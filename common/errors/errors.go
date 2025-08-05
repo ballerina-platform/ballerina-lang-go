@@ -18,30 +18,46 @@
 
 package errors
 
+import "fmt"
+
 type IndexOutOfBoundsError struct {
-	message string
+	index  int
+	length int
 }
 
 func (e IndexOutOfBoundsError) Error() string {
-	return e.message
+	return fmt.Sprintf("Index %d out of bounds for length %d", e.index, e.length)
 }
 
-func NewIndexOutOfBoundsError(message string) *IndexOutOfBoundsError {
+func (e IndexOutOfBoundsError) GetIndex() int {
+	return e.index
+}
+
+func (e IndexOutOfBoundsError) GetLength() int {
+	return e.length
+}
+
+func NewIndexOutOfBoundsError(index, length int) *IndexOutOfBoundsError {
 	return &IndexOutOfBoundsError{
-		message: message,
+		index:  index,
+		length: length,
 	}
 }
 
 type IllegalArgumentError struct {
-	message string
+	argument interface{}
 }
 
 func (e IllegalArgumentError) Error() string {
-	return e.message
+	return fmt.Sprintf("Illegal argument: %v", e.argument)
 }
 
-func NewIllegalArgumentError(message string) *IllegalArgumentError {
+func (e IllegalArgumentError) GetArgument() interface{} {
+	return e.argument
+}
+
+func NewIllegalArgumentError(argument interface{}) *IllegalArgumentError {
 	return &IllegalArgumentError{
-		message: message,
+		argument: argument,
 	}
 }

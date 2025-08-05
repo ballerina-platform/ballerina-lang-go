@@ -79,14 +79,14 @@ func (lm lineMapImpl) TextLines() []string {
 
 func (lm lineMapImpl) positionRangeCheck(position int) error {
 	if position < 0 || position > lm.textLines[lm.length-1].EndOffset() {
-		return errors.NewIndexOutOfBoundsError(fmt.Sprintf("Index: '%d', Size: '%d'", position, lm.textLines[lm.length-1].EndOffset()))
+		return errors.NewIndexOutOfBoundsError(position, lm.textLines[lm.length-1].EndOffset())
 	}
 	return nil
 }
 
 func (lm lineMapImpl) lineRangeCheck(lineNo int) error {
 	if lineNo < 0 || lineNo > lm.length {
-		return errors.NewIndexOutOfBoundsError(fmt.Sprintf("Line number: '%d', Size: '%d'", lineNo, lm.length))
+		return errors.NewIndexOutOfBoundsError(lineNo, lm.length)
 	}
 	return nil
 }
