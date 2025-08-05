@@ -70,12 +70,8 @@ func (std *stringTextDocumentImpl) String() string {
 	return std.text
 }
 
-func (std *stringTextDocumentImpl) TextLines() []string {
-	if std.textDocumentBase.lineMap != nil {
-		return std.textDocumentBase.lineMap.TextLines()
-	}
-	std.textDocumentBase.lineMap = std.PopulateTextLineMap()
-	return std.textDocumentBase.lineMap.TextLines()
+func (std stringTextDocumentImpl) TextLines() []string {
+	return std.Lines().TextLines()
 }
 
 func (std *stringTextDocumentImpl) Lines() LineMap {
