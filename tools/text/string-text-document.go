@@ -20,6 +20,11 @@ package text
 
 import "strings"
 
+const (
+	CR = 13 // Carriage Return
+	LF = 10 // Line Feed
+)
+
 // StringTextDocument represents a TextDocument created with a string.
 type StringTextDocument interface {
 	TextDocument
@@ -75,47 +80,45 @@ func (std stringTextDocumentImpl) TextLines() []string {
 }
 
 func (std *stringTextDocumentImpl) Lines() LineMap {
-	if std.textDocumentBase.lineMap != nil {
-		return std.textDocumentBase.lineMap
+	if std.lineMap != nil {
+		return std.lineMap
 	}
-	std.textDocumentBase.lineMap = std.PopulateTextLineMap()
-	return std.textDocumentBase.lineMap
+	std.lineMap = std.PopulateTextLineMap()
+	return std.lineMap
 }
 
 func (std *stringTextDocumentImpl) calculateTextLines() []TextLine {
-	startOffset := 0
 	var textLines []TextLine
-	var lineBuilder strings.Builder
-	index := 0
+
 	line := 0
+	startOffset := 0
+
+	index := 0
 	textLength := len(std.text)
+
 	var lengthOfNewLineChars int
 
 	for index < textLength {
-		c := rune(std.text[index])
-		if c == '\r' || c == '\n' {
-			nextCharIndex := index + 1
-			if c == '\r' && textLength != nextCharIndex && rune(std.text[nextCharIndex]) == '\n' {
+		if std.text[index] == CR || std.text[index] == LF {
+			nextIndex := index + 1
+			if std.text[index] == CR && nextIndex < textLength && std.text[nextIndex] == LF {
 				lengthOfNewLineChars = 2
 			} else {
 				lengthOfNewLineChars = 1
 			}
 
-			strLine := lineBuilder.String()
-			endOffset := startOffset + len(strLine)
-			textLines = append(textLines, NewTextLine(line, strLine, startOffset, endOffset, lengthOfNewLineChars))
-			line++
+			endOffset := startOffset + (index - startOffset)
+			textLines = append(textLines, NewTextLine(line, std.text[startOffset:index], startOffset, endOffset, lengthOfNewLineChars))
+
+			line = line + 1
 			startOffset = endOffset + lengthOfNewLineChars
-			lineBuilder.Reset()
-			index += lengthOfNewLineChars
+			index = index + lengthOfNewLineChars
 		} else {
-			lineBuilder.WriteRune(c)
-			index++
+			index = index + 1
 		}
 	}
 
-	strLine := lineBuilder.String()
-	textLines = append(textLines, NewTextLine(line, strLine, startOffset, startOffset+len(strLine), 0))
+	textLines = append(textLines, NewTextLine(line, std.text[startOffset:], startOffset, textLength, 0))
 
 	return textLines
 }
