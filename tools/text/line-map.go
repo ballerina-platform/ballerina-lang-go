@@ -60,11 +60,11 @@ func (lm lineMapImpl) LinePositionFromPosition(position int) (LinePosition, erro
 
 func (lm lineMapImpl) TextPositionFromLinePosition(linePosition LinePosition) (int, error) {
 	if err := lm.lineRangeCheck(linePosition.Line()); err != nil {
-		return 0, err
+		return -1, err
 	}
 	textLine := lm.textLines[linePosition.Line()]
 	if textLine.Length() < linePosition.Offset() {
-		return 0, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", linePosition.Offset()))
+		return -1, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", linePosition.Offset()))
 	}
 	return textLine.StartOffset() + linePosition.Offset(), nil
 }
