@@ -50,10 +50,6 @@ func (tdc textDocumentChangeImpl) GetTextEdit(index int) TextEdit {
 }
 
 func (tdc textDocumentChangeImpl) String() string {
-	if len(tdc.textEdits) == 0 {
-		return ""
-	}
-
 	var editStrings []string
 	for _, textEdit := range tdc.textEdits {
 		editStrings = append(editStrings, textEdit.String())
