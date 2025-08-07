@@ -26,7 +26,7 @@ package diagnostics
 //   - args: arguments to diagnostic message format
 //
 // Returns a Diagnostic instance.
-func CreateDiagnostic(diagnosticInfo DiagnosticInfo, location Location, args ...interface{}) Diagnostic {
+func CreateDiagnostic(diagnosticInfo DiagnosticInfo, location Location, args ...any) Diagnostic {
 	return NewDefaultDiagnostic(diagnosticInfo, location, []DiagnosticProperty[any]{}, args...)
 }
 
@@ -39,6 +39,6 @@ func CreateDiagnostic(diagnosticInfo DiagnosticInfo, location Location, args ...
 //   - args: arguments to diagnostic message format
 //
 // Returns a Diagnostic instance.
-func CreateDiagnosticWithProperties(diagnosticInfo DiagnosticInfo, location Location, properties []DiagnosticProperty[any], args ...interface{}) Diagnostic {
+func CreateDiagnosticWithProperties(diagnosticInfo DiagnosticInfo, location Location, properties []DiagnosticProperty[any], args ...any) Diagnostic {
 	return NewDefaultDiagnostic(diagnosticInfo, location, properties, args...)
 }

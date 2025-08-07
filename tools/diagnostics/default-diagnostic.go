@@ -33,11 +33,11 @@ type defaultDiagnosticImpl struct {
 	diagnosticBase
 	diagnosticInfo DiagnosticInfo
 	location       Location
-	properties     []DiagnosticProperty[interface{}]
+	properties     []DiagnosticProperty[any]
 	message        string
 }
 
-func NewDefaultDiagnostic(diagnosticInfo DiagnosticInfo, location Location, properties []DiagnosticProperty[any], args ...interface{}) DefaultDiagnostic {
+func NewDefaultDiagnostic(diagnosticInfo DiagnosticInfo, location Location, properties []DiagnosticProperty[any], args ...any) DefaultDiagnostic {
 	message := formatMessage(diagnosticInfo.MessageFormat(), args...)
 	return &defaultDiagnosticImpl{
 		diagnosticBase: diagnosticBase{},
@@ -82,7 +82,7 @@ func (dd *defaultDiagnosticImpl) String() string {
 		dd.Message())
 }
 
-func formatMessage(format string, args ...interface{}) string {
+func formatMessage(format string, args ...any) string {
 	if len(args) == 0 {
 		return format
 	}

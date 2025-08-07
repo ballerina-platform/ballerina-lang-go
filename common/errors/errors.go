@@ -45,18 +45,18 @@ func NewIndexOutOfBoundsError(index, length int) *IndexOutOfBoundsError {
 }
 
 type IllegalArgumentError struct {
-	argument interface{}
+	argument any
 }
 
 func (e IllegalArgumentError) Error() string {
 	return fmt.Sprintf("Illegal argument: %v", e.argument)
 }
 
-func (e IllegalArgumentError) GetArgument() interface{} {
+func (e IllegalArgumentError) GetArgument() any {
 	return e.argument
 }
 
-func NewIllegalArgumentError(argument interface{}) *IllegalArgumentError {
+func NewIllegalArgumentError(argument any) *IllegalArgumentError {
 	return &IllegalArgumentError{
 		argument: argument,
 	}
