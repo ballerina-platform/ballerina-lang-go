@@ -106,8 +106,10 @@ func (lm lineMapImpl) findLineFrom(position int) TextLine {
 	right := lm.length - 1
 
 	for left <= right {
-		// Using bit shift to handle overflow when sum of left and right is greater than max int
-		middle := (left + right) >> 1
+		lhs := left >> 1
+		rhs := right >> 1
+
+		middle := (lhs + rhs) + (left & right & 1)
 		startOffset := lm.textLines[middle].StartOffset()
 		endOffset := lm.textLines[middle].EndOffsetWithNewLines()
 
