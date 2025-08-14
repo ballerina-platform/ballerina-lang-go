@@ -18,7 +18,10 @@
 
 package text
 
-import "unicode"
+import (
+	"unicode"
+	"unicode/utf8"
+)
 
 // CharReader is a character reader utility used by the Ballerina lexer.
 type CharReader interface {
@@ -34,29 +37,23 @@ type CharReader interface {
 
 // charReaderImpl is the concrete implementation of CharReader.
 type charReaderImpl struct {
-	charBuffer       []rune
+	charBuffer       string
 	offset           int
 	charBufferLength int
 	lexemeStartPos   int
 }
 
-// newCharReader constructs a CharReader with the given character buffer.
-func newCharReader(charBuffer []rune) CharReader {
-	return &charReaderImpl{
-		charBuffer:       charBuffer,
-		offset:           0,
-		charBufferLength: len(charBuffer),
-		lexemeStartPos:   0,
-	}
-}
-
 func CharReaderFromTextDocument(textDocument TextDocument) CharReader {
-	return newCharReader(textDocument.ToCharArray())
+	return CharReaderFromText(string(textDocument.ToCharArray()))
 }
 
 func CharReaderFromText(text string) CharReader {
-	charBuffer := []rune(text)
-	return newCharReader(charBuffer)
+	return &charReaderImpl{
+		charBuffer:       text,
+		offset:           0,
+		charBufferLength: len(text),
+		lexemeStartPos:   0,
+	}
 }
 
 func (cr *charReaderImpl) Reset(offset int) {
@@ -65,7 +62,8 @@ func (cr *charReaderImpl) Reset(offset int) {
 
 func (cr charReaderImpl) Peek() rune {
 	if cr.offset < cr.charBufferLength {
-		return cr.charBuffer[cr.offset]
+		r, _ := utf8.DecodeRuneInString(cr.charBuffer[cr.offset:])
+		return r
 	} else {
 		// TODO Revisit this branch
 		return unicode.MaxRune
@@ -73,9 +71,15 @@ func (cr charReaderImpl) Peek() rune {
 }
 
 func (cr charReaderImpl) PeekN(k int) rune {
-	n := cr.offset + k
+	n := cr.offset
+	for range k {
+		_, size := utf8.DecodeRuneInString(cr.charBuffer[n:])
+		n = n + size
+	}
+
 	if n < cr.charBufferLength {
-		return cr.charBuffer[n]
+		r, _ := utf8.DecodeRuneInString(cr.charBuffer[n:])
+		return r
 	} else {
 		// TODO Revisit this branch
 		return unicode.MaxRune
@@ -83,11 +87,17 @@ func (cr charReaderImpl) PeekN(k int) rune {
 }
 
 func (cr *charReaderImpl) Advance() {
-	cr.offset++
+	_, size := utf8.DecodeRuneInString(cr.charBuffer[cr.offset:])
+	cr.offset = cr.offset + size
 }
 
 func (cr *charReaderImpl) AdvanceN(k int) {
-	cr.offset += k
+	for range k {
+		if cr.offset < cr.charBufferLength {
+			_, size := utf8.DecodeRuneInString(cr.charBuffer[cr.offset:])
+			cr.offset = cr.offset + size
+		}
+	}
 }
 
 func (cr *charReaderImpl) Mark() {
