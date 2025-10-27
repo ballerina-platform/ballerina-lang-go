@@ -28,6 +28,7 @@ type TextDocument interface {
 	TextLines() []string
 	Lines() LineMap
 	PopulateTextLineMap() LineMap
+	String() string
 }
 
 type textDocumentBase struct {

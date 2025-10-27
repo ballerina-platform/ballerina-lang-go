@@ -27,7 +27,7 @@ package diagnostics
 //
 // Returns a Diagnostic instance.
 func CreateDiagnostic(diagnosticInfo DiagnosticInfo, location Location, args ...any) Diagnostic {
-	return NewDefaultDiagnostic(diagnosticInfo, location, []DiagnosticProperty[any]{}, args...)
+	return NewDefaultDiagnostic(diagnosticInfo, location, nil, args...)
 }
 
 // CreateDiagnosticWithProperties creates a Diagnostic instance from the given details.

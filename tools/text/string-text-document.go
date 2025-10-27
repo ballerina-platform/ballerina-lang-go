@@ -39,8 +39,7 @@ type stringTextDocumentImpl struct {
 
 func NewStringTextDocument(text string) StringTextDocument {
 	return &stringTextDocumentImpl{
-		textDocumentBase: textDocumentBase{},
-		text:             text,
+		text: text,
 	}
 }
 

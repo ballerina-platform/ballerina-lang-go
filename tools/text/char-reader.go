@@ -44,7 +44,7 @@ type charReaderImpl struct {
 }
 
 func CharReaderFromTextDocument(textDocument TextDocument) CharReader {
-	return CharReaderFromText(string(textDocument.ToCharArray()))
+	return CharReaderFromText(textDocument.String())
 }
 
 func CharReaderFromText(text string) CharReader {
@@ -105,7 +105,7 @@ func (cr *charReaderImpl) Mark() {
 }
 
 func (cr charReaderImpl) GetMarkedChars() string {
-	return string(cr.charBuffer[cr.lexemeStartPos:cr.offset])
+	return cr.charBuffer[cr.lexemeStartPos:cr.offset]
 }
 
 func (cr charReaderImpl) IsEOF() bool {

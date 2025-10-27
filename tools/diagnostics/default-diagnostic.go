@@ -19,8 +19,9 @@
 package diagnostics
 
 import (
-	"ballerina-lang-go/tools/text"
 	"fmt"
+
+	"ballerina-lang-go/tools/text"
 )
 
 // DefaultDiagnostic is an internal implementation of the Diagnostic interface that is used by the DiagnosticFactory
@@ -40,7 +41,6 @@ type defaultDiagnosticImpl struct {
 func NewDefaultDiagnostic(diagnosticInfo DiagnosticInfo, location Location, properties []DiagnosticProperty[any], args ...any) DefaultDiagnostic {
 	message := formatMessage(diagnosticInfo.MessageFormat(), args...)
 	return &defaultDiagnosticImpl{
-		diagnosticBase: diagnosticBase{},
 		diagnosticInfo: diagnosticInfo,
 		location:       location,
 		properties:     properties,

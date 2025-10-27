@@ -19,8 +19,9 @@
 package text
 
 import (
-	"ballerina-lang-go/common/errors"
 	"fmt"
+
+	"ballerina-lang-go/common/errors"
 )
 
 // LineMap represents a collection of text lines in the TextDocument.
@@ -66,6 +67,7 @@ func (lm lineMapImpl) TextPositionFromLinePosition(linePosition LinePosition) (i
 	if textLine.Length() < linePosition.Offset() {
 		return -1, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", linePosition.Offset()))
 	}
+	// TODO: Lazy initialize and cache
 	return textLine.StartOffset() + linePosition.Offset(), nil
 }
 
@@ -100,27 +102,22 @@ func (lm lineMapImpl) findLineFrom(position int) TextLine {
 	} else if position == lm.textLines[lm.length-1].EndOffset() {
 		return lm.textLines[lm.length-1]
 	}
-
-	var foundTextLine TextLine
 	left := 0
 	right := lm.length - 1
-
 	for left <= right {
 		lhs := left >> 1
 		rhs := right >> 1
-
 		middle := (lhs + rhs) + (left & right & 1)
 		startOffset := lm.textLines[middle].StartOffset()
 		endOffset := lm.textLines[middle].EndOffsetWithNewLines()
-
 		if startOffset <= position && position < endOffset {
-			foundTextLine = lm.textLines[middle]
-			break
+			return lm.textLines[middle]
 		} else if endOffset <= position {
 			left = middle + 1
 		} else {
 			right = middle - 1
 		}
 	}
-	return foundTextLine
+	// This should never happen given the boundary checks above
+	panic("binary search failed to find matching text line")
 }
