@@ -1,0 +1,19 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Config Schema",
+    "description": "Schema with required fields",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["name", "version"],
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "version": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        }
+    }
+}
