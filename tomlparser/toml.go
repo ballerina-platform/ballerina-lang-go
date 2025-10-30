@@ -47,20 +47,28 @@ type Location struct {
 	EndColumn   int
 }
 
-func Read(path string) (*Toml, error) {
+func readFile(path string) (string, error) {
 	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+func Read(path string) (*Toml, error) {
+	content, err := readFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ReadString(string(content))
+	return ReadString(content)
 }
 
 func ReadWithSchema(path string, schema Schema) (*Toml, error) {
-	content, err := os.ReadFile(path)
+	content, err := readFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ReadStringWithSchema(string(content), schema)
+	return ReadStringWithSchema(content, schema)
 }
 
 func ReadStream(reader io.Reader) (*Toml, error) {

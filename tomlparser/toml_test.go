@@ -17,7 +17,6 @@
 package tomlparser
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -320,7 +319,6 @@ func TestTo(t *testing.T) {
 		freshToml.To(&badConfig)
 
 		diagnostics := freshToml.Diagnostics()
-		fmt.Println(diagnostics)
 		if len(diagnostics) == 0 {
 			t.Error("To() should add diagnostics for type mismatch, but got none")
 		}
