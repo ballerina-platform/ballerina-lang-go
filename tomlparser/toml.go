@@ -18,7 +18,10 @@
 
 package tomlparser
 
+// TODO: Currently toml parser gets a single diagnostic at a time. After migrating the parser, should use the same for toml as well.
+
 import (
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -90,10 +93,7 @@ func ReadString(content string) (*Toml, error) {
 	}
 
 	if err != nil {
-		t.diagnostics = append(t.diagnostics, Diagnostic{
-			Message:  err.Error(),
-			Severity: "ERROR",
-		})
+		t.diagnostics = append(t.diagnostics, parseErrorDiagnostic(err))
 	}
 
 	return t, err
@@ -252,10 +252,7 @@ func (t *Toml) ToMap() map[string]any {
 func (t *Toml) To(target any) {
 	_, err := toml.Decode(t.content, target)
 	if err != nil {
-		t.diagnostics = append(t.diagnostics, Diagnostic{
-			Message:  err.Error(),
-			Severity: "ERROR",
-		})
+		t.diagnostics = append(t.diagnostics, parseErrorDiagnostic(err))
 	}
 }
 
@@ -283,4 +280,22 @@ func (t *Toml) getValueByPath(keys []string) (any, bool) {
 	}
 
 	return current, true
+}
+
+func parseErrorDiagnostic(err error) Diagnostic {
+	diagnostic := Diagnostic{
+		Message:  err.Error(),
+		Severity: "ERROR",
+	}
+	var parseErr toml.ParseError
+	if errors.As(err, &parseErr) {
+		diagnostic.Message = parseErr.Message
+		diagnostic.Location = &Location{
+			StartLine:   parseErr.Position.Line,
+			StartColumn: parseErr.Position.Col,
+			EndLine:     parseErr.Position.Line,
+			EndColumn:   parseErr.Position.Col + parseErr.Position.Len,
+		}
+	}
+	return diagnostic
 }

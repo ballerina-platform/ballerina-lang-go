@@ -392,3 +392,60 @@ func TestNonExistentKey(t *testing.T) {
 		t.Error("Expected false for non-existent key")
 	}
 }
+
+// Consolidated essential location/diagnostics tests
+func TestErrorLocation_DuplicateKeys(t *testing.T) {
+	invalidToml := `
+title = "Test"
+title = "Duplicate"
+`
+
+	tomlDoc, err := ReadString(invalidToml)
+	if err == nil {
+		t.Fatal("Expected error for duplicate keys, got nil")
+	}
+
+	diags := tomlDoc.Diagnostics()
+	if len(diags) == 0 {
+		t.Fatal("Expected diagnostics, got none")
+	}
+
+	diag := diags[0]
+	if diag.Location == nil {
+		t.Fatal("Expected location information, got nil")
+	}
+
+	// The error should be on line 3 (duplicate title)
+	if diag.Location.StartLine != 3 {
+		t.Errorf("Expected StartLine 3, got %d", diag.Location.StartLine)
+	}
+	if diag.Location.StartColumn <= 0 {
+		t.Errorf("Expected positive StartColumn, got %d", diag.Location.StartColumn)
+	}
+}
+
+func TestErrorLocation_SyntaxError(t *testing.T) {
+	invalidToml := `
+[section
+key = "value"
+`
+
+	tomlDoc, err := ReadString(invalidToml)
+	if err == nil {
+		t.Fatal("Expected error for invalid syntax, got nil")
+	}
+
+	diags := tomlDoc.Diagnostics()
+	if len(diags) == 0 {
+		t.Fatal("Expected diagnostics, got none")
+	}
+
+	diag := diags[0]
+	if diag.Location == nil {
+		t.Fatal("Expected location information, got nil")
+	}
+	// The error should be on line 3 where "key" starts
+	if diag.Location.StartLine != 3 {
+		t.Errorf("Expected StartLine 3, got %d", diag.Location.StartLine)
+	}
+}
