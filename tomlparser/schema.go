@@ -19,6 +19,7 @@ package tomlparser
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -35,16 +36,11 @@ type schemaImpl struct {
 }
 
 func NewSchemaFromPath(path string) (Schema, error) {
-	compiler := jsonschema.NewCompiler()
-
-	schema, err := compiler.Compile(path)
+	content, err := readFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile schema from path %s: %w", path, err)
+		return nil, fmt.Errorf("failed to read schema file %s: %w", path, err)
 	}
-
-	return &schemaImpl{
-		compiled: schema,
-	}, nil
+	return NewSchemaFromString(content)
 }
 
 func NewSchemaFromString(content string) (Schema, error) {
@@ -69,27 +65,16 @@ func NewSchemaFromString(content string) (Schema, error) {
 	}, nil
 }
 
-func NewSchemaFromFile(file *os.File) (Schema, error) {
-	compiler := jsonschema.NewCompiler()
-
-	var schemaDoc any
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&schemaDoc); err != nil {
-		return nil, fmt.Errorf("failed to decode schema JSON: %w", err)
-	}
-
-	if err := compiler.AddResource("schema.json", schemaDoc); err != nil {
-		return nil, fmt.Errorf("failed to add schema resource: %w", err)
-	}
-
-	schema, err := compiler.Compile("schema.json")
+func NewSchemaFromReader(reader io.Reader) (Schema, error) {
+	content, err := readFromReader(reader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile schema: %w", err)
+		return nil, fmt.Errorf("failed to read schema: %w", err)
 	}
+	return NewSchemaFromString(content)
+}
 
-	return &schemaImpl{
-		compiled: schema,
-	}, nil
+func NewSchemaFromFile(file *os.File) (Schema, error) {
+	return NewSchemaFromReader(file)
 }
 
 func (s *schemaImpl) Validate(data any) error {

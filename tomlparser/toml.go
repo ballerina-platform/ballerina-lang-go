@@ -55,6 +55,14 @@ func readFile(path string) (string, error) {
 	return string(content), nil
 }
 
+func readFromReader(reader io.Reader) (string, error) {
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
 func Read(path string) (*Toml, error) {
 	content, err := readFile(path)
 	if err != nil {
@@ -72,19 +80,19 @@ func ReadWithSchema(path string, schema Schema) (*Toml, error) {
 }
 
 func ReadStream(reader io.Reader) (*Toml, error) {
-	content, err := io.ReadAll(reader)
+	content, err := readFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
-	return ReadString(string(content))
+	return ReadString(content)
 }
 
 func ReadStreamWithSchema(reader io.Reader, schema Schema) (*Toml, error) {
-	content, err := io.ReadAll(reader)
+	content, err := readFromReader(reader)
 	if err != nil {
 		return nil, err
 	}
-	return ReadStringWithSchema(string(content), schema)
+	return ReadStringWithSchema(content, schema)
 }
 
 func ReadString(content string) (*Toml, error) {
