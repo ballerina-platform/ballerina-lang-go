@@ -67,12 +67,12 @@ func NewIllegalArgumentError(argument any) *IllegalArgumentError {
 	}
 }
 
-type ErrorWithStackTrace struct {
+type errorWithStackTrace struct {
 	err   error
 	stack []uintptr
 }
 
-func (e *ErrorWithStackTrace) Error() string {
+func (e *errorWithStackTrace) Error() string {
 	if e.stack != nil {
 		return fmt.Sprintf("%s%s", e.err.Error(), e.StackTrace())
 	}
@@ -95,13 +95,13 @@ func DecorateWithStackTrace(err error) error {
 
 	stack := make([]uintptr, maxDepth)
 	length := runtime.Callers(skip, stack[:])
-	return &ErrorWithStackTrace{
+	return &errorWithStackTrace{
 		err:   err,
 		stack: stack[:length],
 	}
 }
 
-func (e *ErrorWithStackTrace) StackTrace() []byte {
+func (e *errorWithStackTrace) StackTrace() []byte {
 	if e == nil || len(e.stack) == 0 {
 		return nil
 	}

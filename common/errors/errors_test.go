@@ -35,10 +35,9 @@ func TestDecorateWithStackTrace_WithBacktraceDisabled(t *testing.T) {
 		t.Errorf("Expected 'test error', got '%s'", decorated.Error())
 	}
 
-	// Should not be an ErrorWithStackTrace
-	_, ok := decorated.(*ErrorWithStackTrace)
-	if ok {
-		t.Error("Expected original error, got ErrorWithStackTrace when backtrace is disabled")
+	// Should be the same error reference when backtrace is disabled
+	if decorated != err {
+		t.Error("Expected original error when backtrace is disabled")
 	}
 }
 
@@ -50,24 +49,18 @@ func TestDecorateWithStackTrace_WithBacktraceEnabled(t *testing.T) {
 	err := errors.New("test error with stack")
 	decorated := DecorateWithStackTrace(err)
 
-	// Should be an ErrorWithStackTrace
-	stackErr, ok := decorated.(*ErrorWithStackTrace)
-	if !ok {
-		t.Fatal("Expected ErrorWithStackTrace when backtrace is enabled")
+	// Should not be the original error when backtrace is enabled
+	if decorated == err {
+		t.Fatal("Expected decorated error when backtrace is enabled")
 	}
 
 	// Error message should contain original error
-	if !strings.Contains(stackErr.Error(), "test error with stack") {
+	if !strings.Contains(decorated.Error(), "test error with stack") {
 		t.Errorf("Error message should contain original error text")
 	}
 
-	// Stack trace should be present
-	if len(stackErr.stack) == 0 {
-		t.Error("Expected non-empty stack trace")
-	}
-
 	// Error message should contain stack trace
-	errorMsg := stackErr.Error()
+	errorMsg := decorated.Error()
 	if !strings.Contains(errorMsg, "\n\tat ") {
 		t.Error("Error message should contain formatted stack trace")
 	}
@@ -89,23 +82,23 @@ func TestErrorWithStackTrace_StackTrace(t *testing.T) {
 	defer os.Unsetenv("BAL_BACKTRACE")
 
 	err := errors.New("test error")
-	decorated := DecorateWithStackTrace(err).(*ErrorWithStackTrace)
+	decorated := DecorateWithStackTrace(err)
 
-	stackTrace := decorated.StackTrace()
+	// Test through the Error() method which includes the stack trace
+	errorMsg := decorated.Error()
 
-	if stackTrace == nil {
-		t.Error("Expected non-nil stack trace")
+	// Should contain original error message
+	if !strings.Contains(errorMsg, "test error") {
+		t.Error("Expected error message to contain original error text")
 	}
 
-	stackTraceStr := string(stackTrace)
-
 	// Should contain function name
-	if !strings.Contains(stackTraceStr, "\n\tat ") {
+	if !strings.Contains(errorMsg, "\n\tat ") {
 		t.Error("Stack trace should contain function frames")
 	}
 
 	// Should contain file path
-	if !strings.Contains(stackTraceStr, ".go:") {
+	if !strings.Contains(errorMsg, ".go:") {
 		t.Error("Stack trace should contain file paths and line numbers")
 	}
 }
