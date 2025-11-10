@@ -1,0 +1,11 @@
+-- inputs --
+GetTrigger
+invalidjson
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find the trigger:  reason: unexpected error
+

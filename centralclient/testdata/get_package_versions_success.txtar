@@ -1,0 +1,12 @@
+-- inputs --
+GetPackageVersions
+wso2
+sf
+any
+spl5
+
+-- expected_output --
+[1.0.0 1.1.0 1.2.0]
+
+-- expected_error --
+

@@ -1,0 +1,11 @@
+-- inputs --
+GetTrigger
+notfound
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find the trigger: id: notfound. reason: trigger not found
+

@@ -1,0 +1,13 @@
+-- inputs --
+GetPackage
+testorg
+badrequest
+1.0.0
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: could not connect to remote repository to find versions for: testorg/badrequest:1.0.0. reason: invalid version format
+

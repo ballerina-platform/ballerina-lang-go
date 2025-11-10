@@ -1,0 +1,11 @@
+-- inputs --
+GetTriggers
+servererror
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find triggers: . reason: internal server error
+
