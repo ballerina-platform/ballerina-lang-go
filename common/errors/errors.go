@@ -74,34 +74,25 @@ type errorWithStackTrace struct {
 
 func (e *errorWithStackTrace) Error() string {
 	if e.stack != nil {
-		return fmt.Sprintf("%s%s", e.err.Error(), e.StackTrace())
+		return fmt.Sprintf("%s%s", e.err.Error(), e.stackTrace())
 	}
 	return e.err.Error()
 }
 
 func DecorateWithStackTrace(err error) error {
-	if os.Getenv("BAL_BACKTRACE") != "true" {
+	if err == nil || os.Getenv("BAL_BACKTRACE") != "true" {
 		return err
 	}
 
-	if err == nil {
-		return nil
-	}
-
-	const (
-		maxDepth = 32
-		skip     = 2 // skip DecorateWithStackTrace and its caller
-	)
-
-	stack := make([]uintptr, maxDepth)
-	length := runtime.Callers(skip, stack[:])
+	stack := make([]uintptr, 32)
+	length := runtime.Callers(2, stack[:])
 	return &errorWithStackTrace{
 		err:   err,
 		stack: stack[:length],
 	}
 }
 
-func (e *errorWithStackTrace) StackTrace() []byte {
+func (e *errorWithStackTrace) stackTrace() []byte {
 	if e == nil || len(e.stack) == 0 {
 		return nil
 	}
