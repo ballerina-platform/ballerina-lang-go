@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -27,7 +28,7 @@ import (
 
 type Schema interface {
 	Validate(data any) error
-	FromPath(path string) (Schema, error)
+	FromPath(fsys fs.FS, path string) (Schema, error)
 	FromString(content string) (Schema, error)
 }
 
@@ -35,8 +36,8 @@ type schemaImpl struct {
 	compiled *jsonschema.Schema
 }
 
-func NewSchemaFromPath(path string) (Schema, error) {
-	content, err := readFile(path)
+func NewSchemaFromPath(fsys fs.FS, path string) (Schema, error) {
+	content, err := readFile(fsys, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read schema file %s: %w", path, err)
 	}
@@ -84,8 +85,8 @@ func (s *schemaImpl) Validate(data any) error {
 	return nil
 }
 
-func (s *schemaImpl) FromPath(path string) (Schema, error) {
-	return NewSchemaFromPath(path)
+func (s *schemaImpl) FromPath(fsys fs.FS, path string) (Schema, error) {
+	return NewSchemaFromPath(fsys, path)
 }
 
 func (s *schemaImpl) FromString(content string) (Schema, error) {

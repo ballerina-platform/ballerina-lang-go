@@ -17,6 +17,7 @@
 package tomlparser
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -326,7 +327,7 @@ func TestTo(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	toml, err := Read("testdata/sample.toml")
+	toml, err := Read(os.DirFS("."), "testdata/sample.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML file: %v", err)
 	}

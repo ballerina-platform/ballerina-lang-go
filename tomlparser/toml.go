@@ -21,7 +21,7 @@ package tomlparser
 import (
 	"errors"
 	"io"
-	"os"
+	"io/fs"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -47,8 +47,8 @@ type Location struct {
 	EndColumn   int
 }
 
-func readFile(path string) (string, error) {
-	content, err := os.ReadFile(path)
+func readFile(fsys fs.FS, path string) (string, error) {
+	content, err := fs.ReadFile(fsys, path)
 	if err != nil {
 		return "", err
 	}
@@ -63,16 +63,16 @@ func readFromReader(reader io.Reader) (string, error) {
 	return string(content), nil
 }
 
-func Read(path string) (*Toml, error) {
-	content, err := readFile(path)
+func Read(fsys fs.FS, path string) (*Toml, error) {
+	content, err := readFile(fsys, path)
 	if err != nil {
 		return nil, err
 	}
 	return ReadString(content)
 }
 
-func ReadWithSchema(path string, schema Schema) (*Toml, error) {
-	content, err := readFile(path)
+func ReadWithSchema(fsys fs.FS, path string, schema Schema) (*Toml, error) {
+	content, err := readFile(fsys, path)
 	if err != nil {
 		return nil, err
 	}

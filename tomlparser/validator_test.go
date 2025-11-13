@@ -22,8 +22,10 @@ import (
 	"testing"
 )
 
+var fsys = os.DirFS(".")
+
 func TestSchemaFromPath(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema from path: %v", err)
 	}
@@ -70,12 +72,12 @@ func TestSchemaFromFile(t *testing.T) {
 }
 
 func TestValidatorWithValidToml(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
 
-	tomlDoc, err := Read("testdata/ballerina-package.toml")
+	tomlDoc, err := Read(fsys, "testdata/ballerina-package.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML: %v", err)
 	}
@@ -92,12 +94,12 @@ func TestValidatorWithValidToml(t *testing.T) {
 }
 
 func TestValidatorWithInvalidToml(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
 
-	tomlDoc, err := Read("testdata/invalid-sample.toml")
+	tomlDoc, err := Read(fsys, "testdata/invalid-sample.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML: %v", err)
 	}
@@ -124,12 +126,12 @@ func TestValidatorWithInvalidToml(t *testing.T) {
 }
 
 func TestReadWithSchema(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
 
-	tomlDoc, err := ReadWithSchema("testdata/ballerina-package.toml", schema)
+	tomlDoc, err := ReadWithSchema(fsys, "testdata/ballerina-package.toml", schema)
 	if err != nil {
 		t.Errorf("ReadWithSchema should succeed for valid TOML: %v", err)
 	}
@@ -145,12 +147,12 @@ func TestReadWithSchema(t *testing.T) {
 }
 
 func TestReadWithSchemaInvalid(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
 
-	tomlDoc, err := ReadWithSchema("testdata/invalid-sample.toml", schema)
+	tomlDoc, err := ReadWithSchema(fsys, "testdata/invalid-sample.toml", schema)
 	if err == nil {
 		t.Error("ReadWithSchema should fail for invalid TOML")
 	}
@@ -226,7 +228,7 @@ unexpected = "field"
 }
 
 func TestReadStreamWithSchema(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
@@ -248,12 +250,12 @@ func TestReadStreamWithSchema(t *testing.T) {
 }
 
 func TestValidateMethod(t *testing.T) {
-	tomlDoc, err := Read("testdata/ballerina-package.toml")
+	tomlDoc, err := Read(fsys, "testdata/ballerina-package.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML: %v", err)
 	}
 
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
@@ -265,12 +267,12 @@ func TestValidateMethod(t *testing.T) {
 }
 
 func TestValidateMethodWithInvalidData(t *testing.T) {
-	tomlDoc, err := Read("testdata/invalid-sample.toml")
+	tomlDoc, err := Read(fsys, "testdata/invalid-sample.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML: %v", err)
 	}
 
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
@@ -286,12 +288,12 @@ func TestValidateMethodWithInvalidData(t *testing.T) {
 }
 
 func TestSchemaWithRequiredFields(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/required-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/required-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
 
-	tomlDoc, err := Read("testdata/missing-required.toml")
+	tomlDoc, err := Read(fsys, "testdata/missing-required.toml")
 	if err != nil {
 		t.Fatalf("Failed to read TOML: %v", err)
 	}
@@ -361,7 +363,7 @@ func TestSchemaValidationWithArrays(t *testing.T) {
 }
 
 func TestSchemaValidationWithNestedObjects(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
@@ -385,7 +387,7 @@ version = "1.0.0"
 }
 
 func TestValidatorWithNilToml(t *testing.T) {
-	schema, err := NewSchemaFromPath("testdata/sample-schema.json")
+	schema, err := NewSchemaFromPath(fsys, "testdata/sample-schema.json")
 	if err != nil {
 		t.Fatalf("Failed to load schema: %v", err)
 	}
