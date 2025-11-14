@@ -21,6 +21,12 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+      - name: Run WASM tests
+        run: |
+          export GOOS=js
+          export GOARCH=wasm
+          go test ./... -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec"
+
       - name: Check gofmt
         run: |
           unformatted=$(gofmt -l -s .)
