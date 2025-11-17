@@ -1,0 +1,28 @@
+title = "Server Configuration"
+
+[owner]
+name = "WSO2"
+
+[database]
+server = "192.168.1.1"
+ports = [ 8001, 8001, 8002 ]
+connection_max = 5000
+enabled = true
+
+[servers]
+  [servers.alpha]
+  ip = "10.0.0.1"
+  dc = "eqdc10"
+
+  [servers.beta]
+  ip = "10.0.0.2"
+  dc = "eqdc10"
+
+[[routes]]
+name = "health"
+path = "/health"
+
+[[routes]]
+name = "metrics"
+path = "/metrics"
+method = "GET"
