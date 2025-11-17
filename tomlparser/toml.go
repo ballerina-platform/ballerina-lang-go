@@ -257,10 +257,6 @@ func (t *Toml) Diagnostics() []Diagnostic {
 	return t.diagnostics
 }
 
-func (t *Toml) RootNode() map[string]any {
-	return t.rootNode
-}
-
 func (t *Toml) ToMap() map[string]any {
 	return t.rootNode
 }
