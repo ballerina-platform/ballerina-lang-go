@@ -20,6 +20,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 var fsys = os.DirFS(".")
@@ -115,7 +117,7 @@ func TestValidatorWithInvalidToml(t *testing.T) {
 	}
 
 	diagnostic := tomlDoc.Diagnostics()[0]
-	if diagnostic.Severity != "ERROR" {
+	if diagnostic.Severity != diagnostics.Error {
 		t.Errorf("Expected ERROR severity, got %s", diagnostic.Severity)
 	}
 

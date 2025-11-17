@@ -18,6 +18,8 @@ package tomlparser
 
 import (
 	"fmt"
+
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type Validator interface {
@@ -44,7 +46,7 @@ func (v *validatorImpl) Validate(toml *Toml) error {
 	if err := v.schema.Validate(data); err != nil {
 		diagnostic := Diagnostic{
 			Message:  err.Error(),
-			Severity: "ERROR",
+			Severity: diagnostics.Error,
 		}
 		toml.diagnostics = append(toml.diagnostics, diagnostic)
 		return err

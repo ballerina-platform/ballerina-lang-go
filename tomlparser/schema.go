@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -45,12 +44,12 @@ func NewSchemaFromPath(fsys fs.FS, path string) (Schema, error) {
 }
 
 func NewSchemaFromString(content string) (Schema, error) {
-	compiler := jsonschema.NewCompiler()
-
 	var schemaDoc any
 	if err := json.Unmarshal([]byte(content), &schemaDoc); err != nil {
 		return nil, fmt.Errorf("failed to parse schema JSON: %w", err)
 	}
+
+	compiler := jsonschema.NewCompiler()
 
 	if err := compiler.AddResource("schema.json", schemaDoc); err != nil {
 		return nil, fmt.Errorf("failed to add schema resource: %w", err)
@@ -74,7 +73,7 @@ func NewSchemaFromReader(reader io.Reader) (Schema, error) {
 	return NewSchemaFromString(content)
 }
 
-func NewSchemaFromFile(file *os.File) (Schema, error) {
+func NewSchemaFromFile(file fs.File) (Schema, error) {
 	return NewSchemaFromReader(file)
 }
 

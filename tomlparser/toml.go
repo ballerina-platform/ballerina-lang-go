@@ -24,6 +24,8 @@ import (
 	"io/fs"
 	"strings"
 
+	"ballerina-lang-go/tools/diagnostics"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -36,7 +38,7 @@ type Toml struct {
 
 type Diagnostic struct {
 	Message  string
-	Severity string
+	Severity diagnostics.DiagnosticSeverity
 	Location *Location
 }
 
@@ -204,7 +206,7 @@ func (t *Toml) GetTable(dottedKey string) (*Toml, bool) {
 	return &Toml{
 		rootNode:    table,
 		metadata:    t.metadata,
-		diagnostics: make([]Diagnostic, 0),
+		diagnostics: nil,
 		content:     "",
 	}, true
 }
@@ -223,7 +225,7 @@ func (t *Toml) GetTables(dottedKey string) ([]*Toml, bool) {
 				result[i] = &Toml{
 					rootNode:    table,
 					metadata:    t.metadata,
-					diagnostics: make([]Diagnostic, 0),
+					diagnostics: nil,
 					content:     "",
 				}
 			}
@@ -238,7 +240,7 @@ func (t *Toml) GetTables(dottedKey string) ([]*Toml, bool) {
 			result = append(result, &Toml{
 				rootNode:    table,
 				metadata:    t.metadata,
-				diagnostics: make([]Diagnostic, 0),
+				diagnostics: nil,
 				content:     "",
 			})
 		}
@@ -299,7 +301,7 @@ func (t *Toml) getValueByPath(keys []string) (any, bool) {
 func parseErrorDiagnostic(err error) Diagnostic {
 	diagnostic := Diagnostic{
 		Message:  err.Error(),
-		Severity: "ERROR",
+		Severity: diagnostics.Error,
 	}
 	var parseErr toml.ParseError
 	if errors.As(err, &parseErr) {
