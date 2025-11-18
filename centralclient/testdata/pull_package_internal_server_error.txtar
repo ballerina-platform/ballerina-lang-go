@@ -1,0 +1,14 @@
+-- inputs --
+PullPackage
+pullorg
+servererror
+1.0.0
+bala/pullorg/servererror
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to pull the package: 'pullorg/servererror:1.0.0' from the remote repository 'https://localhost:9090/registry/packages/pullorg/servererror/1.0.0'. reason: internal server error occurred
+

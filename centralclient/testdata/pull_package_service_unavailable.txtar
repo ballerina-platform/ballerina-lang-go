@@ -1,0 +1,14 @@
+-- inputs --
+PullPackage
+pullorg
+unavailable
+1.0.0
+bala/pullorg/unavailable
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to pull the package: 'pullorg/unavailable:1.0.0' from the remote repository 'https://localhost:9090/registry/packages/pullorg/unavailable/1.0.0'. reason: service temporarily unavailable
+
