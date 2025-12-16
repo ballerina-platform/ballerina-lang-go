@@ -21,6 +21,6 @@ type Module struct {
 	Summary    string `json:"summary"`
 	Readme     string `json:"readme"`
 	APIDocURL  string `json:"apiDocURL"`
-	Executable *bool  `json:"executable,omitempty"`
+	Executable *bool  `json:"executable"`
 	PackageURL string `json:"packageUrl"`
 }

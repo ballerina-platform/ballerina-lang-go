@@ -22,19 +22,19 @@ type Package struct {
 	Version                      string   `json:"version"`
 	Platform                     string   `json:"platform"`
 	LanguageSpecificationVersion string   `json:"languageSpecificationVersion"`
-	IsDeprecated                 *bool    `json:"isDeprecated,omitempty"`
-	DeprecateMessage             string   `json:"deprecateMessage,omitempty"`
+	IsDeprecated                 bool     `json:"isDeprecated"`
+	DeprecateMessage             string   `json:"deprecateMessage"`
 	URL                          string   `json:"URL"`
 	BalaVersion                  string   `json:"balaVersion"`
 	BalaURL                      string   `json:"balaURL"`
 	Readme                       string   `json:"readme"`
-	Template                     *bool    `json:"template,omitempty"`
+	Template                     bool     `json:"template"`
 	Licenses                     []string `json:"licenses"`
 	Authors                      []string `json:"authors"`
 	SourceCodeLocation           string   `json:"sourceCodeLocation"`
 	Keywords                     []string `json:"keywords"`
 	BallerinaVersion             string   `json:"ballerinaVersion"`
-	CreatedDate                  *int64   `json:"createdDate,omitempty"`
+	CreatedDate                  int64    `json:"createdDate"`
 	Modules                      []Module `json:"modules"`
 	Summary                      string   `json:"summary"`
 	Icon                         string   `json:"icon"`

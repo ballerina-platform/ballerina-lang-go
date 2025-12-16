@@ -28,22 +28,23 @@ const (
 )
 
 type PackageResolutionRequest struct {
-	Packages []PackageResolutionRequestPackage `json:"packages"`
+	Packages []packageResolutionRequestPackage `json:"packages"`
 }
 
-type PackageResolutionRequestPackage struct {
-	Org     string                 `json:"org"`
-	Name    string                 `json:"name"`
-	Version string                 `json:"version"`
-	Mode    *PackageResolutionMode `json:"mode,omitempty"`
+// PackageResolutionRequest.java:49-95
+type packageResolutionRequestPackage struct {
+	Org     string                `json:"org"`
+	Name    string                `json:"name"`
+	Version string                `json:"version"`
+	Mode    PackageResolutionMode `json:"mode,omitempty"`
 }
 
-func (r *PackageResolutionRequest) AddPackage(orgName, name, version string, mode *PackageResolutionMode) {
+func (r *PackageResolutionRequest) AddPackage(orgName, name, version string, mode PackageResolutionMode) {
 	if r.Packages == nil {
-		r.Packages = []PackageResolutionRequestPackage{}
+		r.Packages = []packageResolutionRequestPackage{}
 	}
 	encodedVersion := url.QueryEscape(version)
-	r.Packages = append(r.Packages, PackageResolutionRequestPackage{
+	r.Packages = append(r.Packages, packageResolutionRequestPackage{
 		Org:     orgName,
 		Name:    name,
 		Version: encodedVersion,

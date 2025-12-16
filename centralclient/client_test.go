@@ -35,7 +35,7 @@ import (
 const (
 	testBalVersion = "slp5"
 	testBalaName   = "sf-any.bala"
-	accessToken    = "273cc9f6-c333-36ab-aa2q-f08e9513ff5y"
+	accessToken    = "test-access-token"
 )
 
 var utilTestResources = filepath.Join("testdata", "utils")
@@ -349,7 +349,7 @@ func newMockCentralAPIClient(t *testing.T) CentralAPIClient {
 	}
 
 	transport := newMockTransport(packageJSON, packageSearchJSON, balaContent)
-	mockClient := &http.Client{
+	mockClient := http.Client{
 		Transport:     transport,
 		CheckRedirect: preventRedirect,
 	}
@@ -357,7 +357,7 @@ func newMockCentralAPIClient(t *testing.T) CentralAPIClient {
 	return newTestCentralAPIClient(mockClient)
 }
 
-func newTestCentralAPIClient(httpClient *http.Client) CentralAPIClient {
+func newTestCentralAPIClient(httpClient http.Client) CentralAPIClient {
 	return &centralAPIClientImpl{
 		baseURL:     "https://localhost:9090/registry",
 		httpClient:  httpClient,
@@ -366,7 +366,7 @@ func newTestCentralAPIClient(httpClient *http.Client) CentralAPIClient {
 	}
 }
 
-func newDeprecatedPackageMockClient(balaContent []byte, balaFileName string) *http.Client {
+func newDeprecatedPackageMockClient(balaContent []byte, balaFileName string) http.Client {
 	transport := RoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if strings.Contains(req.URL.String(), "/registry/packages/") {
 			return &http.Response{
@@ -390,13 +390,13 @@ func newDeprecatedPackageMockClient(balaContent []byte, balaFileName string) *ht
 		return newBinaryResponse(http.StatusOK, balaContent, req), nil
 	})
 
-	return &http.Client{
+	return http.Client{
 		Transport:     transport,
 		CheckRedirect: preventRedirect,
 	}
 }
 
-func newRetryMockClient(balaContent []byte, balaFileName string, attemptCount, downloadAttempts *int) *http.Client {
+func newRetryMockClient(balaContent []byte, balaFileName string, attemptCount, downloadAttempts *int) http.Client {
 	transport := RoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if strings.Contains(req.URL.String(), "/registry/packages/") {
 			*attemptCount++
@@ -426,7 +426,7 @@ func newRetryMockClient(balaContent []byte, balaFileName string, attemptCount, d
 		return resp, nil
 	})
 
-	return &http.Client{
+	return http.Client{
 		Transport:     transport,
 		CheckRedirect: preventRedirect,
 	}

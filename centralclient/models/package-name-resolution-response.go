@@ -17,11 +17,12 @@
 package models
 
 type PackageNameResolutionResponse struct {
-	ResolvedModules   []PackageNameResolutionResponseModule `json:"resolvedModules"`
-	UnresolvedModules []PackageNameResolutionResponseModule `json:"unresolvedModules"`
+	ResolvedModules   []packageNameResolutionResponseModule `json:"resolvedModules"`
+	UnresolvedModules []packageNameResolutionResponseModule `json:"unresolvedModules"`
 }
 
-type PackageNameResolutionResponseModule struct {
+// PackageNameResolutionResponse.java:42-96
+type packageNameResolutionResponseModule struct {
 	Organization string `json:"organization"`
 	ModuleName   string `json:"moduleName"`
 	Version      string `json:"version"`

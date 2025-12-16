@@ -35,6 +35,7 @@ type memFile struct {
 	isDir bool
 }
 
+// openMemFile embeds memFile and bytes.Reader to implement fs.File interface
 type openMemFile struct {
 	*memFile
 	*bytes.Reader

@@ -17,22 +17,24 @@
 package models
 
 type PackageResolutionResponse struct {
-	Resolved   []PackageResolutionResponsePackage `json:"resolved"`
-	Unresolved []PackageResolutionResponsePackage `json:"unresolved"`
+	Resolved   []packageResolutionResponsePackage `json:"resolved"`
+	Unresolved []packageResolutionResponsePackage `json:"unresolved"`
 }
 
-type PackageResolutionResponsePackage struct {
+// PackageResolutionResponse.java:45-109
+type packageResolutionResponsePackage struct {
 	Org              string                                `json:"org"`
 	Name             string                                `json:"name"`
 	Version          string                                `json:"version"`
-	DependencyGraph  []PackageResolutionResponseDependency `json:"dependencyGraph"`
-	IsDeprecated     *bool                                 `json:"isDeprecated,omitempty"`
-	DeprecateMessage string                                `json:"deprecateMessage,omitempty"`
+	DependencyGraph  []packageResolutionResponseDependency `json:"dependencyGraph"`
+	IsDeprecated     bool                                  `json:"isDeprecated"`
+	DeprecateMessage string                                `json:"deprecateMessage"`
 }
 
-type PackageResolutionResponseDependency struct {
+// PackageResolutionResponse.java:114-158
+type packageResolutionResponseDependency struct {
 	Org          string                                `json:"org"`
 	Name         string                                `json:"name"`
 	Version      string                                `json:"version"`
-	Dependencies []PackageResolutionResponseDependency `json:"dependencies"`
+	Dependencies []packageResolutionResponseDependency `json:"dependencies"`
 }

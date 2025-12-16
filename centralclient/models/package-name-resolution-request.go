@@ -17,27 +17,29 @@
 package models
 
 type PackageNameResolutionRequest struct {
-	Modules []PackageNameResolutionRequestModule `json:"modules"`
+	Modules []packageNameResolutionRequestModule `json:"modules"`
 }
 
-type PackageNameResolutionRequestModule struct {
+// PackageNameResolutionRequest.java:36-93
+type packageNameResolutionRequestModule struct {
 	Organization     string                                        `json:"organization"`
 	ModuleName       string                                        `json:"moduleName"`
-	PossiblePackages []PackageNameResolutionRequestPossiblePackage `json:"possiblePackages,omitempty"`
-	Mode             *PackageResolutionMode                        `json:"mode,omitempty"`
+	PossiblePackages []packageNameResolutionRequestPossiblePackage `json:"possiblePackages,omitempty"`
+	Mode             PackageResolutionMode                         `json:"mode,omitempty"`
 }
 
-type PackageNameResolutionRequestPossiblePackage struct {
+// PackageNameResolutionRequest.java:41-63
+type packageNameResolutionRequestPossiblePackage struct {
 	Org     string `json:"org"`
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-func (r *PackageNameResolutionRequest) AddModule(orgName, moduleName string, possiblePackages []PackageNameResolutionRequestPossiblePackage, mode *PackageResolutionMode) {
+func (r *PackageNameResolutionRequest) AddModule(orgName, moduleName string, possiblePackages []packageNameResolutionRequestPossiblePackage, mode PackageResolutionMode) {
 	if r.Modules == nil {
-		r.Modules = []PackageNameResolutionRequestModule{}
+		r.Modules = []packageNameResolutionRequestModule{}
 	}
-	r.Modules = append(r.Modules, PackageNameResolutionRequestModule{
+	r.Modules = append(r.Modules, packageNameResolutionRequestModule{
 		Organization:     orgName,
 		ModuleName:       moduleName,
 		PossiblePackages: possiblePackages,
@@ -47,9 +49,9 @@ func (r *PackageNameResolutionRequest) AddModule(orgName, moduleName string, pos
 
 func (r *PackageNameResolutionRequest) AddModuleSimple(orgName, moduleName string) {
 	if r.Modules == nil {
-		r.Modules = []PackageNameResolutionRequestModule{}
+		r.Modules = []packageNameResolutionRequestModule{}
 	}
-	r.Modules = append(r.Modules, PackageNameResolutionRequestModule{
+	r.Modules = append(r.Modules, packageNameResolutionRequestModule{
 		Organization: orgName,
 		ModuleName:   moduleName,
 	})
