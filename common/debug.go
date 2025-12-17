@@ -16,32 +16,24 @@
  * under the License.
  */
 
-package diagnostics
-
-// DiagnosticSeverity represents a severity of a Diagnostic.
-type DiagnosticSeverity uint8
+package common
 
 const (
-	Internal DiagnosticSeverity = iota
-	Hint
-	Info
-	Warning
-	Error
+	DUMP_TOKENS uint16 = 1 << iota
+	DUMP_ST
+	DEBUG_ERROR_RECOVERY
 )
 
-func (ds DiagnosticSeverity) String() string {
-	switch ds {
-	case Internal:
-		return "INTERNAL"
-	case Hint:
-		return "HINT"
-	case Info:
-		return "INFO"
-	case Warning:
-		return "WARNING"
-	case Error:
-		return "ERROR"
-	default:
-		return "UNKNOWN"
+type DebugContext struct {
+	Flags   uint16
+	Channel chan string
+}
+
+var DebugCtx DebugContext
+
+func Init(flags uint16) {
+	DebugCtx = DebugContext{
+		Flags:   flags,
+		Channel: make(chan string),
 	}
 }
