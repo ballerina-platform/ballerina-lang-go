@@ -49,6 +49,7 @@ func main() {
 
 	corpusBalDir := "./corpus/bal"
 	corpusTokensDir := "./corpus/tokens"
+	corpusParserDir := "./corpus/parser"
 
 	// Find ballerina-lang-go binary
 	ballerinaLangGo := "ballerina-lang-go"
@@ -99,7 +100,7 @@ func main() {
 	// Start workers
 	for i := 0; i < finalNumJobs; i++ {
 		wg.Add(1)
-		go worker(jobChan, &wg, ballerinaLangGo, corpusBalDir, corpusTokensDir)
+		go worker(jobChan, &wg, ballerinaLangGo, corpusBalDir, corpusTokensDir, corpusParserDir)
 	}
 
 	// Send jobs
@@ -112,63 +113,104 @@ func main() {
 	wg.Wait()
 }
 
-func worker(jobChan <-chan string, wg *sync.WaitGroup, ballerinaLangGo, corpusBalDir, corpusTokensDir string) {
+func worker(jobChan <-chan string, wg *sync.WaitGroup, ballerinaLangGo, corpusBalDir, corpusTokensDir, corpusParserDir string) {
 	defer wg.Done()
 
 	for balFile := range jobChan {
-		if err := processFile(ballerinaLangGo, balFile, corpusBalDir, corpusTokensDir); err != nil {
+		if err := processFile(ballerinaLangGo, balFile, corpusBalDir, corpusTokensDir, corpusParserDir); err != nil {
 			fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", balFile, err)
 		}
 	}
 }
 
-func processFile(ballerinaLangGo, balFile, corpusBalDir, corpusTokensDir string) error {
+func processFile(ballerinaLangGo, balFile, corpusBalDir, corpusTokensDir, corpusParserDir string) error {
 	// Print progress
 	fmt.Printf("Processing: %s\n", balFile)
 
-	// Run ballerina-lang-go with -dump-tokens
-	cmd := exec.Command(ballerinaLangGo, balFile, "-dump-tokens")
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("creating stderr pipe: %w", err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("starting command: %w", err)
-	}
-
-	// Read all stderr output
-	tokenOutput, err := io.ReadAll(stderr)
-	if err != nil {
-		cmd.Wait()
-		return fmt.Errorf("reading stderr: %w", err)
-	}
-
-	// Wait for command to complete
-	if err := cmd.Wait(); err != nil {
-		// Command exited with non-zero exit code - panic with stderr output
-		panic(fmt.Sprintf("ballerina-lang-go failed for %s:\n%s", balFile, string(tokenOutput)))
-	}
-
-	// Calculate output path
+	// Calculate relative path (used for both tokens and parser output)
 	relPath, err := filepath.Rel(corpusBalDir, balFile)
 	if err != nil {
 		return fmt.Errorf("calculating relative path: %w", err)
 	}
 
-	// Change extension from .bal to .token
-	relPath = strings.TrimSuffix(relPath, ".bal") + ".token"
-	outputPath := filepath.Join(corpusTokensDir, relPath)
-
-	// Create output directory if needed
-	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("creating output directory: %w", err)
+	// Process tokens: Run ballerina-lang-go with -dump-tokens
+	tokenCmd := exec.Command(ballerinaLangGo, balFile, "-dump-tokens")
+	tokenStderr, err := tokenCmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("creating stderr pipe for tokens: %w", err)
 	}
 
-	// Write token file
-	if err := os.WriteFile(outputPath, tokenOutput, 0644); err != nil {
-		return fmt.Errorf("writing token file: %w", err)
+	if err := tokenCmd.Start(); err != nil {
+		return fmt.Errorf("starting token command: %w", err)
+	}
+
+	// Read all stderr output (tokens)
+	tokenOutput, err := io.ReadAll(tokenStderr)
+	if err != nil {
+		tokenCmd.Wait()
+		return fmt.Errorf("reading token stderr: %w", err)
+	}
+
+	// Wait for command to complete
+	tokenRelPath := strings.TrimSuffix(relPath, ".bal") + ".token"
+	tokenOutputPath := filepath.Join(corpusTokensDir, tokenRelPath)
+	tokenOutputDir := filepath.Dir(tokenOutputPath)
+	if err := os.MkdirAll(tokenOutputDir, 0755); err != nil {
+		return fmt.Errorf("creating token output directory: %w", err)
+	}
+
+	if err := tokenCmd.Wait(); err != nil {
+		// Command crashed or failed - write error output to file for test comparison
+		errorMsg := fmt.Sprintf("ERROR: ballerina-lang-go -dump-tokens failed for %s\nExit code: %v\nOutput:\n%s", balFile, err, string(tokenOutput))
+		if writeErr := os.WriteFile(tokenOutputPath, []byte(errorMsg), 0644); writeErr != nil {
+			return fmt.Errorf("writing token error file: %w", writeErr)
+		}
+		fmt.Fprintf(os.Stderr, "Warning: %s produced error output (written to %s)\n", balFile, tokenOutputPath)
+	} else {
+		// Write token file
+		if err := os.WriteFile(tokenOutputPath, tokenOutput, 0644); err != nil {
+			return fmt.Errorf("writing token file: %w", err)
+		}
+	}
+
+	// Process parser: Run ballerina-lang-go with -dump-st
+	parserCmd := exec.Command(ballerinaLangGo, balFile, "-dump-st")
+	parserStderr, err := parserCmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("creating stderr pipe for parser: %w", err)
+	}
+
+	if err := parserCmd.Start(); err != nil {
+		return fmt.Errorf("starting parser command: %w", err)
+	}
+
+	// Read all stderr output (parser JSON)
+	parserOutput, err := io.ReadAll(parserStderr)
+	if err != nil {
+		parserCmd.Wait()
+		return fmt.Errorf("reading parser stderr: %w", err)
+	}
+
+	// Wait for command to complete
+	parserRelPath := strings.TrimSuffix(relPath, ".bal") + ".json"
+	parserOutputPath := filepath.Join(corpusParserDir, parserRelPath)
+	parserOutputDir := filepath.Dir(parserOutputPath)
+	if err := os.MkdirAll(parserOutputDir, 0755); err != nil {
+		return fmt.Errorf("creating parser output directory: %w", err)
+	}
+
+	if err := parserCmd.Wait(); err != nil {
+		// Command crashed or failed - write error output to file for test comparison
+		errorMsg := fmt.Sprintf("ERROR: ballerina-lang-go -dump-st failed for %s\nExit code: %v\nOutput:\n%s", balFile, err, string(parserOutput))
+		if writeErr := os.WriteFile(parserOutputPath, []byte(errorMsg), 0644); writeErr != nil {
+			return fmt.Errorf("writing parser error file: %w", writeErr)
+		}
+		fmt.Fprintf(os.Stderr, "Warning: %s produced error output (written to %s)\n", balFile, parserOutputPath)
+	} else {
+		// Write parser JSON file
+		if err := os.WriteFile(parserOutputPath, parserOutput, 0644); err != nil {
+			return fmt.Errorf("writing parser JSON file: %w", err)
+		}
 	}
 
 	return nil
