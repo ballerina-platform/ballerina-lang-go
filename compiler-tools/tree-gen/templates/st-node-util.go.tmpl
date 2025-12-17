@@ -1,0 +1,55 @@
+// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package internal
+
+import "reflect"
+// replaceInner recursively replaces a target node with a replacement node.
+// Returns true if the replacement was made, false otherwise.
+func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNode) {
+    if current == nil {
+        return false, nil
+    }
+    if current == target {
+        return true, replacement
+    }
+    switch n := current.(type) {
+{{range .Nodes}}
+{{if not .IsAbstract}}
+    case *ST{{.Name}}:
+{{range $index, $attr := .Attributes}}
+        modified{{title $attr.Name}}, {{$attr.Name}}Node := replaceInner(n.{{title $attr.Name}}, target, replacement)
+{{end}}
+        modified := {{range $index, $attr := .Attributes}}{{if $index}} || {{end}}modified{{title $attr.Name}}{{end}}
+        if modified {
+            return true, createNodeAndAddChildren(&ST{{.Name}}{
+{{if .Base}}
+                ST{{.Base}}: n.ST{{.Base}},
+{{end}}
+{{range .Attributes}}
+                {{title .Name}}: {{.Name}}Node,
+{{end}}
+            }, {{range $index, $attr := .Attributes}}{{if $index}}, {{end}}{{$attr.Name}}Node{{end}})
+        }
+        return false, current
+{{end}}
+{{end}}
+	case STToken:
+		return false, current
+    default:
+		panic ("unsupported node type: " + reflect.TypeOf(current).Name())
+    }
+}
