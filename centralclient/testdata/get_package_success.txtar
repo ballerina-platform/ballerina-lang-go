@@ -1,0 +1,13 @@
+-- inputs --
+GetPackage
+foo
+winery
+1.3.5
+any
+slp5
+
+-- expected_output --
+org=foo name=winery version=1.3.5
+
+-- expected_error --
+

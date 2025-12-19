@@ -1,0 +1,14 @@
+-- inputs --
+PullPackage
+pullorg
+missing-content-disposition
+1.0.0
+bala/pullorg/missing-content-disposition
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to pull the package: 'pullorg/missing-content-disposition:1.0.0'. BALA content download from 'https://fileserver.dev-central.ballerina.io/2.0/pullorg/pkg/1.0.0/pkg-any-1.0.0.bala' failed.
+

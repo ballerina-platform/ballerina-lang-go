@@ -1,0 +1,11 @@
+-- inputs --
+GetConnector
+notfound
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find connector: id: notfound. reason: connector not found
+

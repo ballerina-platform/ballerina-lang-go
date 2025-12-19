@@ -1,0 +1,11 @@
+-- inputs --
+GetConnectors
+servererror
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find connector: . reason: internal server error
+

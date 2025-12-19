@@ -1,0 +1,11 @@
+-- inputs --
+GetTrigger
+servererror
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+error: failed to find the trigger: id: servererror. reason: internal server error
+

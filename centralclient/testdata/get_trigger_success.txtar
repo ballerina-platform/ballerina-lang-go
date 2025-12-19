@@ -1,0 +1,11 @@
+-- inputs --
+GetTrigger
+456
+any
+slp5
+
+-- expected_output --
+map[id:456 name:http-trigger type:http]
+
+-- expected_error --
+
