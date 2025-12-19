@@ -159,3 +159,101 @@ func TestMove_FileAndDirectory(t *testing.T) {
 		t.Fatalf("expected ErrNotExist for move, got %v", err)
 	}
 }
+
+func TestMkdirAll(t *testing.T) {
+	fsys := NewMemFS()
+
+	// Test creating nested directories
+	if err := MkdirAll(fsys, "a/b/c", 0o755); err != nil {
+		t.Fatalf("MkdirAll error: %v", err)
+	}
+
+	// Verify all directories were created
+	for _, dir := range []string{"a", "a/b", "a/b/c"} {
+		f, err := fsys.Open(dir)
+		if err != nil {
+			t.Fatalf("Open %s error: %v", dir, err)
+		}
+		info, err := f.Stat()
+		if err != nil {
+			t.Fatalf("Stat %s error: %v", dir, err)
+		}
+		if !info.IsDir() {
+			t.Errorf("%s should be a directory", dir)
+		}
+		if info.Mode()&fs.ModeDir == 0 {
+			t.Errorf("%s mode should have ModeDir set", dir)
+		}
+		f.Close()
+	}
+
+	// Test creating directory that already exists (should not error)
+	if err := MkdirAll(fsys, "a/b", 0o755); err != nil {
+		t.Fatalf("MkdirAll on existing dir error: %v", err)
+	}
+
+	// Test invalid path
+	if err := MkdirAll(fsys, "/absolute/path", 0o755); err == nil || !errors.Is(err, fs.ErrInvalid) {
+		t.Fatalf("MkdirAll: expected ErrInvalid for absolute path, got %v", err)
+	}
+
+	// Test creating single directory
+	if err := MkdirAll(fsys, "single", 0o700); err != nil {
+		t.Fatalf("MkdirAll single dir error: %v", err)
+	}
+	f, err := fsys.Open("single")
+	if err != nil {
+		t.Fatalf("Open single error: %v", err)
+	}
+	info, _ := f.Stat()
+	if !info.IsDir() {
+		t.Errorf("single should be a directory")
+	}
+	f.Close()
+}
+
+func TestMkdirAll_ReadDir(t *testing.T) {
+	fsys := NewMemFS()
+
+	// Create directories and files
+	if err := MkdirAll(fsys, "root/sub1/deep", 0o755); err != nil {
+		t.Fatalf("MkdirAll error: %v", err)
+	}
+	if err := MkdirAll(fsys, "root/sub2", 0o755); err != nil {
+		t.Fatalf("MkdirAll error: %v", err)
+	}
+	if err := WriteFile(fsys, "root/file.txt", []byte("content"), 0o644); err != nil {
+		t.Fatalf("WriteFile error: %v", err)
+	}
+
+	// Read root directory
+	entries, err := fs.ReadDir(fsys, "root")
+	if err != nil {
+		t.Fatalf("ReadDir error: %v", err)
+	}
+
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(entries))
+	}
+
+	entryMap := make(map[string]fs.DirEntry)
+	for _, e := range entries {
+		entryMap[e.Name()] = e
+	}
+
+	for _, name := range []string{"file.txt", "sub1", "sub2"} {
+		if _, ok := entryMap[name]; !ok {
+			t.Errorf("expected entry %s not found", name)
+		}
+	}
+
+	if entryMap["file.txt"].IsDir() {
+		t.Errorf("file.txt should not be a directory")
+	}
+	if !entryMap["sub1"].IsDir() {
+		t.Errorf("sub1 should be a directory")
+	}
+	if !entryMap["sub2"].IsDir() {
+		t.Errorf("sub2 should be a directory")
+	}
+}

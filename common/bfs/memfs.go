@@ -18,27 +18,72 @@ package bfs
 
 import (
 	"bytes"
-	"fmt"
 	"io/fs"
+	"path"
 	"strings"
 	"time"
 )
 
+// memFS is an in-memory filesystem that supports both files and directories.
+// It implements fs.FS, fs.ReadDirFS, MutableFS, and WritableFS interfaces.
 type memFS struct {
-	files map[string]*memFile
+	entries map[string]*memEntry
 }
 
-type memFile struct {
-	name  string
-	data  []byte
-	mode  fs.FileMode
-	isDir bool
+// memEntry represents either a file or directory in the in-memory filesystem.
+type memEntry struct {
+	name    string
+	data    []byte
+	mode    fs.FileMode
+	modTime time.Time
+	isDir   bool
 }
 
-// openMemFile embeds memFile and bytes.Reader to implement fs.File interface
-type openMemFile struct {
-	*memFile
-	*bytes.Reader
+// memFileHandle is an open handle to a memEntry, implementing fs.File.
+type memFileHandle struct {
+	entry  *memEntry
+	reader *bytes.Reader
+}
+
+// memDirHandle is an open handle to a directory for reading entries.
+type memDirHandle struct {
+	entry   *memEntry
+	entries []fs.DirEntry
+	offset  int
+}
+
+func NewMemFS() *memFS {
+	return &memFS{
+		entries: make(map[string]*memEntry),
+	}
+}
+
+// mkdirAllInternal creates all directories in the path if they don't exist.
+func (mfs *memFS) mkdirAllInternal(dirPath string, perm fs.FileMode) {
+	if dirPath == "" || dirPath == "." {
+		return
+	}
+
+	parts := strings.Split(dirPath, "/")
+	current := ""
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		if current == "" {
+			current = part
+		} else {
+			current = current + "/" + part
+		}
+		if _, exists := mfs.entries[current]; !exists {
+			mfs.entries[current] = &memEntry{
+				name:    path.Base(current),
+				mode:    perm | fs.ModeDir,
+				modTime: time.Now(),
+				isDir:   true,
+			}
+		}
+	}
 }
 
 func (mfs *memFS) Create(name string) (fs.File, error) {
@@ -46,18 +91,31 @@ func (mfs *memFS) Create(name string) (fs.File, error) {
 		return nil, &fs.PathError{Op: "create", Path: name, Err: fs.ErrInvalid}
 	}
 
-	file := &memFile{
-		name: name,
+	// Create parent directories
+	if dir := path.Dir(name); dir != "." {
+		mfs.mkdirAllInternal(dir, 0o755)
 	}
-	mfs.files[name] = file
 
-	return &openMemFile{
-		memFile: file,
-		Reader:  bytes.NewReader(file.data),
+	entry := &memEntry{
+		name:    path.Base(name),
+		mode:    0o644,
+		modTime: time.Now(),
+		isDir:   false,
+	}
+	mfs.entries[name] = entry
+
+	return &memFileHandle{
+		entry:  entry,
+		reader: bytes.NewReader(entry.data),
 	}, nil
 }
 
-func (mfs *memFS) MkdirAll(path string, perm fs.FileMode) error {
+func (mfs *memFS) MkdirAll(dirPath string, perm fs.FileMode) error {
+	if !fs.ValidPath(dirPath) {
+		return &fs.PathError{Op: "mkdir", Path: dirPath, Err: fs.ErrInvalid}
+	}
+
+	mfs.mkdirAllInternal(dirPath, perm)
 	return nil
 }
 
@@ -66,14 +124,33 @@ func (mfs *memFS) Open(name string) (fs.File, error) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
 	}
 
-	file, ok := mfs.files[name]
+	// Handle root directory
+	if name == "." {
+		return &memDirHandle{
+			entry: &memEntry{
+				name:  ".",
+				mode:  fs.ModeDir | 0o755,
+				isDir: true,
+			},
+			entries: mfs.readDirEntries("."),
+		}, nil
+	}
+
+	entry, ok := mfs.entries[name]
 	if !ok {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 	}
 
-	return &openMemFile{
-		memFile: file,
-		Reader:  bytes.NewReader(file.data),
+	if entry.isDir {
+		return &memDirHandle{
+			entry:   entry,
+			entries: mfs.readDirEntries(name),
+		}, nil
+	}
+
+	return &memFileHandle{
+		entry:  entry,
+		reader: bytes.NewReader(entry.data),
 	}, nil
 }
 
@@ -82,157 +159,289 @@ func (mfs *memFS) OpenFile(name string, flag int, perm fs.FileMode) (fs.File, er
 		return nil, &fs.PathError{Op: "openfile", Path: name, Err: fs.ErrInvalid}
 	}
 
-	file, ok := mfs.files[name]
+	entry, ok := mfs.entries[name]
 	if !ok {
-		file = &memFile{
-			name: name,
-			mode: perm,
+		// Create parent directories
+		if dir := path.Dir(name); dir != "." {
+			mfs.mkdirAllInternal(dir, 0o755)
 		}
-		mfs.files[name] = file
+
+		entry = &memEntry{
+			name:    path.Base(name),
+			mode:    perm,
+			modTime: time.Now(),
+			isDir:   false,
+		}
+		mfs.entries[name] = entry
 	}
 
-	return &openMemFile{
-		memFile: file,
-		Reader:  bytes.NewReader(file.data),
+	return &memFileHandle{
+		entry:  entry,
+		reader: bytes.NewReader(entry.data),
 	}, nil
 }
 
+func (mfs *memFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
+	}
+
+	// For root directory
+	if name == "." {
+		return mfs.readDirEntries("."), nil
+	}
+
+	entry, ok := mfs.entries[name]
+	if !ok {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrNotExist}
+	}
+
+	if !entry.isDir {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
+	}
+
+	return mfs.readDirEntries(name), nil
+}
+
+// readDirEntries returns direct children of a directory.
+func (mfs *memFS) readDirEntries(dirPath string) []fs.DirEntry {
+	var prefix string
+	if dirPath == "." {
+		prefix = ""
+	} else {
+		prefix = dirPath + "/"
+	}
+
+	seen := make(map[string]bool)
+	var entries []fs.DirEntry
+
+	for name := range mfs.entries {
+		var childName string
+		if prefix == "" {
+			childName = name
+		} else if after, ok := strings.CutPrefix(name, prefix); ok {
+			childName = after
+		} else {
+			continue
+		}
+
+		// Get only direct children (no nested paths)
+		if idx := strings.Index(childName, "/"); idx != -1 {
+			childName = childName[:idx]
+		}
+
+		if childName == "" || seen[childName] {
+			continue
+		}
+		seen[childName] = true
+
+		// Check if this child is a directory or file
+		fullPath := childName
+		if prefix != "" {
+			fullPath = prefix + childName
+		}
+
+		if e, exists := mfs.entries[fullPath]; exists {
+			entries = append(entries, &dirEntry{entry: e})
+		} else {
+			// It's an implicit directory (exists only as part of a path)
+			entries = append(entries, &dirEntry{
+				entry: &memEntry{
+					name:  childName,
+					mode:  fs.ModeDir | 0o755,
+					isDir: true,
+				},
+			})
+		}
+	}
+
+	return entries
+}
+
+// Remove removes a file or directory and all its contents.
 func (mfs *memFS) Remove(name string) error {
-	if _, exists := mfs.files[name]; exists {
-		delete(mfs.files, name)
-		return nil
-	}
-
-	dirPrefix := name
-	if !strings.HasSuffix(dirPrefix, "/") {
-		dirPrefix = fmt.Sprintf("%s/", dirPrefix)
-	}
-
 	removed := false
-	for fname := range mfs.files {
-		if strings.HasPrefix(fname, dirPrefix) {
-			delete(mfs.files, fname)
+
+	// Remove the entry itself if it exists
+	if _, exists := mfs.entries[name]; exists {
+		delete(mfs.entries, name)
+		removed = true
+	}
+
+	// Also remove all children (for directories)
+	prefix := name + "/"
+	for entryName := range mfs.entries {
+		if strings.HasPrefix(entryName, prefix) {
+			delete(mfs.entries, entryName)
 			removed = true
 		}
 	}
 
 	if !removed {
-		return &fs.PathError{
-			Op:   "remove",
-			Path: name,
-			Err:  fs.ErrNotExist,
-		}
+		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrNotExist}
 	}
 
 	return nil
 }
 
+// Move moves a file or directory from oldpath to newpath.
 func (mfs *memFS) Move(oldpath, newpath string) error {
-	if file, exists := mfs.files[oldpath]; exists {
-		delete(mfs.files, oldpath)
-		file.name = newpath
-		mfs.files[newpath] = file
-		return nil
-	}
-
-	oldDirPrefix := oldpath
-	if !strings.HasSuffix(oldDirPrefix, "/") {
-		oldDirPrefix = fmt.Sprintf("%s/", oldDirPrefix)
-	}
-
-	newDirPrefix := newpath
-	if !strings.HasSuffix(newDirPrefix, "/") {
-		newDirPrefix = fmt.Sprintf("%s/", newDirPrefix)
-	}
-
-	type moveEntry struct {
+	type moveItem struct {
 		oldName string
 		newName string
-		file    *memFile
+		entry   *memEntry
 	}
 
-	var toMove []moveEntry
+	var toMove []moveItem
 
-	for name, file := range mfs.files {
-		if after, ok := strings.CutPrefix(name, oldDirPrefix); ok {
-			newName := newDirPrefix + after
-			toMove = append(toMove, moveEntry{
+	// Check for exact match (file or directory entry)
+	if entry, exists := mfs.entries[oldpath]; exists {
+		toMove = append(toMove, moveItem{
+			oldName: oldpath,
+			newName: newpath,
+			entry:   entry,
+		})
+	}
+
+	// Also move all children (for directories)
+	oldPrefix := oldpath + "/"
+	newPrefix := newpath + "/"
+
+	for name, entry := range mfs.entries {
+		if suffix, ok := strings.CutPrefix(name, oldPrefix); ok {
+			toMove = append(toMove, moveItem{
 				oldName: name,
-				newName: newName,
-				file:    file,
+				newName: newPrefix + suffix,
+				entry:   entry,
 			})
 		}
 	}
 
 	if len(toMove) == 0 {
-		return &fs.PathError{
-			Op:   "move",
-			Path: oldpath,
-			Err:  fs.ErrNotExist,
-		}
+		return &fs.PathError{Op: "move", Path: oldpath, Err: fs.ErrNotExist}
 	}
 
-	for _, entry := range toMove {
-		delete(mfs.files, entry.oldName)
-		entry.file.name = entry.newName
-		mfs.files[entry.newName] = entry.file
+	for _, item := range toMove {
+		delete(mfs.entries, item.oldName)
+		item.entry.name = path.Base(item.newName)
+		mfs.entries[item.newName] = item.entry
 	}
 
 	return nil
 }
 
+// WriteFile writes data to a file, creating it if necessary.
 func (mfs *memFS) WriteFile(name string, data []byte, perm fs.FileMode) error {
 	if !fs.ValidPath(name) {
 		return &fs.PathError{Op: "writefile", Path: name, Err: fs.ErrInvalid}
 	}
 
-	mfs.files[name] = &memFile{
-		name: name,
-		data: data,
-		mode: perm,
+	// Create parent directories
+	if dir := path.Dir(name); dir != "." {
+		mfs.mkdirAllInternal(dir, 0o755)
+	}
+
+	mfs.entries[name] = &memEntry{
+		name:    path.Base(name),
+		data:    data,
+		mode:    perm,
+		modTime: time.Now(),
+		isDir:   false,
 	}
 
 	return nil
 }
 
-func (o *openMemFile) Close() error {
+// memFileHandle implements fs.File for regular files
+
+func (h *memFileHandle) Close() error {
 	return nil
 }
 
-func (o *openMemFile) IsDir() bool {
-	return o.isDir
+func (h *memFileHandle) Read(p []byte) (int, error) {
+	return h.reader.Read(p)
 }
 
-func (o *openMemFile) ModTime() time.Time {
-	return time.Time{}
+func (h *memFileHandle) Stat() (fs.FileInfo, error) {
+	return h.entry, nil
 }
 
-func (o *openMemFile) Mode() fs.FileMode {
-	return o.mode
-}
+// memDirHandle implements fs.File and fs.ReadDirFile for directories
 
-func (o *openMemFile) Name() string {
-	return o.name
-}
-
-func (o *openMemFile) Read(p []byte) (int, error) {
-	return o.Reader.Read(p)
-}
-
-func (o *openMemFile) Size() int64 {
-	return int64(len(o.data))
-}
-
-func (o *openMemFile) Stat() (fs.FileInfo, error) {
-	return o, nil
-}
-
-func (o *openMemFile) Sys() any {
+func (h *memDirHandle) Close() error {
 	return nil
 }
 
-func NewMemFS() fs.FS {
-	return &memFS{
-		files: make(map[string]*memFile),
+func (h *memDirHandle) Read(p []byte) (int, error) {
+	return 0, &fs.PathError{Op: "read", Path: h.entry.name, Err: fs.ErrInvalid}
+}
+
+func (h *memDirHandle) Stat() (fs.FileInfo, error) {
+	return h.entry, nil
+}
+
+func (h *memDirHandle) ReadDir(n int) ([]fs.DirEntry, error) {
+	if n <= 0 {
+		entries := h.entries[h.offset:]
+		h.offset = len(h.entries)
+		return entries, nil
 	}
+
+	if h.offset >= len(h.entries) {
+		return nil, nil
+	}
+
+	end := min(h.offset+n, len(h.entries))
+
+	entries := h.entries[h.offset:end]
+	h.offset = end
+	return entries, nil
+}
+
+// memEntry implements fs.FileInfo
+
+func (e *memEntry) Name() string {
+	return e.name
+}
+
+func (e *memEntry) Size() int64 {
+	return int64(len(e.data))
+}
+
+func (e *memEntry) Mode() fs.FileMode {
+	return e.mode
+}
+
+func (e *memEntry) ModTime() time.Time {
+	return e.modTime
+}
+
+func (e *memEntry) IsDir() bool {
+	return e.isDir
+}
+
+func (e *memEntry) Sys() any {
+	return nil
+}
+
+// dirEntry implements fs.DirEntry
+
+type dirEntry struct {
+	entry *memEntry
+}
+
+func (d *dirEntry) Name() string {
+	return d.entry.name
+}
+
+func (d *dirEntry) IsDir() bool {
+	return d.entry.isDir
+}
+
+func (d *dirEntry) Type() fs.FileMode {
+	return d.entry.mode.Type()
+}
+
+func (d *dirEntry) Info() (fs.FileInfo, error) {
+	return d.entry, nil
 }
