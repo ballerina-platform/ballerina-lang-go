@@ -230,14 +230,14 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 
 	actualDigest := fmt.Sprintf("%s%s", SHA256, checkHashInternal(fsys, balaFilePath))
 	if trueDigest != "" && trueDigest != actualDigest {
-		warning := fmt.Sprintf(`*************************************************************
+		if clientContext.OnWarning != nil {
+			warning := fmt.Sprintf(`*************************************************************
 * WARNING: Certain packages may have originated from sources other than the official distributors. *
 *************************************************************
 
 * Verification failed: The hash value of the following package could not be confirmed. 
 %s
 `, packageName)
-		if clientContext.OnWarning != nil {
 			clientContext.OnWarning(warning)
 		}
 	}
