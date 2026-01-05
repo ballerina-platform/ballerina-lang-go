@@ -40,9 +40,6 @@ type packageResolutionRequestPackage struct {
 }
 
 func (r *PackageResolutionRequest) AddPackage(orgName, name, version string, mode PackageResolutionMode) {
-	if r.Packages == nil {
-		r.Packages = []packageResolutionRequestPackage{}
-	}
 	encodedVersion := url.QueryEscape(version)
 	r.Packages = append(r.Packages, packageResolutionRequestPackage{
 		Org:     orgName,

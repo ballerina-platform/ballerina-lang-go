@@ -198,7 +198,7 @@ func TestMkdirAll(t *testing.T) {
 	}
 
 	// Test creating single directory
-	if err := MkdirAll(fsys, "single", 0o700); err != nil {
+	if err := MkdirAll(fsys, "single", 0o755); err != nil {
 		t.Fatalf("MkdirAll single dir error: %v", err)
 	}
 	f, err := fsys.Open("single")

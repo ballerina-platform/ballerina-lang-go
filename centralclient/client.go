@@ -35,11 +35,11 @@ import (
 )
 
 type CentralAPIClient interface {
-	GetPackage(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (models.Package, error)
+	GetPackage(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (*models.Package, error)
 	GetPackageVersions(orgNamePath, packageNamePath, supportedPlatform, ballerinaVersion string) ([]string, error)
 	PullPackage(org, name, version string, fsys fs.FS, packagePathInBalaCache, supportedPlatform, ballerinaVersion string, clientContext ClientContext) error
-	ResolvePackageNames(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageNameResolutionResponse, error)
-	ResolveDependencies(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageResolutionResponse, error)
+	ResolvePackageNames(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageNameResolutionResponse, error)
+	ResolveDependencies(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageResolutionResponse, error)
 	GetConnectors(params map[string]string, supportedPlatform, ballerinaVersion string) (any, error)
 	GetConnector(id, supportedPlatform, ballerinaVersion string) (map[string]any, error)
 	GetConnectorByInfo(connector models.ConnectorInfo, supportedPlatform, ballerinaVersion string) (map[string]any, error)
@@ -83,8 +83,6 @@ func NewCentralAPIClient(baseURL string, proxyURL string, accessToken string) Ce
 		baseURL:        baseURL,
 		proxyURL:       proxyURL,
 		accessToken:    accessToken,
-		proxyUsername:  "",
-		proxyPassword:  "",
 		connectTimeout: DefaultConnectTimeout * time.Second,
 		readTimeout:    DefaultReadTimeout * time.Second,
 		writeTimeout:   DefaultWriteTimeout * time.Second,
@@ -111,22 +109,22 @@ func NewCentralAPIClientFull(baseURL string, proxyURL string, proxyUsername, pro
 	}
 }
 
-func (c *centralAPIClientImpl) GetPackage(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (models.Package, error) {
+func (c *centralAPIClientImpl) GetPackage(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (*models.Package, error) {
 	pkg, err := c.getPackageInternal(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion)
 	if err != nil {
 		switch err.(type) {
 		case *NoPackageError, *CentralClientError:
-			return models.Package{}, err
+			return nil, err
 
 		default:
-			return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrCannotFindPackage, getPackageSignature(orgNamePath, packageNamePath, version)))
+			return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrCannotFindPackage, getPackageSignature(orgNamePath, packageNamePath, version)))
 		}
 	}
 
 	return pkg, nil
 }
 
-func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (models.Package, error) {
+func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, version, supportedPlatform, ballerinaVersion string) (*models.Package, error) {
 	resourceURL := fmt.Sprintf("%s%s%s%s", PackagePathPrefix, orgNamePath, Separator, packageNamePath)
 
 	urlStr := fmt.Sprintf("%s%s", c.baseURL, resourceURL)
@@ -136,14 +134,14 @@ func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, 
 
 	req, err := c.newRequest(http.MethodGet, urlStr, supportedPlatform, ballerinaVersion, nil)
 	if err != nil {
-		return models.Package{}, err
+		return nil, err
 	}
 
 	c.logRequestInitVerbose(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return models.Package{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -151,7 +149,7 @@ func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, 
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return models.Package{}, err
+		return nil, err
 	}
 
 	c.logResponseVerbose(resp, string(bodyBytes))
@@ -160,48 +158,45 @@ func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, 
 	if isApplicationJSONContentType(contentType) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var pkg models.Package
+			var pkg *models.Package
 			if err := json.Unmarshal(bodyBytes, &pkg); err != nil {
-				return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
+				return nil, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
 			}
 			return pkg, nil
 
 		case http.StatusNotFound:
 			var errResp models.Error
 			if err := json.Unmarshal(bodyBytes, &errResp); err != nil {
-				return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
+				return nil, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
 			}
 
 			if errResp.Message != "" && strings.Contains(errResp.Message, "package not found for:") {
-				return models.Package{}, NewNoPackageError(errResp.Message)
+				return nil, NewNoPackageError(errResp.Message)
 			}
 
 		case http.StatusUnauthorized:
-			return models.Package{}, c.handleUnauthorizedResponseWithOrg(orgNamePath, bodyBytes)
+			return nil, c.handleUnauthorizedResponseWithOrg(orgNamePath, bodyBytes)
 
 		case http.StatusBadRequest, http.StatusInternalServerError, http.StatusServiceUnavailable:
 			var errResp models.Error
 
 			if err := json.Unmarshal(bodyBytes, &errResp); err != nil {
-				return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
+				return nil, NewCentralClientError(fmt.Sprintf("%s%s. reason: unexpected error", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version)))
 			}
 
 			if errResp.Message != "" {
-				return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s. reason: %s", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version), errResp.Message))
+				return nil, NewCentralClientError(fmt.Sprintf("%s%s. reason: %s", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, version), errResp.Message))
 			}
 		}
 	}
 
-	return models.Package{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrCannotFindPackage, getPackageSignature(orgNamePath, packageNamePath, version)))
+	return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrCannotFindPackage, getPackageSignature(orgNamePath, packageNamePath, version)))
 }
 
 func (c *centralAPIClientImpl) GetPackageVersions(orgNamePath, packageNamePath, supportedPlatform, ballerinaVersion string) ([]string, error) {
 	versions, err := c.getPackageVersionsInternal(orgNamePath, packageNamePath, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, "")))
+		return nil, wrapCentralClientError(err, fmt.Sprintf("%s%s", ErrCannotFindVersions, getPackageSignature(orgNamePath, packageNamePath, "")))
 	}
 
 	return versions, nil
@@ -300,32 +295,26 @@ func (c *centralAPIClientImpl) PullPackage(org, name, version string, fsys fs.FS
 	return nil
 }
 
-func (c *centralAPIClientImpl) ResolvePackageNames(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageNameResolutionResponse, error) {
+func (c *centralAPIClientImpl) ResolvePackageNames(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageNameResolutionResponse, error) {
 	response, err := c.resolvePackageNamesInternal(request, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		switch err.(type) {
-		case *CentralClientError, *ConnectionError:
-			return models.PackageNameResolutionResponse{}, err
-
-		default:
-			return models.PackageNameResolutionResponse{}, NewCentralClientError(ErrPackageResolution)
-		}
+		return nil, wrapCentralOrConnectionError(err, ErrPackageResolution)
 	}
 
 	return response, nil
 }
 
-func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageNameResolutionResponse, error) {
+func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.PackageNameResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageNameResolutionResponse, error) {
 	urlStr := fmt.Sprintf("%s%s%s", c.baseURL, PackagePathPrefix, ResolveModules)
 
 	bodyBytes, err := json.Marshal(request)
 	if err != nil {
-		return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
+		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
 	}
 
 	req, err := c.newRequest(http.MethodPost, urlStr, supportedPlatform, ballerinaVersion, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
+		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
 	}
 
 	req.Header.Set(ContentType, MediaTypeJSON)
@@ -336,7 +325,7 @@ func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.Packag
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
+		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
 	}
 	defer resp.Body.Close()
 
@@ -344,7 +333,7 @@ func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.Packag
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
+		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
 	}
 
 	c.logResponseVerbose(resp, string(respBodyBytes))
@@ -353,66 +342,60 @@ func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.Packag
 	if isApplicationJSONContentType(contentType) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var resolutionResponse models.PackageNameResolutionResponse
+			var resolutionResponse *models.PackageNameResolutionResponse
 			if err := json.Unmarshal(respBodyBytes, &resolutionResponse); err != nil {
-				return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 			return resolutionResponse, nil
 
 		case http.StatusUnauthorized:
-			return models.PackageNameResolutionResponse{}, c.handleUnauthorizedResponse(bodyBytes)
+			return nil, c.handleUnauthorizedResponse(bodyBytes)
 
 		case http.StatusBadRequest:
 			var errResp models.Error
 			if err := json.Unmarshal(respBodyBytes, &errResp); err != nil {
-				return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 
 			if errResp.Message != "" {
-				return models.PackageNameResolutionResponse{}, NewConnectionError(errResp.Message)
+				return nil, NewConnectionError(errResp.Message)
 			}
 
 		case http.StatusInternalServerError, http.StatusServiceUnavailable:
 			var errResp models.Error
 			if err := json.Unmarshal(respBodyBytes, &errResp); err != nil {
-				return models.PackageNameResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 
 			if errResp.Message != "" {
-				return models.PackageNameResolutionResponse{}, NewConnectionError(fmt.Sprintf("%s. reason: %s", ErrPackageResolution, errResp.Message))
+				return nil, NewConnectionError(fmt.Sprintf("%s. reason: %s", ErrPackageResolution, errResp.Message))
 			}
 		}
 	}
 
-	return models.PackageNameResolutionResponse{}, NewConnectionError(ErrPackageResolution)
+	return nil, NewConnectionError(ErrPackageResolution)
 }
 
-func (c *centralAPIClientImpl) ResolveDependencies(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageResolutionResponse, error) {
+func (c *centralAPIClientImpl) ResolveDependencies(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageResolutionResponse, error) {
 	response, err := c.resolveDependenciesInternal(request, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		switch err.(type) {
-		case *CentralClientError, *ConnectionError:
-			return models.PackageResolutionResponse{}, err
-
-		default:
-			return models.PackageResolutionResponse{}, NewCentralClientError(ErrPackageResolution)
-		}
+		return nil, wrapCentralOrConnectionError(err, ErrPackageResolution)
 	}
 
 	return response, nil
 }
 
-func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (models.PackageResolutionResponse, error) {
+func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.PackageResolutionRequest, supportedPlatform, ballerinaVersion string) (*models.PackageResolutionResponse, error) {
 	urlStr := fmt.Sprintf("%s%s%s", c.baseURL, PackagePathPrefix, ResolveDependencies)
 
 	bodyBytes, err := json.Marshal(request)
 	if err != nil {
-		return models.PackageResolutionResponse{}, err
+		return nil, err
 	}
 
 	req, err := c.newRequest(http.MethodPost, urlStr, supportedPlatform, ballerinaVersion, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return models.PackageResolutionResponse{}, err
+		return nil, err
 	}
 
 	req.Header.Set(AcceptEncoding, Identity)
@@ -422,7 +405,7 @@ func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.Packag
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return models.PackageResolutionResponse{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -430,7 +413,7 @@ func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.Packag
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return models.PackageResolutionResponse{}, err
+		return nil, err
 	}
 
 	c.logResponseVerbose(resp, string(respBodyBytes))
@@ -439,47 +422,44 @@ func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.Packag
 	if isApplicationJSONContentType(contentType) {
 		switch resp.StatusCode {
 		case http.StatusOK:
-			var resolutionResponse models.PackageResolutionResponse
+			var resolutionResponse *models.PackageResolutionResponse
 			if err := json.Unmarshal(respBodyBytes, &resolutionResponse); err != nil {
-				return models.PackageResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 			return resolutionResponse, nil
 
 		case http.StatusUnauthorized:
-			return models.PackageResolutionResponse{}, c.handleUnauthorizedResponse(bodyBytes)
+			return nil, c.handleUnauthorizedResponse(bodyBytes)
 
 		case http.StatusBadRequest:
 			var errResp models.Error
 			if err := json.Unmarshal(respBodyBytes, &errResp); err != nil {
-				return models.PackageResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 
 			if errResp.Message != "" {
-				return models.PackageResolutionResponse{}, NewConnectionError(errResp.Message)
+				return nil, NewConnectionError(errResp.Message)
 			}
 
 		case http.StatusInternalServerError, http.StatusServiceUnavailable:
 			var errResp models.Error
 			if err := json.Unmarshal(respBodyBytes, &errResp); err != nil {
-				return models.PackageResolutionResponse{}, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
+				return nil, NewCentralClientError(fmt.Sprintf("%s. reason: unexpected error", ErrPackageResolution))
 			}
 
 			if errResp.Message != "" {
-				return models.PackageResolutionResponse{}, NewConnectionError(fmt.Sprintf("%s. reason: %s", ErrPackageResolution, errResp.Message))
+				return nil, NewConnectionError(fmt.Sprintf("%s. reason: %s", ErrPackageResolution, errResp.Message))
 			}
 		}
 	}
 
-	return models.PackageResolutionResponse{}, NewConnectionError(ErrPackageResolution)
+	return nil, NewConnectionError(ErrPackageResolution)
 }
 
 func (c *centralAPIClientImpl) GetConnectors(params map[string]string, supportedPlatform, ballerinaVersion string) (any, error) {
 	connectors, err := c.getConnectorsInternal(params, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(ErrCannotGetConnector)
+		return nil, wrapCentralClientError(err, ErrCannotGetConnector)
 	}
 
 	return connectors, nil
@@ -535,10 +515,7 @@ func (c *centralAPIClientImpl) getConnectorsInternal(params map[string]string, s
 func (c *centralAPIClientImpl) GetConnector(id, supportedPlatform, ballerinaVersion string) (map[string]any, error) {
 	connector, err := c.getConnectorInternal(id, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(fmt.Sprintf("%sid: %s", ErrCannotGetConnector, id))
+		return nil, wrapCentralClientError(err, fmt.Sprintf("%sid: %s", ErrCannotGetConnector, id))
 	}
 
 	return connector, nil
@@ -585,10 +562,7 @@ func (c *centralAPIClientImpl) getConnectorInternal(id, supportedPlatform, balle
 func (c *centralAPIClientImpl) GetConnectorByInfo(connector models.ConnectorInfo, supportedPlatform, ballerinaVersion string) (map[string]any, error) {
 	result, err := c.getConnectorByInfoInternal(connector, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(fmt.Sprintf("%s'%s'", ErrCannotGetConnector, connector.PackageName))
+		return nil, wrapCentralClientError(err, fmt.Sprintf("%s'%s'", ErrCannotGetConnector, connector.PackageName))
 	}
 
 	return result, nil
@@ -636,10 +610,7 @@ func (c *centralAPIClientImpl) getConnectorByInfoInternal(connector models.Conne
 func (c *centralAPIClientImpl) GetTriggers(params map[string]string, supportedPlatform, ballerinaVersion string) (any, error) {
 	triggers, err := c.getTriggersInternal(params, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(ErrCannotGetTriggers)
+		return nil, wrapCentralClientError(err, ErrCannotGetTriggers)
 	}
 
 	return triggers, nil
@@ -695,10 +666,7 @@ func (c *centralAPIClientImpl) getTriggersInternal(params map[string]string, sup
 func (c *centralAPIClientImpl) GetTrigger(id, supportedPlatform, ballerinaVersion string) (map[string]any, error) {
 	trigger, err := c.getTriggerInternal(id, supportedPlatform, ballerinaVersion)
 	if err != nil {
-		if _, ok := err.(*CentralClientError); ok {
-			return nil, err
-		}
-		return nil, NewCentralClientError(fmt.Sprintf("%s id: %s", ErrCannotGetTrigger, id))
+		return nil, wrapCentralClientError(err, fmt.Sprintf("%s id: %s", ErrCannotGetTrigger, id))
 	}
 
 	return trigger, nil
@@ -749,6 +717,25 @@ func (c *centralAPIClientImpl) SetAccessToken(token string) {
 	c.accessToken = token
 }
 
+// wrapCentralClientError wraps an error with CentralClientError unless it's already a CentralClientError.
+func wrapCentralClientError(err error, message string) error {
+	if _, ok := err.(*CentralClientError); ok {
+		return err
+	}
+	return NewCentralClientError(message)
+}
+
+// wrapCentralOrConnectionError wraps an error with CentralClientError unless it's already
+// a CentralClientError or ConnectionError.
+func wrapCentralOrConnectionError(err error, message string) error {
+	switch err.(type) {
+	case *CentralClientError, *ConnectionError:
+		return err
+	default:
+		return NewCentralClientError(message)
+	}
+}
+
 func (c *centralAPIClientImpl) pullPackageInternal(org, name, version string, fsys fs.FS, packagePathInBalaCache, supportedPlatform, ballerinaVersion string, clientContext ClientContext) error {
 	resourceURL := fmt.Sprintf("%s%s%s%s", PackagePathPrefix, org, Separator, name)
 
@@ -791,10 +778,6 @@ func (c *centralAPIClientImpl) pullPackageInternal(org, name, version string, fs
 		deprecationFlag := resp.Header.Get("Is-Deprecated")
 		deprecationMsg := resp.Header.Get("Deprecate-Message")
 		digest := resp.Header.Get(Digest)
-
-		if digest == "" {
-			digest = ""
-		}
 
 		isDeprecated := deprecationFlag == "true"
 		deprecationMessage := deprecationMsg
@@ -903,41 +886,6 @@ func buildHTTPClient(baseURL, proxyURL, proxyUsername, proxyPassword string, cal
 
 	return client
 }
-
-// func (c *centralAPIClientImpl) getHTTPClient() *http.Client {
-// 	if c.httpClient != nil {
-// 		return c.httpClient
-// 	}
-//
-// 	transport := &http.Transport{
-// 		TLSClientConfig: &tls.Config{},
-// 	}
-//
-// 	if c.proxyURL != "" {
-// 		parsedProxyURL, err := url.Parse(c.proxyURL)
-// 		if err == nil {
-// 			if c.proxyUsername != "" && c.proxyPassword != "" {
-// 				parsedProxyURL.User = url.UserPassword(c.proxyUsername, c.proxyPassword)
-// 			}
-// 			transport.Proxy = http.ProxyURL(parsedProxyURL)
-// 		}
-// 	}
-//
-// 	client := &http.Client{
-// 		Transport: &customRetryTransport{
-// 			transport:  transport,
-// 			maxRetries: c.maxRetries,
-// 			baseURL:    c.baseURL,
-// 		},
-// 		Timeout: c.callTimeout,
-// 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-// 			return http.ErrUseLastResponse
-// 		},
-// 	}
-//
-// 	c.httpClient = client
-// 	return client
-// }
 
 type customRetryTransport struct {
 	transport  http.RoundTripper

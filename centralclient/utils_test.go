@@ -288,7 +288,11 @@ func TestCheckHashInternal(t *testing.T) {
 				bfs.WriteFile(fsys, tt.filePath, tt.content, 0o644)
 			}
 
-			result := checkHashInternal(fsys, tt.filePath)
+			result, err := checkHashInternal(fsys, tt.filePath)
+			if err != nil && tt.name != "non-existent file" {
+				t.Errorf("unexpected error: %v", err)
+			}
+
 			if result != tt.expected {
 				t.Errorf("expected %s, got %s", tt.expected, result)
 			}

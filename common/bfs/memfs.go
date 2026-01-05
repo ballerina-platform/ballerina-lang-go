@@ -60,10 +60,17 @@ func NewMemFS() *memFS {
 
 // mkdirAllInternal creates all directories in the path if they don't exist.
 func (mfs *memFS) mkdirAllInternal(dirPath string, perm fs.FileMode) {
-	if dirPath == "" || dirPath == "." {
-		return
+	if dirPath == "" {
+		panic("dirPath cannot be empty")
 	}
 
+	if perm.Perm() != 0o755 {
+		panic("unsupported FileMode: only 0o755 is supported")
+	}
+
+	if dirPath == "." {
+		return
+	}
 	parts := strings.Split(dirPath, "/")
 	current := ""
 	for _, part := range parts {

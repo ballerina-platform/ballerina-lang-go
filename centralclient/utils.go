@@ -228,7 +228,12 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 		return err
 	}
 
-	actualDigest := fmt.Sprintf("%s%s", SHA256, checkHashInternal(fsys, balaFilePath))
+	hash, err := checkHashInternal(fsys, balaFilePath)
+	if err != nil {
+		return err
+	}
+
+	actualDigest := fmt.Sprintf("%s%s", SHA256, hash)
 	if trueDigest != "" && trueDigest != actualDigest {
 		if clientContext.OnWarning != nil {
 			warning := fmt.Sprintf(`*************************************************************
@@ -334,19 +339,19 @@ func createMetaFile(fsys fs.FS, metaFilePath string, errMsg string, clientContex
 	return nil
 }
 
-func checkHashInternal(fsys fs.FS, filePath string) string {
+func checkHashInternal(fsys fs.FS, filePath string) (string, error) {
 	file, err := fsys.Open(filePath)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	defer file.Close()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
-		return ""
+		return "", err
 	}
 
-	return hex.EncodeToString(hasher.Sum(nil))
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
 func getAsList(arrayString string) ([]string, error) {

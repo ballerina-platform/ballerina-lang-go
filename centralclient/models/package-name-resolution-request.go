@@ -36,9 +36,6 @@ type packageNameResolutionRequestPossiblePackage struct {
 }
 
 func (r *PackageNameResolutionRequest) AddModule(orgName, moduleName string, possiblePackages []packageNameResolutionRequestPossiblePackage, mode PackageResolutionMode) {
-	if r.Modules == nil {
-		r.Modules = []packageNameResolutionRequestModule{}
-	}
 	r.Modules = append(r.Modules, packageNameResolutionRequestModule{
 		Organization:     orgName,
 		ModuleName:       moduleName,
@@ -48,9 +45,6 @@ func (r *PackageNameResolutionRequest) AddModule(orgName, moduleName string, pos
 }
 
 func (r *PackageNameResolutionRequest) AddModuleSimple(orgName, moduleName string) {
-	if r.Modules == nil {
-		r.Modules = []packageNameResolutionRequestModule{}
-	}
 	r.Modules = append(r.Modules, packageNameResolutionRequestModule{
 		Organization: orgName,
 		ModuleName:   moduleName,
