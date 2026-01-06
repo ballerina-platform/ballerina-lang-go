@@ -1,0 +1,11 @@
+-- inputs --
+GetConnectors
+winery
+any
+slp5
+
+-- expected_output --
+true
+
+-- expected_error --
+

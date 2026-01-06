@@ -1,0 +1,11 @@
+-- inputs --
+GetTriggers
+unauthorized
+any
+slp5
+
+-- expected_output --
+
+-- expected_error --
+unauthorized access token. check access token set in 'Settings.toml' file. reason: unauthorized access
+
