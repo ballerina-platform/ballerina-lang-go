@@ -690,7 +690,7 @@ func SingleShape(t SemType) common.Optional[Value] {
 		}
 	} else if IsSubtypeSimple(t, STRING) {
 		sd := getComplexSubtypeData(t.(ComplexSemType), BT_STRING)
-		value := stringSubtypeSingleValue(sd)
+		value := StringSubtypeSingleValue(sd)
 		if value.IsEmpty() {
 			return common.OptionalEmpty[Value]()
 		} else {

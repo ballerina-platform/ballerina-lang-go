@@ -48,9 +48,9 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg
 		}
 	} else {
 		bddNode := b.(BddNode)
-		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), common.ToPointer(And(bddNode.Atom(), *pos)), neg),
-			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, common.ToPointer(And(bddNode.Atom(), *neg))),
-				listProjBddInnerVal(cx, k, bddNode.Right(), pos, common.ToPointer(And(bddNode.Atom(), *neg)))))
+		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), common.ToPointer(And(bddNode.Atom(), pos)), neg),
+			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, common.ToPointer(And(bddNode.Atom(), neg))),
+				listProjBddInnerVal(cx, k, bddNode.Right(), pos, common.ToPointer(And(bddNode.Atom(), neg)))))
 	}
 }
 

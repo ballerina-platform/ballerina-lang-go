@@ -93,7 +93,6 @@ func init() {
 
 func BasicTypeCodeFrom(code int) BasicTypeCode {
 	// migrated from BasicTypeCode.java:72
-	// todo: Add validation
 	return BasicTypeCode{Code: code}
 }
 

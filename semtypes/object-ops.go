@@ -17,10 +17,24 @@
 package semtypes
 
 type ObjectOps struct {
-	CommonOps
 }
 
 var _ BasicTypeOps = &ObjectOps{}
+
+func (this *ObjectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from ObjectOps.java:51:5
+	return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t2)
+}
+
+func (this *ObjectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from ObjectOps.java:51:5
+	return bddSubtypeIntersect(MAPPING_SUBTYPE_OBJECT, t2)
+}
+
+func (this *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from ObjectOps.java:51:5
+	return bddSubtypeUnion(MAPPING_SUBTYPE_OBJECT, t2)
+}
 
 func objectSubTypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ObjectOps.java:43:5

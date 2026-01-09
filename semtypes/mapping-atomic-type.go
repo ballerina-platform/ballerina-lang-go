@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "slices"
+
 type MappingAtomicType struct {
 	Names []string
 	Types []CellSemType
@@ -23,6 +25,16 @@ type MappingAtomicType struct {
 }
 
 var _ AtomicType = &MappingAtomicType{}
+
+func (this *MappingAtomicType) equals(other AtomicType) bool {
+	if other, ok := other.(*MappingAtomicType); ok {
+		if other.Rest != this.Rest {
+			return false
+		}
+		return slices.Equal(other.Names, this.Names) && slices.Equal(other.Types, this.Types)
+	}
+	return false
+}
 
 func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType) MappingAtomicType {
 	// migrated from MappingAtomicType.java:52:5

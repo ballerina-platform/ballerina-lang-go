@@ -17,7 +17,6 @@
 package semtypes
 
 type FunctionOps struct {
-	CommonOps
 }
 
 var _ BasicTypeOps = &FunctionOps{}
@@ -27,6 +26,26 @@ func (this *FunctionOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
 		return bddEvery(cx, b, nil, nil, functionFormulaIsEmpty)
 	}, t.(Bdd))
+}
+
+func (this *FunctionOps) Complement(t SubtypeData) SubtypeData {
+	// migrated from FunctionOps.java:49:5
+	return BddComplement(t.(Bdd))
+}
+
+func (this *FunctionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from FunctionOps.java:51:5
+	return BddDiff(t1.(Bdd), t2.(Bdd))
+}
+
+func (this *FunctionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from FunctionOps.java:53:5
+	return BddIntersect(t1.(Bdd), t2.(Bdd))
+}
+
+func (this *FunctionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from FunctionOps.java:55:5
+	return BddUnion(t1.(Bdd), t2.(Bdd))
 }
 
 func functionFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {

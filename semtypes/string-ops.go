@@ -28,8 +28,8 @@ func NewStringOps() StringOps {
 
 func (this *StringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from StringOps.java:45:5
-	sd1 := d1.(*StringSubtype)
-	sd2 := d2.(*StringSubtype)
+	sd1 := d1.(StringSubtype)
+	sd2 := d2.(StringSubtype)
 	var chars []EnumerableType[string]
 	var nonChars []EnumerableType[string]
 	charsAllowed := EnumerableSubtypeUnion(sd1.GetChar(), sd2.GetChar(), &chars)
@@ -53,8 +53,8 @@ func (this *StringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 			return CreateNothing()
 		}
 	}
-	sd1 := d1.(*StringSubtype)
-	sd2 := d2.(*StringSubtype)
+	sd1 := d1.(StringSubtype)
+	sd2 := d2.(StringSubtype)
 	var chars []EnumerableType[string]
 	var nonChars []EnumerableType[string]
 	charsAllowed := EnumerableSubtypeIntersect(sd1.GetChar(), sd2.GetChar(), &chars)
@@ -69,7 +69,7 @@ func (this *StringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 
 func (this *StringOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from StringOps.java:91:5
-	st := d.(*StringSubtype)
+	st := d.(StringSubtype)
 	if len(st.GetChar().Values()) == 0 && len(st.GetNonChar().Values()) == 0 {
 		if st.GetChar().Allowed() && st.GetNonChar().Allowed() {
 			return CreateAll()

@@ -39,8 +39,8 @@ func (this *ListDefinition) GetSemType(env Env) SemType {
 	s := this.semType
 	if s == nil {
 		rec := env.recListAtom()
-		this.rec = rec
-		return this.createSemType(env, rec)
+		this.rec = &rec
+		return this.createSemType(env, &rec)
 	} else {
 		return s
 	}
@@ -105,9 +105,9 @@ func (this *ListDefinition) define(env Env, initial []CellSemType, fixedLength i
 	rec := this.rec
 	if rec != nil {
 		atom = rec
-		env.setRecListAtomType(rec, atomicType)
+		env.setRecListAtomType(*rec, &atomicType)
 	} else {
-		atom = env.listAtom(atomicType)
+		atom = common.ToPointer(env.listAtom(&atomicType))
 	}
 	return this.createSemType(env, atom)
 }

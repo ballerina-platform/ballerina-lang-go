@@ -94,7 +94,7 @@ func CreateStringSubtype(chara CharStringSubtype, nonChar NonCharStringSubtype) 
 	return StringSubtypeFrom(chara, nonChar)
 }
 
-func stringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
+func StringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
 	if _, ok := d.(AllOrNothingSubtype); ok {
 		return common.OptionalEmpty[string]()
 	}

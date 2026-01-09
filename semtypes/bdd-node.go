@@ -33,20 +33,15 @@ func BddNodeCreate(atom Atom, left Bdd, middle Bdd, right Bdd) BddNode {
 }
 
 func IsSimpleNode(left Bdd, middle Bdd, right Bdd) bool {
+	var leftIsAll, middleIsNothing, rightIsNothing bool
 	if leftNode, ok := left.(BddAllOrNothing); ok {
-		if !leftNode.IsAll() {
-			return false
-		}
+		leftIsAll = leftNode.IsAll()
 	}
 	if middleNode, ok := middle.(BddAllOrNothing); ok {
-		if !middleNode.IsNothing() {
-			return false
-		}
+		middleIsNothing = middleNode.IsNothing()
 	}
 	if rightNode, ok := right.(BddAllOrNothing); ok {
-		if !rightNode.IsNothing() {
-			return false
-		}
+		rightIsNothing = rightNode.IsNothing()
 	}
-	return true
+	return leftIsAll && middleIsNothing && rightIsNothing
 }

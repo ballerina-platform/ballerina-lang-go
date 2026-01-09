@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "ballerina-lang-go/common"
+
 type TypeAtom struct {
 	index      int
 	AtomicType AtomicType
@@ -25,9 +27,7 @@ var _ Atom = &TypeAtom{}
 
 func CreateTypeAtom(index int, atomicType AtomicType) TypeAtom {
 	// migrated from TypeAtom.java:31:5
-	if index >= 0 {
-		panic("assertion failed")
-	}
+	common.Assert(index >= 0)
 
 	return TypeAtom{
 		index:      index,

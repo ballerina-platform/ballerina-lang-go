@@ -16,12 +16,25 @@
 
 package semtypes
 
+import "slices"
+
 type ListAtomicType struct {
 	Members FixedLengthArray
 	Rest    CellSemType
 }
 
 var _ AtomicType = &ListAtomicType{}
+
+func (this *ListAtomicType) equals(other AtomicType) bool {
+	if other, ok := other.(*ListAtomicType); ok {
+		if other.Rest != this.Rest {
+			return false
+		}
+		return other.Members.FixedLength == this.Members.FixedLength &&
+			slices.Equal(other.Members.Initial, this.Members.Initial)
+	}
+	return false
+}
 
 func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest CellSemType) ListAtomicType {
 	this := ListAtomicType{}
@@ -32,7 +45,6 @@ func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest CellSemType
 
 func ListAtomicTypeFrom(members FixedLengthArray, rest CellSemType) ListAtomicType {
 	// migrated from ListAtomicType.java:34:5
-	// FIXME: failed to find constructor for ListAtomicType
 
 	return NewListAtomicTypeFromMembersRest(members, rest)
 }

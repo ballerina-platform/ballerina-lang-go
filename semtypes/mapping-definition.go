@@ -16,7 +16,10 @@
 
 package semtypes
 
-import "sort"
+import (
+	"ballerina-lang-go/common"
+	"sort"
+)
 
 type MappingDefinition struct {
 	rec     *RecAtom
@@ -44,8 +47,8 @@ func (this *MappingDefinition) GetSemType(env Env) SemType {
 	s := this.semType
 	if s == nil {
 		rec := env.recMappingAtom()
-		this.rec = rec
-		return this.createSemType(env, rec)
+		this.rec = &rec
+		return this.createSemType(env, &rec)
 	} else {
 		return s
 	}
@@ -64,9 +67,9 @@ func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemT
 	rec := this.rec
 	if rec != nil {
 		atom = rec
-		env.setRecMappingAtomType(rec, atomicType)
+		env.setRecMappingAtomType(*rec, &atomicType)
 	} else {
-		atom = env.mappingAtom(atomicType)
+		atom = common.ToPointer(env.mappingAtom(&atomicType))
 	}
 	return this.createSemType(env, atom)
 }

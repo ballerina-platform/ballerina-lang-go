@@ -28,9 +28,9 @@ func bddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate b
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEvery(cx, bn.Left(), common.ToPointer(And(bn.Atom(), *pos)), neg, predicate) &&
+		return bddEvery(cx, bn.Left(), common.ToPointer(And(bn.Atom(), pos)), neg, predicate) &&
 			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEvery(cx, bn.Right(), pos, common.ToPointer(And(bn.Atom(), *neg)), predicate)
+			bddEvery(cx, bn.Right(), pos, common.ToPointer(And(bn.Atom(), neg)), predicate)
 	}
 }
 
@@ -49,7 +49,7 @@ func andIfPositive(atom Atom, next *Conjunction) *Conjunction {
 	if recAtom, ok := atom.(*RecAtom); ok && recAtom.Index() < 0 {
 		return next
 	}
-	tmp := And(atom, *next)
+	tmp := And(atom, next)
 	return &tmp
 }
 

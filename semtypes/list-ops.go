@@ -23,7 +23,6 @@ import (
 )
 
 type ListOps struct {
-	CommonOps
 }
 
 var _ BasicTypeOps = &ListOps{}

@@ -18,4 +18,5 @@ package semtypes
 
 type AtomicType interface {
 	AtomKind() Kind
+	equals(other AtomicType) bool
 }

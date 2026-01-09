@@ -16,12 +16,15 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+	"sync"
+)
 
 // InitializedTypeAtom is a generic record holding an atomic type and its index
 // migrated from PredefinedTypeEnv.java:630
 type InitializedTypeAtom[E AtomicType] struct {
-	atomicType *E
+	atomicType E
 	index      int
 }
 
@@ -33,8 +36,8 @@ type PredefinedTypeEnv struct {
 	initializedCellAtoms       []InitializedTypeAtom[*CellAtomicType]
 	initializedListAtoms       []InitializedTypeAtom[*ListAtomicType]
 	initializedMappingAtoms    []InitializedTypeAtom[*MappingAtomicType]
-	initializedRecListAtoms    []ListAtomicType
-	initializedRecMappingAtoms []MappingAtomicType
+	initializedRecListAtoms    []*ListAtomicType
+	initializedRecMappingAtoms []*MappingAtomicType
 	nextAtomIndex              int
 
 	// CellAtomicType fields - migrated from PredefinedTypeEnv.java:85-119
@@ -95,20 +98,21 @@ type PredefinedTypeEnv struct {
 
 // Package-level singleton instance
 var predefinedTypeEnvInstance *PredefinedTypeEnv
+var predefinedTypeEnvInitializer sync.Once
 
 // PredefinedTypeEnvGetInstance returns the singleton instance
 // migrated from PredefinedTypeEnv.java:72-74
 func PredefinedTypeEnvGetInstance() *PredefinedTypeEnv {
-	if predefinedTypeEnvInstance == nil {
+	predefinedTypeEnvInitializer.Do(func() {
 		predefinedTypeEnvInstance = &PredefinedTypeEnv{
 			initializedCellAtoms:       make([]InitializedTypeAtom[*CellAtomicType], 0),
 			initializedListAtoms:       make([]InitializedTypeAtom[*ListAtomicType], 0),
 			initializedMappingAtoms:    make([]InitializedTypeAtom[*MappingAtomicType], 0),
-			initializedRecListAtoms:    make([]ListAtomicType, 0),
-			initializedRecMappingAtoms: make([]MappingAtomicType, 0),
+			initializedRecListAtoms:    make([]*ListAtomicType, 0),
+			initializedRecMappingAtoms: make([]*MappingAtomicType, 0),
 			nextAtomIndex:              0,
 		}
-	}
+	})
 	return predefinedTypeEnvInstance
 }
 
@@ -135,7 +139,7 @@ func (this *PredefinedTypeEnv) addInitializedMapAtom(atom *MappingAtomicType) {
 // addInitializedAtom is a generic function to add an atom to the atoms list with an index
 // migrated from PredefinedTypeEnv.java:161-163
 func addInitializedAtom[E AtomicType](env *PredefinedTypeEnv, atoms *[]InitializedTypeAtom[E], atom E) {
-	*atoms = append(*atoms, InitializedTypeAtom[E]{atomicType: &atom, index: env.nextAtomIndex})
+	*atoms = append(*atoms, InitializedTypeAtom[E]{atomicType: atom, index: env.nextAtomIndex})
 	env.nextAtomIndex++
 }
 
@@ -162,7 +166,7 @@ func (this *PredefinedTypeEnv) mappingAtomIndex(atom *MappingAtomicType) int {
 // migration note: this does pointer equality not value equality
 func atomIndex[E AtomicType](initializedAtoms []InitializedTypeAtom[E], atom E) int {
 	for _, initializedAtom := range initializedAtoms {
-		if initializedAtom.atomicType == &atom {
+		if initializedAtom.atomicType.equals(atom) {
 			return initializedAtom.index
 		}
 	}
@@ -582,7 +586,7 @@ func (this *PredefinedTypeEnv) listAtomicRO() *ListAtomicType {
 	if this._listAtomicRO == nil {
 		val := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
 		this._listAtomicRO = &val
-		this.initializedRecListAtoms = append(this.initializedRecListAtoms, val)
+		this.initializedRecListAtoms = append(this.initializedRecListAtoms, &val)
 	}
 	return this._listAtomicRO
 }
@@ -593,7 +597,7 @@ func (this *PredefinedTypeEnv) mappingAtomicRO() *MappingAtomicType {
 	if this._mappingAtomicRO == nil {
 		val := MappingAtomicTypeFrom([]string{}, []CellSemType{}, CELL_SEMTYPE_INNER_RO)
 		this._mappingAtomicRO = &val
-		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, val)
+		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
 	}
 	return this._mappingAtomicRO
 }
@@ -607,7 +611,7 @@ func (this *PredefinedTypeEnv) getMappingAtomicObjectRO() *MappingAtomicType {
 			[]CellSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER_RO)
 		this._mappingAtomicObjectRO = &val
-		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, val)
+		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
 	}
 	return this._mappingAtomicObjectRO
 }

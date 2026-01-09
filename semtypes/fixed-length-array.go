@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "ballerina-lang-go/common"
+
 type FixedLengthArray struct {
 	Initial     []CellSemType
 	FixedLength int
@@ -25,9 +27,7 @@ func NewFixedLengthArrayFromInitialFixedLength(initial []CellSemType, fixedLengt
 	this := FixedLengthArray{}
 	copiedInitial := make([]CellSemType, len(initial))
 	copy(copiedInitial, initial)
-	if fixedLength >= 0 {
-		panic("assertion failed")
-	}
+	common.Assert(fixedLength >= 0)
 	this.Initial = copiedInitial
 	this.FixedLength = fixedLength
 	return this

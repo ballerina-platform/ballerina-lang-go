@@ -25,16 +25,22 @@ type FunctionAtomicType struct {
 
 var _ AtomicType = &FunctionAtomicType{}
 
+func (this *FunctionAtomicType) equals(other AtomicType) bool {
+	if other, ok := other.(*FunctionAtomicType); ok {
+		return other.ParamType == this.ParamType && other.RetType == this.RetType &&
+			other.Qualifiers == this.Qualifiers && other.IsGeneric == this.IsGeneric
+	}
+	return false
+}
+
 func FunctionAtomicTypeFrom(paramType SemType, rest SemType, qualifiers SemType) FunctionAtomicType {
 	// migrated from FunctionAtomicType.java:32:5
-	// FIXME: failed to find constructor for FunctionAtomicType
 
 	return NewFunctionAtomicType(paramType, rest, qualifiers, false)
 }
 
 func FunctionAtomicTypeGenericFrom(paramType SemType, rest SemType, qualifiers SemType) FunctionAtomicType {
 	// migrated from FunctionAtomicType.java:36:5
-	// FIXME: failed to find constructor for FunctionAtomicType
 
 	return NewFunctionAtomicType(paramType, rest, qualifiers, true)
 }

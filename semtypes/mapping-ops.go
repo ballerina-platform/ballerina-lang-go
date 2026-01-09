@@ -19,7 +19,6 @@ package semtypes
 import "ballerina-lang-go/common"
 
 type MappingOps struct {
-	CommonOps
 }
 
 var _ BasicTypeOps = &MappingOps{}

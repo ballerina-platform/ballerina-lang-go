@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "ballerina-lang-go/common"
+
 func CellContaining(env Env, ty SemType) CellSemType {
 	// migrated from CellSubtype.java:42:5
 	return CellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_LIMITED)
@@ -28,11 +30,9 @@ func RoCellContaining(env Env, ty SemType) CellSemType {
 
 func CellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMutability) CellSemType {
 	// migrated from CellSubtype.java:50:5
-	if IsNever(ty) || (!IsSubtypeSimple(ty, CELL)) {
-		panic("assertion failed")
-	}
+	common.Assert(IsNever(ty) || !IsSubtypeSimple(ty, CELL))
 	atomicCell := CellAtomicTypeFrom(ty, mut)
-	atom := env.cellAtom(atomicCell)
+	atom := env.cellAtom(&atomicCell)
 	bdd := BddAtom(&atom)
 	complexSemType := basicSubtype(BT_CELL, bdd)
 	return CellSemTypeFrom(complexSemType.SubtypeDataList())

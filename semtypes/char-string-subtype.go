@@ -21,7 +21,6 @@ type CharStringSubtype struct {
 	values  []EnumerableType[string]
 }
 
-// FIXME: when fixing this we need to think about Values
 var _ EnumerableSubtype[string] = &CharStringSubtype{}
 
 func CharStringSubtypeFrom(allowed bool, values []EnumerableType[string]) CharStringSubtype {
