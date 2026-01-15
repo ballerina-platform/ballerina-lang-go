@@ -1,0 +1,94 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BInvokableSymbol struct {
+    BVarSymbol
+    Params []BVarSymbol
+    RestParam BVarSymbol
+    RetType BType
+    ParamDefaultValTypes map[string]BType
+    ReceiverSymbol BVarSymbol
+    BodyExist bool
+    annotationAttachmentsOnExternal []BAnnotationAttachmentSymbol
+    EnclForkName string
+    Source string
+    StrandName string
+    SchedulerPolicy SchedulerPolicy
+    DependentGlobalVars Set[BVarSymbol]
+}
+
+var _ InvokableSymbol = &BInvokableSymbol{}
+func NewBInvokableSymbolFromIntIntNamePackageIDBTypeBSymbolLocationSymbolOrigin(tag int, flags int, name Name, pkgID PackageID, type BType, owner BSymbol, pos Location, origin SymbolOrigin) BInvokableSymbol {
+this := BInvokableSymbol{};
+this.schedulerPolicy = SchedulerPolicy_PARENT
+this.strandName = nil
+// Default field initializations
+
+this(tag, flags, name, name, pkgID, type, owner, pos, origin)
+return this
+}
+
+func NewBInvokableSymbolFromIntIntNameNamePackageIDBTypeBSymbolLocationSymbolOrigin(tag int, flags int, name Name, originalName Name, pkgID PackageID, type BType, owner BSymbol, pos Location, origin SymbolOrigin) BInvokableSymbol {
+this := BInvokableSymbol{};
+this.schedulerPolicy = SchedulerPolicy_PARENT
+this.strandName = nil
+// Default field initializations
+
+super(flags, name, originalName, pkgID, type, owner, pos, origin)
+this.tag = tag
+this.params = make([]interface{}, 0)
+this.annotationAttachments = make([]interface{}, 0)
+this.dependentGlobalVars = make(map[interface{}]bool)
+this.paramDefaultValTypes = make(map[interface{}]interface{})
+this.kind = SymbolKind_FUNCTION
+return this
+}
+
+func (this *BInvokableSymbol) GetParameters() []BVarSymbol {
+// migrated from BInvokableSymbol.java:92:5
+return params
+}
+
+func (this *BInvokableSymbol) GetType() BInvokableType {
+// migrated from BInvokableSymbol.java:97:5
+if type.(BInvokableType) {
+return bInvokableType
+}
+throw new BLangCompilerException("Invokable symbol with non invokable type : " + type);
+}
+
+func (this *BInvokableSymbol) GetReturnType() BType {
+// migrated from BInvokableSymbol.java:107:5
+return retType
+}
+
+func (this *BInvokableSymbol) SetAnnotationAttachments(annotationAttachments *[]BAnnotationAttachmentSymbol) {
+// migrated from BInvokableSymbol.java:112:5
+this.annotationAttachments = annotationAttachments
+}
+
+func (this *BInvokableSymbol) SetAnnotationAttachmentsOnExternal(annotationAttachments *[]BAnnotationAttachmentSymbol) {
+// migrated from BInvokableSymbol.java:116:5
+this.annotationAttachmentsOnExternal = annotationAttachments
+}
+
+func (this *BInvokableSymbol) GetAnnotationAttachmentsOnExternal() []any {
+// migrated from BInvokableSymbol.java:120:5
+return this.annotationAttachmentsOnExternal
+}
+

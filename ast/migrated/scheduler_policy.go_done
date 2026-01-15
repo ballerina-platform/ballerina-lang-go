@@ -16,28 +16,10 @@
 
 package ast
 
-type BLangFunctionBodyData interface {
-    GetScope() Scope
-    SetScope(scope Scope)
-}
+type SchedulerPolicy uint
 
-type BLangFunctionBody interface {
-    BLangFunctionBodyData
-}
-
-type BLangFunctionBodyBase struct {
-    Scope Scope
-}
-
-type BLangFunctionBodyMethods struct {
-    Self BLangFunctionBody
-}
-
-func (b *BLangFunctionBodyBase) GetScope() Scope {
-return b.Scope
-}
-
-func (b *BLangFunctionBodyBase) SetScope(scope Scope) {
-b.Scope = scope
-}
+const (
+    SchedulerPolicy_PARENT SchedulerPolicy = iota
+    SchedulerPolicy_ANY
+)
 
