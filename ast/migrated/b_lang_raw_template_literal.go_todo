@@ -1,0 +1,91 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangRawTemplateLiteral struct {
+    BLangExpression
+    Strings []BLangLiteral
+    Insertions []BLangExpression
+}
+
+var _ RawTemplateLiteralNode = &BLangRawTemplateLiteral{}
+func NewBLangRawTemplateLiteral() BLangRawTemplateLiteral {
+this := BLangRawTemplateLiteral{};
+strings = make([]interface{}, 0)
+insertions = make([]interface{}, 0)
+return this
+}
+
+func (this *BLangRawTemplateLiteral) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangRawTemplateLiteral.java:47:5
+visitor.visit(this)
+}
+
+func (this *BLangRawTemplateLiteral) GetKind() NodeKind {
+// migrated from BLangRawTemplateLiteral.java:62:5
+return NodeKind_RAW_TEMPLATE_LITERAL
+}
+
+func (this *BLangRawTemplateLiteral) ToString() string {
+// migrated from BLangRawTemplateLiteral.java:67:5
+return ((("BLangRawTemplateLiteral: strings " + strings) + ", insertions ") + insertions)
+}
+
+func (this *BLangRawTemplateLiteral) GetInsertions() []any {
+// migrated from BLangRawTemplateLiteral.java:72:5
+return insertions
+}
+
+func (this *BLangRawTemplateLiteral) AddInsertion(expression ExpressionNode) {
+// migrated from BLangRawTemplateLiteral.java:77:5
+insertions = append(insertions, BLangExpression(expression))
+insertions
+}
+
+func (this *BLangRawTemplateLiteral) GetStrings() []any {
+// migrated from BLangRawTemplateLiteral.java:82:5
+return strings
+}
+
+func (this *BLangRawTemplateLiteral) AddString(stringLiteral ExpressionNode) {
+// migrated from BLangRawTemplateLiteral.java:87:5
+strings = append(strings, BLangLiteral(stringLiteral))
+strings
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangRawTemplateLiteral.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 49744520776. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangRawTemplateLiteral.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 49744524896. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

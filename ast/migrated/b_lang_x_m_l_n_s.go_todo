@@ -1,0 +1,161 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangLocalXMLNS struct {
+    BLangXMLNS
+}
+
+type BLangPackageXMLNS struct {
+    BLangXMLNS
+}
+
+type BLangXMLNS struct {
+    BLangNode
+    NamespaceURI BLangExpression
+    Prefix BLangIdentifier
+    CompUnit BLangIdentifier
+    Symbol BSymbol
+}
+
+var _ XMLNSDeclarationNode = &BLangXMLNS{}
+func NewBLangLocalXMLNS() BLangLocalXMLNS {
+this := BLangLocalXMLNS{};
+return this
+}
+
+func NewBLangPackageXMLNS() BLangPackageXMLNS {
+this := BLangPackageXMLNS{};
+return this
+}
+
+func NewBLangXMLNS() BLangXMLNS {
+this := BLangXMLNS{};
+return this
+}
+
+func (this *BLangLocalXMLNS) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangXMLNS.java:91:9
+visitor.visit(this)
+}
+
+func (this *BLangPackageXMLNS) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangXMLNS.java:112:9
+visitor.visit(this)
+}
+
+func (this *BLangXMLNS) GetNamespaceURI() ExpressionNode {
+// migrated from BLangXMLNS.java:41:5
+return namespaceURI
+}
+
+func (this *BLangXMLNS) GetPrefix() BLangIdentifier {
+// migrated from BLangXMLNS.java:46:5
+return prefix
+}
+
+func (this *BLangXMLNS) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangXMLNS.java:51:5
+visitor.visit(this)
+}
+
+func (this *BLangXMLNS) SetNamespaceURI(namespaceURI ExpressionNode) {
+// migrated from BLangXMLNS.java:66:5
+this.namespaceURI = BLangExpression(namespaceURI)
+}
+
+func (this *BLangXMLNS) SetPrefix(prefix IdentifierNode) {
+// migrated from BLangXMLNS.java:71:5
+this.prefix = BLangIdentifier(prefix)
+}
+
+func (this *BLangXMLNS) GetKind() NodeKind {
+// migrated from BLangXMLNS.java:76:5
+return NodeKind_XMLNS
+}
+
+func (this *BLangXMLNS) ToString() string {
+// migrated from BLangXMLNS.java:81:5
+return (((("BLangXMLNS: " + prefix) + "[") + namespaceURI) + "]")
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613569832. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613574528. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangLocalXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613601160. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//             analyzer.visit(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangLocalXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613604136. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//             return modifier.transform(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangPackageXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613608744. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//             analyzer.visit(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangPackageXMLNS.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 40613611784. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//             return modifier.transform(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

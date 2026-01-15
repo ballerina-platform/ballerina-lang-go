@@ -1,0 +1,148 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangImportPackage struct {
+    BLangNode
+    OrgName BLangIdentifier
+    PkgNameComps []BLangIdentifier
+    Alias BLangIdentifier
+    CompUnit BLangIdentifier
+    Version BLangIdentifier
+    Symbol BPackageSymbol
+}
+
+var _ ImportPackageNode = &BLangImportPackage{}
+func NewBLangImportPackage() BLangImportPackage {
+this := BLangImportPackage{};
+return this
+}
+
+func (this *BLangImportPackage) GetPackageName() []BLangIdentifier {
+// migrated from BLangImportPackage.java:43:5
+return pkgNameComps
+}
+
+func (this *BLangImportPackage) SetPackageName(nameParts *[]any) {
+// migrated from BLangImportPackage.java:48:5
+this.pkgNameComps = make([]interface{}, 0)
+this.pkgNameComps = append(this.pkgNameComps, BLangIdentifier(nameParts))
+this.pkgNameComps
+}
+
+func (this *BLangImportPackage) GetPackageVersion() IdentifierNode {
+// migrated from BLangImportPackage.java:54:5
+return version
+}
+
+func (this *BLangImportPackage) SetPackageVersion(version IdentifierNode) {
+// migrated from BLangImportPackage.java:59:5
+this.version = BLangIdentifier(version)
+}
+
+func (this *BLangImportPackage) GetAlias() BLangIdentifier {
+// migrated from BLangImportPackage.java:64:5
+return alias
+}
+
+func (this *BLangImportPackage) SetAlias(alias IdentifierNode) {
+// migrated from BLangImportPackage.java:69:5
+this.alias = BLangIdentifier(alias)
+}
+
+func (this *BLangImportPackage) GetOrgName() IdentifierNode {
+// migrated from BLangImportPackage.java:74:5
+return orgName
+}
+
+func (this *BLangImportPackage) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangImportPackage.java:79:5
+visitor.visit(this)
+}
+
+func (this *BLangImportPackage) GetKind() NodeKind {
+// migrated from BLangImportPackage.java:94:5
+return NodeKind_IMPORT
+}
+
+func (this *BLangImportPackage) Equals(o interface{}) bool {
+// migrated from BLangImportPackage.java:99:5
+if (this == o) {
+return true
+}
+if ((o == nil) || (this.getClass() != o.getClass())) {
+return false
+}
+that := BLangImportPackage(o)
+if pkgNameComps != null ? !pkgNameComps.equals(that.pkgNameComps) :
+                that.pkgNameComps != null {
+return false
+}
+if version != null ? !version.equals(that.version) : that.version != null {
+return false
+}
+return (alias == that.alias)
+}
+
+func (this *BLangImportPackage) HashCode() int {
+// migrated from BLangImportPackage.java:122:5
+result := pkgNameComps != null ? pkgNameComps.hashCode() : 0
+result = ((31 * result) + version != null ? version.hashCode() : 0)
+return result
+}
+
+func (this *BLangImportPackage) ToString() string {
+// migrated from BLangImportPackage.java:129:5
+return ("import " + this.GetQualifiedPackageName())
+}
+
+func (this *BLangImportPackage) GetQualifiedPackageName() string {
+// migrated from BLangImportPackage.java:134:5
+orgName := this.orgName.ToString()
+pkgName := String.join(".", pkgNameComps.stream()
+                .map(id -> id.value).toList())
+versionStr := (this.version.value != null) ? this.version.value : ""
+if (!versionStr.isEmpty()) {
+versionStr = (" version " + versionStr)
+}
+aliasStr := (this.alias.value != null && !this.alias.value.equals(pkgName)) ?
+                " as " + this.alias.value : ""
+return (((orgName.isEmpty() ? "" : orgName + '/' + pkgName) + versionStr) + aliasStr)
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangImportPackage.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 42727529312. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangImportPackage.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 42727529320. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

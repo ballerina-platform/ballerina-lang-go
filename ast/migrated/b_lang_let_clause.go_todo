@@ -1,0 +1,87 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangLetClause struct {
+    BLangNode
+    LetVarDeclarations []BLangLetVariable
+    Env SymbolEnv
+}
+
+var _ LetClauseNode = &BLangLetClause{}
+func NewBLangLetClause() BLangLetClause {
+this := BLangLetClause{};
+this.letVarDeclarations = make([]interface{}, 0)
+// Default field initializations
+
+return this
+}
+
+func (this *BLangLetClause) GetLetVarDeclarations() []BLangLetVariable {
+// migrated from BLangLetClause.java:46:5
+return letVarDeclarations
+}
+
+func (this *BLangLetClause) AddLetVarDeclarations(letVarDeclarations *[]BLangLetVariable) {
+// migrated from BLangLetClause.java:51:5
+this.letVarDeclarations = letVarDeclarations
+}
+
+func (this *BLangLetClause) GetKind() NodeKind {
+// migrated from BLangLetClause.java:60:5
+return NodeKind_LET_CLAUSE
+}
+
+func (this *BLangLetClause) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangLetClause.java:65:5
+visitor.visit(this)
+}
+
+func (this *BLangLetClause) ToString() string {
+// migrated from BLangLetClause.java:80:5
+// FIXME: failed to find constructor for StringJoiner
+
+declarations := NewStringJoiner()
+for _, letVarDeclaration := range letVarDeclarations {
+declarations = append(declarations, String.valueOf(letVarDeclaration))
+declarations
+}
+return ("let " + declarations.ToString())
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangLetClause.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 31692242944. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangLetClause.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 31692242952. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

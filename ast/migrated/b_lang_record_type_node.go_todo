@@ -1,0 +1,85 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangRecordTypeNode struct {
+    BLangStructureTypeNode
+    RestFieldType BLangType
+    Sealed bool
+    Analyzed bool
+}
+
+var _ RecordTypeNode = &BLangRecordTypeNode{}
+func NewBLangRecordTypeNode() BLangRecordTypeNode {
+this := BLangRecordTypeNode{};
+return this
+}
+
+func NewBLangRecordTypeNodeFromIntBLangType(includedFieldCount int, restField BLangType) BLangRecordTypeNode {
+this := BLangRecordTypeNode{};
+super(includedFieldCount)
+restFieldType = restField
+return this
+}
+
+func (this *BLangRecordTypeNode) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangRecordTypeNode.java:52:5
+visitor.visit(this)
+}
+
+func (this *BLangRecordTypeNode) GetKind() NodeKind {
+// migrated from BLangRecordTypeNode.java:67:5
+return NodeKind_RECORD_TYPE
+}
+
+func (this *BLangRecordTypeNode) ToString() string {
+// migrated from BLangRecordTypeNode.java:72:5
+return (("record { " + this.fields) + " }")
+}
+
+func (this *BLangRecordTypeNode) GetRestFieldType() BLangType {
+// migrated from BLangRecordTypeNode.java:77:5
+return restFieldType
+}
+
+func (this *BLangRecordTypeNode) IsSealed() bool {
+// migrated from BLangRecordTypeNode.java:82:5
+return sealed
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangRecordTypeNode.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 39141319304. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangRecordTypeNode.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 39141323424. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

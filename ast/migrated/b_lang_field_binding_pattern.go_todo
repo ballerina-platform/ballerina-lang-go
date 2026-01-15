@@ -1,0 +1,77 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangFieldBindingPattern struct {
+    BLangBindingPattern
+    FieldName BLangIdentifier
+    BindingPattern BLangBindingPattern
+}
+
+var _ FieldBindingPatternNode = &BLangFieldBindingPattern{}
+func NewBLangFieldBindingPattern() BLangFieldBindingPattern {
+this := BLangFieldBindingPattern{};
+return this
+}
+
+func (this *BLangFieldBindingPattern) GetFieldName() IdentifierNode {
+// migrated from BLangFieldBindingPattern.java:40:5
+return fieldName
+}
+
+func (this *BLangFieldBindingPattern) SetFieldName(fieldName IdentifierNode) {
+// migrated from BLangFieldBindingPattern.java:45:5
+this.fieldName = BLangIdentifier(fieldName)
+}
+
+func (this *BLangFieldBindingPattern) GetBindingPattern() BindingPatternNode {
+// migrated from BLangFieldBindingPattern.java:50:5
+return bindingPattern
+}
+
+func (this *BLangFieldBindingPattern) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangFieldBindingPattern.java:55:5
+visitor.visit(this)
+}
+
+func (this *BLangFieldBindingPattern) GetKind() NodeKind {
+// migrated from BLangFieldBindingPattern.java:70:5
+return NodeKind_FIELD_BINDING_PATTERN
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangFieldBindingPattern.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 52865070592. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangFieldBindingPattern.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 52865070600. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

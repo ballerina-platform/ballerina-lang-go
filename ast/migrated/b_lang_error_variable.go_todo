@@ -1,0 +1,151 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangErrorDetailEntry struct {
+    BLangNodeEntry
+    Key BLangIdentifier
+    ValueBindingPattern BLangVariable
+    KeySymbol BSymbol
+}
+
+type BLangErrorVariable struct {
+    BLangVariable
+    Message BLangSimpleVariable
+    Cause BLangVariable
+    RestDetail BLangSimpleVariable
+    Detail []BLangErrorDetailEntry
+    DetailExpr BLangInvocation
+    ReasonVarPrefixAvailable bool
+    ReasonMatchConst BLangLiteral
+    IsInMatchStmt bool
+}
+
+var _ ErrorDetailEntry = &BLangErrorDetailEntry{}
+var _ ErrorVariableNode = &BLangErrorVariable{}
+func NewBLangErrorDetailEntryFromBLangIdentifierBLangVariable(key BLangIdentifier, valueBindingPattern BLangVariable) BLangErrorDetailEntry {
+this := BLangErrorDetailEntry{};
+this.key = key
+this.valueBindingPattern = valueBindingPattern
+return this
+}
+
+func NewBLangErrorVariable() BLangErrorVariable {
+this := BLangErrorVariable{};
+return this
+}
+
+func (this *BLangErrorDetailEntry) GetKey() BLangIdentifier {
+// migrated from BLangErrorVariable.java:122:9
+return key
+}
+
+func (this *BLangErrorDetailEntry) GetValue() BLangVariable {
+// migrated from BLangErrorVariable.java:127:9
+return valueBindingPattern
+}
+
+func (this *BLangErrorDetailEntry) ToString() string {
+// migrated from BLangErrorVariable.java:132:9
+return ((key + ": ") + valueBindingPattern)
+}
+
+func (this *BLangErrorVariable) GetMessage() BLangSimpleVariable {
+// migrated from BLangErrorVariable.java:61:5
+return message
+}
+
+func (this *BLangErrorVariable) GetDetail() []BLangErrorDetailEntry {
+// migrated from BLangErrorVariable.java:66:5
+return detail
+}
+
+func (this *BLangErrorVariable) GetRestDetail() BLangSimpleVariable {
+// migrated from BLangErrorVariable.java:71:5
+return this.restDetail
+}
+
+func (this *BLangErrorVariable) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangErrorVariable.java:76:5
+visitor.visit(this)
+}
+
+func (this *BLangErrorVariable) GetKind() NodeKind {
+// migrated from BLangErrorVariable.java:91:5
+return NodeKind_ERROR_VARIABLE
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorVariable.constructor_declaration
+// Error: unhandled expression kind: class_literal
+// Java source:
+// Flag.class
+// S-expression:
+// (class_literal (type_identifier))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorVariable.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47764836864. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorVariable.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47764836872. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorVariable.method_declaration
+// Error: unhandled expression kind: lambda_expression
+// Java source:
+// d -> details.add(d.key.toString() + "=" + d.valueBindingPattern.toString())
+// S-expression:
+// (lambda_expression parameters: (identifier) body: (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (binary_expression left: (binary_expression left: (method_invocation object: (field_access object: (identifier) field: (identifier)) name: (identifier) arguments: (argument_list)) right: (string_literal (string_fragment))) right: (method_invocation object: (field_access object: (identifier) field: (identifier)) name: (identifier) arguments: (argument_list))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorDetailEntry.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47764858344. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//             analyzer.visit(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorDetailEntry.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47764861320. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//         public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//             return modifier.transform(this, props);
+//         }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

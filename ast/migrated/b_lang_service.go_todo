@@ -1,0 +1,158 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangService struct {
+    BLangNode
+    ServiceVariable BLangSimpleVariable
+    AttachedExprs []BLangExpression
+    ServiceClass BLangClassDefinition
+    AbsoluteResourcePath []IdentifierNode
+    ServiceNameLiteral BLangLiteral
+    Name BLangIdentifier
+    AnnAttachments []BLangAnnotationAttachment
+    MarkdownDocumentationAttachment BLangMarkdownDocumentation
+    FlagSet Set[Flag]
+    Symbol BSymbol
+    ListenerType BType
+    ResourceFunctions []BLangFunction
+    InferredServiceType BType
+}
+
+var _ ServiceNode = &BLangService{}
+func NewBLangService() BLangService {
+this := BLangService{};
+return this
+}
+
+func (this *BLangService) GetName() BLangIdentifier {
+// migrated from BLangService.java:68:5
+return name
+}
+
+func (this *BLangService) SetName(name IdentifierNode) {
+// migrated from BLangService.java:73:5
+this.name = BLangIdentifier(name)
+}
+
+func (this *BLangService) IsAnonymousService() bool {
+// migrated from BLangService.java:78:5
+return false
+}
+
+func (this *BLangService) GetResources() []BLangFunction {
+// migrated from BLangService.java:84:5
+return Collections.emptyList()
+}
+
+func (this *BLangService) GetAttachedExprs() []BLangExpression {
+// migrated from BLangService.java:90:5
+return this.attachedExprs
+}
+
+func (this *BLangService) GetServiceClass() BLangClassDefinition {
+// migrated from BLangService.java:95:5
+return this.serviceClass
+}
+
+func (this *BLangService) GetAbsolutePath() []IdentifierNode {
+// migrated from BLangService.java:100:5
+return this.absoluteResourcePath
+}
+
+func (this *BLangService) GetServiceNameLiteral() LiteralNode {
+// migrated from BLangService.java:105:5
+return serviceNameLiteral
+}
+
+func (this *BLangService) GetFlags() Set[Flag] {
+// migrated from BLangService.java:110:5
+return nil
+}
+
+func (this *BLangService) AddFlag(flag Flag) {
+// migrated from BLangService.java:115:5
+this.getFlags() = append(this.getFlags(), flag)
+this.getFlags()
+}
+
+func (this *BLangService) GetAnnotationAttachments() []BLangAnnotationAttachment {
+// migrated from BLangService.java:120:5
+return annAttachments
+}
+
+func (this *BLangService) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+// migrated from BLangService.java:125:5
+this.getAnnotationAttachments() = append(this.getAnnotationAttachments(), BLangAnnotationAttachment(annAttachment))
+this.getAnnotationAttachments()
+}
+
+func (this *BLangService) GetMarkdownDocumentationAttachment() BLangMarkdownDocumentation {
+// migrated from BLangService.java:130:5
+return markdownDocumentationAttachment
+}
+
+func (this *BLangService) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+// migrated from BLangService.java:135:5
+this.markdownDocumentationAttachment = BLangMarkdownDocumentation(documentationNode)
+}
+
+func (this *BLangService) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangService.java:140:5
+visitor.visit(this)
+}
+
+func (this *BLangService) GetKind() NodeKind {
+// migrated from BLangService.java:155:5
+return NodeKind_SERVICE
+}
+
+func (this *BLangService) ToString() string {
+// migrated from BLangService.java:160:5
+return ((((("BLangService: " + flagSet) + " ") + annAttachments) + " ") + this.GetName())
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangService.constructor_declaration
+// Error: unhandled expression kind: class_literal
+// Java source:
+// Flag.class
+// S-expression:
+// (class_literal (type_identifier))
+
+// FIXME: Failed to migrate
+// Location: class BLangService.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47425200008. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangService.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47425204128. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

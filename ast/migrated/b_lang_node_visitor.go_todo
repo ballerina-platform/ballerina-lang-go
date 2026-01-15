@@ -1,0 +1,1442 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangNodeVisitorData interface {
+}
+
+type BLangNodeVisitor interface {
+    BLangNodeVisitorData
+    Visit(pkgNode BLangPackage)
+    VisitWithBLangTestablePackage(testablePkgNode BLangTestablePackage)
+    VisitWithBLangCompilationUnit(compUnit BLangCompilationUnit)
+    VisitWithBLangImportPackage(importPkgNode BLangImportPackage)
+    VisitWithBLangXMLNS(xmlnsNode BLangXMLNS)
+    VisitWithBLangFunction(funcNode BLangFunction)
+    VisitWithBLangBlockFunctionBody(blockFuncBody BLangBlockFunctionBody)
+    VisitWithBLangExprFunctionBody(exprFuncBody BLangExprFunctionBody)
+    VisitWithBLangExternalFunctionBody(externFuncBody BLangExternalFunctionBody)
+    VisitWithBLangService(serviceNode BLangService)
+    VisitWithBLangTypeDefinition(typeDefinition BLangTypeDefinition)
+    VisitWithBLangConstant(constant BLangConstant)
+    VisitWithBLangSimpleVariable(varNode BLangSimpleVariable)
+    VisitWithBLangIdentifier(identifierNode BLangIdentifier)
+    VisitWithBLangAnnotation(annotationNode BLangAnnotation)
+    VisitWithBLangAnnotationAttachment(annAttachmentNode BLangAnnotationAttachment)
+    VisitWithBLangTableKeySpecifier(tableKeySpecifierNode BLangTableKeySpecifier)
+    VisitWithBLangTableKeyTypeConstraint(tableKeyTypeConstraint BLangTableKeyTypeConstraint)
+    VisitWithBLangBlockStmt(blockNode BLangBlockStmt)
+    VisitWithBLangLockStmt(lockStmtNode BLangLockStmt)
+    VisitWithBLangUnLockStmt(unLockNode BLangUnLockStmt)
+    VisitWithBLangSimpleVariableDef(varDefNode BLangSimpleVariableDef)
+    VisitWithBLangAssignment(assignNode BLangAssignment)
+    VisitWithBLangCompoundAssignment(compoundAssignNode BLangCompoundAssignment)
+    VisitWithBLangRetry(retryNode BLangRetry)
+    VisitWithBLangRetryTransaction(retryTransaction BLangRetryTransaction)
+    VisitWithBLangRetrySpec(retrySpec BLangRetrySpec)
+    VisitWithBLangContinue(continueNode BLangContinue)
+    VisitWithBLangBreak(breakNode BLangBreak)
+    VisitWithBLangReturn(returnNode BLangReturn)
+    VisitWithBLangPanic(panicNode BLangPanic)
+    VisitWithBLangXMLNSStatement(xmlnsStmtNode BLangXMLNSStatement)
+    VisitWithBLangExpressionStmt(exprStmtNode BLangExpressionStmt)
+    VisitWithBLangIf(ifNode BLangIf)
+    VisitWithBLangQueryAction(queryAction BLangQueryAction)
+    VisitWithBLangMatchStatement(matchStatementNode BLangMatchStatement)
+    VisitWithBLangMatchGuard(matchGuard BLangMatchGuard)
+    VisitWithBLangConstPattern(constMatchPattern BLangConstPattern)
+    VisitWithBLangWildCardMatchPattern(wildCardMatchPattern BLangWildCardMatchPattern)
+    VisitWithBLangVarBindingPatternMatchPattern(varBindingPattern BLangVarBindingPatternMatchPattern)
+    VisitWithBLangMappingMatchPattern(mappingMatchPattern BLangMappingMatchPattern)
+    VisitWithBLangFieldMatchPattern(fieldMatchPattern BLangFieldMatchPattern)
+    VisitWithBLangRestMatchPattern(restMatchPattern BLangRestMatchPattern)
+    VisitWithBLangListMatchPattern(listMatchPattern BLangListMatchPattern)
+    VisitWithBLangCaptureBindingPattern(captureBindingPattern BLangCaptureBindingPattern)
+    VisitWithBLangListBindingPattern(listBindingPattern BLangListBindingPattern)
+    VisitWithBLangMappingBindingPattern(mappingBindingPattern BLangMappingBindingPattern)
+    VisitWithBLangFieldBindingPattern(fieldBindingPattern BLangFieldBindingPattern)
+    VisitWithBLangRestBindingPattern(restBindingPattern BLangRestBindingPattern)
+    VisitWithBLangWildCardBindingPattern(wildCardBindingPattern BLangWildCardBindingPattern)
+    VisitWithBLangErrorMatchPattern(errorMatchPattern BLangErrorMatchPattern)
+    VisitWithBLangErrorMessageMatchPattern(errorMessageMatchPattern BLangErrorMessageMatchPattern)
+    VisitWithBLangErrorCauseMatchPattern(errorCauseMatchPattern BLangErrorCauseMatchPattern)
+    VisitWithBLangErrorFieldMatchPatterns(errorFieldMatchPatterns BLangErrorFieldMatchPatterns)
+    VisitWithBLangSimpleMatchPattern(simpleMatchPattern BLangSimpleMatchPattern)
+    VisitWithBLangNamedArgMatchPattern(namedArgMatchPattern BLangNamedArgMatchPattern)
+    VisitWithBLangErrorBindingPattern(errorBindingPattern BLangErrorBindingPattern)
+    VisitWithBLangErrorMessageBindingPattern(errorMessageBindingPattern BLangErrorMessageBindingPattern)
+    VisitWithBLangErrorCauseBindingPattern(errorCauseBindingPattern BLangErrorCauseBindingPattern)
+    VisitWithBLangErrorFieldBindingPatterns(errorFieldBindingPatterns BLangErrorFieldBindingPatterns)
+    VisitWithBLangSimpleBindingPattern(simpleBindingPattern BLangSimpleBindingPattern)
+    VisitWithBLangNamedArgBindingPattern(namedArgBindingPattern BLangNamedArgBindingPattern)
+    VisitWithBLangForeach(foreach BLangForeach)
+    VisitWithBLangDo(doNode BLangDo)
+    VisitWithBLangFail(failNode BLangFail)
+    VisitWithBLangFromClause(fromClause BLangFromClause)
+    VisitWithBLangJoinClause(joinClause BLangJoinClause)
+    VisitWithBLangLetClause(letClause BLangLetClause)
+    VisitWithBLangOnClause(onClause BLangOnClause)
+    VisitWithBLangOrderKey(orderKeyClause BLangOrderKey)
+    VisitWithBLangOrderByClause(orderByClause BLangOrderByClause)
+    VisitWithBLangGroupingKey(groupingKeyClause BLangGroupingKey)
+    VisitWithBLangGroupByClause(groupByClause BLangGroupByClause)
+    VisitWithBLangSelectClause(selectClause BLangSelectClause)
+    VisitWithBLangCollectClause(collectClause BLangCollectClause)
+    VisitWithBLangWhereClause(whereClause BLangWhereClause)
+    VisitWithBLangDoClause(doClause BLangDoClause)
+    VisitWithBLangOnFailClause(onFailClause BLangOnFailClause)
+    VisitWithBLangOnConflictClause(onConflictClause BLangOnConflictClause)
+    VisitWithBLangLimitClause(limitClause BLangLimitClause)
+    VisitWithBLangMatchClause(matchClause BLangMatchClause)
+    VisitWithBLangWhile(whileNode BLangWhile)
+    VisitWithBLangLock(lockNode BLangLock)
+    VisitWithBLangTransaction(transactionNode BLangTransaction)
+    VisitWithBLangTupleDestructure(stmt BLangTupleDestructure)
+    VisitWithBLangRecordDestructure(stmt BLangRecordDestructure)
+    VisitWithBLangErrorDestructure(stmt BLangErrorDestructure)
+    VisitWithBLangForkJoin(forkJoin BLangForkJoin)
+    VisitWithBLangWorkerAsyncSendExpr(asyncSendExpr BLangWorkerAsyncSendExpr)
+    VisitWithBLangWorkerReceive(workerReceiveNode BLangWorkerReceive)
+    VisitWithBLangAlternateWorkerReceive(alternateWorkerReceive BLangAlternateWorkerReceive)
+    VisitWithBLangMultipleWorkerReceive(multipleWorkerReceive BLangMultipleWorkerReceive)
+    VisitWithBLangRollback(rollbackNode BLangRollback)
+    VisitWithBLangLiteral(literalExpr BLangLiteral)
+    VisitWithBLangConstRef(constRef BLangConstRef)
+    VisitWithBLangNumericLiteral(literalExpr BLangNumericLiteral)
+    VisitWithBLangRecordLiteral(recordLiteral BLangRecordLiteral)
+    VisitWithBLangTupleVarRef(varRefExpr BLangTupleVarRef)
+    VisitWithBLangRecordVarRef(varRefExpr BLangRecordVarRef)
+    VisitWithBLangErrorVarRef(varRefExpr BLangErrorVarRef)
+    VisitWithBLangSimpleVarRef(varRefExpr BLangSimpleVarRef)
+    VisitWithBLangFieldBasedAccess(fieldAccessExpr BLangFieldBasedAccess)
+    VisitWithBLangPrefixedFieldBasedAccess(prefixedFieldBasedAccess BLangPrefixedFieldBasedAccess)
+    VisitWithBLangIndexBasedAccess(indexAccessExpr BLangIndexBasedAccess)
+    VisitWithBLangInvocation(invocationExpr BLangInvocation)
+    VisitWithBLangCollectContextInvocation(collectContextInvocationExpr BLangCollectContextInvocation)
+    VisitWithBLangTypeInit(connectorInitExpr BLangTypeInit)
+    VisitWithBLangActionInvocation(actionInvocationExpr BLangActionInvocation)
+    VisitWithBLangTernaryExpr(ternaryExpr BLangTernaryExpr)
+    VisitWithBLangWaitExpr(awaitExpr BLangWaitExpr)
+    VisitWithBLangTrapExpr(trapExpr BLangTrapExpr)
+    VisitWithBLangBinaryExpr(binaryExpr BLangBinaryExpr)
+    VisitWithBLangElvisExpr(elvisExpr BLangElvisExpr)
+    VisitWithBLangGroupExpr(groupExpr BLangGroupExpr)
+    VisitWithBLangLetExpression(letExpr BLangLetExpression)
+    VisitWithBLangListConstructorExpr(listConstructorExpr BLangListConstructorExpr)
+    VisitWithBLangListConstructorSpreadOpExpr(listConstructorSpreadOpExpr BLangListConstructorSpreadOpExpr)
+    VisitWithBLangTableConstructorExpr(tableConstructorExpr BLangTableConstructorExpr)
+    VisitWithBLangTupleLiteral(tupleLiteral BLangTupleLiteral)
+    VisitWithBLangArrayLiteral(arrayLiteral BLangArrayLiteral)
+    VisitWithBLangUnaryExpr(unaryExpr BLangUnaryExpr)
+    VisitWithBLangTypedescExpr(accessExpr BLangTypedescExpr)
+    VisitWithBLangTypeConversionExpr(conversionExpr BLangTypeConversionExpr)
+    VisitWithBLangXMLQName(xmlQName BLangXMLQName)
+    VisitWithBLangXMLAttribute(xmlAttribute BLangXMLAttribute)
+    VisitWithBLangXMLElementLiteral(xmlElementLiteral BLangXMLElementLiteral)
+    VisitWithBLangXMLTextLiteral(xmlTextLiteral BLangXMLTextLiteral)
+    VisitWithBLangXMLCommentLiteral(xmlCommentLiteral BLangXMLCommentLiteral)
+    VisitWithBLangXMLProcInsLiteral(xmlProcInsLiteral BLangXMLProcInsLiteral)
+    VisitWithBLangXMLQuotedString(xmlQuotedString BLangXMLQuotedString)
+    VisitWithBLangStringTemplateLiteral(stringTemplateLiteral BLangStringTemplateLiteral)
+    VisitWithBLangRawTemplateLiteral(rawTemplateLiteral BLangRawTemplateLiteral)
+    VisitWithBLangLambdaFunction(bLangLambdaFunction BLangLambdaFunction)
+    VisitWithBLangArrowFunction(bLangArrowFunction BLangArrowFunction)
+    VisitWithBLangRestArgsExpression(bLangVarArgsExpression BLangRestArgsExpression)
+    VisitWithBLangNamedArgsExpression(bLangNamedArgsExpression BLangNamedArgsExpression)
+    VisitWithBLangIsAssignableExpr(assignableExpr BLangIsAssignableExpr)
+    VisitWithBLangCheckedExpr(checkedExpr BLangCheckedExpr)
+    VisitWithBLangErrorConstructorExpr(errorConstructorExpr BLangErrorConstructorExpr)
+    VisitWithBLangCheckPanickedExpr(checkPanickedExpr BLangCheckPanickedExpr)
+    VisitWithBLangServiceConstructorExpr(serviceConstructorExpr BLangServiceConstructorExpr)
+    VisitWithBLangTypeTestExpr(typeTestExpr BLangTypeTestExpr)
+    VisitWithBLangIsLikeExpr(typeTestExpr BLangIsLikeExpr)
+    VisitWithBLangIgnoreExpr(ignoreExpr BLangIgnoreExpr)
+    VisitWithBLangDynamicArgExpr(dynamicParamExpr BLangDynamicArgExpr)
+    VisitWithBLangAnnotAccessExpr(annotAccessExpr BLangAnnotAccessExpr)
+    VisitWithBLangQueryExpr(queryExpr BLangQueryExpr)
+    VisitWithBLangTransactionalExpr(transactionalExpr BLangTransactionalExpr)
+    VisitWithBLangCommitExpr(commitExpr BLangCommitExpr)
+    VisitWithBLangObjectConstructorExpression(bLangObjectConstructorExpression BLangObjectConstructorExpression)
+    VisitWithBLangInferredTypedescDefaultNode(inferTypedescExpr BLangInferredTypedescDefaultNode)
+    VisitWithBLangValueType(valueType BLangValueType)
+    VisitWithBLangArrayType(arrayType BLangArrayType)
+    VisitWithBLangBuiltInRefTypeNode(builtInRefType BLangBuiltInRefTypeNode)
+    VisitWithBLangConstrainedType(constrainedType BLangConstrainedType)
+    VisitWithBLangStreamType(streamType BLangStreamType)
+    VisitWithBLangTableTypeNode(tableType BLangTableTypeNode)
+    VisitWithBLangUserDefinedType(userDefinedType BLangUserDefinedType)
+    VisitWithBLangFunctionTypeNode(functionTypeNode BLangFunctionTypeNode)
+    VisitWithBLangUnionTypeNode(unionTypeNode BLangUnionTypeNode)
+    VisitWithBLangIntersectionTypeNode(intersectionTypeNode BLangIntersectionTypeNode)
+    VisitWithBLangObjectTypeNode(objectTypeNode BLangObjectTypeNode)
+    VisitWithBLangRecordTypeNode(recordTypeNode BLangRecordTypeNode)
+    VisitWithBLangFiniteTypeNode(finiteTypeNode BLangFiniteTypeNode)
+    VisitWithBLangTupleTypeNode(tupleTypeNode BLangTupleTypeNode)
+    VisitWithBLangErrorType(errorType BLangErrorType)
+    VisitWithBLangLocalVarRef(localVarRef BLangLocalVarRef)
+    VisitWithBLangFieldVarRef(fieldVarRef BLangFieldVarRef)
+    VisitWithBLangPackageVarRef(packageVarRef BLangPackageVarRef)
+    VisitWithBLangFunctionVarRef(functionVarRef BLangFunctionVarRef)
+    VisitWithBLangTypeLoad(typeLoad BLangTypeLoad)
+    VisitWithBLangStructFieldAccessExpr(fieldAccessExpr BLangStructFieldAccessExpr)
+    VisitWithBLangStructFunctionVarRef(functionVarRef BLangStructFunctionVarRef)
+    VisitWithBLangMapAccessExpr(mapKeyAccessExpr BLangMapAccessExpr)
+    VisitWithBLangArrayAccessExpr(arrayIndexAccessExpr BLangArrayAccessExpr)
+    VisitWithBLangTupleAccessExpr(arrayIndexAccessExpr BLangTupleAccessExpr)
+    VisitWithBLangTableAccessExpr(tableKeyAccessExpr BLangTableAccessExpr)
+    VisitWithBLangXMLAccessExpr(xmlAccessExpr BLangXMLAccessExpr)
+    VisitWithBLangMapLiteral(mapLiteral BLangMapLiteral)
+    VisitWithBLangStructLiteral(structLiteral BLangStructLiteral)
+    VisitWithBFunctionPointerInvocation(bFunctionPointerInvocation BFunctionPointerInvocation)
+    VisitWithBLangAttachedFunctionInvocation(iExpr BLangAttachedFunctionInvocation)
+    VisitWithBLangJSONArrayLiteral(jsonArrayLiteral BLangJSONArrayLiteral)
+    VisitWithBLangJSONAccessExpr(jsonAccessExpr BLangJSONAccessExpr)
+    VisitWithBLangStringAccessExpr(stringAccessExpr BLangStringAccessExpr)
+    VisitWithBLangLocalXMLNS(xmlnsNode BLangLocalXMLNS)
+    VisitWithBLangPackageXMLNS(xmlnsNode BLangPackageXMLNS)
+    VisitWithBLangXMLSequenceLiteral(bLangXMLSequenceLiteral BLangXMLSequenceLiteral)
+    VisitWithBLangStatementExpression(bLangStatementExpression BLangStatementExpression)
+    VisitWithBLangMarkdownDocumentationLine(bLangMarkdownDocumentationLine BLangMarkdownDocumentationLine)
+    VisitWithBLangMarkdownParameterDocumentation(bLangDocumentationParameter BLangMarkdownParameterDocumentation)
+    VisitWithBLangMarkdownReturnParameterDocumentation(bLangMarkdownReturnParameterDocumentation BLangMarkdownReturnParameterDocumentation)
+    VisitWithBLangMarkDownDeprecationDocumentation(bLangMarkDownDeprecationDocumentation BLangMarkDownDeprecationDocumentation)
+    VisitWithBLangMarkDownDeprecatedParametersDocumentation(bLangMarkDownDeprecatedParametersDocumentation BLangMarkDownDeprecatedParametersDocumentation)
+    VisitWithBLangMarkdownDocumentation(bLangMarkdownDocumentation BLangMarkdownDocumentation)
+    VisitWithBLangTupleVariable(bLangTupleVariable BLangTupleVariable)
+    VisitWithBLangTupleVariableDef(bLangTupleVariableDef BLangTupleVariableDef)
+    VisitWithBLangRecordVariable(bLangRecordVariable BLangRecordVariable)
+    VisitWithBLangRecordVariableDef(bLangRecordVariableDef BLangRecordVariableDef)
+    VisitWithBLangErrorVariable(bLangErrorVariable BLangErrorVariable)
+    VisitWithBLangErrorVariableDef(bLangErrorVariableDef BLangErrorVariableDef)
+    VisitWithBLangWorkerFlushExpr(workerFlushExpr BLangWorkerFlushExpr)
+    VisitWithBLangWorkerSyncSendExpr(syncSendExpr BLangWorkerSyncSendExpr)
+    VisitWithBLangWaitForAllExpr(waitForAllExpr BLangWaitForAllExpr)
+    VisitWithBLangWaitLiteral(waitLiteral BLangWaitLiteral)
+    VisitWithBLangRecordKeyValueField(recordKeyValue BLangRecordKeyValueField)
+    VisitWithBLangRecordKey(recordKey BLangRecordKey)
+    VisitWithBLangRecordSpreadOperatorField(spreadOperatorField BLangRecordSpreadOperatorField)
+    VisitWithBLangMarkdownReferenceDocumentation(bLangMarkdownReferenceDocumentation BLangMarkdownReferenceDocumentation)
+    VisitWithBLangWaitKeyValue(waitKeyValue BLangWaitKeyValue)
+    VisitWithBLangXMLElementFilter(xmlElementFilter BLangXMLElementFilter)
+    VisitWithBLangXMLElementAccess(xmlElementAccess BLangXMLElementAccess)
+    VisitWithBLangXMLNavigationAccess(xmlNavigation BLangXMLNavigationAccess)
+    VisitWithBLangClassDefinition(classDefinition BLangClassDefinition)
+    VisitWithBLangResourceFunction(resourceFunction BLangResourceFunction)
+    VisitWithBLangResourcePathSegment(resourcePathSegment BLangResourcePathSegment)
+    VisitWithBLangResourceAccessInvocation(resourceAccessInvocation BLangResourceAccessInvocation)
+    VisitWithBLangRegExpTemplateLiteral(regExpTemplateLiteral BLangRegExpTemplateLiteral)
+    VisitWithBLangReSequence(reSequence BLangReSequence)
+    VisitWithBLangReAtomQuantifier(reAtomQuantifier BLangReAtomQuantifier)
+    VisitWithBLangReAtomCharOrEscape(reAtomCharOrEscape BLangReAtomCharOrEscape)
+    VisitWithBLangReQuantifier(reQuantifier BLangReQuantifier)
+    VisitWithBLangReCharacterClass(reCharacterClass BLangReCharacterClass)
+    VisitWithBLangReCharSet(reCharSet BLangReCharSet)
+    VisitWithBLangReCharSetRange(reCharSetRange BLangReCharSetRange)
+    VisitWithBLangReAssertion(reAssertion BLangReAssertion)
+    VisitWithBLangReCapturingGroups(reCapturingGroups BLangReCapturingGroups)
+    VisitWithBLangReDisjunction(reDisjunction BLangReDisjunction)
+    VisitWithBLangReFlagsOnOff(reFlagsOnOff BLangReFlagsOnOff)
+    VisitWithBLangReFlagExpression(reFlagsOnOff BLangReFlagExpression)
+    VisitWithBLangXMLIndexedStepExtend(xmlIndexedStepExtend BLangXMLIndexedStepExtend)
+    VisitWithBLangXMLFilterStepExtend(xmlFilterStepExtend BLangXMLFilterStepExtend)
+    VisitWithBLangXMLMethodCallStepExtend(xmlMethodCallStepExtend BLangXMLMethodCallStepExtend)
+    VisitWithBLangExtendedXMLNavigationAccess(extendedXMLNavigationAccess BLangExtendedXMLNavigationAccess)
+    VisitWithBLangNaturalExpression(naturalExpression BLangNaturalExpression)
+}
+
+type BLangNodeVisitorBase struct {
+}
+
+type BLangNodeVisitorMethods struct {
+    Self BLangNodeVisitor
+}
+
+func (m *BLangNodeVisitorMethods) Visit(pkgNode BLangPackage) {
+// migrated from BLangNodeVisitor.java:227:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTestablePackage(testablePkgNode BLangTestablePackage) {
+// migrated from BLangNodeVisitor.java:231:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCompilationUnit(compUnit BLangCompilationUnit) {
+// migrated from BLangNodeVisitor.java:235:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangImportPackage(importPkgNode BLangImportPackage) {
+// migrated from BLangNodeVisitor.java:239:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLNS(xmlnsNode BLangXMLNS) {
+// migrated from BLangNodeVisitor.java:243:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFunction(funcNode BLangFunction) {
+// migrated from BLangNodeVisitor.java:247:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangBlockFunctionBody(blockFuncBody BLangBlockFunctionBody) {
+// migrated from BLangNodeVisitor.java:251:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangExprFunctionBody(exprFuncBody BLangExprFunctionBody) {
+// migrated from BLangNodeVisitor.java:255:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangExternalFunctionBody(externFuncBody BLangExternalFunctionBody) {
+// migrated from BLangNodeVisitor.java:259:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangService(serviceNode BLangService) {
+// migrated from BLangNodeVisitor.java:263:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypeDefinition(typeDefinition BLangTypeDefinition) {
+// migrated from BLangNodeVisitor.java:267:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangConstant(constant BLangConstant) {
+// migrated from BLangNodeVisitor.java:271:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSimpleVariable(varNode BLangSimpleVariable) {
+// migrated from BLangNodeVisitor.java:275:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIdentifier(identifierNode BLangIdentifier) {
+// migrated from BLangNodeVisitor.java:279:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAnnotation(annotationNode BLangAnnotation) {
+// migrated from BLangNodeVisitor.java:283:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAnnotationAttachment(annAttachmentNode BLangAnnotationAttachment) {
+// migrated from BLangNodeVisitor.java:287:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTableKeySpecifier(tableKeySpecifierNode BLangTableKeySpecifier) {
+// migrated from BLangNodeVisitor.java:291:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTableKeyTypeConstraint(tableKeyTypeConstraint BLangTableKeyTypeConstraint) {
+// migrated from BLangNodeVisitor.java:295:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangBlockStmt(blockNode BLangBlockStmt) {
+// migrated from BLangNodeVisitor.java:300:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLockStmt(lockStmtNode BLangLockStmt) {
+// migrated from BLangNodeVisitor.java:304:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangUnLockStmt(unLockNode BLangUnLockStmt) {
+// migrated from BLangNodeVisitor.java:308:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSimpleVariableDef(varDefNode BLangSimpleVariableDef) {
+// migrated from BLangNodeVisitor.java:312:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAssignment(assignNode BLangAssignment) {
+// migrated from BLangNodeVisitor.java:316:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCompoundAssignment(compoundAssignNode BLangCompoundAssignment) {
+// migrated from BLangNodeVisitor.java:320:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRetry(retryNode BLangRetry) {
+// migrated from BLangNodeVisitor.java:324:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRetryTransaction(retryTransaction BLangRetryTransaction) {
+// migrated from BLangNodeVisitor.java:328:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRetrySpec(retrySpec BLangRetrySpec) {
+// migrated from BLangNodeVisitor.java:332:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangContinue(continueNode BLangContinue) {
+// migrated from BLangNodeVisitor.java:336:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangBreak(breakNode BLangBreak) {
+// migrated from BLangNodeVisitor.java:340:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReturn(returnNode BLangReturn) {
+// migrated from BLangNodeVisitor.java:344:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangPanic(panicNode BLangPanic) {
+// migrated from BLangNodeVisitor.java:348:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLNSStatement(xmlnsStmtNode BLangXMLNSStatement) {
+// migrated from BLangNodeVisitor.java:352:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangExpressionStmt(exprStmtNode BLangExpressionStmt) {
+// migrated from BLangNodeVisitor.java:356:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIf(ifNode BLangIf) {
+// migrated from BLangNodeVisitor.java:360:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangQueryAction(queryAction BLangQueryAction) {
+// migrated from BLangNodeVisitor.java:364:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMatchStatement(matchStatementNode BLangMatchStatement) {
+// migrated from BLangNodeVisitor.java:368:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMatchGuard(matchGuard BLangMatchGuard) {
+// migrated from BLangNodeVisitor.java:372:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangConstPattern(constMatchPattern BLangConstPattern) {
+// migrated from BLangNodeVisitor.java:376:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWildCardMatchPattern(wildCardMatchPattern BLangWildCardMatchPattern) {
+// migrated from BLangNodeVisitor.java:380:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangVarBindingPatternMatchPattern(varBindingPattern BLangVarBindingPatternMatchPattern) {
+// migrated from BLangNodeVisitor.java:384:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMappingMatchPattern(mappingMatchPattern BLangMappingMatchPattern) {
+// migrated from BLangNodeVisitor.java:388:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFieldMatchPattern(fieldMatchPattern BLangFieldMatchPattern) {
+// migrated from BLangNodeVisitor.java:392:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRestMatchPattern(restMatchPattern BLangRestMatchPattern) {
+// migrated from BLangNodeVisitor.java:396:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangListMatchPattern(listMatchPattern BLangListMatchPattern) {
+// migrated from BLangNodeVisitor.java:400:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCaptureBindingPattern(captureBindingPattern BLangCaptureBindingPattern) {
+// migrated from BLangNodeVisitor.java:404:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangListBindingPattern(listBindingPattern BLangListBindingPattern) {
+// migrated from BLangNodeVisitor.java:408:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMappingBindingPattern(mappingBindingPattern BLangMappingBindingPattern) {
+// migrated from BLangNodeVisitor.java:412:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFieldBindingPattern(fieldBindingPattern BLangFieldBindingPattern) {
+// migrated from BLangNodeVisitor.java:416:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRestBindingPattern(restBindingPattern BLangRestBindingPattern) {
+// migrated from BLangNodeVisitor.java:420:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWildCardBindingPattern(wildCardBindingPattern BLangWildCardBindingPattern) {
+// migrated from BLangNodeVisitor.java:424:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorMatchPattern(errorMatchPattern BLangErrorMatchPattern) {
+// migrated from BLangNodeVisitor.java:428:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorMessageMatchPattern(errorMessageMatchPattern BLangErrorMessageMatchPattern) {
+// migrated from BLangNodeVisitor.java:432:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorCauseMatchPattern(errorCauseMatchPattern BLangErrorCauseMatchPattern) {
+// migrated from BLangNodeVisitor.java:436:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorFieldMatchPatterns(errorFieldMatchPatterns BLangErrorFieldMatchPatterns) {
+// migrated from BLangNodeVisitor.java:440:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSimpleMatchPattern(simpleMatchPattern BLangSimpleMatchPattern) {
+// migrated from BLangNodeVisitor.java:444:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangNamedArgMatchPattern(namedArgMatchPattern BLangNamedArgMatchPattern) {
+// migrated from BLangNodeVisitor.java:448:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorBindingPattern(errorBindingPattern BLangErrorBindingPattern) {
+// migrated from BLangNodeVisitor.java:452:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorMessageBindingPattern(errorMessageBindingPattern BLangErrorMessageBindingPattern) {
+// migrated from BLangNodeVisitor.java:456:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorCauseBindingPattern(errorCauseBindingPattern BLangErrorCauseBindingPattern) {
+// migrated from BLangNodeVisitor.java:460:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorFieldBindingPatterns(errorFieldBindingPatterns BLangErrorFieldBindingPatterns) {
+// migrated from BLangNodeVisitor.java:464:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSimpleBindingPattern(simpleBindingPattern BLangSimpleBindingPattern) {
+// migrated from BLangNodeVisitor.java:468:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangNamedArgBindingPattern(namedArgBindingPattern BLangNamedArgBindingPattern) {
+// migrated from BLangNodeVisitor.java:472:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangForeach(foreach BLangForeach) {
+// migrated from BLangNodeVisitor.java:476:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangDo(doNode BLangDo) {
+// migrated from BLangNodeVisitor.java:480:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFail(failNode BLangFail) {
+// migrated from BLangNodeVisitor.java:484:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFromClause(fromClause BLangFromClause) {
+// migrated from BLangNodeVisitor.java:488:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangJoinClause(joinClause BLangJoinClause) {
+// migrated from BLangNodeVisitor.java:492:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLetClause(letClause BLangLetClause) {
+// migrated from BLangNodeVisitor.java:496:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangOnClause(onClause BLangOnClause) {
+// migrated from BLangNodeVisitor.java:500:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangOrderKey(orderKeyClause BLangOrderKey) {
+// migrated from BLangNodeVisitor.java:504:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangOrderByClause(orderByClause BLangOrderByClause) {
+// migrated from BLangNodeVisitor.java:508:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangGroupingKey(groupingKeyClause BLangGroupingKey) {
+// migrated from BLangNodeVisitor.java:512:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangGroupByClause(groupByClause BLangGroupByClause) {
+// migrated from BLangNodeVisitor.java:516:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSelectClause(selectClause BLangSelectClause) {
+// migrated from BLangNodeVisitor.java:520:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCollectClause(collectClause BLangCollectClause) {
+// migrated from BLangNodeVisitor.java:524:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWhereClause(whereClause BLangWhereClause) {
+// migrated from BLangNodeVisitor.java:528:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangDoClause(doClause BLangDoClause) {
+// migrated from BLangNodeVisitor.java:532:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangOnFailClause(onFailClause BLangOnFailClause) {
+// migrated from BLangNodeVisitor.java:536:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangOnConflictClause(onConflictClause BLangOnConflictClause) {
+// migrated from BLangNodeVisitor.java:540:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLimitClause(limitClause BLangLimitClause) {
+// migrated from BLangNodeVisitor.java:544:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMatchClause(matchClause BLangMatchClause) {
+// migrated from BLangNodeVisitor.java:548:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWhile(whileNode BLangWhile) {
+// migrated from BLangNodeVisitor.java:552:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLock(lockNode BLangLock) {
+// migrated from BLangNodeVisitor.java:556:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTransaction(transactionNode BLangTransaction) {
+// migrated from BLangNodeVisitor.java:560:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleDestructure(stmt BLangTupleDestructure) {
+// migrated from BLangNodeVisitor.java:564:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordDestructure(stmt BLangRecordDestructure) {
+// migrated from BLangNodeVisitor.java:568:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorDestructure(stmt BLangErrorDestructure) {
+// migrated from BLangNodeVisitor.java:572:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangForkJoin(forkJoin BLangForkJoin) {
+// migrated from BLangNodeVisitor.java:576:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWorkerAsyncSendExpr(asyncSendExpr BLangWorkerAsyncSendExpr) {
+// migrated from BLangNodeVisitor.java:580:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWorkerReceive(workerReceiveNode BLangWorkerReceive) {
+// migrated from BLangNodeVisitor.java:584:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAlternateWorkerReceive(alternateWorkerReceive BLangAlternateWorkerReceive) {
+// migrated from BLangNodeVisitor.java:588:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMultipleWorkerReceive(multipleWorkerReceive BLangMultipleWorkerReceive) {
+// migrated from BLangNodeVisitor.java:592:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRollback(rollbackNode BLangRollback) {
+// migrated from BLangNodeVisitor.java:596:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLiteral(literalExpr BLangLiteral) {
+// migrated from BLangNodeVisitor.java:602:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangConstRef(constRef BLangConstRef) {
+// migrated from BLangNodeVisitor.java:606:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangNumericLiteral(literalExpr BLangNumericLiteral) {
+// migrated from BLangNodeVisitor.java:610:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordLiteral(recordLiteral BLangRecordLiteral) {
+// migrated from BLangNodeVisitor.java:614:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleVarRef(varRefExpr BLangTupleVarRef) {
+// migrated from BLangNodeVisitor.java:618:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordVarRef(varRefExpr BLangRecordVarRef) {
+// migrated from BLangNodeVisitor.java:622:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorVarRef(varRefExpr BLangErrorVarRef) {
+// migrated from BLangNodeVisitor.java:626:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangSimpleVarRef(varRefExpr BLangSimpleVarRef) {
+// migrated from BLangNodeVisitor.java:630:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFieldBasedAccess(fieldAccessExpr BLangFieldBasedAccess) {
+// migrated from BLangNodeVisitor.java:634:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangPrefixedFieldBasedAccess(prefixedFieldBasedAccess BLangPrefixedFieldBasedAccess) {
+// migrated from BLangNodeVisitor.java:638:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIndexBasedAccess(indexAccessExpr BLangIndexBasedAccess) {
+// migrated from BLangNodeVisitor.java:642:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangInvocation(invocationExpr BLangInvocation) {
+// migrated from BLangNodeVisitor.java:646:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCollectContextInvocation(collectContextInvocationExpr BLangCollectContextInvocation) {
+// migrated from BLangNodeVisitor.java:650:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypeInit(connectorInitExpr BLangTypeInit) {
+// migrated from BLangNodeVisitor.java:654:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangActionInvocation(actionInvocationExpr BLangActionInvocation) {
+// migrated from BLangNodeVisitor.java:658:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTernaryExpr(ternaryExpr BLangTernaryExpr) {
+// migrated from BLangNodeVisitor.java:662:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWaitExpr(awaitExpr BLangWaitExpr) {
+// migrated from BLangNodeVisitor.java:666:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTrapExpr(trapExpr BLangTrapExpr) {
+// migrated from BLangNodeVisitor.java:670:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangBinaryExpr(binaryExpr BLangBinaryExpr) {
+// migrated from BLangNodeVisitor.java:674:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangElvisExpr(elvisExpr BLangElvisExpr) {
+// migrated from BLangNodeVisitor.java:678:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangGroupExpr(groupExpr BLangGroupExpr) {
+// migrated from BLangNodeVisitor.java:682:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLetExpression(letExpr BLangLetExpression) {
+// migrated from BLangNodeVisitor.java:686:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangListConstructorExpr(listConstructorExpr BLangListConstructorExpr) {
+// migrated from BLangNodeVisitor.java:690:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangListConstructorSpreadOpExpr(listConstructorSpreadOpExpr BLangListConstructorSpreadOpExpr) {
+// migrated from BLangNodeVisitor.java:694:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTableConstructorExpr(tableConstructorExpr BLangTableConstructorExpr) {
+// migrated from BLangNodeVisitor.java:698:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleLiteral(tupleLiteral BLangTupleLiteral) {
+// migrated from BLangNodeVisitor.java:702:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangArrayLiteral(arrayLiteral BLangArrayLiteral) {
+// migrated from BLangNodeVisitor.java:706:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangUnaryExpr(unaryExpr BLangUnaryExpr) {
+// migrated from BLangNodeVisitor.java:710:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypedescExpr(accessExpr BLangTypedescExpr) {
+// migrated from BLangNodeVisitor.java:714:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypeConversionExpr(conversionExpr BLangTypeConversionExpr) {
+// migrated from BLangNodeVisitor.java:718:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLQName(xmlQName BLangXMLQName) {
+// migrated from BLangNodeVisitor.java:722:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLAttribute(xmlAttribute BLangXMLAttribute) {
+// migrated from BLangNodeVisitor.java:726:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLElementLiteral(xmlElementLiteral BLangXMLElementLiteral) {
+// migrated from BLangNodeVisitor.java:730:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLTextLiteral(xmlTextLiteral BLangXMLTextLiteral) {
+// migrated from BLangNodeVisitor.java:734:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLCommentLiteral(xmlCommentLiteral BLangXMLCommentLiteral) {
+// migrated from BLangNodeVisitor.java:738:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLProcInsLiteral(xmlProcInsLiteral BLangXMLProcInsLiteral) {
+// migrated from BLangNodeVisitor.java:742:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLQuotedString(xmlQuotedString BLangXMLQuotedString) {
+// migrated from BLangNodeVisitor.java:746:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStringTemplateLiteral(stringTemplateLiteral BLangStringTemplateLiteral) {
+// migrated from BLangNodeVisitor.java:750:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRawTemplateLiteral(rawTemplateLiteral BLangRawTemplateLiteral) {
+// migrated from BLangNodeVisitor.java:754:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLambdaFunction(bLangLambdaFunction BLangLambdaFunction) {
+// migrated from BLangNodeVisitor.java:758:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangArrowFunction(bLangArrowFunction BLangArrowFunction) {
+// migrated from BLangNodeVisitor.java:762:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRestArgsExpression(bLangVarArgsExpression BLangRestArgsExpression) {
+// migrated from BLangNodeVisitor.java:766:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangNamedArgsExpression(bLangNamedArgsExpression BLangNamedArgsExpression) {
+// migrated from BLangNodeVisitor.java:770:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIsAssignableExpr(assignableExpr BLangIsAssignableExpr) {
+// migrated from BLangNodeVisitor.java:774:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCheckedExpr(checkedExpr BLangCheckedExpr) {
+// migrated from BLangNodeVisitor.java:778:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorConstructorExpr(errorConstructorExpr BLangErrorConstructorExpr) {
+// migrated from BLangNodeVisitor.java:782:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCheckPanickedExpr(checkPanickedExpr BLangCheckPanickedExpr) {
+// migrated from BLangNodeVisitor.java:786:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangServiceConstructorExpr(serviceConstructorExpr BLangServiceConstructorExpr) {
+// migrated from BLangNodeVisitor.java:790:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypeTestExpr(typeTestExpr BLangTypeTestExpr) {
+// migrated from BLangNodeVisitor.java:794:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIsLikeExpr(typeTestExpr BLangIsLikeExpr) {
+// migrated from BLangNodeVisitor.java:798:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIgnoreExpr(ignoreExpr BLangIgnoreExpr) {
+// migrated from BLangNodeVisitor.java:802:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangDynamicArgExpr(dynamicParamExpr BLangDynamicArgExpr) {
+// migrated from BLangNodeVisitor.java:806:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAnnotAccessExpr(annotAccessExpr BLangAnnotAccessExpr) {
+// migrated from BLangNodeVisitor.java:810:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangQueryExpr(queryExpr BLangQueryExpr) {
+// migrated from BLangNodeVisitor.java:814:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTransactionalExpr(transactionalExpr BLangTransactionalExpr) {
+// migrated from BLangNodeVisitor.java:818:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangCommitExpr(commitExpr BLangCommitExpr) {
+// migrated from BLangNodeVisitor.java:822:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangObjectConstructorExpression(bLangObjectConstructorExpression BLangObjectConstructorExpression) {
+// migrated from BLangNodeVisitor.java:826:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangInferredTypedescDefaultNode(inferTypedescExpr BLangInferredTypedescDefaultNode) {
+// migrated from BLangNodeVisitor.java:830:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangValueType(valueType BLangValueType) {
+// migrated from BLangNodeVisitor.java:836:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangArrayType(arrayType BLangArrayType) {
+// migrated from BLangNodeVisitor.java:840:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangBuiltInRefTypeNode(builtInRefType BLangBuiltInRefTypeNode) {
+// migrated from BLangNodeVisitor.java:844:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangConstrainedType(constrainedType BLangConstrainedType) {
+// migrated from BLangNodeVisitor.java:848:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStreamType(streamType BLangStreamType) {
+// migrated from BLangNodeVisitor.java:852:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTableTypeNode(tableType BLangTableTypeNode) {
+// migrated from BLangNodeVisitor.java:856:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangUserDefinedType(userDefinedType BLangUserDefinedType) {
+// migrated from BLangNodeVisitor.java:860:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFunctionTypeNode(functionTypeNode BLangFunctionTypeNode) {
+// migrated from BLangNodeVisitor.java:864:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangUnionTypeNode(unionTypeNode BLangUnionTypeNode) {
+// migrated from BLangNodeVisitor.java:868:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangIntersectionTypeNode(intersectionTypeNode BLangIntersectionTypeNode) {
+// migrated from BLangNodeVisitor.java:872:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangObjectTypeNode(objectTypeNode BLangObjectTypeNode) {
+// migrated from BLangNodeVisitor.java:876:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordTypeNode(recordTypeNode BLangRecordTypeNode) {
+// migrated from BLangNodeVisitor.java:880:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFiniteTypeNode(finiteTypeNode BLangFiniteTypeNode) {
+// migrated from BLangNodeVisitor.java:884:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleTypeNode(tupleTypeNode BLangTupleTypeNode) {
+// migrated from BLangNodeVisitor.java:888:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorType(errorType BLangErrorType) {
+// migrated from BLangNodeVisitor.java:892:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLocalVarRef(localVarRef BLangLocalVarRef) {
+// migrated from BLangNodeVisitor.java:898:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFieldVarRef(fieldVarRef BLangFieldVarRef) {
+// migrated from BLangNodeVisitor.java:902:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangPackageVarRef(packageVarRef BLangPackageVarRef) {
+// migrated from BLangNodeVisitor.java:906:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangFunctionVarRef(functionVarRef BLangFunctionVarRef) {
+// migrated from BLangNodeVisitor.java:910:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTypeLoad(typeLoad BLangTypeLoad) {
+// migrated from BLangNodeVisitor.java:914:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStructFieldAccessExpr(fieldAccessExpr BLangStructFieldAccessExpr) {
+// migrated from BLangNodeVisitor.java:918:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStructFunctionVarRef(functionVarRef BLangStructFunctionVarRef) {
+// migrated from BLangNodeVisitor.java:922:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMapAccessExpr(mapKeyAccessExpr BLangMapAccessExpr) {
+// migrated from BLangNodeVisitor.java:926:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangArrayAccessExpr(arrayIndexAccessExpr BLangArrayAccessExpr) {
+// migrated from BLangNodeVisitor.java:930:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleAccessExpr(arrayIndexAccessExpr BLangTupleAccessExpr) {
+// migrated from BLangNodeVisitor.java:934:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTableAccessExpr(tableKeyAccessExpr BLangTableAccessExpr) {
+// migrated from BLangNodeVisitor.java:938:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLAccessExpr(xmlAccessExpr BLangXMLAccessExpr) {
+// migrated from BLangNodeVisitor.java:942:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMapLiteral(mapLiteral BLangMapLiteral) {
+// migrated from BLangNodeVisitor.java:946:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStructLiteral(structLiteral BLangStructLiteral) {
+// migrated from BLangNodeVisitor.java:950:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBFunctionPointerInvocation(bFunctionPointerInvocation BFunctionPointerInvocation) {
+// migrated from BLangNodeVisitor.java:954:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangAttachedFunctionInvocation(iExpr BLangAttachedFunctionInvocation) {
+// migrated from BLangNodeVisitor.java:958:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangJSONArrayLiteral(jsonArrayLiteral BLangJSONArrayLiteral) {
+// migrated from BLangNodeVisitor.java:962:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangJSONAccessExpr(jsonAccessExpr BLangJSONAccessExpr) {
+// migrated from BLangNodeVisitor.java:966:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStringAccessExpr(stringAccessExpr BLangStringAccessExpr) {
+// migrated from BLangNodeVisitor.java:970:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangLocalXMLNS(xmlnsNode BLangLocalXMLNS) {
+// migrated from BLangNodeVisitor.java:974:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangPackageXMLNS(xmlnsNode BLangPackageXMLNS) {
+// migrated from BLangNodeVisitor.java:978:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLSequenceLiteral(bLangXMLSequenceLiteral BLangXMLSequenceLiteral) {
+// migrated from BLangNodeVisitor.java:982:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangStatementExpression(bLangStatementExpression BLangStatementExpression) {
+// migrated from BLangNodeVisitor.java:986:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkdownDocumentationLine(bLangMarkdownDocumentationLine BLangMarkdownDocumentationLine) {
+// migrated from BLangNodeVisitor.java:990:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkdownParameterDocumentation(bLangDocumentationParameter BLangMarkdownParameterDocumentation) {
+// migrated from BLangNodeVisitor.java:994:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkdownReturnParameterDocumentation(bLangMarkdownReturnParameterDocumentation BLangMarkdownReturnParameterDocumentation) {
+// migrated from BLangNodeVisitor.java:998:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkDownDeprecationDocumentation(bLangMarkDownDeprecationDocumentation BLangMarkDownDeprecationDocumentation) {
+// migrated from BLangNodeVisitor.java:1002:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkDownDeprecatedParametersDocumentation(bLangMarkDownDeprecatedParametersDocumentation BLangMarkDownDeprecatedParametersDocumentation) {
+// migrated from BLangNodeVisitor.java:1006:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkdownDocumentation(bLangMarkdownDocumentation BLangMarkdownDocumentation) {
+// migrated from BLangNodeVisitor.java:1010:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleVariable(bLangTupleVariable BLangTupleVariable) {
+// migrated from BLangNodeVisitor.java:1014:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangTupleVariableDef(bLangTupleVariableDef BLangTupleVariableDef) {
+// migrated from BLangNodeVisitor.java:1018:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordVariable(bLangRecordVariable BLangRecordVariable) {
+// migrated from BLangNodeVisitor.java:1022:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordVariableDef(bLangRecordVariableDef BLangRecordVariableDef) {
+// migrated from BLangNodeVisitor.java:1026:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorVariable(bLangErrorVariable BLangErrorVariable) {
+// migrated from BLangNodeVisitor.java:1030:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangErrorVariableDef(bLangErrorVariableDef BLangErrorVariableDef) {
+// migrated from BLangNodeVisitor.java:1034:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWorkerFlushExpr(workerFlushExpr BLangWorkerFlushExpr) {
+// migrated from BLangNodeVisitor.java:1038:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWorkerSyncSendExpr(syncSendExpr BLangWorkerSyncSendExpr) {
+// migrated from BLangNodeVisitor.java:1042:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWaitForAllExpr(waitForAllExpr BLangWaitForAllExpr) {
+// migrated from BLangNodeVisitor.java:1046:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWaitLiteral(waitLiteral BLangWaitLiteral) {
+// migrated from BLangNodeVisitor.java:1050:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordKeyValueField(recordKeyValue BLangRecordKeyValueField) {
+// migrated from BLangNodeVisitor.java:1054:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordKey(recordKey BLangRecordKey) {
+// migrated from BLangNodeVisitor.java:1058:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRecordSpreadOperatorField(spreadOperatorField BLangRecordSpreadOperatorField) {
+// migrated from BLangNodeVisitor.java:1062:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangMarkdownReferenceDocumentation(bLangMarkdownReferenceDocumentation BLangMarkdownReferenceDocumentation) {
+// migrated from BLangNodeVisitor.java:1066:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangWaitKeyValue(waitKeyValue BLangWaitKeyValue) {
+// migrated from BLangNodeVisitor.java:1070:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLElementFilter(xmlElementFilter BLangXMLElementFilter) {
+// migrated from BLangNodeVisitor.java:1074:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLElementAccess(xmlElementAccess BLangXMLElementAccess) {
+// migrated from BLangNodeVisitor.java:1078:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLNavigationAccess(xmlNavigation BLangXMLNavigationAccess) {
+// migrated from BLangNodeVisitor.java:1082:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangClassDefinition(classDefinition BLangClassDefinition) {
+// migrated from BLangNodeVisitor.java:1086:5
+throw  new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangResourceFunction(resourceFunction BLangResourceFunction) {
+// migrated from BLangNodeVisitor.java:1090:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangResourcePathSegment(resourcePathSegment BLangResourcePathSegment) {
+// migrated from BLangNodeVisitor.java:1094:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangResourceAccessInvocation(resourceAccessInvocation BLangResourceAccessInvocation) {
+// migrated from BLangNodeVisitor.java:1098:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangRegExpTemplateLiteral(regExpTemplateLiteral BLangRegExpTemplateLiteral) {
+// migrated from BLangNodeVisitor.java:1102:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReSequence(reSequence BLangReSequence) {
+// migrated from BLangNodeVisitor.java:1106:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReAtomQuantifier(reAtomQuantifier BLangReAtomQuantifier) {
+// migrated from BLangNodeVisitor.java:1110:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReAtomCharOrEscape(reAtomCharOrEscape BLangReAtomCharOrEscape) {
+// migrated from BLangNodeVisitor.java:1114:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReQuantifier(reQuantifier BLangReQuantifier) {
+// migrated from BLangNodeVisitor.java:1118:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReCharacterClass(reCharacterClass BLangReCharacterClass) {
+// migrated from BLangNodeVisitor.java:1122:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReCharSet(reCharSet BLangReCharSet) {
+// migrated from BLangNodeVisitor.java:1126:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReCharSetRange(reCharSetRange BLangReCharSetRange) {
+// migrated from BLangNodeVisitor.java:1130:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReAssertion(reAssertion BLangReAssertion) {
+// migrated from BLangNodeVisitor.java:1134:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReCapturingGroups(reCapturingGroups BLangReCapturingGroups) {
+// migrated from BLangNodeVisitor.java:1138:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReDisjunction(reDisjunction BLangReDisjunction) {
+// migrated from BLangNodeVisitor.java:1142:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReFlagsOnOff(reFlagsOnOff BLangReFlagsOnOff) {
+// migrated from BLangNodeVisitor.java:1146:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangReFlagExpression(reFlagsOnOff BLangReFlagExpression) {
+// migrated from BLangNodeVisitor.java:1150:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLIndexedStepExtend(xmlIndexedStepExtend BLangXMLIndexedStepExtend) {
+// migrated from BLangNodeVisitor.java:1154:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLFilterStepExtend(xmlFilterStepExtend BLangXMLFilterStepExtend) {
+// migrated from BLangNodeVisitor.java:1158:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangXMLMethodCallStepExtend(xmlMethodCallStepExtend BLangXMLMethodCallStepExtend) {
+// migrated from BLangNodeVisitor.java:1162:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangExtendedXMLNavigationAccess(extendedXMLNavigationAccess BLangExtendedXMLNavigationAccess) {
+// migrated from BLangNodeVisitor.java:1166:5
+throw new AssertionError();
+}
+
+func (m *BLangNodeVisitorMethods) VisitWithBLangNaturalExpression(naturalExpression BLangNaturalExpression) {
+// migrated from BLangNodeVisitor.java:1170:5
+throw new AssertionError();
+}
+

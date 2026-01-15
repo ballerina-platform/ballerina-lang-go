@@ -1,0 +1,82 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangErrorCauseMatchPattern struct {
+    BLangMatchPattern
+    SimpleMatchPattern BLangSimpleMatchPattern
+    ErrorMatchPattern BLangErrorMatchPattern
+}
+
+var _ ErrorCauseMatchPatternNode = &BLangErrorCauseMatchPattern{}
+func NewBLangErrorCauseMatchPattern() BLangErrorCauseMatchPattern {
+this := BLangErrorCauseMatchPattern{};
+return this
+}
+
+func (this *BLangErrorCauseMatchPattern) GetSimpleMatchPattern() SimpleMatchPatternNode {
+// migrated from BLangErrorCauseMatchPattern.java:39:5
+return simpleMatchPattern
+}
+
+func (this *BLangErrorCauseMatchPattern) SetSimpleMatchPattern(simpleMatchPatternNode SimpleMatchPatternNode) {
+// migrated from BLangErrorCauseMatchPattern.java:44:5
+this.simpleMatchPattern = BLangSimpleMatchPattern(simpleMatchPatternNode)
+}
+
+func (this *BLangErrorCauseMatchPattern) GetErrorMatchPattern() ErrorMatchPatternNode {
+// migrated from BLangErrorCauseMatchPattern.java:49:5
+return errorMatchPattern
+}
+
+func (this *BLangErrorCauseMatchPattern) SetErrorMatchPattern(errorMatchPattern ErrorMatchPatternNode) {
+// migrated from BLangErrorCauseMatchPattern.java:54:5
+this.errorMatchPattern = BLangErrorMatchPattern(errorMatchPattern)
+}
+
+func (this *BLangErrorCauseMatchPattern) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangErrorCauseMatchPattern.java:59:5
+visitor.visit(this)
+}
+
+func (this *BLangErrorCauseMatchPattern) GetKind() NodeKind {
+// migrated from BLangErrorCauseMatchPattern.java:74:5
+return NodeKind_ERROR_CAUSE_MATCH_PATTERN
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorCauseMatchPattern.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 41519544960. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangErrorCauseMatchPattern.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 41519544968. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

@@ -1,0 +1,98 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangIf struct {
+    BLangStatement
+    Expr BLangExpression
+    Body BLangBlockStmt
+    ElseStmt BLangStatement
+}
+
+var _ IfNode = &BLangIf{}
+func NewBLangIf() BLangIf {
+this := BLangIf{};
+return this
+}
+
+func (this *BLangIf) GetCondition() BLangExpression {
+// migrated from BLangIf.java:43:5
+return expr
+}
+
+func (this *BLangIf) GetBody() BLangBlockStmt {
+// migrated from BLangIf.java:48:5
+return body
+}
+
+func (this *BLangIf) GetElseStatement() BLangStatement {
+// migrated from BLangIf.java:53:5
+return elseStmt
+}
+
+func (this *BLangIf) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangIf.java:58:5
+visitor.visit(this)
+}
+
+func (this *BLangIf) GetKind() NodeKind {
+// migrated from BLangIf.java:73:5
+return NodeKind_IF
+}
+
+func (this *BLangIf) SetCondition(condition ExpressionNode) {
+// migrated from BLangIf.java:78:5
+this.expr = BLangExpression(condition)
+}
+
+func (this *BLangIf) SetBody(body BlockStatementNode) {
+// migrated from BLangIf.java:83:5
+this.body = BLangBlockStmt(body)
+}
+
+func (this *BLangIf) SetElseStatement(elseStatement StatementNode) {
+// migrated from BLangIf.java:88:5
+this.elseStmt = BLangStatement(elseStatement)
+}
+
+func (this *BLangIf) ToString() string {
+// migrated from BLangIf.java:93:5
+return (((("if (" + expr) + ") ") + body) + elseStmt != null ? (" else " + elseStmt) : "")
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangIf.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 48804984992. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangIf.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 48804985000. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

@@ -1,0 +1,66 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type OCEDynamicEnvironmentData struct {
+    CapturedClosureEnv SymbolEnv
+    MapBlockMapSymbol BVarSymbol
+    MapFunctionMapSymbol BVarSymbol
+    TypeInit BLangTypeInit
+    ObjectType BObjectType
+    AttachedFunctionInvocation BLangAttachedFunctionInvocation
+    ObjMethodsEnv SymbolEnv
+    FieldEnv SymbolEnv
+    BlockMapUpdatedInInitMethod bool
+    FunctionMapUpdatedInInitMethod bool
+    BlockMap BVarSymbol
+    ClassEnclosedFunctionMap BVarSymbol
+    LambdaFunctionsList []BLangLambdaFunction
+    ClosureBlockSymbols Set[BSymbol]
+    ClosureFuncSymbols Set[BSymbol]
+    CloneRef OCEDynamicEnvironmentData
+    CloneAttempt int
+    OriginalClass BLangClassDefinition
+    Parents LinkedList[BLangClassDefinition]
+    ClosureDesugaringInProgress bool
+    IsDirty bool
+    DesugaredClosureVars []BLangSimpleVarRef
+    InitInvocation BLangExpression
+}
+
+func NewOCEDynamicEnvironmentData() OCEDynamicEnvironmentData {
+this := OCEDynamicEnvironmentData{};
+lambdaFunctionsList = make([]interface{}, 0)
+closureBlockSymbols = make(map[interface{}]bool)
+closureFuncSymbols = make(map[interface{}]bool)
+parents = make([]interface{}, 0)
+desugaredClosureVars = make([]interface{}, 0)
+cloneAttempt = 0
+return this
+}
+
+func (this *OCEDynamicEnvironmentData) CleanUp() {
+// migrated from OCEDynamicEnvironmentData.java:65:5
+parents.clear()
+closureFuncSymbols.clear()
+lambdaFunctionsList.clear()
+closureBlockSymbols.clear()
+desugaredClosureVars.clear()
+mapFunctionMapSymbol = nil
+mapBlockMapSymbol = nil
+}
+

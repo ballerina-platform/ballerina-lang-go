@@ -1,0 +1,134 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangInputClauseData interface {
+    GetCollection() BLangExpression
+    SetCollection(collection BLangExpression)
+    GetVariableDefinitionNode() VariableDefinitionNode
+    SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode)
+    GetIsDeclaredWithVar() bool
+    SetIsDeclaredWithVar(isDeclaredWithVar bool)
+    GetVarType() BType
+    SetVarType(varType BType)
+    GetResultType() BType
+    SetResultType(resultType BType)
+    GetNillableResultType() BType
+    SetNillableResultType(nillableResultType BType)
+}
+
+type BLangInputClause interface {
+    BLangInputClauseData
+    GetCollection() ExpressionNode
+    SetCollection(collection ExpressionNode)
+    SetDeclaredWithVar() bool
+    IsDeclaredWithVar() bool
+    GetVariableDefinitionNode() VariableDefinitionNode
+    SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode)
+}
+
+type BLangInputClauseBase struct {
+    Collection BLangExpression
+    VariableDefinitionNode VariableDefinitionNode
+    IsDeclaredWithVar bool
+    VarType BType
+    ResultType BType
+    NillableResultType BType
+}
+
+type BLangInputClauseMethods struct {
+    Self BLangInputClause
+}
+
+func (b *BLangInputClauseBase) GetCollection() BLangExpression {
+return b.Collection
+}
+
+func (b *BLangInputClauseBase) SetCollection(collection BLangExpression) {
+b.Collection = collection
+}
+
+func (b *BLangInputClauseBase) GetVariableDefinitionNode() VariableDefinitionNode {
+return b.VariableDefinitionNode
+}
+
+func (b *BLangInputClauseBase) SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode) {
+b.VariableDefinitionNode = variableDefinitionNode
+}
+
+func (b *BLangInputClauseBase) GetIsDeclaredWithVar() bool {
+return b.IsDeclaredWithVar
+}
+
+func (b *BLangInputClauseBase) SetIsDeclaredWithVar(isDeclaredWithVar bool) {
+b.IsDeclaredWithVar = isDeclaredWithVar
+}
+
+func (b *BLangInputClauseBase) GetVarType() BType {
+return b.VarType
+}
+
+func (b *BLangInputClauseBase) SetVarType(varType BType) {
+b.VarType = varType
+}
+
+func (b *BLangInputClauseBase) GetResultType() BType {
+return b.ResultType
+}
+
+func (b *BLangInputClauseBase) SetResultType(resultType BType) {
+b.ResultType = resultType
+}
+
+func (b *BLangInputClauseBase) GetNillableResultType() BType {
+return b.NillableResultType
+}
+
+func (b *BLangInputClauseBase) SetNillableResultType(nillableResultType BType) {
+b.NillableResultType = nillableResultType
+}
+
+func (m *BLangInputClauseMethods) GetCollection() ExpressionNode {
+// migrated from BLangInputClause.java:46:5
+return m.Self.GetCollection()
+}
+
+func (m *BLangInputClauseMethods) SetCollection(collection ExpressionNode) {
+// migrated from BLangInputClause.java:51:5
+m.Self.collection = BLangExpression(collection)
+}
+
+func (m *BLangInputClauseMethods) SetDeclaredWithVar() bool {
+// migrated from BLangInputClause.java:56:5
+return false
+}
+
+func (m *BLangInputClauseMethods) IsDeclaredWithVar() bool {
+// migrated from BLangInputClause.java:61:5
+return m.Self.GetIsDeclaredWithVar()
+}
+
+func (m *BLangInputClauseMethods) GetVariableDefinitionNode() VariableDefinitionNode {
+// migrated from BLangInputClause.java:66:5
+return m.Self.GetVariableDefinitionNode()
+}
+
+func (m *BLangInputClauseMethods) SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode) {
+// migrated from BLangInputClause.java:71:5
+m.Self.variableDefinitionNode = m.Self.GetVariableDefinitionNode()
+}
+

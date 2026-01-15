@@ -1,0 +1,134 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangTypeConversionExpr struct {
+    BLangExpression
+    Expr BLangExpression
+    TypeNode BLangType
+    AnnAttachments []BLangAnnotationAttachment
+    TargetType BType
+    CheckTypes bool
+}
+
+var _ TypeConversionNode = &BLangTypeConversionExpr{}
+func NewBLangTypeConversionExpr() BLangTypeConversionExpr {
+this := BLangTypeConversionExpr{};
+this.annAttachments = make([]interface{}, 0)
+this.checkTypes = true
+// Default field initializations
+
+return this
+}
+
+func (this *BLangTypeConversionExpr) GetExpression() ExpressionNode {
+// migrated from BLangTypeConversionExpr.java:56:5
+return expr
+}
+
+func (this *BLangTypeConversionExpr) SetExpression(expr ExpressionNode) {
+// migrated from BLangTypeConversionExpr.java:61:5
+this.expr = BLangExpression(expr)
+}
+
+func (this *BLangTypeConversionExpr) GetTypeNode() BLangType {
+// migrated from BLangTypeConversionExpr.java:66:5
+return typeNode
+}
+
+func (this *BLangTypeConversionExpr) SetTypeNode(typeNode TypeNode) {
+// migrated from BLangTypeConversionExpr.java:71:5
+this.typeNode = BLangType(typeNode)
+}
+
+func (this *BLangTypeConversionExpr) GetKind() NodeKind {
+// migrated from BLangTypeConversionExpr.java:76:5
+return NodeKind_TYPE_CONVERSION_EXPR
+}
+
+func (this *BLangTypeConversionExpr) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangTypeConversionExpr.java:81:5
+visitor.visit(this)
+}
+
+func (this *BLangTypeConversionExpr) ToString() string {
+// migrated from BLangTypeConversionExpr.java:96:5
+return new StringBuilder()
+                .append("<")
+                .append(annAttachments.isEmpty() ? "" : attachmentsToString())
+                .append(targetType != null ? targetType.toString() : "")
+                .append("> ")
+                .append(String.valueOf(expr)).ToString()
+}
+
+func (this *BLangTypeConversionExpr) attachmentsToString() string {
+// migrated from BLangTypeConversionExpr.java:107:5
+return annAttachments.stream().map(a -> "@" + a.getAnnotationName()).collect(Collectors.joining(", "))
+}
+
+func (this *BLangTypeConversionExpr) GetFlags() Set[any] {
+// migrated from BLangTypeConversionExpr.java:111:5
+return flagSet
+}
+
+func (this *BLangTypeConversionExpr) AddFlag(flag Flag) {
+// migrated from BLangTypeConversionExpr.java:116:5
+flagSet = append(flagSet, flag)
+flagSet
+}
+
+func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []any {
+// migrated from BLangTypeConversionExpr.java:121:5
+return annAttachments
+}
+
+func (this *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+// migrated from BLangTypeConversionExpr.java:126:5
+annAttachments = append(annAttachments, BLangAnnotationAttachment(annAttachment))
+annAttachments
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangTypeConversionExpr.field_declaration
+// Error: unhandled expression kind: class_literal
+// Java source:
+// Flag.class
+// S-expression:
+// (class_literal (type_identifier))
+
+// FIXME: Failed to migrate
+// Location: class BLangTypeConversionExpr.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47559364264. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangTypeConversionExpr.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 47559373280. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

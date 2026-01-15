@@ -1,0 +1,105 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangMarkdownParameterDocumentation struct {
+    BLangExpression
+    ParameterName BLangIdentifier
+    ParameterDocumentationLines []string
+    Symbol BVarSymbol
+}
+
+var _ MarkdownDocumentationParameterAttributeNode = &BLangMarkdownParameterDocumentation{}
+func NewBLangMarkdownParameterDocumentation() BLangMarkdownParameterDocumentation {
+this := BLangMarkdownParameterDocumentation{};
+parameterDocumentationLines = make([]interface{}, 0)
+return this
+}
+
+func (this *BLangMarkdownParameterDocumentation) GetParameterName() IdentifierNode {
+// migrated from BLangMarkdownParameterDocumentation.java:37:5
+return parameterName
+}
+
+func (this *BLangMarkdownParameterDocumentation) SetParameterName(parameterName IdentifierNode) {
+// migrated from BLangMarkdownParameterDocumentation.java:42:5
+this.parameterName = BLangIdentifier(parameterName)
+}
+
+func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentationLines() []string {
+// migrated from BLangMarkdownParameterDocumentation.java:47:5
+return parameterDocumentationLines
+}
+
+func (this *BLangMarkdownParameterDocumentation) AddParameterDocumentationLine(text string) {
+// migrated from BLangMarkdownParameterDocumentation.java:52:5
+parameterDocumentationLines = append(parameterDocumentationLines, text)
+parameterDocumentationLines
+}
+
+func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentation() string {
+// migrated from BLangMarkdownParameterDocumentation.java:57:5
+return parameterDocumentationLines.stream().collect(Collectors.joining("\n")).replace("\r", "")
+}
+
+func (this *BLangMarkdownParameterDocumentation) GetSymbol() BVarSymbol {
+// migrated from BLangMarkdownParameterDocumentation.java:62:5
+return symbol
+}
+
+func (this *BLangMarkdownParameterDocumentation) SetSymbol(symbol BVarSymbol) {
+// migrated from BLangMarkdownParameterDocumentation.java:67:5
+this.symbol = symbol
+}
+
+func (this *BLangMarkdownParameterDocumentation) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangMarkdownParameterDocumentation.java:72:5
+visitor.visit(this)
+}
+
+func (this *BLangMarkdownParameterDocumentation) GetKind() NodeKind {
+// migrated from BLangMarkdownParameterDocumentation.java:87:5
+return NodeKind_DOCUMENTATION_PARAMETER
+}
+
+func (this *BLangMarkdownParameterDocumentation) ToString() string {
+// migrated from BLangMarkdownParameterDocumentation.java:92:5
+return ((("BLangMarkdownParameterDocumentation: " + parameterName) + " : ") + parameterDocumentationLines)
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangMarkdownParameterDocumentation.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 53230064328. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangMarkdownParameterDocumentation.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 53230068448. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+

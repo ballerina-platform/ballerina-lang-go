@@ -1,0 +1,92 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package ast
+
+type BLangTupleVariable struct {
+    BLangVariable
+    MemberVariables []BLangVariable
+    RestVariable BLangVariable
+}
+
+var _ TupleVariableNode = &BLangTupleVariable{}
+func NewBLangTupleVariable() BLangTupleVariable {
+this := BLangTupleVariable{};
+return this
+}
+
+func (this *BLangTupleVariable) GetVariables() []BLangVariable {
+// migrated from BLangTupleVariable.java:50:5
+return memberVariables
+}
+
+func (this *BLangTupleVariable) Accept(visitor BLangNodeVisitor) {
+// migrated from BLangTupleVariable.java:55:5
+visitor.visit(this)
+}
+
+func (this *BLangTupleVariable) AddVariable(variable VariableNode) {
+// migrated from BLangTupleVariable.java:70:5
+this.memberVariables = append(this.memberVariables, BLangVariable(variable))
+this.memberVariables
+}
+
+func (this *BLangTupleVariable) GetRestVariable() BLangVariable {
+// migrated from BLangTupleVariable.java:75:5
+return this.restVariable
+}
+
+func (this *BLangTupleVariable) GetKind() NodeKind {
+// migrated from BLangTupleVariable.java:80:5
+return NodeKind_TUPLE_VARIABLE
+}
+
+func (this *BLangTupleVariable) ToString() string {
+// migrated from BLangTupleVariable.java:85:5
+return (((("[" + memberVariables.stream().map(BLangVariable::toString).collect(Collectors.joining(","))) + (restVariable != null) ? (!memberVariables.isEmpty() ? ",..." : "...") +
+                        restVariable.toString() : "") + "] ") + expr != null ? " = " + String.valueOf(expr) : "")
+}
+
+// FIXME: Failed to migrate
+// Location: class BLangTupleVariable.constructor_declaration
+// Error: unhandled expression kind: class_literal
+// Java source:
+// Flag.class
+// S-expression:
+// (class_literal (type_identifier))
+
+// FIXME: Failed to migrate
+// Location: class BLangTupleVariable.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 31486766632. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T> void accept(BLangNodeAnalyzer<T> analyzer, T props) {
+//         analyzer.visit(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier))) type: (void_type) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (expression_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
+// FIXME: Failed to migrate
+// Location: class BLangTupleVariable.method_declaration
+// Error: unexpected panic: Method metadata not found in cache for node ID 31486787872. This is a programming error - analyzeNode should have been called first.
+// Java source:
+// @Override
+//     public <T, R> R apply(BLangNodeTransformer<T, R> modifier, T props) {
+//         return modifier.transform(this, props);
+//     }
+// S-expression:
+// (method_declaration (modifiers (marker_annotation name: (identifier))) type_parameters: (type_parameters (type_parameter (type_identifier)) (type_parameter (type_identifier))) type: (type_identifier) name: (identifier) parameters: (formal_parameters (formal_parameter type: (generic_type (type_identifier) (type_arguments (type_identifier) (type_identifier))) name: (identifier)) (formal_parameter type: (type_identifier) name: (identifier))) body: (block (return_statement (method_invocation object: (identifier) name: (identifier) arguments: (argument_list (this) (identifier))))))
+
