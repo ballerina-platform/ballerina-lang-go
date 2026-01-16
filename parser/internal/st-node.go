@@ -3577,3 +3577,47 @@ func CreateEnumMemberNode(metadata STNode, identifier STNode, equalToken STNode,
 		ConstExprNode: constExprNode,
 	}, metadata, identifier, equalToken, constExprNode)
 }
+
+// TODO: think how to special case this so it can also be generated
+type STAmbiguousCollectionNode struct {
+	STNodeBase
+
+	CollectionStartToken STNode
+
+	Members []STNode
+
+	CollectionEndToken STNode
+}
+
+func (n *STAmbiguousCollectionNode) Kind() common.SyntaxKind {
+	return n.STNodeBase.Kind()
+}
+
+func (n *STAmbiguousCollectionNode) BucketCount() int {
+	return 3
+}
+
+func (n *STAmbiguousCollectionNode) ChildInBucket(bucket int) STNode {
+	switch bucket {
+
+	case 0:
+		return n.CollectionStartToken
+
+	case 1:
+		return CreateNodeList(n.Members...)
+	case 2:
+		return n.CollectionEndToken
+
+	default:
+		panic("invalid bucket index")
+	}
+}
+
+func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
+	return []STNode{
+
+		n.CollectionStartToken,
+		CreateNodeList(n.Members...),
+		n.CollectionEndToken,
+	}
+}

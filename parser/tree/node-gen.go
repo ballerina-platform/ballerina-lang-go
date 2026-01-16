@@ -51,10 +51,6 @@ type FunctionDefinition struct {
 	ModuleMemberDeclarationNode
 }
 
-func (n FunctionDefinition) Kind() common.SyntaxKind {
-	return common.FUNCTION_DEFINITION
-}
-
 func (n FunctionDefinition) Metadata() *MetadataNode {
 	val, ok := n.ChildInBucket(0).(*MetadataNode)
 	if !ok {
@@ -7667,30 +7663,6 @@ func (n NaturalExpressionNode) CloseBraceToken() *Token {
 	val, ok := n.ChildInBucket(5).(*Token)
 	if !ok {
 		panic("expected Token")
-	}
-	return val
-}
-
-type STAmbiguousCollectionNode struct {
-	NonTerminalNode
-}
-
-func (n STAmbiguousCollectionNode) CollectionStartToken() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		panic("expected Node")
-	}
-	return val
-}
-
-func (n STAmbiguousCollectionNode) Members() NodeList[Node] {
-	return nodeListFrom[Node](into[*NonTerminalNode](n.ChildInBucket(1)))
-}
-
-func (n STAmbiguousCollectionNode) CollectionEndToken() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		panic("expected Node")
 	}
 	return val
 }

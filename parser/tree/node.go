@@ -468,3 +468,28 @@ type DocumentMemberDeclarationNode struct {
 type IdentifierToken struct {
 	Token
 }
+
+// TODO: think how to special case this so it can also be generated
+type STAmbiguousCollectionNode struct {
+	NonTerminalNode
+}
+
+func (n STAmbiguousCollectionNode) CollectionStartToken() Node {
+	val, ok := n.ChildInBucket(0).(Node)
+	if !ok {
+		panic("expected Node")
+	}
+	return val
+}
+
+func (n STAmbiguousCollectionNode) Members() NodeList[Node] {
+	return nodeListFrom[Node](into[*NonTerminalNode](n.ChildInBucket(1)))
+}
+
+func (n STAmbiguousCollectionNode) CollectionEndToken() Node {
+	val, ok := n.ChildInBucket(2).(Node)
+	if !ok {
+		panic("expected Node")
+	}
+	return val
+}

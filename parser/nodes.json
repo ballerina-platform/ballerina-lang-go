@@ -28,7 +28,6 @@
   {
     "name": "FunctionDefinition",
     "base": "ModuleMemberDeclarationNode",
-    "kind": "FUNCTION_DEFINITION",
     "attributes": [
       {
         "name": "metadata",
@@ -5039,25 +5038,6 @@
       {
         "name": "closeBraceToken",
         "type": "Token"
-      }
-    ]
-  },
-  {
-    "name": "STAmbiguousCollectionNode",
-    "base": "Node",
-    "attributes": [
-      {
-        "name": "collectionStartToken",
-        "type": "Node"
-      },
-      {
-        "name": "members",
-        "type": "Node",
-        "occurrences": "MULTIPLE"
-      },
-      {
-        "name": "collectionEndToken",
-        "type": "Node"
       }
     ]
   }
