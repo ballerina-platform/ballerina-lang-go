@@ -1,0 +1,257 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package tree
+
+type NodeTransformer[T any] interface {
+	// Module and function definitions
+	TransformModulePart(modulePartNode *ModulePart) T
+	TransformFunctionDefinition(functionDefinitionNode *FunctionDefinition) T
+
+	// Node types
+	TransformAlternateReceive(alternateReceiveNode *AlternateReceiveNode) T
+	TransformAnnotAccessExpression(annotAccessExpressionNode *AnnotAccessExpressionNode) T
+	TransformAnnotation(annotationNode *AnnotationNode) T
+	TransformAnnotationAttachPoint(annotationAttachPointNode *AnnotationAttachPointNode) T
+	TransformAnnotationDeclaration(annotationDeclarationNode *AnnotationDeclarationNode) T
+	TransformArrayDimension(arrayDimensionNode *ArrayDimensionNode) T
+	TransformArrayTypeDescriptor(arrayTypeDescriptorNode *ArrayTypeDescriptorNode) T
+	TransformAssignmentStatement(assignmentStatementNode *AssignmentStatementNode) T
+	TransformAsyncSendAction(asyncSendActionNode *AsyncSendActionNode) T
+	TransformBallerinaNameReference(ballerinaNameReferenceNode *BallerinaNameReferenceNode) T
+	TransformBasicLiteral(basicLiteralNode *BasicLiteralNode) T
+	TransformBinaryExpression(binaryExpressionNode *BinaryExpressionNode) T
+	TransformBlockStatement(blockStatementNode *BlockStatementNode) T
+	TransformBracedExpression(bracedExpressionNode *BracedExpressionNode) T
+	TransformBreakStatement(breakStatementNode *BreakStatementNode) T
+	TransformBuiltinSimpleNameReference(builtinSimpleNameReferenceNode *BuiltinSimpleNameReferenceNode) T
+	TransformByteArrayLiteral(byteArrayLiteralNode *ByteArrayLiteralNode) T
+	TransformCaptureBindingPattern(captureBindingPatternNode *CaptureBindingPatternNode) T
+	TransformCheckExpression(checkExpressionNode *CheckExpressionNode) T
+	TransformClassDefinition(classDefinitionNode *ClassDefinitionNode) T
+	TransformClientResourceAccessAction(clientResourceAccessActionNode *ClientResourceAccessActionNode) T
+	TransformCollectClause(collectClauseNode *CollectClauseNode) T
+	TransformCommitAction(commitActionNode *CommitActionNode) T
+	TransformCompoundAssignmentStatement(compoundAssignmentStatementNode *CompoundAssignmentStatementNode) T
+	TransformComputedNameField(computedNameFieldNode *ComputedNameFieldNode) T
+	TransformComputedResourceAccessSegment(computedResourceAccessSegmentNode *ComputedResourceAccessSegmentNode) T
+	TransformConditionalExpression(conditionalExpressionNode *ConditionalExpressionNode) T
+	TransformConstantDeclaration(constantDeclarationNode *ConstantDeclarationNode) T
+	TransformContinueStatement(continueStatementNode *ContinueStatementNode) T
+	TransformDefaultableParameter(defaultableParameterNode *DefaultableParameterNode) T
+	TransformDistinctTypeDescriptor(distinctTypeDescriptorNode *DistinctTypeDescriptorNode) T
+	TransformDoStatement(doStatementNode *DoStatementNode) T
+	TransformDoubleGTToken(doubleGTTokenNode *DoubleGTTokenNode) T
+	TransformElseBlock(elseBlockNode *ElseBlockNode) T
+	TransformEnumDeclaration(enumDeclarationNode *EnumDeclarationNode) T
+	TransformEnumMember(enumMemberNode *EnumMemberNode) T
+	TransformErrorBindingPattern(errorBindingPatternNode *ErrorBindingPatternNode) T
+	TransformErrorConstructorExpression(errorConstructorExpressionNode *ErrorConstructorExpressionNode) T
+	TransformErrorMatchPattern(errorMatchPatternNode *ErrorMatchPatternNode) T
+	TransformExplicitAnonymousFunctionExpression(explicitAnonymousFunctionExpressionNode *ExplicitAnonymousFunctionExpressionNode) T
+	TransformExplicitNewExpression(explicitNewExpressionNode *ExplicitNewExpressionNode) T
+	TransformExpressionFunctionBody(expressionFunctionBodyNode *ExpressionFunctionBodyNode) T
+	TransformExpressionStatement(expressionStatementNode *ExpressionStatementNode) T
+	TransformExternalFunctionBody(externalFunctionBodyNode *ExternalFunctionBodyNode) T
+	TransformFailStatement(failStatementNode *FailStatementNode) T
+	TransformFieldAccessExpression(fieldAccessExpressionNode *FieldAccessExpressionNode) T
+	TransformFieldBindingPatternFull(fieldBindingPatternFullNode *FieldBindingPatternFullNode) T
+	TransformFieldBindingPatternVarname(fieldBindingPatternVarnameNode *FieldBindingPatternVarnameNode) T
+	TransformFieldMatchPattern(fieldMatchPatternNode *FieldMatchPatternNode) T
+	TransformFlushAction(flushActionNode *FlushActionNode) T
+	TransformForEachStatement(forEachStatementNode *ForEachStatementNode) T
+	TransformForkStatement(forkStatementNode *ForkStatementNode) T
+	TransformFromClause(fromClauseNode *FromClauseNode) T
+	TransformFunctionBodyBlock(functionBodyBlockNode *FunctionBodyBlockNode) T
+	TransformFunctionCallExpression(functionCallExpressionNode *FunctionCallExpressionNode) T
+	TransformFunctionSignature(functionSignatureNode *FunctionSignatureNode) T
+	TransformFunctionTypeDescriptor(functionTypeDescriptorNode *FunctionTypeDescriptorNode) T
+	TransformGroupByClause(groupByClauseNode *GroupByClauseNode) T
+	TransformGroupingKeyVarDeclaration(groupingKeyVarDeclarationNode *GroupingKeyVarDeclarationNode) T
+	TransformIfElseStatement(ifElseStatementNode *IfElseStatementNode) T
+	TransformImplicitAnonymousFunctionExpression(implicitAnonymousFunctionExpressionNode *ImplicitAnonymousFunctionExpressionNode) T
+	TransformImplicitNewExpression(implicitNewExpressionNode *ImplicitNewExpressionNode) T
+	TransformImportDeclaration(importDeclarationNode *ImportDeclarationNode) T
+	TransformImportOrgName(importOrgNameNode *ImportOrgNameNode) T
+	TransformImportPrefix(importPrefixNode *ImportPrefixNode) T
+	TransformIncludedRecordParameter(includedRecordParameterNode *IncludedRecordParameterNode) T
+	TransformIndexedExpression(indexedExpressionNode *IndexedExpressionNode) T
+	TransformInferredTypedescDefault(inferredTypedescDefaultNode *InferredTypedescDefaultNode) T
+	TransformInlineCodeReference(inlineCodeReferenceNode *InlineCodeReferenceNode) T
+	TransformInterpolation(interpolationNode *InterpolationNode) T
+	TransformIntersectionTypeDescriptor(intersectionTypeDescriptorNode *IntersectionTypeDescriptorNode) T
+	TransformJoinClause(joinClauseNode *JoinClauseNode) T
+	TransformKeySpecifier(keySpecifierNode *KeySpecifierNode) T
+	TransformKeyTypeConstraint(keyTypeConstraintNode *KeyTypeConstraintNode) T
+	TransformLetClause(letClauseNode *LetClauseNode) T
+	TransformLetExpression(letExpressionNode *LetExpressionNode) T
+	TransformLetVariableDeclaration(letVariableDeclarationNode *LetVariableDeclarationNode) T
+	TransformLimitClause(limitClauseNode *LimitClauseNode) T
+	TransformListBindingPattern(listBindingPatternNode *ListBindingPatternNode) T
+	TransformListConstructorExpression(listConstructorExpressionNode *ListConstructorExpressionNode) T
+	TransformListenerDeclaration(listenerDeclarationNode *ListenerDeclarationNode) T
+	TransformListMatchPattern(listMatchPatternNode *ListMatchPatternNode) T
+	TransformLocalTypeDefinitionStatement(localTypeDefinitionStatementNode *LocalTypeDefinitionStatementNode) T
+	TransformLockStatement(lockStatementNode *LockStatementNode) T
+	TransformMappingBindingPattern(mappingBindingPatternNode *MappingBindingPatternNode) T
+	TransformMappingConstructorExpression(mappingConstructorExpressionNode *MappingConstructorExpressionNode) T
+	TransformMappingMatchPattern(mappingMatchPatternNode *MappingMatchPatternNode) T
+	TransformMapTypeDescriptor(mapTypeDescriptorNode *MapTypeDescriptorNode) T
+	TransformMarkdownCodeBlock(markdownCodeBlockNode *MarkdownCodeBlockNode) T
+	TransformMarkdownCodeLine(markdownCodeLineNode *MarkdownCodeLineNode) T
+	TransformMarkdownDocumentation(markdownDocumentationNode *MarkdownDocumentationNode) T
+	TransformMarkdownDocumentationLine(markdownDocumentationLineNode *MarkdownDocumentationLineNode) T
+	TransformMarkdownParameterDocumentationLine(markdownParameterDocumentationLineNode *MarkdownParameterDocumentationLineNode) T
+	TransformMatchClause(matchClauseNode *MatchClauseNode) T
+	TransformMatchGuard(matchGuardNode *MatchGuardNode) T
+	TransformMatchStatement(matchStatementNode *MatchStatementNode) T
+	TransformMemberTypeDescriptor(memberTypeDescriptorNode *MemberTypeDescriptorNode) T
+	TransformMetadata(metadataNode *MetadataNode) T
+	TransformMethodCallExpression(methodCallExpressionNode *MethodCallExpressionNode) T
+	TransformMethodDeclaration(methodDeclarationNode *MethodDeclarationNode) T
+	TransformModuleVariableDeclaration(moduleVariableDeclarationNode *ModuleVariableDeclarationNode) T
+	TransformModuleXMLNamespaceDeclaration(moduleXMLNamespaceDeclarationNode *ModuleXMLNamespaceDeclarationNode) T
+	TransformNamedArgBindingPattern(namedArgBindingPatternNode *NamedArgBindingPatternNode) T
+	TransformNamedArgMatchPattern(namedArgMatchPatternNode *NamedArgMatchPatternNode) T
+	TransformNamedArgument(namedArgumentNode *NamedArgumentNode) T
+	TransformNamedWorkerDeclaration(namedWorkerDeclarationNode *NamedWorkerDeclarationNode) T
+	TransformNaturalExpression(naturalExpressionNode *NaturalExpressionNode) T
+	TransformNilLiteral(nilLiteralNode *NilLiteralNode) T
+	TransformNilTypeDescriptor(nilTypeDescriptorNode *NilTypeDescriptorNode) T
+	TransformObjectConstructorExpression(objectConstructorExpressionNode *ObjectConstructorExpressionNode) T
+	TransformObjectField(objectFieldNode *ObjectFieldNode) T
+	TransformObjectTypeDescriptor(objectTypeDescriptorNode *ObjectTypeDescriptorNode) T
+	TransformOnClause(onClauseNode *OnClauseNode) T
+	TransformOnConflictClause(onConflictClauseNode *OnConflictClauseNode) T
+	TransformOnFailClause(onFailClauseNode *OnFailClauseNode) T
+	TransformOptionalFieldAccessExpression(optionalFieldAccessExpressionNode *OptionalFieldAccessExpressionNode) T
+	TransformOptionalTypeDescriptor(optionalTypeDescriptorNode *OptionalTypeDescriptorNode) T
+	TransformOrderByClause(orderByClauseNode *OrderByClauseNode) T
+	TransformOrderKey(orderKeyNode *OrderKeyNode) T
+	TransformPanicStatement(panicStatementNode *PanicStatementNode) T
+	TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *ParameterizedTypeDescriptorNode) T
+	TransformParenthesisedTypeDescriptor(parenthesisedTypeDescriptorNode *ParenthesisedTypeDescriptorNode) T
+	TransformPositionalArgument(positionalArgumentNode *PositionalArgumentNode) T
+	TransformQualifiedNameReference(qualifiedNameReferenceNode *QualifiedNameReferenceNode) T
+	TransformQueryAction(queryActionNode *QueryActionNode) T
+	TransformQueryConstructType(queryConstructTypeNode *QueryConstructTypeNode) T
+	TransformQueryExpression(queryExpressionNode *QueryExpressionNode) T
+	TransformQueryPipeline(queryPipelineNode *QueryPipelineNode) T
+	TransformReAssertion(reAssertionNode *ReAssertionNode) T
+	TransformReAtomCharOrEscape(reAtomCharOrEscapeNode *ReAtomCharOrEscapeNode) T
+	TransformReAtomQuantifier(reAtomQuantifierNode *ReAtomQuantifierNode) T
+	TransformReBracedQuantifier(reBracedQuantifierNode *ReBracedQuantifierNode) T
+	TransformReCapturingGroups(reCapturingGroupsNode *ReCapturingGroupsNode) T
+	TransformReceiveAction(receiveActionNode *ReceiveActionNode) T
+	TransformReceiveField(receiveFieldNode *ReceiveFieldNode) T
+	TransformReceiveFields(receiveFieldsNode *ReceiveFieldsNode) T
+	TransformReCharacterClass(reCharacterClassNode *ReCharacterClassNode) T
+	TransformReCharSetAtomNoDashWithReCharSetNoDash(reCharSetAtomNoDashWithReCharSetNoDashNode *ReCharSetAtomNoDashWithReCharSetNoDashNode) T
+	TransformReCharSetAtomWithReCharSetNoDash(reCharSetAtomWithReCharSetNoDashNode *ReCharSetAtomWithReCharSetNoDashNode) T
+	TransformReCharSetRange(reCharSetRangeNode *ReCharSetRangeNode) T
+	TransformReCharSetRangeNoDash(reCharSetRangeNoDashNode *ReCharSetRangeNoDashNode) T
+	TransformReCharSetRangeNoDashWithReCharSet(reCharSetRangeNoDashWithReCharSetNode *ReCharSetRangeNoDashWithReCharSetNode) T
+	TransformReCharSetRangeWithReCharSet(reCharSetRangeWithReCharSetNode *ReCharSetRangeWithReCharSetNode) T
+	TransformRecordField(recordFieldNode *RecordFieldNode) T
+	TransformRecordFieldWithDefaultValue(recordFieldWithDefaultValueNode *RecordFieldWithDefaultValueNode) T
+	TransformRecordRestDescriptor(recordRestDescriptorNode *RecordRestDescriptorNode) T
+	TransformRecordTypeDescriptor(recordTypeDescriptorNode *RecordTypeDescriptorNode) T
+	TransformReFlagExpression(reFlagExpressionNode *ReFlagExpressionNode) T
+	TransformReFlags(reFlagsNode *ReFlagsNode) T
+	TransformReFlagsOnOff(reFlagsOnOffNode *ReFlagsOnOffNode) T
+	TransformRemoteMethodCallAction(remoteMethodCallActionNode *RemoteMethodCallActionNode) T
+	TransformReQuantifier(reQuantifierNode *ReQuantifierNode) T
+	TransformRequiredExpression(requiredExpressionNode *RequiredExpressionNode) T
+	TransformRequiredParameter(requiredParameterNode *RequiredParameterNode) T
+	TransformReQuoteEscape(reQuoteEscapeNode *ReQuoteEscapeNode) T
+	TransformReSequence(reSequenceNode *ReSequenceNode) T
+	TransformReSimpleCharClassEscape(reSimpleCharClassEscapeNode *ReSimpleCharClassEscapeNode) T
+	TransformResourceAccessRestSegment(resourceAccessRestSegmentNode *ResourceAccessRestSegmentNode) T
+	TransformResourcePathParameter(resourcePathParameterNode *ResourcePathParameterNode) T
+	TransformRestArgument(restArgumentNode *RestArgumentNode) T
+	TransformRestBindingPattern(restBindingPatternNode *RestBindingPatternNode) T
+	TransformRestDescriptor(restDescriptorNode *RestDescriptorNode) T
+	TransformRestMatchPattern(restMatchPatternNode *RestMatchPatternNode) T
+	TransformRestParameter(restParameterNode *RestParameterNode) T
+	TransformRetryStatement(retryStatementNode *RetryStatementNode) T
+	TransformReturnStatement(returnStatementNode *ReturnStatementNode) T
+	TransformReturnTypeDescriptor(returnTypeDescriptorNode *ReturnTypeDescriptorNode) T
+	TransformReUnicodeGeneralCategory(reUnicodeGeneralCategoryNode *ReUnicodeGeneralCategoryNode) T
+	TransformReUnicodePropertyEscape(reUnicodePropertyEscapeNode *ReUnicodePropertyEscapeNode) T
+	TransformReUnicodeScript(reUnicodeScriptNode *ReUnicodeScriptNode) T
+	TransformRollbackStatement(rollbackStatementNode *RollbackStatementNode) T
+	TransformSelectClause(selectClauseNode *SelectClauseNode) T
+	TransformServiceDeclaration(serviceDeclarationNode *ServiceDeclarationNode) T
+	TransformSimpleNameReference(simpleNameReferenceNode *SimpleNameReferenceNode) T
+	TransformSingletonTypeDescriptor(singletonTypeDescriptorNode *SingletonTypeDescriptorNode) T
+	TransformSpecificField(specificFieldNode *SpecificFieldNode) T
+	TransformSpreadField(spreadFieldNode *SpreadFieldNode) T
+	TransformSpreadMember(spreadMemberNode *SpreadMemberNode) T
+	TransformSTAmbiguousCollection(sTAmbiguousCollectionNode *STAmbiguousCollectionNode) T
+	TransformStartAction(startActionNode *StartActionNode) T
+	TransformStreamTypeDescriptor(streamTypeDescriptorNode *StreamTypeDescriptorNode) T
+	TransformStreamTypeParams(streamTypeParamsNode *StreamTypeParamsNode) T
+	TransformSyncSendAction(syncSendActionNode *SyncSendActionNode) T
+	TransformTableConstructorExpression(tableConstructorExpressionNode *TableConstructorExpressionNode) T
+	TransformTableTypeDescriptor(tableTypeDescriptorNode *TableTypeDescriptorNode) T
+	TransformTemplateExpression(templateExpressionNode *TemplateExpressionNode) T
+	TransformTransactionalExpression(transactionalExpressionNode *TransactionalExpressionNode) T
+	TransformTransactionStatement(transactionStatementNode *TransactionStatementNode) T
+	TransformTrapExpression(trapExpressionNode *TrapExpressionNode) T
+	TransformTrippleGTToken(trippleGTTokenNode *TrippleGTTokenNode) T
+	TransformTupleTypeDescriptor(tupleTypeDescriptorNode *TupleTypeDescriptorNode) T
+	TransformTypeCastExpression(typeCastExpressionNode *TypeCastExpressionNode) T
+	TransformTypeCastParam(typeCastParamNode *TypeCastParamNode) T
+	TransformTypedBindingPattern(typedBindingPatternNode *TypedBindingPatternNode) T
+	TransformTypeDefinition(typeDefinitionNode *TypeDefinitionNode) T
+	TransformTypeofExpression(typeofExpressionNode *TypeofExpressionNode) T
+	TransformTypeParameter(typeParameterNode *TypeParameterNode) T
+	TransformTypeReference(typeReferenceNode *TypeReferenceNode) T
+	TransformTypeReferenceTypeDesc(typeReferenceTypeDescNode *TypeReferenceTypeDescNode) T
+	TransformTypeTestExpression(typeTestExpressionNode *TypeTestExpressionNode) T
+	TransformUnaryExpression(unaryExpressionNode *UnaryExpressionNode) T
+	TransformUnionTypeDescriptor(unionTypeDescriptorNode *UnionTypeDescriptorNode) T
+	TransformVariableDeclaration(variableDeclarationNode *VariableDeclarationNode) T
+	TransformWaitAction(waitActionNode *WaitActionNode) T
+	TransformWaitField(waitFieldNode *WaitFieldNode) T
+	TransformWaitFieldsList(waitFieldsListNode *WaitFieldsListNode) T
+	TransformWhereClause(whereClauseNode *WhereClauseNode) T
+	TransformWhileStatement(whileStatementNode *WhileStatementNode) T
+	TransformWildcardBindingPattern(wildcardBindingPatternNode *WildcardBindingPatternNode) T
+	TransformXMLAtomicNamePattern(xMLAtomicNamePatternNode *XMLAtomicNamePatternNode) T
+	TransformXMLAttribute(xMLAttributeNode *XMLAttributeNode) T
+	TransformXMLCDATA(xMLCDATANode *XMLCDATANode) T
+	TransformXMLElement(xMLElementNode *XMLElementNode) T
+	TransformXMLEmptyElement(xMLEmptyElementNode *XMLEmptyElementNode) T
+	TransformXMLEndTag(xMLEndTagNode *XMLEndTagNode) T
+	TransformXMLFilterExpression(xMLFilterExpressionNode *XMLFilterExpressionNode) T
+	TransformXMLNamePatternChaining(xMLNamePatternChainingNode *XMLNamePatternChainingNode) T
+	TransformXMLNamespaceDeclaration(xMLNamespaceDeclarationNode *XMLNamespaceDeclarationNode) T
+	TransformXMLQualifiedName(xMLQualifiedNameNode *XMLQualifiedNameNode) T
+	TransformXMLSimpleName(xMLSimpleNameNode *XMLSimpleNameNode) T
+	TransformXMLStartTag(xMLStartTagNode *XMLStartTagNode) T
+	TransformXMLStepExpression(xMLStepExpressionNode *XMLStepExpressionNode) T
+	TransformXMLStepIndexedExtend(xMLStepIndexedExtendNode *XMLStepIndexedExtendNode) T
+	TransformXMLStepMethodCallExtend(xMLStepMethodCallExtendNode *XMLStepMethodCallExtendNode) T
+	TransformXMLText(xMLTextNode *XMLTextNode) T
+
+	// Tokens
+	TransformToken(token *Token) T
+	TransformIdentifierToken(identifier *IdentifierToken) T
+
+	// Misc
+	TransformSyntaxNode(node Node) T
+}
