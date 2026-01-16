@@ -16,7 +16,6 @@
 
 package internal
 
-import "reflect"
 // replaceInner recursively replaces a target node with a replacement node.
 // Returns true if the replacement was made, false otherwise.
 func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNode) {
@@ -50,6 +49,6 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 	case STToken:
 		return false, current
     default:
-		panic ("unsupported node type: " + reflect.TypeOf(current).Name())
+		return replaceInnerFallback(current, target, replacement)
     }
 }

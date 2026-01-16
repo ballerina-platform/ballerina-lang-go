@@ -16,8 +16,6 @@
 
 package internal
 
-import "reflect"
-
 // replaceInner recursively replaces a target node with a replacement node.
 // Returns true if the replacement was made, false otherwise.
 func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNode) {
@@ -5677,49 +5675,9 @@ func replaceInner(current STNode, target STNode, replacement STNode) (bool, STNo
 		}
 		return false, current
 
-	case *STAmbiguousCollectionNode:
-
-		modifiedCollectionStartToken, collectionStartTokenNode := replaceInner(n.CollectionStartToken, target, replacement)
-
-		modifiedMembers, membersNode := replaceAll(n.Members, target, replacement)
-
-		modifiedCollectionEndToken, collectionEndTokenNode := replaceInner(n.CollectionEndToken, target, replacement)
-
-		modified := modifiedCollectionStartToken || modifiedMembers || modifiedCollectionEndToken
-		if modified {
-			children := []STNode{collectionStartTokenNode}
-			children = append(children, membersNode...)
-			children = append(children, collectionEndTokenNode)
-			return true, createNodeAndAddChildren(&STAmbiguousCollectionNode{
-				STNodeBase: n.STNodeBase,
-
-				CollectionStartToken: collectionStartTokenNode,
-
-				Members: membersNode,
-
-				CollectionEndToken: collectionEndTokenNode,
-			}, children...)
-		}
-		return false, current
-
 	case STToken:
 		return false, current
-	case *STNodeList:
-		if n.IsEmpty() {
-			return false, current
-		}
-		modified := false
-		var newSTNodes []STNode
-		for _, each := range n.children {
-			m, e := replaceInner(each, target, replacement)
-			modified = modified || m
-			newSTNodes = append(newSTNodes, e)
-		}
-		if modified {
-			return true, CreateNodeList(newSTNodes...)
-		}
-		return false, current
 	default:
-		panic("unsupported node type: " + reflect.TypeOf(current).Name())
+		return replaceInnerFallback(current, target, replacement)
 	}
 }
