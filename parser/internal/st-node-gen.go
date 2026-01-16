@@ -55,6 +55,7 @@ func (n *STModulePart) ChildInBucket(bucket int) STNode {
 
 func (n *STModulePart) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Imports,
 
 		n.Members,
@@ -124,6 +125,7 @@ func (n *STFunctionDefinition) ChildInBucket(bucket int) STNode {
 
 func (n *STFunctionDefinition) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.QualifierList,
@@ -187,6 +189,7 @@ func (n *STImportDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STImportDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ImportKeyword,
 
 		n.OrgName,
@@ -261,6 +264,7 @@ func (n *STListenerDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STListenerDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -331,6 +335,7 @@ func (n *STTypeDefinitionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeDefinitionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -422,6 +427,7 @@ func (n *STServiceDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STServiceDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.Qualifiers,
@@ -490,6 +496,7 @@ func (n *STAssignmentStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAssignmentStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.VarRef,
 
 		n.EqualsToken,
@@ -547,6 +554,7 @@ func (n *STCompoundAssignmentStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STCompoundAssignmentStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LhsExpression,
 
 		n.BinaryOperator,
@@ -611,6 +619,7 @@ func (n *STVariableDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STVariableDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.FinalKeyword,
@@ -662,6 +671,7 @@ func (n *STBlockStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STBlockStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBraceToken,
 
 		n.Statements,
@@ -702,6 +712,7 @@ func (n *STBreakStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STBreakStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.BreakToken,
 
 		n.SemicolonToken,
@@ -745,6 +756,7 @@ func (n *STFailStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFailStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FailKeyword,
 
 		n.Expression,
@@ -819,6 +831,7 @@ func (n *STContinueStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STContinueStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ContinueToken,
 
 		n.SemicolonToken,
@@ -867,6 +880,7 @@ func (n *STExternalFunctionBodyNode) ChildInBucket(bucket int) STNode {
 
 func (n *STExternalFunctionBodyNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.EqualsToken,
 
 		n.Annotations,
@@ -919,6 +933,7 @@ func (n *STIfElseStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STIfElseStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.IfKeyword,
 
 		n.Condition,
@@ -961,6 +976,7 @@ func (n *STElseBlockNode) ChildInBucket(bucket int) STNode {
 
 func (n *STElseBlockNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ElseKeyword,
 
 		n.ElseBody,
@@ -1009,6 +1025,7 @@ func (n *STWhileStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWhileStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.WhileKeyword,
 
 		n.Condition,
@@ -1056,6 +1073,7 @@ func (n *STPanicStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STPanicStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.PanicKeyword,
 
 		n.Expression,
@@ -1101,6 +1119,7 @@ func (n *STReturnStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReturnStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReturnKeyword,
 
 		n.Expression,
@@ -1156,6 +1175,7 @@ func (n *STLocalTypeDefinitionStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLocalTypeDefinitionStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypeKeyword,
@@ -1205,6 +1225,7 @@ func (n *STLockStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLockStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LockKeyword,
 
 		n.BlockStatement,
@@ -1255,6 +1276,7 @@ func (n *STForkStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STForkStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ForkKeyword,
 
 		n.OpenBraceToken,
@@ -1317,6 +1339,7 @@ func (n *STForEachStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STForEachStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ForEachKeyword,
 
 		n.TypedBindingPattern,
@@ -1482,6 +1505,7 @@ func (n *STFieldAccessExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFieldAccessExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.DotToken,
@@ -1532,6 +1556,7 @@ func (n *STFunctionCallExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFunctionCallExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FunctionName,
 
 		n.OpenParenToken,
@@ -1594,6 +1619,7 @@ func (n *STMethodCallExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMethodCallExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.DotToken,
@@ -1645,6 +1671,7 @@ func (n *STMappingConstructorExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMappingConstructorExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBrace,
 
 		n.Fields,
@@ -1695,6 +1722,7 @@ func (n *STIndexedExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STIndexedExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ContainerExpression,
 
 		n.OpenBracket,
@@ -1737,6 +1765,7 @@ func (n *STTypeofExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeofExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeofKeyword,
 
 		n.Expression,
@@ -1775,6 +1804,7 @@ func (n *STUnaryExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STUnaryExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.UnaryOperator,
 
 		n.Expression,
@@ -1828,6 +1858,7 @@ func (n *STComputedNameFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STComputedNameFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.FieldNameExpr,
@@ -1902,6 +1933,7 @@ func (n *STConstantDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STConstantDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -1969,6 +2001,7 @@ func (n *STDefaultableParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STDefaultableParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypeName,
@@ -2018,6 +2051,7 @@ func (n *STRequiredParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRequiredParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypeName,
@@ -2068,6 +2102,7 @@ func (n *STIncludedRecordParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STIncludedRecordParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.AsteriskToken,
@@ -2120,6 +2155,7 @@ func (n *STRestParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRestParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypeName,
@@ -2162,6 +2198,7 @@ func (n *STImportOrgNameNode) ChildInBucket(bucket int) STNode {
 
 func (n *STImportOrgNameNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OrgName,
 
 		n.SlashToken,
@@ -2200,6 +2237,7 @@ func (n *STImportPrefixNode) ChildInBucket(bucket int) STNode {
 
 func (n *STImportPrefixNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.AsKeyword,
 
 		n.Prefix,
@@ -2250,6 +2288,7 @@ func (n *STSpecificFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSpecificFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReadonlyKeyword,
 
 		n.FieldName,
@@ -2292,6 +2331,7 @@ func (n *STSpreadFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSpreadFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Ellipsis,
 
 		n.ValueExpr,
@@ -2337,6 +2377,7 @@ func (n *STNamedArgumentNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNamedArgumentNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ArgumentName,
 
 		n.EqualsToken,
@@ -2372,6 +2413,7 @@ func (n *STPositionalArgumentNode) ChildInBucket(bucket int) STNode {
 
 func (n *STPositionalArgumentNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 	}
 }
@@ -2408,6 +2450,7 @@ func (n *STRestArgumentNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRestArgumentNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Ellipsis,
 
 		n.Expression,
@@ -2446,6 +2489,7 @@ func (n *STInferredTypedescDefaultNode) ChildInBucket(bucket int) STNode {
 
 func (n *STInferredTypedescDefaultNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.GtToken,
@@ -2499,6 +2543,7 @@ func (n *STObjectTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STObjectTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ObjectTypeQualifiers,
 
 		n.ObjectKeyword,
@@ -2568,6 +2613,7 @@ func (n *STObjectConstructorExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STObjectConstructorExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.ObjectTypeQualifiers,
@@ -2631,6 +2677,7 @@ func (n *STRecordTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRecordTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.RecordKeyword,
 
 		n.BodyStartDelimiter,
@@ -2680,6 +2727,7 @@ func (n *STReturnTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReturnTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReturnsKeyword,
 
 		n.Annotations,
@@ -2720,6 +2768,7 @@ func (n *STNilTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNilTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.CloseParenToken,
@@ -2758,6 +2807,7 @@ func (n *STOptionalTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOptionalTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeDescriptor,
 
 		n.QuestionMarkToken,
@@ -2826,6 +2876,7 @@ func (n *STObjectFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STObjectFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -2896,6 +2947,7 @@ func (n *STRecordFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRecordFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.ReadonlyKeyword,
@@ -2967,6 +3019,7 @@ func (n *STRecordFieldWithDefaultValueNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRecordFieldWithDefaultValueNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.ReadonlyKeyword,
@@ -3020,6 +3073,7 @@ func (n *STRecordRestDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRecordRestDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeName,
 
 		n.EllipsisToken,
@@ -3065,6 +3119,7 @@ func (n *STTypeReferenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.AsteriskToken,
 
 		n.TypeName,
@@ -3110,6 +3165,7 @@ func (n *STAnnotationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAnnotationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.AtToken,
 
 		n.AnnotReference,
@@ -3150,6 +3206,7 @@ func (n *STMetadataNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMetadataNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.DocumentationString,
 
 		n.Annotations,
@@ -3213,6 +3270,7 @@ func (n *STModuleVariableDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STModuleVariableDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -3266,6 +3324,7 @@ func (n *STTypeTestExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeTestExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.IsKeyword,
@@ -3328,6 +3387,7 @@ func (n *STRemoteMethodCallActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRemoteMethodCallActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.RightArrowToken,
@@ -3374,6 +3434,7 @@ func (n *STMapTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMapTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.MapKeywordToken,
 
 		n.MapTypeParamsNode,
@@ -3412,6 +3473,7 @@ func (n *STNilLiteralNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNilLiteralNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.CloseParenToken,
@@ -3485,6 +3547,7 @@ func (n *STAnnotationDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAnnotationDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -3537,6 +3600,7 @@ func (n *STAnnotationAttachPointNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAnnotationAttachPointNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SourceKeyword,
 
 		n.Identifiers,
@@ -3590,6 +3654,7 @@ func (n *STXMLNamespaceDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLNamespaceDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.XmlnsKeyword,
 
 		n.Namespaceuri,
@@ -3649,6 +3714,7 @@ func (n *STModuleXMLNamespaceDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STModuleXMLNamespaceDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.XmlnsKeyword,
 
 		n.Namespaceuri,
@@ -3708,6 +3774,7 @@ func (n *STFunctionBodyBlockNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFunctionBodyBlockNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBraceToken,
 
 		n.NamedWorkerDeclarator,
@@ -3777,6 +3844,7 @@ func (n *STNamedWorkerDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNamedWorkerDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TransactionalKeyword,
@@ -3825,6 +3893,7 @@ func (n *STNamedWorkerDeclarator) ChildInBucket(bucket int) STNode {
 
 func (n *STNamedWorkerDeclarator) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.WorkerInitStatements,
 
 		n.NamedWorkerDeclarations,
@@ -3889,6 +3958,7 @@ func (n *STSimpleNameReferenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSimpleNameReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Name,
 	}
 }
@@ -3930,6 +4000,7 @@ func (n *STQualifiedNameReferenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STQualifiedNameReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ModulePrefix,
 
 		n.Colon,
@@ -4033,6 +4104,7 @@ func (n *STListConstructorExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STListConstructorExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.Expressions,
@@ -4083,6 +4155,7 @@ func (n *STTypeCastExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeCastExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.TypeCastParam,
@@ -4125,6 +4198,7 @@ func (n *STTypeCastParamNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeCastParamNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.Type,
@@ -4168,6 +4242,7 @@ func (n *STUnionTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STUnionTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LeftTypeDesc,
 
 		n.PipeToken,
@@ -4223,6 +4298,7 @@ func (n *STTableConstructorExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTableConstructorExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TableKeyword,
 
 		n.KeySpecifier,
@@ -4277,6 +4353,7 @@ func (n *STKeySpecifierNode) ChildInBucket(bucket int) STNode {
 
 func (n *STKeySpecifierNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.KeyKeyword,
 
 		n.OpenParenToken,
@@ -4319,6 +4396,7 @@ func (n *STStreamTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STStreamTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StreamKeywordToken,
 
 		n.StreamTypeParamsNode,
@@ -4372,6 +4450,7 @@ func (n *STStreamTypeParamsNode) ChildInBucket(bucket int) STNode {
 
 func (n *STStreamTypeParamsNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.LeftTypeDescNode,
@@ -4426,6 +4505,7 @@ func (n *STLetExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLetExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LetKeyword,
 
 		n.LetVarDeclarations,
@@ -4478,6 +4558,7 @@ func (n *STLetVariableDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLetVariableDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypedBindingPattern,
@@ -4571,6 +4652,7 @@ func (n *STXMLElementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLElementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StartTag,
 
 		n.Content,
@@ -4623,6 +4705,7 @@ func (n *STXMLStartTagNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLStartTagNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.Name,
@@ -4675,6 +4758,7 @@ func (n *STXMLEndTagNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLEndTagNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.SlashToken,
@@ -4714,6 +4798,7 @@ func (n *STXMLSimpleNameNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLSimpleNameNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Name,
 	}
 }
@@ -4755,6 +4840,7 @@ func (n *STXMLQualifiedNameNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLQualifiedNameNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Prefix,
 
 		n.Colon,
@@ -4810,6 +4896,7 @@ func (n *STXMLEmptyElementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLEmptyElementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.Name,
@@ -4859,6 +4946,7 @@ func (n *STInterpolationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STInterpolationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.InterpolationStartToken,
 
 		n.Expression,
@@ -4894,6 +4982,7 @@ func (n *STXMLTextNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLTextNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Content,
 	}
 }
@@ -4935,6 +5024,7 @@ func (n *STXMLAttributeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLAttributeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.AttributeName,
 
 		n.EqualToken,
@@ -4980,6 +5070,7 @@ func (n *STXMLAttributeValue) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLAttributeValue) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StartQuote,
 
 		n.Value,
@@ -5025,6 +5116,7 @@ func (n *STXMLComment) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLComment) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CommentStart,
 
 		n.Content,
@@ -5070,6 +5162,7 @@ func (n *STXMLCDATANode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLCDATANode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CdataStart,
 
 		n.Content,
@@ -5120,6 +5213,7 @@ func (n *STXMLProcessingInstruction) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLProcessingInstruction) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.PiStart,
 
 		n.Target,
@@ -5167,6 +5261,7 @@ func (n *STTableTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTableTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TableKeywordToken,
 
 		n.RowTypeParameterNode,
@@ -5212,6 +5307,7 @@ func (n *STTypeParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LtToken,
 
 		n.TypeNode,
@@ -5252,6 +5348,7 @@ func (n *STKeyTypeConstraintNode) ChildInBucket(bucket int) STNode {
 
 func (n *STKeyTypeConstraintNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.KeyKeywordToken,
 
 		n.TypeParameterNode,
@@ -5295,6 +5392,7 @@ func (n *STFunctionTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFunctionTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.QualifierList,
 
 		n.FunctionKeyword,
@@ -5345,6 +5443,7 @@ func (n *STFunctionSignatureNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFunctionSignatureNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.Parameters,
@@ -5404,6 +5503,7 @@ func (n *STExplicitAnonymousFunctionExpressionNode) ChildInBucket(bucket int) ST
 
 func (n *STExplicitAnonymousFunctionExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.QualifierList,
@@ -5455,6 +5555,7 @@ func (n *STExpressionFunctionBodyNode) ChildInBucket(bucket int) STNode {
 
 func (n *STExpressionFunctionBodyNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.RightDoubleArrow,
 
 		n.Expression,
@@ -5500,6 +5601,7 @@ func (n *STTupleTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTupleTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracketToken,
 
 		n.MemberTypeDesc,
@@ -5545,6 +5647,7 @@ func (n *STParenthesisedTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STParenthesisedTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.Typedesc,
@@ -5592,6 +5695,7 @@ func (n *STExplicitNewExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STExplicitNewExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.NewKeyword,
 
 		n.TypeDescriptor,
@@ -5632,6 +5736,7 @@ func (n *STImplicitNewExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STImplicitNewExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.NewKeyword,
 
 		n.ParenthesizedArgList,
@@ -5675,6 +5780,7 @@ func (n *STParenthesizedArgList) ChildInBucket(bucket int) STNode {
 
 func (n *STParenthesizedArgList) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.Arguments,
@@ -5719,6 +5825,7 @@ func (n *STQueryConstructTypeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STQueryConstructTypeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Keyword,
 
 		n.KeySpecifier,
@@ -5767,6 +5874,7 @@ func (n *STFromClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFromClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FromKeyword,
 
 		n.TypedBindingPattern,
@@ -5809,6 +5917,7 @@ func (n *STWhereClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWhereClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.WhereKeyword,
 
 		n.Expression,
@@ -5847,6 +5956,7 @@ func (n *STLetClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLetClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LetKeyword,
 
 		n.LetVarDeclarations,
@@ -5905,6 +6015,7 @@ func (n *STJoinClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STJoinClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OuterKeyword,
 
 		n.JoinKeyword,
@@ -5961,6 +6072,7 @@ func (n *STOnClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOnClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OnKeyword,
 
 		n.LhsExpression,
@@ -6003,6 +6115,7 @@ func (n *STLimitClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STLimitClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LimitKeyword,
 
 		n.Expression,
@@ -6046,6 +6159,7 @@ func (n *STOnConflictClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOnConflictClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OnKeyword,
 
 		n.ConflictKeyword,
@@ -6086,6 +6200,7 @@ func (n *STQueryPipelineNode) ChildInBucket(bucket int) STNode {
 
 func (n *STQueryPipelineNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FromClause,
 
 		n.IntermediateClauses,
@@ -6124,6 +6239,7 @@ func (n *STSelectClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSelectClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SelectKeyword,
 
 		n.Expression,
@@ -6162,6 +6278,7 @@ func (n *STCollectClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STCollectClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CollectKeyword,
 
 		n.Expression,
@@ -6210,6 +6327,7 @@ func (n *STQueryExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STQueryExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.QueryConstructType,
 
 		n.QueryPipeline,
@@ -6257,6 +6375,7 @@ func (n *STQueryActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STQueryActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.QueryPipeline,
 
 		n.DoKeyword,
@@ -6302,6 +6421,7 @@ func (n *STIntersectionTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STIntersectionTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LeftTypeDesc,
 
 		n.BitwiseAndToken,
@@ -6347,6 +6467,7 @@ func (n *STImplicitAnonymousFunctionParameters) ChildInBucket(bucket int) STNode
 
 func (n *STImplicitAnonymousFunctionParameters) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenToken,
 
 		n.Parameters,
@@ -6392,6 +6513,7 @@ func (n *STImplicitAnonymousFunctionExpressionNode) ChildInBucket(bucket int) ST
 
 func (n *STImplicitAnonymousFunctionExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Params,
 
 		n.RightDoubleArrow,
@@ -6437,6 +6559,7 @@ func (n *STStartActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STStartActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.StartKeyword,
@@ -6477,6 +6600,7 @@ func (n *STFlushActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFlushActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FlushKeyword,
 
 		n.PeerWorker,
@@ -6510,6 +6634,7 @@ func (n *STSingletonTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSingletonTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SimpleContExprNode,
 	}
 }
@@ -6605,6 +6730,7 @@ func (n *STTypedBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypedBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeDescriptor,
 
 		n.BindingPattern,
@@ -6640,6 +6766,7 @@ func (n *STCaptureBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STCaptureBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.VariableName,
 	}
 }
@@ -6671,6 +6798,7 @@ func (n *STWildcardBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWildcardBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.UnderscoreToken,
 	}
 }
@@ -6712,6 +6840,7 @@ func (n *STListBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STListBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.BindingPatterns,
@@ -6757,6 +6886,7 @@ func (n *STMappingBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMappingBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBrace,
 
 		n.FieldBindingPatterns,
@@ -6804,6 +6934,7 @@ func (n *STFieldBindingPatternFullNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFieldBindingPatternFullNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.VariableName,
 
 		n.Colon,
@@ -6839,6 +6970,7 @@ func (n *STFieldBindingPatternVarnameNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFieldBindingPatternVarnameNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.VariableName,
 	}
 }
@@ -6875,6 +7007,7 @@ func (n *STRestBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRestBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.EllipsisToken,
 
 		n.VariableName,
@@ -6928,6 +7061,7 @@ func (n *STErrorBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STErrorBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ErrorKeyword,
 
 		n.TypeReference,
@@ -6977,6 +7111,7 @@ func (n *STNamedArgBindingPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNamedArgBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ArgName,
 
 		n.EqualsToken,
@@ -7022,6 +7157,7 @@ func (n *STAsyncSendActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAsyncSendActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.RightArrowToken,
@@ -7067,6 +7203,7 @@ func (n *STSyncSendActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSyncSendActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.SyncSendToken,
@@ -7107,6 +7244,7 @@ func (n *STReceiveActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReceiveActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LeftArrow,
 
 		n.ReceiveWorkers,
@@ -7150,6 +7288,7 @@ func (n *STReceiveFieldsNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReceiveFieldsNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBrace,
 
 		n.ReceiveFields,
@@ -7185,6 +7324,7 @@ func (n *STAlternateReceiveNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAlternateReceiveNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Workers,
 	}
 }
@@ -7221,6 +7361,7 @@ func (n *STRestDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRestDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeDescriptor,
 
 		n.EllipsisToken,
@@ -7259,6 +7400,7 @@ func (n *STDoubleGTTokenNode) ChildInBucket(bucket int) STNode {
 
 func (n *STDoubleGTTokenNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenGTToken,
 
 		n.EndGTToken,
@@ -7302,6 +7444,7 @@ func (n *STTrippleGTTokenNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTrippleGTTokenNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenGTToken,
 
 		n.MiddleGTToken,
@@ -7342,6 +7485,7 @@ func (n *STWaitActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWaitActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.WaitKeyword,
 
 		n.WaitFutureExpr,
@@ -7385,6 +7529,7 @@ func (n *STWaitFieldsListNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWaitFieldsListNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBrace,
 
 		n.WaitFields,
@@ -7430,6 +7575,7 @@ func (n *STWaitFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STWaitFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FieldName,
 
 		n.Colon,
@@ -7475,6 +7621,7 @@ func (n *STAnnotAccessExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAnnotAccessExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.AnnotChainingToken,
@@ -7520,6 +7667,7 @@ func (n *STOptionalFieldAccessExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOptionalFieldAccessExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.OptionalChainingToken,
@@ -7575,6 +7723,7 @@ func (n *STConditionalExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STConditionalExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LhsExpression,
 
 		n.QuestionMarkToken,
@@ -7649,6 +7798,7 @@ func (n *STEnumDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STEnumDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.Qualifier,
@@ -7709,6 +7859,7 @@ func (n *STEnumMemberNode) ChildInBucket(bucket int) STNode {
 
 func (n *STEnumMemberNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.Identifier,
@@ -7751,6 +7902,7 @@ func (n *STArrayTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STArrayTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.MemberTypeDesc,
 
 		n.Dimensions,
@@ -7794,6 +7946,7 @@ func (n *STArrayDimensionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STArrayDimensionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.ArrayLength,
@@ -7839,6 +7992,7 @@ func (n *STTransactionStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTransactionStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TransactionKeyword,
 
 		n.BlockStatement,
@@ -7884,6 +8038,7 @@ func (n *STRollbackStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRollbackStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.RollbackKeyword,
 
 		n.Expression,
@@ -7939,6 +8094,7 @@ func (n *STRetryStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRetryStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.RetryKeyword,
 
 		n.TypeParameter,
@@ -7978,6 +8134,7 @@ func (n *STCommitActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STCommitActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CommitKeyword,
 	}
 }
@@ -8009,6 +8166,7 @@ func (n *STTransactionalExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTransactionalExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TransactionalKeyword,
 	}
 }
@@ -8055,6 +8213,7 @@ func (n *STByteArrayLiteralNode) ChildInBucket(bucket int) STNode {
 
 func (n *STByteArrayLiteralNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Type,
 
 		n.StartBacktick,
@@ -8099,6 +8258,7 @@ func (n *STXMLFilterExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLFilterExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.XmlPatternChain,
@@ -8142,6 +8302,7 @@ func (n *STXMLStepExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLStepExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.XmlStepStart,
@@ -8187,6 +8348,7 @@ func (n *STXMLNamePatternChainingNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLNamePatternChainingNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StartToken,
 
 		n.XmlNamePattern,
@@ -8232,6 +8394,7 @@ func (n *STXMLStepIndexedExtendNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLStepIndexedExtendNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.Expression,
@@ -8277,6 +8440,7 @@ func (n *STXMLStepMethodCallExtendNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLStepMethodCallExtendNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.DotToken,
 
 		n.MethodName,
@@ -8322,6 +8486,7 @@ func (n *STXMLAtomicNamePatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STXMLAtomicNamePatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Prefix,
 
 		n.Colon,
@@ -8357,6 +8522,7 @@ func (n *STTypeReferenceTypeDescNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTypeReferenceTypeDescNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeRef,
 	}
 }
@@ -8413,6 +8579,7 @@ func (n *STMatchStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMatchStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.MatchKeyword,
 
 		n.Condition,
@@ -8469,6 +8636,7 @@ func (n *STMatchClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMatchClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.MatchPatterns,
 
 		n.MatchGuard,
@@ -8511,6 +8679,7 @@ func (n *STMatchGuardNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMatchGuardNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.IfKeyword,
 
 		n.Expression,
@@ -8549,6 +8718,7 @@ func (n *STDistinctTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STDistinctTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.DistinctKeyword,
 
 		n.TypeDescriptor,
@@ -8592,6 +8762,7 @@ func (n *STListMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STListMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.MatchPatterns,
@@ -8637,6 +8808,7 @@ func (n *STRestMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRestMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.EllipsisToken,
 
 		n.VarKeywordToken,
@@ -8682,6 +8854,7 @@ func (n *STMappingMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMappingMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBraceToken,
 
 		n.FieldMatchPatterns,
@@ -8727,6 +8900,7 @@ func (n *STFieldMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STFieldMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FieldNameNode,
 
 		n.ColonToken,
@@ -8782,6 +8956,7 @@ func (n *STErrorMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STErrorMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ErrorKeyword,
 
 		n.TypeReference,
@@ -8831,6 +9006,7 @@ func (n *STNamedArgMatchPatternNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNamedArgMatchPatternNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Identifier,
 
 		n.EqualToken,
@@ -8868,6 +9044,7 @@ func (n *STMarkdownDocumentationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMarkdownDocumentationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.DocumentationLines,
 	}
 }
@@ -8997,6 +9174,7 @@ func (n *STBallerinaNameReferenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STBallerinaNameReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReferenceType,
 
 		n.StartBacktick,
@@ -9044,6 +9222,7 @@ func (n *STInlineCodeReferenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STInlineCodeReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StartBacktick,
 
 		n.CodeReference,
@@ -9104,6 +9283,7 @@ func (n *STMarkdownCodeBlockNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMarkdownCodeBlockNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.StartLineHashToken,
 
 		n.StartBacktick,
@@ -9150,6 +9330,7 @@ func (n *STMarkdownCodeLineNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMarkdownCodeLineNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.HashToken,
 
 		n.CodeDescription,
@@ -9193,6 +9374,7 @@ func (n *STOrderByClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOrderByClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OrderKeyword,
 
 		n.ByKeyword,
@@ -9233,6 +9415,7 @@ func (n *STOrderKeyNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOrderKeyNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.OrderDirection,
@@ -9276,6 +9459,7 @@ func (n *STGroupByClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STGroupByClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.GroupKeyword,
 
 		n.ByKeyword,
@@ -9326,6 +9510,7 @@ func (n *STGroupingKeyVarDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STGroupingKeyVarDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.TypeDescriptor,
 
 		n.SimpleBindingPattern,
@@ -9378,6 +9563,7 @@ func (n *STOnFailClauseNode) ChildInBucket(bucket int) STNode {
 
 func (n *STOnFailClauseNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OnKeyword,
 
 		n.FailKeyword,
@@ -9425,6 +9611,7 @@ func (n *STDoStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STDoStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.DoKeyword,
 
 		n.BlockStatement,
@@ -9500,6 +9687,7 @@ func (n *STClassDefinitionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STClassDefinitionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
 
 		n.VisibilityQualifier,
@@ -9601,6 +9789,7 @@ func (n *STRequiredExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STRequiredExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.QuestionMarkToken,
 	}
 }
@@ -9652,6 +9841,7 @@ func (n *STErrorConstructorExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STErrorConstructorExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ErrorKeyword,
 
 		n.TypeReference,
@@ -9730,6 +9920,7 @@ func (n *STSpreadMemberNode) ChildInBucket(bucket int) STNode {
 
 func (n *STSpreadMemberNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Ellipsis,
 
 		n.Expression,
@@ -9793,6 +9984,7 @@ func (n *STClientResourceAccessActionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STClientResourceAccessActionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
 
 		n.RightArrowToken,
@@ -9846,6 +10038,7 @@ func (n *STComputedResourceAccessSegmentNode) ChildInBucket(bucket int) STNode {
 
 func (n *STComputedResourceAccessSegmentNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracketToken,
 
 		n.Expression,
@@ -9896,6 +10089,7 @@ func (n *STResourceAccessRestSegmentNode) ChildInBucket(bucket int) STNode {
 
 func (n *STResourceAccessRestSegmentNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracketToken,
 
 		n.EllipsisToken,
@@ -9933,6 +10127,7 @@ func (n *STReSequenceNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReSequenceNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReTerm,
 	}
 }
@@ -9971,6 +10166,7 @@ func (n *STReAtomQuantifierNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReAtomQuantifierNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReAtom,
 
 		n.ReQuantifier,
@@ -10004,6 +10200,7 @@ func (n *STReAtomCharOrEscapeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReAtomCharOrEscapeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReAtomCharOrEscape,
 	}
 }
@@ -10040,6 +10237,7 @@ func (n *STReQuoteEscapeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReQuoteEscapeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SlashToken,
 
 		n.ReSyntaxChar,
@@ -10078,6 +10276,7 @@ func (n *STReSimpleCharClassEscapeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReSimpleCharClassEscapeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SlashToken,
 
 		n.ReSimpleCharClassCode,
@@ -10131,6 +10330,7 @@ func (n *STReUnicodePropertyEscapeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReUnicodePropertyEscapeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.SlashToken,
 
 		n.Property,
@@ -10177,6 +10377,7 @@ func (n *STReUnicodeScriptNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReUnicodeScriptNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ScriptStart,
 
 		n.ReUnicodePropertyValue,
@@ -10215,6 +10416,7 @@ func (n *STReUnicodeGeneralCategoryNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReUnicodeGeneralCategoryNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CategoryStart,
 
 		n.ReUnicodeGeneralCategoryName,
@@ -10263,6 +10465,7 @@ func (n *STReCharacterClassNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReCharacterClassNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracket,
 
 		n.Negation,
@@ -10305,6 +10508,7 @@ func (n *STReCharSetRangeWithReCharSetNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReCharSetRangeWithReCharSetNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReCharSetRange,
 
 		n.ReCharSet,
@@ -10348,6 +10552,7 @@ func (n *STReCharSetRangeNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReCharSetRangeNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LhsReCharSetAtom,
 
 		n.MinusToken,
@@ -10388,6 +10593,7 @@ func (n *STReCharSetAtomWithReCharSetNoDashNode) ChildInBucket(bucket int) STNod
 
 func (n *STReCharSetAtomWithReCharSetNoDashNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReCharSetAtom,
 
 		n.ReCharSetNoDash,
@@ -10426,6 +10632,7 @@ func (n *STReCharSetRangeNoDashWithReCharSetNode) ChildInBucket(bucket int) STNo
 
 func (n *STReCharSetRangeNoDashWithReCharSetNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReCharSetRangeNoDash,
 
 		n.ReCharSet,
@@ -10469,6 +10676,7 @@ func (n *STReCharSetRangeNoDashNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReCharSetRangeNoDashNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReCharSetAtomNoDash,
 
 		n.MinusToken,
@@ -10509,6 +10717,7 @@ func (n *STReCharSetAtomNoDashWithReCharSetNoDashNode) ChildInBucket(bucket int)
 
 func (n *STReCharSetAtomNoDashWithReCharSetNoDashNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReCharSetAtomNoDash,
 
 		n.ReCharSetNoDash,
@@ -10557,6 +10766,7 @@ func (n *STReCapturingGroupsNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReCapturingGroupsNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParenthesis,
 
 		n.ReFlagExpression,
@@ -10604,6 +10814,7 @@ func (n *STReFlagExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReFlagExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.QuestionMark,
 
 		n.ReFlagsOnOff,
@@ -10649,6 +10860,7 @@ func (n *STReFlagsOnOffNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReFlagsOnOffNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LhsReFlags,
 
 		n.MinusToken,
@@ -10684,6 +10896,7 @@ func (n *STReFlagsNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReFlagsNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReFlag,
 	}
 }
@@ -10715,6 +10928,7 @@ func (n *STReAssertionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReAssertionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReAssertion,
 	}
 }
@@ -10751,6 +10965,7 @@ func (n *STReQuantifierNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReQuantifierNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ReBaseQuantifier,
 
 		n.NonGreedyChar,
@@ -10804,6 +11019,7 @@ func (n *STReBracedQuantifierNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReBracedQuantifierNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBraceToken,
 
 		n.LeastTimesMatchedDigit,
@@ -10848,6 +11064,7 @@ func (n *STMemberTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMemberTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Annotations,
 
 		n.TypeDescriptor,
@@ -10891,6 +11108,7 @@ func (n *STReceiveFieldNode) ChildInBucket(bucket int) STNode {
 
 func (n *STReceiveFieldNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.FieldName,
 
 		n.Colon,
@@ -10951,6 +11169,7 @@ func (n *STNaturalExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STNaturalExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.ConstKeyword,
 
 		n.NaturalKeyword,
