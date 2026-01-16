@@ -22,11 +22,11 @@ import (
 
 // OCEDynamicEnvironmentData represents the dynamic environment data for object constructor expressions
 type OCEDynamicEnvironmentData struct {
-	CapturedClosureEnv             *SymbolEnv
-	MapBlockMapSymbol              *BVarSymbol
-	MapFunctionMapSymbol           *BVarSymbol
+	CapturedClosureEnv   *SymbolEnv
+	MapBlockMapSymbol    *BVarSymbol
+	MapFunctionMapSymbol *BVarSymbol
 	// TypeInit                       *BLangTypeInit
-	ObjectType                     *BObjectType
+	ObjectType *BObjectType
 	// AttachedFunctionInvocation     *BLangAttachedFunctionInvocation
 	ObjMethodsEnv                  *SymbolEnv
 	FieldEnv                       *SymbolEnv

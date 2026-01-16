@@ -70,7 +70,7 @@ const (
 type ProjectKind uint8
 
 const (
-	ProjectKind_BUILD_PROJECT      ProjectKind = iota
+	ProjectKind_BUILD_PROJECT ProjectKind = iota
 	ProjectKind_SINGLE_FILE_PROJECT
 	ProjectKind_BALA_PROJECT
 	ProjectKind_WORKSPACE_PROJECT
@@ -173,9 +173,9 @@ type (
 		BType
 		BStructureTypeBase
 		MarkedIsolatedness bool
-		MutableType       *BObjectType
-		ClassDef          *BLangClassDefinition
-		TypeIdSet         *BTypeIdSet
+		MutableType        *BObjectType
+		ClassDef           *BLangClassDefinition
+		TypeIdSet          *BTypeIdSet
 	}
 )
 
@@ -292,7 +292,6 @@ func (this *BObjectType) IsNullable() bool {
 	// migrated from BObjectType.java:252:5
 	return false
 }
-
 
 type TypeTags uint
 

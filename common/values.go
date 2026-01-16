@@ -91,7 +91,7 @@ type (
 	}
 
 	OrderedMap[K comparable, V any] struct {
-		keys []K
+		keys   []K
 		values []V
 	}
 )

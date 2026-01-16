@@ -22,6 +22,6 @@ type BTypeIdSet struct {
 
 type BTypeId struct {
 	PackageID PackageID
-	Name string
-	PublicID bool
+	Name      string
+	PublicID  bool
 }

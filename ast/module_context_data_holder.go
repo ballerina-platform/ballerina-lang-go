@@ -19,24 +19,24 @@ package ast
 // ModuleContextDataHolder is a data holder struct for ModuleContext.
 // Migrated from io.ballerina.projects.internal.ModuleContextDataHolder
 type ModuleContextDataHolder struct {
-	Exported                bool
-	ProjectKind             ProjectKind
-	SkipTests               bool
-	SourceRoot              string
-	IsObservabiltyIncluded  bool
-	DumpBir                 bool
-	Cloud                   string
-	Descriptor              ModuleDescriptor
+	Exported               bool
+	ProjectKind            ProjectKind
+	SkipTests              bool
+	SourceRoot             string
+	IsObservabiltyIncluded bool
+	DumpBir                bool
+	Cloud                  string
+	Descriptor             ModuleDescriptor
 }
 
 // ModuleDescriptor uniquely describes a Ballerina module in terms of its name and PackageDescriptor.
 // Migrated from io.ballerina.projects.ModuleDescriptor
 // Note: ModuleName, PackageDescriptor, PackageName, PackageOrg, and PackageVersion types need to be migrated
 type ModuleDescriptor struct {
-	moduleName               *ModuleName
-	packageDesc              *PackageDescriptor
-	moduleCompilationId      *PackageID
-	moduleTestCompilationId  *PackageID
+	moduleName              *ModuleName
+	packageDesc             *PackageDescriptor
+	moduleCompilationId     *PackageID
+	moduleTestCompilationId *PackageID
 }
 
 // newModuleDescriptor creates a new ModuleDescriptor (private constructor from Java)
@@ -183,10 +183,10 @@ type PackageOrg struct {
 }
 
 const (
-	PKG_ORG_BALLERINA_NAME   = "ballerina"
-	PKG_ORG_BALLERINAI_NAME  = "ballerinai"
-	PKG_ORG_BALLERINAX_NAME  = "ballerinax"
-	PKG_ORG_ANON_NAME        = "$anon"
+	PKG_ORG_BALLERINA_NAME  = "ballerina"
+	PKG_ORG_BALLERINAI_NAME = "ballerinai"
+	PKG_ORG_BALLERINAX_NAME = "ballerinax"
+	PKG_ORG_ANON_NAME       = "$anon"
 )
 
 var (
@@ -273,7 +273,6 @@ func FromSemanticVersion(version *SemanticVersion) *PackageVersion {
 func (this *PackageVersion) value() *SemanticVersion {
 	panic("Not implemented")
 }
-
 
 // PackageDescriptor uniquely describes a Ballerina package in terms of its name, organization,
 // version and the loaded repository.

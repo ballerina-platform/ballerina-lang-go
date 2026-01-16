@@ -301,10 +301,10 @@ type (
 
 	BLangLambdaFunction struct {
 		BLangExpressionBase
-		Function                        *BLangFunction
-		CapturedClosureEnv              *SymbolEnv
-		ParamMapSymbolsOfEnclInvokable  map[int]*BVarSymbol
-		EnclMapSymbols                  map[int]*BVarSymbol
+		Function                       *BLangFunction
+		CapturedClosureEnv             *SymbolEnv
+		ParamMapSymbolsOfEnclInvokable map[int]*BVarSymbol
+		EnclMapSymbols                 map[int]*BVarSymbol
 	}
 
 	BLangBinaryExpr struct {
@@ -390,29 +390,29 @@ type (
 
 	BLangWorkerSendExprBase struct {
 		BLangWorkerSendReceiveExprBase
-		Expr BLangExpression
-		Receive *BLangWorkerReceive
-		SendType *BType
+		Expr                     BLangExpression
+		Receive                  *BLangWorkerReceive
+		SendType                 *BType
 		SendTypeWithNoMsgIgnored *BType
-		NoMessagePossible bool
+		NoMessagePossible        bool
 	}
 
 	BLangInvocation struct {
 		BLangExpressionBase
-		PkgAlias                *BLangIdentifier
-		Name                    *BLangIdentifier
-		Expr                    BLangExpression
-		ArgExprs                []BLangExpression
-		AnnAttachments          []BLangAnnotationAttachment
-		RequiredArgs            []BLangExpression
-		RestArgs                []BLangExpression
-		ObjectInitMethod        bool
-		FlagSet                 common.UnorderedSet[Flag]
-		Async                   bool
-		ExprSymbol              *BSymbol
+		PkgAlias                  *BLangIdentifier
+		Name                      *BLangIdentifier
+		Expr                      BLangExpression
+		ArgExprs                  []BLangExpression
+		AnnAttachments            []BLangAnnotationAttachment
+		RequiredArgs              []BLangExpression
+		RestArgs                  []BLangExpression
+		ObjectInitMethod          bool
+		FlagSet                   common.UnorderedSet[Flag]
+		Async                     bool
+		ExprSymbol                *BSymbol
 		FunctionPointerInvocation bool
-		LangLibInvocation       bool
-		Symbol                  *BSymbol
+		LangLibInvocation         bool
+		Symbol                    *BSymbol
 	}
 )
 
@@ -501,7 +501,6 @@ func (this *BLangWorkerReceive) ToActionString() string {
 	}
 	return " <- "
 }
-
 
 func (this *BLangBinaryExpr) GetLeftExpression() ExpressionNode {
 	// migrated from BLangBinaryExpr.java:45:5

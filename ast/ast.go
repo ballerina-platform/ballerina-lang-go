@@ -868,38 +868,38 @@ type (
 
 	BLangPackage struct {
 		BLangNode
-		CompUnits                []BLangCompilationUnit
-		Imports                  []BLangImportPackage
-		XmlnsList                []BLangXMLNS
-		Constants                []BLangConstant
-		GlobalVars               []BLangSimpleVariable
-		Services                 []BLangService
-		Functions                []BLangFunction
-		TypeDefinitions          []BLangTypeDefinition
-		Annotations              []BLangAnnotation
-		InitFunction             *BLangFunction
-		StartFunction            *BLangFunction
-		StopFunction             *BLangFunction
-		TopLevelNodes            []TopLevelNode
-		TestablePkgs             []*BLangTestablePackage
-		ClassDefinitions         []BLangClassDefinition
-		ObjAttachedFunctions     []BSymbol
-		FlagSet                  common.UnorderedSet[Flag]
-		CompletedPhases          common.UnorderedSet[CompilerPhase]
-		LambdaFunctions          []BLangLambdaFunction
+		CompUnits                  []BLangCompilationUnit
+		Imports                    []BLangImportPackage
+		XmlnsList                  []BLangXMLNS
+		Constants                  []BLangConstant
+		GlobalVars                 []BLangSimpleVariable
+		Services                   []BLangService
+		Functions                  []BLangFunction
+		TypeDefinitions            []BLangTypeDefinition
+		Annotations                []BLangAnnotation
+		InitFunction               *BLangFunction
+		StartFunction              *BLangFunction
+		StopFunction               *BLangFunction
+		TopLevelNodes              []TopLevelNode
+		TestablePkgs               []*BLangTestablePackage
+		ClassDefinitions           []BLangClassDefinition
+		ObjAttachedFunctions       []BSymbol
+		FlagSet                    common.UnorderedSet[Flag]
+		CompletedPhases            common.UnorderedSet[CompilerPhase]
+		LambdaFunctions            []BLangLambdaFunction
 		GlobalVariableDependencies map[BSymbol]common.Set[*BVarSymbol]
-		PackageID                PackageID
-		Symbol                   *BPackageSymbol
-		diagnostics              []diagnostics.Diagnostic
-		ModuleContextDataHolder  *ModuleContextDataHolder
-		errorCount               int
-		warnCount                int
+		PackageID                  PackageID
+		Symbol                     *BPackageSymbol
+		diagnostics                []diagnostics.Diagnostic
+		ModuleContextDataHolder    *ModuleContextDataHolder
+		errorCount                 int
+		warnCount                  int
 	}
 	BLangTestablePackage struct {
 		BLangPackage
-		Parent                  *BLangPackage
-		mockFunctionNamesMap    map[string]string
-		isLegacyMockingMap      map[string]bool
+		Parent               *BLangPackage
+		mockFunctionNamesMap map[string]string
+		isLegacyMockingMap   map[string]bool
 	}
 	BLangXMLNS struct {
 		BLangNode
@@ -984,18 +984,18 @@ type (
 
 	BLangFunction struct {
 		BLangInvokableNodeBase
-		Receiver            *BLangSimpleVariable
-		ParamClosureMap     map[int]*BVarSymbol
-		MapSymbol           *BVarSymbol
-		InitFunctionStmts   common.OrderedMap[*BSymbol, BLangStatement]
+		Receiver           *BLangSimpleVariable
+		ParamClosureMap    map[int]*BVarSymbol
+		MapSymbol          *BVarSymbol
+		InitFunctionStmts  common.OrderedMap[*BSymbol, BLangStatement]
 		ClosureVarSymbols  common.OrderedSet[ClosureVarSymbol]
 		OriginalFuncSymbol *BInvokableSymbol
-		SendsToThis         common.OrderedSet[Channel]
-		AnonForkName        string
-		MapSymbolUpdated    bool
-		AttachedFunction    bool
-		ObjInitFunction     bool
-		InterfaceFunction   bool
+		SendsToThis        common.OrderedSet[Channel]
+		AnonForkName       string
+		MapSymbolUpdated   bool
+		AttachedFunction   bool
+		ObjInitFunction    bool
+		InterfaceFunction  bool
 	}
 
 	BLangTypeDefinition struct {
