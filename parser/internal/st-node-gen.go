@@ -85,8 +85,6 @@ type STFunctionDefinition struct {
 }
 
 func (n *STFunctionDefinition) Kind() common.SyntaxKind {
-	// Return the kind from the embedded node instead of hardcoded value
-	// This allows the same struct to represent both FUNCTION_DEFINITION and OBJECT_METHOD_DEFINITION
 	return n.STModuleMemberDeclarationNode.Kind()
 }
 
@@ -783,10 +781,13 @@ func (n *STExpressionStatementNode) BucketCount() int {
 
 func (n *STExpressionStatementNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.Expression
+
 	case 1:
 		return n.SemicolonToken
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -794,7 +795,9 @@ func (n *STExpressionStatementNode) ChildInBucket(bucket int) STNode {
 
 func (n *STExpressionStatementNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Expression,
+
 		n.SemicolonToken,
 	}
 }
@@ -1376,12 +1379,16 @@ func (n *STBinaryExpressionNode) BucketCount() int {
 
 func (n *STBinaryExpressionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.LhsExpr
+
 	case 1:
 		return n.Operator
+
 	case 2:
 		return n.RhsExpr
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -1389,8 +1396,11 @@ func (n *STBinaryExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STBinaryExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.LhsExpr,
+
 		n.Operator,
+
 		n.RhsExpr,
 	}
 }
@@ -1415,12 +1425,16 @@ func (n *STBracedExpressionNode) BucketCount() int {
 
 func (n *STBracedExpressionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.OpenParen
+
 	case 1:
 		return n.Expression
+
 	case 2:
 		return n.CloseParen
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -1428,8 +1442,11 @@ func (n *STBracedExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STBracedExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenParen,
+
 		n.Expression,
+
 		n.CloseParen,
 	}
 }
@@ -1452,10 +1469,13 @@ func (n *STCheckExpressionNode) BucketCount() int {
 
 func (n *STCheckExpressionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.CheckKeyword
+
 	case 1:
 		return n.Expression
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -1463,7 +1483,9 @@ func (n *STCheckExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STCheckExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CheckKeyword,
+
 		n.Expression,
 	}
 }
@@ -3916,15 +3938,20 @@ func (n *STBasicLiteralNode) BucketCount() int {
 
 func (n *STBasicLiteralNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.LiteralToken
+
 	default:
 		panic("invalid bucket index")
 	}
 }
 
 func (n *STBasicLiteralNode) ChildBuckets() []STNode {
-	return []STNode{n.LiteralToken}
+	return []STNode{
+
+		n.LiteralToken,
+	}
 }
 
 type STTypeDescriptorNode = STExpressionNode
@@ -4025,15 +4052,20 @@ func (n *STBuiltinSimpleNameReferenceNode) BucketCount() int {
 
 func (n *STBuiltinSimpleNameReferenceNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.Name
+
 	default:
 		panic("invalid bucket index")
 	}
 }
 
 func (n *STBuiltinSimpleNameReferenceNode) ChildBuckets() []STNode {
-	return []STNode{n.Name}
+	return []STNode{
+
+		n.Name,
+	}
 }
 
 type STTrapExpressionNode struct {
@@ -4054,17 +4086,25 @@ func (n *STTrapExpressionNode) BucketCount() int {
 
 func (n *STTrapExpressionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.TrapKeyword
+
 	case 1:
 		return n.Expression
+
 	default:
 		panic("invalid bucket index")
 	}
 }
 
 func (n *STTrapExpressionNode) ChildBuckets() []STNode {
-	return []STNode{n.TrapKeyword, n.Expression}
+	return []STNode{
+
+		n.TrapKeyword,
+
+		n.Expression,
+	}
 }
 
 type STListConstructorExpressionNode struct {
@@ -4591,14 +4631,19 @@ func (n *STTemplateExpressionNode) BucketCount() int {
 
 func (n *STTemplateExpressionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.Type
+
 	case 1:
 		return n.StartBacktick
+
 	case 2:
 		return n.Content
+
 	case 3:
 		return n.EndBacktick
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -4606,9 +4651,13 @@ func (n *STTemplateExpressionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STTemplateExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Type,
+
 		n.StartBacktick,
+
 		n.Content,
+
 		n.EndBacktick,
 	}
 }
@@ -6667,20 +6716,28 @@ func (n *STMethodDeclarationNode) BucketCount() int {
 
 func (n *STMethodDeclarationNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.Metadata
+
 	case 1:
 		return n.QualifierList
+
 	case 2:
 		return n.FunctionKeyword
+
 	case 3:
 		return n.MethodName
+
 	case 4:
 		return n.RelativeResourcePath
+
 	case 5:
 		return n.MethodSignature
+
 	case 6:
 		return n.Semicolon
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -6688,12 +6745,19 @@ func (n *STMethodDeclarationNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMethodDeclarationNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.Metadata,
+
 		n.QualifierList,
+
 		n.FunctionKeyword,
+
 		n.MethodName,
+
 		n.RelativeResourcePath,
+
 		n.MethodSignature,
+
 		n.Semicolon,
 	}
 }
@@ -9067,10 +9131,13 @@ func (n *STMarkdownDocumentationLineNode) BucketCount() int {
 
 func (n *STMarkdownDocumentationLineNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.HashToken
+
 	case 1:
 		return n.DocumentElements
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -9078,7 +9145,9 @@ func (n *STMarkdownDocumentationLineNode) ChildInBucket(bucket int) STNode {
 
 func (n *STMarkdownDocumentationLineNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.HashToken,
+
 		n.DocumentElements,
 	}
 }
@@ -9107,16 +9176,22 @@ func (n *STMarkdownParameterDocumentationLineNode) BucketCount() int {
 
 func (n *STMarkdownParameterDocumentationLineNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.HashToken
+
 	case 1:
 		return n.PlusToken
+
 	case 2:
 		return n.ParameterName
+
 	case 3:
 		return n.MinusToken
+
 	case 4:
 		return n.DocumentElements
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -9124,10 +9199,15 @@ func (n *STMarkdownParameterDocumentationLineNode) ChildInBucket(bucket int) STN
 
 func (n *STMarkdownParameterDocumentationLineNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.HashToken,
+
 		n.PlusToken,
+
 		n.ParameterName,
+
 		n.MinusToken,
+
 		n.DocumentElements,
 	}
 }
@@ -9734,18 +9814,25 @@ func (n *STResourcePathParameterNode) BucketCount() int {
 
 func (n *STResourcePathParameterNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.OpenBracketToken
+
 	case 1:
 		return n.Annotations
+
 	case 2:
 		return n.TypeDescriptor
+
 	case 3:
 		return n.EllipsisToken
+
 	case 4:
 		return n.ParamName
+
 	case 5:
 		return n.CloseBracketToken
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -9753,11 +9840,17 @@ func (n *STResourcePathParameterNode) ChildInBucket(bucket int) STNode {
 
 func (n *STResourcePathParameterNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.OpenBracketToken,
+
 		n.Annotations,
+
 		n.TypeDescriptor,
+
 		n.EllipsisToken,
+
 		n.ParamName,
+
 		n.CloseBracketToken,
 	}
 }
@@ -9872,10 +9965,13 @@ func (n *STParameterizedTypeDescriptorNode) BucketCount() int {
 
 func (n *STParameterizedTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.KeywordToken
+
 	case 1:
 		return n.TypeParamNode
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -9883,7 +9979,9 @@ func (n *STParameterizedTypeDescriptorNode) ChildInBucket(bucket int) STNode {
 
 func (n *STParameterizedTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.KeywordToken,
+
 		n.TypeParamNode,
 	}
 }
@@ -11204,12 +11302,15 @@ func (n *STAmbiguousCollectionNode) BucketCount() int {
 
 func (n *STAmbiguousCollectionNode) ChildInBucket(bucket int) STNode {
 	switch bucket {
+
 	case 0:
 		return n.CollectionStartToken
+
 	case 1:
 		return CreateNodeList(n.Members...)
 	case 2:
 		return n.CollectionEndToken
+
 	default:
 		panic("invalid bucket index")
 	}
@@ -11217,6 +11318,7 @@ func (n *STAmbiguousCollectionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
 	return []STNode{
+
 		n.CollectionStartToken,
 		CreateNodeList(n.Members...),
 		n.CollectionEndToken,

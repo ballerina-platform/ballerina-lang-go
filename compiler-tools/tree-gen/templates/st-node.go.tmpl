@@ -33,6 +33,11 @@ type ST{{.Name}} struct {
 func (n *ST{{.Name}}) Kind() common.SyntaxKind {
     return common.{{.Kind}}
 }
+{{else}}
+func (n *ST{{.Name}}) Kind() common.SyntaxKind {
+    return n.ST{{.Base}}.Kind()
+}
+{{end}}
 
 func (n *ST{{.Name}}) BucketCount() int {
     return {{len .Attributes}}
@@ -56,6 +61,5 @@ func (n *ST{{.Name}}) ChildBuckets() []STNode {
     {{end}}
     }
 }
-{{end}}
 {{end}}
 {{end}}
