@@ -43,17 +43,17 @@ type Context interface {
 var _ Context = &contextImpl{}
 
 type contextImpl struct {
-	_env Env
-	_memoStack []*BddMemo
-	_listMemo map[Bdd]*BddMemo
-	_mappingMemo map[Bdd]*BddMemo
+	_env          Env
+	_memoStack    []*BddMemo
+	_listMemo     map[Bdd]*BddMemo
+	_mappingMemo  map[Bdd]*BddMemo
 	_functionMemo map[Bdd]*BddMemo
 
-	_jsonMemo SemType
-	_anydataMemo SemType
-	_cloneableMemo SemType
+	_jsonMemo           SemType
+	_anydataMemo        SemType
+	_cloneableMemo      SemType
 	_isolatedObjectMemo SemType
-	_serviceObjectMemo SemType
+	_serviceObjectMemo  SemType
 }
 
 func (this *contextImpl) pushToMemoStack(m *BddMemo) {

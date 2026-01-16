@@ -43,7 +43,7 @@ func CreateComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset int, s
 func CreateComplexSemTypeWithAllBitSetSubtypeList(allBitset int, subtypeList []BasicSubtype) ComplexSemType {
 	// migrated from ComplexSemType.java:44:5
 	some := 0
-    var dataList []ProperSubtypeData
+	var dataList []ProperSubtypeData
 	for _, basicSubtype := range subtypeList {
 		dataList = append(dataList, basicSubtype.SubtypeData)
 		c := basicSubtype.BasicTypeCode.Code

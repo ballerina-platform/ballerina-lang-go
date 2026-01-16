@@ -21,7 +21,6 @@ type BooleanOps struct {
 
 var _ BasicTypeOps = &BooleanOps{}
 
-
 func (this *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:33:5
 	v1 := d1.(BooleanSubtype)

@@ -40,8 +40,8 @@ const (
 func GetIdentifier(this Atom) atomIdentifier {
 	// migrated from Atom.java:43:5
 
-    return atomIdentifier{
-        Index: this.Index(),
-        Kind:  this.Kind(),
-    }
+	return atomIdentifier{
+		Index: this.Index(),
+		Kind:  this.Kind(),
+	}
 }

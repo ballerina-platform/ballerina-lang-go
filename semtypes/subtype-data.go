@@ -18,4 +18,3 @@ package semtypes
 
 type SubtypeData interface {
 }
-

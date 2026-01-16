@@ -57,23 +57,24 @@ func GetTypeEnv() Env {
 }
 
 type envImpl struct {
-	recListAtoms []*ListAtomicType
+	recListAtoms      []*ListAtomicType
 	recListAtomsMutex sync.Mutex
 
-	recMappingAtoms []*MappingAtomicType
+	recMappingAtoms      []*MappingAtomicType
 	recMappingAtomsMutex sync.Mutex
 
-	recFunctionAtoms []*FunctionAtomicType
+	recFunctionAtoms      []*FunctionAtomicType
 	recFunctionAtomsMutex sync.Mutex
 
-	distinctAtoms int
+	distinctAtoms     int
 	distinctAtomMutex sync.Mutex
 	// migration-note: unlike java implementation this will leak memory. So be careful about adding atoms in an unbounded way.
 	atomTableMutex sync.Mutex
-	atomTable map[AtomicType]TypeAtom
+	atomTable      map[AtomicType]TypeAtom
 
 	types map[string]SemType
 }
+
 var _ Env = &envImpl{}
 
 func (this *envImpl) recListAtomCount() int {

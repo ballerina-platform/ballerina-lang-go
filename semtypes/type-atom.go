@@ -35,7 +35,6 @@ func CreateTypeAtom(index int, atomicType AtomicType) TypeAtom {
 	}
 }
 
-
 func (this *TypeAtom) Index() int {
 	return this.index
 }
