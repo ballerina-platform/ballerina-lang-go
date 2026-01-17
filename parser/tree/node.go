@@ -20,7 +20,6 @@ package tree
 
 import (
 	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/parser/internal"
 	"ballerina-lang-go/tools/diagnostics"
 	"iter"
 )
@@ -58,7 +57,7 @@ type Node interface {
 	LeadingInvalidTokens() []Token
 	TrailingInvalidTokens() []Token
 	// TODO: think about how to do nodetransformer
-	InternalNode() internal.STNode
+	InternalNode() STNode
 	ToSourceCode() string
 }
 
@@ -69,7 +68,7 @@ func (m *MinutiaeList) Iterator() iter.Seq[Minutiae] {
 }
 
 type Minutiae struct {
-	internalMinutiae internal.STMinutiae
+	internalMinutiae STMinutiae
 	token            Token
 	position         int
 	textRange        TextRange
@@ -107,7 +106,7 @@ type DiagnosticProperty[T any] interface {
 }
 
 type SyntaxDiagnostic struct {
-	nodeDiagnostic internal.STNodeDiagnostic
+	nodeDiagnostic STNodeDiagnostic
 	location       NodeLocation
 	diagnosticInfo *DiagnosticInfo
 }
@@ -143,7 +142,7 @@ const (
 )
 
 type NodeBase struct {
-	internalNode internal.STNode
+	internalNode STNode
 	// TODO: does this needs to be int?
 	position              int
 	parent                *NonTerminalNode
@@ -153,7 +152,7 @@ type NodeBase struct {
 	textRangeWithMinutiae TextRange
 }
 
-func NodeFrom(internalNode internal.STNode, position int, parent *NonTerminalNode) Node {
+func NodeFrom(internalNode STNode, position int, parent *NonTerminalNode) Node {
 	return &NodeBase{
 		internalNode: internalNode,
 		position:     position,
@@ -259,7 +258,7 @@ func (n *NonTerminalNode) Diagnostics() iter.Seq[Diagnostic] {
 	}
 }
 
-func createSyntaxDiagnostic(diagnostic internal.STNodeDiagnostic) Diagnostic {
+func createSyntaxDiagnostic(diagnostic STNodeDiagnostic) Diagnostic {
 	panic("not implemented")
 }
 
@@ -306,7 +305,7 @@ func (n *NodeBase) TrailingInvalidTokens() []Token {
 	panic("TrailingInvalidTokens() should be implemented by child types")
 }
 
-func (n *NodeBase) InternalNode() internal.STNode {
+func (n *NodeBase) InternalNode() STNode {
 	return n.internalNode
 }
 
@@ -355,7 +354,7 @@ func (n *NonTerminalNode) loadNode(childIndex int) Node {
 	index := 0
 	for i := range n.internalNode.BucketCount() {
 		child := n.internalNode.ChildInBucket(i)
-		if !internal.IsSTNodePresent(child) {
+		if !IsSTNodePresent(child) {
 			continue
 		}
 		if child.Kind() == common.LIST {
@@ -388,7 +387,7 @@ func (n *NonTerminalNode) ChildInBucket(bucket int) Node {
 		return child
 	}
 	internalChild := n.internalNode.ChildInBucket(bucket)
-	if !internal.IsSTNodePresent(internalChild) {
+	if !IsSTNodePresent(internalChild) {
 		return nil
 	}
 	child = createFacade[Node](internalChild, n.position, *n)
@@ -404,7 +403,7 @@ type Token struct {
 }
 
 func (t *Token) Text() string {
-	stToken, ok := t.internalNode.(internal.STToken)
+	stToken, ok := t.internalNode.(STToken)
 	if !ok {
 		panic("expected STToken")
 	}
@@ -438,19 +437,19 @@ type TextRange struct {
 	length      int
 }
 
-func createFacade[T Node](node internal.STNode, position int, parent NonTerminalNode) T {
+func createFacade[T Node](node STNode, position int, parent NonTerminalNode) T {
 	panic("not implemented")
 }
 
 type NodeList[T Node] struct {
-	internalListNode internal.STNodeList
+	internalListNode STNodeList
 	nonTerminalNode  NonTerminalNode
 	size             int
 }
 
 func nodeListFrom[T Node](nonTerminalNode *NonTerminalNode) NodeList[T] {
 	size := nonTerminalNode.bucketCount()
-	internalListNode, ok := nonTerminalNode.internalNode.(*internal.STNodeList)
+	internalListNode, ok := nonTerminalNode.internalNode.(*STNodeList)
 	if !ok {
 		panic("expected STNodeList")
 	}
@@ -469,12 +468,13 @@ type IdentifierToken struct {
 	Token
 }
 
+// FIXME: remove this
 // TODO: think how to special case this so it can also be generated
-type STAmbiguousCollectionNode struct {
+type AmbiguousCollectionNode struct {
 	NonTerminalNode
 }
 
-func (n STAmbiguousCollectionNode) CollectionStartToken() Node {
+func (n AmbiguousCollectionNode) CollectionStartToken() Node {
 	val, ok := n.ChildInBucket(0).(Node)
 	if !ok {
 		panic("expected Node")
@@ -482,11 +482,11 @@ func (n STAmbiguousCollectionNode) CollectionStartToken() Node {
 	return val
 }
 
-func (n STAmbiguousCollectionNode) Members() NodeList[Node] {
+func (n AmbiguousCollectionNode) Members() NodeList[Node] {
 	return nodeListFrom[Node](into[*NonTerminalNode](n.ChildInBucket(1)))
 }
 
-func (n STAmbiguousCollectionNode) CollectionEndToken() Node {
+func (n AmbiguousCollectionNode) CollectionEndToken() Node {
 	val, ok := n.ChildInBucket(2).(Node)
 	if !ok {
 		panic("expected Node")

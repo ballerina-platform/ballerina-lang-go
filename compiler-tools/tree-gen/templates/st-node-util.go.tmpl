@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package internal
+package tree
 
 // replaceInner recursively replaces a target node with a replacement node.
 // Returns true if the replacement was made, false otherwise.

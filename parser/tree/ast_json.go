@@ -18,7 +18,7 @@
 // - SyntaxTreeJSONGenerator.java (ballerina-lang/compiler/ballerina-parser/src/test/java/io/ballerinalang/compiler/parser/test/SyntaxTreeJSONGenerator.java)
 // - ParserTestUtils.java (ballerina-lang/compiler/ballerina-parser/src/test/java/io/ballerinalang/compiler/parser/test/ParserTestUtils.java)
 
-package internal
+package tree
 
 import (
 	"ballerina-lang-go/parser/common"

@@ -17,7 +17,7 @@
 package parser
 
 import (
-	"ballerina-lang-go/parser/internal"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
 	"encoding/json"
 	"fmt"
@@ -368,7 +368,7 @@ func parseFileWithRecovery(filePath string) (err error) {
 	}
 
 	// Generate JSON from the parsed AST
-	actualJSON := internal.GenerateJSON(ast)
+	actualJSON := tree.GenerateJSON(ast)
 
 	// Determine expected JSON file path
 	// Replace .bal with .json and change directory from corpus/bal to corpus/parser

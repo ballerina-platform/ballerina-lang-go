@@ -14,7 +14,7 @@
 //  specific language governing permissions and limitations
 //  under the License.
 
-package internal
+package tree
 
 import "ballerina-lang-go/parser/common"
 
