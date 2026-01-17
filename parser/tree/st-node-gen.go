@@ -66,6 +66,19 @@ func (n *STModulePart) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STModulePart) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ModulePart{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STModuleMemberDeclarationNode = STNode
 
 type STFunctionDefinition struct {
@@ -144,6 +157,19 @@ func (n *STFunctionDefinition) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STFunctionDefinition) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FunctionDefinition{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STImportDeclarationNode struct {
 	STNode
 
@@ -203,6 +229,19 @@ func (n *STImportDeclarationNode) ChildBuckets() []STNode {
 		n.Prefix,
 
 		n.Semicolon,
+	}
+}
+
+func (n *STImportDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImportDeclarationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -289,6 +328,19 @@ func (n *STListenerDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STListenerDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ListenerDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypeDefinitionNode struct {
 	STModuleMemberDeclarationNode
 
@@ -355,6 +407,19 @@ func (n *STTypeDefinitionNode) ChildBuckets() []STNode {
 		n.TypeDescriptor,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STTypeDefinitionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeDefinitionNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -462,6 +527,19 @@ func (n *STServiceDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STServiceDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ServiceDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STStatementNode = STNode
 
 type STAssignmentStatementNode struct {
@@ -516,6 +594,19 @@ func (n *STAssignmentStatementNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STAssignmentStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AssignmentStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -578,6 +669,19 @@ func (n *STCompoundAssignmentStatementNode) ChildBuckets() []STNode {
 		n.RhsExpression,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STCompoundAssignmentStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &CompoundAssignmentStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -650,6 +754,19 @@ func (n *STVariableDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STVariableDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &VariableDeclarationNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBlockStatementNode struct {
 	STStatementNode
 
@@ -698,6 +815,19 @@ func (n *STBlockStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STBlockStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BlockStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBreakStatementNode struct {
 	STStatementNode
 
@@ -736,6 +866,19 @@ func (n *STBreakStatementNode) ChildBuckets() []STNode {
 		n.BreakToken,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STBreakStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BreakStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -787,6 +930,19 @@ func (n *STFailStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STFailStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FailStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STExpressionStatementNode struct {
 	STStatementNode
 
@@ -828,6 +984,19 @@ func (n *STExpressionStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STExpressionStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ExpressionStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STContinueStatementNode struct {
 	STStatementNode
 
@@ -866,6 +1035,19 @@ func (n *STContinueStatementNode) ChildBuckets() []STNode {
 		n.ContinueToken,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STContinueStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ContinueStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -924,6 +1106,19 @@ func (n *STExternalFunctionBodyNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STExternalFunctionBodyNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ExternalFunctionBodyNode{
+		FunctionBodyNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STIfElseStatementNode struct {
 	STStatementNode
 
@@ -979,6 +1174,19 @@ func (n *STIfElseStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STIfElseStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &IfElseStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STElseBlockNode struct {
 	STNode
 
@@ -1017,6 +1225,19 @@ func (n *STElseBlockNode) ChildBuckets() []STNode {
 		n.ElseKeyword,
 
 		n.ElseBody,
+	}
+}
+
+func (n *STElseBlockNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ElseBlockNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1075,6 +1296,19 @@ func (n *STWhileStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STWhileStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WhileStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STPanicStatementNode struct {
 	STStatementNode
 
@@ -1123,6 +1357,19 @@ func (n *STPanicStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STPanicStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &PanicStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReturnStatementNode struct {
 	STStatementNode
 
@@ -1168,6 +1415,19 @@ func (n *STReturnStatementNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STReturnStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReturnStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1233,6 +1493,19 @@ func (n *STLocalTypeDefinitionStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STLocalTypeDefinitionStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LocalTypeDefinitionStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STLockStatementNode struct {
 	STStatementNode
 
@@ -1278,6 +1551,19 @@ func (n *STLockStatementNode) ChildBuckets() []STNode {
 		n.BlockStatement,
 
 		n.OnFailClause,
+	}
+}
+
+func (n *STLockStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LockStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1333,6 +1619,19 @@ func (n *STForkStatementNode) ChildBuckets() []STNode {
 		n.NamedWorkerDeclarations,
 
 		n.CloseBraceToken,
+	}
+}
+
+func (n *STForkStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ForkStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1405,6 +1704,19 @@ func (n *STForEachStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STForEachStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ForEachStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STExpressionNode = STNode
 
 type STBinaryExpressionNode struct {
@@ -1452,6 +1764,19 @@ func (n *STBinaryExpressionNode) ChildBuckets() []STNode {
 		n.Operator,
 
 		n.RhsExpr,
+	}
+}
+
+func (n *STBinaryExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BinaryExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1503,6 +1828,19 @@ func (n *STBracedExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STBracedExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BracedExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STCheckExpressionNode struct {
 	STExpressionNode
 
@@ -1541,6 +1879,19 @@ func (n *STCheckExpressionNode) ChildBuckets() []STNode {
 		n.CheckKeyword,
 
 		n.Expression,
+	}
+}
+
+func (n *STCheckExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &CheckExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1589,6 +1940,19 @@ func (n *STFieldAccessExpressionNode) ChildBuckets() []STNode {
 		n.DotToken,
 
 		n.FieldName,
+	}
+}
+
+func (n *STFieldAccessExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FieldAccessExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1644,6 +2008,19 @@ func (n *STFunctionCallExpressionNode) ChildBuckets() []STNode {
 		n.Arguments,
 
 		n.CloseParenToken,
+	}
+}
+
+func (n *STFunctionCallExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FunctionCallExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1716,6 +2093,19 @@ func (n *STMethodCallExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMethodCallExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MethodCallExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMappingConstructorExpressionNode struct {
 	STExpressionNode
 
@@ -1761,6 +2151,19 @@ func (n *STMappingConstructorExpressionNode) ChildBuckets() []STNode {
 		n.Fields,
 
 		n.CloseBrace,
+	}
+}
+
+func (n *STMappingConstructorExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MappingConstructorExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1819,6 +2222,19 @@ func (n *STIndexedExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STIndexedExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &IndexedExpressionNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypeofExpressionNode struct {
 	STExpressionNode
 
@@ -1860,6 +2276,19 @@ func (n *STTypeofExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTypeofExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeofExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STUnaryExpressionNode struct {
 	STExpressionNode
 
@@ -1898,6 +2327,19 @@ func (n *STUnaryExpressionNode) ChildBuckets() []STNode {
 		n.UnaryOperator,
 
 		n.Expression,
+	}
+}
+
+func (n *STUnaryExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &UnaryExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -1960,6 +2402,19 @@ func (n *STComputedNameFieldNode) ChildBuckets() []STNode {
 		n.ColonToken,
 
 		n.ValueExpr,
+	}
+}
+
+func (n *STComputedNameFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ComputedNameFieldNode{
+		MappingFieldNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2046,6 +2501,19 @@ func (n *STConstantDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STConstantDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ConstantDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STParameterNode = STNode
 
 type STDefaultableParameterNode struct {
@@ -2110,6 +2578,19 @@ func (n *STDefaultableParameterNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STDefaultableParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &DefaultableParameterNode{
+		ParameterNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRequiredParameterNode struct {
 	STParameterNode
 
@@ -2155,6 +2636,19 @@ func (n *STRequiredParameterNode) ChildBuckets() []STNode {
 		n.TypeName,
 
 		n.ParamName,
+	}
+}
+
+func (n *STRequiredParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RequiredParameterNode{
+		ParameterNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2213,6 +2707,19 @@ func (n *STIncludedRecordParameterNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STIncludedRecordParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &IncludedRecordParameterNode{
+		ParameterNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRestParameterNode struct {
 	STParameterNode
 
@@ -2268,6 +2775,19 @@ func (n *STRestParameterNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRestParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RestParameterNode{
+		ParameterNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STImportOrgNameNode struct {
 	STNode
 
@@ -2309,6 +2829,19 @@ func (n *STImportOrgNameNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STImportOrgNameNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImportOrgNameNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STImportPrefixNode struct {
 	STNode
 
@@ -2347,6 +2880,19 @@ func (n *STImportPrefixNode) ChildBuckets() []STNode {
 		n.AsKeyword,
 
 		n.Prefix,
+	}
+}
+
+func (n *STImportPrefixNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImportPrefixNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2407,6 +2953,19 @@ func (n *STSpecificFieldNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STSpecificFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SpecificFieldNode{
+		MappingFieldNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STSpreadFieldNode struct {
 	STMappingFieldNode
 
@@ -2445,6 +3004,19 @@ func (n *STSpreadFieldNode) ChildBuckets() []STNode {
 		n.Ellipsis,
 
 		n.ValueExpr,
+	}
+}
+
+func (n *STSpreadFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SpreadFieldNode{
+		MappingFieldNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2498,6 +3070,19 @@ func (n *STNamedArgumentNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STNamedArgumentNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NamedArgumentNode{
+		FunctionArgumentNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STPositionalArgumentNode struct {
 	STFunctionArgumentNode
 
@@ -2529,6 +3114,19 @@ func (n *STPositionalArgumentNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Expression,
+	}
+}
+
+func (n *STPositionalArgumentNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &PositionalArgumentNode{
+		FunctionArgumentNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2573,6 +3171,19 @@ func (n *STRestArgumentNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRestArgumentNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RestArgumentNode{
+		FunctionArgumentNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STInferredTypedescDefaultNode struct {
 	STExpressionNode
 
@@ -2611,6 +3222,19 @@ func (n *STInferredTypedescDefaultNode) ChildBuckets() []STNode {
 		n.LtToken,
 
 		n.GtToken,
+	}
+}
+
+func (n *STInferredTypedescDefaultNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &InferredTypedescDefaultNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2673,6 +3297,19 @@ func (n *STObjectTypeDescriptorNode) ChildBuckets() []STNode {
 		n.Members,
 
 		n.CloseBrace,
+	}
+}
+
+func (n *STObjectTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ObjectTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -2752,6 +3389,19 @@ func (n *STObjectConstructorExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STObjectConstructorExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ObjectConstructorExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRecordTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -2814,6 +3464,19 @@ func (n *STRecordTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRecordTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RecordTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReturnTypeDescriptorNode struct {
 	STNode
 
@@ -2862,6 +3525,19 @@ func (n *STReturnTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReturnTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReturnTypeDescriptorNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STNilTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -2903,6 +3579,19 @@ func (n *STNilTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STNilTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NilTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STOptionalTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -2941,6 +3630,19 @@ func (n *STOptionalTypeDescriptorNode) ChildBuckets() []STNode {
 		n.TypeDescriptor,
 
 		n.QuestionMarkToken,
+	}
+}
+
+func (n *STOptionalTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OptionalTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3027,6 +3729,19 @@ func (n *STObjectFieldNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STObjectFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ObjectFieldNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRecordFieldNode struct {
 	STNode
 
@@ -3093,6 +3808,19 @@ func (n *STRecordFieldNode) ChildBuckets() []STNode {
 		n.QuestionMarkToken,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STRecordFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RecordFieldNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3172,6 +3900,19 @@ func (n *STRecordFieldWithDefaultValueNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRecordFieldWithDefaultValueNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RecordFieldWithDefaultValueNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRecordRestDescriptorNode struct {
 	STNode
 
@@ -3217,6 +3958,19 @@ func (n *STRecordRestDescriptorNode) ChildBuckets() []STNode {
 		n.EllipsisToken,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STRecordRestDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RecordRestDescriptorNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3268,6 +4022,19 @@ func (n *STTypeReferenceNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTypeReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeReferenceNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STAnnotationNode struct {
 	STNode
 
@@ -3316,6 +4083,19 @@ func (n *STAnnotationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STAnnotationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AnnotationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMetadataNode struct {
 	STNode
 
@@ -3354,6 +4134,19 @@ func (n *STMetadataNode) ChildBuckets() []STNode {
 		n.DocumentationString,
 
 		n.Annotations,
+	}
+}
+
+func (n *STMetadataNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MetadataNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3433,6 +4226,19 @@ func (n *STModuleVariableDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STModuleVariableDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ModuleVariableDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypeTestExpressionNode struct {
 	STExpressionNode
 
@@ -3478,6 +4284,19 @@ func (n *STTypeTestExpressionNode) ChildBuckets() []STNode {
 		n.IsKeyword,
 
 		n.TypeDescriptor,
+	}
+}
+
+func (n *STTypeTestExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeTestExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3552,6 +4371,19 @@ func (n *STRemoteMethodCallActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRemoteMethodCallActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RemoteMethodCallActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMapTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -3593,6 +4425,19 @@ func (n *STMapTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMapTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MapTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STNilLiteralNode struct {
 	STExpressionNode
 
@@ -3631,6 +4476,19 @@ func (n *STNilLiteralNode) ChildBuckets() []STNode {
 		n.OpenParenToken,
 
 		n.CloseParenToken,
+	}
+}
+
+func (n *STNilLiteralNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NilLiteralNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3724,6 +4582,19 @@ func (n *STAnnotationDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STAnnotationDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AnnotationDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STAnnotationAttachPointNode struct {
 	STNode
 
@@ -3762,6 +4633,19 @@ func (n *STAnnotationAttachPointNode) ChildBuckets() []STNode {
 		n.SourceKeyword,
 
 		n.Identifiers,
+	}
+}
+
+func (n *STAnnotationAttachPointNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AnnotationAttachPointNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -3827,6 +4711,19 @@ func (n *STXMLNamespaceDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLNamespaceDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLNamespaceDeclarationNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STModuleXMLNamespaceDeclarationNode struct {
 	STModuleMemberDeclarationNode
 
@@ -3889,6 +4786,19 @@ func (n *STModuleXMLNamespaceDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STModuleXMLNamespaceDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ModuleXMLNamespaceDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STFunctionBodyBlockNode struct {
 	STFunctionBodyNode
 
@@ -3948,6 +4858,19 @@ func (n *STFunctionBodyBlockNode) ChildBuckets() []STNode {
 		n.CloseBraceToken,
 
 		n.SemicolonToken,
+	}
+}
+
+func (n *STFunctionBodyBlockNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FunctionBodyBlockNode{
+		FunctionBodyNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4027,6 +4950,19 @@ func (n *STNamedWorkerDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STNamedWorkerDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NamedWorkerDeclarationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STNamedWorkerDeclarator struct {
 	STNode
 
@@ -4068,6 +5004,19 @@ func (n *STNamedWorkerDeclarator) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STNamedWorkerDeclarator) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NamedWorkerDeclarator{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBasicLiteralNode struct {
 	STExpressionNode
 
@@ -4099,6 +5048,19 @@ func (n *STBasicLiteralNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.LiteralToken,
+	}
+}
+
+func (n *STBasicLiteralNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BasicLiteralNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4137,6 +5099,19 @@ func (n *STSimpleNameReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Name,
+	}
+}
+
+func (n *STSimpleNameReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SimpleNameReferenceNode{
+		NameReferenceNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4188,6 +5163,19 @@ func (n *STQualifiedNameReferenceNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STQualifiedNameReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &QualifiedNameReferenceNode{
+		NameReferenceNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBuiltinSimpleNameReferenceNode struct {
 	STNameReferenceNode
 
@@ -4219,6 +5207,19 @@ func (n *STBuiltinSimpleNameReferenceNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Name,
+	}
+}
+
+func (n *STBuiltinSimpleNameReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BuiltinSimpleNameReferenceNode{
+		NameReferenceNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4260,6 +5261,19 @@ func (n *STTrapExpressionNode) ChildBuckets() []STNode {
 		n.TrapKeyword,
 
 		n.Expression,
+	}
+}
+
+func (n *STTrapExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TrapExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4308,6 +5322,19 @@ func (n *STListConstructorExpressionNode) ChildBuckets() []STNode {
 		n.Expressions,
 
 		n.CloseBracket,
+	}
+}
+
+func (n *STListConstructorExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ListConstructorExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4366,6 +5393,19 @@ func (n *STTypeCastExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTypeCastExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeCastExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypeCastParamNode struct {
 	STNode
 
@@ -4404,6 +5444,19 @@ func (n *STTypeCastParamNode) ChildBuckets() []STNode {
 		n.Annotations,
 
 		n.Type,
+	}
+}
+
+func (n *STTypeCastParamNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeCastParamNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4452,6 +5505,19 @@ func (n *STUnionTypeDescriptorNode) ChildBuckets() []STNode {
 		n.PipeToken,
 
 		n.RightTypeDesc,
+	}
+}
+
+func (n *STUnionTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &UnionTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4517,6 +5583,19 @@ func (n *STTableConstructorExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTableConstructorExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TableConstructorExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STKeySpecifierNode struct {
 	STNode
 
@@ -4572,6 +5651,19 @@ func (n *STKeySpecifierNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STKeySpecifierNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &KeySpecifierNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STStreamTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -4610,6 +5702,19 @@ func (n *STStreamTypeDescriptorNode) ChildBuckets() []STNode {
 		n.StreamKeywordToken,
 
 		n.StreamTypeParamsNode,
+	}
+}
+
+func (n *STStreamTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &StreamTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4675,6 +5780,19 @@ func (n *STStreamTypeParamsNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STStreamTypeParamsNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &StreamTypeParamsNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STLetExpressionNode struct {
 	STExpressionNode
 
@@ -4727,6 +5845,19 @@ func (n *STLetExpressionNode) ChildBuckets() []STNode {
 		n.InKeyword,
 
 		n.Expression,
+	}
+}
+
+func (n *STLetExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LetExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4785,6 +5916,19 @@ func (n *STLetVariableDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STLetVariableDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LetVariableDeclarationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTemplateExpressionNode struct {
 	STExpressionNode
 
@@ -4840,6 +5984,19 @@ func (n *STTemplateExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTemplateExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TemplateExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLItemNode = STNode
 
 type STXMLElementNode struct {
@@ -4887,6 +6044,19 @@ func (n *STXMLElementNode) ChildBuckets() []STNode {
 		n.Content,
 
 		n.EndTag,
+	}
+}
+
+func (n *STXMLElementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLElementNode{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -4947,6 +6117,19 @@ func (n *STXMLStartTagNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLStartTagNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLStartTagNode{
+		XMLElementTagNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLEndTagNode struct {
 	STXMLElementTagNode
 
@@ -5002,6 +6185,19 @@ func (n *STXMLEndTagNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLEndTagNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLEndTagNode{
+		XMLElementTagNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLNameNode = STNode
 
 type STXMLSimpleNameNode struct {
@@ -5035,6 +6231,19 @@ func (n *STXMLSimpleNameNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Name,
+	}
+}
+
+func (n *STXMLSimpleNameNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLSimpleNameNode{
+		XMLNameNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5083,6 +6292,19 @@ func (n *STXMLQualifiedNameNode) ChildBuckets() []STNode {
 		n.Colon,
 
 		n.Name,
+	}
+}
+
+func (n *STXMLQualifiedNameNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLQualifiedNameNode{
+		XMLNameNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5148,6 +6370,19 @@ func (n *STXMLEmptyElementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLEmptyElementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLEmptyElementNode{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STInterpolationNode struct {
 	STXMLItemNode
 
@@ -5196,6 +6431,19 @@ func (n *STInterpolationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STInterpolationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &InterpolationNode{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLTextNode struct {
 	STXMLItemNode
 
@@ -5227,6 +6475,19 @@ func (n *STXMLTextNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Content,
+	}
+}
+
+func (n *STXMLTextNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLTextNode{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5278,6 +6539,19 @@ func (n *STXMLAttributeNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLAttributeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLAttributeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLAttributeValue struct {
 	STNode
 
@@ -5323,6 +6597,19 @@ func (n *STXMLAttributeValue) ChildBuckets() []STNode {
 		n.Value,
 
 		n.EndQuote,
+	}
+}
+
+func (n *STXMLAttributeValue) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLAttributeValue{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5374,6 +6661,19 @@ func (n *STXMLComment) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLComment) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLComment{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLCDATANode struct {
 	STXMLItemNode
 
@@ -5419,6 +6719,19 @@ func (n *STXMLCDATANode) ChildBuckets() []STNode {
 		n.Content,
 
 		n.CdataEnd,
+	}
+}
+
+func (n *STXMLCDATANode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLCDATANode{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5477,6 +6790,19 @@ func (n *STXMLProcessingInstruction) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLProcessingInstruction) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLProcessingInstruction{
+		XMLItemNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTableTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -5522,6 +6848,19 @@ func (n *STTableTypeDescriptorNode) ChildBuckets() []STNode {
 		n.RowTypeParameterNode,
 
 		n.KeyConstraintNode,
+	}
+}
+
+func (n *STTableTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TableTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5573,6 +6912,19 @@ func (n *STTypeParameterNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTypeParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeParameterNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STKeyTypeConstraintNode struct {
 	STNode
 
@@ -5611,6 +6963,19 @@ func (n *STKeyTypeConstraintNode) ChildBuckets() []STNode {
 		n.KeyKeywordToken,
 
 		n.TypeParameterNode,
+	}
+}
+
+func (n *STKeyTypeConstraintNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &KeyTypeConstraintNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5659,6 +7024,19 @@ func (n *STFunctionTypeDescriptorNode) ChildBuckets() []STNode {
 		n.FunctionKeyword,
 
 		n.FunctionSignature,
+	}
+}
+
+func (n *STFunctionTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FunctionTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5714,6 +7092,19 @@ func (n *STFunctionSignatureNode) ChildBuckets() []STNode {
 		n.CloseParenToken,
 
 		n.ReturnTypeDesc,
+	}
+}
+
+func (n *STFunctionSignatureNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FunctionSignatureNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5781,6 +7172,19 @@ func (n *STExplicitAnonymousFunctionExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STExplicitAnonymousFunctionExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ExplicitAnonymousFunctionExpressionNode{
+		AnonymousFunctionExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STFunctionBodyNode = STNode
 
 type STExpressionFunctionBodyNode struct {
@@ -5828,6 +7232,19 @@ func (n *STExpressionFunctionBodyNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.Semicolon,
+	}
+}
+
+func (n *STExpressionFunctionBodyNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ExpressionFunctionBodyNode{
+		FunctionBodyNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5879,6 +7296,19 @@ func (n *STTupleTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTupleTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TupleTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STParenthesisedTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -5924,6 +7354,19 @@ func (n *STParenthesisedTypeDescriptorNode) ChildBuckets() []STNode {
 		n.Typedesc,
 
 		n.CloseParenToken,
+	}
+}
+
+func (n *STParenthesisedTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ParenthesisedTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -5977,6 +7420,19 @@ func (n *STExplicitNewExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STExplicitNewExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ExplicitNewExpressionNode{
+		NewExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STImplicitNewExpressionNode struct {
 	STNewExpressionNode
 
@@ -6015,6 +7471,19 @@ func (n *STImplicitNewExpressionNode) ChildBuckets() []STNode {
 		n.NewKeyword,
 
 		n.ParenthesizedArgList,
+	}
+}
+
+func (n *STImplicitNewExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImplicitNewExpressionNode{
+		NewExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6066,6 +7535,19 @@ func (n *STParenthesizedArgList) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STParenthesizedArgList) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ParenthesizedArgList{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STClauseNode = STNode
 
 type STIntermediateClauseNode = STClauseNode
@@ -6108,6 +7590,19 @@ func (n *STQueryConstructTypeNode) ChildBuckets() []STNode {
 		n.Keyword,
 
 		n.KeySpecifier,
+	}
+}
+
+func (n *STQueryConstructTypeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &QueryConstructTypeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6166,6 +7661,19 @@ func (n *STFromClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STFromClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FromClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STWhereClauseNode struct {
 	STIntermediateClauseNode
 
@@ -6207,6 +7715,19 @@ func (n *STWhereClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STWhereClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WhereClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STLetClauseNode struct {
 	STIntermediateClauseNode
 
@@ -6245,6 +7766,19 @@ func (n *STLetClauseNode) ChildBuckets() []STNode {
 		n.LetKeyword,
 
 		n.LetVarDeclarations,
+	}
+}
+
+func (n *STLetClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LetClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6317,6 +7851,19 @@ func (n *STJoinClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STJoinClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &JoinClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STOnClauseNode struct {
 	STClauseNode
 
@@ -6372,6 +7919,19 @@ func (n *STOnClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STOnClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OnClauseNode{
+		ClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STLimitClauseNode struct {
 	STIntermediateClauseNode
 
@@ -6410,6 +7970,19 @@ func (n *STLimitClauseNode) ChildBuckets() []STNode {
 		n.LimitKeyword,
 
 		n.Expression,
+	}
+}
+
+func (n *STLimitClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &LimitClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6461,6 +8034,19 @@ func (n *STOnConflictClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STOnConflictClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OnConflictClauseNode{
+		ClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STQueryPipelineNode struct {
 	STNode
 
@@ -6499,6 +8085,19 @@ func (n *STQueryPipelineNode) ChildBuckets() []STNode {
 		n.FromClause,
 
 		n.IntermediateClauses,
+	}
+}
+
+func (n *STQueryPipelineNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &QueryPipelineNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6543,6 +8142,19 @@ func (n *STSelectClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STSelectClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SelectClauseNode{
+		ClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STCollectClauseNode struct {
 	STClauseNode
 
@@ -6581,6 +8193,19 @@ func (n *STCollectClauseNode) ChildBuckets() []STNode {
 		n.CollectKeyword,
 
 		n.Expression,
+	}
+}
+
+func (n *STCollectClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &CollectClauseNode{
+		ClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6639,6 +8264,19 @@ func (n *STQueryExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STQueryExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &QueryExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STQueryActionNode struct {
 	STActionNode
 
@@ -6684,6 +8322,19 @@ func (n *STQueryActionNode) ChildBuckets() []STNode {
 		n.DoKeyword,
 
 		n.BlockStatement,
+	}
+}
+
+func (n *STQueryActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &QueryActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6735,6 +8386,19 @@ func (n *STIntersectionTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STIntersectionTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &IntersectionTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STImplicitAnonymousFunctionParameters struct {
 	STNode
 
@@ -6780,6 +8444,19 @@ func (n *STImplicitAnonymousFunctionParameters) ChildBuckets() []STNode {
 		n.Parameters,
 
 		n.CloseParenToken,
+	}
+}
+
+func (n *STImplicitAnonymousFunctionParameters) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImplicitAnonymousFunctionParameters{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -6831,6 +8508,19 @@ func (n *STImplicitAnonymousFunctionExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STImplicitAnonymousFunctionExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ImplicitAnonymousFunctionExpressionNode{
+		AnonymousFunctionExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STStartActionNode struct {
 	STExpressionNode
 
@@ -6879,6 +8569,19 @@ func (n *STStartActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STStartActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &StartActionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STFlushActionNode struct {
 	STExpressionNode
 
@@ -6920,6 +8623,19 @@ func (n *STFlushActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STFlushActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FlushActionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STSingletonTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -6951,6 +8667,19 @@ func (n *STSingletonTypeDescriptorNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.SimpleContExprNode,
+	}
+}
+
+func (n *STSingletonTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SingletonTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7030,6 +8759,19 @@ func (n *STMethodDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMethodDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MethodDeclarationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypedBindingPatternNode struct {
 	STNode
 
@@ -7071,6 +8813,19 @@ func (n *STTypedBindingPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTypedBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypedBindingPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBindingPatternNode = STNode
 
 type STCaptureBindingPatternNode struct {
@@ -7107,6 +8862,19 @@ func (n *STCaptureBindingPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STCaptureBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &CaptureBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STWildcardBindingPatternNode struct {
 	STBindingPatternNode
 
@@ -7138,6 +8906,19 @@ func (n *STWildcardBindingPatternNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.UnderscoreToken,
+	}
+}
+
+func (n *STWildcardBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WildcardBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7189,6 +8970,19 @@ func (n *STListBindingPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STListBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ListBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMappingBindingPatternNode struct {
 	STBindingPatternNode
 
@@ -7234,6 +9028,19 @@ func (n *STMappingBindingPatternNode) ChildBuckets() []STNode {
 		n.FieldBindingPatterns,
 
 		n.CloseBrace,
+	}
+}
+
+func (n *STMappingBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MappingBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7287,6 +9094,19 @@ func (n *STFieldBindingPatternFullNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STFieldBindingPatternFullNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FieldBindingPatternFullNode{
+		FieldBindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STFieldBindingPatternVarnameNode struct {
 	STFieldBindingPatternNode
 
@@ -7318,6 +9138,19 @@ func (n *STFieldBindingPatternVarnameNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.VariableName,
+	}
+}
+
+func (n *STFieldBindingPatternVarnameNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FieldBindingPatternVarnameNode{
+		FieldBindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7359,6 +9192,19 @@ func (n *STRestBindingPatternNode) ChildBuckets() []STNode {
 		n.EllipsisToken,
 
 		n.VariableName,
+	}
+}
+
+func (n *STRestBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RestBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7424,6 +9270,19 @@ func (n *STErrorBindingPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STErrorBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ErrorBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STNamedArgBindingPatternNode struct {
 	STBindingPatternNode
 
@@ -7469,6 +9328,19 @@ func (n *STNamedArgBindingPatternNode) ChildBuckets() []STNode {
 		n.EqualsToken,
 
 		n.BindingPattern,
+	}
+}
+
+func (n *STNamedArgBindingPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NamedArgBindingPatternNode{
+		BindingPatternNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7520,6 +9392,19 @@ func (n *STAsyncSendActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STAsyncSendActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AsyncSendActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STSyncSendActionNode struct {
 	STActionNode
 
@@ -7568,6 +9453,19 @@ func (n *STSyncSendActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STSyncSendActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SyncSendActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReceiveActionNode struct {
 	STActionNode
 
@@ -7606,6 +9504,19 @@ func (n *STReceiveActionNode) ChildBuckets() []STNode {
 		n.LeftArrow,
 
 		n.ReceiveWorkers,
+	}
+}
+
+func (n *STReceiveActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReceiveActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7657,6 +9568,19 @@ func (n *STReceiveFieldsNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReceiveFieldsNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReceiveFieldsNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STAlternateReceiveNode struct {
 	STNode
 
@@ -7688,6 +9612,19 @@ func (n *STAlternateReceiveNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.Workers,
+	}
+}
+
+func (n *STAlternateReceiveNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AlternateReceiveNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7732,6 +9669,19 @@ func (n *STRestDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRestDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RestDescriptorNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STDoubleGTTokenNode struct {
 	STNode
 
@@ -7770,6 +9720,19 @@ func (n *STDoubleGTTokenNode) ChildBuckets() []STNode {
 		n.OpenGTToken,
 
 		n.EndGTToken,
+	}
+}
+
+func (n *STDoubleGTTokenNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &DoubleGTTokenNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7821,6 +9784,19 @@ func (n *STTrippleGTTokenNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTrippleGTTokenNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TrippleGTTokenNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STWaitActionNode struct {
 	STActionNode
 
@@ -7859,6 +9835,19 @@ func (n *STWaitActionNode) ChildBuckets() []STNode {
 		n.WaitKeyword,
 
 		n.WaitFutureExpr,
+	}
+}
+
+func (n *STWaitActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WaitActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -7910,6 +9899,19 @@ func (n *STWaitFieldsListNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STWaitFieldsListNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WaitFieldsListNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STWaitFieldNode struct {
 	STNode
 
@@ -7955,6 +9957,19 @@ func (n *STWaitFieldNode) ChildBuckets() []STNode {
 		n.Colon,
 
 		n.WaitFutureExpr,
+	}
+}
+
+func (n *STWaitFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &WaitFieldNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8006,6 +10021,19 @@ func (n *STAnnotAccessExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STAnnotAccessExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &AnnotAccessExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STOptionalFieldAccessExpressionNode struct {
 	STExpressionNode
 
@@ -8051,6 +10079,19 @@ func (n *STOptionalFieldAccessExpressionNode) ChildBuckets() []STNode {
 		n.OptionalChainingToken,
 
 		n.FieldName,
+	}
+}
+
+func (n *STOptionalFieldAccessExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OptionalFieldAccessExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8113,6 +10154,19 @@ func (n *STConditionalExpressionNode) ChildBuckets() []STNode {
 		n.ColonToken,
 
 		n.EndExpression,
+	}
+}
+
+func (n *STConditionalExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ConditionalExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8199,6 +10253,19 @@ func (n *STEnumDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STEnumDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &EnumDeclarationNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STEnumMemberNode struct {
 	STNode
 
@@ -8254,6 +10321,19 @@ func (n *STEnumMemberNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STEnumMemberNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &EnumMemberNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STArrayTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -8292,6 +10372,19 @@ func (n *STArrayTypeDescriptorNode) ChildBuckets() []STNode {
 		n.MemberTypeDesc,
 
 		n.Dimensions,
+	}
+}
+
+func (n *STArrayTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ArrayTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8343,6 +10436,19 @@ func (n *STArrayDimensionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STArrayDimensionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ArrayDimensionNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTransactionStatementNode struct {
 	STStatementNode
 
@@ -8391,6 +10497,19 @@ func (n *STTransactionStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STTransactionStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TransactionStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRollbackStatementNode struct {
 	STStatementNode
 
@@ -8436,6 +10555,19 @@ func (n *STRollbackStatementNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.Semicolon,
+	}
+}
+
+func (n *STRollbackStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RollbackStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8501,6 +10633,19 @@ func (n *STRetryStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STRetryStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RetryStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STCommitActionNode struct {
 	STActionNode
 
@@ -8535,6 +10680,19 @@ func (n *STCommitActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STCommitActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &CommitActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTransactionalExpressionNode struct {
 	STExpressionNode
 
@@ -8566,6 +10724,19 @@ func (n *STTransactionalExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.TransactionalKeyword,
+	}
+}
+
+func (n *STTransactionalExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TransactionalExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8624,6 +10795,19 @@ func (n *STByteArrayLiteralNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STByteArrayLiteralNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ByteArrayLiteralNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLNavigateExpressionNode = STExpressionNode
 
 type STXMLFilterExpressionNode struct {
@@ -8664,6 +10848,19 @@ func (n *STXMLFilterExpressionNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.XmlPatternChain,
+	}
+}
+
+func (n *STXMLFilterExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLFilterExpressionNode{
+		XMLNavigateExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8715,6 +10912,19 @@ func (n *STXMLStepExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLStepExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLStepExpressionNode{
+		XMLNavigateExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLNamePatternChainingNode struct {
 	STNode
 
@@ -8760,6 +10970,19 @@ func (n *STXMLNamePatternChainingNode) ChildBuckets() []STNode {
 		n.XmlNamePattern,
 
 		n.GtToken,
+	}
+}
+
+func (n *STXMLNamePatternChainingNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLNamePatternChainingNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8811,6 +11034,19 @@ func (n *STXMLStepIndexedExtendNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLStepIndexedExtendNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLStepIndexedExtendNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STXMLStepMethodCallExtendNode struct {
 	STNode
 
@@ -8856,6 +11092,19 @@ func (n *STXMLStepMethodCallExtendNode) ChildBuckets() []STNode {
 		n.MethodName,
 
 		n.ParenthesizedArgList,
+	}
+}
+
+func (n *STXMLStepMethodCallExtendNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLStepMethodCallExtendNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -8907,6 +11156,19 @@ func (n *STXMLAtomicNamePatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STXMLAtomicNamePatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &XMLAtomicNamePatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STTypeReferenceTypeDescNode struct {
 	STTypeDescriptorNode
 
@@ -8938,6 +11200,19 @@ func (n *STTypeReferenceTypeDescNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.TypeRef,
+	}
+}
+
+func (n *STTypeReferenceTypeDescNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &TypeReferenceTypeDescNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9010,6 +11285,19 @@ func (n *STMatchStatementNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMatchStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MatchStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMatchClauseNode struct {
 	STNode
 
@@ -9065,6 +11353,19 @@ func (n *STMatchClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMatchClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MatchClauseNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMatchGuardNode struct {
 	STNode
 
@@ -9106,6 +11407,19 @@ func (n *STMatchGuardNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMatchGuardNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MatchGuardNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STDistinctTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -9144,6 +11458,19 @@ func (n *STDistinctTypeDescriptorNode) ChildBuckets() []STNode {
 		n.DistinctKeyword,
 
 		n.TypeDescriptor,
+	}
+}
+
+func (n *STDistinctTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &DistinctTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9195,6 +11522,19 @@ func (n *STListMatchPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STListMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ListMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRestMatchPatternNode struct {
 	STNode
 
@@ -9240,6 +11580,19 @@ func (n *STRestMatchPatternNode) ChildBuckets() []STNode {
 		n.VarKeywordToken,
 
 		n.VariableName,
+	}
+}
+
+func (n *STRestMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RestMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9291,6 +11644,19 @@ func (n *STMappingMatchPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMappingMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MappingMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STFieldMatchPatternNode struct {
 	STNode
 
@@ -9336,6 +11702,19 @@ func (n *STFieldMatchPatternNode) ChildBuckets() []STNode {
 		n.ColonToken,
 
 		n.MatchPattern,
+	}
+}
+
+func (n *STFieldMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &FieldMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9401,6 +11780,19 @@ func (n *STErrorMatchPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STErrorMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ErrorMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STNamedArgMatchPatternNode struct {
 	STNode
 
@@ -9449,6 +11841,19 @@ func (n *STNamedArgMatchPatternNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STNamedArgMatchPatternNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NamedArgMatchPatternNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STDocumentationNode = STNode
 
 type STMarkdownDocumentationNode struct {
@@ -9482,6 +11887,19 @@ func (n *STMarkdownDocumentationNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.DocumentationLines,
+	}
+}
+
+func (n *STMarkdownDocumentationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MarkdownDocumentationNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9523,6 +11941,19 @@ func (n *STMarkdownDocumentationLineNode) ChildBuckets() []STNode {
 		n.HashToken,
 
 		n.DocumentElements,
+	}
+}
+
+func (n *STMarkdownDocumentationLineNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MarkdownDocumentationLineNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9588,6 +12019,19 @@ func (n *STMarkdownParameterDocumentationLineNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMarkdownParameterDocumentationLineNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MarkdownParameterDocumentationLineNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STBallerinaNameReferenceNode struct {
 	STDocumentationNode
 
@@ -9643,6 +12087,19 @@ func (n *STBallerinaNameReferenceNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STBallerinaNameReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &BallerinaNameReferenceNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STInlineCodeReferenceNode struct {
 	STDocumentationNode
 
@@ -9688,6 +12145,19 @@ func (n *STInlineCodeReferenceNode) ChildBuckets() []STNode {
 		n.CodeReference,
 
 		n.EndBacktick,
+	}
+}
+
+func (n *STInlineCodeReferenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &InlineCodeReferenceNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9760,6 +12230,19 @@ func (n *STMarkdownCodeBlockNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STMarkdownCodeBlockNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MarkdownCodeBlockNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMarkdownCodeLineNode struct {
 	STDocumentationNode
 
@@ -9798,6 +12281,19 @@ func (n *STMarkdownCodeLineNode) ChildBuckets() []STNode {
 		n.HashToken,
 
 		n.CodeDescription,
+	}
+}
+
+func (n *STMarkdownCodeLineNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MarkdownCodeLineNode{
+		DocumentationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9849,6 +12345,19 @@ func (n *STOrderByClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STOrderByClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OrderByClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STOrderKeyNode struct {
 	STNode
 
@@ -9887,6 +12396,19 @@ func (n *STOrderKeyNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.OrderDirection,
+	}
+}
+
+func (n *STOrderKeyNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OrderKeyNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9935,6 +12457,19 @@ func (n *STGroupByClauseNode) ChildBuckets() []STNode {
 		n.ByKeyword,
 
 		n.GroupingKey,
+	}
+}
+
+func (n *STGroupByClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &GroupByClauseNode{
+		IntermediateClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -9993,6 +12528,19 @@ func (n *STGroupingKeyVarDeclarationNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STGroupingKeyVarDeclarationNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &GroupingKeyVarDeclarationNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STOnFailClauseNode struct {
 	STClauseNode
 
@@ -10048,6 +12596,19 @@ func (n *STOnFailClauseNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STOnFailClauseNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &OnFailClauseNode{
+		ClauseNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STDoStatementNode struct {
 	STStatementNode
 
@@ -10093,6 +12654,19 @@ func (n *STDoStatementNode) ChildBuckets() []STNode {
 		n.BlockStatement,
 
 		n.OnFailClause,
+	}
+}
+
+func (n *STDoStatementNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &DoStatementNode{
+		StatementNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10186,6 +12760,19 @@ func (n *STClassDefinitionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STClassDefinitionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ClassDefinitionNode{
+		ModuleMemberDeclarationNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STResourcePathParameterNode struct {
 	STNode
 
@@ -10255,6 +12842,19 @@ func (n *STResourcePathParameterNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STResourcePathParameterNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ResourcePathParameterNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STRequiredExpressionNode struct {
 	STExpressionNode
 
@@ -10286,6 +12886,19 @@ func (n *STRequiredExpressionNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.QuestionMarkToken,
+	}
+}
+
+func (n *STRequiredExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &RequiredExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10351,6 +12964,19 @@ func (n *STErrorConstructorExpressionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STErrorConstructorExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ErrorConstructorExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STParameterizedTypeDescriptorNode struct {
 	STTypeDescriptorNode
 
@@ -10392,6 +13018,19 @@ func (n *STParameterizedTypeDescriptorNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STParameterizedTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ParameterizedTypeDescriptorNode{
+		TypeDescriptorNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STSpreadMemberNode struct {
 	STNode
 
@@ -10430,6 +13069,19 @@ func (n *STSpreadMemberNode) ChildBuckets() []STNode {
 		n.Ellipsis,
 
 		n.Expression,
+	}
+}
+
+func (n *STSpreadMemberNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &SpreadMemberNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10509,6 +13161,19 @@ func (n *STClientResourceAccessActionNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STClientResourceAccessActionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ClientResourceAccessActionNode{
+		ActionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STComputedResourceAccessSegmentNode struct {
 	STNode
 
@@ -10554,6 +13219,19 @@ func (n *STComputedResourceAccessSegmentNode) ChildBuckets() []STNode {
 		n.Expression,
 
 		n.CloseBracketToken,
+	}
+}
+
+func (n *STComputedResourceAccessSegmentNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ComputedResourceAccessSegmentNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10612,6 +13290,19 @@ func (n *STResourceAccessRestSegmentNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STResourceAccessRestSegmentNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ResourceAccessRestSegmentNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReSequenceNode struct {
 	STNode
 
@@ -10643,6 +13334,19 @@ func (n *STReSequenceNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.ReTerm,
+	}
+}
+
+func (n *STReSequenceNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReSequenceNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10689,6 +13393,19 @@ func (n *STReAtomQuantifierNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReAtomQuantifierNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReAtomQuantifierNode{
+		ReTermNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReAtomCharOrEscapeNode struct {
 	STNode
 
@@ -10720,6 +13437,19 @@ func (n *STReAtomCharOrEscapeNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.ReAtomCharOrEscape,
+	}
+}
+
+func (n *STReAtomCharOrEscapeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReAtomCharOrEscapeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10764,6 +13494,19 @@ func (n *STReQuoteEscapeNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReQuoteEscapeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReQuoteEscapeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReSimpleCharClassEscapeNode struct {
 	STNode
 
@@ -10802,6 +13545,19 @@ func (n *STReSimpleCharClassEscapeNode) ChildBuckets() []STNode {
 		n.SlashToken,
 
 		n.ReSimpleCharClassCode,
+	}
+}
+
+func (n *STReSimpleCharClassEscapeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReSimpleCharClassEscapeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -10867,6 +13623,19 @@ func (n *STReUnicodePropertyEscapeNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReUnicodePropertyEscapeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReUnicodePropertyEscapeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReUnicodePropertyNode = STNode
 
 type STReUnicodeScriptNode struct {
@@ -10910,6 +13679,19 @@ func (n *STReUnicodeScriptNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReUnicodeScriptNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReUnicodeScriptNode{
+		ReUnicodePropertyNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReUnicodeGeneralCategoryNode struct {
 	STReUnicodePropertyNode
 
@@ -10948,6 +13730,19 @@ func (n *STReUnicodeGeneralCategoryNode) ChildBuckets() []STNode {
 		n.CategoryStart,
 
 		n.ReUnicodeGeneralCategoryName,
+	}
+}
+
+func (n *STReUnicodeGeneralCategoryNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReUnicodeGeneralCategoryNode{
+		ReUnicodePropertyNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11006,6 +13801,19 @@ func (n *STReCharacterClassNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReCharacterClassNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharacterClassNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReCharSetRangeWithReCharSetNode struct {
 	STNode
 
@@ -11044,6 +13852,19 @@ func (n *STReCharSetRangeWithReCharSetNode) ChildBuckets() []STNode {
 		n.ReCharSetRange,
 
 		n.ReCharSet,
+	}
+}
+
+func (n *STReCharSetRangeWithReCharSetNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetRangeWithReCharSetNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11095,6 +13916,19 @@ func (n *STReCharSetRangeNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReCharSetRangeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetRangeNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReCharSetAtomWithReCharSetNoDashNode struct {
 	STNode
 
@@ -11136,6 +13970,19 @@ func (n *STReCharSetAtomWithReCharSetNoDashNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReCharSetAtomWithReCharSetNoDashNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetAtomWithReCharSetNoDashNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReCharSetRangeNoDashWithReCharSetNode struct {
 	STNode
 
@@ -11174,6 +14021,19 @@ func (n *STReCharSetRangeNoDashWithReCharSetNode) ChildBuckets() []STNode {
 		n.ReCharSetRangeNoDash,
 
 		n.ReCharSet,
+	}
+}
+
+func (n *STReCharSetRangeNoDashWithReCharSetNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetRangeNoDashWithReCharSetNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11225,6 +14085,19 @@ func (n *STReCharSetRangeNoDashNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReCharSetRangeNoDashNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetRangeNoDashNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReCharSetAtomNoDashWithReCharSetNoDashNode struct {
 	STNode
 
@@ -11263,6 +14136,19 @@ func (n *STReCharSetAtomNoDashWithReCharSetNoDashNode) ChildBuckets() []STNode {
 		n.ReCharSetAtomNoDash,
 
 		n.ReCharSetNoDash,
+	}
+}
+
+func (n *STReCharSetAtomNoDashWithReCharSetNoDashNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCharSetAtomNoDashWithReCharSetNoDashNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11321,6 +14207,19 @@ func (n *STReCapturingGroupsNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReCapturingGroupsNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReCapturingGroupsNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReFlagExpressionNode struct {
 	STNode
 
@@ -11366,6 +14265,19 @@ func (n *STReFlagExpressionNode) ChildBuckets() []STNode {
 		n.ReFlagsOnOff,
 
 		n.Colon,
+	}
+}
+
+func (n *STReFlagExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReFlagExpressionNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11417,6 +14329,19 @@ func (n *STReFlagsOnOffNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReFlagsOnOffNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReFlagsOnOffNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReFlagsNode struct {
 	STNode
 
@@ -11451,6 +14376,19 @@ func (n *STReFlagsNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReFlagsNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReFlagsNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STReAssertionNode struct {
 	STReTermNode
 
@@ -11482,6 +14420,19 @@ func (n *STReAssertionNode) ChildBuckets() []STNode {
 	return []STNode{
 
 		n.ReAssertion,
+	}
+}
+
+func (n *STReAssertionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReAssertionNode{
+		ReTermNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11523,6 +14474,19 @@ func (n *STReQuantifierNode) ChildBuckets() []STNode {
 		n.ReBaseQuantifier,
 
 		n.NonGreedyChar,
+	}
+}
+
+func (n *STReQuantifierNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReQuantifierNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11588,6 +14552,19 @@ func (n *STReBracedQuantifierNode) ChildBuckets() []STNode {
 	}
 }
 
+func (n *STReBracedQuantifierNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReBracedQuantifierNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
+	}
+}
+
 type STMemberTypeDescriptorNode struct {
 	STNode
 
@@ -11626,6 +14603,19 @@ func (n *STMemberTypeDescriptorNode) ChildBuckets() []STNode {
 		n.Annotations,
 
 		n.TypeDescriptor,
+	}
+}
+
+func (n *STMemberTypeDescriptorNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &MemberTypeDescriptorNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11674,6 +14664,19 @@ func (n *STReceiveFieldNode) ChildBuckets() []STNode {
 		n.Colon,
 
 		n.PeerWorker,
+	}
+}
+
+func (n *STReceiveFieldNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &ReceiveFieldNode{
+		NonTerminalNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }
 
@@ -11743,5 +14746,18 @@ func (n *STNaturalExpressionNode) ChildBuckets() []STNode {
 		n.Prompt,
 
 		n.CloseBraceToken,
+	}
+}
+
+func (n *STNaturalExpressionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+	return &NaturalExpressionNode{
+		ExpressionNode: NonTerminalNode{
+			NodeBase: NodeBase{
+				internalNode: n,
+				position:     position,
+				parent:       parent,
+			},
+			childBuckets: make([]Node, n.BucketCount()),
+		},
 	}
 }

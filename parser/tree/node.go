@@ -468,28 +468,14 @@ type IdentifierToken struct {
 	Token
 }
 
-// FIXME: remove this
-// TODO: think how to special case this so it can also be generated
-type AmbiguousCollectionNode struct {
+type ExternalTreeNodeList struct {
 	NonTerminalNode
 }
 
-func (n AmbiguousCollectionNode) CollectionStartToken() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		panic("expected Node")
-	}
-	return val
+var _ Node = &ExternalTreeNodeList{}
+
+type LiteralValueToken struct {
+	Token
 }
 
-func (n AmbiguousCollectionNode) Members() NodeList[Node] {
-	return nodeListFrom[Node](into[*NonTerminalNode](n.ChildInBucket(1)))
-}
-
-func (n AmbiguousCollectionNode) CollectionEndToken() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		panic("expected Node")
-	}
-	return val
-}
+var _ Node = &LiteralValueToken{}
