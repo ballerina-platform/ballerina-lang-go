@@ -28,6 +28,7 @@ type ST{{.Name}} struct {
     {{title .Name}} STNode
 {{end}}
 }
+var _ STNode = &ST{{.Name}}{}
 {{if .Kind}}
 
 func (n *ST{{.Name}}) Kind() common.SyntaxKind {

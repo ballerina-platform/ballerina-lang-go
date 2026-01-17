@@ -28,6 +28,8 @@ type STModulePart struct {
 	EofToken STNode
 }
 
+var _ STNode = &STModulePart{}
+
 func (n *STModulePart) Kind() common.SyntaxKind {
 	return common.MODULE_PART
 }
@@ -83,6 +85,8 @@ type STFunctionDefinition struct {
 
 	FunctionBody STNode
 }
+
+var _ STNode = &STFunctionDefinition{}
 
 func (n *STFunctionDefinition) Kind() common.SyntaxKind {
 	return n.STModuleMemberDeclarationNode.Kind()
@@ -154,6 +158,8 @@ type STImportDeclarationNode struct {
 	Semicolon STNode
 }
 
+var _ STNode = &STImportDeclarationNode{}
+
 func (n *STImportDeclarationNode) Kind() common.SyntaxKind {
 	return common.IMPORT_DECLARATION
 }
@@ -219,6 +225,8 @@ type STListenerDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STListenerDeclarationNode{}
 
 func (n *STListenerDeclarationNode) Kind() common.SyntaxKind {
 	return common.LISTENER_DECLARATION
@@ -297,6 +305,8 @@ type STTypeDefinitionNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STTypeDefinitionNode{}
+
 func (n *STTypeDefinitionNode) Kind() common.SyntaxKind {
 	return common.TYPE_DEFINITION
 }
@@ -373,6 +383,8 @@ type STServiceDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STServiceDeclarationNode{}
 
 func (n *STServiceDeclarationNode) Kind() common.SyntaxKind {
 	return common.SERVICE_DECLARATION
@@ -464,6 +476,8 @@ type STAssignmentStatementNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STAssignmentStatementNode{}
+
 func (n *STAssignmentStatementNode) Kind() common.SyntaxKind {
 	return common.ASSIGNMENT_STATEMENT
 }
@@ -518,6 +532,8 @@ type STCompoundAssignmentStatementNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STCompoundAssignmentStatementNode{}
 
 func (n *STCompoundAssignmentStatementNode) Kind() common.SyntaxKind {
 	return common.COMPOUND_ASSIGNMENT_STATEMENT
@@ -581,6 +597,8 @@ type STVariableDeclarationNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STVariableDeclarationNode{}
+
 func (n *STVariableDeclarationNode) Kind() common.SyntaxKind {
 	return common.LOCAL_VAR_DECL
 }
@@ -642,6 +660,8 @@ type STBlockStatementNode struct {
 	CloseBraceToken STNode
 }
 
+var _ STNode = &STBlockStatementNode{}
+
 func (n *STBlockStatementNode) Kind() common.SyntaxKind {
 	return common.BLOCK_STATEMENT
 }
@@ -686,6 +706,8 @@ type STBreakStatementNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STBreakStatementNode{}
+
 func (n *STBreakStatementNode) Kind() common.SyntaxKind {
 	return common.BREAK_STATEMENT
 }
@@ -726,6 +748,8 @@ type STFailStatementNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STFailStatementNode{}
 
 func (n *STFailStatementNode) Kind() common.SyntaxKind {
 	return common.FAIL_STATEMENT
@@ -771,6 +795,8 @@ type STExpressionStatementNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STExpressionStatementNode{}
+
 func (n *STExpressionStatementNode) Kind() common.SyntaxKind {
 	return n.STStatementNode.Kind()
 }
@@ -809,6 +835,8 @@ type STContinueStatementNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STContinueStatementNode{}
 
 func (n *STContinueStatementNode) Kind() common.SyntaxKind {
 	return common.CONTINUE_STATEMENT
@@ -852,6 +880,8 @@ type STExternalFunctionBodyNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STExternalFunctionBodyNode{}
 
 func (n *STExternalFunctionBodyNode) Kind() common.SyntaxKind {
 	return common.EXTERNAL_FUNCTION_BODY
@@ -906,6 +936,8 @@ type STIfElseStatementNode struct {
 	ElseBody STNode
 }
 
+var _ STNode = &STIfElseStatementNode{}
+
 func (n *STIfElseStatementNode) Kind() common.SyntaxKind {
 	return common.IF_ELSE_STATEMENT
 }
@@ -955,6 +987,8 @@ type STElseBlockNode struct {
 	ElseBody STNode
 }
 
+var _ STNode = &STElseBlockNode{}
+
 func (n *STElseBlockNode) Kind() common.SyntaxKind {
 	return common.ELSE_BLOCK
 }
@@ -997,6 +1031,8 @@ type STWhileStatementNode struct {
 
 	OnFailClause STNode
 }
+
+var _ STNode = &STWhileStatementNode{}
 
 func (n *STWhileStatementNode) Kind() common.SyntaxKind {
 	return common.WHILE_STATEMENT
@@ -1049,6 +1085,8 @@ type STPanicStatementNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STPanicStatementNode{}
+
 func (n *STPanicStatementNode) Kind() common.SyntaxKind {
 	return common.PANIC_STATEMENT
 }
@@ -1094,6 +1132,8 @@ type STReturnStatementNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STReturnStatementNode{}
 
 func (n *STReturnStatementNode) Kind() common.SyntaxKind {
 	return common.RETURN_STATEMENT
@@ -1144,6 +1184,8 @@ type STLocalTypeDefinitionStatementNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STLocalTypeDefinitionStatementNode{}
 
 func (n *STLocalTypeDefinitionStatementNode) Kind() common.SyntaxKind {
 	return common.LOCAL_TYPE_DEFINITION_STATEMENT
@@ -1201,6 +1243,8 @@ type STLockStatementNode struct {
 	OnFailClause STNode
 }
 
+var _ STNode = &STLockStatementNode{}
+
 func (n *STLockStatementNode) Kind() common.SyntaxKind {
 	return common.LOCK_STATEMENT
 }
@@ -1248,6 +1292,8 @@ type STForkStatementNode struct {
 
 	CloseBraceToken STNode
 }
+
+var _ STNode = &STForkStatementNode{}
 
 func (n *STForkStatementNode) Kind() common.SyntaxKind {
 	return common.FORK_STATEMENT
@@ -1305,6 +1351,8 @@ type STForEachStatementNode struct {
 
 	OnFailClause STNode
 }
+
+var _ STNode = &STForEachStatementNode{}
 
 func (n *STForEachStatementNode) Kind() common.SyntaxKind {
 	return common.FOREACH_STATEMENT
@@ -1369,6 +1417,8 @@ type STBinaryExpressionNode struct {
 	RhsExpr STNode
 }
 
+var _ STNode = &STBinaryExpressionNode{}
+
 func (n *STBinaryExpressionNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
 }
@@ -1415,6 +1465,8 @@ type STBracedExpressionNode struct {
 	CloseParen STNode
 }
 
+var _ STNode = &STBracedExpressionNode{}
+
 func (n *STBracedExpressionNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
 }
@@ -1459,6 +1511,8 @@ type STCheckExpressionNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STCheckExpressionNode{}
+
 func (n *STCheckExpressionNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
 }
@@ -1499,6 +1553,8 @@ type STFieldAccessExpressionNode struct {
 
 	FieldName STNode
 }
+
+var _ STNode = &STFieldAccessExpressionNode{}
 
 func (n *STFieldAccessExpressionNode) Kind() common.SyntaxKind {
 	return common.FIELD_ACCESS
@@ -1547,6 +1603,8 @@ type STFunctionCallExpressionNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STFunctionCallExpressionNode{}
 
 func (n *STFunctionCallExpressionNode) Kind() common.SyntaxKind {
 	return common.FUNCTION_CALL
@@ -1604,6 +1662,8 @@ type STMethodCallExpressionNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STMethodCallExpressionNode{}
 
 func (n *STMethodCallExpressionNode) Kind() common.SyntaxKind {
 	return common.METHOD_CALL
@@ -1666,6 +1726,8 @@ type STMappingConstructorExpressionNode struct {
 	CloseBrace STNode
 }
 
+var _ STNode = &STMappingConstructorExpressionNode{}
+
 func (n *STMappingConstructorExpressionNode) Kind() common.SyntaxKind {
 	return common.MAPPING_CONSTRUCTOR
 }
@@ -1713,6 +1775,8 @@ type STIndexedExpressionNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STIndexedExpressionNode{}
 
 func (n *STIndexedExpressionNode) Kind() common.SyntaxKind {
 	return common.INDEXED_EXPRESSION
@@ -1763,6 +1827,8 @@ type STTypeofExpressionNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STTypeofExpressionNode{}
+
 func (n *STTypeofExpressionNode) Kind() common.SyntaxKind {
 	return common.TYPEOF_EXPRESSION
 }
@@ -1801,6 +1867,8 @@ type STUnaryExpressionNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STUnaryExpressionNode{}
 
 func (n *STUnaryExpressionNode) Kind() common.SyntaxKind {
 	return common.UNARY_EXPRESSION
@@ -1846,6 +1914,8 @@ type STComputedNameFieldNode struct {
 
 	ValueExpr STNode
 }
+
+var _ STNode = &STComputedNameFieldNode{}
 
 func (n *STComputedNameFieldNode) Kind() common.SyntaxKind {
 	return common.COMPUTED_NAME_FIELD
@@ -1912,6 +1982,8 @@ type STConstantDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STConstantDeclarationNode{}
 
 func (n *STConstantDeclarationNode) Kind() common.SyntaxKind {
 	return common.CONST_DECLARATION
@@ -1990,6 +2062,8 @@ type STDefaultableParameterNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STDefaultableParameterNode{}
+
 func (n *STDefaultableParameterNode) Kind() common.SyntaxKind {
 	return common.DEFAULTABLE_PARAM
 }
@@ -2046,6 +2120,8 @@ type STRequiredParameterNode struct {
 	ParamName STNode
 }
 
+var _ STNode = &STRequiredParameterNode{}
+
 func (n *STRequiredParameterNode) Kind() common.SyntaxKind {
 	return common.REQUIRED_PARAM
 }
@@ -2093,6 +2169,8 @@ type STIncludedRecordParameterNode struct {
 
 	ParamName STNode
 }
+
+var _ STNode = &STIncludedRecordParameterNode{}
 
 func (n *STIncludedRecordParameterNode) Kind() common.SyntaxKind {
 	return common.INCLUDED_RECORD_PARAM
@@ -2147,6 +2225,8 @@ type STRestParameterNode struct {
 	ParamName STNode
 }
 
+var _ STNode = &STRestParameterNode{}
+
 func (n *STRestParameterNode) Kind() common.SyntaxKind {
 	return common.REST_PARAM
 }
@@ -2196,6 +2276,8 @@ type STImportOrgNameNode struct {
 	SlashToken STNode
 }
 
+var _ STNode = &STImportOrgNameNode{}
+
 func (n *STImportOrgNameNode) Kind() common.SyntaxKind {
 	return common.IMPORT_ORG_NAME
 }
@@ -2234,6 +2316,8 @@ type STImportPrefixNode struct {
 
 	Prefix STNode
 }
+
+var _ STNode = &STImportPrefixNode{}
 
 func (n *STImportPrefixNode) Kind() common.SyntaxKind {
 	return common.IMPORT_PREFIX
@@ -2279,6 +2363,8 @@ type STSpecificFieldNode struct {
 
 	ValueExpr STNode
 }
+
+var _ STNode = &STSpecificFieldNode{}
 
 func (n *STSpecificFieldNode) Kind() common.SyntaxKind {
 	return common.SPECIFIC_FIELD
@@ -2329,6 +2415,8 @@ type STSpreadFieldNode struct {
 	ValueExpr STNode
 }
 
+var _ STNode = &STSpreadFieldNode{}
+
 func (n *STSpreadFieldNode) Kind() common.SyntaxKind {
 	return common.SPREAD_FIELD
 }
@@ -2372,6 +2460,8 @@ type STNamedArgumentNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STNamedArgumentNode{}
+
 func (n *STNamedArgumentNode) Kind() common.SyntaxKind {
 	return common.NAMED_ARG
 }
@@ -2414,6 +2504,8 @@ type STPositionalArgumentNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STPositionalArgumentNode{}
+
 func (n *STPositionalArgumentNode) Kind() common.SyntaxKind {
 	return common.POSITIONAL_ARG
 }
@@ -2447,6 +2539,8 @@ type STRestArgumentNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STRestArgumentNode{}
 
 func (n *STRestArgumentNode) Kind() common.SyntaxKind {
 	return common.REST_ARG
@@ -2486,6 +2580,8 @@ type STInferredTypedescDefaultNode struct {
 
 	GtToken STNode
 }
+
+var _ STNode = &STInferredTypedescDefaultNode{}
 
 func (n *STInferredTypedescDefaultNode) Kind() common.SyntaxKind {
 	return common.INFERRED_TYPEDESC_DEFAULT
@@ -2531,6 +2627,8 @@ type STObjectTypeDescriptorNode struct {
 
 	CloseBrace STNode
 }
+
+var _ STNode = &STObjectTypeDescriptorNode{}
 
 func (n *STObjectTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.OBJECT_TYPE_DESC
@@ -2595,6 +2693,8 @@ type STObjectConstructorExpressionNode struct {
 
 	CloseBraceToken STNode
 }
+
+var _ STNode = &STObjectConstructorExpressionNode{}
 
 func (n *STObjectConstructorExpressionNode) Kind() common.SyntaxKind {
 	return common.OBJECT_CONSTRUCTOR
@@ -2666,6 +2766,8 @@ type STRecordTypeDescriptorNode struct {
 	BodyEndDelimiter STNode
 }
 
+var _ STNode = &STRecordTypeDescriptorNode{}
+
 func (n *STRecordTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.RECORD_TYPE_DESC
 }
@@ -2722,6 +2824,8 @@ type STReturnTypeDescriptorNode struct {
 	Type STNode
 }
 
+var _ STNode = &STReturnTypeDescriptorNode{}
+
 func (n *STReturnTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.RETURN_TYPE_DESCRIPTOR
 }
@@ -2766,6 +2870,8 @@ type STNilTypeDescriptorNode struct {
 	CloseParenToken STNode
 }
 
+var _ STNode = &STNilTypeDescriptorNode{}
+
 func (n *STNilTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.NIL_TYPE_DESC
 }
@@ -2804,6 +2910,8 @@ type STOptionalTypeDescriptorNode struct {
 
 	QuestionMarkToken STNode
 }
+
+var _ STNode = &STOptionalTypeDescriptorNode{}
 
 func (n *STOptionalTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.OPTIONAL_TYPE_DESC
@@ -2855,6 +2963,8 @@ type STObjectFieldNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STObjectFieldNode{}
 
 func (n *STObjectFieldNode) Kind() common.SyntaxKind {
 	return common.OBJECT_FIELD
@@ -2933,6 +3043,8 @@ type STRecordFieldNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STRecordFieldNode{}
+
 func (n *STRecordFieldNode) Kind() common.SyntaxKind {
 	return common.RECORD_FIELD
 }
@@ -3002,6 +3114,8 @@ type STRecordFieldWithDefaultValueNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STRecordFieldWithDefaultValueNode{}
+
 func (n *STRecordFieldWithDefaultValueNode) Kind() common.SyntaxKind {
 	return common.RECORD_FIELD_WITH_DEFAULT_VALUE
 }
@@ -3068,6 +3182,8 @@ type STRecordRestDescriptorNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STRecordRestDescriptorNode{}
+
 func (n *STRecordRestDescriptorNode) Kind() common.SyntaxKind {
 	return common.RECORD_REST_TYPE
 }
@@ -3113,6 +3229,8 @@ type STTypeReferenceNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STTypeReferenceNode{}
 
 func (n *STTypeReferenceNode) Kind() common.SyntaxKind {
 	return common.TYPE_REFERENCE
@@ -3160,6 +3278,8 @@ type STAnnotationNode struct {
 	AnnotValue STNode
 }
 
+var _ STNode = &STAnnotationNode{}
+
 func (n *STAnnotationNode) Kind() common.SyntaxKind {
 	return common.ANNOTATION
 }
@@ -3203,6 +3323,8 @@ type STMetadataNode struct {
 
 	Annotations STNode
 }
+
+var _ STNode = &STMetadataNode{}
 
 func (n *STMetadataNode) Kind() common.SyntaxKind {
 	return common.METADATA
@@ -3252,6 +3374,8 @@ type STModuleVariableDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STModuleVariableDeclarationNode{}
 
 func (n *STModuleVariableDeclarationNode) Kind() common.SyntaxKind {
 	return common.MODULE_VAR_DECL
@@ -3319,6 +3443,8 @@ type STTypeTestExpressionNode struct {
 	TypeDescriptor STNode
 }
 
+var _ STNode = &STTypeTestExpressionNode{}
+
 func (n *STTypeTestExpressionNode) Kind() common.SyntaxKind {
 	return common.TYPE_TEST_EXPRESSION
 }
@@ -3372,6 +3498,8 @@ type STRemoteMethodCallActionNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STRemoteMethodCallActionNode{}
 
 func (n *STRemoteMethodCallActionNode) Kind() common.SyntaxKind {
 	return common.REMOTE_METHOD_CALL_ACTION
@@ -3432,6 +3560,8 @@ type STMapTypeDescriptorNode struct {
 	MapTypeParamsNode STNode
 }
 
+var _ STNode = &STMapTypeDescriptorNode{}
+
 func (n *STMapTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.MAP_TYPE_DESC
 }
@@ -3470,6 +3600,8 @@ type STNilLiteralNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STNilLiteralNode{}
 
 func (n *STNilLiteralNode) Kind() common.SyntaxKind {
 	return common.NIL_LITERAL
@@ -3523,6 +3655,8 @@ type STAnnotationDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STAnnotationDeclarationNode{}
 
 func (n *STAnnotationDeclarationNode) Kind() common.SyntaxKind {
 	return common.ANNOTATION_DECLARATION
@@ -3598,6 +3732,8 @@ type STAnnotationAttachPointNode struct {
 	Identifiers STNode
 }
 
+var _ STNode = &STAnnotationAttachPointNode{}
+
 func (n *STAnnotationAttachPointNode) Kind() common.SyntaxKind {
 	return common.ANNOTATION_ATTACH_POINT
 }
@@ -3642,6 +3778,8 @@ type STXMLNamespaceDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STXMLNamespaceDeclarationNode{}
 
 func (n *STXMLNamespaceDeclarationNode) Kind() common.SyntaxKind {
 	return common.XML_NAMESPACE_DECLARATION
@@ -3703,6 +3841,8 @@ type STModuleXMLNamespaceDeclarationNode struct {
 	SemicolonToken STNode
 }
 
+var _ STNode = &STModuleXMLNamespaceDeclarationNode{}
+
 func (n *STModuleXMLNamespaceDeclarationNode) Kind() common.SyntaxKind {
 	return common.MODULE_XML_NAMESPACE_DECLARATION
 }
@@ -3762,6 +3902,8 @@ type STFunctionBodyBlockNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STFunctionBodyBlockNode{}
 
 func (n *STFunctionBodyBlockNode) Kind() common.SyntaxKind {
 	return common.FUNCTION_BODY_BLOCK
@@ -3827,6 +3969,8 @@ type STNamedWorkerDeclarationNode struct {
 	OnFailClause STNode
 }
 
+var _ STNode = &STNamedWorkerDeclarationNode{}
+
 func (n *STNamedWorkerDeclarationNode) Kind() common.SyntaxKind {
 	return common.NAMED_WORKER_DECLARATION
 }
@@ -3891,6 +4035,8 @@ type STNamedWorkerDeclarator struct {
 	NamedWorkerDeclarations STNode
 }
 
+var _ STNode = &STNamedWorkerDeclarator{}
+
 func (n *STNamedWorkerDeclarator) Kind() common.SyntaxKind {
 	return common.NAMED_WORKER_DECLARATOR
 }
@@ -3928,6 +4074,8 @@ type STBasicLiteralNode struct {
 	LiteralToken STNode
 }
 
+var _ STNode = &STBasicLiteralNode{}
+
 func (n *STBasicLiteralNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
 }
@@ -3964,6 +4112,8 @@ type STSimpleNameReferenceNode struct {
 	Name STNode
 }
 
+var _ STNode = &STSimpleNameReferenceNode{}
+
 func (n *STSimpleNameReferenceNode) Kind() common.SyntaxKind {
 	return common.SIMPLE_NAME_REFERENCE
 }
@@ -3999,6 +4149,8 @@ type STQualifiedNameReferenceNode struct {
 
 	Identifier STNode
 }
+
+var _ STNode = &STQualifiedNameReferenceNode{}
 
 func (n *STQualifiedNameReferenceNode) Kind() common.SyntaxKind {
 	return common.QUALIFIED_NAME_REFERENCE
@@ -4042,6 +4194,8 @@ type STBuiltinSimpleNameReferenceNode struct {
 	Name STNode
 }
 
+var _ STNode = &STBuiltinSimpleNameReferenceNode{}
+
 func (n *STBuiltinSimpleNameReferenceNode) Kind() common.SyntaxKind {
 	return n.STNameReferenceNode.Kind()
 }
@@ -4075,6 +4229,8 @@ type STTrapExpressionNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STTrapExpressionNode{}
 
 func (n *STTrapExpressionNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
@@ -4116,6 +4272,8 @@ type STListConstructorExpressionNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STListConstructorExpressionNode{}
 
 func (n *STListConstructorExpressionNode) Kind() common.SyntaxKind {
 	return common.LIST_CONSTRUCTOR
@@ -4164,6 +4322,8 @@ type STTypeCastExpressionNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STTypeCastExpressionNode{}
 
 func (n *STTypeCastExpressionNode) Kind() common.SyntaxKind {
 	return common.TYPE_CAST_EXPRESSION
@@ -4214,6 +4374,8 @@ type STTypeCastParamNode struct {
 	Type STNode
 }
 
+var _ STNode = &STTypeCastParamNode{}
+
 func (n *STTypeCastParamNode) Kind() common.SyntaxKind {
 	return common.TYPE_CAST_PARAM
 }
@@ -4254,6 +4416,8 @@ type STUnionTypeDescriptorNode struct {
 
 	RightTypeDesc STNode
 }
+
+var _ STNode = &STUnionTypeDescriptorNode{}
 
 func (n *STUnionTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.UNION_TYPE_DESC
@@ -4304,6 +4468,8 @@ type STTableConstructorExpressionNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STTableConstructorExpressionNode{}
 
 func (n *STTableConstructorExpressionNode) Kind() common.SyntaxKind {
 	return common.TABLE_CONSTRUCTOR
@@ -4363,6 +4529,8 @@ type STKeySpecifierNode struct {
 	CloseParenToken STNode
 }
 
+var _ STNode = &STKeySpecifierNode{}
+
 func (n *STKeySpecifierNode) Kind() common.SyntaxKind {
 	return common.KEY_SPECIFIER
 }
@@ -4412,6 +4580,8 @@ type STStreamTypeDescriptorNode struct {
 	StreamTypeParamsNode STNode
 }
 
+var _ STNode = &STStreamTypeDescriptorNode{}
+
 func (n *STStreamTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.STREAM_TYPE_DESC
 }
@@ -4456,6 +4626,8 @@ type STStreamTypeParamsNode struct {
 
 	GtToken STNode
 }
+
+var _ STNode = &STStreamTypeParamsNode{}
 
 func (n *STStreamTypeParamsNode) Kind() common.SyntaxKind {
 	return common.STREAM_TYPE_PARAMS
@@ -4515,6 +4687,8 @@ type STLetExpressionNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STLetExpressionNode{}
+
 func (n *STLetExpressionNode) Kind() common.SyntaxKind {
 	return common.LET_EXPRESSION
 }
@@ -4567,6 +4741,8 @@ type STLetVariableDeclarationNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STLetVariableDeclarationNode{}
 
 func (n *STLetVariableDeclarationNode) Kind() common.SyntaxKind {
 	return common.LET_VAR_DECL
@@ -4621,6 +4797,8 @@ type STTemplateExpressionNode struct {
 	EndBacktick STNode
 }
 
+var _ STNode = &STTemplateExpressionNode{}
+
 func (n *STTemplateExpressionNode) Kind() common.SyntaxKind {
 	return n.STExpressionNode.Kind()
 }
@@ -4674,6 +4852,8 @@ type STXMLElementNode struct {
 	EndTag STNode
 }
 
+var _ STNode = &STXMLElementNode{}
+
 func (n *STXMLElementNode) Kind() common.SyntaxKind {
 	return common.XML_ELEMENT
 }
@@ -4723,6 +4903,8 @@ type STXMLStartTagNode struct {
 
 	GetToken STNode
 }
+
+var _ STNode = &STXMLStartTagNode{}
 
 func (n *STXMLStartTagNode) Kind() common.SyntaxKind {
 	return common.XML_ELEMENT_START_TAG
@@ -4777,6 +4959,8 @@ type STXMLEndTagNode struct {
 	GetToken STNode
 }
 
+var _ STNode = &STXMLEndTagNode{}
+
 func (n *STXMLEndTagNode) Kind() common.SyntaxKind {
 	return common.XML_ELEMENT_END_TAG
 }
@@ -4826,6 +5010,8 @@ type STXMLSimpleNameNode struct {
 	Name STNode
 }
 
+var _ STNode = &STXMLSimpleNameNode{}
+
 func (n *STXMLSimpleNameNode) Kind() common.SyntaxKind {
 	return common.XML_SIMPLE_NAME
 }
@@ -4861,6 +5047,8 @@ type STXMLQualifiedNameNode struct {
 
 	Name STNode
 }
+
+var _ STNode = &STXMLQualifiedNameNode{}
 
 func (n *STXMLQualifiedNameNode) Kind() common.SyntaxKind {
 	return common.XML_QUALIFIED_NAME
@@ -4911,6 +5099,8 @@ type STXMLEmptyElementNode struct {
 
 	GetToken STNode
 }
+
+var _ STNode = &STXMLEmptyElementNode{}
 
 func (n *STXMLEmptyElementNode) Kind() common.SyntaxKind {
 	return common.XML_EMPTY_ELEMENT
@@ -4968,6 +5158,8 @@ type STInterpolationNode struct {
 	InterpolationEndToken STNode
 }
 
+var _ STNode = &STInterpolationNode{}
+
 func (n *STInterpolationNode) Kind() common.SyntaxKind {
 	return common.INTERPOLATION
 }
@@ -5010,6 +5202,8 @@ type STXMLTextNode struct {
 	Content STNode
 }
 
+var _ STNode = &STXMLTextNode{}
+
 func (n *STXMLTextNode) Kind() common.SyntaxKind {
 	return common.XML_TEXT
 }
@@ -5045,6 +5239,8 @@ type STXMLAttributeNode struct {
 
 	Value STNode
 }
+
+var _ STNode = &STXMLAttributeNode{}
 
 func (n *STXMLAttributeNode) Kind() common.SyntaxKind {
 	return common.XML_ATTRIBUTE
@@ -5092,6 +5288,8 @@ type STXMLAttributeValue struct {
 	EndQuote STNode
 }
 
+var _ STNode = &STXMLAttributeValue{}
+
 func (n *STXMLAttributeValue) Kind() common.SyntaxKind {
 	return common.XML_ATTRIBUTE_VALUE
 }
@@ -5138,6 +5336,8 @@ type STXMLComment struct {
 	CommentEnd STNode
 }
 
+var _ STNode = &STXMLComment{}
+
 func (n *STXMLComment) Kind() common.SyntaxKind {
 	return common.XML_COMMENT
 }
@@ -5183,6 +5383,8 @@ type STXMLCDATANode struct {
 
 	CdataEnd STNode
 }
+
+var _ STNode = &STXMLCDATANode{}
 
 func (n *STXMLCDATANode) Kind() common.SyntaxKind {
 	return common.XML_CDATA
@@ -5231,6 +5433,8 @@ type STXMLProcessingInstruction struct {
 
 	PiEnd STNode
 }
+
+var _ STNode = &STXMLProcessingInstruction{}
 
 func (n *STXMLProcessingInstruction) Kind() common.SyntaxKind {
 	return common.XML_PI
@@ -5283,6 +5487,8 @@ type STTableTypeDescriptorNode struct {
 	KeyConstraintNode STNode
 }
 
+var _ STNode = &STTableTypeDescriptorNode{}
+
 func (n *STTableTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.TABLE_TYPE_DESC
 }
@@ -5329,6 +5535,8 @@ type STTypeParameterNode struct {
 	GtToken STNode
 }
 
+var _ STNode = &STTypeParameterNode{}
+
 func (n *STTypeParameterNode) Kind() common.SyntaxKind {
 	return common.TYPE_PARAMETER
 }
@@ -5373,6 +5581,8 @@ type STKeyTypeConstraintNode struct {
 	TypeParameterNode STNode
 }
 
+var _ STNode = &STKeyTypeConstraintNode{}
+
 func (n *STKeyTypeConstraintNode) Kind() common.SyntaxKind {
 	return common.KEY_TYPE_CONSTRAINT
 }
@@ -5413,6 +5623,8 @@ type STFunctionTypeDescriptorNode struct {
 
 	FunctionSignature STNode
 }
+
+var _ STNode = &STFunctionTypeDescriptorNode{}
 
 func (n *STFunctionTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.FUNCTION_TYPE_DESC
@@ -5461,6 +5673,8 @@ type STFunctionSignatureNode struct {
 
 	ReturnTypeDesc STNode
 }
+
+var _ STNode = &STFunctionSignatureNode{}
 
 func (n *STFunctionSignatureNode) Kind() common.SyntaxKind {
 	return common.FUNCTION_SIGNATURE
@@ -5518,6 +5732,8 @@ type STExplicitAnonymousFunctionExpressionNode struct {
 
 	FunctionBody STNode
 }
+
+var _ STNode = &STExplicitAnonymousFunctionExpressionNode{}
 
 func (n *STExplicitAnonymousFunctionExpressionNode) Kind() common.SyntaxKind {
 	return common.EXPLICIT_ANONYMOUS_FUNCTION_EXPRESSION
@@ -5577,6 +5793,8 @@ type STExpressionFunctionBodyNode struct {
 	Semicolon STNode
 }
 
+var _ STNode = &STExpressionFunctionBodyNode{}
+
 func (n *STExpressionFunctionBodyNode) Kind() common.SyntaxKind {
 	return common.EXPRESSION_FUNCTION_BODY
 }
@@ -5623,6 +5841,8 @@ type STTupleTypeDescriptorNode struct {
 	CloseBracketToken STNode
 }
 
+var _ STNode = &STTupleTypeDescriptorNode{}
+
 func (n *STTupleTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.TUPLE_TYPE_DESC
 }
@@ -5668,6 +5888,8 @@ type STParenthesisedTypeDescriptorNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STParenthesisedTypeDescriptorNode{}
 
 func (n *STParenthesisedTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.PARENTHESISED_TYPE_DESC
@@ -5717,6 +5939,8 @@ type STExplicitNewExpressionNode struct {
 	ParenthesizedArgList STNode
 }
 
+var _ STNode = &STExplicitNewExpressionNode{}
+
 func (n *STExplicitNewExpressionNode) Kind() common.SyntaxKind {
 	return common.EXPLICIT_NEW_EXPRESSION
 }
@@ -5761,6 +5985,8 @@ type STImplicitNewExpressionNode struct {
 	ParenthesizedArgList STNode
 }
 
+var _ STNode = &STImplicitNewExpressionNode{}
+
 func (n *STImplicitNewExpressionNode) Kind() common.SyntaxKind {
 	return common.IMPLICIT_NEW_EXPRESSION
 }
@@ -5801,6 +6027,8 @@ type STParenthesizedArgList struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STParenthesizedArgList{}
 
 func (n *STParenthesizedArgList) Kind() common.SyntaxKind {
 	return common.PARENTHESIZED_ARG_LIST
@@ -5850,6 +6078,8 @@ type STQueryConstructTypeNode struct {
 	KeySpecifier STNode
 }
 
+var _ STNode = &STQueryConstructTypeNode{}
+
 func (n *STQueryConstructTypeNode) Kind() common.SyntaxKind {
 	return common.QUERY_CONSTRUCT_TYPE
 }
@@ -5892,6 +6122,8 @@ type STFromClauseNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STFromClauseNode{}
 
 func (n *STFromClauseNode) Kind() common.SyntaxKind {
 	return common.FROM_CLAUSE
@@ -5942,6 +6174,8 @@ type STWhereClauseNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STWhereClauseNode{}
+
 func (n *STWhereClauseNode) Kind() common.SyntaxKind {
 	return common.WHERE_CLAUSE
 }
@@ -5980,6 +6214,8 @@ type STLetClauseNode struct {
 
 	LetVarDeclarations STNode
 }
+
+var _ STNode = &STLetClauseNode{}
 
 func (n *STLetClauseNode) Kind() common.SyntaxKind {
 	return common.LET_CLAUSE
@@ -6027,6 +6263,8 @@ type STJoinClauseNode struct {
 
 	JoinOnCondition STNode
 }
+
+var _ STNode = &STJoinClauseNode{}
 
 func (n *STJoinClauseNode) Kind() common.SyntaxKind {
 	return common.JOIN_CLAUSE
@@ -6091,6 +6329,8 @@ type STOnClauseNode struct {
 	RhsExpression STNode
 }
 
+var _ STNode = &STOnClauseNode{}
+
 func (n *STOnClauseNode) Kind() common.SyntaxKind {
 	return common.ON_CLAUSE
 }
@@ -6140,6 +6380,8 @@ type STLimitClauseNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STLimitClauseNode{}
+
 func (n *STLimitClauseNode) Kind() common.SyntaxKind {
 	return common.LIMIT_CLAUSE
 }
@@ -6180,6 +6422,8 @@ type STOnConflictClauseNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STOnConflictClauseNode{}
 
 func (n *STOnConflictClauseNode) Kind() common.SyntaxKind {
 	return common.ON_CONFLICT_CLAUSE
@@ -6225,6 +6469,8 @@ type STQueryPipelineNode struct {
 	IntermediateClauses STNode
 }
 
+var _ STNode = &STQueryPipelineNode{}
+
 func (n *STQueryPipelineNode) Kind() common.SyntaxKind {
 	return common.QUERY_PIPELINE
 }
@@ -6264,6 +6510,8 @@ type STSelectClauseNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STSelectClauseNode{}
+
 func (n *STSelectClauseNode) Kind() common.SyntaxKind {
 	return common.SELECT_CLAUSE
 }
@@ -6302,6 +6550,8 @@ type STCollectClauseNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STCollectClauseNode{}
 
 func (n *STCollectClauseNode) Kind() common.SyntaxKind {
 	return common.COLLECT_CLAUSE
@@ -6345,6 +6595,8 @@ type STQueryExpressionNode struct {
 
 	OnConflictClause STNode
 }
+
+var _ STNode = &STQueryExpressionNode{}
 
 func (n *STQueryExpressionNode) Kind() common.SyntaxKind {
 	return common.QUERY_EXPRESSION
@@ -6397,6 +6649,8 @@ type STQueryActionNode struct {
 	BlockStatement STNode
 }
 
+var _ STNode = &STQueryActionNode{}
+
 func (n *STQueryActionNode) Kind() common.SyntaxKind {
 	return common.QUERY_ACTION
 }
@@ -6442,6 +6696,8 @@ type STIntersectionTypeDescriptorNode struct {
 
 	RightTypeDesc STNode
 }
+
+var _ STNode = &STIntersectionTypeDescriptorNode{}
 
 func (n *STIntersectionTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.INTERSECTION_TYPE_DESC
@@ -6489,6 +6745,8 @@ type STImplicitAnonymousFunctionParameters struct {
 	CloseParenToken STNode
 }
 
+var _ STNode = &STImplicitAnonymousFunctionParameters{}
+
 func (n *STImplicitAnonymousFunctionParameters) Kind() common.SyntaxKind {
 	return common.INFER_PARAM_LIST
 }
@@ -6534,6 +6792,8 @@ type STImplicitAnonymousFunctionExpressionNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STImplicitAnonymousFunctionExpressionNode{}
 
 func (n *STImplicitAnonymousFunctionExpressionNode) Kind() common.SyntaxKind {
 	return common.IMPLICIT_ANONYMOUS_FUNCTION_EXPRESSION
@@ -6581,6 +6841,8 @@ type STStartActionNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STStartActionNode{}
+
 func (n *STStartActionNode) Kind() common.SyntaxKind {
 	return common.START_ACTION
 }
@@ -6625,6 +6887,8 @@ type STFlushActionNode struct {
 	PeerWorker STNode
 }
 
+var _ STNode = &STFlushActionNode{}
+
 func (n *STFlushActionNode) Kind() common.SyntaxKind {
 	return common.FLUSH_ACTION
 }
@@ -6661,6 +6925,8 @@ type STSingletonTypeDescriptorNode struct {
 
 	SimpleContExprNode STNode
 }
+
+var _ STNode = &STSingletonTypeDescriptorNode{}
 
 func (n *STSingletonTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.SINGLETON_TYPE_DESC
@@ -6705,6 +6971,8 @@ type STMethodDeclarationNode struct {
 
 	Semicolon STNode
 }
+
+var _ STNode = &STMethodDeclarationNode{}
 
 func (n *STMethodDeclarationNode) Kind() common.SyntaxKind {
 	return n.STNode.Kind()
@@ -6770,6 +7038,8 @@ type STTypedBindingPatternNode struct {
 	BindingPattern STNode
 }
 
+var _ STNode = &STTypedBindingPatternNode{}
+
 func (n *STTypedBindingPatternNode) Kind() common.SyntaxKind {
 	return common.TYPED_BINDING_PATTERN
 }
@@ -6809,6 +7079,8 @@ type STCaptureBindingPatternNode struct {
 	VariableName STNode
 }
 
+var _ STNode = &STCaptureBindingPatternNode{}
+
 func (n *STCaptureBindingPatternNode) Kind() common.SyntaxKind {
 	return common.CAPTURE_BINDING_PATTERN
 }
@@ -6840,6 +7112,8 @@ type STWildcardBindingPatternNode struct {
 
 	UnderscoreToken STNode
 }
+
+var _ STNode = &STWildcardBindingPatternNode{}
 
 func (n *STWildcardBindingPatternNode) Kind() common.SyntaxKind {
 	return common.WILDCARD_BINDING_PATTERN
@@ -6876,6 +7150,8 @@ type STListBindingPatternNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STListBindingPatternNode{}
 
 func (n *STListBindingPatternNode) Kind() common.SyntaxKind {
 	return common.LIST_BINDING_PATTERN
@@ -6922,6 +7198,8 @@ type STMappingBindingPatternNode struct {
 
 	CloseBrace STNode
 }
+
+var _ STNode = &STMappingBindingPatternNode{}
 
 func (n *STMappingBindingPatternNode) Kind() common.SyntaxKind {
 	return common.MAPPING_BINDING_PATTERN
@@ -6971,6 +7249,8 @@ type STFieldBindingPatternFullNode struct {
 	BindingPattern STNode
 }
 
+var _ STNode = &STFieldBindingPatternFullNode{}
+
 func (n *STFieldBindingPatternFullNode) Kind() common.SyntaxKind {
 	return common.FIELD_BINDING_PATTERN
 }
@@ -7013,6 +7293,8 @@ type STFieldBindingPatternVarnameNode struct {
 	VariableName STNode
 }
 
+var _ STNode = &STFieldBindingPatternVarnameNode{}
+
 func (n *STFieldBindingPatternVarnameNode) Kind() common.SyntaxKind {
 	return common.FIELD_BINDING_PATTERN
 }
@@ -7046,6 +7328,8 @@ type STRestBindingPatternNode struct {
 
 	VariableName STNode
 }
+
+var _ STNode = &STRestBindingPatternNode{}
 
 func (n *STRestBindingPatternNode) Kind() common.SyntaxKind {
 	return common.REST_BINDING_PATTERN
@@ -7091,6 +7375,8 @@ type STErrorBindingPatternNode struct {
 
 	CloseParenthesis STNode
 }
+
+var _ STNode = &STErrorBindingPatternNode{}
 
 func (n *STErrorBindingPatternNode) Kind() common.SyntaxKind {
 	return common.ERROR_BINDING_PATTERN
@@ -7148,6 +7434,8 @@ type STNamedArgBindingPatternNode struct {
 	BindingPattern STNode
 }
 
+var _ STNode = &STNamedArgBindingPatternNode{}
+
 func (n *STNamedArgBindingPatternNode) Kind() common.SyntaxKind {
 	return common.NAMED_ARG_BINDING_PATTERN
 }
@@ -7193,6 +7481,8 @@ type STAsyncSendActionNode struct {
 
 	PeerWorker STNode
 }
+
+var _ STNode = &STAsyncSendActionNode{}
 
 func (n *STAsyncSendActionNode) Kind() common.SyntaxKind {
 	return common.ASYNC_SEND_ACTION
@@ -7240,6 +7530,8 @@ type STSyncSendActionNode struct {
 	PeerWorker STNode
 }
 
+var _ STNode = &STSyncSendActionNode{}
+
 func (n *STSyncSendActionNode) Kind() common.SyntaxKind {
 	return common.SYNC_SEND_ACTION
 }
@@ -7284,6 +7576,8 @@ type STReceiveActionNode struct {
 	ReceiveWorkers STNode
 }
 
+var _ STNode = &STReceiveActionNode{}
+
 func (n *STReceiveActionNode) Kind() common.SyntaxKind {
 	return common.RECEIVE_ACTION
 }
@@ -7324,6 +7618,8 @@ type STReceiveFieldsNode struct {
 
 	CloseBrace STNode
 }
+
+var _ STNode = &STReceiveFieldsNode{}
 
 func (n *STReceiveFieldsNode) Kind() common.SyntaxKind {
 	return common.RECEIVE_FIELDS
@@ -7367,6 +7663,8 @@ type STAlternateReceiveNode struct {
 	Workers STNode
 }
 
+var _ STNode = &STAlternateReceiveNode{}
+
 func (n *STAlternateReceiveNode) Kind() common.SyntaxKind {
 	return common.ALTERNATE_RECEIVE
 }
@@ -7400,6 +7698,8 @@ type STRestDescriptorNode struct {
 
 	EllipsisToken STNode
 }
+
+var _ STNode = &STRestDescriptorNode{}
 
 func (n *STRestDescriptorNode) Kind() common.SyntaxKind {
 	return common.REST_TYPE
@@ -7439,6 +7739,8 @@ type STDoubleGTTokenNode struct {
 
 	EndGTToken STNode
 }
+
+var _ STNode = &STDoubleGTTokenNode{}
 
 func (n *STDoubleGTTokenNode) Kind() common.SyntaxKind {
 	return common.DOUBLE_GT_TOKEN
@@ -7480,6 +7782,8 @@ type STTrippleGTTokenNode struct {
 
 	EndGTToken STNode
 }
+
+var _ STNode = &STTrippleGTTokenNode{}
 
 func (n *STTrippleGTTokenNode) Kind() common.SyntaxKind {
 	return common.TRIPPLE_GT_TOKEN
@@ -7525,6 +7829,8 @@ type STWaitActionNode struct {
 	WaitFutureExpr STNode
 }
 
+var _ STNode = &STWaitActionNode{}
+
 func (n *STWaitActionNode) Kind() common.SyntaxKind {
 	return common.WAIT_ACTION
 }
@@ -7565,6 +7871,8 @@ type STWaitFieldsListNode struct {
 
 	CloseBrace STNode
 }
+
+var _ STNode = &STWaitFieldsListNode{}
 
 func (n *STWaitFieldsListNode) Kind() common.SyntaxKind {
 	return common.WAIT_FIELDS_LIST
@@ -7612,6 +7920,8 @@ type STWaitFieldNode struct {
 	WaitFutureExpr STNode
 }
 
+var _ STNode = &STWaitFieldNode{}
+
 func (n *STWaitFieldNode) Kind() common.SyntaxKind {
 	return common.WAIT_FIELD
 }
@@ -7658,6 +7968,8 @@ type STAnnotAccessExpressionNode struct {
 	AnnotTagReference STNode
 }
 
+var _ STNode = &STAnnotAccessExpressionNode{}
+
 func (n *STAnnotAccessExpressionNode) Kind() common.SyntaxKind {
 	return common.ANNOT_ACCESS
 }
@@ -7703,6 +8015,8 @@ type STOptionalFieldAccessExpressionNode struct {
 
 	FieldName STNode
 }
+
+var _ STNode = &STOptionalFieldAccessExpressionNode{}
 
 func (n *STOptionalFieldAccessExpressionNode) Kind() common.SyntaxKind {
 	return common.OPTIONAL_FIELD_ACCESS
@@ -7753,6 +8067,8 @@ type STConditionalExpressionNode struct {
 
 	EndExpression STNode
 }
+
+var _ STNode = &STConditionalExpressionNode{}
 
 func (n *STConditionalExpressionNode) Kind() common.SyntaxKind {
 	return common.CONDITIONAL_EXPRESSION
@@ -7819,6 +8135,8 @@ type STEnumDeclarationNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STEnumDeclarationNode{}
 
 func (n *STEnumDeclarationNode) Kind() common.SyntaxKind {
 	return common.ENUM_DECLARATION
@@ -7893,6 +8211,8 @@ type STEnumMemberNode struct {
 	ConstExprNode STNode
 }
 
+var _ STNode = &STEnumMemberNode{}
+
 func (n *STEnumMemberNode) Kind() common.SyntaxKind {
 	return common.ENUM_MEMBER
 }
@@ -7942,6 +8262,8 @@ type STArrayTypeDescriptorNode struct {
 	Dimensions STNode
 }
 
+var _ STNode = &STArrayTypeDescriptorNode{}
+
 func (n *STArrayTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.ARRAY_TYPE_DESC
 }
@@ -7982,6 +8304,8 @@ type STArrayDimensionNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STArrayDimensionNode{}
 
 func (n *STArrayDimensionNode) Kind() common.SyntaxKind {
 	return common.ARRAY_DIMENSION
@@ -8029,6 +8353,8 @@ type STTransactionStatementNode struct {
 	OnFailClause STNode
 }
 
+var _ STNode = &STTransactionStatementNode{}
+
 func (n *STTransactionStatementNode) Kind() common.SyntaxKind {
 	return common.TRANSACTION_STATEMENT
 }
@@ -8074,6 +8400,8 @@ type STRollbackStatementNode struct {
 
 	Semicolon STNode
 }
+
+var _ STNode = &STRollbackStatementNode{}
 
 func (n *STRollbackStatementNode) Kind() common.SyntaxKind {
 	return common.ROLLBACK_STATEMENT
@@ -8124,6 +8452,8 @@ type STRetryStatementNode struct {
 
 	OnFailClause STNode
 }
+
+var _ STNode = &STRetryStatementNode{}
 
 func (n *STRetryStatementNode) Kind() common.SyntaxKind {
 	return common.RETRY_STATEMENT
@@ -8177,6 +8507,8 @@ type STCommitActionNode struct {
 	CommitKeyword STNode
 }
 
+var _ STNode = &STCommitActionNode{}
+
 func (n *STCommitActionNode) Kind() common.SyntaxKind {
 	return common.COMMIT_ACTION
 }
@@ -8208,6 +8540,8 @@ type STTransactionalExpressionNode struct {
 
 	TransactionalKeyword STNode
 }
+
+var _ STNode = &STTransactionalExpressionNode{}
 
 func (n *STTransactionalExpressionNode) Kind() common.SyntaxKind {
 	return common.TRANSACTIONAL_EXPRESSION
@@ -8246,6 +8580,8 @@ type STByteArrayLiteralNode struct {
 
 	EndBacktick STNode
 }
+
+var _ STNode = &STByteArrayLiteralNode{}
 
 func (n *STByteArrayLiteralNode) Kind() common.SyntaxKind {
 	return common.BYTE_ARRAY_LITERAL
@@ -8298,6 +8634,8 @@ type STXMLFilterExpressionNode struct {
 	XmlPatternChain STNode
 }
 
+var _ STNode = &STXMLFilterExpressionNode{}
+
 func (n *STXMLFilterExpressionNode) Kind() common.SyntaxKind {
 	return common.XML_FILTER_EXPRESSION
 }
@@ -8338,6 +8676,8 @@ type STXMLStepExpressionNode struct {
 
 	XmlStepExtend STNode
 }
+
+var _ STNode = &STXMLStepExpressionNode{}
 
 func (n *STXMLStepExpressionNode) Kind() common.SyntaxKind {
 	return common.XML_STEP_EXPRESSION
@@ -8385,6 +8725,8 @@ type STXMLNamePatternChainingNode struct {
 	GtToken STNode
 }
 
+var _ STNode = &STXMLNamePatternChainingNode{}
+
 func (n *STXMLNamePatternChainingNode) Kind() common.SyntaxKind {
 	return common.XML_NAME_PATTERN_CHAIN
 }
@@ -8430,6 +8772,8 @@ type STXMLStepIndexedExtendNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STXMLStepIndexedExtendNode{}
 
 func (n *STXMLStepIndexedExtendNode) Kind() common.SyntaxKind {
 	return common.XML_STEP_INDEXED_EXTEND
@@ -8477,6 +8821,8 @@ type STXMLStepMethodCallExtendNode struct {
 	ParenthesizedArgList STNode
 }
 
+var _ STNode = &STXMLStepMethodCallExtendNode{}
+
 func (n *STXMLStepMethodCallExtendNode) Kind() common.SyntaxKind {
 	return common.XML_STEP_METHOD_CALL_EXTEND
 }
@@ -8523,6 +8869,8 @@ type STXMLAtomicNamePatternNode struct {
 	Name STNode
 }
 
+var _ STNode = &STXMLAtomicNamePatternNode{}
+
 func (n *STXMLAtomicNamePatternNode) Kind() common.SyntaxKind {
 	return common.XML_ATOMIC_NAME_PATTERN
 }
@@ -8565,6 +8913,8 @@ type STTypeReferenceTypeDescNode struct {
 	TypeRef STNode
 }
 
+var _ STNode = &STTypeReferenceTypeDescNode{}
+
 func (n *STTypeReferenceTypeDescNode) Kind() common.SyntaxKind {
 	return common.TYPE_REFERENCE_TYPE_DESC
 }
@@ -8606,6 +8956,8 @@ type STMatchStatementNode struct {
 
 	OnFailClause STNode
 }
+
+var _ STNode = &STMatchStatementNode{}
 
 func (n *STMatchStatementNode) Kind() common.SyntaxKind {
 	return common.MATCH_STATEMENT
@@ -8670,6 +9022,8 @@ type STMatchClauseNode struct {
 	BlockStatement STNode
 }
 
+var _ STNode = &STMatchClauseNode{}
+
 func (n *STMatchClauseNode) Kind() common.SyntaxKind {
 	return common.MATCH_CLAUSE
 }
@@ -8719,6 +9073,8 @@ type STMatchGuardNode struct {
 	Expression STNode
 }
 
+var _ STNode = &STMatchGuardNode{}
+
 func (n *STMatchGuardNode) Kind() common.SyntaxKind {
 	return common.MATCH_GUARD
 }
@@ -8757,6 +9113,8 @@ type STDistinctTypeDescriptorNode struct {
 
 	TypeDescriptor STNode
 }
+
+var _ STNode = &STDistinctTypeDescriptorNode{}
 
 func (n *STDistinctTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.DISTINCT_TYPE_DESC
@@ -8798,6 +9156,8 @@ type STListMatchPatternNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STListMatchPatternNode{}
 
 func (n *STListMatchPatternNode) Kind() common.SyntaxKind {
 	return common.LIST_MATCH_PATTERN
@@ -8845,6 +9205,8 @@ type STRestMatchPatternNode struct {
 	VariableName STNode
 }
 
+var _ STNode = &STRestMatchPatternNode{}
+
 func (n *STRestMatchPatternNode) Kind() common.SyntaxKind {
 	return common.REST_MATCH_PATTERN
 }
@@ -8891,6 +9253,8 @@ type STMappingMatchPatternNode struct {
 	CloseBraceToken STNode
 }
 
+var _ STNode = &STMappingMatchPatternNode{}
+
 func (n *STMappingMatchPatternNode) Kind() common.SyntaxKind {
 	return common.MAPPING_MATCH_PATTERN
 }
@@ -8936,6 +9300,8 @@ type STFieldMatchPatternNode struct {
 
 	MatchPattern STNode
 }
+
+var _ STNode = &STFieldMatchPatternNode{}
 
 func (n *STFieldMatchPatternNode) Kind() common.SyntaxKind {
 	return common.FIELD_MATCH_PATTERN
@@ -8986,6 +9352,8 @@ type STErrorMatchPatternNode struct {
 
 	CloseParenthesisToken STNode
 }
+
+var _ STNode = &STErrorMatchPatternNode{}
 
 func (n *STErrorMatchPatternNode) Kind() common.SyntaxKind {
 	return common.ERROR_MATCH_PATTERN
@@ -9043,6 +9411,8 @@ type STNamedArgMatchPatternNode struct {
 	MatchPattern STNode
 }
 
+var _ STNode = &STNamedArgMatchPatternNode{}
+
 func (n *STNamedArgMatchPatternNode) Kind() common.SyntaxKind {
 	return common.NAMED_ARG_MATCH_PATTERN
 }
@@ -9087,6 +9457,8 @@ type STMarkdownDocumentationNode struct {
 	DocumentationLines STNode
 }
 
+var _ STNode = &STMarkdownDocumentationNode{}
+
 func (n *STMarkdownDocumentationNode) Kind() common.SyntaxKind {
 	return common.MARKDOWN_DOCUMENTATION
 }
@@ -9120,6 +9492,8 @@ type STMarkdownDocumentationLineNode struct {
 
 	DocumentElements STNode
 }
+
+var _ STNode = &STMarkdownDocumentationLineNode{}
 
 func (n *STMarkdownDocumentationLineNode) Kind() common.SyntaxKind {
 	return n.STDocumentationNode.Kind()
@@ -9165,6 +9539,8 @@ type STMarkdownParameterDocumentationLineNode struct {
 
 	DocumentElements STNode
 }
+
+var _ STNode = &STMarkdownParameterDocumentationLineNode{}
 
 func (n *STMarkdownParameterDocumentationLineNode) Kind() common.SyntaxKind {
 	return n.STDocumentationNode.Kind()
@@ -9224,6 +9600,8 @@ type STBallerinaNameReferenceNode struct {
 	EndBacktick STNode
 }
 
+var _ STNode = &STBallerinaNameReferenceNode{}
+
 func (n *STBallerinaNameReferenceNode) Kind() common.SyntaxKind {
 	return common.BALLERINA_NAME_REFERENCE
 }
@@ -9274,6 +9652,8 @@ type STInlineCodeReferenceNode struct {
 
 	EndBacktick STNode
 }
+
+var _ STNode = &STInlineCodeReferenceNode{}
 
 func (n *STInlineCodeReferenceNode) Kind() common.SyntaxKind {
 	return common.INLINE_CODE_REFERENCE
@@ -9326,6 +9706,8 @@ type STMarkdownCodeBlockNode struct {
 
 	EndBacktick STNode
 }
+
+var _ STNode = &STMarkdownCodeBlockNode{}
 
 func (n *STMarkdownCodeBlockNode) Kind() common.SyntaxKind {
 	return common.MARKDOWN_CODE_BLOCK
@@ -9386,6 +9768,8 @@ type STMarkdownCodeLineNode struct {
 	CodeDescription STNode
 }
 
+var _ STNode = &STMarkdownCodeLineNode{}
+
 func (n *STMarkdownCodeLineNode) Kind() common.SyntaxKind {
 	return common.MARKDOWN_CODE_LINE
 }
@@ -9426,6 +9810,8 @@ type STOrderByClauseNode struct {
 
 	OrderKey STNode
 }
+
+var _ STNode = &STOrderByClauseNode{}
 
 func (n *STOrderByClauseNode) Kind() common.SyntaxKind {
 	return common.ORDER_BY_CLAUSE
@@ -9471,6 +9857,8 @@ type STOrderKeyNode struct {
 	OrderDirection STNode
 }
 
+var _ STNode = &STOrderKeyNode{}
+
 func (n *STOrderKeyNode) Kind() common.SyntaxKind {
 	return common.ORDER_KEY
 }
@@ -9511,6 +9899,8 @@ type STGroupByClauseNode struct {
 
 	GroupingKey STNode
 }
+
+var _ STNode = &STGroupByClauseNode{}
 
 func (n *STGroupByClauseNode) Kind() common.SyntaxKind {
 	return common.GROUP_BY_CLAUSE
@@ -9559,6 +9949,8 @@ type STGroupingKeyVarDeclarationNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STGroupingKeyVarDeclarationNode{}
 
 func (n *STGroupingKeyVarDeclarationNode) Kind() common.SyntaxKind {
 	return common.GROUPING_KEY_VAR_DECLARATION
@@ -9613,6 +10005,8 @@ type STOnFailClauseNode struct {
 	BlockStatement STNode
 }
 
+var _ STNode = &STOnFailClauseNode{}
+
 func (n *STOnFailClauseNode) Kind() common.SyntaxKind {
 	return common.ON_FAIL_CLAUSE
 }
@@ -9663,6 +10057,8 @@ type STDoStatementNode struct {
 
 	OnFailClause STNode
 }
+
+var _ STNode = &STDoStatementNode{}
 
 func (n *STDoStatementNode) Kind() common.SyntaxKind {
 	return common.DO_STATEMENT
@@ -9721,6 +10117,8 @@ type STClassDefinitionNode struct {
 
 	SemicolonToken STNode
 }
+
+var _ STNode = &STClassDefinitionNode{}
 
 func (n *STClassDefinitionNode) Kind() common.SyntaxKind {
 	return common.CLASS_DEFINITION
@@ -9804,6 +10202,8 @@ type STResourcePathParameterNode struct {
 	CloseBracketToken STNode
 }
 
+var _ STNode = &STResourcePathParameterNode{}
+
 func (n *STResourcePathParameterNode) Kind() common.SyntaxKind {
 	return n.STNode.Kind()
 }
@@ -9861,6 +10261,8 @@ type STRequiredExpressionNode struct {
 	QuestionMarkToken STNode
 }
 
+var _ STNode = &STRequiredExpressionNode{}
+
 func (n *STRequiredExpressionNode) Kind() common.SyntaxKind {
 	return common.REQUIRED_EXPRESSION
 }
@@ -9900,6 +10302,8 @@ type STErrorConstructorExpressionNode struct {
 
 	CloseParenToken STNode
 }
+
+var _ STNode = &STErrorConstructorExpressionNode{}
 
 func (n *STErrorConstructorExpressionNode) Kind() common.SyntaxKind {
 	return common.ERROR_CONSTRUCTOR
@@ -9955,6 +10359,8 @@ type STParameterizedTypeDescriptorNode struct {
 	TypeParamNode STNode
 }
 
+var _ STNode = &STParameterizedTypeDescriptorNode{}
+
 func (n *STParameterizedTypeDescriptorNode) Kind() common.SyntaxKind {
 	return n.STTypeDescriptorNode.Kind()
 }
@@ -9993,6 +10399,8 @@ type STSpreadMemberNode struct {
 
 	Expression STNode
 }
+
+var _ STNode = &STSpreadMemberNode{}
 
 func (n *STSpreadMemberNode) Kind() common.SyntaxKind {
 	return common.SPREAD_MEMBER
@@ -10042,6 +10450,8 @@ type STClientResourceAccessActionNode struct {
 
 	Arguments STNode
 }
+
+var _ STNode = &STClientResourceAccessActionNode{}
 
 func (n *STClientResourceAccessActionNode) Kind() common.SyntaxKind {
 	return common.CLIENT_RESOURCE_ACCESS_ACTION
@@ -10109,6 +10519,8 @@ type STComputedResourceAccessSegmentNode struct {
 	CloseBracketToken STNode
 }
 
+var _ STNode = &STComputedResourceAccessSegmentNode{}
+
 func (n *STComputedResourceAccessSegmentNode) Kind() common.SyntaxKind {
 	return common.COMPUTED_RESOURCE_ACCESS_SEGMENT
 }
@@ -10157,6 +10569,8 @@ type STResourceAccessRestSegmentNode struct {
 	CloseBracketToken STNode
 }
 
+var _ STNode = &STResourceAccessRestSegmentNode{}
+
 func (n *STResourceAccessRestSegmentNode) Kind() common.SyntaxKind {
 	return common.RESOURCE_ACCESS_REST_SEGMENT
 }
@@ -10204,6 +10618,8 @@ type STReSequenceNode struct {
 	ReTerm STNode
 }
 
+var _ STNode = &STReSequenceNode{}
+
 func (n *STReSequenceNode) Kind() common.SyntaxKind {
 	return common.RE_SEQUENCE
 }
@@ -10239,6 +10655,8 @@ type STReAtomQuantifierNode struct {
 
 	ReQuantifier STNode
 }
+
+var _ STNode = &STReAtomQuantifierNode{}
 
 func (n *STReAtomQuantifierNode) Kind() common.SyntaxKind {
 	return common.RE_ATOM_QUANTIFIER
@@ -10277,6 +10695,8 @@ type STReAtomCharOrEscapeNode struct {
 	ReAtomCharOrEscape STNode
 }
 
+var _ STNode = &STReAtomCharOrEscapeNode{}
+
 func (n *STReAtomCharOrEscapeNode) Kind() common.SyntaxKind {
 	return common.RE_LITERAL_CHAR_DOT_OR_ESCAPE
 }
@@ -10310,6 +10730,8 @@ type STReQuoteEscapeNode struct {
 
 	ReSyntaxChar STNode
 }
+
+var _ STNode = &STReQuoteEscapeNode{}
 
 func (n *STReQuoteEscapeNode) Kind() common.SyntaxKind {
 	return common.RE_QUOTE_ESCAPE
@@ -10349,6 +10771,8 @@ type STReSimpleCharClassEscapeNode struct {
 
 	ReSimpleCharClassCode STNode
 }
+
+var _ STNode = &STReSimpleCharClassEscapeNode{}
 
 func (n *STReSimpleCharClassEscapeNode) Kind() common.SyntaxKind {
 	return common.RE_SIMPLE_CHAR_CLASS_ESCAPE
@@ -10394,6 +10818,8 @@ type STReUnicodePropertyEscapeNode struct {
 
 	CloseBraceToken STNode
 }
+
+var _ STNode = &STReUnicodePropertyEscapeNode{}
 
 func (n *STReUnicodePropertyEscapeNode) Kind() common.SyntaxKind {
 	return common.RE_UNICODE_PROPERTY_ESCAPE
@@ -10451,6 +10877,8 @@ type STReUnicodeScriptNode struct {
 	ReUnicodePropertyValue STNode
 }
 
+var _ STNode = &STReUnicodeScriptNode{}
+
 func (n *STReUnicodeScriptNode) Kind() common.SyntaxKind {
 	return common.RE_UNICODE_SCRIPT
 }
@@ -10489,6 +10917,8 @@ type STReUnicodeGeneralCategoryNode struct {
 
 	ReUnicodeGeneralCategoryName STNode
 }
+
+var _ STNode = &STReUnicodeGeneralCategoryNode{}
 
 func (n *STReUnicodeGeneralCategoryNode) Kind() common.SyntaxKind {
 	return common.RE_UNICODE_GENERAL_CATEGORY
@@ -10532,6 +10962,8 @@ type STReCharacterClassNode struct {
 
 	CloseBracket STNode
 }
+
+var _ STNode = &STReCharacterClassNode{}
 
 func (n *STReCharacterClassNode) Kind() common.SyntaxKind {
 	return common.RE_CHARACTER_CLASS
@@ -10582,6 +11014,8 @@ type STReCharSetRangeWithReCharSetNode struct {
 	ReCharSet STNode
 }
 
+var _ STNode = &STReCharSetRangeWithReCharSetNode{}
+
 func (n *STReCharSetRangeWithReCharSetNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_RANGE_WITH_RE_CHAR_SET
 }
@@ -10622,6 +11056,8 @@ type STReCharSetRangeNode struct {
 
 	RhsReCharSetAtom STNode
 }
+
+var _ STNode = &STReCharSetRangeNode{}
 
 func (n *STReCharSetRangeNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_RANGE
@@ -10667,6 +11103,8 @@ type STReCharSetAtomWithReCharSetNoDashNode struct {
 	ReCharSetNoDash STNode
 }
 
+var _ STNode = &STReCharSetAtomWithReCharSetNoDashNode{}
+
 func (n *STReCharSetAtomWithReCharSetNoDashNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_ATOM_WITH_RE_CHAR_SET_NO_DASH
 }
@@ -10705,6 +11143,8 @@ type STReCharSetRangeNoDashWithReCharSetNode struct {
 
 	ReCharSet STNode
 }
+
+var _ STNode = &STReCharSetRangeNoDashWithReCharSetNode{}
 
 func (n *STReCharSetRangeNoDashWithReCharSetNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_RANGE_NO_DASH_WITH_RE_CHAR_SET
@@ -10746,6 +11186,8 @@ type STReCharSetRangeNoDashNode struct {
 
 	ReCharSetAtom STNode
 }
+
+var _ STNode = &STReCharSetRangeNoDashNode{}
 
 func (n *STReCharSetRangeNoDashNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_RANGE_NO_DASH
@@ -10791,6 +11233,8 @@ type STReCharSetAtomNoDashWithReCharSetNoDashNode struct {
 	ReCharSetNoDash STNode
 }
 
+var _ STNode = &STReCharSetAtomNoDashWithReCharSetNoDashNode{}
+
 func (n *STReCharSetAtomNoDashWithReCharSetNoDashNode) Kind() common.SyntaxKind {
 	return common.RE_CHAR_SET_ATOM_NO_DASH_WITH_RE_CHAR_SET_NO_DASH
 }
@@ -10833,6 +11277,8 @@ type STReCapturingGroupsNode struct {
 
 	CloseParenthesis STNode
 }
+
+var _ STNode = &STReCapturingGroupsNode{}
 
 func (n *STReCapturingGroupsNode) Kind() common.SyntaxKind {
 	return common.RE_CAPTURING_GROUP
@@ -10885,6 +11331,8 @@ type STReFlagExpressionNode struct {
 	Colon STNode
 }
 
+var _ STNode = &STReFlagExpressionNode{}
+
 func (n *STReFlagExpressionNode) Kind() common.SyntaxKind {
 	return common.RE_FLAG_EXPR
 }
@@ -10931,6 +11379,8 @@ type STReFlagsOnOffNode struct {
 	RhsReFlags STNode
 }
 
+var _ STNode = &STReFlagsOnOffNode{}
+
 func (n *STReFlagsOnOffNode) Kind() common.SyntaxKind {
 	return common.RE_FLAGS_ON_OFF
 }
@@ -10973,6 +11423,8 @@ type STReFlagsNode struct {
 	ReFlag STNode
 }
 
+var _ STNode = &STReFlagsNode{}
+
 func (n *STReFlagsNode) Kind() common.SyntaxKind {
 	return common.RE_FLAGS
 }
@@ -11004,6 +11456,8 @@ type STReAssertionNode struct {
 
 	ReAssertion STNode
 }
+
+var _ STNode = &STReAssertionNode{}
 
 func (n *STReAssertionNode) Kind() common.SyntaxKind {
 	return common.RE_ASSERTION
@@ -11038,6 +11492,8 @@ type STReQuantifierNode struct {
 
 	NonGreedyChar STNode
 }
+
+var _ STNode = &STReQuantifierNode{}
 
 func (n *STReQuantifierNode) Kind() common.SyntaxKind {
 	return common.RE_QUANTIFIER
@@ -11083,6 +11539,8 @@ type STReBracedQuantifierNode struct {
 
 	CloseBraceToken STNode
 }
+
+var _ STNode = &STReBracedQuantifierNode{}
 
 func (n *STReBracedQuantifierNode) Kind() common.SyntaxKind {
 	return common.RE_BRACED_QUANTIFIER
@@ -11138,6 +11596,8 @@ type STMemberTypeDescriptorNode struct {
 	TypeDescriptor STNode
 }
 
+var _ STNode = &STMemberTypeDescriptorNode{}
+
 func (n *STMemberTypeDescriptorNode) Kind() common.SyntaxKind {
 	return common.MEMBER_TYPE_DESC
 }
@@ -11178,6 +11638,8 @@ type STReceiveFieldNode struct {
 
 	PeerWorker STNode
 }
+
+var _ STNode = &STReceiveFieldNode{}
 
 func (n *STReceiveFieldNode) Kind() common.SyntaxKind {
 	return common.RECEIVE_FIELD
@@ -11230,6 +11692,8 @@ type STNaturalExpressionNode struct {
 
 	CloseBraceToken STNode
 }
+
+var _ STNode = &STNaturalExpressionNode{}
 
 func (n *STNaturalExpressionNode) Kind() common.SyntaxKind {
 	return common.NATURAL_EXPRESSION

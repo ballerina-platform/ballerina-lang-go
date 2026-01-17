@@ -140,6 +140,21 @@ type (
 	}
 )
 
+// Type assertions to ensure interface compliance
+var _ STNode = &STInvalidTokenMinutiaeNode{}
+var _ STNode = &STMinutiae{}
+var _ STNode = &STInvalidNodeMinutiae{}
+var _ STNode = &STNodeList{}
+
+var _ STToken = &STMissingToken{}
+var _ STNode = &STMissingToken{}
+var _ STToken = &STLiteralValueToken{}
+var _ STNode = &STLiteralValueToken{}
+var _ STToken = &STInvalidToken{}
+var _ STNode = &STInvalidToken{}
+var _ STToken = &STIdentifierToken{}
+var _ STNode = &STIdentifierToken{}
+
 func (n *STLiteralValueToken) BucketCount() int {
 	return 1
 }
@@ -3621,3 +3636,5 @@ func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
 		n.CollectionEndToken,
 	}
 }
+
+var _ STNode = &STAmbiguousCollectionNode{}
