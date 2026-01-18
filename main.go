@@ -21,6 +21,7 @@ package main
 import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
 	"fmt"
 	"os"
@@ -103,7 +104,14 @@ func main() {
 		}()
 	}
 
-	// Read the file
+	parserFromFile(debugCtx, fileName)
+	if debugCtx != nil {
+		close(debugCtx.Channel)
+		wg.Wait()
+	}
+}
+
+func parserFromFile(debugCtx *debugcommon.DebugContext, fileName string) tree.SyntaxTree {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading file %s: %v\n", fileName, err)
@@ -123,10 +131,8 @@ func main() {
 	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader, debugCtx)
 
 	// Parse the entire file (parser will internally call tokenizer)
-	_ = ballerinaParser.Parse()
+	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
 
-	if debugCtx != nil {
-		close(debugCtx.Channel)
-		wg.Wait()
-	}
+	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
+	return tree.NewSyntaxTreeFromNodeTextDocumentStringBool(moduleNode, nil, fileName, false)
 }

@@ -51,6 +51,7 @@ type Node interface {
 	HasDiagnostics() bool
 	IsMissing() bool
 	SyntaxTree() *SyntaxTree
+	SetSyntaxTree(syntaxTree *SyntaxTree)
 	LineRange() LineRange
 	LeadingMinutiae() MinutiaeList
 	TrailingMinutiae() MinutiaeList
@@ -170,6 +171,10 @@ func (n *NodeBase) Position() int {
 
 func (n *NodeBase) Parent() *NonTerminalNode {
 	return n.parent
+}
+
+func (n *NodeBase) SetSyntaxTree(syntaxTree *SyntaxTree) {
+	n.syntaxTree = syntaxTree
 }
 
 func (n *NodeBase) Ancestor(filter func(Node) bool) *Node {
@@ -408,16 +413,6 @@ func (t *Token) Text() string {
 		panic("expected STToken")
 	}
 	return stToken.Text()
-}
-
-type SyntaxTree struct {
-	rootNode     Node
-	filePath     string
-	textDocument TextDocument
-	lineRange    LineRange
-}
-
-type TextDocument interface {
 }
 
 type LineRange struct {
