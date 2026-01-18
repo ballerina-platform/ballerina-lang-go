@@ -16,64 +16,24 @@
 
 package ast
 
-type AssignmentNode interface {
-	GetVariable() ExpressionNode
-	GetExpression() ExpressionNode
-	IsDeclaredWithVar() bool
-	SetExpression(expression Node)
-	SetDeclaredWithVar(IsDeclaredWithVar bool)
-	SetVariable(variableReferenceNode VariableReferenceNode)
-}
+import "ballerina-lang-go/model"
 
-type CompoundAssignmentNode interface {
-	StatementNode
-	GetVariable() ExpressionNode
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
-	SetVariable(variableReferenceNode VariableReferenceNode)
-	GetOperatorKind() OperatorKind
-}
-
-type DoNode interface {
-	StatementNode
-	GetBody() BlockStatementNode
-	SetBody(body BlockStatementNode)
-	GetOnFailClause() OnFailClauseNode
-	SetOnFailClause(onFailClause OnFailClauseNode)
-}
-
-type BlockStatementNode interface {
-	BlockNode
-	StatementNode
-}
-
-type BlockNode interface {
-	Node
-	GetStatements() []StatementNode
-	AddStatement(statement StatementNode)
-}
-
-type VariableDefinitionNode interface {
-	StatementNode
-	GetVariable() VariableNode
-	SetVariable(variable VariableNode)
-	GetIsInFork() bool
-	GetIsWorker() bool
-}
-
-type OnFailClauseNode interface {
-	Node
-	SetDeclaredWithVar()
-	IsDeclaredWithVar() bool
-	GetVariableDefinitionNode() VariableDefinitionNode
-	SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode)
-	GetBody() BlockStatementNode
-	SetBody(body BlockStatementNode)
-}
-
-type BLangStatement = Node
-type StatementNode = Node
-type ContinueNode = StatementNode
+// Type aliases for model interfaces
+type (
+	AssignmentNode          = model.AssignmentNode
+	CompoundAssignmentNode  = model.CompoundAssignmentNode
+	DoNode                  = model.DoNode
+	BlockStatementNode      = model.BlockStatementNode
+	ExpressionStatementNode = model.ExpressionStatementNode
+	IfNode                  = model.IfNode
+	BlockNode               = model.BlockNode
+	VariableDefinitionNode  = model.VariableDefinitionNode
+	ReturnNode              = model.ReturnNode
+	WhileNode               = model.WhileNode
+	BLangStatement          = model.StatementNode
+	StatementNode           = model.StatementNode
+	ContinueNode            = model.ContinueNode
+)
 type FailureBreakMode uint
 
 const (
@@ -118,6 +78,37 @@ type (
 		Body         BLangBlockStmt
 		OnFailClause BLangOnFailClause
 	}
+
+	BLangExpressionStmt struct {
+		BLangStatementBase
+		Expr BLangExpression
+	}
+
+	BLangIf struct {
+		BLangStatementBase
+		Expr     BLangExpression
+		Body     BLangBlockStmt
+		ElseStmt BLangStatement
+	}
+
+	BLangWhile struct {
+		BLangStatementBase
+		Expr         BLangExpression
+		Body         BLangBlockStmt
+		OnFailClause BLangOnFailClause
+	}
+
+	BLangSimpleVariableDef struct {
+		BLangStatementBase
+		Var      BLangSimpleVariable
+		IsInFork bool
+		IsWorker bool
+	}
+
+	BLangReturn struct {
+		BLangStatementBase
+		Expr BLangExpression
+	}
 )
 
 var _ AssignmentNode = &BLangAssignment{}
@@ -125,14 +116,22 @@ var _ CompoundAssignmentNode = &BLangCompoundAssignment{}
 var _ ContinueNode = &BLangContinue{}
 var _ DoNode = &BLangDo{}
 var _ BlockStatementNode = &BLangBlockStmt{}
+var _ ExpressionStatementNode = &BLangExpressionStmt{}
+var _ IfNode = &BLangIf{}
+var _ WhileNode = &BLangWhile{}
+var _ VariableDefinitionNode = &BLangSimpleVariableDef{}
+var _ ReturnNode = &BLangReturn{}
 
-var _ BLangNode = &BLangStatementBase{}
 var _ BLangNode = &BLangAssignment{}
 var _ BLangNode = &BLangBlockStmt{}
 var _ BLangNode = &BLangBreak{}
 var _ BLangNode = &BLangCompoundAssignment{}
 var _ BLangNode = &BLangContinue{}
 var _ BLangNode = &BLangDo{}
+var _ BLangNode = &BLangExpressionStmt{}
+var _ BLangNode = &BLangIf{}
+var _ BLangNode = &BLangWhile{}
+var _ BLangNode = &BLangSimpleVariableDef{}
 
 func (this *BLangAssignment) GetVariable() ExpressionNode {
 	// migrated from BLangAssignment.java:48:5
@@ -149,9 +148,17 @@ func (this *BLangAssignment) IsDeclaredWithVar() bool {
 	return false
 }
 
+func (this *BLangAssignment) GetKind() NodeKind {
+	return NodeKind_ASSIGNMENT
+}
+
 func (this *BLangAssignment) SetExpression(expression ExpressionNode) {
 	// migrated from BLangAssignment.java:64:5
-	this.Expr = expression
+	if expr, ok := expression.(BLangExpression); ok {
+		this.Expr = expr
+	} else {
+		panic("expression is not a BLangExpression")
+	}
 }
 
 func (this *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
@@ -160,7 +167,11 @@ func (this *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
 
 func (this *BLangAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
 	// migrated from BLangAssignment.java:74:5
-	this.VarRef = variableReferenceNode
+	if varRef, ok := variableReferenceNode.(BLangExpression); ok {
+		this.VarRef = varRef
+	} else {
+		panic("variableReferenceNode is not a BLangExpression")
+	}
 }
 
 func (this *BLangBlockStmt) GetKind() NodeKind {
@@ -252,4 +263,147 @@ func (this *BLangDo) SetOnFailClause(onFailClause OnFailClauseNode) {
 func (this *BLangDo) GetKind() NodeKind {
 	// migrated from BLangDo.java:82:5
 	return NodeKind_DO_STMT
+}
+
+func (this *BLangExpressionStmt) GetExpression() ExpressionNode {
+	// migrated from BLangExpressionStmt.java:46:5
+	return this.Expr
+}
+
+func (this *BLangExpressionStmt) GetKind() NodeKind {
+	return NodeKind_EXPRESSION_STATEMENT
+}
+
+func (this *BLangIf) GetCondition() ExpressionNode {
+	// migrated from BLangIf.java:47:5
+	return this.Expr
+}
+
+func (this *BLangIf) GetBody() BlockStatementNode {
+	// migrated from BLangIf.java:52:5
+	return &this.Body
+}
+
+func (this *BLangIf) GetElseStatement() StatementNode {
+	// migrated from BLangIf.java:57:5
+	return this.ElseStmt
+}
+
+func (this *BLangIf) SetCondition(condition ExpressionNode) {
+	// migrated from BLangIf.java:62:5
+	if expr, ok := condition.(BLangExpression); ok {
+		this.Expr = expr
+	} else {
+		panic("condition is not a BLangExpression")
+	}
+}
+
+func (this *BLangIf) SetBody(body BlockStatementNode) {
+	// migrated from BLangIf.java:67:5
+	if blockStmt, ok := body.(*BLangBlockStmt); ok {
+		this.Body = *blockStmt
+		return
+	}
+	panic("body is not a BLangBlockStmt")
+}
+
+func (this *BLangIf) SetElseStatement(elseStatement StatementNode) {
+	// migrated from BLangIf.java:72:5
+	if elseStmt, ok := elseStatement.(BLangStatement); ok {
+		this.ElseStmt = elseStmt
+		return
+	}
+	panic("elseStatement is not a BLangStatement")
+}
+
+func (this *BLangIf) GetKind() NodeKind {
+	// migrated from BLangIf.java:77:5
+	return NodeKind_IF
+}
+
+func (this *BLangWhile) GetCondition() ExpressionNode {
+	// migrated from BLangWhile.java:50:5
+	return this.Expr
+}
+
+func (this *BLangWhile) SetCondition(condition ExpressionNode) {
+	// migrated from BLangWhile.java:60:5
+	if expr, ok := condition.(BLangExpression); ok {
+		this.Expr = expr
+	} else {
+		panic("condition is not a BLangExpression")
+	}
+}
+
+func (this *BLangWhile) GetBody() BlockStatementNode {
+	// migrated from BLangWhile.java:55:5
+	return &this.Body
+}
+
+func (this *BLangWhile) SetBody(body BlockStatementNode) {
+	// migrated from BLangWhile.java:65:5
+	if blockStmt, ok := body.(*BLangBlockStmt); ok {
+		this.Body = *blockStmt
+		return
+	}
+	panic("body is not a BLangBlockStmt")
+}
+
+func (this *BLangWhile) GetOnFailClause() OnFailClauseNode {
+	// migrated from BLangWhile.java:70:5
+	return &this.OnFailClause
+}
+
+func (this *BLangWhile) SetOnFailClause(onFailClause OnFailClauseNode) {
+	// migrated from BLangWhile.java:75:5
+	if onFailClause, ok := onFailClause.(*BLangOnFailClause); ok {
+		this.OnFailClause = *onFailClause
+		return
+	}
+	panic("onFailClause is not a BLangOnFailClause")
+}
+
+func (this *BLangWhile) GetKind() NodeKind {
+	// migrated from BLangWhile.java:95:5
+	return NodeKind_WHILE
+}
+
+func (this *BLangSimpleVariableDef) GetIsInFork() bool {
+	return this.IsInFork
+}
+
+func (this *BLangSimpleVariableDef) GetIsWorker() bool {
+	return this.IsWorker
+}
+
+func (this *BLangSimpleVariableDef) GetKind() NodeKind {
+	return NodeKind_VARIABLE_DEF
+}
+
+func (this *BLangSimpleVariableDef) GetVariable() VariableNode {
+	return &this.Var
+}
+
+func (this *BLangSimpleVariableDef) SetVariable(variable VariableNode) {
+	if v, ok := variable.(*BLangSimpleVariable); ok {
+		this.Var = *v
+	} else {
+		panic("variable is not a BLangSimpleVariable")
+	}
+}
+
+func (this *BLangReturn) GetExpression() ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangReturn) SetExpression(expression ExpressionNode) {
+	if expr, ok := expression.(BLangExpression); ok {
+		this.Expr = expr
+	} else {
+		panic("expression is not a BLangExpression")
+	}
+}
+
+func (this *BLangReturn) GetKind() NodeKind {
+	return NodeKind_RETURN
 }

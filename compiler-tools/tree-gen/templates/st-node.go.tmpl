@@ -64,9 +64,9 @@ func (n *ST{{.Name}}) ChildBuckets() []STNode {
 }
 
 
-func (n *ST{{.Name}}) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *ST{{.Name}}) CreateFacade(position int, parent NonTerminalNode) Node {
     return &{{.Name}}{
-        {{if .Base}}{{if eq .Base "Node"}}NonTerminalNode{{else}}{{.Base}}{{end}}{{else}}NonTerminalNode{{end}}: NonTerminalNode{
+        {{if and .Base (ne .Base "Node")}}{{.Base}}: &NonTerminalNodeBase{{else}}NonTerminalNodeBase: NonTerminalNodeBase{{end}}{
             NodeBase: NodeBase{
                 internalNode: n,
                 position: position,

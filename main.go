@@ -19,10 +19,10 @@
 package main
 
 import (
+	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
-	"ballerina-lang-go/parser/tree"
-	"ballerina-lang-go/tools/text"
 	"fmt"
 	"os"
 	"sync"
@@ -30,13 +30,14 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s <file.bal> [-dump-tokens] [-dump-st] [-trace-recovery] [-log-file <path>]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s <file.bal> [-dump-tokens] [-dump-st] [-dump-ast] [-trace-recovery] [-log-file <path>]\n", os.Args[0])
 		os.Exit(1)
 	}
 
 	fileName := os.Args[1]
 	dumpTokens := false
 	dumpST := false
+	dumpAST := false
 	traceRecovery := false
 	logFile := ""
 
@@ -47,6 +48,8 @@ func main() {
 			dumpTokens = true
 		} else if arg == "-dump-st" {
 			dumpST = true
+		} else if arg == "-dump-ast" {
+			dumpAST = true
 		} else if arg == "-trace-recovery" {
 			traceRecovery = true
 		} else if arg == "-log-file" {
@@ -104,35 +107,19 @@ func main() {
 		}()
 	}
 
-	parserFromFile(debugCtx, fileName)
+	cx := context.NewCompilerContext()
+
+	syntaxTree, err := parser.GetSyntaxTree(debugCtx, fileName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error getting syntax tree: %v\n", err)
+		os.Exit(1)
+	}
+	if dumpAST {
+		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+		fmt.Println(compilationUnit)
+	}
 	if debugCtx != nil {
 		close(debugCtx.Channel)
 		wg.Wait()
 	}
-}
-
-func parserFromFile(debugCtx *debugcommon.DebugContext, fileName string) tree.SyntaxTree {
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading file %s: %v\n", fileName, err)
-		os.Exit(1)
-	}
-
-	// Create CharReader from file content
-	reader := text.CharReaderFromText(string(content))
-
-	// Create Lexer with DebugContext
-	lexer := parser.NewLexer(reader, debugCtx)
-
-	// Create TokenReader from Lexer
-	tokenReader := parser.CreateTokenReader(*lexer, debugCtx)
-
-	// Create Parser from TokenReader
-	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader, debugCtx)
-
-	// Parse the entire file (parser will internally call tokenizer)
-	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
-
-	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
-	return tree.NewSyntaxTreeFromNodeTextDocumentStringBool(moduleNode, nil, fileName, false)
 }

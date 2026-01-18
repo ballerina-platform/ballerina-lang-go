@@ -16,6 +16,8 @@
 
 package ast
 
+import "ballerina-lang-go/model"
+
 // ModuleContextDataHolder is a data holder struct for ModuleContext.
 // Migrated from io.ballerina.projects.internal.ModuleContextDataHolder
 type ModuleContextDataHolder struct {
@@ -35,8 +37,8 @@ type ModuleContextDataHolder struct {
 type ModuleDescriptor struct {
 	moduleName              *ModuleName
 	packageDesc             *PackageDescriptor
-	moduleCompilationId     *PackageID
-	moduleTestCompilationId *PackageID
+	moduleCompilationId     *model.PackageID
+	moduleTestCompilationId *model.PackageID
 }
 
 // newModuleDescriptor creates a new ModuleDescriptor (private constructor from Java)
@@ -47,7 +49,7 @@ func newModuleDescriptor(moduleName *ModuleName, packageDesc *PackageDescriptor)
 	this.packageDesc = packageDesc
 
 	if packageDesc.name().value() == "." && packageDesc.org().anonymous() {
-		this.moduleCompilationId = &DEFAULT
+		this.moduleCompilationId = &model.DEFAULT
 		this.moduleTestCompilationId = this.moduleCompilationId
 	} else {
 		panic("Not implemented")
@@ -87,13 +89,13 @@ func (this *ModuleDescriptor) Name() *ModuleName {
 
 // ModuleCompilationId returns the module compilation ID
 // Migrated from ModuleDescriptor.java:74:5
-func (this *ModuleDescriptor) ModuleCompilationId() *PackageID {
+func (this *ModuleDescriptor) ModuleCompilationId() *model.PackageID {
 	return this.moduleCompilationId
 }
 
 // ModuleTestCompilationId returns the module test compilation ID
 // Migrated from ModuleDescriptor.java:78:5
-func (this *ModuleDescriptor) ModuleTestCompilationId() *PackageID {
+func (this *ModuleDescriptor) ModuleTestCompilationId() *model.PackageID {
 	return this.moduleTestCompilationId
 }
 

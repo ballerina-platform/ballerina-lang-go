@@ -18,6 +18,7 @@
 
 package common
 
+// FIXME: move this to context
 const (
 	DUMP_TOKENS uint16 = 1 << iota
 	DUMP_ST

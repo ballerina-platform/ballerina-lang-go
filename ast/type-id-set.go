@@ -16,12 +16,14 @@
 
 package ast
 
+import "ballerina-lang-go/model"
+
 // FIXME: implement this
 type BTypeIdSet struct {
 }
 
 type BTypeId struct {
-	PackageID PackageID
+	PackageID model.PackageID
 	Name      string
 	PublicID  bool
 }

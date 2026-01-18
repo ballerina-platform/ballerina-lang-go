@@ -252,6 +252,6 @@ type NodeTransformer[T any] interface {
 	TransformMemberTypeDescriptor(memberTypeDescriptorNode *MemberTypeDescriptorNode) T
 	TransformReceiveField(receiveFieldNode *ReceiveFieldNode) T
 	TransformNaturalExpression(naturalExpressionNode *NaturalExpressionNode) T
-	TransformToken(token *Token) T
+	TransformToken(token Token) T
 	TransformIdentifierToken(identifier *IdentifierToken) T
 }

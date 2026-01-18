@@ -11,7 +11,7 @@
       },
       {
         "name": "members",
-        "type": "DocumentMemberDeclarationNode",
+        "type": "ModuleMemberDeclarationNode",
         "occurrences": "MULTIPLE"
       },
       {

@@ -18,297 +18,302 @@ package ast
 
 import (
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"strings"
 )
 
-type NodeKind uint
-type DocumentationReferenceType string
+type NodeKind = model.NodeKind
+type DocumentationReferenceType = model.DocumentationReferenceType
 
+// NodeKind constants - aliases to model package
 const (
-	NodeKind_ANNOTATION NodeKind = iota
-	NodeKind_ANNOTATION_ATTACHMENT
-	NodeKind_ANNOTATION_ATTRIBUTE
-	NodeKind_COMPILATION_UNIT
-	NodeKind_DEPRECATED
-	NodeKind_DOCUMENTATION
-	NodeKind_MARKDOWN_DOCUMENTATION
-	NodeKind_ENDPOINT
-	NodeKind_FUNCTION
-	NodeKind_RESOURCE_FUNC
-	NodeKind_BLOCK_FUNCTION_BODY
-	NodeKind_EXPR_FUNCTION_BODY
-	NodeKind_EXTERN_FUNCTION_BODY
-	NodeKind_IDENTIFIER
-	NodeKind_IMPORT
-	NodeKind_PACKAGE
-	NodeKind_PACKAGE_DECLARATION
-	NodeKind_RECORD_LITERAL_KEY_VALUE
-	NodeKind_RECORD_LITERAL_SPREAD_OP
-	NodeKind_RESOURCE
-	NodeKind_SERVICE
-	NodeKind_TYPE_DEFINITION
-	NodeKind_VARIABLE
-	NodeKind_LET_VARIABLE
-	NodeKind_TUPLE_VARIABLE
-	NodeKind_RECORD_VARIABLE
-	NodeKind_ERROR_VARIABLE
-	NodeKind_WORKER
-	NodeKind_XMLNS
-	NodeKind_CHANNEL
-	NodeKind_WAIT_LITERAL_KEY_VALUE
-	NodeKind_TABLE_KEY_SPECIFIER
-	NodeKind_TABLE_KEY_TYPE_CONSTRAINT
-	NodeKind_RETRY_SPEC
-	NodeKind_CLASS_DEFN
-	NodeKind_DOCUMENTATION_ATTRIBUTE
-	NodeKind_ARRAY_LITERAL_EXPR
-	NodeKind_TUPLE_LITERAL_EXPR
-	NodeKind_LIST_CONSTRUCTOR_EXPR
-	NodeKind_LIST_CONSTRUCTOR_SPREAD_OP
-	NodeKind_BINARY_EXPR
-	NodeKind_QUERY_EXPR
-	NodeKind_ELVIS_EXPR
-	NodeKind_GROUP_EXPR
-	NodeKind_TYPE_INIT_EXPR
-	NodeKind_FIELD_BASED_ACCESS_EXPR
-	NodeKind_INDEX_BASED_ACCESS_EXPR
-	NodeKind_INT_RANGE_EXPR
-	NodeKind_INVOCATION
-	NodeKind_COLLECT_CONTEXT_INVOCATION
-	NodeKind_LAMBDA
-	NodeKind_ARROW_EXPR
-	NodeKind_LITERAL
-	NodeKind_NUMERIC_LITERAL
-	NodeKind_HEX_FLOATING_POINT_LITERAL
-	NodeKind_INTEGER_LITERAL
-	NodeKind_DECIMAL_FLOATING_POINT_LITERAL
-	NodeKind_CONSTANT
-	NodeKind_RECORD_LITERAL_EXPR
-	NodeKind_SIMPLE_VARIABLE_REF
-	NodeKind_CONSTANT_REF
-	NodeKind_TUPLE_VARIABLE_REF
-	NodeKind_RECORD_VARIABLE_REF
-	NodeKind_ERROR_VARIABLE_REF
-	NodeKind_STRING_TEMPLATE_LITERAL
-	NodeKind_RAW_TEMPLATE_LITERAL
-	NodeKind_TERNARY_EXPR
-	NodeKind_WAIT_EXPR
-	NodeKind_TRAP_EXPR
-	NodeKind_TYPEDESC_EXPRESSION
-	NodeKind_ANNOT_ACCESS_EXPRESSION
-	NodeKind_TYPE_CONVERSION_EXPR
-	NodeKind_IS_ASSIGNABLE_EXPR
-	NodeKind_UNARY_EXPR
-	NodeKind_REST_ARGS_EXPR
-	NodeKind_NAMED_ARGS_EXPR
-	NodeKind_XML_QNAME
-	NodeKind_XML_ATTRIBUTE
-	NodeKind_XML_ATTRIBUTE_ACCESS_EXPR
-	NodeKind_XML_QUOTED_STRING
-	NodeKind_XML_ELEMENT_LITERAL
-	NodeKind_XML_TEXT_LITERAL
-	NodeKind_XML_COMMENT_LITERAL
-	NodeKind_XML_PI_LITERAL
-	NodeKind_XML_SEQUENCE_LITERAL
-	NodeKind_XML_ELEMENT_FILTER_EXPR
-	NodeKind_XML_ELEMENT_ACCESS
-	NodeKind_XML_NAVIGATION
-	NodeKind_XML_EXTENDED_NAVIGATION
-	NodeKind_XML_STEP_INDEXED_EXTEND
-	NodeKind_XML_STEP_FILTER_EXTEND
-	NodeKind_XML_STEP_METHOD_CALL_EXTEND
-	NodeKind_STATEMENT_EXPRESSION
-	NodeKind_MATCH_EXPRESSION
-	NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE
-	NodeKind_CHECK_EXPR
-	NodeKind_CHECK_PANIC_EXPR
-	NodeKind_FAIL
-	NodeKind_TYPE_TEST_EXPR
-	NodeKind_IS_LIKE
-	NodeKind_IGNORE_EXPR
-	NodeKind_DOCUMENTATION_DESCRIPTION
-	NodeKind_DOCUMENTATION_PARAMETER
-	NodeKind_DOCUMENTATION_REFERENCE
-	NodeKind_DOCUMENTATION_DEPRECATION
-	NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
-	NodeKind_SERVICE_CONSTRUCTOR
-	NodeKind_LET_EXPR
-	NodeKind_TABLE_CONSTRUCTOR_EXPR
-	NodeKind_TRANSACTIONAL_EXPRESSION
-	NodeKind_OBJECT_CTOR_EXPRESSION
-	NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
-	NodeKind_DYNAMIC_PARAM_EXPR
-	NodeKind_INFER_TYPEDESC_EXPR
-	NodeKind_REG_EXP_TEMPLATE_LITERAL
-	NodeKind_REG_EXP_DISJUNCTION
-	NodeKind_REG_EXP_SEQUENCE
-	NodeKind_REG_EXP_ATOM_CHAR_ESCAPE
-	NodeKind_REG_EXP_ATOM_QUANTIFIER
-	NodeKind_REG_EXP_CHARACTER_CLASS
-	NodeKind_REG_EXP_CHAR_SET
-	NodeKind_REG_EXP_CHAR_SET_RANGE
-	NodeKind_REG_EXP_QUANTIFIER
-	NodeKind_REG_EXP_ASSERTION
-	NodeKind_REG_EXP_CAPTURING_GROUP
-	NodeKind_REG_EXP_FLAG_EXPR
-	NodeKind_REG_EXP_FLAGS_ON_OFF
-	NodeKind_NATURAL_EXPR
-	NodeKind_ABORT
-	NodeKind_DONE
-	NodeKind_RETRY
-	NodeKind_RETRY_TRANSACTION
-	NodeKind_ASSIGNMENT
-	NodeKind_COMPOUND_ASSIGNMENT
-	NodeKind_POST_INCREMENT
-	NodeKind_BLOCK
-	NodeKind_BREAK
-	NodeKind_NEXT
-	NodeKind_EXPRESSION_STATEMENT
-	NodeKind_FOREACH
-	NodeKind_FORK_JOIN
-	NodeKind_IF
-	NodeKind_MATCH
-	NodeKind_MATCH_STATEMENT
-	NodeKind_MATCH_TYPED_PATTERN_CLAUSE
-	NodeKind_MATCH_STATIC_PATTERN_CLAUSE
-	NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE
-	NodeKind_REPLY
-	NodeKind_RETURN
-	NodeKind_THROW
-	NodeKind_PANIC
-	NodeKind_TRANSACTION
-	NodeKind_TRANSFORM
-	NodeKind_TUPLE_DESTRUCTURE
-	NodeKind_RECORD_DESTRUCTURE
-	NodeKind_ERROR_DESTRUCTURE
-	NodeKind_VARIABLE_DEF
-	NodeKind_WHILE
-	NodeKind_LOCK
-	NodeKind_WORKER_RECEIVE
-	NodeKind_ALTERNATE_WORKER_RECEIVE
-	NodeKind_MULTIPLE_WORKER_RECEIVE
-	NodeKind_WORKER_ASYNC_SEND
-	NodeKind_WORKER_SYNC_SEND
-	NodeKind_WORKER_FLUSH
-	NodeKind_STREAM
-	NodeKind_SCOPE
-	NodeKind_COMPENSATE
-	NodeKind_CHANNEL_RECEIVE
-	NodeKind_CHANNEL_SEND
-	NodeKind_DO_ACTION
-	NodeKind_COMMIT
-	NodeKind_ROLLBACK
-	NodeKind_DO_STMT
-	NodeKind_SELECT
-	NodeKind_COLLECT
-	NodeKind_FROM
-	NodeKind_JOIN
-	NodeKind_WHERE
-	NodeKind_DO
-	NodeKind_LET_CLAUSE
-	NodeKind_ON_CONFLICT
-	NodeKind_ON
-	NodeKind_LIMIT
-	NodeKind_ORDER_BY
-	NodeKind_ORDER_KEY
-	NodeKind_GROUP_BY
-	NodeKind_GROUPING_KEY
-	NodeKind_ON_FAIL
-	NodeKind_MATCH_CLAUSE
-	NodeKind_MATCH_GUARD
-	NodeKind_CONST_MATCH_PATTERN
-	NodeKind_WILDCARD_MATCH_PATTERN
-	NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN
-	NodeKind_LIST_MATCH_PATTERN
-	NodeKind_REST_MATCH_PATTERN
-	NodeKind_MAPPING_MATCH_PATTERN
-	NodeKind_FIELD_MATCH_PATTERN
-	NodeKind_ERROR_MATCH_PATTERN
-	NodeKind_ERROR_MESSAGE_MATCH_PATTERN
-	NodeKind_ERROR_CAUSE_MATCH_PATTERN
-	NodeKind_ERROR_FIELD_MATCH_PATTERN
-	NodeKind_NAMED_ARG_MATCH_PATTERN
-	NodeKind_SIMPLE_MATCH_PATTERN
-	NodeKind_WILDCARD_BINDING_PATTERN
-	NodeKind_CAPTURE_BINDING_PATTERN
-	NodeKind_LIST_BINDING_PATTERN
-	NodeKind_REST_BINDING_PATTERN
-	NodeKind_FIELD_BINDING_PATTERN
-	NodeKind_MAPPING_BINDING_PATTERN
-	NodeKind_ERROR_BINDING_PATTERN
-	NodeKind_ERROR_MESSAGE_BINDING_PATTERN
-	NodeKind_ERROR_CAUSE_BINDING_PATTERN
-	NodeKind_ERROR_FIELD_BINDING_PATTERN
-	NodeKind_NAMED_ARG_BINDING_PATTERN
-	NodeKind_SIMPLE_BINDING_PATTERN
-	NodeKind_ARRAY_TYPE
-	NodeKind_UNION_TYPE_NODE
-	NodeKind_INTERSECTION_TYPE_NODE
-	NodeKind_FINITE_TYPE_NODE
-	NodeKind_TUPLE_TYPE_NODE
-	NodeKind_BUILT_IN_REF_TYPE
-	NodeKind_CONSTRAINED_TYPE
-	NodeKind_FUNCTION_TYPE
-	NodeKind_USER_DEFINED_TYPE
-	NodeKind_VALUE_TYPE
-	NodeKind_RECORD_TYPE
-	NodeKind_OBJECT_TYPE
-	NodeKind_ERROR_TYPE
-	NodeKind_STREAM_TYPE
-	NodeKind_TABLE_TYPE
-	NodeKind_NODE_ENTRY
-	NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	NodeKind_RESOURCE_PATH_PARAM_SEGMENT
-	NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	NodeKind_RESOURCE_ROOT_PATH_SEGMENT
+	NodeKind_ANNOTATION                          = model.NodeKind_ANNOTATION
+	NodeKind_ANNOTATION_ATTACHMENT               = model.NodeKind_ANNOTATION_ATTACHMENT
+	NodeKind_ANNOTATION_ATTRIBUTE                = model.NodeKind_ANNOTATION_ATTRIBUTE
+	NodeKind_COMPILATION_UNIT                    = model.NodeKind_COMPILATION_UNIT
+	NodeKind_DEPRECATED                          = model.NodeKind_DEPRECATED
+	NodeKind_DOCUMENTATION                       = model.NodeKind_DOCUMENTATION
+	NodeKind_MARKDOWN_DOCUMENTATION              = model.NodeKind_MARKDOWN_DOCUMENTATION
+	NodeKind_ENDPOINT                            = model.NodeKind_ENDPOINT
+	NodeKind_FUNCTION                            = model.NodeKind_FUNCTION
+	NodeKind_RESOURCE_FUNC                       = model.NodeKind_RESOURCE_FUNC
+	NodeKind_BLOCK_FUNCTION_BODY                 = model.NodeKind_BLOCK_FUNCTION_BODY
+	NodeKind_EXPR_FUNCTION_BODY                  = model.NodeKind_EXPR_FUNCTION_BODY
+	NodeKind_EXTERN_FUNCTION_BODY                = model.NodeKind_EXTERN_FUNCTION_BODY
+	NodeKind_IDENTIFIER                          = model.NodeKind_IDENTIFIER
+	NodeKind_IMPORT                              = model.NodeKind_IMPORT
+	NodeKind_PACKAGE                             = model.NodeKind_PACKAGE
+	NodeKind_PACKAGE_DECLARATION                 = model.NodeKind_PACKAGE_DECLARATION
+	NodeKind_RECORD_LITERAL_KEY_VALUE            = model.NodeKind_RECORD_LITERAL_KEY_VALUE
+	NodeKind_RECORD_LITERAL_SPREAD_OP            = model.NodeKind_RECORD_LITERAL_SPREAD_OP
+	NodeKind_RESOURCE                            = model.NodeKind_RESOURCE
+	NodeKind_SERVICE                             = model.NodeKind_SERVICE
+	NodeKind_TYPE_DEFINITION                     = model.NodeKind_TYPE_DEFINITION
+	NodeKind_VARIABLE                            = model.NodeKind_VARIABLE
+	NodeKind_LET_VARIABLE                        = model.NodeKind_LET_VARIABLE
+	NodeKind_TUPLE_VARIABLE                      = model.NodeKind_TUPLE_VARIABLE
+	NodeKind_RECORD_VARIABLE                     = model.NodeKind_RECORD_VARIABLE
+	NodeKind_ERROR_VARIABLE                      = model.NodeKind_ERROR_VARIABLE
+	NodeKind_WORKER                              = model.NodeKind_WORKER
+	NodeKind_XMLNS                               = model.NodeKind_XMLNS
+	NodeKind_CHANNEL                             = model.NodeKind_CHANNEL
+	NodeKind_WAIT_LITERAL_KEY_VALUE              = model.NodeKind_WAIT_LITERAL_KEY_VALUE
+	NodeKind_TABLE_KEY_SPECIFIER                 = model.NodeKind_TABLE_KEY_SPECIFIER
+	NodeKind_TABLE_KEY_TYPE_CONSTRAINT           = model.NodeKind_TABLE_KEY_TYPE_CONSTRAINT
+	NodeKind_RETRY_SPEC                          = model.NodeKind_RETRY_SPEC
+	NodeKind_CLASS_DEFN                          = model.NodeKind_CLASS_DEFN
+	NodeKind_DOCUMENTATION_ATTRIBUTE             = model.NodeKind_DOCUMENTATION_ATTRIBUTE
+	NodeKind_ARRAY_LITERAL_EXPR                  = model.NodeKind_ARRAY_LITERAL_EXPR
+	NodeKind_TUPLE_LITERAL_EXPR                  = model.NodeKind_TUPLE_LITERAL_EXPR
+	NodeKind_LIST_CONSTRUCTOR_EXPR               = model.NodeKind_LIST_CONSTRUCTOR_EXPR
+	NodeKind_LIST_CONSTRUCTOR_SPREAD_OP          = model.NodeKind_LIST_CONSTRUCTOR_SPREAD_OP
+	NodeKind_BINARY_EXPR                         = model.NodeKind_BINARY_EXPR
+	NodeKind_QUERY_EXPR                          = model.NodeKind_QUERY_EXPR
+	NodeKind_ELVIS_EXPR                          = model.NodeKind_ELVIS_EXPR
+	NodeKind_GROUP_EXPR                          = model.NodeKind_GROUP_EXPR
+	NodeKind_TYPE_INIT_EXPR                      = model.NodeKind_TYPE_INIT_EXPR
+	NodeKind_FIELD_BASED_ACCESS_EXPR             = model.NodeKind_FIELD_BASED_ACCESS_EXPR
+	NodeKind_INDEX_BASED_ACCESS_EXPR             = model.NodeKind_INDEX_BASED_ACCESS_EXPR
+	NodeKind_INT_RANGE_EXPR                      = model.NodeKind_INT_RANGE_EXPR
+	NodeKind_INVOCATION                          = model.NodeKind_INVOCATION
+	NodeKind_COLLECT_CONTEXT_INVOCATION          = model.NodeKind_COLLECT_CONTEXT_INVOCATION
+	NodeKind_LAMBDA                              = model.NodeKind_LAMBDA
+	NodeKind_ARROW_EXPR                          = model.NodeKind_ARROW_EXPR
+	NodeKind_LITERAL                             = model.NodeKind_LITERAL
+	NodeKind_NUMERIC_LITERAL                     = model.NodeKind_NUMERIC_LITERAL
+	NodeKind_HEX_FLOATING_POINT_LITERAL          = model.NodeKind_HEX_FLOATING_POINT_LITERAL
+	NodeKind_INTEGER_LITERAL                     = model.NodeKind_INTEGER_LITERAL
+	NodeKind_DECIMAL_FLOATING_POINT_LITERAL      = model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL
+	NodeKind_CONSTANT                            = model.NodeKind_CONSTANT
+	NodeKind_RECORD_LITERAL_EXPR                 = model.NodeKind_RECORD_LITERAL_EXPR
+	NodeKind_SIMPLE_VARIABLE_REF                 = model.NodeKind_SIMPLE_VARIABLE_REF
+	NodeKind_CONSTANT_REF                        = model.NodeKind_CONSTANT_REF
+	NodeKind_TUPLE_VARIABLE_REF                  = model.NodeKind_TUPLE_VARIABLE_REF
+	NodeKind_RECORD_VARIABLE_REF                 = model.NodeKind_RECORD_VARIABLE_REF
+	NodeKind_ERROR_VARIABLE_REF                  = model.NodeKind_ERROR_VARIABLE_REF
+	NodeKind_STRING_TEMPLATE_LITERAL             = model.NodeKind_STRING_TEMPLATE_LITERAL
+	NodeKind_RAW_TEMPLATE_LITERAL                = model.NodeKind_RAW_TEMPLATE_LITERAL
+	NodeKind_TERNARY_EXPR                        = model.NodeKind_TERNARY_EXPR
+	NodeKind_WAIT_EXPR                           = model.NodeKind_WAIT_EXPR
+	NodeKind_TRAP_EXPR                           = model.NodeKind_TRAP_EXPR
+	NodeKind_TYPEDESC_EXPRESSION                 = model.NodeKind_TYPEDESC_EXPRESSION
+	NodeKind_ANNOT_ACCESS_EXPRESSION             = model.NodeKind_ANNOT_ACCESS_EXPRESSION
+	NodeKind_TYPE_CONVERSION_EXPR                = model.NodeKind_TYPE_CONVERSION_EXPR
+	NodeKind_IS_ASSIGNABLE_EXPR                  = model.NodeKind_IS_ASSIGNABLE_EXPR
+	NodeKind_UNARY_EXPR                          = model.NodeKind_UNARY_EXPR
+	NodeKind_REST_ARGS_EXPR                      = model.NodeKind_REST_ARGS_EXPR
+	NodeKind_NAMED_ARGS_EXPR                     = model.NodeKind_NAMED_ARGS_EXPR
+	NodeKind_XML_QNAME                           = model.NodeKind_XML_QNAME
+	NodeKind_XML_ATTRIBUTE                       = model.NodeKind_XML_ATTRIBUTE
+	NodeKind_XML_ATTRIBUTE_ACCESS_EXPR           = model.NodeKind_XML_ATTRIBUTE_ACCESS_EXPR
+	NodeKind_XML_QUOTED_STRING                   = model.NodeKind_XML_QUOTED_STRING
+	NodeKind_XML_ELEMENT_LITERAL                 = model.NodeKind_XML_ELEMENT_LITERAL
+	NodeKind_XML_TEXT_LITERAL                    = model.NodeKind_XML_TEXT_LITERAL
+	NodeKind_XML_COMMENT_LITERAL                 = model.NodeKind_XML_COMMENT_LITERAL
+	NodeKind_XML_PI_LITERAL                      = model.NodeKind_XML_PI_LITERAL
+	NodeKind_XML_SEQUENCE_LITERAL                = model.NodeKind_XML_SEQUENCE_LITERAL
+	NodeKind_XML_ELEMENT_FILTER_EXPR             = model.NodeKind_XML_ELEMENT_FILTER_EXPR
+	NodeKind_XML_ELEMENT_ACCESS                  = model.NodeKind_XML_ELEMENT_ACCESS
+	NodeKind_XML_NAVIGATION                      = model.NodeKind_XML_NAVIGATION
+	NodeKind_XML_EXTENDED_NAVIGATION             = model.NodeKind_XML_EXTENDED_NAVIGATION
+	NodeKind_XML_STEP_INDEXED_EXTEND             = model.NodeKind_XML_STEP_INDEXED_EXTEND
+	NodeKind_XML_STEP_FILTER_EXTEND              = model.NodeKind_XML_STEP_FILTER_EXTEND
+	NodeKind_XML_STEP_METHOD_CALL_EXTEND         = model.NodeKind_XML_STEP_METHOD_CALL_EXTEND
+	NodeKind_STATEMENT_EXPRESSION                = model.NodeKind_STATEMENT_EXPRESSION
+	NodeKind_MATCH_EXPRESSION                    = model.NodeKind_MATCH_EXPRESSION
+	NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE     = model.NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE
+	NodeKind_CHECK_EXPR                          = model.NodeKind_CHECK_EXPR
+	NodeKind_CHECK_PANIC_EXPR                    = model.NodeKind_CHECK_PANIC_EXPR
+	NodeKind_FAIL                                = model.NodeKind_FAIL
+	NodeKind_TYPE_TEST_EXPR                      = model.NodeKind_TYPE_TEST_EXPR
+	NodeKind_IS_LIKE                             = model.NodeKind_IS_LIKE
+	NodeKind_IGNORE_EXPR                         = model.NodeKind_IGNORE_EXPR
+	NodeKind_DOCUMENTATION_DESCRIPTION           = model.NodeKind_DOCUMENTATION_DESCRIPTION
+	NodeKind_DOCUMENTATION_PARAMETER             = model.NodeKind_DOCUMENTATION_PARAMETER
+	NodeKind_DOCUMENTATION_REFERENCE             = model.NodeKind_DOCUMENTATION_REFERENCE
+	NodeKind_DOCUMENTATION_DEPRECATION           = model.NodeKind_DOCUMENTATION_DEPRECATION
+	NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS = model.NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
+	NodeKind_SERVICE_CONSTRUCTOR                 = model.NodeKind_SERVICE_CONSTRUCTOR
+	NodeKind_LET_EXPR                            = model.NodeKind_LET_EXPR
+	NodeKind_TABLE_CONSTRUCTOR_EXPR              = model.NodeKind_TABLE_CONSTRUCTOR_EXPR
+	NodeKind_TRANSACTIONAL_EXPRESSION            = model.NodeKind_TRANSACTIONAL_EXPRESSION
+	NodeKind_OBJECT_CTOR_EXPRESSION              = model.NodeKind_OBJECT_CTOR_EXPRESSION
+	NodeKind_ERROR_CONSTRUCTOR_EXPRESSION        = model.NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
+	NodeKind_DYNAMIC_PARAM_EXPR                  = model.NodeKind_DYNAMIC_PARAM_EXPR
+	NodeKind_INFER_TYPEDESC_EXPR                 = model.NodeKind_INFER_TYPEDESC_EXPR
+	NodeKind_REG_EXP_TEMPLATE_LITERAL            = model.NodeKind_REG_EXP_TEMPLATE_LITERAL
+	NodeKind_REG_EXP_DISJUNCTION                 = model.NodeKind_REG_EXP_DISJUNCTION
+	NodeKind_REG_EXP_SEQUENCE                    = model.NodeKind_REG_EXP_SEQUENCE
+	NodeKind_REG_EXP_ATOM_CHAR_ESCAPE            = model.NodeKind_REG_EXP_ATOM_CHAR_ESCAPE
+	NodeKind_REG_EXP_ATOM_QUANTIFIER             = model.NodeKind_REG_EXP_ATOM_QUANTIFIER
+	NodeKind_REG_EXP_CHARACTER_CLASS             = model.NodeKind_REG_EXP_CHARACTER_CLASS
+	NodeKind_REG_EXP_CHAR_SET                    = model.NodeKind_REG_EXP_CHAR_SET
+	NodeKind_REG_EXP_CHAR_SET_RANGE              = model.NodeKind_REG_EXP_CHAR_SET_RANGE
+	NodeKind_REG_EXP_QUANTIFIER                  = model.NodeKind_REG_EXP_QUANTIFIER
+	NodeKind_REG_EXP_ASSERTION                   = model.NodeKind_REG_EXP_ASSERTION
+	NodeKind_REG_EXP_CAPTURING_GROUP             = model.NodeKind_REG_EXP_CAPTURING_GROUP
+	NodeKind_REG_EXP_FLAG_EXPR                   = model.NodeKind_REG_EXP_FLAG_EXPR
+	NodeKind_REG_EXP_FLAGS_ON_OFF                = model.NodeKind_REG_EXP_FLAGS_ON_OFF
+	NodeKind_NATURAL_EXPR                        = model.NodeKind_NATURAL_EXPR
+	NodeKind_ABORT                               = model.NodeKind_ABORT
+	NodeKind_DONE                                = model.NodeKind_DONE
+	NodeKind_RETRY                               = model.NodeKind_RETRY
+	NodeKind_RETRY_TRANSACTION                   = model.NodeKind_RETRY_TRANSACTION
+	NodeKind_ASSIGNMENT                          = model.NodeKind_ASSIGNMENT
+	NodeKind_COMPOUND_ASSIGNMENT                 = model.NodeKind_COMPOUND_ASSIGNMENT
+	NodeKind_POST_INCREMENT                      = model.NodeKind_POST_INCREMENT
+	NodeKind_BLOCK                               = model.NodeKind_BLOCK
+	NodeKind_BREAK                               = model.NodeKind_BREAK
+	NodeKind_NEXT                                = model.NodeKind_NEXT
+	NodeKind_EXPRESSION_STATEMENT                = model.NodeKind_EXPRESSION_STATEMENT
+	NodeKind_FOREACH                             = model.NodeKind_FOREACH
+	NodeKind_FORK_JOIN                           = model.NodeKind_FORK_JOIN
+	NodeKind_IF                                  = model.NodeKind_IF
+	NodeKind_MATCH                               = model.NodeKind_MATCH
+	NodeKind_MATCH_STATEMENT                     = model.NodeKind_MATCH_STATEMENT
+	NodeKind_MATCH_TYPED_PATTERN_CLAUSE          = model.NodeKind_MATCH_TYPED_PATTERN_CLAUSE
+	NodeKind_MATCH_STATIC_PATTERN_CLAUSE         = model.NodeKind_MATCH_STATIC_PATTERN_CLAUSE
+	NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE     = model.NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE
+	NodeKind_REPLY                               = model.NodeKind_REPLY
+	NodeKind_RETURN                              = model.NodeKind_RETURN
+	NodeKind_THROW                               = model.NodeKind_THROW
+	NodeKind_PANIC                               = model.NodeKind_PANIC
+	NodeKind_TRANSACTION                         = model.NodeKind_TRANSACTION
+	NodeKind_TRANSFORM                           = model.NodeKind_TRANSFORM
+	NodeKind_TUPLE_DESTRUCTURE                   = model.NodeKind_TUPLE_DESTRUCTURE
+	NodeKind_RECORD_DESTRUCTURE                  = model.NodeKind_RECORD_DESTRUCTURE
+	NodeKind_ERROR_DESTRUCTURE                   = model.NodeKind_ERROR_DESTRUCTURE
+	NodeKind_VARIABLE_DEF                        = model.NodeKind_VARIABLE_DEF
+	NodeKind_WHILE                               = model.NodeKind_WHILE
+	NodeKind_LOCK                                = model.NodeKind_LOCK
+	NodeKind_WORKER_RECEIVE                      = model.NodeKind_WORKER_RECEIVE
+	NodeKind_ALTERNATE_WORKER_RECEIVE            = model.NodeKind_ALTERNATE_WORKER_RECEIVE
+	NodeKind_MULTIPLE_WORKER_RECEIVE             = model.NodeKind_MULTIPLE_WORKER_RECEIVE
+	NodeKind_WORKER_ASYNC_SEND                   = model.NodeKind_WORKER_ASYNC_SEND
+	NodeKind_WORKER_SYNC_SEND                    = model.NodeKind_WORKER_SYNC_SEND
+	NodeKind_WORKER_FLUSH                        = model.NodeKind_WORKER_FLUSH
+	NodeKind_STREAM                              = model.NodeKind_STREAM
+	NodeKind_SCOPE                               = model.NodeKind_SCOPE
+	NodeKind_COMPENSATE                          = model.NodeKind_COMPENSATE
+	NodeKind_CHANNEL_RECEIVE                     = model.NodeKind_CHANNEL_RECEIVE
+	NodeKind_CHANNEL_SEND                        = model.NodeKind_CHANNEL_SEND
+	NodeKind_DO_ACTION                           = model.NodeKind_DO_ACTION
+	NodeKind_COMMIT                              = model.NodeKind_COMMIT
+	NodeKind_ROLLBACK                            = model.NodeKind_ROLLBACK
+	NodeKind_DO_STMT                             = model.NodeKind_DO_STMT
+	NodeKind_SELECT                              = model.NodeKind_SELECT
+	NodeKind_COLLECT                             = model.NodeKind_COLLECT
+	NodeKind_FROM                                = model.NodeKind_FROM
+	NodeKind_JOIN                                = model.NodeKind_JOIN
+	NodeKind_WHERE                               = model.NodeKind_WHERE
+	NodeKind_DO                                  = model.NodeKind_DO
+	NodeKind_LET_CLAUSE                          = model.NodeKind_LET_CLAUSE
+	NodeKind_ON_CONFLICT                         = model.NodeKind_ON_CONFLICT
+	NodeKind_ON                                  = model.NodeKind_ON
+	NodeKind_LIMIT                               = model.NodeKind_LIMIT
+	NodeKind_ORDER_BY                            = model.NodeKind_ORDER_BY
+	NodeKind_ORDER_KEY                           = model.NodeKind_ORDER_KEY
+	NodeKind_GROUP_BY                            = model.NodeKind_GROUP_BY
+	NodeKind_GROUPING_KEY                        = model.NodeKind_GROUPING_KEY
+	NodeKind_ON_FAIL                             = model.NodeKind_ON_FAIL
+	NodeKind_MATCH_CLAUSE                        = model.NodeKind_MATCH_CLAUSE
+	NodeKind_MATCH_GUARD                         = model.NodeKind_MATCH_GUARD
+	NodeKind_CONST_MATCH_PATTERN                 = model.NodeKind_CONST_MATCH_PATTERN
+	NodeKind_WILDCARD_MATCH_PATTERN              = model.NodeKind_WILDCARD_MATCH_PATTERN
+	NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN   = model.NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN
+	NodeKind_LIST_MATCH_PATTERN                  = model.NodeKind_LIST_MATCH_PATTERN
+	NodeKind_REST_MATCH_PATTERN                  = model.NodeKind_REST_MATCH_PATTERN
+	NodeKind_MAPPING_MATCH_PATTERN               = model.NodeKind_MAPPING_MATCH_PATTERN
+	NodeKind_FIELD_MATCH_PATTERN                 = model.NodeKind_FIELD_MATCH_PATTERN
+	NodeKind_ERROR_MATCH_PATTERN                 = model.NodeKind_ERROR_MATCH_PATTERN
+	NodeKind_ERROR_MESSAGE_MATCH_PATTERN         = model.NodeKind_ERROR_MESSAGE_MATCH_PATTERN
+	NodeKind_ERROR_CAUSE_MATCH_PATTERN           = model.NodeKind_ERROR_CAUSE_MATCH_PATTERN
+	NodeKind_ERROR_FIELD_MATCH_PATTERN           = model.NodeKind_ERROR_FIELD_MATCH_PATTERN
+	NodeKind_NAMED_ARG_MATCH_PATTERN             = model.NodeKind_NAMED_ARG_MATCH_PATTERN
+	NodeKind_SIMPLE_MATCH_PATTERN                = model.NodeKind_SIMPLE_MATCH_PATTERN
+	NodeKind_WILDCARD_BINDING_PATTERN            = model.NodeKind_WILDCARD_BINDING_PATTERN
+	NodeKind_CAPTURE_BINDING_PATTERN             = model.NodeKind_CAPTURE_BINDING_PATTERN
+	NodeKind_LIST_BINDING_PATTERN                = model.NodeKind_LIST_BINDING_PATTERN
+	NodeKind_REST_BINDING_PATTERN                = model.NodeKind_REST_BINDING_PATTERN
+	NodeKind_FIELD_BINDING_PATTERN               = model.NodeKind_FIELD_BINDING_PATTERN
+	NodeKind_MAPPING_BINDING_PATTERN             = model.NodeKind_MAPPING_BINDING_PATTERN
+	NodeKind_ERROR_BINDING_PATTERN               = model.NodeKind_ERROR_BINDING_PATTERN
+	NodeKind_ERROR_MESSAGE_BINDING_PATTERN       = model.NodeKind_ERROR_MESSAGE_BINDING_PATTERN
+	NodeKind_ERROR_CAUSE_BINDING_PATTERN         = model.NodeKind_ERROR_CAUSE_BINDING_PATTERN
+	NodeKind_ERROR_FIELD_BINDING_PATTERN         = model.NodeKind_ERROR_FIELD_BINDING_PATTERN
+	NodeKind_NAMED_ARG_BINDING_PATTERN           = model.NodeKind_NAMED_ARG_BINDING_PATTERN
+	NodeKind_SIMPLE_BINDING_PATTERN              = model.NodeKind_SIMPLE_BINDING_PATTERN
+	NodeKind_ARRAY_TYPE                          = model.NodeKind_ARRAY_TYPE
+	NodeKind_UNION_TYPE_NODE                     = model.NodeKind_UNION_TYPE_NODE
+	NodeKind_INTERSECTION_TYPE_NODE              = model.NodeKind_INTERSECTION_TYPE_NODE
+	NodeKind_FINITE_TYPE_NODE                    = model.NodeKind_FINITE_TYPE_NODE
+	NodeKind_TUPLE_TYPE_NODE                     = model.NodeKind_TUPLE_TYPE_NODE
+	NodeKind_BUILT_IN_REF_TYPE                   = model.NodeKind_BUILT_IN_REF_TYPE
+	NodeKind_CONSTRAINED_TYPE                    = model.NodeKind_CONSTRAINED_TYPE
+	NodeKind_FUNCTION_TYPE                       = model.NodeKind_FUNCTION_TYPE
+	NodeKind_USER_DEFINED_TYPE                   = model.NodeKind_USER_DEFINED_TYPE
+	NodeKind_VALUE_TYPE                          = model.NodeKind_VALUE_TYPE
+	NodeKind_RECORD_TYPE                         = model.NodeKind_RECORD_TYPE
+	NodeKind_OBJECT_TYPE                         = model.NodeKind_OBJECT_TYPE
+	NodeKind_ERROR_TYPE                          = model.NodeKind_ERROR_TYPE
+	NodeKind_STREAM_TYPE                         = model.NodeKind_STREAM_TYPE
+	NodeKind_TABLE_TYPE                          = model.NodeKind_TABLE_TYPE
+	NodeKind_NODE_ENTRY                          = model.NodeKind_NODE_ENTRY
+	NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT    = model.NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
+	NodeKind_RESOURCE_PATH_PARAM_SEGMENT         = model.NodeKind_RESOURCE_PATH_PARAM_SEGMENT
+	NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT    = model.NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT
+	NodeKind_RESOURCE_ROOT_PATH_SEGMENT          = model.NodeKind_RESOURCE_ROOT_PATH_SEGMENT
 )
 
-type Flag uint
+type Flag = model.Flag
 
+// Flag constants - aliases to model package
 const (
-	Flag_PUBLIC Flag = iota
-	Flag_PRIVATE
-	Flag_REMOTE
-	Flag_TRANSACTIONAL
-	Flag_NATIVE
-	Flag_FINAL
-	Flag_ATTACHED
-	Flag_LAMBDA
-	Flag_WORKER
-	Flag_PARALLEL
-	Flag_LISTENER
-	Flag_READONLY
-	Flag_FUNCTION_FINAL
-	Flag_INTERFACE
-	Flag_REQUIRED
-	Flag_RECORD
-	Flag_ANONYMOUS
-	Flag_OPTIONAL
-	Flag_TESTABLE
-	Flag_CLIENT
-	Flag_RESOURCE
-	Flag_ISOLATED
-	Flag_SERVICE
-	Flag_CONSTANT
-	Flag_TYPE_PARAM
-	Flag_LANG_LIB
-	Flag_FORKED
-	Flag_DISTINCT
-	Flag_CLASS
-	Flag_CONFIGURABLE
-	Flag_OBJECT_CTOR
-	Flag_ENUM
-	Flag_INCLUDED
-	Flag_REQUIRED_PARAM
-	Flag_DEFAULTABLE_PARAM
-	Flag_REST_PARAM
-	Flag_FIELD
-	Flag_ANY_FUNCTION
-	Flag_NEVER_ALLOWED
-	Flag_ENUM_MEMBER
-	Flag_QUERY_LAMBDA
+	Flag_PUBLIC            = model.Flag_PUBLIC
+	Flag_PRIVATE           = model.Flag_PRIVATE
+	Flag_REMOTE            = model.Flag_REMOTE
+	Flag_TRANSACTIONAL     = model.Flag_TRANSACTIONAL
+	Flag_NATIVE            = model.Flag_NATIVE
+	Flag_FINAL             = model.Flag_FINAL
+	Flag_ATTACHED          = model.Flag_ATTACHED
+	Flag_LAMBDA            = model.Flag_LAMBDA
+	Flag_WORKER            = model.Flag_WORKER
+	Flag_PARALLEL          = model.Flag_PARALLEL
+	Flag_LISTENER          = model.Flag_LISTENER
+	Flag_READONLY          = model.Flag_READONLY
+	Flag_FUNCTION_FINAL    = model.Flag_FUNCTION_FINAL
+	Flag_INTERFACE         = model.Flag_INTERFACE
+	Flag_REQUIRED          = model.Flag_REQUIRED
+	Flag_RECORD            = model.Flag_RECORD
+	Flag_ANONYMOUS         = model.Flag_ANONYMOUS
+	Flag_OPTIONAL          = model.Flag_OPTIONAL
+	Flag_TESTABLE          = model.Flag_TESTABLE
+	Flag_CLIENT            = model.Flag_CLIENT
+	Flag_RESOURCE          = model.Flag_RESOURCE
+	Flag_ISOLATED          = model.Flag_ISOLATED
+	Flag_SERVICE           = model.Flag_SERVICE
+	Flag_CONSTANT          = model.Flag_CONSTANT
+	Flag_TYPE_PARAM        = model.Flag_TYPE_PARAM
+	Flag_LANG_LIB          = model.Flag_LANG_LIB
+	Flag_FORKED            = model.Flag_FORKED
+	Flag_DISTINCT          = model.Flag_DISTINCT
+	Flag_CLASS             = model.Flag_CLASS
+	Flag_CONFIGURABLE      = model.Flag_CONFIGURABLE
+	Flag_OBJECT_CTOR       = model.Flag_OBJECT_CTOR
+	Flag_ENUM              = model.Flag_ENUM
+	Flag_INCLUDED          = model.Flag_INCLUDED
+	Flag_REQUIRED_PARAM    = model.Flag_REQUIRED_PARAM
+	Flag_DEFAULTABLE_PARAM = model.Flag_DEFAULTABLE_PARAM
+	Flag_REST_PARAM        = model.Flag_REST_PARAM
+	Flag_FIELD             = model.Flag_FIELD
+	Flag_ANY_FUNCTION      = model.Flag_ANY_FUNCTION
+	Flag_NEVER_ALLOWED     = model.Flag_NEVER_ALLOWED
+	Flag_ENUM_MEMBER       = model.Flag_ENUM_MEMBER
+	Flag_QUERY_LAMBDA      = model.Flag_QUERY_LAMBDA
 )
 
 type Flags uint64
@@ -475,11 +480,12 @@ func UnMask(mask Flags) common.Set[Flag] {
 	return &flagSet
 }
 
-type SourceKind uint8
+type SourceKind = model.SourceKind
 
+// SourceKind constants - aliases to model package
 const (
-	SourceKind_REGULAR_SOURCE SourceKind = iota
-	SourceKind_TEST_SOURCE
+	SourceKind_REGULAR_SOURCE = model.SourceKind_REGULAR_SOURCE
+	SourceKind_TEST_SOURCE    = model.SourceKind_TEST_SOURCE
 )
 
 type CompilerPhase uint8
@@ -526,240 +532,49 @@ const (
 	Point_CLASS          Point = "class"
 )
 
-type IdentifierNode interface {
-	GetValue() string
-	SetValue(value string)
-	SetOriginalValue(value string)
-	IsLiteral() bool
-	SetLiteral(isLiteral bool)
-}
+type Location = diagnostics.Location
 
-type AnnotationAttachmentNode interface {
-	GetPackgeAlias() IdentifierNode
-	SetPackageAlias(pkgAlias IdentifierNode)
-	GetAnnotationName() IdentifierNode
-	SetAnnotationName(name IdentifierNode)
-	GetExpressionNode() ExpressionNode
-	SetExpressionNode(expr ExpressionNode)
-}
-
-type TopLevelNode = Node
-type FunctionBodyNode = Node
-
-type ExprFunctionBodyNode interface {
-	FunctionBodyNode
-	GetExpr() ExpressionNode
-}
-
+// Type aliases for model interfaces
 type (
-	Location interface{}
-	Node     interface {
-		GetKind() NodeKind
-		GetPosition() Location
-	}
-	DocumentableNode interface {
-		Node
-		GetMarkdownDocumentationAttachment() MarkdownDocumentationNode
-		SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode)
-	}
-
-	MarkdownDocumentationNode interface {
-		Node
-		GetDocumentationLines() []MarkdownDocumentationTextAttributeNode
-		AddDocumentationLine(documentationText MarkdownDocumentationTextAttributeNode)
-		GetParameters() []MarkdownDocumentationParameterAttributeNode
-		AddParameter(parameter MarkdownDocumentationParameterAttributeNode)
-		GetReturnParameter() MarkdownDocumentationReturnParameterAttributeNode
-		GetDeprecationDocumentation() MarkDownDocumentationDeprecationAttributeNode
-		SetReturnParameter(returnParameter MarkdownDocumentationReturnParameterAttributeNode)
-		SetDeprecationDocumentation(deprecationDocumentation MarkDownDocumentationDeprecationAttributeNode)
-		SetDeprecatedParametersDocumentation(deprecatedParametersDocumentation MarkDownDocumentationDeprecatedParametersAttributeNode)
-		GetDeprecatedParametersDocumentation() MarkDownDocumentationDeprecatedParametersAttributeNode
-		GetDocumentation() string
-		GetParameterDocumentations() map[string]MarkdownDocumentationParameterAttributeNode
-		GetReturnParameterDocumentation() *string
-		GetReferences() []MarkdownDocumentationReferenceAttributeNode
-		AddReference(reference MarkdownDocumentationReferenceAttributeNode)
-	}
-
-	AnnotatableNode interface {
-		Node
-		GetFlags() common.Set[Flag]
-		AddFlag(flag Flag)
-		GetAnnotationAttachments() []AnnotationAttachmentNode
-		AddAnnotationAttachment(annAttachment AnnotationAttachmentNode)
-	}
-
-	OrderedNode interface {
-		Node
-		GetPrecedence() int
-		SetPrecedence(precedence int)
-	}
-
-	VariableNode interface {
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		GetTypeNode() TypeNode
-		SetTypeNode(typeNode TypeNode)
-		GetInitialExpression() ExpressionNode
-		SetInitialExpression(expr ExpressionNode)
-	}
-
-	SimpleVariableNode interface {
-		VariableNode
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-	}
-
-	InvokableNode interface {
-		AnnotatableNode
-		DocumentableNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-		GetParameters() []SimpleVariableNode
-		AddParameter(param SimpleVariableNode)
-		GetReturnTypeNode() TypeNode
-		SetReturnTypeNode(returnTypeNode TypeNode)
-		GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode
-		AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode)
-		GetBody() FunctionBodyNode
-		SetBody(body FunctionBodyNode)
-		HasBody() bool
-		GetRestParameters() SimpleVariableNode
-		SetRestParameter(restParam SimpleVariableNode)
-	}
-
-	FunctionNode interface {
-		InvokableNode
-		AnnotatableNode
-		TopLevelNode
-		GetReceiver() SimpleVariableNode
-		SetReceiver(receiver SimpleVariableNode)
-	}
-
-	ClassDefinition interface {
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		OrderedNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-		GetFunctions() []FunctionNode
-		AddFunction(function FunctionNode)
-		GetInitFunction() FunctionNode
-		AddField(field VariableNode)
-		AddTypeReference(typeRef TypeNode)
-	}
-
-	ServiceNode interface {
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-		GetResources() []FunctionNode
-		IsAnonymousService() bool
-		GetAttachedExprs() []ExpressionNode
-		GetServiceClass() ClassDefinition
-		GetAbsolutePath() []IdentifierNode
-		GetServiceNameLiteral() LiteralNode
-	}
-
-	CompilationUnitNode interface {
-		Node
-		AddTopLevelNode(node TopLevelNode)
-		GetTopLevelNodes() []TopLevelNode
-		SetName(name string)
-		GetName() string
-		SetSourceKind(kind SourceKind)
-		GetSourceKind() SourceKind
-	}
-
-	ConstantNode interface {
-		GetTypeNode() TypeNode
-		GetAssociatedTypeDefinition() TypeDefinition
-	}
-
-	TypeDefinition interface {
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		OrderedNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-		GetTypeNode() TypeNode
-		SetTypeNode(typeNode TypeNode)
-	}
-
-	PackageNode interface {
-		Node
-		GetCompilationUnits() []CompilationUnitNode
-		AddCompilationUnit(compUnit CompilationUnitNode)
-		GetImports() []ImportPackageNode
-		AddImport(importPkg ImportPackageNode)
-		GetNamespaceDeclarations() []XMLNSDeclarationNode
-		AddNamespaceDeclaration(xmlnsDecl XMLNSDeclarationNode)
-		GetConstants() []ConstantNode
-		GetGlobalVariables() []VariableNode
-		AddGlobalVariable(globalVar SimpleVariableNode)
-		GetServices() []ServiceNode
-		AddService(service ServiceNode)
-		GetFunctions() []FunctionNode
-		AddFunction(function FunctionNode)
-		GetTypeDefinitions() []TypeDefinition
-		AddTypeDefinition(typeDefinition TypeDefinition)
-		GetAnnotations() []AnnotationNode
-		AddAnnotation(annotation AnnotationNode)
-		GetClassDefinitions() []ClassDefinition
-	}
-
-	ImportPackageNode interface {
-		Node
-		TopLevelNode
-		GetOrgName() IdentifierNode
-		GetPackageName() []IdentifierNode
-		SetPackageName([]IdentifierNode)
-		GetPackageVersion() IdentifierNode
-		SetPackageVersion(IdentifierNode)
-		GetAlias() IdentifierNode
-		SetAlias(IdentifierNode)
-	}
-
-	XMLNSDeclarationNode interface {
-		TopLevelNode
-		GetNamespaceURI() ExpressionNode
-		SetNamespaceURI(namespaceURI ExpressionNode)
-		GetPrefix() IdentifierNode
-		SetPrefix(prefix IdentifierNode)
-	}
-
-	AnnotationNode interface {
-		AnnotatableNode
-		DocumentableNode
-		TopLevelNode
-		GetName() IdentifierNode
-		SetName(name IdentifierNode)
-		GetTypeNode() TypeNode
-		SetTypeNode(typeNode TypeNode)
-	}
-	BLangNode interface {
-		SetBType(ty *BType)
-		GetBType() *BType
-		SetDeterminedType(ty *BType)
-		GetDeterminedType() *BType
-		GetPosition() Location
-		SetPosition(pos Location)
-	}
+	Node                      = model.Node
+	IdentifierNode            = model.IdentifierNode
+	AnnotationAttachmentNode  = model.AnnotationAttachmentNode
+	TopLevelNode              = model.TopLevelNode
+	FunctionBodyNode          = model.FunctionBodyNode
+	ExprFunctionBodyNode      = model.ExprFunctionBodyNode
+	DocumentableNode          = model.DocumentableNode
+	MarkdownDocumentationNode = model.MarkdownDocumentationNode
+	AnnotatableNode           = model.AnnotatableNode
+	OrderedNode               = model.OrderedNode
+	VariableNode              = model.VariableNode
+	SimpleVariableNode        = model.SimpleVariableNode
+	InvokableNode             = model.InvokableNode
+	FunctionNode              = model.FunctionNode
+	ClassDefinition           = model.ClassDefinition
+	ServiceNode               = model.ServiceNode
+	CompilationUnitNode       = model.CompilationUnitNode
+	ConstantNode              = model.ConstantNode
+	TypeDefinition            = model.TypeDefinition
+	PackageNode               = model.PackageNode
+	ImportPackageNode         = model.ImportPackageNode
+	XMLNSDeclarationNode      = model.XMLNSDeclarationNode
+	AnnotationNode            = model.AnnotationNode
 )
+
+type BLangNode interface {
+	Node
+	SetBType(ty TypeNode)
+	GetBType() TypeNode
+	SetDeterminedType(ty TypeNode)
+	GetDeterminedType() TypeNode
+	GetPosition() Location
+	SetPosition(pos Location)
+}
 
 type (
 	BLangNodeBase struct {
-		ty             *BType
-		determinedType *BType
+		ty             TypeNode
+		determinedType TypeNode
 
 		parent BLangNode
 
@@ -861,16 +676,16 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		FlagSet                         common.UnorderedSet[Flag]
 		Symbol                          *BSymbol
-		ListenerType                    *BType
+		ListenerType                    BType
 		ResourceFunctions               []BLangFunction
-		InferredServiceType             *BType
+		InferredServiceType             BType
 	}
 
 	BLangCompilationUnit struct {
 		BLangNodeBase
 		TopLevelNodes []TopLevelNode
 		Name          string
-		packageID     PackageID
+		packageID     model.PackageID
 		sourceKind    SourceKind
 	}
 
@@ -896,7 +711,7 @@ type (
 		CompletedPhases            common.UnorderedSet[CompilerPhase]
 		LambdaFunctions            []BLangLambdaFunction
 		GlobalVariableDependencies map[BSymbol]common.Set[*BVarSymbol]
-		PackageID                  PackageID
+		PackageID                  model.PackageID
 		Symbol                     *BPackageSymbol
 		diagnostics                []diagnostics.Diagnostic
 		ModuleContextDataHolder    *ModuleContextDataHolder
@@ -913,7 +728,7 @@ type (
 		BLangNodeBase
 		namespaceURI BLangExpression
 		prefix       *BLangIdentifier
-		compUnit     *BLangIdentifier
+		CompUnit     *BLangIdentifier
 		symbol       *BSymbol
 	}
 	BLangLocalXMLNS struct {
@@ -1022,19 +837,19 @@ type (
 	}
 )
 
-func (this *BLangNodeBase) SetBType(ty *BType) {
+func (this *BLangNodeBase) SetBType(ty TypeNode) {
 	this.ty = ty
 }
 
-func (this *BLangNodeBase) GetBType() *BType {
+func (this *BLangNodeBase) GetBType() TypeNode {
 	return this.ty
 }
 
-func (this *BLangNodeBase) SetDeterminedType(ty *BType) {
+func (this *BLangNodeBase) SetDeterminedType(ty TypeNode) {
 	this.determinedType = ty
 }
 
-func (this *BLangNodeBase) GetDeterminedType() *BType {
+func (this *BLangNodeBase) GetDeterminedType() TypeNode {
 	return this.determinedType
 }
 
@@ -1066,7 +881,6 @@ var _ FunctionNode = &BLangFunction{}
 
 var _ BLangNode = &BLangAnnotation{}
 var _ BLangNode = &BLangAnnotationAttachment{}
-var _ BLangNode = &BLangFunctionBodyBase{}
 var _ BLangNode = &BLangBlockFunctionBody{}
 var _ BLangNode = &BLangExprFunctionBody{}
 var _ BLangNode = &BLangIdentifier{}
@@ -1081,10 +895,8 @@ var _ BLangNode = &BLangLocalXMLNS{}
 var _ BLangNode = &BLangPackageXMLNS{}
 var _ BLangNode = &BLangMarkdownDocumentation{}
 var _ BLangNode = &BLangMarkdownReferenceDocumentation{}
-var _ BLangNode = &BLangVariableBase{}
 var _ BLangNode = &BLangConstant{}
 var _ BLangNode = &BLangSimpleVariable{}
-var _ BLangNode = &BLangInvokableNodeBase{}
 var _ BLangNode = &BLangFunction{}
 var _ BLangNode = &BLangTypeDefinition{}
 
@@ -1122,7 +934,11 @@ func (this *BLangAnnotationAttachment) GetExpressionNode() ExpressionNode {
 }
 
 func (this *BLangAnnotationAttachment) SetExpressionNode(expr ExpressionNode) {
-	this.Expr = expr
+	if expr, ok := expr.(BLangExpression); ok {
+		this.Expr = expr
+	} else {
+		panic("expr is not a BLangExpression")
+	}
 }
 
 func (this *BLangAnnotation) GetKind() NodeKind {
@@ -1214,6 +1030,11 @@ func (this *BLangExprFunctionBody) GetExpr() ExpressionNode {
 func (this *BLangIdentifier) GetValue() string {
 	// migrated from BLangIdentifier.java:32:5
 	return this.Value
+}
+
+func (this *BLangIdentifier) GetKind() NodeKind {
+	// migrated from BLangIdentifier.java:32:5
+	return NodeKind_IDENTIFIER
 }
 
 func (this *BLangIdentifier) SetValue(value string) {
@@ -1426,12 +1247,12 @@ func (this *BLangCompilationUnit) SetName(name string) {
 	this.Name = name
 }
 
-func (this *BLangCompilationUnit) GetPackageID() PackageID {
+func (this *BLangCompilationUnit) GetPackageID() model.PackageID {
 	// migrated from BLangCompilationUnit.java:68:5
 	return this.packageID
 }
 
-func (this *BLangCompilationUnit) SetPackageID(packageID PackageID) {
+func (this *BLangCompilationUnit) SetPackageID(packageID model.PackageID) {
 	// migrated from BLangCompilationUnit.java:72:5
 	this.packageID = packageID
 }
@@ -2122,7 +1943,11 @@ func (this *BLangXMLNS) GetPrefix() IdentifierNode {
 }
 
 func (this *BLangXMLNS) SetNamespaceURI(namespaceURI ExpressionNode) {
-	this.namespaceURI = namespaceURI
+	if expr, ok := namespaceURI.(BLangExpression); ok {
+		this.namespaceURI = expr
+	} else {
+		panic("namespaceURI is not a BLangExpression")
+	}
 }
 
 func (this *BLangXMLNS) SetPrefix(prefix IdentifierNode) {
@@ -2384,7 +2209,7 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	this.CompletedPhases = common.UnorderedSet[CompilerPhase]{}
 	this.LambdaFunctions = []BLangLambdaFunction{}
 	this.GlobalVariableDependencies = make(map[BSymbol]common.Set[*BVarSymbol])
-	this.errorCount = 5
+	this.errorCount = 0
 	this.warnCount = 0
 	this.diagnostics = []diagnostics.Diagnostic{}
 	return this
@@ -2410,4 +2235,35 @@ func (this *BLangTestablePackage) AddIsLegacyMockingMap(id string, isLegacy bool
 		this.isLegacyMockingMap = make(map[string]bool)
 	}
 	this.isLegacyMockingMap[id] = isLegacy
+}
+
+func createSimpleVariableNodeWithLocationTokenLocation(location Location, identifier tree.Token, identifierPos Location) *BLangSimpleVariable {
+	memberVar := createSimpleVariableNode()
+	memberVar.pos = location
+	name := createIdentifierFromToken(identifierPos, identifier)
+	name.SetPosition(identifierPos)
+	memberVar.SetName(&name)
+	return memberVar
+}
+
+func createSimpleVariableNode() *BLangSimpleVariable {
+	return &BLangSimpleVariable{
+		BLangVariableBase: BLangVariableBase{
+			FlagSet: &common.UnorderedSet[Flag]{},
+		},
+	}
+}
+
+func createConstantNode() *BLangConstant {
+	return &BLangConstant{
+		BLangVariableBase: BLangVariableBase{
+			FlagSet: &common.UnorderedSet[Flag]{},
+		},
+	}
+}
+
+func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree) *BLangCompilationUnit {
+	nodeBuilder := NewNodeBuilder(cx)
+	compilationUnit := nodeBuilder.TransformModulePart(syntaxTree.RootNode.(*tree.ModulePart))
+	return compilationUnit.(*BLangCompilationUnit)
 }

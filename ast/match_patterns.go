@@ -16,16 +16,16 @@
 
 package ast
 
-type ConstPatternNode interface {
-	Node
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
-}
+import "ballerina-lang-go/model"
 
-type MatchPatternNode = Node
+// Type aliases for model interfaces
+type (
+	ConstPatternNode = model.ConstPatternNode
+	MatchPatternNode = model.MatchPatternNode
+)
 
 type (
-	BLangMatchPattern struct {
+	BLangMatchPatternBase struct {
 		BLangNodeBase
 
 		MatchExpr             BLangExpression
@@ -35,14 +35,13 @@ type (
 		IsLastPattern         bool
 	}
 	BLangConstPattern struct {
-		BLangMatchPattern
+		BLangMatchPatternBase
 		Expr BLangExpression
 	}
 )
 
 var _ ConstPatternNode = &BLangConstPattern{}
 
-var _ BLangNode = &BLangMatchPattern{}
 var _ BLangNode = &BLangConstPattern{}
 
 func (this *BLangConstPattern) GetKind() NodeKind {

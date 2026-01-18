@@ -54,7 +54,7 @@ type STNode interface {
 	addChildren(children ...STNode)
 	updateDiagnostics(children []STNode)
 	updateWidth(children []STNode)
-	CreateFacade(position int, parent *NonTerminalNode) Node
+	CreateFacade(position int, parent NonTerminalNode) Node
 }
 
 type STToken interface {
@@ -170,9 +170,9 @@ func (n *STLiteralValueToken) ChildInBucket(bucket int) STNode {
 	}
 }
 
-func (n *STLiteralValueToken) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *STLiteralValueToken) CreateFacade(position int, parent NonTerminalNode) Node {
 	return &LiteralValueToken{
-		Token: Token{
+		TokenBase: TokenBase{
 			NodeBase: NodeBase{
 				internalNode: n,
 				position:     position,
@@ -198,11 +198,11 @@ func (n *STMinutiae) WidthWithMinutiae() uint16 {
 	return n.Width()
 }
 
-func (n *STMinutiae) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *STMinutiae) CreateFacade(position int, parent NonTerminalNode) Node {
 	panic("unsupported operation")
 }
 
-func (n *STInvalidNodeMinutiae) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *STInvalidNodeMinutiae) CreateFacade(position int, parent NonTerminalNode) Node {
 	panic("unsupported operation")
 }
 
@@ -223,7 +223,7 @@ func (n *STInvalidTokenMinutiaeNode) ChildBuckets() []STNode {
 	return []STNode{n.token}
 }
 
-func (n *STInvalidTokenMinutiaeNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *STInvalidTokenMinutiaeNode) CreateFacade(position int, parent NonTerminalNode) Node {
 	panic("unsupported operation")
 }
 
@@ -239,7 +239,7 @@ func (t *STNodeBase) ChildInBucket(bucket int) STNode {
 	panic("ChildInBucket is not supported for STNodeBase")
 }
 
-func (t *STNodeBase) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (t *STNodeBase) CreateFacade(position int, parent NonTerminalNode) Node {
 	panic("CreateFacade is not supported for STNodeBase")
 }
 
@@ -275,10 +275,10 @@ func (t *STMissingToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STN
 	}, leadingMinutiae, trailingMinutiae).(*STMissingToken)
 }
 
-func (t *STMissingToken) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (t *STMissingToken) CreateFacade(position int, parent NonTerminalNode) Node {
 	if t.kind == common.IDENTIFIER_TOKEN {
 		return &IdentifierToken{
-			Token: Token{
+			TokenBase: TokenBase{
 				NodeBase: NodeBase{
 					internalNode: t,
 					position:     position,
@@ -287,7 +287,7 @@ func (t *STMissingToken) CreateFacade(position int, parent *NonTerminalNode) Nod
 			},
 		}
 	} else {
-		return &Token{
+		return &TokenBase{
 			NodeBase: NodeBase{
 				internalNode: t,
 				position:     position,
@@ -329,8 +329,8 @@ func (t *STInvalidToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STN
 	}, leadingMinutiae, trailingMinutiae).(*STInvalidToken)
 }
 
-func (t *STInvalidToken) CreateFacade(position int, parent *NonTerminalNode) Node {
-	return &Token{
+func (t *STInvalidToken) CreateFacade(position int, parent NonTerminalNode) Node {
+	return &TokenBase{
 		NodeBase: NodeBase{
 			internalNode: t,
 			position:     position,
@@ -369,9 +369,9 @@ func (s *STNodeList) ChildInBucket(bucket int) STNode {
 	return s.children[bucket]
 }
 
-func (s *STNodeList) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (s *STNodeList) CreateFacade(position int, parent NonTerminalNode) Node {
 	return &ExternalTreeNodeList{
-		NonTerminalNode: NonTerminalNode{
+		NonTerminalNodeBase: NonTerminalNodeBase{
 			NodeBase: NodeBase{
 				internalNode: s,
 				position:     position,
@@ -838,12 +838,30 @@ func (t *STTokenBase) Text() string {
 	return t.kind.StrValue()
 }
 
-func (t *STTokenBase) CreateFacade(position int, parent *NonTerminalNode) Node {
-	panic("CreateFacade is not supported for STTokenBase")
+func (t *STTokenBase) CreateFacade(position int, parent NonTerminalNode) Node {
+	return &TokenBase{
+		NodeBase: NodeBase{
+			internalNode: t,
+			position:     position,
+			parent:       parent,
+		},
+	}
 }
 
 func (t *STIdentifierToken) Text() string {
 	return t.text
+}
+
+func (t *STIdentifierToken) CreateFacade(position int, parent NonTerminalNode) Node {
+	return &IdentifierToken{
+		TokenBase: TokenBase{
+			NodeBase: NodeBase{
+				internalNode: t,
+				position:     position,
+				parent:       parent,
+			},
+		},
+	}
 }
 
 func (t *STLiteralValueToken) Text() string {
@@ -3717,7 +3735,7 @@ func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
 
 var _ STNode = &STAmbiguousCollectionNode{}
 
-func (n *STAmbiguousCollectionNode) CreateFacade(position int, parent *NonTerminalNode) Node {
+func (n *STAmbiguousCollectionNode) CreateFacade(position int, parent NonTerminalNode) Node {
 	panic("unsupported operation")
 }
 

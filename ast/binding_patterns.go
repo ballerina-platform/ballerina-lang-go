@@ -16,85 +16,36 @@
 
 package ast
 
-type CaptureBindingPatternNode interface {
-	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
-}
+import "ballerina-lang-go/model"
 
-type WildCardBindingPatternNode = Node
-type BindingPatternNode = Node
-
-type SimpleBindingPatternNode interface {
-	Node
-	GetCaptureBindingPattern() CaptureBindingPatternNode
-	SetCaptureBindingPattern(captureBindingPatternNode CaptureBindingPatternNode)
-	GetWildCardBindingPattern() WildCardBindingPatternNode
-	SetWildCardBindingPattern(wildCardBindingPatternNode WildCardBindingPatternNode)
-}
-
-type ErrorMessageBindingPatternNode interface {
-	Node
-	GetSimpleBindingPattern() SimpleBindingPatternNode
-	SetSimpleBindingPattern(simpleBindingPatternNode SimpleBindingPatternNode)
-}
-
-type ErrorBindingPatternNode interface {
-	Node
-	GetErrorTypeReference() UserDefinedTypeNode
-	SetErrorTypeReference(userDefinedTypeNode UserDefinedTypeNode)
-	GetErrorMessageBindingPatternNode() ErrorMessageBindingPatternNode
-	SetErrorMessageBindingPatternNode(errorMessageBindingPatternNode ErrorMessageBindingPatternNode)
-	GetErrorCauseBindingPatternNode() ErrorCauseBindingPatternNode
-	SetErrorCauseBindingPatternNode(errorCauseBindingPatternNode ErrorCauseBindingPatternNode)
-	GetErrorFieldBindingPatternsNode() ErrorFieldBindingPatternsNode
-	SetErrorFieldBindingPatternsNode(errorFieldBindingPatternsNode ErrorFieldBindingPatternsNode)
-}
-
-type ErrorCauseBindingPatternNode interface {
-	Node
-	GetSimpleBindingPattern() SimpleBindingPatternNode
-	SetSimpleBindingPattern(simpleBindingPatternNode SimpleBindingPatternNode)
-	GetErrorBindingPatternNode() ErrorBindingPatternNode
-	SetErrorBindingPatternNode(errorBindingPatternNode ErrorBindingPatternNode)
-}
-
-type ErrorFieldBindingPatternsNode interface {
-	Node
-	GetNamedArgMatchPatterns() []NamedArgBindingPatternNode
-	AddNamedArgBindingPattern(namedArgBindingPatternNode NamedArgBindingPatternNode)
-	GetRestBindingPattern() RestBindingPatternNode
-	SetRestBindingPattern(restBindingPattern RestBindingPatternNode)
-}
-
-type NamedArgBindingPatternNode interface {
-	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
-	GetBindingPattern() BindingPatternNode
-	SetBindingPattern(bindingPattern BindingPatternNode)
-}
-
-type RestBindingPatternNode interface {
-	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
-}
+// Type aliases for model interfaces
+type (
+	CaptureBindingPatternNode      = model.CaptureBindingPatternNode
+	WildCardBindingPatternNode     = model.WildCardBindingPatternNode
+	BindingPatternNode             = model.BindingPatternNode
+	SimpleBindingPatternNode       = model.SimpleBindingPatternNode
+	ErrorMessageBindingPatternNode = model.ErrorMessageBindingPatternNode
+	ErrorBindingPatternNode        = model.ErrorBindingPatternNode
+	ErrorCauseBindingPatternNode   = model.ErrorCauseBindingPatternNode
+	ErrorFieldBindingPatternsNode  = model.ErrorFieldBindingPatternsNode
+	NamedArgBindingPatternNode     = model.NamedArgBindingPatternNode
+	RestBindingPatternNode         = model.RestBindingPatternNode
+)
 
 type (
-	BLangBindingPattern struct {
+	BLangBindingPatternBase struct {
 		BLangNodeBase
 		DeclaredVars map[string]BVarSymbol
 	}
 
 	BLangCaptureBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		Identifier BLangIdentifier
 		Symbol     BVarSymbol
 	}
 
 	BLangErrorBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		ErrorTypeReference         *BLangUserDefinedType
 		ErrorMessageBindingPattern *BLangErrorMessageBindingPattern
 		ErrorCauseBindingPattern   *BLangErrorCauseBindingPattern
@@ -102,40 +53,40 @@ type (
 	}
 
 	BLangErrorMessageBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		SimpleBindingPattern *BLangSimpleBindingPattern
 	}
 	BLangErrorCauseBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		SimpleBindingPattern *BLangSimpleBindingPattern
 		ErrorBindingPattern  *BLangErrorBindingPattern
 	}
 
 	BLangErrorFieldBindingPatterns struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		NamedArgBindingPatterns []BLangNamedArgBindingPattern
 		RestBindingPattern      *BLangRestBindingPattern
 	}
 	BLangSimpleBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		CaptureBindingPattern  *BLangCaptureBindingPattern
 		WildCardBindingPattern *BLangWildCardBindingPattern
 	}
 
 	BLangNamedArgBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		ArgName        *BLangIdentifier
 		BindingPattern BindingPatternNode
 	}
 
 	BLangRestBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 		VariableName *BLangIdentifier
 		Symbol       *BVarSymbol
 	}
 
 	BLangWildCardBindingPattern struct {
-		BLangBindingPattern
+		BLangBindingPatternBase
 	}
 )
 
@@ -149,7 +100,6 @@ var _ NamedArgBindingPatternNode = &BLangNamedArgBindingPattern{}
 var _ RestBindingPatternNode = &BLangRestBindingPattern{}
 var _ WildCardBindingPatternNode = &BLangWildCardBindingPattern{}
 
-var _ BLangNode = &BLangBindingPattern{}
 var _ BLangNode = &BLangCaptureBindingPattern{}
 var _ BLangNode = &BLangErrorBindingPattern{}
 var _ BLangNode = &BLangErrorMessageBindingPattern{}
@@ -413,4 +363,8 @@ func (this *BLangRestBindingPattern) GetKind() NodeKind {
 func (this *BLangWildCardBindingPattern) GetKind() NodeKind {
 	// migrated from BLangWildCardBindingPattern.java:48:5
 	return NodeKind_WILDCARD_BINDING_PATTERN
+}
+
+func (this *BLangWildCardBindingPattern) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }

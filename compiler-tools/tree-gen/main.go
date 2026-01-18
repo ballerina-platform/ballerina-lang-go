@@ -85,10 +85,19 @@ func main() {
 
 	config := Config{Nodes: nodes}
 
+	// Create set of abstract type names
+	abstractTypes := make(map[string]bool)
+	for _, node := range nodes {
+		if node.IsAbstract {
+			abstractTypes[node.Name] = true
+		}
+	}
+
 	// Prepare template data
 	data := map[string]interface{}{
-		"Nodes":    config.Nodes,
-		"NodeType": *nodeType,
+		"Nodes":         config.Nodes,
+		"NodeType":      *nodeType,
+		"AbstractTypes": abstractTypes,
 	}
 
 	// Generate main file
@@ -117,6 +126,13 @@ func generateFile(templatePath, outputPath string, data map[string]interface{}) 
 			}
 			runes := []rune(s)
 			return string(append([]rune{unicode.ToUpper(runes[0])}, runes[1:]...))
+		},
+		"isAbstract": func(typeName string) bool {
+			abstractTypesMap, ok := data["AbstractTypes"].(map[string]bool)
+			if !ok {
+				return false
+			}
+			return abstractTypesMap[typeName]
 		},
 	}
 	tmpl, err := template.New(filepath.Base(templatePath)).Funcs(tmplFuncs).ParseFiles(templatePath)

@@ -20,6 +20,9 @@ import (
 	"ballerina-lang-go/parser/common"
 	tree "ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/tools/text"
+	"fmt"
+	"os"
 	"strings"
 )
 
@@ -14782,4 +14785,30 @@ func (this *BallerinaParser) isBlockContext(ctx common.ParserRuleContext) bool {
 
 func (this *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 	return (((token.Kind() == common.MAP_KEYWORD) || (token.Kind() == common.START_KEYWORD)) || (token.Kind() == common.JOIN_KEYWORD))
+}
+
+func GetSyntaxTree(debugCtx *debugcommon.DebugContext, fileName string) (*tree.SyntaxTree, error) {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file %s: %v", fileName, err)
+	}
+
+	// Create CharReader from file content
+	reader := text.CharReaderFromText(string(content))
+
+	// Create Lexer with DebugContext
+	lexer := NewLexer(reader, debugCtx)
+
+	// Create TokenReader from Lexer
+	tokenReader := CreateTokenReader(*lexer, debugCtx)
+
+	// Create Parser from TokenReader
+	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, debugCtx)
+
+	// Parse the entire file (parser will internally call tokenizer)
+	rootNode := ballerinaParser.Parse().(*tree.STModulePart)
+
+	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
+	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocumentStringBool(moduleNode, nil, fileName, false)
+	return &syntaxTree, nil
 }

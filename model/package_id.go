@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package ast
+package model
 
 import (
 	"ballerina-lang-go/common"
@@ -166,11 +166,24 @@ type PackageID struct {
 	Name           *Name
 	Version        *Name
 	NameComps      []Name
-	IsUnnamed      bool
+	isUnnamed      bool
 	SkipTests      bool
 	IsTestPkg      bool
 	SourceFileName *Name
 	SourceRoot     *string
+}
+
+func (this *PackageID) IsUnnamed() bool {
+	return this.isUnnamed || (this.OrgName == nil && this.PkgName == nil && this.Version == nil)
+}
+
+func (this *PackageID) Equals(other PackageID) bool {
+	// FIXME: properly implement this
+	samePkg := false
+	if this.IsUnnamed() == other.IsUnnamed() {
+		samePkg = (!this.IsUnnamed()) || (this.SourceFileName == other.SourceFileName)
+	}
+	return samePkg && this.OrgName == other.OrgName && this.PkgName == other.PkgName && this.Version == other.Version
 }
 
 func NewPackageID(orgName Name, nameComps []Name, version Name) PackageID {

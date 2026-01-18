@@ -22,7 +22,7 @@ import (
 )
 
 type SyntaxTree struct {
-	rootNode     Node
+	RootNode     Node
 	filePath     string
 	textDocument TextDocument
 	// lineRange    LineRange
@@ -30,7 +30,7 @@ type SyntaxTree struct {
 
 func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument TextDocument, filePath string, clone bool) SyntaxTree {
 	this := SyntaxTree{}
-	this.rootNode = modifyWithSyntaxTree(rootNode, clone, &this)
+	this.RootNode = modifyWithSyntaxTree(rootNode, clone, &this)
 	this.textDocument = textDocument
 	this.filePath = filePath
 	return this
@@ -38,7 +38,7 @@ func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument Tex
 
 func (this *SyntaxTree) ContainsModulePart() bool {
 	// migrated from SyntaxTree.java:76:5
-	return this.rootNode.Kind() == common.MODULE_PART
+	return this.RootNode.Kind() == common.MODULE_PART
 }
 
 func (this *SyntaxTree) FilePath() string {
@@ -58,17 +58,17 @@ func (this *SyntaxTree) ReplaceNode(target Node, replacement Node) SyntaxTree {
 
 func (this *SyntaxTree) Diagnostics() iter.Seq[Diagnostic] {
 	// migrated from SyntaxTree.java:105:5
-	return this.rootNode.Diagnostics()
+	return this.RootNode.Diagnostics()
 }
 
 func (this *SyntaxTree) HasDiagnostics() bool {
 	// migrated from SyntaxTree.java:109:5
-	return this.rootNode.HasDiagnostics()
+	return this.RootNode.HasDiagnostics()
 }
 
 func (this *SyntaxTree) ToSourceCode() string {
 	// migrated from SyntaxTree.java:123:5
-	return this.rootNode.ToSourceCode()
+	return this.RootNode.ToSourceCode()
 }
 
 func modifyWithSyntaxTree[T Node](node T, clone bool, syntaxTree *SyntaxTree) T {

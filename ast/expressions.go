@@ -18,183 +18,52 @@ package ast
 
 import (
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/model"
 	"fmt"
 	"strconv"
 	"strings"
 )
 
-type OperatorKind string
+type OperatorKind = model.OperatorKind
 
-const (
-	OperatorKind_ADD                          OperatorKind = "+"
-	OperatorKind_SUB                                       = "-"
-	OperatorKind_MUL                                       = "*"
-	OperatorKind_DIV                                       = "/"
-	OperatorKind_MOD                                       = "%"
-	OperatorKind_AND                                       = "&&"
-	OperatorKind_OR                                        = "||"
-	OperatorKind_EQUAL                                     = "=="
-	OperatorKind_EQUALS                                    = "equals"
-	OperatorKind_NOT_EQUAL                                 = "!="
-	OperatorKind_GREATER_THAN                              = ">"
-	OperatorKind_GREATER_EQUAL                             = ">="
-	OperatorKind_LESS_THAN                                 = "<"
-	OperatorKind_LESS_EQUAL                                = "<="
-	OperatorKind_IS_ASSIGNABLE                             = "isassignable"
-	OperatorKind_NOT                                       = "!"
-	OperatorKind_LENGTHOF                                  = "lengthof"
-	OperatorKind_TYPEOF                                    = "typeof"
-	OperatorKind_UNTAINT                                   = "untaint"
-	OperatorKind_INCREMENT                                 = "++"
-	OperatorKind_DECREMENT                                 = "--"
-	OperatorKind_CHECK                                     = "check"
-	OperatorKind_CHECK_PANIC                               = "checkpanic"
-	OperatorKind_ELVIS                                     = "?:"
-	OperatorKind_BITWISE_AND                               = "&"
-	OperatorKind_BITWISE_OR                                = "|"
-	OperatorKind_BITWISE_XOR                               = "^"
-	OperatorKind_BITWISE_COMPLEMENT                        = "~"
-	OperatorKind_BITWISE_LEFT_SHIFT                        = "<<"
-	OperatorKind_BITWISE_RIGHT_SHIFT                       = ">>"
-	OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT              = ">>>"
-	OperatorKind_CLOSED_RANGE                              = "..."
-	OperatorKind_HALF_OPEN_RANGE                           = "..<"
-	OperatorKind_REF_EQUAL                                 = "==="
-	OperatorKind_REF_NOT_EQUAL                             = "!=="
-	OperatorKind_ANNOT_ACCESS                              = ".@"
-	OperatorKind_UNDEFINED                                 = "UNDEF"
+type BLangExpression interface {
+	ExpressionNode
+	BLangNode
+	SetTypeCheckedType(ty BType)
+}
+
+// Type aliases for model interfaces
+type (
+	BinaryExpressionNode                                   = model.BinaryExpressionNode
+	UnaryExpressionNode                                    = model.UnaryExpressionNode
+	IndexBasedAccessNode                                   = model.IndexBasedAccessNode
+	ListConstructorExprNode                                = model.ListConstructorExprNode
+	CheckedExpressionNode                                  = model.CheckedExpressionNode
+	CheckPanickedExpressionNode                            = model.CheckPanickedExpressionNode
+	CollectContextInvocationNode                           = model.CollectContextInvocationNode
+	ActionNode                                             = model.ActionNode
+	ExpressionNode                                         = model.ExpressionNode
+	VariableReferenceNode                                  = model.VariableReferenceNode
+	DynamicArgNode                                         = model.DynamicArgNode
+	CommitExpressionNode                                   = model.CommitExpressionNode
+	SimpleVariableReferenceNode                            = model.SimpleVariableReferenceNode
+	LiteralNode                                            = model.LiteralNode
+	ElvisExpressionNode                                    = model.ElvisExpressionNode
+	RecordField                                            = model.RecordField
+	RecordVarNameFieldNode                                 = model.RecordVarNameFieldNode
+	MarkdownDocumentationTextAttributeNode                 = model.MarkdownDocumentationTextAttributeNode
+	MarkdownDocumentationParameterAttributeNode            = model.MarkdownDocumentationParameterAttributeNode
+	MarkdownDocumentationReturnParameterAttributeNode      = model.MarkdownDocumentationReturnParameterAttributeNode
+	MarkDownDocumentationDeprecationAttributeNode          = model.MarkDownDocumentationDeprecationAttributeNode
+	MarkDownDocumentationDeprecatedParametersAttributeNode = model.MarkDownDocumentationDeprecatedParametersAttributeNode
+	WorkerReceiveNode                                      = model.WorkerReceiveNode
+	WorkerSendExpressionNode                               = model.WorkerSendExpressionNode
+	MarkdownDocumentationReferenceAttributeNode            = model.MarkdownDocumentationReferenceAttributeNode
+	LambdaFunctionNode                                     = model.LambdaFunctionNode
+	InvocationNode                                         = model.InvocationNode
+	GroupExpressionNode                                    = model.GroupExpressionNode
+	TypedescExpressionNode                                 = model.TypedescExpressionNode
 )
-
-type BinaryExpressionNode interface {
-	GetLeftExpression() ExpressionNode
-	GetRightExpression() ExpressionNode
-	GetOperatorKind() OperatorKind
-}
-
-type UnaryExpressionNode interface {
-	GetExpression() ExpressionNode
-	GetOperatorKind() OperatorKind
-}
-
-type CheckedExpressionNode = UnaryExpressionNode
-type CheckPanickedExpressionNode = UnaryExpressionNode
-type CollectContextInvocationNode = ExpressionNode
-type ActionNode = Node
-type BLangExpression = Node
-type ExpressionNode = Node
-type VariableReferenceNode = ExpressionNode
-type DynamicArgNode = ExpressionNode
-
-type CommitExpressionNode interface {
-	ExpressionNode
-	ActionNode
-}
-
-type SimpleVariableReferenceNode interface {
-	VariableReferenceNode
-	GetPackageAlias() IdentifierNode
-	GetVariableName() IdentifierNode
-}
-
-type LiteralNode interface {
-	ExpressionNode
-	GetValue() any
-	SetValue(value any)
-	GetOriginalValue() string
-	SetOriginalValue(originalValue string)
-}
-
-type ElvisExpressionNode interface {
-	GetLeftExpression() ExpressionNode
-	GetRightExpression() ExpressionNode
-}
-
-type RecordField interface {
-	Node
-	IsKeyValueField() bool
-}
-
-type RecordVarNameFieldNode interface {
-	RecordField
-	SimpleVariableReferenceNode
-}
-
-type MarkdownDocumentationTextAttributeNode interface {
-	ExpressionNode
-	GetText() string
-	SetText(text string)
-}
-
-type MarkdownDocumentationParameterAttributeNode interface {
-	ExpressionNode
-	GetParameterName() IdentifierNode
-	SetParameterName(parameterName IdentifierNode)
-	GetParameterDocumentationLines() []string
-	AddParameterDocumentationLine(text string)
-	GetParameterDocumentation() string
-	GetSymbol() BVarSymbol
-	SetSymbol(symbol BVarSymbol)
-}
-
-type MarkdownDocumentationReturnParameterAttributeNode interface {
-	ExpressionNode
-	GetReturnParameterDocumentationLines() []string
-	AddReturnParameterDocumentationLine(text string)
-	GetReturnParameterDocumentation() string
-	GetReturnType() BType
-	SetReturnType(typ BType)
-}
-
-type MarkDownDocumentationDeprecationAttributeNode interface {
-	ExpressionNode
-	AddDeprecationDocumentationLine(text string)
-	AddDeprecationLine(text string)
-	GetDocumentation() string
-}
-
-type MarkDownDocumentationDeprecatedParametersAttributeNode interface {
-	ExpressionNode
-	AddParameter(parameter MarkdownDocumentationParameterAttributeNode)
-	GetParameters() []MarkdownDocumentationParameterAttributeNode
-}
-
-type WorkerReceiveNode interface {
-	ExpressionNode
-	ActionNode
-	GetWorkerName() IdentifierNode
-	SetWorkerName(identifierNode IdentifierNode)
-}
-
-type WorkerSendExpressionNode interface {
-	ExpressionNode
-	ActionNode
-	GetExpression() ExpressionNode
-	GetWorkerName() IdentifierNode
-	SetWorkerName(identifierNode IdentifierNode)
-}
-
-type MarkdownDocumentationReferenceAttributeNode interface {
-	Node
-	GetType() DocumentationReferenceType
-}
-
-type LambdaFunctionNode interface {
-	ExpressionNode
-	GetFunctionNode() FunctionNode
-	SetFunctionNode(functionNode FunctionNode)
-}
-
-type InvocationNode interface {
-	VariableReferenceNode
-	AnnotatableNode
-	GetPackageAlias() IdentifierNode
-	GetName() IdentifierNode
-	GetArgumentExpressions() []ExpressionNode
-	GetRequiredArgs() []ExpressionNode
-	GetExpression() ExpressionNode
-	IsIterableOperation() bool
-	IsAsync() bool
-}
 
 type Channel struct {
 	Sender     string
@@ -231,7 +100,7 @@ type (
 	BLangMarkdownReturnParameterDocumentation struct {
 		BLangExpressionBase
 		ReturnParameterDocumentationLines []string
-		ReturnType                        *BType
+		ReturnType                        BType
 	}
 	BLangMarkDownDeprecationDocumentation struct {
 		BLangExpressionBase
@@ -252,8 +121,8 @@ type (
 	}
 
 	NarrowedTypes struct {
-		TrueType  *BType
-		FalseType *BType
+		TrueType  BType
+		FalseType BType
 	}
 
 	BLangTypeConversionExpr struct {
@@ -267,10 +136,10 @@ type (
 		symbol                     BSymbol
 	}
 
-	BLangAccessExpression struct {
+	BLangAccessExpressionBase struct {
 		BLangValueExpressionBase
 		Expr                BLangExpression
-		OriginalType        *BType
+		OriginalType        BType
 		OptionalFieldAccess bool
 		ErrorSafeNavigation bool
 		NilSafeNavigation   bool
@@ -295,7 +164,7 @@ type (
 		Params            []BLangSimpleVariable
 		FunctionName      *IdentifierNode
 		Body              *BLangExprFunctionBody
-		FuncType          *BType
+		FuncType          BType
 		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
 	}
 
@@ -333,13 +202,13 @@ type (
 	BLangCommitExpr struct {
 		BLangExpressionBase
 	}
-	BLangVariableReference struct {
+	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
 		PkgSymbol BSymbol
 	}
 
 	BLangSimpleVarRef struct {
-		BLangVariableReference
+		BLangVariableReferenceBase
 		PkgAlias     *BLangIdentifier
 		VariableName *BLangIdentifier
 		VarSymbol    BSymbol
@@ -362,6 +231,11 @@ type (
 		IsConstant      bool
 		IsFiniteContext bool
 	}
+
+	BLangNumericLiteral struct {
+		BLangLiteral
+		Kind NodeKind
+	}
 	BLangDynamicArgExpr struct {
 		BLangExpressionBase
 		Condition           BLangExpression
@@ -377,7 +251,7 @@ type (
 		BLangExpressionBase
 		Env              *SymbolEnv
 		WorkerSymbol     *BSymbol
-		WorkerType       *BType
+		WorkerType       BType
 		WorkerIdentifier *BLangIdentifier
 		Channel          *Channel
 	}
@@ -385,15 +259,15 @@ type (
 	BLangWorkerReceive struct {
 		BLangWorkerSendReceiveExprBase
 		Send               WorkerSendExpressionNode
-		MatchingSendsError *BType
+		MatchingSendsError BType
 	}
 
 	BLangWorkerSendExprBase struct {
 		BLangWorkerSendReceiveExprBase
 		Expr                     BLangExpression
 		Receive                  *BLangWorkerReceive
-		SendType                 *BType
-		SendTypeWithNoMsgIgnored *BType
+		SendType                 BType
+		SendTypeWithNoMsgIgnored BType
 		NoMessagePossible        bool
 	}
 
@@ -414,57 +288,123 @@ type (
 		LangLibInvocation         bool
 		Symbol                    *BSymbol
 	}
+
+	BLangGroupExpr struct {
+		BLangExpressionBase
+		Expression BLangExpression
+	}
+
+	BLangTypedescExpr struct {
+		BLangExpressionBase
+		TypeNode TypeNode
+	}
+
+	BLangUnaryExpr struct {
+		BLangExpressionBase
+		Expr     BLangExpression
+		Operator OperatorKind
+		OpSymbol *BOperatorSymbol
+	}
+
+	BLangIndexBasedAccess struct {
+		BLangAccessExpressionBase
+		IndexExpr         BLangExpression
+		IsStoreOnCreation bool
+	}
+
+	BLangListConstructorExpr struct {
+		BLangExpressionBase
+		Exprs          []BLangExpression
+		IsTypedescExpr bool
+		TypedescType   BType
+	}
 )
 
-var _ BinaryExpressionNode = &BLangBinaryExpr{}
-var _ CheckedExpressionNode = &BLangCheckedExpr{}
-var _ CheckPanickedExpressionNode = &BLangCheckPanickedExpr{}
-var _ CollectContextInvocationNode = &BLangCollectContextInvocation{}
-var _ SimpleVariableReferenceNode = &BLangSimpleVarRef{}
-var _ SimpleVariableReferenceNode = &BLangLocalVarRef{}
-var _ LiteralNode = &BLangConstRef{}
-var _ LiteralNode = &BLangLiteral{}
-var _ RecordVarNameFieldNode = &BLangConstRef{}
-var _ DynamicArgNode = &BLangDynamicArgExpr{}
-var _ ElvisExpressionNode = &BLangElvisExpr{}
-var _ MarkdownDocumentationTextAttributeNode = &BLangMarkdownDocumentationLine{}
-var _ MarkdownDocumentationParameterAttributeNode = &BLangMarkdownParameterDocumentation{}
-var _ MarkdownDocumentationReturnParameterAttributeNode = &BLangMarkdownReturnParameterDocumentation{}
-var _ MarkDownDocumentationDeprecationAttributeNode = &BLangMarkDownDeprecationDocumentation{}
-var _ MarkDownDocumentationDeprecatedParametersAttributeNode = &BLangMarkDownDeprecatedParametersDocumentation{}
-var _ WorkerReceiveNode = &BLangWorkerReceive{}
-var _ LambdaFunctionNode = &BLangLambdaFunction{}
-var _ InvocationNode = &BLangInvocation{}
+var (
+	_ BinaryExpressionNode                                   = &BLangBinaryExpr{}
+	_ CheckedExpressionNode                                  = &BLangCheckedExpr{}
+	_ CheckPanickedExpressionNode                            = &BLangCheckPanickedExpr{}
+	_ CollectContextInvocationNode                           = &BLangCollectContextInvocation{}
+	_ SimpleVariableReferenceNode                            = &BLangSimpleVarRef{}
+	_ SimpleVariableReferenceNode                            = &BLangLocalVarRef{}
+	_ LiteralNode                                            = &BLangConstRef{}
+	_ LiteralNode                                            = &BLangLiteral{}
+	_ BLangExpression                                        = &BLangLiteral{}
+	_ RecordVarNameFieldNode                                 = &BLangConstRef{}
+	_ DynamicArgNode                                         = &BLangDynamicArgExpr{}
+	_ ElvisExpressionNode                                    = &BLangElvisExpr{}
+	_ MarkdownDocumentationTextAttributeNode                 = &BLangMarkdownDocumentationLine{}
+	_ MarkdownDocumentationParameterAttributeNode            = &BLangMarkdownParameterDocumentation{}
+	_ MarkdownDocumentationReturnParameterAttributeNode      = &BLangMarkdownReturnParameterDocumentation{}
+	_ MarkDownDocumentationDeprecationAttributeNode          = &BLangMarkDownDeprecationDocumentation{}
+	_ MarkDownDocumentationDeprecatedParametersAttributeNode = &BLangMarkDownDeprecatedParametersDocumentation{}
+	_ WorkerReceiveNode                                      = &BLangWorkerReceive{}
+	_ LambdaFunctionNode                                     = &BLangLambdaFunction{}
+	_ InvocationNode                                         = &BLangInvocation{}
+	_ BLangExpression                                        = &BLangInvocation{}
+	_ GroupExpressionNode                                    = &BLangGroupExpr{}
+	_ TypedescExpressionNode                                 = &BLangTypedescExpr{}
+	_ LiteralNode                                            = &BLangNumericLiteral{}
+	_ UnaryExpressionNode                                    = &BLangUnaryExpr{}
+	_ IndexBasedAccessNode                                   = &BLangIndexBasedAccess{}
+	_ ListConstructorExprNode                                = &BLangListConstructorExpr{}
+)
 
-var _ BLangNode = &BLangExpressionBase{}
-var _ BLangNode = &BLangTypeConversionExpr{}
-var _ BLangNode = &BLangValueExpressionBase{}
-var _ BLangNode = &BLangAccessExpression{}
-var _ BLangNode = &BLangAlternateWorkerReceive{}
-var _ BLangNode = &BLangAnnotAccessExpr{}
-var _ BLangNode = &BLangArrowFunction{}
-var _ BLangNode = &BLangLambdaFunction{}
-var _ BLangNode = &BLangBinaryExpr{}
-var _ BLangNode = &BLangCheckedExpr{}
-var _ BLangNode = &BLangCheckPanickedExpr{}
-var _ BLangNode = &BLangCollectContextInvocation{}
-var _ BLangNode = &BLangCommitExpr{}
-var _ BLangNode = &BLangVariableReference{}
-var _ BLangNode = &BLangSimpleVarRef{}
-var _ BLangNode = &BLangLocalVarRef{}
-var _ BLangNode = &BLangConstRef{}
-var _ BLangNode = &BLangLiteral{}
-var _ BLangNode = &BLangDynamicArgExpr{}
-var _ BLangNode = &BLangElvisExpr{}
-var _ BLangNode = &BLangWorkerSendReceiveExprBase{}
-var _ BLangNode = &BLangWorkerReceive{}
-var _ BLangNode = &BLangWorkerSendExprBase{}
-var _ BLangNode = &BLangInvocation{}
-var _ BLangNode = &BLangMarkdownDocumentationLine{}
-var _ BLangNode = &BLangMarkdownParameterDocumentation{}
-var _ BLangNode = &BLangMarkdownReturnParameterDocumentation{}
-var _ BLangNode = &BLangMarkDownDeprecationDocumentation{}
-var _ BLangNode = &BLangMarkDownDeprecatedParametersDocumentation{}
+var (
+	_ BLangNode = &BLangTypeConversionExpr{}
+	_ BLangNode = &BLangAlternateWorkerReceive{}
+	_ BLangNode = &BLangAnnotAccessExpr{}
+	_ BLangNode = &BLangArrowFunction{}
+	_ BLangNode = &BLangLambdaFunction{}
+	_ BLangNode = &BLangBinaryExpr{}
+	_ BLangNode = &BLangCheckedExpr{}
+	_ BLangNode = &BLangCheckPanickedExpr{}
+	_ BLangNode = &BLangCollectContextInvocation{}
+	_ BLangNode = &BLangCommitExpr{}
+	_ BLangNode = &BLangSimpleVarRef{}
+	_ BLangNode = &BLangLocalVarRef{}
+	_ BLangNode = &BLangConstRef{}
+	_ BLangNode = &BLangLiteral{}
+	_ BLangNode = &BLangNumericLiteral{}
+	_ BLangNode = &BLangDynamicArgExpr{}
+	_ BLangNode = &BLangElvisExpr{}
+	_ BLangNode = &BLangWorkerReceive{}
+	_ BLangNode = &BLangInvocation{}
+	_ BLangNode = &BLangMarkdownDocumentationLine{}
+	_ BLangNode = &BLangMarkdownParameterDocumentation{}
+	_ BLangNode = &BLangMarkdownReturnParameterDocumentation{}
+	_ BLangNode = &BLangMarkDownDeprecationDocumentation{}
+	_ BLangNode = &BLangMarkDownDeprecatedParametersDocumentation{}
+	_ BLangNode = &BLangGroupExpr{}
+	_ BLangNode = &BLangTypedescExpr{}
+	_ BLangNode = &BLangIndexBasedAccess{}
+	_ BLangNode = &BLangListConstructorExpr{}
+)
+
+func (this *BLangGroupExpr) GetKind() NodeKind {
+	// migrated from BLangGroupExpr.java:57:5
+	return NodeKind_GROUP_EXPR
+}
+
+func (this *BLangGroupExpr) GetExpression() ExpressionNode {
+	// migrated from BLangGroupExpr.java:62:5
+	return this.Expression
+}
+
+func (this *BLangTypedescExpr) GetKind() NodeKind {
+	// migrated from BLangTypedescExpr.java:52:5
+	return NodeKind_TYPEDESC_EXPRESSION
+}
+
+func (this *BLangTypedescExpr) GetTypeNode() TypeNode {
+	// migrated from BLangTypedescExpr.java:57:5
+	return this.TypeNode
+}
+
+func (this *BLangTypedescExpr) SetTypeNode(typeNode TypeNode) {
+	// migrated from BLangTypedescExpr.java:62:5
+	this.TypeNode = typeNode
+}
 
 func (this *BLangAlternateWorkerReceive) GetKind() NodeKind {
 	// migrated from BLangAlternateWorkerReceive.java:37:5
@@ -559,7 +499,7 @@ func (this *BLangCheckedExpr) GetExpression() ExpressionNode {
 
 func (this *BLangCheckedExpr) GetOperatorKind() OperatorKind {
 	// migrated from BLangCheckedExpr.java:58:5
-	return OperatorKind_CHECK
+	return model.OperatorKind_CHECK
 }
 
 func (this *BLangCheckedExpr) GetKind() NodeKind {
@@ -569,7 +509,7 @@ func (this *BLangCheckedExpr) GetKind() NodeKind {
 
 func (this *BLangCheckPanickedExpr) GetOperatorKind() OperatorKind {
 	// migrated from BLangCheckPanickedExpr.java:39:5
-	return OperatorKind_CHECK_PANIC
+	return model.OperatorKind_CHECK_PANIC
 }
 
 func (this *BLangCheckPanickedExpr) GetKind() NodeKind {
@@ -612,6 +552,16 @@ func (this *BLangConstRef) SetValue(value interface{}) {
 	this.Value = value
 }
 
+func (this *BLangConstRef) GetIsConstant() bool {
+	return true
+}
+
+func (this *BLangConstRef) SetIsConstant(isConstant bool) {
+	if !isConstant {
+		panic("isConstant is not true")
+	}
+}
+
 func (this *BLangConstRef) GetOriginalValue() string {
 	// migrated from BLangConstRef.java:48:5
 	return this.OriginalValue
@@ -635,6 +585,14 @@ func (this *BLangConstRef) IsKeyValueField() bool {
 func (this *BLangLiteral) GetValue() any {
 	// migrated from BLangLiteral.java:48:5
 	return this.Value
+}
+
+func (this *BLangLiteral) GetIsConstant() bool {
+	return this.IsConstant
+}
+
+func (this *BLangLiteral) SetIsConstant(isConstant bool) {
+	this.IsConstant = isConstant
 }
 
 func (this *BLangLiteral) SetValue(value any) {
@@ -713,12 +671,16 @@ func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentation() str
 	return strings.ReplaceAll(strings.Join(this.ParameterDocumentationLines, "\n"), "\r", "")
 }
 
-func (this *BLangMarkdownParameterDocumentation) GetSymbol() BVarSymbol {
-	return *this.Symbol
+func (this *BLangMarkdownParameterDocumentation) GetSymbol() VariableSymbol {
+	return this.Symbol
 }
 
-func (this *BLangMarkdownParameterDocumentation) SetSymbol(symbol BVarSymbol) {
-	this.Symbol = &symbol
+func (this *BLangMarkdownParameterDocumentation) SetSymbol(symbol VariableSymbol) {
+	if bvs, ok := symbol.(*BVarSymbol); ok {
+		this.Symbol = bvs
+	} else {
+		panic("symbol is not a *BVarSymbol")
+	}
 }
 
 func (this *BLangMarkdownParameterDocumentation) GetKind() NodeKind {
@@ -737,12 +699,16 @@ func (this *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumen
 	return strings.ReplaceAll(strings.Join(this.ReturnParameterDocumentationLines, "\n"), "\r", "")
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) GetReturnType() BType {
-	return *this.ReturnType
+func (this *BLangMarkdownReturnParameterDocumentation) GetReturnType() ValueType {
+	return this.ReturnType
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty BType) {
-	this.ReturnType = &ty
+func (this *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty ValueType) {
+	if bt, ok := ty.(BType); ok {
+		this.ReturnType = bt
+	} else {
+		panic("ty is not a *BType")
+	}
 }
 
 func (this *BLangMarkdownReturnParameterDocumentation) GetKind() NodeKind {
@@ -863,4 +829,88 @@ func (this *BLangInvocation) AddAnnotationAttachment(annAttachment AnnotationAtt
 
 func (this *BLangInvocation) GetKind() NodeKind {
 	return NodeKind_INVOCATION
+}
+
+func (this *BLangTypeConversionExpr) GetKind() NodeKind {
+	return NodeKind_TYPE_CONVERSION_EXPR
+}
+
+func (this *BLangNumericLiteral) GetKind() NodeKind {
+	return NodeKind_NUMERIC_LITERAL
+}
+
+func (this *BLangLiteral) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangInvocation) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangUnaryExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangIndexBasedAccess) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangListConstructorExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangGroupExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangUnaryExpr) GetExpression() ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangUnaryExpr) GetOperatorKind() OperatorKind {
+	return this.Operator
+}
+
+func (this *BLangUnaryExpr) GetKind() NodeKind {
+	return NodeKind_UNARY_EXPR
+}
+
+func (this *BLangIndexBasedAccess) GetKind() NodeKind {
+	return NodeKind_INDEX_BASED_ACCESS_EXPR
+}
+
+func (this *BLangIndexBasedAccess) GetExpression() ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangIndexBasedAccess) GetIndex() ExpressionNode {
+	return this.IndexExpr
+}
+
+func (this *BLangListConstructorExpr) GetKind() NodeKind {
+	return NodeKind_LIST_CONSTRUCTOR_EXPR
+}
+
+func (this *BLangListConstructorExpr) GetExpressions() []ExpressionNode {
+	result := make([]ExpressionNode, len(this.Exprs))
+	for i := range this.Exprs {
+		result[i] = this.Exprs[i]
+	}
+	return result
+}
+
+func createBLangUnaryExpr(location Location, operator OperatorKind, expr BLangExpression) *BLangUnaryExpr {
+	exprNode := &BLangUnaryExpr{}
+	exprNode.pos = location
+	exprNode.Expr = expr
+	exprNode.Operator = operator
+	return exprNode
 }

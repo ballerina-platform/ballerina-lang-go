@@ -18,19 +18,15 @@ package ast
 
 import (
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/model"
 )
 
-type CollectClauseNode interface {
-	Node
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
-}
-
-type DoClauseNode interface {
-	Node
-	GetBody() BlockStatementNode
-	SetBody(body BlockStatementNode)
-}
+// Type aliases for model interfaces
+type (
+	CollectClauseNode = model.CollectClauseNode
+	DoClauseNode      = model.DoClauseNode
+	OnFailClauseNode  = model.OnFailClauseNode
+)
 
 type SymbolEnv struct {
 	Scope             *Scope
@@ -50,15 +46,15 @@ type SymbolEnv struct {
 }
 
 type TypeParamEntry struct {
-	TypeParam *BType
-	BoundType *BType
+	TypeParam BType
+	BoundType BType
 }
 
 const Scope_DEFAULT_SIZE = 10
 
 type Scope struct {
 	Owner   *BSymbol
-	Entries map[Name]ScopeEntry
+	Entries map[model.Name]ScopeEntry
 }
 
 type ScopeEntry struct {
@@ -82,7 +78,7 @@ type (
 		BLangNodeBase
 		Body                   *BLangBlockStmt
 		VariableDefinitionNode VariableDefinitionNode
-		VarType                *BType
+		VarType                BType
 		BodyContainsFail       bool
 		IsInternal             bool
 		isDeclaredWithVar      bool

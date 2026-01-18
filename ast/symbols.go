@@ -18,64 +18,61 @@ package ast
 
 import (
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/model"
 	"strings"
 )
 
-type SymbolKind uint
+type SymbolKind = model.SymbolKind
 
+// SymbolKind constants - aliases to model package
 const (
-	SymbolKind_PACKAGE SymbolKind = iota
-	SymbolKind_STRUCT
-	SymbolKind_OBJECT
-	SymbolKind_RECORD
-	SymbolKind_CONNECTOR
-	SymbolKind_ACTION
-	SymbolKind_SERVICE
-	SymbolKind_RESOURCE
-	SymbolKind_FUNCTION
-	SymbolKind_WORKER
-	SymbolKind_ANNOTATION
-	SymbolKind_ANNOTATION_ATTRIBUTE
-	SymbolKind_CONSTANT
-	SymbolKind_VARIABLE
-	SymbolKind_PACKAGE_VARIABLE
-	SymbolKind_TRANSFORMER
-	SymbolKind_TYPE_DEF
-	SymbolKind_ENUM
-	SymbolKind_ERROR
-
-	SymbolKind_PARAMETER
-	SymbolKind_PATH_PARAMETER
-	SymbolKind_PATH_REST_PARAMETER
-	SymbolKind_LOCAL_VARIABLE
-	SymbolKind_SERVICE_VARIABLE
-	SymbolKind_CONNECTOR_VARIABLE
-
-	SymbolKind_CAST_OPERATOR
-	SymbolKind_CONVERSION_OPERATOR
-	SymbolKind_TYPEOF_OPERATOR
-
-	SymbolKind_XMLNS
-	SymbolKind_SCOPE
-	SymbolKind_OTHER
-
-	SymbolKind_INVOKABLE_TYPE
-
-	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
-	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
-
-	SymbolKind_SEQUENCE
+	SymbolKind_PACKAGE                          = model.SymbolKind_PACKAGE
+	SymbolKind_STRUCT                           = model.SymbolKind_STRUCT
+	SymbolKind_OBJECT                           = model.SymbolKind_OBJECT
+	SymbolKind_RECORD                           = model.SymbolKind_RECORD
+	SymbolKind_CONNECTOR                        = model.SymbolKind_CONNECTOR
+	SymbolKind_ACTION                           = model.SymbolKind_ACTION
+	SymbolKind_SERVICE                          = model.SymbolKind_SERVICE
+	SymbolKind_RESOURCE                         = model.SymbolKind_RESOURCE
+	SymbolKind_FUNCTION                         = model.SymbolKind_FUNCTION
+	SymbolKind_WORKER                           = model.SymbolKind_WORKER
+	SymbolKind_ANNOTATION                       = model.SymbolKind_ANNOTATION
+	SymbolKind_ANNOTATION_ATTRIBUTE             = model.SymbolKind_ANNOTATION_ATTRIBUTE
+	SymbolKind_CONSTANT                         = model.SymbolKind_CONSTANT
+	SymbolKind_VARIABLE                         = model.SymbolKind_VARIABLE
+	SymbolKind_PACKAGE_VARIABLE                 = model.SymbolKind_PACKAGE_VARIABLE
+	SymbolKind_TRANSFORMER                      = model.SymbolKind_TRANSFORMER
+	SymbolKind_TYPE_DEF                         = model.SymbolKind_TYPE_DEF
+	SymbolKind_ENUM                             = model.SymbolKind_ENUM
+	SymbolKind_ERROR                            = model.SymbolKind_ERROR
+	SymbolKind_PARAMETER                        = model.SymbolKind_PARAMETER
+	SymbolKind_PATH_PARAMETER                   = model.SymbolKind_PATH_PARAMETER
+	SymbolKind_PATH_REST_PARAMETER              = model.SymbolKind_PATH_REST_PARAMETER
+	SymbolKind_LOCAL_VARIABLE                   = model.SymbolKind_LOCAL_VARIABLE
+	SymbolKind_SERVICE_VARIABLE                 = model.SymbolKind_SERVICE_VARIABLE
+	SymbolKind_CONNECTOR_VARIABLE               = model.SymbolKind_CONNECTOR_VARIABLE
+	SymbolKind_CAST_OPERATOR                    = model.SymbolKind_CAST_OPERATOR
+	SymbolKind_CONVERSION_OPERATOR              = model.SymbolKind_CONVERSION_OPERATOR
+	SymbolKind_TYPEOF_OPERATOR                  = model.SymbolKind_TYPEOF_OPERATOR
+	SymbolKind_XMLNS                            = model.SymbolKind_XMLNS
+	SymbolKind_SCOPE                            = model.SymbolKind_SCOPE
+	SymbolKind_OTHER                            = model.SymbolKind_OTHER
+	SymbolKind_INVOKABLE_TYPE                   = model.SymbolKind_INVOKABLE_TYPE
+	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT = model.SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
+	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT      = model.SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
+	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT = model.SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
+	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT       = model.SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
+	SymbolKind_SEQUENCE                         = model.SymbolKind_SEQUENCE
 )
 
-type SymbolOrigin uint8
+type SymbolOrigin = model.SymbolOrigin
 
+// SymbolOrigin constants - aliases to model package
 const (
-	SymbolOrigin_BUILTIN SymbolOrigin = iota
-	SymbolOrigin_SOURCE
-	SymbolOrigin_COMPILED_SOURCE
-	SymbolOrigin_VIRTUAL
+	SymbolOrigin_BUILTIN         = model.SymbolOrigin_BUILTIN
+	SymbolOrigin_SOURCE          = model.SymbolOrigin_SOURCE
+	SymbolOrigin_COMPILED_SOURCE = model.SymbolOrigin_COMPILED_SOURCE
+	SymbolOrigin_VIRTUAL         = model.SymbolOrigin_VIRTUAL
 )
 
 type DiagnosticState uint8
@@ -125,32 +122,17 @@ const (
 	SymTag_SEQUENCE              SymTag = 1<<32 | SymTag_MAIN
 )
 
-type Symbol interface {
-	GetName() Name
-	GetOriginalName() Name
-	GetKind() SymbolKind
-	GetType() Type
-	GetFlags() common.Set[Flag]
-	GetEnclosingSymbol() Symbol
-	GetEnclosedSymbols() []Symbol
-	GetPosition() Location
-	GetOrigin() SymbolOrigin
-}
-
-type TypeSymbol = Symbol
-
-type Annotatable interface {
-	AddAnnotation(AnnotationAttachmentSymbol)
-	GetAnnotations() []AnnotationAttachmentSymbol
-}
-
-type AnnotationSymbol = Annotatable
-
-type ConstantSymbol = Annotatable
-
-type AnnotationAttachmentSymbol interface {
-	IsConstAnnotation() bool
-}
+// Type aliases for model interfaces
+type (
+	Symbol                     = model.Symbol
+	TypeSymbol                 = model.TypeSymbol
+	Annotatable                = model.Annotatable
+	AnnotationSymbol           = model.AnnotationSymbol
+	ConstantSymbol             = model.ConstantSymbol
+	AnnotationAttachmentSymbol = model.AnnotationAttachmentSymbol
+	InvokableSymbol            = model.InvokableSymbol
+	VariableSymbol             = model.VariableSymbol
+)
 
 type SchedulerPolicy uint8
 
@@ -159,28 +141,17 @@ const (
 	SchedulerPolicy_ANY
 )
 
-type InvokableSymbol interface {
-	Annotatable
-	GetParameters() []VariableSymbol
-	GetReturnType() Type
-}
-
-type VariableSymbol interface {
-	Symbol
-	GetConstValue() any
-}
-
 type BOperatorSymbol = BInvokableSymbol
 type (
 	BSymbol struct {
 		BLangNodeBase
 		Tag                   SymTag
 		Flags                 Flags
-		Name                  *Name
-		OriginalName          *Name
-		PkgID                 *PackageID
+		Name                  *model.Name
+		OriginalName          *model.Name
+		PkgID                 *model.PackageID
 		Kind                  SymbolKind
-		Type                  *BType
+		Type                  BType
 		Owner                 Symbol
 		Tainted               bool
 		Closure               bool
@@ -198,7 +169,7 @@ type (
 	BConstantSymbol struct {
 		BVarSymbol
 		Value       *BLangConstantValue
-		LiteralType *BType
+		LiteralType BType
 	}
 	BTypeSymbol struct {
 		BSymbol
@@ -208,12 +179,12 @@ type (
 	}
 	BAnnotationAttachmentSymbol struct {
 		BSymbol
-		AnnotPkgID *PackageID
-		AnnotTag   *Name
+		AnnotPkgID *model.PackageID
+		AnnotTag   *model.Name
 	}
 	BAnnotationSymbol struct {
 		BTypeSymbol
-		AttachedType          *BType
+		AttachedType          BType
 		Points                common.Set[AttachPoint]
 		MaskedPoints          int
 		annotationAttachments []BAnnotationAttachmentSymbol
@@ -222,8 +193,8 @@ type (
 		BVarSymbol
 		Params                          []BVarSymbol
 		RestParam                       *BVarSymbol
-		RetType                         *BType
-		ParamDefaultValTypes            map[string]*BType
+		RetType                         BType
+		ParamDefaultValTypes            map[string]BType
 		ReceiverSymbol                  *BVarSymbol
 		BodyExist                       bool
 		annotationAttachmentsOnExternal []BAnnotationAttachmentSymbol
@@ -249,24 +220,15 @@ var (
 	_ Annotatable                = &BVarSymbol{}
 )
 
-var _ BLangNode = &BSymbol{}
-var _ BLangNode = &BVarSymbol{}
-var _ BLangNode = &BConstantSymbol{}
-var _ BLangNode = &BTypeSymbol{}
-var _ BLangNode = &BAnnotationAttachmentSymbol{}
-var _ BLangNode = &BAnnotationSymbol{}
-var _ BLangNode = &BInvokableSymbol{}
-var _ BLangNode = &BPackageSymbol{}
-
-func (this *BSymbol) GetName() Name {
-	return *this.Name
+func (this *BSymbol) GetName() string {
+	return string(*this.Name)
 }
 
-func (this *BSymbol) GetOriginalName() Name {
+func (this *BSymbol) GetOriginalName() string {
 	if this.OriginalName != nil {
-		return *this.OriginalName
+		return string(*this.OriginalName)
 	}
-	return *this.Name
+	return string(*this.Name)
 }
 
 func (this *BSymbol) GetKind() SymbolKind {
@@ -422,7 +384,7 @@ func asMask(points map[Point]bool) int {
 	return mask
 }
 
-func NewBAnnotationSymbol(name *Name, originalName *Name, flags Flags, points common.Set[AttachPoint], pkgID *PackageID, bType *BType, owner Symbol, pos Location, origin SymbolOrigin) *BAnnotationSymbol {
+func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[AttachPoint], pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BAnnotationSymbol {
 	symbol := &BAnnotationSymbol{
 		BTypeSymbol: BTypeSymbol{
 			BSymbol: BSymbol{
@@ -446,11 +408,11 @@ func NewBAnnotationSymbol(name *Name, originalName *Name, flags Flags, points co
 	return symbol
 }
 
-func NewBConstantSymbol(flags Flags, name *Name, pkgID *PackageID, literalType *BType, bType *BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
+func NewBConstantSymbol(flags Flags, name *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
 	return NewBConstantSymbolWithOriginalName(flags, name, name, pkgID, literalType, bType, owner, pos, origin)
 }
 
-func NewBConstantSymbolWithOriginalName(flags Flags, name *Name, originalName *Name, pkgID *PackageID, literalType *BType, bType *BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
+func NewBConstantSymbolWithOriginalName(flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
 	symbol := &BConstantSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
@@ -475,11 +437,11 @@ func NewBConstantSymbolWithOriginalName(flags Flags, name *Name, originalName *N
 	return symbol
 }
 
-func NewBInvokableSymbol(tag SymTag, flags Flags, name *Name, pkgID *PackageID, bType *BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
+func NewBInvokableSymbol(tag SymTag, flags Flags, name *model.Name, pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
 	return NewBInvokableSymbolWithOriginalName(tag, flags, name, name, pkgID, bType, owner, pos, origin)
 }
 
-func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *Name, originalName *Name, pkgID *PackageID, bType *BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
+func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
 	symbol := &BInvokableSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
@@ -499,7 +461,7 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *Name, or
 			State:                 DiagnosticState_VALID,
 		},
 		Params:                          []BVarSymbol{},
-		ParamDefaultValTypes:            make(map[string]*BType),
+		ParamDefaultValTypes:            make(map[string]BType),
 		annotationAttachmentsOnExternal: []BAnnotationAttachmentSymbol{},
 		SchedulerPolicy:                 SchedulerPolicy_PARENT,
 		DependentGlobalVars:             &common.UnorderedSet[*BVarSymbol]{},
@@ -507,21 +469,21 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *Name, or
 	return symbol
 }
 
-func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *PackageID) string {
-	if DOT == *pkgID.Name {
+func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *model.PackageID) string {
+	if model.DOT == *pkgID.Name {
 		return pkgID.Name.Value()
 	}
 	org := ""
-	if pkgID.OrgName != nil && *pkgID.OrgName != ANON_ORG {
-		org = pkgID.OrgName.Value() + string(ORG_NAME_SEPARATOR)
+	if pkgID.OrgName != nil && *pkgID.OrgName != model.ANON_ORG {
+		org = pkgID.OrgName.Value() + string(model.ORG_NAME_SEPARATOR)
 	}
-	if *pkgID.Version == EMPTY {
+	if *pkgID.Version == model.EMPTY {
 		return org + pkgID.Name.Value()
 	}
-	return org + pkgID.Name.Value() + string(VERSION_SEPARATOR) + GetMajorVersion(*pkgID.Version)
+	return org + pkgID.Name.Value() + string(model.VERSION_SEPARATOR) + GetMajorVersion(*pkgID.Version)
 }
 
-func GetMajorVersion(version Name) string {
+func GetMajorVersion(version model.Name) string {
 	return strings.Split(version.Value(), ".")[0]
 }
 
