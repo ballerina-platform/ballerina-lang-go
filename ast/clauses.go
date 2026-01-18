@@ -34,7 +34,7 @@ type DoClauseNode interface {
 
 type SymbolEnv struct {
 	Scope             *Scope
-	Node              *BLangNode
+	Node              BLangNode
 	EnclPkg           *BLangPackage
 	EnclType          TypeNode
 	EnclAnnotation    *BLangAnnotation
@@ -68,18 +68,18 @@ type ScopeEntry struct {
 
 type (
 	BLangCollectClause struct {
-		BLangNode
+		BLangNodeBase
 		Expression      ExpressionNode
 		Env             *SymbolEnv
 		NonGroupingKeys common.Set[string]
 	}
 	BLangDoClause struct {
-		BLangNode
+		BLangNodeBase
 		Body *BLangBlockStmt
 		Env  *SymbolEnv
 	}
 	BLangOnFailClause struct {
-		BLangNode
+		BLangNodeBase
 		Body                   *BLangBlockStmt
 		VariableDefinitionNode VariableDefinitionNode
 		VarType                *BType
@@ -94,6 +94,10 @@ var (
 	_ DoClauseNode      = &BLangDoClause{}
 	_ OnFailClauseNode  = &BLangOnFailClause{}
 )
+
+var _ BLangNode = &BLangCollectClause{}
+var _ BLangNode = &BLangDoClause{}
+var _ BLangNode = &BLangOnFailClause{}
 
 func (this *BLangCollectClause) GetKind() NodeKind {
 	// migrated from BLangCollectClause.java:48:5

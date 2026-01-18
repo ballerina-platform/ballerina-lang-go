@@ -244,7 +244,7 @@ type (
 		Parameters []BLangMarkdownParameterDocumentation
 	}
 	BLangExpressionBase struct {
-		BLangNode
+		BLangNodeBase
 		ImpConversionExpr *BLangTypeConversionExpr
 		TypeChecked       bool
 		ExpectedType      BType
@@ -435,6 +435,36 @@ var _ MarkDownDocumentationDeprecatedParametersAttributeNode = &BLangMarkDownDep
 var _ WorkerReceiveNode = &BLangWorkerReceive{}
 var _ LambdaFunctionNode = &BLangLambdaFunction{}
 var _ InvocationNode = &BLangInvocation{}
+
+var _ BLangNode = &BLangExpressionBase{}
+var _ BLangNode = &BLangTypeConversionExpr{}
+var _ BLangNode = &BLangValueExpressionBase{}
+var _ BLangNode = &BLangAccessExpression{}
+var _ BLangNode = &BLangAlternateWorkerReceive{}
+var _ BLangNode = &BLangAnnotAccessExpr{}
+var _ BLangNode = &BLangArrowFunction{}
+var _ BLangNode = &BLangLambdaFunction{}
+var _ BLangNode = &BLangBinaryExpr{}
+var _ BLangNode = &BLangCheckedExpr{}
+var _ BLangNode = &BLangCheckPanickedExpr{}
+var _ BLangNode = &BLangCollectContextInvocation{}
+var _ BLangNode = &BLangCommitExpr{}
+var _ BLangNode = &BLangVariableReference{}
+var _ BLangNode = &BLangSimpleVarRef{}
+var _ BLangNode = &BLangLocalVarRef{}
+var _ BLangNode = &BLangConstRef{}
+var _ BLangNode = &BLangLiteral{}
+var _ BLangNode = &BLangDynamicArgExpr{}
+var _ BLangNode = &BLangElvisExpr{}
+var _ BLangNode = &BLangWorkerSendReceiveExprBase{}
+var _ BLangNode = &BLangWorkerReceive{}
+var _ BLangNode = &BLangWorkerSendExprBase{}
+var _ BLangNode = &BLangInvocation{}
+var _ BLangNode = &BLangMarkdownDocumentationLine{}
+var _ BLangNode = &BLangMarkdownParameterDocumentation{}
+var _ BLangNode = &BLangMarkdownReturnParameterDocumentation{}
+var _ BLangNode = &BLangMarkDownDeprecationDocumentation{}
+var _ BLangNode = &BLangMarkDownDeprecatedParametersDocumentation{}
 
 func (this *BLangAlternateWorkerReceive) GetKind() NodeKind {
 	// migrated from BLangAlternateWorkerReceive.java:37:5

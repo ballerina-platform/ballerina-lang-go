@@ -173,7 +173,7 @@ type VariableSymbol interface {
 type BOperatorSymbol = BInvokableSymbol
 type (
 	BSymbol struct {
-		BLangNode
+		BLangNodeBase
 		Tag                   SymTag
 		Flags                 Flags
 		Name                  *Name
@@ -248,6 +248,15 @@ var (
 	_ VariableSymbol             = &BVarSymbol{}
 	_ Annotatable                = &BVarSymbol{}
 )
+
+var _ BLangNode = &BSymbol{}
+var _ BLangNode = &BVarSymbol{}
+var _ BLangNode = &BConstantSymbol{}
+var _ BLangNode = &BTypeSymbol{}
+var _ BLangNode = &BAnnotationAttachmentSymbol{}
+var _ BLangNode = &BAnnotationSymbol{}
+var _ BLangNode = &BInvokableSymbol{}
+var _ BLangNode = &BPackageSymbol{}
 
 func (this *BSymbol) GetName() Name {
 	return *this.Name
@@ -417,16 +426,16 @@ func NewBAnnotationSymbol(name *Name, originalName *Name, flags Flags, points co
 	symbol := &BAnnotationSymbol{
 		BTypeSymbol: BTypeSymbol{
 			BSymbol: BSymbol{
-				BLangNode:    BLangNode{pos: pos},
-				Tag:          SymTag_ANNOTATION,
-				Flags:        flags,
-				Name:         name,
-				OriginalName: originalName,
-				PkgID:        pkgID,
-				Type:         bType,
-				Owner:        owner,
-				Pos:          pos,
-				Origin:       origin,
+				BLangNodeBase: BLangNodeBase{pos: pos},
+				Tag:           SymTag_ANNOTATION,
+				Flags:         flags,
+				Name:          name,
+				OriginalName:  originalName,
+				PkgID:         pkgID,
+				Type:          bType,
+				Owner:         owner,
+				Pos:           pos,
+				Origin:        origin,
 			},
 		},
 		AttachedType:          bType,
@@ -445,17 +454,17 @@ func NewBConstantSymbolWithOriginalName(flags Flags, name *Name, originalName *N
 	symbol := &BConstantSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
-				BLangNode:    BLangNode{pos: pos},
-				Tag:          SymTag_CONSTANT,
-				Flags:        flags,
-				Name:         name,
-				OriginalName: originalName,
-				PkgID:        pkgID,
-				Type:         bType,
-				Owner:        owner,
-				Pos:          pos,
-				Origin:       origin,
-				Kind:         SymbolKind_CONSTANT,
+				BLangNodeBase: BLangNodeBase{pos: pos},
+				Tag:           SymTag_CONSTANT,
+				Flags:         flags,
+				Name:          name,
+				OriginalName:  originalName,
+				PkgID:         pkgID,
+				Type:          bType,
+				Owner:         owner,
+				Pos:           pos,
+				Origin:        origin,
+				Kind:          SymbolKind_CONSTANT,
 			},
 			annotationAttachments: []BAnnotationAttachmentSymbol{},
 			State:                 DiagnosticState_VALID,
@@ -474,17 +483,17 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *Name, or
 	symbol := &BInvokableSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
-				BLangNode:    BLangNode{pos: pos},
-				Tag:          tag,
-				Flags:        flags,
-				Name:         name,
-				OriginalName: originalName,
-				PkgID:        pkgID,
-				Type:         bType,
-				Owner:        owner,
-				Pos:          pos,
-				Origin:       origin,
-				Kind:         SymbolKind_FUNCTION,
+				BLangNodeBase: BLangNodeBase{pos: pos},
+				Tag:           tag,
+				Flags:         flags,
+				Name:          name,
+				OriginalName:  originalName,
+				PkgID:         pkgID,
+				Type:          bType,
+				Owner:         owner,
+				Pos:           pos,
+				Origin:        origin,
+				Kind:          SymbolKind_FUNCTION,
 			},
 			annotationAttachments: []BAnnotationAttachmentSymbol{},
 			State:                 DiagnosticState_VALID,

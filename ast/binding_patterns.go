@@ -83,7 +83,7 @@ type RestBindingPatternNode interface {
 
 type (
 	BLangBindingPattern struct {
-		BLangNode
+		BLangNodeBase
 		DeclaredVars map[string]BVarSymbol
 	}
 
@@ -148,6 +148,17 @@ var _ SimpleBindingPatternNode = &BLangSimpleBindingPattern{}
 var _ NamedArgBindingPatternNode = &BLangNamedArgBindingPattern{}
 var _ RestBindingPatternNode = &BLangRestBindingPattern{}
 var _ WildCardBindingPatternNode = &BLangWildCardBindingPattern{}
+
+var _ BLangNode = &BLangBindingPattern{}
+var _ BLangNode = &BLangCaptureBindingPattern{}
+var _ BLangNode = &BLangErrorBindingPattern{}
+var _ BLangNode = &BLangErrorMessageBindingPattern{}
+var _ BLangNode = &BLangErrorCauseBindingPattern{}
+var _ BLangNode = &BLangErrorFieldBindingPatterns{}
+var _ BLangNode = &BLangSimpleBindingPattern{}
+var _ BLangNode = &BLangNamedArgBindingPattern{}
+var _ BLangNode = &BLangRestBindingPattern{}
+var _ BLangNode = &BLangWildCardBindingPattern{}
 
 func (this *BLangCaptureBindingPattern) GetKind() NodeKind {
 	// migrated from BLangCaptureBindingPattern.java:55:5

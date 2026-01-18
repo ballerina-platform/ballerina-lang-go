@@ -26,7 +26,7 @@ type MatchPatternNode = Node
 
 type (
 	BLangMatchPattern struct {
-		BLangNode
+		BLangNodeBase
 
 		MatchExpr             BLangExpression
 		DeclaredVars          map[string]BVarSymbol
@@ -41,6 +41,9 @@ type (
 )
 
 var _ ConstPatternNode = &BLangConstPattern{}
+
+var _ BLangNode = &BLangMatchPattern{}
+var _ BLangNode = &BLangConstPattern{}
 
 func (this *BLangConstPattern) GetKind() NodeKind {
 	// migrated from BLangConstPattern.java:53:5

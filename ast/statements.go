@@ -84,7 +84,7 @@ const (
 
 type (
 	BLangStatementBase struct {
-		BLangNode
+		BLangNodeBase
 	}
 	BLangAssignment struct {
 		BLangStatementBase
@@ -125,6 +125,14 @@ var _ CompoundAssignmentNode = &BLangCompoundAssignment{}
 var _ ContinueNode = &BLangContinue{}
 var _ DoNode = &BLangDo{}
 var _ BlockStatementNode = &BLangBlockStmt{}
+
+var _ BLangNode = &BLangStatementBase{}
+var _ BLangNode = &BLangAssignment{}
+var _ BLangNode = &BLangBlockStmt{}
+var _ BLangNode = &BLangBreak{}
+var _ BLangNode = &BLangCompoundAssignment{}
+var _ BLangNode = &BLangContinue{}
+var _ BLangNode = &BLangDo{}
 
 func (this *BLangAssignment) GetVariable() ExpressionNode {
 	// migrated from BLangAssignment.java:48:5

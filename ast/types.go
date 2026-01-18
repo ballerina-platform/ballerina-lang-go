@@ -134,7 +134,7 @@ type (
 		Flags   uint64
 	}
 	BLangTypeBase struct {
-		BLangNode
+		BLangNodeBase
 		FlagSet  common.UnorderedSet[Flag]
 		Nullable bool
 		Grouped  bool
@@ -188,6 +188,10 @@ var (
 	_ NamedNode                = &BField{}
 	_ ObjectType               = &BObjectType{}
 )
+
+var _ BLangNode = &BLangTypeBase{}
+var _ BLangNode = &BLangArrayType{}
+var _ BLangNode = &BLangUserDefinedType{}
 
 func (this *BLangArrayType) GetKind() NodeKind {
 	// migrated from BLangArrayType.java:100:5

@@ -746,14 +746,22 @@ type (
 		GetTypeNode() TypeNode
 		SetTypeNode(typeNode TypeNode)
 	}
+	BLangNode interface {
+		SetBType(ty *BType)
+		GetBType() *BType
+		SetDeterminedType(ty *BType)
+		GetDeterminedType() *BType
+		GetPosition() Location
+		SetPosition(pos Location)
+	}
 )
 
 type (
-	BLangNode struct {
+	BLangNodeBase struct {
 		ty             *BType
 		determinedType *BType
 
-		parent *BLangNode
+		parent BLangNode
 
 		pos                Location
 		desugared          bool
@@ -762,7 +770,7 @@ type (
 	}
 
 	BLangAnnotation struct {
-		BLangNode
+		BLangNodeBase
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
@@ -773,7 +781,7 @@ type (
 	}
 
 	BLangAnnotationAttachment struct {
-		BLangNode
+		BLangNodeBase
 		Expr                       BLangExpression
 		AnnotationName             *BLangIdentifier
 		PkgAlias                   *BLangIdentifier
@@ -783,7 +791,7 @@ type (
 	}
 
 	BLangFunctionBodyBase struct {
-		BLangNode
+		BLangNodeBase
 		Scope *Scope
 	}
 
@@ -799,14 +807,14 @@ type (
 	}
 
 	BLangIdentifier struct {
-		BLangNode
+		BLangNodeBase
 		Value         string
 		OriginalValue string
 		isLiteral     bool
 	}
 
 	BLangImportPackage struct {
-		BLangNode
+		BLangNodeBase
 		OrgName      *BLangIdentifier
 		PkgNameComps []BLangIdentifier
 		Alias        *BLangIdentifier
@@ -816,7 +824,7 @@ type (
 	}
 
 	BLangClassDefinition struct {
-		BLangNode
+		BLangNodeBase
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
@@ -842,7 +850,7 @@ type (
 	}
 
 	BLangService struct {
-		BLangNode
+		BLangNodeBase
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
 		ServiceClass                    *BLangClassDefinition
@@ -859,7 +867,7 @@ type (
 	}
 
 	BLangCompilationUnit struct {
-		BLangNode
+		BLangNodeBase
 		TopLevelNodes []TopLevelNode
 		Name          string
 		packageID     PackageID
@@ -867,7 +875,7 @@ type (
 	}
 
 	BLangPackage struct {
-		BLangNode
+		BLangNodeBase
 		CompUnits                  []BLangCompilationUnit
 		Imports                    []BLangImportPackage
 		XmlnsList                  []BLangXMLNS
@@ -902,7 +910,7 @@ type (
 		isLegacyMockingMap   map[string]bool
 	}
 	BLangXMLNS struct {
-		BLangNode
+		BLangNodeBase
 		namespaceURI BLangExpression
 		prefix       *BLangIdentifier
 		compUnit     *BLangIdentifier
@@ -915,7 +923,7 @@ type (
 		BLangXMLNS
 	}
 	BLangMarkdownDocumentation struct {
-		BLangNode
+		BLangNodeBase
 		DocumentationLines                []BLangMarkdownDocumentationLine
 		Parameters                        []BLangMarkdownParameterDocumentation
 		References                        []BLangMarkdownReferenceDocumentation
@@ -924,7 +932,7 @@ type (
 		DeprecatedParametersDocumentation *BLangMarkDownDeprecatedParametersDocumentation
 	}
 	BLangMarkdownReferenceDocumentation struct {
-		BLangNode
+		BLangNodeBase
 		Qualifier         string
 		TypeName          string
 		Identifier        string
@@ -938,7 +946,7 @@ type (
 	}
 
 	BLangVariableBase struct {
-		BLangNode
+		BLangNodeBase
 		TypeNode                        TypeNode
 		AnnAttachments                  []AnnotationAttachmentNode
 		MarkdownDocumentationAttachment MarkdownDocumentationNode
@@ -966,7 +974,7 @@ type (
 	}
 
 	BLangInvokableNodeBase struct {
-		BLangNode
+		BLangNodeBase
 		Name                            *BLangIdentifier
 		AnnAttachments                  []AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
@@ -999,7 +1007,7 @@ type (
 	}
 
 	BLangTypeDefinition struct {
-		BLangNode
+		BLangNodeBase
 		name                            *BLangIdentifier
 		typeNode                        TypeNode
 		annAttachments                  []BLangAnnotationAttachment
@@ -1014,8 +1022,28 @@ type (
 	}
 )
 
-func (this *BLangNode) GetPosition() Location {
+func (this *BLangNodeBase) SetBType(ty *BType) {
+	this.ty = ty
+}
+
+func (this *BLangNodeBase) GetBType() *BType {
+	return this.ty
+}
+
+func (this *BLangNodeBase) SetDeterminedType(ty *BType) {
+	this.determinedType = ty
+}
+
+func (this *BLangNodeBase) GetDeterminedType() *BType {
+	return this.determinedType
+}
+
+func (this *BLangNodeBase) GetPosition() Location {
 	return this.pos
+}
+
+func (this *BLangNodeBase) SetPosition(pos Location) {
+	this.pos = pos
 }
 
 var _ AnnotationAttachmentNode = &BLangAnnotationAttachment{}
@@ -1035,6 +1063,30 @@ var _ MarkdownDocumentationNode = &BLangMarkdownDocumentation{}
 var _ MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
 var _ ExprFunctionBodyNode = &BLangExprFunctionBody{}
 var _ FunctionNode = &BLangFunction{}
+
+var _ BLangNode = &BLangAnnotation{}
+var _ BLangNode = &BLangAnnotationAttachment{}
+var _ BLangNode = &BLangFunctionBodyBase{}
+var _ BLangNode = &BLangBlockFunctionBody{}
+var _ BLangNode = &BLangExprFunctionBody{}
+var _ BLangNode = &BLangIdentifier{}
+var _ BLangNode = &BLangImportPackage{}
+var _ BLangNode = &BLangClassDefinition{}
+var _ BLangNode = &BLangService{}
+var _ BLangNode = &BLangCompilationUnit{}
+var _ BLangNode = &BLangPackage{}
+var _ BLangNode = &BLangTestablePackage{}
+var _ BLangNode = &BLangXMLNS{}
+var _ BLangNode = &BLangLocalXMLNS{}
+var _ BLangNode = &BLangPackageXMLNS{}
+var _ BLangNode = &BLangMarkdownDocumentation{}
+var _ BLangNode = &BLangMarkdownReferenceDocumentation{}
+var _ BLangNode = &BLangVariableBase{}
+var _ BLangNode = &BLangConstant{}
+var _ BLangNode = &BLangSimpleVariable{}
+var _ BLangNode = &BLangInvokableNodeBase{}
+var _ BLangNode = &BLangFunction{}
+var _ BLangNode = &BLangTypeDefinition{}
 
 func (this *BLangAnnotationAttachment) GetKind() NodeKind {
 	// migrated from BLangAnnotationAttachment.java:89:5
