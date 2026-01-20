@@ -14,29 +14,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package bir
 
 import (
 	"strconv"
 	"strings"
 
-	"ballerina-lang-go/compiler/model/elements"
-	"ballerina-lang-go/compiler/model/symbols"
-	"ballerina-lang-go/compiler/semantics/model/types"
-	"ballerina-lang-go/compiler/util"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
 type (
-	Name                  = util.Name
-	PackageID             = elements.PackageID
-	SymbolOrigin          = symbols.SymbolOrigin
-	AttachPoint           = elements.AttachPoint
-	MarkdownDocAttachment = elements.MarkdownDocAttachment
-	Flag                  = elements.Flag
-	NamedNode             = types.NamedNode
-	BType                 = types.BType
-	BInvokableType        = types.BInvokableType
+	Name                  = model.Name
+	PackageID             = model.PackageID
+	SymbolOrigin          = model.SymbolOrigin
+	AttachPoint           = model.AttachPoint
+	MarkdownDocAttachment = model.MarkdownDocAttachment
+	Flag                  = model.Flag
+	NamedNode             = model.NamedNode
+
+	BType = model.ValueType
 )
 
 type BIRNodeData interface {
@@ -213,7 +210,7 @@ func NewBIRPackageWithIsTestPkg(pos diagnostics.Location, org Name, pkgName Name
 			BIRNodeBase: BIRNodeBase{
 				Pos: pos,
 			},
-			PackageID:                      elements.NewPackageID(org, pkgName, name, version, sourceFileName, sourceRoot, isTestPkg, skipTest),
+			PackageID:                      model.NewPackageIDFull(org, pkgName, name, version, sourceFileName, sourceRoot, isTestPkg, skipTest),
 			ImportModules:                  []BIRImportModule{},
 			TypeDefs:                       []BIRTypeDefinition{},
 			GlobalVars:                     []BIRGlobalVariableDcl{},
@@ -257,8 +254,6 @@ func (b *BIRImportModuleBase) GetPackageID() PackageID {
 type BIRImportModule interface {
 	BIRImportModuleData
 	BIRNode
-	Equals(o interface{}) bool
-	HashCode() int
 }
 
 type BIRImportModuleMethods struct {
@@ -275,7 +270,7 @@ func NewBIRImportModule(pos diagnostics.Location, org Name, name Name, version N
 			BIRNodeBase: BIRNodeBase{
 				Pos: pos,
 			},
-			PackageID: elements.NewPackageIDWithOrgNameVersion(org, name, version),
+			PackageID: model.NewPackageIDWithName(org, name, version),
 		},
 		BIRImportModuleMethods: BIRImportModuleMethods{Self: nil},
 	}
@@ -286,24 +281,6 @@ func NewBIRImportModule(pos diagnostics.Location, org Name, name Name, version N
 type BIRImportModuleImpl struct {
 	BIRImportModuleBase
 	BIRImportModuleMethods
-}
-
-func (m *BIRImportModuleImpl) Equals(o interface{}) bool {
-	if m == o {
-		return true
-	}
-	if o == nil {
-		return false
-	}
-	other, ok := o.(BIRImportModule)
-	if !ok {
-		return false
-	}
-	return m.GetPackageID().Equals(other.GetPackageID())
-}
-
-func (m *BIRImportModuleImpl) HashCode() int {
-	return m.GetPackageID().HashCode()
 }
 
 type BIRVariableDclData interface {
@@ -334,8 +311,8 @@ type BIRVariableDclData interface {
 	GetOnlyUsedInSingleBB() bool
 	SetInitialized(initialized bool)
 	GetInitialized() bool
-	SetInsScope(insScope BirScope)
-	GetInsScope() BirScope
+	SetInsScope(insScope BIRScope)
+	GetInsScope() BIRScope
 }
 
 type BIRVariableDclBase struct {
@@ -353,7 +330,7 @@ type BIRVariableDclBase struct {
 	InsOffset          int
 	OnlyUsedInSingleBB bool
 	Initialized        bool
-	InsScope           BirScope
+	InsScope           BIRScope
 }
 
 func (b *BIRVariableDclBase) SetType(type_ BType) {
@@ -460,20 +437,17 @@ func (b *BIRVariableDclBase) GetInitialized() bool {
 	return b.Initialized
 }
 
-func (b *BIRVariableDclBase) SetInsScope(insScope BirScope) {
+func (b *BIRVariableDclBase) SetInsScope(insScope BIRScope) {
 	b.InsScope = insScope
 }
 
-func (b *BIRVariableDclBase) GetInsScope() BirScope {
+func (b *BIRVariableDclBase) GetInsScope() BIRScope {
 	return b.InsScope
 }
 
 type BIRVariableDcl interface {
 	BIRVariableDclData
 	BIRDocumentableNode
-	Equals(other interface{}) bool
-	HashCode() int
-	String() string
 }
 
 type BIRVariableDclMethods struct {
@@ -498,7 +472,7 @@ func NewBIRVariableDcl(pos diagnostics.Location, type_ BType, name Name, origina
 			Scope:        scope,
 			Kind:         kind,
 			MetaVarName:  metaVarName,
-			JvmVarName:   strings.ReplaceAll(name.GetValue(), "%", "_"),
+			JvmVarName:   strings.ReplaceAll(name.Value(), "%", "_"),
 		},
 		BIRVariableDclMethods: BIRVariableDclMethods{Self: nil},
 	}
@@ -517,25 +491,6 @@ func NewBIRVariableDclSimple(type_ BType, name Name, scope VarScope, kind VarKin
 type BIRVariableDclImpl struct {
 	BIRVariableDclBase
 	BIRVariableDclMethods
-}
-
-func (v *BIRVariableDclImpl) Equals(other interface{}) bool {
-	if v == other {
-		return true
-	}
-	otherVarDecl, ok := other.(BIRVariableDcl)
-	if !ok {
-		return false
-	}
-	return v.GetName().Equals(otherVarDecl.GetName())
-}
-
-func (v *BIRVariableDclImpl) HashCode() int {
-	return v.GetName().HashCode()
-}
-
-func (v *BIRVariableDclImpl) String() string {
-	return v.GetName().String()
 }
 
 type BIRParameterData interface {
@@ -710,23 +665,8 @@ type BIRGlobalVariableDclImpl struct {
 	BIRGlobalVariableDclMethods
 }
 
-func (v *BIRGlobalVariableDclImpl) Equals(other interface{}) bool {
-	if v == other {
-		return true
-	}
-	otherVarDecl, ok := other.(BIRVariableDcl)
-	if !ok {
-		return false
-	}
-	return v.GetName().Equals(otherVarDecl.GetName())
-}
-
-func (v *BIRGlobalVariableDclImpl) HashCode() int {
-	return v.GetName().HashCode()
-}
-
 func (v *BIRGlobalVariableDclImpl) String() string {
-	return v.GetName().String()
+	return string(v.GetName())
 }
 
 type BIRFunctionParameterData interface {
@@ -806,23 +746,8 @@ type BIRFunctionParameterImpl struct {
 	BIRFunctionParameterMethods
 }
 
-func (v *BIRFunctionParameterImpl) Equals(other interface{}) bool {
-	if v == other {
-		return true
-	}
-	otherVarDecl, ok := other.(BIRVariableDcl)
-	if !ok {
-		return false
-	}
-	return v.GetName().Equals(otherVarDecl.GetName())
-}
-
-func (v *BIRFunctionParameterImpl) HashCode() int {
-	return v.GetName().HashCode()
-}
-
 func (v *BIRFunctionParameterImpl) String() string {
-	return v.GetName().String()
+	return string(v.GetName())
 }
 
 type BIRFunctionData interface {
@@ -1287,7 +1212,6 @@ func (b *BIRBasicBlockBase) GetTerminator() BIRTerminator {
 type BIRBasicBlock interface {
 	BIRBasicBlockData
 	BIRNode
-	String() string
 }
 
 type BIRBasicBlockMethods struct {
@@ -1316,20 +1240,16 @@ func NewBIRBasicBlock(id Name, number int) BIRBasicBlock {
 }
 
 func NewBIRBasicBlockWithNumber(number int) BIRBasicBlock {
-	return NewBIRBasicBlock(util.NewName(BIR_BASIC_BLOCK_PREFIX+strconv.Itoa(number)), number)
+	return NewBIRBasicBlock(Name(BIR_BASIC_BLOCK_PREFIX+strconv.Itoa(number)), number)
 }
 
 func NewBIRBasicBlockWithIdPrefix(idPrefix string, number int) BIRBasicBlock {
-	return NewBIRBasicBlock(util.NewName(idPrefix+strconv.Itoa(number)), number)
+	return NewBIRBasicBlock(Name(idPrefix+strconv.Itoa(number)), number)
 }
 
 type BIRBasicBlockImpl struct {
 	BIRBasicBlockBase
 	BIRBasicBlockMethods
-}
-
-func (b *BIRBasicBlockImpl) String() string {
-	return b.GetId().GetValue()
 }
 
 type BIRTypeDefinitionData interface {
@@ -1518,10 +1438,6 @@ func NewBIRTypeDefinitionSimple(pos diagnostics.Location, name Name, originalNam
 type BIRTypeDefinitionImpl struct {
 	BIRTypeDefinitionBase
 	BIRTypeDefinitionMethods
-}
-
-func (t *BIRTypeDefinitionImpl) String() string {
-	return t.GetType().String() + " " + t.GetInternalName().String()
 }
 
 type BIRErrorEntryData interface {

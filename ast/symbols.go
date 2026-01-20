@@ -17,9 +17,90 @@
 package ast
 
 import (
+	"strings"
+
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
-	"strings"
+)
+
+type (
+	SymbolKind            = model.SymbolKind
+	MarkdownDocAttachment = model.MarkdownDocAttachment
+)
+
+// SymbolKind constants - aliases to model package
+const (
+	SymbolKind_PACKAGE                          = model.SymbolKind_PACKAGE
+	SymbolKind_STRUCT                           = model.SymbolKind_STRUCT
+	SymbolKind_OBJECT                           = model.SymbolKind_OBJECT
+	SymbolKind_RECORD                           = model.SymbolKind_RECORD
+	SymbolKind_CONNECTOR                        = model.SymbolKind_CONNECTOR
+	SymbolKind_ACTION                           = model.SymbolKind_ACTION
+	SymbolKind_SERVICE                          = model.SymbolKind_SERVICE
+	SymbolKind_RESOURCE                         = model.SymbolKind_RESOURCE
+	SymbolKind_FUNCTION                         = model.SymbolKind_FUNCTION
+	SymbolKind_WORKER                           = model.SymbolKind_WORKER
+	SymbolKind_ANNOTATION                       = model.SymbolKind_ANNOTATION
+	SymbolKind_ANNOTATION_ATTRIBUTE             = model.SymbolKind_ANNOTATION_ATTRIBUTE
+	SymbolKind_CONSTANT                         = model.SymbolKind_CONSTANT
+	SymbolKind_VARIABLE                         = model.SymbolKind_VARIABLE
+	SymbolKind_PACKAGE_VARIABLE                 = model.SymbolKind_PACKAGE_VARIABLE
+	SymbolKind_TRANSFORMER                      = model.SymbolKind_TRANSFORMER
+	SymbolKind_TYPE_DEF                         = model.SymbolKind_TYPE_DEF
+	SymbolKind_ENUM                             = model.SymbolKind_ENUM
+	SymbolKind_ERROR                            = model.SymbolKind_ERROR
+	SymbolKind_PARAMETER                        = model.SymbolKind_PARAMETER
+	SymbolKind_PATH_PARAMETER                   = model.SymbolKind_PATH_PARAMETER
+	SymbolKind_PATH_REST_PARAMETER              = model.SymbolKind_PATH_REST_PARAMETER
+	SymbolKind_LOCAL_VARIABLE                   = model.SymbolKind_LOCAL_VARIABLE
+	SymbolKind_SERVICE_VARIABLE                 = model.SymbolKind_SERVICE_VARIABLE
+	SymbolKind_CONNECTOR_VARIABLE               = model.SymbolKind_CONNECTOR_VARIABLE
+	SymbolKind_CAST_OPERATOR                    = model.SymbolKind_CAST_OPERATOR
+	SymbolKind_CONVERSION_OPERATOR              = model.SymbolKind_CONVERSION_OPERATOR
+	SymbolKind_TYPEOF_OPERATOR                  = model.SymbolKind_TYPEOF_OPERATOR
+	SymbolKind_XMLNS                            = model.SymbolKind_XMLNS
+	SymbolKind_SCOPE                            = model.SymbolKind_SCOPE
+	SymbolKind_OTHER                            = model.SymbolKind_OTHER
+	SymbolKind_INVOKABLE_TYPE                   = model.SymbolKind_INVOKABLE_TYPE
+	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT = model.SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
+	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT      = model.SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
+	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT = model.SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
+	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT       = model.SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
+	SymbolKind_SEQUENCE                         = model.SymbolKind_SEQUENCE
+)
+
+type SymbolOrigin = model.SymbolOrigin
+
+// SymbolOrigin constants - aliases to model package
+const (
+	SymbolOrigin_BUILTIN         = model.SymbolOrigin_BUILTIN
+	SymbolOrigin_SOURCE          = model.SymbolOrigin_SOURCE
+	SymbolOrigin_COMPILED_SOURCE = model.SymbolOrigin_COMPILED_SOURCE
+	SymbolOrigin_VIRTUAL         = model.SymbolOrigin_VIRTUAL
+)
+
+type Point = model.Point
+
+// Point constants - aliases to model package
+const (
+	Point_TYPE           = model.Point_TYPE
+	Point_OBJECT         = model.Point_OBJECT
+	Point_FUNCTION       = model.Point_FUNCTION
+	Point_OBJECT_METHOD  = model.Point_OBJECT_METHOD
+	Point_SERVICE_REMOTE = model.Point_SERVICE_REMOTE
+	Point_PARAMETER      = model.Point_PARAMETER
+	Point_RETURN         = model.Point_RETURN
+	Point_SERVICE        = model.Point_SERVICE
+	Point_FIELD          = model.Point_FIELD
+	Point_OBJECT_FIELD   = model.Point_OBJECT_FIELD
+	Point_RECORD_FIELD   = model.Point_RECORD_FIELD
+	Point_LISTENER       = model.Point_LISTENER
+	Point_ANNOTATION     = model.Point_ANNOTATION
+	Point_EXTERNAL       = model.Point_EXTERNAL
+	Point_VAR            = model.Point_VAR
+	Point_CONST          = model.Point_CONST
+	Point_WORKER         = model.Point_WORKER
+	Point_CLASS          = model.Point_CLASS
 )
 
 type DiagnosticState uint8
@@ -404,7 +485,7 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Na
 	return symbol
 }
 
-func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *model.PackageID) string {
+func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *PackageID) string {
 	if model.DOT == *pkgID.Name {
 		return pkgID.Name.Value()
 	}
@@ -448,17 +529,4 @@ func (this *BInvokableSymbol) GetAnnotationAttachmentsOnExternal() []model.Annot
 		result[i] = &this.annotationAttachmentsOnExternal[i]
 	}
 	return result
-}
-
-type MarkdownDocAttachment struct {
-	Description             *string
-	Parameters              []Parameters
-	ReturnValueDescription  *string
-	DeprecatedDocumentation *string
-	DeprecatedParameters    []Parameters
-}
-
-type Parameters struct {
-	Name        *string
-	Description *string
 }

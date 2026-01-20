@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package bir
 
 type BIROperandData interface {
 	BIRNodeData
@@ -38,9 +38,6 @@ func (b *BIROperandBase) GetVariableDcl() BIRVariableDcl {
 type BIROperand interface {
 	BIROperandData
 	BIRNode
-	Equals(other interface{}) bool
-	HashCode() int
-	String() string
 }
 
 type BIROperandMethods struct {
@@ -68,23 +65,4 @@ func NewBIROperand(variableDcl BIRVariableDcl) BIROperand {
 type BIROperandImpl struct {
 	BIROperandBase
 	BIROperandMethods
-}
-
-func (o *BIROperandImpl) Equals(other interface{}) bool {
-	if o == other {
-		return true
-	}
-	otherOperand, ok := other.(BIROperand)
-	if !ok {
-		return false
-	}
-	return o.GetVariableDcl().Equals(otherOperand.GetVariableDcl())
-}
-
-func (o *BIROperandImpl) HashCode() int {
-	return o.GetVariableDcl().HashCode()
-}
-
-func (o *BIROperandImpl) String() string {
-	return o.GetVariableDcl().String()
 }

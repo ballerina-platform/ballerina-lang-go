@@ -21,16 +21,13 @@ import (
 	"fmt"
 	"io"
 
-	birmodel "ballerina-lang-go/compiler/bir/model"
-	"ballerina-lang-go/compiler/model/elements"
-	"ballerina-lang-go/compiler/model/symbols"
-	"ballerina-lang-go/compiler/util"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
 
 	"github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 )
 
-func LoadBIRPackageFromReader(r io.Reader) (birmodel.BIRPackage, error) {
+func LoadBIRPackageFromReader(r io.Reader) (BIRPackage, error) {
 	// Read all data into a buffer since kaitai.NewStream requires io.ReadSeeker
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -104,7 +101,7 @@ func LoadBIRPackageFromReader(r io.Reader) (birmodel.BIRPackage, error) {
 // buildBIRPackage constructs the BIRPackage shell: only PackageID and empty
 // collections are initialized here; contents are populated by the helpers
 // below.
-func buildBIRPackage(b *Bir) (birmodel.BIRPackage, error) {
+func buildBIRPackage(b *Bir) (BIRPackage, error) {
 	mod := b.Module
 
 	// The module id is a CP index into the constant pool; the corresponding
@@ -114,18 +111,18 @@ func buildBIRPackage(b *Bir) (birmodel.BIRPackage, error) {
 		return nil, fmt.Errorf("reading module package id: %w", err)
 	}
 
-	org := util.NewName(cpString(b, pkgCp.OrgIndex))
-	pkgName := util.NewName(cpString(b, pkgCp.PackageNameIndex))
-	name := util.NewName(cpString(b, pkgCp.NameIndex))
-	version := util.NewName(cpString(b, pkgCp.VersionIndex))
+	org := Name(cpString(b, pkgCp.OrgIndex))
+	pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
+	name := Name(cpString(b, pkgCp.NameIndex))
+	version := Name(cpString(b, pkgCp.VersionIndex))
 
 	// We don't have source file name / root at this level; keep them empty.
-	sourceFileName := util.NewName("")
+	sourceFileName := Name("")
 	sourceRoot := ""
 	skipTest := false
 	isTest := false
 
-	p := birmodel.NewBIRPackageWithIsTestPkg(
+	p := NewBIRPackageWithIsTestPkg(
 		nil, // pos
 		org,
 		pkgName,
@@ -141,24 +138,24 @@ func buildBIRPackage(b *Bir) (birmodel.BIRPackage, error) {
 }
 
 // populateImports fills BIRPackage.importModules from Module.Imports.
-func populateImports(b *Bir, pkg birmodel.BIRPackage) error {
+func populateImports(b *Bir, pkg BIRPackage) error {
 	if b.Module.ImportCount == 0 {
 		return nil
 	}
 
-	imports := make([]birmodel.BIRImportModule, 0, len(b.Module.Imports))
+	imports := make([]BIRImportModule, 0, len(b.Module.Imports))
 
 	for _, imp := range b.Module.Imports {
 		if imp == nil {
 			continue
 		}
-		org := util.NewName(cpString(b, imp.OrgIndex))
+		org := Name(cpString(b, imp.OrgIndex))
 		// Note: PackageNameIndex is available but NewBIRImportModule doesn't support separate pkgName
 		// It uses NewPackageIDWithOrgNameVersion which sets PkgName = name
-		name := util.NewName(cpString(b, imp.NameIndex))
-		version := util.NewName(cpString(b, imp.VersionIndex))
+		name := Name(cpString(b, imp.NameIndex))
+		version := Name(cpString(b, imp.VersionIndex))
 
-		mod := birmodel.NewBIRImportModule(nil, org, name, version)
+		mod := NewBIRImportModule(nil, org, name, version)
 		imports = append(imports, mod)
 		// TODO: Use imp.PackageNameIndex if BIRImportModule API is extended to support separate pkgName
 	}
@@ -168,32 +165,32 @@ func populateImports(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateFunctions creates a minimal BIRFunction node for each Bir_Function.
-func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
+func populateFunctions(b *Bir, pkg BIRPackage) error {
 	if b.Module.FunctionCount == 0 {
 		return nil
 	}
 
-	funcs := make([]birmodel.BIRFunction, 0, len(b.Module.Functions))
+	funcs := make([]BIRFunction, 0, len(b.Module.Functions))
 
 	for _, f := range b.Module.Functions {
 		if f == nil {
 			continue
 		}
 
-		name := util.NewName(cpString(b, f.NameCpIndex))
-		origName := util.NewName(cpString(b, f.OriginalNameCpIndex))
-		workerName := util.NewName(cpString(b, f.WorkerNameCpIndex))
-		origin := symbols.ToOrigin(uint8(f.Origin))
+		name := Name(cpString(b, f.NameCpIndex))
+		origName := Name(cpString(b, f.OriginalNameCpIndex))
+		workerName := Name(cpString(b, f.WorkerNameCpIndex))
+		origin := model.SymbolOrigin(f.Origin)
 		pos := positionToLocation(b, f.Position)
 
 		// Type is left nil for now; wiring BType from the shape CP entries is
 		// a larger task and not required for the structural mapping.
-		var fnType birmodel.BInvokableType
+		var fnType BInvokableType
 
 		// Worker channel count is not directly known at this level; create
 		// with zero sendInsCount – this matches the secondary Java ctor used
 		// by BIRGen when only structure matters.
-		fn := birmodel.NewBIRFunctionWithSendInsCount(
+		fn := NewBIRFunctionWithSendInsCount(
 			pos,
 			name,
 			origName,
@@ -206,13 +203,13 @@ func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
 
 		// Required params -> BIRParameter list.
 		if f.RequiredParamCount > 0 {
-			params := make([]birmodel.BIRParameter, 0, len(f.RequiredParams))
+			params := make([]BIRParameter, 0, len(f.RequiredParams))
 			for _, rp := range f.RequiredParams {
 				if rp == nil {
 					continue
 				}
-				pName := util.NewName(cpString(b, rp.ParamNameCpIndex))
-				p := birmodel.NewBIRParameter(nil, pName, rp.Flags)
+				pName := Name(cpString(b, rp.ParamNameCpIndex))
+				p := NewBIRParameter(nil, pName, rp.Flags)
 				// TODO: Parse parameter annotations from rp if available
 				params = append(params, p)
 			}
@@ -221,8 +218,8 @@ func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
 
 		// Rest parameter
 		if f.HasRestParam != 0 {
-			restParamName := util.NewName(cpString(b, f.RestParamNameCpIndex))
-			restParam := birmodel.NewBIRParameter(nil, restParamName, 0)
+			restParamName := Name(cpString(b, f.RestParamNameCpIndex))
+			restParam := NewBIRParameter(nil, restParamName, 0)
 			// Note: BIRParameter doesn't have SetAnnotAttachments in the current model
 			// Rest param annotations are available in f.RestParamAnnotations if needed
 			fn.SetRestParam(restParam)
@@ -270,22 +267,22 @@ func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
 
 		// Dependent global vars
 		if f.DependentGlobalVarLength > 0 && len(f.DependentGlobalVarCpEntry) > 0 {
-			dependentVars := make([]birmodel.BIRGlobalVariableDcl, 0, len(f.DependentGlobalVarCpEntry))
+			dependentVars := make([]BIRGlobalVariableDcl, 0, len(f.DependentGlobalVarCpEntry))
 			pkgID := pkg.GetPackageID()
 			for _, cpIdx := range f.DependentGlobalVarCpEntry {
-				varName := util.NewName(cpString(b, cpIdx))
+				varName := Name(cpString(b, cpIdx))
 				// Create a minimal global var reference
-				gv := birmodel.NewBIRGlobalVariableDcl(
+				gv := NewBIRGlobalVariableDcl(
 					nil,
 					0,   // flags
 					nil, // type
 					pkgID,
 					varName,
 					varName,
-					birmodel.VAR_SCOPE_GLOBAL,
-					birmodel.VAR_KIND_LOCAL, // kind doesn't matter for dependency reference
-					varName.GetValue(),
-					symbols.SYMBOL_ORIGIN_SOURCE,
+					VAR_SCOPE_GLOBAL,
+					VAR_KIND_LOCAL, // kind doesn't matter for dependency reference
+					varName.Value(),
+					model.SymbolOrigin_SOURCE,
 				)
 				dependentVars = append(dependentVars, gv)
 			}
@@ -295,7 +292,7 @@ func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
 		// Populate function body (basic blocks, instructions, etc.)
 		if f.FunctionBody != nil {
 			if err := populateFunctionBody(b, fn, f.FunctionBody); err != nil {
-				return fmt.Errorf("populating function body for %s: %w", name.GetValue(), err)
+				return fmt.Errorf("populating function body for %s: %w", name.Value(), err)
 			}
 		}
 
@@ -308,27 +305,27 @@ func populateFunctions(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateConstants maps Bir_Constant -> BIRConstant.
-func populateConstants(b *Bir, pkg birmodel.BIRPackage) error {
+func populateConstants(b *Bir, pkg BIRPackage) error {
 	if b.Module.ConstCount == 0 {
-		empty := []birmodel.BIRConstant{}
+		empty := []BIRConstant{}
 		pkg.SetConstants(&empty)
 		return nil
 	}
 
-	consts := make([]birmodel.BIRConstant, 0, len(b.Module.Constants))
+	consts := make([]BIRConstant, 0, len(b.Module.Constants))
 
 	for _, c := range b.Module.Constants {
 		if c == nil {
 			continue
 		}
-		name := util.NewName(cpString(b, c.NameCpIndex))
-		origin := symbols.ToOrigin(uint8(c.Origin))
+		name := Name(cpString(b, c.NameCpIndex))
+		origin := model.SymbolOrigin(c.Origin)
 		pos := positionToLocation(b, c.Position)
 
 		// Type + value + attachments left nil/zeroed; mapping them would
 		// require full type + const value decoding.
-		var t birmodel.BType
-		cv := birmodel.ConstValue{}
+		var t model.ValueType
+		cv := ConstValue{}
 
 		// Parse type
 		if c.TypeCpIndex >= 0 {
@@ -340,7 +337,7 @@ func populateConstants(b *Bir, pkg birmodel.BIRPackage) error {
 			cv = parseConstantValue(b, c.ConstantValue)
 		}
 
-		bc := birmodel.NewBIRConstant(pos, name, c.Flags, t, cv, origin)
+		bc := NewBIRConstant(pos, name, c.Flags, t, cv, origin)
 
 		// Parse markdown doc attachment
 		if c.Doc != nil {
@@ -364,38 +361,38 @@ func populateConstants(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateTypeDefs maps Bir_TypeDefinition -> BIRTypeDefinition.
-func populateTypeDefs(b *Bir, pkg birmodel.BIRPackage) error {
+func populateTypeDefs(b *Bir, pkg BIRPackage) error {
 	if b.Module.TypeDefinitionCount == 0 {
-		empty := []birmodel.BIRTypeDefinition{}
+		empty := []BIRTypeDefinition{}
 		pkg.SetTypeDefs(&empty)
 		return nil
 	}
 
-	defs := make([]birmodel.BIRTypeDefinition, 0, len(b.Module.TypeDefinitions))
+	defs := make([]BIRTypeDefinition, 0, len(b.Module.TypeDefinitions))
 
 	for _, td := range b.Module.TypeDefinitions {
 		if td == nil {
 			continue
 		}
 
-		name := util.NewName(cpString(b, td.NameCpIndex))
-		origName := util.NewName(cpString(b, td.OriginalNameCpIndex))
-		origin := symbols.ToOrigin(uint8(td.Origin))
+		name := Name(cpString(b, td.NameCpIndex))
+		origName := Name(cpString(b, td.OriginalNameCpIndex))
+		origin := model.SymbolOrigin(td.Origin)
 		pos := positionToLocation(b, td.Position)
 
 		// Internal name is the same as name for now.
 		internalName := name
 
 		isBuiltin := false
-		var t birmodel.BType
-		attachedFuncs := []birmodel.BIRFunction{}
+		var t model.ValueType
+		attachedFuncs := []BIRFunction{}
 
 		// Parse type
 		if td.TypeCpIndex >= 0 {
 			t = parseTypeFromCP(b, td.TypeCpIndex)
 		}
 
-		bt := birmodel.NewBIRTypeDefinition(
+		bt := NewBIRTypeDefinition(
 			pos,
 			internalName,
 			td.Flags,
@@ -432,7 +429,7 @@ func populateTypeDefs(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateTypeDefBodies populates attached functions and referenced types for type definitions.
-func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
+func populateTypeDefBodies(b *Bir, pkg BIRPackage) error {
 	if b.Module.TypeDefinitionBodiesCount == 0 {
 		return nil
 	}
@@ -445,7 +442,7 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 	// Filter type defs to only OBJECT and RECORD types (as per Java code)
 	// For now, we'll match type def bodies to type defs by index
 	// This assumes the order matches between TypeDefinitions and TypeDefinitionBodies
-	objectRecordDefs := make([]birmodel.BIRTypeDefinition, 0)
+	objectRecordDefs := make([]BIRTypeDefinition, 0)
 	for _, td := range *typeDefs {
 		// TODO: Check if type is OBJECT or RECORD - for now, include all
 		objectRecordDefs = append(objectRecordDefs, td)
@@ -465,20 +462,20 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 
 		// Parse attached functions - these are full Bir_Function objects
 		if tdb.AttachedFunctionsCount > 0 && len(tdb.AttachedFunctions) > 0 {
-			attachedFuncs := make([]birmodel.BIRFunction, 0, len(tdb.AttachedFunctions))
+			attachedFuncs := make([]BIRFunction, 0, len(tdb.AttachedFunctions))
 			for _, af := range tdb.AttachedFunctions {
 				if af == nil {
 					continue
 				}
 				// Parse as a full function (same as regular functions)
-				funcName := util.NewName(cpString(b, af.NameCpIndex))
-				origName := util.NewName(cpString(b, af.OriginalNameCpIndex))
-				workerName := util.NewName(cpString(b, af.WorkerNameCpIndex))
-				origin := symbols.ToOrigin(uint8(af.Origin))
+				funcName := Name(cpString(b, af.NameCpIndex))
+				origName := Name(cpString(b, af.OriginalNameCpIndex))
+				workerName := Name(cpString(b, af.WorkerNameCpIndex))
+				origin := model.SymbolOrigin(af.Origin)
 				pos := positionToLocation(b, af.Position)
-				var fnType birmodel.BInvokableType
+				var fnType BInvokableType
 
-				attachedFn := birmodel.NewBIRFunctionWithSendInsCount(
+				attachedFn := NewBIRFunctionWithSendInsCount(
 					pos,
 					funcName,
 					origName,
@@ -491,13 +488,13 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 
 				// Parse required params, rest param, etc. (same as regular functions)
 				if af.RequiredParamCount > 0 {
-					params := make([]birmodel.BIRParameter, 0, len(af.RequiredParams))
+					params := make([]BIRParameter, 0, len(af.RequiredParams))
 					for _, rp := range af.RequiredParams {
 						if rp == nil {
 							continue
 						}
-						pName := util.NewName(cpString(b, rp.ParamNameCpIndex))
-						p := birmodel.NewBIRParameter(nil, pName, rp.Flags)
+						pName := Name(cpString(b, rp.ParamNameCpIndex))
+						p := NewBIRParameter(nil, pName, rp.Flags)
 						// Parse parameter annotations
 						// Note: BIRParameter doesn't have SetAnnotAttachments in the current model
 						// This would need to be added if parameter annotations are needed
@@ -508,15 +505,15 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 				}
 
 				if af.HasRestParam != 0 {
-					restParamName := util.NewName(cpString(b, af.RestParamNameCpIndex))
-					restParam := birmodel.NewBIRParameter(nil, restParamName, 0)
+					restParamName := Name(cpString(b, af.RestParamNameCpIndex))
+					restParam := NewBIRParameter(nil, restParamName, 0)
 					attachedFn.SetRestParam(restParam)
 				}
 
 				// Parse function type
 				if af.TypeCpIndex >= 0 {
 					fnType := parseTypeFromCP(b, af.TypeCpIndex)
-					if invokableType, ok := fnType.(birmodel.BInvokableType); ok {
+					if invokableType, ok := fnType.(BInvokableType); ok {
 						attachedFn.SetType(invokableType)
 					}
 				}
@@ -560,7 +557,7 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 
 		// Parse referenced types
 		if tdb.ReferencedTypesCount > 0 && len(tdb.ReferencedTypes) > 0 {
-			referencedTypes := make([]birmodel.BType, 0, len(tdb.ReferencedTypes))
+			referencedTypes := make([]model.ValueType, 0, len(tdb.ReferencedTypes))
 			for _, rt := range tdb.ReferencedTypes {
 				if rt == nil {
 					continue
@@ -582,14 +579,14 @@ func populateTypeDefBodies(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateGlobals maps Bir_GlobalVar -> BIRGlobalVariableDcl.
-func populateGlobals(b *Bir, pkg birmodel.BIRPackage) error {
+func populateGlobals(b *Bir, pkg BIRPackage) error {
 	if b.Module.GlobalVarCount == 0 {
-		empty := []birmodel.BIRGlobalVariableDcl{}
+		empty := []BIRGlobalVariableDcl{}
 		pkg.SetGlobalVars(&empty)
 		return nil
 	}
 
-	globals := make([]birmodel.BIRGlobalVariableDcl, 0, len(b.Module.GlobalVars))
+	globals := make([]BIRGlobalVariableDcl, 0, len(b.Module.GlobalVars))
 
 	// Use the package's PackageID for all globals.
 	pkgID := pkg.GetPackageID()
@@ -598,22 +595,22 @@ func populateGlobals(b *Bir, pkg birmodel.BIRPackage) error {
 		if gv == nil {
 			continue
 		}
-		name := util.NewName(cpString(b, gv.NameCpIndex))
-		origin := symbols.ToOrigin(uint8(gv.Origin))
+		name := Name(cpString(b, gv.NameCpIndex))
+		origin := model.SymbolOrigin(gv.Origin)
 		pos := positionToLocation(b, gv.Position)
 
-		kind := birmodel.VarKind(gv.Kind)
-		scope := birmodel.VAR_SCOPE_GLOBAL
+		kind := VarKind(gv.Kind)
+		scope := VAR_SCOPE_GLOBAL
 
-		var t birmodel.BType
-		metaVarName := name.GetValue()
+		var t model.ValueType
+		metaVarName := name.Value()
 
 		// Parse type
 		if gv.TypeCpIndex >= 0 {
 			t = parseTypeFromCP(b, gv.TypeCpIndex)
 		}
 
-		g := birmodel.NewBIRGlobalVariableDcl(
+		g := NewBIRGlobalVariableDcl(
 			pos,
 			gv.Flags,
 			t,
@@ -648,54 +645,54 @@ func populateGlobals(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateAnnotations maps Bir_Annotation -> BIRAnnotation.
-func populateAnnotations(b *Bir, pkg birmodel.BIRPackage) error {
+func populateAnnotations(b *Bir, pkg BIRPackage) error {
 	if b.Module.AnnotationsSize == 0 {
-		empty := []birmodel.BIRAnnotation{}
+		empty := []BIRAnnotation{}
 		pkg.SetAnnotations(&empty)
 		return nil
 	}
 
-	anns := make([]birmodel.BIRAnnotation, 0, len(b.Module.Annotations))
+	anns := make([]BIRAnnotation, 0, len(b.Module.Annotations))
 
 	for _, a := range b.Module.Annotations {
 		if a == nil {
 			continue
 		}
 
-		name := util.NewName(cpString(b, a.NameCpIndex))
-		origName := util.NewName(cpString(b, a.OriginalNameCpIndex))
-		origin := symbols.ToOrigin(uint8(a.Origin))
+		name := Name(cpString(b, a.NameCpIndex))
+		origName := Name(cpString(b, a.OriginalNameCpIndex))
+		origin := model.SymbolOrigin(a.Origin)
 		pos := positionToLocation(b, a.Position)
 
 		// Parse PackageID from PackageIdCpIndex
-		var annotPkgID elements.PackageID
+		var annotPkgID model.PackageID
 		if a.PackageIdCpIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, a.PackageIdCpIndex)
 			if err == nil && pkgCp != nil {
-				org := util.NewName(cpString(b, pkgCp.OrgIndex))
-				pkgName := util.NewName(cpString(b, pkgCp.PackageNameIndex))
-				namePart := util.NewName(cpString(b, pkgCp.NameIndex))
-				version := util.NewName(cpString(b, pkgCp.VersionIndex))
-				annotPkgID = elements.NewPackageID(org, pkgName, namePart, version, util.NewName(""), "", false, false)
+				org := Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := Name(cpString(b, pkgCp.NameIndex))
+				version := Name(cpString(b, pkgCp.VersionIndex))
+				annotPkgID = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
-		// Attach points -> []elements.AttachPoint.
-		points := make([]elements.AttachPoint, 0, len(a.AttachPoints))
+		// Attach points -> []AttachPoint.
+		points := make([]AttachPoint, 0, len(a.AttachPoints))
 		for _, ap := range a.AttachPoints {
 			if ap == nil {
 				continue
 			}
 			pointName := cpString(b, ap.PointNameCpIndex)
-			apStruct := elements.GetAttachmentPoint(pointName, ap.IsSource != 0)
+			apStruct := getAttachmentPoint(pointName, ap.IsSource != 0)
 			if apStruct != nil {
 				points = append(points, *apStruct)
 			}
 		}
 
-		var t birmodel.BType
+		var t model.ValueType
 
-		ba := birmodel.NewBIRAnnotation(
+		ba := NewBIRAnnotation(
 			pos,
 			name,
 			origName,
@@ -736,23 +733,23 @@ func populateAnnotations(b *Bir, pkg birmodel.BIRPackage) error {
 }
 
 // populateServices maps Bir_ServiceDeclaration -> BIRServiceDeclaration.
-func populateServices(b *Bir, pkg birmodel.BIRPackage) error {
+func populateServices(b *Bir, pkg BIRPackage) error {
 	if b.Module.ServiceDeclsSize == 0 {
-		empty := []birmodel.BIRServiceDeclaration{}
+		empty := []BIRServiceDeclaration{}
 		pkg.SetServiceDecls(&empty)
 		return nil
 	}
 
-	services := make([]birmodel.BIRServiceDeclaration, 0, len(b.Module.ServiceDeclarations))
+	services := make([]BIRServiceDeclaration, 0, len(b.Module.ServiceDeclarations))
 
 	for _, s := range b.Module.ServiceDeclarations {
 		if s == nil {
 			continue
 		}
 
-		genName := util.NewName(cpString(b, s.NameCpIndex))
-		assocName := util.NewName(cpString(b, s.AssociatedClassNameCpIndex))
-		origin := symbols.ToOrigin(uint8(s.Origin))
+		genName := Name(cpString(b, s.NameCpIndex))
+		assocName := Name(cpString(b, s.AssociatedClassNameCpIndex))
+		origin := model.SymbolOrigin(s.Origin)
 		pos := positionToLocation(b, s.Position)
 
 		// Attach points as strings.
@@ -769,12 +766,12 @@ func populateServices(b *Bir, pkg birmodel.BIRPackage) error {
 			attachPointLiteral = cpString(b, s.AttachPointLiteral)
 		}
 
-		var t birmodel.BType
+		var t model.ValueType
 		if s.HasType != 0 && s.TypeCpIndex >= 0 {
 			t = parseTypeFromCP(b, s.TypeCpIndex)
 		}
 
-		listenerTypes := make([]birmodel.BType, 0, s.ListenerTypesCount)
+		listenerTypes := make([]model.ValueType, 0, s.ListenerTypesCount)
 		for _, lt := range s.ListenerTypes {
 			if lt == nil {
 				continue
@@ -787,7 +784,7 @@ func populateServices(b *Bir, pkg birmodel.BIRPackage) error {
 			}
 		}
 
-		svc := birmodel.NewBIRServiceDeclaration(
+		svc := NewBIRServiceDeclaration(
 			attachPoint,
 			attachPointLiteral,
 			listenerTypes,
@@ -808,11 +805,20 @@ func populateServices(b *Bir, pkg birmodel.BIRPackage) error {
 
 // pointsToSet converts a slice of AttachPoint to a set. Our Go model uses a
 // set‑like collection conceptually; we store it as a slice here.
-func pointsToSet(points []elements.AttachPoint) []elements.AttachPoint {
+func pointsToSet(points []AttachPoint) []AttachPoint {
 	if len(points) == 0 {
-		return []elements.AttachPoint{}
+		return []AttachPoint{}
 	}
 	return points
+}
+
+// getAttachmentPoint creates an AttachPoint from a point name and source flag.
+func getAttachmentPoint(pointName string, isSource bool) *AttachPoint {
+	point := model.Point(pointName)
+	return &AttachPoint{
+		Point:  point,
+		Source: isSource,
+	}
 }
 
 // --- Constant‑pool helpers ---------------------------------------------------
@@ -858,7 +864,7 @@ func cpAsPackage(b *Bir, idx int32) (*Bir_PackageCpInfo, error) {
 }
 
 // populateFunctionBody populates the function body including basic blocks and instructions.
-func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBody) error {
+func populateFunctionBody(b *Bir, fn BIRFunction, body *Bir_FunctionBody) error {
 	if body == nil {
 		return nil
 	}
@@ -876,7 +882,7 @@ func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBod
 
 	// Function parameters (default parameters)
 	if body.DefaultParameterCount > 0 && len(body.DefaultParameters) > 0 {
-		params := make([]birmodel.BIRFunctionParameter, 0, len(body.DefaultParameters))
+		params := make([]BIRFunctionParameter, 0, len(body.DefaultParameters))
 		for _, dp := range body.DefaultParameters {
 			if dp == nil {
 				continue
@@ -893,7 +899,7 @@ func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBod
 
 	// Local variables
 	if body.LocalVariablesCount > 0 && len(body.LocalVariables) > 0 {
-		localVars := make([]birmodel.BIRVariableDcl, 0, len(body.LocalVariables))
+		localVars := make([]BIRVariableDcl, 0, len(body.LocalVariables))
 		for _, lv := range body.LocalVariables {
 			if lv == nil {
 				continue
@@ -919,7 +925,7 @@ func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBod
 
 	// Error table
 	if body.ErrorTable != nil && body.ErrorTable.ErrorEntriesCount > 0 {
-		errorEntries := make([]birmodel.BIRErrorEntry, 0, body.ErrorTable.ErrorEntriesCount)
+		errorEntries := make([]BIRErrorEntry, 0, body.ErrorTable.ErrorEntriesCount)
 		for _, ee := range body.ErrorTable.ErrorEntries {
 			if ee == nil {
 				continue
@@ -936,13 +942,13 @@ func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBod
 
 	// Worker channels
 	if body.WorkerChannelInfo != nil && body.WorkerChannelInfo.ChannelsLength > 0 {
-		channels := make([]birmodel.ChannelDetails, 0, body.WorkerChannelInfo.ChannelsLength)
+		channels := make([]ChannelDetails, 0, body.WorkerChannelInfo.ChannelsLength)
 		for _, ch := range body.WorkerChannelInfo.WorkerChannelDetails {
 			if ch == nil {
 				continue
 			}
 			channelName := cpString(b, ch.NameCpIndex)
-			channel := birmodel.ChannelDetails{
+			channel := ChannelDetails{
 				Name:                channelName,
 				ChannelInSameStrand: ch.IsChannelInSameStrand != 0,
 				Send:                ch.IsSend != 0,
@@ -958,13 +964,13 @@ func populateFunctionBody(b *Bir, fn birmodel.BIRFunction, body *Bir_FunctionBod
 }
 
 // populateBasicBlocks creates BIRBasicBlock instances from the Kaitai model.
-func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBasicBlock, error) {
+func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, error) {
 	if bbInfo == nil || bbInfo.BasicBlocksCount == 0 {
-		return []birmodel.BIRBasicBlock{}, nil
+		return []BIRBasicBlock{}, nil
 	}
 
-	basicBlocks := make([]birmodel.BIRBasicBlock, 0, bbInfo.BasicBlocksCount)
-	bbMap := make(map[string]birmodel.BIRBasicBlock) // Map BB name to BB for terminator references
+	basicBlocks := make([]BIRBasicBlock, 0, bbInfo.BasicBlocksCount)
+	bbMap := make(map[string]BIRBasicBlock) // Map BB name to BB for terminator references
 
 	// First pass: create all basic blocks
 	for i, kaitaiBB := range bbInfo.BasicBlocks {
@@ -972,9 +978,9 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBas
 			continue
 		}
 
-		bbName := util.NewName(cpString(b, kaitaiBB.NameCpIndex))
-		bb := birmodel.NewBIRBasicBlock(bbName, i)
-		bbMap[bbName.GetValue()] = bb
+		bbName := Name(cpString(b, kaitaiBB.NameCpIndex))
+		bb := NewBIRBasicBlock(bbName, i)
+		bbMap[bbName.Value()] = bb
 		basicBlocks = append(basicBlocks, bb)
 	}
 
@@ -993,8 +999,8 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBas
 
 		// Separate instructions into non-terminators and terminator
 		// The last instruction is always the terminator (per BIRBinaryWriter logic)
-		nonTerminators := make([]birmodel.BIRNonTerminator, 0)
-		var terminator birmodel.BIRTerminator
+		nonTerminators := make([]BIRNonTerminator, 0)
+		var terminator BIRTerminator
 
 		instructionCount := len(kaitaiBB.Instructions)
 		if instructionCount == 0 {
@@ -1008,7 +1014,7 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBas
 				continue
 			}
 
-			kind := birmodel.InstructionKind(kaitaiIns.InstructionKind)
+			kind := InstructionKind(kaitaiIns.InstructionKind)
 			pos := positionToLocation(b, kaitaiIns.Position)
 
 			// Verify this is actually a non-terminator (kind > 16)
@@ -1024,7 +1030,7 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBas
 		// The last instruction is the terminator
 		lastIns := kaitaiBB.Instructions[instructionCount-1]
 		if lastIns != nil {
-			kind := birmodel.InstructionKind(lastIns.InstructionKind)
+			kind := InstructionKind(lastIns.InstructionKind)
 			pos := positionToLocation(b, lastIns.Position)
 			term := createTerminator(b, kind, pos, lastIns, bbMap)
 			if term != nil {
@@ -1045,327 +1051,327 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]birmodel.BIRBas
 }
 
 // createTerminator creates a BIRTerminator instance from Kaitai instruction data.
-func createTerminator(b *Bir, kind birmodel.InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func createTerminator(b *Bir, kind InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if kaitaiIns == nil || kaitaiIns.InstructionStructure == nil {
 		// Fallback to minimal implementation
 		return &terminatorImpl{
-			BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
+			BIRTerminatorBase: NewBIRTerminatorBase(pos),
 			kind:              kind,
 		}
 	}
 
 	// Parse based on instruction kind
 	switch kind {
-	case birmodel.INSTRUCTION_KIND_GOTO:
+	case INSTRUCTION_KIND_GOTO:
 		return parseGotoTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_RETURN:
+	case INSTRUCTION_KIND_RETURN:
 		return parseReturnTerminator(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_BRANCH:
+	case INSTRUCTION_KIND_BRANCH:
 		return parseBranchTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_CALL:
+	case INSTRUCTION_KIND_CALL:
 		return parseCallTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_ASYNC_CALL:
+	case INSTRUCTION_KIND_ASYNC_CALL:
 		return parseAsyncCallTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_FP_CALL:
+	case INSTRUCTION_KIND_FP_CALL:
 		return parseFPCallTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_LOCK:
+	case INSTRUCTION_KIND_LOCK:
 		return parseLockTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_FIELD_LOCK:
+	case INSTRUCTION_KIND_FIELD_LOCK:
 		return parseFieldLockTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_UNLOCK:
+	case INSTRUCTION_KIND_UNLOCK:
 		return parseUnlockTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_PANIC:
+	case INSTRUCTION_KIND_PANIC:
 		return parsePanicTerminator(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_WAIT:
+	case INSTRUCTION_KIND_WAIT:
 		return parseWaitTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_FLUSH:
+	case INSTRUCTION_KIND_FLUSH:
 		return parseFlushTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_WK_RECEIVE:
+	case INSTRUCTION_KIND_WK_RECEIVE:
 		return parseWorkerReceiveTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_WK_SEND:
+	case INSTRUCTION_KIND_WK_SEND:
 		return parseWorkerSendTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_WK_ALT_RECEIVE:
+	case INSTRUCTION_KIND_WK_ALT_RECEIVE:
 		return parseWorkerAlternateReceiveTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_WK_MULTIPLE_RECEIVE:
+	case INSTRUCTION_KIND_WK_MULTIPLE_RECEIVE:
 		return parseWorkerMultipleReceiveTerminator(b, pos, kaitaiIns, bbMap)
-	case birmodel.INSTRUCTION_KIND_WAIT_ALL:
+	case INSTRUCTION_KIND_WAIT_ALL:
 		return parseWaitAllTerminator(b, pos, kaitaiIns, bbMap)
 	default:
 		// For unknown terminators, return minimal implementation
 		return &terminatorImpl{
-			BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
+			BIRTerminatorBase: NewBIRTerminatorBase(pos),
 			kind:              kind,
 		}
 	}
 }
 
 // parseGotoTerminator parses a GOTO terminator
-func parseGotoTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseGotoTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if gotoIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionGoto); ok && gotoIns != nil {
 		targetBBName := cpString(b, gotoIns.TargetBbIdNameCpIndex)
-		var targetBB birmodel.BIRBasicBlock
+		var targetBB BIRBasicBlock
 		if targetBBName != "" {
 			targetBB = bbMap[targetBBName]
 		}
-		return birmodel.NewBIRTerminatorGOTO(pos, targetBB)
+		return NewBIRTerminatorGOTO(pos, targetBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_GOTO,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_GOTO,
 	}
 }
 
 // parseReturnTerminator parses a Return terminator
-func parseReturnTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRTerminator {
+func parseReturnTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRTerminator {
 	if _, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionReturn); ok {
-		return birmodel.NewBIRTerminatorReturn(pos)
+		return NewBIRTerminatorReturn(pos)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_RETURN,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_RETURN,
 	}
 }
 
 // parseBranchTerminator parses a Branch terminator
-func parseBranchTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseBranchTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if branchIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionBranch); ok && branchIns != nil {
 		op := parseOperand(b, branchIns.BranchOperand)
 		trueBBName := cpString(b, branchIns.TrueBbIdNameCpIndex)
 		falseBBName := cpString(b, branchIns.FalseBbIdNameCpIndex)
-		var trueBB, falseBB birmodel.BIRBasicBlock
+		var trueBB, falseBB BIRBasicBlock
 		if trueBBName != "" {
 			trueBB = bbMap[trueBBName]
 		}
 		if falseBBName != "" {
 			falseBB = bbMap[falseBBName]
 		}
-		return birmodel.NewBIRTerminatorBranch(pos, op, trueBB, falseBB)
+		return NewBIRTerminatorBranch(pos, op, trueBB, falseBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_BRANCH,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_BRANCH,
 	}
 }
 
 // parseCallTerminator parses a Call terminator
-func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if callIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionCall); ok && callIns != nil {
 		callInfo := callIns.CallInstructionInfo
 		if callInfo == nil {
 			return &terminatorImpl{
-				BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-				kind:              birmodel.INSTRUCTION_KIND_CALL,
+				BIRTerminatorBase: NewBIRTerminatorBase(pos),
+				kind:              INSTRUCTION_KIND_CALL,
 			}
 		}
 
 		isVirtual := callInfo.IsVirtual != 0
 		// Parse package ID
-		var calleePkg elements.PackageID
+		var calleePkg model.PackageID
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {
-				org := util.NewName(cpString(b, pkgCp.OrgIndex))
-				pkgName := util.NewName(cpString(b, pkgCp.PackageNameIndex))
-				namePart := util.NewName(cpString(b, pkgCp.NameIndex))
-				version := util.NewName(cpString(b, pkgCp.VersionIndex))
-				calleePkg = elements.NewPackageID(org, pkgName, namePart, version, util.NewName(""), "", false, false)
+				org := Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := Name(cpString(b, pkgCp.NameIndex))
+				version := Name(cpString(b, pkgCp.VersionIndex))
+				calleePkg = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
-		name := util.NewName(cpString(b, callInfo.CallNameCpIndex))
-		args := make([]birmodel.BIROperand, 0, len(callInfo.Arguments))
+		name := Name(cpString(b, callInfo.CallNameCpIndex))
+		args := make([]BIROperand, 0, len(callInfo.Arguments))
 		for _, arg := range callInfo.Arguments {
 			if arg != nil {
 				args = append(args, parseOperand(b, arg))
 			}
 		}
 
-		var lhsOp birmodel.BIROperand
+		var lhsOp BIROperand
 		if callInfo.HasLhsOperand != 0 && callInfo.LhsOperand != nil {
 			lhsOp = parseOperand(b, callInfo.LhsOperand)
 		}
 
 		thenBBName := cpString(b, callIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
 
-		return birmodel.NewBIRTerminatorCall(pos, birmodel.INSTRUCTION_KIND_CALL, isVirtual, calleePkg, name, args, lhsOp, thenBB, []birmodel.BIRAnnotationAttachment{}, []elements.Flag{})
+		return NewBIRTerminatorCall(pos, INSTRUCTION_KIND_CALL, isVirtual, calleePkg, name, args, lhsOp, thenBB, []BIRAnnotationAttachment{}, []model.Flag{})
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_CALL,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_CALL,
 	}
 }
 
 // parseAsyncCallTerminator parses an AsyncCall terminator
-func parseAsyncCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseAsyncCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if asyncCallIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionAsyncCall); ok && asyncCallIns != nil {
 		callInfo := asyncCallIns.CallInstructionInfo
 		if callInfo == nil {
 			return &terminatorImpl{
-				BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-				kind:              birmodel.INSTRUCTION_KIND_ASYNC_CALL,
+				BIRTerminatorBase: NewBIRTerminatorBase(pos),
+				kind:              INSTRUCTION_KIND_ASYNC_CALL,
 			}
 		}
 
 		isVirtual := callInfo.IsVirtual != 0
 		// Parse package ID
-		var calleePkg elements.PackageID
+		var calleePkg model.PackageID
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {
-				org := util.NewName(cpString(b, pkgCp.OrgIndex))
-				pkgName := util.NewName(cpString(b, pkgCp.PackageNameIndex))
-				namePart := util.NewName(cpString(b, pkgCp.NameIndex))
-				version := util.NewName(cpString(b, pkgCp.VersionIndex))
-				calleePkg = elements.NewPackageID(org, pkgName, namePart, version, util.NewName(""), "", false, false)
+				org := Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := Name(cpString(b, pkgCp.NameIndex))
+				version := Name(cpString(b, pkgCp.VersionIndex))
+				calleePkg = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
-		name := util.NewName(cpString(b, callInfo.CallNameCpIndex))
-		args := make([]birmodel.BIROperand, 0, len(callInfo.Arguments))
+		name := Name(cpString(b, callInfo.CallNameCpIndex))
+		args := make([]BIROperand, 0, len(callInfo.Arguments))
 		for _, arg := range callInfo.Arguments {
 			if arg != nil {
 				args = append(args, parseOperand(b, arg))
 			}
 		}
 
-		var lhsOp birmodel.BIROperand
+		var lhsOp BIROperand
 		if callInfo.HasLhsOperand != 0 && callInfo.LhsOperand != nil {
 			lhsOp = parseOperand(b, callInfo.LhsOperand)
 		}
 
 		// Parse annotation attachments
-		annots := []birmodel.BIRAnnotationAttachment{}
+		annots := []BIRAnnotationAttachment{}
 		if asyncCallIns.AnnotationAttachmentsContent != nil {
 			annots = parseAnnotationAttachments(b, asyncCallIns.AnnotationAttachmentsContent)
 		}
 
 		thenBBName := cpString(b, asyncCallIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
 
-		return birmodel.NewBIRTerminatorAsyncCall(pos, birmodel.INSTRUCTION_KIND_ASYNC_CALL, isVirtual, calleePkg, name, args, lhsOp, thenBB, annots, []birmodel.BIRAnnotationAttachment{}, []elements.Flag{})
+		return NewBIRTerminatorAsyncCall(pos, INSTRUCTION_KIND_ASYNC_CALL, isVirtual, calleePkg, name, args, lhsOp, thenBB, annots, []BIRAnnotationAttachment{}, []model.Flag{})
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_ASYNC_CALL,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_ASYNC_CALL,
 	}
 }
 
 // parseFPCallTerminator parses an FPCall terminator
-func parseFPCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseFPCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if fpCallIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionFpCall); ok && fpCallIns != nil {
 		fp := parseOperand(b, fpCallIns.FpOperand)
-		args := make([]birmodel.BIROperand, 0, len(fpCallIns.FpArguments))
+		args := make([]BIROperand, 0, len(fpCallIns.FpArguments))
 		for _, arg := range fpCallIns.FpArguments {
 			if arg != nil {
 				args = append(args, parseOperand(b, arg))
 			}
 		}
 
-		var lhsOp birmodel.BIROperand
+		var lhsOp BIROperand
 		if fpCallIns.HasLhsOperand == 1 && fpCallIns.LhsOperand != nil {
 			lhsOp = parseOperand(b, fpCallIns.LhsOperand)
 		}
 
 		isAsync := fpCallIns.IsAsynch != 0
-		annots := []birmodel.BIRAnnotationAttachment{}
+		annots := []BIRAnnotationAttachment{}
 		if fpCallIns.AnnotationAttachmentsContent != nil {
 			annots = parseAnnotationAttachments(b, fpCallIns.AnnotationAttachmentsContent)
 		}
 
 		thenBBName := cpString(b, fpCallIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
 
-		return birmodel.NewBIRTerminatorFPCall(pos, birmodel.INSTRUCTION_KIND_FP_CALL, fp, args, lhsOp, isAsync, thenBB, annots)
+		return NewBIRTerminatorFPCall(pos, INSTRUCTION_KIND_FP_CALL, fp, args, lhsOp, isAsync, thenBB, annots)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_FP_CALL,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_FP_CALL,
 	}
 }
 
 // parseLockTerminator parses a Lock terminator
-func parseLockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseLockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if lockIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionLock); ok && lockIns != nil {
 		lockedBBName := cpString(b, lockIns.LockBbIdNameCpIndex)
-		var lockedBB birmodel.BIRBasicBlock
+		var lockedBB BIRBasicBlock
 		if lockedBBName != "" {
 			lockedBB = bbMap[lockedBBName]
 		}
-		lock := birmodel.NewBIRTerminatorLock(pos, lockedBB)
+		lock := NewBIRTerminatorLock(pos, lockedBB)
 		// Cast to BIRTerminator since NewBIRTerminatorLock returns BIRTerminatorLock interface
-		if term, ok := lock.(birmodel.BIRTerminator); ok {
+		if term, ok := lock.(BIRTerminator); ok {
 			return term
 		}
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_LOCK,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_LOCK,
 	}
 }
 
 // parseFieldLockTerminator parses a FieldLock terminator
-func parseFieldLockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseFieldLockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if fieldLockIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionFieldLock); ok && fieldLockIns != nil {
 		// Parse local var name (for now, create a minimal operand)
 		lockVarName := cpString(b, fieldLockIns.LockVarNameCpIndex)
 		fieldName := cpString(b, fieldLockIns.FieldNameCpIndex)
 		lockedBBName := cpString(b, fieldLockIns.LockBbIdNameCpIndex)
-		var lockedBB birmodel.BIRBasicBlock
+		var lockedBB BIRBasicBlock
 		if lockedBBName != "" {
 			lockedBB = bbMap[lockedBBName]
 		}
 		// Create a minimal operand for the local var
-		localVar := birmodel.NewBIROperand(birmodel.NewBIRVariableDclSimple(nil, util.NewName(lockVarName), birmodel.VAR_SCOPE_FUNCTION, birmodel.VAR_KIND_LOCAL))
-		return birmodel.NewBIRTerminatorFieldLock(pos, localVar, fieldName, lockedBB)
+		localVar := NewBIROperand(NewBIRVariableDclSimple(nil, Name(lockVarName), VAR_SCOPE_FUNCTION, VAR_KIND_LOCAL))
+		return NewBIRTerminatorFieldLock(pos, localVar, fieldName, lockedBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_FIELD_LOCK,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_FIELD_LOCK,
 	}
 }
 
 // parseUnlockTerminator parses an Unlock terminator
-func parseUnlockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseUnlockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if unlockIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionUnlock); ok && unlockIns != nil {
 		unlockBBName := cpString(b, unlockIns.UnlockBbIdNameCpIndex)
-		var unlockBB birmodel.BIRBasicBlock
+		var unlockBB BIRBasicBlock
 		if unlockBBName != "" {
 			unlockBB = bbMap[unlockBBName]
 		}
-		return birmodel.NewBIRTerminatorUnlock(pos, unlockBB)
+		return NewBIRTerminatorUnlock(pos, unlockBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_UNLOCK,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_UNLOCK,
 	}
 }
 
 // parsePanicTerminator parses a Panic terminator
-func parsePanicTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRTerminator {
+func parsePanicTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRTerminator {
 	if panicIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionPanic); ok && panicIns != nil {
 		errorOp := parseOperand(b, panicIns.ErrorOperand)
-		return birmodel.NewBIRTerminatorPanic(pos, errorOp)
+		return NewBIRTerminatorPanic(pos, errorOp)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_PANIC,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_PANIC,
 	}
 }
 
 // parseWaitTerminator parses a Wait terminator
-func parseWaitTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWaitTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if waitIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWait); ok && waitIns != nil {
-		exprList := make([]birmodel.BIROperand, 0, len(waitIns.WaitExpressions))
+		exprList := make([]BIROperand, 0, len(waitIns.WaitExpressions))
 		for _, expr := range waitIns.WaitExpressions {
 			if expr != nil {
 				exprList = append(exprList, parseOperand(b, expr))
@@ -1373,27 +1379,27 @@ func parseWaitTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 		}
 		lhsOp := parseOperand(b, waitIns.LhsOperand)
 		thenBBName := cpString(b, waitIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorWait(pos, exprList, lhsOp, thenBB)
+		return NewBIRTerminatorWait(pos, exprList, lhsOp, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WAIT,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WAIT,
 	}
 }
 
 // parseFlushTerminator parses a Flush terminator
-func parseFlushTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseFlushTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if flushIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionFlush); ok && flushIns != nil {
-		channels := []birmodel.ChannelDetails{}
+		channels := []ChannelDetails{}
 		if flushIns.WorkerChannelDetail != nil && len(flushIns.WorkerChannelDetail.WorkerChannelDetails) > 0 {
 			for _, wcd := range flushIns.WorkerChannelDetail.WorkerChannelDetails {
 				if wcd != nil {
 					channelName := cpString(b, wcd.NameCpIndex)
-					channel := birmodel.ChannelDetails{
+					channel := ChannelDetails{
 						Name:                channelName,
 						ChannelInSameStrand: wcd.IsChannelInSameStrand != 0,
 						Send:                wcd.IsSend != 0,
@@ -1404,63 +1410,63 @@ func parseFlushTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instr
 		}
 		lhsOp := parseOperand(b, flushIns.LhsOperand)
 		thenBBName := cpString(b, flushIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorFlush(pos, channels, lhsOp, thenBB)
+		return NewBIRTerminatorFlush(pos, channels, lhsOp, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_FLUSH,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_FLUSH,
 	}
 }
 
 // parseWorkerReceiveTerminator parses a WorkerReceive terminator
-func parseWorkerReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWorkerReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if wrIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkReceive); ok && wrIns != nil {
-		workerName := util.NewName(cpString(b, wrIns.WorkerNameCpIndex))
+		workerName := Name(cpString(b, wrIns.WorkerNameCpIndex))
 		lhsOp := parseOperand(b, wrIns.LhsOperand)
 		isSameStrand := wrIns.IsSameStrand != 0
 		thenBBName := cpString(b, wrIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorWorkerReceive(pos, workerName, lhsOp, isSameStrand, thenBB)
+		return NewBIRTerminatorWorkerReceive(pos, workerName, lhsOp, isSameStrand, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WK_RECEIVE,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WK_RECEIVE,
 	}
 }
 
 // parseWorkerSendTerminator parses a WorkerSend terminator
-func parseWorkerSendTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWorkerSendTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if wsIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkSend); ok && wsIns != nil {
-		channel := util.NewName(cpString(b, wsIns.ChannelNameCpIndex))
+		channel := Name(cpString(b, wsIns.ChannelNameCpIndex))
 		data := parseOperand(b, wsIns.WorkerDataOperand)
 		isSameStrand := wsIns.IsSameStrand != 0
 		isSync := wsIns.IsSynch != 0
-		var lhsOp birmodel.BIROperand
+		var lhsOp BIROperand
 		if isSync && wsIns.LhsOperand != nil {
 			lhsOp = parseOperand(b, wsIns.LhsOperand)
 		}
 		thenBBName := cpString(b, wsIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorWorkerSend(pos, channel, data, isSameStrand, isSync, lhsOp, thenBB)
+		return NewBIRTerminatorWorkerSend(pos, channel, data, isSameStrand, isSync, lhsOp, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WK_SEND,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WK_SEND,
 	}
 }
 
 // parseWorkerAlternateReceiveTerminator parses a WorkerAlternateReceive terminator
-func parseWorkerAlternateReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWorkerAlternateReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if arIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkAltReceive); ok && arIns != nil {
 		channels := make([]string, 0, len(arIns.ChannelNameCpIndex))
 		for _, chIdx := range arIns.ChannelNameCpIndex {
@@ -1469,61 +1475,61 @@ func parseWorkerAlternateReceiveTerminator(b *Bir, pos diagnostics.Location, kai
 		lhsOp := parseOperand(b, arIns.LhsOperand)
 		isSameStrand := arIns.IsSameStrand != 0
 		thenBBName := cpString(b, arIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorWorkerAlternateReceive(pos, channels, lhsOp, isSameStrand, thenBB)
+		return NewBIRTerminatorWorkerAlternateReceive(pos, channels, lhsOp, isSameStrand, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WK_ALT_RECEIVE,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WK_ALT_RECEIVE,
 	}
 }
 
 // parseWorkerMultipleReceiveTerminator parses a WorkerMultipleReceive terminator
-func parseWorkerMultipleReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWorkerMultipleReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if mrIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkMulReceive); ok && mrIns != nil {
-		receiveFields := make([]birmodel.ReceiveField, 0, len(mrIns.ChannelFieldCpIndex))
+		receiveFields := make([]ReceiveField, 0, len(mrIns.ChannelFieldCpIndex))
 		for _, rf := range mrIns.ChannelFieldCpIndex {
 			if rf != nil {
 				key := cpString(b, rf.FieldName)
 				workerReceive := cpString(b, rf.ChannelName)
-				receiveFields = append(receiveFields, birmodel.ReceiveField{
+				receiveFields = append(receiveFields, ReceiveField{
 					Key:           key,
 					WorkerReceive: workerReceive,
 				})
 			}
 		}
-		var targetType birmodel.BType
+		var targetType BType
 		if mrIns.TypeCpIndex >= 0 {
 			targetType = parseTypeFromCP(b, mrIns.TypeCpIndex)
 		}
 		lhsOp := parseOperand(b, mrIns.LhsOperand)
 		isSameStrand := mrIns.IsSameStrand != 0
 		thenBBName := cpString(b, mrIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		mr := birmodel.NewBIRTerminatorWorkerMultipleReceive(pos, receiveFields, lhsOp, isSameStrand, thenBB)
+		mr := NewBIRTerminatorWorkerMultipleReceive(pos, receiveFields, lhsOp, isSameStrand, thenBB)
 		mr.TargetType = targetType
 		return mr
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WK_MULTIPLE_RECEIVE,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WK_MULTIPLE_RECEIVE,
 	}
 }
 
 // parseWaitAllTerminator parses a WaitAll terminator
-func parseWaitAllTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]birmodel.BIRBasicBlock) birmodel.BIRTerminator {
+func parseWaitAllTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if waIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWaitAll); ok && waIns != nil {
 		keys := make([]string, 0, len(waIns.KeyNameCpIndex))
 		for _, keyIdx := range waIns.KeyNameCpIndex {
 			keys = append(keys, cpString(b, keyIdx))
 		}
-		valueExprs := make([]birmodel.BIROperand, 0, len(waIns.ValueExpression))
+		valueExprs := make([]BIROperand, 0, len(waIns.ValueExpression))
 		for _, val := range waIns.ValueExpression {
 			if val != nil {
 				valueExprs = append(valueExprs, parseOperand(b, val))
@@ -1531,85 +1537,85 @@ func parseWaitAllTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Ins
 		}
 		lhsOp := parseOperand(b, waIns.LhsOperand)
 		thenBBName := cpString(b, waIns.ThenBbIdNameCpIndex)
-		var thenBB birmodel.BIRBasicBlock
+		var thenBB BIRBasicBlock
 		if thenBBName != "" {
 			thenBB = bbMap[thenBBName]
 		}
-		return birmodel.NewBIRTerminatorWaitAll(pos, lhsOp, keys, valueExprs, thenBB)
+		return NewBIRTerminatorWaitAll(pos, lhsOp, keys, valueExprs, thenBB)
 	}
 	return &terminatorImpl{
-		BIRTerminatorBase: birmodel.NewBIRTerminatorBase(pos),
-		kind:              birmodel.INSTRUCTION_KIND_WAIT_ALL,
+		BIRTerminatorBase: NewBIRTerminatorBase(pos),
+		kind:              INSTRUCTION_KIND_WAIT_ALL,
 	}
 }
 
 // createNonTerminator creates a BIRNonTerminator instance from Kaitai instruction data.
-func createNonTerminator(b *Bir, kind birmodel.InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func createNonTerminator(b *Bir, kind InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if kaitaiIns == nil || kaitaiIns.InstructionStructure == nil {
 		// Fallback to minimal implementation
 		return &nonTerminatorImpl{
-			BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
+			BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
 			kind:                 kind,
 		}
 	}
 
 	// Parse based on instruction kind
 	switch kind {
-	case birmodel.INSTRUCTION_KIND_MOVE:
+	case INSTRUCTION_KIND_MOVE:
 		return parseMoveInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_CONST_LOAD:
+	case INSTRUCTION_KIND_CONST_LOAD:
 		return parseConstantLoadInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_NEW_STRUCTURE:
+	case INSTRUCTION_KIND_NEW_STRUCTURE:
 		return parseNewStructureInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_NEW_ARRAY:
+	case INSTRUCTION_KIND_NEW_ARRAY:
 		return parseNewArrayInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_MAP_LOAD, birmodel.INSTRUCTION_KIND_ARRAY_LOAD, birmodel.INSTRUCTION_KIND_MAP_STORE, birmodel.INSTRUCTION_KIND_ARRAY_STORE,
-		birmodel.INSTRUCTION_KIND_OBJECT_LOAD, birmodel.INSTRUCTION_KIND_OBJECT_STORE, birmodel.INSTRUCTION_KIND_STRING_LOAD,
-		birmodel.INSTRUCTION_KIND_XML_LOAD, birmodel.INSTRUCTION_KIND_XML_SEQ_LOAD, birmodel.INSTRUCTION_KIND_XML_ATTRIBUTE_LOAD, birmodel.INSTRUCTION_KIND_XML_ATTRIBUTE_STORE:
+	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE,
+		INSTRUCTION_KIND_OBJECT_LOAD, INSTRUCTION_KIND_OBJECT_STORE, INSTRUCTION_KIND_STRING_LOAD,
+		INSTRUCTION_KIND_XML_LOAD, INSTRUCTION_KIND_XML_SEQ_LOAD, INSTRUCTION_KIND_XML_ATTRIBUTE_LOAD, INSTRUCTION_KIND_XML_ATTRIBUTE_STORE:
 		return parseFieldAccessInstruction(b, pos, kind, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_NEW_ERROR:
+	case INSTRUCTION_KIND_NEW_ERROR:
 		return parseNewErrorInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_TYPE_CAST:
+	case INSTRUCTION_KIND_TYPE_CAST:
 		return parseTypeCastInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_IS_LIKE:
+	case INSTRUCTION_KIND_IS_LIKE:
 		return parseIsLikeInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_TYPE_TEST:
+	case INSTRUCTION_KIND_TYPE_TEST:
 		return parseTypeTestInstruction(b, pos, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_ADD, birmodel.INSTRUCTION_KIND_SUB, birmodel.INSTRUCTION_KIND_MUL, birmodel.INSTRUCTION_KIND_DIV, birmodel.INSTRUCTION_KIND_MOD,
-		birmodel.INSTRUCTION_KIND_EQUAL, birmodel.INSTRUCTION_KIND_NOT_EQUAL, birmodel.INSTRUCTION_KIND_GREATER_THAN, birmodel.INSTRUCTION_KIND_GREATER_EQUAL,
-		birmodel.INSTRUCTION_KIND_LESS_THAN, birmodel.INSTRUCTION_KIND_LESS_EQUAL, birmodel.INSTRUCTION_KIND_AND, birmodel.INSTRUCTION_KIND_OR,
-		birmodel.INSTRUCTION_KIND_REF_EQUAL, birmodel.INSTRUCTION_KIND_REF_NOT_EQUAL, birmodel.INSTRUCTION_KIND_CLOSED_RANGE, birmodel.INSTRUCTION_KIND_HALF_OPEN_RANGE,
-		birmodel.INSTRUCTION_KIND_ANNOT_ACCESS:
+	case INSTRUCTION_KIND_ADD, INSTRUCTION_KIND_SUB, INSTRUCTION_KIND_MUL, INSTRUCTION_KIND_DIV, INSTRUCTION_KIND_MOD,
+		INSTRUCTION_KIND_EQUAL, INSTRUCTION_KIND_NOT_EQUAL, INSTRUCTION_KIND_GREATER_THAN, INSTRUCTION_KIND_GREATER_EQUAL,
+		INSTRUCTION_KIND_LESS_THAN, INSTRUCTION_KIND_LESS_EQUAL, INSTRUCTION_KIND_AND, INSTRUCTION_KIND_OR,
+		INSTRUCTION_KIND_REF_EQUAL, INSTRUCTION_KIND_REF_NOT_EQUAL, INSTRUCTION_KIND_CLOSED_RANGE, INSTRUCTION_KIND_HALF_OPEN_RANGE,
+		INSTRUCTION_KIND_ANNOT_ACCESS:
 		return parseBinaryOpInstruction(b, pos, kind, kaitaiIns)
-	case birmodel.INSTRUCTION_KIND_TYPEOF, birmodel.INSTRUCTION_KIND_NOT, birmodel.INSTRUCTION_KIND_NEGATE:
+	case INSTRUCTION_KIND_TYPEOF, INSTRUCTION_KIND_NOT, INSTRUCTION_KIND_NEGATE:
 		return parseUnaryOpInstruction(b, pos, kind, kaitaiIns)
 	default:
 		// For other instructions, return minimal implementation
 		return &nonTerminatorImpl{
-			BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
+			BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
 			kind:                 kind,
 		}
 	}
 }
 
 // parseMoveInstruction parses a Move instruction
-func parseMoveInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseMoveInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if moveIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionMove); ok && moveIns != nil {
 		rhsOp := parseOperand(b, moveIns.RhsOperand)
 		lhsOp := parseOperand(b, moveIns.LhsOperand)
-		return birmodel.NewBIRNonTerminatorMove(pos, rhsOp, lhsOp)
+		return NewBIRNonTerminatorMove(pos, rhsOp, lhsOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_MOVE,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_MOVE,
 	}
 }
 
 // parseConstantLoadInstruction parses a ConstantLoad instruction
-func parseConstantLoadInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseConstantLoadInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if constIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionConstLoad); ok && constIns != nil {
 		lhsOp := parseOperand(b, constIns.LhsOperand)
-		var constType birmodel.BType
+		var constType BType
 		if constIns.TypeCpIndex >= 0 {
 			constType = parseTypeFromCP(b, constIns.TypeCpIndex)
 		}
@@ -1618,47 +1624,47 @@ func parseConstantLoadInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *B
 		if constIns.ConstantValueInfo != nil {
 			value = parseConstantValueInfo(b, constIns.ConstantValueInfo, constType)
 		}
-		return birmodel.NewBIRNonTerminatorConstantLoad(pos, value, constType, lhsOp)
+		return NewBIRNonTerminatorConstantLoad(pos, value, constType, lhsOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_CONST_LOAD,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_CONST_LOAD,
 	}
 }
 
 // parseBinaryOpInstruction parses a BinaryOp instruction
-func parseBinaryOpInstruction(b *Bir, pos diagnostics.Location, kind birmodel.InstructionKind, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseBinaryOpInstruction(b *Bir, pos diagnostics.Location, kind InstructionKind, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if binOpIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionBinaryOperation); ok && binOpIns != nil {
 		rhsOp1 := parseOperand(b, binOpIns.RhsOperandOne)
 		rhsOp2 := parseOperand(b, binOpIns.RhsOperandTwo)
 		lhsOp := parseOperand(b, binOpIns.LhsOperand)
-		return birmodel.NewBIRNonTerminatorBinaryOp(pos, kind, lhsOp, rhsOp1, rhsOp2)
+		return NewBIRNonTerminatorBinaryOp(pos, kind, lhsOp, rhsOp1, rhsOp2)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
 		kind:                 kind,
 	}
 }
 
 // parseUnaryOpInstruction parses a UnaryOp instruction
-func parseUnaryOpInstruction(b *Bir, pos diagnostics.Location, kind birmodel.InstructionKind, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseUnaryOpInstruction(b *Bir, pos diagnostics.Location, kind InstructionKind, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if unaryOpIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionUnaryOperation); ok && unaryOpIns != nil {
 		rhsOp := parseOperand(b, unaryOpIns.RhsOperand)
 		lhsOp := parseOperand(b, unaryOpIns.LhsOperand)
-		return birmodel.NewBIRNonTerminatorUnaryOP(pos, kind, lhsOp, rhsOp)
+		return NewBIRNonTerminatorUnaryOP(pos, kind, lhsOp, rhsOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
 		kind:                 kind,
 	}
 }
 
 // parseNewStructureInstruction parses a NewStructure instruction
-func parseNewStructureInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseNewStructureInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if structIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionNewStructure); ok && structIns != nil {
 		rhsOp := parseOperand(b, structIns.RhsOperand)
 		lhsOp := parseOperand(b, structIns.LhsOperand)
-		initialValues := make([]birmodel.BIRMappingConstructorEntry, 0, len(structIns.InitValues))
+		initialValues := make([]BIRMappingConstructorEntry, 0, len(structIns.InitValues))
 		for _, mc := range structIns.InitValues {
 			if mc == nil {
 				continue
@@ -1667,44 +1673,44 @@ func parseNewStructureInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *B
 				if kvBody, ok := mc.MappingConstructorBody.(*Bir_MappingConstructorKeyValueBody); ok && kvBody != nil {
 					keyOp := parseOperand(b, kvBody.KeyOperand)
 					valueOp := parseOperand(b, kvBody.ValueOperand)
-					entry := birmodel.NewBIRMappingConstructorKeyValueEntry(keyOp, valueOp)
+					entry := NewBIRMappingConstructorKeyValueEntry(keyOp, valueOp)
 					initialValues = append(initialValues, entry)
 				}
 			} else { // spread field
 				if spreadBody, ok := mc.MappingConstructorBody.(*Bir_MappingConstructorSpreadFieldBody); ok && spreadBody != nil {
 					exprOp := parseOperand(b, spreadBody.ExprOperand)
-					entry := birmodel.NewBIRMappingConstructorSpreadFieldEntry(exprOp)
+					entry := NewBIRMappingConstructorSpreadFieldEntry(exprOp)
 					initialValues = append(initialValues, entry)
 				}
 			}
 		}
-		return birmodel.NewBIRNonTerminatorNewStructure(pos, lhsOp, rhsOp, initialValues)
+		return NewBIRNonTerminatorNewStructure(pos, lhsOp, rhsOp, initialValues)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_NEW_STRUCTURE,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_NEW_STRUCTURE,
 	}
 }
 
 // parseNewArrayInstruction parses a NewArray instruction
-func parseNewArrayInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseNewArrayInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if arrayIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionNewArray); ok && arrayIns != nil {
-		var arrayType birmodel.BType
+		var arrayType BType
 		if arrayIns.TypeCpIndex >= 0 {
 			arrayType = parseTypeFromCP(b, arrayIns.TypeCpIndex)
 		}
 		lhsOp := parseOperand(b, arrayIns.LhsOperand)
 		sizeOp := parseOperand(b, arrayIns.SizeOperand)
-		values := make([]birmodel.BIRListConstructorEntry, 0, len(arrayIns.InitValues))
+		values := make([]BIRListConstructorEntry, 0, len(arrayIns.InitValues))
 		for _, val := range arrayIns.InitValues {
 			if val == nil {
 				continue
 			}
 			exprOp := parseOperand(b, val)
-			entry := birmodel.NewBIRListConstructorExprEntry(exprOp)
+			entry := NewBIRListConstructorExprEntry(exprOp)
 			values = append(values, entry)
 		}
-		na := birmodel.NewBIRNonTerminatorNewArray(pos, arrayType, lhsOp, sizeOp, values)
+		na := NewBIRNonTerminatorNewArray(pos, arrayType, lhsOp, sizeOp, values)
 		if arrayIns.HasTypedescOperand == 1 && arrayIns.TypedescOperand != nil {
 			na.TypedescOp = parseOperand(b, arrayIns.TypedescOperand)
 		}
@@ -1714,16 +1720,16 @@ func parseNewArrayInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_I
 		return na
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_NEW_ARRAY,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_NEW_ARRAY,
 	}
 }
 
 // parseFieldAccessInstruction parses a FieldAccess instruction (MAP_LOAD, ARRAY_LOAD, etc.)
-func parseFieldAccessInstruction(b *Bir, pos diagnostics.Location, kind birmodel.InstructionKind, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseFieldAccessInstruction(b *Bir, pos diagnostics.Location, kind InstructionKind, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	// FieldAccess is used for MAP_LOAD, ARRAY_LOAD, MAP_STORE, ARRAY_STORE, etc.
 	// They all use index_access structure
-	var keyOp, rhsOp, lhsOp birmodel.BIROperand
+	var keyOp, rhsOp, lhsOp BIROperand
 	var optionalFieldAccess, fillingRead bool
 
 	switch ins := kaitaiIns.InstructionStructure.(type) {
@@ -1762,22 +1768,22 @@ func parseFieldAccessInstruction(b *Bir, pos diagnostics.Location, kind birmodel
 	}
 
 	if lhsOp != nil {
-		fa := birmodel.NewBIRNonTerminatorFieldAccess(pos, kind, lhsOp, keyOp, rhsOp)
+		fa := NewBIRNonTerminatorFieldAccess(pos, kind, lhsOp, keyOp, rhsOp)
 		fa.OptionalFieldAccess = optionalFieldAccess
 		fa.FillingRead = fillingRead
 		return fa
 	}
 
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
 		kind:                 kind,
 	}
 }
 
 // parseNewErrorInstruction parses a NewError instruction
-func parseNewErrorInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseNewErrorInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if errorIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionNewError); ok && errorIns != nil {
-		var errorType birmodel.BType
+		var errorType BType
 		if errorIns.ErrorTypeCpIndex >= 0 {
 			errorType = parseTypeFromCP(b, errorIns.ErrorTypeCpIndex)
 		}
@@ -1785,63 +1791,63 @@ func parseNewErrorInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_I
 		messageOp := parseOperand(b, errorIns.MessageOperand)
 		causeOp := parseOperand(b, errorIns.CauseOperand)
 		detailOp := parseOperand(b, errorIns.DetailOperand)
-		return birmodel.NewBIRNonTerminatorNewError(pos, errorType, lhsOp, messageOp, causeOp, detailOp)
+		return NewBIRNonTerminatorNewError(pos, errorType, lhsOp, messageOp, causeOp, detailOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_NEW_ERROR,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_NEW_ERROR,
 	}
 }
 
 // parseTypeCastInstruction parses a TypeCast instruction
-func parseTypeCastInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseTypeCastInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if castIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionTypeCast); ok && castIns != nil {
 		lhsOp := parseOperand(b, castIns.LhsOperand)
 		rhsOp := parseOperand(b, castIns.RhsOperand)
-		var castType birmodel.BType
+		var castType BType
 		if castIns.TypeCpIndex >= 0 {
 			castType = parseTypeFromCP(b, castIns.TypeCpIndex)
 		}
 		checkTypes := castIns.IsCheckTypes != 0
-		return birmodel.NewBIRNonTerminatorTypeCast(pos, lhsOp, rhsOp, castType, checkTypes)
+		return NewBIRNonTerminatorTypeCast(pos, lhsOp, rhsOp, castType, checkTypes)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_TYPE_CAST,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_TYPE_CAST,
 	}
 }
 
 // parseIsLikeInstruction parses an IsLike instruction
-func parseIsLikeInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseIsLikeInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if isLikeIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionIsLike); ok && isLikeIns != nil {
-		var likeType birmodel.BType
+		var likeType BType
 		if isLikeIns.TypeCpIndex >= 0 {
 			likeType = parseTypeFromCP(b, isLikeIns.TypeCpIndex)
 		}
 		lhsOp := parseOperand(b, isLikeIns.LhsOperand)
 		rhsOp := parseOperand(b, isLikeIns.RhsOperand)
-		return birmodel.NewBIRNonTerminatorIsLike(pos, likeType, lhsOp, rhsOp)
+		return NewBIRNonTerminatorIsLike(pos, likeType, lhsOp, rhsOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_IS_LIKE,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_IS_LIKE,
 	}
 }
 
 // parseTypeTestInstruction parses a TypeTest instruction
-func parseTypeTestInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) birmodel.BIRNonTerminator {
+func parseTypeTestInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRNonTerminator {
 	if testIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionTypeTest); ok && testIns != nil {
-		var testType birmodel.BType
+		var testType BType
 		if testIns.TypeCpIndex >= 0 {
 			testType = parseTypeFromCP(b, testIns.TypeCpIndex)
 		}
 		lhsOp := parseOperand(b, testIns.LhsOperand)
 		rhsOp := parseOperand(b, testIns.RhsOperand)
-		return birmodel.NewBIRNonTerminatorTypeTest(pos, testType, lhsOp, rhsOp)
+		return NewBIRNonTerminatorTypeTest(pos, testType, lhsOp, rhsOp)
 	}
 	return &nonTerminatorImpl{
-		BIRNonTerminatorBase: birmodel.NewBIRNonTerminatorBase(pos),
-		kind:                 birmodel.INSTRUCTION_KIND_TYPE_TEST,
+		BIRNonTerminatorBase: NewBIRNonTerminatorBase(pos),
+		kind:                 INSTRUCTION_KIND_TYPE_TEST,
 	}
 }
 
@@ -1858,25 +1864,25 @@ func positionToLocation(b *Bir, pos *Bir_Position) diagnostics.Location {
 // Minimal implementations to satisfy interfaces
 
 type terminatorImpl struct {
-	birmodel.BIRTerminatorBase
-	kind birmodel.InstructionKind
+	BIRTerminatorBase
+	kind InstructionKind
 }
 
-func (t *terminatorImpl) GetNextBasicBlocks() []birmodel.BIRBasicBlock {
+func (t *terminatorImpl) GetNextBasicBlocks() []BIRBasicBlock {
 	if t.GetThenBB() != nil {
-		return []birmodel.BIRBasicBlock{t.GetThenBB()}
+		return []BIRBasicBlock{t.GetThenBB()}
 	}
-	return []birmodel.BIRBasicBlock{}
+	return []BIRBasicBlock{}
 }
 
-func (t *terminatorImpl) Accept(visitor birmodel.BIRVisitor) {
+func (t *terminatorImpl) Accept(visitor BIRVisitor) {
 	// Dispatch to appropriate visitor method based on kind
 	switch t.kind {
-	case birmodel.INSTRUCTION_KIND_GOTO:
+	case INSTRUCTION_KIND_GOTO:
 		visitor.VisitBIRTerminatorGOTO(t)
-	case birmodel.INSTRUCTION_KIND_RETURN:
+	case INSTRUCTION_KIND_RETURN:
 		visitor.VisitBIRTerminatorReturn(t)
-	case birmodel.INSTRUCTION_KIND_BRANCH:
+	case INSTRUCTION_KIND_BRANCH:
 		visitor.VisitBIRTerminatorBranch(t)
 	default:
 		// Default to generic terminator visit
@@ -1885,11 +1891,11 @@ func (t *terminatorImpl) Accept(visitor birmodel.BIRVisitor) {
 }
 
 type nonTerminatorImpl struct {
-	birmodel.BIRNonTerminatorBase
-	kind birmodel.InstructionKind
+	BIRNonTerminatorBase
+	kind InstructionKind
 }
 
-func (n *nonTerminatorImpl) Accept(visitor birmodel.BIRVisitor) {
+func (n *nonTerminatorImpl) Accept(visitor BIRVisitor) {
 	// Dispatch to appropriate visitor method based on kind
 	// For now, use a generic non-terminator visit
 	visitor.VisitBIRNonTerminatorMove(n)
@@ -1898,29 +1904,29 @@ func (n *nonTerminatorImpl) Accept(visitor birmodel.BIRVisitor) {
 // Helper functions for parsing various structures
 
 // populatePathParameters populates path parameters for resource functions.
-func populatePathParameters(b *Bir, fn birmodel.BIRFunction, rfc *Bir_ResourceFunctionContent) error {
+func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionContent) error {
 	if rfc == nil {
 		return nil
 	}
 
 	// Path parameters
 	if rfc.PathParamsCount > 0 && len(rfc.PathParams) > 0 {
-		pathParams := make([]birmodel.BIRVariableDcl, 0, len(rfc.PathParams))
+		pathParams := make([]BIRVariableDcl, 0, len(rfc.PathParams))
 		for _, pp := range rfc.PathParams {
 			if pp == nil {
 				continue
 			}
 			metaVarName := cpString(b, pp.PathParamNameCpIndex)
-			var t birmodel.BType
+			var t BType
 			if pp.PathParamTypeCpIndex >= 0 {
 				t = parseTypeFromCP(b, pp.PathParamTypeCpIndex)
 			}
-			name := util.NewName(metaVarName)
-			pathVar := birmodel.NewBIRVariableDclSimple(
+			name := Name(metaVarName)
+			pathVar := NewBIRVariableDclSimple(
 				t,
 				name,
-				birmodel.VAR_SCOPE_FUNCTION,
-				birmodel.VAR_KIND_LOCAL,
+				VAR_SCOPE_FUNCTION,
+				VAR_KIND_LOCAL,
 			)
 			pathParams = append(pathParams, pathVar)
 		}
@@ -1932,34 +1938,34 @@ func populatePathParameters(b *Bir, fn birmodel.BIRFunction, rfc *Bir_ResourceFu
 	// Rest path parameter
 	if rfc.HasRestPathParam != 0 && rfc.RestPathParam != nil {
 		metaVarName := cpString(b, rfc.RestPathParam.PathParamNameCpIndex)
-		name := util.NewName(metaVarName)
-		var t birmodel.BType
+		name := Name(metaVarName)
+		var t BType
 		if rfc.RestPathParam.PathParamTypeCpIndex >= 0 {
 			t = parseTypeFromCP(b, rfc.RestPathParam.PathParamTypeCpIndex)
 		}
-		restPathVar := birmodel.NewBIRVariableDclSimple(
+		restPathVar := NewBIRVariableDclSimple(
 			t,
 			name,
-			birmodel.VAR_SCOPE_FUNCTION,
-			birmodel.VAR_KIND_LOCAL,
+			VAR_SCOPE_FUNCTION,
+			VAR_KIND_LOCAL,
 		)
 		fn.SetRestPathParam(restPathVar)
 	}
 
 	// Resource path segments
 	if rfc.ResourcePathSegmentCount > 0 && len(rfc.ResourcePathSegments) > 0 {
-		resourcePath := make([]util.Name, 0, len(rfc.ResourcePathSegments))
+		resourcePath := make([]Name, 0, len(rfc.ResourcePathSegments))
 		pathSegmentPosList := make([]diagnostics.Location, 0, len(rfc.ResourcePathSegments))
-		pathSegmentTypeList := make([]birmodel.BType, 0, len(rfc.ResourcePathSegments))
+		pathSegmentTypeList := make([]BType, 0, len(rfc.ResourcePathSegments))
 
 		for _, seg := range rfc.ResourcePathSegments {
 			if seg == nil {
 				continue
 			}
-			pathName := util.NewName(cpString(b, seg.ResourcePathSegmentCpIndex))
+			pathName := Name(cpString(b, seg.ResourcePathSegmentCpIndex))
 			resourcePath = append(resourcePath, pathName)
 			pathSegmentPosList = append(pathSegmentPosList, positionToLocation(b, seg.ResourcePathSegmentPos))
-			var t birmodel.BType
+			var t BType
 			if seg.ResourcePathSegmentType >= 0 {
 				t = parseTypeFromCP(b, seg.ResourcePathSegmentType)
 			}
@@ -1976,7 +1982,7 @@ func populatePathParameters(b *Bir, fn birmodel.BIRFunction, rfc *Bir_ResourceFu
 	// Accessor
 	if rfc.ResourceAccessor >= 0 {
 		// TODO: Map accessor from CP index or value
-		accessorName := util.NewName(cpString(b, rfc.ResourceAccessor))
+		accessorName := Name(cpString(b, rfc.ResourceAccessor))
 		fn.SetAccessor(accessorName)
 	}
 
@@ -1984,43 +1990,43 @@ func populatePathParameters(b *Bir, fn birmodel.BIRFunction, rfc *Bir_ResourceFu
 }
 
 // parseAnnotationAttachments parses annotation attachments.
-func parseAnnotationAttachments(b *Bir, aac *Bir_AnnotationAttachmentsContent) []birmodel.BIRAnnotationAttachment {
+func parseAnnotationAttachments(b *Bir, aac *Bir_AnnotationAttachmentsContent) []BIRAnnotationAttachment {
 	if aac == nil || aac.AttachmentsCount == 0 {
-		return []birmodel.BIRAnnotationAttachment{}
+		return []BIRAnnotationAttachment{}
 	}
 
-	attachments := make([]birmodel.BIRAnnotationAttachment, 0, aac.AttachmentsCount)
+	attachments := make([]BIRAnnotationAttachment, 0, aac.AttachmentsCount)
 	for _, aa := range aac.AnnotationAttachments {
 		if aa == nil {
 			continue
 		}
 
 		// Parse PackageID
-		var annotPkgID elements.PackageID
+		var annotPkgID model.PackageID
 		if aa.PackageIdCpIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, aa.PackageIdCpIndex)
 			if err == nil && pkgCp != nil {
-				org := util.NewName(cpString(b, pkgCp.OrgIndex))
-				pkgName := util.NewName(cpString(b, pkgCp.PackageNameIndex))
-				namePart := util.NewName(cpString(b, pkgCp.NameIndex))
-				version := util.NewName(cpString(b, pkgCp.VersionIndex))
-				annotPkgID = elements.NewPackageID(org, pkgName, namePart, version, util.NewName(""), "", false, false)
+				org := Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := Name(cpString(b, pkgCp.NameIndex))
+				version := Name(cpString(b, pkgCp.VersionIndex))
+				annotPkgID = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
 		// Parse tag reference
-		tagRef := util.NewName(cpString(b, aa.TagReferenceCpIndex))
+		tagRef := Name(cpString(b, aa.TagReferenceCpIndex))
 		pos := positionToLocation(b, aa.Position)
 
 		// Check if this is a const annotation
 		if aa.IsConstAnnot != 0 && aa.ConstantValue != nil {
 			// Create const annotation attachment
 			constValue := parseConstantValue(b, aa.ConstantValue)
-			att := birmodel.NewBIRConstAnnotationAttachment(pos, annotPkgID, tagRef, constValue)
+			att := NewBIRConstAnnotationAttachment(pos, annotPkgID, tagRef, constValue)
 			attachments = append(attachments, att)
 		} else {
 			// Regular annotation attachment
-			att := birmodel.NewBIRAnnotationAttachment(pos, annotPkgID, tagRef)
+			att := NewBIRAnnotationAttachment(pos, annotPkgID, tagRef)
 			attachments = append(attachments, att)
 		}
 	}
@@ -2029,46 +2035,46 @@ func parseAnnotationAttachments(b *Bir, aac *Bir_AnnotationAttachmentsContent) [
 }
 
 // parseReturnVar parses a return variable.
-func parseReturnVar(b *Bir, rv *Bir_ReturnVar) birmodel.BIRVariableDcl {
+func parseReturnVar(b *Bir, rv *Bir_ReturnVar) BIRVariableDcl {
 	if rv == nil {
 		return nil
 	}
 
-	name := util.NewName(cpString(b, rv.NameCpIndex))
-	kind := birmodel.VarKind(rv.Kind)
-	var t birmodel.BType
+	name := Name(cpString(b, rv.NameCpIndex))
+	kind := VarKind(rv.Kind)
+	var t BType
 	if rv.TypeCpIndex >= 0 {
 		t = parseTypeFromCP(b, rv.TypeCpIndex)
 	}
 
-	return birmodel.NewBIRVariableDclSimple(
+	return NewBIRVariableDclSimple(
 		t,
 		name,
-		birmodel.VAR_SCOPE_FUNCTION,
+		VAR_SCOPE_FUNCTION,
 		kind,
 	)
 }
 
 // parseFunctionParameter parses a function parameter (default parameter).
-func parseFunctionParameter(b *Bir, dp *Bir_DefaultParameter) birmodel.BIRFunctionParameter {
+func parseFunctionParameter(b *Bir, dp *Bir_DefaultParameter) BIRFunctionParameter {
 	if dp == nil {
 		return nil
 	}
 
-	name := util.NewName(cpString(b, dp.NameCpIndex))
-	kind := birmodel.VarKind(dp.Kind)
-	var t birmodel.BType
+	name := Name(cpString(b, dp.NameCpIndex))
+	kind := VarKind(dp.Kind)
+	var t BType
 	if dp.TypeCpIndex >= 0 {
 		t = parseTypeFromCP(b, dp.TypeCpIndex)
 	}
 	metaVarName := cpString(b, dp.MetaVarNameCpIndex)
 	hasDefaultExpr := dp.HasDefaultExpr != 0
 
-	return birmodel.NewBIRFunctionParameter(
+	return NewBIRFunctionParameter(
 		nil, // pos
 		t,
 		name,
-		birmodel.VAR_SCOPE_FUNCTION,
+		VAR_SCOPE_FUNCTION,
 		kind,
 		metaVarName,
 		hasDefaultExpr,
@@ -2076,27 +2082,27 @@ func parseFunctionParameter(b *Bir, dp *Bir_DefaultParameter) birmodel.BIRFuncti
 }
 
 // parseLocalVariable parses a local variable.
-func parseLocalVariable(b *Bir, lv *Bir_LocalVariable) birmodel.BIRVariableDcl {
+func parseLocalVariable(b *Bir, lv *Bir_LocalVariable) BIRVariableDcl {
 	if lv == nil {
 		return nil
 	}
 
-	name := util.NewName(cpString(b, lv.NameCpIndex))
-	kind := birmodel.VarKind(lv.Kind)
-	var t birmodel.BType
+	name := Name(cpString(b, lv.NameCpIndex))
+	kind := VarKind(lv.Kind)
+	var t BType
 	if lv.TypeCpIndex >= 0 {
 		t = parseTypeFromCP(b, lv.TypeCpIndex)
 	}
 
-	localVar := birmodel.NewBIRVariableDclSimple(
+	localVar := NewBIRVariableDclSimple(
 		t,
 		name,
-		birmodel.VAR_SCOPE_FUNCTION,
+		VAR_SCOPE_FUNCTION,
 		kind,
 	)
 
 	// Parse enclosing basic block info if this is a LOCAL variable
-	if kind == birmodel.VAR_KIND_LOCAL && lv.EnclosingBasicBlockId != nil {
+	if kind == VAR_KIND_LOCAL && lv.EnclosingBasicBlockId != nil {
 		// TODO: Set startBB, endBB, and insOffset if needed
 		// This requires access to the basic blocks map
 	}
@@ -2105,7 +2111,7 @@ func parseLocalVariable(b *Bir, lv *Bir_LocalVariable) birmodel.BIRVariableDcl {
 }
 
 // parseErrorEntry parses an error table entry.
-func parseErrorEntry(b *Bir, ee *Bir_ErrorEntry) birmodel.BIRErrorEntry {
+func parseErrorEntry(b *Bir, ee *Bir_ErrorEntry) BIRErrorEntry {
 	if ee == nil {
 		return nil
 	}
@@ -2117,23 +2123,23 @@ func parseErrorEntry(b *Bir, ee *Bir_ErrorEntry) birmodel.BIRErrorEntry {
 
 	// Create basic block references by name (they will be resolved later if needed)
 	// For now, we create minimal basic blocks with just the name
-	trapBB := birmodel.NewBIRBasicBlock(util.NewName(trapBBName), 0)
-	endBB := birmodel.NewBIRBasicBlock(util.NewName(endBBName), 0)
-	targetBB := birmodel.NewBIRBasicBlock(util.NewName(targetBBName), 0)
+	trapBB := NewBIRBasicBlock(Name(trapBBName), 0)
+	endBB := NewBIRBasicBlock(Name(endBBName), 0)
+	targetBB := NewBIRBasicBlock(Name(targetBBName), 0)
 
 	// Parse error operand
-	var errorOp birmodel.BIROperand
+	var errorOp BIROperand
 	if ee.ErrorOperand != nil {
 		errorOp = parseOperand(b, ee.ErrorOperand)
 	}
 
-	return birmodel.NewBIRErrorEntry(trapBB, endBB, errorOp, targetBB)
+	return NewBIRErrorEntry(trapBB, endBB, errorOp, targetBB)
 }
 
 // Helper functions for parsing complex structures
 
 // parseTypeFromCP parses a BType from a constant pool index (shape_cp_info).
-func parseTypeFromCP(b *Bir, cpIndex int32) birmodel.BType {
+func parseTypeFromCP(b *Bir, cpIndex int32) model.ValueType {
 	if cpIndex < 0 {
 		return nil
 	}
@@ -2155,7 +2161,7 @@ func parseTypeFromCP(b *Bir, cpIndex int32) birmodel.BType {
 
 // createBTypeFromTypeInfo creates a minimal BType from Bir_TypeInfo.
 // This is a placeholder implementation until full type system is available.
-func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) birmodel.BType {
+func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) model.ValueType {
 	if ti == nil {
 		return nil
 	}
@@ -2165,7 +2171,7 @@ func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) birmodel.BType {
 	// For now, we create a stub that satisfies the BType interface
 	return &minimalBType{
 		tag:   int(ti.TypeTag),
-		name:  util.NewName(cpString(b, ti.NameIndex)),
+		name:  Name(cpString(b, ti.NameIndex)),
 		flags: ti.TypeFlag,
 	}
 }
@@ -2173,7 +2179,7 @@ func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) birmodel.BType {
 // minimalBType is a minimal implementation of BType for parsing purposes.
 type minimalBType struct {
 	tag     int
-	name    util.Name
+	name    Name
 	flags   int64
 	semType interface{}
 	tsymbol interface{}
@@ -2181,84 +2187,97 @@ type minimalBType struct {
 
 func (t *minimalBType) GetTag() int                    { return t.tag }
 func (t *minimalBType) SetTag(tag int)                 { t.tag = tag }
-func (t *minimalBType) GetName() util.Name             { return t.name }
-func (t *minimalBType) SetName(name util.Name)         { t.name = name }
+func (t *minimalBType) GetName() Name                  { return t.name }
+func (t *minimalBType) SetName(name Name)              { t.name = name }
 func (t *minimalBType) GetFlags() int64                { return t.flags }
 func (t *minimalBType) SetFlags(flags int64)           { t.flags = flags }
 func (t *minimalBType) GetSemType() interface{}        { return t.semType }
 func (t *minimalBType) SetSemType(semType interface{}) { t.semType = semType }
 func (t *minimalBType) GetTsymbol() interface{}        { return t.tsymbol }
 func (t *minimalBType) SetTsymbol(tsymbol interface{}) { t.tsymbol = tsymbol }
-func (t *minimalBType) GetReturnType() birmodel.BType  { return nil }
+func (t *minimalBType) GetReturnType() model.ValueType { return nil }
+func (t *minimalBType) GetTypeKind() model.TypeKind {
+	// Return a default type kind - this is a minimal implementation
+	return model.TypeKind_OTHER
+}
 func (t *minimalBType) String() string {
-	if t.name.GetValue() != "" {
-		return t.name.GetValue()
+	if t.name.Value() != "" {
+		return t.name.Value()
 	}
 	return fmt.Sprintf("type_%d", t.tag)
 }
 
 // parseMarkdown parses markdown documentation from Bir_Markdown.
-func parseMarkdown(b *Bir, md *Bir_Markdown) elements.MarkdownDocAttachment {
+func parseMarkdown(b *Bir, md *Bir_Markdown) MarkdownDocAttachment {
 	if md == nil || md.HasDoc == 0 || md.MarkdownContent == nil {
-		return elements.NewMarkdownDocAttachment(0)
+		return MarkdownDocAttachment{}
 	}
 
 	mc := md.MarkdownContent
-	mdDoc := elements.NewMarkdownDocAttachment(int(mc.ParametersCount))
+	mdDoc := MarkdownDocAttachment{}
 
 	// Parse description
 	if mc.DescriptionCpIndex >= 0 {
-		mdDoc.Description = cpString(b, mc.DescriptionCpIndex)
+		desc := cpString(b, mc.DescriptionCpIndex)
+		mdDoc.Description = &desc
 	}
 
 	// Parse return value description
 	if mc.ReturnValueDescriptionCpIndex >= 0 {
-		mdDoc.ReturnValueDescription = cpString(b, mc.ReturnValueDescriptionCpIndex)
+		retDesc := cpString(b, mc.ReturnValueDescriptionCpIndex)
+		mdDoc.ReturnValueDescription = &retDesc
 	}
 
 	// Parse parameters
 	if mc.ParametersCount > 0 && len(mc.Parameters) > 0 {
-		params := make([]elements.Parameter, 0, len(mc.Parameters))
+		params := make([]model.Parameters, 0, len(mc.Parameters))
 		for _, mp := range mc.Parameters {
 			if mp == nil {
 				continue
 			}
 			paramName := cpString(b, mp.NameCpIndex)
 			paramDesc := cpString(b, mp.DescriptionCpIndex)
-			params = append(params, elements.NewParameter(paramName, paramDesc))
+			params = append(params, model.Parameters{
+				Name:        &paramName,
+				Description: &paramDesc,
+			})
 		}
 		mdDoc.Parameters = params
 	}
 
 	// Parse deprecated docs
 	if mc.DeprecatedDocsCpIndex >= 0 {
-		mdDoc.DeprecatedDocumentation = cpString(b, mc.DeprecatedDocsCpIndex)
+		deprecatedDocs := cpString(b, mc.DeprecatedDocsCpIndex)
+		mdDoc.DeprecatedDocumentation = &deprecatedDocs
 	}
 
 	// Parse deprecated params
 	if mc.DeprecatedParamsCount > 0 && len(mc.DeprecatedParams) > 0 {
-		deprecatedParams := make([]elements.Parameter, 0, len(mc.DeprecatedParams))
+		deprecatedParams := make([]model.Parameters, 0, len(mc.DeprecatedParams))
 		for _, mp := range mc.DeprecatedParams {
 			if mp == nil {
 				continue
 			}
 			paramName := cpString(b, mp.NameCpIndex)
 			paramDesc := cpString(b, mp.DescriptionCpIndex)
-			deprecatedParams = append(deprecatedParams, elements.NewParameter(paramName, paramDesc))
+			deprecatedParams = append(deprecatedParams, model.Parameters{
+				Name:        &paramName,
+				Description: &paramDesc,
+			})
 		}
-		mdDoc.DeprecatedParams = deprecatedParams
+		mdDoc.DeprecatedParameters = deprecatedParams
 	}
 
 	return mdDoc
 }
 
 // parseConstantValue parses a constant value from Bir_ConstantValue.
-func parseConstantValue(b *Bir, cv *Bir_ConstantValue) birmodel.ConstValue {
+func parseConstantValue(b *Bir, cv *Bir_ConstantValue) ConstValue {
 	if cv == nil {
-		return birmodel.ConstValue{}
+		return ConstValue{}
 	}
 
-	var constType birmodel.BType
+	var constType BType
 	if cv.ConstantValueTypeCpIndex >= 0 {
 		constType = parseTypeFromCP(b, cv.ConstantValueTypeCpIndex)
 	}
@@ -2272,14 +2291,14 @@ func parseConstantValue(b *Bir, cv *Bir_ConstantValue) birmodel.ConstValue {
 		value = parseConstantValueInfo(b, cv.ConstantValueInfo, constType)
 	}
 
-	return birmodel.ConstValue{
+	return ConstValue{
 		Type:  constType,
 		Value: value,
 	}
 }
 
 // parseConstantValueInfo parses the actual constant value from the info structure.
-func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType birmodel.BType) interface{} {
+func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType BType) interface{} {
 	if cvi == nil {
 		return nil
 	}
@@ -2368,28 +2387,28 @@ func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType birmodel.BType)
 }
 
 // parseReceiver parses a receiver from Bir_Reciever.
-func parseReceiver(b *Bir, rec *Bir_Reciever) birmodel.BIRVariableDcl {
+func parseReceiver(b *Bir, rec *Bir_Reciever) BIRVariableDcl {
 	if rec == nil {
 		return nil
 	}
 
-	name := util.NewName(cpString(b, rec.NameCpIndex))
-	kind := birmodel.VarKind(rec.Kind)
-	var t birmodel.BType
+	name := Name(cpString(b, rec.NameCpIndex))
+	kind := VarKind(rec.Kind)
+	var t BType
 	if rec.TypeCpIndex >= 0 {
 		t = parseTypeFromCP(b, rec.TypeCpIndex)
 	}
 
-	return birmodel.NewBIRVariableDclSimple(
+	return NewBIRVariableDclSimple(
 		t,
 		name,
-		birmodel.VAR_SCOPE_FUNCTION,
+		VAR_SCOPE_FUNCTION,
 		kind,
 	)
 }
 
 // parseOperand parses a BIROperand from Bir_Operand.
-func parseOperand(b *Bir, op *Bir_Operand) birmodel.BIROperand {
+func parseOperand(b *Bir, op *Bir_Operand) BIROperand {
 	if op == nil {
 		return nil
 	}
@@ -2397,18 +2416,18 @@ func parseOperand(b *Bir, op *Bir_Operand) birmodel.BIROperand {
 	// Check if variable is ignored
 	if op.IgnoredVariable != 0 {
 		// Ignored variable - create a minimal variable declaration
-		var ignoredType birmodel.BType
+		var ignoredType BType
 		if op.IgnoredTypeCpIndex >= 0 {
 			ignoredType = parseTypeFromCP(b, op.IgnoredTypeCpIndex)
 		}
 		// Create a minimal variable for ignored operands
-		ignoredVar := birmodel.NewBIRVariableDclSimple(
+		ignoredVar := NewBIRVariableDclSimple(
 			ignoredType,
-			util.NewName("_"),
-			birmodel.VAR_SCOPE_FUNCTION,
-			birmodel.VAR_KIND_LOCAL,
+			Name("_"),
+			VAR_SCOPE_FUNCTION,
+			VAR_KIND_LOCAL,
 		)
-		return birmodel.NewBIROperand(ignoredVar)
+		return NewBIROperand(ignoredVar)
 	}
 
 	// Parse variable
@@ -2416,10 +2435,10 @@ func parseOperand(b *Bir, op *Bir_Operand) birmodel.BIROperand {
 		return nil
 	}
 
-	var varType birmodel.BType
-	varName := util.NewName(cpString(b, op.Variable.VariableDclNameCpIndex))
-	kind := birmodel.VarKind(op.Variable.Kind)
-	scope := birmodel.VarScope(op.Variable.Scope)
+	var varType BType
+	varName := Name(cpString(b, op.Variable.VariableDclNameCpIndex))
+	kind := VarKind(op.Variable.Kind)
+	scope := VarScope(op.Variable.Scope)
 
 	// For global/constant variables, get type from GlobalOrConstantVariable
 	if op.Variable.Kind == 5 || op.Variable.Kind == 7 {
@@ -2431,12 +2450,12 @@ func parseOperand(b *Bir, op *Bir_Operand) birmodel.BIROperand {
 	}
 
 	// Create variable declaration
-	varDcl := birmodel.NewBIRVariableDclSimple(
+	varDcl := NewBIRVariableDclSimple(
 		varType,
 		varName,
 		scope,
 		kind,
 	)
 
-	return birmodel.NewBIROperand(varDcl)
+	return NewBIROperand(varDcl)
 }

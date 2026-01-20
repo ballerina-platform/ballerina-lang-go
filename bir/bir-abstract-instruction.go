@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package bir
 
 import "ballerina-lang-go/tools/diagnostics"
 
@@ -24,15 +24,15 @@ type BIRAbstractInstructionData interface {
 	GetKind() InstructionKind
 	SetLhsOp(lhsOp BIROperand)
 	GetLhsOp() BIROperand
-	SetScope(scope BirScope)
-	GetScope() BirScope
+	SetScope(scope BIRScope)
+	GetScope() BIRScope
 }
 
 type BIRAbstractInstructionBase struct {
 	BIRNodeBase
 	Kind  InstructionKind
 	LhsOp BIROperand
-	Scope BirScope
+	Scope BIRScope
 }
 
 func (b *BIRAbstractInstructionBase) SetKind(kind InstructionKind) {
@@ -51,11 +51,11 @@ func (b *BIRAbstractInstructionBase) GetLhsOp() BIROperand {
 	return b.LhsOp
 }
 
-func (b *BIRAbstractInstructionBase) SetScope(scope BirScope) {
+func (b *BIRAbstractInstructionBase) SetScope(scope BIRScope) {
 	b.Scope = scope
 }
 
-func (b *BIRAbstractInstructionBase) GetScope() BirScope {
+func (b *BIRAbstractInstructionBase) GetScope() BIRScope {
 	return b.Scope
 }
 

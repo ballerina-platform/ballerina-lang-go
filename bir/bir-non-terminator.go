@@ -14,12 +14,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package bir
 
 import (
-	"ballerina-lang-go/compiler/semantics/model/types"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
 )
+
+type BIRNonTerminator interface {
+	BIRNode
+}
+
+type BIRNonTerminatorBase struct {
+	BIRNodeBase
+}
+
+func NewBIRNonTerminatorBase(pos diagnostics.Location) BIRNonTerminatorBase {
+	return BIRNonTerminatorBase{
+		BIRNodeBase: BIRNodeBase{
+			Pos: pos,
+		},
+	}
+}
 
 // Move instruction: _1 = move _2
 type BIRNonTerminatorMove struct {
@@ -138,11 +154,11 @@ func (u *BIRNonTerminatorUnaryOP) Accept(visitor BIRVisitor) {
 // ConstantLoad instruction: _1 = const 10 (int)
 type BIRNonTerminatorConstantLoad struct {
 	BIRAbstractInstructionBase
-	Value interface{}
-	Type  types.BType
+	Value any
+	Type  model.ValueType
 }
 
-func NewBIRNonTerminatorConstantLoad(pos diagnostics.Location, value interface{}, type_ types.BType, lhsOp BIROperand) *BIRNonTerminatorConstantLoad {
+func NewBIRNonTerminatorConstantLoad(pos diagnostics.Location, value any, type_ model.ValueType, lhsOp BIROperand) *BIRNonTerminatorConstantLoad {
 	c := &BIRNonTerminatorConstantLoad{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_CONST_LOAD),
 		Value:                      value,
@@ -222,11 +238,11 @@ type BIRNonTerminatorNewArray struct {
 	TypedescOp        BIROperand
 	ElementTypedescOp BIROperand
 	SizeOp            BIROperand
-	Type              types.BType
+	Type              model.ValueType
 	Values            []BIRListConstructorEntry
 }
 
-func NewBIRNonTerminatorNewArray(pos diagnostics.Location, type_ types.BType, lhsOp BIROperand, sizeOp BIROperand, values []BIRListConstructorEntry) *BIRNonTerminatorNewArray {
+func NewBIRNonTerminatorNewArray(pos diagnostics.Location, type_ model.ValueType, lhsOp BIROperand, sizeOp BIROperand, values []BIRListConstructorEntry) *BIRNonTerminatorNewArray {
 	n := &BIRNonTerminatorNewArray{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_NEW_ARRAY),
 		Type:                       type_,
@@ -316,13 +332,13 @@ func (f *BIRNonTerminatorFieldAccess) Accept(visitor BIRVisitor) {
 // NewError instruction: error(reason as string, detail as map)
 type BIRNonTerminatorNewError struct {
 	BIRAbstractInstructionBase
-	Type      types.BType
+	Type      model.ValueType
 	MessageOp BIROperand
 	CauseOp   BIROperand
 	DetailOp  BIROperand
 }
 
-func NewBIRNonTerminatorNewError(pos diagnostics.Location, type_ types.BType, lhsOp BIROperand, messageOp BIROperand, causeOp BIROperand, detailOp BIROperand) *BIRNonTerminatorNewError {
+func NewBIRNonTerminatorNewError(pos diagnostics.Location, type_ model.ValueType, lhsOp BIROperand, messageOp BIROperand, causeOp BIROperand, detailOp BIROperand) *BIRNonTerminatorNewError {
 	n := &BIRNonTerminatorNewError{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_NEW_ERROR),
 		Type:                       type_,
@@ -354,11 +370,11 @@ func (n *BIRNonTerminatorNewError) Accept(visitor BIRVisitor) {
 type BIRNonTerminatorTypeCast struct {
 	BIRAbstractInstructionBase
 	RhsOp      BIROperand
-	Type       types.BType
+	Type       model.ValueType
 	CheckTypes bool
 }
 
-func NewBIRNonTerminatorTypeCast(pos diagnostics.Location, lhsOp BIROperand, rhsOp BIROperand, castType types.BType, checkTypes bool) *BIRNonTerminatorTypeCast {
+func NewBIRNonTerminatorTypeCast(pos diagnostics.Location, lhsOp BIROperand, rhsOp BIROperand, castType model.ValueType, checkTypes bool) *BIRNonTerminatorTypeCast {
 	t := &BIRNonTerminatorTypeCast{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_TYPE_CAST),
 		RhsOp:                      rhsOp,
@@ -387,10 +403,10 @@ func (t *BIRNonTerminatorTypeCast) Accept(visitor BIRVisitor) {
 type BIRNonTerminatorIsLike struct {
 	BIRAbstractInstructionBase
 	RhsOp BIROperand
-	Type  types.BType
+	Type  model.ValueType
 }
 
-func NewBIRNonTerminatorIsLike(pos diagnostics.Location, type_ types.BType, lhsOp BIROperand, rhsOp BIROperand) *BIRNonTerminatorIsLike {
+func NewBIRNonTerminatorIsLike(pos diagnostics.Location, type_ model.ValueType, lhsOp BIROperand, rhsOp BIROperand) *BIRNonTerminatorIsLike {
 	i := &BIRNonTerminatorIsLike{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_IS_LIKE),
 		Type:                       type_,
@@ -418,10 +434,10 @@ func (i *BIRNonTerminatorIsLike) Accept(visitor BIRVisitor) {
 type BIRNonTerminatorTypeTest struct {
 	BIRAbstractInstructionBase
 	RhsOp BIROperand
-	Type  types.BType
+	Type  model.ValueType
 }
 
-func NewBIRNonTerminatorTypeTest(pos diagnostics.Location, type_ types.BType, lhsOp BIROperand, rhsOp BIROperand) *BIRNonTerminatorTypeTest {
+func NewBIRNonTerminatorTypeTest(pos diagnostics.Location, type_ model.ValueType, lhsOp BIROperand, rhsOp BIROperand) *BIRNonTerminatorTypeTest {
 	t := &BIRNonTerminatorTypeTest{
 		BIRAbstractInstructionBase: NewBIRAbstractInstructionBase(pos, INSTRUCTION_KIND_TYPE_TEST),
 		Type:                       type_,
