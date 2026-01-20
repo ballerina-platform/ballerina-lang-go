@@ -2111,7 +2111,7 @@ func (n *NodeBuilder) TransformFunctionBodyBlock(functionBodyBlockNode *tree.Fun
 
 	n.generateAndAddBLangStatements(functionBodyBlockNode.Statements(), &stmtList, 0, functionBodyBlockNode)
 
-	bLFuncBody.Stmts = statements
+	bLFuncBody.Stmts = stmtList
 	bLFuncBody.pos = getPosition(functionBodyBlockNode)
 	n.isInLocalContext = false
 	return bLFuncBody

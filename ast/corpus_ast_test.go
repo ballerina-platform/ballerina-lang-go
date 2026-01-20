@@ -20,15 +20,14 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-var (
-	supportedSubsets = []string{"subset1"}
-)
+var supportedSubsets = []string{"subset1"}
 
 func getCorpusDir(t *testing.T) string {
 	corpusBalDir := "../corpus/bal"
@@ -43,7 +42,6 @@ func getCorpusDir(t *testing.T) string {
 }
 
 func getCorpusFiles(t *testing.T) []string {
-
 	corpusBalDir := getCorpusDir(t)
 	// Find all .bal files
 	var balFiles []string
@@ -102,4 +100,7 @@ func testASTGeneration(t *testing.T, balFile string) {
 	if compilationUnit == nil {
 		t.Errorf("compilation unit is nil for %s", balFile)
 	}
+	prettyPrinter := PrettyPrinter{}
+	// FIXME: implment logic to compare this
+	fmt.Println(prettyPrinter.Print(compilationUnit))
 }
