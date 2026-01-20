@@ -18,6 +18,8 @@
 
 package common
 
+import "iter"
+
 type Optional[T any] struct {
 	value    T
 	hasValue bool
@@ -70,4 +72,104 @@ func PointerEqualToValue[T comparable](ptr any, value T) bool {
 
 func ValueEqual[T comparable](v1, v2 T) bool {
 	return v1 == v2
+}
+
+type Set[T comparable] interface {
+	Add(value T)
+	Remove(value T)
+	Contains(value T) bool
+	Values() iter.Seq[T]
+}
+
+type (
+	UnorderedSet[T comparable] struct {
+		values map[T]bool
+	}
+	OrderedSet[T comparable] struct {
+		// TODO: we need a more efficient data structure for this
+		values []T
+	}
+
+	OrderedMap[K comparable, V any] struct {
+		keys   []K
+		values []V
+	}
+)
+
+var _ Set[any] = &UnorderedSet[any]{}
+var _ Set[any] = &OrderedSet[any]{}
+
+func (s *UnorderedSet[T]) Add(value T) {
+	if s.values == nil {
+		s.values = make(map[T]bool)
+	}
+	s.values[value] = true
+}
+
+func (s *UnorderedSet[T]) Remove(value T) {
+	delete(s.values, value)
+}
+
+func (s *UnorderedSet[T]) Contains(value T) bool {
+	return s.values[value]
+}
+
+func (s *OrderedSet[T]) Add(value T) {
+	s.values = append(s.values, value)
+}
+
+func (s *OrderedSet[T]) Remove(value T) {
+	for i, v := range s.values {
+		if v == value {
+			s.values = append(s.values[:i], s.values[i+1:]...)
+			break
+		}
+	}
+}
+
+func (s *OrderedSet[T]) Contains(value T) bool {
+	for _, v := range s.values {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *UnorderedSet[T]) Values() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		if s.values == nil {
+			return
+		}
+		for k := range s.values {
+			if !yield(k) {
+				break
+			}
+		}
+	}
+}
+
+func (s *OrderedSet[T]) Values() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, v := range s.values {
+			if !yield(v) {
+				break
+			}
+		}
+	}
+}
+
+func (m *OrderedMap[K, V]) Add(key K, value V) {
+	m.keys = append(m.keys, key)
+	m.values = append(m.values, value)
+}
+
+func (m *OrderedMap[K, V]) Remove(key K) {
+	for i, k := range m.keys {
+		if k == key {
+			m.keys = append(m.keys[:i], m.keys[i+1:]...)
+			m.values = append(m.values[:i], m.values[i+1:]...)
+			break
+		}
+	}
 }

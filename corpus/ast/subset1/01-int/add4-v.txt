@@ -1,0 +1,93 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (literal 3)
+            (literal 5)()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)()
+            (literal 11)()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)()
+            (invocation add (
+              (literal 5)
+              (literal 9)()()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (invocation add (
+                (literal 3)
+                (literal 5)()
+              (invocation add (
+                (literal 5)
+                (literal 9)()()
+            (literal 12)()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (invocation add (
+                (literal 3)
+                (literal 5)()
+              (invocation add (
+                (literal 5)
+                (literal 9)()()
+            (invocation add (
+              (literal 4)
+              (literal 7)()()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (invocation add (
+                (literal 3)
+                (literal 5)()
+              (invocation add (
+                (literal 5)
+                (literal 9)()()
+            (invocation add (
+              (invocation add (
+                (literal 4)
+                (literal 7)()
+              (literal 5)()()())
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (invocation add (
+              (invocation add (
+                (literal 3)
+                (literal 5)()
+              (invocation add (
+                (literal 5)
+                (literal 9)()()
+            (invocation add (
+              (invocation add (
+                (literal 4)
+                (literal 7)()
+              (invocation add (
+                (literal 23)
+                (literal 50)()()()())))
+  (function add (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y))))))

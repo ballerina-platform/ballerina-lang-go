@@ -18,7 +18,7 @@ package parser
 import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/parser/internal"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
 	"unicode"
 )
@@ -40,8 +40,8 @@ type Lexer struct {
 type LexerContext struct {
 	mode              ParserMode
 	modeStack         []ParserMode
-	leadingTriviaList []internal.STNode
-	diagnostics       []internal.STNodeDiagnostic
+	leadingTriviaList []tree.STNode
+	diagnostics       []tree.STNodeDiagnostic
 }
 
 func NewLexer(reader text.CharReader, debugCtx *debugcommon.DebugContext) *Lexer {
@@ -79,8 +79,8 @@ func (l *Lexer) GetCurrentMode() ParserMode {
 	return l.context.mode
 }
 
-func (l *Lexer) NextToken() internal.STToken {
-	var token internal.STToken
+func (l *Lexer) NextToken() tree.STToken {
+	var token tree.STToken
 	switch l.context.mode {
 	case PARSER_MODE_TEMPLATE:
 		token = l.readTemplateToken()
@@ -99,16 +99,16 @@ func (l *Lexer) NextToken() internal.STToken {
 		token = l.readToken()
 	}
 	if len(l.context.diagnostics) > 0 {
-		token = internal.AddSyntaxDiagnostics(token, l.context.diagnostics)
+		token = tree.AddSyntaxDiagnostics(token, l.context.diagnostics)
 		l.context.diagnostics = nil
 	}
 	if l.debugCtx != nil && l.debugCtx.Flags&debugcommon.DUMP_TOKENS != 0 {
-		l.debugCtx.Channel <- internal.ToSexpr(token)
+		l.debugCtx.Channel <- tree.ToSexpr(token)
 	}
 	return token
 }
 
-func (l *Lexer) readToken() internal.STToken {
+func (l *Lexer) readToken() tree.STToken {
 	reader := l.reader
 	reader.Mark()
 	if reader.IsEOF() {
@@ -120,7 +120,7 @@ func (l *Lexer) readToken() internal.STToken {
 		return l.getIdentifierToken()
 	}
 	reader.Advance()
-	var token internal.STToken
+	var token tree.STToken
 	switch c {
 	case COLON:
 		token = l.getSyntaxToken(common.COLON_TOKEN)
@@ -217,21 +217,21 @@ func (l *Lexer) readToken() internal.STToken {
 		} else {
 			invalidToken := l.processInvalidToken()
 			token = l.NextToken()
-			f := internal.CreateDiagnostic(&common.ERROR_INVALID_TOKEN, invalidToken)
-			token = internal.AddSyntaxDiagnostic(token, f)
+			f := tree.CreateDiagnostic(&common.ERROR_INVALID_TOKEN, invalidToken)
+			token = tree.AddSyntaxDiagnostic(token, f)
 		}
 	}
 	return token
 }
 
-func (l *Lexer) processInvalidToken() internal.STToken {
+func (l *Lexer) processInvalidToken() tree.STToken {
 	reader := l.reader
 	for !l.isEndOfInvalidToken() {
 		reader.Advance()
 	}
 	tokenText := l.getLexeme()
-	invalidToken := internal.CreateInvalidToken(tokenText)
-	invalidNodeMinutiae := internal.CreateInvalidNodeMinutiae(invalidToken)
+	invalidToken := tree.CreateInvalidToken(tokenText)
+	invalidNodeMinutiae := tree.CreateInvalidNodeMinutiae(invalidToken)
 	l.context.leadingTriviaList = append(l.context.leadingTriviaList, invalidNodeMinutiae)
 	return invalidToken
 }
@@ -272,7 +272,7 @@ func isIdentifierInitialChar(c rune) bool {
 	return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || c == '_' || isUnicodeIdentifierChar(c)
 }
 
-// Ported from io.ballerina.compiler.internal.parser.AbstractLexer.java (line 242-255)
+// Ported from io.ballerina.compiler.tree.parser.AbstractLexer.java (line 242-255)
 // Check whether a given char is a unicode identifier char.
 //
 // UnicodeIdentifierChar := ^ ( AsciiChar | UnicodeNonIdentifierChar )
@@ -300,7 +300,7 @@ func isUnicodeIdentifierChar(c rune) bool {
 		unicode.Is(unicode.Pc, c)
 }
 
-// Ported from io.ballerina.compiler.internal.parser.AbstractLexer.java (line 265-267)
+// Ported from io.ballerina.compiler.tree.parser.AbstractLexer.java (line 265-267)
 func isUnicodePrivateUseChar(c rune) bool {
 	return (0xE000 <= c && c <= 0xF8FF) ||
 		(0xF0000 <= c && c <= 0xFFFFD) ||
@@ -398,7 +398,7 @@ func (l *Lexer) processIdentifierEnd() {
 	}
 }
 
-func (l *Lexer) processIdentifierOrKeyword() internal.STToken {
+func (l *Lexer) processIdentifierOrKeyword() tree.STToken {
 	l.processUnquotedIdentifier()
 	tokenText := l.getLexeme()
 	switch tokenText {
@@ -649,7 +649,7 @@ func (l *Lexer) skipComment(lookaheadCount int) int {
 	return lookaheadCount
 }
 
-func (l *Lexer) processNumericLiteral(startChar rune) internal.STToken {
+func (l *Lexer) processNumericLiteral(startChar rune) tree.STToken {
 	reader := l.reader
 	nextChar := reader.Peek()
 	if l.isHexIndicator(startChar, nextChar) {
@@ -701,14 +701,14 @@ func (l *Lexer) processNumericLiteral(startChar rune) internal.STToken {
 	return l.getLiteral(common.DECIMAL_INTEGER_LITERAL_TOKEN)
 }
 
-func (l *Lexer) getLiteral(kind common.SyntaxKind) internal.STToken {
+func (l *Lexer) getLiteral(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := l.getLeadingTrivia()
 	lexeme := l.getLexeme()
 	trailingTrivia := l.processTrailingTrivia()
-	return internal.CreateLiteralValueToken(kind, lexeme, leadingTrivia, trailingTrivia)
+	return tree.CreateLiteralValueToken(kind, lexeme, leadingTrivia, trailingTrivia)
 }
 
-func (l *Lexer) processDecimalFloatLiteral() internal.STToken {
+func (l *Lexer) processDecimalFloatLiteral() tree.STToken {
 	reader := l.reader
 	nextChar := reader.Peek()
 
@@ -740,12 +740,12 @@ func (l *Lexer) processDecimalFloatLiteral() internal.STToken {
 	}
 }
 
-func (l *Lexer) parseFloatingPointTypeSuffix() internal.STToken {
+func (l *Lexer) parseFloatingPointTypeSuffix() tree.STToken {
 	l.reader.Advance()
 	return l.getLiteral(common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN)
 }
 
-func (l *Lexer) processExponent(isHex bool) internal.STToken {
+func (l *Lexer) processExponent(isHex bool) tree.STToken {
 	// Advance reader as exponent indicator is already validated
 	reader := l.reader
 	reader.Advance()
@@ -780,7 +780,7 @@ func (l *Lexer) processExponent(isHex bool) internal.STToken {
 }
 
 func (l *Lexer) reportLexerError(errorCode common.DiagnosticErrorCode, args ...any) {
-	diagnostic := internal.CreateDiagnostic(&errorCode, args...)
+	diagnostic := tree.CreateDiagnostic(&errorCode, args...)
 	l.context.diagnostics = append(l.context.diagnostics, diagnostic)
 }
 
@@ -855,7 +855,7 @@ func (l *Lexer) isHexIntFollowedIdentifier() bool {
 	return isIdentifierFollowingChar(lookaheadChar)
 }
 
-func (l *Lexer) processHexLiteral() internal.STToken {
+func (l *Lexer) processHexLiteral() tree.STToken {
 	reader := l.reader
 	reader.Advance() // advance for "x" or "X"
 	containsHexDigit := false
@@ -903,7 +903,7 @@ func (l *Lexer) processHexLiteral() internal.STToken {
 	return l.getLiteral(common.HEX_FLOATING_POINT_LITERAL_TOKEN)
 }
 
-func (l *Lexer) getHexIntegerLiteral() internal.STToken {
+func (l *Lexer) getHexIntegerLiteral() tree.STToken {
 	lexeme := l.getLexeme()
 	if lexeme == "0x" || lexeme == "0X" {
 		l.reportLexerError(common.ERROR_MISSING_HEX_NUMBER_AFTER_HEX_INDICATOR)
@@ -916,7 +916,7 @@ func (l *Lexer) isHexIndicator(startChar rune, nextChar rune) bool {
 	return startChar == '0' && (nextChar == 'x' || nextChar == 'X')
 }
 
-func (l *Lexer) processQuotedIdentifier() internal.STToken {
+func (l *Lexer) processQuotedIdentifier() tree.STToken {
 	l.processIdentifierEnd()
 	if string(SINGLE_QUOTE) == l.getLexeme() {
 		l.reportLexerError(common.ERROR_INCOMPLETE_QUOTED_IDENTIFIER)
@@ -924,16 +924,16 @@ func (l *Lexer) processQuotedIdentifier() internal.STToken {
 	return l.getIdentifierToken()
 }
 
-func (l *Lexer) getBacktickToken() internal.STToken {
+func (l *Lexer) getBacktickToken() tree.STToken {
 	leadingTrivia := l.getLeadingTrivia()
 	// Trivia after the back-tick including whitespace belongs to the content of the back-tick.
 	// Therefore, do not process trailing trivia for starting back-tick. We reach here only for
 	// starting back-tick. Ending back-tick is processed by the template mode.
-	trailingTrivia := internal.CreateEmptyNodeList()
-	return internal.CreateTokenFrom(common.BACKTICK_TOKEN, leadingTrivia, trailingTrivia)
+	trailingTrivia := tree.CreateEmptyNodeList()
+	return tree.CreateTokenFrom(common.BACKTICK_TOKEN, leadingTrivia, trailingTrivia)
 }
 
-func (l *Lexer) processExclamationMarkOperator() internal.STToken {
+func (l *Lexer) processExclamationMarkOperator() tree.STToken {
 	reader := l.reader
 	switch reader.Peek() {
 	case EQUAL:
@@ -962,7 +962,7 @@ func (l *Lexer) isNotIsToken() bool {
 		!(isIdentifierFollowingChar(reader.PeekN(2)) || reader.PeekN(2) == BACKSLASH)
 }
 
-func (l *Lexer) processTokenStartWithGt() internal.STToken {
+func (l *Lexer) processTokenStartWithGt() tree.STToken {
 	reader := l.reader
 	if reader.Peek() == EQUAL {
 		reader.Advance()
@@ -991,7 +991,7 @@ func (l *Lexer) processTokenStartWithGt() internal.STToken {
 	}
 }
 
-func (l *Lexer) processTokenStartWithLt() internal.STToken {
+func (l *Lexer) processTokenStartWithLt() tree.STToken {
 	reader := l.reader
 	switch reader.Peek() {
 	case EQUAL:
@@ -1012,7 +1012,7 @@ func (l *Lexer) processTokenStartWithLt() internal.STToken {
 	}
 }
 
-func (l *Lexer) processSlashToken() internal.STToken {
+func (l *Lexer) processSlashToken() tree.STToken {
 	// check for the second char
 	reader := l.reader
 	if reader.Peek() != ASTERISK {
@@ -1030,7 +1030,7 @@ func (l *Lexer) processSlashToken() internal.STToken {
 	}
 }
 
-func (l *Lexer) processEqualOperator() internal.STToken {
+func (l *Lexer) processEqualOperator() tree.STToken {
 	reader := l.reader
 	switch reader.Peek() {
 	case EQUAL:
@@ -1052,7 +1052,7 @@ func (l *Lexer) processEqualOperator() internal.STToken {
 	}
 }
 
-func (l *Lexer) processDocumentationString() internal.STToken {
+func (l *Lexer) processDocumentationString() tree.STToken {
 	reader := l.reader
 	nextChar := reader.Peek()
 	for !reader.IsEOF() {
@@ -1093,11 +1093,11 @@ func (l *Lexer) processDocumentationString() internal.STToken {
 
 	leadingTrivia := l.getLeadingTrivia()
 	lexeme := l.getLexeme()
-	trailingTrivia := internal.CreateEmptyNodeList() // No trailing trivia
-	return internal.CreateLiteralValueToken(common.DOCUMENTATION_STRING, lexeme, leadingTrivia, trailingTrivia)
+	trailingTrivia := tree.CreateEmptyNodeList() // No trailing trivia
+	return tree.CreateLiteralValueToken(common.DOCUMENTATION_STRING, lexeme, leadingTrivia, trailingTrivia)
 }
 
-func (l *Lexer) processStringLiteral() internal.STToken {
+func (l *Lexer) processStringLiteral() tree.STToken {
 	reader := l.reader
 	var nextChar rune
 	for !reader.IsEOF() {
@@ -1137,7 +1137,7 @@ func (l *Lexer) processStringLiteral() internal.STToken {
 	return l.getLiteral(common.STRING_LITERAL_TOKEN)
 }
 
-func (l *Lexer) processPipeOperator() internal.STToken {
+func (l *Lexer) processPipeOperator() tree.STToken {
 	reader := l.reader
 	switch reader.Peek() {
 	case CLOSE_BRACE:
@@ -1151,7 +1151,7 @@ func (l *Lexer) processPipeOperator() internal.STToken {
 	}
 }
 
-func (l *Lexer) processDot() internal.STToken {
+func (l *Lexer) processDot() tree.STToken {
 	reader := l.reader
 	nextChar := reader.Peek()
 	if nextChar == DOT {
@@ -1177,37 +1177,37 @@ func (l *Lexer) processDot() internal.STToken {
 	return l.getSyntaxToken(common.DOT_TOKEN)
 }
 
-func (l *Lexer) getIdentifierToken() internal.STToken {
+func (l *Lexer) getIdentifierToken() tree.STToken {
 	leadingTrivia := l.getLeadingTrivia()
 	lexeme := l.getLexeme()
 	trailingTrivia := l.processTrailingTrivia()
-	return internal.CreateIdentifierToken(lexeme, leadingTrivia, trailingTrivia)
+	return tree.CreateIdentifierToken(lexeme, leadingTrivia, trailingTrivia)
 }
 
 func (l *Lexer) processUnquotedIdentifier() {
 	l.processIdentifierEnd()
 }
 
-func (l *Lexer) getSyntaxToken(kind common.SyntaxKind) internal.STToken {
+func (l *Lexer) getSyntaxToken(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := l.getLeadingTrivia()
 	trailingTrivia := l.processTrailingTrivia()
-	return internal.CreateTokenFrom(kind, leadingTrivia, trailingTrivia)
+	return tree.CreateTokenFrom(kind, leadingTrivia, trailingTrivia)
 }
 
-func (l *Lexer) getLeadingTrivia() internal.STNode {
-	trivia := internal.CreateNodeList(l.context.leadingTriviaList...)
-	l.context.leadingTriviaList = make([]internal.STNode, 0, INITIAL_TRIVIA_CAPACITY)
+func (l *Lexer) getLeadingTrivia() tree.STNode {
+	trivia := tree.CreateNodeList(l.context.leadingTriviaList...)
+	l.context.leadingTriviaList = make([]tree.STNode, 0, INITIAL_TRIVIA_CAPACITY)
 	return trivia
 }
 
-func (l *Lexer) processTrailingTrivia() internal.STNode {
-	triviaList := make([]internal.STNode, 0, INITIAL_TRIVIA_CAPACITY)
+func (l *Lexer) processTrailingTrivia() tree.STNode {
+	triviaList := make([]tree.STNode, 0, INITIAL_TRIVIA_CAPACITY)
 	l.processSyntaxTrivia(&triviaList, false)
-	result := internal.CreateNodeList(triviaList...)
+	result := tree.CreateNodeList(triviaList...)
 	return result
 }
 
-func (l *Lexer) processSyntaxTrivia(triviaList *[]internal.STNode, isLeading bool) {
+func (l *Lexer) processSyntaxTrivia(triviaList *[]tree.STNode, isLeading bool) {
 	reader := l.reader
 	for !reader.IsEOF() {
 		reader.Mark()
@@ -1234,7 +1234,7 @@ func (l *Lexer) processSyntaxTrivia(triviaList *[]internal.STNode, isLeading boo
 	}
 }
 
-func (l *Lexer) processComment() internal.STNode {
+func (l *Lexer) processComment() tree.STNode {
 	reader := l.reader
 	reader.AdvanceN(2)
 	nextToken := reader.Peek()
@@ -1249,28 +1249,28 @@ func (l *Lexer) processComment() internal.STNode {
 		}
 		break
 	}
-	return internal.CreateMinutiae(common.COMMENT_MINUTIAE, l.getLexeme())
+	return tree.CreateMinutiae(common.COMMENT_MINUTIAE, l.getLexeme())
 }
 
-func (l *Lexer) processEndOfLine() internal.STNode {
+func (l *Lexer) processEndOfLine() tree.STNode {
 	reader := l.reader
 	c := reader.Peek()
 	switch c {
 	case NEWLINE:
 		reader.Advance()
-		return internal.CreateMinutiae(common.END_OF_LINE_MINUTIAE, l.getLexeme())
+		return tree.CreateMinutiae(common.END_OF_LINE_MINUTIAE, l.getLexeme())
 	case CARRIAGE_RETURN:
 		reader.Advance()
 		if reader.Peek() == NEWLINE {
 			reader.Advance()
 		}
-		return internal.CreateMinutiae(common.END_OF_LINE_MINUTIAE, l.getLexeme())
+		return tree.CreateMinutiae(common.END_OF_LINE_MINUTIAE, l.getLexeme())
 	default:
 		panic("unreachable")
 	}
 }
 
-func (l *Lexer) processWhitespaces() internal.STNode {
+func (l *Lexer) processWhitespaces() tree.STNode {
 	reader := l.reader
 	for !reader.IsEOF() {
 		c := reader.Peek()
@@ -1283,10 +1283,10 @@ func (l *Lexer) processWhitespaces() internal.STNode {
 		}
 		break
 	}
-	return internal.CreateMinutiae(common.WHITESPACE_MINUTIAE, l.getLexeme())
+	return tree.CreateMinutiae(common.WHITESPACE_MINUTIAE, l.getLexeme())
 }
 
-func (l *Lexer) readTokenInBracedContentInInterpolation() internal.STToken {
+func (l *Lexer) readTokenInBracedContentInInterpolation() tree.STToken {
 	reader := l.reader
 	reader.Mark()
 	nextChar := reader.Peek()
@@ -1312,7 +1312,7 @@ func (l *Lexer) readTokenInBracedContentInInterpolation() internal.STToken {
 	return l.readToken()
 }
 
-func (l *Lexer) readTokenInInterpolation() internal.STToken {
+func (l *Lexer) readTokenInInterpolation() tree.STToken {
 	reader := l.reader
 	reader.Mark()
 	nextChar := reader.Peek()
@@ -1341,17 +1341,17 @@ func (l *Lexer) readTokenInInterpolation() internal.STToken {
 	}
 }
 
-func (l *Lexer) getSyntaxTokenWithoutTrailingTrivia(kind common.SyntaxKind) internal.STToken {
+func (l *Lexer) getSyntaxTokenWithoutTrailingTrivia(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := l.getLeadingTrivia()
-	trailingTrivia := internal.CreateEmptyNodeList()
-	return internal.CreateTokenFrom(kind, leadingTrivia, trailingTrivia)
+	trailingTrivia := tree.CreateEmptyNodeList()
+	return tree.CreateTokenFrom(kind, leadingTrivia, trailingTrivia)
 }
 
 func (l *Lexer) processLeadingTrivia() {
 	l.processSyntaxTrivia(&l.context.leadingTriviaList, true)
 }
 
-func (l *Lexer) readRegExpTemplateToken() internal.STToken {
+func (l *Lexer) readRegExpTemplateToken() tree.STToken {
 	reader := l.reader
 	shouldProcessInterpolations := true
 	reader.Mark()
@@ -1414,7 +1414,7 @@ func (l *Lexer) readRegExpTemplateToken() internal.STToken {
 	return l.getLiteral(common.TEMPLATE_STRING)
 }
 
-func (l *Lexer) readPromptToken() internal.STToken {
+func (l *Lexer) readPromptToken() tree.STToken {
 	reader := l.reader
 	reader.Mark()
 	if reader.IsEOF() {
@@ -1456,7 +1456,7 @@ func (l *Lexer) readPromptToken() internal.STToken {
 	return l.getLiteral(common.PROMPT_CONTENT)
 }
 
-func (l *Lexer) readTemplateToken() internal.STToken {
+func (l *Lexer) readTemplateToken() tree.STToken {
 	reader := l.reader
 	reader.Mark()
 	if reader.IsEOF() {

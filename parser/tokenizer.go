@@ -17,13 +17,13 @@ package parser
 
 import (
 	debugcommon "ballerina-lang-go/common"
-	"ballerina-lang-go/parser/internal"
+	"ballerina-lang-go/parser/tree"
 )
 
 type TokenReader struct {
 	lexer             Lexer
 	dbgContext        *debugcommon.DebugContext
-	currentToken      internal.STToken
+	currentToken      tree.STToken
 	tokenBuffer       tokenBuffer
 	currentTokenIndex int
 }
@@ -36,7 +36,7 @@ func CreateTokenReader(lexer Lexer, dbgContext *debugcommon.DebugContext) *Token
 		currentTokenIndex: 0,
 		tokenBuffer: tokenBuffer{
 			capacity:   BUFFER_SIZE,
-			tokens:     make([]internal.STToken, BUFFER_SIZE),
+			tokens:     make([]tree.STToken, BUFFER_SIZE),
 			endIndex:   -1,
 			startIndex: -1,
 			size:       0,
@@ -44,7 +44,7 @@ func CreateTokenReader(lexer Lexer, dbgContext *debugcommon.DebugContext) *Token
 	}
 }
 
-func (t *TokenReader) Read() internal.STToken {
+func (t *TokenReader) Read() tree.STToken {
 	if t.tokenBuffer.size > 0 {
 		t.currentToken = t.tokenBuffer.consume()
 	} else {
@@ -54,7 +54,7 @@ func (t *TokenReader) Read() internal.STToken {
 	return t.currentToken
 }
 
-func (t *TokenReader) Peek() internal.STToken {
+func (t *TokenReader) Peek() tree.STToken {
 	if t.tokenBuffer.size > 0 {
 		return t.tokenBuffer.peek()
 	} else {
@@ -64,7 +64,7 @@ func (t *TokenReader) Peek() internal.STToken {
 	}
 }
 
-func (t *TokenReader) PeekN(n int) internal.STToken {
+func (t *TokenReader) PeekN(n int) tree.STToken {
 	if n >= BUFFER_SIZE {
 		panic("n is too large")
 	}
@@ -77,7 +77,7 @@ func (t *TokenReader) PeekN(n int) internal.STToken {
 	return t.tokenBuffer.peekN(n)
 }
 
-func (t *TokenReader) Head() internal.STToken {
+func (t *TokenReader) Head() tree.STToken {
 	return t.currentToken
 }
 
@@ -105,13 +105,13 @@ const BUFFER_SIZE = 20
 
 type tokenBuffer struct {
 	capacity   int
-	tokens     []internal.STToken
+	tokens     []tree.STToken
 	endIndex   int
 	startIndex int
 	size       int
 }
 
-func (t *tokenBuffer) add(token internal.STToken) {
+func (t *tokenBuffer) add(token tree.STToken) {
 	if t.size == t.capacity {
 		panic("buffer overflow")
 	}
@@ -130,11 +130,11 @@ func (t *tokenBuffer) add(token internal.STToken) {
 	t.size++
 }
 
-func (t *tokenBuffer) peek() internal.STToken {
+func (t *tokenBuffer) peek() tree.STToken {
 	return t.tokens[t.startIndex]
 }
 
-func (t *tokenBuffer) peekN(n int) internal.STToken {
+func (t *tokenBuffer) peekN(n int) tree.STToken {
 	if n > t.size {
 		panic("n is too large")
 	}
@@ -147,7 +147,7 @@ func (t *tokenBuffer) peekN(n int) internal.STToken {
 	return t.tokens[index]
 }
 
-func (t *tokenBuffer) consume() internal.STToken {
+func (t *tokenBuffer) consume() tree.STToken {
 	token := t.tokens[t.startIndex]
 	t.size--
 	if t.startIndex == t.capacity-1 {

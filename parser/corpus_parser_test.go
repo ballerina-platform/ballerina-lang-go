@@ -17,15 +17,18 @@
 package parser
 
 import (
-	"ballerina-lang-go/parser/internal"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/text"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+var update = flag.Bool("update", false, "update expected JSON files")
 
 // XML parser ignore list (135 files failing)
 var xmlParserIgnoreList = []string{
@@ -256,6 +259,11 @@ func shouldIgnoreFile(filePath string, corpusBalDir string) bool {
 	return false
 }
 
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
+
 func TestParseCorpusFiles(t *testing.T) {
 	// Try both relative paths - from package directory and from project root
 	corpusBalDir := "../corpus/bal"
@@ -368,12 +376,64 @@ func parseFileWithRecovery(filePath string) (err error) {
 	}
 
 	// Generate JSON from the parsed AST
-	actualJSON := internal.GenerateJSON(ast)
+	actualJSON := tree.GenerateJSON(ast)
 
 	// Determine expected JSON file path
 	// Replace .bal with .json and change directory from corpus/bal to corpus/parser
 	expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
 	expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
+
+	// Normalize JSON by parsing and re-marshaling to handle whitespace differences
+	var actualObj interface{}
+	normalizedJSON := actualJSON
+	if err := json.Unmarshal([]byte(actualJSON), &actualObj); err == nil {
+		if normalized, err := json.MarshalIndent(actualObj, "", "  "); err == nil {
+			normalizedJSON = string(normalized)
+		}
+	}
+
+	// If update flag is set, check if update is needed and update if necessary
+	if *update {
+		// Ensure the directory exists
+		dir := filepath.Dir(expectedJSONPath)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("error creating directory for expected JSON file: %w", err)
+		}
+
+		// Check if file exists
+		expectedJSONBytes, readErr := os.ReadFile(expectedJSONPath)
+		if readErr != nil {
+			// File doesn't exist - create it and fail the test
+			if os.IsNotExist(readErr) {
+				if err := os.WriteFile(expectedJSONPath, []byte(normalizedJSON), 0o644); err != nil {
+					return fmt.Errorf("error writing expected JSON file: %w", err)
+				}
+				return fmt.Errorf("created expected JSON file: %s", expectedJSONPath)
+			}
+			return fmt.Errorf("error reading expected JSON file: %w", readErr)
+		}
+
+		// File exists - normalize and compare
+		expectedJSON := string(expectedJSONBytes)
+		var expectedObj interface{}
+		if err := json.Unmarshal([]byte(expectedJSON), &expectedObj); err == nil {
+			if normalized, err := json.MarshalIndent(expectedObj, "", "  "); err == nil {
+				expectedJSON = string(normalized)
+			}
+		}
+
+		// Only update if content is different
+		if normalizedJSON != expectedJSON {
+			// Content is different - update file and fail the test
+			if err := os.WriteFile(expectedJSONPath, []byte(normalizedJSON), 0o644); err != nil {
+				return fmt.Errorf("error writing expected JSON file: %w", err)
+			}
+			return fmt.Errorf("updated expected JSON file: %s", expectedJSONPath)
+		}
+
+		// Content matches - no update needed, test passes
+		return nil
+	}
 
 	// Read expected JSON file
 	expectedJSONBytes, readErr := os.ReadFile(expectedJSONPath)
@@ -387,24 +447,19 @@ func parseFileWithRecovery(filePath string) (err error) {
 
 	expectedJSON := string(expectedJSONBytes)
 
-	// Normalize both JSON strings by parsing and re-marshaling to handle whitespace differences
-	var expectedObj, actualObj interface{}
+	// Normalize expected JSON by parsing and re-marshaling to handle whitespace differences
+	var expectedObj interface{}
 	if err := json.Unmarshal([]byte(expectedJSON), &expectedObj); err == nil {
 		if normalized, err := json.MarshalIndent(expectedObj, "", "  "); err == nil {
 			expectedJSON = string(normalized)
 		}
 	}
-	if err := json.Unmarshal([]byte(actualJSON), &actualObj); err == nil {
-		if normalized, err := json.MarshalIndent(actualObj, "", "  "); err == nil {
-			actualJSON = string(normalized)
-		}
-	}
 
 	// Compare JSON strings exactly (no tolerance for formatting differences)
-	if actualJSON != expectedJSON {
+	if normalizedJSON != expectedJSON {
 		// Split into lines for line-by-line comparison
 		expectedLines := strings.Split(expectedJSON, "\n")
-		actualLines := strings.Split(actualJSON, "\n")
+		actualLines := strings.Split(normalizedJSON, "\n")
 
 		// Build detailed diff showing line numbers and differences
 		var diffBuilder strings.Builder

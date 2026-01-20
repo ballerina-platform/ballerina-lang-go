@@ -17,7 +17,7 @@ package parser
 
 import (
 	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/parser/internal"
+	"ballerina-lang-go/parser/tree"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -40,7 +40,7 @@ func formatParserRuleContext(ctx common.ParserRuleContext) string {
 	return ctx.String()
 }
 
-func formatSTToken(token internal.STToken) string {
+func formatSTToken(token tree.STToken) string {
 	if token == nil {
 		return "nil"
 	}
@@ -69,11 +69,11 @@ func formatSTToken(token internal.STToken) string {
 	return fmt.Sprintf("%s:%s", kindStr, token.Text())
 }
 
-func formatSTNode(node internal.STNode) string {
+func formatSTNode(node tree.STNode) string {
 	if node == nil {
 		return "nil"
 	}
-	return internal.ToSexpr(node)
+	return tree.ToSexpr(node)
 }
 
 func formatSolution(sol *Solution) string {
@@ -145,8 +145,8 @@ type Solution struct {
 	Action        Action
 	TokenText     string
 	TokenKind     common.SyntaxKind
-	RecoveredNode internal.STNode
-	RemovedToken  internal.STToken
+	RecoveredNode tree.STNode
+	RemovedToken  tree.STToken
 	Depth         int
 }
 
@@ -331,8 +331,8 @@ type AbstractParserErrorHandler interface {
 	GetInsertSolution(context common.ParserRuleContext) *Solution
 
 	// Default/concrete methods (implemented in AbstractParserErrorHandlerMethods)
-	Recover(currentCtx common.ParserRuleContext, nextToken internal.STToken, isCompletion bool) *Solution
-	ConsumeInvalidToken() internal.STToken
+	Recover(currentCtx common.ParserRuleContext, nextToken tree.STToken, isCompletion bool) *Solution
+	ConsumeInvalidToken() tree.STToken
 	StartContext(context common.ParserRuleContext)
 	EndContext()
 	SwitchContext(context common.ParserRuleContext)
@@ -350,7 +350,7 @@ type AbstractParserErrorHandlerMethods struct {
 	Self AbstractParserErrorHandler
 }
 
-func (m *AbstractParserErrorHandlerMethods) Recover(currentCtx common.ParserRuleContext, nextToken internal.STToken, isCompletion bool) (result *Solution) {
+func (m *AbstractParserErrorHandlerMethods) Recover(currentCtx common.ParserRuleContext, nextToken tree.STToken, isCompletion bool) (result *Solution) {
 	dbgCtx := m.Self.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(Recover start %s %s %s)",
@@ -396,7 +396,7 @@ func (m *AbstractParserErrorHandlerMethods) Recover(currentCtx common.ParserRule
 	return m.getFailSafeSolution(currentCtx, nextToken)
 }
 
-func (m *AbstractParserErrorHandlerMethods) getResolution(currentCtx common.ParserRuleContext, nextToken internal.STToken) *Solution {
+func (m *AbstractParserErrorHandlerMethods) getResolution(currentCtx common.ParserRuleContext, nextToken tree.STToken) *Solution {
 	dbgCtx := m.Self.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(getResolution start %s %s)",
@@ -412,13 +412,13 @@ func (m *AbstractParserErrorHandlerMethods) getResolution(currentCtx common.Pars
 	return sol
 }
 
-func (m *AbstractParserErrorHandlerMethods) getFailSafeSolution(currentCtx common.ParserRuleContext, nextToken internal.STToken) *Solution {
+func (m *AbstractParserErrorHandlerMethods) getFailSafeSolution(currentCtx common.ParserRuleContext, nextToken tree.STToken) *Solution {
 	sol := NewSolution(ACTION_REMOVE, currentCtx, nextToken.Kind(), nextToken.Text())
 	sol.RemovedToken = m.Self.ConsumeInvalidToken()
 	return sol
 }
 
-func (m *AbstractParserErrorHandlerMethods) validateSolution(bestMatch *Result, currentCtx common.ParserRuleContext, nextToken internal.STNode) {
+func (m *AbstractParserErrorHandlerMethods) validateSolution(bestMatch *Result, currentCtx common.ParserRuleContext, nextToken tree.STNode) {
 	sol := bestMatch.solution
 	if (sol == nil) || (sol.Action == ACTION_REMOVE) {
 		return
@@ -437,7 +437,7 @@ func (m *AbstractParserErrorHandlerMethods) validateSolution(bestMatch *Result, 
 	}
 }
 
-func (m *AbstractParserErrorHandlerMethods) getCompletion(context common.ParserRuleContext, nextToken internal.STToken) *Solution {
+func (m *AbstractParserErrorHandlerMethods) getCompletion(context common.ParserRuleContext, nextToken tree.STToken) *Solution {
 	tempCtxStack := m.Self.GetCtxStack()
 	m.Self.SetCtxStack(m.getCtxStackSnapshot())
 	var sol *Solution
@@ -460,7 +460,7 @@ func (m *AbstractParserErrorHandlerMethods) getCompletion(context common.ParserR
 	return sol
 }
 
-func (m *AbstractParserErrorHandlerMethods) ConsumeInvalidToken() (result internal.STToken) {
+func (m *AbstractParserErrorHandlerMethods) ConsumeInvalidToken() (result tree.STToken) {
 	dbgCtx := m.Self.getDebugContext()
 	ctxStack := m.Self.GetCtxStack()
 	var ctx common.ParserRuleContext
@@ -486,8 +486,8 @@ func (m *AbstractParserErrorHandlerMethods) applyFix(currentCtx common.ParserRul
 	}
 }
 
-func (m *AbstractParserErrorHandlerMethods) handleMissingToken(currentCtx common.ParserRuleContext, fix *Solution) internal.STNode {
-	return internal.CreateMissingTokenWithDiagnosticsFromParserRules(fix.TokenKind, fix.Ctx)
+func (m *AbstractParserErrorHandlerMethods) handleMissingToken(currentCtx common.ParserRuleContext, fix *Solution) tree.STNode {
+	return tree.CreateMissingTokenWithDiagnosticsFromParserRules(fix.TokenKind, fix.Ctx)
 }
 
 func (m *AbstractParserErrorHandlerMethods) getCtxStackSnapshot() []common.ParserRuleContext {
@@ -3212,7 +3212,7 @@ func (this *BallerinaParserErrorHandler) modifyAlternativesWithArgListStart(alte
 func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
 	this.startContextIfRequired(currentCtx)
 	var parentCtx common.ParserRuleContext
-	var nextToken internal.STToken
+	var nextToken tree.STToken
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_EOF:
 		return common.PARSER_RULE_CONTEXT_EOF
@@ -4765,7 +4765,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForEqualOp() common.ParserRu
 
 func (this *BallerinaParserErrorHandler) getNextRuleForCloseBrace(nextLookahead int) common.ParserRuleContext {
 	parentCtx := this.GetParentContext()
-	var nextToken internal.STToken
+	var nextToken tree.STToken
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY_BLOCK:
 		this.EndContext()
@@ -4905,7 +4905,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForCloseBraceInFuncBody() co
 
 func (this *BallerinaParserErrorHandler) getNextRuleForAnnotationEnd(nextLookahead int) common.ParserRuleContext {
 	var parentCtx common.ParserRuleContext
-	var nextToken internal.STToken
+	var nextToken tree.STToken
 	nextToken = this.tokenReader.PeekN(nextLookahead)
 	if nextToken.Kind() == common.AT_TOKEN {
 		return common.PARSER_RULE_CONTEXT_AT
@@ -5029,7 +5029,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 }
 
 func (this *BallerinaParserErrorHandler) getNextRuleForSemicolon(nextLookahead int) common.ParserRuleContext {
-	var nextToken internal.STToken
+	var nextToken tree.STToken
 	parentCtx := this.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY {
 		this.EndContext()
@@ -5585,7 +5585,7 @@ func (this *BallerinaParserErrorHandler) isStatement(parentCtx common.ParserRule
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isBinaryOperator(token internal.STToken) bool {
+func (this *BallerinaParserErrorHandler) isBinaryOperator(token tree.STToken) bool {
 	switch token.Kind() {
 	case common.PLUS_TOKEN,
 		common.MINUS_TOKEN,
@@ -6062,7 +6062,7 @@ func (this *BallerinaParserErrorHandler) isBasicLiteral(kind common.SyntaxKind) 
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isUnaryOperator(token internal.STToken) bool {
+func (this *BallerinaParserErrorHandler) isUnaryOperator(token tree.STToken) bool {
 	switch token.Kind() {
 	case common.PLUS_TOKEN,
 		common.MINUS_TOKEN,

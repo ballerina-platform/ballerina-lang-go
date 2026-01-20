@@ -20,7 +20,6 @@ package tree
 
 import (
 	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/parser/internal"
 	"ballerina-lang-go/tools/diagnostics"
 	"iter"
 )
@@ -41,7 +40,7 @@ import (
 
 type Node interface {
 	Position() int
-	Parent() *NonTerminalNode
+	Parent() NonTerminalNode
 	Ancestor(filter func(Node) bool) *Node
 	Ancestors() []*Node
 	TextRange() TextRange
@@ -52,13 +51,14 @@ type Node interface {
 	HasDiagnostics() bool
 	IsMissing() bool
 	SyntaxTree() *SyntaxTree
+	SetSyntaxTree(syntaxTree *SyntaxTree)
 	LineRange() LineRange
 	LeadingMinutiae() MinutiaeList
 	TrailingMinutiae() MinutiaeList
 	LeadingInvalidTokens() []Token
 	TrailingInvalidTokens() []Token
 	// TODO: think about how to do nodetransformer
-	InternalNode() internal.STNode
+	InternalNode() STNode
 	ToSourceCode() string
 }
 
@@ -69,7 +69,7 @@ func (m *MinutiaeList) Iterator() iter.Seq[Minutiae] {
 }
 
 type Minutiae struct {
-	internalMinutiae internal.STMinutiae
+	internalMinutiae STMinutiae
 	token            Token
 	position         int
 	textRange        TextRange
@@ -107,7 +107,7 @@ type DiagnosticProperty[T any] interface {
 }
 
 type SyntaxDiagnostic struct {
-	nodeDiagnostic internal.STNodeDiagnostic
+	nodeDiagnostic STNodeDiagnostic
 	location       NodeLocation
 	diagnosticInfo *DiagnosticInfo
 }
@@ -143,17 +143,17 @@ const (
 )
 
 type NodeBase struct {
-	internalNode internal.STNode
+	internalNode STNode
 	// TODO: does this needs to be int?
 	position              int
-	parent                *NonTerminalNode
+	parent                NonTerminalNode
 	syntaxTree            *SyntaxTree
 	lineRange             LineRange
 	textRange             TextRange
 	textRangeWithMinutiae TextRange
 }
 
-func NodeFrom(internalNode internal.STNode, position int, parent *NonTerminalNode) Node {
+func NodeFrom(internalNode STNode, position int, parent NonTerminalNode) Node {
 	return &NodeBase{
 		internalNode: internalNode,
 		position:     position,
@@ -169,8 +169,12 @@ func (n *NodeBase) Position() int {
 	return n.position
 }
 
-func (n *NodeBase) Parent() *NonTerminalNode {
+func (n *NodeBase) Parent() NonTerminalNode {
 	return n.parent
+}
+
+func (n *NodeBase) SetSyntaxTree(syntaxTree *SyntaxTree) {
+	n.syntaxTree = syntaxTree
 }
 
 func (n *NodeBase) Ancestor(filter func(Node) bool) *Node {
@@ -239,7 +243,7 @@ func (n *NodeBase) Diagnostics() iter.Seq[Diagnostic] {
 	panic("Diagnostics() should be implemented by child types")
 }
 
-func (n *NonTerminalNode) Diagnostics() iter.Seq[Diagnostic] {
+func (n *NonTerminalNodeBase) Diagnostics() iter.Seq[Diagnostic] {
 	return func(yield func(Diagnostic) bool) {
 		if !n.internalNode.HasDiagnostics() {
 			return
@@ -259,11 +263,11 @@ func (n *NonTerminalNode) Diagnostics() iter.Seq[Diagnostic] {
 	}
 }
 
-func createSyntaxDiagnostic(diagnostic internal.STNodeDiagnostic) Diagnostic {
+func createSyntaxDiagnostic(diagnostic STNodeDiagnostic) Diagnostic {
 	panic("not implemented")
 }
 
-func (n *NonTerminalNode) Children() []Node {
+func (n *NonTerminalNodeBase) Children() []Node {
 	panic("Children() should be implemented by child types")
 }
 
@@ -306,7 +310,7 @@ func (n *NodeBase) TrailingInvalidTokens() []Token {
 	panic("TrailingInvalidTokens() should be implemented by child types")
 }
 
-func (n *NodeBase) InternalNode() internal.STNode {
+func (n *NodeBase) InternalNode() STNode {
 	return n.internalNode
 }
 
@@ -322,25 +326,32 @@ func (n *NodeBase) populateSyntaxTree() *SyntaxTree {
 	if n.parent == nil {
 		// This is a detached node. Create a new SyntaxTree with this node being the root.
 		n.syntaxTree = &SyntaxTree{
-			rootNode: n,
+			RootNode: n,
 		}
 	} else {
-		parent := *n.parent
+		parent := n.parent
 		n.syntaxTree = parent.SyntaxTree()
 	}
 	return n.syntaxTree
 }
 
-type NonTerminalNode struct {
+type NonTerminalNode interface {
+	Node
+	bucketCount() int
+	ChildNodes() iter.Seq[Node]
+	loadNode(childIndex int) Node
+	ChildInBucket(bucket int) Node
+}
+type NonTerminalNodeBase struct {
 	NodeBase
 	childBuckets []Node
 }
 
-func (n *NonTerminalNode) bucketCount() int {
+func (n *NonTerminalNodeBase) bucketCount() int {
 	return n.internalNode.BucketCount()
 }
 
-func (n *NonTerminalNode) ChildNodes() iter.Seq[Node] {
+func (n *NonTerminalNodeBase) ChildNodes() iter.Seq[Node] {
 	return func(yield func(Node) bool) {
 		for i := range n.childBuckets {
 			if !yield(n.loadNode(i)) {
@@ -351,11 +362,11 @@ func (n *NonTerminalNode) ChildNodes() iter.Seq[Node] {
 }
 
 // FIXME: this don't fully implement ChildNodeList.loadNode but do we need to?
-func (n *NonTerminalNode) loadNode(childIndex int) Node {
+func (n *NonTerminalNodeBase) loadNode(childIndex int) Node {
 	index := 0
 	for i := range n.internalNode.BucketCount() {
 		child := n.internalNode.ChildInBucket(i)
-		if !internal.IsSTNodePresent(child) {
+		if !IsSTNodePresent(child) {
 			continue
 		}
 		if child.Kind() == common.LIST {
@@ -382,43 +393,38 @@ func into[T Node](node Node) T {
 	return typed
 }
 
-func (n *NonTerminalNode) ChildInBucket(bucket int) Node {
+func (n *NonTerminalNodeBase) ChildInBucket(bucket int) Node {
 	child := n.childBuckets[bucket]
 	if child != nil {
 		return child
 	}
 	internalChild := n.internalNode.ChildInBucket(bucket)
-	if !internal.IsSTNodePresent(internalChild) {
+	if !IsSTNodePresent(internalChild) {
 		return nil
 	}
-	child = createFacade[Node](internalChild, n.position, *n)
+	child = createFacade[Node](internalChild, n.position, n)
 	n.childBuckets[bucket] = child
 	return child
 
 }
 
-type Token struct {
+type Token interface {
+	Node
+	Text() string
+}
+
+type TokenBase struct {
 	NodeBase
 	leadingMinutiaeList  MinutiaeList
 	trailingMinutiaeList MinutiaeList
 }
 
-func (t *Token) Text() string {
-	stToken, ok := t.internalNode.(internal.STToken)
+func (t *TokenBase) Text() string {
+	stToken, ok := t.internalNode.(STToken)
 	if !ok {
 		panic("expected STToken")
 	}
 	return stToken.Text()
-}
-
-type SyntaxTree struct {
-	rootNode     Node
-	filePath     string
-	textDocument TextDocument
-	lineRange    LineRange
-}
-
-type TextDocument interface {
 }
 
 type LineRange struct {
@@ -438,58 +444,94 @@ type TextRange struct {
 	length      int
 }
 
-func createFacade[T Node](node internal.STNode, position int, parent NonTerminalNode) T {
-	panic("not implemented")
+func createFacade[T Node](node STNode, position int, parent NonTerminalNode) T {
+	return node.CreateFacade(position, parent).(T)
 }
 
 type NodeList[T Node] struct {
-	internalListNode internal.STNodeList
+	internalListNode STNodeList
 	nonTerminalNode  NonTerminalNode
 	size             int
 }
 
-func nodeListFrom[T Node](nonTerminalNode *NonTerminalNode) NodeList[T] {
+func (n *NodeList[T]) Size() int {
+	return n.size
+}
+
+func nodeListFrom[T Node](nonTerminalNode NonTerminalNode) NodeList[T] {
 	size := nonTerminalNode.bucketCount()
-	internalListNode, ok := nonTerminalNode.internalNode.(*internal.STNodeList)
+	internalListNode, ok := nonTerminalNode.InternalNode().(*STNodeList)
 	if !ok {
 		panic("expected STNodeList")
 	}
 	return NodeList[T]{
 		internalListNode: *internalListNode,
-		nonTerminalNode:  *nonTerminalNode,
+		nonTerminalNode:  nonTerminalNode,
 		size:             size,
 	}
 }
 
+func (n *NodeList[T]) Get(index int) T {
+	if index < 0 || index >= n.size {
+		panic("index out of bounds")
+	}
+	return n.nonTerminalNode.ChildInBucket(index).(T)
+}
+
+func (n *NodeList[T]) tryGet(index int) (*T, bool) {
+	if index < 0 || index >= n.size {
+		panic("index out of bounds")
+	}
+	if val, ok := n.nonTerminalNode.ChildInBucket(index).(T); ok {
+		return &val, true
+	}
+	return nil, false
+}
+
+func (n *NodeList[T]) Iterator() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for i := range n.size {
+			if val, ok := n.tryGet(i); ok {
+				if !yield(*val) {
+					return
+				}
+			} else {
+				continue
+			}
+		}
+	}
+}
+
 type DocumentMemberDeclarationNode struct {
-	NonTerminalNode
+	NonTerminalNodeBase
 }
 
 type IdentifierToken struct {
-	Token
+	TokenBase
 }
 
-// TODO: think how to special case this so it can also be generated
-type STAmbiguousCollectionNode struct {
-	NonTerminalNode
+type ExternalTreeNodeList struct {
+	NonTerminalNodeBase
 }
 
-func (n STAmbiguousCollectionNode) CollectionStartToken() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		panic("expected Node")
+var _ Node = &ExternalTreeNodeList{}
+
+type LiteralValueToken struct {
+	TokenBase
+}
+
+var _ Node = &LiteralValueToken{}
+
+func CreateNodeListWithFacade[T Node](nodes []T) NodeList[T] {
+	var internalNodes []STNode
+	for _, node := range nodes {
+		internalNodes = append(internalNodes, node.InternalNode())
 	}
-	return val
-}
-
-func (n STAmbiguousCollectionNode) Members() NodeList[Node] {
-	return nodeListFrom[Node](into[*NonTerminalNode](n.ChildInBucket(1)))
-}
-
-func (n STAmbiguousCollectionNode) CollectionEndToken() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		panic("expected Node")
+	stNodeList := CreateNodeList(internalNodes...).(*STNodeList)
+	nodeList := NodeList[T]{
+		internalListNode: *stNodeList,
+		nonTerminalNode:  nil,
+		size:             len(nodes),
 	}
-	return val
+	return nodeList
 }

@@ -26,3 +26,41 @@ type Location interface {
 	LineRange() text.LineRange
 	TextRange() text.TextRange
 }
+
+// BLangDiagnosticLocation is a minimal implementation of Location for AST nodes
+type BLangDiagnosticLocation struct {
+	filePath    string
+	startLine   int
+	endLine     int
+	startColumn int
+	endColumn   int
+	startOffset int
+	length      int
+}
+
+func NewBLangDiagnosticLocation(
+	filePath string,
+	startLine, endLine, startColumn, endColumn, startOffset, length int,
+) Location {
+	return &BLangDiagnosticLocation{
+		filePath:    filePath,
+		startLine:   startLine,
+		endLine:     endLine,
+		startColumn: startColumn,
+		endColumn:   endColumn,
+		startOffset: startOffset,
+		length:      length,
+	}
+}
+
+var _ Location = &BLangDiagnosticLocation{}
+
+func (loc *BLangDiagnosticLocation) LineRange() text.LineRange {
+	startLinePos := text.LinePositionFromLineAndOffset(loc.startLine, loc.startColumn)
+	endLinePos := text.LinePositionFromLineAndOffset(loc.endLine, loc.endColumn)
+	return text.LineRangeFromLinePositions(loc.filePath, startLinePos, endLinePos)
+}
+
+func (loc *BLangDiagnosticLocation) TextRange() text.TextRange {
+	return text.TextRangeFromStartOffsetAndLength(loc.startOffset, loc.length)
+}

@@ -1,0 +1,53 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function foo (
+    (variable arr (type
+      (array-type
+        (value-type int) dimensions: 1 (
+        (literal -1)))))
+    (variable i (type
+      (value-type int)))) (
+    (array-type
+      (value-type int) dimensions: 1 (
+      (literal -1))))
+    (block-function-body
+      (assignment
+        (index-based-access
+          (simple-var-ref arr)
+          (simple-var-ref i))
+        (binary-expr +
+          (simple-var-ref i)
+          (literal 10)))
+      (return
+        (simple-var-ref arr))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable arr))
+      (assignment
+        (wildcard-binding-pattern)
+        (invocation foo (
+          (simple-var-ref arr)
+          (literal 0)())
+      (assignment
+        (wildcard-binding-pattern)
+        (invocation foo (
+          (simple-var-ref arr)
+          (literal 1)())
+      (assignment
+        (wildcard-binding-pattern)
+        (invocation foo (
+          (simple-var-ref arr)
+          (literal 2)())
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref arr)())
+      (var-def
+        (variable str))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref str))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref str)()))))

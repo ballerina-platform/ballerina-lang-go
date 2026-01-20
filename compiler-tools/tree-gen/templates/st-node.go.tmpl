@@ -14,7 +14,7 @@
 //  specific language governing permissions and limitations
 //  under the License.
 
-package internal
+package tree
 
 import "ballerina-lang-go/parser/common"
 
@@ -28,6 +28,7 @@ type ST{{.Name}} struct {
     {{title .Name}} STNode
 {{end}}
 }
+var _ STNode = &ST{{.Name}}{}
 {{if .Kind}}
 
 func (n *ST{{.Name}}) Kind() common.SyntaxKind {
@@ -59,6 +60,20 @@ func (n *ST{{.Name}}) ChildBuckets() []STNode {
     {{range $i, $attr := .Attributes}}
     n.{{title $attr.Name}},
     {{end}}
+    }
+}
+
+
+func (n *ST{{.Name}}) CreateFacade(position int, parent NonTerminalNode) Node {
+    return &{{.Name}}{
+        {{if and .Base (ne .Base "Node")}}{{.Base}}: &NonTerminalNodeBase{{else}}NonTerminalNodeBase: NonTerminalNodeBase{{end}}{
+            NodeBase: NodeBase{
+                internalNode: n,
+                position: position,
+                parent: parent,
+            },
+            childBuckets: make([]Node, n.BucketCount()),
+        },
     }
 }
 {{end}}

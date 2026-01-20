@@ -18,38 +18,37 @@
 package tree
 
 import (
-    "ballerina-lang-go/parser/common"
+	"ballerina-lang-go/parser/common"
 )
 
 {{range .Nodes}}
 {{if .IsAbstract}}
 type {{.Name}} = {{if .Base}}{{if eq .Base "Node"}}NonTerminalNode{{else}}{{.Base}}{{end}}{{else}}NonTerminalNode{{end}}
-
 {{else}}
 type {{.Name}} struct {
-    {{if .Base}}{{if eq .Base "Node"}}NonTerminalNode{{else}}{{.Base}}{{end}}{{else}}NonTerminalNode{{end}}
+	{{if .Base}}{{if eq .Base "Node"}}NonTerminalNodeBase{{else}}{{.Base}}{{end}}{{else}}NonTerminalNodeBase{{end}}
 }
 {{if .Kind}}
 
 func (n {{.Name}}) Kind() common.SyntaxKind {
-    return common.{{.Kind}}
+	return common.{{.Kind}}
 }
 {{end}}
 {{$nodeName := .Name}}
 {{range $index, $attr := .Attributes}}
 {{if or (eq $attr.Occurrences "MULTIPLE") (eq $attr.Occurrences "MULTIPLE_SEPARATED")}}
 
-func (n {{$nodeName}}) {{title $attr.Name}}() NodeList[{{if eq $attr.Type "Node"}}Node{{else}}*{{$attr.Type}}{{end}}] {
-    return nodeListFrom[{{if eq $attr.Type "Node"}}Node{{else}}*{{$attr.Type}}{{end}}](into[*NonTerminalNode](n.ChildInBucket({{$index}})))
+func (n {{$nodeName}}) {{title $attr.Name}}() NodeList[{{if or (eq $attr.Type "Node") (eq $attr.Type "Token") (isAbstract $attr.Type)}}{{$attr.Type}}{{else}}*{{$attr.Type}}{{end}}] {
+	return nodeListFrom[{{if or (eq $attr.Type "Node") (eq $attr.Type "Token") (isAbstract $attr.Type)}}{{$attr.Type}}{{else}}*{{$attr.Type}}{{end}}](into[NonTerminalNode](n.ChildInBucket({{$index}})))
 }
 {{else}}
 
-func (n {{$nodeName}}) {{title $attr.Name}}() {{if eq $attr.Type "Node"}}Node{{else}}*{{$attr.Type}}{{end}} {
-    val, ok := n.ChildInBucket({{$index}}).({{if eq $attr.Type "Node"}}Node{{else}}*{{$attr.Type}}{{end}})
-    if !ok {
-        panic("expected {{$attr.Type}}")
-    }
-    return val
+func (n {{$nodeName}}) {{title $attr.Name}}() {{if or (eq $attr.Type "Node") (eq $attr.Type "Token") (isAbstract $attr.Type)}}{{$attr.Type}}{{else}}*{{$attr.Type}}{{end}} {
+	val, ok := n.ChildInBucket({{$index}}).({{if or (eq $attr.Type "Node") (eq $attr.Type "Token") (isAbstract $attr.Type)}}{{$attr.Type}}{{else}}*{{$attr.Type}}{{end}})
+	if !ok {
+		return nil
+	}
+	return val
 }
 {{end}}
 {{end}}
