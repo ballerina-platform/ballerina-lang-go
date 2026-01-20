@@ -51,12 +51,10 @@ func (m *BIROperandMethods) Accept(visitor BIRVisitor) {
 func NewBIROperand(variableDcl BIRVariableDcl) BIROperand {
 	op := &BIROperandImpl{
 		BIROperandBase: BIROperandBase{
-			BIRNodeBase: BIRNodeBase{
-				Pos: nil,
-			},
+			BIRNodeBase: BIRNodeBase{},
 			VariableDcl: variableDcl,
 		},
-		BIROperandMethods: BIROperandMethods{Self: nil},
+		BIROperandMethods: BIROperandMethods{},
 	}
 	op.BIROperandMethods.Self = op
 	return op

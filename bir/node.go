@@ -221,7 +221,7 @@ func NewBIRPackageWithIsTestPkg(pos diagnostics.Location, org Name, pkgName Name
 			ServiceDecls:                   []BIRServiceDeclaration{},
 			RecordDefaultValueMap:          make(map[string]map[string]string),
 		},
-		BIRPackageMethods: BIRPackageMethods{Self: nil},
+		BIRPackageMethods: BIRPackageMethods{},
 	}
 	pkg.BIRPackageMethods.Self = pkg
 	return pkg
@@ -272,7 +272,7 @@ func NewBIRImportModule(pos diagnostics.Location, org Name, name Name, version N
 			},
 			PackageID: model.NewPackageIDWithName(org, name, version),
 		},
-		BIRImportModuleMethods: BIRImportModuleMethods{Self: nil},
+		BIRImportModuleMethods: BIRImportModuleMethods{},
 	}
 	mod.BIRImportModuleMethods.Self = mod
 	return mod
@@ -474,7 +474,7 @@ func NewBIRVariableDcl(pos diagnostics.Location, type_ BType, name Name, origina
 			MetaVarName:  metaVarName,
 			JvmVarName:   strings.ReplaceAll(name.Value(), "%", "_"),
 		},
-		BIRVariableDclMethods: BIRVariableDclMethods{Self: nil},
+		BIRVariableDclMethods: BIRVariableDclMethods{},
 	}
 	varDecl.BIRVariableDclMethods.Self = varDecl
 	return varDecl
@@ -557,7 +557,7 @@ func NewBIRParameter(pos diagnostics.Location, name Name, flags int64) BIRParame
 			Flags:            flags,
 			AnnotAttachments: []BIRAnnotationAttachment{},
 		},
-		BIRParameterMethods: BIRParameterMethods{Self: nil},
+		BIRParameterMethods: BIRParameterMethods{},
 	}
 	param.BIRParameterMethods.Self = param
 	return param
@@ -654,7 +654,7 @@ func NewBIRGlobalVariableDcl(pos diagnostics.Location, flags int64, type_ BType,
 			Origin:           origin,
 			AnnotAttachments: []BIRAnnotationAttachment{},
 		},
-		BIRGlobalVariableDclMethods: BIRGlobalVariableDclMethods{Self: nil},
+		BIRGlobalVariableDclMethods: BIRGlobalVariableDclMethods{},
 	}
 	globalVar.BIRGlobalVariableDclMethods.Self = globalVar
 	return globalVar
@@ -729,7 +729,7 @@ func NewBIRFunctionParameter(pos diagnostics.Location, type_ BType, name Name, s
 			},
 			HasDefaultExpr: hasDefaultExpr,
 		},
-		BIRFunctionParameterMethods: BIRFunctionParameterMethods{Self: nil},
+		BIRFunctionParameterMethods: BIRFunctionParameterMethods{},
 	}
 	param.BIRFunctionParameterMethods.Self = param
 	return param
@@ -1097,7 +1097,7 @@ func NewBIRFunction(pos diagnostics.Location, name Name, originalName Name, flag
 			ReturnTypeAnnots:    returnTypeAnnots,
 			DependentGlobalVars: dependentGlobalVars,
 		},
-		BIRFunctionMethods: BIRFunctionMethods{Self: nil},
+		BIRFunctionMethods: BIRFunctionMethods{},
 	}
 	fn.BIRFunctionMethods.Self = fn
 	return fn
@@ -1126,7 +1126,7 @@ func NewBIRFunctionWithSendInsCount(pos diagnostics.Location, name Name, origina
 			ReturnTypeAnnots: []BIRAnnotationAttachment{},
 			Origin:           origin,
 		},
-		BIRFunctionMethods: BIRFunctionMethods{Self: nil},
+		BIRFunctionMethods: BIRFunctionMethods{},
 	}
 	fn.BIRFunctionMethods.Self = fn
 	return fn
@@ -1225,15 +1225,12 @@ func (m *BIRBasicBlockMethods) Accept(visitor BIRVisitor) {
 func NewBIRBasicBlock(id Name, number int) BIRBasicBlock {
 	bb := &BIRBasicBlockImpl{
 		BIRBasicBlockBase: BIRBasicBlockBase{
-			BIRNodeBase: BIRNodeBase{
-				Pos: nil,
-			},
+			BIRNodeBase:  BIRNodeBase{},
 			Number:       number,
 			Id:           id,
 			Instructions: []BIRNonTerminator{},
-			Terminator:   nil,
 		},
-		BIRBasicBlockMethods: BIRBasicBlockMethods{Self: nil},
+		BIRBasicBlockMethods: BIRBasicBlockMethods{},
 	}
 	bb.BIRBasicBlockMethods.Self = bb
 	return bb
@@ -1425,7 +1422,7 @@ func NewBIRTypeDefinition(pos diagnostics.Location, internalName Name, flags int
 			OriginalName:     originalName,
 			AnnotAttachments: []BIRAnnotationAttachment{},
 		},
-		BIRTypeDefinitionMethods: BIRTypeDefinitionMethods{Self: nil},
+		BIRTypeDefinitionMethods: BIRTypeDefinitionMethods{},
 	}
 	td.BIRTypeDefinitionMethods.Self = td
 	return td
@@ -1508,15 +1505,13 @@ func (m *BIRErrorEntryMethods) Accept(visitor BIRVisitor) {
 func NewBIRErrorEntry(trapBB BIRBasicBlock, endBB BIRBasicBlock, errorOp BIROperand, targetBB BIRBasicBlock) BIRErrorEntry {
 	entry := &BIRErrorEntryImpl{
 		BIRErrorEntryBase: BIRErrorEntryBase{
-			BIRNodeBase: BIRNodeBase{
-				Pos: nil,
-			},
-			TrapBB:   trapBB,
-			EndBB:    endBB,
-			ErrorOp:  errorOp,
-			TargetBB: targetBB,
+			BIRNodeBase: BIRNodeBase{},
+			TrapBB:      trapBB,
+			EndBB:       endBB,
+			ErrorOp:     errorOp,
+			TargetBB:    targetBB,
 		},
-		BIRErrorEntryMethods: BIRErrorEntryMethods{Self: nil},
+		BIRErrorEntryMethods: BIRErrorEntryMethods{},
 	}
 	entry.BIRErrorEntryMethods.Self = entry
 	return entry
@@ -1670,7 +1665,7 @@ func NewBIRAnnotation(pos diagnostics.Location, name Name, originalName Name, fl
 			Origin:           origin,
 			AnnotAttachments: []BIRAnnotationAttachment{},
 		},
-		BIRAnnotationMethods: BIRAnnotationMethods{Self: nil},
+		BIRAnnotationMethods: BIRAnnotationMethods{},
 	}
 	ann.BIRAnnotationMethods.Self = ann
 	return ann
@@ -1783,7 +1778,7 @@ func NewBIRConstant(pos diagnostics.Location, name Name, flags int64, type_ BTyp
 			Origin:           origin,
 			AnnotAttachments: []BIRAnnotationAttachment{},
 		},
-		BIRConstantMethods: BIRConstantMethods{Self: nil},
+		BIRConstantMethods: BIRConstantMethods{},
 	}
 	constant.BIRConstantMethods.Self = constant
 	return constant
@@ -1846,7 +1841,7 @@ func NewBIRAnnotationAttachment(pos diagnostics.Location, annotPkgId PackageID, 
 			AnnotPkgId:  annotPkgId,
 			AnnotTagRef: annotTagRef,
 		},
-		BIRAnnotationAttachmentMethods: BIRAnnotationAttachmentMethods{Self: nil},
+		BIRAnnotationAttachmentMethods: BIRAnnotationAttachmentMethods{},
 	}
 	att.BIRAnnotationAttachmentMethods.Self = att
 	return att
@@ -1901,7 +1896,7 @@ func NewBIRConstAnnotationAttachment(pos diagnostics.Location, annotPkgId Packag
 			},
 			AnnotValue: annotValue,
 		},
-		BIRConstAnnotationAttachmentMethods: BIRConstAnnotationAttachmentMethods{Self: nil},
+		BIRConstAnnotationAttachmentMethods: BIRConstAnnotationAttachmentMethods{},
 	}
 	att.BIRConstAnnotationAttachmentMethods.Self = att
 	return att
@@ -2040,8 +2035,7 @@ func NewBIRMappingConstructorKeyValueEntry(keyOp BIROperand, valueOp BIROperand)
 			ValueOp: valueOp,
 		},
 		BIRMappingConstructorKeyValueEntryMethods: BIRMappingConstructorKeyValueEntryMethods{
-			BIRMappingConstructorEntryMethods: BIRMappingConstructorEntryMethods{Self: nil},
-			Self:                              nil,
+			BIRMappingConstructorEntryMethods: BIRMappingConstructorEntryMethods{},
 		},
 	}
 	entry.BIRMappingConstructorKeyValueEntryMethods.Self = entry
@@ -2092,8 +2086,7 @@ func NewBIRMappingConstructorSpreadFieldEntry(exprOp BIROperand) BIRMappingConst
 			ExprOp: exprOp,
 		},
 		BIRMappingConstructorSpreadFieldEntryMethods: BIRMappingConstructorSpreadFieldEntryMethods{
-			BIRMappingConstructorEntryMethods: BIRMappingConstructorEntryMethods{Self: nil},
-			Self:                              nil,
+			BIRMappingConstructorEntryMethods: BIRMappingConstructorEntryMethods{},
 		},
 	}
 	entry.BIRMappingConstructorSpreadFieldEntryMethods.Self = entry
@@ -2295,7 +2288,7 @@ func NewBIRServiceDeclaration(attachPoint []string, attachPointLiteral string, l
 			Origin:              origin,
 			Flags:               flags,
 		},
-		BIRServiceDeclarationMethods: BIRServiceDeclarationMethods{Self: nil},
+		BIRServiceDeclarationMethods: BIRServiceDeclarationMethods{},
 	}
 	svc.BIRServiceDeclarationMethods.Self = svc
 	return svc

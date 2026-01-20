@@ -28,80 +28,7 @@ type (
 	MarkdownDocAttachment = model.MarkdownDocAttachment
 )
 
-// SymbolKind constants - aliases to model package
-const (
-	SymbolKind_PACKAGE                          = model.SymbolKind_PACKAGE
-	SymbolKind_STRUCT                           = model.SymbolKind_STRUCT
-	SymbolKind_OBJECT                           = model.SymbolKind_OBJECT
-	SymbolKind_RECORD                           = model.SymbolKind_RECORD
-	SymbolKind_CONNECTOR                        = model.SymbolKind_CONNECTOR
-	SymbolKind_ACTION                           = model.SymbolKind_ACTION
-	SymbolKind_SERVICE                          = model.SymbolKind_SERVICE
-	SymbolKind_RESOURCE                         = model.SymbolKind_RESOURCE
-	SymbolKind_FUNCTION                         = model.SymbolKind_FUNCTION
-	SymbolKind_WORKER                           = model.SymbolKind_WORKER
-	SymbolKind_ANNOTATION                       = model.SymbolKind_ANNOTATION
-	SymbolKind_ANNOTATION_ATTRIBUTE             = model.SymbolKind_ANNOTATION_ATTRIBUTE
-	SymbolKind_CONSTANT                         = model.SymbolKind_CONSTANT
-	SymbolKind_VARIABLE                         = model.SymbolKind_VARIABLE
-	SymbolKind_PACKAGE_VARIABLE                 = model.SymbolKind_PACKAGE_VARIABLE
-	SymbolKind_TRANSFORMER                      = model.SymbolKind_TRANSFORMER
-	SymbolKind_TYPE_DEF                         = model.SymbolKind_TYPE_DEF
-	SymbolKind_ENUM                             = model.SymbolKind_ENUM
-	SymbolKind_ERROR                            = model.SymbolKind_ERROR
-	SymbolKind_PARAMETER                        = model.SymbolKind_PARAMETER
-	SymbolKind_PATH_PARAMETER                   = model.SymbolKind_PATH_PARAMETER
-	SymbolKind_PATH_REST_PARAMETER              = model.SymbolKind_PATH_REST_PARAMETER
-	SymbolKind_LOCAL_VARIABLE                   = model.SymbolKind_LOCAL_VARIABLE
-	SymbolKind_SERVICE_VARIABLE                 = model.SymbolKind_SERVICE_VARIABLE
-	SymbolKind_CONNECTOR_VARIABLE               = model.SymbolKind_CONNECTOR_VARIABLE
-	SymbolKind_CAST_OPERATOR                    = model.SymbolKind_CAST_OPERATOR
-	SymbolKind_CONVERSION_OPERATOR              = model.SymbolKind_CONVERSION_OPERATOR
-	SymbolKind_TYPEOF_OPERATOR                  = model.SymbolKind_TYPEOF_OPERATOR
-	SymbolKind_XMLNS                            = model.SymbolKind_XMLNS
-	SymbolKind_SCOPE                            = model.SymbolKind_SCOPE
-	SymbolKind_OTHER                            = model.SymbolKind_OTHER
-	SymbolKind_INVOKABLE_TYPE                   = model.SymbolKind_INVOKABLE_TYPE
-	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT = model.SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT      = model.SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
-	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT = model.SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT       = model.SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
-	SymbolKind_SEQUENCE                         = model.SymbolKind_SEQUENCE
-)
-
-type SymbolOrigin = model.SymbolOrigin
-
-// SymbolOrigin constants - aliases to model package
-const (
-	SymbolOrigin_BUILTIN         = model.SymbolOrigin_BUILTIN
-	SymbolOrigin_SOURCE          = model.SymbolOrigin_SOURCE
-	SymbolOrigin_COMPILED_SOURCE = model.SymbolOrigin_COMPILED_SOURCE
-	SymbolOrigin_VIRTUAL         = model.SymbolOrigin_VIRTUAL
-)
-
 type Point = model.Point
-
-// Point constants - aliases to model package
-const (
-	Point_TYPE           = model.Point_TYPE
-	Point_OBJECT         = model.Point_OBJECT
-	Point_FUNCTION       = model.Point_FUNCTION
-	Point_OBJECT_METHOD  = model.Point_OBJECT_METHOD
-	Point_SERVICE_REMOTE = model.Point_SERVICE_REMOTE
-	Point_PARAMETER      = model.Point_PARAMETER
-	Point_RETURN         = model.Point_RETURN
-	Point_SERVICE        = model.Point_SERVICE
-	Point_FIELD          = model.Point_FIELD
-	Point_OBJECT_FIELD   = model.Point_OBJECT_FIELD
-	Point_RECORD_FIELD   = model.Point_RECORD_FIELD
-	Point_LISTENER       = model.Point_LISTENER
-	Point_ANNOTATION     = model.Point_ANNOTATION
-	Point_EXTERNAL       = model.Point_EXTERNAL
-	Point_VAR            = model.Point_VAR
-	Point_CONST          = model.Point_CONST
-	Point_WORKER         = model.Point_WORKER
-	Point_CLASS          = model.Point_CLASS
-)
 
 type DiagnosticState uint8
 
@@ -359,41 +286,41 @@ func asMask(points map[Point]bool) int {
 	mask := 0
 	for point := range points {
 		switch point {
-		case Point_TYPE:
+		case model.Point_TYPE:
 			mask |= 1
-		case Point_OBJECT:
+		case model.Point_OBJECT:
 			mask |= 1 << 1
-		case Point_FUNCTION:
+		case model.Point_FUNCTION:
 			mask |= 1 << 2
-		case Point_OBJECT_METHOD:
+		case model.Point_OBJECT_METHOD:
 			mask |= 1 << 3
-		case Point_SERVICE_REMOTE:
+		case model.Point_SERVICE_REMOTE:
 			mask |= 1 << 4
-		case Point_PARAMETER:
+		case model.Point_PARAMETER:
 			mask |= 1 << 5
-		case Point_RETURN:
+		case model.Point_RETURN:
 			mask |= 1 << 6
-		case Point_SERVICE:
+		case model.Point_SERVICE:
 			mask |= 1 << 7
-		case Point_FIELD:
+		case model.Point_FIELD:
 			mask |= 1 << 8
-		case Point_OBJECT_FIELD:
+		case model.Point_OBJECT_FIELD:
 			mask |= 1 << 9
-		case Point_RECORD_FIELD:
+		case model.Point_RECORD_FIELD:
 			mask |= 1 << 10
-		case Point_LISTENER:
+		case model.Point_LISTENER:
 			mask |= 1 << 11
-		case Point_ANNOTATION:
+		case model.Point_ANNOTATION:
 			mask |= 1 << 12
-		case Point_EXTERNAL:
+		case model.Point_EXTERNAL:
 			mask |= 1 << 13
-		case Point_VAR:
+		case model.Point_VAR:
 			mask |= 1 << 14
-		case Point_CONST:
+		case model.Point_CONST:
 			mask |= 1 << 15
-		case Point_WORKER:
+		case model.Point_WORKER:
 			mask |= 1 << 16
-		case Point_CLASS:
+		case model.Point_CLASS:
 			mask |= 1 << 17
 		}
 	}

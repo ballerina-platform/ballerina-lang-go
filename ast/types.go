@@ -26,52 +26,6 @@ type (
 	NamedNode = model.NamedNode
 )
 
-// TypeKind constants - aliases to model package
-const (
-	TypeKind_INT           = model.TypeKind_INT
-	TypeKind_BYTE          = model.TypeKind_BYTE
-	TypeKind_FLOAT         = model.TypeKind_FLOAT
-	TypeKind_DECIMAL       = model.TypeKind_DECIMAL
-	TypeKind_STRING        = model.TypeKind_STRING
-	TypeKind_BOOLEAN       = model.TypeKind_BOOLEAN
-	TypeKind_BLOB          = model.TypeKind_BLOB
-	TypeKind_TYPEDESC      = model.TypeKind_TYPEDESC
-	TypeKind_TYPEREFDESC   = model.TypeKind_TYPEREFDESC
-	TypeKind_STREAM        = model.TypeKind_STREAM
-	TypeKind_TABLE         = model.TypeKind_TABLE
-	TypeKind_JSON          = model.TypeKind_JSON
-	TypeKind_XML           = model.TypeKind_XML
-	TypeKind_ANY           = model.TypeKind_ANY
-	TypeKind_ANYDATA       = model.TypeKind_ANYDATA
-	TypeKind_MAP           = model.TypeKind_MAP
-	TypeKind_FUTURE        = model.TypeKind_FUTURE
-	TypeKind_PACKAGE       = model.TypeKind_PACKAGE
-	TypeKind_SERVICE       = model.TypeKind_SERVICE
-	TypeKind_CONNECTOR     = model.TypeKind_CONNECTOR
-	TypeKind_ENDPOINT      = model.TypeKind_ENDPOINT
-	TypeKind_FUNCTION      = model.TypeKind_FUNCTION
-	TypeKind_ANNOTATION    = model.TypeKind_ANNOTATION
-	TypeKind_ARRAY         = model.TypeKind_ARRAY
-	TypeKind_UNION         = model.TypeKind_UNION
-	TypeKind_INTERSECTION  = model.TypeKind_INTERSECTION
-	TypeKind_VOID          = model.TypeKind_VOID
-	TypeKind_NIL           = model.TypeKind_NIL
-	TypeKind_NEVER         = model.TypeKind_NEVER
-	TypeKind_NONE          = model.TypeKind_NONE
-	TypeKind_OTHER         = model.TypeKind_OTHER
-	TypeKind_ERROR         = model.TypeKind_ERROR
-	TypeKind_TUPLE         = model.TypeKind_TUPLE
-	TypeKind_OBJECT        = model.TypeKind_OBJECT
-	TypeKind_RECORD        = model.TypeKind_RECORD
-	TypeKind_FINITE        = model.TypeKind_FINITE
-	TypeKind_CHANNEL       = model.TypeKind_CHANNEL
-	TypeKind_HANDLE        = model.TypeKind_HANDLE
-	TypeKind_READONLY      = model.TypeKind_READONLY
-	TypeKind_TYPEPARAM     = model.TypeKind_TYPEPARAM
-	TypeKind_PARAMETERIZED = model.TypeKind_PARAMETERIZED
-	TypeKind_REGEXP        = model.TypeKind_REGEXP
-)
-
 type ProjectKind uint8
 
 const (
