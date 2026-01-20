@@ -1,0 +1,24 @@
+(compilation-unit  regular-source (unnamed-package)
+  (const c1 () (
+    (literal 43)))
+  (const c2 () (
+    (literal 44)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (assignment
+        (wildcard-binding-pattern)
+        (literal 100))
+      (assignment
+        (wildcard-binding-pattern)
+        (binary-expr +
+          (literal 100)
+          (literal 11)))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref c1))
+      (assignment
+        (wildcard-binding-pattern)
+        (binary-expr +
+          (simple-var-ref c1)
+          (simple-var-ref c2))))))

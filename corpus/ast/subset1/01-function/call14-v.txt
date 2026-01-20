@@ -1,0 +1,50 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation foo (
+            (invocation bar (
+              (invocation baz (
+                (invocation sum (
+                  (literal 23)
+                  (invocation foobar (()()()()()())))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function bar (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function baz (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function foobar () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 12))))
+  (function sum (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y))))))

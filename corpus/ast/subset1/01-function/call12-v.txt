@@ -1,0 +1,31 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation foo (
+            (invocation getArg1 (()
+            (invocation getArg2 (()()())))
+  (function foo (
+    (variable i (type
+      (value-type int)))
+    (variable j (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr *
+          (simple-var-ref i)
+          (simple-var-ref j)))))
+  (function getArg1 () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 2))))
+  (function getArg2 () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 4)))))

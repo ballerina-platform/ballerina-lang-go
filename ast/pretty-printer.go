@@ -27,10 +27,10 @@ import (
 // TODO: may be we should rewrite this on top of a visitor.
 
 type PrettyPrinter struct {
-	indentLevel int
-	beginningPrinted bool
+	indentLevel        int
+	beginningPrinted   bool
 	addSpaceBeforeNode bool
-	buffer strings.Builder
+	buffer             strings.Builder
 }
 
 func (p *PrettyPrinter) Print(node BLangNode) string {
@@ -118,7 +118,6 @@ func (p *PrettyPrinter) printImportPackage(node *BLangImportPackage) {
 	p.endNode()
 }
 
-
 func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.startNode()
 	p.printString("compilation-unit")
@@ -133,7 +132,6 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.indentLevel--
 	p.endNode()
 }
-
 
 func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
 	// no-op
@@ -177,7 +175,6 @@ func (p *PrettyPrinter) printString(str string) {
 	p.buffer.WriteString(str)
 	p.addSpaceBeforeNode = true
 }
-
 
 func (p *PrettyPrinter) printPackageID(packageID model.PackageID) {
 	if packageID.IsUnnamed() {
@@ -230,7 +227,7 @@ func (p *PrettyPrinter) printSimpleVarRef(node *BLangSimpleVarRef) {
 	p.startNode()
 	p.printString("simple-var-ref")
 	if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-		p.printString(node.PkgAlias.Value + ":" + node.VariableName.Value)
+		p.printString(node.PkgAlias.Value + " " + node.VariableName.Value)
 	} else {
 		p.printString(node.VariableName.Value)
 	}
@@ -255,7 +252,7 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 
 	// Print function name with optional package alias
 	if node.PkgAlias != nil && node.PkgAlias.Value != "" {
-		p.printString(node.PkgAlias.Value + ":" + node.Name.Value)
+		p.printString(node.PkgAlias.Value + " " + node.Name.Value)
 	} else {
 		p.printString(node.Name.Value)
 	}
@@ -269,14 +266,15 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 
 	// Print arguments if present
+	p.printString("(")
 	if len(node.ArgExprs) > 0 {
-		p.printString("args:")
 		p.indentLevel++
 		for _, arg := range node.ArgExprs {
 			p.PrintInner(arg.(BLangNode))
 		}
 		p.indentLevel--
 	}
+	p.printSticky("(")
 
 	p.endNode()
 }
@@ -319,10 +317,11 @@ func (p *PrettyPrinter) printIf(node *BLangIf) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
+	p.printString("(")
 	if node.ElseStmt != nil {
-		p.printString("else:")
 		p.PrintInner(node.ElseStmt.(BLangNode))
 	}
+	p.printSticky(")")
 	p.indentLevel--
 	p.endNode()
 }
@@ -348,10 +347,11 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	p.printString("variable")
 	p.printString(node.Name.Value)
 	if node.TypeNode != nil {
-		p.printString("type:")
+		p.printString("(type")
 		p.indentLevel++
 		p.PrintInner(node.TypeNode.(BLangNode))
 		p.indentLevel--
+		p.printSticky(")")
 	}
 	p.endNode()
 }
@@ -379,8 +379,8 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printString(node.Name.Value)
 
 	// Print parameters if present
+	p.printString("(")
 	if len(node.RequiredParams) > 0 {
-		p.printString("params:")
 		p.indentLevel++
 		for _, param := range node.RequiredParams {
 			p.PrintInner(&param)
@@ -388,14 +388,16 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 		p.indentLevel--
 	}
 
+	p.printSticky(")")
 	// Print return type if present
+	p.printString("(")
 	if node.ReturnTypeNode != nil {
-		p.printString("return-type:")
 		p.indentLevel++
 		p.PrintInner(node.ReturnTypeNode.(BLangNode))
 		p.indentLevel--
 	}
 
+	p.printSticky(")")
 	// Print function body if present
 	if node.Body != nil {
 		p.indentLevel++
@@ -464,12 +466,13 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	if node.Dimensions > 0 {
 		p.printString(fmt.Sprintf("dimensions: %d", node.Dimensions))
 	}
+	p.printString("(")
 	if len(node.Sizes) > 0 {
-		p.printString("sizes:")
 		for _, size := range node.Sizes {
 			p.PrintInner(size.(BLangNode))
 		}
 	}
+	p.printSticky(")")
 	p.indentLevel--
 	p.endNode()
 }
@@ -480,18 +483,20 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printString("const")
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
+	p.printString("(")
 	if node.TypeNode != nil {
-		p.printString("type:")
 		p.indentLevel++
 		p.PrintInner(node.TypeNode.(BLangNode))
 		p.indentLevel--
 	}
+	p.printSticky(")")
+	p.printString("(")
 	if node.Expr != nil {
-		p.printString("expr:")
 		p.indentLevel++
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
+	p.printSticky(")")
 	p.endNode()
 }
 

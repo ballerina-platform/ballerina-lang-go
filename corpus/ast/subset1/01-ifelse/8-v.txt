@@ -1,0 +1,41 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation printIfFalse (
+          (literal true)())
+      (expression-stmt
+        (invocation printIfFalse (
+          (literal false)())
+      (expression-stmt
+        (invocation printIfTrue (
+          (literal true)())
+      (expression-stmt
+        (invocation printIfTrue (
+          (literal false)())))
+  (function printIfFalse (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (simple-var-ref b)
+        (block-stmt) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 0)()))))))
+  (function printIfTrue (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 1)())) (
+        (block-stmt))))))

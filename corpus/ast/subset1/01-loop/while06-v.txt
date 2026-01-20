@@ -1,0 +1,32 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable i))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (literal 5))
+        (block-stmt
+          (var-def
+            (variable j))
+          (while
+            (binary-expr <
+              (simple-var-ref j)
+              (simple-var-ref i))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (simple-var-ref j)())
+              (assignment
+                (simple-var-ref j)
+                (binary-expr +
+                  (simple-var-ref j)
+                  (literal 1)))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (literal 1))))))))

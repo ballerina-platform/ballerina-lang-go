@@ -1,0 +1,19 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (invocation makeNil (()
+          (invocation makeNil (())
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 1)())) ())
+      (block-stmt)))
+  (function makeNil () (
+    (value-type null))
+    (block-function-body
+      (return
+        (literal ())))))

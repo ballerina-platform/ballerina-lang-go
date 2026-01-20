@@ -1,0 +1,84 @@
+(compilation-unit  regular-source (unnamed-package)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation printClosestSquareNum (
+          (literal 1)())
+      (expression-stmt
+        (invocation printClosestSquareNum (
+          (literal 0)())
+      (expression-stmt
+        (invocation printClosestSquareNum (
+          (literal 5)())
+      (expression-stmt
+        (invocation printClosestSquareNum (
+          (literal 17)())))
+  (function printClosestSquareNum (
+    (variable x (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable i))
+      (while
+        (binary-expr >=
+          (simple-var-ref i)
+          (literal 0))
+        (block-stmt
+          (if
+            (group-expr
+              (invocation isSquareNumber (
+                (simple-var-ref i)())
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (simple-var-ref i)())
+              (return
+                (literal ()))) ())
+          (block-stmt
+            (assignment
+              (simple-var-ref i)
+              (binary-expr -
+                (simple-var-ref i)
+                (literal 1))))))))
+  (function isSquareNumber (
+    (variable x (type
+      (value-type int)))) (
+    (value-type boolean))
+    (block-function-body
+      (var-def
+        (variable i))
+      (while
+        (binary-expr <=
+          (simple-var-ref i)
+          (simple-var-ref x))
+        (block-stmt
+          (if
+            (group-expr
+              (binary-expr ==
+                (binary-expr *
+                  (simple-var-ref i)
+                  (simple-var-ref i))
+                (simple-var-ref x)))
+            (block-stmt
+              (return
+                (literal true))) (
+            (if
+              (group-expr
+                (binary-expr >
+                  (binary-expr *
+                    (simple-var-ref i)
+                    (simple-var-ref i))
+                  (simple-var-ref x)))
+              (block-stmt
+                (return
+                  (literal false))) ())))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (literal 1)))))
+      (return
+        (literal false)))))
