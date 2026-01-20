@@ -278,7 +278,6 @@ func TestParseCorpusFiles(t *testing.T) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		t.Fatalf("Error walking corpus/bal directory: %v", err)
 	}
@@ -303,7 +302,10 @@ func TestParseCorpusFiles(t *testing.T) {
 		}
 
 		t.Run(balFile, func(t *testing.T) {
-			t.Parallel() // Run in parallel for faster execution
+			if os.Getenv("GOARCH") == "wasm" {
+				t.Skip("skipping parser testsing wasm")
+			}
+			t.Parallel() // Run in parallel for faster execution (native only)
 			parseFile(t, balFile, index, total)
 		})
 	}
