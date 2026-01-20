@@ -116,8 +116,7 @@ func main() {
 	}
 	if dumpAST {
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-		prettyPrinter := ast.PrettyPrinter{
-		}
+		prettyPrinter := ast.PrettyPrinter{}
 		fmt.Println(prettyPrinter.Print(compilationUnit))
 	}
 	if debugCtx != nil {
