@@ -22,59 +22,6 @@ import (
 	"strings"
 )
 
-type SymbolKind = model.SymbolKind
-
-// SymbolKind constants - aliases to model package
-const (
-	SymbolKind_PACKAGE                          = model.SymbolKind_PACKAGE
-	SymbolKind_STRUCT                           = model.SymbolKind_STRUCT
-	SymbolKind_OBJECT                           = model.SymbolKind_OBJECT
-	SymbolKind_RECORD                           = model.SymbolKind_RECORD
-	SymbolKind_CONNECTOR                        = model.SymbolKind_CONNECTOR
-	SymbolKind_ACTION                           = model.SymbolKind_ACTION
-	SymbolKind_SERVICE                          = model.SymbolKind_SERVICE
-	SymbolKind_RESOURCE                         = model.SymbolKind_RESOURCE
-	SymbolKind_FUNCTION                         = model.SymbolKind_FUNCTION
-	SymbolKind_WORKER                           = model.SymbolKind_WORKER
-	SymbolKind_ANNOTATION                       = model.SymbolKind_ANNOTATION
-	SymbolKind_ANNOTATION_ATTRIBUTE             = model.SymbolKind_ANNOTATION_ATTRIBUTE
-	SymbolKind_CONSTANT                         = model.SymbolKind_CONSTANT
-	SymbolKind_VARIABLE                         = model.SymbolKind_VARIABLE
-	SymbolKind_PACKAGE_VARIABLE                 = model.SymbolKind_PACKAGE_VARIABLE
-	SymbolKind_TRANSFORMER                      = model.SymbolKind_TRANSFORMER
-	SymbolKind_TYPE_DEF                         = model.SymbolKind_TYPE_DEF
-	SymbolKind_ENUM                             = model.SymbolKind_ENUM
-	SymbolKind_ERROR                            = model.SymbolKind_ERROR
-	SymbolKind_PARAMETER                        = model.SymbolKind_PARAMETER
-	SymbolKind_PATH_PARAMETER                   = model.SymbolKind_PATH_PARAMETER
-	SymbolKind_PATH_REST_PARAMETER              = model.SymbolKind_PATH_REST_PARAMETER
-	SymbolKind_LOCAL_VARIABLE                   = model.SymbolKind_LOCAL_VARIABLE
-	SymbolKind_SERVICE_VARIABLE                 = model.SymbolKind_SERVICE_VARIABLE
-	SymbolKind_CONNECTOR_VARIABLE               = model.SymbolKind_CONNECTOR_VARIABLE
-	SymbolKind_CAST_OPERATOR                    = model.SymbolKind_CAST_OPERATOR
-	SymbolKind_CONVERSION_OPERATOR              = model.SymbolKind_CONVERSION_OPERATOR
-	SymbolKind_TYPEOF_OPERATOR                  = model.SymbolKind_TYPEOF_OPERATOR
-	SymbolKind_XMLNS                            = model.SymbolKind_XMLNS
-	SymbolKind_SCOPE                            = model.SymbolKind_SCOPE
-	SymbolKind_OTHER                            = model.SymbolKind_OTHER
-	SymbolKind_INVOKABLE_TYPE                   = model.SymbolKind_INVOKABLE_TYPE
-	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT = model.SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT      = model.SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
-	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT = model.SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT       = model.SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
-	SymbolKind_SEQUENCE                         = model.SymbolKind_SEQUENCE
-)
-
-type SymbolOrigin = model.SymbolOrigin
-
-// SymbolOrigin constants - aliases to model package
-const (
-	SymbolOrigin_BUILTIN         = model.SymbolOrigin_BUILTIN
-	SymbolOrigin_SOURCE          = model.SymbolOrigin_SOURCE
-	SymbolOrigin_COMPILED_SOURCE = model.SymbolOrigin_COMPILED_SOURCE
-	SymbolOrigin_VIRTUAL         = model.SymbolOrigin_VIRTUAL
-)
-
 type DiagnosticState uint8
 
 const (
@@ -122,18 +69,6 @@ const (
 	SymTag_SEQUENCE              SymTag = 1<<32 | SymTag_MAIN
 )
 
-// Type aliases for model interfaces
-type (
-	Symbol                     = model.Symbol
-	TypeSymbol                 = model.TypeSymbol
-	Annotatable                = model.Annotatable
-	AnnotationSymbol           = model.AnnotationSymbol
-	ConstantSymbol             = model.ConstantSymbol
-	AnnotationAttachmentSymbol = model.AnnotationAttachmentSymbol
-	InvokableSymbol            = model.InvokableSymbol
-	VariableSymbol             = model.VariableSymbol
-)
-
 type SchedulerPolicy uint8
 
 const (
@@ -150,14 +85,14 @@ type (
 		Name                  *model.Name
 		OriginalName          *model.Name
 		PkgID                 *model.PackageID
-		Kind                  SymbolKind
+		Kind                  model.SymbolKind
 		Type                  BType
-		Owner                 Symbol
+		Owner                 model.Symbol
 		Tainted               bool
 		Closure               bool
 		MarkdownDocumentation *MarkdownDocAttachment
 		Pos                   Location
-		Origin                SymbolOrigin
+		Origin                model.SymbolOrigin
 	}
 	BVarSymbol struct {
 		BSymbol
@@ -210,14 +145,14 @@ type (
 )
 
 var (
-	_ Symbol                     = &BSymbol{}
-	_ TypeSymbol                 = &BTypeSymbol{}
-	_ AnnotationSymbol           = &BAnnotationSymbol{}
-	_ AnnotationAttachmentSymbol = &BAnnotationAttachmentSymbol{}
-	_ ConstantSymbol             = &BConstantSymbol{}
-	_ InvokableSymbol            = &BInvokableSymbol{}
-	_ VariableSymbol             = &BVarSymbol{}
-	_ Annotatable                = &BVarSymbol{}
+	_ model.Symbol                     = &BSymbol{}
+	_ model.TypeSymbol                 = &BTypeSymbol{}
+	_ model.AnnotationSymbol           = &BAnnotationSymbol{}
+	_ model.AnnotationAttachmentSymbol = &BAnnotationAttachmentSymbol{}
+	_ model.ConstantSymbol             = &BConstantSymbol{}
+	_ model.InvokableSymbol            = &BInvokableSymbol{}
+	_ model.VariableSymbol             = &BVarSymbol{}
+	_ model.Annotatable                = &BVarSymbol{}
 )
 
 func (this *BSymbol) GetName() string {
@@ -231,44 +166,44 @@ func (this *BSymbol) GetOriginalName() string {
 	return string(*this.Name)
 }
 
-func (this *BSymbol) GetKind() SymbolKind {
+func (this *BSymbol) GetKind() model.SymbolKind {
 	return this.Kind
 }
 
-func (this *BSymbol) GetType() Type {
+func (this *BSymbol) GetType() model.Type {
 	return this.Type
 }
 
-func (this *BSymbol) GetFlags() common.Set[Flag] {
+func (this *BSymbol) GetFlags() common.Set[model.Flag] {
 	return UnMask(this.Flags)
 }
 
-func (this *BSymbol) GetEnclosingSymbol() Symbol {
+func (this *BSymbol) GetEnclosingSymbol() model.Symbol {
 	return this.Owner
 }
 
-func (this *BSymbol) GetEnclosedSymbols() []Symbol {
+func (this *BSymbol) GetEnclosedSymbols() []model.Symbol {
 	// Returns empty slice as per Java implementation
-	return []Symbol{}
+	return []model.Symbol{}
 }
 
 func (this *BSymbol) GetPosition() Location {
 	return this.Pos
 }
 
-func (this *BSymbol) GetOrigin() SymbolOrigin {
+func (this *BSymbol) GetOrigin() model.SymbolOrigin {
 	return this.Origin
 }
 
-func (this *BConstantSymbol) GetKind() SymbolKind {
-	return SymbolKind_CONSTANT
+func (this *BConstantSymbol) GetKind() model.SymbolKind {
+	return model.SymbolKind_CONSTANT
 }
 
 func (this *BConstantSymbol) GetConstValue() any {
 	return this.Value
 }
 
-func (this *BVarSymbol) AddAnnotation(symbol AnnotationAttachmentSymbol) {
+func (this *BVarSymbol) AddAnnotation(symbol model.AnnotationAttachmentSymbol) {
 	if symbol == nil {
 		return
 	}
@@ -279,8 +214,8 @@ func (this *BVarSymbol) AddAnnotation(symbol AnnotationAttachmentSymbol) {
 	}
 }
 
-func (this *BVarSymbol) GetAnnotations() []AnnotationAttachmentSymbol {
-	result := make([]AnnotationAttachmentSymbol, len(this.annotationAttachments))
+func (this *BVarSymbol) GetAnnotations() []model.AnnotationAttachmentSymbol {
+	result := make([]model.AnnotationAttachmentSymbol, len(this.annotationAttachments))
 	for i := range this.annotationAttachments {
 		result[i] = &this.annotationAttachments[i]
 	}
@@ -295,7 +230,7 @@ func (this *BAnnotationAttachmentSymbol) IsConstAnnotation() bool {
 	return false
 }
 
-func (this *BAnnotationSymbol) AddAnnotation(symbol AnnotationAttachmentSymbol) {
+func (this *BAnnotationSymbol) AddAnnotation(symbol model.AnnotationAttachmentSymbol) {
 	if symbol == nil {
 		return
 	}
@@ -306,8 +241,8 @@ func (this *BAnnotationSymbol) AddAnnotation(symbol AnnotationAttachmentSymbol) 
 	}
 }
 
-func (this *BAnnotationSymbol) GetAnnotations() []AnnotationAttachmentSymbol {
-	result := make([]AnnotationAttachmentSymbol, len(this.annotationAttachments))
+func (this *BAnnotationSymbol) GetAnnotations() []model.AnnotationAttachmentSymbol {
+	result := make([]model.AnnotationAttachmentSymbol, len(this.annotationAttachments))
 	for i := range this.annotationAttachments {
 		result[i] = &this.annotationAttachments[i]
 	}
@@ -384,7 +319,7 @@ func asMask(points map[Point]bool) int {
 	return mask
 }
 
-func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[AttachPoint], pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BAnnotationSymbol {
+func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[AttachPoint], pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BAnnotationSymbol {
 	symbol := &BAnnotationSymbol{
 		BTypeSymbol: BTypeSymbol{
 			BSymbol: BSymbol{
@@ -408,11 +343,11 @@ func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flag
 	return symbol
 }
 
-func NewBConstantSymbol(flags Flags, name *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
+func NewBConstantSymbol(flags Flags, name *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BConstantSymbol {
 	return NewBConstantSymbolWithOriginalName(flags, name, name, pkgID, literalType, bType, owner, pos, origin)
 }
 
-func NewBConstantSymbolWithOriginalName(flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BConstantSymbol {
+func NewBConstantSymbolWithOriginalName(flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, literalType BType, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BConstantSymbol {
 	symbol := &BConstantSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
@@ -426,22 +361,22 @@ func NewBConstantSymbolWithOriginalName(flags Flags, name *model.Name, originalN
 				Owner:         owner,
 				Pos:           pos,
 				Origin:        origin,
-				Kind:          SymbolKind_CONSTANT,
+				Kind:          model.SymbolKind_CONSTANT,
 			},
 			annotationAttachments: []BAnnotationAttachmentSymbol{},
 			State:                 DiagnosticState_VALID,
 		},
 		LiteralType: literalType,
 	}
-	symbol.Kind = SymbolKind_CONSTANT
+	symbol.Kind = model.SymbolKind_CONSTANT
 	return symbol
 }
 
-func NewBInvokableSymbol(tag SymTag, flags Flags, name *model.Name, pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
+func NewBInvokableSymbol(tag SymTag, flags Flags, name *model.Name, pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BInvokableSymbol {
 	return NewBInvokableSymbolWithOriginalName(tag, flags, name, name, pkgID, bType, owner, pos, origin)
 }
 
-func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, bType BType, owner Symbol, pos Location, origin SymbolOrigin) *BInvokableSymbol {
+func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Name, originalName *model.Name, pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BInvokableSymbol {
 	symbol := &BInvokableSymbol{
 		BVarSymbol: BVarSymbol{
 			BSymbol: BSymbol{
@@ -455,7 +390,7 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Na
 				Owner:         owner,
 				Pos:           pos,
 				Origin:        origin,
-				Kind:          SymbolKind_FUNCTION,
+				Kind:          model.SymbolKind_FUNCTION,
 			},
 			annotationAttachments: []BAnnotationAttachmentSymbol{},
 			State:                 DiagnosticState_VALID,
@@ -487,15 +422,15 @@ func GetMajorVersion(version model.Name) string {
 	return strings.Split(version.Value(), ".")[0]
 }
 
-func (this *BInvokableSymbol) GetParameters() []VariableSymbol {
-	result := make([]VariableSymbol, len(this.Params))
+func (this *BInvokableSymbol) GetParameters() []model.VariableSymbol {
+	result := make([]model.VariableSymbol, len(this.Params))
 	for i := range this.Params {
 		result[i] = &this.Params[i]
 	}
 	return result
 }
 
-func (this *BInvokableSymbol) GetReturnType() Type {
+func (this *BInvokableSymbol) GetReturnType() model.Type {
 	return this.RetType
 }
 
@@ -507,8 +442,8 @@ func (this *BInvokableSymbol) SetAnnotationAttachmentsOnExternal(annotationAttac
 	this.annotationAttachmentsOnExternal = annotationAttachments
 }
 
-func (this *BInvokableSymbol) GetAnnotationAttachmentsOnExternal() []AnnotationAttachmentSymbol {
-	result := make([]AnnotationAttachmentSymbol, len(this.annotationAttachmentsOnExternal))
+func (this *BInvokableSymbol) GetAnnotationAttachmentsOnExternal() []model.AnnotationAttachmentSymbol {
+	result := make([]model.AnnotationAttachmentSymbol, len(this.annotationAttachmentsOnExternal))
 	for i := range this.annotationAttachmentsOnExternal {
 		result[i] = &this.annotationAttachmentsOnExternal[i]
 	}

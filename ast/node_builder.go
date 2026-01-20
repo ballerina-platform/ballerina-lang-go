@@ -616,7 +616,7 @@ func (n *NodeBuilder) getNextAnonymousTypeKey(packageID model.PackageID, suffixe
 
 // createTypeNode creates a type node from a syntax tree node
 // This delegates to the appropriate Transform method based on the node type
-func (n *NodeBuilder) createTypeNode(typeNode tree.Node) TypeNode {
+func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeNode {
 	if typeNode == nil {
 		panic("createTypeNode: typeNode is nil")
 	}
@@ -641,7 +641,7 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) TypeNode {
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
 	default:
-		return n.TransformSyntaxNode(typeNode).(TypeNode)
+		return n.TransformSyntaxNode(typeNode).(model.TypeNode)
 	}
 }
 
@@ -676,10 +676,10 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 	if visibilityQualifier != nil {
 		if visibilityQualifier.Kind() == common.PRIVATE_KEYWORD {
 			// Line 6015: bLSimpleVar.flagSet.add(Flag.PRIVATE);
-			bLSimpleVar.FlagSet.Add(Flag_PRIVATE)
+			bLSimpleVar.FlagSet.Add(model.Flag_PRIVATE)
 		} else if visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
 			// Line 6017: bLSimpleVar.flagSet.add(Flag.PUBLIC);
-			bLSimpleVar.FlagSet.Add(Flag_PUBLIC)
+			bLSimpleVar.FlagSet.Add(model.Flag_PUBLIC)
 		}
 	}
 
@@ -699,7 +699,7 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 	return bLSimpleVar
 }
 
-func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeNode {
+func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeNode {
 	var typeText string
 	if typeNode.Kind() == common.NIL_TYPE_DESC {
 		typeText = "()"
@@ -1011,7 +1011,7 @@ func isNumericLiteral(kind common.SyntaxKind) bool {
 func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType bool) model.LiteralNode {
 	var bLiteral model.LiteralNode
 	kind := literal.Kind()
-	var typeTag TypeTags = -1
+	var typeTag model.TypeTags = -1
 	var value any = nil
 	var originalValue *string = nil
 
@@ -1024,14 +1024,14 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		textValue = ""
 	}
 
-	//TODO: Verify all types, only string type tested
+	// TODO: Verify all types, only string type tested
 	if kind == common.NUMERIC_LITERAL {
 		basicLiteralNode := literal.(*tree.BasicLiteralNode)
 		literalTokenKind := basicLiteralNode.LiteralToken().Kind()
-		var nodeKind NodeKind
+		var nodeKind model.NodeKind
 		if literalTokenKind == common.DECIMAL_INTEGER_LITERAL_TOKEN ||
 			literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN {
-			nodeKind = NodeKind_INTEGER_LITERAL
+			nodeKind = model.NodeKind_INTEGER_LITERAL
 			typeTag = model.TypeTags_INT
 			value = getIntegerLiteral(literal, textValue)
 			originalValue = &textValue
@@ -1040,8 +1040,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 				typeTag = model.TypeTags_BYTE
 			}
 		} else if literalTokenKind == common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN {
-			//TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = NodeKind_DECIMAL_FLOATING_POINT_LITERAL
+			// TODO: Check effect of mapping negative(-) numbers as unary-expr
+			nodeKind = model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL
 			if balCommon.IsDecimalDiscriminated(textValue) {
 				typeTag = model.TypeTags_DECIMAL
 			} else {
@@ -1056,8 +1056,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 				originalValue = &textValue
 			}
 		} else {
-			//TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = NodeKind_HEX_FLOATING_POINT_LITERAL
+			// TODO: Check effect of mapping negative(-) numbers as unary-expr
+			nodeKind = model.NodeKind_HEX_FLOATING_POINT_LITERAL
 			typeTag = model.TypeTags_FLOAT
 			value = getHexNodeValue(textValue)
 			originalValue = &textValue
@@ -1161,7 +1161,7 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 		// Dispatch to TransformSyntaxNode which handles all node types
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
-		node := transformedNode.(TopLevelNode)
+		node := transformedNode.(model.TopLevelNode)
 
 		// Special handling for XML namespace declarations
 		if _, isXMLNS := memberNode.(*tree.ModuleXMLNamespaceDeclarationNode); isXMLNS {
@@ -1195,17 +1195,17 @@ func setFunctionQualifiers(bLFunction *BLangFunction, qualifierList tree.NodeLis
 
 		switch kind {
 		case common.PUBLIC_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_PUBLIC)
+			bLFunction.FlagSet.Add(model.Flag_PUBLIC)
 		case common.PRIVATE_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_PRIVATE)
+			bLFunction.FlagSet.Add(model.Flag_PRIVATE)
 		case common.REMOTE_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_REMOTE)
+			bLFunction.FlagSet.Add(model.Flag_REMOTE)
 		case common.TRANSACTIONAL_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_TRANSACTIONAL)
+			bLFunction.FlagSet.Add(model.Flag_TRANSACTIONAL)
 		case common.RESOURCE_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_RESOURCE)
+			bLFunction.FlagSet.Add(model.Flag_RESOURCE)
 		case common.ISOLATED_KEYWORD:
-			bLFunction.FlagSet.Add(Flag_ISOLATED)
+			bLFunction.FlagSet.Add(model.Flag_ISOLATED)
 		default:
 			// Skip unknown qualifiers
 			continue
@@ -1218,7 +1218,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 	parameters := funcSignature.Parameters()
 	for param := range parameters.Iterator() {
 		// Transform parameter using TransformSyntaxNode
-		paramNode := n.TransformSyntaxNode(param).(SimpleVariableNode)
+		paramNode := n.TransformSyntaxNode(param).(model.SimpleVariableNode)
 
 		// Special handling for rest parameters
 		if _, isRestParam := param.(*tree.RestParameterNode); isRestParam {
@@ -1252,7 +1252,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 	} else {
 		bLValueType := BLangValueType{}
 		// TODO: set pos
-		bLValueType.TypeKind = TypeKind_NIL
+		bLValueType.TypeKind = model.TypeKind_NIL
 		bLFunction.SetReturnTypeNode(&bLValueType)
 	}
 }
@@ -1300,13 +1300,13 @@ func (n *NodeBuilder) populateFunctionNode(name BLangIdentifier, qualifierList t
 	// Set the function body
 	if funcBody == nil {
 		blFunction.Body = nil
-		blFunction.FlagSet.Add(Flag_INTERFACE)
+		blFunction.FlagSet.Add(model.Flag_INTERFACE)
 		blFunction.InterfaceFunction = true
 	} else {
-		body := n.TransformSyntaxNode(funcBody).(FunctionBodyNode)
+		body := n.TransformSyntaxNode(funcBody).(model.FunctionBodyNode)
 		blFunction.Body = body
-		if body.GetKind() == NodeKind_EXTERN_FUNCTION_BODY {
-			blFunction.FlagSet.Add(Flag_NATIVE)
+		if body.GetKind() == model.NodeKind_EXTERN_FUNCTION_BODY {
+			blFunction.FlagSet.Add(model.Flag_NATIVE)
 		}
 	}
 }
@@ -1418,7 +1418,6 @@ func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentSta
 }
 
 func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree.VariableDeclarationNode) BLangNode {
-
 	// Line 3009-3011: Create variable definition node
 	varNode := n.createBLangVarDef(
 		getPosition(variableDeclarationNode),
@@ -1435,7 +1434,7 @@ func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree
 	return varNode.(BLangNode)
 }
 
-func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) VariableDefinitionNode {
+func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) model.VariableDefinitionNode {
 	// Line 3020: Get binding pattern from typedBindingPattern
 	bindingPattern := typedBindingPattern.BindingPattern()
 
@@ -1473,7 +1472,7 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 
 		// Line 3038-3040: Handle final flag
 		if finalKeyword != nil {
-			variable.GetFlags().Add(Flag_FINAL)
+			variable.GetFlags().Add(model.Flag_FINAL)
 		}
 
 		// Line 3042-3046: Handle type descriptor
@@ -1694,7 +1693,7 @@ func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.Binar
 	bLBinaryExpr.pos = getPosition(binaryExpressionNode)
 	bLBinaryExpr.LhsExpr = n.createExpression(binaryExpressionNode.LhsExpr())
 	bLBinaryExpr.RhsExpr = n.createExpression(binaryExpressionNode.RhsExpr())
-	var operator OperatorKind
+	var operator model.OperatorKind
 	if binaryExpressionNode.Operator() == nil {
 		operator = model.OperatorKind_UNDEFINED
 	} else {
@@ -1814,21 +1813,21 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 	// Lines 950-952: Skip annotations and documentation (metadata check will panic if present)
 
 	// Line 954: constantNode.flagSet.add(Flag.CONSTANT);
-	constantNode.FlagSet.Add(Flag_CONSTANT)
+	constantNode.FlagSet.Add(model.Flag_CONSTANT)
 
 	// Line 955-958: Check visibility qualifier and add Flag.PUBLIC if PUBLIC_KEYWORD
 	visibilityQualifier := constantDeclarationNode.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
 		// Line 957: constantNode.flagSet.add(Flag.PUBLIC);
-		constantNode.FlagSet.Add(Flag_PUBLIC)
+		constantNode.FlagSet.Add(model.Flag_PUBLIC)
 	}
 
 	// Line 960: NodeKind nodeKind = constantNode.expr.getKind();
 	nodeKind := constantNode.Expr.GetKind()
 
 	// Line 964-969: Check whether the value is a literal or a unary expression
-	if (nodeKind == NodeKind_LITERAL || nodeKind == NodeKind_NUMERIC_LITERAL || nodeKind == NodeKind_UNARY_EXPR) &&
-		(constantNode.TypeNode == nil || constantNode.TypeNode.GetKind() != NodeKind_ARRAY_TYPE) {
+	if (nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL || nodeKind == model.NodeKind_UNARY_EXPR) &&
+		(constantNode.TypeNode == nil || constantNode.TypeNode.GetKind() != model.NodeKind_ARRAY_TYPE) {
 		// Line 968: createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos);
 		n.createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos)
 	}
@@ -1860,8 +1859,8 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	nodeKind := constantNode.Expr.GetKind()
 
 	// Line 897-903: Create a new literal.
-	var literal LiteralNode
-	if nodeKind == NodeKind_LITERAL {
+	var literal model.LiteralNode
+	if nodeKind == model.NodeKind_LITERAL {
 		// Line 900: literal = (BLangLiteral) TreeBuilder.createLiteralExpression();
 		literal = &BLangLiteral{}
 	} else {
@@ -1870,7 +1869,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	}
 
 	// Line 904-909: Handle literal/numeric literal case
-	if nodeKind == NodeKind_LITERAL || nodeKind == NodeKind_NUMERIC_LITERAL {
+	if nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL {
 		// Line 905: literal.setValue(((BLangLiteral) constantNode.expr).value);
 		constantExprLiteral := constantNode.Expr.(*BLangLiteral)
 		literal.SetValue(constantExprLiteral.GetValue())
@@ -1914,9 +1913,9 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	// Line 926: typeDef.setName(anonTypeGenName);
 	typeDef.SetName(&anonTypeGenName)
 	// Line 927: typeDef.flagSet.add(Flag.PUBLIC);
-	typeDef.AddFlag(Flag_PUBLIC)
+	typeDef.AddFlag(model.Flag_PUBLIC)
 	// Line 928: typeDef.flagSet.add(Flag.ANONYMOUS);
-	typeDef.AddFlag(Flag_ANONYMOUS)
+	typeDef.AddFlag(model.Flag_ANONYMOUS)
 	// Line 929: typeDef.typeNode = finiteTypeNode;
 	typeDef.SetTypeNode(finiteTypeNode)
 	// Line 930: typeDef.pos = pos;
@@ -1965,7 +1964,7 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 	}
 
 	// Line 3304: simpleVar.flagSet.add(Flag.REQUIRED_PARAM);
-	simpleVar.FlagSet.Add(Flag_REQUIRED_PARAM)
+	simpleVar.FlagSet.Add(model.Flag_REQUIRED_PARAM)
 
 	// Line 3305: return simpleVar;
 	return simpleVar
@@ -2819,58 +2818,58 @@ func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken)
 	panic("TransformIdentifierToken unimplemented")
 }
 
-func stringToTypeKind(typeText string) TypeKind {
+func stringToTypeKind(typeText string) model.TypeKind {
 	switch typeText {
 	case "int":
-		return TypeKind_INT
+		return model.TypeKind_INT
 	case "byte":
-		return TypeKind_BYTE
+		return model.TypeKind_BYTE
 	case "float":
-		return TypeKind_FLOAT
+		return model.TypeKind_FLOAT
 	case "decimal":
-		return TypeKind_DECIMAL
+		return model.TypeKind_DECIMAL
 	case "boolean":
-		return TypeKind_BOOLEAN
+		return model.TypeKind_BOOLEAN
 	case "string":
-		return TypeKind_STRING
+		return model.TypeKind_STRING
 	case "json":
-		return TypeKind_JSON
+		return model.TypeKind_JSON
 	case "xml":
-		return TypeKind_XML
+		return model.TypeKind_XML
 	case "stream":
-		return TypeKind_STREAM
+		return model.TypeKind_STREAM
 	case "table":
-		return TypeKind_TABLE
+		return model.TypeKind_TABLE
 	case "any":
-		return TypeKind_ANY
+		return model.TypeKind_ANY
 	case "anydata":
-		return TypeKind_ANYDATA
+		return model.TypeKind_ANYDATA
 	case "map":
-		return TypeKind_MAP
+		return model.TypeKind_MAP
 	case "future":
-		return TypeKind_FUTURE
+		return model.TypeKind_FUTURE
 	case "typedesc":
-		return TypeKind_TYPEDESC
+		return model.TypeKind_TYPEDESC
 	case "error":
-		return TypeKind_ERROR
+		return model.TypeKind_ERROR
 	case "()", "null":
-		return TypeKind_NIL
+		return model.TypeKind_NIL
 	case "never":
-		return TypeKind_NEVER
+		return model.TypeKind_NEVER
 	case "channel":
-		return TypeKind_CHANNEL
+		return model.TypeKind_CHANNEL
 	case "service":
-		return TypeKind_SERVICE
+		return model.TypeKind_SERVICE
 	case "handle":
-		return TypeKind_HANDLE
+		return model.TypeKind_HANDLE
 	case "readonly":
-		return TypeKind_READONLY
+		return model.TypeKind_READONLY
 	default:
 		panic("stringToTypeKind: invalid type name: " + typeText)
 	}
 }
 
-func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) TypeNode {
+func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeNode {
 	userDefinedType := BLangUserDefinedType{}
 	userDefinedType.pos = pos
 	userDefinedType.PkgAlias = pkgAlias
@@ -2882,7 +2881,7 @@ func getNextMissingNodeName(pkgID model.PackageID) string {
 	panic("getNextMissingNodeName unimplemented")
 }
 
-func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos Location) VariableNode {
+func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos Location) model.VariableNode {
 	var varName tree.Token
 	switch bindingPattern.Kind() {
 	case common.MAPPING_BINDING_PATTERN, common.LIST_BINDING_PATTERN, common.ERROR_BINDING_PATTERN, common.REST_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:

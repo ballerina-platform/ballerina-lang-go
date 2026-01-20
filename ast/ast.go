@@ -26,296 +26,6 @@ import (
 	"strings"
 )
 
-type NodeKind = model.NodeKind
-type DocumentationReferenceType = model.DocumentationReferenceType
-
-// NodeKind constants - aliases to model package
-const (
-	NodeKind_ANNOTATION                          = model.NodeKind_ANNOTATION
-	NodeKind_ANNOTATION_ATTACHMENT               = model.NodeKind_ANNOTATION_ATTACHMENT
-	NodeKind_ANNOTATION_ATTRIBUTE                = model.NodeKind_ANNOTATION_ATTRIBUTE
-	NodeKind_COMPILATION_UNIT                    = model.NodeKind_COMPILATION_UNIT
-	NodeKind_DEPRECATED                          = model.NodeKind_DEPRECATED
-	NodeKind_DOCUMENTATION                       = model.NodeKind_DOCUMENTATION
-	NodeKind_MARKDOWN_DOCUMENTATION              = model.NodeKind_MARKDOWN_DOCUMENTATION
-	NodeKind_ENDPOINT                            = model.NodeKind_ENDPOINT
-	NodeKind_FUNCTION                            = model.NodeKind_FUNCTION
-	NodeKind_RESOURCE_FUNC                       = model.NodeKind_RESOURCE_FUNC
-	NodeKind_BLOCK_FUNCTION_BODY                 = model.NodeKind_BLOCK_FUNCTION_BODY
-	NodeKind_EXPR_FUNCTION_BODY                  = model.NodeKind_EXPR_FUNCTION_BODY
-	NodeKind_EXTERN_FUNCTION_BODY                = model.NodeKind_EXTERN_FUNCTION_BODY
-	NodeKind_IDENTIFIER                          = model.NodeKind_IDENTIFIER
-	NodeKind_IMPORT                              = model.NodeKind_IMPORT
-	NodeKind_PACKAGE                             = model.NodeKind_PACKAGE
-	NodeKind_PACKAGE_DECLARATION                 = model.NodeKind_PACKAGE_DECLARATION
-	NodeKind_RECORD_LITERAL_KEY_VALUE            = model.NodeKind_RECORD_LITERAL_KEY_VALUE
-	NodeKind_RECORD_LITERAL_SPREAD_OP            = model.NodeKind_RECORD_LITERAL_SPREAD_OP
-	NodeKind_RESOURCE                            = model.NodeKind_RESOURCE
-	NodeKind_SERVICE                             = model.NodeKind_SERVICE
-	NodeKind_TYPE_DEFINITION                     = model.NodeKind_TYPE_DEFINITION
-	NodeKind_VARIABLE                            = model.NodeKind_VARIABLE
-	NodeKind_LET_VARIABLE                        = model.NodeKind_LET_VARIABLE
-	NodeKind_TUPLE_VARIABLE                      = model.NodeKind_TUPLE_VARIABLE
-	NodeKind_RECORD_VARIABLE                     = model.NodeKind_RECORD_VARIABLE
-	NodeKind_ERROR_VARIABLE                      = model.NodeKind_ERROR_VARIABLE
-	NodeKind_WORKER                              = model.NodeKind_WORKER
-	NodeKind_XMLNS                               = model.NodeKind_XMLNS
-	NodeKind_CHANNEL                             = model.NodeKind_CHANNEL
-	NodeKind_WAIT_LITERAL_KEY_VALUE              = model.NodeKind_WAIT_LITERAL_KEY_VALUE
-	NodeKind_TABLE_KEY_SPECIFIER                 = model.NodeKind_TABLE_KEY_SPECIFIER
-	NodeKind_TABLE_KEY_TYPE_CONSTRAINT           = model.NodeKind_TABLE_KEY_TYPE_CONSTRAINT
-	NodeKind_RETRY_SPEC                          = model.NodeKind_RETRY_SPEC
-	NodeKind_CLASS_DEFN                          = model.NodeKind_CLASS_DEFN
-	NodeKind_DOCUMENTATION_ATTRIBUTE             = model.NodeKind_DOCUMENTATION_ATTRIBUTE
-	NodeKind_ARRAY_LITERAL_EXPR                  = model.NodeKind_ARRAY_LITERAL_EXPR
-	NodeKind_TUPLE_LITERAL_EXPR                  = model.NodeKind_TUPLE_LITERAL_EXPR
-	NodeKind_LIST_CONSTRUCTOR_EXPR               = model.NodeKind_LIST_CONSTRUCTOR_EXPR
-	NodeKind_LIST_CONSTRUCTOR_SPREAD_OP          = model.NodeKind_LIST_CONSTRUCTOR_SPREAD_OP
-	NodeKind_BINARY_EXPR                         = model.NodeKind_BINARY_EXPR
-	NodeKind_QUERY_EXPR                          = model.NodeKind_QUERY_EXPR
-	NodeKind_ELVIS_EXPR                          = model.NodeKind_ELVIS_EXPR
-	NodeKind_GROUP_EXPR                          = model.NodeKind_GROUP_EXPR
-	NodeKind_TYPE_INIT_EXPR                      = model.NodeKind_TYPE_INIT_EXPR
-	NodeKind_FIELD_BASED_ACCESS_EXPR             = model.NodeKind_FIELD_BASED_ACCESS_EXPR
-	NodeKind_INDEX_BASED_ACCESS_EXPR             = model.NodeKind_INDEX_BASED_ACCESS_EXPR
-	NodeKind_INT_RANGE_EXPR                      = model.NodeKind_INT_RANGE_EXPR
-	NodeKind_INVOCATION                          = model.NodeKind_INVOCATION
-	NodeKind_COLLECT_CONTEXT_INVOCATION          = model.NodeKind_COLLECT_CONTEXT_INVOCATION
-	NodeKind_LAMBDA                              = model.NodeKind_LAMBDA
-	NodeKind_ARROW_EXPR                          = model.NodeKind_ARROW_EXPR
-	NodeKind_LITERAL                             = model.NodeKind_LITERAL
-	NodeKind_NUMERIC_LITERAL                     = model.NodeKind_NUMERIC_LITERAL
-	NodeKind_HEX_FLOATING_POINT_LITERAL          = model.NodeKind_HEX_FLOATING_POINT_LITERAL
-	NodeKind_INTEGER_LITERAL                     = model.NodeKind_INTEGER_LITERAL
-	NodeKind_DECIMAL_FLOATING_POINT_LITERAL      = model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL
-	NodeKind_CONSTANT                            = model.NodeKind_CONSTANT
-	NodeKind_RECORD_LITERAL_EXPR                 = model.NodeKind_RECORD_LITERAL_EXPR
-	NodeKind_SIMPLE_VARIABLE_REF                 = model.NodeKind_SIMPLE_VARIABLE_REF
-	NodeKind_CONSTANT_REF                        = model.NodeKind_CONSTANT_REF
-	NodeKind_TUPLE_VARIABLE_REF                  = model.NodeKind_TUPLE_VARIABLE_REF
-	NodeKind_RECORD_VARIABLE_REF                 = model.NodeKind_RECORD_VARIABLE_REF
-	NodeKind_ERROR_VARIABLE_REF                  = model.NodeKind_ERROR_VARIABLE_REF
-	NodeKind_STRING_TEMPLATE_LITERAL             = model.NodeKind_STRING_TEMPLATE_LITERAL
-	NodeKind_RAW_TEMPLATE_LITERAL                = model.NodeKind_RAW_TEMPLATE_LITERAL
-	NodeKind_TERNARY_EXPR                        = model.NodeKind_TERNARY_EXPR
-	NodeKind_WAIT_EXPR                           = model.NodeKind_WAIT_EXPR
-	NodeKind_TRAP_EXPR                           = model.NodeKind_TRAP_EXPR
-	NodeKind_TYPEDESC_EXPRESSION                 = model.NodeKind_TYPEDESC_EXPRESSION
-	NodeKind_ANNOT_ACCESS_EXPRESSION             = model.NodeKind_ANNOT_ACCESS_EXPRESSION
-	NodeKind_TYPE_CONVERSION_EXPR                = model.NodeKind_TYPE_CONVERSION_EXPR
-	NodeKind_IS_ASSIGNABLE_EXPR                  = model.NodeKind_IS_ASSIGNABLE_EXPR
-	NodeKind_UNARY_EXPR                          = model.NodeKind_UNARY_EXPR
-	NodeKind_REST_ARGS_EXPR                      = model.NodeKind_REST_ARGS_EXPR
-	NodeKind_NAMED_ARGS_EXPR                     = model.NodeKind_NAMED_ARGS_EXPR
-	NodeKind_XML_QNAME                           = model.NodeKind_XML_QNAME
-	NodeKind_XML_ATTRIBUTE                       = model.NodeKind_XML_ATTRIBUTE
-	NodeKind_XML_ATTRIBUTE_ACCESS_EXPR           = model.NodeKind_XML_ATTRIBUTE_ACCESS_EXPR
-	NodeKind_XML_QUOTED_STRING                   = model.NodeKind_XML_QUOTED_STRING
-	NodeKind_XML_ELEMENT_LITERAL                 = model.NodeKind_XML_ELEMENT_LITERAL
-	NodeKind_XML_TEXT_LITERAL                    = model.NodeKind_XML_TEXT_LITERAL
-	NodeKind_XML_COMMENT_LITERAL                 = model.NodeKind_XML_COMMENT_LITERAL
-	NodeKind_XML_PI_LITERAL                      = model.NodeKind_XML_PI_LITERAL
-	NodeKind_XML_SEQUENCE_LITERAL                = model.NodeKind_XML_SEQUENCE_LITERAL
-	NodeKind_XML_ELEMENT_FILTER_EXPR             = model.NodeKind_XML_ELEMENT_FILTER_EXPR
-	NodeKind_XML_ELEMENT_ACCESS                  = model.NodeKind_XML_ELEMENT_ACCESS
-	NodeKind_XML_NAVIGATION                      = model.NodeKind_XML_NAVIGATION
-	NodeKind_XML_EXTENDED_NAVIGATION             = model.NodeKind_XML_EXTENDED_NAVIGATION
-	NodeKind_XML_STEP_INDEXED_EXTEND             = model.NodeKind_XML_STEP_INDEXED_EXTEND
-	NodeKind_XML_STEP_FILTER_EXTEND              = model.NodeKind_XML_STEP_FILTER_EXTEND
-	NodeKind_XML_STEP_METHOD_CALL_EXTEND         = model.NodeKind_XML_STEP_METHOD_CALL_EXTEND
-	NodeKind_STATEMENT_EXPRESSION                = model.NodeKind_STATEMENT_EXPRESSION
-	NodeKind_MATCH_EXPRESSION                    = model.NodeKind_MATCH_EXPRESSION
-	NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE     = model.NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE
-	NodeKind_CHECK_EXPR                          = model.NodeKind_CHECK_EXPR
-	NodeKind_CHECK_PANIC_EXPR                    = model.NodeKind_CHECK_PANIC_EXPR
-	NodeKind_FAIL                                = model.NodeKind_FAIL
-	NodeKind_TYPE_TEST_EXPR                      = model.NodeKind_TYPE_TEST_EXPR
-	NodeKind_IS_LIKE                             = model.NodeKind_IS_LIKE
-	NodeKind_IGNORE_EXPR                         = model.NodeKind_IGNORE_EXPR
-	NodeKind_DOCUMENTATION_DESCRIPTION           = model.NodeKind_DOCUMENTATION_DESCRIPTION
-	NodeKind_DOCUMENTATION_PARAMETER             = model.NodeKind_DOCUMENTATION_PARAMETER
-	NodeKind_DOCUMENTATION_REFERENCE             = model.NodeKind_DOCUMENTATION_REFERENCE
-	NodeKind_DOCUMENTATION_DEPRECATION           = model.NodeKind_DOCUMENTATION_DEPRECATION
-	NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS = model.NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
-	NodeKind_SERVICE_CONSTRUCTOR                 = model.NodeKind_SERVICE_CONSTRUCTOR
-	NodeKind_LET_EXPR                            = model.NodeKind_LET_EXPR
-	NodeKind_TABLE_CONSTRUCTOR_EXPR              = model.NodeKind_TABLE_CONSTRUCTOR_EXPR
-	NodeKind_TRANSACTIONAL_EXPRESSION            = model.NodeKind_TRANSACTIONAL_EXPRESSION
-	NodeKind_OBJECT_CTOR_EXPRESSION              = model.NodeKind_OBJECT_CTOR_EXPRESSION
-	NodeKind_ERROR_CONSTRUCTOR_EXPRESSION        = model.NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
-	NodeKind_DYNAMIC_PARAM_EXPR                  = model.NodeKind_DYNAMIC_PARAM_EXPR
-	NodeKind_INFER_TYPEDESC_EXPR                 = model.NodeKind_INFER_TYPEDESC_EXPR
-	NodeKind_REG_EXP_TEMPLATE_LITERAL            = model.NodeKind_REG_EXP_TEMPLATE_LITERAL
-	NodeKind_REG_EXP_DISJUNCTION                 = model.NodeKind_REG_EXP_DISJUNCTION
-	NodeKind_REG_EXP_SEQUENCE                    = model.NodeKind_REG_EXP_SEQUENCE
-	NodeKind_REG_EXP_ATOM_CHAR_ESCAPE            = model.NodeKind_REG_EXP_ATOM_CHAR_ESCAPE
-	NodeKind_REG_EXP_ATOM_QUANTIFIER             = model.NodeKind_REG_EXP_ATOM_QUANTIFIER
-	NodeKind_REG_EXP_CHARACTER_CLASS             = model.NodeKind_REG_EXP_CHARACTER_CLASS
-	NodeKind_REG_EXP_CHAR_SET                    = model.NodeKind_REG_EXP_CHAR_SET
-	NodeKind_REG_EXP_CHAR_SET_RANGE              = model.NodeKind_REG_EXP_CHAR_SET_RANGE
-	NodeKind_REG_EXP_QUANTIFIER                  = model.NodeKind_REG_EXP_QUANTIFIER
-	NodeKind_REG_EXP_ASSERTION                   = model.NodeKind_REG_EXP_ASSERTION
-	NodeKind_REG_EXP_CAPTURING_GROUP             = model.NodeKind_REG_EXP_CAPTURING_GROUP
-	NodeKind_REG_EXP_FLAG_EXPR                   = model.NodeKind_REG_EXP_FLAG_EXPR
-	NodeKind_REG_EXP_FLAGS_ON_OFF                = model.NodeKind_REG_EXP_FLAGS_ON_OFF
-	NodeKind_NATURAL_EXPR                        = model.NodeKind_NATURAL_EXPR
-	NodeKind_ABORT                               = model.NodeKind_ABORT
-	NodeKind_DONE                                = model.NodeKind_DONE
-	NodeKind_RETRY                               = model.NodeKind_RETRY
-	NodeKind_RETRY_TRANSACTION                   = model.NodeKind_RETRY_TRANSACTION
-	NodeKind_ASSIGNMENT                          = model.NodeKind_ASSIGNMENT
-	NodeKind_COMPOUND_ASSIGNMENT                 = model.NodeKind_COMPOUND_ASSIGNMENT
-	NodeKind_POST_INCREMENT                      = model.NodeKind_POST_INCREMENT
-	NodeKind_BLOCK                               = model.NodeKind_BLOCK
-	NodeKind_BREAK                               = model.NodeKind_BREAK
-	NodeKind_NEXT                                = model.NodeKind_NEXT
-	NodeKind_EXPRESSION_STATEMENT                = model.NodeKind_EXPRESSION_STATEMENT
-	NodeKind_FOREACH                             = model.NodeKind_FOREACH
-	NodeKind_FORK_JOIN                           = model.NodeKind_FORK_JOIN
-	NodeKind_IF                                  = model.NodeKind_IF
-	NodeKind_MATCH                               = model.NodeKind_MATCH
-	NodeKind_MATCH_STATEMENT                     = model.NodeKind_MATCH_STATEMENT
-	NodeKind_MATCH_TYPED_PATTERN_CLAUSE          = model.NodeKind_MATCH_TYPED_PATTERN_CLAUSE
-	NodeKind_MATCH_STATIC_PATTERN_CLAUSE         = model.NodeKind_MATCH_STATIC_PATTERN_CLAUSE
-	NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE     = model.NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE
-	NodeKind_REPLY                               = model.NodeKind_REPLY
-	NodeKind_RETURN                              = model.NodeKind_RETURN
-	NodeKind_THROW                               = model.NodeKind_THROW
-	NodeKind_PANIC                               = model.NodeKind_PANIC
-	NodeKind_TRANSACTION                         = model.NodeKind_TRANSACTION
-	NodeKind_TRANSFORM                           = model.NodeKind_TRANSFORM
-	NodeKind_TUPLE_DESTRUCTURE                   = model.NodeKind_TUPLE_DESTRUCTURE
-	NodeKind_RECORD_DESTRUCTURE                  = model.NodeKind_RECORD_DESTRUCTURE
-	NodeKind_ERROR_DESTRUCTURE                   = model.NodeKind_ERROR_DESTRUCTURE
-	NodeKind_VARIABLE_DEF                        = model.NodeKind_VARIABLE_DEF
-	NodeKind_WHILE                               = model.NodeKind_WHILE
-	NodeKind_LOCK                                = model.NodeKind_LOCK
-	NodeKind_WORKER_RECEIVE                      = model.NodeKind_WORKER_RECEIVE
-	NodeKind_ALTERNATE_WORKER_RECEIVE            = model.NodeKind_ALTERNATE_WORKER_RECEIVE
-	NodeKind_MULTIPLE_WORKER_RECEIVE             = model.NodeKind_MULTIPLE_WORKER_RECEIVE
-	NodeKind_WORKER_ASYNC_SEND                   = model.NodeKind_WORKER_ASYNC_SEND
-	NodeKind_WORKER_SYNC_SEND                    = model.NodeKind_WORKER_SYNC_SEND
-	NodeKind_WORKER_FLUSH                        = model.NodeKind_WORKER_FLUSH
-	NodeKind_STREAM                              = model.NodeKind_STREAM
-	NodeKind_SCOPE                               = model.NodeKind_SCOPE
-	NodeKind_COMPENSATE                          = model.NodeKind_COMPENSATE
-	NodeKind_CHANNEL_RECEIVE                     = model.NodeKind_CHANNEL_RECEIVE
-	NodeKind_CHANNEL_SEND                        = model.NodeKind_CHANNEL_SEND
-	NodeKind_DO_ACTION                           = model.NodeKind_DO_ACTION
-	NodeKind_COMMIT                              = model.NodeKind_COMMIT
-	NodeKind_ROLLBACK                            = model.NodeKind_ROLLBACK
-	NodeKind_DO_STMT                             = model.NodeKind_DO_STMT
-	NodeKind_SELECT                              = model.NodeKind_SELECT
-	NodeKind_COLLECT                             = model.NodeKind_COLLECT
-	NodeKind_FROM                                = model.NodeKind_FROM
-	NodeKind_JOIN                                = model.NodeKind_JOIN
-	NodeKind_WHERE                               = model.NodeKind_WHERE
-	NodeKind_DO                                  = model.NodeKind_DO
-	NodeKind_LET_CLAUSE                          = model.NodeKind_LET_CLAUSE
-	NodeKind_ON_CONFLICT                         = model.NodeKind_ON_CONFLICT
-	NodeKind_ON                                  = model.NodeKind_ON
-	NodeKind_LIMIT                               = model.NodeKind_LIMIT
-	NodeKind_ORDER_BY                            = model.NodeKind_ORDER_BY
-	NodeKind_ORDER_KEY                           = model.NodeKind_ORDER_KEY
-	NodeKind_GROUP_BY                            = model.NodeKind_GROUP_BY
-	NodeKind_GROUPING_KEY                        = model.NodeKind_GROUPING_KEY
-	NodeKind_ON_FAIL                             = model.NodeKind_ON_FAIL
-	NodeKind_MATCH_CLAUSE                        = model.NodeKind_MATCH_CLAUSE
-	NodeKind_MATCH_GUARD                         = model.NodeKind_MATCH_GUARD
-	NodeKind_CONST_MATCH_PATTERN                 = model.NodeKind_CONST_MATCH_PATTERN
-	NodeKind_WILDCARD_MATCH_PATTERN              = model.NodeKind_WILDCARD_MATCH_PATTERN
-	NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN   = model.NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN
-	NodeKind_LIST_MATCH_PATTERN                  = model.NodeKind_LIST_MATCH_PATTERN
-	NodeKind_REST_MATCH_PATTERN                  = model.NodeKind_REST_MATCH_PATTERN
-	NodeKind_MAPPING_MATCH_PATTERN               = model.NodeKind_MAPPING_MATCH_PATTERN
-	NodeKind_FIELD_MATCH_PATTERN                 = model.NodeKind_FIELD_MATCH_PATTERN
-	NodeKind_ERROR_MATCH_PATTERN                 = model.NodeKind_ERROR_MATCH_PATTERN
-	NodeKind_ERROR_MESSAGE_MATCH_PATTERN         = model.NodeKind_ERROR_MESSAGE_MATCH_PATTERN
-	NodeKind_ERROR_CAUSE_MATCH_PATTERN           = model.NodeKind_ERROR_CAUSE_MATCH_PATTERN
-	NodeKind_ERROR_FIELD_MATCH_PATTERN           = model.NodeKind_ERROR_FIELD_MATCH_PATTERN
-	NodeKind_NAMED_ARG_MATCH_PATTERN             = model.NodeKind_NAMED_ARG_MATCH_PATTERN
-	NodeKind_SIMPLE_MATCH_PATTERN                = model.NodeKind_SIMPLE_MATCH_PATTERN
-	NodeKind_WILDCARD_BINDING_PATTERN            = model.NodeKind_WILDCARD_BINDING_PATTERN
-	NodeKind_CAPTURE_BINDING_PATTERN             = model.NodeKind_CAPTURE_BINDING_PATTERN
-	NodeKind_LIST_BINDING_PATTERN                = model.NodeKind_LIST_BINDING_PATTERN
-	NodeKind_REST_BINDING_PATTERN                = model.NodeKind_REST_BINDING_PATTERN
-	NodeKind_FIELD_BINDING_PATTERN               = model.NodeKind_FIELD_BINDING_PATTERN
-	NodeKind_MAPPING_BINDING_PATTERN             = model.NodeKind_MAPPING_BINDING_PATTERN
-	NodeKind_ERROR_BINDING_PATTERN               = model.NodeKind_ERROR_BINDING_PATTERN
-	NodeKind_ERROR_MESSAGE_BINDING_PATTERN       = model.NodeKind_ERROR_MESSAGE_BINDING_PATTERN
-	NodeKind_ERROR_CAUSE_BINDING_PATTERN         = model.NodeKind_ERROR_CAUSE_BINDING_PATTERN
-	NodeKind_ERROR_FIELD_BINDING_PATTERN         = model.NodeKind_ERROR_FIELD_BINDING_PATTERN
-	NodeKind_NAMED_ARG_BINDING_PATTERN           = model.NodeKind_NAMED_ARG_BINDING_PATTERN
-	NodeKind_SIMPLE_BINDING_PATTERN              = model.NodeKind_SIMPLE_BINDING_PATTERN
-	NodeKind_ARRAY_TYPE                          = model.NodeKind_ARRAY_TYPE
-	NodeKind_UNION_TYPE_NODE                     = model.NodeKind_UNION_TYPE_NODE
-	NodeKind_INTERSECTION_TYPE_NODE              = model.NodeKind_INTERSECTION_TYPE_NODE
-	NodeKind_FINITE_TYPE_NODE                    = model.NodeKind_FINITE_TYPE_NODE
-	NodeKind_TUPLE_TYPE_NODE                     = model.NodeKind_TUPLE_TYPE_NODE
-	NodeKind_BUILT_IN_REF_TYPE                   = model.NodeKind_BUILT_IN_REF_TYPE
-	NodeKind_CONSTRAINED_TYPE                    = model.NodeKind_CONSTRAINED_TYPE
-	NodeKind_FUNCTION_TYPE                       = model.NodeKind_FUNCTION_TYPE
-	NodeKind_USER_DEFINED_TYPE                   = model.NodeKind_USER_DEFINED_TYPE
-	NodeKind_VALUE_TYPE                          = model.NodeKind_VALUE_TYPE
-	NodeKind_RECORD_TYPE                         = model.NodeKind_RECORD_TYPE
-	NodeKind_OBJECT_TYPE                         = model.NodeKind_OBJECT_TYPE
-	NodeKind_ERROR_TYPE                          = model.NodeKind_ERROR_TYPE
-	NodeKind_STREAM_TYPE                         = model.NodeKind_STREAM_TYPE
-	NodeKind_TABLE_TYPE                          = model.NodeKind_TABLE_TYPE
-	NodeKind_NODE_ENTRY                          = model.NodeKind_NODE_ENTRY
-	NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT    = model.NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	NodeKind_RESOURCE_PATH_PARAM_SEGMENT         = model.NodeKind_RESOURCE_PATH_PARAM_SEGMENT
-	NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT    = model.NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	NodeKind_RESOURCE_ROOT_PATH_SEGMENT          = model.NodeKind_RESOURCE_ROOT_PATH_SEGMENT
-)
-
-type Flag = model.Flag
-
-// Flag constants - aliases to model package
-const (
-	Flag_PUBLIC            = model.Flag_PUBLIC
-	Flag_PRIVATE           = model.Flag_PRIVATE
-	Flag_REMOTE            = model.Flag_REMOTE
-	Flag_TRANSACTIONAL     = model.Flag_TRANSACTIONAL
-	Flag_NATIVE            = model.Flag_NATIVE
-	Flag_FINAL             = model.Flag_FINAL
-	Flag_ATTACHED          = model.Flag_ATTACHED
-	Flag_LAMBDA            = model.Flag_LAMBDA
-	Flag_WORKER            = model.Flag_WORKER
-	Flag_PARALLEL          = model.Flag_PARALLEL
-	Flag_LISTENER          = model.Flag_LISTENER
-	Flag_READONLY          = model.Flag_READONLY
-	Flag_FUNCTION_FINAL    = model.Flag_FUNCTION_FINAL
-	Flag_INTERFACE         = model.Flag_INTERFACE
-	Flag_REQUIRED          = model.Flag_REQUIRED
-	Flag_RECORD            = model.Flag_RECORD
-	Flag_ANONYMOUS         = model.Flag_ANONYMOUS
-	Flag_OPTIONAL          = model.Flag_OPTIONAL
-	Flag_TESTABLE          = model.Flag_TESTABLE
-	Flag_CLIENT            = model.Flag_CLIENT
-	Flag_RESOURCE          = model.Flag_RESOURCE
-	Flag_ISOLATED          = model.Flag_ISOLATED
-	Flag_SERVICE           = model.Flag_SERVICE
-	Flag_CONSTANT          = model.Flag_CONSTANT
-	Flag_TYPE_PARAM        = model.Flag_TYPE_PARAM
-	Flag_LANG_LIB          = model.Flag_LANG_LIB
-	Flag_FORKED            = model.Flag_FORKED
-	Flag_DISTINCT          = model.Flag_DISTINCT
-	Flag_CLASS             = model.Flag_CLASS
-	Flag_CONFIGURABLE      = model.Flag_CONFIGURABLE
-	Flag_OBJECT_CTOR       = model.Flag_OBJECT_CTOR
-	Flag_ENUM              = model.Flag_ENUM
-	Flag_INCLUDED          = model.Flag_INCLUDED
-	Flag_REQUIRED_PARAM    = model.Flag_REQUIRED_PARAM
-	Flag_DEFAULTABLE_PARAM = model.Flag_DEFAULTABLE_PARAM
-	Flag_REST_PARAM        = model.Flag_REST_PARAM
-	Flag_FIELD             = model.Flag_FIELD
-	Flag_ANY_FUNCTION      = model.Flag_ANY_FUNCTION
-	Flag_NEVER_ALLOWED     = model.Flag_NEVER_ALLOWED
-	Flag_ENUM_MEMBER       = model.Flag_ENUM_MEMBER
-	Flag_QUERY_LAMBDA      = model.Flag_QUERY_LAMBDA
-)
-
 type Flags uint64
 
 const (
@@ -376,7 +86,7 @@ const (
 	Flags_SOURCE_ANNOTATION  = Flags_EFFECTIVE_TYPE_DEF << 1 //  44
 )
 
-func AsMask(flagSet common.Set[Flag]) Flags {
+func AsMask(flagSet common.Set[model.Flag]) Flags {
 	mask := Flags(0)
 	for flag := range flagSet.Values() {
 		mask |= Flags(flag)
@@ -384,94 +94,94 @@ func AsMask(flagSet common.Set[Flag]) Flags {
 	return mask
 }
 
-func flagToFlagsBit(flag Flag) Flags {
+func flagToFlagsBit(flag model.Flag) Flags {
 	switch flag {
-	case Flag_PUBLIC:
+	case model.Flag_PUBLIC:
 		return Flags_PUBLIC
-	case Flag_PRIVATE:
+	case model.Flag_PRIVATE:
 		return Flags_PRIVATE
-	case Flag_REMOTE:
+	case model.Flag_REMOTE:
 		return Flags_REMOTE
-	case Flag_TRANSACTIONAL:
+	case model.Flag_TRANSACTIONAL:
 		return Flags_TRANSACTIONAL
-	case Flag_NATIVE:
+	case model.Flag_NATIVE:
 		return Flags_NATIVE
-	case Flag_FINAL:
+	case model.Flag_FINAL:
 		return Flags_FINAL
-	case Flag_ATTACHED:
+	case model.Flag_ATTACHED:
 		return Flags_ATTACHED
-	case Flag_LAMBDA:
+	case model.Flag_LAMBDA:
 		return Flags_LAMBDA
-	case Flag_WORKER:
+	case model.Flag_WORKER:
 		return Flags_WORKER
-	case Flag_LISTENER:
+	case model.Flag_LISTENER:
 		return Flags_LISTENER
-	case Flag_READONLY:
+	case model.Flag_READONLY:
 		return Flags_READONLY
-	case Flag_FUNCTION_FINAL:
+	case model.Flag_FUNCTION_FINAL:
 		return Flags_FUNCTION_FINAL
-	case Flag_INTERFACE:
+	case model.Flag_INTERFACE:
 		return Flags_INTERFACE
-	case Flag_REQUIRED:
+	case model.Flag_REQUIRED:
 		return Flags_REQUIRED
-	case Flag_RECORD:
+	case model.Flag_RECORD:
 		return Flags_RECORD
-	case Flag_ANONYMOUS:
+	case model.Flag_ANONYMOUS:
 		return Flags_ANONYMOUS
-	case Flag_OPTIONAL:
+	case model.Flag_OPTIONAL:
 		return Flags_OPTIONAL
-	case Flag_TESTABLE:
+	case model.Flag_TESTABLE:
 		return Flags_TESTABLE
-	case Flag_CLIENT:
+	case model.Flag_CLIENT:
 		return Flags_CLIENT
-	case Flag_RESOURCE:
+	case model.Flag_RESOURCE:
 		return Flags_RESOURCE
-	case Flag_ISOLATED:
+	case model.Flag_ISOLATED:
 		return Flags_ISOLATED
-	case Flag_SERVICE:
+	case model.Flag_SERVICE:
 		return Flags_SERVICE
-	case Flag_CONSTANT:
+	case model.Flag_CONSTANT:
 		return Flags_CONSTANT
-	case Flag_TYPE_PARAM:
+	case model.Flag_TYPE_PARAM:
 		return Flags_TYPE_PARAM
-	case Flag_LANG_LIB:
+	case model.Flag_LANG_LIB:
 		return Flags_LANG_LIB
-	case Flag_FORKED:
+	case model.Flag_FORKED:
 		return Flags_FORKED
-	case Flag_DISTINCT:
+	case model.Flag_DISTINCT:
 		return Flags_DISTINCT
-	case Flag_CLASS:
+	case model.Flag_CLASS:
 		return Flags_CLASS
-	case Flag_CONFIGURABLE:
+	case model.Flag_CONFIGURABLE:
 		return Flags_CONFIGURABLE
-	case Flag_OBJECT_CTOR:
+	case model.Flag_OBJECT_CTOR:
 		return Flags_OBJECT_CTOR
-	case Flag_ENUM:
+	case model.Flag_ENUM:
 		return Flags_ENUM
-	case Flag_INCLUDED:
+	case model.Flag_INCLUDED:
 		return Flags_INCLUDED
-	case Flag_REQUIRED_PARAM:
+	case model.Flag_REQUIRED_PARAM:
 		return Flags_REQUIRED_PARAM
-	case Flag_DEFAULTABLE_PARAM:
+	case model.Flag_DEFAULTABLE_PARAM:
 		return Flags_DEFAULTABLE_PARAM
-	case Flag_REST_PARAM:
+	case model.Flag_REST_PARAM:
 		return Flags_REST_PARAM
-	case Flag_FIELD:
+	case model.Flag_FIELD:
 		return Flags_FIELD
-	case Flag_ANY_FUNCTION:
+	case model.Flag_ANY_FUNCTION:
 		return Flags_ANY_FUNCTION
-	case Flag_ENUM_MEMBER:
+	case model.Flag_ENUM_MEMBER:
 		return Flags_ENUM_MEMBER
-	case Flag_QUERY_LAMBDA:
+	case model.Flag_QUERY_LAMBDA:
 		return Flags_QUERY_LAMBDA
 	default:
 		return 0
 	}
 }
 
-func UnMask(mask Flags) common.Set[Flag] {
-	flagSet := common.UnorderedSet[Flag]{}
-	for flag := Flag_PUBLIC; flag <= Flag_QUERY_LAMBDA; flag++ {
+func UnMask(mask Flags) common.Set[model.Flag] {
+	flagSet := common.UnorderedSet[model.Flag]{}
+	for flag := model.Flag_PUBLIC; flag <= model.Flag_QUERY_LAMBDA; flag++ {
 		flagVal := flagToFlagsBit(flag)
 		if flagVal != 0 && (mask&flagVal) == flagVal {
 			flagSet.Add(flag)
@@ -534,47 +244,20 @@ const (
 
 type Location = diagnostics.Location
 
-// Type aliases for model interfaces
-type (
-	Node                      = model.Node
-	IdentifierNode            = model.IdentifierNode
-	AnnotationAttachmentNode  = model.AnnotationAttachmentNode
-	TopLevelNode              = model.TopLevelNode
-	FunctionBodyNode          = model.FunctionBodyNode
-	ExprFunctionBodyNode      = model.ExprFunctionBodyNode
-	DocumentableNode          = model.DocumentableNode
-	MarkdownDocumentationNode = model.MarkdownDocumentationNode
-	AnnotatableNode           = model.AnnotatableNode
-	OrderedNode               = model.OrderedNode
-	VariableNode              = model.VariableNode
-	SimpleVariableNode        = model.SimpleVariableNode
-	InvokableNode             = model.InvokableNode
-	FunctionNode              = model.FunctionNode
-	ClassDefinition           = model.ClassDefinition
-	ServiceNode               = model.ServiceNode
-	CompilationUnitNode       = model.CompilationUnitNode
-	ConstantNode              = model.ConstantNode
-	TypeDefinition            = model.TypeDefinition
-	PackageNode               = model.PackageNode
-	ImportPackageNode         = model.ImportPackageNode
-	XMLNSDeclarationNode      = model.XMLNSDeclarationNode
-	AnnotationNode            = model.AnnotationNode
-)
-
 type BLangNode interface {
-	Node
-	SetBType(ty TypeNode)
-	GetBType() TypeNode
-	SetDeterminedType(ty TypeNode)
-	GetDeterminedType() TypeNode
+	model.Node
+	SetBType(ty model.TypeNode)
+	GetBType() model.TypeNode
+	SetDeterminedType(ty model.TypeNode)
+	GetDeterminedType() model.TypeNode
 	GetPosition() Location
 	SetPosition(pos Location)
 }
 
 type (
 	BLangNodeBase struct {
-		ty             TypeNode
-		determinedType TypeNode
+		ty             model.TypeNode
+		determinedType model.TypeNode
 
 		parent BLangNode
 
@@ -589,8 +272,8 @@ type (
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		TypeNode                        TypeNode
-		FlagSet                         common.UnorderedSet[Flag]
+		TypeNode                        model.TypeNode
+		FlagSet                         common.UnorderedSet[model.Flag]
 		attachPoints                    common.UnorderedSet[AttachPoint]
 		Symbol                          *BSymbol
 	}
@@ -618,7 +301,7 @@ type (
 
 	BLangExprFunctionBody struct {
 		BLangFunctionBodyBase
-		Expr ExpressionNode
+		Expr model.ExpressionNode
 	}
 
 	BLangIdentifier struct {
@@ -645,9 +328,9 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
 		Functions                       []BLangFunction
-		Fields                          []SimpleVariableNode
-		TypeRefs                        []TypeNode
-		FlagSet                         common.Set[Flag]
+		Fields                          []model.SimpleVariableNode
+		TypeRefs                        []model.TypeNode
+		FlagSet                         common.Set[model.Flag]
 		Symbol                          *BTypeSymbol
 		GeneratedInitFunction           *BLangFunction
 		Receiver                        *BLangSimpleVariable
@@ -669,12 +352,12 @@ type (
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
 		ServiceClass                    *BLangClassDefinition
-		AbsoluteResourcePath            []IdentifierNode
+		AbsoluteResourcePath            []model.IdentifierNode
 		ServiceNameLiteral              *BLangLiteral
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		FlagSet                         common.UnorderedSet[Flag]
+		FlagSet                         common.UnorderedSet[model.Flag]
 		Symbol                          *BSymbol
 		ListenerType                    BType
 		ResourceFunctions               []BLangFunction
@@ -683,7 +366,7 @@ type (
 
 	BLangCompilationUnit struct {
 		BLangNodeBase
-		TopLevelNodes []TopLevelNode
+		TopLevelNodes []model.TopLevelNode
 		Name          string
 		packageID     model.PackageID
 		sourceKind    SourceKind
@@ -703,11 +386,11 @@ type (
 		InitFunction               *BLangFunction
 		StartFunction              *BLangFunction
 		StopFunction               *BLangFunction
-		TopLevelNodes              []TopLevelNode
+		TopLevelNodes              []model.TopLevelNode
 		TestablePkgs               []*BLangTestablePackage
 		ClassDefinitions           []BLangClassDefinition
 		ObjAttachedFunctions       []BSymbol
-		FlagSet                    common.UnorderedSet[Flag]
+		FlagSet                    common.UnorderedSet[model.Flag]
 		CompletedPhases            common.UnorderedSet[CompilerPhase]
 		LambdaFunctions            []BLangLambdaFunction
 		GlobalVariableDependencies map[BSymbol]common.Set[*BVarSymbol]
@@ -752,7 +435,7 @@ type (
 		TypeName          string
 		Identifier        string
 		ReferenceName     string
-		Type              DocumentationReferenceType
+		Type              model.DocumentationReferenceType
 		HasParserWarnings bool
 	}
 	BLangConstantValue struct {
@@ -762,12 +445,12 @@ type (
 
 	BLangVariableBase struct {
 		BLangNodeBase
-		TypeNode                        TypeNode
-		AnnAttachments                  []AnnotationAttachmentNode
-		MarkdownDocumentationAttachment MarkdownDocumentationNode
-		Expr                            ExpressionNode
+		TypeNode                        model.TypeNode
+		AnnAttachments                  []model.AnnotationAttachmentNode
+		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
+		Expr                            model.ExpressionNode
 		Symbol                          *BVarSymbol
-		FlagSet                         common.Set[Flag]
+		FlagSet                         common.Set[model.Flag]
 		IsDeclaredWithVar               bool
 	}
 
@@ -791,15 +474,15 @@ type (
 	BLangInvokableNodeBase struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		AnnAttachments                  []AnnotationAttachmentNode
+		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
-		RestParam                       SimpleVariableNode
-		ReturnTypeNode                  TypeNode
-		ReturnTypeAnnAttachments        []AnnotationAttachmentNode
-		Body                            FunctionBodyNode
-		DefaultWorkerName               IdentifierNode
-		FlagSet                         common.UnorderedSet[Flag]
+		RestParam                       model.SimpleVariableNode
+		ReturnTypeNode                  model.TypeNode
+		ReturnTypeAnnAttachments        []model.AnnotationAttachmentNode
+		Body                            model.FunctionBodyNode
+		DefaultWorkerName               model.IdentifierNode
+		FlagSet                         common.UnorderedSet[model.Flag]
 		Symbol                          *BInvokableSymbol
 		ClonedEnv                       *SymbolEnv
 		DesugaredReturnType             bool
@@ -824,10 +507,10 @@ type (
 	BLangTypeDefinition struct {
 		BLangNodeBase
 		name                            *BLangIdentifier
-		typeNode                        TypeNode
+		typeNode                        model.TypeNode
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
-		flagSet                         common.UnorderedSet[Flag]
+		flagSet                         common.UnorderedSet[model.Flag]
 		precedence                      int
 		symbol                          *BSymbol
 		cycleDepth                      int
@@ -837,19 +520,19 @@ type (
 	}
 )
 
-func (this *BLangNodeBase) SetBType(ty TypeNode) {
+func (this *BLangNodeBase) SetBType(ty model.TypeNode) {
 	this.ty = ty
 }
 
-func (this *BLangNodeBase) GetBType() TypeNode {
+func (this *BLangNodeBase) GetBType() model.TypeNode {
 	return this.ty
 }
 
-func (this *BLangNodeBase) SetDeterminedType(ty TypeNode) {
+func (this *BLangNodeBase) SetDeterminedType(ty model.TypeNode) {
 	this.determinedType = ty
 }
 
-func (this *BLangNodeBase) GetDeterminedType() TypeNode {
+func (this *BLangNodeBase) GetDeterminedType() model.TypeNode {
 	return this.determinedType
 }
 
@@ -861,55 +544,59 @@ func (this *BLangNodeBase) SetPosition(pos Location) {
 	this.pos = pos
 }
 
-var _ AnnotationAttachmentNode = &BLangAnnotationAttachment{}
-var _ IdentifierNode = &BLangIdentifier{}
-var _ ImportPackageNode = &BLangImportPackage{}
-var _ ClassDefinition = &BLangClassDefinition{}
-var _ PackageNode = &BLangPackage{}
-var _ PackageNode = &BLangTestablePackage{}
-var _ AnnotationNode = &BLangAnnotation{}
-var _ XMLNSDeclarationNode = &BLangXMLNS{}
-var _ ServiceNode = &BLangService{}
-var _ CompilationUnitNode = &BLangCompilationUnit{}
-var _ ConstantNode = &BLangConstant{}
-var _ TypeDefinition = &BLangTypeDefinition{}
-var _ SimpleVariableNode = &BLangSimpleVariable{}
-var _ MarkdownDocumentationNode = &BLangMarkdownDocumentation{}
-var _ MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
-var _ ExprFunctionBodyNode = &BLangExprFunctionBody{}
-var _ FunctionNode = &BLangFunction{}
+var (
+	_ model.AnnotationAttachmentNode                    = &BLangAnnotationAttachment{}
+	_ model.IdentifierNode                              = &BLangIdentifier{}
+	_ model.ImportPackageNode                           = &BLangImportPackage{}
+	_ model.ClassDefinition                             = &BLangClassDefinition{}
+	_ model.PackageNode                                 = &BLangPackage{}
+	_ model.PackageNode                                 = &BLangTestablePackage{}
+	_ model.AnnotationNode                              = &BLangAnnotation{}
+	_ model.XMLNSDeclarationNode                        = &BLangXMLNS{}
+	_ model.ServiceNode                                 = &BLangService{}
+	_ model.CompilationUnitNode                         = &BLangCompilationUnit{}
+	_ model.ConstantNode                                = &BLangConstant{}
+	_ model.TypeDefinition                              = &BLangTypeDefinition{}
+	_ model.SimpleVariableNode                          = &BLangSimpleVariable{}
+	_ model.MarkdownDocumentationNode                   = &BLangMarkdownDocumentation{}
+	_ model.MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
+	_ model.ExprFunctionBodyNode                        = &BLangExprFunctionBody{}
+	_ model.FunctionNode                                = &BLangFunction{}
+)
 
-var _ BLangNode = &BLangAnnotation{}
-var _ BLangNode = &BLangAnnotationAttachment{}
-var _ BLangNode = &BLangBlockFunctionBody{}
-var _ BLangNode = &BLangExprFunctionBody{}
-var _ BLangNode = &BLangIdentifier{}
-var _ BLangNode = &BLangImportPackage{}
-var _ BLangNode = &BLangClassDefinition{}
-var _ BLangNode = &BLangService{}
-var _ BLangNode = &BLangCompilationUnit{}
-var _ BLangNode = &BLangPackage{}
-var _ BLangNode = &BLangTestablePackage{}
-var _ BLangNode = &BLangXMLNS{}
-var _ BLangNode = &BLangLocalXMLNS{}
-var _ BLangNode = &BLangPackageXMLNS{}
-var _ BLangNode = &BLangMarkdownDocumentation{}
-var _ BLangNode = &BLangMarkdownReferenceDocumentation{}
-var _ BLangNode = &BLangConstant{}
-var _ BLangNode = &BLangSimpleVariable{}
-var _ BLangNode = &BLangFunction{}
-var _ BLangNode = &BLangTypeDefinition{}
+var (
+	_ BLangNode = &BLangAnnotation{}
+	_ BLangNode = &BLangAnnotationAttachment{}
+	_ BLangNode = &BLangBlockFunctionBody{}
+	_ BLangNode = &BLangExprFunctionBody{}
+	_ BLangNode = &BLangIdentifier{}
+	_ BLangNode = &BLangImportPackage{}
+	_ BLangNode = &BLangClassDefinition{}
+	_ BLangNode = &BLangService{}
+	_ BLangNode = &BLangCompilationUnit{}
+	_ BLangNode = &BLangPackage{}
+	_ BLangNode = &BLangTestablePackage{}
+	_ BLangNode = &BLangXMLNS{}
+	_ BLangNode = &BLangLocalXMLNS{}
+	_ BLangNode = &BLangPackageXMLNS{}
+	_ BLangNode = &BLangMarkdownDocumentation{}
+	_ BLangNode = &BLangMarkdownReferenceDocumentation{}
+	_ BLangNode = &BLangConstant{}
+	_ BLangNode = &BLangSimpleVariable{}
+	_ BLangNode = &BLangFunction{}
+	_ BLangNode = &BLangTypeDefinition{}
+)
 
-func (this *BLangAnnotationAttachment) GetKind() NodeKind {
+func (this *BLangAnnotationAttachment) GetKind() model.NodeKind {
 	// migrated from BLangAnnotationAttachment.java:89:5
-	return NodeKind_ANNOTATION_ATTACHMENT
+	return model.NodeKind_ANNOTATION_ATTACHMENT
 }
 
-func (this *BLangAnnotationAttachment) GetPackgeAlias() IdentifierNode {
+func (this *BLangAnnotationAttachment) GetPackgeAlias() model.IdentifierNode {
 	return this.PkgAlias
 }
 
-func (this *BLangAnnotationAttachment) SetPackageAlias(pkgAlias IdentifierNode) {
+func (this *BLangAnnotationAttachment) SetPackageAlias(pkgAlias model.IdentifierNode) {
 	if id, ok := pkgAlias.(*BLangIdentifier); ok {
 		this.PkgAlias = id
 	} else {
@@ -917,11 +604,11 @@ func (this *BLangAnnotationAttachment) SetPackageAlias(pkgAlias IdentifierNode) 
 	}
 }
 
-func (this *BLangAnnotationAttachment) GetAnnotationName() IdentifierNode {
+func (this *BLangAnnotationAttachment) GetAnnotationName() model.IdentifierNode {
 	return this.AnnotationName
 }
 
-func (this *BLangAnnotationAttachment) SetAnnotationName(name IdentifierNode) {
+func (this *BLangAnnotationAttachment) SetAnnotationName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.AnnotationName = id
 	} else {
@@ -929,11 +616,11 @@ func (this *BLangAnnotationAttachment) SetAnnotationName(name IdentifierNode) {
 	}
 }
 
-func (this *BLangAnnotationAttachment) GetExpressionNode() ExpressionNode {
+func (this *BLangAnnotationAttachment) GetExpressionNode() model.ExpressionNode {
 	return this.Expr
 }
 
-func (this *BLangAnnotationAttachment) SetExpressionNode(expr ExpressionNode) {
+func (this *BLangAnnotationAttachment) SetExpressionNode(expr model.ExpressionNode) {
 	if expr, ok := expr.(BLangExpression); ok {
 		this.Expr = expr
 	} else {
@@ -941,17 +628,17 @@ func (this *BLangAnnotationAttachment) SetExpressionNode(expr ExpressionNode) {
 	}
 }
 
-func (this *BLangAnnotation) GetKind() NodeKind {
+func (this *BLangAnnotation) GetKind() model.NodeKind {
 	// migrated from BLangAnnotation.java:135:5
-	return NodeKind_ANNOTATION
+	return model.NodeKind_ANNOTATION
 }
 
-func (this *BLangAnnotation) GetName() IdentifierNode {
+func (this *BLangAnnotation) GetName() model.IdentifierNode {
 	// migrated from BLangAnnotation.java:80:5
 	return this.Name
 }
 
-func (this *BLangAnnotation) SetName(name IdentifierNode) {
+func (this *BLangAnnotation) SetName(name model.IdentifierNode) {
 	// migrated from BLangAnnotation.java:85:5
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.Name = id
@@ -960,36 +647,36 @@ func (this *BLangAnnotation) SetName(name IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangAnnotation) GetTypeNode() TypeNode {
+func (this *BLangAnnotation) GetTypeNode() model.TypeNode {
 	// migrated from BLangAnnotation.java:70:5
 	return this.TypeNode
 }
 
-func (this *BLangAnnotation) SetTypeNode(typeNode TypeNode) {
+func (this *BLangAnnotation) SetTypeNode(typeNode model.TypeNode) {
 	// migrated from BLangAnnotation.java:75:5
 	this.TypeNode = typeNode
 }
 
-func (this *BLangAnnotation) GetFlags() common.Set[Flag] {
+func (this *BLangAnnotation) GetFlags() common.Set[model.Flag] {
 	// migrated from BLangAnnotation.java:90:5
 	return &this.FlagSet
 }
 
-func (this *BLangAnnotation) AddFlag(flag Flag) {
+func (this *BLangAnnotation) AddFlag(flag model.Flag) {
 	// migrated from BLangAnnotation.java:95:5
 	(&this.FlagSet).Add(flag)
 }
 
-func (this *BLangAnnotation) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (this *BLangAnnotation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangAnnotation.java:100:5
-	attachments := make([]AnnotationAttachmentNode, len(this.AnnAttachments))
+	attachments := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i, attachment := range this.AnnAttachments {
 		attachments[i] = &attachment
 	}
 	return attachments
 }
 
-func (this *BLangAnnotation) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (this *BLangAnnotation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangAnnotation.java:105:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		this.AnnAttachments = append(this.AnnAttachments, *annAttachment)
@@ -998,12 +685,12 @@ func (this *BLangAnnotation) AddAnnotationAttachment(annAttachment AnnotationAtt
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangAnnotation) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (this *BLangAnnotation) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangAnnotation.java:110:5
 	return this.MarkdownDocumentationAttachment
 }
 
-func (this *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (this *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangAnnotation.java:115:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		this.MarkdownDocumentationAttachment = documentationNode
@@ -1012,17 +699,17 @@ func (this *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNod
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (this *BLangBlockFunctionBody) GetKind() NodeKind {
+func (this *BLangBlockFunctionBody) GetKind() model.NodeKind {
 	// migrated from BLangBlockFunctionBody.java:73:5
-	return NodeKind_BLOCK_FUNCTION_BODY
+	return model.NodeKind_BLOCK_FUNCTION_BODY
 }
 
-func (this *BLangExprFunctionBody) GetKind() NodeKind {
+func (this *BLangExprFunctionBody) GetKind() model.NodeKind {
 	// migrated from BLangExprFunctionBody.java:50:5
-	return NodeKind_EXPR_FUNCTION_BODY
+	return model.NodeKind_EXPR_FUNCTION_BODY
 }
 
-func (this *BLangExprFunctionBody) GetExpr() ExpressionNode {
+func (this *BLangExprFunctionBody) GetExpr() model.ExpressionNode {
 	// migrated from BLangExprFunctionBody.java:55:5
 	return this.Expr
 }
@@ -1032,9 +719,9 @@ func (this *BLangIdentifier) GetValue() string {
 	return this.Value
 }
 
-func (this *BLangIdentifier) GetKind() NodeKind {
+func (this *BLangIdentifier) GetKind() model.NodeKind {
 	// migrated from BLangIdentifier.java:32:5
-	return NodeKind_IDENTIFIER
+	return model.NodeKind_IDENTIFIER
 }
 
 func (this *BLangIdentifier) SetValue(value string) {
@@ -1057,23 +744,23 @@ func (this *BLangIdentifier) SetLiteral(isLiteral bool) {
 	this.isLiteral = isLiteral
 }
 
-func (this *BLangImportPackage) GetKind() NodeKind {
-	return NodeKind_IMPORT
+func (this *BLangImportPackage) GetKind() model.NodeKind {
+	return model.NodeKind_IMPORT
 }
 
-func (this *BLangImportPackage) GetOrgName() IdentifierNode {
+func (this *BLangImportPackage) GetOrgName() model.IdentifierNode {
 	return this.OrgName
 }
 
-func (this *BLangImportPackage) GetPackageName() []IdentifierNode {
-	result := make([]IdentifierNode, len(this.PkgNameComps))
+func (this *BLangImportPackage) GetPackageName() []model.IdentifierNode {
+	result := make([]model.IdentifierNode, len(this.PkgNameComps))
 	for i := range this.PkgNameComps {
 		result[i] = &this.PkgNameComps[i]
 	}
 	return result
 }
 
-func (this *BLangImportPackage) SetPackageName(nameParts []IdentifierNode) {
+func (this *BLangImportPackage) SetPackageName(nameParts []model.IdentifierNode) {
 	this.PkgNameComps = make([]BLangIdentifier, 0, len(nameParts))
 	for _, namePart := range nameParts {
 		if id, ok := namePart.(*BLangIdentifier); ok {
@@ -1084,11 +771,11 @@ func (this *BLangImportPackage) SetPackageName(nameParts []IdentifierNode) {
 	}
 }
 
-func (this *BLangImportPackage) GetPackageVersion() IdentifierNode {
+func (this *BLangImportPackage) GetPackageVersion() model.IdentifierNode {
 	return this.Version
 }
 
-func (this *BLangImportPackage) SetPackageVersion(version IdentifierNode) {
+func (this *BLangImportPackage) SetPackageVersion(version model.IdentifierNode) {
 	if id, ok := version.(*BLangIdentifier); ok {
 		this.Version = id
 	} else {
@@ -1096,11 +783,11 @@ func (this *BLangImportPackage) SetPackageVersion(version IdentifierNode) {
 	}
 }
 
-func (this *BLangImportPackage) GetAlias() IdentifierNode {
+func (this *BLangImportPackage) GetAlias() model.IdentifierNode {
 	return this.Alias
 }
 
-func (this *BLangImportPackage) SetAlias(alias IdentifierNode) {
+func (this *BLangImportPackage) SetAlias(alias model.IdentifierNode) {
 	if id, ok := alias.(*BLangIdentifier); ok {
 		this.Alias = id
 	} else {
@@ -1113,18 +800,18 @@ func NewBLangClassDefinition() BLangClassDefinition {
 	this.CycleDepth = (-1)
 	this.IsObjectContructorDecl = false
 	// Default field initializations
-	this.FlagSet = &common.UnorderedSet[Flag]{}
-	this.FlagSet.Add(Flag_CLASS)
+	this.FlagSet = &common.UnorderedSet[model.Flag]{}
+	this.FlagSet.Add(model.Flag_CLASS)
 
 	return this
 }
 
-func (this *BLangClassDefinition) GetName() IdentifierNode {
+func (this *BLangClassDefinition) GetName() model.IdentifierNode {
 	// migrated from BLangClassDefinition.java:88:5
 	return this.Name
 }
 
-func (this *BLangClassDefinition) SetName(name IdentifierNode) {
+func (this *BLangClassDefinition) SetName(name model.IdentifierNode) {
 	// migrated from BLangClassDefinition.java:93:5
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.Name = id
@@ -1133,16 +820,16 @@ func (this *BLangClassDefinition) SetName(name IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangClassDefinition) GetFunctions() []FunctionNode {
+func (this *BLangClassDefinition) GetFunctions() []model.FunctionNode {
 	// migrated from BLangClassDefinition.java:98:5
-	result := make([]FunctionNode, len(this.Functions))
+	result := make([]model.FunctionNode, len(this.Functions))
 	for i := range this.Functions {
 		result[i] = &this.Functions[i]
 	}
 	return result
 }
 
-func (this *BLangClassDefinition) AddFunction(function FunctionNode) {
+func (this *BLangClassDefinition) AddFunction(function model.FunctionNode) {
 	// migrated from BLangClassDefinition.java:103:5
 	if function, ok := function.(*BLangFunction); ok {
 		this.Functions = append(this.Functions, *function)
@@ -1151,12 +838,12 @@ func (this *BLangClassDefinition) AddFunction(function FunctionNode) {
 	panic("function is not a BLangFunction")
 }
 
-func (this *BLangClassDefinition) GetInitFunction() FunctionNode {
+func (this *BLangClassDefinition) GetInitFunction() model.FunctionNode {
 	// migrated from BLangClassDefinition.java:108:5
 	return this.InitFunction
 }
 
-func (this *BLangClassDefinition) AddField(field VariableNode) {
+func (this *BLangClassDefinition) AddField(field model.VariableNode) {
 	// migrated from BLangClassDefinition.java:113:5
 	if field, ok := field.(*BLangSimpleVariable); ok {
 		this.Fields = append(this.Fields, field)
@@ -1165,36 +852,36 @@ func (this *BLangClassDefinition) AddField(field VariableNode) {
 	panic("field is not a BLangSimpleVariable")
 }
 
-func (this *BLangClassDefinition) AddTypeReference(typeRef TypeNode) {
+func (this *BLangClassDefinition) AddTypeReference(typeRef model.TypeNode) {
 	// migrated from BLangClassDefinition.java:118:5
 	this.TypeRefs = append(this.TypeRefs, typeRef)
 }
 
-func (this *BLangClassDefinition) GetKind() NodeKind {
+func (this *BLangClassDefinition) GetKind() model.NodeKind {
 	// migrated from BLangClassDefinition.java:138:5
-	return NodeKind_CLASS_DEFN
+	return model.NodeKind_CLASS_DEFN
 }
 
-func (this *BLangClassDefinition) GetFlags() common.Set[Flag] {
+func (this *BLangClassDefinition) GetFlags() common.Set[model.Flag] {
 	// migrated from BLangClassDefinition.java:158:5
 	return this.FlagSet
 }
 
-func (this *BLangClassDefinition) AddFlag(flag Flag) {
+func (this *BLangClassDefinition) AddFlag(flag model.Flag) {
 	// migrated from BLangClassDefinition.java:163:5
 	this.FlagSet.Add(flag)
 }
 
-func (this *BLangClassDefinition) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (this *BLangClassDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangClassDefinition.java:168:5
-	attachments := make([]AnnotationAttachmentNode, len(this.AnnAttachments))
+	attachments := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i, attachment := range this.AnnAttachments {
 		attachments[i] = &attachment
 	}
 	return attachments
 }
 
-func (this *BLangClassDefinition) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (this *BLangClassDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangClassDefinition.java:173:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		this.AnnAttachments = append(this.AnnAttachments, *annAttachment)
@@ -1203,12 +890,12 @@ func (this *BLangClassDefinition) AddAnnotationAttachment(annAttachment Annotati
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangClassDefinition) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (this *BLangClassDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangClassDefinition.java:178:5
 	return this.MarkdownDocumentationAttachment
 }
 
-func (this *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (this *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangClassDefinition.java:183:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		this.MarkdownDocumentationAttachment = documentationNode
@@ -1227,12 +914,12 @@ func (this *BLangClassDefinition) SetPrecedence(precedence int) {
 	this.Precedence = precedence
 }
 
-func (this *BLangCompilationUnit) AddTopLevelNode(node TopLevelNode) {
+func (this *BLangCompilationUnit) AddTopLevelNode(node model.TopLevelNode) {
 	// migrated from BLangCompilationUnit.java:48:5
 	this.TopLevelNodes = append(this.TopLevelNodes, node)
 }
 
-func (this *BLangCompilationUnit) GetTopLevelNodes() []TopLevelNode {
+func (this *BLangCompilationUnit) GetTopLevelNodes() []model.TopLevelNode {
 	// migrated from BLangCompilationUnit.java:53:5
 	return this.TopLevelNodes
 }
@@ -1257,9 +944,9 @@ func (this *BLangCompilationUnit) SetPackageID(packageID model.PackageID) {
 	this.packageID = packageID
 }
 
-func (this *BLangCompilationUnit) GetKind() NodeKind {
+func (this *BLangCompilationUnit) GetKind() model.NodeKind {
 	// migrated from BLangCompilationUnit.java:76:5
-	return NodeKind_COMPILATION_UNIT
+	return model.NodeKind_COMPILATION_UNIT
 }
 
 func (this *BLangCompilationUnit) SetSourceKind(kind SourceKind) {
@@ -1272,16 +959,16 @@ func (this *BLangCompilationUnit) GetSourceKind() SourceKind {
 	return this.sourceKind
 }
 
-func (this *BLangConstant) SetTypeNode(typeNode TypeNode) {
+func (this *BLangConstant) SetTypeNode(typeNode model.TypeNode) {
 	// migrated from BLangConstant.java:63:5
 	this.TypeNode = typeNode
 }
 
-func (this *BLangConstant) GetName() IdentifierNode {
+func (this *BLangConstant) GetName() model.IdentifierNode {
 	return this.Name
 }
 
-func (this *BLangConstant) SetName(name IdentifierNode) {
+func (this *BLangConstant) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.Name = id
 		return
@@ -1289,22 +976,22 @@ func (this *BLangConstant) SetName(name IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangConstant) GetFlags() common.Set[Flag] {
+func (this *BLangConstant) GetFlags() common.Set[model.Flag] {
 	// migrated from BLangConstant.java:78:5
 	return this.FlagSet
 }
 
-func (this *BLangConstant) AddFlag(flag Flag) {
+func (this *BLangConstant) AddFlag(flag model.Flag) {
 	// migrated from BLangConstant.java:83:5
 	this.FlagSet.Add(flag)
 }
 
-func (this *BLangConstant) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (this *BLangConstant) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangConstant.java:88:5
 	return this.AnnAttachments
 }
 
-func (this *BLangConstant) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (this *BLangConstant) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangConstant.java:93:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		this.AnnAttachments = append(this.AnnAttachments, annAttachment)
@@ -1313,12 +1000,12 @@ func (this *BLangConstant) AddAnnotationAttachment(annAttachment AnnotationAttac
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangConstant) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (this *BLangConstant) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangConstant.java:98:5
 	return this.MarkdownDocumentationAttachment
 }
 
-func (this *BLangConstant) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (this *BLangConstant) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangConstant.java:103:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		this.MarkdownDocumentationAttachment = documentationNode
@@ -1327,17 +1014,17 @@ func (this *BLangConstant) SetMarkdownDocumentationAttachment(documentationNode 
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (this *BLangConstant) GetKind() NodeKind {
+func (this *BLangConstant) GetKind() model.NodeKind {
 	// migrated from BLangConstant.java:108:5
-	return NodeKind_CONSTANT
+	return model.NodeKind_CONSTANT
 }
 
-func (this *BLangConstant) GetTypeNode() TypeNode {
+func (this *BLangConstant) GetTypeNode() model.TypeNode {
 	// migrated from BLangConstant.java:134:5
 	return this.TypeNode
 }
 
-func (this *BLangConstant) GetAssociatedTypeDefinition() TypeDefinition {
+func (this *BLangConstant) GetAssociatedTypeDefinition() model.TypeDefinition {
 	// migrated from BLangConstant.java:139:5
 	return this.AssociatedTypeDefinition
 }
@@ -1351,15 +1038,15 @@ func (this *BLangConstant) SetPrecedence(precedence int) {
 	// migrated from BLangConstant.java:149:5
 }
 
-func (this *BLangSimpleVariable) GetName() IdentifierNode {
+func (this *BLangSimpleVariable) GetName() model.IdentifierNode {
 	return this.Name
 }
 
-func (this *BLangSimpleVariable) GetKind() NodeKind {
-	return NodeKind_VARIABLE
+func (this *BLangSimpleVariable) GetKind() model.NodeKind {
+	return model.NodeKind_VARIABLE
 }
 
-func (this *BLangSimpleVariable) SetName(name IdentifierNode) {
+func (this *BLangSimpleVariable) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.Name = id
 		return
@@ -1367,19 +1054,19 @@ func (this *BLangSimpleVariable) SetName(name IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangMarkdownDocumentation) GetKind() NodeKind {
-	return NodeKind_MARKDOWN_DOCUMENTATION
+func (this *BLangMarkdownDocumentation) GetKind() model.NodeKind {
+	return model.NodeKind_MARKDOWN_DOCUMENTATION
 }
 
-func (this *BLangMarkdownDocumentation) GetDocumentationLines() []MarkdownDocumentationTextAttributeNode {
-	result := make([]MarkdownDocumentationTextAttributeNode, len(this.DocumentationLines))
+func (this *BLangMarkdownDocumentation) GetDocumentationLines() []model.MarkdownDocumentationTextAttributeNode {
+	result := make([]model.MarkdownDocumentationTextAttributeNode, len(this.DocumentationLines))
 	for i := range this.DocumentationLines {
 		result[i] = &this.DocumentationLines[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddDocumentationLine(documentationText MarkdownDocumentationTextAttributeNode) {
+func (this *BLangMarkdownDocumentation) AddDocumentationLine(documentationText model.MarkdownDocumentationTextAttributeNode) {
 	if line, ok := documentationText.(*BLangMarkdownDocumentationLine); ok {
 		this.DocumentationLines = append(this.DocumentationLines, *line)
 	} else {
@@ -1387,32 +1074,31 @@ func (this *BLangMarkdownDocumentation) AddDocumentationLine(documentationText M
 	}
 }
 
-func (this *BLangMarkdownDocumentation) GetParameters() []MarkdownDocumentationParameterAttributeNode {
-	result := make([]MarkdownDocumentationParameterAttributeNode, len(this.Parameters))
+func (this *BLangMarkdownDocumentation) GetParameters() []model.MarkdownDocumentationParameterAttributeNode {
+	result := make([]model.MarkdownDocumentationParameterAttributeNode, len(this.Parameters))
 	for i := range this.Parameters {
 		result[i] = &this.Parameters[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddParameter(parameter MarkdownDocumentationParameterAttributeNode) {
+func (this *BLangMarkdownDocumentation) AddParameter(parameter model.MarkdownDocumentationParameterAttributeNode) {
 	if param, ok := parameter.(*BLangMarkdownParameterDocumentation); ok {
 		this.Parameters = append(this.Parameters, *param)
 	} else {
 		panic("parameter is not a BLangMarkdownParameterDocumentation")
 	}
-
 }
 
-func (this *BLangMarkdownDocumentation) GetReturnParameter() MarkdownDocumentationReturnParameterAttributeNode {
+func (this *BLangMarkdownDocumentation) GetReturnParameter() model.MarkdownDocumentationReturnParameterAttributeNode {
 	return this.ReturnParameter
 }
 
-func (this *BLangMarkdownDocumentation) GetDeprecationDocumentation() MarkDownDocumentationDeprecationAttributeNode {
+func (this *BLangMarkdownDocumentation) GetDeprecationDocumentation() model.MarkDownDocumentationDeprecationAttributeNode {
 	return this.DeprecationDocumentation
 }
 
-func (this *BLangMarkdownDocumentation) SetReturnParameter(returnParameter MarkdownDocumentationReturnParameterAttributeNode) {
+func (this *BLangMarkdownDocumentation) SetReturnParameter(returnParameter model.MarkdownDocumentationReturnParameterAttributeNode) {
 	if param, ok := returnParameter.(*BLangMarkdownReturnParameterDocumentation); ok {
 		this.ReturnParameter = param
 	} else {
@@ -1420,7 +1106,7 @@ func (this *BLangMarkdownDocumentation) SetReturnParameter(returnParameter Markd
 	}
 }
 
-func (this *BLangMarkdownDocumentation) SetDeprecationDocumentation(deprecationDocumentation MarkDownDocumentationDeprecationAttributeNode) {
+func (this *BLangMarkdownDocumentation) SetDeprecationDocumentation(deprecationDocumentation model.MarkDownDocumentationDeprecationAttributeNode) {
 	if doc, ok := deprecationDocumentation.(*BLangMarkDownDeprecationDocumentation); ok {
 		this.DeprecationDocumentation = doc
 	} else {
@@ -1428,7 +1114,7 @@ func (this *BLangMarkdownDocumentation) SetDeprecationDocumentation(deprecationD
 	}
 }
 
-func (this *BLangMarkdownDocumentation) SetDeprecatedParametersDocumentation(deprecatedParametersDocumentation MarkDownDocumentationDeprecatedParametersAttributeNode) {
+func (this *BLangMarkdownDocumentation) SetDeprecatedParametersDocumentation(deprecatedParametersDocumentation model.MarkDownDocumentationDeprecatedParametersAttributeNode) {
 	if doc, ok := deprecatedParametersDocumentation.(*BLangMarkDownDeprecatedParametersDocumentation); ok {
 		this.DeprecatedParametersDocumentation = doc
 	} else {
@@ -1436,7 +1122,7 @@ func (this *BLangMarkdownDocumentation) SetDeprecatedParametersDocumentation(dep
 	}
 }
 
-func (this *BLangMarkdownDocumentation) GetDeprecatedParametersDocumentation() MarkDownDocumentationDeprecatedParametersAttributeNode {
+func (this *BLangMarkdownDocumentation) GetDeprecatedParametersDocumentation() model.MarkDownDocumentationDeprecatedParametersAttributeNode {
 	return this.DeprecatedParametersDocumentation
 }
 
@@ -1449,8 +1135,8 @@ func (this *BLangMarkdownDocumentation) GetDocumentation() string {
 	return strings.ReplaceAll(result, "\r", "")
 }
 
-func (this *BLangMarkdownDocumentation) GetParameterDocumentations() map[string]MarkdownDocumentationParameterAttributeNode {
-	result := make(map[string]MarkdownDocumentationParameterAttributeNode)
+func (this *BLangMarkdownDocumentation) GetParameterDocumentations() map[string]model.MarkdownDocumentationParameterAttributeNode {
+	result := make(map[string]model.MarkdownDocumentationParameterAttributeNode)
 	for _, parameter := range this.Parameters {
 		paramName := parameter.GetParameterName()
 		result[paramName.GetValue()] = &parameter
@@ -1465,15 +1151,15 @@ func (this *BLangMarkdownDocumentation) GetReturnParameterDocumentation() *strin
 	return common.ToPointer(this.ReturnParameter.GetReturnParameterDocumentation())
 }
 
-func (this *BLangMarkdownDocumentation) GetReferences() []MarkdownDocumentationReferenceAttributeNode {
-	result := make([]MarkdownDocumentationReferenceAttributeNode, len(this.References))
+func (this *BLangMarkdownDocumentation) GetReferences() []model.MarkdownDocumentationReferenceAttributeNode {
+	result := make([]model.MarkdownDocumentationReferenceAttributeNode, len(this.References))
 	for i := range this.References {
 		result[i] = &this.References[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddReference(reference MarkdownDocumentationReferenceAttributeNode) {
+func (this *BLangMarkdownDocumentation) AddReference(reference model.MarkdownDocumentationReferenceAttributeNode) {
 	if ref, ok := reference.(*BLangMarkdownReferenceDocumentation); ok {
 		this.References = append(this.References, *ref)
 	} else {
@@ -1481,21 +1167,21 @@ func (this *BLangMarkdownDocumentation) AddReference(reference MarkdownDocumenta
 	}
 }
 
-func (this *BLangMarkdownReferenceDocumentation) GetType() DocumentationReferenceType {
+func (this *BLangMarkdownReferenceDocumentation) GetType() model.DocumentationReferenceType {
 	return this.Type
 }
 
-func (this *BLangMarkdownReferenceDocumentation) GetKind() NodeKind {
-	return NodeKind_DOCUMENTATION_REFERENCE
+func (this *BLangMarkdownReferenceDocumentation) GetKind() model.NodeKind {
+	return model.NodeKind_DOCUMENTATION_REFERENCE
 }
 
 // BLangService methods
 
-func (this *BLangService) GetName() IdentifierNode {
+func (this *BLangService) GetName() model.IdentifierNode {
 	return this.Name
 }
 
-func (this *BLangService) SetName(name IdentifierNode) {
+func (this *BLangService) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.Name = id
 	} else {
@@ -1503,51 +1189,51 @@ func (this *BLangService) SetName(name IdentifierNode) {
 	}
 }
 
-func (this *BLangService) GetResources() []FunctionNode {
-	return []FunctionNode{}
+func (this *BLangService) GetResources() []model.FunctionNode {
+	return []model.FunctionNode{}
 }
 
 func (this *BLangService) IsAnonymousService() bool {
 	return false
 }
 
-func (this *BLangService) GetAttachedExprs() []ExpressionNode {
-	result := make([]ExpressionNode, len(this.AttachedExprs))
+func (this *BLangService) GetAttachedExprs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(this.AttachedExprs))
 	for i := range this.AttachedExprs {
 		result[i] = this.AttachedExprs[i]
 	}
 	return result
 }
 
-func (this *BLangService) GetServiceClass() ClassDefinition {
+func (this *BLangService) GetServiceClass() model.ClassDefinition {
 	return this.ServiceClass
 }
 
-func (this *BLangService) GetAbsolutePath() []IdentifierNode {
+func (this *BLangService) GetAbsolutePath() []model.IdentifierNode {
 	return this.AbsoluteResourcePath
 }
 
-func (this *BLangService) GetServiceNameLiteral() LiteralNode {
+func (this *BLangService) GetServiceNameLiteral() model.LiteralNode {
 	return this.ServiceNameLiteral
 }
 
-func (this *BLangService) GetFlags() common.Set[Flag] {
+func (this *BLangService) GetFlags() common.Set[model.Flag] {
 	return &this.FlagSet
 }
 
-func (this *BLangService) AddFlag(flag Flag) {
+func (this *BLangService) AddFlag(flag model.Flag) {
 	this.FlagSet.Add(flag)
 }
 
-func (this *BLangService) GetAnnotationAttachments() []AnnotationAttachmentNode {
-	result := make([]AnnotationAttachmentNode, len(this.AnnAttachments))
+func (this *BLangService) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i := range this.AnnAttachments {
 		result[i] = &this.AnnAttachments[i]
 	}
 	return result
 }
 
-func (this *BLangService) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (this *BLangService) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	if ann, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		this.AnnAttachments = append(this.AnnAttachments, *ann)
 	} else {
@@ -1555,11 +1241,11 @@ func (this *BLangService) AddAnnotationAttachment(annAttachment AnnotationAttach
 	}
 }
 
-func (this *BLangService) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (this *BLangService) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	return this.MarkdownDocumentationAttachment
 }
 
-func (this *BLangService) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (this *BLangService) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	if doc, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		this.MarkdownDocumentationAttachment = doc
 	} else {
@@ -1567,15 +1253,15 @@ func (this *BLangService) SetMarkdownDocumentationAttachment(documentationNode M
 	}
 }
 
-func (this *BLangService) GetKind() NodeKind {
-	return NodeKind_SERVICE
+func (this *BLangService) GetKind() model.NodeKind {
+	return model.NodeKind_SERVICE
 }
 
-func (this *BLangFunction) GetReceiver() SimpleVariableNode {
+func (this *BLangFunction) GetReceiver() model.SimpleVariableNode {
 	return this.Receiver
 }
 
-func (this *BLangFunction) SetReceiver(receiver SimpleVariableNode) {
+func (this *BLangFunction) SetReceiver(receiver model.SimpleVariableNode) {
 	if rec, ok := receiver.(*BLangSimpleVariable); ok {
 		this.Receiver = rec
 	} else {
@@ -1583,15 +1269,15 @@ func (this *BLangFunction) SetReceiver(receiver SimpleVariableNode) {
 	}
 }
 
-func (this *BLangFunction) GetKind() NodeKind {
-	return NodeKind_FUNCTION
+func (this *BLangFunction) GetKind() model.NodeKind {
+	return model.NodeKind_FUNCTION
 }
 
-func (b *BLangInvokableNodeBase) GetName() IdentifierNode {
+func (b *BLangInvokableNodeBase) GetName() model.IdentifierNode {
 	return b.Name
 }
 
-func (b *BLangInvokableNodeBase) SetName(name IdentifierNode) {
+func (b *BLangInvokableNodeBase) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		b.Name = id
 	} else {
@@ -1599,35 +1285,35 @@ func (b *BLangInvokableNodeBase) SetName(name IdentifierNode) {
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (b *BLangInvokableNodeBase) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return b.AnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetAnnAttachments() []AnnotationAttachmentNode {
-	attachments := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
+func (b *BLangInvokableNodeBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
+	attachments := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
 	for i, attachment := range b.AnnAttachments {
 		attachments[i] = attachment
 	}
 	return attachments
 }
 
-func (b *BLangInvokableNodeBase) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (b *BLangInvokableNodeBase) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	b.AnnAttachments = append(b.AnnAttachments, annAttachment)
 }
 
-func (b *BLangInvokableNodeBase) SetAnnAttachments(annAttachments []AnnotationAttachmentNode) {
+func (b *BLangInvokableNodeBase) SetAnnAttachments(annAttachments []model.AnnotationAttachmentNode) {
 	b.AnnAttachments = annAttachments
 }
 
-func (b *BLangInvokableNodeBase) AddFlag(flag Flag) {
+func (b *BLangInvokableNodeBase) AddFlag(flag model.Flag) {
 	b.FlagSet.Add(flag)
 }
 
-func (b *BLangInvokableNodeBase) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (b *BLangInvokableNodeBase) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	return b.MarkdownDocumentationAttachment
 }
 
-func (b *BLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment MarkdownDocumentationNode) {
+func (b *BLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment model.MarkdownDocumentationNode) {
 	if doc, ok := markdownDocumentationAttachment.(*BLangMarkdownDocumentation); ok {
 		b.MarkdownDocumentationAttachment = doc
 	} else {
@@ -1635,15 +1321,15 @@ func (b *BLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetParameters() []SimpleVariableNode {
-	result := make([]SimpleVariableNode, len(b.RequiredParams))
+func (b *BLangInvokableNodeBase) GetParameters() []model.SimpleVariableNode {
+	result := make([]model.SimpleVariableNode, len(b.RequiredParams))
 	for i, param := range b.RequiredParams {
 		result[i] = &param
 	}
 	return result
 }
 
-func (b *BLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
+func (b *BLangInvokableNodeBase) AddParameter(param model.SimpleVariableNode) {
 	if blangParam, ok := param.(*BLangSimpleVariable); ok {
 		b.RequiredParams = append(b.RequiredParams, *blangParam)
 	} else {
@@ -1651,15 +1337,15 @@ func (b *BLangInvokableNodeBase) AddParameter(param SimpleVariableNode) {
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetRequiredParams() []SimpleVariableNode {
-	result := make([]SimpleVariableNode, len(b.RequiredParams))
+func (b *BLangInvokableNodeBase) GetRequiredParams() []model.SimpleVariableNode {
+	result := make([]model.SimpleVariableNode, len(b.RequiredParams))
 	for i, param := range b.RequiredParams {
 		result[i] = &param
 	}
 	return result
 }
 
-func (b *BLangInvokableNodeBase) SetRequiredParams(requiredParams []SimpleVariableNode) {
+func (b *BLangInvokableNodeBase) SetRequiredParams(requiredParams []model.SimpleVariableNode) {
 	b.RequiredParams = make([]BLangSimpleVariable, len(requiredParams))
 	for i, param := range requiredParams {
 		if blangParam, ok := param.(*BLangSimpleVariable); ok {
@@ -1670,19 +1356,19 @@ func (b *BLangInvokableNodeBase) SetRequiredParams(requiredParams []SimpleVariab
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetRestParameters() SimpleVariableNode {
+func (b *BLangInvokableNodeBase) GetRestParameters() model.SimpleVariableNode {
 	return b.RestParam
 }
 
-func (b *BLangInvokableNodeBase) GetRestParam() SimpleVariableNode {
+func (b *BLangInvokableNodeBase) GetRestParam() model.SimpleVariableNode {
 	return b.RestParam
 }
 
-func (b *BLangInvokableNodeBase) SetRestParameter(restParam SimpleVariableNode) {
+func (b *BLangInvokableNodeBase) SetRestParameter(restParam model.SimpleVariableNode) {
 	b.RestParam = restParam
 }
 
-func (b *BLangInvokableNodeBase) SetRestParam(restParam SimpleVariableNode) {
+func (b *BLangInvokableNodeBase) SetRestParam(restParam model.SimpleVariableNode) {
 	b.RestParam = restParam
 }
 
@@ -1690,67 +1376,67 @@ func (b *BLangInvokableNodeBase) HasBody() bool {
 	return b.Body != nil
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeNode() TypeNode {
+func (b *BLangInvokableNodeBase) GetReturnTypeNode() model.TypeNode {
 	return b.ReturnTypeNode
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeNode(returnTypeNode TypeNode) {
+func (b *BLangInvokableNodeBase) SetReturnTypeNode(returnTypeNode model.TypeNode) {
 	b.ReturnTypeNode = returnTypeNode
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode {
+func (b *BLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return b.ReturnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeAnnAttachments() []AnnotationAttachmentNode {
+func (b *BLangInvokableNodeBase) GetReturnTypeAnnAttachments() []model.AnnotationAttachmentNode {
 	return b.ReturnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (b *BLangInvokableNodeBase) AddReturnTypeAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	b.ReturnTypeAnnAttachments = append(b.ReturnTypeAnnAttachments, annAttachment)
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeAnnAttachments(returnTypeAnnAttachments []AnnotationAttachmentNode) {
+func (b *BLangInvokableNodeBase) SetReturnTypeAnnAttachments(returnTypeAnnAttachments []model.AnnotationAttachmentNode) {
 	b.ReturnTypeAnnAttachments = returnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetBody() FunctionBodyNode {
+func (b *BLangInvokableNodeBase) GetBody() model.FunctionBodyNode {
 	return b.Body
 }
 
-func (b *BLangInvokableNodeBase) SetBody(body FunctionBodyNode) {
+func (b *BLangInvokableNodeBase) SetBody(body model.FunctionBodyNode) {
 	b.Body = body
 }
 
-func (b *BLangInvokableNodeBase) GetDefaultWorkerName() IdentifierNode {
+func (b *BLangInvokableNodeBase) GetDefaultWorkerName() model.IdentifierNode {
 	return b.DefaultWorkerName
 }
 
-func (b *BLangInvokableNodeBase) SetDefaultWorkerName(defaultWorkerName IdentifierNode) {
+func (b *BLangInvokableNodeBase) SetDefaultWorkerName(defaultWorkerName model.IdentifierNode) {
 	b.DefaultWorkerName = defaultWorkerName
 }
 
-func (b *BLangInvokableNodeBase) GetFlags() common.Set[Flag] {
+func (b *BLangInvokableNodeBase) GetFlags() common.Set[model.Flag] {
 	return &b.FlagSet
 }
 
-func (b *BLangInvokableNodeBase) GetFlagSet() common.Set[Flag] {
+func (b *BLangInvokableNodeBase) GetFlagSet() common.Set[model.Flag] {
 	return &b.FlagSet
 }
 
-func (b *BLangInvokableNodeBase) SetFlagSet(flagSet common.Set[Flag]) {
-	if set, ok := flagSet.(*common.UnorderedSet[Flag]); ok {
+func (b *BLangInvokableNodeBase) SetFlagSet(flagSet common.Set[model.Flag]) {
+	if set, ok := flagSet.(*common.UnorderedSet[model.Flag]); ok {
 		b.FlagSet = *set
 	} else {
 		panic("flagSet is not a common.UnorderedSet[Flag]")
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetSymbol() InvokableSymbol {
+func (b *BLangInvokableNodeBase) GetSymbol() model.InvokableSymbol {
 	return b.Symbol
 }
 
-func (b *BLangInvokableNodeBase) SetSymbol(symbol InvokableSymbol) {
+func (b *BLangInvokableNodeBase) SetSymbol(symbol model.InvokableSymbol) {
 	if sym, ok := symbol.(*BInvokableSymbol); ok {
 		b.Symbol = sym
 	} else {
@@ -1774,43 +1460,43 @@ func (b *BLangInvokableNodeBase) SetDesugaredReturnType(desugaredReturnType bool
 	b.DesugaredReturnType = desugaredReturnType
 }
 
-func (b *BLangVariableBase) GetTypeNode() TypeNode {
+func (b *BLangVariableBase) GetTypeNode() model.TypeNode {
 	return b.TypeNode
 }
 
-func (b *BLangVariableBase) SetTypeNode(typeNode TypeNode) {
+func (b *BLangVariableBase) SetTypeNode(typeNode model.TypeNode) {
 	b.TypeNode = typeNode
 }
 
-func (b *BLangVariableBase) GetAnnAttachments() []AnnotationAttachmentNode {
+func (b *BLangVariableBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
 	return b.AnnAttachments
 }
 
-func (b *BLangVariableBase) SetAnnAttachments(annAttachments []AnnotationAttachmentNode) {
+func (b *BLangVariableBase) SetAnnAttachments(annAttachments []model.AnnotationAttachmentNode) {
 	b.AnnAttachments = annAttachments
 }
 
-func (b *BLangVariableBase) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (b *BLangVariableBase) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	return b.MarkdownDocumentationAttachment
 }
 
-func (b *BLangVariableBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment MarkdownDocumentationNode) {
+func (b *BLangVariableBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment model.MarkdownDocumentationNode) {
 	b.MarkdownDocumentationAttachment = markdownDocumentationAttachment
 }
 
-func (b *BLangVariableBase) GetExpr() ExpressionNode {
+func (b *BLangVariableBase) GetExpr() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangVariableBase) SetExpr(expr ExpressionNode) {
+func (b *BLangVariableBase) SetExpr(expr model.ExpressionNode) {
 	b.Expr = expr
 }
 
-func (b *BLangVariableBase) GetFlagSet() common.Set[Flag] {
+func (b *BLangVariableBase) GetFlagSet() common.Set[model.Flag] {
 	return b.FlagSet
 }
 
-func (b *BLangVariableBase) SetFlagSet(flagSet common.Set[Flag]) {
+func (b *BLangVariableBase) SetFlagSet(flagSet common.Set[model.Flag]) {
 	b.FlagSet = flagSet
 }
 
@@ -1830,28 +1516,28 @@ func (b *BLangVariableBase) SetSymbol(symbol *BVarSymbol) {
 	b.Symbol = symbol
 }
 
-func (m *BLangVariableBase) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (m *BLangVariableBase) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangVariable.java:83:5
 	m.AnnAttachments = append(m.AnnAttachments, annAttachment)
 }
 
-func (m *BLangVariableBase) AddFlag(flag Flag) {
+func (m *BLangVariableBase) AddFlag(flag model.Flag) {
 	m.FlagSet.Add(flag)
 }
 
-func (m *BLangVariableBase) GetAnnotationAttachments() []AnnotationAttachmentNode {
+func (m *BLangVariableBase) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return m.AnnAttachments
 }
 
-func (m *BLangVariableBase) GetFlags() common.Set[Flag] {
+func (m *BLangVariableBase) GetFlags() common.Set[model.Flag] {
 	return m.FlagSet
 }
 
-func (m *BLangVariableBase) GetInitialExpression() ExpressionNode {
+func (m *BLangVariableBase) GetInitialExpression() model.ExpressionNode {
 	return m.Expr
 }
 
-func (m *BLangVariableBase) SetInitialExpression(expr ExpressionNode) {
+func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
 	m.Expr = expr
 }
 
@@ -1860,17 +1546,17 @@ func (m *BLangVariableBase) SetInitialExpression(expr ExpressionNode) {
 func NewBLangTypeDefinition() *BLangTypeDefinition {
 	this := &BLangTypeDefinition{}
 	this.annAttachments = []BLangAnnotationAttachment{}
-	this.flagSet = common.UnorderedSet[Flag]{}
+	this.flagSet = common.UnorderedSet[model.Flag]{}
 	this.cycleDepth = -1
 	this.hasCyclicReference = false
 	return this
 }
 
-func (this *BLangTypeDefinition) GetName() IdentifierNode {
+func (this *BLangTypeDefinition) GetName() model.IdentifierNode {
 	return this.name
 }
 
-func (this *BLangTypeDefinition) SetName(name IdentifierNode) {
+func (this *BLangTypeDefinition) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		this.name = id
 	} else {
@@ -1878,31 +1564,31 @@ func (this *BLangTypeDefinition) SetName(name IdentifierNode) {
 	}
 }
 
-func (this *BLangTypeDefinition) GetTypeNode() TypeNode {
+func (this *BLangTypeDefinition) GetTypeNode() model.TypeNode {
 	return this.typeNode
 }
 
-func (this *BLangTypeDefinition) SetTypeNode(typeNode TypeNode) {
+func (this *BLangTypeDefinition) SetTypeNode(typeNode model.TypeNode) {
 	this.typeNode = typeNode
 }
 
-func (this *BLangTypeDefinition) GetFlags() common.Set[Flag] {
+func (this *BLangTypeDefinition) GetFlags() common.Set[model.Flag] {
 	return &this.flagSet
 }
 
-func (this *BLangTypeDefinition) AddFlag(flag Flag) {
+func (this *BLangTypeDefinition) AddFlag(flag model.Flag) {
 	this.flagSet.Add(flag)
 }
 
-func (this *BLangTypeDefinition) GetAnnotationAttachments() []AnnotationAttachmentNode {
-	result := make([]AnnotationAttachmentNode, len(this.annAttachments))
+func (this *BLangTypeDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	result := make([]model.AnnotationAttachmentNode, len(this.annAttachments))
 	for i := range this.annAttachments {
 		result[i] = &this.annAttachments[i]
 	}
 	return result
 }
 
-func (this *BLangTypeDefinition) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+func (this *BLangTypeDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	if ann, ok := annAttachment.(*BLangAnnotationAttachment); ok {
 		this.annAttachments = append(this.annAttachments, *ann)
 	} else {
@@ -1910,11 +1596,11 @@ func (this *BLangTypeDefinition) AddAnnotationAttachment(annAttachment Annotatio
 	}
 }
 
-func (this *BLangTypeDefinition) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+func (this *BLangTypeDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	return this.markdownDocumentationAttachment
 }
 
-func (this *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+func (this *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	if doc, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
 		this.markdownDocumentationAttachment = doc
 	} else {
@@ -1930,19 +1616,19 @@ func (this *BLangTypeDefinition) SetPrecedence(precedence int) {
 	this.precedence = precedence
 }
 
-func (this *BLangTypeDefinition) GetKind() NodeKind {
-	return NodeKind_TYPE_DEFINITION
+func (this *BLangTypeDefinition) GetKind() model.NodeKind {
+	return model.NodeKind_TYPE_DEFINITION
 }
 
-func (this *BLangXMLNS) GetNamespaceURI() ExpressionNode {
+func (this *BLangXMLNS) GetNamespaceURI() model.ExpressionNode {
 	return this.namespaceURI
 }
 
-func (this *BLangXMLNS) GetPrefix() IdentifierNode {
+func (this *BLangXMLNS) GetPrefix() model.IdentifierNode {
 	return this.prefix
 }
 
-func (this *BLangXMLNS) SetNamespaceURI(namespaceURI ExpressionNode) {
+func (this *BLangXMLNS) SetNamespaceURI(namespaceURI model.ExpressionNode) {
 	if expr, ok := namespaceURI.(BLangExpression); ok {
 		this.namespaceURI = expr
 	} else {
@@ -1950,7 +1636,7 @@ func (this *BLangXMLNS) SetNamespaceURI(namespaceURI ExpressionNode) {
 	}
 }
 
-func (this *BLangXMLNS) SetPrefix(prefix IdentifierNode) {
+func (this *BLangXMLNS) SetPrefix(prefix model.IdentifierNode) {
 	if ident, ok := prefix.(*BLangIdentifier); ok {
 		this.prefix = ident
 	} else {
@@ -1958,19 +1644,19 @@ func (this *BLangXMLNS) SetPrefix(prefix IdentifierNode) {
 	}
 }
 
-func (this *BLangXMLNS) GetKind() NodeKind {
-	return NodeKind_XMLNS
+func (this *BLangXMLNS) GetKind() model.NodeKind {
+	return model.NodeKind_XMLNS
 }
 
-func (this *BLangPackage) GetCompilationUnits() []CompilationUnitNode {
-	result := make([]CompilationUnitNode, len(this.CompUnits))
+func (this *BLangPackage) GetCompilationUnits() []model.CompilationUnitNode {
+	result := make([]model.CompilationUnitNode, len(this.CompUnits))
 	for i := range this.CompUnits {
 		result[i] = &this.CompUnits[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddCompilationUnit(compUnit CompilationUnitNode) {
+func (this *BLangPackage) AddCompilationUnit(compUnit model.CompilationUnitNode) {
 	if cu, ok := compUnit.(*BLangCompilationUnit); ok {
 		this.CompUnits = append(this.CompUnits, *cu)
 	} else {
@@ -1978,15 +1664,15 @@ func (this *BLangPackage) AddCompilationUnit(compUnit CompilationUnitNode) {
 	}
 }
 
-func (this *BLangPackage) GetImports() []ImportPackageNode {
-	result := make([]ImportPackageNode, len(this.Imports))
+func (this *BLangPackage) GetImports() []model.ImportPackageNode {
+	result := make([]model.ImportPackageNode, len(this.Imports))
 	for i := range this.Imports {
 		result[i] = &this.Imports[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddImport(importPkg ImportPackageNode) {
+func (this *BLangPackage) AddImport(importPkg model.ImportPackageNode) {
 	if imp, ok := importPkg.(*BLangImportPackage); ok {
 		this.Imports = append(this.Imports, *imp)
 	} else {
@@ -1994,15 +1680,15 @@ func (this *BLangPackage) AddImport(importPkg ImportPackageNode) {
 	}
 }
 
-func (this *BLangPackage) GetNamespaceDeclarations() []XMLNSDeclarationNode {
-	result := make([]XMLNSDeclarationNode, len(this.XmlnsList))
+func (this *BLangPackage) GetNamespaceDeclarations() []model.XMLNSDeclarationNode {
+	result := make([]model.XMLNSDeclarationNode, len(this.XmlnsList))
 	for i := range this.XmlnsList {
 		result[i] = &this.XmlnsList[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddNamespaceDeclaration(xmlnsDecl XMLNSDeclarationNode) {
+func (this *BLangPackage) AddNamespaceDeclaration(xmlnsDecl model.XMLNSDeclarationNode) {
 	if xmlns, ok := xmlnsDecl.(*BLangXMLNS); ok {
 		this.XmlnsList = append(this.XmlnsList, *xmlns)
 		this.TopLevelNodes = append(this.TopLevelNodes, xmlnsDecl)
@@ -2011,23 +1697,23 @@ func (this *BLangPackage) AddNamespaceDeclaration(xmlnsDecl XMLNSDeclarationNode
 	}
 }
 
-func (this *BLangPackage) GetConstants() []ConstantNode {
-	result := make([]ConstantNode, len(this.Constants))
+func (this *BLangPackage) GetConstants() []model.ConstantNode {
+	result := make([]model.ConstantNode, len(this.Constants))
 	for i := range this.Constants {
 		result[i] = &this.Constants[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) GetGlobalVariables() []VariableNode {
-	result := make([]VariableNode, len(this.GlobalVars))
+func (this *BLangPackage) GetGlobalVariables() []model.VariableNode {
+	result := make([]model.VariableNode, len(this.GlobalVars))
 	for i := range this.GlobalVars {
 		result[i] = &this.GlobalVars[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddGlobalVariable(globalVar SimpleVariableNode) {
+func (this *BLangPackage) AddGlobalVariable(globalVar model.SimpleVariableNode) {
 	if sv, ok := globalVar.(*BLangSimpleVariable); ok {
 		this.GlobalVars = append(this.GlobalVars, *sv)
 		this.TopLevelNodes = append(this.TopLevelNodes, globalVar)
@@ -2036,15 +1722,15 @@ func (this *BLangPackage) AddGlobalVariable(globalVar SimpleVariableNode) {
 	}
 }
 
-func (this *BLangPackage) GetServices() []ServiceNode {
-	result := make([]ServiceNode, len(this.Services))
+func (this *BLangPackage) GetServices() []model.ServiceNode {
+	result := make([]model.ServiceNode, len(this.Services))
 	for i := range this.Services {
 		result[i] = &this.Services[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddService(service ServiceNode) {
+func (this *BLangPackage) AddService(service model.ServiceNode) {
 	if svc, ok := service.(*BLangService); ok {
 		this.Services = append(this.Services, *svc)
 		this.TopLevelNodes = append(this.TopLevelNodes, service)
@@ -2053,15 +1739,15 @@ func (this *BLangPackage) AddService(service ServiceNode) {
 	}
 }
 
-func (this *BLangPackage) GetFunctions() []FunctionNode {
-	result := make([]FunctionNode, len(this.Functions))
+func (this *BLangPackage) GetFunctions() []model.FunctionNode {
+	result := make([]model.FunctionNode, len(this.Functions))
 	for i := range this.Functions {
 		result[i] = &this.Functions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddFunction(function FunctionNode) {
+func (this *BLangPackage) AddFunction(function model.FunctionNode) {
 	if fn, ok := function.(*BLangFunction); ok {
 		this.Functions = append(this.Functions, *fn)
 		this.TopLevelNodes = append(this.TopLevelNodes, function)
@@ -2070,15 +1756,15 @@ func (this *BLangPackage) AddFunction(function FunctionNode) {
 	}
 }
 
-func (this *BLangPackage) GetTypeDefinitions() []TypeDefinition {
-	result := make([]TypeDefinition, len(this.TypeDefinitions))
+func (this *BLangPackage) GetTypeDefinitions() []model.TypeDefinition {
+	result := make([]model.TypeDefinition, len(this.TypeDefinitions))
 	for i := range this.TypeDefinitions {
 		result[i] = &this.TypeDefinitions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddTypeDefinition(typeDefinition TypeDefinition) {
+func (this *BLangPackage) AddTypeDefinition(typeDefinition model.TypeDefinition) {
 	if td, ok := typeDefinition.(*BLangTypeDefinition); ok {
 		this.TypeDefinitions = append(this.TypeDefinitions, *td)
 		this.TopLevelNodes = append(this.TopLevelNodes, typeDefinition)
@@ -2087,15 +1773,15 @@ func (this *BLangPackage) AddTypeDefinition(typeDefinition TypeDefinition) {
 	}
 }
 
-func (this *BLangPackage) GetAnnotations() []AnnotationNode {
-	result := make([]AnnotationNode, len(this.Annotations))
+func (this *BLangPackage) GetAnnotations() []model.AnnotationNode {
+	result := make([]model.AnnotationNode, len(this.Annotations))
 	for i := range this.Annotations {
 		result[i] = &this.Annotations[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddAnnotation(annotation AnnotationNode) {
+func (this *BLangPackage) AddAnnotation(annotation model.AnnotationNode) {
 	if ann, ok := annotation.(*BLangAnnotation); ok {
 		this.Annotations = append(this.Annotations, *ann)
 		this.TopLevelNodes = append(this.TopLevelNodes, annotation)
@@ -2104,16 +1790,16 @@ func (this *BLangPackage) AddAnnotation(annotation AnnotationNode) {
 	}
 }
 
-func (this *BLangPackage) GetClassDefinitions() []ClassDefinition {
-	result := make([]ClassDefinition, len(this.ClassDefinitions))
+func (this *BLangPackage) GetClassDefinitions() []model.ClassDefinition {
+	result := make([]model.ClassDefinition, len(this.ClassDefinitions))
 	for i := range this.ClassDefinitions {
 		result[i] = &this.ClassDefinitions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) GetKind() NodeKind {
-	return NodeKind_PACKAGE
+func (this *BLangPackage) GetKind() model.NodeKind {
+	return model.NodeKind_PACKAGE
 }
 
 func (this *BLangPackage) AddTestablePkg(testablePkg *BLangTestablePackage) {
@@ -2135,7 +1821,7 @@ func (this *BLangPackage) ContainsTestablePkg() bool {
 	return len(this.TestablePkgs) > 0
 }
 
-func (this *BLangPackage) GetFlags() common.Set[Flag] {
+func (this *BLangPackage) GetFlags() common.Set[model.Flag] {
 	return &this.FlagSet
 }
 
@@ -2201,11 +1887,11 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	this.Functions = []BLangFunction{}
 	this.TypeDefinitions = []BLangTypeDefinition{}
 	this.Annotations = []BLangAnnotation{}
-	this.TopLevelNodes = []TopLevelNode{}
+	this.TopLevelNodes = []model.TopLevelNode{}
 	this.TestablePkgs = []*BLangTestablePackage{}
 	this.ClassDefinitions = []BLangClassDefinition{}
 	this.ObjAttachedFunctions = []BSymbol{}
-	this.FlagSet = common.UnorderedSet[Flag]{}
+	this.FlagSet = common.UnorderedSet[model.Flag]{}
 	this.CompletedPhases = common.UnorderedSet[CompilerPhase]{}
 	this.LambdaFunctions = []BLangLambdaFunction{}
 	this.GlobalVariableDependencies = make(map[BSymbol]common.Set[*BVarSymbol])
@@ -2249,7 +1935,7 @@ func createSimpleVariableNodeWithLocationTokenLocation(location Location, identi
 func createSimpleVariableNode() *BLangSimpleVariable {
 	return &BLangSimpleVariable{
 		BLangVariableBase: BLangVariableBase{
-			FlagSet: &common.UnorderedSet[Flag]{},
+			FlagSet: &common.UnorderedSet[model.Flag]{},
 		},
 	}
 }
@@ -2257,7 +1943,7 @@ func createSimpleVariableNode() *BLangSimpleVariable {
 func createConstantNode() *BLangConstant {
 	return &BLangConstant{
 		BLangVariableBase: BLangVariableBase{
-			FlagSet: &common.UnorderedSet[Flag]{},
+			FlagSet: &common.UnorderedSet[model.Flag]{},
 		},
 	}
 }

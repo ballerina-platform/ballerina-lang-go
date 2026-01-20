@@ -18,12 +18,6 @@ package ast
 
 import "ballerina-lang-go/model"
 
-// Type aliases for model interfaces
-type (
-	ConstPatternNode = model.ConstPatternNode
-	MatchPatternNode = model.MatchPatternNode
-)
-
 type (
 	BLangMatchPatternBase struct {
 		BLangNodeBase
@@ -40,21 +34,21 @@ type (
 	}
 )
 
-var _ ConstPatternNode = &BLangConstPattern{}
+var _ model.ConstPatternNode = &BLangConstPattern{}
 
 var _ BLangNode = &BLangConstPattern{}
 
-func (this *BLangConstPattern) GetKind() NodeKind {
+func (this *BLangConstPattern) GetKind() model.NodeKind {
 	// migrated from BLangConstPattern.java:53:5
-	return NodeKind_CONST_MATCH_PATTERN
+	return model.NodeKind_CONST_MATCH_PATTERN
 }
 
-func (this *BLangConstPattern) GetExpression() ExpressionNode {
+func (this *BLangConstPattern) GetExpression() model.ExpressionNode {
 	// migrated from BLangConstPattern.java:58:5
 	return this.Expr
 }
 
-func (this *BLangConstPattern) SetExpression(expression ExpressionNode) {
+func (this *BLangConstPattern) SetExpression(expression model.ExpressionNode) {
 	// migrated from BLangConstPattern.java:63:5
 	if expr, ok := expression.(BLangExpression); ok {
 		this.Expr = expr

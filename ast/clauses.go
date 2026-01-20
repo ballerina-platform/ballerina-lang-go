@@ -21,21 +21,14 @@ import (
 	"ballerina-lang-go/model"
 )
 
-// Type aliases for model interfaces
-type (
-	CollectClauseNode = model.CollectClauseNode
-	DoClauseNode      = model.DoClauseNode
-	OnFailClauseNode  = model.OnFailClauseNode
-)
-
 type SymbolEnv struct {
 	Scope             *Scope
 	Node              BLangNode
 	EnclPkg           *BLangPackage
-	EnclType          TypeNode
+	EnclType          model.TypeNode
 	EnclAnnotation    *BLangAnnotation
 	EnclService       *BLangService
-	EnclInvokable     InvokableNode
+	EnclInvokable     model.InvokableNode
 	EnclVarSym        *BVarSymbol
 	EnclEnv           *SymbolEnv
 	TypeParamsEntries []TypeParamEntry
@@ -65,7 +58,7 @@ type ScopeEntry struct {
 type (
 	BLangCollectClause struct {
 		BLangNodeBase
-		Expression      ExpressionNode
+		Expression      model.ExpressionNode
 		Env             *SymbolEnv
 		NonGroupingKeys common.Set[string]
 	}
@@ -77,7 +70,7 @@ type (
 	BLangOnFailClause struct {
 		BLangNodeBase
 		Body                   *BLangBlockStmt
-		VariableDefinitionNode VariableDefinitionNode
+		VariableDefinitionNode model.VariableDefinitionNode
 		VarType                BType
 		BodyContainsFail       bool
 		IsInternal             bool
@@ -86,26 +79,28 @@ type (
 )
 
 var (
-	_ CollectClauseNode = &BLangCollectClause{}
-	_ DoClauseNode      = &BLangDoClause{}
-	_ OnFailClauseNode  = &BLangOnFailClause{}
+	_ model.CollectClauseNode = &BLangCollectClause{}
+	_ model.DoClauseNode      = &BLangDoClause{}
+	_ model.OnFailClauseNode  = &BLangOnFailClause{}
 )
 
-var _ BLangNode = &BLangCollectClause{}
-var _ BLangNode = &BLangDoClause{}
-var _ BLangNode = &BLangOnFailClause{}
+var (
+	_ BLangNode = &BLangCollectClause{}
+	_ BLangNode = &BLangDoClause{}
+	_ BLangNode = &BLangOnFailClause{}
+)
 
-func (this *BLangCollectClause) GetKind() NodeKind {
+func (this *BLangCollectClause) GetKind() model.NodeKind {
 	// migrated from BLangCollectClause.java:48:5
-	return NodeKind_COLLECT
+	return model.NodeKind_COLLECT
 }
 
-func (this *BLangCollectClause) GetExpression() ExpressionNode {
+func (this *BLangCollectClause) GetExpression() model.ExpressionNode {
 	// migrated from BLangCollectClause.java:68:5
 	return this.Expression
 }
 
-func (this *BLangCollectClause) SetExpression(expression ExpressionNode) {
+func (this *BLangCollectClause) SetExpression(expression model.ExpressionNode) {
 	// migrated from BLangCollectClause.java:73:5
 	if exp, ok := expression.(BLangExpression); ok {
 		this.Expression = exp
@@ -114,12 +109,12 @@ func (this *BLangCollectClause) SetExpression(expression ExpressionNode) {
 	}
 }
 
-func (this *BLangDoClause) GetBody() BlockStatementNode {
+func (this *BLangDoClause) GetBody() model.BlockStatementNode {
 	// migrated from BLangDoClause.java:46:5
 	return this.Body
 }
 
-func (this *BLangDoClause) SetBody(body BlockStatementNode) {
+func (this *BLangDoClause) SetBody(body model.BlockStatementNode) {
 	// migrated from BLangDoClause.java:51:5
 	if body, ok := body.(*BLangBlockStmt); ok {
 		this.Body = body
@@ -128,9 +123,9 @@ func (this *BLangDoClause) SetBody(body BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (this *BLangDoClause) GetKind() NodeKind {
+func (this *BLangDoClause) GetKind() model.NodeKind {
 	// migrated from BLangDoClause.java:66:5
-	return NodeKind_DO
+	return model.NodeKind_DO
 }
 
 func (this *BLangOnFailClause) SetDeclaredWithVar() {
@@ -143,22 +138,22 @@ func (this *BLangOnFailClause) IsDeclaredWithVar() bool {
 	return this.isDeclaredWithVar
 }
 
-func (this *BLangOnFailClause) GetVariableDefinitionNode() VariableDefinitionNode {
+func (this *BLangOnFailClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
 	// migrated from BLangOnFailClause.java:63:5
 	return this.VariableDefinitionNode
 }
 
-func (this *BLangOnFailClause) SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode) {
+func (this *BLangOnFailClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
 	// migrated from BLangOnFailClause.java:68:5
 	this.VariableDefinitionNode = variableDefinitionNode
 }
 
-func (this *BLangOnFailClause) GetBody() BlockStatementNode {
+func (this *BLangOnFailClause) GetBody() model.BlockStatementNode {
 	// migrated from BLangOnFailClause.java:73:5
 	return this.Body
 }
 
-func (this *BLangOnFailClause) SetBody(body BlockStatementNode) {
+func (this *BLangOnFailClause) SetBody(body model.BlockStatementNode) {
 	// migrated from BLangOnFailClause.java:98:5
 	if body, ok := body.(*BLangBlockStmt); ok {
 		this.Body = body
@@ -167,7 +162,7 @@ func (this *BLangOnFailClause) SetBody(body BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (this *BLangOnFailClause) GetKind() NodeKind {
+func (this *BLangOnFailClause) GetKind() model.NodeKind {
 	// migrated from BLangOnFailClause.java:93:5
-	return NodeKind_ON_FAIL
+	return model.NodeKind_ON_FAIL
 }

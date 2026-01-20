@@ -21,54 +21,6 @@ import (
 	"ballerina-lang-go/model"
 )
 
-type TypeKind = model.TypeKind
-
-// TypeKind constants - aliases to model package
-const (
-	TypeKind_INT           = model.TypeKind_INT
-	TypeKind_BYTE          = model.TypeKind_BYTE
-	TypeKind_FLOAT         = model.TypeKind_FLOAT
-	TypeKind_DECIMAL       = model.TypeKind_DECIMAL
-	TypeKind_STRING        = model.TypeKind_STRING
-	TypeKind_BOOLEAN       = model.TypeKind_BOOLEAN
-	TypeKind_BLOB          = model.TypeKind_BLOB
-	TypeKind_TYPEDESC      = model.TypeKind_TYPEDESC
-	TypeKind_TYPEREFDESC   = model.TypeKind_TYPEREFDESC
-	TypeKind_STREAM        = model.TypeKind_STREAM
-	TypeKind_TABLE         = model.TypeKind_TABLE
-	TypeKind_JSON          = model.TypeKind_JSON
-	TypeKind_XML           = model.TypeKind_XML
-	TypeKind_ANY           = model.TypeKind_ANY
-	TypeKind_ANYDATA       = model.TypeKind_ANYDATA
-	TypeKind_MAP           = model.TypeKind_MAP
-	TypeKind_FUTURE        = model.TypeKind_FUTURE
-	TypeKind_PACKAGE       = model.TypeKind_PACKAGE
-	TypeKind_SERVICE       = model.TypeKind_SERVICE
-	TypeKind_CONNECTOR     = model.TypeKind_CONNECTOR
-	TypeKind_ENDPOINT      = model.TypeKind_ENDPOINT
-	TypeKind_FUNCTION      = model.TypeKind_FUNCTION
-	TypeKind_ANNOTATION    = model.TypeKind_ANNOTATION
-	TypeKind_ARRAY         = model.TypeKind_ARRAY
-	TypeKind_UNION         = model.TypeKind_UNION
-	TypeKind_INTERSECTION  = model.TypeKind_INTERSECTION
-	TypeKind_VOID          = model.TypeKind_VOID
-	TypeKind_NIL           = model.TypeKind_NIL
-	TypeKind_NEVER         = model.TypeKind_NEVER
-	TypeKind_NONE          = model.TypeKind_NONE
-	TypeKind_OTHER         = model.TypeKind_OTHER
-	TypeKind_ERROR         = model.TypeKind_ERROR
-	TypeKind_TUPLE         = model.TypeKind_TUPLE
-	TypeKind_OBJECT        = model.TypeKind_OBJECT
-	TypeKind_RECORD        = model.TypeKind_RECORD
-	TypeKind_FINITE        = model.TypeKind_FINITE
-	TypeKind_CHANNEL       = model.TypeKind_CHANNEL
-	TypeKind_HANDLE        = model.TypeKind_HANDLE
-	TypeKind_READONLY      = model.TypeKind_READONLY
-	TypeKind_TYPEPARAM     = model.TypeKind_TYPEPARAM
-	TypeKind_PARAMETERIZED = model.TypeKind_PARAMETERIZED
-	TypeKind_REGEXP        = model.TypeKind_REGEXP
-)
-
 type ProjectKind uint8
 
 const (
@@ -78,32 +30,18 @@ const (
 	ProjectKind_WORKSPACE_PROJECT
 )
 
-// Type aliases for model interfaces
-type (
-	TypeNode                 = model.TypeNode
-	BuiltInReferenceTypeNode = model.BuiltInReferenceTypeNode
-	ReferenceTypeNode        = model.ReferenceTypeNode
-	ArrayTypeNode            = model.ArrayTypeNode
-	UserDefinedTypeNode      = model.UserDefinedTypeNode
-	FiniteTypeNode           = model.FiniteTypeNode
-)
-
 // TODO: move these to model package
 type Field interface {
 	GetName() model.Name
-	GetType() Type
+	GetType() model.Type
 }
 
 type NamedNode interface {
 	GetName() model.Name
 }
 
-type Type = model.Type
-
-type ValueType = model.ValueType
-
 type SelectivelyImmutableReferenceType interface {
-	Type
+	model.Type
 }
 
 type ObjectType interface {
@@ -111,9 +49,9 @@ type ObjectType interface {
 }
 
 type BType interface {
-	Type
-	bTypeGetTag() TypeTags
-	bTypesetTag(tag TypeTags)
+	model.Type
+	bTypeGetTag() model.TypeTags
+	bTypesetTag(tag model.TypeTags)
 	bTypeGetTSymbol() *BTypeSymbol
 	bTypeSetTSymbol(tsymbol *BTypeSymbol)
 	bTypeGetName() model.Name
@@ -125,10 +63,10 @@ type BType interface {
 type (
 	BLangTypeBase struct {
 		BLangNodeBase
-		FlagSet  common.UnorderedSet[Flag]
+		FlagSet  common.UnorderedSet[model.Flag]
 		Nullable bool
 		Grouped  bool
-		tags     TypeTags
+		tags     model.TypeTags
 		tsymbol  *BTypeSymbol
 		name     model.Name
 		flags    uint64
@@ -136,24 +74,24 @@ type (
 
 	BTypeImpl struct {
 		tSymbol *BTypeSymbol
-		tag     TypeTags
+		tag     model.TypeTags
 		name    model.Name
 		flags   uint64
 	}
 	BLangArrayType struct {
 		BLangTypeBase
-		Elemtype   TypeNode
+		Elemtype   model.TypeNode
 		Sizes      []BLangExpression
 		Dimensions int
 	}
 	BLangBuiltInRefTypeNode struct {
 		BLangTypeBase
-		TypeKind TypeKind
+		TypeKind model.TypeKind
 	}
 
 	BLangValueType struct {
 		BLangTypeBase
-		TypeKind TypeKind
+		TypeKind model.TypeKind
 	}
 
 	BLangUserDefinedType struct {
@@ -191,13 +129,13 @@ type (
 )
 
 var (
-	_ ArrayTypeNode            = &BLangArrayType{}
-	_ BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
-	_ UserDefinedTypeNode      = &BLangUserDefinedType{}
-	_ Field                    = &BField{}
-	_ NamedNode                = &BField{}
-	_ ObjectType               = &BObjectType{}
-	_ FiniteTypeNode           = &BLangFiniteTypeNode{}
+	_ model.ArrayTypeNode            = &BLangArrayType{}
+	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
+	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
+	_ Field                          = &BField{}
+	_ NamedNode                      = &BField{}
+	_ ObjectType                     = &BObjectType{}
+	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 )
 
 var (
@@ -208,17 +146,19 @@ var (
 	_ BType = &BTypeImpl{}
 )
 
-var _ BLangNode = &BLangArrayType{}
-var _ BLangNode = &BLangUserDefinedType{}
-var _ BLangNode = &BLangValueType{}
-var _ TypeNode = &BLangValueType{}
+var (
+	_ BLangNode      = &BLangArrayType{}
+	_ BLangNode      = &BLangUserDefinedType{}
+	_ BLangNode      = &BLangValueType{}
+	_ model.TypeNode = &BLangValueType{}
+)
 
-func (this *BLangArrayType) GetKind() NodeKind {
+func (this *BLangArrayType) GetKind() model.NodeKind {
 	// migrated from BLangArrayType.java:100:5
-	return NodeKind_ARRAY_TYPE
+	return model.NodeKind_ARRAY_TYPE
 }
 
-func (this *BLangArrayType) GetElementType() TypeNode {
+func (this *BLangArrayType) GetElementType() model.TypeNode {
 	return this.Elemtype
 }
 
@@ -226,8 +166,8 @@ func (this *BLangArrayType) GetDimensions() int {
 	return this.Dimensions
 }
 
-func (this *BLangArrayType) GetSizes() []ExpressionNode {
-	expressionNodes := make([]ExpressionNode, len(this.Sizes))
+func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
+	expressionNodes := make([]model.ExpressionNode, len(this.Sizes))
 	for i, size := range this.Sizes {
 		expressionNodes[i] = size
 	}
@@ -242,45 +182,45 @@ func (this *BLangTypeBase) IsGrouped() bool {
 	return this.Grouped
 }
 
-func (this *BLangBuiltInRefTypeNode) GetTypeKind() TypeKind {
+func (this *BLangBuiltInRefTypeNode) GetTypeKind() model.TypeKind {
 	return this.TypeKind
 }
 
-func (this *BLangBuiltInRefTypeNode) GetKind() NodeKind {
+func (this *BLangBuiltInRefTypeNode) GetKind() model.NodeKind {
 	// migrated from BLangBuiltInRefTypeNode.java:60:5
-	return NodeKind_BUILT_IN_REF_TYPE
+	return model.NodeKind_BUILT_IN_REF_TYPE
 }
 
-func (this *BLangValueType) GetTypeKind() TypeKind {
+func (this *BLangValueType) GetTypeKind() model.TypeKind {
 	return this.TypeKind
 }
 
-func (this *BLangValueType) GetKind() NodeKind {
+func (this *BLangValueType) GetKind() model.NodeKind {
 	// migrated from BLangValueType.java:74:5
-	return NodeKind_VALUE_TYPE
+	return model.NodeKind_VALUE_TYPE
 }
 
-func (this *BLangUserDefinedType) GetPackageAlias() IdentifierNode {
+func (this *BLangUserDefinedType) GetPackageAlias() model.IdentifierNode {
 	// migrated from BLangUserDefinedType.java:55:5
 	return &this.PkgAlias
 }
 
-func (this *BLangUserDefinedType) GetTypeName() IdentifierNode {
+func (this *BLangUserDefinedType) GetTypeName() model.IdentifierNode {
 	// migrated from BLangUserDefinedType.java:60:5
 	return &this.TypeName
 }
 
-func (this *BLangUserDefinedType) GetFlags() common.Set[Flag] {
+func (this *BLangUserDefinedType) GetFlags() common.Set[model.Flag] {
 	// migrated from BLangUserDefinedType.java:65:5
 	return &this.FlagSet
 }
 
-func (this *BLangUserDefinedType) GetKind() NodeKind {
+func (this *BLangUserDefinedType) GetKind() model.NodeKind {
 	// migrated from BLangUserDefinedType.java:70:5
-	return NodeKind_USER_DEFINED_TYPE
+	return model.NodeKind_USER_DEFINED_TYPE
 }
 
-func (this *BLangUserDefinedType) GetTypeKind() TypeKind {
+func (this *BLangUserDefinedType) GetTypeKind() model.TypeKind {
 	panic("not implemented")
 }
 
@@ -288,49 +228,49 @@ func (this *BField) GetName() model.Name {
 	return this.Name
 }
 
-func (this *BField) GetType() Type {
+func (this *BField) GetType() model.Type {
 	return this.Type
 }
 
-func typeTagToTypeKind(tag TypeTags) TypeKind {
+func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	switch tag {
 	case model.TypeTags_INT:
-		return TypeKind_INT
+		return model.TypeKind_INT
 	case model.TypeTags_BYTE:
-		return TypeKind_BYTE
+		return model.TypeKind_BYTE
 	case model.TypeTags_FLOAT:
-		return TypeKind_FLOAT
+		return model.TypeKind_FLOAT
 	case model.TypeTags_DECIMAL:
-		return TypeKind_DECIMAL
+		return model.TypeKind_DECIMAL
 	case model.TypeTags_STRING:
-		return TypeKind_STRING
+		return model.TypeKind_STRING
 	case model.TypeTags_BOOLEAN:
-		return TypeKind_BOOLEAN
+		return model.TypeKind_BOOLEAN
 	case model.TypeTags_TYPEDESC:
-		return TypeKind_TYPEDESC
+		return model.TypeKind_TYPEDESC
 	case model.TypeTags_NIL:
-		return TypeKind_NIL
+		return model.TypeKind_NIL
 	case model.TypeTags_NEVER:
-		return TypeKind_NEVER
+		return model.TypeKind_NEVER
 	case model.TypeTags_ERROR:
-		return TypeKind_ERROR
+		return model.TypeKind_ERROR
 	case model.TypeTags_READONLY:
-		return TypeKind_READONLY
+		return model.TypeKind_READONLY
 	case model.TypeTags_PARAMETERIZED_TYPE:
-		return TypeKind_PARAMETERIZED
+		return model.TypeKind_PARAMETERIZED
 	default:
-		return TypeKind_OTHER
+		return model.TypeKind_OTHER
 	}
 }
 
-func (this *BLangTypeBase) getTypeKind() TypeKind {
+func (this *BLangTypeBase) getTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.bTypeGetTag())
 }
 
 // BObjectType methods
-func (this *BObjectType) GetKind() TypeKind {
+func (this *BObjectType) GetKind() model.TypeKind {
 	// migrated from BObjectType.java:89:5
-	return TypeKind_OBJECT
+	return model.TypeKind_OBJECT
 }
 
 func (this *BObjectType) IsNullable() bool {
@@ -338,13 +278,11 @@ func (this *BObjectType) IsNullable() bool {
 	return false
 }
 
-type TypeTags = model.TypeTags
-
-func (this *BLangTypeBase) bTypesetTag(tag TypeTags) {
+func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) bTypeGetTag() TypeTags {
+func (this *BLangTypeBase) bTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
@@ -372,11 +310,11 @@ func (this *BLangTypeBase) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) bTypeGetTag() TypeTags {
+func (this *BTypeImpl) bTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
-func (this *BTypeImpl) bTypesetTag(tag TypeTags) {
+func (this *BTypeImpl) bTypesetTag(tag model.TypeTags) {
 	this.tag = tag
 }
 
@@ -404,10 +342,11 @@ func (this *BTypeImpl) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) GetTypeKind() TypeKind {
+func (this *BTypeImpl) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.tag)
 }
-func (this *BTypeImpl) GetKind() NodeKind {
+
+func (this *BTypeImpl) GetKind() model.NodeKind {
 	panic("not implemented")
 }
 
@@ -427,15 +366,15 @@ func (this *BTypeImpl) IsGrouped() bool {
 	panic("not implemented")
 }
 
-func (this *BLangFiniteTypeNode) GetValueSet() []ExpressionNode {
-	values := make([]ExpressionNode, len(this.ValueSpace))
+func (this *BLangFiniteTypeNode) GetValueSet() []model.ExpressionNode {
+	values := make([]model.ExpressionNode, len(this.ValueSpace))
 	for i, value := range this.ValueSpace {
 		values[i] = value
 	}
 	return values
 }
 
-func (this *BLangFiniteTypeNode) AddValue(value ExpressionNode) {
+func (this *BLangFiniteTypeNode) AddValue(value model.ExpressionNode) {
 	if blangExpression, ok := value.(BLangExpression); ok {
 		this.ValueSpace = append(this.ValueSpace, blangExpression)
 	} else {
@@ -443,7 +382,7 @@ func (this *BLangFiniteTypeNode) AddValue(value ExpressionNode) {
 	}
 }
 
-func (this *BLangFiniteTypeNode) GetKind() NodeKind {
+func (this *BLangFiniteTypeNode) GetKind() model.NodeKind {
 	// migrated from BLangFiniteTypeNode.java:100:5
-	return NodeKind_FINITE_TYPE_NODE
+	return model.NodeKind_FINITE_TYPE_NODE
 }

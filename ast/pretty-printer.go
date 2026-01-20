@@ -137,10 +137,10 @@ func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
 	// no-op
 }
 
-func (p *PrettyPrinter) printSourceKind(sourceKind SourceKind) {
-	if sourceKind == SourceKind_REGULAR_SOURCE {
+func (p *PrettyPrinter) printSourceKind(sourceKind model.SourceKind) {
+	if sourceKind == model.SourceKind_REGULAR_SOURCE {
 		p.printString("regular-source")
-	} else if sourceKind == SourceKind_TEST_SOURCE {
+	} else if sourceKind == model.SourceKind_TEST_SOURCE {
 		p.printString("test-source")
 	} else {
 		panic("Unsupported source kind: " + strconv.Itoa(int(sourceKind)))
@@ -190,25 +190,25 @@ func (p *PrettyPrinter) printPackageID(packageID model.PackageID) {
 }
 
 // Helper methods
-func (p *PrettyPrinter) printOperatorKind(opKind OperatorKind) {
+func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
 	p.printString(string(opKind))
 }
 
-func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
+func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
 	p.printString(string(typeKind))
 }
 
 func (p *PrettyPrinter) printFlags(flagSet interface{}) {
 	// Check if flagSet has a Contains method
 	type flagChecker interface {
-		Contains(Flag) bool
+		Contains(model.Flag) bool
 	}
 
 	if checker, ok := flagSet.(flagChecker); ok {
-		if checker.Contains(Flag_PUBLIC) {
+		if checker.Contains(model.Flag_PUBLIC) {
 			p.printString("public")
 		}
-		if checker.Contains(Flag_PRIVATE) {
+		if checker.Contains(model.Flag_PRIVATE) {
 			p.printString("private")
 		}
 		// Add more flags as needed
