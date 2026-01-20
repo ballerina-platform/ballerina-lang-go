@@ -1122,7 +1122,7 @@ func parseGotoTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 }
 
 // parseReturnTerminator parses a Return terminator
-func parseReturnTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRTerminator {
+func parseReturnTerminator(_ *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction) BIRTerminator {
 	if _, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionReturn); ok {
 		return NewBIRTerminatorReturn(pos)
 	}
@@ -1620,7 +1620,7 @@ func parseConstantLoadInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *B
 			constType = parseTypeFromCP(b, constIns.TypeCpIndex)
 		}
 		// Parse constant value
-		var value interface{}
+		var value any
 		if constIns.ConstantValueInfo != nil {
 			value = parseConstantValueInfo(b, constIns.ConstantValueInfo, constType)
 		}
@@ -1853,7 +1853,7 @@ func parseTypeTestInstruction(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_I
 
 // positionToLocation converts a Bir_Position to diagnostics.Location.
 // For now, returns nil as we don't have a full Location implementation.
-func positionToLocation(b *Bir, pos *Bir_Position) diagnostics.Location {
+func positionToLocation(_ *Bir, pos *Bir_Position) diagnostics.Location {
 	if pos == nil {
 		return nil
 	}
@@ -2181,8 +2181,8 @@ type minimalBType struct {
 	tag     int
 	name    Name
 	flags   int64
-	semType interface{}
-	tsymbol interface{}
+	semType any
+	tsymbol any
 }
 
 func (t *minimalBType) GetTag() int                    { return t.tag }
@@ -2191,15 +2191,16 @@ func (t *minimalBType) GetName() Name                  { return t.name }
 func (t *minimalBType) SetName(name Name)              { t.name = name }
 func (t *minimalBType) GetFlags() int64                { return t.flags }
 func (t *minimalBType) SetFlags(flags int64)           { t.flags = flags }
-func (t *minimalBType) GetSemType() interface{}        { return t.semType }
-func (t *minimalBType) SetSemType(semType interface{}) { t.semType = semType }
-func (t *minimalBType) GetTsymbol() interface{}        { return t.tsymbol }
-func (t *minimalBType) SetTsymbol(tsymbol interface{}) { t.tsymbol = tsymbol }
+func (t *minimalBType) GetSemType() any                { return t.semType }
+func (t *minimalBType) SetSemType(semType any)         { t.semType = semType }
+func (t *minimalBType) GetTsymbol() any                { return t.tsymbol }
+func (t *minimalBType) SetTsymbol(tsymbol any)         { t.tsymbol = tsymbol }
 func (t *minimalBType) GetReturnType() model.ValueType { return nil }
 func (t *minimalBType) GetTypeKind() model.TypeKind {
 	// Return a default type kind - this is a minimal implementation
 	return model.TypeKind_OTHER
 }
+
 func (t *minimalBType) String() string {
 	if t.name.Value() != "" {
 		return t.name.Value()
@@ -2283,7 +2284,7 @@ func parseConstantValue(b *Bir, cv *Bir_ConstantValue) ConstValue {
 	}
 
 	// Parse constant value info based on type
-	var value interface{}
+	var value any
 	if cv.ConstantValueInfo != nil {
 		// The constant value info is a switch-on type structure
 		// For now, we extract basic values based on the type
@@ -2298,7 +2299,7 @@ func parseConstantValue(b *Bir, cv *Bir_ConstantValue) ConstValue {
 }
 
 // parseConstantValueInfo parses the actual constant value from the info structure.
-func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType BType) interface{} {
+func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType BType) any {
 	if cvi == nil {
 		return nil
 	}
@@ -2352,7 +2353,7 @@ func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType BType) interfac
 	case *Bir_MapConstantInfo:
 		// Map constants - parse key-value pairs
 		if v.MapConstantSize > 0 && len(v.MapKeyValues) > 0 {
-			result := make(map[string]interface{})
+			result := make(map[string]any)
 			for _, kv := range v.MapKeyValues {
 				if kv == nil {
 					continue
@@ -2366,7 +2367,7 @@ func parseConstantValueInfo(b *Bir, cvi kaitai.Struct, constType BType) interfac
 	case *Bir_ListConstantInfo:
 		// List constants - parse member values
 		if v.ListConstantSize > 0 && len(v.ListMemberValueInfo) > 0 {
-			result := make([]interface{}, 0, len(v.ListMemberValueInfo))
+			result := make([]any, 0, len(v.ListMemberValueInfo))
 			for _, member := range v.ListMemberValueInfo {
 				if member == nil {
 					continue

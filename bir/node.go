@@ -16,6 +16,10 @@
 
 package bir
 
+//go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
+//go:generate mv bir.go bir-gen.go
+//go:generate go fmt bir-gen.go
+
 import (
 	"strconv"
 	"strings"
