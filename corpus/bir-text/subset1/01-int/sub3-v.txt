@@ -1,0 +1,231 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 1.8.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %5 = ConstantLoad %!s(int64=9223372036854775806)
+    %7 = ConstantLoad %!s(int64=9223372036854775806)
+    %11 = sub(%5,%7) -> bb1;
+  }
+  bb1 {
+    %12 = println(%1) -> bb2;
+  }
+  bb2 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %17 = ConstantLoad %!s(int64=1)
+    %19 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = sub(%17,%19) -> bb3;
+  }
+  bb3 {
+    %24 = println(%1) -> bb4;
+  }
+  bb4 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %29 = ConstantLoad %!s(int64=0)
+    %31 = ConstantLoad %!s(int64=9223372036854775806)
+    %11 = sub(%29,%31) -> bb5;
+  }
+  bb5 {
+    %36 = println(%1) -> bb6;
+  }
+  bb6 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %41 = ConstantLoad %!s(int64=9223372036854775806)
+    %43 = ConstantLoad %!s(int64=1)
+    %2 = sub(%41,%43) -> bb7;
+  }
+  bb7 {
+    %48 = println(%1) -> bb8;
+  }
+  bb8 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %53 = ConstantLoad %!s(int64=1)
+    %55 = ConstantLoad %!s(int64=1)
+    %11 = sub(%53,%55) -> bb9;
+  }
+  bb9 {
+    %60 = println(%1) -> bb10;
+  }
+  bb10 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %65 = ConstantLoad %!s(int64=0)
+    %67 = ConstantLoad %!s(int64=1)
+    %2 = sub(%65,%67) -> bb11;
+  }
+  bb11 {
+    %72 = println(%1) -> bb12;
+  }
+  bb12 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %11 = ConstantLoad %!s(int64=1)
+    %77 = unknown %11;
+    %11 = ConstantLoad %!s(int64=1)
+    %80 = unknown %11;
+    %11 = sub(%77,%80) -> bb13;
+  }
+  bb13 {
+    %86 = println(%1) -> bb14;
+  }
+  bb14 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %91 = ConstantLoad %!s(int64=9223372036854775806)
+    %93 = ConstantLoad %!s(int64=0)
+    %2 = sub(%91,%93) -> bb15;
+  }
+  bb15 {
+    %98 = println(%1) -> bb16;
+  }
+  bb16 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %103 = ConstantLoad %!s(int64=1)
+    %105 = ConstantLoad %!s(int64=0)
+    %11 = sub(%103,%105) -> bb17;
+  }
+  bb17 {
+    %110 = println(%1) -> bb18;
+  }
+  bb18 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %115 = ConstantLoad %!s(int64=0)
+    %117 = ConstantLoad %!s(int64=0)
+    %2 = sub(%115,%117) -> bb19;
+  }
+  bb19 {
+    %122 = println(%1) -> bb20;
+  }
+  bb20 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %11 = ConstantLoad %!s(int64=1)
+    %127 = unknown %11;
+    %11 = ConstantLoad %!s(int64=0)
+    %130 = unknown %11;
+    %11 = sub(%127,%130) -> bb21;
+  }
+  bb21 {
+    %136 = println(%1) -> bb22;
+  }
+  bb22 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %141 = unknown %2;
+    %2 = ConstantLoad %!s(int64=0)
+    %144 = unknown %2;
+    %2 = sub(%141,%144) -> bb23;
+  }
+  bb23 {
+    %150 = println(%1) -> bb24;
+  }
+  bb24 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %155 = ConstantLoad %!s(int64=9223372036854775806)
+    %11 = ConstantLoad %!s(int64=1)
+    %157 = unknown %11;
+    %11 = sub(%155,%157) -> bb25;
+  }
+  bb25 {
+    %163 = println(%1) -> bb26;
+  }
+  bb26 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %168 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad %!s(int64=1)
+    %170 = unknown %2;
+    %2 = sub(%168,%170) -> bb27;
+  }
+  bb27 {
+    %176 = println(%1) -> bb28;
+  }
+  bb28 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %181 = ConstantLoad %!s(int64=0)
+    %11 = ConstantLoad %!s(int64=1)
+    %183 = unknown %11;
+    %11 = sub(%181,%183) -> bb29;
+  }
+  bb29 {
+    %189 = println(%1) -> bb30;
+  }
+  bb30 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %2 = ConstantLoad %!s(int64=1)
+    %194 = unknown %2;
+    %2 = ConstantLoad %!s(int64=1)
+    %199 = unknown %2;
+    %197 = unknown %199;
+    %2 = sub(%194,%197) -> bb31;
+  }
+  bb31 {
+    %204 = println(%1) -> bb32;
+  }
+  bb32 {
+    %199 = ConstantLoad %!s(int64=-1)
+    %209 = ConstantLoad %!s(int64=9223372036854775806)
+    %211 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = sub(%209,%211) -> bb33;
+  }
+  bb33 {
+    %216 = println(%1) -> bb34;
+  }
+  bb34 {
+    %11 = ConstantLoad %!s(int64=-1)
+    %221 = ConstantLoad %!s(int64=1)
+    %223 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = sub(%221,%223) -> bb35;
+  }
+  bb35 {
+    %228 = println(%1) -> bb36;
+  }
+  bb36 {
+    %199 = ConstantLoad %!s(int64=-1)
+    %233 = ConstantLoad %!s(int64=0)
+    %235 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = sub(%233,%235) -> bb37;
+  }
+  bb37 {
+    %240 = println(%1) -> bb38;
+  }
+  bb38 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb39;
+  }
+  bb39 {
+    return;
+  }
+}
+sub<NIL>{
+  bb0 {
+    %0 = - %1 %2;
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}

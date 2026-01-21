@@ -1,0 +1,112 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 1.8.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %5 = foo() -> bb1;
+  }
+  bb1 {
+    %6 = bar() -> bb2;
+  }
+  bb2 {
+    %7 = + %5 %6;
+    %8 = println(%1) -> bb3;
+  }
+  bb3 {
+    %5 = ConstantLoad %!s(int64=-1)
+    %6 = foo() -> bb4;
+  }
+  bb4 {
+    %7 = bar() -> bb5;
+  }
+  bb5 {
+    %2 = - %6 %7;
+    %16 = println(%1) -> bb6;
+  }
+  bb6 {
+    %6 = ConstantLoad %!s(int64=-1)
+    %7 = foo() -> bb7;
+  }
+  bb7 {
+    %2 = bar() -> bb8;
+  }
+  bb8 {
+    %5 = * %7 %2;
+    %24 = println(%1) -> bb9;
+  }
+  bb9 {
+    %7 = ConstantLoad %!s(int64=-1)
+    %2 = foo() -> bb10;
+  }
+  bb10 {
+    %5 = bar() -> bb11;
+  }
+  bb11 {
+    %6 = / %2 %5;
+    %32 = println(%1) -> bb12;
+  }
+  bb12 {
+    %2 = ConstantLoad %!s(int64=-1)
+    %5 = foo() -> bb13;
+  }
+  bb13 {
+    %6 = bar() -> bb14;
+  }
+  bb14 {
+    %7 = % %5 %6;
+    %40 = println(%1) -> bb15;
+  }
+  bb15 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb16;
+  }
+  bb16 {
+    return;
+  }
+}
+foo<NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(int64=105)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+bar<NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(int64=2)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}

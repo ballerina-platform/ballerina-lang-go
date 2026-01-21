@@ -16,7 +16,153 @@
 
 package bir
 
-import "ballerina-lang-go/model"
+import (
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
+)
+
+//go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
+//go:generate mv bir.go bir-def-gen.go
+type ConstValue struct {
+	Type  model.ValueType
+	Value interface{}
+}
+
+type BIRInstruction interface {
+	GetKind() InstructionKind
+}
+
+type (
+	BIRNodeBase struct {
+		Pos diagnostics.Location
+	}
+
+	BIRDocumentableNodeBase struct {
+		BIRNodeBase
+		MarkdownDocAttachment model.MarkdownDocAttachment
+	}
+
+	// BIRAbstractInstruction
+	BIRInstructionBase struct {
+		BIRNodeBase
+		// Kind InstructionKind
+		LhsOp *BIROperand
+		Scope *BIRScope
+	}
+
+	BIRScope struct {
+		Id     int
+		Parent *BIRScope
+	}
+
+	BIRPackage struct {
+		BIRNodeBase
+		PackageID *model.PackageID
+		// TODO: avoid duplicates here
+		ImportModules []BIRImportModule
+		TypeDefs      []BIRTypeDefinition
+		GlobalVars    []BIRGlobalVariableDcl
+		Functions     []BIRFunction
+		Constants     []BIRConstant
+	}
+
+	BIRImportModule struct {
+		BIRNodeBase
+		PackageID *model.PackageID
+	}
+
+	BIRTypeDefinition struct {
+		BIRDocumentableNodeBase
+		Name            model.Name
+		OriginalName    model.Name
+		InternalName    model.Name
+		AttachedFuncs   []BIRFunction
+		Flags           int64
+		Type            model.TypeNode
+		IsBuiltin       bool
+		ReferencedTypes []model.TypeNode
+		ReferenceType   model.TypeNode
+		Origin          model.SymbolOrigin
+		Index           int
+	}
+
+	BIRVariableDcl struct {
+		BIRDocumentableNodeBase
+		Type               model.ValueType
+		Name               model.Name
+		OriginalName       model.Name
+		MetaVarName        string
+		Kind               VarKind
+		Scope              VarScope
+		IgnoreVariable     bool
+		EndBB              *BIRBasicBlock
+		StartBB            *BIRBasicBlock
+		InsOffset          int
+		OnlyUsedInSingleBB bool
+		Initialized        bool
+	}
+
+	BIRGlobalVariableDcl struct {
+		BIRVariableDcl
+		Flags  int64
+		PkgId  *model.PackageID
+		Origin model.SymbolOrigin
+	}
+
+	BIRFunction struct {
+		BIRDocumentableNodeBase
+		Name           model.Name
+		OriginalName   model.Name
+		Flags          int64
+		Origin         model.SymbolOrigin
+		Type           model.InvokableType
+		RequiredParams []BIRParameter
+		RestParams     *BIRParameter
+		ArgsCount      int
+		LocalVars      []BIRVariableDcl
+		ReturnVariable *BIRVariableDcl
+		Parameters     []BIRFunctionParameter
+		BasicBlocks    []BIRBasicBlock
+		// FIXME:
+		DependentGlobalVars []BIRGlobalVariableDcl
+	}
+
+	BIRConstant struct {
+		BIRDocumentableNodeBase
+		Name       model.Name
+		Flags      int64
+		Type       model.ValueType
+		ConstValue ConstValue
+		Origin     model.SymbolOrigin
+	}
+
+	BIRBasicBlock struct {
+		BIRNodeBase
+		Number       int
+		Id           model.Name
+		Instructions []BIRNonTerminator
+		Terminator   BIRTerminator
+	}
+
+	BIRParameter struct {
+		BIRNodeBase
+		Name  model.Name
+		Flags int64
+	}
+
+	BIRFunctionParameter struct {
+		BIRVariableDcl
+		HasDefaultExpr  bool
+		IsPathParameter bool
+	}
+
+	BIROperand struct {
+		BIRNodeBase
+		VariableDcl *BIRVariableDcl
+	}
+)
+
+// TODO: add interface asserts
 
 type VarKind uint8
 
@@ -31,20 +177,12 @@ const (
 	VAR_KIND_SYNTHETIC
 )
 
-func (v VarKind) GetValue() uint8 {
-	return uint8(v)
-}
-
 type VarScope uint8
 
 const (
 	VAR_SCOPE_FUNCTION VarScope = iota + 1
 	VAR_SCOPE_GLOBAL
 )
-
-func (v VarScope) GetValue() uint8 {
-	return uint8(v)
-}
 
 type InstructionKind uint8
 
@@ -157,29 +295,3 @@ const (
 const (
 	INSTRUCTION_KIND_PLATFORM InstructionKind = 128
 )
-
-func (i InstructionKind) GetValue() uint8 {
-	return uint8(i)
-}
-
-type BIRScope struct {
-	Id     int
-	Parent *BIRScope
-}
-
-func NewBIRScope(id int, parent *BIRScope) *BIRScope {
-	return &BIRScope{
-		Id:     id,
-		Parent: parent,
-	}
-}
-
-type BInvokableType interface {
-	model.ValueType
-	GetParamTypes() []model.ValueType
-	SetParamTypes(paramTypes []model.ValueType)
-	GetRestType() model.ValueType
-	SetRestType(restType model.ValueType)
-	GetRetType() model.ValueType
-	SetRetType(retType model.ValueType)
-}

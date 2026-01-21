@@ -74,6 +74,7 @@ func ValueEqual[T comparable](v1, v2 T) bool {
 	return v1 == v2
 }
 
+// TODO: think of a way to implement this without depending on comparable
 type Set[T comparable] interface {
 	Add(value T)
 	Remove(value T)

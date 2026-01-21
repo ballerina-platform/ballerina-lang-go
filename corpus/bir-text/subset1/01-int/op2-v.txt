@@ -1,0 +1,124 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 1.8.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=6)
+    %3 = ConstantLoad %!s(int64=5)
+    %5 = ConstantLoad %!s(int64=3)
+    %7 = ConstantLoad %!s(int64=2)
+    %9 = ConstantLoad %!s(int64=1)
+    %11 = ConstantLoad %!s(bool=true)
+    %13 = ConstantLoad %!s(bool=false)
+    %16 = ConstantLoad %!s(int64=12)
+    %18 = + %16 %1;
+    %16 = ConstantLoad %!s(int64=15)
+    %21 = + %5 %16;
+    %15 = == %18 %21;
+    %24 = printBoolean(%15) -> bb1;
+  }
+  bb1 {
+    %16 = ConstantLoad %!s(int64=2)
+    %18 = + %3 %16;
+    %25 = != %3 %18;
+    %32 = printBoolean(%25) -> bb2;
+  }
+  bb2 {
+    %21 = ConstantLoad %!s(int64=9)
+    %36 = < %3 %21;
+    %16 = ConstantLoad %!s(int64=2)
+    %39 = > %3 %16;
+    %33 = == %36 %39;
+    %42 = printBoolean(%33) -> bb3;
+  }
+  bb3 {
+    %18 = + %9 %5;
+    %21 = ConstantLoad %!s(int64=4)
+    %16 = + %7 %21;
+    %43 = <= %18 %16;
+    %52 = printBoolean(%43) -> bb4;
+  }
+  bb4 {
+    %36 = >= %9 %3;
+    %21 = ConstantLoad %!s(int64=1)
+    %18 = + %21 %7;
+    %39 = >= %18 %5;
+    %62 = == %36 %39;
+    %53 = != %62 %13;
+    %66 = printBoolean(%53) -> bb5;
+  }
+  bb5 {
+    %16 = ConstantLoad %!s(int64=7)
+    %21 = + %16 %9;
+    %18 = ConstantLoad %!s(int64=8)
+    %36 = == %21 %18;
+    %67 = != %36 %13;
+    %76 = printBoolean(%67) -> bb6;
+  }
+  bb6 {
+    %39 = unknown %11;
+    %77 = == %39 %13;
+    %83 = printBoolean(%77) -> bb7;
+  }
+  bb7 {
+    %62 = unknown %11;
+    %84 = == %13 %62;
+    %90 = printBoolean(%84) -> bb8;
+  }
+  bb8 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb9;
+  }
+  bb9 {
+    return;
+  }
+}
+printBoolean<NIL>{
+  bb0 {
+    %1 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(int64=-1)
+    %7 = ConstantLoad %!s(int64=1)
+    %8 = println(%3) -> bb3;
+  }
+  bb2 {
+    %7 = ConstantLoad %!s(int64=-1)
+    %4 = ConstantLoad %!s(int64=0)
+    %14 = println(%3) -> bb3;
+  }
+  bb3 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb4;
+  }
+  bb4 {
+    return;
+  }
+}

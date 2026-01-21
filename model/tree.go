@@ -1256,3 +1256,8 @@ type Parameters struct {
 type NamedNode interface {
 	GetName() Name
 }
+
+type InvokableType interface {
+	GetParameterTypes() []Type
+	GetReturnType() Type
+}
