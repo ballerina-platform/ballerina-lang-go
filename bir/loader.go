@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
@@ -94,6 +95,23 @@ func LoadBIRPackageFromReader(r io.Reader) (BIRPackage, error) {
 	// TODO: types, globals, annotations, services etc. can be wired in the
 	// same style as needed. For now we keep them empty – the model remains
 	// structurally valid and the code builds.
+
+	return pkg, nil
+}
+
+// LoadBIRPackageFromFile loads a BIR package from a file in the given filesystem.
+// It opens the file at the specified path, reads its contents, and parses it as a BIR package.
+func LoadBIRPackageFromFile(fsys fs.FS, path string) (BIRPackage, error) {
+	file, err := fsys.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("opening BIR file %q: %w", path, err)
+	}
+	defer file.Close()
+
+	pkg, err := LoadBIRPackageFromReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("loading BIR package from %q: %w", path, err)
+	}
 
 	return pkg, nil
 }
