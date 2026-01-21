@@ -80,11 +80,12 @@ func testBIRPackageLoading(t *testing.T, birFile string) {
 		}
 	}()
 
-	dir := filepath.Dir(birFile)
-	filename := filepath.Base(birFile)
-	fsys := os.DirFS(dir)
-
-	pkg, err := LoadBIRPackageFromFile(fsys, filename)
+	file, err := os.Open(birFile)
+	if err != nil {
+		t.Fatalf("failed to open test BIR file: %v", err)
+	}
+	defer file.Close()
+	pkg, err := LoadBIRPackageFromReader(file)
 	if err != nil {
 		t.Errorf("error loading BIR package from %s: %v", birFile, err)
 		return

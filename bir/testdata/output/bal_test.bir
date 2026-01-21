@@ -1,0 +1,65 @@
+module heshanp.bal_test v 0.1.0;
+import ballerinai.observe v 0.0.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %1 = testLoop() -> bb1;
+  }
+  bb1 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+testLoop<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=0)
+    %3 = ConstantLoad %!s(int64=1000000)
+    GOTO bb1;
+  }
+  bb1 {
+    %7 = < %1 %3;
+    %7 ? bb2 : bb3;
+  }
+  bb2 {
+    %9 = ConstantLoad %!s(int64=1)
+    %1 = + %1 %9;
+    GOTO bb1;
+  }
+  bb3 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb4;
+  }
+  bb4 {
+    return;
+  }
+}

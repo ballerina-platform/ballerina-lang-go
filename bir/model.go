@@ -21,6 +21,8 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+//go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
+//go:generate mv bir.go bir-def-gen.go
 type ConstValue struct {
 	Type  model.ValueType
 	Value interface{}

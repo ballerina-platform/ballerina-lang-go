@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/fs"
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
@@ -97,23 +96,6 @@ func LoadBIRPackageFromReader(r io.Reader) (*BIRPackage, error) {
 	// TODO: types, globals, annotations, services etc. can be wired in the
 	// same style as needed. For now we keep them empty – the model remains
 	// structurally valid and the code builds.
-
-	return pkg, nil
-}
-
-// LoadBIRPackageFromFile loads a BIR package from a file in the given filesystem.
-// It opens the file at the specified path, reads its contents, and parses it as a BIR package.
-func LoadBIRPackageFromFile(fsys fs.FS, path string) (BIRPackage, error) {
-	file, err := fsys.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("opening BIR file %q: %w", path, err)
-	}
-	defer file.Close()
-
-	pkg, err := LoadBIRPackageFromReader(file)
-	if err != nil {
-		return nil, fmt.Errorf("loading BIR package from %q: %w", path, err)
-	}
 
 	return pkg, nil
 }
@@ -360,12 +342,12 @@ func populateConstants(b *Bir, pkg *BIRPackage) error {
 
 		// Parse markdown doc attachment
 		if c.Doc != nil {
-			panic("markdown doc attachment not supported")
+			fmt.Println("WARNING: markdown doc attachment not supported ignoring")
 		}
 
 		// Parse annotation attachments
 		if c.AnnotationAttachmentsContent != nil {
-			panic("annotation attachments not supported")
+			fmt.Println("WARNING: annotation attachments not supported ignoring")
 		}
 
 		consts = append(consts, bc)
@@ -964,24 +946,6 @@ func (t *terminatorImpl) GetNextBasicBlocks() []BIRBasicBlock {
 		return []BIRBasicBlock{*t.ThenBB}
 	}
 	return nil
-}
-
-// populatePathParameters populates path parameters for resource functions.
-func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionContent) error {
-	if rfc == nil {
-		return nil
-	}
-
-	panic("path parameters not supported")
-}
-
-// parseAnnotationAttachments parses annotation attachments.
-func parseAnnotationAttachments(b *Bir, aac *Bir_AnnotationAttachmentsContent) []any {
-	if aac == nil || aac.AttachmentsCount == 0 {
-		return nil
-	}
-
-	panic("annotation attachments not supported")
 }
 
 // parseReturnVar parses a return variable.
