@@ -129,13 +129,13 @@ func buildBIRPackage(b *Bir) (BIRPackage, error) {
 		return nil, fmt.Errorf("reading module package id: %w", err)
 	}
 
-	org := Name(cpString(b, pkgCp.OrgIndex))
-	pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
-	name := Name(cpString(b, pkgCp.NameIndex))
-	version := Name(cpString(b, pkgCp.VersionIndex))
+	org := model.Name(cpString(b, pkgCp.OrgIndex))
+	pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
+	name := model.Name(cpString(b, pkgCp.NameIndex))
+	version := model.Name(cpString(b, pkgCp.VersionIndex))
 
 	// We don't have source file name / root at this level; keep them empty.
-	sourceFileName := Name("")
+	sourceFileName := model.Name("")
 	sourceRoot := ""
 	skipTest := false
 	isTest := false
@@ -167,11 +167,11 @@ func populateImports(b *Bir, pkg BIRPackage) error {
 		if imp == nil {
 			continue
 		}
-		org := Name(cpString(b, imp.OrgIndex))
+		org := model.Name(cpString(b, imp.OrgIndex))
 		// Note: PackageNameIndex is available but NewBIRImportModule doesn't support separate pkgName
 		// It uses NewPackageIDWithOrgNameVersion which sets PkgName = name
-		name := Name(cpString(b, imp.NameIndex))
-		version := Name(cpString(b, imp.VersionIndex))
+		name := model.Name(cpString(b, imp.NameIndex))
+		version := model.Name(cpString(b, imp.VersionIndex))
 
 		mod := NewBIRImportModule(nil, org, name, version)
 		imports = append(imports, mod)
@@ -195,9 +195,9 @@ func populateFunctions(b *Bir, pkg BIRPackage) error {
 			continue
 		}
 
-		name := Name(cpString(b, f.NameCpIndex))
-		origName := Name(cpString(b, f.OriginalNameCpIndex))
-		workerName := Name(cpString(b, f.WorkerNameCpIndex))
+		name := model.Name(cpString(b, f.NameCpIndex))
+		origName := model.Name(cpString(b, f.OriginalNameCpIndex))
+		workerName := model.Name(cpString(b, f.WorkerNameCpIndex))
 		origin := model.SymbolOrigin(f.Origin)
 		pos := positionToLocation(b, f.Position)
 
@@ -226,7 +226,7 @@ func populateFunctions(b *Bir, pkg BIRPackage) error {
 				if rp == nil {
 					continue
 				}
-				pName := Name(cpString(b, rp.ParamNameCpIndex))
+				pName := model.Name(cpString(b, rp.ParamNameCpIndex))
 				p := NewBIRParameter(nil, pName, rp.Flags)
 				// TODO: Parse parameter annotations from rp if available
 				params = append(params, p)
@@ -236,7 +236,7 @@ func populateFunctions(b *Bir, pkg BIRPackage) error {
 
 		// Rest parameter
 		if f.HasRestParam != 0 {
-			restParamName := Name(cpString(b, f.RestParamNameCpIndex))
+			restParamName := model.Name(cpString(b, f.RestParamNameCpIndex))
 			restParam := NewBIRParameter(nil, restParamName, 0)
 			// Note: BIRParameter doesn't have SetAnnotAttachments in the current model
 			// Rest param annotations are available in f.RestParamAnnotations if needed
@@ -288,7 +288,7 @@ func populateFunctions(b *Bir, pkg BIRPackage) error {
 			dependentVars := make([]BIRGlobalVariableDcl, 0, len(f.DependentGlobalVarCpEntry))
 			pkgID := pkg.GetPackageID()
 			for _, cpIdx := range f.DependentGlobalVarCpEntry {
-				varName := Name(cpString(b, cpIdx))
+				varName := model.Name(cpString(b, cpIdx))
 				// Create a minimal global var reference
 				gv := NewBIRGlobalVariableDcl(
 					nil,
@@ -336,7 +336,7 @@ func populateConstants(b *Bir, pkg BIRPackage) error {
 		if c == nil {
 			continue
 		}
-		name := Name(cpString(b, c.NameCpIndex))
+		name := model.Name(cpString(b, c.NameCpIndex))
 		origin := model.SymbolOrigin(c.Origin)
 		pos := positionToLocation(b, c.Position)
 
@@ -393,8 +393,8 @@ func populateTypeDefs(b *Bir, pkg BIRPackage) error {
 			continue
 		}
 
-		name := Name(cpString(b, td.NameCpIndex))
-		origName := Name(cpString(b, td.OriginalNameCpIndex))
+		name := model.Name(cpString(b, td.NameCpIndex))
+		origName := model.Name(cpString(b, td.OriginalNameCpIndex))
 		origin := model.SymbolOrigin(td.Origin)
 		pos := positionToLocation(b, td.Position)
 
@@ -486,9 +486,9 @@ func populateTypeDefBodies(b *Bir, pkg BIRPackage) error {
 					continue
 				}
 				// Parse as a full function (same as regular functions)
-				funcName := Name(cpString(b, af.NameCpIndex))
-				origName := Name(cpString(b, af.OriginalNameCpIndex))
-				workerName := Name(cpString(b, af.WorkerNameCpIndex))
+				funcName := model.Name(cpString(b, af.NameCpIndex))
+				origName := model.Name(cpString(b, af.OriginalNameCpIndex))
+				workerName := model.Name(cpString(b, af.WorkerNameCpIndex))
 				origin := model.SymbolOrigin(af.Origin)
 				pos := positionToLocation(b, af.Position)
 				var fnType BInvokableType
@@ -511,7 +511,7 @@ func populateTypeDefBodies(b *Bir, pkg BIRPackage) error {
 						if rp == nil {
 							continue
 						}
-						pName := Name(cpString(b, rp.ParamNameCpIndex))
+						pName := model.Name(cpString(b, rp.ParamNameCpIndex))
 						p := NewBIRParameter(nil, pName, rp.Flags)
 						// Parse parameter annotations
 						// Note: BIRParameter doesn't have SetAnnotAttachments in the current model
@@ -523,7 +523,7 @@ func populateTypeDefBodies(b *Bir, pkg BIRPackage) error {
 				}
 
 				if af.HasRestParam != 0 {
-					restParamName := Name(cpString(b, af.RestParamNameCpIndex))
+					restParamName := model.Name(cpString(b, af.RestParamNameCpIndex))
 					restParam := NewBIRParameter(nil, restParamName, 0)
 					attachedFn.SetRestParam(restParam)
 				}
@@ -613,7 +613,7 @@ func populateGlobals(b *Bir, pkg BIRPackage) error {
 		if gv == nil {
 			continue
 		}
-		name := Name(cpString(b, gv.NameCpIndex))
+		name := model.Name(cpString(b, gv.NameCpIndex))
 		origin := model.SymbolOrigin(gv.Origin)
 		pos := positionToLocation(b, gv.Position)
 
@@ -677,8 +677,8 @@ func populateAnnotations(b *Bir, pkg BIRPackage) error {
 			continue
 		}
 
-		name := Name(cpString(b, a.NameCpIndex))
-		origName := Name(cpString(b, a.OriginalNameCpIndex))
+		name := model.Name(cpString(b, a.NameCpIndex))
+		origName := model.Name(cpString(b, a.OriginalNameCpIndex))
 		origin := model.SymbolOrigin(a.Origin)
 		pos := positionToLocation(b, a.Position)
 
@@ -687,16 +687,16 @@ func populateAnnotations(b *Bir, pkg BIRPackage) error {
 		if a.PackageIdCpIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, a.PackageIdCpIndex)
 			if err == nil && pkgCp != nil {
-				org := Name(cpString(b, pkgCp.OrgIndex))
-				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
-				namePart := Name(cpString(b, pkgCp.NameIndex))
-				version := Name(cpString(b, pkgCp.VersionIndex))
+				org := model.Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := model.Name(cpString(b, pkgCp.NameIndex))
+				version := model.Name(cpString(b, pkgCp.VersionIndex))
 				annotPkgID = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
 		// Attach points -> []AttachPoint.
-		points := make([]AttachPoint, 0, len(a.AttachPoints))
+		points := make([]model.AttachPoint, 0, len(a.AttachPoints))
 		for _, ap := range a.AttachPoints {
 			if ap == nil {
 				continue
@@ -765,8 +765,8 @@ func populateServices(b *Bir, pkg BIRPackage) error {
 			continue
 		}
 
-		genName := Name(cpString(b, s.NameCpIndex))
-		assocName := Name(cpString(b, s.AssociatedClassNameCpIndex))
+		genName := model.Name(cpString(b, s.NameCpIndex))
+		assocName := model.Name(cpString(b, s.AssociatedClassNameCpIndex))
 		origin := model.SymbolOrigin(s.Origin)
 		pos := positionToLocation(b, s.Position)
 
@@ -821,19 +821,19 @@ func populateServices(b *Bir, pkg BIRPackage) error {
 	return nil
 }
 
-// pointsToSet converts a slice of AttachPoint to a set. Our Go model uses a
+// pointsToSet converts a slice of model.AttachPoint to a set. Our Go model uses a
 // set‑like collection conceptually; we store it as a slice here.
-func pointsToSet(points []AttachPoint) []AttachPoint {
+func pointsToSet(points []model.AttachPoint) []model.AttachPoint {
 	if len(points) == 0 {
-		return []AttachPoint{}
+		return []model.AttachPoint{}
 	}
 	return points
 }
 
-// getAttachmentPoint creates an AttachPoint from a point name and source flag.
-func getAttachmentPoint(pointName string, isSource bool) *AttachPoint {
+// getAttachmentPoint creates an model.AttachPoint from a point name and source flag.
+func getAttachmentPoint(pointName string, isSource bool) *model.AttachPoint {
 	point := model.Point(pointName)
-	return &AttachPoint{
+	return &model.AttachPoint{
 		Point:  point,
 		Source: isSource,
 	}
@@ -996,7 +996,7 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, 
 			continue
 		}
 
-		bbName := Name(cpString(b, kaitaiBB.NameCpIndex))
+		bbName := model.Name(cpString(b, kaitaiBB.NameCpIndex))
 		bb := NewBIRBasicBlock(bbName, i)
 		bbMap[bbName.Value()] = bb
 		basicBlocks = append(basicBlocks, bb)
@@ -1188,15 +1188,15 @@ func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {
-				org := Name(cpString(b, pkgCp.OrgIndex))
-				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
-				namePart := Name(cpString(b, pkgCp.NameIndex))
-				version := Name(cpString(b, pkgCp.VersionIndex))
+				org := model.Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := model.Name(cpString(b, pkgCp.NameIndex))
+				version := model.Name(cpString(b, pkgCp.VersionIndex))
 				calleePkg = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
-		name := Name(cpString(b, callInfo.CallNameCpIndex))
+		name := model.Name(cpString(b, callInfo.CallNameCpIndex))
 		args := make([]BIROperand, 0, len(callInfo.Arguments))
 		for _, arg := range callInfo.Arguments {
 			if arg != nil {
@@ -1240,15 +1240,15 @@ func parseAsyncCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_I
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {
-				org := Name(cpString(b, pkgCp.OrgIndex))
-				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
-				namePart := Name(cpString(b, pkgCp.NameIndex))
-				version := Name(cpString(b, pkgCp.VersionIndex))
+				org := model.Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := model.Name(cpString(b, pkgCp.NameIndex))
+				version := model.Name(cpString(b, pkgCp.VersionIndex))
 				calleePkg = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
-		name := Name(cpString(b, callInfo.CallNameCpIndex))
+		name := model.Name(cpString(b, callInfo.CallNameCpIndex))
 		args := make([]BIROperand, 0, len(callInfo.Arguments))
 		for _, arg := range callInfo.Arguments {
 			if arg != nil {
@@ -1349,7 +1349,7 @@ func parseFieldLockTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_I
 			lockedBB = bbMap[lockedBBName]
 		}
 		// Create a minimal operand for the local var
-		localVar := NewBIROperand(NewBIRVariableDclSimple(nil, Name(lockVarName), VAR_SCOPE_FUNCTION, VAR_KIND_LOCAL))
+		localVar := NewBIROperand(NewBIRVariableDclSimple(nil, model.Name(lockVarName), VAR_SCOPE_FUNCTION, VAR_KIND_LOCAL))
 		return NewBIRTerminatorFieldLock(pos, localVar, fieldName, lockedBB)
 	}
 	return &terminatorImpl{
@@ -1443,7 +1443,7 @@ func parseFlushTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instr
 // parseWorkerReceiveTerminator parses a WorkerReceive terminator
 func parseWorkerReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if wrIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkReceive); ok && wrIns != nil {
-		workerName := Name(cpString(b, wrIns.WorkerNameCpIndex))
+		workerName := model.Name(cpString(b, wrIns.WorkerNameCpIndex))
 		lhsOp := parseOperand(b, wrIns.LhsOperand)
 		isSameStrand := wrIns.IsSameStrand != 0
 		thenBBName := cpString(b, wrIns.ThenBbIdNameCpIndex)
@@ -1462,7 +1462,7 @@ func parseWorkerReceiveTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *B
 // parseWorkerSendTerminator parses a WorkerSend terminator
 func parseWorkerSendTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap map[string]BIRBasicBlock) BIRTerminator {
 	if wsIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionWkSend); ok && wsIns != nil {
-		channel := Name(cpString(b, wsIns.ChannelNameCpIndex))
+		channel := model.Name(cpString(b, wsIns.ChannelNameCpIndex))
 		data := parseOperand(b, wsIns.WorkerDataOperand)
 		isSameStrand := wsIns.IsSameStrand != 0
 		isSync := wsIns.IsSynch != 0
@@ -1939,7 +1939,7 @@ func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionCon
 			if pp.PathParamTypeCpIndex >= 0 {
 				t = parseTypeFromCP(b, pp.PathParamTypeCpIndex)
 			}
-			name := Name(metaVarName)
+			name := model.Name(metaVarName)
 			pathVar := NewBIRVariableDclSimple(
 				t,
 				name,
@@ -1956,7 +1956,7 @@ func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionCon
 	// Rest path parameter
 	if rfc.HasRestPathParam != 0 && rfc.RestPathParam != nil {
 		metaVarName := cpString(b, rfc.RestPathParam.PathParamNameCpIndex)
-		name := Name(metaVarName)
+		name := model.Name(metaVarName)
 		var t BType
 		if rfc.RestPathParam.PathParamTypeCpIndex >= 0 {
 			t = parseTypeFromCP(b, rfc.RestPathParam.PathParamTypeCpIndex)
@@ -1972,7 +1972,7 @@ func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionCon
 
 	// Resource path segments
 	if rfc.ResourcePathSegmentCount > 0 && len(rfc.ResourcePathSegments) > 0 {
-		resourcePath := make([]Name, 0, len(rfc.ResourcePathSegments))
+		resourcePath := make([]model.Name, 0, len(rfc.ResourcePathSegments))
 		pathSegmentPosList := make([]diagnostics.Location, 0, len(rfc.ResourcePathSegments))
 		pathSegmentTypeList := make([]BType, 0, len(rfc.ResourcePathSegments))
 
@@ -1980,7 +1980,7 @@ func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionCon
 			if seg == nil {
 				continue
 			}
-			pathName := Name(cpString(b, seg.ResourcePathSegmentCpIndex))
+			pathName := model.Name(cpString(b, seg.ResourcePathSegmentCpIndex))
 			resourcePath = append(resourcePath, pathName)
 			pathSegmentPosList = append(pathSegmentPosList, positionToLocation(b, seg.ResourcePathSegmentPos))
 			var t BType
@@ -2000,7 +2000,7 @@ func populatePathParameters(b *Bir, fn BIRFunction, rfc *Bir_ResourceFunctionCon
 	// Accessor
 	if rfc.ResourceAccessor >= 0 {
 		// TODO: Map accessor from CP index or value
-		accessorName := Name(cpString(b, rfc.ResourceAccessor))
+		accessorName := model.Name(cpString(b, rfc.ResourceAccessor))
 		fn.SetAccessor(accessorName)
 	}
 
@@ -2024,16 +2024,16 @@ func parseAnnotationAttachments(b *Bir, aac *Bir_AnnotationAttachmentsContent) [
 		if aa.PackageIdCpIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, aa.PackageIdCpIndex)
 			if err == nil && pkgCp != nil {
-				org := Name(cpString(b, pkgCp.OrgIndex))
-				pkgName := Name(cpString(b, pkgCp.PackageNameIndex))
-				namePart := Name(cpString(b, pkgCp.NameIndex))
-				version := Name(cpString(b, pkgCp.VersionIndex))
+				org := model.Name(cpString(b, pkgCp.OrgIndex))
+				pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
+				namePart := model.Name(cpString(b, pkgCp.NameIndex))
+				version := model.Name(cpString(b, pkgCp.VersionIndex))
 				annotPkgID = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 
 		// Parse tag reference
-		tagRef := Name(cpString(b, aa.TagReferenceCpIndex))
+		tagRef := model.Name(cpString(b, aa.TagReferenceCpIndex))
 		pos := positionToLocation(b, aa.Position)
 
 		// Check if this is a const annotation
@@ -2058,7 +2058,7 @@ func parseReturnVar(b *Bir, rv *Bir_ReturnVar) BIRVariableDcl {
 		return nil
 	}
 
-	name := Name(cpString(b, rv.NameCpIndex))
+	name := model.Name(cpString(b, rv.NameCpIndex))
 	kind := VarKind(rv.Kind)
 	var t BType
 	if rv.TypeCpIndex >= 0 {
@@ -2079,7 +2079,7 @@ func parseFunctionParameter(b *Bir, dp *Bir_DefaultParameter) BIRFunctionParamet
 		return nil
 	}
 
-	name := Name(cpString(b, dp.NameCpIndex))
+	name := model.Name(cpString(b, dp.NameCpIndex))
 	kind := VarKind(dp.Kind)
 	var t BType
 	if dp.TypeCpIndex >= 0 {
@@ -2105,7 +2105,7 @@ func parseLocalVariable(b *Bir, lv *Bir_LocalVariable) BIRVariableDcl {
 		return nil
 	}
 
-	name := Name(cpString(b, lv.NameCpIndex))
+	name := model.Name(cpString(b, lv.NameCpIndex))
 	kind := VarKind(lv.Kind)
 	var t BType
 	if lv.TypeCpIndex >= 0 {
@@ -2141,9 +2141,9 @@ func parseErrorEntry(b *Bir, ee *Bir_ErrorEntry) BIRErrorEntry {
 
 	// Create basic block references by name (they will be resolved later if needed)
 	// For now, we create minimal basic blocks with just the name
-	trapBB := NewBIRBasicBlock(Name(trapBBName), 0)
-	endBB := NewBIRBasicBlock(Name(endBBName), 0)
-	targetBB := NewBIRBasicBlock(Name(targetBBName), 0)
+	trapBB := NewBIRBasicBlock(model.Name(trapBBName), 0)
+	endBB := NewBIRBasicBlock(model.Name(endBBName), 0)
+	targetBB := NewBIRBasicBlock(model.Name(targetBBName), 0)
 
 	// Parse error operand
 	var errorOp BIROperand
@@ -2189,7 +2189,7 @@ func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) model.ValueType {
 	// For now, we create a stub that satisfies the BType interface
 	return &minimalBType{
 		tag:   int(ti.TypeTag),
-		name:  Name(cpString(b, ti.NameIndex)),
+		name:  model.Name(cpString(b, ti.NameIndex)),
 		flags: ti.TypeFlag,
 	}
 }
@@ -2197,7 +2197,7 @@ func createBTypeFromTypeInfo(b *Bir, ti *Bir_TypeInfo) model.ValueType {
 // minimalBType is a minimal implementation of BType for parsing purposes.
 type minimalBType struct {
 	tag     int
-	name    Name
+	name    model.Name
 	flags   int64
 	semType any
 	tsymbol any
@@ -2205,8 +2205,8 @@ type minimalBType struct {
 
 func (t *minimalBType) GetTag() int                    { return t.tag }
 func (t *minimalBType) SetTag(tag int)                 { t.tag = tag }
-func (t *minimalBType) GetName() Name                  { return t.name }
-func (t *minimalBType) SetName(name Name)              { t.name = name }
+func (t *minimalBType) GetName() model.Name                  { return t.name }
+func (t *minimalBType) SetName(name model.Name)              { t.name = name }
 func (t *minimalBType) GetFlags() int64                { return t.flags }
 func (t *minimalBType) SetFlags(flags int64)           { t.flags = flags }
 func (t *minimalBType) GetSemType() any                { return t.semType }
@@ -2227,13 +2227,13 @@ func (t *minimalBType) String() string {
 }
 
 // parseMarkdown parses markdown documentation from Bir_Markdown.
-func parseMarkdown(b *Bir, md *Bir_Markdown) MarkdownDocAttachment {
+func parseMarkdown(b *Bir, md *Bir_Markdown) model.MarkdownDocAttachment {
 	if md == nil || md.HasDoc == 0 || md.MarkdownContent == nil {
-		return MarkdownDocAttachment{}
+		return model.MarkdownDocAttachment{}
 	}
 
 	mc := md.MarkdownContent
-	mdDoc := MarkdownDocAttachment{}
+	mdDoc := model.MarkdownDocAttachment{}
 
 	// Parse description
 	if mc.DescriptionCpIndex >= 0 {
@@ -2411,7 +2411,7 @@ func parseReceiver(b *Bir, rec *Bir_Reciever) BIRVariableDcl {
 		return nil
 	}
 
-	name := Name(cpString(b, rec.NameCpIndex))
+	name := model.Name(cpString(b, rec.NameCpIndex))
 	kind := VarKind(rec.Kind)
 	var t BType
 	if rec.TypeCpIndex >= 0 {
@@ -2442,7 +2442,7 @@ func parseOperand(b *Bir, op *Bir_Operand) BIROperand {
 		// Create a minimal variable for ignored operands
 		ignoredVar := NewBIRVariableDclSimple(
 			ignoredType,
-			Name("_"),
+			model.Name("_"),
 			VAR_SCOPE_FUNCTION,
 			VAR_KIND_LOCAL,
 		)
@@ -2455,7 +2455,7 @@ func parseOperand(b *Bir, op *Bir_Operand) BIROperand {
 	}
 
 	var varType BType
-	varName := Name(cpString(b, op.Variable.VariableDclNameCpIndex))
+	varName := model.Name(cpString(b, op.Variable.VariableDclNameCpIndex))
 	kind := VarKind(op.Variable.Kind)
 	scope := VarScope(op.Variable.Scope)
 

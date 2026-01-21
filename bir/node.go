@@ -17,8 +17,7 @@
 package bir
 
 //go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
-//go:generate mv bir.go bir-gen.go
-//go:generate go fmt bir-gen.go
+//go:generate mv bir.go bir-def-gen.go
 
 import (
 	"strconv"
@@ -28,18 +27,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type (
-	Name                  = model.Name
-	PackageID             = model.PackageID
-	SymbolOrigin          = model.SymbolOrigin
-	AttachPoint           = model.AttachPoint
-	MarkdownDocAttachment = model.MarkdownDocAttachment
-	Flag                  = model.Flag
-	NamedNode             = model.NamedNode
-
-	BType = model.ValueType
-)
-
+type BType = model.ValueType
 type BIRNodeData interface {
 	SetPos(pos diagnostics.Location)
 	GetPos() diagnostics.Location
@@ -64,8 +52,8 @@ type BIRNode interface {
 
 type BIRPackageData interface {
 	BIRNodeData
-	SetPackageID(packageID PackageID)
-	GetPackageID() PackageID
+	SetPackageID(packageID model.PackageID)
+	GetPackageID() model.PackageID
 	SetImportModules(importModules *[]BIRImportModule)
 	GetImportModules() *[]BIRImportModule
 	SetTypeDefs(typeDefs *[]BIRTypeDefinition)
@@ -90,7 +78,7 @@ type BIRPackageData interface {
 
 type BIRPackageBase struct {
 	BIRNodeBase
-	PackageID                      PackageID
+	PackageID                      model.PackageID
 	ImportModules                  []BIRImportModule
 	TypeDefs                       []BIRTypeDefinition
 	GlobalVars                     []BIRGlobalVariableDcl
@@ -103,11 +91,11 @@ type BIRPackageBase struct {
 	RecordDefaultValueMap          map[string]map[string]string
 }
 
-func (b *BIRPackageBase) SetPackageID(packageID PackageID) {
+func (b *BIRPackageBase) SetPackageID(packageID model.PackageID) {
 	b.PackageID = packageID
 }
 
-func (b *BIRPackageBase) GetPackageID() PackageID {
+func (b *BIRPackageBase) GetPackageID() model.PackageID {
 	return b.PackageID
 }
 
@@ -204,11 +192,11 @@ func (m *BIRPackageMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRPackage(m.Self)
 }
 
-func NewBIRPackage(pos diagnostics.Location, org Name, pkgName Name, name Name, version Name, sourceFileName Name, sourceRoot string, skipTest bool) BIRPackage {
+func NewBIRPackage(pos diagnostics.Location, org model.Name, pkgName model.Name, name model.Name, version model.Name, sourceFileName model.Name, sourceRoot string, skipTest bool) BIRPackage {
 	return NewBIRPackageWithIsTestPkg(pos, org, pkgName, name, version, sourceFileName, sourceRoot, skipTest, false)
 }
 
-func NewBIRPackageWithIsTestPkg(pos diagnostics.Location, org Name, pkgName Name, name Name, version Name, sourceFileName Name, sourceRoot string, skipTest bool, isTestPkg bool) BIRPackage {
+func NewBIRPackageWithIsTestPkg(pos diagnostics.Location, org model.Name, pkgName model.Name, name model.Name, version model.Name, sourceFileName model.Name, sourceRoot string, skipTest bool, isTestPkg bool) BIRPackage {
 	pkg := &BIRPackageImpl{
 		BIRPackageBase: BIRPackageBase{
 			BIRNodeBase: BIRNodeBase{
@@ -248,20 +236,20 @@ type BIRPackageImpl struct {
 
 type BIRImportModuleData interface {
 	BIRNodeData
-	SetPackageID(packageID PackageID)
-	GetPackageID() PackageID
+	SetPackageID(packageID model.PackageID)
+	GetPackageID() model.PackageID
 }
 
 type BIRImportModuleBase struct {
 	BIRNodeBase
-	PackageID PackageID
+	PackageID model.PackageID
 }
 
-func (b *BIRImportModuleBase) SetPackageID(packageID PackageID) {
+func (b *BIRImportModuleBase) SetPackageID(packageID model.PackageID) {
 	b.PackageID = packageID
 }
 
-func (b *BIRImportModuleBase) GetPackageID() PackageID {
+func (b *BIRImportModuleBase) GetPackageID() model.PackageID {
 	return b.PackageID
 }
 
@@ -278,7 +266,7 @@ func (m *BIRImportModuleMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRImportModule(m.Self)
 }
 
-func NewBIRImportModule(pos diagnostics.Location, org Name, name Name, version Name) BIRImportModule {
+func NewBIRImportModule(pos diagnostics.Location, org model.Name, name model.Name, version model.Name) BIRImportModule {
 	mod := &BIRImportModuleImpl{
 		BIRImportModuleBase: BIRImportModuleBase{
 			BIRNodeBase: BIRNodeBase{
@@ -301,10 +289,10 @@ type BIRVariableDclData interface {
 	BIRDocumentableNodeData
 	SetType(type_ BType)
 	GetType() BType
-	SetName(name Name)
-	GetName() Name
-	SetOriginalName(originalName Name)
-	GetOriginalName() Name
+	SetName(name model.Name)
+	GetName() model.Name
+	SetOriginalName(originalName model.Name)
+	GetOriginalName() model.Name
 	SetMetaVarName(metaVarName string)
 	GetMetaVarName() string
 	SetJvmVarName(jvmVarName string)
@@ -332,8 +320,8 @@ type BIRVariableDclData interface {
 type BIRVariableDclBase struct {
 	BIRDocumentableNodeBase
 	Type               BType
-	Name               Name
-	OriginalName       Name
+	Name               model.Name
+	OriginalName       model.Name
 	MetaVarName        string
 	JvmVarName         string
 	Kind               VarKind
@@ -355,19 +343,19 @@ func (b *BIRVariableDclBase) GetType() BType {
 	return b.Type
 }
 
-func (b *BIRVariableDclBase) SetName(name Name) {
+func (b *BIRVariableDclBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRVariableDclBase) GetName() Name {
+func (b *BIRVariableDclBase) GetName() model.Name {
 	return b.Name
 }
 
-func (b *BIRVariableDclBase) SetOriginalName(originalName Name) {
+func (b *BIRVariableDclBase) SetOriginalName(originalName model.Name) {
 	b.OriginalName = originalName
 }
 
-func (b *BIRVariableDclBase) GetOriginalName() Name {
+func (b *BIRVariableDclBase) GetOriginalName() model.Name {
 	return b.OriginalName
 }
 
@@ -472,7 +460,7 @@ func (m *BIRVariableDclMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRVariableDcl(m.Self)
 }
 
-func NewBIRVariableDcl(pos diagnostics.Location, type_ BType, name Name, originalName Name, scope VarScope, kind VarKind, metaVarName string) BIRVariableDcl {
+func NewBIRVariableDcl(pos diagnostics.Location, type_ BType, name model.Name, originalName model.Name, scope VarScope, kind VarKind, metaVarName string) BIRVariableDcl {
 	varDecl := &BIRVariableDclImpl{
 		BIRVariableDclBase: BIRVariableDclBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -494,11 +482,11 @@ func NewBIRVariableDcl(pos diagnostics.Location, type_ BType, name Name, origina
 	return varDecl
 }
 
-func NewBIRVariableDclWithName(pos diagnostics.Location, type_ BType, name Name, scope VarScope, kind VarKind, metaVarName string) BIRVariableDcl {
+func NewBIRVariableDclWithName(pos diagnostics.Location, type_ BType, name model.Name, scope VarScope, kind VarKind, metaVarName string) BIRVariableDcl {
 	return NewBIRVariableDcl(pos, type_, name, name, scope, kind, metaVarName)
 }
 
-func NewBIRVariableDclSimple(type_ BType, name Name, scope VarScope, kind VarKind) BIRVariableDcl {
+func NewBIRVariableDclSimple(type_ BType, name model.Name, scope VarScope, kind VarKind) BIRVariableDcl {
 	return NewBIRVariableDcl(nil, type_, name, name, scope, kind, "")
 }
 
@@ -509,8 +497,8 @@ type BIRVariableDclImpl struct {
 
 type BIRParameterData interface {
 	BIRNodeData
-	SetName(name Name)
-	GetName() Name
+	SetName(name model.Name)
+	GetName() model.Name
 	SetFlags(flags int64)
 	GetFlags() int64
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
@@ -519,16 +507,16 @@ type BIRParameterData interface {
 
 type BIRParameterBase struct {
 	BIRNodeBase
-	Name             Name
+	Name             model.Name
 	Flags            int64
 	AnnotAttachments []BIRAnnotationAttachment
 }
 
-func (b *BIRParameterBase) SetName(name Name) {
+func (b *BIRParameterBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRParameterBase) GetName() Name {
+func (b *BIRParameterBase) GetName() model.Name {
 	return b.Name
 }
 
@@ -561,7 +549,7 @@ func (m *BIRParameterMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRParameter(m.Self)
 }
 
-func NewBIRParameter(pos diagnostics.Location, name Name, flags int64) BIRParameter {
+func NewBIRParameter(pos diagnostics.Location, name model.Name, flags int64) BIRParameter {
 	param := &BIRParameterImpl{
 		BIRParameterBase: BIRParameterBase{
 			BIRNodeBase: BIRNodeBase{
@@ -586,10 +574,10 @@ type BIRGlobalVariableDclData interface {
 	BIRVariableDclData
 	SetFlags(flags int64)
 	GetFlags() int64
-	SetPkgId(pkgId PackageID)
-	GetPkgId() PackageID
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
+	SetPkgId(pkgId model.PackageID)
+	GetPkgId() model.PackageID
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
 	GetAnnotAttachments() *[]BIRAnnotationAttachment
 }
@@ -597,8 +585,8 @@ type BIRGlobalVariableDclData interface {
 type BIRGlobalVariableDclBase struct {
 	BIRVariableDclBase
 	Flags            int64
-	PkgId            PackageID
-	Origin           SymbolOrigin
+	PkgId            model.PackageID
+	Origin           model.SymbolOrigin
 	AnnotAttachments []BIRAnnotationAttachment
 }
 
@@ -610,19 +598,19 @@ func (b *BIRGlobalVariableDclBase) GetFlags() int64 {
 	return b.Flags
 }
 
-func (b *BIRGlobalVariableDclBase) SetPkgId(pkgId PackageID) {
+func (b *BIRGlobalVariableDclBase) SetPkgId(pkgId model.PackageID) {
 	b.PkgId = pkgId
 }
 
-func (b *BIRGlobalVariableDclBase) GetPkgId() PackageID {
+func (b *BIRGlobalVariableDclBase) GetPkgId() model.PackageID {
 	return b.PkgId
 }
 
-func (b *BIRGlobalVariableDclBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRGlobalVariableDclBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRGlobalVariableDclBase) GetOrigin() SymbolOrigin {
+func (b *BIRGlobalVariableDclBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
@@ -647,7 +635,7 @@ func (m *BIRGlobalVariableDclMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRGlobalVariableDcl(m.Self)
 }
 
-func NewBIRGlobalVariableDcl(pos diagnostics.Location, flags int64, type_ BType, pkgId PackageID, name Name, originalName Name, scope VarScope, kind VarKind, metaVarName string, origin SymbolOrigin) BIRGlobalVariableDcl {
+func NewBIRGlobalVariableDcl(pos diagnostics.Location, flags int64, type_ BType, pkgId model.PackageID, name model.Name, originalName model.Name, scope VarScope, kind VarKind, metaVarName string, origin model.SymbolOrigin) BIRGlobalVariableDcl {
 	globalVar := &BIRGlobalVariableDclImpl{
 		BIRGlobalVariableDclBase: BIRGlobalVariableDclBase{
 			BIRVariableDclBase: BIRVariableDclBase{
@@ -726,7 +714,7 @@ func (m *BIRFunctionParameterMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRFunctionParameter(m.Self)
 }
 
-func NewBIRFunctionParameter(pos diagnostics.Location, type_ BType, name Name, scope VarScope, kind VarKind, metaVarName string, hasDefaultExpr bool) BIRFunctionParameter {
+func NewBIRFunctionParameter(pos diagnostics.Location, type_ BType, name model.Name, scope VarScope, kind VarKind, metaVarName string, hasDefaultExpr bool) BIRFunctionParameter {
 	param := &BIRFunctionParameterImpl{
 		BIRFunctionParameterBase: BIRFunctionParameterBase{
 			BIRVariableDclBase: BIRVariableDclBase{
@@ -749,7 +737,7 @@ func NewBIRFunctionParameter(pos diagnostics.Location, type_ BType, name Name, s
 	return param
 }
 
-func NewBIRFunctionParameterWithIsPathParameter(pos diagnostics.Location, type_ BType, name Name, scope VarScope, kind VarKind, metaVarName string, hasDefaultExpr bool, isPathParameter bool) BIRFunctionParameter {
+func NewBIRFunctionParameterWithIsPathParameter(pos diagnostics.Location, type_ BType, name model.Name, scope VarScope, kind VarKind, metaVarName string, hasDefaultExpr bool, isPathParameter bool) BIRFunctionParameter {
 	param := NewBIRFunctionParameter(pos, type_, name, scope, kind, metaVarName, hasDefaultExpr)
 	param.SetIsPathParameter(isPathParameter)
 	return param
@@ -766,15 +754,15 @@ func (v *BIRFunctionParameterImpl) String() string {
 
 type BIRFunctionData interface {
 	BIRDocumentableNodeData
-	NamedNode
-	SetName(name Name)
-	GetName() Name
-	SetOriginalName(originalName Name)
-	GetOriginalName() Name
+	model.NamedNode
+	SetName(name model.Name)
+	GetName() model.Name
+	SetOriginalName(originalName model.Name)
+	GetOriginalName() model.Name
 	SetFlags(flags int64)
 	GetFlags() int64
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
 	SetType(type_ BInvokableType)
 	GetType() BInvokableType
 	SetRequiredParams(requiredParams *[]BIRParameter)
@@ -795,8 +783,8 @@ type BIRFunctionData interface {
 	GetBasicBlocks() *[]BIRBasicBlock
 	SetErrorTable(errorTable *[]BIRErrorEntry)
 	GetErrorTable() *[]BIRErrorEntry
-	SetWorkerName(workerName Name)
-	GetWorkerName() Name
+	SetWorkerName(workerName model.Name)
+	GetWorkerName() model.Name
 	SetWorkerChannels(workerChannels []ChannelDetails)
 	GetWorkerChannels() []ChannelDetails
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
@@ -811,12 +799,12 @@ type BIRFunctionData interface {
 	GetPathParams() *[]BIRVariableDcl
 	SetRestPathParam(restPathParam BIRVariableDcl)
 	GetRestPathParam() BIRVariableDcl
-	SetResourcePath(resourcePath *[]Name)
-	GetResourcePath() *[]Name
+	SetResourcePath(resourcePath *[]model.Name)
+	GetResourcePath() *[]model.Name
 	SetResourcePathSegmentPosList(resourcePathSegmentPosList *[]diagnostics.Location)
 	GetResourcePathSegmentPosList() *[]diagnostics.Location
-	SetAccessor(accessor Name)
-	GetAccessor() Name
+	SetAccessor(accessor model.Name)
+	GetAccessor() model.Name
 	SetPathSegmentTypeList(pathSegmentTypeList *[]BType)
 	GetPathSegmentTypeList() *[]BType
 	SetHasWorkers(hasWorkers bool)
@@ -825,10 +813,10 @@ type BIRFunctionData interface {
 
 type BIRFunctionBase struct {
 	BIRDocumentableNodeBase
-	Name                       Name
-	OriginalName               Name
+	Name                       model.Name
+	OriginalName               model.Name
 	Flags                      int64
-	Origin                     SymbolOrigin
+	Origin                     model.SymbolOrigin
 	Type                       BInvokableType
 	RequiredParams             []BIRParameter
 	Receiver                   BIRVariableDcl
@@ -839,7 +827,7 @@ type BIRFunctionBase struct {
 	Parameters                 []BIRFunctionParameter
 	BasicBlocks                []BIRBasicBlock
 	ErrorTable                 []BIRErrorEntry
-	WorkerName                 Name
+	WorkerName                 model.Name
 	WorkerChannels             []ChannelDetails
 	AnnotAttachments           []BIRAnnotationAttachment
 	AnnotAttachmentsOnExternal []BIRAnnotationAttachment
@@ -847,26 +835,26 @@ type BIRFunctionBase struct {
 	DependentGlobalVars        []BIRGlobalVariableDcl
 	PathParams                 []BIRVariableDcl
 	RestPathParam              BIRVariableDcl
-	ResourcePath               []Name
+	ResourcePath               []model.Name
 	ResourcePathSegmentPosList []diagnostics.Location
-	Accessor                   Name
+	Accessor                   model.Name
 	PathSegmentTypeList        []BType
 	HasWorkers                 bool
 }
 
-func (b *BIRFunctionBase) SetName(name Name) {
+func (b *BIRFunctionBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRFunctionBase) GetName() Name {
+func (b *BIRFunctionBase) GetName() model.Name {
 	return b.Name
 }
 
-func (b *BIRFunctionBase) SetOriginalName(originalName Name) {
+func (b *BIRFunctionBase) SetOriginalName(originalName model.Name) {
 	b.OriginalName = originalName
 }
 
-func (b *BIRFunctionBase) GetOriginalName() Name {
+func (b *BIRFunctionBase) GetOriginalName() model.Name {
 	return b.OriginalName
 }
 
@@ -878,11 +866,11 @@ func (b *BIRFunctionBase) GetFlags() int64 {
 	return b.Flags
 }
 
-func (b *BIRFunctionBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRFunctionBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRFunctionBase) GetOrigin() SymbolOrigin {
+func (b *BIRFunctionBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
@@ -966,11 +954,11 @@ func (b *BIRFunctionBase) GetErrorTable() *[]BIRErrorEntry {
 	return &b.ErrorTable
 }
 
-func (b *BIRFunctionBase) SetWorkerName(workerName Name) {
+func (b *BIRFunctionBase) SetWorkerName(workerName model.Name) {
 	b.WorkerName = workerName
 }
 
-func (b *BIRFunctionBase) GetWorkerName() Name {
+func (b *BIRFunctionBase) GetWorkerName() model.Name {
 	return b.WorkerName
 }
 
@@ -1030,11 +1018,11 @@ func (b *BIRFunctionBase) GetRestPathParam() BIRVariableDcl {
 	return b.RestPathParam
 }
 
-func (b *BIRFunctionBase) SetResourcePath(resourcePath *[]Name) {
+func (b *BIRFunctionBase) SetResourcePath(resourcePath *[]model.Name) {
 	b.ResourcePath = *resourcePath
 }
 
-func (b *BIRFunctionBase) GetResourcePath() *[]Name {
+func (b *BIRFunctionBase) GetResourcePath() *[]model.Name {
 	return &b.ResourcePath
 }
 
@@ -1046,11 +1034,11 @@ func (b *BIRFunctionBase) GetResourcePathSegmentPosList() *[]diagnostics.Locatio
 	return &b.ResourcePathSegmentPosList
 }
 
-func (b *BIRFunctionBase) SetAccessor(accessor Name) {
+func (b *BIRFunctionBase) SetAccessor(accessor model.Name) {
 	b.Accessor = accessor
 }
 
-func (b *BIRFunctionBase) GetAccessor() Name {
+func (b *BIRFunctionBase) GetAccessor() model.Name {
 	return b.Accessor
 }
 
@@ -1083,7 +1071,7 @@ func (m *BIRFunctionMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRFunction(m.Self)
 }
 
-func NewBIRFunction(pos diagnostics.Location, name Name, originalName Name, flags int64, origin SymbolOrigin, type_ BInvokableType, requiredParams []BIRParameter, receiver BIRVariableDcl, restParam BIRParameter, argsCount int, localVars []BIRVariableDcl, returnVariable BIRVariableDcl, parameters []BIRFunctionParameter, basicBlocks []BIRBasicBlock, errorTable []BIRErrorEntry, workerName Name, workerChannels []ChannelDetails, annotAttachments []BIRAnnotationAttachment, returnTypeAnnots []BIRAnnotationAttachment, dependentGlobalVars []BIRGlobalVariableDcl) BIRFunction {
+func NewBIRFunction(pos diagnostics.Location, name model.Name, originalName model.Name, flags int64, origin model.SymbolOrigin, type_ BInvokableType, requiredParams []BIRParameter, receiver BIRVariableDcl, restParam BIRParameter, argsCount int, localVars []BIRVariableDcl, returnVariable BIRVariableDcl, parameters []BIRFunctionParameter, basicBlocks []BIRBasicBlock, errorTable []BIRErrorEntry, workerName model.Name, workerChannels []ChannelDetails, annotAttachments []BIRAnnotationAttachment, returnTypeAnnots []BIRAnnotationAttachment, dependentGlobalVars []BIRGlobalVariableDcl) BIRFunction {
 	fn := &BIRFunctionImpl{
 		BIRFunctionBase: BIRFunctionBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -1117,7 +1105,7 @@ func NewBIRFunction(pos diagnostics.Location, name Name, originalName Name, flag
 	return fn
 }
 
-func NewBIRFunctionWithSendInsCount(pos diagnostics.Location, name Name, originalName Name, flags int64, type_ BInvokableType, workerName Name, sendInsCount int, origin SymbolOrigin) BIRFunction {
+func NewBIRFunctionWithSendInsCount(pos diagnostics.Location, name model.Name, originalName model.Name, flags int64, type_ BInvokableType, workerName model.Name, sendInsCount int, origin model.SymbolOrigin) BIRFunction {
 	fn := &BIRFunctionImpl{
 		BIRFunctionBase: BIRFunctionBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -1146,7 +1134,7 @@ func NewBIRFunctionWithSendInsCount(pos diagnostics.Location, name Name, origina
 	return fn
 }
 
-func NewBIRFunctionSimple(pos diagnostics.Location, name Name, flags int64, type_ BInvokableType, workerName Name, sendInsCount int, origin SymbolOrigin) BIRFunction {
+func NewBIRFunctionSimple(pos diagnostics.Location, name model.Name, flags int64, type_ BInvokableType, workerName model.Name, sendInsCount int, origin model.SymbolOrigin) BIRFunction {
 	return NewBIRFunctionWithSendInsCount(pos, name, name, flags, type_, workerName, sendInsCount, origin)
 }
 
@@ -1173,8 +1161,8 @@ type BIRBasicBlockData interface {
 	BIRNodeData
 	SetNumber(number int)
 	GetNumber() int
-	SetId(id Name)
-	GetId() Name
+	SetId(id model.Name)
+	GetId() model.Name
 	SetInstructions(instructions *[]BIRNonTerminator)
 	GetInstructions() *[]BIRNonTerminator
 	SetTerminator(terminator BIRTerminator)
@@ -1184,7 +1172,7 @@ type BIRBasicBlockData interface {
 type BIRBasicBlockBase struct {
 	BIRNodeBase
 	Number       int
-	Id           Name
+	Id           model.Name
 	Instructions []BIRNonTerminator
 	Terminator   BIRTerminator
 }
@@ -1199,11 +1187,11 @@ func (b *BIRBasicBlockBase) GetNumber() int {
 	return b.Number
 }
 
-func (b *BIRBasicBlockBase) SetId(id Name) {
+func (b *BIRBasicBlockBase) SetId(id model.Name) {
 	b.Id = id
 }
 
-func (b *BIRBasicBlockBase) GetId() Name {
+func (b *BIRBasicBlockBase) GetId() model.Name {
 	return b.Id
 }
 
@@ -1236,7 +1224,7 @@ func (m *BIRBasicBlockMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRBasicBlock(m.Self)
 }
 
-func NewBIRBasicBlock(id Name, number int) BIRBasicBlock {
+func NewBIRBasicBlock(id model.Name, number int) BIRBasicBlock {
 	bb := &BIRBasicBlockImpl{
 		BIRBasicBlockBase: BIRBasicBlockBase{
 			BIRNodeBase:  BIRNodeBase{},
@@ -1251,11 +1239,11 @@ func NewBIRBasicBlock(id Name, number int) BIRBasicBlock {
 }
 
 func NewBIRBasicBlockWithNumber(number int) BIRBasicBlock {
-	return NewBIRBasicBlock(Name(BIR_BASIC_BLOCK_PREFIX+strconv.Itoa(number)), number)
+	return NewBIRBasicBlock(model.Name(BIR_BASIC_BLOCK_PREFIX+strconv.Itoa(number)), number)
 }
 
 func NewBIRBasicBlockWithIdPrefix(idPrefix string, number int) BIRBasicBlock {
-	return NewBIRBasicBlock(Name(idPrefix+strconv.Itoa(number)), number)
+	return NewBIRBasicBlock(model.Name(idPrefix+strconv.Itoa(number)), number)
 }
 
 type BIRBasicBlockImpl struct {
@@ -1265,13 +1253,13 @@ type BIRBasicBlockImpl struct {
 
 type BIRTypeDefinitionData interface {
 	BIRDocumentableNodeData
-	NamedNode
-	SetName(name Name)
-	GetName() Name
-	SetOriginalName(originalName Name)
-	GetOriginalName() Name
-	SetInternalName(internalName Name)
-	GetInternalName() Name
+	model.NamedNode
+	SetName(name model.Name)
+	GetName() model.Name
+	SetOriginalName(originalName model.Name)
+	GetOriginalName() model.Name
+	SetInternalName(internalName model.Name)
+	GetInternalName() model.Name
 	SetAttachedFuncs(attachedFuncs *[]BIRFunction)
 	GetAttachedFuncs() *[]BIRFunction
 	SetFlags(flags int64)
@@ -1284,8 +1272,8 @@ type BIRTypeDefinitionData interface {
 	GetReferencedTypes() *[]BType
 	SetReferenceType(referenceType BType)
 	GetReferenceType() BType
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
 	GetAnnotAttachments() *[]BIRAnnotationAttachment
 	SetIndex(index int)
@@ -1294,41 +1282,41 @@ type BIRTypeDefinitionData interface {
 
 type BIRTypeDefinitionBase struct {
 	BIRDocumentableNodeBase
-	Name             Name
-	OriginalName     Name
-	InternalName     Name
+	Name             model.Name
+	OriginalName     model.Name
+	InternalName     model.Name
 	AttachedFuncs    []BIRFunction
 	Flags            int64
 	Type             BType
 	IsBuiltin        bool
 	ReferencedTypes  []BType
 	ReferenceType    BType
-	Origin           SymbolOrigin
+	Origin           model.SymbolOrigin
 	AnnotAttachments []BIRAnnotationAttachment
 	Index            int
 }
 
-func (b *BIRTypeDefinitionBase) SetName(name Name) {
+func (b *BIRTypeDefinitionBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRTypeDefinitionBase) GetName() Name {
+func (b *BIRTypeDefinitionBase) GetName() model.Name {
 	return b.Name
 }
 
-func (b *BIRTypeDefinitionBase) SetOriginalName(originalName Name) {
+func (b *BIRTypeDefinitionBase) SetOriginalName(originalName model.Name) {
 	b.OriginalName = originalName
 }
 
-func (b *BIRTypeDefinitionBase) GetOriginalName() Name {
+func (b *BIRTypeDefinitionBase) GetOriginalName() model.Name {
 	return b.OriginalName
 }
 
-func (b *BIRTypeDefinitionBase) SetInternalName(internalName Name) {
+func (b *BIRTypeDefinitionBase) SetInternalName(internalName model.Name) {
 	b.InternalName = internalName
 }
 
-func (b *BIRTypeDefinitionBase) GetInternalName() Name {
+func (b *BIRTypeDefinitionBase) GetInternalName() model.Name {
 	return b.InternalName
 }
 
@@ -1380,11 +1368,11 @@ func (b *BIRTypeDefinitionBase) GetReferenceType() BType {
 	return b.ReferenceType
 }
 
-func (b *BIRTypeDefinitionBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRTypeDefinitionBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRTypeDefinitionBase) GetOrigin() SymbolOrigin {
+func (b *BIRTypeDefinitionBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
@@ -1417,7 +1405,7 @@ func (m *BIRTypeDefinitionMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRTypeDefinition(m.Self)
 }
 
-func NewBIRTypeDefinition(pos diagnostics.Location, internalName Name, flags int64, isBuiltin bool, type_ BType, attachedFuncs []BIRFunction, origin SymbolOrigin, name Name, originalName Name) BIRTypeDefinition {
+func NewBIRTypeDefinition(pos diagnostics.Location, internalName model.Name, flags int64, isBuiltin bool, type_ BType, attachedFuncs []BIRFunction, origin model.SymbolOrigin, name model.Name, originalName model.Name) BIRTypeDefinition {
 	td := &BIRTypeDefinitionImpl{
 		BIRTypeDefinitionBase: BIRTypeDefinitionBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -1442,7 +1430,7 @@ func NewBIRTypeDefinition(pos diagnostics.Location, internalName Name, flags int
 	return td
 }
 
-func NewBIRTypeDefinitionSimple(pos diagnostics.Location, name Name, originalName Name, flags int64, isBuiltin bool, type_ BType, attachedFuncs []BIRFunction, origin SymbolOrigin) BIRTypeDefinition {
+func NewBIRTypeDefinitionSimple(pos diagnostics.Location, name model.Name, originalName model.Name, flags int64, isBuiltin bool, type_ BType, attachedFuncs []BIRFunction, origin model.SymbolOrigin) BIRTypeDefinition {
 	return NewBIRTypeDefinition(pos, name, flags, isBuiltin, type_, attachedFuncs, origin, name, originalName)
 }
 
@@ -1556,49 +1544,49 @@ func (c *ChannelDetails) String() string {
 
 type BIRAnnotationData interface {
 	BIRDocumentableNodeData
-	SetName(name Name)
-	GetName() Name
-	SetOriginalName(originalName Name)
-	GetOriginalName() Name
+	SetName(name model.Name)
+	GetName() model.Name
+	SetOriginalName(originalName model.Name)
+	GetOriginalName() model.Name
 	SetFlags(flags int64)
 	GetFlags() int64
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
-	SetAttachPoints(attachPoints *[]AttachPoint)
-	GetAttachPoints() *[]AttachPoint
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
+	SetAttachPoints(attachPoints *[]model.AttachPoint)
+	GetAttachPoints() *[]model.AttachPoint
 	SetAnnotationType(annotationType BType)
 	GetAnnotationType() BType
-	SetPackageID(packageID PackageID)
-	GetPackageID() PackageID
+	SetPackageID(packageID model.PackageID)
+	GetPackageID() model.PackageID
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
 	GetAnnotAttachments() *[]BIRAnnotationAttachment
 }
 
 type BIRAnnotationBase struct {
 	BIRDocumentableNodeBase
-	Name             Name
-	OriginalName     Name
+	Name             model.Name
+	OriginalName     model.Name
 	Flags            int64
-	Origin           SymbolOrigin
-	AttachPoints     []AttachPoint
+	Origin           model.SymbolOrigin
+	AttachPoints     []model.AttachPoint
 	AnnotationType   BType
-	PackageID        PackageID
+	PackageID        model.PackageID
 	AnnotAttachments []BIRAnnotationAttachment
 }
 
-func (b *BIRAnnotationBase) SetName(name Name) {
+func (b *BIRAnnotationBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRAnnotationBase) GetName() Name {
+func (b *BIRAnnotationBase) GetName() model.Name {
 	return b.Name
 }
 
-func (b *BIRAnnotationBase) SetOriginalName(originalName Name) {
+func (b *BIRAnnotationBase) SetOriginalName(originalName model.Name) {
 	b.OriginalName = originalName
 }
 
-func (b *BIRAnnotationBase) GetOriginalName() Name {
+func (b *BIRAnnotationBase) GetOriginalName() model.Name {
 	return b.OriginalName
 }
 
@@ -1610,19 +1598,19 @@ func (b *BIRAnnotationBase) GetFlags() int64 {
 	return b.Flags
 }
 
-func (b *BIRAnnotationBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRAnnotationBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRAnnotationBase) GetOrigin() SymbolOrigin {
+func (b *BIRAnnotationBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
-func (b *BIRAnnotationBase) SetAttachPoints(attachPoints *[]AttachPoint) {
+func (b *BIRAnnotationBase) SetAttachPoints(attachPoints *[]model.AttachPoint) {
 	b.AttachPoints = *attachPoints
 }
 
-func (b *BIRAnnotationBase) GetAttachPoints() *[]AttachPoint {
+func (b *BIRAnnotationBase) GetAttachPoints() *[]model.AttachPoint {
 	return &b.AttachPoints
 }
 
@@ -1634,11 +1622,11 @@ func (b *BIRAnnotationBase) GetAnnotationType() BType {
 	return b.AnnotationType
 }
 
-func (b *BIRAnnotationBase) SetPackageID(packageID PackageID) {
+func (b *BIRAnnotationBase) SetPackageID(packageID model.PackageID) {
 	b.PackageID = packageID
 }
 
-func (b *BIRAnnotationBase) GetPackageID() PackageID {
+func (b *BIRAnnotationBase) GetPackageID() model.PackageID {
 	return b.PackageID
 }
 
@@ -1663,7 +1651,7 @@ func (m *BIRAnnotationMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRAnnotation(m.Self)
 }
 
-func NewBIRAnnotation(pos diagnostics.Location, name Name, originalName Name, flags int64, points []AttachPoint, annotationType BType, origin SymbolOrigin) BIRAnnotation {
+func NewBIRAnnotation(pos diagnostics.Location, name model.Name, originalName model.Name, flags int64, points []model.AttachPoint, annotationType BType, origin model.SymbolOrigin) BIRAnnotation {
 	ann := &BIRAnnotationImpl{
 		BIRAnnotationBase: BIRAnnotationBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -1692,35 +1680,35 @@ type BIRAnnotationImpl struct {
 
 type BIRConstantData interface {
 	BIRDocumentableNodeData
-	SetName(name Name)
-	GetName() Name
+	SetName(name model.Name)
+	GetName() model.Name
 	SetFlags(flags int64)
 	GetFlags() int64
 	SetType(type_ BType)
 	GetType() BType
 	SetConstValue(constValue ConstValue)
 	GetConstValue() ConstValue
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
 	SetAnnotAttachments(annotAttachments *[]BIRAnnotationAttachment)
 	GetAnnotAttachments() *[]BIRAnnotationAttachment
 }
 
 type BIRConstantBase struct {
 	BIRDocumentableNodeBase
-	Name             Name
+	Name             model.Name
 	Flags            int64
 	Type             BType
 	ConstValue       ConstValue
-	Origin           SymbolOrigin
+	Origin           model.SymbolOrigin
 	AnnotAttachments []BIRAnnotationAttachment
 }
 
-func (b *BIRConstantBase) SetName(name Name) {
+func (b *BIRConstantBase) SetName(name model.Name) {
 	b.Name = name
 }
 
-func (b *BIRConstantBase) GetName() Name {
+func (b *BIRConstantBase) GetName() model.Name {
 	return b.Name
 }
 
@@ -1748,11 +1736,11 @@ func (b *BIRConstantBase) GetConstValue() ConstValue {
 	return b.ConstValue
 }
 
-func (b *BIRConstantBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRConstantBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRConstantBase) GetOrigin() SymbolOrigin {
+func (b *BIRConstantBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
@@ -1777,7 +1765,7 @@ func (m *BIRConstantMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRConstant(m.Self)
 }
 
-func NewBIRConstant(pos diagnostics.Location, name Name, flags int64, type_ BType, constValue ConstValue, origin SymbolOrigin) BIRConstant {
+func NewBIRConstant(pos diagnostics.Location, name model.Name, flags int64, type_ BType, constValue ConstValue, origin model.SymbolOrigin) BIRConstant {
 	constant := &BIRConstantImpl{
 		BIRConstantBase: BIRConstantBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{
@@ -1805,31 +1793,31 @@ type BIRConstantImpl struct {
 
 type BIRAnnotationAttachmentData interface {
 	BIRNodeData
-	SetAnnotPkgId(annotPkgId PackageID)
-	GetAnnotPkgId() PackageID
-	SetAnnotTagRef(annotTagRef Name)
-	GetAnnotTagRef() Name
+	SetAnnotPkgId(annotPkgId model.PackageID)
+	GetAnnotPkgId() model.PackageID
+	SetAnnotTagRef(annotTagRef model.Name)
+	GetAnnotTagRef() model.Name
 }
 
 type BIRAnnotationAttachmentBase struct {
 	BIRNodeBase
-	AnnotPkgId  PackageID
-	AnnotTagRef Name
+	AnnotPkgId  model.PackageID
+	AnnotTagRef model.Name
 }
 
-func (b *BIRAnnotationAttachmentBase) SetAnnotPkgId(annotPkgId PackageID) {
+func (b *BIRAnnotationAttachmentBase) SetAnnotPkgId(annotPkgId model.PackageID) {
 	b.AnnotPkgId = annotPkgId
 }
 
-func (b *BIRAnnotationAttachmentBase) GetAnnotPkgId() PackageID {
+func (b *BIRAnnotationAttachmentBase) GetAnnotPkgId() model.PackageID {
 	return b.AnnotPkgId
 }
 
-func (b *BIRAnnotationAttachmentBase) SetAnnotTagRef(annotTagRef Name) {
+func (b *BIRAnnotationAttachmentBase) SetAnnotTagRef(annotTagRef model.Name) {
 	b.AnnotTagRef = annotTagRef
 }
 
-func (b *BIRAnnotationAttachmentBase) GetAnnotTagRef() Name {
+func (b *BIRAnnotationAttachmentBase) GetAnnotTagRef() model.Name {
 	return b.AnnotTagRef
 }
 
@@ -1846,7 +1834,7 @@ func (m *BIRAnnotationAttachmentMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRAnnotationAttachment(m.Self)
 }
 
-func NewBIRAnnotationAttachment(pos diagnostics.Location, annotPkgId PackageID, annotTagRef Name) BIRAnnotationAttachment {
+func NewBIRAnnotationAttachment(pos diagnostics.Location, annotPkgId model.PackageID, annotTagRef model.Name) BIRAnnotationAttachment {
 	att := &BIRAnnotationAttachmentImpl{
 		BIRAnnotationAttachmentBase: BIRAnnotationAttachmentBase{
 			BIRNodeBase: BIRNodeBase{
@@ -1898,7 +1886,7 @@ func (m *BIRConstAnnotationAttachmentMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRConstAnnotationAttachment(m.Self)
 }
 
-func NewBIRConstAnnotationAttachment(pos diagnostics.Location, annotPkgId PackageID, annotTagRef Name, annotValue ConstValue) BIRConstAnnotationAttachment {
+func NewBIRConstAnnotationAttachment(pos diagnostics.Location, annotPkgId model.PackageID, annotTagRef model.Name, annotValue ConstValue) BIRConstAnnotationAttachment {
 	att := &BIRConstAnnotationAttachmentImpl{
 		BIRConstAnnotationAttachmentBase: BIRConstAnnotationAttachmentBase{
 			BIRAnnotationAttachmentBase: BIRAnnotationAttachmentBase{
@@ -1935,20 +1923,20 @@ func NewConstValue(value interface{}, type_ BType) *ConstValue {
 
 type BIRDocumentableNodeData interface {
 	BIRNodeData
-	SetMarkdownDocAttachment(markdownDocAttachment MarkdownDocAttachment)
-	GetMarkdownDocAttachment() MarkdownDocAttachment
+	SetMarkdownDocAttachment(markdownDocAttachment model.MarkdownDocAttachment)
+	GetMarkdownDocAttachment() model.MarkdownDocAttachment
 }
 
 type BIRDocumentableNodeBase struct {
 	BIRNodeBase
-	MarkdownDocAttachment MarkdownDocAttachment
+	MarkdownDocAttachment model.MarkdownDocAttachment
 }
 
-func (b *BIRDocumentableNodeBase) SetMarkdownDocAttachment(markdownDocAttachment MarkdownDocAttachment) {
+func (b *BIRDocumentableNodeBase) SetMarkdownDocAttachment(markdownDocAttachment model.MarkdownDocAttachment) {
 	b.MarkdownDocAttachment = markdownDocAttachment
 }
 
-func (b *BIRDocumentableNodeBase) GetMarkdownDocAttachment() MarkdownDocAttachment {
+func (b *BIRDocumentableNodeBase) GetMarkdownDocAttachment() model.MarkdownDocAttachment {
 	return b.MarkdownDocAttachment
 }
 
@@ -2184,14 +2172,14 @@ type BIRServiceDeclarationData interface {
 	GetAttachPointLiteral() string
 	SetListenerTypes(listenerTypes *[]BType)
 	GetListenerTypes() *[]BType
-	SetGeneratedName(generatedName Name)
-	GetGeneratedName() Name
-	SetAssociatedClassName(associatedClassName Name)
-	GetAssociatedClassName() Name
+	SetGeneratedName(generatedName model.Name)
+	GetGeneratedName() model.Name
+	SetAssociatedClassName(associatedClassName model.Name)
+	GetAssociatedClassName() model.Name
 	SetType(type_ BType)
 	GetType() BType
-	SetOrigin(origin SymbolOrigin)
-	GetOrigin() SymbolOrigin
+	SetOrigin(origin model.SymbolOrigin)
+	GetOrigin() model.SymbolOrigin
 	SetFlags(flags int64)
 	GetFlags() int64
 }
@@ -2201,10 +2189,10 @@ type BIRServiceDeclarationBase struct {
 	AttachPoint         []string
 	AttachPointLiteral  string
 	ListenerTypes       []BType
-	GeneratedName       Name
-	AssociatedClassName Name
+	GeneratedName       model.Name
+	AssociatedClassName model.Name
 	Type                BType
-	Origin              SymbolOrigin
+	Origin              model.SymbolOrigin
 	Flags               int64
 }
 
@@ -2232,19 +2220,19 @@ func (b *BIRServiceDeclarationBase) GetListenerTypes() *[]BType {
 	return &b.ListenerTypes
 }
 
-func (b *BIRServiceDeclarationBase) SetGeneratedName(generatedName Name) {
+func (b *BIRServiceDeclarationBase) SetGeneratedName(generatedName model.Name) {
 	b.GeneratedName = generatedName
 }
 
-func (b *BIRServiceDeclarationBase) GetGeneratedName() Name {
+func (b *BIRServiceDeclarationBase) GetGeneratedName() model.Name {
 	return b.GeneratedName
 }
 
-func (b *BIRServiceDeclarationBase) SetAssociatedClassName(associatedClassName Name) {
+func (b *BIRServiceDeclarationBase) SetAssociatedClassName(associatedClassName model.Name) {
 	b.AssociatedClassName = associatedClassName
 }
 
-func (b *BIRServiceDeclarationBase) GetAssociatedClassName() Name {
+func (b *BIRServiceDeclarationBase) GetAssociatedClassName() model.Name {
 	return b.AssociatedClassName
 }
 
@@ -2256,11 +2244,11 @@ func (b *BIRServiceDeclarationBase) GetType() BType {
 	return b.Type
 }
 
-func (b *BIRServiceDeclarationBase) SetOrigin(origin SymbolOrigin) {
+func (b *BIRServiceDeclarationBase) SetOrigin(origin model.SymbolOrigin) {
 	b.Origin = origin
 }
 
-func (b *BIRServiceDeclarationBase) GetOrigin() SymbolOrigin {
+func (b *BIRServiceDeclarationBase) GetOrigin() model.SymbolOrigin {
 	return b.Origin
 }
 
@@ -2285,7 +2273,7 @@ func (m *BIRServiceDeclarationMethods) Accept(visitor BIRVisitor) {
 	visitor.VisitBIRServiceDeclaration(m.Self)
 }
 
-func NewBIRServiceDeclaration(attachPoint []string, attachPointLiteral string, listenerTypes []BType, generatedName Name, associatedClassName Name, type_ BType, origin SymbolOrigin, flags int64, location diagnostics.Location) BIRServiceDeclaration {
+func NewBIRServiceDeclaration(attachPoint []string, attachPointLiteral string, listenerTypes []BType, generatedName model.Name, associatedClassName model.Name, type_ BType, origin model.SymbolOrigin, flags int64, location diagnostics.Location) BIRServiceDeclaration {
 	svc := &BIRServiceDeclarationImpl{
 		BIRServiceDeclarationBase: BIRServiceDeclarationBase{
 			BIRDocumentableNodeBase: BIRDocumentableNodeBase{

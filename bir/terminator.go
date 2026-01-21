@@ -90,13 +90,13 @@ type BIRTerminatorCall struct {
 	BIRTerminatorBase
 	IsVirtual              bool
 	Args                   []BIROperand
-	Name                   Name
+	Name                   model.Name
 	CalleePkg              model.PackageID
 	CalleeAnnotAttachments []BIRAnnotationAttachment
-	CalleeFlags            []Flag
+	CalleeFlags            []model.Flag
 }
 
-func NewBIRTerminatorCall(pos diagnostics.Location, kind InstructionKind, isVirtual bool, calleePkg PackageID, name Name, args []BIROperand, lhsOp BIROperand, thenBB BIRBasicBlock, calleeAnnotAttachments []BIRAnnotationAttachment, calleeFlags []Flag) *BIRTerminatorCall {
+func NewBIRTerminatorCall(pos diagnostics.Location, kind InstructionKind, isVirtual bool, calleePkg model.PackageID, name model.Name, args []BIROperand, lhsOp BIROperand, thenBB BIRBasicBlock, calleeAnnotAttachments []BIRAnnotationAttachment, calleeFlags []model.Flag) *BIRTerminatorCall {
 	c := &BIRTerminatorCall{
 		BIRTerminatorBase:      NewBIRTerminatorBase(pos),
 		IsVirtual:              isVirtual,
@@ -145,7 +145,7 @@ type BIRTerminatorAsyncCall struct {
 	AnnotAttachments []BIRAnnotationAttachment
 }
 
-func NewBIRTerminatorAsyncCall(pos diagnostics.Location, kind InstructionKind, isVirtual bool, calleePkg PackageID, name Name, args []BIROperand, lhsOp BIROperand, thenBB BIRBasicBlock, annotAttachments []BIRAnnotationAttachment, calleeAnnotAttachments []BIRAnnotationAttachment, calleeFlags []Flag) *BIRTerminatorAsyncCall {
+func NewBIRTerminatorAsyncCall(pos diagnostics.Location, kind InstructionKind, isVirtual bool, calleePkg model.PackageID, name model.Name, args []BIROperand, lhsOp BIROperand, thenBB BIRBasicBlock, annotAttachments []BIRAnnotationAttachment, calleeAnnotAttachments []BIRAnnotationAttachment, calleeFlags []model.Flag) *BIRTerminatorAsyncCall {
 	ac := &BIRTerminatorAsyncCall{
 		BIRTerminatorCall: *NewBIRTerminatorCall(pos, kind, isVirtual, calleePkg, name, args, lhsOp, thenBB, calleeAnnotAttachments, calleeFlags),
 		AnnotAttachments:  annotAttachments,
@@ -505,11 +505,11 @@ func (f *BIRTerminatorFlush) Accept(visitor BIRVisitor) {
 // WorkerReceive instruction: WRK_RECEIVE w1;
 type BIRTerminatorWorkerReceive struct {
 	BIRTerminatorBase
-	WorkerName   Name
+	WorkerName   model.Name
 	IsSameStrand bool
 }
 
-func NewBIRTerminatorWorkerReceive(pos diagnostics.Location, workerName Name, lhsOp BIROperand, isSameStrand bool, thenBB BIRBasicBlock) *BIRTerminatorWorkerReceive {
+func NewBIRTerminatorWorkerReceive(pos diagnostics.Location, workerName model.Name, lhsOp BIROperand, isSameStrand bool, thenBB BIRBasicBlock) *BIRTerminatorWorkerReceive {
 	wr := &BIRTerminatorWorkerReceive{
 		BIRTerminatorBase: NewBIRTerminatorBase(pos),
 		WorkerName:        workerName,
@@ -626,13 +626,13 @@ func (m *BIRTerminatorWorkerMultipleReceive) Accept(visitor BIRVisitor) {
 // WorkerSend instruction: %5 WRK_SEND w1;
 type BIRTerminatorWorkerSend struct {
 	BIRTerminatorBase
-	Channel      Name
+	Channel      model.Name
 	Data         BIROperand
 	IsSameStrand bool
 	IsSync       bool
 }
 
-func NewBIRTerminatorWorkerSend(pos diagnostics.Location, channel Name, data BIROperand, isSameStrand bool, isSync bool, lhsOp BIROperand, thenBB BIRBasicBlock) *BIRTerminatorWorkerSend {
+func NewBIRTerminatorWorkerSend(pos diagnostics.Location, channel model.Name, data BIROperand, isSameStrand bool, isSync bool, lhsOp BIROperand, thenBB BIRBasicBlock) *BIRTerminatorWorkerSend {
 	ws := &BIRTerminatorWorkerSend{
 		BIRTerminatorBase: NewBIRTerminatorBase(pos),
 		Channel:           channel,
