@@ -17,8 +17,9 @@
 package model
 
 import (
-	"ballerina-lang-go/common"
 	"strings"
+
+	"ballerina-lang-go/common"
 )
 
 const (
@@ -237,3 +238,19 @@ var (
 
 	REGEXP_PKG = NewPackageID(BALLERINA_ORG, []Name{LANG, REGEXP}, DEFAULT_VERSION)
 )
+
+func NewPackageIDWithName(orgName, name, version Name) PackageID {
+	return NewPackageID(orgName, CreateNameComps(name), version)
+}
+
+func CreateNameComps(name Name) []Name {
+	if name == "." {
+		return []Name{Name(".")}
+	}
+	parts := strings.Split(name.Value(), ".")
+	result := make([]Name, len(parts))
+	for i, part := range parts {
+		result[i] = Name(part)
+	}
+	return result
+}

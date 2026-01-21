@@ -17,9 +17,10 @@
 package ast
 
 import (
+	"strings"
+
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
-	"strings"
 )
 
 type DiagnosticState uint8
@@ -90,7 +91,7 @@ type (
 		Owner                 model.Symbol
 		Tainted               bool
 		Closure               bool
-		MarkdownDocumentation *MarkdownDocAttachment
+		MarkdownDocumentation *model.MarkdownDocAttachment
 		Pos                   Location
 		Origin                model.SymbolOrigin
 	}
@@ -120,7 +121,7 @@ type (
 	BAnnotationSymbol struct {
 		BTypeSymbol
 		AttachedType          BType
-		Points                common.Set[AttachPoint]
+		Points                common.Set[model.AttachPoint]
 		MaskedPoints          int
 		annotationAttachments []BAnnotationAttachmentSymbol
 	}
@@ -262,8 +263,8 @@ func (this *BAnnotationSymbol) BvmAlias() string {
 	return ""
 }
 
-func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[AttachPoint]) int {
-	points := make(map[Point]bool)
+func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[model.AttachPoint]) int {
+	points := make(map[model.Point]bool)
 	if attachPoints != nil {
 		for ap := range attachPoints.Values() {
 			if ap.Point != "" {
@@ -274,52 +275,52 @@ func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[AttachPoi
 	return asMask(points)
 }
 
-func asMask(points map[Point]bool) int {
+func asMask(points map[model.Point]bool) int {
 	mask := 0
 	for point := range points {
 		switch point {
-		case Point_TYPE:
+		case model.Point_TYPE:
 			mask |= 1
-		case Point_OBJECT:
+		case model.Point_OBJECT:
 			mask |= 1 << 1
-		case Point_FUNCTION:
+		case model.Point_FUNCTION:
 			mask |= 1 << 2
-		case Point_OBJECT_METHOD:
+		case model.Point_OBJECT_METHOD:
 			mask |= 1 << 3
-		case Point_SERVICE_REMOTE:
+		case model.Point_SERVICE_REMOTE:
 			mask |= 1 << 4
-		case Point_PARAMETER:
+		case model.Point_PARAMETER:
 			mask |= 1 << 5
-		case Point_RETURN:
+		case model.Point_RETURN:
 			mask |= 1 << 6
-		case Point_SERVICE:
+		case model.Point_SERVICE:
 			mask |= 1 << 7
-		case Point_FIELD:
+		case model.Point_FIELD:
 			mask |= 1 << 8
-		case Point_OBJECT_FIELD:
+		case model.Point_OBJECT_FIELD:
 			mask |= 1 << 9
-		case Point_RECORD_FIELD:
+		case model.Point_RECORD_FIELD:
 			mask |= 1 << 10
-		case Point_LISTENER:
+		case model.Point_LISTENER:
 			mask |= 1 << 11
-		case Point_ANNOTATION:
+		case model.Point_ANNOTATION:
 			mask |= 1 << 12
-		case Point_EXTERNAL:
+		case model.Point_EXTERNAL:
 			mask |= 1 << 13
-		case Point_VAR:
+		case model.Point_VAR:
 			mask |= 1 << 14
-		case Point_CONST:
+		case model.Point_CONST:
 			mask |= 1 << 15
-		case Point_WORKER:
+		case model.Point_WORKER:
 			mask |= 1 << 16
-		case Point_CLASS:
+		case model.Point_CLASS:
 			mask |= 1 << 17
 		}
 	}
 	return mask
 }
 
-func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[AttachPoint], pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BAnnotationSymbol {
+func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[model.AttachPoint], pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BAnnotationSymbol {
 	symbol := &BAnnotationSymbol{
 		BTypeSymbol: BTypeSymbol{
 			BSymbol: BSymbol{
@@ -448,17 +449,4 @@ func (this *BInvokableSymbol) GetAnnotationAttachmentsOnExternal() []model.Annot
 		result[i] = &this.annotationAttachmentsOnExternal[i]
 	}
 	return result
-}
-
-type MarkdownDocAttachment struct {
-	Description             *string
-	Parameters              []Parameters
-	ReturnValueDescription  *string
-	DeprecatedDocumentation *string
-	DeprecatedParameters    []Parameters
-}
-
-type Parameters struct {
-	Name        *string
-	Description *string
 }

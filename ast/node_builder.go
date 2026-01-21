@@ -17,15 +17,16 @@
 package ast
 
 import (
+	"regexp"
+	"strconv"
+	"strings"
+
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/identifierutil"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
-	"regexp"
-	"strconv"
-	"strings"
 
 	balCommon "ballerina-lang-go/common"
 )

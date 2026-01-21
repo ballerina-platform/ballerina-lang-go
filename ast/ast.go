@@ -17,13 +17,14 @@
 package ast
 
 import (
+	"strings"
+
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"strings"
 )
 
 type Flags uint64
@@ -192,12 +193,6 @@ func UnMask(mask Flags) common.Set[model.Flag] {
 
 type SourceKind = model.SourceKind
 
-// SourceKind constants - aliases to model package
-const (
-	SourceKind_REGULAR_SOURCE = model.SourceKind_REGULAR_SOURCE
-	SourceKind_TEST_SOURCE    = model.SourceKind_TEST_SOURCE
-)
-
 type CompilerPhase uint8
 
 const (
@@ -213,33 +208,6 @@ const (
 	CompilerPhase_BIR_GEN
 	CompilerPhase_BIR_EMIT
 	CompilerPhase_CODE_GEN
-)
-
-type AttachPoint struct {
-	Point  Point
-	Source bool
-}
-type Point string
-
-const (
-	Point_TYPE           Point = "type"
-	Point_OBJECT         Point = "object"
-	Point_FUNCTION       Point = "function"
-	Point_OBJECT_METHOD  Point = "objectfunction"
-	Point_SERVICE_REMOTE Point = "serviceremotefunction"
-	Point_PARAMETER      Point = "parameter"
-	Point_RETURN         Point = "return"
-	Point_SERVICE        Point = "service"
-	Point_FIELD          Point = "field"
-	Point_OBJECT_FIELD   Point = "objectfield"
-	Point_RECORD_FIELD   Point = "recordfield"
-	Point_LISTENER       Point = "listener"
-	Point_ANNOTATION     Point = "annotation"
-	Point_EXTERNAL       Point = "external"
-	Point_VAR            Point = "var"
-	Point_CONST          Point = "const"
-	Point_WORKER         Point = "worker"
-	Point_CLASS          Point = "class"
 )
 
 type Location = diagnostics.Location
@@ -274,7 +242,7 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		TypeNode                        model.TypeNode
 		FlagSet                         common.UnorderedSet[model.Flag]
-		attachPoints                    common.UnorderedSet[AttachPoint]
+		attachPoints                    common.UnorderedSet[model.AttachPoint]
 		Symbol                          *BSymbol
 	}
 
@@ -284,7 +252,7 @@ type (
 		AnnotationName             *BLangIdentifier
 		PkgAlias                   *BLangIdentifier
 		AnnotationSymbol           *BAnnotationSymbol
-		AttachPoints               common.OrderedSet[Point]
+		AttachPoints               common.OrderedSet[model.Point]
 		AnnotationAttachmentSymbol *BAnnotationAttachmentSymbol
 	}
 

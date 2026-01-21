@@ -36,10 +36,6 @@ type Field interface {
 	GetType() model.Type
 }
 
-type NamedNode interface {
-	GetName() model.Name
-}
-
 type SelectivelyImmutableReferenceType interface {
 	model.Type
 }
@@ -133,7 +129,7 @@ var (
 	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
 	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
 	_ Field                          = &BField{}
-	_ NamedNode                      = &BField{}
+	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 )

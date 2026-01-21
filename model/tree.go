@@ -423,7 +423,7 @@ const (
 type SymbolOrigin uint8
 
 const (
-	SymbolOrigin_BUILTIN SymbolOrigin = iota
+	SymbolOrigin_BUILTIN SymbolOrigin = iota + 1
 	SymbolOrigin_SOURCE
 	SymbolOrigin_COMPILED_SOURCE
 	SymbolOrigin_VIRTUAL
@@ -1210,4 +1210,49 @@ type OrderedNode interface {
 	Node
 	GetPrecedence() int
 	SetPrecedence(precedence int)
+}
+
+type AttachPoint struct {
+	Point  Point
+	Source bool
+}
+
+type Point string
+
+const (
+	Point_TYPE           Point = "type"
+	Point_OBJECT               = "object"
+	Point_FUNCTION             = "function"
+	Point_OBJECT_METHOD        = "objectfunction"
+	Point_SERVICE_REMOTE       = "serviceremotefunction"
+	Point_PARAMETER            = "parameter"
+	Point_RETURN               = "return"
+	Point_SERVICE              = "service"
+	Point_FIELD                = "field"
+	Point_OBJECT_FIELD         = "objectfield"
+	Point_RECORD_FIELD         = "recordfield"
+	Point_LISTENER             = "listener"
+	Point_ANNOTATION           = "annotation"
+	Point_EXTERNAL             = "external"
+	Point_VAR                  = "var"
+	Point_CONST                = "const"
+	Point_WORKER               = "worker"
+	Point_CLASS                = "class"
+)
+
+type MarkdownDocAttachment struct {
+	Description             *string
+	Parameters              []Parameters
+	ReturnValueDescription  *string
+	DeprecatedDocumentation *string
+	DeprecatedParameters    []Parameters
+}
+
+type Parameters struct {
+	Name        *string
+	Description *string
+}
+
+type NamedNode interface {
+	GetName() Name
 }
