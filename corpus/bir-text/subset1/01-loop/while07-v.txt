@@ -1,0 +1,133 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 1.8.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=1)
+    %4 = printClosestSquareNum(%1) -> bb1;
+  }
+  bb1 {
+    %5 = ConstantLoad %!s(int64=0)
+    %8 = printClosestSquareNum(%5) -> bb2;
+  }
+  bb2 {
+    %9 = ConstantLoad %!s(int64=5)
+    %12 = printClosestSquareNum(%9) -> bb3;
+  }
+  bb3 {
+    %13 = ConstantLoad %!s(int64=17)
+    %16 = printClosestSquareNum(%13) -> bb4;
+  }
+  bb4 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+printClosestSquareNum<NIL>{
+  bb0 {
+    %2 = %1;
+    GOTO bb1;
+  }
+  bb1 {
+    %5 = ConstantLoad %!s(int64=0)
+    %6 = >= %2 %5;
+    %6 ? bb2 : bb7;
+  }
+  bb2 {
+    %7 = %2;
+    %6 = isSquareNumber(%7) -> bb3;
+  }
+  bb3 {
+    %6 ? bb4 : bb6;
+  }
+  bb4 {
+    %5 = ConstantLoad %!s(int64=-1)
+    %16 = println(%11) -> bb5;
+  }
+  bb5 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb8;
+  }
+  bb6 {
+    %5 = ConstantLoad %!s(int64=1)
+    %2 = - %2 %5;
+    GOTO bb1;
+  }
+  bb7 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb8;
+  }
+  bb8 {
+    return;
+  }
+}
+isSquareNumber<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=0)
+    GOTO bb1;
+  }
+  bb1 {
+    %6 = <= %2 %1;
+    %6 ? bb2 : bb7;
+  }
+  bb2 {
+    %9 = * %2 %2;
+    %6 = == %9 %1;
+    %6 ? bb3 : bb4;
+  }
+  bb3 {
+    %0 = ConstantLoad %!s(bool=true)
+    GOTO bb8;
+  }
+  bb4 {
+    %9 = * %2 %2;
+    %6 = > %9 %1;
+    %6 ? bb5 : bb6;
+  }
+  bb5 {
+    %0 = ConstantLoad %!s(bool=false)
+    GOTO bb8;
+  }
+  bb6 {
+    %9 = ConstantLoad %!s(int64=1)
+    %2 = + %2 %9;
+    GOTO bb1;
+  }
+  bb7 {
+    %0 = ConstantLoad %!s(bool=false)
+    GOTO bb8;
+  }
+  bb8 {
+    return;
+  }
+}

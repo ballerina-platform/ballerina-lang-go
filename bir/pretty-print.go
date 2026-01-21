@@ -209,7 +209,7 @@ func (p *PrettyPrinter) PrintInstructionKind(kind InstructionKind) string {
 }
 
 func (p *PrettyPrinter) PrintMove(move *Move) string {
-	panic("unimplemented")
+	return fmt.Sprintf("%s = %s;", p.PrintOperand(*move.LhsOp), p.PrintOperand(*move.RhsOp))
 }
 
 func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {

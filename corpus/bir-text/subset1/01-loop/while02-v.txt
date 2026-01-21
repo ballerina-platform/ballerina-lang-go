@@ -1,0 +1,69 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 1.8.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=5)
+    %4 = printInts(%1) -> bb1;
+  }
+  bb1 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+printInts<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=0)
+    GOTO bb1;
+  }
+  bb1 {
+    %6 = < %2 %1;
+    %6 ? bb2 : bb4;
+  }
+  bb2 {
+    %8 = ConstantLoad %!s(int64=-1)
+    %12 = println(%7) -> bb3;
+  }
+  bb3 {
+    %8 = ConstantLoad %!s(int64=1)
+    %2 = + %2 %8;
+    GOTO bb1;
+  }
+  bb4 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}

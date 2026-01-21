@@ -1,0 +1,46 @@
+module $anon.. v 0.0.0;
+$annotation_data  other;
+.<init><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<start><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+.<stop><NIL>{
+  bb0 {
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=100)
+    %2 = ConstantLoad %!s(int64=100)
+    %5 = ConstantLoad %!s(int64=11)
+    %6 = + %2 %5;
+    %2 = ConstantLoad %!s(int64=43)
+    %5 = ConstantLoad %!s(int64=43)
+    %6 = ConstantLoad %!s(int64=44)
+    %2 = + %5 %6;
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb1;
+  }
+  bb1 {
+    return;
+  }
+}
