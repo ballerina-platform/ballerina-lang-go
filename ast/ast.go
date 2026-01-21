@@ -27,13 +27,6 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type (
-	NodeKind                   = model.NodeKind
-	DocumentationReferenceType = model.DocumentationReferenceType
-	PackageID                  = model.PackageID
-	AttachPoint                = model.AttachPoint
-)
-
 type Flags uint64
 
 const (
@@ -249,7 +242,7 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		TypeNode                        model.TypeNode
 		FlagSet                         common.UnorderedSet[model.Flag]
-		attachPoints                    common.UnorderedSet[AttachPoint]
+		attachPoints                    common.UnorderedSet[model.AttachPoint]
 		Symbol                          *BSymbol
 	}
 
@@ -259,7 +252,7 @@ type (
 		AnnotationName             *BLangIdentifier
 		PkgAlias                   *BLangIdentifier
 		AnnotationSymbol           *BAnnotationSymbol
-		AttachPoints               common.OrderedSet[Point]
+		AttachPoints               common.OrderedSet[model.Point]
 		AnnotationAttachmentSymbol *BAnnotationAttachmentSymbol
 	}
 

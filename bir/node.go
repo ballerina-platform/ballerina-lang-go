@@ -214,7 +214,17 @@ func NewBIRPackageWithIsTestPkg(pos diagnostics.Location, org Name, pkgName Name
 			BIRNodeBase: BIRNodeBase{
 				Pos: pos,
 			},
-			PackageID:                      model.NewPackageIDFull(org, pkgName, name, version, sourceFileName, sourceRoot, isTestPkg, skipTest),
+			PackageID: model.PackageID{
+				OrgName:        &org,
+				PkgName:        &pkgName,
+				Name:           &name,
+				Version:        &version,
+				NameComps:      model.CreateNameComps(name),
+				SourceFileName: &sourceFileName,
+				SourceRoot:     &sourceRoot,
+				IsTestPkg:      isTestPkg,
+				SkipTests:      skipTest,
+			},
 			ImportModules:                  []BIRImportModule{},
 			TypeDefs:                       []BIRTypeDefinition{},
 			GlobalVars:                     []BIRGlobalVariableDcl{},

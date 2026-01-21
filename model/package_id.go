@@ -239,25 +239,11 @@ var (
 	REGEXP_PKG = NewPackageID(BALLERINA_ORG, []Name{LANG, REGEXP}, DEFAULT_VERSION)
 )
 
-func NewPackageIDFull(orgName Name, pkgName Name, name Name, version Name, sourceFileName Name, sourceRoot string, isTestPkg bool, skipTest bool) PackageID {
-	return PackageID{
-		OrgName:        &orgName,
-		PkgName:        &pkgName,
-		Name:           &name,
-		Version:        &version,
-		NameComps:      createNameComps(name),
-		SourceFileName: &sourceFileName,
-		SourceRoot:     &sourceRoot,
-		IsTestPkg:      isTestPkg,
-		SkipTests:      skipTest,
-	}
-}
-
 func NewPackageIDWithName(orgName, name, version Name) PackageID {
-	return NewPackageID(orgName, createNameComps(name), version)
+	return NewPackageID(orgName, CreateNameComps(name), version)
 }
 
-func createNameComps(name Name) []Name {
+func CreateNameComps(name Name) []Name {
 	if name == "." {
 		return []Name{Name(".")}
 	}

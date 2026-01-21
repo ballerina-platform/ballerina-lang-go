@@ -23,13 +23,6 @@ import (
 	"ballerina-lang-go/model"
 )
 
-type (
-	SymbolKind            = model.SymbolKind
-	MarkdownDocAttachment = model.MarkdownDocAttachment
-)
-
-type Point = model.Point
-
 type DiagnosticState uint8
 
 const (
@@ -98,7 +91,7 @@ type (
 		Owner                 model.Symbol
 		Tainted               bool
 		Closure               bool
-		MarkdownDocumentation *MarkdownDocAttachment
+		MarkdownDocumentation *model.MarkdownDocAttachment
 		Pos                   Location
 		Origin                model.SymbolOrigin
 	}
@@ -128,7 +121,7 @@ type (
 	BAnnotationSymbol struct {
 		BTypeSymbol
 		AttachedType          BType
-		Points                common.Set[AttachPoint]
+		Points                common.Set[model.AttachPoint]
 		MaskedPoints          int
 		annotationAttachments []BAnnotationAttachmentSymbol
 	}
@@ -270,8 +263,8 @@ func (this *BAnnotationSymbol) BvmAlias() string {
 	return ""
 }
 
-func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[AttachPoint]) int {
-	points := make(map[Point]bool)
+func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[model.AttachPoint]) int {
+	points := make(map[model.Point]bool)
 	if attachPoints != nil {
 		for ap := range attachPoints.Values() {
 			if ap.Point != "" {
@@ -282,7 +275,7 @@ func (this *BAnnotationSymbol) getMaskedPoints(attachPoints common.Set[AttachPoi
 	return asMask(points)
 }
 
-func asMask(points map[Point]bool) int {
+func asMask(points map[model.Point]bool) int {
 	mask := 0
 	for point := range points {
 		switch point {
@@ -327,7 +320,7 @@ func asMask(points map[Point]bool) int {
 	return mask
 }
 
-func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[AttachPoint], pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BAnnotationSymbol {
+func NewBAnnotationSymbol(name *model.Name, originalName *model.Name, flags Flags, points common.Set[model.AttachPoint], pkgID *model.PackageID, bType BType, owner model.Symbol, pos Location, origin model.SymbolOrigin) *BAnnotationSymbol {
 	symbol := &BAnnotationSymbol{
 		BTypeSymbol: BTypeSymbol{
 			BSymbol: BSymbol{
@@ -412,7 +405,7 @@ func NewBInvokableSymbolWithOriginalName(tag SymTag, flags Flags, name *model.Na
 	return symbol
 }
 
-func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *PackageID) string {
+func (this *BAnnotationSymbol) getPackageIDStringWithMajorVersion(pkgID *model.PackageID) string {
 	if model.DOT == *pkgID.Name {
 		return pkgID.Name.Value()
 	}

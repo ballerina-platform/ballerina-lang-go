@@ -21,11 +21,6 @@ import (
 	"ballerina-lang-go/model"
 )
 
-type (
-	TypeKind  = model.TypeKind
-	NamedNode = model.NamedNode
-)
-
 type ProjectKind uint8
 
 const (
@@ -134,7 +129,7 @@ var (
 	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
 	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
 	_ Field                          = &BField{}
-	_ NamedNode                      = &BField{}
+	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 )
