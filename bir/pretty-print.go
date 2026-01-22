@@ -204,6 +204,8 @@ func (p *PrettyPrinter) PrintInstructionKind(kind InstructionKind) string {
 		return "=="
 	case INSTRUCTION_KIND_NOT_EQUAL:
 		return "!="
+	case INSTRUCTION_KIND_NOT:
+		return "!"
 	}
 	return "unknown"
 }

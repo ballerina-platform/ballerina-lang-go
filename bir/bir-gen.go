@@ -204,19 +204,35 @@ type statementEffect struct {
 func handleStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt ast.BLangStatement) statementEffect {
 	switch stmt := stmt.(type) {
 	case *ast.BLangExpressionStmt:
-		return transformExpressionStatement(ctx, curBB, stmt)
+		return expressionStatement(ctx, curBB, stmt)
 	case *ast.BLangIf:
-		return transformIfStatement(ctx, curBB, stmt)
+		return ifStatement(ctx, curBB, stmt)
 	case *ast.BLangBlockStmt:
-		return transformBlockStatement(ctx, curBB, stmt)
+		return blockStatement(ctx, curBB, stmt)
 	case *ast.BLangReturn:
-		return transformReturnStatement(ctx, curBB, stmt)
+		return returnStatement(ctx, curBB, stmt)
+	case *ast.BLangSimpleVariableDef:
+		return simpleVariableDefinition(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
 }
 
-func transformReturnStatement(_ *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
+func simpleVariableDefinition(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
+	exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
+	curBB := exprResult.block
+	move := &Move{}
+	varName := model.Name(stmt.Var.GetName().GetValue())
+	move.LhsOp = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL)
+	ctx.varMap[varName.Value()] = move.LhsOp
+	move.RhsOp = exprResult.result
+	curBB.Instructions = append(curBB.Instructions, move)
+	return statementEffect{
+		block: curBB,
+	}
+}
+
+func returnStatement(_ *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
 	common.Assert(stmt.Expr == nil)
 	curBB.Terminator = &Return{}
 	return statementEffect{
@@ -224,7 +240,7 @@ func transformReturnStatement(_ *StmtContext, curBB *BIRBasicBlock, stmt *ast.BL
 	}
 }
 
-func transformExpressionStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangExpressionStmt) statementEffect {
+func expressionStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangExpressionStmt) statementEffect {
 	result := handleExpression(ctx, curBB, stmt.Expr)
 	// We are ignoring the expression result (We can have one for things like call)
 	return statementEffect{
@@ -232,11 +248,12 @@ func transformExpressionStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *
 	}
 }
 
-func transformIfStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
+func ifStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
 	cond := handleExpression(ctx, curBB, stmt.Expr)
 	thenBB := ctx.addBB()
 	var finalBB *BIRBasicBlock
-	thenEffect := transformBlockStatement(ctx, thenBB, &stmt.Body)
+	thenEffect := blockStatement(ctx, thenBB, &stmt.Body)
+	// TODO: refactor this
 	if stmt.ElseStmt != nil {
 		elseBB := ctx.addBB()
 		// Add branch to current BB
@@ -250,8 +267,12 @@ func transformIfStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLan
 		finalBB = ctx.addBB()
 		elseEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
 	} else {
-		curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: thenBB}}
 		finalBB = ctx.addBB()
+		branch := &Branch{}
+		branch.Op = cond.result
+		branch.TrueBB = thenBB
+		branch.FalseBB = finalBB
+		curBB.Terminator = branch
 	}
 	thenEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
 	return statementEffect{
@@ -259,7 +280,7 @@ func transformIfStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLan
 	}
 }
 
-func transformBlockStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStmt) statementEffect {
+func blockStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStmt) statementEffect {
 	curBB := bb
 	for _, stmt := range stmt.Stmts {
 		effect := handleStatement(ctx, curBB, stmt)
@@ -282,19 +303,44 @@ type expressionEffect struct {
 func handleExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
 	switch expr := expr.(type) {
 	case *ast.BLangInvocation:
-		return transformInvocation(ctx, curBB, expr)
+		return invocation(ctx, curBB, expr)
 	case *ast.BLangLiteral:
-		return transformLiteral(ctx, curBB, expr)
+		return literal(ctx, curBB, expr)
 	case *ast.BLangBinaryExpr:
 		return binaryExpression(ctx, curBB, expr)
 	case *ast.BLangSimpleVarRef:
 		return simpleVariableReference(ctx, curBB, expr)
+	case *ast.BLangUnaryExpr:
+		return unaryExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
 }
 
-func transformInvocation(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
+func unaryExpression(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryExpr) expressionEffect {
+	var kind InstructionKind
+	switch expr.Operator {
+	case model.OperatorKind_NOT:
+		kind = INSTRUCTION_KIND_NOT
+	default:
+		panic("unexpected unary operator kind")
+	}
+	opEffect := handleExpression(ctx, bb, expr.Expr)
+
+	resultOperand := ctx.addTempVar(nil)
+	unaryOp := &UnaryOp{}
+	unaryOp.Kind = kind
+	unaryOp.LhsOp = resultOperand
+	curBB := opEffect.block
+	unaryOp.RhsOp = opEffect.result
+	curBB.Instructions = append(curBB.Instructions, unaryOp)
+	return expressionEffect{
+		result: resultOperand,
+		block:  bb,
+	}
+}
+
+func invocation(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
 	curBB := bb
 	var args []BIROperand
 	for _, arg := range expr.ArgExprs {
@@ -319,7 +365,7 @@ func transformInvocation(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangInv
 	}
 }
 
-func transformLiteral(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
+func literal(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
 	resultOperand := ctx.addTempVar(nil)
 	constantLoad := &ConstantLoad{}
 	constantLoad.Value = expr.Value
