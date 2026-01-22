@@ -17,6 +17,10 @@
 package bir
 
 import (
+	"ballerina-lang-go/ast"
+	debugcommon "ballerina-lang-go/common"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/parser"
 	"flag"
 	"fmt"
 	"os"
@@ -246,4 +250,108 @@ func testBIRPackageLoading(t *testing.T, birFile string) {
 		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", birFile, expectedTextPath, diff)
 		return
 	}
+}
+
+// getCorpusBalFiles retrieves all .bal files from the corpus directory for BIR generation testing.
+func getCorpusBalFiles(t *testing.T) []string {
+	corpusBalDir := "../corpus/bal"
+	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+		corpusBalDir = "./corpus/bal"
+		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+			t.Skipf("Corpus directory not found (tried ../corpus/bal and ./corpus/bal), skipping test")
+		}
+	}
+
+	var balFiles []string
+	for _, subset := range supportedSubsets {
+		dirPath := filepath.Join(corpusBalDir, subset)
+		err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && strings.HasSuffix(path, ".bal") {
+				balFiles = append(balFiles, path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Error walking corpus/bal/%s directory: %v", subset, err)
+		}
+	}
+
+	if len(balFiles) == 0 {
+		t.Fatalf("No .bal files found in %s", corpusBalDir)
+	}
+	return balFiles
+}
+
+// TestBIRGeneration tests BIR generation from .bal source files in the corpus.
+func TestBIRGeneration(t *testing.T) {
+	flag.Parse()
+	balFiles := getCorpusBalFiles(t)
+	for _, balFile := range balFiles {
+		t.Run(balFile, func(t *testing.T) {
+			t.Parallel()
+			testBIRGeneration(t, balFile)
+		})
+	}
+}
+
+// testBIRGeneration tests BIR generation for a single .bal file.
+func testBIRGeneration(t *testing.T, balFile string) {
+	// Skip files not ending with -v.bal (follow AST test convention)
+	if !strings.HasSuffix(balFile, "-v.bal") {
+		t.Skipf("Skipping %s", balFile)
+		return
+	}
+
+	// Catch panics during BIR generation
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while generating BIR from %s: %v", balFile, r)
+		}
+	}()
+
+	// Create debug context with channel
+	debugCtx := &debugcommon.DebugContext{
+		Channel: make(chan string),
+	}
+	// Drain channel in background to prevent blocking
+	go func() {
+		for range debugCtx.Channel {
+			// Discard debug messages
+		}
+	}()
+	defer close(debugCtx.Channel)
+
+	// Create compiler context
+	cx := context.NewCompilerContext()
+
+	// Step 1: Parse syntax tree
+	syntaxTree, err := parser.GetSyntaxTree(debugCtx, balFile)
+	if err != nil {
+		t.Errorf("error getting syntax tree from %s: %v", balFile, err)
+		return
+	}
+
+	// Step 2: Get compilation unit (AST)
+	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+	if compilationUnit == nil {
+		t.Errorf("compilation unit is nil for %s", balFile)
+		return
+	}
+
+	// Step 3: Convert to AST package
+	pkg := ast.ToPackage(compilationUnit)
+
+	// Step 4: Generate BIR package
+	birPkg := GenBir(cx, pkg)
+
+	// Validate result
+	if birPkg == nil {
+		t.Errorf("BIR package is nil for %s", balFile)
+		return
+	}
+
+	// Success: BIR generation completed without panic
 }
