@@ -193,7 +193,6 @@ func handleBlockFunctionBody(ctx *StmtContext, ast *ast.BLangBlockFunctionBody) 
 		effect := handleStatement(ctx, curBB, stmt)
 		curBB = effect.block
 	}
-	// TODO: handle setting return value
 	curBB.Terminator = &Return{}
 }
 
@@ -213,8 +212,24 @@ func handleStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return returnStatement(ctx, curBB, stmt)
 	case *ast.BLangSimpleVariableDef:
 		return simpleVariableDefinition(ctx, curBB, stmt)
+	case *ast.BLangAssignment:
+		return assignmentStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
+	}
+}
+
+func assignmentStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
+	valueEffect := handleExpression(ctx, bb, stmt.Expr)
+	refEffect := handleExpression(ctx, valueEffect.block, stmt.VarRef)
+	currBB := refEffect.block
+	mov := &Move{}
+	mov.LhsOp = refEffect.result
+	mov.RhsOp = valueEffect.result
+	currBB.Instructions = append(currBB.Instructions, mov)
+
+	return statementEffect{
+		block: currBB,
 	}
 }
 
@@ -232,11 +247,19 @@ func simpleVariableDefinition(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 	}
 }
 
-func returnStatement(_ *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
-	common.Assert(stmt.Expr == nil)
+func returnStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
+	curBB := bb
+	if stmt.Expr != nil {
+		valueEffect := handleExpression(ctx, curBB, stmt.Expr)
+		curBB = valueEffect.block
+		mov := &Move{}
+		mov.LhsOp = ctx.retVar
+		mov.RhsOp = valueEffect.result
+		curBB.Instructions = append(curBB.Instructions, mov)
+	}
 	curBB.Terminator = &Return{}
 	return statementEffect{
-		block: nil,
+		block: curBB,
 	}
 }
 
@@ -322,6 +345,8 @@ func unaryExpression(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	switch expr.Operator {
 	case model.OperatorKind_NOT:
 		kind = INSTRUCTION_KIND_NOT
+	case model.OperatorKind_SUB:
+		kind = INSTRUCTION_KIND_NEGATE
 	default:
 		panic("unexpected unary operator kind")
 	}
