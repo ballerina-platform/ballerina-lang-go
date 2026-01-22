@@ -29,6 +29,7 @@ import (
 
 type Context struct {
 	CompilerContext *context.CompilerContext
+	constantMap     map[string]*BIRConstant
 }
 
 // Add a stmt context for code gen function function. When we start to generated code for a function we create this context and pass it to each statement code gen function.
@@ -47,7 +48,7 @@ type StmtContext struct {
 	scope       *BIRScope
 	nextScopeId int
 	// TODO: do better
-	varMap      map[string]*BIROperand
+	varMap map[string]*BIROperand
 	// If needed we can keep track of things like the return bb (if we have to semantics to guarantee single return bb)
 	// and init bb
 }
@@ -67,24 +68,6 @@ func (cx *StmtContext) addTempVar(ty model.ValueType) *BIROperand {
 	return cx.addLocalVar(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
 }
 
-func (cx *StmtContext) addScope() *BIRScope {
-	scope := BIRScope{Id: cx.nextScopeId}
-	if cx.scope != nil {
-		scope.Parent = cx.scope
-	}
-	cx.scope = &scope
-	return &scope
-}
-
-func (cx *StmtContext) popScope() *BIRScope {
-	if cx.scope == nil {
-		panic("No more scopes")
-	}
-	parent := cx.scope.Parent
-	cx.scope = parent
-	return parent
-}
-
 func (cx *StmtContext) addBB() *BIRBasicBlock {
 	index := len(cx.bbs)
 	bb := BB(index)
@@ -97,6 +80,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg.PackageID = &ast.PackageID
 	genCtx := &Context{
 		CompilerContext: ctx,
+		constantMap:     make(map[string]*BIRConstant),
 	}
 	for _, importPkg := range ast.Imports {
 		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
@@ -108,7 +92,9 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		birPkg.GlobalVars = appendIfNotNil(birPkg.GlobalVars, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
 	for _, constant := range ast.Constants {
-		birPkg.Constants = appendIfNotNil(birPkg.Constants, TransformConstant(genCtx, &constant))
+		c := TransformConstant(genCtx, &constant)
+		genCtx.constantMap[c.Name.Value()] = c
+		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
 	}
 	for _, function := range ast.Functions {
 		birPkg.Functions = appendIfNotNil(birPkg.Functions, TransformFunction(genCtx, &function))
@@ -183,8 +169,17 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	return birFunc
 }
 
-func TransformConstant(ctx *Context, ast *ast.BLangConstant) *BIRConstant {
-	panic("unimplemented")
+func TransformConstant(ctx *Context, c *ast.BLangConstant) *BIRConstant {
+	valueExpr := c.Expr
+	if literal, ok := valueExpr.(*ast.BLangLiteral); ok {
+		return &BIRConstant{
+			Name: model.Name(c.GetName().GetValue()),
+			ConstValue: ConstValue{
+				Value: literal.Value,
+			},
+		}
+	}
+	panic("unexpected constant value type")
 }
 
 func handleBlockFunctionBody(ctx *StmtContext, ast *ast.BLangBlockFunctionBody) {
@@ -335,8 +330,17 @@ func handleExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return simpleVariableReference(ctx, curBB, expr)
 	case *ast.BLangUnaryExpr:
 		return unaryExpression(ctx, curBB, expr)
+	case *ast.BLangWildCardBindingPattern:
+		return wildcardBindingPattern(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
+	}
+}
+
+func wildcardBindingPattern(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
+	return expressionEffect{
+		result: ctx.addTempVar(nil),
+		block:  curBB,
 	}
 }
 
@@ -452,13 +456,29 @@ func binaryExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 }
 
 func simpleVariableReference(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
-	operand, ok := ctx.varMap[expr.VariableName.GetValue()]
+	varName := expr.VariableName.GetValue()
+	operand, ok := ctx.varMap[varName]
 	if !ok {
-		panic("variable not found")
-	}
-	return expressionEffect{
-		result: operand,
-		block:  curBB,
+		// FIXME: this is a hack until we have constant propagation. At which point these should be literals
+		constant, ok := ctx.birCx.constantMap[varName]
+		if !ok {
+			panic("variable not found")
+		}
+		resultOperand := ctx.addTempVar(nil)
+		constantLoad := &ConstantLoad{}
+		constantLoad.Value = constant.ConstValue
+		constantLoad.LhsOp = resultOperand
+		curBB.Instructions = append(curBB.Instructions, constantLoad)
+		return expressionEffect{
+			result: resultOperand,
+			block:  curBB,
+		}
+
+	} else {
+		return expressionEffect{
+			result: operand,
+			block:  curBB,
+		}
 	}
 }
 
