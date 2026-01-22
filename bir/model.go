@@ -302,6 +302,6 @@ const (
 func BB(number int) BIRBasicBlock {
 	return BIRBasicBlock{
 		Number: number,
-		Id: model.Name(fmt.Sprintf("bb%d", number)),
+		Id:     model.Name(fmt.Sprintf("bb%d", number)),
 	}
 }

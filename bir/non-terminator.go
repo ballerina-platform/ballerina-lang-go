@@ -64,8 +64,8 @@ type (
 		TypeDesc *BIROperand
 		// Why this is needed (type desc should say what is the element type?)
 		ElementTypeDesc *BIROperand
-		SizeOp *BIROperand
-		Type model.ValueType
+		SizeOp          *BIROperand
+		Type            model.ValueType
 	}
 )
 
@@ -74,8 +74,8 @@ var (
 	_ BIRAssignInstruction = &BinaryOp{}
 	_ BIRAssignInstruction = &UnaryOp{}
 	_ BIRAssignInstruction = &ConstantLoad{}
-	_ BIRInstruction = &FieldAccess{}
-	_ BIRInstruction = &NewArray{}
+	_ BIRInstruction       = &FieldAccess{}
+	_ BIRInstruction       = &NewArray{}
 )
 
 func (m *Move) GetLhsOperand() *BIROperand {

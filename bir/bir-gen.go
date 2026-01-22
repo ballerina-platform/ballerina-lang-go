@@ -295,7 +295,7 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 }
 
 func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
-	 switch varRef := stmt.VarRef.(type) {
+	switch varRef := stmt.VarRef.(type) {
 	case *ast.BLangIndexBasedAccess:
 		return assignToMemberStatement(ctx, bb, varRef, stmt.Expr)
 	case *ast.BLangWildCardBindingPattern:
