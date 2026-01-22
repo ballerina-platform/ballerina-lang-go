@@ -60,7 +60,7 @@ func (cx *StmtContext) addLocalVar(name model.Name, ty model.ValueType, kind Var
 	varDcl.Scope = VAR_SCOPE_FUNCTION
 	varDcl.MetaVarName = name.Value()
 	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl}
+	return &BIROperand{VariableDcl: varDcl, index: len(cx.localVars) - 1}
 }
 
 func (cx *StmtContext) addTempVar(ty model.ValueType) *BIROperand {
