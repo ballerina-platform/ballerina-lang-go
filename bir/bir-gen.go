@@ -40,7 +40,7 @@ type Context struct {
 // When we codegen an statement it should optionally return the current block, next statement will add instructions to that block.
 // -- Statements that needs branching (if else, loops, etc) should always merge to a single block. And we have the invariant each statement always start in a single block.
 
-type StmtContext struct {
+type stmtContext struct {
 	birCx       *Context
 	bbs         []*BIRBasicBlock
 	localVars   []*BIRVariableDcl
@@ -51,9 +51,32 @@ type StmtContext struct {
 	varMap map[string]*BIROperand
 	// If needed we can keep track of things like the return bb (if we have to semantics to guarantee single return bb)
 	// and init bb
+	loopCtx *loopContext
 }
 
-func (cx *StmtContext) addLocalVar(name model.Name, ty model.ValueType, kind VarKind) *BIROperand {
+type loopContext struct {
+	onBreakBB    *BIRBasicBlock
+	onContinueBB *BIRBasicBlock
+	enclosing    *loopContext
+}
+
+func (cx *stmtContext) addLoopCtx(onBreakBB *BIRBasicBlock, onContinueBB *BIRBasicBlock) *loopContext {
+	newCtx := &loopContext{
+		onBreakBB:    onBreakBB,
+		onContinueBB: onContinueBB,
+		enclosing:    cx.loopCtx,
+	}
+	cx.loopCtx = newCtx
+	return newCtx
+}
+func (cx *stmtContext) popLoopCtx() {
+	if cx.loopCtx == nil {
+		panic("no enclosing loop context")
+	}
+	cx.loopCtx = cx.loopCtx.enclosing
+}
+
+func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind VarKind) *BIROperand {
 	varDcl := &BIRVariableDcl{}
 	varDcl.Name = name
 	varDcl.Type = ty
@@ -64,11 +87,11 @@ func (cx *StmtContext) addLocalVar(name model.Name, ty model.ValueType, kind Var
 	return &BIROperand{VariableDcl: varDcl, index: len(cx.localVars) - 1}
 }
 
-func (cx *StmtContext) addTempVar(ty model.ValueType) *BIROperand {
+func (cx *stmtContext) addTempVar(ty model.ValueType) *BIROperand {
 	return cx.addLocalVar(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
 }
 
-func (cx *StmtContext) addBB() *BIRBasicBlock {
+func (cx *stmtContext) addBB() *BIRBasicBlock {
 	index := len(cx.bbs)
 	bb := BB(index)
 	cx.bbs = append(cx.bbs, &bb)
@@ -144,7 +167,7 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
 	common.Assert(astFunc.Receiver == nil)
-	stmtCx := &StmtContext{birCx: ctx, varMap: make(map[string]*BIROperand)}
+	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[string]*BIROperand)}
 	stmtCx.retVar = stmtCx.addLocalVar(model.Name("%0"), nil, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
 		paramOperand := stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), nil, VAR_KIND_ARG)
@@ -172,6 +195,7 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 func TransformConstant(ctx *Context, c *ast.BLangConstant) *BIRConstant {
 	valueExpr := c.Expr
 	if literal, ok := valueExpr.(*ast.BLangLiteral); ok {
+		// FIXME: once we have constant propagation these should be propagated and no longer needed
 		return &BIRConstant{
 			Name: model.Name(c.GetName().GetValue()),
 			ConstValue: ConstValue{
@@ -179,23 +203,27 @@ func TransformConstant(ctx *Context, c *ast.BLangConstant) *BIRConstant {
 			},
 		}
 	}
+	// TODO: need this think how to actually implement constant value initialization. May be we add these to init function?
 	panic("unexpected constant value type")
 }
 
-func handleBlockFunctionBody(ctx *StmtContext, ast *ast.BLangBlockFunctionBody) {
+func handleBlockFunctionBody(ctx *stmtContext, ast *ast.BLangBlockFunctionBody) {
 	curBB := ctx.addBB()
 	for _, stmt := range ast.Stmts {
 		effect := handleStatement(ctx, curBB, stmt)
 		curBB = effect.block
 	}
-	curBB.Terminator = &Return{}
+	// Add implicit return
+	if curBB != nil {
+		curBB.Terminator = &Return{}
+	}
 }
 
 type statementEffect struct {
 	block *BIRBasicBlock
 }
 
-func handleStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt ast.BLangStatement) statementEffect {
+func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangStatement) statementEffect {
 	switch stmt := stmt.(type) {
 	case *ast.BLangExpressionStmt:
 		return expressionStatement(ctx, curBB, stmt)
@@ -209,12 +237,61 @@ func handleStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return simpleVariableDefinition(ctx, curBB, stmt)
 	case *ast.BLangAssignment:
 		return assignmentStatement(ctx, curBB, stmt)
+	case *ast.BLangWhile:
+		return whileStatement(ctx, curBB, stmt)
+	case *ast.BLangBreak:
+		return breakStatement(ctx, curBB, stmt)
+	case *ast.BLangContinue:
+		return continueStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
 }
 
-func assignmentStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
+func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
+	onContinueBB := ctx.loopCtx.onContinueBB
+	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: onContinueBB}}
+	return statementEffect{
+		// We don't know where to add the next statement so we return nil
+		block: nil,
+	}
+}
+
+func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak) statementEffect {
+	onBreakBB := ctx.loopCtx.onBreakBB
+	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: onBreakBB}}
+	return statementEffect{
+		// We don't know where to add the next statement so we return nil
+		block: nil,
+	}
+}
+
+func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) statementEffect {
+	loopHead := ctx.addBB()
+	// jump to loop head
+	bb.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+	condEffect := handleExpression(ctx, loopHead, stmt.Expr)
+
+	loopBody := ctx.addBB()
+	loopEnd := ctx.addBB()
+	// conditionally jump to loop body
+	branch := &Branch{}
+	branch.Op = condEffect.result
+	branch.TrueBB = loopBody
+	branch.FalseBB = loopEnd
+	condEffect.block.Terminator = branch
+
+	ctx.addLoopCtx(loopEnd, loopHead)
+	bodyEffect := blockStatement(ctx, loopBody, &stmt.Body)
+	bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+
+	ctx.popLoopCtx()
+	return statementEffect{
+		block: loopEnd,
+	}
+}
+
+func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
 	valueEffect := handleExpression(ctx, bb, stmt.Expr)
 	refEffect := handleExpression(ctx, valueEffect.block, stmt.VarRef)
 	currBB := refEffect.block
@@ -228,7 +305,7 @@ func assignmentStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangAss
 	}
 }
 
-func simpleVariableDefinition(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
+func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
 	exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
 	curBB := exprResult.block
 	move := &Move{}
@@ -242,7 +319,7 @@ func simpleVariableDefinition(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 	}
 }
 
-func returnStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
+func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
 	curBB := bb
 	if stmt.Expr != nil {
 		valueEffect := handleExpression(ctx, curBB, stmt.Expr)
@@ -253,12 +330,10 @@ func returnStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
 	curBB.Terminator = &Return{}
-	return statementEffect{
-		block: curBB,
-	}
+	return statementEffect{}
 }
 
-func expressionStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangExpressionStmt) statementEffect {
+func expressionStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangExpressionStmt) statementEffect {
 	result := handleExpression(ctx, curBB, stmt.Expr)
 	// We are ignoring the expression result (We can have one for things like call)
 	return statementEffect{
@@ -266,7 +341,7 @@ func expressionStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLang
 	}
 }
 
-func ifStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
+func ifStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
 	cond := handleExpression(ctx, curBB, stmt.Expr)
 	thenBB := ctx.addBB()
 	var finalBB *BIRBasicBlock
@@ -292,13 +367,16 @@ func ifStatement(ctx *StmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) stat
 		branch.FalseBB = finalBB
 		curBB.Terminator = branch
 	}
-	thenEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+	// this could be nil if the control flow moved out of the if (ex: break, continue, return, etc)
+	if thenEffect.block != nil {
+		thenEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+	}
 	return statementEffect{
 		block: finalBB,
 	}
 }
 
-func blockStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStmt) statementEffect {
+func blockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStmt) statementEffect {
 	curBB := bb
 	for _, stmt := range stmt.Stmts {
 		effect := handleStatement(ctx, curBB, stmt)
@@ -309,7 +387,7 @@ func blockStatement(ctx *StmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStm
 	}
 }
 
-func handleExprFunctionBody(ctx *StmtContext, ast *ast.BLangExprFunctionBody) {
+func handleExprFunctionBody(ctx *stmtContext, ast *ast.BLangExprFunctionBody) {
 	panic("unimplemented")
 }
 
@@ -318,7 +396,7 @@ type expressionEffect struct {
 	block  *BIRBasicBlock
 }
 
-func handleExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
+func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
 	switch expr := expr.(type) {
 	case *ast.BLangInvocation:
 		return invocation(ctx, curBB, expr)
@@ -337,14 +415,14 @@ func handleExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 	}
 }
 
-func wildcardBindingPattern(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
+func wildcardBindingPattern(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
 	return expressionEffect{
 		result: ctx.addTempVar(nil),
 		block:  curBB,
 	}
 }
 
-func unaryExpression(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryExpr) expressionEffect {
+func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryExpr) expressionEffect {
 	var kind InstructionKind
 	switch expr.Operator {
 	case model.OperatorKind_NOT:
@@ -369,7 +447,7 @@ func unaryExpression(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	}
 }
 
-func invocation(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
+func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
 	curBB := bb
 	var args []BIROperand
 	for _, arg := range expr.ArgExprs {
@@ -394,7 +472,7 @@ func invocation(ctx *StmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	}
 }
 
-func literal(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
+func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
 	resultOperand := ctx.addTempVar(nil)
 	constantLoad := &ConstantLoad{}
 	constantLoad.Value = expr.Value
@@ -406,7 +484,7 @@ func literal(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
 	var kind InstructionKind
 	switch expr.OpKind {
 	case model.OperatorKind_ADD:
@@ -455,7 +533,7 @@ func binaryExpression(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 	}
 }
 
-func simpleVariableReference(ctx *StmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
+func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
 	operand, ok := ctx.varMap[varName]
 	if !ok {
