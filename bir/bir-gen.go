@@ -283,7 +283,10 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 
 	ctx.addLoopCtx(loopEnd, loopHead)
 	bodyEffect := blockStatement(ctx, loopBody, &stmt.Body)
-	bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+	// This could happen if the while block always ends return, break or continue
+	if bodyEffect.block != nil {
+		bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+	}
 
 	ctx.popLoopCtx()
 	return statementEffect{
@@ -292,14 +295,58 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 }
 
 func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
-	valueEffect := handleExpression(ctx, bb, stmt.Expr)
-	refEffect := handleExpression(ctx, valueEffect.block, stmt.VarRef)
+	 switch varRef := stmt.VarRef.(type) {
+	case *ast.BLangIndexBasedAccess:
+		return assignToMemberStatement(ctx, bb, varRef, stmt.Expr)
+	case *ast.BLangWildCardBindingPattern:
+		return assignToWildcardBindingPattern(ctx, bb, varRef, stmt.Expr)
+	case *ast.BLangSimpleVarRef:
+		return assignToSimpleVariable(ctx, bb, varRef, stmt.Expr)
+	default:
+		panic("unexpected variable reference type")
+	}
+}
+
+func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, value ast.BLangExpression) statementEffect {
+	valueEffect := handleExpression(ctx, bb, value)
+	refEffect := wildcardBindingPattern(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
 	mov := &Move{}
 	mov.LhsOp = refEffect.result
 	mov.RhsOp = valueEffect.result
 	currBB.Instructions = append(currBB.Instructions, mov)
+	return statementEffect{
+		block: currBB,
+	}
+}
 
+func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, value ast.BLangExpression) statementEffect {
+	valueEffect := handleExpression(ctx, bb, value)
+	refEffect := simpleVariableReference(ctx, valueEffect.block, varRef)
+	currBB := refEffect.block
+	mov := &Move{}
+	mov.LhsOp = refEffect.result
+	mov.RhsOp = valueEffect.result
+	currBB.Instructions = append(currBB.Instructions, mov)
+	return statementEffect{
+		block: currBB,
+	}
+}
+
+func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, value ast.BLangExpression) statementEffect {
+	currBB := bb
+	valueEffect := handleExpression(ctx, currBB, value)
+	currBB = valueEffect.block
+	containerRefEffect := handleExpression(ctx, currBB, varRef.Expr)
+	currBB = containerRefEffect.block
+	indexEffect := handleExpression(ctx, currBB, varRef.IndexExpr)
+	currBB = indexEffect.block
+	fieldAccess := &FieldAccess{}
+	fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_STORE
+	fieldAccess.LhsOp = containerRefEffect.result
+	fieldAccess.KeyOp = indexEffect.result
+	fieldAccess.RhsOp = valueEffect.result
+	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return statementEffect{
 		block: currBB,
 	}
@@ -358,7 +405,9 @@ func ifStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) stat
 
 		elseEffect := handleStatement(ctx, elseBB, stmt.ElseStmt)
 		finalBB = ctx.addBB()
-		elseEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+		if elseEffect.block != nil {
+			elseEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+		}
 	} else {
 		finalBB = ctx.addBB()
 		branch := &Branch{}
@@ -410,9 +459,54 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return unaryExpression(ctx, curBB, expr)
 	case *ast.BLangWildCardBindingPattern:
 		return wildcardBindingPattern(ctx, curBB, expr)
+	case *ast.BLangGroupExpr:
+		return groupExpression(ctx, curBB, expr)
+	case *ast.BLangIndexBasedAccess:
+		return indexBasedAccess(ctx, curBB, expr)
+	case *ast.BLangListConstructorExpr:
+		return listConstructorExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
+}
+
+func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLangListConstructorExpr) expressionEffect {
+	// FIXME: since we don't have type information we are going to just create an open array
+	sizeOperand := ctx.addTempVar(nil)
+	constantLoad := &ConstantLoad{}
+	constantLoad.Value = -1
+	constantLoad.LhsOp = sizeOperand
+	bb.Instructions = append(bb.Instructions, constantLoad)
+
+	resultOperand := ctx.addTempVar(nil)
+	newArray := &NewArray{}
+	newArray.LhsOp = resultOperand
+	newArray.SizeOp = sizeOperand
+	bb.Instructions = append(bb.Instructions, newArray)
+	return expressionEffect{
+		result: resultOperand,
+		block:  bb,
+	}
+}
+
+func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
+	// Assignment is handled in assignmentStatement to this is always a load
+	resultOperand := ctx.addTempVar(nil)
+	fieldAccess := &FieldAccess{}
+	fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
+	fieldAccess.LhsOp = resultOperand
+	indexEffect := handleExpression(ctx, bb, expr.IndexExpr)
+	fieldAccess.KeyOp = indexEffect.result
+	containerRefEffect := handleExpression(ctx, indexEffect.block, expr.Expr)
+	fieldAccess.RhsOp = containerRefEffect.result
+	bb.Instructions = append(bb.Instructions, fieldAccess)
+	return expressionEffect{
+		result: resultOperand,
+	}
+}
+
+func groupExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangGroupExpr) expressionEffect {
+	return handleExpression(ctx, curBB, expr.Expression)
 }
 
 func wildcardBindingPattern(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangWildCardBindingPattern) expressionEffect {
@@ -513,6 +607,10 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 		kind = INSTRUCTION_KIND_LESS_THAN
 	case model.OperatorKind_LESS_EQUAL:
 		kind = INSTRUCTION_KIND_LESS_EQUAL
+	case model.OperatorKind_REF_EQUAL:
+		kind = INSTRUCTION_KIND_REF_EQUAL
+	case model.OperatorKind_REF_NOT_EQUAL:
+		kind = INSTRUCTION_KIND_REF_NOT_EQUAL
 	default:
 		panic("unexpected binary operator kind")
 	}
