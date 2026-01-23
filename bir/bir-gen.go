@@ -32,14 +32,6 @@ type Context struct {
 	constantMap     map[string]*BIRConstant
 }
 
-// Add a stmt context for code gen function function. When we start to generated code for a function we create this context and pass it to each statement code gen function.
-// Context will hold the BBs and local variables. (only reason I can think we need to access the block array is to unify things like panic so may be not allow direct access to this array).
-//  Allowing code gen to modify BBs willy nelly will cause all sorts of problems.
-//  -- We need to abstract away operand creation to be pointers to the variables. Instead of pointers I would like this to be an index to this array. But we'll start with the pointers since we can create operands out of them
-//  -- I assume there should be a way to look up the BIR operand for a give AST variable?
-// When we codegen an statement it should optionally return the current block, next statement will add instructions to that block.
-// -- Statements that needs branching (if else, loops, etc) should always merge to a single block. And we have the invariant each statement always start in a single block.
-
 type stmtContext struct {
 	birCx       *Context
 	bbs         []*BIRBasicBlock
@@ -48,9 +40,7 @@ type stmtContext struct {
 	scope       *BIRScope
 	nextScopeId int
 	// TODO: do better
-	varMap map[string]*BIROperand
-	// If needed we can keep track of things like the return bb (if we have to semantics to guarantee single return bb)
-	// and init bb
+	varMap  map[string]*BIROperand
 	loopCtx *loopContext
 }
 
@@ -181,8 +171,6 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	default:
 		panic("unexpected function body type")
 	}
-	// // TODO: do we need to set enclosing BBs? (BBs shouldn't nest so I don't see why we need them)
-	// birFunc.BasicBlocks = append(birFunc.BasicBlocks, entryBB)
 	for _, bbPtr := range stmtCx.bbs {
 		birFunc.BasicBlocks = append(birFunc.BasicBlocks, *bbPtr)
 	}
