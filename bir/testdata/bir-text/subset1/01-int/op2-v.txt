@@ -83,12 +83,12 @@ main<NIL>{
     %76 = printBoolean(%67) -> bb6;
   }
   bb6 {
-    %39 = unknown %11;
+    %39 = ! %11;
     %77 = == %39 %13;
     %83 = printBoolean(%77) -> bb7;
   }
   bb7 {
-    %62 = unknown %11;
+    %62 = ! %11;
     %84 = == %13 %62;
     %90 = printBoolean(%84) -> bb8;
   }

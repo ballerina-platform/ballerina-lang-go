@@ -40,7 +40,7 @@ main<NIL>{
   bb2 {
     %5 = ConstantLoad %!s(int64=3)
     %3 = < %1 %5;
-    %7 = unknown %3;
+    %7 = ! %3;
     %7 ? bb3 : bb4;
   }
   bb3 {

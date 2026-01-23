@@ -71,7 +71,7 @@ main<NIL>{
   }
   bb5 {
     %45 = ConstantLoad %!s(bool=false)
-    %46 = unknown %45;
+    %46 = ! %45;
     %45 = ConstantLoad %!s(bool=false)
     %44 = >= %46 %45;
     %50 = printBoolean(%44) -> bb6;
@@ -79,7 +79,7 @@ main<NIL>{
   bb6 {
     %46 = ConstantLoad %!s(bool=false)
     %45 = ConstantLoad %!s(bool=false)
-    %54 = unknown %45;
+    %54 = ! %45;
     %51 = <= %46 %54;
     %57 = printBoolean(%51) -> bb7;
   }

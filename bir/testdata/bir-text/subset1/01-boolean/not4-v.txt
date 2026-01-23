@@ -30,55 +30,42 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(bool=true)
-    %1 = not(%2) -> bb1;
+    %1 = printBoolean() -> bb1;
   }
   bb1 {
-    %7 = printBoolean(%1) -> bb2;
+    %0 = ConstantLoad %!s(<nil>)
+    GOTO bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+printBoolean<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(bool=false)
+    %2 = ! %1;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(int64=-1)
+    %7 = ConstantLoad %!s(int64=1)
+    %8 = println(%3) -> bb2;
   }
   bb2 {
     %9 = ConstantLoad %!s(bool=false)
-    %8 = not(%9) -> bb3;
+    %1 = ! %9;
+    %1 ? bb3 : bb4;
   }
   bb3 {
-    %14 = printBoolean(%8) -> bb4;
+    %7 = ConstantLoad %!s(int64=-1)
+    %4 = ConstantLoad %!s(int64=2)
+    %18 = println(%3) -> bb4;
   }
   bb4 {
     %0 = ConstantLoad %!s(<nil>)
     GOTO bb5;
   }
   bb5 {
-    return;
-  }
-}
-printBoolean<NIL>{
-  bb0 {
-    %1 ? bb1 : bb2;
-  }
-  bb1 {
-    %4 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
-    %8 = println(%3) -> bb3;
-  }
-  bb2 {
-    %7 = ConstantLoad %!s(int64=-1)
-    %4 = ConstantLoad %!s(int64=0)
-    %14 = println(%3) -> bb3;
-  }
-  bb3 {
-    %0 = ConstantLoad %!s(<nil>)
-    GOTO bb4;
-  }
-  bb4 {
-    return;
-  }
-}
-not<NIL>{
-  bb0 {
-    %0 = unknown %1;
-    GOTO bb1;
-  }
-  bb1 {
     return;
   }
 }

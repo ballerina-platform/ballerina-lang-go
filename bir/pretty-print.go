@@ -180,7 +180,7 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 }
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
-	return fmt.Sprintf("%%%d", operand.index)
+	return operand.VariableDcl.Name.Value()
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
