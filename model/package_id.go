@@ -162,17 +162,18 @@ const (
 	DEFAULT_MAJOR_VERSION = Name("0")
 )
 
+// You should never directly allocate a PackageID. Instead, use the NewPackageID function.
 type PackageID struct {
 	OrgName        *Name
 	PkgName        *Name
 	Name           *Name
 	Version        *Name
 	NameComps      []Name
+	SourceFileName *Name
+	SourceRoot     *string
 	isUnnamed      bool
 	SkipTests      bool
 	IsTestPkg      bool
-	SourceFileName *Name
-	SourceRoot     *string
 }
 
 func (this *PackageID) IsUnnamed() bool {
@@ -198,7 +199,7 @@ func NewPackageID(interner *PackageIDInterner, orgName Name, nameComps []Name, v
 
 var (
 	DefaultPackageIDInterner = &PackageIDInterner{
-		packageMap: make(map[PackageKey]*PackageID),
+		packageMap: make(map[packageKey]*PackageID),
 	}
 )
 
@@ -253,7 +254,7 @@ func CreateNameComps(name Name) []Name {
 
 type PackageIDInterner struct {
 	rwLock     sync.RWMutex
-	packageMap map[PackageKey]*PackageID
+	packageMap map[packageKey]*PackageID
 }
 
 func (this *PackageIDInterner) GetDefaultPackage() *PackageID {
@@ -261,7 +262,7 @@ func (this *PackageIDInterner) GetDefaultPackage() *PackageID {
 }
 
 func (this *PackageIDInterner) Intern(packageID *PackageID) *PackageID {
-	packageKey := PackageKeyFromPackageID(packageID)
+	packageKey := packageKeyFromPackageID(packageID)
 	this.rwLock.RLock()
 	internedPackage, ok := this.packageMap[packageKey]
 	this.rwLock.RUnlock()
@@ -274,23 +275,23 @@ func (this *PackageIDInterner) Intern(packageID *PackageID) *PackageID {
 	return packageID
 }
 
-type PackageKey struct {
+type packageKey struct {
 	orgName Name
 	pkgName Name
 	name    Name
 	version Name
 }
 
-func PackageKeyFromPackageID(packageID *PackageID) PackageKey {
+func packageKeyFromPackageID(packageID *PackageID) packageKey {
 	if packageID == nil || packageID.IsUnnamed() {
-		return PackageKey{
+		return packageKey{
 			orgName: ANON_ORG,
 			pkgName: DEFAULT_PACKAGE,
 			version: DEFAULT_VERSION,
 			name:    DEFAULT_PACKAGE,
 		}
 	}
-	return PackageKey{
+	return packageKey{
 		orgName: *packageID.OrgName,
 		pkgName: *packageID.PkgName,
 		version: *packageID.Version,
