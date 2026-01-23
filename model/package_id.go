@@ -178,25 +178,18 @@ func (this *PackageID) IsUnnamed() bool {
 	return this.isUnnamed || (this.OrgName == nil && this.PkgName == nil && this.Version == nil)
 }
 
-func (this *PackageID) Equals(other PackageID) bool {
-	// FIXME: properly implement this
-	samePkg := false
-	if this.IsUnnamed() == other.IsUnnamed() {
-		samePkg = (!this.IsUnnamed()) || (this.SourceFileName == other.SourceFileName)
-	}
-	return samePkg && this.OrgName == other.OrgName && this.PkgName == other.PkgName && this.Version == other.Version
-}
-
-func NewPackageID(orgName Name, nameComps []Name, version Name) PackageID {
+// FIXME:
+func NewPackageID(orgName Name, nameComps []Name, version Name) *PackageID {
 	nameParts := make([]string, len(nameComps))
 	for i, name := range nameComps {
 		nameParts[i] = string(name)
 	}
 	name := strings.Join(nameParts, ".")
-	return PackageID{
+	return &PackageID{
 		OrgName:   &orgName,
 		NameComps: nameComps,
 		Name:      common.ToPointer(Name(name)),
+		PkgName:   common.ToPointer(Name(name)),
 		Version:   &version,
 		SkipTests: true,
 	}
@@ -239,7 +232,7 @@ var (
 	REGEXP_PKG = NewPackageID(BALLERINA_ORG, []Name{LANG, REGEXP}, DEFAULT_VERSION)
 )
 
-func NewPackageIDWithName(orgName, name, version Name) PackageID {
+func NewPackageIDWithName(orgName, name, version Name) *PackageID {
 	return NewPackageID(orgName, CreateNameComps(name), version)
 }
 

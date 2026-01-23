@@ -762,7 +762,7 @@ func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 
 		isVirtual := callInfo.IsVirtual != 0
 		// Parse package ID
-		var calleePkg model.PackageID
+		var calleePkg *model.PackageID
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {

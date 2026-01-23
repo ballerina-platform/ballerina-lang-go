@@ -23,32 +23,47 @@ import (
 
 type CompilerContext struct {
 	anonTypeCount map[packageKey]int
+	packageContext *packageContext
+}
+
+func (this *CompilerContext) GetDefaultPackage() *model.PackageID {
+	return this.packageContext.defaultPackage
+}
+
+type packageContext struct {
+	defaultPackage *model.PackageID
 }
 
 func NewCompilerContext() *CompilerContext {
 	return &CompilerContext{
 		anonTypeCount: make(map[packageKey]int),
+        packageContext: &packageContext{
+            defaultPackage: model.DEFAULT,
+        },
 	}
 }
 
 type packageKey struct {
 	orgName model.Name
 	pkgName model.Name
+	name    model.Name
 	version model.Name
 }
 
-func packageKeyFromPackageID(packageID model.PackageID) packageKey {
-	if packageID.IsUnnamed() {
+func packageKeyFromPackageID(packageID *model.PackageID) packageKey {
+	if packageID == nil || packageID.IsUnnamed() {
 		return packageKey{
 			orgName: model.ANON_ORG,
 			pkgName: model.DEFAULT_PACKAGE,
 			version: model.DEFAULT_VERSION,
+			name:    model.DEFAULT_PACKAGE,
 		}
 	}
 	return packageKey{
 		orgName: *packageID.OrgName,
 		pkgName: *packageID.PkgName,
 		version: *packageID.Version,
+		name:    *packageID.Name,
 	}
 }
 
@@ -58,11 +73,11 @@ const (
 	ANON_TYPE         = ANON_PREFIX + "Type$"
 )
 
-func (this *CompilerContext) GetNextAnonymousTypeKey(packageID model.PackageID) string {
+func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	packageKey := packageKeyFromPackageID(packageID)
 	nextValue := this.anonTypeCount[packageKey]
 	this.anonTypeCount[packageKey] = nextValue + 1
-	if model.ANNOTATIONS_PKG.Equals(packageID) {
+	if packageID != nil && model.ANNOTATIONS_PKG != packageID {
 		return BUILTIN_ANON_TYPE + "_" + strconv.Itoa(nextValue)
 	}
 	return ANON_TYPE + "_" + strconv.Itoa(nextValue)

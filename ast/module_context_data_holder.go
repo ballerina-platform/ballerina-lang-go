@@ -49,7 +49,7 @@ func newModuleDescriptor(moduleName *ModuleName, packageDesc *PackageDescriptor)
 	this.packageDesc = packageDesc
 
 	if packageDesc.name().value() == "." && packageDesc.org().anonymous() {
-		this.moduleCompilationId = &model.DEFAULT
+		this.moduleCompilationId = model.DEFAULT
 		this.moduleTestCompilationId = this.moduleCompilationId
 	} else {
 		panic("Not implemented")
