@@ -257,11 +257,18 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseCorpusFiles(t *testing.T) {
+	testCorpusInner(t, getCorpusDir(t))
+}
 
+func TestJBalUnitTests(t *testing.T) {
+	testCorpusInner(t, "./testdata/bal")
+}
+
+func testCorpusInner(t *testing.T, corpusDir string) {
 	if os.Getenv("GOARCH") == "wasm" {
 		t.Skip("skipping parser testsing wasm")
 	}
-	balFiles := getCorpusFiles(t, getCorpusDir(t))
+	balFiles := getCorpusFiles(t, corpusDir)
 
 	// Create subtests for each file
 	// Running in parallel for faster test execution
@@ -278,7 +285,7 @@ func TestParseCorpusFiles(t *testing.T) {
 
 		t.Run(balFile, func(t *testing.T) {
 			t.Parallel() // Run in parallel for faster execution (native only)
-			parseFile(t, balFile)
+			parseFile(t, balFile, corpusDir)
 		})
 	}
 }
@@ -316,7 +323,7 @@ func getCorpusFiles(t *testing.T, corpusBalDir string) []string {
 	return balFiles
 }
 
-func parseFile(t *testing.T, filePath string) {
+func parseFile(t *testing.T, filePath string, baseDir string) {
 	// Catch any panics and convert them to errors
 	defer func() {
 		if r := recover(); r != nil {
@@ -342,7 +349,7 @@ func parseFile(t *testing.T, filePath string) {
 
 	actualJSON := tree.GenerateJSON(ast)
 
-	expectedJSONPath := expectedJSONPath(filePath)
+	expectedJSONPath := expectedJSONPath(filePath, baseDir)
 
 	normalizedJSON := normalizeJSON(actualJSON)
 
@@ -365,9 +372,23 @@ func parseFile(t *testing.T, filePath string) {
 	}
 }
 
-func expectedJSONPath(filePath string) string {
-	expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
-	expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
+func expectedJSONPath(filePath string, baseDir string) string {
+	// Get the relative path from baseDir
+	relPath, err := filepath.Rel(baseDir, filePath)
+	if err != nil {
+		// If we can't get relative path, fall back to string replacement
+		expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
+		expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
+		return expectedJSONPath
+	}
+
+	// Replace "bal" directory with "parser" in the base directory path
+	parserBaseDir := strings.Replace(baseDir, string(filepath.Separator)+"bal", string(filepath.Separator)+"parser", 1)
+
+	// Construct the expected JSON path
+	expectedJSONPath := filepath.Join(parserBaseDir, relPath)
+	expectedJSONPath = strings.TrimSuffix(expectedJSONPath, ".bal") + ".json"
+
 	return expectedJSONPath
 }
 

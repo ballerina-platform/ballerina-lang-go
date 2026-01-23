@@ -42,7 +42,6 @@ func TestASTGeneration(t *testing.T) {
 	}
 }
 
-
 func testASTGeneration(t *testing.T, balFile string) {
 	if !strings.HasSuffix(balFile, "-v.bal") {
 		t.Skipf("Skipping %s", balFile)
@@ -155,29 +154,29 @@ func getDiff(expectedAST, actualAST string) string {
 }
 
 func updateIfNeeded(t *testing.T, expectedASTPath string, actualAST string) bool {
-		// Ensure the directory exists
-		dir := filepath.Dir(expectedASTPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Errorf("error creating directory for expected AST file: %v", err)
-			return true
-		}
+	// Ensure the directory exists
+	dir := filepath.Dir(expectedASTPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Errorf("error creating directory for expected AST file: %v", err)
+		return true
+	}
 
-		// Check if file exists
-		expectedAST, readErr := readExpectedAST(expectedASTPath)
-		if readErr != nil {
-			// File doesn't exist - create it and fail the test
-			t.Errorf("error reading expected AST file: %v", readErr)
-			return true
-		}
+	// Check if file exists
+	expectedAST, readErr := readExpectedAST(expectedASTPath)
+	if readErr != nil {
+		// File doesn't exist - create it and fail the test
+		t.Errorf("error reading expected AST file: %v", readErr)
+		return true
+	}
 
-		if actualAST != expectedAST {
-			if err := os.WriteFile(expectedASTPath, []byte(actualAST), 0o644); err != nil {
-				t.Errorf("error writing expected AST file: %v", err)
-				return true
-			}
+	if actualAST != expectedAST {
+		if err := os.WriteFile(expectedASTPath, []byte(actualAST), 0o644); err != nil {
+			t.Errorf("error writing expected AST file: %v", err)
 			return true
 		}
-		return false
+		return true
+	}
+	return false
 }
 
 func expectedASTPath(balFile string) string {
