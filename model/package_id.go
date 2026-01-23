@@ -18,6 +18,7 @@ package model
 
 import (
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/common"
 )
@@ -178,14 +179,13 @@ func (this *PackageID) IsUnnamed() bool {
 	return this.isUnnamed || (this.OrgName == nil && this.PkgName == nil && this.Version == nil)
 }
 
-// FIXME:
-func NewPackageID(orgName Name, nameComps []Name, version Name) *PackageID {
+func NewPackageID(interner *PackageIDInterner, orgName Name, nameComps []Name, version Name) *PackageID {
 	nameParts := make([]string, len(nameComps))
 	for i, name := range nameComps {
 		nameParts[i] = string(name)
 	}
 	name := strings.Join(nameParts, ".")
-	return &PackageID{
+	id := &PackageID{
 		OrgName:   &orgName,
 		NameComps: nameComps,
 		Name:      common.ToPointer(Name(name)),
@@ -193,48 +193,51 @@ func NewPackageID(orgName Name, nameComps []Name, version Name) *PackageID {
 		Version:   &version,
 		SkipTests: true,
 	}
+	return interner.Intern(id)
 }
 
 var (
-	DEFAULT = NewPackageID(ANON_ORG, []Name{DEFAULT_PACKAGE}, DEFAULT_VERSION)
+	DefaultPackageIDInterner = &PackageIDInterner{
+		packageMap: make(map[PackageKey]*PackageID),
+	}
+)
+
+var (
+	DEFAULT = NewPackageID(DefaultPackageIDInterner, ANON_ORG, []Name{DEFAULT_PACKAGE}, DEFAULT_VERSION)
 
 	// Lang.* Modules IDs
 
 	// lang.__internal module is visible only to the compiler and peer lang.* modules.
-	INTERNAL_PKG = NewPackageID(BALLERINA_ORG, []Name{LANG, INTERNAL}, DEFAULT_VERSION)
+	INTERNAL_PKG = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, INTERNAL}, DEFAULT_VERSION)
 
 	// Visible Lang modules.
-	ANNOTATIONS_PKG      = NewPackageID(BALLERINA_ORG, []Name{LANG, ANNOTATIONS}, DEFAULT_VERSION)
-	JAVA_PKG             = NewPackageID(BALLERINA_ORG, []Name{JAVA}, DEFAULT_VERSION)
-	ARRAY_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, ARRAY}, DEFAULT_VERSION)
-	DECIMAL_PKG          = NewPackageID(BALLERINA_ORG, []Name{LANG, DECIMAL}, DEFAULT_VERSION)
-	ERROR_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, ERROR}, DEFAULT_VERSION)
-	FLOAT_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, FLOAT}, DEFAULT_VERSION)
-	FUNCTION_PKG         = NewPackageID(BALLERINA_ORG, []Name{LANG, FUNCTION}, DEFAULT_VERSION)
-	FUTURE_PKG           = NewPackageID(BALLERINA_ORG, []Name{LANG, FUTURE}, DEFAULT_VERSION)
-	INT_PKG              = NewPackageID(BALLERINA_ORG, []Name{LANG, INT}, DEFAULT_VERSION)
-	MAP_PKG              = NewPackageID(BALLERINA_ORG, []Name{LANG, MAP}, DEFAULT_VERSION)
-	NATURAL_PKG          = NewPackageID(BALLERINA_ORG, []Name{LANG, NATURAL}, DEFAULT_VERSION)
-	OBJECT_PKG           = NewPackageID(BALLERINA_ORG, []Name{LANG, OBJECT}, DEFAULT_VERSION)
-	STREAM_PKG           = NewPackageID(BALLERINA_ORG, []Name{LANG, STREAM}, DEFAULT_VERSION)
-	STRING_PKG           = NewPackageID(BALLERINA_ORG, []Name{LANG, STRING}, DEFAULT_VERSION)
-	TABLE_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, TABLE}, DEFAULT_VERSION)
-	TYPEDESC_PKG         = NewPackageID(BALLERINA_ORG, []Name{LANG, TYPEDESC}, DEFAULT_VERSION)
-	VALUE_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, VALUE}, DEFAULT_VERSION)
-	XML_PKG              = NewPackageID(BALLERINA_ORG, []Name{LANG, XML}, DEFAULT_VERSION)
-	BOOLEAN_PKG          = NewPackageID(BALLERINA_ORG, []Name{LANG, BOOLEAN}, DEFAULT_VERSION)
-	QUERY_PKG            = NewPackageID(BALLERINA_ORG, []Name{LANG, QUERY}, DEFAULT_VERSION)
-	RUNTIME_PKG          = NewPackageID(BALLERINA_ORG, []Name{LANG, RUNTIME}, DEFAULT_VERSION)
-	TRANSACTION_PKG      = NewPackageID(BALLERINA_ORG, []Name{LANG, TRANSACTION}, DEFAULT_VERSION)
-	TRANSACTION_INTERNAL = NewPackageID(BALLERINA_INTERNAL_ORG, []Name{TRANSACTION}, DEFAULT_VERSION)
-	OBSERVE_INTERNAL     = NewPackageID(BALLERINA_INTERNAL_ORG, []Name{OBSERVE}, DEFAULT_VERSION)
+	ANNOTATIONS_PKG      = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, ANNOTATIONS}, DEFAULT_VERSION)
+	JAVA_PKG             = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{JAVA}, DEFAULT_VERSION)
+	ARRAY_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, ARRAY}, DEFAULT_VERSION)
+	DECIMAL_PKG          = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, DECIMAL}, DEFAULT_VERSION)
+	ERROR_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, ERROR}, DEFAULT_VERSION)
+	FLOAT_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, FLOAT}, DEFAULT_VERSION)
+	FUNCTION_PKG         = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, FUNCTION}, DEFAULT_VERSION)
+	FUTURE_PKG           = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, FUTURE}, DEFAULT_VERSION)
+	INT_PKG              = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, INT}, DEFAULT_VERSION)
+	MAP_PKG              = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, MAP}, DEFAULT_VERSION)
+	NATURAL_PKG          = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, NATURAL}, DEFAULT_VERSION)
+	OBJECT_PKG           = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, OBJECT}, DEFAULT_VERSION)
+	STREAM_PKG           = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, STREAM}, DEFAULT_VERSION)
+	STRING_PKG           = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, STRING}, DEFAULT_VERSION)
+	TABLE_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, TABLE}, DEFAULT_VERSION)
+	TYPEDESC_PKG         = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, TYPEDESC}, DEFAULT_VERSION)
+	VALUE_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, VALUE}, DEFAULT_VERSION)
+	XML_PKG              = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, XML}, DEFAULT_VERSION)
+	BOOLEAN_PKG          = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, BOOLEAN}, DEFAULT_VERSION)
+	QUERY_PKG            = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, QUERY}, DEFAULT_VERSION)
+	RUNTIME_PKG          = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, RUNTIME}, DEFAULT_VERSION)
+	TRANSACTION_PKG      = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, TRANSACTION}, DEFAULT_VERSION)
+	TRANSACTION_INTERNAL = NewPackageID(DefaultPackageIDInterner, BALLERINA_INTERNAL_ORG, []Name{TRANSACTION}, DEFAULT_VERSION)
+	OBSERVE_INTERNAL     = NewPackageID(DefaultPackageIDInterner, BALLERINA_INTERNAL_ORG, []Name{OBSERVE}, DEFAULT_VERSION)
 
-	REGEXP_PKG = NewPackageID(BALLERINA_ORG, []Name{LANG, REGEXP}, DEFAULT_VERSION)
+	REGEXP_PKG = NewPackageID(DefaultPackageIDInterner, BALLERINA_ORG, []Name{LANG, REGEXP}, DEFAULT_VERSION)
 )
-
-func NewPackageIDWithName(orgName, name, version Name) *PackageID {
-	return NewPackageID(orgName, CreateNameComps(name), version)
-}
 
 func CreateNameComps(name Name) []Name {
 	if name == "." {
@@ -246,4 +249,51 @@ func CreateNameComps(name Name) []Name {
 		result[i] = Name(part)
 	}
 	return result
+}
+
+type PackageIDInterner struct {
+	rwLock     sync.RWMutex
+	packageMap map[PackageKey]*PackageID
+}
+
+func (this *PackageIDInterner) GetDefaultPackage() *PackageID {
+	return DEFAULT
+}
+
+func (this *PackageIDInterner) Intern(packageID *PackageID) *PackageID {
+	packageKey := PackageKeyFromPackageID(packageID)
+	this.rwLock.RLock()
+	internedPackage, ok := this.packageMap[packageKey]
+	this.rwLock.RUnlock()
+	if ok {
+		return internedPackage
+	}
+	this.rwLock.Lock()
+	defer this.rwLock.Unlock()
+	this.packageMap[packageKey] = packageID
+	return packageID
+}
+
+type PackageKey struct {
+	orgName Name
+	pkgName Name
+	name    Name
+	version Name
+}
+
+func PackageKeyFromPackageID(packageID *PackageID) PackageKey {
+	if packageID == nil || packageID.IsUnnamed() {
+		return PackageKey{
+			orgName: ANON_ORG,
+			pkgName: DEFAULT_PACKAGE,
+			version: DEFAULT_VERSION,
+			name:    DEFAULT_PACKAGE,
+		}
+	}
+	return PackageKey{
+		orgName: *packageID.OrgName,
+		pkgName: *packageID.PkgName,
+		version: *packageID.Version,
+		name:    *packageID.Name,
+	}
 }

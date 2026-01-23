@@ -137,7 +137,8 @@ func testBIRPackageLoading(t *testing.T, birFile string, baseDir string) {
 		t.Fatalf("failed to open test BIR file: %v", err)
 	}
 	defer file.Close()
-	pkg, err := LoadBIRPackageFromReader(file)
+	cx := context.NewCompilerContext()
+	pkg, err := LoadBIRPackageFromReader(cx, file)
 	if err != nil {
 		t.Errorf("error loading BIR package from %s: %v", birFile, err)
 		return
