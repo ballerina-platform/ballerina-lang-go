@@ -21,14 +21,81 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 var supportedSubsets = []string{"subset1"}
+
+func TestASTGeneration(t *testing.T) {
+	flag.Parse()
+	balFiles := getCorpusFiles(t)
+	for _, balFile := range balFiles {
+		t.Run(balFile, func(t *testing.T) {
+			t.Parallel()
+			testASTGeneration(t, balFile)
+		})
+	}
+}
+
+
+func testASTGeneration(t *testing.T, balFile string) {
+	if !strings.HasSuffix(balFile, "-v.bal") {
+		t.Skipf("Skipping %s", balFile)
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while testing AST generation for %s: %v", balFile, r)
+		}
+	}()
+
+	debugCtx := debugcommon.DebugContext{
+		Channel: make(chan string),
+	}
+	cx := context.NewCompilerContext()
+	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, balFile)
+	if err != nil {
+		t.Errorf("error getting syntax tree for %s: %v", balFile, err)
+	}
+	compilationUnit := GetCompilationUnit(cx, syntaxTree)
+	if compilationUnit == nil {
+		t.Errorf("compilation unit is nil for %s", balFile)
+	}
+	prettyPrinter := PrettyPrinter{}
+	actualAST := prettyPrinter.Print(compilationUnit)
+
+	// Generate expected file path
+	// Replace .bal with .txt and change directory from corpus/bal to corpus/ast
+	expectedASTPath := expectedASTPath(balFile)
+
+	// If update flag is set, check if update is needed and update if necessary
+	if *update {
+		if !updateIfNeeded(t, expectedASTPath, actualAST) {
+			return
+		}
+		t.Errorf("updated expected AST file: %s", expectedASTPath)
+		return
+	}
+
+	// Read expected AST file
+	expectedAST, readErr := readExpectedAST(expectedASTPath)
+	if readErr != nil {
+		t.Errorf("error reading expected AST file: %v", readErr)
+		return
+	}
+
+	// Compare AST strings exactly
+	if actualAST != expectedAST {
+		diff := showDiff(expectedAST, actualAST)
+		t.Errorf("AST mismatch for %s\nExpected file: %s\n%s", balFile, expectedASTPath, diff)
+		return
+	}
+}
 
 var update = flag.Bool("update", false, "update expected AST files")
 
@@ -82,161 +149,39 @@ func readExpectedAST(filePath string) (string, error) {
 
 // showDiff generates a detailed diff string showing differences between expected and actual AST strings.
 func showDiff(expectedAST, actualAST string) string {
-	// Split into lines for line-by-line comparison
-	expectedLines := strings.Split(expectedAST, "\n")
-	actualLines := strings.Split(actualAST, "\n")
-
-	// Build detailed diff showing line numbers and differences
-	var diffBuilder strings.Builder
-	diffBuilder.WriteString("\nAST mismatch - showing differences:\n\n")
-
-	maxLines := len(expectedLines)
-	if len(actualLines) > maxLines {
-		maxLines = len(actualLines)
-	}
-
-	diffCount := 0
-	const maxDiffsToShow = 20
-
-	// Show line-by-line differences
-	for i := 0; i < maxLines && diffCount < maxDiffsToShow; i++ {
-		lineNum := i + 1
-		expectedLine := ""
-		actualLine := ""
-
-		if i < len(expectedLines) {
-			expectedLine = expectedLines[i]
-		}
-		if i < len(actualLines) {
-			actualLine = actualLines[i]
-		}
-
-		if expectedLine != actualLine {
-			diffCount++
-			diffBuilder.WriteString(fmt.Sprintf("Line %d:\n", lineNum))
-			if expectedLine == "" {
-				diffBuilder.WriteString("  Expected: (empty)\n")
-			} else {
-				diffBuilder.WriteString(fmt.Sprintf("  Expected: %s\n", expectedLine))
-			}
-			if actualLine == "" {
-				diffBuilder.WriteString("  Actual:   (empty)\n\n")
-			} else {
-				diffBuilder.WriteString(fmt.Sprintf("  Actual:   %s\n\n", actualLine))
-			}
-		}
-	}
-
-	if diffCount >= maxDiffsToShow {
-		diffBuilder.WriteString(fmt.Sprintf("... (showing first %d differences, more exist)\n", maxDiffsToShow))
-	}
-
-	diffBuilder.WriteString(fmt.Sprintf("Total lines different: %d+\n", diffCount))
-	diffBuilder.WriteString("Use diff tool for full comparison\n")
-
-	return diffBuilder.String()
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(expectedAST, actualAST, false)
+	return dmp.DiffPrettyText(diffs)
 }
 
-func TestASTGeneration(t *testing.T) {
-	flag.Parse()
-	balFiles := getCorpusFiles(t)
-	for _, balFile := range balFiles {
-		t.Run(balFile, func(t *testing.T) {
-			t.Parallel()
-			testASTGeneration(t, balFile)
-		})
-	}
-}
-
-func testASTGeneration(t *testing.T, balFile string) {
-	if !strings.HasSuffix(balFile, "-v.bal") {
-		t.Skipf("Skipping %s", balFile)
-		return
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("panic while testing AST generation for %s: %v", balFile, r)
-		}
-	}()
-
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	cx := context.NewCompilerContext()
-	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, balFile)
-	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", balFile, err)
-	}
-	compilationUnit := GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", balFile)
-	}
-	prettyPrinter := PrettyPrinter{}
-	actualAST := prettyPrinter.Print(compilationUnit)
-
-	// Generate expected file path
-	// Replace .bal with .txt and change directory from corpus/bal to corpus/ast
-	expectedASTPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
-	expectedASTPath = strings.Replace(expectedASTPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"ast"+string(filepath.Separator), 1)
-
-	// If update flag is set, check if update is needed and update if necessary
-	if *update {
+func updateIfNeeded(t *testing.T, expectedASTPath string, actualAST string) bool {
 		// Ensure the directory exists
 		dir := filepath.Dir(expectedASTPath)
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Errorf("error creating directory for expected AST file: %v", err)
-			return
+			return true
 		}
 
 		// Check if file exists
 		expectedAST, readErr := readExpectedAST(expectedASTPath)
 		if readErr != nil {
 			// File doesn't exist - create it and fail the test
-			if os.IsNotExist(readErr) {
-				if err := os.WriteFile(expectedASTPath, []byte(actualAST), 0o644); err != nil {
-					t.Errorf("error writing expected AST file: %v", err)
-					return
-				}
-				t.Errorf("created expected AST file: %s", expectedASTPath)
-				return
-			}
 			t.Errorf("error reading expected AST file: %v", readErr)
-			return
+			return true
 		}
 
-		// File exists - compare content
-
-		// Only update if content is different
 		if actualAST != expectedAST {
-			// Content is different - update file and fail the test
 			if err := os.WriteFile(expectedASTPath, []byte(actualAST), 0o644); err != nil {
 				t.Errorf("error writing expected AST file: %v", err)
-				return
+				return true
 			}
-			t.Errorf("updated expected AST file: %s", expectedASTPath)
-			return
+			return true
 		}
+		return false
+}
 
-		// Content matches - no update needed, test passes
-		return
-	}
-
-	// Read expected AST file
-	expectedAST, readErr := readExpectedAST(expectedASTPath)
-	if readErr != nil {
-		// If expected AST file doesn't exist, provide an error
-		if os.IsNotExist(readErr) {
-			t.Errorf("expected AST file not found: %s", expectedASTPath)
-			return
-		}
-		t.Errorf("error reading expected AST file: %v", readErr)
-		return
-	}
-
-	// Compare AST strings exactly
-	if actualAST != expectedAST {
-		diff := showDiff(expectedAST, actualAST)
-		t.Errorf("AST mismatch for %s\nExpected file: %s\n%s", balFile, expectedASTPath, diff)
-		return
-	}
+func expectedASTPath(balFile string) string {
+	expectedASTPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
+	expectedASTPath = strings.Replace(expectedASTPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"ast"+string(filepath.Separator), 1)
+	return expectedASTPath
 }

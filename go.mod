@@ -9,6 +9,9 @@ require (
 	golang.org/x/tools v0.39.0
 )
 
-require golang.org/x/text v0.28.0 // indirect
+require (
+	github.com/sergi/go-diff v1.4.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+)
 
 require github.com/kaitai-io/kaitai_struct_go_runtime v0.11.0
