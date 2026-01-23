@@ -21,11 +21,12 @@ import (
 	"ballerina-lang-go/tools/text"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 var update = flag.Bool("update", false, "update expected JSON files")
@@ -232,16 +233,7 @@ var documentationParserIgnoreList = []string{
 }
 
 // shouldIgnoreFile checks if a file should be ignored based on the ignore lists
-func shouldIgnoreFile(filePath string, corpusBalDir string) bool {
-	// Get relative path from corpusBalDir
-	relPath, err := filepath.Rel(corpusBalDir, filePath)
-	if err != nil {
-		return false
-	}
-	// Normalize path separators to forward slashes for comparison
-	relPath = filepath.ToSlash(relPath)
-
-	// Check all ignore lists
+func shouldIgnoreFile(filePath string) bool {
 	allIgnoreLists := [][]string{
 		xmlParserIgnoreList,
 		regexParserIgnoreList,
@@ -250,7 +242,7 @@ func shouldIgnoreFile(filePath string, corpusBalDir string) bool {
 
 	for _, ignoreList := range allIgnoreLists {
 		for _, ignorePath := range ignoreList {
-			if relPath == ignorePath {
+			if strings.HasSuffix(filePath, ignorePath) {
 				return true
 			}
 		}
@@ -265,7 +257,40 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseCorpusFiles(t *testing.T) {
-	// Try both relative paths - from package directory and from project root
+	testCorpusInner(t, getCorpusDir(t))
+}
+
+func TestJBalUnitTests(t *testing.T) {
+	testCorpusInner(t, "./testdata/bal")
+}
+
+func testCorpusInner(t *testing.T, corpusDir string) {
+	if os.Getenv("GOARCH") == "wasm" {
+		t.Skip("skipping parser testsing wasm")
+	}
+	balFiles := getCorpusFiles(t, corpusDir)
+
+	// Create subtests for each file
+	// Running in parallel for faster test execution
+	for _, balFile := range balFiles {
+		balFile := balFile // capture loop variable
+
+		// Skip files in ignore lists
+		if shouldIgnoreFile(balFile) {
+			t.Run(balFile, func(t *testing.T) {
+				t.Skipf("Skipping file in ignore list: %s", balFile)
+			})
+			continue
+		}
+
+		t.Run(balFile, func(t *testing.T) {
+			t.Parallel() // Run in parallel for faster execution (native only)
+			parseFile(t, balFile, corpusDir)
+		})
+	}
+}
+
+func getCorpusDir(t *testing.T) string {
 	corpusBalDir := "../corpus/bal"
 	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
 		// Try alternative path (when running from project root)
@@ -274,8 +299,10 @@ func TestParseCorpusFiles(t *testing.T) {
 			t.Skipf("Corpus directory not found (tried ../corpus/bal and ./corpus/bal), skipping test")
 		}
 	}
+	return corpusBalDir
+}
 
-	// Find all .bal files
+func getCorpusFiles(t *testing.T, corpusBalDir string) []string {
 	var balFiles []string
 	err := filepath.Walk(corpusBalDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -293,224 +320,133 @@ func TestParseCorpusFiles(t *testing.T) {
 	if len(balFiles) == 0 {
 		t.Fatalf("No .bal files found in %s", corpusBalDir)
 	}
-
-	// Create subtests for each file
-	// Running in parallel for faster test execution
-	total := len(balFiles)
-	for i, balFile := range balFiles {
-		balFile := balFile // capture loop variable
-		index := i + 1
-
-		// Skip files in ignore lists
-		if shouldIgnoreFile(balFile, corpusBalDir) {
-			t.Run(balFile, func(t *testing.T) {
-				t.Skipf("Skipping file in ignore list: %s", balFile)
-			})
-			continue
-		}
-
-		t.Run(balFile, func(t *testing.T) {
-			if os.Getenv("GOARCH") == "wasm" {
-				t.Skip("skipping parser testsing wasm")
-			}
-			t.Parallel() // Run in parallel for faster execution (native only)
-			parseFile(t, balFile, index, total)
-		})
-	}
+	return balFiles
 }
 
-func parseFile(t *testing.T, filePath string, index int, total int) {
-	// Print file name at the beginning (before parsing) so we can see it even if stack overflow occurs
-	fmt.Fprintf(os.Stderr, "[%d/%d] %s ... ", index, total, filePath)
-
-	// Use a helper function to catch panics completely
-	err := parseFileWithRecovery(filePath)
-
-	// Print success/failure at the end
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "FAILED: %v\n", err)
-		t.Errorf("FAILED: %s - %v", filePath, err)
-	} else {
-		fmt.Fprintf(os.Stderr, "SUCCESS\n")
-	}
-}
-
-// parseFileWithRecovery parses a file and returns any error or panic as an error
-func parseFileWithRecovery(filePath string) (err error) {
+func parseFile(t *testing.T, filePath string, baseDir string) {
 	// Catch any panics and convert them to errors
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic: %v", r)
+			t.Fatalf("panic: %v", r)
 		}
 	}()
 
 	// Read file content
 	content, readErr := os.ReadFile(filePath)
 	if readErr != nil {
-		return fmt.Errorf("error reading file: %w", readErr)
+		t.Fatalf("error reading file: %v", readErr)
 	}
 
-	// Create CharReader from file content
 	reader := text.CharReaderFromText(string(content))
 
-	// Create Lexer (no debug context needed for tests)
 	lexer := NewLexer(reader, nil)
 
-	// Create TokenReader from Lexer
 	tokenReader := CreateTokenReader(*lexer, nil)
 
-	// Create Parser from TokenReader
 	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, nil)
 
-	// Parse the entire file - this may panic
 	ast := ballerinaParser.Parse()
 
-	// Verify that Parse() returns a non-nil STNode
-	if ast == nil {
-		return fmt.Errorf("Parse() returned nil AST")
-	}
-
-	// Verify it's a valid STNode by checking its Kind
-	if ast.Kind() == 0 {
-		return fmt.Errorf("Parse() returned AST with invalid Kind (0)")
-	}
-
-	// Generate JSON from the parsed AST
 	actualJSON := tree.GenerateJSON(ast)
 
-	// Determine expected JSON file path
-	// Replace .bal with .json and change directory from corpus/bal to corpus/parser
-	expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
-	expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
+	expectedJSONPath := expectedJSONPath(filePath, baseDir)
 
-	// Normalize JSON by parsing and re-marshaling to handle whitespace differences
-	var actualObj interface{}
-	normalizedJSON := actualJSON
-	if err := json.Unmarshal([]byte(actualJSON), &actualObj); err == nil {
-		if normalized, err := json.MarshalIndent(actualObj, "", "  "); err == nil {
-			normalizedJSON = string(normalized)
-		}
-	}
+	normalizedJSON := normalizeJSON(actualJSON)
 
 	// If update flag is set, check if update is needed and update if necessary
 	if *update {
-		// Ensure the directory exists
-		dir := filepath.Dir(expectedJSONPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("error creating directory for expected JSON file: %w", err)
+		if updateIfNeeded(t, expectedJSONPath, normalizedJSON) {
+			t.Fatalf("Updated expected JSON file: %s", expectedJSONPath)
 		}
-
-		// Check if file exists
-		expectedJSONBytes, readErr := os.ReadFile(expectedJSONPath)
-		if readErr != nil {
-			// File doesn't exist - create it and fail the test
-			if os.IsNotExist(readErr) {
-				if err := os.WriteFile(expectedJSONPath, []byte(normalizedJSON), 0o644); err != nil {
-					return fmt.Errorf("error writing expected JSON file: %w", err)
-				}
-				return fmt.Errorf("created expected JSON file: %s", expectedJSONPath)
-			}
-			return fmt.Errorf("error reading expected JSON file: %w", readErr)
-		}
-
-		// File exists - normalize and compare
-		expectedJSON := string(expectedJSONBytes)
-		var expectedObj interface{}
-		if err := json.Unmarshal([]byte(expectedJSON), &expectedObj); err == nil {
-			if normalized, err := json.MarshalIndent(expectedObj, "", "  "); err == nil {
-				expectedJSON = string(normalized)
-			}
-		}
-
-		// Only update if content is different
-		if normalizedJSON != expectedJSON {
-			// Content is different - update file and fail the test
-			if err := os.WriteFile(expectedJSONPath, []byte(normalizedJSON), 0o644); err != nil {
-				return fmt.Errorf("error writing expected JSON file: %w", err)
-			}
-			return fmt.Errorf("updated expected JSON file: %s", expectedJSONPath)
-		}
-
-		// Content matches - no update needed, test passes
-		return nil
+		return
 	}
 
-	// Read expected JSON file
+	expectedJSON := expectedJSON(t, expectedJSONPath)
+
+	// Compare JSON strings exactly (no tolerance for formatting differences)
+	if normalizedJSON != expectedJSON {
+		diff := getDiff(expectedJSON, normalizedJSON)
+		t.Errorf("JSON mismatch for %s\nExpected file: %s\n%s", filePath, expectedJSONPath, diff)
+		return
+
+	}
+}
+
+func expectedJSONPath(filePath string, baseDir string) string {
+	// Get the relative path from baseDir
+	relPath, err := filepath.Rel(baseDir, filePath)
+	if err != nil {
+		// If we can't get relative path, fall back to string replacement
+		expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
+		expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
+		return expectedJSONPath
+	}
+
+	// Replace "bal" directory with "parser" in the base directory path
+	parserBaseDir := strings.Replace(baseDir, string(filepath.Separator)+"bal", string(filepath.Separator)+"parser", 1)
+
+	// Construct the expected JSON path
+	expectedJSONPath := filepath.Join(parserBaseDir, relPath)
+	expectedJSONPath = strings.TrimSuffix(expectedJSONPath, ".bal") + ".json"
+
+	return expectedJSONPath
+}
+
+func normalizeJSON(jsonStr string) string {
+	var obj interface{}
+	normalizedJSON := jsonStr
+	if err := json.Unmarshal([]byte(jsonStr), &obj); err == nil {
+		if normalized, err := json.MarshalIndent(obj, "", "  "); err == nil {
+			normalizedJSON = string(normalized)
+		}
+	}
+	return normalizedJSON
+}
+
+func updateIfNeeded(t *testing.T, expectedJSONPath string, actualJSON string) bool {
+	// Ensure the directory exists
+	dir := filepath.Dir(expectedJSONPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Errorf("error creating directory for expected JSON file: %v", err)
+		return true
+	}
+
+	expectedJSON := expectedJSON(t, expectedJSONPath)
+	// Only update if content is different
+	if actualJSON != expectedJSON {
+		// Content is different - update file and fail the test
+		if err := os.WriteFile(expectedJSONPath, []byte(actualJSON), 0o644); err != nil {
+			t.Errorf("error writing expected JSON file: %v", err)
+			return true
+		}
+		return true
+	}
+
+	return false
+}
+
+func expectedJSON(t *testing.T, expectedJSONPath string) string {
+	// Check if file exists
 	expectedJSONBytes, readErr := os.ReadFile(expectedJSONPath)
 	if readErr != nil {
-		// If expected JSON file doesn't exist, skip this file
-		if os.IsNotExist(readErr) {
-			return fmt.Errorf("expected JSON file not found: %s (skipping)", expectedJSONPath)
-		}
-		return fmt.Errorf("error reading expected JSON file: %w", readErr)
+		t.Fatalf("error reading expected JSON file: %v", readErr)
+		return ""
 	}
 
+	// File exists - normalize and compare
 	expectedJSON := string(expectedJSONBytes)
-
-	// Normalize expected JSON by parsing and re-marshaling to handle whitespace differences
 	var expectedObj interface{}
 	if err := json.Unmarshal([]byte(expectedJSON), &expectedObj); err == nil {
 		if normalized, err := json.MarshalIndent(expectedObj, "", "  "); err == nil {
 			expectedJSON = string(normalized)
 		}
 	}
+	return expectedJSON
+}
 
-	// Compare JSON strings exactly (no tolerance for formatting differences)
-	if normalizedJSON != expectedJSON {
-		// Split into lines for line-by-line comparison
-		expectedLines := strings.Split(expectedJSON, "\n")
-		actualLines := strings.Split(normalizedJSON, "\n")
-
-		// Build detailed diff showing line numbers and differences
-		var diffBuilder strings.Builder
-		diffBuilder.WriteString("\nJSON mismatch - showing differences:\n\n")
-
-		maxLines := len(expectedLines)
-		if len(actualLines) > maxLines {
-			maxLines = len(actualLines)
-		}
-
-		diffCount := 0
-		const maxDiffsToShow = 20
-
-		// Show line-by-line differences
-		for i := 0; i < maxLines && diffCount < maxDiffsToShow; i++ {
-			lineNum := i + 1
-			expectedLine := ""
-			actualLine := ""
-
-			if i < len(expectedLines) {
-				expectedLine = expectedLines[i]
-			}
-			if i < len(actualLines) {
-				actualLine = actualLines[i]
-			}
-
-			if expectedLine != actualLine {
-				diffCount++
-				diffBuilder.WriteString(fmt.Sprintf("Line %d:\n", lineNum))
-				if expectedLine == "" {
-					diffBuilder.WriteString("  Expected: (empty)\n")
-				} else {
-					diffBuilder.WriteString(fmt.Sprintf("  Expected: %s\n", expectedLine))
-				}
-				if actualLine == "" {
-					diffBuilder.WriteString("  Actual:   (empty)\n\n")
-				} else {
-					diffBuilder.WriteString(fmt.Sprintf("  Actual:   %s\n\n", actualLine))
-				}
-			}
-		}
-
-		if diffCount >= maxDiffsToShow {
-			diffBuilder.WriteString(fmt.Sprintf("... (showing first %d differences, more exist)\n", maxDiffsToShow))
-		}
-
-		diffBuilder.WriteString(fmt.Sprintf("Total lines different: %d+\n", diffCount))
-		diffBuilder.WriteString("Use diff tool for full comparison\n")
-
-		return fmt.Errorf("JSON mismatch for %s\nExpected file: %s\n%s", filePath, expectedJSONPath, diffBuilder.String())
-	}
-
-	return nil
+// getDiff generates a detailed diff string showing differences between expected and actual AST strings.
+func getDiff(expectedAST, actualAST string) string {
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(expectedAST, actualAST, false)
+	return dmp.DiffPrettyText(diffs)
 }
