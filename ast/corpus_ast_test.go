@@ -91,7 +91,7 @@ func testASTGeneration(t *testing.T, balFile string) {
 
 	// Compare AST strings exactly
 	if actualAST != expectedAST {
-		diff := showDiff(expectedAST, actualAST)
+		diff := getDiff(expectedAST, actualAST)
 		t.Errorf("AST mismatch for %s\nExpected file: %s\n%s", balFile, expectedASTPath, diff)
 		return
 	}
@@ -147,8 +147,8 @@ func readExpectedAST(filePath string) (string, error) {
 	return string(expectedASTBytes), nil
 }
 
-// showDiff generates a detailed diff string showing differences between expected and actual AST strings.
-func showDiff(expectedAST, actualAST string) string {
+// getDiff generates a detailed diff string showing differences between expected and actual AST strings.
+func getDiff(expectedAST, actualAST string) string {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(expectedAST, actualAST, false)
 	return dmp.DiffPrettyText(diffs)
