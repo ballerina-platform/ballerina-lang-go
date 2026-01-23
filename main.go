@@ -20,6 +20,7 @@ package main
 
 import (
 	"ballerina-lang-go/ast"
+	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
@@ -30,7 +31,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s <file.bal> [-dump-tokens] [-dump-st] [-dump-ast] [-trace-recovery] [-log-file <path>]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s <file.bal> [-dump-tokens] [-dump-st] [-dump-ast] [-dump-bir] [-trace-recovery] [-log-file <path>]\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -38,6 +39,7 @@ func main() {
 	dumpTokens := false
 	dumpST := false
 	dumpAST := false
+	dumpBIR := false
 	traceRecovery := false
 	logFile := ""
 
@@ -50,6 +52,8 @@ func main() {
 			dumpST = true
 		} else if arg == "-dump-ast" {
 			dumpAST = true
+		} else if arg == "-dump-bir" {
+			dumpBIR = true
 		} else if arg == "-trace-recovery" {
 			traceRecovery = true
 		} else if arg == "-log-file" {
@@ -114,10 +118,19 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error getting syntax tree: %v\n", err)
 		os.Exit(1)
 	}
-	if dumpAST {
+	// We can't support these flags for all sources yet
+	if dumpAST || dumpBIR {
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-		prettyPrinter := ast.PrettyPrinter{}
-		fmt.Println(prettyPrinter.Print(compilationUnit))
+		if dumpAST {
+			prettyPrinter := ast.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(compilationUnit))
+		}
+		if dumpBIR {
+			pkg := ast.ToPackage(compilationUnit)
+			birPkg := bir.GenBir(cx, pkg)
+			prettyPrinter := bir.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(*birPkg))
+		}
 	}
 	if debugCtx != nil {
 		close(debugCtx.Channel)

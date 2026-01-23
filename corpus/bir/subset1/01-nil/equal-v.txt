@@ -1,0 +1,30 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 ? bb3 : bb5;
+  }
+  bb1 {
+    %3 = makeNil() -> bb2;
+  }
+  bb2 {
+    %1 = == %2 %3;
+  }
+  bb3 {
+    %4 = ConstantLoad %!s(int64=1)
+    %5 = println(%4) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+makeNil<NIL>{
+  bb0 {
+    %1 = ConstantLoad ()
+    %0 = %1;
+    return;
+  }
+}

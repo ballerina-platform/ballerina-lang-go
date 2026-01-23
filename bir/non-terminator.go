@@ -51,6 +51,22 @@ type (
 		Value any
 		Type  model.ValueType
 	}
+
+	FieldAccess struct {
+		BIRInstructionBase
+		Kind  InstructionKind
+		KeyOp *BIROperand
+		RhsOp *BIROperand
+	}
+
+	NewArray struct {
+		BIRInstructionBase
+		TypeDesc *BIROperand
+		// Why this is needed (type desc should say what is the element type?)
+		ElementTypeDesc *BIROperand
+		SizeOp          *BIROperand
+		Type            model.ValueType
+	}
 )
 
 var (
@@ -58,6 +74,8 @@ var (
 	_ BIRAssignInstruction = &BinaryOp{}
 	_ BIRAssignInstruction = &UnaryOp{}
 	_ BIRAssignInstruction = &ConstantLoad{}
+	_ BIRInstruction       = &FieldAccess{}
+	_ BIRInstruction       = &NewArray{}
 )
 
 func (m *Move) GetLhsOperand() *BIROperand {
@@ -130,4 +148,20 @@ func (c *ConstantLoad) GetLhsOperand() *BIROperand {
 
 func (c *ConstantLoad) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_CONST_LOAD
+}
+
+func (f *FieldAccess) GetLhsOperand() *BIROperand {
+	return f.LhsOp
+}
+
+func (f *FieldAccess) GetKind() InstructionKind {
+	return f.Kind
+}
+
+func (n *NewArray) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
+func (n *NewArray) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_ARRAY
 }

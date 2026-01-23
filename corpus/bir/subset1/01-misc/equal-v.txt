@@ -1,0 +1,112 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = mkNil() -> bb1;
+  }
+  bb1 {
+    %3 = mkNil() -> bb2;
+  }
+  bb2 {
+    %1 = unknown %2 %3;
+    %4 = println(%1) -> bb3;
+  }
+  bb3 {
+    %6 = ConstantLoad %!s(int64=1)
+    %7 = mkInt(%6) -> bb4;
+  }
+  bb4 {
+    %8 = ConstantLoad %!s(int64=1)
+    %9 = mkInt(%8) -> bb5;
+  }
+  bb5 {
+    %5 = unknown %7 %9;
+    %10 = println(%5) -> bb6;
+  }
+  bb6 {
+    %12 = ConstantLoad %!s(bool=true)
+    %13 = mkBoolean(%12) -> bb7;
+  }
+  bb7 {
+    %14 = ConstantLoad %!s(bool=true)
+    %15 = mkBoolean(%14) -> bb8;
+  }
+  bb8 {
+    %11 = unknown %13 %15;
+    %16 = println(%11) -> bb9;
+  }
+  bb9 {
+    %18 = ConstantLoad %!s(int64=36028797018963969)
+    %19 = unknown %18;
+    %20 = mkInt(%19) -> bb10;
+  }
+  bb10 {
+    %21 = ConstantLoad %!s(int64=36028797018963969)
+    %22 = unknown %21;
+    %23 = mkInt(%22) -> bb11;
+  }
+  bb11 {
+    %17 = unknown %20 %23;
+    %24 = println(%17) -> bb12;
+  }
+  bb12 {
+    %26 = ConstantLoad %!s(int64=36028797018963968)
+    %27 = unknown %26;
+    %28 = mkInt(%27) -> bb13;
+  }
+  bb13 {
+    %29 = ConstantLoad %!s(int64=36028797018963968)
+    %30 = unknown %29;
+    %31 = mkInt(%30) -> bb14;
+  }
+  bb14 {
+    %25 = unknown %28 %31;
+    %32 = println(%25) -> bb15;
+  }
+  bb15 {
+    %34 = ConstantLoad %!s(int64=36028797018963967)
+    %35 = mkInt(%34) -> bb16;
+  }
+  bb16 {
+    %36 = ConstantLoad %!s(int64=36028797018963967)
+    %37 = mkInt(%36) -> bb17;
+  }
+  bb17 {
+    %33 = unknown %35 %37;
+    %38 = println(%33) -> bb18;
+  }
+  bb18 {
+    %40 = ConstantLoad %!s(int64=36028797018963968)
+    %41 = mkInt(%40) -> bb19;
+  }
+  bb19 {
+    %42 = ConstantLoad %!s(int64=36028797018963968)
+    %43 = mkInt(%42) -> bb20;
+  }
+  bb20 {
+    %39 = unknown %41 %43;
+    %44 = println(%39) -> bb21;
+  }
+  bb21 {
+    return;
+  }
+}
+mkNil<NIL>{
+  bb0 {
+    %1 = ConstantLoad ()
+    %0 = %1;
+    return;
+  }
+}
+mkInt<NIL>{
+  bb0 {
+    %0 = n;
+    return;
+  }
+}
+mkBoolean<NIL>{
+  bb0 {
+    %0 = b;
+    return;
+  }
+}

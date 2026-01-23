@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}",
             "args": [
                 "${file}",
-                "-dump-ast"
+                "-dump-bir"
             ]
         }
     ]

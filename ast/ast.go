@@ -1921,3 +1921,28 @@ func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree
 	compilationUnit := nodeBuilder.TransformModulePart(syntaxTree.RootNode.(*tree.ModulePart))
 	return compilationUnit.(*BLangCompilationUnit)
 }
+
+// TODO: get rid of this once we have a proper project api. This just remaps compilation unit to a BLangPackage.
+func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
+	p := BLangPackage{}
+	p.PackageID = compilationUnit.packageID
+	for _, node := range compilationUnit.TopLevelNodes {
+		switch node.(type) {
+		case *BLangImportPackage:
+			p.Imports = append(p.Imports, *node.(*BLangImportPackage))
+		case *BLangConstant:
+			p.Constants = append(p.Constants, *node.(*BLangConstant))
+		case *BLangService:
+			p.Services = append(p.Services, *node.(*BLangService))
+		case *BLangFunction:
+			p.Functions = append(p.Functions, *node.(*BLangFunction))
+		case *BLangTypeDefinition:
+			p.TypeDefinitions = append(p.TypeDefinitions, *node.(*BLangTypeDefinition))
+		case *BLangAnnotation:
+			p.Annotations = append(p.Annotations, *node.(*BLangAnnotation))
+		default:
+			p.TopLevelNodes = append(p.TopLevelNodes, node)
+		}
+	}
+	return &p
+}

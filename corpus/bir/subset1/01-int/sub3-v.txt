@@ -1,0 +1,178 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %3 = sub(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad %!s(int64=9223372036854775806)
+    %7 = sub(%5,%6) -> bb3;
+  }
+  bb3 {
+    %8 = println(%7) -> bb4;
+  }
+  bb4 {
+    %9 = ConstantLoad %!s(int64=0)
+    %10 = ConstantLoad %!s(int64=9223372036854775806)
+    %11 = sub(%9,%10) -> bb5;
+  }
+  bb5 {
+    %12 = println(%11) -> bb6;
+  }
+  bb6 {
+    %13 = ConstantLoad %!s(int64=9223372036854775806)
+    %14 = ConstantLoad %!s(int64=1)
+    %15 = sub(%13,%14) -> bb7;
+  }
+  bb7 {
+    %16 = println(%15) -> bb8;
+  }
+  bb8 {
+    %17 = ConstantLoad %!s(int64=1)
+    %18 = ConstantLoad %!s(int64=1)
+    %19 = sub(%17,%18) -> bb9;
+  }
+  bb9 {
+    %20 = println(%19) -> bb10;
+  }
+  bb10 {
+    %21 = ConstantLoad %!s(int64=0)
+    %22 = ConstantLoad %!s(int64=1)
+    %23 = sub(%21,%22) -> bb11;
+  }
+  bb11 {
+    %24 = println(%23) -> bb12;
+  }
+  bb12 {
+    %25 = ConstantLoad %!s(int64=1)
+    %26 = unknown %25;
+    %27 = ConstantLoad %!s(int64=1)
+    %28 = unknown %27;
+    %29 = sub(%26,%28) -> bb13;
+  }
+  bb13 {
+    %30 = println(%29) -> bb14;
+  }
+  bb14 {
+    %31 = ConstantLoad %!s(int64=9223372036854775806)
+    %32 = ConstantLoad %!s(int64=0)
+    %33 = sub(%31,%32) -> bb15;
+  }
+  bb15 {
+    %34 = println(%33) -> bb16;
+  }
+  bb16 {
+    %35 = ConstantLoad %!s(int64=1)
+    %36 = ConstantLoad %!s(int64=0)
+    %37 = sub(%35,%36) -> bb17;
+  }
+  bb17 {
+    %38 = println(%37) -> bb18;
+  }
+  bb18 {
+    %39 = ConstantLoad %!s(int64=0)
+    %40 = ConstantLoad %!s(int64=0)
+    %41 = sub(%39,%40) -> bb19;
+  }
+  bb19 {
+    %42 = println(%41) -> bb20;
+  }
+  bb20 {
+    %43 = ConstantLoad %!s(int64=1)
+    %44 = unknown %43;
+    %45 = ConstantLoad %!s(int64=0)
+    %46 = unknown %45;
+    %47 = sub(%44,%46) -> bb21;
+  }
+  bb21 {
+    %48 = println(%47) -> bb22;
+  }
+  bb22 {
+    %49 = ConstantLoad %!s(int64=9223372036854775806)
+    %50 = unknown %49;
+    %51 = ConstantLoad %!s(int64=0)
+    %52 = unknown %51;
+    %53 = sub(%50,%52) -> bb23;
+  }
+  bb23 {
+    %54 = println(%53) -> bb24;
+  }
+  bb24 {
+    %55 = ConstantLoad %!s(int64=9223372036854775806)
+    %56 = ConstantLoad %!s(int64=1)
+    %57 = unknown %56;
+    %58 = sub(%55,%57) -> bb25;
+  }
+  bb25 {
+    %59 = println(%58) -> bb26;
+  }
+  bb26 {
+    %60 = ConstantLoad %!s(int64=1)
+    %61 = ConstantLoad %!s(int64=1)
+    %62 = unknown %61;
+    %63 = sub(%60,%62) -> bb27;
+  }
+  bb27 {
+    %64 = println(%63) -> bb28;
+  }
+  bb28 {
+    %65 = ConstantLoad %!s(int64=0)
+    %66 = ConstantLoad %!s(int64=1)
+    %67 = unknown %66;
+    %68 = sub(%65,%67) -> bb29;
+  }
+  bb29 {
+    %69 = println(%68) -> bb30;
+  }
+  bb30 {
+    %70 = ConstantLoad %!s(int64=1)
+    %71 = unknown %70;
+    %72 = ConstantLoad %!s(int64=1)
+    %73 = unknown %72;
+    %74 = unknown %73;
+    %75 = sub(%71,%74) -> bb31;
+  }
+  bb31 {
+    %76 = println(%75) -> bb32;
+  }
+  bb32 {
+    %77 = ConstantLoad %!s(int64=9223372036854775806)
+    %78 = ConstantLoad %!s(int64=9223372036854775806)
+    %79 = sub(%77,%78) -> bb33;
+  }
+  bb33 {
+    %80 = println(%79) -> bb34;
+  }
+  bb34 {
+    %81 = ConstantLoad %!s(int64=1)
+    %82 = ConstantLoad %!s(int64=9223372036854775806)
+    %83 = sub(%81,%82) -> bb35;
+  }
+  bb35 {
+    %84 = println(%83) -> bb36;
+  }
+  bb36 {
+    %85 = ConstantLoad %!s(int64=0)
+    %86 = ConstantLoad %!s(int64=9223372036854775806)
+    %87 = sub(%85,%86) -> bb37;
+  }
+  bb37 {
+    %88 = println(%87) -> bb38;
+  }
+  bb38 {
+    return;
+  }
+}
+sub<NIL>{
+  bb0 {
+    %3 = - a b;
+    %0 = %3;
+    return;
+  }
+}

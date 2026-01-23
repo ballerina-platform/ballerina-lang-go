@@ -1,0 +1,256 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %3 = lte(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = printBoolean(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(int64=9223372036854775806)
+    %6 = ConstantLoad %!s(int64=1)
+    %7 = lte(%5,%6) -> bb3;
+  }
+  bb3 {
+    %8 = printBoolean(%7) -> bb4;
+  }
+  bb4 {
+    %9 = ConstantLoad %!s(int64=9223372036854775806)
+    %10 = ConstantLoad %!s(int64=0)
+    %11 = lte(%9,%10) -> bb5;
+  }
+  bb5 {
+    %12 = printBoolean(%11) -> bb6;
+  }
+  bb6 {
+    %13 = ConstantLoad %!s(int64=9223372036854775806)
+    %14 = ConstantLoad %!s(int64=1)
+    %15 = unknown %14;
+    %16 = lte(%13,%15) -> bb7;
+  }
+  bb7 {
+    %17 = printBoolean(%16) -> bb8;
+  }
+  bb8 {
+    %18 = ConstantLoad %!s(int64=9223372036854775806)
+    %19 = ConstantLoad %!s(int64=9223372036854775806)
+    %20 = unknown %19;
+    %21 = lte(%18,%20) -> bb9;
+  }
+  bb9 {
+    %22 = printBoolean(%21) -> bb10;
+  }
+  bb10 {
+    %23 = ConstantLoad %!s(int64=1)
+    %24 = ConstantLoad %!s(int64=9223372036854775806)
+    %25 = lte(%23,%24) -> bb11;
+  }
+  bb11 {
+    %26 = printBoolean(%25) -> bb12;
+  }
+  bb12 {
+    %27 = ConstantLoad %!s(int64=1)
+    %28 = ConstantLoad %!s(int64=1)
+    %29 = lte(%27,%28) -> bb13;
+  }
+  bb13 {
+    %30 = printBoolean(%29) -> bb14;
+  }
+  bb14 {
+    %31 = ConstantLoad %!s(int64=1)
+    %32 = ConstantLoad %!s(int64=0)
+    %33 = lte(%31,%32) -> bb15;
+  }
+  bb15 {
+    %34 = printBoolean(%33) -> bb16;
+  }
+  bb16 {
+    %35 = ConstantLoad %!s(int64=1)
+    %36 = ConstantLoad %!s(int64=1)
+    %37 = unknown %36;
+    %38 = lte(%35,%37) -> bb17;
+  }
+  bb17 {
+    %39 = printBoolean(%38) -> bb18;
+  }
+  bb18 {
+    %40 = ConstantLoad %!s(int64=1)
+    %41 = ConstantLoad %!s(int64=9223372036854775806)
+    %42 = unknown %41;
+    %43 = lte(%40,%42) -> bb19;
+  }
+  bb19 {
+    %44 = printBoolean(%43) -> bb20;
+  }
+  bb20 {
+    %45 = ConstantLoad %!s(int64=0)
+    %46 = ConstantLoad %!s(int64=9223372036854775806)
+    %47 = lte(%45,%46) -> bb21;
+  }
+  bb21 {
+    %48 = printBoolean(%47) -> bb22;
+  }
+  bb22 {
+    %49 = ConstantLoad %!s(int64=0)
+    %50 = ConstantLoad %!s(int64=1)
+    %51 = lte(%49,%50) -> bb23;
+  }
+  bb23 {
+    %52 = printBoolean(%51) -> bb24;
+  }
+  bb24 {
+    %53 = ConstantLoad %!s(int64=0)
+    %54 = ConstantLoad %!s(int64=0)
+    %55 = lte(%53,%54) -> bb25;
+  }
+  bb25 {
+    %56 = printBoolean(%55) -> bb26;
+  }
+  bb26 {
+    %57 = ConstantLoad %!s(int64=0)
+    %58 = ConstantLoad %!s(int64=1)
+    %59 = unknown %58;
+    %60 = lte(%57,%59) -> bb27;
+  }
+  bb27 {
+    %61 = printBoolean(%60) -> bb28;
+  }
+  bb28 {
+    %62 = ConstantLoad %!s(int64=0)
+    %63 = ConstantLoad %!s(int64=9223372036854775806)
+    %64 = unknown %63;
+    %65 = lte(%62,%64) -> bb29;
+  }
+  bb29 {
+    %66 = printBoolean(%65) -> bb30;
+  }
+  bb30 {
+    %67 = ConstantLoad %!s(int64=1)
+    %68 = unknown %67;
+    %69 = ConstantLoad %!s(int64=9223372036854775806)
+    %70 = lte(%68,%69) -> bb31;
+  }
+  bb31 {
+    %71 = printBoolean(%70) -> bb32;
+  }
+  bb32 {
+    %72 = ConstantLoad %!s(int64=1)
+    %73 = unknown %72;
+    %74 = ConstantLoad %!s(int64=1)
+    %75 = lte(%73,%74) -> bb33;
+  }
+  bb33 {
+    %76 = printBoolean(%75) -> bb34;
+  }
+  bb34 {
+    %77 = ConstantLoad %!s(int64=1)
+    %78 = unknown %77;
+    %79 = ConstantLoad %!s(int64=0)
+    %80 = lte(%78,%79) -> bb35;
+  }
+  bb35 {
+    %81 = printBoolean(%80) -> bb36;
+  }
+  bb36 {
+    %82 = ConstantLoad %!s(int64=1)
+    %83 = unknown %82;
+    %84 = ConstantLoad %!s(int64=1)
+    %85 = unknown %84;
+    %86 = lte(%83,%85) -> bb37;
+  }
+  bb37 {
+    %87 = printBoolean(%86) -> bb38;
+  }
+  bb38 {
+    %88 = ConstantLoad %!s(int64=1)
+    %89 = unknown %88;
+    %90 = ConstantLoad %!s(int64=9223372036854775806)
+    %91 = unknown %90;
+    %92 = lte(%89,%91) -> bb39;
+  }
+  bb39 {
+    %93 = printBoolean(%92) -> bb40;
+  }
+  bb40 {
+    %94 = ConstantLoad %!s(int64=9223372036854775806)
+    %95 = unknown %94;
+    %96 = ConstantLoad %!s(int64=9223372036854775806)
+    %97 = lte(%95,%96) -> bb41;
+  }
+  bb41 {
+    %98 = printBoolean(%97) -> bb42;
+  }
+  bb42 {
+    %99 = ConstantLoad %!s(int64=9223372036854775806)
+    %100 = unknown %99;
+    %101 = ConstantLoad %!s(int64=1)
+    %102 = lte(%100,%101) -> bb43;
+  }
+  bb43 {
+    %103 = printBoolean(%102) -> bb44;
+  }
+  bb44 {
+    %104 = ConstantLoad %!s(int64=9223372036854775806)
+    %105 = unknown %104;
+    %106 = ConstantLoad %!s(int64=0)
+    %107 = lte(%105,%106) -> bb45;
+  }
+  bb45 {
+    %108 = printBoolean(%107) -> bb46;
+  }
+  bb46 {
+    %109 = ConstantLoad %!s(int64=9223372036854775806)
+    %110 = unknown %109;
+    %111 = ConstantLoad %!s(int64=1)
+    %112 = unknown %111;
+    %113 = lte(%110,%112) -> bb47;
+  }
+  bb47 {
+    %114 = printBoolean(%113) -> bb48;
+  }
+  bb48 {
+    %115 = ConstantLoad %!s(int64=9223372036854775806)
+    %116 = unknown %115;
+    %117 = ConstantLoad %!s(int64=9223372036854775806)
+    %118 = unknown %117;
+    %119 = lte(%116,%118) -> bb49;
+  }
+  bb49 {
+    %120 = printBoolean(%119) -> bb50;
+  }
+  bb50 {
+    return;
+  }
+}
+lte<NIL>{
+  bb0 {
+    %3 = <= a b;
+    %0 = %3;
+    return;
+  }
+}
+printBoolean<NIL>{
+  bb0 {
+    b ? bb1 : bb3;
+  }
+  bb1 {
+    %2 = ConstantLoad %!s(int64=1)
+    %3 = println(%2) -> bb2;
+  }
+  bb2 {
+    GOTO bb5;
+  }
+  bb3 {
+    %4 = ConstantLoad %!s(int64=0)
+    %5 = println(%4) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}

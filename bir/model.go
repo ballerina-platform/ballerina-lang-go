@@ -19,6 +19,7 @@ package bir
 import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 )
 
 //go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
@@ -159,6 +160,8 @@ type (
 	BIROperand struct {
 		BIRNodeBase
 		VariableDcl *BIRVariableDcl
+		// If index > 0 then it is the index to the functions local var array
+		index int
 	}
 )
 
@@ -295,3 +298,10 @@ const (
 const (
 	INSTRUCTION_KIND_PLATFORM InstructionKind = 128
 )
+
+func BB(number int) BIRBasicBlock {
+	return BIRBasicBlock{
+		Number: number,
+		Id:     model.Name(fmt.Sprintf("bb%d", number)),
+	}
+}

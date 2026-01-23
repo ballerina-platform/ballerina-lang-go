@@ -1,0 +1,40 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = getArg1() -> bb1;
+  }
+  bb1 {
+    %2 = getArg2() -> bb2;
+  }
+  bb2 {
+    %3 = foo(%1,%2) -> bb3;
+  }
+  bb3 {
+    %4 = println(%3) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+foo<NIL>{
+  bb0 {
+    %3 = * i j;
+    %0 = %3;
+    return;
+  }
+}
+getArg1<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=2)
+    %0 = %1;
+    return;
+  }
+}
+getArg2<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=4)
+    %0 = %1;
+    return;
+  }
+}

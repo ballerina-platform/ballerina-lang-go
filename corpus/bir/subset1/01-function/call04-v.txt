@@ -1,0 +1,71 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = foo() -> bb1;
+  }
+  bb1 {
+    %3 = bar() -> bb2;
+  }
+  bb2 {
+    %1 = + %2 %3;
+    %4 = println(%1) -> bb3;
+  }
+  bb3 {
+    %6 = foo() -> bb4;
+  }
+  bb4 {
+    %7 = bar() -> bb5;
+  }
+  bb5 {
+    %5 = - %6 %7;
+    %8 = println(%5) -> bb6;
+  }
+  bb6 {
+    %10 = foo() -> bb7;
+  }
+  bb7 {
+    %11 = bar() -> bb8;
+  }
+  bb8 {
+    %9 = * %10 %11;
+    %12 = println(%9) -> bb9;
+  }
+  bb9 {
+    %14 = foo() -> bb10;
+  }
+  bb10 {
+    %15 = bar() -> bb11;
+  }
+  bb11 {
+    %13 = / %14 %15;
+    %16 = println(%13) -> bb12;
+  }
+  bb12 {
+    %18 = foo() -> bb13;
+  }
+  bb13 {
+    %19 = bar() -> bb14;
+  }
+  bb14 {
+    %17 = % %18 %19;
+    %20 = println(%17) -> bb15;
+  }
+  bb15 {
+    return;
+  }
+}
+foo<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=105)
+    %0 = %1;
+    return;
+  }
+}
+bar<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=2)
+    %0 = %1;
+    return;
+  }
+}

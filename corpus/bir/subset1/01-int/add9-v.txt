@@ -1,0 +1,75 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %3 = ConstantLoad %!s(int64=8)
+    %4 = ConstantLoad %!s(int64=5)
+    %2 = + %3 %4;
+    %5 = ConstantLoad %!s(int64=11)
+    %1 = - %2 %5;
+    %6 = println(%1) -> bb1;
+  }
+  bb1 {
+    %9 = ConstantLoad %!s(int64=8)
+    %10 = ConstantLoad %!s(int64=11)
+    %8 = - %9 %10;
+    %11 = ConstantLoad %!s(int64=5)
+    %7 = + %8 %11;
+    %12 = println(%7) -> bb2;
+  }
+  bb2 {
+    %16 = ConstantLoad %!s(int64=3)
+    %17 = ConstantLoad %!s(int64=5)
+    %15 = + %16 %17;
+    %18 = ConstantLoad %!s(int64=5)
+    %14 = - %15 %18;
+    %19 = ConstantLoad %!s(int64=9)
+    %13 = + %14 %19;
+    %20 = println(%13) -> bb3;
+  }
+  bb3 {
+    %21 = ConstantLoad %!s(int64=3)
+    %22 = ConstantLoad %!s(int64=5)
+    %23 = ConstantLoad %!s(int64=5)
+    %24 = unknown %23;
+    %25 = ConstantLoad %!s(int64=9)
+    %26 = add(%21,%22,%24,%25) -> bb4;
+  }
+  bb4 {
+    %27 = println(%26) -> bb5;
+  }
+  bb5 {
+    %31 = ConstantLoad %!s(int64=3)
+    %32 = ConstantLoad %!s(int64=5)
+    %30 = - %31 %32;
+    %33 = ConstantLoad %!s(int64=9)
+    %29 = + %30 %33;
+    %34 = ConstantLoad %!s(int64=4)
+    %28 = - %29 %34;
+    %35 = println(%28) -> bb6;
+  }
+  bb6 {
+    %36 = ConstantLoad %!s(int64=3)
+    %37 = ConstantLoad %!s(int64=5)
+    %38 = unknown %37;
+    %39 = ConstantLoad %!s(int64=9)
+    %40 = ConstantLoad %!s(int64=4)
+    %41 = unknown %40;
+    %42 = add(%36,%38,%39,%41) -> bb7;
+  }
+  bb7 {
+    %43 = println(%42) -> bb8;
+  }
+  bb8 {
+    return;
+  }
+}
+add<NIL>{
+  bb0 {
+    %7 = + a b;
+    %6 = + %7 c;
+    %5 = + %6 d;
+    %0 = %5;
+    return;
+  }
+}

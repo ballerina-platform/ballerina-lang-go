@@ -1,0 +1,91 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=3)
+    %3 = ConstantLoad %!s(int64=5)
+    %1 = + %2 %3;
+    %4 = println(%1) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad %!s(int64=3)
+    %8 = ConstantLoad %!s(int64=5)
+    %6 = + %7 %8;
+    %9 = ConstantLoad %!s(int64=11)
+    %5 = + %6 %9;
+    %10 = println(%5) -> bb2;
+  }
+  bb2 {
+    %14 = ConstantLoad %!s(int64=3)
+    %15 = ConstantLoad %!s(int64=5)
+    %13 = + %14 %15;
+    %16 = ConstantLoad %!s(int64=5)
+    %12 = + %13 %16;
+    %17 = ConstantLoad %!s(int64=9)
+    %11 = + %12 %17;
+    %18 = println(%11) -> bb3;
+  }
+  bb3 {
+    %23 = ConstantLoad %!s(int64=3)
+    %24 = ConstantLoad %!s(int64=5)
+    %22 = + %23 %24;
+    %25 = ConstantLoad %!s(int64=5)
+    %21 = + %22 %25;
+    %26 = ConstantLoad %!s(int64=9)
+    %20 = + %21 %26;
+    %27 = ConstantLoad %!s(int64=12)
+    %19 = + %20 %27;
+    %28 = println(%19) -> bb4;
+  }
+  bb4 {
+    %34 = ConstantLoad %!s(int64=3)
+    %35 = ConstantLoad %!s(int64=5)
+    %33 = + %34 %35;
+    %36 = ConstantLoad %!s(int64=5)
+    %32 = + %33 %36;
+    %37 = ConstantLoad %!s(int64=9)
+    %31 = + %32 %37;
+    %38 = ConstantLoad %!s(int64=4)
+    %30 = + %31 %38;
+    %39 = ConstantLoad %!s(int64=7)
+    %29 = + %30 %39;
+    %40 = println(%29) -> bb5;
+  }
+  bb5 {
+    %47 = ConstantLoad %!s(int64=3)
+    %48 = ConstantLoad %!s(int64=5)
+    %46 = + %47 %48;
+    %49 = ConstantLoad %!s(int64=5)
+    %45 = + %46 %49;
+    %50 = ConstantLoad %!s(int64=9)
+    %44 = + %45 %50;
+    %51 = ConstantLoad %!s(int64=4)
+    %43 = + %44 %51;
+    %52 = ConstantLoad %!s(int64=7)
+    %42 = + %43 %52;
+    %53 = ConstantLoad %!s(int64=5)
+    %41 = + %42 %53;
+    %54 = println(%41) -> bb6;
+  }
+  bb6 {
+    %62 = ConstantLoad %!s(int64=3)
+    %63 = ConstantLoad %!s(int64=5)
+    %61 = + %62 %63;
+    %64 = ConstantLoad %!s(int64=5)
+    %60 = + %61 %64;
+    %65 = ConstantLoad %!s(int64=9)
+    %59 = + %60 %65;
+    %66 = ConstantLoad %!s(int64=4)
+    %58 = + %59 %66;
+    %67 = ConstantLoad %!s(int64=7)
+    %57 = + %58 %67;
+    %68 = ConstantLoad %!s(int64=23)
+    %56 = + %57 %68;
+    %69 = ConstantLoad %!s(int64=50)
+    %55 = + %56 %69;
+    %70 = println(%55) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}

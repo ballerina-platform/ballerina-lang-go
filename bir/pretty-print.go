@@ -132,8 +132,27 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintReturn(instruction.(*Return))
 	case *Branch:
 		return p.PrintBranch(instruction.(*Branch))
+	case *FieldAccess:
+		return p.PrintFieldAccess(instruction.(*FieldAccess))
+	case *NewArray:
+		return p.PrintNewArray(instruction.(*NewArray))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
+	}
+}
+
+func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
+	return fmt.Sprintf("%s = newArray %s[%s]", p.PrintOperand(*array.LhsOp), p.PrintType(array.Type), p.PrintOperand(*array.SizeOp))
+}
+
+func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
+	switch access.Kind {
+	case INSTRUCTION_KIND_ARRAY_STORE:
+		return fmt.Sprintf("%s[%s] = %s;", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.KeyOp), p.PrintOperand(*access.RhsOp))
+	case INSTRUCTION_KIND_ARRAY_LOAD:
+		return fmt.Sprintf("%s = %s[%s];", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
+	default:
+		panic(fmt.Sprintf("unknown field access kind: %d", access.Kind))
 	}
 }
 
@@ -204,6 +223,8 @@ func (p *PrettyPrinter) PrintInstructionKind(kind InstructionKind) string {
 		return "=="
 	case INSTRUCTION_KIND_NOT_EQUAL:
 		return "!="
+	case INSTRUCTION_KIND_NOT:
+		return "!"
 	}
 	return "unknown"
 }
@@ -221,6 +242,9 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 }
 
 func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
+	if typeNode == nil {
+		return "<UNKNOWN>"
+	}
 	sb := strings.Builder{}
 	sb.WriteString(string(typeNode.GetTypeKind()))
 	return sb.String()
