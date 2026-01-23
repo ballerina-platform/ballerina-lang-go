@@ -39,7 +39,7 @@ type (
 		IsVirtual   bool
 		Args        []BIROperand
 		Name        model.Name
-		CalleePkg   model.PackageID
+		CalleePkg   *model.PackageID
 		CalleeFlags common.Set[model.Flag]
 	}
 

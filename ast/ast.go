@@ -336,7 +336,7 @@ type (
 		BLangNodeBase
 		TopLevelNodes []model.TopLevelNode
 		Name          string
-		packageID     model.PackageID
+		packageID     *model.PackageID
 		sourceKind    SourceKind
 	}
 
@@ -362,7 +362,7 @@ type (
 		CompletedPhases            common.UnorderedSet[CompilerPhase]
 		LambdaFunctions            []BLangLambdaFunction
 		GlobalVariableDependencies map[BSymbol]common.Set[*BVarSymbol]
-		PackageID                  model.PackageID
+		PackageID                  *model.PackageID
 		Symbol                     *BPackageSymbol
 		diagnostics                []diagnostics.Diagnostic
 		ModuleContextDataHolder    *ModuleContextDataHolder
@@ -902,12 +902,12 @@ func (this *BLangCompilationUnit) SetName(name string) {
 	this.Name = name
 }
 
-func (this *BLangCompilationUnit) GetPackageID() model.PackageID {
+func (this *BLangCompilationUnit) GetPackageID() *model.PackageID {
 	// migrated from BLangCompilationUnit.java:68:5
 	return this.packageID
 }
 
-func (this *BLangCompilationUnit) SetPackageID(packageID model.PackageID) {
+func (this *BLangCompilationUnit) SetPackageID(packageID *model.PackageID) {
 	// migrated from BLangCompilationUnit.java:72:5
 	this.packageID = packageID
 }

@@ -90,7 +90,7 @@ func (cx *stmtContext) addBB() *BIRBasicBlock {
 
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg := &BIRPackage{}
-	birPkg.PackageID = &ast.PackageID
+	birPkg.PackageID = ast.PackageID
 	genCtx := &Context{
 		CompilerContext: ctx,
 		constantMap:     make(map[string]*BIRConstant),

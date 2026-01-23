@@ -56,7 +56,7 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 	p.sb.Reset()
 
 	p.write("module ")
-	p.write(p.PrintPackageID(*node.PackageID))
+	p.write(p.PrintPackageID(node.PackageID))
 	p.write(";\n")
 	for _, importModule := range node.ImportModules {
 		p.write(p.PrintImportModule(importModule))
@@ -253,11 +253,11 @@ func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
 func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {
 	sb := strings.Builder{}
 	sb.WriteString("import ")
-	sb.WriteString(p.PrintPackageID(*importModules.PackageID))
+	sb.WriteString(p.PrintPackageID(importModules.PackageID))
 	return sb.String()
 }
 
-func (p *PrettyPrinter) PrintPackageID(packageID model.PackageID) string {
+func (p *PrettyPrinter) PrintPackageID(packageID *model.PackageID) string {
 	if packageID.IsUnnamed() {
 		return "$anon-package"
 	}

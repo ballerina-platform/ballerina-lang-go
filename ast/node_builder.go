@@ -32,7 +32,7 @@ import (
 )
 
 type NodeBuilder struct {
-	PackageID            model.PackageID
+	PackageID            *model.PackageID
 	anonTypeNameSuffixes []string // Stack for anonymous type name suffixes
 	additionalStatements []BLangStatement
 	CurrentCompUnitName  string
@@ -51,7 +51,8 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 		symbolTable: model.SymbolTable{
 			TypeSymbolTable: &BTypeSymbolTable{},
 		},
-		cx: cx,
+		cx:        cx,
+		PackageID: cx.GetDefaultPackage(),
 	}
 	return nodeBuilder
 }
@@ -611,7 +612,7 @@ func createIgnoreIdentifier(node tree.Node) BLangIdentifier {
 
 // getNextAnonymousTypeKey generates the next anonymous type key
 // Placeholder function - to be implemented
-func (n *NodeBuilder) getNextAnonymousTypeKey(packageID model.PackageID, suffixes []string) string {
+func (n *NodeBuilder) getNextAnonymousTypeKey(packageID *model.PackageID, suffixes []string) string {
 	return n.cx.GetNextAnonymousTypeKey(packageID)
 }
 
@@ -2878,7 +2879,7 @@ func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLan
 	return &userDefinedType
 }
 
-func getNextMissingNodeName(pkgID model.PackageID) string {
+func getNextMissingNodeName(pkgID *model.PackageID) string {
 	panic("getNextMissingNodeName unimplemented")
 }
 

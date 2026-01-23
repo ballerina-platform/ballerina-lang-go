@@ -1,4 +1,4 @@
-module $anon-package;
+module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 foo<NIL>{
   bb0 {

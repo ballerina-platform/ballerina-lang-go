@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
 
@@ -29,7 +30,7 @@ import (
 
 type bbMap map[string]*BIRBasicBlock
 
-func LoadBIRPackageFromReader(r io.Reader) (*BIRPackage, error) {
+func LoadBIRPackageFromReader(cx *context.CompilerContext, r io.Reader) (*BIRPackage, error) {
 	// Read all data into a buffer since kaitai.NewStream requires io.ReadSeeker
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -79,7 +80,7 @@ func LoadBIRPackageFromReader(r io.Reader) (*BIRPackage, error) {
 	}
 
 	// Functions (only high‑level meta: names/flags/origin/required params).
-	if err := populateFunctions(b, pkg); err != nil {
+	if err := populateFunctions(cx, b, pkg); err != nil {
 		return nil, err
 	}
 
@@ -164,7 +165,7 @@ func populateImports(b *Bir, pkg *BIRPackage) error {
 }
 
 // populateFunctions creates a minimal BIRFunction node for each Bir_Function.
-func populateFunctions(b *Bir, pkg *BIRPackage) error {
+func populateFunctions(cx *context.CompilerContext, b *Bir, pkg *BIRPackage) error {
 	if b.Module.FunctionCount == 0 {
 		return nil
 	}
@@ -283,7 +284,7 @@ func populateFunctions(b *Bir, pkg *BIRPackage) error {
 
 		// Populate function body (basic blocks, instructions, etc.)
 		if f.FunctionBody != nil {
-			if err := populateFunctionBody(b, &fn, f.FunctionBody); err != nil {
+			if err := populateFunctionBody(cx, b, &fn, f.FunctionBody); err != nil {
 				return fmt.Errorf("populating function body for %s: %w", name.Value(), err)
 			}
 		}
@@ -500,7 +501,7 @@ func cpAsPackage(b *Bir, idx int32) (*Bir_PackageCpInfo, error) {
 }
 
 // populateFunctionBody populates the function body including basic blocks and instructions.
-func populateFunctionBody(b *Bir, fn *BIRFunction, body *Bir_FunctionBody) error {
+func populateFunctionBody(cx *context.CompilerContext, b *Bir, fn *BIRFunction, body *Bir_FunctionBody) error {
 	if body == nil {
 		return nil
 	}
@@ -550,7 +551,7 @@ func populateFunctionBody(b *Bir, fn *BIRFunction, body *Bir_FunctionBody) error
 
 	// Populate basic blocks
 	if body.FunctionBasicBlocksInfo != nil && body.FunctionBasicBlocksInfo.BasicBlocksCount > 0 {
-		basicBlocks, err := populateBasicBlocks(b, body.FunctionBasicBlocksInfo)
+		basicBlocks, err := populateBasicBlocks(cx, b, body.FunctionBasicBlocksInfo)
 		if err != nil {
 			return fmt.Errorf("populating basic blocks: %w", err)
 		}
@@ -571,7 +572,7 @@ func populateFunctionBody(b *Bir, fn *BIRFunction, body *Bir_FunctionBody) error
 }
 
 // populateBasicBlocks creates BIRBasicBlock instances from the Kaitai model.
-func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, error) {
+func populateBasicBlocks(cx *context.CompilerContext, b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, error) {
 	if bbInfo == nil || bbInfo.BasicBlocksCount == 0 {
 		return []BIRBasicBlock{}, nil
 	}
@@ -642,7 +643,7 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, 
 		if lastIns != nil {
 			kind := InstructionKind(lastIns.InstructionKind)
 			pos := positionToLocation(b, lastIns.Position)
-			term := createTerminator(b, kind, pos, lastIns, bbMap)
+			term := createTerminator(cx, b, kind, pos, lastIns, bbMap)
 			if term != nil {
 				terminator = term
 			}
@@ -666,7 +667,7 @@ func populateBasicBlocks(b *Bir, bbInfo *Bir_BasicBlocksInfo) ([]BIRBasicBlock, 
 }
 
 // createTerminator creates a BIRTerminator instance from Kaitai instruction data.
-func createTerminator(b *Bir, kind InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap bbMap) BIRTerminator {
+func createTerminator(cx *context.CompilerContext, b *Bir, kind InstructionKind, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap bbMap) BIRTerminator {
 	if kaitaiIns == nil || kaitaiIns.InstructionStructure == nil {
 		// Fallback to minimal implementation
 		return nil
@@ -681,7 +682,7 @@ func createTerminator(b *Bir, kind InstructionKind, pos diagnostics.Location, ka
 	case INSTRUCTION_KIND_BRANCH:
 		return parseBranchTerminator(b, pos, kaitaiIns, bbMap)
 	case INSTRUCTION_KIND_CALL:
-		return parseCallTerminator(b, pos, kaitaiIns, bbMap)
+		return parseCallTerminator(cx, b, pos, kaitaiIns, bbMap)
 	default:
 		panic(fmt.Sprintf("unknown terminator kind: %d", kind))
 	}
@@ -753,7 +754,7 @@ func parseBranchTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Inst
 }
 
 // parseCallTerminator parses a Call terminator
-func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap bbMap) BIRTerminator {
+func parseCallTerminator(cx *context.CompilerContext, b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instruction, bbMap bbMap) BIRTerminator {
 	if callIns, ok := kaitaiIns.InstructionStructure.(*Bir_InstructionCall); ok && callIns != nil {
 		callInfo := callIns.CallInstructionInfo
 		if callInfo == nil {
@@ -762,7 +763,7 @@ func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 
 		isVirtual := callInfo.IsVirtual != 0
 		// Parse package ID
-		var calleePkg model.PackageID
+		var calleePkg *model.PackageID
 		if callInfo.PackageIndex >= 0 {
 			pkgCp, err := cpAsPackage(b, callInfo.PackageIndex)
 			if err == nil && pkgCp != nil {
@@ -770,7 +771,7 @@ func parseCallTerminator(b *Bir, pos diagnostics.Location, kaitaiIns *Bir_Instru
 				pkgName := model.Name(cpString(b, pkgCp.PackageNameIndex))
 				namePart := model.Name(cpString(b, pkgCp.NameIndex))
 				version := model.Name(cpString(b, pkgCp.VersionIndex))
-				calleePkg = model.NewPackageID(org, []model.Name{pkgName, namePart}, version)
+				calleePkg = cx.NewPackageID(org, []model.Name{pkgName, namePart}, version)
 			}
 		}
 

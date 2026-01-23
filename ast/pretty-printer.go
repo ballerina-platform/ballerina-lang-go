@@ -176,7 +176,7 @@ func (p *PrettyPrinter) printString(str string) {
 	p.addSpaceBeforeNode = true
 }
 
-func (p *PrettyPrinter) printPackageID(packageID model.PackageID) {
+func (p *PrettyPrinter) printPackageID(packageID *model.PackageID) {
 	if packageID.IsUnnamed() {
 		p.printString("(unnamed-package)")
 	} else {
