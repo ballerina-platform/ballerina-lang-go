@@ -1,0 +1,101 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=1)
+    %2 = printClosestSquareNum(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad %!s(int64=0)
+    %4 = printClosestSquareNum(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(int64=5)
+    %6 = printClosestSquareNum(%5) -> bb3;
+  }
+  bb3 {
+    %7 = ConstantLoad %!s(int64=17)
+    %8 = printClosestSquareNum(%7) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+printClosestSquareNum<NIL>{
+  bb0 {
+    i = x;
+    GOTO bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(int64=0)
+    %3 = >= i %4;
+    %3 ? bb2 : bb3;
+  }
+  bb2 {
+    %5 ? bb5 : bb7;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+  }
+  bb5 {
+    %6 = println(i) -> bb6;
+  }
+  bb6 {
+    %7 = ConstantLoad ()
+    %0 = %7;
+    return;
+  }
+  bb7 {
+    %9 = ConstantLoad %!s(int64=1)
+    %8 = - i %9;
+    i = %8;
+    GOTO bb1;
+  }
+}
+isSquareNumber<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=0)
+    i = %2;
+    GOTO bb1;
+  }
+  bb1 {
+    %4 = <= i x;
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %6 = * i i;
+    %5 = == %6 x;
+    %5 ? bb4 : bb5;
+  }
+  bb3 {
+    %13 = ConstantLoad %!s(bool=false)
+    %0 = %13;
+    return;
+  }
+  bb4 {
+    %7 = ConstantLoad %!s(bool=true)
+    %0 = %7;
+    return;
+  }
+  bb5 {
+    %9 = * i i;
+    %8 = > %9 x;
+    %8 ? bb6 : bb7;
+  }
+  bb6 {
+    %10 = ConstantLoad %!s(bool=false)
+    %0 = %10;
+    return;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    %12 = ConstantLoad %!s(int64=1)
+    %11 = + i %12;
+    i = %11;
+    GOTO bb1;
+  }
+}

@@ -1,0 +1,18 @@
+module $anon-package;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=100)
+    %2 = %1;
+    %4 = ConstantLoad %!s(int64=100)
+    %5 = ConstantLoad %!s(int64=11)
+    %3 = + %4 %5;
+    %6 = %3;
+    %7 = ConstantLoad {<nil> %!s(int64=43)}
+    %8 = %7;
+    %10 = ConstantLoad {<nil> %!s(int64=43)}
+    %11 = ConstantLoad {<nil> %!s(int64=44)}
+    %9 = + %10 %11;
+    %12 = %9;
+    return;
+  }
+}

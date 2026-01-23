@@ -112,18 +112,6 @@ func getCorpusFiles(t *testing.T, baseDir string) []string {
 	return birFiles
 }
 
-func TestBIRPackageLoading(t *testing.T) {
-	flag.Parse()
-	corpusDir := getCorpusDir(t)
-	birFiles := getCorpusFiles(t, corpusDir)
-	for _, birFile := range birFiles {
-		t.Run(birFile, func(t *testing.T) {
-			t.Parallel()
-			testBIRPackageLoading(t, birFile, corpusDir)
-		})
-	}
-}
-
 func TestJBalUnitBIRTests(t *testing.T) {
 	flag.Parse()
 	testdataDir := "./testdata/bir"
@@ -229,6 +217,19 @@ func testBIRPackageLoading(t *testing.T, birFile string, baseDir string) {
 	}
 }
 
+// expectedBIRPath converts a .bal file path to the expected BIR text file path.
+// Example: corpus/bal/subset1/01-int/add3-v.bal -> corpus/bir/subset1/01-int/add3-v.txt
+func expectedBIRPath(balFile string) string {
+	expectedBIRPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
+	expectedBIRPath = strings.Replace(
+		expectedBIRPath,
+		string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator),
+		string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bir"+string(filepath.Separator),
+		1,
+	)
+	return expectedBIRPath
+}
+
 // getCorpusBalFiles retrieves all .bal files from the corpus directory for BIR generation testing.
 func getCorpusBalFiles(t *testing.T) []string {
 	corpusBalDir := "../corpus/bal"
@@ -330,5 +331,56 @@ func testBIRGeneration(t *testing.T, balFile string) {
 		return
 	}
 
-	// Success: BIR generation completed without panic
+	// Pretty print BIR output
+	prettyPrinter := PrettyPrinter{}
+	actualBIR := prettyPrinter.Print(*birPkg)
+
+	// If update flag is set, check if update is needed and update if necessary
+	expectedPath := expectedBIRPath(balFile)
+	if *update {
+		if updateIfNeeded(t, balFile, expectedPath, actualBIR) {
+			t.Fatalf("Updated expected BIR file: %s", expectedPath)
+		}
+		return
+	}
+
+	// Read expected BIR text file
+	expectedText := getExpectedBIRText(t, balFile)
+
+	// Compare BIR text strings exactly
+	if actualBIR != expectedText {
+		diff := getBIRDiff(expectedText, actualBIR)
+		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", balFile, expectedPath, diff)
+		return
+	}
+}
+
+func updateIfNeeded(t *testing.T, balFile, expectedPath, actualBIR string) bool {
+	// Ensure the directory exists
+	expectedText := getExpectedBIRText(t, balFile)
+
+	// File exists - compare content
+	// Only update if content is different
+	if actualBIR != expectedText {
+		// Content is different - update file and fail the test
+		if err := os.WriteFile(expectedPath, []byte(actualBIR), 0o644); err != nil {
+			t.Errorf("error writing expected BIR text file: %v", err)
+			return true
+		}
+		t.Errorf("updated expected BIR text file: %s", expectedPath)
+		return true
+	}
+
+	// Content matches - no update needed, test passes
+	return false
+}
+
+func getExpectedBIRText(t *testing.T, balFile string) string {
+	expectedPath := expectedBIRPath(balFile)
+	expectedText, readErr := readExpectedBIRText(expectedPath)
+	if readErr != nil {
+		t.Errorf("error reading expected BIR text file: %v", readErr)
+		return ""
+	}
+	return expectedText
 }

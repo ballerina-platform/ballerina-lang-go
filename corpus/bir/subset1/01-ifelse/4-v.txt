@@ -1,0 +1,58 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=5)
+    %2 = printBranch(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad %!s(int64=10)
+    %4 = printBranch(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(int64=15)
+    %6 = printBranch(%5) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
+printBranch<NIL>{
+  bb0 {
+    %3 = ConstantLoad %!s(int64=10)
+    %2 = < x %3;
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(int64=0)
+    %5 = println(%4) -> bb2;
+  }
+  bb2 {
+    GOTO bb9;
+  }
+  bb3 {
+    %7 = ConstantLoad %!s(int64=10)
+    %6 = == x %7;
+    %6 ? bb4 : bb6;
+  }
+  bb4 {
+    %8 = ConstantLoad %!s(int64=1)
+    %9 = println(%8) -> bb5;
+  }
+  bb5 {
+    GOTO bb8;
+  }
+  bb6 {
+    %10 = ConstantLoad %!s(int64=2)
+    %11 = println(%10) -> bb7;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    GOTO bb9;
+  }
+  bb9 {
+    return;
+  }
+}

@@ -1,0 +1,43 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=5)
+    %2 = printInts(%1) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+printInts<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=0)
+    i = %2;
+    GOTO bb1;
+  }
+  bb1 {
+    %4 = < i maxExclusive;
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %5 = println(i) -> bb4;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+    %6 = increase(i) -> bb5;
+  }
+  bb5 {
+    i = %6;
+    GOTO bb1;
+  }
+}
+increase<NIL>{
+  bb0 {
+    %3 = ConstantLoad %!s(int64=1)
+    %2 = + x %3;
+    %0 = %2;
+    return;
+  }
+}

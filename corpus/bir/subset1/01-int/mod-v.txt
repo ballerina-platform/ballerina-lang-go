@@ -1,0 +1,38 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=5)
+    %2 = ConstantLoad %!s(int64=3)
+    %3 = mod(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(int64=7)
+    %6 = ConstantLoad %!s(int64=7)
+    %7 = mod(%5,%6) -> bb3;
+  }
+  bb3 {
+    %8 = println(%7) -> bb4;
+  }
+  bb4 {
+    %9 = ConstantLoad %!s(int64=6)
+    %10 = ConstantLoad %!s(int64=9)
+    %11 = mod(%9,%10) -> bb5;
+  }
+  bb5 {
+    %12 = println(%11) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+mod<NIL>{
+  bb0 {
+    %3 = % x y;
+    %0 = %3;
+    return;
+  }
+}

@@ -1,0 +1,180 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=9223372036854775806)
+    big = %1;
+    %4 = ConstantLoad %!s(int64=9223372036854775806)
+    %3 = == big %4;
+    %5 = printBoolean(%3) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad %!s(int64=1)
+    %6 = == big %7;
+    %8 = printBoolean(%6) -> bb2;
+  }
+  bb2 {
+    %10 = ConstantLoad %!s(int64=0)
+    %9 = == big %10;
+    %11 = printBoolean(%9) -> bb3;
+  }
+  bb3 {
+    %13 = ConstantLoad %!s(int64=1)
+    %14 = unknown %13;
+    %12 = == big %14;
+    %15 = printBoolean(%12) -> bb4;
+  }
+  bb4 {
+    %17 = ConstantLoad %!s(int64=9223372036854775806)
+    %18 = unknown %17;
+    %16 = == big %18;
+    %19 = printBoolean(%16) -> bb5;
+  }
+  bb5 {
+    %20 = ConstantLoad %!s(int64=1)
+    one = %20;
+    %23 = ConstantLoad %!s(int64=9223372036854775806)
+    %22 = == one %23;
+    %24 = printBoolean(%22) -> bb6;
+  }
+  bb6 {
+    %26 = ConstantLoad %!s(int64=1)
+    %25 = == one %26;
+    %27 = printBoolean(%25) -> bb7;
+  }
+  bb7 {
+    %29 = ConstantLoad %!s(int64=0)
+    %28 = == one %29;
+    %30 = printBoolean(%28) -> bb8;
+  }
+  bb8 {
+    %32 = ConstantLoad %!s(int64=1)
+    %33 = unknown %32;
+    %31 = == one %33;
+    %34 = printBoolean(%31) -> bb9;
+  }
+  bb9 {
+    %36 = ConstantLoad %!s(int64=9223372036854775806)
+    %37 = unknown %36;
+    %35 = == one %37;
+    %38 = printBoolean(%35) -> bb10;
+  }
+  bb10 {
+    %39 = ConstantLoad %!s(int64=0)
+    zero = %39;
+    %42 = ConstantLoad %!s(int64=9223372036854775806)
+    %41 = == zero %42;
+    %43 = printBoolean(%41) -> bb11;
+  }
+  bb11 {
+    %45 = ConstantLoad %!s(int64=1)
+    %44 = == zero %45;
+    %46 = printBoolean(%44) -> bb12;
+  }
+  bb12 {
+    %48 = ConstantLoad %!s(int64=0)
+    %47 = == zero %48;
+    %49 = printBoolean(%47) -> bb13;
+  }
+  bb13 {
+    %51 = ConstantLoad %!s(int64=1)
+    %52 = unknown %51;
+    %50 = == zero %52;
+    %53 = printBoolean(%50) -> bb14;
+  }
+  bb14 {
+    %55 = ConstantLoad %!s(int64=9223372036854775806)
+    %56 = unknown %55;
+    %54 = == zero %56;
+    %57 = printBoolean(%54) -> bb15;
+  }
+  bb15 {
+    %59 = unknown one;
+    %60 = ConstantLoad %!s(int64=9223372036854775806)
+    %58 = == %59 %60;
+    %61 = printBoolean(%58) -> bb16;
+  }
+  bb16 {
+    %63 = unknown one;
+    %64 = ConstantLoad %!s(int64=1)
+    %62 = == %63 %64;
+    %65 = printBoolean(%62) -> bb17;
+  }
+  bb17 {
+    %67 = unknown one;
+    %68 = ConstantLoad %!s(int64=0)
+    %66 = == %67 %68;
+    %69 = printBoolean(%66) -> bb18;
+  }
+  bb18 {
+    %71 = unknown one;
+    %72 = ConstantLoad %!s(int64=1)
+    %73 = unknown %72;
+    %70 = == %71 %73;
+    %74 = printBoolean(%70) -> bb19;
+  }
+  bb19 {
+    %76 = unknown one;
+    %77 = ConstantLoad %!s(int64=9223372036854775806)
+    %78 = unknown %77;
+    %75 = == %76 %78;
+    %79 = printBoolean(%75) -> bb20;
+  }
+  bb20 {
+    %81 = unknown big;
+    %82 = ConstantLoad %!s(int64=9223372036854775806)
+    %80 = == %81 %82;
+    %83 = printBoolean(%80) -> bb21;
+  }
+  bb21 {
+    %85 = unknown big;
+    %86 = ConstantLoad %!s(int64=1)
+    %84 = == %85 %86;
+    %87 = printBoolean(%84) -> bb22;
+  }
+  bb22 {
+    %89 = unknown big;
+    %90 = ConstantLoad %!s(int64=0)
+    %88 = == %89 %90;
+    %91 = printBoolean(%88) -> bb23;
+  }
+  bb23 {
+    %93 = unknown big;
+    %94 = ConstantLoad %!s(int64=1)
+    %95 = unknown %94;
+    %92 = == %93 %95;
+    %96 = printBoolean(%92) -> bb24;
+  }
+  bb24 {
+    %98 = unknown big;
+    %99 = ConstantLoad %!s(int64=9223372036854775806)
+    %100 = unknown %99;
+    %97 = == %98 %100;
+    %101 = printBoolean(%97) -> bb25;
+  }
+  bb25 {
+    return;
+  }
+}
+printBoolean<NIL>{
+  bb0 {
+    b ? bb1 : bb3;
+  }
+  bb1 {
+    %2 = ConstantLoad %!s(int64=1)
+    %3 = println(%2) -> bb2;
+  }
+  bb2 {
+    GOTO bb5;
+  }
+  bb3 {
+    %4 = ConstantLoad %!s(int64=0)
+    %5 = println(%4) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}

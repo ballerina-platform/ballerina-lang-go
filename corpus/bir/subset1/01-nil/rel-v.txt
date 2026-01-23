@@ -1,0 +1,41 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(bool=true)
+    %3 = toNil(%2) -> bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(bool=false)
+    %5 = toNil(%4) -> bb2;
+  }
+  bb2 {
+    %1 = < %3 %5;
+    %6 = toNil(%1) -> bb3;
+  }
+  bb3 {
+    %8 = ConstantLoad %!s(bool=false)
+    %9 = toNil(%8) -> bb4;
+  }
+  bb4 {
+    %10 = ConstantLoad %!s(bool=true)
+    %11 = toNil(%10) -> bb5;
+  }
+  bb5 {
+    %7 = <= %9 %11;
+    %12 = toNil(%7) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+toNil<NIL>{
+  bb0 {
+    %2 = println(b) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad ()
+    %0 = %3;
+    return;
+  }
+}

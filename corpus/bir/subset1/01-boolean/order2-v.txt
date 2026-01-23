@@ -1,0 +1,28 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = printComp() -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+printComp<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(bool=true)
+    %3 = ConstantLoad %!s(bool=false)
+    %1 = > %2 %3;
+    %1 ? bb1 : bb3;
+  }
+  bb1 {
+    %4 = ConstantLoad %!s(int64=1)
+    %5 = println(%4) -> bb2;
+  }
+  bb2 {
+    GOTO bb3;
+  }
+  bb3 {
+    return;
+  }
+}

@@ -1,0 +1,89 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad %!s(int64=17)
+    %3 = ConstantLoad %!s(int64=17)
+    %1 = == %2 %3;
+    b = %1;
+    b ? bb1 : bb3;
+  }
+  bb1 {
+    %5 = ConstantLoad %!s(int64=17)
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    GOTO bb5;
+  }
+  bb3 {
+    %7 = ConstantLoad %!s(int64=0)
+    %8 = println(%7) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    %10 = ConstantLoad %!s(int64=21)
+    %11 = ConstantLoad %!s(int64=21)
+    %9 = != %10 %11;
+    b = %9;
+    b ? bb6 : bb8;
+  }
+  bb6 {
+    %12 = ConstantLoad %!s(int64=0)
+    %13 = println(%12) -> bb7;
+  }
+  bb7 {
+    GOTO bb10;
+  }
+  bb8 {
+    %14 = ConstantLoad %!s(int64=21)
+    %15 = println(%14) -> bb9;
+  }
+  bb9 {
+    GOTO bb10;
+  }
+  bb10 {
+    %16 = ConstantLoad %!s(int64=42)
+    x = %16;
+    %19 = ConstantLoad %!s(int64=42)
+    %18 = == x %19;
+    %18 ? bb11 : bb13;
+  }
+  bb11 {
+    %20 = ConstantLoad %!s(int64=42)
+    %21 = println(%20) -> bb12;
+  }
+  bb12 {
+    GOTO bb15;
+  }
+  bb13 {
+    %22 = ConstantLoad %!s(int64=0)
+    %23 = println(%22) -> bb14;
+  }
+  bb14 {
+    GOTO bb15;
+  }
+  bb15 {
+    %25 = ConstantLoad %!s(int64=42)
+    %24 = != %25 x;
+    %24 ? bb16 : bb18;
+  }
+  bb16 {
+    %26 = ConstantLoad %!s(int64=0)
+    %27 = println(%26) -> bb17;
+  }
+  bb17 {
+    GOTO bb20;
+  }
+  bb18 {
+    %28 = ConstantLoad %!s(int64=42)
+    %29 = println(%28) -> bb19;
+  }
+  bb19 {
+    GOTO bb20;
+  }
+  bb20 {
+    return;
+  }
+}

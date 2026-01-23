@@ -1,0 +1,55 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=6)
+    %2 = ConstantLoad %!s(int64=5)
+    %3 = ConstantLoad %!s(int64=7)
+    %4 = printIfBetween(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad %!s(int64=2)
+    %7 = ConstantLoad %!s(int64=3)
+    %8 = printIfBetween(%5,%6,%7) -> bb2;
+  }
+  bb2 {
+    %9 = ConstantLoad %!s(int64=0)
+    %10 = ConstantLoad %!s(int64=1)
+    %11 = unknown %10;
+    %12 = ConstantLoad %!s(int64=4)
+    %13 = printIfBetween(%9,%11,%12) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
+printIfBetween<NIL>{
+  bb0 {
+    i = min;
+    GOTO bb1;
+  }
+  bb1 {
+    %5 = <= i max;
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %6 = == i n;
+    %6 ? bb4 : bb6;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+    %7 = println(n) -> bb5;
+  }
+  bb5 {
+    GOTO bb3;
+  }
+  bb6 {
+    %9 = ConstantLoad %!s(int64=1)
+    %8 = + i %9;
+    i = %8;
+    GOTO bb1;
+  }
+}

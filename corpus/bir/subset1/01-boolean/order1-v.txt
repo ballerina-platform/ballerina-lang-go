@@ -1,0 +1,99 @@
+module $anon-package;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(bool=true)
+    %2 = ConstantLoad %!s(bool=false)
+    %3 = greaterThan(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = printBoolean(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad %!s(bool=true)
+    %6 = ConstantLoad %!s(bool=true)
+    %7 = greaterThan(%5,%6) -> bb3;
+  }
+  bb3 {
+    %8 = printBoolean(%7) -> bb4;
+  }
+  bb4 {
+    %9 = ConstantLoad %!s(bool=false)
+    %10 = ConstantLoad %!s(bool=false)
+    %11 = greaterThan(%9,%10) -> bb5;
+  }
+  bb5 {
+    %12 = printBoolean(%11) -> bb6;
+  }
+  bb6 {
+    %13 = ConstantLoad %!s(bool=true)
+    %14 = ConstantLoad %!s(bool=false)
+    %15 = lessThan(%13,%14) -> bb7;
+  }
+  bb7 {
+    %16 = printBoolean(%15) -> bb8;
+  }
+  bb8 {
+    %17 = ConstantLoad %!s(bool=false)
+    %18 = ConstantLoad %!s(bool=true)
+    %19 = lessThan(%17,%18) -> bb9;
+  }
+  bb9 {
+    %20 = printBoolean(%19) -> bb10;
+  }
+  bb10 {
+    %21 = ConstantLoad %!s(bool=true)
+    %22 = ConstantLoad %!s(bool=true)
+    %23 = lessThan(%21,%22) -> bb11;
+  }
+  bb11 {
+    %24 = printBoolean(%23) -> bb12;
+  }
+  bb12 {
+    %25 = ConstantLoad %!s(bool=false)
+    %26 = ConstantLoad %!s(bool=false)
+    %27 = lessThan(%25,%26) -> bb13;
+  }
+  bb13 {
+    %28 = printBoolean(%27) -> bb14;
+  }
+  bb14 {
+    return;
+  }
+}
+printBoolean<NIL>{
+  bb0 {
+    b ? bb1 : bb3;
+  }
+  bb1 {
+    %2 = ConstantLoad %!s(int64=1)
+    %3 = println(%2) -> bb2;
+  }
+  bb2 {
+    GOTO bb5;
+  }
+  bb3 {
+    %4 = ConstantLoad %!s(int64=0)
+    %5 = println(%4) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+lessThan<NIL>{
+  bb0 {
+    %3 = < x y;
+    %0 = %3;
+    return;
+  }
+}
+greaterThan<NIL>{
+  bb0 {
+    %3 = > x y;
+    %0 = %3;
+    return;
+  }
+}
