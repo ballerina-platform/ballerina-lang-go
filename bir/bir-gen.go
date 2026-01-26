@@ -74,7 +74,7 @@ func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind Var
 	varDcl.Scope = VAR_SCOPE_FUNCTION
 	varDcl.MetaVarName = name.Value()
 	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, index: len(cx.localVars) - 1}
+	return &BIROperand{VariableDcl: varDcl, Index: len(cx.localVars) - 1}
 }
 
 func (cx *stmtContext) addTempVar(ty model.ValueType) *BIROperand {
@@ -177,6 +177,7 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	for _, varPtr := range stmtCx.localVars {
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
+	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl
 	return birFunc
 }
 
@@ -378,6 +379,7 @@ func expressionStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLang
 
 func ifStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
 	cond := handleExpression(ctx, curBB, stmt.Expr)
+	curBB = cond.block
 	thenBB := ctx.addBB()
 	var finalBB *BIRBasicBlock
 	thenEffect := blockStatement(ctx, thenBB, &stmt.Body)

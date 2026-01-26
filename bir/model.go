@@ -160,8 +160,8 @@ type (
 	BIROperand struct {
 		BIRNodeBase
 		VariableDcl *BIRVariableDcl
-		// If index > 0 then it is the index to the functions local var array
-		index int
+		// If Index > 0 then it is the index to the functions local var array
+		Index int
 	}
 )
 
