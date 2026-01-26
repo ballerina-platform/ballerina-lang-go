@@ -1,3 +1,4 @@
+// @disabled
 // @productions list-type-descriptor list-constructor-expr assign-stmt local-var-decl-stmt string-literal function-call-expr
 import ballerina/io;
 

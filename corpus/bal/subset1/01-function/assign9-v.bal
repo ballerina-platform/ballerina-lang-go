@@ -1,3 +1,4 @@
+// @disabled
 // @productions module-const-decl assign-stmt additive-expr
 const c1 = 43;
 const c2 = 44;

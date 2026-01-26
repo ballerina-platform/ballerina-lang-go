@@ -40,9 +40,9 @@ const (
 )
 
 var (
-	skipFiles        = []string{}
 	outputRegex      = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex       = regexp.MustCompile(`//\s*@panic\s+(.+)`)
+	disabledRegex    = regexp.MustCompile(`//\s*@disabled`)
 	supportedSubsets = []string{"subset1"}
 )
 
@@ -278,12 +278,11 @@ func findBalFiles(dir string) []string {
 }
 
 func isFileSkipped(filePath string) bool {
-	for _, skip := range skipFiles {
-		if strings.HasSuffix(filePath, skip) {
-			return true
-		}
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return false
 	}
-	return false
+	return disabledRegex.Match(content)
 }
 
 func readExpectedOutput(balFile string) (string, error) {

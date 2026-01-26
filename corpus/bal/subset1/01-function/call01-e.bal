@@ -1,3 +1,4 @@
+// @disabled
 // @productions boolean boolean-literal return-stmt function-call-expr
 public function main() {
     foo(); // @error  

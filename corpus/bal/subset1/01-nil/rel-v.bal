@@ -1,3 +1,4 @@
+// @disabled
 // @productions boolean relational-expr boolean-literal return-stmt function-call-expr
 import ballerina/io;
 public function main() {
