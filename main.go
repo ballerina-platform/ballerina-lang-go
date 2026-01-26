@@ -24,8 +24,11 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/runtime"
+	_ "ballerina-lang-go/stdlibs/io" // Initialize io module with extern functions
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -118,19 +121,30 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error getting syntax tree: %v\n", err)
 		os.Exit(1)
 	}
-	// We can't support these flags for all sources yet
-	if dumpAST || dumpBIR {
+
+	// Check if it's a .bal file - if so, parse, generate BIR, and interpret
+	isBalFile := strings.HasSuffix(fileName, ".bal")
+	var birPkg *bir.BIRPackage
+
+	if isBalFile || dumpAST || dumpBIR {
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 		if dumpAST {
 			prettyPrinter := ast.PrettyPrinter{}
 			fmt.Println(prettyPrinter.Print(compilationUnit))
 		}
-		if dumpBIR {
+		if isBalFile || dumpBIR {
 			pkg := ast.ToPackage(compilationUnit)
-			birPkg := bir.GenBir(cx, pkg)
-			prettyPrinter := bir.PrettyPrinter{}
-			fmt.Println(prettyPrinter.Print(*birPkg))
+			birPkg = bir.GenBir(cx, pkg)
+			if dumpBIR {
+				prettyPrinter := bir.PrettyPrinter{}
+				fmt.Println(prettyPrinter.Print(*birPkg))
+			}
 		}
+	}
+
+	// Interpret the BIR if it's a .bal file
+	if isBalFile && birPkg != nil {
+		runtime.Interpret(*birPkg)
 	}
 	if debugCtx != nil {
 		close(debugCtx.Channel)
