@@ -31,13 +31,14 @@ main<NIL>{
 }
 foo<NIL>{
   bb0 {
-    %3 ? bb3 : bb4;
+    %4 = bar(x) -> bb1;
   }
   bb1 {
     %5 = baz(y) -> bb2;
   }
   bb2 {
     %3 = == %4 %5;
+    %3 ? bb3 : bb4;
   }
   bb3 {
     %6 = ConstantLoad %!s(int64=0)
@@ -45,13 +46,14 @@ foo<NIL>{
     return;
   }
   bb4 {
-    %7 ? bb7 : bb8;
+    %8 = bar(x) -> bb5;
   }
   bb5 {
     %9 = baz(y) -> bb6;
   }
   bb6 {
     %7 = > %8 %9;
+    %7 ? bb7 : bb8;
   }
   bb7 {
     %10 = ConstantLoad %!s(int64=1)
