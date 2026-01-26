@@ -28,14 +28,11 @@ import (
 func Interpret(pkg bir.BIRPackage) {
 	// Initialize a fresh registry for each interpretation
 	reg := modules.GetRegistry()
-
 	// Register the package modules
 	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
 	funcs := pkg.Functions
-
 	// Get the main function and execute it
 	mainFunc := funcs[0]
-
 	// Catch panics and print them with "panic: <message>" format
 	defer func() {
 		if r := recover(); r != nil {
@@ -44,6 +41,5 @@ func Interpret(pkg bir.BIRPackage) {
 			os.Exit(1)
 		}
 	}()
-
 	executeFunction(mainFunc, nil)
 }

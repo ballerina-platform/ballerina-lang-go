@@ -77,12 +77,9 @@ func TestIntegrationSuite(t *testing.T) {
 			if isFileSkipped(balFile) {
 				continue
 			}
-
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
 			filePath := buildFilePath(relPath)
-
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-
 			result := runTest(binaryPath, balFile)
 			if result.success {
 				passedTotal++
@@ -111,15 +108,12 @@ func TestIntegrationSuite(t *testing.T) {
 func buildInterpreterBinary(t *testing.T) string {
 	tmpDir := t.TempDir()
 	binPath := filepath.Join(tmpDir, "bal-interpreter")
-
 	cmd := exec.Command("go", "build", "-o", binPath, "main.go")
 	cmd.Dir = ".." // project root
-
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to build interpreter:\n%s\n%v", out, err)
 	}
-
 	return binPath
 }
 
@@ -128,24 +122,19 @@ func runTest(binaryPath, balFile string) testResult {
 	if err != nil {
 		return newTestResult(false, "", fmt.Sprintf("error reading expected output: %v", err))
 	}
-
 	expectedPanic, err := readExpectedPanic(balFile)
 	if err != nil {
 		return newTestResult(false, "", fmt.Sprintf("error reading expected panic: %v", err))
 	}
-
 	cmd := exec.Command(binaryPath, balFile)
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
-
 	if expectedPanic != "" {
 		return testPanic(expectedPanic, outputStr, err != nil)
 	}
-
 	expected := trimNewline(expectedOutput)
 	actual := trimNewline(outputStr)
 	success := err == nil && actual == expected
-
 	return testResult{
 		success:  success,
 		expected: expected,
@@ -180,7 +169,6 @@ func trimNewline(s string) string {
 func printFinalSummary(total, passed int, failedTests []failedTest) {
 	fmt.Printf("%d RUN\n", total)
 	fmt.Printf("%d %sPASSED%s\n", passed, colorGreen, colorReset)
-
 	if len(failedTests) > 0 {
 		fmt.Println("FAILED Tests")
 		for _, ft := range failedTests {
@@ -258,7 +246,6 @@ func readExpectedOutput(balFile string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	matches := outputRegex.FindAllStringSubmatch(string(content), -1)
 	outputs := make([]string, 0, len(matches))
 	for _, m := range matches {
@@ -274,7 +261,6 @@ func readExpectedPanic(balFile string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	matches := panicRegex.FindAllStringSubmatch(string(content), -1)
 	if len(matches) > 0 && len(matches[0]) > 1 {
 		return strings.TrimSpace(matches[0][1]), nil

@@ -27,7 +27,6 @@ import (
 type Registry struct {
 	// birModules holds BIR-backed modules keyed by a stable string derived from PackageID.
 	birModules map[*model.PackageID]*BIRModule
-
 	// nativeModules holds Go-native modules keyed by their module name.
 	nativeModules map[string]*NativeModule
 }
@@ -77,7 +76,6 @@ func (r *Registry) GetBIRModule(id *model.PackageID) (*BIRModule, error) {
 	if m, ok := r.birModules[id]; ok {
 		return m, nil
 	}
-
 	return nil, fmt.Errorf("module not found for given PackageID")
 }
 

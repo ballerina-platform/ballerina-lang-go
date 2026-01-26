@@ -51,7 +51,6 @@ func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
 			}
 		}
 	}
-
 	return &BIRModule{
 		Pkg:       pkg,
 		Functions: functions,

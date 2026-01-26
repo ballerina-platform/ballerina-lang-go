@@ -79,7 +79,6 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
 	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
 	op1 := frame.locals[rhsOp1]
 	op2 := frame.locals[rhsOp2]
-
 	switch v1 := op1.(type) {
 	case int64:
 		switch v2 := op2.(type) {
@@ -284,7 +283,8 @@ func execBinaryOpRefNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 
 	// Reference inequality: opposite of reference equality
 	// Both nil -> not equal (false), one nil -> not equal (true), otherwise use !=
-	frame.locals[lhsOp] = (op1 == nil) != (op2 == nil) || (op1 != nil && op2 != nil && op1 != op2)
+	// Simply negate the equality check for clarity and maintainability
+	frame.locals[lhsOp] = !((op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2))
 }
 
 func execUnaryOpNot(unaryOp *bir.UnaryOp, frame *Frame) {

@@ -46,9 +46,7 @@ func execCall(callInfo *bir.Call, frame *Frame) bir.BIRBasicBlock {
 	for i, op := range args {
 		values[i] = frame.locals[op.Index]
 	}
-
 	reg := modules.GetRegistry()
-
 	// First, search all BIR modules for the function
 	allBIRModules := reg.GetAllBIRModules()
 	for _, birMod := range allBIRModules {
@@ -60,7 +58,6 @@ func execCall(callInfo *bir.Call, frame *Frame) bir.BIRBasicBlock {
 			return *callInfo.ThenBB
 		}
 	}
-
 	// If not found in BIR modules, search all native/extern modules
 	allNativeModules := reg.GetAllNativeModules()
 	for _, nativeMod := range allNativeModules {
