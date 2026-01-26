@@ -30,13 +30,9 @@ import (
 
 // ANSI color codes
 const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
-	colorBlue   = "\033[34m"
-	colorCyan   = "\033[36m"
-	colorBold   = "\033[1m"
+	colorReset = "\033[0m"
+	colorGreen = "\033[32m"
+	colorRed   = "\033[31m"
 )
 
 var (
@@ -52,8 +48,13 @@ type failedTest struct {
 	fileName string
 }
 
+type testResult struct {
+	success  bool
+	expected string
+	actual   string
+}
+
 func TestIntegrationSuite(t *testing.T) {
-	// 🔨 Build interpreter once
 	binaryPath := buildInterpreterBinary(t)
 
 	corpusBalBaseDir := "../corpus/bal"
@@ -66,7 +67,9 @@ func TestIntegrationSuite(t *testing.T) {
 			continue
 		}
 
-		fmt.Printf("%s===== Subset %s =====%s\n", colorCyan, subset, colorReset)
+		subsetNum := formatSubsetNumber(subset)
+		fmt.Printf("Subset %s\n", subsetNum)
+		fmt.Println("==========================")
 
 		balFiles := findBalFiles(corpusBalDir)
 
@@ -75,11 +78,18 @@ func TestIntegrationSuite(t *testing.T) {
 				continue
 			}
 
-			if runTest(binaryPath, balFile, corpusBalDir) {
+			relPath, _ := filepath.Rel(corpusBalDir, balFile)
+			filePath := buildFilePath(relPath)
+
+			fmt.Printf("\t=== RUN   %s\n", filePath)
+
+			result := runTest(binaryPath, balFile)
+			if result.success {
 				passedTotal++
+				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
 			} else {
 				failedTotal++
-				relPath, _ := filepath.Rel(corpusBalDir, balFile)
+				printTestFailure(filePath, result)
 				failedTests = append(failedTests, failedTest{
 					subset:   subset,
 					dirName:  filepath.Dir(relPath),
@@ -91,16 +101,12 @@ func TestIntegrationSuite(t *testing.T) {
 
 	total := passedTotal + failedTotal
 	if total > 0 {
-		printFinalSummary(total, passedTotal, failedTotal, failedTests)
+		printFinalSummary(total, passedTotal, failedTests)
 		if failedTotal > 0 {
 			t.Fail()
 		}
 	}
 }
-
-//
-// ───────────────────────── Binary Build ─────────────────────────
-//
 
 func buildInterpreterBinary(t *testing.T) string {
 	tmpDir := t.TempDir()
@@ -117,159 +123,121 @@ func buildInterpreterBinary(t *testing.T) string {
 	return binPath
 }
 
-//
-// ───────────────────────── Test Runner ─────────────────────────
-//
-
-func runTest(binaryPath, balFile, baseDir string) bool {
-	relPath, _ := filepath.Rel(baseDir, balFile)
-	dirName := filepath.Dir(relPath)
-	fileName := filepath.Base(balFile)
-
+func runTest(binaryPath, balFile string) testResult {
 	expectedOutput, err := readExpectedOutput(balFile)
 	if err != nil {
-		printResult(dirName, fileName, false, "", "")
-		return false
+		return newTestResult(false, "", fmt.Sprintf("error reading expected output: %v", err))
 	}
 
 	expectedPanic, err := readExpectedPanic(balFile)
 	if err != nil {
-		printResult(dirName, fileName, false, "", "")
-		return false
+		return newTestResult(false, "", fmt.Sprintf("error reading expected panic: %v", err))
 	}
 
 	cmd := exec.Command(binaryPath, balFile)
-
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
 
-	// If panic is expected, check that the error output contains the panic message
 	if expectedPanic != "" {
-		if err == nil {
-			// Expected panic but got no error
-			printResult(dirName, fileName, false, fmt.Sprintf("panic: %s", expectedPanic), "no error")
-			return false
-		}
-		// Check if panic message is contained in the output
-		success := strings.Contains(outputStr, expectedPanic)
-		if success {
-			printResult(dirName, fileName, true, fmt.Sprintf("panic: %s", expectedPanic), outputStr)
-		} else {
-			printResult(dirName, fileName, false, fmt.Sprintf("panic: %s", expectedPanic), outputStr)
-		}
-		return success
+		return testPanic(expectedPanic, outputStr, err != nil)
 	}
 
-	// Normal output test - should not have errors
-	if err != nil {
-		fmt.Println(outputStr)
-		expected := strings.TrimRight(expectedOutput, "\n")
-		actual := strings.TrimRight(outputStr, "\n")
-		printResult(dirName, fileName, false, expected, actual)
-		return false
-	}
+	expected := trimNewline(expectedOutput)
+	actual := trimNewline(outputStr)
+	success := err == nil && actual == expected
 
-	actual := strings.TrimRight(outputStr, "\n")
-	expected := strings.TrimRight(expectedOutput, "\n")
-
-	success := actual == expected
-	printResult(dirName, fileName, success, expected, actual)
-	return success
-}
-
-//
-// ───────────────────────── Output ─────────────────────────
-//
-
-func printResult(dirName, fileName string, success bool, expected, actual string) {
-	filePath := fileName
-	if dirName != "." {
-		filePath = dirName + "/" + fileName
-	}
-
-	if success {
-		fmt.Printf("%s✓ %s%s\n", colorGreen, filePath, colorReset)
-	} else {
-		fmt.Printf("%s✗ %s%s\n", colorRed, filePath, colorReset)
-		if expected != "" || actual != "" {
-			fmt.Printf("  %sExpected:%s %s\n", colorYellow, colorReset, expected)
-			fmt.Printf("  %sFound:   %s %s\n", colorYellow, colorReset, actual)
-		}
+	return testResult{
+		success:  success,
+		expected: expected,
+		actual:   actual,
 	}
 }
 
-//
-// ───────────────────────── Summary ─────────────────────────
-//
-
-func printFinalSummary(total, passed, failed int, failedTests []failedTest) {
-	fmt.Println()
-	percentage := float64(passed) / float64(total) * 100
-	boxWidth := 38
-
-	fmt.Printf("%s╔%s╗%s\n", colorCyan, strings.Repeat("═", boxWidth), colorReset)
-
-	title := "Test Summary"
-	pad := (boxWidth - len(title)) / 2
-	fmt.Printf(
-		"%s║%s%s%s%s%s║%s\n",
-		colorCyan,
-		strings.Repeat(" ", pad),
-		colorBold, title, colorReset,
-		strings.Repeat(" ", boxWidth-pad-len(title)),
-		colorReset,
-	)
-
-	fmt.Printf("%s╠%s╣%s\n", colorCyan, strings.Repeat("═", boxWidth), colorReset)
-	fmt.Printf("%s║ %s%-36s %s║%s\n", colorCyan, colorBlue, fmt.Sprintf("Total: %d", total), colorCyan, colorReset)
-	fmt.Printf("%s║ %s%-36s %s║%s\n", colorCyan, colorGreen, fmt.Sprintf("Passed: %d", passed), colorCyan, colorReset)
-
-	fc := colorGreen
-	if failed > 0 {
-		fc = colorRed
+func testPanic(expectedPanic, outputStr string, hasError bool) testResult {
+	if !hasError {
+		return newTestResult(false, fmt.Sprintf("panic: %s", expectedPanic), "no error")
 	}
-	fmt.Printf("%s║ %s%-36s %s║%s\n", colorCyan, fc, fmt.Sprintf("Failed: %d", failed), colorCyan, colorReset)
+	success := strings.Contains(outputStr, expectedPanic)
+	return testResult{
+		success:  success,
+		expected: fmt.Sprintf("panic: %s", expectedPanic),
+		actual:   outputStr,
+	}
+}
 
-	rc := colorGreen
-	if percentage < 90 {
-		rc = colorYellow
+func newTestResult(success bool, expected, actual string) testResult {
+	return testResult{
+		success:  success,
+		expected: expected,
+		actual:   actual,
 	}
-	if percentage < 70 {
-		rc = colorRed
-	}
-	fmt.Printf("%s║ %s%-36s %s║%s\n", colorCyan, rc, fmt.Sprintf("Success Rate: %.1f%%", percentage), colorCyan, colorReset)
+}
+
+func trimNewline(s string) string {
+	return strings.TrimRight(s, "\n")
+}
+
+func printFinalSummary(total, passed int, failedTests []failedTest) {
+	fmt.Printf("%d RUN\n", total)
+	fmt.Printf("%d %sPASSED%s\n", passed, colorGreen, colorReset)
 
 	if len(failedTests) > 0 {
-		fmt.Printf("%s╠%s╣%s\n", colorCyan, strings.Repeat("═", boxWidth), colorReset)
-		fmt.Printf("%s║ Failed Tests%*s║%s\n", colorCyan, boxWidth-12, "", colorReset)
-
+		fmt.Println("FAILED Tests")
 		for _, ft := range failedTests {
-			path := fmt.Sprintf("%s/%s/%s", ft.subset, ft.dirName, ft.fileName)
-			if ft.dirName == "." {
-				path = fmt.Sprintf("%s/%s", ft.subset, ft.fileName)
-			}
-			pad := boxWidth - 3 - len(path)
-			if pad < 0 {
-				pad = 0
-			}
-			fmt.Printf(
-				"%s║ %s• %s%s%s║%s\n",
-				colorCyan, colorRed, path, strings.Repeat(" ", pad), colorCyan, colorReset,
-			)
+			path := buildFailedTestPath(ft)
+			fmt.Println(path)
 		}
 	}
-
-	fmt.Printf("%s╚%s╝%s\n", colorCyan, strings.Repeat("═", boxWidth), colorReset)
 }
 
-//
-// ───────────────────────── Helpers ─────────────────────────
-//
+func formatSubsetNumber(subset string) string {
+	subsetNum := strings.TrimPrefix(subset, "subset")
+	if len(subsetNum) == 1 {
+		subsetNum = "0" + subsetNum
+	}
+	return subsetNum
+}
+
+func buildFilePath(relPath string) string {
+	if filepath.Dir(relPath) == "." {
+		return filepath.Base(relPath)
+	}
+	return relPath
+}
+
+func buildFailedTestPath(ft failedTest) string {
+	if ft.dirName == "." {
+		return fmt.Sprintf("%s/%s", ft.subset, ft.fileName)
+	}
+	return fmt.Sprintf("%s/%s/%s", ft.subset, ft.dirName, ft.fileName)
+}
+
+func printTestFailure(filePath string, result testResult) {
+	fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
+	if result.expected == "" && result.actual == "" {
+		return
+	}
+	fmt.Printf("\t\texpected:\n")
+	printIndentedLines(result.expected, "\t\t\t")
+	fmt.Printf("\t\tfound:\n")
+	printIndentedLines(result.actual, "\t\t\t")
+}
+
+func printIndentedLines(text, indent string) {
+	if text == "" {
+		fmt.Printf("%s(empty)\n", indent)
+		return
+	}
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		fmt.Printf("%s%s\n", indent, line)
+	}
+}
 
 func findBalFiles(dir string) []string {
 	var files []string
 	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() {
+		if err == nil && !info.IsDir() && filepath.Ext(path) == ".bal" {
 			files = append(files, path)
 		}
 		return nil
@@ -292,7 +260,7 @@ func readExpectedOutput(balFile string) (string, error) {
 	}
 
 	matches := outputRegex.FindAllStringSubmatch(string(content), -1)
-	var outputs []string
+	outputs := make([]string, 0, len(matches))
 	for _, m := range matches {
 		if len(m) > 1 {
 			outputs = append(outputs, strings.TrimSpace(m[1]))
