@@ -20,6 +20,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"fmt"
 )
 
 func extractBinaryOpIndices(binaryOp *bir.BinaryOp) (rhsOp1, rhsOp2, lhsOp int) {
@@ -33,4 +34,19 @@ func extractUnaryOpIndices(unaryOp *bir.UnaryOp) (rhsOp, lhsOp int) {
 	rhsOp = unaryOp.RhsOp.Index
 	lhsOp = unaryOp.LhsOp.Index
 	return
+}
+
+// getBinaryOperands extracts indices and retrieves operand values from the frame.
+func getBinaryOperands(binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 any, lhsOp int) {
+	rhsOp1 := binaryOp.RhsOp1.Index
+	rhsOp2 := binaryOp.RhsOp2.Index
+	lhsOp = binaryOp.LhsOp.Index
+	return frame.GetOperand(rhsOp1), frame.GetOperand(rhsOp2), lhsOp
+}
+
+// validateShiftAmount validates that a shift amount is within valid range (0-63).
+func validateShiftAmount(amount int64) {
+	if amount < 0 || amount >= 64 {
+		panic(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount))
+	}
 }

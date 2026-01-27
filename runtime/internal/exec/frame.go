@@ -20,4 +20,19 @@ package exec
 
 type Frame struct {
 	locals []any // variable index → value (indexed by BIROperand.Index)
+	// TODO: When globals are implemented, negative indices will refer to globals
+	// and positive indices will refer to locals. The package will have its own
+	// array for globals, initialized with the init function.
+}
+
+// GetOperand retrieves the value of an operand by its index.
+// TODO: When globals are implemented, check if index < 0 and access globals array.
+func (f *Frame) GetOperand(index int) any {
+	return f.locals[index]
+}
+
+// SetOperand sets the value of an operand by its index.
+// TODO: When globals are implemented, check if index < 0 and set in globals array.
+func (f *Frame) SetOperand(index int, value any) {
+	f.locals[index] = value
 }

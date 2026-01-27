@@ -26,7 +26,7 @@ import (
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	opIndex := branchTerm.Op.Index
-	value := frame.locals[opIndex]
+	value := frame.GetOperand(opIndex)
 	cond, ok := value.(bool)
 	if !ok {
 		panic(fmt.Sprintf("invalid branch condition type at index %d: %T (expected bool)", opIndex, value))
@@ -41,33 +41,32 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry) *bir.BIRB
 	funcName := callInfo.Name.Value()
 	values := make([]any, len(callInfo.Args))
 	for i, op := range callInfo.Args {
-		values[i] = frame.locals[op.Index]
+		values[i] = frame.GetOperand(op.Index)
 	}
 	orgName := callInfo.CalleePkg.OrgName.Value()
 	pkgName := callInfo.CalleePkg.PkgName.Value()
 	moduleKey := orgName + "/" + pkgName
 	qualifiedName := moduleKey + ":" + funcName
 
+	var result any
 	fn := reg.GetBIRFunction(qualifiedName)
 	if fn != nil {
-		result := executeFunction(*fn, values, reg)
-		if callInfo.LhsOp != nil {
-			frame.locals[callInfo.LhsOp.Index] = result
+		result = executeFunction(*fn, values, reg)
+	} else {
+		externFn := reg.GetNativeFunction(qualifiedName)
+		if externFn != nil {
+			var err error
+			result, err = externFn.Impl(values)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			panic("function not found: " + funcName)
 		}
-		return callInfo.ThenBB
 	}
 
-	externFn := reg.GetNativeFunction(qualifiedName)
-	if externFn != nil {
-		result, err := externFn.Impl(values)
-		if err != nil {
-			panic(err)
-		}
-		if callInfo.LhsOp != nil {
-			frame.locals[callInfo.LhsOp.Index] = result
-		}
-		return callInfo.ThenBB
+	if callInfo.LhsOp != nil {
+		frame.SetOperand(callInfo.LhsOp.Index, result)
 	}
-
-	panic("function not found: " + funcName)
+	return callInfo.ThenBB
 }

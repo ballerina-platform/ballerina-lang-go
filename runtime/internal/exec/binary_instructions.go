@@ -25,9 +25,7 @@ import (
 )
 
 func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 
 	switch v1 := op1.(type) {
 	case int64:
@@ -40,19 +38,19 @@ func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame) {
 			if v1 < 0 && v2 < 0 && v1 < math.MinInt64-v2 {
 				panic("arithmetic overflow")
 			}
-			frame.locals[lhsOp] = v1 + v2
+			frame.SetOperand(lhsOp, v1+v2)
 			return
 		}
 	case float64:
 		switch v2 := op2.(type) {
 		case float64:
-			frame.locals[lhsOp] = v1 + v2
+			frame.SetOperand(lhsOp, v1+v2)
 			return
 		}
 	case string:
 		switch v2 := op2.(type) {
 		case string:
-			frame.locals[lhsOp] = v1 + v2
+			frame.SetOperand(lhsOp, v1+v2)
 			return
 		}
 	}
@@ -76,9 +74,7 @@ func execBinaryOpMul(binaryOp *bir.BinaryOp, frame *Frame) {
 }
 
 func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case int64:
 		switch v2 := op2.(type) {
@@ -90,7 +86,7 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
 			if v1 == math.MinInt64 && v2 == -1 {
 				panic("arithmetic overflow")
 			}
-			frame.locals[lhsOp] = v1 / v2
+			frame.SetOperand(lhsOp, v1/v2)
 			return
 		}
 	case float64:
@@ -99,7 +95,7 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
 			if v2 == 0 {
 				panic("divide by zero")
 			}
-			frame.locals[lhsOp] = v1 / v2
+			frame.SetOperand(lhsOp, v1/v2)
 			return
 		}
 	}
@@ -107,10 +103,7 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
 }
 
 func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case int64:
 		switch v2 := op2.(type) {
@@ -118,7 +111,7 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame) {
 			if v2 == 0 {
 				panic("divide by zero")
 			}
-			frame.locals[lhsOp] = v1 % v2
+			frame.SetOperand(lhsOp, v1%v2)
 			return
 		}
 	case float64:
@@ -127,7 +120,7 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame) {
 			if v2 == 0 {
 				panic("divide by zero")
 			}
-			frame.locals[lhsOp] = math.Mod(v1, v2)
+			frame.SetOperand(lhsOp, math.Mod(v1, v2))
 			return
 		}
 	}
@@ -135,84 +128,78 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame) {
 }
 
 func execBinaryOpEqual(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case nil:
-		frame.locals[lhsOp] = op2 == nil
+		frame.SetOperand(lhsOp, op2 == nil)
 	case int64:
 		switch v2 := op2.(type) {
 		case int64:
-			frame.locals[lhsOp] = v1 == v2
+			frame.SetOperand(lhsOp, v1 == v2)
 		default:
-			frame.locals[lhsOp] = false
+			frame.SetOperand(lhsOp, false)
 		}
 	case float64:
 		switch v2 := op2.(type) {
 		case float64:
-			frame.locals[lhsOp] = v1 == v2
+			frame.SetOperand(lhsOp, v1 == v2)
 		default:
-			frame.locals[lhsOp] = false
+			frame.SetOperand(lhsOp, false)
 		}
 	case string:
 		switch v2 := op2.(type) {
 		case string:
-			frame.locals[lhsOp] = v1 == v2
+			frame.SetOperand(lhsOp, v1 == v2)
 		default:
-			frame.locals[lhsOp] = false
+			frame.SetOperand(lhsOp, false)
 		}
 	case bool:
 		switch v2 := op2.(type) {
 		case bool:
-			frame.locals[lhsOp] = v1 == v2
+			frame.SetOperand(lhsOp, v1 == v2)
 		default:
-			frame.locals[lhsOp] = false
+			frame.SetOperand(lhsOp, false)
 		}
 	default:
-		frame.locals[lhsOp] = false
+		frame.SetOperand(lhsOp, false)
 	}
 }
 
 func execBinaryOpNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case nil:
-		frame.locals[lhsOp] = op2 != nil
+		frame.SetOperand(lhsOp, op2 != nil)
 	case int64:
 		switch v2 := op2.(type) {
 		case int64:
-			frame.locals[lhsOp] = v1 != v2
+			frame.SetOperand(lhsOp, v1 != v2)
 		default:
-			frame.locals[lhsOp] = true
+			frame.SetOperand(lhsOp, true)
 		}
 	case float64:
 		switch v2 := op2.(type) {
 		case float64:
-			frame.locals[lhsOp] = v1 != v2
+			frame.SetOperand(lhsOp, v1 != v2)
 		default:
-			frame.locals[lhsOp] = true
+			frame.SetOperand(lhsOp, true)
 		}
 	case string:
 		switch v2 := op2.(type) {
 		case string:
-			frame.locals[lhsOp] = v1 != v2
+			frame.SetOperand(lhsOp, v1 != v2)
 		default:
-			frame.locals[lhsOp] = true
+			frame.SetOperand(lhsOp, true)
 		}
 	case bool:
 		switch v2 := op2.(type) {
 		case bool:
-			frame.locals[lhsOp] = v1 != v2
+			frame.SetOperand(lhsOp, v1 != v2)
 		default:
-			frame.locals[lhsOp] = true
+			frame.SetOperand(lhsOp, true)
 		}
 	default:
-		frame.locals[lhsOp] = true
+		frame.SetOperand(lhsOp, true)
 	}
 }
 
@@ -249,167 +236,111 @@ func execBinaryOpLTE(binaryOp *bir.BinaryOp, frame *Frame) {
 }
 
 func execBinaryOpAnd(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-	b1 := op1.(bool)
-	b2 := op2.(bool)
-	frame.locals[lhsOp] = b1 && b2
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	frame.SetOperand(lhsOp, op1.(bool) && op2.(bool))
 }
 
 func execBinaryOpOr(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-	b1 := op1.(bool)
-	b2 := op2.(bool)
-	frame.locals[lhsOp] = b1 || b2
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	frame.SetOperand(lhsOp, op1.(bool) || op2.(bool))
 }
 
 func execBinaryOpRefEqual(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-	frame.locals[lhsOp] = (op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2)
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	frame.SetOperand(lhsOp, (op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2))
 }
 
 func execBinaryOpRefNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-	frame.locals[lhsOp] = !((op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2))
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	frame.SetOperand(lhsOp, !((op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2)))
 }
 
 func execUnaryOpNot(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
-	op := frame.locals[rhsOp]
-	frame.locals[lhsOp] = !op.(bool)
+	op := frame.GetOperand(rhsOp)
+	frame.SetOperand(lhsOp, !op.(bool))
 }
 
 func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
-	op := frame.locals[rhsOp]
+	op := frame.GetOperand(rhsOp)
 	switch v := op.(type) {
 	case int64:
-		frame.locals[lhsOp] = -v
+		frame.SetOperand(lhsOp, -v)
 	case float64:
-		frame.locals[lhsOp] = -v
+		frame.SetOperand(lhsOp, -v)
 	default:
 		panic(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op))
 	}
 }
 
 func execBinaryOpBitwiseAnd(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			frame.locals[lhsOp] = v1 & v2
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T & %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T & %T (expected int64)", op1, op2))
+	frame.SetOperand(lhsOp, v1&v2)
 }
 
 func execBinaryOpBitwiseOr(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			frame.locals[lhsOp] = v1 | v2
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T | %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T | %T (expected int64)", op1, op2))
+	frame.SetOperand(lhsOp, v1|v2)
 }
 
 func execBinaryOpBitwiseXor(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			frame.locals[lhsOp] = v1 ^ v2
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T ^ %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T ^ %T (expected int64)", op1, op2))
+	frame.SetOperand(lhsOp, v1^v2)
 }
 
 func execBinaryOpBitwiseLeftShift(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			if v2 < 0 || v2 >= 64 {
-				panic(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", v2))
-			}
-			frame.locals[lhsOp] = v1 << uint(v2)
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T << %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T << %T (expected int64)", op1, op2))
+	validateShiftAmount(v2)
+	frame.SetOperand(lhsOp, v1<<uint(v2))
 }
 
 func execBinaryOpBitwiseRightShift(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			if v2 < 0 || v2 >= 64 {
-				panic(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", v2))
-			}
-			frame.locals[lhsOp] = v1 >> uint(v2)
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T >> %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T >> %T (expected int64)", op1, op2))
+	validateShiftAmount(v2)
+	frame.SetOperand(lhsOp, v1>>uint(v2))
 }
 
 func execBinaryOpBitwiseUnsignedRightShift(binaryOp *bir.BinaryOp, frame *Frame) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
-
-	switch v1 := op1.(type) {
-	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			if v2 < 0 || v2 >= 64 {
-				panic(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", v2))
-			}
-			frame.locals[lhsOp] = int64(uint64(v1) >> uint(v2))
-			return
-		}
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	v1, ok1 := op1.(int64)
+	v2, ok2 := op2.(int64)
+	if !ok1 || !ok2 {
+		panic(fmt.Sprintf("unsupported type combination: %T >>> %T (expected int64)", op1, op2))
 	}
-	panic(fmt.Sprintf("unsupported type combination: %T >>> %T (expected int64)", op1, op2))
+	validateShiftAmount(v2)
+	frame.SetOperand(lhsOp, int64(uint64(v1)>>uint(v2)))
 }
 
 func execBinaryOpArithmetic(binaryOp *bir.BinaryOp, frame *Frame, opName string,
 	intOp func(a, b int64) int64, floatOp func(a, b float64) float64,
 	checkZero bool) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 
 	switch v1 := op1.(type) {
 	case int64:
@@ -418,7 +349,7 @@ func execBinaryOpArithmetic(binaryOp *bir.BinaryOp, frame *Frame, opName string,
 			if checkZero && v2 == 0 {
 				panic("divide by zero")
 			}
-			frame.locals[lhsOp] = intOp(v1, v2)
+			frame.SetOperand(lhsOp, intOp(v1, v2))
 			return
 		}
 	case float64:
@@ -427,7 +358,7 @@ func execBinaryOpArithmetic(binaryOp *bir.BinaryOp, frame *Frame, opName string,
 			if checkZero && v2 == 0 {
 				panic("divide by zero")
 			}
-			frame.locals[lhsOp] = floatOp(v1, v2)
+			frame.SetOperand(lhsOp, floatOp(v1, v2))
 			return
 		}
 	}
@@ -437,36 +368,34 @@ func execBinaryOpArithmetic(binaryOp *bir.BinaryOp, frame *Frame, opName string,
 func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
 	boolCmp func(a, b bool) bool) {
-	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
-	op1 := frame.locals[rhsOp1]
-	op2 := frame.locals[rhsOp2]
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 
 	switch v1 := op1.(type) {
 	case nil:
 		switch op2.(type) {
 		case nil:
-			frame.locals[lhsOp] = boolCmp(false, false)
+			frame.SetOperand(lhsOp, boolCmp(false, false))
 		default:
 			panic(fmt.Sprintf("cannot compare nil with non-nil value: op1=nil, op2=%v", op2))
 		}
 	case int64:
 		switch v2 := op2.(type) {
 		case int64:
-			frame.locals[lhsOp] = intCmp(v1, v2)
+			frame.SetOperand(lhsOp, intCmp(v1, v2))
 		default:
 			panic(fmt.Sprintf("type mismatch: int64 vs %T", op2))
 		}
 	case float64:
 		switch v2 := op2.(type) {
 		case float64:
-			frame.locals[lhsOp] = floatCmp(v1, v2)
+			frame.SetOperand(lhsOp, floatCmp(v1, v2))
 		default:
 			panic(fmt.Sprintf("type mismatch: float64 vs %T", op2))
 		}
 	case bool:
 		switch v2 := op2.(type) {
 		case bool:
-			frame.locals[lhsOp] = boolCmp(v1, v2)
+			frame.SetOperand(lhsOp, boolCmp(v1, v2))
 		default:
 			panic(fmt.Sprintf("type mismatch: bool vs %T", op2))
 		}

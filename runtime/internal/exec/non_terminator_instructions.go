@@ -23,11 +23,11 @@ import (
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
-	frame.locals[constantLoad.LhsOp.Index] = constantLoad.Value
+	frame.SetOperand(constantLoad.LhsOp.Index, constantLoad.Value)
 }
 
 func execMove(moveIns *bir.Move, frame *Frame) {
-	frame.locals[moveIns.LhsOp.Index] = frame.locals[moveIns.RhsOp.Index]
+	frame.SetOperand(moveIns.LhsOp.Index, frame.GetOperand(moveIns.RhsOp.Index))
 }
 
 func execTypeCast(typeCast bir.BIRNonTerminator, frame *Frame) {
@@ -36,14 +36,14 @@ func execTypeCast(typeCast bir.BIRNonTerminator, frame *Frame) {
 
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	if newArray.SizeOp == nil {
-		frame.locals[newArray.LhsOp.Index] = []any(nil)
+		frame.SetOperand(newArray.LhsOp.Index, []any(nil))
 		return
 	}
-	size := frame.locals[newArray.SizeOp.Index].(int64)
+	size := frame.GetOperand(newArray.SizeOp.Index).(int64)
 	limit := int(size)
 	if limit < 0 {
 		limit = 0
 	}
 	arr := make([]any, limit)
-	frame.locals[newArray.LhsOp.Index] = arr
+	frame.SetOperand(newArray.LhsOp.Index, arr)
 }
