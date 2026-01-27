@@ -1481,7 +1481,7 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
-		if isDeclaredWithVar {
+		if !isDeclaredWithVar {
 			variable.SetTypeNode(n.createTypeNode(typeDesc))
 		}
 

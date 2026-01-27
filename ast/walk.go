@@ -322,7 +322,7 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.OnFailClause)
 
 	case *BLangSimpleVariableDef:
-		Walk(v, &node.Var)
+		Walk(v, node.Var)
 
 	case *BLangReturn:
 		if node.Expr != nil {
