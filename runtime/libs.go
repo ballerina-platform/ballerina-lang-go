@@ -18,25 +18,7 @@
 
 package runtime
 
+// Import all standard libraries to trigger their init() functions.
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/api"
-	"ballerina-lang-go/runtime/internal/exec"
-	"fmt"
-	"os"
+	_ "ballerina-lang-go/stdlibs/io"
 )
-
-// Interpret interprets a BIR package and returns the runtime instance and any error.
-// When the runtime is not needed, the first return value can be ignored.
-func Interpret(pkg bir.BIRPackage) (*api.Runtime, error) {
-	rt := api.NewRuntime()
-	var err error
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "panic: %v\n", r)
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
-	exec.Interpret(pkg, rt)
-	return rt, err
-}
