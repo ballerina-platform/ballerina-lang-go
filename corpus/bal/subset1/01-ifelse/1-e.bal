@@ -1,4 +1,3 @@
-// @disabled
 // @productions if-else-stmt return-stmt function-call-expr int-literal
 import ballerina/io;
 

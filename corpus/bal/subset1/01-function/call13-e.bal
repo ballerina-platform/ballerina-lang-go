@@ -1,4 +1,3 @@
-// @disabled
 // @productions return-stmt local-var-decl-stmt int-literal
 public function main() {
     int x = 1;

@@ -37,18 +37,26 @@ import (
 	"testing"
 )
 
-// ANSI color codes
 const (
+	// ANSI color codes
 	colorReset = "\033[0m"
 	colorGreen = "\033[32m"
 	colorRed   = "\033[31m"
+
+	corpusBalBaseDir = "../corpus/bal"
 )
 
 var (
 	outputRegex      = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex       = regexp.MustCompile(`//\s*@panic\s+(.+)`)
-	disabledRegex    = regexp.MustCompile(`//\s*@disabled`)
 	supportedSubsets = []string{"subset1"}
+	// skipTestsMap contains file paths (relative to corpus/bal/subset1) that should be skipped
+	skipTestsMap = makeSkipTestsMap([]string{
+		"01-function/assign8-v.bal",
+		"01-function/assign9-v.bal",
+		"01-function/call08-v.bal",
+		"01-nil/rel-v.bal",
+	})
 )
 
 type failedTest struct {
@@ -64,8 +72,7 @@ type testResult struct {
 }
 
 func TestIntegrationSuite(t *testing.T) {
-	corpusBalBaseDir := "../corpus/bal"
-	var passedTotal, failedTotal int
+	var passedTotal, failedTotal, skippedTotal int
 	var failedTests []failedTest
 
 	for _, subset := range supportedSubsets {
@@ -81,7 +88,11 @@ func TestIntegrationSuite(t *testing.T) {
 		balFiles := findBalFiles(corpusBalDir)
 
 		for _, balFile := range balFiles {
-			if isFileSkipped(balFile) {
+			skipped, reason := isFileSkipped(balFile)
+			if skipped {
+				if reason == skipReasonSkipList {
+					skippedTotal++
+				}
 				continue
 			}
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
@@ -104,7 +115,8 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 
 	total := passedTotal + failedTotal
-	printFinalSummary(total, passedTotal, failedTests)
+	passedCount := total - skippedTotal
+	printFinalSummary(total, passedCount, skippedTotal, failedTests)
 	if failedTotal > 0 {
 		t.Fail()
 	}
@@ -280,8 +292,11 @@ func extractPanicFromOutput(outputStr, expectedPanic string) string {
 	return panicMsg
 }
 
-func printFinalSummary(total, passed int, failedTests []failedTest) {
+func printFinalSummary(total, passed, skipped int, failedTests []failedTest) {
 	fmt.Printf("%d RUN\n", total)
+	if skipped > 0 {
+		fmt.Printf("%d SKIPPED\n", skipped)
+	}
 	fmt.Printf("%d %sPASSED%s\n", passed, colorGreen, colorReset)
 	if len(failedTests) > 0 {
 		fmt.Println("FAILED Tests")
@@ -347,15 +362,45 @@ func findBalFiles(dir string) []string {
 	return files
 }
 
-func isFileSkipped(filePath string) bool {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return false
+type skipReason int
+
+const (
+	skipReasonErrorFile skipReason = iota // -e.bal files
+	skipReasonSkipList                    // files in skipTestsMap
+)
+
+func isFileSkipped(filePath string) (bool, skipReason) {
+	// Skip files ending with -e.bal (error test files)
+	fileName := filepath.Base(filePath)
+	if strings.HasSuffix(fileName, "-e.bal") {
+		return true, skipReasonErrorFile
 	}
-	return disabledRegex.Match(content)
+
+	// Check against skip-tests map
+	for _, subset := range supportedSubsets {
+		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
+		if relPath, err := filepath.Rel(corpusBalDir, filePath); err == nil {
+			relPath = filepath.ToSlash(relPath)
+			if skipTestsMap[relPath] {
+				return true, skipReasonSkipList
+			}
+		}
+	}
+
+	return false, 0
 }
 
-// readFileContent reads the content of a file, returning empty string on error
+// makeSkipTestsMap converts a slice of skip paths into a map for O(1) lookup
+func makeSkipTestsMap(paths []string) map[string]bool {
+	m := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		m[filepath.ToSlash(path)] = true
+	}
+	return m
+}
+
+// readFileContent reads the content of a file, returning empty string on error.
+// Errors are ignored as this is used for reading test annotations which are optional.
 func readFileContent(filePath string) string {
 	content, _ := os.ReadFile(filePath)
 	return string(content)
