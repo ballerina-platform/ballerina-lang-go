@@ -95,7 +95,19 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	ty := node.GetBType()
-	resolveBType(t.env, ty.(ast.BType))
+	bType := ty.(ast.BType)
+	resolveBType(t.env, bType)
+	semType := bType.SemType()
+	setSemType(node.GetBType(), semType)
+	setSemType(node.GetDeterminedType(), semType)
+}
+
+func setSemType(node model.TypeNode, ty semtypes.SemType) {
+	if node == nil {
+		return
+	}
+	bType := node.(ast.BType)
+	bType.SetSemType(ty)
 }
 
 // TODO: do we need to track depth (similar to nBallerina)?

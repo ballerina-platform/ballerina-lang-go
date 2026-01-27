@@ -187,7 +187,7 @@ func (this *BLangTypeBase) SemType() semtypes.SemType {
 }
 
 func (this *BLangTypeBase) SetSemType(semtype semtypes.SemType) {
-	if this.semtype != nil {
+	if this.semtype != nil && this.semtype != semtype {
 		panic("semtype already set")
 	}
 	this.semtype = semtype

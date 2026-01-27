@@ -63,7 +63,25 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 	typeResolver := NewIsolatedTypeResolver()
 	typeResolver.ResolveTypes(pkg)
+	validator := &typeResolutionValidator{t: t}
+	ast.Walk(validator, pkg)
 
 	// If we reach here, type resolution completed without panicking
 	t.Logf("Type resolution completed successfully for %s", testCase.InputPath)
+}
+
+type typeResolutionValidator struct {
+	t *testing.T
+}
+
+func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	if ty, ok := node.(ast.BType); ok {
+		if ty.SemType() == nil {
+			v.t.Errorf("type not resolved for %+v", ty)
+		}
+	}
+	return v
 }
