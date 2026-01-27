@@ -98,6 +98,7 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	resolveBType(t.env, ty.(ast.BType))
 }
 
+// TODO: do we need to track depth (similar to nBallerina)?
 func resolveBType(env *symbolEnv, btype ast.BType) {
 	if btype.SemType() != nil {
 		// already resolved
@@ -119,6 +120,25 @@ func resolveBType(env *symbolEnv, btype ast.BType) {
 		default:
 			panic("unexpected")
 		}
+	case *ast.BLangArrayType:
+		defn := ty.Definition
+		var t semtypes.SemType
+		if defn == nil {
+			d := semtypes.NewListDefinition()
+			ty.Definition = &d
+			resolveBType(env, ty.Elemtype.(ast.BType))
+			memberTy := ty.Elemtype.(ast.BType).SemType()
+			if ty.IsOpenArray() {
+				t = d.DefineListTypeWrappedWithEnvSemType(env.typeEnv, memberTy)
+			} else {
+				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
+				t = d.DefineListTypeWrappedWithEnvSemTypesInt(env.typeEnv, []semtypes.SemType{memberTy}, length)
+			}
+		} else {
+			t = defn.GetSemType(env.typeEnv)
+		}
+
+		ty.SetSemType(t)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		panic("not implemented")

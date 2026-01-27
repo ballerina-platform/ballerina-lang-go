@@ -84,6 +84,7 @@ type (
 		Elemtype   model.TypeNode
 		Sizes      []BLangExpression
 		Dimensions int
+		Definition semtypes.Definition
 	}
 	BLangBuiltInRefTypeNode struct {
 		BLangTypeBase
@@ -177,11 +178,18 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 	return expressionNodes
 }
 
+func (this *BLangArrayType) IsOpenArray() bool {
+	return this.Dimensions == 1 && this.Sizes[0].(*BLangLiteral).Value == OPEN_ARRAY_INDICATOR
+}
+
 func (this *BLangTypeBase) SemType() semtypes.SemType {
 	return this.semtype
 }
 
 func (this *BLangTypeBase) SetSemType(semtype semtypes.SemType) {
+	if this.semtype != nil {
+		panic("semtype already set")
+	}
 	this.semtype = semtype
 }
 
@@ -274,7 +282,7 @@ func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	}
 }
 
-func (this *BLangTypeBase) getTypeKind() model.TypeKind {
+func (this *BLangTypeBase) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.bTypeGetTag())
 }
 
