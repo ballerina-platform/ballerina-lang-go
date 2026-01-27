@@ -24,7 +24,7 @@ import (
 	"fmt"
 )
 
-func execBranch(branchTerm *bir.Branch, frame *Frame) bir.BIRBasicBlock {
+func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	opIndex := branchTerm.Op.Index
 	value := frame.locals[opIndex]
 	cond, ok := value.(bool)
@@ -32,12 +32,12 @@ func execBranch(branchTerm *bir.Branch, frame *Frame) bir.BIRBasicBlock {
 		panic(fmt.Sprintf("invalid branch condition type at index %d: %T (expected bool)", opIndex, value))
 	}
 	if cond {
-		return *branchTerm.TrueBB
+		return branchTerm.TrueBB
 	}
-	return *branchTerm.FalseBB
+	return branchTerm.FalseBB
 }
 
-func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) bir.BIRBasicBlock {
+func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) *bir.BIRBasicBlock {
 	funcName := callInfo.Name.Value()
 	values := make([]any, len(callInfo.Args))
 	for i, op := range callInfo.Args {
@@ -54,7 +54,7 @@ func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) bir.BIRBasicBlo
 		if callInfo.LhsOp != nil {
 			frame.locals[callInfo.LhsOp.Index] = result
 		}
-		return *callInfo.ThenBB
+		return callInfo.ThenBB
 	}
 
 	externFn := rt.Registry.GetNativeFunction(qualifiedName)
@@ -66,7 +66,7 @@ func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) bir.BIRBasicBlo
 		if callInfo.LhsOp != nil {
 			frame.locals[callInfo.LhsOp.Index] = result
 		}
-		return *callInfo.ThenBB
+		return callInfo.ThenBB
 	}
 
 	panic("function not found: " + funcName)

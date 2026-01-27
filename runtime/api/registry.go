@@ -26,15 +26,12 @@ type ModuleInitializer func(*Runtime)
 
 var moduleInitializers []ModuleInitializer
 
-// RegisterModuleInitializer registers a function that will be called to initialize
-// a native module when a new Runtime is created. This should be called from
-// a module's init() function.
-func RegisterModuleInitializer(init ModuleInitializer) {
-	moduleInitializers = append(moduleInitializers, init)
-}
-
 type Runtime struct {
 	Registry *modules.Registry
+}
+
+func RegisterModuleInitializer(init ModuleInitializer) {
+	moduleInitializers = append(moduleInitializers, init)
 }
 
 func NewRuntime() *Runtime {

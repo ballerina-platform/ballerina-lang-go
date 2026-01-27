@@ -40,8 +40,8 @@ func execTypeCast(typeCast bir.BIRNonTerminator, frame *Frame) {
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	// Get result variable and array size from frame
 	if newArray.SizeOp == nil {
-		// Create empty array if no size specified
-		frame.locals[newArray.LhsOp.Index] = make([]any, 0)
+		// Use nil slice when no size is specified so that it behaves like an empty array
+		frame.locals[newArray.LhsOp.Index] = []any(nil)
 		return
 	}
 	size := frame.locals[newArray.SizeOp.Index].(int64)
