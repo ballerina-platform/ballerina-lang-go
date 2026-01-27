@@ -20,37 +20,31 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/test_util"
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-var supportedSubsets = []string{"subset1"}
-
 func TestASTGeneration(t *testing.T) {
 	flag.Parse()
-	balFiles := getCorpusFiles(t)
-	for _, balFile := range balFiles {
-		t.Run(balFile, func(t *testing.T) {
+
+	testPairs := test_util.GetValidTests(t, test_util.AST)
+
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
-			testASTGeneration(t, balFile)
+			testASTGeneration(t, testPair)
 		})
 	}
 }
 
-func testASTGeneration(t *testing.T, balFile string) {
-	if !strings.HasSuffix(balFile, "-v.bal") {
-		t.Skipf("Skipping %s", balFile)
-		return
-	}
+func testASTGeneration(t *testing.T, testCase test_util.TestCase) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("panic while testing AST generation for %s: %v", balFile, r)
+			t.Errorf("panic while testing AST generation for %s: %v", testCase.InputPath, r)
 		}
 	}()
 
@@ -58,132 +52,43 @@ func testASTGeneration(t *testing.T, balFile string) {
 		Channel: make(chan string),
 	}
 	cx := context.NewCompilerContext()
-	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, balFile)
+	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", balFile, err)
+		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
 	}
 	compilationUnit := GetCompilationUnit(cx, syntaxTree)
 	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", balFile)
+		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
 	}
 	prettyPrinter := PrettyPrinter{}
 	actualAST := prettyPrinter.Print(compilationUnit)
 
-	// Generate expected file path
-	// Replace .bal with .txt and change directory from corpus/bal to corpus/ast
-	expectedASTPath := expectedASTPath(balFile)
-
-	// If update flag is set, check if update is needed and update if necessary
+	// If update flag is set, update expected file
 	if *update {
-		if !updateIfNeeded(t, expectedASTPath, actualAST) {
-			return
+		if test_util.UpdateIfNeeded(t, testCase.ExpectedPath, actualAST) {
+			t.Errorf("updated expected AST file: %s", testCase.ExpectedPath)
 		}
-		t.Errorf("updated expected AST file: %s", expectedASTPath)
 		return
 	}
 
 	// Read expected AST file
-	expectedAST, readErr := readExpectedAST(expectedASTPath)
-	if readErr != nil {
-		t.Errorf("error reading expected AST file: %v", readErr)
-		return
-	}
+	expectedAST := test_util.ReadExpectedFile(t, testCase.ExpectedPath)
 
 	// Compare AST strings exactly
 	if actualAST != expectedAST {
 		diff := getDiff(expectedAST, actualAST)
-		t.Errorf("AST mismatch for %s\nExpected file: %s\n%s", balFile, expectedASTPath, diff)
+		t.Errorf("AST mismatch for %s\nExpected file: %s\n%s", testCase.InputPath, testCase.ExpectedPath, diff)
 		return
 	}
 }
 
 var update = flag.Bool("update", false, "update expected AST files")
 
-func getCorpusDir(t *testing.T) string {
-	corpusBalDir := "../corpus/bal"
-	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-		// Try alternative path (when running from project root)
-		corpusBalDir = "./corpus/bal"
-		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-			t.Skipf("Corpus directory not found (tried ../corpus/bal and ./corpus/bal), skipping test")
-		}
-	}
-	return corpusBalDir
-}
-
-func getCorpusFiles(t *testing.T) []string {
-	corpusBalDir := getCorpusDir(t)
-	// Find all .bal files
-	var balFiles []string
-	for _, subset := range supportedSubsets {
-		dirPath := filepath.Join(corpusBalDir, subset)
-		err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() && strings.HasSuffix(path, ".bal") {
-				balFiles = append(balFiles, path)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("Error walking corpus/bal/%s directory: %v", subset, err)
-		}
-	}
-
-	if len(balFiles) == 0 {
-		t.Fatalf("No .bal files found in %s", corpusBalDir)
-	}
-	return balFiles
-}
-
-// readExpectedAST reads the expected AST file and returns its content.
-// Returns the content and an error. If the file doesn't exist, the error will be os.ErrNotExist.
-func readExpectedAST(filePath string) (string, error) {
-	expectedASTBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", err
-	}
-	return string(expectedASTBytes), nil
-}
-
 // getDiff generates a detailed diff string showing differences between expected and actual AST strings.
 func getDiff(expectedAST, actualAST string) string {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(expectedAST, actualAST, false)
 	return dmp.DiffPrettyText(diffs)
-}
-
-func updateIfNeeded(t *testing.T, expectedASTPath string, actualAST string) bool {
-	// Ensure the directory exists
-	dir := filepath.Dir(expectedASTPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Errorf("error creating directory for expected AST file: %v", err)
-		return true
-	}
-
-	// Check if file exists
-	expectedAST, readErr := readExpectedAST(expectedASTPath)
-	if readErr != nil {
-		// File doesn't exist - create it and fail the test
-		t.Errorf("error reading expected AST file: %v", readErr)
-		return true
-	}
-
-	if actualAST != expectedAST {
-		if err := os.WriteFile(expectedASTPath, []byte(actualAST), 0o644); err != nil {
-			t.Errorf("error writing expected AST file: %v", err)
-			return true
-		}
-		return true
-	}
-	return false
-}
-
-func expectedASTPath(balFile string) string {
-	expectedASTPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
-	expectedASTPath = strings.Replace(expectedASTPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"ast"+string(filepath.Separator), 1)
-	return expectedASTPath
 }
 
 // walkTestVisitor tracks node types visited during Walk traversal
@@ -204,24 +109,21 @@ func (v *walkTestVisitor) Visit(node BLangNode) Visitor {
 
 func TestWalkTraversal(t *testing.T) {
 	flag.Parse()
-	balFiles := getCorpusFiles(t)
-	for _, balFile := range balFiles {
-		t.Run(balFile, func(t *testing.T) {
+
+	testPairs := test_util.GetValidTests(t, test_util.AST)
+
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
-			testWalkTraversal(t, balFile)
+			testWalkTraversal(t, testPair)
 		})
 	}
 }
 
-func testWalkTraversal(t *testing.T, balFile string) {
-	if !strings.HasSuffix(balFile, "-v.bal") {
-		t.Skipf("Skipping %s", balFile)
-		return
-	}
-
+func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Walk panicked for %s: %v", balFile, r)
+			t.Errorf("Walk panicked for %s: %v", testCase.InputPath, r)
 		}
 	}()
 
@@ -229,14 +131,14 @@ func testWalkTraversal(t *testing.T, balFile string) {
 		Channel: make(chan string),
 	}
 	cx := context.NewCompilerContext()
-	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, balFile)
+	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", balFile, err)
+		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
 		return
 	}
 	compilationUnit := GetCompilationUnit(cx, syntaxTree)
 	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", balFile)
+		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
 		return
 	}
 
@@ -244,11 +146,11 @@ func testWalkTraversal(t *testing.T, balFile string) {
 	Walk(visitor, compilationUnit)
 
 	if visitor.nodeCount == 0 {
-		t.Errorf("Walk visited 0 nodes for %s", balFile)
+		t.Errorf("Walk visited 0 nodes for %s", testCase.InputPath)
 	}
 
 	if testing.Verbose() {
-		t.Logf("File: %s, Total nodes: %d", balFile, visitor.nodeCount)
+		t.Logf("File: %s, Total nodes: %d", testCase.InputPath, visitor.nodeCount)
 		for typeName, count := range visitor.visitedTypes {
 			t.Logf("  %s: %d nodes", typeName, count)
 		}
