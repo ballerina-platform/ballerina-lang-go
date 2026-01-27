@@ -21,6 +21,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/test_util"
 	"flag"
 	"os"
@@ -261,7 +262,11 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	// Step 3: Convert to AST package
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 4: Generate BIR package
+	// Step 4: Resolve types
+	typeResolver := semantics.NewTypeResolver()
+	typeResolver.ResolveTypes(pkg)
+
+	// Step 5: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result
