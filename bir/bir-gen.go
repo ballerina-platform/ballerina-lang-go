@@ -30,6 +30,8 @@ import (
 type Context struct {
 	CompilerContext *context.CompilerContext
 	constantMap     map[string]*BIRConstant
+	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
+	packageID       *model.PackageID            // Current package ID
 }
 
 type stmtContext struct {
@@ -94,8 +96,37 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	genCtx := &Context{
 		CompilerContext: ctx,
 		constantMap:     make(map[string]*BIRConstant),
+		importAliasMap:  make(map[string]*model.PackageID),
+		packageID:       ast.PackageID,
 	}
+	// Build import alias map
 	for _, importPkg := range ast.Imports {
+		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
+			// Build package ID from import using CompilerContext for consistency
+			var orgName model.Name
+			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
+				orgName = model.Name(importPkg.OrgName.Value)
+			} else {
+				orgName = model.ANON_ORG
+			}
+			var nameComps []model.Name
+			if len(importPkg.PkgNameComps) > 0 {
+				for _, comp := range importPkg.PkgNameComps {
+					nameComps = append(nameComps, model.Name(comp.Value))
+				}
+			} else {
+				nameComps = []model.Name{model.DEFAULT_PACKAGE}
+			}
+			var version model.Name
+			if importPkg.Version != nil && importPkg.Version.Value != "" {
+				version = model.Name(importPkg.Version.Value)
+			} else {
+				version = model.DEFAULT_VERSION
+			}
+			// Use CompilerContext to create package ID for consistency with interned package IDs
+			pkgID := ctx.NewPackageID(orgName, nameComps, version)
+			genCtx.importAliasMap[importPkg.Alias.Value] = pkgID
+		}
 		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
 	}
 	for _, typeDef := range ast.TypeDefinitions {
@@ -548,6 +579,22 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call.Name = model.Name(expr.GetName().GetValue())
 	call.ThenBB = thenBB
 	call.LhsOp = resultOperand
+
+	// Set CalleePkg from symbol if available
+	if expr.Symbol != nil && expr.Symbol.PkgID != nil {
+		call.CalleePkg = expr.Symbol.PkgID
+	} else if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+		// Qualified call - look up package ID from import alias
+		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
+			call.CalleePkg = pkgID
+		}
+		// If not found in imports, leave CalleePkg as nil (likely native/extern function)
+	} else {
+		// Unqualified call (no PkgAlias) - assume same-module call and use current package
+		if ctx.birCx.packageID != nil {
+			call.CalleePkg = ctx.birCx.packageID
+		}
+	}
 
 	curBB.Terminator = call
 	return expressionEffect{
