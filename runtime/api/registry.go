@@ -18,18 +18,35 @@
 
 package api
 
-import "ballerina-lang-go/runtime/internal/modules"
+import (
+	"ballerina-lang-go/runtime/internal/modules"
+)
 
-type NativeModule struct {
-	Name string
+type ModuleInitializer func(*Runtime)
+
+var moduleInitializers []ModuleInitializer
+
+// RegisterModuleInitializer registers a function that will be called to initialize
+// a native module when a new Runtime is created. This should be called from
+// a module's init() function.
+func RegisterModuleInitializer(init ModuleInitializer) {
+	moduleInitializers = append(moduleInitializers, init)
 }
 
-func RegisterNativeModule(orgName, moduleName string) *NativeModule {
-	// Native modules are backed by Go implementations only.
-	moduleKey := modules.GetRegistry().RegisterNativeModule(orgName, moduleName, modules.NewNativeModule())
-	return &NativeModule{Name: moduleKey}
+type Runtime struct {
+	Registry *modules.Registry
 }
 
-func RegisterExternFunction(module *NativeModule, funcName string, impl func(args []any) (any, error)) {
-	modules.GetRegistry().RegisterExternFunction(module.Name, funcName, impl)
+func NewRuntime() *Runtime {
+	rt := &Runtime{
+		Registry: modules.NewRegistry(),
+	}
+	for _, init := range moduleInitializers {
+		init(rt)
+	}
+	return rt
+}
+
+func RegisterExternFunction(reg *modules.Registry, orgName string, moduleName string, funcName string, impl func(args []any) (any, error)) {
+	reg.RegisterExternFunction(orgName, moduleName, funcName, impl)
 }

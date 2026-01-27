@@ -20,26 +20,12 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/api"
 	"ballerina-lang-go/runtime/internal/modules"
-	"fmt"
-	"os"
 )
 
-func Interpret(pkg bir.BIRPackage) {
-	// Initialize a fresh registry for each interpretation
-	reg := modules.GetRegistry()
-	// Register the package modules
-	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
-	funcs := pkg.Functions
-	// Get the main function and execute it
-	mainFunc := funcs[0]
-	// Catch panics and print them with "panic: <message>" format
-	defer func() {
-		if r := recover(); r != nil {
-			panicMsg := fmt.Sprintf("%v", r)
-			fmt.Fprintf(os.Stderr, "panic: %s\n", panicMsg)
-			os.Exit(1)
-		}
-	}()
-	executeFunction(mainFunc, nil)
+func Interpret(pkg bir.BIRPackage, rt *api.Runtime) {
+	rt.Registry.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
+	mainFunc := pkg.Functions[0]
+	executeFunction(mainFunc, nil, rt)
 }

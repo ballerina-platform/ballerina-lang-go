@@ -20,12 +20,11 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/runtime/api"
 	"fmt"
 )
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) bir.BIRBasicBlock {
-	// Evaluate the branch operand as a boolean and choose the appropriate basic block.
 	opIndex := branchTerm.Op.Index
 	value := frame.locals[opIndex]
 	cond, ok := value.(bool)
@@ -38,39 +37,36 @@ func execBranch(branchTerm *bir.Branch, frame *Frame) bir.BIRBasicBlock {
 	return *branchTerm.FalseBB
 }
 
-func execCall(callInfo *bir.Call, frame *Frame) bir.BIRBasicBlock {
+func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) bir.BIRBasicBlock {
 	funcName := callInfo.Name.Value()
-	args := callInfo.Args
-	// Extract argument values from the frame
-	values := make([]any, len(args))
-	for i, op := range args {
+	values := make([]any, len(callInfo.Args))
+	for i, op := range callInfo.Args {
 		values[i] = frame.locals[op.Index]
 	}
-	reg := modules.GetRegistry()
-	// First, search all BIR modules for the function
-	allBIRModules := reg.GetAllBIRModules()
-	for _, birMod := range allBIRModules {
-		if fn, ok := birMod.Functions[funcName]; ok {
-			result := executeFunction(*fn, values)
-			if callInfo.LhsOp != nil {
-				frame.locals[callInfo.LhsOp.Index] = result
-			}
-			return *callInfo.ThenBB
+	orgName := callInfo.CalleePkg.OrgName.Value()
+	pkgName := callInfo.CalleePkg.PkgName.Value()
+	moduleKey := orgName + "/" + pkgName
+	qualifiedName := moduleKey + ":" + funcName
+
+	fn := rt.Registry.GetBIRFunction(qualifiedName)
+	if fn != nil {
+		result := executeFunction(*fn, values, rt)
+		if callInfo.LhsOp != nil {
+			frame.locals[callInfo.LhsOp.Index] = result
 		}
+		return *callInfo.ThenBB
 	}
-	// If not found in BIR modules, search all native/extern modules
-	allNativeModules := reg.GetAllNativeModules()
-	for _, nativeMod := range allNativeModules {
-		if externFn, ok := nativeMod.ExternFunctions[funcName]; ok {
-			result, err := externFn.Impl(values)
-			if err != nil {
-				panic(err)
-			}
-			if callInfo.LhsOp != nil {
-				frame.locals[callInfo.LhsOp.Index] = result
-			}
-			return *callInfo.ThenBB
+
+	externFn := rt.Registry.GetNativeFunction(qualifiedName)
+	if externFn != nil {
+		result, err := externFn.Impl(values)
+		if err != nil {
+			panic(err)
 		}
+		if callInfo.LhsOp != nil {
+			frame.locals[callInfo.LhsOp.Index] = result
+		}
+		return *callInfo.ThenBB
 	}
 
 	panic("function not found: " + funcName)

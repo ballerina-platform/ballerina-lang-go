@@ -18,7 +18,6 @@
 
 package exec
 
-// Frame represents an execution frame containing local variables.
 type Frame struct {
 	locals []any // variable index → value (indexed by BIROperand.Index)
 }

@@ -20,9 +20,21 @@ package runtime
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/api"
 	"ballerina-lang-go/runtime/internal/exec"
+	_ "ballerina-lang-go/stdlibs/io" // Import to trigger io module's init() registration
+	"fmt"
+	"os"
 )
 
-func Interpret(pkg bir.BIRPackage) {
-	exec.Interpret(pkg)
+func Interpret(pkg bir.BIRPackage) (err error) {
+	rt := api.NewRuntime()
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "panic: %v\n", r)
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	exec.Interpret(pkg, rt)
+	return nil
 }

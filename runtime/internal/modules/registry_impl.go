@@ -19,104 +19,51 @@
 package modules
 
 import (
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
-	"fmt"
 )
 
-// Registry holds all loaded modules
 type Registry struct {
-	// birModules holds BIR-backed modules keyed by a stable string derived from PackageID.
-	birModules map[*model.PackageID]*BIRModule
-	// nativeModules holds Go-native modules keyed by their module name.
-	nativeModules map[string]*NativeModule
+	birFunctions    map[string]*bir.BIRFunction
+	nativeFunctions map[string]*ExternFunction
 }
 
-var globalRegistry *Registry
-
-func init() {
-	// Initialize registry on package load to support native module registration in init() functions
-	InitRegistry()
-}
-
-func GetRegistry() *Registry {
-	return globalRegistry
-}
-
-// InitRegistry initializes a fresh registry
-func InitRegistry() {
-	globalRegistry = &Registry{
-		birModules:    make(map[*model.PackageID]*BIRModule),
-		nativeModules: make(map[string]*NativeModule),
+func NewRegistry() *Registry {
+	return &Registry{
+		birFunctions:    make(map[string]*bir.BIRFunction),
+		nativeFunctions: make(map[string]*ExternFunction),
 	}
 }
 
-// RegisterModule registers a BIR-backed module using its PackageID.
 func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule {
-	if existing, exists := r.birModules[id]; exists {
-		return existing
+	moduleKey := id.OrgName.Value() + "/" + id.PkgName.Value()
+	if m.Pkg != nil && m.Pkg.Functions != nil {
+		for i := range m.Pkg.Functions {
+			fn := &m.Pkg.Functions[i]
+			funcName := fn.Name.Value()
+			qualifiedName := moduleKey + ":" + funcName
+			r.birFunctions[qualifiedName] = fn
+			r.birFunctions[funcName] = fn
+		}
 	}
-	r.birModules[id] = m
 	return m
 }
 
-// RegisterNativeModule registers a Go-native module using orgName and moduleName.
-// The moduleKey is calculated as "orgName/moduleName" internally.
-// Returns the moduleKey that was used to register the module.
-func (r *Registry) RegisterNativeModule(orgName, moduleName string, m *NativeModule) string {
-	moduleKey := orgName + "/" + moduleName
-	if _, exists := r.nativeModules[moduleKey]; exists {
-		return moduleKey
-	}
-	r.nativeModules[moduleKey] = m
-	return moduleKey
-}
-
-// GetBIRModule returns a BIR-backed module for the given PackageID.
-func (r *Registry) GetBIRModule(id *model.PackageID) (*BIRModule, error) {
-	if m, ok := r.birModules[id]; ok {
-		return m, nil
-	}
-	return nil, fmt.Errorf("module not found for given PackageID")
-}
-
-func (r *Registry) RegisterExternFunction(moduleName, funcName string, impl func(args []any) (any, error)) error {
-	// Extern functions are registered only on native (Go) modules.
-	m, ok := r.nativeModules[moduleName]
-	if !ok {
-		return fmt.Errorf("module not found: %s", moduleName)
-	}
-	if m.ExternFunctions == nil {
-		m.ExternFunctions = make(map[string]*ExternFunction)
-	}
-	m.ExternFunctions[funcName] = &ExternFunction{
+func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl func(args []any) (any, error)) {
+	externFn := &ExternFunction{
 		Name: funcName,
 		Impl: impl,
 	}
-	return nil
+	moduleKey := orgName + "/" + moduleName
+	qualifiedName := moduleKey + ":" + funcName
+	r.nativeFunctions[qualifiedName] = externFn
+	r.nativeFunctions[funcName] = externFn
 }
 
-func (r *Registry) GetNativeModuleByPkgID(id *model.PackageID) (*NativeModule, error) {
-	nameKey := id.OrgName.Value() + "/" + id.PkgName.Value()
-	if m, ok := r.nativeModules[nameKey]; ok {
-		return m, nil
-	}
-	return nil, fmt.Errorf("module not found: %s", nameKey)
+func (r *Registry) GetBIRFunction(funcName string) *bir.BIRFunction {
+	return r.birFunctions[funcName]
 }
 
-// GetAllBIRModules returns all registered BIR modules
-func (r *Registry) GetAllBIRModules() []*BIRModule {
-	modules := make([]*BIRModule, 0, len(r.birModules))
-	for _, m := range r.birModules {
-		modules = append(modules, m)
-	}
-	return modules
-}
-
-// GetAllNativeModules returns all registered native modules
-func (r *Registry) GetAllNativeModules() []*NativeModule {
-	modules := make([]*NativeModule, 0, len(r.nativeModules))
-	for _, m := range r.nativeModules {
-		modules = append(modules, m)
-	}
-	return modules
+func (r *Registry) GetNativeFunction(funcName string) *ExternFunction {
+	return r.nativeFunctions[funcName]
 }

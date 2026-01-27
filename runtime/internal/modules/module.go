@@ -27,39 +27,12 @@ type ExternFunction struct {
 	Impl func(args []any) (any, error)
 }
 
-// BIRModule represents a module backed by a BIR package and its functions.
 type BIRModule struct {
-	Pkg       *bir.BIRPackage
-	Functions map[string]*bir.BIRFunction
+	Pkg *bir.BIRPackage
 }
 
-// NativeModule represents a module that only contains native/extern functions.
-type NativeModule struct {
-	ExternFunctions map[string]*ExternFunction
-}
-
-// NewBIRModule creates a BIRModule backed by a BIR package.
 func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
-	functions := make(map[string]*bir.BIRFunction)
-	if pkg != nil && pkg.PackageID != nil {
-		if funcs := pkg.Functions; funcs != nil {
-			for i := range funcs {
-				fn := funcs[i]
-				funcName := fn.Name.Value()
-				birFnPtr := &fn
-				functions[funcName] = birFnPtr
-			}
-		}
-	}
 	return &BIRModule{
-		Pkg:       pkg,
-		Functions: functions,
-	}
-}
-
-// NewNativeModule creates a module used for native (Go) extern functions only.
-func NewNativeModule() *NativeModule {
-	return &NativeModule{
-		ExternFunctions: make(map[string]*ExternFunction),
+		Pkg: pkg,
 	}
 }

@@ -25,7 +25,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
-	_ "ballerina-lang-go/stdlibs/io" // Initialize io module with extern functions
 	"fmt"
 	"os"
 	"strings"
@@ -144,7 +143,9 @@ func main() {
 
 	// Interpret the BIR if it's a .bal file
 	if isBalFile && birPkg != nil {
-		runtime.Interpret(*birPkg)
+		if err := runtime.Interpret(*birPkg); err != nil {
+			os.Exit(1)
+		}
 	}
 	if debugCtx != nil {
 		close(debugCtx.Channel)

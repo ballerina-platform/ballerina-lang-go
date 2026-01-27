@@ -21,11 +21,11 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/runtime/api"
 	"fmt"
 )
 
-func executeFunction(birFunc bir.BIRFunction, args []any) any {
-	// Initialize local variables: index 0 = return var, indices 1+ = params (from args), rest = default values.
+func executeFunction(birFunc bir.BIRFunction, args []any, rt *api.Runtime) any {
 	localVars := &birFunc.LocalVars
 	locals := make([]any, len(*localVars))
 	locals[0] = defaultValueForType((*localVars)[0].Type)
@@ -37,13 +37,10 @@ func executeFunction(birFunc bir.BIRFunction, args []any) any {
 	}
 	frame := &Frame{locals: locals}
 
-	// Execute basic blocks
 	bbs := &birFunc.BasicBlocks
-	bb := (*bbs)[0] // entry block
+	bb := (*bbs)[0]
 	for {
-		instructions := bb.Instructions
-		// execute all non-terminator instructions
-		for _, inst := range instructions {
+		for _, inst := range bb.Instructions {
 			execInstruction(inst, frame)
 		}
 		term := bb.Terminator
@@ -51,7 +48,7 @@ func executeFunction(birFunc bir.BIRFunction, args []any) any {
 			break
 		}
 		// Execute terminator and get the next basic block
-		bb = execTerminator(term, bb, frame)
+		bb = execTerminator(term, bb, frame, rt)
 	}
 	// Return the value of the return variable
 	// Return variable is always at index 0
@@ -221,14 +218,14 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 	}
 }
 
-func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *Frame) bir.BIRBasicBlock {
+func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *Frame, rt *api.Runtime) bir.BIRBasicBlock {
 	switch term.GetKind() {
 	case bir.INSTRUCTION_KIND_GOTO:
 		return *term.(*bir.Goto).ThenBB
 	case bir.INSTRUCTION_KIND_BRANCH:
 		return execBranch(term.(*bir.Branch), frame)
 	case bir.INSTRUCTION_KIND_CALL:
-		return execCall(term.(*bir.Call), frame)
+		return execCall(term.(*bir.Call), frame, rt)
 	case bir.INSTRUCTION_KIND_RETURN:
 		fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_RETURN")
 	case bir.INSTRUCTION_KIND_ASYNC_CALL:
