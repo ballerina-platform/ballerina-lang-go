@@ -35,18 +35,26 @@ import (
 )
 
 const (
-	// ANSI color codes
 	colorReset = "\033[0m"
 	colorGreen = "\033[32m"
 	colorRed   = "\033[31m"
 
 	corpusBalBaseDir = "../corpus/bal"
+
+	externOrgName    = "ballerina"
+	externModuleName = "io"
+	externFuncName   = "println"
+
+	panicPrefix     = "panic: "
+	errorFileSuffix = "-e.bal"
+	subsetPrefix    = "subset"
 )
 
 var (
 	outputRegex      = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex       = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 	supportedSubsets = []string{"subset1"}
+
 	// skipTestsMap contains file paths (relative to corpus/bal/subset1) that should be skipped
 	skipTestsMap = makeSkipTestsMap([]string{
 		"01-function/assign8-v.bal",
@@ -55,7 +63,6 @@ var (
 		"01-nil/rel-v.bal",
 	})
 
-	// printlnOutputs stores captured output of ballerina/io:println for each Bal file.
 	// Key: absolute Bal file path; Value: concatenated println lines.
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -151,6 +158,7 @@ func runTest(balFile string) testResult {
 
 	var panicOccurred bool
 	var panicValue interface{}
+
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -169,30 +177,12 @@ func runTest(balFile string) testResult {
 		pkg := ast.ToPackage(compilationUnit)
 		birPkg := bir.GenBir(cx, pkg)
 
-		// Reset captured println output for this file.
 		printlnMu.Lock()
 		printlnOutputs[balFile] = ""
 		printlnMu.Unlock()
 
 		rt := api.NewRuntime()
-		rt.Registry.RegisterExternFunction("ballerina", "io", "println", func(args []any) (any, error) {
-			// Capture println output into an in-memory buffer keyed by Bal file path
-			// to make assertions easier and avoid relying on os.Stdout in tests.
-			var b strings.Builder
-			for i, arg := range args {
-				if i > 0 {
-					b.WriteByte(' ')
-				}
-				b.WriteString(valueToString(arg))
-			}
-			b.WriteByte('\n')
-
-			printlnMu.Lock()
-			printlnOutputs[balFile] += b.String()
-			printlnMu.Unlock()
-
-			return nil, nil
-		})
+		rt.Registry.RegisterExternFunction(externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
 		interpretErr := rt.Interpret(*birPkg)
 		if interpretErr != nil {
 			panicOccurred = true
@@ -208,27 +198,52 @@ func runTest(balFile string) testResult {
 	// For tests, we only assert on captured ballerina/io:println output.
 	outputStr := printlnStr
 
+	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+}
+
+// capturePrintlnOutput returns a function that captures println output into an in-memory buffer
+// keyed by Bal file path to make assertions easier and avoid relying on os.Stdout in tests.
+func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
+	return func(args []any) (any, error) {
+		var b strings.Builder
+		for i, arg := range args {
+			if i > 0 {
+				b.WriteByte(' ')
+			}
+			b.WriteString(valueToString(arg))
+		}
+		b.WriteByte('\n')
+
+		printlnMu.Lock()
+		printlnOutputs[balFile] += b.String()
+		printlnMu.Unlock()
+
+		return nil, nil
+	}
+}
+
+func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
 	if expectedPanic != "" {
 		if panicOccurred {
 			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
 			success := strings.Contains(panicStr, expectedPanic) || strings.Contains(outputStr, expectedPanic)
 			return testResult{
 				success:  success,
-				expected: fmt.Sprintf("panic: %s", expectedPanic),
-				actual:   fmt.Sprintf("panic: %s", panicStr),
+				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
+				actual:   fmt.Sprintf("%s%s", panicPrefix, panicStr),
 			}
 		}
 		if panicMsg := extractPanicFromOutput(outputStr, expectedPanic); panicMsg != "" {
 			success := strings.Contains(panicMsg, expectedPanic)
 			return testResult{
 				success:  success,
-				expected: fmt.Sprintf("panic: %s", expectedPanic),
-				actual:   fmt.Sprintf("panic: %s", panicMsg),
+				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
+				actual:   fmt.Sprintf("%s%s", panicPrefix, panicMsg),
 			}
 		}
 		return testResult{
 			success:  false,
-			expected: fmt.Sprintf("panic: %s", expectedPanic),
+			expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
 			actual:   "no error detected",
 		}
 	}
@@ -237,7 +252,7 @@ func runTest(balFile string) testResult {
 		return testResult{
 			success:  false,
 			expected: expectedOutput,
-			actual:   fmt.Sprintf("panic: %v", panicValue),
+			actual:   fmt.Sprintf("%s%v", panicPrefix, panicValue),
 		}
 	}
 
@@ -251,12 +266,11 @@ func runTest(balFile string) testResult {
 	}
 }
 
-type stringer interface {
-	String() string
-}
-
-// valueToString converts a Ballerina value into a string
 func valueToString(v any) string {
+	type stringer interface {
+		String() string
+	}
+
 	switch t := v.(type) {
 	case string:
 		return t
@@ -301,21 +315,21 @@ func trimNewline(s string) string {
 }
 
 func extractPanicMessage(panicStr string) string {
-	if strings.HasPrefix(panicStr, "panic: ") {
-		return strings.TrimPrefix(panicStr, "panic: ")
+	if strings.HasPrefix(panicStr, panicPrefix) {
+		return strings.TrimPrefix(panicStr, panicPrefix)
 	}
 	return panicStr
 }
 
 func extractPanicFromOutput(outputStr, expectedPanic string) string {
-	if !strings.Contains(outputStr, "panic: "+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
+	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
 		return ""
 	}
-	panicIdx := strings.Index(outputStr, "panic: ")
+	panicIdx := strings.Index(outputStr, panicPrefix)
 	if panicIdx < 0 {
 		return ""
 	}
-	panicMsg := strings.TrimSpace(outputStr[panicIdx+7:])
+	panicMsg := strings.TrimSpace(outputStr[panicIdx+len(panicPrefix):])
 	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
 		panicMsg = panicMsg[:newlineIdx]
 	}
@@ -338,7 +352,7 @@ func printFinalSummary(total, passed, skipped int, failedTests []failedTest) {
 }
 
 func formatSubsetNumber(subset string) string {
-	subsetNum := strings.TrimPrefix(subset, "subset")
+	subsetNum := strings.TrimPrefix(subset, subsetPrefix)
 	if len(subsetNum) == 1 {
 		subsetNum = "0" + subsetNum
 	}
@@ -393,13 +407,11 @@ func findBalFiles(dir string) []string {
 }
 
 func isFileSkipped(filePath string) (bool, skipReason) {
-	// Skip files ending with -e.bal (error test files)
 	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, "-e.bal") {
+	if strings.HasSuffix(fileName, errorFileSuffix) {
 		return true, skipReasonErrorFile
 	}
 
-	// Check against skip-tests map
 	for _, subset := range supportedSubsets {
 		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
 		if relPath, err := filepath.Rel(corpusBalDir, filePath); err == nil {
