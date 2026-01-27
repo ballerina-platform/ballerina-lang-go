@@ -5,7 +5,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable x))
+        (variable x (type
+          (value-type int))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref x)())))
