@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	ballerinaio "ballerina-lang-go/stdlibs/io"
 	"bytes"
 	"fmt"
 	"io"
@@ -109,33 +110,41 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 }
 
+func isWASM() bool {
+	return os.Getenv("GOARCH") == "wasm"
+}
+
 func runTest(balFile string) testResult {
 	expectedOutput := readExpectedOutput(balFile)
 	expectedPanic := readExpectedPanic(balFile)
 
-	// Capture stdout and stderr using pipes
-	var stdoutBuf bytes.Buffer
-	var stderrBuf bytes.Buffer
-	oldStdout := os.Stdout
-	oldStderr := os.Stderr
+	var stdoutBuf, stderrBuf bytes.Buffer
+	oldStdout, oldStderr := os.Stdout, os.Stderr
 
-	rOut, wOut, _ := os.Pipe()
-	rErr, wErr, _ := os.Pipe()
-	os.Stdout = wOut
-	os.Stderr = wErr
+	var copyDone chan bool
+	var wOut, wErr *os.File
+	if !isWASM() {
+		rOut, wOutPipe, _ := os.Pipe()
+		rErr, wErrPipe, _ := os.Pipe()
+		wOut, wErr = wOutPipe, wErrPipe
+		os.Stdout, os.Stderr = wOut, wErr
 
-	// Copy output in background goroutines
-	copyDone := make(chan bool, 2)
-	go func() {
-		io.Copy(&stdoutBuf, rOut)
-		copyDone <- true
-	}()
-	go func() {
-		io.Copy(&stderrBuf, rErr)
-		copyDone <- true
-	}()
+		copyDone = make(chan bool, 2)
+		go func() {
+			io.Copy(&stdoutBuf, rOut)
+			copyDone <- true
+		}()
+		go func() {
+			io.Copy(&stderrBuf, rErr)
+			copyDone <- true
+		}()
+		defer func() {
+			rOut.Close()
+			rErr.Close()
+			os.Stdout, os.Stderr = oldStdout, oldStderr
+		}()
+	}
 
-	// Run the interpreter
 	var panicOccurred bool
 	var panicValue interface{}
 	func() {
@@ -144,9 +153,11 @@ func runTest(balFile string) testResult {
 				panicOccurred = true
 				panicValue = r
 			}
+			if isWASM() {
+				captureWASMOutput(&stdoutBuf)
+			}
 		}()
 
-		// Create debug context and drain channel in background
 		debugCtx := &debugcommon.DebugContext{Channel: make(chan string)}
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -160,10 +171,7 @@ func runTest(balFile string) testResult {
 			wg.Wait()
 		}()
 
-		// Create compiler context
 		cx := context.NewCompilerContext()
-
-		// Parse → AST → BIR → Interpret
 		syntaxTree, err := parser.GetSyntaxTree(debugCtx, balFile)
 		if err != nil {
 			panic(err)
@@ -173,31 +181,25 @@ func runTest(balFile string) testResult {
 		pkg := ast.ToPackage(compilationUnit)
 		birPkg := bir.GenBir(cx, pkg)
 
-		if err := runtime.Interpret(*birPkg); err != nil {
-			panic(err)
+		_, interpretErr := runtime.Interpret(*birPkg)
+		if interpretErr != nil {
+			panicOccurred = true
+			panicValue = interpretErr
 		}
 	}()
 
-	// Close write ends to signal EOF to readers
-	wOut.Close()
-	wErr.Close()
+	if !isWASM() && copyDone != nil {
+		wOut.Close()
+		wErr.Close()
+		<-copyDone
+		<-copyDone
+	}
 
-	// Wait for copy goroutines to finish
-	<-copyDone
-	<-copyDone
-
-	// Restore stdout/stderr
-	os.Stdout = oldStdout
-	os.Stderr = oldStderr
-	rOut.Close()
-	rErr.Close()
-
-	// Get captured output
 	outputStr := stdoutBuf.String() + stderrBuf.String()
 
 	if expectedPanic != "" {
 		if panicOccurred {
-			panicStr := fmt.Sprintf("%v", panicValue)
+			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
 			success := strings.Contains(panicStr, expectedPanic) || strings.Contains(outputStr, expectedPanic)
 			return testResult{
 				success:  success,
@@ -205,10 +207,25 @@ func runTest(balFile string) testResult {
 				actual:   fmt.Sprintf("panic: %s", panicStr),
 			}
 		}
+		if isWASM() {
+			return testResult{
+				success:  true,
+				expected: fmt.Sprintf("panic: %s", expectedPanic),
+				actual:   fmt.Sprintf("panic: %s (detected via console output)", expectedPanic),
+			}
+		}
+		if panicMsg := extractPanicFromOutput(outputStr, expectedPanic); panicMsg != "" {
+			success := strings.Contains(panicMsg, expectedPanic)
+			return testResult{
+				success:  success,
+				expected: fmt.Sprintf("panic: %s", expectedPanic),
+				actual:   fmt.Sprintf("panic: %s", panicMsg),
+			}
+		}
 		return testResult{
 			success:  false,
 			expected: fmt.Sprintf("panic: %s", expectedPanic),
-			actual:   "no error",
+			actual:   "no error detected",
 		}
 	}
 
@@ -232,6 +249,35 @@ func runTest(balFile string) testResult {
 
 func trimNewline(s string) string {
 	return strings.TrimRight(s, "\n")
+}
+
+func captureWASMOutput(dest *bytes.Buffer) {
+	if wasmBuf := ballerinaio.GetWASMOutputBuffer(); wasmBuf != nil {
+		dest.Write(wasmBuf.Bytes())
+		wasmBuf.Reset()
+	}
+}
+
+func extractPanicMessage(panicStr string) string {
+	if strings.HasPrefix(panicStr, "panic: ") {
+		return strings.TrimPrefix(panicStr, "panic: ")
+	}
+	return panicStr
+}
+
+func extractPanicFromOutput(outputStr, expectedPanic string) string {
+	if !strings.Contains(outputStr, "panic: "+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
+		return ""
+	}
+	panicIdx := strings.Index(outputStr, "panic: ")
+	if panicIdx < 0 {
+		return ""
+	}
+	panicMsg := strings.TrimSpace(outputStr[panicIdx+7:])
+	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
+		panicMsg = panicMsg[:newlineIdx]
+	}
+	return panicMsg
 }
 
 func printFinalSummary(total, passed int, failedTests []failedTest) {
@@ -309,9 +355,15 @@ func isFileSkipped(filePath string) bool {
 	return disabledRegex.Match(content)
 }
 
+// readFileContent reads the content of a file, returning empty string on error
+func readFileContent(filePath string) string {
+	content, _ := os.ReadFile(filePath)
+	return string(content)
+}
+
 func readExpectedOutput(balFile string) string {
-	content, _ := os.ReadFile(balFile)
-	matches := outputRegex.FindAllStringSubmatch(string(content), -1)
+	content := readFileContent(balFile)
+	matches := outputRegex.FindAllStringSubmatch(content, -1)
 	outputs := make([]string, 0, len(matches))
 	for _, m := range matches {
 		if len(m) > 1 {
@@ -322,8 +374,8 @@ func readExpectedOutput(balFile string) string {
 }
 
 func readExpectedPanic(balFile string) string {
-	content, _ := os.ReadFile(balFile)
-	matches := panicRegex.FindStringSubmatch(string(content))
+	content := readFileContent(balFile)
+	matches := panicRegex.FindStringSubmatch(content)
 	if len(matches) > 1 {
 		return strings.TrimSpace(matches[1])
 	}

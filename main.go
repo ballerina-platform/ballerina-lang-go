@@ -143,7 +143,7 @@ func main() {
 
 	// Interpret the BIR if it's a .bal file
 	if isBalFile && birPkg != nil {
-		if err := runtime.Interpret(*birPkg); err != nil {
+		if _, err := runtime.Interpret(*birPkg); err != nil {
 			os.Exit(1)
 		}
 	}

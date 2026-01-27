@@ -27,8 +27,11 @@ import (
 	"os"
 )
 
-func Interpret(pkg bir.BIRPackage) (err error) {
+// Interpret interprets a BIR package and returns the runtime instance and any error.
+// When the runtime is not needed, the first return value can be ignored.
+func Interpret(pkg bir.BIRPackage) (*api.Runtime, error) {
 	rt := api.NewRuntime()
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(os.Stderr, "panic: %v\n", r)
@@ -36,5 +39,5 @@ func Interpret(pkg bir.BIRPackage) (err error) {
 		}
 	}()
 	exec.Interpret(pkg, rt)
-	return nil
+	return rt, err
 }
