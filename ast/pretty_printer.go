@@ -437,7 +437,7 @@ func (p *PrettyPrinter) printSimpleVariableDef(node *BLangSimpleVariableDef) {
 	p.startNode()
 	p.printString("var-def")
 	p.indentLevel++
-	p.PrintInner(&node.Var)
+	p.PrintInner(node.Var)
 	if node.IsInFork {
 		p.printString("in-fork")
 	}

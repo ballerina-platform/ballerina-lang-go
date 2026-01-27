@@ -86,7 +86,7 @@ type (
 
 	BLangSimpleVariableDef struct {
 		BLangStatementBase
-		Var      BLangSimpleVariable
+		Var      *BLangSimpleVariable
 		IsInFork bool
 		IsWorker bool
 	}
@@ -372,12 +372,12 @@ func (this *BLangSimpleVariableDef) GetKind() model.NodeKind {
 }
 
 func (this *BLangSimpleVariableDef) GetVariable() model.VariableNode {
-	return &this.Var
+	return this.Var
 }
 
 func (this *BLangSimpleVariableDef) SetVariable(variable model.VariableNode) {
 	if v, ok := variable.(*BLangSimpleVariable); ok {
-		this.Var = *v
+		this.Var = v
 	} else {
 		panic("variable is not a BLangSimpleVariable")
 	}
