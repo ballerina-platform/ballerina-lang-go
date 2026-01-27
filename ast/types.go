@@ -90,6 +90,8 @@ type (
 		TypeKind model.TypeKind
 	}
 
+	// TODO: Is this just type reference? if not we need to rethink this when we have actual user defined types.
+	//   If the user defined type is recursive we need a way to get the Definition (similar to array type etc) from that.
 	BLangUserDefinedType struct {
 		BLangTypeBase
 		PkgAlias BLangIdentifier

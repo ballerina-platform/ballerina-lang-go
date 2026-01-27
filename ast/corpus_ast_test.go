@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -183,4 +184,73 @@ func expectedASTPath(balFile string) string {
 	expectedASTPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
 	expectedASTPath = strings.Replace(expectedASTPath, string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"corpus"+string(filepath.Separator)+"ast"+string(filepath.Separator), 1)
 	return expectedASTPath
+}
+
+// walkTestVisitor tracks node types visited during Walk traversal
+type walkTestVisitor struct {
+	visitedTypes map[string]int
+	nodeCount    int
+}
+
+func (v *walkTestVisitor) Visit(node BLangNode) Visitor {
+	if node == nil {
+		return nil
+	}
+	v.nodeCount++
+	typeName := fmt.Sprintf("%T", node)
+	v.visitedTypes[typeName]++
+	return v
+}
+
+func TestWalkTraversal(t *testing.T) {
+	flag.Parse()
+	balFiles := getCorpusFiles(t)
+	for _, balFile := range balFiles {
+		t.Run(balFile, func(t *testing.T) {
+			t.Parallel()
+			testWalkTraversal(t, balFile)
+		})
+	}
+}
+
+func testWalkTraversal(t *testing.T, balFile string) {
+	if !strings.HasSuffix(balFile, "-v.bal") {
+		t.Skipf("Skipping %s", balFile)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Walk panicked for %s: %v", balFile, r)
+		}
+	}()
+
+	debugCtx := debugcommon.DebugContext{
+		Channel: make(chan string),
+	}
+	cx := context.NewCompilerContext()
+	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, balFile)
+	if err != nil {
+		t.Errorf("error getting syntax tree for %s: %v", balFile, err)
+		return
+	}
+	compilationUnit := GetCompilationUnit(cx, syntaxTree)
+	if compilationUnit == nil {
+		t.Errorf("compilation unit is nil for %s", balFile)
+		return
+	}
+
+	visitor := &walkTestVisitor{visitedTypes: make(map[string]int)}
+	Walk(visitor, compilationUnit)
+
+	if visitor.nodeCount == 0 {
+		t.Errorf("Walk visited 0 nodes for %s", balFile)
+	}
+
+	if testing.Verbose() {
+		t.Logf("File: %s, Total nodes: %d", balFile, visitor.nodeCount)
+		for typeName, count := range visitor.visitedTypes {
+			t.Logf("  %s: %d nodes", typeName, count)
+		}
+	}
 }
