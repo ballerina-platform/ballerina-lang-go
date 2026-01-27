@@ -19,12 +19,20 @@
 package corpus
 
 import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/bir"
+	debugcommon "ballerina-lang-go/common"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/parser"
+	"ballerina-lang-go/runtime"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -55,8 +63,6 @@ type testResult struct {
 }
 
 func TestIntegrationSuite(t *testing.T) {
-	binaryPath := buildInterpreterBinary(t)
-
 	corpusBalBaseDir := "../corpus/bal"
 	var passedTotal, failedTotal int
 	var failedTests []failedTest
@@ -80,7 +86,7 @@ func TestIntegrationSuite(t *testing.T) {
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
 			filePath := buildFilePath(relPath)
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(binaryPath, balFile)
+			result := runTest(balFile)
 			if result.success {
 				passedTotal++
 				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
@@ -97,64 +103,126 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 
 	total := passedTotal + failedTotal
-	if total > 0 {
-		printFinalSummary(total, passedTotal, failedTests)
-		if failedTotal > 0 {
-			t.Fail()
+	printFinalSummary(total, passedTotal, failedTests)
+	if failedTotal > 0 {
+		t.Fail()
+	}
+}
+
+func runTest(balFile string) testResult {
+	expectedOutput := readExpectedOutput(balFile)
+	expectedPanic := readExpectedPanic(balFile)
+
+	// Capture stdout and stderr using pipes
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+
+	rOut, wOut, _ := os.Pipe()
+	rErr, wErr, _ := os.Pipe()
+	os.Stdout = wOut
+	os.Stderr = wErr
+
+	// Copy output in background goroutines
+	copyDone := make(chan bool, 2)
+	go func() {
+		io.Copy(&stdoutBuf, rOut)
+		copyDone <- true
+	}()
+	go func() {
+		io.Copy(&stderrBuf, rErr)
+		copyDone <- true
+	}()
+
+	// Run the interpreter
+	var panicOccurred bool
+	var panicValue interface{}
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicOccurred = true
+				panicValue = r
+			}
+		}()
+
+		// Create debug context and drain channel in background
+		debugCtx := &debugcommon.DebugContext{Channel: make(chan string)}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range debugCtx.Channel {
+			}
+		}()
+		defer func() {
+			close(debugCtx.Channel)
+			wg.Wait()
+		}()
+
+		// Create compiler context
+		cx := context.NewCompilerContext()
+
+		// Parse → AST → BIR → Interpret
+		syntaxTree, err := parser.GetSyntaxTree(debugCtx, balFile)
+		if err != nil {
+			panic(err)
+		}
+
+		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+		pkg := ast.ToPackage(compilationUnit)
+		birPkg := bir.GenBir(cx, pkg)
+
+		if err := runtime.Interpret(*birPkg); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Close write ends to signal EOF to readers
+	wOut.Close()
+	wErr.Close()
+
+	// Wait for copy goroutines to finish
+	<-copyDone
+	<-copyDone
+
+	// Restore stdout/stderr
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+	rOut.Close()
+	rErr.Close()
+
+	// Get captured output
+	outputStr := stdoutBuf.String() + stderrBuf.String()
+
+	if expectedPanic != "" {
+		if panicOccurred {
+			panicStr := fmt.Sprintf("%v", panicValue)
+			success := strings.Contains(panicStr, expectedPanic) || strings.Contains(outputStr, expectedPanic)
+			return testResult{
+				success:  success,
+				expected: fmt.Sprintf("panic: %s", expectedPanic),
+				actual:   fmt.Sprintf("panic: %s", panicStr),
+			}
+		}
+		return testResult{
+			success:  false,
+			expected: fmt.Sprintf("panic: %s", expectedPanic),
+			actual:   "no error",
 		}
 	}
-}
 
-func buildInterpreterBinary(t *testing.T) string {
-	tmpDir := t.TempDir()
-	binPath := filepath.Join(tmpDir, "bal-interpreter")
-	cmd := exec.Command("go", "build", "-o", binPath, "main.go")
-	cmd.Dir = ".." // project root
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to build interpreter:\n%s\n%v", out, err)
+	if panicOccurred {
+		return testResult{
+			success:  false,
+			expected: expectedOutput,
+			actual:   fmt.Sprintf("panic: %v", panicValue),
+		}
 	}
-	return binPath
-}
 
-func runTest(binaryPath, balFile string) testResult {
-	expectedOutput, err := readExpectedOutput(balFile)
-	if err != nil {
-		return newTestResult(false, "", fmt.Sprintf("error reading expected output: %v", err))
-	}
-	expectedPanic, err := readExpectedPanic(balFile)
-	if err != nil {
-		return newTestResult(false, "", fmt.Sprintf("error reading expected panic: %v", err))
-	}
-	cmd := exec.Command(binaryPath, balFile)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-	if expectedPanic != "" {
-		return testPanic(expectedPanic, outputStr, err != nil)
-	}
 	expected := trimNewline(expectedOutput)
 	actual := trimNewline(outputStr)
-	success := err == nil && actual == expected
-	return testResult{
-		success:  success,
-		expected: expected,
-		actual:   actual,
-	}
-}
-
-func testPanic(expectedPanic, outputStr string, hasError bool) testResult {
-	if !hasError {
-		return newTestResult(false, fmt.Sprintf("panic: %s", expectedPanic), "no error")
-	}
-	success := strings.Contains(outputStr, expectedPanic)
-	return testResult{
-		success:  success,
-		expected: fmt.Sprintf("panic: %s", expectedPanic),
-		actual:   outputStr,
-	}
-}
-
-func newTestResult(success bool, expected, actual string) testResult {
+	success := actual == expected
 	return testResult{
 		success:  success,
 		expected: expected,
@@ -224,7 +292,7 @@ func printIndentedLines(text, indent string) {
 
 func findBalFiles(dir string) []string {
 	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() && filepath.Ext(path) == ".bal" {
 			files = append(files, path)
 		}
@@ -241,11 +309,8 @@ func isFileSkipped(filePath string) bool {
 	return disabledRegex.Match(content)
 }
 
-func readExpectedOutput(balFile string) (string, error) {
-	content, err := os.ReadFile(balFile)
-	if err != nil {
-		return "", err
-	}
+func readExpectedOutput(balFile string) string {
+	content, _ := os.ReadFile(balFile)
 	matches := outputRegex.FindAllStringSubmatch(string(content), -1)
 	outputs := make([]string, 0, len(matches))
 	for _, m := range matches {
@@ -253,17 +318,14 @@ func readExpectedOutput(balFile string) (string, error) {
 			outputs = append(outputs, strings.TrimSpace(m[1]))
 		}
 	}
-	return strings.Join(outputs, "\n"), nil
+	return strings.Join(outputs, "\n")
 }
 
-func readExpectedPanic(balFile string) (string, error) {
-	content, err := os.ReadFile(balFile)
-	if err != nil {
-		return "", err
+func readExpectedPanic(balFile string) string {
+	content, _ := os.ReadFile(balFile)
+	matches := panicRegex.FindStringSubmatch(string(content))
+	if len(matches) > 1 {
+		return strings.TrimSpace(matches[1])
 	}
-	matches := panicRegex.FindAllStringSubmatch(string(content), -1)
-	if len(matches) > 0 && len(matches[0]) > 1 {
-		return strings.TrimSpace(matches[0][1]), nil
-	}
-	return "", nil
+	return ""
 }
