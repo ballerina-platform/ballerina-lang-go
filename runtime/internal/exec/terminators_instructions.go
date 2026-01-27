@@ -20,7 +20,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime/internal/modules"
 	"fmt"
 )
 
@@ -37,7 +37,7 @@ func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	return branchTerm.FalseBB
 }
 
-func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) *bir.BIRBasicBlock {
+func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
 	funcName := callInfo.Name.Value()
 	values := make([]any, len(callInfo.Args))
 	for i, op := range callInfo.Args {
@@ -48,16 +48,16 @@ func execCall(callInfo *bir.Call, frame *Frame, rt *api.Runtime) *bir.BIRBasicBl
 	moduleKey := orgName + "/" + pkgName
 	qualifiedName := moduleKey + ":" + funcName
 
-	fn := rt.Registry.GetBIRFunction(qualifiedName)
+	fn := reg.GetBIRFunction(qualifiedName)
 	if fn != nil {
-		result := executeFunction(*fn, values, rt)
+		result := executeFunction(*fn, values, reg)
 		if callInfo.LhsOp != nil {
 			frame.locals[callInfo.LhsOp.Index] = result
 		}
 		return callInfo.ThenBB
 	}
 
-	externFn := rt.Registry.GetNativeFunction(qualifiedName)
+	externFn := reg.GetNativeFunction(qualifiedName)
 	if externFn != nil {
 		result, err := externFn.Impl(values)
 		if err != nil {

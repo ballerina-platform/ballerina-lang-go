@@ -20,12 +20,11 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/api"
 	"ballerina-lang-go/runtime/internal/modules"
 )
 
-func Interpret(pkg bir.BIRPackage, rt *api.Runtime) {
-	rt.Registry.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
+func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
+	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
 	mainFunc := pkg.Functions[0]
-	executeFunction(mainFunc, nil, rt)
+	executeFunction(mainFunc, nil, reg)
 }

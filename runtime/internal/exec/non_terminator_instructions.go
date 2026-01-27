@@ -31,27 +31,19 @@ func execMove(moveIns *bir.Move, frame *Frame) {
 }
 
 func execTypeCast(typeCast bir.BIRNonTerminator, frame *Frame) {
-	// TypeCast instruction type not yet implemented in bir package
-	// For now, this is a placeholder - the actual TypeCast type doesn't exist yet
-	// When implemented, it should extract RhsOp and LhsOp and perform type conversion
 	panic("TypeCast instruction not yet implemented")
 }
 
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
-	// Get result variable and array size from frame
 	if newArray.SizeOp == nil {
-		// Use nil slice when no size is specified so that it behaves like an empty array
 		frame.locals[newArray.LhsOp.Index] = []any(nil)
 		return
 	}
 	size := frame.locals[newArray.SizeOp.Index].(int64)
 	limit := int(size)
-	// If size is negative, create empty array
 	if limit < 0 {
 		limit = 0
 	}
-	// Create array - NewArray doesn't have a Values field in the current implementation
-	// This would need to be populated from other sources or handled differently
 	arr := make([]any, limit)
 	frame.locals[newArray.LhsOp.Index] = arr
 }

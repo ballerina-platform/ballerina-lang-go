@@ -22,13 +22,13 @@ import (
 	"ballerina-lang-go/bir"
 )
 
+type BIRModule struct {
+	Pkg *bir.BIRPackage
+}
+
 type ExternFunction struct {
 	Name string
 	Impl func(args []any) (any, error)
-}
-
-type BIRModule struct {
-	Pkg *bir.BIRPackage
 }
 
 func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {

@@ -21,11 +21,32 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime/internal/modules"
 	"fmt"
 )
 
-func executeFunction(birFunc bir.BIRFunction, args []any, rt *api.Runtime) any {
+// defaultValueForType returns the runtime "zero" value for a Ballerina type.
+func defaultValueForType(t model.ValueType) any {
+	if t == nil {
+		return nil
+	}
+	switch t.GetTypeKind() {
+	case model.TypeKind_BOOLEAN:
+		return false
+	case model.TypeKind_INT, model.TypeKind_BYTE:
+		return int64(0)
+	case model.TypeKind_FLOAT:
+		return float64(0)
+	case model.TypeKind_STRING:
+		return ""
+	case model.TypeKind_NIL:
+		return nil
+	default:
+		return nil
+	}
+}
+
+func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry) any {
 	localVars := &birFunc.LocalVars
 	locals := make([]any, len(*localVars))
 	locals[0] = defaultValueForType((*localVars)[0].Type)
@@ -47,11 +68,8 @@ func executeFunction(birFunc bir.BIRFunction, args []any, rt *api.Runtime) any {
 		if term.GetKind() == bir.INSTRUCTION_KIND_RETURN {
 			break
 		}
-		// Execute terminator and get the next basic block
-		bb = execTerminator(term, *bb, frame, rt)
+		bb = execTerminator(term, *bb, frame, reg)
 	}
-	// Return the value of the return variable
-	// Return variable is always at index 0
 	return frame.locals[0]
 }
 
@@ -128,13 +146,11 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 			fmt.Printf("UNKNOWN_UNARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
 	default:
-		// For now, keep behaviour roughly similar to the previous implementation
-		// by reporting unimplemented/unknown instruction types.
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
 }
 
-func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *Frame, rt *api.Runtime) *bir.BIRBasicBlock {
+func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB
@@ -143,7 +159,7 @@ func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *
 	case *bir.Call:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_CALL:
-			return execCall(v, frame, rt)
+			return execCall(v, frame, reg)
 		case bir.INSTRUCTION_KIND_ASYNC_CALL:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_ASYNC_CALL")
 		case bir.INSTRUCTION_KIND_WAIT:
@@ -177,25 +193,4 @@ func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return &currentBB
-}
-
-// defaultValueForType returns the runtime "zero" value for a Ballerina type.
-func defaultValueForType(t model.ValueType) any {
-	if t == nil {
-		return nil
-	}
-	switch t.GetTypeKind() {
-	case model.TypeKind_BOOLEAN:
-		return false
-	case model.TypeKind_INT, model.TypeKind_BYTE:
-		return int64(0)
-	case model.TypeKind_FLOAT:
-		return float64(0)
-	case model.TypeKind_STRING:
-		return ""
-	case model.TypeKind_NIL:
-		return nil
-	default:
-		return nil
-	}
 }

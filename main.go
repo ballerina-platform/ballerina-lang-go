@@ -24,7 +24,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
-	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/api"
 	"fmt"
 	"os"
 	"strings"
@@ -143,7 +143,8 @@ func main() {
 
 	// Interpret the BIR if it's a .bal file
 	if isBalFile && birPkg != nil {
-		if _, err := runtime.Interpret(*birPkg); err != nil {
+		rt := api.NewRuntime()
+		if err := rt.Interpret(*birPkg); err != nil {
 			os.Exit(1)
 		}
 	}

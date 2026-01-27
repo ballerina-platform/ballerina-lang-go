@@ -270,9 +270,6 @@ func execBinaryOpRefEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
 	op1 := frame.locals[rhsOp1]
 	op2 := frame.locals[rhsOp2]
-
-	// Reference equality: compare if two references point to the same object
-	// Both nil -> equal, one nil -> not equal, otherwise use ==
 	frame.locals[lhsOp] = (op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2)
 }
 
@@ -280,10 +277,6 @@ func execBinaryOpRefNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	rhsOp1, rhsOp2, lhsOp := extractBinaryOpIndices(binaryOp)
 	op1 := frame.locals[rhsOp1]
 	op2 := frame.locals[rhsOp2]
-
-	// Reference inequality: opposite of reference equality
-	// Both nil -> not equal (false), one nil -> not equal (true), otherwise use !=
-	// Simply negate the equality check for clarity and maintainability
 	frame.locals[lhsOp] = !((op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2))
 }
 
@@ -411,8 +404,6 @@ func execBinaryOpBitwiseUnsignedRightShift(binaryOp *bir.BinaryOp, frame *Frame)
 	panic(fmt.Sprintf("unsupported type combination: %T >>> %T (expected int64)", op1, op2))
 }
 
-// Helper functions
-
 func execBinaryOpArithmetic(binaryOp *bir.BinaryOp, frame *Frame, opName string,
 	intOp func(a, b int64) int64, floatOp func(a, b float64) float64,
 	checkZero bool) {
@@ -454,7 +445,6 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	case nil:
 		switch op2.(type) {
 		case nil:
-			// Both nil: use boolCmp(false, false) to determine if operator includes equality
 			frame.locals[lhsOp] = boolCmp(false, false)
 		default:
 			panic(fmt.Sprintf("cannot compare nil with non-nil value: op1=nil, op2=%v", op2))

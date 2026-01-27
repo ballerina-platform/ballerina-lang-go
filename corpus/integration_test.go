@@ -21,17 +21,14 @@ package corpus
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
-	"ballerina-lang-go/runtime"
-	ballerinaio "ballerina-lang-go/stdlibs/io"
-	"bytes"
+	"ballerina-lang-go/runtime/api"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -57,6 +54,11 @@ var (
 		"01-function/call08-v.bal",
 		"01-nil/rel-v.bal",
 	})
+
+	// printlnOutputs stores captured output of ballerina/io:println for each Bal file.
+	// Key: absolute Bal file path; Value: concatenated println lines.
+	printlnOutputs = make(map[string]string)
+	printlnMu      sync.Mutex
 )
 
 type failedTest struct {
@@ -71,9 +73,17 @@ type testResult struct {
 	actual   string
 }
 
+type skipReason int
+
+const (
+	skipReasonErrorFile skipReason = iota // -e.bal files
+	skipReasonSkipList                    // files in skipTestsMap
+)
+
 func TestIntegrationSuite(t *testing.T) {
 	var passedTotal, failedTotal, skippedTotal int
 	var failedTests []failedTest
+	var resultsMu sync.Mutex
 
 	for _, subset := range supportedSubsets {
 		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
@@ -87,6 +97,8 @@ func TestIntegrationSuite(t *testing.T) {
 
 		balFiles := findBalFiles(corpusBalDir)
 
+		var wg sync.WaitGroup
+
 		for _, balFile := range balFiles {
 			skipped, reason := isFileSkipped(balFile)
 			if skipped {
@@ -97,21 +109,32 @@ func TestIntegrationSuite(t *testing.T) {
 			}
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
 			filePath := buildFilePath(relPath)
-			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(balFile)
-			if result.success {
-				passedTotal++
-				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
-			} else {
-				failedTotal++
-				printTestFailure(filePath, result)
-				failedTests = append(failedTests, failedTest{
-					subset:   subset,
-					dirName:  filepath.Dir(relPath),
-					fileName: filepath.Base(balFile),
-				})
-			}
+			wg.Add(1)
+			go func(balFile, filePath, subset, relPath string) {
+				defer wg.Done()
+
+				fmt.Printf("\t=== RUN   %s\n", filePath)
+				result := runTest(balFile)
+
+				resultsMu.Lock()
+				defer resultsMu.Unlock()
+
+				if result.success {
+					passedTotal++
+					fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
+				} else {
+					failedTotal++
+					printTestFailure(filePath, result)
+					failedTests = append(failedTests, failedTest{
+						subset:   subset,
+						dirName:  filepath.Dir(relPath),
+						fileName: filepath.Base(balFile),
+					})
+				}
+			}(balFile, filePath, subset, relPath)
 		}
+
+		wg.Wait()
 	}
 
 	total := passedTotal + failedTotal
@@ -122,40 +145,9 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 }
 
-func isWASM() bool {
-	return os.Getenv("GOARCH") == "wasm"
-}
-
 func runTest(balFile string) testResult {
 	expectedOutput := readExpectedOutput(balFile)
 	expectedPanic := readExpectedPanic(balFile)
-
-	var stdoutBuf, stderrBuf bytes.Buffer
-	oldStdout, oldStderr := os.Stdout, os.Stderr
-
-	var copyDone chan bool
-	var wOut, wErr *os.File
-	if !isWASM() {
-		rOut, wOutPipe, _ := os.Pipe()
-		rErr, wErrPipe, _ := os.Pipe()
-		wOut, wErr = wOutPipe, wErrPipe
-		os.Stdout, os.Stderr = wOut, wErr
-
-		copyDone = make(chan bool, 2)
-		go func() {
-			io.Copy(&stdoutBuf, rOut)
-			copyDone <- true
-		}()
-		go func() {
-			io.Copy(&stderrBuf, rErr)
-			copyDone <- true
-		}()
-		defer func() {
-			rOut.Close()
-			rErr.Close()
-			os.Stdout, os.Stderr = oldStdout, oldStderr
-		}()
-	}
 
 	var panicOccurred bool
 	var panicValue interface{}
@@ -165,26 +157,10 @@ func runTest(balFile string) testResult {
 				panicOccurred = true
 				panicValue = r
 			}
-			if isWASM() {
-				captureWASMOutput(&stdoutBuf)
-			}
-		}()
-
-		debugCtx := &debugcommon.DebugContext{Channel: make(chan string)}
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range debugCtx.Channel {
-			}
-		}()
-		defer func() {
-			close(debugCtx.Channel)
-			wg.Wait()
 		}()
 
 		cx := context.NewCompilerContext()
-		syntaxTree, err := parser.GetSyntaxTree(debugCtx, balFile)
+		syntaxTree, err := parser.GetSyntaxTree(nil, balFile)
 		if err != nil {
 			panic(err)
 		}
@@ -193,21 +169,44 @@ func runTest(balFile string) testResult {
 		pkg := ast.ToPackage(compilationUnit)
 		birPkg := bir.GenBir(cx, pkg)
 
-		_, interpretErr := runtime.Interpret(*birPkg)
+		// Reset captured println output for this file.
+		printlnMu.Lock()
+		printlnOutputs[balFile] = ""
+		printlnMu.Unlock()
+
+		rt := api.NewRuntime()
+		rt.Registry.RegisterExternFunction("ballerina", "io", "println", func(args []any) (any, error) {
+			// Capture println output into an in-memory buffer keyed by Bal file path
+			// to make assertions easier and avoid relying on os.Stdout in tests.
+			var b strings.Builder
+			for i, arg := range args {
+				if i > 0 {
+					b.WriteByte(' ')
+				}
+				b.WriteString(valueToString(arg))
+			}
+			b.WriteByte('\n')
+
+			printlnMu.Lock()
+			printlnOutputs[balFile] += b.String()
+			printlnMu.Unlock()
+
+			return nil, nil
+		})
+		interpretErr := rt.Interpret(*birPkg)
 		if interpretErr != nil {
 			panicOccurred = true
 			panicValue = interpretErr
 		}
 	}()
 
-	if !isWASM() && copyDone != nil {
-		wOut.Close()
-		wErr.Close()
-		<-copyDone
-		<-copyDone
-	}
+	printlnMu.Lock()
+	printlnStr := printlnOutputs[balFile]
+	delete(printlnOutputs, balFile)
+	printlnMu.Unlock()
 
-	outputStr := stdoutBuf.String() + stderrBuf.String()
+	// For tests, we only assert on captured ballerina/io:println output.
+	outputStr := printlnStr
 
 	if expectedPanic != "" {
 		if panicOccurred {
@@ -217,13 +216,6 @@ func runTest(balFile string) testResult {
 				success:  success,
 				expected: fmt.Sprintf("panic: %s", expectedPanic),
 				actual:   fmt.Sprintf("panic: %s", panicStr),
-			}
-		}
-		if isWASM() {
-			return testResult{
-				success:  true,
-				expected: fmt.Sprintf("panic: %s", expectedPanic),
-				actual:   fmt.Sprintf("panic: %s (detected via console output)", expectedPanic),
 			}
 		}
 		if panicMsg := extractPanicFromOutput(outputStr, expectedPanic); panicMsg != "" {
@@ -259,15 +251,53 @@ func runTest(balFile string) testResult {
 	}
 }
 
-func trimNewline(s string) string {
-	return strings.TrimRight(s, "\n")
+type stringer interface {
+	String() string
 }
 
-func captureWASMOutput(dest *bytes.Buffer) {
-	if wasmBuf := ballerinaio.GetWASMOutputBuffer(); wasmBuf != nil {
-		dest.Write(wasmBuf.Bytes())
-		wasmBuf.Reset()
+// valueToString converts a Ballerina value into a string
+func valueToString(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case int:
+		return strconv.Itoa(t)
+	case int8:
+		return strconv.FormatInt(int64(t), 10)
+	case int16:
+		return strconv.FormatInt(int64(t), 10)
+	case int32:
+		return strconv.FormatInt(int64(t), 10)
+	case int64:
+		return strconv.FormatInt(t, 10)
+	case uint:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(t), 10)
+	case uint64:
+		return strconv.FormatUint(t, 10)
+	case float32:
+		return strconv.FormatFloat(float64(t), 'g', -1, 32)
+	case float64:
+		return strconv.FormatFloat(t, 'g', -1, 64)
+	case bool:
+		return strconv.FormatBool(t)
+	case stringer:
+		return t.String()
+	case nil:
+		return "nil"
+	default:
+		// Fallback; avoid pulling in fmt.Sprint here.
+		return "<unsupported>"
 	}
+}
+
+func trimNewline(s string) string {
+	return strings.TrimRight(s, "\n")
 }
 
 func extractPanicMessage(panicStr string) string {
@@ -362,13 +392,6 @@ func findBalFiles(dir string) []string {
 	return files
 }
 
-type skipReason int
-
-const (
-	skipReasonErrorFile skipReason = iota // -e.bal files
-	skipReasonSkipList                    // files in skipTestsMap
-)
-
 func isFileSkipped(filePath string) (bool, skipReason) {
 	// Skip files ending with -e.bal (error test files)
 	fileName := filepath.Base(filePath)
@@ -399,8 +422,6 @@ func makeSkipTestsMap(paths []string) map[string]bool {
 	return m
 }
 
-// readFileContent reads the content of a file, returning empty string on error.
-// Errors are ignored as this is used for reading test annotations which are optional.
 func readFileContent(filePath string) string {
 	content, _ := os.ReadFile(filePath)
 	return string(content)
