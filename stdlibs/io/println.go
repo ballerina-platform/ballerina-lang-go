@@ -24,8 +24,11 @@ import (
 )
 
 func init() {
-	ioModule := api.RegisterNativeModule("ballerina", "io")
-	api.RegisterExternFunction(ioModule, "println", func(args []any) (any, error) {
+	api.RegisterModuleInitializer(initIOModule)
+}
+
+func initIOModule(rt *api.Runtime) {
+	api.RegisterExternFunction(rt.Registry, "ballerina", "io", "println", func(args []any) (any, error) {
 		Println(args...)
 		return nil, nil
 	})
