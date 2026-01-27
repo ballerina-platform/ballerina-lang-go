@@ -99,10 +99,27 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
 	}
-	// Build import alias map
-	for _, importPkg := range ast.Imports {
+	processImports(ctx, genCtx, ast.Imports, birPkg)
+	for _, typeDef := range ast.TypeDefinitions {
+		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
+	}
+	for _, globalVar := range ast.GlobalVars {
+		birPkg.GlobalVars = appendIfNotNil(birPkg.GlobalVars, TransformGlobalVariableDcl(genCtx, &globalVar))
+	}
+	for _, constant := range ast.Constants {
+		c := TransformConstant(genCtx, &constant)
+		genCtx.constantMap[c.Name.Value()] = c
+		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
+	}
+	for _, function := range ast.Functions {
+		birPkg.Functions = appendIfNotNil(birPkg.Functions, TransformFunction(genCtx, &function))
+	}
+	return birPkg
+}
+
+func processImports(compilerCtx *context.CompilerContext, genCtx *Context, imports []ast.BLangImportPackage, birPkg *BIRPackage) {
+	for _, importPkg := range imports {
 		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
-			// Build package ID from import using CompilerContext for consistency
 			var orgName model.Name
 			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
 				orgName = model.Name(importPkg.OrgName.Value)
@@ -123,27 +140,11 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 			} else {
 				version = model.DEFAULT_VERSION
 			}
-			// Use CompilerContext to create package ID for consistency with interned package IDs
-			pkgID := ctx.NewPackageID(orgName, nameComps, version)
+			pkgID := compilerCtx.NewPackageID(orgName, nameComps, version)
 			genCtx.importAliasMap[importPkg.Alias.Value] = pkgID
 		}
 		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
 	}
-	for _, typeDef := range ast.TypeDefinitions {
-		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
-	}
-	for _, globalVar := range ast.GlobalVars {
-		birPkg.GlobalVars = appendIfNotNil(birPkg.GlobalVars, TransformGlobalVariableDcl(genCtx, &globalVar))
-	}
-	for _, constant := range ast.Constants {
-		c := TransformConstant(genCtx, &constant)
-		genCtx.constantMap[c.Name.Value()] = c
-		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
-	}
-	for _, function := range ast.Functions {
-		birPkg.Functions = appendIfNotNil(birPkg.Functions, TransformFunction(genCtx, &function))
-	}
-	return birPkg
 }
 
 func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportModule {

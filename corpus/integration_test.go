@@ -97,7 +97,6 @@ func TestIntegrationSuite(t *testing.T) {
 		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
 			continue
 		}
-
 		subsetNum := formatSubsetNumber(subset)
 		fmt.Printf("Subset %s\n", subsetNum)
 		fmt.Println("==========================")
@@ -140,7 +139,6 @@ func TestIntegrationSuite(t *testing.T) {
 				}
 			}(balFile, filePath, subset, relPath)
 		}
-
 		wg.Wait()
 	}
 
@@ -189,7 +187,6 @@ func runTest(balFile string) testResult {
 			panicValue = interpretErr
 		}
 	}()
-
 	printlnMu.Lock()
 	printlnStr := printlnOutputs[balFile]
 	delete(printlnOutputs, balFile)
@@ -197,7 +194,6 @@ func runTest(balFile string) testResult {
 
 	// For tests, we only assert on captured ballerina/io:println output.
 	outputStr := printlnStr
-
 	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
 }
 
@@ -213,7 +209,6 @@ func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 			b.WriteString(valueToString(arg))
 		}
 		b.WriteByte('\n')
-
 		printlnMu.Lock()
 		printlnOutputs[balFile] += b.String()
 		printlnMu.Unlock()
@@ -270,7 +265,6 @@ func valueToString(v any) string {
 	type stringer interface {
 		String() string
 	}
-
 	switch t := v.(type) {
 	case string:
 		return t
@@ -411,7 +405,6 @@ func isFileSkipped(filePath string) (bool, skipReason) {
 	if strings.HasSuffix(fileName, errorFileSuffix) {
 		return true, skipReasonErrorFile
 	}
-
 	for _, subset := range supportedSubsets {
 		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
 		if relPath, err := filepath.Rel(corpusBalDir, filePath); err == nil {
@@ -421,7 +414,6 @@ func isFileSkipped(filePath string) (bool, skipReason) {
 			}
 		}
 	}
-
 	return false, 0
 }
 
