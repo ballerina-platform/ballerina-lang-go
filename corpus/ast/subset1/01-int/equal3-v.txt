@@ -5,7 +5,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable b))
+        (variable b (type
+          (value-type boolean))))
       (if
         (simple-var-ref b)
         (block-stmt
@@ -32,7 +33,8 @@
             (invocation io println (
               (literal 21)()))))
       (var-def
-        (variable x))
+        (variable x (type
+          (value-type int))))
       (if
         (binary-expr ==
           (simple-var-ref x)
