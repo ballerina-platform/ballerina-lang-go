@@ -45,12 +45,19 @@ type (
 	}
 )
 
-var _ ast.Visitor = &TypeResolver{}
-var _ ast.Visitor = &functionTypeResolver{}
-var _ ast.Visitor = &constantTypeResolver{}
+var (
+	_ ast.Visitor = &TypeResolver{}
+	_ ast.Visitor = &functionTypeResolver{}
+	_ ast.Visitor = &constantTypeResolver{}
+)
 
 func NewTypeResolver() *TypeResolver {
 	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetTypeEnv()}}
+}
+
+// NewIsolatedTypeResolver is meant for testing so that we can run each test in parallel
+func NewIsolatedTypeResolver() *TypeResolver {
+	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}}
 }
 
 func newFunctionTypeResolver(typeResolver *TypeResolver, function *ast.BLangFunction) *functionTypeResolver {
@@ -134,7 +141,6 @@ func (t *functionTypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (t *functionTypeResolver) resolveExpr(expr model.ExpressionNode) {
-
 }
 
 func (t *functionTypeResolver) resolveStmt(stmt ast.BLangStatement) {
