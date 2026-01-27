@@ -19,6 +19,7 @@ package ast
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 )
 
 type ProjectKind uint8
@@ -54,6 +55,8 @@ type BType interface {
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
 	bTypeSetFlags(flags uint64)
+	SemType() semtypes.SemType
+	SetSemType(semtype semtypes.SemType)
 }
 
 type (
@@ -66,6 +69,7 @@ type (
 		tsymbol  *BTypeSymbol
 		name     model.Name
 		flags    uint64
+		semtype  semtypes.SemType
 	}
 
 	BTypeImpl struct {
@@ -73,6 +77,7 @@ type (
 		tag     model.TypeTags
 		name    model.Name
 		flags   uint64
+		semtype semtypes.SemType
 	}
 	BLangArrayType struct {
 		BLangTypeBase
@@ -170,6 +175,14 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 		expressionNodes[i] = size
 	}
 	return expressionNodes
+}
+
+func (this *BLangTypeBase) SemType() semtypes.SemType {
+	return this.semtype
+}
+
+func (this *BLangTypeBase) SetSemType(semtype semtypes.SemType) {
+	this.semtype = semtype
 }
 
 func (this *BLangTypeBase) IsNullable() bool {
@@ -338,6 +351,14 @@ func (this *BTypeImpl) bTypeGetFlags() uint64 {
 
 func (this *BTypeImpl) bTypeSetFlags(flags uint64) {
 	this.flags = flags
+}
+
+func (this *BTypeImpl) SemType() semtypes.SemType {
+	return this.semtype
+}
+
+func (this *BTypeImpl) SetSemType(semtype semtypes.SemType) {
+	this.semtype = semtype
 }
 
 func (this *BTypeImpl) GetTypeKind() model.TypeKind {
