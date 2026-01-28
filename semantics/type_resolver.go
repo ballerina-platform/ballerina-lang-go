@@ -18,8 +18,10 @@ package semantics
 
 import (
 	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"fmt"
 	"math/big"
 	"strconv"
 )
@@ -27,6 +29,7 @@ import (
 type (
 	TypeResolver struct {
 		env *symbolEnv
+		ctx *context.CompilerContext
 	}
 
 	symbolEnv struct {
@@ -43,13 +46,13 @@ type (
 
 var _ ast.Visitor = &TypeResolver{}
 
-func NewTypeResolver() *TypeResolver {
-	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetTypeEnv()}}
+func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
+	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetTypeEnv()}, ctx: ctx}
 }
 
 // NewIsolatedTypeResolver is meant for testing so that we can run each test in parallel
-func NewIsolatedTypeResolver() *TypeResolver {
-	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}}
+func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
+	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}, ctx: ctx}
 }
 
 // ResolveTypes resolves all the type definitions and return a map of all the types of symbols exported by the package.
@@ -74,7 +77,7 @@ func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 	}
 	var restTy semtypes.SemType
 	if fn.RestParam != nil {
-		panic("unimplemented")
+		t.ctx.Unimplemented("var args not supported", fn.RestParam.GetPosition())
 	} else {
 		restTy = &semtypes.NEVER
 	}
@@ -106,18 +109,17 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
 		return nil
 	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode:
-		resolveBType(t.env, n.(ast.BType))
+		t.resolveBType(n.(ast.BType))
 		return nil
 	case *ast.BLangLiteral:
-		resolveLiteral(t.env, n)
+		t.resolveLiteral(n)
 		return nil
 	default:
 		return t
 	}
-	panic("unreachable")
 }
 
-func resolveLiteral(_ *symbolEnv, n *ast.BLangLiteral) {
+func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	bType := n.GetBType().(ast.BType)
 	var ty semtypes.SemType
 	switch bType.BTypeGetTag() {
@@ -138,18 +140,18 @@ func resolveLiteral(_ *symbolEnv, n *ast.BLangLiteral) {
 		strValue := n.GetValue().(string)
 		r := new(big.Rat)
 		if _, ok := r.SetString(strValue); !ok {
-			panic("unimplemented")
+			t.ctx.SyntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), n.GetPosition())
 		}
 		ty = semtypes.DecimalConst(*r)
 	case model.TypeTags_FLOAT:
 		strValue := n.GetValue().(string)
 		f, err := strconv.ParseFloat(strValue, 64)
 		if err != nil {
-			panic("unimplemented")
+			t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), n.GetPosition())
 		}
 		ty = semtypes.FloatConst(f)
 	default:
-		panic("unimplemented")
+		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
 	}
 	bType.SetSemType(ty)
 	setSemType(n.GetDeterminedType(), ty)
@@ -158,7 +160,7 @@ func resolveLiteral(_ *symbolEnv, n *ast.BLangLiteral) {
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	ty := node.GetBType()
 	bType := ty.(ast.BType)
-	resolveBType(t.env, bType)
+	t.resolveBType(bType)
 	semType := bType.SemType()
 	setSemType(node.GetBType(), semType)
 	setSemType(node.GetDeterminedType(), semType)
@@ -173,7 +175,7 @@ func setSemType(node model.TypeNode, ty semtypes.SemType) {
 }
 
 // TODO: do we need to track depth (similar to nBallerina)?
-func resolveBType(env *symbolEnv, btype ast.BType) {
+func (tr *TypeResolver) resolveBType(btype ast.BType) {
 	if btype.SemType() != nil {
 		// already resolved
 		return
@@ -194,29 +196,29 @@ func resolveBType(env *symbolEnv, btype ast.BType) {
 		case model.TypeKind_ANY:
 			btype.SetSemType(&semtypes.ANY)
 		default:
-			panic("unexpected")
+			tr.ctx.InternalError("unexpected type kind")
 		}
 	case *ast.BLangArrayType:
 		defn := ty.Definition
-		var t semtypes.SemType
+		var semTy semtypes.SemType
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			resolveBType(env, ty.Elemtype.(ast.BType))
+			tr.resolveBType(ty.Elemtype.(ast.BType))
 			memberTy := ty.Elemtype.(ast.BType).SemType()
 			if ty.IsOpenArray() {
-				t = d.DefineListTypeWrappedWithEnvSemType(env.typeEnv, memberTy)
+				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.env.typeEnv, memberTy)
 			} else {
 				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				t = d.DefineListTypeWrappedWithEnvSemTypesInt(env.typeEnv, []semtypes.SemType{memberTy}, length)
+				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.env.typeEnv, []semtypes.SemType{memberTy}, length)
 			}
 		} else {
-			t = defn.GetSemType(env.typeEnv)
+			semTy = defn.GetSemType(tr.env.typeEnv)
 		}
 
-		ty.SetSemType(t)
+		ty.SetSemType(semTy)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
-		panic("not implemented")
+		tr.ctx.Unimplemented("unsupported type", nil)
 	}
 }

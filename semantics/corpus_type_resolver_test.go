@@ -61,7 +61,7 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 	pkg := ast.ToPackage(compilationUnit)
-	typeResolver := NewIsolatedTypeResolver()
+	typeResolver := NewIsolatedTypeResolver(cx)
 	typeResolver.ResolveTypes(pkg)
 	validator := &typeResolutionValidator{t: t}
 	ast.Walk(validator, pkg)

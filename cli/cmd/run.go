@@ -159,7 +159,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	if runOpts.dumpBIR {
 		pkg := ast.ToPackage(compilationUnit)
 		// Add type resolution step
-		typeResolver := semantics.NewTypeResolver()
+		typeResolver := semantics.NewTypeResolver(cx)
 		typeResolver.ResolveTypes(pkg)
 		// Then generate BIR
 		birPkg := bir.GenBir(cx, pkg)

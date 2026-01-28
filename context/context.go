@@ -18,6 +18,8 @@ package context
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 	"strconv"
 )
 
@@ -32,6 +34,25 @@ func (this *CompilerContext) GetDefaultPackage() *model.PackageID {
 
 func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.Name, version model.Name) *model.PackageID {
 	return model.NewPackageID(this.packageInterner, orgName, nameComps, version)
+}
+
+func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Unimplemented: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Unimplemented: %s", message))
+}
+
+// TODO: implement these properly
+func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Syntax error: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Syntax error: %s", message))
+}
+
+func (this *CompilerContext) InternalError(message string) {
+	panic(fmt.Sprintf("Internal error: %s", message))
 }
 
 func NewCompilerContext() *CompilerContext {

@@ -263,7 +263,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 4: Resolve types
-	typeResolver := semantics.NewTypeResolver()
+	typeResolver := semantics.NewTypeResolver(cx)
 	typeResolver.ResolveTypes(pkg)
 
 	// Step 5: Generate BIR package
