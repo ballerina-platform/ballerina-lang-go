@@ -19,21 +19,22 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"fmt"
 	"reflect"
 )
 
-// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
 type analyzer interface {
 	ast.Visitor
 	ctx() *context.CompilerContext
 	tyCtx() semtypes.Context
-	symbolTy(name string) semtypes.SemType
+	refTy(name UniformRef) semtypes.SemType
 	unimplementedErr(message string)
 	semanticErr(message string)
 	syntaxErr(message string)
 	internalErr(message string)
+	localRef(name string) UniformRef
 }
 
 type (
@@ -41,7 +42,9 @@ type (
 		compilerCtx   *context.CompilerContext
 		typeCtx       semtypes.Context
 		resolvedTypes TypeResolutionResult
-		constants     map[string]*ast.BLangConstant
+		// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
+		constants     map[UniformRef]*ast.BLangConstant
+		pkg           *ast.BLangPackage
 	}
 	constantAnalyzer struct {
 		sa           *SemanticAnalyzer
@@ -53,6 +56,14 @@ type (
 var _ analyzer = &SemanticAnalyzer{}
 var _ analyzer = &constantAnalyzer{}
 
+func (sa *SemanticAnalyzer) localRef(name string) UniformRef {
+	return refInPackage(sa.pkg, name)
+}
+
+func (ca *constantAnalyzer) localRef(name string) UniformRef {
+	return ca.sa.localRef(name)
+}
+
 func (sa *SemanticAnalyzer) ctx() *context.CompilerContext {
 	return sa.compilerCtx
 }
@@ -61,7 +72,7 @@ func (sa *SemanticAnalyzer) tyCtx() semtypes.Context {
 	return sa.typeCtx
 }
 
-func (sa *SemanticAnalyzer) symbolTy(name string) semtypes.SemType {
+func (sa *SemanticAnalyzer) refTy(name UniformRef) semtypes.SemType {
 	ty, ok := sa.resolvedTypes.functions[name]
 	if ok {
 		return ty
@@ -82,8 +93,8 @@ func (ca *constantAnalyzer) tyCtx() semtypes.Context {
 	return ca.sa.tyCtx()
 }
 
-func (ca *constantAnalyzer) symbolTy(name string) semtypes.SemType {
-	return ca.sa.symbolTy(name)
+func (ca *constantAnalyzer) refTy(name UniformRef) semtypes.SemType {
+	return ca.sa.refTy(name)
 }
 
 func (sa *SemanticAnalyzer) unimplementedErr(message string) {
@@ -124,12 +135,14 @@ func NewSemanticAnalyzer(ctx *context.CompilerContext, resolvedTypes TypeResolut
 		compilerCtx:   ctx,
 		typeCtx:       semtypes.ContextFrom(semtypes.GetTypeEnv()),
 		resolvedTypes: resolvedTypes,
-		constants:     make(map[string]*ast.BLangConstant),
+		constants:     make(map[UniformRef]*ast.BLangConstant),
 	}
 }
 
 func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
+	sa.pkg = pkg
 	ast.Walk(sa, pkg)
+	sa.pkg = nil
 }
 
 func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
@@ -161,11 +174,28 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		ca.expectedType = expectedType
 	case *ast.BLangIdentifier:
 		name := n.GetValue()
-		if _, ok := ca.sa.constants[name]; ok {
+		ref := ca.localRef(name)
+		if _, ok := ca.sa.constants[ref]; ok {
 			ca.syntaxErr("constant already declared")
 			return nil
 		}
-		ca.sa.constants[name] = ca.constant
+		ca.sa.constants[ref] = ca.constant
+	case model.ExpressionNode:
+		switch n.GetKind() {
+            case model.NodeKind_LITERAL:
+            case model.NodeKind_NUMERIC_LITERAL:
+            case model.NodeKind_STRING_TEMPLATE_LITERAL:
+            case model.NodeKind_RECORD_LITERAL_EXPR:
+            case model.NodeKind_LIST_CONSTRUCTOR_EXPR:
+            case model.NodeKind_LIST_CONSTRUCTOR_SPREAD_OP:
+            case model.NodeKind_SIMPLE_VARIABLE_REF:
+            case model.NodeKind_BINARY_EXPR:
+            case model.NodeKind_GROUP_EXPR:
+            case model.NodeKind_UNARY_EXPR:
+			default:
+				ca.semanticErr("expression is not a constant expression")
+				return nil
+		}
 	}
 	return ca
 }
@@ -174,39 +204,80 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.BLangLiteral:
-		// TODO: implement semantic analysis
+		ty := expr.GetBType().(ast.BType).SemType()
+		ctx := a.tyCtx()
+		if !semtypes.IsSubtype(ctx, ty, expectedType) {
+			a.semanticErr("incompatible type for literal")
+			return
+		}
 	case *ast.BLangNumericLiteral:
-		// TODO: implement semantic analysis
+		ty := expr.GetBType().(ast.BType).SemType()
+		ctx := a.tyCtx()
+		if !semtypes.IsSubtype(ctx, ty, expectedType) {
+			a.semanticErr("incompatible type for literal")
+			return
+		}
 
 	// Variable References
 	case *ast.BLangSimpleVarRef:
-		// TODO: implement semantic analysis
 	case *ast.BLangLocalVarRef:
-		// TODO: implement semantic analysis
 	case *ast.BLangConstRef:
-		// TODO: implement semantic analysis
 
 	// Operators
 	case *ast.BLangBinaryExpr:
-		// TODO: implement semantic analysis
 	case *ast.BLangUnaryExpr:
-		// TODO: implement semantic analysis
 
 	// Function and Method Calls
 	case *ast.BLangInvocation:
-		// TODO: implement semantic analysis
 
 	// Indexing
 	case *ast.BLangIndexBasedAccess:
-		// TODO: implement semantic analysis
 
 	// Collections and Groups
 	case *ast.BLangListConstructorExpr:
-		// TODO: implement semantic analysis
 	case *ast.BLangGroupExpr:
-		// TODO: implement semantic analysis
 
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
+}
+
+func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
+	var retTy semtypes.SemType
+	// TODO: fix this when we properly support libraries
+	if invocation.PkgAlias != nil {
+		if invocation.PkgAlias.GetValue() != "io" {
+			a.unimplementedErr("unsupported package alias: " + invocation.PkgAlias.GetValue())
+		} else if invocation.Name.GetValue() != "println" {
+			retTy = &semtypes.NIL
+		} else {
+			a.unimplementedErr("unsupported io function: " + invocation.Name.GetValue())
+		}
+	} else {
+		fnTy := a.refTy(a.localRef(invocation.Name.GetValue()))
+		if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+			a.semanticErr("function not found: " + invocation.Name.GetValue())
+			return
+		}
+		argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
+		for i, arg := range invocation.ArgExprs {
+			analyzeExpression(a, arg, nil)
+			argTys[i] = arg.GetBType().(ast.BType).SemType()
+		}
+		paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
+		argLd := semtypes.NewListDefinition()
+		argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE);
+		if !semtypes.IsSubtype(a.tyCtx(), argListTy, paramListTy) {
+			a.semanticErr("incompatible arguments for function call")
+			return
+		}
+		retTy = semtypes.FunctionReturnType(a.tyCtx(), fnTy, argListTy)
+	}
+	if expectedType != nil {
+		if !semtypes.IsSubtype(a.tyCtx(), retTy, expectedType) {
+			a.semanticErr("incompatible return type for function call")
+			return
+		}
+	}
+	invocation.GetBType().(ast.BType).SetSemType(retTy)
 }

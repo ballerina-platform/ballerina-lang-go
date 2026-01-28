@@ -21,10 +21,20 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/big"
 	"strconv"
 )
+
+// UniformRef is a reference to a symbol that is same whether we are referring to it from different package or same
+// so we can efficiently implement lookup logic.
+// TODO: string here is just a placeholder
+type UniformRef string
+
+func refInPackage(pkg *ast.BLangPackage, name string) UniformRef {
+	return UniformRef(name)
+}
 
 type (
 	TypeResolver struct {
@@ -39,9 +49,10 @@ type (
 	}
 
 	TypeResolutionResult struct {
-		functions map[string]semtypes.SemType
+		functions map[UniformRef]semtypes.SemType
 		// We can't resolve constants fully here because they can have type descriptors so they'll be resolved at semantic analysis
 	}
+
 )
 
 var _ ast.Visitor = &TypeResolver{}
@@ -62,10 +73,10 @@ func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) TypeResolutionResult {
 	ast.Walk(t, pkg)
 	// TODO: We need to build symbol for function types here (and in the future type decl)
-	functions := make(map[string]semtypes.SemType)
+	functions := make(map[UniformRef]semtypes.SemType)
 	for _, fn := range pkg.Functions {
 		ty := t.resolveFunction(&fn)
-		functions[fn.Name.Value] = ty
+		functions[refInPackage(pkg, fn.Name.Value)] = ty
 	}
 	return TypeResolutionResult{functions: functions}
 }
@@ -114,6 +125,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
 		return nil
+	case *ast.BLangNumericLiteral:
+		t.resolveNumericLiteral(n)
+		return nil
 	case *ast.BLangTypeDefinition:
 		t.ctx.Unimplemented("type definitions not supported", n.GetPosition())
 		return nil
@@ -127,6 +141,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	var ty semtypes.SemType
 	switch bType.BTypeGetTag() {
 	case model.TypeTags_INT:
+		// INT literals are handled via BLangNumericLiteral path
 	case model.TypeTags_BYTE:
 		value := n.GetValue().(int64)
 		ty = semtypes.IntConst(value)
@@ -141,23 +156,94 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	// Get value from string
 	case model.TypeTags_DECIMAL:
 		strValue := n.GetValue().(string)
-		r := new(big.Rat)
-		if _, ok := r.SetString(strValue); !ok {
-			t.ctx.SyntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), n.GetPosition())
-		}
+		r := t.parseDecimalValue(strValue, n.GetPosition())
 		ty = semtypes.DecimalConst(*r)
 	case model.TypeTags_FLOAT:
 		strValue := n.GetValue().(string)
-		f, err := strconv.ParseFloat(strValue, 64)
-		if err != nil {
-			t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), n.GetPosition())
-		}
+		f := t.parseFloatValue(strValue, n.GetPosition())
 		ty = semtypes.FloatConst(f)
 	default:
 		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
 	}
 	bType.SetSemType(ty)
 	setSemType(n.GetDeterminedType(), ty)
+}
+
+// parseFloatValue parses a string as float64 with error handling
+func (t *TypeResolver) parseFloatValue(strValue string, pos diagnostics.Location) float64 {
+	f, err := strconv.ParseFloat(strValue, 64)
+	if err != nil {
+		t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), pos)
+		return 0
+	}
+	return f
+}
+
+// parseDecimalValue parses a string as big.Rat with error handling
+func (t *TypeResolver) parseDecimalValue(strValue string, pos diagnostics.Location) *big.Rat {
+	r := new(big.Rat)
+	if _, ok := r.SetString(strValue); !ok {
+		t.ctx.SyntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), pos)
+		return big.NewRat(0, 1)
+	}
+	return r
+}
+
+func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
+	bType := n.GetBType().(ast.BType)
+	typeTag := bType.BTypeGetTag()
+
+	var ty semtypes.SemType
+
+	switch n.Kind {
+	case model.NodeKind_INTEGER_LITERAL:
+		ty = t.resolveIntegerLiteral(n, typeTag)
+	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
+		ty = t.resolveDecimalFloatingPointLiteral(n, typeTag)
+	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
+		ty = t.resolveHexFloatingPointLiteral(n, typeTag)
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
+		return
+	}
+
+	bType.SetSemType(ty)
+	setSemType(n.GetDeterminedType(), ty)
+}
+
+func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
+	value := n.GetValue().(int64)
+
+	switch typeTag {
+	case model.TypeTags_INT, model.TypeTags_BYTE:
+		return semtypes.IntConst(value)
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected type tag %v for integer literal", typeTag), n.GetPosition())
+		return nil
+	}
+}
+
+func (t *TypeResolver) resolveDecimalFloatingPointLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
+	strValue := n.GetValue().(string)
+
+	switch typeTag {
+	case model.TypeTags_FLOAT:
+		f := t.parseFloatValue(strValue, n.GetPosition())
+		return semtypes.FloatConst(f)
+
+	case model.TypeTags_DECIMAL:
+		r := t.parseDecimalValue(strValue, n.GetPosition())
+		return semtypes.DecimalConst(*r)
+
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected type tag %v for decimal floating point literal", typeTag), n.GetPosition())
+		return nil
+	}
+}
+
+func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
+	t.ctx.Unimplemented("hex floating point literals not supported", n.GetPosition())
+	return nil
 }
 
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {

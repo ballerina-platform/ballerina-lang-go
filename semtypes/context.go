@@ -21,7 +21,7 @@ type Context interface {
 	getMemoStackDepth() int
 	getMemoStack(i int) *BddMemo
 	popFromMemoStack() *BddMemo
-	env() Env
+	Env() Env
 	jsonMemo() SemType
 	setJsonMemo(t SemType)
 	anydataMemo() SemType
@@ -75,7 +75,7 @@ func (this *contextImpl) popFromMemoStack() *BddMemo {
 	return memo
 }
 
-func (this *contextImpl) env() Env {
+func (this *contextImpl) Env() Env {
 	return this._env
 }
 

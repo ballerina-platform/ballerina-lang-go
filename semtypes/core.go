@@ -533,7 +533,7 @@ func mappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 			return nil
 		}
 	} else {
-		env := cx.env()
+		env := cx.Env()
 		if !IsSubtypeSimple(t, MAPPING) {
 			return nil
 		}
@@ -588,7 +588,7 @@ func listAtomicType(cx Context, t SemType) *ListAtomicType {
 			return nil
 		}
 	} else {
-		env := cx.env()
+		env := cx.Env()
 		if !IsSubtypeSimple(t, LIST) {
 			return nil
 		}
@@ -842,7 +842,7 @@ func TypeCheckContext(env Env) Context {
 
 func CreateJson(context Context) SemType {
 	memo := context.jsonMemo()
-	env := context.env()
+	env := context.Env()
 
 	if memo != nil {
 		return memo
@@ -858,7 +858,7 @@ func CreateJson(context Context) SemType {
 
 func CreateAnydata(context Context) SemType {
 	memo := context.anydataMemo()
-	env := context.env()
+	env := context.Env()
 
 	if memo != nil {
 		return memo
@@ -876,7 +876,7 @@ func CreateAnydata(context Context) SemType {
 
 func CreateCloneable(context Context) SemType {
 	memo := context.cloneableMemo()
-	env := context.env()
+	env := context.Env()
 
 	if memo != nil {
 		return memo
@@ -900,7 +900,7 @@ func CreateIsolatedObject(context Context) SemType {
 
 	quals := ObjectQualifiersFrom(true, false, NetworkQualifierNone)
 	od := NewObjectDefinition()
-	isolatedObj := od.Define(context.env(), quals, []Member{})
+	isolatedObj := od.Define(context.Env(), quals, []Member{})
 	context.setIsolatedObjectMemo(isolatedObj)
 	return isolatedObj
 }
@@ -913,7 +913,7 @@ func CreateServiceObject(context Context) SemType {
 
 	quals := ObjectQualifiersFrom(false, false, NetworkQualifierService)
 	od := NewObjectDefinition()
-	serviceObj := od.Define(context.env(), quals, []Member{})
+	serviceObj := od.Define(context.Env(), quals, []Member{})
 	context.setServiceObjectMemo(serviceObj)
 	return serviceObj
 }
@@ -941,7 +941,7 @@ func MappingAtomicTypesInUnion(cx Context, t SemType) common.Optional[[]MappingA
 		}
 		return common.OptionalEmpty[[]MappingAtomicType]()
 	} else {
-		env := cx.env()
+		env := cx.Env()
 		if !IsSubtypeSimple(t, MAPPING) {
 			return common.OptionalEmpty[[]MappingAtomicType]()
 		}

@@ -42,7 +42,7 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 			if p == nil {
 				break
 			} else {
-				m := intersectMapping(cx.env(), combined, *cx.mappingAtomType(p.Atom))
+				m := intersectMapping(cx.Env(), combined, *cx.mappingAtomType(p.Atom))
 				if m == nil {
 					return true
 				} else {
