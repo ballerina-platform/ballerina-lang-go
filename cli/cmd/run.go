@@ -30,6 +30,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
 
 	"github.com/spf13/cobra"
 )
@@ -150,6 +151,10 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 	if runOpts.dumpBIR {
 		pkg := ast.ToPackage(compilationUnit)
+		// Add type resolution step
+		typeResolver := semantics.NewTypeResolver()
+		typeResolver.ResolveTypes(pkg)
+		// Then generate BIR
 		birPkg := bir.GenBir(cx, pkg)
 		prettyPrinter := bir.PrettyPrinter{}
 
