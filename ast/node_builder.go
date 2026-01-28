@@ -17,16 +17,15 @@
 package ast
 
 import (
-	"regexp"
-	"strconv"
-	"strings"
-
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/identifierutil"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
+	"regexp"
+	"strconv"
+	"strings"
 
 	balCommon "ballerina-lang-go/common"
 )
@@ -1415,8 +1414,13 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 	return bLAssignment
 }
 
-func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStatementNode *tree.CompoundAssignmentStatementNode) BLangNode {
-	panic("TransformCompoundAssignmentStatement unimplemented")
+func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStmtNode *tree.CompoundAssignmentStatementNode) BLangNode {
+	bLCompAssignment := &BLangCompoundAssignment{}
+	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
+	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
+	bLCompAssignment.SetPosition(getPosition(compoundAssignmentStmtNode))
+	bLCompAssignment.OpKind = model.OperatorKind_valueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
+	return bLCompAssignment
 }
 
 func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree.VariableDeclarationNode) BLangNode {

@@ -59,6 +59,7 @@ func (cx *stmtContext) addLoopCtx(onBreakBB *BIRBasicBlock, onContinueBB *BIRBas
 	cx.loopCtx = newCtx
 	return newCtx
 }
+
 func (cx *stmtContext) popLoopCtx() {
 	if cx.loopCtx == nil {
 		panic("no enclosing loop context")
@@ -225,6 +226,8 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return simpleVariableDefinition(ctx, curBB, stmt)
 	case *ast.BLangAssignment:
 		return assignmentStatement(ctx, curBB, stmt)
+	case *ast.BLangCompoundAssignment:
+		return compoundAssignment(ctx, curBB, stmt)
 	case *ast.BLangWhile:
 		return whileStatement(ctx, curBB, stmt)
 	case *ast.BLangBreak:
@@ -234,6 +237,14 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 	default:
 		panic("unexpected statement type")
 	}
+}
+
+func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
+	// First do the operation
+	ref := stmt.VarRef.(ast.BLangExpression)
+	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr)
+	// Then do the assignment
+	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect)
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
@@ -283,20 +294,24 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 }
 
 func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
-	switch varRef := stmt.VarRef.(type) {
+	valueEffect := handleExpression(ctx, bb, stmt.Expr)
+	return assignmentStatementInner(ctx, valueEffect.block, stmt.VarRef, valueEffect)
+}
+
+func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLangExpression, valueEffect expressionEffect) statementEffect {
+	switch varRef := ref.(type) {
 	case *ast.BLangIndexBasedAccess:
-		return assignToMemberStatement(ctx, bb, varRef, stmt.Expr)
+		return assignToMemberStatement(ctx, bb, varRef, valueEffect)
 	case *ast.BLangWildCardBindingPattern:
-		return assignToWildcardBindingPattern(ctx, bb, varRef, stmt.Expr)
+		return assignToWildcardBindingPattern(ctx, bb, varRef, valueEffect)
 	case *ast.BLangSimpleVarRef:
-		return assignToSimpleVariable(ctx, bb, varRef, stmt.Expr)
+		return assignToSimpleVariable(ctx, bb, varRef, valueEffect)
 	default:
 		panic("unexpected variable reference type")
 	}
 }
 
-func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, value ast.BLangExpression) statementEffect {
-	valueEffect := handleExpression(ctx, bb, value)
+func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, valueEffect expressionEffect) statementEffect {
 	refEffect := wildcardBindingPattern(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
 	mov := &Move{}
@@ -308,8 +323,7 @@ func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef 
 	}
 }
 
-func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, value ast.BLangExpression) statementEffect {
-	valueEffect := handleExpression(ctx, bb, value)
+func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, valueEffect expressionEffect) statementEffect {
 	refEffect := simpleVariableReference(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
 	mov := &Move{}
@@ -321,10 +335,8 @@ func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLa
 	}
 }
 
-func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, value ast.BLangExpression) statementEffect {
-	currBB := bb
-	valueEffect := handleExpression(ctx, currBB, value)
-	currBB = valueEffect.block
+func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect) statementEffect {
+	currBB := valueEffect.block
 	containerRefEffect := handleExpression(ctx, currBB, varRef.Expr)
 	currBB = containerRefEffect.block
 	indexEffect := handleExpression(ctx, currBB, varRef.IndexExpr)
@@ -566,9 +578,9 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression) expressionEffect {
 	var kind InstructionKind
-	switch expr.OpKind {
+	switch opKind {
 	case model.OperatorKind_ADD:
 		kind = INSTRUCTION_KIND_ADD
 	case model.OperatorKind_SUB:
@@ -606,9 +618,9 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = kind
 	binaryOp.LhsOp = resultOperand
-	op1Effect := handleExpression(ctx, curBB, expr.LhsExpr)
+	op1Effect := handleExpression(ctx, curBB, lhsExpr)
 	curBB = op1Effect.block
-	op2Effect := handleExpression(ctx, curBB, expr.RhsExpr)
+	op2Effect := handleExpression(ctx, curBB, rhsExpr)
 	curBB = op2Effect.block
 	binaryOp.RhsOp1 = *op1Effect.result
 	binaryOp.RhsOp2 = *op2Effect.result
@@ -617,6 +629,10 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 		result: resultOperand,
 		block:  curBB,
 	}
+}
+
+func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+	return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr)
 }
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
