@@ -264,9 +264,13 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 4: Resolve types
 	typeResolver := semantics.NewTypeResolver(cx)
-	typeResolver.ResolveTypes(pkg)
+	resolvedTypes := typeResolver.ResolveTypes(pkg)
 
-	// Step 5: Generate BIR package
+	// Step 5: Run semantic analysis
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
+	semanticAnalyzer.Analyze(pkg)
+
+	// Step 6: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result

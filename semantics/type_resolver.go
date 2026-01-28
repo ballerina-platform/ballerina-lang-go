@@ -114,6 +114,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
 		return nil
+	case *ast.BLangTypeDefinition:
+		t.ctx.Unimplemented("type definitions not supported", n.GetPosition())
+		return nil
 	default:
 		return t
 	}
@@ -196,7 +199,7 @@ func (tr *TypeResolver) resolveBType(btype ast.BType) {
 		case model.TypeKind_ANY:
 			btype.SetSemType(&semtypes.ANY)
 		default:
-			tr.ctx.InternalError("unexpected type kind")
+			tr.ctx.InternalError("unexpected type kind", nil)
 		}
 	case *ast.BLangArrayType:
 		defn := ty.Definition

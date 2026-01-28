@@ -23,6 +23,7 @@ import (
 	"strconv"
 )
 
+// TODO: consider moving type resolution env in to this
 type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner
@@ -43,6 +44,13 @@ func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Locat
 	panic(fmt.Sprintf("Unimplemented: %s", message))
 }
 
+func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Semantic error: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Semantic error: %s", message))
+}
+
 // TODO: implement these properly
 func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
 	if pos != nil {
@@ -51,7 +59,10 @@ func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Locatio
 	panic(fmt.Sprintf("Syntax error: %s", message))
 }
 
-func (this *CompilerContext) InternalError(message string) {
+func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Internal error: %s at %s", message, pos))
+	}
 	panic(fmt.Sprintf("Internal error: %s", message))
 }
 

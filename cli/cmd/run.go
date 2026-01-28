@@ -160,7 +160,10 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		pkg := ast.ToPackage(compilationUnit)
 		// Add type resolution step
 		typeResolver := semantics.NewTypeResolver(cx)
-		typeResolver.ResolveTypes(pkg)
+		resolvedTypes := typeResolver.ResolveTypes(pkg)
+		// Run semantic analysis after type resolution
+		semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
+		semanticAnalyzer.Analyze(pkg)
 		// Then generate BIR
 		birPkg := bir.GenBir(cx, pkg)
 		prettyPrinter := bir.PrettyPrinter{}
