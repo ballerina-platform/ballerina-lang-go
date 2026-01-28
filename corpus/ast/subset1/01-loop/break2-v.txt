@@ -30,7 +30,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable i))
+        (variable i (type
+          (value-type int))))
       (while
         (binary-expr <=
           (simple-var-ref i)

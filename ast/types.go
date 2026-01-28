@@ -19,6 +19,7 @@ package ast
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 )
 
 type ProjectKind uint8
@@ -46,7 +47,7 @@ type ObjectType interface {
 
 type BType interface {
 	model.Type
-	bTypeGetTag() model.TypeTags
+	BTypeGetTag() model.TypeTags
 	bTypesetTag(tag model.TypeTags)
 	bTypeGetTSymbol() *BTypeSymbol
 	bTypeSetTSymbol(tsymbol *BTypeSymbol)
@@ -54,6 +55,8 @@ type BType interface {
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
 	bTypeSetFlags(flags uint64)
+	SemType() semtypes.SemType
+	SetSemType(semtype semtypes.SemType)
 }
 
 type (
@@ -66,6 +69,7 @@ type (
 		tsymbol  *BTypeSymbol
 		name     model.Name
 		flags    uint64
+		semtype  semtypes.SemType
 	}
 
 	BTypeImpl struct {
@@ -73,12 +77,14 @@ type (
 		tag     model.TypeTags
 		name    model.Name
 		flags   uint64
+		semtype semtypes.SemType
 	}
 	BLangArrayType struct {
 		BLangTypeBase
 		Elemtype   model.TypeNode
 		Sizes      []BLangExpression
 		Dimensions int
+		Definition semtypes.Definition
 	}
 	BLangBuiltInRefTypeNode struct {
 		BLangTypeBase
@@ -90,6 +96,8 @@ type (
 		TypeKind model.TypeKind
 	}
 
+	// TODO: Is this just type reference? if not we need to rethink this when we have actual user defined types.
+	//   If the user defined type is recursive we need a way to get the Definition (similar to array type etc) from that.
 	BLangUserDefinedType struct {
 		BLangTypeBase
 		PkgAlias BLangIdentifier
@@ -168,6 +176,21 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 		expressionNodes[i] = size
 	}
 	return expressionNodes
+}
+
+func (this *BLangArrayType) IsOpenArray() bool {
+	return this.Dimensions == 1 && this.Sizes[0].(*BLangLiteral).Value == OPEN_ARRAY_INDICATOR
+}
+
+func (this *BLangTypeBase) SemType() semtypes.SemType {
+	return this.semtype
+}
+
+func (this *BLangTypeBase) SetSemType(semtype semtypes.SemType) {
+	if this.semtype != nil && this.semtype != semtype {
+		panic("semtype already set")
+	}
+	this.semtype = semtype
 }
 
 func (this *BLangTypeBase) IsNullable() bool {
@@ -259,8 +282,8 @@ func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	}
 }
 
-func (this *BLangTypeBase) getTypeKind() model.TypeKind {
-	return typeTagToTypeKind(this.bTypeGetTag())
+func (this *BLangTypeBase) GetTypeKind() model.TypeKind {
+	return typeTagToTypeKind(this.BTypeGetTag())
 }
 
 // BObjectType methods
@@ -278,7 +301,7 @@ func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) bTypeGetTag() model.TypeTags {
+func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
@@ -306,7 +329,7 @@ func (this *BLangTypeBase) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) bTypeGetTag() model.TypeTags {
+func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
@@ -336,6 +359,14 @@ func (this *BTypeImpl) bTypeGetFlags() uint64 {
 
 func (this *BTypeImpl) bTypeSetFlags(flags uint64) {
 	this.flags = flags
+}
+
+func (this *BTypeImpl) SemType() semtypes.SemType {
+	return this.semtype
+}
+
+func (this *BTypeImpl) SetSemType(semtype semtypes.SemType) {
+	this.semtype = semtype
 }
 
 func (this *BTypeImpl) GetTypeKind() model.TypeKind {

@@ -1428,6 +1428,10 @@ func (b *BLangInvokableNodeBase) SetDesugaredReturnType(desugaredReturnType bool
 	b.DesugaredReturnType = desugaredReturnType
 }
 
+func (b *BLangVariableBase) GetBType() model.TypeNode {
+	return b.TypeNode
+}
+
 func (b *BLangVariableBase) GetTypeNode() model.TypeNode {
 	return b.TypeNode
 }
