@@ -1,0 +1,61 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad %!s(int64=1000000)
+    loopCount = %1;
+    %3 = ConstantLoad %!s(int64=0)
+    i = %3;
+    %5 = ConstantLoad %!s(int64=0)
+    total = %5;
+    GOTO bb1;
+  }
+  bb1 {
+    %7 = < i loopCount;
+    %7 ? bb2 : bb3;
+  }
+  bb2 {
+    %9 = ConstantLoad %!s(int64=1)
+    %8 = + i %9;
+    %10 = sum(i,%8) -> bb4;
+  }
+  bb3 {
+    %17 = ConstantLoad Loop count: 
+    %18 = println(%17,loopCount) -> bb6;
+  }
+  bb4 {
+    a = %10;
+    %12 = addOffset(a) -> bb5;
+  }
+  bb5 {
+    b = %12;
+    %14 = + total b;
+    total = %14;
+    %16 = ConstantLoad %!s(int64=1)
+    %15 = + i %16;
+    i = %15;
+    GOTO bb1;
+  }
+  bb6 {
+    %19 = ConstantLoad Final total: 
+    %20 = println(%19,total) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}
+sum<NIL>{
+  bb0 {
+    %3 = + x y;
+    %0 = %3;
+    return;
+  }
+}
+addOffset<NIL>{
+  bb0 {
+    %3 = ConstantLoad %!s(int64=10)
+    %2 = + value %3;
+    %0 = %2;
+    return;
+  }
+}

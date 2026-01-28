@@ -92,10 +92,23 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printIndexBasedAccess(t)
 	case *BLangWildCardBindingPattern:
 		p.printWildCardBindingPattern(t)
+	case *BLangCompoundAssignment:
+		p.printCompoundAssignment(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
 	}
+}
+
+func (p *PrettyPrinter) printCompoundAssignment(t *BLangCompoundAssignment) {
+	p.startNode()
+	p.printString("compound-assignment")
+	p.printOperatorKind(t.OpKind)
+	p.indentLevel++
+	p.PrintInner(t.VarRef.(BLangNode))
+	p.PrintInner(t.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
 }
 
 func (p *PrettyPrinter) printImportPackage(node *BLangImportPackage) {
