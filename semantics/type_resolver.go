@@ -34,6 +34,11 @@ type (
 		// should be able to lookup that from here and get the semtype there
 		typeEnv semtypes.Env
 	}
+
+	TypeResolutionResult struct {
+		functions map[string]semtypes.SemType
+		// We can't resolve constants fully here because they can have type descriptors so they'll be resolved at semantic analysis
+	}
 )
 
 var _ ast.Visitor = &TypeResolver{}
@@ -47,9 +52,44 @@ func NewIsolatedTypeResolver() *TypeResolver {
 	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}}
 }
 
-func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) {
+// ResolveTypes resolves all the type definitions and return a map of all the types of symbols exported by the package.
+// After this (for the given package) all the semtypes are known. Semantic analysis will validate and propagate these
+// types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
+// it is safe use the closed world assumption to optimize type checks.
+func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) TypeResolutionResult {
 	ast.Walk(t, pkg)
 	// TODO: We need to build symbol for function types here (and in the future type decl)
+	functions := make(map[string]semtypes.SemType)
+	for _, fn := range pkg.Functions {
+		ty := t.resolveFunction(&fn)
+		functions[fn.Name.Value] = ty
+	}
+	return TypeResolutionResult{functions: functions}
+}
+
+func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
+	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
+	for i, param := range fn.RequiredParams {
+		paramTypes[i] = param.GetBType().(ast.BType).SemType()
+	}
+	var restTy semtypes.SemType
+	if fn.RestParam != nil {
+		panic("unimplemented")
+	} else {
+		restTy = &semtypes.NEVER
+	}
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.env.typeEnv, paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+	var returnTy semtypes.SemType
+	if fn.ReturnTypeNode != nil {
+		bType := fn.ReturnTypeNode.(ast.BType)
+		returnTy = bType.SemType()
+	} else {
+		returnTy = &semtypes.NIL
+	}
+	functionDefn := semtypes.NewFunctionDefinition()
+	return functionDefn.Define(t.env.typeEnv, paramListTy, returnTy,
+		semtypes.FunctionQualifiersFrom(t.env.typeEnv, false, false))
 }
 
 func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
@@ -65,12 +105,8 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
 		return nil
-	case *ast.BLangArrayType:
-	case *ast.BLangBuiltInRefTypeNode:
-	case *ast.BLangValueType:
-	case *ast.BLangUserDefinedType:
-	case *ast.BLangFiniteTypeNode:
-		resolveBType(t.env, n)
+	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode:
+		resolveBType(t.env, n.(ast.BType))
 		return nil
 	case *ast.BLangLiteral:
 		resolveLiteral(t.env, n)
@@ -81,7 +117,7 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	panic("unreachable")
 }
 
-func resolveLiteral(symbolEnv *symbolEnv, n *ast.BLangLiteral) {
+func resolveLiteral(_ *symbolEnv, n *ast.BLangLiteral) {
 	bType := n.GetBType().(ast.BType)
 	var ty semtypes.SemType
 	switch bType.BTypeGetTag() {
@@ -155,6 +191,8 @@ func resolveBType(env *symbolEnv, btype ast.BType) {
 			btype.SetSemType(&semtypes.STRING)
 		case model.TypeKind_NIL:
 			btype.SetSemType(&semtypes.NIL)
+		case model.TypeKind_ANY:
+			btype.SetSemType(&semtypes.ANY)
 		default:
 			panic("unexpected")
 		}

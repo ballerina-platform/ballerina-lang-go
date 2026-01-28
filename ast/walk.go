@@ -257,6 +257,12 @@ func Walk(v Visitor, node BLangNode) {
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}
+		if node.RestParam != nil {
+			Walk(v, node.RestParam.(BLangNode))
+		}
+		if node.ReturnTypeNode != nil {
+			Walk(v, node.ReturnTypeNode.(BLangNode))
+		}
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
