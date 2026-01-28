@@ -23,7 +23,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
-	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -179,7 +179,7 @@ func runTest(balFile string) testResult {
 		printlnOutputs[balFile] = ""
 		printlnMu.Unlock()
 
-		rt := api.NewRuntime()
+		rt := runtime.NewRuntime()
 		rt.Registry.RegisterExternFunction(externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
 		interpretErr := rt.Interpret(*birPkg)
 		if interpretErr != nil {

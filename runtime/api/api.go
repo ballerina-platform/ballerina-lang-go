@@ -37,19 +37,7 @@ type Runtime struct {
 // a runtime instance during its construction.
 type ModuleInitializer func(*Runtime)
 
-var moduleInitializers []ModuleInitializer
-
-// NewRuntime constructs a new runtime with an empty registry and runs all
-// registered module initializers.
-func NewRuntime() *Runtime {
-	rt := &Runtime{
-		Registry: modules.NewRegistry(),
-	}
-	for _, init := range moduleInitializers {
-		init(rt)
-	}
-	return rt
-}
+var ModuleInitializers []ModuleInitializer
 
 // Interpret interprets a BIR package using this runtime instance.
 // It wraps the underlying interpreter with panic recovery and
@@ -68,7 +56,7 @@ func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
 // RegisterModuleInitializer registers a module initializer that will be invoked
 // for every newly created runtime.
 func RegisterModuleInitializer(init ModuleInitializer) {
-	moduleInitializers = append(moduleInitializers, init)
+	ModuleInitializers = append(ModuleInitializers, init)
 }
 
 // RegisterExternFunction registers a native (extern) function implementation in
