@@ -30,7 +30,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
-	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime"
 
 	"github.com/spf13/cobra"
 )
@@ -169,7 +169,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(os.Stderr, "Running executable")
 	fmt.Fprintln(os.Stderr)
 
-	rt := api.NewRuntime()
+	rt := runtime.NewRuntime()
 	if err := rt.Interpret(*birPkg); err != nil {
 		return err
 	}
