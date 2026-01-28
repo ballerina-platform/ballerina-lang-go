@@ -2,9 +2,10 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 ? bb2 : bb4;
+    %1 = foo() -> bb1;
   }
   bb1 {
+    %1 ? bb2 : bb4;
   }
   bb2 {
     %2 = ConstantLoad %!s(int64=100)
