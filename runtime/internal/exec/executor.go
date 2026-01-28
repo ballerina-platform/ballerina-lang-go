@@ -70,7 +70,7 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry)
 		}
 		bb = execTerminator(term, *bb, frame, reg)
 	}
-	return frame.GetOperand(0)
+	return frame.locals[0]
 }
 
 func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
