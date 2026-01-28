@@ -20,6 +20,8 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"math/big"
+	"strconv"
 )
 
 type (
@@ -34,9 +36,7 @@ type (
 	}
 )
 
-var (
-	_ ast.Visitor = &TypeResolver{}
-)
+var _ ast.Visitor = &TypeResolver{}
 
 func NewTypeResolver() *TypeResolver {
 	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetTypeEnv()}}
@@ -49,6 +49,7 @@ func NewIsolatedTypeResolver() *TypeResolver {
 
 func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) {
 	ast.Walk(t, pkg)
+	// TODO: We need to build symbol for function types here (and in the future type decl)
 }
 
 func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
@@ -71,10 +72,51 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangFiniteTypeNode:
 		resolveBType(t.env, n)
 		return nil
+	case *ast.BLangLiteral:
+		resolveLiteral(t.env, n)
+		return nil
 	default:
 		return t
 	}
 	panic("unreachable")
+}
+
+func resolveLiteral(symbolEnv *symbolEnv, n *ast.BLangLiteral) {
+	bType := n.GetBType().(ast.BType)
+	var ty semtypes.SemType
+	switch bType.BTypeGetTag() {
+	case model.TypeTags_INT:
+	case model.TypeTags_BYTE:
+		value := n.GetValue().(int64)
+		ty = semtypes.IntConst(value)
+	case model.TypeTags_BOOLEAN:
+		value := n.GetValue().(bool)
+		ty = semtypes.BooleanConst(value)
+	case model.TypeTags_STRING:
+		value := n.GetValue().(string)
+		ty = semtypes.StringConst(value)
+	case model.TypeTags_NIL:
+		ty = &semtypes.NIL
+	// Get value from string
+	case model.TypeTags_DECIMAL:
+		strValue := n.GetValue().(string)
+		r := new(big.Rat)
+		if _, ok := r.SetString(strValue); !ok {
+			panic("unimplemented")
+		}
+		ty = semtypes.DecimalConst(*r)
+	case model.TypeTags_FLOAT:
+		strValue := n.GetValue().(string)
+		f, err := strconv.ParseFloat(strValue, 64)
+		if err != nil {
+			panic("unimplemented")
+		}
+		ty = semtypes.FloatConst(f)
+	default:
+		panic("unimplemented")
+	}
+	bType.SetSemType(ty)
+	setSemType(n.GetDeterminedType(), ty)
 }
 
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
