@@ -27,17 +27,6 @@ type (
 		env *symbolEnv
 	}
 
-	resolverBase struct {
-		typeResolver *TypeResolver
-	}
-	functionTypeResolver struct {
-		resolverBase
-		function *ast.BLangFunction
-	}
-	constantTypeResolver struct {
-		resolverBase
-	}
-
 	symbolEnv struct {
 		// TODO: keep a map of ast nodes by identifier. When we run into a an indentifier in different package we
 		// should be able to lookup that from here and get the semtype there
@@ -47,8 +36,6 @@ type (
 
 var (
 	_ ast.Visitor = &TypeResolver{}
-	_ ast.Visitor = &functionTypeResolver{}
-	_ ast.Visitor = &constantTypeResolver{}
 )
 
 func NewTypeResolver() *TypeResolver {
@@ -58,10 +45,6 @@ func NewTypeResolver() *TypeResolver {
 // NewIsolatedTypeResolver is meant for testing so that we can run each test in parallel
 func NewIsolatedTypeResolver() *TypeResolver {
 	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}}
-}
-
-func newFunctionTypeResolver(typeResolver *TypeResolver, function *ast.BLangFunction) *functionTypeResolver {
-	return &functionTypeResolver{resolverBase: resolverBase{typeResolver: typeResolver}, function: function}
 }
 
 func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) {
@@ -75,9 +58,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	}
 	switch n := node.(type) {
 	case *ast.BLangFunction:
-		return newFunctionTypeResolver(t, n)
+		return t
 	case *ast.BLangConstant:
-		return &constantTypeResolver{resolverBase: resolverBase{typeResolver: t}}
+		return nil
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
 		return nil
@@ -86,7 +69,8 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangValueType:
 	case *ast.BLangUserDefinedType:
 	case *ast.BLangFiniteTypeNode:
-		panic("not implemented")
+		resolveBType(t.env, n)
+		return nil
 	default:
 		return t
 	}
@@ -155,30 +139,4 @@ func resolveBType(env *symbolEnv, btype ast.BType) {
 		// TODO: here we need to implement type resolution logic for each type
 		panic("not implemented")
 	}
-}
-
-func (t *functionTypeResolver) Visit(node ast.BLangNode) ast.Visitor {
-	// We are inside the BLangFunction so need to deal with it's fields only
-	switch n := node.(type) {
-	case *ast.BLangSimpleVariable:
-		t.typeResolver.resolveSimpleVariable(n)
-	case *ast.BLangBlockFunctionBody:
-		for _, stmt := range n.Stmts {
-			t.resolveStmt(stmt)
-		}
-	case *ast.BLangExprFunctionBody:
-		t.resolveExpr(n.Expr)
-	}
-	return t
-}
-
-func (t *functionTypeResolver) resolveExpr(expr model.ExpressionNode) {
-}
-
-func (t *functionTypeResolver) resolveStmt(stmt ast.BLangStatement) {
-	// FIXME: fix assignment
-}
-
-func (t *constantTypeResolver) Visit(node ast.BLangNode) ast.Visitor {
-	return nil
 }
