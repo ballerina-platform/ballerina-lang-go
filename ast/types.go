@@ -47,7 +47,7 @@ type ObjectType interface {
 
 type BType interface {
 	model.Type
-	bTypeGetTag() model.TypeTags
+	BTypeGetTag() model.TypeTags
 	bTypesetTag(tag model.TypeTags)
 	bTypeGetTSymbol() *BTypeSymbol
 	bTypeSetTSymbol(tsymbol *BTypeSymbol)
@@ -283,7 +283,7 @@ func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 }
 
 func (this *BLangTypeBase) GetTypeKind() model.TypeKind {
-	return typeTagToTypeKind(this.bTypeGetTag())
+	return typeTagToTypeKind(this.BTypeGetTag())
 }
 
 // BObjectType methods
@@ -301,7 +301,7 @@ func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) bTypeGetTag() model.TypeTags {
+func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
@@ -329,7 +329,7 @@ func (this *BLangTypeBase) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) bTypeGetTag() model.TypeTags {
+func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
