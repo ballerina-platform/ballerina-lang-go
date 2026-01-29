@@ -108,18 +108,15 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          find dist -name "bal" -o -name "bal.exe" | while read file; do
-            dir=$(dirname "$file")
-            platform=$(basename "$(dirname "$dir")")
-            if [[ "$file" == *.exe ]]; then
-              cp "$file" "release/${platform}.exe"
-            else
-              cp "$file" "release/${platform}"
-            fi
+          for artifact_dir in dist/bal-*; do
+            platform=$(basename "$artifact_dir")
+            cd "$artifact_dir"
+            zip -r "../../release/${platform}.zip" .
+            cd ../..
           done
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*
+          files: release/*.zip
           generate_release_notes: true
