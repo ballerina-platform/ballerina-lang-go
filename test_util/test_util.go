@@ -49,6 +49,14 @@ func GetValidTests(t *testing.T, kind TestKind) []TestCase {
 	})
 }
 
+// GetErrorTests returns all error test pairs for the given test kind
+// It only returns test cases where the input file ends with "-e.bal"
+func GetErrorTests(t *testing.T, kind TestKind) []TestCase {
+	return GetTests(t, kind, func(path string) bool {
+		return strings.HasSuffix(path, "-e.bal")
+	})
+}
+
 // GetTests returns test pairs for the given test kind, filtered by the provided function
 func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestCase {
 	inputBaseDirAlt := "bal"
