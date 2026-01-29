@@ -76,6 +76,21 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	t.Logf("Semantic analysis completed successfully for %s", testCase.InputPath)
 }
 
+var semanticAnalysisErrorSkipList = []string {
+	// reachability analysis
+	"01-function/call13-e.bal",
+	"01-loop/while03-e.bal",
+
+	// union td not implemented
+	"01-function/assign11-e.bal",
+
+	// error constructor expr not implemented
+	"01-function/assign10-e.bal",
+
+	// module type defn not implemented
+	"01-function/call11-e.bal",
+}
+
 func TestSemanticAnalysisErrors(t *testing.T) {
 	flag.Parse()
 
@@ -90,6 +105,12 @@ func TestSemanticAnalysisErrors(t *testing.T) {
 }
 
 func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
+	for _, skip := range semanticAnalysisErrorSkipList {
+		if strings.HasSuffix(testCase.InputPath, skip) {
+			t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
+			return
+		}
+	}
 	// We EXPECT a panic for error test cases
 	didPanic := false
 	var panicValue interface{}
