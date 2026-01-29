@@ -680,7 +680,7 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		}
 		resultOperand := ctx.addTempVar(nil)
 		constantLoad := &ConstantLoad{}
-		constantLoad.Value = constant.ConstValue
+		constantLoad.Value = constant.ConstValue.Value
 		constantLoad.LhsOp = resultOperand
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
 		return expressionEffect{
