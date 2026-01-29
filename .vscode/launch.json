@@ -9,11 +9,8 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}",
-            "args": [
-                "${file}",
-                "-dump-bir"
-            ]
+            "program": "${workspaceFolder}/cli/cmd",
+            "args": ["run", "${file}", "--dump-bir"]
         }
     ]
 }
