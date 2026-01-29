@@ -40,7 +40,7 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 
 func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg *Conjunction) SemType {
 	// migrated from ListProj.java:87:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
 		} else {

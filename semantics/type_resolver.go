@@ -115,6 +115,9 @@ func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 }
 
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	if typeData.TypeDescriptor == nil {
+		return t
+	}
 	ty := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
 	typeData.Type = ty
 	return t
@@ -126,13 +129,11 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	switch n := node.(type) {
-	case *ast.BLangFunction:
+	case *ast.BLangFunction, *ast.BLangConstant:
 		return t
-	case *ast.BLangConstant:
-		return nil
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
-		return nil
+		return t
 	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode:
 		t.ctx.InternalError("unexpected type definition node", n.GetPosition())
 		return nil

@@ -38,6 +38,8 @@ type Context interface {
 	functionAtomType(atom Atom) *FunctionAtomicType
 	listAtomType(atom Atom) *ListAtomicType
 	mappingAtomType(atom Atom) *MappingAtomicType
+	comparableMemo(t1, t2 SemType) *comparableMemo
+	setComparableMemo(t1, t2 SemType, memo *comparableMemo)
 }
 
 var _ Context = &contextImpl{}
@@ -54,6 +56,18 @@ type contextImpl struct {
 	_cloneableMemo      SemType
 	_isolatedObjectMemo SemType
 	_serviceObjectMemo  SemType
+	_comparableMemo     map[comparableMemoKey]*comparableMemo
+}
+
+type comparableMemo struct {
+	semType1   SemType
+	semType2   SemType
+	comparable bool
+}
+
+type comparableMemoKey struct {
+	semType1 SemType
+	semType2 SemType
 }
 
 func (this *contextImpl) pushToMemoStack(m *BddMemo) {
@@ -145,9 +159,18 @@ func (this *contextImpl) mappingAtomType(atom Atom) *MappingAtomicType {
 
 func ContextFrom(env Env) Context {
 	return &contextImpl{
-		_env:          env,
-		_listMemo:     make(map[Bdd]*BddMemo),
-		_mappingMemo:  make(map[Bdd]*BddMemo),
-		_functionMemo: make(map[Bdd]*BddMemo),
+		_env:            env,
+		_listMemo:       make(map[Bdd]*BddMemo),
+		_mappingMemo:    make(map[Bdd]*BddMemo),
+		_functionMemo:   make(map[Bdd]*BddMemo),
+		_comparableMemo: make(map[comparableMemoKey]*comparableMemo),
 	}
+}
+
+func (this *contextImpl) comparableMemo(t1, t2 SemType) *comparableMemo {
+	return this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
+}
+
+func (this *contextImpl) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
+	this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
 }

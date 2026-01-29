@@ -12,6 +12,10 @@ const (
 	MIN_VALUE = -MAX_VALUE - 1       // Platform min int
 )
 
+func bitCount(b BasicTypeBitSet) int {
+	return bits.OnesCount(uint(b.bitset))
+}
+
 func cellAtomType(atom Atom) CellAtomicType {
 	ta := atom.(*TypeAtom)
 	atomicType := ta.AtomicType
@@ -301,7 +305,7 @@ func IsSameType(cx Context, t1, t2 SemType) bool {
 	return IsSubtype(cx, t1, t2) && IsSubtype(cx, t2, t1)
 }
 
-func widenToBasicTypes(t SemType) BasicTypeBitSet {
+func WidenToBasicTypes(t SemType) BasicTypeBitSet {
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		return *b
 	} else {
@@ -981,4 +985,43 @@ func collectBddMappingAtomicTypesInUnion(env Env, bdd Bdd, top MappingAtomicType
 	}
 
 	return false
+}
+
+func Comparable(cx Context, t1, t2 SemType) bool {
+	semType := Diff(Union(t1, t2), &NIL)
+	if IsSubtypeSimple(semType, SIMPLE_OR_STRING) {
+		nOrderings := bitCount(WidenToBasicTypes(semType))
+		return nOrderings <= 1
+	}
+	if IsSubtypeSimple(semType, LIST) {
+		return comparableNillableList(cx, t1, t2)
+	}
+	return false
+}
+
+
+// t1, t2 must be subtype of LIST|?
+func comparableNillableList(cx Context, t1, t2 SemType) bool {
+    memoized := cx.comparableMemo(t1, t2)
+    if memoized != nil {
+        return memoized.comparable;
+    }
+    memo := comparableMemo{ semType1: t1, semType2: t2 }
+    cx.setComparableMemo(t1, t2, &memo)
+	listMemberTypes1 := ListAllMemberTypesInner(cx, t1)
+	listMemberTypes2 := ListAllMemberTypesInner(cx, t2)
+	ranges1 := listMemberTypes1.Ranges
+	ranges2 := listMemberTypes2.Ranges
+	memberTypes1 := listMemberTypes1.SemTypes
+	memberTypes2 := listMemberTypes2.SemTypes
+    for _, combinedRange := range CombineRanges(ranges1, ranges2) {
+        i1 := combinedRange.I1
+        i2 := combinedRange.I2
+        if i1 != -1 && i2 != -1 && !Comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
+            memo.comparable = false
+            return false
+        }
+    }
+    memo.comparable = true
+    return true
 }

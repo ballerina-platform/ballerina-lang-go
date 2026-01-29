@@ -191,10 +191,10 @@ func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemTy
 		fnAtom := cx.functionAtomType(b.Atom())
 		atomArgListTy := fnAtom.ParamType
 		atomReturnTy := fnAtom.RetType
-		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.Left),
-			Union(functionReturnTypeInner(cx, Diff(accumArgList, atomArgListTy), accumReturn, b.Left),
-				Union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.Middle),
-					functionReturnTypeInner(cx, accumArgList, accumReturn, b.Right))))
+		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.Left()),
+			Union(functionReturnTypeInner(cx, Diff(accumArgList, atomArgListTy), accumReturn, b.Left()),
+				Union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.Middle()),
+					functionReturnTypeInner(cx, accumArgList, accumReturn, b.Right()))))
 
 	default:
 		panic("impossible")

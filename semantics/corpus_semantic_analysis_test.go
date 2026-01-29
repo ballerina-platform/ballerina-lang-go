@@ -22,21 +22,22 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/test_util"
+	"flag"
 	"testing"
 )
 
-// func TestSemanticAnalysis(t *testing.T) {
-// 	flag.Parse()
+func TestSemanticAnalysis(t *testing.T) {
+	flag.Parse()
 
-// 	testPairs := test_util.GetValidTests(t, test_util.AST)
+	testPairs := test_util.GetValidTests(t, test_util.AST)
 
-// 	for _, testPair := range testPairs {
-// 		t.Run(testPair.Name, func(t *testing.T) {
-// 			t.Parallel()
-// 			testSemanticAnalysis(t, testPair)
-// 		})
-// 	}
-// }
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
+			t.Parallel()
+			testSemanticAnalysis(t, testPair)
+		})
+	}
+}
 
 func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	defer func() {
