@@ -34,6 +34,7 @@ type analyzer interface {
 	ctx() *context.CompilerContext
 	tyCtx() semtypes.Context
 	refTy(name UniformRef) semtypes.SemType
+	importedPackage(alias string) *ast.BLangImportPackage
 	unimplementedErr(message string)
 	semanticErr(message string)
 	syntaxErr(message string)
@@ -57,8 +58,9 @@ type (
 		typeCtx       semtypes.Context
 		resolvedTypes TypeResolutionResult
 		// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
-		constants map[UniformRef]*ast.BLangConstant
-		pkg       *ast.BLangPackage
+		constants    map[UniformRef]*ast.BLangConstant
+		pkg          *ast.BLangPackage
+		importedPkgs map[string]*ast.BLangImportPackage
 	}
 	constantAnalyzer struct {
 		analyzerBase
@@ -148,6 +150,10 @@ func (ab *analyzerBase) executeCallbacks() {
 
 func (ab *analyzerBase) parentAnalyzer() analyzer {
 	return ab.parent
+}
+
+func (ab *analyzerBase) importedPackage(alias string) *ast.BLangImportPackage {
+	return ab.parentAnalyzer().importedPackage(alias)
 }
 
 func (ab *analyzerBase) ctx() *context.CompilerContext {
@@ -258,6 +264,10 @@ func (sa *SemanticAnalyzer) refTy(name UniformRef) semtypes.SemType {
 	}
 	sa.semanticErr(fmt.Sprintf("symbol %s not found", name))
 	return nil
+}
+
+func (sa *SemanticAnalyzer) importedPackage(alias string) *ast.BLangImportPackage {
+	return sa.importedPkgs[alias]
 }
 
 func (fa *functionAnalyzer) refTy(name UniformRef) semtypes.SemType {
@@ -382,13 +392,16 @@ func NewSemanticAnalyzer(ctx *context.CompilerContext, resolvedTypes TypeResolut
 		typeCtx:       semtypes.ContextFrom(semtypes.GetTypeEnv()),
 		resolvedTypes: resolvedTypes,
 		constants:     make(map[UniformRef]*ast.BLangConstant),
+		importedPkgs:  make(map[string]*ast.BLangImportPackage),
 	}
 }
 
 func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 	sa.pkg = pkg
+	sa.importedPkgs = make(map[string]*ast.BLangImportPackage)
 	ast.Walk(sa, pkg)
 	sa.pkg = nil
+	sa.importedPkgs = nil
 }
 
 func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
@@ -398,6 +411,9 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	switch n := node.(type) {
+	case *ast.BLangImportPackage:
+		sa.processImport(n)
+		return nil
 	case *ast.BLangConstant:
 		return &constantAnalyzer{analyzerBase: analyzerBase{parent: sa}, constant: n}
 	case *ast.BLangReturn:
@@ -415,6 +431,29 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		// Now delegates function creation to visitInner
 		return visitInner(sa, node)
 	}
+}
+
+func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
+	alias := importNode.Alias.GetValue()
+
+	// Only support ballerina/io
+	if importNode.OrgName == nil || importNode.OrgName.GetValue() != "ballerina" {
+		sa.unimplementedErr("unsupported import organization: only 'ballerina' imports are supported")
+		return
+	}
+
+	if len(importNode.PkgNameComps) != 1 || importNode.PkgNameComps[0].GetValue() != "io" {
+		sa.unimplementedErr("unsupported import package: only 'ballerina/io' is supported")
+		return
+	}
+
+	// Check for duplicate imports
+	if _, exists := sa.importedPkgs[alias]; exists {
+		sa.semanticErr(fmt.Sprintf("import alias '%s' already defined", alias))
+		return
+	}
+
+	sa.importedPkgs[alias] = importNode
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
@@ -795,14 +834,24 @@ func isNumericType(ty semtypes.SemType) bool {
 
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
 	var retTy semtypes.SemType
-	// TODO: fix this when we properly support libraries
+
 	if invocation.PkgAlias != nil && invocation.PkgAlias.GetValue() != "" {
-		if invocation.PkgAlias.GetValue() != "io" {
-			a.unimplementedErr("unsupported package alias: " + invocation.PkgAlias.GetValue())
-		} else if invocation.Name.GetValue() == "println" {
+		pkgAlias := invocation.PkgAlias.GetValue()
+
+		// Check if package was imported
+		importNode := a.importedPackage(pkgAlias)
+		if importNode == nil {
+			a.semanticErr(fmt.Sprintf("undefined module '%s'", pkgAlias))
+			return
+		}
+
+		// Validate function in imported package
+		if pkgAlias == "io" && invocation.Name.GetValue() == "println" {
 			retTy = &semtypes.NIL
-		} else {
+		} else if pkgAlias == "io" {
 			a.unimplementedErr("unsupported io function: " + invocation.Name.GetValue())
+		} else {
+			a.unimplementedErr("unsupported package: " + pkgAlias)
 		}
 	} else {
 		fnTy := a.refTy(a.localRef(invocation.Name.GetValue()))
