@@ -30,20 +30,33 @@ func execMove(moveIns *bir.Move, frame *Frame) {
 	frame.SetOperand(moveIns.LhsOp.Index, frame.GetOperand(moveIns.RhsOp.Index))
 }
 
-func execTypeCast(typeCast bir.BIRNonTerminator, frame *Frame) {
-	panic("TypeCast instruction not yet implemented")
+func execNewArray(newArray *bir.NewArray, frame *Frame) {
+	size := 0
+	if newArray.SizeOp != nil {
+		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
+		if size < 0 {
+			size = 0
+		}
+	}
+	arr := make([]any, size)
+	frame.SetOperand(newArray.LhsOp.Index, &arr)
 }
 
-func execNewArray(newArray *bir.NewArray, frame *Frame) {
-	if newArray.SizeOp == nil {
-		frame.SetOperand(newArray.LhsOp.Index, []any(nil))
-		return
+func execArrayStore(access *bir.FieldAccess, frame *Frame) {
+	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
+	arr := *arrPtr
+	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	if idx >= len(arr) {
+		newArr := make([]any, idx+1)
+		copy(newArr, arr)
+		*arrPtr = newArr
+		arr = newArr
 	}
-	size := frame.GetOperand(newArray.SizeOp.Index).(int64)
-	limit := int(size)
-	if limit < 0 {
-		limit = 0
-	}
-	arr := make([]any, limit)
-	frame.SetOperand(newArray.LhsOp.Index, arr)
+	arr[idx] = frame.GetOperand(access.RhsOp.Index)
+}
+
+func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
+	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
+	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	frame.SetOperand(access.LhsOp.Index, arr[idx])
 }
