@@ -30,7 +30,7 @@ import (
 //   3. Know width but not position
 //   4. We build them bottom up
 // All green nodes satisfy STNode interface.
-// All the actual nodes are generated in `st-node-gen.go` using `tree-gen` tool.
+// All the actual nodes are generated in `st_node_gen.go` using `tree-gen` tool.
 // We need these to be very memory efficient but not necessarily fast to build. We build these once but hold them
 // for very long time.
 //   We need to be careful about not holding lot of "medium" sized nodes for each token.
@@ -66,9 +66,9 @@ type STToken interface {
 	ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken
 }
 
-// Actual "base" types for AST nodes. We generate most of the actual nodes in st-node-gen.go.
+// Actual "base" types for AST nodes. We generate most of the actual nodes in st_node_gen.go.
 //
-//go:generate ../../tree-gen -config ../nodes.json -type st-node -template ../../compiler-tools/tree-gen/templates/st-node.go.tmpl -output st-node-gen.go -util-template ../../compiler-tools/tree-gen/templates/st-node-util.go.tmpl -util-output st-node-util-gen.go
+//go:generate ../../tree-gen -config ../nodes.json -type st-node -template ../../compiler-tools/tree-gen/templates/st-node.go.tmpl -output st_node_gen.go -util-template ../../compiler-tools/tree-gen/templates/st-node-util.go.tmpl -util-output st_node_util_gen.go
 type (
 	STTokenBase struct {
 		kind                common.SyntaxKind
