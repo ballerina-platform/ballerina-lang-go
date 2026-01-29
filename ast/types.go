@@ -60,12 +60,12 @@ type BType interface {
 type (
 	BLangTypeBase struct {
 		BLangNodeBase
-		FlagSet  common.UnorderedSet[model.Flag]
-		Grouped  bool
-		tags     model.TypeTags
-		tsymbol  *BTypeSymbol
-		name     model.Name
-		flags    uint64
+		FlagSet common.UnorderedSet[model.Flag]
+		Grouped bool
+		tags    model.TypeTags
+		tsymbol *BTypeSymbol
+		name    model.Name
+		flags   uint64
 	}
 
 	BTypeImpl struct {
@@ -146,9 +146,9 @@ var (
 )
 
 var (
-	_ BLangNode      = &BLangArrayType{}
-	_ BLangNode      = &BLangUserDefinedType{}
-	_ BLangNode      = &BLangValueType{}
+	_ BLangNode            = &BLangArrayType{}
+	_ BLangNode            = &BLangUserDefinedType{}
+	_ BLangNode            = &BLangValueType{}
 	_ model.TypeDescriptor = &BLangValueType{}
 )
 

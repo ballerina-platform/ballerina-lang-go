@@ -999,29 +999,28 @@ func Comparable(cx Context, t1, t2 SemType) bool {
 	return false
 }
 
-
 // t1, t2 must be subtype of LIST|?
 func comparableNillableList(cx Context, t1, t2 SemType) bool {
-    memoized := cx.comparableMemo(t1, t2)
-    if memoized != nil {
-        return memoized.comparable;
-    }
-    memo := comparableMemo{ semType1: t1, semType2: t2 }
-    cx.setComparableMemo(t1, t2, &memo)
+	memoized := cx.comparableMemo(t1, t2)
+	if memoized != nil {
+		return memoized.comparable
+	}
+	memo := comparableMemo{semType1: t1, semType2: t2}
+	cx.setComparableMemo(t1, t2, &memo)
 	listMemberTypes1 := ListAllMemberTypesInner(cx, t1)
 	listMemberTypes2 := ListAllMemberTypesInner(cx, t2)
 	ranges1 := listMemberTypes1.Ranges
 	ranges2 := listMemberTypes2.Ranges
 	memberTypes1 := listMemberTypes1.SemTypes
 	memberTypes2 := listMemberTypes2.SemTypes
-    for _, combinedRange := range CombineRanges(ranges1, ranges2) {
-        i1 := combinedRange.I1
-        i2 := combinedRange.I2
-        if i1 != -1 && i2 != -1 && !Comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
-            memo.comparable = false
-            return false
-        }
-    }
-    memo.comparable = true
-    return true
+	for _, combinedRange := range CombineRanges(ranges1, ranges2) {
+		i1 := combinedRange.I1
+		i2 := combinedRange.I2
+		if i1 != -1 && i2 != -1 && !Comparable(cx, memberTypes1[i1], memberTypes2[i2]) {
+			memo.comparable = false
+			return false
+		}
+	}
+	memo.comparable = true
+	return true
 }

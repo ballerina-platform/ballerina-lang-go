@@ -52,7 +52,6 @@ type (
 		functions map[UniformRef]semtypes.SemType
 		// We can't resolve constants fully here because they can have type descriptors so they'll be resolved at semantic analysis
 	}
-
 )
 
 var _ ast.Visitor = &TypeResolver{}

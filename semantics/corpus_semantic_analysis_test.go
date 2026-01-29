@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/test_util"
 	"flag"
@@ -71,11 +72,41 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
 	semanticAnalyzer.Analyze(pkg)
 
+	// Step 3: Validate that all expressions have determinedTypes set
+	validator := &semanticAnalysisValidator{t: t}
+	ast.Walk(validator, pkg)
+
 	// If we reach here, semantic analysis completed without panicking
 	t.Logf("Semantic analysis completed successfully for %s", testCase.InputPath)
 }
 
-var semanticAnalysisErrorSkipList = []string {
+type semanticAnalysisValidator struct {
+	t *testing.T
+}
+
+func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+
+	// Check if node implements BLangExpression interface
+	if expr, ok := node.(ast.BLangExpression); ok {
+		// Validate determinedType is set
+		if expr.GetDeterminedType() == nil {
+			v.t.Errorf("determinedType not set for expression %T at %v",
+				node, node.GetPosition())
+		}
+	}
+
+	return v
+}
+
+func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	// Not validating TypeData in this validator
+	return v
+}
+
+var semanticAnalysisErrorSkipList = []string{
 	// reachability analysis
 	"01-function/call13-e.bal",
 	"01-loop/while03-e.bal",

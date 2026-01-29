@@ -49,7 +49,7 @@ type analyzer interface {
 
 type (
 	analyzerBase struct {
-		parent analyzer
+		parent    analyzer
 		callbacks []callBack
 	}
 	SemanticAnalyzer struct {
@@ -78,10 +78,10 @@ type (
 
 	loopAnalyzer struct {
 		analyzerBase
-		loop        ast.BLangNode
-		breakFound  bool
+		loop          ast.BLangNode
+		breakFound    bool
 		continueFound bool
-		localVarsTy map[UniformRef]semtypes.SemType
+		localVarsTy   map[UniformRef]semtypes.SemType
 	}
 )
 
@@ -147,7 +147,6 @@ func (ab *analyzerBase) executeCallbacks() {
 	ab.callbacks = nil
 }
 
-
 func (ab *analyzerBase) parentAnalyzer() analyzer {
 	return ab.parent
 }
@@ -167,7 +166,6 @@ func (ab *analyzerBase) tyCtx() semtypes.Context {
 func (ab *analyzerBase) localRef(name string) UniformRef {
 	return ab.parentAnalyzer().localRef(name)
 }
-
 
 func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return nil
@@ -474,9 +472,9 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 	return &loopAnalyzer{
 		analyzerBase: analyzerBase{parent: parent},
-		loop:        loop,
-		breakFound:  false,
-		localVarsTy: make(map[UniformRef]semtypes.SemType),
+		loop:         loop,
+		breakFound:   false,
+		localVarsTy:  make(map[UniformRef]semtypes.SemType),
 	}
 }
 
