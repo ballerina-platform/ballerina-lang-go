@@ -160,7 +160,8 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	case model.TypeTags_INT:
 		// INT literals are usually handled via BLangNumericLiteral path
 		// but we resolve the type here as well for completeness
-		ty = &semtypes.INT
+		value := n.GetValue().(int64)
+		ty = semtypes.IntConst(value)
 	case model.TypeTags_BYTE:
 		value := n.GetValue().(int64)
 		ty = semtypes.IntConst(value)

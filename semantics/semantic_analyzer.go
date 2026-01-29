@@ -21,10 +21,13 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/bits"
 	"reflect"
 )
+
+type callBack func()
 
 type analyzer interface {
 	ast.Visitor
@@ -37,10 +40,19 @@ type analyzer interface {
 	internalErr(message string)
 	localRef(name string) UniformRef
 	setRefTy(name UniformRef, ty semtypes.SemType)
+	parentAnalyzer() analyzer
+	loc() diagnostics.Location
+	queueCallback(callback callBack)
+	executeCallbacks()
 }
 
 type (
+	analyzerBase struct {
+		parent analyzer
+		callbacks []callBack
+	}
 	SemanticAnalyzer struct {
+		analyzerBase
 		compilerCtx   *context.CompilerContext
 		typeCtx       semtypes.Context
 		resolvedTypes TypeResolutionResult
@@ -49,30 +61,107 @@ type (
 		pkg       *ast.BLangPackage
 	}
 	constantAnalyzer struct {
-		sa           *SemanticAnalyzer
+		analyzerBase
 		constant     *ast.BLangConstant
 		expectedType semtypes.SemType
 	}
 
 	functionAnalyzer struct {
-		parent      analyzer
+		analyzerBase
 		function    *ast.BLangFunction
 		localVarsTy map[UniformRef]semtypes.SemType
 		retTy       semtypes.SemType
+		returnFound bool
 	}
 
 	loopAnalyzer struct {
-		parent      analyzer
+		analyzerBase
 		loop        ast.BLangNode
 		breakFound  bool
+		continueFound bool
 		localVarsTy map[UniformRef]semtypes.SemType
 	}
 )
 
-var _ analyzer = &SemanticAnalyzer{}
 var _ analyzer = &constantAnalyzer{}
+var _ analyzer = &SemanticAnalyzer{}
 var _ analyzer = &functionAnalyzer{}
 var _ analyzer = &loopAnalyzer{}
+
+// FIXME: this is not correct since const analyzer will propagte to semantic analyzer
+func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
+	if analyzer == nil {
+		panic("unexpected")
+	}
+	if fa, ok := analyzer.(*functionAnalyzer); ok {
+		if returnStmt.Expr == nil {
+			if !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
+				fa.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
+			}
+		}
+		analyzeExpression(fa, returnStmt.Expr, fa.retTy)
+		fa.returnFound = true
+	} else if analyzer.parentAnalyzer() != nil {
+		returnFound(analyzer.parentAnalyzer(), returnStmt)
+	} else {
+		analyzer.ctx().SemanticError("return statement not allowed in this context", analyzer.loc())
+	}
+}
+
+func breakFound(analyzer analyzer) {
+	if analyzer == nil {
+		panic("unexpected")
+	}
+	if la, ok := analyzer.(*loopAnalyzer); ok {
+		la.breakFound = true
+	} else if analyzer.parentAnalyzer() != nil {
+		breakFound(analyzer.parentAnalyzer())
+	} else {
+		analyzer.ctx().SemanticError("break statement not allowed in this context", analyzer.loc())
+	}
+}
+
+func continueFound(analyzer analyzer) {
+	if analyzer == nil {
+		panic("unexpected")
+	}
+	if la, ok := analyzer.(*loopAnalyzer); ok {
+		la.continueFound = true
+	} else if analyzer.parentAnalyzer() != nil {
+		continueFound(analyzer.parentAnalyzer())
+	} else {
+		analyzer.ctx().SemanticError("continue statement not allowed in this context", analyzer.loc())
+	}
+}
+
+func (ab *analyzerBase) queueCallback(callback callBack) {
+	ab.callbacks = append(ab.callbacks, callback)
+}
+
+func (ab *analyzerBase) executeCallbacks() {
+	for _, callback := range ab.callbacks {
+		callback()
+	}
+	ab.callbacks = nil
+}
+
+
+func (ab *analyzerBase) parentAnalyzer() analyzer {
+	return ab.parent
+}
+
+func (ab *analyzerBase) ctx() *context.CompilerContext {
+	return ab.parentAnalyzer().ctx()
+}
+
+func (ab *analyzerBase) tyCtx() semtypes.Context {
+	return ab.parentAnalyzer().tyCtx()
+}
+
+func (ab *analyzerBase) localRef(name string) UniformRef {
+	return ab.parentAnalyzer().localRef(name)
+}
+
 
 func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return nil
@@ -87,20 +176,16 @@ func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 }
 
 func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	fa.executeCallbacks()
 	if node == nil {
 		return nil
 	}
 	switch n := node.(type) {
 	case *ast.BLangReturn:
-		if n.Expr == nil {
-			if !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
-				// TODO: should put error at this node
-				fa.semanticErr("expect a return value")
-			}
-			return nil
-		}
-		analyzeExpression(fa, n.Expr, fa.retTy)
+		returnFound(fa, n)
 		return fa
+	case *ast.BLangIdentifier:
+		return nil
 	default:
 		// Delegate loop creation and common nodes to visitInner
 		return visitInner(fa, node)
@@ -108,6 +193,7 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	la.executeCallbacks()
 	if node == nil {
 		return nil
 	}
@@ -124,6 +210,22 @@ func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	}
 }
 
+func (fa *functionAnalyzer) loc() diagnostics.Location {
+	return fa.function.GetPosition()
+}
+
+func (la *loopAnalyzer) loc() diagnostics.Location {
+	return la.loop.GetPosition()
+}
+
+func (sa *SemanticAnalyzer) loc() diagnostics.Location {
+	return sa.pkg.GetPosition()
+}
+
+func (ca *constantAnalyzer) loc() diagnostics.Location {
+	return ca.constant.GetPosition()
+}
+
 func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return ca
 }
@@ -133,7 +235,7 @@ func (sa *SemanticAnalyzer) localRef(name string) UniformRef {
 }
 
 func (ca *constantAnalyzer) localRef(name string) UniformRef {
-	return ca.sa.localRef(name)
+	return ca.parentAnalyzer().localRef(name)
 }
 
 func (sa *SemanticAnalyzer) ctx() *context.CompilerContext {
@@ -166,28 +268,8 @@ func (fa *functionAnalyzer) refTy(name UniformRef) semtypes.SemType {
 	return fa.parent.refTy(name)
 }
 
-func (fa *functionAnalyzer) localRef(name string) UniformRef {
-	return fa.parent.localRef(name)
-}
-
-func (fa *functionAnalyzer) ctx() *context.CompilerContext {
-	return fa.parent.ctx()
-}
-
-func (fa *functionAnalyzer) tyCtx() semtypes.Context {
-	return fa.parent.tyCtx()
-}
-
-func (ca *constantAnalyzer) ctx() *context.CompilerContext {
-	return ca.sa.ctx()
-}
-
-func (ca *constantAnalyzer) tyCtx() semtypes.Context {
-	return ca.sa.tyCtx()
-}
-
 func (ca *constantAnalyzer) refTy(name UniformRef) semtypes.SemType {
-	return ca.sa.refTy(name)
+	return ca.parentAnalyzer().refTy(name)
 }
 
 func (sa *SemanticAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
@@ -246,19 +328,19 @@ func (sa *SemanticAnalyzer) internalErr(message string) {
 }
 
 func (ca *constantAnalyzer) unimplementedErr(message string) {
-	ca.sa.compilerCtx.Unimplemented(message, ca.constant.GetPosition())
+	ca.parentAnalyzer().ctx().Unimplemented(message, ca.constant.GetPosition())
 }
 
 func (ca *constantAnalyzer) semanticErr(message string) {
-	ca.sa.compilerCtx.SemanticError(message, ca.constant.GetPosition())
+	ca.parentAnalyzer().ctx().SemanticError(message, ca.constant.GetPosition())
 }
 
 func (ca *constantAnalyzer) syntaxErr(message string) {
-	ca.sa.compilerCtx.SyntaxError(message, ca.constant.GetPosition())
+	ca.parentAnalyzer().ctx().SyntaxError(message, ca.constant.GetPosition())
 }
 
 func (ca *constantAnalyzer) internalErr(message string) {
-	ca.sa.compilerCtx.InternalError(message, ca.constant.GetPosition())
+	ca.parentAnalyzer().ctx().InternalError(message, ca.constant.GetPosition())
 }
 
 func (fa *functionAnalyzer) unimplementedErr(message string) {
@@ -310,13 +392,14 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 }
 
 func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	sa.executeCallbacks()
 	if node == nil {
 		// Done
 		return nil
 	}
 	switch n := node.(type) {
 	case *ast.BLangConstant:
-		return &constantAnalyzer{sa: sa, constant: n}
+		return &constantAnalyzer{analyzerBase: analyzerBase{parent: sa}, constant: n}
 	case *ast.BLangReturn:
 		// Error: return only valid in functions
 		sa.semanticErr("return statement outside function")
@@ -335,18 +418,23 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{parent: parent, function: function, localVarsTy: make(map[UniformRef]semtypes.SemType)}
+	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function, localVarsTy: make(map[UniformRef]semtypes.SemType)}
 	for _, param := range function.RequiredParams {
 		name := param.GetName().GetValue()
 		fa.setRefTy(fa.localRef(name), param.GetTypeData().Type)
 	}
 	fa.retTy = function.ReturnTypeData.Type
+	parent.queueCallback(func() {
+		if !fa.returnFound && !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
+			fa.semanticErr("expect a return statement")
+		}
+	})
 	return fa
 }
 
 func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 	return &loopAnalyzer{
-		parent:      parent,
+		analyzerBase: analyzerBase{parent: parent},
 		loop:        loop,
 		breakFound:  false,
 		localVarsTy: make(map[UniformRef]semtypes.SemType),
@@ -354,6 +442,7 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 }
 
 func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	ca.executeCallbacks()
 	if node == nil {
 		setExpectedType(ca.constant, ca.expectedType)
 		ca.constant.TypeData.Type = ca.expectedType
@@ -386,7 +475,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			ca.syntaxErr("type not resolved")
 			return nil
 		}
-		ctx := ca.sa.tyCtx()
+		ctx := ca.tyCtx()
 		if semtypes.IsNever(expectedType) || !semtypes.IsSubtype(ctx, expectedType, semtypes.CreateAnydata(ctx)) {
 			ca.syntaxErr("invalid type for constant declaration")
 			return nil
@@ -395,11 +484,12 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangIdentifier:
 		name := n.GetValue()
 		ref := ca.localRef(name)
-		if _, ok := ca.sa.constants[ref]; ok {
+		semanticAnalyzer := ca.parentAnalyzer().(*SemanticAnalyzer)
+		if _, ok := semanticAnalyzer.constants[ref]; ok {
 			ca.syntaxErr("constant already declared")
 			return nil
 		}
-		ca.sa.constants[ref] = ca.constant
+		semanticAnalyzer.constants[ref] = ca.constant
 	case model.ExpressionNode:
 		switch n.GetKind() {
 		case model.NodeKind_LITERAL,
@@ -537,7 +627,6 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 	}
 	setExpectedType(expr, resultTy)
 }
-
 
 func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) {
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
@@ -757,23 +846,21 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	setExpectedType(simpleVariableDef, expectedType)
 }
 
-
 func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangFunction:
 		return initializeFunctionAnalyzer(a, n)
 	case *ast.BLangWhile:
+		analyzeWhile(a, n)
 		return initializeLoopAnalyzer(a, n)
 	case *ast.BLangIf:
 		analyzeIf(a, n)
 		return a
 	case *ast.BLangBreak:
-		// Error: break only valid in loops
-		a.semanticErr("break statement outside loop")
+		breakFound(a)
 		return nil
 	case *ast.BLangContinue:
-		// Error: continue only valid in loops
-		a.semanticErr("continue statement outside loop")
+		continueFound(a)
 		return nil
 	case *ast.BLangSimpleVariableDef:
 		analyzeSimpleVariableDef(a, n)
@@ -782,11 +869,14 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		analyzeAssignment(a, n)
 		return a
 	case *ast.BLangExpressionStmt:
-		analyzeExpression(a, n.Expr, nil)
+		analyzeExpression(a, n.Expr, &semtypes.NIL)
 		return a
 	case ast.BLangExpression:
 		analyzeExpression(a, n, nil)
 		return a
+	case *ast.BLangReturn:
+		returnFound(a, n)
+		return nil
 	default:
 		return a
 	}
@@ -802,6 +892,9 @@ func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) {
 	analyzeExpression(a, ifStmt.Expr, &semtypes.BOOLEAN)
 }
 
+func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
+	analyzeExpression(a, whileStmt.Expr, &semtypes.BOOLEAN)
+}
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
 	typeData := e.GetBType()

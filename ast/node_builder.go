@@ -887,6 +887,9 @@ func getIntegerLiteral(literal tree.Node, textValue string) any {
 	basicLiteralNode := literal.(*tree.BasicLiteralNode)
 	literalTokenKind := basicLiteralNode.LiteralToken().Kind()
 	if literalTokenKind == common.DECIMAL_INTEGER_LITERAL_TOKEN {
+		if textValue[0] == '0' && len(textValue) > 1 {
+			panic("invalid integer literal: leading zero")
+		}
 		return parseLong(textValue, textValue, 10)
 	} else if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN {
 		processedNodeValue := strings.ToLower(textValue)
