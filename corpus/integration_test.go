@@ -51,27 +51,22 @@ const (
 )
 
 var (
-	outputRegex      = regexp.MustCompile(`//\s*@output\s+(.+)`)
-	panicRegex       = regexp.MustCompile(`//\s*@panic\s+(.+)`)
-	supportedSubsets = []string{"subset1"}
+	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
+	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 
-	// skipTestsMap contains file paths (relative to corpus/bal/subset1) that should be skipped
 	skipTestsMap = makeSkipTestsMap([]string{
-		"01-function/assign8-v.bal",
-		"01-function/assign9-v.bal",
-		"01-function/call08-v.bal",
-		"01-nil/rel-v.bal",
+		"subset1/01-function/assign8-v.bal",
+		"subset1/01-function/assign9-v.bal",
+		"subset1/01-function/call08-v.bal",
+		"subset1/01-nil/rel-v.bal",
 	})
 
-	// Key: absolute Bal file path; Value: concatenated println lines.
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
 )
 
 type failedTest struct {
-	subset   string
-	dirName  string
-	fileName string
+	relPath string
 }
 
 type testResult struct {
@@ -92,59 +87,66 @@ func TestIntegrationSuite(t *testing.T) {
 	var failedTests []failedTest
 	var resultsMu sync.Mutex
 
-	for _, subset := range supportedSubsets {
-		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
-		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+	corpusBalDir := corpusBalBaseDir
+	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+		return
+	}
+
+	balFiles := findBalFiles(corpusBalDir)
+
+	var wg sync.WaitGroup
+
+	for _, balFile := range balFiles {
+		skipped, reason := isFileSkipped(balFile)
+		if skipped {
+			if reason == skipReasonSkipList {
+				skippedTotal++
+			}
 			continue
 		}
-		subsetNum := formatSubsetNumber(subset)
-		fmt.Printf("Subset %s\n", subsetNum)
-		fmt.Println("==========================")
+		relPath, _ := filepath.Rel(corpusBalDir, balFile)
+		filePath := buildFilePath(relPath)
+		wg.Add(1)
+		go func(balFile, filePath, relPath string) {
+			defer wg.Done()
 
-		balFiles := findBalFiles(corpusBalDir)
+			defer func() {
+				if r := recover(); r != nil {
+					resultsMu.Lock()
+					defer resultsMu.Unlock()
 
-		var wg sync.WaitGroup
-
-		for _, balFile := range balFiles {
-			skipped, reason := isFileSkipped(balFile)
-			if skipped {
-				if reason == skipReasonSkipList {
-					skippedTotal++
-				}
-				continue
-			}
-			relPath, _ := filepath.Rel(corpusBalDir, balFile)
-			filePath := buildFilePath(relPath)
-			wg.Add(1)
-			go func(balFile, filePath, subset, relPath string) {
-				defer wg.Done()
-
-				fmt.Printf("\t=== RUN   %s\n", filePath)
-				result := runTest(balFile)
-
-				resultsMu.Lock()
-				defer resultsMu.Unlock()
-
-				if result.success {
-					passedTotal++
-					fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
-				} else {
 					failedTotal++
-					printTestFailure(filePath, result)
+					fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
+					fmt.Printf("\t\tpanic: %v\n", r)
 					failedTests = append(failedTests, failedTest{
-						subset:   subset,
-						dirName:  filepath.Dir(relPath),
-						fileName: filepath.Base(balFile),
+						relPath: filepath.ToSlash(relPath),
 					})
 				}
-			}(balFile, filePath, subset, relPath)
-		}
-		wg.Wait()
+			}()
+
+			fmt.Printf("\t=== RUN   %s\n", filePath)
+			result := runTest(balFile)
+
+			resultsMu.Lock()
+			defer resultsMu.Unlock()
+
+			if result.success {
+				passedTotal++
+				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
+			} else {
+				failedTotal++
+				printTestFailure(filePath, result)
+				failedTests = append(failedTests, failedTest{
+					relPath: filepath.ToSlash(relPath),
+				})
+			}
+		}(balFile, filePath, relPath)
 	}
+	wg.Wait()
 
 	total := passedTotal + failedTotal
 	passedCount := total - skippedTotal
-	printFinalSummary(total, passedCount, skippedTotal, failedTests)
+	printFinalSummary(total, passedCount, skippedTotal, failedTotal, failedTests)
 	if failedTotal > 0 {
 		t.Fail()
 	}
@@ -192,29 +194,8 @@ func runTest(balFile string) testResult {
 	delete(printlnOutputs, balFile)
 	printlnMu.Unlock()
 
-	// For tests, we only assert on captured ballerina/io:println output.
 	outputStr := printlnStr
 	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
-}
-
-// capturePrintlnOutput returns a function that captures println output into an in-memory buffer
-// keyed by Bal file path to make assertions easier and avoid relying on os.Stdout in tests.
-func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
-	return func(args []any) (any, error) {
-		var b strings.Builder
-		for i, arg := range args {
-			if i > 0 {
-				b.WriteByte(' ')
-			}
-			b.WriteString(valueToString(arg))
-		}
-		b.WriteByte('\n')
-		printlnMu.Lock()
-		printlnOutputs[balFile] += b.String()
-		printlnMu.Unlock()
-
-		return nil, nil
-	}
 }
 
 func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
@@ -244,10 +225,17 @@ func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOc
 	}
 
 	if panicOccurred {
+		panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
+		actual := fmt.Sprintf("%s%s", panicPrefix, panicStr)
+		if st, ok := panicValue.(interface{ Stack() []byte }); ok {
+			if stack := st.Stack(); len(stack) > 0 {
+				actual = actual + "\n" + string(stack)
+			}
+		}
 		return testResult{
 			success:  false,
 			expected: expectedOutput,
-			actual:   fmt.Sprintf("%s%v", panicPrefix, panicValue),
+			actual:   actual,
 		}
 	}
 
@@ -258,6 +246,76 @@ func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOc
 		success:  success,
 		expected: expected,
 		actual:   actual,
+	}
+}
+
+func trimNewline(s string) string {
+	return strings.TrimRight(s, "\n")
+}
+
+func extractPanicMessage(panicStr string) string {
+	if strings.HasPrefix(panicStr, panicPrefix) {
+		return strings.TrimPrefix(panicStr, panicPrefix)
+	}
+	return panicStr
+}
+
+func extractPanicFromOutput(outputStr, expectedPanic string) string {
+	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
+		return ""
+	}
+	panicIdx := strings.Index(outputStr, panicPrefix)
+	if panicIdx < 0 {
+		return ""
+	}
+	panicMsg := strings.TrimSpace(outputStr[panicIdx+len(panicPrefix):])
+	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
+		panicMsg = panicMsg[:newlineIdx]
+	}
+	return panicMsg
+}
+
+func readExpectedOutput(balFile string) string {
+	content := readFileContent(balFile)
+	matches := outputRegex.FindAllStringSubmatch(content, -1)
+	outputs := make([]string, 0, len(matches))
+	for _, m := range matches {
+		if len(m) > 1 {
+			outputs = append(outputs, strings.TrimSpace(m[1]))
+		}
+	}
+	return strings.Join(outputs, "\n")
+}
+
+func readExpectedPanic(balFile string) string {
+	content := readFileContent(balFile)
+	matches := panicRegex.FindStringSubmatch(content)
+	if len(matches) > 1 {
+		return strings.TrimSpace(matches[1])
+	}
+	return ""
+}
+
+func readFileContent(filePath string) string {
+	content, _ := os.ReadFile(filePath)
+	return string(content)
+}
+
+func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
+	return func(args []any) (any, error) {
+		var b strings.Builder
+		for i, arg := range args {
+			if i > 0 {
+				b.WriteByte(' ')
+			}
+			b.WriteString(valueToString(arg))
+		}
+		b.WriteByte('\n')
+		printlnMu.Lock()
+		printlnOutputs[balFile] += b.String()
+		printlnMu.Unlock()
+
+		return nil, nil
 	}
 }
 
@@ -294,63 +352,48 @@ func valueToString(v any) string {
 		return strconv.FormatFloat(t, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(t)
+	case *[]any:
+		if t == nil {
+			return "[]"
+		}
+		return formatAnySlice(*t)
+	case []any:
+		return formatAnySlice(t)
 	case stringer:
 		return t.String()
 	case nil:
 		return "nil"
 	default:
-		// Fallback; avoid pulling in fmt.Sprint here.
 		return "<unsupported>"
 	}
 }
 
-func trimNewline(s string) string {
-	return strings.TrimRight(s, "\n")
+func formatAnySlice(items []any) string {
+	var b strings.Builder
+	b.WriteByte('[')
+	for i, item := range items {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(valueToString(item))
+	}
+	b.WriteByte(']')
+	return b.String()
 }
 
-func extractPanicMessage(panicStr string) string {
-	if strings.HasPrefix(panicStr, panicPrefix) {
-		return strings.TrimPrefix(panicStr, panicPrefix)
-	}
-	return panicStr
-}
-
-func extractPanicFromOutput(outputStr, expectedPanic string) string {
-	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
-		return ""
-	}
-	panicIdx := strings.Index(outputStr, panicPrefix)
-	if panicIdx < 0 {
-		return ""
-	}
-	panicMsg := strings.TrimSpace(outputStr[panicIdx+len(panicPrefix):])
-	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
-		panicMsg = panicMsg[:newlineIdx]
-	}
-	return panicMsg
-}
-
-func printFinalSummary(total, passed, skipped int, failedTests []failedTest) {
+func printFinalSummary(total, passed, skipped, failed int, failedTests []failedTest) {
 	fmt.Printf("%d RUN\n", total)
 	if skipped > 0 {
 		fmt.Printf("%d SKIPPED\n", skipped)
 	}
 	fmt.Printf("%d %sPASSED%s\n", passed, colorGreen, colorReset)
-	if len(failedTests) > 0 {
+	if failed > 0 {
+		fmt.Printf("%d %sFAILED%s\n", failed, colorRed, colorReset)
 		fmt.Println("FAILED Tests")
 		for _, ft := range failedTests {
-			path := buildFailedTestPath(ft)
-			fmt.Println(path)
+			fmt.Println(ft.relPath)
 		}
 	}
-}
-
-func formatSubsetNumber(subset string) string {
-	subsetNum := strings.TrimPrefix(subset, subsetPrefix)
-	if len(subsetNum) == 1 {
-		subsetNum = "0" + subsetNum
-	}
-	return subsetNum
 }
 
 func buildFilePath(relPath string) string {
@@ -358,13 +401,6 @@ func buildFilePath(relPath string) string {
 		return filepath.Base(relPath)
 	}
 	return relPath
-}
-
-func buildFailedTestPath(ft failedTest) string {
-	if ft.dirName == "." {
-		return fmt.Sprintf("%s/%s", ft.subset, ft.fileName)
-	}
-	return fmt.Sprintf("%s/%s/%s", ft.subset, ft.dirName, ft.fileName)
 }
 
 func printTestFailure(filePath string, result testResult) {
@@ -405,49 +441,19 @@ func isFileSkipped(filePath string) (bool, skipReason) {
 	if strings.HasSuffix(fileName, errorFileSuffix) {
 		return true, skipReasonErrorFile
 	}
-	for _, subset := range supportedSubsets {
-		corpusBalDir := filepath.Join(corpusBalBaseDir, subset)
-		if relPath, err := filepath.Rel(corpusBalDir, filePath); err == nil {
-			relPath = filepath.ToSlash(relPath)
-			if skipTestsMap[relPath] {
-				return true, skipReasonSkipList
-			}
+	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
+		relPath = filepath.ToSlash(relPath)
+		if skipTestsMap[relPath] {
+			return true, skipReasonSkipList
 		}
 	}
 	return false, 0
 }
 
-// makeSkipTestsMap converts a slice of skip paths into a map for O(1) lookup
 func makeSkipTestsMap(paths []string) map[string]bool {
 	m := make(map[string]bool, len(paths))
 	for _, path := range paths {
 		m[filepath.ToSlash(path)] = true
 	}
 	return m
-}
-
-func readFileContent(filePath string) string {
-	content, _ := os.ReadFile(filePath)
-	return string(content)
-}
-
-func readExpectedOutput(balFile string) string {
-	content := readFileContent(balFile)
-	matches := outputRegex.FindAllStringSubmatch(content, -1)
-	outputs := make([]string, 0, len(matches))
-	for _, m := range matches {
-		if len(m) > 1 {
-			outputs = append(outputs, strings.TrimSpace(m[1]))
-		}
-	}
-	return strings.Join(outputs, "\n")
-}
-
-func readExpectedPanic(balFile string) string {
-	content := readFileContent(balFile)
-	matches := panicRegex.FindStringSubmatch(content)
-	if len(matches) > 1 {
-		return strings.TrimSpace(matches[1])
-	}
-	return ""
 }
