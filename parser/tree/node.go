@@ -16,7 +16,7 @@
 
 package tree
 
-//go:generate ../../tree-gen -config ../nodes.json -type node -template ../../compiler-tools/tree-gen/templates/node.go.tmpl -output node-gen.go
+//go:generate ../../tree-gen -config ../nodes.json -type node -template ../../compiler-tools/tree-gen/templates/node.go.tmpl -output node_gen.go
 
 import (
 	"ballerina-lang-go/parser/common"
