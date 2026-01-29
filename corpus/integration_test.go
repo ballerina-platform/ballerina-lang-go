@@ -54,12 +54,7 @@ var (
 	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 
-	skipTestsMap = makeSkipTestsMap([]string{
-		"subset1/01-function/assign8-v.bal",
-		"subset1/01-function/assign9-v.bal",
-		"subset1/01-function/call08-v.bal",
-		"subset1/01-nil/rel-v.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
