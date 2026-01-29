@@ -19,9 +19,6 @@
 package api
 
 import (
-	"fmt"
-	"os"
-
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
@@ -43,12 +40,6 @@ var ModuleInitializers []ModuleInitializer
 // It wraps the underlying interpreter with panic recovery and
 // returns any panic as an error value.
 func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "panic: %v\n", r)
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
 	exec.Interpret(pkg, rt.Registry)
 	return err
 }

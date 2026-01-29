@@ -25,27 +25,6 @@ import (
 	"fmt"
 )
 
-// defaultValueForType returns the runtime "zero" value for a Ballerina type.
-func defaultValueForType(t model.ValueType) any {
-	if t == nil {
-		return nil
-	}
-	switch t.GetTypeKind() {
-	case model.TypeKind_BOOLEAN:
-		return false
-	case model.TypeKind_INT, model.TypeKind_BYTE:
-		return int64(0)
-	case model.TypeKind_FLOAT:
-		return float64(0)
-	case model.TypeKind_STRING:
-		return ""
-	case model.TypeKind_NIL:
-		return nil
-	default:
-		return nil
-	}
-}
-
 func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry) any {
 	localVars := &birFunc.LocalVars
 	locals := make([]any, len(*localVars))
@@ -57,7 +36,6 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry)
 		locals[i] = defaultValueForType((*localVars)[i].Type)
 	}
 	frame := &Frame{locals: locals}
-
 	bbs := &birFunc.BasicBlocks
 	bb := &(*bbs)[0]
 	for {
@@ -81,6 +59,15 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 		execMove(v, frame)
 	case *bir.NewArray:
 		execNewArray(v, frame)
+	case *bir.FieldAccess:
+		switch v.GetKind() {
+		case bir.INSTRUCTION_KIND_ARRAY_STORE:
+			execArrayStore(v, frame)
+		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
+			execArrayLoad(v, frame)
+		default:
+			fmt.Printf("UNKNOWN_FIELD_ACCESS_KIND(%d)\n", v.GetKind())
+		}
 	case *bir.BinaryOp:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ADD:
@@ -193,4 +180,24 @@ func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return &currentBB
+}
+
+func defaultValueForType(t model.ValueType) any {
+	if t == nil {
+		return nil
+	}
+	switch t.GetTypeKind() {
+	case model.TypeKind_BOOLEAN:
+		return false
+	case model.TypeKind_INT, model.TypeKind_BYTE:
+		return int64(0)
+	case model.TypeKind_FLOAT:
+		return float64(0)
+	case model.TypeKind_STRING:
+		return ""
+	case model.TypeKind_NIL:
+		return nil
+	default:
+		return nil
+	}
 }
