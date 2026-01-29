@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,61 +30,61 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=2)
+    %2 = ConstantLoad -1
+    %5 = ConstantLoad 2
     %6 = unknown %5;
-    %5 = ConstantLoad %!s(int64=5)
+    %5 = ConstantLoad 5
     %8 = + %6 %5;
     %9 = println(%1) -> bb1;
   }
   bb1 {
-    %6 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=5)
-    %8 = ConstantLoad %!s(int64=2)
+    %6 = ConstantLoad -1
+    %5 = ConstantLoad 5
+    %8 = ConstantLoad 2
     %2 = unknown %8;
     %8 = + %5 %2;
     %18 = println(%1) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=-1)
-    %2 = ConstantLoad %!s(int64=5)
-    %8 = ConstantLoad %!s(int64=2)
+    %5 = ConstantLoad -1
+    %2 = ConstantLoad 5
+    %8 = ConstantLoad 2
     %6 = unknown %8;
-    %8 = ConstantLoad %!s(int64=3)
+    %8 = ConstantLoad 3
     %27 = * %6 %8;
     %6 = + %2 %27;
     %29 = println(%1) -> bb3;
   }
   bb3 {
-    %8 = ConstantLoad %!s(int64=5)
+    %8 = ConstantLoad 5
     %2 = unknown %8;
-    %27 = ConstantLoad %!s(int64=2)
+    %27 = ConstantLoad 2
     %30 = < %2 %27;
     %36 = printBoolean(%30) -> bb4;
   }
   bb4 {
-    %6 = ConstantLoad %!s(int64=2)
-    %5 = ConstantLoad %!s(int64=5)
+    %6 = ConstantLoad 2
+    %5 = ConstantLoad 5
     %8 = unknown %5;
     %37 = >= %6 %8;
     %43 = printBoolean(%37) -> bb5;
   }
   bb5 {
-    %45 = ConstantLoad %!s(bool=false)
+    %45 = ConstantLoad false
     %46 = ! %45;
-    %45 = ConstantLoad %!s(bool=false)
+    %45 = ConstantLoad false
     %44 = >= %46 %45;
     %50 = printBoolean(%44) -> bb6;
   }
   bb6 {
-    %46 = ConstantLoad %!s(bool=false)
-    %45 = ConstantLoad %!s(bool=false)
+    %46 = ConstantLoad false
+    %45 = ConstantLoad false
     %54 = ! %45;
     %51 = <= %46 %54;
     %57 = printBoolean(%51) -> bb7;
   }
   bb7 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb8;
   }
   bb8 {
@@ -96,17 +96,17 @@ printBoolean<NIL>{
     %1 ? bb1 : bb2;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad -1
+    %7 = ConstantLoad 1
     %8 = println(%3) -> bb3;
   }
   bb2 {
-    %7 = ConstantLoad %!s(int64=-1)
-    %4 = ConstantLoad %!s(int64=0)
+    %7 = ConstantLoad -1
+    %4 = ConstantLoad 0
     %14 = println(%3) -> bb3;
   }
   bb3 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb4;
   }
   bb4 {

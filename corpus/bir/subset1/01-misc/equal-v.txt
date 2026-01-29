@@ -12,11 +12,11 @@ main<NIL>{
     %4 = println(%1) -> bb3;
   }
   bb3 {
-    %6 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad 1
     %7 = mkInt(%6) -> bb4;
   }
   bb4 {
-    %8 = ConstantLoad %!s(int64=1)
+    %8 = ConstantLoad 1
     %9 = mkInt(%8) -> bb5;
   }
   bb5 {
@@ -24,11 +24,11 @@ main<NIL>{
     %10 = println(%5) -> bb6;
   }
   bb6 {
-    %12 = ConstantLoad %!s(bool=true)
+    %12 = ConstantLoad true
     %13 = mkBoolean(%12) -> bb7;
   }
   bb7 {
-    %14 = ConstantLoad %!s(bool=true)
+    %14 = ConstantLoad true
     %15 = mkBoolean(%14) -> bb8;
   }
   bb8 {
@@ -36,12 +36,12 @@ main<NIL>{
     %16 = println(%11) -> bb9;
   }
   bb9 {
-    %18 = ConstantLoad %!s(int64=36028797018963969)
+    %18 = ConstantLoad 36028797018963969
     %19 = unknown %18;
     %20 = mkInt(%19) -> bb10;
   }
   bb10 {
-    %21 = ConstantLoad %!s(int64=36028797018963969)
+    %21 = ConstantLoad 36028797018963969
     %22 = unknown %21;
     %23 = mkInt(%22) -> bb11;
   }
@@ -50,12 +50,12 @@ main<NIL>{
     %24 = println(%17) -> bb12;
   }
   bb12 {
-    %26 = ConstantLoad %!s(int64=36028797018963968)
+    %26 = ConstantLoad 36028797018963968
     %27 = unknown %26;
     %28 = mkInt(%27) -> bb13;
   }
   bb13 {
-    %29 = ConstantLoad %!s(int64=36028797018963968)
+    %29 = ConstantLoad 36028797018963968
     %30 = unknown %29;
     %31 = mkInt(%30) -> bb14;
   }
@@ -64,11 +64,11 @@ main<NIL>{
     %32 = println(%25) -> bb15;
   }
   bb15 {
-    %34 = ConstantLoad %!s(int64=36028797018963967)
+    %34 = ConstantLoad 36028797018963967
     %35 = mkInt(%34) -> bb16;
   }
   bb16 {
-    %36 = ConstantLoad %!s(int64=36028797018963967)
+    %36 = ConstantLoad 36028797018963967
     %37 = mkInt(%36) -> bb17;
   }
   bb17 {
@@ -76,11 +76,11 @@ main<NIL>{
     %38 = println(%33) -> bb18;
   }
   bb18 {
-    %40 = ConstantLoad %!s(int64=36028797018963968)
+    %40 = ConstantLoad 36028797018963968
     %41 = mkInt(%40) -> bb19;
   }
   bb19 {
-    %42 = ConstantLoad %!s(int64=36028797018963968)
+    %42 = ConstantLoad 36028797018963968
     %43 = mkInt(%42) -> bb20;
   }
   bb20 {
@@ -93,7 +93,7 @@ main<NIL>{
 }
 mkNil<NIL>{
   bb0 {
-    %1 = ConstantLoad ()
+    %1 = ConstantLoad <nil>
     %0 = %1;
     return;
   }

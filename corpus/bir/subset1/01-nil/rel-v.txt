@@ -2,11 +2,11 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(bool=true)
+    %2 = ConstantLoad true
     %3 = toNil(%2) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad %!s(bool=false)
+    %4 = ConstantLoad false
     %5 = toNil(%4) -> bb2;
   }
   bb2 {
@@ -14,11 +14,11 @@ main<NIL>{
     %6 = toNil(%1) -> bb3;
   }
   bb3 {
-    %8 = ConstantLoad %!s(bool=false)
+    %8 = ConstantLoad false
     %9 = toNil(%8) -> bb4;
   }
   bb4 {
-    %10 = ConstantLoad %!s(bool=true)
+    %10 = ConstantLoad true
     %11 = toNil(%10) -> bb5;
   }
   bb5 {
@@ -34,7 +34,7 @@ toNil<NIL>{
     %2 = println(b) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad ()
+    %3 = ConstantLoad <nil>
     %0 = %3;
     return;
   }

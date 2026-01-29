@@ -10,7 +10,7 @@ main<NIL>{
 }
 foo<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(bool=false)
+    %1 = ConstantLoad false
     b = %1;
     GOTO bb1;
   }
@@ -18,7 +18,7 @@ foo<NIL>{
     b ? bb2 : bb3;
   }
   bb2 {
-    %3 = ConstantLoad %!s(int64=0)
+    %3 = ConstantLoad 0
     %4 = println(%3) -> bb4;
   }
   bb3 {

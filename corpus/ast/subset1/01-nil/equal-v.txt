@@ -17,4 +17,4 @@
     (value-type null))
     (block-function-body
       (return
-        (literal ())))))
+        (literal <nil>)))))

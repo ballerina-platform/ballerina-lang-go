@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,15 +30,15 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=10)
+    %2 = ConstantLoad -1
+    %5 = ConstantLoad 10
     %8 = foo(%5) -> bb1;
   }
   bb1 {
     %9 = println(%1) -> bb2;
   }
   bb2 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb3;
   }
   bb3 {
@@ -47,9 +47,9 @@ main<NIL>{
 }
 foo<NIL>{
   bb0 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %2 = - %1 %4;
-    %4 = ConstantLoad %!s(int64=0)
+    %4 = ConstantLoad 0
     %8 = != %2 %4;
     %8 ? bb1 : bb3;
   }

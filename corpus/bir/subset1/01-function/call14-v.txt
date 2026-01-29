@@ -2,7 +2,7 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=23)
+    %1 = ConstantLoad 23
     %2 = foobar() -> bb1;
   }
   bb1 {
@@ -44,7 +44,7 @@ baz<NIL>{
 }
 foobar<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=12)
+    %1 = ConstantLoad 12
     %0 = %1;
     return;
   }

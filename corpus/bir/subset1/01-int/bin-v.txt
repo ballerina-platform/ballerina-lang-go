@@ -2,9 +2,9 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=6)
-    %2 = ConstantLoad %!s(int64=2)
-    %3 = ConstantLoad %!s(int64=3)
+    %1 = ConstantLoad 6
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
     %4 = bin(%1,%2,%3) -> bb1;
   }
   bb1 {

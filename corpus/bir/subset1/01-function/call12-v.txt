@@ -26,14 +26,14 @@ foo<NIL>{
 }
 getArg1<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=2)
+    %1 = ConstantLoad 2
     %0 = %1;
     return;
   }
 }
 getArg2<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=4)
+    %1 = ConstantLoad 4
     %0 = %1;
     return;
   }

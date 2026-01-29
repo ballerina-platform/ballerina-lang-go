@@ -2,33 +2,33 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=3)
-    %2 = ConstantLoad %!s(int64=5)
+    %1 = ConstantLoad 3
+    %2 = ConstantLoad 5
     %3 = add(%1,%2) -> bb1;
   }
   bb1 {
     %4 = println(%3) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=3)
-    %6 = ConstantLoad %!s(int64=5)
+    %5 = ConstantLoad 3
+    %6 = ConstantLoad 5
     %7 = add(%5,%6) -> bb3;
   }
   bb3 {
-    %8 = ConstantLoad %!s(int64=11)
+    %8 = ConstantLoad 11
     %9 = add(%7,%8) -> bb4;
   }
   bb4 {
     %10 = println(%9) -> bb5;
   }
   bb5 {
-    %11 = ConstantLoad %!s(int64=3)
-    %12 = ConstantLoad %!s(int64=5)
+    %11 = ConstantLoad 3
+    %12 = ConstantLoad 5
     %13 = add(%11,%12) -> bb6;
   }
   bb6 {
-    %14 = ConstantLoad %!s(int64=5)
-    %15 = ConstantLoad %!s(int64=9)
+    %14 = ConstantLoad 5
+    %15 = ConstantLoad 9
     %16 = add(%14,%15) -> bb7;
   }
   bb7 {
@@ -38,41 +38,41 @@ main<NIL>{
     %18 = println(%17) -> bb9;
   }
   bb9 {
-    %19 = ConstantLoad %!s(int64=3)
-    %20 = ConstantLoad %!s(int64=5)
+    %19 = ConstantLoad 3
+    %20 = ConstantLoad 5
     %21 = add(%19,%20) -> bb10;
   }
   bb10 {
-    %22 = ConstantLoad %!s(int64=5)
-    %23 = ConstantLoad %!s(int64=9)
+    %22 = ConstantLoad 5
+    %23 = ConstantLoad 9
     %24 = add(%22,%23) -> bb11;
   }
   bb11 {
     %25 = add(%21,%24) -> bb12;
   }
   bb12 {
-    %26 = ConstantLoad %!s(int64=12)
+    %26 = ConstantLoad 12
     %27 = add(%25,%26) -> bb13;
   }
   bb13 {
     %28 = println(%27) -> bb14;
   }
   bb14 {
-    %29 = ConstantLoad %!s(int64=3)
-    %30 = ConstantLoad %!s(int64=5)
+    %29 = ConstantLoad 3
+    %30 = ConstantLoad 5
     %31 = add(%29,%30) -> bb15;
   }
   bb15 {
-    %32 = ConstantLoad %!s(int64=5)
-    %33 = ConstantLoad %!s(int64=9)
+    %32 = ConstantLoad 5
+    %33 = ConstantLoad 9
     %34 = add(%32,%33) -> bb16;
   }
   bb16 {
     %35 = add(%31,%34) -> bb17;
   }
   bb17 {
-    %36 = ConstantLoad %!s(int64=4)
-    %37 = ConstantLoad %!s(int64=7)
+    %36 = ConstantLoad 4
+    %37 = ConstantLoad 7
     %38 = add(%36,%37) -> bb18;
   }
   bb18 {
@@ -82,25 +82,25 @@ main<NIL>{
     %40 = println(%39) -> bb20;
   }
   bb20 {
-    %41 = ConstantLoad %!s(int64=3)
-    %42 = ConstantLoad %!s(int64=5)
+    %41 = ConstantLoad 3
+    %42 = ConstantLoad 5
     %43 = add(%41,%42) -> bb21;
   }
   bb21 {
-    %44 = ConstantLoad %!s(int64=5)
-    %45 = ConstantLoad %!s(int64=9)
+    %44 = ConstantLoad 5
+    %45 = ConstantLoad 9
     %46 = add(%44,%45) -> bb22;
   }
   bb22 {
     %47 = add(%43,%46) -> bb23;
   }
   bb23 {
-    %48 = ConstantLoad %!s(int64=4)
-    %49 = ConstantLoad %!s(int64=7)
+    %48 = ConstantLoad 4
+    %49 = ConstantLoad 7
     %50 = add(%48,%49) -> bb24;
   }
   bb24 {
-    %51 = ConstantLoad %!s(int64=5)
+    %51 = ConstantLoad 5
     %52 = add(%50,%51) -> bb25;
   }
   bb25 {
@@ -110,26 +110,26 @@ main<NIL>{
     %54 = println(%53) -> bb27;
   }
   bb27 {
-    %55 = ConstantLoad %!s(int64=3)
-    %56 = ConstantLoad %!s(int64=5)
+    %55 = ConstantLoad 3
+    %56 = ConstantLoad 5
     %57 = add(%55,%56) -> bb28;
   }
   bb28 {
-    %58 = ConstantLoad %!s(int64=5)
-    %59 = ConstantLoad %!s(int64=9)
+    %58 = ConstantLoad 5
+    %59 = ConstantLoad 9
     %60 = add(%58,%59) -> bb29;
   }
   bb29 {
     %61 = add(%57,%60) -> bb30;
   }
   bb30 {
-    %62 = ConstantLoad %!s(int64=4)
-    %63 = ConstantLoad %!s(int64=7)
+    %62 = ConstantLoad 4
+    %63 = ConstantLoad 7
     %64 = add(%62,%63) -> bb31;
   }
   bb31 {
-    %65 = ConstantLoad %!s(int64=23)
-    %66 = ConstantLoad %!s(int64=50)
+    %65 = ConstantLoad 23
+    %66 = ConstantLoad 50
     %67 = add(%65,%66) -> bb32;
   }
   bb32 {

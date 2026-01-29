@@ -2,16 +2,16 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=0)
+    %1 = ConstantLoad 0
     i = %1;
     GOTO bb1;
   }
   bb1 {
-    %3 = ConstantLoad %!s(bool=true)
+    %3 = ConstantLoad true
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=3)
+    %5 = ConstantLoad 3
     %4 = < i %5;
     %6 = ! %4;
     %6 ? bb4 : bb5;
@@ -26,7 +26,7 @@ main<NIL>{
     %7 = println(i) -> bb6;
   }
   bb6 {
-    %9 = ConstantLoad %!s(int64=1)
+    %9 = ConstantLoad 1
     %8 = + i %9;
     i = %8;
     GOTO bb1;

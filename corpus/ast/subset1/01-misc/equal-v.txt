@@ -59,7 +59,7 @@
     (value-type any))
     (block-function-body
       (return
-        (literal ()))))
+        (literal <nil>))))
   (function mkInt (
     (variable n (type
       (value-type int)))) (

@@ -12,7 +12,7 @@ main<NIL>{
     %1 ? bb3 : bb5;
   }
   bb3 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %5 = println(%4) -> bb4;
   }
   bb4 {
@@ -24,7 +24,7 @@ main<NIL>{
 }
 makeNil<NIL>{
   bb0 {
-    %1 = ConstantLoad ()
+    %1 = ConstantLoad <nil>
     %0 = %1;
     return;
   }

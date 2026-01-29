@@ -2,43 +2,43 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(bool=true)
-    %2 = ConstantLoad %!s(bool=true)
+    %1 = ConstantLoad true
+    %2 = ConstantLoad true
     %3 = printEq(%1,%2) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad %!s(bool=true)
-    %5 = ConstantLoad %!s(bool=false)
+    %4 = ConstantLoad true
+    %5 = ConstantLoad false
     %6 = printEq(%4,%5) -> bb2;
   }
   bb2 {
-    %7 = ConstantLoad %!s(bool=false)
-    %8 = ConstantLoad %!s(bool=true)
+    %7 = ConstantLoad false
+    %8 = ConstantLoad true
     %9 = printEq(%7,%8) -> bb3;
   }
   bb3 {
-    %10 = ConstantLoad %!s(bool=false)
-    %11 = ConstantLoad %!s(bool=false)
+    %10 = ConstantLoad false
+    %11 = ConstantLoad false
     %12 = printEq(%10,%11) -> bb4;
   }
   bb4 {
-    %13 = ConstantLoad %!s(bool=true)
-    %14 = ConstantLoad %!s(bool=true)
+    %13 = ConstantLoad true
+    %14 = ConstantLoad true
     %15 = printNotEq(%13,%14) -> bb5;
   }
   bb5 {
-    %16 = ConstantLoad %!s(bool=true)
-    %17 = ConstantLoad %!s(bool=false)
+    %16 = ConstantLoad true
+    %17 = ConstantLoad false
     %18 = printNotEq(%16,%17) -> bb6;
   }
   bb6 {
-    %19 = ConstantLoad %!s(bool=false)
-    %20 = ConstantLoad %!s(bool=true)
+    %19 = ConstantLoad false
+    %20 = ConstantLoad true
     %21 = printNotEq(%19,%20) -> bb7;
   }
   bb7 {
-    %22 = ConstantLoad %!s(bool=false)
-    %23 = ConstantLoad %!s(bool=false)
+    %22 = ConstantLoad false
+    %23 = ConstantLoad false
     %24 = printNotEq(%22,%23) -> bb8;
   }
   bb8 {
@@ -51,14 +51,14 @@ printEq<NIL>{
     %3 ? bb1 : bb3;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %5 = println(%4) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %6 = ConstantLoad %!s(int64=0)
+    %6 = ConstantLoad 0
     %7 = println(%6) -> bb4;
   }
   bb4 {
@@ -74,14 +74,14 @@ printNotEq<NIL>{
     %3 ? bb1 : bb3;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %5 = println(%4) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %6 = ConstantLoad %!s(int64=0)
+    %6 = ConstantLoad 0
     %7 = println(%6) -> bb4;
   }
   bb4 {

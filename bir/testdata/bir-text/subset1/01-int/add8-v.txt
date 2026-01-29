@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,69 +30,69 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=1)
-    %6 = ConstantLoad %!s(int64=0)
+    %2 = ConstantLoad -1
+    %5 = ConstantLoad 1
+    %6 = ConstantLoad 0
     %7 = + %5 %6;
     %8 = println(%1) -> bb1;
   }
   bb1 {
-    %5 = ConstantLoad %!s(int64=-1)
-    %6 = ConstantLoad %!s(int64=1)
-    %7 = ConstantLoad %!s(int64=9223372036854775806)
+    %5 = ConstantLoad -1
+    %6 = ConstantLoad 1
+    %7 = ConstantLoad 9223372036854775806
     %2 = + %6 %7;
     %16 = println(%1) -> bb2;
   }
   bb2 {
-    %6 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad -1
+    %7 = ConstantLoad 1
     %2 = unknown %7;
-    %5 = ConstantLoad %!s(int64=0)
+    %5 = ConstantLoad 0
     %7 = + %2 %5;
     %25 = println(%1) -> bb3;
   }
   bb3 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad -1
+    %5 = ConstantLoad 1
     %7 = unknown %5;
-    %6 = ConstantLoad %!s(int64=9223372036854775806)
+    %6 = ConstantLoad 9223372036854775806
     %5 = unknown %6;
     %6 = + %7 %5;
     %35 = println(%1) -> bb4;
   }
   bb4 {
-    %7 = ConstantLoad %!s(int64=-1)
-    %40 = ConstantLoad %!s(int64=1)
-    %42 = ConstantLoad %!s(int64=0)
+    %7 = ConstantLoad -1
+    %40 = ConstantLoad 1
+    %42 = ConstantLoad 0
     %5 = add(%40,%42) -> bb5;
   }
   bb5 {
     %47 = println(%1) -> bb6;
   }
   bb6 {
-    %6 = ConstantLoad %!s(int64=-1)
-    %52 = ConstantLoad %!s(int64=1)
-    %54 = ConstantLoad %!s(int64=9223372036854775806)
+    %6 = ConstantLoad -1
+    %52 = ConstantLoad 1
+    %54 = ConstantLoad 9223372036854775806
     %2 = add(%52,%54) -> bb7;
   }
   bb7 {
     %59 = println(%1) -> bb8;
   }
   bb8 {
-    %5 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
+    %5 = ConstantLoad -1
+    %7 = ConstantLoad 1
     %64 = unknown %7;
-    %67 = ConstantLoad %!s(int64=0)
+    %67 = ConstantLoad 0
     %2 = add(%64,%67) -> bb9;
   }
   bb9 {
     %72 = println(%1) -> bb10;
   }
   bb10 {
-    %6 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad -1
+    %7 = ConstantLoad 1
     %77 = unknown %7;
-    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = ConstantLoad 9223372036854775806
     %80 = unknown %2;
     %5 = add(%77,%80) -> bb11;
   }
@@ -100,7 +100,7 @@ main<NIL>{
     %86 = println(%1) -> bb12;
   }
   bb12 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb13;
   }
   bb13 {

@@ -37,7 +37,7 @@
                 (invocation io println (
                   (simple-var-ref i)())
               (return
-                (literal ()))) ())
+                (literal <nil>))) ())
           (block-stmt
             (assignment
               (simple-var-ref i)
