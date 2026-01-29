@@ -46,12 +46,7 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
 	arr := *arrPtr
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	if idx >= len(arr) {
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		arr = newArr
-	}
+	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
 	arr[idx] = frame.GetOperand(access.RhsOp.Index)
 }
 
@@ -59,4 +54,14 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
 	frame.SetOperand(access.LhsOp.Index, arr[idx])
+}
+
+func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
+	if idx >= len(arr) {
+		newArr := make([]any, idx+1)
+		copy(newArr, arr)
+		*arrPtr = newArr
+		return newArr
+	}
+	return arr
 }
