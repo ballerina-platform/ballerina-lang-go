@@ -496,7 +496,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLang
 	// FIXME: since we don't have type information we are going to just create an open array
 	sizeOperand := ctx.addTempVar(nil)
 	constantLoad := &ConstantLoad{}
-	constantLoad.Value = -1
+	constantLoad.Value = int64(-1)
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
