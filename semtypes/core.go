@@ -314,7 +314,7 @@ func WidenToBasicTypes(t SemType) BasicTypeBitSet {
 	}
 }
 
-func wideUnsigned(t SemType) SemType {
+func WideUnsigned(t SemType) SemType {
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		return b
 	} else {

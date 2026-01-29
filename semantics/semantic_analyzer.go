@@ -55,16 +55,24 @@ type (
 	}
 
 	functionAnalyzer struct {
-		sa          *SemanticAnalyzer
+		parent      analyzer
 		function    *ast.BLangFunction
 		localVarsTy map[UniformRef]semtypes.SemType
 		retTy       semtypes.SemType
+	}
+
+	loopAnalyzer struct {
+		parent      analyzer
+		loop        ast.BLangNode
+		breakFound  bool
+		localVarsTy map[UniformRef]semtypes.SemType
 	}
 )
 
 var _ analyzer = &SemanticAnalyzer{}
 var _ analyzer = &constantAnalyzer{}
 var _ analyzer = &functionAnalyzer{}
+var _ analyzer = &loopAnalyzer{}
 
 func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return nil
@@ -74,17 +82,15 @@ func (fa *functionAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor 
 	return nil
 }
 
+func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return la
+}
+
 func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
 	switch n := node.(type) {
-	case *ast.BLangSimpleVariableDef:
-		analyzeSimpleVariableDef(fa, n)
-		return fa
-	case *ast.BLangAssignment:
-		analyzeAssignment(fa, n)
-		return fa
 	case *ast.BLangReturn:
 		if n.Expr == nil {
 			if !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
@@ -94,13 +100,28 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			return nil
 		}
 		analyzeExpression(fa, n.Expr, fa.retTy)
-	case *ast.BLangExpressionStmt:
-		analyzeExpression(fa, n.Expr, nil)
 		return fa
 	default:
-		return fa
+		// Delegate loop creation and common nodes to visitInner
+		return visitInner(fa, node)
 	}
-	return fa
+}
+
+func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	switch node.(type) {
+	case *ast.BLangBreak:
+		la.breakFound = true
+		return nil
+	case *ast.BLangContinue:
+		// Continue is valid within a loop
+		return nil
+	default:
+		// Delegate nested loops and common nodes to visitInner
+		return visitInner(la, node)
+	}
 }
 
 func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
@@ -142,19 +163,19 @@ func (fa *functionAnalyzer) refTy(name UniformRef) semtypes.SemType {
 	if ok {
 		return ty
 	}
-	return fa.sa.refTy(name)
+	return fa.parent.refTy(name)
 }
 
 func (fa *functionAnalyzer) localRef(name string) UniformRef {
-	return fa.sa.localRef(name)
+	return fa.parent.localRef(name)
 }
 
 func (fa *functionAnalyzer) ctx() *context.CompilerContext {
-	return fa.sa.ctx()
+	return fa.parent.ctx()
 }
 
 func (fa *functionAnalyzer) tyCtx() semtypes.Context {
-	return fa.sa.tyCtx()
+	return fa.parent.tyCtx()
 }
 
 func (ca *constantAnalyzer) ctx() *context.CompilerContext {
@@ -179,6 +200,33 @@ func (ca *constantAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
 
 func (fa *functionAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
 	fa.localVarsTy[name] = ty
+}
+
+func (la *loopAnalyzer) ctx() *context.CompilerContext {
+	return la.parent.ctx()
+}
+
+func (la *loopAnalyzer) tyCtx() semtypes.Context {
+	return la.parent.tyCtx()
+}
+
+func (la *loopAnalyzer) refTy(name UniformRef) semtypes.SemType {
+	// Check local variables first (loop-scoped)
+	ty, ok := la.localVarsTy[name]
+	if ok {
+		return ty
+	}
+	// Fallback to parent analyzer
+	return la.parent.refTy(name)
+}
+
+func (la *loopAnalyzer) localRef(name string) UniformRef {
+	return la.parent.localRef(name)
+}
+
+func (la *loopAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
+	// Store in local map for loop scope
+	la.localVarsTy[name] = ty
 }
 
 func (sa *SemanticAnalyzer) unimplementedErr(message string) {
@@ -214,19 +262,35 @@ func (ca *constantAnalyzer) internalErr(message string) {
 }
 
 func (fa *functionAnalyzer) unimplementedErr(message string) {
-	fa.sa.compilerCtx.Unimplemented(message, fa.function.GetPosition())
+	fa.parent.ctx().Unimplemented(message, fa.function.GetPosition())
 }
 
 func (fa *functionAnalyzer) semanticErr(message string) {
-	fa.sa.compilerCtx.SemanticError(message, fa.function.GetPosition())
+	fa.parent.ctx().SemanticError(message, fa.function.GetPosition())
 }
 
 func (fa *functionAnalyzer) syntaxErr(message string) {
-	fa.sa.compilerCtx.SyntaxError(message, fa.function.GetPosition())
+	fa.parent.ctx().SyntaxError(message, fa.function.GetPosition())
 }
 
 func (fa *functionAnalyzer) internalErr(message string) {
-	fa.sa.compilerCtx.InternalError(message, fa.function.GetPosition())
+	fa.parent.ctx().InternalError(message, fa.function.GetPosition())
+}
+
+func (la *loopAnalyzer) unimplementedErr(message string) {
+	la.parent.ctx().Unimplemented(message, la.loop.GetPosition())
+}
+
+func (la *loopAnalyzer) semanticErr(message string) {
+	la.parent.ctx().SemanticError(message, la.loop.GetPosition())
+}
+
+func (la *loopAnalyzer) syntaxErr(message string) {
+	la.parent.ctx().SyntaxError(message, la.loop.GetPosition())
+}
+
+func (la *loopAnalyzer) internalErr(message string) {
+	la.parent.ctx().InternalError(message, la.loop.GetPosition())
 }
 
 // When we support multiple packages we need to resolve types of all of them before semantic analysis
@@ -253,24 +317,40 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangConstant:
 		return &constantAnalyzer{sa: sa, constant: n}
-	case ast.BLangExpression:
-		analyzeExpression(sa, n, nil)
+	case *ast.BLangReturn:
+		// Error: return only valid in functions
+		sa.semanticErr("return statement outside function")
 		return nil
-	case *ast.BLangFunction:
-		return initializeFunctionAnalyzer(sa, n)
+	case *ast.BLangWhile:
+		// Error: loop only valid in functions
+		sa.semanticErr("loop statement outside function")
+		return nil
+	case *ast.BLangIf:
+		sa.semanticErr("if statement outside function")
+		return nil
 	default:
-		return sa
+		// Now delegates function creation to visitInner
+		return visitInner(sa, node)
 	}
 }
 
-func initializeFunctionAnalyzer(sa *SemanticAnalyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{sa: sa, function: function, localVarsTy: make(map[UniformRef]semtypes.SemType)}
+func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
+	fa := &functionAnalyzer{parent: parent, function: function, localVarsTy: make(map[UniformRef]semtypes.SemType)}
 	for _, param := range function.RequiredParams {
 		name := param.GetName().GetValue()
 		fa.setRefTy(fa.localRef(name), param.GetTypeData().Type)
 	}
 	fa.retTy = function.ReturnTypeData.Type
 	return fa
+}
+
+func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
+	return &loopAnalyzer{
+		parent:      parent,
+		loop:        loop,
+		breakFound:  false,
+		localVarsTy: make(map[UniformRef]semtypes.SemType),
+	}
 }
 
 func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
@@ -281,6 +361,24 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	switch n := node.(type) {
+	case *ast.BLangFunction:
+		ca.semanticErr("function definition not allowed in constant expression")
+		return nil
+	case *ast.BLangWhile:
+		ca.semanticErr("loop not allowed in constant expression")
+		return nil
+	case *ast.BLangIf:
+		ca.semanticErr("if statement not allowed in constant expression")
+		return nil
+	case *ast.BLangReturn:
+		ca.semanticErr("return statement not allowed in constant expression")
+		return nil
+	case *ast.BLangBreak:
+		ca.semanticErr("break statement not allowed in constant expression")
+		return nil
+	case *ast.BLangContinue:
+		ca.semanticErr("continue statement not allowed in constant expression")
+		return nil
 	case *ast.BLangTypeDefinition:
 		typeData := n.GetTypeData()
 		expectedType := typeData.Type
@@ -394,7 +492,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
 	case *ast.BLangGroupExpr:
-		panic("not implemented")
+		analyzeExpression(a, expr.Expression, expectedType)
+		setExpectedType(expr, expr.Expression.GetBType().Type)
 	case *ast.BLangWildCardBindingPattern:
 		setExpectedType(expr, &semtypes.ANY)
 	default:
@@ -658,10 +757,49 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	setExpectedType(simpleVariableDef, expectedType)
 }
 
+
+func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.BLangFunction:
+		return initializeFunctionAnalyzer(a, n)
+	case *ast.BLangWhile:
+		return initializeLoopAnalyzer(a, n)
+	case *ast.BLangIf:
+		analyzeIf(a, n)
+		return a
+	case *ast.BLangBreak:
+		// Error: break only valid in loops
+		a.semanticErr("break statement outside loop")
+		return nil
+	case *ast.BLangContinue:
+		// Error: continue only valid in loops
+		a.semanticErr("continue statement outside loop")
+		return nil
+	case *ast.BLangSimpleVariableDef:
+		analyzeSimpleVariableDef(a, n)
+		return a
+	case *ast.BLangAssignment:
+		analyzeAssignment(a, n)
+		return a
+	case *ast.BLangExpressionStmt:
+		analyzeExpression(a, n.Expr, nil)
+		return a
+	case ast.BLangExpression:
+		analyzeExpression(a, n, nil)
+		return a
+	default:
+		return a
+	}
+}
+
 func analyzeAssignment[A analyzer](a A, assignment *ast.BLangAssignment) {
 	analyzeExpression(a, assignment.VarRef, nil)
 	expectedType := assignment.VarRef.GetBType().Type
 	analyzeExpression(a, assignment.Expr, expectedType)
+}
+
+func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) {
+	analyzeExpression(a, ifStmt.Expr, &semtypes.BOOLEAN)
 }
 
 
