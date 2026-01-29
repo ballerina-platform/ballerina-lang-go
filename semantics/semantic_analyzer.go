@@ -492,26 +492,28 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 	analyzeExpression(a, binaryExpr.RhsExpr, nil)
 	lhsTy := binaryExpr.LhsExpr.GetBType().Type
 	rhsTy := binaryExpr.RhsExpr.GetBType().Type
-	var resultTy semtypes.BasicTypeBitSet
+	var resultTy semtypes.SemType
 	if isEqualityExpr(binaryExpr) {
 		intersection := semtypes.Intersect(lhsTy, rhsTy)
 		if semtypes.IsEmpty(a.tyCtx(), intersection) {
 			a.semanticErr(fmt.Sprintf("expect same type for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-		resultTy = semtypes.BOOLEAN
+		resultTy = &semtypes.BOOLEAN
 	} else {
 		lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 		rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 		numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
 		numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
+		nilLifted := false
 		if numLhsBits != 1 || numRhsBits != 1 {
 			a.semanticErr(fmt.Sprintf("union types not supported for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
 		if semtypes.IsSubtypeSimple(&lhsBasicTy, semtypes.NIL) || semtypes.IsSubtypeSimple(&rhsBasicTy, semtypes.NIL) {
-			a.unimplementedErr("nil lifting not supported")
-			return
+			nilLifted = true
+			lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
+			rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
 		}
 		if isMultipcativeExpr(binaryExpr) {
 			if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
@@ -519,7 +521,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				return
 			}
 			if lhsBasicTy == rhsBasicTy {
-				resultTy = lhsBasicTy
+				resultTy = &lhsBasicTy
 			} else {
 				a.unimplementedErr("type coercion not supported")
 			}
@@ -531,7 +533,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				return
 			}
 			if lhsBasicTy == rhsBasicTy {
-				resultTy = lhsBasicTy
+				resultTy = &lhsBasicTy
 			} else {
 				a.unimplementedErr("type coercion not supported")
 			}
@@ -540,19 +542,23 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
 				return
 			}
-			resultTy = semtypes.BOOLEAN
+			resultTy = &semtypes.BOOLEAN
+			nilLifted = false
 		} else {
 			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
+		if nilLifted {
+			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+		}
 	}
 	if expectedType != nil {
-		if !semtypes.IsSubtype(a.tyCtx(), &resultTy, expectedType) {
+		if !semtypes.IsSubtype(a.tyCtx(), resultTy, expectedType) {
 			a.semanticErr("incompatible result type for binary expression")
 			return
 		}
 	}
-	setExpectedType(binaryExpr, &resultTy)
+	setExpectedType(binaryExpr, resultTy)
 }
 
 type opExpr interface {
