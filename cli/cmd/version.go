@@ -19,24 +19,27 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:           "bal",
-	Short:         "The build system and package manager of Ballerina",
-	Long:          `The build system and package manager of Ballerina`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
+// Version is set via ldflags at build time
+var Version = "dev"
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the Ballerina version",
+	Run: func(cmd *cobra.Command, args []string) {
+		printVersion()
+	},
 }
 
-func main() {
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(versionCmd)
+func init() {
+	rootCmd.Version = Version
+	rootCmd.SetVersionTemplate("Ballerina Version: {{.Version}}\n")
+}
 
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+func printVersion() {
+	fmt.Println("Ballerina Version: ", Version)
 }
