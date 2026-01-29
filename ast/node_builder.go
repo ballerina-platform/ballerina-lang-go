@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"regexp"
 	"strconv"
@@ -617,7 +618,7 @@ func (n *NodeBuilder) getNextAnonymousTypeKey(packageID *model.PackageID, suffix
 
 // createTypeNode creates a type node from a syntax tree node
 // This delegates to the appropriate Transform method based on the node type
-func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeNode {
+func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 	if typeNode == nil {
 		panic("createTypeNode: typeNode is nil")
 	}
@@ -642,7 +643,7 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeNode {
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
 	default:
-		return n.TransformSyntaxNode(typeNode).(model.TypeNode)
+		return n.TransformSyntaxNode(typeNode).(model.TypeDescriptor)
 	}
 }
 
@@ -670,7 +671,10 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 		bLSimpleVar.IsDeclaredWithVar = true
 	} else {
 		// Line 6010: bLSimpleVar.setTypeNode(createTypeNode(typeName));
-		bLSimpleVar.SetTypeNode(n.createTypeNode(typeName))
+		typeData := model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeName),
+		}
+		bLSimpleVar.SetTypeData(typeData)
 	}
 
 	// Line 6013-6019: Handle visibility qualifier
@@ -700,7 +704,7 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 	return bLSimpleVar
 }
 
-func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeNode {
+func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeDescriptor {
 	var typeText string
 	if typeNode.Kind() == common.NIL_TYPE_DESC {
 		typeText = "()"
@@ -1066,7 +1070,10 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		numericLiteral := &BLangNumericLiteral{}
 		numericLiteral.Kind = nodeKind
 		numericLiteral.pos = getPosition(literal)
-		numericLiteral.SetBType(n.symbolTable.GetTypeFromTag(typeTag))
+		typeData := model.TypeData{
+			TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
+		}
+		numericLiteral.SetBType(typeData)
 		numericLiteral.Value = value
 		numericLiteral.OriginalValue = *originalValue
 		return &numericLiteral.BLangLiteral
@@ -1133,8 +1140,11 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	}
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
-	bLangNode.SetBType(n.symbolTable.GetTypeFromTag(typeTag))
-	bType := bLangNode.GetBType().(BType)
+	typeData := model.TypeData{
+		TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
+	}
+	bLangNode.SetBType(typeData)
+	bType := typeData.TypeDescriptor.(BType)
 	bType.bTypesetTag(typeTag)
 	bLiteral.SetValue(value)
 	bLiteral.SetOriginalValue(*originalValue)
@@ -1241,8 +1251,10 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, "return")
 
 		// Create the type node from the type child
-		returnType := n.createTypeNode(typeNode)
-		bLFunction.SetReturnTypeNode(returnType)
+		typeData := model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeNode),
+		}
+		bLFunction.SetReturnTypeData(typeData)
 
 		// Pop "return" from the stack
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
@@ -1251,10 +1263,12 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 			panic("unimplemented")
 		}
 	} else {
-		bLValueType := BLangValueType{}
-		// TODO: set pos
-		bLValueType.TypeKind = model.TypeKind_NIL
-		bLFunction.SetReturnTypeNode(&bLValueType)
+		nilType := BLangValueType{TypeKind: model.TypeKind_NIL}
+		typeData := model.TypeData{
+			TypeDescriptor: &nilType,
+			Type:           &semtypes.NIL,
+		}
+		bLFunction.SetReturnTypeData(typeData)
 	}
 }
 
@@ -1486,7 +1500,10 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
 		if !isDeclaredWithVar {
-			variable.SetTypeNode(n.createTypeNode(typeDesc))
+			typeData := model.TypeData{
+				TypeDescriptor: n.createTypeNode(typeDesc),
+			}
+			variable.SetTypeData(typeData)
 		}
 
 		// Line 3048: Return variable definition
@@ -1606,7 +1623,9 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 	} else if isType(actionOrExpression.Kind()) {
 		typeAccessExpr := BLangTypedescExpr{}
 		typeAccessExpr.pos = getPosition(actionOrExpression)
-		typeAccessExpr.TypeNode = n.createTypeNode(actionOrExpression)
+		typeAccessExpr.TypeData = model.TypeData{
+			TypeDescriptor: n.createTypeNode(actionOrExpression),
+		}
 		return &typeAccessExpr
 	} else {
 		return n.TransformSyntaxNode(actionOrExpression)
@@ -1668,7 +1687,10 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(returnStatementNode)
 		nilLiteral.Value = nil
-		nilLiteral.SetBType(n.symbolTable.GetTypeFromTag(model.TypeTags_NIL))
+		typeData := model.TypeData{
+			TypeDescriptor: n.symbolTable.GetTypeFromTag(model.TypeTags_NIL),
+		}
+		nilLiteral.SetBType(typeData)
 		bLReturn.SetExpression(nilLiteral)
 	}
 
@@ -1813,7 +1835,10 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 	typeDescriptor := constantDeclarationNode.TypeDescriptor()
 	if typeDescriptor != nil {
 		// Line 947: constantNode.typeNode = createTypeNode(constantDeclarationNode.typeDescriptor().orElse(null));
-		constantNode.TypeNode = n.createTypeNode(typeDescriptor)
+		typeData := model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeDescriptor),
+		}
+		constantNode.SetTypeData(typeData)
 	}
 
 	// Lines 950-952: Skip annotations and documentation (metadata check will panic if present)
@@ -1832,8 +1857,9 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 	nodeKind := constantNode.Expr.GetKind()
 
 	// Line 964-969: Check whether the value is a literal or a unary expression
+	typeData := constantNode.GetTypeData()
 	if (nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL || nodeKind == model.NodeKind_UNARY_EXPR) &&
-		(constantNode.TypeNode == nil || constantNode.TypeNode.GetKind() != model.NodeKind_ARRAY_TYPE) {
+		(typeData.TypeDescriptor == nil || typeData.TypeDescriptor.GetKind() != model.NodeKind_ARRAY_TYPE) {
 		// Line 968: createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos);
 		n.createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos)
 	}
@@ -1923,7 +1949,10 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	// Line 928: typeDef.flagSet.add(Flag.ANONYMOUS);
 	typeDef.AddFlag(model.Flag_ANONYMOUS)
 	// Line 929: typeDef.typeNode = finiteTypeNode;
-	typeDef.SetTypeNode(finiteTypeNode)
+	typeData := model.TypeData{
+		TypeDescriptor: finiteTypeNode,
+	}
+	typeDef.SetTypeData(typeData)
 	// Line 930: typeDef.pos = pos;
 	typeDef.SetPosition(pos)
 
@@ -2513,7 +2542,9 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 			literal := &BLangLiteral{
 				BLangExpressionBase: BLangExpressionBase{
 					BLangNodeBase: BLangNodeBase{
-						ty: n.symbolTable.GetTypeFromTag(model.TypeTags_INT),
+						ty: model.TypeData{
+							TypeDescriptor: n.symbolTable.GetTypeFromTag(model.TypeTags_INT),
+						},
 					},
 				},
 				Value: OPEN_ARRAY_INDICATOR,
@@ -2526,7 +2557,9 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 
 	arrayTypeNode := &BLangArrayType{}
 	arrayTypeNode.pos = position
-	arrayTypeNode.Elemtype = n.createTypeNode(arrayTypeDescriptorNode.MemberTypeDesc())
+	arrayTypeNode.Elemtype = model.TypeData{
+		TypeDescriptor: n.createTypeNode(arrayTypeDescriptorNode.MemberTypeDesc()),
+	}
 	arrayTypeNode.Dimensions = dimensionSize
 	arrayTypeNode.Sizes = sizes
 	return arrayTypeNode
@@ -2875,7 +2908,7 @@ func stringToTypeKind(typeText string) model.TypeKind {
 	}
 }
 
-func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeNode {
+func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeDescriptor {
 	userDefinedType := BLangUserDefinedType{}
 	userDefinedType.pos = pos
 	userDefinedType.PkgAlias = pkgAlias

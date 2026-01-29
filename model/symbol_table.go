@@ -22,7 +22,7 @@ type SymbolTable struct {
 	TypeSymbolTable TypeSymbolTable
 }
 
-func (this *SymbolTable) GetTypeFromTag(tag TypeTags) TypeNode {
+func (this *SymbolTable) GetTypeFromTag(tag TypeTags) TypeDescriptor {
 	return this.TypeSymbolTable.GetTypeFromTag(tag)
 }
 
@@ -31,7 +31,7 @@ func (this *SymbolTable) GetBuiltinPos() diagnostics.Location {
 }
 
 type TypeSymbolTable interface {
-	GetTypeFromTag(tag TypeTags) TypeNode
+	GetTypeFromTag(tag TypeTags) TypeDescriptor
 }
 
 type TypeTags int

@@ -19,6 +19,7 @@ package ast
 import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/test_util"
 	"flag"
@@ -104,6 +105,10 @@ func (v *walkTestVisitor) Visit(node BLangNode) Visitor {
 	v.nodeCount++
 	typeName := fmt.Sprintf("%T", node)
 	v.visitedTypes[typeName]++
+	return v
+}
+
+func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) Visitor {
 	return v
 }
 

@@ -84,7 +84,14 @@ func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) TypeResolutionResult 
 func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i, param := range fn.RequiredParams {
-		paramTypes[i] = param.GetBType().(ast.BType).SemType()
+		typeData := param.GetTypeData()
+		if typeData.Type != nil {
+			// Already resolved
+			paramTypes[i] = typeData.Type
+		} else {
+			// This should be resolved already
+			paramTypes[i] = typeData.Type
+		}
 	}
 	var restTy semtypes.SemType
 	if fn.RestParam != nil {
@@ -95,15 +102,22 @@ func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.env.typeEnv, paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
-	if fn.ReturnTypeNode != nil {
-		bType := fn.ReturnTypeNode.(ast.BType)
-		returnTy = bType.SemType()
+	returnTypeData := fn.GetReturnTypeData()
+	if returnTypeData.TypeDescriptor != nil {
+		// Already resolved
+		returnTy = returnTypeData.Type
 	} else {
 		returnTy = &semtypes.NIL
 	}
 	functionDefn := semtypes.NewFunctionDefinition()
 	return functionDefn.Define(t.env.typeEnv, paramListTy, returnTy,
 		semtypes.FunctionQualifiersFrom(t.env.typeEnv, false, false))
+}
+
+func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	ty := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
+	typeData.Type = ty
+	return t
 }
 
 func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
@@ -120,7 +134,7 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
 		return nil
 	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode:
-		t.resolveBType(n.(ast.BType))
+		t.ctx.InternalError("unexpected type definition node", n.GetPosition())
 		return nil
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
@@ -137,11 +151,15 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
-	bType := n.GetBType().(ast.BType)
+	typeData := n.GetBType()
+	bType := typeData.TypeDescriptor.(ast.BType)
 	var ty semtypes.SemType
+
 	switch bType.BTypeGetTag() {
 	case model.TypeTags_INT:
-		// INT literals are handled via BLangNumericLiteral path
+		// INT literals are usually handled via BLangNumericLiteral path
+		// but we resolve the type here as well for completeness
+		ty = &semtypes.INT
 	case model.TypeTags_BYTE:
 		value := n.GetValue().(int64)
 		ty = semtypes.IntConst(value)
@@ -153,7 +171,6 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 		ty = semtypes.StringConst(value)
 	case model.TypeTags_NIL:
 		ty = &semtypes.NIL
-	// Get value from string
 	case model.TypeTags_DECIMAL:
 		strValue := n.GetValue().(string)
 		r := t.parseDecimalValue(strValue, n.GetPosition())
@@ -165,8 +182,13 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	default:
 		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
 	}
-	bType.SetSemType(ty)
-	setSemType(n.GetDeterminedType(), ty)
+
+	// Set on TypeData
+	typeData.Type = ty
+	n.SetBType(typeData)
+
+	// Set on determinedType
+	n.SetDeterminedType(ty)
 }
 
 // parseFloatValue parses a string as float64 with error handling
@@ -190,7 +212,8 @@ func (t *TypeResolver) parseDecimalValue(strValue string, pos diagnostics.Locati
 }
 
 func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
-	bType := n.GetBType().(ast.BType)
+	typeData := n.GetBType()
+	bType := typeData.TypeDescriptor.(ast.BType)
 	typeTag := bType.BTypeGetTag()
 
 	var ty semtypes.SemType
@@ -207,8 +230,12 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
 		return
 	}
 
-	bType.SetSemType(ty)
-	setSemType(n.GetDeterminedType(), ty)
+	// Set on TypeData
+	typeData.Type = ty
+	n.SetBType(typeData)
+
+	// Set on determinedType
+	n.SetDeterminedType(ty)
 }
 
 func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
@@ -247,45 +274,42 @@ func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral
 }
 
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
-	ty := node.GetBType()
-	bType := ty.(ast.BType)
-	t.resolveBType(bType)
-	semType := bType.SemType()
-	setSemType(node.GetBType(), semType)
-	setSemType(node.GetDeterminedType(), semType)
-}
-
-func setSemType(node model.TypeNode, ty semtypes.SemType) {
-	if node == nil {
+	typeData := node.GetTypeData()
+	if typeData.TypeDescriptor == nil {
 		return
 	}
-	bType := node.(ast.BType)
-	bType.SetSemType(ty)
+
+	// Resolve the type descriptor and get the semtype
+	semType := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
+
+	// Set on TypeData
+	typeData.Type = semType
+	node.SetTypeData(typeData)
+
+	// Set on determinedType
+	node.SetDeterminedType(semType)
 }
 
 // TODO: do we need to track depth (similar to nBallerina)?
-func (tr *TypeResolver) resolveBType(btype ast.BType) {
-	if btype.SemType() != nil {
-		// already resolved
-		return
-	}
+func (tr *TypeResolver) resolveBType(btype ast.BType) semtypes.SemType {
 	switch ty := btype.(type) {
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
 		case model.TypeKind_BOOLEAN:
-			btype.SetSemType(&semtypes.BOOLEAN)
+			return &semtypes.BOOLEAN
 		case model.TypeKind_INT:
-			btype.SetSemType(&semtypes.INT)
+			return &semtypes.INT
 		case model.TypeKind_FLOAT:
-			btype.SetSemType(&semtypes.FLOAT)
+			return &semtypes.FLOAT
 		case model.TypeKind_STRING:
-			btype.SetSemType(&semtypes.STRING)
+			return &semtypes.STRING
 		case model.TypeKind_NIL:
-			btype.SetSemType(&semtypes.NIL)
+			return &semtypes.NIL
 		case model.TypeKind_ANY:
-			btype.SetSemType(&semtypes.ANY)
+			return &semtypes.ANY
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
+			return nil
 		}
 	case *ast.BLangArrayType:
 		defn := ty.Definition
@@ -293,8 +317,12 @@ func (tr *TypeResolver) resolveBType(btype ast.BType) {
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			tr.resolveBType(ty.Elemtype.(ast.BType))
-			memberTy := ty.Elemtype.(ast.BType).SemType()
+			// Resolve element type and update its TypeData
+			elemTypeData := ty.Elemtype
+			memberTy := tr.resolveBType(elemTypeData.TypeDescriptor.(ast.BType))
+			elemTypeData.Type = memberTy
+			ty.Elemtype = elemTypeData
+
 			if ty.IsOpenArray() {
 				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.env.typeEnv, memberTy)
 			} else {
@@ -304,10 +332,10 @@ func (tr *TypeResolver) resolveBType(btype ast.BType) {
 		} else {
 			semTy = defn.GetSemType(tr.env.typeEnv)
 		}
-
-		ty.SetSemType(semTy)
+		return semTy
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
+		return nil
 	}
 }

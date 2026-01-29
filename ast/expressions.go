@@ -260,7 +260,7 @@ type (
 
 	BLangTypedescExpr struct {
 		BLangExpressionBase
-		TypeNode model.TypeNode
+		TypeData model.TypeData
 	}
 
 	BLangUnaryExpr struct {
@@ -360,14 +360,14 @@ func (this *BLangTypedescExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPEDESC_EXPRESSION
 }
 
-func (this *BLangTypedescExpr) GetTypeNode() model.TypeNode {
+func (this *BLangTypedescExpr) GetTypeData() model.TypeData {
 	// migrated from BLangTypedescExpr.java:57:5
-	return this.TypeNode
+	return this.TypeData
 }
 
-func (this *BLangTypedescExpr) SetTypeNode(typeNode model.TypeNode) {
+func (this *BLangTypedescExpr) SetTypeData(typeData model.TypeData) {
 	// migrated from BLangTypedescExpr.java:62:5
-	this.TypeNode = typeNode
+	this.TypeData = typeData
 }
 
 func (this *BLangAlternateWorkerReceive) GetKind() model.NodeKind {

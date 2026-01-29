@@ -55,21 +55,17 @@ type BType interface {
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
 	bTypeSetFlags(flags uint64)
-	SemType() semtypes.SemType
-	SetSemType(semtype semtypes.SemType)
 }
 
 type (
 	BLangTypeBase struct {
 		BLangNodeBase
 		FlagSet  common.UnorderedSet[model.Flag]
-		Nullable bool
 		Grouped  bool
 		tags     model.TypeTags
 		tsymbol  *BTypeSymbol
 		name     model.Name
 		flags    uint64
-		semtype  semtypes.SemType
 	}
 
 	BTypeImpl struct {
@@ -77,11 +73,10 @@ type (
 		tag     model.TypeTags
 		name    model.Name
 		flags   uint64
-		semtype semtypes.SemType
 	}
 	BLangArrayType struct {
 		BLangTypeBase
-		Elemtype   model.TypeNode
+		Elemtype   model.TypeData
 		Sizes      []BLangExpression
 		Dimensions int
 		Definition semtypes.Definition
@@ -154,7 +149,7 @@ var (
 	_ BLangNode      = &BLangArrayType{}
 	_ BLangNode      = &BLangUserDefinedType{}
 	_ BLangNode      = &BLangValueType{}
-	_ model.TypeNode = &BLangValueType{}
+	_ model.TypeDescriptor = &BLangValueType{}
 )
 
 func (this *BLangArrayType) GetKind() model.NodeKind {
@@ -162,7 +157,7 @@ func (this *BLangArrayType) GetKind() model.NodeKind {
 	return model.NodeKind_ARRAY_TYPE
 }
 
-func (this *BLangArrayType) GetElementType() model.TypeNode {
+func (this *BLangArrayType) GetElementType() model.TypeData {
 	return this.Elemtype
 }
 
@@ -180,21 +175,6 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 
 func (this *BLangArrayType) IsOpenArray() bool {
 	return this.Dimensions == 1 && this.Sizes[0].(*BLangLiteral).Value == OPEN_ARRAY_INDICATOR
-}
-
-func (this *BLangTypeBase) SemType() semtypes.SemType {
-	return this.semtype
-}
-
-func (this *BLangTypeBase) SetSemType(semtype semtypes.SemType) {
-	if this.semtype != nil && this.semtype != semtype {
-		panic("semtype already set")
-	}
-	this.semtype = semtype
-}
-
-func (this *BLangTypeBase) IsNullable() bool {
-	return this.Nullable
 }
 
 func (this *BLangTypeBase) IsGrouped() bool {
@@ -292,11 +272,6 @@ func (this *BObjectType) GetKind() model.TypeKind {
 	return model.TypeKind_OBJECT
 }
 
-func (this *BObjectType) IsNullable() bool {
-	// migrated from BObjectType.java:252:5
-	return false
-}
-
 func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
@@ -361,14 +336,6 @@ func (this *BTypeImpl) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) SemType() semtypes.SemType {
-	return this.semtype
-}
-
-func (this *BTypeImpl) SetSemType(semtype semtypes.SemType) {
-	this.semtype = semtype
-}
-
 func (this *BTypeImpl) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.tag)
 }
@@ -382,10 +349,6 @@ func (this *BTypeImpl) GetPosition() Location {
 }
 
 func (this *BTypeImpl) SetPosition(pos Location) {
-	panic("not implemented")
-}
-
-func (this *BTypeImpl) IsNullable() bool {
 	panic("not implemented")
 }
 

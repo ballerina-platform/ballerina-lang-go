@@ -56,6 +56,16 @@ type (
 var _ analyzer = &SemanticAnalyzer{}
 var _ analyzer = &constantAnalyzer{}
 
+func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	sa.unimplementedErr("type data not supported")
+	return nil
+}
+
+func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	ca.unimplementedErr("type data not supported")
+	return ca
+}
+
 func (sa *SemanticAnalyzer) localRef(name string) UniformRef {
 	return refInPackage(sa.pkg, name)
 }
@@ -79,7 +89,8 @@ func (sa *SemanticAnalyzer) refTy(name UniformRef) semtypes.SemType {
 	}
 	constant, ok := sa.constants[name]
 	if ok {
-		return constant.GetBType().(ast.BType).SemType()
+		typeData := constant.GetTypeData()
+		return typeData.Type
 	}
 	sa.semanticErr(fmt.Sprintf("symbol %s not found", name))
 	return nil
@@ -165,7 +176,12 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	}
 	switch n := node.(type) {
 	case *ast.BLangTypeDefinition:
-		expectedType := n.GetBType().(ast.BType).SemType()
+		typeData := n.GetTypeData()
+		expectedType := typeData.Type
+		if expectedType == nil {
+			ca.syntaxErr("type not resolved")
+			return nil
+		}
 		ctx := ca.sa.tyCtx()
 		if semtypes.IsNever(expectedType) || !semtypes.IsSubtype(ctx, expectedType, semtypes.CreateAnydata(ctx)) {
 			ca.syntaxErr("invalid type for constant declaration")
@@ -204,14 +220,16 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	switch expr := expr.(type) {
 	// Literals
 	case *ast.BLangLiteral:
-		ty := expr.GetBType().(ast.BType).SemType()
+		typeData := expr.GetBType()
+		ty := typeData.Type
 		ctx := a.tyCtx()
 		if !semtypes.IsSubtype(ctx, ty, expectedType) {
 			a.semanticErr("incompatible type for literal")
 			return
 		}
 	case *ast.BLangNumericLiteral:
-		ty := expr.GetBType().(ast.BType).SemType()
+		typeData := expr.GetBType()
+		ty := typeData.Type
 		ctx := a.tyCtx()
 		if !semtypes.IsSubtype(ctx, ty, expectedType) {
 			a.semanticErr("incompatible type for literal")
@@ -262,7 +280,8 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 		argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 		for i, arg := range invocation.ArgExprs {
 			analyzeExpression(a, arg, nil)
-			argTys[i] = arg.GetBType().(ast.BType).SemType()
+			typeData := arg.GetBType()
+			argTys[i] = typeData.Type
 		}
 		paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 		argLd := semtypes.NewListDefinition()
@@ -279,5 +298,7 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 			return
 		}
 	}
-	invocation.GetBType().(ast.BType).SetSemType(retTy)
+	typeData := invocation.GetBType()
+	typeData.Type = retTy
+	invocation.SetBType(typeData)
 }

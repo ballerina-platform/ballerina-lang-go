@@ -18,6 +18,7 @@ package model
 
 import (
 	"ballerina-lang-go/common"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -624,8 +625,8 @@ type AnnotationNode interface {
 	TopLevelNode
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
-	GetTypeNode() TypeNode
-	SetTypeNode(typeNode TypeNode)
+	GetTypeData() TypeData
+	SetTypeData(typeData TypeData)
 }
 
 type FunctionBodyNode = Node
@@ -641,8 +642,8 @@ type VariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetTypeNode() TypeNode
-	SetTypeNode(typeNode TypeNode)
+	GetTypeData() TypeData
+	SetTypeData(typeData TypeData)
 	GetInitialExpression() ExpressionNode
 	SetInitialExpression(expr ExpressionNode)
 	GetIsDeclaredWithVar() bool
@@ -659,7 +660,7 @@ type SimpleVariableNode interface {
 }
 
 type ConstantNode interface {
-	GetTypeNode() TypeNode
+	GetTypeData() TypeData
 	GetAssociatedTypeDefinition() TypeDefinition
 }
 
@@ -672,8 +673,8 @@ type InvokableNode interface {
 	SetName(name IdentifierNode)
 	GetParameters() []SimpleVariableNode
 	AddParameter(param SimpleVariableNode)
-	GetReturnTypeNode() TypeNode
-	SetReturnTypeNode(returnTypeNode TypeNode)
+	GetReturnTypeData() TypeData
+	SetReturnTypeData(typeData TypeData)
 	GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode
 	AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 	GetBody() FunctionBodyNode
@@ -704,7 +705,7 @@ type ClassDefinition interface {
 	AddFunction(function FunctionNode)
 	GetInitFunction() FunctionNode
 	AddField(field VariableNode)
-	AddTypeReference(typeRef TypeNode)
+	AddTypeReference(typeRef *TypeData)
 }
 
 type ServiceNode interface {
@@ -730,26 +731,35 @@ type TypeDefinition interface {
 	OrderedNode
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
-	GetTypeNode() TypeNode
-	SetTypeNode(typeNode TypeNode)
+	GetTypeData() TypeData
+	SetTypeData(typeData TypeData)
 }
 
-type TypeNode interface {
+type TypeData struct {
+	// Represent semantic information (if available) of the type that are necessary to construct a value of the type.
+	// Will always be available after creating the AST but will be nil if there is no such type descriptor to the
+	// attached node.
+	TypeDescriptor TypeDescriptor
+	// Represents the actual type represented by the AST node. Will be initialized by the semantic analyzer, and will
+	// never be nil after that.
+	Type semtypes.SemType
+}
+
+type TypeDescriptor interface {
 	Node
-	IsNullable() bool
 	IsGrouped() bool
 }
 
 type BuiltInReferenceTypeNode interface {
-	TypeNode
+	TypeDescriptor
 	GetTypeKind() TypeKind
 }
 
-type ReferenceTypeNode = TypeNode
+type ReferenceTypeNode = TypeDescriptor
 
 type ArrayTypeNode interface {
 	ReferenceTypeNode
-	GetElementType() TypeNode
+	GetElementType() TypeData
 	GetDimensions() int
 	GetSizes() []ExpressionNode
 }
@@ -923,8 +933,8 @@ type GroupExpressionNode interface {
 
 type TypedescExpressionNode interface {
 	ExpressionNode
-	GetTypeNode() TypeNode
-	SetTypeNode(typeNode TypeNode)
+	GetTypeData() TypeData
+	SetTypeData(typeData TypeData)
 }
 
 type DynamicArgNode = ExpressionNode

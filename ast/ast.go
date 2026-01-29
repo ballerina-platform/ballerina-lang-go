@@ -17,14 +17,13 @@
 package ast
 
 import (
-	"strings"
-
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"strings"
 )
 
 type Flags uint64
@@ -214,18 +213,19 @@ type Location = diagnostics.Location
 
 type BLangNode interface {
 	model.Node
-	SetBType(ty model.TypeNode)
-	GetBType() model.TypeNode
-	SetDeterminedType(ty model.TypeNode)
-	GetDeterminedType() model.TypeNode
+	// TODO: Rename these to be TypeData instead
+	SetBType(ty model.TypeData)
+	GetBType() model.TypeData
+	SetDeterminedType(ty semtypes.SemType)
+	GetDeterminedType() semtypes.SemType
 	GetPosition() Location
 	SetPosition(pos Location)
 }
 
 type (
 	BLangNodeBase struct {
-		ty             model.TypeNode
-		determinedType model.TypeNode
+		ty             model.TypeData
+		determinedType semtypes.SemType
 
 		parent BLangNode
 
@@ -235,12 +235,13 @@ type (
 		internal           bool
 	}
 
+	// TODO: look into what is the difference between the public TypeData fields and ty
 	BLangAnnotation struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		TypeNode                        model.TypeNode
+		TypeData                        model.TypeData
 		FlagSet                         common.UnorderedSet[model.Flag]
 		attachPoints                    common.UnorderedSet[model.AttachPoint]
 		Symbol                          *BSymbol
@@ -297,7 +298,7 @@ type (
 		InitFunction                    *BLangFunction
 		Functions                       []BLangFunction
 		Fields                          []model.SimpleVariableNode
-		TypeRefs                        []model.TypeNode
+		TypeRefs                        []model.TypeDescriptor
 		FlagSet                         common.Set[model.Flag]
 		Symbol                          *BTypeSymbol
 		GeneratedInitFunction           *BLangFunction
@@ -413,7 +414,7 @@ type (
 
 	BLangVariableBase struct {
 		BLangNodeBase
-		TypeNode                        model.TypeNode
+		TypeData                        model.TypeData
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
 		Expr                            model.ExpressionNode
@@ -446,7 +447,7 @@ type (
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       model.SimpleVariableNode
-		ReturnTypeNode                  model.TypeNode
+		ReturnTypeData                  model.TypeData
 		ReturnTypeAnnAttachments        []model.AnnotationAttachmentNode
 		Body                            model.FunctionBodyNode
 		DefaultWorkerName               model.IdentifierNode
@@ -475,7 +476,7 @@ type (
 	BLangTypeDefinition struct {
 		BLangNodeBase
 		name                            *BLangIdentifier
-		typeNode                        model.TypeNode
+		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
 		flagSet                         common.UnorderedSet[model.Flag]
@@ -488,19 +489,19 @@ type (
 	}
 )
 
-func (this *BLangNodeBase) SetBType(ty model.TypeNode) {
+func (this *BLangNodeBase) SetBType(ty model.TypeData) {
 	this.ty = ty
 }
 
-func (this *BLangNodeBase) GetBType() model.TypeNode {
+func (this *BLangNodeBase) GetBType() model.TypeData {
 	return this.ty
 }
 
-func (this *BLangNodeBase) SetDeterminedType(ty model.TypeNode) {
+func (this *BLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
 	this.determinedType = ty
 }
 
-func (this *BLangNodeBase) GetDeterminedType() model.TypeNode {
+func (this *BLangNodeBase) GetDeterminedType() semtypes.SemType {
 	return this.determinedType
 }
 
@@ -615,14 +616,14 @@ func (this *BLangAnnotation) SetName(name model.IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangAnnotation) GetTypeNode() model.TypeNode {
+func (this *BLangAnnotation) GetTypeData() model.TypeData {
 	// migrated from BLangAnnotation.java:70:5
-	return this.TypeNode
+	return this.TypeData
 }
 
-func (this *BLangAnnotation) SetTypeNode(typeNode model.TypeNode) {
+func (this *BLangAnnotation) SetTypeData(typeData model.TypeData) {
 	// migrated from BLangAnnotation.java:75:5
-	this.TypeNode = typeNode
+	this.TypeData = typeData
 }
 
 func (this *BLangAnnotation) GetFlags() common.Set[model.Flag] {
@@ -820,9 +821,9 @@ func (this *BLangClassDefinition) AddField(field model.VariableNode) {
 	panic("field is not a BLangSimpleVariable")
 }
 
-func (this *BLangClassDefinition) AddTypeReference(typeRef model.TypeNode) {
+func (this *BLangClassDefinition) AddTypeReference(typeRef *model.TypeData) {
 	// migrated from BLangClassDefinition.java:118:5
-	this.TypeRefs = append(this.TypeRefs, typeRef)
+	this.TypeRefs = append(this.TypeRefs, typeRef.TypeDescriptor)
 }
 
 func (this *BLangClassDefinition) GetKind() model.NodeKind {
@@ -927,11 +928,6 @@ func (this *BLangCompilationUnit) GetSourceKind() SourceKind {
 	return this.sourceKind
 }
 
-func (this *BLangConstant) SetTypeNode(typeNode model.TypeNode) {
-	// migrated from BLangConstant.java:63:5
-	this.TypeNode = typeNode
-}
-
 func (this *BLangConstant) GetName() model.IdentifierNode {
 	return this.Name
 }
@@ -987,9 +983,13 @@ func (this *BLangConstant) GetKind() model.NodeKind {
 	return model.NodeKind_CONSTANT
 }
 
-func (this *BLangConstant) GetTypeNode() model.TypeNode {
+func (this *BLangConstant) GetTypeData() model.TypeData {
 	// migrated from BLangConstant.java:134:5
-	return this.TypeNode
+	return this.TypeData
+}
+
+func (this *BLangConstant) SetTypeData(typeData model.TypeData) {
+	this.TypeData = typeData
 }
 
 func (this *BLangConstant) GetAssociatedTypeDefinition() model.TypeDefinition {
@@ -1344,12 +1344,12 @@ func (b *BLangInvokableNodeBase) HasBody() bool {
 	return b.Body != nil
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeNode() model.TypeNode {
-	return b.ReturnTypeNode
+func (b *BLangInvokableNodeBase) GetReturnTypeData() model.TypeData {
+	return b.ReturnTypeData
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeNode(returnTypeNode model.TypeNode) {
-	b.ReturnTypeNode = returnTypeNode
+func (b *BLangInvokableNodeBase) SetReturnTypeData(returnTypeData model.TypeData) {
+	b.ReturnTypeData = returnTypeData
 }
 
 func (b *BLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -1428,16 +1428,16 @@ func (b *BLangInvokableNodeBase) SetDesugaredReturnType(desugaredReturnType bool
 	b.DesugaredReturnType = desugaredReturnType
 }
 
-func (b *BLangVariableBase) GetBType() model.TypeNode {
-	return b.TypeNode
+func (b *BLangVariableBase) GetBType() model.TypeData {
+	return b.TypeData
 }
 
-func (b *BLangVariableBase) GetTypeNode() model.TypeNode {
-	return b.TypeNode
+func (b *BLangVariableBase) GetTypeData() model.TypeData {
+	return b.TypeData
 }
 
-func (b *BLangVariableBase) SetTypeNode(typeNode model.TypeNode) {
-	b.TypeNode = typeNode
+func (b *BLangVariableBase) SetTypeData(typeData model.TypeData) {
+	b.TypeData = typeData
 }
 
 func (b *BLangVariableBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
@@ -1536,12 +1536,12 @@ func (this *BLangTypeDefinition) SetName(name model.IdentifierNode) {
 	}
 }
 
-func (this *BLangTypeDefinition) GetTypeNode() model.TypeNode {
-	return this.typeNode
+func (this *BLangTypeDefinition) GetTypeData() model.TypeData {
+	return this.typeData
 }
 
-func (this *BLangTypeDefinition) SetTypeNode(typeNode model.TypeNode) {
-	this.typeNode = typeNode
+func (this *BLangTypeDefinition) SetTypeData(typeData model.TypeData) {
+	this.typeData = typeData
 }
 
 func (this *BLangTypeDefinition) GetFlags() common.Set[model.Flag] {

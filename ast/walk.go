@@ -16,13 +16,17 @@
 
 package ast
 
-import "fmt"
+import (
+	"ballerina-lang-go/model"
+	"fmt"
+)
 
 // A Visitor's Visit method is invoked for each node encountered by [Walk].
 // If the result visitor w is not nil, [Walk] visits each of the children
 // of node with the visitor w, followed by a call of w.Visit(nil).
 type Visitor interface {
 	Visit(node BLangNode) (w Visitor)
+	VisitTypeData(typeData *model.TypeData) (w Visitor)
 }
 
 // Walk traverses an AST in depth-first order: It starts by calling
@@ -184,9 +188,7 @@ func Walk(v Visitor, node BLangNode) {
 		for i := range node.AnnAttachments {
 			Walk(v, &node.AnnAttachments[i])
 		}
-		if node.TypeNode != nil {
-			Walk(v, node.TypeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.TypeData)
 
 	case *BLangAnnotationAttachment:
 		Walk(v, node.Expr.(BLangNode))
@@ -202,9 +204,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.name != nil {
 			Walk(v, node.name)
 		}
-		if node.typeNode != nil {
-			Walk(v, node.typeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.typeData)
 		for i := range node.annAttachments {
 			Walk(v, &node.annAttachments[i])
 		}
@@ -216,17 +216,13 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
-		if node.TypeNode != nil {
-			Walk(v, node.TypeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.TypeData)
 
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		if node.TypeNode != nil {
-			Walk(v, node.TypeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.TypeData)
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
@@ -260,9 +256,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		if node.ReturnTypeNode != nil {
-			Walk(v, node.ReturnTypeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.ReturnTypeData)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
@@ -441,9 +435,7 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangTypedescExpr:
-		if node.TypeNode != nil {
-			Walk(v, node.TypeNode.(BLangNode))
-		}
+		v.VisitTypeData(&node.TypeData)
 
 	case *BLangTypeConversionExpr:
 		// No children
@@ -497,28 +489,8 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	// Section 8: Type Nodes
-	case *BLangArrayType:
-		if node.Elemtype != nil {
-			Walk(v, node.Elemtype.(BLangNode))
-		}
-		for _, size := range node.Sizes {
-			Walk(v, size.(BLangNode))
-		}
-
-	case *BLangUserDefinedType:
-		Walk(v, &node.PkgAlias)
-		Walk(v, &node.TypeName)
-
-	case *BLangValueType:
-		// Leaf node
-
-	case *BLangBuiltInRefTypeNode:
-		// Leaf node
-
-	case *BLangFiniteTypeNode:
-		for _, value := range node.ValueSpace {
-			Walk(v, value.(BLangNode))
-		}
+	case *BLangArrayType, *BLangUserDefinedType, *BLangValueType, *BLangBuiltInRefTypeNode, *BLangFiniteTypeNode:
+		panic("Type nodes should not be visited directly")
 
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:

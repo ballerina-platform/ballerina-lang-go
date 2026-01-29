@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/test_util"
 	"flag"
@@ -78,10 +79,15 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-	if ty, ok := node.(ast.BType); ok {
-		if ty.SemType() == nil {
-			v.t.Errorf("type not resolved for %+v", ty)
-		}
+	return v
+}
+
+func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	if typeData.TypeDescriptor == nil {
+		return nil
+	}
+	if typeData.Type == nil {
+		v.t.Errorf("type not resolved for %+v", typeData)
 	}
 	return v
 }
