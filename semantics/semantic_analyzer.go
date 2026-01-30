@@ -917,6 +917,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangAssignment:
 		analyzeAssignment(a, n)
 		return a
+	case *ast.BLangCompoundAssignment:
+		analyzeAssignment(a, n)
+		return a
 	case *ast.BLangExpressionStmt:
 		analyzeExpression(a, n.Expr, &semtypes.NIL)
 		return a
@@ -931,10 +934,17 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	}
 }
 
-func analyzeAssignment[A analyzer](a A, assignment *ast.BLangAssignment) {
-	analyzeExpression(a, assignment.VarRef, nil)
-	expectedType := assignment.VarRef.GetTypeData().Type
-	analyzeExpression(a, assignment.Expr, expectedType)
+type assignmentNode interface {
+	GetVariable() model.ExpressionNode
+	GetExpression() model.ExpressionNode
+}
+
+func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
+	variable := assignment.GetVariable().(ast.BLangExpression)
+	analyzeExpression(a, variable, nil)
+	expectedType := variable.GetTypeData().Type
+	expression := assignment.GetExpression().(ast.BLangExpression)
+	analyzeExpression(a, expression, expectedType)
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) {
