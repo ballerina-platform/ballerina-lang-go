@@ -94,6 +94,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printWildCardBindingPattern(t)
 	case *BLangCompoundAssignment:
 		p.printCompoundAssignment(t)
+	case *BLangUnionTypeNode:
+		p.printUnionTypeNode(t)
+	case *BLangErrorTypeNode:
+		p.printErrorTypeNode(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -553,5 +557,28 @@ func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
 	p.startNode()
 	p.printString("wildcard-binding-pattern")
+	p.endNode()
+}
+
+// Union type node printer
+func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
+	p.startNode()
+	p.printString("union-type")
+	p.indentLevel++
+	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Error type node printer
+func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
+	p.startNode()
+	p.printString("error-type")
+	if !node.IsTop() {
+		p.indentLevel++
+		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
 	p.endNode()
 }
