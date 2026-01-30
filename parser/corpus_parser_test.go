@@ -356,7 +356,7 @@ func parseFile(t *testing.T, testCase test_util.TestCase) {
 
 	// If update flag is set, check if update is needed and update if necessary
 	if *update {
-		if test_util.UpdateIfNeeded(t, testCase.ExpectedPath, normalizedJSON) {
+		if test_util.UpdateIfNeeded(t, testCase.ExpectedPath, normalizedJSON, normalizeJSON) {
 			t.Fatalf("Updated expected JSON file: %s", testCase.ExpectedPath)
 		}
 		return

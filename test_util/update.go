@@ -38,15 +38,24 @@ func ReadExpectedFile(t *testing.T, expectedPath string) string {
 // UpdateIfNeeded compares the actual content with the expected file content.
 // Returns true if the content differs and an update was made.
 // Returns false if the content matches (no update needed).
-func UpdateIfNeeded(t *testing.T, expectedPath, actual string) bool {
+// Optionally accepts a normalization function to apply to existing content before comparison.
+func UpdateIfNeeded(t *testing.T, expectedPath, actual string, normalizeExisting ...func(string) string) bool {
 	t.Helper()
 
 	// Read existing file if it exists
 	existingContent, err := os.ReadFile(expectedPath)
 	fileExists := err == nil
 
-	// If file exists and content matches, no update needed
-	if fileExists && string(existingContent) == actual {
+	existing := string(existingContent)
+
+	// Apply normalization to existing content before comparison if provided
+	// (actual is assumed to already be in the desired format)
+	if len(normalizeExisting) > 0 && normalizeExisting[0] != nil && fileExists {
+		existing = normalizeExisting[0](existing)
+	}
+
+	// If file exists and content matches (after normalization), no update needed
+	if fileExists && existing == actual {
 		return false
 	}
 
