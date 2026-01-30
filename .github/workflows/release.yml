@@ -116,6 +116,8 @@ jobs:
           mkdir -p release
           for artifact_dir in dist/bal-*; do
             platform=$(basename "$artifact_dir")
+            # Make the binary executable
+            find "$artifact_dir" -name "bal*" -type f -exec chmod +x {} \;
             cd "$artifact_dir"
             zip -r "../../release/ballerina-${platform}-${VERSION}.zip" .
             cd ../..
