@@ -25,7 +25,10 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable arr))
+        (variable arr (type
+          (array-type
+            (value-type int) dimensions: 1 (
+            (literal -1))))))
       (assignment
         (wildcard-binding-pattern)
         (invocation foo (
@@ -45,7 +48,8 @@
         (invocation io println (
           (simple-var-ref arr)())
       (var-def
-        (variable str))
+        (variable str (type
+          (value-type string))))
       (assignment
         (wildcard-binding-pattern)
         (simple-var-ref str))

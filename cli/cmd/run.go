@@ -31,6 +31,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semantics"
 
 	"github.com/spf13/cobra"
 )
@@ -154,6 +155,12 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Println(prettyPrinter.Print(compilationUnit))
 	}
 	pkg := ast.ToPackage(compilationUnit)
+	// Add type resolution step
+	typeResolver := semantics.NewTypeResolver(cx)
+	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	// Run semantic analysis after type resolution
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
+	semanticAnalyzer.Analyze(pkg)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}

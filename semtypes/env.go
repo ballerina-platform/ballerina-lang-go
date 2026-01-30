@@ -34,26 +34,37 @@ type Env interface {
 	listAtomType(atom Atom) *ListAtomicType
 }
 
-var typeEnv Env = nil
-var typeEnvInitializer sync.Once
+var (
+	typeEnv            Env = nil
+	typeEnvInitializer sync.Once
+)
 
 func GetTypeEnv() Env {
 	typeEnvInitializer.Do(func() {
-		env := &envImpl{
-			atomTable: make(map[AtomicType]TypeAtom),
-			types:     make(map[string]SemType),
-		}
-		fillRecAtoms(predefinedTypeEnv, &env.recListAtoms, predefinedTypeEnv.initializedRecListAtoms)
-		fillRecAtoms(predefinedTypeEnv, &env.recMappingAtoms, predefinedTypeEnv.initializedRecMappingAtoms)
-		for _, each := range predefinedTypeEnv.initializedCellAtoms {
-			env.cellAtom(each.atomicType)
-		}
-		for _, each := range predefinedTypeEnv.initializedListAtoms {
-			env.listAtom(each.atomicType)
-		}
-		typeEnv = env
+		typeEnv = createTypeEnv()
 	})
 	return typeEnv
+}
+
+func createTypeEnv() Env {
+	env := &envImpl{
+		atomTable: make(map[AtomicType]TypeAtom),
+		types:     make(map[string]SemType),
+	}
+	fillRecAtoms(predefinedTypeEnv, &env.recListAtoms, predefinedTypeEnv.initializedRecListAtoms)
+	fillRecAtoms(predefinedTypeEnv, &env.recMappingAtoms, predefinedTypeEnv.initializedRecMappingAtoms)
+	for _, each := range predefinedTypeEnv.initializedCellAtoms {
+		env.cellAtom(each.atomicType)
+	}
+	for _, each := range predefinedTypeEnv.initializedListAtoms {
+		env.listAtom(each.atomicType)
+	}
+	return env
+}
+
+// This is mostly intendent for test which are executed in parallel. this will create a new Env each time you call it
+func GetIsolatedTypeEnv() Env {
+	return createTypeEnv()
 }
 
 type envImpl struct {

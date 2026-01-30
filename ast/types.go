@@ -19,6 +19,7 @@ package ast
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 )
 
 type ProjectKind uint8
@@ -46,7 +47,7 @@ type ObjectType interface {
 
 type BType interface {
 	model.Type
-	bTypeGetTag() model.TypeTags
+	BTypeGetTag() model.TypeTags
 	bTypesetTag(tag model.TypeTags)
 	bTypeGetTSymbol() *BTypeSymbol
 	bTypeSetTSymbol(tsymbol *BTypeSymbol)
@@ -59,13 +60,12 @@ type BType interface {
 type (
 	BLangTypeBase struct {
 		BLangNodeBase
-		FlagSet  common.UnorderedSet[model.Flag]
-		Nullable bool
-		Grouped  bool
-		tags     model.TypeTags
-		tsymbol  *BTypeSymbol
-		name     model.Name
-		flags    uint64
+		FlagSet common.UnorderedSet[model.Flag]
+		Grouped bool
+		tags    model.TypeTags
+		tsymbol *BTypeSymbol
+		name    model.Name
+		flags   uint64
 	}
 
 	BTypeImpl struct {
@@ -76,9 +76,10 @@ type (
 	}
 	BLangArrayType struct {
 		BLangTypeBase
-		Elemtype   model.TypeNode
+		Elemtype   model.TypeData
 		Sizes      []BLangExpression
 		Dimensions int
+		Definition semtypes.Definition
 	}
 	BLangBuiltInRefTypeNode struct {
 		BLangTypeBase
@@ -90,6 +91,8 @@ type (
 		TypeKind model.TypeKind
 	}
 
+	// TODO: Is this just type reference? if not we need to rethink this when we have actual user defined types.
+	//   If the user defined type is recursive we need a way to get the Definition (similar to array type etc) from that.
 	BLangUserDefinedType struct {
 		BLangTypeBase
 		PkgAlias BLangIdentifier
@@ -122,6 +125,17 @@ type (
 		BLangTypeBase
 		ValueSpace []BLangExpression
 	}
+
+	BLangUnionTypeNode struct {
+		BLangTypeBase
+		lhs model.TypeData
+		rhs model.TypeData
+	}
+
+	BLangErrorTypeNode struct {
+		BLangTypeBase
+		detailType model.TypeData
+	}
 )
 
 var (
@@ -132,6 +146,8 @@ var (
 	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
+	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
+	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
 )
 
 var (
@@ -143,10 +159,10 @@ var (
 )
 
 var (
-	_ BLangNode      = &BLangArrayType{}
-	_ BLangNode      = &BLangUserDefinedType{}
-	_ BLangNode      = &BLangValueType{}
-	_ model.TypeNode = &BLangValueType{}
+	_ BLangNode            = &BLangArrayType{}
+	_ BLangNode            = &BLangUserDefinedType{}
+	_ BLangNode            = &BLangValueType{}
+	_ model.TypeDescriptor = &BLangValueType{}
 )
 
 func (this *BLangArrayType) GetKind() model.NodeKind {
@@ -154,7 +170,7 @@ func (this *BLangArrayType) GetKind() model.NodeKind {
 	return model.NodeKind_ARRAY_TYPE
 }
 
-func (this *BLangArrayType) GetElementType() model.TypeNode {
+func (this *BLangArrayType) GetElementType() model.TypeData {
 	return this.Elemtype
 }
 
@@ -170,8 +186,8 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 	return expressionNodes
 }
 
-func (this *BLangTypeBase) IsNullable() bool {
-	return this.Nullable
+func (this *BLangArrayType) IsOpenArray() bool {
+	return this.Dimensions == 1 && this.Sizes[0].(*BLangLiteral).Value == OPEN_ARRAY_INDICATOR
 }
 
 func (this *BLangTypeBase) IsGrouped() bool {
@@ -259,8 +275,8 @@ func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	}
 }
 
-func (this *BLangTypeBase) getTypeKind() model.TypeKind {
-	return typeTagToTypeKind(this.bTypeGetTag())
+func (this *BLangTypeBase) GetTypeKind() model.TypeKind {
+	return typeTagToTypeKind(this.BTypeGetTag())
 }
 
 // BObjectType methods
@@ -269,16 +285,11 @@ func (this *BObjectType) GetKind() model.TypeKind {
 	return model.TypeKind_OBJECT
 }
 
-func (this *BObjectType) IsNullable() bool {
-	// migrated from BObjectType.java:252:5
-	return false
-}
-
 func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) bTypeGetTag() model.TypeTags {
+func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
@@ -306,7 +317,7 @@ func (this *BLangTypeBase) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) bTypeGetTag() model.TypeTags {
+func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
@@ -354,11 +365,15 @@ func (this *BTypeImpl) SetPosition(pos Location) {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) IsNullable() bool {
+func (this *BTypeImpl) IsGrouped() bool {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) IsGrouped() bool {
+func (this *BTypeImpl) GetTypeData() model.TypeData {
+	panic("not implemented")
+}
+
+func (this *BTypeImpl) GetDeterminedType() semtypes.SemType {
 	panic("not implemented")
 }
 
@@ -381,4 +396,32 @@ func (this *BLangFiniteTypeNode) AddValue(value model.ExpressionNode) {
 func (this *BLangFiniteTypeNode) GetKind() model.NodeKind {
 	// migrated from BLangFiniteTypeNode.java:100:5
 	return model.NodeKind_FINITE_TYPE_NODE
+}
+
+func (this *BLangUnionTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_UNION_TYPE_NODE
+}
+
+func (this *BLangUnionTypeNode) Lhs() model.TypeData {
+	return this.lhs
+}
+
+func (this *BLangUnionTypeNode) Rhs() model.TypeData {
+	return this.rhs
+}
+
+func (this *BLangErrorTypeNode) GetDetailType() model.TypeData {
+	return this.detailType
+}
+
+func (this *BLangErrorTypeNode) IsTop() bool {
+	return this.detailType.TypeDescriptor == nil
+}
+
+func (this *BLangErrorTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_ERROR_TYPE
+}
+
+func (this *BLangErrorTypeNode) IsDistinct() bool {
+	return this.FlagSet.Contains(model.Flag_DISTINCT)
 }
