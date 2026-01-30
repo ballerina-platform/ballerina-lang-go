@@ -100,18 +100,24 @@ jobs:
       contents: write
 
     steps:
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
 
       - name: Prepare release files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p release
           for artifact_dir in dist/bal-*; do
             platform=$(basename "$artifact_dir")
             cd "$artifact_dir"
-            zip -r "../../release/${platform}.zip" .
+            zip -r "../../release/ballerina-${platform}-${VERSION}.zip" .
             cd ../..
           done
 
