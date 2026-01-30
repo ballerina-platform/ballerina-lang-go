@@ -356,6 +356,14 @@ func (this *BTypeImpl) IsGrouped() bool {
 	panic("not implemented")
 }
 
+func (this *BTypeImpl) GetTypeData() model.TypeData {
+	panic("not implemented")
+}
+
+func (this *BTypeImpl) GetDeterminedType() semtypes.SemType {
+	panic("not implemented")
+}
+
 func (this *BLangFiniteTypeNode) GetValueSet() []model.ExpressionNode {
 	values := make([]model.ExpressionNode, len(this.ValueSpace))
 	for i, value := range this.ValueSpace {

@@ -560,7 +560,8 @@ type DocumentationReferenceType string
 type Node interface {
 	GetKind() NodeKind
 	GetPosition() diagnostics.Location
-	SetPosition(pos diagnostics.Location)
+	GetTypeData() TypeData
+	GetDeterminedType() semtypes.SemType
 }
 
 // Top-Level/Structure Interfaces

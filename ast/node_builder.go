@@ -1435,7 +1435,7 @@ func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStm
 	bLCompAssignment := &BLangCompoundAssignment{}
 	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
 	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
-	bLCompAssignment.SetPosition(getPosition(compoundAssignmentStmtNode))
+	BLangNode(bLCompAssignment).SetPosition(getPosition(compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKind_valueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
 	return bLCompAssignment
 }
@@ -1479,7 +1479,7 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 
 		// Line 3034: Set position
 		bLVarDef.pos = location
-		variable.SetPosition(location)
+		variable.(BLangNode).SetPosition(location)
 
 		// Line 3035: Handle initializer
 		var expr BLangExpression
@@ -1912,7 +1912,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 		literal.SetOriginalValue(constantExprLiteral.GetOriginalValue())
 		// Line 907: literal.setBType(constantNode.expr.getBType());
 		bLiteralNode := literal.(BLangNode)
-		constantExpr := constantNode.Expr.(BLangNode)
+		constantExpr := constantNode.Expr
 		bLiteralNode.SetTypeData(constantExpr.GetTypeData())
 		// Line 908: literal.isConstant = true;
 		literal.SetIsConstant(true)
@@ -1957,7 +1957,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	}
 	typeDef.SetTypeData(typeData)
 	// Line 930: typeDef.pos = pos;
-	typeDef.SetPosition(pos)
+	BLangNode(typeDef).SetPosition(pos)
 
 	// Line 932-935: We add this type definition to the `associatedTypeDefinition` field of the constant node.
 	// Line 935: constantNode.associatedTypeDefinition = typeDef;

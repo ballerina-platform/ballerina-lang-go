@@ -214,10 +214,7 @@ type Location = diagnostics.Location
 type BLangNode interface {
 	model.Node
 	SetTypeData(ty model.TypeData)
-	GetTypeData() model.TypeData
 	SetDeterminedType(ty semtypes.SemType)
-	GetDeterminedType() semtypes.SemType
-	GetPosition() Location
 	SetPosition(pos Location)
 }
 
@@ -1879,7 +1876,7 @@ func createSimpleVariableNodeWithLocationTokenLocation(location Location, identi
 	memberVar := createSimpleVariableNode()
 	memberVar.pos = location
 	name := createIdentifierFromToken(identifierPos, identifier)
-	name.SetPosition(identifierPos)
+	BLangNode(&name).SetPosition(identifierPos)
 	memberVar.SetName(&name)
 	return memberVar
 }
