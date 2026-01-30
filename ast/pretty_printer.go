@@ -359,10 +359,10 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	p.startNode()
 	p.printString("variable")
 	p.printString(node.Name.Value)
-	if node.TypeNode != nil {
+	if node.GetTypeData().TypeDescriptor != nil {
 		p.printString("(type")
 		p.indentLevel++
-		p.PrintInner(node.TypeNode.(BLangNode))
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -404,9 +404,9 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printSticky(")")
 	// Print return type if present
 	p.printString("(")
-	if node.ReturnTypeNode != nil {
+	if node.ReturnTypeData.TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTypeNode.(BLangNode))
+		p.PrintInner(node.ReturnTypeData.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 
@@ -437,7 +437,7 @@ func (p *PrettyPrinter) printSimpleVariableDef(node *BLangSimpleVariableDef) {
 	p.startNode()
 	p.printString("var-def")
 	p.indentLevel++
-	p.PrintInner(&node.Var)
+	p.PrintInner(node.Var)
 	if node.IsInFork {
 		p.printString("in-fork")
 	}
@@ -475,7 +475,7 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	p.startNode()
 	p.printString("array-type")
 	p.indentLevel++
-	p.PrintInner(node.Elemtype.(BLangNode))
+	p.PrintInner(node.Elemtype.TypeDescriptor.(BLangNode))
 	if node.Dimensions > 0 {
 		p.printString(fmt.Sprintf("dimensions: %d", node.Dimensions))
 	}
@@ -497,9 +497,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
 	p.printString("(")
-	if node.TypeNode != nil {
+	if node.GetTypeData().TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.TypeNode.(BLangNode))
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")

@@ -14,7 +14,8 @@
     (value-type int))
     (block-function-body
       (var-def
-        (variable i))
+        (variable i (type
+          (value-type int))))
       (if
         (group-expr
           (binary-expr !=

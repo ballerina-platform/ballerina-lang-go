@@ -5,11 +5,14 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable loopCount))
+        (variable loopCount (type
+          (value-type int))))
       (var-def
-        (variable i))
+        (variable i (type
+          (value-type int))))
       (var-def
-        (variable total))
+        (variable total (type
+          (value-type int))))
       (while
         (group-expr
           (binary-expr <
@@ -17,9 +20,11 @@
             (simple-var-ref loopCount)))
         (block-stmt
           (var-def
-            (variable a))
+            (variable a (type
+              (value-type int))))
           (var-def
-            (variable b))
+            (variable b (type
+              (value-type int))))
           (compound-assignment +
             (simple-var-ref total)
             (simple-var-ref b))

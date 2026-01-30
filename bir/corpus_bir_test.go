@@ -21,6 +21,8 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/test_util"
 	"flag"
 	"os"
 	"path/filepath"
@@ -72,19 +74,6 @@ func getBIRDiff(expectedText, actualText string) string {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(expectedText, actualText, false)
 	return dmp.DiffPrettyText(diffs)
-
-}
-
-func getCorpusDir(t *testing.T) string {
-	corpusBirDir := "../corpus/bir"
-	if _, err := os.Stat(corpusBirDir); os.IsNotExist(err) {
-		// Try alternative path (when running from project root)
-		corpusBirDir = "./corpus/bir"
-		if _, err := os.Stat(corpusBirDir); os.IsNotExist(err) {
-			t.Skipf("Corpus directory not found (tried ../corpus/bir and ./corpus/bir), skipping test")
-		}
-	}
-	return corpusBirDir
 }
 
 func getCorpusFiles(t *testing.T, baseDir string) []string {
@@ -218,76 +207,26 @@ func testBIRPackageLoading(t *testing.T, birFile string, baseDir string) {
 	}
 }
 
-// expectedBIRPath converts a .bal file path to the expected BIR text file path.
-// Example: corpus/bal/subset1/01-int/add3-v.bal -> corpus/bir/subset1/01-int/add3-v.txt
-func expectedBIRPath(balFile string) string {
-	expectedBIRPath := strings.TrimSuffix(balFile, ".bal") + ".txt"
-	expectedBIRPath = strings.Replace(
-		expectedBIRPath,
-		string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bal"+string(filepath.Separator),
-		string(filepath.Separator)+"corpus"+string(filepath.Separator)+"bir"+string(filepath.Separator),
-		1,
-	)
-	return expectedBIRPath
-}
-
-// getCorpusBalFiles retrieves all .bal files from the corpus directory for BIR generation testing.
-func getCorpusBalFiles(t *testing.T) []string {
-	corpusBalDir := "../corpus/bal"
-	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-		corpusBalDir = "./corpus/bal"
-		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-			t.Skipf("Corpus directory not found (tried ../corpus/bal and ./corpus/bal), skipping test")
-		}
-	}
-
-	var balFiles []string
-	for _, subset := range supportedSubsets {
-		dirPath := filepath.Join(corpusBalDir, subset)
-		err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() && strings.HasSuffix(path, ".bal") {
-				balFiles = append(balFiles, path)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("Error walking corpus/bal/%s directory: %v", subset, err)
-		}
-	}
-
-	if len(balFiles) == 0 {
-		t.Fatalf("No .bal files found in %s", corpusBalDir)
-	}
-	return balFiles
-}
-
 // TestBIRGeneration tests BIR generation from .bal source files in the corpus.
 func TestBIRGeneration(t *testing.T) {
 	flag.Parse()
-	balFiles := getCorpusBalFiles(t)
-	for _, balFile := range balFiles {
-		t.Run(balFile, func(t *testing.T) {
+
+	testPairs := test_util.GetValidTests(t, test_util.BIR)
+
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
-			testBIRGeneration(t, balFile)
+			testBIRGeneration(t, testPair)
 		})
 	}
 }
 
 // testBIRGeneration tests BIR generation for a single .bal file.
-func testBIRGeneration(t *testing.T, balFile string) {
-	// Skip files not ending with -v.bal (follow AST test convention)
-	if !strings.HasSuffix(balFile, "-v.bal") {
-		t.Skipf("Skipping %s", balFile)
-		return
-	}
-
+func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	// Catch panics during BIR generation
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("panic while generating BIR from %s: %v", balFile, r)
+			t.Errorf("panic while generating BIR from %s: %v", testPair.InputPath, r)
 		}
 	}()
 
@@ -307,28 +246,36 @@ func testBIRGeneration(t *testing.T, balFile string) {
 	cx := context.NewCompilerContext()
 
 	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(debugCtx, balFile)
+	syntaxTree, err := parser.GetSyntaxTree(debugCtx, testPair.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree from %s: %v", balFile, err)
+		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
 		return
 	}
 
 	// Step 2: Get compilation unit (AST)
 	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", balFile)
+		t.Errorf("compilation unit is nil for %s", testPair.InputPath)
 		return
 	}
 
 	// Step 3: Convert to AST package
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 4: Generate BIR package
+	// Step 4: Resolve types
+	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver.ResolveTypes(pkg)
+
+	// // Step 5: Run semantic analysis
+	// semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
+	// semanticAnalyzer.Analyze(pkg)
+
+	// Step 6: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result
 	if birPkg == nil {
-		t.Errorf("BIR package is nil for %s", balFile)
+		t.Errorf("BIR package is nil for %s", testPair.InputPath)
 		return
 	}
 
@@ -336,52 +283,21 @@ func testBIRGeneration(t *testing.T, balFile string) {
 	prettyPrinter := PrettyPrinter{}
 	actualBIR := prettyPrinter.Print(*birPkg)
 
-	// If update flag is set, check if update is needed and update if necessary
-	expectedPath := expectedBIRPath(balFile)
+	// If update flag is set, update expected file
 	if *update {
-		if updateIfNeeded(t, balFile, expectedPath, actualBIR) {
-			t.Fatalf("Updated expected BIR file: %s", expectedPath)
+		if test_util.UpdateIfNeeded(t, testPair.ExpectedPath, actualBIR) {
+			t.Fatalf("Updated expected BIR file: %s", testPair.ExpectedPath)
 		}
 		return
 	}
 
 	// Read expected BIR text file
-	expectedText := getExpectedBIRText(t, balFile)
+	expectedText := test_util.ReadExpectedFile(t, testPair.ExpectedPath)
 
 	// Compare BIR text strings exactly
 	if actualBIR != expectedText {
 		diff := getBIRDiff(expectedText, actualBIR)
-		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", balFile, expectedPath, diff)
+		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", testPair.InputPath, testPair.ExpectedPath, diff)
 		return
 	}
-}
-
-func updateIfNeeded(t *testing.T, balFile, expectedPath, actualBIR string) bool {
-	// Ensure the directory exists
-	expectedText := getExpectedBIRText(t, balFile)
-
-	// File exists - compare content
-	// Only update if content is different
-	if actualBIR != expectedText {
-		// Content is different - update file and fail the test
-		if err := os.WriteFile(expectedPath, []byte(actualBIR), 0o644); err != nil {
-			t.Errorf("error writing expected BIR text file: %v", err)
-			return true
-		}
-		t.Errorf("updated expected BIR text file: %s", expectedPath)
-		return true
-	}
-
-	// Content matches - no update needed, test passes
-	return false
-}
-
-func getExpectedBIRText(t *testing.T, balFile string) string {
-	expectedPath := expectedBIRPath(balFile)
-	expectedText, readErr := readExpectedBIRText(expectedPath)
-	if readErr != nil {
-		t.Errorf("error reading expected BIR text file: %v", readErr)
-		return ""
-	}
-	return expectedText
 }

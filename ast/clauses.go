@@ -25,7 +25,7 @@ type SymbolEnv struct {
 	Scope             *Scope
 	Node              BLangNode
 	EnclPkg           *BLangPackage
-	EnclType          model.TypeNode
+	EnclType          model.TypeDescriptor
 	EnclAnnotation    *BLangAnnotation
 	EnclService       *BLangService
 	EnclInvokable     model.InvokableNode
