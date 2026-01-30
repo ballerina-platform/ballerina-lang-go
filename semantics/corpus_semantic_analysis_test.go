@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
 	"strings"
@@ -92,7 +93,12 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// Check if node implements BLangExpression interface
 	if expr, ok := node.(ast.BLangExpression); ok {
 		// Validate determinedType is set
-		if expr.GetDeterminedType() == nil {
+		if semtypes.IsNever(expr.GetDeterminedType()) {
+			v.t.Errorf("determinedType is never for expression %T at %v",
+				node, node.GetPosition())
+		}
+	} else {
+		if node.GetDeterminedType() == nil {
 			v.t.Errorf("determinedType not set for expression %T at %v",
 				node, node.GetPosition())
 		}
