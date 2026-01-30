@@ -32,7 +32,8 @@ jobs:
         id: version
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "version=ballerina-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          DATE=$(date -u +%Y%m%d)
+          echo "version=${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
       - name: Build the Ballerina CLI for all platforms
         env:
