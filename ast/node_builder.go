@@ -1076,7 +1076,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		typeData := model.TypeData{
 			TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
 		}
-		numericLiteral.SetBType(typeData)
+		numericLiteral.SetTypeData(typeData)
 		numericLiteral.Value = value
 		numericLiteral.OriginalValue = *originalValue
 		return &numericLiteral.BLangLiteral
@@ -1146,7 +1146,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	typeData := model.TypeData{
 		TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
 	}
-	bLangNode.SetBType(typeData)
+	bLangNode.SetTypeData(typeData)
 	bType := typeData.TypeDescriptor.(BType)
 	bType.bTypesetTag(typeTag)
 	bLiteral.SetValue(value)
@@ -1693,7 +1693,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		typeData := model.TypeData{
 			TypeDescriptor: n.symbolTable.GetTypeFromTag(model.TypeTags_NIL),
 		}
-		nilLiteral.SetBType(typeData)
+		nilLiteral.SetTypeData(typeData)
 		bLReturn.SetExpression(nilLiteral)
 	}
 
@@ -1913,7 +1913,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 		// Line 907: literal.setBType(constantNode.expr.getBType());
 		bLiteralNode := literal.(BLangNode)
 		constantExpr := constantNode.Expr.(BLangNode)
-		bLiteralNode.SetBType(constantExpr.GetBType())
+		bLiteralNode.SetTypeData(constantExpr.GetTypeData())
 		// Line 908: literal.isConstant = true;
 		literal.SetIsConstant(true)
 		// Line 909: finiteTypeNode.valueSpace.add(literal);
@@ -1925,7 +1925,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 		// Line 913-914: BLangUnaryExpr unaryExpr = createBLangUnaryExpr(unaryConstant.pos, unaryConstant.operator, unaryConstant.expr);
 		unaryExpr := createBLangUnaryExpr(unaryConstant.GetPosition(), unaryConstant.Operator, unaryConstant.Expr)
 		// Line 915: unaryExpr.setBType(unaryConstant.expr.getBType());
-		unaryExpr.SetBType(unaryConstant.Expr.GetBType())
+		unaryExpr.SetTypeData(unaryConstant.Expr.GetTypeData())
 		// Line 916: finiteTypeNode.valueSpace.add(unaryExpr);
 		finiteTypeNode.ValueSpace = append(finiteTypeNode.ValueSpace, unaryExpr)
 	}

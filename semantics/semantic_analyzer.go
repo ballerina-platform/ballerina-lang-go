@@ -482,7 +482,9 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	ca.executeCallbacks()
 	if node == nil {
 		setExpectedType(ca.constant, ca.expectedType)
-		ca.constant.TypeData.Type = ca.expectedType
+		typeData := ca.constant.GetTypeData()
+		typeData.Type = ca.expectedType
+		ca.constant.SetTypeData(typeData)
 		// Done
 		return nil
 	}
@@ -541,7 +543,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			model.NodeKind_UNARY_EXPR:
 			bLangExpr := n.(ast.BLangExpression)
 			analyzeExpression(ca, bLangExpr, ca.expectedType)
-			exprTy := bLangExpr.GetBType().Type
+			exprTy := bLangExpr.GetTypeData().Type
 			if ca.expectedType != nil {
 				if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
 					ca.semanticErr("incompatible type for constant expression")
@@ -565,7 +567,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		if expectedType == nil {
 			return
 		}
-		typeData := expr.GetBType()
+		typeData := expr.GetTypeData()
 		ty := typeData.Type
 		ctx := a.tyCtx()
 		if !semtypes.IsSubtype(ctx, ty, expectedType) {
@@ -576,7 +578,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		if expectedType == nil {
 			return
 		}
-		typeData := expr.GetBType()
+		typeData := expr.GetTypeData()
 		ty := typeData.Type
 		ctx := a.tyCtx()
 		if !semtypes.IsSubtype(ctx, ty, expectedType) {
@@ -620,7 +622,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		analyzeListConstructorExpr(a, expr, expectedType)
 	case *ast.BLangGroupExpr:
 		analyzeExpression(a, expr.Expression, expectedType)
-		setExpectedType(expr, expr.Expression.GetBType().Type)
+		setExpectedType(expr, expr.Expression.GetTypeData().Type)
 	case *ast.BLangWildCardBindingPattern:
 		setExpectedType(expr, &semtypes.ANY)
 	default:
@@ -631,7 +633,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {
 	containerExpr := expr.Expr
 	analyzeExpression(a, containerExpr, nil)
-	containerExprTy := containerExpr.GetBType().Type
+	containerExprTy := containerExpr.GetTypeData().Type
 	var keyExprExpectedType semtypes.SemType
 	ctx := a.tyCtx()
 	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) || !semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) || !semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
@@ -646,7 +648,7 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 	}
 	keyExpr := expr.IndexExpr
 	analyzeExpression(a, keyExpr, keyExprExpectedType)
-	keyExprTy := keyExpr.GetBType().Type
+	keyExprTy := keyExpr.GetTypeData().Type
 	var resultTy semtypes.SemType
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		resultTy = semtypes.ListProjInnerVal(ctx, containerExprTy, keyExprTy)
@@ -669,7 +671,7 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
 	for i, expr := range expr.Exprs {
 		analyzeExpression(a, expr, nil)
-		memberTypes[i] = expr.GetBType().Type
+		memberTypes[i] = expr.GetTypeData().Type
 	}
 	ld := semtypes.NewListDefinition()
 	valueTy := ld.DefineListTypeWrapped(a.tyCtx().Env(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
@@ -684,7 +686,7 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 
 func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
 	analyzeExpression(a, unaryExpr.Expr, expectedType)
-	exprTy := unaryExpr.Expr.GetBType().Type
+	exprTy := unaryExpr.Expr.GetTypeData().Type
 	var resultTy semtypes.SemType
 	switch unaryExpr.GetOperatorKind() {
 	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
@@ -715,8 +717,8 @@ func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedTy
 func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
 	analyzeExpression(a, binaryExpr.LhsExpr, nil)
 	analyzeExpression(a, binaryExpr.RhsExpr, nil)
-	lhsTy := binaryExpr.LhsExpr.GetBType().Type
-	rhsTy := binaryExpr.RhsExpr.GetBType().Type
+	lhsTy := binaryExpr.LhsExpr.GetTypeData().Type
+	rhsTy := binaryExpr.RhsExpr.GetTypeData().Type
 	var resultTy semtypes.SemType
 	if isEqualityExpr(binaryExpr) {
 		intersection := semtypes.Intersect(lhsTy, rhsTy)
@@ -860,7 +862,7 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 		argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 		for i, arg := range invocation.ArgExprs {
 			analyzeExpression(a, arg, nil)
-			typeData := arg.GetBType()
+			typeData := arg.GetTypeData()
 			argTys[i] = typeData.Type
 		}
 		paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
@@ -931,7 +933,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 
 func analyzeAssignment[A analyzer](a A, assignment *ast.BLangAssignment) {
 	analyzeExpression(a, assignment.VarRef, nil)
-	expectedType := assignment.VarRef.GetBType().Type
+	expectedType := assignment.VarRef.GetTypeData().Type
 	analyzeExpression(a, assignment.Expr, expectedType)
 }
 
@@ -944,8 +946,8 @@ func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
-	typeData := e.GetBType()
+	typeData := e.GetTypeData()
 	typeData.Type = expectedType
-	e.SetBType(typeData)
+	e.SetTypeData(typeData)
 	e.SetDeterminedType(expectedType)
 }

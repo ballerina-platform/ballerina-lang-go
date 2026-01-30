@@ -213,9 +213,8 @@ type Location = diagnostics.Location
 
 type BLangNode interface {
 	model.Node
-	// TODO: Rename these to be TypeData instead
-	SetBType(ty model.TypeData)
-	GetBType() model.TypeData
+	SetTypeData(ty model.TypeData)
+	GetTypeData() model.TypeData
 	SetDeterminedType(ty semtypes.SemType)
 	GetDeterminedType() semtypes.SemType
 	GetPosition() Location
@@ -414,7 +413,6 @@ type (
 
 	BLangVariableBase struct {
 		BLangNodeBase
-		TypeData                        model.TypeData
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
 		Expr                            model.ExpressionNode
@@ -489,11 +487,11 @@ type (
 	}
 )
 
-func (this *BLangNodeBase) SetBType(ty model.TypeData) {
+func (this *BLangNodeBase) SetTypeData(ty model.TypeData) {
 	this.ty = ty
 }
 
-func (this *BLangNodeBase) GetBType() model.TypeData {
+func (this *BLangNodeBase) GetTypeData() model.TypeData {
 	return this.ty
 }
 
@@ -502,6 +500,9 @@ func (this *BLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
 }
 
 func (this *BLangNodeBase) GetDeterminedType() semtypes.SemType {
+	if this.determinedType == nil {
+		return &semtypes.NEVER
+	}
 	return this.determinedType
 }
 
@@ -983,15 +984,6 @@ func (this *BLangConstant) GetKind() model.NodeKind {
 	return model.NodeKind_CONSTANT
 }
 
-func (this *BLangConstant) GetTypeData() model.TypeData {
-	// migrated from BLangConstant.java:134:5
-	return this.TypeData
-}
-
-func (this *BLangConstant) SetTypeData(typeData model.TypeData) {
-	this.TypeData = typeData
-}
-
 func (this *BLangConstant) GetAssociatedTypeDefinition() model.TypeDefinition {
 	// migrated from BLangConstant.java:139:5
 	return this.AssociatedTypeDefinition
@@ -1426,18 +1418,6 @@ func (b *BLangInvokableNodeBase) GetDesugaredReturnType() bool {
 
 func (b *BLangInvokableNodeBase) SetDesugaredReturnType(desugaredReturnType bool) {
 	b.DesugaredReturnType = desugaredReturnType
-}
-
-func (b *BLangVariableBase) GetBType() model.TypeData {
-	return b.TypeData
-}
-
-func (b *BLangVariableBase) GetTypeData() model.TypeData {
-	return b.TypeData
-}
-
-func (b *BLangVariableBase) SetTypeData(typeData model.TypeData) {
-	b.TypeData = typeData
 }
 
 func (b *BLangVariableBase) GetAnnAttachments() []model.AnnotationAttachmentNode {

@@ -216,13 +216,15 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
-		v.VisitTypeData(&node.TypeData)
+		typeData := node.GetTypeData()
+		v.VisitTypeData(&typeData)
 
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		v.VisitTypeData(&node.TypeData)
+		typeData := node.GetTypeData()
+		v.VisitTypeData(&typeData)
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}

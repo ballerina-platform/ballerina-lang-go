@@ -359,10 +359,10 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	p.startNode()
 	p.printString("variable")
 	p.printString(node.Name.Value)
-	if node.TypeData.TypeDescriptor != nil {
+	if node.GetTypeData().TypeDescriptor != nil {
 		p.printString("(type")
 		p.indentLevel++
-		p.PrintInner(node.TypeData.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -497,9 +497,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
 	p.printString("(")
-	if node.TypeData.TypeDescriptor != nil {
+	if node.GetTypeData().TypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.TypeData.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")

@@ -151,7 +151,7 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
-	typeData := n.GetBType()
+	typeData := n.GetTypeData()
 	bType := typeData.TypeDescriptor.(ast.BType)
 	var ty semtypes.SemType
 
@@ -186,7 +186,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 
 	// Set on TypeData
 	typeData.Type = ty
-	n.SetBType(typeData)
+	n.SetTypeData(typeData)
 
 	// Set on determinedType
 	n.SetDeterminedType(ty)
@@ -213,7 +213,7 @@ func (t *TypeResolver) parseDecimalValue(strValue string, pos diagnostics.Locati
 }
 
 func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
-	typeData := n.GetBType()
+	typeData := n.GetTypeData()
 	bType := typeData.TypeDescriptor.(ast.BType)
 	typeTag := bType.BTypeGetTag()
 
@@ -233,7 +233,7 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
 
 	// Set on TypeData
 	typeData.Type = ty
-	n.SetBType(typeData)
+	n.SetTypeData(typeData)
 
 	// Set on determinedType
 	n.SetDeterminedType(ty)
