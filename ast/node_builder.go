@@ -2065,7 +2065,19 @@ func (n *NodeBuilder) TransformNilTypeDescriptor(nilTypeDescriptorNode *tree.Nil
 }
 
 func (n *NodeBuilder) TransformOptionalTypeDescriptor(optionalTypeDescriptorNode *tree.OptionalTypeDescriptorNode) BLangNode {
-	panic("TransformOptionalTypeDescriptor unimplemented")
+	typeDesc := optionalTypeDescriptorNode.TypeDescriptor()
+	nilType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+
+	bLUnionType := &BLangUnionTypeNode{
+		lhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeDesc),
+		},
+		rhs: model.TypeData{
+			TypeDescriptor: nilType,
+		},
+	}
+	bLUnionType.pos = getPosition(optionalTypeDescriptorNode)
+	return bLUnionType
 }
 
 func (n *NodeBuilder) TransformObjectField(objectFieldNode *tree.ObjectFieldNode) BLangNode {
