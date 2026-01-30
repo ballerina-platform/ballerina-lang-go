@@ -356,6 +356,20 @@ func (tr *TypeResolver) resolveBType(btype ast.BType) semtypes.SemType {
 			semTy = defn.GetSemType(tr.env.typeEnv)
 		}
 		return semTy
+	case *ast.BLangUnionTypeNode:
+		lhs := tr.resolveBType(ty.Lhs().TypeDescriptor.(ast.BType))
+		rhs := tr.resolveBType(ty.Rhs().TypeDescriptor.(ast.BType))
+		return semtypes.Union(lhs, rhs)
+	case *ast.BLangErrorTypeNode:
+		if ty.IsDistinct() {
+			panic("distinct error types not supported")
+		}
+		if ty.IsTop() {
+			return &semtypes.ERROR
+		} else {
+			detailTy := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType))
+			return semtypes.ErrorDetail(detailTy)
+		}
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

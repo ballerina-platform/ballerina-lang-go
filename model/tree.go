@@ -729,6 +729,17 @@ type FiniteTypeNode interface {
 	AddValue(value ExpressionNode)
 }
 
+type UnionTypeNode interface {
+	ReferenceTypeNode
+	Lhs() TypeData
+	Rhs() TypeData
+}
+
+type ErrorTypeNode interface {
+	Node
+	GetDetailType() TypeData
+}
+
 type UserDefinedTypeNode interface {
 	ReferenceTypeNode
 	GetPackageAlias() IdentifierNode
