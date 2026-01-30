@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,32 +30,32 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=9223372036854775806)
-    %4 = ConstantLoad %!s(int64=9223372036854775806)
+    %2 = ConstantLoad 9223372036854775806
+    %4 = ConstantLoad 9223372036854775806
     %1 = gte(%2,%4) -> bb1;
   }
   bb1 {
     %10 = printBoolean(%1) -> bb2;
   }
   bb2 {
-    %12 = ConstantLoad %!s(int64=9223372036854775806)
-    %14 = ConstantLoad %!s(int64=1)
+    %12 = ConstantLoad 9223372036854775806
+    %14 = ConstantLoad 1
     %11 = gte(%12,%14) -> bb3;
   }
   bb3 {
     %20 = printBoolean(%11) -> bb4;
   }
   bb4 {
-    %22 = ConstantLoad %!s(int64=9223372036854775806)
-    %24 = ConstantLoad %!s(int64=0)
+    %22 = ConstantLoad 9223372036854775806
+    %24 = ConstantLoad 0
     %21 = gte(%22,%24) -> bb5;
   }
   bb5 {
     %30 = printBoolean(%21) -> bb6;
   }
   bb6 {
-    %32 = ConstantLoad %!s(int64=9223372036854775806)
-    %35 = ConstantLoad %!s(int64=1)
+    %32 = ConstantLoad 9223372036854775806
+    %35 = ConstantLoad 1
     %34 = unknown %35;
     %31 = gte(%32,%34) -> bb7;
   }
@@ -63,8 +63,8 @@ main<NIL>{
     %41 = printBoolean(%31) -> bb8;
   }
   bb8 {
-    %43 = ConstantLoad %!s(int64=9223372036854775806)
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %43 = ConstantLoad 9223372036854775806
+    %35 = ConstantLoad 9223372036854775806
     %45 = unknown %35;
     %42 = gte(%43,%45) -> bb9;
   }
@@ -72,32 +72,32 @@ main<NIL>{
     %52 = printBoolean(%42) -> bb10;
   }
   bb10 {
-    %54 = ConstantLoad %!s(int64=1)
-    %56 = ConstantLoad %!s(int64=9223372036854775806)
+    %54 = ConstantLoad 1
+    %56 = ConstantLoad 9223372036854775806
     %53 = gte(%54,%56) -> bb11;
   }
   bb11 {
     %62 = printBoolean(%53) -> bb12;
   }
   bb12 {
-    %64 = ConstantLoad %!s(int64=1)
-    %66 = ConstantLoad %!s(int64=1)
+    %64 = ConstantLoad 1
+    %66 = ConstantLoad 1
     %63 = gte(%64,%66) -> bb13;
   }
   bb13 {
     %72 = printBoolean(%63) -> bb14;
   }
   bb14 {
-    %74 = ConstantLoad %!s(int64=1)
-    %76 = ConstantLoad %!s(int64=0)
+    %74 = ConstantLoad 1
+    %76 = ConstantLoad 0
     %73 = gte(%74,%76) -> bb15;
   }
   bb15 {
     %82 = printBoolean(%73) -> bb16;
   }
   bb16 {
-    %84 = ConstantLoad %!s(int64=1)
-    %35 = ConstantLoad %!s(int64=1)
+    %84 = ConstantLoad 1
+    %35 = ConstantLoad 1
     %86 = unknown %35;
     %83 = gte(%84,%86) -> bb17;
   }
@@ -105,8 +105,8 @@ main<NIL>{
     %93 = printBoolean(%83) -> bb18;
   }
   bb18 {
-    %95 = ConstantLoad %!s(int64=1)
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %95 = ConstantLoad 1
+    %35 = ConstantLoad 9223372036854775806
     %97 = unknown %35;
     %94 = gte(%95,%97) -> bb19;
   }
@@ -114,32 +114,32 @@ main<NIL>{
     %104 = printBoolean(%94) -> bb20;
   }
   bb20 {
-    %106 = ConstantLoad %!s(int64=0)
-    %108 = ConstantLoad %!s(int64=9223372036854775806)
+    %106 = ConstantLoad 0
+    %108 = ConstantLoad 9223372036854775806
     %105 = gte(%106,%108) -> bb21;
   }
   bb21 {
     %114 = printBoolean(%105) -> bb22;
   }
   bb22 {
-    %116 = ConstantLoad %!s(int64=0)
-    %118 = ConstantLoad %!s(int64=1)
+    %116 = ConstantLoad 0
+    %118 = ConstantLoad 1
     %115 = gte(%116,%118) -> bb23;
   }
   bb23 {
     %124 = printBoolean(%115) -> bb24;
   }
   bb24 {
-    %126 = ConstantLoad %!s(int64=0)
-    %128 = ConstantLoad %!s(int64=0)
+    %126 = ConstantLoad 0
+    %128 = ConstantLoad 0
     %125 = gte(%126,%128) -> bb25;
   }
   bb25 {
     %134 = printBoolean(%125) -> bb26;
   }
   bb26 {
-    %136 = ConstantLoad %!s(int64=0)
-    %35 = ConstantLoad %!s(int64=1)
+    %136 = ConstantLoad 0
+    %35 = ConstantLoad 1
     %138 = unknown %35;
     %135 = gte(%136,%138) -> bb27;
   }
@@ -147,8 +147,8 @@ main<NIL>{
     %145 = printBoolean(%135) -> bb28;
   }
   bb28 {
-    %147 = ConstantLoad %!s(int64=0)
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %147 = ConstantLoad 0
+    %35 = ConstantLoad 9223372036854775806
     %149 = unknown %35;
     %146 = gte(%147,%149) -> bb29;
   }
@@ -156,36 +156,36 @@ main<NIL>{
     %156 = printBoolean(%146) -> bb30;
   }
   bb30 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %158 = unknown %35;
-    %161 = ConstantLoad %!s(int64=9223372036854775806)
+    %161 = ConstantLoad 9223372036854775806
     %157 = gte(%158,%161) -> bb31;
   }
   bb31 {
     %167 = printBoolean(%157) -> bb32;
   }
   bb32 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %169 = unknown %35;
-    %172 = ConstantLoad %!s(int64=1)
+    %172 = ConstantLoad 1
     %168 = gte(%169,%172) -> bb33;
   }
   bb33 {
     %178 = printBoolean(%168) -> bb34;
   }
   bb34 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %180 = unknown %35;
-    %183 = ConstantLoad %!s(int64=0)
+    %183 = ConstantLoad 0
     %179 = gte(%180,%183) -> bb35;
   }
   bb35 {
     %189 = printBoolean(%179) -> bb36;
   }
   bb36 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %191 = unknown %35;
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %194 = unknown %35;
     %190 = gte(%191,%194) -> bb37;
   }
@@ -193,9 +193,9 @@ main<NIL>{
     %201 = printBoolean(%190) -> bb38;
   }
   bb38 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %203 = unknown %35;
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %206 = unknown %35;
     %202 = gte(%203,%206) -> bb39;
   }
@@ -203,36 +203,36 @@ main<NIL>{
     %213 = printBoolean(%202) -> bb40;
   }
   bb40 {
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %215 = unknown %35;
-    %218 = ConstantLoad %!s(int64=9223372036854775806)
+    %218 = ConstantLoad 9223372036854775806
     %214 = gte(%215,%218) -> bb41;
   }
   bb41 {
     %224 = printBoolean(%214) -> bb42;
   }
   bb42 {
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %226 = unknown %35;
-    %229 = ConstantLoad %!s(int64=1)
+    %229 = ConstantLoad 1
     %225 = gte(%226,%229) -> bb43;
   }
   bb43 {
     %235 = printBoolean(%225) -> bb44;
   }
   bb44 {
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %237 = unknown %35;
-    %240 = ConstantLoad %!s(int64=0)
+    %240 = ConstantLoad 0
     %236 = gte(%237,%240) -> bb45;
   }
   bb45 {
     %246 = printBoolean(%236) -> bb46;
   }
   bb46 {
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %248 = unknown %35;
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %251 = unknown %35;
     %247 = gte(%248,%251) -> bb47;
   }
@@ -240,9 +240,9 @@ main<NIL>{
     %258 = printBoolean(%247) -> bb48;
   }
   bb48 {
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %260 = unknown %35;
-    %35 = ConstantLoad %!s(int64=9223372036854775806)
+    %35 = ConstantLoad 9223372036854775806
     %263 = unknown %35;
     %259 = gte(%260,%263) -> bb49;
   }
@@ -250,7 +250,7 @@ main<NIL>{
     %270 = printBoolean(%259) -> bb50;
   }
   bb50 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb51;
   }
   bb51 {
@@ -271,17 +271,17 @@ printBoolean<NIL>{
     %1 ? bb1 : bb2;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=-1)
-    %7 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad -1
+    %7 = ConstantLoad 1
     %8 = println(%3) -> bb3;
   }
   bb2 {
-    %7 = ConstantLoad %!s(int64=-1)
-    %4 = ConstantLoad %!s(int64=0)
+    %7 = ConstantLoad -1
+    %4 = ConstantLoad 0
     %14 = println(%3) -> bb3;
   }
   bb3 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb4;
   }
   bb4 {

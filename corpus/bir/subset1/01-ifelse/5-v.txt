@@ -2,23 +2,23 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(bool=true)
-    %2 = ConstantLoad %!s(bool=true)
+    %1 = ConstantLoad true
+    %2 = ConstantLoad true
     %3 = printBranch(%1,%2) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad %!s(bool=true)
-    %5 = ConstantLoad %!s(bool=false)
+    %4 = ConstantLoad true
+    %5 = ConstantLoad false
     %6 = printBranch(%4,%5) -> bb2;
   }
   bb2 {
-    %7 = ConstantLoad %!s(bool=false)
-    %8 = ConstantLoad %!s(bool=true)
+    %7 = ConstantLoad false
+    %8 = ConstantLoad true
     %9 = printBranch(%7,%8) -> bb3;
   }
   bb3 {
-    %10 = ConstantLoad %!s(bool=false)
-    %11 = ConstantLoad %!s(bool=false)
+    %10 = ConstantLoad false
+    %11 = ConstantLoad false
     %12 = printBranch(%10,%11) -> bb4;
   }
   bb4 {
@@ -33,14 +33,14 @@ printBranch<NIL>{
     y ? bb2 : bb4;
   }
   bb2 {
-    %3 = ConstantLoad %!s(int64=0)
+    %3 = ConstantLoad 0
     %4 = println(%3) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %5 = ConstantLoad %!s(int64=1)
+    %5 = ConstantLoad 1
     %6 = println(%5) -> bb5;
   }
   bb5 {
@@ -53,14 +53,14 @@ printBranch<NIL>{
     y ? bb8 : bb10;
   }
   bb8 {
-    %7 = ConstantLoad %!s(int64=2)
+    %7 = ConstantLoad 2
     %8 = println(%7) -> bb9;
   }
   bb9 {
     GOTO bb12;
   }
   bb10 {
-    %9 = ConstantLoad %!s(int64=3)
+    %9 = ConstantLoad 3
     %10 = println(%9) -> bb11;
   }
   bb11 {

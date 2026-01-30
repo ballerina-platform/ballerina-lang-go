@@ -2,32 +2,32 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=9223372036854775806)
-    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %1 = ConstantLoad 9223372036854775806
+    %2 = ConstantLoad 9223372036854775806
     %3 = eq(%1,%2) -> bb1;
   }
   bb1 {
     %4 = printBoolean(%3) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=9223372036854775806)
-    %6 = ConstantLoad %!s(int64=1)
+    %5 = ConstantLoad 9223372036854775806
+    %6 = ConstantLoad 1
     %7 = eq(%5,%6) -> bb3;
   }
   bb3 {
     %8 = printBoolean(%7) -> bb4;
   }
   bb4 {
-    %9 = ConstantLoad %!s(int64=9223372036854775806)
-    %10 = ConstantLoad %!s(int64=0)
+    %9 = ConstantLoad 9223372036854775806
+    %10 = ConstantLoad 0
     %11 = eq(%9,%10) -> bb5;
   }
   bb5 {
     %12 = printBoolean(%11) -> bb6;
   }
   bb6 {
-    %13 = ConstantLoad %!s(int64=9223372036854775806)
-    %14 = ConstantLoad %!s(int64=1)
+    %13 = ConstantLoad 9223372036854775806
+    %14 = ConstantLoad 1
     %15 = unknown %14;
     %16 = eq(%13,%15) -> bb7;
   }
@@ -35,8 +35,8 @@ main<NIL>{
     %17 = printBoolean(%16) -> bb8;
   }
   bb8 {
-    %18 = ConstantLoad %!s(int64=9223372036854775806)
-    %19 = ConstantLoad %!s(int64=9223372036854775806)
+    %18 = ConstantLoad 9223372036854775806
+    %19 = ConstantLoad 9223372036854775806
     %20 = unknown %19;
     %21 = eq(%18,%20) -> bb9;
   }
@@ -44,32 +44,32 @@ main<NIL>{
     %22 = printBoolean(%21) -> bb10;
   }
   bb10 {
-    %23 = ConstantLoad %!s(int64=1)
-    %24 = ConstantLoad %!s(int64=9223372036854775806)
+    %23 = ConstantLoad 1
+    %24 = ConstantLoad 9223372036854775806
     %25 = eq(%23,%24) -> bb11;
   }
   bb11 {
     %26 = printBoolean(%25) -> bb12;
   }
   bb12 {
-    %27 = ConstantLoad %!s(int64=1)
-    %28 = ConstantLoad %!s(int64=1)
+    %27 = ConstantLoad 1
+    %28 = ConstantLoad 1
     %29 = eq(%27,%28) -> bb13;
   }
   bb13 {
     %30 = printBoolean(%29) -> bb14;
   }
   bb14 {
-    %31 = ConstantLoad %!s(int64=1)
-    %32 = ConstantLoad %!s(int64=0)
+    %31 = ConstantLoad 1
+    %32 = ConstantLoad 0
     %33 = eq(%31,%32) -> bb15;
   }
   bb15 {
     %34 = printBoolean(%33) -> bb16;
   }
   bb16 {
-    %35 = ConstantLoad %!s(int64=1)
-    %36 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
+    %36 = ConstantLoad 1
     %37 = unknown %36;
     %38 = eq(%35,%37) -> bb17;
   }
@@ -77,8 +77,8 @@ main<NIL>{
     %39 = printBoolean(%38) -> bb18;
   }
   bb18 {
-    %40 = ConstantLoad %!s(int64=1)
-    %41 = ConstantLoad %!s(int64=9223372036854775806)
+    %40 = ConstantLoad 1
+    %41 = ConstantLoad 9223372036854775806
     %42 = unknown %41;
     %43 = eq(%40,%42) -> bb19;
   }
@@ -86,32 +86,32 @@ main<NIL>{
     %44 = printBoolean(%43) -> bb20;
   }
   bb20 {
-    %45 = ConstantLoad %!s(int64=0)
-    %46 = ConstantLoad %!s(int64=9223372036854775806)
+    %45 = ConstantLoad 0
+    %46 = ConstantLoad 9223372036854775806
     %47 = eq(%45,%46) -> bb21;
   }
   bb21 {
     %48 = printBoolean(%47) -> bb22;
   }
   bb22 {
-    %49 = ConstantLoad %!s(int64=0)
-    %50 = ConstantLoad %!s(int64=1)
+    %49 = ConstantLoad 0
+    %50 = ConstantLoad 1
     %51 = eq(%49,%50) -> bb23;
   }
   bb23 {
     %52 = printBoolean(%51) -> bb24;
   }
   bb24 {
-    %53 = ConstantLoad %!s(int64=0)
-    %54 = ConstantLoad %!s(int64=0)
+    %53 = ConstantLoad 0
+    %54 = ConstantLoad 0
     %55 = eq(%53,%54) -> bb25;
   }
   bb25 {
     %56 = printBoolean(%55) -> bb26;
   }
   bb26 {
-    %57 = ConstantLoad %!s(int64=0)
-    %58 = ConstantLoad %!s(int64=1)
+    %57 = ConstantLoad 0
+    %58 = ConstantLoad 1
     %59 = unknown %58;
     %60 = eq(%57,%59) -> bb27;
   }
@@ -119,8 +119,8 @@ main<NIL>{
     %61 = printBoolean(%60) -> bb28;
   }
   bb28 {
-    %62 = ConstantLoad %!s(int64=0)
-    %63 = ConstantLoad %!s(int64=9223372036854775806)
+    %62 = ConstantLoad 0
+    %63 = ConstantLoad 9223372036854775806
     %64 = unknown %63;
     %65 = eq(%62,%64) -> bb29;
   }
@@ -128,36 +128,36 @@ main<NIL>{
     %66 = printBoolean(%65) -> bb30;
   }
   bb30 {
-    %67 = ConstantLoad %!s(int64=1)
+    %67 = ConstantLoad 1
     %68 = unknown %67;
-    %69 = ConstantLoad %!s(int64=9223372036854775806)
+    %69 = ConstantLoad 9223372036854775806
     %70 = eq(%68,%69) -> bb31;
   }
   bb31 {
     %71 = printBoolean(%70) -> bb32;
   }
   bb32 {
-    %72 = ConstantLoad %!s(int64=1)
+    %72 = ConstantLoad 1
     %73 = unknown %72;
-    %74 = ConstantLoad %!s(int64=1)
+    %74 = ConstantLoad 1
     %75 = eq(%73,%74) -> bb33;
   }
   bb33 {
     %76 = printBoolean(%75) -> bb34;
   }
   bb34 {
-    %77 = ConstantLoad %!s(int64=1)
+    %77 = ConstantLoad 1
     %78 = unknown %77;
-    %79 = ConstantLoad %!s(int64=0)
+    %79 = ConstantLoad 0
     %80 = eq(%78,%79) -> bb35;
   }
   bb35 {
     %81 = printBoolean(%80) -> bb36;
   }
   bb36 {
-    %82 = ConstantLoad %!s(int64=1)
+    %82 = ConstantLoad 1
     %83 = unknown %82;
-    %84 = ConstantLoad %!s(int64=1)
+    %84 = ConstantLoad 1
     %85 = unknown %84;
     %86 = eq(%83,%85) -> bb37;
   }
@@ -165,9 +165,9 @@ main<NIL>{
     %87 = printBoolean(%86) -> bb38;
   }
   bb38 {
-    %88 = ConstantLoad %!s(int64=1)
+    %88 = ConstantLoad 1
     %89 = unknown %88;
-    %90 = ConstantLoad %!s(int64=9223372036854775806)
+    %90 = ConstantLoad 9223372036854775806
     %91 = unknown %90;
     %92 = eq(%89,%91) -> bb39;
   }
@@ -175,36 +175,36 @@ main<NIL>{
     %93 = printBoolean(%92) -> bb40;
   }
   bb40 {
-    %94 = ConstantLoad %!s(int64=9223372036854775806)
+    %94 = ConstantLoad 9223372036854775806
     %95 = unknown %94;
-    %96 = ConstantLoad %!s(int64=9223372036854775806)
+    %96 = ConstantLoad 9223372036854775806
     %97 = eq(%95,%96) -> bb41;
   }
   bb41 {
     %98 = printBoolean(%97) -> bb42;
   }
   bb42 {
-    %99 = ConstantLoad %!s(int64=9223372036854775806)
+    %99 = ConstantLoad 9223372036854775806
     %100 = unknown %99;
-    %101 = ConstantLoad %!s(int64=1)
+    %101 = ConstantLoad 1
     %102 = eq(%100,%101) -> bb43;
   }
   bb43 {
     %103 = printBoolean(%102) -> bb44;
   }
   bb44 {
-    %104 = ConstantLoad %!s(int64=9223372036854775806)
+    %104 = ConstantLoad 9223372036854775806
     %105 = unknown %104;
-    %106 = ConstantLoad %!s(int64=0)
+    %106 = ConstantLoad 0
     %107 = eq(%105,%106) -> bb45;
   }
   bb45 {
     %108 = printBoolean(%107) -> bb46;
   }
   bb46 {
-    %109 = ConstantLoad %!s(int64=9223372036854775806)
+    %109 = ConstantLoad 9223372036854775806
     %110 = unknown %109;
-    %111 = ConstantLoad %!s(int64=1)
+    %111 = ConstantLoad 1
     %112 = unknown %111;
     %113 = eq(%110,%112) -> bb47;
   }
@@ -212,9 +212,9 @@ main<NIL>{
     %114 = printBoolean(%113) -> bb48;
   }
   bb48 {
-    %115 = ConstantLoad %!s(int64=9223372036854775806)
+    %115 = ConstantLoad 9223372036854775806
     %116 = unknown %115;
-    %117 = ConstantLoad %!s(int64=9223372036854775806)
+    %117 = ConstantLoad 9223372036854775806
     %118 = unknown %117;
     %119 = eq(%116,%118) -> bb49;
   }
@@ -237,14 +237,14 @@ printBoolean<NIL>{
     b ? bb1 : bb3;
   }
   bb1 {
-    %2 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad 1
     %3 = println(%2) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad %!s(int64=0)
+    %4 = ConstantLoad 0
     %5 = println(%4) -> bb4;
   }
   bb4 {

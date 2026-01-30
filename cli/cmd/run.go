@@ -30,6 +30,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/runtime"
 
 	"github.com/spf13/cobra"
 )
@@ -125,6 +126,14 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(logWriter, "%s\n", msg)
 			}
 		}()
+
+		// Ensure debug context cleanup on any exit path
+		defer func() {
+			if debugCtx != nil {
+				close(debugCtx.Channel)
+				wg.Wait()
+			}
+		}()
 	}
 
 	// Compile the source
@@ -135,12 +144,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	syntaxTree, err := parser.GetSyntaxTree(debugCtx, fileName)
 	if err != nil {
-		if debugCtx != nil {
-			close(debugCtx.Channel)
-			wg.Wait()
-		}
-		printError(fmt.Errorf("compilation failed: %s", err.Error()), "", false)
-		return err
+		printError(fmt.Errorf("compilation failed: %w", err), "", false)
+		return fmt.Errorf("compilation failed: %w", err)
 	}
 
 	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
@@ -148,11 +153,10 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		prettyPrinter := ast.PrettyPrinter{}
 		fmt.Println(prettyPrinter.Print(compilationUnit))
 	}
+	pkg := ast.ToPackage(compilationUnit)
+	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
-		pkg := ast.ToPackage(compilationUnit)
-		birPkg := bir.GenBir(cx, pkg)
 		prettyPrinter := bir.PrettyPrinter{}
-
 		// Print the BIR with separators
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
@@ -160,18 +164,14 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(os.Stderr, "===================END BIR===================")
 	}
 
-	if debugCtx != nil {
-		close(debugCtx.Channel)
-		wg.Wait()
-	}
-
 	// Run the executable
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Running executable")
 	fmt.Fprintln(os.Stderr)
 
-	// TODO: Implement execution
-	fmt.Fprintln(os.Stderr, "(execution not yet implemented)")
-
+	rt := runtime.NewRuntime()
+	if err := rt.Interpret(*birPkg); err != nil {
+		return err
+	}
 	return nil
 }

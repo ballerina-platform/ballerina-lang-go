@@ -2,19 +2,19 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=1)
+    %1 = ConstantLoad 1
     %2 = printClosestSquareNum(%1) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad %!s(int64=0)
+    %3 = ConstantLoad 0
     %4 = printClosestSquareNum(%3) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=5)
+    %5 = ConstantLoad 5
     %6 = printClosestSquareNum(%5) -> bb3;
   }
   bb3 {
-    %7 = ConstantLoad %!s(int64=17)
+    %7 = ConstantLoad 17
     %8 = printClosestSquareNum(%7) -> bb4;
   }
   bb4 {
@@ -27,28 +27,29 @@ printClosestSquareNum<NIL>{
     GOTO bb1;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=0)
+    %4 = ConstantLoad 0
     %3 = >= i %4;
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %5 ? bb5 : bb7;
+    %5 = isSquareNumber(i) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
+    %5 ? bb5 : bb7;
   }
   bb5 {
     %6 = println(i) -> bb6;
   }
   bb6 {
-    %7 = ConstantLoad ()
+    %7 = ConstantLoad <nil>
     %0 = %7;
     return;
   }
   bb7 {
-    %9 = ConstantLoad %!s(int64=1)
+    %9 = ConstantLoad 1
     %8 = - i %9;
     i = %8;
     GOTO bb1;
@@ -56,7 +57,7 @@ printClosestSquareNum<NIL>{
 }
 isSquareNumber<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=0)
+    %2 = ConstantLoad 0
     i = %2;
     GOTO bb1;
   }
@@ -70,12 +71,12 @@ isSquareNumber<NIL>{
     %5 ? bb4 : bb5;
   }
   bb3 {
-    %13 = ConstantLoad %!s(bool=false)
+    %13 = ConstantLoad false
     %0 = %13;
     return;
   }
   bb4 {
-    %7 = ConstantLoad %!s(bool=true)
+    %7 = ConstantLoad true
     %0 = %7;
     return;
   }
@@ -85,7 +86,7 @@ isSquareNumber<NIL>{
     %8 ? bb6 : bb7;
   }
   bb6 {
-    %10 = ConstantLoad %!s(bool=false)
+    %10 = ConstantLoad false
     %0 = %10;
     return;
   }
@@ -93,7 +94,7 @@ isSquareNumber<NIL>{
     GOTO bb8;
   }
   bb8 {
-    %12 = ConstantLoad %!s(int64=1)
+    %12 = ConstantLoad 1
     %11 = + i %12;
     i = %11;
     GOTO bb1;

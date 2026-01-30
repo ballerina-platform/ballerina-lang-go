@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,7 +30,7 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=-1)
+    %2 = ConstantLoad -1
     %5 = mkNil() -> bb1;
   }
   bb1 {
@@ -41,12 +41,12 @@ main<NIL>{
     %8 = println(%1) -> bb3;
   }
   bb3 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %13 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad -1
+    %13 = ConstantLoad 1
     %5 = mkInt(%13) -> bb4;
   }
   bb4 {
-    %17 = ConstantLoad %!s(int64=1)
+    %17 = ConstantLoad 1
     %6 = mkInt(%17) -> bb5;
   }
   bb5 {
@@ -54,12 +54,12 @@ main<NIL>{
     %22 = println(%1) -> bb6;
   }
   bb6 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %27 = ConstantLoad %!s(bool=true)
+    %2 = ConstantLoad -1
+    %27 = ConstantLoad true
     %5 = mkBoolean(%27) -> bb7;
   }
   bb7 {
-    %31 = ConstantLoad %!s(bool=true)
+    %31 = ConstantLoad true
     %6 = mkBoolean(%31) -> bb8;
   }
   bb8 {
@@ -67,13 +67,13 @@ main<NIL>{
     %36 = println(%1) -> bb9;
   }
   bb9 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %42 = ConstantLoad %!s(int64=36028797018963969)
+    %2 = ConstantLoad -1
+    %42 = ConstantLoad 36028797018963969
     %41 = unknown %42;
     %5 = mkInt(%41) -> bb10;
   }
   bb10 {
-    %42 = ConstantLoad %!s(int64=36028797018963969)
+    %42 = ConstantLoad 36028797018963969
     %46 = unknown %42;
     %6 = mkInt(%46) -> bb11;
   }
@@ -82,13 +82,13 @@ main<NIL>{
     %52 = println(%1) -> bb12;
   }
   bb12 {
-    %42 = ConstantLoad %!s(int64=-1)
-    %2 = ConstantLoad %!s(int64=36028797018963968)
+    %42 = ConstantLoad -1
+    %2 = ConstantLoad 36028797018963968
     %57 = unknown %2;
     %5 = mkInt(%57) -> bb13;
   }
   bb13 {
-    %2 = ConstantLoad %!s(int64=36028797018963968)
+    %2 = ConstantLoad 36028797018963968
     %62 = unknown %2;
     %6 = mkInt(%62) -> bb14;
   }
@@ -97,12 +97,12 @@ main<NIL>{
     %68 = println(%1) -> bb15;
   }
   bb15 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %73 = ConstantLoad %!s(int64=36028797018963967)
+    %2 = ConstantLoad -1
+    %73 = ConstantLoad 36028797018963967
     %5 = mkInt(%73) -> bb16;
   }
   bb16 {
-    %77 = ConstantLoad %!s(int64=36028797018963967)
+    %77 = ConstantLoad 36028797018963967
     %6 = mkInt(%77) -> bb17;
   }
   bb17 {
@@ -110,12 +110,12 @@ main<NIL>{
     %82 = println(%1) -> bb18;
   }
   bb18 {
-    %42 = ConstantLoad %!s(int64=-1)
-    %87 = ConstantLoad %!s(int64=36028797018963968)
+    %42 = ConstantLoad -1
+    %87 = ConstantLoad 36028797018963968
     %5 = mkInt(%87) -> bb19;
   }
   bb19 {
-    %91 = ConstantLoad %!s(int64=36028797018963968)
+    %91 = ConstantLoad 36028797018963968
     %6 = mkInt(%91) -> bb20;
   }
   bb20 {
@@ -123,7 +123,7 @@ main<NIL>{
     %96 = println(%1) -> bb21;
   }
   bb21 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb22;
   }
   bb22 {
@@ -132,7 +132,7 @@ main<NIL>{
 }
 mkNil<NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {

@@ -30,6 +30,8 @@ import (
 type Context struct {
 	CompilerContext *context.CompilerContext
 	constantMap     map[string]*BIRConstant
+	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
+	packageID       *model.PackageID            // Current package ID
 }
 
 type stmtContext struct {
@@ -74,7 +76,7 @@ func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind Var
 	varDcl.Scope = VAR_SCOPE_FUNCTION
 	varDcl.MetaVarName = name.Value()
 	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, index: len(cx.localVars) - 1}
+	return &BIROperand{VariableDcl: varDcl, Index: len(cx.localVars) - 1}
 }
 
 func (cx *stmtContext) addTempVar(ty model.ValueType) *BIROperand {
@@ -94,10 +96,10 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	genCtx := &Context{
 		CompilerContext: ctx,
 		constantMap:     make(map[string]*BIRConstant),
+		importAliasMap:  make(map[string]*model.PackageID),
+		packageID:       ast.PackageID,
 	}
-	for _, importPkg := range ast.Imports {
-		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
-	}
+	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, typeDef := range ast.TypeDefinitions {
 		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
 	}
@@ -113,6 +115,36 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		birPkg.Functions = appendIfNotNil(birPkg.Functions, TransformFunction(genCtx, &function))
 	}
 	return birPkg
+}
+
+func processImports(compilerCtx *context.CompilerContext, genCtx *Context, imports []ast.BLangImportPackage, birPkg *BIRPackage) {
+	for _, importPkg := range imports {
+		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
+			var orgName model.Name
+			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
+				orgName = model.Name(importPkg.OrgName.Value)
+			} else {
+				orgName = model.ANON_ORG
+			}
+			var nameComps []model.Name
+			if len(importPkg.PkgNameComps) > 0 {
+				for _, comp := range importPkg.PkgNameComps {
+					nameComps = append(nameComps, model.Name(comp.Value))
+				}
+			} else {
+				nameComps = []model.Name{model.DEFAULT_PACKAGE}
+			}
+			var version model.Name
+			if importPkg.Version != nil && importPkg.Version.Value != "" {
+				version = model.Name(importPkg.Version.Value)
+			} else {
+				version = model.DEFAULT_VERSION
+			}
+			pkgID := compilerCtx.NewPackageID(orgName, nameComps, version)
+			genCtx.importAliasMap[importPkg.Alias.Value] = pkgID
+		}
+		birPkg.ImportModules = appendIfNotNil(birPkg.ImportModules, TransformImportModule(genCtx, importPkg))
+	}
 }
 
 func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportModule {
@@ -177,6 +209,7 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	for _, varPtr := range stmtCx.localVars {
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
+	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl
 	return birFunc
 }
 
@@ -378,6 +411,7 @@ func expressionStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLang
 
 func ifStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) statementEffect {
 	cond := handleExpression(ctx, curBB, stmt.Expr)
+	curBB = cond.block
 	thenBB := ctx.addBB()
 	var finalBB *BIRBasicBlock
 	thenEffect := blockStatement(ctx, thenBB, &stmt.Body)
@@ -462,7 +496,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLang
 	// FIXME: since we don't have type information we are going to just create an open array
 	sizeOperand := ctx.addTempVar(nil)
 	constantLoad := &ConstantLoad{}
-	constantLoad.Value = -1
+	constantLoad.Value = int64(-1)
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
@@ -525,7 +559,7 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	curBB.Instructions = append(curBB.Instructions, unaryOp)
 	return expressionEffect{
 		result: resultOperand,
-		block:  bb,
+		block:  curBB,
 	}
 }
 
@@ -546,6 +580,22 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call.Name = model.Name(expr.GetName().GetValue())
 	call.ThenBB = thenBB
 	call.LhsOp = resultOperand
+
+	// Set CalleePkg from symbol if available
+	if expr.Symbol != nil && expr.Symbol.PkgID != nil {
+		call.CalleePkg = expr.Symbol.PkgID
+	} else if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+		// Qualified call - look up package ID from import alias
+		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
+			call.CalleePkg = pkgID
+		}
+		// If not found in imports, leave CalleePkg as nil (likely native/extern function)
+	} else {
+		// Unqualified call (no PkgAlias) - assume same-module call and use current package
+		if ctx.birCx.packageID != nil {
+			call.CalleePkg = ctx.birCx.packageID
+		}
+	}
 
 	curBB.Terminator = call
 	return expressionEffect{
@@ -630,7 +680,7 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		}
 		resultOperand := ctx.addTempVar(nil)
 		constantLoad := &ConstantLoad{}
-		constantLoad.Value = constant.ConstValue
+		constantLoad.Value = constant.ConstValue.Value
 		constantLoad.LhsOp = resultOperand
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
 		return expressionEffect{

@@ -2,134 +2,134 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=9223372036854775806)
-    %2 = ConstantLoad %!s(int64=9223372036854775806)
+    %1 = ConstantLoad 9223372036854775806
+    %2 = ConstantLoad 9223372036854775806
     %3 = rem(%1,%2) -> bb1;
   }
   bb1 {
     %4 = println(%3) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=1)
-    %6 = ConstantLoad %!s(int64=9223372036854775806)
+    %5 = ConstantLoad 1
+    %6 = ConstantLoad 9223372036854775806
     %7 = rem(%5,%6) -> bb3;
   }
   bb3 {
     %8 = println(%7) -> bb4;
   }
   bb4 {
-    %9 = ConstantLoad %!s(int64=0)
-    %10 = ConstantLoad %!s(int64=9223372036854775806)
+    %9 = ConstantLoad 0
+    %10 = ConstantLoad 9223372036854775806
     %11 = rem(%9,%10) -> bb5;
   }
   bb5 {
     %12 = println(%11) -> bb6;
   }
   bb6 {
-    %13 = ConstantLoad %!s(int64=1)
+    %13 = ConstantLoad 1
     %14 = unknown %13;
-    %15 = ConstantLoad %!s(int64=9223372036854775806)
+    %15 = ConstantLoad 9223372036854775806
     %16 = rem(%14,%15) -> bb7;
   }
   bb7 {
     %17 = println(%16) -> bb8;
   }
   bb8 {
-    %18 = ConstantLoad %!s(int64=9223372036854775806)
+    %18 = ConstantLoad 9223372036854775806
     %19 = unknown %18;
-    %20 = ConstantLoad %!s(int64=9223372036854775806)
+    %20 = ConstantLoad 9223372036854775806
     %21 = rem(%19,%20) -> bb9;
   }
   bb9 {
     %22 = println(%21) -> bb10;
   }
   bb10 {
-    %23 = ConstantLoad %!s(int64=9223372036854775806)
-    %24 = ConstantLoad %!s(int64=10)
+    %23 = ConstantLoad 9223372036854775806
+    %24 = ConstantLoad 10
     %25 = rem(%23,%24) -> bb11;
   }
   bb11 {
     %26 = println(%25) -> bb12;
   }
   bb12 {
-    %27 = ConstantLoad %!s(int64=1)
-    %28 = ConstantLoad %!s(int64=10)
+    %27 = ConstantLoad 1
+    %28 = ConstantLoad 10
     %29 = rem(%27,%28) -> bb13;
   }
   bb13 {
     %30 = println(%29) -> bb14;
   }
   bb14 {
-    %31 = ConstantLoad %!s(int64=0)
-    %32 = ConstantLoad %!s(int64=10)
+    %31 = ConstantLoad 0
+    %32 = ConstantLoad 10
     %33 = rem(%31,%32) -> bb15;
   }
   bb15 {
     %34 = println(%33) -> bb16;
   }
   bb16 {
-    %35 = ConstantLoad %!s(int64=1)
+    %35 = ConstantLoad 1
     %36 = unknown %35;
-    %37 = ConstantLoad %!s(int64=10)
+    %37 = ConstantLoad 10
     %38 = rem(%36,%37) -> bb17;
   }
   bb17 {
     %39 = println(%38) -> bb18;
   }
   bb18 {
-    %40 = ConstantLoad %!s(int64=9223372036854775806)
+    %40 = ConstantLoad 9223372036854775806
     %41 = unknown %40;
-    %42 = ConstantLoad %!s(int64=10)
+    %42 = ConstantLoad 10
     %43 = rem(%41,%42) -> bb19;
   }
   bb19 {
     %44 = println(%43) -> bb20;
   }
   bb20 {
-    %45 = ConstantLoad %!s(int64=9223372036854775806)
-    %46 = ConstantLoad %!s(int64=1)
+    %45 = ConstantLoad 9223372036854775806
+    %46 = ConstantLoad 1
     %47 = rem(%45,%46) -> bb21;
   }
   bb21 {
     %48 = println(%47) -> bb22;
   }
   bb22 {
-    %49 = ConstantLoad %!s(int64=1)
-    %50 = ConstantLoad %!s(int64=1)
+    %49 = ConstantLoad 1
+    %50 = ConstantLoad 1
     %51 = rem(%49,%50) -> bb23;
   }
   bb23 {
     %52 = println(%51) -> bb24;
   }
   bb24 {
-    %53 = ConstantLoad %!s(int64=0)
-    %54 = ConstantLoad %!s(int64=1)
+    %53 = ConstantLoad 0
+    %54 = ConstantLoad 1
     %55 = rem(%53,%54) -> bb25;
   }
   bb25 {
     %56 = println(%55) -> bb26;
   }
   bb26 {
-    %57 = ConstantLoad %!s(int64=1)
+    %57 = ConstantLoad 1
     %58 = unknown %57;
-    %59 = ConstantLoad %!s(int64=1)
+    %59 = ConstantLoad 1
     %60 = rem(%58,%59) -> bb27;
   }
   bb27 {
     %61 = println(%60) -> bb28;
   }
   bb28 {
-    %62 = ConstantLoad %!s(int64=9223372036854775806)
+    %62 = ConstantLoad 9223372036854775806
     %63 = unknown %62;
-    %64 = ConstantLoad %!s(int64=1)
+    %64 = ConstantLoad 1
     %65 = rem(%63,%64) -> bb29;
   }
   bb29 {
     %66 = println(%65) -> bb30;
   }
   bb30 {
-    %67 = ConstantLoad %!s(int64=9223372036854775806)
-    %68 = ConstantLoad %!s(int64=1)
+    %67 = ConstantLoad 9223372036854775806
+    %68 = ConstantLoad 1
     %69 = unknown %68;
     %70 = rem(%67,%69) -> bb31;
   }
@@ -137,8 +137,8 @@ main<NIL>{
     %71 = println(%70) -> bb32;
   }
   bb32 {
-    %72 = ConstantLoad %!s(int64=1)
-    %73 = ConstantLoad %!s(int64=1)
+    %72 = ConstantLoad 1
+    %73 = ConstantLoad 1
     %74 = unknown %73;
     %75 = rem(%72,%74) -> bb33;
   }
@@ -146,8 +146,8 @@ main<NIL>{
     %76 = println(%75) -> bb34;
   }
   bb34 {
-    %77 = ConstantLoad %!s(int64=0)
-    %78 = ConstantLoad %!s(int64=1)
+    %77 = ConstantLoad 0
+    %78 = ConstantLoad 1
     %79 = unknown %78;
     %80 = rem(%77,%79) -> bb35;
   }
@@ -155,9 +155,9 @@ main<NIL>{
     %81 = println(%80) -> bb36;
   }
   bb36 {
-    %82 = ConstantLoad %!s(int64=1)
+    %82 = ConstantLoad 1
     %83 = unknown %82;
-    %84 = ConstantLoad %!s(int64=1)
+    %84 = ConstantLoad 1
     %85 = unknown %84;
     %86 = rem(%83,%85) -> bb37;
   }
@@ -165,9 +165,9 @@ main<NIL>{
     %87 = println(%86) -> bb38;
   }
   bb38 {
-    %88 = ConstantLoad %!s(int64=9223372036854775806)
+    %88 = ConstantLoad 9223372036854775806
     %89 = unknown %88;
-    %90 = ConstantLoad %!s(int64=1)
+    %90 = ConstantLoad 1
     %91 = unknown %90;
     %92 = rem(%89,%91) -> bb39;
   }
@@ -175,8 +175,8 @@ main<NIL>{
     %93 = println(%92) -> bb40;
   }
   bb40 {
-    %94 = ConstantLoad %!s(int64=9223372036854775806)
-    %95 = ConstantLoad %!s(int64=10)
+    %94 = ConstantLoad 9223372036854775806
+    %95 = ConstantLoad 10
     %96 = unknown %95;
     %97 = rem(%94,%96) -> bb41;
   }
@@ -184,8 +184,8 @@ main<NIL>{
     %98 = println(%97) -> bb42;
   }
   bb42 {
-    %99 = ConstantLoad %!s(int64=1)
-    %100 = ConstantLoad %!s(int64=10)
+    %99 = ConstantLoad 1
+    %100 = ConstantLoad 10
     %101 = unknown %100;
     %102 = rem(%99,%101) -> bb43;
   }
@@ -193,8 +193,8 @@ main<NIL>{
     %103 = println(%102) -> bb44;
   }
   bb44 {
-    %104 = ConstantLoad %!s(int64=0)
-    %105 = ConstantLoad %!s(int64=10)
+    %104 = ConstantLoad 0
+    %105 = ConstantLoad 10
     %106 = unknown %105;
     %107 = rem(%104,%106) -> bb45;
   }
@@ -202,9 +202,9 @@ main<NIL>{
     %108 = println(%107) -> bb46;
   }
   bb46 {
-    %109 = ConstantLoad %!s(int64=1)
+    %109 = ConstantLoad 1
     %110 = unknown %109;
-    %111 = ConstantLoad %!s(int64=10)
+    %111 = ConstantLoad 10
     %112 = unknown %111;
     %113 = rem(%110,%112) -> bb47;
   }
@@ -212,9 +212,9 @@ main<NIL>{
     %114 = println(%113) -> bb48;
   }
   bb48 {
-    %115 = ConstantLoad %!s(int64=9223372036854775806)
+    %115 = ConstantLoad 9223372036854775806
     %116 = unknown %115;
-    %117 = ConstantLoad %!s(int64=10)
+    %117 = ConstantLoad 10
     %118 = unknown %117;
     %119 = rem(%116,%118) -> bb49;
   }
@@ -222,8 +222,8 @@ main<NIL>{
     %120 = println(%119) -> bb50;
   }
   bb50 {
-    %121 = ConstantLoad %!s(int64=9223372036854775806)
-    %122 = ConstantLoad %!s(int64=9223372036854775806)
+    %121 = ConstantLoad 9223372036854775806
+    %122 = ConstantLoad 9223372036854775806
     %123 = unknown %122;
     %124 = rem(%121,%123) -> bb51;
   }
@@ -231,8 +231,8 @@ main<NIL>{
     %125 = println(%124) -> bb52;
   }
   bb52 {
-    %126 = ConstantLoad %!s(int64=1)
-    %127 = ConstantLoad %!s(int64=9223372036854775806)
+    %126 = ConstantLoad 1
+    %127 = ConstantLoad 9223372036854775806
     %128 = unknown %127;
     %129 = rem(%126,%128) -> bb53;
   }
@@ -240,8 +240,8 @@ main<NIL>{
     %130 = println(%129) -> bb54;
   }
   bb54 {
-    %131 = ConstantLoad %!s(int64=0)
-    %132 = ConstantLoad %!s(int64=9223372036854775806)
+    %131 = ConstantLoad 0
+    %132 = ConstantLoad 9223372036854775806
     %133 = unknown %132;
     %134 = rem(%131,%133) -> bb55;
   }
@@ -249,9 +249,9 @@ main<NIL>{
     %135 = println(%134) -> bb56;
   }
   bb56 {
-    %136 = ConstantLoad %!s(int64=1)
+    %136 = ConstantLoad 1
     %137 = unknown %136;
-    %138 = ConstantLoad %!s(int64=9223372036854775806)
+    %138 = ConstantLoad 9223372036854775806
     %139 = unknown %138;
     %140 = rem(%137,%139) -> bb57;
   }
@@ -259,9 +259,9 @@ main<NIL>{
     %141 = println(%140) -> bb58;
   }
   bb58 {
-    %142 = ConstantLoad %!s(int64=9223372036854775806)
+    %142 = ConstantLoad 9223372036854775806
     %143 = unknown %142;
-    %144 = ConstantLoad %!s(int64=9223372036854775806)
+    %144 = ConstantLoad 9223372036854775806
     %145 = unknown %144;
     %146 = rem(%143,%145) -> bb59;
   }

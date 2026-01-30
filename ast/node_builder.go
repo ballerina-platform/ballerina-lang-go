@@ -1111,7 +1111,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NIL_LITERAL {
 		typeTag = model.TypeTags_NIL
-		value = string(model.NIL_VALUE)
+		value = nil
 		originalValue = balCommon.ToPointer(string(model.NIL_VALUE))
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NULL_LITERAL {
@@ -1663,7 +1663,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 	} else {
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(returnStatementNode)
-		nilLiteral.Value = string(model.NIL_VALUE)
+		nilLiteral.Value = nil
 		nilLiteral.SetBType(n.symbolTable.GetTypeFromTag(model.TypeTags_NIL))
 		bLReturn.SetExpression(nilLiteral)
 	}

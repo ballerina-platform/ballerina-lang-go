@@ -2,14 +2,14 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(bool=true)
+    %1 = ConstantLoad true
     %2 = not(%1) -> bb1;
   }
   bb1 {
     %3 = printBoolean(%2) -> bb2;
   }
   bb2 {
-    %4 = ConstantLoad %!s(bool=false)
+    %4 = ConstantLoad false
     %5 = not(%4) -> bb3;
   }
   bb3 {
@@ -24,14 +24,14 @@ printBoolean<NIL>{
     b ? bb1 : bb3;
   }
   bb1 {
-    %2 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad 1
     %3 = println(%2) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad %!s(int64=0)
+    %4 = ConstantLoad 0
     %5 = println(%4) -> bb4;
   }
   bb4 {

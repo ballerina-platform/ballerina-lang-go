@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,36 +30,36 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %5 = ConstantLoad %!s(int64=60)
-    %7 = ConstantLoad %!s(int64=2)
+    %2 = ConstantLoad -1
+    %5 = ConstantLoad 60
+    %7 = ConstantLoad 2
     %11 = div(%5,%7) -> bb1;
   }
   bb1 {
     %12 = println(%1) -> bb2;
   }
   bb2 {
-    %11 = ConstantLoad %!s(int64=-1)
-    %18 = ConstantLoad %!s(int64=120)
-    %20 = ConstantLoad %!s(int64=3)
+    %11 = ConstantLoad -1
+    %18 = ConstantLoad 120
+    %20 = ConstantLoad 3
     %17 = div(%18,%20) -> bb3;
   }
   bb3 {
-    %25 = ConstantLoad %!s(int64=4)
+    %25 = ConstantLoad 4
     %2 = div(%17,%25) -> bb4;
   }
   bb4 {
     %30 = println(%1) -> bb5;
   }
   bb5 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %36 = ConstantLoad %!s(int64=120)
-    %38 = ConstantLoad %!s(int64=3)
+    %2 = ConstantLoad -1
+    %36 = ConstantLoad 120
+    %38 = ConstantLoad 3
     %35 = div(%36,%38) -> bb6;
   }
   bb6 {
-    %44 = ConstantLoad %!s(int64=16)
-    %46 = ConstantLoad %!s(int64=4)
+    %44 = ConstantLoad 16
+    %46 = ConstantLoad 4
     %43 = div(%44,%46) -> bb7;
   }
   bb7 {
@@ -69,14 +69,14 @@ main<NIL>{
     %54 = println(%1) -> bb9;
   }
   bb9 {
-    %11 = ConstantLoad %!s(int64=-1)
-    %60 = ConstantLoad %!s(int64=120)
-    %62 = ConstantLoad %!s(int64=3)
+    %11 = ConstantLoad -1
+    %60 = ConstantLoad 120
+    %62 = ConstantLoad 3
     %59 = div(%60,%62) -> bb10;
   }
   bb10 {
-    %68 = ConstantLoad %!s(int64=16)
-    %70 = ConstantLoad %!s(int64=4)
+    %68 = ConstantLoad 16
+    %70 = ConstantLoad 4
     %67 = div(%68,%70) -> bb11;
   }
   bb11 {
@@ -86,43 +86,43 @@ main<NIL>{
     %78 = println(%1) -> bb13;
   }
   bb13 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %85 = ConstantLoad %!s(int64=120)
-    %87 = ConstantLoad %!s(int64=3)
+    %2 = ConstantLoad -1
+    %85 = ConstantLoad 120
+    %87 = ConstantLoad 3
     %84 = div(%85,%87) -> bb14;
   }
   bb14 {
-    %93 = ConstantLoad %!s(int64=16)
-    %95 = ConstantLoad %!s(int64=4)
+    %93 = ConstantLoad 16
+    %95 = ConstantLoad 4
     %92 = div(%93,%95) -> bb15;
   }
   bb15 {
     %83 = div(%84,%92) -> bb16;
   }
   bb16 {
-    %103 = ConstantLoad %!s(int64=2)
+    %103 = ConstantLoad 2
     %11 = div(%83,%103) -> bb17;
   }
   bb17 {
     %108 = println(%1) -> bb18;
   }
   bb18 {
-    %11 = ConstantLoad %!s(int64=-1)
-    %115 = ConstantLoad %!s(int64=120)
-    %117 = ConstantLoad %!s(int64=3)
+    %11 = ConstantLoad -1
+    %115 = ConstantLoad 120
+    %117 = ConstantLoad 3
     %114 = div(%115,%117) -> bb19;
   }
   bb19 {
-    %123 = ConstantLoad %!s(int64=16)
-    %125 = ConstantLoad %!s(int64=4)
+    %123 = ConstantLoad 16
+    %125 = ConstantLoad 4
     %122 = div(%123,%125) -> bb20;
   }
   bb20 {
     %113 = div(%114,%122) -> bb21;
   }
   bb21 {
-    %134 = ConstantLoad %!s(int64=10)
-    %136 = ConstantLoad %!s(int64=5)
+    %134 = ConstantLoad 10
+    %136 = ConstantLoad 5
     %133 = div(%134,%136) -> bb22;
   }
   bb22 {
@@ -132,27 +132,27 @@ main<NIL>{
     %144 = println(%1) -> bb24;
   }
   bb24 {
-    %2 = ConstantLoad %!s(int64=-1)
-    %151 = ConstantLoad %!s(int64=120)
-    %153 = ConstantLoad %!s(int64=3)
+    %2 = ConstantLoad -1
+    %151 = ConstantLoad 120
+    %153 = ConstantLoad 3
     %150 = div(%151,%153) -> bb25;
   }
   bb25 {
-    %159 = ConstantLoad %!s(int64=16)
-    %161 = ConstantLoad %!s(int64=4)
+    %159 = ConstantLoad 16
+    %161 = ConstantLoad 4
     %158 = div(%159,%161) -> bb26;
   }
   bb26 {
     %149 = div(%150,%158) -> bb27;
   }
   bb27 {
-    %171 = ConstantLoad %!s(int64=400)
-    %173 = ConstantLoad %!s(int64=20)
+    %171 = ConstantLoad 400
+    %173 = ConstantLoad 20
     %170 = div(%171,%173) -> bb28;
   }
   bb28 {
-    %179 = ConstantLoad %!s(int64=100)
-    %181 = ConstantLoad %!s(int64=10)
+    %179 = ConstantLoad 100
+    %181 = ConstantLoad 10
     %178 = div(%179,%181) -> bb29;
   }
   bb29 {
@@ -165,7 +165,7 @@ main<NIL>{
     %192 = println(%1) -> bb32;
   }
   bb32 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb33;
   }
   bb33 {

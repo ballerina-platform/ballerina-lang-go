@@ -2,15 +2,15 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=5)
+    %1 = ConstantLoad 5
     %2 = printBranch(%1) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad %!s(int64=10)
+    %3 = ConstantLoad 10
     %4 = printBranch(%3) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad %!s(int64=15)
+    %5 = ConstantLoad 15
     %6 = printBranch(%5) -> bb3;
   }
   bb3 {
@@ -19,19 +19,19 @@ main<NIL>{
 }
 printBranch<NIL>{
   bb0 {
-    %3 = ConstantLoad %!s(int64=10)
+    %3 = ConstantLoad 10
     %2 = < x %3;
     %2 ? bb1 : bb3;
   }
   bb1 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %5 = println(%4) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %6 = ConstantLoad %!s(int64=0)
+    %6 = ConstantLoad 0
     %7 = println(%6) -> bb4;
   }
   bb4 {

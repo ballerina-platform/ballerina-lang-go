@@ -27,4 +27,4 @@
         (invocation io println (
           (simple-var-ref b)())
       (return
-        (literal ())))))
+        (literal <nil>)))))

@@ -2,8 +2,8 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=5)
-    %2 = ConstantLoad %!s(int64=2)
+    %1 = ConstantLoad 5
+    %2 = ConstantLoad 2
     %3 = sub(%1,%2) -> bb1;
   }
   bb1 {
@@ -11,8 +11,8 @@ main<NIL>{
     %5 = println(sub1) -> bb2;
   }
   bb2 {
-    %6 = ConstantLoad %!s(int64=0)
-    %7 = ConstantLoad %!s(int64=1)
+    %6 = ConstantLoad 0
+    %7 = ConstantLoad 1
     %8 = sub(%6,%7) -> bb3;
   }
   bb3 {

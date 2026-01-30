@@ -184,7 +184,7 @@ func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
-	return fmt.Sprintf("%s = ConstantLoad %s", p.PrintOperand(*load.LhsOp), load.Value)
+	return fmt.Sprintf("%s = ConstantLoad %v", p.PrintOperand(*load.LhsOp), load.Value)
 }
 
 func (p *PrettyPrinter) PrintUnaryOp(op *UnaryOp) string {

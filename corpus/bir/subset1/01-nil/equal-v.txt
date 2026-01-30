@@ -2,16 +2,17 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 ? bb3 : bb5;
+    %2 = makeNil() -> bb1;
   }
   bb1 {
     %3 = makeNil() -> bb2;
   }
   bb2 {
     %1 = == %2 %3;
+    %1 ? bb3 : bb5;
   }
   bb3 {
-    %4 = ConstantLoad %!s(int64=1)
+    %4 = ConstantLoad 1
     %5 = println(%4) -> bb4;
   }
   bb4 {
@@ -23,7 +24,7 @@ main<NIL>{
 }
 makeNil<NIL>{
   bb0 {
-    %1 = ConstantLoad ()
+    %1 = ConstantLoad <nil>
     %0 = %1;
     return;
   }

@@ -3,7 +3,7 @@ import ballerina.io v 1.8.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -12,7 +12,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -21,7 +21,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -30,23 +30,23 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=1)
+    %1 = ConstantLoad 1
     %4 = printClosestSquareNum(%1) -> bb1;
   }
   bb1 {
-    %5 = ConstantLoad %!s(int64=0)
+    %5 = ConstantLoad 0
     %8 = printClosestSquareNum(%5) -> bb2;
   }
   bb2 {
-    %9 = ConstantLoad %!s(int64=5)
+    %9 = ConstantLoad 5
     %12 = printClosestSquareNum(%9) -> bb3;
   }
   bb3 {
-    %13 = ConstantLoad %!s(int64=17)
+    %13 = ConstantLoad 17
     %16 = printClosestSquareNum(%13) -> bb4;
   }
   bb4 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb5;
   }
   bb5 {
@@ -59,7 +59,7 @@ printClosestSquareNum<NIL>{
     GOTO bb1;
   }
   bb1 {
-    %5 = ConstantLoad %!s(int64=0)
+    %5 = ConstantLoad 0
     %6 = >= %2 %5;
     %6 ? bb2 : bb7;
   }
@@ -71,20 +71,20 @@ printClosestSquareNum<NIL>{
     %6 ? bb4 : bb6;
   }
   bb4 {
-    %5 = ConstantLoad %!s(int64=-1)
+    %5 = ConstantLoad -1
     %16 = println(%11) -> bb5;
   }
   bb5 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb8;
   }
   bb6 {
-    %5 = ConstantLoad %!s(int64=1)
+    %5 = ConstantLoad 1
     %2 = - %2 %5;
     GOTO bb1;
   }
   bb7 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb8;
   }
   bb8 {
@@ -93,7 +93,7 @@ printClosestSquareNum<NIL>{
 }
 isSquareNumber<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=0)
+    %2 = ConstantLoad 0
     GOTO bb1;
   }
   bb1 {
@@ -106,7 +106,7 @@ isSquareNumber<NIL>{
     %6 ? bb3 : bb4;
   }
   bb3 {
-    %0 = ConstantLoad %!s(bool=true)
+    %0 = ConstantLoad true
     GOTO bb8;
   }
   bb4 {
@@ -115,16 +115,16 @@ isSquareNumber<NIL>{
     %6 ? bb5 : bb6;
   }
   bb5 {
-    %0 = ConstantLoad %!s(bool=false)
+    %0 = ConstantLoad false
     GOTO bb8;
   }
   bb6 {
-    %9 = ConstantLoad %!s(int64=1)
+    %9 = ConstantLoad 1
     %2 = + %2 %9;
     GOTO bb1;
   }
   bb7 {
-    %0 = ConstantLoad %!s(bool=false)
+    %0 = ConstantLoad false
     GOTO bb8;
   }
   bb8 {

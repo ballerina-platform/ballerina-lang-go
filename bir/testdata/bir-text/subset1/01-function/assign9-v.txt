@@ -2,7 +2,7 @@ module $anon.. v 0.0.0;
 $annotation_data  other;
 .<init><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -11,7 +11,7 @@ $annotation_data  other;
 }
 .<start><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -20,7 +20,7 @@ $annotation_data  other;
 }
 .<stop><NIL>{
   bb0 {
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {
@@ -29,15 +29,15 @@ $annotation_data  other;
 }
 main<NIL>{
   bb0 {
-    %2 = ConstantLoad %!s(int64=100)
-    %2 = ConstantLoad %!s(int64=100)
-    %5 = ConstantLoad %!s(int64=11)
+    %2 = ConstantLoad 100
+    %2 = ConstantLoad 100
+    %5 = ConstantLoad 11
     %6 = + %2 %5;
-    %2 = ConstantLoad %!s(int64=43)
-    %5 = ConstantLoad %!s(int64=43)
-    %6 = ConstantLoad %!s(int64=44)
+    %2 = ConstantLoad 43
+    %5 = ConstantLoad 43
+    %6 = ConstantLoad 44
     %2 = + %5 %6;
-    %0 = ConstantLoad %!s(<nil>)
+    %0 = ConstantLoad <nil>
     GOTO bb1;
   }
   bb1 {

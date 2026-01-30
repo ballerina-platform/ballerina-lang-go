@@ -14,7 +14,7 @@ main<NIL>{
 }
 foo<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=2)
+    %1 = ConstantLoad 2
     %0 = %1;
     return;
   }

@@ -2,32 +2,32 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(int64=1)
+    %1 = ConstantLoad 1
     x = %1;
-    %3 = ConstantLoad %!s(int64=2)
+    %3 = ConstantLoad 2
     y = %3;
     %5 = < x y;
     %6 = printBoolean(%5) -> bb1;
   }
   bb1 {
-    %7 = ConstantLoad %!s(int64=1)
-    %8 = ConstantLoad %!s(int64=2)
+    %7 = ConstantLoad 1
+    %8 = ConstantLoad 2
     %9 = greaterThan(%7,%8) -> bb2;
   }
   bb2 {
     %10 = printBoolean(%9) -> bb3;
   }
   bb3 {
-    %11 = ConstantLoad %!s(int64=2)
-    %12 = ConstantLoad %!s(int64=1)
+    %11 = ConstantLoad 2
+    %12 = ConstantLoad 1
     %13 = greaterThan(%11,%12) -> bb4;
   }
   bb4 {
     %14 = printBoolean(%13) -> bb5;
   }
   bb5 {
-    %15 = ConstantLoad %!s(int64=2)
-    %16 = ConstantLoad %!s(int64=1)
+    %15 = ConstantLoad 2
+    %16 = ConstantLoad 1
     %17 = unknown %16;
     %18 = greaterThan(%15,%17) -> bb6;
   }
@@ -35,33 +35,33 @@ main<NIL>{
     %19 = printBoolean(%18) -> bb7;
   }
   bb7 {
-    %20 = ConstantLoad %!s(int64=1)
-    %21 = ConstantLoad %!s(int64=2)
+    %20 = ConstantLoad 1
+    %21 = ConstantLoad 2
     %22 = lessThan(%20,%21) -> bb8;
   }
   bb8 {
     %23 = printBoolean(%22) -> bb9;
   }
   bb9 {
-    %24 = ConstantLoad %!s(int64=0)
-    %25 = ConstantLoad %!s(int64=0)
+    %24 = ConstantLoad 0
+    %25 = ConstantLoad 0
     %26 = lessThan(%24,%25) -> bb10;
   }
   bb10 {
     %27 = printBoolean(%26) -> bb11;
   }
   bb11 {
-    %28 = ConstantLoad %!s(int64=2)
-    %29 = ConstantLoad %!s(int64=1)
+    %28 = ConstantLoad 2
+    %29 = ConstantLoad 1
     %30 = lessThan(%28,%29) -> bb12;
   }
   bb12 {
     %31 = printBoolean(%30) -> bb13;
   }
   bb13 {
-    %32 = ConstantLoad %!s(int64=1)
+    %32 = ConstantLoad 1
     %33 = unknown %32;
-    %34 = ConstantLoad %!s(int64=17)
+    %34 = ConstantLoad 17
     %35 = lessThan(%33,%34) -> bb14;
   }
   bb14 {
@@ -76,14 +76,14 @@ printBoolean<NIL>{
     b ? bb1 : bb3;
   }
   bb1 {
-    %2 = ConstantLoad %!s(int64=1)
+    %2 = ConstantLoad 1
     %3 = println(%2) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad %!s(int64=0)
+    %4 = ConstantLoad 0
     %5 = println(%4) -> bb4;
   }
   bb4 {

@@ -2,19 +2,20 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
-    %1 ? bb2 : bb4;
+    %1 = foo() -> bb1;
   }
   bb1 {
+    %1 ? bb2 : bb4;
   }
   bb2 {
-    %2 = ConstantLoad %!s(int64=100)
+    %2 = ConstantLoad 100
     %3 = bar(%2) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %4 = ConstantLoad %!s(int64=200)
+    %4 = ConstantLoad 200
     %5 = baz(%4) -> bb5;
   }
   bb5 {
@@ -26,7 +27,7 @@ main<NIL>{
 }
 foo<NIL>{
   bb0 {
-    %1 = ConstantLoad %!s(bool=true)
+    %1 = ConstantLoad true
     %0 = %1;
     return;
   }
