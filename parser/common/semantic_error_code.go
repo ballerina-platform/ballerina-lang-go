@@ -87,3 +87,7 @@ var VARIABLE_NOT_INITIALIZED = newSemanticErrorCode("BCE2520", "variable '%s' is
 
 // Unused return value - custom (not directly in Java but similar behavior)
 var UNUSED_RETURN_VALUE = newSemanticErrorCode("BCE2067", "return value of function is not used")
+
+// Undefined module - when using a module prefix without importing it
+// Reference: BCE2000 in DiagnosticErrorCode.java
+var UNDEFINED_MODULE = newSemanticErrorCode("BCE2000", "undefined module '%s'")

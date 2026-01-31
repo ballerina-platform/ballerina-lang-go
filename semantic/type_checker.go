@@ -44,11 +44,13 @@ type TypeChecker struct {
 	functionSymbols map[string]*ast.BInvokableSymbol
 	functionInfo    map[string]*FunctionInfo  // Function name -> info
 	localVars       map[string]model.TypeTags // Variable name -> type tag (for current function scope)
+	errorExprs      map[model.ExpressionNode]bool // Track expressions that already have errors to avoid cascading
+	importAliases   map[string]bool // Track valid import aliases (e.g., "io" from "import ballerina/io")
 }
 
 // NewTypeChecker creates a new TypeChecker instance.
 func NewTypeChecker(pkg *ast.BLangPackage, cx *compilerContext.CompilerContext) *TypeChecker {
-	return &TypeChecker{
+	tc := &TypeChecker{
 		pkg:             pkg,
 		cx:              cx,
 		semtypeCx:       semtypes.TypeCheckContext(semtypes.GetTypeEnv()),
@@ -56,6 +58,24 @@ func NewTypeChecker(pkg *ast.BLangPackage, cx *compilerContext.CompilerContext) 
 		functionSymbols: make(map[string]*ast.BInvokableSymbol),
 		functionInfo:    make(map[string]*FunctionInfo),
 		localVars:       make(map[string]model.TypeTags),
+		errorExprs:      make(map[model.ExpressionNode]bool),
+		importAliases:   make(map[string]bool),
+	}
+	// Collect import aliases
+	tc.collectImportAliases()
+	return tc
+}
+
+// collectImportAliases gathers all module aliases from import declarations.
+func (tc *TypeChecker) collectImportAliases() {
+	for i := range tc.pkg.Imports {
+		imp := &tc.pkg.Imports[i]
+		alias := imp.GetAlias()
+		if alias != nil {
+			if ident, ok := alias.(*ast.BLangIdentifier); ok && ident.Value != "" {
+				tc.importAliases[ident.Value] = true
+			}
+		}
 	}
 }
 
@@ -107,7 +127,8 @@ func (tc *TypeChecker) buildFunctionInfo(fn *ast.BLangFunction) *FunctionInfo {
 // checkFunction type-checks a function.
 func (tc *TypeChecker) checkFunction(fn *ast.BLangFunction) {
 	tc.currentFunction = fn
-	tc.localVars = make(map[string]model.TypeTags) // Reset local vars for each function
+	tc.localVars = make(map[string]model.TypeTags)  // Reset local vars for each function
+	tc.errorExprs = make(map[model.ExpressionNode]bool) // Reset error expressions for each function
 
 	// Add parameters to local variable table
 	for _, param := range fn.RequiredParams {
@@ -202,6 +223,17 @@ func (tc *TypeChecker) checkAssignment(assign *ast.BLangAssignment) {
 		return
 	}
 
+	// Check if the LHS variable is defined
+	if varRef, ok := assign.VarRef.(*ast.BLangSimpleVarRef); ok {
+		if varRef.VariableName != nil {
+			varName := varRef.VariableName.Value
+			if _, found := tc.localVars[varName]; !found {
+				tc.addError(common.UNDEFINED_SYMBOL, varRef.GetPosition(), varName)
+				return // Don't check type compatibility for undefined variables
+			}
+		}
+	}
+
 	// Check the expression
 	if expr, ok := assign.Expr.(ast.BLangExpression); ok {
 		tc.checkExpression(expr)
@@ -265,9 +297,23 @@ func (tc *TypeChecker) checkInvocation(invocation *ast.BLangInvocation) {
 		tc.checkExpression(arg)
 	}
 
+	// Check qualified function calls (e.g., io:println)
+	if pkgAlias := invocation.GetPackageAlias(); pkgAlias != nil {
+		if ident, ok := pkgAlias.(*ast.BLangIdentifier); ok && ident.Value != "" {
+			// Check if the module alias is defined (imported)
+			if !tc.importAliases[ident.Value] {
+				tc.addError(common.UNDEFINED_MODULE, invocation.GetPosition(), ident.Value)
+			}
+			// Skip further validation for qualified calls as we don't have external module info
+			return
+		}
+	}
+
 	// Look up function info
 	funcInfo, found := tc.functionInfo[funcName]
 	if !found {
+		// Report undefined function error only for unqualified function calls
+		tc.addError(common.UNDEFINED_FUNCTION, invocation.GetPosition(), funcName)
 		return
 	}
 
@@ -284,6 +330,11 @@ func (tc *TypeChecker) checkInvocation(invocation *ast.BLangInvocation) {
 	// Check argument types
 	for i, arg := range invocation.ArgExprs {
 		if arg == nil || i >= expectedArgs || i >= len(funcInfo.ParamTypes) {
+			continue
+		}
+
+		// Skip type checking if this argument expression already has an error
+		if tc.errorExprs[arg] {
 			continue
 		}
 
@@ -312,6 +363,13 @@ func (tc *TypeChecker) checkReturn(ret *ast.BLangReturn) {
 	if ret.Expr != nil {
 		if expr, ok := ret.Expr.(ast.BLangExpression); ok {
 			tc.checkExpression(expr)
+		}
+	}
+
+	// If the return expression already has an error, don't report additional type errors
+	if ret.Expr != nil {
+		if tc.errorExprs[ret.Expr] {
+			return
 		}
 	}
 
@@ -433,8 +491,28 @@ func (tc *TypeChecker) checkExpression(expr ast.BLangExpression) ast.BType {
 	case *ast.BLangInvocation:
 		tc.checkInvocation(e)
 		return tc.getExpressionType(e)
+	case *ast.BLangSimpleVarRef:
+		tc.checkVariableReference(e)
+		return tc.getExpressionType(e)
+	case *ast.BLangGroupExpr:
+		// Unwrap grouped expressions
+		return tc.checkExpression(e.Expression)
 	default:
 		return tc.getExpressionType(expr)
+	}
+}
+
+// checkVariableReference checks if a variable reference is valid.
+func (tc *TypeChecker) checkVariableReference(varRef *ast.BLangSimpleVarRef) {
+	if varRef == nil || varRef.VariableName == nil {
+		return
+	}
+
+	varName := varRef.VariableName.Value
+
+	// Check if variable is defined in local scope
+	if _, found := tc.localVars[varName]; !found {
+		tc.addError(common.UNDEFINED_SYMBOL, varRef.GetPosition(), varName)
 	}
 }
 
@@ -513,6 +591,7 @@ func (tc *TypeChecker) checkUnaryExpression(expr *ast.BLangUnaryExpr) ast.BType 
 	}
 
 	op := expr.Operator
+	hasError := false
 
 	switch op {
 	case model.OperatorKind_NOT:
@@ -520,6 +599,10 @@ func (tc *TypeChecker) checkUnaryExpression(expr *ast.BLangUnaryExpr) ast.BType 
 		if operandTypeTag != model.TypeTags_BOOLEAN {
 			tc.addError(common.INVALID_UNARY_OP, expr.GetPosition(),
 				"!", tc.getTypeNameFromTag(operandTypeTag))
+			hasError = true
+		}
+		if hasError {
+			tc.errorExprs[expr] = true
 		}
 		return tc.booleanType()
 	case model.OperatorKind_SUB:
@@ -527,6 +610,10 @@ func (tc *TypeChecker) checkUnaryExpression(expr *ast.BLangUnaryExpr) ast.BType 
 		if !tc.isNumericTypeTag(operandTypeTag) {
 			tc.addError(common.INVALID_UNARY_OP, expr.GetPosition(),
 				"-", tc.getTypeNameFromTag(operandTypeTag))
+			hasError = true
+		}
+		if hasError {
+			tc.errorExprs[expr] = true
 		}
 		return tc.createTypeFromTag(operandTypeTag)
 	case model.OperatorKind_ADD:
@@ -534,6 +621,10 @@ func (tc *TypeChecker) checkUnaryExpression(expr *ast.BLangUnaryExpr) ast.BType 
 		if !tc.isNumericTypeTag(operandTypeTag) {
 			tc.addError(common.INVALID_UNARY_OP, expr.GetPosition(),
 				"+", tc.getTypeNameFromTag(operandTypeTag))
+			hasError = true
+		}
+		if hasError {
+			tc.errorExprs[expr] = true
 		}
 		return tc.createTypeFromTag(operandTypeTag)
 	}
