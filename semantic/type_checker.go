@@ -144,14 +144,132 @@ func (tc *TypeChecker) checkFunction(fn *ast.BLangFunction) {
 		return
 	}
 
-	// Check function body
+	// Check function body and track if it returns
+	var returns bool
 	if blockBody, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
-		for _, stmt := range blockBody.Stmts {
-			tc.checkStatement(stmt)
+		returns = tc.checkStatementBlock(blockBody.Stmts)
+	}
+
+	// Check if function must return but doesn't
+	if fn.ReturnTypeNode != nil {
+		returnType := tc.getTypeTagFromTypeNode(fn.ReturnTypeNode)
+		if returnType != model.TypeTags_NIL && !returns {
+			// Function has a return type but doesn't always return
+			tc.addError(common.INVOKABLE_MUST_RETURN, fn.GetPosition())
 		}
 	}
 
 	tc.currentFunction = nil
+}
+
+// checkStatementBlock checks a block of statements and returns true if the block always terminates.
+func (tc *TypeChecker) checkStatementBlock(stmts []ast.BLangStatement) bool {
+	for i, stmt := range stmts {
+		tc.checkStatement(stmt)
+
+		// Check if this statement terminates the block
+		if tc.isTerminatingStatement(stmt) {
+			// Any statements after this are unreachable
+			if i+1 < len(stmts) {
+				tc.addError(common.UNREACHABLE_CODE, stmts[i+1].GetPosition())
+			}
+			return true
+		}
+	}
+	return false
+}
+
+// isTerminatingStatement checks if a statement always terminates (return, break, continue, infinite loop).
+func (tc *TypeChecker) isTerminatingStatement(stmt ast.BLangStatement) bool {
+	switch s := stmt.(type) {
+	case *ast.BLangReturn:
+		return true
+	case *ast.BLangBreak:
+		return true
+	case *ast.BLangContinue:
+		return true
+	case *ast.BLangWhile:
+		// Check if it's an infinite loop (condition is literal true)
+		if tc.isAlwaysTrue(s.Expr) {
+			// Check if there's no break in the loop body
+			if !tc.hasBreakStatement(s.Body.Stmts) {
+				return true
+			}
+		}
+		return false
+	case *ast.BLangIf:
+		// If-else is terminating only if both branches terminate
+		if s.ElseStmt == nil {
+			return false
+		}
+		ifTerminates := tc.checkStatementBlockTerminates(s.Body.Stmts)
+		elseTerminates := tc.statementTerminates(s.ElseStmt)
+		return ifTerminates && elseTerminates
+	default:
+		return false
+	}
+}
+
+// checkStatementBlockTerminates checks if a statement block terminates (without adding errors).
+func (tc *TypeChecker) checkStatementBlockTerminates(stmts []ast.BLangStatement) bool {
+	for _, stmt := range stmts {
+		if tc.isTerminatingStatement(stmt) {
+			return true
+		}
+	}
+	return false
+}
+
+// statementTerminates checks if a single statement terminates.
+func (tc *TypeChecker) statementTerminates(stmt ast.BLangStatement) bool {
+	switch s := stmt.(type) {
+	case *ast.BLangBlockStmt:
+		return tc.checkStatementBlockTerminates(s.Stmts)
+	case *ast.BLangIf:
+		if s.ElseStmt == nil {
+			return false
+		}
+		return tc.checkStatementBlockTerminates(s.Body.Stmts) && tc.statementTerminates(s.ElseStmt)
+	default:
+		return tc.isTerminatingStatement(stmt)
+	}
+}
+
+// isAlwaysTrue checks if an expression is always true (literal true).
+func (tc *TypeChecker) isAlwaysTrue(expr model.ExpressionNode) bool {
+	if lit, ok := expr.(*ast.BLangLiteral); ok {
+		if val, ok := lit.Value.(bool); ok {
+			return val
+		}
+	}
+	return false
+}
+
+// hasBreakStatement checks if a block contains a break statement.
+func (tc *TypeChecker) hasBreakStatement(stmts []ast.BLangStatement) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.BLangBreak:
+			return true
+		case *ast.BLangIf:
+			if tc.hasBreakStatement(s.Body.Stmts) {
+				return true
+			}
+			if s.ElseStmt != nil {
+				if block, ok := s.ElseStmt.(*ast.BLangBlockStmt); ok {
+					if tc.hasBreakStatement(block.Stmts) {
+						return true
+					}
+				}
+			}
+		case *ast.BLangBlockStmt:
+			if tc.hasBreakStatement(s.Stmts) {
+				return true
+			}
+		// Don't recurse into nested loops - break only affects the innermost loop
+		}
+	}
+	return false
 }
 
 // checkStatement type-checks a statement.
@@ -420,14 +538,16 @@ func (tc *TypeChecker) checkIf(ifStmt *ast.BLangIf) {
 		}
 	}
 
-	// Check body
-	for _, stmt := range ifStmt.Body.Stmts {
-		tc.checkStatement(stmt)
-	}
+	// Check body with unreachable code detection
+	tc.checkStatementBlock(ifStmt.Body.Stmts)
 
 	// Check else statement
 	if ifStmt.ElseStmt != nil {
-		tc.checkStatement(ifStmt.ElseStmt)
+		if block, ok := ifStmt.ElseStmt.(*ast.BLangBlockStmt); ok {
+			tc.checkStatementBlock(block.Stmts)
+		} else {
+			tc.checkStatement(ifStmt.ElseStmt)
+		}
 	}
 }
 
@@ -448,11 +568,9 @@ func (tc *TypeChecker) checkWhile(whileStmt *ast.BLangWhile) {
 		}
 	}
 
-	// Check body with increased loop depth
+	// Check body with increased loop depth and unreachable code detection
 	tc.loopDepth++
-	for _, stmt := range whileStmt.Body.Stmts {
-		tc.checkStatement(stmt)
-	}
+	tc.checkStatementBlock(whileStmt.Body.Stmts)
 	tc.loopDepth--
 }
 

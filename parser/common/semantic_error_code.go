@@ -91,3 +91,7 @@ var UNUSED_RETURN_VALUE = newSemanticErrorCode("BCE2067", "return value of funct
 // Undefined module - when using a module prefix without importing it
 // Reference: BCE2000 in DiagnosticErrorCode.java
 var UNDEFINED_MODULE = newSemanticErrorCode("BCE2000", "undefined module '%s'")
+
+// Unreachable code - code after return, break, continue, or infinite loop
+// Reference: BCE2106 in DiagnosticErrorCode.java
+var UNREACHABLE_CODE = newSemanticErrorCode("BCE2106", "unreachable code")
