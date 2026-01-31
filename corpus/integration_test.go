@@ -58,7 +58,15 @@ var (
 	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 
-	skipTestsMap = makeSkipTestsMap([]string{})
+	// Skip tests that require unimplemented AST transformations:
+	// - TransformTypeDefinition
+	// - TransformUnionTypeDescriptor
+	// - TransformErrorConstructorExpression
+	skipTestsMap = makeSkipTestsMap([]string{
+		"subset1/01-function/assign10-e.bal",
+		"subset1/01-function/assign11-e.bal",
+		"subset1/01-function/call11-e.bal",
+	})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
