@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semantic"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -120,7 +121,13 @@ func TestIntegrationSuite(t *testing.T) {
 			}()
 
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(balFile)
+
+			var result testResult
+			if isErrorTestFile(balFile) {
+				result = runErrorTest(balFile)
+			} else {
+				result = runTest(balFile)
+			}
 
 			resultsMu.Lock()
 			defer resultsMu.Unlock()
@@ -191,6 +198,123 @@ func runTest(balFile string) testResult {
 
 	outputStr := printlnStr
 	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+}
+
+// runErrorTest runs a test for error files (-e.bal).
+// It parses expected errors from @error annotations and compares them with actual diagnostics.
+func runErrorTest(balFile string) testResult {
+	content := readFileContent(balFile)
+	expectedErrors := ParseExpectedErrors(content)
+
+	cx := context.NewCompilerContext()
+	syntaxTree, err := parser.GetSyntaxTree(nil, balFile)
+	if err != nil {
+		return testResult{
+			success:  false,
+			expected: formatExpectedErrors(expectedErrors),
+			actual:   fmt.Sprintf("parse error: %v", err),
+		}
+	}
+
+	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+	pkg := ast.ToPackage(compilationUnit)
+
+	// Run type checker to detect semantic errors
+	typeChecker := semantic.NewTypeChecker(pkg, cx)
+	typeChecker.Check()
+
+	// Get diagnostics from package
+	diagnostics := pkg.GetDiagnostics()
+	actualErrors := ExtractActualErrors(diagnostics)
+
+	// Match expected vs actual errors
+	matchResult := MatchErrors(expectedErrors, actualErrors)
+
+	// Check if successful - either by line matching or count matching
+	// (positions are not currently set in the AST, so we fall back to count matching)
+	isSuccess := IsErrorTestSuccessful(matchResult) && IsErrorCountMatch(expectedErrors, actualErrors)
+
+	if isSuccess {
+		return testResult{
+			success:  true,
+			expected: formatExpectedErrors(expectedErrors),
+			actual:   formatActualErrors(actualErrors),
+		}
+	}
+
+	return testResult{
+		success:  false,
+		expected: formatExpectedErrors(expectedErrors),
+		actual:   formatActualErrorsWithResult(actualErrors, matchResult, expectedErrors),
+	}
+}
+
+// formatExpectedErrors formats expected errors for display.
+func formatExpectedErrors(errors []ExpectedError) string {
+	if len(errors) == 0 {
+		return "no errors expected"
+	}
+	var lines []string
+	for _, e := range errors {
+		lines = append(lines, fmt.Sprintf("error at line %d", e.Line))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// formatActualErrors formats actual errors for display.
+func formatActualErrors(errors []ActualError) string {
+	if len(errors) == 0 {
+		return "no errors"
+	}
+	var lines []string
+	for _, e := range errors {
+		lines = append(lines, fmt.Sprintf("line %d: %s", e.Line, e.Message))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// formatActualErrorsWithResult formats actual errors with match result for display.
+func formatActualErrorsWithResult(errors []ActualError, result ErrorMatchResult, expected []ExpectedError) string {
+	var sb strings.Builder
+
+	// Show count mismatch if applicable
+	if len(expected) != len(errors) {
+		sb.WriteString(fmt.Sprintf("Error count mismatch: expected %d, got %d\n", len(expected), len(errors)))
+	}
+
+	if len(result.Missing) > 0 {
+		sb.WriteString("MISSING errors at lines: ")
+		for i, line := range result.Missing {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%d", line))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(result.Unexpected) > 0 {
+		sb.WriteString("UNEXPECTED errors:\n")
+		for _, line := range result.Unexpected {
+			for _, e := range errors {
+				if e.Line == line {
+					sb.WriteString(fmt.Sprintf("  line %d: %s\n", e.Line, e.Message))
+					break
+				}
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		sb.WriteString("Actual errors:\n")
+		for _, e := range errors {
+			sb.WriteString(fmt.Sprintf("  %s\n", e.Message))
+		}
+	} else {
+		sb.WriteString("no errors detected")
+	}
+
+	return sb.String()
 }
 
 func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
@@ -432,10 +556,6 @@ func findBalFiles(dir string) []string {
 }
 
 func isFileSkipped(filePath string) (bool, skipReason) {
-	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, errorFileSuffix) {
-		return true, skipReasonErrorFile
-	}
 	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
 		relPath = filepath.ToSlash(relPath)
 		if skipTestsMap[relPath] {
@@ -443,6 +563,11 @@ func isFileSkipped(filePath string) (bool, skipReason) {
 		}
 	}
 	return false, 0
+}
+
+// isErrorTestFile returns true if the file is an error test file (-e.bal).
+func isErrorTestFile(filePath string) bool {
+	return strings.HasSuffix(filepath.Base(filePath), errorFileSuffix)
 }
 
 func makeSkipTestsMap(paths []string) map[string]bool {
