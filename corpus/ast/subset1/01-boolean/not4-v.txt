@@ -18,7 +18,8 @@
               (literal 1)())) ())
       (block-stmt
         (var-def
-          (variable b))
+          (variable b (type
+            (value-type boolean))))
         (if
           (unary-expr !
             (simple-var-ref b))

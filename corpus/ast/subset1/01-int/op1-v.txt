@@ -89,13 +89,17 @@
               (literal 3))
             (literal 4))())
       (var-def
-        (variable i))
+        (variable i (type
+          (value-type int))))
       (var-def
-        (variable j))
+        (variable j (type
+          (value-type int))))
       (var-def
-        (variable k))
+        (variable k (type
+          (value-type int))))
       (var-def
-        (variable l))
+        (variable l (type
+          (value-type int))))
       (expression-stmt
         (invocation io println (
           (binary-expr +

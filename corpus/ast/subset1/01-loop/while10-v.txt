@@ -5,7 +5,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable i))
+        (variable i (type
+          (value-type int))))
       (while
         (literal true)
         (block-stmt
