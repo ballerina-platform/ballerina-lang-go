@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantic"
@@ -264,10 +265,11 @@ func collectSyntaxTreeDiagnostics(syntaxTree *tree.SyntaxTree, pkg *ast.BLangPac
 	defer func() {
 		if r := recover(); r != nil {
 			// If we can't iterate diagnostics, just add a generic syntax error
-			// Use line -1 so count-based matching is used (line 0 becomes line 1 after conversion)
-			code := "BCE0000"
-			diagInfo := diagnostics.NewDiagnosticInfo(&code, "syntax error", diagnostics.Error)
-			// Note: location with line -1 will result in Line() returning 0 for count-based matching
+			// Use the standard syntax error code from parser/common
+			errorCode := common.ERROR_SYNTAX_ERROR
+			code := errorCode.DiagnosticId()
+			diagInfo := diagnostics.NewDiagnosticInfo(&code, errorCode.MessageKey(), diagnostics.Error)
+			// Note: nil location will result in Line() returning 0 for count-based matching
 			pkg.AddDiagnostic(diagnostics.CreateDiagnostic(diagInfo, nil))
 		}
 	}()
