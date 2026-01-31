@@ -23,8 +23,10 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantic"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -219,13 +221,16 @@ func runErrorTest(balFile string) testResult {
 	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 	pkg := ast.ToPackage(compilationUnit)
 
+	// Collect syntax tree diagnostics (parser/lexer errors)
+	collectSyntaxTreeDiagnostics(syntaxTree, pkg)
+
 	// Run type checker to detect semantic errors
 	typeChecker := semantic.NewTypeChecker(pkg, cx)
 	typeChecker.Check()
 
-	// Get diagnostics from package
-	diagnostics := pkg.GetDiagnostics()
-	actualErrors := ExtractActualErrors(diagnostics)
+	// Get diagnostics from package (includes both syntax and semantic errors)
+	pkgDiagnostics := pkg.GetDiagnostics()
+	actualErrors := ExtractActualErrors(pkgDiagnostics)
 
 	// Match expected vs actual errors
 	matchResult := MatchErrors(expectedErrors, actualErrors)
@@ -246,6 +251,58 @@ func runErrorTest(balFile string) testResult {
 		success:  false,
 		expected: formatExpectedErrors(expectedErrors),
 		actual:   formatActualErrorsWithResult(actualErrors, matchResult, expectedErrors),
+	}
+}
+
+// collectSyntaxTreeDiagnostics collects parser/lexer diagnostics from the syntax tree.
+func collectSyntaxTreeDiagnostics(syntaxTree *tree.SyntaxTree, pkg *ast.BLangPackage) {
+	if syntaxTree == nil || !syntaxTree.HasDiagnostics() {
+		return
+	}
+
+	// Use defer/recover to handle any panics during diagnostic iteration
+	defer func() {
+		if r := recover(); r != nil {
+			// If we can't iterate diagnostics, just add a generic syntax error
+			// Use line -1 so count-based matching is used (line 0 becomes line 1 after conversion)
+			code := "BCE0000"
+			diagInfo := diagnostics.NewDiagnosticInfo(&code, "syntax error", diagnostics.Error)
+			// Note: location with line -1 will result in Line() returning 0 for count-based matching
+			pkg.AddDiagnostic(diagnostics.CreateDiagnostic(diagInfo, nil))
+		}
+	}()
+
+	for diag := range syntaxTree.Diagnostics() {
+		if diag == nil {
+			continue
+		}
+
+		// Convert tree.Diagnostic to tools/diagnostics.Diagnostic
+		info := diag.DiagnosticInfo()
+		code := info.Code()
+		diagInfo := diagnostics.NewDiagnosticInfo(
+			&code,
+			info.MessageFormat(),
+			diagnostics.DiagnosticSeverity(info.Severity()),
+		)
+
+		// Create location from the syntax tree diagnostic
+		var loc diagnostics.Location
+		if diag.Location() != nil {
+			lineRange := diag.Location().LineRange()
+			loc = diagnostics.NewBLangDiagnosticLocation(
+				syntaxTree.FilePath(),
+				lineRange.StartLine().Line(),
+				lineRange.EndLine().Line(),
+				lineRange.StartLine().Offset(),
+				lineRange.EndLine().Offset(),
+				0, 0,
+			)
+		}
+
+		// Create diagnostic and add to package
+		newDiag := diagnostics.CreateDiagnostic(diagInfo, loc)
+		pkg.AddDiagnostic(newDiag)
 	}
 }
 
