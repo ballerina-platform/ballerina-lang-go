@@ -36,16 +36,15 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry)
 		locals[i] = defaultValueForType((*localVars)[i].Type)
 	}
 	frame := &Frame{locals: locals}
-	bbs := &birFunc.BasicBlocks
-	bb := &(*bbs)[0]
+	bbs := birFunc.BasicBlocks
+	bb := &bbs[0]
 	for {
 		instructions := bb.Instructions
 		term := bb.Terminator
 		for i := 0; i < len(instructions); i++ {
 			execInstruction(instructions[i], frame)
 		}
-
-		bb = execTerminator(term, *bb, frame, reg)
+		bb = execTerminator(term, frame, reg)
 		if bb == nil {
 			break
 		}
@@ -139,7 +138,7 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 	}
 }
 
-func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
+func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB
@@ -181,7 +180,7 @@ func execTerminator(term bir.BIRTerminator, currentBB bir.BIRBasicBlock, frame *
 	default:
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
-	return &currentBB
+	return nil
 }
 
 func defaultValueForType(t model.ValueType) any {

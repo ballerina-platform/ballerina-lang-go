@@ -35,12 +35,15 @@ type (
 
 	Call struct {
 		BIRTerminatorBase
-		Kind        InstructionKind
-		IsVirtual   bool
-		Args        []BIROperand
-		Name        model.Name
-		CalleePkg   *model.PackageID
-		CalleeFlags common.Set[model.Flag]
+		Kind              InstructionKind
+		IsVirtual         bool
+		Args              []BIROperand
+		Name              model.Name
+		CalleePkg         *model.PackageID
+		CalleeFlags       common.Set[model.Flag]
+		FunctionLookupKey string
+		CachedBIRFunc     *BIRFunction
+		IsNativeFunc      bool
 	}
 
 	Return struct {

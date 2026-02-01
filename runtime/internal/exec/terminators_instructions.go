@@ -38,35 +38,59 @@ func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 }
 
 func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
-	funcName := callInfo.Name.Value()
-	values := make([]any, len(callInfo.Args))
-	for i, op := range callInfo.Args {
-		values[i] = frame.GetOperand(op.Index)
-	}
-	orgName := callInfo.CalleePkg.OrgName.Value()
-	pkgName := callInfo.CalleePkg.PkgName.Value()
-	moduleKey := orgName + "/" + pkgName
-	qualifiedName := moduleKey + ":" + funcName
-
-	var result any
-	fn := reg.GetBIRFunction(qualifiedName)
-	if fn != nil {
-		result = executeFunction(*fn, values, reg)
-	} else {
-		externFn := reg.GetNativeFunction(qualifiedName)
-		if externFn != nil {
-			var err error
-			result, err = externFn.Impl(values)
-			if err != nil {
-				panic(err)
-			}
-		} else {
-			panic("function not found: " + funcName)
-		}
-	}
-
+	values := extractArgs(callInfo.Args, frame)
+	result := executeCall(callInfo, values, reg)
 	if callInfo.LhsOp != nil {
 		frame.SetOperand(callInfo.LhsOp.Index, result)
 	}
 	return callInfo.ThenBB
+}
+
+func extractArgs(args []bir.BIROperand, frame *Frame) []any {
+	values := make([]any, len(args))
+	for i, op := range args {
+		values[i] = frame.GetOperand(op.Index)
+	}
+	return values
+}
+
+func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry) any {
+	if callInfo.CachedBIRFunc != nil {
+		return executeFunction(*callInfo.CachedBIRFunc, values, reg)
+	}
+	if callInfo.IsNativeFunc {
+		return executeNative(callInfo.FunctionLookupKey, values, reg)
+	}
+	return lookupAndExecute(callInfo, values, reg)
+}
+
+func executeNative(lookupKey string, values []any, reg *modules.Registry) any {
+	externFn := reg.GetNativeFunction(lookupKey)
+	if externFn == nil {
+		panic("native function not found: " + lookupKey)
+	}
+	result, err := externFn.Impl(values)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry) any {
+	lookupKey := callInfo.FunctionLookupKey
+	fn := reg.GetBIRFunction(lookupKey)
+	if fn != nil {
+		callInfo.CachedBIRFunc = fn
+		return executeFunction(*fn, values, reg)
+	}
+	externFn := reg.GetNativeFunction(lookupKey)
+	if externFn != nil {
+		callInfo.IsNativeFunc = true
+		result, err := externFn.Impl(values)
+		if err != nil {
+			panic(err)
+		}
+		return result
+	}
+	panic("function not found: " + callInfo.Name.Value())
 }
