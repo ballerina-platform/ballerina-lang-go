@@ -40,10 +40,8 @@ type (
 	BLangBlockStmt struct {
 		BLangStatementBase
 		Stmts            []BLangStatement
-		MapSymbol        BVarSymbol
 		FailureBreakMode FailureBreakMode
 		IsLetExpr        bool
-		Scope            Scope
 	}
 	BLangBreak struct {
 		BLangStatementBase

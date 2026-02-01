@@ -240,28 +240,23 @@ type (
 		TypeData                        model.TypeData
 		FlagSet                         common.UnorderedSet[model.Flag]
 		attachPoints                    common.UnorderedSet[model.AttachPoint]
-		Symbol                          *BSymbol
 	}
 
 	BLangAnnotationAttachment struct {
 		BLangNodeBase
-		Expr                       BLangExpression
-		AnnotationName             *BLangIdentifier
-		PkgAlias                   *BLangIdentifier
-		AnnotationSymbol           *BAnnotationSymbol
-		AttachPoints               common.OrderedSet[model.Point]
-		AnnotationAttachmentSymbol *BAnnotationAttachmentSymbol
+		Expr           BLangExpression
+		AnnotationName *BLangIdentifier
+		PkgAlias       *BLangIdentifier
+		AttachPoints   common.OrderedSet[model.Point]
 	}
 
 	BLangFunctionBodyBase struct {
 		BLangNodeBase
-		Scope *Scope
 	}
 
 	BLangBlockFunctionBody struct {
 		BLangFunctionBodyBase
-		Stmts     []BLangStatement
-		MapSymbol *BVarSymbol
+		Stmts []BLangStatement
 	}
 
 	BLangExprFunctionBody struct {
@@ -274,6 +269,7 @@ type (
 		Value         string
 		OriginalValue string
 		isLiteral     bool
+		Symbol        model.Symbol
 	}
 
 	BLangImportPackage struct {
@@ -283,12 +279,12 @@ type (
 		Alias        *BLangIdentifier
 		CompUnit     *BLangIdentifier
 		Version      *BLangIdentifier
-		Symbol       *BPackageSymbol
 	}
 
 	BLangClassDefinition struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
+		Symbol                          model.Symbol
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
@@ -296,14 +292,12 @@ type (
 		Fields                          []model.SimpleVariableNode
 		TypeRefs                        []model.TypeDescriptor
 		FlagSet                         common.Set[model.Flag]
-		Symbol                          *BTypeSymbol
 		GeneratedInitFunction           *BLangFunction
 		Receiver                        *BLangSimpleVariable
 		ReferencedFields                []BLangSimpleVariable
 		LocalVarRefs                    []BLangLocalVarRef
 		OceEnvData                      *OCEDynamicEnvironmentData
 		ObjectType                      *BObjectType
-		TypeDefEnv                      *SymbolEnv
 		CycleDepth                      int
 		Precedence                      int
 		IsServiceDecl                   bool
@@ -314,6 +308,7 @@ type (
 
 	BLangService struct {
 		BLangNodeBase
+		Symbol                          model.Symbol
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
 		ServiceClass                    *BLangClassDefinition
@@ -323,7 +318,6 @@ type (
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		FlagSet                         common.UnorderedSet[model.Flag]
-		Symbol                          *BSymbol
 		ListenerType                    BType
 		ResourceFunctions               []BLangFunction
 		InferredServiceType             BType
@@ -354,13 +348,10 @@ type (
 		TopLevelNodes              []model.TopLevelNode
 		TestablePkgs               []*BLangTestablePackage
 		ClassDefinitions           []BLangClassDefinition
-		ObjAttachedFunctions       []BSymbol
 		FlagSet                    common.UnorderedSet[model.Flag]
 		CompletedPhases            common.UnorderedSet[CompilerPhase]
 		LambdaFunctions            []BLangLambdaFunction
-		GlobalVariableDependencies map[BSymbol]common.Set[*BVarSymbol]
 		PackageID                  *model.PackageID
-		Symbol                     *BPackageSymbol
 		diagnostics                []diagnostics.Diagnostic
 		ModuleContextDataHolder    *ModuleContextDataHolder
 		errorCount                 int
@@ -377,7 +368,6 @@ type (
 		namespaceURI BLangExpression
 		prefix       *BLangIdentifier
 		CompUnit     *BLangIdentifier
-		symbol       *BSymbol
 	}
 	BLangLocalXMLNS struct {
 		BLangXMLNS
@@ -403,26 +393,21 @@ type (
 		Type              model.DocumentationReferenceType
 		HasParserWarnings bool
 	}
-	BLangConstantValue struct {
-		Value any
-		Type  BType
-	}
 
 	BLangVariableBase struct {
 		BLangNodeBase
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
 		Expr                            model.ExpressionNode
-		Symbol                          *BVarSymbol
 		FlagSet                         common.Set[model.Flag]
 		IsDeclaredWithVar               bool
+		Symbol                          model.Symbol
 	}
 
 	BLangConstant struct {
 		BLangVariableBase
 		Name                     *BLangIdentifier
 		AssociatedTypeDefinition *BLangTypeDefinition
-		Symbol                   *BConstantSymbol
 	}
 
 	BLangSimpleVariable struct {
@@ -431,13 +416,13 @@ type (
 	}
 
 	ClosureVarSymbol struct {
-		BSymbol            *BSymbol
 		DiagnosticLocation Location
 	}
 
 	BLangInvokableNodeBase struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
+		Symbol                          model.Symbol
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
@@ -447,19 +432,13 @@ type (
 		Body                            model.FunctionBodyNode
 		DefaultWorkerName               model.IdentifierNode
 		FlagSet                         common.UnorderedSet[model.Flag]
-		Symbol                          *BInvokableSymbol
-		ClonedEnv                       *SymbolEnv
 		DesugaredReturnType             bool
 	}
 
 	BLangFunction struct {
 		BLangInvokableNodeBase
 		Receiver           *BLangSimpleVariable
-		ParamClosureMap    map[int]*BVarSymbol
-		MapSymbol          *BVarSymbol
-		InitFunctionStmts  common.OrderedMap[*BSymbol, BLangStatement]
 		ClosureVarSymbols  common.OrderedSet[ClosureVarSymbol]
-		OriginalFuncSymbol *BInvokableSymbol
 		SendsToThis        common.OrderedSet[Channel]
 		AnonForkName       string
 		MapSymbolUpdated   bool
@@ -471,12 +450,12 @@ type (
 	BLangTypeDefinition struct {
 		BLangNodeBase
 		name                            *BLangIdentifier
+		Symbol                          model.Symbol
 		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
 		flagSet                         common.UnorderedSet[model.Flag]
 		precedence                      int
-		symbol                          *BSymbol
 		cycleDepth                      int
 		isBuiltinTypeDef                bool
 		hasCyclicReference              bool
@@ -1389,26 +1368,6 @@ func (b *BLangInvokableNodeBase) SetFlagSet(flagSet common.Set[model.Flag]) {
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetSymbol() model.InvokableSymbol {
-	return b.Symbol
-}
-
-func (b *BLangInvokableNodeBase) SetSymbol(symbol model.InvokableSymbol) {
-	if sym, ok := symbol.(*BInvokableSymbol); ok {
-		b.Symbol = sym
-	} else {
-		panic("symbol is not a BInvokableSymbol")
-	}
-}
-
-func (b *BLangInvokableNodeBase) GetClonedEnv() *SymbolEnv {
-	return b.ClonedEnv
-}
-
-func (b *BLangInvokableNodeBase) SetClonedEnv(clonedEnv *SymbolEnv) {
-	b.ClonedEnv = clonedEnv
-}
-
 func (b *BLangInvokableNodeBase) GetDesugaredReturnType() bool {
 	return b.DesugaredReturnType
 }
@@ -1455,14 +1414,6 @@ func (b *BLangVariableBase) GetIsDeclaredWithVar() bool {
 
 func (b *BLangVariableBase) SetIsDeclaredWithVar(isDeclaredWithVar bool) {
 	b.IsDeclaredWithVar = isDeclaredWithVar
-}
-
-func (b *BLangVariableBase) GetSymbol() *BVarSymbol {
-	return b.Symbol
-}
-
-func (b *BLangVariableBase) SetSymbol(symbol *BVarSymbol) {
-	b.Symbol = symbol
 }
 
 func (m *BLangVariableBase) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
@@ -1839,11 +1790,9 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	this.TopLevelNodes = []model.TopLevelNode{}
 	this.TestablePkgs = []*BLangTestablePackage{}
 	this.ClassDefinitions = []BLangClassDefinition{}
-	this.ObjAttachedFunctions = []BSymbol{}
 	this.FlagSet = common.UnorderedSet[model.Flag]{}
 	this.CompletedPhases = common.UnorderedSet[CompilerPhase]{}
 	this.LambdaFunctions = []BLangLambdaFunction{}
-	this.GlobalVariableDependencies = make(map[BSymbol]common.Set[*BVarSymbol])
 	this.errorCount = 0
 	this.warnCount = 0
 	this.diagnostics = []diagnostics.Diagnostic{}

@@ -49,8 +49,6 @@ type BType interface {
 	model.Type
 	BTypeGetTag() model.TypeTags
 	bTypesetTag(tag model.TypeTags)
-	bTypeGetTSymbol() *BTypeSymbol
-	bTypeSetTSymbol(tsymbol *BTypeSymbol)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
@@ -63,16 +61,14 @@ type (
 		FlagSet common.UnorderedSet[model.Flag]
 		Grouped bool
 		tags    model.TypeTags
-		tsymbol *BTypeSymbol
 		name    model.Name
 		flags   uint64
 	}
 
 	BTypeImpl struct {
-		tSymbol *BTypeSymbol
-		tag     model.TypeTags
-		name    model.Name
-		flags   uint64
+		tag   model.TypeTags
+		name  model.Name
+		flags uint64
 	}
 	BLangArrayType struct {
 		BLangTypeBase
@@ -97,7 +93,6 @@ type (
 		BLangTypeBase
 		PkgAlias BLangIdentifier
 		TypeName BLangIdentifier
-		Symbol   BSymbol
 	}
 
 	BStructureTypeBase struct {
@@ -108,7 +103,6 @@ type (
 	BField struct {
 		Name     model.Name
 		Type     BType
-		Symbol   BSymbol
 		Location Location
 	}
 
@@ -280,14 +274,6 @@ func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
-func (this *BLangTypeBase) bTypeGetTSymbol() *BTypeSymbol {
-	return this.tsymbol
-}
-
-func (this *BLangTypeBase) bTypeSetTSymbol(tsymbol *BTypeSymbol) {
-	this.tsymbol = tsymbol
-}
-
 func (this *BLangTypeBase) bTypeGetName() model.Name {
 	return this.name
 }
@@ -310,14 +296,6 @@ func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
 
 func (this *BTypeImpl) bTypesetTag(tag model.TypeTags) {
 	this.tag = tag
-}
-
-func (this *BTypeImpl) bTypeGetTSymbol() *BTypeSymbol {
-	return this.tSymbol
-}
-
-func (this *BTypeImpl) bTypeSetTSymbol(tsymbol *BTypeSymbol) {
-	this.tSymbol = tsymbol
 }
 
 func (this *BTypeImpl) bTypeGetName() model.Name {

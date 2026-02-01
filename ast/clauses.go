@@ -21,51 +21,20 @@ import (
 	"ballerina-lang-go/model"
 )
 
-type SymbolEnv struct {
-	Scope             *Scope
-	Node              BLangNode
-	EnclPkg           *BLangPackage
-	EnclType          model.TypeDescriptor
-	EnclAnnotation    *BLangAnnotation
-	EnclService       *BLangService
-	EnclInvokable     model.InvokableNode
-	EnclVarSym        *BVarSymbol
-	EnclEnv           *SymbolEnv
-	TypeParamsEntries []TypeParamEntry
-	LogErrors         bool
-	EnvCount          int
-	RelativeEnvCount  int
-	IsModuleInit      bool
-}
-
 type TypeParamEntry struct {
 	TypeParam BType
 	BoundType BType
-}
-
-const Scope_DEFAULT_SIZE = 10
-
-type Scope struct {
-	Owner   *BSymbol
-	Entries map[model.Name]ScopeEntry
-}
-
-type ScopeEntry struct {
-	Symbol *BSymbol
-	Next   *ScopeEntry
 }
 
 type (
 	BLangCollectClause struct {
 		BLangNodeBase
 		Expression      model.ExpressionNode
-		Env             *SymbolEnv
 		NonGroupingKeys common.Set[string]
 	}
 	BLangDoClause struct {
 		BLangNodeBase
 		Body *BLangBlockStmt
-		Env  *SymbolEnv
 	}
 	BLangOnFailClause struct {
 		BLangNodeBase

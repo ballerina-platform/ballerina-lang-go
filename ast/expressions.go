@@ -77,8 +77,7 @@ type (
 	}
 	BLangExpressionBase struct {
 		BLangNodeBase
-		ImpConversionExpr *BLangTypeConversionExpr
-		TypeChecked       bool
+		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType      BType
 	}
 
@@ -160,6 +159,7 @@ type (
 	}
 	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
+		Symbol model.Symbol
 	}
 
 	BLangSimpleVarRef struct {
@@ -227,6 +227,7 @@ type (
 		BLangExpressionBase
 		PkgAlias                  *BLangIdentifier
 		Name                      *BLangIdentifier
+		Symbol                    model.Symbol
 		Expr                      BLangExpression
 		ArgExprs                  []BLangExpression
 		AnnAttachments            []BLangAnnotationAttachment

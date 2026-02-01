@@ -153,7 +153,6 @@ func processImports(compilerCtx *context.CompilerContext, genCtx *Context, impor
 }
 
 func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportModule {
-	common.Assert(ast.Symbol == nil)
 	// FIXME: fix this when we have symbol resolution, given only import we support is io we are going to hardcode it
 	orgName := model.Name("ballerina")
 	pkgName := model.Name("io")
@@ -173,7 +172,6 @@ func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTyp
 
 func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIRGlobalVariableDcl {
 	var name, originalName model.Name
-	common.Assert(ast.Symbol == nil)
 	name = model.Name(ast.GetName().GetValue())
 	originalName = name
 	birVarDcl := &BIRGlobalVariableDcl{}
@@ -187,7 +185,6 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIR
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
-	common.Assert(astFunc.Symbol == nil)
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
@@ -601,10 +598,8 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call.ThenBB = thenBB
 	call.LhsOp = resultOperand
 
-	// Set CalleePkg from symbol if available
-	if expr.Symbol != nil && expr.Symbol.PkgID != nil {
-		call.CalleePkg = expr.Symbol.PkgID
-	} else if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+	// Package qualified call - look up package ID from import alias
+	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
 		// Qualified call - look up package ID from import alias
 		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
 			call.CalleePkg = pkgID

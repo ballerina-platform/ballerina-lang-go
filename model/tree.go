@@ -373,54 +373,6 @@ const (
 	TypeKind_REGEXP                 = "regexp"
 )
 
-type SymbolKind uint
-
-const (
-	SymbolKind_PACKAGE SymbolKind = iota
-	SymbolKind_STRUCT
-	SymbolKind_OBJECT
-	SymbolKind_RECORD
-	SymbolKind_CONNECTOR
-	SymbolKind_ACTION
-	SymbolKind_SERVICE
-	SymbolKind_RESOURCE
-	SymbolKind_FUNCTION
-	SymbolKind_WORKER
-	SymbolKind_ANNOTATION
-	SymbolKind_ANNOTATION_ATTRIBUTE
-	SymbolKind_CONSTANT
-	SymbolKind_VARIABLE
-	SymbolKind_PACKAGE_VARIABLE
-	SymbolKind_TRANSFORMER
-	SymbolKind_TYPE_DEF
-	SymbolKind_ENUM
-	SymbolKind_ERROR
-
-	SymbolKind_PARAMETER
-	SymbolKind_PATH_PARAMETER
-	SymbolKind_PATH_REST_PARAMETER
-	SymbolKind_LOCAL_VARIABLE
-	SymbolKind_SERVICE_VARIABLE
-	SymbolKind_CONNECTOR_VARIABLE
-
-	SymbolKind_CAST_OPERATOR
-	SymbolKind_CONVERSION_OPERATOR
-	SymbolKind_TYPEOF_OPERATOR
-
-	SymbolKind_XMLNS
-	SymbolKind_SCOPE
-	SymbolKind_OTHER
-
-	SymbolKind_INVOKABLE_TYPE
-
-	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
-	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
-
-	SymbolKind_SEQUENCE
-)
-
 type SymbolOrigin uint8
 
 const (
