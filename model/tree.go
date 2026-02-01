@@ -863,8 +863,6 @@ type MarkdownDocumentationParameterAttributeNode interface {
 	GetParameterDocumentationLines() []string
 	AddParameterDocumentationLine(text string)
 	GetParameterDocumentation() string
-	GetSymbol() VariableSymbol
-	SetSymbol(symbol VariableSymbol)
 }
 
 type MarkdownDocumentationReturnParameterAttributeNode interface {
@@ -1148,46 +1146,6 @@ type MarkdownDocumentationNode interface {
 	GetReturnParameterDocumentation() *string
 	GetReferences() []MarkdownDocumentationReferenceAttributeNode
 	AddReference(reference MarkdownDocumentationReferenceAttributeNode)
-}
-
-// Symbol Interfaces
-
-type Symbol interface {
-	GetName() string
-	GetOriginalName() string
-	GetKind() SymbolKind
-	GetType() Type
-	GetFlags() common.Set[Flag]
-	GetEnclosingSymbol() Symbol
-	GetEnclosedSymbols() []Symbol
-	GetPosition() diagnostics.Location
-	GetOrigin() SymbolOrigin
-}
-
-type TypeSymbol = Symbol
-
-type Annotatable interface {
-	AddAnnotation(AnnotationAttachmentSymbol)
-	GetAnnotations() []AnnotationAttachmentSymbol
-}
-
-type AnnotationSymbol = Annotatable
-
-type ConstantSymbol = Annotatable
-
-type AnnotationAttachmentSymbol interface {
-	IsConstAnnotation() bool
-}
-
-type InvokableSymbol interface {
-	Annotatable
-	GetParameters() []VariableSymbol
-	GetReturnType() Type
-}
-
-type VariableSymbol interface {
-	Symbol
-	GetConstValue() any
 }
 
 // Other Interfaces

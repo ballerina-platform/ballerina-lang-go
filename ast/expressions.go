@@ -59,7 +59,6 @@ type (
 		BLangExpressionBase
 		ParameterName               *BLangIdentifier
 		ParameterDocumentationLines []string
-		Symbol                      *BVarSymbol
 	}
 	BLangMarkdownReturnParameterDocumentation struct {
 		BLangExpressionBase
@@ -81,7 +80,6 @@ type (
 		ImpConversionExpr *BLangTypeConversionExpr
 		TypeChecked       bool
 		ExpectedType      BType
-		NarrowedTypeInfo  map[*BVarSymbol]NarrowedTypes
 	}
 
 	NarrowedTypes struct {
@@ -97,7 +95,6 @@ type (
 		BLangExpressionBase
 		IsLValue                   bool
 		IsCompoundAssignmentLValue bool
-		symbol                     BSymbol
 	}
 
 	BLangAccessExpressionBase struct {
@@ -117,10 +114,9 @@ type (
 
 	BLangAnnotAccessExpr struct {
 		BLangExpressionBase
-		Expr             BLangExpression
-		PkgAlias         *BLangIdentifier
-		AnnotationName   *BLangIdentifier
-		AnnotationSymbol *BAnnotationSymbol
+		Expr           BLangExpression
+		PkgAlias       *BLangIdentifier
+		AnnotationName *BLangIdentifier
 	}
 
 	BLangArrowFunction struct {
@@ -134,18 +130,14 @@ type (
 
 	BLangLambdaFunction struct {
 		BLangExpressionBase
-		Function                       *BLangFunction
-		CapturedClosureEnv             *SymbolEnv
-		ParamMapSymbolsOfEnclInvokable map[int]*BVarSymbol
-		EnclMapSymbols                 map[int]*BVarSymbol
+		Function *BLangFunction
 	}
 
 	BLangBinaryExpr struct {
 		BLangExpressionBase
-		LhsExpr  BLangExpression
-		RhsExpr  BLangExpression
-		OpKind   model.OperatorKind
-		OpSymbol *BOperatorSymbol
+		LhsExpr BLangExpression
+		RhsExpr BLangExpression
+		OpKind  model.OperatorKind
 	}
 
 	BLangCheckedExpr struct {
@@ -168,14 +160,12 @@ type (
 	}
 	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
-		PkgSymbol BSymbol
 	}
 
 	BLangSimpleVarRef struct {
 		BLangVariableReferenceBase
 		PkgAlias     *BLangIdentifier
 		VariableName *BLangIdentifier
-		VarSymbol    BSymbol
 	}
 
 	BLangLocalVarRef struct {
@@ -213,8 +203,6 @@ type (
 
 	BLangWorkerSendReceiveExprBase struct {
 		BLangExpressionBase
-		Env              *SymbolEnv
-		WorkerSymbol     *BSymbol
 		WorkerType       BType
 		WorkerIdentifier *BLangIdentifier
 		Channel          *Channel
@@ -247,10 +235,8 @@ type (
 		ObjectInitMethod          bool
 		FlagSet                   common.UnorderedSet[model.Flag]
 		Async                     bool
-		ExprSymbol                *BSymbol
 		FunctionPointerInvocation bool
 		LangLibInvocation         bool
-		Symbol                    *BSymbol
 	}
 
 	BLangGroupExpr struct {
@@ -267,7 +253,6 @@ type (
 		BLangExpressionBase
 		Expr     BLangExpression
 		Operator model.OperatorKind
-		OpSymbol *BOperatorSymbol
 	}
 
 	BLangIndexBasedAccess struct {
@@ -633,18 +618,6 @@ func (this *BLangMarkdownParameterDocumentation) AddParameterDocumentationLine(t
 
 func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentation() string {
 	return strings.ReplaceAll(strings.Join(this.ParameterDocumentationLines, "\n"), "\r", "")
-}
-
-func (this *BLangMarkdownParameterDocumentation) GetSymbol() model.VariableSymbol {
-	return this.Symbol
-}
-
-func (this *BLangMarkdownParameterDocumentation) SetSymbol(symbol model.VariableSymbol) {
-	if bvs, ok := symbol.(*BVarSymbol); ok {
-		this.Symbol = bvs
-	} else {
-		panic("symbol is not a *BVarSymbol")
-	}
 }
 
 func (this *BLangMarkdownParameterDocumentation) GetKind() model.NodeKind {

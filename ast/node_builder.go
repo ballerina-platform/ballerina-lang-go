@@ -39,7 +39,6 @@ type NodeBuilder struct {
 	isInLocalContext     bool
 	isInFiniteContext    bool
 	inCollectContext     bool
-	symbolTable          model.SymbolTable
 	constantSet          map[string]bool // Track declared constants to detect redeclarations
 	cx                   *context.CompilerContext
 }
@@ -48,11 +47,8 @@ type NodeBuilder struct {
 func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	nodeBuilder := &NodeBuilder{
 		constantSet: make(map[string]bool),
-		symbolTable: model.SymbolTable{
-			TypeSymbolTable: &BTypeSymbolTable{},
-		},
-		cx:        cx,
-		PackageID: cx.GetDefaultPackage(),
+		cx:          cx,
+		PackageID:   cx.GetDefaultPackage(),
 	}
 	return nodeBuilder
 }
@@ -784,7 +780,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	iToken := node.(tree.Token)
 
 	emptyStr := ""
-	pkgAlias := createIdentifier(n.symbolTable.GetBuiltinPos(), &emptyStr, &emptyStr)
+	pkgAlias := createIdentifier(getBuiltinPos(), &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(iToken), iToken)
 	return []BLangIdentifier{pkgAlias, name}
 }
@@ -1074,7 +1070,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		numericLiteral.Kind = nodeKind
 		numericLiteral.pos = getPosition(literal)
 		typeData := model.TypeData{
-			TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
+			TypeDescriptor: getTypeFromTag(typeTag),
 		}
 		numericLiteral.SetTypeData(typeData)
 		numericLiteral.Value = value
@@ -1144,7 +1140,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
 	typeData := model.TypeData{
-		TypeDescriptor: n.symbolTable.GetTypeFromTag(typeTag),
+		TypeDescriptor: getTypeFromTag(typeTag),
 	}
 	bLangNode.SetTypeData(typeData)
 	bType := typeData.TypeDescriptor.(BType)
@@ -1691,7 +1687,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		nilLiteral.pos = getPosition(returnStatementNode)
 		nilLiteral.Value = nil
 		typeData := model.TypeData{
-			TypeDescriptor: n.symbolTable.GetTypeFromTag(model.TypeTags_NIL),
+			TypeDescriptor: getTypeFromTag(model.TypeTags_NIL),
 		}
 		nilLiteral.SetTypeData(typeData)
 		bLReturn.SetExpression(nilLiteral)
@@ -1944,7 +1940,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	// Line 924: this.anonTypeNameSuffixes.pop();
 	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 	// Line 925: IdentifierNode anonTypeGenName = createIdentifier(symTable.builtinPos, genName, constantNode.name.value);
-	anonTypeGenName := createIdentifier(n.symbolTable.GetBuiltinPos(), &genName, &constantNameValue)
+	anonTypeGenName := createIdentifier(getBuiltinPos(), &genName, &constantNameValue)
 	// Line 926: typeDef.setName(anonTypeGenName);
 	typeDef.SetName(&anonTypeGenName)
 	// Line 927: typeDef.flagSet.add(Flag.PUBLIC);
@@ -1998,7 +1994,7 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 		// Line 3299-3303: else if (simpleVar.name.pos == null) { ... }
 		// Param doesn't have a name and also is not a missing node
 		// Therefore, assigning the built-in location
-		simpleVar.Name.pos = n.symbolTable.GetBuiltinPos()
+		simpleVar.Name.pos = getBuiltinPos()
 	}
 
 	// Line 3304: simpleVar.flagSet.add(Flag.REQUIRED_PARAM);
@@ -2546,7 +2542,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 				BLangExpressionBase: BLangExpressionBase{
 					BLangNodeBase: BLangNodeBase{
 						ty: model.TypeData{
-							TypeDescriptor: n.symbolTable.GetTypeFromTag(model.TypeTags_INT),
+							TypeDescriptor: getTypeFromTag(model.TypeTags_INT),
 						},
 					},
 				},
