@@ -26,10 +26,12 @@ type Scope interface {
 	AddSymbol(name string, symbol Symbol)
 }
 
+// These methods should never be called directly. Instead call them via the compiler context.
 type Symbol interface {
 	Name() string
 	Type() semtypes.SemType
 	Kind() SymbolKind
+	SetType(semtypes.SemType)
 	IsPublic() bool
 }
 
@@ -56,13 +58,11 @@ type (
 		Version      string
 	}
 
+	// We are using indeces here with the same rational as RefAtoms, instead of pointers
 	SymbolRef struct {
 		Package    PackageIdentifier
 		Index      int
 		SpaceIndex int
-		// symbol is kept here as reference purely as an optimization, Index, SpaceIndex tuple should be enough to get
-		// the actual symbol update
-		symbol Symbol
 	}
 
 	ModuleScope struct {
@@ -149,7 +149,7 @@ func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	if !ok {
 		return SymbolRef{}, false
 	}
-	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index, symbol: space.Symbols[index]}, true
+	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}, true
 }
 
 func NewSymbolSpaceInner(packageId PackageID, index int) *SymbolSpace {
@@ -239,26 +239,23 @@ func (ba *symbolBase) IsPublic() bool {
 }
 
 func (ref *SymbolRef) Name() string {
-	return ref.symbol.Name()
+	panic("unexpected")
 }
 
 func (ref *SymbolRef) Type() semtypes.SemType {
-	return ref.symbol.Type()
+	panic("unexpected")
 }
 
 func (ref *SymbolRef) SetType(ty semtypes.SemType) {
-	// Delegate to the underlying symbol
-	if setter, ok := ref.symbol.(symbolTypeSetter); ok {
-		setter.SetType(ty)
-	}
+	panic("unexpected")
 }
 
 func (ref *SymbolRef) Kind() SymbolKind {
-	return ref.symbol.Kind()
+	panic("unexpected")
 }
 
 func (ref *SymbolRef) IsPublic() bool {
-	return ref.symbol.IsPublic()
+	panic("unexpected")
 }
 
 func (ts *TypeSymbol) Kind() SymbolKind {

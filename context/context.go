@@ -18,6 +18,7 @@ package context
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"strconv"
@@ -60,6 +61,26 @@ func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
 		return symbolSpace.Symbols[refSymbol.Index]
 	}
 	return symbol
+}
+
+func (this *CompilerContext) SymbolName(symbol model.Symbol) string {
+	return this.GetSymbol(symbol).Name()
+}
+
+func (this *CompilerContext) SymbolType(symbol model.Symbol) semtypes.SemType {
+	return this.GetSymbol(symbol).Type()
+}
+
+func (this *CompilerContext) SymbolKind(symbol model.Symbol) model.SymbolKind {
+	return this.GetSymbol(symbol).Kind()
+}
+
+func (this *CompilerContext) SymbolIsPublic(symbol model.Symbol) bool {
+	return this.GetSymbol(symbol).IsPublic()
+}
+
+func (this *CompilerContext) SetSymbolType(symbol model.Symbol, ty semtypes.SemType) {
+	this.GetSymbol(symbol).SetType(ty)
 }
 
 func (this *CompilerContext) GetDefaultPackage() *model.PackageID {

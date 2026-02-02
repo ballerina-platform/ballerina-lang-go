@@ -407,8 +407,8 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		typeData := ca.constant.GetTypeData()
 		typeData.Type = ca.expectedType
 		ca.constant.SetTypeData(typeData)
-		symbol := ca.constant.Symbol().(symbolTypeSetter)
-		symbol.SetType(ca.expectedType)
+		symbol := ca.constant.Symbol()
+		ca.ctx().SetSymbolType(symbol, ca.expectedType)
 		// Done
 		return nil
 	}
@@ -505,7 +505,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 
 	// Variable References
 	case *ast.BLangSimpleVarRef:
-		ty := expr.Symbol().Type()
+		ty := a.ctx().SymbolType(expr.Symbol())
 		if expectedType != nil {
 			if !semtypes.IsSubtype(a.tyCtx(), ty, expectedType) {
 				a.semanticErr("incompatible type for variable reference")
@@ -748,7 +748,7 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	var retTy semtypes.SemType
 
 	symbol := invocation.Symbol()
-	fnTy := symbol.Type()
+	fnTy := a.ctx().SymbolType(symbol)
 	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
 		a.semanticErr("function not found: " + invocation.Name.GetValue())
 		return

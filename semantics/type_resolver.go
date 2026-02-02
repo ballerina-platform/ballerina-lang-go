@@ -101,7 +101,7 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 		semtypes.FunctionQualifiersFrom(t.env.typeEnv, false, false))
 
 	// Update symbol type for the function
-	updateSymbolType(fn, fnType)
+	updateSymbolType(t.ctx, fn, fnType)
 	fnSymbol := ctx.GetSymbol(fn.Symbol()).(*model.FunctionSymbol)
 	fnSymbol.Signature.ParamTypes = paramTypes
 	fnSymbol.Signature.ReturnType = returnTy
@@ -119,7 +119,7 @@ func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 
 	// Update symbol type if the type descriptor has a symbol
 	if tdNode, ok := typeData.TypeDescriptor.(ast.BLangNode); ok {
-		updateSymbolType(tdNode, ty)
+		updateSymbolType(t.ctx, tdNode, ty)
 	}
 
 	return t
@@ -195,7 +195,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	n.SetDeterminedType(ty)
 
 	// Update symbol type if this literal has a symbol
-	updateSymbolType(n, ty)
+	updateSymbolType(t.ctx, n, ty)
 }
 
 // parseFloatValue parses a string as float64 with error handling
@@ -245,7 +245,7 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
 	n.SetDeterminedType(ty)
 
 	// Update symbol type if this numeric literal has a symbol
-	updateSymbolType(n, ty)
+	updateSymbolType(t.ctx, n, ty)
 }
 
 func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
@@ -285,13 +285,12 @@ func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral
 
 // updateSymbolType updates the symbol's type if the node has an associated symbol.
 // This synchronizes the symbol's type with the node's resolved type.
-func updateSymbolType(node ast.BLangNode, ty semtypes.SemType) {
+func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semtypes.SemType) {
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
 		if symbol != nil {
 			// symbol resolver should initialize the symbol
-			symbolSetter := symbol.(symbolTypeSetter)
-			symbolSetter.SetType(ty)
+			ctx.SetSymbolType(symbol, ty)
 		}
 	}
 }
@@ -313,7 +312,7 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	node.SetDeterminedType(semType)
 
 	// Update symbol type
-	updateSymbolType(node, semType)
+	updateSymbolType(t.ctx, node, semType)
 }
 
 // TODO: do we need to track depth (similar to nBallerina)?

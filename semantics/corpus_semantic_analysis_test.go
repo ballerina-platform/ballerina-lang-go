@@ -79,7 +79,7 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	semanticAnalyzer.Analyze(pkg)
 
 	// Step 4: Validate that all expressions have determinedTypes set
-	validator := &semanticAnalysisValidator{t: t}
+	validator := &semanticAnalysisValidator{t: t, ctx: cx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, semantic analysis completed without panicking
@@ -87,7 +87,8 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 }
 
 type semanticAnalysisValidator struct {
-	t *testing.T
+	t   *testing.T
+	ctx *context.CompilerContext
 }
 
 func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
@@ -112,9 +113,9 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	// Check if node has a symbol that should have type set
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
-		if symbol.Type() == nil {
+		if v.ctx.SymbolType(symbol) == nil {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T at %v",
-				symbol.Name(), symbol.Kind(), node, node.GetPosition())
+				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node, node.GetPosition())
 		}
 	}
 
@@ -129,9 +130,9 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 	// Check if type descriptor has a symbol that should have type set
 	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
 		symbol := typeWithSymbol.Symbol()
-		if symbol.Type() == nil {
+		if v.ctx.SymbolType(symbol) == nil {
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for type descriptor %T at %v",
-				symbol.Name(), symbol.Kind(), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
+				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
 		}
 	}
 

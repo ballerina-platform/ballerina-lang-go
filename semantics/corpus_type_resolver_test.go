@@ -68,7 +68,7 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewIsolatedTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
-	validator := &typeResolutionValidator{t: t}
+	validator := &typeResolutionValidator{t: t, ctx: cx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, type resolution completed without panicking
@@ -76,7 +76,8 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 }
 
 type typeResolutionValidator struct {
-	t *testing.T
+	t   *testing.T
+	ctx *context.CompilerContext
 }
 
 func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
@@ -87,10 +88,10 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
 		// Skip constant symbols (kind: 1) since they're resolved during semantic analysis
-		if symbol.Kind() == model.SymbolKindConstant {
+		if v.ctx.SymbolKind(symbol) == model.SymbolKindConstant {
 			return v
 		}
-		if symbol.Type() == nil {
+		if v.ctx.SymbolType(symbol) == nil {
 			if isExpr(node) {
 				// expressions will get their type set during semantic analysis
 				return v
@@ -99,7 +100,7 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 				return v
 			}
 			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T",
-				symbol.Name(), symbol.Kind(), node)
+				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node)
 		}
 	}
 
