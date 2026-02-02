@@ -54,6 +54,12 @@ type (
 	}
 )
 
+// symbolTypeSetter is redefined here to allow setting types on symbols.
+// This must match the private interface in model/symbol.go.
+type symbolTypeSetter interface {
+	SetType(semtypes.SemType)
+}
+
 var _ ast.Visitor = &TypeResolver{}
 
 func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
@@ -109,8 +115,13 @@ func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 		returnTy = &semtypes.NIL
 	}
 	functionDefn := semtypes.NewFunctionDefinition()
-	return functionDefn.Define(t.env.typeEnv, paramListTy, returnTy,
+	fnType := functionDefn.Define(t.env.typeEnv, paramListTy, returnTy,
 		semtypes.FunctionQualifiersFrom(t.env.typeEnv, false, false))
+
+	// Update symbol type for the function
+	updateSymbolType(fn, fnType)
+
+	return fnType
 }
 
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
@@ -119,6 +130,12 @@ func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	}
 	ty := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
 	typeData.Type = ty
+
+	// Update symbol type if the type descriptor has a symbol
+	if tdNode, ok := typeData.TypeDescriptor.(ast.BLangNode); ok {
+		updateSymbolType(tdNode, ty)
+	}
+
 	return t
 }
 
@@ -190,6 +207,9 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 
 	// Set on determinedType
 	n.SetDeterminedType(ty)
+
+	// Update symbol type if this literal has a symbol
+	updateSymbolType(n, ty)
 }
 
 // parseFloatValue parses a string as float64 with error handling
@@ -237,6 +257,9 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
 
 	// Set on determinedType
 	n.SetDeterminedType(ty)
+
+	// Update symbol type if this numeric literal has a symbol
+	updateSymbolType(n, ty)
 }
 
 func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
@@ -274,6 +297,19 @@ func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral
 	return nil
 }
 
+// updateSymbolType updates the symbol's type if the node has an associated symbol.
+// This synchronizes the symbol's type with the node's resolved type.
+func updateSymbolType(node ast.BLangNode, ty semtypes.SemType) {
+	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
+		symbol := nodeWithSymbol.Symbol()
+		if symbol != nil {
+			// symbol resolver should initialize the symbol
+			symbolSetter := symbol.(symbolTypeSetter)
+			symbolSetter.SetType(ty)
+		}
+	}
+}
+
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	typeData := node.GetTypeData()
 	if typeData.TypeDescriptor == nil {
@@ -289,6 +325,9 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 
 	// Set on determinedType
 	node.SetDeterminedType(semType)
+
+	// Update symbol type
+	updateSymbolType(node, semType)
 }
 
 // TODO: do we need to track depth (similar to nBallerina)?

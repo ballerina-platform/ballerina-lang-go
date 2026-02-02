@@ -33,6 +33,12 @@ type Symbol interface {
 	IsPublic() bool
 }
 
+// symbolTypeSetter is a private interface for updating symbol types during type resolution.
+// All concrete symbol types implement this through symbolBase.
+type symbolTypeSetter interface {
+	SetType(semtypes.SemType)
+}
+
 type SymbolKind uint
 
 const (
@@ -238,6 +244,10 @@ func (ba *symbolBase) Type() semtypes.SemType {
 	return ba.ty
 }
 
+func (ba *symbolBase) SetType(ty semtypes.SemType) {
+	ba.ty = ty
+}
+
 func (ba *symbolBase) IsPublic() bool {
 	return ba.isPublic
 }
@@ -248,6 +258,13 @@ func (ref *SymbolRef) Name() string {
 
 func (ref *SymbolRef) Type() semtypes.SemType {
 	return ref.symbol.Type()
+}
+
+func (ref *SymbolRef) SetType(ty semtypes.SemType) {
+	// Delegate to the underlying symbol
+	if setter, ok := ref.symbol.(symbolTypeSetter); ok {
+		setter.SetType(ty)
+	}
 }
 
 func (ref *SymbolRef) Kind() SymbolKind {

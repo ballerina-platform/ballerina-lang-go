@@ -83,7 +83,34 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
+
+	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
+		symbol := nodeWithSymbol.Symbol()
+		// Skip constant symbols (kind: 1) since they're resolved during semantic analysis
+		if symbol.Kind() == model.SymbolKindConstant {
+			return v
+		}
+		if symbol.Type() == nil {
+			if isExpr(node) {
+				// expressions will get their type set during semantic analysis
+				return v
+			} else if _, ok := node.(*ast.BLangConstant); ok {
+				// constants will get their type set during semantic analysis
+				return v
+			}
+			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T",
+				symbol.Name(), symbol.Kind(), node)
+		}
+	}
+
 	return v
+}
+
+func isExpr(node ast.BLangNode) bool {
+	if _, ok := node.(model.ExpressionNode); ok {
+		return true
+	}
+	return false
 }
 
 func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
