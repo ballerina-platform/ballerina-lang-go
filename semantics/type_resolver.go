@@ -29,14 +29,9 @@ import (
 
 type (
 	TypeResolver struct {
-		env *symbolEnv
 		ctx *context.CompilerContext
-	}
-
-	symbolEnv struct {
-		// TODO: keep a map of ast nodes by identifier. When we run into a an indentifier in different package we
-		// should be able to lookup that from here and get the semtype there
 		typeEnv semtypes.Env
+		typeDefns map[model.SymbolRef]*ast.BLangTypeDefinition
 	}
 )
 
@@ -49,12 +44,20 @@ type symbolTypeSetter interface {
 var _ ast.Visitor = &TypeResolver{}
 
 func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
-	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetTypeEnv()}, ctx: ctx}
+	return &TypeResolver{
+		typeEnv:   semtypes.GetTypeEnv(),
+		ctx:       ctx,
+		typeDefns: make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+	}
 }
 
 // NewIsolatedTypeResolver is meant for testing so that we can run each test in parallel
 func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
-	return &TypeResolver{env: &symbolEnv{typeEnv: semtypes.GetIsolatedTypeEnv()}, ctx: ctx}
+	return &TypeResolver{
+		typeEnv:   semtypes.GetIsolatedTypeEnv(),
+		ctx:       ctx,
+		typeDefns: make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+	}
 }
 
 // ResolveTypes resolves all the type definitions and return a map of all the types of symbols exported by the package.
@@ -62,6 +65,12 @@ func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
 func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+	for _, defn := range pkg.TypeDefinitions {
+		symbol := defn.Symbol().(*model.SymbolRef)
+		// NOTE: this is strictly speaking wrong becuase we are storing a copy. but given BLangPackage store
+		// Type decls by value in array we can't get references to them.
+		t.typeDefns[*symbol] = &defn
+	}
 	ast.Walk(t, pkg)
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
@@ -87,7 +96,7 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 		restTy = &semtypes.NEVER
 	}
 	paramListDefn := semtypes.NewListDefinition()
-	paramListTy := paramListDefn.DefineListTypeWrapped(t.env.typeEnv, paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv, paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
 	returnTypeData := fn.GetReturnTypeData()
 	if returnTypeData.TypeDescriptor != nil {
@@ -97,8 +106,8 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 		returnTy = &semtypes.NIL
 	}
 	functionDefn := semtypes.NewFunctionDefinition()
-	fnType := functionDefn.Define(t.env.typeEnv, paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.env.typeEnv, false, false))
+	fnType := functionDefn.Define(t.typeEnv, paramListTy, returnTy,
+		semtypes.FunctionQualifiersFrom(t.typeEnv, false, false))
 
 	// Update symbol type for the function
 	updateSymbolType(t.ctx, fn, fnType)
@@ -136,9 +145,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
 		return t
-	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode:
-		t.ctx.InternalError("unexpected type definition node", n.GetPosition())
-		return nil
+	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode, *ast.BLangUnionTypeNode, *ast.BLangErrorTypeNode:
+		t.resolveBType(node.(ast.BType), 0)
+		return t
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
 		return nil
@@ -154,15 +163,15 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, depth int) semtypes.SemType {
-	if defn.GetDeterminedType() != nil {
-		return defn.GetDeterminedType()
+	if defn.DeterminedType != nil {
+		return defn.DeterminedType
 	}
 	if depth == defn.CycleDepth {
 		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
 	}
 	defn.CycleDepth = depth
 	semType := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
-	if defn.GetDeterminedType() == nil {
+	if defn.DeterminedType == nil {
 		defn.SetDeterminedType(semType)
 		updateSymbolType(t.ctx, defn, semType)
 		defn.CycleDepth = -1
@@ -371,18 +380,18 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 			ty.Elemtype = elemTypeData
 
 			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.env.typeEnv, memberTy)
+				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.typeEnv, memberTy)
 			} else {
 				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.env.typeEnv, []semtypes.SemType{memberTy}, length)
+				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.typeEnv, []semtypes.SemType{memberTy}, length)
 			}
 		} else {
-			semTy = defn.GetSemType(tr.env.typeEnv)
+			semTy = defn.GetSemType(tr.typeEnv)
 		}
 		return semTy
 	case *ast.BLangUnionTypeNode:
-		lhs := tr.resolveBType(ty.Lhs().TypeDescriptor.(ast.BType))
-		rhs := tr.resolveBType(ty.Rhs().TypeDescriptor.(ast.BType))
+		lhs := tr.resolveBType(ty.Lhs().TypeDescriptor.(ast.BType), depth+1)
+		rhs := tr.resolveBType(ty.Rhs().TypeDescriptor.(ast.BType), depth+1)
 		return semtypes.Union(lhs, rhs)
 	case *ast.BLangErrorTypeNode:
 		if ty.IsDistinct() {
@@ -391,9 +400,18 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		if ty.IsTop() {
 			return &semtypes.ERROR
 		} else {
-			detailTy := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType))
+			detailTy := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType), depth+1)
 			return semtypes.ErrorDetail(detailTy)
 		}
+	case *ast.BLangUserDefinedType:
+		symbol := ty.Symbol().(*model.SymbolRef)
+		defn, ok := tr.typeDefns[*symbol]
+		if !ok {
+			// This should have been detected by the symbol resolver
+			tr.ctx.InternalError("type definition not found", nil)
+			return nil
+		}
+		return tr.resolveTypeDefinition(defn, depth+1)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

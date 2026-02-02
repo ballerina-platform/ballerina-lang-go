@@ -188,7 +188,7 @@ func Walk(v Visitor, node BLangNode) {
 		for i := range node.AnnAttachments {
 			Walk(v, &node.AnnAttachments[i])
 		}
-		v.VisitTypeData(&node.TypeData)
+		walkTypeData(v, &node.TypeData)
 
 	case *BLangAnnotationAttachment:
 		Walk(v, node.Expr.(BLangNode))
@@ -204,7 +204,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		v.VisitTypeData(&node.typeData)
+		walkTypeData(v, &node.typeData)
 		for i := range node.annAttachments {
 			Walk(v, &node.annAttachments[i])
 		}
@@ -217,14 +217,14 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 		typeData := node.GetTypeData()
-		v.VisitTypeData(&typeData)
+		walkTypeData(v, &typeData)
 
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
 		typeData := node.GetTypeData()
-		v.VisitTypeData(&typeData)
+		walkTypeData(v, &typeData)
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
@@ -258,7 +258,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		v.VisitTypeData(&node.ReturnTypeData)
+		walkTypeData(v, &node.ReturnTypeData)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
@@ -437,7 +437,7 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangTypedescExpr:
-		v.VisitTypeData(&node.TypeData)
+		walkTypeData(v, &node.TypeData)
 
 	case *BLangTypeConversionExpr:
 		// No children
@@ -491,8 +491,33 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	// Section 8: Type Nodes
-	case *BLangArrayType, *BLangUserDefinedType, *BLangValueType, *BLangBuiltInRefTypeNode, *BLangFiniteTypeNode:
-		panic("Type nodes should not be visited directly")
+	case *BLangArrayType:
+		walkTypeData(v, &node.Elemtype)
+		for i := range node.Sizes {
+			Walk(v, node.Sizes[i].(BLangNode))
+		}
+
+	case *BLangUserDefinedType:
+		Walk(v, &node.PkgAlias)
+		Walk(v, &node.TypeName)
+
+	case *BLangValueType:
+		// No children to walk
+
+	case *BLangBuiltInRefTypeNode:
+		// No children to walk
+
+	case *BLangFiniteTypeNode:
+		for i := range node.ValueSpace {
+			Walk(v, node.ValueSpace[i].(BLangNode))
+		}
+
+	case *BLangUnionTypeNode:
+		walkTypeData(v, &node.lhs)
+		walkTypeData(v, &node.rhs)
+
+	case *BLangErrorTypeNode:
+		walkTypeData(v, &node.detailType)
 
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
@@ -633,4 +658,17 @@ func Walk(v Visitor, node BLangNode) {
 		panic(fmt.Sprintf("unexpected node type %T", node))
 	}
 	v.Visit(nil)
+}
+
+// We need to do this because TypeData is not a ast node but within it there can be ast nodes. Need to think if this is
+// the correct appraoch.
+func walkTypeData(v Visitor, typeData *model.TypeData) {
+	v.VisitTypeData(typeData)
+	if typeData.TypeDescriptor == nil {
+		return
+	}
+	td := typeData.TypeDescriptor
+	if tdNode, ok := td.(BLangNode); ok {
+		Walk(v, tdNode)
+	}
 }
