@@ -146,9 +146,6 @@ var semanticAnalysisErrorSkipList = []string{
 
 	// error constructor expr not implemented
 	"01-function/assign10-e.bal",
-
-	// module type defn not implemented
-	"01-function/call11-e.bal",
 }
 
 func TestSemanticAnalysisErrors(t *testing.T) {
