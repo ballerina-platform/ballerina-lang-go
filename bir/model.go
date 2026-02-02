@@ -17,14 +17,13 @@
 package bir
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
 )
 
-//go:generate kaitai-struct-compiler --target go bir.ksy --outdir ../ --go-package bir
-//go:generate mv bir.go bir-def-gen.go
 type ConstValue struct {
 	Type  model.ValueType
 	Value interface{}
