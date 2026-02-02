@@ -2592,26 +2592,16 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	position := getPosition(arrayTypeDescriptorNode)
 	dimensionNodes := arrayTypeDescriptorNode.Dimensions()
 	dimensionSize := dimensionNodes.Size()
-	sizes := make([]BLangExpression, 0, dimensionSize)
+	var sizes []BLangExpression
 
 	for i := dimensionSize - 1; i >= 0; i-- {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
-			literal := &BLangLiteral{
-				BLangExpressionBase: BLangExpressionBase{
-					BLangNodeBase: BLangNodeBase{
-						ty: model.TypeData{
-							TypeDescriptor: getTypeFromTag(model.TypeTags_INT),
-						},
-					},
-				},
-				Value: OPEN_ARRAY_INDICATOR,
-			}
-			sizes = append(sizes, literal)
 		} else {
 			panic("array length expression handling unimplemented")
 		}
 	}
+	dimensionSize = len(sizes)
 
 	arrayTypeNode := &BLangArrayType{}
 	arrayTypeNode.pos = position

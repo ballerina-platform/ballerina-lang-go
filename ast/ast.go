@@ -226,7 +226,7 @@ type BLangNode interface {
 type (
 	BLangNodeBase struct {
 		ty             model.TypeData
-		determinedType semtypes.SemType
+		DeterminedType semtypes.SemType
 
 		parent BLangNode
 
@@ -476,14 +476,14 @@ func (this *BLangNodeBase) GetTypeData() model.TypeData {
 }
 
 func (this *BLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
-	this.determinedType = ty
+	this.DeterminedType = ty
 }
 
 func (this *BLangNodeBase) GetDeterminedType() semtypes.SemType {
-	if this.determinedType == nil {
+	if this.DeterminedType == nil {
 		return &semtypes.NEVER
 	}
-	return this.determinedType
+	return this.DeterminedType
 }
 
 func (this *BLangNodeBase) GetPosition() Location {

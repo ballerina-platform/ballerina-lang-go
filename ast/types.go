@@ -138,6 +138,7 @@ var (
 	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
 	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
 	_ Field                          = &BField{}
+	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
@@ -183,7 +184,7 @@ func (this *BLangArrayType) GetSizes() []model.ExpressionNode {
 }
 
 func (this *BLangArrayType) IsOpenArray() bool {
-	return this.Dimensions == 1 && this.Sizes[0].(*BLangLiteral).Value == OPEN_ARRAY_INDICATOR
+	return this.Dimensions == 0
 }
 
 func (this *BLangTypeBase) IsGrouped() bool {
