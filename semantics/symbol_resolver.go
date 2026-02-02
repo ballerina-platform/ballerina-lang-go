@@ -26,6 +26,7 @@ import (
 )
 
 type symbolResolver interface {
+	ast.Visitor
 	GetSymbol(name string) (model.Symbol, bool)
 	GetPrefixedSymbol(prefix, name string) (model.Symbol, bool)
 	AddSymbol(name string, symbol model.Symbol)
@@ -168,11 +169,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewTypeSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition())
 	}
-	// Now properly resolve top level nodes
-	for _, fn := range pkg.Functions {
-		functionResolver := newFunctionResolver(moduleResolver, &fn)
-		resolveFunction(functionResolver, &fn)
-	}
+	ast.Walk(moduleResolver, pkg)
 	return moduleResolver.scope.Exports()
 }
 
@@ -230,12 +227,44 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable())
-	case model.InvocationNode:
-		resolveFunctionRef(bs, n.(functionRefNode))
-	case model.VariableNode:
-		referVariable(bs, n.(variableNode))
+	default:
+		return visitInnerSymbolResolver(bs, n)
 	}
 	return bs
+}
+
+func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case model.InvocationNode:
+		resolveFunctionRef(resolver, n.(functionRefNode))
+	case model.VariableNode:
+		referVariable(resolver, n.(variableNode))
+	case model.SimpleVariableReferenceNode:
+		referSimpleVariableReference(resolver, n)
+	}
+	return resolver
+}
+
+func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVariableReferenceNode) {
+	name := n.GetVariableName().GetValue()
+	var prefix string
+	if n.GetPackageAlias() != nil {
+		prefix = n.GetPackageAlias().GetValue()
+	}
+	symbolicNode := n.(ast.BNodeWithSymbol)
+	if prefix != "" {
+		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		if !ok {
+			syntaxError(resolver, "Unknown symbol: "+name, n.GetPosition())
+		}
+		symbolicNode.SetSymbol(symbol)
+	} else {
+		symbol, ok := resolver.GetSymbol(name)
+		if !ok {
+			syntaxError(resolver, "Unknown symbol: "+name, n.GetPosition())
+		}
+		symbolicNode.SetSymbol(symbol)
+	}
 }
 
 type functionRefNode interface {
@@ -331,6 +360,45 @@ func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescript
 		}
 	}
 	return
+}
+
+func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.BLangFunction:
+		name := n.Name.Value
+		symbol, ok := ms.GetSymbol(name)
+		if !ok {
+			internalError(ms, "Module level function symbol not found: "+name, n.Name.GetPosition())
+		}
+		n.SetSymbol(symbol)
+		functionResolver := newFunctionResolver(ms, n)
+		resolveFunction(functionResolver, n)
+		return nil
+	case *ast.BLangConstant:
+		name := n.Name.Value
+		symbol, ok := ms.GetSymbol(name)
+		if !ok {
+			internalError(ms, "Module level constant symbol not found: "+name, n.Name.GetPosition())
+		}
+		n.SetSymbol(symbol)
+		// TODO: create a local scope and resolve the body?
+		return ms
+	case *ast.BLangTypeDefinition:
+		name := n.Name.Value
+		symbol, ok := ms.GetSymbol(name)
+		if !ok {
+			internalError(ms, "Module level type symbol not found: "+name, n.Name.GetPosition())
+		}
+		n.SetSymbol(symbol)
+		return ms
+	default:
+		return visitInnerSymbolResolver(ms, n)
+	}
+	return ms
+}
+
+func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return ms
 }
 
 func internalError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {

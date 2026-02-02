@@ -274,7 +274,6 @@ type (
 		Value         string
 		OriginalValue string
 		isLiteral     bool
-		symbol        model.Symbol
 	}
 
 	BLangImportPackage struct {
@@ -495,16 +494,6 @@ func (this *BLangNodeBase) SetPosition(pos Location) {
 	this.pos = pos
 }
 
-// Symbol methods for BNodeWithSymbol interface
-
-func (n *BLangIdentifier) Symbol() model.Symbol {
-	return n.symbol
-}
-
-func (n *BLangIdentifier) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
-}
-
 func (n *BLangClassDefinition) Symbol() model.Symbol {
 	return n.symbol
 }
@@ -590,7 +579,6 @@ var (
 
 var (
 	// Assert that concrete types with symbols implement BNodeWithSymbol
-	_ BNodeWithSymbol = &BLangIdentifier{}
 	_ BNodeWithSymbol = &BLangClassDefinition{}
 	_ BNodeWithSymbol = &BLangService{}
 	_ BNodeWithSymbol = &BLangConstant{}
