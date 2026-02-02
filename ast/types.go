@@ -51,7 +51,7 @@ type BType interface {
 	bTypesetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
-	BTypeGetFlags() uint64
+	bTypeGetFlags() uint64
 	bTypeSetFlags(flags uint64)
 
 	// TODO: Add serialize method later
@@ -296,7 +296,7 @@ func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
+func (this *BLangTypeBase) bTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
@@ -308,7 +308,7 @@ func (this *BLangTypeBase) bTypeSetName(name model.Name) {
 	this.name = name
 }
 
-func (this *BLangTypeBase) BTypeGetFlags() uint64 {
+func (this *BLangTypeBase) bTypeGetFlags() uint64 {
 	return this.flags
 }
 
@@ -332,7 +332,7 @@ func (this *BTypeImpl) bTypeSetName(name model.Name) {
 	this.name = name
 }
 
-func (this *BTypeImpl) BTypeGetFlags() uint64 {
+func (this *BTypeImpl) bTypeGetFlags() uint64 {
 	return this.flags
 }
 
