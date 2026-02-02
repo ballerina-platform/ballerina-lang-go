@@ -116,11 +116,7 @@ func (cp *ConstantPool) EntryKey(entry CPEntry) string {
 	case *ByteCPEntry:
 		return fmt.Sprintf("byte:%d", e.Value)
 	case *ShapeCPEntry:
-		// TODO: Proper shape key generation
-		if e.Shape == nil {
-			return "shape:nil"
-		}
-		return fmt.Sprintf("shape:t%d:n%s:f%d", e.Shape.BTypeGetTag(), e.Shape.BTypeGetName(), e.Shape.BTypeGetFlags())
+		panic("shape key generation not implemented")
 	default:
 		panic("unknown CPEntry type")
 	}
@@ -175,9 +171,7 @@ func (cp *ConstantPool) AddByteCPEntry(value byte) int32 {
 }
 
 func (cp *ConstantPool) AddShapeCPEntry(shape ast.BType) int32 {
-	name := string(shape.BTypeGetName())
-	cp.AddStringCPEntry(name)
-	return cp.AddEntry(&ShapeCPEntry{Shape: shape})
+	panic("shape entry addition not implemented")
 }
 
 func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) error {
@@ -218,26 +212,7 @@ func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) error {
 		}
 		return cp.writeInt32(buf, int32(e.VersionCPIndex))
 	case *ShapeCPEntry:
-		typeBuf := &bytes.Buffer{}
-
-		if err := cp.writeUInt8(typeBuf, uint8(e.Shape.BTypeGetTag())); err != nil {
-			return err
-		}
-
-		name := string(e.Shape.BTypeGetName())
-		if err := cp.writeInt32(typeBuf, cp.AddStringCPEntry(name)); err != nil {
-			return err
-		}
-
-		if err := cp.writeUInt64(typeBuf, e.Shape.BTypeGetFlags()); err != nil {
-			return err
-		}
-
-		if err := cp.writeInt32(buf, int32(typeBuf.Len())); err != nil {
-			return err
-		}
-		_, err := buf.Write(typeBuf.Bytes())
-		return err
+		panic("shape serialization not implemented")
 	default:
 		return fmt.Errorf("unsupported constant pool entry type: %T", entry)
 	}
