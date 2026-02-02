@@ -245,3 +245,10 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 func (fs *FunctionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
 }
+
+func NewFunctionSymbol(name string, signature FunctionSignature, ty semtypes.SemType) FunctionSymbol {
+	return FunctionSymbol{
+		symbolBase: symbolBase{name: name, ty: ty},
+		Signature: signature,
+	}
+}
