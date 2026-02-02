@@ -30,6 +30,7 @@ import (
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/semtypes"
 
 	"github.com/spf13/cobra"
 )
@@ -153,6 +154,10 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Println(prettyPrinter.Print(compilationUnit))
 	}
 	pkg := ast.ToPackage(compilationUnit)
+	// Resolve symbols (imports) before type resolution
+	env := semtypes.GetTypeEnv()
+	importedSymbols := semantics.ResolveImports(env, pkg)
+	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)
 	resolvedTypes := typeResolver.ResolveTypes(pkg)

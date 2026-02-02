@@ -30,6 +30,7 @@ type Symbol interface {
 	Name() string
 	Type() semtypes.SemType
 	Kind() SymbolKind
+	IsPublic() bool
 }
 
 type SymbolKind uint
@@ -89,8 +90,9 @@ type (
 	}
 
 	symbolBase struct {
-		name string
-		ty   semtypes.SemType
+		name     string
+		ty       semtypes.SemType
+		isPublic bool
 	}
 
 	TypeSymbol struct {
@@ -149,7 +151,27 @@ func NewSymbolSpace(packageId PackageID) *SymbolSpace {
 	return &SymbolSpace{pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
+func NewFunctionScope(parent Scope, pkg PackageID) *FunctionScope {
+	return &FunctionScope{
+		blockScopeBase: blockScopeBase{
+			parent: parent,
+			Main:   *NewSymbolSpace(pkg),
+		},
+	}
+}
+
+func NewBlockScope(parent Scope, pkg PackageID) *BlockScope {
+	return &BlockScope{
+		blockScopeBase: blockScopeBase{
+			parent: parent,
+			Main:   *NewSymbolSpace(pkg),
+		},
+	}
+}
+
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
+	// FIXME: this needs to only export public symbols but this means we need to correct indexes in symbol refs how to do that?
+	// -- Or do we need to do that correction
 	return ExportedSymbolSpace{
 		Main:       &ms.Main,
 		Annotation: &ms.Annotation,
@@ -216,6 +238,10 @@ func (ba *symbolBase) Type() semtypes.SemType {
 	return ba.ty
 }
 
+func (ba *symbolBase) IsPublic() bool {
+	return ba.isPublic
+}
+
 func (ref *SymbolRef) Name() string {
 	return ref.symbol.Name()
 }
@@ -225,7 +251,11 @@ func (ref *SymbolRef) Type() semtypes.SemType {
 }
 
 func (ref *SymbolRef) Kind() SymbolKind {
-	return ref.Kind()
+	return ref.symbol.Kind()
+}
+
+func (ref *SymbolRef) IsPublic() bool {
+	return ref.symbol.IsPublic()
 }
 
 func (ts *TypeSymbol) Kind() SymbolKind {
@@ -246,9 +276,23 @@ func (fs *FunctionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
 }
 
-func NewFunctionSymbol(name string, signature FunctionSignature, ty semtypes.SemType) FunctionSymbol {
+func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return FunctionSymbol{
-		symbolBase: symbolBase{name: name, ty: ty},
+		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		Signature: signature,
+	}
+}
+
+func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
+	return ValueSymbol{
+		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		isConst: isConst,
+		isParameter: isParameter,
+	}
+}
+
+func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
+	return TypeSymbol{
+		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 	}
 }

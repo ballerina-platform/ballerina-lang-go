@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
 	"testing"
@@ -62,6 +63,9 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 	pkg := ast.ToPackage(compilationUnit)
+	env := semtypes.GetIsolatedTypeEnv()
+	importedSymbols := ResolveImports(env, pkg)
+	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewIsolatedTypeResolver(cx)
 	typeResolver.ResolveTypes(pkg)
 	validator := &typeResolutionValidator{t: t}

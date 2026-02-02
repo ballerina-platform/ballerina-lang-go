@@ -201,8 +201,8 @@ func Walk(v Visitor, node BLangNode) {
 
 	// Section 2: Type Definitions & Variables
 	case *BLangTypeDefinition:
-		if node.name != nil {
-			Walk(v, node.name)
+		if node.Name != nil {
+			Walk(v, node.Name)
 		}
 		v.VisitTypeData(&node.typeData)
 		for i := range node.annAttachments {

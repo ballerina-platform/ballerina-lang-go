@@ -65,15 +65,20 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 1: Type Resolution
+	// Step 1: Symbol Resolution
+	env := semtypes.GetIsolatedTypeEnv()
+	importedSymbols := ResolveImports(env, pkg)
+	ResolveSymbols(cx, pkg, importedSymbols)
+
+	// Step 2: Type Resolution
 	typeResolver := NewIsolatedTypeResolver(cx)
 	resolvedTypes := typeResolver.ResolveTypes(pkg)
 
-	// Step 2: Semantic Analysis
+	// Step 3: Semantic Analysis
 	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 3: Validate that all expressions have determinedTypes set
+	// Step 4: Validate that all expressions have determinedTypes set
 	validator := &semanticAnalysisValidator{t: t}
 	ast.Walk(validator, pkg)
 
@@ -190,11 +195,16 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 1: Type Resolution
+	// Step 1: Symbol Resolution
+	env := semtypes.GetIsolatedTypeEnv()
+	importedSymbols := ResolveImports(env, pkg)
+	ResolveSymbols(cx, pkg, importedSymbols)
+
+	// Step 2: Type Resolution
 	typeResolver := NewIsolatedTypeResolver(cx)
 	resolvedTypes := typeResolver.ResolveTypes(pkg)
 
-	// Step 2: Semantic Analysis - this should panic for error cases
+	// Step 3: Semantic Analysis - this should panic for error cases
 	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
 	semanticAnalyzer.Analyze(pkg)
 

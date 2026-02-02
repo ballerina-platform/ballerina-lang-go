@@ -454,12 +454,12 @@ type (
 
 	BLangTypeDefinition struct {
 		BLangNodeBase
-		name                            *BLangIdentifier
+		Name                            *BLangIdentifier
 		symbol                          model.Symbol
 		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
-		flagSet                         common.UnorderedSet[model.Flag]
+		FlagSet                         common.UnorderedSet[model.Flag]
 		precedence                      int
 		cycleDepth                      int
 		isBuiltinTypeDef                bool
@@ -1512,19 +1512,19 @@ func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
 func NewBLangTypeDefinition() *BLangTypeDefinition {
 	this := &BLangTypeDefinition{}
 	this.annAttachments = []BLangAnnotationAttachment{}
-	this.flagSet = common.UnorderedSet[model.Flag]{}
+	this.FlagSet = common.UnorderedSet[model.Flag]{}
 	this.cycleDepth = -1
 	this.hasCyclicReference = false
 	return this
 }
 
 func (this *BLangTypeDefinition) GetName() model.IdentifierNode {
-	return this.name
+	return this.Name
 }
 
 func (this *BLangTypeDefinition) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.name = id
+		this.Name = id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
@@ -1539,11 +1539,11 @@ func (this *BLangTypeDefinition) SetTypeData(typeData model.TypeData) {
 }
 
 func (this *BLangTypeDefinition) GetFlags() common.Set[model.Flag] {
-	return &this.flagSet
+	return &this.FlagSet
 }
 
 func (this *BLangTypeDefinition) AddFlag(flag model.Flag) {
-	this.flagSet.Add(flag)
+	this.FlagSet.Add(flag)
 }
 
 func (this *BLangTypeDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {

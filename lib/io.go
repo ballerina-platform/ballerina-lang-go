@@ -33,7 +33,7 @@ func GetIoSymbols(env semtypes.Env) model.ExportedSymbolSpace {
 		RestParamType: &semtypes.ANY,
 		ReturnType:    &semtypes.NIL,
 	}
-	printLnSymbol := model.NewFunctionSymbol("println", printLnSignature, functionSignatureToSemType(env, &printLnSignature))
+	printLnSymbol := model.NewFunctionSymbol("println", printLnSignature, true)
 	space.AddSymbol("println", &printLnSymbol)
 	return model.ExportedSymbolSpace{
 		Main: space,

@@ -93,6 +93,7 @@ type (
 		BLangTypeBase
 		PkgAlias BLangIdentifier
 		TypeName BLangIdentifier
+		symbol   model.Symbol
 	}
 
 	BStructureTypeBase struct {
@@ -129,6 +130,7 @@ var (
 	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
+	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 )
 
 var (
@@ -215,6 +217,14 @@ func (this *BLangUserDefinedType) GetKind() model.NodeKind {
 
 func (this *BLangUserDefinedType) GetTypeKind() model.TypeKind {
 	panic("not implemented")
+}
+
+func (this *BLangUserDefinedType) Symbol() model.Symbol {
+	return this.symbol
+}
+
+func (this *BLangUserDefinedType) SetSymbol(symbol model.Symbol) {
+	this.symbol = symbol
 }
 
 func (this *BField) GetName() model.Name {

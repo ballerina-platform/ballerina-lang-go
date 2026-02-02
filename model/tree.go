@@ -597,6 +597,7 @@ type ExprFunctionBodyNode interface {
 // Variable/Constant Interfaces
 
 type VariableNode interface {
+	NodeWithSymbol
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
