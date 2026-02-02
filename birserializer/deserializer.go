@@ -280,7 +280,7 @@ func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
 			return err
 		}
 
-		t := ast.NewBType(model.TypeTags(tag), nil, name, uint64(flags))
+		t := ast.NewBType(model.TypeTags(tag), name, uint64(flags))
 
 		br.cp[i] = t
 	default:
