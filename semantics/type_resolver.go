@@ -114,7 +114,7 @@ func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return t
 	}
-	ty := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
+	ty := t.resolveBType(typeData.TypeDescriptor.(ast.BType), 0)
 	typeData.Type = ty
 
 	// Update symbol type if the type descriptor has a symbol
@@ -146,10 +146,35 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		t.resolveNumericLiteral(n)
 		return nil
 	case *ast.BLangTypeDefinition:
-		t.ctx.Unimplemented("type definitions not supported", n.GetPosition())
+		t.resolveTypeDefinition(n, 0)
 		return nil
 	default:
 		return t
+	}
+}
+
+func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, depth int) semtypes.SemType {
+	if defn.GetDeterminedType() != nil {
+		return defn.GetDeterminedType()
+	}
+	if depth == defn.CycleDepth {
+		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
+	}
+	defn.CycleDepth = depth
+	semType := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	if defn.GetDeterminedType() == nil {
+		defn.SetDeterminedType(semType)
+		updateSymbolType(t.ctx, defn, semType)
+		defn.CycleDepth = -1
+		typeData := defn.GetTypeData()
+		typeData.Type = semType
+		defn.SetTypeData(typeData)
+		return semType
+	} else {
+		// This can happen with recursion
+		// We use the first definition we produced
+		// and throw away the others
+		return defn.GetDeterminedType()
 	}
 }
 
@@ -300,7 +325,7 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	}
 
 	// Resolve the type descriptor and get the semtype
-	semType := t.resolveBType(typeData.TypeDescriptor.(ast.BType))
+	semType := t.resolveBType(typeData.TypeDescriptor.(ast.BType), 0)
 
 	// Set on TypeData
 	typeData.Type = semType
@@ -313,8 +338,7 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	updateSymbolType(t.ctx, node, semType)
 }
 
-// TODO: do we need to track depth (similar to nBallerina)?
-func (tr *TypeResolver) resolveBType(btype ast.BType) semtypes.SemType {
+func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemType {
 	switch ty := btype.(type) {
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
@@ -342,7 +366,7 @@ func (tr *TypeResolver) resolveBType(btype ast.BType) semtypes.SemType {
 			ty.Definition = &d
 			// Resolve element type and update its TypeData
 			elemTypeData := ty.Elemtype
-			memberTy := tr.resolveBType(elemTypeData.TypeDescriptor.(ast.BType))
+			memberTy := tr.resolveBType(elemTypeData.TypeDescriptor.(ast.BType), depth+1)
 			elemTypeData.Type = memberTy
 			ty.Elemtype = elemTypeData
 

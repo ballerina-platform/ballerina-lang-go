@@ -460,7 +460,7 @@ type (
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
 		FlagSet                         common.UnorderedSet[model.Flag]
 		precedence                      int
-		cycleDepth                      int
+		CycleDepth                      int
 		isBuiltinTypeDef                bool
 		hasCyclicReference              bool
 		referencedFieldsDefined         bool
@@ -1501,7 +1501,7 @@ func NewBLangTypeDefinition() *BLangTypeDefinition {
 	this := &BLangTypeDefinition{}
 	this.annAttachments = []BLangAnnotationAttachment{}
 	this.FlagSet = common.UnorderedSet[model.Flag]{}
-	this.cycleDepth = -1
+	this.CycleDepth = -1
 	this.hasCyclicReference = false
 	return this
 }
