@@ -5,9 +5,11 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable x))
+        (variable x (type
+          (value-type int))))
       (var-def
-        (variable y))
+        (variable y (type
+          (value-type int))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr <

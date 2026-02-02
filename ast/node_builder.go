@@ -1473,21 +1473,25 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 		}
 		variable.SetInitialExpression(expr)
 
-		// Line 3037: Set variable
-		bLVarDef.SetVariable(variable)
-
 		// Line 3038-3040: Handle final flag
+		// NOTE: Must be set BEFORE SetVariable since SetVariable copies by value
 		if finalKeyword != nil {
 			variable.GetFlags().Add(model.Flag_FINAL)
 		}
 
 		// Line 3042-3046: Handle type descriptor
+		// NOTE: Must be set BEFORE SetVariable since SetVariable copies by value
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
-		if isDeclaredWithVar {
+		if !isDeclaredWithVar {
+			// Set the TypeNode when there's an explicit type (not var)
 			variable.SetTypeNode(n.createTypeNode(typeDesc))
 		}
+
+		// Line 3037: Set variable
+		// NOTE: SetVariable copies the variable by value, so all properties must be set before this
+		bLVarDef.SetVariable(variable)
 
 		// Line 3048: Return variable definition
 		return bLVarDef

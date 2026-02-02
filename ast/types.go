@@ -310,6 +310,11 @@ func (this *BTypeImpl) bTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
+// BTypeGetTag returns the type tag (exported version of bTypeGetTag)
+func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
+	return this.tag
+}
+
 func (this *BTypeImpl) bTypesetTag(tag model.TypeTags) {
 	this.tag = tag
 }

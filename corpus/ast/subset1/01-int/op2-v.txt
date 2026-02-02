@@ -5,19 +5,26 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable i6))
+        (variable i6 (type
+          (value-type int))))
       (var-def
-        (variable i5))
+        (variable i5 (type
+          (value-type int))))
       (var-def
-        (variable i3))
+        (variable i3 (type
+          (value-type int))))
       (var-def
-        (variable i2))
+        (variable i2 (type
+          (value-type int))))
       (var-def
-        (variable i1))
+        (variable i1 (type
+          (value-type int))))
       (var-def
-        (variable t))
+        (variable t (type
+          (value-type boolean))))
       (var-def
-        (variable f))
+        (variable f (type
+          (value-type boolean))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==

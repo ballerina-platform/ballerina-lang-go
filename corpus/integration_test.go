@@ -21,7 +21,11 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/common"
+	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semantic"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,7 +56,15 @@ var (
 	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 
-	skipTestsMap = makeSkipTestsMap([]string{})
+	// Skip tests that require unimplemented AST transformations:
+	// - TransformTypeDefinition
+	// - TransformUnionTypeDescriptor
+	// - TransformErrorConstructorExpression
+	skipTestsMap = makeSkipTestsMap([]string{
+		"subset1/01-function/assign10-e.bal",
+		"subset1/01-function/assign11-e.bal",
+		"subset1/01-function/call11-e.bal",
+	})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -118,7 +130,13 @@ func TestIntegrationSuite(t *testing.T) {
 			}()
 
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(balFile)
+
+			var result testResult
+			if isErrorTestFile(balFile) {
+				result = runErrorTest(balFile)
+			} else {
+				result = runTest(balFile)
+			}
 
 			resultsMu.Lock()
 			defer resultsMu.Unlock()
@@ -189,6 +207,179 @@ func runTest(balFile string) testResult {
 
 	outputStr := printlnStr
 	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+}
+
+// runErrorTest runs a test for error files (-e.bal).
+// It parses expected errors from @error annotations and compares them with actual diagnostics.
+func runErrorTest(balFile string) testResult {
+	content := readFileContent(balFile)
+	expectedErrors := ParseExpectedErrors(content)
+
+	cx := context.NewCompilerContext()
+	syntaxTree, err := parser.GetSyntaxTree(nil, balFile)
+	if err != nil {
+		return testResult{
+			success:  false,
+			expected: formatExpectedErrors(expectedErrors),
+			actual:   fmt.Sprintf("parse error: %v", err),
+		}
+	}
+
+	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+	pkg := ast.ToPackage(compilationUnit)
+
+	// Collect syntax tree diagnostics (parser/lexer errors)
+	collectSyntaxTreeDiagnostics(syntaxTree, pkg)
+
+	// Run type checker to detect semantic errors
+	typeChecker := semantic.NewTypeChecker(pkg, cx)
+	typeChecker.Check()
+
+	// Get diagnostics from package (includes both syntax and semantic errors)
+	pkgDiagnostics := pkg.GetDiagnostics()
+	actualErrors := ExtractActualErrors(pkgDiagnostics)
+
+	// Match expected vs actual errors
+	matchResult := MatchErrors(expectedErrors, actualErrors)
+
+	// Check if successful - either by line matching or count matching
+	// (positions are not currently set in the AST, so we fall back to count matching)
+	isSuccess := IsErrorTestSuccessful(matchResult) && IsErrorCountMatch(expectedErrors, actualErrors)
+
+	if isSuccess {
+		return testResult{
+			success:  true,
+			expected: formatExpectedErrors(expectedErrors),
+			actual:   formatActualErrors(actualErrors),
+		}
+	}
+
+	return testResult{
+		success:  false,
+		expected: formatExpectedErrors(expectedErrors),
+		actual:   formatActualErrorsWithResult(actualErrors, matchResult, expectedErrors),
+	}
+}
+
+// collectSyntaxTreeDiagnostics collects parser/lexer diagnostics from the syntax tree.
+func collectSyntaxTreeDiagnostics(syntaxTree *tree.SyntaxTree, pkg *ast.BLangPackage) {
+	if syntaxTree == nil || !syntaxTree.HasDiagnostics() {
+		return
+	}
+
+	// Use defer/recover to handle any panics during diagnostic iteration
+	defer func() {
+		if r := recover(); r != nil {
+			// If we can't iterate diagnostics, just add a generic syntax error
+			// Use the standard syntax error code from parser/common
+			errorCode := common.ERROR_SYNTAX_ERROR
+			code := errorCode.DiagnosticId()
+			diagInfo := diagnostics.NewDiagnosticInfo(&code, errorCode.MessageKey(), diagnostics.Error)
+			// Note: nil location will result in Line() returning 0 for count-based matching
+			pkg.AddDiagnostic(diagnostics.CreateDiagnostic(diagInfo, nil))
+		}
+	}()
+
+	for diag := range syntaxTree.Diagnostics() {
+		if diag == nil {
+			continue
+		}
+
+		// Convert tree.Diagnostic to tools/diagnostics.Diagnostic
+		info := diag.DiagnosticInfo()
+		code := info.Code()
+		diagInfo := diagnostics.NewDiagnosticInfo(
+			&code,
+			info.MessageFormat(),
+			diagnostics.DiagnosticSeverity(info.Severity()),
+		)
+
+		// Create location from the syntax tree diagnostic
+		var loc diagnostics.Location
+		if diag.Location() != nil {
+			lineRange := diag.Location().LineRange()
+			loc = diagnostics.NewBLangDiagnosticLocation(
+				syntaxTree.FilePath(),
+				lineRange.StartLine().Line(),
+				lineRange.EndLine().Line(),
+				lineRange.StartLine().Offset(),
+				lineRange.EndLine().Offset(),
+				0, 0,
+			)
+		}
+
+		// Create diagnostic and add to package
+		newDiag := diagnostics.CreateDiagnostic(diagInfo, loc)
+		pkg.AddDiagnostic(newDiag)
+	}
+}
+
+// formatExpectedErrors formats expected errors for display.
+func formatExpectedErrors(errors []ExpectedError) string {
+	if len(errors) == 0 {
+		return "no errors expected"
+	}
+	var lines []string
+	for _, e := range errors {
+		lines = append(lines, fmt.Sprintf("error at line %d", e.Line))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// formatActualErrors formats actual errors for display.
+func formatActualErrors(errors []ActualError) string {
+	if len(errors) == 0 {
+		return "no errors"
+	}
+	var lines []string
+	for _, e := range errors {
+		lines = append(lines, fmt.Sprintf("line %d: %s", e.Line, e.Message))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// formatActualErrorsWithResult formats actual errors with match result for display.
+func formatActualErrorsWithResult(errors []ActualError, result ErrorMatchResult, expected []ExpectedError) string {
+	var sb strings.Builder
+
+	// Show count mismatch if applicable
+	if len(expected) != len(errors) {
+		sb.WriteString(fmt.Sprintf("Error count mismatch: expected %d, got %d\n", len(expected), len(errors)))
+	}
+
+	if len(result.Missing) > 0 {
+		sb.WriteString("MISSING errors at lines: ")
+		for i, line := range result.Missing {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%d", line))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(result.Unexpected) > 0 {
+		sb.WriteString("UNEXPECTED errors:\n")
+		for _, line := range result.Unexpected {
+			for _, e := range errors {
+				if e.Line == line {
+					sb.WriteString(fmt.Sprintf("  line %d: %s\n", e.Line, e.Message))
+					break
+				}
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		sb.WriteString("Actual errors:\n")
+		for _, e := range errors {
+			sb.WriteString(fmt.Sprintf("  %s\n", e.Message))
+		}
+	} else {
+		sb.WriteString("no errors detected")
+	}
+
+	return sb.String()
 }
 
 func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
@@ -430,10 +621,6 @@ func findBalFiles(dir string) []string {
 }
 
 func isFileSkipped(filePath string) (bool, skipReason) {
-	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, errorFileSuffix) {
-		return true, skipReasonErrorFile
-	}
 	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
 		relPath = filepath.ToSlash(relPath)
 		if skipTestsMap[relPath] {
@@ -441,6 +628,11 @@ func isFileSkipped(filePath string) (bool, skipReason) {
 		}
 	}
 	return false, 0
+}
+
+// isErrorTestFile returns true if the file is an error test file (-e.bal).
+func isErrorTestFile(filePath string) bool {
+	return strings.HasSuffix(filepath.Base(filePath), errorFileSuffix)
 }
 
 func makeSkipTestsMap(paths []string) map[string]bool {

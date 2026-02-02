@@ -126,10 +126,31 @@ func (sd *SyntaxDiagnostic) DiagnosticInfo() DiagnosticInfo {
 	return *sd.diagnosticInfo
 }
 
+func (sd *SyntaxDiagnostic) Message() string {
+	info := sd.DiagnosticInfo()
+	return info.MessageFormat()
+}
+
+func (sd *SyntaxDiagnostic) Properties() []DiagnosticProperty[any] {
+	return nil
+}
+
 type DiagnosticInfo struct {
 	code          string
 	messageFormat string
 	severity      DiagnosticSeverity
+}
+
+func (di DiagnosticInfo) Code() string {
+	return di.code
+}
+
+func (di DiagnosticInfo) MessageFormat() string {
+	return di.messageFormat
+}
+
+func (di DiagnosticInfo) Severity() DiagnosticSeverity {
+	return di.severity
 }
 
 type DiagnosticSeverity uint8
@@ -264,11 +285,21 @@ func (n *NonTerminalNodeBase) Diagnostics() iter.Seq[Diagnostic] {
 }
 
 func createSyntaxDiagnostic(diagnostic STNodeDiagnostic) Diagnostic {
-	panic("not implemented")
+	return &SyntaxDiagnostic{
+		nodeDiagnostic: diagnostic,
+	}
 }
 
 func (n *NonTerminalNodeBase) Children() []Node {
-	panic("Children() should be implemented by child types")
+	count := n.bucketCount()
+	children := make([]Node, 0, count)
+	for i := 0; i < count; i++ {
+		child := n.ChildInBucket(i)
+		if child != nil {
+			children = append(children, child)
+		}
+	}
+	return children
 }
 
 func (n *NodeBase) HasDiagnostics() bool {
@@ -427,10 +458,35 @@ func (t *TokenBase) Text() string {
 	return stToken.Text()
 }
 
+func (t *TokenBase) Diagnostics() iter.Seq[Diagnostic] {
+	return func(yield func(Diagnostic) bool) {
+		if !t.internalNode.HasDiagnostics() {
+			return
+		}
+		stToken, ok := t.internalNode.(STToken)
+		if !ok {
+			return
+		}
+		for _, diagnostic := range stToken.Diagnostics() {
+			if !yield(createSyntaxDiagnostic(diagnostic)) {
+				return
+			}
+		}
+	}
+}
+
 type LineRange struct {
 	// In java version there is fileNmae as well I think we can get this from textDocument
 	startLine LinePosition
 	endLine   LinePosition
+}
+
+func (lr LineRange) StartLine() LinePosition {
+	return lr.startLine
+}
+
+func (lr LineRange) EndLine() LinePosition {
+	return lr.endLine
 }
 
 // TODO: int to match with java, i think a pair of u16 is enough
@@ -438,6 +494,15 @@ type LinePosition struct {
 	line   int
 	column int
 }
+
+func (lp LinePosition) Line() int {
+	return lp.line
+}
+
+func (lp LinePosition) Offset() int {
+	return lp.column
+}
+
 type TextRange struct {
 	startOffset int
 	endOffset   int
