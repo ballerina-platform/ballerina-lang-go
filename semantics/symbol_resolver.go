@@ -57,9 +57,9 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		importedSymbols = make(map[string]model.ExportedSymbolSpace)
 	}
 	scope := &model.ModuleScope{
-		Main:       *model.NewSymbolSpace(pkgID),
+		Main:       ctx.NewSymbolSpace(pkgID),
 		Prefix:     importedSymbols,
-		Annotation: *model.NewSymbolSpace(pkgID),
+		Annotation: ctx.NewSymbolSpace(pkgID),
 	}
 	return &moduleSymbolResolver{
 		ctx:   ctx,
@@ -71,7 +71,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 func newFunctionResolver(parent symbolResolver, node ast.BLangNode) *blockSymbolResolver {
 	pkgID := parent.GetPkgID()
 	parentScope := parent.GetScope()
-	scope := model.NewFunctionScope(parentScope, pkgID)
+	scope := parent.GetCtx().NewFunctionScope(parentScope, pkgID)
 	return &blockSymbolResolver{
 		parent: parent,
 		scope:  scope,
@@ -82,7 +82,7 @@ func newFunctionResolver(parent symbolResolver, node ast.BLangNode) *blockSymbol
 func newBlockSymbolResolverWithBlockScope(parent symbolResolver, node ast.BLangNode) *blockSymbolResolver {
 	pkgID := parent.GetPkgID()
 	parentScope := parent.GetScope()
-	scope := model.NewBlockScope(parentScope, pkgID)
+	scope := parent.GetCtx().NewBlockScope(parentScope, pkgID)
 	return &blockSymbolResolver{
 		parent: parent,
 		scope:  scope,
@@ -193,7 +193,7 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 }
 
 // This is a tempary hack since we can only have one import io
-func ResolveImports(env semtypes.Env, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
@@ -205,7 +205,7 @@ func ResolveImports(env semtypes.Env, pkg *ast.BLangPackage) map[string]model.Ex
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetIoSymbols(env)
+				result[key] = lib.GetIoSymbols(ctx, env)
 			}
 		}
 	}
@@ -394,7 +394,6 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	default:
 		return visitInnerSymbolResolver(ms, n)
 	}
-	return ms
 }
 
 func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {

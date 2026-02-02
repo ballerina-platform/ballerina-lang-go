@@ -64,7 +64,7 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(env, pkg)
+	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewIsolatedTypeResolver(cx)
 	typeResolver.ResolveTypes(pkg)

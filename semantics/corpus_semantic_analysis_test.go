@@ -67,7 +67,7 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 
 	// Step 1: Symbol Resolution
 	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(env, pkg)
+	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
@@ -197,7 +197,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 
 	// Step 1: Symbol Resolution
 	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(env, pkg)
+	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution

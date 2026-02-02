@@ -156,7 +156,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	pkg := ast.ToPackage(compilationUnit)
 	// Resolve symbols (imports) before type resolution
 	env := semtypes.GetTypeEnv()
-	importedSymbols := semantics.ResolveImports(env, pkg)
+	importedSymbols := semantics.ResolveImports(cx, env, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)

@@ -64,7 +64,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(env, pkg)
+	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}

@@ -265,7 +265,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 4: Resolve symbols
 	env := semtypes.GetTypeEnv()
-	importedSymbols := semantics.ResolveImports(env, pkg)
+	importedSymbols := semantics.ResolveImports(cx, env, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types

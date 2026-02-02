@@ -17,18 +17,19 @@
 package lib
 
 import (
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
 
-func GetIoSymbols(env semtypes.Env) model.ExportedSymbolSpace {
+func GetIoSymbols(ctx *context.CompilerContext, env semtypes.Env) model.ExportedSymbolSpace {
 	pkg := model.NewPackageID(
 		model.DefaultPackageIDInterner,
 		model.Name("ballerina"),
 		[]model.Name{model.Name("io")},
 		model.Name("0.0.1"),
 	)
-	space := model.NewSymbolSpace(*pkg)
+	space := ctx.NewSymbolSpace(*pkg)
 	printLnSignature := model.FunctionSignature{
 		RestParamType: &semtypes.ANY,
 		ReturnType:    &semtypes.NIL,
