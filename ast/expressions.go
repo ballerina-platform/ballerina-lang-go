@@ -78,7 +78,7 @@ type (
 	BLangExpressionBase struct {
 		BLangNodeBase
 		// ImpConversionExpr *BLangTypeConversionExpr
-		ExpectedType      BType
+		ExpectedType BType
 	}
 
 	NarrowedTypes struct {

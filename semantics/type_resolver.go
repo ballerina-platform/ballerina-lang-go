@@ -61,7 +61,7 @@ func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 // After this (for the given package) all the semtypes are known. Semantic analysis will validate and propagate these
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
-func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage)  {
+func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 	ast.Walk(t, pkg)
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)

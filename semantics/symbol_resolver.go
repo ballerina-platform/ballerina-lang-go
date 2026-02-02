@@ -37,15 +37,15 @@ type symbolResolver interface {
 
 type (
 	moduleSymbolResolver struct {
-		ctx *context.CompilerContext
+		ctx   *context.CompilerContext
 		scope *model.ModuleScope
 		pkgID model.PackageID
 	}
 
 	blockSymbolResolver struct {
 		parent symbolResolver
-		scope model.Scope
-		node ast.BLangNode
+		scope  model.Scope
+		node   ast.BLangNode
 	}
 )
 

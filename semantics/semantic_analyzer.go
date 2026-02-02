@@ -51,8 +51,8 @@ type (
 	}
 	SemanticAnalyzer struct {
 		analyzerBase
-		compilerCtx   *context.CompilerContext
-		typeCtx       semtypes.Context
+		compilerCtx *context.CompilerContext
+		typeCtx     semtypes.Context
 		// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
 		pkg          *ast.BLangPackage
 		importedPkgs map[string]*ast.BLangImportPackage
@@ -223,7 +223,6 @@ func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor 
 	return ca
 }
 
-
 func (sa *SemanticAnalyzer) ctx() *context.CompilerContext {
 	return sa.compilerCtx
 }
@@ -236,7 +235,6 @@ func (sa *SemanticAnalyzer) importedPackage(alias string) *ast.BLangImportPackag
 	return sa.importedPkgs[alias]
 }
 
-
 func (la *loopAnalyzer) ctx() *context.CompilerContext {
 	return la.parent.ctx()
 }
@@ -244,8 +242,6 @@ func (la *loopAnalyzer) ctx() *context.CompilerContext {
 func (la *loopAnalyzer) tyCtx() semtypes.Context {
 	return la.parent.tyCtx()
 }
-
-
 
 func (sa *SemanticAnalyzer) unimplementedErr(message string) {
 	sa.compilerCtx.Unimplemented(message, nil)
@@ -314,9 +310,9 @@ func (la *loopAnalyzer) internalErr(message string) {
 // When we support multiple packages we need to resolve types of all of them before semantic analysis
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
-		compilerCtx:   ctx,
-		typeCtx:       semtypes.ContextFrom(semtypes.GetTypeEnv()),
-		importedPkgs:  make(map[string]*ast.BLangImportPackage),
+		compilerCtx:  ctx,
+		typeCtx:      semtypes.ContextFrom(semtypes.GetTypeEnv()),
+		importedPkgs: make(map[string]*ast.BLangImportPackage),
 	}
 }
 

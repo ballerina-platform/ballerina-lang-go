@@ -337,29 +337,29 @@ type (
 
 	BLangPackage struct {
 		BLangNodeBase
-		CompUnits                  []BLangCompilationUnit
-		Imports                    []BLangImportPackage
-		XmlnsList                  []BLangXMLNS
-		Constants                  []BLangConstant
-		GlobalVars                 []BLangSimpleVariable
-		Services                   []BLangService
-		Functions                  []BLangFunction
-		TypeDefinitions            []BLangTypeDefinition
-		Annotations                []BLangAnnotation
-		InitFunction               *BLangFunction
-		StartFunction              *BLangFunction
-		StopFunction               *BLangFunction
-		TopLevelNodes              []model.TopLevelNode
-		TestablePkgs               []*BLangTestablePackage
-		ClassDefinitions           []BLangClassDefinition
-		FlagSet                    common.UnorderedSet[model.Flag]
-		CompletedPhases            common.UnorderedSet[CompilerPhase]
-		LambdaFunctions            []BLangLambdaFunction
-		PackageID                  *model.PackageID
-		diagnostics                []diagnostics.Diagnostic
-		ModuleContextDataHolder    *ModuleContextDataHolder
-		errorCount                 int
-		warnCount                  int
+		CompUnits               []BLangCompilationUnit
+		Imports                 []BLangImportPackage
+		XmlnsList               []BLangXMLNS
+		Constants               []BLangConstant
+		GlobalVars              []BLangSimpleVariable
+		Services                []BLangService
+		Functions               []BLangFunction
+		TypeDefinitions         []BLangTypeDefinition
+		Annotations             []BLangAnnotation
+		InitFunction            *BLangFunction
+		StartFunction           *BLangFunction
+		StopFunction            *BLangFunction
+		TopLevelNodes           []model.TopLevelNode
+		TestablePkgs            []*BLangTestablePackage
+		ClassDefinitions        []BLangClassDefinition
+		FlagSet                 common.UnorderedSet[model.Flag]
+		CompletedPhases         common.UnorderedSet[CompilerPhase]
+		LambdaFunctions         []BLangLambdaFunction
+		PackageID               *model.PackageID
+		diagnostics             []diagnostics.Diagnostic
+		ModuleContextDataHolder *ModuleContextDataHolder
+		errorCount              int
+		warnCount               int
 	}
 	BLangTestablePackage struct {
 		BLangPackage
@@ -441,14 +441,14 @@ type (
 
 	BLangFunction struct {
 		BLangInvokableNodeBase
-		Receiver           *BLangSimpleVariable
-		ClosureVarSymbols  common.OrderedSet[ClosureVarSymbol]
-		SendsToThis        common.OrderedSet[Channel]
-		AnonForkName       string
-		MapSymbolUpdated   bool
-		AttachedFunction   bool
-		ObjInitFunction    bool
-		InterfaceFunction  bool
+		Receiver          *BLangSimpleVariable
+		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
+		SendsToThis       common.OrderedSet[Channel]
+		AnonForkName      string
+		MapSymbolUpdated  bool
+		AttachedFunction  bool
+		ObjInitFunction   bool
+		InterfaceFunction bool
 	}
 
 	BLangTypeDefinition struct {
