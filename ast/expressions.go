@@ -159,7 +159,7 @@ type (
 	}
 	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
-		Symbol model.Symbol
+		symbol model.Symbol
 	}
 
 	BLangSimpleVarRef struct {
@@ -227,7 +227,7 @@ type (
 		BLangExpressionBase
 		PkgAlias                  *BLangIdentifier
 		Name                      *BLangIdentifier
-		Symbol                    model.Symbol
+		symbol                    model.Symbol
 		Expr                      BLangExpression
 		ArgExprs                  []BLangExpression
 		AnnAttachments            []BLangAnnotationAttachment
@@ -330,6 +330,32 @@ var (
 	_ BLangNode = &BLangIndexBasedAccess{}
 	_ BLangNode = &BLangListConstructorExpr{}
 )
+
+var (
+	// Assert that concrete types with symbols implement BNodeWithSymbol
+	_ BNodeWithSymbol = &BLangSimpleVarRef{}
+	_ BNodeWithSymbol = &BLangLocalVarRef{}
+	_ BNodeWithSymbol = &BLangConstRef{}
+	_ BNodeWithSymbol = &BLangInvocation{}
+)
+
+// Symbol methods for BNodeWithSymbol interface
+
+func (n *BLangVariableReferenceBase) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangVariableReferenceBase) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangInvocation) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangInvocation) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
 
 func (this *BLangGroupExpr) GetKind() model.NodeKind {
 	// migrated from BLangGroupExpr.java:57:5

@@ -190,6 +190,11 @@ func UnMask(mask Flags) common.Set[model.Flag] {
 	return &flagSet
 }
 
+type BNodeWithSymbol interface {
+	model.NodeWithSymbol
+	SetSymbol(symbol model.Symbol)
+}
+
 type SourceKind = model.SourceKind
 
 type CompilerPhase uint8
@@ -269,7 +274,7 @@ type (
 		Value         string
 		OriginalValue string
 		isLiteral     bool
-		Symbol        model.Symbol
+		symbol        model.Symbol
 	}
 
 	BLangImportPackage struct {
@@ -284,7 +289,7 @@ type (
 	BLangClassDefinition struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		Symbol                          model.Symbol
+		symbol                          model.Symbol
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
@@ -308,7 +313,7 @@ type (
 
 	BLangService struct {
 		BLangNodeBase
-		Symbol                          model.Symbol
+		symbol                          model.Symbol
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
 		ServiceClass                    *BLangClassDefinition
@@ -401,7 +406,7 @@ type (
 		Expr                            model.ExpressionNode
 		FlagSet                         common.Set[model.Flag]
 		IsDeclaredWithVar               bool
-		Symbol                          model.Symbol
+		symbol                          model.Symbol
 	}
 
 	BLangConstant struct {
@@ -422,7 +427,7 @@ type (
 	BLangInvokableNodeBase struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		Symbol                          model.Symbol
+		symbol                          model.Symbol
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
@@ -450,7 +455,7 @@ type (
 	BLangTypeDefinition struct {
 		BLangNodeBase
 		name                            *BLangIdentifier
-		Symbol                          model.Symbol
+		symbol                          model.Symbol
 		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
@@ -488,6 +493,56 @@ func (this *BLangNodeBase) GetPosition() Location {
 
 func (this *BLangNodeBase) SetPosition(pos Location) {
 	this.pos = pos
+}
+
+// Symbol methods for BNodeWithSymbol interface
+
+func (n *BLangIdentifier) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangIdentifier) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangClassDefinition) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangClassDefinition) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangService) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangService) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangVariableBase) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangVariableBase) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangInvokableNodeBase) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangInvokableNodeBase) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
+}
+
+func (n *BLangTypeDefinition) Symbol() model.Symbol {
+	return n.symbol
+}
+
+func (n *BLangTypeDefinition) SetSymbol(symbol model.Symbol) {
+	n.symbol = symbol
 }
 
 var (
@@ -531,6 +586,17 @@ var (
 	_ BLangNode = &BLangSimpleVariable{}
 	_ BLangNode = &BLangFunction{}
 	_ BLangNode = &BLangTypeDefinition{}
+)
+
+var (
+	// Assert that concrete types with symbols implement BNodeWithSymbol
+	_ BNodeWithSymbol = &BLangIdentifier{}
+	_ BNodeWithSymbol = &BLangClassDefinition{}
+	_ BNodeWithSymbol = &BLangService{}
+	_ BNodeWithSymbol = &BLangConstant{}
+	_ BNodeWithSymbol = &BLangSimpleVariable{}
+	_ BNodeWithSymbol = &BLangFunction{}
+	_ BNodeWithSymbol = &BLangTypeDefinition{}
 )
 
 func (this *BLangAnnotationAttachment) GetKind() model.NodeKind {

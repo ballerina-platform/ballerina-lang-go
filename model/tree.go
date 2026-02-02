@@ -516,6 +516,11 @@ type Node interface {
 	GetDeterminedType() semtypes.SemType
 }
 
+type NodeWithSymbol interface {
+	Node
+	Symbol() Symbol
+}
+
 // Top-Level/Structure Interfaces
 
 type TopLevelNode = Node
