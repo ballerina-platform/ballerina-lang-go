@@ -27,7 +27,6 @@ import (
 // ReadExpectedFile reads the expected output file and returns its contents
 func ReadExpectedFile(t *testing.T, expectedPath string) string {
 	t.Helper()
-
 	data, err := os.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read expected file %s: %v", expectedPath, err)
@@ -41,35 +40,22 @@ func ReadExpectedFile(t *testing.T, expectedPath string) string {
 // Optionally accepts a normalization function to apply to existing content before comparison.
 func UpdateIfNeeded(t *testing.T, expectedPath, actual string, normalizeExisting ...func(string) string) bool {
 	t.Helper()
-
-	// Read existing file if it exists
 	existingContent, err := os.ReadFile(expectedPath)
 	fileExists := err == nil
-
 	existing := string(existingContent)
-
-	// Apply normalization to existing content before comparison if provided
-	// (actual is assumed to already be in the desired format)
 	if len(normalizeExisting) > 0 && normalizeExisting[0] != nil && fileExists {
 		existing = normalizeExisting[0](existing)
 	}
-
-	// If file exists and content matches (after normalization), no update needed
 	if fileExists && existing == actual {
 		return false
 	}
-
-	// Create parent directory if it doesn't exist
 	dir := filepath.Dir(expectedPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatalf("Failed to create directory %s: %v", dir, err)
 	}
-
-	// Write actual output to expected file
 	if err := os.WriteFile(expectedPath, []byte(actual), 0644); err != nil {
 		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
 	}
-
 	t.Logf("Updated expected file: %s", expectedPath)
 	return true
 }

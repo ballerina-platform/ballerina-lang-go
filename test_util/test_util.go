@@ -69,25 +69,16 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 		outputBaseDir = "ast"
 		outputExt = ".txt"
 		subsets = []string{"subset1"}
-
 	case Parser:
 		outputBaseDir = "parser"
 		outputExt = ".json"
-		// Parser processes entire corpus tree, no subset restriction
-
 	case BIR:
 		outputBaseDir = "bir"
 		outputExt = ".txt"
 		subsets = []string{"subset1"}
 	}
-
-	// Resolve input and output directories
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)
-
-	// Discover files
 	files := discoverFiles(t, resolvedInputDir, subsets, filterFunc)
-
-	// Create test pairs with expected paths
 	testPairs := make([]TestCase, 0, len(files))
 	for _, inputPath := range files {
 		expectedPath := computeExpectedPath(inputPath, resolvedInputDir, resolvedOutputDir, outputExt)
@@ -105,7 +96,6 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 // resolveDir resolves the input and output directories
 // It tries ../corpus/<inputBaseDir> first, then ./corpus/<inputBaseDir>
 func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, string) {
-	// Try ../corpus first (when running from package dir)
 	inputDir := filepath.Join("..", "corpus", inputBaseDir)
 	if _, err := os.Stat(inputDir); err == nil {
 		outputDir := filepath.Join("..", "corpus", outputBaseDir)
@@ -113,8 +103,6 @@ func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, strin
 		absOutput, _ := filepath.Abs(outputDir)
 		return absInput, absOutput
 	}
-
-	// Fall back to ./corpus (when running from repo root)
 	inputDir = filepath.Join(".", "corpus", inputBaseDir)
 	if _, err := os.Stat(inputDir); err == nil {
 		outputDir := filepath.Join(".", "corpus", outputBaseDir)
@@ -130,8 +118,6 @@ func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, strin
 // discoverFiles walks the directory tree and collects all .bal files that match the filter
 func discoverFiles(t *testing.T, baseDir string, subsets []string, filterFunc func(string) bool) []string {
 	var files []string
-
-	// If subsets are specified, only walk those subdirectories
 	if len(subsets) > 0 {
 		for _, subset := range subsets {
 			subsetDir := filepath.Join(baseDir, subset)
@@ -143,17 +129,14 @@ func discoverFiles(t *testing.T, baseDir string, subsets []string, filterFunc fu
 			files = append(files, subsetFiles...)
 		}
 	} else {
-		// Walk entire base directory
 		files = walkDir(t, baseDir, filterFunc)
 	}
-
 	return files
 }
 
 // walkDir recursively walks a directory and collects all .bal files that match the filter
 func walkDir(t *testing.T, dir string, filterFunc func(string) bool) []string {
 	var files []string
-
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -173,19 +156,12 @@ func walkDir(t *testing.T, dir string, filterFunc func(string) bool) []string {
 	if err != nil {
 		t.Fatalf("Failed to walk directory %s: %v", dir, err)
 	}
-
 	return files
 }
 
 // computeExpectedPath converts an input path to the expected output path
-// For example: corpus/bal/subset1/foo/bar.bal -> corpus/ast/subset1/foo/bar.txt
 func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt string) string {
-	// Get relative path from input base
 	relPath, _ := filepath.Rel(inputBaseDir, inputPath)
-
-	// Replace .bal extension with output extension
 	relPath = strings.TrimSuffix(relPath, ".bal") + outputExt
-
-	// Join with output base directory
 	return filepath.Join(outputBaseDir, relPath)
 }

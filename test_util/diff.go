@@ -27,15 +27,12 @@ import (
 func GetDiff(expected, actual string) string {
 	expectedLines := strings.Split(expected, "\n")
 	actualLines := strings.Split(actual, "\n")
-
 	var diff strings.Builder
 	diff.WriteString("Diff:\n")
-
 	maxLen := len(expectedLines)
 	if len(actualLines) > maxLen {
 		maxLen = len(actualLines)
 	}
-
 	for i := 0; i < maxLen; i++ {
 		var expectedLine, actualLine string
 		if i < len(expectedLines) {
@@ -44,13 +41,11 @@ func GetDiff(expected, actual string) string {
 		if i < len(actualLines) {
 			actualLine = actualLines[i]
 		}
-
 		if expectedLine != actualLine {
 			diff.WriteString(fmt.Sprintf("Line %d:\n", i+1))
 			diff.WriteString(fmt.Sprintf("  Expected: %q\n", expectedLine))
 			diff.WriteString(fmt.Sprintf("  Actual:   %q\n", actualLine))
 		}
 	}
-
 	return diff.String()
 }
