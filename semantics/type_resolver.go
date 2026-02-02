@@ -29,8 +29,8 @@ import (
 
 type (
 	TypeResolver struct {
-		ctx *context.CompilerContext
-		typeEnv semtypes.Env
+		ctx       *context.CompilerContext
+		typeEnv   semtypes.Env
 		typeDefns map[model.SymbolRef]*ast.BLangTypeDefinition
 	}
 )
@@ -72,6 +72,12 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		t.typeDefns[*symbol] = &defn
 	}
 	ast.Walk(t, pkg)
+	tctx := semtypes.ContextFrom(t.typeEnv)
+	for _, defn := range pkg.TypeDefinitions {
+		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
+			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
+		}
+	}
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
 	}
@@ -411,7 +417,7 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 			tr.ctx.InternalError("type definition not found", nil)
 			return nil
 		}
-		return tr.resolveTypeDefinition(defn, depth+1)
+		return tr.resolveTypeDefinition(defn, depth)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
