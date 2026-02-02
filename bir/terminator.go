@@ -43,7 +43,7 @@ type (
 		CalleeFlags       common.Set[model.Flag]
 		FunctionLookupKey string
 		CachedBIRFunc     *BIRFunction
-		IsNativeFunc      bool
+		CachedNativeFunc  func(args []any) (any, error)
 	}
 
 	Return struct {

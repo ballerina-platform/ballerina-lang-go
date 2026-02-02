@@ -46,34 +46,18 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry) *bir.BIRB
 	return callInfo.ThenBB
 }
 
-func extractArgs(args []bir.BIROperand, frame *Frame) []any {
-	values := make([]any, len(args))
-	for i, op := range args {
-		values[i] = frame.GetOperand(op.Index)
-	}
-	return values
-}
-
 func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry) any {
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(*callInfo.CachedBIRFunc, values, reg)
 	}
-	if callInfo.IsNativeFunc {
-		return executeNative(callInfo.FunctionLookupKey, values, reg)
+	if callInfo.CachedNativeFunc != nil {
+		result, err := callInfo.CachedNativeFunc(values)
+		if err != nil {
+			panic(err)
+		}
+		return result
 	}
 	return lookupAndExecute(callInfo, values, reg)
-}
-
-func executeNative(lookupKey string, values []any, reg *modules.Registry) any {
-	externFn := reg.GetNativeFunction(lookupKey)
-	if externFn == nil {
-		panic("native function not found: " + lookupKey)
-	}
-	result, err := externFn.Impl(values)
-	if err != nil {
-		panic(err)
-	}
-	return result
 }
 
 func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry) any {
@@ -85,7 +69,7 @@ func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry) a
 	}
 	externFn := reg.GetNativeFunction(lookupKey)
 	if externFn != nil {
-		callInfo.IsNativeFunc = true
+		callInfo.CachedNativeFunc = externFn.Impl
 		result, err := externFn.Impl(values)
 		if err != nil {
 			panic(err)
@@ -93,4 +77,12 @@ func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry) a
 		return result
 	}
 	panic("function not found: " + callInfo.Name.Value())
+}
+
+func extractArgs(args []bir.BIROperand, frame *Frame) []any {
+	values := make([]any, len(args))
+	for i, op := range args {
+		values[i] = frame.GetOperand(op.Index)
+	}
+	return values
 }
