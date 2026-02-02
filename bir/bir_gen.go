@@ -17,11 +17,12 @@
 package bir
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
-	"fmt"
 )
 
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
@@ -161,6 +162,7 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 		PackageID: &model.PackageID{
 			OrgName: &orgName,
 			PkgName: &pkgName,
+			Name:    &pkgName,
 			Version: &version,
 		},
 	}
