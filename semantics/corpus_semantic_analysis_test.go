@@ -72,10 +72,10 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 
 	// Step 2: Type Resolution
 	typeResolver := NewIsolatedTypeResolver(cx)
-	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Semantic Analysis
-	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
+	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
 	// Step 4: Validate that all expressions have determinedTypes set
@@ -109,11 +109,32 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 		}
 	}
 
+	// Check if node has a symbol that should have type set
+	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
+		symbol := nodeWithSymbol.Symbol()
+		if symbol.Type() == nil {
+			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T at %v",
+				symbol.Name(), symbol.Kind(), node, node.GetPosition())
+		}
+	}
+
 	return v
 }
 
 func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
-	// Not validating TypeData in this validator
+	if typeData == nil || typeData.TypeDescriptor == nil {
+		return v
+	}
+
+	// Check if type descriptor has a symbol that should have type set
+	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
+		symbol := typeWithSymbol.Symbol()
+		if symbol.Type() == nil {
+			v.t.Errorf("symbol %s (kind: %v) does not have type set for type descriptor %T at %v",
+				symbol.Name(), symbol.Kind(), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
+		}
+	}
+
 	return v
 }
 
@@ -202,10 +223,10 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 
 	// Step 2: Type Resolution
 	typeResolver := NewIsolatedTypeResolver(cx)
-	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Semantic Analysis - this should panic for error cases
-	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
+	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
 	// If we reach here without panic, the defer will catch it

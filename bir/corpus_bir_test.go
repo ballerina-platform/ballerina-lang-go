@@ -270,7 +270,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 
 	// Step 5: Resolve types
 	typeResolver := semantics.NewTypeResolver(cx)
-	typeResolver.ResolveTypes(pkg)
+	typeResolver.ResolveTypes(cx, pkg)
 
 	// // Step 6: Run semantic analysis
 	// semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)

@@ -160,9 +160,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)
-	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	typeResolver.ResolveTypes(cx, pkg)
 	// Run semantic analysis after type resolution
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {

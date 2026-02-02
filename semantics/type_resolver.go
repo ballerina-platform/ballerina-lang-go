@@ -27,15 +27,6 @@ import (
 	"strconv"
 )
 
-// UniformRef is a reference to a symbol that is same whether we are referring to it from different package or same
-// so we can efficiently implement lookup logic.
-// TODO: string here is just a placeholder
-type UniformRef string
-
-func refInPackage(pkg *ast.BLangPackage, name string) UniformRef {
-	return UniformRef(name)
-}
-
 type (
 	TypeResolver struct {
 		env *symbolEnv
@@ -46,11 +37,6 @@ type (
 		// TODO: keep a map of ast nodes by identifier. When we run into a an indentifier in different package we
 		// should be able to lookup that from here and get the semtype there
 		typeEnv semtypes.Env
-	}
-
-	TypeResolutionResult struct {
-		functions map[UniformRef]semtypes.SemType
-		// We can't resolve constants fully here because they can have type descriptors so they'll be resolved at semantic analysis
 	}
 )
 
@@ -75,18 +61,14 @@ func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 // After this (for the given package) all the semtypes are known. Semantic analysis will validate and propagate these
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
-func (t *TypeResolver) ResolveTypes(pkg *ast.BLangPackage) TypeResolutionResult {
+func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage)  {
 	ast.Walk(t, pkg)
-	// TODO: We need to build symbol for function types here (and in the future type decl)
-	functions := make(map[UniformRef]semtypes.SemType)
 	for _, fn := range pkg.Functions {
-		ty := t.resolveFunction(&fn)
-		functions[refInPackage(pkg, fn.Name.Value)] = ty
+		t.resolveFunction(ctx, &fn)
 	}
-	return TypeResolutionResult{functions: functions}
 }
 
-func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
+func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) semtypes.SemType {
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i, param := range fn.RequiredParams {
 		typeData := param.GetTypeData()
@@ -120,6 +102,10 @@ func (t *TypeResolver) resolveFunction(fn *ast.BLangFunction) semtypes.SemType {
 
 	// Update symbol type for the function
 	updateSymbolType(fn, fnType)
+	fnSymbol := ctx.GetSymbol(fn.Symbol()).(*model.FunctionSymbol)
+	fnSymbol.Signature.ParamTypes = paramTypes
+	fnSymbol.Signature.ReturnType = returnTy
+	fnSymbol.Signature.RestParamType = restTy
 
 	return fnType
 }
