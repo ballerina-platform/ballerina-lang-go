@@ -42,10 +42,10 @@ type TypeChecker struct {
 	currentFunction *ast.BLangFunction
 	loopDepth       int // Track nested loop depth for break/continue validation
 	functionSymbols map[string]*ast.BInvokableSymbol
-	functionInfo    map[string]*FunctionInfo  // Function name -> info
-	localVars       map[string]model.TypeTags // Variable name -> type tag (for current function scope)
+	functionInfo    map[string]*FunctionInfo      // Function name -> info
+	localVars       map[string]model.TypeTags     // Variable name -> type tag (for current function scope)
 	errorExprs      map[model.ExpressionNode]bool // Track expressions that already have errors to avoid cascading
-	importAliases   map[string]bool // Track valid import aliases (e.g., "io" from "import ballerina/io")
+	importAliases   map[string]bool               // Track valid import aliases (e.g., "io" from "import ballerina/io")
 }
 
 // NewTypeChecker creates a new TypeChecker instance.
@@ -127,7 +127,7 @@ func (tc *TypeChecker) buildFunctionInfo(fn *ast.BLangFunction) *FunctionInfo {
 // checkFunction type-checks a function.
 func (tc *TypeChecker) checkFunction(fn *ast.BLangFunction) {
 	tc.currentFunction = fn
-	tc.localVars = make(map[string]model.TypeTags)  // Reset local vars for each function
+	tc.localVars = make(map[string]model.TypeTags)      // Reset local vars for each function
 	tc.errorExprs = make(map[model.ExpressionNode]bool) // Reset error expressions for each function
 
 	// Add parameters to local variable table
@@ -266,7 +266,7 @@ func (tc *TypeChecker) hasBreakStatement(stmts []ast.BLangStatement) bool {
 			if tc.hasBreakStatement(s.Stmts) {
 				return true
 			}
-		// Don't recurse into nested loops - break only affects the innermost loop
+			// Don't recurse into nested loops - break only affects the innermost loop
 		}
 	}
 	return false
