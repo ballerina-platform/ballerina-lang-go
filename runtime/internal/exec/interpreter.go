@@ -23,18 +23,8 @@ import (
 
 func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
 	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
-	mainFunc := findMainFunction(pkg)
-	if mainFunc == nil {
+	if pkg.MainFunction == nil {
 		panic("main function not found in BIR package")
 	}
-	executeFunction(*mainFunc, nil, reg)
-}
-
-func findMainFunction(pkg bir.BIRPackage) *bir.BIRFunction {
-	for i := range pkg.Functions {
-		if pkg.Functions[i].Name.Value() == "main" {
-			return &pkg.Functions[i]
-		}
-	}
-	return nil
+	executeFunction(*pkg.MainFunction, nil, reg)
 }

@@ -34,14 +34,10 @@ func NewRegistry() *Registry {
 }
 
 func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule {
-	moduleKey := id.OrgName.Value() + "/" + id.PkgName.Value()
 	if m.Pkg != nil && m.Pkg.Functions != nil {
 		for i := range m.Pkg.Functions {
 			fn := &m.Pkg.Functions[i]
-			funcName := fn.Name.Value()
-			qualifiedName := moduleKey + ":" + funcName
-			r.birFunctions[qualifiedName] = fn
-			r.birFunctions[funcName] = fn
+			r.birFunctions[fn.FunctionLookupKey] = fn
 		}
 	}
 	return m

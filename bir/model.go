@@ -65,6 +65,7 @@ type (
 		GlobalVars    []BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		Constants     []BIRConstant
+		MainFunction  *BIRFunction
 	}
 
 	BIRImportModule struct {
@@ -126,6 +127,7 @@ type (
 		BasicBlocks    []BIRBasicBlock
 		// FIXME:
 		DependentGlobalVars []BIRGlobalVariableDcl
+		FunctionLookupKey   string
 	}
 
 	BIRConstant struct {

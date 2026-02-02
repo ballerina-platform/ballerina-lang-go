@@ -113,7 +113,11 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
 	}
 	for _, function := range ast.Functions {
-		birPkg.Functions = appendIfNotNil(birPkg.Functions, TransformFunction(genCtx, &function))
+		birFunc := TransformFunction(genCtx, &function)
+		birPkg.Functions = append(birPkg.Functions, *birFunc)
+		if birFunc.Name.Value() == "main" {
+			birPkg.MainFunction = birFunc
+		}
 	}
 	return birPkg
 }
@@ -189,6 +193,10 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
+	orgName := ctx.packageID.OrgName.Value()
+	pkgName := ctx.packageID.PkgName.Value()
+	moduleKey := orgName + "/" + pkgName
+	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[string]*BIROperand)}
 	stmtCx.retVar = stmtCx.addLocalVar(model.Name("%0"), nil, VAR_KIND_RETURN)
@@ -608,7 +616,10 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 			call.CalleePkg = ctx.birCx.packageID
 		}
 	}
-
+	orgName := call.CalleePkg.OrgName.Value()
+	pkgName := call.CalleePkg.PkgName.Value()
+	moduleKey := orgName + "/" + pkgName
+	call.FunctionLookupKey = moduleKey + ":" + call.Name.Value()
 	curBB.Terminator = call
 	return expressionEffect{
 		result: resultOperand,
