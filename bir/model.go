@@ -80,10 +80,10 @@ type (
 		InternalName    model.Name
 		AttachedFuncs   []BIRFunction
 		Flags           int64
-		Type            model.TypeNode
+		Type            model.TypeDescriptor
 		IsBuiltin       bool
-		ReferencedTypes []model.TypeNode
-		ReferenceType   model.TypeNode
+		ReferencedTypes []model.TypeDescriptor
+		ReferenceType   model.TypeDescriptor
 		Origin          model.SymbolOrigin
 		Index           int
 	}

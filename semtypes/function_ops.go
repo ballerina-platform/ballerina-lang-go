@@ -129,3 +129,74 @@ func (this *FunctionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *
 		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, pos.Next)) && (IsSubtype(cx, t1, Complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), pos.Next)))
 	}
 }
+
+// Corresponds to dom^? in AMK tutorial.
+func FunctionParamListType(cx Context, fnTy SemType) SemType {
+	if !IsSubtypeSimple(fnTy, FUNCTION) {
+		return nil
+	}
+	switch ty := fnTy.(type) {
+	case *BasicTypeBitSet:
+		return &NEVER
+	case ComplexSemType:
+		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
+		return functionParamListTypeInner(cx, &NEVER, bdd)
+	default:
+		panic("impossible")
+	}
+}
+
+func functionParamListTypeInner(cx Context, accumTy SemType, bdd Bdd) SemType {
+	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+		if allOrNothing.IsAll() {
+			return accumTy
+		}
+		return &ANY
+	}
+	bddNode := bdd.(BddNode)
+	atomArgListTy := cx.functionAtomType(bddNode.Atom()).ParamType
+	return Intersect(functionParamListTypeInner(cx, Union(accumTy, atomArgListTy), bddNode.Left()),
+		Intersect(functionParamListTypeInner(cx, accumTy, bddNode.Middle()),
+			functionParamListTypeInner(cx, accumTy, bddNode.Right())))
+}
+
+// Corresponds to apply^? in AMK tutorial.
+func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
+	domain := FunctionParamListType(cx, fnTy)
+	if domain == nil || !IsSubtype(cx, argList, domain) {
+		return nil
+	}
+	switch ty := fnTy.(type) {
+	case *BasicTypeBitSet:
+		return &ANY
+	case ComplexSemType:
+		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
+		return functionReturnTypeInner(cx, argList, &ANY, bdd)
+	default:
+		panic("impossible")
+	}
+}
+
+func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemType, bdd Bdd) SemType {
+	if IsEmpty(cx, accumArgList) || IsEmpty(cx, accumReturn) {
+		return &NEVER
+	}
+	switch b := bdd.(type) {
+	case BddAllOrNothing:
+		if b.IsAll() {
+			return accumReturn
+		}
+		return &NEVER
+	case BddNode:
+		fnAtom := cx.functionAtomType(b.Atom())
+		atomArgListTy := fnAtom.ParamType
+		atomReturnTy := fnAtom.RetType
+		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.Left()),
+			Union(functionReturnTypeInner(cx, Diff(accumArgList, atomArgListTy), accumReturn, b.Left()),
+				Union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.Middle()),
+					functionReturnTypeInner(cx, accumArgList, accumReturn, b.Right()))))
+
+	default:
+		panic("impossible")
+	}
+}

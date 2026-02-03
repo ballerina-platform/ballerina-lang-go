@@ -18,6 +18,7 @@ package parser
 
 import (
 	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/tools/text"
 	"encoding/json"
 	"flag"
@@ -257,24 +258,35 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseCorpusFiles(t *testing.T) {
-	testCorpusInner(t, getCorpusDir(t))
+	if os.Getenv("GOARCH") == "wasm" {
+		t.Skip("skipping parser testing wasm")
+	}
+
+	// Parser can parse all .bal files, not just -v.bal
+	testPairs := test_util.GetTests(t, test_util.Parser, func(path string) bool {
+		return true
+	})
+
+	// Create subtests for each file
+	// Running in parallel for faster test execution
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
+			t.Parallel() // Run in parallel for faster execution (native only)
+			parseFile(t, testPair)
+		})
+	}
 }
 
 func TestJBalUnitTests(t *testing.T) {
-	testCorpusInner(t, "./testdata/bal")
-}
-
-func testCorpusInner(t *testing.T, corpusDir string) {
+	corpusDir := "./testdata/bal"
 	if os.Getenv("GOARCH") == "wasm" {
-		t.Skip("skipping parser testsing wasm")
+		t.Skip("skipping parser testing wasm")
 	}
 	balFiles := getCorpusFiles(t, corpusDir)
 
 	// Create subtests for each file
 	// Running in parallel for faster test execution
 	for _, balFile := range balFiles {
-		balFile := balFile // capture loop variable
-
 		// Skip files in ignore lists
 		if shouldIgnoreFile(balFile) {
 			t.Run(balFile, func(t *testing.T) {
@@ -283,23 +295,14 @@ func testCorpusInner(t *testing.T, corpusDir string) {
 			continue
 		}
 
+		// Create TestCase from file path
+		testCase := createTestCase(t, balFile, corpusDir)
+
 		t.Run(balFile, func(t *testing.T) {
 			t.Parallel() // Run in parallel for faster execution (native only)
-			parseFile(t, balFile, corpusDir)
+			parseFile(t, testCase)
 		})
 	}
-}
-
-func getCorpusDir(t *testing.T) string {
-	corpusBalDir := "../corpus/bal"
-	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-		// Try alternative path (when running from project root)
-		corpusBalDir = "./corpus/bal"
-		if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
-			t.Skipf("Corpus directory not found (tried ../corpus/bal and ./corpus/bal), skipping test")
-		}
-	}
-	return corpusBalDir
 }
 
 func getCorpusFiles(t *testing.T, corpusBalDir string) []string {
@@ -323,7 +326,7 @@ func getCorpusFiles(t *testing.T, corpusBalDir string) []string {
 	return balFiles
 }
 
-func parseFile(t *testing.T, filePath string, baseDir string) {
+func parseFile(t *testing.T, testCase test_util.TestCase) {
 	// Catch any panics and convert them to errors
 	defer func() {
 		if r := recover(); r != nil {
@@ -332,7 +335,7 @@ func parseFile(t *testing.T, filePath string, baseDir string) {
 	}()
 
 	// Read file content
-	content, readErr := os.ReadFile(filePath)
+	content, readErr := os.ReadFile(testCase.InputPath)
 	if readErr != nil {
 		t.Fatalf("error reading file: %v", readErr)
 	}
@@ -349,37 +352,33 @@ func parseFile(t *testing.T, filePath string, baseDir string) {
 
 	actualJSON := tree.GenerateJSON(ast)
 
-	expectedJSONPath := expectedJSONPath(filePath, baseDir)
-
 	normalizedJSON := normalizeJSON(actualJSON)
 
 	// If update flag is set, check if update is needed and update if necessary
 	if *update {
-		if updateIfNeeded(t, expectedJSONPath, normalizedJSON) {
-			t.Fatalf("Updated expected JSON file: %s", expectedJSONPath)
+		if test_util.UpdateIfNeeded(t, testCase.ExpectedPath, normalizedJSON, normalizeJSON) {
+			t.Fatalf("Updated expected JSON file: %s", testCase.ExpectedPath)
 		}
 		return
 	}
 
-	expectedJSON := expectedJSON(t, expectedJSONPath)
+	expectedJSON := expectedJSON(t, testCase.ExpectedPath)
 
 	// Compare JSON strings exactly (no tolerance for formatting differences)
 	if normalizedJSON != expectedJSON {
 		diff := getDiff(expectedJSON, normalizedJSON)
-		t.Errorf("JSON mismatch for %s\nExpected file: %s\n%s", filePath, expectedJSONPath, diff)
+		t.Errorf("JSON mismatch for %s\nExpected file: %s\n%s", testCase.InputPath, testCase.ExpectedPath, diff)
 		return
 
 	}
 }
 
-func expectedJSONPath(filePath string, baseDir string) string {
+// createTestCase creates a TestCase from a file path and base directory
+func createTestCase(t *testing.T, filePath string, baseDir string) test_util.TestCase {
 	// Get the relative path from baseDir
 	relPath, err := filepath.Rel(baseDir, filePath)
 	if err != nil {
-		// If we can't get relative path, fall back to string replacement
-		expectedJSONPath := strings.TrimSuffix(filePath, ".bal") + ".json"
-		expectedJSONPath = strings.Replace(expectedJSONPath, string(filepath.Separator)+"bal"+string(filepath.Separator), string(filepath.Separator)+"parser"+string(filepath.Separator), 1)
-		return expectedJSONPath
+		t.Fatalf("Failed to get relative path: %v", err)
 	}
 
 	// Replace "bal" directory with "parser" in the base directory path
@@ -389,7 +388,11 @@ func expectedJSONPath(filePath string, baseDir string) string {
 	expectedJSONPath := filepath.Join(parserBaseDir, relPath)
 	expectedJSONPath = strings.TrimSuffix(expectedJSONPath, ".bal") + ".json"
 
-	return expectedJSONPath
+	return test_util.TestCase{
+		Name:         filePath,
+		InputPath:    filePath,
+		ExpectedPath: expectedJSONPath,
+	}
 }
 
 func normalizeJSON(jsonStr string) string {
@@ -401,28 +404,6 @@ func normalizeJSON(jsonStr string) string {
 		}
 	}
 	return normalizedJSON
-}
-
-func updateIfNeeded(t *testing.T, expectedJSONPath string, actualJSON string) bool {
-	// Ensure the directory exists
-	dir := filepath.Dir(expectedJSONPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Errorf("error creating directory for expected JSON file: %v", err)
-		return true
-	}
-
-	expectedJSON := expectedJSON(t, expectedJSONPath)
-	// Only update if content is different
-	if actualJSON != expectedJSON {
-		// Content is different - update file and fail the test
-		if err := os.WriteFile(expectedJSONPath, []byte(actualJSON), 0o644); err != nil {
-			t.Errorf("error writing expected JSON file: %v", err)
-			return true
-		}
-		return true
-	}
-
-	return false
 }
 
 func expectedJSON(t *testing.T, expectedJSONPath string) string {

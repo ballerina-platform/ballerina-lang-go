@@ -18,9 +18,12 @@ package context
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 	"strconv"
 )
 
+// TODO: consider moving type resolution env in to this
 type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner
@@ -32,6 +35,35 @@ func (this *CompilerContext) GetDefaultPackage() *model.PackageID {
 
 func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.Name, version model.Name) *model.PackageID {
 	return model.NewPackageID(this.packageInterner, orgName, nameComps, version)
+}
+
+func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Unimplemented: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Unimplemented: %s", message))
+}
+
+func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Semantic error: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Semantic error: %s", message))
+}
+
+// TODO: implement these properly
+func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Syntax error: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Syntax error: %s", message))
+}
+
+func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
+	if pos != nil {
+		panic(fmt.Sprintf("Internal error: %s at %s", message, pos))
+	}
+	panic(fmt.Sprintf("Internal error: %s", message))
 }
 
 func NewCompilerContext() *CompilerContext {

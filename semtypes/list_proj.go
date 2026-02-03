@@ -40,7 +40,7 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 
 func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg *Conjunction) SemType {
 	// migrated from ListProj.java:87:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
 		} else {
@@ -60,7 +60,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 	var rest CellSemType
 	if pos == nil {
 		members = FixedLengthArrayEmpty()
-		rest = CellContaining(cx.env(), Union(&VAL, &UNDEF))
+		rest = CellContaining(cx.Env(), Union(&VAL, &UNDEF))
 	} else {
 		// combine all the positive tuples using intersection
 		lt := cx.listAtomType(pos.Atom)
@@ -79,7 +79,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 				d := p.Atom
 				p = p.Next
 				lt = cx.listAtomType(d)
-				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.env(), members, rest, lt.Members, lt.Rest)
+				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
 					return &NEVER
 				}
@@ -92,7 +92,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 		}
 		// Ensure that we can use isNever on rest in listInhabited
 		if !IsNever(CellInnerVal(rest)) && IsEmpty(cx, rest) {
-			rest = RoCellContaining(cx.env(), &NEVER)
+			rest = RoCellContaining(cx.Env(), &NEVER)
 		}
 	}
 	// return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
@@ -178,7 +178,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				t := append([]CellSemType(nil), memberTypes...)
-				t[i] = CellContaining(cx.env(), d)
+				t[i] = CellContaining(cx.Env(), d)
 				var maxVal int
 				if nRequired > (i + 1) {
 					maxVal = nRequired

@@ -41,7 +41,7 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 	} else {
 		normalizedKc = keyConstraint
 	}
-	return tableContainingWithEnvSemTypeSemTypeSemType(cx.env(), tableConstraint, normalizedKc, &VAL)
+	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, &VAL)
 }
 
 func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
@@ -54,15 +54,15 @@ func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames
 		fieldTypes[i] = MappingMemberTypeInnerVal(cx, tableConstraint, key)
 	}
 	listDef1 := NewListDefinition()
-	normalizedKs := listDef1.TupleTypeWrapped(cx.env(), fieldNameSingletons...)
+	normalizedKs := listDef1.TupleTypeWrapped(cx.Env(), fieldNameSingletons...)
 	var normalizedKc SemType
 	if len(fieldTypes) > 1 {
 		ld := NewListDefinition()
-		normalizedKc = ld.TupleTypeWrapped(cx.env(), fieldTypes...)
+		normalizedKc = ld.TupleTypeWrapped(cx.Env(), fieldTypes...)
 	} else {
 		normalizedKc = fieldTypes[0]
 	}
-	return tableContainingWithEnvSemTypeSemTypeSemType(cx.env(), tableConstraint, normalizedKc, normalizedKs)
+	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, normalizedKs)
 }
 
 func TableContaining(env Env, tableConstraint SemType) SemType {

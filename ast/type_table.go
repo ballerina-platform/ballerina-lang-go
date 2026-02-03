@@ -48,7 +48,7 @@ var (
 	}
 )
 
-func (this *BTypeSymbolTable) GetTypeFromTag(tag model.TypeTags) model.TypeNode {
+func (this *BTypeSymbolTable) GetTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
 	switch tag {
 	case model.TypeTags_BOOLEAN:
 		return booleanType

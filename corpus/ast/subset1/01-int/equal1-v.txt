@@ -5,7 +5,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable big))
+        (variable big (type
+          (value-type int))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==
@@ -34,7 +35,8 @@
             (unary-expr -
               (literal 9223372036854775806)))())
       (var-def
-        (variable one))
+        (variable one (type
+          (value-type int))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==
@@ -63,7 +65,8 @@
             (unary-expr -
               (literal 9223372036854775806)))())
       (var-def
-        (variable zero))
+        (variable zero (type
+          (value-type int))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==

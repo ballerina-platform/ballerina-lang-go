@@ -61,7 +61,7 @@ func listFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
 				d := p.Atom
 				p = p.Next
 				lt = cx.listAtomType(d)
-				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.env(), members, rest, lt.Members, lt.Rest)
+				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
 					return true
 				}
@@ -138,7 +138,7 @@ func listSampleTypes(cx Context, members FixedLengthArray, rest CellSemType, ind
 	nRequired := 0
 	for i := 0; i < len(indices); i++ {
 		index := indices[i]
-		t := CellContainingInnerVal(cx.env(), listMemberAt(members, rest, index))
+		t := CellContainingInnerVal(cx.Env(), listMemberAt(members, rest, index))
 		if IsEmpty(cx, t) {
 			break
 		}
