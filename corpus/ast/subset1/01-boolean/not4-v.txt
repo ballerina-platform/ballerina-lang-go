@@ -5,7 +5,7 @@
     (value-type null))
     (block-function-body
       (expression-stmt
-        (invocation printBoolean (())))
+        (invocation printBoolean ()))))
   (function printBoolean () (
     (value-type null))
     (block-function-body
@@ -15,7 +15,7 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) ())
+              (literal 1))))) ())
       (block-stmt
         (var-def
           (variable b (type
@@ -26,5 +26,5 @@
           (block-stmt
             (expression-stmt
               (invocation io println (
-                (literal 2)())) ())
+                (literal 2))))) ())
         (block-stmt)))))

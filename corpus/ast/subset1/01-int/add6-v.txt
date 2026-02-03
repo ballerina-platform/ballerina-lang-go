@@ -12,7 +12,7 @@
                 (literal 3)))
             (group-expr
               (unary-expr -
-                (literal 5)))()())
+                (literal 5))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -22,10 +22,10 @@
                   (literal 3)))
               (group-expr
                 (unary-expr -
-                  (literal 5)))()
+                  (literal 5)))))
             (group-expr
               (unary-expr -
-                (literal 11)))()())
+                (literal 11))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -35,14 +35,14 @@
                   (literal 3)))
               (group-expr
                 (unary-expr -
-                  (literal 5)))()
+                  (literal 5)))))
             (invocation add (
               (group-expr
                 (unary-expr -
                   (literal 5)))
               (group-expr
                 (unary-expr -
-                  (literal 9)))()()())
+                  (literal 9))))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -53,17 +53,17 @@
                     (literal 3)))
                 (group-expr
                   (unary-expr -
-                    (literal 5)))()
+                    (literal 5)))))
               (invocation add (
                 (group-expr
                   (unary-expr -
                     (literal 5)))
                 (group-expr
                   (unary-expr -
-                    (literal 9)))()()
+                    (literal 9)))))))
             (group-expr
               (unary-expr -
-                (literal 12)))()())
+                (literal 12))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -74,21 +74,21 @@
                     (literal 3)))
                 (group-expr
                   (unary-expr -
-                    (literal 5)))()
+                    (literal 5)))))
               (invocation add (
                 (group-expr
                   (unary-expr -
                     (literal 5)))
                 (group-expr
                   (unary-expr -
-                    (literal 9)))()()
+                    (literal 9)))))))
             (invocation add (
               (group-expr
                 (unary-expr -
                   (literal 4)))
               (group-expr
                 (unary-expr -
-                  (literal 7)))()()())
+                  (literal 7))))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -99,14 +99,14 @@
                     (literal 3)))
                 (group-expr
                   (unary-expr -
-                    (literal 5)))()
+                    (literal 5)))))
               (invocation add (
                 (group-expr
                   (unary-expr -
                     (literal 5)))
                 (group-expr
                   (unary-expr -
-                    (literal 9)))()()
+                    (literal 9)))))))
             (invocation add (
               (invocation add (
                 (group-expr
@@ -114,10 +114,10 @@
                     (literal 4)))
                 (group-expr
                   (unary-expr -
-                    (literal 7)))()
+                    (literal 7)))))
               (group-expr
                 (unary-expr -
-                  (literal 5)))()()())
+                  (literal 5))))))))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -128,14 +128,14 @@
                     (literal 3)))
                 (group-expr
                   (unary-expr -
-                    (literal 5)))()
+                    (literal 5)))))
               (invocation add (
                 (group-expr
                   (unary-expr -
                     (literal 5)))
                 (group-expr
                   (unary-expr -
-                    (literal 9)))()()
+                    (literal 9)))))))
             (invocation add (
               (invocation add (
                 (group-expr
@@ -143,14 +143,14 @@
                     (literal 4)))
                 (group-expr
                   (unary-expr -
-                    (literal 7)))()
+                    (literal 7)))))
               (invocation add (
                 (group-expr
                   (unary-expr -
                     (literal 23)))
                 (group-expr
                   (unary-expr -
-                    (literal 50)))()()()())))
+                    (literal 50))))))))))))))
   (function add (
     (variable x (type
       (value-type int)))

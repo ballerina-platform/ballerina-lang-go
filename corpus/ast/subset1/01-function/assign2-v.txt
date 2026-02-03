@@ -9,16 +9,16 @@
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)())
+          (simple-var-ref x))))
       (assignment
         (simple-var-ref x)
         (literal 1))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)())
+          (simple-var-ref x))))
       (assignment
         (simple-var-ref x)
         (literal 2))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)()))))
+          (simple-var-ref x)))))))

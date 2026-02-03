@@ -6,11 +6,11 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (literal 42)())
+          (literal 42))))
       (expression-stmt
         (invocation io println (
           (unary-expr -
-            (literal 1))())
+            (literal 1)))))
       (expression-stmt
         (invocation io println (
-          (literal 0)()))))
+          (literal 0)))))))

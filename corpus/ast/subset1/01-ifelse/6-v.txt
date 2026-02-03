@@ -8,17 +8,17 @@
         (invocation io println (
           (invocation foo (
             (literal 1)
-            (literal 1)()())
+            (literal 1))))))
       (expression-stmt
         (invocation io println (
           (invocation foo (
             (literal 1)
-            (literal 10)()())
+            (literal 10))))))
       (expression-stmt
         (invocation io println (
           (invocation foo (
             (literal 11)
-            (literal 1)()())))
+            (literal 1))))))))
   (function foo (
     (variable x (type
       (value-type int)))
@@ -30,9 +30,9 @@
         (group-expr
           (binary-expr ==
             (invocation bar (
-              (simple-var-ref x)()
+              (simple-var-ref x)))
             (invocation baz (
-              (simple-var-ref y)()))
+              (simple-var-ref y)))))
         (block-stmt
           (return
             (literal 0))) (
@@ -41,9 +41,9 @@
             (group-expr
               (binary-expr >
                 (invocation bar (
-                  (simple-var-ref x)()
+                  (simple-var-ref x)))
                 (invocation baz (
-                  (simple-var-ref y)()))
+                  (simple-var-ref y)))))
             (block-stmt
               (return
                 (literal 1))) (

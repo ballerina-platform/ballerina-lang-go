@@ -9,8 +9,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())
+              (literal 0))))
           (break)))
       (expression-stmt
         (invocation io println (
-          (literal 1)()))))
+          (literal 1)))))))

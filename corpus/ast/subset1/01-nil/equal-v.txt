@@ -6,12 +6,12 @@
     (block-function-body
       (if
         (binary-expr ==
-          (invocation makeNil (()
-          (invocation makeNil (())
+          (invocation makeNil ())
+          (invocation makeNil ()))
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) ())
+              (literal 1))))) ())
       (block-stmt)))
   (function makeNil () (
     (value-type null))

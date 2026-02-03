@@ -287,7 +287,7 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 		}
 		p.indentLevel--
 	}
-	p.printSticky("(")
+	p.printSticky(")")
 
 	p.endNode()
 }

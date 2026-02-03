@@ -9,7 +9,7 @@
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)())))
+          (simple-var-ref x))))))
   (function foo () (
     (value-type int))
     (block-function-body

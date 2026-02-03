@@ -9,20 +9,20 @@
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref neg1)())
+          (simple-var-ref neg1))))
       (expression-stmt
         (invocation io println (
           (invocation neg (
-            (literal 0)()())
+            (literal 0))))))
       (expression-stmt
         (invocation io println (
           (invocation neg (
             (unary-expr -
-              (literal 1))()())
+              (literal 1)))))))
       (expression-stmt
         (invocation io println (
           (invocation negneg (
-            (literal 1)()())))
+            (literal 1))))))))
   (function neg (
     (variable x (type
       (value-type int)))) (

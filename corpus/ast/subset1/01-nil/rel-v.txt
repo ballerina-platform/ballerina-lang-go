@@ -8,16 +8,16 @@
         (invocation toNil (
           (binary-expr <
             (invocation toNil (
-              (literal true)()
+              (literal true)))
             (invocation toNil (
-              (literal false)())())
+              (literal false)))))))
       (expression-stmt
         (invocation toNil (
           (binary-expr <=
             (invocation toNil (
-              (literal false)()
+              (literal false)))
             (invocation toNil (
-              (literal true)())())))
+              (literal true)))))))))
   (function toNil (
     (variable b (type
       (value-type boolean)))) (
@@ -25,6 +25,6 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (simple-var-ref b)())
+          (simple-var-ref b))))
       (return
         (literal <nil>)))))

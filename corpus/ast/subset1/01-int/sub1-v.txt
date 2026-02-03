@@ -9,13 +9,13 @@
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref sub1)())
+          (simple-var-ref sub1))))
       (var-def
         (variable sub2 (type
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref sub2)())))
+          (simple-var-ref sub2))))))
   (function sub (
     (variable x (type
       (value-type int)))

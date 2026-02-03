@@ -7,8 +7,8 @@
       (expression-stmt
         (invocation io println (
           (invocation foo (
-            (invocation getArg1 (()
-            (invocation getArg2 (()()())))
+            (invocation getArg1 ())
+            (invocation getArg2 ()))))))))
   (function foo (
     (variable i (type
       (value-type int)))

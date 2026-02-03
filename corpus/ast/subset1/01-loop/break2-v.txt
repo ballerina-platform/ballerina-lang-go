@@ -8,18 +8,18 @@
         (invocation printIfBetween (
           (literal 6)
           (literal 5)
-          (literal 7)())
+          (literal 7))))
       (expression-stmt
         (invocation printIfBetween (
           (literal 1)
           (literal 2)
-          (literal 3)())
+          (literal 3))))
       (expression-stmt
         (invocation printIfBetween (
           (literal 0)
           (unary-expr -
             (literal 1))
-          (literal 4)())))
+          (literal 4))))))
   (function printIfBetween (
     (variable n (type
       (value-type int)))
@@ -44,7 +44,7 @@
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (simple-var-ref n)())
+                  (simple-var-ref n))))
               (break)) ())
           (block-stmt
             (assignment

@@ -9,13 +9,13 @@
           (binary-expr +
             (unary-expr -
               (literal 2))
-            (literal 5))())
+            (literal 5)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
             (literal 5)
             (unary-expr -
-              (literal 2)))())
+              (literal 2))))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -23,31 +23,31 @@
             (binary-expr *
               (unary-expr -
                 (literal 2))
-              (literal 3)))())
+              (literal 3))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr <
             (unary-expr -
               (literal 5))
-            (literal 2))())
+            (literal 2)))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr >=
             (literal 2)
             (unary-expr -
-              (literal 5)))())
+              (literal 5))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr >=
             (unary-expr !
               (literal false))
-            (literal false))())
+            (literal false)))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr <=
             (literal false)
             (unary-expr !
-              (literal false)))())))
+              (literal false))))))))
   (function printBoolean (
     (variable x (type
       (value-type boolean)))) (
@@ -58,8 +58,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

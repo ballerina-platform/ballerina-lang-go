@@ -33,20 +33,20 @@
         (wildcard-binding-pattern)
         (invocation foo (
           (simple-var-ref arr)
-          (literal 0)())
+          (literal 0))))
       (assignment
         (wildcard-binding-pattern)
         (invocation foo (
           (simple-var-ref arr)
-          (literal 1)())
+          (literal 1))))
       (assignment
         (wildcard-binding-pattern)
         (invocation foo (
           (simple-var-ref arr)
-          (literal 2)())
+          (literal 2))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref arr)())
+          (simple-var-ref arr))))
       (var-def
         (variable str (type
           (value-type string))))
@@ -55,4 +55,4 @@
         (simple-var-ref str))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref str)()))))
+          (simple-var-ref str)))))))
