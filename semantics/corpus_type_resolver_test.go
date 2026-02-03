@@ -108,10 +108,8 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func isExpr(node ast.BLangNode) bool {
-	if _, ok := node.(model.ExpressionNode); ok {
-		return true
-	}
-	return false
+	_, ok := node.(model.ExpressionNode)
+	return ok
 }
 
 func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {

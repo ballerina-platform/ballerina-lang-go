@@ -288,10 +288,8 @@ func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral
 func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semtypes.SemType) {
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
-		if symbol != nil {
-			// symbol resolver should initialize the symbol
-			ctx.SetSymbolType(symbol, ty)
-		}
+		// symbol resolver should initialize the symbol
+		ctx.SetSymbolType(symbol, ty)
 	}
 }
 

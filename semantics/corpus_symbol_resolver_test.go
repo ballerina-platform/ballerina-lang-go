@@ -30,7 +30,6 @@ import (
 
 func TestSymbolResolver(t *testing.T) {
 	flag.Parse()
-
 	testPairs := test_util.GetValidTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {
@@ -66,10 +65,8 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 	env := semtypes.GetIsolatedTypeEnv()
 	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
-
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
 	ast.Walk(validator, pkg)
-
 	// If we reach here, symbol resolution completed without panicking
 	t.Logf("Symbol resolution completed successfully for %s", testCase.InputPath)
 }
@@ -83,7 +80,6 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-
 	// Check if this node should have a symbol resolved
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		if nodeWithSymbol.Symbol() == nil {
@@ -91,7 +87,6 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 				node, node.GetPosition(), v.testPath)
 		}
 	}
-
 	return v
 }
 
@@ -99,7 +94,6 @@ func (v *symbolResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.
 	if typeData.TypeDescriptor == nil {
 		return nil
 	}
-
 	// Check if this type descriptor should have a symbol resolved
 	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
 		if typeWithSymbol.Symbol() == nil {
@@ -107,6 +101,5 @@ func (v *symbolResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.
 				typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition(), v.testPath)
 		}
 	}
-
 	return v
 }
