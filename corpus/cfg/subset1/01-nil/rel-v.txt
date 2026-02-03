@@ -1,0 +1,37 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation toNil (
+        (binary-expr <
+          (invocation toNil (
+            (literal true)))
+          (invocation toNil (
+            (literal false)))))))
+    (expression-stmt
+      (invocation toNil (
+        (binary-expr <
+          (invocation toNil (
+            (literal true)))
+          (invocation toNil (
+            (literal false)))))))
+    (expression-stmt
+      (invocation toNil (
+        (binary-expr <=
+          (invocation toNil (
+            (literal false)))
+          (invocation toNil (
+            (literal true)))))))
+  )
+)
+(toNil
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (return
+      (literal <nil>))
+  )
+)

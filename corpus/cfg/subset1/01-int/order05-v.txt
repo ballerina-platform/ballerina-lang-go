@@ -1,0 +1,1815 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 9223372036854775806)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 1)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (literal 0)
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 1))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 9223372036854775806)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 1)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (literal 0)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr >=
+          (unary-expr -
+            (literal 9223372036854775806))
+          (unary-expr -
+            (literal 9223372036854775806))))))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

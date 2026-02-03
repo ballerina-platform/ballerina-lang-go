@@ -1,0 +1,480 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (group-expr
+                (unary-expr -
+                  (literal 3)))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 9)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (group-expr
+                (unary-expr -
+                  (literal 3)))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 9)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (group-expr
+                  (unary-expr -
+                    (literal 3)))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 9))))
+          (group-expr
+            (unary-expr -
+              (literal 12)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (group-expr
+                (unary-expr -
+                  (literal 3)))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 9)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (group-expr
+                  (unary-expr -
+                    (literal 3)))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 9))))
+          (group-expr
+            (unary-expr -
+              (literal 12)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (group-expr
+                    (unary-expr -
+                      (literal 3)))
+                  (group-expr
+                    (unary-expr -
+                      (literal 5))))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 9))))
+            (group-expr
+              (unary-expr -
+                (literal 4))))
+          (group-expr
+            (unary-expr -
+              (literal 7)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (group-expr
+                (unary-expr -
+                  (literal 3)))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 9)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (group-expr
+                  (unary-expr -
+                    (literal 3)))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 9))))
+          (group-expr
+            (unary-expr -
+              (literal 12)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (group-expr
+                    (unary-expr -
+                      (literal 3)))
+                  (group-expr
+                    (unary-expr -
+                      (literal 5))))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 9))))
+            (group-expr
+              (unary-expr -
+                (literal 4))))
+          (group-expr
+            (unary-expr -
+              (literal 7)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (binary-expr +
+                    (group-expr
+                      (unary-expr -
+                        (literal 3)))
+                    (group-expr
+                      (unary-expr -
+                        (literal 5))))
+                  (group-expr
+                    (unary-expr -
+                      (literal 5))))
+                (group-expr
+                  (unary-expr -
+                    (literal 9))))
+              (group-expr
+                (unary-expr -
+                  (literal 4))))
+            (group-expr
+              (unary-expr -
+                (literal 7))))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (group-expr
+            (unary-expr -
+              (literal 3)))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (group-expr
+              (unary-expr -
+                (literal 3)))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 11)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (group-expr
+                (unary-expr -
+                  (literal 3)))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 5))))
+          (group-expr
+            (unary-expr -
+              (literal 9)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (group-expr
+                  (unary-expr -
+                    (literal 3)))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 5))))
+            (group-expr
+              (unary-expr -
+                (literal 9))))
+          (group-expr
+            (unary-expr -
+              (literal 12)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (group-expr
+                    (unary-expr -
+                      (literal 3)))
+                  (group-expr
+                    (unary-expr -
+                      (literal 5))))
+                (group-expr
+                  (unary-expr -
+                    (literal 5))))
+              (group-expr
+                (unary-expr -
+                  (literal 9))))
+            (group-expr
+              (unary-expr -
+                (literal 4))))
+          (group-expr
+            (unary-expr -
+              (literal 7)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (binary-expr +
+                    (group-expr
+                      (unary-expr -
+                        (literal 3)))
+                    (group-expr
+                      (unary-expr -
+                        (literal 5))))
+                  (group-expr
+                    (unary-expr -
+                      (literal 5))))
+                (group-expr
+                  (unary-expr -
+                    (literal 9))))
+              (group-expr
+                (unary-expr -
+                  (literal 4))))
+            (group-expr
+              (unary-expr -
+                (literal 7))))
+          (group-expr
+            (unary-expr -
+              (literal 5)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (binary-expr +
+                    (binary-expr +
+                      (group-expr
+                        (unary-expr -
+                          (literal 3)))
+                      (group-expr
+                        (unary-expr -
+                          (literal 5))))
+                    (group-expr
+                      (unary-expr -
+                        (literal 5))))
+                  (group-expr
+                    (unary-expr -
+                      (literal 9))))
+                (group-expr
+                  (unary-expr -
+                    (literal 4))))
+              (group-expr
+                (unary-expr -
+                  (literal 7))))
+            (group-expr
+              (unary-expr -
+                (literal 23))))
+          (group-expr
+            (unary-expr -
+              (literal 50)))))))
+  )
+)

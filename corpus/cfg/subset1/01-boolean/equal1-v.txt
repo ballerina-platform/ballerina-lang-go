@@ -1,0 +1,184 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printEq (
+        (literal false)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal true))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal true)
+        (literal false))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal false)
+        (literal true))))
+    (expression-stmt
+      (invocation printNotEq (
+        (literal false)
+        (literal false))))
+  )
+)
+(printEq
+  (bb0 () (bb1 bb3)
+    (binary-expr ==
+      (simple-var-ref b1)
+      (simple-var-ref b2))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)
+(printNotEq
+  (bb0 () (bb1 bb3)
+    (binary-expr !=
+      (simple-var-ref b1)
+      (simple-var-ref b2))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

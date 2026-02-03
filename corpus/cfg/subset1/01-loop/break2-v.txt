@@ -1,0 +1,69 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 6)
+        (literal 5)
+        (literal 7))))
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 6)
+        (literal 5)
+        (literal 7))))
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 1)
+        (literal 2)
+        (literal 3))))
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 6)
+        (literal 5)
+        (literal 7))))
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 1)
+        (literal 2)
+        (literal 3))))
+    (expression-stmt
+      (invocation printIfBetween (
+        (literal 0)
+        (unary-expr -
+          (literal 1))
+        (literal 4))))
+  )
+)
+(printIfBetween
+  (bb0 () (bb1)
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr <=
+      (simple-var-ref i)
+      (simple-var-ref max))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (binary-expr ==
+      (simple-var-ref i)
+      (simple-var-ref n))
+  )
+  (bb3 (bb1 bb4) ())
+  (bb4 (bb2) (bb3)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref n))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref n))))
+    (break)
+  )
+  (bb5 (bb2) (bb1)
+    (assignment
+      (simple-var-ref i)
+      (binary-expr +
+        (simple-var-ref i)
+        (literal 1)))
+  )
+)

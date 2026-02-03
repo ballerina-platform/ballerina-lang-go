@@ -1,0 +1,42 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 5)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 5)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 7)
+          (literal 7))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 5)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 7)
+          (literal 7))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (literal 6)
+          (literal 9))))))
+  )
+)
+(mod
+  (bb0 () ()
+    (return
+      (binary-expr %
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
