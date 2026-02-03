@@ -1,0 +1,42 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null)))))
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+    (assignment
+      (simple-var-ref x)
+      (literal <nil>))
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+    (assignment
+      (simple-var-ref x)
+      (literal <nil>))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)

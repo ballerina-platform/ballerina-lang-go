@@ -1,0 +1,19 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printComp ()))
+  )
+)
+(printComp
+  (bb0 () (bb1 bb2)
+    (binary-expr >
+      (literal true)
+      (literal false))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb0) ())
+)

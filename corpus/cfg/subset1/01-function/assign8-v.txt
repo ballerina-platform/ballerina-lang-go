@@ -1,0 +1,176 @@
+(foo
+  (bb0 () ()
+    (assignment
+      (index-based-access
+        (simple-var-ref arr)
+        (simple-var-ref i))
+      (binary-expr +
+        (simple-var-ref i)
+        (literal 10)))
+    (assignment
+      (index-based-access
+        (simple-var-ref arr)
+        (simple-var-ref i))
+      (binary-expr +
+        (simple-var-ref i)
+        (literal 10)))
+    (return
+      (simple-var-ref arr))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 2))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 2))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref arr))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 2))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref arr))))
+    (var-def
+      (variable str (type
+        (value-type string))))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 2))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref arr))))
+    (var-def
+      (variable str (type
+        (value-type string))))
+    (assignment
+      (wildcard-binding-pattern)
+      (simple-var-ref str))
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) ()))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 0))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 1))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation foo (
+        (simple-var-ref arr)
+        (literal 2))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref arr))))
+    (var-def
+      (variable str (type
+        (value-type string))))
+    (assignment
+      (wildcard-binding-pattern)
+      (simple-var-ref str))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref str))))
+  )
+)

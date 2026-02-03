@@ -1,0 +1,38 @@
+(foo
+  (bb0 () (bb1 bb3)
+    (group-expr
+      (simple-var-ref b))
+  )
+  (bb1 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref i)
+        (literal 1)))
+  )
+  (bb2 () ())
+  (bb3 (bb0) ()
+    (return
+      (binary-expr %
+        (simple-var-ref i)
+        (literal 5)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (literal 13)
+          (literal false))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (literal 13)
+          (literal false))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (literal 14)
+          (literal true))))))
+  )
+)

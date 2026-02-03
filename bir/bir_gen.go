@@ -304,6 +304,7 @@ func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak
 	}
 }
 
+// TODO: is this correct for nested loops?
 func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) statementEffect {
 	loopHead := ctx.addBB()
 	// jump to loop head

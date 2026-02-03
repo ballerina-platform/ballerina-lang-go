@@ -218,7 +218,10 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// Step 3: Semantic Analysis - this should panic for error cases
+	// Step 3: Control Flow Graph Generation
+	cfg := CreateControlFlowGraph(cx, pkg)
+
+	// Step 4: Semantic Analysis - this should panic for error cases
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 

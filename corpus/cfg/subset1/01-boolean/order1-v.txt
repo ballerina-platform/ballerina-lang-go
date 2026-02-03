@@ -1,0 +1,176 @@
+(greaterThan
+  (bb0 () ()
+    (return
+      (binary-expr >
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(lessThan
+  (bb0 () ()
+    (return
+      (binary-expr <
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal false)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal false)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal false)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal false)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal false)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal false)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal false)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal false))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal false)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal true)
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal false)
+          (literal false))))))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

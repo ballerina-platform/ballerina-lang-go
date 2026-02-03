@@ -1,0 +1,48 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr ==
+        (simple-var-ref x)
+        (literal 1)))
+  )
+)
+(foo
+  (bb0 () (bb1 bb3)
+    (group-expr
+      (unary-expr !
+        (invocation bar (
+          (literal 1)))))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal true))
+  )
+  (bb2 () ())
+  (bb3 (bb0) ()
+    (return
+      (literal false))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation foo ()))))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

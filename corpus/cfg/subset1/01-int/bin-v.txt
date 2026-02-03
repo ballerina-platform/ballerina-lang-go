@@ -1,0 +1,20 @@
+(bin
+  (bb0 () ()
+    (return
+      (binary-expr /
+        (binary-expr *
+          (simple-var-ref x)
+          (simple-var-ref y))
+        (simple-var-ref z)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation bin (
+          (literal 6)
+          (literal 2)
+          (literal 3))))))
+  )
+)

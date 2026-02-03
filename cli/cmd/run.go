@@ -39,6 +39,7 @@ var runOpts struct {
 	dumpTokens    bool
 	dumpST        bool
 	dumpAST       bool
+	dumpCFG       bool
 	dumpBIR       bool
 	traceRecovery bool
 	logFile       string
@@ -77,6 +78,7 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.dumpTokens, "dump-tokens", false, "Dump lexer tokens")
 	runCmd.Flags().BoolVar(&runOpts.dumpST, "dump-st", false, "Dump syntax tree")
 	runCmd.Flags().BoolVar(&runOpts.dumpAST, "dump-ast", false, "Dump abstract syntax tree")
+	runCmd.Flags().BoolVar(&runOpts.dumpCFG, "dumpCFG", false, "Dump control flow graph")
 	runCmd.Flags().BoolVar(&runOpts.dumpBIR, "dump-bir", false, "Dump Ballerina Intermediate Representation")
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
@@ -160,6 +162,16 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
+	// Run control flow analysis after type resolution
+	cfg := semantics.CreateCFG(cx, pkg)
+	if runOpts.dumpCFG {
+		prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
+		// Print the CFG with separators
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
+		fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
+		fmt.Fprintln(os.Stderr, "===================END CFG===================")
+	}
 	// Run semantic analysis after type resolution
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
