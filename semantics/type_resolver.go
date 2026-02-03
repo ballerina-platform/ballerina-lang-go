@@ -68,6 +68,9 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
 	}
+	for _, fn := range pkg.Functions {
+		t.resolveFunction(ctx, &fn)
+	}
 	ast.Walk(t, pkg)
 	tctx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
 	for _, defn := range pkg.TypeDefinitions {
