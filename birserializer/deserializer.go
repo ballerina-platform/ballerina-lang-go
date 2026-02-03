@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -31,20 +32,12 @@ type BIRReader struct {
 	cp []any
 }
 
-func NewBIRReader() *BIRReader {
-	return &BIRReader{}
-}
-
 func Unmarshal(data []byte) (*bir.BIRPackage, error) {
-	return NewBIRReader().deserialize(data)
-}
+	reader := &BIRReader{
+		r: bytes.NewReader(data),
+	}
 
-func (br *BIRReader) deserialize(data []byte) (*bir.BIRPackage, error) {
-	// Initialize reader state for reuse
-	br.r = bytes.NewReader(data)
-	br.cp = nil
-
-	return br.readPackage()
+	return reader.readPackage()
 }
 
 func (br *BIRReader) readPackage() (*bir.BIRPackage, error) {
@@ -107,54 +100,6 @@ func (br *BIRReader) readPackage() (*bir.BIRPackage, error) {
 	}, nil
 }
 
-func (br *BIRReader) readInt8() (int8, error) {
-	var v int8
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-func (br *BIRReader) readUInt8() (uint8, error) {
-	var v uint8
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-func (br *BIRReader) readInt32() (int32, error) {
-	var v int32
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-func (br *BIRReader) readInt64() (int64, error) {
-	var v int64
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-func (br *BIRReader) readFloat64() (float64, error) {
-	var v float64
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return 0, err
-	}
-	return v, nil
-}
-
-func (br *BIRReader) readBool() (bool, error) {
-	var v bool
-	if err := binary.Read(br.r, binary.BigEndian, &v); err != nil {
-		return false, err
-	}
-	return v, nil
-}
-
 func (br *BIRReader) readConstantPool() error {
 	cpSize, err := br.readInt32()
 	if err != nil {
@@ -179,7 +124,7 @@ func (br *BIRReader) readConstantPool() error {
 
 func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
 	switch tag {
-	case 0: // NULL/placeholder entry
+	case 0: // NULL
 		br.cp[i] = nil
 	case 1: // INTEGER
 		value, err := br.readInt64()
@@ -187,21 +132,18 @@ func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
 			return err
 		}
 		br.cp[i] = value
-
 	case 2: // FLOAT
 		value, err := br.readFloat64()
 		if err != nil {
 			return err
 		}
 		br.cp[i] = value
-
 	case 3: // BOOLEAN
 		b, err := br.readUInt8()
 		if err != nil {
 			return err
 		}
 		br.cp[i] = b != 0
-
 	case 4: // STRING
 		length, err := br.readInt32()
 		if err != nil {
@@ -214,10 +156,8 @@ func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
 			if _, err := br.r.Read(strBytes); err != nil {
 				return err
 			}
-			str := string(strBytes)
-			br.cp[i] = str
+			br.cp[i] = string(strBytes)
 		}
-
 	case 5: // PACKAGE
 		orgIdx, err := br.readInt32()
 		if err != nil {
@@ -235,54 +175,41 @@ func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
 		if err != nil {
 			return err
 		}
-
 		org := model.Name(br.getStringFromCP(int(orgIdx)))
 		pkgName := model.Name(br.getStringFromCP(int(pkgNameIdx)))
 		moduleName := model.Name(br.getStringFromCP(int(moduleNameIdx)))
 		version := model.Name(br.getStringFromCP(int(versionIdx)))
-
 		br.cp[i] = &model.PackageID{
 			OrgName: &org,
 			PkgName: &pkgName,
 			Name:    &moduleName,
 			Version: &version,
 		}
-
 	case 6: // BYTE
 		value, err := br.readInt32()
 		if err != nil {
 			return err
 		}
 		br.cp[i] = value
-
-	case 7: // SHAPE (type)
+	case 7: // SHAPE
 		_, err := br.readInt32() // shapeLen
 		if err != nil {
 			return err
 		}
-
-		// tag
 		tag, err := br.readUInt8()
 		if err != nil {
 			return err
 		}
-
-		// name
 		nameIdx, err := br.readInt32()
 		if err != nil {
 			return err
 		}
 		name := model.Name(br.getStringFromCP(int(nameIdx)))
-
-		// flags
 		flags, err := br.readInt64()
 		if err != nil {
 			return err
 		}
-
-		t := ast.NewBType(model.TypeTags(tag), name, uint64(flags))
-
-		br.cp[i] = t
+		br.cp[i] = ast.NewBType(model.TypeTags(tag), name, uint64(flags))
 	default:
 		return fmt.Errorf("unknown CP tag: %d", tag)
 	}
@@ -1147,4 +1074,34 @@ func (br *BIRReader) readOperand(varMap map[string]*bir.BIRVariableDcl) (*bir.BI
 	return &bir.BIROperand{
 		VariableDcl: varDcl,
 	}, nil
+}
+
+func read[T any](r io.Reader) (T, error) {
+	var v T
+	err := binary.Read(r, binary.BigEndian, &v)
+	return v, err
+}
+
+func (br *BIRReader) readInt8() (int8, error) {
+	return read[int8](br.r)
+}
+
+func (br *BIRReader) readUInt8() (uint8, error) {
+	return read[uint8](br.r)
+}
+
+func (br *BIRReader) readInt32() (int32, error) {
+	return read[int32](br.r)
+}
+
+func (br *BIRReader) readInt64() (int64, error) {
+	return read[int64](br.r)
+}
+
+func (br *BIRReader) readFloat64() (float64, error) {
+	return read[float64](br.r)
+}
+
+func (br *BIRReader) readBool() (bool, error) {
+	return read[bool](br.r)
 }
