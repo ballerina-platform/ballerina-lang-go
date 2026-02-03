@@ -67,7 +67,7 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
-	tyCtx := semtypes.ContextFrom(env)
+	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
 	validator := &typeResolutionValidator{t: t, ctx: cx, tyCtx: tyCtx}
 	ast.Walk(validator, pkg)
 
