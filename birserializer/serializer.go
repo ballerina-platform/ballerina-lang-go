@@ -40,19 +40,16 @@ func NewBIRWriter() *BIRWriter {
 	}
 }
 
-// Marshal returns the BIR encoding of pkg.
-// This is a convenience function that creates a new BIRWriter and calls Serialize.
 func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
-	return NewBIRWriter().serialize(pkg)
+	writer := &BIRWriter{
+		cp: NewConstantPool(),
+	}
+
+	return writer.serialize(pkg)
 }
 
 func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
-	// Reset constant pool for reuse
-	bw.cp = NewConstantPool()
-
 	birbuf := &bytes.Buffer{}
-
-	// Write the package details
 	pkgIDIdx := int32(-1)
 	if pkg.PackageID != nil {
 		pkgIDIdx = bw.cp.AddPackageCPEntry(pkg.PackageID)
@@ -61,22 +58,18 @@ func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
 		return nil, err
 	}
 
-	// Write import module declarations
 	if err := bw.writeImportModuleDecls(birbuf, pkg); err != nil {
 		return nil, err
 	}
 
-	// Write constants
 	if err := bw.writeConstants(birbuf, pkg); err != nil {
 		return nil, err
 	}
 
-	// Write global vars
 	if err := bw.writeGlobalVars(birbuf, pkg); err != nil {
 		return nil, err
 	}
 
-	// Write functions
 	if err := bw.writeFunctions(birbuf, pkg); err != nil {
 		return nil, err
 	}
@@ -179,6 +172,7 @@ func (bw *BIRWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant)
 	return err
 }
 
+// FIXME: Implement type writing
 func (bw *BIRWriter) writeType(buf *bytes.Buffer, t any) error {
 	return bw.writeInt32(buf, -1)
 }
@@ -196,6 +190,7 @@ func (bw *BIRWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) erro
 	return bw.writeInt32(buf, valIdx)
 }
 
+// FIXME: Remove this after implementing types
 func (bw *BIRWriter) inferTag(value any) (model.TypeTags, error) {
 	switch v := value.(type) {
 	case bir.ConstValue:
@@ -293,7 +288,6 @@ func (bw *BIRWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) 
 		// Return -1 as the index for nil values
 		return -1, nil
 	default:
-		fmt.Println("Unsupported tag:", tag)
 		return 0, fmt.Errorf("unsupported tag for constant value: %v", tag)
 	}
 }
@@ -348,15 +342,12 @@ func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) error
 	if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(fn.OriginalName.Value())); err != nil {
 		return err
 	}
-
 	if err := bw.writeInt64(buf, fn.Flags); err != nil {
 		return err
 	}
-
 	if err := bw.writeUInt8(buf, uint8(fn.Origin)); err != nil {
 		return err
 	}
-
 	if err := bw.writeInt32(buf, int32(len(fn.RequiredParams))); err != nil {
 		return err
 	}
@@ -422,7 +413,6 @@ func (bw *BIRWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRVariableD
 	if err := bw.writeUInt8(buf, uint8(localVar.Kind)); err != nil {
 		return err
 	}
-
 	if err := bw.writeType(buf, localVar.Type); err != nil {
 		return err
 	}
@@ -468,7 +458,6 @@ func (bw *BIRWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) e
 	if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(bb.Id.Value())); err != nil {
 		return err
 	}
-	// TODO: Adding the terminator instruction as well! Why?
 	if err := bw.writeInt32(buf, int32(len(bb.Instructions))); err != nil {
 		return err
 	}
@@ -555,7 +544,7 @@ func (bw *BIRWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		}
 
 	case *bir.Return:
-		// Nothing to writ for return terminator
+		// Nothing to write for return terminator
 	default:
 		return fmt.Errorf("unsupported terminator type: %T", term)
 	}
@@ -628,7 +617,6 @@ func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		if err := bw.writeType(buf, instr.Type); err != nil {
 			return err
 		}
-
 		if err := bw.writeOperand(buf, instr.LhsOp); err != nil {
 			return err
 		}
@@ -641,7 +629,6 @@ func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 
 func (bw *BIRWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) error {
 	if op == nil || op.VariableDcl == nil {
-		// Should not happen based on current bir-gen, but let's be safe
 		if err := bw.writeBool(buf, false); err != nil {
 			return err
 		}
@@ -658,7 +645,6 @@ func (bw *BIRWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) error {
 		if err := bw.writeBool(buf, true); err != nil {
 			return err
 		}
-
 		return bw.writeType(buf, op.VariableDcl.Type)
 	}
 
