@@ -537,7 +537,7 @@ func (t *TypeResolver) resolveListConstructorExpr(expr *ast.BLangListConstructor
 
 	// Construct the list type from member types
 	ld := semtypes.NewListDefinition()
-	listTy := ld.DefineListTypeWrapped(t.typeEnv, memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 
 	// Set on TypeData
 	typeData := expr.GetTypeData()
@@ -658,12 +658,11 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 	keyExprTy := t.resolveExpression(keyExpr)
 
 	// Determine result type by projecting the container type with the key type
-	ctx := semtypes.ContextFrom(t.typeEnv)
 	var resultTy semtypes.SemType
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		// List indexing
-		resultTy = semtypes.ListProjInnerVal(ctx, containerExprTy, keyExprTy)
+		resultTy = semtypes.ListProjInnerVal(t.tyCtx, containerExprTy, keyExprTy)
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		// String indexing returns a string
 		resultTy = &semtypes.STRING
@@ -705,12 +704,11 @@ func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.Sem
 	}
 
 	// Construct the argument list type
-	ctx := semtypes.ContextFrom(t.typeEnv)
 	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(t.typeEnv, argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 
 	// Get the return type from the function type
-	retTy := semtypes.FunctionReturnType(ctx, fnTy, argListTy)
+	retTy := semtypes.FunctionReturnType(t.tyCtx, fnTy, argListTy)
 
 	// Set on TypeData
 	typeData := expr.GetTypeData()
