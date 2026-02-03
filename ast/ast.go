@@ -480,9 +480,6 @@ func (this *BLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
 }
 
 func (this *BLangNodeBase) GetDeterminedType() semtypes.SemType {
-	if this.DeterminedType == nil {
-		return &semtypes.NEVER
-	}
 	return this.DeterminedType
 }
 

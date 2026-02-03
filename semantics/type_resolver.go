@@ -176,6 +176,14 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		// Done
 		return nil
 	}
+
+	// Set DeterminedType to NEVER for all nodes by default.
+	// Nodes with actual semantic types will overwrite this during resolution.
+	if node.GetDeterminedType() == nil {
+		node.SetDeterminedType(&semtypes.NEVER)
+	}
+
+	// Existing type-specific resolution switch
 	switch n := node.(type) {
 	case *ast.BLangConstant:
 		t.resolveConstant(n)
@@ -204,6 +212,10 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, depth int) semtypes.SemType {
 	if defn.DeterminedType != nil {
 		return defn.DeterminedType
+	}
+	// Walk Name identifier to ensure it gets DeterminedType set
+	if defn.Name != nil {
+		ast.Walk(t, defn.Name)
 	}
 	if depth == defn.CycleDepth {
 		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
@@ -795,6 +807,10 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {
 		// This should have been caught before type resolver as a syntax error
 		t.ctx.InternalError("constant expression is nil", constant.GetPosition())
 		return
+	}
+	// Walk Name identifier to ensure it gets DeterminedType set
+	if constant.Name != nil {
+		ast.Walk(t, constant.Name)
 	}
 	ast.Walk(t, constant.Expr.(ast.BLangNode))
 	exprType := constant.Expr.(ast.BLangExpression).GetDeterminedType()
