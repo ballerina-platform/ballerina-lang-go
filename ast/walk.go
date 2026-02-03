@@ -188,7 +188,7 @@ func Walk(v Visitor, node BLangNode) {
 		for i := range node.AnnAttachments {
 			Walk(v, &node.AnnAttachments[i])
 		}
-		walkTypeData(v, &node.TypeData)
+		WalkTypeData(v, &node.TypeData)
 
 	case *BLangAnnotationAttachment:
 		Walk(v, node.Expr.(BLangNode))
@@ -204,7 +204,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		walkTypeData(v, &node.typeData)
+		WalkTypeData(v, &node.typeData)
 		for i := range node.annAttachments {
 			Walk(v, &node.annAttachments[i])
 		}
@@ -217,14 +217,14 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 		typeData := node.GetTypeData()
-		walkTypeData(v, &typeData)
+		WalkTypeData(v, &typeData)
 
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
 		typeData := node.GetTypeData()
-		walkTypeData(v, &typeData)
+		WalkTypeData(v, &typeData)
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
@@ -258,7 +258,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		walkTypeData(v, &node.ReturnTypeData)
+		WalkTypeData(v, &node.ReturnTypeData)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
@@ -437,7 +437,7 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangTypedescExpr:
-		walkTypeData(v, &node.TypeData)
+		WalkTypeData(v, &node.TypeData)
 
 	case *BLangTypeConversionExpr:
 		// No children
@@ -492,7 +492,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	// Section 8: Type Nodes
 	case *BLangArrayType:
-		walkTypeData(v, &node.Elemtype)
+		WalkTypeData(v, &node.Elemtype)
 		for i := range node.Sizes {
 			Walk(v, node.Sizes[i].(BLangNode))
 		}
@@ -513,11 +513,11 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangUnionTypeNode:
-		walkTypeData(v, &node.lhs)
-		walkTypeData(v, &node.rhs)
+		WalkTypeData(v, &node.lhs)
+		WalkTypeData(v, &node.rhs)
 
 	case *BLangErrorTypeNode:
-		walkTypeData(v, &node.detailType)
+		WalkTypeData(v, &node.detailType)
 
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
@@ -662,7 +662,7 @@ func Walk(v Visitor, node BLangNode) {
 
 // We need to do this because TypeData is not a ast node but within it there can be ast nodes. Need to think if this is
 // the correct appraoch.
-func walkTypeData(v Visitor, typeData *model.TypeData) {
+func WalkTypeData(v Visitor, typeData *model.TypeData) {
 	v.VisitTypeData(typeData)
 	if typeData.TypeDescriptor == nil {
 		return

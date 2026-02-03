@@ -67,7 +67,8 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
-	validator := &typeResolutionValidator{t: t, ctx: cx}
+	tyCtx := semtypes.ContextFrom(env)
+	validator := &typeResolutionValidator{t: t, ctx: cx, tyCtx: tyCtx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, type resolution completed without panicking
@@ -77,11 +78,32 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 type typeResolutionValidator struct {
 	t   *testing.T
 	ctx *context.CompilerContext
+	tyCtx semtypes.Context
 }
 
 func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
+	}
+
+	// Validate that all BLangExpression nodes have their determined type set
+	if expr, ok := node.(ast.BLangExpression); ok {
+		determinedType := expr.GetDeterminedType()
+		if determinedType == nil {
+			v.t.Errorf("expression %T at %v does not have determined type set", expr, expr.GetPosition())
+		}
+		if semtypes.IsNever(determinedType) {
+			v.t.Errorf("expression %T at %v has determined type NEVER", expr, expr.GetPosition())
+		}
+
+		// Also validate TypeData.Type is set
+		typeData := expr.GetTypeData()
+		if typeData.Type == nil {
+			v.t.Errorf("expression %T at %v does not have TypeData.Type set", expr, expr.GetPosition())
+		}
+		if !semtypes.IsSameType(v.tyCtx, typeData.Type, determinedType) {
+			v.t.Errorf("expression %T at %v has TypeData.Type %v, which is not the same as determined type %v", expr, expr.GetPosition(), typeData.Type, determinedType)
+		}
 	}
 
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
@@ -91,10 +113,8 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 			return v
 		}
 		if v.ctx.SymbolType(symbol) == nil {
-			if isExpr(node) {
-				// expressions will get their type set during semantic analysis
-				return v
-			} else if _, ok := node.(*ast.BLangConstant); ok {
+			// FIXME: get rid of this
+			if _, ok := node.(*ast.BLangConstant); ok {
 				// constants will get their type set during semantic analysis
 				return v
 			}
@@ -104,11 +124,6 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	}
 
 	return v
-}
-
-func isExpr(node ast.BLangNode) bool {
-	_, ok := node.(model.ExpressionNode)
-	return ok
 }
 
 func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
