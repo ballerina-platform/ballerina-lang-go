@@ -34,11 +34,11 @@
       (expression-stmt
         (invocation io println (
           (literal Loop count: )
-          (simple-var-ref loopCount)())
+          (simple-var-ref loopCount))))
       (expression-stmt
         (invocation io println (
           (literal Final total: )
-          (simple-var-ref total)())))
+          (simple-var-ref total))))))
   (function sum (
     (variable x (type
       (value-type int)))

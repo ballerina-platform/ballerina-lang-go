@@ -33,14 +33,14 @@
               (simple-var-ref i6))
             (binary-expr +
               (simple-var-ref i3)
-              (literal 15)))())
+              (literal 15))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr !=
             (simple-var-ref i5)
             (binary-expr +
               (simple-var-ref i5)
-              (literal 2)))())
+              (literal 2))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==
@@ -49,7 +49,7 @@
               (literal 9))
             (binary-expr >
               (simple-var-ref i5)
-              (literal 2)))())
+              (literal 2))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr <=
@@ -58,7 +58,7 @@
               (simple-var-ref i3))
             (binary-expr +
               (simple-var-ref i2)
-              (literal 4)))())
+              (literal 4))))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr !=
@@ -71,7 +71,7 @@
                   (literal 1)
                   (simple-var-ref i2))
                 (simple-var-ref i3)))
-            (simple-var-ref f))())
+            (simple-var-ref f)))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr !=
@@ -80,19 +80,19 @@
                 (literal 7)
                 (simple-var-ref i1))
               (literal 8))
-            (simple-var-ref f))())
+            (simple-var-ref f)))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==
             (unary-expr !
               (simple-var-ref t))
-            (simple-var-ref f))())
+            (simple-var-ref f)))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==
             (simple-var-ref f)
             (unary-expr !
-              (simple-var-ref t)))())))
+              (simple-var-ref t))))))))
   (function printBoolean (
     (variable x (type
       (value-type boolean)))) (
@@ -103,8 +103,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

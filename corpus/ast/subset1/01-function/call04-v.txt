@@ -7,28 +7,28 @@
       (expression-stmt
         (invocation io println (
           (binary-expr +
-            (invocation foo (()
-            (invocation bar (())())
+            (invocation foo ())
+            (invocation bar ())))))
       (expression-stmt
         (invocation io println (
           (binary-expr -
-            (invocation foo (()
-            (invocation bar (())())
+            (invocation foo ())
+            (invocation bar ())))))
       (expression-stmt
         (invocation io println (
           (binary-expr *
-            (invocation foo (()
-            (invocation bar (())())
+            (invocation foo ())
+            (invocation bar ())))))
       (expression-stmt
         (invocation io println (
           (binary-expr /
-            (invocation foo (()
-            (invocation bar (())())
+            (invocation foo ())
+            (invocation bar ())))))
       (expression-stmt
         (invocation io println (
           (binary-expr %
-            (invocation foo (()
-            (invocation bar (())())))
+            (invocation foo ())
+            (invocation bar ())))))))
   (function foo () (
     (value-type int))
     (block-function-body

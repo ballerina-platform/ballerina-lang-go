@@ -9,19 +9,19 @@
           (value-type boolean))))
       (expression-stmt
         (invocation printBoolean (
-          (simple-var-ref b)())
+          (simple-var-ref b))))
       (assignment
         (simple-var-ref b)
         (literal true))
       (expression-stmt
         (invocation printBoolean (
-          (simple-var-ref b)())
+          (simple-var-ref b))))
       (assignment
         (simple-var-ref b)
         (literal false))
       (expression-stmt
         (invocation printBoolean (
-          (simple-var-ref b)())))
+          (simple-var-ref b))))))
   (function printBoolean (
     (variable b (type
       (value-type boolean)))) (
@@ -32,8 +32,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

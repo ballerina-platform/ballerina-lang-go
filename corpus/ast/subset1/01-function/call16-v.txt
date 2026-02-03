@@ -7,7 +7,7 @@
       (expression-stmt
         (invocation io println (
           (invocation foo (
-            (literal 10)()())))
+            (literal 10))))))))
   (function foo (
     (variable x (type
       (value-type int)))) (
@@ -24,7 +24,7 @@
         (block-stmt
           (return
             (invocation foo (
-              (simple-var-ref i)())) ())
+              (simple-var-ref i))))) ())
       (block-stmt
         (return
           (simple-var-ref i))))))

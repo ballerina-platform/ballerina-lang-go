@@ -6,12 +6,12 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (literal 0)())
+          (literal 0))))
       (expression-stmt
-        (invocation nothing (())
+        (invocation nothing ()))
       (expression-stmt
         (invocation io println (
-          (literal 1)())))
+          (literal 1))))))
   (function nothing () (
     (value-type null))
     (block-function-body)))

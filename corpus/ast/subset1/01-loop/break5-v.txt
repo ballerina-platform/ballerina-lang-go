@@ -7,7 +7,7 @@
       (expression-stmt
         (invocation io println (
           (invocation foo (
-            (literal 10)()())))
+            (literal 10))))))))
   (function foo (
     (variable x (type
       (value-type int)))) (
@@ -37,7 +37,7 @@
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (simple-var-ref i)())
+                  (simple-var-ref i))))
               (break)) ())
           (block-stmt)))
       (if
@@ -52,4 +52,4 @@
       (block-stmt
         (return
           (invocation foo (
-            (simple-var-ref i)())))))
+            (simple-var-ref i))))))))

@@ -9,7 +9,7 @@
           (invocation bin (
             (literal 6)
             (literal 2)
-            (literal 3)()())))
+            (literal 3))))))))
   (function bin (
     (variable x (type
       (value-type int)))

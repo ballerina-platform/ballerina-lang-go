@@ -6,16 +6,16 @@
     (block-function-body
       (expression-stmt
         (invocation printClosestSquareNum (
-          (literal 1)())
+          (literal 1))))
       (expression-stmt
         (invocation printClosestSquareNum (
-          (literal 0)())
+          (literal 0))))
       (expression-stmt
         (invocation printClosestSquareNum (
-          (literal 5)())
+          (literal 5))))
       (expression-stmt
         (invocation printClosestSquareNum (
-          (literal 17)())))
+          (literal 17))))))
   (function printClosestSquareNum (
     (variable x (type
       (value-type int)))) (
@@ -32,11 +32,11 @@
           (if
             (group-expr
               (invocation isSquareNumber (
-                (simple-var-ref i)())
+                (simple-var-ref i))))
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (simple-var-ref i)())
+                  (simple-var-ref i))))
               (return
                 (literal <nil>))) ())
           (block-stmt

@@ -6,15 +6,15 @@
     (block-function-body
       (if
         (group-expr
-          (invocation foo (())
+          (invocation foo ()))
         (block-stmt
           (expression-stmt
             (invocation bar (
-              (literal 100)())) (
+              (literal 100))))) (
         (block-stmt
           (expression-stmt
             (invocation baz (
-              (literal 200)()))))))
+              (literal 200)))))))))
   (function foo () (
     (value-type boolean))
     (block-function-body
@@ -27,7 +27,7 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)())))
+          (simple-var-ref x))))))
   (function baz (
     (variable x (type
       (value-type int)))) (
@@ -35,4 +35,4 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x)()))))
+          (simple-var-ref x)))))))

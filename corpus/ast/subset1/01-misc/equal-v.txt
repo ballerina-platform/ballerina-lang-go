@@ -7,54 +7,54 @@
       (expression-stmt
         (invocation io println (
           (binary-expr ===
-            (invocation mkNil (()
-            (invocation mkNil (())())
+            (invocation mkNil ())
+            (invocation mkNil ())))))
       (expression-stmt
         (invocation io println (
           (binary-expr !==
             (invocation mkInt (
-              (literal 1)()
+              (literal 1)))
             (invocation mkInt (
-              (literal 1)())())
+              (literal 1)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (invocation mkBoolean (
-              (literal true)()
+              (literal true)))
             (invocation mkBoolean (
-              (literal true)())())
+              (literal true)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (invocation mkInt (
               (unary-expr -
-                (literal 36028797018963969))()
+                (literal 36028797018963969))))
             (invocation mkInt (
               (unary-expr -
-                (literal 36028797018963969))())())
+                (literal 36028797018963969))))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (invocation mkInt (
               (unary-expr -
-                (literal 36028797018963968))()
+                (literal 36028797018963968))))
             (invocation mkInt (
               (unary-expr -
-                (literal 36028797018963968))())())
+                (literal 36028797018963968))))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (invocation mkInt (
-              (literal 36028797018963967)()
+              (literal 36028797018963967)))
             (invocation mkInt (
-              (literal 36028797018963967)())())
+              (literal 36028797018963967)))))))
       (expression-stmt
         (invocation io println (
           (binary-expr ===
             (invocation mkInt (
-              (literal 36028797018963968)()
+              (literal 36028797018963968)))
             (invocation mkInt (
-              (literal 36028797018963968)())())))
+              (literal 36028797018963968)))))))))
   (function mkNil () (
     (value-type any))
     (block-function-body

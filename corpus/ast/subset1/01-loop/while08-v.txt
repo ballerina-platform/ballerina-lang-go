@@ -5,7 +5,7 @@
     (value-type null))
     (block-function-body
       (expression-stmt
-        (invocation foo (())))
+        (invocation foo ()))))
   (function foo () (
     (value-type null))
     (block-function-body
@@ -17,4 +17,4 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))))
+              (literal 0)))))))))

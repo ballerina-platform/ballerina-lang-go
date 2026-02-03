@@ -7,35 +7,35 @@
       (expression-stmt
         (invocation printEq (
           (literal true)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printEq (
           (literal true)
-          (literal false)())
+          (literal false))))
       (expression-stmt
         (invocation printEq (
           (literal false)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printEq (
           (literal false)
-          (literal false)())
+          (literal false))))
       (expression-stmt
         (invocation printNotEq (
           (literal true)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printNotEq (
           (literal true)
-          (literal false)())
+          (literal false))))
       (expression-stmt
         (invocation printNotEq (
           (literal false)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printNotEq (
           (literal false)
-          (literal false)())))
+          (literal false))))))
   (function printEq (
     (variable b1 (type
       (value-type boolean)))
@@ -50,11 +50,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))))
+              (literal 0)))))))))
   (function printNotEq (
     (variable b1 (type
       (value-type boolean)))
@@ -69,8 +69,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

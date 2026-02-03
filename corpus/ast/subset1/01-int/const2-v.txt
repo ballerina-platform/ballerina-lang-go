@@ -6,20 +6,20 @@
     (block-function-body
       (expression-stmt
         (invocation io println (
-          (literal 0)())
+          (literal 0))))
       (expression-stmt
         (invocation io println (
-          (literal 1)())
+          (literal 1))))
       (expression-stmt
         (invocation io println (
-          (literal 9223372036854775807)())
+          (literal 9223372036854775807))))
       (expression-stmt
         (invocation io println (
           (unary-expr -
-            (literal 1))())
+            (literal 1)))))
       (expression-stmt
         (invocation io println (
           (binary-expr -
             (unary-expr -
               (literal 9223372036854775807))
-            (literal 1))()))))
+            (literal 1))))))))

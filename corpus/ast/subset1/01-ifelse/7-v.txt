@@ -7,19 +7,19 @@
       (expression-stmt
         (invocation foo (
           (literal 1)
-          (literal 1)())
+          (literal 1))))
       (expression-stmt
         (invocation foo (
           (literal 2)
-          (literal 1)())
+          (literal 1))))
       (expression-stmt
         (invocation foo (
           (literal 5)
-          (literal 4)())
+          (literal 4))))
       (expression-stmt
         (invocation foo (
           (literal 12)
-          (literal 10)())))
+          (literal 10))))))
   (function foo (
     (variable x (type
       (value-type int)))
@@ -38,7 +38,7 @@
               (binary-expr -
                 (simple-var-ref x)
                 (literal 1))
-              (simple-var-ref y)())) (
+              (simple-var-ref y))))) (
         (if
           (group-expr
             (binary-expr <
@@ -50,8 +50,8 @@
                 (simple-var-ref x)
                 (binary-expr -
                   (simple-var-ref y)
-                  (literal 1))())) (
+                  (literal 1)))))) (
           (block-stmt
             (expression-stmt
               (invocation io println (
-                (simple-var-ref x)())))))))))
+                (simple-var-ref x))))))))))))

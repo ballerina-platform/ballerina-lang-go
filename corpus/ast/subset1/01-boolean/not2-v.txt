@@ -7,11 +7,11 @@
       (expression-stmt
         (invocation printBoolean (
           (invocation not (
-            (literal true)()())
+            (literal true))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation not (
-            (literal false)()())))
+            (literal false))))))))
   (function printBoolean (
     (variable b (type
       (value-type boolean)))) (
@@ -22,11 +22,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))))
+              (literal 0)))))))))
   (function not (
     (variable b (type
       (value-type boolean)))) (

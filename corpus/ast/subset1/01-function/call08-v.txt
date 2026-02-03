@@ -6,7 +6,7 @@
     (block-function-body
       (expression-stmt
         (invocation printBoolean (
-          (invocation foo (()())))
+          (invocation foo ()))))))
   (function foo () (
     (value-type boolean))
     (block-function-body
@@ -14,7 +14,7 @@
         (group-expr
           (unary-expr !
             (invocation bar (
-              (literal 1)()))
+              (literal 1)))))
         (block-stmt
           (return
             (literal true))) (
@@ -40,8 +40,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

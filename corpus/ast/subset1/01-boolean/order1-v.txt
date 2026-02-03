@@ -8,37 +8,37 @@
         (invocation printBoolean (
           (invocation greaterThan (
             (literal true)
-            (literal false)()())
+            (literal false))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation greaterThan (
             (literal true)
-            (literal true)()())
+            (literal true))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation greaterThan (
             (literal false)
-            (literal false)()())
+            (literal false))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation lessThan (
             (literal true)
-            (literal false)()())
+            (literal false))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation lessThan (
             (literal false)
-            (literal true)()())
+            (literal true))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation lessThan (
             (literal true)
-            (literal true)()())
+            (literal true))))))
       (expression-stmt
         (invocation printBoolean (
           (invocation lessThan (
             (literal false)
-            (literal false)()())))
+            (literal false))))))))
   (function printBoolean (
     (variable b (type
       (value-type boolean)))) (
@@ -49,11 +49,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))))
+              (literal 0)))))))))
   (function lessThan (
     (variable x (type
       (value-type boolean)))

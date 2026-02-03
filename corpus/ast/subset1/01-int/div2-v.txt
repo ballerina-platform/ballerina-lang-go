@@ -8,7 +8,7 @@
         (invocation io println (
           (invocation div (
             (literal 8)
-            (literal 2)()())))
+            (literal 2))))))))
   (function div (
     (variable x (type
       (value-type int)))

@@ -5,9 +5,9 @@
     (value-type null))
     (block-function-body
       (expression-stmt
-        (invocation printTrue (())
+        (invocation printTrue ()))
       (expression-stmt
-        (invocation printFalse (())))
+        (invocation printFalse ()))))
   (function printTrue () (
     (value-type null))
     (block-function-body
@@ -16,7 +16,7 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) ())
+              (literal 1))))) ())
       (block-stmt)))
   (function printFalse () (
     (value-type null))
@@ -29,8 +29,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 1)())) (
+              (literal 1))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())))))))
+              (literal 0))))))))))

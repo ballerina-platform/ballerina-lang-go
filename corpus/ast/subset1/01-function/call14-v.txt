@@ -11,7 +11,7 @@
               (invocation baz (
                 (invocation sum (
                   (literal 23)
-                  (invocation foobar (()()()()()())))
+                  (invocation foobar ()))))))))))))))
   (function foo (
     (variable x (type
       (value-type int)))) (

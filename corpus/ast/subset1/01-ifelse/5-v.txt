@@ -7,19 +7,19 @@
       (expression-stmt
         (invocation printBranch (
           (literal true)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printBranch (
           (literal true)
-          (literal false)())
+          (literal false))))
       (expression-stmt
         (invocation printBranch (
           (literal false)
-          (literal true)())
+          (literal true))))
       (expression-stmt
         (invocation printBranch (
           (literal false)
-          (literal false)())))
+          (literal false))))))
   (function printBranch (
     (variable x (type
       (value-type boolean)))
@@ -37,11 +37,11 @@
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (literal 0)())) (
+                  (literal 0))))) (
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (literal 1)()))))) (
+                  (literal 1)))))))) (
         (block-stmt
           (if
             (group-expr
@@ -49,8 +49,8 @@
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (literal 2)())) (
+                  (literal 2))))) (
             (block-stmt
               (expression-stmt
                 (invocation io println (
-                  (literal 3)()))))))))))
+                  (literal 3)))))))))))))

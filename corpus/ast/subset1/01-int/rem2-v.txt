@@ -12,7 +12,7 @@
           (invocation rem (
             (simple-var-ref INT_MIN)
             (unary-expr -
-              (literal 1))()())))
+              (literal 1)))))))))
   (function rem (
     (variable x (type
       (value-type int)))

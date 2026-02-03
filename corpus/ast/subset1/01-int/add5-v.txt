@@ -8,14 +8,14 @@
         (invocation io println (
           (binary-expr +
             (literal 3)
-            (literal 5))())
+            (literal 5)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
             (binary-expr +
               (literal 3)
               (literal 5))
-            (literal 11))())
+            (literal 11)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -24,7 +24,7 @@
                 (literal 3)
                 (literal 5))
               (literal 5))
-            (literal 9))())
+            (literal 9)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -35,7 +35,7 @@
                   (literal 5))
                 (literal 5))
               (literal 9))
-            (literal 12))())
+            (literal 12)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -48,7 +48,7 @@
                   (literal 5))
                 (literal 9))
               (literal 4))
-            (literal 7))())
+            (literal 7)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -63,7 +63,7 @@
                   (literal 9))
                 (literal 4))
               (literal 7))
-            (literal 5))())
+            (literal 5)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -80,4 +80,4 @@
                   (literal 4))
                 (literal 7))
               (literal 23))
-            (literal 50))()))))
+            (literal 50))))))))

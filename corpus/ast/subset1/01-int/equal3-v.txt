@@ -12,11 +12,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 17)())) (
+              (literal 17))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))
+              (literal 0)))))))
       (assignment
         (simple-var-ref b)
         (binary-expr !=
@@ -27,11 +27,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())) (
+              (literal 0))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 21)()))))
+              (literal 21)))))))
       (var-def
         (variable x (type
           (value-type int))))
@@ -42,11 +42,11 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 42)())) (
+              (literal 42))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)()))))
+              (literal 0)))))))
       (if
         (binary-expr !=
           (literal 42)
@@ -54,8 +54,8 @@
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 0)())) (
+              (literal 0))))) (
         (block-stmt
           (expression-stmt
             (invocation io println (
-              (literal 42)())))))))
+              (literal 42))))))))))

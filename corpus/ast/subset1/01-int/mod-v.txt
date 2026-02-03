@@ -8,17 +8,17 @@
         (invocation io println (
           (invocation mod (
             (literal 5)
-            (literal 3)()())
+            (literal 3))))))
       (expression-stmt
         (invocation io println (
           (invocation mod (
             (literal 7)
-            (literal 7)()())
+            (literal 7))))))
       (expression-stmt
         (invocation io println (
           (invocation mod (
             (literal 6)
-            (literal 9)()())))
+            (literal 9))))))))
   (function mod (
     (variable x (type
       (value-type int)))

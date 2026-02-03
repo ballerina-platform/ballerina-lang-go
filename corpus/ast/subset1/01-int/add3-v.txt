@@ -9,12 +9,12 @@
           (value-type int))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref add1)())
+          (simple-var-ref add1))))
       (expression-stmt
         (invocation io println (
           (invocation add (
             (literal 20)
-            (literal 30)()())))
+            (literal 30))))))))
   (function add (
     (variable x (type
       (value-type int)))

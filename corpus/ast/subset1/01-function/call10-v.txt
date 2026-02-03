@@ -8,12 +8,12 @@
         (invocation io println (
           (invocation foo (
             (literal 13)
-            (literal false)()())
+            (literal false))))))
       (expression-stmt
         (invocation io println (
           (invocation foo (
             (literal 14)
-            (literal true)()())))
+            (literal true))))))))
   (function foo (
     (variable i (type
       (value-type int)))

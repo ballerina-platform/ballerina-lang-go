@@ -8,7 +8,7 @@
         (invocation io println (
           (invocation mul (
             (literal 4)
-            (literal 2)()())))
+            (literal 2))))))))
   (function mul (
     (variable x (type
       (value-type int)))

@@ -10,14 +10,14 @@
             (binary-expr +
               (literal 8)
               (literal 5))
-            (literal 11))())
+            (literal 11)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
             (binary-expr -
               (literal 8)
               (literal 11))
-            (literal 5))())
+            (literal 5)))))
       (expression-stmt
         (invocation io println (
           (binary-expr +
@@ -26,7 +26,7 @@
                 (literal 3)
                 (literal 5))
               (literal 5))
-            (literal 9))())
+            (literal 9)))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -34,7 +34,7 @@
             (literal 5)
             (unary-expr -
               (literal 5))
-            (literal 9)()())
+            (literal 9))))))
       (expression-stmt
         (invocation io println (
           (binary-expr -
@@ -43,7 +43,7 @@
                 (literal 3)
                 (literal 5))
               (literal 9))
-            (literal 4))())
+            (literal 4)))))
       (expression-stmt
         (invocation io println (
           (invocation add (
@@ -52,7 +52,7 @@
               (literal 5))
             (literal 9)
             (unary-expr -
-              (literal 4))()())))
+              (literal 4)))))))))
   (function add (
     (variable a (type
       (value-type int)))
