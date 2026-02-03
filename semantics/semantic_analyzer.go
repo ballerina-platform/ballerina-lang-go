@@ -33,14 +33,11 @@ type analyzer interface {
 	ast.Visitor
 	ctx() *context.CompilerContext
 	tyCtx() semtypes.Context
-	refTy(name UniformRef) semtypes.SemType
 	importedPackage(alias string) *ast.BLangImportPackage
 	unimplementedErr(message string)
 	semanticErr(message string)
 	syntaxErr(message string)
 	internalErr(message string)
-	localRef(name string) UniformRef
-	setRefTy(name UniformRef, ty semtypes.SemType)
 	parentAnalyzer() analyzer
 	loc() diagnostics.Location
 	queueCallback(callback callBack)
@@ -54,11 +51,9 @@ type (
 	}
 	SemanticAnalyzer struct {
 		analyzerBase
-		compilerCtx   *context.CompilerContext
-		typeCtx       semtypes.Context
-		resolvedTypes TypeResolutionResult
+		compilerCtx *context.CompilerContext
+		typeCtx     semtypes.Context
 		// TODO: move the constant resolution to type resolver as well so that we can run semantic analyzer in parallel as well
-		constants    map[UniformRef]*ast.BLangConstant
 		pkg          *ast.BLangPackage
 		importedPkgs map[string]*ast.BLangImportPackage
 	}
@@ -71,7 +66,6 @@ type (
 	functionAnalyzer struct {
 		analyzerBase
 		function    *ast.BLangFunction
-		localVarsTy map[UniformRef]semtypes.SemType
 		retTy       semtypes.SemType
 		returnFound bool
 	}
@@ -81,7 +75,6 @@ type (
 		loop          ast.BLangNode
 		breakFound    bool
 		continueFound bool
-		localVarsTy   map[UniformRef]semtypes.SemType
 	}
 )
 
@@ -163,10 +156,6 @@ func (ab *analyzerBase) tyCtx() semtypes.Context {
 	return ab.parentAnalyzer().tyCtx()
 }
 
-func (ab *analyzerBase) localRef(name string) UniformRef {
-	return ab.parentAnalyzer().localRef(name)
-}
-
 func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return nil
 }
@@ -234,14 +223,6 @@ func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor 
 	return ca
 }
 
-func (sa *SemanticAnalyzer) localRef(name string) UniformRef {
-	return refInPackage(sa.pkg, name)
-}
-
-func (ca *constantAnalyzer) localRef(name string) UniformRef {
-	return ca.parentAnalyzer().localRef(name)
-}
-
 func (sa *SemanticAnalyzer) ctx() *context.CompilerContext {
 	return sa.compilerCtx
 }
@@ -250,46 +231,8 @@ func (sa *SemanticAnalyzer) tyCtx() semtypes.Context {
 	return sa.typeCtx
 }
 
-func (sa *SemanticAnalyzer) refTy(name UniformRef) semtypes.SemType {
-	ty, ok := sa.resolvedTypes.functions[name]
-	if ok {
-		return ty
-	}
-	constant, ok := sa.constants[name]
-	if ok {
-		typeData := constant.GetTypeData()
-		return typeData.Type
-	}
-	sa.semanticErr(fmt.Sprintf("symbol %s not found", name))
-	return nil
-}
-
 func (sa *SemanticAnalyzer) importedPackage(alias string) *ast.BLangImportPackage {
 	return sa.importedPkgs[alias]
-}
-
-func (fa *functionAnalyzer) refTy(name UniformRef) semtypes.SemType {
-	ty, ok := fa.localVarsTy[name]
-	if ok {
-		return ty
-	}
-	return fa.parent.refTy(name)
-}
-
-func (ca *constantAnalyzer) refTy(name UniformRef) semtypes.SemType {
-	return ca.parentAnalyzer().refTy(name)
-}
-
-func (sa *SemanticAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
-	panic("setRefTy not supported on SemanticAnalyzer")
-}
-
-func (ca *constantAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
-	panic("setRefTy not supported on constantAnalyzer")
-}
-
-func (fa *functionAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
-	fa.localVarsTy[name] = ty
 }
 
 func (la *loopAnalyzer) ctx() *context.CompilerContext {
@@ -298,25 +241,6 @@ func (la *loopAnalyzer) ctx() *context.CompilerContext {
 
 func (la *loopAnalyzer) tyCtx() semtypes.Context {
 	return la.parent.tyCtx()
-}
-
-func (la *loopAnalyzer) refTy(name UniformRef) semtypes.SemType {
-	// Check local variables first (loop-scoped)
-	ty, ok := la.localVarsTy[name]
-	if ok {
-		return ty
-	}
-	// Fallback to parent analyzer
-	return la.parent.refTy(name)
-}
-
-func (la *loopAnalyzer) localRef(name string) UniformRef {
-	return la.parent.localRef(name)
-}
-
-func (la *loopAnalyzer) setRefTy(name UniformRef, ty semtypes.SemType) {
-	// Store in local map for loop scope
-	la.localVarsTy[name] = ty
 }
 
 func (sa *SemanticAnalyzer) unimplementedErr(message string) {
@@ -384,13 +308,11 @@ func (la *loopAnalyzer) internalErr(message string) {
 }
 
 // When we support multiple packages we need to resolve types of all of them before semantic analysis
-func NewSemanticAnalyzer(ctx *context.CompilerContext, resolvedTypes TypeResolutionResult) *SemanticAnalyzer {
+func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
-		compilerCtx:   ctx,
-		typeCtx:       semtypes.ContextFrom(semtypes.GetTypeEnv()),
-		resolvedTypes: resolvedTypes,
-		constants:     make(map[UniformRef]*ast.BLangConstant),
-		importedPkgs:  make(map[string]*ast.BLangImportPackage),
+		compilerCtx:  ctx,
+		typeCtx:      semtypes.ContextFrom(semtypes.GetTypeEnv()),
+		importedPkgs: make(map[string]*ast.BLangImportPackage),
 	}
 }
 
@@ -455,12 +377,9 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function, localVarsTy: make(map[UniformRef]semtypes.SemType)}
-	for _, param := range function.RequiredParams {
-		name := param.GetName().GetValue()
-		fa.setRefTy(fa.localRef(name), param.GetTypeData().Type)
-	}
-	fa.retTy = function.ReturnTypeData.Type
+	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
+	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature.ReturnType
 	parent.queueCallback(func() {
 		if !fa.returnFound && !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
 			fa.semanticErr("expect a return statement")
@@ -474,7 +393,6 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 		analyzerBase: analyzerBase{parent: parent},
 		loop:         loop,
 		breakFound:   false,
-		localVarsTy:  make(map[UniformRef]semtypes.SemType),
 	}
 }
 
@@ -485,10 +403,14 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		typeData := ca.constant.GetTypeData()
 		typeData.Type = ca.expectedType
 		ca.constant.SetTypeData(typeData)
+		symbol := ca.constant.Symbol()
+		ca.ctx().SetSymbolType(symbol, ca.expectedType)
 		// Done
 		return nil
 	}
 	switch n := node.(type) {
+	case *ast.BLangIdentifier:
+		return nil
 	case *ast.BLangFunction:
 		ca.semanticErr("function definition not allowed in constant expression")
 		return nil
@@ -520,15 +442,6 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			return nil
 		}
 		ca.expectedType = expectedType
-	case *ast.BLangIdentifier:
-		name := n.GetValue()
-		ref := ca.localRef(name)
-		semanticAnalyzer := ca.parentAnalyzer().(*SemanticAnalyzer)
-		if _, ok := semanticAnalyzer.constants[ref]; ok {
-			ca.syntaxErr("constant already declared")
-			return nil
-		}
-		semanticAnalyzer.constants[ref] = ca.constant
 	case model.ExpressionNode:
 		switch n.GetKind() {
 		case model.NodeKind_LITERAL,
@@ -588,12 +501,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 
 	// Variable References
 	case *ast.BLangSimpleVarRef:
-		ref := a.localRef(expr.VariableName.GetValue())
-		ty := a.refTy(ref)
-		if ty == nil {
-			a.semanticErr("variable not found: " + expr.VariableName.GetValue())
-			return
-		}
+		ty := a.ctx().SymbolType(expr.Symbol())
 		if expectedType != nil {
 			if !semtypes.IsSubtype(a.tyCtx(), ty, expectedType) {
 				a.semanticErr("incompatible type for variable reference")
@@ -835,45 +743,26 @@ func isNumericType(ty semtypes.SemType) bool {
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
 	var retTy semtypes.SemType
 
-	if invocation.PkgAlias != nil && invocation.PkgAlias.GetValue() != "" {
-		pkgAlias := invocation.PkgAlias.GetValue()
-
-		// Check if package was imported
-		importNode := a.importedPackage(pkgAlias)
-		if importNode == nil {
-			a.semanticErr(fmt.Sprintf("undefined module '%s'", pkgAlias))
-			return
-		}
-
-		// Validate function in imported package
-		if pkgAlias == "io" && invocation.Name.GetValue() == "println" {
-			retTy = &semtypes.NIL
-		} else if pkgAlias == "io" {
-			a.unimplementedErr("unsupported io function: " + invocation.Name.GetValue())
-		} else {
-			a.unimplementedErr("unsupported package: " + pkgAlias)
-		}
-	} else {
-		fnTy := a.refTy(a.localRef(invocation.Name.GetValue()))
-		if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-			a.semanticErr("function not found: " + invocation.Name.GetValue())
-			return
-		}
-		argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
-		for i, arg := range invocation.ArgExprs {
-			analyzeExpression(a, arg, nil)
-			typeData := arg.GetTypeData()
-			argTys[i] = typeData.Type
-		}
-		paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
-		argLd := semtypes.NewListDefinition()
-		argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-		if !semtypes.IsSubtype(a.tyCtx(), argListTy, paramListTy) {
-			a.semanticErr("incompatible arguments for function call")
-			return
-		}
-		retTy = semtypes.FunctionReturnType(a.tyCtx(), fnTy, argListTy)
+	symbol := invocation.Symbol()
+	fnTy := a.ctx().SymbolType(symbol)
+	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+		a.semanticErr("function not found: " + invocation.Name.GetValue())
+		return
 	}
+	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
+	for i, arg := range invocation.ArgExprs {
+		analyzeExpression(a, arg, nil)
+		typeData := arg.GetTypeData()
+		argTys[i] = typeData.Type
+	}
+	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
+	argLd := semtypes.NewListDefinition()
+	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	if !semtypes.IsSubtype(a.tyCtx(), argListTy, paramListTy) {
+		a.semanticErr("incompatible arguments for function call")
+		return
+	}
+	retTy = semtypes.FunctionReturnType(a.tyCtx(), fnTy, argListTy)
 	if expectedType != nil {
 		if !semtypes.IsSubtype(a.tyCtx(), retTy, expectedType) {
 			a.semanticErr("incompatible return type for function call")
@@ -889,9 +778,6 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	if variable.Expr != nil {
 		analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType)
 	}
-	name := variable.Name.GetValue()
-	ref := a.localRef(name)
-	a.setRefTy(ref, expectedType)
 	setExpectedType(simpleVariableDef, expectedType)
 }
 

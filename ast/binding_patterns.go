@@ -21,13 +21,11 @@ import "ballerina-lang-go/model"
 type (
 	BLangBindingPatternBase struct {
 		BLangNodeBase
-		DeclaredVars map[string]BVarSymbol
 	}
 
 	BLangCaptureBindingPattern struct {
 		BLangBindingPatternBase
 		Identifier BLangIdentifier
-		Symbol     BVarSymbol
 	}
 
 	BLangErrorBindingPattern struct {
@@ -68,7 +66,6 @@ type (
 	BLangRestBindingPattern struct {
 		BLangBindingPatternBase
 		VariableName *BLangIdentifier
-		Symbol       *BVarSymbol
 	}
 
 	BLangWildCardBindingPattern struct {

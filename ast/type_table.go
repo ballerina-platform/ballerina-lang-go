@@ -16,13 +16,10 @@
 
 package ast
 
-import "ballerina-lang-go/model"
-
-// TODO: think of a better way and place to put this
-type BTypeSymbolTable struct {
-}
-
-var _ model.TypeSymbolTable = &BTypeSymbolTable{}
+import (
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
+)
 
 var (
 	booleanType = &BTypeImpl{
@@ -48,7 +45,7 @@ var (
 	}
 )
 
-func (this *BTypeSymbolTable) GetTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
+func getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
 	switch tag {
 	case model.TypeTags_BOOLEAN:
 		return booleanType
@@ -63,4 +60,8 @@ func (this *BTypeSymbolTable) GetTypeFromTag(tag model.TypeTags) model.TypeDescr
 	default:
 		panic("not implemented")
 	}
+}
+
+func getBuiltinPos() diagnostics.Location {
+	return nil
 }

@@ -28,23 +28,22 @@ import (
 	"testing"
 )
 
-func TestTypeResolver(t *testing.T) {
+func TestSymbolResolver(t *testing.T) {
 	flag.Parse()
-
 	testPairs := test_util.GetValidTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
-			testTypeResolution(t, testPair)
+			testSymbolResolution(t, testPair)
 		})
 	}
 }
 
-func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
+func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Fatalf("Type resolution panicked for %s: %v", testCase.InputPath, r)
+			t.Fatalf("Symbol resolution panicked for %s: %v", testCase.InputPath, r)
 		}
 	}()
 
@@ -66,58 +65,41 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	env := semtypes.GetIsolatedTypeEnv()
 	importedSymbols := ResolveImports(cx, env, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
-	typeResolver := NewIsolatedTypeResolver(cx)
-	typeResolver.ResolveTypes(cx, pkg)
-	validator := &typeResolutionValidator{t: t, ctx: cx}
+	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
 	ast.Walk(validator, pkg)
-
-	// If we reach here, type resolution completed without panicking
-	t.Logf("Type resolution completed successfully for %s", testCase.InputPath)
+	// If we reach here, symbol resolution completed without panicking
+	t.Logf("Symbol resolution completed successfully for %s", testCase.InputPath)
 }
 
-type typeResolutionValidator struct {
-	t   *testing.T
-	ctx *context.CompilerContext
+type symbolResolutionValidator struct {
+	t        *testing.T
+	testPath string
 }
 
-func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
+func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-
+	// Check if this node should have a symbol resolved
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
-		symbol := nodeWithSymbol.Symbol()
-		// Skip constant symbols (kind: 1) since they're resolved during semantic analysis
-		if v.ctx.SymbolKind(symbol) == model.SymbolKindConstant {
-			return v
-		}
-		if v.ctx.SymbolType(symbol) == nil {
-			if isExpr(node) {
-				// expressions will get their type set during semantic analysis
-				return v
-			} else if _, ok := node.(*ast.BLangConstant); ok {
-				// constants will get their type set during semantic analysis
-				return v
-			}
-			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T",
-				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node)
+		if nodeWithSymbol.Symbol() == nil {
+			v.t.Errorf("Symbol not resolved for %T at %s in %s",
+				node, node.GetPosition(), v.testPath)
 		}
 	}
-
 	return v
 }
 
-func isExpr(node ast.BLangNode) bool {
-	_, ok := node.(model.ExpressionNode)
-	return ok
-}
-
-func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *symbolResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return nil
 	}
-	if typeData.Type == nil {
-		v.t.Errorf("type not resolved for %+v", typeData)
+	// Check if this type descriptor should have a symbol resolved
+	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
+		if typeWithSymbol.Symbol() == nil {
+			v.t.Errorf("Symbol not resolved for type %T at %s in %s",
+				typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition(), v.testPath)
+		}
 	}
 	return v
 }

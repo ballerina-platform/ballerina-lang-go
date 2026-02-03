@@ -373,54 +373,6 @@ const (
 	TypeKind_REGEXP                 = "regexp"
 )
 
-type SymbolKind uint
-
-const (
-	SymbolKind_PACKAGE SymbolKind = iota
-	SymbolKind_STRUCT
-	SymbolKind_OBJECT
-	SymbolKind_RECORD
-	SymbolKind_CONNECTOR
-	SymbolKind_ACTION
-	SymbolKind_SERVICE
-	SymbolKind_RESOURCE
-	SymbolKind_FUNCTION
-	SymbolKind_WORKER
-	SymbolKind_ANNOTATION
-	SymbolKind_ANNOTATION_ATTRIBUTE
-	SymbolKind_CONSTANT
-	SymbolKind_VARIABLE
-	SymbolKind_PACKAGE_VARIABLE
-	SymbolKind_TRANSFORMER
-	SymbolKind_TYPE_DEF
-	SymbolKind_ENUM
-	SymbolKind_ERROR
-
-	SymbolKind_PARAMETER
-	SymbolKind_PATH_PARAMETER
-	SymbolKind_PATH_REST_PARAMETER
-	SymbolKind_LOCAL_VARIABLE
-	SymbolKind_SERVICE_VARIABLE
-	SymbolKind_CONNECTOR_VARIABLE
-
-	SymbolKind_CAST_OPERATOR
-	SymbolKind_CONVERSION_OPERATOR
-	SymbolKind_TYPEOF_OPERATOR
-
-	SymbolKind_XMLNS
-	SymbolKind_SCOPE
-	SymbolKind_OTHER
-
-	SymbolKind_INVOKABLE_TYPE
-
-	SymbolKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	SymbolKind_RESOURCE_PATH_PARAM_SEGMENT
-	SymbolKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	SymbolKind_RESOURCE_ROOT_PATH_SEGMENT
-
-	SymbolKind_SEQUENCE
-)
-
 type SymbolOrigin uint8
 
 const (
@@ -564,6 +516,11 @@ type Node interface {
 	GetDeterminedType() semtypes.SemType
 }
 
+type NodeWithSymbol interface {
+	Node
+	Symbol() Symbol
+}
+
 // Top-Level/Structure Interfaces
 
 type TopLevelNode = Node
@@ -640,6 +597,7 @@ type ExprFunctionBodyNode interface {
 // Variable/Constant Interfaces
 
 type VariableNode interface {
+	NodeWithSymbol
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
@@ -863,8 +821,6 @@ type MarkdownDocumentationParameterAttributeNode interface {
 	GetParameterDocumentationLines() []string
 	AddParameterDocumentationLine(text string)
 	GetParameterDocumentation() string
-	GetSymbol() VariableSymbol
-	SetSymbol(symbol VariableSymbol)
 }
 
 type MarkdownDocumentationReturnParameterAttributeNode interface {
@@ -1148,46 +1104,6 @@ type MarkdownDocumentationNode interface {
 	GetReturnParameterDocumentation() *string
 	GetReferences() []MarkdownDocumentationReferenceAttributeNode
 	AddReference(reference MarkdownDocumentationReferenceAttributeNode)
-}
-
-// Symbol Interfaces
-
-type Symbol interface {
-	GetName() string
-	GetOriginalName() string
-	GetKind() SymbolKind
-	GetType() Type
-	GetFlags() common.Set[Flag]
-	GetEnclosingSymbol() Symbol
-	GetEnclosedSymbols() []Symbol
-	GetPosition() diagnostics.Location
-	GetOrigin() SymbolOrigin
-}
-
-type TypeSymbol = Symbol
-
-type Annotatable interface {
-	AddAnnotation(AnnotationAttachmentSymbol)
-	GetAnnotations() []AnnotationAttachmentSymbol
-}
-
-type AnnotationSymbol = Annotatable
-
-type ConstantSymbol = Annotatable
-
-type AnnotationAttachmentSymbol interface {
-	IsConstAnnotation() bool
-}
-
-type InvokableSymbol interface {
-	Annotatable
-	GetParameters() []VariableSymbol
-	GetReturnType() Type
-}
-
-type VariableSymbol interface {
-	Symbol
-	GetConstValue() any
 }
 
 // Other Interfaces

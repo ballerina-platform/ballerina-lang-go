@@ -18,6 +18,7 @@ package context
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"strconv"
@@ -27,6 +28,59 @@ import (
 type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner
+	symbolSpaces    []*model.SymbolSpace
+}
+
+func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
+	space := model.NewSymbolSpaceInner(packageId, len(this.symbolSpaces))
+	this.symbolSpaces = append(this.symbolSpaces, space)
+	return space
+}
+
+func (this *CompilerContext) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
+	return &model.FunctionScope{
+		BlockScopeBase: model.BlockScopeBase{
+			Parent: parent,
+			Main:   this.NewSymbolSpace(pkg),
+		},
+	}
+}
+
+func (this *CompilerContext) NewBlockScope(parent model.Scope, pkg model.PackageID) *model.BlockScope {
+	return &model.BlockScope{
+		BlockScopeBase: model.BlockScopeBase{
+			Parent: parent,
+			Main:   this.NewSymbolSpace(pkg),
+		},
+	}
+}
+
+func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
+	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
+		symbolSpace := this.symbolSpaces[refSymbol.SpaceIndex]
+		return symbolSpace.Symbols[refSymbol.Index]
+	}
+	return symbol
+}
+
+func (this *CompilerContext) SymbolName(symbol model.Symbol) string {
+	return this.GetSymbol(symbol).Name()
+}
+
+func (this *CompilerContext) SymbolType(symbol model.Symbol) semtypes.SemType {
+	return this.GetSymbol(symbol).Type()
+}
+
+func (this *CompilerContext) SymbolKind(symbol model.Symbol) model.SymbolKind {
+	return this.GetSymbol(symbol).Kind()
+}
+
+func (this *CompilerContext) SymbolIsPublic(symbol model.Symbol) bool {
+	return this.GetSymbol(symbol).IsPublic()
+}
+
+func (this *CompilerContext) SetSymbolType(symbol model.Symbol, ty semtypes.SemType) {
+	this.GetSymbol(symbol).SetType(ty)
 }
 
 func (this *CompilerContext) GetDefaultPackage() *model.PackageID {

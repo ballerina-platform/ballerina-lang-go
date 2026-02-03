@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
 	"os"
@@ -262,15 +263,20 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	// Step 3: Convert to AST package
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 4: Resolve types
-	typeResolver := semantics.NewTypeResolver(cx)
-	typeResolver.ResolveTypes(pkg)
+	// Step 4: Resolve symbols
+	env := semtypes.GetTypeEnv()
+	importedSymbols := semantics.ResolveImports(cx, env, pkg)
+	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
-	// // Step 5: Run semantic analysis
+	// Step 5: Resolve types
+	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkg)
+
+	// // Step 6: Run semantic analysis
 	// semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
 	// semanticAnalyzer.Analyze(pkg)
 
-	// Step 6: Generate BIR package
+	// Step 7: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result

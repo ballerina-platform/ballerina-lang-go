@@ -65,16 +65,21 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 1: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
-	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	// Step 1: Symbol Resolution
+	env := semtypes.GetIsolatedTypeEnv()
+	importedSymbols := ResolveImports(cx, env, pkg)
+	ResolveSymbols(cx, pkg, importedSymbols)
 
-	// Step 2: Semantic Analysis
-	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
+	// Step 2: Type Resolution
+	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkg)
+
+	// Step 3: Semantic Analysis
+	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 3: Validate that all expressions have determinedTypes set
-	validator := &semanticAnalysisValidator{t: t}
+	// Step 4: Validate that all expressions have determinedTypes set
+	validator := &semanticAnalysisValidator{t: t, ctx: cx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, semantic analysis completed without panicking
@@ -82,7 +87,8 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 }
 
 type semanticAnalysisValidator struct {
-	t *testing.T
+	t   *testing.T
+	ctx *context.CompilerContext
 }
 
 func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
@@ -104,11 +110,32 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 		}
 	}
 
+	// Check if node has a symbol that should have type set
+	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
+		symbol := nodeWithSymbol.Symbol()
+		if v.ctx.SymbolType(symbol) == nil {
+			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T at %v",
+				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node, node.GetPosition())
+		}
+	}
+
 	return v
 }
 
 func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
-	// Not validating TypeData in this validator
+	if typeData == nil || typeData.TypeDescriptor == nil {
+		return v
+	}
+
+	// Check if type descriptor has a symbol that should have type set
+	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
+		symbol := typeWithSymbol.Symbol()
+		if v.ctx.SymbolType(symbol) == nil {
+			v.t.Errorf("symbol %s (kind: %v) does not have type set for type descriptor %T at %v",
+				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition())
+		}
+	}
+
 	return v
 }
 
@@ -190,12 +217,17 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 1: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
-	resolvedTypes := typeResolver.ResolveTypes(pkg)
+	// Step 1: Symbol Resolution
+	env := semtypes.GetIsolatedTypeEnv()
+	importedSymbols := ResolveImports(cx, env, pkg)
+	ResolveSymbols(cx, pkg, importedSymbols)
 
-	// Step 2: Semantic Analysis - this should panic for error cases
-	semanticAnalyzer := NewSemanticAnalyzer(cx, resolvedTypes)
+	// Step 2: Type Resolution
+	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkg)
+
+	// Step 3: Semantic Analysis - this should panic for error cases
+	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
 	// If we reach here without panic, the defer will catch it

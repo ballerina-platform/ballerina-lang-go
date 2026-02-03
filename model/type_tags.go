@@ -16,24 +16,6 @@
 
 package model
 
-import "ballerina-lang-go/tools/diagnostics"
-
-type SymbolTable struct {
-	TypeSymbolTable TypeSymbolTable
-}
-
-func (this *SymbolTable) GetTypeFromTag(tag TypeTags) TypeDescriptor {
-	return this.TypeSymbolTable.GetTypeFromTag(tag)
-}
-
-func (this *SymbolTable) GetBuiltinPos() diagnostics.Location {
-	return nil
-}
-
-type TypeSymbolTable interface {
-	GetTypeFromTag(tag TypeTags) TypeDescriptor
-}
-
 type TypeTags int
 
 const (

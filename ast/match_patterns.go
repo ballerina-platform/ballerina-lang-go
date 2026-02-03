@@ -23,8 +23,6 @@ type (
 		BLangNodeBase
 
 		MatchExpr             BLangExpression
-		DeclaredVars          map[string]BVarSymbol
-		Scope                 Scope
 		MatchGuardIsAvailable bool
 		IsLastPattern         bool
 	}

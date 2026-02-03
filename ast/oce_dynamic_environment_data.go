@@ -17,25 +17,15 @@
 package ast
 
 import (
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 )
 
 // OCEDynamicEnvironmentData represents the dynamic environment data for object constructor expressions
 type OCEDynamicEnvironmentData struct {
-	CapturedClosureEnv   *SymbolEnv
-	MapBlockMapSymbol    *BVarSymbol
-	MapFunctionMapSymbol *BVarSymbol
 	// TypeInit                       *BLangTypeInit
 	ObjectType *BObjectType
 	// AttachedFunctionInvocation     *BLangAttachedFunctionInvocation
-	ObjMethodsEnv                  *SymbolEnv
-	FieldEnv                       *SymbolEnv
-	BlockMap                       *BVarSymbol
-	ClassEnclosedFunctionMap       *BVarSymbol
 	LambdaFunctionsList            []BLangLambdaFunction
-	ClosureBlockSymbols            common.Set[*BSymbol]
-	ClosureFuncSymbols             common.Set[*BSymbol]
 	CloneRef                       *OCEDynamicEnvironmentData
 	OriginalClass                  *BLangClassDefinition
 	Parents                        []*BLangClassDefinition
@@ -52,8 +42,6 @@ type OCEDynamicEnvironmentData struct {
 func NewOCEDynamicEnvironmentData() *OCEDynamicEnvironmentData {
 	this := &OCEDynamicEnvironmentData{}
 	this.LambdaFunctionsList = make([]BLangLambdaFunction, 0, 1)
-	this.ClosureBlockSymbols = &common.UnorderedSet[*BSymbol]{}
-	this.ClosureFuncSymbols = &common.UnorderedSet[*BSymbol]{}
 	this.Parents = make([]*BLangClassDefinition, 0)
 	this.DesugaredClosureVars = make([]*BLangSimpleVarRef, 0)
 	this.CloneAttempt = 0
@@ -63,10 +51,6 @@ func NewOCEDynamicEnvironmentData() *OCEDynamicEnvironmentData {
 // CleanUp clears all collections and resets pointer fields
 func (this *OCEDynamicEnvironmentData) CleanUp() {
 	this.Parents = nil
-	this.ClosureFuncSymbols = &common.UnorderedSet[*BSymbol]{}
 	this.LambdaFunctionsList = nil
-	this.ClosureBlockSymbols = &common.UnorderedSet[*BSymbol]{}
 	this.DesugaredClosureVars = nil
-	this.MapFunctionMapSymbol = nil
-	this.MapBlockMapSymbol = nil
 }
