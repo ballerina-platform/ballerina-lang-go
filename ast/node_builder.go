@@ -2067,7 +2067,6 @@ func (n *NodeBuilder) TransformNilTypeDescriptor(nilTypeDescriptorNode *tree.Nil
 func (n *NodeBuilder) TransformOptionalTypeDescriptor(optionalTypeDescriptorNode *tree.OptionalTypeDescriptorNode) BLangNode {
 	typeDesc := optionalTypeDescriptorNode.TypeDescriptor()
 	nilType := &BLangValueType{TypeKind: model.TypeKind_NIL}
-
 	bLUnionType := &BLangUnionTypeNode{
 		lhs: model.TypeData{
 			TypeDescriptor: n.createTypeNode(typeDesc),
@@ -2759,10 +2758,7 @@ func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDesc
 }
 
 func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
-	// Create error type node
 	errorType := &BLangErrorTypeNode{}
-
-	// Set position
 	errorType.pos = getPosition(errorTypeDescriptorNode)
 
 	// Handle optional type parameter
