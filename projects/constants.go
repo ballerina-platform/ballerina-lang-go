@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package projects
+
+// File and directory constants for Ballerina projects.
+// Java source: io.ballerina.projects.util.ProjectConstants
+const (
+	// BallerinaTomlFile is the name of the package manifest file.
+	BallerinaTomlFile = "Ballerina.toml"
+
+	// DependenciesTomlFile is the name of the dependency lock file.
+	DependenciesTomlFile = "Dependencies.toml"
+
+	// CloudTomlFile is the name of the cloud configuration file.
+	CloudTomlFile = "Cloud.toml"
+
+	// CompilerPluginTomlFile is the name of the compiler plugin manifest.
+	CompilerPluginTomlFile = "CompilerPlugin.toml"
+
+	// BalToolTomlFile is the name of the bal tool manifest.
+	BalToolTomlFile = "BalTool.toml"
+
+	// PackageMdFile is the package documentation file (deprecated).
+	PackageMdFile = "Package.md"
+
+	// ReadmeMdFile is the readme file.
+	ReadmeMdFile = "README.md"
+
+	// ModuleMdFile is the module documentation file (deprecated).
+	ModuleMdFile = "Module.md"
+
+	// ModulesDir is the directory containing named modules.
+	ModulesDir = "modules"
+
+	// TestsDir is the directory containing test sources.
+	TestsDir = "tests"
+
+	// ResourcesDir is the directory containing package resources.
+	ResourcesDir = "resources"
+
+	// TargetDir is the build output directory.
+	TargetDir = "target"
+
+	// BalFileExtension is the extension for Ballerina source files.
+	BalFileExtension = ".bal"
+
+	// BalaFileExtension is the extension for compiled package archives.
+	BalaFileExtension = ".bala"
+
+	// TomlFileExtension is the extension for TOML files.
+	TomlFileExtension = ".toml"
+)
+
+// Package metadata constants.
+const (
+	// DefaultOrg is the default organization for unnamed packages.
+	DefaultOrg = "$anon"
+
+	// DefaultVersion is the default version for packages.
+	DefaultVersion = "0.0.0"
+
+	// BallerinaOrg is the Ballerina organization name.
+	BallerinaOrg = "ballerina"
+
+	// BallerinaInternalOrg is the internal Ballerina organization.
+	BallerinaInternalOrg = "ballerinai"
+)
+
+// ProjectKind represents the type of Ballerina project.
+// Java source: io.ballerina.projects.ProjectKind
+type ProjectKind int
+
+const (
+	// BuildProjectKind is a standard package with Ballerina.toml.
+	BuildProjectKind ProjectKind = iota
+
+	// SingleFileProjectKind is a standalone .bal file.
+	SingleFileProjectKind
+
+	// BalaProjectKind is a compiled package archive.
+	BalaProjectKind
+)
+
+// String returns the string representation of the project kind.
+func (k ProjectKind) String() string {
+	switch k {
+	case BuildProjectKind:
+		return "BUILD_PROJECT"
+	case SingleFileProjectKind:
+		return "SINGLE_FILE_PROJECT"
+	case BalaProjectKind:
+		return "BALA_PROJECT"
+	default:
+		return "UNKNOWN"
+	}
+}
