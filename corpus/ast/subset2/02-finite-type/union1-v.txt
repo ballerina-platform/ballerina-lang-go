@@ -10,7 +10,8 @@
             (finite-type
               (literal 1))
             (finite-type
-              (literal true))))))
+              (literal true)))) (expr
+          (literal 1))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref c))))

@@ -22,7 +22,8 @@
   (bb0 () (bb1)
     (var-def
       (variable i (type
-        (value-type int))))
+        (value-type int)) (expr
+        (simple-var-ref min))))
   )
   (bb1 (bb0 bb5) (bb2 bb3)
     (binary-expr <=

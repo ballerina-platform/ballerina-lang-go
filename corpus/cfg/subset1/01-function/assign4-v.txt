@@ -2,7 +2,8 @@
   (bb0 () ()
     (var-def
       (variable b (type
-        (value-type boolean))))
+        (value-type boolean)) (expr
+        (literal false))))
     (expression-stmt
       (invocation printBoolean (
         (simple-var-ref b))))

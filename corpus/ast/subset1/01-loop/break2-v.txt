@@ -31,7 +31,8 @@
     (block-function-body
       (var-def
         (variable i (type
-          (value-type int))))
+          (value-type int)) (expr
+          (simple-var-ref min))))
       (while
         (binary-expr <=
           (simple-var-ref i)

@@ -10,7 +10,10 @@
   (bb0 () ()
     (var-def
       (variable add1 (type
-        (value-type int))))
+        (value-type int)) (expr
+        (invocation add (
+          (literal 2)
+          (literal 3))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref add1))))

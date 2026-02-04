@@ -86,16 +86,20 @@
           (literal 4)))))
     (var-def
       (variable i (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 12))))
     (var-def
       (variable j (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 6))))
     (var-def
       (variable k (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 3))))
     (var-def
       (variable l (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 4))))
     (expression-stmt
       (invocation io println (
         (binary-expr +
