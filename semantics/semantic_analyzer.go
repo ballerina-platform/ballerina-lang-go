@@ -65,16 +65,13 @@ type (
 
 	functionAnalyzer struct {
 		analyzerBase
-		function    *ast.BLangFunction
-		retTy       semtypes.SemType
-		returnFound bool
+		function *ast.BLangFunction
+		retTy    semtypes.SemType
 	}
 
 	loopAnalyzer struct {
 		analyzerBase
-		loop          ast.BLangNode
-		breakFound    bool
-		continueFound bool
+		loop ast.BLangNode
 	}
 )
 
@@ -95,37 +92,10 @@ func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
 			}
 		}
 		analyzeExpression(fa, returnStmt.Expr, fa.retTy)
-		fa.returnFound = true
 	} else if analyzer.parentAnalyzer() != nil {
 		returnFound(analyzer.parentAnalyzer(), returnStmt)
 	} else {
 		analyzer.ctx().SemanticError("return statement not allowed in this context", analyzer.loc())
-	}
-}
-
-func breakFound(analyzer analyzer) {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if la, ok := analyzer.(*loopAnalyzer); ok {
-		la.breakFound = true
-	} else if analyzer.parentAnalyzer() != nil {
-		breakFound(analyzer.parentAnalyzer())
-	} else {
-		analyzer.ctx().SemanticError("break statement not allowed in this context", analyzer.loc())
-	}
-}
-
-func continueFound(analyzer analyzer) {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if la, ok := analyzer.(*loopAnalyzer); ok {
-		la.continueFound = true
-	} else if analyzer.parentAnalyzer() != nil {
-		continueFound(analyzer.parentAnalyzer())
-	} else {
-		analyzer.ctx().SemanticError("continue statement not allowed in this context", analyzer.loc())
 	}
 }
 
@@ -191,11 +161,7 @@ func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	switch node.(type) {
-	case *ast.BLangBreak:
-		la.breakFound = true
-		return nil
-	case *ast.BLangContinue:
-		// Continue is valid within a loop
+	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	default:
 		// Delegate nested loops and common nodes to visitInner
@@ -385,11 +351,6 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature.ReturnType
-	parent.queueCallback(func() {
-		if !fa.returnFound && !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
-			fa.semanticErr("expect a return statement")
-		}
-	})
 	return fa
 }
 
@@ -397,7 +358,6 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 	return &loopAnalyzer{
 		analyzerBase: analyzerBase{parent: parent},
 		loop:         loop,
-		breakFound:   false,
 	}
 }
 
@@ -720,11 +680,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangIf:
 		analyzeIf(a, n)
 		return a
-	case *ast.BLangBreak:
-		breakFound(a)
-		return nil
-	case *ast.BLangContinue:
-		continueFound(a)
+	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	case *ast.BLangSimpleVariableDef:
 		analyzeSimpleVariableDef(a, n)

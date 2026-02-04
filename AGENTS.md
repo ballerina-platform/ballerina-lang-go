@@ -17,8 +17,10 @@ a function with meaningful name.
 3. Do type resolution
 4. Generate Control Flow Graph (CFG)
 5. Do semantic analysis
-6. Generate BIR
-7. Interpret generated BIR
+6. Analyze reachability
+7. Analyze explicit return
+8. Generate BIR
+9. Interpret generated BIR
 
 ## Tests
 ### Corpus tests

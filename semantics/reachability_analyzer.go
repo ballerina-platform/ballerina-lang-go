@@ -22,9 +22,6 @@ import (
 	"ballerina-lang-go/context"
 )
 
-// AnalyzeReachability checks if any basic blocks in the CFG are unreachable
-// and reports semantic errors for nodes in those blocks.
-// A basic block is reachable if either it is the root (index = 0) or it has parents.
 func AnalyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 	var wg sync.WaitGroup
 	// FIXME: clean this up when we have proper error handling
