@@ -29,7 +29,7 @@ import (
 
 type Context struct {
 	CompilerContext *context.CompilerContext
-	constantMap     map[string]*BIRConstant
+	constantMap     map[model.SymbolRef]*BIRConstant
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
 }
@@ -42,7 +42,7 @@ type stmtContext struct {
 	scope       *BIRScope
 	nextScopeId int
 	// TODO: do better
-	varMap  map[string]*BIROperand
+	varMap  map[model.SymbolRef]*BIROperand
 	loopCtx *loopContext
 }
 
@@ -69,7 +69,7 @@ func (cx *stmtContext) popLoopCtx() {
 	cx.loopCtx = cx.loopCtx.enclosing
 }
 
-func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind VarKind) *BIROperand {
+func (cx *stmtContext) addLocalVarInner(name model.Name, ty model.ValueType, kind VarKind) *BIROperand {
 	varDcl := &BIRVariableDcl{}
 	varDcl.Name = name
 	varDcl.Type = ty
@@ -81,7 +81,14 @@ func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind Var
 }
 
 func (cx *stmtContext) addTempVar(ty model.ValueType) *BIROperand {
-	return cx.addLocalVar(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
+	return cx.addLocalVarInner(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
+}
+
+func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind VarKind, symbol model.Symbol) *BIROperand {
+	operand := cx.addLocalVarInner(name, ty, kind)
+	symRef := cx.birCx.CompilerContext.RefSymbol(symbol)
+	cx.varMap[symRef] = operand
+	return operand
 }
 
 func (cx *stmtContext) addBB() *BIRBasicBlock {
@@ -96,7 +103,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg.PackageID = ast.PackageID
 	genCtx := &Context{
 		CompilerContext: ctx,
-		constantMap:     make(map[string]*BIRConstant),
+		constantMap:     make(map[model.SymbolRef]*BIRConstant),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
 	}
@@ -109,7 +116,8 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	}
 	for _, constant := range ast.Constants {
 		c := TransformConstant(genCtx, &constant)
-		genCtx.constantMap[c.Name.Value()] = c
+		symRef := genCtx.CompilerContext.RefSymbol(constant.Symbol())
+		genCtx.constantMap[symRef] = c
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
 	}
 	for _, function := range ast.Functions {
@@ -196,11 +204,10 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	moduleKey := orgName + "/" + pkgName
 	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
 	common.Assert(astFunc.Receiver == nil)
-	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[string]*BIROperand)}
-	stmtCx.retVar = stmtCx.addLocalVar(model.Name("%0"), nil, VAR_KIND_RETURN)
+	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
+	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), nil, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		paramOperand := stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), nil, VAR_KIND_ARG)
-		stmtCx.varMap[param.GetName().GetValue()] = paramOperand
+		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), nil, VAR_KIND_ARG, param.Symbol())
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
@@ -393,9 +400,9 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 }
 
 func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
+	varName := model.Name(stmt.Var.GetName().GetValue())
 	if stmt.Var.Expr == nil {
-		varName := model.Name(stmt.Var.GetName().GetValue())
-		ctx.varMap[varName.Value()] = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL)
+		ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
 		// just declare the variable
 		return statementEffect{
 			block: bb,
@@ -404,9 +411,7 @@ func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 	exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
 	curBB := exprResult.block
 	move := &Move{}
-	varName := model.Name(stmt.Var.GetName().GetValue())
-	move.LhsOp = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL)
-	ctx.varMap[varName.Value()] = move.LhsOp
+	move.LhsOp = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
 	move.RhsOp = exprResult.result
 	curBB.Instructions = append(curBB.Instructions, move)
 	return statementEffect{
@@ -703,13 +708,19 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
-	operand, ok := ctx.varMap[varName]
-	if !ok {
-		// FIXME: this is a hack until we have constant propagation. At which point these should be literals
-		constant, ok := ctx.birCx.constantMap[varName]
-		if !ok {
-			panic("variable not found")
+	symRef := ctx.birCx.CompilerContext.RefSymbol(expr.Symbol())
+
+	// Try local variable lookup first
+	if operand, ok := ctx.varMap[symRef]; ok {
+		return expressionEffect{
+			result: operand,
+			block:  curBB,
 		}
+	}
+
+	// Try constant lookup
+	// FIXME: this is a hack until we have package level variable initialization
+	if constant, ok := ctx.birCx.constantMap[symRef]; ok {
 		resultOperand := ctx.addTempVar(nil)
 		constantLoad := &ConstantLoad{}
 		constantLoad.Value = constant.ConstValue.Value
@@ -719,13 +730,10 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 			result: resultOperand,
 			block:  curBB,
 		}
-
-	} else {
-		return expressionEffect{
-			result: operand,
-			block:  curBB,
-		}
 	}
+
+	panic(fmt.Sprintf("variable %s not found (SymbolRef: Pkg=%v Index=%d SpaceIndex=%d)",
+		varName, symRef.Package, symRef.Index, symRef.SpaceIndex))
 }
 
 func appendIfNotNil[T any](slice []T, item *T) []T {
