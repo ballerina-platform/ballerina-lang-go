@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -27,7 +26,9 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/parser"
+	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -47,7 +48,7 @@ var runOpts struct {
 }
 
 var runCmd = &cobra.Command{
-	Use:   "run <source-file.bal>",
+	Use:   "run [<source-file.bal> | <package-dir> | .]",
 	Short: "Compile and run the current package or a Ballerina source file",
 	Long: `	Compile the current package and run it.
 
@@ -87,7 +88,11 @@ func init() {
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
-	fileName := args[0]
+	// Default to current directory if no path provided (bal run == bal run .)
+	path := "."
+	if len(args) > 0 {
+		path = args[0]
+	}
 
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
@@ -140,9 +145,45 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	// Load project using ProjectLoader (auto-detects type)
+	// Java: io.ballerina.projects.directory.ProjectLoader.loadProject
+	result, err := directory.Load(path)
+	if err != nil {
+		printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
+		return err
+	}
+
+	// Check for loading errors
+	diagResult := result.Diagnostics()
+	if diagResult.HasErrors() {
+		printDiagnostics(diagResult)
+		return fmt.Errorf("project loading contains errors")
+	}
+
+	// Get default module for compilation
+	project := result.Project()
+	pkg := project.CurrentPackage()
+	defaultModule := pkg.GetDefaultModule()
+
 	// Compile the source
 	fmt.Fprintln(os.Stderr, "Compiling source")
-	fmt.Fprintf(os.Stderr, "\t%s\n", filepath.Base(fileName))
+	// Print package identifier based on project type
+	if project.Kind() == projects.ProjectKindSingleFile {
+		// Single file project - show filename
+		docIDs := defaultModule.DocumentIDs()
+		if len(docIDs) > 0 {
+			doc := defaultModule.Document(docIDs[0])
+			if doc != nil {
+				fmt.Fprintf(os.Stderr, "\t%s\n", doc.Name())
+			}
+		}
+	} else {
+		// Build project - show org/packageName:version
+		fmt.Fprintf(os.Stderr, "\t%s/%s:%s\n",
+			pkg.PackageOrg().Value(),
+			pkg.PackageName().Value(),
+			pkg.PackageVersion().String())
+	}
 
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
@@ -209,4 +250,96 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return nil
+}
+
+// compileModule compiles all documents in a module and returns the BIR package.
+// Java: Approximates io.ballerina.cli.task.CompileTask for single module
+func compileModule(module *projects.Module, debugCtx *debugcommon.DebugContext) (*bir.BIRPackage, error) {
+	cx := context.NewCompilerContext()
+	env := semtypes.GetTypeEnv()
+
+	// Collect all syntax trees from documents
+	var syntaxTrees []*tree.SyntaxTree
+	for _, docID := range module.DocumentIDs() {
+		doc := module.Document(docID)
+		st := doc.SyntaxTree()
+		if st != nil {
+			syntaxTrees = append(syntaxTrees, st)
+		}
+	}
+
+	if len(syntaxTrees) == 0 {
+		return nil, fmt.Errorf("no source files found in module")
+	}
+
+	// Build combined AST from all syntax trees
+	pkg := buildPackageAST(cx, syntaxTrees, debugCtx)
+
+	// Semantic analysis
+	importedSymbols := semantics.ResolveImports(cx, env, pkg)
+	semantics.ResolveSymbols(cx, pkg, importedSymbols)
+
+	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkg)
+
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(pkg)
+
+	// Generate BIR
+	return bir.GenBir(cx, pkg), nil
+}
+
+// buildPackageAST builds a combined AST Package from multiple syntax trees.
+// For single file: equivalent to current ast.ToPackage(ast.GetCompilationUnit(cx, st))
+// For multi-file: combines all compilation units into one package
+func buildPackageAST(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, debugCtx *debugcommon.DebugContext) *ast.BLangPackage {
+	if len(syntaxTrees) == 1 {
+		// Single file - use existing path
+		cu := ast.GetCompilationUnit(cx, syntaxTrees[0])
+		if runOpts.dumpAST {
+			prettyPrinter := ast.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(cu))
+		}
+		return ast.ToPackage(cu)
+	}
+
+	// Multi-file - combine compilation units
+	// Build a combined package by merging all compilation units
+	pkg := &ast.BLangPackage{}
+
+	for _, st := range syntaxTrees {
+		cu := ast.GetCompilationUnit(cx, st)
+		if runOpts.dumpAST {
+			prettyPrinter := ast.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(cu))
+		}
+
+		// Merge this compilation unit into the package
+		// Use the first compilation unit's PackageID
+		if pkg.PackageID == nil {
+			pkg.PackageID = cu.GetPackageID()
+		}
+
+		// Append all top-level nodes from this compilation unit
+		for _, node := range cu.GetTopLevelNodes() {
+			switch n := node.(type) {
+			case *ast.BLangImportPackage:
+				pkg.Imports = append(pkg.Imports, *n)
+			case *ast.BLangConstant:
+				pkg.Constants = append(pkg.Constants, *n)
+			case *ast.BLangService:
+				pkg.Services = append(pkg.Services, *n)
+			case *ast.BLangFunction:
+				pkg.Functions = append(pkg.Functions, *n)
+			case *ast.BLangTypeDefinition:
+				pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
+			case *ast.BLangAnnotation:
+				pkg.Annotations = append(pkg.Annotations, *n)
+			default:
+				pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
+			}
+		}
+	}
+
+	return pkg
 }
