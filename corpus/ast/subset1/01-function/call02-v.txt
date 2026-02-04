@@ -6,7 +6,8 @@
     (block-function-body
       (var-def
         (variable x (type
-          (value-type int))))
+          (value-type int)) (expr
+          (invocation foo ()))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref x))))))

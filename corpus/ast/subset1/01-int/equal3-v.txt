@@ -6,7 +6,10 @@
     (block-function-body
       (var-def
         (variable b (type
-          (value-type boolean))))
+          (value-type boolean)) (expr
+          (binary-expr ==
+            (literal 17)
+            (literal 17)))))
       (if
         (simple-var-ref b)
         (block-stmt
@@ -34,7 +37,8 @@
               (literal 21)))))))
       (var-def
         (variable x (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 42))))
       (if
         (binary-expr ==
           (simple-var-ref x)

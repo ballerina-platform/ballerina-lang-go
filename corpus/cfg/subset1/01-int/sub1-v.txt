@@ -2,13 +2,19 @@
   (bb0 () ()
     (var-def
       (variable sub1 (type
-        (value-type int))))
+        (value-type int)) (expr
+        (invocation sub (
+          (literal 5)
+          (literal 2))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref sub1))))
     (var-def
       (variable sub2 (type
-        (value-type int))))
+        (value-type int)) (expr
+        (invocation sub (
+          (literal 0)
+          (literal 1))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref sub2))))

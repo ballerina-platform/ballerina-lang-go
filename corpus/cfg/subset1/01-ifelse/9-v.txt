@@ -10,7 +10,8 @@
   (bb0 () (bb1 bb3)
     (var-def
       (variable b (type
-        (value-type boolean))))
+        (value-type boolean)) (expr
+        (literal false))))
     (simple-var-ref b)
   )
   (bb1 (bb0) (bb2)

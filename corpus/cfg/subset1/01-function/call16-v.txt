@@ -2,7 +2,10 @@
   (bb0 () (bb1 bb2)
     (var-def
       (variable i (type
-        (value-type int))))
+        (value-type int)) (expr
+        (binary-expr -
+          (simple-var-ref x)
+          (literal 1)))))
     (group-expr
       (binary-expr !=
         (simple-var-ref i)

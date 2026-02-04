@@ -10,13 +10,16 @@
   (bb0 () (bb1)
     (var-def
       (variable loopCount (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 1000000))))
     (var-def
       (variable i (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 0))))
     (var-def
       (variable total (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 0))))
   )
   (bb1 (bb0 bb2) (bb2 bb3)
     (group-expr
@@ -27,10 +30,17 @@
   (bb2 (bb1) (bb1)
     (var-def
       (variable a (type
-        (value-type int))))
+        (value-type int)) (expr
+        (invocation sum (
+          (simple-var-ref i)
+          (binary-expr +
+            (simple-var-ref i)
+            (literal 1)))))))
     (var-def
       (variable b (type
-        (value-type int))))
+        (value-type int)) (expr
+        (invocation addOffset (
+          (simple-var-ref a))))))
     (compound-assignment +
       (simple-var-ref total)
       (simple-var-ref b))

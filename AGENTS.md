@@ -11,6 +11,8 @@
 - Don't add comments explaining each line of code. If you need to add comments to describe a block of statements then you should extract them to
   a function with meaningful name.
 
+- IMPORTANT: never store `model.Symbol` as the key in a map, always use a `model.SymbolRef`
+
 ## Interpreter stages
 
 1. Generate Syntax Tree

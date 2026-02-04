@@ -17,7 +17,8 @@
         (variable c (type
           (union-type
             (value-type int)
-            (value-type boolean)))))
+            (value-type boolean))) (expr
+          (invocation foo ()))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref c)))))))
