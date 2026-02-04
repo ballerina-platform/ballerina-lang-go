@@ -139,10 +139,6 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 }
 
 var semanticAnalysisErrorSkipList = []string{
-	// reachability analysis
-	"01-function/call13-e.bal",
-	"01-loop/while03-e.bal",
-
 	// error constructor expr not implemented
 	"01-function/assign10-e.bal",
 }
@@ -224,6 +220,9 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	// Step 4: Semantic Analysis - this should panic for error cases
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
+
+	// Step 5: Reachability Analysis - this should panic for error cases
+	AnalyzeReachability(cx, cfg)
 
 	// If we reach here without panic, the defer will catch it
 }

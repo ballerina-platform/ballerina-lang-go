@@ -76,8 +76,8 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 }
 
 type typeResolutionValidator struct {
-	t   *testing.T
-	ctx *context.CompilerContext
+	t     *testing.T
+	ctx   *context.CompilerContext
 	tyCtx semtypes.Context
 }
 

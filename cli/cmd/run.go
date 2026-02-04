@@ -163,7 +163,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	typeResolver := semantics.NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 	// Run control flow analysis after type resolution
-	cfg := semantics.CreateCFG(cx, pkg)
+	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis
+	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 	if runOpts.dumpCFG {
 		prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
 		// Print the CFG with separators
@@ -175,6 +176,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Run semantic analysis after type resolution
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
+	// Run reachability analysis after semantic analysis
+	semantics.AnalyzeReachability(cx, cfg)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}
