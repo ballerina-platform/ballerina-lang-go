@@ -63,6 +63,7 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+	// FIXME: clean this up when we have proper error handling
 	panicChan := make(chan interface{}, len(pkg.Functions))
 	for _, fn := range pkg.Functions {
 		wg.Add(1)
@@ -111,7 +112,7 @@ type loopControlFlowData struct {
 	loopHead bbRef
 	// Block with the loop body
 	loopBody bbRef
-	loopEnd bbRef
+	loopEnd  bbRef
 }
 
 // stmtEffect tracks how a statement affects control flow
@@ -165,8 +166,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, stat
 		// If current block is terminated (nextBB == -1), remaining statements are unreachable
 		// but we still analyze them for completeness
 		if currentBB == bbRef(-1) {
+			analyzer.ctx.SemanticError("Unreachable code", stmt.GetPosition())
 			// Create an unreachable block for the remaining statements
-			// The reachability analyzer will detect and report these as errors
 			currentBB = analyzer.createNewBB()
 		}
 
@@ -228,7 +229,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	ternaryChecker := &ternaryExpressionChecker{}
 	ast.Walk(ternaryChecker, stmt.(ast.BLangNode))
 	if ternaryChecker.hasTernaryExpression {
-		return createTernaryExpressionEffect(analyzer,curBB, ternaryChecker.ifTrue, ternaryChecker.ifFalse)
+		return createTernaryExpressionEffect(analyzer, curBB, ternaryChecker.ifTrue, ternaryChecker.ifFalse)
 	}
 	switch s := stmt.(type) {
 	case *ast.BLangReturn:
@@ -272,16 +273,16 @@ func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB 
 	panic("unimplemented")
 }
 
-type ternaryExpressionChecker struct{
+type ternaryExpressionChecker struct {
 	hasTernaryExpression bool
-	ifTrue model.ExpressionNode
-	ifFalse model.ExpressionNode
+	ifTrue               model.ExpressionNode
+	ifFalse              model.ExpressionNode
 }
 
 var _ ast.Visitor = &ternaryExpressionChecker{}
 
 func (c *ternaryExpressionChecker) Visit(node ast.BLangNode) ast.Visitor {
-	if (c.hasTernaryExpression) {
+	if c.hasTernaryExpression {
 		return nil
 	}
 	if _, ok := node.(*ast.BLangElvisExpr); ok {
@@ -310,7 +311,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeBlockStmt(curBB bbRef, stmt 
 }
 
 var (
-	trueTy = semtypes.BooleanConst(true)
+	trueTy  = semtypes.BooleanConst(true)
 	falseTy = semtypes.BooleanConst(false)
 )
 
@@ -356,7 +357,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 	loopData := loopControlFlowData{
 		loopHead: loopHead,
 		loopBody: loopBody,
-		loopEnd: loopEnd,
+		loopEnd:  loopEnd,
 	}
 	analyzer.loops = append(analyzer.loops, loopData)
 	analyzer.addEdge(curBB, loopHead)

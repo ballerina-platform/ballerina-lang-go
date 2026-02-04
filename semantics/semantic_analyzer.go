@@ -550,8 +550,8 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 	var keyExprExpectedType semtypes.SemType
 	ctx := a.tyCtx()
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) ||
-	   semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) ||
-	   semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
+		semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) ||
+		semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
 		keyExprExpectedType = &semtypes.INT
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.TABLE) {
 		a.unimplementedErr("table not supported")
