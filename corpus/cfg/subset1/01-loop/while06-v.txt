@@ -2,7 +2,8 @@
   (bb0 () (bb1)
     (var-def
       (variable i (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 0))))
   )
   (bb1 (bb0 bb6) (bb2 bb3)
     (binary-expr <
@@ -12,7 +13,8 @@
   (bb2 (bb1) (bb4)
     (var-def
       (variable j (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 0))))
   )
   (bb3 (bb1) ())
   (bb4 (bb2 bb5) (bb5 bb6)

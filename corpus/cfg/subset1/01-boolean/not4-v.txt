@@ -17,7 +17,8 @@
   (bb2 (bb1) (bb3 bb4)
     (var-def
       (variable b (type
-        (value-type boolean))))
+        (value-type boolean)) (expr
+        (literal false))))
     (unary-expr !
       (simple-var-ref b))
   )

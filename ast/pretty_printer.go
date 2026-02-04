@@ -104,6 +104,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printUserDefinedType(t)
 	case *BLangFiniteTypeNode:
 		p.printFiniteTypeNode(t)
+	case *BLangListConstructorExpr:
+		p.printListConstructorExpr(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -376,6 +378,13 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 		p.indentLevel--
 		p.printSticky(")")
 	}
+	if node.Expr != nil {
+		p.printString("(expr")
+		p.indentLevel++
+		p.PrintInner(node.Expr.(BLangNode))
+		p.indentLevel--
+		p.printSticky(")")
+	}
 	p.endNode()
 }
 
@@ -555,6 +564,18 @@ func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(node.IndexExpr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// List constructor expression printer
+func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr) {
+	p.startNode()
+	p.printString("list-constructor-expr")
+	p.indentLevel++
+	for _, expr := range node.Exprs {
+		p.PrintInner(expr.(BLangNode))
+	}
 	p.indentLevel--
 	p.endNode()
 }

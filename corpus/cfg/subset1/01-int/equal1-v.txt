@@ -2,7 +2,8 @@
   (bb0 () ()
     (var-def
       (variable big (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 9223372036854775806))))
     (expression-stmt
       (invocation printBoolean (
         (binary-expr ==
@@ -32,7 +33,8 @@
             (literal 9223372036854775806))))))
     (var-def
       (variable one (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 1))))
     (expression-stmt
       (invocation printBoolean (
         (binary-expr ==
@@ -62,7 +64,8 @@
             (literal 9223372036854775806))))))
     (var-def
       (variable zero (type
-        (value-type int))))
+        (value-type int)) (expr
+        (literal 0))))
     (expression-stmt
       (invocation printBoolean (
         (binary-expr ==

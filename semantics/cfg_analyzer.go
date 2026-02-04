@@ -28,11 +28,11 @@ import (
 // FIXME: we have these panic chaining stuff because we don't handle compiler errors correctly
 // need to fix these once we do.
 
-// AnalyzeCFG runs both reachability and explicit return analyses concurrently
+// AnalyzeCFG runs reachability, explicit return, and uninitialized variable analyses concurrently
 // with centralized panic handling.
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan any, 2) // Buffer for 2 analyses
+	panicChan := make(chan any, 3) // Buffer for 3 analyses
 
 	// Run reachability analysis
 	wg.Add(1)
@@ -56,6 +56,18 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 			}
 		}()
 		analyzeExplicitReturn(ctx, pkg, cfg)
+	}()
+
+	// Run uninitialized variable analysis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				panicChan <- r
+			}
+		}()
+		analyzeUninitializedVars(ctx, pkg, cfg)
 	}()
 
 	wg.Wait()
