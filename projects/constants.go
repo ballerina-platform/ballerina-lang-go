@@ -81,32 +81,3 @@ const (
 	// BallerinaInternalOrg is the internal Ballerina organization.
 	BallerinaInternalOrg = "ballerinai"
 )
-
-// ProjectKind represents the type of Ballerina project.
-// Java source: io.ballerina.projects.ProjectKind
-type ProjectKind int
-
-const (
-	// BuildProjectKind is a standard package with Ballerina.toml.
-	BuildProjectKind ProjectKind = iota
-
-	// SingleFileProjectKind is a standalone .bal file.
-	SingleFileProjectKind
-
-	// BalaProjectKind is a compiled package archive.
-	BalaProjectKind
-)
-
-// String returns the string representation of the project kind.
-func (k ProjectKind) String() string {
-	switch k {
-	case BuildProjectKind:
-		return "BUILD_PROJECT"
-	case SingleFileProjectKind:
-		return "SINGLE_FILE_PROJECT"
-	case BalaProjectKind:
-		return "BALA_PROJECT"
-	default:
-		return "UNKNOWN"
-	}
-}
