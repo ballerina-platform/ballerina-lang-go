@@ -21,22 +21,33 @@ package projects
 // ModuleID represents a unique identifier for a Module instance.
 // Java source: io.ballerina.projects.ModuleId
 type ModuleID struct {
-	id        string
-	packageID PackageID
+	id         string
+	moduleName string
+	packageID  PackageID
 }
 
 // NewModuleID creates a new unique ModuleID associated with the given PackageID.
-func NewModuleID(packageID PackageID) ModuleID {
+// The moduleName parameter is the module directory path (or empty for default module).
+// Java equivalent: ModuleId.create(String moduleDirPath, PackageId packageId)
+func NewModuleID(moduleName string, packageID PackageID) ModuleID {
 	return ModuleID{
-		id:        generateUUID(),
-		packageID: packageID,
+		id:         generateUUID(),
+		moduleName: moduleName,
+		packageID:  packageID,
 	}
 }
 
 // newModuleIDFromString creates a ModuleID from an existing UUID string.
 // Used for deserialization or testing.
-func newModuleIDFromString(id string, packageID PackageID) ModuleID {
-	return ModuleID{id: id, packageID: packageID}
+func newModuleIDFromString(id string, moduleName string, packageID PackageID) ModuleID {
+	return ModuleID{id: id, moduleName: moduleName, packageID: packageID}
+}
+
+// ModuleName returns the module name (directory path) associated with this ID.
+// Deprecated: Use Module.ModuleName() from the Module object instead.
+// This method is provided for backward compatibility.
+func (m ModuleID) ModuleName() string {
+	return m.moduleName
 }
 
 // String returns the string representation of the module ID.

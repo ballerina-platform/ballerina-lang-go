@@ -44,18 +44,23 @@ func generateUUID() string {
 // PackageID is a UUID that uniquely identifies a specific Package object instance.
 // Java source: io.ballerina.projects.PackageId
 type PackageID struct {
-	id string
+	id          string
+	packageName string
 }
 
-// NewPackageID creates a new unique PackageID.
-func NewPackageID() PackageID {
-	return PackageID{id: generateUUID()}
+// NewPackageID creates a new unique PackageID with the given package name.
+// Java equivalent: PackageId.create(String packageName)
+func NewPackageID(packageName string) PackageID {
+	return PackageID{
+		id:          generateUUID(),
+		packageName: packageName,
+	}
 }
 
 // newPackageIDFromString creates a PackageID from an existing UUID string.
 // Used for deserialization or testing.
-func newPackageIDFromString(id string) PackageID {
-	return PackageID{id: id}
+func newPackageIDFromString(id string, packageName string) PackageID {
+	return PackageID{id: id, packageName: packageName}
 }
 
 // String returns the string representation of the package ID.

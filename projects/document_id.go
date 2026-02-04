@@ -21,22 +21,25 @@ package projects
 // DocumentID represents a unique identifier for a Document instance.
 // Java source: io.ballerina.projects.DocumentId
 type DocumentID struct {
-	id       string
-	moduleID ModuleID
+	id           string
+	documentPath string
+	moduleID     ModuleID
 }
 
 // NewDocumentID creates a new unique DocumentID associated with the given ModuleID.
-func NewDocumentID(moduleID ModuleID) DocumentID {
+// Java equivalent: DocumentId.create(String documentPath, ModuleId moduleId)
+func NewDocumentID(documentPath string, moduleID ModuleID) DocumentID {
 	return DocumentID{
-		id:       generateUUID(),
-		moduleID: moduleID,
+		id:           generateUUID(),
+		documentPath: documentPath,
+		moduleID:     moduleID,
 	}
 }
 
 // newDocumentIDFromString creates a DocumentID from an existing UUID string.
 // Used for deserialization or testing.
-func newDocumentIDFromString(id string, moduleID ModuleID) DocumentID {
-	return DocumentID{id: id, moduleID: moduleID}
+func newDocumentIDFromString(id string, documentPath string, moduleID ModuleID) DocumentID {
+	return DocumentID{id: id, documentPath: documentPath, moduleID: moduleID}
 }
 
 // String returns the string representation of the document ID.
