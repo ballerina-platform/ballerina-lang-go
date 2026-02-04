@@ -1,0 +1,33 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (union-type
+          (finite-type
+            (literal 1))
+          (finite-type
+            (literal 2))))))
+    (assignment
+      (simple-var-ref c)
+      (literal 2))
+    (var-def
+      (variable d (type
+        (value-type int))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref d))))
+    (var-def
+      (variable e (type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 1))
+            (finite-type
+              (literal 2)))
+          (finite-type
+            (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref e))))
+  )
+)

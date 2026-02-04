@@ -64,62 +64,14 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
 		t.resolveTypeDefinition(defn, 0)
+	}
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
 	}
 	ast.Walk(t, pkg)
-	tctx := semtypes.ContextFrom(t.typeEnv)
+	tctx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
-			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
-		}
-	}
-}
-
-// resolveBlockStatements resolves all expression types in a list of statements
-func (t *TypeResolver) resolveBlockStatements(stmts []ast.BLangStatement) {
-	for i := range stmts {
-		t.resolveStatement(stmts[i])
-	}
-}
-
-// resolveStatement resolves expression types in a statement
-func (t *TypeResolver) resolveStatement(stmt ast.BLangStatement) {
-	switch s := stmt.(type) {
-	case *ast.BLangSimpleVariableDef:
-		variable := s.GetVariable().(*ast.BLangSimpleVariable)
-		if variable.Expr != nil {
-			t.resolveExpression(variable.Expr.(ast.BLangExpression))
-		}
-	case *ast.BLangAssignment:
-		t.resolveExpression(s.GetVariable().(ast.BLangExpression))
-		t.resolveExpression(s.GetExpression().(ast.BLangExpression))
-	case *ast.BLangCompoundAssignment:
-		t.resolveExpression(s.GetVariable().(ast.BLangExpression))
-		t.resolveExpression(s.GetExpression().(ast.BLangExpression))
-	case *ast.BLangExpressionStmt:
-		t.resolveExpression(s.Expr)
-	case *ast.BLangIf:
-		t.resolveExpression(s.Expr)
-		t.resolveBlockStatements(s.Body.Stmts)
-		if s.ElseStmt != nil {
-			t.resolveStatement(s.ElseStmt)
-		}
-	case *ast.BLangWhile:
-		t.resolveExpression(s.Expr)
-		t.resolveBlockStatements(s.Body.Stmts)
-	case *ast.BLangReturn:
-		if s.Expr != nil {
-			t.resolveExpression(s.Expr)
-		}
-	case *ast.BLangBreak, *ast.BLangContinue:
-		// No expressions to resolve
-	default:
-		t.ctx.InternalError(fmt.Sprintf("unexpected statement type: %T", s), s.GetPosition())
-	}
-	ast.Walk(t, pkg)
-	for _, defn := range pkg.TypeDefinitions {
-		if semtypes.IsEmpty(t.tyCtx, defn.DeterminedType) {
 			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
@@ -862,6 +814,13 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return nil
 		}
 		return tr.resolveTypeDefinition(defn, depth)
+	case *ast.BLangFiniteTypeNode:
+		var result semtypes.SemType = &semtypes.NEVER
+		for _, value := range ty.ValueSpace {
+			ty := tr.resolveExpression(value)
+			result = semtypes.Union(result, ty)
+		}
+		return result
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
