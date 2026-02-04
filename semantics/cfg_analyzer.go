@@ -25,9 +25,85 @@ import (
 	"sync"
 )
 
-func AnalyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
+// FIXME: we have these panic chaining stuff because we don't handle compiler errors correctly
+// need to fix these once we do.
+
+// AnalyzeCFG runs both reachability and explicit return analyses concurrently
+// with centralized panic handling.
+func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan interface{}, len(pkg.Functions))
+	panicChan := make(chan any, 2) // Buffer for 2 analyses
+
+	// Run reachability analysis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				panicChan <- r
+			}
+		}()
+		analyzeReachability(ctx, cfg)
+	}()
+
+	// Run explicit return analysis
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				panicChan <- r
+			}
+		}()
+		analyzeExplicitReturn(ctx, pkg, cfg)
+	}()
+
+	wg.Wait()
+	close(panicChan)
+
+	// Re-panic with the first error we encountered
+	for p := range panicChan {
+		panic(p)
+	}
+}
+
+// analyzeReachability checks for unreachable code in all functions.
+// This is now a private function called by AnalyzeCFG.
+func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
+	var wg sync.WaitGroup
+	panicChan := make(chan any, len(cfg.funcCfgs))
+	for _, fnCfg := range cfg.funcCfgs {
+		wg.Add(1)
+		go func(fcfg *functionCFG) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicChan <- r
+				}
+			}()
+			for _, bb := range fcfg.bbs {
+				if !bb.isReachable() {
+					for _, node := range bb.nodes {
+						ctx.SemanticError("unreachable code", node.GetPosition())
+					}
+				}
+			}
+		}(&fnCfg)
+	}
+	wg.Wait()
+	close(panicChan)
+
+	for p := range panicChan {
+		panic(p)
+	}
+}
+
+// analyzeExplicitReturn validates that functions with non-nil return types
+// have explicit return statements.
+// This is now a private function called by AnalyzeCFG.
+func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
+	var wg sync.WaitGroup
+	panicChan := make(chan any, len(pkg.Functions))
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		wg.Add(1)
@@ -42,7 +118,6 @@ func AnalyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, 
 		}(fn)
 	}
 	wg.Wait()
-
 	close(panicChan)
 
 	for p := range panicChan {

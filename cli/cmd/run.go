@@ -176,11 +176,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Run semantic analysis after type resolution
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
-	// TODO: group these as analyze cfg and and run them concurrently as well
-	// Run reachability analysis after semantic analysis
-	semantics.AnalyzeReachability(cx, cfg)
-	// Run explicit return analysis after reachability analysis
-	semantics.AnalyzeExplicitReturn(cx, pkg, cfg)
+	// Run CFG analyses (reachability and explicit return) concurrently
+	semantics.AnalyzeCFG(cx, pkg, cfg)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}
