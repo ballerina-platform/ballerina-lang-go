@@ -65,9 +65,12 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		defn := &pkg.TypeDefinitions[i]
 		t.resolveTypeDefinition(defn, 0)
 	}
+<<<<<<< HEAD
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
 	}
+=======
+>>>>>>> 1bf8dbda (Add singleton type support)
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
 	}
