@@ -27,8 +27,6 @@ import (
 	"reflect"
 )
 
-type callBack func()
-
 type analyzer interface {
 	ast.Visitor
 	ctx() *context.CompilerContext
@@ -40,14 +38,11 @@ type analyzer interface {
 	internalErr(message string)
 	parentAnalyzer() analyzer
 	loc() diagnostics.Location
-	queueCallback(callback callBack)
-	executeCallbacks()
 }
 
 type (
 	analyzerBase struct {
-		parent    analyzer
-		callbacks []callBack
+		parent analyzer
 	}
 	SemanticAnalyzer struct {
 		analyzerBase
@@ -99,17 +94,6 @@ func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
 	}
 }
 
-func (ab *analyzerBase) queueCallback(callback callBack) {
-	ab.callbacks = append(ab.callbacks, callback)
-}
-
-func (ab *analyzerBase) executeCallbacks() {
-	for _, callback := range ab.callbacks {
-		callback()
-	}
-	ab.callbacks = nil
-}
-
 func (ab *analyzerBase) parentAnalyzer() analyzer {
 	return ab.parent
 }
@@ -139,7 +123,6 @@ func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 }
 
 func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	fa.executeCallbacks()
 	if node == nil {
 		return nil
 	}
@@ -156,7 +139,6 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	la.executeCallbacks()
 	if node == nil {
 		return nil
 	}
@@ -296,7 +278,6 @@ func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *const
 }
 
 func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	sa.executeCallbacks()
 	if node == nil {
 		// Done
 		return nil
@@ -362,7 +343,6 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 }
 
 func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	ca.executeCallbacks()
 	if node == nil {
 		// Done
 		return nil
