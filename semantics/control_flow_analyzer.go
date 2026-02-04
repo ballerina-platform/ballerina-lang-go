@@ -49,6 +49,10 @@ func (bb *basicBlock) isReachable() bool {
 	return bb.id == 0 || len(bb.parents) > 0
 }
 
+func (bb *basicBlock) isTerminal() bool {
+	return len(bb.children) == 0
+}
+
 type functionCFG struct {
 	bbs []basicBlock
 }
