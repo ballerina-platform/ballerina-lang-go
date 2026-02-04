@@ -221,11 +221,8 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 5: Reachability Analysis - this should panic for error cases
-	AnalyzeReachability(cx, cfg)
-
-	// Step 6: Explicit Return Analysis - this should panic for error cases
-	AnalyzeExplicitReturn(cx, pkg, cfg)
+	// Step 5: CFG Analysis (reachability and explicit return) - this should panic for error cases
+	AnalyzeCFG(cx, pkg, cfg)
 
 	// If we reach here without panic, the defer will catch it
 }
