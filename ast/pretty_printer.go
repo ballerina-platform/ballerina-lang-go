@@ -102,6 +102,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
 		p.printUserDefinedType(t)
+	case *BLangFiniteTypeNode:
+		p.printFiniteTypeNode(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -561,6 +563,18 @@ func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
 	p.startNode()
 	p.printString("wildcard-binding-pattern")
+	p.endNode()
+}
+
+// Finite type node printer
+func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
+	p.startNode()
+	p.printString("finite-type")
+	p.indentLevel++
+	for _, value := range node.ValueSpace {
+		p.PrintInner(value.(BLangNode))
+	}
+	p.indentLevel--
 	p.endNode()
 }
 

@@ -1,0 +1,18 @@
+(foo
+  (bb0 () ()
+    (return
+      (literal 1))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (union-type
+          (value-type int)
+          (value-type boolean)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref c))))
+  )
+)
