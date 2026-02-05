@@ -24,33 +24,37 @@ package projects
 //
 // TODO: Add missing fields from Java implementation:
 //   - dependencyManifest DependencyManifest     // Requires DependencyManifest type
-//   - dependenciesToml   DocumentConfig         // Dependencies.toml content
-//   - cloudToml          DocumentConfig         // Cloud.toml content
-//   - compilerPluginToml DocumentConfig         // CompilerPlugin.toml content
-//   - balToolToml        DocumentConfig         // BalTool.toml content
 //   - packageDescDependencyGraph DependencyGraph // Requires DependencyGraph type
 //   - disableSyntaxTree  bool                   // Flag to disable syntax tree
 //   - resources          []ResourceConfig       // Requires ResourceConfig type
 //   - testResources      []ResourceConfig       // Requires ResourceConfig type
 type PackageConfig struct {
-	packageID       PackageID
-	packageManifest PackageManifest
-	packagePath     string
-	defaultModule   ModuleConfig
-	otherModules    []ModuleConfig
-	ballerinaToml   DocumentConfig // can be nil
-	readmeMd        DocumentConfig // can be nil
+	packageID          PackageID
+	packageManifest    PackageManifest
+	packagePath        string
+	defaultModule      ModuleConfig
+	otherModules       []ModuleConfig
+	ballerinaToml      DocumentConfig // can be nil
+	dependenciesToml   DocumentConfig // can be nil
+	cloudToml          DocumentConfig // can be nil
+	compilerPluginToml DocumentConfig // can be nil
+	balToolToml        DocumentConfig // can be nil
+	readmeMd           DocumentConfig // can be nil
 }
 
 // PackageConfigParams contains parameters for creating a PackageConfig.
 type PackageConfigParams struct {
-	PackageID       PackageID
-	PackageManifest PackageManifest
-	PackagePath     string
-	DefaultModule   ModuleConfig
-	OtherModules    []ModuleConfig
-	BallerinaToml   DocumentConfig
-	ReadmeMd        DocumentConfig
+	PackageID          PackageID
+	PackageManifest    PackageManifest
+	PackagePath        string
+	DefaultModule      ModuleConfig
+	OtherModules       []ModuleConfig
+	BallerinaToml      DocumentConfig
+	DependenciesToml   DocumentConfig
+	CloudToml          DocumentConfig
+	CompilerPluginToml DocumentConfig
+	BalToolToml        DocumentConfig
+	ReadmeMd           DocumentConfig
 }
 
 // NewPackageConfig creates a new PackageConfig from the given parameters.
@@ -60,13 +64,17 @@ func NewPackageConfig(params PackageConfigParams) PackageConfig {
 	copy(otherCopy, params.OtherModules)
 
 	return PackageConfig{
-		packageID:       params.PackageID,
-		packageManifest: params.PackageManifest,
-		packagePath:     params.PackagePath,
-		defaultModule:   params.DefaultModule,
-		otherModules:    otherCopy,
-		ballerinaToml:   params.BallerinaToml,
-		readmeMd:        params.ReadmeMd,
+		packageID:          params.PackageID,
+		packageManifest:    params.PackageManifest,
+		packagePath:        params.PackagePath,
+		defaultModule:      params.DefaultModule,
+		otherModules:       otherCopy,
+		ballerinaToml:      params.BallerinaToml,
+		dependenciesToml:   params.DependenciesToml,
+		cloudToml:          params.CloudToml,
+		compilerPluginToml: params.CompilerPluginToml,
+		balToolToml:        params.BalToolToml,
+		readmeMd:           params.ReadmeMd,
 	}
 }
 
@@ -138,4 +146,56 @@ func (p PackageConfig) ReadmeMd() DocumentConfig {
 // HasReadmeMd returns true if this package has a README.md file.
 func (p PackageConfig) HasReadmeMd() bool {
 	return p.readmeMd != nil
+}
+
+// PackageTemplate returns whether this is a template package.
+// Java: PackageConfig.packageTemplate()
+func (p PackageConfig) PackageTemplate() bool {
+	return p.packageManifest.Template()
+}
+
+// DependencyManifest returns the dependency manifest for this package.
+// TODO(P6): Replace interface{} with DependencyManifest type once migrated.
+// Java: PackageConfig.dependencyManifest()
+func (p PackageConfig) DependencyManifest() interface{} {
+	return nil
+}
+
+// CompilationOptions returns the compilation options for this package config.
+// The Java implementation returns null; this stub returns the zero value.
+// TODO(P6): Wire to actual compilation options if needed.
+// Java: PackageConfig.compilationOptions()
+func (p PackageConfig) CompilationOptions() CompilationOptions {
+	return CompilationOptions{}
+}
+
+// PackageDescDependencyGraph returns the package descriptor dependency graph.
+// TODO(P6): Replace interface{} with DependencyGraph[PackageDescriptor] type once migrated.
+// Java: PackageConfig.packageDescDependencyGraph()
+func (p PackageConfig) PackageDescDependencyGraph() interface{} {
+	return nil
+}
+
+// CloudToml returns the Cloud.toml document config, or nil if not present.
+// Java: PackageConfig.cloudToml()
+func (p PackageConfig) CloudToml() DocumentConfig {
+	return p.cloudToml
+}
+
+// CompilerPluginToml returns the CompilerPlugin.toml document config, or nil if not present.
+// Java: PackageConfig.compilerPluginToml()
+func (p PackageConfig) CompilerPluginToml() DocumentConfig {
+	return p.compilerPluginToml
+}
+
+// BalToolToml returns the BalTool.toml document config, or nil if not present.
+// Java: PackageConfig.balToolToml()
+func (p PackageConfig) BalToolToml() DocumentConfig {
+	return p.balToolToml
+}
+
+// DependenciesToml returns the Dependencies.toml document config, or nil if not present.
+// Java: PackageConfig.dependenciesToml()
+func (p PackageConfig) DependenciesToml() DocumentConfig {
+	return p.dependenciesToml
 }

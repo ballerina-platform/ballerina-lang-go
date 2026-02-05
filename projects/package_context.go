@@ -29,6 +29,11 @@ type packageContext struct {
 	moduleContextMap     map[ModuleID]*moduleContext
 	moduleIDs            []ModuleID
 	defaultModuleContext *moduleContext // cached default module
+
+	// Lazy-initialized fields (matching Java's null-check lazy init pattern).
+	// TODO: Add sync.Once for thread-safe lazy initialization.
+	packageCompilation *PackageCompilation
+	packageResolution  *PackageResolution
 }
 
 // newPackageContext creates a packageContext from PackageConfig.
@@ -182,6 +187,24 @@ func (p *packageContext) getModuleContextMap() map[ModuleID]*moduleContext {
 		result[k] = v
 	}
 	return result
+}
+
+// getPackageCompilation returns the cached PackageCompilation, creating it on first call.
+// Java: PackageContext.getPackageCompilation()
+func (p *packageContext) getPackageCompilation() *PackageCompilation {
+	if p.packageCompilation == nil {
+		p.packageCompilation = newPackageCompilation(p, p.compilationOptions)
+	}
+	return p.packageCompilation
+}
+
+// getResolution returns the cached PackageResolution, creating it on first call.
+// Java: PackageContext.getResolution()
+func (p *packageContext) getResolution() *PackageResolution {
+	if p.packageResolution == nil {
+		p.packageResolution = newPackageResolution(p)
+	}
+	return p.packageResolution
 }
 
 // containsModule checks if the package contains a module with the given ID.

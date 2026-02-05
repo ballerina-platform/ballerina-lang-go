@@ -155,6 +155,141 @@ func (p *Package) ContainsModule(moduleID ModuleID) bool {
 	return p.packageCtx.containsModule(moduleID)
 }
 
+// CompilationOptions returns the compilation options for this package.
+// Java: Package.compilationOptions()
+func (p *Package) CompilationOptions() CompilationOptions {
+	return p.packageCtx.getCompilationOptions()
+}
+
+// BallerinaToml returns the Ballerina.toml document for this package, or nil if absent.
+// TODO(P2.x): Implement when BallerinaToml type is available.
+// Java: Package.ballerinaToml() -> Optional<BallerinaToml>
+func (p *Package) BallerinaToml() interface{} {
+	// TODO(P2.x): Return *BallerinaToml once the type is implemented.
+	// Java lazy-loads from packageContext.ballerinaTomlContext()
+	return nil
+}
+
+// DependenciesToml returns the Dependencies.toml document for this package, or nil if absent.
+// TODO(P2.x): Implement when DependenciesToml type is available.
+// Java: Package.dependenciesToml() -> Optional<DependenciesToml>
+func (p *Package) DependenciesToml() interface{} {
+	// TODO(P2.x): Return *DependenciesToml once the type is implemented.
+	// Java lazy-loads from packageContext.dependenciesTomlContext()
+	return nil
+}
+
+// CloudToml returns the Cloud.toml document for this package, or nil if absent.
+// TODO(P2.x): Implement when CloudToml type is available.
+// Java: Package.cloudToml() -> Optional<CloudToml>
+func (p *Package) CloudToml() interface{} {
+	// TODO(P2.x): Return *CloudToml once the type is implemented.
+	// Java lazy-loads from packageContext.cloudTomlContext()
+	return nil
+}
+
+// CompilerPluginToml returns the CompilerPlugin.toml document for this package, or nil if absent.
+// TODO(P2.x): Implement when CompilerPluginToml type is available.
+// Java: Package.compilerPluginToml() -> Optional<CompilerPluginToml>
+func (p *Package) CompilerPluginToml() interface{} {
+	// TODO(P2.x): Return *CompilerPluginToml once the type is implemented.
+	// Java lazy-loads from packageContext.compilerPluginTomlContext()
+	return nil
+}
+
+// BalToolToml returns the BalTool.toml document for this package, or nil if absent.
+// TODO(P2.x): Implement when BalToolToml type is available.
+// Java: Package.balToolToml() -> Optional<BalToolToml>
+func (p *Package) BalToolToml() interface{} {
+	// TODO(P2.x): Return *BalToolToml once the type is implemented.
+	// Java lazy-loads from packageContext.balToolTomlContext()
+	return nil
+}
+
+// ReadmeMd returns the README.md document for this package, or nil if absent.
+// TODO(P2.x): Implement when PackageReadmeMd type is available.
+// Java: Package.readmeMd() -> Optional<PackageReadmeMd>
+func (p *Package) ReadmeMd() interface{} {
+	// TODO(P2.x): Return *PackageReadmeMd once the type is implemented.
+	// Java lazy-loads from packageContext.readmeMdContext()
+	return nil
+}
+
+// ResourceIDs returns the IDs of all resources in this package's default module.
+// TODO(P2.x): Implement when resource support is added to packageContext.
+// Java: Package.resourceIds() -> Collection<DocumentId>
+func (p *Package) ResourceIDs() []DocumentID {
+	// TODO(P2.x): Delegate to packageContext.resourceIds()
+	return nil
+}
+
+// TestResourceIDs returns the IDs of all test resources in this package's default module.
+// TODO(P2.x): Implement when resource support is added to packageContext.
+// Java: Package.testResourceIds() -> Collection<DocumentId>
+func (p *Package) TestResourceIDs() []DocumentID {
+	// TODO(P2.x): Delegate to packageContext.testResourceIds()
+	return nil
+}
+
+// Resource returns a resource by its DocumentID, or nil if not found.
+// TODO(P2.x): Implement when Resource type is available.
+// Java: Package.resource(DocumentId) -> Resource
+func (p *Package) Resource(documentID DocumentID) interface{} {
+	// TODO(P2.x): Return *Resource once the type is implemented.
+	// Java checks resourceIds first, then falls back to testResources.
+	return nil
+}
+
+// GetCompilation returns the compilation result for this package.
+// Java: Package.getCompilation() -> PackageCompilation
+func (p *Package) GetCompilation() *PackageCompilation {
+	return p.packageCtx.getPackageCompilation()
+}
+
+// GetResolution returns the package resolution (dependency graph) for this package.
+// Java: Package.getResolution() -> PackageResolution
+func (p *Package) GetResolution() *PackageResolution {
+	return p.packageCtx.getResolution()
+}
+
+// GetBuildToolResolution returns the build tool resolution for this package.
+// TODO(P3.x): Implement when BuildToolResolution type is available.
+// Java: Package.getBuildToolResolution() -> BuildToolResolution
+func (p *Package) GetBuildToolResolution() interface{} {
+	// TODO(P3.x): Return *BuildToolResolution once the type is implemented.
+	// Java delegates to packageContext.getBuildToolResolution()
+	return nil
+}
+
+// RunCodeGenAndModifyPlugins runs CodeGenerator and CodeModifier tasks in engaged CompilerPlugins.
+// Returns a DiagnosticResult with diagnostics reported by the plugin tasks.
+// TODO(P3.x): Implement when compiler plugin infrastructure is available.
+// Java: Package.runCodeGenAndModifyPlugins() -> DiagnosticResult
+func (p *Package) RunCodeGenAndModifyPlugins() DiagnosticResult {
+	// TODO(P3.x): Implement with CompilerPluginManager, CodeGeneratorManager, CodeModifierManager
+	return NewDiagnosticResult(nil)
+}
+
+// RunCodeGeneratorPlugins runs CodeGenerator tasks in engaged CompilerPlugins.
+// Returns nil. The real return type will be *CodeGeneratorResult.
+// TODO(P3.x): Implement when compiler plugin infrastructure is available.
+// Java: Package.runCodeGeneratorPlugins() -> CodeGeneratorResult
+func (p *Package) RunCodeGeneratorPlugins() interface{} {
+	// TODO(P3.x): Return *CodeGeneratorResult once the type is implemented.
+	// Java delegates to CompilerPluginManager -> CodeGeneratorManager
+	return nil
+}
+
+// RunCodeModifierPlugins runs CodeModifier tasks in engaged CompilerPlugins.
+// Returns nil. The real return type will be *CodeModifierResult.
+// TODO(P3.x): Implement when compiler plugin infrastructure is available.
+// Java: Package.runCodeModifierPlugins() -> CodeModifierResult
+func (p *Package) RunCodeModifierPlugins() interface{} {
+	// TODO(P3.x): Return *CodeModifierResult once the type is implemented.
+	// Java delegates to CompilerPluginManager -> CodeModifierManager
+	return nil
+}
+
 // Modify returns a PackageModifier for making immutable modifications to this package.
 // Use the modifier to add/update modules and call Apply() to create a new Package.
 func (p *Package) Modify() *PackageModifier {

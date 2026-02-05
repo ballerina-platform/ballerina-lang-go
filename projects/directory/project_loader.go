@@ -50,7 +50,7 @@ func WithBuildOptions(opts projects.BuildOptions) LoadOption {
 //   - Is .bala file -> error (not implemented)
 //
 // Java: io.ballerina.projects.directory.ProjectLoader.loadProject
-func Load(path string, opts ...LoadOption) (projects.ProjectLoadResult, error) {
+func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, error) {
 	// Apply defaults
 	cfg := &loadConfig{
 		buildOptions: projects.NewBuildOptions(),

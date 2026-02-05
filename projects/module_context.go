@@ -18,6 +18,16 @@
 
 package projects
 
+import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
+)
+
 // moduleContext holds internal state for a Module.
 // It manages document contexts for source and test documents.
 // Java: io.ballerina.projects.ModuleContext
@@ -31,6 +41,18 @@ type moduleContext struct {
 	testDocContextMap      map[DocumentID]*documentContext
 	testSrcDocIDs          []DocumentID
 	moduleDescDependencies []ModuleDescriptor
+
+	// Compilation state tracking.
+	// Java: ModuleContext.compilationState, ModuleContext.diagnostics
+	compilationState  ModuleCompilationState
+	moduleDiagnostics []diagnostics.Diagnostic
+
+	// Compilation artifacts.
+	// Java: ModuleContext.bLangPackage, ModuleContext.bPackageSymbol
+	bLangPkg        *ast.BLangPackage
+	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
+	compilerCtx     *context.CompilerContext
+	birPkg          *bir.BIRPackage
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
@@ -185,6 +207,142 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 	result := make([]ModuleDescriptor, len(m.moduleDescDependencies))
 	copy(result, m.moduleDescDependencies)
 	return result
+}
+
+// compile performs module compilation by delegating to compileInternal.
+// Java: ModuleContext.compile(CompilerContext) delegates to
+// currentCompilationState().compile(this, compilerContext)
+func (m *moduleContext) compile() {
+	compileInternal(m)
+	m.compilationState = ModuleCompilationStateCompiled
+}
+
+// compileInternal performs the actual compilation of a module:
+// parse sources, build BLangPackage (AST), and run semantic analysis.
+// Java: ModuleContext.compileInternal(ModuleContext, CompilerContext)
+func compileInternal(moduleCtx *moduleContext) {
+	moduleCtx.moduleDiagnostics = make([]diagnostics.Diagnostic, 0)
+	cx := context.NewCompilerContext()
+	env := semtypes.GetTypeEnv()
+	moduleCtx.compilerCtx = cx
+
+	// Parse all source documents and collect syntax trees.
+	// Java: for (DocumentContext dc : srcDocContextMap.values())
+	//           pkgNode.addCompilationUnit(dc.compilationUnit(...))
+	var syntaxTrees []*tree.SyntaxTree
+	for _, docID := range moduleCtx.srcDocIDs {
+		docCtx := moduleCtx.srcDocContextMap[docID]
+		if docCtx != nil {
+			st := docCtx.parse()
+			if st != nil {
+				syntaxTrees = append(syntaxTrees, st)
+			}
+		}
+	}
+
+	// Parse test source documents.
+	// Java: ModuleContext.parseTestSources()
+	for _, docID := range moduleCtx.testSrcDocIDs {
+		docCtx := moduleCtx.testDocContextMap[docID]
+		if docCtx != nil {
+			docCtx.parse()
+		}
+	}
+
+	if len(syntaxTrees) == 0 {
+		return
+	}
+
+	// Build BLangPackage from syntax trees.
+	// Java: TreeBuilder.createPackageNode() + pkgNode.addCompilationUnit()
+	pkgNode := buildBLangPackage(cx, syntaxTrees)
+	moduleCtx.bLangPkg = pkgNode
+
+	// Run semantic analysis (type checking) phases.
+	// Java: CompilerPhaseRunner.performTypeCheckPhases(pkgNode)
+	importedSymbols := semantics.ResolveImports(cx, env, pkgNode)
+	semantics.ResolveSymbols(cx, pkgNode, importedSymbols)
+
+	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkgNode)
+
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(pkgNode)
+
+	// Generate BIR from the compiled BLangPackage.
+	// Java: CompilerPhaseRunner.performBirGenPhases(bLangPackage)
+	generateCodeInternal(moduleCtx)
+}
+
+// buildBLangPackage builds a BLangPackage from one or more syntax trees.
+// For a single file this is equivalent to ast.ToPackage(ast.GetCompilationUnit(cx, st)).
+// For multiple files it merges all compilation units into a single package.
+// Java: ModuleContext.compileInternal() creates pkgNode and adds compilation units.
+func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree) *ast.BLangPackage {
+	if len(syntaxTrees) == 1 {
+		cu := ast.GetCompilationUnit(cx, syntaxTrees[0])
+		return ast.ToPackage(cu)
+	}
+
+	pkg := &ast.BLangPackage{}
+	for _, st := range syntaxTrees {
+		cu := ast.GetCompilationUnit(cx, st)
+		if pkg.PackageID == nil {
+			pkg.PackageID = cu.GetPackageID()
+		}
+		for _, node := range cu.GetTopLevelNodes() {
+			switch n := node.(type) {
+			case *ast.BLangImportPackage:
+				pkg.Imports = append(pkg.Imports, *n)
+			case *ast.BLangConstant:
+				pkg.Constants = append(pkg.Constants, *n)
+			case *ast.BLangService:
+				pkg.Services = append(pkg.Services, *n)
+			case *ast.BLangFunction:
+				pkg.Functions = append(pkg.Functions, *n)
+			case *ast.BLangTypeDefinition:
+				pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
+			case *ast.BLangAnnotation:
+				pkg.Annotations = append(pkg.Annotations, *n)
+			default:
+				pkg.TopLevelNodes = append(pkg.TopLevelNodes, node)
+			}
+		}
+	}
+	return pkg
+}
+
+// generateCodeInternal generates BIR for this module from the compiled BLangPackage.
+// Java: ModuleContext.generateCodeInternal(ModuleContext, CompilerBackend, CompilerContext)
+// -> CompilerPhaseRunner.performBirGenPhases(bLangPackage)
+func generateCodeInternal(moduleCtx *moduleContext) {
+	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
+		return
+	}
+	moduleCtx.birPkg = bir.GenBir(moduleCtx.compilerCtx, moduleCtx.bLangPkg)
+}
+
+// getBLangPackage returns the compiled BLangPackage.
+// Java: ModuleContext.bLangPackage()
+func (m *moduleContext) getBLangPackage() *ast.BLangPackage {
+	return m.bLangPkg
+}
+
+// getBIRPackage returns the generated BIR package.
+func (m *moduleContext) getBIRPackage() *bir.BIRPackage {
+	return m.birPkg
+}
+
+// getCompilationState returns the current compilation state of the module.
+// Java: ModuleContext.compilationState()
+func (m *moduleContext) getCompilationState() ModuleCompilationState {
+	return m.compilationState
+}
+
+// getDiagnostics returns the diagnostics produced during module compilation.
+// Java: ModuleContext.diagnostics()
+func (m *moduleContext) getDiagnostics() []diagnostics.Diagnostic {
+	return m.moduleDiagnostics
 }
 
 // duplicate creates a copy of the context.
