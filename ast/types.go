@@ -391,12 +391,12 @@ func (this *BLangUnionTypeNode) GetKind() model.NodeKind {
 	return model.NodeKind_UNION_TYPE_NODE
 }
 
-func (this *BLangUnionTypeNode) Lhs() model.TypeData {
-	return this.lhs
+func (this *BLangUnionTypeNode) Lhs() *model.TypeData {
+	return &this.lhs
 }
 
-func (this *BLangUnionTypeNode) Rhs() model.TypeData {
-	return this.rhs
+func (this *BLangUnionTypeNode) Rhs() *model.TypeData {
+	return &this.rhs
 }
 
 func (this *BLangUnionTypeNode) SetLhs(typeData model.TypeData) {

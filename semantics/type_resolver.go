@@ -732,6 +732,25 @@ func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.Sem
 }
 
 func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemType {
+	bLangNode := btype.(ast.BLangNode)
+	if bLangNode.GetDeterminedType() != nil {
+		return bLangNode.GetDeterminedType()
+	}
+	res := tr.resolveBTypeInner(btype, depth)
+	bLangNode.SetDeterminedType(res)
+	typeData := bLangNode.GetTypeData()
+	typeData.Type = res
+	bLangNode.SetTypeData(typeData)
+	return res
+}
+
+func (tr *TypeResolver) resolveTypeDataPair(typeData *model.TypeData, depth int) semtypes.SemType {
+	ty := tr.resolveBType(typeData.TypeDescriptor.(ast.BType), depth)
+	typeData.Type = ty
+	return ty
+}
+
+func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.SemType {
 	switch ty := btype.(type) {
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
@@ -757,11 +776,7 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			// Resolve element type and update its TypeData
-			elemTypeData := ty.Elemtype
-			memberTy := tr.resolveBType(elemTypeData.TypeDescriptor.(ast.BType), depth+1)
-			elemTypeData.Type = memberTy
-			ty.Elemtype = elemTypeData
+			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
 
 			if ty.IsOpenArray() {
 				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
@@ -774,15 +789,8 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		}
 		return semTy
 	case *ast.BLangUnionTypeNode:
-		// FIXME: get rid of this when we get rid GetDeterminedType() hack
-		lhsTypeData := ty.Lhs()
-		rhsTypeData := ty.Rhs()
-		lhs := tr.resolveBType(lhsTypeData.TypeDescriptor.(ast.BType), depth+1)
-		rhs := tr.resolveBType(rhsTypeData.TypeDescriptor.(ast.BType), depth+1)
-		lhsTypeData.Type = lhs
-		rhsTypeData.Type = rhs
-		ty.SetLhs(lhsTypeData)
-		ty.SetRhs(rhsTypeData)
+		lhs := tr.resolveTypeDataPair(ty.Lhs(), depth+1)
+		rhs := tr.resolveTypeDataPair(ty.Rhs(), depth+1)
 		return semtypes.Union(lhs, rhs)
 	case *ast.BLangErrorTypeNode:
 		if ty.IsDistinct() {
@@ -795,6 +803,8 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 			return semtypes.ErrorDetail(detailTy)
 		}
 	case *ast.BLangUserDefinedType:
+		ast.Walk(tr, &ty.TypeName)
+		ast.Walk(tr, &ty.PkgAlias)
 		symbol := ty.Symbol().(*model.SymbolRef)
 		defn, ok := tr.typeDefns[*symbol]
 		if !ok {
