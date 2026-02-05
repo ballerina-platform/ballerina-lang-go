@@ -51,7 +51,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		Channel: make(chan string),
 	}
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
 		return

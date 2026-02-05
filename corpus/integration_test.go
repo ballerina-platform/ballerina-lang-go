@@ -163,7 +163,7 @@ func runTest(balFile string) testResult {
 		}()
 
 		cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-		syntaxTree, err := parser.GetSyntaxTree(nil, balFile)
+		syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
 		if err != nil {
 			panic(err)
 		}
