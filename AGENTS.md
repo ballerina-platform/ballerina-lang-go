@@ -26,6 +26,8 @@
 7. Generate BIR
 8. Interpret generated BIR
 
+Stages up to 7 are considered front end.
+
 ## Tests
 
 ### Corpus tests

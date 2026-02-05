@@ -70,10 +70,12 @@ type (
 	}
 )
 
-var _ analyzer = &constantAnalyzer{}
-var _ analyzer = &SemanticAnalyzer{}
-var _ analyzer = &functionAnalyzer{}
-var _ analyzer = &loopAnalyzer{}
+var (
+	_ analyzer = &constantAnalyzer{}
+	_ analyzer = &SemanticAnalyzer{}
+	_ analyzer = &functionAnalyzer{}
+	_ analyzer = &loopAnalyzer{}
+)
 
 // FIXME: this is not correct since const analyzer will propagte to semantic analyzer
 func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
@@ -468,6 +470,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
 
+	case *ast.BLangErrorConstructorExpr:
+		analyzeErrorConstructorExpr(a, expr, expectedType)
+
 	case *ast.BLangGroupExpr:
 		analyzeExpression(a, expr.Expression, expectedType)
 
@@ -518,6 +523,26 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 	}
 
 	// Validate the resolved list type against expected type
+	validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {
+	argCount := len(expr.PositionalArgs)
+	if argCount < 1 || argCount > 2 {
+		a.semanticErr("error constructor must have at least 1 and at most 2 positional arguments")
+		return
+	}
+
+	msgArg := expr.PositionalArgs[0]
+	analyzeExpression(a, msgArg, &semtypes.STRING)
+
+	// Validate second positional argument if present: must be a subtype of error? (Union of error and nil)
+	if argCount == 2 {
+		causeArg := expr.PositionalArgs[1]
+		analyzeExpression(a, causeArg, semtypes.Union(&semtypes.ERROR, &semtypes.NIL))
+	}
+
+	// Validate the resolved error type against expected type
 	validateResolvedType(a, expr, expectedType)
 }
 
