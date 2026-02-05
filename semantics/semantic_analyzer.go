@@ -590,11 +590,46 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			a.semanticErr(fmt.Sprintf("incompatible types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
+	} else if isBitWiseExpr(binaryExpr) {
+		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 	}
 
 	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
+}
+
+var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
+
+func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
+	ctx := a.tyCtx()
+	if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+		a.semanticErr("expect integer types for bitwise operators")
+		return
+	}
+	var resultTy semtypes.SemType
+	switch binaryExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_AND:
+		resultTy = &semtypes.INT
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		resultTy = &semtypes.INT
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+	default:
+		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
+		return
+	}
+	setExpectedType(binaryExpr, resultTy)
 }
 
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
