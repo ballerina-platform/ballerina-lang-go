@@ -682,6 +682,12 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 		kind = INSTRUCTION_KIND_REF_EQUAL
 	case model.OperatorKind_REF_NOT_EQUAL:
 		kind = INSTRUCTION_KIND_REF_NOT_EQUAL
+	case model.OperatorKind_BITWISE_AND:
+		kind = INSTRUCTION_KIND_BITWISE_AND
+	case model.OperatorKind_BITWISE_OR:
+		kind = INSTRUCTION_KIND_BITWISE_OR
+	case model.OperatorKind_BITWISE_XOR:
+		kind = INSTRUCTION_KIND_BITWISE_XOR
 	default:
 		panic("unexpected binary operator kind")
 	}

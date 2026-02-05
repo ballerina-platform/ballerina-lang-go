@@ -467,6 +467,15 @@ func isMultipcativeExpr(opExpr opExpr) bool {
 	}
 }
 
+func isBitWiseExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		return true
+	default:
+		return false
+	}
+}
+
 func isRelationalExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
@@ -668,6 +677,12 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 			// Relational operators: <, <=, >, >=
 			// Result type is always boolean
 			resultTy = &semtypes.BOOLEAN
+			nilLifted = false
+		} else if isBitWiseExpr(expr) {
+			// Bitwise operators: &, |, ^
+			// strickly speaking this is not correct by we don't know the operand types before type narrowing.
+			// I think this is okay as long as we properly narrow this type in semantic analysis (after narrowing)
+			resultTy = &semtypes.INT
 			nilLifted = false
 		} else {
 			t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
