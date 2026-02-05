@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type BIRReader struct {
@@ -370,7 +371,14 @@ func (br *BIRReader) readConstants() ([]bir.BIRConstant, error) {
 			return nil, err
 		}
 
+		pos, err := br.readPosition()
+
 		constant := bir.BIRConstant{
+			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
+				BIRNodeBase: bir.BIRNodeBase{
+					Pos: pos,
+				},
+			},
 			Name:   name,
 			Flags:  flags,
 			Origin: model.SymbolOrigin(origin),
@@ -422,6 +430,11 @@ func (br *BIRReader) readGlobalVars() ([]bir.BIRGlobalVariableDcl, error) {
 
 	variables := make([]bir.BIRGlobalVariableDcl, count)
 	for i := 0; i < int(count); i++ {
+		pos, err := br.readPosition()
+		if err != nil {
+			return nil, err
+		}
+
 		kind, err := br.readUInt8()
 		if err != nil {
 			return nil, err
@@ -453,6 +466,11 @@ func (br *BIRReader) readGlobalVars() ([]bir.BIRGlobalVariableDcl, error) {
 
 		variables[i] = bir.BIRGlobalVariableDcl{
 			BIRVariableDcl: bir.BIRVariableDcl{
+				BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
+					BIRNodeBase: bir.BIRNodeBase{
+						Pos: pos,
+					},
+				},
 				Kind: bir.VarKind(kind),
 				Name: name,
 				Type: t,
@@ -484,6 +502,11 @@ func (br *BIRReader) readFunctions() ([]bir.BIRFunction, error) {
 }
 
 func (br *BIRReader) readFunction() (*bir.BIRFunction, error) {
+	pos, err := br.readPosition()
+	if err != nil {
+		return nil, err
+	}
+
 	nameIdx, err := br.readInt32()
 	if err != nil {
 		return nil, err
@@ -641,6 +664,11 @@ func (br *BIRReader) readFunction() (*bir.BIRFunction, error) {
 	}
 
 	return &bir.BIRFunction{
+		BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
+			BIRNodeBase: bir.BIRNodeBase{
+				Pos: pos,
+			},
+		},
 		Name:           name,
 		OriginalName:   originalName,
 		Flags:          flag,
@@ -1104,4 +1132,31 @@ func (br *BIRReader) readFloat64() (float64, error) {
 
 func (br *BIRReader) readBool() (bool, error) {
 	return read[bool](br.r)
+}
+
+func (br *BIRReader) readPosition() (diagnostics.Location, error) {
+	sourceFileIdx, err := br.readInt32()
+	if err != nil {
+		return nil, err
+	}
+	sourceFileName := br.getStringFromCP(int(sourceFileIdx))
+
+	sLine, err := br.readInt32()
+	if err != nil {
+		return nil, err
+	}
+	sCol, err := br.readInt32()
+	if err != nil {
+		return nil, err
+	}
+	eLine, err := br.readInt32()
+	if err != nil {
+		return nil, err
+	}
+	eCol, err := br.readInt32()
+	if err != nil {
+		return nil, err
+	}
+
+	return diagnostics.NewBLangDiagnosticLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol), 0, 0), nil
 }
