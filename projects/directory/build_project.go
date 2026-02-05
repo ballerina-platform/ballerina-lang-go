@@ -38,7 +38,9 @@ type BuildProject struct {
 var _ projects.Project = (*BuildProject)(nil)
 
 // LoadBuildProject loads a build project from the given path.
-// Java: io.ballerina.projects.directory.BuildProject.load
+// It merges build options from Ballerina.toml (manifest defaults) with the caller's
+// options using AcceptTheirs, so caller-provided options override manifest defaults.
+// Java: io.ballerina.projects.directory.BuildProject.loadProject
 func LoadBuildProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
 	// Use internal.CreateBuildProjectConfig to scan and create package config
 	packageConfig, err := internal.CreateBuildProjectConfig(path)
@@ -46,14 +48,22 @@ func LoadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 		return projects.ProjectLoadResult{}, err
 	}
 
+	// Merge build options: manifest defaults are the base, caller's options override.
+	// This mirrors Java's ProjectFiles.createBuildOptions which calls:
+	//   defaultBuildOptions.acceptTheirs(theirOptions)
+	// where defaultBuildOptions comes from Ballerina.toml [build-options].
+	// Java: io.ballerina.projects.internal.ProjectFiles.createBuildOptions
+	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
+	mergedOpts := manifestBuildOptions.AcceptTheirs(opts)
+
 	// Create the project first (we need it for the package)
 	project := &BuildProject{
 		sourceRoot:   path,
-		buildOptions: opts,
+		buildOptions: mergedOpts,
 	}
 
 	// Create package from config
-	compilationOptions := opts.CompilationOptions()
+	compilationOptions := mergedOpts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
 	project.currentPackage = pkg
 

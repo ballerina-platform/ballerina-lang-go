@@ -18,8 +18,6 @@
 
 package projects
 
-import "strings"
-
 // ModuleName represents a Ballerina module name.
 // A module name consists of the package name and an optional module name part.
 // For the default module, the module name part is empty.
@@ -33,30 +31,19 @@ type ModuleName struct {
 	moduleNamePart string
 }
 
+// NewDefaultModuleName creates a new ModuleName for the default module with the given package name.
+func NewDefaultModuleName(packageName PackageName) ModuleName {
+	return ModuleName{
+		packageName:    packageName,
+		moduleNamePart: "",
+	}
+}
+
 // NewModuleName creates a new ModuleName with the given package name and module name part.
-// For the default module, pass an empty string for moduleNamePart.
 func NewModuleName(packageName PackageName, moduleNamePart string) ModuleName {
 	return ModuleName{
 		packageName:    packageName,
 		moduleNamePart: moduleNamePart,
-	}
-}
-
-// NewModuleNameFromString parses a full module name string (e.g., "mypackage.utils").
-// If the string contains a dot, the part before the first dot is the package name
-// and the rest is the module name part.
-func NewModuleNameFromString(fullName string) ModuleName {
-	idx := strings.Index(fullName, ".")
-	if idx == -1 {
-		// Default module
-		return ModuleName{
-			packageName:    NewPackageName(fullName),
-			moduleNamePart: "",
-		}
-	}
-	return ModuleName{
-		packageName:    NewPackageName(fullName[:idx]),
-		moduleNamePart: fullName[idx+1:],
 	}
 }
 
@@ -70,8 +57,9 @@ func (m ModuleName) ModuleNamePart() string {
 	return m.moduleNamePart
 }
 
-// IsDefaultModule returns true if this is the default module.
-func (m ModuleName) IsDefaultModule() bool {
+// IsDefaultModuleName returns true if this is the default module name.
+// Java: ModuleName.isDefaultModuleName()
+func (m ModuleName) IsDefaultModuleName() bool {
 	return m.moduleNamePart == ""
 }
 

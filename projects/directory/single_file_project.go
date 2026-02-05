@@ -165,13 +165,6 @@ func (s *SingleFileProject) BuildOptions() projects.BuildOptions {
 	return s.buildOptions
 }
 
-// FilePath returns the path to the single .bal file.
-// This is a convenience method for single file projects.
-// Java: SingleFileProject.documentPath()
-func (s *SingleFileProject) FilePath() string {
-	return s.documentPath
-}
-
 // TargetDir returns the target directory for build outputs.
 // For single file projects, this is the source directory unless overridden by BuildOptions.
 // Java: SingleFileProject.targetDir()
@@ -220,7 +213,7 @@ func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bo
 // For single file projects, returns the document path if the ID matches.
 // Java: SingleFileProject.documentPath(DocumentId)
 func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string {
-	if s.currentPackage == nil || documentID.IsZero() {
+	if s.currentPackage == nil {
 		return ""
 	}
 

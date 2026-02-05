@@ -96,7 +96,3 @@ func (d PackageDescriptor) Hash() int {
 	return h
 }
 
-// IsZero returns true if this is a zero-value PackageDescriptor.
-func (d PackageDescriptor) IsZero() bool {
-	return d.org.IsEmpty() && d.name.IsEmpty()
-}

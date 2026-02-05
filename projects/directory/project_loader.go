@@ -31,7 +31,6 @@ import (
 // loadConfig holds configuration for project loading.
 type loadConfig struct {
 	buildOptions projects.BuildOptions
-	offline      bool
 }
 
 // LoadOption is a functional option for configuring project loading.
@@ -41,13 +40,6 @@ type LoadOption func(*loadConfig)
 func WithBuildOptions(opts projects.BuildOptions) LoadOption {
 	return func(cfg *loadConfig) {
 		cfg.buildOptions = opts
-	}
-}
-
-// WithOffline sets whether to load in offline mode.
-func WithOffline(offline bool) LoadOption {
-	return func(cfg *loadConfig) {
-		cfg.offline = offline
 	}
 }
 
@@ -67,13 +59,6 @@ func Load(path string, opts ...LoadOption) (projects.ProjectLoadResult, error) {
 	// Apply options
 	for _, opt := range opts {
 		opt(cfg)
-	}
-
-	// If offline is set, merge it into build options
-	if cfg.offline {
-		builder := projects.NewBuildOptionsBuilder()
-		builder.WithOffline(true)
-		cfg.buildOptions = cfg.buildOptions.AcceptTheirs(builder.Build())
 	}
 
 	// Get absolute path

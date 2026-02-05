@@ -69,15 +69,10 @@ func (d ModuleDescriptor) Version() PackageVersion {
 	return d.packageDescriptor.Version()
 }
 
-// IsDefaultModule returns true if this is the default module of the package.
-func (d ModuleDescriptor) IsDefaultModule() bool {
-	return d.name.IsDefaultModule()
-}
-
 // String returns the string representation of the descriptor.
 // Format: "org/packageName.moduleName:version" or "org/packageName:version" for default module
 func (d ModuleDescriptor) String() string {
-	if d.name.IsDefaultModule() {
+	if d.name.IsDefaultModuleName() {
 		return d.packageDescriptor.String()
 	}
 	return fmt.Sprintf("%s/%s:%s",
@@ -101,7 +96,3 @@ func (d ModuleDescriptor) Hash() int {
 	return h
 }
 
-// IsZero returns true if this is a zero-value ModuleDescriptor.
-func (d ModuleDescriptor) IsZero() bool {
-	return d.packageDescriptor.IsZero()
-}

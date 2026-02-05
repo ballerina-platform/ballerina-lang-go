@@ -74,7 +74,3 @@ func (m ModuleID) Hash() int {
 	return h
 }
 
-// IsZero returns true if this is a zero-value ModuleID.
-func (m ModuleID) IsZero() bool {
-	return m.id == ""
-}

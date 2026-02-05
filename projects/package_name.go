@@ -44,7 +44,3 @@ func (n PackageName) Equals(other PackageName) bool {
 	return n.value == other.value
 }
 
-// IsEmpty returns true if the package name is empty.
-func (n PackageName) IsEmpty() bool {
-	return n.value == ""
-}

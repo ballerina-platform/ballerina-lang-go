@@ -66,7 +66,3 @@ func (d DocumentID) Hash() int {
 	return h
 }
 
-// IsZero returns true if this is a zero-value DocumentID.
-func (d DocumentID) IsZero() bool {
-	return d.id == ""
-}

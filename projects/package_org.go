@@ -44,7 +44,3 @@ func (o PackageOrg) Equals(other PackageOrg) bool {
 	return o.value == other.value
 }
 
-// IsEmpty returns true if the organization name is empty.
-func (o PackageOrg) IsEmpty() bool {
-	return o.value == ""
-}

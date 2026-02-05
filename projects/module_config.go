@@ -72,7 +72,7 @@ func (m ModuleConfig) ModuleDescriptor() ModuleDescriptor {
 
 // IsDefaultModule returns true if this is the default module of the package.
 func (m ModuleConfig) IsDefaultModule() bool {
-	return m.moduleDescriptor.IsDefaultModule()
+	return m.moduleDescriptor.Name().IsDefaultModuleName()
 }
 
 // SourceDocs returns a copy of the source document configurations.

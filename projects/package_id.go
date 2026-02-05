@@ -82,7 +82,3 @@ func (p PackageID) Hash() int {
 	return h
 }
 
-// IsZero returns true if this is a zero-value PackageID.
-func (p PackageID) IsZero() bool {
-	return p.id == ""
-}

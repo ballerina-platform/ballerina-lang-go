@@ -92,13 +92,6 @@ func (dr DiagnosticResult) Hints() []diagnostics.Diagnostic {
 	return result
 }
 
-// Infos returns a defensive copy of all info diagnostics.
-func (dr DiagnosticResult) Infos() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(dr.infos))
-	copy(result, dr.infos)
-	return result
-}
-
 // HasErrors returns true if there are any error diagnostics.
 func (dr DiagnosticResult) HasErrors() bool {
 	return len(dr.errors) > 0
@@ -124,7 +117,3 @@ func (dr DiagnosticResult) DiagnosticCount() int {
 	return len(dr.diagnostics)
 }
 
-// IsEmpty returns true if there are no diagnostics.
-func (dr DiagnosticResult) IsEmpty() bool {
-	return len(dr.diagnostics) == 0
-}
