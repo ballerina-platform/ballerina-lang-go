@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -178,21 +179,21 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 			panicValue = r
 		}
 
-		// After recovery, verify that a semantic error occurred
+		// After recovery, verify that a semantic or syntax error occurred
 		if !didPanic {
-			t.Errorf("Expected semantic error for %s, but analysis completed without error", testCase.InputPath)
+			t.Errorf("Expected semantic or syntax error for %s, but analysis completed without error", testCase.InputPath)
 			return
 		}
 
-		// // Verify the panic is a semantic error (not some other panic)
-		// panicStr := fmt.Sprintf("%v", panicValue)
-		// if !strings.Contains(panicStr, "Semantic error:") {
-		// 	t.Errorf("Expected semantic error for %s, but got different panic: %v", testCase.InputPath, panicValue)
-		// 	return
-		// }
+		// Verify the panic is a semantic or syntax error (not some other panic)
+		panicStr := fmt.Sprintf("%v", panicValue)
+		if !strings.Contains(panicStr, "Semantic error:") && !strings.Contains(panicStr, "Syntax error:") {
+			t.Errorf("Expected semantic or syntax error for %s, but got different panic: %v", testCase.InputPath, panicValue)
+			return
+		}
 
-		// Success - we got the expected semantic error
-		t.Logf("Semantic error correctly detected for %s: %v", testCase.InputPath, panicValue)
+		// Success - we got the expected semantic or syntax error
+		t.Logf("Semantic or syntax error correctly detected for %s: %v", testCase.InputPath, panicValue)
 	}()
 
 	debugCtx := debugcommon.DebugContext{
