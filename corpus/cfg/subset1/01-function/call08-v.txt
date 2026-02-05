@@ -7,7 +7,7 @@
   )
 )
 (foo
-  (bb0 () (bb1 bb3)
+  (bb0 () (bb1 bb2)
     (group-expr
       (unary-expr !
         (invocation bar (
@@ -17,8 +17,7 @@
     (return
       (literal true))
   )
-  (bb2 () ())
-  (bb3 (bb0) ()
+  (bb2 (bb0) ()
     (return
       (literal false))
   )

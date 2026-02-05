@@ -53,6 +53,10 @@ func (bb *basicBlock) isTerminal() bool {
 	return len(bb.children) == 0
 }
 
+func (bb *basicBlock) isEmpty() bool {
+	return bb.id != 0 && len(bb.parents) == 0 && len(bb.nodes) == 0
+}
+
 type functionCFG struct {
 	bbs []basicBlock
 }
@@ -340,7 +344,7 @@ func (analyzer *functionControlFlowAnalyzer) analyzeIf(curBB bbRef, stmt *ast.BL
 		if !analyzer.isTrue(stmt.Expr) {
 			analyzer.addEdge(initBB, ifFalse)
 		}
-	} else {
+	} else if !analyzer.isTrue(stmt.Expr) {
 		analyzer.addEdge(initBB, finally)
 	}
 	return continueEffect(finally)
@@ -384,7 +388,79 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 }
 
 func (analyzer *functionControlFlowAnalyzer) getCfg() functionCFG {
+	analyzer.pruneEmptyBlocks()
 	return functionCFG{
 		bbs: analyzer.bbs,
 	}
+}
+
+func (analyzer *functionControlFlowAnalyzer) pruneEmptyBlocks() {
+	for {
+		empty := analyzer.findEmptyBlocks()
+		if len(empty) == 0 {
+			break
+		}
+		for _, bbIdx := range empty {
+			bb := &analyzer.bbs[bbIdx]
+			for _, childIdx := range bb.children {
+				analyzer.removeParent(childIdx, bbIdx)
+			}
+		}
+		analyzer.removeBlocksAndReindex(empty)
+	}
+}
+
+func (analyzer *functionControlFlowAnalyzer) findEmptyBlocks() []int {
+	var empty []int
+	for i := range analyzer.bbs {
+		if analyzer.bbs[i].isEmpty() {
+			empty = append(empty, i)
+		}
+	}
+	return empty
+}
+
+func (analyzer *functionControlFlowAnalyzer) removeParent(bbIdx, parentIdx int) {
+	parents := analyzer.bbs[bbIdx].parents
+	newParents := parents[:0]
+	for _, p := range parents {
+		if p != parentIdx {
+			newParents = append(newParents, p)
+		}
+	}
+	analyzer.bbs[bbIdx].parents = newParents
+}
+
+func remapRefs(current []int, mapping map[int]int) []int {
+	result := make([]int, 0, len(current))
+	for _, v := range current {
+		if newV, ok := mapping[v]; ok {
+			result = append(result, newV)
+		}
+	}
+	return result
+}
+
+func (analyzer *functionControlFlowAnalyzer) removeBlocksAndReindex(toRemove []int) {
+	removeSet := make(map[int]bool)
+	for _, i := range toRemove {
+		removeSet[i] = true
+	}
+	var newBbs []basicBlock
+	oldToNew := make(map[int]int)
+	for oldIdx, bb := range analyzer.bbs {
+		if removeSet[oldIdx] {
+			continue
+		}
+		newIdx := len(newBbs)
+		oldToNew[oldIdx] = newIdx
+		bb.id = newIdx
+		newBbs = append(newBbs, bb)
+	}
+	for i := range newBbs {
+		bb := &newBbs[i]
+		bb.parents = remapRefs(bb.parents, oldToNew)
+		bb.children = remapRefs(bb.children, oldToNew)
+	}
+	analyzer.bbs = newBbs
 }

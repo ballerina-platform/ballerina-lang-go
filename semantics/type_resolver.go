@@ -562,7 +562,17 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		resultTy = exprTy
 	case model.OperatorKind_NOT:
 		// Logical NOT: result type is boolean
-		resultTy = exprTy
+		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
+			if semtypes.IsSameType(t.tyCtx, exprTy, &semtypes.BOOLEAN) {
+				resultTy = &semtypes.BOOLEAN
+			} else {
+				// if true -> false, if false -> true
+				resultTy = semtypes.Diff(&semtypes.BOOLEAN, exprTy)
+			}
+		} else {
+			t.ctx.SemanticError(fmt.Sprintf("expect boolean type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported unary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil

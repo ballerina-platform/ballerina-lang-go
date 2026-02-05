@@ -5,16 +5,16 @@
   )
 )
 (printBoolean
-  (bb0 () (bb2)
+  (bb0 () (bb1)
     (unary-expr !
       (literal false))
   )
-  (bb1 () (bb2)
+  (bb1 (bb0) (bb2)
     (expression-stmt
       (invocation io println (
         (literal 1))))
   )
-  (bb2 (bb1 bb0) (bb3 bb4)
+  (bb2 (bb1) (bb3 bb4)
     (var-def
       (variable b (type
         (value-type boolean))))

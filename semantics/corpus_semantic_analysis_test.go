@@ -73,16 +73,22 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// Step 3: Semantic Analysis
+	// Step 3: Control Flow Graph Generation
+	cfg := CreateControlFlowGraph(cx, pkg)
+
+	// Step 4: Semantic Analysis
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 4: Validate that all expressions have determinedTypes set
+	// Step 5: Validate that all expressions have determinedTypes set
 	validator := &semanticAnalysisValidator{t: t, ctx: cx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, semantic analysis completed without panicking
 	t.Logf("Semantic analysis completed successfully for %s", testCase.InputPath)
+
+	// Step 6: CFG Analysis (reachability and explicit return) - this should panic for error cases
+	AnalyzeCFG(cx, pkg, cfg)
 }
 
 type semanticAnalysisValidator struct {
