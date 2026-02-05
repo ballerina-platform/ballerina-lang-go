@@ -145,8 +145,7 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 }
 
 var semanticAnalysisErrorSkipList = []string{
-	// error constructor expr not implemented
-	"01-function/assign10-e.bal",
+	// No skipped tests
 }
 
 func TestSemanticAnalysisErrors(t *testing.T) {

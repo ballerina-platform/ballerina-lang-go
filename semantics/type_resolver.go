@@ -425,6 +425,8 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveIndexBasedAccess(e)
 	case *ast.BLangListConstructorExpr:
 		return t.resolveListConstructorExpr(e)
+	case *ast.BLangErrorConstructorExpr:
+		return t.resolveErrorConstructorExpr(e)
 	case *ast.BLangGroupExpr:
 		return t.resolveGroupExpr(e)
 	case *ast.BLangWildCardBindingPattern:
@@ -549,6 +551,36 @@ func (t *TypeResolver) resolveListConstructorExpr(expr *ast.BLangListConstructor
 	expr.SetDeterminedType(listTy)
 
 	return listTy
+}
+
+func (t *TypeResolver) resolveErrorConstructorExpr(expr *ast.BLangErrorConstructorExpr) semtypes.SemType {
+	var errorTy semtypes.SemType
+
+	if expr.ErrorTypeRef != nil {
+		// User specified explicit type: error<CustomError>
+		refTy := t.resolveBType(expr.ErrorTypeRef, 0)
+
+		// Maybe this should be in semantic analysis?
+		if !semtypes.IsSubtypeSimple(refTy, semtypes.ERROR) {
+			t.ctx.SemanticError(
+				"error type parameter must be a subtype of error",
+				expr.ErrorTypeRef.GetPosition(),
+			)
+			return nil
+		} else {
+			errorTy = refTy
+		}
+	} else {
+		errorTy = &semtypes.ERROR
+	}
+
+	typeData := expr.GetTypeData()
+	typeData.Type = errorTy
+	expr.SetTypeData(typeData)
+	expr.SetDeterminedType(errorTy)
+
+	ast.Walk(t, expr)
+	return errorTy
 }
 
 func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemType {

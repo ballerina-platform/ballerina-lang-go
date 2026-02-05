@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -2777,7 +2778,41 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
-	panic("TransformErrorConstructorExpression unimplemented")
+	result := &BLangErrorConstructorExpr{}
+	result.pos = getPosition(errorConstructorExpressionNode)
+
+	typeRefNode := errorConstructorExpressionNode.TypeReference()
+	if typeRefNode != nil {
+		typeDesc := n.createTypeNode(typeRefNode)
+		if userDefinedType, ok := typeDesc.(*BLangUserDefinedType); ok {
+			result.ErrorTypeRef = userDefinedType
+		} else {
+			n.cx.InternalError("error type reference must be a user-defined type", result.pos)
+		}
+	}
+
+	arguments := errorConstructorExpressionNode.Arguments()
+	positionalArgs := make([]BLangExpression, 0)
+
+	for arg := range arguments.Iterator() {
+		switch arg.Kind() {
+		case common.POSITIONAL_ARG:
+			posArg := arg.(*tree.PositionalArgumentNode)
+			expr := n.createExpression(posArg.Expression())
+			positionalArgs = append(positionalArgs, expr)
+
+		case common.NAMED_ARG:
+			n.cx.InternalError("named arguments not yet supported in error constructor", getPosition(arg))
+		case common.REST_ARG:
+			n.cx.InternalError("rest arguments not supported in error constructor", getPosition(arg))
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected argument kind: %v", arg.Kind()), getPosition(arg))
+		}
+	}
+
+	result.PositionalArgs = positionalArgs
+
+	return result
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
