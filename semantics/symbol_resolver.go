@@ -262,13 +262,13 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 	if prefix != "" {
 		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
-			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
 		}
 		n.SetSymbol(symbol)
 	} else {
 		symbol, ok := resolver.GetSymbol(name)
 		if !ok {
-			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
 		}
 		n.SetSymbol(symbol)
 	}
@@ -284,13 +284,13 @@ func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVa
 	if prefix != "" {
 		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
-			syntaxError(resolver, "Unknown symbol: "+name, n.GetPosition())
+			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
 		}
 		symbolicNode.SetSymbol(symbol)
 	} else {
 		symbol, ok := resolver.GetSymbol(name)
 		if !ok {
-			syntaxError(resolver, "Unknown symbol: "+name, n.GetPosition())
+			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
 		}
 		symbolicNode.SetSymbol(symbol)
 	}
@@ -309,13 +309,13 @@ func resolveFunctionRef[T symbolResolver](resolver T, functionRef functionRefNod
 	if prefix != "" {
 		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
-			syntaxError(resolver, "Unknown function: "+name, functionRef.GetPosition())
+			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
 		}
 		functionRef.SetSymbol(symbol)
 	} else {
 		symbol, ok := resolver.GetSymbol(name)
 		if !ok {
-			syntaxError(resolver, "Unknown function: "+name, functionRef.GetPosition())
+			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
 		}
 		functionRef.SetSymbol(symbol)
 	}
@@ -331,7 +331,7 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	name := variable.GetName().GetValue()
 	symbol, ok := resolver.GetSymbol(name)
 	if !ok {
-		syntaxError(resolver, "Unknown variable: "+name, variable.GetPosition())
+		semanticError(resolver, "Unknown variable: "+name, variable.GetPosition())
 	}
 	variable.SetSymbol(symbol)
 }
@@ -342,7 +342,7 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 		name := variable.Name.Value
 		_, ok := resolver.GetSymbol(name)
 		if ok {
-			syntaxError(resolver, "Variable already defined: "+name, variable.GetPosition())
+			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
@@ -375,12 +375,12 @@ func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescript
 			if pkg != "" {
 				symbol, ok = resolver.GetPrefixedSymbol(pkg, tyName)
 				if !ok {
-					syntaxError(resolver, "Unknown type: "+tyName, td.GetPosition())
+					semanticError(resolver, "Unknown type: "+tyName, td.GetPosition())
 				}
 			} else {
 				symbol, ok = resolver.GetSymbol(tyName)
 				if !ok {
-					syntaxError(resolver, "Unknown type: "+tyName, td.GetPosition())
+					semanticError(resolver, "Unknown type: "+tyName, td.GetPosition())
 				}
 			}
 			bNodeWithSymbol.SetSymbol(symbol)
@@ -431,10 +431,6 @@ func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visi
 
 func internalError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
 	resolver.GetCtx().InternalError(message, pos)
-}
-
-func syntaxError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
-	resolver.GetCtx().SyntaxError(message, pos)
 }
 
 func semanticError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
