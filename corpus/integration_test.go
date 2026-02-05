@@ -54,7 +54,10 @@ var (
 	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 
-	skipTestsMap = makeSkipTestsMap([]string{})
+	// Skip tests that cause unrecoverable Go runtime errors
+	skipTestsMap = makeSkipTestsMap([]string{
+		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
+	})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex

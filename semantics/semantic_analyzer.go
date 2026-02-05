@@ -330,10 +330,31 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	sa.importedPkgs[alias] = importNode
 }
 
+func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol *model.FunctionSymbol) {
+	// Check 1: Must be public
+	if !fnSymbol.IsPublic() {
+		parent.semanticErr("'main' function must be public")
+	}
+
+	// Check 2: Must return error?
+	expectedReturnType := semtypes.Union(&semtypes.ERROR, &semtypes.NIL)
+	actualReturnType := fnSymbol.Signature.ReturnType
+
+	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
+		parent.semanticErr("'main' function must have return type 'error?'")
+	}
+}
+
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature.ReturnType
+
+	// Validate main function constraints
+	if function.Name.Value == "main" {
+		validateMainFunction(parent, function, fnSymbol)
+	}
+
 	return fa
 }
 
@@ -583,13 +604,22 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 	lhsTy := binaryExpr.LhsExpr.GetTypeData().Type
 	rhsTy := binaryExpr.RhsExpr.GetTypeData().Type
 
+	ctx := a.tyCtx()
 	// Perform semantic validation based on operator type
 	if isEqualityExpr(binaryExpr) {
 		// For equality operators, ensure types have non-empty intersection
 		intersection := semtypes.Intersect(lhsTy, rhsTy)
-		if semtypes.IsEmpty(a.tyCtx(), intersection) {
+		if semtypes.IsEmpty(ctx, intersection) {
 			a.semanticErr(fmt.Sprintf("incompatible types for %s", string(binaryExpr.GetOperatorKind())))
 			return
+		}
+		switch binaryExpr.GetOperatorKind() {
+		case model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL:
+			anyData := semtypes.CreateAnydata(ctx)
+			if !semtypes.IsSubtype(ctx, lhsTy, anyData) && !semtypes.IsSubtype(ctx, rhsTy, anyData) {
+				a.semanticErr(fmt.Sprintf("expect anydata types for %s", string(binaryExpr.GetOperatorKind())))
+				return
+			}
 		}
 	} else {
 		// For arithmetic and relational operators
@@ -754,7 +784,31 @@ type assignmentNode interface {
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
+
 	variable := assignment.GetVariable().(ast.BLangExpression)
+	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
+		symbol := symbolNode.Symbol()
+		if symbol == nil {
+			// If this happens it is a bug in symbol resolver
+			a.internalErr("unexpected nil symbol")
+			return
+		}
+		ctx := a.ctx()
+		switch ctx.SymbolKind(symbol) {
+		case model.SymbolKindConstant:
+			a.semanticErr("cannot assign to constant")
+			return
+		case model.SymbolKindParemeter:
+			a.semanticErr("cannot assign to parameter")
+			return
+		case model.SymbolKindFunction:
+			a.semanticErr("cannot assign to function")
+			return
+		case model.SymbolKindType:
+			a.semanticErr("cannot assign to type")
+			return
+		}
+	}
 	analyzeExpression(a, variable, nil)
 	expectedType := variable.GetTypeData().Type
 	expression := assignment.GetExpression().(ast.BLangExpression)

@@ -336,6 +336,7 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	variable.SetSymbol(symbol)
 }
 
+// Use to define variables declared withing a function body
 func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
@@ -344,7 +345,7 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 		if ok {
 			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewValueSymbol(name, false, false, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())

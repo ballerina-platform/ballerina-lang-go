@@ -1,0 +1,46 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (invocation mkInt (
+            (literal 2)))
+          (literal 2)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr !==
+          (literal 17)
+          (invocation mkInt (
+            (literal 17)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (invocation mkBoolean (
+            (literal true)))
+          (literal true)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr !==
+          (literal false)
+          (invocation mkBoolean (
+            (literal false)))))))
+  )
+)
+(mkBoolean
+  (bb0 () ()
+    (return
+      (simple-var-ref b))
+  )
+)
+(mkInt
+  (bb0 () ()
+    (return
+      (simple-var-ref n))
+  )
+)
+(mkNil
+  (bb0 () ()
+    (return
+      (literal <nil>))
+  )
+)
