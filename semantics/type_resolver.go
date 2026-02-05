@@ -30,7 +30,7 @@ import (
 type (
 	TypeResolver struct {
 		ctx       *context.CompilerContext
-		typeEnv   semtypes.Env
+		tyCtx     semtypes.Context
 		typeDefns map[model.SymbolRef]*ast.BLangTypeDefinition
 	}
 )
@@ -45,17 +45,8 @@ var _ ast.Visitor = &TypeResolver{}
 
 func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 	return &TypeResolver{
-		typeEnv:   semtypes.GetTypeEnv(),
 		ctx:       ctx,
-		typeDefns: make(map[model.SymbolRef]*ast.BLangTypeDefinition),
-	}
-}
-
-// NewIsolatedTypeResolver is meant for testing so that we can run each test in parallel
-func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
-	return &TypeResolver{
-		typeEnv:   semtypes.GetIsolatedTypeEnv(),
-		ctx:       ctx,
+		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
 		typeDefns: make(map[model.SymbolRef]*ast.BLangTypeDefinition),
 	}
 }
@@ -75,9 +66,8 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		t.resolveTypeDefinition(defn, 0)
 	}
 	ast.Walk(t, pkg)
-	tctx := semtypes.ContextFrom(t.typeEnv)
 	for _, defn := range pkg.TypeDefinitions {
-		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
+		if semtypes.IsEmpty(t.tyCtx, defn.DeterminedType) {
 			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
@@ -105,7 +95,7 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 		restTy = &semtypes.NEVER
 	}
 	paramListDefn := semtypes.NewListDefinition()
-	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv, paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
 	returnTypeData := fn.GetReturnTypeData()
 	if returnTypeData.TypeDescriptor != nil {
@@ -115,8 +105,8 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 		returnTy = &semtypes.NIL
 	}
 	functionDefn := semtypes.NewFunctionDefinition()
-	fnType := functionDefn.Define(t.typeEnv, paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.typeEnv, false, false))
+	fnType := functionDefn.Define(t.ctx.GetTypeEnv(), paramListTy, returnTy,
+		semtypes.FunctionQualifiersFrom(t.ctx.GetTypeEnv(), false, false))
 
 	// Update symbol type for the function
 	updateSymbolType(t.ctx, fn, fnType)
@@ -389,18 +379,25 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 			ty.Elemtype = elemTypeData
 
 			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.typeEnv, memberTy)
+				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
 			} else {
 				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.typeEnv, []semtypes.SemType{memberTy}, length)
+				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{memberTy}, length)
 			}
 		} else {
-			semTy = defn.GetSemType(tr.typeEnv)
+			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
 		}
 		return semTy
 	case *ast.BLangUnionTypeNode:
-		lhs := tr.resolveBType(ty.Lhs().TypeDescriptor.(ast.BType), depth+1)
-		rhs := tr.resolveBType(ty.Rhs().TypeDescriptor.(ast.BType), depth+1)
+		// FIXME: get rid of this when we get rid GetDeterminedType() hack
+		lhsTypeData := ty.Lhs()
+		rhsTypeData := ty.Rhs()
+		lhs := tr.resolveBType(lhsTypeData.TypeDescriptor.(ast.BType), depth+1)
+		rhs := tr.resolveBType(rhsTypeData.TypeDescriptor.(ast.BType), depth+1)
+		lhsTypeData.Type = lhs
+		rhsTypeData.Type = rhs
+		ty.SetLhs(lhsTypeData)
+		ty.SetRhs(rhsTypeData)
 		return semtypes.Union(lhs, rhs)
 	case *ast.BLangErrorTypeNode:
 		if ty.IsDistinct() {

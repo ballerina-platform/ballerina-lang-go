@@ -22,7 +22,7 @@ import (
 // TestEnvInitAtomTable tests environment initialization with atom table
 // Ported from EnvInitTest.java:testEnvInitAtomTable()
 func TestEnvInitAtomTable(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	envImpl, ok := env.(*envImpl)
 	if !ok {
 		t.Fatal("expected *envImpl")
@@ -129,7 +129,7 @@ func TestEnvInitAtomTable(t *testing.T) {
 // TestTypeAtomIndices tests type atom indices uniqueness
 // Ported from EnvInitTest.java:testTypeAtomIndices()
 func TestTypeAtomIndices(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	envImpl, ok := env.(*envImpl)
 	if !ok {
 		t.Fatal("expected *envImpl")
@@ -152,7 +152,7 @@ func TestTypeAtomIndices(t *testing.T) {
 // TestEnvInitRecAtoms tests recursive atoms initialization
 // Ported from EnvInitTest.java:testEnvInitRecAtoms()
 func TestEnvInitRecAtoms(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	envImpl, ok := env.(*envImpl)
 	if !ok {
 		t.Fatal("expected *envImpl")

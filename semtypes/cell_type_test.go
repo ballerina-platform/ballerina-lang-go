@@ -22,7 +22,7 @@ import (
 // TestTypeCellDisparity tests type and cell type disparity
 // Ported from CellTypeTest.java:testTypeCellDisparity()
 func TestTypeCellDisparity(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	tests := []struct {
@@ -61,7 +61,7 @@ func TestTypeCellDisparity(t *testing.T) {
 // TestBasicCellSubtyping tests basic cell subtyping
 // Ported from CellTypeTest.java:testBasicCellSubtyping()
 func TestBasicCellSubtyping(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	tests := []struct {
@@ -125,7 +125,7 @@ func TestBasicCellSubtyping(t *testing.T) {
 // TestCellSubtyping1 tests cell subtyping with unions
 // Ported from CellTypeTest.java:testCellSubtyping1()
 func TestCellSubtyping1(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	tests := []struct {
@@ -203,7 +203,7 @@ func TestCellSubtyping1(t *testing.T) {
 // TestCellSubtyping2 tests cell subtyping with different mutability
 // Ported from CellTypeTest.java:testCellSubtyping2()
 func TestCellSubtyping2(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	tests := []struct {

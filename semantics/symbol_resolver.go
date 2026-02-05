@@ -21,7 +21,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -193,7 +192,7 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 }
 
 // This is a tempary hack since we can only have one import io
-func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
@@ -205,7 +204,7 @@ func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLa
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetIoSymbols(ctx, env)
+				result[key] = lib.GetIoSymbols(ctx)
 			}
 		}
 	}

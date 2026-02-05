@@ -399,6 +399,14 @@ func (this *BLangUnionTypeNode) Rhs() model.TypeData {
 	return this.rhs
 }
 
+func (this *BLangUnionTypeNode) SetLhs(typeData model.TypeData) {
+	this.lhs = typeData
+}
+
+func (this *BLangUnionTypeNode) SetRhs(typeData model.TypeData) {
+	this.rhs = typeData
+}
+
 func (this *BLangErrorTypeNode) GetDetailType() model.TypeData {
 	return this.detailType
 }

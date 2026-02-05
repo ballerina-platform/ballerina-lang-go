@@ -34,19 +34,7 @@ type Env interface {
 	listAtomType(atom Atom) *ListAtomicType
 }
 
-var (
-	typeEnv            Env = nil
-	typeEnvInitializer sync.Once
-)
-
-func GetTypeEnv() Env {
-	typeEnvInitializer.Do(func() {
-		typeEnv = createTypeEnv()
-	})
-	return typeEnv
-}
-
-func createTypeEnv() Env {
+func CreateTypeEnv() Env {
 	env := &envImpl{
 		atomTable: make(map[AtomicType]TypeAtom),
 		types:     make(map[string]SemType),
@@ -60,11 +48,6 @@ func createTypeEnv() Env {
 		env.listAtom(each.atomicType)
 	}
 	return env
-}
-
-// This is mostly intendent for test which are executed in parallel. this will create a new Env each time you call it
-func GetIsolatedTypeEnv() Env {
-	return createTypeEnv()
 }
 
 type envImpl struct {
