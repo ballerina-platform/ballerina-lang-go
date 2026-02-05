@@ -19,6 +19,8 @@
 package projects
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -255,7 +257,8 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	// Build BLangPackage from syntax trees.
 	// Java: TreeBuilder.createPackageNode() + pkgNode.addCompilationUnit()
-	pkgNode := buildBLangPackage(cx, syntaxTrees)
+	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
+	pkgNode := buildBLangPackage(cx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
 
 	// Run semantic analysis (type checking) phases.
@@ -277,16 +280,27 @@ func compileInternal(moduleCtx *moduleContext) {
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
 // For a single file this is equivalent to ast.ToPackage(ast.GetCompilationUnit(cx, st)).
 // For multiple files it merges all compilation units into a single package.
+// If compilationOptions.DumpAST() is true, each compilation unit is pretty-printed to stdout.
 // Java: ModuleContext.compileInternal() creates pkgNode and adds compilation units.
-func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree) *ast.BLangPackage {
+func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, compilationOptions CompilationOptions) *ast.BLangPackage {
+	dumpAST := compilationOptions.DumpAST()
+
 	if len(syntaxTrees) == 1 {
 		cu := ast.GetCompilationUnit(cx, syntaxTrees[0])
+		if dumpAST {
+			prettyPrinter := ast.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(cu))
+		}
 		return ast.ToPackage(cu)
 	}
 
 	pkg := &ast.BLangPackage{}
 	for _, st := range syntaxTrees {
 		cu := ast.GetCompilationUnit(cx, st)
+		if dumpAST {
+			prettyPrinter := ast.PrettyPrinter{}
+			fmt.Println(prettyPrinter.Print(cu))
+		}
 		if pkg.PackageID == nil {
 			pkg.PackageID = cu.GetPackageID()
 		}

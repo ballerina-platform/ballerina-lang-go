@@ -54,6 +54,7 @@ type CompilationOptions struct {
 	offlineBuild                    *bool
 	experimental                    *bool
 	observabilityIncluded           *bool
+	dumpAST                         *bool
 	dumpBIR                         *bool
 	dumpBIRFile                     *bool
 	dumpGraph                       *bool
@@ -69,6 +70,9 @@ type CompilationOptions struct {
 	disableSyntaxTree               *bool
 	remoteManagement                *bool
 	optimizeDependencyCompilation   *bool
+	dumpTokens                      *bool
+	dumpST                          *bool
+	traceRecovery                   *bool
 	lockingMode                     PackageLockingMode
 }
 
@@ -90,6 +94,11 @@ func (c CompilationOptions) Experimental() bool {
 // ObservabilityIncluded returns whether observability is included.
 func (c CompilationOptions) ObservabilityIncluded() bool {
 	return toBoolDefaultIfNull(c.observabilityIncluded)
+}
+
+// DumpAST returns whether AST dumping is enabled.
+func (c CompilationOptions) DumpAST() bool {
+	return toBoolDefaultIfNull(c.dumpAST)
 }
 
 // DumpBIR returns whether BIR dumping is enabled.
@@ -168,6 +177,21 @@ func (c CompilationOptions) OptimizeDependencyCompilation() bool {
 	return toBoolDefaultIfNull(c.optimizeDependencyCompilation)
 }
 
+// DumpTokens returns whether lexer token dumping is enabled.
+func (c CompilationOptions) DumpTokens() bool {
+	return toBoolDefaultIfNull(c.dumpTokens)
+}
+
+// DumpST returns whether syntax tree dumping is enabled.
+func (c CompilationOptions) DumpST() bool {
+	return toBoolDefaultIfNull(c.dumpST)
+}
+
+// TraceRecovery returns whether error recovery tracing is enabled.
+func (c CompilationOptions) TraceRecovery() bool {
+	return toBoolDefaultIfNull(c.traceRecovery)
+}
+
 // LockingMode returns the package locking mode.
 // Returns PackageLockingModeUnknown if not explicitly set.
 func (c CompilationOptions) LockingMode() PackageLockingMode {
@@ -196,6 +220,12 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		builder.WithObservabilityIncluded(*theirs.observabilityIncluded)
 	} else if c.observabilityIncluded != nil {
 		builder.WithObservabilityIncluded(*c.observabilityIncluded)
+	}
+
+	if theirs.dumpAST != nil {
+		builder.WithDumpAST(*theirs.dumpAST)
+	} else if c.dumpAST != nil {
+		builder.WithDumpAST(*c.dumpAST)
 	}
 
 	if theirs.dumpBIR != nil {
@@ -288,6 +318,24 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		builder.WithOptimizeDependencyCompilation(*c.optimizeDependencyCompilation)
 	}
 
+	if theirs.dumpTokens != nil {
+		builder.WithDumpTokens(*theirs.dumpTokens)
+	} else if c.dumpTokens != nil {
+		builder.WithDumpTokens(*c.dumpTokens)
+	}
+
+	if theirs.dumpST != nil {
+		builder.WithDumpST(*theirs.dumpST)
+	} else if c.dumpST != nil {
+		builder.WithDumpST(*c.dumpST)
+	}
+
+	if theirs.traceRecovery != nil {
+		builder.WithTraceRecovery(*theirs.traceRecovery)
+	} else if c.traceRecovery != nil {
+		builder.WithTraceRecovery(*c.traceRecovery)
+	}
+
 	// Handle locking mode with special sticky logic
 	if theirs.lockingMode != PackageLockingModeUnknown {
 		builder.WithLockingMode(theirs.lockingMode)
@@ -329,6 +377,12 @@ func (b *CompilationOptionsBuilder) WithExperimental(value bool) *CompilationOpt
 // WithObservabilityIncluded sets observability inclusion.
 func (b *CompilationOptionsBuilder) WithObservabilityIncluded(value bool) *CompilationOptionsBuilder {
 	b.options.observabilityIncluded = &value
+	return b
+}
+
+// WithDumpAST sets AST dumping flag.
+func (b *CompilationOptionsBuilder) WithDumpAST(value bool) *CompilationOptionsBuilder {
+	b.options.dumpAST = &value
 	return b
 }
 
@@ -420,6 +474,24 @@ func (b *CompilationOptionsBuilder) WithRemoteManagement(value bool) *Compilatio
 // WithOptimizeDependencyCompilation sets dependency compilation optimization flag.
 func (b *CompilationOptionsBuilder) WithOptimizeDependencyCompilation(value bool) *CompilationOptionsBuilder {
 	b.options.optimizeDependencyCompilation = &value
+	return b
+}
+
+// WithDumpTokens sets lexer token dumping flag.
+func (b *CompilationOptionsBuilder) WithDumpTokens(value bool) *CompilationOptionsBuilder {
+	b.options.dumpTokens = &value
+	return b
+}
+
+// WithDumpST sets syntax tree dumping flag.
+func (b *CompilationOptionsBuilder) WithDumpST(value bool) *CompilationOptionsBuilder {
+	b.options.dumpST = &value
+	return b
+}
+
+// WithTraceRecovery sets error recovery tracing flag.
+func (b *CompilationOptionsBuilder) WithTraceRecovery(value bool) *CompilationOptionsBuilder {
+	b.options.traceRecovery = &value
 	return b
 }
 

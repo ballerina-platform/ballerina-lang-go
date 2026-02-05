@@ -192,6 +192,12 @@ func (b BuildOptions) ExportComponentModel() bool {
 	return b.compilationOptions.ExportComponentModel()
 }
 
+// DumpAST returns whether AST dumping is enabled.
+// Delegated to CompilationOptions.
+func (b BuildOptions) DumpAST() bool {
+	return b.compilationOptions.DumpAST()
+}
+
 // DumpBIR returns whether BIR dumping is enabled.
 // Delegated to CompilationOptions.
 func (b BuildOptions) DumpBIR() bool {
@@ -214,6 +220,24 @@ func (b BuildOptions) DumpGraph() bool {
 // Delegated to CompilationOptions.
 func (b BuildOptions) DumpRawGraphs() bool {
 	return b.compilationOptions.DumpRawGraphs()
+}
+
+// DumpTokens returns whether lexer token dumping is enabled.
+// Delegated to CompilationOptions.
+func (b BuildOptions) DumpTokens() bool {
+	return b.compilationOptions.DumpTokens()
+}
+
+// DumpST returns whether syntax tree dumping is enabled.
+// Delegated to CompilationOptions.
+func (b BuildOptions) DumpST() bool {
+	return b.compilationOptions.DumpST()
+}
+
+// TraceRecovery returns whether error recovery tracing is enabled.
+// Delegated to CompilationOptions.
+func (b BuildOptions) TraceRecovery() bool {
+	return b.compilationOptions.TraceRecovery()
 }
 
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
@@ -423,6 +447,13 @@ func (b *BuildOptionsBuilder) WithCloud(value string) *BuildOptionsBuilder {
 	return b
 }
 
+// WithDumpAST sets whether AST dumping is enabled.
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithDumpAST(value bool) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithDumpAST(value)
+	return b
+}
+
 // WithDumpBIR sets whether BIR dumping is enabled.
 // Delegates to CompilationOptionsBuilder.
 func (b *BuildOptionsBuilder) WithDumpBIR(value bool) *BuildOptionsBuilder {
@@ -448,6 +479,27 @@ func (b *BuildOptionsBuilder) WithDumpGraph(value bool) *BuildOptionsBuilder {
 // Delegates to CompilationOptionsBuilder.
 func (b *BuildOptionsBuilder) WithDumpRawGraphs(value bool) *BuildOptionsBuilder {
 	b.compilationOptionsBuilder.WithDumpRawGraphs(value)
+	return b
+}
+
+// WithDumpTokens sets whether lexer token dumping is enabled.
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithDumpTokens(value bool) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithDumpTokens(value)
+	return b
+}
+
+// WithDumpST sets whether syntax tree dumping is enabled.
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithDumpST(value bool) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithDumpST(value)
+	return b
+}
+
+// WithTraceRecovery sets whether error recovery tracing is enabled.
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithTraceRecovery(value bool) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithTraceRecovery(value)
 	return b
 }
 

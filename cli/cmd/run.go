@@ -89,17 +89,27 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		path = args[0]
 	}
 
+	// Build options from CLI flags. Constructed before debug setup so
+	// buildOpts can be the single source of truth for all flag reads.
+	buildOpts := projects.NewBuildOptionsBuilder().
+		WithDumpAST(runOpts.dumpAST).
+		WithDumpBIR(runOpts.dumpBIR).
+		WithDumpTokens(runOpts.dumpTokens).
+		WithDumpST(runOpts.dumpST).
+		WithTraceRecovery(runOpts.traceRecovery).
+		Build()
+
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
 	flags := uint16(0)
 
-	if runOpts.dumpTokens {
+	if buildOpts.DumpTokens() {
 		flags |= debugcommon.DUMP_TOKENS
 	}
-	if runOpts.dumpST {
+	if buildOpts.DumpST() {
 		flags |= debugcommon.DUMP_ST
 	}
-	if runOpts.traceRecovery {
+	if buildOpts.TraceRecovery() {
 		flags |= debugcommon.DEBUG_ERROR_RECOVERY
 	}
 
@@ -142,7 +152,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	// Load project using ProjectLoader (auto-detects type)
 	// Java: io.ballerina.projects.directory.ProjectLoader.loadProject
-	result, err := directory.LoadProject(path)
+	result, err := directory.LoadProject(path, directory.WithBuildOptions(buildOpts))
 	if err != nil {
 		printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
 		return err
@@ -222,7 +232,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Run CFG analyses (reachability and explicit return) concurrently
 	semantics.AnalyzeCFG(cx, pkg, cfg)
 	birPkg := bir.GenBir(cx, pkg)
-	if runOpts.dumpBIR {
+	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
 		// Print the BIR with separators
 		fmt.Fprintln(os.Stderr)
