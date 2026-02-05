@@ -1,0 +1,62 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad 2
+    %3 = mkInt(%2) -> bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad 2
+    %1 = unknown %3 %4;
+    %5 = println(%1) -> bb2;
+  }
+  bb2 {
+    %7 = ConstantLoad 17
+    %8 = ConstantLoad 17
+    %9 = mkInt(%8) -> bb3;
+  }
+  bb3 {
+    %6 = unknown %7 %9;
+    %10 = println(%6) -> bb4;
+  }
+  bb4 {
+    %12 = ConstantLoad true
+    %13 = mkBoolean(%12) -> bb5;
+  }
+  bb5 {
+    %14 = ConstantLoad true
+    %11 = unknown %13 %14;
+    %15 = println(%11) -> bb6;
+  }
+  bb6 {
+    %17 = ConstantLoad false
+    %18 = ConstantLoad false
+    %19 = mkBoolean(%18) -> bb7;
+  }
+  bb7 {
+    %16 = unknown %17 %19;
+    %20 = println(%16) -> bb8;
+  }
+  bb8 {
+    return;
+  }
+}
+mkNil<NIL>{
+  bb0 {
+    %1 = ConstantLoad <nil>
+    %0 = %1;
+    return;
+  }
+}
+mkInt<NIL>{
+  bb0 {
+    %0 = n;
+    return;
+  }
+}
+mkBoolean<NIL>{
+  bb0 {
+    %0 = b;
+    return;
+  }
+}

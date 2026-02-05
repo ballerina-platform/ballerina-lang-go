@@ -1,0 +1,45 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = ConstantLoad 5
+    %3 = foo(%1,%2) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+inc<NIL>{
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = + n %3;
+    %0 = %2;
+    return;
+  }
+}
+foo<NIL>{
+  bb0 {
+    %3 = == depth maxDepth;
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad <nil>
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %5 = inc(depth) -> bb3;
+  }
+  bb3 {
+    %6 = println(%5) -> bb4;
+  }
+  bb4 {
+    %8 = ConstantLoad 1
+    %7 = + depth %8;
+    %9 = foo(%7,maxDepth) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}
