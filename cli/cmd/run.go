@@ -43,6 +43,7 @@ var runOpts struct {
 	dumpBIR       bool
 	traceRecovery bool
 	logFile       string
+	format        string // Output format (dot, etc.)
 }
 
 var runCmd = &cobra.Command{
@@ -82,6 +83,7 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.dumpBIR, "dump-bir", false, "Dump Ballerina Intermediate Representation")
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
+	runCmd.Flags().StringVar(&runOpts.format, "format", "", "Output format for dump operations (dot)")
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
@@ -166,11 +168,20 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 	if runOpts.dumpCFG {
-		prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
 		// Print the CFG with separators
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
-		fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
+
+		if runOpts.format == "dot" {
+			// Use DOT exporter
+			dotExporter := semantics.NewCFGDotExporter(cx)
+			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
+		} else {
+			// Use default S-expression printer
+			prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
+			fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
+		}
+
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 	// Run semantic analysis after type resolution
