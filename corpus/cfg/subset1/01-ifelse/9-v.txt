@@ -3,16 +3,11 @@
     (expression-stmt
       (invocation printTrue ()))
     (expression-stmt
-      (invocation printTrue ()))
-    (expression-stmt
       (invocation printFalse ()))
   )
 )
 (printFalse
   (bb0 () (bb1 bb3)
-    (var-def
-      (variable b (type
-        (value-type boolean))))
     (var-def
       (variable b (type
         (value-type boolean))))

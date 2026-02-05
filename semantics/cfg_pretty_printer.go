@@ -127,12 +127,11 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 // printNodes prints the AST nodes within a basic block
 func (p *CFGPrettyPrinter) printNodes(nodes []model.Node) {
 	// Create a new PrettyPrinter for each basic block
-	printer := &ast.PrettyPrinter{}
 
 	for _, node := range nodes {
 		// Cast model.Node to ast.BLangNode
 		if blangNode, ok := node.(ast.BLangNode); ok {
-			// Print the node using AST pretty printer
+			printer := &ast.PrettyPrinter{}
 			nodeStr := printer.Print(blangNode)
 
 			// Indent each line of the output

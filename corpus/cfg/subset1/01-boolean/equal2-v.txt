@@ -3,9 +3,6 @@
     (var-def
       (variable b (type
         (value-type boolean))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
     (simple-var-ref b)
   )
   (bb1 (bb0) (bb2)
@@ -14,11 +11,6 @@
         (literal 4))))
   )
   (bb2 (bb1 bb3) (bb4 bb6)
-    (assignment
-      (simple-var-ref b)
-      (binary-expr ==
-        (literal false)
-        (literal false)))
     (assignment
       (simple-var-ref b)
       (binary-expr ==
@@ -42,11 +34,6 @@
       (binary-expr !=
         (literal true)
         (literal true)))
-    (assignment
-      (simple-var-ref b)
-      (binary-expr !=
-        (literal true)
-        (literal true)))
     (simple-var-ref b)
   )
   (bb6 (bb2) (bb5)
@@ -60,9 +47,6 @@
         (literal 8))))
   )
   (bb8 (bb7 bb9) (bb10 bb12)
-    (assignment
-      (simple-var-ref b)
-      (literal true))
     (assignment
       (simple-var-ref b)
       (literal true))
@@ -81,9 +65,6 @@
         (literal 10))))
   )
   (bb11 (bb10 bb12) (bb13 bb15)
-    (assignment
-      (simple-var-ref b)
-      (literal false))
     (assignment
       (simple-var-ref b)
       (literal false))

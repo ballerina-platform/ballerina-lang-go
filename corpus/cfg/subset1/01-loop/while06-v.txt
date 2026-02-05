@@ -24,9 +24,6 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref j))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref j))))
     (assignment
       (simple-var-ref j)
       (binary-expr +

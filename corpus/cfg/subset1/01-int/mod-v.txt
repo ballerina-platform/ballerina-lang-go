@@ -8,21 +8,6 @@
     (expression-stmt
       (invocation io println (
         (invocation mod (
-          (literal 5)
-          (literal 3))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation mod (
-          (literal 7)
-          (literal 7))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation mod (
-          (literal 5)
-          (literal 3))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation mod (
           (literal 7)
           (literal 7))))))
     (expression-stmt

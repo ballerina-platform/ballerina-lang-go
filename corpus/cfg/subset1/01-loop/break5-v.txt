@@ -16,11 +16,6 @@
       (binary-expr -
         (simple-var-ref i)
         (literal 1)))
-    (assignment
-      (simple-var-ref i)
-      (binary-expr -
-        (simple-var-ref i)
-        (literal 1)))
     (group-expr
       (binary-expr ==
         (binary-expr -
@@ -35,9 +30,6 @@
         (literal 0)))
   )
   (bb4 (bb2) (bb3)
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref i))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref i))))

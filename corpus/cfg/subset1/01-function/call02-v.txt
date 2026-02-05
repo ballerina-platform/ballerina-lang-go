@@ -9,9 +9,6 @@
     (var-def
       (variable x (type
         (value-type int))))
-    (var-def
-      (variable x (type
-        (value-type int))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref x))))

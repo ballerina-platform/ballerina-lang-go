@@ -13,17 +13,6 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref i))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref i))))
-    (assignment
-      (simple-var-ref i)
-      (binary-expr +
-        (simple-var-ref i)
-        (literal 1)))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref i))))
     (assignment
       (simple-var-ref i)
       (binary-expr +

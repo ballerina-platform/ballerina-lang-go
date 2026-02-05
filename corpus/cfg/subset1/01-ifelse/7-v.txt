@@ -43,30 +43,6 @@
         (literal 1))))
     (expression-stmt
       (invocation foo (
-        (literal 1)
-        (literal 1))))
-    (expression-stmt
-      (invocation foo (
-        (literal 2)
-        (literal 1))))
-    (expression-stmt
-      (invocation foo (
-        (literal 1)
-        (literal 1))))
-    (expression-stmt
-      (invocation foo (
-        (literal 2)
-        (literal 1))))
-    (expression-stmt
-      (invocation foo (
-        (literal 5)
-        (literal 4))))
-    (expression-stmt
-      (invocation foo (
-        (literal 1)
-        (literal 1))))
-    (expression-stmt
-      (invocation foo (
         (literal 2)
         (literal 1))))
     (expression-stmt

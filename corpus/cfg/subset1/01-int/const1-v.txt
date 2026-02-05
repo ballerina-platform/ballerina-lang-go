@@ -5,16 +5,6 @@
         (literal 42))))
     (expression-stmt
       (invocation io println (
-        (literal 42))))
-    (expression-stmt
-      (invocation io println (
-        (unary-expr -
-          (literal 1)))))
-    (expression-stmt
-      (invocation io println (
-        (literal 42))))
-    (expression-stmt
-      (invocation io println (
         (unary-expr -
           (literal 1)))))
     (expression-stmt

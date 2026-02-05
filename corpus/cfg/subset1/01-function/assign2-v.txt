@@ -3,51 +3,6 @@
     (var-def
       (variable x (type
         (value-type int))))
-    (var-def
-      (variable x (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (var-def
-      (variable x (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (assignment
-      (simple-var-ref x)
-      (literal 1))
-    (var-def
-      (variable x (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (assignment
-      (simple-var-ref x)
-      (literal 1))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (var-def
-      (variable x (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (assignment
-      (simple-var-ref x)
-      (literal 1))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref x))))
-    (assignment
-      (simple-var-ref x)
-      (literal 2))
-    (var-def
-      (variable x (type
-        (value-type int))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref x))))

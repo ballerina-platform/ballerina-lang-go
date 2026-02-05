@@ -11,15 +11,6 @@
     (var-def
       (variable add1 (type
         (value-type int))))
-    (var-def
-      (variable add1 (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref add1))))
-    (var-def
-      (variable add1 (type
-        (value-type int))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref add1))))

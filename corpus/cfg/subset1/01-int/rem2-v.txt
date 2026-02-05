@@ -3,9 +3,6 @@
     (var-def
       (variable INT_MIN (type
         (value-type int))))
-    (var-def
-      (variable INT_MIN (type
-        (value-type int))))
     (expression-stmt
       (invocation io println (
         (invocation rem (

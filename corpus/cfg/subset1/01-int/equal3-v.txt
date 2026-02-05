@@ -3,9 +3,6 @@
     (var-def
       (variable b (type
         (value-type boolean))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
     (simple-var-ref b)
   )
   (bb1 (bb0) (bb2)
@@ -14,11 +11,6 @@
         (literal 17))))
   )
   (bb2 (bb1 bb3) (bb4 bb6)
-    (assignment
-      (simple-var-ref b)
-      (binary-expr !=
-        (literal 21)
-        (literal 21)))
     (assignment
       (simple-var-ref b)
       (binary-expr !=
@@ -37,9 +29,6 @@
         (literal 0))))
   )
   (bb5 (bb4 bb6) (bb7 bb9)
-    (var-def
-      (variable x (type
-        (value-type int))))
     (var-def
       (variable x (type
         (value-type int))))
