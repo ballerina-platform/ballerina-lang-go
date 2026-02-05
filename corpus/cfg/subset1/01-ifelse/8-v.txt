@@ -5,24 +5,6 @@
         (literal true))))
     (expression-stmt
       (invocation printIfFalse (
-        (literal true))))
-    (expression-stmt
-      (invocation printIfFalse (
-        (literal false))))
-    (expression-stmt
-      (invocation printIfFalse (
-        (literal true))))
-    (expression-stmt
-      (invocation printIfFalse (
-        (literal false))))
-    (expression-stmt
-      (invocation printIfTrue (
-        (literal true))))
-    (expression-stmt
-      (invocation printIfFalse (
-        (literal true))))
-    (expression-stmt
-      (invocation printIfFalse (
         (literal false))))
     (expression-stmt
       (invocation printIfTrue (

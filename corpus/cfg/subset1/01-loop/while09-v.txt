@@ -7,9 +7,6 @@
     (expression-stmt
       (invocation io println (
         (literal 0))))
-    (expression-stmt
-      (invocation io println (
-        (literal 0))))
     (break)
   )
   (bb3 (bb2) ()

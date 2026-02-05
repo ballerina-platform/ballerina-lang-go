@@ -15,11 +15,6 @@
       (binary-expr +
         (simple-var-ref i)
         (literal 1)))
-    (assignment
-      (simple-var-ref i)
-      (binary-expr +
-        (simple-var-ref i)
-        (literal 1)))
     (binary-expr ==
       (simple-var-ref i)
       (literal 2))

@@ -7,10 +7,6 @@
     (expression-stmt
       (invocation printBoolean (
         (invocation not (
-          (literal true))))))
-    (expression-stmt
-      (invocation printBoolean (
-        (invocation not (
           (literal false))))))
   )
 )

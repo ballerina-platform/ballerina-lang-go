@@ -5,9 +5,6 @@
         (literal true))))
     (expression-stmt
       (invocation printBoolean (
-        (literal true))))
-    (expression-stmt
-      (invocation printBoolean (
         (literal false))))
   )
 )

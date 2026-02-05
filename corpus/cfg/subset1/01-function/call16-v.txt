@@ -3,9 +3,6 @@
     (var-def
       (variable i (type
         (value-type int))))
-    (var-def
-      (variable i (type
-        (value-type int))))
     (group-expr
       (binary-expr !=
         (simple-var-ref i)

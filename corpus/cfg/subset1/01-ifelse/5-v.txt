@@ -7,30 +7,6 @@
     (expression-stmt
       (invocation printBranch (
         (literal true)
-        (literal true))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal true)
-        (literal false))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal true)
-        (literal true))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal true)
-        (literal false))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal false)
-        (literal true))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal true)
-        (literal true))))
-    (expression-stmt
-      (invocation printBranch (
-        (literal true)
         (literal false))))
     (expression-stmt
       (invocation printBranch (

@@ -3,51 +3,6 @@
     (var-def
       (variable b (type
         (value-type boolean))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (assignment
-      (simple-var-ref b)
-      (literal true))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (assignment
-      (simple-var-ref b)
-      (literal true))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (assignment
-      (simple-var-ref b)
-      (literal true))
-    (expression-stmt
-      (invocation printBoolean (
-        (simple-var-ref b))))
-    (assignment
-      (simple-var-ref b)
-      (literal false))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
     (expression-stmt
       (invocation printBoolean (
         (simple-var-ref b))))

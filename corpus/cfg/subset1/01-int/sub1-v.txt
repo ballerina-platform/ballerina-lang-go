@@ -3,24 +3,6 @@
     (var-def
       (variable sub1 (type
         (value-type int))))
-    (var-def
-      (variable sub1 (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref sub1))))
-    (var-def
-      (variable sub1 (type
-        (value-type int))))
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref sub1))))
-    (var-def
-      (variable sub2 (type
-        (value-type int))))
-    (var-def
-      (variable sub1 (type
-        (value-type int))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref sub1))))

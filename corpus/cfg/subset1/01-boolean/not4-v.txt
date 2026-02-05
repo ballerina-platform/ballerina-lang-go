@@ -18,9 +18,6 @@
     (var-def
       (variable b (type
         (value-type boolean))))
-    (var-def
-      (variable b (type
-        (value-type boolean))))
     (unary-expr !
       (simple-var-ref b))
   )

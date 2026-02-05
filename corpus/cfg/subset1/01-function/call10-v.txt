@@ -26,11 +26,6 @@
     (expression-stmt
       (invocation io println (
         (invocation foo (
-          (literal 13)
-          (literal false))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation foo (
           (literal 14)
           (literal true))))))
   )

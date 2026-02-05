@@ -12,15 +12,6 @@
       (variable loopCount (type
         (value-type int))))
     (var-def
-      (variable loopCount (type
-        (value-type int))))
-    (var-def
-      (variable i (type
-        (value-type int))))
-    (var-def
-      (variable loopCount (type
-        (value-type int))))
-    (var-def
       (variable i (type
         (value-type int))))
     (var-def
@@ -38,24 +29,6 @@
       (variable a (type
         (value-type int))))
     (var-def
-      (variable a (type
-        (value-type int))))
-    (var-def
-      (variable b (type
-        (value-type int))))
-    (var-def
-      (variable a (type
-        (value-type int))))
-    (var-def
-      (variable b (type
-        (value-type int))))
-    (compound-assignment +
-      (simple-var-ref total)
-      (simple-var-ref b))
-    (var-def
-      (variable a (type
-        (value-type int))))
-    (var-def
       (variable b (type
         (value-type int))))
     (compound-assignment +
@@ -66,10 +39,6 @@
       (literal 1))
   )
   (bb3 (bb1) ()
-    (expression-stmt
-      (invocation io println (
-        (literal Loop count: )
-        (simple-var-ref loopCount))))
     (expression-stmt
       (invocation io println (
         (literal Loop count: )

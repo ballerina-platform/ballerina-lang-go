@@ -53,24 +53,6 @@
         (literal 1))))
     (expression-stmt
       (invocation printClosestSquareNum (
-        (literal 1))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
-        (literal 0))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
-        (literal 1))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
-        (literal 0))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
-        (literal 5))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
-        (literal 1))))
-    (expression-stmt
-      (invocation printClosestSquareNum (
         (literal 0))))
     (expression-stmt
       (invocation printClosestSquareNum (
@@ -98,9 +80,6 @@
   )
   (bb3 (bb1) ())
   (bb4 (bb2) ()
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref i))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref i))))

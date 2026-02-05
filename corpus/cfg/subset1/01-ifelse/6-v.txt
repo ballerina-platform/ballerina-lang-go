@@ -52,21 +52,6 @@
       (invocation io println (
         (invocation foo (
           (literal 1)
-          (literal 1))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation foo (
-          (literal 1)
-          (literal 10))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation foo (
-          (literal 1)
-          (literal 1))))))
-    (expression-stmt
-      (invocation io println (
-        (invocation foo (
-          (literal 1)
           (literal 10))))))
     (expression-stmt
       (invocation io println (
