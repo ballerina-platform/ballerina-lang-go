@@ -65,11 +65,16 @@ func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
 }
 
 func (this *CompilerContext) RefSymbol(symbol model.Symbol) model.SymbolRef {
+	// If this happen that's a bug in SymbolResolver
+	if symbol == nil {
+		this.InternalError("RefSymbol called with nil symbol", nil)
+	}
 	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
 		return *refSymbol
 	}
-	// I think this is fine because there is no way to leak the acutal symbol from context
-	panic("Symbol is not a SymbolRef")
+	// This should never happen because we should never store actual symbols in the AST
+	this.InternalError(fmt.Sprintf("Symbol is not a SymbolRef: type=%T, name=%s, kind=%v", symbol, symbol.Name(), symbol.Kind()), nil)
+	return model.SymbolRef{}
 }
 
 func (this *CompilerContext) SymbolName(symbol model.Symbol) string {

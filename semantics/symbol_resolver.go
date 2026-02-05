@@ -145,6 +145,12 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 	resolver.AddSymbol(name, symbol)
 }
 
+func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
+	resolver.AddSymbol(name, symbol)
+	symRef, _ := resolver.GetSymbol(name)
+	node.SetSymbol(symRef)
+}
+
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
 	// First add all the top level symbols they can be referred from anywhere
@@ -174,17 +180,18 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
 	// First add all the parameters to the functionResolver scope
-	for _, param := range function.RequiredParams {
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
 		name := param.Name.Value
 		symbol := model.NewValueSymbol(name, false, false, true)
-		functionResolver.AddSymbol(name, &symbol)
+		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
 	}
 
 	if function.RestParam != nil {
 		if restParam, ok := function.RestParam.(*ast.BLangSimpleVariable); ok {
 			name := restParam.Name.Value
 			symbol := model.NewValueSymbol(name, false, false, true)
-			functionResolver.AddSymbol(name, &symbol)
+			addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
 		}
 	}
 
@@ -338,7 +345,7 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 			syntaxError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
-		resolver.AddSymbol(name, &symbol)
+		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
 		return
