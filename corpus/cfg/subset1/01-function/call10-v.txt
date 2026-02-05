@@ -1,5 +1,5 @@
 (foo
-  (bb0 () (bb1 bb3)
+  (bb0 () (bb1 bb2)
     (group-expr
       (simple-var-ref b))
   )
@@ -9,8 +9,7 @@
         (simple-var-ref i)
         (literal 1)))
   )
-  (bb2 () ())
-  (bb3 (bb0) ()
+  (bb2 (bb0) ()
     (return
       (binary-expr %
         (simple-var-ref i)

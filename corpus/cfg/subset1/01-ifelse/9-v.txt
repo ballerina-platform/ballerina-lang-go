@@ -31,7 +31,7 @@
   )
 )
 (printTrue
-  (bb0 () (bb1 bb2)
+  (bb0 () (bb1)
     (literal true)
   )
   (bb1 (bb0) (bb2)
@@ -39,5 +39,5 @@
       (invocation io println (
         (literal 1))))
   )
-  (bb2 (bb1 bb0) ())
+  (bb2 (bb1) ())
 )
