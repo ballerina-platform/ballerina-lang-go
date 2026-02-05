@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 const (
@@ -147,6 +149,9 @@ func (bw *BIRWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant)
 	}
 
 	if err := bw.writeUInt8(buf, uint8(constant.Origin)); err != nil {
+		return err
+	}
+	if err := bw.writePosition(buf, constant.Pos); err != nil {
 		return err
 	}
 
@@ -298,18 +303,18 @@ func (bw *BIRWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) err
 	}
 
 	for _, gv := range pkg.GlobalVars {
+		if err := bw.writePosition(buf, gv.Pos); err != nil {
+			return err
+		}
 		if err := bw.writeUInt8(buf, uint8(gv.Kind)); err != nil {
 			return err
 		}
-
 		if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(gv.Name.Value())); err != nil {
 			return err
 		}
-
 		if err := bw.writeInt64(buf, gv.Flags); err != nil {
 			return err
 		}
-
 		if err := bw.writeUInt8(buf, uint8(gv.Origin)); err != nil {
 			return err
 		}
@@ -335,10 +340,12 @@ func (bw *BIRWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) erro
 }
 
 func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) error {
+	if err := bw.writePosition(buf, fn.Pos); err != nil {
+		return err
+	}
 	if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(fn.Name.Value())); err != nil {
 		return err
 	}
-
 	if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(fn.OriginalName.Value())); err != nil {
 		return err
 	}
@@ -377,6 +384,7 @@ func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) error
 		if err != nil {
 			return err
 		}
+
 		if err := bw.writeInt32(birbuf, bw.cp.AddStringCPEntry(fn.ReturnVariable.Name.Value())); err != nil {
 			return err
 		}
@@ -685,4 +693,36 @@ func (bw *BIRWriter) writeFloat64(buf *bytes.Buffer, val float64) error {
 
 func (bw *BIRWriter) writeBool(buf *bytes.Buffer, val bool) error {
 	return binary.Write(buf, binary.BigEndian, val)
+}
+
+func (bw *BIRWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) error {
+	var sLine int32 = math.MaxInt32
+	var eLine int32 = math.MaxInt32
+	var sCol int32 = math.MaxInt32
+	var eCol int32 = math.MaxInt32
+	var sourceFileName string = ""
+
+	if pos != nil {
+		sLine = int32(pos.LineRange().StartLine().Line())
+		eLine = int32(pos.LineRange().EndLine().Line())
+		sCol = int32(pos.LineRange().StartLine().Offset())
+		eCol = int32(pos.LineRange().EndLine().Offset())
+		if (pos.LineRange().FileName()) != "" {
+			sourceFileName = pos.LineRange().FileName()
+		}
+	}
+
+	if err := bw.writeInt32(buf, bw.cp.AddStringCPEntry(sourceFileName)); err != nil {
+		return err
+	}
+	if err := bw.writeInt32(buf, sLine); err != nil {
+		return err
+	}
+	if err := bw.writeInt32(buf, sCol); err != nil {
+		return err
+	}
+	if err := bw.writeInt32(buf, eLine); err != nil {
+		return err
+	}
+	return bw.writeInt32(buf, eCol)
 }
