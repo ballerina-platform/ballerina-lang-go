@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
 	"fmt"
@@ -52,7 +53,7 @@ func testASTGeneration(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -135,7 +136,7 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
