@@ -626,6 +626,11 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
 				return
 			}
+		} else if isBitWiseExpr(binaryExpr) {
+			// TODO: this needs to properly implemet narrowing based on operand types
+			// Bitwise operators: &, |, ^
+			// Result type is always integer
+			analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 		} else {
 			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
 			return
@@ -634,6 +639,39 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
+}
+
+var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
+
+func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
+	ctx := a.tyCtx()
+	if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+		a.semanticErr("expect integer types for bitwise operators")
+		return
+	}
+	var resultTy semtypes.SemType
+	switch binaryExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_AND:
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+		resultTy = &semtypes.INT
+	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+		resultTy = &semtypes.INT
+	default:
+		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
+		return
+	}
+	setExpectedType(binaryExpr, resultTy)
 }
 
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
