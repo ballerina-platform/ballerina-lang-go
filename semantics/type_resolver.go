@@ -65,11 +65,14 @@ func NewIsolatedTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
 func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
-	for _, defn := range pkg.TypeDefinitions {
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
 		symbol := defn.Symbol().(*model.SymbolRef)
-		// NOTE: this is strictly speaking wrong becuase we are storing a copy. but given BLangPackage store
-		// Type decls by value in array we can't get references to them.
-		t.typeDefns[*symbol] = &defn
+		t.typeDefns[*symbol] = defn
+	}
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		t.resolveTypeDefinition(defn, 0)
 	}
 	ast.Walk(t, pkg)
 	tctx := semtypes.ContextFrom(t.typeEnv)
