@@ -1,0 +1,27 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 2
+    %2 = mkInt(%1) -> bb1;
+  }
+  bb1 {
+    x = %2;
+    y = x;
+    %5 = unknown x y;
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    %7 = unknown x y;
+    %8 = println(%7) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
+mkInt<NIL>{
+  bb0 {
+    %0 = n;
+    return;
+  }
+}

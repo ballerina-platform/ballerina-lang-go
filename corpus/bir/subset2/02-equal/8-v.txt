@@ -1,0 +1,95 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %2 = ConstantLoad 2
+    %3 = mkInt(%2) -> bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad 2
+    %1 = == %3 %4;
+    %5 = println(%1) -> bb2;
+  }
+  bb2 {
+    %7 = ConstantLoad 17
+    %8 = ConstantLoad 17
+    %9 = mkInt(%8) -> bb3;
+  }
+  bb3 {
+    %6 = != %7 %9;
+    %10 = println(%6) -> bb4;
+  }
+  bb4 {
+    %12 = ConstantLoad true
+    %13 = mkBoolean(%12) -> bb5;
+  }
+  bb5 {
+    %14 = ConstantLoad true
+    %11 = == %13 %14;
+    %15 = println(%11) -> bb6;
+  }
+  bb6 {
+    %17 = ConstantLoad false
+    %18 = ConstantLoad false
+    %19 = mkBoolean(%18) -> bb7;
+  }
+  bb7 {
+    %16 = != %17 %19;
+    %20 = println(%16) -> bb8;
+  }
+  bb8 {
+    %21 = ConstantLoad 2
+    n = %21;
+    %24 = ConstantLoad 2
+    %25 = mkInt(%24) -> bb9;
+  }
+  bb9 {
+    %23 = == %25 n;
+    %26 = println(%23) -> bb10;
+  }
+  bb10 {
+    %27 = ConstantLoad 17
+    n = %27;
+    %29 = ConstantLoad 17
+    %30 = mkInt(%29) -> bb11;
+  }
+  bb11 {
+    %28 = != n %30;
+    %31 = println(%28) -> bb12;
+  }
+  bb12 {
+    %32 = ConstantLoad true
+    b = %32;
+    %35 = ConstantLoad true
+    %36 = mkBoolean(%35) -> bb13;
+  }
+  bb13 {
+    %34 = == %36 b;
+    %37 = println(%34) -> bb14;
+  }
+  bb14 {
+    %38 = ConstantLoad false
+    b = %38;
+    %40 = ConstantLoad false
+    %41 = mkBoolean(%40) -> bb15;
+  }
+  bb15 {
+    %39 = != b %41;
+    %42 = println(%39) -> bb16;
+  }
+  bb16 {
+    return;
+  }
+}
+mkInt<NIL>{
+  bb0 {
+    %0 = n;
+    return;
+  }
+}
+mkBoolean<NIL>{
+  bb0 {
+    %0 = b;
+    return;
+  }
+}

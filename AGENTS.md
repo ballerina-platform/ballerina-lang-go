@@ -11,7 +11,9 @@
 - Don't add comments explaining each line of code. If you need to add comments to describe a block of statements then you should extract them to
   a function with meaningful name.
 
+## Symbols
 - IMPORTANT: never store `model.Symbol` as the key in a map, always use a `model.SymbolRef`
+- Don't call operations on symbols directly instead call them via compiler context
 
 ## Interpreter stages
 
