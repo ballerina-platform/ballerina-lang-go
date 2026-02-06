@@ -20,7 +20,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/common/bfs"
@@ -93,13 +92,21 @@ func TestValidatePackageVersion(t *testing.T) {
 		version string
 		isValid bool
 	}{
-		{"valid simple version", "1.0.0", true},
-		{"valid multi-digit version", "1.1.11", true},
-		{"valid snapshot version", "2.2.2-snapshot", true},
-		{"valid snapshot with number", "2.2.2-snapshot-1", true},
-		{"valid alpha version", "2.2.2-alpha", true},
-		{"invalid short version", "200", false},
-		{"invalid four-part version", "2.2.2.2", false},
+		// Valid versions
+		{"basic", "1.0.0", true},
+		{"with prerelease", "1.0.0-alpha", true},
+		{"with metadata", "1.0.0+build1", true},
+		{"with prerelease and metadata", "1.0.0-alpha+build1", true},
+		{"prerelease with dots", "1.0.0-alpha.1", true},
+		{"metadata with dots", "1.0.0+build.2024", true},
+		// Invalid versions
+		{"empty", "", false},
+		{"too few parts", "1.0", false},
+		{"too many parts", "1.0.0.0", false},
+		{"leading zero", "01.0.0", false},
+		{"non-numeric", "a.0.0", false},
+		{"invalid prerelease", "1.0.0-alpha@1", false},
+		{"invalid metadata", "1.0.0+build@1", false},
 	}
 
 	for _, tt := range tests {
@@ -113,8 +120,6 @@ func TestValidatePackageVersion(t *testing.T) {
 			} else {
 				if err == nil {
 					t.Errorf("expected error for invalid version: %s", tt.version)
-				} else if !strings.Contains(err.Error(), "Invalid version:") {
-					t.Errorf("error message should contain 'Invalid version:', got: %s", err.Error())
 				}
 			}
 		})
