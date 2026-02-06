@@ -17,11 +17,12 @@
 package tree
 
 import (
-	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"reflect"
 	"strings"
+
+	"ballerina-lang-go/parser/common"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 // This represent green nodes in the syntax tree. Green nodes satisfy fallowing properties:
@@ -142,19 +143,23 @@ type (
 )
 
 // Type assertions to ensure interface compliance
-var _ STNode = &STInvalidTokenMinutiaeNode{}
-var _ STNode = &STMinutiae{}
-var _ STNode = &STInvalidNodeMinutiae{}
-var _ STNode = &STNodeList{}
+var (
+	_ STNode = &STInvalidTokenMinutiaeNode{}
+	_ STNode = &STMinutiae{}
+	_ STNode = &STInvalidNodeMinutiae{}
+	_ STNode = &STNodeList{}
+)
 
-var _ STToken = &STMissingToken{}
-var _ STNode = &STMissingToken{}
-var _ STToken = &STLiteralValueToken{}
-var _ STNode = &STLiteralValueToken{}
-var _ STToken = &STInvalidToken{}
-var _ STNode = &STInvalidToken{}
-var _ STToken = &STIdentifierToken{}
-var _ STNode = &STIdentifierToken{}
+var (
+	_ STToken = &STMissingToken{}
+	_ STNode  = &STMissingToken{}
+	_ STToken = &STLiteralValueToken{}
+	_ STNode  = &STLiteralValueToken{}
+	_ STToken = &STInvalidToken{}
+	_ STNode  = &STInvalidToken{}
+	_ STToken = &STIdentifierToken{}
+	_ STNode  = &STIdentifierToken{}
+)
 
 func (n *STLiteralValueToken) BucketCount() int {
 	return 1
@@ -1355,9 +1360,9 @@ func CreateBallerinaNameReferenceNode(referenceType STNode, startBacktick STNode
 			kind: common.BALLERINA_NAME_REFERENCE,
 		},
 		ReferenceType: referenceType,
-		StartBacktick:  startBacktick,
-		NameReference:  nameReference,
-		EndBacktick:    endBacktick,
+		StartBacktick: startBacktick,
+		NameReference: nameReference,
+		EndBacktick:   endBacktick,
 	}, referenceType, startBacktick, nameReference, endBacktick)
 }
 
@@ -1379,7 +1384,7 @@ func CreateMarkdownCodeBlockNode(startLineHashToken STNode, startBacktick STNode
 		},
 		StartLineHashToken: startLineHashToken,
 		StartBacktick:      startBacktick,
-		LangAttribute:     langAttribute,
+		LangAttribute:      langAttribute,
 		CodeLines:          codeLines,
 		EndLineHashToken:   endLineHashToken,
 		EndBacktick:        endBacktick,
@@ -3786,7 +3791,6 @@ func (n *STAmbiguousCollectionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
 	return []STNode{
-
 		n.CollectionStartToken,
 		CreateNodeList(n.Members...),
 		n.CollectionEndToken,
