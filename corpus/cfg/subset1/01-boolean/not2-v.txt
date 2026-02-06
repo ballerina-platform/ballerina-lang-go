@@ -1,0 +1,35 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation not (
+          (literal true))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation not (
+          (literal false))))))
+  )
+)
+(not
+  (bb0 () ()
+    (return
+      (unary-expr !
+        (simple-var-ref b)))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

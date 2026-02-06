@@ -98,6 +98,14 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printUnionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
+	case *BLangTypeDefinition:
+		p.printTypeDefinition(t)
+	case *BLangUserDefinedType:
+		p.printUserDefinedType(t)
+	case *BLangFiniteTypeNode:
+		p.printFiniteTypeNode(t)
+	case *BLangListConstructorExpr:
+		p.printListConstructorExpr(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -370,6 +378,13 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 		p.indentLevel--
 		p.printSticky(")")
 	}
+	if node.Expr != nil {
+		p.printString("(expr")
+		p.indentLevel++
+		p.PrintInner(node.Expr.(BLangNode))
+		p.indentLevel--
+		p.printSticky(")")
+	}
 	p.endNode()
 }
 
@@ -553,10 +568,34 @@ func (p *PrettyPrinter) printIndexBasedAccess(node *BLangIndexBasedAccess) {
 	p.endNode()
 }
 
+// List constructor expression printer
+func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr) {
+	p.startNode()
+	p.printString("list-constructor-expr")
+	p.indentLevel++
+	for _, expr := range node.Exprs {
+		p.PrintInner(expr.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 // Wildcard binding pattern printer
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
 	p.startNode()
 	p.printString("wildcard-binding-pattern")
+	p.endNode()
+}
+
+// Finite type node printer
+func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
+	p.startNode()
+	p.printString("finite-type")
+	p.indentLevel++
+	for _, value := range node.ValueSpace {
+		p.PrintInner(value.(BLangNode))
+	}
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -579,6 +618,34 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 		p.indentLevel++
 		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
+	}
+	p.endNode()
+}
+
+// Type definition printer
+func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
+	p.startNode()
+	p.printString("type-definition")
+	if node.Name != nil {
+		p.printString(node.Name.Value)
+	}
+	p.printFlags(node.FlagSet)
+	if node.GetTypeData().TypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+// User-defined type printer
+func (p *PrettyPrinter) printUserDefinedType(node *BLangUserDefinedType) {
+	p.startNode()
+	p.printString("user-defined-type")
+	if node.PkgAlias.Value != "" {
+		p.printString(node.PkgAlias.Value + " " + node.TypeName.Value)
+	} else {
+		p.printString(node.TypeName.Value)
 	}
 	p.endNode()
 }

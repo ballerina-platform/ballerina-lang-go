@@ -1,0 +1,116 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable i6 (type
+        (value-type int)) (expr
+        (literal 6))))
+    (var-def
+      (variable i5 (type
+        (value-type int)) (expr
+        (literal 5))))
+    (var-def
+      (variable i3 (type
+        (value-type int)) (expr
+        (literal 3))))
+    (var-def
+      (variable i2 (type
+        (value-type int)) (expr
+        (literal 2))))
+    (var-def
+      (variable i1 (type
+        (value-type int)) (expr
+        (literal 1))))
+    (var-def
+      (variable t (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (var-def
+      (variable f (type
+        (value-type boolean)) (expr
+        (literal false))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr ==
+          (binary-expr +
+            (literal 12)
+            (simple-var-ref i6))
+          (binary-expr +
+            (simple-var-ref i3)
+            (literal 15))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr !=
+          (simple-var-ref i5)
+          (binary-expr +
+            (simple-var-ref i5)
+            (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr ==
+          (binary-expr <
+            (simple-var-ref i5)
+            (literal 9))
+          (binary-expr >
+            (simple-var-ref i5)
+            (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr <=
+          (binary-expr +
+            (simple-var-ref i1)
+            (simple-var-ref i3))
+          (binary-expr +
+            (simple-var-ref i2)
+            (literal 4))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr !=
+          (binary-expr ==
+            (binary-expr >=
+              (simple-var-ref i1)
+              (simple-var-ref i5))
+            (binary-expr >=
+              (binary-expr +
+                (literal 1)
+                (simple-var-ref i2))
+              (simple-var-ref i3)))
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr !=
+          (binary-expr ==
+            (binary-expr +
+              (literal 7)
+              (simple-var-ref i1))
+            (literal 8))
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr ==
+          (unary-expr !
+            (simple-var-ref t))
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr ==
+          (simple-var-ref f)
+          (unary-expr !
+            (simple-var-ref t))))))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref x)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

@@ -27,6 +27,7 @@ import (
 type BLangExpression interface {
 	model.ExpressionNode
 	BLangNode
+	// FIXME: get rid of this method
 	SetTypeCheckedType(ty BType)
 }
 type Channel struct {
@@ -268,6 +269,13 @@ type (
 		IsTypedescExpr bool
 		TypedescType   BType
 	}
+
+	BLangErrorConstructorExpr struct {
+		BLangExpressionBase
+		ErrorTypeRef   *BLangUserDefinedType
+		PositionalArgs []BLangExpression
+		// TODO: Add support for NamedArgs
+	}
 )
 
 var (
@@ -298,6 +306,9 @@ var (
 	_ model.UnaryExpressionNode                                    = &BLangUnaryExpr{}
 	_ model.IndexBasedAccessNode                                   = &BLangIndexBasedAccess{}
 	_ model.ListConstructorExprNode                                = &BLangListConstructorExpr{}
+	_ model.ErrorConstructorExpressionNode                         = &BLangErrorConstructorExpr{}
+	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
+	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
 )
 
 var (
@@ -869,6 +880,27 @@ func (this *BLangListConstructorExpr) GetExpressions() []model.ExpressionNode {
 		result[i] = this.Exprs[i]
 	}
 	return result
+}
+
+func (this *BLangErrorConstructorExpr) GetKind() model.NodeKind {
+	return model.NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
+}
+
+func (this *BLangErrorConstructorExpr) GetPositionalArgs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(this.PositionalArgs))
+	for i, arg := range this.PositionalArgs {
+		result[i] = arg
+	}
+	return result
+}
+
+func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
+	// Named arguments not yet supported
+	panic("unimplemented")
+}
+
+func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

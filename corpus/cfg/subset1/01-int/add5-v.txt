@@ -1,0 +1,81 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (literal 3)
+          (literal 5)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (literal 3)
+            (literal 5))
+          (literal 11)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (literal 3)
+              (literal 5))
+            (literal 5))
+          (literal 9)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (literal 3)
+                (literal 5))
+              (literal 5))
+            (literal 9))
+          (literal 12)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (literal 3)
+                  (literal 5))
+                (literal 5))
+              (literal 9))
+            (literal 4))
+          (literal 7)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (binary-expr +
+                    (literal 3)
+                    (literal 5))
+                  (literal 5))
+                (literal 9))
+              (literal 4))
+            (literal 7))
+          (literal 5)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (binary-expr +
+                  (binary-expr +
+                    (binary-expr +
+                      (literal 3)
+                      (literal 5))
+                    (literal 5))
+                  (literal 9))
+                (literal 4))
+              (literal 7))
+            (literal 23))
+          (literal 50)))))
+  )
+)

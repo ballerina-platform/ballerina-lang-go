@@ -127,7 +127,7 @@ func testBIRPackageLoading(t *testing.T, birFile string, baseDir string) {
 		t.Fatalf("failed to open test BIR file: %v", err)
 	}
 	defer file.Close()
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	pkg, err := LoadBIRPackageFromReader(cx, file)
 	if err != nil {
 		t.Errorf("error loading BIR package from %s: %v", birFile, err)
@@ -244,10 +244,10 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	defer close(debugCtx.Channel)
 
 	// Create compiler context
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
 	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(debugCtx, testPair.InputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
 		return
@@ -264,8 +264,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 4: Resolve symbols
-	env := semtypes.GetTypeEnv()
-	importedSymbols := semantics.ResolveImports(cx, env, pkg)
+	importedSymbols := semantics.ResolveImports(cx, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types

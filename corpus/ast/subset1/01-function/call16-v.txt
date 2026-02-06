@@ -15,7 +15,10 @@
     (block-function-body
       (var-def
         (variable i (type
-          (value-type int))))
+          (value-type int)) (expr
+          (binary-expr -
+            (simple-var-ref x)
+            (literal 1)))))
       (if
         (group-expr
           (binary-expr !=
