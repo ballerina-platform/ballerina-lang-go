@@ -1,0 +1,37 @@
+(bar
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)
+(baz
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (literal true))
+  )
+)
+(main
+  (bb0 () (bb1 bb3)
+    (group-expr
+      (invocation foo ()))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation bar (
+        (literal 100))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation baz (
+        (literal 200))))
+  )
+)

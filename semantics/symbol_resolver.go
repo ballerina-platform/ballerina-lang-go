@@ -21,7 +21,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -146,6 +145,12 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 	resolver.AddSymbol(name, symbol)
 }
 
+func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
+	resolver.AddSymbol(name, symbol)
+	symRef, _ := resolver.GetSymbol(name)
+	node.SetSymbol(symRef)
+}
+
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
 	// First add all the top level symbols they can be referred from anywhere
@@ -175,17 +180,18 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 
 func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangFunction) {
 	// First add all the parameters to the functionResolver scope
-	for _, param := range function.RequiredParams {
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
 		name := param.Name.Value
 		symbol := model.NewValueSymbol(name, false, false, true)
-		functionResolver.AddSymbol(name, &symbol)
+		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
 	}
 
 	if function.RestParam != nil {
 		if restParam, ok := function.RestParam.(*ast.BLangSimpleVariable); ok {
 			name := restParam.Name.Value
 			symbol := model.NewValueSymbol(name, false, false, true)
-			functionResolver.AddSymbol(name, &symbol)
+			addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
 		}
 	}
 
@@ -193,7 +199,7 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 }
 
 // This is a tempary hack since we can only have one import io
-func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
@@ -205,7 +211,7 @@ func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLa
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetIoSymbols(ctx, env)
+				result[key] = lib.GetIoSymbols(ctx)
 			}
 		}
 	}
@@ -241,8 +247,31 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
 		referSimpleVariableReference(resolver, n)
+	case *ast.BLangUserDefinedType:
+		referUserDefinedType(resolver, n)
 	}
 	return resolver
+}
+
+func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedType) {
+	name := n.GetTypeName().GetValue()
+	var prefix string
+	if n.GetPackageAlias() != nil {
+		prefix = n.GetPackageAlias().GetValue()
+	}
+	if prefix != "" {
+		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		if !ok {
+			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+		}
+		n.SetSymbol(symbol)
+	} else {
+		symbol, ok := resolver.GetSymbol(name)
+		if !ok {
+			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+		}
+		n.SetSymbol(symbol)
+	}
 }
 
 func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVariableReferenceNode) {
@@ -316,7 +345,7 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 			syntaxError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, false, true)
-		resolver.AddSymbol(name, &symbol)
+		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
 		return
@@ -329,7 +358,7 @@ func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visit
 	}
 	td := typeData.TypeDescriptor
 	setTypeDescriptorSymbol(bs, td)
-	return nil
+	return bs
 }
 
 func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescriptor) {

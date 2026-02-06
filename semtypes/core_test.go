@@ -94,7 +94,7 @@ func TestBitTwiddling(t *testing.T) {
 // Test1 tests basic tuple and type disjointness
 // Ported from SemTypeCoreTest.java:test1()
 func Test1(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 	disjoint(t, ctx, &STRING, &INT)
 	disjoint(t, ctx, &INT, &NIL)
@@ -107,7 +107,7 @@ func Test1(t *testing.T) {
 // Test2 tests basic subtype relationship
 // Ported from SemTypeCoreTest.java:test2()
 func Test2(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 	assertTrue(t, IsSubtype(ctx, &INT, &VAL))
 }
@@ -115,7 +115,7 @@ func Test2(t *testing.T) {
 // Test3 tests tuple union equivalence
 // Ported from SemTypeCoreTest.java:test3()
 func Test3(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	s := testRoTuple(env, &INT, Union(&INT, &STRING))
 	tuple1 := testRoTuple(env, &INT, &INT)
 	tuple2 := testRoTuple(env, &INT, &STRING)
@@ -126,7 +126,7 @@ func Test3(t *testing.T) {
 // Test4 tests tuple subtype relationships
 // Ported from SemTypeCoreTest.java:test4()
 func Test4(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	isT := createTupleType(env, &INT, &STRING)
@@ -143,7 +143,7 @@ func Test4(t *testing.T) {
 // Test5 tests complex tuple union equivalence
 // Ported from SemTypeCoreTest.java:test5()
 func Test5(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	s := testRoTuple(env, &INT, Union(&NIL, Union(&INT, &STRING)))
 	tuple1 := testRoTuple(env, &INT, &INT)
 	tuple2 := testRoTuple(env, &INT, &NIL)
@@ -155,7 +155,7 @@ func Test5(t *testing.T) {
 // Test6 tests mutable tuple subtype relationships
 // Ported from SemTypeCoreTest.java:test6()
 func Test6(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := testTuple(env, &INT, Union(&NIL, Union(&INT, &STRING)))
@@ -171,7 +171,7 @@ func Test6(t *testing.T) {
 // Test7 tests another mutable tuple subtype case
 // Ported from SemTypeCoreTest.java:test7()
 func Test7(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := testTuple(env, &INT, Union(&INT, &STRING))
@@ -188,7 +188,7 @@ func Test7(t *testing.T) {
 // TestTuple1 tests tuple subtype relationships with different lengths
 // Ported from SemTypeCoreTest.java:tupleTest1()
 func TestTuple1(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := createTupleType(env, &INT, &STRING, &NIL)
@@ -201,7 +201,7 @@ func TestTuple1(t *testing.T) {
 // TestTuple2 tests tuple length mismatch
 // Ported from SemTypeCoreTest.java:tupleTest2()
 func TestTuple2(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := createTupleType(env, &INT, &STRING, &NIL)
@@ -214,7 +214,7 @@ func TestTuple2(t *testing.T) {
 // TestTuple3 tests empty tuple operations
 // Ported from SemTypeCoreTest.java:tupleTest3()
 func TestTuple3(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	z1 := createTupleType(env)
@@ -231,7 +231,7 @@ func TestTuple3(t *testing.T) {
 // TestTuple4 tests tuple disjointness with different lengths
 // Ported from SemTypeCoreTest.java:tupleTest4()
 func TestTuple4(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := createTupleType(env, &INT, &INT)
@@ -256,7 +256,7 @@ func funcHelper(env Env, args, ret SemType) SemType {
 // TestFunc1 tests function return type covariance
 // Ported from SemTypeCoreTest.java:funcTest1()
 func TestFunc1(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := funcHelper(env, &INT, &INT)
@@ -269,7 +269,7 @@ func TestFunc1(t *testing.T) {
 // TestFunc2 tests function parameter type contravariance
 // Ported from SemTypeCoreTest.java:funcTest2()
 func TestFunc2(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := funcHelper(env, Union(&NIL, &INT), &INT)
@@ -282,7 +282,7 @@ func TestFunc2(t *testing.T) {
 // TestFunc3 tests function tuple parameter contravariance
 // Ported from SemTypeCoreTest.java:funcTest3()
 func TestFunc3(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := funcHelper(env, createTupleType(env, Union(&NIL, &INT)), &INT)
@@ -295,7 +295,7 @@ func TestFunc3(t *testing.T) {
 // TestFunc4 tests combined parameter contravariance and return type covariance
 // Ported from SemTypeCoreTest.java:funcTest4()
 func TestFunc4(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	s := funcHelper(env, createTupleType(env, Union(&NIL, &INT)), &INT)
@@ -370,7 +370,7 @@ func TestString(t *testing.T) {
 // TestRoList tests read-only list operations
 // Ported from SemTypeCoreTest.java:roListTest()
 func TestRoList(t *testing.T) {
-	env := GetTypeEnv()
+	env := CreateTypeEnv()
 	ctx := ContextFrom(env)
 
 	t1 := Intersect(&LIST, VAL_READONLY)

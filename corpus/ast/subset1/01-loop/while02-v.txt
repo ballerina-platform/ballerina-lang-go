@@ -14,7 +14,8 @@
     (block-function-body
       (var-def
         (variable i (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 0))))
       (while
         (binary-expr <
           (simple-var-ref i)

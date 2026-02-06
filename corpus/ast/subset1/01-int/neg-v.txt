@@ -6,7 +6,9 @@
     (block-function-body
       (var-def
         (variable neg1 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (invocation neg (
+            (literal 17))))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref neg1))))
