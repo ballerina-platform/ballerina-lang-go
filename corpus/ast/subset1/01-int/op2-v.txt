@@ -6,25 +6,32 @@
     (block-function-body
       (var-def
         (variable i6 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 6))))
       (var-def
         (variable i5 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 5))))
       (var-def
         (variable i3 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 3))))
       (var-def
         (variable i2 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 2))))
       (var-def
         (variable i1 (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 1))))
       (var-def
         (variable t (type
-          (value-type boolean))))
+          (value-type boolean)) (expr
+          (literal true))))
       (var-def
         (variable f (type
-          (value-type boolean))))
+          (value-type boolean)) (expr
+          (literal false))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr ==

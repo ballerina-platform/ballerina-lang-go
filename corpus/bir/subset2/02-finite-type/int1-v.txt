@@ -1,0 +1,19 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    c = %1;
+    %3 = ConstantLoad 2
+    c = %3;
+    d = c;
+    %5 = println(d) -> bb1;
+  }
+  bb1 {
+    e = c;
+    %7 = println(e) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}

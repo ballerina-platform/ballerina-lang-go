@@ -1,0 +1,73 @@
+(eq
+  (bb0 () ()
+    (return
+      (binary-expr ==
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation eq (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation ne (
+          (literal 2)
+          (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation eq (
+          (literal 2)
+          (unary-expr -
+            (literal 1)))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation ne (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation eq (
+          (literal 0)
+          (literal 0))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation ne (
+          (literal 2)
+          (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation eq (
+          (unary-expr -
+            (literal 1))
+          (literal 17))))))
+  )
+)
+(ne
+  (bb0 () ()
+    (return
+      (binary-expr !=
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

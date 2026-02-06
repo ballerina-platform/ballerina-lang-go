@@ -4,13 +4,11 @@
   (function foo (
     (variable arr (type
       (array-type
-        (value-type int) dimensions: 1 (
-        (literal -1)))))
+        (value-type int) ())))
     (variable i (type
       (value-type int)))) (
     (array-type
-      (value-type int) dimensions: 1 (
-      (literal -1))))
+      (value-type int) ()))
     (block-function-body
       (assignment
         (index-based-access
@@ -27,8 +25,8 @@
       (var-def
         (variable arr (type
           (array-type
-            (value-type int) dimensions: 1 (
-            (literal -1))))))
+            (value-type int) ())) (expr
+          (list-constructor-expr))))
       (assignment
         (wildcard-binding-pattern)
         (invocation foo (
@@ -49,7 +47,8 @@
           (simple-var-ref arr))))
       (var-def
         (variable str (type
-          (value-type string))))
+          (value-type string)) (expr
+          (literal test str))))
       (assignment
         (wildcard-binding-pattern)
         (simple-var-ref str))

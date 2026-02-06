@@ -22,7 +22,7 @@ import (
 	"ballerina-lang-go/semtypes"
 )
 
-func GetIoSymbols(ctx *context.CompilerContext, env semtypes.Env) model.ExportedSymbolSpace {
+func GetIoSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	pkg := model.NewPackageID(
 		model.DefaultPackageIDInterner,
 		model.Name("ballerina"),
@@ -35,7 +35,7 @@ func GetIoSymbols(ctx *context.CompilerContext, env semtypes.Env) model.Exported
 		ReturnType:    &semtypes.NIL,
 	}
 	printLnSymbol := model.NewFunctionSymbol("println", printLnSignature, true)
-	ctx.SetSymbolType(&printLnSymbol, functionSignatureToSemType(env, &printLnSignature))
+	ctx.SetSymbolType(&printLnSymbol, functionSignatureToSemType(ctx.GetTypeEnv(), &printLnSignature))
 
 	space.AddSymbol("println", &printLnSymbol)
 	return model.ExportedSymbolSpace{
