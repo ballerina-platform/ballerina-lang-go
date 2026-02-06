@@ -120,6 +120,17 @@ type (
 		BLangTypeBase
 		ValueSpace []BLangExpression
 	}
+
+	BLangUnionTypeNode struct {
+		BLangTypeBase
+		lhs model.TypeData
+		rhs model.TypeData
+	}
+
+	BLangErrorTypeNode struct {
+		BLangTypeBase
+		detailType model.TypeData
+	}
 )
 
 var (
@@ -131,6 +142,8 @@ var (
 	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
+	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
+	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
 )
 
 var (
@@ -371,4 +384,32 @@ func (this *BLangFiniteTypeNode) AddValue(value model.ExpressionNode) {
 func (this *BLangFiniteTypeNode) GetKind() model.NodeKind {
 	// migrated from BLangFiniteTypeNode.java:100:5
 	return model.NodeKind_FINITE_TYPE_NODE
+}
+
+func (this *BLangUnionTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_UNION_TYPE_NODE
+}
+
+func (this *BLangUnionTypeNode) Lhs() model.TypeData {
+	return this.lhs
+}
+
+func (this *BLangUnionTypeNode) Rhs() model.TypeData {
+	return this.rhs
+}
+
+func (this *BLangErrorTypeNode) GetDetailType() model.TypeData {
+	return this.detailType
+}
+
+func (this *BLangErrorTypeNode) IsTop() bool {
+	return this.detailType.TypeDescriptor == nil
+}
+
+func (this *BLangErrorTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_ERROR_TYPE
+}
+
+func (this *BLangErrorTypeNode) IsDistinct() bool {
+	return this.FlagSet.Contains(model.Flag_DISTINCT)
 }

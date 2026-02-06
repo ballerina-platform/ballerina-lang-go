@@ -2065,7 +2065,18 @@ func (n *NodeBuilder) TransformNilTypeDescriptor(nilTypeDescriptorNode *tree.Nil
 }
 
 func (n *NodeBuilder) TransformOptionalTypeDescriptor(optionalTypeDescriptorNode *tree.OptionalTypeDescriptorNode) BLangNode {
-	panic("TransformOptionalTypeDescriptor unimplemented")
+	typeDesc := optionalTypeDescriptorNode.TypeDescriptor()
+	nilType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+	bLUnionType := &BLangUnionTypeNode{
+		lhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeDesc),
+		},
+		rhs: model.TypeData{
+			TypeDescriptor: nilType,
+		},
+	}
+	bLUnionType.pos = getPosition(optionalTypeDescriptorNode)
+	return bLUnionType
 }
 
 func (n *NodeBuilder) TransformObjectField(objectFieldNode *tree.ObjectFieldNode) BLangNode {
@@ -2212,7 +2223,18 @@ func (n *NodeBuilder) TransformTypeCastParam(typeCastParamNode *tree.TypeCastPar
 }
 
 func (n *NodeBuilder) TransformUnionTypeDescriptor(unionTypeDescriptorNode *tree.UnionTypeDescriptorNode) BLangNode {
-	panic("TransformUnionTypeDescriptor unimplemented")
+	lhs := unionTypeDescriptorNode.LeftTypeDesc()
+	rhs := unionTypeDescriptorNode.RightTypeDesc()
+	bLUnionType := &BLangUnionTypeNode{
+		lhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(lhs),
+		},
+		rhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(rhs),
+		},
+	}
+	bLUnionType.pos = getPosition(unionTypeDescriptorNode)
+	return bLUnionType
 }
 
 func (n *NodeBuilder) TransformTableConstructorExpression(tableConstructorExpressionNode *tree.TableConstructorExpressionNode) BLangNode {
@@ -2729,7 +2751,31 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
-	panic("TransformParameterizedTypeDescriptor unimplemented")
+	if parameterizedTypeDescriptorNode.Kind() == common.ERROR_TYPE_DESC {
+		return n.transformErrorTypeDescriptor(parameterizedTypeDescriptorNode)
+	}
+	panic("TransformParameterizedTypeDescriptor supported only for error type descriptors")
+}
+
+func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
+	errorType := &BLangErrorTypeNode{}
+	errorType.pos = getPosition(errorTypeDescriptorNode)
+
+	// Handle optional type parameter
+	typeParamNode := errorTypeDescriptorNode.TypeParamNode()
+	if typeParamNode != nil {
+		errorType.detailType = model.TypeData{
+			TypeDescriptor: n.createTypeNode(typeParamNode),
+		}
+	}
+
+	// Check if this is a distinct error type
+	parent := errorTypeDescriptorNode.Parent()
+	if parent.Kind() == common.DISTINCT_TYPE_DESC {
+		errorType.FlagSet.Add(model.Flag_DISTINCT)
+	}
+
+	return errorType
 }
 
 func (n *NodeBuilder) TransformSpreadMember(spreadMemberNode *tree.SpreadMemberNode) BLangNode {

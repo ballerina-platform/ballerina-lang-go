@@ -144,9 +144,6 @@ var semanticAnalysisErrorSkipList = []string{
 	"01-function/call13-e.bal",
 	"01-loop/while03-e.bal",
 
-	// union td not implemented
-	"01-function/assign11-e.bal",
-
 	// error constructor expr not implemented
 	"01-function/assign10-e.bal",
 

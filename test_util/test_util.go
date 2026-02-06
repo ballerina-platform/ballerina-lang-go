@@ -62,23 +62,20 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 	inputBaseDirAlt := "bal"
 	var outputBaseDir string
 	var outputExt string
-	var subsets []string
 
 	switch kind {
 	case AST:
 		outputBaseDir = "ast"
 		outputExt = ".txt"
-		subsets = []string{"subset1"}
 	case Parser:
 		outputBaseDir = "parser"
 		outputExt = ".json"
 	case BIR:
 		outputBaseDir = "bir"
 		outputExt = ".txt"
-		subsets = []string{"subset1"}
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)
-	files := discoverFiles(t, resolvedInputDir, subsets, filterFunc)
+	files := discoverFiles(t, resolvedInputDir, filterFunc)
 	testPairs := make([]TestCase, 0, len(files))
 	for _, inputPath := range files {
 		expectedPath := computeExpectedPath(inputPath, resolvedInputDir, resolvedOutputDir, outputExt)
@@ -116,22 +113,8 @@ func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, strin
 }
 
 // discoverFiles walks the directory tree and collects all .bal files that match the filter
-func discoverFiles(t *testing.T, baseDir string, subsets []string, filterFunc func(string) bool) []string {
-	var files []string
-	if len(subsets) > 0 {
-		for _, subset := range subsets {
-			subsetDir := filepath.Join(baseDir, subset)
-			if _, err := os.Stat(subsetDir); err != nil {
-				t.Logf("Warning: subset directory %s does not exist, skipping", subsetDir)
-				continue
-			}
-			subsetFiles := walkDir(t, subsetDir, filterFunc)
-			files = append(files, subsetFiles...)
-		}
-	} else {
-		files = walkDir(t, baseDir, filterFunc)
-	}
-	return files
+func discoverFiles(t *testing.T, baseDir string, filterFunc func(string) bool) []string {
+	return walkDir(t, baseDir, filterFunc)
 }
 
 // walkDir recursively walks a directory and collects all .bal files that match the filter
