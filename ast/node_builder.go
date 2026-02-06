@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -884,7 +885,7 @@ func getIntegerLiteral(literal tree.Node, textValue string) any {
 	literalTokenKind := basicLiteralNode.LiteralToken().Kind()
 	if literalTokenKind == common.DECIMAL_INTEGER_LITERAL_TOKEN {
 		if textValue[0] == '0' && len(textValue) > 1 {
-			panic("invalid integer literal: leading zero")
+			panic("Syntax error: invalid integer literal: leading zero")
 		}
 		return parseLong(textValue, textValue, 10)
 	} else if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN {
@@ -1402,7 +1403,44 @@ func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree
 }
 
 func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefinitionNode) BLangNode {
-	panic("TransformTypeDefinition unimplemented")
+	// Assert that there is no metadata (per user requirement)
+	metadata := typeDefinitionNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		panic("TransformTypeDefinition: metadata not yet supported")
+	}
+
+	// Line 981: BLangTypeDefinition typeDef = (BLangTypeDefinition) TreeBuilder.createTypeDefinition();
+	typeDef := NewBLangTypeDefinition()
+
+	// Line 982-984: Create identifier from type name and set it
+	identifierNode := createIdentifierFromToken(getPosition(typeDefinitionNode.TypeName()), typeDefinitionNode.TypeName())
+	typeDef.Name = &identifierNode
+
+	// Line 988: this.anonTypeNameSuffixes.push(typeDef.name.value);
+	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, typeDef.Name.GetValue())
+
+	// Line 989: typeDef.typeNode = createTypeNode(typeDefNode.typeDescriptor());
+	typeData := model.TypeData{
+		TypeDescriptor: n.createTypeNode(typeDefinitionNode.TypeDescriptor()),
+	}
+	typeDef.SetTypeData(typeData)
+
+	// Line 990: this.anonTypeNameSuffixes.pop();
+	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+
+	// Line 992-996: Check for visibility qualifier and add Flag.PUBLIC if PUBLIC_KEYWORD
+	visibilityQualifier := typeDefinitionNode.VisibilityQualifier()
+	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
+		typeDef.FlagSet.Add(model.Flag_PUBLIC)
+	}
+
+	// Line 997: typeDef.pos = getPositionWithoutMetadata(typeDefNode);
+	typeDef.pos = getPositionWithoutMetadata(typeDefinitionNode)
+
+	// Line 998: typeDef.annAttachments = applyAll(getAnnotations(typeDefNode.metadata()));
+	// Skipping annotations since we've asserted no metadata
+
+	return typeDef
 }
 
 func (n *NodeBuilder) TransformServiceDeclaration(serviceDeclarationNode *tree.ServiceDeclarationNode) BLangNode {
@@ -2438,7 +2476,10 @@ func (n *NodeBuilder) TransformFlushAction(flushActionNode *tree.FlushActionNode
 }
 
 func (n *NodeBuilder) TransformSingletonTypeDescriptor(singletonTypeDescriptorNode *tree.SingletonTypeDescriptorNode) BLangNode {
-	panic("TransformSingletonTypeDescriptor unimplemented")
+	bLFiniteTypeNode := &BLangFiniteTypeNode{}
+	bLFiniteTypeNode.pos = getPosition(singletonTypeDescriptorNode)
+	bLFiniteTypeNode.ValueSpace = append(bLFiniteTypeNode.ValueSpace, n.createExpression(singletonTypeDescriptorNode.SimpleContExprNode()))
+	return bLFiniteTypeNode
 }
 
 func (n *NodeBuilder) TransformMethodDeclaration(methodDeclarationNode *tree.MethodDeclarationNode) BLangNode {
@@ -2555,26 +2596,16 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	position := getPosition(arrayTypeDescriptorNode)
 	dimensionNodes := arrayTypeDescriptorNode.Dimensions()
 	dimensionSize := dimensionNodes.Size()
-	sizes := make([]BLangExpression, 0, dimensionSize)
+	var sizes []BLangExpression
 
 	for i := dimensionSize - 1; i >= 0; i-- {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
-			literal := &BLangLiteral{
-				BLangExpressionBase: BLangExpressionBase{
-					BLangNodeBase: BLangNodeBase{
-						ty: model.TypeData{
-							TypeDescriptor: getTypeFromTag(model.TypeTags_INT),
-						},
-					},
-				},
-				Value: OPEN_ARRAY_INDICATOR,
-			}
-			sizes = append(sizes, literal)
 		} else {
 			panic("array length expression handling unimplemented")
 		}
 	}
+	dimensionSize = len(sizes)
 
 	arrayTypeNode := &BLangArrayType{}
 	arrayTypeNode.pos = position
@@ -2747,7 +2778,41 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
-	panic("TransformErrorConstructorExpression unimplemented")
+	result := &BLangErrorConstructorExpr{}
+	result.pos = getPosition(errorConstructorExpressionNode)
+
+	typeRefNode := errorConstructorExpressionNode.TypeReference()
+	if typeRefNode != nil {
+		typeDesc := n.createTypeNode(typeRefNode)
+		if userDefinedType, ok := typeDesc.(*BLangUserDefinedType); ok {
+			result.ErrorTypeRef = userDefinedType
+		} else {
+			n.cx.InternalError("error type reference must be a user-defined type", result.pos)
+		}
+	}
+
+	arguments := errorConstructorExpressionNode.Arguments()
+	positionalArgs := make([]BLangExpression, 0)
+
+	for arg := range arguments.Iterator() {
+		switch arg.Kind() {
+		case common.POSITIONAL_ARG:
+			posArg := arg.(*tree.PositionalArgumentNode)
+			expr := n.createExpression(posArg.Expression())
+			positionalArgs = append(positionalArgs, expr)
+
+		case common.NAMED_ARG:
+			n.cx.InternalError("named arguments not yet supported in error constructor", getPosition(arg))
+		case common.REST_ARG:
+			n.cx.InternalError("rest arguments not supported in error constructor", getPosition(arg))
+		default:
+			n.cx.InternalError(fmt.Sprintf("unexpected argument kind: %v", arg.Kind()), getPosition(arg))
+		}
+	}
+
+	result.PositionalArgs = positionalArgs
+
+	return result
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
