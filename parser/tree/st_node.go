@@ -1336,6 +1336,66 @@ func CreateMarkdownDocumentationNode(documentationLines STNode) STNode {
 	}, documentationLines)
 }
 
+func CreateMarkdownParameterDocumentationLineNode(kind common.SyntaxKind, hashToken STNode, plusToken STNode, parameterName STNode, minusToken STNode, documentElements STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownParameterDocumentationLineNode{
+		STDocumentationNode: &STNodeBase{
+			kind: kind,
+		},
+		HashToken:        hashToken,
+		PlusToken:        plusToken,
+		ParameterName:    parameterName,
+		MinusToken:       minusToken,
+		DocumentElements: documentElements,
+	}, hashToken, plusToken, parameterName, minusToken, documentElements)
+}
+
+func CreateBallerinaNameReferenceNode(referenceType STNode, startBacktick STNode, nameReference STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STBallerinaNameReferenceNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.BALLERINA_NAME_REFERENCE,
+		},
+		ReferenceType: referenceType,
+		StartBacktick:  startBacktick,
+		NameReference:  nameReference,
+		EndBacktick:    endBacktick,
+	}, referenceType, startBacktick, nameReference, endBacktick)
+}
+
+func CreateInlineCodeReferenceNode(startBacktick STNode, codeReference STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STInlineCodeReferenceNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.INLINE_CODE_REFERENCE,
+		},
+		StartBacktick: startBacktick,
+		CodeReference: codeReference,
+		EndBacktick:   endBacktick,
+	}, startBacktick, codeReference, endBacktick)
+}
+
+func CreateMarkdownCodeBlockNode(startLineHashToken STNode, startBacktick STNode, langAttribute STNode, codeLines STNode, endLineHashToken STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownCodeBlockNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.MARKDOWN_CODE_BLOCK,
+		},
+		StartLineHashToken: startLineHashToken,
+		StartBacktick:      startBacktick,
+		LangAttribute:     langAttribute,
+		CodeLines:          codeLines,
+		EndLineHashToken:   endLineHashToken,
+		EndBacktick:        endBacktick,
+	}, startLineHashToken, startBacktick, langAttribute, codeLines, endLineHashToken, endBacktick)
+}
+
+func CreateMarkdownCodeLineNode(hashToken STNode, codeDescription STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownCodeLineNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.MARKDOWN_CODE_LINE,
+		},
+		HashToken:       hashToken,
+		CodeDescription: codeDescription,
+	}, hashToken, codeDescription)
+}
+
 func CreateModulePartNode(imports STNode, members STNode, eofToken STNode) STNode {
 	return createNodeAndAddChildren(&STModulePart{
 		STNode: &STNodeBase{
