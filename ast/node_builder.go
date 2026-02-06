@@ -17,6 +17,10 @@
 package ast
 
 import (
+	"regexp"
+	"strconv"
+	"strings"
+
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/identifierutil"
 	"ballerina-lang-go/model"
@@ -24,9 +28,6 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"regexp"
-	"strconv"
-	"strings"
 
 	balCommon "ballerina-lang-go/common"
 )
@@ -1144,7 +1145,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	}
 	bLangNode.SetTypeData(typeData)
 	bType := typeData.TypeDescriptor.(BType)
-	bType.bTypesetTag(typeTag)
+	bType.bTypeSetTag(typeTag)
 	bLiteral.SetValue(value)
 	bLiteral.SetOriginalValue(*originalValue)
 	return bLiteral
