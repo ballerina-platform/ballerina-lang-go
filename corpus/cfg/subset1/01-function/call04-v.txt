@@ -1,0 +1,41 @@
+(bar
+  (bb0 () ()
+    (return
+      (literal 2))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (literal 105))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (invocation foo ())
+          (invocation bar ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr -
+          (invocation foo ())
+          (invocation bar ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr *
+          (invocation foo ())
+          (invocation bar ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr /
+          (invocation foo ())
+          (invocation bar ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr %
+          (invocation foo ())
+          (invocation bar ())))))
+  )
+)

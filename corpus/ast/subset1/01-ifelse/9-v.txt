@@ -23,7 +23,8 @@
     (block-function-body
       (var-def
         (variable b (type
-          (value-type boolean))))
+          (value-type boolean)) (expr
+          (literal false))))
       (if
         (simple-var-ref b)
         (block-stmt

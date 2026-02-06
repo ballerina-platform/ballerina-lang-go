@@ -1,0 +1,71 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation mkInt (
+              (literal 2)))
+            (invocation mkBoolean (
+              (literal true)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (invocation mkInt (
+              (literal 0)))
+            (invocation mkBoolean (
+              (literal false)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation mkBoolean (
+              (literal true)))
+            (invocation mkInt (
+              (literal 1)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal false)
+            (invocation mkInt (
+              (literal 0)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (literal 1)
+            (invocation mkBoolean (
+              (literal true)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal 0)
+            (invocation mkBoolean (
+              (literal false)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (literal true)
+            (invocation mkInt (
+              (literal 1)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal false)
+            (invocation mkInt (
+              (literal 0)))))))))
+  (function mkInt (
+    (variable n (type
+      (value-type int)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref n))))
+  (function mkBoolean (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref b)))))

@@ -1,0 +1,23 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal true))))
+    (expression-stmt
+      (invocation io println (
+        (literal false))))
+    (var-def
+      (variable b (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (assignment
+      (simple-var-ref b)
+      (literal false))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+  )
+)

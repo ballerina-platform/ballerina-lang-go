@@ -1,0 +1,29 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type any)) (expr
+        (invocation mkInt (
+          (literal 2))))))
+    (var-def
+      (variable y (type
+        (value-type any)) (expr
+        (simple-var-ref x))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr !==
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  )
+)
+(mkInt
+  (bb0 () ()
+    (return
+      (simple-var-ref n))
+  )
+)

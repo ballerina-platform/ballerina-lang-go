@@ -1,0 +1,39 @@
+(decrease
+  (bb0 () ()
+    (return
+      (binary-expr -
+        (simple-var-ref x)
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printInts (
+        (literal 5))))
+  )
+)
+(printInts
+  (bb0 () (bb1)
+    (var-def
+      (variable i (type
+        (value-type int)) (expr
+        (simple-var-ref maxExclusive))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr <=
+      (literal 0)
+      (invocation decrease (
+        (simple-var-ref i))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+    (assignment
+      (simple-var-ref i)
+      (invocation decrease (
+        (simple-var-ref i))))
+  )
+  (bb3 (bb1) ())
+)

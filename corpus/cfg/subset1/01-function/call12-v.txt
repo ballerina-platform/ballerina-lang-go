@@ -1,0 +1,29 @@
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr *
+        (simple-var-ref i)
+        (simple-var-ref j)))
+  )
+)
+(getArg1
+  (bb0 () ()
+    (return
+      (literal 2))
+  )
+)
+(getArg2
+  (bb0 () ()
+    (return
+      (literal 4))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (invocation getArg1 ())
+          (invocation getArg2 ()))))))
+  )
+)

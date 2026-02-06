@@ -249,7 +249,7 @@ func Intersect(t1, t2 SemType) SemType {
 		} else {
 			data = ops[code.Code].Intersect(data1, data2)
 		}
-		if allOrNothing, ok := data.(AllOrNothingSubtype); !ok || !allOrNothing.IsAllSubtype() {
+		if allOrNothing, ok := data.(AllOrNothingSubtype); !ok || allOrNothing.IsAllSubtype() {
 			subtypes = append(subtypes, BasicSubtypeFrom(code, data.(ProperSubtypeData)))
 		}
 	}

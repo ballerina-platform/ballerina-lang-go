@@ -19,7 +19,8 @@
       (block-stmt
         (var-def
           (variable b (type
-            (value-type boolean))))
+            (value-type boolean)) (expr
+            (literal false))))
         (if
           (unary-expr !
             (simple-var-ref b))

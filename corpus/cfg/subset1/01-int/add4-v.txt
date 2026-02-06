@@ -1,0 +1,89 @@
+(add
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (literal 3)
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (literal 3)
+            (literal 5)))
+          (literal 11))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (literal 3)
+            (literal 5)))
+          (invocation add (
+            (literal 5)
+            (literal 9))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)))
+            (invocation add (
+              (literal 5)
+              (literal 9)))))
+          (literal 12))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)))
+            (invocation add (
+              (literal 5)
+              (literal 9)))))
+          (invocation add (
+            (literal 4)
+            (literal 7))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)))
+            (invocation add (
+              (literal 5)
+              (literal 9)))))
+          (invocation add (
+            (invocation add (
+              (literal 4)
+              (literal 7)))
+            (literal 5))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add (
+          (invocation add (
+            (invocation add (
+              (literal 3)
+              (literal 5)))
+            (invocation add (
+              (literal 5)
+              (literal 9)))))
+          (invocation add (
+            (invocation add (
+              (literal 4)
+              (literal 7)))
+            (invocation add (
+              (literal 23)
+              (literal 50))))))))))
+  )
+)
