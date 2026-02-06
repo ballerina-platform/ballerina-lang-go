@@ -16,15 +16,16 @@
 package parser
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser/common"
 	tree "ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
-	"fmt"
-	"os"
-	"strings"
 )
 
 type OperatorPrecedence uint8
@@ -11546,15 +11547,15 @@ func (this *BallerinaParser) parseMarkdownDocumentation() tree.STNode {
 }
 
 func (this *BallerinaParser) parseDocumentationString(documentationStringToken tree.STToken) tree.STNode {
-	// leadingTriviaList := this.getLeadingTriviaList(documentationStringToken.LeadingMinutiae())
-	// diagnostics := make([]tree.STNodeDiagnostic, len(documentationStringToken.Diagnostics()))
-	// copy(diagnostics, documentationStringToken.Diagnostics())
-	// charReader := commonCharReader.from(documentationStringToken.Text())
-	// documentationLexer := nil
-	// tokenReader := nil
-	// documentationParser := nil
-	// return this.documentationParser.parse()
-	panic("documentation parser not implemented")
+	leadingTriviaList := this.getLeadingTriviaList(documentationStringToken.LeadingMinutiae())
+	diagnostics := documentationStringToken.Diagnostics()
+
+	charReader := text.CharReaderFromText(documentationStringToken.Text())
+	documentationLexer := NewDocumentationLexer(charReader, leadingTriviaList, diagnostics, this.dbgContext)
+	tokenReader := CreateTokenReader(documentationLexer, this.dbgContext)
+	documentationParser := NewDocumentationParser(tokenReader, this.dbgContext)
+
+	return documentationParser.Parse()
 }
 
 func (this *BallerinaParser) getLeadingTriviaList(leadingMinutiaeNode tree.STNode) []tree.STNode {
@@ -12640,7 +12641,6 @@ func (this *BallerinaParser) parseBracketedListMember(isTypedBindingPattern bool
 
 	// we don't know which one
 	return expr
-
 }
 
 func (this *BallerinaParser) parseAsArrayTypeDesc(typeDesc tree.STNode, openBracket tree.STNode, member tree.STNode, context common.ParserRuleContext) tree.STNode {
@@ -14802,7 +14802,7 @@ func GetSyntaxTree(ctx *context.CompilerContext, debugCtx *debugcommon.DebugCont
 	lexer := NewLexer(reader, debugCtx)
 
 	// Create TokenReader from Lexer
-	tokenReader := CreateTokenReader(*lexer, debugCtx)
+	tokenReader := CreateTokenReader(lexer, debugCtx)
 
 	// Create Parser from TokenReader
 	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, debugCtx)
