@@ -6,10 +6,12 @@
     (block-function-body
       (var-def
         (variable x (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 1))))
       (var-def
         (variable y (type
-          (value-type int))))
+          (value-type int)) (expr
+          (literal 2))))
       (expression-stmt
         (invocation printBoolean (
           (binary-expr <

@@ -1,0 +1,44 @@
+(bar
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(baz
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(foobar
+  (bb0 () ()
+    (return
+      (literal 12))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (invocation bar (
+            (invocation baz (
+              (invocation sum (
+                (literal 23)
+                (invocation foobar ()))))))))))))
+  )
+)
+(sum
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

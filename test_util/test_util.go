@@ -32,6 +32,7 @@ const (
 	AST TestKind = iota
 	Parser
 	BIR
+	CFG
 )
 
 // TestCase represents a test case: input file and expected output file
@@ -72,6 +73,9 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 		outputExt = ".json"
 	case BIR:
 		outputBaseDir = "bir"
+		outputExt = ".txt"
+	case CFG:
+		outputBaseDir = "cfg"
 		outputExt = ".txt"
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)

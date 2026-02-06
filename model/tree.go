@@ -731,8 +731,8 @@ type FiniteTypeNode interface {
 
 type UnionTypeNode interface {
 	ReferenceTypeNode
-	Lhs() TypeData
-	Rhs() TypeData
+	Lhs() *TypeData
+	Rhs() *TypeData
 }
 
 type ErrorTypeNode interface {
@@ -903,6 +903,20 @@ type TypedescExpressionNode interface {
 	ExpressionNode
 	GetTypeData() TypeData
 	SetTypeData(typeData TypeData)
+}
+
+type NamedArgNode interface {
+	ExpressionNode
+	SetName(name IdentifierNode)
+	GetName() IdentifierNode
+	GetExpression() ExpressionNode
+	SetExpression(expr ExpressionNode)
+}
+
+type ErrorConstructorExpressionNode interface {
+	ExpressionNode
+	GetPositionalArgs() []ExpressionNode
+	GetNamedArgs() []NamedArgNode
 }
 
 type DynamicArgNode = ExpressionNode
