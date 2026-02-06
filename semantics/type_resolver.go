@@ -51,7 +51,7 @@ func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 	}
 }
 
-// ResolveTypes resolves all the type definitions and return a map of all the types of symbols exported by the package.
+// ResolveTypes resolves all the type definitions and update the type of symbols.
 // After this (for the given package) all the semtypes are known. Semantic analysis will validate and propagate these
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
