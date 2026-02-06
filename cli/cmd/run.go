@@ -140,7 +140,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(os.Stderr, "Compiling source")
 	fmt.Fprintf(os.Stderr, "\t%s\n", filepath.Base(fileName))
 
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
 	syntaxTree, err := parser.GetSyntaxTree(debugCtx, fileName)
 	if err != nil {
@@ -155,8 +155,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 	pkg := ast.ToPackage(compilationUnit)
 	// Resolve symbols (imports) before type resolution
-	env := semtypes.GetTypeEnv()
-	importedSymbols := semantics.ResolveImports(cx, env, pkg)
+	importedSymbols := semantics.ResolveImports(cx, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)

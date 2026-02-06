@@ -4,13 +4,11 @@
   (function foo (
     (variable arr (type
       (array-type
-        (value-type int) dimensions: 1 (
-        (literal -1)))))
+        (value-type int) ())))
     (variable i (type
       (value-type int)))) (
     (array-type
-      (value-type int) dimensions: 1 (
-      (literal -1))))
+      (value-type int) ()))
     (block-function-body
       (assignment
         (index-based-access
@@ -27,8 +25,7 @@
       (var-def
         (variable arr (type
           (array-type
-            (value-type int) dimensions: 1 (
-            (literal -1))))))
+            (value-type int) ()))))
       (assignment
         (wildcard-binding-pattern)
         (invocation foo (

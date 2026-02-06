@@ -311,7 +311,7 @@ func (la *loopAnalyzer) internalErr(message string) {
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
 		compilerCtx:  ctx,
-		typeCtx:      semtypes.ContextFrom(semtypes.GetTypeEnv()),
+		typeCtx:      semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedPkgs: make(map[string]*ast.BLangImportPackage),
 	}
 }

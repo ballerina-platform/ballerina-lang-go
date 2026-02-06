@@ -167,7 +167,8 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 }
 
 func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTypeDefinition {
-	panic("unimplemented")
+	// FIXME: implement this
+	return nil
 }
 
 func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIRGlobalVariableDcl {

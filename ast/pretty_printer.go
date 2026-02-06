@@ -98,6 +98,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printUnionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
+	case *BLangTypeDefinition:
+		p.printTypeDefinition(t)
+	case *BLangUserDefinedType:
+		p.printUserDefinedType(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -579,6 +583,34 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 		p.indentLevel++
 		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
+	}
+	p.endNode()
+}
+
+// Type definition printer
+func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
+	p.startNode()
+	p.printString("type-definition")
+	if node.Name != nil {
+		p.printString(node.Name.Value)
+	}
+	p.printFlags(node.FlagSet)
+	if node.GetTypeData().TypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+// User-defined type printer
+func (p *PrettyPrinter) printUserDefinedType(node *BLangUserDefinedType) {
+	p.startNode()
+	p.printString("user-defined-type")
+	if node.PkgAlias.Value != "" {
+		p.printString(node.PkgAlias.Value + " " + node.TypeName.Value)
+	} else {
+		p.printString(node.TypeName.Value)
 	}
 	p.endNode()
 }

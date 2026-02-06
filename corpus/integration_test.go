@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -160,7 +161,7 @@ func runTest(balFile string) testResult {
 			}
 		}()
 
-		cx := context.NewCompilerContext()
+		cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 		syntaxTree, err := parser.GetSyntaxTree(nil, balFile)
 		if err != nil {
 			panic(err)

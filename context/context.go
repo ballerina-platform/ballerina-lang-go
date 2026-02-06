@@ -29,6 +29,7 @@ type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner
 	symbolSpaces    []*model.SymbolSpace
+	typeEnv         semtypes.Env
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -61,6 +62,14 @@ func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
 		return symbolSpace.Symbols[refSymbol.Index]
 	}
 	return symbol
+}
+
+func (this *CompilerContext) RefSymbol(symbol model.Symbol) model.SymbolRef {
+	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
+		return *refSymbol
+	}
+	// I think this is fine because there is no way to leak the acutal symbol from context
+	panic("Symbol is not a SymbolRef")
 }
 
 func (this *CompilerContext) SymbolName(symbol model.Symbol) string {
@@ -120,11 +129,17 @@ func (this *CompilerContext) InternalError(message string, pos diagnostics.Locat
 	panic(fmt.Sprintf("Internal error: %s", message))
 }
 
-func NewCompilerContext() *CompilerContext {
+func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {
 	return &CompilerContext{
 		anonTypeCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
+		typeEnv:         typeEnv,
 	}
+}
+
+// GetTypeEnv returns the type environment for this context
+func (this *CompilerContext) GetTypeEnv() semtypes.Env {
+	return this.typeEnv
 }
 
 const (

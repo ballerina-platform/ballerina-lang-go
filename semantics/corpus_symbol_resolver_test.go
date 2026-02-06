@@ -50,7 +50,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -62,8 +62,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 	pkg := ast.ToPackage(compilationUnit)
-	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(cx, env, pkg)
+	importedSymbols := ResolveImports(cx, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
 	ast.Walk(validator, pkg)
