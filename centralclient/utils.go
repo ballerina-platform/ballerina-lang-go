@@ -22,17 +22,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"ballerina-lang-go/common/bfs"
-
-	"github.com/Masterminds/semver/v3"
 )
 
 const (
@@ -122,17 +123,143 @@ func createBalaInHomeRepo(balaDownloadResponse *http.Response, fsys fs.FS, pkgPa
 	return nil
 }
 
+func validateSemverVersion(v string) (string, error) {
+	if v == "" {
+		return "", errors.New("empty version string")
+	}
+
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) != 3 {
+		return "", errors.New("invalid semver format: must be major.minor.patch")
+	}
+
+	var metadata, prerelease string
+	patchPart := parts[2]
+
+	// Extract build metadata (after "+")
+	if idx := strings.Index(patchPart, "+"); idx != -1 {
+		metadata = patchPart[idx+1:]
+		patchPart = patchPart[:idx]
+		if err := validateMetadata(metadata); err != nil {
+			return "", fmt.Errorf("invalid metadata: %w", err)
+		}
+	}
+
+	// Extract prerelease (after "-")
+	if idx := strings.Index(patchPart, "-"); idx != -1 {
+		prerelease = patchPart[idx+1:]
+		patchPart = patchPart[:idx]
+		if err := validatePrerelease(prerelease); err != nil {
+			return "", fmt.Errorf("invalid prerelease: %w", err)
+		}
+	}
+
+	// Validate and parse numeric segments
+	major, err := parseVersionSegment(parts[0], "major")
+	if err != nil {
+		return "", err
+	}
+	minor, err := parseVersionSegment(parts[1], "minor")
+	if err != nil {
+		return "", err
+	}
+	patch, err := parseVersionSegment(patchPart, "patch")
+	if err != nil {
+		return "", err
+	}
+
+	version := fmt.Sprintf("%d.%d.%d", major, minor, patch)
+	if prerelease != "" {
+		version += "-" + prerelease
+	}
+	if metadata != "" {
+		version += "+" + metadata
+	}
+
+	return version, nil
+}
+
+func parseVersionSegment(segment, name string) (uint64, error) {
+	if segment == "" {
+		return 0, fmt.Errorf("invalid %s version: cannot be empty", name)
+	}
+
+	// Check for leading zeros (not allowed unless it's a single digit)
+	if len(segment) > 1 && segment[0] == '0' {
+		return 0, fmt.Errorf("invalid %s version: cannot have leading zeros", name)
+	}
+
+	value, err := strconv.ParseUint(segment, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s version: must be a number", name)
+	}
+
+	return value, nil
+}
+
+func validateMetadata(metadata string) error {
+	if metadata == "" {
+		return errors.New("metadata cannot be empty")
+	}
+	parts := strings.SplitSeq(metadata, ".")
+	for part := range parts {
+		if part == "" {
+			return errors.New("metadata cannot contain empty parts")
+		}
+		for _, r := range part {
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' {
+				return errors.New("metadata contains invalid characters")
+			}
+		}
+	}
+	return nil
+}
+
+func validatePrerelease(prerelease string) error {
+	if prerelease == "" {
+		return errors.New("prerelease cannot be empty")
+	}
+	parts := strings.SplitSeq(prerelease, ".")
+	for part := range parts {
+		if part == "" {
+			return errors.New("prerelease cannot contain empty parts")
+		}
+		// Check if it's all digits
+		allDigits := true
+		for _, r := range part {
+			if !unicode.IsDigit(r) {
+				allDigits = false
+				break
+			}
+		}
+		if allDigits {
+			// Numeric identifiers must not have leading zeros
+			if len(part) > 1 && part[0] == '0' {
+				return errors.New("prerelease numeric identifiers cannot have leading zeros")
+			}
+		} else {
+			// Non-numeric identifiers: alphanumeric and hyphens only
+			for _, r := range part {
+				if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' {
+					return errors.New("prerelease contains invalid characters")
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func validatePackageVersion(pkgVersion string, clientContext ClientContext) (string, error) {
 	if pkgVersion == "" {
 		return "", NewCentralClientError(clientContext.formatLog("Version cannot be empty"))
 	}
 
-	version, err := semver.StrictNewVersion(pkgVersion)
+	version, err := validateSemverVersion(pkgVersion)
 	if err != nil {
 		return "", NewCentralClientError(clientContext.formatLog(fmt.Sprintf("Invalid version: '%s'. %s", pkgVersion, err.Error())))
 	}
 
-	return version.String(), nil
+	return version, nil
 }
 
 func getBalaFileName(contentDisposition, balaFile string) string {
