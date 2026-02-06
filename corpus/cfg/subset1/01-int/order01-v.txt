@@ -1,0 +1,84 @@
+(greaterThan
+  (bb0 () ()
+    (return
+      (binary-expr >
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(lessThan
+  (bb0 () ()
+    (return
+      (binary-expr <
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type int))))
+    (var-def
+      (variable y (type
+        (value-type int))))
+    (expression-stmt
+      (invocation printBoolean (
+        (binary-expr <
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal 2)
+          (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation greaterThan (
+          (literal 2)
+          (unary-expr -
+            (literal 1)))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal 0)
+          (literal 0))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (literal 2)
+          (literal 1))))))
+    (expression-stmt
+      (invocation printBoolean (
+        (invocation lessThan (
+          (unary-expr -
+            (literal 1))
+          (literal 17))))))
+  )
+)
+(printBoolean
+  (bb0 () (bb1 bb3)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

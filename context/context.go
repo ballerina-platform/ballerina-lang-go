@@ -29,6 +29,7 @@ type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner
 	symbolSpaces    []*model.SymbolSpace
+	typeEnv         semtypes.Env
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -61,6 +62,19 @@ func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
 		return symbolSpace.Symbols[refSymbol.Index]
 	}
 	return symbol
+}
+
+func (this *CompilerContext) RefSymbol(symbol model.Symbol) model.SymbolRef {
+	// If this happen that's a bug in SymbolResolver
+	if symbol == nil {
+		this.InternalError("RefSymbol called with nil symbol", nil)
+	}
+	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
+		return *refSymbol
+	}
+	// This should never happen because we should never store actual symbols in the AST
+	this.InternalError(fmt.Sprintf("Symbol is not a SymbolRef: type=%T, name=%s, kind=%v", symbol, symbol.Name(), symbol.Kind()), nil)
+	return model.SymbolRef{}
 }
 
 func (this *CompilerContext) SymbolName(symbol model.Symbol) string {
@@ -120,11 +134,17 @@ func (this *CompilerContext) InternalError(message string, pos diagnostics.Locat
 	panic(fmt.Sprintf("Internal error: %s", message))
 }
 
-func NewCompilerContext() *CompilerContext {
+func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {
 	return &CompilerContext{
 		anonTypeCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
+		typeEnv:         typeEnv,
 	}
+}
+
+// GetTypeEnv returns the type environment for this context
+func (this *CompilerContext) GetTypeEnv() semtypes.Env {
+	return this.typeEnv
 }
 
 const (

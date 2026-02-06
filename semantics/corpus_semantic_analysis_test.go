@@ -52,7 +52,7 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -66,24 +66,29 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(cx, env, pkg)
+	importedSymbols := ResolveImports(cx, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// Step 3: Semantic Analysis
+	// Step 3: Control Flow Graph Generation
+	cfg := CreateControlFlowGraph(cx, pkg)
+
+	// Step 4: Semantic Analysis
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 4: Validate that all expressions have determinedTypes set
+	// Step 5: Validate that all expressions have determinedTypes set
 	validator := &semanticAnalysisValidator{t: t, ctx: cx}
 	ast.Walk(validator, pkg)
 
 	// If we reach here, semantic analysis completed without panicking
 	t.Logf("Semantic analysis completed successfully for %s", testCase.InputPath)
+
+	// Step 6: CFG Analysis (reachability and explicit return) - this should panic for error cases
+	AnalyzeCFG(cx, pkg, cfg)
 }
 
 type semanticAnalysisValidator struct {
@@ -140,15 +145,8 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 }
 
 var semanticAnalysisErrorSkipList = []string{
-	// reachability analysis
-	"01-function/call13-e.bal",
-	"01-loop/while03-e.bal",
-
 	// error constructor expr not implemented
 	"01-function/assign10-e.bal",
-
-	// module type defn not implemented
-	"01-function/call11-e.bal",
 }
 
 func TestSemanticAnalysisErrors(t *testing.T) {
@@ -201,7 +199,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -215,17 +213,22 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(cx, env, pkg)
+	importedSymbols := ResolveImports(cx, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// Step 3: Semantic Analysis - this should panic for error cases
+	// Step 3: Control Flow Graph Generation
+	cfg := CreateControlFlowGraph(cx, pkg)
+
+	// Step 4: Semantic Analysis - this should panic for error cases
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
+
+	// Step 5: CFG Analysis (reachability and explicit return) - this should panic for error cases
+	AnalyzeCFG(cx, pkg, cfg)
 
 	// If we reach here without panic, the defer will catch it
 }

@@ -167,7 +167,8 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 }
 
 func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTypeDefinition {
-	panic("unimplemented")
+	// FIXME: implement this
+	return nil
 }
 
 func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIRGlobalVariableDcl {
@@ -303,6 +304,7 @@ func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak
 	}
 }
 
+// TODO: is this correct for nested loops?
 func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) statementEffect {
 	loopHead := ctx.addBB()
 	// jump to loop head
