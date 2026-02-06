@@ -17,11 +17,12 @@
 package parser
 
 import (
+	"strings"
+
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
-	"strings"
 )
 
 // DocumentationParser is a parser for Ballerina documentation (markdown).
@@ -46,7 +47,9 @@ func (p *DocumentationParser) Parse() tree.STNode {
 
 // parseDocumentationLines parses all documentation lines
 // DocumentationLine :=
-//   MarkdownDocumentationLine
+//
+//	MarkdownDocumentationLine
+//
 // | MarkdownReferenceDocumentationLine
 // | MarkdownDeprecationDocumentationLine
 // | MarkdownParameterDocumentationLine
@@ -224,9 +227,10 @@ func (p *DocumentationParser) parseInlineCodeContentToken() tree.STNode {
 
 // parseCodeBlock parses code block
 // Code-Block :=
-//   # ``` [lang-attribute]
-//   code-line*
-//   # ```
+//
+//	# ``` [lang-attribute]
+//	code-line*
+//	# ```
 func (p *DocumentationParser) parseCodeBlock(startLineHash tree.STNode, startBacktick tree.STNode) tree.STNode {
 	langAttribute := p.parseOptionalLangAttributeToken()
 	codeLines := p.parseCodeLines()
