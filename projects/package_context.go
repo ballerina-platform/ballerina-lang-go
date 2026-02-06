@@ -18,6 +18,8 @@
 
 package projects
 
+import "sync"
+
 // packageContext holds internal state for a Package.
 // It manages module contexts and package-level metadata.
 // Java: io.ballerina.projects.PackageContext
@@ -30,10 +32,11 @@ type packageContext struct {
 	moduleIDs            []ModuleID
 	defaultModuleContext *moduleContext // cached default module
 
-	// Lazy-initialized fields (matching Java's null-check lazy init pattern).
-	// TODO: Add sync.Once for thread-safe lazy initialization.
+	// Lazy-initialized fields (thread-safe via sync.Once, matching documentContext pattern).
 	packageCompilation *PackageCompilation
+	compilationOnce    sync.Once
 	packageResolution  *PackageResolution
+	resolutionOnce     sync.Once
 }
 
 // newPackageContext creates a packageContext from PackageConfig.
@@ -158,21 +161,14 @@ func (p *packageContext) getModuleContextByName(moduleName ModuleName) *moduleCo
 }
 
 // getDefaultModuleContext returns the default module context.
-// Panics if no default module is found (should never happen for valid packages).
+// The default module context is always set during construction (newPackageContext
+// or newPackageContextFromMaps), so this should never return nil for valid packages.
+// Panics if no default module is found as a safety guard.
 func (p *packageContext) getDefaultModuleContext() *moduleContext {
-	if p.defaultModuleContext != nil {
-		return p.defaultModuleContext
+	if p.defaultModuleContext == nil {
+		panic("Default module not found. This is a bug in the Project API")
 	}
-
-	// Search for default module if not cached
-	for _, ctx := range p.moduleContextMap {
-		if ctx.isDefault() {
-			p.defaultModuleContext = ctx
-			return p.defaultModuleContext
-		}
-	}
-
-	panic("Default module not found. This is a bug in the Project API")
+	return p.defaultModuleContext
 }
 
 // getProject returns the project reference.
@@ -190,20 +186,22 @@ func (p *packageContext) getModuleContextMap() map[ModuleID]*moduleContext {
 }
 
 // getPackageCompilation returns the cached PackageCompilation, creating it on first call.
+// Uses sync.Once for thread-safe lazy initialization.
 // Java: PackageContext.getPackageCompilation()
 func (p *packageContext) getPackageCompilation() *PackageCompilation {
-	if p.packageCompilation == nil {
+	p.compilationOnce.Do(func() {
 		p.packageCompilation = newPackageCompilation(p, p.compilationOptions)
-	}
+	})
 	return p.packageCompilation
 }
 
 // getResolution returns the cached PackageResolution, creating it on first call.
+// Uses sync.Once for thread-safe lazy initialization.
 // Java: PackageContext.getResolution()
 func (p *packageContext) getResolution() *PackageResolution {
-	if p.packageResolution == nil {
+	p.resolutionOnce.Do(func() {
 		p.packageResolution = newPackageResolution(p)
-	}
+	})
 	return p.packageResolution
 }
 

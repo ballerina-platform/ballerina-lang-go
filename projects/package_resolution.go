@@ -28,7 +28,7 @@ import (
 // Java source: io.ballerina.projects.PackageResolution
 type PackageResolution struct {
 	rootPackageContext              *packageContext
-	topologicallySortedModuleList_  []*moduleContext
+	topologicallySortedModuleList  []*moduleContext
 	diagnosticResult                DiagnosticResult
 }
 
@@ -79,7 +79,7 @@ func (r *PackageResolution) resolveDependencies() {
 		_ = cycles
 	}
 
-	r.topologicallySortedModuleList_ = sorted
+	r.topologicallySortedModuleList = sorted
 	r.diagnosticResult = NewDiagnosticResult(diags)
 }
 
@@ -138,7 +138,7 @@ func sortModulesTopologically(
 				copy(cycle, (*ancestorList)[startIdx:])
 				*cycles = append(*cycles, cycle)
 			}
-		} else if !visited[dep] || len(*cycles) > 0 {
+		} else if !visited[dep] {
 			sortModulesTopologically(dep, deps, visited, ancestors, ancestorList, sorted, cycles)
 		}
 	}
@@ -162,7 +162,7 @@ func (r *PackageResolution) DiagnosticResult() DiagnosticResult {
 // Dependencies appear before the modules that depend on them.
 // Java source: PackageResolution.topologicallySortedModuleList()
 func (r *PackageResolution) TopologicallySortedModuleList() []*moduleContext {
-	return r.topologicallySortedModuleList_
+	return r.topologicallySortedModuleList
 }
 
 // DependencyGraph returns the dependency graph.

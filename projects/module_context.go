@@ -20,6 +20,7 @@ package projects
 
 import (
 	"fmt"
+	"os"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -221,6 +222,7 @@ func (m *moduleContext) compile() {
 
 // compileInternal performs the actual compilation of a module:
 // parse sources, build BLangPackage (AST), and run semantic analysis.
+// BIR generation is a separate phase handled by BallerinaBackend.performCodeGen().
 // Java: ModuleContext.compileInternal(ModuleContext, CompilerContext)
 func compileInternal(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = make([]diagnostics.Diagnostic, 0)
@@ -271,25 +273,23 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkgNode)
-
-	// Generate BIR from the compiled BLangPackage.
-	// Java: CompilerPhaseRunner.performBirGenPhases(bLangPackage)
-	generateCodeInternal(moduleCtx)
 }
 
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
 // For a single file this is equivalent to ast.ToPackage(ast.GetCompilationUnit(cx, st)).
 // For multiple files it merges all compilation units into a single package.
-// If compilationOptions.DumpAST() is true, each compilation unit is pretty-printed to stdout.
 // Java: ModuleContext.compileInternal() creates pkgNode and adds compilation units.
 func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, compilationOptions CompilationOptions) *ast.BLangPackage {
 	dumpAST := compilationOptions.DumpAST()
+	var prettyPrinter ast.PrettyPrinter
+	if dumpAST {
+		prettyPrinter = ast.PrettyPrinter{}
+	}
 
 	if len(syntaxTrees) == 1 {
 		cu := ast.GetCompilationUnit(cx, syntaxTrees[0])
 		if dumpAST {
-			prettyPrinter := ast.PrettyPrinter{}
-			fmt.Println(prettyPrinter.Print(cu))
+			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
 		}
 		return ast.ToPackage(cu)
 	}
@@ -298,8 +298,7 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 	for _, st := range syntaxTrees {
 		cu := ast.GetCompilationUnit(cx, st)
 		if dumpAST {
-			prettyPrinter := ast.PrettyPrinter{}
-			fmt.Println(prettyPrinter.Print(cu))
+			fmt.Fprintln(os.Stderr, prettyPrinter.Print(cu))
 		}
 		if pkg.PackageID == nil {
 			pkg.PackageID = cu.GetPackageID()

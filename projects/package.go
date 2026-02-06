@@ -142,10 +142,10 @@ func (p *Package) ModuleByName(moduleName ModuleName) *Module {
 	return p.Module(moduleCtx.getModuleID())
 }
 
-// GetDefaultModule returns the default module of this package.
+// DefaultModule returns the default module of this package.
 // Every package has exactly one default module.
 // Java: Package.getDefaultModule()
-func (p *Package) GetDefaultModule() *Module {
+func (p *Package) DefaultModule() *Module {
 	defaultCtx := p.packageCtx.getDefaultModuleContext()
 	return p.Module(defaultCtx.getModuleID())
 }
@@ -240,22 +240,22 @@ func (p *Package) Resource(documentID DocumentID) interface{} {
 	return nil
 }
 
-// GetCompilation returns the compilation result for this package.
+// Compilation returns the compilation result for this package.
 // Java: Package.getCompilation() -> PackageCompilation
-func (p *Package) GetCompilation() *PackageCompilation {
+func (p *Package) Compilation() *PackageCompilation {
 	return p.packageCtx.getPackageCompilation()
 }
 
-// GetResolution returns the package resolution (dependency graph) for this package.
+// Resolution returns the package resolution (dependency graph) for this package.
 // Java: Package.getResolution() -> PackageResolution
-func (p *Package) GetResolution() *PackageResolution {
+func (p *Package) Resolution() *PackageResolution {
 	return p.packageCtx.getResolution()
 }
 
-// GetBuildToolResolution returns the build tool resolution for this package.
+// BuildToolResolution returns the build tool resolution for this package.
 // TODO(P3.x): Implement when BuildToolResolution type is available.
 // Java: Package.getBuildToolResolution() -> BuildToolResolution
-func (p *Package) GetBuildToolResolution() interface{} {
+func (p *Package) BuildToolResolution() interface{} {
 	// TODO(P3.x): Return *BuildToolResolution once the type is implemented.
 	// Java delegates to packageContext.getBuildToolResolution()
 	return nil

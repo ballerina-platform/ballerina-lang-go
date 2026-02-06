@@ -40,7 +40,7 @@ func NewModuleDescriptor(packageDescriptor PackageDescriptor, name ModuleName) M
 func NewModuleDescriptorForDefaultModule(packageDescriptor PackageDescriptor) ModuleDescriptor {
 	return ModuleDescriptor{
 		packageDescriptor: packageDescriptor,
-		name:              NewModuleName(packageDescriptor.Name(), ""),
+		name:              NewDefaultModuleName(packageDescriptor.Name()),
 	}
 }
 

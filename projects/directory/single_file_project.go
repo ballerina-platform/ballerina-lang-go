@@ -195,7 +195,7 @@ func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bo
 	}
 
 	// Get the default module (single file projects have only one module)
-	defaultModule := s.currentPackage.GetDefaultModule()
+	defaultModule := s.currentPackage.DefaultModule()
 	if defaultModule == nil {
 		return projects.DocumentID{}, false
 	}
@@ -218,7 +218,7 @@ func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string 
 	}
 
 	// Get the default module
-	defaultModule := s.currentPackage.GetDefaultModule()
+	defaultModule := s.currentPackage.DefaultModule()
 	if defaultModule == nil {
 		return ""
 	}

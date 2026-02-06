@@ -21,7 +21,6 @@ package projects
 import (
 	"sync"
 
-	"ballerina-lang-go/bir"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -32,6 +31,7 @@ type PackageCompilation struct {
 	packageResolution    *PackageResolution
 	compilationOptions   CompilationOptions
 	compilerBackends     map[TargetPlatform]CompilerBackend
+	backendMu            sync.Mutex
 	pluginDiagnostics    []diagnostics.Diagnostic
 	diagnosticResult     DiagnosticResult
 	compileOnce          sync.Once
@@ -99,9 +99,9 @@ func (c *PackageCompilation) compileModulesInternal() {
 	c.diagnosticResult = NewDiagnosticResult(allDiagnostics)
 }
 
-// GetResolution returns the package resolution.
+// Resolution returns the package resolution.
 // Java source: PackageCompilation.getResolution()
-func (c *PackageCompilation) GetResolution() *PackageResolution {
+func (c *PackageCompilation) Resolution() *PackageResolution {
 	return c.packageResolution
 }
 
@@ -111,26 +111,26 @@ func (c *PackageCompilation) DiagnosticResult() DiagnosticResult {
 	return c.diagnosticResult
 }
 
-// GetSemanticModel returns the semantic model for the specified module.
+// SemanticModel returns the semantic model for the specified module.
 // TODO(P6): Implement when SemanticModel/BallerinaSemanticModel is migrated.
 // Java source: PackageCompilation.getSemanticModel(ModuleId)
-func (c *PackageCompilation) GetSemanticModel(moduleID ModuleID) interface{} {
+func (c *PackageCompilation) SemanticModel(moduleID ModuleID) interface{} {
 	// TODO(P6): Return *SemanticModel once the type is implemented.
 	return nil
 }
 
-// GetCodeActionManager returns the code action manager.
+// CodeActionManager returns the code action manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCodeActionManager()
-func (c *PackageCompilation) GetCodeActionManager() interface{} {
+func (c *PackageCompilation) CodeActionManager() interface{} {
 	// TODO(P6): Return CodeActionManager once the type is implemented.
 	return nil
 }
 
-// GetCompletionManager returns the completion manager.
+// CompletionManager returns the completion manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCompletionManager()
-func (c *PackageCompilation) GetCompletionManager() interface{} {
+func (c *PackageCompilation) CompletionManager() interface{} {
 	// TODO(P6): Return CompletionManager once the type is implemented.
 	return nil
 }
@@ -170,21 +170,17 @@ func (c *PackageCompilation) notifyCompilationCompletion() []diagnostics.Diagnos
 
 // getCompilerBackend returns a compiler backend for the given target platform,
 // creating one via the creator function if not already cached.
+// Thread-safe: uses a mutex to match Java's ConcurrentHashMap.computeIfAbsent() semantics.
 // TODO(P6): Implement when compiler backend integration is complete.
 // Java source: PackageCompilation.getCompilerBackend(TargetPlatform, Function)
 func (c *PackageCompilation) getCompilerBackend(platform TargetPlatform, creator func(TargetPlatform) CompilerBackend) CompilerBackend {
+	c.backendMu.Lock()
+	defer c.backendMu.Unlock()
 	if backend, ok := c.compilerBackends[platform]; ok {
 		return backend
 	}
 	backend := creator(platform)
 	c.compilerBackends[platform] = backend
 	return backend
-}
-
-// GetBir returns the BIR package for the default module of the root package.
-// BIR is generated during module compilation in compileInternal.
-// TODO: This is a temporary public API; replace with proper backend integration.
-func (c *PackageCompilation) GetBir() *bir.BIRPackage {
-	return c.rootPackageContext.getDefaultModuleContext().getBIRPackage()
 }
 
