@@ -1,0 +1,14 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (finite-type
+          (literal true)))))
+    (var-def
+      (variable d (type
+        (value-type boolean))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref d))))
+  )
+)

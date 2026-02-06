@@ -731,8 +731,8 @@ type FiniteTypeNode interface {
 
 type UnionTypeNode interface {
 	ReferenceTypeNode
-	Lhs() TypeData
-	Rhs() TypeData
+	Lhs() *TypeData
+	Rhs() *TypeData
 }
 
 type ErrorTypeNode interface {
