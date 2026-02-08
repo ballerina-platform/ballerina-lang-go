@@ -28,7 +28,7 @@ import (
 var deprecatedChars = []rune{'D', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd'}
 
 type DocumentationLexer struct {
-	*LexerImpl
+	*lexer
 	previousBacktickMode ParserMode
 }
 
@@ -39,7 +39,7 @@ func NewDocumentationLexer(charReader text.CharReader, leadingTriviaList []tree.
 	lexer.context.diagnostics = diagnostics
 	lexer.StartMode(PARSER_MODE_DOC_LINE_START_HASH)
 	return &DocumentationLexer{
-		LexerImpl:            lexer,
+		lexer:                lexer,
 		previousBacktickMode: PARSER_MODE_DEFAULT_MODE,
 	}
 }

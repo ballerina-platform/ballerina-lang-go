@@ -433,20 +433,6 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 		return n.TransformErrorMatchPattern(t)
 	case *tree.NamedArgMatchPatternNode:
 		return n.TransformNamedArgMatchPattern(t)
-	case *tree.MarkdownDocumentationNode:
-		return n.TransformMarkdownDocumentation(t)
-	case *tree.MarkdownDocumentationLineNode:
-		return n.TransformMarkdownDocumentationLine(t)
-	case *tree.MarkdownParameterDocumentationLineNode:
-		return n.TransformMarkdownParameterDocumentationLine(t)
-	case *tree.BallerinaNameReferenceNode:
-		return n.TransformBallerinaNameReference(t)
-	case *tree.InlineCodeReferenceNode:
-		return n.TransformInlineCodeReference(t)
-	case *tree.MarkdownCodeBlockNode:
-		return n.TransformMarkdownCodeBlock(t)
-	case *tree.MarkdownCodeLineNode:
-		return n.TransformMarkdownCodeLine(t)
 	case *tree.OrderByClauseNode:
 		return n.TransformOrderByClause(t)
 	case *tree.OrderKeyNode:
@@ -546,6 +532,11 @@ func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
 	return nil
 }
 
+func getPositionWithoutMetadata(node tree.Node) Location {
+	// FIXME:
+	return nil
+}
+
 // getDocumentationString extracts the documentation string from metadata
 func getDocumentationString(metadata *tree.MetadataNode) tree.Node {
 	if metadata == nil || metadata.IsMissing() {
@@ -564,29 +555,112 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 		return nil
 	}
 
-	// The documentation string node should be a MarkdownDocumentationNode
-	markdownDocNode, ok := docStringNode.(*tree.MarkdownDocumentationNode)
+	markdownDocumentationNode, ok := docStringNode.(*tree.MarkdownDocumentationNode)
 	if !ok {
 		return nil
 	}
 
-	// Transform the markdown documentation node
-	transformed := n.TransformMarkdownDocumentation(markdownDocNode)
-	if transformed == nil {
-		return nil
+	doc := &BLangMarkdownDocumentation{}
+	documentationLines := []BLangMarkdownDocumentationLine{}
+	parameters := []BLangMarkdownParameterDocumentation{}
+	references := []BLangMarkdownReferenceDocumentation{}
+
+	docLineList := markdownDocumentationNode.DocumentationLines()
+
+	var bLangParaDoc *BLangMarkdownParameterDocumentation
+	var bLangReturnParaDoc *BLangMarkdownReturnParameterDocumentation
+	var bLangDeprecationDoc *BLangMarkDownDeprecationDocumentation
+	var bLangDeprecatedParaDoc *BLangMarkDownDeprecatedParametersDocumentation
+
+	for i := 0; i < docLineList.Size(); i++ {
+		singleDocLine := docLineList.Get(i)
+		switch singleDocLine.Kind() {
+		case common.MARKDOWN_DOCUMENTATION_LINE, common.MARKDOWN_REFERENCE_DOCUMENTATION_LINE:
+			docLineNode := singleDocLine.(*tree.MarkdownDocumentationLineNode)
+			docElements := docLineNode.DocumentElements()
+			docText := n.addReferencesAndReturnDocumentationText(&references, docElements)
+
+			if bLangDeprecationDoc != nil {
+				bLangDeprecationDoc.DeprecationDocumentationLines = append(bLangDeprecationDoc.DeprecationDocumentationLines, docText)
+			} else if bLangReturnParaDoc != nil {
+				bLangReturnParaDoc.ReturnParameterDocumentationLines = append(bLangReturnParaDoc.ReturnParameterDocumentationLines, docText)
+			} else if bLangParaDoc != nil {
+				bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, docText)
+			} else {
+				bLangDocLine := BLangMarkdownDocumentationLine{}
+				bLangDocLine.Text = docText
+				bLangDocLine.pos = getPosition(docLineNode)
+				documentationLines = append(documentationLines, bLangDocLine)
+			}
+		case common.MARKDOWN_PARAMETER_DOCUMENTATION_LINE:
+			bLangParaDoc = &BLangMarkdownParameterDocumentation{}
+			parameterDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
+
+			paraName := &BLangIdentifier{}
+			parameterName := parameterDocLineNode.ParameterName()
+			parameterNameValue := ""
+			if parameterName != nil && !parameterName.IsMissing() {
+				parameterNameValue = identifierutil.UnescapeUnicodeCodepoints(parameterName.Text())
+			}
+			paraName.OriginalValue = parameterNameValue
+			if n.stringStartsWithSingleQuote(parameterNameValue) {
+				parameterNameValue = parameterNameValue[1:]
+			}
+			paraName.Value = parameterNameValue
+			bLangParaDoc.ParameterName = paraName
+			paraDocElements := parameterDocLineNode.DocumentElements()
+			paraDocText := n.addReferencesAndReturnDocumentationText(&references, paraDocElements)
+
+			bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, paraDocText)
+			bLangParaDoc.pos = getPosition(parameterName)
+
+			if bLangDeprecatedParaDoc != nil {
+				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+			} else if bLangDeprecationDoc != nil {
+				bLangDeprecatedParaDoc = &BLangMarkDownDeprecatedParametersDocumentation{}
+				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+				bLangDeprecationDoc = nil
+			} else {
+				parameters = append(parameters, *bLangParaDoc)
+			}
+		case common.MARKDOWN_RETURN_PARAMETER_DOCUMENTATION_LINE:
+			bLangReturnParaDoc = &BLangMarkdownReturnParameterDocumentation{}
+			returnParaDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
+
+			returnParaDocElements := returnParaDocLineNode.DocumentElements()
+			returnParaDocText := n.addReferencesAndReturnDocumentationText(&references, returnParaDocElements)
+
+			bLangReturnParaDoc.ReturnParameterDocumentationLines = append(bLangReturnParaDoc.ReturnParameterDocumentationLines, returnParaDocText)
+			bLangReturnParaDoc.pos = getPosition(returnParaDocLineNode)
+			doc.ReturnParameter = bLangReturnParaDoc
+		case common.MARKDOWN_DEPRECATION_DOCUMENTATION_LINE:
+			bLangDeprecationDoc = &BLangMarkDownDeprecationDocumentation{}
+			deprecationDocLineNode := singleDocLine.(*tree.MarkdownDocumentationLineNode)
+
+			docElements := deprecationDocLineNode.DocumentElements()
+			var lineText string
+			if docElements.Size() > 0 {
+				firstElement := docElements.Get(0)
+				if token, ok := firstElement.(tree.Token); ok {
+					lineText = token.Text()
+				}
+			}
+			bLangDeprecationDoc.AddDeprecationLine("# " + lineText)
+			bLangDeprecationDoc.pos = getPosition(deprecationDocLineNode)
+		case common.MARKDOWN_CODE_BLOCK:
+			codeBlockNode := singleDocLine.(*tree.MarkdownCodeBlockNode)
+			n.transformCodeBlock(&documentationLines, codeBlockNode)
+		default:
+		}
 	}
 
-	markdownDoc, ok := transformed.(*BLangMarkdownDocumentation)
-	if !ok {
-		return nil
-	}
-
-	return markdownDoc
-}
-
-func getPositionWithoutMetadata(node tree.Node) Location {
-	// FIXME:
-	return nil
+	doc.DocumentationLines = documentationLines
+	doc.Parameters = parameters
+	doc.References = references
+	doc.DeprecationDocumentation = bLangDeprecationDoc
+	doc.DeprecatedParametersDocumentation = bLangDeprecatedParaDoc
+	doc.pos = getPosition(markdownDocumentationNode)
+	return doc
 }
 
 func createIdentifier(pos Location, value, originalValue *string) BLangIdentifier {
@@ -1831,12 +1905,7 @@ func (n *NodeBuilder) TransformComputedNameField(computedNameFieldNode *tree.Com
 }
 
 func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree.ConstantDeclarationNode) BLangNode {
-	// Check for metadata and panic if present (per user requirement)
-	metadata := constantDeclarationNode.Metadata()
-	if metadata != nil && !metadata.IsMissing() {
-		panic("TransformConstantDeclaration: metadata not yet supported")
-	}
-
+	// Line 940: BLangConstant constantNode = (BLangConstant) TreeBuilder.createConstantNode();
 	constantNode := createConstantNode()
 
 	pos := getPositionWithoutMetadata(constantDeclarationNode)
@@ -1858,7 +1927,14 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 		constantNode.SetTypeData(typeData)
 	}
 
-	// Skip annotations and documentation (metadata check will panic if present)
+	// Lines 950-952: Skip annotations
+
+	metadata := constantDeclarationNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		// TODO: Handle annotations
+		docString := getDocumentationString(metadata)
+		constantNode.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
 
 	constantNode.FlagSet.Add(model.Flag_CONSTANT)
 
@@ -2660,239 +2736,6 @@ func (n *NodeBuilder) TransformNamedArgMatchPattern(namedArgMatchPatternNode *tr
 	panic("TransformNamedArgMatchPattern unimplemented")
 }
 
-func (n *NodeBuilder) TransformMarkdownDocumentation(markdownDocumentationNode *tree.MarkdownDocumentationNode) BLangNode {
-	if markdownDocumentationNode == nil {
-		return nil
-	}
-
-	doc := &BLangMarkdownDocumentation{}
-	documentationLines := []BLangMarkdownDocumentationLine{}
-	parameters := []BLangMarkdownParameterDocumentation{}
-	references := []BLangMarkdownReferenceDocumentation{}
-
-	docLineList := markdownDocumentationNode.DocumentationLines()
-
-	var bLangParaDoc *BLangMarkdownParameterDocumentation
-	var bLangReturnParaDoc *BLangMarkdownReturnParameterDocumentation
-	var bLangDeprecationDoc *BLangMarkDownDeprecationDocumentation
-	var bLangDeprecatedParaDoc *BLangMarkDownDeprecatedParametersDocumentation
-
-	for i := 0; i < docLineList.Size(); i++ {
-		singleDocLine := docLineList.Get(i)
-		switch singleDocLine.Kind() {
-		case common.MARKDOWN_DOCUMENTATION_LINE, common.MARKDOWN_REFERENCE_DOCUMENTATION_LINE:
-			docLineNode := singleDocLine.(*tree.MarkdownDocumentationLineNode)
-			docElements := docLineNode.DocumentElements()
-			docText := n.addReferencesAndReturnDocumentationText(&references, docElements)
-
-			if bLangDeprecationDoc != nil {
-				// reaching here means, a deprecation doc line has already passed.
-				// therefore, add this line to the deprecation documentation.
-				bLangDeprecationDoc.DeprecationDocumentationLines = append(bLangDeprecationDoc.DeprecationDocumentationLines, docText)
-			} else if bLangReturnParaDoc != nil {
-				// reaching here means, a return parameter doc line has already passed.
-				// therefore, add this line to the return parameter documentation.
-				bLangReturnParaDoc.ReturnParameterDocumentationLines = append(bLangReturnParaDoc.ReturnParameterDocumentationLines, docText)
-			} else if bLangParaDoc != nil {
-				// reaching here means, a parameter doc line has already passed.
-				// therefore, add this line to the parameter documentation.
-				bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, docText)
-			} else {
-				bLangDocLine := BLangMarkdownDocumentationLine{}
-				bLangDocLine.Text = docText
-				bLangDocLine.pos = getPosition(docLineNode)
-				documentationLines = append(documentationLines, bLangDocLine)
-			}
-		case common.MARKDOWN_PARAMETER_DOCUMENTATION_LINE:
-			bLangParaDoc = &BLangMarkdownParameterDocumentation{}
-			parameterDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
-
-			paraName := &BLangIdentifier{}
-			parameterName := parameterDocLineNode.ParameterName()
-			parameterNameValue := ""
-			if parameterName != nil && !parameterName.IsMissing() {
-				parameterNameValue = parameterName.Text()
-				// TODO: unescapeUnicodeCodepoints equivalent
-			}
-			paraName.OriginalValue = parameterNameValue
-			if n.stringStartsWithSingleQuote(parameterNameValue) {
-				parameterNameValue = parameterNameValue[1:]
-			}
-			paraName.Value = parameterNameValue
-			bLangParaDoc.ParameterName = paraName
-			paraDocElements := parameterDocLineNode.DocumentElements()
-			paraDocText := n.addReferencesAndReturnDocumentationText(&references, paraDocElements)
-
-			bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, paraDocText)
-			bLangParaDoc.pos = getPosition(parameterName)
-
-			if bLangDeprecatedParaDoc != nil {
-				// reaching here means, a deprecated parameter doc line has already passed.
-				// therefore, add this parameter doc line to the same parameter documentation.
-				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
-			} else if bLangDeprecationDoc != nil {
-				// reaching here means, a deprecation doc line has already passed.
-				// therefore, all parameter doc lines after that should be treated as
-				// deprecated parameter documentation.
-				bLangDeprecatedParaDoc = &BLangMarkDownDeprecatedParametersDocumentation{}
-				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
-				// passed deprecation doc line is not a normal deprecation doc line.
-				// it is a deprecated parameter doc line. therefore, reset bLangDeprecationDoc.
-				bLangDeprecationDoc = nil
-			} else {
-				parameters = append(parameters, *bLangParaDoc)
-			}
-		case common.MARKDOWN_RETURN_PARAMETER_DOCUMENTATION_LINE:
-			bLangReturnParaDoc = &BLangMarkdownReturnParameterDocumentation{}
-			returnParaDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
-
-			returnParaDocElements := returnParaDocLineNode.DocumentElements()
-			returnParaDocText := n.addReferencesAndReturnDocumentationText(&references, returnParaDocElements)
-
-			bLangReturnParaDoc.ReturnParameterDocumentationLines = append(bLangReturnParaDoc.ReturnParameterDocumentationLines, returnParaDocText)
-			bLangReturnParaDoc.pos = getPosition(returnParaDocLineNode)
-			doc.ReturnParameter = bLangReturnParaDoc
-		case common.MARKDOWN_DEPRECATION_DOCUMENTATION_LINE:
-			bLangDeprecationDoc = &BLangMarkDownDeprecationDocumentation{}
-			deprecationDocLineNode := singleDocLine.(*tree.MarkdownDocumentationLineNode)
-
-			docElements := deprecationDocLineNode.DocumentElements()
-			var lineText string
-			if docElements.Size() > 0 {
-				firstElement := docElements.Get(0)
-				if token, ok := firstElement.(tree.Token); ok {
-					lineText = token.Text()
-				}
-			}
-			bLangDeprecationDoc.AddDeprecationLine("# " + lineText)
-			bLangDeprecationDoc.pos = getPosition(deprecationDocLineNode)
-		case common.MARKDOWN_CODE_BLOCK:
-			codeBlockNode := singleDocLine.(*tree.MarkdownCodeBlockNode)
-			n.transformCodeBlock(&documentationLines, codeBlockNode)
-		default:
-			// ignore other cases
-		}
-	}
-
-	doc.DocumentationLines = documentationLines
-	doc.Parameters = parameters
-	doc.References = references
-	doc.DeprecationDocumentation = bLangDeprecationDoc
-	doc.DeprecatedParametersDocumentation = bLangDeprecatedParaDoc
-	doc.pos = getPosition(markdownDocumentationNode)
-	return doc
-}
-
-func (n *NodeBuilder) TransformMarkdownDocumentationLine(markdownDocumentationLineNode *tree.MarkdownDocumentationLineNode) BLangNode {
-	// This is typically called as part of TransformMarkdownDocumentation
-	// Individual lines are processed within the main documentation node
-	bLangDocLine := BLangMarkdownDocumentationLine{}
-	docElements := markdownDocumentationLineNode.DocumentElements()
-	references := []BLangMarkdownReferenceDocumentation{}
-	docText := n.addReferencesAndReturnDocumentationText(&references, docElements)
-	bLangDocLine.Text = docText
-	bLangDocLine.pos = getPosition(markdownDocumentationLineNode)
-	return &bLangDocLine
-}
-
-func (n *NodeBuilder) TransformMarkdownParameterDocumentationLine(markdownParameterDocumentationLineNode *tree.MarkdownParameterDocumentationLineNode) BLangNode {
-	// This is typically called as part of TransformMarkdownDocumentation
-	// Individual parameter lines are processed within the main documentation node
-	bLangParaDoc := &BLangMarkdownParameterDocumentation{}
-	paraName := &BLangIdentifier{}
-	parameterName := markdownParameterDocumentationLineNode.ParameterName()
-	parameterNameValue := ""
-	if parameterName != nil && !parameterName.IsMissing() {
-		parameterNameValue = parameterName.Text()
-		// TODO: unescapeUnicodeCodepoints equivalent
-	}
-	paraName.OriginalValue = parameterNameValue
-	if n.stringStartsWithSingleQuote(parameterNameValue) {
-		parameterNameValue = parameterNameValue[1:]
-	}
-	paraName.Value = parameterNameValue
-	bLangParaDoc.ParameterName = paraName
-	paraDocElements := markdownParameterDocumentationLineNode.DocumentElements()
-	references := []BLangMarkdownReferenceDocumentation{}
-	paraDocText := n.addReferencesAndReturnDocumentationText(&references, paraDocElements)
-	bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, paraDocText)
-	bLangParaDoc.pos = getPosition(parameterName)
-	return bLangParaDoc
-}
-
-func (n *NodeBuilder) TransformBallerinaNameReference(ballerinaNameReferenceNode *tree.BallerinaNameReferenceNode) BLangNode {
-	// This is typically processed as part of addReferencesAndReturnDocumentationText
-	// Return a reference documentation node
-	bLangRefDoc := &BLangMarkdownReferenceDocumentation{}
-	bLangRefDoc.pos = getPosition(ballerinaNameReferenceNode)
-
-	backtickContent := ballerinaNameReferenceNode.NameReference()
-
-	contentString := ""
-	if backtickContent != nil && !backtickContent.IsMissing() {
-		// Use InternalNode() to get STNode and convert to source code
-		contentString = tree.ToSourceCode(backtickContent.InternalNode())
-	}
-	bLangRefDoc.ReferenceName = contentString
-	bLangRefDoc.Type = model.DocumentationReferenceType("BACKTICK_CONTENT")
-
-	referenceType := ballerinaNameReferenceNode.ReferenceType()
-	if referenceType != nil && !referenceType.IsMissing() {
-		refTypeText := referenceType.Text()
-		bLangRefDoc.Type = n.stringToRefType(refTypeText)
-	}
-
-	n.transformDocumentationBacktickContent(backtickContent, bLangRefDoc)
-
-	return bLangRefDoc
-}
-
-func (n *NodeBuilder) TransformInlineCodeReference(inlineCodeReferenceNode *tree.InlineCodeReferenceNode) BLangNode {
-	// This is typically processed as part of addReferencesAndReturnDocumentationText
-	// Return the text representation
-	startBacktick := inlineCodeReferenceNode.StartBacktick()
-	codeReference := inlineCodeReferenceNode.CodeReference()
-	endBacktick := inlineCodeReferenceNode.EndBacktick()
-
-	var docText strings.Builder
-	if startBacktick != nil && !startBacktick.IsMissing() {
-		docText.WriteString(startBacktick.Text())
-	}
-	if codeReference != nil && !codeReference.IsMissing() {
-		docText.WriteString(codeReference.Text())
-	}
-	if endBacktick != nil && !endBacktick.IsMissing() {
-		docText.WriteString(endBacktick.Text())
-	}
-
-	bLangDocLine := BLangMarkdownDocumentationLine{}
-	bLangDocLine.Text = docText.String()
-	bLangDocLine.pos = getPosition(inlineCodeReferenceNode)
-	return &bLangDocLine
-}
-
-func (n *NodeBuilder) TransformMarkdownCodeBlock(markdownCodeBlockNode *tree.MarkdownCodeBlockNode) BLangNode {
-	// This is typically processed as part of TransformMarkdownDocumentation
-	documentationLines := []BLangMarkdownDocumentationLine{}
-	n.transformCodeBlock(&documentationLines, markdownCodeBlockNode)
-	if len(documentationLines) > 0 {
-		return &documentationLines[0]
-	}
-	return nil
-}
-
-func (n *NodeBuilder) TransformMarkdownCodeLine(markdownCodeLineNode *tree.MarkdownCodeLineNode) BLangNode {
-	// This is typically processed as part of transformCodeBlock
-	codeDescription := markdownCodeLineNode.CodeDescription()
-	if codeDescription != nil && !codeDescription.IsMissing() {
-		bLangDocLine := BLangMarkdownDocumentationLine{}
-		bLangDocLine.Text = codeDescription.Text()
-		bLangDocLine.pos = getPosition(markdownCodeLineNode)
-		return &bLangDocLine
-	}
-	return nil
-}
-
 // Helper functions for markdown documentation transformation
 
 func (n *NodeBuilder) addReferencesAndReturnDocumentationText(references *[]BLangMarkdownReferenceDocumentation, docElements tree.NodeList[tree.Node]) string {
@@ -3035,13 +2878,13 @@ func (n *NodeBuilder) transformDocumentationBacktickContent(backtickContent tree
 
 	// Process identifier and qualifier - unescape and remove single quote prefix if present
 	if bLangRefDoc.Identifier != "" {
-		// TODO: unescapeUnicodeCodepoints equivalent
+		bLangRefDoc.Identifier = identifierutil.UnescapeUnicodeCodepoints(bLangRefDoc.Identifier)
 		if n.stringStartsWithSingleQuote(bLangRefDoc.Identifier) {
 			bLangRefDoc.Identifier = bLangRefDoc.Identifier[1:]
 		}
 	}
 	if bLangRefDoc.Qualifier != "" {
-		// TODO: unescapeUnicodeCodepoints equivalent
+		bLangRefDoc.Qualifier = identifierutil.UnescapeUnicodeCodepoints(bLangRefDoc.Qualifier)
 		if n.stringStartsWithSingleQuote(bLangRefDoc.Qualifier) {
 			bLangRefDoc.Qualifier = bLangRefDoc.Qualifier[1:]
 		}

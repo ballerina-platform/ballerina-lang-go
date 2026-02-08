@@ -205,13 +205,6 @@ type NodeTransformer[T any] interface {
 	TransformFieldMatchPattern(fieldMatchPatternNode *FieldMatchPatternNode) T
 	TransformErrorMatchPattern(errorMatchPatternNode *ErrorMatchPatternNode) T
 	TransformNamedArgMatchPattern(namedArgMatchPatternNode *NamedArgMatchPatternNode) T
-	TransformMarkdownDocumentation(markdownDocumentationNode *MarkdownDocumentationNode) T
-	TransformMarkdownDocumentationLine(markdownDocumentationLineNode *MarkdownDocumentationLineNode) T
-	TransformMarkdownParameterDocumentationLine(markdownParameterDocumentationLineNode *MarkdownParameterDocumentationLineNode) T
-	TransformBallerinaNameReference(ballerinaNameReferenceNode *BallerinaNameReferenceNode) T
-	TransformInlineCodeReference(inlineCodeReferenceNode *InlineCodeReferenceNode) T
-	TransformMarkdownCodeBlock(markdownCodeBlockNode *MarkdownCodeBlockNode) T
-	TransformMarkdownCodeLine(markdownCodeLineNode *MarkdownCodeLineNode) T
 	TransformOrderByClause(orderByClauseNode *OrderByClauseNode) T
 	TransformOrderKey(orderKeyNode *OrderKeyNode) T
 	TransformGroupByClause(groupByClauseNode *GroupByClauseNode) T
