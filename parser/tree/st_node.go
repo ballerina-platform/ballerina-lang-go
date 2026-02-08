@@ -142,25 +142,6 @@ type (
 	}
 )
 
-// Type assertions to ensure interface compliance
-var (
-	_ STNode = &STInvalidTokenMinutiaeNode{}
-	_ STNode = &STMinutiae{}
-	_ STNode = &STInvalidNodeMinutiae{}
-	_ STNode = &STNodeList{}
-)
-
-var (
-	_ STToken = &STMissingToken{}
-	_ STNode  = &STMissingToken{}
-	_ STToken = &STLiteralValueToken{}
-	_ STNode  = &STLiteralValueToken{}
-	_ STToken = &STInvalidToken{}
-	_ STNode  = &STInvalidToken{}
-	_ STToken = &STIdentifierToken{}
-	_ STNode  = &STIdentifierToken{}
-)
-
 func (n *STLiteralValueToken) BucketCount() int {
 	return 1
 }
