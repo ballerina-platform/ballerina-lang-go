@@ -723,27 +723,49 @@ func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentat
 			p.PrintInner(&line)
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.printString(")")
 	}
 
 	// Print parameters
 	if len(node.Parameters) > 0 {
-		p.printString("(params")
+		// Print on a new line with proper indentation
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(params")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for i := range node.Parameters {
 			p.PrintInner(&node.Parameters[i])
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	// Print return parameter
 	if node.ReturnParameter != nil {
-		p.printString("(return-param")
+		// Print on a new line with proper indentation
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(return-param")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		p.PrintInner(node.ReturnParameter)
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	// Print deprecation documentation
@@ -816,10 +838,21 @@ func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownP
 		p.printString("(doc-lines")
 		p.indentLevel++
 		for _, line := range node.ParameterDocumentationLines {
-			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			// Print each line on its own line with proper indentation
+			p.buffer.WriteString("\n")
+			for i := 0; i < p.indentLevel; i++ {
+				p.buffer.WriteString("  ")
+			}
+			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	p.indentLevel--
@@ -836,10 +869,21 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 		p.printString("(doc-lines")
 		p.indentLevel++
 		for _, line := range node.ReturnParameterDocumentationLines {
-			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			// Print each line on its own line with proper indentation
+			p.buffer.WriteString("\n")
+			for i := 0; i < p.indentLevel; i++ {
+				p.buffer.WriteString("  ")
+			}
+			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	// Print return type if present
