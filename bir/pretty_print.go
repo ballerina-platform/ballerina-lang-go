@@ -136,9 +136,15 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintFieldAccess(instruction.(*FieldAccess))
 	case *NewArray:
 		return p.PrintNewArray(instruction.(*NewArray))
+	case *TypeCast:
+		return p.PrintTypeCast(instruction.(*TypeCast))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
+}
+
+func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
+	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), cast.Type.String(), p.PrintOperand(*cast.RhsOp))
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {

@@ -18,6 +18,7 @@ package bir
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -67,6 +68,14 @@ type (
 		SizeOp          *BIROperand
 		Type            model.ValueType
 	}
+
+	TypeCast struct {
+		BIRInstructionBase
+		RhsOp *BIROperand
+		// I don't think you need to the type desc part given only way you need to create a new value is with
+		// numeric conversions, which can be done with pure types
+		Type semtypes.SemType
+	}
 )
 
 var (
@@ -76,6 +85,7 @@ var (
 	_ BIRAssignInstruction = &ConstantLoad{}
 	_ BIRInstruction       = &FieldAccess{}
 	_ BIRInstruction       = &NewArray{}
+	_ BIRInstruction       = &TypeCast{}
 )
 
 func (m *Move) GetLhsOperand() *BIROperand {
@@ -164,4 +174,12 @@ func (n *NewArray) GetLhsOperand() *BIROperand {
 
 func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
+}
+
+func (t *TypeCast) GetLhsOperand() *BIROperand {
+	return t.LhsOp
+}
+
+func (t *TypeCast) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_TYPE_CAST
 }

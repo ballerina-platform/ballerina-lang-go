@@ -106,6 +106,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFiniteTypeNode(t)
 	case *BLangListConstructorExpr:
 		p.printListConstructorExpr(t)
+	case *BLangTypeConversionExpr:
+		p.printTypeConversionExpr(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -473,6 +475,18 @@ func (p *PrettyPrinter) printGroupExpr(node *BLangGroupExpr) {
 	p.printString("group-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expression.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printTypeConversionExpr(node *BLangTypeConversionExpr) {
+	p.startNode()
+	p.printString("type-conversion-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expression.(BLangNode))
+	if node.TypeDescriptor != nil {
+		p.PrintInner(node.TypeDescriptor.(BLangNode))
+	}
 	p.indentLevel--
 	p.endNode()
 }

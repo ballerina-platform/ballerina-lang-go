@@ -419,10 +419,20 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		ty := &semtypes.ANY
 		setExpectedType(e, ty)
 		return ty
+	case *ast.BLangTypeConversionExpr:
+		return t.resolveTypeConversionExpr(e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil
 	}
+}
+
+func (t *TypeResolver) resolveTypeConversionExpr(e *ast.BLangTypeConversionExpr) semtypes.SemType {
+	expectedType := t.resolveBType(e.TypeDescriptor.(ast.BType), 0)
+	_ = t.resolveExpression(e.Expression)
+
+	setExpectedType(e, expectedType)
+	return expectedType
 }
 
 // Helper functions for expression type checking
@@ -767,6 +777,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.NIL
 		case model.TypeKind_ANY:
 			return &semtypes.ANY
+		case model.TypeKind_DECIMAL:
+			return &semtypes.DECIMAL
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil

@@ -90,6 +90,7 @@ type (
 
 	BIRVariableDcl struct {
 		BIRDocumentableNodeBase
+		// FIXME: this should be a semtype actual value creation op like new array will take both typedesc and type
 		Type               model.ValueType
 		Name               model.Name
 		OriginalName       model.Name
