@@ -653,50 +653,38 @@ func isDeclaredWithVar(typeNode tree.Node) bool {
 }
 
 func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, initializer tree.Node, visibilityQualifier tree.Token, annotations tree.NodeList[*tree.AnnotationNode]) *BLangSimpleVariable {
-	// Line 6003: BLangSimpleVariable bLSimpleVar = (BLangSimpleVariable) TreeBuilder.createSimpleVariableNode();
 	bLSimpleVar := createSimpleVariableNode()
 
-	// Line 6004-6005: bLSimpleVar.setName(this.createIdentifier(name)); bLSimpleVar.name.pos = getPosition(name);
 	identifier := createIdentifierFromToken(getPosition(name), name)
 	identifier.pos = getPosition(name)
 	bLSimpleVar.SetName(&identifier)
 
-	// Line 6007-6011: Handle var declaration
 	if isDeclaredWithVar(typeName) {
-		// Line 6008: bLSimpleVar.isDeclaredWithVar = true;
 		bLSimpleVar.IsDeclaredWithVar = true
 	} else {
-		// Line 6010: bLSimpleVar.setTypeNode(createTypeNode(typeName));
 		typeData := model.TypeData{
 			TypeDescriptor: n.createTypeNode(typeName),
 		}
 		bLSimpleVar.SetTypeData(typeData)
 	}
 
-	// Line 6013-6019: Handle visibility qualifier
 	if visibilityQualifier != nil {
 		if visibilityQualifier.Kind() == common.PRIVATE_KEYWORD {
-			// Line 6015: bLSimpleVar.flagSet.add(Flag.PRIVATE);
 			bLSimpleVar.FlagSet.Add(model.Flag_PRIVATE)
 		} else if visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-			// Line 6017: bLSimpleVar.flagSet.add(Flag.PUBLIC);
 			bLSimpleVar.FlagSet.Add(model.Flag_PUBLIC)
 		}
 	}
 
-	// Line 6021-6023: Handle initializer
 	if initializer != nil {
-		// Line 6022: bLSimpleVar.setInitialExpression(createExpression(initializer));
 		bLSimpleVar.SetInitialExpression(n.createExpression(initializer))
 	}
 
-	// Line 6025-6027: Handle annotations
 	if annotations.Size() > 0 {
 		// Panic instead of processing annotations (not yet implemented)
 		panic("annotations not yet supported")
 	}
 
-	// Line 6029: return bLSimpleVar;
 	return bLSimpleVar
 }
 
@@ -1402,41 +1390,32 @@ func (n *NodeBuilder) TransformListenerDeclaration(listenerDeclarationNode *tree
 }
 
 func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefinitionNode) BLangNode {
-	// Assert that there is no metadata (per user requirement)
 	metadata := typeDefinitionNode.Metadata()
 	if metadata != nil && !metadata.IsMissing() {
 		panic("TransformTypeDefinition: metadata not yet supported")
 	}
 
-	// Line 981: BLangTypeDefinition typeDef = (BLangTypeDefinition) TreeBuilder.createTypeDefinition();
 	typeDef := NewBLangTypeDefinition()
 
-	// Line 982-984: Create identifier from type name and set it
 	identifierNode := createIdentifierFromToken(getPosition(typeDefinitionNode.TypeName()), typeDefinitionNode.TypeName())
 	typeDef.Name = &identifierNode
 
-	// Line 988: this.anonTypeNameSuffixes.push(typeDef.name.value);
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, typeDef.Name.GetValue())
 
-	// Line 989: typeDef.typeNode = createTypeNode(typeDefNode.typeDescriptor());
 	typeData := model.TypeData{
 		TypeDescriptor: n.createTypeNode(typeDefinitionNode.TypeDescriptor()),
 	}
 	typeDef.SetTypeData(typeData)
 
-	// Line 990: this.anonTypeNameSuffixes.pop();
 	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 
-	// Line 992-996: Check for visibility qualifier and add Flag.PUBLIC if PUBLIC_KEYWORD
 	visibilityQualifier := typeDefinitionNode.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
 		typeDef.FlagSet.Add(model.Flag_PUBLIC)
 	}
 
-	// Line 997: typeDef.pos = getPositionWithoutMetadata(typeDefNode);
 	typeDef.pos = getPositionWithoutMetadata(typeDefinitionNode)
 
-	// Line 998: typeDef.annAttachments = applyAll(getAnnotations(typeDefNode.metadata()));
 	// Skipping annotations since we've asserted no metadata
 
 	return typeDef
@@ -1474,7 +1453,6 @@ func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStm
 }
 
 func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree.VariableDeclarationNode) BLangNode {
-	// Line 3009-3011: Create variable definition node
 	varNode := n.createBLangVarDef(
 		getPosition(variableDeclarationNode),
 		variableDeclarationNode.TypedBindingPattern(),
@@ -1486,35 +1464,27 @@ func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree
 		panic("annotations not yet supported")
 	}
 
-	// Line 3013: Return the variable definition node (cast to BLangNode)
 	return varNode.(BLangNode)
 }
 
 func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) model.VariableDefinitionNode {
-	// Line 3020: Get binding pattern from typedBindingPattern
 	bindingPattern := typedBindingPattern.BindingPattern()
 
-	// Line 3021: Get BLangVariable from binding pattern
 	variable := n.getBLangVariableNode(bindingPattern, location)
 
-	// Line 3022-3027: Build qualifiers list from finalKeyword if present
 	var qualifiers []tree.Token
 	if finalKeyword != nil {
 		qualifiers = append(qualifiers, finalKeyword)
 	}
 	// qualifierList := tree.CreateNodeListWithFacade(qualifiers)
 
-	// Line 3029: Switch on binding pattern kind
 	switch bindingPattern.Kind() {
 	case common.CAPTURE_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
-		// Line 3032-3033: Create BLangSimpleVariableDef
 		bLVarDef := &BLangSimpleVariableDef{}
 
-		// Line 3034: Set position
 		bLVarDef.pos = location
 		variable.(BLangNode).SetPosition(location)
 
-		// Line 3035: Handle initializer
 		var expr BLangExpression
 		if initializer != nil {
 			expr = n.createExpression(initializer)
@@ -1523,15 +1493,12 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 		}
 		variable.SetInitialExpression(expr)
 
-		// Line 3037: Set variable
 		bLVarDef.SetVariable(variable)
 
-		// Line 3038-3040: Handle final flag
 		if finalKeyword != nil {
 			variable.GetFlags().Add(model.Flag_FINAL)
 		}
 
-		// Line 3042-3046: Handle type descriptor
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
@@ -1542,7 +1509,6 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 			variable.SetTypeData(typeData)
 		}
 
-		// Line 3048: Return variable definition
 		return bLVarDef
 
 	case common.MAPPING_BINDING_PATTERN:
@@ -1555,7 +1521,6 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 		panic("ERROR_BINDING_PATTERN unimplemented")
 
 	default:
-		// Line 3059-3060: Panic with invalid binding pattern message
 		panic("Syntax kind is not a valid binding pattern")
 	}
 }
@@ -1848,152 +1813,105 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 		panic("TransformConstantDeclaration: metadata not yet supported")
 	}
 
-	// Line 940: BLangConstant constantNode = (BLangConstant) TreeBuilder.createConstantNode();
 	constantNode := createConstantNode()
 
-	// Line 941: Location pos = getPositionWithoutMetadata(constantDeclarationNode);
 	pos := getPositionWithoutMetadata(constantDeclarationNode)
 
-	// Line 942: Location identifierPos = getPosition(constantDeclarationNode.variableName());
 	identifierPos := getPosition(constantDeclarationNode.VariableName())
 
-	// Line 943: constantNode.name = createIdentifier(identifierPos, constantDeclarationNode.variableName());
 	nameIdentifier := createIdentifierFromToken(identifierPos, constantDeclarationNode.VariableName())
 	constantNode.Name = &nameIdentifier
 
-	// Line 944: constantNode.expr = createExpression(constantDeclarationNode.initializer());
 	constantNode.Expr = n.createExpression(constantDeclarationNode.Initializer())
 
-	// Line 945: constantNode.pos = pos;
 	constantNode.pos = pos
 
-	// Line 946-948: if (constantDeclarationNode.typeDescriptor().isPresent()) { ... }
 	typeDescriptor := constantDeclarationNode.TypeDescriptor()
 	if typeDescriptor != nil {
-		// Line 947: constantNode.typeNode = createTypeNode(constantDeclarationNode.typeDescriptor().orElse(null));
 		typeData := model.TypeData{
 			TypeDescriptor: n.createTypeNode(typeDescriptor),
 		}
 		constantNode.SetTypeData(typeData)
 	}
 
-	// Lines 950-952: Skip annotations and documentation (metadata check will panic if present)
+	// Skip annotations and documentation (metadata check will panic if present)
 
-	// Line 954: constantNode.flagSet.add(Flag.CONSTANT);
 	constantNode.FlagSet.Add(model.Flag_CONSTANT)
 
-	// Line 955-958: Check visibility qualifier and add Flag.PUBLIC if PUBLIC_KEYWORD
 	visibilityQualifier := constantDeclarationNode.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-		// Line 957: constantNode.flagSet.add(Flag.PUBLIC);
 		constantNode.FlagSet.Add(model.Flag_PUBLIC)
 	}
 
-	// Line 960: NodeKind nodeKind = constantNode.expr.getKind();
 	nodeKind := constantNode.Expr.GetKind()
 
-	// Line 964-969: Check whether the value is a literal or a unary expression
 	typeData := constantNode.GetTypeData()
 	if (nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL || nodeKind == model.NodeKind_UNARY_EXPR) &&
 		(typeData.TypeDescriptor == nil || typeData.TypeDescriptor.GetKind() != model.NodeKind_ARRAY_TYPE) {
-		// Line 968: createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos);
 		n.createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos)
 	}
 
-	// Line 970: String constantName = constantNode.name.value;
 	constantName := constantNode.Name.GetValue()
 
-	// Line 971-975: Check for redeclared constants
 	if n.constantSet[constantName] {
 		panic("unimplemented")
-		// Line 972: dlog.error(constantNode.name.pos, DiagnosticErrorCode.REDECLARED_SYMBOL, constantName);
 		// TODO: Add diagnostic logging when dlog is migrated
 	} else {
-		// Line 974: constantSet.add(constantName);
 		n.constantSet[constantName] = true
 	}
 
-	// Line 976: return constantNode;
 	return constantNode
 }
 
 // createAnonymousTypeDefForConstantDeclaration creates an anonymous type definition for constant declarations
 // migrated from BLangNodeBuilder.java:891:5
 func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode *BLangConstant, pos Location, identifierPos Location) {
-	// Line 893-894: Create a new finite type node.
 	finiteTypeNode := &BLangFiniteTypeNode{}
 
-	// Line 896: NodeKind nodeKind = constantNode.expr.getKind();
 	nodeKind := constantNode.Expr.GetKind()
 
-	// Line 897-903: Create a new literal.
 	var literal model.LiteralNode
 	if nodeKind == model.NodeKind_LITERAL {
-		// Line 900: literal = (BLangLiteral) TreeBuilder.createLiteralExpression();
 		literal = &BLangLiteral{}
 	} else {
-		// Line 902: literal = (BLangLiteral) TreeBuilder.createNumericLiteralExpression();
 		literal = &BLangNumericLiteral{}
 	}
 
-	// Line 904-909: Handle literal/numeric literal case
 	if nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL {
-		// Line 905: literal.setValue(((BLangLiteral) constantNode.expr).value);
 		constantExprLiteral := constantNode.Expr.(*BLangLiteral)
 		literal.SetValue(constantExprLiteral.GetValue())
-		// Line 906: literal.setOriginalValue(((BLangLiteral) constantNode.expr).originalValue);
 		literal.SetOriginalValue(constantExprLiteral.GetOriginalValue())
-		// Line 907: literal.setBType(constantNode.expr.getBType());
 		bLiteralNode := literal.(BLangNode)
 		constantExpr := constantNode.Expr
 		bLiteralNode.SetTypeData(constantExpr.GetTypeData())
-		// Line 908: literal.isConstant = true;
 		literal.SetIsConstant(true)
-		// Line 909: finiteTypeNode.valueSpace.add(literal);
 		finiteTypeNode.AddValue(literal)
 	} else {
-		// Line 911-916: Since we only allow unary expressions to come to this point we can straightaway cast to unary
-		// Line 912: BLangUnaryExpr unaryConstant = (BLangUnaryExpr) constantNode.expr;
+		// Since we only allow unary expressions to come to this point we can straightaway cast to unary
 		unaryConstant := constantNode.Expr.(*BLangUnaryExpr)
-		// Line 913-914: BLangUnaryExpr unaryExpr = createBLangUnaryExpr(unaryConstant.pos, unaryConstant.operator, unaryConstant.expr);
 		unaryExpr := createBLangUnaryExpr(unaryConstant.GetPosition(), unaryConstant.Operator, unaryConstant.Expr)
-		// Line 915: unaryExpr.setBType(unaryConstant.expr.getBType());
 		unaryExpr.SetTypeData(unaryConstant.Expr.GetTypeData())
-		// Line 916: finiteTypeNode.valueSpace.add(unaryExpr);
 		finiteTypeNode.ValueSpace = append(finiteTypeNode.ValueSpace, unaryExpr)
 	}
 
-	// Line 918: finiteTypeNode.pos = identifierPos;
 	finiteTypeNode.pos = identifierPos
 
-	// Line 920-930: Create a new anonymous type definition.
-	// Line 921: BLangTypeDefinition typeDef = (BLangTypeDefinition) TreeBuilder.createTypeDefinition();
 	typeDef := NewBLangTypeDefinition()
-	// Line 922: this.anonTypeNameSuffixes.push(constantNode.name.value);
 	constantNameValue := constantNode.Name.GetValue()
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, constantNameValue)
-	// Line 923: String genName = anonymousModelHelper.getNextAnonymousTypeKey(packageID, anonTypeNameSuffixes);
 	genName := n.getNextAnonymousTypeKey(n.PackageID, n.anonTypeNameSuffixes)
-	// Line 924: this.anonTypeNameSuffixes.pop();
 	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	// Line 925: IdentifierNode anonTypeGenName = createIdentifier(symTable.builtinPos, genName, constantNode.name.value);
 	anonTypeGenName := createIdentifier(getBuiltinPos(), &genName, &constantNameValue)
-	// Line 926: typeDef.setName(anonTypeGenName);
 	typeDef.SetName(&anonTypeGenName)
-	// Line 927: typeDef.flagSet.add(Flag.PUBLIC);
 	typeDef.AddFlag(model.Flag_PUBLIC)
-	// Line 928: typeDef.flagSet.add(Flag.ANONYMOUS);
 	typeDef.AddFlag(model.Flag_ANONYMOUS)
-	// Line 929: typeDef.typeNode = finiteTypeNode;
 	typeData := model.TypeData{
 		TypeDescriptor: finiteTypeNode,
 	}
 	typeDef.SetTypeData(typeData)
-	// Line 930: typeDef.pos = pos;
 	BLangNode(typeDef).SetPosition(pos)
 
-	// Line 932-935: We add this type definition to the `associatedTypeDefinition` field of the constant node.
-	// Line 935: constantNode.associatedTypeDefinition = typeDef;
+	// We add this type definition to the `associatedTypeDefinition` field of the constant node.
 	constantNode.AssociatedTypeDefinition = typeDef
 }
 
@@ -2009,35 +1927,27 @@ func (n *NodeBuilder) createSimpleVarWithTokenNodeNodeList(name tree.Token, type
 }
 
 func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.RequiredParameterNode) BLangNode {
-	// Line 3291: Optional<Token> paramName = requiredParameter.paramName();
 	paramName := requiredParameterNode.ParamName()
 
-	// Line 3292: paramName.ifPresent(token -> this.anonTypeNameSuffixes.push(token.text()));
 	if paramName != nil {
 		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
 	}
 
-	// Line 3293-3294: BLangSimpleVariable simpleVar = createSimpleVar(...)
 	simpleVar := n.createSimpleVarWithTokenNodeNodeList(paramName, requiredParameterNode.TypeName(), requiredParameterNode.Annotations())
 
-	// Line 3295: simpleVar.pos = getPosition(requiredParameter);
 	simpleVar.pos = getPosition(requiredParameterNode)
 
-	// Line 3296-3298: if (paramName.isPresent()) { ... }
 	if paramName != nil {
 		simpleVar.Name.pos = getPosition(paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 	} else if simpleVar.Name.pos == nil {
-		// Line 3299-3303: else if (simpleVar.name.pos == null) { ... }
 		// Param doesn't have a name and also is not a missing node
 		// Therefore, assigning the built-in location
 		simpleVar.Name.pos = getBuiltinPos()
 	}
 
-	// Line 3304: simpleVar.flagSet.add(Flag.REQUIRED_PARAM);
 	simpleVar.FlagSet.Add(model.Flag_REQUIRED_PARAM)
 
-	// Line 3305: return simpleVar;
 	return simpleVar
 }
 
