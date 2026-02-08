@@ -593,6 +593,18 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 				documentationLines = append(documentationLines, bLangDocLine)
 			}
 		case common.MARKDOWN_PARAMETER_DOCUMENTATION_LINE:
+			if bLangParaDoc != nil {
+				if bLangDeprecatedParaDoc != nil {
+					bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+				} else if bLangDeprecationDoc != nil {
+					bLangDeprecatedParaDoc = &BLangMarkDownDeprecatedParametersDocumentation{}
+					bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+					bLangDeprecationDoc = nil
+				} else {
+					parameters = append(parameters, *bLangParaDoc)
+				}
+			}
+
 			bLangParaDoc = &BLangMarkdownParameterDocumentation{}
 			parameterDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
 
@@ -613,16 +625,6 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 
 			bLangParaDoc.ParameterDocumentationLines = append(bLangParaDoc.ParameterDocumentationLines, paraDocText)
 			bLangParaDoc.pos = getPosition(parameterName)
-
-			if bLangDeprecatedParaDoc != nil {
-				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
-			} else if bLangDeprecationDoc != nil {
-				bLangDeprecatedParaDoc = &BLangMarkDownDeprecatedParametersDocumentation{}
-				bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
-				bLangDeprecationDoc = nil
-			} else {
-				parameters = append(parameters, *bLangParaDoc)
-			}
 		case common.MARKDOWN_RETURN_PARAMETER_DOCUMENTATION_LINE:
 			bLangReturnParaDoc = &BLangMarkdownReturnParameterDocumentation{}
 			returnParaDocLineNode := singleDocLine.(*tree.MarkdownParameterDocumentationLineNode)
@@ -651,6 +653,18 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 			codeBlockNode := singleDocLine.(*tree.MarkdownCodeBlockNode)
 			n.transformCodeBlock(&documentationLines, codeBlockNode)
 		default:
+		}
+	}
+
+	if bLangParaDoc != nil {
+		if bLangDeprecatedParaDoc != nil {
+			bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+		} else if bLangDeprecationDoc != nil {
+			bLangDeprecatedParaDoc = &BLangMarkDownDeprecatedParametersDocumentation{}
+			bLangDeprecatedParaDoc.Parameters = append(bLangDeprecatedParaDoc.Parameters, *bLangParaDoc)
+			bLangDeprecationDoc = nil
+		} else {
+			parameters = append(parameters, *bLangParaDoc)
 		}
 	}
 
