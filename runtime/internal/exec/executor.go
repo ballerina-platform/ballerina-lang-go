@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
 	"fmt"
+	"math/big"
 )
 
 func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry) any {
@@ -193,9 +194,18 @@ func defaultValueForType(t semtypes.SemType) any {
 		return float64(0)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.STRING) {
 		return ""
-	} else if semtypes.IsSubtypeSimple(t, semtypes.NIL) {
+	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
+		return big.NewRat(0, 1)
+	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
+		return []any{}
+	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
-		panic(fmt.Sprintf("unexpected type: %s", t.String()))
+		return &never{}
 	}
+}
+
+// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
+// this should panic.
+type never struct {
 }
