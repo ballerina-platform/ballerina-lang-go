@@ -18,6 +18,7 @@ package bir
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 	"strings"
 )
@@ -243,7 +244,7 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 	sb := strings.Builder{}
 	sb.WriteString(globalVar.Name.Value())
 	sb.WriteString("  ")
-	sb.WriteString(p.PrintType(globalVar.Type))
+	sb.WriteString(p.PrintSemType(globalVar.Type))
 	return sb.String()
 }
 
@@ -254,6 +255,13 @@ func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
 	sb := strings.Builder{}
 	sb.WriteString(string(typeNode.GetTypeKind()))
 	return sb.String()
+}
+
+func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
+	if typeNode == nil {
+		return "<UNKNOWN>"
+	}
+	return typeNode.String()
 }
 
 func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {

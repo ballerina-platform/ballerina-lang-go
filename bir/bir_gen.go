@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 )
 
@@ -69,7 +70,7 @@ func (cx *stmtContext) popLoopCtx() {
 	cx.loopCtx = cx.loopCtx.enclosing
 }
 
-func (cx *stmtContext) addLocalVarInner(name model.Name, ty model.ValueType, kind VarKind) *BIROperand {
+func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType, kind VarKind) *BIROperand {
 	varDcl := &BIRVariableDcl{}
 	varDcl.Name = name
 	varDcl.Type = ty
@@ -80,11 +81,11 @@ func (cx *stmtContext) addLocalVarInner(name model.Name, ty model.ValueType, kin
 	return &BIROperand{VariableDcl: varDcl, Index: len(cx.localVars) - 1}
 }
 
-func (cx *stmtContext) addTempVar(ty model.ValueType) *BIROperand {
+func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {
 	return cx.addLocalVarInner(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
 }
 
-func (cx *stmtContext) addLocalVar(name model.Name, ty model.ValueType, kind VarKind, symbol model.Symbol) *BIROperand {
+func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, kind VarKind, symbol model.Symbol) *BIROperand {
 	operand := cx.addLocalVarInner(name, ty, kind)
 	symRef := cx.birCx.CompilerContext.RefSymbol(symbol)
 	cx.varMap[symRef] = operand
