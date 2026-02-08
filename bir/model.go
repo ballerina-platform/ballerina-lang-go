@@ -18,6 +18,7 @@ package bir
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 )
@@ -90,8 +91,7 @@ type (
 
 	BIRVariableDcl struct {
 		BIRDocumentableNodeBase
-		// FIXME: this should be a semtype actual value creation op like new array will take both typedesc and type
-		Type               model.ValueType
+		Type               semtypes.SemType
 		Name               model.Name
 		OriginalName       model.Name
 		MetaVarName        string
@@ -135,7 +135,7 @@ type (
 		BIRDocumentableNodeBase
 		Name       model.Name
 		Flags      int64
-		Type       model.ValueType
+		Type       semtypes.SemType
 		ConstValue ConstValue
 		Origin     model.SymbolOrigin
 	}
