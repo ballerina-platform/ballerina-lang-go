@@ -17,11 +17,12 @@
 package ast
 
 import (
-	"ballerina-lang-go/model"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"ballerina-lang-go/model"
 )
 
 // TODO: may be we should rewrite this on top of a visitor.
@@ -114,6 +115,20 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printListConstructorExpr(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
+	case *BLangMarkdownDocumentation:
+		p.printMarkdownDocumentation(t)
+	case *BLangMarkdownDocumentationLine:
+		p.printMarkdownDocumentationLine(t)
+	case *BLangMarkdownParameterDocumentation:
+		p.printMarkdownParameterDocumentation(t)
+	case *BLangMarkdownReturnParameterDocumentation:
+		p.printMarkdownReturnParameterDocumentation(t)
+	case *BLangMarkDownDeprecationDocumentation:
+		p.printMarkDownDeprecationDocumentation(t)
+	case *BLangMarkDownDeprecatedParametersDocumentation:
+		p.printMarkDownDeprecatedParametersDocumentation(t)
+	case *BLangMarkdownReferenceDocumentation:
+		p.printMarkdownReferenceDocumentation(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -446,6 +461,13 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	// Print function name
 	p.printString(node.Name.Value)
 
+	// Print markdown documentation if present
+	if node.MarkdownDocumentationAttachment != nil {
+		p.indentLevel++
+		p.PrintInner(node.MarkdownDocumentationAttachment)
+		p.indentLevel--
+	}
+
 	// Print parameters if present
 	p.printString("(")
 	if len(node.RequiredParams) > 0 {
@@ -582,6 +604,16 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printString("const")
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
+
+	// Print markdown documentation if present
+	if node.MarkdownDocumentationAttachment != nil {
+		if doc, ok := node.MarkdownDocumentationAttachment.(*BLangMarkdownDocumentation); ok {
+			p.indentLevel++
+			p.PrintInner(doc)
+			p.indentLevel--
+		}
+	}
+
 	p.printString("(")
 	if node.GetTypeData().TypeDescriptor != nil {
 		p.indentLevel++
@@ -677,6 +709,76 @@ func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
 	p.endNode()
 }
 
+// Markdown documentation printers
+func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentation) {
+	p.startNode()
+	p.printString("md-doc")
+	p.indentLevel++
+
+	// Print documentation lines
+	if len(node.DocumentationLines) > 0 {
+		p.printString("(doc-lines")
+		p.indentLevel++
+		for _, line := range node.DocumentationLines {
+			p.PrintInner(&line)
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print parameters
+	if len(node.Parameters) > 0 {
+		p.printString("(params")
+		p.indentLevel++
+		for i := range node.Parameters {
+			p.PrintInner(&node.Parameters[i])
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print return parameter
+	if node.ReturnParameter != nil {
+		p.printString("(return-param")
+		p.indentLevel++
+		p.PrintInner(node.ReturnParameter)
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print deprecation documentation
+	if node.DeprecationDocumentation != nil {
+		p.printString("(deprec-doc")
+		p.indentLevel++
+		p.PrintInner(node.DeprecationDocumentation)
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print deprecated parameters documentation
+	if node.DeprecatedParametersDocumentation != nil {
+		p.printString("(deprec-params-doc")
+		p.indentLevel++
+		p.PrintInner(node.DeprecatedParametersDocumentation)
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print references
+	if len(node.References) > 0 {
+		p.printString("(references")
+		p.indentLevel++
+		for i := range node.References {
+			p.PrintInner(&node.References[i])
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	p.indentLevel--
+	p.endNode()
+}
+
 // Error type node printer
 func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 	p.startNode()
@@ -686,6 +788,171 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkdownDocumentationLine(node *BLangMarkdownDocumentationLine) {
+	p.startNode()
+	p.printString("md-doc-line")
+	p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Text, "\"", "\\\"")))
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownParameterDocumentation) {
+	p.startNode()
+	p.printString("md-param-doc")
+	p.indentLevel++
+
+	// Print parameter name
+	if node.ParameterName != nil {
+		p.printString("(param-name")
+		p.printString(node.ParameterName.Value)
+		p.printSticky(")")
+	}
+
+	// Print parameter documentation lines
+	if len(node.ParameterDocumentationLines) > 0 {
+		p.printString("(doc-lines")
+		p.indentLevel++
+		for _, line := range node.ParameterDocumentationLines {
+			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMarkdownReturnParameterDocumentation) {
+	p.startNode()
+	p.printString("md-return-param-doc")
+	p.indentLevel++
+
+	// Print return parameter documentation lines
+	if len(node.ReturnParameterDocumentationLines) > 0 {
+		p.printString("(doc-lines")
+		p.indentLevel++
+		for _, line := range node.ReturnParameterDocumentationLines {
+			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print return type if present
+	if node.ReturnType != nil {
+		p.printString("(return-type")
+		p.indentLevel++
+		p.PrintInner(node.ReturnType.(BLangNode))
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDownDeprecationDocumentation) {
+	p.startNode()
+	p.printString("md-deprec-doc")
+	p.indentLevel++
+
+	// Print deprecation documentation lines
+	if len(node.DeprecationDocumentationLines) > 0 {
+		p.printString("(doc-lines")
+		p.indentLevel++
+		for _, line := range node.DeprecationDocumentationLines {
+			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	// Print deprecation lines
+	if len(node.DeprecationLines) > 0 {
+		p.printString("(deprec-lines")
+		p.indentLevel++
+		for _, line := range node.DeprecationLines {
+			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	if node.IsCorrectDeprecationLine {
+		p.printString("is-correct-deprec-line")
+	}
+
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkDownDeprecatedParametersDocumentation(node *BLangMarkDownDeprecatedParametersDocumentation) {
+	p.startNode()
+	p.printString("md-deprec-params-doc")
+	p.indentLevel++
+
+	// Print deprecated parameters
+	if len(node.Parameters) > 0 {
+		p.printString("(params")
+		p.indentLevel++
+		for i := range node.Parameters {
+			p.PrintInner(&node.Parameters[i])
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
+
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMarkdownReferenceDocumentation(node *BLangMarkdownReferenceDocumentation) {
+	p.startNode()
+	p.printString("md-ref-doc")
+	p.indentLevel++
+
+	// Print reference type
+	p.printString("(type")
+	p.printString(string(node.Type))
+	p.printSticky(")")
+
+	// Print qualifier if present
+	if node.Qualifier != "" {
+		p.printString("(qualifier")
+		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Qualifier, "\"", "\\\"")))
+		p.printSticky(")")
+	}
+
+	// Print type name if present
+	if node.TypeName != "" {
+		p.printString("(type-name")
+		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.TypeName, "\"", "\\\"")))
+		p.printSticky(")")
+	}
+
+	// Print identifier if present
+	if node.Identifier != "" {
+		p.printString("(identifier")
+		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.Identifier, "\"", "\\\"")))
+		p.printSticky(")")
+	}
+
+	// Print reference name
+	if node.ReferenceName != "" {
+		p.printString("(reference-name")
+		p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(node.ReferenceName, "\"", "\\\"")))
+		p.printSticky(")")
+	}
+
+	if node.HasParserWarnings {
+		p.printString("has-parser-warnings")
+	}
+
+	p.indentLevel--
 	p.endNode()
 }
 
