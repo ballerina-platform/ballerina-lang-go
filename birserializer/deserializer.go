@@ -20,76 +20,76 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
 type BIRReader struct {
-	r  *bytes.Reader
-	cp []any
+	r   *bytes.Reader
+	cp  []any
+	ctx *context.CompilerContext
 }
 
-func Unmarshal(data []byte) (*bir.BIRPackage, error) {
+func Unmarshal(ctx *context.CompilerContext, data []byte) (*bir.BIRPackage, error) {
 	reader := &BIRReader{
-		r: bytes.NewReader(data),
+		r:   bytes.NewReader(data),
+		ctx: ctx,
 	}
 
 	return reader.readPackage()
 }
 
 func (br *BIRReader) readPackage() (*bir.BIRPackage, error) {
+	var errMsg string
+	defer func() {
+		if r := recover(); r != nil {
+			if msg, ok := r.(string); ok {
+				errMsg = msg
+			} else {
+				errMsg = fmt.Sprintf("%v", r)
+			}
+		}
+	}()
+
 	magic := make([]byte, 4)
 	_, err := br.r.Read(magic)
 	if err != nil {
-		return nil, err
+		panic(fmt.Sprintf("reading BIR magic: %v", err))
 	}
 
 	if string(magic) != BIR_MAGIC {
-		return nil, fmt.Errorf("invalid BIR magic: %x", magic)
+		panic(fmt.Sprintf("invalid BIR magic: %x", magic))
 	}
 
-	version, err := br.readInt32()
-	if err != nil {
-		return nil, err
+	var version int32
+	if err := br.read(&version); err != nil {
+		panic(fmt.Sprintf("reading BIR version: %v", err))
 	}
 
 	if version != BIR_VERSION {
-		return nil, fmt.Errorf("unsupported BIR version: %d", version)
+		panic(fmt.Sprintf("unsupported BIR version: %d", version))
 	}
 
-	if err := br.readConstantPool(); err != nil {
-		return nil, fmt.Errorf("reading constant pool: %w", err)
-	}
+	br.readConstantPool()
 
-	pkgCPIndex, err := br.readInt32()
-	if err != nil {
-		return nil, fmt.Errorf("reading package CP index: %w", err)
+	var pkgCPIndex int32
+	if err := br.read(&pkgCPIndex); err != nil {
+		panic(fmt.Sprintf("reading package CP index: %v", err))
 	}
 
 	pkgID := br.getPackageFromCP(int(pkgCPIndex))
 
-	imports, err := br.readImports()
-	if err != nil {
-		return nil, fmt.Errorf("reading imports: %w", err)
-	}
+	imports := br.readImports()
+	constants := br.readConstants()
+	globalVars := br.readGlobalVars()
+	functions := br.readFunctions()
 
-	constants, err := br.readConstants()
-	if err != nil {
-		return nil, fmt.Errorf("reading constants: %w", err)
-	}
-
-	globalVars, err := br.readGlobalVars()
-	if err != nil {
-		return nil, fmt.Errorf("reading global vars: %w", err)
-	}
-
-	functions, err := br.readFunctions()
-	if err != nil {
-		return nil, fmt.Errorf("reading functions: %w", err)
+	if errMsg != "" {
+		return nil, fmt.Errorf("BIR deserializer failed due to %s", errMsg)
 	}
 
 	return &bir.BIRPackage{
@@ -101,138 +101,116 @@ func (br *BIRReader) readPackage() (*bir.BIRPackage, error) {
 	}, nil
 }
 
-func (br *BIRReader) readConstantPool() error {
-	cpSize, err := br.readInt32()
-	if err != nil {
-		return err
+func (br *BIRReader) readConstantPool() {
+	var cpSize int64
+	if err := br.read(&cpSize); err != nil {
+		panic(fmt.Sprintf("reading constant pool size: %v", err))
 	}
 
 	br.cp = make([]any, cpSize)
 
 	for i := 0; i < int(cpSize); i++ {
-		tag, err := br.readInt8()
-		if err != nil {
-			return fmt.Errorf("reading CP entry %d tag: %w", i, err)
+		var tag int8
+		if err := br.read(&tag); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d tag: %v", i, err))
 		}
 
-		if err := br.readConstantPoolEntry(tag, i); err != nil {
-			return fmt.Errorf("reading CP entry %d (tag %d): %w", i, tag, err)
-		}
+		br.readConstantPoolEntry(tag, i)
 	}
-
-	return nil
 }
 
-func (br *BIRReader) readConstantPoolEntry(tag int8, i int) error {
+func (br *BIRReader) readConstantPoolEntry(tag int8, i int) {
 	switch tag {
 	case 0: // NULL
 		br.cp[i] = nil
 	case 1: // INTEGER
-		value, err := br.readInt64()
-		if err != nil {
-			return err
+		var value int64
+		if err := br.read(&value); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d integer: %v", i, err))
 		}
 		br.cp[i] = value
 	case 2: // FLOAT
-		value, err := br.readFloat64()
-		if err != nil {
-			return err
+		var value float64
+		if err := br.read(&value); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d float: %v", i, err))
 		}
 		br.cp[i] = value
 	case 3: // BOOLEAN
-		b, err := br.readUInt8()
-		if err != nil {
-			return err
+		var b uint8
+		if err := br.read(&b); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d boolean: %v", i, err))
 		}
 		br.cp[i] = b != 0
 	case 4: // STRING
-		length, err := br.readInt32()
-		if err != nil {
-			return err
+		var length int64
+		if err := br.read(&length); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d string length: %v", i, err))
 		}
 		if length < 0 {
 			br.cp[i] = (*string)(nil)
 		} else {
 			strBytes := make([]byte, length)
 			if _, err := br.r.Read(strBytes); err != nil {
-				return err
+				panic(fmt.Sprintf("reading CP entry %d string bytes: %v", i, err))
 			}
 			br.cp[i] = string(strBytes)
 		}
 	case 5: // PACKAGE
-		orgIdx, err := br.readInt32()
-		if err != nil {
-			return err
+		var orgIdx int32
+		if err := br.read(&orgIdx); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d package org index: %v", i, err))
 		}
-		pkgNameIdx, err := br.readInt32()
-		if err != nil {
-			return err
+		var pkgNameIdx int32
+		if err := br.read(&pkgNameIdx); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d package name index: %v", i, err))
 		}
-		moduleNameIdx, err := br.readInt32()
-		if err != nil {
-			return err
+		var moduleNameIdx int32
+		if err := br.read(&moduleNameIdx); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d module name index: %v", i, err))
 		}
-		versionIdx, err := br.readInt32()
-		if err != nil {
-			return err
+		var versionIdx int32
+		if err := br.read(&versionIdx); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d version index: %v", i, err))
 		}
 		org := model.Name(br.getStringFromCP(int(orgIdx)))
 		pkgName := model.Name(br.getStringFromCP(int(pkgNameIdx)))
-		moduleName := model.Name(br.getStringFromCP(int(moduleNameIdx)))
+		_ = br.getStringFromCP(int(moduleNameIdx)) // moduleName - not used, pkgName contains full path
 		version := model.Name(br.getStringFromCP(int(versionIdx)))
-		br.cp[i] = &model.PackageID{
-			OrgName: &org,
-			PkgName: &pkgName,
-			Name:    &moduleName,
-			Version: &version,
-		}
+		nameComps := model.CreateNameComps(pkgName)
+		br.cp[i] = br.ctx.NewPackageID(org, nameComps, version)
 	case 6: // BYTE
-		value, err := br.readInt32()
-		if err != nil {
-			return err
+		var value uint8
+		if err := br.read(&value); err != nil {
+			panic(fmt.Sprintf("reading CP entry %d byte: %v", i, err))
 		}
 		br.cp[i] = value
 	case 7: // SHAPE
-		_, err := br.readInt32() // shapeLen
-		if err != nil {
-			return err
-		}
-		tag, err := br.readUInt8()
-		if err != nil {
-			return err
-		}
-		nameIdx, err := br.readInt32()
-		if err != nil {
-			return err
-		}
-		name := model.Name(br.getStringFromCP(int(nameIdx)))
-		flags, err := br.readInt64()
-		if err != nil {
-			return err
-		}
-		br.cp[i] = ast.NewBType(model.TypeTags(tag), name, uint64(flags))
+		panic("shape not implemented")
 	default:
-		return fmt.Errorf("unknown CP tag: %d", tag)
+		panic(fmt.Sprintf("unknown CP tag: %d", tag))
 	}
-	return nil
 }
 
-func (br *BIRReader) getStringFromCP(index int) string {
-	if index < 0 || index >= len(br.cp) {
-		return ""
+// getFromCP safely retrieves a value from the constant pool at the given index.
+// Returns nil if the index is out of bounds.
+func (r *BIRReader) getFromCP(index int) any {
+	if index < 0 || index >= len(r.cp) {
+		return nil
 	}
+	return r.cp[index]
+}
 
-	if str, ok := br.cp[index].(string); ok {
+func (r *BIRReader) getStringFromCP(index int) string {
+	v := r.getFromCP(index)
+	if str, ok := v.(string); ok {
 		return str
 	}
 	return ""
 }
 
 func (r *BIRReader) getPackageFromCP(index int) *model.PackageID {
-	if index < 0 || index >= len(r.cp) {
-		return nil
-	}
-	if pkg, ok := r.cp[index].(*model.PackageID); ok {
+	v := r.getFromCP(index)
+	if pkg, ok := v.(*model.PackageID); ok {
 		return pkg
 	}
 	return nil
@@ -242,136 +220,74 @@ func (r *BIRReader) getTypeFromCP(index int) ast.BType {
 	if index == -1 {
 		return nil
 	}
-	if index < 0 || index >= len(r.cp) {
-		return nil
-	}
-	if t, ok := r.cp[index].(ast.BType); ok {
+	v := r.getFromCP(index)
+	if t, ok := v.(ast.BType); ok {
 		return t
 	}
 	return nil
 }
 
 func (r *BIRReader) getIntegerFromCP(index int) any {
-	if index < 0 || index >= len(r.cp) {
+	v := r.getFromCP(index)
+	if v == nil {
 		return int64(0)
 	}
-	v := r.cp[index]
 	if val, ok := v.(int64); ok {
-		if val == -1 {
-			return int(-1)
-		}
 		return val
 	}
 	return v
 }
 
 func (r *BIRReader) getByteFromCP(index int) uint8 {
-	if index < 0 || index >= len(r.cp) {
-		return 0
-	}
-	switch v := r.cp[index].(type) {
-	case uint8:
-		return v
-	case int32:
-		return uint8(v)
-	case int:
-		return uint8(v)
+	v := r.getFromCP(index)
+	if val, ok := v.(uint8); ok {
+		return val
 	}
 	return 0
 }
 
 func (r *BIRReader) getFloatFromCP(index int) float64 {
-	if index < 0 || index >= len(r.cp) {
-		return 0
-	}
-	switch v := r.cp[index].(type) {
-	case float64:
-		return v
-	case float32:
-		return float64(v)
+	v := r.getFromCP(index)
+	if val, ok := v.(float64); ok {
+		return val
 	}
 	return 0
 }
 
 func (r *BIRReader) getBooleanFromCP(index int) bool {
-	if index < 0 || index >= len(r.cp) {
-		return false
-	}
-	if val, ok := r.cp[index].(bool); ok {
+	v := r.getFromCP(index)
+	if val, ok := v.(bool); ok {
 		return val
 	}
 	return false
 }
 
-func (br *BIRReader) readImports() ([]bir.BIRImportModule, error) {
-	count, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-
+func (br *BIRReader) readImports() []bir.BIRImportModule {
+	count := br.readLength()
 	imports := make([]bir.BIRImportModule, count)
 	for i := 0; i < int(count); i++ {
-		orgIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		pkgNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		moduleNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		versionIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
+		org := br.readStringCPEntry()
+		pkgName := br.readStringCPEntry()
+		_ = br.readStringCPEntry() // moduleName - not used, pkgName contains full path
+		version := br.readStringCPEntry()
 
-		org := model.Name(br.getStringFromCP(int(orgIdx)))
-		pkgName := model.Name(br.getStringFromCP(int(pkgNameIdx)))
-		moduleName := model.Name(br.getStringFromCP(int(moduleNameIdx)))
-		version := model.Name(br.getStringFromCP(int(versionIdx)))
-
+		nameComps := model.CreateNameComps(pkgName)
 		imports[i] = bir.BIRImportModule{
-			PackageID: &model.PackageID{
-				OrgName: &org,
-				PkgName: &pkgName,
-				Name:    &moduleName,
-				Version: &version,
-			},
+			PackageID: br.ctx.NewPackageID(org, nameComps, version),
 		}
 	}
 
-	return imports, nil
+	return imports
 }
 
-func (br *BIRReader) readConstants() ([]bir.BIRConstant, error) {
-	count, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-
+func (br *BIRReader) readConstants() []bir.BIRConstant {
+	count := br.readLength()
 	constants := make([]bir.BIRConstant, count)
 	for i := 0; i < int(count); i++ {
-		nameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-
-		name := model.Name(br.getStringFromCP(int(nameIdx)))
-
-		flags, err := br.readInt64()
-		if err != nil {
-			return nil, err
-		}
-
-		origin, err := br.readUInt8()
-		if err != nil {
-			return nil, err
-		}
-
-		pos, err := br.readPosition()
+		name := br.readStringCPEntry()
+		flags := br.readFlags()
+		origin := br.readOrigin()
+		pos := br.readPosition()
 
 		constant := bir.BIRConstant{
 			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
@@ -381,33 +297,30 @@ func (br *BIRReader) readConstants() ([]bir.BIRConstant, error) {
 			},
 			Name:   name,
 			Flags:  flags,
-			Origin: model.SymbolOrigin(origin),
+			Origin: origin,
 		}
 
-		typeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var typeIdx int32
+		if err := br.read(&typeIdx); err != nil {
+			panic(fmt.Sprintf("reading constant %d type index: %v", i, err))
 		}
 
 		t := br.getTypeFromCP(int(typeIdx))
 		constant.Type = t
 
-		_, err = br.readInt64() // length
-		if err != nil {
-			return nil, err
-		}
+		br.readLength()
 
-		cTypeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var cTypeIdx int32
+		if err := br.read(&cTypeIdx); err != nil {
+			panic(fmt.Sprintf("reading constant %d value type index: %v", i, err))
 		}
 
 		cv := br.getTypeFromCP(int(cTypeIdx))
 		var value any
 		// Type is nil, read value from CP directly
-		valueIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var valueIdx int32
+		if err := br.read(&valueIdx); err != nil {
+			panic(fmt.Sprintf("reading constant %d value index: %v", i, err))
 		}
 		value = br.cp[int(valueIdx)]
 
@@ -419,47 +332,22 @@ func (br *BIRReader) readConstants() ([]bir.BIRConstant, error) {
 		constants[i] = constant
 	}
 
-	return constants, nil
+	return constants
 }
 
-func (br *BIRReader) readGlobalVars() ([]bir.BIRGlobalVariableDcl, error) {
-	count, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-
+func (br *BIRReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
+	count := br.readLength()
 	variables := make([]bir.BIRGlobalVariableDcl, count)
 	for i := 0; i < int(count); i++ {
-		pos, err := br.readPosition()
-		if err != nil {
-			return nil, err
-		}
+		pos := br.readPosition()
+		kind := br.readKind()
+		name := br.readStringCPEntry()
+		flags := br.readFlags()
+		origin := br.readOrigin()
 
-		kind, err := br.readUInt8()
-		if err != nil {
-			return nil, err
-		}
-
-		nameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-
-		name := model.Name(br.getStringFromCP(int(nameIdx)))
-
-		flags, err := br.readInt64()
-		if err != nil {
-			return nil, err
-		}
-
-		origin, err := br.readUInt8()
-		if err != nil {
-			return nil, err
-		}
-
-		typeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var typeIdx int32
+		if err := br.read(&typeIdx); err != nil {
+			panic(fmt.Sprintf("reading global var %d type index: %v", i, err))
 		}
 
 		t := br.getTypeFromCP(int(typeIdx))
@@ -471,81 +359,41 @@ func (br *BIRReader) readGlobalVars() ([]bir.BIRGlobalVariableDcl, error) {
 						Pos: pos,
 					},
 				},
-				Kind: bir.VarKind(kind),
+				Kind: kind,
 				Name: name,
 				Type: t,
 			},
 			Flags:  flags,
-			Origin: model.SymbolOrigin(origin),
+			Origin: origin,
 		}
 	}
 
-	return variables, nil
+	return variables
 }
 
-func (br *BIRReader) readFunctions() ([]bir.BIRFunction, error) {
-	count, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-
+func (br *BIRReader) readFunctions() []bir.BIRFunction {
+	count := br.readLength()
 	functions := make([]bir.BIRFunction, count)
 	for i := 0; i < int(count); i++ {
-		fn, err := br.readFunction()
-		if err != nil {
-			return nil, err
-		}
+		fn := br.readFunction()
 		functions[i] = *fn
 	}
 
-	return functions, nil
+	return functions
 }
 
-func (br *BIRReader) readFunction() (*bir.BIRFunction, error) {
-	pos, err := br.readPosition()
-	if err != nil {
-		return nil, err
-	}
-
-	nameIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-	name := model.Name(br.getStringFromCP(int(nameIdx)))
-
-	originalNameIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-	originalName := model.Name(br.getStringFromCP(int(originalNameIdx)))
-
-	flag, err := br.readInt64()
-	if err != nil {
-		return nil, err
-	}
-
-	origin, err := br.readUInt8()
-	if err != nil {
-		return nil, err
-	}
-
-	requiredParamsCount, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
+func (br *BIRReader) readFunction() *bir.BIRFunction {
+	pos := br.readPosition()
+	name := br.readStringCPEntry()
+	originalName := br.readStringCPEntry()
+	flag := br.readFlags()
+	origin := br.readOrigin()
+	requiredParamsCount := br.readLength()
 
 	requiredParams := make([]bir.BIRParameter, requiredParamsCount)
 	for j := 0; j < int(requiredParamsCount); j++ {
-		paramNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		paramName := model.Name(br.getStringFromCP(int(paramNameIdx)))
-
-		paramFlags, err := br.readInt64()
-		if err != nil {
-			return nil, err
-		}
+		paramName := br.readStringCPEntry()
+		paramFlags := br.readFlags()
 
 		requiredParams[j] = bir.BIRParameter{
 			Name:  paramName,
@@ -553,79 +401,56 @@ func (br *BIRReader) readFunction() (*bir.BIRFunction, error) {
 		}
 	}
 
-	_, err = br.readInt64() // length, unused?
-	if err != nil {
-		return nil, err
+	var length int64
+	if err := br.read(&length); err != nil { // length, unused?
+		panic(fmt.Sprintf("reading function length: %v", err))
 	}
 
-	argsCount, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
+	argsCount := br.readLength()
 
 	// Create local maps for variable and basic block lookups
 	varMap := make(map[string]*bir.BIRVariableDcl)
 	bbMap := make(map[string]*bir.BIRBasicBlock)
 
-	hasReturnVar, err := br.readBool()
-	if err != nil {
-		return nil, err
+	var hasReturnVar bool
+	if err := br.read(&hasReturnVar); err != nil {
+		panic(fmt.Sprintf("reading function has return var: %v", err))
 	}
 
 	var returnVar *bir.BIRVariableDcl
 	if hasReturnVar {
-		returnVarKind, err := br.readUInt8()
-		if err != nil {
-			return nil, err
-		}
-		returnVarTypeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		returnVarKind := br.readKind()
+		var returnVarTypeIdx int32
+		if err := br.read(&returnVarTypeIdx); err != nil {
+			panic(fmt.Sprintf("reading return var type index: %v", err))
 		}
 		returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
 
-		returnVarNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		returnVarName := model.Name(br.getStringFromCP(int(returnVarNameIdx)))
+		returnVarName := br.readStringCPEntry()
 
 		returnVar = &bir.BIRVariableDcl{
-			Kind: bir.VarKind(returnVarKind),
+			Kind: returnVarKind,
 			Name: returnVarName,
 			Type: returnVarType,
 		}
 		varMap[returnVarName.Value()] = returnVar
 	}
 
-	localVarCount, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
+	localVarCount := br.readLength()
 	localVars := make([]bir.BIRVariableDcl, localVarCount)
 	for j := 0; j < int(localVarCount); j++ {
-		localVar, err := br.readLocalVar(varMap)
-		if err != nil {
-			return nil, err
-		}
+		localVar := br.readLocalVar(varMap)
 		localVars[j] = *localVar
 	}
 
-	basicBlockCount, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
+	basicBlockCount := br.readLength()
 	basicBlocks := make([]bir.BIRBasicBlock, basicBlockCount)
 	for j := 0; j < int(basicBlockCount); j++ {
-		block, err := br.readBasicBlock(varMap)
-		if err != nil {
-			return nil, err
-		}
+		block := br.readBasicBlock(varMap)
 		basicBlocks[j] = *block
 		bbMap[block.Id.Value()] = &basicBlocks[j]
 	}
 
-	// Fix up pointers
 	for j := range basicBlocks {
 		bb := &basicBlocks[j]
 		if bb.Terminator != nil {
@@ -672,144 +497,87 @@ func (br *BIRReader) readFunction() (*bir.BIRFunction, error) {
 		Name:           name,
 		OriginalName:   originalName,
 		Flags:          flag,
-		Origin:         model.SymbolOrigin(origin),
+		Origin:         origin,
 		RequiredParams: requiredParams,
 		ArgsCount:      int(argsCount),
 		ReturnVariable: returnVar,
 		LocalVars:      localVars,
 		BasicBlocks:    basicBlocks,
-	}, nil
+	}
 }
 
-func (br *BIRReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) (*bir.BIRVariableDcl, error) {
-	kind, err := br.readUInt8()
-	if err != nil {
-		return nil, err
-	}
-	typeIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
+func (br *BIRReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BIRVariableDcl {
+	kind := br.readKind()
+	var typeIdx int32
+	if err := br.read(&typeIdx); err != nil {
+		panic(fmt.Sprintf("reading local var type index: %v", err))
 	}
 	t := br.getTypeFromCP(int(typeIdx))
 
-	nameIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-	name := model.Name(br.getStringFromCP(int(nameIdx)))
+	name := br.readStringCPEntry()
 
 	localVar := &bir.BIRVariableDcl{
-		Kind: bir.VarKind(kind),
+		Kind: kind,
 		Name: name,
 		Type: t,
 	}
 
-	if kind == uint8(bir.VAR_KIND_ARG) {
-		metaVarNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		localVar.MetaVarName = br.getStringFromCP(int(metaVarNameIdx))
-	} else if kind == uint8(bir.VAR_KIND_LOCAL) {
-		metaVarNameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		localVar.MetaVarName = br.getStringFromCP(int(metaVarNameIdx))
+	if kind == bir.VAR_KIND_ARG {
+		metaVarName := br.readStringCPEntry()
+		localVar.MetaVarName = metaVarName.Value()
+	} else if kind == bir.VAR_KIND_LOCAL {
+		metaVarName := br.readStringCPEntry()
+		localVar.MetaVarName = metaVarName.Value()
 
-		endBBIdIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		endBBId := model.Name(br.getStringFromCP(int(endBBIdIdx)))
+		endBBId := br.readStringCPEntry()
 		localVar.EndBB = &bir.BIRBasicBlock{Id: endBBId}
 
-		startBBIdIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		startBBId := model.Name(br.getStringFromCP(int(startBBIdIdx)))
+		startBBId := br.readStringCPEntry()
 		localVar.StartBB = &bir.BIRBasicBlock{Id: startBBId}
 
-		insOffset, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
+		insOffset := br.readLength()
 		localVar.InsOffset = int(insOffset)
 	}
 	varMap[name.Value()] = localVar
-	return localVar, nil
+	return localVar
 }
 
-func (br *BIRReader) readBasicBlock(varMap map[string]*bir.BIRVariableDcl) (*bir.BIRBasicBlock, error) {
-	idIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-	id := model.Name(br.getStringFromCP(int(idIdx)))
-
-	instructionCount, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
+func (br *BIRReader) readBasicBlock(varMap map[string]*bir.BIRVariableDcl) *bir.BIRBasicBlock {
+	id := br.readStringCPEntry()
+	instructionCount := br.readLength()
 
 	instructions := make([]bir.BIRInstruction, instructionCount)
 	for k := 0; k < int(instructionCount); k++ {
-		ins, err := br.readInstruction(varMap)
-		if err != nil {
-			return nil, err
-		}
+		ins := br.readInstruction(varMap)
 		instructions[k] = ins
 	}
 
-	term, err := br.readTerminator(varMap)
-	if err != nil {
-		return nil, err
-	}
+	term := br.readTerminator(varMap)
 
 	return &bir.BIRBasicBlock{
 		Id:           id,
 		Instructions: instructions,
 		Terminator:   term,
-	}, nil
+	}
 }
 
-func (br *BIRReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) (bir.BIRInstruction, error) {
-	insKind, err := br.readUInt8()
-	if err != nil {
-		return nil, err
-	}
-	instructionKind := bir.InstructionKind(insKind)
+func (br *BIRReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.BIRInstruction {
+	instructionKind := br.readInstructionKind()
 
 	switch instructionKind {
 	case bir.INSTRUCTION_KIND_MOVE:
-		rhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
+		rhsOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
 		return &bir.Move{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			RhsOp: rhsOp,
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_ADD, bir.INSTRUCTION_KIND_SUB, bir.INSTRUCTION_KIND_MUL, bir.INSTRUCTION_KIND_DIV, bir.INSTRUCTION_KIND_MOD, bir.INSTRUCTION_KIND_EQUAL, bir.INSTRUCTION_KIND_NOT_EQUAL, bir.INSTRUCTION_KIND_GREATER_THAN, bir.INSTRUCTION_KIND_GREATER_EQUAL, bir.INSTRUCTION_KIND_LESS_THAN, bir.INSTRUCTION_KIND_LESS_EQUAL, bir.INSTRUCTION_KIND_AND, bir.INSTRUCTION_KIND_OR, bir.INSTRUCTION_KIND_REF_EQUAL, bir.INSTRUCTION_KIND_REF_NOT_EQUAL, bir.INSTRUCTION_KIND_CLOSED_RANGE, bir.INSTRUCTION_KIND_HALF_OPEN_RANGE, bir.INSTRUCTION_KIND_ANNOT_ACCESS, bir.INSTRUCTION_KIND_BITWISE_AND, bir.INSTRUCTION_KIND_BITWISE_OR, bir.INSTRUCTION_KIND_BITWISE_XOR, bir.INSTRUCTION_KIND_BITWISE_LEFT_SHIFT, bir.INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT, bir.INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT:
-		rhsOp1, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		rhsOp2, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
+		rhsOp1 := br.readOperand(varMap)
+		rhsOp2 := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
 		return &bir.BinaryOp{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
@@ -817,43 +585,34 @@ func (br *BIRReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) (bir
 			Kind:   instructionKind,
 			RhsOp1: *rhsOp1,
 			RhsOp2: *rhsOp2,
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_TYPEOF, bir.INSTRUCTION_KIND_NOT, bir.INSTRUCTION_KIND_NEGATE:
-		rhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
+		rhsOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
 		return &bir.UnaryOp{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			Kind:  instructionKind,
 			RhsOp: rhsOp,
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_CONST_LOAD:
-		constLoadTypeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var constLoadTypeIdx int32
+		if err := br.read(&constLoadTypeIdx); err != nil {
+			panic(fmt.Sprintf("reading const load type index: %v", err))
 		}
 		constLoadType := br.getTypeFromCP(int(constLoadTypeIdx))
 
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
+		lhsOp := br.readOperand(varMap)
+
+		var isWrapped bool
+		if err := br.read(&isWrapped); err != nil {
+			panic(fmt.Sprintf("reading const load is wrapped: %v", err))
 		}
 
-		isWrapped, err := br.readBool()
-		if err != nil {
-			return nil, err
-		}
-
-		valueIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var valueIdx int32
+		if err := br.read(&valueIdx); err != nil {
+			panic(fmt.Sprintf("reading const load value index: %v", err))
 		}
 
 		var value any
@@ -878,20 +637,11 @@ func (br *BIRReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) (bir
 			},
 			Type:  constLoadType,
 			Value: value,
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD, bir.INSTRUCTION_KIND_ARRAY_STORE, bir.INSTRUCTION_KIND_ARRAY_LOAD:
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		keyOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		rhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
+		lhsOp := br.readOperand(varMap)
+		keyOp := br.readOperand(varMap)
+		rhsOp := br.readOperand(varMap)
 		return &bir.FieldAccess{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
@@ -899,264 +649,242 @@ func (br *BIRReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) (bir
 			Kind:  instructionKind,
 			KeyOp: keyOp,
 			RhsOp: rhsOp,
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
-		typeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var typeIdx int32
+		if err := br.read(&typeIdx); err != nil {
+			panic(fmt.Sprintf("reading new array type index: %v", err))
 		}
 		t := br.getTypeFromCP(int(typeIdx))
 
-		lhsOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-		sizeOp, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
+		lhsOp := br.readOperand(varMap)
+		sizeOp := br.readOperand(varMap)
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			Type:   t,
 			SizeOp: sizeOp,
-		}, nil
+		}
 	default:
-		return nil, fmt.Errorf("unsupported instruction kind: %d", instructionKind)
+		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
 }
 
-func (br *BIRReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) (bir.BIRTerminator, error) {
-	terminatorKind, err := br.readUInt8()
-	if err != nil {
-		return nil, err
+func (br *BIRReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.BIRTerminator {
+	var terminatorKind uint8
+	if err := br.read(&terminatorKind); err != nil {
+		panic(fmt.Sprintf("reading terminator kind: %v", err))
 	}
 
 	if terminatorKind == 0 {
-		return nil, nil
+		return nil
 	}
 
 	termInstructionKind := bir.InstructionKind(terminatorKind)
 
 	switch termInstructionKind {
 	case bir.INSTRUCTION_KIND_RETURN:
-		return &bir.Return{}, nil
+		return &bir.Return{}
 	case bir.INSTRUCTION_KIND_GOTO:
-		idIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		id := br.getStringFromCP(int(idIdx))
+		id := br.readStringCPEntry()
 		return &bir.Goto{
 			BIRTerminatorBase: bir.BIRTerminatorBase{
 				ThenBB: &bir.BIRBasicBlock{
-					Id: model.Name(id),
+					Id: id,
 				},
 			},
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_BRANCH:
-		op, err := br.readOperand(varMap)
-		if err != nil {
-			return nil, err
-		}
-
-		trueBBIdIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		trueBBId := br.getStringFromCP(int(trueBBIdIdx))
-
-		falseBBIdIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		falseBBId := br.getStringFromCP(int(falseBBIdIdx))
+		op := br.readOperand(varMap)
+		trueBBId := br.readStringCPEntry()
+		falseBBId := br.readStringCPEntry()
 
 		return &bir.Branch{
 			Op: op,
 			TrueBB: &bir.BIRBasicBlock{
-				Id: model.Name(trueBBId),
+				Id: trueBBId,
 			},
 			FalseBB: &bir.BIRBasicBlock{
-				Id: model.Name(falseBBId),
+				Id: falseBBId,
 			},
-		}, nil
+		}
 	case bir.INSTRUCTION_KIND_CALL:
-		isVirtual, err := br.readBool()
-		if err != nil {
-			return nil, err
+		var isVirtual bool
+		if err := br.read(&isVirtual); err != nil {
+			panic(fmt.Sprintf("reading call is virtual: %v", err))
 		}
 
-		pkgIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		pkg := br.getPackageFromCP(int(pkgIdx))
-
-		nameIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		name := br.getStringFromCP(int(nameIdx))
-
-		argsCount, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
+		pkg := br.readPackageCPEntry()
+		name := br.readStringCPEntry()
+		argsCount := br.readLength()
 
 		args := make([]bir.BIROperand, argsCount)
 		for k := 0; k < int(argsCount); k++ {
-			arg, err := br.readOperand(varMap)
-			if err != nil {
-				return nil, err
-			}
+			arg := br.readOperand(varMap)
 			args[k] = *arg
 		}
 
-		lshOpExists, err := br.readBool()
-		if err != nil {
-			return nil, err
+		var lshOpExists bool
+		if err := br.read(&lshOpExists); err != nil {
+			panic(fmt.Sprintf("reading call lhs op exists: %v", err))
 		}
 
 		var lhsOp *bir.BIROperand
 		if lshOpExists {
-			op, err := br.readOperand(varMap)
-			if err != nil {
-				return nil, err
-			}
-			lhsOp = op
+			lhsOp = br.readOperand(varMap)
 		}
 
-		thenBBIdIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
-		}
-		thenBBId := br.getStringFromCP(int(thenBBIdIdx))
+		thenBBId := br.readStringCPEntry()
 
 		return &bir.Call{
 			Kind:      termInstructionKind,
 			IsVirtual: isVirtual,
 			CalleePkg: pkg,
-			Name:      model.Name(name),
+			Name:      name,
 			Args:      args,
 			BIRTerminatorBase: bir.BIRTerminatorBase{
 				ThenBB: &bir.BIRBasicBlock{
-					Id: model.Name(thenBBId),
+					Id: thenBBId,
 				},
 				BIRInstructionBase: bir.BIRInstructionBase{
 					LhsOp: lhsOp,
 				},
 			},
-		}, nil
+		}
 	default:
-		return nil, fmt.Errorf("unsupported terminator kind: %d", termInstructionKind)
+		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))
 	}
 }
 
-func (br *BIRReader) readOperand(varMap map[string]*bir.BIRVariableDcl) (*bir.BIROperand, error) {
-	ignoreVariable, err := br.readBool()
-	if err != nil {
-		return nil, err
+func (br *BIRReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIROperand {
+	var ignoreVariable bool
+	if err := br.read(&ignoreVariable); err != nil {
+		panic(fmt.Sprintf("reading operand ignore variable: %v", err))
 	}
 
 	if ignoreVariable {
-		varTypeIdx, err := br.readInt32()
-		if err != nil {
-			return nil, err
+		var varTypeIdx int32
+		if err := br.read(&varTypeIdx); err != nil {
+			panic(fmt.Sprintf("reading operand type index: %v", err))
 		}
 		varType := br.getTypeFromCP(int(varTypeIdx))
 		return &bir.BIROperand{
 			VariableDcl: &bir.BIRVariableDcl{
 				Type: varType,
 			},
-		}, nil
+		}
 	}
 
-	varKind, err := br.readUInt8()
-	if err != nil {
-		return nil, err
-	}
-
-	scope, err := br.readUInt8()
-	if err != nil {
-		return nil, err
-	}
-
-	nameIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
-	}
-	name := model.Name(br.getStringFromCP(int(nameIdx)))
+	varKind := br.readKind()
+	scope := br.readScope()
+	name := br.readStringCPEntry()
 
 	varDcl, ok := varMap[name.Value()]
 	if !ok {
 		varDcl = &bir.BIRVariableDcl{
-			Kind:  bir.VarKind(varKind),
-			Scope: bir.VarScope(scope),
+			Kind:  varKind,
+			Scope: scope,
 			Name:  name,
 		}
-		// Don't put in map yet, as it might be a global or just a reference we haven't seen the formal decl for
 	}
 
 	return &bir.BIROperand{
 		VariableDcl: varDcl,
-	}, nil
+	}
 }
 
-func read[T any](r io.Reader) (T, error) {
-	var v T
-	err := binary.Read(r, binary.BigEndian, &v)
-	return v, err
+func (br *BIRReader) read(v any) error {
+	return binary.Read(br.r, binary.BigEndian, v)
 }
 
-func (br *BIRReader) readInt8() (int8, error) {
-	return read[int8](br.r)
+func (br *BIRReader) readKind() bir.VarKind {
+	var val uint8
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading kind: %v", err))
+	}
+	return bir.VarKind(val)
 }
 
-func (br *BIRReader) readUInt8() (uint8, error) {
-	return read[uint8](br.r)
+func (br *BIRReader) readFlags() int64 {
+	var val int64
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading flags: %v", err))
+	}
+	return val
 }
 
-func (br *BIRReader) readInt32() (int32, error) {
-	return read[int32](br.r)
+func (br *BIRReader) readOrigin() model.SymbolOrigin {
+	var val uint8
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading origin: %v", err))
+	}
+	return model.SymbolOrigin(val)
 }
 
-func (br *BIRReader) readInt64() (int64, error) {
-	return read[int64](br.r)
+func (br *BIRReader) readStringCPEntry() model.Name {
+	var idx int32
+	if err := br.read(&idx); err != nil {
+		panic(fmt.Sprintf("reading string CP entry index: %v", err))
+	}
+	return model.Name(br.getStringFromCP(int(idx)))
 }
 
-func (br *BIRReader) readFloat64() (float64, error) {
-	return read[float64](br.r)
+func (br *BIRReader) readLength() int64 {
+	var val int64
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading length: %v", err))
+	}
+	return val
 }
 
-func (br *BIRReader) readBool() (bool, error) {
-	return read[bool](br.r)
+func (br *BIRReader) readInstructionKind() bir.InstructionKind {
+	var val uint8
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading instruction kind: %v", err))
+	}
+	return bir.InstructionKind(val)
 }
 
-func (br *BIRReader) readPosition() (diagnostics.Location, error) {
-	sourceFileIdx, err := br.readInt32()
-	if err != nil {
-		return nil, err
+func (br *BIRReader) readScope() bir.VarScope {
+	var val uint8
+	if err := br.read(&val); err != nil {
+		panic(fmt.Sprintf("reading scope: %v", err))
+	}
+	return bir.VarScope(val)
+}
+
+func (br *BIRReader) readPackageCPEntry() *model.PackageID {
+	var idx int32
+	if err := br.read(&idx); err != nil {
+		panic(fmt.Sprintf("reading package CP entry index: %v", err))
+	}
+	return br.getPackageFromCP(int(idx))
+}
+
+func (br *BIRReader) readPosition() diagnostics.Location {
+	var sourceFileIdx int32
+	if err := br.read(&sourceFileIdx); err != nil {
+		panic(fmt.Sprintf("reading position source file index: %v", err))
 	}
 	sourceFileName := br.getStringFromCP(int(sourceFileIdx))
 
-	sLine, err := br.readInt32()
-	if err != nil {
-		return nil, err
+	var sLine int32
+	if err := br.read(&sLine); err != nil {
+		panic(fmt.Sprintf("reading position start line: %v", err))
 	}
-	sCol, err := br.readInt32()
-	if err != nil {
-		return nil, err
+	var sCol int32
+	if err := br.read(&sCol); err != nil {
+		panic(fmt.Sprintf("reading position start column: %v", err))
 	}
-	eLine, err := br.readInt32()
-	if err != nil {
-		return nil, err
+	var eLine int32
+	if err := br.read(&eLine); err != nil {
+		panic(fmt.Sprintf("reading position end line: %v", err))
 	}
-	eCol, err := br.readInt32()
-	if err != nil {
-		return nil, err
+	var eCol int32
+	if err := br.read(&eCol); err != nil {
+		panic(fmt.Sprintf("reading position end column: %v", err))
 	}
 
-	return diagnostics.NewBLangDiagnosticLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol), 0, 0), nil
+	return diagnostics.NewBLangDiagnosticLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol), 0, 0)
 }
