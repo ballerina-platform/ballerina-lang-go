@@ -500,10 +500,34 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard patterns have type ANY and are always valid
 		validateResolvedType(a, expr, expectedType)
-
+	case *ast.BLangTypeConversionExpr:
+		validateTypeConversionExpr(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
+}
+
+func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) {
+	analyzeExpression(a, expr.Expression, nil)
+	exprTy := expr.Expression.GetTypeData().Type
+	targetType := expr.TypeDescriptor.GetDeterminedType()
+	intersection := semtypes.Intersect(exprTy, targetType)
+	if semtypes.IsEmpty(a.tyCtx(), intersection) && !potentialNumericConversions(a, exprTy, targetType) {
+		a.semanticErr("impossible type conversion, intersection is empty")
+		return
+	}
+	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
+		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, exprTy))
+		return
+	}
+	validateResolvedType(a, expr, expectedType)
+}
+
+func potentialNumericConversions[A analyzer](a A, exprTy, targetType semtypes.SemType) bool {
+	if semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent() {
+		return true
+	}
+	return false
 }
 
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {

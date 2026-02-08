@@ -1,0 +1,29 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (type-conversion-expr
+          (literal 1)
+          (value-type any)))))
+    (expression-stmt
+      (invocation io println (
+        (type-conversion-expr
+          (literal <nil>)
+          (value-type any)))))
+    (expression-stmt
+      (invocation io println (
+        (type-conversion-expr
+          (literal true)
+          (value-type any)))))
+    (expression-stmt
+      (invocation io println (
+        (type-conversion-expr
+          (literal 2)
+          (value-type int)))))
+    (expression-stmt
+      (invocation io println (
+        (type-conversion-expr
+          (literal false)
+          (value-type boolean)))))
+  )
+)

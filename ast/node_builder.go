@@ -2253,7 +2253,20 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 }
 
 func (n *NodeBuilder) TransformTypeCastExpression(typeCastExpressionNode *tree.TypeCastExpressionNode) BLangNode {
-	panic("TransformTypeCastExpression unimplemented")
+	typeConversionNode := &BLangTypeConversionExpr{}
+	typeConversionNode.SetPosition(getPosition(typeCastExpressionNode))
+	typeCastParamNode := typeCastExpressionNode.TypeCastParam()
+	if typeCastParamNode != nil && typeCastParamNode.Type() != nil {
+		typeConversionNode.TypeDescriptor = n.createTypeNode(typeCastParamNode.Type())
+	} else {
+		panic("type cast param node type is not present")
+	}
+	typeConversionNode.Expression = n.createExpression(typeCastExpressionNode.Expression())
+	annotations := typeCastParamNode.Annotations()
+	if annotations.Size() > 0 {
+		panic("annotations not yet implemented")
+	}
+	return typeConversionNode
 }
 
 func (n *NodeBuilder) TransformTypeCastParam(typeCastParamNode *tree.TypeCastParamNode) BLangNode {
