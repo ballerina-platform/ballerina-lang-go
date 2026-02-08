@@ -174,90 +174,75 @@ func (cp *ConstantPool) AddShapeCPEntry(shape ast.BType) int32 {
 	panic("shape entry addition not implemented")
 }
 
-func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) error {
+func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) {
 	entryType := entry.EntryType()
-	if err := cp.writeInt8(buf, int8(entryType)); err != nil {
-		return err
-	}
+	write(buf, int8(entryType))
 
 	switch e := entry.(type) {
 	case *IntegerCPEntry:
-		return cp.writeInt64(buf, e.Value)
+		write(buf, e.Value)
 	case *FloatCPEntry:
-		return cp.writeFloat64(buf, e.Value)
+		write(buf, e.Value)
 	case *BooleanCPEntry:
-		var b byte
-		if e.Value {
-			b = 1
-		}
-		return cp.writeUInt8(buf, uint8(b))
+		write(buf, e.Value)
 	case *StringCPEntry:
 		strBytes := []byte(e.Value)
-		if err := cp.writeInt32(buf, int32(len(strBytes))); err != nil {
-			return err
-		}
+		cp.writeLength(buf, len(strBytes))
 		_, err := buf.Write(strBytes)
-		return err
+		if err != nil {
+			panic(fmt.Sprintf("writing string bytes: %v", err))
+		}
 	case *ByteCPEntry:
-		return cp.writeInt32(buf, int32(e.Value))
+		write(buf, e.Value)
 	case *PackageCPEntry:
-		if err := cp.writeInt32(buf, int32(e.OrgNameCPIndex)); err != nil {
-			return err
-		}
-		if err := cp.writeInt32(buf, int32(e.PkgNameCPIndex)); err != nil {
-			return err
-		}
-		if err := cp.writeInt32(buf, int32(e.ModuleNameCPIndex)); err != nil {
-			return err
-		}
-		return cp.writeInt32(buf, int32(e.VersionCPIndex))
+		write(buf, e.OrgNameCPIndex)
+		write(buf, e.PkgNameCPIndex)
+		write(buf, e.ModuleNameCPIndex)
+		write(buf, e.VersionCPIndex)
 	case *ShapeCPEntry:
 		panic("shape serialization not implemented")
 	default:
-		return fmt.Errorf("unsupported constant pool entry type: %T", entry)
+		panic(fmt.Sprintf("unsupported constant pool entry type: %T", entry))
 	}
 }
 
 func (cp *ConstantPool) Serialize() ([]byte, error) {
+	var errMsg string
+	defer func() {
+		if r := recover(); r != nil {
+			if msg, ok := r.(string); ok {
+				errMsg = msg
+			} else {
+				errMsg = fmt.Sprintf("%v", r)
+			}
+		}
+	}()
+
 	buf := &bytes.Buffer{}
 
-	if err := cp.writeInt32(buf, int32(-1)); err != nil {
-		return nil, err
-	}
+	write(buf, int64(-1)) // entry count placeholder
 
 	for _, entry := range cp.entries {
-		if err := cp.WriteCPEntry(buf, entry); err != nil {
-			return nil, err
-		}
+		cp.WriteCPEntry(buf, entry)
 	}
 
 	bytes := buf.Bytes()
-	entryCount := int32(len(cp.entries))
-	binary.BigEndian.PutUint32(bytes[0:4], uint32(entryCount))
+	binary.BigEndian.PutUint64(bytes[0:8], uint64(len(cp.entries)))
+
+	if errMsg != "" {
+		return nil, fmt.Errorf("constant pool serialization failed due to %s", errMsg)
+	}
 
 	return bytes, nil
 }
 
-func (cp *ConstantPool) writeInt8(buf *bytes.Buffer, val int8) error {
-	return binary.Write(buf, binary.BigEndian, val)
+func (cp *ConstantPool) writeLength(buf *bytes.Buffer, length int) {
+	write(buf, int64(length))
 }
 
-func (cp *ConstantPool) writeUInt8(buf *bytes.Buffer, val uint8) error {
-	return binary.Write(buf, binary.BigEndian, val)
-}
-
-func (cp *ConstantPool) writeInt32(buf *bytes.Buffer, val int32) error {
-	return binary.Write(buf, binary.BigEndian, val)
-}
-
-func (cp *ConstantPool) writeInt64(buf *bytes.Buffer, val int64) error {
-	return binary.Write(buf, binary.BigEndian, val)
-}
-
-func (cp *ConstantPool) writeUInt64(buf *bytes.Buffer, val uint64) error {
-	return binary.Write(buf, binary.BigEndian, val)
-}
-
-func (cp *ConstantPool) writeFloat64(buf *bytes.Buffer, val float64) error {
-	return binary.Write(buf, binary.BigEndian, val)
+// write writes data to buf using big-endian byte order
+func write(buf *bytes.Buffer, data any) {
+	if err := binary.Write(buf, binary.BigEndian, data); err != nil {
+		panic(fmt.Sprintf("writing binary data: %v", err))
+	}
 }
