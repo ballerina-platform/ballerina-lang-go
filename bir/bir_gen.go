@@ -289,7 +289,7 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
 	// First do the operation
 	ref := stmt.VarRef.(ast.BLangExpression)
-	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr)
+	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType())
 	// Then do the assignment
 	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect)
 }
@@ -529,7 +529,7 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypeConversionExpr) expressionEffect {
 	exprEffect := handleExpression(ctx, curBB, expr.Expression)
 	curBB = exprEffect.block
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	typeCast := &TypeCast{}
 	typeCast.RhsOp = resultOperand
 	typeCast.LhsOp = exprEffect.result
@@ -543,13 +543,13 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 
 func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLangListConstructorExpr) expressionEffect {
 	// FIXME: since we don't have type information we are going to just create an open array
-	sizeOperand := ctx.addTempVar(nil)
+	sizeOperand := ctx.addTempVar(&semtypes.INT)
 	constantLoad := &ConstantLoad{}
 	constantLoad.Value = int64(-1)
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(&semtypes.LIST)
 	newArray := &NewArray{}
 	newArray.LhsOp = resultOperand
 	newArray.SizeOp = sizeOperand
@@ -562,7 +562,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLang
 
 func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
 	// Assignment is handled in assignmentStatement to this is always a load
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	fieldAccess := &FieldAccess{}
 	fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
 	fieldAccess.LhsOp = resultOperand
@@ -599,7 +599,7 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	}
 	opEffect := handleExpression(ctx, bb, expr.Expr)
 
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	unaryOp := &UnaryOp{}
 	unaryOp.Kind = kind
 	unaryOp.LhsOp = resultOperand
@@ -622,7 +622,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	}
 	thenBB := ctx.addBB()
 	// TODO: deal with type
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := &Call{}
 	call.Kind = INSTRUCTION_KIND_CALL
 	call.Args = args
@@ -655,7 +655,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 }
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	constantLoad := &ConstantLoad{}
 	constantLoad.Value = expr.Value
 	constantLoad.LhsOp = resultOperand
@@ -666,7 +666,7 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression) expressionEffect {
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression, resultType semtypes.SemType) expressionEffect {
 	var kind InstructionKind
 	switch opKind {
 	case model.OperatorKind_ADD:
@@ -708,7 +708,7 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 	default:
 		panic("unexpected binary operator kind")
 	}
-	resultOperand := ctx.addTempVar(nil)
+	resultOperand := ctx.addTempVar(resultType)
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = kind
 	binaryOp.LhsOp = resultOperand
@@ -726,7 +726,7 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 }
 
 func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
-	return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr)
+	return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
 }
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
@@ -744,7 +744,7 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	// Try constant lookup
 	// FIXME: this is a hack until we have package level variable initialization
 	if constant, ok := ctx.birCx.constantMap[symRef]; ok {
-		resultOperand := ctx.addTempVar(nil)
+		resultOperand := ctx.addTempVar(constant.Type)
 		constantLoad := &ConstantLoad{}
 		constantLoad.Value = constant.ConstValue.Value
 		constantLoad.LhsOp = resultOperand
