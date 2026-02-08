@@ -519,8 +519,25 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return indexBasedAccess(ctx, curBB, expr)
 	case *ast.BLangListConstructorExpr:
 		return listConstructorExpression(ctx, curBB, expr)
+	case *ast.BLangTypeConversionExpr:
+		return typeConversionExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
+	}
+}
+
+func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypeConversionExpr) expressionEffect {
+	exprEffect := handleExpression(ctx, curBB, expr.Expression)
+	curBB = exprEffect.block
+	resultOperand := ctx.addTempVar(nil)
+	typeCast := &TypeCast{}
+	typeCast.RhsOp = resultOperand
+	typeCast.LhsOp = exprEffect.result
+	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
+	curBB.Instructions = append(curBB.Instructions, typeCast)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
 	}
 }
 
