@@ -1,0 +1,32 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable v (type
+        (array-type
+          (value-type any) ())) (expr
+        (list-constructor-expr))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (literal 0))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (literal true))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (literal 2))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (literal <nil>))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref v)
+        (literal 4))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref v))))
+  )
+)
