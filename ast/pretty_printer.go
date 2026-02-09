@@ -503,32 +503,34 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printString(node.Name.Value)
 
 	// Print markdown documentation if present
-	if node.MarkdownDocumentationAttachment != nil {
+	hasDoc := node.MarkdownDocumentationAttachment != nil
+	if hasDoc {
 		p.indentLevel++
 		p.PrintInner(node.MarkdownDocumentationAttachment)
 		p.indentLevel--
 	}
 
-	// Print parameters if present
-	p.printString("(")
-	if len(node.RequiredParams) > 0 {
+	// Print parameters
+	hasParams := len(node.RequiredParams) > 0
+	if hasParams || !hasDoc {
+		p.printString("(")
 		p.indentLevel++
 		for _, param := range node.RequiredParams {
 			p.PrintInner(&param)
 		}
 		p.indentLevel--
+		p.printSticky(")")
 	}
 
-	p.printSticky(")")
-	// Print return type if present
+	// Print return type
 	p.printString("(")
 	if node.GetReturnTypeDescriptor() != nil {
 		p.indentLevel++
 		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
 		p.indentLevel--
 	}
-
 	p.printSticky(")")
+
 	// Print function body if present
 	if node.Body != nil {
 		p.indentLevel++
@@ -668,6 +670,7 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 			p.indentLevel++
 			p.PrintInner(doc)
 			p.indentLevel--
+			p.addSpaceBeforeNode = true
 		}
 	}
 
@@ -813,18 +816,23 @@ func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentat
 
 	// Print documentation lines
 	if len(node.DocumentationLines) > 0 {
-		p.printString("(doc-lines")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(doc-lines")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for _, line := range node.DocumentationLines {
 			p.PrintInner(&line)
 		}
 		p.indentLevel--
-		p.printString(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	// Print parameters
 	if len(node.Parameters) > 0 {
-		// Print on a new line with proper indentation
 		p.buffer.WriteString("\n")
 		for i := 0; i < p.indentLevel; i++ {
 			p.buffer.WriteString("  ")
@@ -836,17 +844,12 @@ func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentat
 			p.PrintInner(&node.Parameters[i])
 		}
 		p.indentLevel--
-		p.buffer.WriteString("\n")
-		for i := 0; i < p.indentLevel; i++ {
-			p.buffer.WriteString("  ")
-		}
 		p.buffer.WriteString(")")
 		p.addSpaceBeforeNode = false
 	}
 
 	// Print return parameter
 	if node.ReturnParameter != nil {
-		// Print on a new line with proper indentation
 		p.buffer.WriteString("\n")
 		for i := 0; i < p.indentLevel; i++ {
 			p.buffer.WriteString("  ")
@@ -866,32 +869,53 @@ func (p *PrettyPrinter) printMarkdownDocumentation(node *BLangMarkdownDocumentat
 
 	// Print deprecation documentation
 	if node.DeprecationDocumentation != nil {
-		p.printString("(deprec-doc")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(deprec-doc")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		p.PrintInner(node.DeprecationDocumentation)
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
-	// Print deprecated parameters documentation
 	if node.DeprecatedParametersDocumentation != nil {
-		p.printString("(deprec-params-doc")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(deprec-params-doc")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		p.PrintInner(node.DeprecatedParametersDocumentation)
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	// Print references
 	if len(node.References) > 0 {
-		p.printString("(references")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(references")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for i := range node.References {
 			p.PrintInner(&node.References[i])
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
+
+	p.indentLevel--
+	p.buffer.WriteString(")")
+	p.addSpaceBeforeNode = true
 }
 
 // Error type node printer
@@ -928,10 +952,14 @@ func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownP
 
 	// Print parameter documentation lines
 	if len(node.ParameterDocumentationLines) > 0 {
-		p.printString("(doc-lines")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(doc-lines")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for _, line := range node.ParameterDocumentationLines {
-			// Print each line on its own line with proper indentation
 			p.buffer.WriteString("\n")
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
@@ -940,10 +968,6 @@ func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownP
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.buffer.WriteString("\n")
-		for i := 0; i < p.indentLevel; i++ {
-			p.buffer.WriteString("  ")
-		}
 		p.buffer.WriteString(")")
 		p.addSpaceBeforeNode = false
 	}
@@ -959,10 +983,14 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 
 	// Print return parameter documentation lines
 	if len(node.ReturnParameterDocumentationLines) > 0 {
-		p.printString("(doc-lines")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(doc-lines")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for _, line := range node.ReturnParameterDocumentationLines {
-			// Print each line on its own line with proper indentation
 			p.buffer.WriteString("\n")
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
@@ -971,10 +999,6 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.buffer.WriteString("\n")
-		for i := 0; i < p.indentLevel; i++ {
-			p.buffer.WriteString("  ")
-		}
 		p.buffer.WriteString(")")
 		p.addSpaceBeforeNode = false
 	}
@@ -997,26 +1021,46 @@ func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDow
 	p.printString("md-deprec-doc")
 	p.indentLevel++
 
-	// Print deprecation documentation lines
 	if len(node.DeprecationDocumentationLines) > 0 {
-		p.printString("(doc-lines")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(doc-lines")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for _, line := range node.DeprecationDocumentationLines {
-			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.buffer.WriteString("\n")
+			for i := 0; i < p.indentLevel; i++ {
+				p.buffer.WriteString("  ")
+			}
+			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
-	// Print deprecation lines
 	if len(node.DeprecationLines) > 0 {
-		p.printString("(deprec-lines")
+		p.buffer.WriteString("\n")
+		for i := 0; i < p.indentLevel; i++ {
+			p.buffer.WriteString("  ")
+		}
+		p.buffer.WriteString("(deprec-lines")
+		p.addSpaceBeforeNode = false
 		p.indentLevel++
 		for _, line := range node.DeprecationLines {
-			p.printString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.buffer.WriteString("\n")
+			for i := 0; i < p.indentLevel; i++ {
+				p.buffer.WriteString("  ")
+			}
+			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
-		p.printSticky(")")
+		p.buffer.WriteString(")")
+		p.addSpaceBeforeNode = false
 	}
 
 	if node.IsCorrectDeprecationLine {
