@@ -48,6 +48,16 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 			arr[i] = frame.GetOperand(value.Index)
 		}
 	}
+	// TODO: may be this should be done in bir gen and simply pass in the filler value
+	lat := newArray.AtomicType
+	for i := size; i < lat.Members.FixedLength; i++ {
+		ty := lat.MemberAt(i)
+		val := defaultValueForType(ty)
+		if val == neverValue {
+			panic("never value encountered")
+		}
+		arr = append(arr, val)
+	}
 	frame.SetOperand(newArray.LhsOp.Index, &arr)
 }
 
