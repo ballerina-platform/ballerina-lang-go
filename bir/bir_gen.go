@@ -581,6 +581,7 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	bb.Instructions = append(bb.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
+		block:  bb,
 	}
 }
 

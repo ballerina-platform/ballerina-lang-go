@@ -1,0 +1,45 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (literal true)))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (unary-expr -
+              (literal 17))))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (literal false)
+            (literal <nil>)
+            (literal 43)))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (list-constructor-expr
+              (list-constructor-expr
+                (list-constructor-expr
+                  (list-constructor-expr
+                    (list-constructor-expr)))))))))
+      (expression-stmt
+        (invocation io println (
+          (list-constructor-expr
+            (literal false)
+            (list-constructor-expr
+              (literal 1)
+              (literal true)
+              (literal 21))
+            (literal 0))))))))

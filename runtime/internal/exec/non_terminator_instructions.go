@@ -62,6 +62,9 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	if idx < 0 || idx >= len(arr) {
+		panic("index out of bounds")
+	}
 	frame.SetOperand(access.LhsOp.Index, arr[idx])
 }
 
