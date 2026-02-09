@@ -18,9 +18,10 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/semtypes"
 	"fmt"
+	"math/big"
 )
 
 const maxRecursionDepth = 1000
@@ -191,22 +192,30 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 	return nil
 }
 
-func defaultValueForType(t model.ValueType) any {
+func defaultValueForType(t semtypes.SemType) any {
 	if t == nil {
 		return nil
 	}
-	switch t.GetTypeKind() {
-	case model.TypeKind_BOOLEAN:
+	if semtypes.IsSubtypeSimple(t, semtypes.BOOLEAN) {
 		return false
-	case model.TypeKind_INT, model.TypeKind_BYTE:
+	} else if semtypes.IsSubtypeSimple(t, semtypes.INT) {
 		return int64(0)
-	case model.TypeKind_FLOAT:
+	} else if semtypes.IsSubtypeSimple(t, semtypes.FLOAT) {
 		return float64(0)
-	case model.TypeKind_STRING:
+	} else if semtypes.IsSubtypeSimple(t, semtypes.STRING) {
 		return ""
-	case model.TypeKind_NIL:
+	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
+		return big.NewRat(0, 1)
+	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
+		return []any{}
+	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
-	default:
-		return nil
+	} else {
+		return &never{}
 	}
+}
+
+// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
+// this should panic.
+type never struct {
 }

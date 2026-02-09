@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 1.8.0;
-$annotation_data  other;
+$annotation_data  <UNKNOWN>;
 .<init><NIL>{
   bb0 {
     %0 = ConstantLoad <nil>

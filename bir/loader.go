@@ -315,13 +315,7 @@ func populateConstants(b *Bir, pkg *BIRPackage) error {
 
 		// Type + value + attachments left nil/zeroed; mapping them would
 		// require full type + const value decoding.
-		var t model.ValueType
 		cv := ConstValue{}
-
-		// Parse type
-		if c.TypeCpIndex >= 0 {
-			t = parseTypeFromCP(b, c.TypeCpIndex)
-		}
 
 		// Parse constant value
 		if c.ConstantValue != nil {
@@ -336,7 +330,7 @@ func populateConstants(b *Bir, pkg *BIRPackage) error {
 			},
 			Name:       name,
 			Flags:      c.Flags,
-			Type:       t,
+			Type:       nil,
 			ConstValue: cv,
 			Origin:     origin,
 		}
@@ -399,13 +393,7 @@ func populateGlobals(b *Bir, pkg *BIRPackage) error {
 		kind := VarKind(gv.Kind)
 		scope := VAR_SCOPE_GLOBAL
 
-		var t model.ValueType
 		metaVarName := name.Value()
-
-		// Parse type
-		if gv.TypeCpIndex >= 0 {
-			t = parseTypeFromCP(b, gv.TypeCpIndex)
-		}
 
 		g := BIRGlobalVariableDcl{
 			BIRVariableDcl: BIRVariableDcl{
@@ -414,7 +402,7 @@ func populateGlobals(b *Bir, pkg *BIRPackage) error {
 						Pos: pos,
 					},
 				},
-				Type:         t,
+				Type:         nil,
 				Name:         name,
 				OriginalName: name,
 				MetaVarName:  metaVarName,
@@ -957,12 +945,8 @@ func parseReturnVar(b *Bir, rv *Bir_ReturnVar) *BIRVariableDcl {
 
 	name := model.Name(cpString(b, rv.NameCpIndex))
 	kind := VarKind(rv.Kind)
-	var t model.ValueType
-	if rv.TypeCpIndex >= 0 {
-		t = parseTypeFromCP(b, rv.TypeCpIndex)
-	}
 	return &BIRVariableDcl{
-		Type:  t,
+		Type:  nil,
 		Name:  name,
 		Scope: VAR_SCOPE_FUNCTION,
 		Kind:  kind,
@@ -977,15 +961,11 @@ func parseFunctionParameter(b *Bir, dp *Bir_DefaultParameter) *BIRFunctionParame
 
 	name := model.Name(cpString(b, dp.NameCpIndex))
 	kind := VarKind(dp.Kind)
-	var t model.ValueType
-	if dp.TypeCpIndex >= 0 {
-		t = parseTypeFromCP(b, dp.TypeCpIndex)
-	}
 	metaVarName := cpString(b, dp.MetaVarNameCpIndex)
 	hasDefaultExpr := dp.HasDefaultExpr != 0
 	return &BIRFunctionParameter{
 		BIRVariableDcl: BIRVariableDcl{
-			Type:         t,
+			Type:         nil,
 			Name:         name,
 			OriginalName: name,
 			MetaVarName:  metaVarName,
@@ -1004,12 +984,8 @@ func parseLocalVariable(b *Bir, lv *Bir_LocalVariable) *BIRVariableDcl {
 
 	name := model.Name(cpString(b, lv.NameCpIndex))
 	kind := VarKind(lv.Kind)
-	var t model.ValueType
-	if lv.TypeCpIndex >= 0 {
-		t = parseTypeFromCP(b, lv.TypeCpIndex)
-	}
 	localVar := &BIRVariableDcl{
-		Type:  t,
+		Type:  nil,
 		Name:  name,
 		Scope: VAR_SCOPE_FUNCTION,
 		Kind:  kind,
@@ -1224,13 +1200,9 @@ func parseReceiver(b *Bir, rec *Bir_Reciever) *BIRVariableDcl {
 
 	name := model.Name(cpString(b, rec.NameCpIndex))
 	kind := VarKind(rec.Kind)
-	var t model.ValueType
-	if rec.TypeCpIndex >= 0 {
-		t = parseTypeFromCP(b, rec.TypeCpIndex)
-	}
 
 	return &BIRVariableDcl{
-		Type:  t,
+		Type:  nil,
 		Name:  name,
 		Scope: VAR_SCOPE_FUNCTION,
 		Kind:  kind,
@@ -1246,13 +1218,9 @@ func parseOperand(b *Bir, op *Bir_Operand) *BIROperand {
 	// Check if variable is ignored
 	if op.IgnoredVariable != 0 {
 		// Ignored variable - create a minimal variable declaration
-		var ignoredType model.ValueType
-		if op.IgnoredTypeCpIndex >= 0 {
-			ignoredType = parseTypeFromCP(b, op.IgnoredTypeCpIndex)
-		}
 		// Create a minimal variable for ignored operands
 		ignoredVar := &BIRVariableDcl{
-			Type:  ignoredType,
+			Type:  nil,
 			Name:  model.Name("_"),
 			Scope: VAR_SCOPE_FUNCTION,
 			Kind:  VAR_KIND_LOCAL,
@@ -1267,23 +1235,13 @@ func parseOperand(b *Bir, op *Bir_Operand) *BIROperand {
 		return nil
 	}
 
-	var varType model.ValueType
 	varName := model.Name(cpString(b, op.Variable.VariableDclNameCpIndex))
 	kind := VarKind(op.Variable.Kind)
 	scope := VarScope(op.Variable.Scope)
 
-	// For global/constant variables, get type from GlobalOrConstantVariable
-	if op.Variable.Kind == 5 || op.Variable.Kind == 7 {
-		if op.Variable.GlobalOrConstantVariable != nil {
-			if op.Variable.GlobalOrConstantVariable.TypeCpIndex >= 0 {
-				varType = parseTypeFromCP(b, op.Variable.GlobalOrConstantVariable.TypeCpIndex)
-			}
-		}
-	}
-
 	// Create variable declaration
 	varDcl := &BIRVariableDcl{
-		Type:  varType,
+		Type:  nil,
 		Name:  varName,
 		Scope: scope,
 		Kind:  kind,
