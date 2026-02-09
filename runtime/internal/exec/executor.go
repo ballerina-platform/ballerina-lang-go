@@ -214,6 +214,8 @@ func defaultValueForType(t semtypes.SemType) any {
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
-		return &values.Never{}
+		return neverValue
 	}
 }
+
+var neverValue = &values.Never{}
