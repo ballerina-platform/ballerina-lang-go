@@ -17,7 +17,8 @@
 package exec
 
 type Frame struct {
-	locals []any // variable index → value (indexed by BIROperand.Index)
+	locals      []any // variable index → value (indexed by BIROperand.Index)
+	FunctionKey string
 	// TODO: When globals are implemented, negative indices will refer to globals
 	// and positive indices will refer to locals. The package will have its own
 	// array for globals, initialized with the init function.
