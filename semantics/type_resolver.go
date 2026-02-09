@@ -714,7 +714,7 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		// List indexing
-		resultTy = semtypes.ListProjInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+		resultTy = semtypes.ListMemberTypeInnerVal(t.tyCtx, containerExprTy, keyExprTy)
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		// String indexing returns a string
 		resultTy = &semtypes.STRING

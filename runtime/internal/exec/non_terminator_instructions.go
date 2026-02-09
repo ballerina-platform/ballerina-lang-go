@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"math"
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
@@ -55,6 +56,9 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
 	arr := *arrPtr
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	if idx < 0 {
+		panic("index out of bounds")
+	}
 	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
 	arr[idx] = frame.GetOperand(access.RhsOp.Index)
 }
@@ -70,6 +74,9 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 
 func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
 	if idx >= len(arr) {
+		if idx >= math.MaxInt32 {
+			panic("list too long")
+		}
 		newArr := make([]any, idx+1)
 		copy(newArr, arr)
 		*arrPtr = newArr
