@@ -22,3 +22,6 @@
 function test(string param1, string param2) returns string {
     return "";
 }
+
+public function main() {
+}
