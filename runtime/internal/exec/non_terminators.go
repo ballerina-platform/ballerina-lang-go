@@ -115,6 +115,9 @@ func castValue(value any, targetType semtypes.SemType) any {
 
 func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
 	if idx >= len(arr) {
+		if idx >= math.MaxInt32 {
+			panic("list too long")
+		}
 		newArr := make([]any, idx+1)
 		copy(newArr, arr)
 		*arrPtr = newArr
