@@ -35,4 +35,7 @@
     (value-type string))
     (block-function-body
       (return
-        (literal )))))
+        (literal ))))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

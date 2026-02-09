@@ -26,4 +26,7 @@
       (return
         (binary-expr +
           (simple-var-ref x)
-          (simple-var-ref y))))))
+          (simple-var-ref y)))))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

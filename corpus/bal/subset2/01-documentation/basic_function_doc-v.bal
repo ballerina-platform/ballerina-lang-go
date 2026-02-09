@@ -17,3 +17,6 @@
 # Documentation for basic function
 function basicFunction() {
 }
+
+public function main() {
+}

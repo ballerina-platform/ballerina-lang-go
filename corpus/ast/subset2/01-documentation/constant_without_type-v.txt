@@ -4,4 +4,7 @@
     (md-doc
       (doc-lines
         (md-doc-line "Documentation for constant without type"))) () (
-    (literal Some other value))))
+    (literal Some other value)))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

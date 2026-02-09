@@ -1,0 +1,16 @@
+module $anon.. v 0.0.0;
+func1<NIL>{
+  bb0 {
+    return;
+  }
+}
+func2<NIL>{
+  bb0 {
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    return;
+  }
+}

@@ -22,4 +22,7 @@
     (variable y (type
       (value-type int)))) (
     (value-type null))
+    (block-function-body))
+  (function main () (
+    (value-type null))
     (block-function-body)))

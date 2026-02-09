@@ -16,3 +16,6 @@
 
 # Documentation for constant without type
 const stringConstWithoutType = "Some other value";
+
+public function main() {
+}

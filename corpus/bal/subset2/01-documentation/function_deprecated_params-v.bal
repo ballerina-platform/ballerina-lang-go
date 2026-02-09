@@ -23,3 +23,6 @@
 function process(int x, int y) {
     // implementation
 }
+
+public function main() {
+}
