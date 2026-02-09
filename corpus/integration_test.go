@@ -56,8 +56,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
-<<<<<<< HEAD
-		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
 		// Skip all typecast tests
 		"subset2/02-typecast/1-e.bal",
 		"subset2/02-typecast/2-p.bal",
@@ -70,9 +68,6 @@ var (
 		"subset2/02-typecast/9-e.bal",
 		"subset2/02-typecast/numeric-conversion-v.bal",
 		"subset2/02-typecast/numeric-conversion2-e.bal",
-=======
-		// stackoverflow-p.bal is now supported with recursion limit
->>>>>>> ce2ba05c (Enable running compiler error tests with integration tests)
 	})
 
 	printlnOutputs = make(map[string]string)
