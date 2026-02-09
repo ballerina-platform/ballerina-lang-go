@@ -50,23 +50,12 @@ const (
 )
 
 var (
-	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
+	outputRegex = regexp.MustCompile(`//\s*@output\s*(.*)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 	errorRegex  = regexp.MustCompile(`//\s*@error`)
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{
-		// Skip all typecast tests
-		"subset2/02-typecast/1-e.bal",
-		"subset2/02-typecast/2-p.bal",
-		"subset2/02-typecast/3-v.bal",
-		"subset2/02-typecast/4-e.bal",
-		"subset2/02-typecast/5-v.bal",
-		"subset2/02-typecast/6-e.bal",
-		"subset2/02-typecast/7-v.bal",
-		"subset2/02-typecast/8-e.bal",
-		"subset2/02-typecast/9-e.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -345,6 +334,9 @@ func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 }
 
 func valueToString(v any) string {
+	if v == nil {
+		return "nil"
+	}
 	type stringer interface {
 		String() string
 	}
@@ -386,8 +378,6 @@ func valueToString(v any) string {
 		return formatAnySlice(t)
 	case stringer:
 		return t.String()
-	case nil:
-		return "nil"
 	default:
 		return "<unsupported>"
 	}

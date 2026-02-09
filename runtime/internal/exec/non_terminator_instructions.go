@@ -19,7 +19,6 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/semtypes"
-	"fmt"
 	"math/big"
 	"strconv"
 )
@@ -58,26 +57,20 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 	frame.SetOperand(access.LhsOp.Index, arr[idx])
 }
 
-func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
-	if idx >= len(arr) {
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		return newArr
-	}
-	return arr
-}
-
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
 	targetType := typeCast.Type
-	result := convertValue(sourceValue, targetType)
+	result := castValue(sourceValue, targetType)
 	frame.SetOperand(typeCast.LhsOp.Index, result)
 }
 
-func convertValue(value any, targetType semtypes.SemType) any {
-	bitset := semtypes.WidenToBasicTypes(targetType)
-	bitsetValue := (&bitset).All()
+func castValue(value any, targetType semtypes.SemType) any {
+	b := targetType.(*semtypes.BasicTypeBitSet)
+	// If casting to any, just return the value as-is
+	if b.All() == semtypes.ANY.All() {
+		return value
+	}
+	bitsetValue := b.All()
 	switch {
 	case bitsetValue&semtypes.INT.All() != 0:
 		return convertToInt(value)
@@ -87,6 +80,16 @@ func convertValue(value any, targetType semtypes.SemType) any {
 		return convertToDecimal(value)
 	}
 	return value
+}
+
+func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
+	if idx >= len(arr) {
+		newArr := make([]any, idx+1)
+		copy(newArr, arr)
+		*arrPtr = newArr
+		return newArr
+	}
+	return arr
 }
 
 func convertToInt(value any) int64 {
@@ -101,11 +104,11 @@ func convertToInt(value any) int64 {
 	case string:
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			panic(fmt.Sprintf("unsupported type conversion to int: value %v", v))
+			panic("bad type cast")
 		}
 		return int64(f)
 	default:
-		panic(fmt.Sprintf("unsupported type conversion to int: value %v", value))
+		panic("bad type cast")
 	}
 }
 
@@ -121,11 +124,11 @@ func convertToFloat(value any) float64 {
 	case string:
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			panic(fmt.Sprintf("unsupported type conversion to float: value %v", v))
+			panic("bad type cast")
 		}
 		return f
 	default:
-		panic(fmt.Sprintf("unsupported type conversion to float: value %v", value))
+		panic("bad type cast")
 	}
 }
 
@@ -140,10 +143,10 @@ func convertToDecimal(value any) *big.Rat {
 	case string:
 		r := new(big.Rat)
 		if _, ok := r.SetString(v); !ok {
-			panic(fmt.Sprintf("unsupported type conversion to decimal: value %v", v))
+			panic("bad type cast")
 		}
 		return r
 	default:
-		panic(fmt.Sprintf("unsupported type conversion to decimal: value %v", value))
+		panic("bad type cast")
 	}
 }
