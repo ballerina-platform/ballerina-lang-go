@@ -82,5 +82,5 @@ func ListProj(context Context, t SemType, key SemType) SemType {
 
 func ListMemberType(context Context, t SemType, key SemType) SemType {
 	// migrated from SemTypes.java:164:5
-	return listMemberTypeInnerVal(context, t, key)
+	return ListMemberTypeInnerVal(context, t, key)
 }

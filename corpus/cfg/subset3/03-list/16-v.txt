@@ -1,0 +1,16 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable v (type
+        (array-type
+          (value-type any) ())) (expr
+        (list-constructor-expr
+          (literal true)
+          (literal false)
+          (literal <nil>)))))
+    (expression-stmt
+      (invocation io println (
+        (invocation lang.array length (
+          (simple-var-ref v))))))
+  )
+)

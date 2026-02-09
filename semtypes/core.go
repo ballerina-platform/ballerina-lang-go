@@ -366,7 +366,7 @@ func stringSubtype(t SemType) SubtypeData {
 	return subtypeData(t, BT_STRING)
 }
 
-func listMemberTypeInnerVal(cx Context, t, k SemType) SemType {
+func ListMemberTypeInnerVal(cx Context, t, k SemType) SemType {
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		if (b.bitset & LIST.bitset) != 0 {
 			return &VAL
@@ -401,7 +401,7 @@ func ListAllMemberTypesInner(cx Context, t SemType) ListMemberTypes {
 
 	allRanges := bddListAllRanges(cx, getComplexSubtypeData(ct, BT_LIST).(Bdd), []Range{})
 	for _, r := range allRanges {
-		m := listMemberTypeInnerVal(cx, t, IntConst(r.Min))
+		m := ListMemberTypeInnerVal(cx, t, IntConst(r.Min))
 		if !IsNever(m) {
 			ranges = append(ranges, r)
 			types = append(types, m)
