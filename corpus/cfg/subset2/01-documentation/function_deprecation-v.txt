@@ -1,0 +1,14 @@
+(add
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ())
+)
+(oldFunction
+  (bb0 () ())
+)
