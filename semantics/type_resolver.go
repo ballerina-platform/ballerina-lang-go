@@ -738,7 +738,7 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 		resultTy = &semtypes.STRING
 	} else {
 		// For other types, we may need to implement mapping support later
-		t.ctx.Unimplemented("unsupported container type for index based access", expr.GetPosition())
+		t.ctx.SemanticError("unsupported container type for index based access", expr.GetPosition())
 		return nil
 	}
 
