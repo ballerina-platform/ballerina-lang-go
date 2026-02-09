@@ -599,7 +599,7 @@ func MappingMemberTypeInner(cx Context, t, k SemType) SemType {
 	}
 }
 
-func listAtomicType(cx Context, t SemType) *ListAtomicType {
+func ToListAtomicType(cx Context, t SemType) *ListAtomicType {
 	listAtomicInner := LIST_ATOMIC_INNER
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		if b.bitset == LIST.bitset {
