@@ -1,0 +1,78 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable v (type
+          (array-type
+            (value-type any) ())) (expr
+          (list-constructor-expr))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (binary-expr *
+            (literal 1000)
+            (literal 1000)))
+        (block-stmt
+          (assignment
+            (index-based-access
+              (simple-var-ref v)
+              (simple-var-ref i))
+            (literal 1))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (literal 1)))
+          (if
+            (binary-expr ==
+              (binary-expr %
+                (simple-var-ref i)
+                (literal 1000))
+              (literal 0))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (simple-var-ref i))))) ())
+          (block-stmt)))
+      (assignment
+        (index-based-access
+          (simple-var-ref v)
+          (literal 123000))
+        (literal 1001))
+      (assignment
+        (simple-var-ref i)
+        (literal 0))
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (invocation length expr:
+            (simple-var-ref v) ()))
+        (block-stmt
+          (assignment
+            (simple-var-ref sum)
+            (binary-expr +
+              (simple-var-ref sum)
+              (type-conversion-expr
+                (index-based-access
+                  (simple-var-ref v)
+                  (simple-var-ref i))
+                (value-type int))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref sum)))))))
