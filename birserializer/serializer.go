@@ -45,7 +45,6 @@ func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &BIRWriter{
 		cp: NewConstantPool(),
 	}
-
 	return writer.serialize(pkg)
 }
 
@@ -62,7 +61,6 @@ func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
 	}()
 
 	birbuf := &bytes.Buffer{}
-
 	bw.writePackageCPEntry(birbuf, pkg.PackageID)
 	bw.writeImportModuleDecls(birbuf, pkg)
 	bw.writeConstants(birbuf, pkg)
@@ -70,7 +68,6 @@ func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
 	bw.writeFunctions(birbuf, pkg)
 
 	buf := &bytes.Buffer{}
-
 	_, err := buf.Write([]byte(BIR_MAGIC))
 	if err != nil {
 		panic(fmt.Sprintf("writing BIR magic: %v", err))
@@ -135,126 +132,6 @@ func (bw *BIRWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant)
 	}
 }
 
-// FIXME: Implement type writing
-func (bw *BIRWriter) writeType(buf *bytes.Buffer, t any) {
-	write(buf, int32(-1))
-}
-
-func (bw *BIRWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
-	tag, err := bw.inferTag(cv.Value)
-	if err != nil {
-		panic(fmt.Sprintf("inferring const value tag: %v", err))
-	}
-
-	valIdx, err := bw.addValueToCP(tag, cv.Value)
-	if err != nil {
-		panic(fmt.Sprintf("adding const value to constant pool: %v", err))
-	}
-	write(buf, valIdx)
-}
-
-// FIXME: Remove this after implementing types
-func (bw *BIRWriter) inferTag(value any) (model.TypeTags, error) {
-	switch v := value.(type) {
-	case bir.ConstValue:
-		return bw.inferTag(v.Value)
-	case int, int64, int32, int16, int8:
-		return model.TypeTags_INT, nil
-	case float64, float32:
-		return model.TypeTags_FLOAT, nil
-	case string, *string:
-		return model.TypeTags_STRING, nil
-	case bool:
-		return model.TypeTags_BOOLEAN, nil
-	case byte:
-		return model.TypeTags_BYTE, nil
-	case nil:
-		return model.TypeTags_NIL, nil
-	default:
-		return 0, fmt.Errorf("cannot infer tag for value %v (%T)", value, value)
-	}
-}
-
-func (bw *BIRWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) {
-	if cv, ok := value.(bir.ConstValue); ok {
-		return bw.addValueToCP(tag, cv.Value)
-	}
-
-	switch tag {
-	case model.TypeTags_INT, model.TypeTags_SIGNED32_INT, model.TypeTags_SIGNED16_INT, model.TypeTags_SIGNED8_INT, model.TypeTags_UNSIGNED32_INT, model.TypeTags_UNSIGNED16_INT, model.TypeTags_UNSIGNED8_INT:
-		var val int64
-		switch v := value.(type) {
-		case int64:
-			val = v
-		case int:
-			val = int64(v)
-		case int32:
-			val = int64(v)
-		case int16:
-			val = int64(v)
-		case int8:
-			val = int64(v)
-		default:
-			return 0, fmt.Errorf("expected integer for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddIntegerCPEntry(val), nil
-	case model.TypeTags_BYTE:
-		var val byte
-		switch v := value.(type) {
-		case byte:
-			val = v
-		case int:
-			val = byte(v)
-		case int32:
-			val = byte(v)
-		default:
-			return 0, fmt.Errorf("expected byte for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddByteCPEntry(val), nil
-	case model.TypeTags_FLOAT:
-		var val float64
-		switch v := value.(type) {
-		case float64:
-			val = v
-		case float32:
-			val = float64(v)
-		default:
-			return 0, fmt.Errorf("expected float for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddFloatCPEntry(val), nil
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
-		var val string
-		switch v := value.(type) {
-		case string:
-			val = v
-		case *string:
-			if v != nil {
-				val = *v
-			} else {
-				val = ""
-			}
-		default:
-			return 0, fmt.Errorf("expected string for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddStringCPEntry(val), nil
-	case model.TypeTags_BOOLEAN:
-		var val bool
-		switch v := value.(type) {
-		case bool:
-			val = v
-		default:
-			return 0, fmt.Errorf("expected boolean for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddBooleanCPEntry(val), nil
-	case model.TypeTags_NIL:
-		// NIL values don't need to be added to the constant pool
-		// Return -1 as the index for nil values
-		return -1, nil
-	default:
-		return 0, fmt.Errorf("unsupported tag for constant value: %v", tag)
-	}
-}
-
 func (bw *BIRWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.GlobalVars))
 	for _, gv := range pkg.GlobalVars {
@@ -280,6 +157,7 @@ func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writeStringCPEntry(buf, fn.OriginalName.Value())
 	bw.writeFlags(buf, fn.Flags)
 	bw.writeOrigin(buf, fn.Origin)
+
 	bw.writeLength(buf, len(fn.RequiredParams))
 	for _, requiredParam := range fn.RequiredParams {
 		bw.writeStringCPEntry(buf, requiredParam.Name.Value())
@@ -288,6 +166,7 @@ func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 
 	birbuf := &bytes.Buffer{}
 	bw.writeLength(birbuf, fn.ArgsCount)
+
 	write(birbuf, fn.ReturnVariable != nil)
 	if fn.ReturnVariable != nil {
 		bw.writeKind(birbuf, fn.ReturnVariable.Kind)
@@ -356,49 +235,21 @@ func (bw *BIRWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
 	bw.writeTerminator(buf, bb.Terminator)
 }
 
-func (bw *BIRWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) {
-	switch term := term.(type) {
-	case *bir.Goto:
-		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
-	case *bir.Branch:
-		bw.writeOperand(buf, term.Op)
-		bw.writeStringCPEntry(buf, term.TrueBB.Id.Value())
-		bw.writeStringCPEntry(buf, term.FalseBB.Id.Value())
-	case *bir.Call:
-		write(buf, term.IsVirtual)
-		bw.writePackageCPEntry(buf, term.CalleePkg)
-		bw.writeStringCPEntry(buf, term.Name.Value())
-		bw.writeLength(buf, len(term.Args))
-		for _, arg := range term.Args {
-			bw.writeOperand(buf, &arg)
-		}
-		if term.LhsOp != nil {
-			write(buf, uint8(1))
-			bw.writeOperand(buf, term.LhsOp)
-		} else {
-			write(buf, uint8(0))
-		}
-		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
-	case *bir.Return:
-		// Nothing to write for return terminator
-		// Terminator kind is already written
-	default:
-		panic(fmt.Sprintf("unsupported terminator type: %T", term))
-	}
-}
-
 func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstruction) {
 	switch instr := instr.(type) {
 	case *bir.Move:
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
+
 	case *bir.BinaryOp:
 		bw.writeOperand(buf, &instr.RhsOp1)
 		bw.writeOperand(buf, &instr.RhsOp2)
 		bw.writeOperand(buf, instr.LhsOp)
+
 	case *bir.UnaryOp:
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
+
 	case *bir.ConstantLoad:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
@@ -415,22 +266,59 @@ func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 			panic(fmt.Sprintf("inferring constant load tag: %v", err))
 		}
 
-		valIdx, err := bw.addValueToCP(tag, tagValue)
-		if err != nil {
-			panic(fmt.Sprintf("adding constant load value to constant pool: %v", err))
-		}
 		write(buf, isWrapped)
-		write(buf, valIdx)
+		write(buf, int8(tag))
+		bw.writeConstValueByTag(buf, tag, tagValue)
 
 	case *bir.FieldAccess:
 		// TODO: MAP_LOAD and ARRAY_LOAD
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.KeyOp)
 		bw.writeOperand(buf, instr.RhsOp)
+
 	case *bir.NewArray:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
+
+	default:
+		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
+	}
+}
+
+func (bw *BIRWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) {
+	switch term := term.(type) {
+	case *bir.Goto:
+		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
+
+	case *bir.Branch:
+		bw.writeOperand(buf, term.Op)
+		bw.writeStringCPEntry(buf, term.TrueBB.Id.Value())
+		bw.writeStringCPEntry(buf, term.FalseBB.Id.Value())
+
+	case *bir.Call:
+		write(buf, term.IsVirtual)
+		bw.writePackageCPEntry(buf, term.CalleePkg)
+		bw.writeStringCPEntry(buf, term.Name.Value())
+
+		bw.writeLength(buf, len(term.Args))
+		for _, arg := range term.Args {
+			bw.writeOperand(buf, &arg)
+		}
+
+		if term.LhsOp != nil {
+			write(buf, uint8(1))
+			bw.writeOperand(buf, term.LhsOp)
+		} else {
+			write(buf, uint8(0))
+		}
+
+		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
+
+	case *bir.Return:
+
+	default:
+		panic(fmt.Sprintf("unsupported terminator type: %T", term))
 	}
 }
 
@@ -453,6 +341,172 @@ func (bw *BIRWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	bw.writeKind(buf, op.VariableDcl.Kind)
 	bw.writeScope(buf, op.VariableDcl.Scope)
 	bw.writeStringCPEntry(buf, op.VariableDcl.Name.Value())
+}
+
+func (bw *BIRWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
+	tag, err := bw.inferTag(cv.Value)
+	if err != nil {
+		panic(fmt.Sprintf("inferring const value tag: %v", err))
+	}
+
+	write(buf, int8(tag))
+	bw.writeConstValueByTag(buf, tag, cv.Value)
+}
+
+func (bw *BIRWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
+	if cv, ok := value.(bir.ConstValue); ok {
+		bw.writeConstValueByTag(buf, tag, cv.Value)
+		return
+	}
+
+	switch tag {
+	case model.TypeTags_INT,
+		model.TypeTags_SIGNED32_INT,
+		model.TypeTags_SIGNED16_INT,
+		model.TypeTags_SIGNED8_INT,
+		model.TypeTags_UNSIGNED32_INT,
+		model.TypeTags_UNSIGNED16_INT,
+		model.TypeTags_UNSIGNED8_INT:
+		var val int64
+		switch v := value.(type) {
+		case int64:
+			val = v
+		case int:
+			val = int64(v)
+		case int32:
+			val = int64(v)
+		case int16:
+			val = int64(v)
+		case int8:
+			val = int64(v)
+		default:
+			panic(fmt.Sprintf("expected integer for tag %v, got %T", tag, value))
+		}
+		bw.writeIntegerInline(buf, val)
+
+	case model.TypeTags_BYTE:
+		var val byte
+		switch v := value.(type) {
+		case byte:
+			val = v
+		case int:
+			val = byte(v)
+		case int32:
+			val = byte(v)
+		default:
+			panic(fmt.Sprintf("expected byte for tag %v, got %T", tag, value))
+		}
+		bw.writeByteInline(buf, val)
+
+	case model.TypeTags_FLOAT:
+		var val float64
+		switch v := value.(type) {
+		case float64:
+			val = v
+		case float32:
+			val = float64(v)
+		default:
+			panic(fmt.Sprintf("expected float for tag %v, got %T", tag, value))
+		}
+		bw.writeFloatInline(buf, val)
+
+	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+		var val string
+		switch v := value.(type) {
+		case string:
+			val = v
+		case *string:
+			if v != nil {
+				val = *v
+			} else {
+				val = ""
+			}
+		default:
+			panic(fmt.Sprintf("expected string for tag %v, got %T", tag, value))
+		}
+		cpIdx := bw.cp.AddStringCPEntry(val)
+		write(buf, cpIdx)
+
+	case model.TypeTags_BOOLEAN:
+		var val bool
+		switch v := value.(type) {
+		case bool:
+			val = v
+		default:
+			panic(fmt.Sprintf("expected boolean for tag %v, got %T", tag, value))
+		}
+		bw.writeBooleanInline(buf, val)
+
+	case model.TypeTags_NIL:
+		write(buf, int32(-1))
+
+	default:
+		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
+	}
+}
+
+func (bw *BIRWriter) writeIntegerInline(buf *bytes.Buffer, value int64) {
+	write(buf, value)
+}
+
+func (bw *BIRWriter) writeFloatInline(buf *bytes.Buffer, value float64) {
+	write(buf, value)
+}
+
+func (bw *BIRWriter) writeBooleanInline(buf *bytes.Buffer, value bool) {
+	write(buf, value)
+}
+
+func (bw *BIRWriter) writeByteInline(buf *bytes.Buffer, value byte) {
+	write(buf, value)
+}
+
+func (bw *BIRWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) {
+	if cv, ok := value.(bir.ConstValue); ok {
+		return bw.addValueToCP(tag, cv.Value)
+	}
+
+	switch tag {
+	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+		var val string
+		switch v := value.(type) {
+		case string:
+			val = v
+		case *string:
+			if v != nil {
+				val = *v
+			} else {
+				val = ""
+			}
+		default:
+			return 0, fmt.Errorf("expected string for tag %v, got %T", tag, value)
+		}
+		return bw.cp.AddStringCPEntry(val), nil
+	default:
+		return 0, fmt.Errorf("primitive values should not be added to CP, use writeConstValueByTag instead")
+	}
+}
+
+// FIXME: Remove this after implementing types
+func (bw *BIRWriter) inferTag(value any) (model.TypeTags, error) {
+	switch v := value.(type) {
+	case bir.ConstValue:
+		return bw.inferTag(v.Value)
+	case int, int64, int32, int16, int8:
+		return model.TypeTags_INT, nil
+	case float64, float32:
+		return model.TypeTags_FLOAT, nil
+	case string, *string:
+		return model.TypeTags_STRING, nil
+	case bool:
+		return model.TypeTags_BOOLEAN, nil
+	case byte:
+		return model.TypeTags_BYTE, nil
+	case nil:
+		return model.TypeTags_NIL, nil
+	default:
+		return 0, fmt.Errorf("cannot infer tag for value %v (%T)", value, value)
+	}
 }
 
 func (bw *BIRWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
@@ -493,6 +547,11 @@ func (bw *BIRWriter) writePackageCPEntry(buf *bytes.Buffer, pkgID *model.Package
 
 func (bw *BIRWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) {
 	write(buf, int64(birbuf.Len()))
+}
+
+// FIXME: Write actual type
+func (bw *BIRWriter) writeType(buf *bytes.Buffer, _ any) {
+	write(buf, int32(-1))
 }
 
 func (bw *BIRWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {

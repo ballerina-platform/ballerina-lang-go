@@ -28,12 +28,8 @@ import (
 type CPEntryType uint8
 
 const (
-	CP_ENTRY_INTEGER CPEntryType = iota + 1
-	CP_ENTRY_FLOAT
-	CP_ENTRY_BOOLEAN
-	CP_ENTRY_STRING
+	CP_ENTRY_STRING CPEntryType = iota + 1
 	CP_ENTRY_PACKAGE
-	CP_ENTRY_BYTE
 	CP_ENTRY_SHAPE
 )
 
@@ -42,20 +38,8 @@ type CPEntry interface {
 }
 
 type (
-	IntegerCPEntry struct {
-		Value int64
-	}
-	FloatCPEntry struct {
-		Value float64
-	}
-	BooleanCPEntry struct {
-		Value bool
-	}
 	StringCPEntry struct {
 		Value string
-	}
-	ByteCPEntry struct {
-		Value byte
 	}
 	PackageCPEntry struct {
 		OrgNameCPIndex    int32
@@ -68,28 +52,12 @@ type (
 	}
 )
 
-func (e *IntegerCPEntry) EntryType() CPEntryType {
-	return CP_ENTRY_INTEGER
-}
-
-func (e *FloatCPEntry) EntryType() CPEntryType {
-	return CP_ENTRY_FLOAT
-}
-
-func (e *BooleanCPEntry) EntryType() CPEntryType {
-	return CP_ENTRY_BOOLEAN
-}
-
 func (e *StringCPEntry) EntryType() CPEntryType {
 	return CP_ENTRY_STRING
 }
 
 func (e *PackageCPEntry) EntryType() CPEntryType {
 	return CP_ENTRY_PACKAGE
-}
-
-func (e *ByteCPEntry) EntryType() CPEntryType {
-	return CP_ENTRY_BYTE
 }
 
 func (e *ShapeCPEntry) EntryType() CPEntryType {
@@ -101,31 +69,23 @@ type ConstantPool struct {
 	entryMap map[string]int
 }
 
-func (cp *ConstantPool) EntryKey(entry CPEntry) string {
-	switch e := entry.(type) {
-	case *IntegerCPEntry:
-		return fmt.Sprintf("int:%d", e.Value)
-	case *FloatCPEntry:
-		return fmt.Sprintf("float:%g", e.Value)
-	case *BooleanCPEntry:
-		return fmt.Sprintf("bool:%v", e.Value)
-	case *StringCPEntry:
-		return fmt.Sprintf("str:%s", e.Value)
-	case *PackageCPEntry:
-		return fmt.Sprintf("pkg:%d:%d:%d:%d", e.OrgNameCPIndex, e.PkgNameCPIndex, e.ModuleNameCPIndex, e.VersionCPIndex)
-	case *ByteCPEntry:
-		return fmt.Sprintf("byte:%d", e.Value)
-	case *ShapeCPEntry:
-		panic("shape key generation not implemented")
-	default:
-		panic("unknown CPEntry type")
-	}
-}
-
 func NewConstantPool() *ConstantPool {
 	return &ConstantPool{
 		entries:  make([]CPEntry, 0),
 		entryMap: make(map[string]int),
+	}
+}
+
+func (cp *ConstantPool) EntryKey(entry CPEntry) string {
+	switch e := entry.(type) {
+	case *StringCPEntry:
+		return fmt.Sprintf("str:%s", e.Value)
+	case *PackageCPEntry:
+		return fmt.Sprintf("pkg:%d:%d:%d:%d", e.OrgNameCPIndex, e.PkgNameCPIndex, e.ModuleNameCPIndex, e.VersionCPIndex)
+	case *ShapeCPEntry:
+		panic("shape key generation not implemented")
+	default:
+		panic("unknown CPEntry type")
 	}
 }
 
@@ -141,18 +101,6 @@ func (cp *ConstantPool) AddEntry(entry CPEntry) int32 {
 	return int32(index)
 }
 
-func (cp *ConstantPool) AddIntegerCPEntry(value int64) int32 {
-	return cp.AddEntry(&IntegerCPEntry{Value: value})
-}
-
-func (cp *ConstantPool) AddFloatCPEntry(value float64) int32 {
-	return cp.AddEntry(&FloatCPEntry{Value: value})
-}
-
-func (cp *ConstantPool) AddBooleanCPEntry(value bool) int32 {
-	return cp.AddEntry(&BooleanCPEntry{Value: value})
-}
-
 func (cp *ConstantPool) AddStringCPEntry(value string) int32 {
 	return cp.AddEntry(&StringCPEntry{Value: value})
 }
@@ -166,44 +114,8 @@ func (cp *ConstantPool) AddPackageCPEntry(pkg *model.PackageID) int32 {
 	})
 }
 
-func (cp *ConstantPool) AddByteCPEntry(value byte) int32 {
-	return cp.AddEntry(&ByteCPEntry{Value: value})
-}
-
 func (cp *ConstantPool) AddShapeCPEntry(shape ast.BType) int32 {
 	panic("shape entry addition not implemented")
-}
-
-func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) {
-	entryType := entry.EntryType()
-	write(buf, int8(entryType))
-
-	switch e := entry.(type) {
-	case *IntegerCPEntry:
-		write(buf, e.Value)
-	case *FloatCPEntry:
-		write(buf, e.Value)
-	case *BooleanCPEntry:
-		write(buf, e.Value)
-	case *StringCPEntry:
-		strBytes := []byte(e.Value)
-		cp.writeLength(buf, len(strBytes))
-		_, err := buf.Write(strBytes)
-		if err != nil {
-			panic(fmt.Sprintf("writing string bytes: %v", err))
-		}
-	case *ByteCPEntry:
-		write(buf, e.Value)
-	case *PackageCPEntry:
-		write(buf, e.OrgNameCPIndex)
-		write(buf, e.PkgNameCPIndex)
-		write(buf, e.ModuleNameCPIndex)
-		write(buf, e.VersionCPIndex)
-	case *ShapeCPEntry:
-		panic("shape serialization not implemented")
-	default:
-		panic(fmt.Sprintf("unsupported constant pool entry type: %T", entry))
-	}
 }
 
 func (cp *ConstantPool) Serialize() ([]byte, error) {
@@ -236,11 +148,37 @@ func (cp *ConstantPool) Serialize() ([]byte, error) {
 	return bytes, nil
 }
 
+func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) {
+	entryType := entry.EntryType()
+	write(buf, int8(entryType))
+
+	switch e := entry.(type) {
+	case *StringCPEntry:
+		strBytes := []byte(e.Value)
+		cp.writeLength(buf, len(strBytes))
+		_, err := buf.Write(strBytes)
+		if err != nil {
+			panic(fmt.Sprintf("writing string bytes: %v", err))
+		}
+
+	case *PackageCPEntry:
+		write(buf, e.OrgNameCPIndex)
+		write(buf, e.PkgNameCPIndex)
+		write(buf, e.ModuleNameCPIndex)
+		write(buf, e.VersionCPIndex)
+
+	case *ShapeCPEntry:
+		panic("shape serialization not implemented")
+
+	default:
+		panic(fmt.Sprintf("unsupported constant pool entry type: %T", entry))
+	}
+}
+
 func (cp *ConstantPool) writeLength(buf *bytes.Buffer, length int) {
 	write(buf, int64(length))
 }
 
-// write writes data to buf using big-endian byte order
 func write(buf *bytes.Buffer, data any) {
 	if err := binary.Write(buf, binary.BigEndian, data); err != nil {
 		panic(fmt.Sprintf("writing binary data: %v", err))
