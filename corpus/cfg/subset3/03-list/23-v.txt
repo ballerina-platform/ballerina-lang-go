@@ -1,0 +1,17 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable v (type
+        (array-type
+          (value-type any) ())) (expr
+        (list-constructor-expr))))
+    (assignment
+      (index-based-access
+        (simple-var-ref v)
+        (literal 1))
+      (literal 2))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref v))))
+  )
+)
