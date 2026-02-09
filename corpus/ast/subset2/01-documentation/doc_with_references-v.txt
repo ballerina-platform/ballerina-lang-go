@@ -1,0 +1,46 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function testFunction
+    (md-doc
+      (doc-lines
+        (md-doc-line "Test type`typeDef`")
+        (md-doc-line "Test service`helloWorld`")
+        (md-doc-line "Test variable`testVar`")
+        (md-doc-line "Test var`testVar`")
+        (md-doc-line "Test function`add`")
+        (md-doc-line "Test parameter`x`")
+        (md-doc-line "Test const`constant`")
+        (md-doc-line "Test annotation`annot`"))
+      (references
+        (md-ref-doc (type TYPE) (identifier "typeDef") (reference-name "typeDef"))
+        (md-ref-doc (type SERVICE) (identifier "helloWorld") (reference-name "helloWorld"))
+        (md-ref-doc (type VARIABLE) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type VAR) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type FUNCTION) (identifier "add") (reference-name "add"))
+        (md-ref-doc (type PARAMETER) (identifier "x") (reference-name "x"))
+        (md-ref-doc (type CONST) (identifier "constant") (reference-name "constant"))
+        (md-ref-doc (type ANNOTATION) (identifier "annot") (reference-name "annot")))) (
+    (value-type null))
+    (block-function-body))
+  (const testConst
+    (md-doc
+      (doc-lines
+        (md-doc-line "Test type`typeDef`")
+        (md-doc-line "Test service`helloWorld`")
+        (md-doc-line "Test variable`testVar`")
+        (md-doc-line "Test var`testVar`")
+        (md-doc-line "Test function`add`")
+        (md-doc-line "Test parameter`x`")
+        (md-doc-line "Test const`constant`")
+        (md-doc-line "Test annotation`annot`"))
+      (references
+        (md-ref-doc (type TYPE) (identifier "typeDef") (reference-name "typeDef"))
+        (md-ref-doc (type SERVICE) (identifier "helloWorld") (reference-name "helloWorld"))
+        (md-ref-doc (type VARIABLE) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type VAR) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type FUNCTION) (identifier "add") (reference-name "add"))
+        (md-ref-doc (type PARAMETER) (identifier "x") (reference-name "x"))
+        (md-ref-doc (type CONST) (identifier "constant") (reference-name "constant"))
+        (md-ref-doc (type ANNOTATION) (identifier "annot") (reference-name "annot")))) (
+    (value-type string)) (
+    (literal TestConstantDocumentation))))

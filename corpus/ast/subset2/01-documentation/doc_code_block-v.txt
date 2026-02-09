@@ -1,0 +1,16 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function func1
+    (md-doc
+      (doc-lines
+        (md-doc-line "This is a test function")
+        (md-doc-line "```balPurpose of addingthis documentation isto check backtic documentations```"))) (
+    (value-type null))
+    (block-function-body))
+  (function func2
+    (md-doc
+      (doc-lines
+        (md-doc-line "This is a test function")
+        (md-doc-line "```Purpose of addingthis documentation isto check backtic documentations```"))) (
+    (value-type null))
+    (block-function-body)))
