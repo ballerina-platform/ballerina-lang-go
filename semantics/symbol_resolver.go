@@ -344,7 +344,7 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 		if ok {
 			syntaxError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
-		symbol := model.NewValueSymbol(name, false, false, true)
+		symbol := model.NewValueSymbol(name, false, false, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())

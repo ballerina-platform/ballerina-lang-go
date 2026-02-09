@@ -32,7 +32,7 @@ import (
 // with centralized panic handling.
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan any, 2) // Buffer for 2 analyses
+	var panicErr any = nil
 
 	// Run reachability analysis
 	wg.Add(1)
@@ -40,7 +40,7 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 		defer wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
-				panicChan <- r
+				panicErr = r
 			}
 		}()
 		analyzeReachability(ctx, cfg)
@@ -52,18 +52,15 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 		defer wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
-				panicChan <- r
+				panicErr = r
 			}
 		}()
 		analyzeExplicitReturn(ctx, pkg, cfg)
 	}()
 
 	wg.Wait()
-	close(panicChan)
-
-	// Re-panic with the first error we encountered
-	for p := range panicChan {
-		panic(p)
+	if panicErr != nil {
+		panic(panicErr)
 	}
 }
 
@@ -71,14 +68,14 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 // This is now a private function called by AnalyzeCFG.
 func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan any, len(cfg.funcCfgs))
+	var panicErr any = nil
 	for _, fnCfg := range cfg.funcCfgs {
 		wg.Add(1)
 		go func(fcfg *functionCFG) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					panicChan <- r
+					panicErr = r
 				}
 			}()
 			for _, bb := range fcfg.bbs {
@@ -91,10 +88,9 @@ func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 		}(&fnCfg)
 	}
 	wg.Wait()
-	close(panicChan)
 
-	for p := range panicChan {
-		panic(p)
+	if panicErr != nil {
+		panic(panicErr)
 	}
 }
 
@@ -103,7 +99,7 @@ func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 // This is now a private function called by AnalyzeCFG.
 func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan any, len(pkg.Functions))
+	var panicErr any = nil
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		wg.Add(1)
@@ -111,17 +107,16 @@ func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, 
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					panicChan <- r
+					panicErr = r
 				}
 			}()
 			analyzeFunctionExplicitReturn(ctx, f, cfg)
 		}(fn)
 	}
 	wg.Wait()
-	close(panicChan)
 
-	for p := range panicChan {
-		panic(p)
+	if panicErr != nil {
+		panic(panicErr)
 	}
 }
 
