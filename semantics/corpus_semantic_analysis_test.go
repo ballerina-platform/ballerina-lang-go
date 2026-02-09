@@ -52,7 +52,7 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -66,12 +66,11 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(cx, env, pkg)
+	importedSymbols := ResolveImports(cx, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Semantic Analysis
@@ -146,9 +145,6 @@ var semanticAnalysisErrorSkipList = []string{
 
 	// error constructor expr not implemented
 	"01-function/assign10-e.bal",
-
-	// module type defn not implemented
-	"01-function/call11-e.bal",
 }
 
 func TestSemanticAnalysisErrors(t *testing.T) {
@@ -201,7 +197,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext()
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -215,12 +211,11 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	env := semtypes.GetIsolatedTypeEnv()
-	importedSymbols := ResolveImports(cx, env, pkg)
+	importedSymbols := ResolveImports(cx, pkg)
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewIsolatedTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Semantic Analysis - this should panic for error cases

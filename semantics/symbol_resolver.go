@@ -21,7 +21,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -193,7 +192,7 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 }
 
 // This is a tempary hack since we can only have one import io
-func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
@@ -205,7 +204,7 @@ func ResolveImports(ctx *context.CompilerContext, env semtypes.Env, pkg *ast.BLa
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetIoSymbols(ctx, env)
+				result[key] = lib.GetIoSymbols(ctx)
 			}
 		}
 	}
@@ -241,8 +240,31 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
 		referSimpleVariableReference(resolver, n)
+	case *ast.BLangUserDefinedType:
+		referUserDefinedType(resolver, n)
 	}
 	return resolver
+}
+
+func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedType) {
+	name := n.GetTypeName().GetValue()
+	var prefix string
+	if n.GetPackageAlias() != nil {
+		prefix = n.GetPackageAlias().GetValue()
+	}
+	if prefix != "" {
+		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		if !ok {
+			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+		}
+		n.SetSymbol(symbol)
+	} else {
+		symbol, ok := resolver.GetSymbol(name)
+		if !ok {
+			syntaxError(resolver, "Unknown type: "+name, n.GetPosition())
+		}
+		n.SetSymbol(symbol)
+	}
 }
 
 func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVariableReferenceNode) {
@@ -329,7 +351,7 @@ func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visit
 	}
 	td := typeData.TypeDescriptor
 	setTypeDescriptorSymbol(bs, td)
-	return nil
+	return bs
 }
 
 func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescriptor) {
