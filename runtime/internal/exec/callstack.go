@@ -16,18 +16,14 @@
 
 package exec
 
-import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
-)
+type CallStack struct {
+	elements []*Frame
+}
 
-func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
-	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
-	if pkg.MainFunction == nil {
-		panic("main function not found in BIR package")
-	}
-	callStack := &CallStack{
-		elements: make([]*Frame, 0, 32),
-	}
-	executeFunction(*pkg.MainFunction, nil, reg, callStack)
+func (cs *CallStack) Push(frame *Frame) {
+	cs.elements = append(cs.elements, frame)
+}
+
+func (cs *CallStack) Pop() {
+	cs.elements = cs.elements[:len(cs.elements)-1]
 }
