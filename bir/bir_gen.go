@@ -542,18 +542,25 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	}
 }
 
-func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLangListConstructorExpr) expressionEffect {
-	// FIXME: since we don't have type information we are going to just create an open array
+func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangListConstructorExpr) expressionEffect {
+	initValues := make([]*BIROperand, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		exprEffect := handleExpression(ctx, bb, expr)
+		bb = exprEffect.block
+		initValues[i] = exprEffect.result
+	}
 	sizeOperand := ctx.addTempVar(&semtypes.INT)
 	constantLoad := &ConstantLoad{}
-	constantLoad.Value = int64(-1)
+	constantLoad.Value = int64(len(expr.Exprs))
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(&semtypes.LIST)
 	newArray := &NewArray{}
+	newArray.AtomicType = expr.AtomicType
 	newArray.LhsOp = resultOperand
 	newArray.SizeOp = sizeOperand
+	newArray.Values = initValues
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,

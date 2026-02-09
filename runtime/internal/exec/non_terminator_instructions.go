@@ -32,11 +32,13 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	size := 0
 	if newArray.SizeOp != nil {
 		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
-		if size < 0 {
-			size = 0
-		}
 	}
 	arr := make([]any, size)
+	if size > 0 {
+		for i, value := range newArray.Values {
+			arr[i] = frame.GetOperand(value.Index)
+		}
+	}
 	frame.SetOperand(newArray.LhsOp.Index, &arr)
 }
 

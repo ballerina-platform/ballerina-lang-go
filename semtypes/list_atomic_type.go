@@ -53,3 +53,11 @@ func (this *ListAtomicType) AtomKind() Kind {
 	// migrated from ListAtomicType.java:38:5
 	return Kind_LIST_ATOM
 }
+
+func (atomic *ListAtomicType) MemberAtInnerVal(index int) SemType {
+	return CellInnerVal(atomic.MemberAt(index))
+}
+
+func (atomic *ListAtomicType) MemberAt(index int) CellSemType {
+	return listMemberAt(atomic.Members, atomic.Rest, index)
+}
