@@ -45,6 +45,25 @@ test2<NIL>{
     %7 = println(x) -> bb3;
   }
   bb3 {
+    %8 = length(x) -> bb4;
+  }
+  bb4 {
+    %9 = println(%8) -> bb5;
+  }
+  bb5 {
+    %10 = ConstantLoad 3
+    %11 = push(x,%10) -> bb6;
+  }
+  bb6 {
+    %12 = println(x) -> bb7;
+  }
+  bb7 {
+    %13 = length(x) -> bb8;
+  }
+  bb8 {
+    %14 = println(%13) -> bb9;
+  }
+  bb9 {
     return;
   }
 }

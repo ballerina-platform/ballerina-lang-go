@@ -154,6 +154,7 @@ var _ Symbol = &TypeSymbol{}
 var _ Symbol = &ValueSymbol{}
 var _ Symbol = &functionSymbol{}
 var _ FunctionSymbol = &functionSymbol{}
+var _ GenericFunctionSymbol = &genericFunctionSymbol{}
 var _ Symbol = &SymbolRef{}
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -328,8 +329,6 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 func NewGenericFunctionSymbol(space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) SymbolRef) GenericFunctionSymbol {
 	return &genericFunctionSymbol{space: space, monomorphizer: monomorphizer}
 }
-
-var _ GenericFunctionSymbol = &genericFunctionSymbol{}
 
 func (s *genericFunctionSymbol) Name() string {
 	return "push"

@@ -45,5 +45,20 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref x))))
+    (expression-stmt
+      (invocation io println (
+        (invocation lang.array length (
+          (simple-var-ref x))))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref x)
+        (literal 3))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+    (expression-stmt
+      (invocation io println (
+        (invocation lang.array length (
+          (simple-var-ref x))))))
   )
 )

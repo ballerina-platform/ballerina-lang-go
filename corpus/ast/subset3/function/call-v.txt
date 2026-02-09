@@ -40,7 +40,22 @@
           (literal 2))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref x))))))
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (invocation length expr:
+            (simple-var-ref x) ()))))
+      (expression-stmt
+        (invocation push expr:
+          (simple-var-ref x) (
+          (literal 3))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (invocation length expr:
+            (simple-var-ref x) ()))))))
   (function foo (
     (variable x (type
       (array-type

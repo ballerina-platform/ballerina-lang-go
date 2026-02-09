@@ -779,11 +779,11 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 		argExprs[i+1] = arg
 	}
 	var funcSymbol model.FunctionSymbol
-	if symbol, ok := symbol.(model.GenericFunctionSymbol); ok {
-		symbolRef = symbol.Monomorphize(argTys, nil)
+	if genericFn, ok := symbol.(model.GenericFunctionSymbol); ok {
+		symbolRef = genericFn.Monomorphize(argTys, nil)
 		funcSymbol, _ = t.ctx.GetSymbol(&symbolRef).(model.FunctionSymbol)
-	} else if symbol, ok := symbol.(model.FunctionSymbol); ok {
-		funcSymbol = symbol
+	} else if fnSym, ok := symbol.(model.FunctionSymbol); ok {
+		funcSymbol = fnSym
 	} else {
 		t.ctx.InternalError("symbol is not a function symbol", expr.GetPosition())
 		return nil

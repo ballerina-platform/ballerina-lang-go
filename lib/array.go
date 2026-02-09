@@ -35,18 +35,17 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*ArrayPackageID)
 	pushSymbol := model.NewGenericFunctionSymbol(space, createPushMonomorphizer(ctx))
 	space.AddSymbol("push", pushSymbol)
+	lenghtSignature := model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{&semtypes.LIST},
+		ReturnType: &semtypes.INT,
+	}
+
+	lengthSymbol := model.NewFunctionSymbol("length", lenghtSignature, true)
+	ctx.SetSymbolType(lengthSymbol, functionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
+	space.AddSymbol("length", lengthSymbol)
 	return model.ExportedSymbolSpace{
 		Main: space,
 	}
-}
-
-// TODO: think of a way to generalize this and then move to model
-
-// data needed to monomorphazise a single generic type func
-type monomorphizingData1 struct {
-	mut           sync.Mutex
-	monomorphized map[semtypes.SemType]model.SymbolRef
-	nextIndex     int
 }
 
 func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) model.SymbolRef {
@@ -65,9 +64,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		if _, ok := monomorphized[ty]; ok {
 			return monomorphized[ty]
 		}
-		typeBase := semtypes.Union(&semtypes.ANY, &semtypes.ERROR)
-		ld := semtypes.NewListDefinition()
-		topType := ld.DefineListTypeWrapped(ctx.GetTypeEnv(), nil, 0, typeBase, semtypes.CellMutability_CELL_MUT_LIMITED)
+		topType := &semtypes.LIST
 		tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
 		if !semtypes.IsSubtype(tyCtx, ty, topType) {
 			ctx.SemanticError("expect first argument to be a subtype of (any|error)[]", nil)
