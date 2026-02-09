@@ -162,7 +162,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	importedSymbols := semantics.ResolveImports(cx, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 	// Run control flow analysis after type resolution
 	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis

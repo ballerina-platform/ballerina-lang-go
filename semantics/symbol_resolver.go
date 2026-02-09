@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -160,7 +161,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		// We are going to fill this in type resolver
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(name, signature, isPublic)
-		addTopLevelSymbol(moduleResolver, name, &symbol, fn.Name.GetPosition())
+		addTopLevelSymbol(moduleResolver, name, symbol, fn.Name.GetPosition())
 	}
 	for _, constDef := range pkg.Constants {
 		name := constDef.Name.Value
@@ -216,6 +217,17 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[str
 		}
 	}
 
+	for key, symbols := range getImplicitImports(ctx) {
+		result[key] = symbols
+	}
+
+	return result
+}
+
+// TODO: we should avoid resolving these per package given they are the same
+func getImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
+	result := make(map[string]model.ExportedSymbolSpace)
+	result["lang.array"] = lib.GetArraySymbols(ctx)
 	return result
 }
 
@@ -242,7 +254,11 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case model.InvocationNode:
-		resolveFunctionRef(resolver, n.(functionRefNode))
+		if n.GetExpression() != nil {
+			createDeferredMethodSymbol(resolver, n)
+		} else {
+			resolveFunctionRef(resolver, n.(functionRefNode))
+		}
 	case model.VariableNode:
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
@@ -251,6 +267,40 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referUserDefinedType(resolver, n)
 	}
 	return resolver
+}
+
+// since we don't have type information we can't determine if this is an actual method call or need to be converted
+// to a function call.
+func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
+	invocation := n.(*ast.BLangInvocation)
+	name := invocation.Name.GetValue()
+	invocation.SetSymbol(&deferredMethodSymbol{name: name})
+}
+
+type deferredMethodSymbol struct {
+	name string
+}
+
+var _ model.Symbol = &deferredMethodSymbol{}
+
+func (d *deferredMethodSymbol) Name() string {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) Type() semtypes.SemType {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) Kind() model.SymbolKind {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) SetType(semtypes.SemType) {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) IsPublic() bool {
+	panic("method symbol has not been resolved yet")
 }
 
 func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedType) {
@@ -435,4 +485,10 @@ func internalError[T symbolResolver](resolver T, message string, pos diagnostics
 
 func semanticError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
 	resolver.GetCtx().SemanticError(message, pos)
+}
+
+// We can't determine if a symbol is actually a method or not without resolivng the expression
+// Also we can't really resolve the actual method until we know the type of reciever
+// Thus we need to defer the resolution of the method until type resolution
+type defferedMethodSymbol struct {
 }

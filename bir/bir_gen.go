@@ -132,6 +132,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 }
 
 func processImports(compilerCtx *context.CompilerContext, genCtx *Context, imports []ast.BLangImportPackage, birPkg *BIRPackage) {
+	// Add implicit imports
 	for _, importPkg := range imports {
 		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
 			var orgName model.Name
@@ -635,8 +636,9 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		// Qualified call - look up package ID from import alias
 		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
 			call.CalleePkg = pkgID
+		} else {
+			panic("unexpected")
 		}
-		// If not found in imports, leave CalleePkg as nil (likely native/extern function)
 	} else {
 		// Unqualified call (no PkgAlias) - assume same-module call and use current package
 		if ctx.birCx.packageID != nil {

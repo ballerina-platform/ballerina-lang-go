@@ -1762,7 +1762,11 @@ func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode
 }
 
 func (n *NodeBuilder) TransformMethodCallExpression(methodCallExpressionNode *tree.MethodCallExpressionNode) BLangNode {
-	panic("TransformMethodCallExpression unimplemented")
+	bLInvocation := n.createBLangInvocation(methodCallExpressionNode.MethodName(),
+		methodCallExpressionNode.Arguments(),
+		getPosition(methodCallExpressionNode), false)
+	bLInvocation.Expr = n.createExpression(methodCallExpressionNode.Expression())
+	return bLInvocation
 }
 
 func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorExpressionNode *tree.MappingConstructorExpressionNode) BLangNode {
