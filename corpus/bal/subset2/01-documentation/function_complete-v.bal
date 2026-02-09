@@ -22,3 +22,6 @@
 function add(int x, int y) returns int {
     return x + y;
 }
+
+public function main() {
+}
