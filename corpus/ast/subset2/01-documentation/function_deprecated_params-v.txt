@@ -1,0 +1,25 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function process
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for function with deprecated parameters")
+        (md-doc-line "This function processes data"))
+      (params
+        (md-param-doc (param-name x)
+          (doc-lines
+            "first parameter")))
+      (deprec-params-doc
+        (md-deprec-params-doc (params
+            (md-param-doc (param-name y)
+              (doc-lines
+                "second parameter"))
+            (md-param-doc (param-name x)
+              (doc-lines
+                "This parameter is deprecated")))))) (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body)))
