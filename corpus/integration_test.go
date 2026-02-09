@@ -56,7 +56,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
-		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
 		// Skip all typecast tests
 		"subset2/02-typecast/1-e.bal",
 		"subset2/02-typecast/2-p.bal",
