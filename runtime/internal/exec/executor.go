@@ -142,6 +142,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 		default:
 			fmt.Printf("UNKNOWN_UNARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
+	case *bir.TypeCast:
+		execTypeCast(v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}

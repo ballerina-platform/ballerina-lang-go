@@ -531,8 +531,8 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	curBB = exprEffect.block
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	typeCast := &TypeCast{}
-	typeCast.RhsOp = resultOperand
-	typeCast.LhsOp = exprEffect.result
+	typeCast.RhsOp = exprEffect.result
+	typeCast.LhsOp = resultOperand
 	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
 	curBB.Instructions = append(curBB.Instructions, typeCast)
 	return expressionEffect{
