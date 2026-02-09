@@ -606,9 +606,56 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	if lat != nil {
 		return expectedListType, *lat
 	}
-	// FIXME:
-	a.unimplementedErr("list type union resolution not supported")
-	return nil, semtypes.ListAtomicType{}
+
+	alts := semtypes.ListAlternatives(tc, expectedListType)
+
+	// Filter alternatives by length compatibility
+	var validAlts []semtypes.ListAlternative
+
+	for _, expr := range expr.Exprs {
+		analyzeExpression(a, expr, nil)
+	}
+	for _, alt := range alts {
+		if semtypes.ListAlternativeAllowsLength(alt, len(expr.Exprs)) {
+			if alt.Pos != nil {
+				isValid := true
+				lat := alt.Pos
+				for i, expr := range expr.Exprs {
+					exprTy := expr.GetDeterminedType()
+					ty := lat.MemberAtInnerVal(i)
+					if !semtypes.IsSubtype(tc, exprTy, ty) {
+						isValid = false
+						break
+					}
+				}
+				if isValid {
+					validAlts = append(validAlts, alt)
+				}
+			} else {
+				validAlts = append(validAlts, alt)
+			}
+		}
+	}
+
+	// Validate uniqueness
+	if len(validAlts) == 0 {
+		a.semanticErr("no applicable inherent type for list constructor")
+		return nil, semtypes.ListAtomicType{}
+	}
+	if len(validAlts) > 1 {
+		a.semanticErr("ambiguous inherent type for list constructor")
+		return nil, semtypes.ListAtomicType{}
+	}
+
+	// Extract atomic type from selected alternative
+	selectedSemType := validAlts[0].SemType
+	lat = semtypes.ToListAtomicType(tc, selectedSemType)
+	if lat == nil {
+		a.semanticErr("applicable type for list constructor is not atomic")
+		return nil, semtypes.ListAtomicType{}
+	}
+
+	return selectedSemType, *lat
 }
 
 func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {

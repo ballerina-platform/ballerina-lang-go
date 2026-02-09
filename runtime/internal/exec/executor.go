@@ -201,9 +201,11 @@ func defaultValueForType(t semtypes.SemType) any {
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
-		return &never{}
+		return NeverValue
 	}
 }
+
+var NeverValue = &never{}
 
 // Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
 // this should panic.
