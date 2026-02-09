@@ -35,9 +35,10 @@ import (
 )
 
 const (
-	colorReset = "\033[0m"
-	colorGreen = "\033[32m"
-	colorRed   = "\033[31m"
+	colorReset  = "\033[0m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorYellow = "\033[33m"
 
 	corpusBalBaseDir = "../corpus/bal"
 
@@ -45,18 +46,17 @@ const (
 	externModuleName = "io"
 	externFuncName   = "println"
 
-	panicPrefix     = "panic: "
-	errorFileSuffix = "-e.bal"
-	subsetPrefix    = "subset"
+	panicPrefix = "panic: "
 )
 
 var (
 	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
+	errorRegex  = regexp.MustCompile(`//\s*@error`)
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
-		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
+		// stackoverflow-p.bal is now supported with recursion limit
 	})
 
 	printlnOutputs = make(map[string]string)
@@ -73,13 +73,6 @@ type testResult struct {
 	actual   string
 }
 
-type skipReason int
-
-const (
-	skipReasonErrorFile skipReason = iota // -e.bal files
-	skipReasonSkipList                    // files in skipTestsMap
-)
-
 func TestIntegrationSuite(t *testing.T) {
 	var passedTotal, failedTotal, skippedTotal int
 	var failedTests []failedTest
@@ -95,11 +88,11 @@ func TestIntegrationSuite(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for _, balFile := range balFiles {
-		skipped, reason := isFileSkipped(balFile)
-		if skipped {
-			if reason == skipReasonSkipList {
-				skippedTotal++
-			}
+		if isFileSkipped(balFile) {
+			skippedTotal++
+			relPath, _ := filepath.Rel(corpusBalDir, balFile)
+			filePath := buildFilePath(relPath)
+			fmt.Printf("\t--- %sSKIPPED%s: %s\n", colorYellow, colorReset, filePath)
 			continue
 		}
 		relPath, _ := filepath.Rel(corpusBalDir, balFile)
@@ -153,6 +146,7 @@ func TestIntegrationSuite(t *testing.T) {
 func runTest(balFile string) testResult {
 	expectedOutput := readExpectedOutput(balFile)
 	expectedPanic := readExpectedPanic(balFile)
+	hasError := hasError(balFile)
 
 	var panicOccurred bool
 	var panicValue interface{}
@@ -205,11 +199,10 @@ func runTest(balFile string) testResult {
 	delete(printlnOutputs, balFile)
 	printlnMu.Unlock()
 
-	outputStr := printlnStr
-	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, hasError)
 }
 
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
+func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}, hasError bool) testResult {
 	if expectedPanic != "" {
 		if panicOccurred {
 			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
@@ -237,6 +230,13 @@ func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOc
 
 	if panicOccurred {
 		panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
+		if hasError && strings.Contains(panicStr, "error:") {
+			return testResult{
+				success:  true,
+				expected: expectedOutput,
+				actual:   fmt.Sprintf("%s%s", panicPrefix, panicStr),
+			}
+		}
 		actual := fmt.Sprintf("%s%s", panicPrefix, panicStr)
 		if st, ok := panicValue.(interface{ Stack() []byte }); ok {
 			if stack := st.Stack(); len(stack) > 0 {
@@ -305,6 +305,11 @@ func readExpectedPanic(balFile string) string {
 		return strings.TrimSpace(matches[1])
 	}
 	return ""
+}
+
+func hasError(balFile string) bool {
+	content := readFileContent(balFile)
+	return errorRegex.MatchString(content)
 }
 
 func readFileContent(filePath string) string {
@@ -447,18 +452,13 @@ func findBalFiles(dir string) []string {
 	return files
 }
 
-func isFileSkipped(filePath string) (bool, skipReason) {
-	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, errorFileSuffix) {
-		return true, skipReasonErrorFile
+func isFileSkipped(filePath string) bool {
+	relPath, err := filepath.Rel(corpusBalBaseDir, filePath)
+	if err != nil {
+		return false
 	}
-	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
-		relPath = filepath.ToSlash(relPath)
-		if skipTestsMap[relPath] {
-			return true, skipReasonSkipList
-		}
-	}
-	return false, 0
+	relPath = filepath.ToSlash(relPath)
+	return skipTestsMap[relPath]
 }
 
 func makeSkipTestsMap(paths []string) map[string]bool {
