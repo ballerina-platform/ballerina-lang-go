@@ -83,13 +83,20 @@ func castValue(value any, targetType semtypes.SemType) any {
 }
 
 func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
-	if idx >= len(arr) {
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		return newArr
+	if idx < len(arr) {
+		return arr
 	}
-	return arr
+
+	newLen := idx + 1
+	newCap := newLen
+	if cap(arr)*2 > newCap {
+		newCap = cap(arr) * 2
+	}
+
+	newArr := make([]any, newLen, newCap)
+	copy(newArr, arr)
+	*arrPtr = newArr
+	return newArr
 }
 
 func convertToInt(value any) int64 {
