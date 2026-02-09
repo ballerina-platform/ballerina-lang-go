@@ -66,8 +66,6 @@ var (
 		"subset2/02-typecast/7-v.bal",
 		"subset2/02-typecast/8-e.bal",
 		"subset2/02-typecast/9-e.bal",
-		"subset2/02-typecast/numeric-conversion-v.bal",
-		"subset2/02-typecast/numeric-conversion2-e.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

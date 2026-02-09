@@ -18,6 +18,10 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/semtypes"
+	"fmt"
+	"math/big"
+	"strconv"
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
@@ -62,4 +66,84 @@ func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
 		return newArr
 	}
 	return arr
+}
+
+func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
+	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
+	targetType := typeCast.Type
+	result := convertValue(sourceValue, targetType)
+	frame.SetOperand(typeCast.LhsOp.Index, result)
+}
+
+func convertValue(value any, targetType semtypes.SemType) any {
+	bitset := semtypes.WidenToBasicTypes(targetType)
+	bitsetValue := (&bitset).All()
+	switch {
+	case bitsetValue&semtypes.INT.All() != 0:
+		return convertToInt(value)
+	case bitsetValue&semtypes.FLOAT.All() != 0:
+		return convertToFloat(value)
+	case bitsetValue&semtypes.DECIMAL.All() != 0:
+		return convertToDecimal(value)
+	}
+	return value
+}
+
+func convertToInt(value any) int64 {
+	switch v := value.(type) {
+	case int64:
+		return v
+	case float64:
+		return int64(v)
+	case *big.Rat:
+		f, _ := v.Float64()
+		return int64(f)
+	case string:
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(fmt.Sprintf("unsupported type conversion to int: value %v", v))
+		}
+		return int64(f)
+	default:
+		panic(fmt.Sprintf("unsupported type conversion to int: value %v", value))
+	}
+}
+
+func convertToFloat(value any) float64 {
+	switch v := value.(type) {
+	case int64:
+		return float64(v)
+	case float64:
+		return v
+	case *big.Rat:
+		f, _ := v.Float64()
+		return f
+	case string:
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(fmt.Sprintf("unsupported type conversion to float: value %v", v))
+		}
+		return f
+	default:
+		panic(fmt.Sprintf("unsupported type conversion to float: value %v", value))
+	}
+}
+
+func convertToDecimal(value any) *big.Rat {
+	switch v := value.(type) {
+	case int64:
+		return big.NewRat(v, 1)
+	case float64:
+		return new(big.Rat).SetFloat64(v)
+	case *big.Rat:
+		return v
+	case string:
+		r := new(big.Rat)
+		if _, ok := r.SetString(v); !ok {
+			panic(fmt.Sprintf("unsupported type conversion to decimal: value %v", v))
+		}
+		return r
+	default:
+		panic(fmt.Sprintf("unsupported type conversion to decimal: value %v", value))
+	}
 }
