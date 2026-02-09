@@ -11551,7 +11551,7 @@ func (this *BallerinaParser) parseDocumentationString(documentationStringToken t
 	diagnostics := documentationStringToken.Diagnostics()
 
 	charReader := text.CharReaderFromText(documentationStringToken.Text())
-	documentationLexer := NewDocumentationLexer(charReader, leadingTriviaList, diagnostics, this.dbgContext)
+	documentationLexer := newDocumentationLexer(charReader, leadingTriviaList, diagnostics, this.dbgContext)
 	tokenReader := CreateTokenReader(documentationLexer, this.dbgContext)
 	documentationParser := NewDocumentationParser(tokenReader, this.dbgContext)
 

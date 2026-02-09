@@ -27,25 +27,25 @@ import (
 // Character array of "Deprecated" keyword.
 var deprecatedChars = []rune{'D', 'e', 'p', 'r', 'e', 'c', 'a', 't', 'e', 'd'}
 
-type DocumentationLexer struct {
+type documentationLexer struct {
 	*lexer
 	previousBacktickMode ParserMode
 }
 
-// NewDocumentationLexer creates a new DocumentationLexer instance.
-func NewDocumentationLexer(charReader text.CharReader, leadingTriviaList []tree.STNode, diagnostics []tree.STNodeDiagnostic, debugCtx *debugcommon.DebugContext) *DocumentationLexer {
+// newDocumentationLexer creates a new documentationLexer instance.
+func newDocumentationLexer(charReader text.CharReader, leadingTriviaList []tree.STNode, diagnostics []tree.STNodeDiagnostic, debugCtx *debugcommon.DebugContext) *documentationLexer {
 	lexer := NewLexer(charReader, debugCtx)
 	lexer.context.leadingTriviaList = leadingTriviaList
 	lexer.context.diagnostics = diagnostics
 	lexer.StartMode(PARSER_MODE_DOC_LINE_START_HASH)
-	return &DocumentationLexer{
+	return &documentationLexer{
 		lexer:                lexer,
 		previousBacktickMode: PARSER_MODE_DEFAULT_MODE,
 	}
 }
 
 // NextToken gets the next lexical token based on the current mode.
-func (dl *DocumentationLexer) NextToken() tree.STToken {
+func (dl *documentationLexer) NextToken() tree.STToken {
 	var token tree.STToken
 	switch dl.context.mode {
 	case PARSER_MODE_DOC_LINE_START_HASH:
@@ -92,17 +92,17 @@ func (dl *DocumentationLexer) NextToken() tree.STToken {
 }
 
 // peek returns the next character from the reader without consuming the stream.
-func (dl *DocumentationLexer) peek() rune {
+func (dl *documentationLexer) peek() rune {
 	return dl.reader.Peek()
 }
 
 // getLexeme gets the text associated with the current token.
-func (dl *DocumentationLexer) getLexeme() string {
+func (dl *documentationLexer) getLexeme() string {
 	return dl.reader.GetMarkedChars()
 }
 
 // isPossibleIdentifierStart checks whether a given char is a possible identifier start.
-func (dl *DocumentationLexer) isPossibleIdentifierStart(startChar rune) bool {
+func (dl *documentationLexer) isPossibleIdentifierStart(startChar rune) bool {
 	return startChar == SINGLE_QUOTE || startChar == BACKSLASH || isIdentifierInitialChar(startChar)
 }
 
@@ -110,7 +110,7 @@ func (dl *DocumentationLexer) isPossibleIdentifierStart(startChar rune) bool {
 // IdentifierEnd := IdentifierChar*
 // IdentifierChar := IdentifierFollowingChar | IdentifierEscape
 // IdentifierEscape := IdentifierSingleEscape | NumericEscape
-func (dl *DocumentationLexer) processIdentifierEnd() {
+func (dl *documentationLexer) processIdentifierEnd() {
 	reader := dl.reader
 	for !reader.IsEOF() {
 		nextChar := reader.Peek()
@@ -148,7 +148,7 @@ func (dl *DocumentationLexer) processIdentifierEnd() {
 
 // processNumericEscape processes numeric escape.
 // NumericEscape := \ u { CodePoint }
-func (dl *DocumentationLexer) processNumericEscape() {
+func (dl *documentationLexer) processNumericEscape() {
 	// Process '\ u {'
 	dl.reader.AdvanceN(3)
 
@@ -171,13 +171,13 @@ func (dl *DocumentationLexer) processNumericEscape() {
 }
 
 // processLeadingTrivia processes leading trivia.
-func (dl *DocumentationLexer) processLeadingTrivia() {
+func (dl *documentationLexer) processLeadingTrivia() {
 	// New leading trivia will be added to the current leading trivia list
 	dl.processSyntaxTrivia(&dl.context.leadingTriviaList, true)
 }
 
 // processTrailingTrivia processes and returns trailing trivia.
-func (dl *DocumentationLexer) processTrailingTrivia() tree.STNode {
+func (dl *documentationLexer) processTrailingTrivia() tree.STNode {
 	triviaList := make([]tree.STNode, 0, INITIAL_TRIVIA_CAPACITY)
 	dl.processSyntaxTrivia(&triviaList, false)
 	return tree.CreateNodeList(triviaList...)
@@ -185,7 +185,7 @@ func (dl *DocumentationLexer) processTrailingTrivia() tree.STNode {
 
 // processSyntaxTrivia processes syntax trivia and adds it to the provided list.
 // syntax-trivia := whitespace | end-of-line
-func (dl *DocumentationLexer) processSyntaxTrivia(triviaList *[]tree.STNode, isLeading bool) {
+func (dl *documentationLexer) processSyntaxTrivia(triviaList *[]tree.STNode, isLeading bool) {
 	reader := dl.reader
 	for !reader.IsEOF() {
 		reader.Mark()
@@ -208,7 +208,7 @@ func (dl *DocumentationLexer) processSyntaxTrivia(triviaList *[]tree.STNode, isL
 
 // processWhitespaces processes whitespace up to an end of line.
 // whitespace := 0x9 | 0xC | 0x20
-func (dl *DocumentationLexer) processWhitespaces() tree.STNode {
+func (dl *documentationLexer) processWhitespaces() tree.STNode {
 	reader := dl.reader
 	for !reader.IsEOF() {
 		c := reader.Peek()
@@ -227,7 +227,7 @@ func (dl *DocumentationLexer) processWhitespaces() tree.STNode {
 
 // processEndOfLine processes end of line.
 // end-of-line := 0xA | 0xD
-func (dl *DocumentationLexer) processEndOfLine() tree.STNode {
+func (dl *documentationLexer) processEndOfLine() tree.STNode {
 	reader := dl.reader
 	c := reader.Peek()
 	switch c {
@@ -246,7 +246,7 @@ func (dl *DocumentationLexer) processEndOfLine() tree.STNode {
 }
 
 // getLiteral creates a literal token.
-func (dl *DocumentationLexer) getLiteral(tokenKind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getLiteral(tokenKind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 	lexeme := dl.getLexeme()
 	trailingTrivia := dl.processTrailingTrivia()
@@ -254,7 +254,7 @@ func (dl *DocumentationLexer) getLiteral(tokenKind common.SyntaxKind) tree.STTok
 }
 
 // getDocSyntaxToken creates a documentation syntax token.
-func (dl *DocumentationLexer) getDocSyntaxToken(kind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getDocSyntaxToken(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 	trailingTrivia := dl.processTrailingTrivia()
 	dl.checkAndTerminateCurrentMode(trailingTrivia)
@@ -262,7 +262,7 @@ func (dl *DocumentationLexer) getDocSyntaxToken(kind common.SyntaxKind) tree.STT
 }
 
 // getDocLiteralToken creates a documentation literal token.
-func (dl *DocumentationLexer) getDocLiteralToken(kind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getDocLiteralToken(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 	lexeme := dl.getLexeme()
 	trailingTrivia := dl.processTrailingTrivia()
@@ -271,7 +271,7 @@ func (dl *DocumentationLexer) getDocLiteralToken(kind common.SyntaxKind) tree.ST
 }
 
 // getDocIdentifierToken creates a documentation identifier token.
-func (dl *DocumentationLexer) getDocIdentifierToken() tree.STToken {
+func (dl *documentationLexer) getDocIdentifierToken() tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 	lexeme := dl.getLexeme()
 	// Trailing trivia should not be consumed for documentation identifiers.
@@ -280,7 +280,7 @@ func (dl *DocumentationLexer) getDocIdentifierToken() tree.STToken {
 }
 
 // getDocSyntaxTokenWithoutTrivia creates a documentation syntax token without trailing trivia.
-func (dl *DocumentationLexer) getDocSyntaxTokenWithoutTrivia(kind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getDocSyntaxTokenWithoutTrivia(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 
 	// We reach here for backtick tokens. Trailing trivia for those tokens can only be a newline.
@@ -301,7 +301,7 @@ func (dl *DocumentationLexer) getDocSyntaxTokenWithoutTrivia(kind common.SyntaxK
 }
 
 // getDocLiteralWithoutTrivia creates a documentation literal without trailing trivia.
-func (dl *DocumentationLexer) getDocLiteralWithoutTrivia(kind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getDocLiteralWithoutTrivia(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 	lexeme := dl.getLexeme()
 
@@ -323,7 +323,7 @@ func (dl *DocumentationLexer) getDocLiteralWithoutTrivia(kind common.SyntaxKind)
 }
 
 // getCodeStartBacktickToken creates a code start backtick token.
-func (dl *DocumentationLexer) getCodeStartBacktickToken(kind common.SyntaxKind) tree.STToken {
+func (dl *documentationLexer) getCodeStartBacktickToken(kind common.SyntaxKind) tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 
 	// We reach here for double and triple backtick tokens. Trailing trivia for those tokens can only be a newline.
@@ -344,7 +344,7 @@ func (dl *DocumentationLexer) getCodeStartBacktickToken(kind common.SyntaxKind) 
 }
 
 // getCodeLineStartHashToken creates a code line start hash token.
-func (dl *DocumentationLexer) getCodeLineStartHashToken() tree.STToken {
+func (dl *documentationLexer) getCodeLineStartHashToken() tree.STToken {
 	leadingTrivia := dl.getLeadingTrivia()
 
 	// Trivia for # in a code line can only have following 3 cases.
@@ -385,7 +385,7 @@ func (dl *DocumentationLexer) getCodeLineStartHashToken() tree.STToken {
 
 // checkAndTerminateCurrentMode checks if there is a newline present in the trailing minutiae,
 // and terminates the current mode if so.
-func (dl *DocumentationLexer) checkAndTerminateCurrentMode(trailingTrivia tree.STNode) {
+func (dl *documentationLexer) checkAndTerminateCurrentMode(trailingTrivia tree.STNode) {
 	// Check for newline minutiae and terminate the current mode.
 	bucketCount := trailingTrivia.BucketCount()
 	if bucketCount > 0 && trailingTrivia.ChildInBucket(bucketCount-1).Kind() == common.END_OF_LINE_MINUTIAE {
@@ -394,20 +394,20 @@ func (dl *DocumentationLexer) checkAndTerminateCurrentMode(trailingTrivia tree.S
 }
 
 // getLeadingTrivia gets the leading trivia and clears it from the context.
-func (dl *DocumentationLexer) getLeadingTrivia() tree.STNode {
+func (dl *documentationLexer) getLeadingTrivia() tree.STNode {
 	trivia := tree.CreateNodeList(dl.context.leadingTriviaList...)
 	dl.context.leadingTriviaList = make([]tree.STNode, 0, INITIAL_TRIVIA_CAPACITY)
 	return trivia
 }
 
 // reportLexerError reports a lexer error.
-func (dl *DocumentationLexer) reportLexerError(code common.DiagnosticWarningCode, args ...interface{}) {
+func (dl *documentationLexer) reportLexerError(code common.DiagnosticWarningCode, args ...interface{}) {
 	var diagnosticCode diagnostics.DiagnosticCode = &code
 	diagnostic := tree.CreateDiagnostic(diagnosticCode, args...)
 	dl.context.diagnostics = append(dl.context.diagnostics, diagnostic)
 }
 
-func (dl *DocumentationLexer) readDocLineStartHashToken() tree.STToken {
+func (dl *documentationLexer) readDocLineStartHashToken() tree.STToken {
 	dl.reader.Mark()
 	if dl.reader.IsEOF() {
 		return dl.getDocSyntaxToken(common.EOF_TOKEN)
@@ -424,7 +424,7 @@ func (dl *DocumentationLexer) readDocLineStartHashToken() tree.STToken {
 	return dl.getDocSyntaxToken(common.EOF_TOKEN)
 }
 
-func (dl *DocumentationLexer) readDocLineDifferentiatorToken() tree.STToken {
+func (dl *documentationLexer) readDocLineDifferentiatorToken() tree.STToken {
 	c := dl.peek()
 	switch c {
 	case PLUS:
@@ -444,13 +444,13 @@ func (dl *DocumentationLexer) readDocLineDifferentiatorToken() tree.STToken {
 	}
 }
 
-func (dl *DocumentationLexer) processPlusToken() tree.STToken {
+func (dl *documentationLexer) processPlusToken() tree.STToken {
 	dl.reader.Advance() // Advance for +
 	dl.SwitchMode(PARSER_MODE_DOC_PARAMETER)
 	return dl.getDocSyntaxToken(common.PLUS_TOKEN)
 }
 
-func (dl *DocumentationLexer) processDoubleOrTripleBacktickToken() tree.STToken {
+func (dl *documentationLexer) processDoubleOrTripleBacktickToken() tree.STToken {
 	dl.reader.AdvanceN(2) // Advance for two backticks
 	if dl.peek() == BACKTICK {
 		dl.reader.Advance()
@@ -462,7 +462,7 @@ func (dl *DocumentationLexer) processDoubleOrTripleBacktickToken() tree.STToken 
 	}
 }
 
-func (dl *DocumentationLexer) processDeprecationLiteralToken() tree.STToken {
+func (dl *documentationLexer) processDeprecationLiteralToken() tree.STToken {
 	// Look ahead and see if next non-trivial char belongs to a deprecation literal.
 	// There could be spaces and tabs in between.
 	lookAheadCount := 1
@@ -494,7 +494,7 @@ func (dl *DocumentationLexer) processDeprecationLiteralToken() tree.STToken {
 	return dl.getDocLiteralWithoutTrivia(common.DEPRECATION_LITERAL)
 }
 
-func (dl *DocumentationLexer) readDocInternalToken() tree.STToken {
+func (dl *documentationLexer) readDocInternalToken() tree.STToken {
 	dl.reader.Mark()
 	if dl.reader.IsEOF() {
 		return dl.getDocSyntaxToken(common.EOF_TOKEN)
@@ -555,7 +555,7 @@ func (dl *DocumentationLexer) readDocInternalToken() tree.STToken {
 	return dl.getLiteral(common.DOCUMENTATION_DESCRIPTION)
 }
 
-func (dl *DocumentationLexer) processDocumentationReference(nextChar rune) bool {
+func (dl *documentationLexer) processDocumentationReference(nextChar rune) bool {
 	// Look ahead and see if next characters belong to a documentation reference.
 	// If they do, do not advance the reader and return.
 	// Otherwise advance the reader for checked characters and return
@@ -602,7 +602,7 @@ func (dl *DocumentationLexer) processDocumentationReference(nextChar rune) bool 
 	}
 }
 
-func (dl *DocumentationLexer) readDocParameterToken() tree.STToken {
+func (dl *documentationLexer) readDocParameterToken() tree.STToken {
 	dl.reader.Mark()
 	nextChar := dl.peek()
 	if dl.isPossibleIdentifierStart(nextChar) {
@@ -634,7 +634,7 @@ func (dl *DocumentationLexer) readDocParameterToken() tree.STToken {
 	}
 }
 
-func (dl *DocumentationLexer) readDocReferenceTypeToken() tree.STToken {
+func (dl *documentationLexer) readDocReferenceTypeToken() tree.STToken {
 	nextChar := dl.peek()
 	if nextChar == BACKTICK {
 		dl.reader.Advance()
@@ -649,7 +649,7 @@ func (dl *DocumentationLexer) readDocReferenceTypeToken() tree.STToken {
 	return dl.processReferenceType()
 }
 
-func (dl *DocumentationLexer) processReferenceType() tree.STToken {
+func (dl *documentationLexer) processReferenceType() tree.STToken {
 	tokenText := dl.getLexeme()
 	switch tokenText {
 	case TYPE:
@@ -676,7 +676,7 @@ func (dl *DocumentationLexer) processReferenceType() tree.STToken {
 	}
 }
 
-func (dl *DocumentationLexer) readSingleBacktickContentToken() tree.STToken {
+func (dl *documentationLexer) readSingleBacktickContentToken() tree.STToken {
 	dl.reader.Mark()
 	nextChar := dl.peek()
 	if nextChar == BACKSLASH {
@@ -708,7 +708,7 @@ func (dl *DocumentationLexer) readSingleBacktickContentToken() tree.STToken {
 	}
 }
 
-func (dl *DocumentationLexer) processInvalidChars() {
+func (dl *documentationLexer) processInvalidChars() {
 	nextChar := dl.peek()
 	for !dl.reader.IsEOF() {
 		switch nextChar {
@@ -723,7 +723,7 @@ func (dl *DocumentationLexer) processInvalidChars() {
 	}
 }
 
-func (dl *DocumentationLexer) readCodeContent(backtickCount int) tree.STToken {
+func (dl *documentationLexer) readCodeContent(backtickCount int) tree.STToken {
 	dl.reader.Mark()
 	if dl.reader.IsEOF() {
 		return dl.getDocSyntaxToken(common.EOF_TOKEN)
@@ -761,7 +761,7 @@ func (dl *DocumentationLexer) readCodeContent(backtickCount int) tree.STToken {
 	return dl.getLiteral(common.CODE_CONTENT)
 }
 
-func (dl *DocumentationLexer) getBackticksCount() int {
+func (dl *documentationLexer) getBackticksCount() int {
 	count := 1
 	for dl.reader.PeekN(count) == BACKTICK {
 		count += 1
@@ -769,7 +769,7 @@ func (dl *DocumentationLexer) getBackticksCount() int {
 	return count
 }
 
-func (dl *DocumentationLexer) readCodeReferenceEndToken() tree.STToken {
+func (dl *documentationLexer) readCodeReferenceEndToken() tree.STToken {
 	dl.SwitchMode(PARSER_MODE_DOC_INTERNAL)
 	if dl.peek() == BACKTICK {
 		dl.reader.Advance()
@@ -790,7 +790,7 @@ func (dl *DocumentationLexer) readCodeReferenceEndToken() tree.STToken {
 	return dl.getDocSyntaxToken(common.EOF_TOKEN)
 }
 
-func (dl *DocumentationLexer) readCodeLineStartHashToken() tree.STToken {
+func (dl *documentationLexer) readCodeLineStartHashToken() tree.STToken {
 	dl.reader.Mark()
 	if dl.reader.IsEOF() {
 		return dl.getDocSyntaxToken(common.EOF_TOKEN)
