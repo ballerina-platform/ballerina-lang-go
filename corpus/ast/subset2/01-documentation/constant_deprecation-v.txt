@@ -1,0 +1,26 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (const OLD_CONSTANT
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for deprecated constant"))
+      (deprec-doc
+        (md-deprec-doc
+          (doc-lines
+            "This constant is deprecated. Use `NEW_CONSTANT` instead.")
+          (deprec-lines
+            "# # Deprecated")))) (
+    (value-type string)) (
+    (literal old)))
+  (const DEPRECATED_NUMBER
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for deprecated constant with type"))
+      (deprec-doc
+        (md-deprec-doc
+          (doc-lines
+            "This constant is deprecated.")
+          (deprec-lines
+            "# # Deprecated")))) (
+    (value-type int)) (
+    (literal 42))))

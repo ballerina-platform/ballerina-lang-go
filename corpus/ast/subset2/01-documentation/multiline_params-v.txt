@@ -1,0 +1,38 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function test
+    (md-doc
+      (params
+        (md-param-doc (param-name param1)
+          (doc-lines
+            "param1 description line 1"
+            ""
+            "param1 description line 2"
+            ""
+            "param1 description line 3"
+            ""))
+        (md-param-doc (param-name param2)
+          (doc-lines
+            "param2 description line 1"
+            ""
+            "param2 description line 2"
+            ""
+            "param2 description line 3"
+            "")))
+      (return-param
+        (md-return-param-doc
+          (doc-lines
+            "return description line 1"
+            ""
+            "return description line 2"
+            ""
+            "return description line 3"))
+      )) (
+    (variable param1 (type
+      (value-type string)))
+    (variable param2 (type
+      (value-type string)))) (
+    (value-type string))
+    (block-function-body
+      (return
+        (literal )))))
