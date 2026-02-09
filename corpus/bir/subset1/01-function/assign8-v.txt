@@ -11,7 +11,7 @@ foo<NIL>{
 }
 main<NIL>{
   bb0 {
-    %1 = ConstantLoad -1
+    %1 = ConstantLoad 0
     %2 = newArray <UNKNOWN>[%1]
     arr = %2;
     %4 = ConstantLoad 0

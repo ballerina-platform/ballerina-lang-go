@@ -575,8 +575,40 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 		analyzeExpression(a, memberExpr, nil)
 	}
 
-	// Validate the resolved list type against expected type
+	if expectedType != nil {
+		resultType, listAtomicType := selectListInherentType(a, expr, expectedType)
+		for i, memberExpr := range expr.Exprs {
+			requiredType := listAtomicType.MemberAtInnerVal(i)
+			if semtypes.IsNever(requiredType) {
+				a.semanticErr("too many members in list constructor")
+				return
+			}
+			analyzeExpression(a, memberExpr, requiredType)
+		}
+		setExpectedType(expr, resultType)
+	} else {
+		// type resolver will have set the correct type and list atomic type
+		for _, memberExpr := range expr.Exprs {
+			analyzeExpression(a, memberExpr, nil)
+		}
+	}
 	validateResolvedType(a, expr, expectedType)
+}
+
+func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType) {
+	expectedListType := semtypes.Intersect(expectedType, &semtypes.LIST)
+	tc := a.tyCtx()
+	if semtypes.IsEmpty(tc, expectedListType) {
+		a.semanticErr("list type not found in expected type")
+		return nil, semtypes.ListAtomicType{}
+	}
+	lat := semtypes.ToListAtomicType(tc, expectedListType)
+	if lat != nil {
+		return expectedListType, *lat
+	}
+	// FIXME:
+	a.unimplementedErr("list type union resolution not supported")
+	return nil, semtypes.ListAtomicType{}
 }
 
 func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {

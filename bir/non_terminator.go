@@ -62,11 +62,10 @@ type (
 
 	NewArray struct {
 		BIRInstructionBase
-		TypeDesc *BIROperand
-		// Why this is needed (type desc should say what is the element type?)
-		ElementTypeDesc *BIROperand
-		SizeOp          *BIROperand
-		Type            model.ValueType
+		AtomicType semtypes.ListAtomicType
+		SizeOp     *BIROperand
+		Type       model.ValueType
+		Values     []*BIROperand
 	}
 
 	TypeCast struct {

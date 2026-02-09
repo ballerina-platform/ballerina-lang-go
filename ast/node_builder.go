@@ -2150,7 +2150,7 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 	listConstructorExpr := &BLangListConstructorExpr{}
 
 	expressions := listConstructorExpressionNode.Expressions()
-	for i := 0; i < expressions.Size(); i++ {
+	for i := 0; i < expressions.Size(); i += 2 {
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
 		if listMember.Kind() == common.SPREAD_MEMBER {
@@ -2887,7 +2887,16 @@ func (n *NodeBuilder) TransformNaturalExpression(naturalExpressionNode *tree.Nat
 }
 
 func (n *NodeBuilder) TransformToken(token tree.Token) BLangNode {
-	panic("TransformToken unimplemented")
+	kind := token.Kind()
+	switch kind {
+	case common.XML_TEXT_CONTENT, common.TEMPLATE_STRING, common.CLOSE_BRACE_TOKEN, common.PROMPT_CONTENT:
+		return n.createSimpleLiteral(token).(BLangNode)
+	default:
+		if isTokenInRegExp(kind) {
+			return n.createSimpleLiteral(token).(BLangNode)
+		}
+		panic("TransformToken: Syntax kind is not supported: " + kind.StrValue())
+	}
 }
 
 func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken) BLangNode {
