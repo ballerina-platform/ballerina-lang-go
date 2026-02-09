@@ -1,0 +1,74 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = newArray <UNKNOWN>[%1]
+    v = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    GOTO bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad 1000
+    %9 = ConstantLoad 1000
+    %7 = * %8 %9;
+    %6 = < i %7;
+    %6 ? bb2 : bb3;
+  }
+  bb2 {
+    %10 = ConstantLoad 1
+    v[i] = %10;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    %15 = ConstantLoad 1000
+    %14 = % i %15;
+    %16 = ConstantLoad 0
+    %13 = == %14 %16;
+    %13 ? bb4 : bb6;
+  }
+  bb3 {
+    %18 = ConstantLoad 1001
+    %19 = ConstantLoad 123000
+    v[%19] = %18;
+    %20 = ConstantLoad 0
+    i = %20;
+    %21 = ConstantLoad 0
+    sum = %21;
+    GOTO bb7;
+  }
+  bb4 {
+    %17 = println(i) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    GOTO bb1;
+  }
+  bb7 {
+    %24 = length(v) -> bb8;
+  }
+  bb8 {
+    %23 = < i %24;
+    %23 ? bb9 : bb10;
+  }
+  bb9 {
+    %26 = v[i];
+    %27 = <((INT), ())>(%26)
+    %25 = + sum %27;
+    sum = %25;
+    %29 = ConstantLoad 1
+    %28 = + i %29;
+    i = %28;
+    GOTO bb7;
+  }
+  bb10 {
+    %30 = println(sum) -> bb11;
+  }
+  bb11 {
+    return;
+  }
+}
