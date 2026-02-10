@@ -27,7 +27,7 @@ import (
 type BLangExpression interface {
 	model.ExpressionNode
 	BLangNode
-	// FIXME: get rid of this method
+	// TODO: get rid of this method but we need a way to distinguish Expressions from other BLangNodes in a type switch
 	SetTypeCheckedType(ty BType)
 }
 type Channel struct {

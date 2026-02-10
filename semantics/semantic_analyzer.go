@@ -23,7 +23,6 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
-	"math/bits"
 	"reflect"
 )
 
@@ -591,47 +590,9 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			a.semanticErr(fmt.Sprintf("incompatible types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-	} else {
-		// For arithmetic and relational operators
-		lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
-		rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-		numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
-		numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
-
-		if numLhsBits != 1 || numRhsBits != 1 {
-			a.semanticErr(fmt.Sprintf("union types not supported for %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
-
-		if isMultipcativeExpr(binaryExpr) {
-			if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect numeric types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isAdditiveExpr(binaryExpr) {
-			supportedTypes := semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
-			ctx := a.tyCtx()
-			if !semtypes.IsSubtype(ctx, &lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, &rhsBasicTy, supportedTypes) {
-				a.semanticErr(fmt.Sprintf("expect numeric or string types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isRelationalExpr(binaryExpr) {
-			if !semtypes.Comparable(a.tyCtx(), &lhsBasicTy, &rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-		} else {
-			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
 	}
 
+	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
 }

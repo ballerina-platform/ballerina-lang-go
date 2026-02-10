@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/big"
+	"math/bits"
 	"strconv"
 )
 
@@ -537,10 +538,7 @@ func (t *TypeResolver) resolveErrorConstructorExpr(expr *ast.BLangErrorConstruct
 		errorTy = &semtypes.ERROR
 	}
 
-	typeData := expr.GetTypeData()
-	typeData.Type = errorTy
-	expr.SetTypeData(typeData)
-	expr.SetDeterminedType(errorTy)
+	setExpectedType(expr, errorTy)
 
 	ast.Walk(t, expr)
 	return errorTy
@@ -603,6 +601,8 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 	return resultTy
 }
 
+var additiveSupportedTypes = semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
+
 // NilLiftingExprResultTy calculates the result type for binary operators with nil-lifting support.
 // It returns the result type and a boolean indicating whether nil-lifting was applied.
 // The caller is responsible for applying the nil union if needed.
@@ -618,12 +618,24 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 
+	numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
+	numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
+
+	if numLhsBits > 1 || numRhsBits > 1 {
+		t.ctx.SemanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, false
+	}
+
 	if isRelationalExpr(expr) {
 		// Relational operators always return boolean (no nil-lifting)
 		return &semtypes.BOOLEAN, false
 	}
 
 	if isMultipcativeExpr(expr) {
+		if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
+			t.ctx.SemanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
@@ -632,6 +644,11 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	}
 
 	if isAdditiveExpr(expr) {
+		ctx := t.tyCtx
+		if !semtypes.IsSubtype(ctx, &lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, &rhsBasicTy, additiveSupportedTypes) {
+			t.ctx.SemanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
