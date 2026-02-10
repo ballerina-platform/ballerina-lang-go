@@ -25,6 +25,7 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 
@@ -79,7 +80,7 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
 	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(debugCtx, testPair.InputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
 		return
@@ -95,10 +96,17 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	// Step 3: Convert to AST package
 	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 4: Generate BIR package
+	// Step 4: Resolve symbols
+	importedSymbols := semantics.ResolveImports(cx, pkg)
+	semantics.ResolveSymbols(cx, pkg, importedSymbols)
+
+	// Step 5: Resolve types
+	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver.ResolveTypes(cx, pkg)
+
+	// Step 6: Generate BIR package
 	birPkg := bir.GenBir(cx, pkg)
 
-	// Validate result
 	if birPkg == nil {
 		t.Errorf("BIR package is nil for %s", testPair.InputPath)
 		return
