@@ -271,6 +271,10 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
 		n.SetScope(resolver.scope)
 		return resolver
+	case *ast.BLangForeach:
+		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+		n.SetScope(resolver.scope)
+		return resolver
 	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:

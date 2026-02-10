@@ -735,6 +735,11 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 		}
 	} else if isBitWiseExpr(binaryExpr) {
 		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
+	} else if isRangeExpr(binaryExpr) {
+		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.INT) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.INT) {
+			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())))
+			return
+		}
 	}
 
 	// for nil lifting expression we do semantic analysis as part of type resolver

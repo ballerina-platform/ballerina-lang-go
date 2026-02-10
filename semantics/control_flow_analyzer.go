@@ -248,6 +248,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		return analyzer.analyzeBlockStmt(curBB, s)
 	case *ast.BLangWhile:
 		return analyzer.analyzeWhile(curBB, s)
+	case *ast.BLangForeach:
+		return analyzer.analyzeForeach(curBB, s)
 	// These should be handled while handling while statement
 	case *ast.BLangBreak:
 		analyzer.addNode(curBB, stmt)
@@ -425,6 +427,29 @@ func (cfg *functionCFG) markBackedges() {
 			cfg.topoOrder = append(cfg.topoOrder, i)
 		}
 	}
+func (analyzer *functionControlFlowAnalyzer) analyzeForeach(curBB bbRef, stmt *ast.BLangForeach) stmtEffect {
+	loopHead := analyzer.createNewBB()
+	loopBody := analyzer.createNewBB()
+	loopEnd := analyzer.createNewBB()
+	loopData := loopControlFlowData{
+		loopHead: loopHead,
+		loopBody: loopBody,
+		loopEnd:  loopEnd,
+	}
+	analyzer.loops = append(analyzer.loops, loopData)
+	analyzer.addEdge(curBB, loopHead)
+	analyzer.addNode(loopHead, stmt.Collection)
+	if stmt.VariableDef != nil {
+		analyzer.addNode(loopHead, stmt.VariableDef)
+	}
+	analyzer.addEdge(loopHead, loopBody)
+	analyzer.addEdge(loopHead, loopEnd)
+	bodyEffect := analyzer.analyzeBlockStmt(loopBody, &stmt.Body)
+	if !bodyEffect.isTerminal() {
+		analyzer.addEdge(bodyEffect.nextBB, loopHead)
+	}
+	analyzer.loops = analyzer.loops[:len(analyzer.loops)-1]
+	return continueEffect(loopEnd)
 }
 
 func (analyzer *functionControlFlowAnalyzer) getCfg() functionCFG {
