@@ -23,7 +23,6 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
-	"math/bits"
 	"reflect"
 )
 
@@ -70,10 +69,12 @@ type (
 	}
 )
 
-var _ analyzer = &constantAnalyzer{}
-var _ analyzer = &SemanticAnalyzer{}
-var _ analyzer = &functionAnalyzer{}
-var _ analyzer = &loopAnalyzer{}
+var (
+	_ analyzer = &constantAnalyzer{}
+	_ analyzer = &SemanticAnalyzer{}
+	_ analyzer = &functionAnalyzer{}
+	_ analyzer = &loopAnalyzer{}
+)
 
 // FIXME: this is not correct since const analyzer will propagte to semantic analyzer
 func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
@@ -468,6 +469,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
 
+	case *ast.BLangErrorConstructorExpr:
+		analyzeErrorConstructorExpr(a, expr, expectedType)
+
 	case *ast.BLangGroupExpr:
 		analyzeExpression(a, expr.Expression, expectedType)
 
@@ -521,6 +525,26 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 	validateResolvedType(a, expr, expectedType)
 }
 
+func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {
+	argCount := len(expr.PositionalArgs)
+	if argCount < 1 || argCount > 2 {
+		a.semanticErr("error constructor must have at least 1 and at most 2 positional arguments")
+		return
+	}
+
+	msgArg := expr.PositionalArgs[0]
+	analyzeExpression(a, msgArg, &semtypes.STRING)
+
+	// Validate second positional argument if present: must be a subtype of error? (Union of error and nil)
+	if argCount == 2 {
+		causeArg := expr.PositionalArgs[1]
+		analyzeExpression(a, causeArg, semtypes.Union(&semtypes.ERROR, &semtypes.NIL))
+	}
+
+	// Validate the resolved error type against expected type
+	validateResolvedType(a, expr, expectedType)
+}
+
 func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
 	// Validate the operand expression
 	analyzeExpression(a, unaryExpr.Expr, nil)
@@ -566,47 +590,9 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			a.semanticErr(fmt.Sprintf("incompatible types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-	} else {
-		// For arithmetic and relational operators
-		lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
-		rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-		numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
-		numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
-
-		if numLhsBits != 1 || numRhsBits != 1 {
-			a.semanticErr(fmt.Sprintf("union types not supported for %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
-
-		if isMultipcativeExpr(binaryExpr) {
-			if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect numeric types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isAdditiveExpr(binaryExpr) {
-			supportedTypes := semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
-			ctx := a.tyCtx()
-			if !semtypes.IsSubtype(ctx, &lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, &rhsBasicTy, supportedTypes) {
-				a.semanticErr(fmt.Sprintf("expect numeric or string types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isRelationalExpr(binaryExpr) {
-			if !semtypes.Comparable(a.tyCtx(), &lhsBasicTy, &rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-		} else {
-			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
 	}
 
+	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
 }

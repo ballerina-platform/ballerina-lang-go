@@ -395,6 +395,14 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, expr.(BLangNode))
 		}
 
+	case *BLangErrorConstructorExpr:
+		if node.ErrorTypeRef != nil {
+			Walk(v, node.ErrorTypeRef)
+		}
+		for _, arg := range node.PositionalArgs {
+			Walk(v, arg.(BLangNode))
+		}
+
 	case *BLangInvocation:
 		if node.PkgAlias != nil {
 			Walk(v, node.PkgAlias)

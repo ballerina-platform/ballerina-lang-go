@@ -146,7 +146,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
-	syntaxTree, err := parser.GetSyntaxTree(debugCtx, fileName)
+	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, fileName)
 	if err != nil {
 		printError(fmt.Errorf("compilation failed: %w", err), "", false)
 		return fmt.Errorf("compilation failed: %w", err)

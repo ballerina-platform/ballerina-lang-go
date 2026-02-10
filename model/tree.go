@@ -905,6 +905,20 @@ type TypedescExpressionNode interface {
 	SetTypeData(typeData TypeData)
 }
 
+type NamedArgNode interface {
+	ExpressionNode
+	SetName(name IdentifierNode)
+	GetName() IdentifierNode
+	GetExpression() ExpressionNode
+	SetExpression(expr ExpressionNode)
+}
+
+type ErrorConstructorExpressionNode interface {
+	ExpressionNode
+	GetPositionalArgs() []ExpressionNode
+	GetNamedArgs() []NamedArgNode
+}
+
 type DynamicArgNode = ExpressionNode
 
 // Statement Interfaces

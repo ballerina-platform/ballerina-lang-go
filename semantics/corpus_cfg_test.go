@@ -70,7 +70,7 @@ func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 
 	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(debugCtx, testPair.InputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
 		return
