@@ -69,8 +69,9 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		t.resolveFunction(ctx, &fn)
 	}
 	ast.Walk(t, pkg)
+	tctx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
 	for _, defn := range pkg.TypeDefinitions {
-		if semtypes.IsEmpty(t.tyCtx, defn.DeterminedType) {
+		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
 			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
@@ -753,6 +754,13 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return nil
 		}
 		return tr.resolveTypeDefinition(defn, depth)
+	case *ast.BLangFiniteTypeNode:
+		var result semtypes.SemType = &semtypes.NEVER
+		for _, value := range ty.ValueSpace {
+			ty := tr.resolveExpression(value)
+			result = semtypes.Union(result, ty)
+		}
+		return result
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

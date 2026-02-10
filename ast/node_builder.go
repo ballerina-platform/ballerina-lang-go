@@ -2385,7 +2385,10 @@ func (n *NodeBuilder) TransformFlushAction(flushActionNode *tree.FlushActionNode
 }
 
 func (n *NodeBuilder) TransformSingletonTypeDescriptor(singletonTypeDescriptorNode *tree.SingletonTypeDescriptorNode) BLangNode {
-	panic("TransformSingletonTypeDescriptor unimplemented")
+	bLFiniteTypeNode := &BLangFiniteTypeNode{}
+	bLFiniteTypeNode.pos = getPosition(singletonTypeDescriptorNode)
+	bLFiniteTypeNode.ValueSpace = append(bLFiniteTypeNode.ValueSpace, n.createExpression(singletonTypeDescriptorNode.SimpleContExprNode()))
+	return bLFiniteTypeNode
 }
 
 func (n *NodeBuilder) TransformMethodDeclaration(methodDeclarationNode *tree.MethodDeclarationNode) BLangNode {
