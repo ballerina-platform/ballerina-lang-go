@@ -449,6 +449,15 @@ func isMultipcativeExpr(opExpr opExpr) bool {
 	}
 }
 
+func isBitWiseExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		return true
+	default:
+		return false
+	}
+}
+
 func isRelationalExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
@@ -588,6 +597,8 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 	if isEqualityExpr(expr) {
 		// Equality operators always return boolean
 		resultTy = &semtypes.BOOLEAN
+	} else if isBitWiseExpr(expr) {
+		resultTy = &semtypes.INT
 	} else {
 		var nilLifted bool
 		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
