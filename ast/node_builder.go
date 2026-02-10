@@ -811,7 +811,7 @@ func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.N
 // migrated from BLangNodeBuilder.java:6754:5
 func isSimpleLiteral(syntaxKind common.SyntaxKind) bool {
 	switch syntaxKind {
-	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL:
+	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL, common.NULL_LITERAL:
 		return true
 	default:
 		return false
@@ -1740,6 +1740,7 @@ func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEa
 
 func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {
 	if binaryExpressionNode.Operator().Kind() == common.ELVIS_TOKEN {
+		panic("TransformBinaryExpression: elvis operator not supported")
 	}
 
 	bLBinaryExpr := BLangBinaryExpr{}

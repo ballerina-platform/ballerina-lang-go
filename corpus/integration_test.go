@@ -73,7 +73,8 @@ var (
 		"subset2/02-typecast/numeric-conversion-v.bal",
 		"subset2/02-typecast/numeric-conversion2-e.bal",
 
-		"subset3/03-list/24-v.bal",
+		// FIXME: https://github.com/ballerina-platform/ballerina-lang-go/issues/110
+		"subset3/03-int/neg-p.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

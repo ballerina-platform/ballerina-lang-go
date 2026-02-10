@@ -1,0 +1,26 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 17
+    %2 = ConstantLoad 1
+    %3 = newArray <UNKNOWN>[%2]
+    x = %3;
+    %6 = ConstantLoad 1
+    %5 = unknown x %6;
+    %7 = println(%5) -> bb1;
+  }
+  bb1 {
+    %9 = ConstantLoad true
+    %8 = unknown x %9;
+    %10 = println(%8) -> bb2;
+  }
+  bb2 {
+    %12 = ConstantLoad <nil>
+    %11 = unknown x %12;
+    %13 = println(%11) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
