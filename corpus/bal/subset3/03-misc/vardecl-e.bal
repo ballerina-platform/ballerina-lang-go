@@ -14,7 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions return-stmt any
-function foo(any x) returns any[] {
-    return x; // @error
+// @productions local-var-decl-stmt int-literal
+import ballerina/io;
+
+public function main() {
+    int x = 1;
+    int x = 2; // @error
+    io:println(x);
 }
