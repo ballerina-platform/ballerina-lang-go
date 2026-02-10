@@ -462,24 +462,20 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printString(node.Name.Value)
 
 	// Print markdown documentation if present
-	hasDoc := node.MarkdownDocumentationAttachment != nil
-	if hasDoc {
+	if node.MarkdownDocumentationAttachment != nil {
 		p.indentLevel++
 		p.PrintInner(node.MarkdownDocumentationAttachment)
 		p.indentLevel--
 	}
 
 	// Print parameters
-	hasParams := len(node.RequiredParams) > 0
-	if hasParams || !hasDoc {
-		p.printString("(")
-		p.indentLevel++
-		for _, param := range node.RequiredParams {
-			p.PrintInner(&param)
-		}
-		p.indentLevel--
-		p.printSticky(")")
+	p.printString("(")
+	p.indentLevel++
+	for i := range node.RequiredParams {
+		p.PrintInner(&node.RequiredParams[i])
 	}
+	p.indentLevel--
+	p.printSticky(")")
 
 	// Print return type
 	p.printString("(")
@@ -835,7 +831,6 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
-	p.indentLevel--
 	p.endNode()
 }
 

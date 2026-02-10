@@ -612,7 +612,7 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 			parameterName := parameterDocLineNode.ParameterName()
 			parameterNameValue := ""
 			if parameterName != nil && !parameterName.IsMissing() {
-				parameterNameValue = identifierutil.UnescapeUnicodeCodepoints(parameterName.Text())
+				parameterNameValue = unescapeUnicodeCodepoints(parameterName.Text())
 			}
 			paraName.OriginalValue = parameterNameValue
 			if n.stringStartsWithSingleQuote(parameterNameValue) {
@@ -2892,13 +2892,13 @@ func (n *NodeBuilder) transformDocumentationBacktickContent(backtickContent tree
 
 	// Process identifier and qualifier - unescape and remove single quote prefix if present
 	if bLangRefDoc.Identifier != "" {
-		bLangRefDoc.Identifier = identifierutil.UnescapeUnicodeCodepoints(bLangRefDoc.Identifier)
+		bLangRefDoc.Identifier = unescapeUnicodeCodepoints(bLangRefDoc.Identifier)
 		if n.stringStartsWithSingleQuote(bLangRefDoc.Identifier) {
 			bLangRefDoc.Identifier = bLangRefDoc.Identifier[1:]
 		}
 	}
 	if bLangRefDoc.Qualifier != "" {
-		bLangRefDoc.Qualifier = identifierutil.UnescapeUnicodeCodepoints(bLangRefDoc.Qualifier)
+		bLangRefDoc.Qualifier = unescapeUnicodeCodepoints(bLangRefDoc.Qualifier)
 		if n.stringStartsWithSingleQuote(bLangRefDoc.Qualifier) {
 			bLangRefDoc.Qualifier = bLangRefDoc.Qualifier[1:]
 		}
