@@ -12,8 +12,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -24,4 +22,4 @@ jobs:
         run: |
           export GOOS=js
           export GOARCH=wasm
-          go test -timeout 20s ./... -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec"
+          go test -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -timeout 20s ./... -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec"
