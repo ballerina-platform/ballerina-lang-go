@@ -1,0 +1,6 @@
+reviews:
+  path_filters:
+    - "!bir/testdata/**/*.txt"
+    - "!bir/testdata/**/*.bir"
+    - "!bir/testdata/**/*.json"
+    - "!corpus/**/*.txt"
