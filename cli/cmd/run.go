@@ -84,10 +84,18 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
 	runCmd.Flags().StringVar(&runOpts.format, "format", "", "Output format for dump operations (dot)")
+	profiler.RegisterFlags(runCmd)
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
 	fileName := args[0]
+
+	if err := profiler.Start(); err != nil {
+		profErr := fmt.Errorf("failed to start profiler: %w", err)
+		printError(profErr, "", false)
+		return profErr
+	}
+	defer profiler.Stop()
 
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
