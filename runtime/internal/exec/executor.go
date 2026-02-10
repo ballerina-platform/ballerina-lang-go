@@ -27,12 +27,12 @@ import (
 func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry) any {
 	localVars := &birFunc.LocalVars
 	locals := make([]any, len(*localVars))
-	locals[0] = defaultValueForType((*localVars)[0].Type)
+	locals[0] = fillMember((*localVars)[0].Type)
 	for i, arg := range args {
 		locals[i+1] = arg
 	}
 	for i := len(args) + 1; i < len(*localVars); i++ {
-		locals[i] = defaultValueForType((*localVars)[i].Type)
+		locals[i] = fillMember((*localVars)[i].Type)
 	}
 	frame := &Frame{locals: locals}
 	bbs := birFunc.BasicBlocks
@@ -182,10 +182,16 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry)
 	return nil
 }
 
-func defaultValueForType(t semtypes.SemType) any {
+// corresponds to FillMember abstract operation in the spec
+func fillMember(t semtypes.SemType) any {
 	if t == nil {
 		return nil
 	}
+	singleton := semtypes.SingleShape(t)
+	if singleton.IsPresent() {
+		return singleton.Get().Value
+	}
+
 	if semtypes.IsSubtypeSimple(t, semtypes.BOOLEAN) {
 		return false
 	} else if semtypes.IsSubtypeSimple(t, semtypes.INT) {
@@ -209,5 +215,4 @@ var NeverValue = &never{}
 
 // Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
 // this should panic.
-type never struct {
-}
+type never struct{}

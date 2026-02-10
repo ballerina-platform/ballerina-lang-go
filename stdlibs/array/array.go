@@ -20,7 +20,7 @@ func initArrayModule(rt *api.Runtime) {
 	})
 	api.RegisterExternFunction(rt.Registry, orgName, moduleName, "length", func(args []any) (any, error) {
 		if arr, ok := args[0].(*[]any); ok {
-			return len(*arr), nil
+			return int64(len(*arr)), nil
 		}
 		return nil, fmt.Errorf("first argument must be an array")
 	})

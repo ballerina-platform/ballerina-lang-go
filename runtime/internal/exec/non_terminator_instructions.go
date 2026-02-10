@@ -43,7 +43,7 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	lat := newArray.AtomicType
 	for i := size; i < lat.Members.FixedLength; i++ {
 		ty := lat.MemberAt(i)
-		val := defaultValueForType(ty)
+		val := fillMember(ty)
 		if val == NeverValue {
 			panic("never value encountered")
 		}
@@ -52,6 +52,8 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	frame.SetOperand(newArray.LhsOp.Index, &arr)
 }
 
+const MaxArraySize = math.MaxInt32
+
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
 	arr := *arrPtr
@@ -59,8 +61,17 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	if idx < 0 {
 		panic("index out of bounds")
 	}
-	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
+
+	if idx >= MaxArraySize {
+		panic("list too long")
+	}
+	for idx > len(arr)-1 {
+		// FIXME: properly do the filling read here instead
+		arr = append(arr, nil)
+	}
 	arr[idx] = frame.GetOperand(access.RhsOp.Index)
+	frame.SetOperand(access.LhsOp.Index, &arr)
+	*arrPtr = arr
 }
 
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
@@ -70,17 +81,4 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 		panic("index out of bounds")
 	}
 	frame.SetOperand(access.LhsOp.Index, arr[idx])
-}
-
-func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
-	if idx >= len(arr) {
-		if idx >= math.MaxInt32 {
-			panic("list too long")
-		}
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		return newArr
-	}
-	return arr
 }
