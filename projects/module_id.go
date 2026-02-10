@@ -65,12 +65,4 @@ func (m ModuleID) Equals(other ModuleID) bool {
 	return m.id == other.id && m.packageID.Equals(other.packageID)
 }
 
-// Hash returns a hash value for use in maps.
-func (m ModuleID) Hash() int {
-	h := m.packageID.Hash()
-	for _, c := range m.id {
-		h = 31*h + int(c)
-	}
-	return h
-}
 

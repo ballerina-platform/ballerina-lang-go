@@ -18,6 +18,8 @@
 
 package projects
 
+import "slices"
+
 // ModuleConfig represents configuration for a Ballerina module.
 // It contains the module's source documents, test documents, and dependencies.
 // Java source: io.ballerina.projects.ModuleConfig
@@ -41,14 +43,26 @@ func NewModuleConfig(
 	dependencies []ModuleDescriptor,
 ) ModuleConfig {
 	// Make defensive copies
-	srcCopy := make([]DocumentConfig, len(sourceDocs))
-	copy(srcCopy, sourceDocs)
+	var srcCopy []DocumentConfig
+	if sourceDocs == nil {
+		srcCopy = []DocumentConfig{}
+	} else {
+		srcCopy = slices.Clone(sourceDocs)
+	}
 
-	testCopy := make([]DocumentConfig, len(testSourceDocs))
-	copy(testCopy, testSourceDocs)
+	var testCopy []DocumentConfig
+	if testSourceDocs == nil {
+		testCopy = []DocumentConfig{}
+	} else {
+		testCopy = slices.Clone(testSourceDocs)
+	}
 
-	depsCopy := make([]ModuleDescriptor, len(dependencies))
-	copy(depsCopy, dependencies)
+	var depsCopy []ModuleDescriptor
+	if dependencies == nil {
+		depsCopy = []ModuleDescriptor{}
+	} else {
+		depsCopy = slices.Clone(dependencies)
+	}
 
 	return ModuleConfig{
 		moduleID:         moduleID,
@@ -77,23 +91,26 @@ func (m ModuleConfig) IsDefaultModule() bool {
 
 // SourceDocs returns a copy of the source document configurations.
 func (m ModuleConfig) SourceDocs() []DocumentConfig {
-	result := make([]DocumentConfig, len(m.sourceDocs))
-	copy(result, m.sourceDocs)
-	return result
+	if m.sourceDocs == nil {
+		return []DocumentConfig{}
+	}
+	return slices.Clone(m.sourceDocs)
 }
 
 // TestSourceDocs returns a copy of the test source document configurations.
 func (m ModuleConfig) TestSourceDocs() []DocumentConfig {
-	result := make([]DocumentConfig, len(m.testSourceDocs))
-	copy(result, m.testSourceDocs)
-	return result
+	if m.testSourceDocs == nil {
+		return []DocumentConfig{}
+	}
+	return slices.Clone(m.testSourceDocs)
 }
 
 // Dependencies returns a copy of the module dependencies.
 func (m ModuleConfig) Dependencies() []ModuleDescriptor {
-	result := make([]ModuleDescriptor, len(m.dependencies))
-	copy(result, m.dependencies)
-	return result
+	if m.dependencies == nil {
+		return []ModuleDescriptor{}
+	}
+	return slices.Clone(m.dependencies)
 }
 
 // ReadmeMd returns the README.md document config, or nil if not present.

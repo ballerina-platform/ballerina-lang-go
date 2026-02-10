@@ -18,6 +18,8 @@
 
 package projects
 
+import "slices"
+
 // PackageConfig represents configuration for a Ballerina package.
 // It contains the package manifest, module configurations, and related metadata.
 // Java source: io.ballerina.projects.PackageConfig
@@ -115,9 +117,10 @@ func (p PackageConfig) DefaultModule() ModuleConfig {
 
 // OtherModules returns a copy of the non-default module configurations.
 func (p PackageConfig) OtherModules() []ModuleConfig {
-	result := make([]ModuleConfig, len(p.otherModules))
-	copy(result, p.otherModules)
-	return result
+	if p.otherModules == nil {
+		return []ModuleConfig{}
+	}
+	return slices.Clone(p.otherModules)
 }
 
 // AllModules returns a slice containing the default module and all other modules.

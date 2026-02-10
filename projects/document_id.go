@@ -57,12 +57,4 @@ func (d DocumentID) Equals(other DocumentID) bool {
 	return d.id == other.id && d.moduleID.Equals(other.moduleID)
 }
 
-// Hash returns a hash value for use in maps.
-func (d DocumentID) Hash() int {
-	h := d.moduleID.Hash()
-	for _, c := range d.id {
-		h = 31*h + int(c)
-	}
-	return h
-}
 

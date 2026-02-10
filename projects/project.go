@@ -55,3 +55,14 @@ type Project interface {
 	// Java: Project.save()
 	Save() error
 }
+
+// ProjectError represents an error during project loading or configuration.
+// This is the unified error type for the projects package, used by both
+// the directory loader and the internal package config creator.
+type ProjectError struct {
+	Message string
+}
+
+func (e *ProjectError) Error() string {
+	return e.Message
+}

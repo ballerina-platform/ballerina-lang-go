@@ -81,18 +81,4 @@ func (d PackageDescriptor) Equals(other PackageDescriptor) bool {
 		d.version.Equals(other.version)
 }
 
-// Hash returns a hash value for use in maps.
-func (d PackageDescriptor) Hash() int {
-	h := 17
-	for _, c := range d.org.Value() {
-		h = 31*h + int(c)
-	}
-	for _, c := range d.name.Value() {
-		h = 31*h + int(c)
-	}
-	for _, c := range d.version.String() {
-		h = 31*h + int(c)
-	}
-	return h
-}
 

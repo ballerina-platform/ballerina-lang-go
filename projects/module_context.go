@@ -20,7 +20,9 @@ package projects
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -81,8 +83,12 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 
 	// Copy dependencies
 	deps := moduleConfig.Dependencies()
-	depsCopy := make([]ModuleDescriptor, len(deps))
-	copy(depsCopy, deps)
+	var depsCopy []ModuleDescriptor
+	if deps == nil {
+		depsCopy = []ModuleDescriptor{}
+	} else {
+		depsCopy = slices.Clone(deps)
+	}
 
 	return &moduleContext{
 		project:                project,
@@ -121,8 +127,12 @@ func newModuleContextFromMaps(
 	}
 
 	// Copy dependencies
-	depsCopy := make([]ModuleDescriptor, len(moduleDescDependencies))
-	copy(depsCopy, moduleDescDependencies)
+	var depsCopy []ModuleDescriptor
+	if moduleDescDependencies == nil {
+		depsCopy = []ModuleDescriptor{}
+	} else {
+		depsCopy = slices.Clone(moduleDescDependencies)
+	}
 
 	return &moduleContext{
 		project:                project,
@@ -154,16 +164,18 @@ func (m *moduleContext) getModuleName() ModuleName {
 
 // getSrcDocumentIDs returns a defensive copy of source document IDs.
 func (m *moduleContext) getSrcDocumentIDs() []DocumentID {
-	result := make([]DocumentID, len(m.srcDocIDs))
-	copy(result, m.srcDocIDs)
-	return result
+	if m.srcDocIDs == nil {
+		return []DocumentID{}
+	}
+	return slices.Clone(m.srcDocIDs)
 }
 
 // getTestSrcDocumentIDs returns a defensive copy of test document IDs.
 func (m *moduleContext) getTestSrcDocumentIDs() []DocumentID {
-	result := make([]DocumentID, len(m.testSrcDocIDs))
-	copy(result, m.testSrcDocIDs)
-	return result
+	if m.testSrcDocIDs == nil {
+		return []DocumentID{}
+	}
+	return slices.Clone(m.testSrcDocIDs)
 }
 
 // getDocumentContext returns the context for a document.
@@ -178,21 +190,13 @@ func (m *moduleContext) getDocumentContext(documentID DocumentID) *documentConte
 // getSrcDocContextMap returns the source document context map.
 // This returns a shallow copy of the map.
 func (m *moduleContext) getSrcDocContextMap() map[DocumentID]*documentContext {
-	result := make(map[DocumentID]*documentContext, len(m.srcDocContextMap))
-	for k, v := range m.srcDocContextMap {
-		result[k] = v
-	}
-	return result
+	return maps.Clone(m.srcDocContextMap)
 }
 
 // getTestDocContextMap returns the test document context map.
 // This returns a shallow copy of the map.
 func (m *moduleContext) getTestDocContextMap() map[DocumentID]*documentContext {
-	result := make(map[DocumentID]*documentContext, len(m.testDocContextMap))
-	for k, v := range m.testDocContextMap {
-		result[k] = v
-	}
-	return result
+	return maps.Clone(m.testDocContextMap)
 }
 
 // isDefault returns true if this is the default module.
@@ -207,9 +211,10 @@ func (m *moduleContext) getProject() Project {
 
 // getModuleDescDependencies returns a defensive copy of module descriptor dependencies.
 func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
-	result := make([]ModuleDescriptor, len(m.moduleDescDependencies))
-	copy(result, m.moduleDescDependencies)
-	return result
+	if m.moduleDescDependencies == nil {
+		return []ModuleDescriptor{}
+	}
+	return slices.Clone(m.moduleDescDependencies)
 }
 
 // compile performs module compilation by delegating to compileInternal.

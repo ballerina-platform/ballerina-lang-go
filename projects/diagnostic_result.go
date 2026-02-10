@@ -19,6 +19,8 @@
 package projects
 
 import (
+	"slices"
+
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -66,30 +68,34 @@ func NewDiagnosticResult(diags []diagnostics.Diagnostic) DiagnosticResult {
 
 // Diagnostics returns a defensive copy of all diagnostics.
 func (dr DiagnosticResult) Diagnostics() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(dr.diagnostics))
-	copy(result, dr.diagnostics)
-	return result
+	if dr.diagnostics == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(dr.diagnostics)
 }
 
 // Errors returns a defensive copy of all error diagnostics.
 func (dr DiagnosticResult) Errors() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(dr.errors))
-	copy(result, dr.errors)
-	return result
+	if dr.errors == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(dr.errors)
 }
 
 // Warnings returns a defensive copy of all warning diagnostics.
 func (dr DiagnosticResult) Warnings() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(dr.warnings))
-	copy(result, dr.warnings)
-	return result
+	if dr.warnings == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(dr.warnings)
 }
 
 // Hints returns a defensive copy of all hint diagnostics.
 func (dr DiagnosticResult) Hints() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(dr.hints))
-	copy(result, dr.hints)
-	return result
+	if dr.hints == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(dr.hints)
 }
 
 // HasErrors returns true if there are any error diagnostics.

@@ -73,12 +73,4 @@ func (p PackageID) Equals(other PackageID) bool {
 	return p.id == other.id
 }
 
-// Hash returns a hash value for use in maps.
-func (p PackageID) Hash() int {
-	h := 0
-	for _, c := range p.id {
-		h = 31*h + int(c)
-	}
-	return h
-}
 

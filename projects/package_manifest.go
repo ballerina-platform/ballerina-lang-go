@@ -19,6 +19,9 @@
 package projects
 
 import (
+	"maps"
+	"slices"
+
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -104,7 +107,7 @@ func (d Dependency) Repository() string {
 func NewPlatform(dependencies []map[string]any) *Platform {
 	depsCopy := make([]map[string]any, len(dependencies))
 	for i, dep := range dependencies {
-		depsCopy[i] = copyMap(dep)
+		depsCopy[i] = maps.Clone(dep)
 	}
 	return &Platform{
 		dependencies: depsCopy,
@@ -125,7 +128,7 @@ func (p *Platform) Dependencies() []map[string]any {
 	}
 	result := make([]map[string]any, len(p.dependencies))
 	for i, dep := range p.dependencies {
-		result[i] = copyMap(dep)
+		result[i] = maps.Clone(dep)
 	}
 	return result
 }
@@ -180,9 +183,10 @@ func (m PackageManifest) Version() PackageVersion {
 
 // Dependencies returns a copy of the package dependencies.
 func (m PackageManifest) Dependencies() []Dependency {
-	result := make([]Dependency, len(m.dependencies))
-	copy(result, m.dependencies)
-	return result
+	if m.dependencies == nil {
+		return []Dependency{}
+	}
+	return slices.Clone(m.dependencies)
 }
 
 // BuildOptions returns the build options.
@@ -192,9 +196,10 @@ func (m PackageManifest) BuildOptions() BuildOptions {
 
 // Diagnostics returns a copy of the parsing diagnostics.
 func (m PackageManifest) Diagnostics() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(m.diagnostics))
-	copy(result, m.diagnostics)
-	return result
+	if m.diagnostics == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(m.diagnostics)
 }
 
 // HasDiagnostics returns true if there are any diagnostics.
@@ -204,23 +209,26 @@ func (m PackageManifest) HasDiagnostics() bool {
 
 // License returns a copy of the license information.
 func (m PackageManifest) License() []string {
-	result := make([]string, len(m.license))
-	copy(result, m.license)
-	return result
+	if m.license == nil {
+		return []string{}
+	}
+	return slices.Clone(m.license)
 }
 
 // Authors returns a copy of the package authors.
 func (m PackageManifest) Authors() []string {
-	result := make([]string, len(m.authors))
-	copy(result, m.authors)
-	return result
+	if m.authors == nil {
+		return []string{}
+	}
+	return slices.Clone(m.authors)
 }
 
 // Keywords returns a copy of the package keywords.
 func (m PackageManifest) Keywords() []string {
-	result := make([]string, len(m.keywords))
-	copy(result, m.keywords)
-	return result
+	if m.keywords == nil {
+		return []string{}
+	}
+	return slices.Clone(m.keywords)
 }
 
 // Repository returns the package repository URL.
@@ -290,7 +298,7 @@ func (m PackageManifest) Platforms() map[string]*Platform {
 
 // OtherEntries returns a copy of additional TOML entries.
 func (m PackageManifest) OtherEntries() map[string]any {
-	return copyMap(m.otherEntries)
+	return maps.Clone(m.otherEntries)
 }
 
 // OtherEntry returns a specific entry from otherEntries.
@@ -362,7 +370,7 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 	}
 
 	// Copy other entries
-	otherEntries := copyMap(params.OtherEntries)
+	otherEntries := maps.Clone(params.OtherEntries)
 	if otherEntries == nil {
 		otherEntries = make(map[string]any)
 	}
@@ -387,14 +395,3 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 	}
 }
 
-// copyMap creates a shallow copy of a map.
-func copyMap(src map[string]any) map[string]any {
-	if src == nil {
-		return nil
-	}
-	result := make(map[string]any, len(src))
-	for k, v := range src {
-		result[k] = v
-	}
-	return result
-}

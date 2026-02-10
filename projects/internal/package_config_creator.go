@@ -38,7 +38,7 @@ func CreateBuildProjectConfig(projectDirPath string) (projects.PackageConfig, er
 		return projects.PackageConfig{}, err
 	}
 	if !info.IsDir() {
-		return projects.PackageConfig{}, &ProjectError{
+		return projects.PackageConfig{}, &projects.ProjectError{
 			Message: "project path must be a directory: " + projectDirPath,
 		}
 	}
@@ -46,7 +46,7 @@ func CreateBuildProjectConfig(projectDirPath string) (projects.PackageConfig, er
 	// Verify Ballerina.toml exists
 	ballerinaTomlPath := filepath.Join(projectDirPath, projects.BallerinaTomlFile)
 	if _, err := os.Stat(ballerinaTomlPath); os.IsNotExist(err) {
-		return projects.PackageConfig{}, &ProjectError{
+		return projects.PackageConfig{}, &projects.ProjectError{
 			Message: "Ballerina.toml not found in: " + projectDirPath,
 		}
 	}
@@ -281,11 +281,3 @@ func scanBalFiles(dirPath string, moduleID projects.ModuleID) ([]projects.Docume
 	return docs, nil
 }
 
-// ProjectError represents an error in project configuration.
-type ProjectError struct {
-	Message string
-}
-
-func (e *ProjectError) Error() string {
-	return e.Message
-}

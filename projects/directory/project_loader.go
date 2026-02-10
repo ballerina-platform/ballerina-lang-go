@@ -87,7 +87,7 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 		// directories that may contain multiple Ballerina projects.
 
 		// Directory without Ballerina.toml - error
-		return projects.ProjectLoadResult{}, &ProjectLoadError{
+		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "not a valid Ballerina project directory (missing Ballerina.toml): " + absPath,
 		}
 	}
@@ -100,21 +100,13 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 
 	if strings.HasSuffix(absPath, projects.BalaFileExtension) {
 		// .bala file - not implemented
-		return projects.ProjectLoadResult{}, &ProjectLoadError{
+		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "loading from .bala files is not implemented: " + absPath,
 		}
 	}
 
-	return projects.ProjectLoadResult{}, &ProjectLoadError{
+	return projects.ProjectLoadResult{}, &projects.ProjectError{
 		Message: "unsupported file type: " + absPath,
 	}
 }
 
-// ProjectLoadError represents an error during project loading.
-type ProjectLoadError struct {
-	Message string
-}
-
-func (e *ProjectLoadError) Error() string {
-	return e.Message
-}

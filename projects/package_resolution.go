@@ -76,7 +76,6 @@ func (r *PackageResolution) resolveDependencies() {
 
 	if len(cycles) > 0 {
 		// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
-		_ = cycles
 	}
 
 	r.topologicallySortedModuleList = sorted

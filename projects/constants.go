@@ -84,7 +84,7 @@ const (
 	// DefaultOrg is the default organization for unnamed packages.
 	DefaultOrg = "$anon"
 
-	// DefaultVersion is the default version for packages.
+	// DefaultVersion is the default version string for packages.
 	DefaultVersion = "0.0.0"
 
 	// BallerinaOrg is the Ballerina organization name.
@@ -93,3 +93,15 @@ const (
 	// BallerinaInternalOrg is the internal Ballerina organization.
 	BallerinaInternalOrg = "ballerinai"
 )
+
+// DefaultPackageVersion is the pre-parsed default version for packages.
+// This avoids repeated parsing of the default version string.
+var DefaultPackageVersion = mustParseVersion(DefaultVersion)
+
+func mustParseVersion(s string) PackageVersion {
+	v, err := NewPackageVersionFromString(s)
+	if err != nil {
+		panic("invalid default version: " + s)
+	}
+	return v
+}

@@ -54,13 +54,13 @@ func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	}
 
 	if info.IsDir() {
-		return projects.ProjectLoadResult{}, &ProjectLoadError{
+		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "expected a .bal file, got directory: " + absPath,
 		}
 	}
 
 	if !strings.HasSuffix(absPath, projects.BalFileExtension) {
-		return projects.ProjectLoadResult{}, &ProjectLoadError{
+		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "not a Ballerina source file: " + absPath,
 		}
 	}

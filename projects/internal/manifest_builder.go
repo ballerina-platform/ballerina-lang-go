@@ -21,7 +21,9 @@ package internal
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/tomlparser"
@@ -218,7 +220,7 @@ func (b *ManifestBuilder) WithPlatforms(platforms map[string]*projects.Platform)
 
 // WithOtherEntries sets additional TOML entries not covered by specific fields.
 func (b *ManifestBuilder) WithOtherEntries(entries map[string]any) *ManifestBuilder {
-	b.otherEntries = copyMap(entries)
+	b.otherEntries = maps.Clone(entries)
 	return b
 }
 
@@ -280,9 +282,10 @@ func (b *ManifestBuilder) parseFromTOML() {
 
 // Diagnostics returns accumulated diagnostics.
 func (b *ManifestBuilder) Diagnostics() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(b.diagnostics))
-	copy(result, b.diagnostics)
-	return result
+	if b.diagnostics == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(b.diagnostics)
 }
 
 // parsePackageDescriptor parses the [package] section and returns a PackageDescriptor.
@@ -316,14 +319,13 @@ func (b *ManifestBuilder) parsePackageDescriptor() projects.PackageDescriptor {
 	if err != nil {
 		b.addDiagnostic(diagnostics.Error, fmt.Sprintf("invalid version '%s': %v", versionStr, err))
 		// Use default version on error
-		version, _ = projects.NewPackageVersionFromString(projects.DefaultVersion)
+		version = projects.DefaultPackageVersion
 	}
 
 	return projects.NewPackageDescriptor(
 		projects.NewPackageOrg(org),
 		projects.NewPackageName(name),
-		version,
-	)
+		version)
 }
 
 // parseDependencies parses the [[dependency]] array from the TOML document.
@@ -475,16 +477,4 @@ func (b *ManifestBuilder) addDiagnostic(severity diagnostics.DiagnosticSeverity,
 	)
 	diag := diagnostics.NewDefaultDiagnostic(info, loc, nil)
 	b.diagnostics = append(b.diagnostics, diag)
-}
-
-// copyMap creates a shallow copy of a map.
-func copyMap(src map[string]any) map[string]any {
-	if src == nil {
-		return nil
-	}
-	result := make(map[string]any, len(src))
-	for k, v := range src {
-		result[k] = v
-	}
-	return result
 }

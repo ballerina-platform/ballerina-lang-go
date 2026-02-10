@@ -87,12 +87,4 @@ func (d ModuleDescriptor) Equals(other ModuleDescriptor) bool {
 		d.name.Equals(other.name)
 }
 
-// Hash returns a hash value for use in maps.
-func (d ModuleDescriptor) Hash() int {
-	h := d.packageDescriptor.Hash()
-	for _, c := range d.name.ModuleNamePart() {
-		h = 31*h + int(c)
-	}
-	return h
-}
 

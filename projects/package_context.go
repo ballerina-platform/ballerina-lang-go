@@ -18,7 +18,11 @@
 
 package projects
 
-import "sync"
+import (
+	"maps"
+	"slices"
+	"sync"
+)
 
 // packageContext holds internal state for a Package.
 // It manages module contexts and package-level metadata.
@@ -140,9 +144,10 @@ func (p *packageContext) getCompilationOptions() CompilationOptions {
 
 // getModuleIDs returns a defensive copy of all module IDs.
 func (p *packageContext) getModuleIDs() []ModuleID {
-	result := make([]ModuleID, len(p.moduleIDs))
-	copy(result, p.moduleIDs)
-	return result
+	if p.moduleIDs == nil {
+		return []ModuleID{}
+	}
+	return slices.Clone(p.moduleIDs)
 }
 
 // getModuleContext returns context for a module ID.
@@ -178,11 +183,7 @@ func (p *packageContext) getProject() Project {
 
 // getModuleContextMap returns a shallow copy of the module context map.
 func (p *packageContext) getModuleContextMap() map[ModuleID]*moduleContext {
-	result := make(map[ModuleID]*moduleContext, len(p.moduleContextMap))
-	for k, v := range p.moduleContextMap {
-		result[k] = v
-	}
-	return result
+	return maps.Clone(p.moduleContextMap)
 }
 
 // getPackageCompilation returns the cached PackageCompilation, creating it on first call.
