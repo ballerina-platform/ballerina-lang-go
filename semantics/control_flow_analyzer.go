@@ -381,6 +381,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 	if !bodyEffect.isTerminal() {
 		analyzer.addEdge(bodyEnd, loopHead)
 	}
+	// Pop the loop from the stack now that we're done analyzing it
+	analyzer.loops = analyzer.loops[:len(analyzer.loops)-1]
 	return continueEffect(loopEnd)
 }
 
