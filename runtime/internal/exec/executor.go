@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/runtime/values"
 	"ballerina-lang-go/semtypes"
 	"fmt"
 	"math/big"
@@ -203,7 +204,7 @@ func fillMember(t semtypes.SemType) any {
 	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
 		return big.NewRat(0, 1)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
-		return []any{}
+		return &values.List{}
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {

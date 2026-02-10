@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/values"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"fmt"
@@ -379,7 +380,7 @@ func valueToString(v any, visited map[uintptr]bool) string {
 		return strconv.FormatFloat(t, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(t)
-	case *[]any:
+	case *values.List:
 		if t == nil {
 			return "[]"
 		}
@@ -387,16 +388,19 @@ func valueToString(v any, visited map[uintptr]bool) string {
 		if visited[ptr] {
 			return "[...]"
 		}
-		// Check if this array contains itself (cycle detection before formatting)
-		for _, item := range *t {
-			if itemPtr, ok := item.(*[]any); ok {
+		for i := 0; i < t.Len(); i++ {
+			if itemPtr, ok := t.Get(i).(*values.List); ok {
 				if uintptr(unsafe.Pointer(itemPtr)) == ptr {
 					return "[...]"
 				}
 			}
 		}
 		visited[ptr] = true
-		return formatAnySlice(*t, visited)
+		var items []any
+		for i := 0; i < t.Len(); i++ {
+			items = append(items, t.Get(i))
+		}
+		return formatAnySlice(items, visited)
 	case []any:
 		return formatAnySlice(t, visited)
 	case stringer:

@@ -18,7 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"math"
+	"ballerina-lang-go/runtime/values"
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
@@ -30,15 +30,13 @@ func execMove(moveIns *bir.Move, frame *Frame) {
 }
 
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
+	list := &values.List{}
 	size := 0
 	if newArray.SizeOp != nil {
 		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
 	}
-	arr := make([]any, size)
-	if size > 0 {
-		for i, value := range newArray.Values {
-			arr[i] = frame.GetOperand(value.Index)
-		}
+	for _, value := range newArray.Values {
+		list.Push(frame.GetOperand(value.Index))
 	}
 	lat := newArray.AtomicType
 	for i := size; i < lat.Members.FixedLength; i++ {
@@ -47,38 +45,19 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 		if val == NeverValue {
 			panic("never value encountered")
 		}
-		arr = append(arr, val)
+		list.Push(val)
 	}
-	frame.SetOperand(newArray.LhsOp.Index, &arr)
+	frame.SetOperand(newArray.LhsOp.Index, list)
 }
 
-const MaxArraySize = math.MaxInt32
-
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
-	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
-	arr := *arrPtr
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	if idx < 0 {
-		panic("index out of bounds")
-	}
-
-	if idx >= MaxArraySize {
-		panic("list too long")
-	}
-	for idx > len(arr)-1 {
-		// FIXME: properly do the filling read here instead
-		arr = append(arr, nil)
-	}
-	arr[idx] = frame.GetOperand(access.RhsOp.Index)
-	frame.SetOperand(access.LhsOp.Index, &arr)
-	*arrPtr = arr
+	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
+	idx := frame.GetOperand(access.KeyOp.Index).(int64)
+	list.FillingStore(frame.GetOperand(access.RhsOp.Index), int(idx))
 }
 
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
-	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	if idx < 0 || idx >= len(arr) {
-		panic("index out of bounds")
-	}
-	frame.SetOperand(access.LhsOp.Index, arr[idx])
+	list := frame.GetOperand(access.RhsOp.Index).(*values.List)
+	idx := frame.GetOperand(access.KeyOp.Index).(int64)
+	frame.SetOperand(access.LhsOp.Index, list.Get(int(idx)))
 }

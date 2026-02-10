@@ -2,6 +2,7 @@ package array
 
 import (
 	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime/values"
 	"fmt"
 )
 
@@ -12,15 +13,15 @@ const (
 
 func initArrayModule(rt *api.Runtime) {
 	api.RegisterExternFunction(rt.Registry, orgName, moduleName, "push", func(args []any) (any, error) {
-		if arr, ok := args[0].(*[]any); ok {
-			*arr = append(*arr, args[1:]...)
+		if list, ok := args[0].(*values.List); ok {
+			list.Push(args[1:]...)
 			return nil, nil
 		}
 		return nil, fmt.Errorf("first argument must be an array")
 	})
 	api.RegisterExternFunction(rt.Registry, orgName, moduleName, "length", func(args []any) (any, error) {
-		if arr, ok := args[0].(*[]any); ok {
-			return int64(len(*arr)), nil
+		if list, ok := args[0].(*values.List); ok {
+			return int64(list.Len()), nil
 		}
 		return nil, fmt.Errorf("first argument must be an array")
 	})
