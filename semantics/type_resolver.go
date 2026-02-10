@@ -467,6 +467,15 @@ func isMultipcativeExpr(opExpr opExpr) bool {
 	}
 }
 
+func isRangeExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_CLOSED_RANGE, model.OperatorKind_HALF_OPEN_RANGE:
+		return true
+	default:
+		return false
+	}
+}
+
 func isBitWiseExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
@@ -628,6 +637,9 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 		resultTy = &semtypes.BOOLEAN
 	} else if isBitWiseExpr(expr) {
 		resultTy = &semtypes.INT
+	} else if isRangeExpr(expr) {
+		// Range operators: .., ...
+		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
 	} else {
 		var nilLifted bool
 		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
@@ -698,6 +710,40 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 	return nil, false
+}
+func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemType {
+	od := semtypes.NewObjectDefinition()
+
+	// record{| T value;|}
+	fields := []semtypes.Field{
+		semtypes.FieldFrom("value", t, false, false),
+	}
+	var rest semtypes.SemType = &semtypes.NEVER
+	recordTy := createClosedRecordType(env, fields, rest)
+
+	resultTy := semtypes.Union(recordTy, c)
+
+	// function next() returns record {| T value; |}|C;
+	ld := semtypes.NewListDefinition()
+	listTy := ld.DefineListTypeWrapped(env, []semtypes.SemType{}, 0, &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	fd := semtypes.NewFunctionDefinition()
+	fnTy := fd.Define(env, listTy, resultTy, semtypes.FunctionQualifiersFrom(env, false, false))
+
+	members := []semtypes.Member{
+		{
+			Name:       "next",
+			ValueTy:    fnTy,
+			Kind:       semtypes.MemberKindMethod,
+			Visibility: semtypes.VisibilityPublic,
+			Immutable:  true,
+		},
+	}
+	return od.Define(env, semtypes.ObjectQualifiersDEFAULT, members)
+}
+
+func createClosedRecordType(env semtypes.Env, fields []semtypes.Field, rest semtypes.SemType) semtypes.SemType {
+	md := semtypes.NewMappingDefinition()
+	return md.DefineMappingTypeWrapped(env, fields, rest)
 }
 
 func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) semtypes.SemType {

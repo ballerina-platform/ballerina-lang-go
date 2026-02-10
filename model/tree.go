@@ -1011,6 +1011,19 @@ type WhileNode interface {
 	SetOnFailClause(onFailClause OnFailClauseNode)
 }
 
+type ForeachNode interface {
+	StatementNode
+	GetVariableDefinitionNode() VariableDefinitionNode
+	SetVariableDefinitionNode(node VariableDefinitionNode)
+	GetCollection() ExpressionNode
+	SetCollection(collection ExpressionNode)
+	GetBody() BlockStatementNode
+	SetBody(body BlockStatementNode)
+	GetIsDeclaredWithVar() bool
+	GetOnFailClause() OnFailClauseNode
+	SetOnFailClause(onFailClause OnFailClauseNode)
+}
+
 // Binding Pattern Interfaces
 
 type BindingPatternNode = Node

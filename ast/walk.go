@@ -319,6 +319,18 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
+	case *BLangForeach:
+		if node.VariableDef != nil {
+			Walk(v, node.VariableDef)
+		}
+		if node.Collection != nil {
+			Walk(v, node.Collection.(BLangNode))
+		}
+		Walk(v, &node.Body)
+		if node.OnFailClause != nil {
+			Walk(v, node.OnFailClause)
+		}
+
 	case *BLangDo:
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)

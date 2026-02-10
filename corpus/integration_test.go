@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/runtime/values"
@@ -202,6 +203,8 @@ func runTest(balFile string) testResult {
 		semanticAnalyzer.Analyze(pkg)
 		// Run CFG analyses (reachability and explicit return)
 		semantics.AnalyzeCFG(cx, pkg, cfg)
+		// Desugar the package (transform foreach to while, etc.)
+		pkg = desugar.DesugarPackage(cx, pkg)
 		birPkg := bir.GenBir(cx, pkg)
 
 		printlnMu.Lock()

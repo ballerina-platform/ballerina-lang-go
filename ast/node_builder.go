@@ -1712,7 +1712,30 @@ func (n *NodeBuilder) TransformForkStatement(forkStatementNode *tree.ForkStateme
 }
 
 func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEachStatementNode) BLangNode {
-	panic("TransformForEachStatement unimplemented")
+	bLForeach := &BLangForeach{}
+	bLForeach.pos = getPosition(forEachStatementNode)
+
+	varDef := n.createBLangVarDef(
+		getPosition(forEachStatementNode.TypedBindingPattern()),
+		forEachStatementNode.TypedBindingPattern(),
+		nil,
+		nil,
+	).(*BLangSimpleVariableDef)
+	bLForeach.VariableDef = varDef
+	bLForeach.IsDeclaredWithVar = varDef.Var.IsDeclaredWithVar
+
+	bLForeach.Collection = n.createExpression(forEachStatementNode.ActionOrExpressionNode())
+
+	body := n.TransformBlockStatement(forEachStatementNode.BlockStatement()).(*BLangBlockStmt)
+	body.pos = getPosition(forEachStatementNode.BlockStatement())
+	bLForeach.Body = *body
+
+	if forEachStatementNode.OnFailClause() != nil {
+		bLForeach.SetOnFailClause(
+			n.TransformOnFailClause(forEachStatementNode.OnFailClause()).(*BLangOnFailClause),
+		)
+	}
+	return bLForeach
 }
 
 func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {

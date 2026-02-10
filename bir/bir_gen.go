@@ -506,6 +506,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return invocation(ctx, curBB, expr)
 	case *ast.BLangLiteral:
 		return literal(ctx, curBB, expr)
+	case *ast.BLangNumericLiteral:
+		return literal(ctx, curBB, &expr.BLangLiteral)
 	case *ast.BLangBinaryExpr:
 		return binaryExpression(ctx, curBB, expr)
 	case *ast.BLangSimpleVarRef:
