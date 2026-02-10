@@ -39,9 +39,11 @@ var runOpts struct {
 	dumpTokens    bool
 	dumpST        bool
 	dumpAST       bool
+	dumpCFG       bool
 	dumpBIR       bool
 	traceRecovery bool
 	logFile       string
+	format        string // Output format (dot, etc.)
 }
 
 var runCmd = &cobra.Command{
@@ -77,9 +79,11 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.dumpTokens, "dump-tokens", false, "Dump lexer tokens")
 	runCmd.Flags().BoolVar(&runOpts.dumpST, "dump-st", false, "Dump syntax tree")
 	runCmd.Flags().BoolVar(&runOpts.dumpAST, "dump-ast", false, "Dump abstract syntax tree")
+	runCmd.Flags().BoolVar(&runOpts.dumpCFG, "dump-cfg", false, "Dump control flow graph")
 	runCmd.Flags().BoolVar(&runOpts.dumpBIR, "dump-bir", false, "Dump Ballerina Intermediate Representation")
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
+	runCmd.Flags().StringVar(&runOpts.format, "format", "", "Output format for dump operations (dot)")
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
@@ -160,9 +164,31 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
+	// Run control flow analysis after type resolution
+	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis
+	cfg := semantics.CreateControlFlowGraph(cx, pkg)
+	if runOpts.dumpCFG {
+		// Print the CFG with separators
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
+
+		if runOpts.format == "dot" {
+			// Use DOT exporter
+			dotExporter := semantics.NewCFGDotExporter(cx)
+			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
+		} else {
+			// Use default S-expression printer
+			prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
+			fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
+		}
+
+		fmt.Fprintln(os.Stderr, "===================END CFG===================")
+	}
 	// Run semantic analysis after type resolution
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
+	// Run CFG analyses (reachability and explicit return) concurrently
+	semantics.AnalyzeCFG(cx, pkg, cfg)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}

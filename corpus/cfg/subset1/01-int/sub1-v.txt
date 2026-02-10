@@ -1,0 +1,24 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable sub1 (type
+        (value-type int))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref sub1))))
+    (var-def
+      (variable sub2 (type
+        (value-type int))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref sub2))))
+  )
+)
+(sub
+  (bb0 () ()
+    (return
+      (binary-expr -
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

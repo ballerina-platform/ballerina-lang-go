@@ -27,8 +27,6 @@ import (
 	"reflect"
 )
 
-type callBack func()
-
 type analyzer interface {
 	ast.Visitor
 	ctx() *context.CompilerContext
@@ -40,14 +38,11 @@ type analyzer interface {
 	internalErr(message string)
 	parentAnalyzer() analyzer
 	loc() diagnostics.Location
-	queueCallback(callback callBack)
-	executeCallbacks()
 }
 
 type (
 	analyzerBase struct {
-		parent    analyzer
-		callbacks []callBack
+		parent analyzer
 	}
 	SemanticAnalyzer struct {
 		analyzerBase
@@ -65,16 +60,13 @@ type (
 
 	functionAnalyzer struct {
 		analyzerBase
-		function    *ast.BLangFunction
-		retTy       semtypes.SemType
-		returnFound bool
+		function *ast.BLangFunction
+		retTy    semtypes.SemType
 	}
 
 	loopAnalyzer struct {
 		analyzerBase
-		loop          ast.BLangNode
-		breakFound    bool
-		continueFound bool
+		loop ast.BLangNode
 	}
 )
 
@@ -95,49 +87,11 @@ func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
 			}
 		}
 		analyzeExpression(fa, returnStmt.Expr, fa.retTy)
-		fa.returnFound = true
 	} else if analyzer.parentAnalyzer() != nil {
 		returnFound(analyzer.parentAnalyzer(), returnStmt)
 	} else {
 		analyzer.ctx().SemanticError("return statement not allowed in this context", analyzer.loc())
 	}
-}
-
-func breakFound(analyzer analyzer) {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if la, ok := analyzer.(*loopAnalyzer); ok {
-		la.breakFound = true
-	} else if analyzer.parentAnalyzer() != nil {
-		breakFound(analyzer.parentAnalyzer())
-	} else {
-		analyzer.ctx().SemanticError("break statement not allowed in this context", analyzer.loc())
-	}
-}
-
-func continueFound(analyzer analyzer) {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if la, ok := analyzer.(*loopAnalyzer); ok {
-		la.continueFound = true
-	} else if analyzer.parentAnalyzer() != nil {
-		continueFound(analyzer.parentAnalyzer())
-	} else {
-		analyzer.ctx().SemanticError("continue statement not allowed in this context", analyzer.loc())
-	}
-}
-
-func (ab *analyzerBase) queueCallback(callback callBack) {
-	ab.callbacks = append(ab.callbacks, callback)
-}
-
-func (ab *analyzerBase) executeCallbacks() {
-	for _, callback := range ab.callbacks {
-		callback()
-	}
-	ab.callbacks = nil
 }
 
 func (ab *analyzerBase) parentAnalyzer() analyzer {
@@ -169,7 +123,6 @@ func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 }
 
 func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	fa.executeCallbacks()
 	if node == nil {
 		return nil
 	}
@@ -186,16 +139,11 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 }
 
 func (la *loopAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	la.executeCallbacks()
 	if node == nil {
 		return nil
 	}
 	switch node.(type) {
-	case *ast.BLangBreak:
-		la.breakFound = true
-		return nil
-	case *ast.BLangContinue:
-		// Continue is valid within a loop
+	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	default:
 		// Delegate nested loops and common nodes to visitInner
@@ -324,8 +272,12 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 	sa.importedPkgs = nil
 }
 
+func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *constantAnalyzer {
+	expectedType := constant.GetTypeData().Type
+	return &constantAnalyzer{analyzerBase: analyzerBase{parent: parent}, constant: constant, expectedType: expectedType}
+}
+
 func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	sa.executeCallbacks()
 	if node == nil {
 		// Done
 		return nil
@@ -335,7 +287,7 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		sa.processImport(n)
 		return nil
 	case *ast.BLangConstant:
-		return &constantAnalyzer{analyzerBase: analyzerBase{parent: sa}, constant: n}
+		return createConstantAnalyzer(sa, n)
 	case *ast.BLangReturn:
 		// Error: return only valid in functions
 		sa.semanticErr("return statement outside function")
@@ -380,11 +332,6 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature.ReturnType
-	parent.queueCallback(func() {
-		if !fa.returnFound && !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
-			fa.semanticErr("expect a return statement")
-		}
-	})
 	return fa
 }
 
@@ -392,19 +339,11 @@ func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
 	return &loopAnalyzer{
 		analyzerBase: analyzerBase{parent: parent},
 		loop:         loop,
-		breakFound:   false,
 	}
 }
 
 func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
-	ca.executeCallbacks()
 	if node == nil {
-		setExpectedType(ca.constant, ca.expectedType)
-		typeData := ca.constant.GetTypeData()
-		typeData.Type = ca.expectedType
-		ca.constant.SetTypeData(typeData)
-		symbol := ca.constant.Symbol()
-		ca.ctx().SetSymbolType(symbol, ca.expectedType)
 		// Done
 		return nil
 	}
@@ -433,7 +372,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		typeData := n.GetTypeData()
 		expectedType := typeData.Type
 		if expectedType == nil {
-			ca.syntaxErr("type not resolved")
+			ca.internalErr("type not resolved")
 			return nil
 		}
 		ctx := ca.tyCtx()
@@ -441,7 +380,6 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			ca.syntaxErr("invalid type for constant declaration")
 			return nil
 		}
-		ca.expectedType = expectedType
 	case model.ExpressionNode:
 		switch n.GetKind() {
 		case model.NodeKind_LITERAL,
@@ -473,191 +411,179 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	return ca
 }
 
+// validateResolvedType validates that a resolved expression type is compatible with the expected type
+func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
+	typeData := expr.GetTypeData()
+	resolvedTy := typeData.Type
+	if resolvedTy == nil {
+		a.internalErr(fmt.Sprintf("expression type not resolved for %T at %v", expr, expr.GetPosition()))
+		return false
+	}
+
+	if expectedType == nil {
+		return true
+	}
+
+	ctx := a.tyCtx()
+	if !semtypes.IsSubtype(ctx, resolvedTy, expectedType) {
+		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy))
+		return false
+	}
+
+	return true
+}
+
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
 	switch expr := expr.(type) {
-	// Literals
+	// Literals - just validate
 	case *ast.BLangLiteral:
-		if expectedType == nil {
-			return
-		}
-		typeData := expr.GetTypeData()
-		ty := typeData.Type
-		ctx := a.tyCtx()
-		if !semtypes.IsSubtype(ctx, ty, expectedType) {
-			a.semanticErr("incompatible type for literal")
-			return
-		}
-	case *ast.BLangNumericLiteral:
-		if expectedType == nil {
-			return
-		}
-		typeData := expr.GetTypeData()
-		ty := typeData.Type
-		ctx := a.tyCtx()
-		if !semtypes.IsSubtype(ctx, ty, expectedType) {
-			a.semanticErr("incompatible type for literal")
-			return
-		}
+		validateResolvedType(a, expr, expectedType)
 
-	// Variable References
+	case *ast.BLangNumericLiteral:
+		validateResolvedType(a, expr, expectedType)
+
+	// Variable References - just validate
 	case *ast.BLangSimpleVarRef:
-		ty := a.ctx().SymbolType(expr.Symbol())
-		if expectedType != nil {
-			if !semtypes.IsSubtype(a.tyCtx(), ty, expectedType) {
-				a.semanticErr("incompatible type for variable reference")
-				return
-			}
-		}
-		setExpectedType(expr, ty)
+		validateResolvedType(a, expr, expectedType)
+
 	case *ast.BLangLocalVarRef, *ast.BLangConstRef:
 		panic("not implemented")
-	// Operators
+
+	// Operators - validate operands and result
 	case *ast.BLangBinaryExpr:
 		analyzeBinaryExpr(a, expr, expectedType)
+
 	case *ast.BLangUnaryExpr:
 		analyzeUnaryExpr(a, expr, expectedType)
 
-	// Function and Method Calls
+	// Function and Method Calls - validate arguments and result
 	case *ast.BLangInvocation:
 		analyzeInvocation(a, expr, expectedType)
 
-	// Indexing
+	// Indexing - validate container, index, and result
 	case *ast.BLangIndexBasedAccess:
 		analyzeIndexBasedAccess(a, expr, expectedType)
 
-	// Collections and Groups
+	// Collections and Groups - validate members and result
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
+
 	case *ast.BLangGroupExpr:
 		analyzeExpression(a, expr.Expression, expectedType)
-		setExpectedType(expr, expr.Expression.GetTypeData().Type)
+
 	case *ast.BLangWildCardBindingPattern:
-		setExpectedType(expr, &semtypes.ANY)
+		// Wildcard patterns have type ANY and are always valid
+		validateResolvedType(a, expr, expectedType)
+
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
 }
 
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {
+	// Validate container expression
 	containerExpr := expr.Expr
 	analyzeExpression(a, containerExpr, nil)
 	containerExprTy := containerExpr.GetTypeData().Type
+
+	// Determine expected key type based on container type
 	var keyExprExpectedType semtypes.SemType
 	ctx := a.tyCtx()
-	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) || !semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) || !semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
+	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) ||
+		semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) ||
+		semtypes.IsSubtypeSimple(containerExprTy, semtypes.XML) {
 		keyExprExpectedType = &semtypes.INT
-	} else if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.TABLE) {
+	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.TABLE) {
 		a.unimplementedErr("table not supported")
-	} else if !semtypes.IsSubtype(ctx, containerExprTy, semtypes.Union(&semtypes.NIL, &semtypes.MAPPING)) {
+		return
+	} else if semtypes.IsSubtype(ctx, containerExprTy, semtypes.Union(&semtypes.NIL, &semtypes.MAPPING)) {
 		keyExprExpectedType = &semtypes.STRING
 	} else {
 		a.semanticErr("incompatible type for index based access")
 		return
 	}
+
+	// Validate index expression
 	keyExpr := expr.IndexExpr
 	analyzeExpression(a, keyExpr, keyExprExpectedType)
-	keyExprTy := keyExpr.GetTypeData().Type
-	var resultTy semtypes.SemType
-	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
-		resultTy = semtypes.ListProjInnerVal(ctx, containerExprTy, keyExprTy)
-	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
-		resultTy = &semtypes.STRING
-	} else {
-		a.unimplementedErr("unsupported container type for index based access")
-		return
-	}
-	if expectedType != nil {
-		if !semtypes.IsSubtype(ctx, resultTy, expectedType) {
-			a.semanticErr("incompatible type for index based access")
-			return
-		}
-	}
-	setExpectedType(expr, resultTy)
+
+	// Validate the resolved result type against expected type
+	validateResolvedType(a, expr, expectedType)
 }
 
 func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) {
-	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
-	for i, expr := range expr.Exprs {
-		analyzeExpression(a, expr, nil)
-		memberTypes[i] = expr.GetTypeData().Type
+	// Validate each member expression
+	for _, memberExpr := range expr.Exprs {
+		analyzeExpression(a, memberExpr, nil)
 	}
-	ld := semtypes.NewListDefinition()
-	valueTy := ld.DefineListTypeWrapped(a.tyCtx().Env(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if expectedType != nil {
-		if !semtypes.IsSubtype(a.tyCtx(), valueTy, expectedType) {
-			a.semanticErr("incompatible type for list constructor expression")
-			return
-		}
-	}
-	setExpectedType(expr, valueTy)
+
+	// Validate the resolved list type against expected type
+	validateResolvedType(a, expr, expectedType)
 }
 
 func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
-	analyzeExpression(a, unaryExpr.Expr, expectedType)
+	// Validate the operand expression
+	analyzeExpression(a, unaryExpr.Expr, nil)
+
+	// Get the operand type
 	exprTy := unaryExpr.Expr.GetTypeData().Type
-	var resultTy semtypes.SemType
+
+	// Validate operand type based on operator
 	switch unaryExpr.GetOperatorKind() {
 	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
 		if !isNumericType(exprTy) {
 			a.semanticErr(fmt.Sprintf("expect numeric type for %s", string(unaryExpr.GetOperatorKind())))
 			return
 		}
-		resultTy = exprTy
 	case model.OperatorKind_NOT:
 		if !semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
 			a.semanticErr(fmt.Sprintf("expect boolean type for %s", string(unaryExpr.GetOperatorKind())))
 			return
 		}
-		resultTy = exprTy
 	default:
 		a.semanticErr(fmt.Sprintf("unsupported unary operator: %s", string(unaryExpr.GetOperatorKind())))
 		return
 	}
-	if expectedType != nil {
-		if !semtypes.IsSubtype(a.tyCtx(), resultTy, expectedType) {
-			a.semanticErr("incompatible result type for unary expression")
-			return
-		}
-	}
-	setExpectedType(unaryExpr, resultTy)
+
+	// Validate the resolved result type against expected type
+	validateResolvedType(a, unaryExpr, expectedType)
 }
 
 func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
+	// Validate both operand expressions
 	analyzeExpression(a, binaryExpr.LhsExpr, nil)
 	analyzeExpression(a, binaryExpr.RhsExpr, nil)
+
+	// Get operand types
 	lhsTy := binaryExpr.LhsExpr.GetTypeData().Type
 	rhsTy := binaryExpr.RhsExpr.GetTypeData().Type
-	var resultTy semtypes.SemType
+
+	// Perform semantic validation based on operator type
 	if isEqualityExpr(binaryExpr) {
+		// For equality operators, ensure types have non-empty intersection
 		intersection := semtypes.Intersect(lhsTy, rhsTy)
 		if semtypes.IsEmpty(a.tyCtx(), intersection) {
-			a.semanticErr(fmt.Sprintf("expect same type for %s", string(binaryExpr.GetOperatorKind())))
+			a.semanticErr(fmt.Sprintf("incompatible types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-		resultTy = &semtypes.BOOLEAN
 	} else {
+		// For arithmetic and relational operators
 		lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 		rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 		numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
 		numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
-		nilLifted := false
+
 		if numLhsBits != 1 || numRhsBits != 1 {
 			a.semanticErr(fmt.Sprintf("union types not supported for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-		if semtypes.IsSubtypeSimple(&lhsBasicTy, semtypes.NIL) || semtypes.IsSubtypeSimple(&rhsBasicTy, semtypes.NIL) {
-			nilLifted = true
-			lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
-			rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
-		}
+
 		if isMultipcativeExpr(binaryExpr) {
 			if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
 				a.semanticErr(fmt.Sprintf("expect numeric types for %s", string(binaryExpr.GetOperatorKind())))
 				return
 			}
-			if lhsBasicTy == rhsBasicTy {
-				resultTy = &lhsBasicTy
-			} else {
+			if lhsBasicTy != rhsBasicTy {
 				a.unimplementedErr("type coercion not supported")
 			}
 		} else if isAdditiveExpr(binaryExpr) {
@@ -667,9 +593,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				a.semanticErr(fmt.Sprintf("expect numeric or string types for %s", string(binaryExpr.GetOperatorKind())))
 				return
 			}
-			if lhsBasicTy == rhsBasicTy {
-				resultTy = &lhsBasicTy
-			} else {
+			if lhsBasicTy != rhsBasicTy {
 				a.unimplementedErr("type coercion not supported")
 			}
 		} else if isRelationalExpr(binaryExpr) {
@@ -677,84 +601,34 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
 				return
 			}
-			resultTy = &semtypes.BOOLEAN
-			nilLifted = false
 		} else {
 			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-		if nilLifted {
-			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
-		}
 	}
-	if expectedType != nil {
-		if !semtypes.IsSubtype(a.tyCtx(), resultTy, expectedType) {
-			a.semanticErr("incompatible result type for binary expression")
-			return
-		}
-	}
-	setExpectedType(binaryExpr, resultTy)
-}
 
-type opExpr interface {
-	GetOperatorKind() model.OperatorKind
-}
-
-func isEqualityExpr(opExpr opExpr) bool {
-	switch opExpr.GetOperatorKind() {
-	case model.OperatorKind_EQUAL, model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL, model.OperatorKind_REF_EQUAL, model.OperatorKind_REF_NOT_EQUAL:
-		return true
-	default:
-		return false
-	}
-}
-
-func isMultipcativeExpr(opExpr opExpr) bool {
-	switch opExpr.GetOperatorKind() {
-	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
-		return true
-	default:
-		return false
-	}
-}
-
-func isRelationalExpr(opExpr opExpr) bool {
-	switch opExpr.GetOperatorKind() {
-	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
-		return true
-	default:
-		return false
-	}
-}
-
-func isAdditiveExpr(opExpr opExpr) bool {
-	switch opExpr.GetOperatorKind() {
-	case model.OperatorKind_ADD, model.OperatorKind_SUB:
-		return true
-	default:
-		return false
-	}
-}
-
-func isNumericType(ty semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(ty, semtypes.NUMBER)
+	// Validate the resolved result type against expected type
+	validateResolvedType(a, binaryExpr, expectedType)
 }
 
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
-	var retTy semtypes.SemType
-
+	// Get the function type from the symbol
 	symbol := invocation.Symbol()
 	fnTy := a.ctx().SymbolType(symbol)
 	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
 		a.semanticErr("function not found: " + invocation.Name.GetValue())
 		return
 	}
+
+	// Validate each argument expression
 	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
 		analyzeExpression(a, arg, nil)
 		typeData := arg.GetTypeData()
 		argTys[i] = typeData.Type
 	}
+
+	// Validate argument types against function parameter types
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
@@ -762,14 +636,9 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 		a.semanticErr("incompatible arguments for function call")
 		return
 	}
-	retTy = semtypes.FunctionReturnType(a.tyCtx(), fnTy, argListTy)
-	if expectedType != nil {
-		if !semtypes.IsSubtype(a.tyCtx(), retTy, expectedType) {
-			a.semanticErr("incompatible return type for function call")
-			return
-		}
-	}
-	setExpectedType(invocation, retTy)
+
+	// Validate the resolved return type against expected type
+	validateResolvedType(a, invocation, expectedType)
 }
 
 func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpleVariableDef) {
@@ -791,11 +660,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangIf:
 		analyzeIf(a, n)
 		return a
-	case *ast.BLangBreak:
-		breakFound(a)
-		return nil
-	case *ast.BLangContinue:
-		continueFound(a)
+	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	case *ast.BLangSimpleVariableDef:
 		analyzeSimpleVariableDef(a, n)

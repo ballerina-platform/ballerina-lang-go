@@ -65,28 +65,65 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		defn := &pkg.TypeDefinitions[i]
 		t.resolveTypeDefinition(defn, 0)
 	}
+	for _, fn := range pkg.Functions {
+		t.resolveFunction(ctx, &fn)
+	}
 	ast.Walk(t, pkg)
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(t.tyCtx, defn.DeterminedType) {
 			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
-	for _, fn := range pkg.Functions {
-		t.resolveFunction(ctx, &fn)
+}
+
+func (t *TypeResolver) resolveBlockStatements(stmts []ast.BLangStatement) {
+	for i := range stmts {
+		t.resolveStatement(stmts[i])
+	}
+}
+
+// resolveStatement resolves expression types in a statement
+func (t *TypeResolver) resolveStatement(stmt ast.BLangStatement) {
+	switch s := stmt.(type) {
+	case *ast.BLangSimpleVariableDef:
+		variable := s.GetVariable().(*ast.BLangSimpleVariable)
+		if variable.Expr != nil {
+			t.resolveExpression(variable.Expr.(ast.BLangExpression))
+		}
+	case *ast.BLangAssignment:
+		t.resolveExpression(s.GetVariable().(ast.BLangExpression))
+		t.resolveExpression(s.GetExpression().(ast.BLangExpression))
+	case *ast.BLangCompoundAssignment:
+		t.resolveExpression(s.GetVariable().(ast.BLangExpression))
+		t.resolveExpression(s.GetExpression().(ast.BLangExpression))
+	case *ast.BLangExpressionStmt:
+		t.resolveExpression(s.Expr)
+	case *ast.BLangIf:
+		t.resolveExpression(s.Expr)
+		t.resolveBlockStatements(s.Body.Stmts)
+		if s.ElseStmt != nil {
+			t.resolveStatement(s.ElseStmt)
+		}
+	case *ast.BLangWhile:
+		t.resolveExpression(s.Expr)
+		t.resolveBlockStatements(s.Body.Stmts)
+	case *ast.BLangReturn:
+		if s.Expr != nil {
+			t.resolveExpression(s.Expr)
+		}
+	case *ast.BLangBreak, *ast.BLangContinue:
+		// No expressions to resolve
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected statement type: %T", s), s.GetPosition())
 	}
 }
 
 func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) semtypes.SemType {
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i, param := range fn.RequiredParams {
+		ast.Walk(t, &param)
 		typeData := param.GetTypeData()
-		if typeData.Type != nil {
-			// Already resolved
-			paramTypes[i] = typeData.Type
-		} else {
-			// This should be resolved already
-			paramTypes[i] = typeData.Type
-		}
+		paramTypes[i] = typeData.Type
 	}
 	var restTy semtypes.SemType
 	if fn.RestParam != nil {
@@ -97,9 +134,9 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
+	ast.WalkTypeData(t, &fn.ReturnTypeData)
 	returnTypeData := fn.GetReturnTypeData()
 	if returnTypeData.TypeDescriptor != nil {
-		// Already resolved
 		returnTy = returnTypeData.Type
 	} else {
 		returnTy = &semtypes.NIL
@@ -138,15 +175,22 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		// Done
 		return nil
 	}
+
+	// Set DeterminedType to NEVER for all nodes by default.
+	// Nodes with actual semantic types will overwrite this during resolution.
+	if node.GetDeterminedType() == nil {
+		node.SetDeterminedType(&semtypes.NEVER)
+	}
+
+	// Existing type-specific resolution switch
 	switch n := node.(type) {
-	case *ast.BLangFunction, *ast.BLangConstant:
-		return t
+	case *ast.BLangConstant:
+		t.resolveConstant(n)
+		return nil
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
-		return t
 	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode, *ast.BLangUnionTypeNode, *ast.BLangErrorTypeNode:
 		t.resolveBType(node.(ast.BType), 0)
-		return t
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
 		return nil
@@ -156,14 +200,21 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangTypeDefinition:
 		t.resolveTypeDefinition(n, 0)
 		return nil
+	case ast.BLangExpression:
+		t.resolveExpression(n)
 	default:
 		return t
 	}
+	return t
 }
 
 func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, depth int) semtypes.SemType {
 	if defn.DeterminedType != nil {
 		return defn.DeterminedType
+	}
+	// Walk Name identifier to ensure it gets DeterminedType set
+	if defn.Name != nil {
+		ast.Walk(t, defn.Name)
 	}
 	if depth == defn.CycleDepth {
 		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
@@ -220,12 +271,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
 	}
 
-	// Set on TypeData
-	typeData.Type = ty
-	n.SetTypeData(typeData)
-
-	// Set on determinedType
-	n.SetDeterminedType(ty)
+	setExpectedType(n, ty)
 
 	// Update symbol type if this literal has a symbol
 	updateSymbolType(t.ctx, n, ty)
@@ -270,12 +316,7 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
 		return
 	}
 
-	// Set on TypeData
-	typeData.Type = ty
-	n.SetTypeData(typeData)
-
-	// Set on determinedType
-	n.SetDeterminedType(ty)
+	setExpectedType(n, ty)
 
 	// Update symbol type if this numeric literal has a symbol
 	updateSymbolType(t.ctx, n, ty)
@@ -335,18 +376,321 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	// Resolve the type descriptor and get the semtype
 	semType := t.resolveBType(typeData.TypeDescriptor.(ast.BType), 0)
 
-	// Set on TypeData
-	typeData.Type = semType
-	node.SetTypeData(typeData)
-
-	// Set on determinedType
-	node.SetDeterminedType(semType)
+	setExpectedType(node, semType)
 
 	// Update symbol type
 	updateSymbolType(t.ctx, node, semType)
 }
 
+// resolveExpression is a dispatcher that resolves the intrinsic type of any expression
+func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemType {
+	// Check if already resolved
+	if typeData := expr.GetTypeData(); typeData.Type != nil {
+		return typeData.Type
+	}
+
+	switch e := expr.(type) {
+	case *ast.BLangLiteral:
+		t.resolveLiteral(e)
+		return e.GetTypeData().Type
+	case *ast.BLangNumericLiteral:
+		t.resolveNumericLiteral(e)
+		return e.GetTypeData().Type
+	case *ast.BLangSimpleVarRef:
+		return t.resolveSimpleVarRef(e)
+	case *ast.BLangBinaryExpr:
+		return t.resolveBinaryExpr(e)
+	case *ast.BLangUnaryExpr:
+		return t.resolveUnaryExpr(e)
+	case *ast.BLangInvocation:
+		return t.resolveInvocation(e)
+	case *ast.BLangIndexBasedAccess:
+		return t.resolveIndexBasedAccess(e)
+	case *ast.BLangListConstructorExpr:
+		return t.resolveListConstructorExpr(e)
+	case *ast.BLangGroupExpr:
+		return t.resolveGroupExpr(e)
+	case *ast.BLangWildCardBindingPattern:
+		// Wildcard patterns have type ANY
+		ty := &semtypes.ANY
+		setExpectedType(e, ty)
+		return ty
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
+		return nil
+	}
+}
+
+// Helper functions for expression type checking
+
+type opExpr interface {
+	GetOperatorKind() model.OperatorKind
+}
+
+func isEqualityExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_EQUAL, model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL, model.OperatorKind_REF_EQUAL, model.OperatorKind_REF_NOT_EQUAL:
+		return true
+	default:
+		return false
+	}
+}
+
+func isMultipcativeExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
+		return true
+	default:
+		return false
+	}
+}
+
+func isRelationalExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
+		return true
+	default:
+		return false
+	}
+}
+
+func isAdditiveExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		return true
+	default:
+		return false
+	}
+}
+
+func isNumericType(ty semtypes.SemType) bool {
+	return semtypes.IsSubtypeSimple(ty, semtypes.NUMBER)
+}
+
+// Expression resolution methods
+
+func (t *TypeResolver) resolveGroupExpr(expr *ast.BLangGroupExpr) semtypes.SemType {
+	// Group expressions just pass through the inner expression's type
+	innerTy := t.resolveExpression(expr.Expression)
+
+	setExpectedType(expr, innerTy)
+
+	return innerTy
+}
+
+func (t *TypeResolver) resolveSimpleVarRef(expr *ast.BLangSimpleVarRef) semtypes.SemType {
+	// Lookup the symbol's type from the context
+	symbol := expr.Symbol()
+	if symbol == nil {
+		t.ctx.InternalError("variable reference has no symbol", expr.GetPosition())
+		return nil
+	}
+
+	ty := t.ctx.SymbolType(symbol)
+	if ty == nil {
+		t.ctx.InternalError("symbol has no type", expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, ty)
+
+	return ty
+}
+
+func (t *TypeResolver) resolveListConstructorExpr(expr *ast.BLangListConstructorExpr) semtypes.SemType {
+	// Resolve the type of each member expression
+	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
+	for i, memberExpr := range expr.Exprs {
+		memberTypes[i] = t.resolveExpression(memberExpr)
+	}
+
+	// Construct the list type from member types
+	ld := semtypes.NewListDefinition()
+	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+
+	setExpectedType(expr, listTy)
+
+	return listTy
+}
+
+func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemType {
+	// Resolve the operand expression
+	exprTy := t.resolveExpression(expr.Expr)
+
+	// Determine result type based on operator
+	var resultTy semtypes.SemType
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
+		// Numeric unary operators: result type is same as operand type
+		resultTy = exprTy
+	case model.OperatorKind_NOT:
+		// Logical NOT: result type is boolean
+		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
+			if semtypes.IsSameType(t.tyCtx, exprTy, &semtypes.BOOLEAN) {
+				resultTy = &semtypes.BOOLEAN
+			} else {
+				// if true -> false, if false -> true
+				resultTy = semtypes.Diff(&semtypes.BOOLEAN, exprTy)
+			}
+		} else {
+			t.ctx.SemanticError(fmt.Sprintf("expect boolean type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unsupported unary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, resultTy)
+
+	return resultTy
+}
+
+func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.SemType {
+	// Resolve both operands
+	lhsTy := t.resolveExpression(expr.LhsExpr)
+	rhsTy := t.resolveExpression(expr.RhsExpr)
+
+	var resultTy semtypes.SemType
+
+	// Determine result type based on operator
+	if isEqualityExpr(expr) {
+		// Equality operators always return boolean
+		resultTy = &semtypes.BOOLEAN
+	} else {
+		var nilLifted bool
+		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
+		if nilLifted {
+			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+		}
+	}
+
+	setExpectedType(expr, resultTy)
+
+	return resultTy
+}
+
+// NilLiftingExprResultTy calculates the result type for binary operators with nil-lifting support.
+// It returns the result type and a boolean indicating whether nil-lifting was applied.
+// The caller is responsible for applying the nil union if needed.
+func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
+	nilLifted := false
+
+	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
+		nilLifted = true
+		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
+		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
+	}
+
+	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
+	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
+
+	if isRelationalExpr(expr) {
+		// Relational operators always return boolean (no nil-lifting)
+		return &semtypes.BOOLEAN, false
+	}
+
+	if isMultipcativeExpr(expr) {
+		if lhsBasicTy == rhsBasicTy {
+			return &lhsBasicTy, nilLifted
+		}
+		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		return nil, false
+	}
+
+	if isAdditiveExpr(expr) {
+		if lhsBasicTy == rhsBasicTy {
+			return &lhsBasicTy, nilLifted
+		}
+		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		return nil, false
+	}
+
+	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+	return nil, false
+}
+
+func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) semtypes.SemType {
+	// Resolve the container expression
+	containerExpr := expr.Expr
+	containerExprTy := t.resolveExpression(containerExpr)
+
+	// Resolve the index expression
+	keyExpr := expr.IndexExpr
+	keyExprTy := t.resolveExpression(keyExpr)
+
+	// Determine result type by projecting the container type with the key type
+	var resultTy semtypes.SemType
+
+	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
+		// List indexing
+		resultTy = semtypes.ListProjInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
+		// String indexing returns a string
+		resultTy = &semtypes.STRING
+	} else {
+		// For other types, we may need to implement mapping support later
+		t.ctx.Unimplemented("unsupported container type for index based access", expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, resultTy)
+
+	return resultTy
+}
+
+func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.SemType {
+	// Lookup the function's type from the symbol
+	symbol := expr.Symbol()
+	if symbol == nil {
+		t.ctx.InternalError("invocation has no symbol", expr.GetPosition())
+		return nil
+	}
+
+	fnTy := t.ctx.SymbolType(symbol)
+	if fnTy == nil {
+		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
+		return nil
+	}
+
+	// Resolve argument expressions
+	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
+	for i, arg := range expr.ArgExprs {
+		argTys[i] = t.resolveExpression(arg)
+	}
+
+	// Construct the argument list type
+	argLd := semtypes.NewListDefinition()
+	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+
+	// Get the return type from the function type
+	retTy := semtypes.FunctionReturnType(t.tyCtx, fnTy, argListTy)
+
+	setExpectedType(expr, retTy)
+
+	return retTy
+}
+
 func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemType {
+	bLangNode := btype.(ast.BLangNode)
+	if bLangNode.GetDeterminedType() != nil {
+		return bLangNode.GetDeterminedType()
+	}
+	res := tr.resolveBTypeInner(btype, depth)
+	bLangNode.SetDeterminedType(res)
+	typeData := bLangNode.GetTypeData()
+	typeData.Type = res
+	bLangNode.SetTypeData(typeData)
+	return res
+}
+
+func (tr *TypeResolver) resolveTypeDataPair(typeData *model.TypeData, depth int) semtypes.SemType {
+	ty := tr.resolveBType(typeData.TypeDescriptor.(ast.BType), depth)
+	typeData.Type = ty
+	return ty
+}
+
+func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.SemType {
 	switch ty := btype.(type) {
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
@@ -372,11 +716,7 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			// Resolve element type and update its TypeData
-			elemTypeData := ty.Elemtype
-			memberTy := tr.resolveBType(elemTypeData.TypeDescriptor.(ast.BType), depth+1)
-			elemTypeData.Type = memberTy
-			ty.Elemtype = elemTypeData
+			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
 
 			if ty.IsOpenArray() {
 				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
@@ -389,15 +729,8 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		}
 		return semTy
 	case *ast.BLangUnionTypeNode:
-		// FIXME: get rid of this when we get rid GetDeterminedType() hack
-		lhsTypeData := ty.Lhs()
-		rhsTypeData := ty.Rhs()
-		lhs := tr.resolveBType(lhsTypeData.TypeDescriptor.(ast.BType), depth+1)
-		rhs := tr.resolveBType(rhsTypeData.TypeDescriptor.(ast.BType), depth+1)
-		lhsTypeData.Type = lhs
-		rhsTypeData.Type = rhs
-		ty.SetLhs(lhsTypeData)
-		ty.SetRhs(rhsTypeData)
+		lhs := tr.resolveTypeDataPair(ty.Lhs(), depth+1)
+		rhs := tr.resolveTypeDataPair(ty.Rhs(), depth+1)
 		return semtypes.Union(lhs, rhs)
 	case *ast.BLangErrorTypeNode:
 		if ty.IsDistinct() {
@@ -410,6 +743,8 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 			return semtypes.ErrorDetail(detailTy)
 		}
 	case *ast.BLangUserDefinedType:
+		ast.Walk(tr, &ty.TypeName)
+		ast.Walk(tr, &ty.PkgAlias)
 		symbol := ty.Symbol().(*model.SymbolRef)
 		defn, ok := tr.typeDefns[*symbol]
 		if !ok {
@@ -423,4 +758,29 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		tr.ctx.Unimplemented("unsupported type", nil)
 		return nil
 	}
+}
+
+func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {
+	if constant.Expr == nil {
+		// This should have been caught before type resolver as a syntax error
+		t.ctx.InternalError("constant expression is nil", constant.GetPosition())
+		return
+	}
+	// Walk Name identifier to ensure it gets DeterminedType set
+	if constant.Name != nil {
+		ast.Walk(t, constant.Name)
+	}
+	ast.Walk(t, constant.Expr.(ast.BLangNode))
+	exprType := constant.Expr.(ast.BLangExpression).GetDeterminedType()
+	typeData := constant.GetTypeData()
+	var expectedType semtypes.SemType
+	if typeData.TypeDescriptor != nil {
+		ast.WalkTypeData(t, &typeData)
+		expectedType = typeData.Type
+	} else {
+		expectedType = exprType
+	}
+	setExpectedType(constant, expectedType)
+	symbol := constant.Symbol()
+	t.ctx.SetSymbolType(symbol, expectedType)
 }

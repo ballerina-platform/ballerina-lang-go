@@ -1,0 +1,17 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation mul (
+          (literal 4)
+          (literal 2))))))
+  )
+)
+(mul
+  (bb0 () ()
+    (return
+      (binary-expr *
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

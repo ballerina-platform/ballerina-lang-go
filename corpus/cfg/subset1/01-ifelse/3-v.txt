@@ -1,0 +1,32 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printBranch (
+        (literal 5))))
+    (expression-stmt
+      (invocation printBranch (
+        (literal 10))))
+    (expression-stmt
+      (invocation printBranch (
+        (literal 15))))
+  )
+)
+(printBranch
+  (bb0 () (bb1 bb3)
+    (group-expr
+      (binary-expr <
+        (simple-var-ref x)
+        (literal 10)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)

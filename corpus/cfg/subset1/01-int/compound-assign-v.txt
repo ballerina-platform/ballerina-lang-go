@@ -1,0 +1,59 @@
+(addOffset
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref value)
+        (literal 10)))
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable loopCount (type
+        (value-type int))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+    (var-def
+      (variable total (type
+        (value-type int))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (group-expr
+      (binary-expr <
+        (simple-var-ref i)
+        (simple-var-ref loopCount)))
+  )
+  (bb2 (bb1) (bb1)
+    (var-def
+      (variable a (type
+        (value-type int))))
+    (var-def
+      (variable b (type
+        (value-type int))))
+    (compound-assignment +
+      (simple-var-ref total)
+      (simple-var-ref b))
+    (compound-assignment +
+      (simple-var-ref i)
+      (literal 1))
+  )
+  (bb3 (bb1) ()
+    (expression-stmt
+      (invocation io println (
+        (literal Loop count: )
+        (simple-var-ref loopCount))))
+    (expression-stmt
+      (invocation io println (
+        (literal Final total: )
+        (simple-var-ref total))))
+  )
+)
+(sum
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

@@ -1,0 +1,465 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package semantics
+
+import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+	"sync"
+)
+
+type basicBlock struct {
+	// id uniquely identify a basic block within function scope. Root bb will have id 0.
+	id int
+	// bbs from which you can reach this block. If this is empty and it is not a root then this block is not
+	// reachable
+	parents []int
+	// bbs to which you can transition from this block. For blocks with conditional jumps this will 2. For blocks
+	// that don't terminate normally (panic) and for those that mark the end of function scope (return) this
+	// will be empty
+	children []int
+	// Nodes inside this block. Almost always these are statements but ternary expression will have expressions
+	// as children.
+	nodes []model.Node
+}
+
+type bbRef int
+
+func (bb *basicBlock) ref() bbRef {
+	return bbRef(bb.id)
+}
+
+func (bb *basicBlock) isReachable() bool {
+	return bb.id == 0 || len(bb.parents) > 0
+}
+
+func (bb *basicBlock) isTerminal() bool {
+	return len(bb.children) == 0
+}
+
+func (bb *basicBlock) isEmpty() bool {
+	return bb.id != 0 && len(bb.parents) == 0 && len(bb.nodes) == 0
+}
+
+type functionCFG struct {
+	bbs []basicBlock
+}
+
+type PackageCFG struct {
+	funcCfgs map[model.SymbolRef]functionCFG
+}
+
+func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage) *PackageCFG {
+	cfg := &PackageCFG{
+		funcCfgs: make(map[model.SymbolRef]functionCFG),
+	}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	// FIXME: clean this up when we have proper error handling
+	var panicErr any = nil
+	for _, fn := range pkg.Functions {
+		wg.Add(1)
+		fn := fn // Capture loop variable
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = r
+				}
+			}()
+			fnCfg := analyzeFunction(ctx, &fn)
+			mu.Lock()
+			cfg.funcCfgs[ctx.RefSymbol(fn.Symbol())] = fnCfg
+			mu.Unlock()
+		}()
+	}
+	wg.Wait()
+	if panicErr != nil {
+		panic(panicErr)
+	}
+	return cfg
+}
+
+func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) functionCFG {
+	tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
+	analyzer := functionControlFlowAnalyzer{
+		ctx:   ctx,
+		tyCtx: tyCtx,
+	}
+	return analyzer.analyzeFn(fn)
+}
+
+type functionControlFlowAnalyzer struct {
+	ctx   *context.CompilerContext
+	tyCtx semtypes.Context
+	bbs   []basicBlock
+	loops []loopControlFlowData
+}
+
+type loopControlFlowData struct {
+	// Block with the condition
+	loopHead bbRef
+	// Block with the loop body
+	loopBody bbRef
+	loopEnd  bbRef
+}
+
+// stmtEffect tracks how a statement affects control flow
+type stmtEffect struct {
+	// The basic block to use for the next statement
+	// -1 means control flow terminated (return, panic, break, continue)
+	nextBB bbRef
+}
+
+var terminalBB = bbRef(-1)
+
+// terminatedEffect returns an effect indicating control flow has terminated
+func terminatedEffect() stmtEffect {
+	return stmtEffect{nextBB: terminalBB}
+}
+
+func (effect *stmtEffect) isTerminal() bool {
+	return effect.nextBB == terminalBB
+}
+
+// continueEffect returns an effect indicating control flow continues to the given block
+func continueEffect(bb bbRef) stmtEffect {
+	return stmtEffect{nextBB: bb}
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeFn(fn *ast.BLangFunction) functionCFG {
+	switch fnBody := fn.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		analyzer.analyzeBlockFunctionBody(fnBody)
+	case *ast.BLangExprFunctionBody:
+		analyzer.analyzeExprFunctionBody(fnBody)
+	}
+	return analyzer.getCfg()
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeExprFunctionBody(fnBody *ast.BLangExprFunctionBody) {
+	// TODO: we need to deal with ternary expression which will have control flow so bbs
+	panic("unimplemented")
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeBlockFunctionBody(fnBody *ast.BLangBlockFunctionBody) {
+	rootBB := basicBlock{}
+	analyzer.bbs = append(analyzer.bbs, rootBB)
+	_ = analyzer.analyzeStatements(rootBB.ref(), fnBody.Stmts)
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeStatements(curBB bbRef, statements []ast.BLangStatement) stmtEffect {
+	currentBB := curBB
+
+	for _, stmt := range statements {
+		// If current block is terminated (nextBB == -1), remaining statements are unreachable
+		// but we still analyze them for completeness
+		if currentBB == bbRef(-1) {
+			analyzer.ctx.SemanticError("Unreachable code", stmt.GetPosition())
+			// Create an unreachable block for the remaining statements
+			currentBB = analyzer.createNewBB()
+		}
+
+		effect := analyzer.analyzeStatement(currentBB, stmt)
+
+		// Update current block for next statement
+		currentBB = effect.nextBB
+	}
+
+	// Return the final block where control flow continues
+	return continueEffect(currentBB)
+}
+
+func (analyzer *functionControlFlowAnalyzer) addEdge(from, to bbRef) {
+	// Only add edge if it doesn't already exist
+	toInt := int(to)
+	fromInt := int(from)
+
+	// Check if child edge already exists
+	childExists := false
+	for _, child := range analyzer.bbs[from].children {
+		if child == toInt {
+			childExists = true
+			break
+		}
+	}
+	if !childExists {
+		analyzer.bbs[from].children = append(analyzer.bbs[from].children, toInt)
+	}
+
+	// Check if parent edge already exists
+	parentExists := false
+	for _, parent := range analyzer.bbs[to].parents {
+		if parent == fromInt {
+			parentExists = true
+			break
+		}
+	}
+	if !parentExists {
+		analyzer.bbs[to].parents = append(analyzer.bbs[to].parents, fromInt)
+	}
+}
+
+// createNewBB creates a new basic block and returns its reference
+func (analyzer *functionControlFlowAnalyzer) createNewBB() bbRef {
+	id := len(analyzer.bbs)
+	bb := basicBlock{id: id}
+	analyzer.bbs = append(analyzer.bbs, bb)
+	return bb.ref()
+}
+
+// addNode adds a node to a basic block
+func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node model.Node) {
+	analyzer.bbs[bb].nodes = append(analyzer.bbs[bb].nodes, node)
+}
+
+// analyzeStatement dispatches to the appropriate handler based on statement type
+func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt ast.BLangStatement) stmtEffect {
+	ternaryChecker := &ternaryExpressionChecker{}
+	ast.Walk(ternaryChecker, stmt.(ast.BLangNode))
+	if ternaryChecker.hasTernaryExpression {
+		return createTernaryExpressionEffect(analyzer, curBB, ternaryChecker.ifTrue, ternaryChecker.ifFalse)
+	}
+	switch s := stmt.(type) {
+	case *ast.BLangReturn:
+		return analyzer.analyzeReturn(curBB, s)
+	case *ast.BLangIf:
+		return analyzer.analyzeIf(curBB, s)
+	case *ast.BLangBlockStmt:
+		return analyzer.analyzeBlockStmt(curBB, s)
+	case *ast.BLangWhile:
+		return analyzer.analyzeWhile(curBB, s)
+	// These should be handled while handling while statement
+	case *ast.BLangBreak:
+		analyzer.addNode(curBB, stmt)
+		if len(analyzer.loops) == 0 {
+			analyzer.ctx.SemanticError("break statement not allowed outside loop", stmt.GetPosition())
+			return continueEffect(curBB)
+		}
+		loopData := analyzer.loops[len(analyzer.loops)-1]
+		analyzer.addEdge(curBB, loopData.loopEnd)
+		return terminatedEffect()
+	case *ast.BLangContinue:
+		analyzer.addNode(curBB, stmt)
+		if len(analyzer.loops) == 0 {
+			analyzer.ctx.SemanticError("continue statement not allowed outside loop", stmt.GetPosition())
+			return continueEffect(curBB)
+		}
+		loopData := analyzer.loops[len(analyzer.loops)-1]
+		analyzer.addEdge(curBB, loopData.loopHead)
+		return terminatedEffect()
+	case *ast.BLangFunction:
+		analyzer.ctx.InternalError("nested functions not supported", stmt.GetPosition())
+		panic("unreachable")
+	default:
+		// For unimplemented statement types, just add to current block and continue
+		analyzer.addNode(curBB, stmt)
+		return continueEffect(curBB)
+	}
+}
+
+func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 model.ExpressionNode) stmtEffect {
+	panic("unimplemented")
+}
+
+type ternaryExpressionChecker struct {
+	hasTernaryExpression bool
+	ifTrue               model.ExpressionNode
+	ifFalse              model.ExpressionNode
+}
+
+var _ ast.Visitor = &ternaryExpressionChecker{}
+
+func (c *ternaryExpressionChecker) Visit(node ast.BLangNode) ast.Visitor {
+	if c.hasTernaryExpression {
+		return nil
+	}
+	if _, ok := node.(*ast.BLangElvisExpr); ok {
+		panic("unimplemented")
+	}
+	return c
+}
+
+func (c *ternaryExpressionChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return nil
+}
+
+// Terminal statement handlers - these terminate control flow
+
+func (analyzer *functionControlFlowAnalyzer) analyzeReturn(curBB bbRef, stmt *ast.BLangReturn) stmtEffect {
+	analyzer.addNode(curBB, stmt)
+	// Return terminates execution - current block has no children
+	return terminatedEffect()
+}
+
+// Branching statement handlers
+
+func (analyzer *functionControlFlowAnalyzer) analyzeBlockStmt(curBB bbRef, stmt *ast.BLangBlockStmt) stmtEffect {
+	// Block statement just recursively analyzes its statements
+	return analyzer.analyzeStatements(curBB, stmt.Stmts)
+}
+
+var (
+	trueTy  = semtypes.BooleanConst(true)
+	falseTy = semtypes.BooleanConst(false)
+)
+
+func (analyzer *functionControlFlowAnalyzer) analyzeIf(curBB bbRef, stmt *ast.BLangIf) stmtEffect {
+	initBB := curBB
+	ifTrue := analyzer.createNewBB()
+	ifTrueEffect := analyzer.analyzeBlockStmt(ifTrue, &stmt.Body)
+	finally := analyzer.createNewBB()
+	if !ifTrueEffect.isTerminal() {
+		analyzer.addEdge(ifTrueEffect.nextBB, finally)
+	}
+	analyzer.addNode(initBB, stmt.Expr)
+	if !analyzer.isFalse(stmt.Expr) {
+		analyzer.addEdge(initBB, ifTrue)
+	}
+	if stmt.ElseStmt != nil {
+		ifFalse := analyzer.createNewBB()
+		ifFalseEffect := analyzer.analyzeStatement(ifFalse, stmt.ElseStmt)
+		if !ifFalseEffect.isTerminal() {
+			analyzer.addEdge(ifFalseEffect.nextBB, finally)
+		}
+		if !analyzer.isTrue(stmt.Expr) {
+			analyzer.addEdge(initBB, ifFalse)
+		}
+	} else if !analyzer.isTrue(stmt.Expr) {
+		analyzer.addEdge(initBB, finally)
+	}
+	return continueEffect(finally)
+}
+
+func (analyzer *functionControlFlowAnalyzer) isFalse(node ast.BLangExpression) bool {
+	return semtypes.IsSameType(analyzer.tyCtx, node.GetDeterminedType(), falseTy)
+}
+
+func (analyzer *functionControlFlowAnalyzer) isTrue(node ast.BLangExpression) bool {
+	return semtypes.IsSameType(analyzer.tyCtx, node.GetDeterminedType(), trueTy)
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast.BLangWhile) stmtEffect {
+	loopHead := analyzer.createNewBB()
+	loopBody := analyzer.createNewBB()
+	loopEnd := analyzer.createNewBB()
+	loopData := loopControlFlowData{
+		loopHead: loopHead,
+		loopBody: loopBody,
+		loopEnd:  loopEnd,
+	}
+	analyzer.loops = append(analyzer.loops, loopData)
+	analyzer.addEdge(curBB, loopHead)
+	expr := stmt.Expr
+	analyzer.addNode(loopHead, expr)
+	if !analyzer.isFalse(expr) {
+		analyzer.addEdge(loopHead, loopBody)
+	}
+	if !analyzer.isTrue(expr) {
+		analyzer.addEdge(loopHead, loopEnd)
+	}
+	bodyEffect := analyzer.analyzeBlockStmt(loopBody, &stmt.Body)
+	bodyEnd := bodyEffect.nextBB
+	// Can happend with return/panic, continue or break respectively at the end. In all these cases we don't need to add explicit
+	//  edges.
+	if !bodyEffect.isTerminal() {
+		analyzer.addEdge(bodyEnd, loopHead)
+	}
+	// Pop the loop from the stack now that we're done analyzing it
+	analyzer.loops = analyzer.loops[:len(analyzer.loops)-1]
+	return continueEffect(loopEnd)
+}
+
+func (analyzer *functionControlFlowAnalyzer) getCfg() functionCFG {
+	analyzer.pruneEmptyBlocks()
+	return functionCFG{
+		bbs: analyzer.bbs,
+	}
+}
+
+func (analyzer *functionControlFlowAnalyzer) pruneEmptyBlocks() {
+	for {
+		empty := analyzer.findEmptyBlocks()
+		if len(empty) == 0 {
+			break
+		}
+		for _, bbIdx := range empty {
+			bb := &analyzer.bbs[bbIdx]
+			for _, childIdx := range bb.children {
+				analyzer.removeParent(childIdx, bbIdx)
+			}
+		}
+		analyzer.removeBlocksAndReindex(empty)
+	}
+}
+
+func (analyzer *functionControlFlowAnalyzer) findEmptyBlocks() []int {
+	var empty []int
+	for i := range analyzer.bbs {
+		if analyzer.bbs[i].isEmpty() {
+			empty = append(empty, i)
+		}
+	}
+	return empty
+}
+
+func (analyzer *functionControlFlowAnalyzer) removeParent(bbIdx, parentIdx int) {
+	parents := analyzer.bbs[bbIdx].parents
+	newParents := parents[:0]
+	for _, p := range parents {
+		if p != parentIdx {
+			newParents = append(newParents, p)
+		}
+	}
+	analyzer.bbs[bbIdx].parents = newParents
+}
+
+func remapRefs(current []int, mapping map[int]int) []int {
+	result := make([]int, 0, len(current))
+	for _, v := range current {
+		if newV, ok := mapping[v]; ok {
+			result = append(result, newV)
+		}
+	}
+	return result
+}
+
+func (analyzer *functionControlFlowAnalyzer) removeBlocksAndReindex(toRemove []int) {
+	removeSet := make(map[int]bool)
+	for _, i := range toRemove {
+		removeSet[i] = true
+	}
+	var newBbs []basicBlock
+	oldToNew := make(map[int]int)
+	for oldIdx, bb := range analyzer.bbs {
+		if removeSet[oldIdx] {
+			continue
+		}
+		newIdx := len(newBbs)
+		oldToNew[oldIdx] = newIdx
+		bb.id = newIdx
+		newBbs = append(newBbs, bb)
+	}
+	for i := range newBbs {
+		bb := &newBbs[i]
+		bb.parents = remapRefs(bb.parents, oldToNew)
+		bb.children = remapRefs(bb.children, oldToNew)
+	}
+	analyzer.bbs = newBbs
+}

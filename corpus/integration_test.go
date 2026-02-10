@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"fmt"
 	"os"
@@ -169,6 +170,19 @@ func runTest(balFile string) testResult {
 
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 		pkg := ast.ToPackage(compilationUnit)
+		// Resolve symbols (imports) before type resolution
+		importedSymbols := semantics.ResolveImports(cx, pkg)
+		semantics.ResolveSymbols(cx, pkg, importedSymbols)
+		// Add type resolution step
+		typeResolver := semantics.NewTypeResolver(cx)
+		typeResolver.ResolveTypes(cx, pkg)
+		// Run control flow analysis after type resolution
+		cfg := semantics.CreateControlFlowGraph(cx, pkg)
+		// Run semantic analysis after type resolution
+		semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+		semanticAnalyzer.Analyze(pkg)
+		// Run CFG analyses (reachability and explicit return)
+		semantics.AnalyzeCFG(cx, pkg, cfg)
 		birPkg := bir.GenBir(cx, pkg)
 
 		printlnMu.Lock()

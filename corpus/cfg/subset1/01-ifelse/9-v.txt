@@ -1,0 +1,38 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation printTrue ()))
+    (expression-stmt
+      (invocation printFalse ()))
+  )
+)
+(printFalse
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable b (type
+        (value-type boolean))))
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 0))))
+  )
+)
+(printTrue
+  (bb0 () (bb1)
+    (literal true)
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb2 (bb1) ())
+)
