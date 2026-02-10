@@ -31,32 +31,22 @@ const (
 	BIR_VERSION = 75
 )
 
-type BIRWriter struct {
+type birWriter struct {
 	cp *ConstantPool
 }
 
-func NewBIRWriter() *BIRWriter {
-	return &BIRWriter{
-		cp: NewConstantPool(),
-	}
-}
-
 func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
-	writer := &BIRWriter{
+	writer := &birWriter{
 		cp: NewConstantPool(),
 	}
 	return writer.serialize(pkg)
 }
 
-func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
-	var errMsg string
+func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			if msg, ok := r.(string); ok {
-				errMsg = msg
-			} else {
-				errMsg = fmt.Sprintf("%v", r)
-			}
+			result = nil
+			err = fmt.Errorf("BIR serializer failed due to %s", r)
 		}
 	}()
 
@@ -68,7 +58,7 @@ func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
 	bw.writeFunctions(birbuf, pkg)
 
 	buf := &bytes.Buffer{}
-	_, err := buf.Write([]byte(BIR_MAGIC))
+	_, err = buf.Write([]byte(BIR_MAGIC))
 	if err != nil {
 		panic(fmt.Sprintf("writing BIR magic: %v", err))
 	}
@@ -90,14 +80,10 @@ func (bw *BIRWriter) serialize(pkg *bir.BIRPackage) ([]byte, error) {
 		panic(fmt.Sprintf("writing BIR buffer bytes: %v", err))
 	}
 
-	if errMsg != "" {
-		return nil, fmt.Errorf("BIR serializer failed due to %s", errMsg)
-	}
-
 	return buf.Bytes(), nil
 }
 
-func (bw *BIRWriter) writeImportModuleDecls(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+func (bw *birWriter) writeImportModuleDecls(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.ImportModules))
 	for _, imp := range pkg.ImportModules {
 		bw.writeStringCPEntry(buf, imp.PackageID.OrgName.Value())
@@ -107,14 +93,14 @@ func (bw *BIRWriter) writeImportModuleDecls(buf *bytes.Buffer, pkg *bir.BIRPacka
 	}
 }
 
-func (bw *BIRWriter) writeConstants(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+func (bw *birWriter) writeConstants(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.Constants))
 	for _, c := range pkg.Constants {
 		bw.writeConstant(buf, &c)
 	}
 }
 
-func (bw *BIRWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant) {
+func (bw *birWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant) {
 	bw.writeStringCPEntry(buf, constant.Name.Value())
 	bw.writeFlags(buf, constant.Flags)
 	bw.writeOrigin(buf, constant.Origin)
@@ -132,7 +118,7 @@ func (bw *BIRWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant)
 	}
 }
 
-func (bw *BIRWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.GlobalVars))
 	for _, gv := range pkg.GlobalVars {
 		bw.writePosition(buf, gv.Pos)
@@ -144,14 +130,14 @@ func (bw *BIRWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	}
 }
 
-func (bw *BIRWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+func (bw *birWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.Functions))
 	for _, fn := range pkg.Functions {
 		bw.writeFunction(buf, &fn)
 	}
 }
 
-func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
+func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writePosition(buf, fn.Pos)
 	bw.writeStringCPEntry(buf, fn.Name.Value())
 	bw.writeStringCPEntry(buf, fn.OriginalName.Value())
@@ -191,7 +177,7 @@ func (bw *BIRWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	}
 }
 
-func (bw *BIRWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRVariableDcl) {
+func (bw *birWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRVariableDcl) {
 	bw.writeKind(buf, localVar.Kind)
 	bw.writeType(buf, localVar.Type)
 	bw.writeStringCPEntry(buf, localVar.Name.Value())
@@ -218,7 +204,7 @@ func (bw *BIRWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRVariableD
 	}
 }
 
-func (bw *BIRWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
+func (bw *birWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
 	bw.writeStringCPEntry(buf, bb.Id.Value())
 	bw.writeLength(buf, len(bb.Instructions))
 
@@ -235,7 +221,7 @@ func (bw *BIRWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
 	bw.writeTerminator(buf, bb.Terminator)
 }
 
-func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstruction) {
+func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstruction) {
 	switch instr := instr.(type) {
 	case *bir.Move:
 		bw.writeOperand(buf, instr.RhsOp)
@@ -286,7 +272,7 @@ func (bw *BIRWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 	}
 }
 
-func (bw *BIRWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) {
+func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) {
 	switch term := term.(type) {
 	case *bir.Goto:
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
@@ -322,7 +308,7 @@ func (bw *BIRWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 	}
 }
 
-func (bw *BIRWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
+func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	if op == nil || op.VariableDcl == nil {
 		write(buf, false)
 		write(buf, uint8(bir.VAR_KIND_TEMP))
@@ -343,7 +329,7 @@ func (bw *BIRWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	bw.writeStringCPEntry(buf, op.VariableDcl.Name.Value())
 }
 
-func (bw *BIRWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
+func (bw *birWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
 	tag, err := bw.inferTag(cv.Value)
 	if err != nil {
 		panic(fmt.Sprintf("inferring const value tag: %v", err))
@@ -353,7 +339,7 @@ func (bw *BIRWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
 	bw.writeConstValueByTag(buf, tag, cv.Value)
 }
 
-func (bw *BIRWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
+func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
 	if cv, ok := value.(bir.ConstValue); ok {
 		bw.writeConstValueByTag(buf, tag, cv.Value)
 		return
@@ -445,23 +431,23 @@ func (bw *BIRWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 	}
 }
 
-func (bw *BIRWriter) writeIntegerInline(buf *bytes.Buffer, value int64) {
+func (bw *birWriter) writeIntegerInline(buf *bytes.Buffer, value int64) {
 	write(buf, value)
 }
 
-func (bw *BIRWriter) writeFloatInline(buf *bytes.Buffer, value float64) {
+func (bw *birWriter) writeFloatInline(buf *bytes.Buffer, value float64) {
 	write(buf, value)
 }
 
-func (bw *BIRWriter) writeBooleanInline(buf *bytes.Buffer, value bool) {
+func (bw *birWriter) writeBooleanInline(buf *bytes.Buffer, value bool) {
 	write(buf, value)
 }
 
-func (bw *BIRWriter) writeByteInline(buf *bytes.Buffer, value byte) {
+func (bw *birWriter) writeByteInline(buf *bytes.Buffer, value byte) {
 	write(buf, value)
 }
 
-func (bw *BIRWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) {
+func (bw *birWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) {
 	if cv, ok := value.(bir.ConstValue); ok {
 		return bw.addValueToCP(tag, cv.Value)
 	}
@@ -488,7 +474,7 @@ func (bw *BIRWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) 
 }
 
 // FIXME: Remove this after implementing types
-func (bw *BIRWriter) inferTag(value any) (model.TypeTags, error) {
+func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
 	switch v := value.(type) {
 	case bir.ConstValue:
 		return bw.inferTag(v.Value)
@@ -509,35 +495,35 @@ func (bw *BIRWriter) inferTag(value any) (model.TypeTags, error) {
 	}
 }
 
-func (bw *BIRWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
+func (bw *birWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
 	write(buf, uint8(kind))
 }
 
-func (bw *BIRWriter) writeFlags(buf *bytes.Buffer, flags int64) {
+func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags int64) {
 	write(buf, flags)
 }
 
-func (bw *BIRWriter) writeOrigin(buf *bytes.Buffer, origin model.SymbolOrigin) {
+func (bw *birWriter) writeOrigin(buf *bytes.Buffer, origin model.SymbolOrigin) {
 	write(buf, uint8(origin))
 }
 
-func (bw *BIRWriter) writeStringCPEntry(buf *bytes.Buffer, str string) {
+func (bw *birWriter) writeStringCPEntry(buf *bytes.Buffer, str string) {
 	write(buf, bw.cp.AddStringCPEntry(str))
 }
 
-func (bw *BIRWriter) writeLength(buf *bytes.Buffer, length int) {
+func (bw *birWriter) writeLength(buf *bytes.Buffer, length int) {
 	write(buf, int64(length))
 }
 
-func (bw *BIRWriter) writeInstructionKind(buf *bytes.Buffer, kind bir.InstructionKind) {
+func (bw *birWriter) writeInstructionKind(buf *bytes.Buffer, kind bir.InstructionKind) {
 	write(buf, uint8(kind))
 }
 
-func (bw *BIRWriter) writeScope(buf *bytes.Buffer, scope bir.VarScope) {
+func (bw *birWriter) writeScope(buf *bytes.Buffer, scope bir.VarScope) {
 	write(buf, uint8(scope))
 }
 
-func (bw *BIRWriter) writePackageCPEntry(buf *bytes.Buffer, pkgID *model.PackageID) {
+func (bw *birWriter) writePackageCPEntry(buf *bytes.Buffer, pkgID *model.PackageID) {
 	pkgIdx := int32(-1)
 	if pkgID != nil {
 		pkgIdx = bw.cp.AddPackageCPEntry(pkgID)
@@ -545,16 +531,16 @@ func (bw *BIRWriter) writePackageCPEntry(buf *bytes.Buffer, pkgID *model.Package
 	write(buf, pkgIdx)
 }
 
-func (bw *BIRWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) {
+func (bw *birWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) {
 	write(buf, int64(birbuf.Len()))
 }
 
 // FIXME: Write actual type
-func (bw *BIRWriter) writeType(buf *bytes.Buffer, _ any) {
+func (bw *birWriter) writeType(buf *bytes.Buffer, _ any) {
 	write(buf, int32(-1))
 }
 
-func (bw *BIRWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {
+func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {
 	var sLine int32 = math.MaxInt32
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
