@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+version: 2
+
+ignore:
+  - "bir/testdata/**/*.txt"
+  - "bir/testdata/**/*.bir"
+  - "bir/testdata/**/*.json"
+  - "corpus/**/*.txt"
+  
