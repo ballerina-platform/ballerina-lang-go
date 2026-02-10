@@ -70,6 +70,7 @@ type (
 
 	BLangIf struct {
 		BLangStatementBase
+		scope    model.Scope
 		Expr     BLangExpression
 		Body     BLangBlockStmt
 		ElseStmt BLangStatement
@@ -77,6 +78,7 @@ type (
 
 	BLangWhile struct {
 		BLangStatementBase
+		scope        model.Scope
 		Expr         BLangExpression
 		Body         BLangBlockStmt
 		OnFailClause BLangOnFailClause
@@ -106,6 +108,11 @@ var (
 	_ model.WhileNode               = &BLangWhile{}
 	_ model.VariableDefinitionNode  = &BLangSimpleVariableDef{}
 	_ model.ReturnNode              = &BLangReturn{}
+)
+
+var (
+	_ NodeWithScope = &BLangIf{}
+	_ NodeWithScope = &BLangWhile{}
 )
 
 var (
@@ -263,6 +270,14 @@ func (this *BLangExpressionStmt) GetKind() model.NodeKind {
 	return model.NodeKind_EXPRESSION_STATEMENT
 }
 
+func (this *BLangIf) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangIf) SetScope(scope model.Scope) {
+	this.scope = scope
+}
+
 func (this *BLangIf) GetCondition() model.ExpressionNode {
 	// migrated from BLangIf.java:47:5
 	return this.Expr
@@ -304,6 +319,14 @@ func (this *BLangIf) SetElseStatement(elseStatement model.StatementNode) {
 func (this *BLangIf) GetKind() model.NodeKind {
 	// migrated from BLangIf.java:77:5
 	return model.NodeKind_IF
+}
+
+func (this *BLangWhile) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangWhile) SetScope(scope model.Scope) {
+	this.scope = scope
 }
 
 func (this *BLangWhile) GetCondition() model.ExpressionNode {

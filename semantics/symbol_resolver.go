@@ -260,9 +260,18 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 			return bs
 		}
 		functionResolver := newFunctionResolver(bs, n)
+		n.SetScope(functionResolver.scope)
 		resolveFunction(functionResolver, n)
 		return nil
-	case *ast.BLangIf, *ast.BLangWhile, *ast.BLangBlockStmt, *ast.BLangDo:
+	case *ast.BLangIf:
+		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+		n.SetScope(resolver.scope)
+		return resolver
+	case *ast.BLangWhile:
+		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+		n.SetScope(resolver.scope)
+		return resolver
+	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable())
@@ -470,6 +479,7 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		}
 		n.SetSymbol(symRef)
 		functionResolver := newFunctionResolver(ms, n)
+		n.SetScope(functionResolver.scope)
 		resolveFunction(functionResolver, n)
 		return nil
 	case *ast.BLangConstant:
