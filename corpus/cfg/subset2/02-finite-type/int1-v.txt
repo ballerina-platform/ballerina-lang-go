@@ -6,13 +6,15 @@
           (finite-type
             (literal 1))
           (finite-type
-            (literal 2))))))
+            (literal 2)))) (expr
+        (literal 1))))
     (assignment
       (simple-var-ref c)
       (literal 2))
     (var-def
       (variable d (type
-        (value-type int))))
+        (value-type int)) (expr
+        (simple-var-ref c))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref d))))
@@ -25,7 +27,8 @@
             (finite-type
               (literal 2)))
           (finite-type
-            (literal 3))))))
+            (literal 3)))) (expr
+        (simple-var-ref c))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref e))))

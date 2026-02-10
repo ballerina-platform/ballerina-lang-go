@@ -2,7 +2,11 @@
   (bb0 () ()
     (var-def
       (variable INT_MIN (type
-        (value-type int))))
+        (value-type int)) (expr
+        (binary-expr -
+          (unary-expr -
+            (literal 9223372036854775807))
+          (literal 1)))))
     (expression-stmt
       (invocation io println (
         (invocation rem (

@@ -14,7 +14,8 @@
     (block-function-body
       (var-def
         (variable i (type
-          (value-type int))))
+          (value-type int)) (expr
+          (simple-var-ref maxExclusive))))
       (while
         (binary-expr <=
           (literal 0)

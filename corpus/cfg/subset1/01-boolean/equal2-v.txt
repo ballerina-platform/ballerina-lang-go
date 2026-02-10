@@ -2,7 +2,10 @@
   (bb0 () (bb1 bb3)
     (var-def
       (variable b (type
-        (value-type boolean))))
+        (value-type boolean)) (expr
+        (binary-expr ==
+          (literal true)
+          (literal true)))))
     (simple-var-ref b)
   )
   (bb1 (bb0) (bb2)
