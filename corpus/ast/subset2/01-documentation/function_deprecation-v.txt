@@ -9,7 +9,7 @@
           (doc-lines
             "This function is deprecated. Use `newFunction` instead.")
           (deprec-lines
-            "# # Deprecated")))) (
+            "# # Deprecated")))) () (
     (value-type null))
     (block-function-body))
   (function add

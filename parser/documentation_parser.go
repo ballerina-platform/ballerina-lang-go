@@ -19,7 +19,6 @@ package parser
 import (
 	"strings"
 
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
@@ -33,9 +32,9 @@ type DocumentationParser struct {
 	abstractParser
 }
 
-func NewDocumentationParser(tokenReader *TokenReader, dbgContext *debugcommon.DebugContext) *DocumentationParser {
+func NewDocumentationParser(tokenReader *TokenReader) *DocumentationParser {
 	parser := &DocumentationParser{}
-	parser.abstractParser = NewAbstractParserFromTokenReader(tokenReader, dbgContext)
+	parser.abstractParser = NewAbstractParserFromTokenReader(tokenReader)
 	return parser
 }
 

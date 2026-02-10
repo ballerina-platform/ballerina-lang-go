@@ -17,7 +17,6 @@
 package parser
 
 import (
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
@@ -31,8 +30,8 @@ type documentationLexer struct {
 	previousBacktickMode ParserMode
 }
 
-func newDocumentationLexer(charReader text.CharReader, leadingTriviaList []tree.STNode, diagnostics []tree.STNodeDiagnostic, debugCtx *debugcommon.DebugContext) *documentationLexer {
-	lexer := NewLexer(charReader, debugCtx)
+func newDocumentationLexer(charReader text.CharReader, leadingTriviaList []tree.STNode, diagnostics []tree.STNodeDiagnostic) *documentationLexer {
+	lexer := NewLexer(charReader)
 	lexer.context.leadingTriviaList = leadingTriviaList
 	lexer.context.diagnostics = diagnostics
 	lexer.StartMode(PARSER_MODE_DOC_LINE_START_HASH)
@@ -78,9 +77,6 @@ func (dl *documentationLexer) NextToken() tree.STToken {
 	if len(dl.context.diagnostics) > 0 {
 		token = tree.AddSyntaxDiagnostics(token, dl.context.diagnostics)
 		dl.context.diagnostics = nil
-	}
-	if dl.debugCtx != nil && dl.debugCtx.Flags&debugcommon.DUMP_TOKENS != 0 {
-		dl.debugCtx.Channel <- tree.ToSexpr(token)
 	}
 	return token
 }
