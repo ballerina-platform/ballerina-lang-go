@@ -29,9 +29,9 @@ import (
 // BuildProject represents a Ballerina build project (project with Ballerina.toml).
 // Java: io.ballerina.projects.directory.BuildProject
 type BuildProject struct {
-	sourceRoot     string
-	currentPackage *projects.Package
-	buildOptions   projects.BuildOptions
+	projects.BaseProject // embeds CurrentPackage() and Base()
+	sourceRoot           string
+	buildOptions         projects.BuildOptions
 }
 
 // Compile-time check to verify BuildProject implements Project interface
@@ -65,7 +65,7 @@ func LoadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 	// Create package from config
 	compilationOptions := mergedOpts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
-	project.currentPackage = pkg
+	project.InitPackage(pkg)
 
 	// Collect diagnostics from manifest
 	var diags []diagnostics.Diagnostic
@@ -90,12 +90,6 @@ func (b *BuildProject) Kind() projects.ProjectKind {
 	return projects.ProjectKindBuild
 }
 
-// CurrentPackage returns the current package of this project.
-// Java: BuildProject.currentPackage()
-func (b *BuildProject) CurrentPackage() *projects.Package {
-	return b.currentPackage
-}
-
 // BuildOptions returns the build options for this project.
 // Java: BuildProject.buildOptions()
 func (b *BuildProject) BuildOptions() projects.BuildOptions {
@@ -116,7 +110,7 @@ func (b *BuildProject) TargetDir() string {
 // It searches through all modules in the current package.
 // Java: BuildProject.documentId(Path)
 func (b *BuildProject) DocumentID(filePath string) (projects.DocumentID, bool) {
-	if b.currentPackage == nil {
+	if b.CurrentPackage() == nil {
 		return projects.DocumentID{}, false
 	}
 
@@ -127,7 +121,7 @@ func (b *BuildProject) DocumentID(filePath string) (projects.DocumentID, bool) {
 	}
 
 	// Search through all modules
-	for _, module := range b.currentPackage.Modules() {
+	for _, module := range b.CurrentPackage().Modules() {
 		// Check source documents
 		for _, docID := range module.DocumentIDs() {
 			doc := module.Document(docID)
@@ -191,13 +185,13 @@ func (b *BuildProject) documentPathForModule(docID projects.DocumentID, module *
 // DocumentPath returns the file path for the given DocumentID.
 // Java: BuildProject.documentPath(DocumentId)
 func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
-	if b.currentPackage == nil {
+	if b.CurrentPackage() == nil {
 		return ""
 	}
 
 	// Find the module containing this document
 	moduleID := documentID.ModuleID()
-	module := b.currentPackage.Module(moduleID)
+	module := b.CurrentPackage().Module(moduleID)
 	if module == nil {
 		return ""
 	}
@@ -211,4 +205,25 @@ func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
 func (b *BuildProject) Save() error {
 	// TODO: Implement actual save functionality
 	return nil
+}
+
+// Duplicate creates a deep copy of the build project.
+// The duplicated project shares immutable state (IDs, descriptors, configs)
+// but has independent compilation caches and lazy-loaded fields.
+// Java: BuildProject.duplicate()
+func (b *BuildProject) Duplicate() projects.Project {
+	// Create duplicate build options using AcceptTheirs pattern (matches Java)
+	// Java: BuildOptions.builder().build().acceptTheirs(buildOptions())
+	duplicateBuildOptions := projects.NewBuildOptions().AcceptTheirs(b.buildOptions)
+
+	// Create new project instance
+	newProject := &BuildProject{
+		sourceRoot:   b.sourceRoot,
+		buildOptions: duplicateBuildOptions,
+	}
+
+	// Duplicate and set the package
+	projects.ResetPackage(b, newProject)
+
+	return newProject
 }

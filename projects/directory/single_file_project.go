@@ -30,10 +30,11 @@ import (
 // SingleFileProject represents a Ballerina project consisting of a single .bal file.
 // Java: io.ballerina.projects.directory.SingleFileProject
 type SingleFileProject struct {
-	sourceRoot     string
-	currentPackage *projects.Package
-	buildOptions   projects.BuildOptions
-	documentPath   string
+	projects.BaseProject // embeds CurrentPackage() and Base()
+	sourceRoot           string
+	buildOptions         projects.BuildOptions
+	documentPath         string
+	targetDir            string // temp directory for build outputs
 }
 
 // Compile-time check to verify SingleFileProject implements Project interface
@@ -78,11 +79,20 @@ func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	// Derive package name from filename (without extension)
 	packageName := strings.TrimSuffix(fileName, projects.BalFileExtension)
 
+	// Create temp directory for build outputs (matches Java behavior)
+	// Java: Files.createTempDirectory("ballerina-cache" + System.nanoTime())
+	tempDir, err := os.MkdirTemp("", "ballerina-cache*")
+	if err != nil {
+		// If temp dir creation fails, continue without it (Java ignores IOException)
+		tempDir = ""
+	}
+
 	// Create the project first
 	project := &SingleFileProject{
 		sourceRoot:   sourceDir,
 		buildOptions: opts,
 		documentPath: absPath,
+		targetDir:    tempDir,
 	}
 
 	// Create package descriptor with anonymous org and default version
@@ -133,7 +143,7 @@ func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	// Create package from config
 	compilationOptions := opts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
-	project.currentPackage = pkg
+	project.InitPackage(pkg)
 
 	// Single file projects have no diagnostics
 	diagResult := projects.NewDiagnosticResult([]diagnostics.Diagnostic{})
@@ -153,12 +163,6 @@ func (s *SingleFileProject) Kind() projects.ProjectKind {
 	return projects.ProjectKindSingleFile
 }
 
-// CurrentPackage returns the current package of this project.
-// Java: SingleFileProject.currentPackage()
-func (s *SingleFileProject) CurrentPackage() *projects.Package {
-	return s.currentPackage
-}
-
 // BuildOptions returns the build options for this project.
 // Java: SingleFileProject.buildOptions()
 func (s *SingleFileProject) BuildOptions() projects.BuildOptions {
@@ -166,20 +170,20 @@ func (s *SingleFileProject) BuildOptions() projects.BuildOptions {
 }
 
 // TargetDir returns the target directory for build outputs.
-// For single file projects, this is the source directory unless overridden by BuildOptions.
+// For single file projects, this is a temp directory unless overridden by BuildOptions.
 // Java: SingleFileProject.targetDir()
 func (s *SingleFileProject) TargetDir() string {
 	if targetDir := s.buildOptions.TargetDir(); targetDir != "" {
 		return targetDir
 	}
-	return s.sourceRoot
+	return s.targetDir
 }
 
 // DocumentID returns the DocumentID for the given file path, if it exists in this project.
 // For single file projects, only the single document path is valid.
 // Java: SingleFileProject.documentId(Path)
 func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bool) {
-	if s.currentPackage == nil {
+	if s.CurrentPackage() == nil {
 		return projects.DocumentID{}, false
 	}
 
@@ -195,7 +199,7 @@ func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bo
 	}
 
 	// Get the default module (single file projects have only one module)
-	defaultModule := s.currentPackage.DefaultModule()
+	defaultModule := s.CurrentPackage().DefaultModule()
 	if defaultModule == nil {
 		return projects.DocumentID{}, false
 	}
@@ -213,12 +217,12 @@ func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bo
 // For single file projects, returns the document path if the ID matches.
 // Java: SingleFileProject.documentPath(DocumentId)
 func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string {
-	if s.currentPackage == nil {
+	if s.CurrentPackage() == nil {
 		return ""
 	}
 
 	// Get the default module
-	defaultModule := s.currentPackage.DefaultModule()
+	defaultModule := s.CurrentPackage().DefaultModule()
 	if defaultModule == nil {
 		return ""
 	}
@@ -239,4 +243,34 @@ func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string 
 func (s *SingleFileProject) Save() error {
 	// Single file projects don't need save functionality
 	return nil
+}
+
+// Duplicate creates a deep copy of the single file project.
+// The duplicated project shares immutable state (IDs, descriptors, configs)
+// but has independent compilation caches and lazy-loaded fields.
+// Java: SingleFileProject.duplicate()
+func (s *SingleFileProject) Duplicate() projects.Project {
+	// Create duplicate build options using AcceptTheirs pattern (matches Java)
+	// Java: BuildOptions.builder().build().acceptTheirs(buildOptions())
+	duplicateBuildOptions := projects.NewBuildOptions().AcceptTheirs(s.buildOptions)
+
+	// Create new temp directory for the duplicated project
+	tempDir, err := os.MkdirTemp("", "ballerina-cache*")
+	if err != nil {
+		// If temp dir creation fails, continue without it (Java ignores IOException)
+		tempDir = ""
+	}
+
+	// Create new project instance
+	newProject := &SingleFileProject{
+		sourceRoot:   s.sourceRoot,
+		buildOptions: duplicateBuildOptions,
+		documentPath: s.documentPath,
+		targetDir:    tempDir,
+	}
+
+	// Duplicate and set the package
+	projects.ResetPackage(s, newProject)
+
+	return newProject
 }

@@ -162,12 +162,13 @@ func (p *Package) CompilationOptions() CompilationOptions {
 }
 
 // BallerinaToml returns the Ballerina.toml document for this package, or nil if absent.
-// TODO(P2.x): Implement when BallerinaToml type is available.
 // Java: Package.ballerinaToml() -> Optional<BallerinaToml>
-func (p *Package) BallerinaToml() interface{} {
-	// TODO(P2.x): Return *BallerinaToml once the type is implemented.
-	// Java lazy-loads from packageContext.ballerinaTomlContext()
-	return nil
+func (p *Package) BallerinaToml() *BallerinaToml {
+	ctx := p.packageCtx.getBallerinaTomlContext()
+	if ctx == nil {
+		return nil
+	}
+	return newBallerinaToml(ctx, p)
 }
 
 // DependenciesToml returns the Dependencies.toml document for this package, or nil if absent.
@@ -296,25 +297,35 @@ func (p *Package) Modify() *PackageModifier {
 	return newPackageModifier(p)
 }
 
+// duplicate creates a copy of the package for a new project.
+// The duplicated package shares immutable state (IDs, manifests, configs)
+// but has independent module instances and compilation caches.
+// Java: Package.duplicate(Project)
+func (p *Package) duplicate(project Project) *Package {
+	return newPackage(p.packageCtx.duplicate(project), project)
+}
+
 // PackageModifier handles immutable package modifications.
 // It follows the Builder pattern per project conventions.
 // Java: io.ballerina.projects.Package.Modifier
 type PackageModifier struct {
-	packageID          PackageID
-	packageManifest    PackageManifest
-	moduleContextMap   map[ModuleID]*moduleContext
-	project            Project
-	compilationOptions CompilationOptions
+	packageID            PackageID
+	packageManifest      PackageManifest
+	moduleContextMap     map[ModuleID]*moduleContext
+	project              Project
+	compilationOptions   CompilationOptions
+	ballerinaTomlContext *tomlDocumentContext
 }
 
 // newPackageModifier creates a PackageModifier from an existing package.
 func newPackageModifier(oldPackage *Package) *PackageModifier {
 	return &PackageModifier{
-		packageID:          oldPackage.PackageID(),
-		packageManifest:    oldPackage.Manifest(),
-		moduleContextMap:   oldPackage.packageCtx.getModuleContextMap(),
-		project:            oldPackage.project,
-		compilationOptions: oldPackage.packageCtx.getCompilationOptions(),
+		packageID:            oldPackage.PackageID(),
+		packageManifest:      oldPackage.Manifest(),
+		moduleContextMap:     oldPackage.packageCtx.getModuleContextMap(),
+		project:              oldPackage.project,
+		compilationOptions:   oldPackage.packageCtx.getCompilationOptions(),
+		ballerinaTomlContext: oldPackage.packageCtx.getBallerinaTomlContext(),
 	}
 }
 
@@ -360,8 +371,17 @@ func (pm *PackageModifier) Apply() *Package {
 		pm.packageManifest,
 		pm.compilationOptions,
 		pm.moduleContextMap,
+		pm.ballerinaTomlContext,
 	)
 
 	// Create new Package with the new context
-	return newPackage(newPackageCtx, pm.project)
+	newPkg := newPackage(newPackageCtx, pm.project)
+
+	// Update project's current package reference
+	// Java: this.project.setCurrentPackage(new Package(newPackageContext, this.project));
+	if accessor, ok := pm.project.(baseProjectAccessor); ok {
+		accessor.Base().setCurrentPackage(newPkg)
+	}
+
+	return newPkg
 }

@@ -34,7 +34,8 @@ type packageContext struct {
 	compilationOptions   CompilationOptions
 	moduleContextMap     map[ModuleID]*moduleContext
 	moduleIDs            []ModuleID
-	defaultModuleContext *moduleContext // cached default module
+	defaultModuleContext *moduleContext      // cached default module
+	ballerinaTomlContext *tomlDocumentContext // Ballerina.toml context (nil if not present)
 
 	// Lazy-initialized fields (thread-safe via sync.Once, matching documentContext pattern).
 	packageCompilation *PackageCompilation
@@ -66,6 +67,12 @@ func newPackageContext(project Project, packageConfig PackageConfig, compilation
 		moduleIDs = append(moduleIDs, moduleConfig.ModuleID())
 	}
 
+	// Create tomlDocumentContext for Ballerina.toml if present
+	var ballerinaTomlCtx *tomlDocumentContext
+	if packageConfig.HasBallerinaToml() {
+		ballerinaTomlCtx = newTomlDocumentContext(packageConfig.BallerinaToml())
+	}
+
 	return &packageContext{
 		project:              project,
 		packageID:            packageConfig.PackageID(),
@@ -74,6 +81,7 @@ func newPackageContext(project Project, packageConfig PackageConfig, compilation
 		moduleContextMap:     moduleContextMap,
 		moduleIDs:            moduleIDs,
 		defaultModuleContext: defaultModuleCtx,
+		ballerinaTomlContext: ballerinaTomlCtx,
 	}
 }
 
@@ -85,6 +93,7 @@ func newPackageContextFromMaps(
 	packageManifest PackageManifest,
 	compilationOptions CompilationOptions,
 	moduleContextMap map[ModuleID]*moduleContext,
+	ballerinaTomlContext *tomlDocumentContext,
 ) *packageContext {
 	// Build moduleIDs from map keys
 	moduleIDs := make([]ModuleID, 0, len(moduleContextMap))
@@ -104,6 +113,7 @@ func newPackageContextFromMaps(
 		moduleContextMap:     moduleContextMap,
 		moduleIDs:            moduleIDs,
 		defaultModuleContext: defaultModuleContext,
+		ballerinaTomlContext: ballerinaTomlContext,
 	}
 }
 
@@ -212,6 +222,12 @@ func (p *packageContext) containsModule(moduleID ModuleID) bool {
 	return ok
 }
 
+// getBallerinaTomlContext returns the Ballerina.toml context, or nil if not present.
+// Java: PackageContext.ballerinaTomlContext()
+func (p *packageContext) getBallerinaTomlContext() *tomlDocumentContext {
+	return p.ballerinaTomlContext
+}
+
 // duplicate creates a copy of the context.
 // The duplicated context has all module contexts duplicated as well.
 // Java: PackageContext.duplicate(Project)
@@ -230,5 +246,6 @@ func (p *packageContext) duplicate(project Project) *packageContext {
 		p.packageManifest,
 		p.compilationOptions,
 		moduleContextMap,
+		p.ballerinaTomlContext, // Ballerina.toml is immutable, can share reference
 	)
 }

@@ -54,6 +54,12 @@ type Project interface {
 	// Returns an error if the save operation fails.
 	// Java: Project.save()
 	Save() error
+
+	// Duplicate creates a deep copy of the project.
+	// The duplicated project shares immutable state (IDs, descriptors, configs)
+	// but has independent compilation caches and lazy-loaded fields.
+	// Java: Project.duplicate()
+	Duplicate() Project
 }
 
 // ProjectError represents an error during project loading or configuration.
