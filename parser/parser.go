@@ -16,15 +16,16 @@
 package parser
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/parser/common"
 	tree "ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/tools/text"
-	"fmt"
-	"os"
-	"strings"
 )
 
 type OperatorPrecedence uint8
@@ -12640,7 +12641,6 @@ func (this *BallerinaParser) parseBracketedListMember(isTypedBindingPattern bool
 
 	// we don't know which one
 	return expr
-
 }
 
 func (this *BallerinaParser) parseAsArrayTypeDesc(typeDesc tree.STNode, openBracket tree.STNode, member tree.STNode, context common.ParserRuleContext) tree.STNode {
@@ -14814,5 +14814,11 @@ func GetSyntaxTree(ctx *context.CompilerContext, debugCtx *debugcommon.DebugCont
 	textDocument := text.TextDocumentFromText(string(content))
 	textDocument.Lines()
 	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocumentStringBool(moduleNode, textDocument, fileName, false)
+
+	// FIXME: We currently don't have diagnostics
+	if syntaxTree.HasDiagnostics() {
+		ctx.SyntaxError("Syntax errors found", nil)
+	}
+
 	return &syntaxTree, nil
 }

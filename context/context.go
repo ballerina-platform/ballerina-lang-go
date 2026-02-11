@@ -156,16 +156,11 @@ func (this *CompilerContext) PrintDiagnostics() {
 }
 
 func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
-	location := d.Location()
-	lineRange := location.LineRange()
-	fileName := lineRange.FileName()
-	startLine := lineRange.StartLine().Line()
-	startCol := lineRange.StartLine().Offset()
-
 	reset := "\033[0m"
 	red := "\033[31m"
 	yellow := "\033[33m"
 	cyan := "\033[36m"
+
 	bold := "\033[1m"
 
 	severity := d.DiagnosticInfo().Severity()
@@ -186,6 +181,17 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 		bold, severityColor, severityStr, codeStr, reset,
 		bold, d.Message(), reset,
 	)
+
+	location := d.Location()
+	if location == nil {
+		fmt.Fprintln(os.Stderr)
+		return
+	}
+
+	lineRange := location.LineRange()
+	fileName := lineRange.FileName()
+	startLine := lineRange.StartLine().Line()
+	startCol := lineRange.StartLine().Offset()
 
 	lineNumStr := fmt.Sprintf("%d", startLine+1)
 	numWidth := len(lineNumStr)

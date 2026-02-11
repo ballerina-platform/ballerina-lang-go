@@ -194,7 +194,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	syntaxTree, err := parser.GetSyntaxTree(&debugCtx, testCase.InputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
 		return
@@ -214,7 +214,13 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	typeResolver := NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// Step 3: Semantic Analysis
+	// Step 3: Control Flow Graph Generation
+	cfg := CreateControlFlowGraph(cx, pkg)
+
+	// Step 4: Semantic Analysis
 	semanticAnalyzer := NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
+
+	// Step 5: CFG Analysis
+	AnalyzeCFG(cx, pkg, cfg)
 }
