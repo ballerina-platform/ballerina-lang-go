@@ -18,17 +18,18 @@ package tree
 
 import (
 	"ballerina-lang-go/parser/common"
+	"ballerina-lang-go/tools/text"
 	"iter"
 )
 
 type SyntaxTree struct {
 	RootNode     Node
 	filePath     string
-	textDocument TextDocument
+	textDocument text.TextDocument
 	// lineRange    LineRange
 }
 
-func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument TextDocument, filePath string, clone bool) SyntaxTree {
+func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument text.TextDocument, filePath string, clone bool) SyntaxTree {
 	this := SyntaxTree{}
 	this.RootNode = modifyWithSyntaxTree(rootNode, clone, &this)
 	this.textDocument = textDocument
@@ -39,6 +40,10 @@ func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument Tex
 func (this *SyntaxTree) ContainsModulePart() bool {
 	// migrated from SyntaxTree.java:76:5
 	return this.RootNode.Kind() == common.MODULE_PART
+}
+
+func (this *SyntaxTree) TextDocument() text.TextDocument {
+	return this.textDocument
 }
 
 func (this *SyntaxTree) FilePath() string {

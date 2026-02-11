@@ -459,15 +459,38 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	switch expr := expr.(type) {
 	// Literals - just validate
 	case *ast.BLangLiteral:
-		validateResolvedType(a, expr, expectedType)
-
+		if expectedType == nil {
+			return
+		}
+		typeData := expr.GetTypeData()
+		ty := typeData.Type
+		ctx := a.tyCtx()
+		if !semtypes.IsSubtype(ctx, ty, expectedType) {
+			a.ctx().SemanticError("incompatible type for literal", expr.GetPosition())
+			return
+		}
 	case *ast.BLangNumericLiteral:
-		validateResolvedType(a, expr, expectedType)
+		if expectedType == nil {
+			return
+		}
+		typeData := expr.GetTypeData()
+		ty := typeData.Type
+		ctx := a.tyCtx()
+		if !semtypes.IsSubtype(ctx, ty, expectedType) {
+			a.ctx().SemanticError("incompatible type for literal", expr.GetPosition())
+			return
+		}
 
 	// Variable References - just validate
 	case *ast.BLangSimpleVarRef:
-		validateResolvedType(a, expr, expectedType)
-
+		ty := a.ctx().SymbolType(expr.Symbol())
+		if expectedType != nil {
+			if !semtypes.IsSubtype(a.tyCtx(), ty, expectedType) {
+				a.ctx().SemanticError("incompatible type for variable reference", expr.GetPosition())
+				return
+			}
+		}
+		setExpectedType(expr, ty)
 	case *ast.BLangLocalVarRef, *ast.BLangConstRef:
 		panic("not implemented")
 
