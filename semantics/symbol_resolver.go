@@ -208,14 +208,24 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 	for _, imp := range pkg.Imports {
 		// Check if this is ballerina/io import
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if len(imp.PkgNameComps) == 1 && imp.PkgNameComps[0].Value == "io" {
+			if isIoImport(&imp) {
 				// Use alias if available, otherwise use package name
 				key := "io"
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
 				result[key] = lib.GetIoSymbols(ctx)
+			} else if isLangImport(&imp, "array") {
+				key := "array"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = lib.GetArraySymbols(ctx)
+			} else {
+				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
+		} else {
+			ctx.Unimplemented("unsupported import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 		}
 	}
 

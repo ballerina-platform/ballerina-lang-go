@@ -796,16 +796,23 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 }
 
 func (t *TypeResolver) resolveFunctionCall(expr *ast.BLangInvocation, symbol model.Symbol) semtypes.SemType {
-	fnTy := t.ctx.SymbolType(symbol)
-	if fnTy == nil {
-		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
-		return nil
-	}
-
 	// Resolve argument expressions
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	for i, arg := range expr.ArgExprs {
 		argTys[i] = t.resolveExpression(arg)
+	}
+
+	baseSymbol := t.ctx.GetSymbol(symbol)
+	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
+		symbolRef := genericFn.Monomorphize(argTys)
+		symbol = &symbolRef
+		expr.SetSymbol(&symbolRef)
+	}
+
+	fnTy := t.ctx.SymbolType(symbol)
+	if fnTy == nil {
+		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
+		return nil
 	}
 
 	// Construct the argument list type

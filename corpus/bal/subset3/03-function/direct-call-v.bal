@@ -14,11 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions list-type-descriptor list-constructor-expr boolean-literal local-var-decl-stmt
+// @productions list-type-descriptor list-constructor-expr return-stmt any function-call-expr local-var-decl-stmt int-literal
+import ballerina/io;
+import ballerina/lang.array;
+
 public function main() {
-    any[] x = [];
-    int n = x.length(true); // @error
-    ignore(n);
+    test1();
+    test2();
 }
 
-function ignore(int n) { }
+function test1() {
+    any[] x = [];
+    array:push(foo(x), 1);
+    io:println(x); // @output [1]
+}
+
+function test2() {
+    any[] x = [];
+    array:push(foo(x), 2);
+    io:println(x); // @output [2]
+    io:println(array:length(x)); // @output 1
+    array:push(x, 3);
+    io:println(x); // @output [2,3]
+    io:println(x.length()); // @output 2
+}
+
+function foo(any[] x) returns any[] {
+    return x;
+}
