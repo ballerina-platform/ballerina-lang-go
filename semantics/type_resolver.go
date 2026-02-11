@@ -761,8 +761,7 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 			t.pkg.Imports = append(t.pkg.Imports, importNode)
 		}
 	} else {
-		// TODO: use the lang.value space
-		panic("unimplemented")
+		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())
 	}
 	symbolRef, ok := symbolSpace.GetSymbol(methodSymbol.name)
 	if !ok {
