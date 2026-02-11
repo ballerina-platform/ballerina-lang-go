@@ -134,6 +134,7 @@ type (
 	}
 
 	genericFunctionSymbol struct {
+		name          string
 		space         *SymbolSpace
 		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
 	}
@@ -325,12 +326,12 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	}
 }
 
-func NewGenericFunctionSymbol(space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
-	return &genericFunctionSymbol{space: space, monomorphizer: monomorphizer}
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
+	return &genericFunctionSymbol{name: name, space: space, monomorphizer: monomorphizer}
 }
 
 func (s *genericFunctionSymbol) Name() string {
-	return "push"
+	return s.name
 }
 
 func (s *genericFunctionSymbol) Type() semtypes.SemType {

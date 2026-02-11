@@ -33,7 +33,7 @@ var ArrayPackageID = model.NewPackageID(
 
 func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*ArrayPackageID)
-	pushSymbol := model.NewGenericFunctionSymbol(space, createPushMonomorphizer(ctx))
+	pushSymbol := model.NewGenericFunctionSymbol("push", space, createPushMonomorphizer(ctx))
 	space.AddSymbol("push", pushSymbol)
 	lenghtSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{&semtypes.LIST},
