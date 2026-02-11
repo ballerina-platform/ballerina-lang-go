@@ -267,6 +267,12 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
 
+	case *bir.TypeCast:
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeOperand(buf, instr.RhsOp)
+		bw.writeType(buf, instr.Type)
+		// TODO: Write checkTypes
+
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
@@ -368,7 +374,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		default:
 			panic(fmt.Sprintf("expected integer for tag %v, got %T", tag, value))
 		}
-		bw.writeIntegerInline(buf, val)
+		write(buf, val)
 
 	case model.TypeTags_BYTE:
 		var val byte
@@ -382,7 +388,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		default:
 			panic(fmt.Sprintf("expected byte for tag %v, got %T", tag, value))
 		}
-		bw.writeByteInline(buf, val)
+		write(buf, val)
 
 	case model.TypeTags_FLOAT:
 		var val float64
@@ -394,7 +400,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		default:
 			panic(fmt.Sprintf("expected float for tag %v, got %T", tag, value))
 		}
-		bw.writeFloatInline(buf, val)
+		write(buf, val)
 
 	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
 		var val string
@@ -421,55 +427,13 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		default:
 			panic(fmt.Sprintf("expected boolean for tag %v, got %T", tag, value))
 		}
-		bw.writeBooleanInline(buf, val)
+		write(buf, val)
 
 	case model.TypeTags_NIL:
 		write(buf, int32(-1))
 
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
-	}
-}
-
-func (bw *birWriter) writeIntegerInline(buf *bytes.Buffer, value int64) {
-	write(buf, value)
-}
-
-func (bw *birWriter) writeFloatInline(buf *bytes.Buffer, value float64) {
-	write(buf, value)
-}
-
-func (bw *birWriter) writeBooleanInline(buf *bytes.Buffer, value bool) {
-	write(buf, value)
-}
-
-func (bw *birWriter) writeByteInline(buf *bytes.Buffer, value byte) {
-	write(buf, value)
-}
-
-func (bw *birWriter) addValueToCP(tag model.TypeTags, value any) (int32, error) {
-	if cv, ok := value.(bir.ConstValue); ok {
-		return bw.addValueToCP(tag, cv.Value)
-	}
-
-	switch tag {
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
-		var val string
-		switch v := value.(type) {
-		case string:
-			val = v
-		case *string:
-			if v != nil {
-				val = *v
-			} else {
-				val = ""
-			}
-		default:
-			return 0, fmt.Errorf("expected string for tag %v, got %T", tag, value)
-		}
-		return bw.cp.AddStringCPEntry(val), nil
-	default:
-		return 0, fmt.Errorf("primitive values should not be added to CP, use writeConstValueByTag instead")
 	}
 }
 
