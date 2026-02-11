@@ -315,7 +315,7 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 		return
 	}
 
-	if len(importNode.PkgNameComps) != 1 || importNode.PkgNameComps[0].GetValue() != "io" {
+	if !isIoImport(importNode) && !isImplicitImport(importNode) {
 		sa.unimplementedErr("unsupported import package: only 'ballerina/io' is supported")
 		return
 	}
@@ -329,7 +329,19 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	sa.importedPkgs[alias] = importNode
 }
 
-func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol *model.FunctionSymbol) {
+func isIoImport(importNode *ast.BLangImportPackage) bool {
+	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "io"
+}
+
+func isImplicitImport(importNode *ast.BLangImportPackage) bool {
+	return isLangImport(importNode, "array")
+}
+
+func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
+	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
+}
+
+func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
 		parent.semanticErr("'main' function must be public")
@@ -337,7 +349,7 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 
 	// Check 2: Must return error?
 	expectedReturnType := semtypes.Union(&semtypes.ERROR, &semtypes.NIL)
-	actualReturnType := fnSymbol.Signature.ReturnType
+	actualReturnType := fnSymbol.Signature().ReturnType
 
 	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
 		parent.semanticErr("'main' function must have return type 'error?'")
@@ -346,8 +358,8 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
-	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
-	fa.retTy = fnSymbol.Signature.ReturnType
+	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature().ReturnType
 
 	// Validate main function constraints
 	if function.Name.Value == "main" {
@@ -563,8 +575,87 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 		analyzeExpression(a, memberExpr, nil)
 	}
 
-	// Validate the resolved list type against expected type
+	if expectedType != nil {
+		resultType, listAtomicType := selectListInherentType(a, expr, expectedType)
+		for i, memberExpr := range expr.Exprs {
+			requiredType := listAtomicType.MemberAtInnerVal(i)
+			if semtypes.IsNever(requiredType) {
+				a.semanticErr("too many members in list constructor")
+				return
+			}
+			analyzeExpression(a, memberExpr, requiredType)
+		}
+		setExpectedType(expr, resultType)
+	} else {
+		// type resolver will have set the correct type and list atomic type
+		for _, memberExpr := range expr.Exprs {
+			analyzeExpression(a, memberExpr, nil)
+		}
+	}
 	validateResolvedType(a, expr, expectedType)
+}
+
+func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType) {
+	expectedListType := semtypes.Intersect(expectedType, &semtypes.LIST)
+	tc := a.tyCtx()
+	if semtypes.IsEmpty(tc, expectedListType) {
+		a.semanticErr("list type not found in expected type")
+		return nil, semtypes.ListAtomicType{}
+	}
+	lat := semtypes.ToListAtomicType(tc, expectedListType)
+	if lat != nil {
+		return expectedListType, *lat
+	}
+
+	alts := semtypes.ListAlternatives(tc, expectedListType)
+
+	// Filter alternatives by length compatibility
+	var validAlts []semtypes.ListAlternative
+
+	for _, expr := range expr.Exprs {
+		analyzeExpression(a, expr, nil)
+	}
+	for _, alt := range alts {
+		if semtypes.ListAlternativeAllowsLength(alt, len(expr.Exprs)) {
+			if alt.Pos != nil {
+				isValid := true
+				lat := alt.Pos
+				for i, expr := range expr.Exprs {
+					exprTy := expr.GetDeterminedType()
+					ty := lat.MemberAtInnerVal(i)
+					if !semtypes.IsSubtype(tc, exprTy, ty) {
+						isValid = false
+						break
+					}
+				}
+				if isValid {
+					validAlts = append(validAlts, alt)
+				}
+			} else {
+				validAlts = append(validAlts, alt)
+			}
+		}
+	}
+
+	// Validate uniqueness
+	if len(validAlts) == 0 {
+		a.semanticErr("no applicable inherent type for list constructor")
+		return nil, semtypes.ListAtomicType{}
+	}
+	if len(validAlts) > 1 {
+		a.semanticErr("ambiguous inherent type for list constructor")
+		return nil, semtypes.ListAtomicType{}
+	}
+
+	// Extract atomic type from selected alternative
+	selectedSemType := validAlts[0].SemType
+	lat = semtypes.ToListAtomicType(tc, selectedSemType)
+	if lat == nil {
+		a.semanticErr("applicable type for list constructor is not atomic")
+		return nil, semtypes.ListAtomicType{}
+	}
+
+	return selectedSemType, *lat
 }
 
 func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {
@@ -643,6 +734,11 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 		}
 	} else if isBitWiseExpr(binaryExpr) {
 		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
+	} else if isRangeExpr(binaryExpr) {
+		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.INT) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.INT) {
+			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())))
+			return
+		}
 	}
 
 	// for nil lifting expression we do semantic analysis as part of type resolver
@@ -729,6 +825,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangWhile:
 		analyzeWhile(a, n)
 		return initializeLoopAnalyzer(a, n)
+	case *ast.BLangForeach:
+		validateForeach(a, n)
+		return initializeLoopAnalyzer(a, n)
 	case *ast.BLangIf:
 		analyzeIf(a, n)
 		return a
@@ -799,6 +898,17 @@ func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) {
 
 func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
 	analyzeExpression(a, whileStmt.Expr, &semtypes.BOOLEAN)
+}
+
+func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
+	collection := foreachStmt.Collection
+	analyzeExpression(a, collection, nil)
+	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
+		variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+		if !semtypes.IsSubtypeSimple(a.ctx().SymbolType(variable.Symbol()), semtypes.INT) {
+			a.semanticErr("foreach variable must be a subtype of int for range expression")
+		}
+	}
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {

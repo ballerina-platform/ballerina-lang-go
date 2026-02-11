@@ -1,0 +1,38 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 6
+    i = %1;
+    %3 = ConstantLoad 10
+    $desugar$0 = %3;
+    GOTO bb1;
+  }
+  bb1 {
+    %5 = < i $desugar$0;
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %6 = println(i) -> bb4;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+    %8 = ConstantLoad 8
+    %7 = == i %8;
+    %7 ? bb5 : bb6;
+  }
+  bb5 {
+    %10 = ConstantLoad 1
+    %9 = + i %10;
+    i = %9;
+    GOTO bb1;
+  }
+  bb6 {
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb1;
+  }
+}

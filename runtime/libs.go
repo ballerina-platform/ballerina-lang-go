@@ -18,5 +18,6 @@ package runtime
 
 // Import all standard libraries to trigger their init() functions.
 import (
+	_ "ballerina-lang-go/stdlibs/array"
 	_ "ballerina-lang-go/stdlibs/io"
 )

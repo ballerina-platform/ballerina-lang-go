@@ -132,8 +132,8 @@ func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, 
 }
 
 func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFunction, cfg *PackageCFG) {
-	sym := ctx.GetSymbol(fn.Symbol()).(*model.FunctionSymbol)
-	retType := sym.Signature.ReturnType
+	sym := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
+	retType := sym.Signature().ReturnType
 	if semtypes.IsSubtypeSimple(retType, semtypes.NIL) {
 		return
 	}

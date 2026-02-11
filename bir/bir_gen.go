@@ -132,6 +132,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 }
 
 func processImports(compilerCtx *context.CompilerContext, genCtx *Context, imports []ast.BLangImportPackage, birPkg *BIRPackage) {
+	// Add implicit imports
 	for _, importPkg := range imports {
 		if importPkg.Alias != nil && importPkg.Alias.Value != "" {
 			var orgName model.Name
@@ -505,6 +506,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return invocation(ctx, curBB, expr)
 	case *ast.BLangLiteral:
 		return literal(ctx, curBB, expr)
+	case *ast.BLangNumericLiteral:
+		return literal(ctx, curBB, &expr.BLangLiteral)
 	case *ast.BLangBinaryExpr:
 		return binaryExpression(ctx, curBB, expr)
 	case *ast.BLangSimpleVarRef:
@@ -541,18 +544,25 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	}
 }
 
-func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLangListConstructorExpr) expressionEffect {
-	// FIXME: since we don't have type information we are going to just create an open array
+func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangListConstructorExpr) expressionEffect {
+	initValues := make([]*BIROperand, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		exprEffect := handleExpression(ctx, bb, expr)
+		bb = exprEffect.block
+		initValues[i] = exprEffect.result
+	}
 	sizeOperand := ctx.addTempVar(&semtypes.INT)
 	constantLoad := &ConstantLoad{}
-	constantLoad.Value = int64(-1)
+	constantLoad.Value = int64(len(expr.Exprs))
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(&semtypes.LIST)
 	newArray := &NewArray{}
+	newArray.AtomicType = expr.AtomicType
 	newArray.LhsOp = resultOperand
 	newArray.SizeOp = sizeOperand
+	newArray.Values = initValues
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,
@@ -573,6 +583,7 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	bb.Instructions = append(bb.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
+		block:  bb,
 	}
 }
 
@@ -635,8 +646,9 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		// Qualified call - look up package ID from import alias
 		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
 			call.CalleePkg = pkgID
+		} else {
+			panic("unexpected")
 		}
-		// If not found in imports, leave CalleePkg as nil (likely native/extern function)
 	} else {
 		// Unqualified call (no PkgAlias) - assume same-module call and use current package
 		if ctx.birCx.packageID != nil {

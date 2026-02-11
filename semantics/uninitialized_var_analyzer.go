@@ -216,10 +216,37 @@ func statesEqual(s1, s2 *varInitState) bool {
 
 // analyzeBlock performs intra-block analysis
 func (a *uninitVarAnalyzer) analyzeBlock(bb *basicBlock, state *varInitState) *varInitState {
+	markImplicitlyInitializedVars(a.ctx, a.fn, state)
 	for _, node := range bb.nodes {
 		a.analyzeNode(node, state)
 	}
 	return state
+}
+
+// markImplicitlyInitializedVars walks the function's AST to find variables that are initialized
+// by language constructs rather than explicit initializer expressions (e.g. foreach loop variables)
+// and marks them as initialized in the given state.
+func markImplicitlyInitializedVars(ctx *context.CompilerContext, fn *ast.BLangFunction, state *varInitState) {
+	ast.Walk(&implicitVarInitVisitor{ctx: ctx, state: state}, fn)
+}
+
+type implicitVarInitVisitor struct {
+	ctx   *context.CompilerContext
+	state *varInitState
+}
+
+func (v *implicitVarInitVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	if foreach, ok := node.(*ast.BLangForeach); ok && foreach.VariableDef != nil {
+		v.state.markInitialized(v.ctx.RefSymbol(foreach.VariableDef.Var.Symbol()))
+	}
+	return v
+}
+
+func (v *implicitVarInitVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return v
 }
 
 // analyzeNode processes a single node in the CFG
@@ -231,7 +258,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 		if n.Var.Expr != nil {
 			a.checkExpression(n.Var.Expr.(ast.BLangExpression), state)
 			state.markInitialized(symRef)
-		} else {
+		} else if !state.isTracked(symRef) {
 			state.markUninitialized(symRef)
 		}
 	case *ast.BLangAssignment:

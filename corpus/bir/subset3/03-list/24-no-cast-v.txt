@@ -1,0 +1,60 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = newArray <UNKNOWN>[%1]
+    v = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    GOTO bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad 1000
+    %9 = ConstantLoad 1000
+    %7 = * %8 %9;
+    %6 = < i %7;
+    %6 ? bb2 : bb3;
+  }
+  bb2 {
+    %10 = ConstantLoad 1
+    v[i] = %10;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb1;
+  }
+  bb3 {
+    %13 = ConstantLoad 1001
+    %14 = ConstantLoad 123000
+    v[%14] = %13;
+    %15 = ConstantLoad 0
+    i = %15;
+    %16 = ConstantLoad 0
+    sum = %16;
+    GOTO bb4;
+  }
+  bb4 {
+    %19 = length(v) -> bb5;
+  }
+  bb5 {
+    %18 = < i %19;
+    %18 ? bb6 : bb7;
+  }
+  bb6 {
+    %21 = v[i];
+    %20 = + sum %21;
+    sum = %20;
+    %23 = ConstantLoad 1
+    %22 = + i %23;
+    i = %22;
+    GOTO bb4;
+  }
+  bb7 {
+    %24 = println(sum) -> bb8;
+  }
+  bb8 {
+    return;
+  }
+}

@@ -91,7 +91,7 @@ func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types
-	typeResolver := NewTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 6: Create CFG

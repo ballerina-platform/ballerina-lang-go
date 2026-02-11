@@ -1,0 +1,54 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = foreachInWhile() -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+foreachInWhile<NIL>{
+  bb0 {
+    %1 = ConstantLoad 3
+    count = %1;
+    GOTO bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad 0
+    %3 = > count %4;
+    %3 ? bb2 : bb3;
+  }
+  bb2 {
+    %6 = ConstantLoad 1
+    %5 = - count %6;
+    count = %5;
+    %7 = ConstantLoad 1
+    i = %7;
+    %9 = ConstantLoad 3
+    $desugar$0 = %9;
+    GOTO bb4;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+    %11 = < i $desugar$0;
+    %11 ? bb5 : bb6;
+  }
+  bb5 {
+    %14 = ConstantLoad 10
+    %13 = * count %14;
+    %12 = + %13 i;
+    %15 = println(%12) -> bb7;
+  }
+  bb6 {
+    GOTO bb1;
+  }
+  bb7 {
+    %17 = ConstantLoad 1
+    %16 = + i %17;
+    i = %16;
+    GOTO bb4;
+  }
+}

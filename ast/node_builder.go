@@ -1712,7 +1712,30 @@ func (n *NodeBuilder) TransformForkStatement(forkStatementNode *tree.ForkStateme
 }
 
 func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEachStatementNode) BLangNode {
-	panic("TransformForEachStatement unimplemented")
+	bLForeach := &BLangForeach{}
+	bLForeach.pos = getPosition(forEachStatementNode)
+
+	varDef := n.createBLangVarDef(
+		getPosition(forEachStatementNode.TypedBindingPattern()),
+		forEachStatementNode.TypedBindingPattern(),
+		nil,
+		nil,
+	).(*BLangSimpleVariableDef)
+	bLForeach.VariableDef = varDef
+	bLForeach.IsDeclaredWithVar = varDef.Var.IsDeclaredWithVar
+
+	bLForeach.Collection = n.createExpression(forEachStatementNode.ActionOrExpressionNode())
+
+	body := n.TransformBlockStatement(forEachStatementNode.BlockStatement()).(*BLangBlockStmt)
+	body.pos = getPosition(forEachStatementNode.BlockStatement())
+	bLForeach.Body = *body
+
+	if forEachStatementNode.OnFailClause() != nil {
+		bLForeach.SetOnFailClause(
+			n.TransformOnFailClause(forEachStatementNode.OnFailClause()).(*BLangOnFailClause),
+		)
+	}
+	return bLForeach
 }
 
 func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {
@@ -1762,7 +1785,11 @@ func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode
 }
 
 func (n *NodeBuilder) TransformMethodCallExpression(methodCallExpressionNode *tree.MethodCallExpressionNode) BLangNode {
-	panic("TransformMethodCallExpression unimplemented")
+	bLInvocation := n.createBLangInvocation(methodCallExpressionNode.MethodName(),
+		methodCallExpressionNode.Arguments(),
+		getPosition(methodCallExpressionNode), false)
+	bLInvocation.Expr = n.createExpression(methodCallExpressionNode.Expression())
+	return bLInvocation
 }
 
 func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorExpressionNode *tree.MappingConstructorExpressionNode) BLangNode {
@@ -2146,7 +2173,7 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 	listConstructorExpr := &BLangListConstructorExpr{}
 
 	expressions := listConstructorExpressionNode.Expressions()
-	for i := 0; i < expressions.Size(); i++ {
+	for i := 0; i < expressions.Size(); i += 2 {
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
 		if listMember.Kind() == common.SPREAD_MEMBER {
@@ -2883,7 +2910,16 @@ func (n *NodeBuilder) TransformNaturalExpression(naturalExpressionNode *tree.Nat
 }
 
 func (n *NodeBuilder) TransformToken(token tree.Token) BLangNode {
-	panic("TransformToken unimplemented")
+	kind := token.Kind()
+	switch kind {
+	case common.XML_TEXT_CONTENT, common.TEMPLATE_STRING, common.CLOSE_BRACE_TOKEN, common.PROMPT_CONTENT:
+		return n.createSimpleLiteral(token).(BLangNode)
+	default:
+		if isTokenInRegExp(kind) {
+			return n.createSimpleLiteral(token).(BLangNode)
+		}
+		panic("TransformToken: Syntax kind is not supported: " + kind.StrValue())
+	}
 }
 
 func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken) BLangNode {
