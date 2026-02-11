@@ -1,0 +1,16 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mincompatible type for literal[0m
+  [36m-->[0m ../corpus/bal/subset2/02-error-constructor/error-constructor-non-string-message-e.bal:18:23
+   [36m|[0m
+[36m18 [0m|     error err = error(123);  // @error
+   [36m| [31m                      ^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mincompatible type for literal[0m
+  [36m-->[0m ../corpus/bal/subset2/02-error-constructor/error-constructor-non-string-message-e.bal:18:23
+   [36m|[0m
+[36m18 [0m|     error err = error(123);  // @error
+   [36m| [31m                      ^^^[0m
+

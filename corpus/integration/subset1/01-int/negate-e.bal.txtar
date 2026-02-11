@@ -1,0 +1,16 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect numeric type for -[0m
+  [36m-->[0m ../corpus/bal/subset1/01-int/negate-e.bal:28:1
+   [36m|[0m
+[36m28 [0m| function foo(boolean b) returns int {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect numeric type for -[0m
+  [36m-->[0m ../corpus/bal/subset1/01-int/negate-e.bal:28:1
+   [36m|[0m
+[36m28 [0m| function foo(boolean b) returns int {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+

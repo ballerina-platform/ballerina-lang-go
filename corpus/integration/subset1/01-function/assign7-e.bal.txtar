@@ -1,0 +1,3 @@
+-- stdout --
+-- stderr --
+panic: Internal error: variable reference has no symbol at &{../corpus/bal/subset1/01-function/assign7-e.bal %!s(int=19) %!s(int=19) %!s(int=4) %!s(int=5) %!s(int=703) %!s(int=1)}

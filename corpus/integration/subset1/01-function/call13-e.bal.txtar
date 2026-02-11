@@ -1,0 +1,22 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mUnreachable code[0m
+  [36m-->[0m ../corpus/bal/subset1/01-function/call13-e.bal:23:5
+   [36m|[0m
+[36m23 [0m|     int y = 2; // @error
+   [36m| [31m    ^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1munreachable code[0m
+  [36m-->[0m ../corpus/bal/subset1/01-function/call13-e.bal:23:5
+   [36m|[0m
+[36m23 [0m|     int y = 2; // @error
+   [36m| [31m    ^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1munreachable code[0m
+  [36m-->[0m ../corpus/bal/subset1/01-function/call13-e.bal:24:5
+   [36m|[0m
+[36m24 [0m|     _ = y;
+   [36m| [31m    ^^^^^^[0m
+

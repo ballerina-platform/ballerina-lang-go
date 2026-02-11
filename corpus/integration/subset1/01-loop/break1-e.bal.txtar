@@ -1,0 +1,10 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mbreak statement not allowed outside loop[0m
+  [36m-->[0m ../corpus/bal/subset1/01-loop/break1-e.bal:20:5
+   [36m|[0m
+[36m20 [0m|     break; // @error
+   [36m| [31m    ^^^^^^[0m
+

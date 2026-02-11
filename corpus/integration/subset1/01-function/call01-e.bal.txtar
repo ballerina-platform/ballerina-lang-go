@@ -1,0 +1,10 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mincompatible type: expected ((NIL), ()), got ((BOOLEAN), ())[0m
+  [36m-->[0m ../corpus/bal/subset1/01-function/call01-e.bal:19:1
+   [36m|[0m
+[36m19 [0m| public function main() {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+

@@ -153,7 +153,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 
 	if cx.HasErrors() {
-		cx.PrintDiagnostics()
+		cx.PrintDiagnostics(os.Stderr)
 		return nil
 	}
 
@@ -196,7 +196,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	semanticAnalyzer.Analyze(pkg)
 
 	if cx.HasErrors() {
-		cx.PrintDiagnostics()
+		cx.PrintDiagnostics(os.Stderr)
 		return nil
 	}
 

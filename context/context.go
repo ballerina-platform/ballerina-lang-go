@@ -19,6 +19,7 @@ package context
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -146,16 +147,16 @@ func (this *CompilerContext) HasErrors() bool {
 	return len(this.diagnostics) > 0
 }
 
-func (this *CompilerContext) PrintDiagnostics() {
+func (this *CompilerContext) PrintDiagnostics(w io.Writer) {
 	if this.HasErrors() {
-		fmt.Fprintln(os.Stderr, "\nCompilation failed with the following errors:")
+		fmt.Fprintln(w, "\nCompilation failed with the following errors:")
 		for _, diagnostic := range this.diagnostics {
-			this.printDiagnostic(diagnostic)
+			this.printDiagnostic(w, diagnostic)
 		}
 	}
 }
 
-func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
+func (this *CompilerContext) printDiagnostic(w io.Writer, d diagnostics.Diagnostic) {
 	reset := "\033[0m"
 	red := "\033[31m"
 	yellow := "\033[33m"
@@ -177,14 +178,14 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 	}
 
 	// severity[CODE]: MESSAGE
-	fmt.Fprintf(os.Stderr, "%s%s%s%s%s: %s%s%s\n",
+	fmt.Fprintf(w, "%s%s%s%s%s: %s%s%s\n",
 		bold, severityColor, severityStr, codeStr, reset,
 		bold, d.Message(), reset,
 	)
 
 	location := d.Location()
 	if location == nil {
-		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(w)
 		return
 	}
 
@@ -197,7 +198,7 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 	numWidth := len(lineNumStr)
 
 	// --> FILE:LINE:COL
-	fmt.Fprintf(os.Stderr, "%*s%s-->%s %s:%d:%d\n",
+	fmt.Fprintf(w, "%*s%s-->%s %s:%d:%d\n",
 		numWidth, "", cyan, reset, fileName, startLine+1, startCol+1,
 	)
 
@@ -209,14 +210,14 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 			scanner := bufio.NewScanner(file)
 			currentLine := 0
 
-			fmt.Fprintf(os.Stderr, "%*s %s|%s\n", numWidth, "", cyan, reset)
+			fmt.Fprintf(w, "%*s %s|%s\n", numWidth, "", cyan, reset)
 
 			for scanner.Scan() {
 				if currentLine == startLine {
 					lineContent := scanner.Text()
 
 					// LINE | CONTENT
-					fmt.Fprintf(os.Stderr, "%s%s %s| %s\n", cyan, lineNumStr, reset, lineContent)
+					fmt.Fprintf(w, "%s%s %s| %s\n", cyan, lineNumStr, reset, lineContent)
 
 					endLine := lineRange.EndLine().Line()
 					endCol := lineRange.EndLine().Offset()
@@ -244,14 +245,14 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 					for range highlightLen {
 						pointer += "^"
 					}
-					fmt.Fprintf(os.Stderr, "%*s %s| %s%s%s\n", numWidth, "", cyan, severityColor, pointer, reset)
+					fmt.Fprintf(w, "%*s %s| %s%s%s\n", numWidth, "", cyan, severityColor, pointer, reset)
 					break
 				}
 				currentLine++
 			}
 		}
 	}
-	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(w)
 }
 
 func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {

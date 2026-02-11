@@ -1,0 +1,3 @@
+-- stdout --
+-- stderr --
+panic: Internal error: invocation has no symbol at &{../corpus/bal/subset1/01-function/call09-e.bal %!s(int=20) %!s(int=20) %!s(int=4) %!s(int=10) %!s(int=757) %!s(int=6)}

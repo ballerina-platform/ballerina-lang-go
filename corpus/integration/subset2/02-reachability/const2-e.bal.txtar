@@ -1,0 +1,10 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1munreachable code[0m
+  [36m-->[0m ../corpus/bal/subset2/02-reachability/const2-e.bal:28:5
+   [36m|[0m
+[36m28 [0m|     io:println("Done"); // @error
+   [36m| [31m    ^^^^^^^^^^^^^^^^^^^[0m
+

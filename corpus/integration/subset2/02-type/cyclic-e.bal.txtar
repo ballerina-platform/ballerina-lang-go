@@ -1,0 +1,16 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1minvalid cycle detected for type definition A[0m
+  [36m-->[0m ../corpus/bal/subset2/02-type/cyclic-e.bal:17:1
+   [36m|[0m
+[36m17 [0m| type A A; // @error
+   [36m| [31m^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mtype definition A is empty[0m
+  [36m-->[0m ../corpus/bal/subset2/02-type/cyclic-e.bal:17:1
+   [36m|[0m
+[36m17 [0m| type A A; // @error
+   [36m| [31m^^^^^^^^^[0m
+

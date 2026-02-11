@@ -1,0 +1,6 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1m'main' function must have return type 'error?'[0m
+

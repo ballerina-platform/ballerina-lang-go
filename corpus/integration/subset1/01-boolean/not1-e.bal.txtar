@@ -1,0 +1,3 @@
+-- stdout --
+-- stderr --
+panic: interface conversion: interface is nil, not semtypes.ComplexSemType

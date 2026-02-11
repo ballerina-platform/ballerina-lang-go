@@ -1,0 +1,22 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect boolean type for ![0m
+  [36m-->[0m ../corpus/bal/subset1/01-boolean/not3-e.bal:29:12
+   [36m|[0m
+[36m29 [0m|     return !n; // @error
+   [36m| [31m           ^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect boolean type for ![0m
+  [36m-->[0m ../corpus/bal/subset1/01-boolean/not3-e.bal:28:1
+   [36m|[0m
+[36m28 [0m| function foo(int n) returns boolean {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect boolean type for ![0m
+  [36m-->[0m ../corpus/bal/subset1/01-boolean/not3-e.bal:28:1
+   [36m|[0m
+[36m28 [0m| function foo(int n) returns boolean {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
