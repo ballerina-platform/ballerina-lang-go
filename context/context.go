@@ -212,6 +212,9 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 					// LINE | CONTENT
 					fmt.Fprintf(os.Stderr, "%s%s %s| %s\n", cyan, lineNumStr, reset, lineContent)
 
+					endLine := lineRange.EndLine().Line()
+					endCol := lineRange.EndLine().Offset()
+
 					// | POINTER
 					pointer := ""
 					for i := range startCol {
@@ -221,7 +224,20 @@ func (this *CompilerContext) printDiagnostic(d diagnostics.Diagnostic) {
 							pointer += " "
 						}
 					}
-					pointer += "^"
+
+					highlightLen := 1
+					if startLine == endLine {
+						highlightLen = endCol - startCol
+					} else if startLine < endLine {
+						highlightLen = len(lineContent) - startCol
+					}
+					if highlightLen < 1 {
+						highlightLen = 1
+					}
+
+					for range highlightLen {
+						pointer += "^"
+					}
 					fmt.Fprintf(os.Stderr, "%*s %s| %s%s%s\n", numWidth, "", cyan, severityColor, pointer, reset)
 					break
 				}
