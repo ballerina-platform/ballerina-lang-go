@@ -320,11 +320,11 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.OnFailClause)
 
 	case *BLangForeach:
-		if node.VariableDef != nil {
-			Walk(v, node.VariableDef)
-		}
 		if node.Collection != nil {
 			Walk(v, node.Collection.(BLangNode))
+		}
+		if node.VariableDef != nil {
+			Walk(v, node.VariableDef)
 		}
 		Walk(v, &node.Body)
 		if node.OnFailClause != nil {

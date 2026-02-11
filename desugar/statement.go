@@ -360,7 +360,16 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 
 	newBodyStmts := make([]model.StatementNode, len(body.Stmts))
 	copy(newBodyStmts, body.Stmts)
-	newBodyStmts = append(newBodyStmts, incrementStmt)
+	if len(newBodyStmts) > 0 {
+		if isAppentReachable(newBodyStmts[len(newBodyStmts)-1]) {
+			newBodyStmts = append(newBodyStmts, incrementStmt)
+		}
+	} else {
+		// just replace it with a no-op
+		return desugaredNode[model.StatementNode]{
+			replacementNode: &ast.BLangBlockStmt{},
+		}
+	}
 	body.Stmts = newBodyStmts
 
 	bodyResult := walkBlockStmt(cx, body)
@@ -379,6 +388,24 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 	return desugaredNode[model.StatementNode]{
 		initStmts:       initStmts,
 		replacementNode: whileStmt,
+	}
+}
+
+// TODO: do we need to think about if-else here as well?
+// If the last statement in a block is something like panic, return, continue or break, then we shouldn't append
+// nodes after that. I would make that node unreacheable. We need to make sure desugared AST is still valid.
+func isAppentReachable(stmt ast.BLangStatement) bool {
+	switch stmt := stmt.(type) {
+	case *ast.BLangReturn, *ast.BLangContinue, *ast.BLangBreak:
+		return false
+	case *ast.BLangBlockStmt:
+		if len(stmt.Stmts) == 0 {
+			return true
+		}
+		lastChild := stmt.Stmts[len(stmt.Stmts)-1]
+		return isAppentReachable(lastChild)
+	default:
+		return true
 	}
 }
 
