@@ -511,7 +511,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 	exprTy := expr.Expression.GetTypeData().Type
 	targetType := expr.TypeDescriptor.GetDeterminedType()
 	intersection := semtypes.Intersect(exprTy, targetType)
-	if semtypes.IsEmpty(a.tyCtx(), intersection) && !potentialNumericConversions(a, exprTy, targetType) {
+	if semtypes.IsEmpty(a.tyCtx(), intersection) && !hasPotentialNumericConversions(exprTy, targetType) {
 		a.semanticErr("impossible type conversion, intersection is empty")
 		return
 	}
@@ -522,11 +522,8 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 	validateResolvedType(a, expr, expectedType)
 }
 
-func potentialNumericConversions[A analyzer](a A, exprTy, targetType semtypes.SemType) bool {
-	if semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent() {
-		return true
-	}
-	return false
+func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
+	return semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent()
 }
 
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {
@@ -766,7 +763,6 @@ type assignmentNode interface {
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
-
 	variable := assignment.GetVariable().(ast.BLangExpression)
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()
