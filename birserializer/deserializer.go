@@ -50,19 +50,14 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 	}()
 
 	magic := make([]byte, 4)
-	_, err = br.r.Read(magic)
-	if err != nil {
-		panic(fmt.Sprintf("reading BIR magic: %v", err))
-	}
+	br.read(magic)
 
 	if string(magic) != BIR_MAGIC {
 		panic(fmt.Sprintf("invalid BIR magic: %x", magic))
 	}
 
 	var version int32
-	if err := br.read(&version); err != nil {
-		panic(fmt.Sprintf("reading BIR version: %v", err))
-	}
+	br.read(&version)
 
 	if version != BIR_VERSION {
 		panic(fmt.Sprintf("unsupported BIR version: %d", version))
@@ -70,12 +65,10 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 	br.readConstantPool()
 
-	var pkgCPIndex int32
-	if err := br.read(&pkgCPIndex); err != nil {
-		panic(fmt.Sprintf("reading package CP index: %v", err))
-	}
+	var pkgIdx int32
+	br.read(&pkgIdx)
 
-	pkgID := br.getPackageFromCP(int(pkgCPIndex))
+	pkgID := br.getPackageFromCP(int(pkgIdx))
 	imports := br.readImports()
 	constants := br.readConstants()
 	globalVars := br.readGlobalVars()
@@ -92,18 +85,13 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 func (br *birReader) readConstantPool() {
 	var cpSize int64
-	if err := br.read(&cpSize); err != nil {
-		panic(fmt.Sprintf("reading constant pool size: %v", err))
-	}
+	br.read(&cpSize)
 
 	br.cp = make([]any, cpSize)
 
 	for i := 0; i < int(cpSize); i++ {
 		var tag int8
-		if err := br.read(&tag); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d tag: %v", i, err))
-		}
-
+		br.read(&tag)
 		br.readConstantPoolEntry(tag, i)
 	}
 }
@@ -114,35 +102,29 @@ func (br *birReader) readConstantPoolEntry(tag int8, i int) {
 		br.cp[i] = nil
 	case 1:
 		var length int64
-		if err := br.read(&length); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d string length: %v", i, err))
-		}
+		br.read(&length)
+
 		if length < 0 {
 			br.cp[i] = (*string)(nil)
 		} else {
 			strBytes := make([]byte, length)
-			if _, err := br.r.Read(strBytes); err != nil {
-				panic(fmt.Sprintf("reading CP entry %d string bytes: %v", i, err))
-			}
+			br.read(strBytes)
+
 			br.cp[i] = string(strBytes)
 		}
 	case 2:
 		var orgIdx int32
-		if err := br.read(&orgIdx); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d package org index: %v", i, err))
-		}
+		br.read(&orgIdx)
+
 		var pkgNameIdx int32
-		if err := br.read(&pkgNameIdx); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d package name index: %v", i, err))
-		}
+		br.read(&pkgNameIdx)
+
 		var moduleNameIdx int32
-		if err := br.read(&moduleNameIdx); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d module name index: %v", i, err))
-		}
+		br.read(&moduleNameIdx)
+
 		var versionIdx int32
-		if err := br.read(&versionIdx); err != nil {
-			panic(fmt.Sprintf("reading CP entry %d version index: %v", i, err))
-		}
+		br.read(&versionIdx)
+
 		org := model.Name(br.getStringFromCP(int(orgIdx)))
 		pkgName := model.Name(br.getStringFromCP(int(pkgNameIdx)))
 		_ = br.getStringFromCP(int(moduleNameIdx))
@@ -210,6 +192,12 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 		origin := br.readOrigin()
 		pos := br.readPosition()
 
+		var typeIdx int32
+		br.read(&typeIdx)
+
+		// TODO: Implement Types
+		// t := br.getTypeFromCP(int(typeIdx))
+
 		constant := bir.BIRConstant{
 			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
 				BIRNodeBase: bir.BIRNodeBase{
@@ -219,22 +207,13 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 			Name:   name,
 			Flags:  flags,
 			Origin: origin,
+			Type:   nil,
 		}
-
-		var typeIdx int32
-		if err := br.read(&typeIdx); err != nil {
-			panic(fmt.Sprintf("reading constant %d type index: %v", i, err))
-		}
-
-		t := br.getTypeFromCP(int(typeIdx))
-		constant.Type = t
 
 		br.readLength()
 
 		var cTypeIdx int32
-		if err := br.read(&cTypeIdx); err != nil {
-			panic(fmt.Sprintf("reading constant %d value type index: %v", i, err))
-		}
+		br.read(&cTypeIdx)
 
 		cv := br.getTypeFromCP(int(cTypeIdx))
 		value := br.readConstValue(cv)
@@ -260,11 +239,10 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 		origin := br.readOrigin()
 
 		var typeIdx int32
-		if err := br.read(&typeIdx); err != nil {
-			panic(fmt.Sprintf("reading global var %d type index: %v", i, err))
-		}
+		br.read(&typeIdx)
 
-		t := br.getTypeFromCP(int(typeIdx))
+		// TODO: Implement Types
+		// t := br.getTypeFromCP(int(typeIdx))
 
 		variables[i] = bir.BIRGlobalVariableDcl{
 			BIRVariableDcl: bir.BIRVariableDcl{
@@ -275,7 +253,7 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 				},
 				Kind: kind,
 				Name: name,
-				Type: t,
+				Type: nil,
 			},
 			Flags:  flags,
 			Origin: origin,
@@ -321,24 +299,23 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	bbMap := make(map[string]*bir.BIRBasicBlock)
 
 	var hasReturnVar bool
-	if err := br.read(&hasReturnVar); err != nil {
-		panic(fmt.Sprintf("reading function has return var: %v", err))
-	}
+	br.read(&hasReturnVar)
 
 	var returnVar *bir.BIRVariableDcl
 	if hasReturnVar {
 		returnVarKind := br.readKind()
 		var returnVarTypeIdx int32
-		if err := br.read(&returnVarTypeIdx); err != nil {
-			panic(fmt.Sprintf("reading return var type index: %v", err))
-		}
-		returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
+		br.read(&returnVarTypeIdx)
+
+		// TODO: Implement Types
+		// returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
+
 		returnVarName := br.readStringCPEntry()
 
 		returnVar = &bir.BIRVariableDcl{
 			Kind: returnVarKind,
 			Name: returnVarName,
-			Type: returnVarType,
+			Type: nil,
 		}
 		varMap[returnVarName.Value()] = returnVar
 	}
@@ -416,17 +393,17 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 func (br *birReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BIRVariableDcl {
 	kind := br.readKind()
 	var typeIdx int32
-	if err := br.read(&typeIdx); err != nil {
-		panic(fmt.Sprintf("reading local var type index: %v", err))
-	}
-	t := br.getTypeFromCP(int(typeIdx))
+	br.read(&typeIdx)
+
+	// TODO: Implement Types
+	// t := br.getTypeFromCP(int(typeIdx))
 
 	name := br.readStringCPEntry()
 
 	localVar := &bir.BIRVariableDcl{
 		Kind: kind,
 		Name: name,
-		Type: t,
+		Type: nil,
 	}
 
 	if kind == bir.VAR_KIND_ARG {
@@ -518,22 +495,18 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 
 	case bir.INSTRUCTION_KIND_CONST_LOAD:
 		var constLoadTypeIdx int32
-		if err := br.read(&constLoadTypeIdx); err != nil {
-			panic(fmt.Sprintf("reading const load type index: %v", err))
-		}
+		br.read(&constLoadTypeIdx)
+
 		constLoadType := br.getTypeFromCP(int(constLoadTypeIdx))
 
 		lhsOp := br.readOperand(varMap)
 
 		var isWrapped bool
-		if err := br.read(&isWrapped); err != nil {
-			panic(fmt.Sprintf("reading const load is wrapped: %v", err))
-		}
+		br.read(&isWrapped)
 
 		var tagByte int8
-		if err := br.read(&tagByte); err != nil {
-			panic(fmt.Sprintf("reading const load value tag: %v", err))
-		}
+		br.read(&tagByte)
+
 		tag := model.TypeTags(tagByte)
 		value := br.readConstValueByTag(tag)
 
@@ -568,9 +541,8 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
 		var typeIdx int32
-		if err := br.read(&typeIdx); err != nil {
-			panic(fmt.Sprintf("reading new array type index: %v", err))
-		}
+		br.read(&typeIdx)
+
 		t := br.getTypeFromCP(int(typeIdx))
 
 		lhsOp := br.readOperand(varMap)
@@ -583,6 +555,21 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			SizeOp: sizeOp,
 		}
 
+	case bir.INSTRUCTION_KIND_TYPE_CAST:
+		lhsOp := br.readOperand(varMap)
+		rhsOp := br.readOperand(varMap)
+
+		var typeIdx int32
+		br.read(&typeIdx)
+
+		return &bir.TypeCast{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			RhsOp: rhsOp,
+			Type:  nil,
+		}
+
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
@@ -590,9 +577,7 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 
 func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.BIRTerminator {
 	var terminatorKind uint8
-	if err := br.read(&terminatorKind); err != nil {
-		panic(fmt.Sprintf("reading terminator kind: %v", err))
-	}
+	br.read(&terminatorKind)
 
 	if terminatorKind == 0 {
 		return nil
@@ -631,9 +616,7 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 
 	case bir.INSTRUCTION_KIND_CALL:
 		var isVirtual bool
-		if err := br.read(&isVirtual); err != nil {
-			panic(fmt.Sprintf("reading call is virtual: %v", err))
-		}
+		br.read(&isVirtual)
 
 		pkg := br.readPackageCPEntry()
 		name := br.readStringCPEntry()
@@ -646,9 +629,7 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 		}
 
 		var lshOpExists bool
-		if err := br.read(&lshOpExists); err != nil {
-			panic(fmt.Sprintf("reading call lhs op exists: %v", err))
-		}
+		br.read(&lshOpExists)
 
 		var lhsOp *bir.BIROperand
 		if lshOpExists {
@@ -680,19 +661,17 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 
 func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIROperand {
 	var ignoreVariable bool
-	if err := br.read(&ignoreVariable); err != nil {
-		panic(fmt.Sprintf("reading operand ignore variable: %v", err))
-	}
+	br.read(&ignoreVariable)
 
 	if ignoreVariable {
 		var varTypeIdx int32
-		if err := br.read(&varTypeIdx); err != nil {
-			panic(fmt.Sprintf("reading operand type index: %v", err))
-		}
-		varType := br.getTypeFromCP(int(varTypeIdx))
+		br.read(&varTypeIdx)
+
+		// TODO: Implement Types
+		// varType := br.getTypeFromCP(int(varTypeIdx))
 		return &bir.BIROperand{
 			VariableDcl: &bir.BIRVariableDcl{
-				Type: varType,
+				Type: nil,
 			},
 		}
 	}
@@ -718,9 +697,8 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 
 func (br *birReader) readConstValue(valueType ast.BType) any {
 	var tagByte int8
-	if err := br.read(&tagByte); err != nil {
-		panic(fmt.Sprintf("reading const value tag: %v", err))
-	}
+	br.read(&tagByte)
+
 	tag := model.TypeTags(tagByte)
 	return br.readConstValueByTag(tag)
 }
@@ -734,29 +712,34 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		model.TypeTags_UNSIGNED32_INT,
 		model.TypeTags_UNSIGNED16_INT,
 		model.TypeTags_UNSIGNED8_INT:
-		return br.readIntegerInline()
+		var val int64
+		br.read(&val)
+		return val
 
 	case model.TypeTags_BYTE:
-		return br.readByteInline()
+		var val byte
+		br.read(&val)
+		return val
 
 	case model.TypeTags_FLOAT:
-		return br.readFloatInline()
+		var val float64
+		br.read(&val)
+		return val
 
 	case model.TypeTags_BOOLEAN:
-		return br.readBooleanInline()
+		var val bool
+		br.read(&val)
+		return val
 
 	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
 		var idx int32
-		if err := br.read(&idx); err != nil {
-			panic(fmt.Sprintf("reading string CP index: %v", err))
-		}
+		br.read(&idx)
 		return br.getStringFromCP(int(idx))
 
 	case model.TypeTags_NIL:
 		var idx int32
-		if err := br.read(&idx); err != nil {
-			panic(fmt.Sprintf("reading nil value index: %v", err))
-		}
+		br.read(&idx)
+
 		if idx != -1 {
 			panic(fmt.Sprintf("expected -1 for nil value, got %d", idx))
 		}
@@ -764,9 +747,8 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 
 	default:
 		var idx int32
-		if err := br.read(&idx); err != nil {
-			panic(fmt.Sprintf("reading const value CP index: %v", err))
-		}
+		br.read(&idx)
+
 		if idx == -1 {
 			return nil
 		}
@@ -774,129 +756,75 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 	}
 }
 
-func (br *birReader) readIntegerInline() int64 {
-	var val int64
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading integer inline: %v", err))
+func (br *birReader) read(v any) {
+	err := binary.Read(br.r, binary.BigEndian, v)
+	if err != nil {
+		panic(fmt.Sprintf("binary read failed: %v", err))
 	}
-	return val
-}
-
-func (br *birReader) readFloatInline() float64 {
-	var val float64
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading float inline: %v", err))
-	}
-	return val
-}
-
-func (br *birReader) readBooleanInline() bool {
-	var val bool
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading boolean inline: %v", err))
-	}
-	return val
-}
-
-func (br *birReader) readByteInline() byte {
-	var val byte
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading byte inline: %v", err))
-	}
-	return val
-}
-
-func (br *birReader) read(v any) error {
-	return binary.Read(br.r, binary.BigEndian, v)
 }
 
 func (br *birReader) readKind() bir.VarKind {
 	var val uint8
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading kind: %v", err))
-	}
+	br.read(&val)
 	return bir.VarKind(val)
 }
 
 func (br *birReader) readFlags() int64 {
 	var val int64
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading flags: %v", err))
-	}
+	br.read(&val)
 	return val
 }
 
 func (br *birReader) readOrigin() model.SymbolOrigin {
 	var val uint8
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading origin: %v", err))
-	}
+	br.read(&val)
 	return model.SymbolOrigin(val)
 }
 
 func (br *birReader) readStringCPEntry() model.Name {
 	var idx int32
-	if err := br.read(&idx); err != nil {
-		panic(fmt.Sprintf("reading string CP entry index: %v", err))
-	}
+	br.read(&idx)
 	return model.Name(br.getStringFromCP(int(idx)))
 }
 
 func (br *birReader) readLength() int64 {
 	var val int64
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading length: %v", err))
-	}
+	br.read(&val)
 	return val
 }
 
 func (br *birReader) readInstructionKind() bir.InstructionKind {
 	var val uint8
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading instruction kind: %v", err))
-	}
+	br.read(&val)
 	return bir.InstructionKind(val)
 }
 
 func (br *birReader) readScope() bir.VarScope {
 	var val uint8
-	if err := br.read(&val); err != nil {
-		panic(fmt.Sprintf("reading scope: %v", err))
-	}
+	br.read(&val)
 	return bir.VarScope(val)
 }
 
 func (br *birReader) readPackageCPEntry() *model.PackageID {
 	var idx int32
-	if err := br.read(&idx); err != nil {
-		panic(fmt.Sprintf("reading package CP entry index: %v", err))
-	}
+	br.read(&idx)
 	return br.getPackageFromCP(int(idx))
 }
 
 func (br *birReader) readPosition() diagnostics.Location {
 	var sourceFileIdx int32
-	if err := br.read(&sourceFileIdx); err != nil {
-		panic(fmt.Sprintf("reading position source file index: %v", err))
-	}
+	br.read(&sourceFileIdx)
+
 	sourceFileName := br.getStringFromCP(int(sourceFileIdx))
 
 	var sLine int32
-	if err := br.read(&sLine); err != nil {
-		panic(fmt.Sprintf("reading position start line: %v", err))
-	}
+	br.read(&sLine)
 	var sCol int32
-	if err := br.read(&sCol); err != nil {
-		panic(fmt.Sprintf("reading position start column: %v", err))
-	}
+	br.read(&sCol)
 	var eLine int32
-	if err := br.read(&eLine); err != nil {
-		panic(fmt.Sprintf("reading position end line: %v", err))
-	}
+	br.read(&eLine)
 	var eCol int32
-	if err := br.read(&eCol); err != nil {
-		panic(fmt.Sprintf("reading position end column: %v", err))
-	}
+	br.read(&eCol)
 
 	return diagnostics.NewBLangDiagnosticLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol), 0, 0)
 }
