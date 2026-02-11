@@ -152,12 +152,19 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("compilation failed: %w", err)
 	}
 
+	if cx.HasErrors() {
+		cx.PrintDiagnostics()
+		return nil
+	}
+
 	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 	if runOpts.dumpAST {
 		prettyPrinter := ast.PrettyPrinter{}
 		fmt.Println(prettyPrinter.Print(compilationUnit))
 	}
+
 	pkg := ast.ToPackage(compilationUnit)
+
 	// Resolve symbols (imports) before type resolution
 	importedSymbols := semantics.ResolveImports(cx, pkg)
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
@@ -187,8 +194,12 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Run semantic analysis after type resolution
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
-	// Run CFG analyses (reachability and explicit return) concurrently
-	semantics.AnalyzeCFG(cx, pkg, cfg)
+
+	if cx.HasErrors() {
+		cx.PrintDiagnostics()
+		return nil
+	}
+
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}
