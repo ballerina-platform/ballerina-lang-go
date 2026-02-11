@@ -46,34 +46,71 @@ func (m PackageLockingMode) String() string {
 	}
 }
 
+// CFGFormat represents the output format for CFG (Control Flow Graph) dumps.
+type CFGFormat int
+
+const (
+	// CFGFormatUnknown represents an unset format (zero value).
+	// Callers should treat this as "use default" which is S-expression.
+	CFGFormatUnknown CFGFormat = iota
+	// CFGFormatSexp uses S-expression format (the default).
+	CFGFormatSexp
+	// CFGFormatDot uses Graphviz DOT format.
+	CFGFormatDot
+)
+
+// String returns the string representation of CFGFormat.
+func (f CFGFormat) String() string {
+	switch f {
+	case CFGFormatSexp:
+		return "sexp"
+	case CFGFormatDot:
+		return "dot"
+	default:
+		return ""
+	}
+}
+
+// ParseCFGFormat parses a string into a CFGFormat value.
+func ParseCFGFormat(s string) CFGFormat {
+	switch s {
+	case "dot":
+		return CFGFormatDot
+	case "sexp", "":
+		return CFGFormatSexp
+	default:
+		return CFGFormatUnknown
+	}
+}
+
 // CompilationOptions holds compilation-specific options.
 // BuildOptions contains a CompilationOptions instance and delegates compilation-related methods to it.
 type CompilationOptions struct {
-	offlineBuild                    *bool
-	experimental                    *bool
-	observabilityIncluded           *bool
-	dumpAST                         *bool
-	dumpBIR                         *bool
-	dumpBIRFile                     *bool
-	dumpCFG                         *bool
-	dumpCFGFormat                   string // "dot" for DOT format, empty for S-expression
-	dumpGraph                       *bool
-	dumpRawGraphs                   *bool
-	cloud                           string
-	listConflictedClasses           *bool
-	sticky                          *bool
-	withCodeGenerators              *bool
-	withCodeModifiers               *bool
-	configSchemaGen                 *bool
-	exportOpenAPI                   *bool
-	exportComponentModel            *bool
-	disableSyntaxTree               *bool
-	remoteManagement                *bool
-	optimizeDependencyCompilation   *bool
-	dumpTokens                      *bool
-	dumpST                          *bool
-	traceRecovery                   *bool
-	lockingMode                     PackageLockingMode
+	offlineBuild                  *bool
+	experimental                  *bool
+	observabilityIncluded         *bool
+	dumpAST                       *bool
+	dumpBIR                       *bool
+	dumpBIRFile                   *bool
+	dumpCFG                       *bool
+	dumpCFGFormat                 CFGFormat // CFGFormatUnknown = unset, CFGFormatSexp = S-expression, CFGFormatDot = DOT
+	dumpGraph                     *bool
+	dumpRawGraphs                 *bool
+	cloud                         *string // nil = unset, "" = explicitly no cloud, "k8s" etc = cloud target
+	listConflictedClasses         *bool
+	sticky                        *bool
+	withCodeGenerators            *bool
+	withCodeModifiers             *bool
+	configSchemaGen               *bool
+	exportOpenAPI                 *bool
+	exportComponentModel          *bool
+	disableSyntaxTree             *bool
+	remoteManagement              *bool
+	optimizeDependencyCompilation *bool
+	dumpTokens                    *bool
+	dumpST                        *bool
+	traceRecovery                 *bool
+	lockingMode                   PackageLockingMode
 }
 
 // NewCompilationOptions creates a new CompilationOptions with default values.
@@ -116,8 +153,9 @@ func (c CompilationOptions) DumpCFG() bool {
 	return toBoolDefaultIfNull(c.dumpCFG)
 }
 
-// DumpCFGFormat returns the CFG dump format ("dot" for DOT format, empty for S-expression).
-func (c CompilationOptions) DumpCFGFormat() string {
+// DumpCFGFormat returns the CFG dump format.
+// Returns CFGFormatUnknown if not set (callers should treat as S-expression default).
+func (c CompilationOptions) DumpCFGFormat() CFGFormat {
 	return c.dumpCFGFormat
 }
 
@@ -132,8 +170,12 @@ func (c CompilationOptions) DumpRawGraphs() bool {
 }
 
 // Cloud returns the cloud target.
+// Returns empty string if not set or explicitly cleared.
 func (c CompilationOptions) Cloud() string {
-	return c.cloud
+	if c.cloud == nil {
+		return ""
+	}
+	return *c.cloud
 }
 
 // ListConflictedClasses returns whether conflicted classes should be listed.
@@ -255,9 +297,9 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		builder.WithDumpCFG(*c.dumpCFG)
 	}
 
-	if theirs.dumpCFGFormat != "" {
+	if theirs.dumpCFGFormat != CFGFormatUnknown {
 		builder.WithDumpCFGFormat(theirs.dumpCFGFormat)
-	} else {
+	} else if c.dumpCFGFormat != CFGFormatUnknown {
 		builder.WithDumpCFGFormat(c.dumpCFGFormat)
 	}
 
@@ -273,10 +315,10 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		builder.WithDumpRawGraphs(*c.dumpRawGraphs)
 	}
 
-	if theirs.cloud != "" {
-		builder.WithCloud(theirs.cloud)
-	} else {
-		builder.WithCloud(c.cloud)
+	if theirs.cloud != nil {
+		builder.WithCloud(*theirs.cloud)
+	} else if c.cloud != nil {
+		builder.WithCloud(*c.cloud)
 	}
 
 	if theirs.listConflictedClasses != nil {
@@ -424,8 +466,8 @@ func (b *CompilationOptionsBuilder) WithDumpCFG(value bool) *CompilationOptionsB
 	return b
 }
 
-// WithDumpCFGFormat sets CFG dump format ("dot" for DOT format, empty for S-expression).
-func (b *CompilationOptionsBuilder) WithDumpCFGFormat(value string) *CompilationOptionsBuilder {
+// WithDumpCFGFormat sets CFG dump format.
+func (b *CompilationOptionsBuilder) WithDumpCFGFormat(value CFGFormat) *CompilationOptionsBuilder {
 	b.options.dumpCFGFormat = value
 	return b
 }
@@ -444,7 +486,7 @@ func (b *CompilationOptionsBuilder) WithDumpRawGraphs(value bool) *CompilationOp
 
 // WithCloud sets the cloud target.
 func (b *CompilationOptionsBuilder) WithCloud(value string) *CompilationOptionsBuilder {
-	b.options.cloud = value
+	b.options.cloud = &value
 	return b
 }
 

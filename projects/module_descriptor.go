@@ -86,5 +86,3 @@ func (d ModuleDescriptor) Equals(other ModuleDescriptor) bool {
 	return d.packageDescriptor.Equals(other.packageDescriptor) &&
 		d.name.Equals(other.name)
 }
-
-

@@ -280,4 +280,3 @@ func scanBalFiles(dirPath string, moduleID projects.ModuleID) ([]projects.Docume
 
 	return docs, nil
 }
-

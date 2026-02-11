@@ -129,6 +129,8 @@ func (m *Module) Modify() *ModuleModifier {
 type ModuleModifier struct {
 	moduleID          ModuleID
 	moduleDescriptor  ModuleDescriptor
+	srcDocIDs         []DocumentID // Ordered list of source document IDs
+	testSrcDocIDs     []DocumentID // Ordered list of test document IDs
 	srcDocContextMap  map[DocumentID]*documentContext
 	testDocContextMap map[DocumentID]*documentContext
 	isDefaultModule   bool
@@ -139,13 +141,17 @@ type ModuleModifier struct {
 
 // newModuleModifier creates a ModuleModifier from an existing module.
 func newModuleModifier(oldModule *Module) *ModuleModifier {
-	// Get copies of the document context maps
+	// Get copies of the document context maps and ordered ID slices
 	srcDocContextMap := oldModule.moduleCtx.getSrcDocContextMap()
 	testDocContextMap := oldModule.moduleCtx.getTestDocContextMap()
+	srcDocIDs := oldModule.moduleCtx.getSrcDocumentIDs()
+	testSrcDocIDs := oldModule.moduleCtx.getTestSrcDocumentIDs()
 
 	return &ModuleModifier{
 		moduleID:          oldModule.ModuleID(),
 		moduleDescriptor:  oldModule.Descriptor(),
+		srcDocIDs:         srcDocIDs,
+		testSrcDocIDs:     testSrcDocIDs,
 		srcDocContextMap:  srcDocContextMap,
 		testDocContextMap: testDocContextMap,
 		isDefaultModule:   oldModule.IsDefaultModule(),
@@ -159,8 +165,10 @@ func newModuleModifier(oldModule *Module) *ModuleModifier {
 // Returns the modifier for method chaining.
 func (mm *ModuleModifier) AddDocument(documentConfig DocumentConfig) *ModuleModifier {
 	docID := documentConfig.DocumentID()
-	docContext := newDocumentContext(documentConfig, false)
+	disableSyntaxTree := mm.project.BuildOptions().CompilationOptions().DisableSyntaxTree()
+	docContext := newDocumentContext(documentConfig, disableSyntaxTree)
 	mm.srcDocContextMap[docID] = docContext
+	mm.srcDocIDs = append(mm.srcDocIDs, docID)
 	return mm
 }
 
@@ -168,8 +176,10 @@ func (mm *ModuleModifier) AddDocument(documentConfig DocumentConfig) *ModuleModi
 // Returns the modifier for method chaining.
 func (mm *ModuleModifier) AddTestDocument(documentConfig DocumentConfig) *ModuleModifier {
 	docID := documentConfig.DocumentID()
-	docContext := newDocumentContext(documentConfig, false)
+	disableSyntaxTree := mm.project.BuildOptions().CompilationOptions().DisableSyntaxTree()
+	docContext := newDocumentContext(documentConfig, disableSyntaxTree)
 	mm.testDocContextMap[docID] = docContext
+	mm.testSrcDocIDs = append(mm.testSrcDocIDs, docID)
 	return mm
 }
 
@@ -179,13 +189,27 @@ func (mm *ModuleModifier) AddTestDocument(documentConfig DocumentConfig) *Module
 func (mm *ModuleModifier) RemoveDocument(documentID DocumentID) *ModuleModifier {
 	delete(mm.srcDocContextMap, documentID)
 	delete(mm.testDocContextMap, documentID)
+	// Remove from ordered slices
+	mm.srcDocIDs = removeDocumentID(mm.srcDocIDs, documentID)
+	mm.testSrcDocIDs = removeDocumentID(mm.testSrcDocIDs, documentID)
 	return mm
+}
+
+// removeDocumentID removes a DocumentID from a slice while preserving order.
+func removeDocumentID(ids []DocumentID, toRemove DocumentID) []DocumentID {
+	for i, id := range ids {
+		if id.Equals(toRemove) {
+			return append(ids[:i], ids[i+1:]...)
+		}
+	}
+	return ids
 }
 
 // UpdateDocument updates a document by replacing its context with a new one.
 // Returns the modifier for method chaining.
 func (mm *ModuleModifier) UpdateDocument(documentConfig DocumentConfig) *ModuleModifier {
-	docContext := newDocumentContext(documentConfig, false)
+	disableSyntaxTree := mm.project.BuildOptions().CompilationOptions().DisableSyntaxTree()
+	docContext := newDocumentContext(documentConfig, disableSyntaxTree)
 	return mm.updateDocument(docContext)
 }
 
@@ -213,6 +237,8 @@ func (mm *ModuleModifier) Apply() *Module {
 		mm.moduleID,
 		mm.moduleDescriptor,
 		mm.isDefaultModule,
+		mm.srcDocIDs,
+		mm.testSrcDocIDs,
 		mm.srcDocContextMap,
 		mm.testDocContextMap,
 		mm.dependencies,

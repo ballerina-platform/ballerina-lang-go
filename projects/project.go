@@ -47,7 +47,7 @@ type Project interface {
 
 	// Save persists any project changes to the filesystem.
 	// Returns an error if the save operation fails.
-	Save() error
+	Save()
 
 	// Duplicate creates a deep copy of the project.
 	// The duplicated project shares immutable state (IDs, descriptors, configs)

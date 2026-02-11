@@ -17,10 +17,10 @@
  */
 
 // Package test_util provides assertion utilities for testing.
-// Java: org.testng.Assert equivalent
 package test_util
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -38,7 +38,6 @@ func New(t *testing.T) *Assert {
 }
 
 // True asserts that the condition is true.
-// Java: Assert.assertTrue(condition)
 func (a *Assert) True(condition bool, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if !condition {
@@ -47,7 +46,6 @@ func (a *Assert) True(condition bool, msgAndArgs ...interface{}) {
 }
 
 // False asserts that the condition is false.
-// Java: Assert.assertFalse(condition)
 func (a *Assert) False(condition bool, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if condition {
@@ -56,7 +54,6 @@ func (a *Assert) False(condition bool, msgAndArgs ...interface{}) {
 }
 
 // Nil asserts that the value is nil.
-// Java: Assert.assertNull(value)
 func (a *Assert) Nil(value interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if !isNil(value) {
@@ -65,7 +62,6 @@ func (a *Assert) Nil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // NotNil asserts that the value is not nil.
-// Java: Assert.assertNotNull(value)
 func (a *Assert) NotNil(value interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if isNil(value) {
@@ -74,7 +70,6 @@ func (a *Assert) NotNil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // Equal asserts that two values are equal.
-// Java: Assert.assertEquals(actual, expected)
 func (a *Assert) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
@@ -86,7 +81,6 @@ func (a *Assert) Equal(expected, actual interface{}, msgAndArgs ...interface{}) 
 }
 
 // NotEqual asserts that two values are not equal.
-// Java: Assert.assertNotEquals(actual, expected)
 func (a *Assert) NotEqual(expected, actual interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
 	if reflect.DeepEqual(expected, actual) {
@@ -98,6 +92,10 @@ func (a *Assert) NotEqual(expected, actual interface{}, msgAndArgs ...interface{
 // Java: Assert.assertSame(actual, expected)
 func (a *Assert) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
+	if !isComparable(expected) || !isComparable(actual) {
+		a.fail("Same() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
+		return
+	}
 	if expected != actual {
 		a.fail("expected same instance but got different instances", msgAndArgs...)
 	}
@@ -107,6 +105,10 @@ func (a *Assert) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
 // Java: Assert.assertNotSame(actual, expected)
 func (a *Assert) NotSame(expected, actual interface{}, msgAndArgs ...interface{}) {
 	a.t.Helper()
+	if !isComparable(expected) || !isComparable(actual) {
+		a.fail("NotSame() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
+		return
+	}
 	if expected == actual {
 		a.fail("expected different instances but got same instance", msgAndArgs...)
 	}
@@ -230,7 +232,7 @@ func formatMessage(msgAndArgs ...interface{}) string {
 		return ""
 	}
 	if format, ok := msgAndArgs[0].(string); ok {
-		return format // Just return format, let caller handle args
+		return fmt.Sprintf(format, msgAndArgs[1:]...)
 	}
 	return ""
 }
@@ -247,4 +249,13 @@ func isNil(value interface{}) bool {
 		return v.IsNil()
 	}
 	return false
+}
+
+// isComparable checks if a value can be compared using == or !=.
+// Returns true for nil and comparable types, false for slices, maps, and functions.
+func isComparable(value interface{}) bool {
+	if value == nil {
+		return true
+	}
+	return reflect.TypeOf(value).Comparable()
 }

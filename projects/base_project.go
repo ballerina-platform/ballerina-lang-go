@@ -22,6 +22,8 @@ package projects
 // Project implementations should embed this struct to inherit common behavior.
 type BaseProject struct {
 	currentPackage *Package
+	sourceRoot     string
+	buildOptions   BuildOptions
 }
 
 // CurrentPackage returns the current package of this project.
@@ -29,10 +31,27 @@ func (b *BaseProject) CurrentPackage() *Package {
 	return b.currentPackage
 }
 
+// SourceRoot returns the project source directory path.
+func (b *BaseProject) SourceRoot() string {
+	return b.sourceRoot
+}
+
+// BuildOptions returns the build options for this project.
+func (b *BaseProject) BuildOptions() BuildOptions {
+	return b.buildOptions
+}
+
 // InitPackage sets the initial package during project construction.
 // This should only be called once when creating a new project.
 func (b *BaseProject) InitPackage(pkg *Package) {
 	b.currentPackage = pkg
+}
+
+// initBase initializes the base project fields.
+// This should only be called once when creating a new project.
+func (b *BaseProject) initBase(sourceRoot string, buildOptions BuildOptions) {
+	b.sourceRoot = sourceRoot
+	b.buildOptions = buildOptions
 }
 
 // setCurrentPackage updates the project's current package.

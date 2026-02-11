@@ -43,4 +43,3 @@ func (n PackageName) String() string {
 func (n PackageName) Equals(other PackageName) bool {
 	return n.value == other.value
 }
-

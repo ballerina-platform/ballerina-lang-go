@@ -21,7 +21,6 @@ package internal
 
 import (
 	"fmt"
-	"maps"
 	"path/filepath"
 	"slices"
 
@@ -215,12 +214,6 @@ func (b *ManifestBuilder) WithPlatforms(platforms map[string]*projects.Platform)
 			}
 		}
 	}
-	return b
-}
-
-// WithOtherEntries sets additional TOML entries not covered by specific fields.
-func (b *ManifestBuilder) WithOtherEntries(entries map[string]any) *ManifestBuilder {
-	b.otherEntries = maps.Clone(entries)
 	return b
 }
 

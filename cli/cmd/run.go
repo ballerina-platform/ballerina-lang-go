@@ -95,7 +95,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		WithDumpAST(runOpts.dumpAST).
 		WithDumpBIR(runOpts.dumpBIR).
 		WithDumpCFG(runOpts.dumpCFG).
-		WithDumpCFGFormat(runOpts.format).
+		WithDumpCFGFormat(projects.ParseCFGFormat(runOpts.format)).
 		WithDumpTokens(runOpts.dumpTokens).
 		WithDumpST(runOpts.dumpST).
 		WithTraceRecovery(runOpts.traceRecovery).
@@ -169,20 +169,6 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	project := result.Project()
 	pkg := project.CurrentPackage()
 
-	// Print compilation info
-	fmt.Fprintln(os.Stderr, "Compiling source")
-	if project.Kind() == projects.ProjectKindSingleFile {
-		defaultModule := pkg.DefaultModule()
-		docId := defaultModule.DocumentIDs()[0]
-		doc := defaultModule.Document(docId)
-		fmt.Fprintf(os.Stderr, "\t%s\n", doc.Name())
-	} else {
-		fmt.Fprintf(os.Stderr, "\t%s/%s:%s\n",
-			pkg.PackageOrg().Value(),
-			pkg.PackageName().Value(),
-			pkg.PackageVersion().String())
-	}
-
 	// Get package compilation (triggers parsing, type checking, semantic analysis, CFG analysis)
 	compilation := pkg.Compilation()
 
@@ -210,15 +196,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(os.Stderr, "===================END BIR===================")
 	}
 
-	// Run the executable
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Running executable")
-	fmt.Fprintln(os.Stderr)
-
 	rt := runtime.NewRuntime()
 	if err := rt.Interpret(*birPkg); err != nil {
 		return err
 	}
 	return nil
 }
-

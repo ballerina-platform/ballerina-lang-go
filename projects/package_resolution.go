@@ -27,9 +27,9 @@ import (
 // respecting inter-module dependencies declared via moduleDescDependencies.
 // Java source: io.ballerina.projects.PackageResolution
 type PackageResolution struct {
-	rootPackageContext              *packageContext
-	topologicallySortedModuleList  []*moduleContext
-	diagnosticResult                DiagnosticResult
+	rootPackageContext            *packageContext
+	topologicallySortedModuleList []*moduleContext
+	diagnosticResult              DiagnosticResult
 }
 
 // newPackageResolution creates a new PackageResolution from a packageContext.

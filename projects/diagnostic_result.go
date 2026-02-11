@@ -89,6 +89,14 @@ func (dr DiagnosticResult) Warnings() []diagnostics.Diagnostic {
 	return slices.Clone(dr.warnings)
 }
 
+// Infos returns a defensive copy of all info diagnostics.
+func (dr DiagnosticResult) Infos() []diagnostics.Diagnostic {
+	if dr.infos == nil {
+		return []diagnostics.Diagnostic{}
+	}
+	return slices.Clone(dr.infos)
+}
+
 // Hints returns a defensive copy of all hint diagnostics.
 func (dr DiagnosticResult) Hints() []diagnostics.Diagnostic {
 	if dr.hints == nil {
@@ -121,4 +129,3 @@ func (dr DiagnosticResult) WarningCount() int {
 func (dr DiagnosticResult) DiagnosticCount() int {
 	return len(dr.diagnostics)
 }
-

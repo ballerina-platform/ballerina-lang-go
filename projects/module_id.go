@@ -64,5 +64,3 @@ func (m ModuleID) PackageID() PackageID {
 func (m ModuleID) Equals(other ModuleID) bool {
 	return m.id == other.id && m.packageID.Equals(other.packageID)
 }
-
-

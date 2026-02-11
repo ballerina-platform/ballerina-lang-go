@@ -80,5 +80,3 @@ func (d PackageDescriptor) Equals(other PackageDescriptor) bool {
 		d.name.Equals(other.name) &&
 		d.version.Equals(other.version)
 }
-
-

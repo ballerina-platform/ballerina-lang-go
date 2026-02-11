@@ -48,14 +48,14 @@ type moduleContext struct {
 	moduleDescDependencies []ModuleDescriptor
 
 	// Compilation state tracking.
-	compilationState  ModuleCompilationState
+	compilationState  moduleCompilationState
 	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
-	bLangPkg        *ast.BLangPackage
-	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
-	compilerCtx     *context.CompilerContext
-	birPkg          *bir.BIRPackage
+	bLangPkg       *ast.BLangPackage
+	bPackageSymbol interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
+	compilerCtx    *context.CompilerContext
+	birPkg         *bir.BIRPackage
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
@@ -102,25 +102,29 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 
 // newModuleContextFromMaps creates a moduleContext directly from document context maps.
 // This is used for creating modified module contexts.
+// The srcDocIDs and testSrcDocIDs parameters provide deterministic ordering.
 func newModuleContextFromMaps(
 	project Project,
 	moduleID ModuleID,
 	moduleDescriptor ModuleDescriptor,
 	isDefaultModule bool,
+	srcDocIDs []DocumentID,
+	testSrcDocIDs []DocumentID,
 	srcDocContextMap map[DocumentID]*documentContext,
 	testDocContextMap map[DocumentID]*documentContext,
 	moduleDescDependencies []ModuleDescriptor,
 ) *moduleContext {
-	// Build srcDocIDs from map keys
-	srcDocIDs := make([]DocumentID, 0, len(srcDocContextMap))
-	for id := range srcDocContextMap {
-		srcDocIDs = append(srcDocIDs, id)
+	if srcDocContextMap == nil {
+		srcDocContextMap = make(map[DocumentID]*documentContext)
 	}
-
-	// Build testSrcDocIDs from map keys
-	testSrcDocIDs := make([]DocumentID, 0, len(testDocContextMap))
-	for id := range testDocContextMap {
-		testSrcDocIDs = append(testSrcDocIDs, id)
+	if testDocContextMap == nil {
+		testDocContextMap = make(map[DocumentID]*documentContext)
+	}
+	if srcDocIDs == nil {
+		srcDocIDs = []DocumentID{}
+	}
+	if testSrcDocIDs == nil {
+		testSrcDocIDs = []DocumentID{}
 	}
 
 	// Copy dependencies
@@ -217,7 +221,7 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 // compile performs module compilation by delegating to compileInternal.
 func (m *moduleContext) compile() {
 	compileInternal(m)
-	m.compilationState = ModuleCompilationStateCompiled
+	m.compilationState = moduleCompilationStateCompiled
 }
 
 // compileInternal performs the actual compilation of a module:
@@ -273,7 +277,7 @@ func compileInternal(moduleCtx *moduleContext) {
 	if compilationOptions.DumpCFG() {
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
-		if compilationOptions.DumpCFGFormat() == "dot" {
+		if compilationOptions.DumpCFGFormat() == CFGFormatDot {
 			dotExporter := semantics.NewCFGDotExporter(cx)
 			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
 		} else {
@@ -359,7 +363,7 @@ func (m *moduleContext) getBIRPackage() *bir.BIRPackage {
 }
 
 // getCompilationState returns the current compilation state of the module.
-func (m *moduleContext) getCompilationState() ModuleCompilationState {
+func (m *moduleContext) getCompilationState() moduleCompilationState {
 	return m.compilationState
 }
 
@@ -392,6 +396,8 @@ func (m *moduleContext) duplicate(project Project) *moduleContext {
 		m.moduleID,
 		m.moduleDescriptor,
 		m.isDefaultModule,
+		slices.Clone(m.srcDocIDs),
+		slices.Clone(m.testSrcDocIDs),
 		srcDocContextMap,
 		testDocContextMap,
 		m.moduleDescDependencies,

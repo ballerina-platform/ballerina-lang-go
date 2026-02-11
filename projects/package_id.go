@@ -28,9 +28,8 @@ func generateUUID() string {
 	uuid := make([]byte, 16)
 	_, err := rand.Read(uuid)
 	if err != nil {
-		// Fallback to a deterministic but unique-ish value
-		// This should never happen in practice
-		return fmt.Sprintf("%016x%016x", 0, 0)
+		// Return a project error. This should never happen.
+		panic("failed to generate UUID: " + err.Error())
 	}
 	// Set version (4) and variant (RFC 4122)
 	uuid[6] = (uuid[6] & 0x0f) | 0x40
@@ -72,5 +71,3 @@ func (p PackageID) String() string {
 func (p PackageID) Equals(other PackageID) bool {
 	return p.id == other.id
 }
-
-

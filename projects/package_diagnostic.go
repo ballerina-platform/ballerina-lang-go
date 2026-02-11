@@ -30,10 +30,10 @@ var _ diagnostics.Diagnostic = (*packageDiagnostic)(nil)
 // being exposed via project API classes.
 // Java source: io.ballerina.projects.internal.PackageDiagnostic
 type packageDiagnostic struct {
-	diagnostic         diagnostics.Diagnostic
-	moduleDescriptor   ModuleDescriptor
-	project            Project
-	isWorkspaceDep     bool
+	diagnostic       diagnostics.Diagnostic
+	moduleDescriptor ModuleDescriptor
+	project          Project
+	isWorkspaceDep   bool
 }
 
 // newPackageDiagnostic creates a PackageDiagnostic wrapping the given diagnostic

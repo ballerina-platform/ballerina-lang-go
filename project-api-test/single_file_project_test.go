@@ -41,10 +41,10 @@ func TestLoadSingleFile(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadSingleFileProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.SingleFileProject)
+	project := result.Project().(*projects.SingleFileProject)
 
 	// Load the package
 	currentPackage := project.CurrentPackage()
@@ -75,10 +75,10 @@ func TestSingleFileTargetDirectory(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadSingleFileProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.SingleFileProject)
+	project := result.Project().(*projects.SingleFileProject)
 	targetDirPath := project.TargetDir()
 
 	// Verify target directory exists
@@ -103,10 +103,10 @@ func TestDefaultBuildOptions(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadSingleFileProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.SingleFileProject)
+	project := result.Project().(*projects.SingleFileProject)
 	buildOpts := project.BuildOptions()
 
 	// Verify expected default buildOptions
@@ -133,10 +133,10 @@ func TestOverrideBuildOptions(t *testing.T) {
 		WithObservabilityIncluded(true).
 		Build()
 
-	result, err := directory.LoadSingleFileProject(absPath, buildOptions)
+	result, err := directory.LoadProject(absPath, directory.WithBuildOptions(buildOptions))
 	require.NoError(err)
 
-	project := result.Project().(*directory.SingleFileProject)
+	project := result.Project().(*projects.SingleFileProject)
 	buildOpts := project.BuildOptions()
 
 	// Verify expected overridden buildOptions
@@ -159,10 +159,10 @@ func TestUpdateSingleFile(t *testing.T) {
 	newContent := "import ballerina/io;\n"
 
 	// Load the project
-	result, err := directory.LoadSingleFileProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	singleFileProject := result.Project().(*directory.SingleFileProject)
+	singleFileProject := result.Project().(*projects.SingleFileProject)
 
 	// Get the document ID
 	oldModule := singleFileProject.CurrentPackage().DefaultModule()
@@ -230,10 +230,10 @@ func TestProjectDuplicate(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadSingleFileProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	originalProject := result.Project().(*directory.SingleFileProject)
+	originalProject := result.Project().(*projects.SingleFileProject)
 	originalPackage := originalProject.CurrentPackage()
 
 	// Duplicate the project

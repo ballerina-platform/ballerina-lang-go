@@ -47,7 +47,7 @@ func NewBallerinaBackend(compilation *PackageCompilation) *BallerinaBackend {
 // performCodeGen generates BIR for all modules in topological order.
 func (b *BallerinaBackend) performCodeGen() {
 	for _, moduleCtx := range b.packageCompilation.packageResolution.TopologicallySortedModuleList() {
-		if moduleCtx.getCompilationState() == ModuleCompilationStateCompiled {
+		if moduleCtx.getCompilationState() == moduleCompilationStateCompiled {
 			generateCodeInternal(moduleCtx)
 		}
 	}

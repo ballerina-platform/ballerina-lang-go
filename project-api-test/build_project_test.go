@@ -40,10 +40,10 @@ func TestBuildProjectWithOneModule(t *testing.T) {
 	require.NoError(err)
 
 	// 1) Initialize the project instance
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 
 	// 2) Load the package
 	currentPackage := project.CurrentPackage()
@@ -101,10 +101,10 @@ func TestBuildProjectTargetDirectory(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	targetDirPath := project.TargetDir()
 
 	// Verify target directory is not empty
@@ -124,10 +124,10 @@ func TestBuildProjectSourceRoot(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 
 	// Verify source root matches project path
 	assert.Equal(absPath, project.SourceRoot())
@@ -142,10 +142,10 @@ func TestBuildProjectKind(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 
 	// Verify project kind is BUILD
 	assert.Equal(projects.ProjectKindBuild, project.Kind())
@@ -160,14 +160,14 @@ func TestBuildProjectDuplicate(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	originalProject := result.Project().(*directory.BuildProject)
+	originalProject := result.Project()
 	originalPackage := originalProject.CurrentPackage()
 
 	// Duplicate the project
-	duplicatedProject := originalProject.Duplicate().(*directory.BuildProject)
+	duplicatedProject := originalProject.Duplicate()
 
 	// Verify different project instances
 	assert.NotSame(originalProject, duplicatedProject)
@@ -211,10 +211,10 @@ func TestUpdateDocument(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	currentPackage := project.CurrentPackage()
 	oldModule := currentPackage.DefaultModule()
 
@@ -283,10 +283,10 @@ func TestAddDocument(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	currentPackage := project.CurrentPackage()
 	oldModule := currentPackage.DefaultModule()
 
@@ -366,10 +366,10 @@ func TestAddTestDocument(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	currentPackage := project.CurrentPackage()
 	oldModule := currentPackage.DefaultModule()
 
@@ -441,10 +441,10 @@ func TestRemoveDocument(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	currentPackage := project.CurrentPackage()
 	oldModule := currentPackage.DefaultModule()
 
@@ -516,10 +516,10 @@ func TestAddModule(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadBuildProject(absPath, projects.NewBuildOptions())
+	result, err := directory.LoadProject(absPath)
 	require.NoError(err)
 
-	project := result.Project().(*directory.BuildProject)
+	project := result.Project()
 	oldPackage := project.CurrentPackage()
 	pkgManifest := oldPackage.Manifest()
 

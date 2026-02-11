@@ -43,4 +43,3 @@ func (o PackageOrg) String() string {
 func (o PackageOrg) Equals(other PackageOrg) bool {
 	return o.value == other.value
 }
-

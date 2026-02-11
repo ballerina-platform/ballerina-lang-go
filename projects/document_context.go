@@ -136,11 +136,11 @@ func (d *documentContext) getDocumentConfig() DocumentConfig {
 }
 
 // duplicate creates a copy of the context (for modification).
-// The duplicated context has disableSyntaxTree set to false to enable caching.
+// The duplicated context preserves the disableSyntaxTree setting.
 func (d *documentContext) duplicate() *documentContext {
 	return &documentContext{
 		documentConfig:    d.documentConfig,
 		name:              d.name,
-		disableSyntaxTree: false,
+		disableSyntaxTree: d.disableSyntaxTree,
 	}
 }

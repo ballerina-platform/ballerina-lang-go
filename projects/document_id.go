@@ -56,5 +56,3 @@ func (d DocumentID) ModuleID() ModuleID {
 func (d DocumentID) Equals(other DocumentID) bool {
 	return d.id == other.id && d.moduleID.Equals(other.moduleID)
 }
-
-

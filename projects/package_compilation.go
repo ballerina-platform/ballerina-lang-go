@@ -27,14 +27,14 @@ import (
 // PackageCompilation represents compilation at package level by resolving all the dependencies.
 // Java source: io.ballerina.projects.PackageCompilation
 type PackageCompilation struct {
-	rootPackageContext   *packageContext
-	packageResolution    *PackageResolution
-	compilationOptions   CompilationOptions
-	compilerBackends     map[TargetPlatform]CompilerBackend
-	backendMu            sync.Mutex
-	pluginDiagnostics    []diagnostics.Diagnostic
-	diagnosticResult     DiagnosticResult
-	compileOnce          sync.Once
+	rootPackageContext    *packageContext
+	packageResolution     *PackageResolution
+	compilationOptions    CompilationOptions
+	compilerBackends      map[TargetPlatform]CompilerBackend
+	backendMu             sync.Mutex
+	pluginDiagnostics     []diagnostics.Diagnostic
+	diagnosticResult      DiagnosticResult
+	compileOnce           sync.Once
 	compilerPluginManager interface{} // TODO(P6): CompilerPluginManager once plugin system is migrated
 }
 
@@ -183,4 +183,3 @@ func (c *PackageCompilation) getCompilerBackend(platform TargetPlatform, creator
 	c.compilerBackends[platform] = backend
 	return backend
 }
-

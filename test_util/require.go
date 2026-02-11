@@ -84,16 +84,26 @@ func (r *Require) NotEqual(expected, actual interface{}, msgAndArgs ...interface
 }
 
 // Same requires that two pointers refer to the same object.
+// Note: Panics are prevented by checking comparability first.
 func (r *Require) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
 	r.t.Helper()
+	if !isComparable(expected) || !isComparable(actual) {
+		r.failNow("Same() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
+		return
+	}
 	if expected != actual {
 		r.failNow("expected same instance but got different instances", msgAndArgs...)
 	}
 }
 
 // NotSame requires that two pointers refer to different objects.
+// Note: Panics are prevented by checking comparability first.
 func (r *Require) NotSame(expected, actual interface{}, msgAndArgs ...interface{}) {
 	r.t.Helper()
+	if !isComparable(expected) || !isComparable(actual) {
+		r.failNow("NotSame() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
+		return
+	}
 	if expected == actual {
 		r.failNow("expected different instances but got same instance", msgAndArgs...)
 	}

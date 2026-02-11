@@ -16,78 +16,30 @@
  * under the License.
  */
 
-package directory
+package projects
 
 import (
 	"path/filepath"
-
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/internal"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 // BuildProject represents a Ballerina build project (project with Ballerina.toml).
 type BuildProject struct {
-	projects.BaseProject // embeds CurrentPackage() and Base()
-	sourceRoot           string
-	buildOptions         projects.BuildOptions
+	BaseProject
 }
 
 // Compile-time check to verify BuildProject implements Project interface
-var _ projects.Project = (*BuildProject)(nil)
+var _ Project = (*BuildProject)(nil)
 
-// LoadBuildProject loads a build project from the given path.
-// It merges build options from Ballerina.toml (manifest defaults) with the caller's
-// options using AcceptTheirs, so caller-provided options override manifest defaults.
-func LoadBuildProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
-	// Use internal.CreateBuildProjectConfig to scan and create package config
-	packageConfig, err := internal.CreateBuildProjectConfig(path)
-	if err != nil {
-		return projects.ProjectLoadResult{}, err
-	}
-
-	// Merge build options: manifest defaults are the base, caller's options override.
-	// This mirrors Java's ProjectFiles.createBuildOptions which calls:
-	//   defaultBuildOptions.acceptTheirs(theirOptions)
-	// where defaultBuildOptions comes from Ballerina.toml [build-options].
-	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
-	mergedOpts := manifestBuildOptions.AcceptTheirs(opts)
-
-	// Create the project first (we need it for the package)
-	project := &BuildProject{
-		sourceRoot:   path,
-		buildOptions: mergedOpts,
-	}
-
-	// Create package from config
-	compilationOptions := mergedOpts.CompilationOptions()
-	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
-	project.InitPackage(pkg)
-
-	// Collect diagnostics from manifest
-	var diags []diagnostics.Diagnostic
-	manifestDiags := packageConfig.PackageManifest().Diagnostics()
-	diags = append(diags, manifestDiags...)
-
-	// Create diagnostic result
-	diagResult := projects.NewDiagnosticResult(diags)
-
-	return projects.NewProjectLoadResult(project, diagResult), nil
-}
-
-// SourceRoot returns the project source directory path.
-func (b *BuildProject) SourceRoot() string {
-	return b.sourceRoot
+// NewBuildProject creates a new BuildProject with the given source root and build options.
+func NewBuildProject(sourceRoot string, buildOptions BuildOptions) *BuildProject {
+	project := &BuildProject{}
+	project.initBase(sourceRoot, buildOptions)
+	return project
 }
 
 // Kind returns the project kind (BUILD).
-func (b *BuildProject) Kind() projects.ProjectKind {
-	return projects.ProjectKindBuild
-}
-
-// BuildOptions returns the build options for this project.
-func (b *BuildProject) BuildOptions() projects.BuildOptions {
-	return b.buildOptions
+func (b *BuildProject) Kind() ProjectKind {
+	return ProjectKindBuild
 }
 
 // TargetDir returns the target directory for build outputs.
@@ -96,20 +48,20 @@ func (b *BuildProject) TargetDir() string {
 	if targetDir := b.buildOptions.TargetDir(); targetDir != "" {
 		return targetDir
 	}
-	return filepath.Join(b.sourceRoot, projects.TargetDir)
+	return filepath.Join(b.sourceRoot, TargetDir)
 }
 
 // DocumentID returns the DocumentID for the given file path, if it exists in this project.
 // It searches through all modules in the current package.
-func (b *BuildProject) DocumentID(filePath string) (projects.DocumentID, bool) {
+func (b *BuildProject) DocumentID(filePath string) (DocumentID, bool) {
 	if b.CurrentPackage() == nil {
-		return projects.DocumentID{}, false
+		return DocumentID{}, false
 	}
 
 	// Normalize the file path
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
-		return projects.DocumentID{}, false
+		return DocumentID{}, false
 	}
 
 	// Search through all modules
@@ -138,11 +90,11 @@ func (b *BuildProject) DocumentID(filePath string) (projects.DocumentID, bool) {
 		}
 	}
 
-	return projects.DocumentID{}, false
+	return DocumentID{}, false
 }
 
 // documentPathForModule computes the file path for a document in a module.
-func (b *BuildProject) documentPathForModule(docID projects.DocumentID, module *projects.Module) string {
+func (b *BuildProject) documentPathForModule(docID DocumentID, module *Module) string {
 	doc := module.Document(docID)
 	if doc == nil {
 		return ""
@@ -155,7 +107,7 @@ func (b *BuildProject) documentPathForModule(docID projects.DocumentID, module *
 		// Check if it's a test document
 		for _, testID := range module.TestDocumentIDs() {
 			if testID.Equals(docID) {
-				return filepath.Join(b.sourceRoot, projects.TestsDir, docName)
+				return filepath.Join(b.sourceRoot, TestsDir, docName)
 			}
 		}
 		return filepath.Join(b.sourceRoot, docName)
@@ -163,19 +115,19 @@ func (b *BuildProject) documentPathForModule(docID projects.DocumentID, module *
 
 	// Named module: files are in sourceRoot/modules/<moduleName>
 	moduleName := module.ModuleName().ModuleNamePart()
-	modulePath := filepath.Join(b.sourceRoot, projects.ModulesDir, moduleName)
+	modulePath := filepath.Join(b.sourceRoot, ModulesDir, moduleName)
 
 	// Check if it's a test document
 	for _, testID := range module.TestDocumentIDs() {
 		if testID.Equals(docID) {
-			return filepath.Join(modulePath, projects.TestsDir, docName)
+			return filepath.Join(modulePath, TestsDir, docName)
 		}
 	}
 	return filepath.Join(modulePath, docName)
 }
 
 // DocumentPath returns the file path for the given DocumentID.
-func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
+func (b *BuildProject) DocumentPath(documentID DocumentID) string {
 	if b.CurrentPackage() == nil {
 		return ""
 	}
@@ -192,26 +144,19 @@ func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
 
 // Save persists project changes to the filesystem.
 // Currently a stub that returns nil.
-func (b *BuildProject) Save() error {
+func (b *BuildProject) Save() {
 	// TODO: Implement actual save functionality
-	return nil
 }
 
 // Duplicate creates a deep copy of the build project.
 // The duplicated project shares immutable state (IDs, descriptors, configs)
 // but has independent compilation caches and lazy-loaded fields.
-func (b *BuildProject) Duplicate() projects.Project {
-	// Create duplicate build options using AcceptTheirs pattern (matches Java)
-	duplicateBuildOptions := projects.NewBuildOptions().AcceptTheirs(b.buildOptions)
-
-	// Create new project instance
-	newProject := &BuildProject{
-		sourceRoot:   b.sourceRoot,
-		buildOptions: duplicateBuildOptions,
-	}
-
-	// Duplicate and set the package
-	projects.ResetPackage(b, newProject)
+func (b *BuildProject) Duplicate() Project {
+	// Create duplicate build options using AcceptTheirs pattern
+	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
+	// Create new project and package instances
+	newProject := NewBuildProject(b.sourceRoot, duplicateBuildOptions)
+	ResetPackage(b, newProject)
 
 	return newProject
 }

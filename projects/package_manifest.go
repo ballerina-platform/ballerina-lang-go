@@ -45,7 +45,6 @@ type PackageManifest struct {
 	description      string
 	template         bool
 	platforms        map[string]*Platform
-	otherEntries     map[string]any
 }
 
 // Dependency represents a package dependency declared in Ballerina.toml.
@@ -157,7 +156,6 @@ func NewPackageManifest(desc PackageDescriptor) PackageManifest {
 		authors:      []string{},
 		keywords:     []string{},
 		platforms:    make(map[string]*Platform),
-		otherEntries: make(map[string]any),
 	}
 }
 
@@ -296,21 +294,6 @@ func (m PackageManifest) Platforms() map[string]*Platform {
 	return result
 }
 
-// OtherEntries returns a copy of additional TOML entries.
-func (m PackageManifest) OtherEntries() map[string]any {
-	return maps.Clone(m.otherEntries)
-}
-
-// OtherEntry returns a specific entry from otherEntries.
-// Returns nil if the entry does not exist.
-func (m PackageManifest) OtherEntry(key string) any {
-	v, ok := m.otherEntries[key]
-	if !ok {
-		return nil
-	}
-	return v
-}
-
 // PackageManifestParams contains all parameters needed to construct a PackageManifest.
 // This struct is used by internal packages that need to build PackageManifest instances.
 // All fields are exported to allow cross-package construction.
@@ -369,12 +352,6 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 		}
 	}
 
-	// Copy other entries
-	otherEntries := maps.Clone(params.OtherEntries)
-	if otherEntries == nil {
-		otherEntries = make(map[string]any)
-	}
-
 	return PackageManifest{
 		packageDesc:      params.PackageDesc,
 		dependencies:     deps,
@@ -391,7 +368,5 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 		description:      params.Description,
 		template:         params.Template,
 		platforms:        platforms,
-		otherEntries:     otherEntries,
 	}
 }
-

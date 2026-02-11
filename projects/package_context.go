@@ -33,7 +33,7 @@ type packageContext struct {
 	compilationOptions   CompilationOptions
 	moduleContextMap     map[ModuleID]*moduleContext
 	moduleIDs            []ModuleID
-	defaultModuleContext *moduleContext      // cached default module
+	defaultModuleContext *moduleContext       // cached default module
 	ballerinaTomlContext *tomlDocumentContext // Ballerina.toml context (nil if not present)
 
 	// Lazy-initialized fields (thread-safe via sync.Once, matching documentContext pattern).
@@ -93,6 +93,11 @@ func newPackageContextFromMaps(
 	moduleContextMap map[ModuleID]*moduleContext,
 	ballerinaTomlContext *tomlDocumentContext,
 ) *packageContext {
+	// Ensure moduleContextMap is initialized to prevent nil map panics
+	if moduleContextMap == nil {
+		moduleContextMap = make(map[ModuleID]*moduleContext)
+	}
+
 	// Build moduleIDs from map keys
 	moduleIDs := make([]ModuleID, 0, len(moduleContextMap))
 	var defaultModuleContext *moduleContext

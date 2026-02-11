@@ -23,15 +23,15 @@ package projects
 // Java source: io.ballerina.projects.BuildOptions
 type BuildOptions struct {
 	// Build-specific fields
-	testReport                  *bool
-	codeCoverage                *bool
-	dumpBuildTime               *bool
-	skipTests                   *bool
-	targetDir                   string
-	nativeImage                 *bool
-	exportComponentModel        *bool
-	graalVMBuildOptions         string
-	showDependencyDiagnostics   *bool
+	testReport                *bool
+	codeCoverage              *bool
+	dumpBuildTime             *bool
+	skipTests                 *bool
+	targetDir                 string
+	nativeImage               *bool
+	exportComponentModel      *bool
+	graalVMBuildOptions       string
+	showDependencyDiagnostics *bool
 
 	// Composition: BuildOptions contains CompilationOptions
 	compilationOptions CompilationOptions
@@ -215,9 +215,9 @@ func (b BuildOptions) DumpCFG() bool {
 	return b.compilationOptions.DumpCFG()
 }
 
-// DumpCFGFormat returns the CFG dump format ("dot" for DOT format, empty for S-expression).
+// DumpCFGFormat returns the CFG dump format.
 // Delegated to CompilationOptions.
-func (b BuildOptions) DumpCFGFormat() string {
+func (b BuildOptions) DumpCFGFormat() CFGFormat {
 	return b.compilationOptions.DumpCFGFormat()
 }
 
@@ -484,9 +484,9 @@ func (b *BuildOptionsBuilder) WithDumpCFG(value bool) *BuildOptionsBuilder {
 	return b
 }
 
-// WithDumpCFGFormat sets the CFG dump format ("dot" for DOT format, empty for S-expression).
+// WithDumpCFGFormat sets the CFG dump format.
 // Delegates to CompilationOptionsBuilder.
-func (b *BuildOptionsBuilder) WithDumpCFGFormat(value string) *BuildOptionsBuilder {
+func (b *BuildOptionsBuilder) WithDumpCFGFormat(value CFGFormat) *BuildOptionsBuilder {
 	b.compilationOptionsBuilder.WithDumpCFGFormat(value)
 	return b
 }

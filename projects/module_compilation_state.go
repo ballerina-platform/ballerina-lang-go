@@ -18,55 +18,55 @@
 
 package projects
 
-// ModuleCompilationState represents the various compilation stages of a Ballerina module.
-// Java source: io.ballerina.projects.ModuleCompilationState
-type ModuleCompilationState int
+// moduleCompilationState represents the various compilation stages of a Ballerina module.
+// This is package-private to match Java's io.ballerina.projects.ModuleCompilationState.
+type moduleCompilationState int
 
 const (
-	// ModuleCompilationStateLoadedFromSources indicates the module has been loaded from source files.
-	ModuleCompilationStateLoadedFromSources ModuleCompilationState = iota
-	// ModuleCompilationStateParsed indicates the module source files have been parsed.
-	ModuleCompilationStateParsed
-	// ModuleCompilationStateDependenciesResolvedFromSources indicates dependencies have been resolved from sources.
-	ModuleCompilationStateDependenciesResolvedFromSources
-	// ModuleCompilationStateCompiled indicates the module has been compiled.
-	ModuleCompilationStateCompiled
-	// ModuleCompilationStatePlatformLibraryGenerated indicates platform-specific libraries have been generated.
-	ModuleCompilationStatePlatformLibraryGenerated
-	// ModuleCompilationStateLoadedFromCache indicates the module has been loaded from cache.
-	ModuleCompilationStateLoadedFromCache
-	// ModuleCompilationStateBIRLoaded indicates BIR bytes have been loaded.
-	ModuleCompilationStateBIRLoaded
-	// ModuleCompilationStateDependenciesResolvedFromBALA indicates dependencies have been resolved from BALA.
-	ModuleCompilationStateDependenciesResolvedFromBALA
-	// ModuleCompilationStateModuleSymbolLoaded indicates module symbols have been loaded.
-	ModuleCompilationStateModuleSymbolLoaded
-	// ModuleCompilationStatePlatformLibraryLoaded indicates platform-specific libraries have been loaded.
-	ModuleCompilationStatePlatformLibraryLoaded
+	// moduleCompilationStateLoadedFromSources indicates the module has been loaded from source files.
+	moduleCompilationStateLoadedFromSources moduleCompilationState = iota
+	// moduleCompilationStateParsed indicates the module source files have been parsed.
+	moduleCompilationStateParsed
+	// moduleCompilationStateDependenciesResolvedFromSources indicates dependencies have been resolved from sources.
+	moduleCompilationStateDependenciesResolvedFromSources
+	// moduleCompilationStateCompiled indicates the module has been compiled.
+	moduleCompilationStateCompiled
+	// moduleCompilationStatePlatformLibraryGenerated indicates platform-specific libraries have been generated.
+	moduleCompilationStatePlatformLibraryGenerated
+	// moduleCompilationStateLoadedFromCache indicates the module has been loaded from cache.
+	moduleCompilationStateLoadedFromCache
+	// moduleCompilationStateBIRLoaded indicates BIR bytes have been loaded.
+	moduleCompilationStateBIRLoaded
+	// moduleCompilationStateDependenciesResolvedFromBALA indicates dependencies have been resolved from BALA.
+	moduleCompilationStateDependenciesResolvedFromBALA
+	// moduleCompilationStateModuleSymbolLoaded indicates module symbols have been loaded.
+	moduleCompilationStateModuleSymbolLoaded
+	// moduleCompilationStatePlatformLibraryLoaded indicates platform-specific libraries have been loaded.
+	moduleCompilationStatePlatformLibraryLoaded
 )
 
-// String returns the string representation of ModuleCompilationState.
-func (s ModuleCompilationState) String() string {
+// String returns the string representation of moduleCompilationState.
+func (s moduleCompilationState) String() string {
 	switch s {
-	case ModuleCompilationStateLoadedFromSources:
+	case moduleCompilationStateLoadedFromSources:
 		return "LOADED_FROM_SOURCES"
-	case ModuleCompilationStateParsed:
+	case moduleCompilationStateParsed:
 		return "PARSED"
-	case ModuleCompilationStateDependenciesResolvedFromSources:
+	case moduleCompilationStateDependenciesResolvedFromSources:
 		return "DEPENDENCIES_RESOLVED_FROM_SOURCES"
-	case ModuleCompilationStateCompiled:
+	case moduleCompilationStateCompiled:
 		return "COMPILED"
-	case ModuleCompilationStatePlatformLibraryGenerated:
+	case moduleCompilationStatePlatformLibraryGenerated:
 		return "PLATFORM_LIBRARY_GENERATED"
-	case ModuleCompilationStateLoadedFromCache:
+	case moduleCompilationStateLoadedFromCache:
 		return "LOADED_FROM_CACHE"
-	case ModuleCompilationStateBIRLoaded:
+	case moduleCompilationStateBIRLoaded:
 		return "BIR_LOADED"
-	case ModuleCompilationStateDependenciesResolvedFromBALA:
+	case moduleCompilationStateDependenciesResolvedFromBALA:
 		return "DEPENDENCIES_RESOLVED_FROM_BALA"
-	case ModuleCompilationStateModuleSymbolLoaded:
+	case moduleCompilationStateModuleSymbolLoaded:
 		return "MODULE_SYMBOL_LOADED"
-	case ModuleCompilationStatePlatformLibraryLoaded:
+	case moduleCompilationStatePlatformLibraryLoaded:
 		return "PLATFORM_LIBRARY_LOADED"
 	default:
 		return "UNKNOWN"
