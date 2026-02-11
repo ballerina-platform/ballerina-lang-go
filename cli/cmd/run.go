@@ -94,6 +94,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	buildOpts := projects.NewBuildOptionsBuilder().
 		WithDumpAST(runOpts.dumpAST).
 		WithDumpBIR(runOpts.dumpBIR).
+		WithDumpCFG(runOpts.dumpCFG).
+		WithDumpCFGFormat(runOpts.format).
 		WithDumpTokens(runOpts.dumpTokens).
 		WithDumpST(runOpts.dumpST).
 		WithTraceRecovery(runOpts.traceRecovery).
@@ -166,11 +168,11 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	project := result.Project()
 	pkg := project.CurrentPackage()
-	defaultModule := pkg.DefaultModule()
 
-	// Compile the source
+	// Print compilation info
 	fmt.Fprintln(os.Stderr, "Compiling source")
 	if project.Kind() == projects.ProjectKindSingleFile {
+		defaultModule := pkg.DefaultModule()
 		docId := defaultModule.DocumentIDs()[0]
 		doc := defaultModule.Document(docId)
 		fmt.Fprintf(os.Stderr, "\t%s\n", doc.Name())
@@ -181,55 +183,27 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 			pkg.PackageVersion().String())
 	}
 
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	// Get package compilation (triggers parsing, type checking, semantic analysis, CFG analysis)
+	compilation := pkg.Compilation()
 
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, fileName)
-	if err != nil {
-		printError(fmt.Errorf("compilation failed: %w", err), "", false)
-		return fmt.Errorf("compilation failed: %w", err)
+	// Check for compilation errors
+	compilationDiags := compilation.DiagnosticResult()
+	if compilationDiags.HasErrors() {
+		printDiagnostics(compilationDiags)
+		return fmt.Errorf("compilation failed with errors")
 	}
 
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if runOpts.dumpAST {
-		prettyPrinter := ast.PrettyPrinter{}
-		fmt.Println(prettyPrinter.Print(compilationUnit))
-	}
-	pkg := ast.ToPackage(compilationUnit)
-	// Resolve symbols (imports) before type resolution
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
-	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-	// Run control flow analysis after type resolution
-	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis
-	cfg := semantics.CreateControlFlowGraph(cx, pkg)
-	if runOpts.dumpCFG {
-		// Print the CFG with separators
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
+	// Create backend and generate BIR
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
 
-		if runOpts.format == "dot" {
-			// Use DOT exporter
-			dotExporter := semantics.NewCFGDotExporter(cx)
-			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
-		} else {
-			// Use default S-expression printer
-			prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
-			fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
-		}
-
-		fmt.Fprintln(os.Stderr, "===================END CFG===================")
+	if birPkg == nil {
+		return fmt.Errorf("BIR generation failed: no BIR package produced")
 	}
-	// Run semantic analysis after type resolution
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-	// Run CFG analyses (reachability and explicit return) concurrently
-	semantics.AnalyzeCFG(cx, pkg, cfg)
-	birPkg := bir.GenBir(cx, pkg)
+
+	// Dump BIR if requested
 	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
-		// Print the BIR with separators
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
 		fmt.Println(strings.TrimSpace(prettyPrinter.Print(*birPkg)))

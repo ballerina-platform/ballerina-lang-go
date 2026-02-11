@@ -23,6 +23,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -35,7 +36,6 @@ import (
 
 // moduleContext holds internal state for a Module.
 // It manages document contexts for source and test documents.
-// Java: io.ballerina.projects.ModuleContext
 type moduleContext struct {
 	project                Project
 	moduleID               ModuleID
@@ -48,12 +48,10 @@ type moduleContext struct {
 	moduleDescDependencies []ModuleDescriptor
 
 	// Compilation state tracking.
-	// Java: ModuleContext.compilationState, ModuleContext.diagnostics
 	compilationState  ModuleCompilationState
 	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
-	// Java: ModuleContext.bLangPackage, ModuleContext.bPackageSymbol
 	bLangPkg        *ast.BLangPackage
 	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
 	compilerCtx     *context.CompilerContext
@@ -61,7 +59,6 @@ type moduleContext struct {
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
-// Java: ModuleContext.from(Project, ModuleConfig, boolean)
 func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxTree bool) *moduleContext {
 	// Build source document context map
 	srcDocContextMap := make(map[DocumentID]*documentContext)
@@ -218,8 +215,6 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 }
 
 // compile performs module compilation by delegating to compileInternal.
-// Java: ModuleContext.compile(CompilerContext) delegates to
-// currentCompilationState().compile(this, compilerContext)
 func (m *moduleContext) compile() {
 	compileInternal(m)
 	m.compilationState = ModuleCompilationStateCompiled
@@ -227,17 +222,13 @@ func (m *moduleContext) compile() {
 
 // compileInternal performs the actual compilation of a module:
 // parse sources, build BLangPackage (AST), and run semantic analysis.
-// BIR generation is a separate phase handled by BallerinaBackend.performCodeGen().
-// Java: ModuleContext.compileInternal(ModuleContext, CompilerContext)
 func compileInternal(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = make([]diagnostics.Diagnostic, 0)
-	cx := context.NewCompilerContext()
-	env := semtypes.GetTypeEnv()
+	env := semtypes.CreateTypeEnv()
+	cx := context.NewCompilerContext(env)
 	moduleCtx.compilerCtx = cx
 
 	// Parse all source documents and collect syntax trees.
-	// Java: for (DocumentContext dc : srcDocContextMap.values())
-	//           pkgNode.addCompilationUnit(dc.compilationUnit(...))
 	var syntaxTrees []*tree.SyntaxTree
 	for _, docID := range moduleCtx.srcDocIDs {
 		docCtx := moduleCtx.srcDocContextMap[docID]
@@ -250,7 +241,6 @@ func compileInternal(moduleCtx *moduleContext) {
 	}
 
 	// Parse test source documents.
-	// Java: ModuleContext.parseTestSources()
 	for _, docID := range moduleCtx.testSrcDocIDs {
 		docCtx := moduleCtx.testDocContextMap[docID]
 		if docCtx != nil {
@@ -263,27 +253,46 @@ func compileInternal(moduleCtx *moduleContext) {
 	}
 
 	// Build BLangPackage from syntax trees.
-	// Java: TreeBuilder.createPackageNode() + pkgNode.addCompilationUnit()
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 	pkgNode := buildBLangPackage(cx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
 
-	// Run semantic analysis (type checking) phases.
-	// Java: CompilerPhaseRunner.performTypeCheckPhases(pkgNode)
-	importedSymbols := semantics.ResolveImports(cx, env, pkgNode)
+	// Resolve symbols (imports) before type resolution
+	importedSymbols := semantics.ResolveImports(cx, pkgNode)
 	semantics.ResolveSymbols(cx, pkgNode, importedSymbols)
 
+	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx)
 	typeResolver.ResolveTypes(cx, pkgNode)
 
+	// Create control flow graph before semantic analysis.
+	// CFG is needed for conditional type narrowing during semantic analysis.
+	cfg := semantics.CreateControlFlowGraph(cx, pkgNode)
+
+	// Dump CFG if requested
+	if compilationOptions.DumpCFG() {
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
+		if compilationOptions.DumpCFGFormat() == "dot" {
+			dotExporter := semantics.NewCFGDotExporter(cx)
+			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
+		} else {
+			prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
+			fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
+		}
+		fmt.Fprintln(os.Stderr, "===================END CFG===================")
+	}
+
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkgNode)
+
+	// Run CFG analyses (reachability and explicit return) after semantic analysis.
+	semantics.AnalyzeCFG(cx, pkgNode, cfg)
 }
 
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
 // For a single file this is equivalent to ast.ToPackage(ast.GetCompilationUnit(cx, st)).
 // For multiple files it merges all compilation units into a single package.
-// Java: ModuleContext.compileInternal() creates pkgNode and adds compilation units.
 func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTree, compilationOptions CompilationOptions) *ast.BLangPackage {
 	dumpAST := compilationOptions.DumpAST()
 	var prettyPrinter ast.PrettyPrinter
@@ -331,7 +340,6 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 }
 
 // generateCodeInternal generates BIR for this module from the compiled BLangPackage.
-// Java: ModuleContext.generateCodeInternal(ModuleContext, CompilerBackend, CompilerContext)
 // -> CompilerPhaseRunner.performBirGenPhases(bLangPackage)
 func generateCodeInternal(moduleCtx *moduleContext) {
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
@@ -341,7 +349,6 @@ func generateCodeInternal(moduleCtx *moduleContext) {
 }
 
 // getBLangPackage returns the compiled BLangPackage.
-// Java: ModuleContext.bLangPackage()
 func (m *moduleContext) getBLangPackage() *ast.BLangPackage {
 	return m.bLangPkg
 }
@@ -352,20 +359,17 @@ func (m *moduleContext) getBIRPackage() *bir.BIRPackage {
 }
 
 // getCompilationState returns the current compilation state of the module.
-// Java: ModuleContext.compilationState()
 func (m *moduleContext) getCompilationState() ModuleCompilationState {
 	return m.compilationState
 }
 
 // getDiagnostics returns the diagnostics produced during module compilation.
-// Java: ModuleContext.diagnostics()
 func (m *moduleContext) getDiagnostics() []diagnostics.Diagnostic {
 	return m.moduleDiagnostics
 }
 
 // duplicate creates a copy of the context.
 // The duplicated context has all document contexts duplicated as well.
-// Java: ModuleContext.duplicate(Project)
 func (m *moduleContext) duplicate(project Project) *moduleContext {
 	// Duplicate source document contexts
 	srcDocContextMap := make(map[DocumentID]*documentContext, len(m.srcDocIDs))
