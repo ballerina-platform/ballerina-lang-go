@@ -1,0 +1,39 @@
+(foo
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (simple-var-ref depth)
+      (simple-var-ref maxDepth))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal <nil>))
+  )
+  (bb2 (bb0) ()
+    (expression-stmt
+      (invocation io println (
+        (invocation inc (
+          (simple-var-ref depth))))))
+    (expression-stmt
+      (invocation foo (
+        (binary-expr +
+          (simple-var-ref depth)
+          (literal 1))
+        (simple-var-ref maxDepth))))
+  )
+)
+(inc
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref n)
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation foo (
+        (literal 0)
+        (literal 5))))
+  )
+)

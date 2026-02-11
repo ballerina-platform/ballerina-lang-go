@@ -1,0 +1,22 @@
+(bar
+  (bb0 () ()
+    (return
+      (literal false))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (literal 17))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation bar ()))))
+  )
+)
