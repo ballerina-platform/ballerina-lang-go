@@ -19,7 +19,6 @@
 package projects
 
 // ProjectKind represents the type of project.
-// Java: io.ballerina.projects.ProjectKind
 type ProjectKind int
 
 const (

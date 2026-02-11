@@ -20,7 +20,6 @@ package projects
 
 // ProjectLoadResult represents the result of loading a project.
 // It contains the loaded project and any diagnostics encountered during loading.
-// Java: io.ballerina.projects.ProjectLoadResult (conceptual equivalent)
 type ProjectLoadResult struct {
 	project     Project
 	diagnostics DiagnosticResult

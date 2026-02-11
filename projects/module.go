@@ -25,7 +25,6 @@ import (
 // Module represents a Ballerina module.
 // A module is a collection of Ballerina source files that belong together.
 // Modules are immutable - use Modify() to create modified copies.
-// Java: io.ballerina.projects.Module
 type Module struct {
 	moduleCtx       *moduleContext
 	packageInstance *Package
@@ -37,7 +36,6 @@ type Module struct {
 
 // newModule creates a Module from a moduleContext and Package.
 // This is typically called internally during Package creation.
-// Java: Module.from(ModuleContext, Package)
 func newModule(ctx *moduleContext, packageInstance *Package) *Module {
 	return &Module{
 		moduleCtx:       ctx,
@@ -79,7 +77,6 @@ func (m *Module) TestDocumentIDs() []DocumentID {
 // Document returns a document by ID.
 // Documents are lazily loaded and cached using sync.Map for thread safety.
 // Returns nil if the document is not found in this module.
-// Java: Module.document(DocumentId)
 func (m *Module) Document(documentID DocumentID) *Document {
 	// Check source documents first
 	if doc, ok := m.srcDocs.Load(documentID); ok {
@@ -129,7 +126,6 @@ func (m *Module) Modify() *ModuleModifier {
 
 // ModuleModifier handles immutable module modifications.
 // It follows the Builder pattern per project conventions.
-// Java: io.ballerina.projects.Module.Modifier
 type ModuleModifier struct {
 	moduleID          ModuleID
 	moduleDescriptor  ModuleDescriptor
@@ -210,7 +206,6 @@ func (mm *ModuleModifier) updateDocument(newDocContext *documentContext) *Module
 // Apply creates a new Module with the modifications.
 // This triggers a cascade of modifications up the object hierarchy:
 // Module modification -> Package update.
-// Java: Module.Modifier.apply()
 func (mm *ModuleModifier) Apply() *Module {
 	// Create new moduleContext with the updated document contexts
 	newModuleCtx := newModuleContextFromMaps(

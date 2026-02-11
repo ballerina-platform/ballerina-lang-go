@@ -58,7 +58,6 @@ func (m ModuleName) ModuleNamePart() string {
 }
 
 // IsDefaultModuleName returns true if this is the default module name.
-// Java: ModuleName.isDefaultModuleName()
 func (m ModuleName) IsDefaultModuleName() bool {
 	return m.moduleNamePart == ""
 }

@@ -20,7 +20,6 @@ package projects
 
 // BaseProject provides common functionality for all project types.
 // Project implementations should embed this struct to inherit common behavior.
-// Java: io.ballerina.projects.Project (abstract class)
 type BaseProject struct {
 	currentPackage *Package
 }
@@ -56,7 +55,6 @@ type baseProjectAccessor interface {
 
 // ResetPackage duplicates the current package and sets it on the new project.
 // This is a helper method used by project implementations during duplication.
-// Java: Project.resetPackage(Project)
 func ResetPackage(oldProject Project, newProject Project) {
 	if oldProject.CurrentPackage() == nil {
 		return

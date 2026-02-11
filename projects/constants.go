@@ -67,15 +67,12 @@ const (
 	TomlFileExtension = ".toml"
 
 	// CacheDir is the cache directory under target.
-	// Java: ProjectConstants.CACHES_DIR_NAME
 	CacheDir = "cache"
 
 	// RepoBIRCacheName is the directory name for cached BIR files.
-	// Java: ProjectConstants.REPO_BIR_CACHE_NAME
 	RepoBIRCacheName = "bir"
 
 	// BIRFileExtension is the extension for BIR files.
-	// Java: ProjectConstants.BLANG_COMPILED_PKG_BIR_EXT
 	BIRFileExtension = ".bir"
 )
 

@@ -19,14 +19,12 @@
 package projects
 
 // tomlDocumentContext holds internal state for a TOML document.
-// Java: io.ballerina.projects.TomlDocumentContext
 type tomlDocumentContext struct {
 	name    string
 	content string
 }
 
 // newTomlDocumentContext creates a tomlDocumentContext from a DocumentConfig.
-// Java: TomlDocumentContext.from(DocumentConfig)
 func newTomlDocumentContext(docConfig DocumentConfig) *tomlDocumentContext {
 	if docConfig == nil {
 		return nil
@@ -38,14 +36,12 @@ func newTomlDocumentContext(docConfig DocumentConfig) *tomlDocumentContext {
 }
 
 // BallerinaToml represents the 'Ballerina.toml' file in a package.
-// Java: io.ballerina.projects.BallerinaToml
 type BallerinaToml struct {
 	context         *tomlDocumentContext
 	packageInstance *Package
 }
 
 // newBallerinaToml creates a BallerinaToml from a tomlDocumentContext and Package.
-// Java: BallerinaToml.from(TomlDocumentContext, Package)
 func newBallerinaToml(ctx *tomlDocumentContext, pkg *Package) *BallerinaToml {
 	if ctx == nil {
 		return nil
@@ -57,7 +53,6 @@ func newBallerinaToml(ctx *tomlDocumentContext, pkg *Package) *BallerinaToml {
 }
 
 // Name returns the name of the TOML file.
-// Java: BallerinaToml.name()
 func (b *BallerinaToml) Name() string {
 	return BallerinaTomlFile
 }
@@ -71,7 +66,6 @@ func (b *BallerinaToml) Content() string {
 }
 
 // PackageInstance returns the package that this Ballerina.toml belongs to.
-// Java: BallerinaToml.packageInstance()
 func (b *BallerinaToml) PackageInstance() *Package {
 	return b.packageInstance
 }

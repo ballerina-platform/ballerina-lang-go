@@ -152,14 +152,12 @@ func (p PackageConfig) HasReadmeMd() bool {
 }
 
 // PackageTemplate returns whether this is a template package.
-// Java: PackageConfig.packageTemplate()
 func (p PackageConfig) PackageTemplate() bool {
 	return p.packageManifest.Template()
 }
 
 // DependencyManifest returns the dependency manifest for this package.
 // TODO(P6): Replace interface{} with DependencyManifest type once migrated.
-// Java: PackageConfig.dependencyManifest()
 func (p PackageConfig) DependencyManifest() interface{} {
 	return nil
 }
@@ -167,38 +165,32 @@ func (p PackageConfig) DependencyManifest() interface{} {
 // CompilationOptions returns the compilation options for this package config.
 // The Java implementation returns null; this stub returns the zero value.
 // TODO(P6): Wire to actual compilation options if needed.
-// Java: PackageConfig.compilationOptions()
 func (p PackageConfig) CompilationOptions() CompilationOptions {
 	return CompilationOptions{}
 }
 
 // PackageDescDependencyGraph returns the package descriptor dependency graph.
 // TODO(P6): Replace interface{} with DependencyGraph[PackageDescriptor] type once migrated.
-// Java: PackageConfig.packageDescDependencyGraph()
 func (p PackageConfig) PackageDescDependencyGraph() interface{} {
 	return nil
 }
 
 // CloudToml returns the Cloud.toml document config, or nil if not present.
-// Java: PackageConfig.cloudToml()
 func (p PackageConfig) CloudToml() DocumentConfig {
 	return p.cloudToml
 }
 
 // CompilerPluginToml returns the CompilerPlugin.toml document config, or nil if not present.
-// Java: PackageConfig.compilerPluginToml()
 func (p PackageConfig) CompilerPluginToml() DocumentConfig {
 	return p.compilerPluginToml
 }
 
 // BalToolToml returns the BalTool.toml document config, or nil if not present.
-// Java: PackageConfig.balToolToml()
 func (p PackageConfig) BalToolToml() DocumentConfig {
 	return p.balToolToml
 }
 
 // DependenciesToml returns the Dependencies.toml document config, or nil if not present.
-// Java: PackageConfig.dependenciesToml()
 func (p PackageConfig) DependenciesToml() DocumentConfig {
 	return p.dependenciesToml
 }

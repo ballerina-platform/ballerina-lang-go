@@ -26,7 +26,6 @@ import (
 
 // DiagnosticResult represents a collection of diagnostics from a project operation.
 // It provides methods to query errors, warnings, and other diagnostic information.
-// Java: io.ballerina.projects.DiagnosticResult
 type DiagnosticResult struct {
 	diagnostics []diagnostics.Diagnostic
 	errors      []diagnostics.Diagnostic

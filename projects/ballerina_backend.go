@@ -21,7 +21,6 @@ package projects
 import "ballerina-lang-go/bir"
 
 // BallerinaBackendTarget is the target platform for the Go/BIR backend.
-// Java: io.ballerina.projects.JvmTarget
 const BallerinaBackendTarget TargetPlatform = "native"
 
 // BallerinaBackend generates BIR from compiled modules.
@@ -33,7 +32,6 @@ type BallerinaBackend struct {
 
 // NewBallerinaBackend creates a BallerinaBackend from a PackageCompilation
 // and triggers BIR generation for all compiled modules.
-// Java: JBallerinaBackend.from(PackageCompilation, JvmTarget)
 func NewBallerinaBackend(compilation *PackageCompilation) *BallerinaBackend {
 	backend := compilation.getCompilerBackend(BallerinaBackendTarget, func(tp TargetPlatform) CompilerBackend {
 		b := &BallerinaBackend{
@@ -47,7 +45,6 @@ func NewBallerinaBackend(compilation *PackageCompilation) *BallerinaBackend {
 }
 
 // performCodeGen generates BIR for all modules in topological order.
-// Java: JBallerinaBackend.performCodeGen()
 func (b *BallerinaBackend) performCodeGen() {
 	for _, moduleCtx := range b.packageCompilation.packageResolution.TopologicallySortedModuleList() {
 		if moduleCtx.getCompilationState() == ModuleCompilationStateCompiled {
@@ -57,7 +54,6 @@ func (b *BallerinaBackend) performCodeGen() {
 }
 
 // TargetPlatform returns the target platform for this backend.
-// Java: CompilerBackend.targetPlatform()
 func (b *BallerinaBackend) TargetPlatform() TargetPlatform {
 	return BallerinaBackendTarget
 }

@@ -27,7 +27,6 @@ import (
 )
 
 // BuildProject represents a Ballerina build project (project with Ballerina.toml).
-// Java: io.ballerina.projects.directory.BuildProject
 type BuildProject struct {
 	projects.BaseProject // embeds CurrentPackage() and Base()
 	sourceRoot           string
@@ -40,7 +39,6 @@ var _ projects.Project = (*BuildProject)(nil)
 // LoadBuildProject loads a build project from the given path.
 // It merges build options from Ballerina.toml (manifest defaults) with the caller's
 // options using AcceptTheirs, so caller-provided options override manifest defaults.
-// Java: io.ballerina.projects.directory.BuildProject.loadProject
 func LoadBuildProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
 	// Use internal.CreateBuildProjectConfig to scan and create package config
 	packageConfig, err := internal.CreateBuildProjectConfig(path)
@@ -52,7 +50,6 @@ func LoadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 	// This mirrors Java's ProjectFiles.createBuildOptions which calls:
 	//   defaultBuildOptions.acceptTheirs(theirOptions)
 	// where defaultBuildOptions comes from Ballerina.toml [build-options].
-	// Java: io.ballerina.projects.internal.ProjectFiles.createBuildOptions
 	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
 	mergedOpts := manifestBuildOptions.AcceptTheirs(opts)
 
@@ -79,26 +76,22 @@ func LoadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 }
 
 // SourceRoot returns the project source directory path.
-// Java: BuildProject.sourceRoot()
 func (b *BuildProject) SourceRoot() string {
 	return b.sourceRoot
 }
 
 // Kind returns the project kind (BUILD).
-// Java: BuildProject.kind()
 func (b *BuildProject) Kind() projects.ProjectKind {
 	return projects.ProjectKindBuild
 }
 
 // BuildOptions returns the build options for this project.
-// Java: BuildProject.buildOptions()
 func (b *BuildProject) BuildOptions() projects.BuildOptions {
 	return b.buildOptions
 }
 
 // TargetDir returns the target directory for build outputs.
 // If BuildOptions specifies a target directory, that is used; otherwise sourceRoot/target.
-// Java: BuildProject.targetDir()
 func (b *BuildProject) TargetDir() string {
 	if targetDir := b.buildOptions.TargetDir(); targetDir != "" {
 		return targetDir
@@ -108,7 +101,6 @@ func (b *BuildProject) TargetDir() string {
 
 // DocumentID returns the DocumentID for the given file path, if it exists in this project.
 // It searches through all modules in the current package.
-// Java: BuildProject.documentId(Path)
 func (b *BuildProject) DocumentID(filePath string) (projects.DocumentID, bool) {
 	if b.CurrentPackage() == nil {
 		return projects.DocumentID{}, false
@@ -183,7 +175,6 @@ func (b *BuildProject) documentPathForModule(docID projects.DocumentID, module *
 }
 
 // DocumentPath returns the file path for the given DocumentID.
-// Java: BuildProject.documentPath(DocumentId)
 func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
 	if b.CurrentPackage() == nil {
 		return ""
@@ -201,7 +192,6 @@ func (b *BuildProject) DocumentPath(documentID projects.DocumentID) string {
 
 // Save persists project changes to the filesystem.
 // Currently a stub that returns nil.
-// Java: BuildProject.save()
 func (b *BuildProject) Save() error {
 	// TODO: Implement actual save functionality
 	return nil
@@ -210,10 +200,8 @@ func (b *BuildProject) Save() error {
 // Duplicate creates a deep copy of the build project.
 // The duplicated project shares immutable state (IDs, descriptors, configs)
 // but has independent compilation caches and lazy-loaded fields.
-// Java: BuildProject.duplicate()
 func (b *BuildProject) Duplicate() projects.Project {
 	// Create duplicate build options using AcceptTheirs pattern (matches Java)
-	// Java: BuildOptions.builder().build().acceptTheirs(buildOptions())
 	duplicateBuildOptions := projects.NewBuildOptions().AcceptTheirs(b.buildOptions)
 
 	// Create new project instance

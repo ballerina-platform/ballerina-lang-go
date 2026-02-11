@@ -19,7 +19,6 @@
 // Package projectapitest contains integration tests for the Project API.
 // These tests verify the complete project loading and compilation pipeline
 // using real Ballerina source files.
-// Java: io.ballerina.projects.test
 package projectapitest
 
 import (
@@ -34,7 +33,6 @@ import (
 )
 
 // TestLoadSingleFile tests loading a valid standalone Ballerina file.
-// Java: TestSingleFileProject.testLoadSingleFile
 func TestLoadSingleFile(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -69,7 +67,6 @@ func TestLoadSingleFile(t *testing.T) {
 }
 
 // TestSingleFileTargetDirectory tests if the target directory for single files is resolved properly.
-// Java: TestSingleFileProject.testSingleFileTargetDirectory
 func TestSingleFileTargetDirectory(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -98,7 +95,6 @@ func TestSingleFileTargetDirectory(t *testing.T) {
 }
 
 // TestDefaultBuildOptions tests the default build options for single file projects.
-// Java: TestSingleFileProject.testDefaultBuildOptions
 func TestDefaultBuildOptions(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -123,7 +119,6 @@ func TestDefaultBuildOptions(t *testing.T) {
 }
 
 // TestOverrideBuildOptions tests overriding build options for single file projects.
-// Java: TestSingleFileProject.testOverrideBuildOptions
 func TestOverrideBuildOptions(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -153,7 +148,6 @@ func TestOverrideBuildOptions(t *testing.T) {
 }
 
 // TestUpdateSingleFile tests updating document content in a single file project.
-// Java: TestSingleFileProject.testUpdateSingleFile
 func TestUpdateSingleFile(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -228,7 +222,6 @@ func TestUpdateSingleFile(t *testing.T) {
 }
 
 // TestProjectDuplicate tests duplicating a single file project.
-// Java: TestSingleFileProject.testProjectDuplicate
 func TestProjectDuplicate(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -306,16 +299,11 @@ func TestProjectDuplicate(t *testing.T) {
 // Skipped tests:
 
 // testSingleFileWithNoReadPermission - Skipped (OS-specific file permission manipulation)
-// Java: TestSingleFileProject.testSingleFileWithNoReadPermission
 
 // testProjectRefresh - Skipped (clearCaches() not yet implemented)
-// Java: TestSingleFileProject.testProjectRefresh
 
 // testLoadSingleFileInProject - Deferred (requires detection of .bal file within a package)
-// Java: TestSingleFileProject.testLoadSingleFileInProject
 
 // testLoadSingleFileNegative - Deferred (requires detection of .bal file within a package)
-// Java: TestSingleFileProject.testLoadSingleFileNegative
 
 // testDiagnostics - Deferred (requires diagnostics design implementation)
-// Java: TestSingleFileProject.testDiagnostics

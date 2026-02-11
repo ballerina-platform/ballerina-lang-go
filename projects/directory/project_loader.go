@@ -17,7 +17,6 @@
  */
 
 // Package directory provides project loading functionality from filesystem directories.
-// Java: io.ballerina.projects.directory
 package directory
 
 import (
@@ -49,7 +48,6 @@ func WithBuildOptions(opts projects.BuildOptions) LoadOption {
 //   - Is .bal file -> LoadSingleFileProject (stub)
 //   - Is .bala file -> error (not implemented)
 //
-// Java: io.ballerina.projects.directory.ProjectLoader.loadProject
 func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, error) {
 	// Apply defaults
 	cfg := &loadConfig{
@@ -83,7 +81,6 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 		}
 
 		// TODO: P4 - Implement WorkspaceProject detection and loading
-		// Java: io.ballerina.projects.directory.ProjectLoader checks for workspace
 		// directories that may contain multiple Ballerina projects.
 
 		// Directory without Ballerina.toml - error

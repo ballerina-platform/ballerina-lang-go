@@ -19,7 +19,6 @@
 // Package projectapitest contains integration tests for the Project API.
 // These tests verify the complete project loading and compilation pipeline
 // using real Ballerina source files.
-// Java: io.ballerina.projects.test
 package projectapitest
 
 import (
@@ -32,7 +31,6 @@ import (
 )
 
 // TestBuildProjectAPI tests loading a valid build project.
-// Java: TestBuildProject.testBuildProjectAPI
 func TestBuildProjectWithOneModule(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -95,7 +93,6 @@ func TestBuildProjectWithOneModule(t *testing.T) {
 }
 
 // TestBuildProjectTargetDirectory tests if the target directory for build projects is resolved properly.
-// Java: TestBuildProject.testBuildProjectTargetDir
 func TestBuildProjectTargetDirectory(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -119,7 +116,6 @@ func TestBuildProjectTargetDirectory(t *testing.T) {
 }
 
 // TestBuildProjectSourceRoot tests if the source root is resolved correctly.
-// Java: TestBuildProject.testBuildProjectSourceRoot
 func TestBuildProjectSourceRoot(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -138,7 +134,6 @@ func TestBuildProjectSourceRoot(t *testing.T) {
 }
 
 // TestBuildProjectKind tests if the project kind is BUILD.
-// Java: TestBuildProject.testBuildProjectKind
 func TestBuildProjectKind(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -157,7 +152,6 @@ func TestBuildProjectKind(t *testing.T) {
 }
 
 // TestBuildProjectDuplicate tests duplicating a build project.
-// Java: TestBuildProject.testProjectDuplicate
 func TestBuildProjectDuplicate(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -209,7 +203,6 @@ func TestBuildProjectDuplicate(t *testing.T) {
 }
 
 // TestUpdateDocument tests updating document content in a build project.
-// Java: TestBuildProject.testUpdateDocument
 func TestUpdateDocument(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -282,7 +275,6 @@ func TestUpdateDocument(t *testing.T) {
 }
 
 // TestAddDocument tests adding a new document to a module.
-// Java: TestBuildProject.testAddDocument
 func TestAddDocument(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -366,7 +358,6 @@ func TestAddDocument(t *testing.T) {
 }
 
 // TestAddTestDocument tests adding a new test document to a module.
-// Java: TestBuildProject.testAddTestDocument
 func TestAddTestDocument(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -442,7 +433,6 @@ func TestAddTestDocument(t *testing.T) {
 }
 
 // TestRemoveDocument tests removing a document from a module.
-// Java: TestBuildProject.testRemoveDocument
 func TestRemoveDocument(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
@@ -518,7 +508,6 @@ func TestRemoveDocument(t *testing.T) {
 }
 
 // TestAddModule tests adding a new module to a package.
-// Java: TestBuildProject.testAddModuleWithFiles
 func TestAddModule(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)

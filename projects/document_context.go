@@ -28,7 +28,6 @@ import (
 
 // documentContext holds internal state for a Document.
 // It manages lazy loading of syntax tree and text document.
-// Java: io.ballerina.projects.DocumentContext
 type documentContext struct {
 	documentConfig    DocumentConfig
 	name              string
@@ -42,7 +41,6 @@ type documentContext struct {
 }
 
 // newDocumentContext creates a documentContext from DocumentConfig.
-// Java: DocumentContext.from(DocumentConfig, boolean)
 func newDocumentContext(documentConfig DocumentConfig, disableSyntaxTree bool) *documentContext {
 	return &documentContext{
 		documentConfig:    documentConfig,
@@ -139,7 +137,6 @@ func (d *documentContext) getDocumentConfig() DocumentConfig {
 
 // duplicate creates a copy of the context (for modification).
 // The duplicated context has disableSyntaxTree set to false to enable caching.
-// Java: DocumentContext.duplicate()
 func (d *documentContext) duplicate() *documentContext {
 	return &documentContext{
 		documentConfig:    d.documentConfig,

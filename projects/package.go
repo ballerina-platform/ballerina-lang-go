@@ -25,7 +25,6 @@ import (
 // Package represents a Ballerina package.
 // A package is a collection of modules that share a common identity (org/name/version).
 // Packages are immutable - use Modify() to create modified copies.
-// Java: io.ballerina.projects.Package
 type Package struct {
 	project    Project
 	packageCtx *packageContext
@@ -35,7 +34,6 @@ type Package struct {
 }
 
 // newPackage creates a Package from a packageContext and Project.
-// Java: Package.from(Project, PackageConfig, CompilationOptions)
 func newPackage(ctx *packageContext, project Project) *Package {
 	return &Package{
 		project:    project,
@@ -45,7 +43,6 @@ func newPackage(ctx *packageContext, project Project) *Package {
 
 // NewPackageFromConfig creates a Package from a PackageConfig, Project, and CompilationOptions.
 // This is the primary factory function for creating packages.
-// Java: Package.from(Project, PackageConfig, CompilationOptions)
 func NewPackageFromConfig(project Project, packageConfig PackageConfig, compilationOptions CompilationOptions) *Package {
 	ctx := newPackageContext(project, packageConfig, compilationOptions)
 	return newPackage(ctx, project)
@@ -109,7 +106,6 @@ func (p *Package) Modules() []*Module {
 // Module returns a module by ID.
 // Modules are lazily loaded and cached using sync.Map for thread safety.
 // Returns nil if the module is not found in this package.
-// Java: Package.module(ModuleId)
 func (p *Package) Module(moduleID ModuleID) *Module {
 	// Check cache first
 	if module, ok := p.moduleMap.Load(moduleID); ok {
@@ -131,7 +127,6 @@ func (p *Package) Module(moduleID ModuleID) *Module {
 // ModuleByName returns a module by name.
 // Modules are lazily loaded and cached.
 // Returns nil if no module with that name exists.
-// Java: Package.module(ModuleName)
 func (p *Package) ModuleByName(moduleName ModuleName) *Module {
 	moduleCtx := p.packageCtx.getModuleContextByName(moduleName)
 	if moduleCtx == nil {
@@ -144,7 +139,6 @@ func (p *Package) ModuleByName(moduleName ModuleName) *Module {
 
 // DefaultModule returns the default module of this package.
 // Every package has exactly one default module.
-// Java: Package.getDefaultModule()
 func (p *Package) DefaultModule() *Module {
 	defaultCtx := p.packageCtx.getDefaultModuleContext()
 	return p.Module(defaultCtx.getModuleID())
@@ -156,13 +150,11 @@ func (p *Package) ContainsModule(moduleID ModuleID) bool {
 }
 
 // CompilationOptions returns the compilation options for this package.
-// Java: Package.compilationOptions()
 func (p *Package) CompilationOptions() CompilationOptions {
 	return p.packageCtx.getCompilationOptions()
 }
 
 // BallerinaToml returns the Ballerina.toml document for this package, or nil if absent.
-// Java: Package.ballerinaToml() -> Optional<BallerinaToml>
 func (p *Package) BallerinaToml() *BallerinaToml {
 	ctx := p.packageCtx.getBallerinaTomlContext()
 	if ctx == nil {
@@ -173,7 +165,6 @@ func (p *Package) BallerinaToml() *BallerinaToml {
 
 // DependenciesToml returns the Dependencies.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when DependenciesToml type is available.
-// Java: Package.dependenciesToml() -> Optional<DependenciesToml>
 func (p *Package) DependenciesToml() interface{} {
 	// TODO(P2.x): Return *DependenciesToml once the type is implemented.
 	// Java lazy-loads from packageContext.dependenciesTomlContext()
@@ -182,7 +173,6 @@ func (p *Package) DependenciesToml() interface{} {
 
 // CloudToml returns the Cloud.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when CloudToml type is available.
-// Java: Package.cloudToml() -> Optional<CloudToml>
 func (p *Package) CloudToml() interface{} {
 	// TODO(P2.x): Return *CloudToml once the type is implemented.
 	// Java lazy-loads from packageContext.cloudTomlContext()
@@ -191,7 +181,6 @@ func (p *Package) CloudToml() interface{} {
 
 // CompilerPluginToml returns the CompilerPlugin.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when CompilerPluginToml type is available.
-// Java: Package.compilerPluginToml() -> Optional<CompilerPluginToml>
 func (p *Package) CompilerPluginToml() interface{} {
 	// TODO(P2.x): Return *CompilerPluginToml once the type is implemented.
 	// Java lazy-loads from packageContext.compilerPluginTomlContext()
@@ -200,7 +189,6 @@ func (p *Package) CompilerPluginToml() interface{} {
 
 // BalToolToml returns the BalTool.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when BalToolToml type is available.
-// Java: Package.balToolToml() -> Optional<BalToolToml>
 func (p *Package) BalToolToml() interface{} {
 	// TODO(P2.x): Return *BalToolToml once the type is implemented.
 	// Java lazy-loads from packageContext.balToolTomlContext()
@@ -209,7 +197,6 @@ func (p *Package) BalToolToml() interface{} {
 
 // ReadmeMd returns the README.md document for this package, or nil if absent.
 // TODO(P2.x): Implement when PackageReadmeMd type is available.
-// Java: Package.readmeMd() -> Optional<PackageReadmeMd>
 func (p *Package) ReadmeMd() interface{} {
 	// TODO(P2.x): Return *PackageReadmeMd once the type is implemented.
 	// Java lazy-loads from packageContext.readmeMdContext()
@@ -218,7 +205,6 @@ func (p *Package) ReadmeMd() interface{} {
 
 // ResourceIDs returns the IDs of all resources in this package's default module.
 // TODO(P2.x): Implement when resource support is added to packageContext.
-// Java: Package.resourceIds() -> Collection<DocumentId>
 func (p *Package) ResourceIDs() []DocumentID {
 	// TODO(P2.x): Delegate to packageContext.resourceIds()
 	return nil
@@ -226,7 +212,6 @@ func (p *Package) ResourceIDs() []DocumentID {
 
 // TestResourceIDs returns the IDs of all test resources in this package's default module.
 // TODO(P2.x): Implement when resource support is added to packageContext.
-// Java: Package.testResourceIds() -> Collection<DocumentId>
 func (p *Package) TestResourceIDs() []DocumentID {
 	// TODO(P2.x): Delegate to packageContext.testResourceIds()
 	return nil
@@ -234,7 +219,6 @@ func (p *Package) TestResourceIDs() []DocumentID {
 
 // Resource returns a resource by its DocumentID, or nil if not found.
 // TODO(P2.x): Implement when Resource type is available.
-// Java: Package.resource(DocumentId) -> Resource
 func (p *Package) Resource(documentID DocumentID) interface{} {
 	// TODO(P2.x): Return *Resource once the type is implemented.
 	// Java checks resourceIds first, then falls back to testResources.
@@ -242,20 +226,17 @@ func (p *Package) Resource(documentID DocumentID) interface{} {
 }
 
 // Compilation returns the compilation result for this package.
-// Java: Package.getCompilation() -> PackageCompilation
 func (p *Package) Compilation() *PackageCompilation {
 	return p.packageCtx.getPackageCompilation()
 }
 
 // Resolution returns the package resolution (dependency graph) for this package.
-// Java: Package.getResolution() -> PackageResolution
 func (p *Package) Resolution() *PackageResolution {
 	return p.packageCtx.getResolution()
 }
 
 // BuildToolResolution returns the build tool resolution for this package.
 // TODO(P3.x): Implement when BuildToolResolution type is available.
-// Java: Package.getBuildToolResolution() -> BuildToolResolution
 func (p *Package) BuildToolResolution() interface{} {
 	// TODO(P3.x): Return *BuildToolResolution once the type is implemented.
 	// Java delegates to packageContext.getBuildToolResolution()
@@ -265,7 +246,6 @@ func (p *Package) BuildToolResolution() interface{} {
 // RunCodeGenAndModifyPlugins runs CodeGenerator and CodeModifier tasks in engaged CompilerPlugins.
 // Returns a DiagnosticResult with diagnostics reported by the plugin tasks.
 // TODO(P3.x): Implement when compiler plugin infrastructure is available.
-// Java: Package.runCodeGenAndModifyPlugins() -> DiagnosticResult
 func (p *Package) RunCodeGenAndModifyPlugins() DiagnosticResult {
 	// TODO(P3.x): Implement with CompilerPluginManager, CodeGeneratorManager, CodeModifierManager
 	return NewDiagnosticResult(nil)
@@ -274,7 +254,6 @@ func (p *Package) RunCodeGenAndModifyPlugins() DiagnosticResult {
 // RunCodeGeneratorPlugins runs CodeGenerator tasks in engaged CompilerPlugins.
 // Returns nil. The real return type will be *CodeGeneratorResult.
 // TODO(P3.x): Implement when compiler plugin infrastructure is available.
-// Java: Package.runCodeGeneratorPlugins() -> CodeGeneratorResult
 func (p *Package) RunCodeGeneratorPlugins() interface{} {
 	// TODO(P3.x): Return *CodeGeneratorResult once the type is implemented.
 	// Java delegates to CompilerPluginManager -> CodeGeneratorManager
@@ -284,7 +263,6 @@ func (p *Package) RunCodeGeneratorPlugins() interface{} {
 // RunCodeModifierPlugins runs CodeModifier tasks in engaged CompilerPlugins.
 // Returns nil. The real return type will be *CodeModifierResult.
 // TODO(P3.x): Implement when compiler plugin infrastructure is available.
-// Java: Package.runCodeModifierPlugins() -> CodeModifierResult
 func (p *Package) RunCodeModifierPlugins() interface{} {
 	// TODO(P3.x): Return *CodeModifierResult once the type is implemented.
 	// Java delegates to CompilerPluginManager -> CodeModifierManager
@@ -300,14 +278,12 @@ func (p *Package) Modify() *PackageModifier {
 // duplicate creates a copy of the package for a new project.
 // The duplicated package shares immutable state (IDs, manifests, configs)
 // but has independent module instances and compilation caches.
-// Java: Package.duplicate(Project)
 func (p *Package) duplicate(project Project) *Package {
 	return newPackage(p.packageCtx.duplicate(project), project)
 }
 
 // PackageModifier handles immutable package modifications.
 // It follows the Builder pattern per project conventions.
-// Java: io.ballerina.projects.Package.Modifier
 type PackageModifier struct {
 	packageID            PackageID
 	packageManifest      PackageManifest
@@ -362,7 +338,6 @@ func (pm *PackageModifier) updateModules(newModuleContexts []*moduleContext) *Pa
 }
 
 // Apply creates a new Package with the modifications.
-// Java: Package.Modifier.apply()
 func (pm *PackageModifier) Apply() *Package {
 	// Create new packageContext with the updated module contexts
 	newPackageCtx := newPackageContextFromMaps(
@@ -378,7 +353,6 @@ func (pm *PackageModifier) Apply() *Package {
 	newPkg := newPackage(newPackageCtx, pm.project)
 
 	// Update project's current package reference
-	// Java: this.project.setCurrentPackage(new Package(newPackageContext, this.project));
 	if accessor, ok := pm.project.(baseProjectAccessor); ok {
 		accessor.Base().setCurrentPackage(newPkg)
 	}

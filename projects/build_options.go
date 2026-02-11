@@ -95,7 +95,6 @@ func (b BuildOptions) ShowDependencyDiagnostics() bool {
 }
 
 // CompilationOptions returns the underlying compilation options.
-// Java: BuildOptions.compilationOptions()
 func (b BuildOptions) CompilationOptions() CompilationOptions {
 	return b.compilationOptions
 }
@@ -210,6 +209,18 @@ func (b BuildOptions) DumpBIRFile() bool {
 	return b.compilationOptions.DumpBIRFile()
 }
 
+// DumpCFG returns whether CFG dumping is enabled.
+// Delegated to CompilationOptions.
+func (b BuildOptions) DumpCFG() bool {
+	return b.compilationOptions.DumpCFG()
+}
+
+// DumpCFGFormat returns the CFG dump format ("dot" for DOT format, empty for S-expression).
+// Delegated to CompilationOptions.
+func (b BuildOptions) DumpCFGFormat() string {
+	return b.compilationOptions.DumpCFGFormat()
+}
+
 // DumpGraph returns whether graph dumping is enabled.
 // Delegated to CompilationOptions.
 func (b BuildOptions) DumpGraph() bool {
@@ -241,7 +252,6 @@ func (b BuildOptions) TraceRecovery() bool {
 }
 
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
-// Java: BuildOptions.acceptTheirs(BuildOptions)
 func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 	builder := NewBuildOptionsBuilder()
 
@@ -309,7 +319,6 @@ func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 
 // BuildOptionsBuilder provides a builder pattern for BuildOptions.
 // It contains a CompilationOptionsBuilder to build the embedded CompilationOptions.
-// Java: io.ballerina.projects.BuildOptions.BuildOptionsBuilder
 type BuildOptionsBuilder struct {
 	// Build-specific fields
 	testReport                *bool
@@ -468,6 +477,20 @@ func (b *BuildOptionsBuilder) WithDumpBIRFile(value bool) *BuildOptionsBuilder {
 	return b
 }
 
+// WithDumpCFG sets whether CFG dumping is enabled.
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithDumpCFG(value bool) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithDumpCFG(value)
+	return b
+}
+
+// WithDumpCFGFormat sets the CFG dump format ("dot" for DOT format, empty for S-expression).
+// Delegates to CompilationOptionsBuilder.
+func (b *BuildOptionsBuilder) WithDumpCFGFormat(value string) *BuildOptionsBuilder {
+	b.compilationOptionsBuilder.WithDumpCFGFormat(value)
+	return b
+}
+
 // WithDumpGraph sets whether graph dumping is enabled.
 // Delegates to CompilationOptionsBuilder.
 func (b *BuildOptionsBuilder) WithDumpGraph(value bool) *BuildOptionsBuilder {
@@ -566,7 +589,6 @@ func newCompilationOptionsBuilderFrom(opts CompilationOptions) *CompilationOptio
 }
 
 // OptionName represents build option names.
-// Java: io.ballerina.projects.BuildOptions.OptionName
 type OptionName string
 
 const (

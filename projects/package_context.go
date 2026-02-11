@@ -26,7 +26,6 @@ import (
 
 // packageContext holds internal state for a Package.
 // It manages module contexts and package-level metadata.
-// Java: io.ballerina.projects.PackageContext
 type packageContext struct {
 	project              Project
 	packageID            PackageID
@@ -45,7 +44,6 @@ type packageContext struct {
 }
 
 // newPackageContext creates a packageContext from PackageConfig.
-// Java: PackageContext.from(Project, PackageConfig, CompilationOptions)
 func newPackageContext(project Project, packageConfig PackageConfig, compilationOptions CompilationOptions) *packageContext {
 	// Determine if syntax tree should be disabled from compilation options
 	disableSyntaxTree := compilationOptions.DisableSyntaxTree()
@@ -198,7 +196,6 @@ func (p *packageContext) getModuleContextMap() map[ModuleID]*moduleContext {
 
 // getPackageCompilation returns the cached PackageCompilation, creating it on first call.
 // Uses sync.Once for thread-safe lazy initialization.
-// Java: PackageContext.getPackageCompilation()
 func (p *packageContext) getPackageCompilation() *PackageCompilation {
 	p.compilationOnce.Do(func() {
 		p.packageCompilation = newPackageCompilation(p, p.compilationOptions)
@@ -208,7 +205,6 @@ func (p *packageContext) getPackageCompilation() *PackageCompilation {
 
 // getResolution returns the cached PackageResolution, creating it on first call.
 // Uses sync.Once for thread-safe lazy initialization.
-// Java: PackageContext.getResolution()
 func (p *packageContext) getResolution() *PackageResolution {
 	p.resolutionOnce.Do(func() {
 		p.packageResolution = newPackageResolution(p)
@@ -223,14 +219,12 @@ func (p *packageContext) containsModule(moduleID ModuleID) bool {
 }
 
 // getBallerinaTomlContext returns the Ballerina.toml context, or nil if not present.
-// Java: PackageContext.ballerinaTomlContext()
 func (p *packageContext) getBallerinaTomlContext() *tomlDocumentContext {
 	return p.ballerinaTomlContext
 }
 
 // duplicate creates a copy of the context.
 // The duplicated context has all module contexts duplicated as well.
-// Java: PackageContext.duplicate(Project)
 func (p *packageContext) duplicate(project Project) *packageContext {
 	// Duplicate module contexts
 	moduleContextMap := make(map[ModuleID]*moduleContext, len(p.moduleIDs))

@@ -28,7 +28,6 @@ import (
 )
 
 // SingleFileProject represents a Ballerina project consisting of a single .bal file.
-// Java: io.ballerina.projects.directory.SingleFileProject
 type SingleFileProject struct {
 	projects.BaseProject // embeds CurrentPackage() and Base()
 	sourceRoot           string
@@ -41,7 +40,6 @@ type SingleFileProject struct {
 var _ projects.Project = (*SingleFileProject)(nil)
 
 // LoadSingleFileProject loads a single .bal file as a project.
-// Java: io.ballerina.projects.directory.SingleFileProject.load
 func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
 	// Verify file exists and is a .bal file
 	absPath, err := filepath.Abs(path)
@@ -80,7 +78,6 @@ func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	packageName := strings.TrimSuffix(fileName, projects.BalFileExtension)
 
 	// Create temp directory for build outputs (matches Java behavior)
-	// Java: Files.createTempDirectory("ballerina-cache" + System.nanoTime())
 	tempDir, err := os.MkdirTemp("", "ballerina-cache*")
 	if err != nil {
 		// If temp dir creation fails, continue without it (Java ignores IOException)
@@ -152,26 +149,22 @@ func LoadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 }
 
 // SourceRoot returns the directory containing the single .bal file.
-// Java: SingleFileProject.sourceRoot()
 func (s *SingleFileProject) SourceRoot() string {
 	return s.sourceRoot
 }
 
 // Kind returns the project kind (SINGLE_FILE).
-// Java: SingleFileProject.kind()
 func (s *SingleFileProject) Kind() projects.ProjectKind {
 	return projects.ProjectKindSingleFile
 }
 
 // BuildOptions returns the build options for this project.
-// Java: SingleFileProject.buildOptions()
 func (s *SingleFileProject) BuildOptions() projects.BuildOptions {
 	return s.buildOptions
 }
 
 // TargetDir returns the target directory for build outputs.
 // For single file projects, this is a temp directory unless overridden by BuildOptions.
-// Java: SingleFileProject.targetDir()
 func (s *SingleFileProject) TargetDir() string {
 	if targetDir := s.buildOptions.TargetDir(); targetDir != "" {
 		return targetDir
@@ -181,7 +174,6 @@ func (s *SingleFileProject) TargetDir() string {
 
 // DocumentID returns the DocumentID for the given file path, if it exists in this project.
 // For single file projects, only the single document path is valid.
-// Java: SingleFileProject.documentId(Path)
 func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bool) {
 	if s.CurrentPackage() == nil {
 		return projects.DocumentID{}, false
@@ -215,7 +207,6 @@ func (s *SingleFileProject) DocumentID(filePath string) (projects.DocumentID, bo
 
 // DocumentPath returns the file path for the given DocumentID.
 // For single file projects, returns the document path if the ID matches.
-// Java: SingleFileProject.documentPath(DocumentId)
 func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string {
 	if s.CurrentPackage() == nil {
 		return ""
@@ -239,7 +230,6 @@ func (s *SingleFileProject) DocumentPath(documentID projects.DocumentID) string 
 
 // Save persists project changes to the filesystem.
 // For single file projects, this is a no-op as changes are typically not persisted.
-// Java: SingleFileProject.save()
 func (s *SingleFileProject) Save() error {
 	// Single file projects don't need save functionality
 	return nil
@@ -248,10 +238,8 @@ func (s *SingleFileProject) Save() error {
 // Duplicate creates a deep copy of the single file project.
 // The duplicated project shares immutable state (IDs, descriptors, configs)
 // but has independent compilation caches and lazy-loaded fields.
-// Java: SingleFileProject.duplicate()
 func (s *SingleFileProject) Duplicate() projects.Project {
 	// Create duplicate build options using AcceptTheirs pattern (matches Java)
-	// Java: BuildOptions.builder().build().acceptTheirs(buildOptions())
 	duplicateBuildOptions := projects.NewBuildOptions().AcceptTheirs(s.buildOptions)
 
 	// Create new temp directory for the duplicated project

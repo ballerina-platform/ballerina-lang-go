@@ -20,7 +20,6 @@ package projects
 
 // Project interface represents a Ballerina project.
 // This provides core project functionality for all project types.
-// Java: io.ballerina.projects.Project
 type Project interface {
 	// SourceRoot returns the project source directory path.
 	SourceRoot() string
@@ -32,33 +31,27 @@ type Project interface {
 	BuildOptions() BuildOptions
 
 	// CurrentPackage returns the current package of this project.
-	// Java: Project.currentPackage()
 	CurrentPackage() *Package
 
 	// TargetDir returns the target directory for build outputs.
 	// For build projects, this is sourceRoot/target unless overridden by BuildOptions.
-	// Java: Project.targetDir()
 	TargetDir() string
 
 	// DocumentID returns the DocumentID for the given file path, if it exists in this project.
 	// Returns the DocumentID and true if found, or a zero DocumentID and false if not found.
-	// Java: Project.documentId(Path)
 	DocumentID(filePath string) (DocumentID, bool)
 
 	// DocumentPath returns the file path for the given DocumentID.
 	// Returns an empty string if the document is not found.
-	// Java: Project.documentPath(DocumentId)
 	DocumentPath(documentID DocumentID) string
 
 	// Save persists any project changes to the filesystem.
 	// Returns an error if the save operation fails.
-	// Java: Project.save()
 	Save() error
 
 	// Duplicate creates a deep copy of the project.
 	// The duplicated project shares immutable state (IDs, descriptors, configs)
 	// but has independent compilation caches and lazy-loaded fields.
-	// Java: Project.duplicate()
 	Duplicate() Project
 }
 

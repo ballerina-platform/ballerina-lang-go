@@ -19,7 +19,6 @@
 package projects
 
 // PackageLockingMode represents the locking mode for package dependencies.
-// Java: io.ballerina.projects.environment.PackageLockingMode
 type PackageLockingMode int
 
 const (
@@ -49,7 +48,6 @@ func (m PackageLockingMode) String() string {
 
 // CompilationOptions holds compilation-specific options.
 // BuildOptions contains a CompilationOptions instance and delegates compilation-related methods to it.
-// Java: io.ballerina.projects.CompilationOptions
 type CompilationOptions struct {
 	offlineBuild                    *bool
 	experimental                    *bool
@@ -57,6 +55,8 @@ type CompilationOptions struct {
 	dumpAST                         *bool
 	dumpBIR                         *bool
 	dumpBIRFile                     *bool
+	dumpCFG                         *bool
+	dumpCFGFormat                   string // "dot" for DOT format, empty for S-expression
 	dumpGraph                       *bool
 	dumpRawGraphs                   *bool
 	cloud                           string
@@ -109,6 +109,16 @@ func (c CompilationOptions) DumpBIR() bool {
 // DumpBIRFile returns whether BIR file dumping is enabled.
 func (c CompilationOptions) DumpBIRFile() bool {
 	return toBoolDefaultIfNull(c.dumpBIRFile)
+}
+
+// DumpCFG returns whether CFG dumping is enabled.
+func (c CompilationOptions) DumpCFG() bool {
+	return toBoolDefaultIfNull(c.dumpCFG)
+}
+
+// DumpCFGFormat returns the CFG dump format ("dot" for DOT format, empty for S-expression).
+func (c CompilationOptions) DumpCFGFormat() string {
+	return c.dumpCFGFormat
 }
 
 // DumpGraph returns whether graph dumping is enabled.
@@ -199,7 +209,6 @@ func (c CompilationOptions) LockingMode() PackageLockingMode {
 }
 
 // AcceptTheirs merges the given compilation options by favoring theirs if there are conflicts.
-// Java: CompilationOptions.acceptTheirs(CompilationOptions)
 func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationOptions {
 	builder := NewCompilationOptionsBuilder()
 
@@ -238,6 +247,18 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		builder.WithDumpBIRFile(*theirs.dumpBIRFile)
 	} else if c.dumpBIRFile != nil {
 		builder.WithDumpBIRFile(*c.dumpBIRFile)
+	}
+
+	if theirs.dumpCFG != nil {
+		builder.WithDumpCFG(*theirs.dumpCFG)
+	} else if c.dumpCFG != nil {
+		builder.WithDumpCFG(*c.dumpCFG)
+	}
+
+	if theirs.dumpCFGFormat != "" {
+		builder.WithDumpCFGFormat(theirs.dumpCFGFormat)
+	} else {
+		builder.WithDumpCFGFormat(c.dumpCFGFormat)
 	}
 
 	if theirs.dumpGraph != nil {
@@ -350,7 +371,6 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 }
 
 // CompilationOptionsBuilder provides a builder pattern for CompilationOptions.
-// Java: io.ballerina.projects.CompilationOptions.CompilationOptionsBuilder
 type CompilationOptionsBuilder struct {
 	options CompilationOptions
 }
@@ -395,6 +415,18 @@ func (b *CompilationOptionsBuilder) WithDumpBIR(value bool) *CompilationOptionsB
 // WithDumpBIRFile sets BIR file dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpBIRFile(value bool) *CompilationOptionsBuilder {
 	b.options.dumpBIRFile = &value
+	return b
+}
+
+// WithDumpCFG sets CFG dumping flag.
+func (b *CompilationOptionsBuilder) WithDumpCFG(value bool) *CompilationOptionsBuilder {
+	b.options.dumpCFG = &value
+	return b
+}
+
+// WithDumpCFGFormat sets CFG dump format ("dot" for DOT format, empty for S-expression).
+func (b *CompilationOptionsBuilder) WithDumpCFGFormat(value string) *CompilationOptionsBuilder {
+	b.options.dumpCFGFormat = value
 	return b
 }
 
