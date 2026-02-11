@@ -50,8 +50,7 @@ type FunctionSymbol interface {
 // GenericFunctionSymbol represents functions with [@typeParam] types
 type GenericFunctionSymbol interface {
 	FunctionSymbol
-	// FIXME: this shouldn't care about the return type
-	Monomorphize(args []semtypes.SemType, returnTy semtypes.SemType) SymbolRef
+	Monomorphize(args []semtypes.SemType) SymbolRef
 	Space() *SymbolSpace
 }
 
@@ -136,7 +135,7 @@ type (
 
 	genericFunctionSymbol struct {
 		space         *SymbolSpace
-		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) SymbolRef
+		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
 	}
 
 	FunctionSignature struct {
@@ -326,7 +325,7 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	}
 }
 
-func NewGenericFunctionSymbol(space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) SymbolRef) GenericFunctionSymbol {
+func NewGenericFunctionSymbol(space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
 	return &genericFunctionSymbol{space: space, monomorphizer: monomorphizer}
 }
 
@@ -358,8 +357,8 @@ func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
-func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType, ret semtypes.SemType) SymbolRef {
-	return s.monomorphizer(s, args, ret)
+func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType) SymbolRef {
+	return s.monomorphizer(s, args)
 }
 
 func (s *genericFunctionSymbol) Space() *SymbolSpace {

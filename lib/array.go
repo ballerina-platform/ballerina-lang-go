@@ -48,12 +48,12 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	}
 }
 
-func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) model.SymbolRef {
+func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
 	var mut sync.Mutex
 	monomorphized := make(map[semtypes.SemType]model.SymbolRef)
 	nextIndex := 0
 
-	return func(s model.GenericFunctionSymbol, args []semtypes.SemType, ret semtypes.SemType) model.SymbolRef {
+	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
 
 		if len(args) == 0 {
 			ctx.SemanticError("push() requires at least 1 argument", nil)

@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"maps"
 )
 
 type symbolResolver interface {
@@ -49,8 +50,10 @@ type (
 	}
 )
 
-var _ symbolResolver = &moduleSymbolResolver{}
-var _ symbolResolver = &blockSymbolResolver{}
+var (
+	_ symbolResolver = &moduleSymbolResolver{}
+	_ symbolResolver = &blockSymbolResolver{}
+)
 
 func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID, importedSymbols map[string]model.ExportedSymbolSpace) *moduleSymbolResolver {
 	if importedSymbols == nil {
@@ -199,8 +202,7 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	ast.Walk(functionResolver, function)
 }
 
-// This is a tempary hack since we can only have one import io
-func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
@@ -217,15 +219,12 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[str
 		}
 	}
 
-	for key, symbols := range getImplicitImports(ctx) {
-		result[key] = symbols
-	}
+	maps.Copy(result, implicitImports)
 
 	return result
 }
 
-// TODO: we should avoid resolving these per package given they are the same
-func getImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
+func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 	result["lang.array"] = lib.GetArraySymbols(ctx)
 	return result
@@ -438,7 +437,6 @@ func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescript
 			internalError(resolver, "Unsupported type descriptor", td.GetPosition())
 		}
 	}
-	return
 }
 
 func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
@@ -490,5 +488,4 @@ func semanticError[T symbolResolver](resolver T, message string, pos diagnostics
 // We can't determine if a symbol is actually a method or not without resolivng the expression
 // Also we can't really resolve the actual method until we know the type of reciever
 // Thus we need to defer the resolution of the method until type resolution
-type defferedMethodSymbol struct {
-}
+type defferedMethodSymbol struct{}

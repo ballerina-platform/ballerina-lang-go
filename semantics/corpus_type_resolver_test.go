@@ -63,7 +63,7 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 	pkg := ast.ToPackage(compilationUnit)
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)

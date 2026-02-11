@@ -264,7 +264,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 4: Resolve symbols
-	importedSymbols := semantics.ResolveImports(cx, pkg)
+	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types

@@ -67,7 +67,7 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
@@ -213,7 +213,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution

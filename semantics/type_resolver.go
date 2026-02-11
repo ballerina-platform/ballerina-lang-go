@@ -780,7 +780,7 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 	}
 	var funcSymbol model.FunctionSymbol
 	if genericFn, ok := symbol.(model.GenericFunctionSymbol); ok {
-		symbolRef = genericFn.Monomorphize(argTys, nil)
+		symbolRef = genericFn.Monomorphize(argTys)
 		funcSymbol, _ = t.ctx.GetSymbol(&symbolRef).(model.FunctionSymbol)
 	} else if fnSym, ok := symbol.(model.FunctionSymbol); ok {
 		funcSymbol = fnSym

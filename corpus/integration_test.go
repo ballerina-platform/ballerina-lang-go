@@ -186,7 +186,7 @@ func runTest(balFile string) testResult {
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 		pkg := ast.ToPackage(compilationUnit)
 		// Resolve symbols (imports) before type resolution
-		importedSymbols := semantics.ResolveImports(cx, pkg)
+		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
 		semantics.ResolveSymbols(cx, pkg, importedSymbols)
 		// Add type resolution step
 		typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
