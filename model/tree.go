@@ -919,6 +919,15 @@ type ErrorConstructorExpressionNode interface {
 	GetNamedArgs() []NamedArgNode
 }
 
+type TypeConversionNode interface {
+	ExpressionNode
+	AnnotatableNode
+	GetExpression() ExpressionNode
+	SetExpression(expression ExpressionNode)
+	GetTypeDescriptor() TypeDescriptor
+	SetTypeDescriptor(typeDescriptor TypeDescriptor)
+}
+
 type DynamicArgNode = ExpressionNode
 
 // Statement Interfaces

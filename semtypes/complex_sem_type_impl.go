@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "fmt"
+
 type complexSemTypeImpl struct {
 	all             int
 	some            int
@@ -34,4 +36,10 @@ func (this *complexSemTypeImpl) Some() int {
 
 func (this *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
 	return this.subtypeDataList
+}
+
+func (c *complexSemTypeImpl) String() string {
+	allTypes := bitsetToTypeNames(c.all)
+	someTypes := bitsetToTypeNames(c.some)
+	return fmt.Sprintf("((%s), (%s))", allTypes, someTypes)
 }

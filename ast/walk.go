@@ -448,10 +448,15 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.TypeData)
 
 	case *BLangTypeConversionExpr:
-		// No children
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+		if node.TypeDescriptor != nil {
+			Walk(v, node.TypeDescriptor.(BLangNode))
+		}
 
 	case *BLangCommitExpr:
-		// Leaf node
+		panic("unimplemented")
 
 	case *BLangCollectContextInvocation:
 		Walk(v, &node.Invocation)

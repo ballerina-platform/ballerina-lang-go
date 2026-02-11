@@ -89,6 +89,8 @@ type (
 
 	BLangTypeConversionExpr struct {
 		BLangExpressionBase
+		Expression     BLangExpression
+		TypeDescriptor model.TypeDescriptor
 	}
 
 	BLangValueExpressionBase struct {
@@ -307,6 +309,8 @@ var (
 	_ model.IndexBasedAccessNode                                   = &BLangIndexBasedAccess{}
 	_ model.ListConstructorExprNode                                = &BLangListConstructorExpr{}
 	_ model.ErrorConstructorExpressionNode                         = &BLangErrorConstructorExpr{}
+	_ model.TypeConversionNode                                     = &BLangTypeConversionExpr{}
+	_ BLangExpression                                              = &BLangTypeConversionExpr{}
 	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
 	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
 )
@@ -340,6 +344,7 @@ var (
 	_ BLangNode = &BLangTypedescExpr{}
 	_ BLangNode = &BLangIndexBasedAccess{}
 	_ BLangNode = &BLangListConstructorExpr{}
+	_ BLangNode = &BLangTypeConversionExpr{}
 )
 
 var (
@@ -808,6 +813,46 @@ func (this *BLangInvocation) GetKind() model.NodeKind {
 
 func (this *BLangTypeConversionExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_CONVERSION_EXPR
+}
+
+func (this *BLangTypeConversionExpr) GetExpression() model.ExpressionNode {
+	return this.Expression
+}
+
+func (this *BLangTypeConversionExpr) SetExpression(expression model.ExpressionNode) {
+	if expr, ok := expression.(BLangExpression); ok {
+		this.Expression = expr
+	} else {
+		panic("expression is not a BLangExpression")
+	}
+}
+
+func (this *BLangTypeConversionExpr) GetTypeDescriptor() model.TypeDescriptor {
+	return this.TypeDescriptor
+}
+
+func (this *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	this.TypeDescriptor = typeDescriptor
+}
+
+func (this *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
+	panic("not implemented")
+}
+
+func (this *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
+	panic("not implemented")
+}
+
+func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	panic("not implemented")
+}
+
+func (this *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+	panic("not implemented")
+}
+
+func (this *BLangTypeConversionExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }
 
 func (this *BLangNumericLiteral) GetKind() model.NodeKind {

@@ -1,0 +1,32 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    %1 = <((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())>(%2)
+    %3 = println(%2) -> bb1;
+  }
+  bb1 {
+    %4 = ConstantLoad <nil>
+    %4 = <((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())>(%5)
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    %7 = ConstantLoad true
+    %7 = <((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())>(%8)
+    %9 = println(%8) -> bb3;
+  }
+  bb3 {
+    %10 = ConstantLoad 2
+    %10 = <((INT), ())>(%11)
+    %12 = println(%11) -> bb4;
+  }
+  bb4 {
+    %13 = ConstantLoad false
+    %13 = <((BOOLEAN), ())>(%14)
+    %15 = println(%14) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

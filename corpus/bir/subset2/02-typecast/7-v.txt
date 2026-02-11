@@ -1,0 +1,83 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad true
+    %2 = ConstantLoad 17
+    %3 = ConstantLoad false
+    %4 = ifElse(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = println(%4) -> bb2;
+  }
+  bb2 {
+    %6 = ConstantLoad false
+    %7 = ConstantLoad 32
+    %8 = ConstantLoad true
+    %9 = ifElse(%6,%7,%8) -> bb3;
+  }
+  bb3 {
+    %10 = println(%9) -> bb4;
+  }
+  bb4 {
+    %11 = ConstantLoad true
+    %12 = ConstantLoad 32
+    %13 = ConstantLoad true
+    %14 = ifElse(%11,%12,%13) -> bb5;
+  }
+  bb5 {
+    %14 = <((INT), ())>(%15)
+    %16 = println(%15) -> bb6;
+  }
+  bb6 {
+    %17 = ConstantLoad true
+    %18 = ConstantLoad 42
+    %19 = ConstantLoad false
+    %20 = ifElse(%17,%18,%19) -> bb7;
+  }
+  bb7 {
+    %20 = <((INT), ())>(%21)
+    x = %21;
+    %23 = println(x) -> bb8;
+  }
+  bb8 {
+    %24 = ConstantLoad false
+    %25 = ConstantLoad 21
+    %26 = ConstantLoad true
+    %27 = ifElse(%24,%25,%26) -> bb9;
+  }
+  bb9 {
+    %27 = <((BOOLEAN), ())>(%28)
+    %29 = println(%28) -> bb10;
+  }
+  bb10 {
+    %30 = ConstantLoad false
+    %31 = ConstantLoad 21
+    %32 = ConstantLoad false
+    %33 = ifElse(%30,%31,%32) -> bb11;
+  }
+  bb11 {
+    %33 = <((BOOLEAN), ())>(%34)
+    b = %34;
+    %36 = println(b) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}
+ifElse<NIL>{
+  bb0 {
+    t ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = n;
+    return;
+  }
+  bb2 {
+    %0 = b;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}

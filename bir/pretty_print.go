@@ -18,6 +18,7 @@ package bir
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 	"strings"
 )
@@ -136,9 +137,15 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintFieldAccess(instruction.(*FieldAccess))
 	case *NewArray:
 		return p.PrintNewArray(instruction.(*NewArray))
+	case *TypeCast:
+		return p.PrintTypeCast(instruction.(*TypeCast))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
+}
+
+func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
+	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), cast.Type.String(), p.PrintOperand(*cast.RhsOp))
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
@@ -237,7 +244,7 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 	sb := strings.Builder{}
 	sb.WriteString(globalVar.Name.Value())
 	sb.WriteString("  ")
-	sb.WriteString(p.PrintType(globalVar.Type))
+	sb.WriteString(p.PrintSemType(globalVar.Type))
 	return sb.String()
 }
 
@@ -248,6 +255,13 @@ func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
 	sb := strings.Builder{}
 	sb.WriteString(string(typeNode.GetTypeKind()))
 	return sb.String()
+}
+
+func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
+	if typeNode == nil {
+		return "<UNKNOWN>"
+	}
+	return typeNode.String()
 }
 
 func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {
