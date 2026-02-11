@@ -23,7 +23,6 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
-	"math/bits"
 	"reflect"
 )
 
@@ -512,7 +511,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 	exprTy := expr.Expression.GetTypeData().Type
 	targetType := expr.TypeDescriptor.GetDeterminedType()
 	intersection := semtypes.Intersect(exprTy, targetType)
-	if semtypes.IsEmpty(a.tyCtx(), intersection) && !potentialNumericConversions(a, exprTy, targetType) {
+	if semtypes.IsEmpty(a.tyCtx(), intersection) && !hasPotentialNumericConversions(exprTy, targetType) {
 		a.semanticErr("impossible type conversion, intersection is empty")
 		return
 	}
@@ -523,11 +522,8 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 	validateResolvedType(a, expr, expectedType)
 }
 
-func potentialNumericConversions[A analyzer](a A, exprTy, targetType semtypes.SemType) bool {
-	if semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent() {
-		return true
-	}
-	return false
+func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
+	return semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent()
 }
 
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {
@@ -645,52 +641,11 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				return
 			}
 		}
-	} else {
-		// For arithmetic and relational operators
-		lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
-		rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-		numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
-		numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
-
-		if numLhsBits != 1 || numRhsBits != 1 {
-			a.semanticErr(fmt.Sprintf("union types not supported for %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
-
-		if isMultipcativeExpr(binaryExpr) {
-			if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect numeric types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isAdditiveExpr(binaryExpr) {
-			supportedTypes := semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
-			ctx := a.tyCtx()
-			if !semtypes.IsSubtype(ctx, &lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, &rhsBasicTy, supportedTypes) {
-				a.semanticErr(fmt.Sprintf("expect numeric or string types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-			if lhsBasicTy != rhsBasicTy {
-				a.unimplementedErr("type coercion not supported")
-			}
-		} else if isRelationalExpr(binaryExpr) {
-			if !semtypes.Comparable(a.tyCtx(), &lhsBasicTy, &rhsBasicTy) {
-				a.semanticErr(fmt.Sprintf("expect comparable types for %s", string(binaryExpr.GetOperatorKind())))
-				return
-			}
-		} else if isBitWiseExpr(binaryExpr) {
-			// TODO: this needs to properly implemet narrowing based on operand types
-			// Bitwise operators: &, |, ^
-			// Result type is always integer
-			analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
-		} else {
-			a.unimplementedErr(fmt.Sprintf("unsupported operator: %s", string(binaryExpr.GetOperatorKind())))
-			return
-		}
+	} else if isBitWiseExpr(binaryExpr) {
+		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 	}
 
+	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
 }
@@ -706,21 +661,21 @@ func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy,
 	var resultTy semtypes.SemType
 	switch binaryExpr.GetOperatorKind() {
 	case model.OperatorKind_BITWISE_AND:
+		resultTy = &semtypes.INT
 		for _, ty := range bitWiseOpLookOrder {
 			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
 				resultTy = ty
 				break
 			}
 		}
-		resultTy = &semtypes.INT
 	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		resultTy = &semtypes.INT
 		for _, ty := range bitWiseOpLookOrder {
 			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
 				resultTy = ty
 				break
 			}
 		}
-		resultTy = &semtypes.INT
 	default:
 		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
 		return
@@ -808,7 +763,6 @@ type assignmentNode interface {
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
-
 	variable := assignment.GetVariable().(ast.BLangExpression)
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()

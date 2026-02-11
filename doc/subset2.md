@@ -68,4 +68,4 @@
 
 ## numeric-literal
 
--Currently [`HexIntLiterals`](https://ballerina.io/spec/lang/master/#HexIntLiteral) not supported
+- Currently [`HexIntLiterals`](https://ballerina.io/spec/lang/master/#HexIntLiteral) not supported

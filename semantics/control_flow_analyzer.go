@@ -72,7 +72,7 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	// FIXME: clean this up when we have proper error handling
-	panicChan := make(chan interface{}, len(pkg.Functions))
+	var panicErr any = nil
 	for _, fn := range pkg.Functions {
 		wg.Add(1)
 		fn := fn // Capture loop variable
@@ -80,7 +80,7 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					panicChan <- r
+					panicErr = r
 				}
 			}()
 			fnCfg := analyzeFunction(ctx, &fn)
@@ -90,11 +90,8 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 		}()
 	}
 	wg.Wait()
-	close(panicChan)
-
-	// Re-panic with the first error we encountered
-	for p := range panicChan {
-		panic(p)
+	if panicErr != nil {
+		panic(panicErr)
 	}
 	return cfg
 }
@@ -384,6 +381,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 	if !bodyEffect.isTerminal() {
 		analyzer.addEdge(bodyEnd, loopHead)
 	}
+	// Pop the loop from the stack now that we're done analyzing it
+	analyzer.loops = analyzer.loops[:len(analyzer.loops)-1]
 	return continueEffect(loopEnd)
 }
 

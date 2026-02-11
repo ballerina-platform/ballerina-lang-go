@@ -199,7 +199,6 @@ func (a *uninitVarAnalyzer) mergePredecessors(bb *basicBlock) *varInitState {
 	return result
 }
 
-// statesEqual checks if two states are equal
 func statesEqual(s1, s2 *varInitState) bool {
 	if len(s1.initVars) != len(s2.initVars) {
 		return false
@@ -248,7 +247,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 		checker := &varRefChecker{analyzer: a, state: state}
 		ast.Walk(checker, n)
 	default:
-		a.ctx.InternalError("unexpcted node", node.GetPosition())
+		a.ctx.InternalError("unexpected node", node.GetPosition())
 	}
 }
 
@@ -322,7 +321,8 @@ func (v *varRefChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 // analyzeUninitializedVars is the public entry point for uninitialized variable analysis
 func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	panicChan := make(chan any, len(pkg.Functions))
+	// TODO: get rid of this when we have properly implemented error handling
+	var panicErr any = nil
 
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
@@ -331,7 +331,7 @@ func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackag
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					panicChan <- r
+					panicErr = r
 				}
 			}()
 			analyzeFunctionUninitializedVars(ctx, f, cfg)
@@ -339,10 +339,8 @@ func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackag
 	}
 
 	wg.Wait()
-	close(panicChan)
-
-	for p := range panicChan {
-		panic(p)
+	if panicErr != nil {
+		panic(panicErr)
 	}
 }
 

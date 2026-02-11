@@ -54,9 +54,9 @@ def print_graphviz_install_help():
 
 def find_project_root():
     """Find the project root directory (where go.mod is located)."""
-    # Script is in tools/ directory, project root is parent
+    # Script is in compiler-tools/cfgviz/ directory, project root is two levels up
     script_dir = Path(__file__).resolve().parent
-    project_root = script_dir.parent
+    project_root = script_dir.parent.parent
 
     # Verify go.mod exists
     if not (project_root / "go.mod").exists():
