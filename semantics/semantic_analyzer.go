@@ -923,7 +923,7 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 		default:
 			a.unimplementedErr("unsupporeted foreach collection")
 		}
-		if !semtypes.IsSubtype(a.tyCtx(), variableType, expectedValueType) {
+		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
 		}
 	}

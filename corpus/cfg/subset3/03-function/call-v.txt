@@ -17,7 +17,7 @@
     (var-def
       (variable x (type
         (array-type
-          (value-type any) ())) (expr
+          (value-type any) dimensions: 1 ([]))) (expr
         (list-constructor-expr))))
     (expression-stmt
       (invocation lang.array push (
@@ -35,7 +35,7 @@
     (var-def
       (variable x (type
         (array-type
-          (value-type any) ())) (expr
+          (value-type any) dimensions: 1 ([]))) (expr
         (list-constructor-expr))))
     (expression-stmt
       (invocation lang.array push (

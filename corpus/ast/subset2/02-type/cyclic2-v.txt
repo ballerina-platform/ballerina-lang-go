@@ -3,7 +3,7 @@
   (import-package ballerina io (as io))
   (type-definition A
     (array-type
-      (user-defined-type A) ()))
+      (user-defined-type A) dimensions: 1 ([])))
   (function main () (
     (value-type null))
     (block-function-body

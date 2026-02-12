@@ -4,7 +4,7 @@
   (type-definition A
     (union-type
       (array-type
-        (user-defined-type A) ())
+        (user-defined-type A) dimensions: 1 ([]))
       (value-type null)))
   (function main () (
     (value-type null))
