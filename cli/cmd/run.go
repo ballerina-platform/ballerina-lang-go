@@ -31,6 +31,7 @@ import (
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
+	_ "ballerina-lang-go/lib/rt"
 
 	"github.com/spf13/cobra"
 )

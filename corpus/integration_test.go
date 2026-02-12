@@ -32,6 +32,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	_ "ballerina-lang-go/lib/rt"
 )
 
 const (

@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+package rt
 
-// Import all standard libraries to trigger their init() functions.
 import (
-	_ "ballerina-lang-go/stdlibs/array"
-	_ "ballerina-lang-go/stdlibs/io"
+	_ "ballerina-lang-go/lib/array/runtime"
+	_ "ballerina-lang-go/lib/io/runtime"
 )
+

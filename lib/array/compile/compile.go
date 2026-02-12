@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package lib
+package compile
 
 import (
+	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -41,7 +42,7 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	}
 
 	lengthSymbol := model.NewFunctionSymbol("length", lenghtSignature, true)
-	ctx.SetSymbolType(lengthSymbol, functionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
+	ctx.SetSymbolType(lengthSymbol, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
 	space.AddSymbol("length", lengthSymbol)
 	return model.ExportedSymbolSpace{
 		Main: space,
@@ -77,7 +78,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 			ReturnType:    &semtypes.NIL,
 		}
 		pushSymbol := model.NewFunctionSymbol("push", pushSignature, true)
-		ctx.SetSymbolType(pushSymbol, functionSignatureToSemType(ctx.GetTypeEnv(), &pushSignature))
+		ctx.SetSymbolType(pushSymbol, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &pushSignature))
 		symbolName := fmt.Sprintf("push_%d", nextIndex)
 		nextIndex++
 		space := s.Space()
@@ -87,3 +88,4 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		return ref
 	}
 }
+
