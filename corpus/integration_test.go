@@ -185,7 +185,7 @@ func runTest(balFile string) testResult {
 		printlnMu.Unlock()
 
 		rt := runtime.NewRuntime()
-		rt.Registry.RegisterExternFunction(externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
+		runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
 		interpretErr := rt.Interpret(*birPkg)
 		if interpretErr != nil {
 			panicOccurred = true

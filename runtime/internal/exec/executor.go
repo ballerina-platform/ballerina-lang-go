@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/runtime/internal/values"
 	"ballerina-lang-go/semtypes"
 	"fmt"
 	"math/big"
@@ -213,11 +214,6 @@ func defaultValueForType(t semtypes.SemType) any {
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
-		return &never{}
+		return &values.Never{}
 	}
-}
-
-// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
-// this should panic.
-type never struct {
 }

@@ -14,33 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package io
+package main
 
+// Import all standard libraries to trigger their init() functions.
 import (
-	"ballerina-lang-go/runtime"
-	"fmt"
-	"os"
+	_ "ballerina-lang-go/stdlibs/io"
 )
-
-const (
-	orgName    = "ballerina"
-	moduleName = "io"
-	funcName   = "println"
-)
-
-func Println(values ...any) {
-	fmt.Fprintln(os.Stdout, values...)
-}
-
-func printlnExtern(args []any) (any, error) {
-	Println(args...)
-	return nil, nil
-}
-
-func initIOModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, funcName, printlnExtern)
-}
-
-func init() {
-	runtime.RegisterModuleInitializer(initIOModule)
-}
