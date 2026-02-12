@@ -4,7 +4,7 @@ main<NIL>{
   bb0 {
     %1 = ConstantLoad 12.0
     f = %1;
-    f = <((INT), ())>(%3)
+    %3 = <((INT), ())>(f)
     i = %3;
     %5 = println(i) -> bb1;
   }
