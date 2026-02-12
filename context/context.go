@@ -17,11 +17,16 @@
 package context
 
 import (
+	"bufio"
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
-	"strconv"
 )
 
 // TODO: consider moving type resolution env in to this
@@ -30,6 +35,7 @@ type CompilerContext struct {
 	packageInterner *model.PackageIDInterner
 	symbolSpaces    []*model.SymbolSpace
 	typeEnv         semtypes.Env
+	diagnostics     []diagnostics.Diagnostic
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -113,18 +119,17 @@ func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Locat
 }
 
 func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
-	if pos != nil {
-		panic(fmt.Sprintf("Semantic error: %s at %s", message, pos))
-	}
-	panic(fmt.Sprintf("Semantic error: %s", message))
+	code := "SEMANTIC_ERROR"
+	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error)
+	diagnostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
 }
 
-// TODO: implement these properly
 func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
-	if pos != nil {
-		panic(fmt.Sprintf("Syntax error: %s at %s", message, pos))
-	}
-	panic(fmt.Sprintf("Syntax error: %s", message))
+	code := "SYNTAX_ERROR"
+	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error)
+	diagnostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
 }
 
 func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
@@ -132,6 +137,122 @@ func (this *CompilerContext) InternalError(message string, pos diagnostics.Locat
 		panic(fmt.Sprintf("Internal error: %s at %s", message, pos))
 	}
 	panic(fmt.Sprintf("Internal error: %s", message))
+}
+
+func (this *CompilerContext) GetDiagnostics() []diagnostics.Diagnostic {
+	return this.diagnostics
+}
+
+func (this *CompilerContext) HasDiagnostics() bool {
+	return len(this.diagnostics) > 0
+}
+
+func (this *CompilerContext) PrintDiagnostics(w io.Writer) {
+	if this.HasDiagnostics() {
+		fmt.Fprintln(w, "\nCompilation failed with the following errors:")
+		for _, diagnostic := range this.diagnostics {
+			this.printDiagnostic(w, diagnostic)
+		}
+	}
+}
+
+func (this *CompilerContext) printDiagnostic(w io.Writer, d diagnostics.Diagnostic) {
+	reset := "\033[0m"
+	red := "\033[31m"
+	yellow := "\033[33m"
+	cyan := "\033[36m"
+
+	bold := "\033[1m"
+
+	severity := d.DiagnosticInfo().Severity()
+	severityStr := strings.ToLower(severity.String())
+	severityColor := red
+	if severity == diagnostics.Warning {
+		severityColor = yellow
+	}
+
+	code := d.DiagnosticInfo().Code()
+	codeStr := ""
+	if code != "" {
+		codeStr = fmt.Sprintf("[%s]", code)
+	}
+
+	// severity[CODE]: MESSAGE
+	fmt.Fprintf(w, "%s%s%s%s%s: %s%s%s\n",
+		bold, severityColor, severityStr, codeStr, reset,
+		bold, d.Message(), reset,
+	)
+
+	location := d.Location()
+	if location == nil {
+		fmt.Fprintln(w)
+		return
+	}
+
+	lineRange := location.LineRange()
+	fileName := lineRange.FileName()
+	startLine := lineRange.StartLine().Line()
+	startCol := lineRange.StartLine().Offset()
+
+	lineNumStr := fmt.Sprintf("%d", startLine+1)
+	numWidth := len(lineNumStr)
+
+	// --> FILE:LINE:COL
+	fmt.Fprintf(w, "%*s%s-->%s %s:%d:%d\n",
+		numWidth, "", cyan, reset, fileName, startLine+1, startCol+1,
+	)
+
+	// Print source snippet if available
+	if fileName != "" {
+		file, err := os.Open(fileName)
+		if err == nil {
+			defer file.Close()
+			scanner := bufio.NewScanner(file)
+			currentLine := 0
+
+			fmt.Fprintf(w, "%*s %s|%s\n", numWidth, "", cyan, reset)
+
+			for scanner.Scan() {
+				if currentLine == startLine {
+					lineContent := scanner.Text()
+
+					// LINE | CONTENT
+					fmt.Fprintf(w, "%s%s %s| %s\n", cyan, lineNumStr, reset, lineContent)
+
+					endLine := lineRange.EndLine().Line()
+					endCol := lineRange.EndLine().Offset()
+
+					// | POINTER
+					pointer := ""
+					for i := range startCol {
+						if len(lineContent) > i && lineContent[i] == '\t' {
+							pointer += "\t"
+						} else {
+							pointer += " "
+						}
+					}
+
+					highlightLen := 1
+					if startLine == endLine {
+						highlightLen = endCol - startCol
+					} else if startLine < endLine {
+						highlightLen = len(lineContent) - startCol
+					}
+					if highlightLen < 1 {
+						highlightLen = 1
+					}
+
+					for range highlightLen {
+						pointer += "^"
+					}
+					fmt.Fprintf(w, "%*s %s| %s%s%s\n", numWidth, "", cyan, severityColor, pointer, reset)
+					break
+				}
+				currentLine++
+			}
+		}
+	}
+	fmt.Fprintln(w)
 }
 
 func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {

@@ -17,6 +17,17 @@
 package corpus
 
 import (
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"testing"
+
+	"golang.org/x/tools/txtar"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -24,14 +35,6 @@ import (
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
-	"testing"
 )
 
 const (
@@ -44,16 +47,9 @@ const (
 	externOrgName    = "ballerina"
 	externModuleName = "io"
 	externFuncName   = "println"
-
-	panicPrefix     = "panic: "
-	errorFileSuffix = "-e.bal"
-	subsetPrefix    = "subset"
 )
 
 var (
-	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
-	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
-
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
 		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
@@ -70,6 +66,8 @@ var (
 		"subset2/02-typecast/numeric-conversion-v.bal",
 		"subset2/02-typecast/numeric-conversion2-e.bal",
 	})
+
+	updateFlag = flag.Bool("update", false, "update expected output txtar files")
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -88,11 +86,14 @@ type testResult struct {
 type skipReason int
 
 const (
-	skipReasonErrorFile skipReason = iota // -e.bal files
-	skipReasonSkipList                    // files in skipTestsMap
+	skipReasonSkipList skipReason = iota // files in skipTestsMap
 )
 
 func TestIntegrationSuite(t *testing.T) {
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
 	var passedTotal, failedTotal, skippedTotal int
 	var failedTests []failedTest
 	var resultsMu sync.Mutex
@@ -135,7 +136,34 @@ func TestIntegrationSuite(t *testing.T) {
 			}()
 
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(balFile)
+			stdout, stderr := runTest(balFile)
+
+			if *updateFlag {
+				err := updateTxtar(relPath, stdout, stderr)
+				resultsMu.Lock()
+				if err != nil {
+					failedTotal++
+					fmt.Printf("\t--- %sFAIL%s: %s (update error: %v)\n", colorRed, colorReset, filePath, err)
+					failedTests = append(failedTests, failedTest{relPath: filepath.ToSlash(relPath)})
+				} else {
+					passedTotal++
+					fmt.Printf("\t--- %sPASS%s: %s (updated)\n", colorGreen, colorReset, filePath)
+				}
+				resultsMu.Unlock()
+				return
+			}
+
+			expectedStdout, expectedStderr, err := readTxtar(relPath)
+			if err != nil {
+				resultsMu.Lock()
+				failedTotal++
+				fmt.Printf("\t--- %sFAIL%s: %s (txtar error: %v)\n", colorRed, colorReset, filePath, err)
+				failedTests = append(failedTests, failedTest{relPath: filepath.ToSlash(relPath)})
+				resultsMu.Unlock()
+				return
+			}
+
+			result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
 
 			resultsMu.Lock()
 			defer resultsMu.Unlock()
@@ -162,18 +190,52 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 }
 
-func runTest(balFile string) testResult {
-	expectedOutput := readExpectedOutput(balFile)
-	expectedPanic := readExpectedPanic(balFile)
+func updateTxtar(relPath, stdout, stderr string) error {
+	txtarPath := filepath.Join("integration", relPath+".txtar")
+	err := os.MkdirAll(filepath.Dir(txtarPath), 0o755)
+	if err != nil {
+		return err
+	}
 
-	var panicOccurred bool
-	var panicValue interface{}
+	archive := &txtar.Archive{
+		Files: []txtar.File{
+			{Name: "stdout", Data: []byte(stdout)},
+			{Name: "stderr", Data: []byte(stderr)},
+		},
+	}
+
+	return os.WriteFile(txtarPath, txtar.Format(archive), 0o644)
+}
+
+func readTxtar(relPath string) (string, string, error) {
+	txtarPath := filepath.Join("integration", relPath+".txtar")
+	if _, err := os.Stat(txtarPath); os.IsNotExist(err) {
+		return "", "", nil
+	}
+	archive, err := txtar.ParseFile(txtarPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	var stdout, stderr string
+	for _, f := range archive.Files {
+		switch f.Name {
+		case "stdout":
+			stdout = string(f.Data)
+		case "stderr":
+			stderr = string(f.Data)
+		}
+	}
+	return stdout, stderr, nil
+}
+
+func runTest(balFile string) (stdout, stderr string) {
+	var stderrBuilder strings.Builder
 
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				panicOccurred = true
-				panicValue = r
+				fmt.Fprintf(&stderrBuilder, "panic: %v\n", r)
 			}
 		}()
 
@@ -181,6 +243,11 @@ func runTest(balFile string) testResult {
 		syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
 		if err != nil {
 			panic(err)
+		}
+
+		if cx.HasDiagnostics() {
+			cx.PrintDiagnostics(&stderrBuilder)
+			return
 		}
 
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
@@ -198,6 +265,12 @@ func runTest(balFile string) testResult {
 		semanticAnalyzer.Analyze(pkg)
 		// Run CFG analyses (reachability and explicit return)
 		semantics.AnalyzeCFG(cx, pkg, cfg)
+
+		if cx.HasDiagnostics() {
+			cx.PrintDiagnostics(&stderrBuilder)
+			return
+		}
+
 		birPkg := bir.GenBir(cx, pkg)
 
 		printlnMu.Lock()
@@ -208,8 +281,7 @@ func runTest(balFile string) testResult {
 		rt.Registry.RegisterExternFunction(externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
 		interpretErr := rt.Interpret(*birPkg)
 		if interpretErr != nil {
-			panicOccurred = true
-			panicValue = interpretErr
+			fmt.Fprintf(&stderrBuilder, "panic: %v\n", interpretErr)
 		}
 	}()
 	printlnMu.Lock()
@@ -217,111 +289,36 @@ func runTest(balFile string) testResult {
 	delete(printlnOutputs, balFile)
 	printlnMu.Unlock()
 
-	outputStr := printlnStr
-	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+	return printlnStr, stderrBuilder.String()
 }
 
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
-	if expectedPanic != "" {
-		if panicOccurred {
-			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
-			success := strings.Contains(panicStr, expectedPanic) || strings.Contains(outputStr, expectedPanic)
-			return testResult{
-				success:  success,
-				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-				actual:   fmt.Sprintf("%s%s", panicPrefix, panicStr),
-			}
-		}
-		if panicMsg := extractPanicFromOutput(outputStr, expectedPanic); panicMsg != "" {
-			success := strings.Contains(panicMsg, expectedPanic)
-			return testResult{
-				success:  success,
-				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-				actual:   fmt.Sprintf("%s%s", panicPrefix, panicMsg),
-			}
-		}
+func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
+	expectedStdout = trimNewline(expectedStdout)
+	actualStdout = trimNewline(actualStdout)
+	expectedStderr = trimNewline(expectedStderr)
+	actualStderr = trimNewline(actualStderr)
+
+	if actualStdout != expectedStdout {
 		return testResult{
 			success:  false,
-			expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-			actual:   "no error detected",
+			expected: "stdout: " + expectedStdout,
+			actual:   "stdout: " + actualStdout,
 		}
 	}
 
-	if panicOccurred {
-		panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
-		actual := fmt.Sprintf("%s%s", panicPrefix, panicStr)
-		if st, ok := panicValue.(interface{ Stack() []byte }); ok {
-			if stack := st.Stack(); len(stack) > 0 {
-				actual = actual + "\n" + string(stack)
-			}
-		}
+	if actualStderr != expectedStderr {
 		return testResult{
 			success:  false,
-			expected: expectedOutput,
-			actual:   actual,
+			expected: "stderr: " + expectedStderr,
+			actual:   "stderr: " + actualStderr,
 		}
 	}
 
-	expected := trimNewline(expectedOutput)
-	actual := trimNewline(outputStr)
-	success := actual == expected
-	return testResult{
-		success:  success,
-		expected: expected,
-		actual:   actual,
-	}
+	return testResult{success: true}
 }
 
 func trimNewline(s string) string {
 	return strings.TrimRight(s, "\n")
-}
-
-func extractPanicMessage(panicStr string) string {
-	if strings.HasPrefix(panicStr, panicPrefix) {
-		return strings.TrimPrefix(panicStr, panicPrefix)
-	}
-	return panicStr
-}
-
-func extractPanicFromOutput(outputStr, expectedPanic string) string {
-	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
-		return ""
-	}
-	panicIdx := strings.Index(outputStr, panicPrefix)
-	if panicIdx < 0 {
-		return ""
-	}
-	panicMsg := strings.TrimSpace(outputStr[panicIdx+len(panicPrefix):])
-	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
-		panicMsg = panicMsg[:newlineIdx]
-	}
-	return panicMsg
-}
-
-func readExpectedOutput(balFile string) string {
-	content := readFileContent(balFile)
-	matches := outputRegex.FindAllStringSubmatch(content, -1)
-	outputs := make([]string, 0, len(matches))
-	for _, m := range matches {
-		if len(m) > 1 {
-			outputs = append(outputs, strings.TrimSpace(m[1]))
-		}
-	}
-	return strings.Join(outputs, "\n")
-}
-
-func readExpectedPanic(balFile string) string {
-	content := readFileContent(balFile)
-	matches := panicRegex.FindStringSubmatch(content)
-	if len(matches) > 1 {
-		return strings.TrimSpace(matches[1])
-	}
-	return ""
-}
-
-func readFileContent(filePath string) string {
-	content, _ := os.ReadFile(filePath)
-	return string(content)
 }
 
 func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
@@ -442,8 +439,8 @@ func printIndentedLines(text, indent string) {
 		fmt.Printf("%s(empty)\n", indent)
 		return
 	}
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(text, "\n")
+	for line := range lines {
 		fmt.Printf("%s%s\n", indent, line)
 	}
 }
@@ -460,10 +457,6 @@ func findBalFiles(dir string) []string {
 }
 
 func isFileSkipped(filePath string) (bool, skipReason) {
-	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, errorFileSuffix) {
-		return true, skipReasonErrorFile
-	}
 	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
 		relPath = filepath.ToSlash(relPath)
 		if skipTestsMap[relPath] {

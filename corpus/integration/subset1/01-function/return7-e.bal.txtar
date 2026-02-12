@@ -1,0 +1,10 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mincompatible type: expected ((INT), ()), got ((NIL), ())[0m
+  [36m-->[0m ../corpus/bal/subset1/01-function/return7-e.bal:28:1
+   [36m|[0m
+[36m28 [0m| function foo() returns int {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+

@@ -1,0 +1,8 @@
+-- stdout --
+4
+true
+false
+true
+true
+3
+-- stderr --

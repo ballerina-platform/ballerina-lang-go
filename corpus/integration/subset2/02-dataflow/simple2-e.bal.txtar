@@ -1,0 +1,10 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mvariable may not be initialized[0m
+  [36m-->[0m ../corpus/bal/subset2/02-dataflow/simple2-e.bal:21:17
+   [36m|[0m
+[36m21 [0m|     int c = a + b; // @error
+   [36m| [31m                ^[0m
+

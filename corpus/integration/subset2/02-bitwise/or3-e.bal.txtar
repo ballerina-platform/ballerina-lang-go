@@ -1,0 +1,22 @@
+-- stdout --
+-- stderr --
+
+Compilation failed with the following errors:
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect integer types for bitwise operators[0m
+  [36m-->[0m ../corpus/bal/subset2/02-bitwise/or3-e.bal:19:1
+   [36m|[0m
+[36m19 [0m| public function main() {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect integer types for bitwise operators[0m
+  [36m-->[0m ../corpus/bal/subset2/02-bitwise/or3-e.bal:19:1
+   [36m|[0m
+[36m19 [0m| public function main() {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
+[1m[31merror[SEMANTIC_ERROR][0m: [1mexpect integer types for bitwise operators[0m
+  [36m-->[0m ../corpus/bal/subset2/02-bitwise/or3-e.bal:19:1
+   [36m|[0m
+[36m19 [0m| public function main() {
+   [36m| [31m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+
