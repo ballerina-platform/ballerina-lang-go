@@ -166,10 +166,10 @@ func runTest(balFile string) testResult {
 		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
 		pkg := ast.ToPackage(compilationUnit)
 		// Resolve symbols (imports) before type resolution
-		importedSymbols := semantics.ResolveImports(cx, pkg)
+		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
 		semantics.ResolveSymbols(cx, pkg, importedSymbols)
 		// Add type resolution step
-		typeResolver := semantics.NewTypeResolver(cx)
+		typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 		typeResolver.ResolveTypes(cx, pkg)
 		// Run control flow analysis after type resolution
 		cfg := semantics.CreateControlFlowGraph(cx, pkg)

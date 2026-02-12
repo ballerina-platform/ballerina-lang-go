@@ -14,10 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+// @productions list-type-descriptor list-constructor-expr boolean-literal local-var-decl-stmt
+public function main() {
+    any[] x = [];
+    int n = x.length(true); // @error
+    ignore(n);
+}
 
-// Import all standard libraries to trigger their init() functions.
-import (
-	_ "ballerina-lang-go/stdlibs/array"
-	_ "ballerina-lang-go/stdlibs/io"
-)
+function ignore(int n) { }

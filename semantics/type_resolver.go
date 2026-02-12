@@ -30,9 +30,12 @@ import (
 
 type (
 	TypeResolver struct {
-		ctx       *context.CompilerContext
-		tyCtx     semtypes.Context
-		typeDefns map[model.SymbolRef]*ast.BLangTypeDefinition
+		ctx             *context.CompilerContext
+		tyCtx           semtypes.Context
+		typeDefns       map[model.SymbolRef]*ast.BLangTypeDefinition
+		importedSymbols map[string]model.ExportedSymbolSpace
+		pkg             *ast.BLangPackage
+		implicitImports map[string]bool
 	}
 )
 
@@ -44,11 +47,13 @@ type symbolTypeSetter interface {
 
 var _ ast.Visitor = &TypeResolver{}
 
-func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
+func NewTypeResolver(ctx *context.CompilerContext, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	return &TypeResolver{
-		ctx:       ctx,
-		tyCtx:     semtypes.ContextFrom(ctx.GetTypeEnv()),
-		typeDefns: make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+		ctx:             ctx,
+		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
+		typeDefns:       make(map[model.SymbolRef]*ast.BLangTypeDefinition),
+		importedSymbols: importedSymbols,
+		implicitImports: make(map[string]bool),
 	}
 }
 
@@ -57,6 +62,7 @@ func NewTypeResolver(ctx *context.CompilerContext) *TypeResolver {
 // types to the rest of nodes based on semantic information. This means after Resolving types of all the packages
 // it is safe use the closed world assumption to optimize type checks.
 func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+	t.pkg = pkg
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
 		symbol := defn.Symbol().(*model.SymbolRef)
@@ -149,10 +155,12 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 
 	// Update symbol type for the function
 	updateSymbolType(t.ctx, fn, fnType)
-	fnSymbol := ctx.GetSymbol(fn.Symbol()).(*model.FunctionSymbol)
-	fnSymbol.Signature.ParamTypes = paramTypes
-	fnSymbol.Signature.ReturnType = returnTy
-	fnSymbol.Signature.RestParamType = restTy
+	fnSymbol := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
+	sig := fnSymbol.Signature()
+	sig.ParamTypes = paramTypes
+	sig.ReturnType = returnTy
+	sig.RestParamType = restTy
+	fnSymbol.SetSignature(sig)
 
 	return fnType
 }
@@ -717,17 +725,93 @@ func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.Sem
 		t.ctx.InternalError("invocation has no symbol", expr.GetPosition())
 		return nil
 	}
+	if deferredMethodSymbol, ok := symbol.(*deferredMethodSymbol); ok {
+		return t.resolveMethodCall(expr, deferredMethodSymbol)
+	} else {
+		return t.resolveFunctionCall(expr, symbol)
+	}
+}
+
+func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) semtypes.SemType {
+	recieverTy := t.resolveExpression(expr.Expr)
+	if semtypes.IsSubtypeSimple(recieverTy, semtypes.OBJECT) {
+		t.ctx.Unimplemented("method calls not implemented", expr.GetPosition())
+		return nil
+	}
+	// Convert to lang lib function
+	var symbolSpace model.ExportedSymbolSpace
+	var pkgAlias ast.BLangIdentifier
+	if semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST) {
+		pkgName := "lang.array"
+		space, ok := t.importedSymbols[pkgName]
+		if !ok {
+			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+			return nil
+		}
+		symbolSpace = space
+		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		if !t.implicitImports[pkgName] {
+			t.implicitImports[pkgName] = true
+			importNode := ast.BLangImportPackage{
+				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+				Alias:        &pkgAlias,
+			}
+			ast.Walk(t, &importNode)
+			t.pkg.Imports = append(t.pkg.Imports, importNode)
+		}
+	} else {
+		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())
+	}
+	symbolRef, ok := symbolSpace.GetSymbol(methodSymbol.name)
+	if !ok {
+		t.ctx.SemanticError("method not found: "+methodSymbol.name, expr.GetPosition())
+		return nil
+	}
+	symbol := t.ctx.GetSymbol(&symbolRef)
+	argTys := make([]semtypes.SemType, len(expr.ArgExprs)+1)
+	argExprs := make([]ast.BLangExpression, len(expr.ArgExprs)+1)
+	argExprs[0] = expr.Expr
+	argTys[0] = recieverTy
+	for i, arg := range expr.ArgExprs {
+		argTys[i+1] = t.resolveExpression(arg)
+		argExprs[i+1] = arg
+	}
+	var funcSymbol model.FunctionSymbol
+	if genericFn, ok := symbol.(model.GenericFunctionSymbol); ok {
+		symbolRef = genericFn.Monomorphize(argTys)
+		funcSymbol, _ = t.ctx.GetSymbol(&symbolRef).(model.FunctionSymbol)
+	} else if fnSym, ok := symbol.(model.FunctionSymbol); ok {
+		funcSymbol = fnSym
+	} else {
+		t.ctx.InternalError("symbol is not a function symbol", expr.GetPosition())
+		return nil
+	}
+	expr.SetSymbol(&symbolRef)
+	expr.ArgExprs = argExprs
+	expr.Expr = nil
+	expr.PkgAlias = &pkgAlias
+	return t.resolveFunctionCall(expr, funcSymbol)
+}
+
+func (t *TypeResolver) resolveFunctionCall(expr *ast.BLangInvocation, symbol model.Symbol) semtypes.SemType {
+	// Resolve argument expressions
+	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
+	for i, arg := range expr.ArgExprs {
+		argTys[i] = t.resolveExpression(arg)
+	}
+
+	baseSymbol := t.ctx.GetSymbol(symbol)
+	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
+		symbolRef := genericFn.Monomorphize(argTys)
+		symbol = &symbolRef
+		expr.SetSymbol(&symbolRef)
+	}
 
 	fnTy := t.ctx.SymbolType(symbol)
 	if fnTy == nil {
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
 		return nil
-	}
-
-	// Resolve argument expressions
-	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
-	for i, arg := range expr.ArgExprs {
-		argTys[i] = t.resolveExpression(arg)
 	}
 
 	// Construct the argument list type

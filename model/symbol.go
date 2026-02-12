@@ -41,6 +41,19 @@ type symbolTypeSetter interface {
 	SetType(semtypes.SemType)
 }
 
+type FunctionSymbol interface {
+	Symbol
+	Signature() FunctionSignature
+	SetSignature(FunctionSignature)
+}
+
+// GenericFunctionSymbol represents functions with [@typeParam] types
+type GenericFunctionSymbol interface {
+	FunctionSymbol
+	Monomorphize(args []semtypes.SemType) SymbolRef
+	Space() *SymbolSpace
+}
+
 type SymbolKind uint
 
 const (
@@ -115,9 +128,15 @@ type (
 		isParameter bool
 	}
 
-	FunctionSymbol struct {
+	functionSymbol struct {
 		symbolBase
-		Signature FunctionSignature
+		signature FunctionSignature
+	}
+
+	genericFunctionSymbol struct {
+		name          string
+		space         *SymbolSpace
+		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
 	}
 
 	FunctionSignature struct {
@@ -133,7 +152,9 @@ var _ Scope = &FunctionScope{}
 var _ Scope = &BlockScope{}
 var _ Symbol = &TypeSymbol{}
 var _ Symbol = &ValueSymbol{}
-var _ Symbol = &FunctionSymbol{}
+var _ Symbol = &functionSymbol{}
+var _ FunctionSymbol = &functionSymbol{}
+var _ GenericFunctionSymbol = &genericFunctionSymbol{}
 var _ Symbol = &SymbolRef{}
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -272,14 +293,22 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 	return SymbolKindVariable
 }
 
-func (fs *FunctionSymbol) Kind() SymbolKind {
+func (fs *functionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
 }
 
+func (fs *functionSymbol) Signature() FunctionSignature {
+	return fs.signature
+}
+
+func (fs *functionSymbol) SetSignature(sig FunctionSignature) {
+	fs.signature = sig
+}
+
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
-	return FunctionSymbol{
+	return &functionSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
-		Signature:  signature,
+		signature:  signature,
 	}
 }
 
@@ -295,4 +324,44 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 	}
+}
+
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
+	return &genericFunctionSymbol{name: name, space: space, monomorphizer: monomorphizer}
+}
+
+func (s *genericFunctionSymbol) Name() string {
+	return s.name
+}
+
+func (s *genericFunctionSymbol) Type() semtypes.SemType {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) Kind() SymbolKind {
+	return SymbolKindFunction
+}
+
+func (s *genericFunctionSymbol) SetType(_ semtypes.SemType) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) IsPublic() bool {
+	return true
+}
+
+func (s *genericFunctionSymbol) Signature() FunctionSignature {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType) SymbolRef {
+	return s.monomorphizer(s, args)
+}
+
+func (s *genericFunctionSymbol) Space() *SymbolSpace {
+	return s.space
 }

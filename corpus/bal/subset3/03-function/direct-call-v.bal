@@ -14,10 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+// @productions list-type-descriptor list-constructor-expr return-stmt any function-call-expr local-var-decl-stmt int-literal
+import ballerina/io;
+import ballerina/lang.array;
 
-// Import all standard libraries to trigger their init() functions.
-import (
-	_ "ballerina-lang-go/stdlibs/array"
-	_ "ballerina-lang-go/stdlibs/io"
-)
+public function main() {
+    test1();
+    test2();
+}
+
+function test1() {
+    any[] x = [];
+    array:push(foo(x), 1);
+    io:println(x); // @output [1]
+}
+
+function test2() {
+    any[] x = [];
+    array:push(foo(x), 2);
+    io:println(x); // @output [2]
+    io:println(array:length(x)); // @output 1
+    array:push(x, 3);
+    io:println(x); // @output [2,3]
+    io:println(x.length()); // @output 2
+}
+
+function foo(any[] x) returns any[] {
+    return x;
+}

@@ -633,10 +633,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	// Package qualified call - look up package ID from import alias
 	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
 		// Qualified call - look up package ID from import alias
-		if pkgID, found := ctx.birCx.importAliasMap[expr.PkgAlias.Value]; found {
-			call.CalleePkg = pkgID
-		}
-		// If not found in imports, leave CalleePkg as nil (likely native/extern function)
+		call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
 	} else {
 		// Unqualified call (no PkgAlias) - assume same-module call and use current package
 		if ctx.birCx.packageID != nil {
