@@ -20,9 +20,14 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/semtypes"
 	"fmt"
+	"math"
 	"math/big"
+	"regexp"
 	"strconv"
+	"strings"
 )
+
+var decimalStringRegex = regexp.MustCompile(`^[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$`)
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
 	frame.SetOperand(constantLoad.LhsOp.Index, constantLoad.Value)
@@ -48,6 +53,9 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
 	arr := *arrPtr
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	if idx < 0 {
+		panic(fmt.Sprintf("invalid array index: %d", idx))
+	}
 	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
 	arr[idx] = frame.GetOperand(access.RhsOp.Index)
 }
@@ -55,6 +63,9 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	if idx < 0 || idx >= len(arr) {
+		panic(fmt.Sprintf("invalid array index: %d", idx))
+	}
 	frame.SetOperand(access.LhsOp.Index, arr[idx])
 }
 
@@ -68,7 +79,7 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 func castValue(value any, targetType semtypes.SemType) any {
 	b, ok := targetType.(*semtypes.BasicTypeBitSet)
 	if !ok {
-		panic("bad type cast")
+		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
 	}
 	if b.All() == semtypes.ANY.All() {
 		return value
@@ -85,9 +96,9 @@ func castValue(value any, targetType semtypes.SemType) any {
 		if v, ok := value.(bool); ok {
 			return v
 		}
-		panic("bad type cast: cannot cast value to boolean")
+		panic(fmt.Sprintf("bad type cast: cannot cast %v to boolean", value))
 	}
-	panic("bad type cast")
+	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", b.String()))
 }
 
 func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
@@ -105,6 +116,12 @@ func toInt(value any) int64 {
 	case int64:
 		return v
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+		}
+		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+		}
 		return int64(v)
 	case *big.Rat:
 		if !v.IsInt() {
@@ -115,21 +132,8 @@ func toInt(value any) int64 {
 			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
 		}
 		return num.Int64()
-	case string:
-		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
-			return i
-		}
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			panic(fmt.Sprintf("bad type cast: cannot cast %q to int", v))
-		}
-		i := int64(f)
-		if float64(i) != f {
-			panic(fmt.Sprintf("bad type cast: cannot cast %q to int", v))
-		}
-		return i
 	default:
-		panic("bad type cast")
+		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", value))
 	}
 }
 
@@ -142,14 +146,8 @@ func toFloat(value any) float64 {
 	case *big.Rat:
 		f, _ := v.Float64()
 		return f
-	case string:
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			panic(fmt.Sprintf("bad type cast: cannot cast %q to float", v))
-		}
-		return f
 	default:
-		panic("bad type cast")
+		panic(fmt.Sprintf("bad type cast: cannot cast %v to float", value))
 	}
 }
 
@@ -166,12 +164,17 @@ func toDecimal(value any) *big.Rat {
 	case *big.Rat:
 		return v
 	case string:
-		r := new(big.Rat)
-		if _, ok := r.SetString(v); !ok {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
+		if strings.Contains(v, "/") || !decimalStringRegex.MatchString(v) {
+			panic(fmt.Sprintf("cannot cast %v to decimal", v))
 		}
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			panic(fmt.Sprintf("cannot cast %v to decimal", v))
+		}
+		r := new(big.Rat)
+		r.SetFloat64(f)
 		return r
 	default:
-		panic("bad type cast")
+		panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value))
 	}
 }

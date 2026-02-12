@@ -17,8 +17,8 @@
 package compile
 
 import (
-	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/context"
+	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"fmt"
@@ -88,4 +88,3 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		return ref
 	}
 }
-

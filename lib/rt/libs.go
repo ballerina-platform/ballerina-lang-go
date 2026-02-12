@@ -20,4 +20,3 @@ import (
 	_ "ballerina-lang-go/lib/array/runtime"
 	_ "ballerina-lang-go/lib/io/runtime"
 )
-

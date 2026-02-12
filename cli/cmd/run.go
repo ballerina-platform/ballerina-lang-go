@@ -27,11 +27,11 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
-	_ "ballerina-lang-go/lib/rt"
 
 	"github.com/spf13/cobra"
 )

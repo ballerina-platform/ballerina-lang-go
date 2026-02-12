@@ -17,8 +17,8 @@
 package compile
 
 import (
-	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/context"
+	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -43,4 +43,3 @@ func GetIoSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 		Main: space,
 	}
 }
-
