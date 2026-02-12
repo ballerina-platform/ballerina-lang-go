@@ -73,11 +73,11 @@ func castValue(value any, targetType semtypes.SemType) any {
 	bitsetValue := b.All()
 	switch {
 	case bitsetValue&semtypes.INT.All() != 0:
-		return convertToInt(value)
+		return toInt(value)
 	case bitsetValue&semtypes.FLOAT.All() != 0:
-		return convertToFloat(value)
+		return toFloat(value)
 	case bitsetValue&semtypes.DECIMAL.All() != 0:
-		return convertToDecimal(value)
+		return toDecimal(value)
 	}
 	return value
 }
@@ -92,7 +92,7 @@ func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
 	return arr
 }
 
-func convertToInt(value any) int64 {
+func toInt(value any) int64 {
 	switch v := value.(type) {
 	case int64:
 		return v
@@ -112,7 +112,7 @@ func convertToInt(value any) int64 {
 	}
 }
 
-func convertToFloat(value any) float64 {
+func toFloat(value any) float64 {
 	switch v := value.(type) {
 	case int64:
 		return float64(v)
@@ -132,7 +132,7 @@ func convertToFloat(value any) float64 {
 	}
 }
 
-func convertToDecimal(value any) *big.Rat {
+func toDecimal(value any) *big.Rat {
 	switch v := value.(type) {
 	case int64:
 		return big.NewRat(v, 1)
