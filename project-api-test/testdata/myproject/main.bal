@@ -1,1 +1,5 @@
-public function main() {}
+import ballerina/io;
+
+public function main() {
+    io:println(hello());
+}
