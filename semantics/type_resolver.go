@@ -467,6 +467,15 @@ func isMultipcativeExpr(opExpr opExpr) bool {
 	}
 }
 
+func isRangeExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_CLOSED_RANGE, model.OperatorKind_HALF_OPEN_RANGE:
+		return true
+	default:
+		return false
+	}
+}
+
 func isBitWiseExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
@@ -532,14 +541,25 @@ func (t *TypeResolver) resolveListConstructorExpr(expr *ast.BLangListConstructor
 	// Resolve the type of each member expression
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
 	for i, memberExpr := range expr.Exprs {
-		memberTypes[i] = t.resolveExpression(memberExpr)
+		memberTy := t.resolveExpression(memberExpr)
+		var broadTy semtypes.SemType
+		if semtypes.SingleShape(memberTy).IsEmpty() {
+			broadTy = memberTy
+		} else {
+			basicTy := semtypes.WidenToBasicTypes(memberTy)
+			broadTy = &basicTy
+		}
+		memberTypes[i] = broadTy
 	}
 
 	// Construct the list type from member types
 	ld := semtypes.NewListDefinition()
-	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 
 	setExpectedType(expr, listTy)
+	lat := semtypes.ToListAtomicType(t.tyCtx, listTy)
+	// This is always guranteed to work since we created this from a single list type
+	expr.AtomicType = *lat
 
 	return listTy
 }
@@ -617,6 +637,9 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 		resultTy = &semtypes.BOOLEAN
 	} else if isBitWiseExpr(expr) {
 		resultTy = &semtypes.INT
+	} else if isRangeExpr(expr) {
+		// Range operators: .., ...
+		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
 	} else {
 		var nilLifted bool
 		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
@@ -688,6 +711,40 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 	return nil, false
 }
+func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemType {
+	od := semtypes.NewObjectDefinition()
+
+	// record{| T value;|}
+	fields := []semtypes.Field{
+		semtypes.FieldFrom("value", t, false, false),
+	}
+	var rest semtypes.SemType = &semtypes.NEVER
+	recordTy := createClosedRecordType(env, fields, rest)
+
+	resultTy := semtypes.Union(recordTy, c)
+
+	// function next() returns record {| T value; |}|C;
+	ld := semtypes.NewListDefinition()
+	listTy := ld.DefineListTypeWrapped(env, []semtypes.SemType{}, 0, &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	fd := semtypes.NewFunctionDefinition()
+	fnTy := fd.Define(env, listTy, resultTy, semtypes.FunctionQualifiersFrom(env, false, false))
+
+	members := []semtypes.Member{
+		{
+			Name:       "next",
+			ValueTy:    fnTy,
+			Kind:       semtypes.MemberKindMethod,
+			Visibility: semtypes.VisibilityPublic,
+			Immutable:  true,
+		},
+	}
+	return od.Define(env, semtypes.ObjectQualifiersDEFAULT, members)
+}
+
+func createClosedRecordType(env semtypes.Env, fields []semtypes.Field, rest semtypes.SemType) semtypes.SemType {
+	md := semtypes.NewMappingDefinition()
+	return md.DefineMappingTypeWrapped(env, fields, rest)
+}
 
 func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) semtypes.SemType {
 	// Resolve the container expression
@@ -703,13 +760,13 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		// List indexing
-		resultTy = semtypes.ListProjInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+		resultTy = semtypes.ListMemberTypeInnerVal(t.tyCtx, containerExprTy, keyExprTy)
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		// String indexing returns a string
 		resultTy = &semtypes.STRING
 	} else {
 		// For other types, we may need to implement mapping support later
-		t.ctx.Unimplemented("unsupported container type for index based access", expr.GetPosition())
+		t.ctx.SemanticError("unsupported container type for index based access", expr.GetPosition())
 		return nil
 	}
 
@@ -873,14 +930,17 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
-
-			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
-			} else {
-				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{memberTy}, length)
+			t := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
+			for i := len(ty.Sizes); i > 0; i-- {
+				lenExp := ty.Sizes[i-1]
+				if lenExp == nil {
+					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
+				} else {
+					length := lenExp.(*ast.BLangLiteral).Value.(int)
+					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
+				}
 			}
+			semTy = t
 		} else {
 			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
 		}

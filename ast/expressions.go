@@ -19,6 +19,7 @@ package ast
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -269,7 +270,7 @@ type (
 		BLangExpressionBase
 		Exprs          []BLangExpression
 		IsTypedescExpr bool
-		TypedescType   BType
+		AtomicType     semtypes.ListAtomicType
 	}
 
 	BLangErrorConstructorExpr struct {

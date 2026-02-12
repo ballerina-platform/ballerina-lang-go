@@ -78,6 +78,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printGroupExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
+	case *BLangForeach:
+		p.printForeach(t)
 	case *BLangArrayType:
 		p.printArrayType(t)
 	case *BLangConstant:
@@ -503,6 +505,21 @@ func (p *PrettyPrinter) printWhile(node *BLangWhile) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printForeach(node *BLangForeach) {
+	p.startNode()
+	p.printString("foreach")
+	p.indentLevel++
+	if node.VariableDef != nil {
+		p.PrintInner(node.VariableDef)
+	}
+	if node.Collection != nil {
+		p.PrintInner(node.Collection.(BLangNode))
+	}
+	p.PrintInner(&node.Body)
+	p.indentLevel--
+	p.endNode()
+}
+
 // Array type printer
 func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	p.startNode()
@@ -515,7 +532,11 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	p.printString("(")
 	if len(node.Sizes) > 0 {
 		for _, size := range node.Sizes {
-			p.PrintInner(size.(BLangNode))
+			p.printSticky("[")
+			if size != nil {
+				p.PrintInner(size.(BLangNode))
+			}
+			p.printSticky("]")
 		}
 	}
 	p.printSticky(")")

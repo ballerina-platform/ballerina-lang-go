@@ -1,0 +1,45 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (invocation makeNil ())
+          (literal <nil>)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (invocation makeNil ())
+          (literal <nil>)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr !=
+          (literal <nil>)
+          (literal <nil>)))))
+    (var-def
+      (variable x (type
+        (value-type any)) (expr
+        (literal <nil>))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (simple-var-ref x)
+          (literal <nil>)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr !=
+          (invocation makeNilAny ())
+          (literal <nil>)))))
+  )
+)
+(makeNil
+  (bb0 () ()
+    (return
+      (literal <nil>))
+  )
+)
+(makeNilAny
+  (bb0 () ()
+    (return
+      (literal <nil>))
+  )
+)

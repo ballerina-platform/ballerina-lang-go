@@ -811,7 +811,7 @@ func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.N
 // migrated from BLangNodeBuilder.java:6754:5
 func isSimpleLiteral(syntaxKind common.SyntaxKind) bool {
 	switch syntaxKind {
-	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL:
+	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL, common.NULL_LITERAL:
 		return true
 	default:
 		return false
@@ -1712,11 +1712,35 @@ func (n *NodeBuilder) TransformForkStatement(forkStatementNode *tree.ForkStateme
 }
 
 func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEachStatementNode) BLangNode {
-	panic("TransformForEachStatement unimplemented")
+	bLForeach := &BLangForeach{}
+	bLForeach.pos = getPosition(forEachStatementNode)
+
+	varDef := n.createBLangVarDef(
+		getPosition(forEachStatementNode.TypedBindingPattern()),
+		forEachStatementNode.TypedBindingPattern(),
+		nil,
+		nil,
+	).(*BLangSimpleVariableDef)
+	bLForeach.VariableDef = varDef
+	bLForeach.IsDeclaredWithVar = varDef.Var.IsDeclaredWithVar
+
+	bLForeach.Collection = n.createExpression(forEachStatementNode.ActionOrExpressionNode())
+
+	body := n.TransformBlockStatement(forEachStatementNode.BlockStatement()).(*BLangBlockStmt)
+	body.pos = getPosition(forEachStatementNode.BlockStatement())
+	bLForeach.Body = *body
+
+	if forEachStatementNode.OnFailClause() != nil {
+		bLForeach.SetOnFailClause(
+			n.TransformOnFailClause(forEachStatementNode.OnFailClause()).(*BLangOnFailClause),
+		)
+	}
+	return bLForeach
 }
 
 func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {
 	if binaryExpressionNode.Operator().Kind() == common.ELVIS_TOKEN {
+		panic("TransformBinaryExpression: elvis operator not supported")
 	}
 
 	bLBinaryExpr := BLangBinaryExpr{}
@@ -2150,7 +2174,7 @@ func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressi
 	listConstructorExpr := &BLangListConstructorExpr{}
 
 	expressions := listConstructorExpressionNode.Expressions()
-	for i := 0; i < expressions.Size(); i++ {
+	for i := 0; i < expressions.Size(); i += 2 {
 		listMember := expressions.Get(i)
 		var memberExpr BLangExpression
 		if listMember.Kind() == common.SPREAD_MEMBER {
@@ -2528,6 +2552,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	for i := dimensionSize - 1; i >= 0; i-- {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
+			sizes = append(sizes, nil)
 		} else {
 			panic("array length expression handling unimplemented")
 		}
@@ -2887,7 +2912,16 @@ func (n *NodeBuilder) TransformNaturalExpression(naturalExpressionNode *tree.Nat
 }
 
 func (n *NodeBuilder) TransformToken(token tree.Token) BLangNode {
-	panic("TransformToken unimplemented")
+	kind := token.Kind()
+	switch kind {
+	case common.XML_TEXT_CONTENT, common.TEMPLATE_STRING, common.CLOSE_BRACE_TOKEN, common.PROMPT_CONTENT:
+		return n.createSimpleLiteral(token).(BLangNode)
+	default:
+		if isTokenInRegExp(kind) {
+			return n.createSimpleLiteral(token).(BLangNode)
+		}
+		panic("TransformToken: Syntax kind is not supported: " + kind.StrValue())
+	}
 }
 
 func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken) BLangNode {

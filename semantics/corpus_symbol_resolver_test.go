@@ -86,6 +86,12 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 				node, node.GetPosition(), v.testPath)
 		}
 	}
+	if nodeWithScope, ok := node.(ast.NodeWithScope); ok {
+		if nodeWithScope.Scope() == nil {
+			v.t.Errorf("Scope not set for %T at %s in %s",
+				node, node.GetPosition(), v.testPath)
+		}
+	}
 	return v
 }
 

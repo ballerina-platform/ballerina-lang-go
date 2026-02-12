@@ -1,0 +1,35 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 8
+    %2 = loop(%1) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+loop<NIL>{
+  bb0 {
+    %2 = ConstantLoad 2
+    i = %2;
+    $desugar$0 = to;
+    GOTO bb1;
+  }
+  bb1 {
+    %5 = < i $desugar$0;
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %6 = println(i) -> bb4;
+  }
+  bb3 {
+    return;
+  }
+  bb4 {
+    %8 = ConstantLoad 1
+    %7 = + i %8;
+    i = %7;
+    GOTO bb1;
+  }
+}

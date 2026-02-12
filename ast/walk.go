@@ -319,6 +319,18 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
+	case *BLangForeach:
+		if node.Collection != nil {
+			Walk(v, node.Collection.(BLangNode))
+		}
+		if node.VariableDef != nil {
+			Walk(v, node.VariableDef)
+		}
+		Walk(v, &node.Body)
+		if node.OnFailClause != nil {
+			Walk(v, node.OnFailClause)
+		}
+
 	case *BLangDo:
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
@@ -394,7 +406,6 @@ func Walk(v Visitor, node BLangNode) {
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
 		}
-
 	case *BLangErrorConstructorExpr:
 		if node.ErrorTypeRef != nil {
 			Walk(v, node.ErrorTypeRef)
@@ -507,7 +518,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangArrayType:
 		WalkTypeData(v, &node.Elemtype)
 		for i := range node.Sizes {
-			Walk(v, node.Sizes[i].(BLangNode))
+			if node.Sizes[i] != nil {
+				Walk(v, node.Sizes[i].(BLangNode))
+			}
 		}
 
 	case *BLangUserDefinedType:

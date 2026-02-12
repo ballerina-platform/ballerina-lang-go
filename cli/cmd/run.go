@@ -27,6 +27,7 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
@@ -84,10 +85,18 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
 	runCmd.Flags().StringVar(&runOpts.format, "format", "", "Output format for dump operations (dot)")
+	profiler.RegisterFlags(runCmd)
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
 	fileName := args[0]
+
+	if err := profiler.Start(); err != nil {
+		profErr := fmt.Errorf("failed to start profiler: %w", err)
+		printError(profErr, "", false)
+		return profErr
+	}
+	defer profiler.Stop()
 
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
@@ -189,6 +198,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	semanticAnalyzer.Analyze(pkg)
 	// Run CFG analyses (reachability and explicit return) concurrently
 	semantics.AnalyzeCFG(cx, pkg, cfg)
+	// Desugar AST before BIR generation
+	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}
