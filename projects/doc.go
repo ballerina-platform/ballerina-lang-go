@@ -19,9 +19,8 @@
 // Package projects provides the Ballerina Project API for loading, compiling,
 // and managing Ballerina projects and packages.
 //
-// This is a Go port of the Java io.ballerina.projects package. It implements
-// the orchestration layer that loads projects from the filesystem, parses
-// manifests, resolves dependencies, compiles modules, and generates BIR
+// It implements the orchestration layer that loads projects from the filesystem,
+// parses manifests, resolves dependencies, compiles modules, and generates BIR
 // (Ballerina Intermediate Representation) for execution.
 //
 // # Type Hierarchy
@@ -40,13 +39,40 @@
 //
 // # Project Types
 //
-// Concrete project implementations live in the directory subpackage:
+// Two concrete project implementations are provided:
 //
-//   - directory.BuildProject: A standard project with a Ballerina.toml manifest
-//   - directory.SingleFileProject: A standalone .bal file without a manifest
+//   - [BuildProject]: A standard project with a Ballerina.toml manifest
+//   - [SingleFileProject]: A standalone .bal file without a manifest
 //
-// Use [directory.LoadProject] to auto-detect the project type from a path,
-// or use [directory.LoadBuildProject] / [directory.LoadSingleFileProject] directly.
+// Projects are loaded using [directory.LoadProject] which auto-detects the
+// project type based on the path:
+//   - Directory with Ballerina.toml -> BuildProject
+//   - Single .bal file -> SingleFileProject
+//
+// # Loading Projects
+//
+// Use the directory subpackage to load projects from the filesystem:
+//
+//	import "ballerina-lang-go/projects/directory"
+//
+//	// Load with default options
+//	result, err := directory.LoadProject("./myproject")
+//
+//	// Load with custom build options
+//	buildOpts := projects.NewBuildOptionsBuilder().
+//	    WithOffline(true).
+//	    WithSkipTests(true).
+//	    Build()
+//	result, err := directory.LoadProject("./myproject", directory.ProjectLoadConfig{
+//	    BuildOptions: &buildOpts,
+//	})
+//
+//	// Load a single .bal file
+//	result, err := directory.LoadProject("./main.bal")
+//
+// The [directory.ProjectLoadConfig] struct allows optional configuration:
+//   - BuildOptions: Compilation settings (offline mode, skip tests, etc.)
+//   - Future fields can be added without breaking existing callers
 //
 // # Compilation Pipeline
 //
@@ -57,12 +83,31 @@
 //     in topological order via [PackageResolution]
 //  3. CodeGen: [BallerinaBackend] generates BIR from compiled modules
 //
-// Example usage:
+// Complete example:
 //
-//	project, err := directory.LoadProject(path)
+//	// Load project
+//	result, err := directory.LoadProject("./myproject")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	// Check for loading diagnostics
+//	if result.Diagnostics().HasErrors() {
+//	    // Handle errors
+//	}
+//
+//	// Get project and package
+//	project := result.Project()
 //	pkg := project.CurrentPackage()
+//
+//	// Compile (triggers parsing, type checking, semantic analysis)
 //	compilation := pkg.Compilation()
-//	backend := NewBallerinaBackend(compilation)
+//	if compilation.DiagnosticResult().HasErrors() {
+//	    // Handle compilation errors
+//	}
+//
+//	// Generate BIR for execution
+//	backend := projects.NewBallerinaBackend(compilation)
 //	birPkg := backend.BIR()
 //
 // # Immutability and Modifiers
@@ -70,6 +115,11 @@
 // Package, Module, and Document are immutable after creation. To create modified
 // copies, use the modifier pattern:
 //
+//	// Modify a document
+//	doc := module.Document(docID)
+//	updatedDoc := doc.Modify().WithContent(newContent).Apply()
+//
+//	// Modify a package
 //	modifier := pkg.Modify()
 //	modifier.AddModule(moduleConfig)
 //	newPkg := modifier.Apply()
@@ -82,6 +132,6 @@
 //
 // # Subpackages
 //
-//   - projects/directory: Concrete project loaders (BuildProject, SingleFileProject)
+//   - projects/directory: Project loading from filesystem ([LoadProject], [ProjectLoadConfig])
 //   - projects/internal: Internal helpers (ManifestBuilder, PackageConfigCreator)
 package projects

@@ -133,7 +133,9 @@ func TestOverrideBuildOptions(t *testing.T) {
 		WithObservabilityIncluded(true).
 		Build()
 
-	result, err := directory.LoadProject(absPath, directory.WithBuildOptions(buildOptions))
+	result, err := directory.LoadProject(absPath, directory.ProjectLoadConfig{
+		BuildOptions: &buildOptions,
+	})
 	require.NoError(err)
 
 	project := result.Project().(*projects.SingleFileProject)

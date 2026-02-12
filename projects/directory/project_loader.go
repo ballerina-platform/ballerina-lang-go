@@ -29,35 +29,28 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-// loadConfig holds configuration for project loading.
-type loadConfig struct {
-	buildOptions projects.BuildOptions
+// ProjectLoadConfig holds configuration for project loading.
+// All fields are optional - nil values use defaults.
+type ProjectLoadConfig struct {
+	// BuildOptions configures compilation behavior. If nil, defaults are used.
+	BuildOptions *projects.BuildOptions
+
+	// Future fields can be added here, e.g.:
+	// EnvironmentBuilder *EnvironmentBuilder
 }
 
-// LoadOption is a functional option for configuring project loading.
-type LoadOption func(*loadConfig)
-
-// WithBuildOptions sets the build options for project loading.
-func WithBuildOptions(opts projects.BuildOptions) LoadOption {
-	return func(cfg *loadConfig) {
-		cfg.buildOptions = opts
-	}
-}
-
-// LoadProject loads a project from the given path using functional options.
+// LoadProject loads a project from the given path.
 // It detects the project type and delegates to the appropriate loader:
 //   - Has Ballerina.toml -> loadBuildProject
 //   - Is .bal file -> loadSingleFileProject
 //   - Is .bala file -> error (not implemented)
-func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, error) {
+//
+// If no config is provided, default configuration is used.
+func LoadProject(path string, config ...ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	// Apply defaults
-	cfg := &loadConfig{
-		buildOptions: projects.NewBuildOptions(),
-	}
-
-	// Apply options
-	for _, opt := range opts {
-		opt(cfg)
+	var cfg ProjectLoadConfig
+	if len(config) > 0 {
+		cfg = config[0]
 	}
 
 	// Get absolute path
@@ -78,7 +71,7 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 		tomlPath := filepath.Join(absPath, projects.BallerinaTomlFile)
 		if _, err := os.Stat(tomlPath); err == nil {
 			// Has Ballerina.toml - load as build project
-			return loadBuildProject(absPath, cfg.buildOptions)
+			return loadBuildProject(absPath, cfg)
 		}
 
 		// Directory without Ballerina.toml - error
@@ -90,7 +83,7 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 	// Check file extension
 	if strings.HasSuffix(absPath, projects.BalFileExtension) {
 		// Single .bal file
-		return loadSingleFileProject(absPath, cfg.buildOptions)
+		return loadSingleFileProject(absPath, cfg)
 	}
 
 	if strings.HasSuffix(absPath, projects.BalaFileExtension) {
@@ -108,7 +101,7 @@ func LoadProject(path string, opts ...LoadOption) (projects.ProjectLoadResult, e
 // loadBuildProject loads a build project from the given path.
 // It merges build options from Ballerina.toml (manifest defaults) with the caller's
 // options using AcceptTheirs, so caller-provided options override manifest defaults.
-func loadBuildProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
+func loadBuildProject(path string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	// Normalize path to absolute for consistent DocumentID() lookups
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -123,7 +116,12 @@ func loadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 
 	// Merge build options: manifest defaults are the base, caller's options override.
 	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
-	mergedOpts := manifestBuildOptions.AcceptTheirs(opts)
+	var mergedOpts projects.BuildOptions
+	if cfg.BuildOptions != nil {
+		mergedOpts = manifestBuildOptions.AcceptTheirs(*cfg.BuildOptions)
+	} else {
+		mergedOpts = manifestBuildOptions
+	}
 
 	// Create the project
 	project := projects.NewBuildProject(absPath, mergedOpts)
@@ -145,7 +143,7 @@ func loadBuildProject(path string, opts projects.BuildOptions) (projects.Project
 }
 
 // loadSingleFileProject loads a single .bal file as a project.
-func loadSingleFileProject(path string, opts projects.BuildOptions) (projects.ProjectLoadResult, error) {
+func loadSingleFileProject(path string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	// Verify file exists and is a .bal file
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -175,6 +173,14 @@ func loadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 		return projects.ProjectLoadResult{}, err
 	}
 
+	// Get build options or use defaults
+	var buildOpts projects.BuildOptions
+	if cfg.BuildOptions != nil {
+		buildOpts = *cfg.BuildOptions
+	} else {
+		buildOpts = projects.NewBuildOptions()
+	}
+
 	// Get directory and filename
 	sourceDir := filepath.Dir(absPath)
 	fileName := filepath.Base(absPath)
@@ -183,7 +189,7 @@ func loadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	packageName := strings.TrimSuffix(fileName, projects.BalFileExtension)
 
 	// Create the project
-	project := projects.NewSingleFileProject(sourceDir, opts, absPath)
+	project := projects.NewSingleFileProject(sourceDir, buildOpts, absPath)
 
 	// Create package descriptor with anonymous org and default version
 	defaultVersion, _ := projects.NewPackageVersionFromString(projects.DefaultVersion)
@@ -231,7 +237,7 @@ func loadSingleFileProject(path string, opts projects.BuildOptions) (projects.Pr
 	})
 
 	// Create package from config
-	compilationOptions := opts.CompilationOptions()
+	compilationOptions := buildOpts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
 	project.InitPackage(pkg)
 

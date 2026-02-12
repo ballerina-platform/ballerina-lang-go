@@ -153,7 +153,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load project using ProjectLoader (auto-detects type)
-	result, err := directory.LoadProject(path, directory.WithBuildOptions(buildOpts))
+	result, err := directory.LoadProject(path, directory.ProjectLoadConfig{
+		BuildOptions: &buildOpts,
+	})
 	if err != nil {
 		printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
 		return err
