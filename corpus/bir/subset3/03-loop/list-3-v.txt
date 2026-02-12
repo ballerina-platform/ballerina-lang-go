@@ -1,0 +1,38 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
+    %4 = ConstantLoad 3
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    arr = %5;
+    %7 = ConstantLoad 0
+    $desugar$0 = %7;
+    %9 = length(arr) -> bb1;
+  }
+  bb1 {
+    $desugar$2 = %9;
+    GOTO bb2;
+  }
+  bb2 {
+    %11 = < $desugar$0 $desugar$2;
+    %11 ? bb3 : bb4;
+  }
+  bb3 {
+    %12 = arr[$desugar$0];
+    val = %12;
+    %14 = println(val) -> bb5;
+  }
+  bb4 {
+    return;
+  }
+  bb5 {
+    %16 = ConstantLoad 1
+    %15 = + $desugar$0 %16;
+    $desugar$0 = %15;
+    GOTO bb2;
+  }
+}

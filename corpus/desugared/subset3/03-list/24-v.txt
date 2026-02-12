@@ -7,7 +7,7 @@
       (var-def
         (variable v (type
           (array-type
-            (value-type any) ())) (expr
+            (value-type any) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
       (var-def
         (variable i (type

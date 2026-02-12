@@ -904,10 +904,28 @@ func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
 func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 	collection := foreachStmt.Collection
 	analyzeExpression(a, collection, nil)
+	variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+	variableType := a.ctx().SymbolType(variable.Symbol())
 	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
-		variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
-		if !semtypes.IsSubtypeSimple(a.ctx().SymbolType(variable.Symbol()), semtypes.INT) {
+		if !semtypes.IsSubtypeSimple(variableType, semtypes.INT) {
 			a.semanticErr("foreach variable must be a subtype of int for range expression")
+		}
+	} else {
+		collectionType := collection.GetDeterminedType()
+		var expectedValueType semtypes.SemType
+		switch {
+		case semtypes.IsSubtypeSimple(collectionType, semtypes.LIST):
+			memberTypes := semtypes.ListAllMemberTypesInner(a.tyCtx(), collectionType)
+			var result semtypes.SemType = &semtypes.ANY
+			for _, each := range memberTypes.SemTypes {
+				result = semtypes.Intersect(result, each)
+			}
+			expectedValueType = result
+		default:
+			a.unimplementedErr("unsupporeted foreach collection")
+		}
+		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
+			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
 		}
 	}
 }

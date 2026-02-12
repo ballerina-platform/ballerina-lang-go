@@ -306,8 +306,136 @@ func visitForEach(cx *Context, stmt *ast.BLangForeach) desugaredNode[model.State
 		rangeExpr := stmt.Collection.(*ast.BLangBinaryExpr)
 		return desugarForEachOnRange(cx, rangeExpr, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
+	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.LIST) {
+		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	}
 	cx.compilerCtx.Unimplemented("unsupported collection type in foreach", nil)
 	return desugaredNode[model.StatementNode]{}
+}
+
+func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	// Step 1: index variable ($desugar$N = 0)
+	zeroLiteral := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         int64(0),
+			OriginalValue: "0",
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	zeroLiteral.SetDeterminedType(&semtypes.INT)
+
+	idxVarName := &ast.BLangIdentifier{Value: cx.nextDesugarSymbolName()}
+	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
+	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetInitialExpression(zeroLiteral)
+	idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxVar.SetSymbol(idxVarSymbol)
+	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	initStmts = append(initStmts, idxVarDef)
+
+	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
+	idxVarRef.SetSymbol(idxVarSymbol)
+	idxVarRef.SetDeterminedType(&semtypes.INT)
+
+	// Step 2 & 3: length variable ($desugar$M = length(collection))
+	lengthInvocation := createLengthInvocation(cx, collection)
+
+	lenVarName := &ast.BLangIdentifier{Value: cx.nextDesugarSymbolName()}
+	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
+	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetInitialExpression(lengthInvocation)
+	lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenVar.SetSymbol(lenVarSymbol)
+	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	initStmts = append(initStmts, lenVarDef)
+
+	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
+	lenVarRef.SetSymbol(lenVarSymbol)
+	lenVarRef.SetDeterminedType(&semtypes.INT)
+
+	// Step 4: while condition ($idx < $len)
+	whileCondition := &ast.BLangBinaryExpr{
+		LhsExpr: idxVarRef,
+		RhsExpr: lenVarRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+
+	// Step 5: element access (collection[$idx])
+	elementAccess := &ast.BLangIndexBasedAccess{
+		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
+			Expr: collection,
+		},
+		IndexExpr: idxVarRef,
+	}
+	elementAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
+
+	// Step 6: patch loop var def initial expression
+	loopVarDef.Var.SetInitialExpression(elementAccess)
+
+	// Step 7: build body
+	incrementStmt := createIncrementStmt(idxVarRef)
+	cx.pushLoopVar(idxVarRef)
+
+	newBodyStmts := make([]model.StatementNode, 0, len(body.Stmts)+2)
+	newBodyStmts = append(newBodyStmts, loopVarDef)
+	newBodyStmts = append(newBodyStmts, body.Stmts...)
+	if len(newBodyStmts) > 0 {
+		if isAppentReachable(newBodyStmts[len(newBodyStmts)-1]) {
+			newBodyStmts = append(newBodyStmts, incrementStmt)
+		}
+	}
+	body.Stmts = newBodyStmts
+
+	bodyResult := walkBlockStmt(cx, body)
+	newBody := bodyResult.replacementNode.(*ast.BLangBlockStmt)
+
+	cx.popLoopVar()
+
+	// Step 8: create while loop
+	whileStmt := &ast.BLangWhile{
+		Expr: whileCondition,
+		Body: *newBody,
+	}
+	whileStmt.SetScope(foreachScope)
+	whileStmt.SetDeterminedType(&semtypes.NEVER)
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: whileStmt,
+	}
+}
+
+func createLengthInvocation(cx *Context, collection ast.BLangExpression) *ast.BLangInvocation {
+	const pkgName = "lang.array"
+	space, ok := cx.importedSymbols[pkgName]
+	if !ok {
+		cx.compilerCtx.InternalError("lang.array symbol space not found", nil)
+		return nil
+	}
+	symbolRef, ok := space.GetSymbol("length")
+	if !ok {
+		cx.compilerCtx.InternalError("lang.array:length symbol not found", nil)
+		return nil
+	}
+	if !cx.addedImplicitImports[pkgName] {
+		cx.addedImplicitImports[pkgName] = true
+		cx.pkg.Imports = append(cx.pkg.Imports, ast.BLangImportPackage{
+			OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+			PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+			Alias:        &ast.BLangIdentifier{Value: pkgName},
+		})
+	}
+	inv := &ast.BLangInvocation{
+		Name:     &ast.BLangIdentifier{Value: "length"},
+		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
+		ArgExprs: []ast.BLangExpression{collection},
+	}
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(&semtypes.INT)
+	return inv
 }
 
 func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {

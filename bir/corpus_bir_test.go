@@ -127,7 +127,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	semantics.AnalyzeCFG(cx, pkg, cfg)
 
 	// Step 9: Desugar AST (this is where foreach etc. will be transformed)
-	pkg = desugar.DesugarPackage(cx, pkg)
+	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 
 	// Step 10: Generate BIR package
 	birPkg := GenBir(cx, pkg)
