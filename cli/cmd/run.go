@@ -44,10 +44,11 @@ var runOpts struct {
 
 var runCmd = &cobra.Command{
 	Use:   "run [<source-file.bal> | <package-dir> | .]",
-	Short: "Compile and run the current package or a Ballerina source file",
-	Long: `	Compile the current package and run it.
+	Short: "Build and run the current package or a Ballerina source file",
+	Long: `	Build the current package and run it.
 
-	The 'run' command compiles and executes the given Ballerina source file.
+	The 'run' command builds and executes the given Ballerina package or 
+	a source file.
 
 	A Ballerina program consists of one or more modules; one of these modules
 	is distinguished as the root module, which is the default module of
@@ -66,7 +67,9 @@ var runCmd = &cobra.Command{
 
 	A service declaration is the syntactic sugar for creating a service object
 	and attaching it to the module listener specified in the service
-	declaration.`,
+	declaration.
+	
+	Note: Running individual '.bal' files of a package is not allowed.`,
 	Args: validateSourceFile,
 	RunE: runBallerina,
 }
