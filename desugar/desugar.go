@@ -32,6 +32,9 @@ type desugaredNode[E model.Node] struct {
 
 type Context struct {
 	compilerCtx          *context.CompilerContext
+	pkg                  *ast.BLangPackage
+	importedSymbols      map[string]model.ExportedSymbolSpace
+	addedImplicitImports map[string]bool
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
 	loopVarStack         []ast.BLangExpression // Stack to track loop variables (nil for while, varRef for desugared foreach)
@@ -108,6 +111,7 @@ func (s *desugaredSymbol) IsPublic() bool {
 	return s.isPublic
 }
 
+// FIXME: this should return a pair name and symbol and we should get rid of all the direct calls to nextDesugarSymbolName
 func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) model.SymbolRef {
 	if len(ctx.scopeStack) == 0 {
 		ctx.compilerCtx.InternalError("cannot add desugared symbol when scope stack is empty", nil)
@@ -127,9 +131,12 @@ func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind
 }
 
 // DesugarPackage returns a desugared package (may be new or same instance)
-func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) *ast.BLangPackage {
+func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
 	desugarCtx := &Context{
-		compilerCtx: compilerCtx,
+		compilerCtx:          compilerCtx,
+		pkg:                  pkg,
+		importedSymbols:      importedSymbols,
+		addedImplicitImports: make(map[string]bool),
 	}
 
 	// Desugar all functions and replace them

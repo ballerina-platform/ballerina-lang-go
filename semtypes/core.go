@@ -468,26 +468,24 @@ func CombineRanges(ranges1, ranges2 []Range) []CombinedRange {
 			max = *next - 1
 		}
 
-		var in1 *int64 = nil
+		var in1 int64 = -1
 		if i1 < len1 {
 			r := ranges1[i1]
 			if cur >= int64(r.Min) && max <= int64(r.Max) {
-				temp := int64(i1)
-				in1 = &temp
+				in1 = int64(i1)
 			}
 		}
 
-		var in2 *int64 = nil
+		var in2 int64 = -1
 		if i2 < len2 {
 			r := ranges2[i2]
 			if cur >= int64(r.Min) && max <= int64(r.Max) {
-				temp := int64(i2)
-				in2 = &temp
+				in2 = int64(i2)
 			}
 		}
 
-		if in1 != nil || in2 != nil {
-			combined = append(combined, CombinedRangeFrom(RangeFrom(cur, max), *in1, *in2))
+		if in1 != -1 || in2 != -1 {
+			combined = append(combined, CombinedRangeFrom(RangeFrom(cur, max), in1, in2))
 		}
 
 		if next == nil {

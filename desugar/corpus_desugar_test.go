@@ -94,7 +94,7 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	beforeDesugarAST := prettyPrinter.Print(compilationUnit)
 
 	// Step 6: DESUGAR
-	DesugarPackage(cx, pkg)
+	DesugarPackage(cx, pkg, importedSymbols)
 
 	// Step 7: Serialize AST after desugaring
 	prettyPrinterAfter := ast.PrettyPrinter{}

@@ -199,7 +199,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Run CFG analyses (reachability and explicit return) concurrently
 	semantics.AnalyzeCFG(cx, pkg, cfg)
 	// Desugar AST before BIR generation
-	pkg = desugar.DesugarPackage(cx, pkg)
+	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 	birPkg := bir.GenBir(cx, pkg)
 	if runOpts.dumpBIR {
 		prettyPrinter := bir.PrettyPrinter{}

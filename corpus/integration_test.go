@@ -205,7 +205,7 @@ func runTest(balFile string) testResult {
 		// Run CFG analyses (reachability and explicit return)
 		semantics.AnalyzeCFG(cx, pkg, cfg)
 		// Desugar the package (transform foreach to while, etc.)
-		pkg = desugar.DesugarPackage(cx, pkg)
+		pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 		birPkg := bir.GenBir(cx, pkg)
 
 		printlnMu.Lock()
