@@ -21,7 +21,9 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/lib"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"maps"
 )
 
 type symbolResolver interface {
@@ -48,8 +50,10 @@ type (
 	}
 )
 
-var _ symbolResolver = &moduleSymbolResolver{}
-var _ symbolResolver = &blockSymbolResolver{}
+var (
+	_ symbolResolver = &moduleSymbolResolver{}
+	_ symbolResolver = &blockSymbolResolver{}
+)
 
 func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID, importedSymbols map[string]model.ExportedSymbolSpace) *moduleSymbolResolver {
 	if importedSymbols == nil {
@@ -160,7 +164,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		// We are going to fill this in type resolver
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(name, signature, isPublic)
-		addTopLevelSymbol(moduleResolver, name, &symbol, fn.Name.GetPosition())
+		addTopLevelSymbol(moduleResolver, name, symbol, fn.Name.GetPosition())
 	}
 	for _, constDef := range pkg.Constants {
 		name := constDef.Name.Value
@@ -198,24 +202,41 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	ast.Walk(functionResolver, function)
 }
 
-// This is a tempary hack since we can only have one import io
-func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
 		// Check if this is ballerina/io import
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
-			if len(imp.PkgNameComps) == 1 && imp.PkgNameComps[0].Value == "io" {
+			if isIoImport(&imp) {
 				// Use alias if available, otherwise use package name
 				key := "io"
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
 				result[key] = lib.GetIoSymbols(ctx)
+			} else if isLangImport(&imp, "array") {
+				key := "array"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = lib.GetArraySymbols(ctx)
+			} else {
+				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
+		} else {
+			ctx.Unimplemented("unsupported import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 		}
 	}
 
+	maps.Copy(result, implicitImports)
+
+	return result
+}
+
+func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
+	result := make(map[string]model.ExportedSymbolSpace)
+	result["lang.array"] = lib.GetArraySymbols(ctx)
 	return result
 }
 
@@ -242,7 +263,11 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case model.InvocationNode:
-		resolveFunctionRef(resolver, n.(functionRefNode))
+		if n.GetExpression() != nil {
+			createDeferredMethodSymbol(resolver, n)
+		} else {
+			resolveFunctionRef(resolver, n.(functionRefNode))
+		}
 	case model.VariableNode:
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
@@ -251,6 +276,40 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referUserDefinedType(resolver, n)
 	}
 	return resolver
+}
+
+// since we don't have type information we can't determine if this is an actual method call or need to be converted
+// to a function call.
+func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
+	invocation := n.(*ast.BLangInvocation)
+	name := invocation.Name.GetValue()
+	invocation.SetSymbol(&deferredMethodSymbol{name: name})
+}
+
+type deferredMethodSymbol struct {
+	name string
+}
+
+var _ model.Symbol = &deferredMethodSymbol{}
+
+func (d *deferredMethodSymbol) Name() string {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) Type() semtypes.SemType {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) Kind() model.SymbolKind {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) SetType(semtypes.SemType) {
+	panic("method symbol has not been resolved yet")
+}
+
+func (d *deferredMethodSymbol) IsPublic() bool {
+	panic("method symbol has not been resolved yet")
 }
 
 func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedType) {
@@ -388,7 +447,6 @@ func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescript
 			internalError(resolver, "Unsupported type descriptor", td.GetPosition())
 		}
 	}
-	return
 }
 
 func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
@@ -436,3 +494,8 @@ func internalError[T symbolResolver](resolver T, message string, pos diagnostics
 func semanticError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
 	resolver.GetCtx().SemanticError(message, pos)
 }
+
+// We can't determine if a symbol is actually a method or not without resolivng the expression
+// Also we can't really resolve the actual method until we know the type of reciever
+// Thus we need to defer the resolution of the method until type resolution
+type defferedMethodSymbol struct{}

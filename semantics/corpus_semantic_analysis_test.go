@@ -67,11 +67,11 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Control Flow Graph Generation
@@ -213,11 +213,11 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 2: Type Resolution
-	typeResolver := NewTypeResolver(cx)
+	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 3: Control Flow Graph Generation

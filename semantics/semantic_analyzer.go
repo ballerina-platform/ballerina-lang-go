@@ -315,7 +315,7 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 		return
 	}
 
-	if len(importNode.PkgNameComps) != 1 || importNode.PkgNameComps[0].GetValue() != "io" {
+	if !isIoImport(importNode) && !isImplicitImport(importNode) {
 		sa.unimplementedErr("unsupported import package: only 'ballerina/io' is supported")
 		return
 	}
@@ -329,7 +329,19 @@ func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	sa.importedPkgs[alias] = importNode
 }
 
-func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol *model.FunctionSymbol) {
+func isIoImport(importNode *ast.BLangImportPackage) bool {
+	return len(importNode.PkgNameComps) == 1 && importNode.PkgNameComps[0].GetValue() == "io"
+}
+
+func isImplicitImport(importNode *ast.BLangImportPackage) bool {
+	return isLangImport(importNode, "array")
+}
+
+func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
+	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
+}
+
+func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
 		parent.semanticErr("'main' function must be public")
@@ -337,7 +349,7 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 
 	// Check 2: Must return error?
 	expectedReturnType := semtypes.Union(&semtypes.ERROR, &semtypes.NIL)
-	actualReturnType := fnSymbol.Signature.ReturnType
+	actualReturnType := fnSymbol.Signature().ReturnType
 
 	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
 		parent.semanticErr("'main' function must have return type 'error?'")
@@ -346,8 +358,8 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
-	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(*model.FunctionSymbol)
-	fa.retTy = fnSymbol.Signature.ReturnType
+	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature().ReturnType
 
 	// Validate main function constraints
 	if function.Name.Value == "main" {

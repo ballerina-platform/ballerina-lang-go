@@ -62,7 +62,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 	pkg := ast.ToPackage(compilationUnit)
-	importedSymbols := ResolveImports(cx, pkg)
+	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
 	ast.Walk(validator, pkg)

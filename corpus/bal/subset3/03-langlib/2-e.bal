@@ -14,10 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package runtime
-
-// Import all standard libraries to trigger their init() functions.
-import (
-	_ "ballerina-lang-go/stdlibs/array"
-	_ "ballerina-lang-go/stdlibs/io"
-)
+// @productions list-type-descriptor list-constructor-expr local-var-decl-stmt
+public function main() {
+    any[] x = [];
+    x.length(); // @error
+}
