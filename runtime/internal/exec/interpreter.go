@@ -26,7 +26,7 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
 	if pkg.MainFunction == nil {
 		panic("main function not found in BIR package")
 	}
-	callStack := &CallStack{
+	callStack := &callStack{
 		elements: make([]*Frame, 0, 32),
 	}
 	executeFunction(*pkg.MainFunction, nil, reg, callStack)

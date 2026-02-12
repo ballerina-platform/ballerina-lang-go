@@ -35,7 +35,7 @@ func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	return branchTerm.FalseBB
 }
 
-func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack *CallStack) *bir.BIRBasicBlock {
+func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
 	values := extractArgs(callInfo.Args, frame)
 	result := executeCall(callInfo, values, reg, callStack)
 	if callInfo.LhsOp != nil {
@@ -44,7 +44,7 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 	return callInfo.ThenBB
 }
 
-func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *CallStack) any {
+func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *callStack) any {
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(*callInfo.CachedBIRFunc, values, reg, callStack)
 	}
@@ -58,7 +58,7 @@ func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry, callSt
 	return lookupAndExecute(callInfo, values, reg, callStack)
 }
 
-func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *CallStack) any {
+func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *callStack) any {
 	lookupKey := callInfo.FunctionLookupKey
 	fn := reg.GetBIRFunction(lookupKey)
 	if fn != nil {

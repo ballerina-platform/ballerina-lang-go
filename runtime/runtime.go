@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
+	"fmt"
 )
 
 // Runtime represents a Ballerina runtime instance that owns a module registry
@@ -50,6 +51,15 @@ func NewRuntime() *Runtime {
 // It wraps the underlying interpreter with panic recovery and
 // returns any panic as an error value.
 func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			} else {
+				err = fmt.Errorf("runtime panic: %v", r)
+			}
+		}
+	}()
 	exec.Interpret(pkg, rt.registry)
 	return err
 }

@@ -27,7 +27,7 @@ import (
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry, callStack *CallStack) any {
+func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry, callStack *callStack) any {
 	funcKey := birFunc.FunctionLookupKey
 
 	localVars := &birFunc.LocalVars
@@ -39,7 +39,7 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry,
 	for i := len(args) + 1; i < len(*localVars); i++ {
 		locals[i] = defaultValueForType((*localVars)[i].Type)
 	}
-	frame := &Frame{locals: locals, FunctionKey: funcKey}
+	frame := &Frame{locals: locals, functionKey: funcKey}
 	callStack.Push(frame)
 	defer callStack.Pop()
 
@@ -150,7 +150,7 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 	}
 }
 
-func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *CallStack) *bir.BIRBasicBlock {
+func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB

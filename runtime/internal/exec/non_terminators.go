@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/semtypes"
+	"fmt"
 	"math/big"
 	"strconv"
 )
@@ -65,7 +66,10 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 }
 
 func castValue(value any, targetType semtypes.SemType) any {
-	b := targetType.(*semtypes.BasicTypeBitSet)
+	b, ok := targetType.(*semtypes.BasicTypeBitSet)
+	if !ok {
+		panic(fmt.Sprintf("invalid target type for cast: expected *semtypes.BasicTypeBitSet, got %T", targetType))
+	}
 	// If casting to any, just return the value as-is
 	if b.All() == semtypes.ANY.All() {
 		return value
@@ -79,7 +83,7 @@ func castValue(value any, targetType semtypes.SemType) any {
 	case bitsetValue&semtypes.DECIMAL.All() != 0:
 		return toDecimal(value)
 	}
-	return value
+	panic("bad type cast")
 }
 
 func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
@@ -99,14 +103,22 @@ func toInt(value any) int64 {
 	case float64:
 		return int64(v)
 	case *big.Rat:
-		f, _ := v.Float64()
-		return int64(f)
+		// Require an exact integer value to avoid precision loss when converting.
+		if !v.IsInt() {
+			panic("bad type cast")
+		}
+		num := v.Num()
+		// Ensure the integer fits into int64 without overflow.
+		if num.BitLen() > 63 {
+			panic("bad type cast")
+		}
+		return num.Int64()
 	case string:
-		f, err := strconv.ParseFloat(v, 64)
+		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			panic("bad type cast")
 		}
-		return int64(f)
+		return i
 	default:
 		panic("bad type cast")
 	}
@@ -137,7 +149,11 @@ func toDecimal(value any) *big.Rat {
 	case int64:
 		return big.NewRat(v, 1)
 	case float64:
-		return new(big.Rat).SetFloat64(v)
+		r := new(big.Rat)
+		if r.SetFloat64(v) == nil {
+			panic("bad type cast")
+		}
+		return r
 	case *big.Rat:
 		return v
 	case string:
