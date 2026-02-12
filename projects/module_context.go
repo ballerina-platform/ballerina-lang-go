@@ -262,11 +262,11 @@ func compileInternal(moduleCtx *moduleContext) {
 	moduleCtx.bLangPkg = pkgNode
 
 	// Resolve symbols (imports) before type resolution
-	importedSymbols := semantics.ResolveImports(cx, pkgNode)
+	importedSymbols := semantics.ResolveImports(cx, pkgNode, semantics.GetImplicitImports(cx))
 	semantics.ResolveSymbols(cx, pkgNode, importedSymbols)
 
 	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkgNode)
 
 	// Create control flow graph before semantic analysis.
