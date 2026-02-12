@@ -133,8 +133,8 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 	wg.Wait()
 
-	total := passedTotal + failedTotal
-	passedCount := total - skippedTotal
+	total := passedTotal + failedTotal + skippedTotal
+	passedCount := passedTotal
 	printFinalSummary(total, passedCount, skippedTotal, failedTotal, failedTests)
 	if failedTotal > 0 {
 		t.Fail()

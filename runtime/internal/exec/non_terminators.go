@@ -68,9 +68,8 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 func castValue(value any, targetType semtypes.SemType) any {
 	b, ok := targetType.(*semtypes.BasicTypeBitSet)
 	if !ok {
-		panic(fmt.Sprintf("invalid target type for cast: expected *semtypes.BasicTypeBitSet, got %T", targetType))
+		panic("bad type cast")
 	}
-	// If casting to any, just return the value as-is
 	if b.All() == semtypes.ANY.All() {
 		return value
 	}
@@ -82,6 +81,11 @@ func castValue(value any, targetType semtypes.SemType) any {
 		return toFloat(value)
 	case bitsetValue&semtypes.DECIMAL.All() != 0:
 		return toDecimal(value)
+	case bitsetValue&semtypes.BOOLEAN.All() != 0:
+		if v, ok := value.(bool); ok {
+			return v
+		}
+		panic("bad type cast: cannot cast value to boolean")
 	}
 	panic("bad type cast")
 }
@@ -103,20 +107,25 @@ func toInt(value any) int64 {
 	case float64:
 		return int64(v)
 	case *big.Rat:
-		// Require an exact integer value to avoid precision loss when converting.
 		if !v.IsInt() {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
 		}
 		num := v.Num()
-		// Ensure the integer fits into int64 without overflow.
 		if num.BitLen() > 63 {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
 		}
 		return num.Int64()
 	case string:
-		i, err := strconv.ParseInt(v, 10, 64)
+		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return i
+		}
+		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %q to int", v))
+		}
+		i := int64(f)
+		if float64(i) != f {
+			panic(fmt.Sprintf("bad type cast: cannot cast %q to int", v))
 		}
 		return i
 	default:
@@ -136,7 +145,7 @@ func toFloat(value any) float64 {
 	case string:
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %q to float", v))
 		}
 		return f
 	default:
@@ -151,7 +160,7 @@ func toDecimal(value any) *big.Rat {
 	case float64:
 		r := new(big.Rat)
 		if r.SetFloat64(v) == nil {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
 		}
 		return r
 	case *big.Rat:
@@ -159,7 +168,7 @@ func toDecimal(value any) *big.Rat {
 	case string:
 		r := new(big.Rat)
 		if _, ok := r.SetString(v); !ok {
-			panic("bad type cast")
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
 		}
 		return r
 	default:

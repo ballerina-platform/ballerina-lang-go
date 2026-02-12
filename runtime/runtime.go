@@ -56,7 +56,7 @@ func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
 			if e, ok := r.(error); ok {
 				err = e
 			} else {
-				err = fmt.Errorf("runtime panic: %v", r)
+				err = fmt.Errorf("%v", r)
 			}
 		}
 	}()
