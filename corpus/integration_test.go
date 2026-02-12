@@ -49,6 +49,8 @@ const (
 	externFuncName   = "println"
 
 	panicPrefix = "panic: "
+
+	expectedCompileErrorMsg = "compile-time error (diagnostics)"
 )
 
 var (
@@ -136,8 +138,7 @@ func TestIntegrationSuite(t *testing.T) {
 	wg.Wait()
 
 	total := passedTotal + failedTotal + skippedTotal
-	passedCount := passedTotal
-	printFinalSummary(total, passedCount, skippedTotal, failedTotal, failedTests)
+	printFinalSummary(total, passedTotal, skippedTotal, failedTotal, failedTests)
 	if failedTotal > 0 {
 		t.Fail()
 	}
@@ -146,63 +147,74 @@ func TestIntegrationSuite(t *testing.T) {
 func runTest(balFile string) testResult {
 	expectedOutput := readExpectedOutput(balFile)
 	expectedPanic := readExpectedPanic(balFile)
-	hasError := hasError(balFile)
+	isExpectedErrorTest := strings.HasSuffix(filepath.Base(balFile), "-e.bal") || hasError(balFile)
 
-	var panicOccurred bool
-	var panicValue interface{}
+	compileFailed, compilePanicValue, birPkg := runCompilePhase(balFile)
+	panicOccurred, panicValue, printlnStr := runInterpretPhase(balFile, compileFailed, birPkg)
 
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicOccurred = true
-				panicValue = r
-			}
-		}()
+	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, isExpectedErrorTest, compileFailed, compilePanicValue)
+}
 
-		cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-		syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
-		if err != nil {
-			panic(err)
-		}
-
-		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-		pkg := ast.ToPackage(compilationUnit)
-		// Resolve symbols (imports) before type resolution
-		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-		semantics.ResolveSymbols(cx, pkg, importedSymbols)
-		// Add type resolution step
-		typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-		typeResolver.ResolveTypes(cx, pkg)
-		// Run control flow analysis after type resolution
-		cfg := semantics.CreateControlFlowGraph(cx, pkg)
-		// Run semantic analysis after type resolution
-		semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-		semanticAnalyzer.Analyze(pkg)
-		// Run CFG analyses (reachability and explicit return)
-		semantics.AnalyzeCFG(cx, pkg, cfg)
-		birPkg := bir.GenBir(cx, pkg)
-
-		printlnMu.Lock()
-		printlnOutputs[balFile] = ""
-		printlnMu.Unlock()
-
-		rt := runtime.NewRuntime()
-		runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
-		interpretErr := rt.Interpret(*birPkg)
-		if interpretErr != nil {
-			panicOccurred = true
-			panicValue = interpretErr
+func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bir.BIRPackage) {
+	defer func() {
+		if r := recover(); r != nil {
+			failed = true
+			panicVal = r
 		}
 	}()
+
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
+	if err != nil {
+		panic(err)
+	}
+
+	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+	astPkg := ast.ToPackage(compilationUnit)
+	importedSymbols := semantics.ResolveImports(cx, astPkg, semantics.GetImplicitImports(cx))
+	semantics.ResolveSymbols(cx, astPkg, importedSymbols)
+	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
+	typeResolver.ResolveTypes(cx, astPkg)
+	cfg := semantics.CreateControlFlowGraph(cx, astPkg)
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(astPkg)
+	semantics.AnalyzeCFG(cx, astPkg, cfg)
+	pkg = bir.GenBir(cx, astPkg)
+	return
+}
+
+func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackage) (panicOccurred bool, panicValue interface{}, output string) {
+	if compileFailed || birPkg == nil {
+		return false, nil, ""
+	}
+
 	printlnMu.Lock()
-	printlnStr := printlnOutputs[balFile]
+	printlnOutputs[balFile] = ""
+	printlnMu.Unlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			panicOccurred = true
+			panicValue = r
+		}
+	}()
+
+	rt := runtime.NewRuntime()
+	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
+	if err := rt.Interpret(*birPkg); err != nil {
+		panicOccurred = true
+		panicValue = err
+	}
+
+	printlnMu.Lock()
+	output = printlnOutputs[balFile]
 	delete(printlnOutputs, balFile)
 	printlnMu.Unlock()
 
-	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, hasError)
+	return
 }
 
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}, hasError bool) testResult {
+func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}, isExpectedErrorTest, compileFailed bool, compilePanicValue interface{}) testResult {
 	if expectedPanic != "" {
 		if panicOccurred {
 			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
@@ -228,25 +240,37 @@ func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOc
 		}
 	}
 
-	if panicOccurred {
-		panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
-		if hasError && strings.Contains(panicStr, "error:") {
+	if isExpectedErrorTest {
+		if compileFailed {
+			return testResult{success: true, expected: expectedOutput, actual: ""}
+		}
+		if panicOccurred {
 			return testResult{
-				success:  true,
-				expected: expectedOutput,
-				actual:   fmt.Sprintf("%s%s", panicPrefix, panicStr),
+				success:  false,
+				expected: expectedCompileErrorMsg,
+				actual:   formatPanicActual(panicValue),
 			}
 		}
-		actual := fmt.Sprintf("%s%s", panicPrefix, panicStr)
-		if st, ok := panicValue.(interface{ Stack() []byte }); ok {
-			if stack := st.Stack(); len(stack) > 0 {
-				actual = actual + "\n" + string(stack)
-			}
+		actual := trimNewline(outputStr)
+		if actual == "" {
+			actual = "program compiled and ran successfully (no output)"
 		}
+		return testResult{success: false, expected: expectedCompileErrorMsg, actual: actual}
+	}
+
+	if compileFailed {
 		return testResult{
 			success:  false,
 			expected: expectedOutput,
-			actual:   actual,
+			actual:   formatPanicActual(compilePanicValue),
+		}
+	}
+
+	if panicOccurred {
+		return testResult{
+			success:  false,
+			expected: expectedOutput,
+			actual:   formatPanicActual(panicValue),
 		}
 	}
 
@@ -269,6 +293,16 @@ func extractPanicMessage(panicStr string) string {
 		return strings.TrimPrefix(panicStr, panicPrefix)
 	}
 	return panicStr
+}
+
+func formatPanicActual(panicValue interface{}) string {
+	s := panicPrefix + extractPanicMessage(fmt.Sprintf("%v", panicValue))
+	if st, ok := panicValue.(interface{ Stack() []byte }); ok {
+		if stack := st.Stack(); len(stack) > 0 {
+			s += "\n" + string(stack)
+		}
+	}
+	return s
 }
 
 func extractPanicFromOutput(outputStr, expectedPanic string) string {
