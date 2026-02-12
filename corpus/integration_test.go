@@ -245,7 +245,7 @@ func runTest(balFile string) (stdout, stderr string) {
 			panic(err)
 		}
 
-		if cx.HasErrors() {
+		if cx.HasDiagnostics() {
 			cx.PrintDiagnostics(&stderrBuilder)
 			return
 		}
@@ -266,7 +266,7 @@ func runTest(balFile string) (stdout, stderr string) {
 		// Run CFG analyses (reachability and explicit return)
 		semantics.AnalyzeCFG(cx, pkg, cfg)
 
-		if cx.HasErrors() {
+		if cx.HasDiagnostics() {
 			cx.PrintDiagnostics(&stderrBuilder)
 			return
 		}

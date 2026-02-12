@@ -152,7 +152,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("compilation failed: %w", err)
 	}
 
-	if cx.HasErrors() {
+	if cx.HasDiagnostics() {
 		cx.PrintDiagnostics(os.Stderr)
 		return nil
 	}
@@ -195,7 +195,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	if cx.HasErrors() {
+	if cx.HasDiagnostics() {
 		cx.PrintDiagnostics(os.Stderr)
 		return nil
 	}

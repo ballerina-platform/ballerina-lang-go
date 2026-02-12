@@ -183,7 +183,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	defer func() {
 		recover()
 
-		if !cx.HasErrors() {
+		if !cx.HasDiagnostics() {
 			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
 			return
 		}

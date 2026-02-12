@@ -143,12 +143,12 @@ func (this *CompilerContext) GetDiagnostics() []diagnostics.Diagnostic {
 	return this.diagnostics
 }
 
-func (this *CompilerContext) HasErrors() bool {
+func (this *CompilerContext) HasDiagnostics() bool {
 	return len(this.diagnostics) > 0
 }
 
 func (this *CompilerContext) PrintDiagnostics(w io.Writer) {
-	if this.HasErrors() {
+	if this.HasDiagnostics() {
 		fmt.Fprintln(w, "\nCompilation failed with the following errors:")
 		for _, diagnostic := range this.diagnostics {
 			this.printDiagnostic(w, diagnostic)
