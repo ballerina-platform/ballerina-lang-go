@@ -78,6 +78,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printGroupExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
+	case *BLangForeach:
+		p.printForeach(t)
 	case *BLangArrayType:
 		p.printArrayType(t)
 	case *BLangConstant:
@@ -499,6 +501,21 @@ func (p *PrettyPrinter) printWhile(node *BLangWhile) {
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
 	// OnFailClause handling can be added if needed in the future
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printForeach(node *BLangForeach) {
+	p.startNode()
+	p.printString("foreach")
+	p.indentLevel++
+	if node.VariableDef != nil {
+		p.PrintInner(node.VariableDef)
+	}
+	if node.Collection != nil {
+		p.PrintInner(node.Collection.(BLangNode))
+	}
+	p.PrintInner(&node.Body)
 	p.indentLevel--
 	p.endNode()
 }

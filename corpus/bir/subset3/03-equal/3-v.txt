@@ -1,0 +1,60 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 1
+    %3 = newArray <UNKNOWN>[%2]
+    x = %3;
+    y = x;
+    %6 = printEq(x,y) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad 1
+    %8 = ConstantLoad 1
+    %9 = newArray <UNKNOWN>[%8]
+    %10 = ConstantLoad 1
+    %11 = printEq(%9,%10) -> bb2;
+  }
+  bb2 {
+    %12 = ConstantLoad 1
+    %13 = ConstantLoad 1
+    %14 = newArray <UNKNOWN>[%13]
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad 1
+    %17 = newArray <UNKNOWN>[%16]
+    %18 = printEq(%14,%17) -> bb3;
+  }
+  bb3 {
+    %19 = ConstantLoad 0
+    %20 = newArray <UNKNOWN>[%19]
+    %21 = ConstantLoad 0
+    %22 = newArray <UNKNOWN>[%21]
+    %23 = printEq(%20,%22) -> bb4;
+  }
+  bb4 {
+    %24 = ConstantLoad 1
+    %25 = ConstantLoad 1
+    %26 = newArray <UNKNOWN>[%25]
+    %27 = ConstantLoad 2
+    %28 = ConstantLoad 1
+    %29 = newArray <UNKNOWN>[%28]
+    %30 = printEq(%26,%29) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+printEq<NIL>{
+  bb0 {
+    %3 = unknown x y;
+    %4 = println(%3) -> bb1;
+  }
+  bb1 {
+    %5 = unknown x y;
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}

@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/values"
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
@@ -29,37 +30,34 @@ func execMove(moveIns *bir.Move, frame *Frame) {
 }
 
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
+	list := &values.List{}
 	size := 0
 	if newArray.SizeOp != nil {
 		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
-		if size < 0 {
-			size = 0
-		}
 	}
-	arr := make([]any, size)
-	frame.SetOperand(newArray.LhsOp.Index, &arr)
+	for _, value := range newArray.Values {
+		list.Push(frame.GetOperand(value.Index))
+	}
+	lat := newArray.AtomicType
+	for i := size; i < lat.Members.FixedLength; i++ {
+		ty := lat.MemberAt(i)
+		val := fillMember(ty)
+		if val == NeverValue {
+			panic("never value encountered")
+		}
+		list.Push(val)
+	}
+	frame.SetOperand(newArray.LhsOp.Index, list)
 }
 
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
-	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
-	arr := *arrPtr
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
-	arr[idx] = frame.GetOperand(access.RhsOp.Index)
+	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
+	idx := frame.GetOperand(access.KeyOp.Index).(int64)
+	list.FillingStore(frame.GetOperand(access.RhsOp.Index), int(idx))
 }
 
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
-	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	frame.SetOperand(access.LhsOp.Index, arr[idx])
-}
-
-func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
-	if idx >= len(arr) {
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		return newArr
-	}
-	return arr
+	list := frame.GetOperand(access.RhsOp.Index).(*values.List)
+	idx := frame.GetOperand(access.KeyOp.Index).(int64)
+	frame.SetOperand(access.LhsOp.Index, list.Get(int(idx)))
 }

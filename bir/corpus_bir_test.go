@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -271,11 +272,20 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// // Step 6: Run semantic analysis
-	// semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
-	// semanticAnalyzer.Analyze(pkg)
+	// Step 6: Generate control flow graph
+	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 
-	// Step 7: Generate BIR package
+	// Step 7: Run semantic analysis
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(pkg)
+
+	// Step 8: Run CFG analyses (reachability and explicit return)
+	semantics.AnalyzeCFG(cx, pkg, cfg)
+
+	// Step 9: Desugar AST (this is where foreach etc. will be transformed)
+	pkg = desugar.DesugarPackage(cx, pkg)
+
+	// Step 10: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result

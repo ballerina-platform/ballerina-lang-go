@@ -23,17 +23,17 @@ var _ BasicTypeOps = &ObjectOps{}
 
 func (this *ObjectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
-	return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t2)
+	return bddSubtypeDiff(t1, t2)
 }
 
 func (this *ObjectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
-	return bddSubtypeIntersect(MAPPING_SUBTYPE_OBJECT, t2)
+	return bddSubtypeIntersect(t1, t2)
 }
 
 func (this *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
-	return bddSubtypeUnion(MAPPING_SUBTYPE_OBJECT, t2)
+	return bddSubtypeUnion(t1, t2)
 }
 
 func objectSubTypeIsEmpty(cx Context, t SubtypeData) bool {

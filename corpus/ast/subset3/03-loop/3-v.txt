@@ -1,0 +1,34 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation nestedForeach ()))))
+  (function nestedForeach () (
+    (value-type null))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 1)
+          (literal 3))
+        (block-stmt
+          (foreach
+            (var-def
+              (variable j (type
+                (value-type int))))
+            (binary-expr ..<
+              (literal 1)
+              (literal 3))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (binary-expr +
+                    (binary-expr *
+                      (simple-var-ref i)
+                      (literal 10))
+                    (simple-var-ref j))))))))))))

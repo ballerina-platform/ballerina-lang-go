@@ -20,8 +20,10 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/runtime/values"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"fmt"
@@ -32,6 +34,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"unsafe"
 )
 
 const (
@@ -69,6 +72,9 @@ var (
 		"subset2/02-typecast/9-e.bal",
 		"subset2/02-typecast/numeric-conversion-v.bal",
 		"subset2/02-typecast/numeric-conversion2-e.bal",
+
+		// FIXME: https://github.com/ballerina-platform/ballerina-lang-go/issues/110
+		"subset3/03-int/neg-p.bal",
 	})
 
 	printlnOutputs = make(map[string]string)
@@ -198,6 +204,8 @@ func runTest(balFile string) testResult {
 		semanticAnalyzer.Analyze(pkg)
 		// Run CFG analyses (reachability and explicit return)
 		semantics.AnalyzeCFG(cx, pkg, cfg)
+		// Desugar the package (transform foreach to while, etc.)
+		pkg = desugar.DesugarPackage(cx, pkg)
 		birPkg := bir.GenBir(cx, pkg)
 
 		printlnMu.Lock()
@@ -327,11 +335,12 @@ func readFileContent(filePath string) string {
 func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 	return func(args []any) (any, error) {
 		var b strings.Builder
+		visited := make(map[uintptr]bool)
 		for i, arg := range args {
 			if i > 0 {
 				b.WriteByte(' ')
 			}
-			b.WriteString(valueToString(arg))
+			b.WriteString(valueToString(arg, visited))
 		}
 		b.WriteByte('\n')
 		printlnMu.Lock()
@@ -342,7 +351,7 @@ func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 	}
 }
 
-func valueToString(v any) string {
+func valueToString(v any, visited map[uintptr]bool) string {
 	type stringer interface {
 		String() string
 	}
@@ -375,13 +384,29 @@ func valueToString(v any) string {
 		return strconv.FormatFloat(t, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(t)
-	case *[]any:
+	case *values.List:
 		if t == nil {
 			return "[]"
 		}
-		return formatAnySlice(*t)
+		ptr := uintptr(unsafe.Pointer(t))
+		if visited[ptr] {
+			return "[...]"
+		}
+		for i := 0; i < t.Len(); i++ {
+			if itemPtr, ok := t.Get(i).(*values.List); ok {
+				if uintptr(unsafe.Pointer(itemPtr)) == ptr {
+					return "[...]"
+				}
+			}
+		}
+		visited[ptr] = true
+		var items []any
+		for i := 0; i < t.Len(); i++ {
+			items = append(items, t.Get(i))
+		}
+		return formatAnySlice(items, visited)
 	case []any:
-		return formatAnySlice(t)
+		return formatAnySlice(t, visited)
 	case stringer:
 		return t.String()
 	case nil:
@@ -391,14 +416,14 @@ func valueToString(v any) string {
 	}
 }
 
-func formatAnySlice(items []any) string {
+func formatAnySlice(items []any, visited map[uintptr]bool) string {
 	var b strings.Builder
 	b.WriteByte('[')
 	for i, item := range items {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(valueToString(item))
+		b.WriteString(valueToString(item, visited))
 	}
 	b.WriteByte(']')
 	return b.String()

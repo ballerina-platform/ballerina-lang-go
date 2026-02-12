@@ -1,0 +1,29 @@
+(main
+  (bb0 () (bb1))
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 6)
+      (literal 10))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (binary-expr ==
+      (simple-var-ref i)
+      (literal 8))
+  )
+  (bb3 (bb1 bb4) ()
+    (expression-stmt
+      (invocation io println (
+        (literal true))))
+  )
+  (bb4 (bb2) (bb3)
+    (break)
+  )
+  (bb5 (bb2) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+)
