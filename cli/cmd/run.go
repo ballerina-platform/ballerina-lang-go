@@ -195,6 +195,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
+	// Run CFG analyses (reachability and explicit return)
+	semantics.AnalyzeCFG(cx, pkg, cfg)
+
 	if cx.HasDiagnostics() {
 		cx.PrintDiagnostics(os.Stderr)
 		return nil
