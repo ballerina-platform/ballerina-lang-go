@@ -7,7 +7,7 @@
       (var-def
         (variable v (type
           (array-type
-            (value-type any) dimensions: 1 ([]))) (expr
+            (value-type int) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
       (var-def
         (variable i (type
@@ -29,18 +29,7 @@
             (simple-var-ref i)
             (binary-expr +
               (simple-var-ref i)
-              (literal 1)))
-          (if
-            (binary-expr ==
-              (binary-expr %
-                (simple-var-ref i)
-                (literal 1000))
-              (literal 0))
-            (block-stmt
-              (expression-stmt
-                (invocation io println (
-                  (simple-var-ref i))))) ())
-          (block-stmt)))
+              (literal 1)))))
       (assignment
         (index-based-access
           (simple-var-ref v)
@@ -63,11 +52,9 @@
             (simple-var-ref sum)
             (binary-expr +
               (simple-var-ref sum)
-              (type-conversion-expr
-                (index-based-access
-                  (simple-var-ref v)
-                  (simple-var-ref i))
-                (value-type int))))
+              (index-based-access
+                (simple-var-ref v)
+                (simple-var-ref i))))
           (assignment
             (simple-var-ref i)
             (binary-expr +

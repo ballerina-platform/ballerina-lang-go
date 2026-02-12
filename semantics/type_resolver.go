@@ -942,14 +942,17 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
-
-			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
-			} else {
-				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{memberTy}, length)
+			t := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
+			for i := len(ty.Sizes); i > 0; i-- {
+				lenExp := ty.Sizes[i-1]
+				if lenExp == nil {
+					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
+				} else {
+					length := lenExp.(*ast.BLangLiteral).Value.(int)
+					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
+				}
 			}
+			semTy = t
 		} else {
 			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
 		}

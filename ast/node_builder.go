@@ -2549,6 +2549,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	for i := dimensionSize - 1; i >= 0; i-- {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
+			sizes = append(sizes, nil)
 		} else {
 			panic("array length expression handling unimplemented")
 		}
