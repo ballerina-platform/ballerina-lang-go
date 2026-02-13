@@ -31,7 +31,7 @@ type SemanticVersion struct {
 	major      int
 	minor      int
 	patch      int
-preRelease string
+	preRelease string
 	build      string
 }
 

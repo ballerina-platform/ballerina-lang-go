@@ -36,24 +36,24 @@ func createNewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "new <package-path>",
 		Short: "Create a new Ballerina package",
-		Long: `Create a new Ballerina package.
+		Long: `	Create a new Ballerina package.
 
-    Creates the given path if it does not exist and initializes a Ballerina
-    package in it. It generates the Ballerina.toml, main.bal, and .gitignore
-    files inside the package directory. However, for existing paths, the
-    main.bal file is only created if there are no other Ballerina source
-    files (.bal) in the directory.
-
-    The package directory will have the structure below.
-        .
-        ├── Ballerina.toml
-        ├── .gitignore
-        └── main.bal
-
-    Any directory becomes a Ballerina package if that directory has a
-    'Ballerina.toml' file. It contains the organization name, package name,
-    and the version. The package root directory is the default module
-    directory.`,
+	Creates the given path if it does not exist and initializes a Ballerina
+	package in it. It generates the Ballerina.toml, main.bal, and .gitignore
+	files inside the package directory. However, for existing paths, the
+	main.bal file is only created if there are no other Ballerina source
+	files (.bal) in the directory.
+	
+	The package directory will have the structure below.
+		.
+		├── Ballerina.toml
+		├── .gitignore
+		└── main.bal
+		
+	Any directory becomes a Ballerina package if that directory has a
+	'Ballerina.toml' file. It contains the organization name, package name,
+	and the version. The package root directory is the default module
+	directory.`,
 		Args: validateNewArgs,
 		RunE: runNew,
 	}

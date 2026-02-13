@@ -41,7 +41,6 @@ const (
 	keyRepository  = "repository"
 	keyDescription = "description"
 	keyVisibility  = "visibility"
-	keyTemplate    = "template"
 
 	keyDependency = "dependency"
 
@@ -83,8 +82,6 @@ type ManifestBuilder struct {
 	icon             string
 	readme           string
 	description      string
-	template         bool
-	platforms        map[string]*projects.Platform
 	otherEntries     map[string]any
 }
 
@@ -99,7 +96,6 @@ func NewManifestBuilder(toml *tomlparser.Toml, projectPath string) *ManifestBuil
 		license:      []string{},
 		authors:      []string{},
 		keywords:     []string{},
-		platforms:    make(map[string]*projects.Platform),
 		otherEntries: make(map[string]any),
 	}
 }
@@ -115,7 +111,6 @@ func NewManifestBuilderFromDescriptor(desc projects.PackageDescriptor) *Manifest
 		license:      []string{},
 		authors:      []string{},
 		keywords:     []string{},
-		platforms:    make(map[string]*projects.Platform),
 		otherEntries: make(map[string]any),
 	}
 }
@@ -197,26 +192,6 @@ func (b *ManifestBuilder) WithDescription(desc string) *ManifestBuilder {
 	return b
 }
 
-// WithTemplate sets whether this is a template package.
-func (b *ManifestBuilder) WithTemplate(template bool) *ManifestBuilder {
-	b.template = template
-	return b
-}
-
-// WithPlatforms sets the platform-specific configurations.
-func (b *ManifestBuilder) WithPlatforms(platforms map[string]*projects.Platform) *ManifestBuilder {
-	b.platforms = make(map[string]*projects.Platform, len(platforms))
-	for k, v := range platforms {
-		if v != nil {
-			b.platforms[k] = projects.NewPlatform(v.Dependencies())
-			if v.IsGraalVMCompatibleSet() {
-				b.platforms[k] = projects.NewPlatformWithGraalVM(v.Dependencies(), v.GraalVMCompatible())
-			}
-		}
-	}
-	return b
-}
-
 // Build constructs the PackageManifest.
 // If TOML was provided, it parses TOML values first, then applies any With* overrides.
 // All errors are captured as diagnostics - use Diagnostics() to check for errors.
@@ -241,8 +216,6 @@ func (b *ManifestBuilder) Build() projects.PackageManifest {
 		Icon:             b.icon,
 		Readme:           b.readme,
 		Description:      b.description,
-		Template:         b.template,
-		Platforms:        b.platforms,
 		OtherEntries:     b.otherEntries,
 	}
 
@@ -268,9 +241,6 @@ func (b *ManifestBuilder) parseFromTOML() {
 	b.repository = b.parseString(keyPackage + "." + keyRepository)
 	b.description = b.parseString(keyPackage + "." + keyDescription)
 	b.visibility = b.parseString(keyPackage + "." + keyVisibility)
-	if template, ok := b.toml.GetBool(keyPackage + "." + keyTemplate); ok {
-		b.template = template
-	}
 }
 
 // Diagnostics returns accumulated diagnostics.

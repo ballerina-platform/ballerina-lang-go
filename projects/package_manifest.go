@@ -19,7 +19,6 @@
 package projects
 
 import (
-	"maps"
 	"slices"
 
 	"ballerina-lang-go/tools/diagnostics"
@@ -43,8 +42,6 @@ type PackageManifest struct {
 	icon             string
 	readme           string
 	description      string
-	template         bool
-	platforms        map[string]*Platform
 }
 
 // Dependency represents a package dependency declared in Ballerina.toml.
@@ -54,13 +51,6 @@ type Dependency struct {
 	org        PackageOrg
 	version    PackageVersion
 	repository string
-}
-
-// Platform represents platform-specific configuration in Ballerina.toml.
-// Java source: io.ballerina.projects.PackageManifest.Platform
-type Platform struct {
-	dependencies      []map[string]any
-	graalvmCompatible *bool
 }
 
 // NewDependency creates a new Dependency with the given components.
@@ -102,49 +92,6 @@ func (d Dependency) Repository() string {
 	return d.repository
 }
 
-// NewPlatform creates a new Platform with the given dependencies.
-func NewPlatform(dependencies []map[string]any) *Platform {
-	depsCopy := make([]map[string]any, len(dependencies))
-	for i, dep := range dependencies {
-		depsCopy[i] = maps.Clone(dep)
-	}
-	return &Platform{
-		dependencies: depsCopy,
-	}
-}
-
-// NewPlatformWithGraalVM creates a new Platform with GraalVM compatibility info.
-func NewPlatformWithGraalVM(dependencies []map[string]any, graalvmCompatible bool) *Platform {
-	p := NewPlatform(dependencies)
-	p.graalvmCompatible = &graalvmCompatible
-	return p
-}
-
-// Dependencies returns a copy of the platform dependencies.
-func (p *Platform) Dependencies() []map[string]any {
-	if p == nil || p.dependencies == nil {
-		return nil
-	}
-	result := make([]map[string]any, len(p.dependencies))
-	for i, dep := range p.dependencies {
-		result[i] = maps.Clone(dep)
-	}
-	return result
-}
-
-// GraalVMCompatible returns whether this platform is GraalVM compatible.
-func (p *Platform) GraalVMCompatible() bool {
-	if p == nil || p.graalvmCompatible == nil {
-		return false
-	}
-	return *p.graalvmCompatible
-}
-
-// IsGraalVMCompatibleSet returns true if GraalVM compatibility was explicitly set.
-func (p *Platform) IsGraalVMCompatibleSet() bool {
-	return p != nil && p.graalvmCompatible != nil
-}
-
 // NewPackageManifest creates a new PackageManifest with default values.
 func NewPackageManifest(desc PackageDescriptor) PackageManifest {
 	return PackageManifest{
@@ -155,7 +102,6 @@ func NewPackageManifest(desc PackageDescriptor) PackageManifest {
 		license:      []string{},
 		authors:      []string{},
 		keywords:     []string{},
-		platforms:    make(map[string]*Platform),
 	}
 }
 
@@ -259,41 +205,6 @@ func (m PackageManifest) Description() string {
 	return m.description
 }
 
-// Template returns whether this is a template package.
-func (m PackageManifest) Template() bool {
-	return m.template
-}
-
-// Platform returns the platform configuration for the given name.
-// Returns nil if no platform configuration exists for that name.
-func (m PackageManifest) Platform(name string) *Platform {
-	p, ok := m.platforms[name]
-	if !ok {
-		return nil
-	}
-	result := NewPlatform(p.dependencies)
-	if p.graalvmCompatible != nil {
-		graalvm := *p.graalvmCompatible
-		result.graalvmCompatible = &graalvm
-	}
-	return result
-}
-
-// Platforms returns a copy of all platform configurations.
-func (m PackageManifest) Platforms() map[string]*Platform {
-	result := make(map[string]*Platform, len(m.platforms))
-	for k, v := range m.platforms {
-		if v != nil {
-			result[k] = NewPlatform(v.dependencies)
-			if v.graalvmCompatible != nil {
-				graalvm := *v.graalvmCompatible
-				result[k].graalvmCompatible = &graalvm
-			}
-		}
-	}
-	return result
-}
-
 // PackageManifestParams contains all parameters needed to construct a PackageManifest.
 // This struct is used by internal packages that need to build PackageManifest instances.
 // All fields are exported to allow cross-package construction.
@@ -311,8 +222,6 @@ type PackageManifestParams struct {
 	Icon             string
 	Readme           string
 	Description      string
-	Template         bool
-	Platforms        map[string]*Platform
 	OtherEntries     map[string]any
 }
 
@@ -340,18 +249,6 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 	keywords := make([]string, len(params.Keywords))
 	copy(keywords, params.Keywords)
 
-	// Copy platforms
-	platforms := make(map[string]*Platform, len(params.Platforms))
-	for k, v := range params.Platforms {
-		if v != nil {
-			platforms[k] = NewPlatform(v.dependencies)
-			if v.graalvmCompatible != nil {
-				graalvm := *v.graalvmCompatible
-				platforms[k].graalvmCompatible = &graalvm
-			}
-		}
-	}
-
 	return PackageManifest{
 		packageDesc:      params.PackageDesc,
 		dependencies:     deps,
@@ -366,7 +263,5 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 		icon:             params.Icon,
 		readme:           params.Readme,
 		description:      params.Description,
-		template:         params.Template,
-		platforms:        platforms,
 	}
 }

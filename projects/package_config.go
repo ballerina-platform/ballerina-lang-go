@@ -151,11 +151,6 @@ func (p PackageConfig) HasReadmeMd() bool {
 	return p.readmeMd != nil
 }
 
-// PackageTemplate returns whether this is a template package.
-func (p PackageConfig) PackageTemplate() bool {
-	return p.packageManifest.Template()
-}
-
 // DependencyManifest returns the dependency manifest for this package.
 // TODO(P6): Replace interface{} with DependencyManifest type once migrated.
 func (p PackageConfig) DependencyManifest() interface{} {
