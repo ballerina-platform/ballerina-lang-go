@@ -14,28 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
-
-import (
-	"os"
-
-	"github.com/spf13/cobra"
-)
-
-var rootCmd = &cobra.Command{
-	Use:           "bal",
-	Short:         "The build system and package manager of Ballerina",
-	Long:          `The build system and package manager of Ballerina`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-}
-
-func main() {
-	rootCmd.AddCommand(newCmd)
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(versionCmd)
-
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+public function hello() returns string {
+    return "Hello, World!";
 }

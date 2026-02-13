@@ -19,19 +19,15 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
-	"ballerina-lang-go/context"
 	_ "ballerina-lang-go/lib/rt"
-	"ballerina-lang-go/parser"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/semantics"
-	"ballerina-lang-go/semtypes"
 
 	"github.com/spf13/cobra"
 )
@@ -48,11 +44,12 @@ var runOpts struct {
 }
 
 var runCmd = &cobra.Command{
-	Use:   "run <source-file.bal>",
-	Short: "Compile and run the current package or a Ballerina source file",
-	Long: `	Compile the current package and run it.
+	Use:   "run [<source-file.bal> | <package-dir> | .]",
+	Short: "Build and run the current package or a Ballerina source file",
+	Long: `	Build the current package and run it.
 
-	The 'run' command compiles and executes the given Ballerina source file.
+	The 'run' command builds and executes the given Ballerina package or
+	a source file.
 
 	A Ballerina program consists of one or more modules; one of these modules
 	is distinguished as the root module, which is the default module of
@@ -71,7 +68,9 @@ var runCmd = &cobra.Command{
 
 	A service declaration is the syntactic sugar for creating a service object
 	and attaching it to the module listener specified in the service
-	declaration.`,
+	declaration.
+
+	Note: Running individual '.bal' files of a package is not allowed.`,
 	Args: validateSourceFile,
 	RunE: runBallerina,
 }
@@ -88,19 +87,35 @@ func init() {
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
-	fileName := args[0]
+	// Default to current directory if no path provided (bal run == bal run .)
+	path := "."
+	if len(args) > 0 {
+		path = args[0]
+	}
+
+	// Build options from CLI flags. Constructed before debug setup so
+	// buildOpts can be the single source of truth for all flag reads.
+	buildOpts := projects.NewBuildOptionsBuilder().
+		WithDumpAST(runOpts.dumpAST).
+		WithDumpBIR(runOpts.dumpBIR).
+		WithDumpCFG(runOpts.dumpCFG).
+		WithDumpCFGFormat(projects.ParseCFGFormat(runOpts.format)).
+		WithDumpTokens(runOpts.dumpTokens).
+		WithDumpST(runOpts.dumpST).
+		WithTraceRecovery(runOpts.traceRecovery).
+		Build()
 
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
 	flags := uint16(0)
 
-	if runOpts.dumpTokens {
+	if buildOpts.DumpTokens() {
 		flags |= debugcommon.DUMP_TOKENS
 	}
-	if runOpts.dumpST {
+	if buildOpts.DumpST() {
 		flags |= debugcommon.DUMP_ST
 	}
-	if runOpts.traceRecovery {
+	if buildOpts.TraceRecovery() {
 		flags |= debugcommon.DEBUG_ERROR_RECOVERY
 	}
 
@@ -141,69 +156,51 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
-	// Compile the source
-	fmt.Fprintln(os.Stderr, "Compiling source")
-	fmt.Fprintf(os.Stderr, "\t%s\n", filepath.Base(fileName))
-
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, fileName)
+	// Load project using ProjectLoader (auto-detects type)
+	result, err := directory.LoadProject(path, directory.ProjectLoadConfig{
+		BuildOptions: &buildOpts,
+	})
 	if err != nil {
-		printError(fmt.Errorf("compilation failed: %w", err), "", false)
-		return fmt.Errorf("compilation failed: %w", err)
+		printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
+		return err
 	}
 
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if runOpts.dumpAST {
-		prettyPrinter := ast.PrettyPrinter{}
-		fmt.Println(prettyPrinter.Print(compilationUnit))
+	// Check for loading errors
+	diagResult := result.Diagnostics()
+	if diagResult.HasErrors() {
+		printDiagnostics(diagResult)
+		return fmt.Errorf("project loading contains errors")
 	}
-	pkg := ast.ToPackage(compilationUnit)
-	// Resolve symbols (imports) before type resolution
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
-	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-	// Run control flow analysis after type resolution
-	/// We need this before semantic analysis since we need to do conditional type narrowing before semantic analysis
-	cfg := semantics.CreateControlFlowGraph(cx, pkg)
-	if runOpts.dumpCFG {
-		// Print the CFG with separators
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "==================BEGIN CFG==================")
 
-		if runOpts.format == "dot" {
-			// Use DOT exporter
-			dotExporter := semantics.NewCFGDotExporter(cx)
-			fmt.Println(strings.TrimSpace(dotExporter.Export(cfg)))
-		} else {
-			// Use default S-expression printer
-			prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
-			fmt.Println(strings.TrimSpace(prettyPrinter.Print(cfg)))
-		}
+	project := result.Project()
+	pkg := project.CurrentPackage()
 
-		fmt.Fprintln(os.Stderr, "===================END CFG===================")
+	// Get package compilation (triggers parsing, type checking, semantic analysis, CFG analysis)
+	compilation := pkg.Compilation()
+
+	// Check for compilation errors
+	compilationDiags := compilation.DiagnosticResult()
+	if compilationDiags.HasErrors() {
+		printDiagnostics(compilationDiags)
+		return fmt.Errorf("compilation failed with errors")
 	}
-	// Run semantic analysis after type resolution
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-	// Run CFG analyses (reachability and explicit return) concurrently
-	semantics.AnalyzeCFG(cx, pkg, cfg)
-	birPkg := bir.GenBir(cx, pkg)
-	if runOpts.dumpBIR {
+
+	// Create backend and generate BIR
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	if birPkg == nil {
+		return fmt.Errorf("BIR generation failed: no BIR package produced")
+	}
+
+	// Dump BIR if requested
+	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
-		// Print the BIR with separators
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
 		fmt.Println(strings.TrimSpace(prettyPrinter.Print(*birPkg)))
 		fmt.Fprintln(os.Stderr, "===================END BIR===================")
 	}
-
-	// Run the executable
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Running executable")
-	fmt.Fprintln(os.Stderr)
 
 	rt := runtime.NewRuntime()
 	if err := rt.Interpret(*birPkg); err != nil {
