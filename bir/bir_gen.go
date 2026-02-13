@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 	"fmt"
 )
 
@@ -554,12 +555,30 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	constantLoad.LhsOp = sizeOperand
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
+	lat := expr.AtomicType
+	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+		ty := lat.MemberAt(i)
+		fillerVal := values.DefaultValueForType(ty)
+		if fillerVal == values.NeverValue {
+			// this should never happen; semantic analyzer should have cought these
+			panic("never value in filler position")
+		}
+		fillerOperand := ctx.addTempVar(ty)
+		fillerLoad := &ConstantLoad{}
+		fillerLoad.Value = fillerVal
+		fillerLoad.LhsOp = fillerOperand
+		bb.Instructions = append(bb.Instructions, fillerLoad)
+		initValues = append(initValues, fillerOperand)
+	}
+	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
+
 	resultOperand := ctx.addTempVar(&semtypes.LIST)
 	newArray := &NewArray{}
-	newArray.AtomicType = expr.AtomicType
 	newArray.LhsOp = resultOperand
 	newArray.SizeOp = sizeOperand
 	newArray.Values = initValues
+	newArray.Type = expr.GetDeterminedType()
+	newArray.Filler = fillerVal
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,

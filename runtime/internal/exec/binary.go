@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/values"
 	"fmt"
 	"math"
 )
@@ -337,7 +338,7 @@ func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, opSymbol string,
 	frame.SetOperand(lhsOp, bitOp(v1, v2))
 }
 
-func execBinaryOpArithmetic(op1, op2 any, lhsOp int, frame *Frame, opName string,
+func execBinaryOpArithmetic(op1, op2 values.BalValue, lhsOp int, frame *Frame, opName string,
 	intOp func(a, b int64) int64, floatOp func(a, b float64) float64,
 	checkZero bool) {
 	switch v1 := op1.(type) {
@@ -406,7 +407,7 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	}
 }
 
-func getBinaryOperands(binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 any, lhsOp int) {
+func getBinaryOperands(binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue, lhsOp int) {
 	rhsOp1 := binaryOp.RhsOp1.Index
 	rhsOp2 := binaryOp.RhsOp2.Index
 	lhsOp = binaryOp.LhsOp.Index
@@ -425,7 +426,7 @@ func validateShiftAmount(amount int64) {
 	}
 }
 
-func handleNilLifting(op1, op2 any, lhsOp int, frame *Frame) bool {
+func handleNilLifting(op1, op2 values.BalValue, lhsOp int, frame *Frame) bool {
 	if op1 == nil || op2 == nil {
 		frame.SetOperand(lhsOp, nil)
 		return true

@@ -16,7 +16,7 @@ main<NIL>{
 test1<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     x = %2;
     %4 = foo(x) -> bb1;
   }
@@ -34,7 +34,7 @@ test1<NIL>{
 test2<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     x = %2;
     %4 = foo(x) -> bb1;
   }
