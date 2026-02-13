@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -346,8 +347,8 @@ func readFileContent(filePath string) string {
 	return string(content)
 }
 
-func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
-	return func(args []any) (any, error) {
+func capturePrintlnOutput(balFile string) func(args []values.BalValue) (values.BalValue, error) {
+	return func(args []values.BalValue) (values.BalValue, error) {
 		var b strings.Builder
 		visited := make(map[uintptr]bool)
 		for i, arg := range args {
@@ -365,7 +366,7 @@ func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 	}
 }
 
-func valueToString(v any, visited map[uintptr]bool) string {
+func valueToString(v values.BalValue, visited map[uintptr]bool) string {
 	if v == nil {
 		return "nil"
 	}
@@ -401,7 +402,7 @@ func valueToString(v any, visited map[uintptr]bool) string {
 		return strconv.FormatFloat(t, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(t)
-	case *[]any:
+	case *values.List:
 		if t == nil {
 			return "[]"
 		}
@@ -409,16 +410,25 @@ func valueToString(v any, visited map[uintptr]bool) string {
 		if visited[ptr] {
 			return "[...]"
 		}
-		// Check if this array contains itself (cycle detection before formatting)
-		for _, item := range *t {
-			if itemPtr, ok := item.(*[]any); ok {
-				if uintptr(unsafe.Pointer(itemPtr)) == ptr {
+		// Check if this list contains itself (cycle detection before formatting)
+		for i := 0; i < t.Len(); i++ {
+			if item, ok := t.Get(i).(*values.List); ok {
+				if uintptr(unsafe.Pointer(item)) == ptr {
 					return "[...]"
 				}
 			}
 		}
 		visited[ptr] = true
-		return formatAnySlice(*t, visited)
+		var b strings.Builder
+		b.WriteByte('[')
+		for i := 0; i < t.Len(); i++ {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(valueToString(t.Get(i), visited))
+		}
+		b.WriteByte(']')
+		return b.String()
 	case []any:
 		return formatAnySlice(t, visited)
 	case stringer:

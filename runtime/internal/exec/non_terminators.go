@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 	"fmt"
 	"math"
 	"math/big"
@@ -42,43 +43,29 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	if newArray.SizeOp != nil {
 		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
 	}
-	arr := make([]any, size)
-	if size > 0 {
-		for i, value := range newArray.Values {
-			arr[i] = frame.GetOperand(value.Index)
-		}
+	list := values.NewList(size, newArray.Type, newArray.Filler)
+	for i, value := range newArray.Values {
+		list.FillingSet(i, frame.GetOperand(value.Index))
 	}
-	// TODO: may be this should be done in bir gen and simply pass in the filler value
-	lat := newArray.AtomicType
-	for i := size; i < lat.Members.FixedLength; i++ {
-		ty := lat.MemberAt(i)
-		val := defaultValueForType(ty)
-		if val == neverValue {
-			panic("never value encountered")
-		}
-		arr = append(arr, val)
-	}
-	frame.SetOperand(newArray.LhsOp.Index, &arr)
+	frame.SetOperand(newArray.LhsOp.Index, list)
 }
 
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
-	arrPtr := frame.GetOperand(access.LhsOp.Index).(*[]any)
-	arr := *arrPtr
+	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
 	if idx < 0 {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	arr = resizeArrayIfNeeded(arrPtr, arr, idx)
-	arr[idx] = frame.GetOperand(access.RhsOp.Index)
+	list.FillingSet(idx, frame.GetOperand(access.RhsOp.Index))
 }
 
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
-	arr := *(frame.GetOperand(access.RhsOp.Index).(*[]any))
+	list := frame.GetOperand(access.RhsOp.Index).(*values.List)
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
-	if idx < 0 || idx >= len(arr) {
+	if idx < 0 || idx >= list.Len() {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	frame.SetOperand(access.LhsOp.Index, arr[idx])
+	frame.SetOperand(access.LhsOp.Index, list.Get(idx))
 }
 
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
@@ -88,7 +75,7 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 	frame.SetOperand(typeCast.LhsOp.Index, result)
 }
 
-func castValue(value any, targetType semtypes.SemType) any {
+func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
 	b, ok := targetType.(*semtypes.BasicTypeBitSet)
 	if !ok {
 		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
@@ -111,19 +98,6 @@ func castValue(value any, targetType semtypes.SemType) any {
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to boolean", value))
 	}
 	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", b.String()))
-}
-
-func resizeArrayIfNeeded(arrPtr *[]any, arr []any, idx int) []any {
-	if idx >= len(arr) {
-		if idx >= math.MaxInt32 {
-			panic("list too long")
-		}
-		newArr := make([]any, idx+1)
-		copy(newArr, arr)
-		*arrPtr = newArr
-		return newArr
-	}
-	return arr
 }
 
 func toInt(value any) int64 {

@@ -3,26 +3,26 @@ import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     %3 = println(%2) -> bb1;
   }
   bb1 {
     %4 = ConstantLoad true
     %5 = ConstantLoad 1
-    %6 = newArray <UNKNOWN>[%5]
+    %6 = newArray ((), (LIST))[%5]{%4}
     %7 = println(%6) -> bb2;
   }
   bb2 {
     %8 = ConstantLoad <nil>
     %9 = ConstantLoad 1
-    %10 = newArray <UNKNOWN>[%9]
+    %10 = newArray ((), (LIST))[%9]{%8}
     %11 = println(%10) -> bb3;
   }
   bb3 {
     %12 = ConstantLoad 17
     %13 = unknown %12;
     %14 = ConstantLoad 1
-    %15 = newArray <UNKNOWN>[%14]
+    %15 = newArray ((), (LIST))[%14]{%13}
     %16 = println(%15) -> bb4;
   }
   bb4 {
@@ -30,22 +30,22 @@ main<NIL>{
     %18 = ConstantLoad <nil>
     %19 = ConstantLoad 43
     %20 = ConstantLoad 3
-    %21 = newArray <UNKNOWN>[%20]
+    %21 = newArray ((), (LIST))[%20]{%17, %18, %19}
     %22 = println(%21) -> bb5;
   }
   bb5 {
     %23 = ConstantLoad 0
-    %24 = newArray <UNKNOWN>[%23]
+    %24 = newArray ((), (LIST))[%23]{}
     %25 = ConstantLoad 1
-    %26 = newArray <UNKNOWN>[%25]
+    %26 = newArray ((), (LIST))[%25]{%24}
     %27 = ConstantLoad 1
-    %28 = newArray <UNKNOWN>[%27]
+    %28 = newArray ((), (LIST))[%27]{%26}
     %29 = ConstantLoad 1
-    %30 = newArray <UNKNOWN>[%29]
+    %30 = newArray ((), (LIST))[%29]{%28}
     %31 = ConstantLoad 1
-    %32 = newArray <UNKNOWN>[%31]
+    %32 = newArray ((), (LIST))[%31]{%30}
     %33 = ConstantLoad 1
-    %34 = newArray <UNKNOWN>[%33]
+    %34 = newArray ((), (LIST))[%33]{%32}
     %35 = println(%34) -> bb6;
   }
   bb6 {
@@ -54,10 +54,10 @@ main<NIL>{
     %38 = ConstantLoad true
     %39 = ConstantLoad 21
     %40 = ConstantLoad 3
-    %41 = newArray <UNKNOWN>[%40]
+    %41 = newArray ((), (LIST))[%40]{%37, %38, %39}
     %42 = ConstantLoad 0
     %43 = ConstantLoad 3
-    %44 = newArray <UNKNOWN>[%43]
+    %44 = newArray ((), (LIST))[%43]{%36, %41, %42}
     %45 = println(%44) -> bb7;
   }
   bb7 {

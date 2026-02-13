@@ -19,6 +19,7 @@ package modules
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/values"
 )
 
 type Registry struct {
@@ -43,7 +44,7 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 	return m
 }
 
-func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl func(args []any) (any, error)) {
+func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
 	externFn := &ExternFunction{
 		Name: funcName,
 		Impl: impl,

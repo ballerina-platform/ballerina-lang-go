@@ -4,7 +4,7 @@ import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     v = %2;
     %4 = push(v,v) -> bb1;
   }
@@ -13,7 +13,7 @@ main<NIL>{
     %6 = ConstantLoad 2
     %7 = ConstantLoad 4
     %8 = ConstantLoad 4
-    %9 = newArray <UNKNOWN>[%8]
+    %9 = newArray ((), (LIST))[%8]{%5, %6, v, %7}
     %10 = println(%9) -> bb2;
   }
   bb2 {

@@ -3,7 +3,7 @@ import ballerina.io v 0.0.0;
 main<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     v = %2;
     %4 = ConstantLoad 1
     %5 = ConstantLoad 0
