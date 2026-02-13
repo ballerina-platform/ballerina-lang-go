@@ -19,6 +19,7 @@
 package projects
 
 import (
+	"cmp"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,7 +31,7 @@ type SemanticVersion struct {
 	major      int
 	minor      int
 	patch      int
-	preRelease string
+preRelease string
 	build      string
 }
 
@@ -153,24 +154,16 @@ func (v SemanticVersion) Equals(other SemanticVersion) bool {
 }
 
 // Compare compares two versions. Returns -1 if v < other, 0 if equal, 1 if v > other.
+// E.g 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-rc.1 < 1.0.0
 func (v SemanticVersion) Compare(other SemanticVersion) int {
-	if v.major != other.major {
-		if v.major < other.major {
-			return -1
-		}
-		return 1
+	if c := cmp.Compare(v.major, other.major); c != 0 {
+		return c
 	}
-	if v.minor != other.minor {
-		if v.minor < other.minor {
-			return -1
-		}
-		return 1
+	if c := cmp.Compare(v.minor, other.minor); c != 0 {
+		return c
 	}
-	if v.patch != other.patch {
-		if v.patch < other.patch {
-			return -1
-		}
-		return 1
+	if c := cmp.Compare(v.patch, other.patch); c != 0 {
+		return c
 	}
 	// Pre-release versions have lower precedence
 	if v.preRelease == "" && other.preRelease != "" {
@@ -179,13 +172,7 @@ func (v SemanticVersion) Compare(other SemanticVersion) int {
 	if v.preRelease != "" && other.preRelease == "" {
 		return -1
 	}
-	if v.preRelease < other.preRelease {
-		return -1
-	}
-	if v.preRelease > other.preRelease {
-		return 1
-	}
-	return 0
+	return cmp.Compare(v.preRelease, other.preRelease)
 }
 
 // PackageVersion represents a Ballerina package version.
