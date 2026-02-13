@@ -32,12 +32,15 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	_ "ballerina-lang-go/lib/rt"
 )
 
 const (
-	colorReset = "\033[0m"
-	colorGreen = "\033[32m"
-	colorRed   = "\033[31m"
+	colorReset  = "\033[0m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorYellow = "\033[33m"
 
 	corpusBalBaseDir = "../corpus/bal"
 
@@ -45,31 +48,18 @@ const (
 	externModuleName = "io"
 	externFuncName   = "println"
 
-	panicPrefix     = "panic: "
-	errorFileSuffix = "-e.bal"
-	subsetPrefix    = "subset"
+	panicPrefix = "panic: "
+
+	expectedCompileErrorMsg = "compile-time error (diagnostics)"
 )
 
 var (
-	outputRegex = regexp.MustCompile(`//\s*@output\s+(.+)`)
+	outputRegex = regexp.MustCompile(`//\s*@output\s*(.*)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
+	errorRegex  = regexp.MustCompile(`//\s*@error`)
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{
-		"subset2/02-misc/stackoverflow-p.bal", // stack overflows can't be detected by defer blocks
-		// Skip all typecast tests
-		"subset2/02-typecast/1-e.bal",
-		"subset2/02-typecast/2-p.bal",
-		"subset2/02-typecast/3-v.bal",
-		"subset2/02-typecast/4-e.bal",
-		"subset2/02-typecast/5-v.bal",
-		"subset2/02-typecast/6-e.bal",
-		"subset2/02-typecast/7-v.bal",
-		"subset2/02-typecast/8-e.bal",
-		"subset2/02-typecast/9-e.bal",
-		"subset2/02-typecast/numeric-conversion-v.bal",
-		"subset2/02-typecast/numeric-conversion2-e.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -84,13 +74,6 @@ type testResult struct {
 	expected string
 	actual   string
 }
-
-type skipReason int
-
-const (
-	skipReasonErrorFile skipReason = iota // -e.bal files
-	skipReasonSkipList                    // files in skipTestsMap
-)
 
 func TestIntegrationSuite(t *testing.T) {
 	var passedTotal, failedTotal, skippedTotal int
@@ -107,11 +90,11 @@ func TestIntegrationSuite(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for _, balFile := range balFiles {
-		skipped, reason := isFileSkipped(balFile)
-		if skipped {
-			if reason == skipReasonSkipList {
-				skippedTotal++
-			}
+		if isFileSkipped(balFile) {
+			skippedTotal++
+			relPath, _ := filepath.Rel(corpusBalDir, balFile)
+			filePath := buildFilePath(relPath)
+			fmt.Printf("\t--- %sSKIPPED%s: %s\n", colorYellow, colorReset, filePath)
 			continue
 		}
 		relPath, _ := filepath.Rel(corpusBalDir, balFile)
@@ -154,9 +137,8 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 	wg.Wait()
 
-	total := passedTotal + failedTotal
-	passedCount := total - skippedTotal
-	printFinalSummary(total, passedCount, skippedTotal, failedTotal, failedTests)
+	total := passedTotal + failedTotal + skippedTotal
+	printFinalSummary(total, passedTotal, skippedTotal, failedTotal, failedTests)
 	if failedTotal > 0 {
 		t.Fail()
 	}
@@ -165,63 +147,74 @@ func TestIntegrationSuite(t *testing.T) {
 func runTest(balFile string) testResult {
 	expectedOutput := readExpectedOutput(balFile)
 	expectedPanic := readExpectedPanic(balFile)
+	isExpectedErrorTest := strings.HasSuffix(filepath.Base(balFile), "-e.bal") || hasError(balFile)
 
-	var panicOccurred bool
-	var panicValue interface{}
+	compileFailed, compilePanicValue, birPkg := runCompilePhase(balFile)
+	panicOccurred, panicValue, printlnStr := runInterpretPhase(balFile, compileFailed, birPkg)
 
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicOccurred = true
-				panicValue = r
-			}
-		}()
+	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, isExpectedErrorTest, compileFailed, compilePanicValue)
+}
 
-		cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-		syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
-		if err != nil {
-			panic(err)
-		}
-
-		compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-		pkg := ast.ToPackage(compilationUnit)
-		// Resolve symbols (imports) before type resolution
-		importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-		semantics.ResolveSymbols(cx, pkg, importedSymbols)
-		// Add type resolution step
-		typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-		typeResolver.ResolveTypes(cx, pkg)
-		// Run control flow analysis after type resolution
-		cfg := semantics.CreateControlFlowGraph(cx, pkg)
-		// Run semantic analysis after type resolution
-		semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-		semanticAnalyzer.Analyze(pkg)
-		// Run CFG analyses (reachability and explicit return)
-		semantics.AnalyzeCFG(cx, pkg, cfg)
-		birPkg := bir.GenBir(cx, pkg)
-
-		printlnMu.Lock()
-		printlnOutputs[balFile] = ""
-		printlnMu.Unlock()
-
-		rt := runtime.NewRuntime()
-		rt.Registry.RegisterExternFunction(externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
-		interpretErr := rt.Interpret(*birPkg)
-		if interpretErr != nil {
-			panicOccurred = true
-			panicValue = interpretErr
+func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bir.BIRPackage) {
+	defer func() {
+		if r := recover(); r != nil {
+			failed = true
+			panicVal = r
 		}
 	}()
+
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
+	if err != nil {
+		panic(err)
+	}
+
+	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
+	astPkg := ast.ToPackage(compilationUnit)
+	importedSymbols := semantics.ResolveImports(cx, astPkg, semantics.GetImplicitImports(cx))
+	semantics.ResolveSymbols(cx, astPkg, importedSymbols)
+	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
+	typeResolver.ResolveTypes(cx, astPkg)
+	cfg := semantics.CreateControlFlowGraph(cx, astPkg)
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(astPkg)
+	semantics.AnalyzeCFG(cx, astPkg, cfg)
+	pkg = bir.GenBir(cx, astPkg)
+	return
+}
+
+func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackage) (panicOccurred bool, panicValue interface{}, output string) {
+	if compileFailed || birPkg == nil {
+		return false, nil, ""
+	}
+
 	printlnMu.Lock()
-	printlnStr := printlnOutputs[balFile]
+	printlnOutputs[balFile] = ""
+	printlnMu.Unlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			panicOccurred = true
+			panicValue = r
+		}
+	}()
+
+	rt := runtime.NewRuntime()
+	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
+	if err := rt.Interpret(*birPkg); err != nil {
+		panicOccurred = true
+		panicValue = err
+	}
+
+	printlnMu.Lock()
+	output = printlnOutputs[balFile]
 	delete(printlnOutputs, balFile)
 	printlnMu.Unlock()
 
-	outputStr := printlnStr
-	return evaluateTestResult(expectedOutput, expectedPanic, outputStr, panicOccurred, panicValue)
+	return
 }
 
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}) testResult {
+func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}, isExpectedErrorTest, compileFailed bool, compilePanicValue interface{}) testResult {
 	if expectedPanic != "" {
 		if panicOccurred {
 			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
@@ -247,18 +240,37 @@ func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOc
 		}
 	}
 
-	if panicOccurred {
-		panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
-		actual := fmt.Sprintf("%s%s", panicPrefix, panicStr)
-		if st, ok := panicValue.(interface{ Stack() []byte }); ok {
-			if stack := st.Stack(); len(stack) > 0 {
-				actual = actual + "\n" + string(stack)
+	if isExpectedErrorTest {
+		if compileFailed {
+			return testResult{success: true, expected: expectedOutput, actual: ""}
+		}
+		if panicOccurred {
+			return testResult{
+				success:  false,
+				expected: expectedCompileErrorMsg,
+				actual:   formatPanicActual(panicValue),
 			}
 		}
+		actual := trimNewline(outputStr)
+		if actual == "" {
+			actual = "program compiled and ran successfully (no output)"
+		}
+		return testResult{success: false, expected: expectedCompileErrorMsg, actual: actual}
+	}
+
+	if compileFailed {
 		return testResult{
 			success:  false,
 			expected: expectedOutput,
-			actual:   actual,
+			actual:   formatPanicActual(compilePanicValue),
+		}
+	}
+
+	if panicOccurred {
+		return testResult{
+			success:  false,
+			expected: expectedOutput,
+			actual:   formatPanicActual(panicValue),
 		}
 	}
 
@@ -281,6 +293,16 @@ func extractPanicMessage(panicStr string) string {
 		return strings.TrimPrefix(panicStr, panicPrefix)
 	}
 	return panicStr
+}
+
+func formatPanicActual(panicValue interface{}) string {
+	s := panicPrefix + extractPanicMessage(fmt.Sprintf("%v", panicValue))
+	if st, ok := panicValue.(interface{ Stack() []byte }); ok {
+		if stack := st.Stack(); len(stack) > 0 {
+			s += "\n" + string(stack)
+		}
+	}
+	return s
 }
 
 func extractPanicFromOutput(outputStr, expectedPanic string) string {
@@ -319,6 +341,11 @@ func readExpectedPanic(balFile string) string {
 	return ""
 }
 
+func hasError(balFile string) bool {
+	content := readFileContent(balFile)
+	return errorRegex.MatchString(content)
+}
+
 func readFileContent(filePath string) string {
 	content, _ := os.ReadFile(filePath)
 	return string(content)
@@ -343,6 +370,9 @@ func capturePrintlnOutput(balFile string) func(args []any) (any, error) {
 }
 
 func valueToString(v any) string {
+	if v == nil {
+		return "nil"
+	}
 	type stringer interface {
 		String() string
 	}
@@ -384,8 +414,6 @@ func valueToString(v any) string {
 		return formatAnySlice(t)
 	case stringer:
 		return t.String()
-	case nil:
-		return "nil"
 	default:
 		return "<unsupported>"
 	}
@@ -459,18 +487,13 @@ func findBalFiles(dir string) []string {
 	return files
 }
 
-func isFileSkipped(filePath string) (bool, skipReason) {
-	fileName := filepath.Base(filePath)
-	if strings.HasSuffix(fileName, errorFileSuffix) {
-		return true, skipReasonErrorFile
+func isFileSkipped(filePath string) bool {
+	relPath, err := filepath.Rel(corpusBalBaseDir, filePath)
+	if err != nil {
+		return false
 	}
-	if relPath, err := filepath.Rel(corpusBalBaseDir, filePath); err == nil {
-		relPath = filepath.ToSlash(relPath)
-		if skipTestsMap[relPath] {
-			return true, skipReasonSkipList
-		}
-	}
-	return false, 0
+	relPath = filepath.ToSlash(relPath)
+	return skipTestsMap[relPath]
 }
 
 func makeSkipTestsMap(paths []string) map[string]bool {

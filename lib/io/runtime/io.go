@@ -17,7 +17,7 @@
 package io
 
 import (
-	"ballerina-lang-go/runtime/api"
+	"ballerina-lang-go/runtime"
 	"fmt"
 	"os"
 )
@@ -37,10 +37,10 @@ func printlnExtern(args []any) (any, error) {
 	return nil, nil
 }
 
-func initIOModule(rt *api.Runtime) {
-	api.RegisterExternFunction(rt.Registry, orgName, moduleName, funcName, printlnExtern)
+func initIOModule(rt *runtime.Runtime) {
+	runtime.RegisterExternFunction(rt, orgName, moduleName, funcName, printlnExtern)
 }
 
 func init() {
-	api.RegisterModuleInitializer(initIOModule)
+	runtime.RegisterModuleInitializer(initIOModule)
 }

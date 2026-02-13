@@ -27,6 +27,7 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"

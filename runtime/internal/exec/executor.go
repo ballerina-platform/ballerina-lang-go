@@ -19,12 +19,17 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/runtime/internal/values"
 	"ballerina-lang-go/semtypes"
 	"fmt"
 	"math/big"
 )
 
-func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry) any {
+const maxRecursionDepth = 1000
+
+func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry, callStack *callStack) any {
+	funcKey := birFunc.FunctionLookupKey
+
 	localVars := &birFunc.LocalVars
 	locals := make([]any, len(*localVars))
 	locals[0] = defaultValueForType((*localVars)[0].Type)
@@ -34,7 +39,13 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry)
 	for i := len(args) + 1; i < len(*localVars); i++ {
 		locals[i] = defaultValueForType((*localVars)[i].Type)
 	}
-	frame := &Frame{locals: locals}
+	frame := &Frame{locals: locals, functionKey: funcKey}
+	callStack.Push(frame)
+	defer callStack.Pop()
+
+	if len(callStack.elements) > maxRecursionDepth {
+		panic("stack overflow")
+	}
 	bbs := birFunc.BasicBlocks
 	bb := &bbs[0]
 	for {
@@ -43,7 +54,7 @@ func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry)
 		for i := 0; i < len(instructions); i++ {
 			execInstruction(instructions[i], frame)
 		}
-		bb = execTerminator(term, frame, reg)
+		bb = execTerminator(term, frame, reg, callStack)
 		if bb == nil {
 			break
 		}
@@ -132,12 +143,14 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 		default:
 			fmt.Printf("UNKNOWN_UNARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
+	case *bir.TypeCast:
+		execTypeCast(v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
 }
 
-func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
+func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB
@@ -146,7 +159,7 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry)
 	case *bir.Call:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_CALL:
-			return execCall(v, frame, reg)
+			return execCall(v, frame, reg, callStack)
 		case bir.INSTRUCTION_KIND_ASYNC_CALL:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_ASYNC_CALL")
 		case bir.INSTRUCTION_KIND_WAIT:
@@ -201,11 +214,6 @@ func defaultValueForType(t semtypes.SemType) any {
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
-		return &never{}
+		return &values.Never{}
 	}
-}
-
-// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
-// this should panic.
-type never struct {
 }

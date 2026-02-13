@@ -14,31 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package lib
+package common
 
 import (
-	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
 
-func GetIoSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
-	pkg := model.NewPackageID(
-		model.DefaultPackageIDInterner,
-		model.Name("ballerina"),
-		[]model.Name{model.Name("io")},
-		model.Name("0.0.1"),
-	)
-	space := ctx.NewSymbolSpace(*pkg)
-	printLnSignature := model.FunctionSignature{
-		RestParamType: &semtypes.ANY,
-		ReturnType:    &semtypes.NIL,
+func FunctionSignatureToSemType(env semtypes.Env, fs *model.FunctionSignature) semtypes.SemType {
+	var restTy semtypes.SemType
+	if fs.RestParamType != nil {
+		restTy = fs.RestParamType
+	} else {
+		restTy = &semtypes.NEVER
 	}
-	printLnSymbol := model.NewFunctionSymbol("println", printLnSignature, true)
-	ctx.SetSymbolType(printLnSymbol, functionSignatureToSemType(ctx.GetTypeEnv(), &printLnSignature))
 
-	space.AddSymbol("println", printLnSymbol)
-	return model.ExportedSymbolSpace{
-		Main: space,
-	}
+	// Build the parameter list type
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(env, fs.ParamTypes, len(fs.ParamTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+
+	// Build the function type
+	functionDefn := semtypes.NewFunctionDefinition()
+	return functionDefn.Define(env, paramListTy, fs.ReturnType,
+		semtypes.FunctionQualifiersFrom(env, false, false))
 }

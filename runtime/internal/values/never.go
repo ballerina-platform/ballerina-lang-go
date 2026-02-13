@@ -14,10 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package runtime
+package values
 
-// Import all standard libraries to trigger their init() functions.
-import (
-	_ "ballerina-lang-go/stdlibs/array"
-	_ "ballerina-lang-go/stdlibs/io"
-)
+// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
+// this should panic.
+type Never struct {
+}
