@@ -6,7 +6,7 @@ main<NIL>{
     %2 = ConstantLoad 2
     %3 = ConstantLoad false
     %4 = ConstantLoad 3
-    %5 = newArray <UNKNOWN>[%4]
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
     v = %5;
     %7 = foo(v) -> bb1;
   }

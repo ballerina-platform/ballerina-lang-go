@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/values"
 )
 
 type BIRNonTerminator = BIRInstruction
@@ -62,10 +63,10 @@ type (
 
 	NewArray struct {
 		BIRInstructionBase
-		AtomicType semtypes.ListAtomicType
-		SizeOp     *BIROperand
-		Type       model.ValueType
-		Values     []*BIROperand
+		SizeOp *BIROperand
+		Type   semtypes.SemType
+		Values []*BIROperand
+		Filler values.BalValue
 	}
 
 	TypeCast struct {

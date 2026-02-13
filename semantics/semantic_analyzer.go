@@ -585,6 +585,7 @@ func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorE
 			}
 			analyzeExpression(a, memberExpr, requiredType)
 		}
+		expr.AtomicType = listAtomicType
 		setExpectedType(expr, resultType)
 	} else {
 		// type resolver will have set the correct type and list atomic type

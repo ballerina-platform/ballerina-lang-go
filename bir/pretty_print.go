@@ -149,7 +149,14 @@ func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
-	return fmt.Sprintf("%s = newArray %s[%s]", p.PrintOperand(*array.LhsOp), p.PrintType(array.Type), p.PrintOperand(*array.SizeOp))
+	values := strings.Builder{}
+	for i, v := range array.Values {
+		if i > 0 {
+			values.WriteString(", ")
+		}
+		values.WriteString(p.PrintOperand(*v))
+	}
+	return fmt.Sprintf("%s = newArray %s[%s]{%s}", p.PrintOperand(*array.LhsOp), p.PrintSemType(array.Type), p.PrintOperand(*array.SizeOp), values.String())
 }
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {

@@ -77,10 +77,10 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 			if IsNever(CellInner(member)) {
 				return nil, ListAtomicType{}, false
 			}
-			atom = &ListAtomicType{
-				Members: *members,
-				Rest:    *rest,
-			}
+		}
+		atom = &ListAtomicType{
+			Members: *members,
+			Rest:    *rest,
 		}
 	}
 	typeAtom := env.listAtom(atom)

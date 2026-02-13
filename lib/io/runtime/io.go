@@ -18,8 +18,11 @@ package io
 
 import (
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 	"fmt"
 	"os"
+	"strings"
+	"unsafe"
 )
 
 const (
@@ -28,11 +31,40 @@ const (
 	funcName   = "println"
 )
 
-func Println(values ...any) {
-	fmt.Fprintln(os.Stdout, values...)
+func Println(vals ...values.BalValue) {
+	parts := make([]string, len(vals))
+	visited := make(map[uintptr]bool)
+	for i, v := range vals {
+		parts[i] = formatValue(v, visited)
+	}
+	fmt.Fprintln(os.Stdout, strings.Join(parts, " "))
 }
 
-func printlnExtern(args []any) (any, error) {
+func formatValue(v values.BalValue, visited map[uintptr]bool) string {
+	if v == nil {
+		return "nil"
+	}
+	if list, ok := v.(*values.List); ok {
+		ptr := uintptr(unsafe.Pointer(list))
+		if visited[ptr] {
+			return "[...]"
+		}
+		visited[ptr] = true
+		var b strings.Builder
+		b.WriteByte('[')
+		for i := 0; i < list.Len(); i++ {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(formatValue(list.Get(i), visited))
+		}
+		b.WriteByte(']')
+		return b.String()
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+func printlnExtern(args []values.BalValue) (values.BalValue, error) {
 	Println(args...)
 	return nil, nil
 }

@@ -12,7 +12,7 @@ foo<NIL>{
 main<NIL>{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray <UNKNOWN>[%1]
+    %2 = newArray ((), (LIST))[%1]{}
     arr = %2;
     %4 = ConstantLoad 0
     %5 = foo(arr,%4) -> bb1;
