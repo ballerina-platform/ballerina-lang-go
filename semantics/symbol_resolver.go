@@ -19,7 +19,8 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/lib"
+	arraycompile "ballerina-lang-go/lib/array/compile"
+	iocompile "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -214,13 +215,13 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetIoSymbols(ctx)
+				result[key] = iocompile.GetIoSymbols(ctx)
 			} else if isLangImport(&imp, "array") {
 				key := "array"
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = lib.GetArraySymbols(ctx)
+				result[key] = arraycompile.GetArraySymbols(ctx)
 			} else {
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
@@ -236,7 +237,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result["lang.array"] = lib.GetArraySymbols(ctx)
+	result["lang.array"] = arraycompile.GetArraySymbols(ctx)
 	return result
 }
 

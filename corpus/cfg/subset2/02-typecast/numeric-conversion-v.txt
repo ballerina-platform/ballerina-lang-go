@@ -3,7 +3,7 @@
     (var-def
       (variable f (type
         (value-type float)) (expr
-        (literal 12.0))))
+        (literal 12))))
     (var-def
       (variable i (type
         (value-type int)) (expr

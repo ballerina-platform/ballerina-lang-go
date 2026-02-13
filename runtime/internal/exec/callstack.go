@@ -14,13 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions type-cast-expr boolean boolean-literal any int-literal
-import ballerina/io;
+package exec
 
-public function main() {
-    io:println(<any>1); // @output 1
-    io:println(<any>()); // @output nil
-    io:println(<any>true); // @output true
-    io:println(<int>2); // @output 2
-    io:println(<boolean>false); // @output false
+type callStack struct {
+	elements []*Frame
+}
+
+func (cs *callStack) Push(frame *Frame) {
+	cs.elements = append(cs.elements, frame)
+}
+
+func (cs *callStack) Pop() {
+	if len(cs.elements) == 0 {
+		panic("stack underflow")
+	}
+	cs.elements = cs.elements[:len(cs.elements)-1]
 }

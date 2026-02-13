@@ -272,10 +272,12 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 	case model.TypeTags_DECIMAL:
 		strValue := n.GetValue().(string)
 		r := t.parseDecimalValue(strValue, n.GetPosition())
+		n.SetValue(r)
 		ty = semtypes.DecimalConst(*r)
 	case model.TypeTags_FLOAT:
 		strValue := n.GetValue().(string)
 		f := t.parseFloatValue(strValue, n.GetPosition())
+		n.SetValue(f)
 		ty = semtypes.FloatConst(f)
 	default:
 		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
@@ -350,12 +352,12 @@ func (t *TypeResolver) resolveDecimalFloatingPointLiteral(n *ast.BLangNumericLit
 	switch typeTag {
 	case model.TypeTags_FLOAT:
 		f := t.parseFloatValue(strValue, n.GetPosition())
+		n.SetValue(f)
 		return semtypes.FloatConst(f)
-
 	case model.TypeTags_DECIMAL:
 		r := t.parseDecimalValue(strValue, n.GetPosition())
+		n.SetValue(r)
 		return semtypes.DecimalConst(*r)
-
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unexpected type tag %v for decimal floating point literal", typeTag), n.GetPosition())
 		return nil

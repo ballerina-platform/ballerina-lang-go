@@ -25,6 +25,7 @@ import (
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/projects"
+	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 
@@ -47,7 +48,7 @@ var runCmd = &cobra.Command{
 	Short: "Build and run the current package or a Ballerina source file",
 	Long: `	Build the current package and run it.
 
-	The 'run' command builds and executes the given Ballerina package or 
+	The 'run' command builds and executes the given Ballerina package or
 	a source file.
 
 	A Ballerina program consists of one or more modules; one of these modules
@@ -68,7 +69,7 @@ var runCmd = &cobra.Command{
 	A service declaration is the syntactic sugar for creating a service object
 	and attaching it to the module listener specified in the service
 	declaration.
-	
+
 	Note: Running individual '.bal' files of a package is not allowed.`,
 	Args: validateSourceFile,
 	RunE: runBallerina,
