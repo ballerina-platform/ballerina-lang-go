@@ -35,6 +35,7 @@
   - Currently only support [variable-reference-lvexpr](https://ballerina.io/spec/lang/master/#variable-reference-lvexpr)
 - [`Call`](https://ballerina.io/spec/lang/master/#call-expr)
   - Currently only support `function-call-expr`
+- [Type cast expression](https://ballerina.io/spec/lang/master/#section_6.20)
 - [List constructor](https://ballerina.io/spec/lang/master/#list-constructor-expr)
   - Currently [spread-list-member](https://ballerina.io/spec/lang/master/#spread-list-member) not supported
 - [Variable reference](https://ballerina.io/spec/lang/master/#variable-reference-expr)
