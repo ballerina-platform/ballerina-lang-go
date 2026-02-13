@@ -19,25 +19,23 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
-	"ballerina-lang-go/runtime/internal/values"
-	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 	"fmt"
-	"math/big"
 )
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []any, reg *modules.Registry, callStack *callStack) any {
+func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	funcKey := birFunc.FunctionLookupKey
 
 	localVars := &birFunc.LocalVars
-	locals := make([]any, len(*localVars))
-	locals[0] = defaultValueForType((*localVars)[0].Type)
+	locals := make([]values.BalValue, len(*localVars))
+	locals[0] = values.DefaultValueForType((*localVars)[0].Type)
 	for i, arg := range args {
 		locals[i+1] = arg
 	}
 	for i := len(args) + 1; i < len(*localVars); i++ {
-		locals[i] = defaultValueForType((*localVars)[i].Type)
+		locals[i] = values.DefaultValueForType((*localVars)[i].Type)
 	}
 	frame := &Frame{locals: locals, functionKey: funcKey}
 	callStack.Push(frame)
@@ -193,27 +191,4 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return nil
-}
-
-func defaultValueForType(t semtypes.SemType) any {
-	if t == nil {
-		return nil
-	}
-	if semtypes.IsSubtypeSimple(t, semtypes.BOOLEAN) {
-		return false
-	} else if semtypes.IsSubtypeSimple(t, semtypes.INT) {
-		return int64(0)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.FLOAT) {
-		return float64(0)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.STRING) {
-		return ""
-	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
-		return big.NewRat(0, 1)
-	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
-		return []any{}
-	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
-		return nil
-	} else {
-		return &values.Never{}
-	}
 }

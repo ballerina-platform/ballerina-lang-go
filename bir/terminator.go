@@ -19,6 +19,7 @@ package bir
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/values"
 )
 
 type BIRTerminator = BIRInstruction
@@ -43,7 +44,7 @@ type (
 		CalleeFlags       common.Set[model.Flag]
 		FunctionLookupKey string
 		CachedBIRFunc     *BIRFunction
-		CachedNativeFunc  func(args []any) (any, error)
+		CachedNativeFunc  func(args []values.BalValue) (values.BalValue, error)
 	}
 
 	Return struct {

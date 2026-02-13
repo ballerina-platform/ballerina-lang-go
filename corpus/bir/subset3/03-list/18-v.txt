@@ -1,0 +1,34 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = newArray ((), (LIST))[%1]{}
+    v = %2;
+    %4 = ConstantLoad 0
+    %5 = push(v,%4) -> bb1;
+  }
+  bb1 {
+    %6 = ConstantLoad true
+    %7 = push(v,%6) -> bb2;
+  }
+  bb2 {
+    %8 = ConstantLoad 2
+    %9 = push(v,%8) -> bb3;
+  }
+  bb3 {
+    %10 = ConstantLoad <nil>
+    %11 = push(v,%10) -> bb4;
+  }
+  bb4 {
+    %12 = ConstantLoad 4
+    %13 = push(v,%12) -> bb5;
+  }
+  bb5 {
+    %14 = println(v) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

@@ -1,3 +1,5 @@
+//go:build !debug
+
 // Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
@@ -14,9 +16,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package values
+package main
 
-// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
-// this should panic.
-type Never struct {
+import "github.com/spf13/cobra"
+
+type disabledProfiler struct{}
+
+func init() {
+	profiler = &disabledProfiler{}
 }
+
+func (p *disabledProfiler) RegisterFlags(_ *cobra.Command) {}
+
+func (p *disabledProfiler) Start() error { return nil }
+
+func (p *disabledProfiler) Stop() error { return nil }

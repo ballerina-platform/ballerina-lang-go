@@ -1,0 +1,28 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable v (type
+        (array-type
+          (value-type any) ())) (expr
+        (list-constructor-expr
+          (literal <nil>)
+          (literal 1234567890123456789)
+          (literal true)))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref v)
+          (literal 2)))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref v)
+          (literal 1)))))
+    (expression-stmt
+      (invocation io println (
+        (list-constructor-expr
+          (index-based-access
+            (simple-var-ref v)
+            (literal 0))))))
+  )
+)

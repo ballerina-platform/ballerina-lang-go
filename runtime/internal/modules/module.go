@@ -18,6 +18,7 @@ package modules
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/values"
 )
 
 type BIRModule struct {
@@ -26,7 +27,7 @@ type BIRModule struct {
 
 type ExternFunction struct {
 	Name string
-	Impl func(args []any) (any, error)
+	Impl func(args []values.BalValue) (values.BalValue, error)
 }
 
 func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
