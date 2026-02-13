@@ -20,8 +20,8 @@ package main
 
 import (
 	"bytes"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 

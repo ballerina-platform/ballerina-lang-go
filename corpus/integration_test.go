@@ -17,13 +17,10 @@
 package corpus
 
 import (
-	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/parser"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/semantics"
-	"ballerina-lang-go/semtypes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -163,23 +160,18 @@ func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bi
 		}
 	}()
 
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	syntaxTree, err := parser.GetSyntaxTree(cx, nil, balFile)
+	result, err := directory.LoadProject(balFile)
 	if err != nil {
 		panic(err)
 	}
-
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	astPkg := ast.ToPackage(compilationUnit)
-	importedSymbols := semantics.ResolveImports(cx, astPkg, semantics.GetImplicitImports(cx))
-	semantics.ResolveSymbols(cx, astPkg, importedSymbols)
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, astPkg)
-	cfg := semantics.CreateControlFlowGraph(cx, astPkg)
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(astPkg)
-	semantics.AnalyzeCFG(cx, astPkg, cfg)
-	pkg = bir.GenBir(cx, astPkg)
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		failed = true
+		return
+	}
+	backend := projects.NewBallerinaBackend(compilation)
+	pkg = backend.BIR()
 	return
 }
 

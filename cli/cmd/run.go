@@ -24,8 +24,8 @@ import (
 
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
-	"ballerina-lang-go/projects"
 	_ "ballerina-lang-go/lib/rt"
+	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 
