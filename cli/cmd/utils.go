@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"ballerina-lang-go/projects"
@@ -26,17 +27,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// prints an error message in the standard Ballerina CLI format.
+// printError prints an error message in the standard Ballerina CLI format to stderr.
 func printError(err error, usage string, showHelp bool) {
-	fmt.Fprintf(os.Stderr, "ballerina: %s\n", err.Error())
+	printErrorTo(os.Stderr, err, usage, showHelp)
+}
+
+// printErrorTo prints an error message in the standard Ballerina CLI format to the given writer.
+func printErrorTo(w io.Writer, err error, usage string, showHelp bool) {
+	fmt.Fprintf(w, "ballerina: %s\n", err.Error())
 	if usage != "" {
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "USAGE:")
-		fmt.Fprintf(os.Stderr, "    %s\n", usage)
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "USAGE:")
+		fmt.Fprintf(w, "    %s\n", usage)
 	}
 	if showHelp {
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "For more information try --help")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "For more information try --help")
 	}
 }
 

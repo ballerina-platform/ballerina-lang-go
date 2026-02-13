@@ -14,13 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//go:build !js && !wasm
+
 package main
 
 import (
 	"bytes"
-	"io"
-	"os"
 	"path/filepath"
+	"os"
 	"strings"
 	"testing"
 
@@ -32,8 +33,8 @@ import (
 // =============================================================================
 
 // TestNewCommandWithAbsolutePaths tests creating packages at various path depths.
-// Java equivalent: testNewCommandWithAbsolutePaths
 func TestNewCommandWithAbsolutePaths(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name        string
 		path        string
@@ -46,6 +47,7 @@ func TestNewCommandWithAbsolutePaths(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir := t.TempDir()
 			projectPath := filepath.Join(tmpDir, tc.path)
 
@@ -66,8 +68,8 @@ func TestNewCommandWithAbsolutePaths(t *testing.T) {
 }
 
 // TestNewCommandInExistingDirectory tests creating a package in a pre-existing empty directory.
-// Java equivalent: testNewCommandInExistingDirectory
 func TestNewCommandInExistingDirectory(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "existing_project")
 
@@ -90,6 +92,7 @@ func TestNewCommandInExistingDirectory(t *testing.T) {
 
 // TestNewCommandBallerinaTomlContent verifies the content of generated Ballerina.toml.
 func TestNewCommandBallerinaTomlContent(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "myproject")
 
@@ -125,6 +128,7 @@ func TestNewCommandBallerinaTomlContent(t *testing.T) {
 
 // TestNewCommandGitignoreContent verifies the content of generated .gitignore.
 func TestNewCommandGitignoreContent(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "myproject")
 
@@ -156,6 +160,7 @@ func TestNewCommandGitignoreContent(t *testing.T) {
 
 // TestNewCommandMainBalContent verifies the content of generated main.bal.
 func TestNewCommandMainBalContent(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "myproject")
 
@@ -186,13 +191,9 @@ func TestNewCommandMainBalContent(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Package Name Validation
-// =============================================================================
-
 // TestNewCommandWithInvalidProjectName tests package name sanitization.
-// Java equivalent: testNewCommandWithInvalidProjectName
 func TestNewCommandWithInvalidProjectName(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		dirName string
@@ -204,6 +205,7 @@ func TestNewCommandWithInvalidProjectName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir := t.TempDir()
 			projectPath := filepath.Join(tmpDir, tc.dirName)
 
@@ -238,8 +240,8 @@ func TestNewCommandWithInvalidProjectName(t *testing.T) {
 }
 
 // TestNewCommandWithDigitPrefix tests names starting with digit get "app" prefix.
-// Java equivalent: testNewCommandInExistingDirectoryWithInvalidName
 func TestNewCommandWithDigitPrefix(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "9project")
 
@@ -271,8 +273,8 @@ func TestNewCommandWithDigitPrefix(t *testing.T) {
 }
 
 // TestNewCommandWithOnlyNonAlphanumeric tests pure symbols default to "my_package".
-// Java equivalent: testNewCommandWithPackageNameHasOnlyNonAlphanumeric
 func TestNewCommandWithOnlyNonAlphanumeric(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name    string
 		dirName string
@@ -284,6 +286,7 @@ func TestNewCommandWithOnlyNonAlphanumeric(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir := t.TempDir()
 			projectPath := filepath.Join(tmpDir, tc.dirName)
 
@@ -316,13 +319,9 @@ func TestNewCommandWithOnlyNonAlphanumeric(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Error Cases - Arguments
-// =============================================================================
-
 // TestNewCommandNoArgs tests error when no arguments provided.
-// Java equivalent: testNewCommandNoArgs
 func TestNewCommandNoArgs(t *testing.T) {
+	t.Parallel()
 	_, stderr, err := executeNewCommandWithArgs(t)
 	if err == nil {
 		t.Fatal("expected error, got success")
@@ -334,8 +333,8 @@ func TestNewCommandNoArgs(t *testing.T) {
 }
 
 // TestNewCommandMultipleArgs tests error when too many arguments provided.
-// Java equivalent: testNewCommandMultipleArgs
 func TestNewCommandMultipleArgs(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path1 := filepath.Join(tmpDir, "project1")
 	path2 := filepath.Join(tmpDir, "project2")
@@ -350,12 +349,9 @@ func TestNewCommandMultipleArgs(t *testing.T) {
 	}
 }
 
-// =============================================================================
-// Error Cases - Existing Content
-// =============================================================================
-
 // TestNewCommandInExistingProject tests error when directory is already a Ballerina project.
 func TestNewCommandInExistingProject(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "existing_project")
 
@@ -380,8 +376,8 @@ func TestNewCommandInExistingProject(t *testing.T) {
 
 // TestNewCommandWithExistingBalFiles tests that command succeeds when .bal files exist,
 // but main.bal is NOT created (preserving existing code).
-// Java equivalent: testNewCommandInExistingDirectoryWithExistingBalFiles
 func TestNewCommandWithExistingBalFiles(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	projectPath := filepath.Join(tmpDir, "dir_with_bal")
 
@@ -433,8 +429,8 @@ func TestNewCommandWithExistingBalFiles(t *testing.T) {
 }
 
 // TestNewCommandWithConflictingFiles tests error when conflicting files/directories exist.
-// Java equivalent: testNewCommandInExistingDirectoryWithExistingPackageFiles
 func TestNewCommandWithConflictingFiles(t *testing.T) {
+	t.Parallel()
 	conflictingItems := []struct {
 		name  string
 		isDir bool
@@ -449,6 +445,7 @@ func TestNewCommandWithConflictingFiles(t *testing.T) {
 
 	for _, item := range conflictingItems {
 		t.Run(item.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir := t.TempDir()
 			projectPath := filepath.Join(tmpDir, "project")
 
@@ -486,8 +483,8 @@ func TestNewCommandWithConflictingFiles(t *testing.T) {
 // =============================================================================
 
 // TestNewCommandWithHelp tests the help flag.
-// Java equivalent: testNewCommandWithHelp
 func TestNewCommandWithHelp(t *testing.T) {
+	t.Parallel()
 	stdout, _, _ := executeNewCommandWithArgs(t, "--help")
 
 	if !strings.Contains(stdout, "Create a new Ballerina package") {
@@ -506,37 +503,23 @@ func executeNewCommand(t *testing.T, projectPath string) (stdout, stderr string,
 }
 
 // executeNewCommandWithArgs executes the new command with the given arguments.
+// Creates a fresh command instance to support parallel test execution.
 func executeNewCommandWithArgs(t *testing.T, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	rOut, wOut, _ := os.Pipe()
-	os.Stdout = wOut
+	// Create fresh command instance for parallel safety
+	cmd := createNewCmd()
 
-	// Capture stderr
-	oldStderr := os.Stderr
-	rErr, wErr, _ := os.Pipe()
-	os.Stderr = wErr
+	// Capture stdout and stderr using cobra's built-in support
+	var outBuf, errBuf bytes.Buffer
+	cmd.SetOut(&outBuf)
+	cmd.SetErr(&errBuf)
 
-	// Reset command state for reuse
-	newCmd.SetArgs(args)
+	// Set arguments and execute
+	cmd.SetArgs(args)
+	err = cmd.Execute()
 
-	// Execute command
-	err = newCmd.Execute()
-
-	// Close writers and restore
-	wOut.Close()
-	wErr.Close()
-	os.Stdout = oldStdout
-	os.Stderr = oldStderr
-
-	// Read captured output
-	var bufOut, bufErr bytes.Buffer
-	io.Copy(&bufOut, rOut)
-	io.Copy(&bufErr, rErr)
-
-	return bufOut.String(), bufErr.String(), err
+	return outBuf.String(), errBuf.String(), err
 }
 
 // assertPackageStructure verifies the expected package structure exists.

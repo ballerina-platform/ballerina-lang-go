@@ -16,6 +16,8 @@
  * under the License.
  */
 
+//go:build !js && !wasm
+
 package main
 
 import (

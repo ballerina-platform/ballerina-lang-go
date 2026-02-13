@@ -28,10 +28,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var newCmd = &cobra.Command{
-	Use:   "new <package-path>",
-	Short: "Create a new Ballerina package",
-	Long: `Create a new Ballerina package.
+var newCmd = createNewCmd()
+
+// createNewCmd creates a new instance of the 'new' command.
+// This factory function enables parallel test execution.
+func createNewCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "new <package-path>",
+		Short: "Create a new Ballerina package",
+		Long: `Create a new Ballerina package.
 
     Creates the given path if it does not exist and initializes a Ballerina
     package in it. It generates the Ballerina.toml, main.bal, and .gitignore
@@ -49,20 +54,21 @@ var newCmd = &cobra.Command{
     'Ballerina.toml' file. It contains the organization name, package name,
     and the version. The package root directory is the default module
     directory.`,
-	Args: validateNewArgs,
-	RunE: runNew,
+		Args: validateNewArgs,
+		RunE: runNew,
+	}
 }
 
 // validateNewArgs validates the arguments for the 'new' command.
 func validateNewArgs(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		err := fmt.Errorf("project path is not provided")
-		printError(err, "new <project-path>", false)
+		printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 		return err
 	}
 	if len(args) > 1 {
 		err := fmt.Errorf("too many arguments")
-		printError(err, "new <project-path>", false)
+		printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 		return err
 	}
 	return nil
@@ -75,7 +81,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 	// Convert to absolute path
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
-		printError(fmt.Errorf("invalid path: %w", err), "new <project-path>", false)
+		printErrorTo(cmd.ErrOrStderr(), fmt.Errorf("invalid path: %w", err), "new <project-path>", false)
 		return err
 	}
 
@@ -88,18 +94,18 @@ func runNew(cmd *cobra.Command, args []string) error {
 		// Directory exists - check for conflicts
 		if !info.IsDir() {
 			err := fmt.Errorf("path exists and is not a directory: %s", absPath)
-			printError(err, "new <project-path>", false)
+			printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 			return err
 		}
 
 		if err := checkExistingDirectory(absPath); err != nil {
-			printError(err, "new <project-path>", false)
+			printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 			return err
 		}
 	} else if !os.IsNotExist(err) {
 		// Some other error (not "does not exist")
 		err := fmt.Errorf("error checking path: %w", err)
-		printError(err, "new <project-path>", false)
+		printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 		return err
 	}
 	// If path doesn't exist, it will be created by initPackage (including parent dirs)
@@ -117,13 +123,13 @@ func runNew(cmd *cobra.Command, args []string) error {
 
 	// Create the package
 	if err := initPackage(absPath, packageName, orgName); err != nil {
-		printError(err, "new <project-path>", false)
+		printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
 		return err
 	}
 
 	// Print success message
 	if nameWarning != "" {
-		fmt.Fprintln(os.Stderr, nameWarning)
+		fmt.Fprintln(cmd.ErrOrStderr(), nameWarning)
 	}
 
 	// Use relative path in output if originally provided as relative
@@ -131,7 +137,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 	if filepath.IsAbs(projectPath) {
 		displayPath = absPath
 	}
-	fmt.Printf("Created new package '%s' at %s.\n", packageName, displayPath)
+	fmt.Fprintf(cmd.OutOrStdout(), "Created new package '%s' at %s.\n", packageName, displayPath)
 
 	return nil
 }
