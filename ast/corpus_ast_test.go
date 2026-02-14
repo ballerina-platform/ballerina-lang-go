@@ -17,22 +17,27 @@
 package ast
 
 import (
+	"flag"
+	"fmt"
+	"os"
+	"testing"
+
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"fmt"
-	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-func TestASTGeneration(t *testing.T) {
+func TestMain(m *testing.M) {
 	flag.Parse()
+	os.Exit(m.Run())
+}
 
+func TestASTGeneration(t *testing.T) {
 	testPairs := test_util.GetValidTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {
@@ -114,8 +119,6 @@ func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) Visitor {
 }
 
 func TestWalkTraversal(t *testing.T) {
-	flag.Parse()
-
 	testPairs := test_util.GetValidTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {

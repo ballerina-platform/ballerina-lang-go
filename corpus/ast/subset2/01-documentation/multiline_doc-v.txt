@@ -1,0 +1,21 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function test
+    (md-doc
+      (doc-lines
+        (md-doc-line "description line 1")
+        (md-doc-line "")
+        (md-doc-line "description line 2")
+        (md-doc-line "")
+        (md-doc-line "description line 3"))) (
+    (variable param1 (type
+      (value-type string)))
+    (variable param2 (type
+      (value-type string)))) (
+    (value-type string))
+    (block-function-body
+      (return
+        (literal ))))
+  (function main () (
+    (value-type null))
+    (block-function-body)))
