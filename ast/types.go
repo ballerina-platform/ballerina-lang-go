@@ -48,7 +48,7 @@ type ObjectType interface {
 type BType interface {
 	model.Type
 	BTypeGetTag() model.TypeTags
-	bTypesetTag(tag model.TypeTags)
+	bTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
@@ -290,7 +290,7 @@ func (this *BObjectType) GetKind() model.TypeKind {
 	return model.TypeKind_OBJECT
 }
 
-func (this *BLangTypeBase) bTypesetTag(tag model.TypeTags) {
+func (this *BLangTypeBase) bTypeSetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
@@ -318,7 +318,7 @@ func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
-func (this *BTypeImpl) bTypesetTag(tag model.TypeTags) {
+func (this *BTypeImpl) bTypeSetTag(tag model.TypeTags) {
 	this.tag = tag
 }
 
@@ -364,6 +364,14 @@ func (this *BTypeImpl) GetTypeData() model.TypeData {
 
 func (this *BTypeImpl) GetDeterminedType() semtypes.SemType {
 	panic("not implemented")
+}
+
+func NewBType(tag model.TypeTags, name model.Name, flags uint64) BType {
+	return &BTypeImpl{
+		tag:   tag,
+		name:  name,
+		flags: flags,
+	}
 }
 
 func (this *BLangFiniteTypeNode) GetValueSet() []model.ExpressionNode {
