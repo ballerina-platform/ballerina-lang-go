@@ -226,10 +226,12 @@ func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (Symbol, bool) {
 	if prefix == "" {
 		return ms.GetSymbol(name)
 	}
-	prefix = mapToLangPrefixIfNeeded(prefix)
 	exported, ok := ms.Prefix[prefix]
 	if !ok {
-		return nil, false
+		exported, ok = ms.Prefix[mapToLangPrefixIfNeeded(prefix)]
+		if !ok {
+			return nil, false
+		}
 	}
 	ref, ok := exported.Main.GetSymbol(name)
 	if !ok {

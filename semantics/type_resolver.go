@@ -504,6 +504,17 @@ func isBitWiseExpr(opExpr opExpr) bool {
 	}
 }
 
+func isShiftExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_LEFT_SHIFT,
+		model.OperatorKind_BITWISE_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		return true
+	default:
+		return false
+	}
+}
+
 func isRelationalExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
@@ -730,6 +741,15 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		}
 		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
 		return nil, false
+	}
+
+	if isShiftExpr(expr) {
+		ctx := t.tyCtx
+		if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
+		return &semtypes.INT, nilLifted
 	}
 
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
