@@ -612,7 +612,17 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 	// Determine result type based on operator
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
-	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
+	case model.OperatorKind_SUB:
+		if numLit, ok := expr.Expr.(*ast.BLangNumericLiteral); ok {
+			resultValue := numLit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
+		} else if lit, ok := expr.Expr.(*ast.BLangLiteral); semtypes.IsSubtypeSimple(exprTy, semtypes.INT) && ok {
+			resultValue := lit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
+		} else {
+			resultTy = exprTy
+		}
+	case model.OperatorKind_ADD, model.OperatorKind_BITWISE_COMPLEMENT:
 		// Numeric unary operators: result type is same as operand type
 		resultTy = exprTy
 	case model.OperatorKind_NOT:
@@ -976,6 +986,10 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		ast.Walk(tr, &ty.TypeName)
 		ast.Walk(tr, &ty.PkgAlias)
 		symbol := ty.Symbol()
+		if ty.PkgAlias.Value != "" {
+			// imported symbol should have been already resolved
+			return tr.ctx.SymbolType(symbol)
+		}
 		defn, ok := tr.typeDefns[symbol]
 		if !ok {
 			// This should have been detected by the symbol resolver

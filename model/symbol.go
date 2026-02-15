@@ -211,10 +211,22 @@ func (ms *ModuleScope) GetSymbol(name string) (Symbol, bool) {
 	return &ref, true
 }
 
+func mapToLangPrefixIfNeeded(prefix string) string {
+	switch prefix {
+	case "int":
+		return "lang.int"
+	case "array":
+		return "lang.array"
+	default:
+		return prefix
+	}
+}
+
 func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (Symbol, bool) {
 	if prefix == "" {
 		return ms.GetSymbol(name)
 	}
+	prefix = mapToLangPrefixIfNeeded(prefix)
 	exported, ok := ms.Prefix[prefix]
 	if !ok {
 		return nil, false
