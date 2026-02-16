@@ -1022,10 +1022,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	if kind == common.NUMERIC_LITERAL {
 		basicLiteralNode := literal.(*tree.BasicLiteralNode)
 		literalTokenKind := basicLiteralNode.LiteralToken().Kind()
-		var nodeKind model.NodeKind
 		switch literalTokenKind {
 		case common.DECIMAL_INTEGER_LITERAL_TOKEN, common.HEX_INTEGER_LITERAL_TOKEN:
-			nodeKind = model.NodeKind_INTEGER_LITERAL
 			typeTag = model.TypeTags_INT
 			value = getIntegerLiteral(literal, textValue)
 			originalValue = &textValue
@@ -1035,7 +1033,6 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			}
 		case common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL
 			if balCommon.IsDecimalDiscriminated(textValue) {
 				typeTag = model.TypeTags_DECIMAL
 			} else {
@@ -1051,13 +1048,11 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			}
 		default:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = model.NodeKind_HEX_FLOATING_POINT_LITERAL
 			typeTag = model.TypeTags_FLOAT
 			value = getHexNodeValue(textValue)
 			originalValue = &textValue
 		}
 		numericLiteral := &BLangNumericLiteral{}
-		numericLiteral.Kind = nodeKind
 		numericLiteral.pos = getPosition(literal)
 		typeData := model.TypeData{
 			TypeDescriptor: getTypeFromTag(typeTag),

@@ -1797,9 +1797,10 @@ func (this *BLangPackage) AddDiagnostic(diagnostic diagnostics.Diagnostic) {
 	}
 	this.diagnostics = append(this.diagnostics, diagnostic)
 	severity := diagnostic.DiagnosticInfo().Severity()
-	if severity == diagnostics.Error {
+	switch severity {
+	case diagnostics.Error:
 		this.errorCount++
-	} else if severity == diagnostics.Warning {
+	case diagnostics.Warning:
 		this.warnCount++
 	}
 }

@@ -743,7 +743,8 @@ func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.Sem
 	}
 	symbolRef, ok := symbol.(*model.SymbolRef)
 	if !ok {
-		panic(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol))
+		t.ctx.InternalError(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol), expr.GetPosition())
+		return nil
 	}
 	return t.resolveFunctionCall(expr, *symbolRef)
 }
