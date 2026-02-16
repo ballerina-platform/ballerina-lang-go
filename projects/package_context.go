@@ -50,7 +50,7 @@ func newPackageContext(project Project, packageConfig PackageConfig, compilation
 
 	// Build module context map from all modules
 	moduleContextMap := make(map[ModuleID]*moduleContext)
-	moduleIDs := make([]ModuleID, 0)
+	var moduleIDs []ModuleID
 
 	// Add default module
 	defaultModuleConfig := packageConfig.DefaultModule()
@@ -157,9 +157,6 @@ func (p *packageContext) getCompilationOptions() CompilationOptions {
 
 // getModuleIDs returns a defensive copy of all module IDs.
 func (p *packageContext) getModuleIDs() []ModuleID {
-	if p.moduleIDs == nil {
-		return []ModuleID{}
-	}
 	return slices.Clone(p.moduleIDs)
 }
 

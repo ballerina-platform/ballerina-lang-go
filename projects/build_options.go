@@ -27,11 +27,9 @@ type BuildOptions struct {
 	codeCoverage              *bool
 	dumpBuildTime             *bool
 	skipTests                 *bool
-	targetDir                 string
-	nativeImage               *bool
 	exportComponentModel      *bool
-	graalVMBuildOptions       string
 	showDependencyDiagnostics *bool
+	targetDir                 string
 
 	// Composition: BuildOptions contains CompilationOptions
 	compilationOptions CompilationOptions
@@ -71,22 +69,6 @@ func (b BuildOptions) SkipTests() bool {
 // TargetDir returns the target directory path.
 func (b BuildOptions) TargetDir() string {
 	return b.targetDir
-}
-
-// NativeImage returns whether GraalVM native image is enabled.
-func (b BuildOptions) NativeImage() bool {
-	return toBoolDefaultIfNull(b.nativeImage)
-}
-
-// GraalVM returns whether GraalVM native image is enabled.
-// Alias for NativeImage().
-func (b BuildOptions) GraalVM() bool {
-	return b.NativeImage()
-}
-
-// GraalVMBuildOptions returns additional GraalVM build options.
-func (b BuildOptions) GraalVMBuildOptions() string {
-	return b.graalVMBuildOptions
 }
 
 // ShowDependencyDiagnostics returns whether dependency diagnostics should be shown.
@@ -286,22 +268,10 @@ func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 		builder.WithTargetDir(b.targetDir)
 	}
 
-	if theirs.nativeImage != nil {
-		builder.WithNativeImage(*theirs.nativeImage)
-	} else if b.nativeImage != nil {
-		builder.WithNativeImage(*b.nativeImage)
-	}
-
 	if theirs.exportComponentModel != nil {
 		builder.WithExportComponentModel(*theirs.exportComponentModel)
 	} else if b.exportComponentModel != nil {
 		builder.WithExportComponentModel(*b.exportComponentModel)
-	}
-
-	if theirs.graalVMBuildOptions != "" {
-		builder.WithGraalVMBuildOptions(theirs.graalVMBuildOptions)
-	} else {
-		builder.WithGraalVMBuildOptions(b.graalVMBuildOptions)
 	}
 
 	if theirs.showDependencyDiagnostics != nil {
@@ -325,11 +295,9 @@ type BuildOptionsBuilder struct {
 	codeCoverage              *bool
 	dumpBuildTime             *bool
 	skipTests                 *bool
-	targetDir                 string
-	nativeImage               *bool
 	exportComponentModel      *bool
-	graalVMBuildOptions       string
 	showDependencyDiagnostics *bool
+	targetDir                 string
 
 	// Embedded builder for compilation options
 	compilationOptionsBuilder *CompilationOptionsBuilder
@@ -369,24 +337,6 @@ func (b *BuildOptionsBuilder) WithSkipTests(value bool) *BuildOptionsBuilder {
 // WithTargetDir sets the target directory path.
 func (b *BuildOptionsBuilder) WithTargetDir(path string) *BuildOptionsBuilder {
 	b.targetDir = path
-	return b
-}
-
-// WithNativeImage sets whether GraalVM native image is enabled.
-func (b *BuildOptionsBuilder) WithNativeImage(value bool) *BuildOptionsBuilder {
-	b.nativeImage = &value
-	return b
-}
-
-// WithGraalVM sets whether GraalVM native image is enabled.
-// Alias for WithNativeImage.
-func (b *BuildOptionsBuilder) WithGraalVM(value bool) *BuildOptionsBuilder {
-	return b.WithNativeImage(value)
-}
-
-// WithGraalVMBuildOptions sets additional GraalVM build options.
-func (b *BuildOptionsBuilder) WithGraalVMBuildOptions(value string) *BuildOptionsBuilder {
-	b.graalVMBuildOptions = value
 	return b
 }
 
@@ -571,9 +521,7 @@ func (b *BuildOptionsBuilder) Build() BuildOptions {
 		dumpBuildTime:             b.dumpBuildTime,
 		skipTests:                 b.skipTests,
 		targetDir:                 b.targetDir,
-		nativeImage:               b.nativeImage,
 		exportComponentModel:      b.exportComponentModel,
-		graalVMBuildOptions:       b.graalVMBuildOptions,
 		showDependencyDiagnostics: b.showDependencyDiagnostics,
 		compilationOptions:        compilationOptions,
 	}
@@ -603,9 +551,7 @@ const (
 	OptionNameListConflictedClasses         OptionName = "listConflictedClasses"
 	OptionNameDumpBuildTime                 OptionName = "dumpBuildTime"
 	OptionNameTargetDir                     OptionName = "targetDir"
-	OptionNameNativeImage                   OptionName = "graalvm"
 	OptionNameExportComponentModel          OptionName = "exportComponentModel"
-	OptionNameGraalVMBuildOptions           OptionName = "graalvmBuildOptions"
 	OptionNameShowDependencyDiagnostics     OptionName = "showDependencyDiagnostics"
 	OptionNameOptimizeDependencyCompilation OptionName = "optimizeDependencyCompilation"
 	OptionNameRemoteManagement              OptionName = "remoteManagement"

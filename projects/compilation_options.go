@@ -93,10 +93,10 @@ type CompilationOptions struct {
 	dumpBIR                       *bool
 	dumpBIRFile                   *bool
 	dumpCFG                       *bool
-	dumpCFGFormat                 CFGFormat // CFGFormatUnknown = unset, CFGFormatSexp = S-expression, CFGFormatDot = DOT
 	dumpGraph                     *bool
 	dumpRawGraphs                 *bool
-	cloud                         *string // nil = unset, "" = explicitly no cloud, "k8s" etc = cloud target
+	dumpTokens                    *bool
+	dumpST                        *bool
 	listConflictedClasses         *bool
 	sticky                        *bool
 	withCodeGenerators            *bool
@@ -107,9 +107,9 @@ type CompilationOptions struct {
 	disableSyntaxTree             *bool
 	remoteManagement              *bool
 	optimizeDependencyCompilation *bool
-	dumpTokens                    *bool
-	dumpST                        *bool
 	traceRecovery                 *bool
+	cloud                         *string
+	dumpCFGFormat                 CFGFormat
 	lockingMode                   PackageLockingMode
 }
 

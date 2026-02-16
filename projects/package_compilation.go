@@ -46,7 +46,6 @@ func newPackageCompilation(rootPkgCtx *packageContext, compilationOptions Compil
 		packageResolution:  rootPkgCtx.getResolution(),
 		compilationOptions: compilationOptions,
 		compilerBackends:   make(map[TargetPlatform]CompilerBackend),
-		pluginDiagnostics:  make([]diagnostics.Diagnostic, 0),
 	}
 
 	compilation.compile()
@@ -66,7 +65,7 @@ func (c *PackageCompilation) compile() {
 // compileModulesInternal performs the actual compilation of all modules.
 // Java source: PackageCompilation.compileModulesInternal()
 func (c *PackageCompilation) compileModulesInternal() {
-	allDiagnostics := make([]diagnostics.Diagnostic, 0)
+	var allDiagnostics []diagnostics.Diagnostic
 
 	// Add resolution diagnostics
 	allDiagnostics = append(allDiagnostics, c.packageResolution.DiagnosticResult().Diagnostics()...)
