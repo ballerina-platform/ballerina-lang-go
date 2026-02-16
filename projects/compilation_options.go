@@ -18,6 +18,44 @@
 
 package projects
 
+// OptionalBool is a tri-state boolean: unknown (unset), true, or false.
+// It uses a single byte instead of *bool (pointer + bool = 9+ bytes with heap allocation).
+type OptionalBool byte
+
+const (
+	// OptionalBoolUnknown is the zero value representing an unset boolean.
+	OptionalBoolUnknown OptionalBool = iota
+	// OptionalBoolTrue represents an explicitly set true value.
+	OptionalBoolTrue
+	// OptionalBoolFalse represents an explicitly set false value.
+	OptionalBoolFalse
+)
+
+// Of converts a bool to an OptionalBool.
+func Of(value bool) OptionalBool {
+	if value {
+		return OptionalBoolTrue
+	}
+	return OptionalBoolFalse
+}
+
+// IsSet returns true if this optional has been explicitly set (true or false).
+func (o OptionalBool) IsSet() bool {
+	return o != OptionalBoolUnknown
+}
+
+// ValueOr returns the bool value, or the given default if unset.
+func (o OptionalBool) ValueOr(def bool) bool {
+	switch o {
+	case OptionalBoolTrue:
+		return true
+	case OptionalBoolFalse:
+		return false
+	default:
+		return def
+	}
+}
+
 // PackageLockingMode represents the locking mode for package dependencies.
 type PackageLockingMode int
 
@@ -86,28 +124,28 @@ func ParseCFGFormat(s string) CFGFormat {
 // CompilationOptions holds compilation-specific options.
 // BuildOptions contains a CompilationOptions instance and delegates compilation-related methods to it.
 type CompilationOptions struct {
-	offlineBuild                  *bool
-	experimental                  *bool
-	observabilityIncluded         *bool
-	dumpAST                       *bool
-	dumpBIR                       *bool
-	dumpBIRFile                   *bool
-	dumpCFG                       *bool
-	dumpGraph                     *bool
-	dumpRawGraphs                 *bool
-	dumpTokens                    *bool
-	dumpST                        *bool
-	listConflictedClasses         *bool
-	sticky                        *bool
-	withCodeGenerators            *bool
-	withCodeModifiers             *bool
-	configSchemaGen               *bool
-	exportOpenAPI                 *bool
-	exportComponentModel          *bool
-	disableSyntaxTree             *bool
-	remoteManagement              *bool
-	optimizeDependencyCompilation *bool
-	traceRecovery                 *bool
+	offlineBuild                  OptionalBool
+	experimental                  OptionalBool
+	observabilityIncluded         OptionalBool
+	dumpAST                       OptionalBool
+	dumpBIR                       OptionalBool
+	dumpBIRFile                   OptionalBool
+	dumpCFG                       OptionalBool
+	dumpGraph                     OptionalBool
+	dumpRawGraphs                 OptionalBool
+	dumpTokens                    OptionalBool
+	dumpST                        OptionalBool
+	listConflictedClasses         OptionalBool
+	sticky                        OptionalBool
+	withCodeGenerators            OptionalBool
+	withCodeModifiers             OptionalBool
+	configSchemaGen               OptionalBool
+	exportOpenAPI                 OptionalBool
+	exportComponentModel          OptionalBool
+	disableSyntaxTree             OptionalBool
+	remoteManagement              OptionalBool
+	optimizeDependencyCompilation OptionalBool
+	traceRecovery                 OptionalBool
 	cloud                         *string
 	dumpCFGFormat                 CFGFormat
 	lockingMode                   PackageLockingMode
@@ -120,37 +158,37 @@ func NewCompilationOptions() CompilationOptions {
 
 // OfflineBuild returns whether offline build mode is enabled.
 func (c CompilationOptions) OfflineBuild() bool {
-	return toBoolDefaultIfNull(c.offlineBuild)
+	return c.offlineBuild.ValueOr(false)
 }
 
 // Experimental returns whether experimental features are enabled.
 func (c CompilationOptions) Experimental() bool {
-	return toBoolDefaultIfNull(c.experimental)
+	return c.experimental.ValueOr(false)
 }
 
 // ObservabilityIncluded returns whether observability is included.
 func (c CompilationOptions) ObservabilityIncluded() bool {
-	return toBoolDefaultIfNull(c.observabilityIncluded)
+	return c.observabilityIncluded.ValueOr(false)
 }
 
 // DumpAST returns whether AST dumping is enabled.
 func (c CompilationOptions) DumpAST() bool {
-	return toBoolDefaultIfNull(c.dumpAST)
+	return c.dumpAST.ValueOr(false)
 }
 
 // DumpBIR returns whether BIR dumping is enabled.
 func (c CompilationOptions) DumpBIR() bool {
-	return toBoolDefaultIfNull(c.dumpBIR)
+	return c.dumpBIR.ValueOr(false)
 }
 
 // DumpBIRFile returns whether BIR file dumping is enabled.
 func (c CompilationOptions) DumpBIRFile() bool {
-	return toBoolDefaultIfNull(c.dumpBIRFile)
+	return c.dumpBIRFile.ValueOr(false)
 }
 
 // DumpCFG returns whether CFG dumping is enabled.
 func (c CompilationOptions) DumpCFG() bool {
-	return toBoolDefaultIfNull(c.dumpCFG)
+	return c.dumpCFG.ValueOr(false)
 }
 
 // DumpCFGFormat returns the CFG dump format.
@@ -161,12 +199,12 @@ func (c CompilationOptions) DumpCFGFormat() CFGFormat {
 
 // DumpGraph returns whether graph dumping is enabled.
 func (c CompilationOptions) DumpGraph() bool {
-	return toBoolDefaultIfNull(c.dumpGraph)
+	return c.dumpGraph.ValueOr(false)
 }
 
 // DumpRawGraphs returns whether raw graph dumping is enabled.
 func (c CompilationOptions) DumpRawGraphs() bool {
-	return toBoolDefaultIfNull(c.dumpRawGraphs)
+	return c.dumpRawGraphs.ValueOr(false)
 }
 
 // Cloud returns the cloud target.
@@ -180,68 +218,68 @@ func (c CompilationOptions) Cloud() string {
 
 // ListConflictedClasses returns whether conflicted classes should be listed.
 func (c CompilationOptions) ListConflictedClasses() bool {
-	return toBoolDefaultIfNull(c.listConflictedClasses)
+	return c.listConflictedClasses.ValueOr(false)
 }
 
 // Sticky returns whether sticky mode is enabled.
 // Deprecated: Use LockingMode() instead.
 func (c CompilationOptions) Sticky() bool {
-	return toBoolDefaultIfNull(c.sticky)
+	return c.sticky.ValueOr(false)
 }
 
 // WithCodeGenerators returns whether code generators should be run.
 func (c CompilationOptions) WithCodeGenerators() bool {
-	return toBoolDefaultIfNull(c.withCodeGenerators)
+	return c.withCodeGenerators.ValueOr(false)
 }
 
 // WithCodeModifiers returns whether code modifiers should be run.
 func (c CompilationOptions) WithCodeModifiers() bool {
-	return toBoolDefaultIfNull(c.withCodeModifiers)
+	return c.withCodeModifiers.ValueOr(false)
 }
 
 // ConfigSchemaGen returns whether config schema generation is enabled.
 func (c CompilationOptions) ConfigSchemaGen() bool {
-	return toBoolDefaultIfNull(c.configSchemaGen)
+	return c.configSchemaGen.ValueOr(false)
 }
 
 // ExportOpenAPI returns whether OpenAPI export is enabled.
 func (c CompilationOptions) ExportOpenAPI() bool {
-	return toBoolDefaultIfNull(c.exportOpenAPI)
+	return c.exportOpenAPI.ValueOr(false)
 }
 
 // ExportComponentModel returns whether component model export is enabled.
 func (c CompilationOptions) ExportComponentModel() bool {
-	return toBoolDefaultIfNull(c.exportComponentModel)
+	return c.exportComponentModel.ValueOr(false)
 }
 
 // DisableSyntaxTree returns whether syntax tree caching is disabled.
 func (c CompilationOptions) DisableSyntaxTree() bool {
-	return toBoolDefaultIfNull(c.disableSyntaxTree)
+	return c.disableSyntaxTree.ValueOr(false)
 }
 
 // RemoteManagement returns whether remote management is enabled.
 func (c CompilationOptions) RemoteManagement() bool {
-	return toBoolDefaultIfNull(c.remoteManagement)
+	return c.remoteManagement.ValueOr(false)
 }
 
 // OptimizeDependencyCompilation returns whether dependency compilation optimization is enabled.
 func (c CompilationOptions) OptimizeDependencyCompilation() bool {
-	return toBoolDefaultIfNull(c.optimizeDependencyCompilation)
+	return c.optimizeDependencyCompilation.ValueOr(false)
 }
 
 // DumpTokens returns whether lexer token dumping is enabled.
 func (c CompilationOptions) DumpTokens() bool {
-	return toBoolDefaultIfNull(c.dumpTokens)
+	return c.dumpTokens.ValueOr(false)
 }
 
 // DumpST returns whether syntax tree dumping is enabled.
 func (c CompilationOptions) DumpST() bool {
-	return toBoolDefaultIfNull(c.dumpST)
+	return c.dumpST.ValueOr(false)
 }
 
 // TraceRecovery returns whether error recovery tracing is enabled.
 func (c CompilationOptions) TraceRecovery() bool {
-	return toBoolDefaultIfNull(c.traceRecovery)
+	return c.traceRecovery.ValueOr(false)
 }
 
 // LockingMode returns the package locking mode.
@@ -250,166 +288,65 @@ func (c CompilationOptions) LockingMode() PackageLockingMode {
 	return c.lockingMode
 }
 
+// acceptOptionalBool returns theirs if set, else ours.
+func acceptOptionalBool(ours, theirs OptionalBool) OptionalBool {
+	if theirs.IsSet() {
+		return theirs
+	}
+	return ours
+}
+
 // AcceptTheirs merges the given compilation options by favoring theirs if there are conflicts.
 func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationOptions {
-	builder := NewCompilationOptionsBuilder()
-
-	// For each field, use theirs if set, otherwise use ours
-	if theirs.offlineBuild != nil {
-		builder.WithOfflineBuild(*theirs.offlineBuild)
-	} else if c.offlineBuild != nil {
-		builder.WithOfflineBuild(*c.offlineBuild)
+	merged := CompilationOptions{
+		offlineBuild:                  acceptOptionalBool(c.offlineBuild, theirs.offlineBuild),
+		experimental:                  acceptOptionalBool(c.experimental, theirs.experimental),
+		observabilityIncluded:         acceptOptionalBool(c.observabilityIncluded, theirs.observabilityIncluded),
+		dumpAST:                       acceptOptionalBool(c.dumpAST, theirs.dumpAST),
+		dumpBIR:                       acceptOptionalBool(c.dumpBIR, theirs.dumpBIR),
+		dumpBIRFile:                   acceptOptionalBool(c.dumpBIRFile, theirs.dumpBIRFile),
+		dumpCFG:                       acceptOptionalBool(c.dumpCFG, theirs.dumpCFG),
+		dumpGraph:                     acceptOptionalBool(c.dumpGraph, theirs.dumpGraph),
+		dumpRawGraphs:                 acceptOptionalBool(c.dumpRawGraphs, theirs.dumpRawGraphs),
+		dumpTokens:                    acceptOptionalBool(c.dumpTokens, theirs.dumpTokens),
+		dumpST:                        acceptOptionalBool(c.dumpST, theirs.dumpST),
+		listConflictedClasses:         acceptOptionalBool(c.listConflictedClasses, theirs.listConflictedClasses),
+		sticky:                        acceptOptionalBool(c.sticky, theirs.sticky),
+		withCodeGenerators:            acceptOptionalBool(c.withCodeGenerators, theirs.withCodeGenerators),
+		withCodeModifiers:             acceptOptionalBool(c.withCodeModifiers, theirs.withCodeModifiers),
+		configSchemaGen:               acceptOptionalBool(c.configSchemaGen, theirs.configSchemaGen),
+		exportOpenAPI:                 acceptOptionalBool(c.exportOpenAPI, theirs.exportOpenAPI),
+		exportComponentModel:          acceptOptionalBool(c.exportComponentModel, theirs.exportComponentModel),
+		disableSyntaxTree:             acceptOptionalBool(c.disableSyntaxTree, theirs.disableSyntaxTree),
+		remoteManagement:              acceptOptionalBool(c.remoteManagement, theirs.remoteManagement),
+		optimizeDependencyCompilation: acceptOptionalBool(c.optimizeDependencyCompilation, theirs.optimizeDependencyCompilation),
+		traceRecovery:                 acceptOptionalBool(c.traceRecovery, theirs.traceRecovery),
 	}
 
-	if theirs.experimental != nil {
-		builder.WithExperimental(*theirs.experimental)
-	} else if c.experimental != nil {
-		builder.WithExperimental(*c.experimental)
-	}
-
-	if theirs.observabilityIncluded != nil {
-		builder.WithObservabilityIncluded(*theirs.observabilityIncluded)
-	} else if c.observabilityIncluded != nil {
-		builder.WithObservabilityIncluded(*c.observabilityIncluded)
-	}
-
-	if theirs.dumpAST != nil {
-		builder.WithDumpAST(*theirs.dumpAST)
-	} else if c.dumpAST != nil {
-		builder.WithDumpAST(*c.dumpAST)
-	}
-
-	if theirs.dumpBIR != nil {
-		builder.WithDumpBIR(*theirs.dumpBIR)
-	} else if c.dumpBIR != nil {
-		builder.WithDumpBIR(*c.dumpBIR)
-	}
-
-	if theirs.dumpBIRFile != nil {
-		builder.WithDumpBIRFile(*theirs.dumpBIRFile)
-	} else if c.dumpBIRFile != nil {
-		builder.WithDumpBIRFile(*c.dumpBIRFile)
-	}
-
-	if theirs.dumpCFG != nil {
-		builder.WithDumpCFG(*theirs.dumpCFG)
-	} else if c.dumpCFG != nil {
-		builder.WithDumpCFG(*c.dumpCFG)
-	}
-
-	if theirs.dumpCFGFormat != CFGFormatUnknown {
-		builder.WithDumpCFGFormat(theirs.dumpCFGFormat)
-	} else if c.dumpCFGFormat != CFGFormatUnknown {
-		builder.WithDumpCFGFormat(c.dumpCFGFormat)
-	}
-
-	if theirs.dumpGraph != nil {
-		builder.WithDumpGraph(*theirs.dumpGraph)
-	} else if c.dumpGraph != nil {
-		builder.WithDumpGraph(*c.dumpGraph)
-	}
-
-	if theirs.dumpRawGraphs != nil {
-		builder.WithDumpRawGraphs(*theirs.dumpRawGraphs)
-	} else if c.dumpRawGraphs != nil {
-		builder.WithDumpRawGraphs(*c.dumpRawGraphs)
-	}
-
+	// Cloud (*string)
 	if theirs.cloud != nil {
-		builder.WithCloud(*theirs.cloud)
-	} else if c.cloud != nil {
-		builder.WithCloud(*c.cloud)
-	}
-
-	if theirs.listConflictedClasses != nil {
-		builder.WithListConflictedClasses(*theirs.listConflictedClasses)
-	} else if c.listConflictedClasses != nil {
-		builder.WithListConflictedClasses(*c.listConflictedClasses)
-	}
-
-	if theirs.sticky != nil {
-		builder.WithSticky(*theirs.sticky)
-	} else if c.sticky != nil {
-		builder.WithSticky(*c.sticky)
-	}
-
-	if theirs.withCodeGenerators != nil {
-		builder.WithCodeGeneratorsEnabled(*theirs.withCodeGenerators)
-	} else if c.withCodeGenerators != nil {
-		builder.WithCodeGeneratorsEnabled(*c.withCodeGenerators)
-	}
-
-	if theirs.withCodeModifiers != nil {
-		builder.WithCodeModifiersEnabled(*theirs.withCodeModifiers)
-	} else if c.withCodeModifiers != nil {
-		builder.WithCodeModifiersEnabled(*c.withCodeModifiers)
-	}
-
-	if theirs.configSchemaGen != nil {
-		builder.WithConfigSchemaGen(*theirs.configSchemaGen)
-	} else if c.configSchemaGen != nil {
-		builder.WithConfigSchemaGen(*c.configSchemaGen)
-	}
-
-	if theirs.exportOpenAPI != nil {
-		builder.WithExportOpenAPI(*theirs.exportOpenAPI)
-	} else if c.exportOpenAPI != nil {
-		builder.WithExportOpenAPI(*c.exportOpenAPI)
-	}
-
-	if theirs.exportComponentModel != nil {
-		builder.WithExportComponentModel(*theirs.exportComponentModel)
-	} else if c.exportComponentModel != nil {
-		builder.WithExportComponentModel(*c.exportComponentModel)
-	}
-
-	if theirs.disableSyntaxTree != nil {
-		builder.WithDisableSyntaxTree(*theirs.disableSyntaxTree)
-	} else if c.disableSyntaxTree != nil {
-		builder.WithDisableSyntaxTree(*c.disableSyntaxTree)
-	}
-
-	if theirs.remoteManagement != nil {
-		builder.WithRemoteManagement(*theirs.remoteManagement)
-	} else if c.remoteManagement != nil {
-		builder.WithRemoteManagement(*c.remoteManagement)
-	}
-
-	if theirs.optimizeDependencyCompilation != nil {
-		builder.WithOptimizeDependencyCompilation(*theirs.optimizeDependencyCompilation)
-	} else if c.optimizeDependencyCompilation != nil {
-		builder.WithOptimizeDependencyCompilation(*c.optimizeDependencyCompilation)
-	}
-
-	if theirs.dumpTokens != nil {
-		builder.WithDumpTokens(*theirs.dumpTokens)
-	} else if c.dumpTokens != nil {
-		builder.WithDumpTokens(*c.dumpTokens)
-	}
-
-	if theirs.dumpST != nil {
-		builder.WithDumpST(*theirs.dumpST)
-	} else if c.dumpST != nil {
-		builder.WithDumpST(*c.dumpST)
-	}
-
-	if theirs.traceRecovery != nil {
-		builder.WithTraceRecovery(*theirs.traceRecovery)
-	} else if c.traceRecovery != nil {
-		builder.WithTraceRecovery(*c.traceRecovery)
-	}
-
-	// Handle locking mode with special sticky logic
-	if theirs.lockingMode != PackageLockingModeUnknown {
-		builder.WithLockingMode(theirs.lockingMode)
-	} else if builder.options.sticky != nil && *builder.options.sticky {
-		// If sticky is true, set locking mode to HARD unless theirs has a locking mode
-		builder.WithLockingMode(PackageLockingModeHard)
+		merged.cloud = theirs.cloud
 	} else {
-		builder.WithLockingMode(c.lockingMode)
+		merged.cloud = c.cloud
 	}
 
-	return builder.Build()
+	// CFG format
+	if theirs.dumpCFGFormat != CFGFormatUnknown {
+		merged.dumpCFGFormat = theirs.dumpCFGFormat
+	} else {
+		merged.dumpCFGFormat = c.dumpCFGFormat
+	}
+
+	// Locking mode with special sticky logic
+	if theirs.lockingMode != PackageLockingModeUnknown {
+		merged.lockingMode = theirs.lockingMode
+	} else if merged.sticky == OptionalBoolTrue {
+		merged.lockingMode = PackageLockingModeHard
+	} else {
+		merged.lockingMode = c.lockingMode
+	}
+
+	return merged
 }
 
 // CompilationOptionsBuilder provides a builder pattern for CompilationOptions.
@@ -426,43 +363,43 @@ func NewCompilationOptionsBuilder() *CompilationOptionsBuilder {
 
 // WithOfflineBuild sets offline build mode.
 func (b *CompilationOptionsBuilder) WithOfflineBuild(value bool) *CompilationOptionsBuilder {
-	b.options.offlineBuild = &value
+	b.options.offlineBuild = Of(value)
 	return b
 }
 
 // WithExperimental sets experimental features flag.
 func (b *CompilationOptionsBuilder) WithExperimental(value bool) *CompilationOptionsBuilder {
-	b.options.experimental = &value
+	b.options.experimental = Of(value)
 	return b
 }
 
 // WithObservabilityIncluded sets observability inclusion.
 func (b *CompilationOptionsBuilder) WithObservabilityIncluded(value bool) *CompilationOptionsBuilder {
-	b.options.observabilityIncluded = &value
+	b.options.observabilityIncluded = Of(value)
 	return b
 }
 
 // WithDumpAST sets AST dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpAST(value bool) *CompilationOptionsBuilder {
-	b.options.dumpAST = &value
+	b.options.dumpAST = Of(value)
 	return b
 }
 
 // WithDumpBIR sets BIR dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpBIR(value bool) *CompilationOptionsBuilder {
-	b.options.dumpBIR = &value
+	b.options.dumpBIR = Of(value)
 	return b
 }
 
 // WithDumpBIRFile sets BIR file dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpBIRFile(value bool) *CompilationOptionsBuilder {
-	b.options.dumpBIRFile = &value
+	b.options.dumpBIRFile = Of(value)
 	return b
 }
 
 // WithDumpCFG sets CFG dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpCFG(value bool) *CompilationOptionsBuilder {
-	b.options.dumpCFG = &value
+	b.options.dumpCFG = Of(value)
 	return b
 }
 
@@ -474,13 +411,13 @@ func (b *CompilationOptionsBuilder) WithDumpCFGFormat(value CFGFormat) *Compilat
 
 // WithDumpGraph sets graph dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpGraph(value bool) *CompilationOptionsBuilder {
-	b.options.dumpGraph = &value
+	b.options.dumpGraph = Of(value)
 	return b
 }
 
 // WithDumpRawGraphs sets raw graph dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpRawGraphs(value bool) *CompilationOptionsBuilder {
-	b.options.dumpRawGraphs = &value
+	b.options.dumpRawGraphs = Of(value)
 	return b
 }
 
@@ -492,80 +429,80 @@ func (b *CompilationOptionsBuilder) WithCloud(value string) *CompilationOptionsB
 
 // WithListConflictedClasses sets conflicted classes listing flag.
 func (b *CompilationOptionsBuilder) WithListConflictedClasses(value bool) *CompilationOptionsBuilder {
-	b.options.listConflictedClasses = &value
+	b.options.listConflictedClasses = Of(value)
 	return b
 }
 
 // WithSticky sets sticky mode.
 // Deprecated: Use WithLockingMode() instead.
 func (b *CompilationOptionsBuilder) WithSticky(value bool) *CompilationOptionsBuilder {
-	b.options.sticky = &value
+	b.options.sticky = Of(value)
 	return b
 }
 
 // WithCodeGeneratorsEnabled sets whether code generators should run.
 func (b *CompilationOptionsBuilder) WithCodeGeneratorsEnabled(value bool) *CompilationOptionsBuilder {
-	b.options.withCodeGenerators = &value
+	b.options.withCodeGenerators = Of(value)
 	return b
 }
 
 // WithCodeModifiersEnabled sets whether code modifiers should run.
 func (b *CompilationOptionsBuilder) WithCodeModifiersEnabled(value bool) *CompilationOptionsBuilder {
-	b.options.withCodeModifiers = &value
+	b.options.withCodeModifiers = Of(value)
 	return b
 }
 
 // WithConfigSchemaGen sets config schema generation flag.
 func (b *CompilationOptionsBuilder) WithConfigSchemaGen(value bool) *CompilationOptionsBuilder {
-	b.options.configSchemaGen = &value
+	b.options.configSchemaGen = Of(value)
 	return b
 }
 
 // WithExportOpenAPI sets OpenAPI export flag.
 func (b *CompilationOptionsBuilder) WithExportOpenAPI(value bool) *CompilationOptionsBuilder {
-	b.options.exportOpenAPI = &value
+	b.options.exportOpenAPI = Of(value)
 	return b
 }
 
 // WithExportComponentModel sets component model export flag.
 func (b *CompilationOptionsBuilder) WithExportComponentModel(value bool) *CompilationOptionsBuilder {
-	b.options.exportComponentModel = &value
+	b.options.exportComponentModel = Of(value)
 	return b
 }
 
 // WithDisableSyntaxTree sets syntax tree caching disabled flag.
 func (b *CompilationOptionsBuilder) WithDisableSyntaxTree(value bool) *CompilationOptionsBuilder {
-	b.options.disableSyntaxTree = &value
+	b.options.disableSyntaxTree = Of(value)
 	return b
 }
 
 // WithRemoteManagement sets remote management flag.
 func (b *CompilationOptionsBuilder) WithRemoteManagement(value bool) *CompilationOptionsBuilder {
-	b.options.remoteManagement = &value
+	b.options.remoteManagement = Of(value)
 	return b
 }
 
 // WithOptimizeDependencyCompilation sets dependency compilation optimization flag.
 func (b *CompilationOptionsBuilder) WithOptimizeDependencyCompilation(value bool) *CompilationOptionsBuilder {
-	b.options.optimizeDependencyCompilation = &value
+	b.options.optimizeDependencyCompilation = Of(value)
 	return b
 }
 
 // WithDumpTokens sets lexer token dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpTokens(value bool) *CompilationOptionsBuilder {
-	b.options.dumpTokens = &value
+	b.options.dumpTokens = Of(value)
 	return b
 }
 
 // WithDumpST sets syntax tree dumping flag.
 func (b *CompilationOptionsBuilder) WithDumpST(value bool) *CompilationOptionsBuilder {
-	b.options.dumpST = &value
+	b.options.dumpST = Of(value)
 	return b
 }
 
 // WithTraceRecovery sets error recovery tracing flag.
 func (b *CompilationOptionsBuilder) WithTraceRecovery(value bool) *CompilationOptionsBuilder {
-	b.options.traceRecovery = &value
+	b.options.traceRecovery = Of(value)
 	return b
 }
 
@@ -578,12 +515,4 @@ func (b *CompilationOptionsBuilder) WithLockingMode(mode PackageLockingMode) *Co
 // Build creates the CompilationOptions instance.
 func (b *CompilationOptionsBuilder) Build() CompilationOptions {
 	return b.options
-}
-
-// toBoolDefaultIfNull returns false if the pointer is nil, otherwise returns the value.
-func toBoolDefaultIfNull(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return *b
 }
