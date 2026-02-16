@@ -31,12 +31,16 @@ go build -o bal ./cli/cmd
 ./bal run --help
 ```
 
-#### Running a bal source file
+#### Running a bal source 
 
-Currently, only single files are supported
+Currently, the following are supported:
+- Single .bal file
+- Ballerina package with only the default module
+
 E.g 
 ```bash
 ./bal run --dump-bir corpus/bal/subset1/01-boolean/equal1-v.bal
+./bal run project-api-test/testdata/myproject
 ```
 
 ### Testing
