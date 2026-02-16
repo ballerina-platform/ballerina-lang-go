@@ -1,0 +1,43 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable neg1 (type
+          (value-type int)) (expr
+          (invocation neg (
+            (literal 17))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref neg1))))
+      (expression-stmt
+        (invocation io println (
+          (invocation neg (
+            (literal 0))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation neg (
+            (unary-expr -
+              (literal 1)))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation negneg (
+            (literal 1))))))))
+  (function neg (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (unary-expr -
+          (simple-var-ref x)))))
+  (function negneg (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (unary-expr -
+          (unary-expr -
+            (simple-var-ref x)))))))

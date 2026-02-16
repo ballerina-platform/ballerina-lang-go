@@ -1,0 +1,122 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (literal 60)
+            (literal 2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (literal 120)
+                (literal 3)))
+            (literal 4)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (literal 120)
+                (literal 3)))
+            (group-expr
+              (binary-expr /
+                (literal 16)
+                (literal 4)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (literal 120)
+                (literal 3)))
+            (group-expr
+              (binary-expr /
+                (literal 16)
+                (literal 4)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (group-expr
+                  (binary-expr /
+                    (literal 120)
+                    (literal 3)))
+                (group-expr
+                  (binary-expr /
+                    (literal 16)
+                    (literal 4)))))
+            (literal 2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (group-expr
+                  (binary-expr /
+                    (literal 120)
+                    (literal 3)))
+                (group-expr
+                  (binary-expr /
+                    (literal 16)
+                    (literal 4)))))
+            (group-expr
+              (binary-expr /
+                (literal 10)
+                (literal 5)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr /
+            (group-expr
+              (binary-expr /
+                (group-expr
+                  (binary-expr /
+                    (literal 120)
+                    (literal 3)))
+                (group-expr
+                  (binary-expr /
+                    (literal 16)
+                    (literal 4)))))
+            (group-expr
+              (group-expr
+                (binary-expr /
+                  (binary-expr /
+                    (literal 400)
+                    (literal 20))
+                  (group-expr
+                    (binary-expr /
+                      (literal 100)
+                      (literal 10))))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation div (
+            (invocation div (
+              (invocation div (
+                (literal 120)
+                (literal 3)))
+              (invocation div (
+                (literal 16)
+                (literal 4)))))
+            (invocation div (
+              (invocation div (
+                (literal 400)
+                (literal 20)))
+              (invocation div (
+                (literal 100)
+                (literal 10))))))))))))
+  (function div (
+    (variable i (type
+      (value-type int)))
+    (variable j (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr /
+          (simple-var-ref i)
+          (simple-var-ref j))))))

@@ -200,7 +200,7 @@ func (v *implicitVarInitVisitor) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	if foreach, ok := node.(*ast.BLangForeach); ok && foreach.VariableDef != nil {
-		v.state.markInitialized(v.ctx.RefSymbol(foreach.VariableDef.Var.Symbol()))
+		v.state.markInitialized(foreach.VariableDef.Var.Symbol())
 	}
 	return v
 }

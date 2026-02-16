@@ -1,0 +1,81 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation mkInt (
+              (literal 2)))
+            (literal 2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !=
+            (literal 17)
+            (invocation mkInt (
+              (literal 17)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation mkBoolean (
+              (literal true)))
+            (literal true)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !=
+            (literal false)
+            (invocation mkBoolean (
+              (literal false)))))))
+      (var-def
+        (variable n (type
+          (value-type int)) (expr
+          (literal 2))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation mkInt (
+              (literal 2)))
+            (simple-var-ref n)))))
+      (assignment
+        (simple-var-ref n)
+        (literal 17))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !=
+            (simple-var-ref n)
+            (invocation mkInt (
+              (literal 17)))))))
+      (var-def
+        (variable b (type
+          (value-type boolean)) (expr
+          (literal true))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (invocation mkBoolean (
+              (literal true)))
+            (simple-var-ref b)))))
+      (assignment
+        (simple-var-ref b)
+        (literal false))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !=
+            (simple-var-ref b)
+            (invocation mkBoolean (
+              (literal false)))))))))
+  (function mkInt (
+    (variable n (type
+      (value-type int)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref n))))
+  (function mkBoolean (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref b)))))

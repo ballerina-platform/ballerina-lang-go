@@ -33,6 +33,7 @@ const (
 	Parser
 	BIR
 	CFG
+	Desugar
 )
 
 // TestCase represents a test case: input file and expected output file
@@ -76,6 +77,9 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 		outputExt = ".txt"
 	case CFG:
 		outputBaseDir = "cfg"
+		outputExt = ".txt"
+	case Desugar:
+		outputBaseDir = "desugared"
 		outputExt = ".txt"
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)

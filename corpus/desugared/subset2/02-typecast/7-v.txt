@@ -1,0 +1,74 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation ifElse (
+            (literal true)
+            (literal 17)
+            (literal false))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation ifElse (
+            (literal false)
+            (literal 32)
+            (literal true))))))
+      (expression-stmt
+        (invocation io println (
+          (type-conversion-expr
+            (invocation ifElse (
+              (literal true)
+              (literal 32)
+              (literal true)))
+            (value-type int)))))
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (type-conversion-expr
+            (invocation ifElse (
+              (literal true)
+              (literal 42)
+              (literal false)))
+            (value-type int)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (type-conversion-expr
+            (invocation ifElse (
+              (literal false)
+              (literal 21)
+              (literal true)))
+            (value-type boolean)))))
+      (var-def
+        (variable b (type
+          (value-type boolean)) (expr
+          (type-conversion-expr
+            (invocation ifElse (
+              (literal false)
+              (literal 21)
+              (literal false)))
+            (value-type boolean)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref b))))))
+  (function ifElse (
+    (variable t (type
+      (value-type boolean)))
+    (variable n (type
+      (value-type int)))
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type any))
+    (block-function-body
+      (if
+        (simple-var-ref t)
+        (block-stmt
+          (return
+            (simple-var-ref n))) (
+        (block-stmt
+          (return
+            (simple-var-ref b))))))))

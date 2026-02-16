@@ -40,6 +40,8 @@ func (p *PrettyPrinter) Print(node BLangNode) string {
 
 func (p *PrettyPrinter) PrintInner(node BLangNode) {
 	switch t := node.(type) {
+	case *BLangPackage:
+		p.printPackage(t)
 	case *BLangCompilationUnit:
 		p.printCompilationUnit(t)
 	case *BLangImportPackage:
@@ -62,6 +64,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSimpleVarRef(t)
 	case *BLangLiteral:
 		p.printLiteral(t)
+	case *BLangNumericLiteral:
+		p.printNumericLiteral(t)
 	case *BLangBinaryExpr:
 		p.printBinaryExpr(t)
 	case *BLangInvocation:
@@ -162,6 +166,26 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printPackage(node *BLangPackage) {
+	p.startNode()
+	p.printString("package")
+	p.indentLevel++
+	for i := range node.Imports {
+		p.printImportPackage(&node.Imports[i])
+	}
+	for i := range node.Constants {
+		p.printConstant(&node.Constants[i])
+	}
+	for i := range node.TypeDefinitions {
+		p.printTypeDefinition(&node.TypeDefinitions[i])
+	}
+	for i := range node.Functions {
+		p.printFunction(&node.Functions[i])
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
 	// no-op
 }
@@ -249,6 +273,13 @@ func (p *PrettyPrinter) printFlags(flagSet interface{}) {
 func (p *PrettyPrinter) printLiteral(node *BLangLiteral) {
 	p.startNode()
 	p.printString("literal")
+	p.printString(fmt.Sprintf("%v", node.Value))
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNumericLiteral(node *BLangNumericLiteral) {
+	p.startNode()
+	p.printString("numeric-literal")
 	p.printString(fmt.Sprintf("%v", node.Value))
 	p.endNode()
 }

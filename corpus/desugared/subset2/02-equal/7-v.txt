@@ -1,0 +1,69 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation mkInt (
+              (literal 0)))
+            (invocation mkNil ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal 0)
+            (invocation mkNil ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation mkBoolean (
+              (literal false)))
+            (invocation mkNil ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (invocation mkBoolean (
+              (literal true)))
+            (invocation mkNil ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal false)
+            (invocation mkNil ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (invocation mkNil ())
+            (literal true)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (invocation mkBoolean (
+              (literal true)))
+            (literal true)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (literal false)
+            (invocation mkBoolean (
+              (literal false)))))))))
+  (function mkNil () (
+    (value-type any))
+    (block-function-body
+      (return
+        (literal <nil>))))
+  (function mkInt (
+    (variable n (type
+      (value-type int)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref n))))
+  (function mkBoolean (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type any))
+    (block-function-body
+      (return
+        (simple-var-ref b)))))

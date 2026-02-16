@@ -1,0 +1,177 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable big (type
+          (value-type int)) (expr
+          (literal 9223372036854775806))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref big)
+            (literal 9223372036854775806)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref big)
+            (literal 1)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref big)
+            (literal 0)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref big)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref big)
+            (unary-expr -
+              (literal 9223372036854775806))))))
+      (var-def
+        (variable one (type
+          (value-type int)) (expr
+          (literal 1))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref one)
+            (literal 9223372036854775806)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref one)
+            (literal 1)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref one)
+            (literal 0)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref one)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref one)
+            (unary-expr -
+              (literal 9223372036854775806))))))
+      (var-def
+        (variable zero (type
+          (value-type int)) (expr
+          (literal 0))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref zero)
+            (literal 9223372036854775806)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref zero)
+            (literal 1)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref zero)
+            (literal 0)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref zero)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (simple-var-ref zero)
+            (unary-expr -
+              (literal 9223372036854775806))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref one))
+            (literal 9223372036854775806)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref one))
+            (literal 1)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref one))
+            (literal 0)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref one))
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref one))
+            (unary-expr -
+              (literal 9223372036854775806))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref big))
+            (literal 9223372036854775806)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref big))
+            (literal 1)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref big))
+            (literal 0)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref big))
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr ==
+            (unary-expr -
+              (simple-var-ref big))
+            (unary-expr -
+              (literal 9223372036854775806))))))))
+  (function printBoolean (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 1))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 0))))))))))

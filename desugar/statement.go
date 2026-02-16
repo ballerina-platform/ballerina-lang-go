@@ -307,8 +307,13 @@ func visitForEach(cx *Context, stmt *ast.BLangForeach) desugaredNode[model.State
 func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
-	startExpr := rangeExpr.LhsExpr
-	endExpr := rangeExpr.RhsExpr
+	startResult := walkExpression(cx, rangeExpr.LhsExpr)
+	initStmts = append(initStmts, startResult.initStmts...)
+	startExpr := startResult.replacementNode
+
+	endResult := walkExpression(cx, rangeExpr.RhsExpr)
+	initStmts = append(initStmts, endResult.initStmts...)
+	endExpr := endResult.replacementNode
 
 	loopVarDef.Var.SetInitialExpression(startExpr)
 	initStmts = append(initStmts, loopVarDef)
@@ -327,7 +332,7 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 	endVar.SetDeterminedType(&semtypes.INT)
 	endVar.SetInitialExpression(endExpr)
 	endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
-	endVar.SetSymbol(&endVarSymbol)
+	endVar.SetSymbol(endVarSymbol)
 
 	endVarDef := &ast.BLangSimpleVariableDef{
 		Var: endVar,
@@ -337,7 +342,7 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 	endVarRef := &ast.BLangSimpleVarRef{
 		VariableName: endVarName,
 	}
-	endVarRef.SetSymbol(&endVarSymbol)
+	endVarRef.SetSymbol(endVarSymbol)
 
 	var compOp model.OperatorKind
 	if rangeExpr.GetOperatorKind() == model.OperatorKind_CLOSED_RANGE {

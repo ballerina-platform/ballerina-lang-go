@@ -1,0 +1,73 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr -
+            (binary-expr +
+              (literal 8)
+              (literal 5))
+            (literal 11)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (binary-expr -
+              (literal 8)
+              (literal 11))
+            (literal 5)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr +
+            (binary-expr -
+              (binary-expr +
+                (literal 3)
+                (literal 5))
+              (literal 5))
+            (literal 9)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (literal 3)
+            (literal 5)
+            (unary-expr -
+              (literal 5))
+            (literal 9))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr -
+            (binary-expr +
+              (binary-expr -
+                (literal 3)
+                (literal 5))
+              (literal 9))
+            (literal 4)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (literal 3)
+            (unary-expr -
+              (literal 5))
+            (literal 9)
+            (unary-expr -
+              (literal 4)))))))))
+  (function add (
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))
+    (variable c (type
+      (value-type int)))
+    (variable d (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (simple-var-ref a)
+              (simple-var-ref b))
+            (simple-var-ref c))
+          (simple-var-ref d))))))

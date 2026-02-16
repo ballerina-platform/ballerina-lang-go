@@ -427,6 +427,7 @@ func (cfg *functionCFG) markBackedges() {
 			cfg.topoOrder = append(cfg.topoOrder, i)
 		}
 	}
+}
 func (analyzer *functionControlFlowAnalyzer) analyzeForeach(curBB bbRef, stmt *ast.BLangForeach) stmtEffect {
 	loopHead := analyzer.createNewBB()
 	loopBody := analyzer.createNewBB()

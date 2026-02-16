@@ -25,23 +25,19 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
-	"strings"
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
+var update = flag.Bool("update", false, "update expected desugared AST files")
+
 func TestDesugar(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.AST)
+	testPairs := test_util.GetValidTests(t, test_util.Desugar)
 
 	for _, testPair := range testPairs {
-		// Skip tests in subset3/03-loop/ directory
-		if strings.Contains(testPair.InputPath, "subset3/03-loop/") {
-			continue
-		}
-
 		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
 			testDesugar(t, testPair)
@@ -89,22 +85,28 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Serialize AST after semantic analysis but before desugaring
-	prettyPrinter := ast.PrettyPrinter{}
-	beforeDesugarAST := prettyPrinter.Print(compilationUnit)
-
 	// Step 6: DESUGAR
 	DesugarPackage(cx, pkg)
 
 	// Step 7: Serialize AST after desugaring
-	prettyPrinterAfter := ast.PrettyPrinter{}
-	afterDesugarAST := prettyPrinterAfter.Print(compilationUnit)
+	prettyPrinter := ast.PrettyPrinter{}
+	actualAST := prettyPrinter.Print(pkg)
 
-	// Compare: after desugaring should be same as before desugaring
-	// (for tests that don't require desugaring transformations)
-	if beforeDesugarAST != afterDesugarAST {
-		t.Errorf("AST changed after desugaring for %s\nDiff:\n%s",
-			testCase.InputPath, getDiff(beforeDesugarAST, afterDesugarAST))
+	// If update flag is set, update expected file
+	if *update {
+		if test_util.UpdateIfNeeded(t, testCase.ExpectedPath, actualAST) {
+			t.Errorf("updated expected desugared AST file: %s", testCase.ExpectedPath)
+		}
+		return
+	}
+
+	// Read expected AST file
+	expectedAST := test_util.ReadExpectedFile(t, testCase.ExpectedPath)
+
+	// Compare AST strings exactly
+	if actualAST != expectedAST {
+		t.Errorf("Desugared AST mismatch for %s\nExpected file: %s\n%s",
+			testCase.InputPath, testCase.ExpectedPath, getDiff(expectedAST, actualAST))
 		return
 	}
 

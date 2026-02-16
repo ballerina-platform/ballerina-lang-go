@@ -1,0 +1,35 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 6))))
+      (var-def
+        (variable $desugar$0 (expr
+          (literal 10))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref i))))
+          (if
+            (binary-expr ==
+              (simple-var-ref i)
+              (literal 8))
+            (block-stmt
+              (break)) ())
+          (block-stmt)
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (literal true)))))))

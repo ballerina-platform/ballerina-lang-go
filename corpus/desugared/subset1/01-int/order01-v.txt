@@ -1,0 +1,92 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (literal 1))))
+      (var-def
+        (variable y (type
+          (value-type int)) (expr
+          (literal 2))))
+      (expression-stmt
+        (invocation printBoolean (
+          (binary-expr <
+            (simple-var-ref x)
+            (simple-var-ref y)))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation greaterThan (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation greaterThan (
+            (literal 2)
+            (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation greaterThan (
+            (literal 2)
+            (unary-expr -
+              (literal 1)))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation lessThan (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation lessThan (
+            (literal 0)
+            (literal 0))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation lessThan (
+            (literal 2)
+            (literal 1))))))
+      (expression-stmt
+        (invocation printBoolean (
+          (invocation lessThan (
+            (unary-expr -
+              (literal 1))
+            (literal 17))))))))
+  (function printBoolean (
+    (variable b (type
+      (value-type boolean)))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 1))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 0)))))))))
+  (function lessThan (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr <
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function greaterThan (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr >
+          (simple-var-ref x)
+          (simple-var-ref y))))))
