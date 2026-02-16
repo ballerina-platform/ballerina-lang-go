@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"runtime"
 	"slices"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -204,25 +206,13 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	cx := moduleCtx.compilerCtx
 
-	// Parse all source documents and collect syntax trees.
-	var syntaxTrees []*tree.SyntaxTree
-	for _, docID := range moduleCtx.srcDocIDs {
-		docCtx := moduleCtx.srcDocContextMap[docID]
-		if docCtx != nil {
-			st := docCtx.parse()
-			if st != nil {
-				syntaxTrees = append(syntaxTrees, st)
-			}
-		}
-	}
-
-	// Parse test source documents.
-	for _, docID := range moduleCtx.testSrcDocIDs {
-		docCtx := moduleCtx.testDocContextMap[docID]
-		if docCtx != nil {
-			docCtx.parse()
-		}
-	}
+	// Parse all source and test documents in parallel.
+	syntaxTrees := parseDocumentsParallel(
+		moduleCtx.srcDocIDs,
+		moduleCtx.srcDocContextMap,
+		moduleCtx.testSrcDocIDs,
+		moduleCtx.testDocContextMap,
+	)
 
 	if len(syntaxTrees) == 0 {
 		return
@@ -269,6 +259,68 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, importedSymbols)
+}
+
+// parseDocumentsParallel parses source and test documents in parallel.
+// It uses bounded concurrency (GOMAXPROCS) to avoid excessive goroutines.
+// Returns syntax trees from source documents only (test docs are parsed but not returned).
+func parseDocumentsParallel(
+	srcDocIDs []DocumentID,
+	srcDocContextMap map[DocumentID]*documentContext,
+	testDocIDs []DocumentID,
+	testDocContextMap map[DocumentID]*documentContext,
+) []*tree.SyntaxTree {
+	// Use bounded parallelism
+	maxWorkers := runtime.GOMAXPROCS(0)
+	sem := make(chan struct{}, maxWorkers)
+
+	var (
+		mu          sync.Mutex
+		wg          sync.WaitGroup
+		syntaxTrees []*tree.SyntaxTree
+	)
+
+	// Parse source documents - collect syntax trees
+	for _, docID := range srcDocIDs {
+		docCtx := srcDocContextMap[docID]
+		if docCtx == nil {
+			continue
+		}
+
+		wg.Add(1)
+		go func(dc *documentContext) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire semaphore
+			defer func() { <-sem }() // release semaphore
+
+			st := dc.parse()
+			if st != nil {
+				mu.Lock()
+				syntaxTrees = append(syntaxTrees, st)
+				mu.Unlock()
+			}
+		}(docCtx)
+	}
+
+	// Parse test documents - no syntax trees collected
+	for _, docID := range testDocIDs {
+		docCtx := testDocContextMap[docID]
+		if docCtx == nil {
+			continue
+		}
+
+		wg.Add(1)
+		go func(dc *documentContext) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire semaphore
+			defer func() { <-sem }() // release semaphore
+
+			dc.parse()
+		}(docCtx)
+	}
+
+	wg.Wait()
+	return syntaxTrees
 }
 
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
