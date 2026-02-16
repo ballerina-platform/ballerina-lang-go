@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package birserializer
+package codec
 
 import (
 	"flag"
@@ -116,11 +116,11 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	pkg := ast.ToPackage(compilationUnit)
 
 	// Step 4: Resolve symbols
-	importedSymbols := semantics.ResolveImports(cx, pkg)
+	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types
-	typeResolver := semantics.NewTypeResolver(cx)
+	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
 	// Step 6: Generate BIR package
