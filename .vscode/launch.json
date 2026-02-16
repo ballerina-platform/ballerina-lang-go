@@ -7,7 +7,7 @@
         
     
         {
-            "name": "Debug Ballerina interpreter - Singlefile",
+            "name": "Debug Ballerina Interpreter - Single File",
             "type": "go",
             "request": "launch",
             "mode": "auto",
@@ -18,7 +18,7 @@
             ]
         },
         {
-            "name": "Debug Ballerina interpreter - Package",
+            "name": "Debug Ballerina Interpreter - Package",
             "type": "go",
             "request": "launch",
             "mode": "auto",
