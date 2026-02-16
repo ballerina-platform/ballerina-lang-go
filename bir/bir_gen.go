@@ -554,10 +554,6 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
 		ty := lat.MemberAt(i)
 		fillerVal := values.DefaultValueForType(ty)
-		if fillerVal == values.NeverValue {
-			// this should never happen; semantic analyzer should have cought these
-			panic("never value in filler position")
-		}
 		fillerOperand := ctx.addTempVar(ty)
 		fillerLoad := &ConstantLoad{}
 		fillerLoad.Value = fillerVal
