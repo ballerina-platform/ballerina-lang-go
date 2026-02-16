@@ -276,11 +276,7 @@ func (b *ManifestBuilder) parsePackageDescriptor() projects.PackageDescriptor {
 
 // parseDependencies parses the [[dependency]] array from the TOML document.
 func (b *ManifestBuilder) parseDependencies() []projects.Dependency {
-	tables, ok := b.toml.GetTables(keyDependency)
-	if !ok {
-		return nil
-	}
-
+	tables, _ := b.toml.GetTables(keyDependency)
 	var deps []projects.Dependency
 	for _, table := range tables {
 		dep, err := b.parseDependency(table)
@@ -381,22 +377,15 @@ func (b *ManifestBuilder) parseBuildOptions() projects.BuildOptions {
 // parseString retrieves a string value from the TOML document.
 // Returns empty string if the key does not exist.
 func (b *ManifestBuilder) parseString(key string) string {
-	value, ok := b.toml.GetString(key)
-	if !ok {
-		return ""
-	}
+	value, _ := b.toml.GetString(key)
 	return value
 }
 
 // parseStringArray retrieves a string array from the TOML document.
 // Returns nil if the key does not exist or is not an array.
 func (b *ManifestBuilder) parseStringArray(key string) []string {
-	arr, ok := b.toml.GetArray(key)
-	if !ok {
-		return nil
-	}
-
-	result := make([]string, 0, len(arr))
+	arr, _ := b.toml.GetArray(key)
+	var result []string
 	for _, item := range arr {
 		if str, ok := item.(string); ok {
 			result = append(result, str)
