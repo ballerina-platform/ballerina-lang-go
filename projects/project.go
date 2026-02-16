@@ -21,8 +21,6 @@ package projects
 // Project interface represents a Ballerina project.
 // This provides core project functionality for all project types.
 type Project interface {
-	baseProjectAccessor
-
 	// SourceRoot returns the project source directory path.
 	SourceRoot() string
 
@@ -55,6 +53,9 @@ type Project interface {
 	// The duplicated project shares immutable state (IDs, descriptors, configs)
 	// but has independent compilation caches and lazy-loaded fields.
 	Duplicate() Project
+
+	// Returns the Environment associated with this project.
+	Environment() *Environment
 }
 
 // ProjectError represents an error during project loading or configuration.

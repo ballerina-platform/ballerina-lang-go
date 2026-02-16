@@ -14,6 +14,6 @@ func NewEnvironment(cx *context.CompilerContext) *Environment {
 	}
 }
 
-func (e *Environment) CompilerContext() *context.CompilerContext {
+func (e *Environment) compilerContext() *context.CompilerContext {
 	return e.compilerCtx
 }

@@ -92,7 +92,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: depsCopy,
-		compilerCtx:            project.Base().Environment().CompilerContext(),
+		compilerCtx:            project.Environment().compilerContext(),
 	}
 }
 
@@ -229,7 +229,7 @@ func compileInternal(moduleCtx *moduleContext) {
 		return
 	}
 
-	compilerCtx := moduleCtx.project.Base().Environment().CompilerContext()
+	compilerCtx := moduleCtx.project.Environment().compilerContext()
 
 	// Build BLangPackage from syntax trees.
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
