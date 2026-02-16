@@ -147,18 +147,12 @@ func (br *birReader) getFromCP(index int) any {
 
 func (br *birReader) getStringFromCP(index int) string {
 	v := br.getFromCP(index)
-	if str, ok := v.(string); ok {
-		return str
-	}
-	return ""
+	return v.(string)
 }
 
 func (br *birReader) getPackageFromCP(index int) *model.PackageID {
 	v := br.getFromCP(index)
-	if pkg, ok := v.(*model.PackageID); ok {
-		return pkg
-	}
-	return nil
+	return v.(*model.PackageID)
 }
 
 // FIXME: Read actual type
@@ -197,7 +191,6 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 
 		// TODO: Implement Types
 		// t := br.getTypeFromCP(int(typeIdx))
-
 		constant := bir.BIRConstant{
 			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
 				BIRNodeBase: bir.BIRNodeBase{
@@ -243,7 +236,6 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 
 		// TODO: Implement Types
 		// t := br.getTypeFromCP(int(typeIdx))
-
 		variables[i] = bir.BIRGlobalVariableDcl{
 			BIRVariableDcl: bir.BIRVariableDcl{
 				BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
@@ -309,7 +301,6 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 
 		// TODO: Implement Types
 		// returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
-
 		returnVarName := br.readStringCPEntry()
 
 		returnVar = &bir.BIRVariableDcl{
@@ -397,7 +388,6 @@ func (br *birReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BI
 
 	// TODO: Implement Types
 	// t := br.getTypeFromCP(int(typeIdx))
-
 	name := br.readStringCPEntry()
 
 	localVar := &bir.BIRVariableDcl{
@@ -406,10 +396,11 @@ func (br *birReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BI
 		Type: nil,
 	}
 
-	if kind == bir.VAR_KIND_ARG {
+	switch kind {
+	case bir.VAR_KIND_ARG:
 		metaVarName := br.readStringCPEntry()
 		localVar.MetaVarName = metaVarName.Value()
-	} else if kind == bir.VAR_KIND_LOCAL {
+	case bir.VAR_KIND_LOCAL:
 		metaVarName := br.readStringCPEntry()
 		localVar.MetaVarName = metaVarName.Value()
 
@@ -458,7 +449,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			},
 			RhsOp: rhsOp,
 		}
-
 	case bir.INSTRUCTION_KIND_ADD, bir.INSTRUCTION_KIND_SUB, bir.INSTRUCTION_KIND_MUL,
 		bir.INSTRUCTION_KIND_DIV, bir.INSTRUCTION_KIND_MOD, bir.INSTRUCTION_KIND_EQUAL,
 		bir.INSTRUCTION_KIND_NOT_EQUAL, bir.INSTRUCTION_KIND_GREATER_THAN,
@@ -481,7 +471,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp1: *rhsOp1,
 			RhsOp2: *rhsOp2,
 		}
-
 	case bir.INSTRUCTION_KIND_TYPEOF, bir.INSTRUCTION_KIND_NOT, bir.INSTRUCTION_KIND_NEGATE:
 		rhsOp := br.readOperand(varMap)
 		lhsOp := br.readOperand(varMap)
@@ -492,7 +481,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			Kind:  instructionKind,
 			RhsOp: rhsOp,
 		}
-
 	case bir.INSTRUCTION_KIND_CONST_LOAD:
 		var constLoadTypeIdx int32
 		br.read(&constLoadTypeIdx)
@@ -524,7 +512,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			Type:  constLoadType,
 			Value: value,
 		}
-
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD,
 		bir.INSTRUCTION_KIND_ARRAY_STORE, bir.INSTRUCTION_KIND_ARRAY_LOAD:
 		lhsOp := br.readOperand(varMap)
@@ -538,7 +525,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			KeyOp: keyOp,
 			RhsOp: rhsOp,
 		}
-
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
 		var typeIdx int32
 		br.read(&typeIdx)
@@ -554,7 +540,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			Type:   t,
 			SizeOp: sizeOp,
 		}
-
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
 		rhsOp := br.readOperand(varMap)
@@ -569,7 +554,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp: rhsOp,
 			Type:  nil,
 		}
-
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
@@ -598,7 +582,6 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 				},
 			},
 		}
-
 	case bir.INSTRUCTION_KIND_BRANCH:
 		op := br.readOperand(varMap)
 		trueBBId := br.readStringCPEntry()
@@ -613,7 +596,6 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 				Id: falseBBId,
 			},
 		}
-
 	case bir.INSTRUCTION_KIND_CALL:
 		var isVirtual bool
 		br.read(&isVirtual)
@@ -653,7 +635,6 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 				},
 			},
 		}
-
 	default:
 		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))
 	}
@@ -695,7 +676,7 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 	}
 }
 
-func (br *birReader) readConstValue(valueType ast.BType) any {
+func (br *birReader) readConstValue(_ ast.BType) any {
 	var tagByte int8
 	br.read(&tagByte)
 
@@ -715,36 +696,26 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		var val int64
 		br.read(&val)
 		return val
-
 	case model.TypeTags_BYTE:
 		var val byte
 		br.read(&val)
 		return val
-
 	case model.TypeTags_FLOAT:
 		var val float64
 		br.read(&val)
 		return val
-
 	case model.TypeTags_BOOLEAN:
 		var val bool
 		br.read(&val)
 		return val
-
 	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
 		var idx int32
 		br.read(&idx)
 		return br.getStringFromCP(int(idx))
-
 	case model.TypeTags_NIL:
 		var idx int32
 		br.read(&idx)
-
-		if idx != -1 {
-			panic(fmt.Sprintf("expected -1 for nil value, got %d", idx))
-		}
 		return nil
-
 	default:
 		var idx int32
 		br.read(&idx)

@@ -226,23 +226,20 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 	case *bir.Move:
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
-
 	case *bir.BinaryOp:
 		bw.writeOperand(buf, &instr.RhsOp1)
 		bw.writeOperand(buf, &instr.RhsOp2)
 		bw.writeOperand(buf, instr.LhsOp)
-
 	case *bir.UnaryOp:
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
-
 	case *bir.ConstantLoad:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
 		var tagValue any = instr.Value
-		if cv, ok := instr.Value.(bir.ConstValue); ok {
+		if cv, isConstValue := instr.Value.(bir.ConstValue); isConstValue {
 			isWrapped = true
 			tagValue = cv.Value
 		}
@@ -255,24 +252,20 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		write(buf, isWrapped)
 		write(buf, int8(tag))
 		bw.writeConstValueByTag(buf, tag, tagValue)
-
 	case *bir.FieldAccess:
 		// TODO: MAP_LOAD and ARRAY_LOAD
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.KeyOp)
 		bw.writeOperand(buf, instr.RhsOp)
-
 	case *bir.NewArray:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
-
 	case *bir.TypeCast:
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeType(buf, instr.Type)
 		// TODO: Write checkTypes
-
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
@@ -282,12 +275,10 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 	switch term := term.(type) {
 	case *bir.Goto:
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
-
 	case *bir.Branch:
 		bw.writeOperand(buf, term.Op)
 		bw.writeStringCPEntry(buf, term.TrueBB.Id.Value())
 		bw.writeStringCPEntry(buf, term.FalseBB.Id.Value())
-
 	case *bir.Call:
 		write(buf, term.IsVirtual)
 		bw.writePackageCPEntry(buf, term.CalleePkg)
@@ -306,9 +297,7 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		}
 
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
-
 	case *bir.Return:
-
 	default:
 		panic(fmt.Sprintf("unsupported terminator type: %T", term))
 	}
@@ -346,7 +335,7 @@ func (bw *birWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
 }
 
 func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
-	if cv, ok := value.(bir.ConstValue); ok {
+	if cv, isConstValue := value.(bir.ConstValue); isConstValue {
 		bw.writeConstValueByTag(buf, tag, cv.Value)
 		return
 	}
@@ -375,7 +364,6 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected integer for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-
 	case model.TypeTags_BYTE:
 		var val byte
 		switch v := value.(type) {
@@ -389,7 +377,6 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected byte for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-
 	case model.TypeTags_FLOAT:
 		var val float64
 		switch v := value.(type) {
@@ -401,7 +388,6 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected float for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-
 	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
 		var val string
 		switch v := value.(type) {
@@ -418,7 +404,6 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		}
 		cpIdx := bw.cp.AddStringCPEntry(val)
 		write(buf, cpIdx)
-
 	case model.TypeTags_BOOLEAN:
 		var val bool
 		switch v := value.(type) {
@@ -428,10 +413,8 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected boolean for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-
 	case model.TypeTags_NIL:
 		write(buf, int32(-1))
-
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
 	}

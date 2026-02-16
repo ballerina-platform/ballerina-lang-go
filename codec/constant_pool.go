@@ -122,11 +122,7 @@ func (cp *ConstantPool) Serialize() ([]byte, error) {
 	var errMsg string
 	defer func() {
 		if r := recover(); r != nil {
-			if msg, ok := r.(string); ok {
-				errMsg = msg
-			} else {
-				errMsg = fmt.Sprintf("%v", r)
-			}
+			errMsg = fmt.Sprintf("%v", r)
 		}
 	}()
 
@@ -160,16 +156,13 @@ func (cp *ConstantPool) WriteCPEntry(buf *bytes.Buffer, entry CPEntry) {
 		if err != nil {
 			panic(fmt.Sprintf("writing string bytes: %v", err))
 		}
-
 	case *PackageCPEntry:
 		write(buf, e.OrgNameCPIndex)
 		write(buf, e.PkgNameCPIndex)
 		write(buf, e.ModuleNameCPIndex)
 		write(buf, e.VersionCPIndex)
-
 	case *ShapeCPEntry:
 		panic("shape serialization not implemented")
-
 	default:
 		panic(fmt.Sprintf("unsupported constant pool entry type: %T", entry))
 	}
