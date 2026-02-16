@@ -42,8 +42,9 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	}
 
 	lengthSymbol := model.NewFunctionSymbol("length", lenghtSignature, true)
-	ctx.SetSymbolType(lengthSymbol, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
 	space.AddSymbol("length", lengthSymbol)
+	lengthRef, _ := space.GetSymbol("length")
+	ctx.SetSymbolType(lengthRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
 	return model.ExportedSymbolSpace{
 		Main: space,
 	}
@@ -78,12 +79,12 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 			ReturnType:    &semtypes.NIL,
 		}
 		pushSymbol := model.NewFunctionSymbol("push", pushSignature, true)
-		ctx.SetSymbolType(pushSymbol, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &pushSignature))
 		symbolName := fmt.Sprintf("push_%d", nextIndex)
 		nextIndex++
 		space := s.Space()
 		space.AddSymbol(symbolName, pushSymbol)
 		ref, _ := space.GetSymbol(symbolName)
+		ctx.SetSymbolType(ref, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &pushSignature))
 		monomorphized[ty] = ref
 		return ref
 	}

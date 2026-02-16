@@ -778,7 +778,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
 	variable := assignment.GetVariable().(ast.BLangExpression)
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()
-		if symbol == nil {
+		if !ast.SymbolIsSet(symbolNode) {
 			// If this happens it is a bug in symbol resolver
 			a.internalErr("unexpected nil symbol")
 			return

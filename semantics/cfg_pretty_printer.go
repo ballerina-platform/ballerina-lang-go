@@ -51,8 +51,7 @@ func (p *CFGPrettyPrinter) Print(cfg *PackageCFG) string {
 
 	entries := make([]fnEntry, 0, len(cfg.funcCfgs))
 	for ref, fnCfg := range cfg.funcCfgs {
-		sym := p.ctx.GetSymbol(&ref)
-		name := p.ctx.SymbolName(sym)
+		name := p.ctx.SymbolName(ref)
 		entries = append(entries, fnEntry{ref: ref, name: name, cfg: fnCfg})
 	}
 

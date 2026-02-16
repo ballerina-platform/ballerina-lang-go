@@ -226,8 +226,7 @@ func (a *uninitVarAnalyzer) analyzeBlock(bb *basicBlock, state *varInitState) *v
 func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 	switch n := node.(type) {
 	case *ast.BLangSimpleVariableDef:
-		sym := n.Var.Symbol()
-		symRef := a.ctx.RefSymbol(sym)
+		symRef := n.Var.Symbol()
 		if n.Var.Expr != nil {
 			a.checkExpression(n.Var.Expr.(ast.BLangExpression), state)
 			state.markInitialized(symRef)
@@ -260,8 +259,7 @@ func (a *uninitVarAnalyzer) markAssignmentTarget(expr ast.BLangExpression, state
 
 	// For simple variable references, mark as initialized
 	if nodeWithSymbol, ok := expr.(model.NodeWithSymbol); ok {
-		sym := nodeWithSymbol.Symbol()
-		symRef := a.ctx.RefSymbol(sym)
+		symRef := nodeWithSymbol.Symbol()
 		if state.isTracked(symRef) {
 			state.markInitialized(symRef)
 		}
@@ -280,8 +278,7 @@ func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangExpression, state *var
 }
 
 // checkVariableReference checks if a variable is initialized before use
-func (a *uninitVarAnalyzer) checkVariableReference(sym model.Symbol, node model.Node, state *varInitState) {
-	symRef := a.ctx.RefSymbol(sym)
+func (a *uninitVarAnalyzer) checkVariableReference(symRef model.SymbolRef, node model.Node, state *varInitState) {
 	if !state.isTracked(symRef) {
 		return
 	}
@@ -346,8 +343,7 @@ func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackag
 
 // analyzeFunctionUninitializedVars analyzes a single function for uninitialized variables
 func analyzeFunctionUninitializedVars(ctx *context.CompilerContext, fn *ast.BLangFunction, cfg *PackageCFG) {
-	ref := ctx.RefSymbol(fn.Symbol())
-	fnCfg, ok := cfg.funcCfgs[ref]
+	fnCfg, ok := cfg.funcCfgs[fn.Symbol()]
 	if !ok {
 		return
 	}

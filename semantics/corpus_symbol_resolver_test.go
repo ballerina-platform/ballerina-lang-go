@@ -79,9 +79,15 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
+	if invocation, ok := node.(*ast.BLangInvocation); ok {
+		rawSymbol := invocation.RawSymbol
+		if _, ok := rawSymbol.(*deferredMethodSymbol); ok {
+			return nil
+		}
+	}
 	// Check if this node should have a symbol resolved
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
-		if nodeWithSymbol.Symbol() == nil {
+		if !ast.SymbolIsSet(nodeWithSymbol) {
 			v.t.Errorf("Symbol not resolved for %T at %s in %s",
 				node, node.GetPosition(), v.testPath)
 		}
@@ -95,7 +101,7 @@ func (v *symbolResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.
 	}
 	// Check if this type descriptor should have a symbol resolved
 	if typeWithSymbol, ok := typeData.TypeDescriptor.(ast.BNodeWithSymbol); ok {
-		if typeWithSymbol.Symbol() == nil {
+		if !ast.SymbolIsSet(typeWithSymbol) {
 			v.t.Errorf("Symbol not resolved for type %T at %s in %s",
 				typeData.TypeDescriptor, typeData.TypeDescriptor.GetPosition(), v.testPath)
 		}

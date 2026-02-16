@@ -165,11 +165,12 @@ func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
 }
 
 func (p *PrettyPrinter) printSourceKind(sourceKind model.SourceKind) {
-	if sourceKind == model.SourceKind_REGULAR_SOURCE {
+	switch sourceKind {
+	case model.SourceKind_REGULAR_SOURCE:
 		p.printString("regular-source")
-	} else if sourceKind == model.SourceKind_TEST_SOURCE {
+	case model.SourceKind_TEST_SOURCE:
 		p.printString("test-source")
-	} else {
+	default:
 		panic("Unsupported source kind: " + strconv.Itoa(int(sourceKind)))
 	}
 }

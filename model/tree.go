@@ -518,7 +518,7 @@ type Node interface {
 
 type NodeWithSymbol interface {
 	Node
-	Symbol() Symbol
+	Symbol() SymbolRef
 }
 
 // Top-Level/Structure Interfaces

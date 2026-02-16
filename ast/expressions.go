@@ -162,7 +162,7 @@ type (
 	}
 	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
-		symbol model.Symbol
+		symbol model.SymbolRef
 	}
 
 	BLangSimpleVarRef struct {
@@ -228,9 +228,11 @@ type (
 
 	BLangInvocation struct {
 		BLangExpressionBase
-		PkgAlias                  *BLangIdentifier
-		Name                      *BLangIdentifier
-		symbol                    model.Symbol
+		PkgAlias *BLangIdentifier
+		Name     *BLangIdentifier
+		// RawSymbol holds either a *model.SymbolRef (resolved) or a *deferredMethodSymbol (unresolved).
+		// Access via Symbol() after type resolution, or directly for deferred-symbol checks.
+		RawSymbol                 model.Symbol
 		Expr                      BLangExpression
 		ArgExprs                  []BLangExpression
 		AnnAttachments            []BLangAnnotationAttachment
@@ -357,20 +359,23 @@ var (
 
 // Symbol methods for BNodeWithSymbol interface
 
-func (n *BLangVariableReferenceBase) Symbol() model.Symbol {
+func (n *BLangVariableReferenceBase) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangVariableReferenceBase) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangVariableReferenceBase) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
-func (n *BLangInvocation) Symbol() model.Symbol {
-	return n.symbol
+// Symbol returns the resolved SymbolRef for this invocation.
+// Panics if the symbol has not been resolved yet (i.e. is a deferred method symbol).
+// Only call this after type resolution.
+func (n *BLangInvocation) Symbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
 }
 
-func (n *BLangInvocation) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangInvocation) SetSymbol(symbolRef model.SymbolRef) {
+	n.RawSymbol = &symbolRef
 }
 
 func (this *BLangGroupExpr) GetKind() model.NodeKind {

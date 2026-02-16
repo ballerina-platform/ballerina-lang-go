@@ -57,8 +57,7 @@ func (e *CFGDotExporter) Export(cfg *PackageCFG) string {
 
 	entries := make([]fnEntry, 0, len(cfg.funcCfgs))
 	for ref, fnCfg := range cfg.funcCfgs {
-		sym := e.ctx.GetSymbol(&ref)
-		name := e.ctx.SymbolName(sym)
+		name := e.ctx.SymbolName(ref)
 		entries = append(entries, fnEntry{ref: ref, name: name, cfg: fnCfg})
 	}
 

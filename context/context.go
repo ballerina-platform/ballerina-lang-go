@@ -56,44 +56,28 @@ func (this *CompilerContext) NewBlockScope(parent model.Scope, pkg model.Package
 	}
 }
 
-func (this *CompilerContext) GetSymbol(symbol model.Symbol) model.Symbol {
-	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
-		symbolSpace := this.symbolSpaces[refSymbol.SpaceIndex]
-		return symbolSpace.Symbols[refSymbol.Index]
-	}
-	return symbol
+func (this *CompilerContext) GetSymbol(symbol model.SymbolRef) model.Symbol {
+	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
+	return symbolSpace.Symbols[symbol.Index]
 }
 
-func (this *CompilerContext) RefSymbol(symbol model.Symbol) model.SymbolRef {
-	// If this happen that's a bug in SymbolResolver
-	if symbol == nil {
-		this.InternalError("RefSymbol called with nil symbol", nil)
-	}
-	if refSymbol, ok := symbol.(*model.SymbolRef); ok {
-		return *refSymbol
-	}
-	// This should never happen because we should never store actual symbols in the AST
-	this.InternalError(fmt.Sprintf("Symbol is not a SymbolRef: type=%T, name=%s, kind=%v", symbol, symbol.Name(), symbol.Kind()), nil)
-	return model.SymbolRef{}
-}
-
-func (this *CompilerContext) SymbolName(symbol model.Symbol) string {
+func (this *CompilerContext) SymbolName(symbol model.SymbolRef) string {
 	return this.GetSymbol(symbol).Name()
 }
 
-func (this *CompilerContext) SymbolType(symbol model.Symbol) semtypes.SemType {
+func (this *CompilerContext) SymbolType(symbol model.SymbolRef) semtypes.SemType {
 	return this.GetSymbol(symbol).Type()
 }
 
-func (this *CompilerContext) SymbolKind(symbol model.Symbol) model.SymbolKind {
+func (this *CompilerContext) SymbolKind(symbol model.SymbolRef) model.SymbolKind {
 	return this.GetSymbol(symbol).Kind()
 }
 
-func (this *CompilerContext) SymbolIsPublic(symbol model.Symbol) bool {
+func (this *CompilerContext) SymbolIsPublic(symbol model.SymbolRef) bool {
 	return this.GetSymbol(symbol).IsPublic()
 }
 
-func (this *CompilerContext) SetSymbolType(symbol model.Symbol, ty semtypes.SemType) {
+func (this *CompilerContext) SetSymbolType(symbol model.SymbolRef, ty semtypes.SemType) {
 	this.GetSymbol(symbol).SetType(ty)
 }
 

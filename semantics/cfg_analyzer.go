@@ -138,8 +138,7 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 		return
 	}
 
-	ref := ctx.RefSymbol(fn.Symbol())
-	fnCfg, ok := cfg.funcCfgs[ref]
+	fnCfg, ok := cfg.funcCfgs[fn.Symbol()]
 	if !ok {
 		return
 	}

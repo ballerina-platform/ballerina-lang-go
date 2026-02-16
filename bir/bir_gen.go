@@ -85,10 +85,9 @@ func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {
 	return cx.addLocalVarInner(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty, VAR_KIND_TEMP)
 }
 
-func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, kind VarKind, symbol model.Symbol) *BIROperand {
+func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, kind VarKind, symbol model.SymbolRef) *BIROperand {
 	operand := cx.addLocalVarInner(name, ty, kind)
-	symRef := cx.birCx.CompilerContext.RefSymbol(symbol)
-	cx.varMap[symRef] = operand
+	cx.varMap[symbol] = operand
 	return operand
 }
 
@@ -117,8 +116,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	}
 	for _, constant := range ast.Constants {
 		c := TransformConstant(genCtx, &constant)
-		symRef := genCtx.CompilerContext.RefSymbol(constant.Symbol())
-		genCtx.constantMap[symRef] = c
+		genCtx.constantMap[constant.Symbol()] = c
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
 	}
 	for _, function := range ast.Functions {
@@ -728,7 +726,7 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
-	symRef := ctx.birCx.CompilerContext.RefSymbol(expr.Symbol())
+	symRef := expr.Symbol()
 
 	// Try local variable lookup first
 	if operand, ok := ctx.varMap[symRef]; ok {
