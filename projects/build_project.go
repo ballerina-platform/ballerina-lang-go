@@ -37,6 +37,10 @@ func NewBuildProject(sourceRoot string, buildOptions BuildOptions) *BuildProject
 	return project
 }
 
+func (b *BuildProject) Base() *BaseProject {
+	return &b.BaseProject
+}
+
 // Kind returns the project kind (BUILD).
 func (b *BuildProject) Kind() ProjectKind {
 	return ProjectKindBuild

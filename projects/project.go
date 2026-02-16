@@ -21,6 +21,8 @@ package projects
 // Project interface represents a Ballerina project.
 // This provides core project functionality for all project types.
 type Project interface {
+	baseProjectAccessor
+
 	// SourceRoot returns the project source directory path.
 	SourceRoot() string
 

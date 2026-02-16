@@ -49,6 +49,10 @@ func NewSingleFileProject(sourceRoot string, buildOptions BuildOptions, document
 	return project
 }
 
+func (s *SingleFileProject) Base() *BaseProject {
+	return &s.BaseProject
+}
+
 // Kind returns the project kind (SINGLE_FILE).
 func (s *SingleFileProject) Kind() ProjectKind {
 	return ProjectKindSingleFile
