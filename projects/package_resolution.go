@@ -18,9 +18,7 @@
 
 package projects
 
-import (
-	"ballerina-lang-go/tools/diagnostics"
-)
+import "slices"
 
 // PackageResolution holds the result of package dependency resolution.
 // It builds a topologically sorted list of modules within the root package,
@@ -49,19 +47,23 @@ func newPackageResolution(pkgCtx *packageContext) *PackageResolution {
 // based on their inter-module dependencies (moduleDescDependencies).
 // Java source: PackageResolution.resolveDependencies(DependencyResolution)
 func (r *PackageResolution) resolveDependencies() {
-	var diags []diagnostics.Diagnostic
+	pkgCtx := r.rootPackageContext
 
-	// Build descriptor-to-moduleContext lookup
-	descToCtx := make(map[string]*moduleContext) // keyed by ModuleDescriptor.String()
-	for _, modID := range r.rootPackageContext.moduleIDs {
-		modCtx := r.rootPackageContext.moduleContextMap[modID]
+	// Build ordered module list
+	descToCtx := make(map[string]*moduleContext, len(pkgCtx.moduleIDs))
+	modules := make([]*moduleContext, 0, len(pkgCtx.moduleIDs))
+	for _, modID := range pkgCtx.moduleIDs {
+		modCtx := pkgCtx.moduleContextMap[modID]
+		if modCtx == nil {
+			continue
+		}
 		descToCtx[modCtx.getDescriptor().String()] = modCtx
+		modules = append(modules, modCtx)
 	}
 
 	// Build adjacency: module -> modules it depends on
-	deps := make(map[*moduleContext][]*moduleContext)
-	for _, modID := range r.rootPackageContext.moduleIDs {
-		modCtx := r.rootPackageContext.moduleContextMap[modID]
+	deps := make(map[*moduleContext][]*moduleContext, len(modules))
+	for _, modCtx := range modules {
 		var moduleDeps []*moduleContext
 		for _, depDesc := range modCtx.getModuleDescDependencies() {
 			if depCtx, ok := descToCtx[depDesc.String()]; ok {
@@ -72,83 +74,56 @@ func (r *PackageResolution) resolveDependencies() {
 	}
 
 	// Topological sort (DFS post-order, matching Java DependencyGraph algorithm)
-	sorted, cycles := topologicalSortModules(r.rootPackageContext.moduleIDs, r.rootPackageContext.moduleContextMap, deps)
+	sorted, cycles := topologicalSortModules(modules, deps)
 
-	if len(cycles) > 0 {
-		// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
-	}
+	// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
+	_ = cycles
 
 	r.topologicallySortedModuleList = sorted
-	r.diagnosticResult = NewDiagnosticResult(diags)
+	r.diagnosticResult = NewDiagnosticResult(nil)
 }
 
 // topologicalSortModules performs DFS-based topological sort on modules.
 // Returns modules in dependency order (dependencies before dependents)
 // and any cycles detected.
 // Java source: DependencyGraph.toTopologicallySortedList()
-func topologicalSortModules(
-	moduleIDs []ModuleID,
-	moduleContextMap map[ModuleID]*moduleContext,
+func topologicalSortModules(modules []*moduleContext,
 	deps map[*moduleContext][]*moduleContext,
 ) ([]*moduleContext, [][]*moduleContext) {
-	visited := make(map[*moduleContext]bool)
-	ancestors := make(map[*moduleContext]bool)
-	var ancestorList []*moduleContext // for cycle detection
-	sorted := make([]*moduleContext, 0, len(moduleIDs))
+	visited := make(map[*moduleContext]bool, len(modules))
+	inStack := make(map[*moduleContext]bool, len(modules))
+	var stack []*moduleContext
+	sorted := make([]*moduleContext, 0, len(modules))
 	var cycles [][]*moduleContext
 
-	// Process modules in deterministic order (by moduleID order)
-	for _, modID := range moduleIDs {
-		modCtx := moduleContextMap[modID]
-		if !visited[modCtx] && !ancestors[modCtx] {
-			sortModulesTopologically(modCtx, deps, visited, ancestors, &ancestorList, &sorted, &cycles)
+	var visit func(vertex *moduleContext)
+	visit = func(vertex *moduleContext) {
+		inStack[vertex] = true
+		stack = append(stack, vertex)
+
+		for _, dep := range deps[vertex] {
+			if inStack[dep] {
+				if startIdx := slices.Index(stack, dep); startIdx >= 0 {
+					cycles = append(cycles, slices.Clone(stack[startIdx:]))
+				}
+			} else if !visited[dep] {
+				visit(dep)
+			}
+		}
+
+		sorted = append(sorted, vertex)
+		visited[vertex] = true
+		delete(inStack, vertex)
+		stack = stack[:len(stack)-1]
+	}
+
+	for _, modCtx := range modules {
+		if !visited[modCtx] {
+			visit(modCtx)
 		}
 	}
 
 	return sorted, cycles
-}
-
-// sortModulesTopologically performs recursive DFS with cycle detection.
-// Java source: DependencyGraph.sortTopologically()
-func sortModulesTopologically(
-	vertex *moduleContext,
-	deps map[*moduleContext][]*moduleContext,
-	visited map[*moduleContext]bool,
-	ancestors map[*moduleContext]bool,
-	ancestorList *[]*moduleContext,
-	sorted *[]*moduleContext,
-	cycles *[][]*moduleContext,
-) {
-	ancestors[vertex] = true
-	*ancestorList = append(*ancestorList, vertex)
-
-	for _, dep := range deps[vertex] {
-		if ancestors[dep] {
-			// Cycle detected - find cycle start
-			startIdx := -1
-			for i, a := range *ancestorList {
-				if a == dep {
-					startIdx = i
-					break
-				}
-			}
-			if startIdx >= 0 {
-				cycle := make([]*moduleContext, len(*ancestorList)-startIdx)
-				copy(cycle, (*ancestorList)[startIdx:])
-				*cycles = append(*cycles, cycle)
-			}
-		} else if !visited[dep] {
-			sortModulesTopologically(dep, deps, visited, ancestors, ancestorList, sorted, cycles)
-		}
-	}
-
-	if !visited[vertex] {
-		*sorted = append(*sorted, vertex)
-		visited[vertex] = true
-	}
-
-	delete(ancestors, vertex)
-	*ancestorList = (*ancestorList)[:len(*ancestorList)-1]
 }
 
 // DiagnosticResult returns the diagnostics from resolution.
