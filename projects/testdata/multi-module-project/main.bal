@@ -14,8 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
+import multimoduleproject.services;
+import testorg/multimoduleproject.storage;
 
 public function main() {
-    io:println(hello());
+    services:runServices();
+    storage:initDatabase();
 }

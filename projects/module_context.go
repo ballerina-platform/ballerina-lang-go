@@ -193,15 +193,9 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 	return slices.Clone(m.moduleDescDependencies)
 }
 
-// compile performs module compilation by delegating to compileInternal.
-func (m *moduleContext) compile() {
-	compileInternal(m)
-	m.compilationState = moduleCompilationStateCompiled
-}
-
-// compileInternal performs the actual compilation of a module:
-// parse sources, build BLangPackage (AST), and run semantic analysis.
-func compileInternal(moduleCtx *moduleContext) {
+// compilePhase1 performs parsing, AST building, symbol resolution, and type resolution.
+// This phase must run sequentially respecting module dependencies.
+func compilePhase1(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 
 	cx := moduleCtx.compilerCtx
@@ -232,6 +226,18 @@ func compileInternal(moduleCtx *moduleContext) {
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(compilerCtx, importedSymbols)
 	typeResolver.ResolveTypes(compilerCtx, pkgNode)
+}
+
+// compilePhase2 performs CFG creation, semantic analysis, and CFG analysis.
+// This phase can run in parallel across modules after all modules complete Phase 1.
+func compilePhase2(moduleCtx *moduleContext) {
+	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
+		return
+	}
+
+	pkgNode := moduleCtx.bLangPkg
+	cx := moduleCtx.compilerCtx
+	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	// Create control flow graph before semantic analysis.
 	// CFG is needed for conditional type narrowing during semantic analysis.
@@ -259,6 +265,8 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, importedSymbols)
+
+	moduleCtx.compilationState = moduleCompilationStateCompiled
 }
 
 // parseDocumentsParallel parses source and test documents in parallel.
@@ -444,4 +452,26 @@ func (m *moduleContext) containsDocument(documentID DocumentID) bool {
 func (m *moduleContext) isTestDocument(documentID DocumentID) bool {
 	_, ok := m.testDocContextMap[documentID]
 	return ok
+}
+
+func (m *moduleContext) populateModuleLoadRequests() []*moduleLoadRequest {
+	var requests []*moduleLoadRequest
+	for _, docID := range m.srcDocIDs {
+		docCtx := m.srcDocContextMap[docID]
+		if docCtx != nil {
+			requests = append(requests, docCtx.moduleLoadRequests()...)
+		}
+	}
+	return requests
+}
+
+func (m *moduleContext) populateTestModuleLoadRequests() []*moduleLoadRequest {
+	var requests []*moduleLoadRequest
+	for _, docID := range m.testSrcDocIDs {
+		docCtx := m.testDocContextMap[docID]
+		if docCtx != nil {
+			requests = append(requests, docCtx.moduleLoadRequests()...)
+		}
+	}
+	return requests
 }

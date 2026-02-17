@@ -19,6 +19,7 @@
 package projects
 
 import (
+	"strings"
 	"sync"
 
 	"ballerina-lang-go/parser"
@@ -143,4 +144,60 @@ func (d *documentContext) duplicate() *documentContext {
 		name:              d.name,
 		disableSyntaxTree: d.disableSyntaxTree,
 	}
+}
+
+func (d *documentContext) moduleLoadRequests() []*moduleLoadRequest {
+	syntaxTree := d.getSyntaxTree()
+	if syntaxTree == nil {
+		return nil
+	}
+
+	rootNode := syntaxTree.RootNode
+	if rootNode == nil {
+		return nil
+	}
+
+	modulePart, ok := rootNode.(*tree.ModulePart)
+	if !ok {
+		return nil
+	}
+
+	var requests []*moduleLoadRequest
+	imports := modulePart.Imports()
+	for i := 0; i < imports.Size(); i++ {
+		importDecl := imports.Get(i)
+		request := extractModuleLoadRequest(importDecl)
+		if request != nil {
+			requests = append(requests, request)
+		}
+	}
+	return requests
+}
+
+func extractModuleLoadRequest(importDecl *tree.ImportDeclarationNode) *moduleLoadRequest {
+	// Get organization name (optional)
+	var orgName *PackageOrg
+	if importDecl.OrgName() != nil {
+		orgNameNode := importDecl.OrgName()
+		if orgNameNode.OrgName() != nil {
+			org := NewPackageOrg(orgNameNode.OrgName().Text())
+			orgName = &org
+		}
+	}
+
+	// Build module name by joining identifiers with "."
+	// Use Iterator which filters out separator tokens (dots)
+	moduleNameList := importDecl.ModuleName()
+	var moduleNameParts []string
+	for ident := range moduleNameList.Iterator() {
+		// Handle quoted identifiers - strip the leading ' character
+		text := ident.Text()
+		if len(text) > 0 && text[0] == '\'' {
+			text = text[1:]
+		}
+		moduleNameParts = append(moduleNameParts, text)
+	}
+	moduleName := strings.Join(moduleNameParts, ".")
+
+	return newModuleLoadRequest(orgName, moduleName)
 }

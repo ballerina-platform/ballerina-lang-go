@@ -606,3 +606,27 @@ func TestAddModule(t *testing.T) {
 	require.NotNil(testDoc)
 	assert.Equal(testContent, testDoc.TextDocument().String())
 }
+
+// TestMultiModuleDependencyOrder tests that dependency resolution is performed for multi-module
+func TestMultiModuleDependencyOrder(t *testing.T) {
+	assert := test_util.New(t)
+	require := test_util.NewRequire(t)
+
+	projectPath := filepath.Join("testdata", "multi-module-project")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	// Load the multi-module project
+	result, err := directory.LoadProject(absPath)
+	require.NoError(err, "Failed to load multi-module-project")
+
+	// Get package resolution which performs topological sorting
+	resolution := result.Project().CurrentPackage().Resolution()
+	sortedModuleNames := resolution.TopologicallySortedModuleNames()
+	require.Len(sortedModuleNames, 3)
+
+	// Verify the order
+	assert.Equal("multimoduleproject.storage", sortedModuleNames[0])
+	assert.Equal("multimoduleproject.services", sortedModuleNames[1])
+	assert.Equal("multimoduleproject", sortedModuleNames[2])
+}
