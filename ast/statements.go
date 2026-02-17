@@ -298,11 +298,7 @@ func (this *BLangIf) SetBody(body model.BlockStatementNode) {
 
 func (this *BLangIf) SetElseStatement(elseStatement model.StatementNode) {
 	// migrated from BLangIf.java:72:5
-	if elseStmt, ok := elseStatement.(BLangStatement); ok {
-		this.ElseStmt = elseStmt
-		return
-	}
-	panic("elseStatement is not a BLangStatement")
+	this.ElseStmt = elseStatement
 }
 
 func (this *BLangIf) GetKind() model.NodeKind {

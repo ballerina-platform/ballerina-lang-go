@@ -527,10 +527,10 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 		return n.TransformReceiveField(t)
 	case *tree.NaturalExpressionNode:
 		return n.TransformNaturalExpression(t)
-	case tree.Token:
-		return n.TransformToken(t)
 	case *tree.IdentifierToken:
 		return n.TransformIdentifierToken(t)
+	case tree.Token:
+		return n.TransformToken(t)
 	default:
 		panic("TransformSyntaxNode: unsupported node type")
 	}
@@ -871,12 +871,13 @@ func (n *NodeBuilder) createSimpleLiteral(literal tree.Node) model.LiteralNode {
 func getIntegerLiteral(literal tree.Node, textValue string) any {
 	basicLiteralNode := literal.(*tree.BasicLiteralNode)
 	literalTokenKind := basicLiteralNode.LiteralToken().Kind()
-	if literalTokenKind == common.DECIMAL_INTEGER_LITERAL_TOKEN {
+	switch literalTokenKind {
+	case common.DECIMAL_INTEGER_LITERAL_TOKEN:
 		if textValue[0] == '0' && len(textValue) > 1 {
 			panic("Syntax error: invalid integer literal: leading zero")
 		}
 		return parseLong(textValue, textValue, 10)
-	} else if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN {
+	case common.HEX_INTEGER_LITERAL_TOKEN:
 		processedNodeValue := strings.ToLower(textValue)
 		processedNodeValue = strings.ReplaceAll(processedNodeValue, "0x", "")
 		return parseLong(textValue, processedNodeValue, 16)
@@ -1021,10 +1022,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	if kind == common.NUMERIC_LITERAL {
 		basicLiteralNode := literal.(*tree.BasicLiteralNode)
 		literalTokenKind := basicLiteralNode.LiteralToken().Kind()
-		var nodeKind model.NodeKind
-		if literalTokenKind == common.DECIMAL_INTEGER_LITERAL_TOKEN ||
-			literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN {
-			nodeKind = model.NodeKind_INTEGER_LITERAL
+		switch literalTokenKind {
+		case common.DECIMAL_INTEGER_LITERAL_TOKEN, common.HEX_INTEGER_LITERAL_TOKEN:
 			typeTag = model.TypeTags_INT
 			value = getIntegerLiteral(literal, textValue)
 			originalValue = &textValue
@@ -1032,9 +1031,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN && withinByteRange(value) {
 				typeTag = model.TypeTags_BYTE
 			}
-		} else if literalTokenKind == common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN {
+		case common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL
 			if balCommon.IsDecimalDiscriminated(textValue) {
 				typeTag = model.TypeTags_DECIMAL
 			} else {
@@ -1048,15 +1046,13 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 				value = textValue
 				originalValue = &textValue
 			}
-		} else {
+		default:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
-			nodeKind = model.NodeKind_HEX_FLOATING_POINT_LITERAL
 			typeTag = model.TypeTags_FLOAT
 			value = getHexNodeValue(textValue)
 			originalValue = &textValue
 		}
 		numericLiteral := &BLangNumericLiteral{}
-		numericLiteral.Kind = nodeKind
 		numericLiteral.pos = getPosition(literal)
 		typeData := model.TypeData{
 			TypeDescriptor: getTypeFromTag(typeTag),

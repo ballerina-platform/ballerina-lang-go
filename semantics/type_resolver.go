@@ -65,8 +65,8 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 	t.pkg = pkg
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		symbol := defn.Symbol().(*model.SymbolRef)
-		t.typeDefns[*symbol] = defn
+		symbol := defn.Symbol()
+		t.typeDefns[symbol] = defn
 	}
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
@@ -530,11 +530,6 @@ func (t *TypeResolver) resolveGroupExpr(expr *ast.BLangGroupExpr) semtypes.SemTy
 func (t *TypeResolver) resolveSimpleVarRef(expr *ast.BLangSimpleVarRef) semtypes.SemType {
 	// Lookup the symbol's type from the context
 	symbol := expr.Symbol()
-	if symbol == nil {
-		t.ctx.InternalError("variable reference has no symbol", expr.GetPosition())
-		return nil
-	}
-
 	ty := t.ctx.SymbolType(symbol)
 	if ty == nil {
 		t.ctx.InternalError("symbol has no type", expr.GetPosition())
@@ -749,16 +744,20 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 
 func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.SemType {
 	// Lookup the function's type from the symbol
-	symbol := expr.Symbol()
+	symbol := expr.RawSymbol
 	if symbol == nil {
 		t.ctx.InternalError("invocation has no symbol", expr.GetPosition())
 		return nil
 	}
 	if deferredMethodSymbol, ok := symbol.(*deferredMethodSymbol); ok {
 		return t.resolveMethodCall(expr, deferredMethodSymbol)
-	} else {
-		return t.resolveFunctionCall(expr, symbol)
 	}
+	symbolRef, ok := symbol.(*model.SymbolRef)
+	if !ok {
+		t.ctx.InternalError(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol), expr.GetPosition())
+		return nil
+	}
+	return t.resolveFunctionCall(expr, *symbolRef)
 }
 
 func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) semtypes.SemType {
@@ -797,7 +796,6 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 		t.ctx.SemanticError("method not found: "+methodSymbol.name, expr.GetPosition())
 		return nil
 	}
-	symbol := t.ctx.GetSymbol(&symbolRef)
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs)+1)
 	argExprs := make([]ast.BLangExpression, len(expr.ArgExprs)+1)
 	argExprs[0] = expr.Expr
@@ -806,38 +804,34 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 		argTys[i+1] = t.resolveExpression(arg)
 		argExprs[i+1] = arg
 	}
-	var funcSymbol model.FunctionSymbol
-	if genericFn, ok := symbol.(model.GenericFunctionSymbol); ok {
+	baseSymbol := t.ctx.GetSymbol(symbolRef)
+	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
 		symbolRef = genericFn.Monomorphize(argTys)
-		funcSymbol, _ = t.ctx.GetSymbol(&symbolRef).(model.FunctionSymbol)
-	} else if fnSym, ok := symbol.(model.FunctionSymbol); ok {
-		funcSymbol = fnSym
-	} else {
+	} else if _, ok := baseSymbol.(model.FunctionSymbol); !ok {
 		t.ctx.InternalError("symbol is not a function symbol", expr.GetPosition())
 		return nil
 	}
-	expr.SetSymbol(&symbolRef)
+	expr.SetSymbol(symbolRef)
 	expr.ArgExprs = argExprs
 	expr.Expr = nil
 	expr.PkgAlias = &pkgAlias
-	return t.resolveFunctionCall(expr, funcSymbol)
+	return t.resolveFunctionCall(expr, symbolRef)
 }
 
-func (t *TypeResolver) resolveFunctionCall(expr *ast.BLangInvocation, symbol model.Symbol) semtypes.SemType {
+func (t *TypeResolver) resolveFunctionCall(expr *ast.BLangInvocation, symbolRef model.SymbolRef) semtypes.SemType {
 	// Resolve argument expressions
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	for i, arg := range expr.ArgExprs {
 		argTys[i] = t.resolveExpression(arg)
 	}
 
-	baseSymbol := t.ctx.GetSymbol(symbol)
+	baseSymbol := t.ctx.GetSymbol(symbolRef)
 	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
-		symbolRef := genericFn.Monomorphize(argTys)
-		symbol = &symbolRef
-		expr.SetSymbol(&symbolRef)
+		symbolRef = genericFn.Monomorphize(argTys)
+		expr.SetSymbol(symbolRef)
 	}
 
-	fnTy := t.ctx.SymbolType(symbol)
+	fnTy := t.ctx.SymbolType(symbolRef)
 	if fnTy == nil {
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
 		return nil
@@ -931,8 +925,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 	case *ast.BLangUserDefinedType:
 		ast.Walk(tr, &ty.TypeName)
 		ast.Walk(tr, &ty.PkgAlias)
-		symbol := ty.Symbol().(*model.SymbolRef)
-		defn, ok := tr.typeDefns[*symbol]
+		symbol := ty.Symbol()
+		defn, ok := tr.typeDefns[symbol]
 		if !ok {
 			// This should have been detected by the symbol resolver
 			tr.ctx.InternalError("type definition not found", nil)

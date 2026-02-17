@@ -192,7 +192,12 @@ func UnMask(mask Flags) common.Set[model.Flag] {
 
 type BNodeWithSymbol interface {
 	model.NodeWithSymbol
-	SetSymbol(symbol model.Symbol)
+	SetSymbol(symbolRef model.SymbolRef)
+}
+
+// SymbolIsSet returns true if the AST node has its symbol set.
+func SymbolIsSet(node model.NodeWithSymbol) bool {
+	return node.Symbol() != (model.SymbolRef{})
 }
 
 type SourceKind = model.SourceKind
@@ -288,7 +293,7 @@ type (
 	BLangClassDefinition struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		symbol                          model.Symbol
+		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
@@ -312,7 +317,7 @@ type (
 
 	BLangService struct {
 		BLangNodeBase
-		symbol                          model.Symbol
+		symbol                          model.SymbolRef
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
 		ServiceClass                    *BLangClassDefinition
@@ -405,7 +410,7 @@ type (
 		Expr                            model.ExpressionNode
 		FlagSet                         common.Set[model.Flag]
 		IsDeclaredWithVar               bool
-		symbol                          model.Symbol
+		symbol                          model.SymbolRef
 	}
 
 	BLangConstant struct {
@@ -426,7 +431,7 @@ type (
 	BLangInvokableNodeBase struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		symbol                          model.Symbol
+		symbol                          model.SymbolRef
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
@@ -454,7 +459,7 @@ type (
 	BLangTypeDefinition struct {
 		BLangNodeBase
 		Name                            *BLangIdentifier
-		symbol                          model.Symbol
+		symbol                          model.SymbolRef
 		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
@@ -491,44 +496,44 @@ func (this *BLangNodeBase) SetPosition(pos Location) {
 	this.pos = pos
 }
 
-func (n *BLangClassDefinition) Symbol() model.Symbol {
+func (n *BLangClassDefinition) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangClassDefinition) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangClassDefinition) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
-func (n *BLangService) Symbol() model.Symbol {
+func (n *BLangService) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangService) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangService) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
-func (n *BLangVariableBase) Symbol() model.Symbol {
+func (n *BLangVariableBase) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangVariableBase) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangVariableBase) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
-func (n *BLangInvokableNodeBase) Symbol() model.Symbol {
+func (n *BLangInvokableNodeBase) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangInvokableNodeBase) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangInvokableNodeBase) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
-func (n *BLangTypeDefinition) Symbol() model.Symbol {
+func (n *BLangTypeDefinition) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangTypeDefinition) SetSymbol(symbol model.Symbol) {
-	n.symbol = symbol
+func (n *BLangTypeDefinition) SetSymbol(symbolRef model.SymbolRef) {
+	n.symbol = symbolRef
 }
 
 var (
@@ -1278,9 +1283,7 @@ func (b *BLangInvokableNodeBase) GetAnnotationAttachments() []model.AnnotationAt
 
 func (b *BLangInvokableNodeBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
 	attachments := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
-	for i, attachment := range b.AnnAttachments {
-		attachments[i] = attachment
-	}
+	copy(attachments, b.AnnAttachments)
 	return attachments
 }
 
@@ -1794,9 +1797,10 @@ func (this *BLangPackage) AddDiagnostic(diagnostic diagnostics.Diagnostic) {
 	}
 	this.diagnostics = append(this.diagnostics, diagnostic)
 	severity := diagnostic.DiagnosticInfo().Severity()
-	if severity == diagnostics.Error {
+	switch severity {
+	case diagnostics.Error:
 		this.errorCount++
-	} else if severity == diagnostics.Warning {
+	case diagnostics.Warning:
 		this.warnCount++
 	}
 }
@@ -1908,19 +1912,19 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 	p := BLangPackage{}
 	p.PackageID = compilationUnit.packageID
 	for _, node := range compilationUnit.TopLevelNodes {
-		switch node.(type) {
+		switch node := node.(type) {
 		case *BLangImportPackage:
-			p.Imports = append(p.Imports, *node.(*BLangImportPackage))
+			p.Imports = append(p.Imports, *node)
 		case *BLangConstant:
-			p.Constants = append(p.Constants, *node.(*BLangConstant))
+			p.Constants = append(p.Constants, *node)
 		case *BLangService:
-			p.Services = append(p.Services, *node.(*BLangService))
+			p.Services = append(p.Services, *node)
 		case *BLangFunction:
-			p.Functions = append(p.Functions, *node.(*BLangFunction))
+			p.Functions = append(p.Functions, *node)
 		case *BLangTypeDefinition:
-			p.TypeDefinitions = append(p.TypeDefinitions, *node.(*BLangTypeDefinition))
+			p.TypeDefinitions = append(p.TypeDefinitions, *node)
 		case *BLangAnnotation:
-			p.Annotations = append(p.Annotations, *node.(*BLangAnnotation))
+			p.Annotations = append(p.Annotations, *node)
 		default:
 			p.TopLevelNodes = append(p.TopLevelNodes, node)
 		}

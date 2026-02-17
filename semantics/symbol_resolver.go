@@ -29,8 +29,8 @@ import (
 
 type symbolResolver interface {
 	ast.Visitor
-	GetSymbol(name string) (model.Symbol, bool)
-	GetPrefixedSymbol(prefix, name string) (model.Symbol, bool)
+	GetSymbol(name string) (model.SymbolRef, bool)
+	GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool)
 	AddSymbol(name string, symbol model.Symbol)
 	GetPkgID() model.PackageID
 	GetScope() model.Scope
@@ -46,7 +46,7 @@ type (
 
 	blockSymbolResolver struct {
 		parent symbolResolver
-		scope  model.Scope
+		scope  model.BlockLevelScope
 		node   ast.BLangNode
 	}
 )
@@ -94,8 +94,8 @@ func newBlockSymbolResolverWithBlockScope(parent symbolResolver, node ast.BLangN
 	}
 }
 
-func (ms *moduleSymbolResolver) GetSymbol(name string) (model.Symbol, bool) {
-	return ms.scope.GetSymbol(name)
+func (ms *moduleSymbolResolver) GetSymbol(name string) (model.SymbolRef, bool) {
+	return ms.scope.Main.GetSymbol(name)
 }
 
 func (ms *moduleSymbolResolver) GetPkgID() model.PackageID {
@@ -106,8 +106,15 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 	return ms.scope
 }
 
-func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.Symbol, bool) {
-	return ms.scope.GetPrefixedSymbol(prefix, name)
+func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
+	if prefix == "" {
+		return ms.GetSymbol(name)
+	}
+	exported, ok := ms.scope.Prefix[prefix]
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	return exported.Main.GetSymbol(name)
 }
 
 func (ms *moduleSymbolResolver) AddSymbol(name string, symbol model.Symbol) {
@@ -118,12 +125,16 @@ func (ms *moduleSymbolResolver) GetCtx() *context.CompilerContext {
 	return ms.ctx
 }
 
-func (bs *blockSymbolResolver) GetSymbol(name string) (model.Symbol, bool) {
-	return bs.scope.GetSymbol(name)
+func (bs *blockSymbolResolver) GetSymbol(name string) (model.SymbolRef, bool) {
+	ref, ok := bs.scope.MainSpace().GetSymbol(name)
+	if ok {
+		return ref, true
+	}
+	return bs.parent.GetSymbol(name)
 }
 
-func (bs *blockSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.Symbol, bool) {
-	return bs.scope.GetPrefixedSymbol(prefix, name)
+func (bs *blockSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
+	return bs.parent.GetPrefixedSymbol(prefix, name)
 }
 
 func (bs *blockSymbolResolver) AddSymbol(name string, symbol model.Symbol) {
@@ -284,7 +295,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
 	invocation := n.(*ast.BLangInvocation)
 	name := invocation.Name.GetValue()
-	invocation.SetSymbol(&deferredMethodSymbol{name: name})
+	invocation.RawSymbol = &deferredMethodSymbol{name: name}
 }
 
 type deferredMethodSymbol struct {
@@ -320,17 +331,17 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 		prefix = n.GetPackageAlias().GetValue()
 	}
 	if prefix != "" {
-		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
 			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
 		}
-		n.SetSymbol(symbol)
+		n.SetSymbol(symRef)
 	} else {
-		symbol, ok := resolver.GetSymbol(name)
+		symRef, ok := resolver.GetSymbol(name)
 		if !ok {
 			semanticError(resolver, "Unknown type: "+name, n.GetPosition())
 		}
-		n.SetSymbol(symbol)
+		n.SetSymbol(symRef)
 	}
 }
 
@@ -342,17 +353,17 @@ func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVa
 	}
 	symbolicNode := n.(ast.BNodeWithSymbol)
 	if prefix != "" {
-		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
 			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
 		}
-		symbolicNode.SetSymbol(symbol)
+		symbolicNode.SetSymbol(symRef)
 	} else {
-		symbol, ok := resolver.GetSymbol(name)
+		symRef, ok := resolver.GetSymbol(name)
 		if !ok {
 			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
 		}
-		symbolicNode.SetSymbol(symbol)
+		symbolicNode.SetSymbol(symRef)
 	}
 }
 
@@ -360,40 +371,40 @@ type functionRefNode interface {
 	GetName() model.IdentifierNode
 	GetPosition() diagnostics.Location
 	GetPackageAlias() model.IdentifierNode
-	SetSymbol(symbol model.Symbol)
+	SetSymbol(symbolRef model.SymbolRef)
 }
 
 func resolveFunctionRef[T symbolResolver](resolver T, functionRef functionRefNode) {
 	name := functionRef.GetName().GetValue()
 	prefix := functionRef.GetPackageAlias().GetValue()
 	if prefix != "" {
-		symbol, ok := resolver.GetPrefixedSymbol(prefix, name)
+		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
 		if !ok {
 			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
 		}
-		functionRef.SetSymbol(symbol)
+		functionRef.SetSymbol(symRef)
 	} else {
-		symbol, ok := resolver.GetSymbol(name)
+		symRef, ok := resolver.GetSymbol(name)
 		if !ok {
 			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
 		}
-		functionRef.SetSymbol(symbol)
+		functionRef.SetSymbol(symRef)
 	}
 }
 
 type variableNode interface {
 	GetName() model.IdentifierNode
 	GetPosition() diagnostics.Location
-	SetSymbol(symbol model.Symbol)
+	SetSymbol(symbolRef model.SymbolRef)
 }
 
 func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	name := variable.GetName().GetValue()
-	symbol, ok := resolver.GetSymbol(name)
+	symRef, ok := resolver.GetSymbol(name)
 	if !ok {
 		semanticError(resolver, "Unknown variable: "+name, variable.GetPosition())
 	}
-	variable.SetSymbol(symbol)
+	variable.SetSymbol(symRef)
 }
 
 func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
@@ -423,27 +434,26 @@ func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visit
 
 func setTypeDescriptorSymbol[T symbolResolver](resolver T, td model.TypeDescriptor) {
 	if bNodeWithSymbol, ok := td.(ast.BNodeWithSymbol); ok {
-		symbol := bNodeWithSymbol.Symbol()
-		if symbol != nil {
+		if ast.SymbolIsSet(bNodeWithSymbol) {
 			return
 		}
 		switch td := td.(type) {
 		case *ast.BLangUserDefinedType:
 			pkg := td.GetPackageAlias().GetValue()
 			tyName := td.GetTypeName().GetValue()
-			var symbol model.Symbol
+			var symRef model.SymbolRef
 			if pkg != "" {
-				symbol, ok = resolver.GetPrefixedSymbol(pkg, tyName)
+				symRef, ok = resolver.GetPrefixedSymbol(pkg, tyName)
 				if !ok {
 					semanticError(resolver, "Unknown type: "+tyName, td.GetPosition())
 				}
 			} else {
-				symbol, ok = resolver.GetSymbol(tyName)
+				symRef, ok = resolver.GetSymbol(tyName)
 				if !ok {
 					semanticError(resolver, "Unknown type: "+tyName, td.GetPosition())
 				}
 			}
-			bNodeWithSymbol.SetSymbol(symbol)
+			bNodeWithSymbol.SetSymbol(symRef)
 		default:
 			internalError(resolver, "Unsupported type descriptor", td.GetPosition())
 		}
@@ -454,30 +464,30 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangFunction:
 		name := n.Name.Value
-		symbol, ok := ms.GetSymbol(name)
+		symRef, ok := ms.GetSymbol(name)
 		if !ok {
 			internalError(ms, "Module level function symbol not found: "+name, n.Name.GetPosition())
 		}
-		n.SetSymbol(symbol)
+		n.SetSymbol(symRef)
 		functionResolver := newFunctionResolver(ms, n)
 		resolveFunction(functionResolver, n)
 		return nil
 	case *ast.BLangConstant:
 		name := n.Name.Value
-		symbol, ok := ms.GetSymbol(name)
+		symRef, ok := ms.GetSymbol(name)
 		if !ok {
 			internalError(ms, "Module level constant symbol not found: "+name, n.Name.GetPosition())
 		}
-		n.SetSymbol(symbol)
+		n.SetSymbol(symRef)
 		// TODO: create a local scope and resolve the body?
 		return ms
 	case *ast.BLangTypeDefinition:
 		name := n.Name.Value
-		symbol, ok := ms.GetSymbol(name)
+		symRef, ok := ms.GetSymbol(name)
 		if !ok {
 			internalError(ms, "Module level type symbol not found: "+name, n.Name.GetPosition())
 		}
-		n.SetSymbol(symbol)
+		n.SetSymbol(symRef)
 		return ms
 	default:
 		return visitInnerSymbolResolver(ms, n)

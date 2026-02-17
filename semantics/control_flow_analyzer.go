@@ -85,7 +85,7 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 			}()
 			fnCfg := analyzeFunction(ctx, &fn)
 			mu.Lock()
-			cfg.funcCfgs[ctx.RefSymbol(fn.Symbol())] = fnCfg
+			cfg.funcCfgs[fn.Symbol()] = fnCfg
 			mu.Unlock()
 		}()
 	}

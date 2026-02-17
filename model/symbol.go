@@ -26,6 +26,17 @@ type Scope interface {
 	AddSymbol(name string, symbol Symbol)
 }
 
+// SymbolSpaceProvider provides access to symbol spaces for block-level scopes
+type SymbolSpaceProvider interface {
+	MainSpace() *SymbolSpace
+}
+
+// BlockLevelScope combines Scope and SymbolSpaceProvider for block-level scopes
+type BlockLevelScope interface {
+	Scope
+	SymbolSpaceProvider
+}
+
 // These methods should never be called directly. Instead call them via the compiler context.
 type Symbol interface {
 	Name() string
@@ -241,6 +252,10 @@ func (bs *BlockScopeBase) GetPrefixedSymbol(prefix, name string) (Symbol, bool) 
 
 func (bs *BlockScopeBase) AddSymbol(name string, symbol Symbol) {
 	bs.Main.AddSymbol(name, symbol)
+}
+
+func (bs *BlockScopeBase) MainSpace() *SymbolSpace {
+	return bs.Main
 }
 
 func (ba *symbolBase) Name() string {

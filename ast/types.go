@@ -93,7 +93,7 @@ type (
 		BLangTypeBase
 		PkgAlias BLangIdentifier
 		TypeName BLangIdentifier
-		symbol   model.Symbol
+		symbol   model.SymbolRef
 	}
 
 	BStructureTypeBase struct {
@@ -233,12 +233,12 @@ func (this *BLangUserDefinedType) GetTypeKind() model.TypeKind {
 	panic("not implemented")
 }
 
-func (this *BLangUserDefinedType) Symbol() model.Symbol {
+func (this *BLangUserDefinedType) Symbol() model.SymbolRef {
 	return this.symbol
 }
 
-func (this *BLangUserDefinedType) SetSymbol(symbol model.Symbol) {
-	this.symbol = symbol
+func (this *BLangUserDefinedType) SetSymbol(symbolRef model.SymbolRef) {
+	this.symbol = symbolRef
 }
 
 func (this *BField) GetName() model.Name {
