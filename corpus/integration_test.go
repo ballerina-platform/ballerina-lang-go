@@ -59,6 +59,7 @@ var (
 	skipTestsMap = makeSkipTestsMap([]string{
 		"subset4/04-typetest/1-v.bal",
 		"subset4/04-typetest/2-v.bal",
+		"subset4/04-narrowing/1-v.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

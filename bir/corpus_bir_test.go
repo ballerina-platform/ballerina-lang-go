@@ -271,11 +271,17 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
 
-	// // Step 6: Run semantic analysis
-	// semanticAnalyzer := semantics.NewSemanticAnalyzer(cx, resolvedTypes)
-	// semanticAnalyzer.Analyze(pkg)
+	// Step 6: Create control flow graph
+	semantics.CreateControlFlowGraph(cx, pkg)
 
-	// Step 7: Generate BIR package
+	// Step 7: Run type narrowing
+	semantics.NarrowTypes(cx, pkg)
+
+	// Step 8: Run semantic analysis
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(pkg)
+
+	// Step 9: Generate BIR package
 	birPkg := GenBir(cx, pkg)
 
 	// Validate result

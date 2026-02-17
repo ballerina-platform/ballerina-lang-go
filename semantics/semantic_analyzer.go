@@ -447,8 +447,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
 func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
-	typeData := expr.GetTypeData()
-	resolvedTy := typeData.Type
+	resolvedTy := expr.GetDeterminedType()
 	if resolvedTy == nil {
 		a.internalErr(fmt.Sprintf("expression type not resolved for %T at %v", expr, expr.GetPosition()))
 		return false
