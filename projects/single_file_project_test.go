@@ -37,7 +37,7 @@ func TestLoadSingleFile(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	projectPath := filepath.Join("testdata", "single_file", "main.bal")
+	projectPath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
@@ -71,7 +71,7 @@ func TestSingleFileTargetDirectory(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	projectPath := filepath.Join("testdata", "single_file", "main.bal")
+	projectPath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
@@ -99,7 +99,7 @@ func TestDefaultBuildOptions(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	projectPath := filepath.Join("testdata", "single_file", "main.bal")
+	projectPath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
@@ -123,7 +123,7 @@ func TestOverrideBuildOptions(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	projectPath := filepath.Join("testdata", "single_file", "main.bal")
+	projectPath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
@@ -154,7 +154,7 @@ func TestUpdateSingleFile(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	filePath := filepath.Join("testdata", "single_file", "main.bal")
+	filePath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(filePath)
 	require.NoError(err)
 
@@ -228,7 +228,7 @@ func TestProjectDuplicate(t *testing.T) {
 	assert := test_util.New(t)
 	require := test_util.NewRequire(t)
 
-	projectPath := filepath.Join("testdata", "single_file", "main.bal")
+	projectPath := filepath.Join("testdata", "single-file", "main.bal")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
@@ -297,15 +297,3 @@ func TestProjectDuplicate(t *testing.T) {
 	// Verify compilations are different instances
 	assert.NotSame(originalCompilation, duplicatedCompilation)
 }
-
-// Skipped tests:
-
-// testSingleFileWithNoReadPermission - Skipped (OS-specific file permission manipulation)
-
-// testProjectRefresh - Skipped (clearCaches() not yet implemented)
-
-// testLoadSingleFileInProject - Deferred (requires detection of .bal file within a package)
-
-// testLoadSingleFileNegative - Deferred (requires detection of .bal file within a package)
-
-// testDiagnostics - Deferred (requires diagnostics design implementation)

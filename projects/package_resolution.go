@@ -18,64 +18,112 @@
 
 package projects
 
-import "slices"
-
 // PackageResolution holds the result of package dependency resolution.
 // It builds a topologically sorted list of modules within the root package,
-// respecting inter-module dependencies declared via moduleDescDependencies.
-// Java source: io.ballerina.projects.PackageResolution
+// respecting inter-module dependencies discovered from import statements.
 type PackageResolution struct {
 	rootPackageContext            *packageContext
+	moduleResolver                *moduleResolver
+	moduleDependencyGraph         *DependencyGraph[ModuleDescriptor]
 	topologicallySortedModuleList []*moduleContext
 	diagnosticResult              DiagnosticResult
 }
 
-// newPackageResolution creates a new PackageResolution from a packageContext.
-// It resolves inter-module dependencies and builds a topologically sorted module list.
-// Java source: PackageResolution.from(PackageContext, CompilationOptions)
 func newPackageResolution(pkgCtx *packageContext) *PackageResolution {
 	r := &PackageResolution{
 		rootPackageContext: pkgCtx,
 	}
 
+	// Create module resolver with all module descriptors
+	moduleDescs := r.collectModuleDescriptors()
+	r.moduleResolver = newModuleResolver(pkgCtx.getDescriptor(), moduleDescs)
+
+	// Build dependency graph from imports
+	r.buildModuleDependencyGraph()
+
+	// Resolve dependencies (topological sort)
 	r.resolveDependencies()
 	return r
 }
 
-// resolveDependencies builds the topologically sorted module list.
-// For single-package compilation, this sorts modules within the root package
-// based on their inter-module dependencies (moduleDescDependencies).
-// Java source: PackageResolution.resolveDependencies(DependencyResolution)
-func (r *PackageResolution) resolveDependencies() {
+func (r *PackageResolution) collectModuleDescriptors() []ModuleDescriptor {
 	pkgCtx := r.rootPackageContext
+	moduleDescs := make([]ModuleDescriptor, 0, len(pkgCtx.moduleIDs))
+	for _, modID := range pkgCtx.moduleIDs {
+		modCtx := pkgCtx.moduleContextMap[modID]
+		if modCtx != nil {
+			moduleDescs = append(moduleDescs, modCtx.getDescriptor())
+		}
+	}
+	return moduleDescs
+}
 
-	// Build ordered module list
-	descToCtx := make(map[string]*moduleContext, len(pkgCtx.moduleIDs))
-	modules := make([]*moduleContext, 0, len(pkgCtx.moduleIDs))
+func (r *PackageResolution) buildModuleDependencyGraph() {
+	pkgCtx := r.rootPackageContext
+	builder := newDependencyGraphBuilder[ModuleDescriptor]()
+
+	// Add all modules as nodes first
+	for _, modID := range pkgCtx.moduleIDs {
+		modCtx := pkgCtx.moduleContextMap[modID]
+		if modCtx != nil {
+			builder.addNode(modCtx.getDescriptor())
+		}
+	}
+
+	// Process each module's imports and add edges
 	for _, modID := range pkgCtx.moduleIDs {
 		modCtx := pkgCtx.moduleContextMap[modID]
 		if modCtx == nil {
 			continue
 		}
-		descToCtx[modCtx.getDescriptor().String()] = modCtx
-		modules = append(modules, modCtx)
-	}
 
-	// Build adjacency: module -> modules it depends on
-	deps := make(map[*moduleContext][]*moduleContext, len(modules))
-	for _, modCtx := range modules {
-		var moduleDeps []*moduleContext
-		for _, depDesc := range modCtx.getModuleDescDependencies() {
-			if depCtx, ok := descToCtx[depDesc.String()]; ok {
-				moduleDeps = append(moduleDeps, depCtx)
+		fromDesc := modCtx.getDescriptor()
+
+		// Get all module load requests for this module
+		requests := modCtx.populateModuleLoadRequests()
+		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
+
+		// Resolve requests and add edges
+		responses := r.moduleResolver.resolveModuleLoadRequests(requests)
+		for _, resp := range responses {
+			if resp.resolved {
+				toDesc := resp.moduleDesc
+				// Only add edge if the dependency is a different module
+				if !fromDesc.Equals(toDesc) {
+					builder.addDependency(fromDesc, toDesc)
+				}
 			}
 		}
-		deps[modCtx] = moduleDeps
 	}
 
-	// Topological sort (DFS post-order, matching Java DependencyGraph algorithm)
-	sorted, cycles := topologicalSortModules(modules, deps)
+	r.moduleDependencyGraph = builder.build()
+}
 
+func (r *PackageResolution) resolveDependencies() {
+	pkgCtx := r.rootPackageContext
+
+	// Use the module dependency graph for topological sort
+	sortedDescs := r.moduleDependencyGraph.ToTopologicallySortedList()
+
+	// Map descriptors to contexts for lookup
+	descToCtx := make(map[string]*moduleContext, len(pkgCtx.moduleIDs))
+	for _, modID := range pkgCtx.moduleIDs {
+		modCtx := pkgCtx.moduleContextMap[modID]
+		if modCtx != nil {
+			descToCtx[modCtx.getDescriptor().String()] = modCtx
+		}
+	}
+
+	// Build sorted module list from sorted descriptors
+	sorted := make([]*moduleContext, 0, len(sortedDescs))
+	for _, desc := range sortedDescs {
+		if modCtx, ok := descToCtx[desc.String()]; ok {
+			sorted = append(sorted, modCtx)
+		}
+	}
+
+	// Check for cycles
+	cycles := r.moduleDependencyGraph.FindCycles()
 	// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
 	_ = cycles
 
@@ -83,66 +131,7 @@ func (r *PackageResolution) resolveDependencies() {
 	r.diagnosticResult = NewDiagnosticResult(nil)
 }
 
-// topologicalSortModules performs DFS-based topological sort on modules.
-// Returns modules in dependency order (dependencies before dependents)
-// and any cycles detected.
-// Java source: DependencyGraph.toTopologicallySortedList()
-func topologicalSortModules(modules []*moduleContext,
-	deps map[*moduleContext][]*moduleContext,
-) ([]*moduleContext, [][]*moduleContext) {
-	visited := make(map[*moduleContext]bool, len(modules))
-	inStack := make(map[*moduleContext]bool, len(modules))
-	var stack []*moduleContext
-	sorted := make([]*moduleContext, 0, len(modules))
-	var cycles [][]*moduleContext
-
-	var visit func(vertex *moduleContext)
-	visit = func(vertex *moduleContext) {
-		inStack[vertex] = true
-		stack = append(stack, vertex)
-
-		for _, dep := range deps[vertex] {
-			if inStack[dep] {
-				if startIdx := slices.Index(stack, dep); startIdx >= 0 {
-					cycles = append(cycles, slices.Clone(stack[startIdx:]))
-				}
-			} else if !visited[dep] {
-				visit(dep)
-			}
-		}
-
-		sorted = append(sorted, vertex)
-		visited[vertex] = true
-		delete(inStack, vertex)
-		stack = stack[:len(stack)-1]
-	}
-
-	for _, modCtx := range modules {
-		if !visited[modCtx] {
-			visit(modCtx)
-		}
-	}
-
-	return sorted, cycles
-}
-
 // DiagnosticResult returns the diagnostics from resolution.
-// Java source: PackageResolution.diagnosticResult()
 func (r *PackageResolution) DiagnosticResult() DiagnosticResult {
 	return r.diagnosticResult
-}
-
-// TopologicallySortedModuleList returns modules in topological order.
-// Dependencies appear before the modules that depend on them.
-// Java source: PackageResolution.topologicallySortedModuleList()
-func (r *PackageResolution) TopologicallySortedModuleList() []*moduleContext {
-	return r.topologicallySortedModuleList
-}
-
-// DependencyGraph returns the dependency graph.
-// TODO(P7): Implement when full DependencyGraph type is migrated.
-// Java source: PackageResolution.dependencyGraph()
-func (r *PackageResolution) DependencyGraph() interface{} {
-	// TODO(P7): Return *DependencyGraph once the type is implemented.
-	return nil
 }
