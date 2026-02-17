@@ -202,6 +202,14 @@ func (this *BLangBreak) GetKind() model.NodeKind {
 	return model.NodeKind_BREAK
 }
 
+func (this *BLangCompoundAssignment) IsDeclaredWithVar() bool {
+	return false
+}
+
+func (this *BLangCompoundAssignment) SetDeclaredWithVar(_ bool) {
+	panic("compound assignemnt can't be declared with var")
+}
+
 func (this *BLangCompoundAssignment) GetOperatorKind() model.OperatorKind {
 	// migrated from BLangCompoundAssignment.java:59:5
 	return this.OpKind
