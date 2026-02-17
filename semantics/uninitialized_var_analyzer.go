@@ -138,80 +138,40 @@ func newUninitVarAnalyzer(ctx *context.CompilerContext, fn *ast.BLangFunction, f
 	return analyzer
 }
 
-// analyze performs fixed-point iteration using worklist algorithm
 func (a *uninitVarAnalyzer) analyze() {
 	if len(a.fcfg.bbs) == 0 {
 		return
 	}
-
-	// Worklist for fixed-point iteration
-	worklist := []int{0} // Start with root block
-	inWorklist := make(map[int]bool)
-	inWorklist[0] = true
-
-	for len(worklist) > 0 {
-		// Dequeue
-		bbID := worklist[0]
-		worklist = worklist[1:]
-		inWorklist[bbID] = false
-
-		bb := &a.fcfg.bbs[bbID]
-		state := a.states[bbID]
-
-		newEntry := a.mergePredecessors(bb)
-		if !statesEqual(state.entry, newEntry) {
-			state.entry = newEntry
-		}
-
-		// Analyze block with entry state
-		exitState := a.analyzeBlock(bb, state.entry.clone())
-
-		// Check if exit state changed
-		if !statesEqual(state.exit, exitState) {
-			state.exit = exitState
-
-			// Add all successors to worklist
-			for _, childID := range bb.children {
-				if !inWorklist[childID] {
-					worklist = append(worklist, childID)
-					inWorklist[childID] = true
-				}
-			}
-		}
+	for _, i := range a.fcfg.topoOrder {
+		bb := &a.fcfg.bbs[i]
+		entry := a.mergePredecessors(bb)
+		a.states[i].entry = entry
+		exit := a.analyzeBlock(bb, entry.clone())
+		a.states[i].exit = exit
 	}
 }
 
-// mergePredecessors merges the exit states of all predecessors
+// mergePredecessors merges the exit states of all non-backedge predecessors.
 func (a *uninitVarAnalyzer) mergePredecessors(bb *basicBlock) *varInitState {
-	if len(bb.parents) == 0 {
+	backedgeSet := make(map[int]bool, len(bb.backedgeParents))
+	for _, p := range bb.backedgeParents {
+		backedgeSet[p] = true
+	}
+	result := (*varInitState)(nil)
+	for _, parentID := range bb.parents {
+		if backedgeSet[parentID] {
+			continue
+		}
+		if result == nil {
+			result = a.states[parentID].exit.clone()
+		} else {
+			result = mergeStates(result, a.states[parentID].exit)
+		}
+	}
+	if result == nil {
 		return newVarInitState()
 	}
-
-	// Start with first parent
-	result := a.states[bb.parents[0]].exit
-
-	// Merge with remaining parents
-	for i := 1; i < len(bb.parents); i++ {
-		parentExit := a.states[bb.parents[i]].exit
-		result = mergeStates(result, parentExit)
-	}
-
 	return result
-}
-
-func statesEqual(s1, s2 *varInitState) bool {
-	if len(s1.initVars) != len(s2.initVars) {
-		return false
-	}
-
-	for sym, init1 := range s1.initVars {
-		init2, exists := s2.initVars[sym]
-		if !exists || init1 != init2 {
-			return false
-		}
-	}
-
-	return true
 }
 
 // analyzeBlock performs intra-block analysis
