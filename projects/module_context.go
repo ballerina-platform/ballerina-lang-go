@@ -259,6 +259,9 @@ func compileInternal(moduleCtx *moduleContext) {
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 
+	// Run type narrowing analysis before semantic analysis.
+	semantics.NarrowTypes(cx, pkgNode)
+
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkgNode)
 
