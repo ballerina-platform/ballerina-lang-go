@@ -23,12 +23,12 @@ package projects
 // Java source: io.ballerina.projects.BuildOptions
 type BuildOptions struct {
 	// Build-specific fields
-	testReport                OptionalBool
-	codeCoverage              OptionalBool
-	dumpBuildTime             OptionalBool
-	skipTests                 OptionalBool
-	exportComponentModel      OptionalBool
-	showDependencyDiagnostics OptionalBool
+	testReport                optionalBool
+	codeCoverage              optionalBool
+	dumpBuildTime             optionalBool
+	skipTests                 optionalBool
+	exportComponentModel      optionalBool
+	showDependencyDiagnostics optionalBool
 	targetDir                 string
 
 	// Composition: BuildOptions contains CompilationOptions
@@ -44,23 +44,23 @@ func NewBuildOptions() BuildOptions {
 
 // TestReport returns whether test report generation is enabled.
 func (b BuildOptions) TestReport() bool {
-	return b.testReport.ValueOr(false)
+	return b.testReport.valueOr(false)
 }
 
 // CodeCoverage returns whether code coverage is enabled.
 func (b BuildOptions) CodeCoverage() bool {
-	return b.codeCoverage.ValueOr(false)
+	return b.codeCoverage.valueOr(false)
 }
 
 // DumpBuildTime returns whether build time dumping is enabled.
 func (b BuildOptions) DumpBuildTime() bool {
-	return b.dumpBuildTime.ValueOr(false)
+	return b.dumpBuildTime.valueOr(false)
 }
 
 // SkipTests returns whether tests should be skipped.
 // By default, tests are skipped (returns true if unset).
 func (b BuildOptions) SkipTests() bool {
-	return b.skipTests.ValueOr(true)
+	return b.skipTests.valueOr(true)
 }
 
 // TargetDir returns the target directory path.
@@ -70,7 +70,7 @@ func (b BuildOptions) TargetDir() string {
 
 // ShowDependencyDiagnostics returns whether dependency diagnostics should be shown.
 func (b BuildOptions) ShowDependencyDiagnostics() bool {
-	return b.showDependencyDiagnostics.ValueOr(false)
+	return b.showDependencyDiagnostics.valueOr(false)
 }
 
 // CompilationOptions returns the underlying compilation options.
@@ -233,12 +233,12 @@ func (b BuildOptions) TraceRecovery() bool {
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
 func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 	merged := BuildOptions{
-		skipTests:                 acceptOptionalBool(b.skipTests, theirs.skipTests),
-		codeCoverage:              acceptOptionalBool(b.codeCoverage, theirs.codeCoverage),
-		testReport:                acceptOptionalBool(b.testReport, theirs.testReport),
-		dumpBuildTime:             acceptOptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
-		exportComponentModel:      acceptOptionalBool(b.exportComponentModel, theirs.exportComponentModel),
-		showDependencyDiagnostics: acceptOptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
+		skipTests:                 acceptoptionalBool(b.skipTests, theirs.skipTests),
+		codeCoverage:              acceptoptionalBool(b.codeCoverage, theirs.codeCoverage),
+		testReport:                acceptoptionalBool(b.testReport, theirs.testReport),
+		dumpBuildTime:             acceptoptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
+		exportComponentModel:      acceptoptionalBool(b.exportComponentModel, theirs.exportComponentModel),
+		showDependencyDiagnostics: acceptoptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
 	}
 
 	if theirs.targetDir != "" {
@@ -257,12 +257,12 @@ func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 // It contains a CompilationOptionsBuilder to build the embedded CompilationOptions.
 type BuildOptionsBuilder struct {
 	// Build-specific fields
-	testReport                OptionalBool
-	codeCoverage              OptionalBool
-	dumpBuildTime             OptionalBool
-	skipTests                 OptionalBool
-	exportComponentModel      OptionalBool
-	showDependencyDiagnostics OptionalBool
+	testReport                optionalBool
+	codeCoverage              optionalBool
+	dumpBuildTime             optionalBool
+	skipTests                 optionalBool
+	exportComponentModel      optionalBool
+	showDependencyDiagnostics optionalBool
 	targetDir                 string
 
 	// Embedded builder for compilation options
@@ -278,25 +278,25 @@ func NewBuildOptionsBuilder() *BuildOptionsBuilder {
 
 // WithTestReport sets whether test report generation is enabled.
 func (b *BuildOptionsBuilder) WithTestReport(value bool) *BuildOptionsBuilder {
-	b.testReport = Of(value)
+	b.testReport = optionalBoolOf(value)
 	return b
 }
 
 // WithCodeCoverage sets whether code coverage is enabled.
 func (b *BuildOptionsBuilder) WithCodeCoverage(value bool) *BuildOptionsBuilder {
-	b.codeCoverage = Of(value)
+	b.codeCoverage = optionalBoolOf(value)
 	return b
 }
 
 // WithDumpBuildTime sets whether build time dumping is enabled.
 func (b *BuildOptionsBuilder) WithDumpBuildTime(value bool) *BuildOptionsBuilder {
-	b.dumpBuildTime = Of(value)
+	b.dumpBuildTime = optionalBoolOf(value)
 	return b
 }
 
 // WithSkipTests sets whether tests should be skipped.
 func (b *BuildOptionsBuilder) WithSkipTests(value bool) *BuildOptionsBuilder {
-	b.skipTests = Of(value)
+	b.skipTests = optionalBoolOf(value)
 	return b
 }
 
@@ -308,14 +308,14 @@ func (b *BuildOptionsBuilder) WithTargetDir(path string) *BuildOptionsBuilder {
 
 // WithShowDependencyDiagnostics sets whether dependency diagnostics should be shown.
 func (b *BuildOptionsBuilder) WithShowDependencyDiagnostics(value bool) *BuildOptionsBuilder {
-	b.showDependencyDiagnostics = Of(value)
+	b.showDependencyDiagnostics = optionalBoolOf(value)
 	return b
 }
 
 // WithExportComponentModel sets whether component model export is enabled.
 // This sets both the build-level flag and delegates to compilation options.
 func (b *BuildOptionsBuilder) WithExportComponentModel(value bool) *BuildOptionsBuilder {
-	b.exportComponentModel = Of(value)
+	b.exportComponentModel = optionalBoolOf(value)
 	b.compilationOptionsBuilder.WithExportComponentModel(value)
 	return b
 }
