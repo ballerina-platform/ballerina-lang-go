@@ -529,7 +529,8 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 		var typeIdx int32
 		br.read(&typeIdx)
 
-		t := br.getTypeFromCP(int(typeIdx))
+		// TODO: Implement Types
+		// t := br.getTypeFromCP(int(typeIdx))
 
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
@@ -537,7 +538,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			Type:   t,
 			SizeOp: sizeOp,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
