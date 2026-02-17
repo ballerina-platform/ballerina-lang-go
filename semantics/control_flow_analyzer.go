@@ -30,6 +30,8 @@ type basicBlock struct {
 	// bbs from which you can reach this block. If this is empty and it is not a root then this block is not
 	// reachable
 	parents []int
+	// subset of parents; each entry is also in parents. These are the back edges of the CFG (e.g. loop-back edges).
+	backedgeParents []int
 	// bbs to which you can transition from this block. For blocks with conditional jumps this will 2. For blocks
 	// that don't terminate normally (panic) and for those that mark the end of function scope (return) this
 	// will be empty
@@ -58,7 +60,8 @@ func (bb *basicBlock) isEmpty() bool {
 }
 
 type functionCFG struct {
-	bbs []basicBlock
+	bbs       []basicBlock
+	topoOrder []int // block IDs in topological order (non-backedge DAG); computed by markBackedges
 }
 
 type PackageCFG struct {
@@ -386,11 +389,49 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 	return continueEffect(loopEnd)
 }
 
+func (cfg *functionCFG) markBackedges() {
+	if len(cfg.bbs) == 0 {
+		return
+	}
+	type color uint8
+	const white color = 0
+	const gray color = 1
+	const black color = 2
+	colors := make([]color, len(cfg.bbs))
+	var postOrder []int
+	var dfs func(id int)
+	dfs = func(id int) {
+		colors[id] = 1
+		for _, childID := range cfg.bbs[id].children {
+			switch colors[childID] {
+			case gray:
+				cfg.bbs[childID].backedgeParents = append(cfg.bbs[childID].backedgeParents, id)
+			case white:
+				dfs(childID)
+			}
+		}
+		colors[id] = black
+		postOrder = append(postOrder, id)
+	}
+	dfs(0)
+	// Reverse post-order gives a topological ordering of the non-backedge DAG.
+	cfg.topoOrder = make([]int, 0, len(cfg.bbs))
+	for i := len(postOrder) - 1; i >= 0; i-- {
+		cfg.topoOrder = append(cfg.topoOrder, postOrder[i])
+	}
+	// Append any unreachable blocks (not visited by DFS from root) at the end.
+	for i := range cfg.bbs {
+		if colors[i] == 0 {
+			cfg.topoOrder = append(cfg.topoOrder, i)
+		}
+	}
+}
+
 func (analyzer *functionControlFlowAnalyzer) getCfg() functionCFG {
 	analyzer.pruneEmptyBlocks()
-	return functionCFG{
-		bbs: analyzer.bbs,
-	}
+	cfg := functionCFG{bbs: analyzer.bbs}
+	cfg.markBackedges()
+	return cfg
 }
 
 func (analyzer *functionControlFlowAnalyzer) pruneEmptyBlocks() {
