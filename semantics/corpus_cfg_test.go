@@ -103,6 +103,22 @@ func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
 		return
 	}
 
+	// Validate backedgeParents is a subset of parents for every block
+	for symRef, fcfg := range cfg.funcCfgs {
+		for _, bb := range fcfg.bbs {
+			parentSet := make(map[int]bool, len(bb.parents))
+			for _, p := range bb.parents {
+				parentSet[p] = true
+			}
+			for _, p := range bb.backedgeParents {
+				if !parentSet[p] {
+					t.Errorf("CFG invariant violated in %s: function %v, block %d: backedgeParent %d is not in parents %v",
+						testPair.InputPath, symRef, bb.id, p, bb.parents)
+				}
+			}
+		}
+	}
+
 	// Pretty print CFG output
 	prettyPrinter := NewCFGPrettyPrinter(cx)
 	actualCFG := prettyPrinter.Print(cfg)
