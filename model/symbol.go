@@ -158,15 +158,17 @@ type (
 	}
 )
 
-var _ Scope = &ModuleScope{}
-var _ Scope = &FunctionScope{}
-var _ Scope = &BlockScope{}
-var _ Symbol = &TypeSymbol{}
-var _ Symbol = &ValueSymbol{}
-var _ Symbol = &functionSymbol{}
-var _ FunctionSymbol = &functionSymbol{}
-var _ GenericFunctionSymbol = &genericFunctionSymbol{}
-var _ Symbol = &SymbolRef{}
+var (
+	_ Scope                 = &ModuleScope{}
+	_ Scope                 = &FunctionScope{}
+	_ Scope                 = &BlockScope{}
+	_ Symbol                = &TypeSymbol{}
+	_ Symbol                = &ValueSymbol{}
+	_ Symbol                = &functionSymbol{}
+	_ FunctionSymbol        = &functionSymbol{}
+	_ GenericFunctionSymbol = &genericFunctionSymbol{}
+	_ Symbol                = &SymbolRef{}
+)
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
 	if _, ok := symbol.(*SymbolRef); ok {

@@ -81,14 +81,17 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	// Step 4: Control Flow Graph Generation
 	semantics.CreateControlFlowGraph(cx, pkg)
 
-	// Step 5: Semantic Analysis
+	// Step 5: Type Narrowing
+	semantics.NarrowTypes(cx, pkg)
+
+	// Step 6: Semantic Analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
-	// Step 6: DESUGAR
+	// Step 7: DESUGAR
 	DesugarPackage(cx, pkg, importedSymbols)
 
-	// Step 7: Serialize AST after desugaring
+	// Step 8: Serialize AST after desugaring
 	prettyPrinter := ast.PrettyPrinter{}
 	actualAST := prettyPrinter.Print(pkg)
 

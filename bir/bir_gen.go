@@ -812,7 +812,7 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
-	symRef := expr.Symbol()
+	symRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(expr.Symbol())
 
 	// Try local variable lookup first
 	if operand, ok := ctx.varMap[symRef]; ok {
