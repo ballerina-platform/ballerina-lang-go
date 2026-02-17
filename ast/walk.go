@@ -394,7 +394,6 @@ func Walk(v Visitor, node BLangNode) {
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
 		}
-
 	case *BLangErrorConstructorExpr:
 		if node.ErrorTypeRef != nil {
 			Walk(v, node.ErrorTypeRef)

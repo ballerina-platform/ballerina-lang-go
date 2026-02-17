@@ -550,14 +550,25 @@ func (t *TypeResolver) resolveListConstructorExpr(expr *ast.BLangListConstructor
 	// Resolve the type of each member expression
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
 	for i, memberExpr := range expr.Exprs {
-		memberTypes[i] = t.resolveExpression(memberExpr)
+		memberTy := t.resolveExpression(memberExpr)
+		var broadTy semtypes.SemType
+		if semtypes.SingleShape(memberTy).IsEmpty() {
+			broadTy = memberTy
+		} else {
+			basicTy := semtypes.WidenToBasicTypes(memberTy)
+			broadTy = &basicTy
+		}
+		memberTypes[i] = broadTy
 	}
 
 	// Construct the list type from member types
 	ld := semtypes.NewListDefinition()
-	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 
 	setExpectedType(expr, listTy)
+	lat := semtypes.ToListAtomicType(t.tyCtx, listTy)
+	// This is always guranteed to work since we created this from a single list type
+	expr.AtomicType = *lat
 
 	return listTy
 }
@@ -721,13 +732,13 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
 		// List indexing
-		resultTy = semtypes.ListProjInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+		resultTy = semtypes.ListMemberTypeInnerVal(t.tyCtx, containerExprTy, keyExprTy)
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		// String indexing returns a string
 		resultTy = &semtypes.STRING
 	} else {
 		// For other types, we may need to implement mapping support later
-		t.ctx.Unimplemented("unsupported container type for index based access", expr.GetPosition())
+		t.ctx.SemanticError("unsupported container type for index based access", expr.GetPosition())
 		return nil
 	}
 

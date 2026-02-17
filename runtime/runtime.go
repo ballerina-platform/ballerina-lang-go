@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/values"
 	"fmt"
 )
 
@@ -72,6 +73,6 @@ func RegisterModuleInitializer(init ModuleInitializer) {
 
 // RegisterExternFunction registers a native (extern) function implementation in
 // the given runtime instance so it can be called from interpreted BIR code.
-func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl func(args []any) (any, error)) {
+func RegisterExternFunction(rt *Runtime, orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {
 	rt.registry.RegisterExternFunction(orgName, moduleName, funcName, impl)
 }

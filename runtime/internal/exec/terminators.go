@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/values"
 	"fmt"
 )
 
@@ -44,7 +45,7 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 	return callInfo.ThenBB
 }
 
-func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *callStack) any {
+func executeCall(callInfo *bir.Call, values []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(*callInfo.CachedBIRFunc, values, reg, callStack)
 	}
@@ -58,7 +59,7 @@ func executeCall(callInfo *bir.Call, values []any, reg *modules.Registry, callSt
 	return lookupAndExecute(callInfo, values, reg, callStack)
 }
 
-func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry, callStack *callStack) any {
+func lookupAndExecute(callInfo *bir.Call, values []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	lookupKey := callInfo.FunctionLookupKey
 	fn := reg.GetBIRFunction(lookupKey)
 	if fn != nil {
@@ -77,8 +78,8 @@ func lookupAndExecute(callInfo *bir.Call, values []any, reg *modules.Registry, c
 	panic("function not found: " + callInfo.Name.Value())
 }
 
-func extractArgs(args []bir.BIROperand, frame *Frame) []any {
-	values := make([]any, len(args))
+func extractArgs(args []bir.BIROperand, frame *Frame) []values.BalValue {
+	values := make([]values.BalValue, len(args))
 	for i, op := range args {
 		values[i] = frame.GetOperand(op.Index)
 	}

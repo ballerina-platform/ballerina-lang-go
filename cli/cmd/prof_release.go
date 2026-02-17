@@ -14,9 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package values
+//go:build !debug
 
-// Given we use nil for ballerina nil we'll have an explicit never value. If tried to use as operand in any operation
-// this should panic.
-type Never struct {
+package main
+
+import "github.com/spf13/cobra"
+
+type disabledProfiler struct{}
+
+func init() {
+	profiler = &disabledProfiler{}
 }
+
+func (p *disabledProfiler) RegisterFlags(_ *cobra.Command) {}
+
+func (p *disabledProfiler) Start() error { return nil }
+
+func (p *disabledProfiler) Stop() error { return nil }

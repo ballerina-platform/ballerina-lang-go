@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 	"fmt"
 )
 
@@ -541,18 +542,40 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	}
 }
 
-func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, _ *ast.BLangListConstructorExpr) expressionEffect {
-	// FIXME: since we don't have type information we are going to just create an open array
+func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangListConstructorExpr) expressionEffect {
+	initValues := make([]*BIROperand, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		exprEffect := handleExpression(ctx, bb, expr)
+		bb = exprEffect.block
+		initValues[i] = exprEffect.result
+	}
+
+	lat := expr.AtomicType
+	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
+		ty := lat.MemberAt(i)
+		fillerVal := values.DefaultValueForType(ty)
+		fillerOperand := ctx.addTempVar(ty)
+		fillerLoad := &ConstantLoad{}
+		fillerLoad.Value = fillerVal
+		fillerLoad.LhsOp = fillerOperand
+		bb.Instructions = append(bb.Instructions, fillerLoad)
+		initValues = append(initValues, fillerOperand)
+	}
+	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
+
 	sizeOperand := ctx.addTempVar(&semtypes.INT)
 	constantLoad := &ConstantLoad{}
-	constantLoad.Value = int64(-1)
 	constantLoad.LhsOp = sizeOperand
+	constantLoad.Value = int64(len(initValues))
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(&semtypes.LIST)
 	newArray := &NewArray{}
 	newArray.LhsOp = resultOperand
 	newArray.SizeOp = sizeOperand
+	newArray.Values = initValues
+	newArray.Type = expr.GetDeterminedType()
+	newArray.Filler = fillerVal
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,
@@ -573,6 +596,7 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	bb.Instructions = append(bb.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
+		block:  bb,
 	}
 }
 
