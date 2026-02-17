@@ -16,10 +16,10 @@
  * under the License.
  */
 
-// Package projectapitest contains integration tests for the Project API.
+// Package projects_test contains integration tests for the Project API.
 // These tests verify the complete project loading and compilation pipeline
 // using real Ballerina source files.
-package projectapitest
+package projects_test
 
 import (
 	"path/filepath"
