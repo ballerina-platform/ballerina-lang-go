@@ -54,3 +54,9 @@ echo "Executables are available in the root directory:"
 echo "  - ./tree-gen"
 echo "  - ./update-corpus"
 
+# Generate test data files (corpus and parser/testdata JSON files)
+echo ""
+echo "Generating test data files..."
+go test ./... -update || true
+echo "✓ Test data files generated"
+
