@@ -24,8 +24,8 @@ import (
 	"sort"
 	"strings"
 
+	"ballerina-lang-go/common/tomlparser"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/tomlparser"
 )
 
 // CreateBuildProjectConfig creates a PackageConfig by scanning the project directory.

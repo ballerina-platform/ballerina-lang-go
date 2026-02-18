@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 	"slices"
 
+	"ballerina-lang-go/common/tomlparser"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/tomlparser"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
