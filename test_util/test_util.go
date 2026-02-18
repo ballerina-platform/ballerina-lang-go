@@ -94,26 +94,63 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 	return testPairs
 }
 
-// resolveDir resolves the input and output directories
-// It tries ../corpus/<inputBaseDir> first, then ./corpus/<inputBaseDir>
-func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, string) {
-	inputDir := filepath.Join("..", "corpus", inputBaseDir)
-	if _, err := os.Stat(inputDir); err == nil {
-		outputDir := filepath.Join("..", "corpus", outputBaseDir)
-		absInput, _ := filepath.Abs(inputDir)
-		absOutput, _ := filepath.Abs(outputDir)
-		return absInput, absOutput
+// TryResolveCorpusDir returns the absolute path to corpus/<inputBaseDir> if it exists.
+// It tries ../corpus/<dir>, ./corpus/<dir>, then repo root (go.mod) + corpus/<dir>,
+// so corpus tests work from package dir or repo root without LFS.
+// Returns ("", false) when not found (caller can return early instead of failing).
+func TryResolveCorpusDir(inputBaseDir string) (string, bool) {
+	for _, rel := range []string{
+		filepath.Join("..", "corpus", inputBaseDir),
+		filepath.Join(".", "corpus", inputBaseDir),
+	} {
+		if abs, err := filepath.Abs(rel); err == nil {
+			if _, err := os.Stat(abs); err == nil {
+				return abs, true
+			}
+		}
 	}
-	inputDir = filepath.Join(".", "corpus", inputBaseDir)
-	if _, err := os.Stat(inputDir); err == nil {
-		outputDir := filepath.Join(".", "corpus", outputBaseDir)
-		absInput, _ := filepath.Abs(inputDir)
-		absOutput, _ := filepath.Abs(outputDir)
-		return absInput, absOutput
+	if root := findRepoRoot(); root != "" {
+		dir := filepath.Join(root, "corpus", inputBaseDir)
+		if _, err := os.Stat(dir); err == nil {
+			return dir, true
+		}
 	}
+	return "", false
+}
 
-	t.Fatalf("Could not find corpus directory")
-	return "", ""
+// DiscoverBalFiles returns all .bal file paths under baseDir (e.g. corpus/bal).
+func DiscoverBalFiles(t *testing.T, baseDir string) []string {
+	return walkDir(t, baseDir, func(string) bool { return true })
+}
+
+// resolveDir resolves the input and output directories.
+// It tries ../corpus/<dir>, ./corpus/<dir>, then repo root (go.mod) + corpus/<dir>
+// so corpus tests work from package dir or repo root without LFS.
+func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, string) {
+	inputDir, ok := TryResolveCorpusDir(inputBaseDir)
+	if !ok {
+		t.Fatalf("Could not find corpus directory")
+		return "", ""
+	}
+	outputDir := filepath.Join(filepath.Dir(filepath.Dir(inputDir)), "corpus", outputBaseDir)
+	if _, err := os.Stat(outputDir); err != nil {
+		t.Fatalf("Could not find corpus output directory %s: %v", outputDir, err)
+		return "", ""
+	}
+	return inputDir, outputDir
+}
+
+func findRepoRoot() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for d := cwd; d != "" && d != string(filepath.Separator); d = filepath.Dir(d) {
+		if _, err := os.Stat(filepath.Join(d, "go.mod")); err == nil {
+			return d
+		}
+	}
+	return ""
 }
 
 // discoverFiles walks the directory tree and collects all .bal files that match the filter

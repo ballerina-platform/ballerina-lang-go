@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/values"
 	"fmt"
 	"os"
@@ -40,8 +41,6 @@ const (
 	colorGreen  = "\033[32m"
 	colorRed    = "\033[31m"
 	colorYellow = "\033[33m"
-
-	corpusBalBaseDir = "../corpus/bal"
 
 	externOrgName    = "ballerina"
 	externModuleName = "io"
@@ -81,17 +80,17 @@ func TestIntegrationSuite(t *testing.T) {
 	var failedTests []failedTest
 	var resultsMu sync.Mutex
 
-	corpusBalDir := corpusBalBaseDir
-	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+	corpusBalDir, ok := test_util.TryResolveCorpusDir("bal")
+	if !ok {
 		return
 	}
 
-	balFiles := findBalFiles(corpusBalDir)
+	balFiles := test_util.DiscoverBalFiles(t, corpusBalDir)
 
 	var wg sync.WaitGroup
 
 	for _, balFile := range balFiles {
-		if isFileSkipped(balFile) {
+		if isFileSkipped(balFile, corpusBalDir) {
 			skippedTotal++
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
 			filePath := buildFilePath(relPath)
@@ -495,19 +494,8 @@ func printIndentedLines(text, indent string) {
 	}
 }
 
-func findBalFiles(dir string) []string {
-	var files []string
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && filepath.Ext(path) == ".bal" {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files
-}
-
-func isFileSkipped(filePath string) bool {
-	relPath, err := filepath.Rel(corpusBalBaseDir, filePath)
+func isFileSkipped(filePath, baseDir string) bool {
+	relPath, err := filepath.Rel(baseDir, filePath)
 	if err != nil {
 		return false
 	}
