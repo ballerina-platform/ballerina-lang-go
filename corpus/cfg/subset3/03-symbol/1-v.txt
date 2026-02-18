@@ -1,0 +1,17 @@
+(foo
+  (bb0 () ()
+    (var-def
+      (variable foo (type
+        (value-type int)) (expr
+        (literal 5))))
+    (return
+      (simple-var-ref foo))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo ()))))
+  )
+)
