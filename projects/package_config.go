@@ -61,16 +61,12 @@ type PackageConfigParams struct {
 
 // NewPackageConfig creates a new PackageConfig from the given parameters.
 func NewPackageConfig(params PackageConfigParams) PackageConfig {
-	// Make defensive copy of other modules
-	otherCopy := make([]ModuleConfig, len(params.OtherModules))
-	copy(otherCopy, params.OtherModules)
-
 	return PackageConfig{
 		packageID:          params.PackageID,
 		packageManifest:    params.PackageManifest,
 		packagePath:        params.PackagePath,
 		defaultModule:      params.DefaultModule,
-		otherModules:       otherCopy,
+		otherModules:       slices.Clone(params.OtherModules),
 		ballerinaToml:      params.BallerinaToml,
 		dependenciesToml:   params.DependenciesToml,
 		cloudToml:          params.CloudToml,
@@ -117,9 +113,6 @@ func (p PackageConfig) DefaultModule() ModuleConfig {
 
 // OtherModules returns a copy of the non-default module configurations.
 func (p PackageConfig) OtherModules() []ModuleConfig {
-	if p.otherModules == nil {
-		return []ModuleConfig{}
-	}
 	return slices.Clone(p.otherModules)
 }
 

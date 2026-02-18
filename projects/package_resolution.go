@@ -49,7 +49,7 @@ func newPackageResolution(pkgCtx *packageContext) *PackageResolution {
 // based on their inter-module dependencies (moduleDescDependencies).
 // Java source: PackageResolution.resolveDependencies(DependencyResolution)
 func (r *PackageResolution) resolveDependencies() {
-	diags := make([]diagnostics.Diagnostic, 0)
+	var diags []diagnostics.Diagnostic
 
 	// Build descriptor-to-moduleContext lookup
 	descToCtx := make(map[string]*moduleContext) // keyed by ModuleDescriptor.String()
@@ -93,7 +93,7 @@ func topologicalSortModules(
 ) ([]*moduleContext, [][]*moduleContext) {
 	visited := make(map[*moduleContext]bool)
 	ancestors := make(map[*moduleContext]bool)
-	ancestorList := make([]*moduleContext, 0) // for cycle detection
+	var ancestorList []*moduleContext // for cycle detection
 	sorted := make([]*moduleContext, 0, len(moduleIDs))
 	var cycles [][]*moduleContext
 

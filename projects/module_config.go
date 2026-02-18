@@ -42,34 +42,12 @@ func NewModuleConfig(
 	readmeMd DocumentConfig,
 	dependencies []ModuleDescriptor,
 ) ModuleConfig {
-	// Make defensive copies
-	var srcCopy []DocumentConfig
-	if sourceDocs == nil {
-		srcCopy = []DocumentConfig{}
-	} else {
-		srcCopy = slices.Clone(sourceDocs)
-	}
-
-	var testCopy []DocumentConfig
-	if testSourceDocs == nil {
-		testCopy = []DocumentConfig{}
-	} else {
-		testCopy = slices.Clone(testSourceDocs)
-	}
-
-	var depsCopy []ModuleDescriptor
-	if dependencies == nil {
-		depsCopy = []ModuleDescriptor{}
-	} else {
-		depsCopy = slices.Clone(dependencies)
-	}
-
 	return ModuleConfig{
 		moduleID:         moduleID,
 		moduleDescriptor: moduleDescriptor,
-		sourceDocs:       srcCopy,
-		testSourceDocs:   testCopy,
-		dependencies:     depsCopy,
+		sourceDocs:       slices.Clone(sourceDocs),
+		testSourceDocs:   slices.Clone(testSourceDocs),
+		dependencies:     slices.Clone(dependencies),
 		readmeMd:         readmeMd,
 	}
 }
@@ -91,25 +69,16 @@ func (m ModuleConfig) IsDefaultModule() bool {
 
 // SourceDocs returns a copy of the source document configurations.
 func (m ModuleConfig) SourceDocs() []DocumentConfig {
-	if m.sourceDocs == nil {
-		return []DocumentConfig{}
-	}
 	return slices.Clone(m.sourceDocs)
 }
 
 // TestSourceDocs returns a copy of the test source document configurations.
 func (m ModuleConfig) TestSourceDocs() []DocumentConfig {
-	if m.testSourceDocs == nil {
-		return []DocumentConfig{}
-	}
 	return slices.Clone(m.testSourceDocs)
 }
 
 // Dependencies returns a copy of the module dependencies.
 func (m ModuleConfig) Dependencies() []ModuleDescriptor {
-	if m.dependencies == nil {
-		return []ModuleDescriptor{}
-	}
 	return slices.Clone(m.dependencies)
 }
 

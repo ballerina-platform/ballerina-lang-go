@@ -38,15 +38,8 @@ type DiagnosticResult struct {
 // The diagnostics are categorized by severity during construction.
 func NewDiagnosticResult(diags []diagnostics.Diagnostic) DiagnosticResult {
 	result := DiagnosticResult{
-		diagnostics: make([]diagnostics.Diagnostic, len(diags)),
-		errors:      make([]diagnostics.Diagnostic, 0),
-		warnings:    make([]diagnostics.Diagnostic, 0),
-		hints:       make([]diagnostics.Diagnostic, 0),
-		infos:       make([]diagnostics.Diagnostic, 0),
+		diagnostics: slices.Clone(diags),
 	}
-
-	// Copy diagnostics
-	copy(result.diagnostics, diags)
 
 	// Categorize by severity
 	for _, d := range diags {
@@ -67,41 +60,26 @@ func NewDiagnosticResult(diags []diagnostics.Diagnostic) DiagnosticResult {
 
 // Diagnostics returns a defensive copy of all diagnostics.
 func (dr DiagnosticResult) Diagnostics() []diagnostics.Diagnostic {
-	if dr.diagnostics == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(dr.diagnostics)
 }
 
 // Errors returns a defensive copy of all error diagnostics.
 func (dr DiagnosticResult) Errors() []diagnostics.Diagnostic {
-	if dr.errors == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(dr.errors)
 }
 
 // Warnings returns a defensive copy of all warning diagnostics.
 func (dr DiagnosticResult) Warnings() []diagnostics.Diagnostic {
-	if dr.warnings == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(dr.warnings)
 }
 
 // Infos returns a defensive copy of all info diagnostics.
 func (dr DiagnosticResult) Infos() []diagnostics.Diagnostic {
-	if dr.infos == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(dr.infos)
 }
 
 // Hints returns a defensive copy of all hint diagnostics.
 func (dr DiagnosticResult) Hints() []diagnostics.Diagnostic {
-	if dr.hints == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(dr.hints)
 }
 

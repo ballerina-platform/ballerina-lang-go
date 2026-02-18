@@ -51,8 +51,6 @@ const (
 	keyTestReport            = "testReport"
 	keyCodeCoverage          = "codeCoverage"
 	keyCloud                 = "cloud"
-	keyGraalVM               = "graalvm"
-	keyGraalVMBuildOptions   = "graalvmBuildOptions"
 	keySticky                = "sticky"
 )
 
@@ -90,13 +88,7 @@ func NewManifestBuilder(toml *tomlparser.Toml, projectPath string) *ManifestBuil
 	return &ManifestBuilder{
 		toml:         toml,
 		projectPath:  projectPath,
-		diagnostics:  make([]diagnostics.Diagnostic, 0),
-		dependencies: make([]projects.Dependency, 0),
 		buildOptions: projects.NewBuildOptions(),
-		license:      []string{},
-		authors:      []string{},
-		keywords:     []string{},
-		otherEntries: make(map[string]any),
 	}
 }
 
@@ -105,13 +97,7 @@ func NewManifestBuilder(toml *tomlparser.Toml, projectPath string) *ManifestBuil
 func NewManifestBuilderFromDescriptor(desc projects.PackageDescriptor) *ManifestBuilder {
 	return &ManifestBuilder{
 		packageDesc:  desc,
-		diagnostics:  make([]diagnostics.Diagnostic, 0),
-		dependencies: make([]projects.Dependency, 0),
 		buildOptions: projects.NewBuildOptions(),
-		license:      []string{},
-		authors:      []string{},
-		keywords:     []string{},
-		otherEntries: make(map[string]any),
 	}
 }
 
@@ -245,9 +231,6 @@ func (b *ManifestBuilder) parseFromTOML() {
 
 // Diagnostics returns accumulated diagnostics.
 func (b *ManifestBuilder) Diagnostics() []diagnostics.Diagnostic {
-	if b.diagnostics == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(b.diagnostics)
 }
 
@@ -293,13 +276,8 @@ func (b *ManifestBuilder) parsePackageDescriptor() projects.PackageDescriptor {
 
 // parseDependencies parses the [[dependency]] array from the TOML document.
 func (b *ManifestBuilder) parseDependencies() []projects.Dependency {
-	deps := make([]projects.Dependency, 0)
-
-	tables, ok := b.toml.GetTables(keyDependency)
-	if !ok {
-		return deps
-	}
-
+	tables, _ := b.toml.GetTables(keyDependency)
+	var deps []projects.Dependency
 	for _, table := range tables {
 		dep, err := b.parseDependency(table)
 		if err != nil {
@@ -389,14 +367,6 @@ func (b *ManifestBuilder) parseBuildOptions() projects.BuildOptions {
 		builder.WithCloud(cloud)
 	}
 
-	if graalVM, ok := b.toml.GetBool(keyBuildOptions + "." + keyGraalVM); ok {
-		builder.WithGraalVM(graalVM)
-	}
-
-	if graalVMOpts, ok := b.toml.GetString(keyBuildOptions + "." + keyGraalVMBuildOptions); ok {
-		builder.WithGraalVMBuildOptions(graalVMOpts)
-	}
-
 	if sticky, ok := b.toml.GetBool(keyBuildOptions + "." + keySticky); ok {
 		builder.WithSticky(sticky)
 	}
@@ -407,22 +377,15 @@ func (b *ManifestBuilder) parseBuildOptions() projects.BuildOptions {
 // parseString retrieves a string value from the TOML document.
 // Returns empty string if the key does not exist.
 func (b *ManifestBuilder) parseString(key string) string {
-	value, ok := b.toml.GetString(key)
-	if !ok {
-		return ""
-	}
+	value, _ := b.toml.GetString(key)
 	return value
 }
 
 // parseStringArray retrieves a string array from the TOML document.
-// Returns an empty slice if the key does not exist or is not an array.
+// Returns nil if the key does not exist or is not an array.
 func (b *ManifestBuilder) parseStringArray(key string) []string {
-	arr, ok := b.toml.GetArray(key)
-	if !ok {
-		return []string{}
-	}
-
-	result := make([]string, 0, len(arr))
+	arr, _ := b.toml.GetArray(key)
+	var result []string
 	for _, item := range arr {
 		if str, ok := item.(string); ok {
 			result = append(result, str)

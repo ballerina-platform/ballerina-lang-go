@@ -23,15 +23,13 @@ package projects
 // Java source: io.ballerina.projects.BuildOptions
 type BuildOptions struct {
 	// Build-specific fields
-	testReport                *bool
-	codeCoverage              *bool
-	dumpBuildTime             *bool
-	skipTests                 *bool
+	testReport                optionalBool
+	codeCoverage              optionalBool
+	dumpBuildTime             optionalBool
+	skipTests                 optionalBool
+	exportComponentModel      optionalBool
+	showDependencyDiagnostics optionalBool
 	targetDir                 string
-	nativeImage               *bool
-	exportComponentModel      *bool
-	graalVMBuildOptions       string
-	showDependencyDiagnostics *bool
 
 	// Composition: BuildOptions contains CompilationOptions
 	compilationOptions CompilationOptions
@@ -46,26 +44,23 @@ func NewBuildOptions() BuildOptions {
 
 // TestReport returns whether test report generation is enabled.
 func (b BuildOptions) TestReport() bool {
-	return toBoolDefaultIfNull(b.testReport)
+	return b.testReport.valueOr(false)
 }
 
 // CodeCoverage returns whether code coverage is enabled.
 func (b BuildOptions) CodeCoverage() bool {
-	return toBoolDefaultIfNull(b.codeCoverage)
+	return b.codeCoverage.valueOr(false)
 }
 
 // DumpBuildTime returns whether build time dumping is enabled.
 func (b BuildOptions) DumpBuildTime() bool {
-	return toBoolDefaultIfNull(b.dumpBuildTime)
+	return b.dumpBuildTime.valueOr(false)
 }
 
 // SkipTests returns whether tests should be skipped.
-// By default, tests are skipped (returns true if nil).
+// By default, tests are skipped (returns true if unset).
 func (b BuildOptions) SkipTests() bool {
-	if b.skipTests == nil {
-		return true // Default: skip tests
-	}
-	return *b.skipTests
+	return b.skipTests.valueOr(true)
 }
 
 // TargetDir returns the target directory path.
@@ -73,25 +68,9 @@ func (b BuildOptions) TargetDir() string {
 	return b.targetDir
 }
 
-// NativeImage returns whether GraalVM native image is enabled.
-func (b BuildOptions) NativeImage() bool {
-	return toBoolDefaultIfNull(b.nativeImage)
-}
-
-// GraalVM returns whether GraalVM native image is enabled.
-// Alias for NativeImage().
-func (b BuildOptions) GraalVM() bool {
-	return b.NativeImage()
-}
-
-// GraalVMBuildOptions returns additional GraalVM build options.
-func (b BuildOptions) GraalVMBuildOptions() string {
-	return b.graalVMBuildOptions
-}
-
 // ShowDependencyDiagnostics returns whether dependency diagnostics should be shown.
 func (b BuildOptions) ShowDependencyDiagnostics() bool {
-	return toBoolDefaultIfNull(b.showDependencyDiagnostics)
+	return b.showDependencyDiagnostics.valueOr(false)
 }
 
 // CompilationOptions returns the underlying compilation options.
@@ -253,83 +232,38 @@ func (b BuildOptions) TraceRecovery() bool {
 
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
 func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
-	builder := NewBuildOptionsBuilder()
-
-	// Handle build-specific fields
-	if theirs.skipTests != nil {
-		builder.WithSkipTests(*theirs.skipTests)
-	} else if b.skipTests != nil {
-		builder.WithSkipTests(*b.skipTests)
-	}
-
-	if theirs.codeCoverage != nil {
-		builder.WithCodeCoverage(*theirs.codeCoverage)
-	} else if b.codeCoverage != nil {
-		builder.WithCodeCoverage(*b.codeCoverage)
-	}
-
-	if theirs.testReport != nil {
-		builder.WithTestReport(*theirs.testReport)
-	} else if b.testReport != nil {
-		builder.WithTestReport(*b.testReport)
-	}
-
-	if theirs.dumpBuildTime != nil {
-		builder.WithDumpBuildTime(*theirs.dumpBuildTime)
-	} else if b.dumpBuildTime != nil {
-		builder.WithDumpBuildTime(*b.dumpBuildTime)
+	merged := BuildOptions{
+		skipTests:                 acceptoptionalBool(b.skipTests, theirs.skipTests),
+		codeCoverage:              acceptoptionalBool(b.codeCoverage, theirs.codeCoverage),
+		testReport:                acceptoptionalBool(b.testReport, theirs.testReport),
+		dumpBuildTime:             acceptoptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
+		exportComponentModel:      acceptoptionalBool(b.exportComponentModel, theirs.exportComponentModel),
+		showDependencyDiagnostics: acceptoptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
 	}
 
 	if theirs.targetDir != "" {
-		builder.WithTargetDir(theirs.targetDir)
+		merged.targetDir = theirs.targetDir
 	} else {
-		builder.WithTargetDir(b.targetDir)
-	}
-
-	if theirs.nativeImage != nil {
-		builder.WithNativeImage(*theirs.nativeImage)
-	} else if b.nativeImage != nil {
-		builder.WithNativeImage(*b.nativeImage)
-	}
-
-	if theirs.exportComponentModel != nil {
-		builder.WithExportComponentModel(*theirs.exportComponentModel)
-	} else if b.exportComponentModel != nil {
-		builder.WithExportComponentModel(*b.exportComponentModel)
-	}
-
-	if theirs.graalVMBuildOptions != "" {
-		builder.WithGraalVMBuildOptions(theirs.graalVMBuildOptions)
-	} else {
-		builder.WithGraalVMBuildOptions(b.graalVMBuildOptions)
-	}
-
-	if theirs.showDependencyDiagnostics != nil {
-		builder.WithShowDependencyDiagnostics(*theirs.showDependencyDiagnostics)
-	} else if b.showDependencyDiagnostics != nil {
-		builder.WithShowDependencyDiagnostics(*b.showDependencyDiagnostics)
+		merged.targetDir = b.targetDir
 	}
 
 	// Merge compilation options
-	mergedCompilationOptions := b.compilationOptions.AcceptTheirs(theirs.compilationOptions)
-	builder.compilationOptionsBuilder = newCompilationOptionsBuilderFrom(mergedCompilationOptions)
+	merged.compilationOptions = b.compilationOptions.AcceptTheirs(theirs.compilationOptions)
 
-	return builder.Build()
+	return merged
 }
 
 // BuildOptionsBuilder provides a builder pattern for BuildOptions.
 // It contains a CompilationOptionsBuilder to build the embedded CompilationOptions.
 type BuildOptionsBuilder struct {
 	// Build-specific fields
-	testReport                *bool
-	codeCoverage              *bool
-	dumpBuildTime             *bool
-	skipTests                 *bool
+	testReport                optionalBool
+	codeCoverage              optionalBool
+	dumpBuildTime             optionalBool
+	skipTests                 optionalBool
+	exportComponentModel      optionalBool
+	showDependencyDiagnostics optionalBool
 	targetDir                 string
-	nativeImage               *bool
-	exportComponentModel      *bool
-	graalVMBuildOptions       string
-	showDependencyDiagnostics *bool
 
 	// Embedded builder for compilation options
 	compilationOptionsBuilder *CompilationOptionsBuilder
@@ -344,25 +278,25 @@ func NewBuildOptionsBuilder() *BuildOptionsBuilder {
 
 // WithTestReport sets whether test report generation is enabled.
 func (b *BuildOptionsBuilder) WithTestReport(value bool) *BuildOptionsBuilder {
-	b.testReport = &value
+	b.testReport = optionalBoolOf(value)
 	return b
 }
 
 // WithCodeCoverage sets whether code coverage is enabled.
 func (b *BuildOptionsBuilder) WithCodeCoverage(value bool) *BuildOptionsBuilder {
-	b.codeCoverage = &value
+	b.codeCoverage = optionalBoolOf(value)
 	return b
 }
 
 // WithDumpBuildTime sets whether build time dumping is enabled.
 func (b *BuildOptionsBuilder) WithDumpBuildTime(value bool) *BuildOptionsBuilder {
-	b.dumpBuildTime = &value
+	b.dumpBuildTime = optionalBoolOf(value)
 	return b
 }
 
 // WithSkipTests sets whether tests should be skipped.
 func (b *BuildOptionsBuilder) WithSkipTests(value bool) *BuildOptionsBuilder {
-	b.skipTests = &value
+	b.skipTests = optionalBoolOf(value)
 	return b
 }
 
@@ -372,34 +306,16 @@ func (b *BuildOptionsBuilder) WithTargetDir(path string) *BuildOptionsBuilder {
 	return b
 }
 
-// WithNativeImage sets whether GraalVM native image is enabled.
-func (b *BuildOptionsBuilder) WithNativeImage(value bool) *BuildOptionsBuilder {
-	b.nativeImage = &value
-	return b
-}
-
-// WithGraalVM sets whether GraalVM native image is enabled.
-// Alias for WithNativeImage.
-func (b *BuildOptionsBuilder) WithGraalVM(value bool) *BuildOptionsBuilder {
-	return b.WithNativeImage(value)
-}
-
-// WithGraalVMBuildOptions sets additional GraalVM build options.
-func (b *BuildOptionsBuilder) WithGraalVMBuildOptions(value string) *BuildOptionsBuilder {
-	b.graalVMBuildOptions = value
-	return b
-}
-
 // WithShowDependencyDiagnostics sets whether dependency diagnostics should be shown.
 func (b *BuildOptionsBuilder) WithShowDependencyDiagnostics(value bool) *BuildOptionsBuilder {
-	b.showDependencyDiagnostics = &value
+	b.showDependencyDiagnostics = optionalBoolOf(value)
 	return b
 }
 
 // WithExportComponentModel sets whether component model export is enabled.
 // This sets both the build-level flag and delegates to compilation options.
 func (b *BuildOptionsBuilder) WithExportComponentModel(value bool) *BuildOptionsBuilder {
-	b.exportComponentModel = &value
+	b.exportComponentModel = optionalBoolOf(value)
 	b.compilationOptionsBuilder.WithExportComponentModel(value)
 	return b
 }
@@ -570,11 +486,9 @@ func (b *BuildOptionsBuilder) Build() BuildOptions {
 		codeCoverage:              b.codeCoverage,
 		dumpBuildTime:             b.dumpBuildTime,
 		skipTests:                 b.skipTests,
-		targetDir:                 b.targetDir,
-		nativeImage:               b.nativeImage,
 		exportComponentModel:      b.exportComponentModel,
-		graalVMBuildOptions:       b.graalVMBuildOptions,
 		showDependencyDiagnostics: b.showDependencyDiagnostics,
+		targetDir:                 b.targetDir,
 		compilationOptions:        compilationOptions,
 	}
 }
@@ -603,9 +517,7 @@ const (
 	OptionNameListConflictedClasses         OptionName = "listConflictedClasses"
 	OptionNameDumpBuildTime                 OptionName = "dumpBuildTime"
 	OptionNameTargetDir                     OptionName = "targetDir"
-	OptionNameNativeImage                   OptionName = "graalvm"
 	OptionNameExportComponentModel          OptionName = "exportComponentModel"
-	OptionNameGraalVMBuildOptions           OptionName = "graalvmBuildOptions"
 	OptionNameShowDependencyDiagnostics     OptionName = "showDependencyDiagnostics"
 	OptionNameOptimizeDependencyCompilation OptionName = "optimizeDependencyCompilation"
 	OptionNameRemoteManagement              OptionName = "remoteManagement"

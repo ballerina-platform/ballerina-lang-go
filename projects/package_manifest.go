@@ -96,12 +96,7 @@ func (d Dependency) Repository() string {
 func NewPackageManifest(desc PackageDescriptor) PackageManifest {
 	return PackageManifest{
 		packageDesc:  desc,
-		dependencies: []Dependency{},
 		buildOptions: NewBuildOptions(),
-		diagnostics:  []diagnostics.Diagnostic{},
-		license:      []string{},
-		authors:      []string{},
-		keywords:     []string{},
 	}
 }
 
@@ -127,9 +122,6 @@ func (m PackageManifest) Version() PackageVersion {
 
 // Dependencies returns a copy of the package dependencies.
 func (m PackageManifest) Dependencies() []Dependency {
-	if m.dependencies == nil {
-		return []Dependency{}
-	}
 	return slices.Clone(m.dependencies)
 }
 
@@ -140,9 +132,6 @@ func (m PackageManifest) BuildOptions() BuildOptions {
 
 // Diagnostics returns a copy of the parsing diagnostics.
 func (m PackageManifest) Diagnostics() []diagnostics.Diagnostic {
-	if m.diagnostics == nil {
-		return []diagnostics.Diagnostic{}
-	}
 	return slices.Clone(m.diagnostics)
 }
 
@@ -153,25 +142,16 @@ func (m PackageManifest) HasDiagnostics() bool {
 
 // License returns a copy of the license information.
 func (m PackageManifest) License() []string {
-	if m.license == nil {
-		return []string{}
-	}
 	return slices.Clone(m.license)
 }
 
 // Authors returns a copy of the package authors.
 func (m PackageManifest) Authors() []string {
-	if m.authors == nil {
-		return []string{}
-	}
 	return slices.Clone(m.authors)
 }
 
 // Keywords returns a copy of the package keywords.
 func (m PackageManifest) Keywords() []string {
-	if m.keywords == nil {
-		return []string{}
-	}
 	return slices.Clone(m.keywords)
 }
 
@@ -229,34 +209,14 @@ type PackageManifestParams struct {
 // This function is intended for use by internal packages that need to construct
 // PackageManifest instances with full control over all fields.
 func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest {
-	// Copy dependencies
-	deps := make([]Dependency, len(params.Dependencies))
-	copy(deps, params.Dependencies)
-
-	// Copy diagnostics
-	diags := make([]diagnostics.Diagnostic, len(params.Diagnostics))
-	copy(diags, params.Diagnostics)
-
-	// Copy license
-	license := make([]string, len(params.License))
-	copy(license, params.License)
-
-	// Copy authors
-	authors := make([]string, len(params.Authors))
-	copy(authors, params.Authors)
-
-	// Copy keywords
-	keywords := make([]string, len(params.Keywords))
-	copy(keywords, params.Keywords)
-
 	return PackageManifest{
 		packageDesc:      params.PackageDesc,
-		dependencies:     deps,
+		dependencies:     slices.Clone(params.Dependencies),
 		buildOptions:     params.BuildOptions,
-		diagnostics:      diags,
-		license:          license,
-		authors:          authors,
-		keywords:         keywords,
+		diagnostics:      slices.Clone(params.Diagnostics),
+		license:          slices.Clone(params.License),
+		authors:          slices.Clone(params.Authors),
+		keywords:         slices.Clone(params.Keywords),
 		repository:       params.Repository,
 		ballerinaVersion: params.BallerinaVersion,
 		visibility:       params.Visibility,

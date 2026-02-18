@@ -79,13 +79,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	}
 
 	// Copy dependencies
-	deps := moduleConfig.Dependencies()
-	var depsCopy []ModuleDescriptor
-	if deps == nil {
-		depsCopy = []ModuleDescriptor{}
-	} else {
-		depsCopy = slices.Clone(deps)
-	}
+	depsCopy := slices.Clone(moduleConfig.Dependencies())
 
 	return &moduleContext{
 		project:                project,
@@ -120,20 +114,6 @@ func newModuleContextFromMaps(
 	if testDocContextMap == nil {
 		testDocContextMap = make(map[DocumentID]*documentContext)
 	}
-	if srcDocIDs == nil {
-		srcDocIDs = []DocumentID{}
-	}
-	if testSrcDocIDs == nil {
-		testSrcDocIDs = []DocumentID{}
-	}
-
-	// Copy dependencies
-	var depsCopy []ModuleDescriptor
-	if moduleDescDependencies == nil {
-		depsCopy = []ModuleDescriptor{}
-	} else {
-		depsCopy = slices.Clone(moduleDescDependencies)
-	}
 
 	return &moduleContext{
 		project:                project,
@@ -144,7 +124,7 @@ func newModuleContextFromMaps(
 		srcDocIDs:              srcDocIDs,
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
-		moduleDescDependencies: depsCopy,
+		moduleDescDependencies: slices.Clone(moduleDescDependencies),
 	}
 }
 
@@ -165,17 +145,11 @@ func (m *moduleContext) getModuleName() ModuleName {
 
 // getSrcDocumentIDs returns a defensive copy of source document IDs.
 func (m *moduleContext) getSrcDocumentIDs() []DocumentID {
-	if m.srcDocIDs == nil {
-		return []DocumentID{}
-	}
 	return slices.Clone(m.srcDocIDs)
 }
 
 // getTestSrcDocumentIDs returns a defensive copy of test document IDs.
 func (m *moduleContext) getTestSrcDocumentIDs() []DocumentID {
-	if m.testSrcDocIDs == nil {
-		return []DocumentID{}
-	}
 	return slices.Clone(m.testSrcDocIDs)
 }
 
@@ -212,9 +186,6 @@ func (m *moduleContext) getProject() Project {
 
 // getModuleDescDependencies returns a defensive copy of module descriptor dependencies.
 func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
-	if m.moduleDescDependencies == nil {
-		return []ModuleDescriptor{}
-	}
 	return slices.Clone(m.moduleDescDependencies)
 }
 
@@ -227,7 +198,7 @@ func (m *moduleContext) compile() {
 // compileInternal performs the actual compilation of a module:
 // parse sources, build BLangPackage (AST), and run semantic analysis.
 func compileInternal(moduleCtx *moduleContext) {
-	moduleCtx.moduleDiagnostics = make([]diagnostics.Diagnostic, 0)
+	moduleCtx.moduleDiagnostics = nil
 	env := semtypes.CreateTypeEnv()
 	cx := context.NewCompilerContext(env)
 	moduleCtx.compilerCtx = cx
