@@ -94,24 +94,24 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 	return testPairs
 }
 
-// resolveDir resolves the input and output directories
-// It tries ../corpus/<inputBaseDir> first, then ./corpus/<inputBaseDir>
+// resolveDir resolves the input and output directories to absolute paths.
+// It tries ../corpus/<inputBaseDir>, then ./corpus/<inputBaseDir>, then ../../corpus/<inputBaseDir>.
 func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, string) {
-	inputDir := filepath.Join("..", "corpus", inputBaseDir)
-	if _, err := os.Stat(inputDir); err == nil {
-		outputDir := filepath.Join("..", "corpus", outputBaseDir)
-		absInput, _ := filepath.Abs(inputDir)
-		absOutput, _ := filepath.Abs(outputDir)
-		return absInput, absOutput
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Could not get working directory: %v", err)
 	}
-	inputDir = filepath.Join(".", "corpus", inputBaseDir)
-	if _, err := os.Stat(inputDir); err == nil {
-		outputDir := filepath.Join(".", "corpus", outputBaseDir)
-		absInput, _ := filepath.Abs(inputDir)
-		absOutput, _ := filepath.Abs(outputDir)
-		return absInput, absOutput
+	for _, base := range []string{
+		filepath.Join(cwd, "..", "corpus"),
+		filepath.Join(cwd, "corpus"),
+		filepath.Join(cwd, "..", "..", "corpus"),
+	} {
+		inputDir := filepath.Join(base, inputBaseDir)
+		if _, err := os.Stat(inputDir); err == nil {
+			outputDir := filepath.Join(base, outputBaseDir)
+			return filepath.Clean(inputDir), filepath.Clean(outputDir)
+		}
 	}
-
 	t.Fatalf("Could not find corpus directory")
 	return "", ""
 }
