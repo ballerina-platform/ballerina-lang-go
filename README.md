@@ -1,5 +1,7 @@
 # ballerina-lang-go
 
+[![codecov](https://codecov.io/gh/ballerina-platform/ballerina-lang-go/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/ballerina-lang-go)
+
 ## Goals
 
 The primary goal of this effort is to come up with a native Ballerina compiler frontend that is fast, memory-efficient and has a fast startup. Eventually it could replace the current [jBallerina](https://github.com/ballerina-platform/ballerina-lang) compiler frontend.

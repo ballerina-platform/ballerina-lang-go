@@ -18,8 +18,15 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Run tests
-        run: go test -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+      - name: Run tests with coverage
+        run: go test -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Check gofmt
         run: |
