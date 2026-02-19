@@ -22,13 +22,6 @@ import (
 	"os"
 	"testing"
 
-	debugcommon "ballerina-lang-go/common"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/test_util"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
