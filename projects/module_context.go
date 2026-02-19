@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -270,7 +269,6 @@ func compilePhase2(moduleCtx *moduleContext) {
 }
 
 // parseDocumentsParallel parses source and test documents in parallel.
-// It uses bounded concurrency (GOMAXPROCS) to avoid excessive goroutines.
 // Returns syntax trees from source documents only (test docs are parsed but not returned).
 func parseDocumentsParallel(
 	srcDocIDs []DocumentID,
@@ -278,10 +276,6 @@ func parseDocumentsParallel(
 	testDocIDs []DocumentID,
 	testDocContextMap map[DocumentID]*documentContext,
 ) []*tree.SyntaxTree {
-	// Use bounded parallelism
-	maxWorkers := runtime.GOMAXPROCS(0)
-	sem := make(chan struct{}, maxWorkers)
-
 	var (
 		mu          sync.Mutex
 		wg          sync.WaitGroup
@@ -298,9 +292,6 @@ func parseDocumentsParallel(
 		wg.Add(1)
 		go func(dc *documentContext) {
 			defer wg.Done()
-			sem <- struct{}{}        // acquire semaphore
-			defer func() { <-sem }() // release semaphore
-
 			st := dc.parse()
 			if st != nil {
 				mu.Lock()
@@ -320,9 +311,6 @@ func parseDocumentsParallel(
 		wg.Add(1)
 		go func(dc *documentContext) {
 			defer wg.Done()
-			sem <- struct{}{}        // acquire semaphore
-			defer func() { <-sem }() // release semaphore
-
 			dc.parse()
 		}(docCtx)
 	}

@@ -106,18 +106,18 @@ func (r *PackageResolution) resolveDependencies() {
 	sortedDescs := r.moduleDependencyGraph.ToTopologicallySortedList()
 
 	// Map descriptors to contexts for lookup
-	descToCtx := make(map[string]*moduleContext, len(pkgCtx.moduleIDs))
+	descToCtx := make(map[ModuleDescriptor]*moduleContext, len(pkgCtx.moduleIDs))
 	for _, modID := range pkgCtx.moduleIDs {
 		modCtx := pkgCtx.moduleContextMap[modID]
 		if modCtx != nil {
-			descToCtx[modCtx.getDescriptor().String()] = modCtx
+			descToCtx[modCtx.getDescriptor()] = modCtx
 		}
 	}
 
 	// Build sorted module list from sorted descriptors
 	sorted := make([]*moduleContext, 0, len(sortedDescs))
 	for _, desc := range sortedDescs {
-		if modCtx, ok := descToCtx[desc.String()]; ok {
+		if modCtx, ok := descToCtx[desc]; ok {
 			sorted = append(sorted, modCtx)
 		}
 	}
