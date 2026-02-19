@@ -17,6 +17,8 @@
 package semantics
 
 import (
+	"maps"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	arraycompile "ballerina-lang-go/lib/array/compile"
@@ -24,7 +26,6 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"maps"
 )
 
 type scopeKind int
@@ -467,7 +468,7 @@ func defineForeachLoopVar[T symbolResolver](resolver T, variable model.VariableN
 		return
 	}
 	name := v.Name.Value
-	if _, exists := resolver.GetSymbol(name); exists {
+	if _, _, exists := resolver.GetSymbol(name); exists {
 		semanticError(resolver, "Variable already defined: "+name, v.GetPosition())
 		return
 	}
