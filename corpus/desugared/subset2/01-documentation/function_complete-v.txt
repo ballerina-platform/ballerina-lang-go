@@ -1,0 +1,31 @@
+(package
+  (function add
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for complete function")
+        (md-doc-line "This function adds two numbers together"))
+      (params
+        (md-param-doc (param-name x)
+          (doc-lines
+            "first number to add"))
+        (md-param-doc (param-name y)
+          (doc-lines
+            "second number to add")))
+      (return-param
+        (md-return-param-doc
+          (doc-lines
+            "the sum of x and y"))
+      )) (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

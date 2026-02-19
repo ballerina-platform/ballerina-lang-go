@@ -1,12 +1,12 @@
 module $anon.. v 0.0.0;
-add<NIL>{
+add(((INT), ()),((INT), ())) -> ((INT), ()){
   bb0 {
     %3 = + x y;
     %0 = %3;
     return;
   }
 }
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     return;
   }

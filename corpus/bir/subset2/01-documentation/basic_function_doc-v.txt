@@ -1,10 +1,10 @@
 module $anon.. v 0.0.0;
-basicFunction<NIL>{
+basicFunction() -> ((NIL), ()){
   bb0 {
     return;
   }
 }
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     return;
   }
