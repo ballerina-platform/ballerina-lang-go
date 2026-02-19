@@ -16,30 +16,25 @@
  * under the License.
  */
 
-package projects
+package projects_test
 
 import (
-	"io/fs"
+	"os"
+	"path/filepath"
 
-	"ballerina-lang-go/context"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
 )
 
-type Environment struct {
-	fsys        fs.FS
-	compilerCtx *context.CompilerContext
-}
-
-func newEnvironment(fsys fs.FS, cx *context.CompilerContext) *Environment {
-	return &Environment{
-		fsys:        fsys,
-		compilerCtx: cx,
+func loadProject(path string, config ...directory.ProjectLoadConfig) (projects.ProjectLoadResult, error) {
+	baseDir := path
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		baseDir = filepath.Dir(path)
+		path = filepath.Base(path)
+	} else {
+		path = "."
 	}
-}
 
-func (e *Environment) compilerContext() *context.CompilerContext {
-	return e.compilerCtx
-}
-
-func (e *Environment) fs() fs.FS {
-	return e.fsys
+	fsys := os.DirFS(baseDir)
+	return directory.LoadProject(nil, fsys, path, config...)
 }

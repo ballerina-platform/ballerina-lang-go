@@ -19,6 +19,7 @@
 package projects
 
 import (
+	"io/fs"
 	"path/filepath"
 )
 
@@ -31,9 +32,9 @@ type BuildProject struct {
 var _ Project = (*BuildProject)(nil)
 
 // NewBuildProject creates a new BuildProject with the given source root and build options.
-func NewBuildProject(sourceRoot string, buildOptions BuildOptions) *BuildProject {
+func NewBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *BuildProject {
 	project := &BuildProject{}
-	project.initBase(sourceRoot, buildOptions)
+	project.initBase(fsys, sourceRoot, buildOptions)
 	return project
 }
 
@@ -58,21 +59,15 @@ func (b *BuildProject) DocumentID(filePath string) (DocumentID, bool) {
 		return DocumentID{}, false
 	}
 
-	// Normalize the file path
-	absPath, err := filepath.Abs(filePath)
-	if err != nil {
-		return DocumentID{}, false
-	}
-
 	// Search through all modules
 	for _, module := range b.CurrentPackage().Modules() {
 		// Check source documents
 		for _, docID := range module.DocumentIDs() {
 			doc := module.Document(docID)
-			if doc != nil && doc.Name() == filepath.Base(absPath) {
+			if doc != nil && doc.Name() == filepath.Base(filePath) {
 				// Check if the document path matches
 				docPath := b.documentPathForModule(docID, module)
-				if docPath == absPath {
+				if docPath == filePath {
 					return docID, true
 				}
 			}
@@ -81,9 +76,9 @@ func (b *BuildProject) DocumentID(filePath string) (DocumentID, bool) {
 		// Check test documents
 		for _, docID := range module.TestDocumentIDs() {
 			doc := module.Document(docID)
-			if doc != nil && doc.Name() == filepath.Base(absPath) {
+			if doc != nil && doc.Name() == filepath.Base(filePath) {
 				docPath := b.documentPathForModule(docID, module)
-				if docPath == absPath {
+				if docPath == filePath {
 					return docID, true
 				}
 			}
@@ -155,7 +150,7 @@ func (b *BuildProject) Duplicate() Project {
 	// Create duplicate build options using AcceptTheirs pattern
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
 	// Create new project and package instances
-	newProject := NewBuildProject(b.sourceRoot, duplicateBuildOptions)
+	newProject := NewBuildProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions)
 	ResetPackage(b, newProject)
 
 	return newProject

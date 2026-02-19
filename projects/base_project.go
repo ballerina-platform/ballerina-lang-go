@@ -19,6 +19,8 @@
 package projects
 
 import (
+	"io/fs"
+
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/semtypes"
 )
@@ -55,12 +57,12 @@ func (b *BaseProject) InitPackage(pkg *Package) {
 
 // initBase initializes the base project fields.
 // This should only be called once when creating a new project.
-func (b *BaseProject) initBase(sourceRoot string, buildOptions BuildOptions) {
+func (b *BaseProject) initBase(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) {
 	b.sourceRoot = sourceRoot
 	b.buildOptions = buildOptions
 
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	b.environment = NewEnvironment(cx)
+	b.environment = newEnvironment(fsys, cx)
 }
 
 // setCurrentPackage updates the project's current package.

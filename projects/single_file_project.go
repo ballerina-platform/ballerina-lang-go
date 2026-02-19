@@ -19,6 +19,7 @@
 package projects
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -34,7 +35,7 @@ type SingleFileProject struct {
 var _ Project = (*SingleFileProject)(nil)
 
 // NewSingleFileProject creates a new SingleFileProject with the given parameters.
-func NewSingleFileProject(sourceRoot string, buildOptions BuildOptions, documentPath string) *SingleFileProject {
+func NewSingleFileProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, documentPath string) *SingleFileProject {
 	// Create temp directory for build outputs
 	targetDir, err := os.MkdirTemp("", "ballerina-cache*")
 	if err != nil {
@@ -45,7 +46,7 @@ func NewSingleFileProject(sourceRoot string, buildOptions BuildOptions, document
 		documentPath: documentPath,
 		targetDir:    targetDir,
 	}
-	project.initBase(sourceRoot, buildOptions)
+	project.initBase(fsys, sourceRoot, buildOptions)
 	return project
 }
 
@@ -132,7 +133,7 @@ func (s *SingleFileProject) Duplicate() Project {
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(s.buildOptions)
 
 	// Create new project instance
-	newProject := NewSingleFileProject(s.sourceRoot, duplicateBuildOptions, s.documentPath)
+	newProject := NewSingleFileProject(s.Environment().fs(), s.sourceRoot, duplicateBuildOptions, s.documentPath)
 
 	// Duplicate and set the package
 	ResetPackage(s, newProject)

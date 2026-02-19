@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -88,12 +89,6 @@ func init() {
 }
 
 func runBallerina(cmd *cobra.Command, args []string) error {
-	// Default to current directory if no path provided (bal run == bal run .)
-	path := "."
-	if len(args) > 0 {
-		path = args[0]
-	}
-
 	// Build options from CLI flags. Constructed before debug setup so
 	// buildOpts can be the single source of truth for all flag reads.
 	buildOpts := projects.NewBuildOptionsBuilder().
@@ -164,12 +159,28 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	// Default to current directory if no path provided (bal run == bal run .)
+	path := "."
+	if len(args) > 0 {
+		path = args[0]
+	}
+
+	baseDir := path
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		baseDir = filepath.Dir(path)
+		path = filepath.Base(path)
+	} else {
+		path = "."
+	}
+
+	fsys := os.DirFS(baseDir)
+
 	// Load project using ProjectLoader (auto-detects type)
-	result, err := directory.LoadProject(path, directory.ProjectLoadConfig{
+	result, err := directory.LoadProject(nil, fsys, path, directory.ProjectLoadConfig{
 		BuildOptions: &buildOpts,
 	})
 	if err != nil {
-		printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
+		printRunError(err)
 		return err
 	}
 
@@ -215,4 +226,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return nil
+}
+
+func printRunError(err error) {
+	printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
 }
