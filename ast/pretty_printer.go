@@ -564,7 +564,11 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 	p.printString("(")
 	if len(node.Sizes) > 0 {
 		for _, size := range node.Sizes {
-			p.PrintInner(size.(BLangNode))
+			p.printSticky("[")
+			if size != nil {
+				p.PrintInner(size.(BLangNode))
+			}
+			p.printSticky("]")
 		}
 	}
 	p.printSticky(")")

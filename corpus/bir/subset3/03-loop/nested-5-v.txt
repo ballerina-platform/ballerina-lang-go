@@ -35,11 +35,11 @@ breakInNestedLoops<NIL>{
     %8 = ConstantLoad 1
     j = %8;
     %10 = ConstantLoad 5
-    $desugar$2 = %10;
+    $desugar$1 = %10;
     GOTO bb6;
   }
   bb6 {
-    %12 = < j $desugar$2;
+    %12 = < j $desugar$1;
     %12 ? bb7 : bb8;
   }
   bb7 {

@@ -6,7 +6,7 @@
       (var-def
         (variable v (type
           (array-type
-            (value-type any) ())) (expr
+            (value-type any) dimensions: 1 ([]))) (expr
           (list-constructor-expr
             (literal 1)
             (literal 2)
@@ -17,7 +17,7 @@
   (function foo (
     (variable v (type
       (array-type
-        (value-type any) ())))) (
+        (value-type any) dimensions: 1 ([]))))) (
     (value-type null))
     (block-function-body
       (expression-stmt

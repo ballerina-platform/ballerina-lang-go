@@ -86,7 +86,7 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	semanticAnalyzer.Analyze(pkg)
 
 	// Step 6: DESUGAR
-	DesugarPackage(cx, pkg)
+	DesugarPackage(cx, pkg, importedSymbols)
 
 	// Step 7: Serialize AST after desugaring
 	prettyPrinter := ast.PrettyPrinter{}
