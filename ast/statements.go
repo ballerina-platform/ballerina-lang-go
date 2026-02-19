@@ -93,6 +93,12 @@ type (
 		BLangStatementBase
 		Expr BLangExpression
 	}
+
+	BLangMatchStatement struct {
+		BLangStatementBase
+		Expr         BLangExpression
+		MatchClauses []BLangMatchClause
+	}
 )
 
 var (
@@ -119,6 +125,8 @@ var (
 	_ BLangNode = &BLangIf{}
 	_ BLangNode = &BLangWhile{}
 	_ BLangNode = &BLangSimpleVariableDef{}
+	_ BLangNode = &BLangReturn{}
+	_ BLangNode = &BLangMatchStatement{}
 )
 
 func (this *BLangAssignment) GetVariable() model.ExpressionNode {
@@ -399,4 +407,8 @@ func (this *BLangReturn) SetExpression(expression model.ExpressionNode) {
 
 func (this *BLangReturn) GetKind() model.NodeKind {
 	return model.NodeKind_RETURN
+}
+
+func (this *BLangMatchStatement) GetKind() model.NodeKind {
+	return model.NodeKind_MATCH_STATEMENT
 }

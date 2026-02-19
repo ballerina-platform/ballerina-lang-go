@@ -233,13 +233,8 @@ type (
 	BLangNodeBase struct {
 		ty             model.TypeData
 		DeterminedType semtypes.SemType
-
-		parent BLangNode
-
-		pos                Location
-		desugared          bool
-		constantPropagated bool
-		internal           bool
+		parent         BLangNode
+		pos            Location
 	}
 
 	// TODO: look into what is the difference between the public TypeData fields and ty

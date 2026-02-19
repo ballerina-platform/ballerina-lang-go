@@ -119,6 +119,8 @@ func (t *TypeResolver) resolveStatement(stmt ast.BLangStatement) {
 		if s.Expr != nil {
 			t.resolveExpression(s.Expr)
 		}
+	case *ast.BLangMatchStatement:
+		t.resolveMatchStatement(s)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		// No expressions to resolve
 	default:
@@ -210,6 +212,8 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangTypeDefinition:
 		t.resolveTypeDefinition(n, 0)
 		return nil
+	case *ast.BLangMatchStatement:
+		t.resolveMatchStatement(n)
 	case ast.BLangExpression:
 		t.resolveExpression(n)
 	default:
@@ -653,10 +657,14 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 	} else if isBitWiseExpr(expr) {
 		resultTy = &semtypes.INT
 	} else {
-		var nilLifted bool
-		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
-		if nilLifted {
-			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+		result := nilLiftingExprResultTy(t.tyCtx, lhsTy, rhsTy, expr)
+		if result.err != "" {
+			resultTy = &semtypes.NEVER
+		} else {
+			resultTy = result.ty
+			if result.nilLifted {
+				resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+			}
 		}
 	}
 
@@ -667,10 +675,13 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 
 var additiveSupportedTypes = semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
 
-// NilLiftingExprResultTy calculates the result type for binary operators with nil-lifting support.
-// It returns the result type and a boolean indicating whether nil-lifting was applied.
-// The caller is responsible for applying the nil union if needed.
-func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
+type nilLiftResult struct {
+	ty        semtypes.SemType
+	nilLifted bool
+	err       string
+}
+
+func nilLiftingExprResultTy(tyCtx semtypes.Context, lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) nilLiftResult {
 	nilLifted := false
 
 	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
@@ -686,42 +697,34 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
 
 	if numLhsBits > 1 || numRhsBits > 1 {
-		t.ctx.SemanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-		return nil, false
+		return nilLiftResult{err: fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind()))}
 	}
 
 	if isRelationalExpr(expr) {
-		// Relational operators always return boolean (no nil-lifting)
-		return &semtypes.BOOLEAN, false
+		return nilLiftResult{ty: &semtypes.BOOLEAN}
 	}
 
 	if isMultipcativeExpr(expr) {
 		if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
-			t.ctx.SemanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
+			return nilLiftResult{err: fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind()))}
 		}
 		if lhsBasicTy == rhsBasicTy {
-			return &lhsBasicTy, nilLifted
+			return nilLiftResult{ty: &lhsBasicTy, nilLifted: nilLifted}
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
-		return nil, false
+		return nilLiftResult{err: "type coercion not supported"}
 	}
 
 	if isAdditiveExpr(expr) {
-		ctx := t.tyCtx
-		if !semtypes.IsSubtype(ctx, &lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, &rhsBasicTy, additiveSupportedTypes) {
-			t.ctx.SemanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
+		if !semtypes.IsSubtype(tyCtx, &lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(tyCtx, &rhsBasicTy, additiveSupportedTypes) {
+			return nilLiftResult{err: fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind()))}
 		}
 		if lhsBasicTy == rhsBasicTy {
-			return &lhsBasicTy, nilLifted
+			return nilLiftResult{ty: &lhsBasicTy, nilLifted: nilLifted}
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
-		return nil, false
+		return nilLiftResult{err: "type coercion not supported"}
 	}
 
-	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
-	return nil, false
+	return nilLiftResult{err: fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind()))}
 }
 
 func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) semtypes.SemType {
@@ -981,4 +984,44 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {
 	setExpectedType(constant, expectedType)
 	symbol := constant.Symbol()
 	t.ctx.SetSymbolType(symbol, expectedType)
+}
+
+func (t *TypeResolver) resolveMatchStatement(stmt *ast.BLangMatchStatement) {
+	t.resolveExpression(stmt.Expr)
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+		t.resolveMatchClause(clause)
+	}
+}
+
+func (t *TypeResolver) resolveMatchClause(clause *ast.BLangMatchClause) {
+	var acceptedTy semtypes.SemType = &semtypes.NEVER
+	for _, pattern := range clause.Patterns {
+		acceptedTy = semtypes.Union(acceptedTy, t.resolveMatchPattern(pattern))
+	}
+
+	if clause.Guard != nil {
+		guradType := t.resolveExpression(clause.Guard)
+		acceptedTy = semtypes.Intersect(acceptedTy, guradType)
+	}
+
+	clause.AcceptedType = acceptedTy
+
+	t.resolveBlockStatements(clause.Body.Stmts)
+}
+
+func (t *TypeResolver) resolveMatchPattern(pattern ast.BLangMatchPattern) semtypes.SemType {
+	switch p := pattern.(type) {
+	case *ast.BLangConstPattern:
+		ty := t.resolveExpression(p.Expr)
+		p.SetAcceptedType(ty)
+		return ty
+	case *ast.BLangWildCardMatchPattern:
+		ty := &semtypes.ANY
+		p.SetAcceptedType(ty)
+		return ty
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected match pattern type: %T", pattern), pattern.GetPosition())
+		return &semtypes.NEVER
+	}
 }

@@ -267,6 +267,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		loopData := analyzer.loops[len(analyzer.loops)-1]
 		analyzer.addEdge(curBB, loopData.loopHead)
 		return terminatedEffect()
+	case *ast.BLangMatchStatement:
+		return analyzer.analyzeMatch(curBB, s)
 	case *ast.BLangFunction:
 		analyzer.ctx.InternalError("nested functions not supported", stmt.GetPosition())
 		panic("unreachable")
@@ -387,6 +389,21 @@ func (analyzer *functionControlFlowAnalyzer) analyzeWhile(curBB bbRef, stmt *ast
 	// Pop the loop from the stack now that we're done analyzing it
 	analyzer.loops = analyzer.loops[:len(analyzer.loops)-1]
 	return continueEffect(loopEnd)
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzeMatch(curBB bbRef, stmt *ast.BLangMatchStatement) stmtEffect {
+	analyzer.addNode(curBB, stmt.Expr)
+	finally := analyzer.createNewBB()
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+		clauseBB := analyzer.createNewBB()
+		analyzer.addEdge(curBB, clauseBB)
+		clauseEffect := analyzer.analyzeBlockStmt(clauseBB, &clause.Body)
+		if !clauseEffect.isTerminal() {
+			analyzer.addEdge(clauseEffect.nextBB, finally)
+		}
+	}
+	return continueEffect(finally)
 }
 
 func (cfg *functionCFG) markBackedges() {

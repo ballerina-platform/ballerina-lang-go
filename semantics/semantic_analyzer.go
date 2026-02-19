@@ -633,9 +633,9 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 	analyzeExpression(a, binaryExpr.LhsExpr, nil)
 	analyzeExpression(a, binaryExpr.RhsExpr, nil)
 
-	// Get operand types
-	lhsTy := binaryExpr.LhsExpr.GetTypeData().Type
-	rhsTy := binaryExpr.RhsExpr.GetTypeData().Type
+	// Get operand types (use DeterminedType which reflects type narrowing)
+	lhsTy := binaryExpr.LhsExpr.GetDeterminedType()
+	rhsTy := binaryExpr.RhsExpr.GetDeterminedType()
 
 	ctx := a.tyCtx()
 	// Perform semantic validation based on operator type
@@ -656,9 +656,19 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 		}
 	} else if isBitWiseExpr(binaryExpr) {
 		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
+	} else {
+		result := nilLiftingExprResultTy(a.tyCtx(), lhsTy, rhsTy, binaryExpr)
+		if result.err != "" {
+			a.semanticErr(result.err)
+			return
+		}
+		resultTy := result.ty
+		if result.nilLifted {
+			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+		}
+		setExpectedType(binaryExpr, resultTy)
 	}
 
-	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
 }
@@ -747,6 +757,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangMatchStatement:
+		return a
 	case *ast.BLangSimpleVariableDef:
 		analyzeSimpleVariableDef(a, n)
 		return a
