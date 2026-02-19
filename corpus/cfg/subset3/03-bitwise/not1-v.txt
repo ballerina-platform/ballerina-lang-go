@@ -1,0 +1,62 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable i (type
+        (value-type int)) (expr
+        (literal 5))))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref i)))))
+    (assignment
+      (simple-var-ref i)
+      (unary-expr -
+        (literal 5)))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref i)))))
+    (assignment
+      (simple-var-ref i)
+      (literal 0))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref i)))))
+    (assignment
+      (simple-var-ref i)
+      (unary-expr -
+        (literal 1)))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref i)))))
+    (var-def
+      (variable j (type
+        (finite-type
+          (unary-expr -
+            (literal 1)))) (expr
+        (unary-expr -
+          (literal 1)))))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref j)))))
+    (var-def
+      (variable k (type
+        (finite-type
+          (literal 5))) (expr
+        (literal 5))))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref k)))))
+    (assignment
+      (simple-var-ref i)
+      (literal 9223372036854775807))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr ~
+          (simple-var-ref i)))))
+  )
+)

@@ -611,9 +611,37 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 	// Determine result type based on operator
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
-	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
-		// Numeric unary operators: result type is same as operand type
+	case model.OperatorKind_ADD:
+		// Unary +: result type is same as operand type
 		resultTy = exprTy
+	case model.OperatorKind_SUB:
+		// Unary -: negate singleton values if finite
+		shape := semtypes.SingleShape(exprTy)
+		if !shape.IsEmpty() {
+			switch v := shape.Get().Value.(type) {
+			case int64:
+				resultTy = semtypes.IntConst(-v)
+			case float64:
+				resultTy = semtypes.FloatConst(-v)
+			default:
+				resultTy = exprTy
+			}
+		} else {
+			resultTy = exprTy
+		}
+
+	case model.OperatorKind_BITWISE_COMPLEMENT:
+		if semtypes.IsSameType(t.tyCtx, exprTy, &semtypes.INT) {
+			resultTy = exprTy
+		} else {
+			shape := semtypes.SingleShape(exprTy)
+			if !shape.IsEmpty() {
+				resultTy = semtypes.IntConst(^shape.Get().Value.(int64))
+			} else {
+				resultTy = exprTy
+			}
+		}
+
 	case model.OperatorKind_NOT:
 		// Logical NOT: result type is boolean
 		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
