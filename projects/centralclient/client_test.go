@@ -17,6 +17,7 @@
 package centralclient
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -38,7 +39,10 @@ const (
 	accessToken    = "test-access-token"
 )
 
-var utilTestResources = filepath.Join("testdata", "utils")
+var (
+	utilTestResources = filepath.Join("testdata", "utils")
+	update            = flag.Bool("update", false, "update expected test case outputs")
+)
 
 type TestRunner func(client CentralAPIClient) (string, string)
 
@@ -51,7 +55,7 @@ type TestCase struct {
 }
 
 func TestCentralAPIClient(t *testing.T) {
-	bless := os.Getenv("BLESS") == "1" || os.Getenv("BLESS") == "true"
+	flag.Parse()
 
 	testCases, err := parseTestCases("testdata")
 	if err != nil {
@@ -64,7 +68,7 @@ func TestCentralAPIClient(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			output, errStr := tc.runner(client)
 
-			if bless {
+			if *update {
 				if err := updateTestCase(tc, output, errStr); err != nil {
 					t.Fatalf("failed to update test case %s: %v", tc.name, err)
 				}

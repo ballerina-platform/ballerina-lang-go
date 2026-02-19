@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"ballerina-lang-go/centralclient/models"
+	"ballerina-lang-go/projects/centralclient/models"
 )
 
 type CentralAPIClient interface {
