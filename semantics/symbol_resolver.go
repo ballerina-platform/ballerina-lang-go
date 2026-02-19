@@ -467,7 +467,7 @@ func defineForeachLoopVar[T symbolResolver](resolver T, variable model.VariableN
 		return
 	}
 	name := v.Name.Value
-	if _, exists := resolver.GetSymbol(name); exists {
+	if _, _, exists := resolver.GetSymbol(name); exists {
 		semanticError(resolver, "Variable already defined: "+name, v.GetPosition())
 		return
 	}
