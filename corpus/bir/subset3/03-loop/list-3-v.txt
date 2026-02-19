@@ -9,30 +9,31 @@ main<NIL>{
     %4 = ConstantLoad 3
     %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
     arr = %5;
-    %7 = ConstantLoad 0
-    $desugar$0 = %7;
-    %9 = length(arr) -> bb1;
+    $desugar$0 = arr;
+    %8 = ConstantLoad 0
+    $desugar$1 = %8;
+    %10 = length($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$1 = %9;
+    $desugar$2 = %10;
     GOTO bb2;
   }
   bb2 {
-    %11 = < $desugar$0 $desugar$1;
-    %11 ? bb3 : bb4;
+    %12 = < $desugar$1 $desugar$2;
+    %12 ? bb3 : bb4;
   }
   bb3 {
-    %12 = arr[$desugar$0];
-    val = %12;
-    %14 = println(val) -> bb5;
+    %13 = $desugar$0[$desugar$1];
+    val = %13;
+    %15 = println(val) -> bb5;
   }
   bb4 {
     return;
   }
   bb5 {
-    %16 = ConstantLoad 1
-    %15 = + $desugar$0 %16;
-    $desugar$0 = %15;
+    %17 = ConstantLoad 1
+    %16 = + $desugar$1 %17;
+    $desugar$1 = %16;
     GOTO bb2;
   }
 }

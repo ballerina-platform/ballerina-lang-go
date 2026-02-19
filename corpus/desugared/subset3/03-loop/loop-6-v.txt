@@ -5,19 +5,8 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable arr (type
-          (union-type
-            (array-type
-              (value-type int) dimensions: 1 ([]))
-            (array-type
-              (value-type boolean) dimensions: 1 ([])))) (expr
-          (list-constructor-expr
-            (literal 1)
-            (literal 2)
-            (literal 3)))))
-      (var-def
         (variable $desugar$0 (expr
-          (simple-var-ref arr))))
+          (invocation foo ()))))
       (var-def
         (variable $desugar$1 (expr
           (numeric-literal 0))))
@@ -31,18 +20,28 @@
           (simple-var-ref $desugar$2))
         (block-stmt
           (var-def
-            (variable val (type
-              (union-type
-                (value-type int)
-                (value-type boolean))) (expr
+            (variable i (type
+              (value-type int)) (expr
               (index-based-access
                 (simple-var-ref $desugar$0)
                 (simple-var-ref $desugar$1)))))
           (expression-stmt
             (invocation io println (
-              (simple-var-ref val))))
+              (simple-var-ref i))))
           (assignment
             (simple-var-ref $desugar$1)
             (binary-expr +
               (simple-var-ref $desugar$1)
-              (numeric-literal 1))))))))
+              (numeric-literal 1)))))))
+  (function foo () (
+    (array-type
+      (value-type int) dimensions: 1 ([])))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal called foo))))
+      (return
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3))))))

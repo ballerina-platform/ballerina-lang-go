@@ -316,7 +316,26 @@ func visitForEach(cx *Context, stmt *ast.BLangForeach) desugaredNode[model.State
 func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
-	// Step 1: index variable ($desugar$N = 0)
+	// Step 1: evaluate collection once into a temp variable
+	collResult := walkExpression(cx, collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode
+
+	collType := collExpr.GetDeterminedType()
+	collName, collVarSymbol := cx.addDesugardSymbol(collType, model.SymbolKindVariable, false)
+	collVarName := &ast.BLangIdentifier{Value: collName}
+	collVar := &ast.BLangSimpleVariable{Name: collVarName}
+	collVar.SetDeterminedType(collType)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collVarSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	initStmts = append(initStmts, collVarDef)
+
+	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
+	collVarRef.SetSymbol(collVarSymbol)
+	collVarRef.SetDeterminedType(collType)
+
+	// Step 2: index variable ($desugar$N = 0)
 	zeroLiteral := &ast.BLangNumericLiteral{
 		BLangLiteral: ast.BLangLiteral{
 			Value:         int64(0),
@@ -339,8 +358,8 @@ func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDe
 	idxVarRef.SetSymbol(idxVarSymbol)
 	idxVarRef.SetDeterminedType(&semtypes.INT)
 
-	// Step 2 & 3: length variable ($desugar$M = length(collection))
-	lengthInvocation := createLengthInvocation(cx, collection)
+	// Step 3: length variable ($desugar$M = length(collVar))
+	lengthInvocation := createLengthInvocation(cx, collVarRef)
 
 	lenName, lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
 	lenVarName := &ast.BLangIdentifier{Value: lenName}
@@ -363,10 +382,10 @@ func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDe
 	}
 	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
 
-	// Step 5: element access (collection[$idx])
+	// Step 5: element access (collVar[$idx])
 	elementAccess := &ast.BLangIndexBasedAccess{
 		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
-			Expr: collection,
+			Expr: collVarRef,
 		},
 		IndexExpr: idxVarRef,
 	}
