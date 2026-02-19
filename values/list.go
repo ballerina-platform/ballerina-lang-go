@@ -48,12 +48,24 @@ func (l *List) FillingSet(idx int, value BalValue) {
 		if idx >= math.MaxInt32 {
 			panic("list too long")
 		}
-		newElems := make([]BalValue, idx+1)
-		copy(newElems, l.elems)
-		for i := len(l.elems); i < idx; i++ {
-			newElems[i] = l.filler
+		requiredLen := idx + 1
+		prevLen := len(l.elems)
+		if requiredLen <= cap(l.elems) {
+			l.elems = l.elems[:requiredLen]
+			for i := prevLen; i < idx; i++ {
+				l.elems[i] = l.filler
+			}
+			l.elems[idx] = value
+		} else {
+			newList := make([]BalValue, requiredLen)
+			copy(newList, l.elems)
+			for i := prevLen; i < idx; i++ {
+				newList[i] = l.filler
+			}
+			newList[idx] = value
+			l.elems = newList
 		}
-		l.elems = newElems
+		return
 	}
 	l.elems[idx] = value
 }
