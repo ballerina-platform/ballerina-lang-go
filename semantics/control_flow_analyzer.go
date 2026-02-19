@@ -59,9 +59,17 @@ func (bb *basicBlock) isEmpty() bool {
 	return bb.id != 0 && len(bb.parents) == 0 && len(bb.nodes) == 0
 }
 
+type deferredEdge struct {
+	fromBB   int
+	toBB     int
+	isActive func() bool
+}
+
 type functionCFG struct {
-	bbs       []basicBlock
-	topoOrder []int // block IDs in topological order (non-backedge DAG); computed by markBackedges
+	bbs []basicBlock
+	// TODO: need to think of a way to normalize this along with other edges instead of special casing
+	deferredEdges []deferredEdge
+	topoOrder     []int // block IDs in topological order (non-backedge DAG); computed by markBackedges
 }
 
 type PackageCFG struct {
@@ -109,10 +117,11 @@ func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) functi
 }
 
 type functionControlFlowAnalyzer struct {
-	ctx   *context.CompilerContext
-	tyCtx semtypes.Context
-	bbs   []basicBlock
-	loops []loopControlFlowData
+	ctx           *context.CompilerContext
+	tyCtx         semtypes.Context
+	bbs           []basicBlock
+	deferredEdges []deferredEdge
+	loops         []loopControlFlowData
 }
 
 type loopControlFlowData struct {
@@ -403,6 +412,11 @@ func (analyzer *functionControlFlowAnalyzer) analyzeMatch(curBB bbRef, stmt *ast
 			analyzer.addEdge(clauseEffect.nextBB, finally)
 		}
 	}
+	analyzer.deferredEdges = append(analyzer.deferredEdges, deferredEdge{
+		fromBB:   int(curBB),
+		toBB:     int(finally),
+		isActive: func() bool { return !stmt.IsExhaustive },
+	})
 	return continueEffect(finally)
 }
 
@@ -446,7 +460,7 @@ func (cfg *functionCFG) markBackedges() {
 
 func (analyzer *functionControlFlowAnalyzer) getCfg() functionCFG {
 	analyzer.pruneEmptyBlocks()
-	cfg := functionCFG{bbs: analyzer.bbs}
+	cfg := functionCFG{bbs: analyzer.bbs, deferredEdges: analyzer.deferredEdges}
 	cfg.markBackedges()
 	return cfg
 }
@@ -520,4 +534,18 @@ func (analyzer *functionControlFlowAnalyzer) removeBlocksAndReindex(toRemove []i
 		bb.children = remapRefs(bb.children, oldToNew)
 	}
 	analyzer.bbs = newBbs
+
+	newDeferred := analyzer.deferredEdges[:0]
+	for _, de := range analyzer.deferredEdges {
+		newFrom, fromOk := oldToNew[de.fromBB]
+		newTo, toOk := oldToNew[de.toBB]
+		if fromOk && toOk {
+			newDeferred = append(newDeferred, deferredEdge{
+				fromBB:   newFrom,
+				toBB:     newTo,
+				isActive: de.isActive,
+			})
+		}
+	}
+	analyzer.deferredEdges = newDeferred
 }

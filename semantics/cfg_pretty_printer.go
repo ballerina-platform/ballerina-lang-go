@@ -82,6 +82,10 @@ func (p *CFGPrettyPrinter) printFunctionCFG(funcName string, cfg functionCFG) {
 		p.printBasicBlock(&bb)
 	}
 
+	for _, de := range cfg.deferredEdges {
+		p.buffer.WriteString(fmt.Sprintf("  (deferred bb%d -> bb%d)\n", de.fromBB, de.toBB))
+	}
+
 	p.buffer.WriteString(")")
 }
 

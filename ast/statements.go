@@ -98,6 +98,7 @@ type (
 		BLangStatementBase
 		Expr         BLangExpression
 		MatchClauses []BLangMatchClause
+		IsExhaustive bool
 	}
 )
 

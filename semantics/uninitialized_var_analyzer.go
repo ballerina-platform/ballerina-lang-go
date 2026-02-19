@@ -168,6 +168,15 @@ func (a *uninitVarAnalyzer) mergePredecessors(bb *basicBlock) *varInitState {
 			result = mergeStates(result, a.states[parentID].exit)
 		}
 	}
+	for _, de := range a.fcfg.deferredEdges {
+		if de.toBB == bb.id && de.isActive() {
+			if result == nil {
+				result = a.states[de.fromBB].exit.clone()
+			} else {
+				result = mergeStates(result, a.states[de.fromBB].exit)
+			}
+		}
+	}
 	if result == nil {
 		return newVarInitState()
 	}

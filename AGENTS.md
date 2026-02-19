@@ -22,13 +22,15 @@
 3. Do type resolution
 4. Generate Control Flow Graph (CFG)
 5. Do semantic analysis
+   - Type narrowing
 6. Analyze CFG
    - Reachability analysis
    - Explicit return analysis
-7. Generate BIR
-8. Interpret generated BIR
+7. Desugar
+8. Generate BIR
+9. Interpret generated BIR
 
-Stages up to 7 are considered front end.
+Stages up to 8 are considered front end.
 
 ## Tests
 

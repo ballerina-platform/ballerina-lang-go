@@ -455,9 +455,7 @@ func analyzeMatchStatement(ctx *context.CompilerContext, chain *binding, stmt *a
 		remainingType = semtypes.Diff(remainingType, clause.AcceptedType)
 	}
 
-	if !semtypes.IsEmpty(tyCtx, remainingType) {
-		ctx.SemanticError("non-exhaustive match statement", stmt.GetPosition())
-	}
+	stmt.IsExhaustive = semtypes.IsEmpty(tyCtx, remainingType)
 
 	if allNonCompletion {
 		return statementEffect{chain, true}

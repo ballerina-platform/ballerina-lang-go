@@ -34,4 +34,5 @@
       (unary-expr -
         (literal 1)))
   )
+  (deferred bb0 -> bb1)
 )

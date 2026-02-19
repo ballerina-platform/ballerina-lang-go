@@ -95,6 +95,12 @@ func (e *CFGDotExporter) exportFunctionCFG(funcName string, cfg functionCFG) {
 		e.exportEdges(funcName, &bb)
 	}
 
+	for _, de := range cfg.deferredEdges {
+		sourceID := fmt.Sprintf("%s_bb%d", funcName, de.fromBB)
+		targetID := fmt.Sprintf("%s_bb%d", funcName, de.toBB)
+		e.buffer.WriteString(fmt.Sprintf("        %s -> %s [style=dashed, label=\"deferred\"];\n", sourceID, targetID))
+	}
+
 	e.buffer.WriteString("    }\n\n")
 }
 
