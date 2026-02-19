@@ -518,7 +518,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangArrayType:
 		WalkTypeData(v, &node.Elemtype)
 		for i := range node.Sizes {
-			Walk(v, node.Sizes[i].(BLangNode))
+			if node.Sizes[i] != nil {
+				Walk(v, node.Sizes[i].(BLangNode))
+			}
 		}
 
 	case *BLangUserDefinedType:

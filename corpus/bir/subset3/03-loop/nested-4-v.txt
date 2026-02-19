@@ -38,11 +38,11 @@ continueInNestedLoops<NIL>{
     %10 = ConstantLoad 1
     j = %10;
     %12 = ConstantLoad 4
-    $desugar$2 = %12;
+    $desugar$1 = %12;
     GOTO bb6;
   }
   bb6 {
-    %14 = < j $desugar$2;
+    %14 = < j $desugar$1;
     %14 ? bb7 : bb8;
   }
   bb7 {

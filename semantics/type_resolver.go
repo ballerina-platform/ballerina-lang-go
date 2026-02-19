@@ -19,6 +19,7 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -816,7 +817,7 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 	var symbolSpace model.ExportedSymbolSpace
 	var pkgAlias ast.BLangIdentifier
 	if semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST) {
-		pkgName := "lang.array"
+		pkgName := array.PackageName
 		space, ok := t.importedSymbols[pkgName]
 		if !ok {
 			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
@@ -942,14 +943,17 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
-
-			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
-			} else {
-				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{memberTy}, length)
+			t := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
+			for i := len(ty.Sizes); i > 0; i-- {
+				lenExp := ty.Sizes[i-1]
+				if lenExp == nil {
+					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
+				} else {
+					length := int(lenExp.(*ast.BLangLiteral).Value.(int64))
+					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
+				}
 			}
+			semTy = t
 		} else {
 			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
 		}

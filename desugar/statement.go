@@ -19,6 +19,7 @@ package desugar
 
 import (
 	"ballerina-lang-go/ast"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -306,8 +307,155 @@ func visitForEach(cx *Context, stmt *ast.BLangForeach) desugaredNode[model.State
 		rangeExpr := stmt.Collection.(*ast.BLangBinaryExpr)
 		return desugarForEachOnRange(cx, rangeExpr, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
+	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.LIST) {
+		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	}
 	cx.compilerCtx.Unimplemented("unsupported collection type in foreach", nil)
 	return desugaredNode[model.StatementNode]{}
+}
+
+func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	// Step 1: evaluate collection once into a temp variable
+	collResult := walkExpression(cx, collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode
+
+	collType := collExpr.GetDeterminedType()
+	collName, collVarSymbol := cx.addDesugardSymbol(collType, model.SymbolKindVariable, false)
+	collVarName := &ast.BLangIdentifier{Value: collName}
+	collVar := &ast.BLangSimpleVariable{Name: collVarName}
+	collVar.SetDeterminedType(collType)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collVarSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	initStmts = append(initStmts, collVarDef)
+
+	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
+	collVarRef.SetSymbol(collVarSymbol)
+	collVarRef.SetDeterminedType(collType)
+
+	// Step 2: index variable ($desugar$N = 0)
+	zeroLiteral := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         int64(0),
+			OriginalValue: "0",
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	zeroLiteral.SetDeterminedType(&semtypes.INT)
+
+	idxName, idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxVarName := &ast.BLangIdentifier{Value: idxName}
+	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
+	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetInitialExpression(zeroLiteral)
+	idxVar.SetSymbol(idxVarSymbol)
+	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	initStmts = append(initStmts, idxVarDef)
+
+	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
+	idxVarRef.SetSymbol(idxVarSymbol)
+	idxVarRef.SetDeterminedType(&semtypes.INT)
+
+	// Step 3: length variable ($desugar$M = length(collVar))
+	lengthInvocation := createLengthInvocation(cx, collVarRef)
+
+	lenName, lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenVarName := &ast.BLangIdentifier{Value: lenName}
+	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
+	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetInitialExpression(lengthInvocation)
+	lenVar.SetSymbol(lenVarSymbol)
+	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	initStmts = append(initStmts, lenVarDef)
+
+	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
+	lenVarRef.SetSymbol(lenVarSymbol)
+	lenVarRef.SetDeterminedType(&semtypes.INT)
+
+	// Step 4: while condition ($idx < $len)
+	whileCondition := &ast.BLangBinaryExpr{
+		LhsExpr: idxVarRef,
+		RhsExpr: lenVarRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+
+	// Step 5: element access (collVar[$idx])
+	elementAccess := &ast.BLangIndexBasedAccess{
+		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
+			Expr: collVarRef,
+		},
+		IndexExpr: idxVarRef,
+	}
+	elementAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
+
+	// Step 6: patch loop var def initial expression
+	loopVarDef.Var.SetInitialExpression(elementAccess)
+
+	// Step 7: build body
+	incrementStmt := createIncrementStmt(idxVarRef)
+	cx.pushLoopVar(idxVarRef)
+
+	newBodyStmts := make([]model.StatementNode, 0, len(body.Stmts)+2)
+	newBodyStmts = append(newBodyStmts, loopVarDef)
+	newBodyStmts = append(newBodyStmts, body.Stmts...)
+	if len(newBodyStmts) > 0 {
+		if isAppentReachable(newBodyStmts[len(newBodyStmts)-1]) {
+			newBodyStmts = append(newBodyStmts, incrementStmt)
+		}
+	}
+	body.Stmts = newBodyStmts
+
+	bodyResult := walkBlockStmt(cx, body)
+	newBody := bodyResult.replacementNode.(*ast.BLangBlockStmt)
+
+	cx.popLoopVar()
+
+	// Step 8: create while loop
+	whileStmt := &ast.BLangWhile{
+		Expr: whileCondition,
+		Body: *newBody,
+	}
+	whileStmt.SetScope(foreachScope)
+	whileStmt.SetDeterminedType(&semtypes.NEVER)
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: whileStmt,
+	}
+}
+
+func createLengthInvocation(cx *Context, collection ast.BLangExpression) *ast.BLangInvocation {
+	pkgName := array.PackageName
+	space, ok := cx.importedSymbols[pkgName]
+	if !ok {
+		cx.compilerCtx.InternalError(pkgName+" symbol space not found", nil)
+		return nil
+	}
+	symbolRef, ok := space.GetSymbol("length")
+	if !ok {
+		cx.compilerCtx.InternalError(pkgName+":length symbol not found", nil)
+		return nil
+	}
+	if !cx.addedImplicitImports[pkgName] {
+		cx.addedImplicitImports[pkgName] = true
+		cx.pkg.Imports = append(cx.pkg.Imports, ast.BLangImportPackage{
+			OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+			PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+			Alias:        &ast.BLangIdentifier{Value: pkgName},
+		})
+	}
+	inv := &ast.BLangInvocation{
+		Name:     &ast.BLangIdentifier{Value: "length"},
+		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
+		ArgExprs: []ast.BLangExpression{collection},
+	}
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(&semtypes.INT)
+	return inv
 }
 
 func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
@@ -329,15 +477,11 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 	}
 	loopVarRef.SetSymbol(loopVarDef.Var.Symbol())
 
-	endVarName := &ast.BLangIdentifier{
-		Value: cx.nextDesugarSymbolName(),
-	}
-	endVar := &ast.BLangSimpleVariable{
-		Name: endVarName,
-	}
+	endName, endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	endVarName := &ast.BLangIdentifier{Value: endName}
+	endVar := &ast.BLangSimpleVariable{Name: endVarName}
 	endVar.SetDeterminedType(&semtypes.INT)
 	endVar.SetInitialExpression(endExpr)
-	endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
 	endVar.SetSymbol(endVarSymbol)
 
 	endVarDef := &ast.BLangSimpleVariableDef{
