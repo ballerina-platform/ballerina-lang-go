@@ -615,6 +615,11 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		// Unary +: result type is same as operand type
 		resultTy = exprTy
 	case model.OperatorKind_SUB:
+		if !isNumericType(exprTy) {
+			t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
+
 		// Unary -: negate singleton values if finite
 		shape := semtypes.SingleShape(exprTy)
 		if !shape.IsEmpty() {
@@ -624,7 +629,7 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 			case float64:
 				resultTy = semtypes.FloatConst(-v)
 			default:
-				t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for unary -: %T", v), expr.GetPosition())
 				return nil
 			}
 		} else {
@@ -637,15 +642,10 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		} else {
 			shape := semtypes.SingleShape(exprTy)
 			if !shape.IsEmpty() {
-		if semtypes.IsSubType(t.tyCtx, exprTy, &semtypes.INT) {
-		    shape := semtypes.SingleShape(exprTy)
-			if !shape.IsEmpty() {
 				resultTy = semtypes.IntConst(^shape.Get().Value.(int64))
 			} else {
 				resultTy = exprTy
 			}
-		} else {
-             semanticError or never
 		}
 
 	case model.OperatorKind_NOT:
