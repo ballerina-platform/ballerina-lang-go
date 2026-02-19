@@ -14,11 +14,11 @@ main<NIL>{
     %9 = length(arr) -> bb1;
   }
   bb1 {
-    $desugar$2 = %9;
+    $desugar$1 = %9;
     GOTO bb2;
   }
   bb2 {
-    %11 = < $desugar$0 $desugar$2;
+    %11 = < $desugar$0 $desugar$1;
     %11 ? bb3 : bb4;
   }
   bb3 {

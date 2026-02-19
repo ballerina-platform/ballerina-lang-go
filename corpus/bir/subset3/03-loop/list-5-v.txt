@@ -33,7 +33,7 @@ main<NIL>{
   }
   bb2 {
     %24 = ConstantLoad 0
-    $desugar$2 = %24;
+    $desugar$1 = %24;
     %26 = values[i];
     %27 = length(%26) -> bb4;
   }
@@ -41,16 +41,16 @@ main<NIL>{
     return;
   }
   bb4 {
-    $desugar$4 = %27;
+    $desugar$2 = %27;
     GOTO bb5;
   }
   bb5 {
-    %29 = < $desugar$2 $desugar$4;
+    %29 = < $desugar$1 $desugar$2;
     %29 ? bb6 : bb7;
   }
   bb6 {
     %31 = values[i];
-    %30 = %31[$desugar$2];
+    %30 = %31[$desugar$1];
     value = %30;
     %33 = println(value) -> bb8;
   }
@@ -62,8 +62,8 @@ main<NIL>{
   }
   bb8 {
     %35 = ConstantLoad 1
-    %34 = + $desugar$2 %35;
-    $desugar$2 = %34;
+    %34 = + $desugar$1 %35;
+    $desugar$1 = %34;
     GOTO bb5;
   }
 }

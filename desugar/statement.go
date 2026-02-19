@@ -326,11 +326,11 @@ func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDe
 	}
 	zeroLiteral.SetDeterminedType(&semtypes.INT)
 
-	idxVarName := &ast.BLangIdentifier{Value: cx.nextDesugarSymbolName()}
+	idxName, idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxVarName := &ast.BLangIdentifier{Value: idxName}
 	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
 	idxVar.SetDeterminedType(&semtypes.INT)
 	idxVar.SetInitialExpression(zeroLiteral)
-	idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
 	idxVar.SetSymbol(idxVarSymbol)
 	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
 	initStmts = append(initStmts, idxVarDef)
@@ -342,11 +342,11 @@ func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDe
 	// Step 2 & 3: length variable ($desugar$M = length(collection))
 	lengthInvocation := createLengthInvocation(cx, collection)
 
-	lenVarName := &ast.BLangIdentifier{Value: cx.nextDesugarSymbolName()}
+	lenName, lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenVarName := &ast.BLangIdentifier{Value: lenName}
 	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
 	lenVar.SetDeterminedType(&semtypes.INT)
 	lenVar.SetInitialExpression(lengthInvocation)
-	lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
 	lenVar.SetSymbol(lenVarSymbol)
 	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
 	initStmts = append(initStmts, lenVarDef)
@@ -457,15 +457,11 @@ func desugarForEachOnRange(cx *Context, rangeExpr *ast.BLangBinaryExpr, loopVarD
 	}
 	loopVarRef.SetSymbol(loopVarDef.Var.Symbol())
 
-	endVarName := &ast.BLangIdentifier{
-		Value: cx.nextDesugarSymbolName(),
-	}
-	endVar := &ast.BLangSimpleVariable{
-		Name: endVarName,
-	}
+	endName, endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	endVarName := &ast.BLangIdentifier{Value: endName}
+	endVar := &ast.BLangSimpleVariable{Name: endVarName}
 	endVar.SetDeterminedType(&semtypes.INT)
 	endVar.SetInitialExpression(endExpr)
-	endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
 	endVar.SetSymbol(endVarSymbol)
 
 	endVarDef := &ast.BLangSimpleVariableDef{

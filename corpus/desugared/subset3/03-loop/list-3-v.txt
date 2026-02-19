@@ -19,13 +19,13 @@
         (variable $desugar$0 (expr
           (numeric-literal 0))))
       (var-def
-        (variable $desugar$2 (expr
+        (variable $desugar$1 (expr
           (invocation lang.array length (
             (simple-var-ref arr))))))
       (while
         (binary-expr <
           (simple-var-ref $desugar$0)
-          (simple-var-ref $desugar$2))
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable val (type

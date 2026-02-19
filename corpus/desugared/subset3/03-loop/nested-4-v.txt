@@ -37,12 +37,12 @@
                 (value-type int)) (expr
                 (literal 1))))
             (var-def
-              (variable $desugar$2 (expr
+              (variable $desugar$1 (expr
                 (literal 4))))
             (while
               (binary-expr <
                 (simple-var-ref j)
-                (simple-var-ref $desugar$2))
+                (simple-var-ref $desugar$1))
               (block-stmt
                 (if
                   (binary-expr ==

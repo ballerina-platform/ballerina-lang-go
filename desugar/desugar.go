@@ -111,8 +111,7 @@ func (s *desugaredSymbol) IsPublic() bool {
 	return s.isPublic
 }
 
-// FIXME: this should return a pair name and symbol and we should get rid of all the direct calls to nextDesugarSymbolName
-func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) model.SymbolRef {
+func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
 	if len(ctx.scopeStack) == 0 {
 		ctx.compilerCtx.InternalError("cannot add desugared symbol when scope stack is empty", nil)
 	}
@@ -124,10 +123,9 @@ func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind
 		isPublic: isPublic,
 	}
 	ctx.currentScope().AddSymbol(name, symbol)
-	// Get the SymbolRef from the scope
 	sym, _ := ctx.currentScope().GetSymbol(name)
 	ref := sym.(*model.SymbolRef)
-	return *ref
+	return name, *ref
 }
 
 // DesugarPackage returns a desugared package (may be new or same instance)
