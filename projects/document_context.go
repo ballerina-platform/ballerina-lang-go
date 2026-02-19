@@ -180,7 +180,12 @@ func extractModuleLoadRequest(importDecl *tree.ImportDeclarationNode) *moduleLoa
 	if importDecl.OrgName() != nil {
 		orgNameNode := importDecl.OrgName()
 		if orgNameNode.OrgName() != nil {
-			org := NewPackageOrg(orgNameNode.OrgName().Text())
+			// Handle quoted identifiers - strip the leading ' character
+			text := orgNameNode.OrgName().Text()
+			if len(text) > 0 && text[0] == '\'' {
+				text = text[1:]
+			}
+			org := NewPackageOrg(text)
 			orgName = &org
 		}
 	}
