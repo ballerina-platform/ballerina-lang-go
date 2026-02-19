@@ -31,7 +31,6 @@ import (
 	"ballerina-lang-go/desugar"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
-	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -127,6 +126,7 @@ func newModuleContextFromMaps(
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: slices.Clone(moduleDescDependencies),
+		compilerCtx:            project.Environment().compilerContext(),
 	}
 }
 
@@ -201,9 +201,8 @@ func (m *moduleContext) compile() {
 // parse sources, build BLangPackage (AST), and run semantic analysis.
 func compileInternal(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
-	env := semtypes.CreateTypeEnv()
-	cx := context.NewCompilerContext(env)
-	moduleCtx.compilerCtx = cx
+
+	cx := moduleCtx.compilerCtx
 
 	// Parse all source documents and collect syntax trees.
 	var syntaxTrees []*tree.SyntaxTree
