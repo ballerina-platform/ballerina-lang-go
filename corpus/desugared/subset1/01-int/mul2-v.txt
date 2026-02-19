@@ -1,0 +1,91 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 9223372036854775806)
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 9223372036854775806)
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 9223372036854775806)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 1)
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 1)
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 1)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 0)
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 0)
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (literal 0)
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 1))
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 1))
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 1))
+            (unary-expr -
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 9223372036854775806))
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 9223372036854775806))
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr *
+            (unary-expr -
+              (literal 9223372036854775806))
+            (unary-expr -
+              (literal 1)))))))))

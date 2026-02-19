@@ -1,0 +1,43 @@
+(lower
+  (bb0 () ()
+    (var-def
+      (variable u (type
+        (value-type int)) (expr
+        (literal 2))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref u))))
+    (return
+      (simple-var-ref u))
+  )
+)
+(main
+  (bb0 () (bb1))
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (invocation lower ())
+      (invocation upper ()))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+  (bb3 (bb1) ())
+)
+(upper
+  (bb0 () ()
+    (var-def
+      (variable u (type
+        (value-type int)) (expr
+        (literal 5))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref u))))
+    (return
+      (simple-var-ref u))
+  )
+)

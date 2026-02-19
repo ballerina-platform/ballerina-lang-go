@@ -735,6 +735,11 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 		}
 	} else if isBitWiseExpr(binaryExpr) {
 		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
+	} else if isRangeExpr(binaryExpr) {
+		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.INT) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.INT) {
+			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())))
+			return
+		}
 	}
 
 	// for nil lifting expression we do semantic analysis as part of type resolver
@@ -821,6 +826,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangWhile:
 		analyzeWhile(a, n)
 		return initializeLoopAnalyzer(a, n)
+	case *ast.BLangForeach:
+		validateForeach(a, n)
+		return initializeLoopAnalyzer(a, n)
 	case *ast.BLangIf:
 		analyzeIf(a, n)
 		return a
@@ -891,6 +899,17 @@ func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) {
 
 func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
 	analyzeExpression(a, whileStmt.Expr, &semtypes.BOOLEAN)
+}
+
+func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
+	collection := foreachStmt.Collection
+	analyzeExpression(a, collection, nil)
+	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
+		variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+		if !semtypes.IsSubtypeSimple(a.ctx().SymbolType(variable.Symbol()), semtypes.INT) {
+			a.semanticErr("foreach variable must be a subtype of int for range expression")
+		}
+	}
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {

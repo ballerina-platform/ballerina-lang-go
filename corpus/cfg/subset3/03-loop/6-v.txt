@@ -1,0 +1,53 @@
+(continueInNestedLoops
+  (bb0 () (bb1))
+  (bb1 (bb0 bb4 bb8) (bb2 bb3)
+    (binary-expr ..<
+      (literal 1)
+      (literal 4))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (binary-expr ==
+      (simple-var-ref i)
+      (literal 2))
+  )
+  (bb3 (bb1) ())
+  (bb4 (bb2) (bb1)
+    (continue)
+  )
+  (bb5 (bb2) (bb6))
+  (bb6 (bb5 bb9 bb10) (bb7 bb8)
+    (binary-expr ..<
+      (literal 1)
+      (literal 4))
+    (var-def
+      (variable j (type
+        (value-type int))))
+  )
+  (bb7 (bb6) (bb9 bb10)
+    (binary-expr ==
+      (simple-var-ref j)
+      (literal 2))
+  )
+  (bb8 (bb6) (bb1))
+  (bb9 (bb7) (bb6)
+    (continue)
+  )
+  (bb10 (bb7) (bb6)
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (binary-expr *
+            (simple-var-ref i)
+            (literal 10))
+          (simple-var-ref j)))))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation continueInNestedLoops ()))
+  )
+)

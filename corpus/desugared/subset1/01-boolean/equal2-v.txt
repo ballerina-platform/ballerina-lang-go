@@ -1,0 +1,81 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable b (type
+          (value-type boolean)) (expr
+          (binary-expr ==
+            (literal true)
+            (literal true)))))
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 4))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 5)))))))
+      (assignment
+        (simple-var-ref b)
+        (binary-expr ==
+          (literal false)
+          (literal false)))
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 6))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 7)))))))
+      (assignment
+        (simple-var-ref b)
+        (binary-expr !=
+          (literal true)
+          (literal true)))
+      (if
+        (simple-var-ref b)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 8))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 9)))))))
+      (assignment
+        (simple-var-ref b)
+        (literal true))
+      (if
+        (binary-expr ==
+          (simple-var-ref b)
+          (literal true))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 10))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 11)))))))
+      (assignment
+        (simple-var-ref b)
+        (literal false))
+      (if
+        (binary-expr ==
+          (literal true)
+          (simple-var-ref b))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 12))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal 13))))))))))

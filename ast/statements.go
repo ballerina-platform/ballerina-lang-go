@@ -70,6 +70,7 @@ type (
 
 	BLangIf struct {
 		BLangStatementBase
+		scope    model.Scope
 		Expr     BLangExpression
 		Body     BLangBlockStmt
 		ElseStmt BLangStatement
@@ -77,9 +78,20 @@ type (
 
 	BLangWhile struct {
 		BLangStatementBase
+		scope        model.Scope
 		Expr         BLangExpression
 		Body         BLangBlockStmt
 		OnFailClause BLangOnFailClause
+	}
+
+	BLangForeach struct {
+		BLangStatementBase
+		scope             model.Scope
+		VariableDef       *BLangSimpleVariableDef
+		Collection        BLangExpression
+		Body              BLangBlockStmt
+		OnFailClause      *BLangOnFailClause
+		IsDeclaredWithVar bool
 	}
 
 	BLangSimpleVariableDef struct {
@@ -104,8 +116,15 @@ var (
 	_ model.ExpressionStatementNode = &BLangExpressionStmt{}
 	_ model.IfNode                  = &BLangIf{}
 	_ model.WhileNode               = &BLangWhile{}
+	_ model.ForeachNode             = &BLangForeach{}
 	_ model.VariableDefinitionNode  = &BLangSimpleVariableDef{}
 	_ model.ReturnNode              = &BLangReturn{}
+)
+
+var (
+	_ NodeWithScope = &BLangIf{}
+	_ NodeWithScope = &BLangWhile{}
+	_ NodeWithScope = &BLangForeach{}
 )
 
 var (
@@ -118,6 +137,7 @@ var (
 	_ BLangNode = &BLangExpressionStmt{}
 	_ BLangNode = &BLangIf{}
 	_ BLangNode = &BLangWhile{}
+	_ BLangNode = &BLangForeach{}
 	_ BLangNode = &BLangSimpleVariableDef{}
 )
 
@@ -263,6 +283,14 @@ func (this *BLangExpressionStmt) GetKind() model.NodeKind {
 	return model.NodeKind_EXPRESSION_STATEMENT
 }
 
+func (this *BLangIf) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangIf) SetScope(scope model.Scope) {
+	this.scope = scope
+}
+
 func (this *BLangIf) GetCondition() model.ExpressionNode {
 	// migrated from BLangIf.java:47:5
 	return this.Expr
@@ -304,6 +332,14 @@ func (this *BLangIf) SetElseStatement(elseStatement model.StatementNode) {
 func (this *BLangIf) GetKind() model.NodeKind {
 	// migrated from BLangIf.java:77:5
 	return model.NodeKind_IF
+}
+
+func (this *BLangWhile) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangWhile) SetScope(scope model.Scope) {
+	this.scope = scope
 }
 
 func (this *BLangWhile) GetCondition() model.ExpressionNode {
@@ -351,6 +387,73 @@ func (this *BLangWhile) SetOnFailClause(onFailClause model.OnFailClauseNode) {
 func (this *BLangWhile) GetKind() model.NodeKind {
 	// migrated from BLangWhile.java:95:5
 	return model.NodeKind_WHILE
+}
+
+func (this *BLangForeach) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangForeach) SetScope(scope model.Scope) {
+	this.scope = scope
+}
+
+func (this *BLangForeach) GetKind() model.NodeKind {
+	return model.NodeKind_FOREACH
+}
+
+func (this *BLangForeach) GetVariableDefinitionNode() model.VariableDefinitionNode {
+	return this.VariableDef
+}
+
+func (this *BLangForeach) SetVariableDefinitionNode(node model.VariableDefinitionNode) {
+	if varDef, ok := node.(*BLangSimpleVariableDef); ok {
+		this.VariableDef = varDef
+		return
+	}
+	panic("node is not a *BLangSimpleVariableDef")
+}
+
+func (this *BLangForeach) GetCollection() model.ExpressionNode {
+	return this.Collection
+}
+
+func (this *BLangForeach) SetCollection(collection model.ExpressionNode) {
+	if expr, ok := collection.(BLangExpression); ok {
+		this.Collection = expr
+	} else {
+		panic("collection is not a BLangExpression")
+	}
+}
+
+func (this *BLangForeach) GetBody() model.BlockStatementNode {
+	return &this.Body
+}
+
+func (this *BLangForeach) SetBody(body model.BlockStatementNode) {
+	if blockStmt, ok := body.(*BLangBlockStmt); ok {
+		this.Body = *blockStmt
+		return
+	}
+	panic("body is not a BLangBlockStmt")
+}
+
+func (this *BLangForeach) GetIsDeclaredWithVar() bool {
+	return this.IsDeclaredWithVar
+}
+
+func (this *BLangForeach) GetOnFailClause() model.OnFailClauseNode {
+	if this.OnFailClause == nil {
+		return nil
+	}
+	return this.OnFailClause
+}
+
+func (this *BLangForeach) SetOnFailClause(onFailClause model.OnFailClauseNode) {
+	if clause, ok := onFailClause.(*BLangOnFailClause); ok {
+		this.OnFailClause = clause
+		return
+	}
+	panic("onFailClause is not a *BLangOnFailClause")
 }
 
 func (this *BLangSimpleVariableDef) GetIsInFork() bool {

@@ -40,6 +40,8 @@ func (p *PrettyPrinter) Print(node BLangNode) string {
 
 func (p *PrettyPrinter) PrintInner(node BLangNode) {
 	switch t := node.(type) {
+	case *BLangPackage:
+		p.printPackage(t)
 	case *BLangCompilationUnit:
 		p.printCompilationUnit(t)
 	case *BLangImportPackage:
@@ -62,6 +64,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printSimpleVarRef(t)
 	case *BLangLiteral:
 		p.printLiteral(t)
+	case *BLangNumericLiteral:
+		p.printNumericLiteral(t)
 	case *BLangBinaryExpr:
 		p.printBinaryExpr(t)
 	case *BLangInvocation:
@@ -78,6 +82,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printGroupExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
+	case *BLangForeach:
+		p.printForeach(t)
 	case *BLangArrayType:
 		p.printArrayType(t)
 	case *BLangConstant:
@@ -155,6 +161,26 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.indentLevel++
 	for _, topLevelNode := range node.TopLevelNodes {
 		p.PrintInner(topLevelNode.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printPackage(node *BLangPackage) {
+	p.startNode()
+	p.printString("package")
+	p.indentLevel++
+	for i := range node.Imports {
+		p.printImportPackage(&node.Imports[i])
+	}
+	for i := range node.Constants {
+		p.printConstant(&node.Constants[i])
+	}
+	for i := range node.TypeDefinitions {
+		p.printTypeDefinition(&node.TypeDefinitions[i])
+	}
+	for i := range node.Functions {
+		p.printFunction(&node.Functions[i])
 	}
 	p.indentLevel--
 	p.endNode()
@@ -247,6 +273,13 @@ func (p *PrettyPrinter) printFlags(flagSet interface{}) {
 func (p *PrettyPrinter) printLiteral(node *BLangLiteral) {
 	p.startNode()
 	p.printString("literal")
+	p.printString(fmt.Sprintf("%v", node.Value))
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNumericLiteral(node *BLangNumericLiteral) {
+	p.startNode()
+	p.printString("numeric-literal")
 	p.printString(fmt.Sprintf("%v", node.Value))
 	p.endNode()
 }
@@ -500,6 +533,21 @@ func (p *PrettyPrinter) printWhile(node *BLangWhile) {
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
 	// OnFailClause handling can be added if needed in the future
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printForeach(node *BLangForeach) {
+	p.startNode()
+	p.printString("foreach")
+	p.indentLevel++
+	if node.VariableDef != nil {
+		p.PrintInner(node.VariableDef)
+	}
+	if node.Collection != nil {
+		p.PrintInner(node.Collection.(BLangNode))
+	}
+	p.PrintInner(&node.Body)
 	p.indentLevel--
 	p.endNode()
 }

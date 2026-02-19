@@ -112,19 +112,21 @@ type blockState struct {
 
 // uninitVarAnalyzer performs data flow analysis for uninitialized variables
 type uninitVarAnalyzer struct {
-	ctx    *context.CompilerContext
-	fn     *ast.BLangFunction
-	fcfg   *functionCFG
-	states map[int]*blockState // State for each basic block (keyed by bb.id)
+	ctx               *context.CompilerContext
+	fn                *ast.BLangFunction
+	fcfg              *functionCFG
+	states            map[int]*blockState
+	implicitInitState *varInitState // vars initialized by language constructs, used as entry state baseline
 }
 
 // newUninitVarAnalyzer creates a new analyzer for a function
 func newUninitVarAnalyzer(ctx *context.CompilerContext, fn *ast.BLangFunction, fcfg *functionCFG) *uninitVarAnalyzer {
 	analyzer := &uninitVarAnalyzer{
-		ctx:    ctx,
-		fn:     fn,
-		fcfg:   fcfg,
-		states: make(map[int]*blockState),
+		ctx:               ctx,
+		fn:                fn,
+		fcfg:              fcfg,
+		states:            make(map[int]*blockState),
+		implicitInitState: buildImplicitInitState(fn),
 	}
 
 	// Initialize block states
@@ -137,6 +139,28 @@ func newUninitVarAnalyzer(ctx *context.CompilerContext, fn *ast.BLangFunction, f
 
 	return analyzer
 }
+
+func buildImplicitInitState(fn *ast.BLangFunction) *varInitState {
+	state := newVarInitState()
+	ast.Walk(&implicitVarMarker{state: state}, fn)
+	return state
+}
+
+type implicitVarMarker struct {
+	state *varInitState
+}
+
+func (m *implicitVarMarker) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+	if foreach, ok := node.(*ast.BLangForeach); ok && foreach.VariableDef != nil {
+		m.state.markInitialized(foreach.VariableDef.Var.Symbol())
+	}
+	return m
+}
+
+func (m *implicitVarMarker) VisitTypeData(*model.TypeData) ast.Visitor { return m }
 
 func (a *uninitVarAnalyzer) analyze() {
 	if len(a.fcfg.bbs) == 0 {
@@ -169,7 +193,10 @@ func (a *uninitVarAnalyzer) mergePredecessors(bb *basicBlock) *varInitState {
 		}
 	}
 	if result == nil {
-		return newVarInitState()
+		result = newVarInitState()
+	}
+	for symRef := range a.implicitInitState.initVars {
+		result.markInitialized(symRef)
 	}
 	return result
 }
@@ -190,7 +217,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 		if n.Var.Expr != nil {
 			a.checkExpression(n.Var.Expr.(ast.BLangExpression), state)
 			state.markInitialized(symRef)
-		} else {
+		} else if !state.isInitialized(symRef) {
 			state.markUninitialized(symRef)
 		}
 	case *ast.BLangAssignment:

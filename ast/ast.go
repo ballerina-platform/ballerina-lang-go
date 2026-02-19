@@ -200,6 +200,11 @@ func SymbolIsSet(node model.NodeWithSymbol) bool {
 	return node.Symbol() != (model.SymbolRef{})
 }
 
+type NodeWithScope interface {
+	Scope() model.Scope
+	SetScope(scope model.Scope)
+}
+
 type SourceKind = model.SourceKind
 
 type CompilerPhase uint8
@@ -446,6 +451,7 @@ type (
 
 	BLangFunction struct {
 		BLangInvokableNodeBase
+		scope             model.Scope
 		Receiver          *BLangSimpleVariable
 		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
 		SendsToThis       common.OrderedSet[Channel]
@@ -1264,6 +1270,16 @@ func (this *BLangFunction) SetReceiver(receiver model.SimpleVariableNode) {
 func (this *BLangFunction) GetKind() model.NodeKind {
 	return model.NodeKind_FUNCTION
 }
+
+func (this *BLangFunction) Scope() model.Scope {
+	return this.scope
+}
+
+func (this *BLangFunction) SetScope(scope model.Scope) {
+	this.scope = scope
+}
+
+var _ NodeWithScope = &BLangFunction{}
 
 func (b *BLangInvokableNodeBase) GetName() model.IdentifierNode {
 	return b.Name

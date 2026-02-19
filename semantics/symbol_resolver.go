@@ -260,9 +260,21 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 			return bs
 		}
 		functionResolver := newFunctionResolver(bs, n)
+		n.SetScope(functionResolver.scope)
 		resolveFunction(functionResolver, n)
 		return nil
-	case *ast.BLangIf, *ast.BLangWhile, *ast.BLangBlockStmt, *ast.BLangDo:
+	case *ast.BLangIf:
+		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+		n.SetScope(resolver.scope)
+		return resolver
+	case *ast.BLangWhile:
+		resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+		n.SetScope(resolver.scope)
+		return resolver
+	case *ast.BLangForeach:
+		resolveForeachSymbols(bs, n)
+		return nil
+	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable())
@@ -423,6 +435,37 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 	}
 }
 
+func resolveForeachSymbols(bs *blockSymbolResolver, n *ast.BLangForeach) {
+	resolver := newBlockSymbolResolverWithBlockScope(bs, n)
+	n.SetScope(resolver.scope)
+	if n.Collection != nil {
+		ast.Walk(resolver, n.Collection.(ast.BLangNode))
+	}
+	if n.VariableDef != nil {
+		defineForeachLoopVar(resolver, n.VariableDef.GetVariable())
+		ast.Walk(resolver, n.VariableDef.Var)
+	}
+	ast.Walk(resolver, &n.Body)
+	if n.OnFailClause != nil {
+		ast.Walk(resolver, n.OnFailClause)
+	}
+}
+
+func defineForeachLoopVar[T symbolResolver](resolver T, variable model.VariableNode) {
+	v, ok := variable.(*ast.BLangSimpleVariable)
+	if !ok {
+		internalError(resolver, "Unsupported foreach loop variable", variable.GetPosition())
+		return
+	}
+	name := v.Name.Value
+	if _, exists := resolver.GetSymbol(name); exists {
+		semanticError(resolver, "Variable already defined: "+name, v.GetPosition())
+		return
+	}
+	symbol := model.NewValueSymbol(name, false, true, false)
+	addSymbolAndSetOnNode(resolver, name, &symbol, v)
+}
+
 func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return nil
@@ -470,6 +513,7 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		}
 		n.SetSymbol(symRef)
 		functionResolver := newFunctionResolver(ms, n)
+		n.SetScope(functionResolver.scope)
 		resolveFunction(functionResolver, n)
 		return nil
 	case *ast.BLangConstant:
