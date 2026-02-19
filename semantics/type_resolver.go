@@ -637,10 +637,15 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		} else {
 			shape := semtypes.SingleShape(exprTy)
 			if !shape.IsEmpty() {
+		if semtypes.IsSubType(t.tyCtx, exprTy, &semtypes.INT) {
+		    shape := semtypes.SingleShape(exprTy)
+			if !shape.IsEmpty() {
 				resultTy = semtypes.IntConst(^shape.Get().Value.(int64))
 			} else {
 				resultTy = exprTy
 			}
+		} else {
+             semanticError or never
 		}
 
 	case model.OperatorKind_NOT:
