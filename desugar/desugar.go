@@ -132,6 +132,9 @@ func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind
 
 // DesugarPackage returns a desugared package (may be new or same instance)
 func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
+	if importedSymbols == nil {
+		importedSymbols = make(map[string]model.ExportedSymbolSpace)
+	}
 	desugarCtx := &Context{
 		compilerCtx:          compilerCtx,
 		pkg:                  pkg,

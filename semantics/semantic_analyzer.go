@@ -916,13 +916,13 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 		switch {
 		case semtypes.IsSubtypeSimple(collectionType, semtypes.LIST):
 			memberTypes := semtypes.ListAllMemberTypesInner(a.tyCtx(), collectionType)
-			var result semtypes.SemType = &semtypes.ANY
+			var result semtypes.SemType = &semtypes.NEVER
 			for _, each := range memberTypes.SemTypes {
-				result = semtypes.Intersect(result, each)
+				result = semtypes.Union(result, each)
 			}
 			expectedValueType = result
 		default:
-			a.unimplementedErr("unsupporeted foreach collection")
+			a.unimplementedErr("unsupported foreach collection")
 		}
 		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())

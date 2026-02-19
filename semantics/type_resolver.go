@@ -948,7 +948,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 				if lenExp == nil {
 					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
 				} else {
-					length := lenExp.(*ast.BLangLiteral).Value.(int)
+					length := int(lenExp.(*ast.BLangLiteral).Value.(int64))
 					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
 				}
 			}
