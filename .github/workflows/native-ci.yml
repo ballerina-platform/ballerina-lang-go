@@ -25,7 +25,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: coverage.out
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           verbose: true
 
       - name: Check gofmt
