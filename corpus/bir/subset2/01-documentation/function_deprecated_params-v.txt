@@ -1,10 +1,10 @@
 module $anon.. v 0.0.0;
-process<NIL>{
+process(((INT), ()),((INT), ())) -> ((NIL), ()){
   bb0 {
     return;
   }
 }
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     return;
   }
