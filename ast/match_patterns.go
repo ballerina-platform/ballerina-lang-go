@@ -16,25 +16,48 @@
 
 package ast
 
-import "ballerina-lang-go/model"
+import (
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+)
+
+type BLangMatchPattern interface {
+	model.MatchPatternNode
+	SetAcceptedType(semtypes.SemType)
+}
+
+type BLangMatchGuard BLangExpression
 
 type (
-	BLangMatchPatternBase struct {
+	BLangMatchClause struct {
 		bLangNodeBase
+		Guard        BLangExpression
+		Body         BLangBlockStmt
+		Patterns     []BLangMatchPattern
+		AcceptedType semtypes.SemType
+	}
 
-		MatchExpr             BLangExpression
-		MatchGuardIsAvailable bool
-		IsLastPattern         bool
+	bLangMatchPatternBase struct {
+		bLangNodeBase
+		AcceptedType semtypes.SemType
 	}
 	BLangConstPattern struct {
-		BLangMatchPatternBase
+		bLangMatchPatternBase
 		Expr BLangExpression
+	}
+
+	BLangWildCardMatchPattern struct {
+		bLangMatchPatternBase
 	}
 )
 
 var _ model.ConstPatternNode = &BLangConstPattern{}
+var _ model.MatchClause = &BLangMatchClause{}
+var _ BLangMatchPattern = &BLangConstPattern{}
+var _ BLangMatchPattern = &BLangWildCardMatchPattern{}
 
 var _ BLangNode = &BLangConstPattern{}
+var _ BLangNode = &BLangMatchClause{}
 
 func (this *BLangConstPattern) GetKind() model.NodeKind {
 	// migrated from BLangConstPattern.java:53:5
@@ -53,4 +76,52 @@ func (this *BLangConstPattern) SetExpression(expression model.ExpressionNode) {
 	} else {
 		panic("Expected BLangExpression")
 	}
+}
+
+func (this *BLangWildCardMatchPattern) GetKind() model.NodeKind {
+	return model.NodeKind_WILDCARD_MATCH_PATTERN
+}
+
+func (this *BLangMatchClause) GetKind() model.NodeKind {
+	return model.NodeKind_MATCH_CLAUSE
+}
+
+func (this *BLangMatchClause) GetMatchGuard() model.MatchGuard {
+	return this.Guard
+}
+
+func (this *BLangMatchClause) GetBlockStatementNode() model.BlockStatementNode {
+	return &this.Body
+}
+
+func (this *BLangMatchClause) GetMatchPatterns() []model.MatchPatternNode {
+	result := make([]model.MatchPatternNode, len(this.Patterns))
+	for i, p := range this.Patterns {
+		result[i] = p
+	}
+	return result
+}
+
+func (this *BLangMatchClause) SetMatchClause(node BLangMatchGuard) {
+	this.Guard = node
+}
+
+func (this *BLangMatchClause) SetBlockStatementNode(node BLangBlockStmt) {
+	this.Body = node
+}
+
+func (this *BLangMatchClause) SetMatchPatterns(nodes []BLangMatchPattern) {
+	this.Patterns = nodes
+}
+
+func (this *BLangMatchClause) GetAcceptedType() semtypes.SemType {
+	return this.AcceptedType
+}
+
+func (this *bLangMatchPatternBase) GetAcceptedType() semtypes.SemType {
+	return this.AcceptedType
+}
+
+func (this *bLangMatchPatternBase) SetAcceptedType(t semtypes.SemType) {
+	this.AcceptedType = t
 }

@@ -50,6 +50,8 @@ func walkStatement(cx *FunctionContext, node model.StatementNode) desugaredNode[
 		return desugaredNode[model.StatementNode]{replacementNode: stmt}
 	case *ast.BLangContinue:
 		return walkContinue(cx, stmt)
+	case *ast.BLangMatchStatement:
+		return walkMatchStatement(cx, stmt)
 	default:
 		panic("unexpected statement type")
 	}
@@ -564,4 +566,25 @@ func isRangeExpr(expr ast.BLangExpression) bool {
 		}
 	}
 	return false
+}
+
+func walkMatchStatement(cx *FunctionContext, stmt *ast.BLangMatchStatement) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	if stmt.Expr != nil {
+		result := walkExpression(cx, stmt.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+		bodyResult := walkBlockStmt(cx, &clause.Body)
+		clause.Body = *bodyResult.replacementNode.(*ast.BLangBlockStmt)
+	}
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: stmt,
+	}
 }

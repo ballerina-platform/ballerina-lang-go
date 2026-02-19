@@ -143,6 +143,8 @@ func (t *TypeResolver) ResolveStatement(chain *type_narrowing.Binding, stmt ast.
 		if s.Expr != nil {
 			t.ResolveExpression(chain, s.Expr)
 		}
+	case *ast.BLangMatchStatement:
+		t.resolveMatchStatement(chain, s)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		// No expressions to resolve
 	default:
@@ -226,6 +228,8 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangTypeDefinition:
 		t.resolveTypeDefinition(n, 0)
 		return nil
+	case *ast.BLangMatchStatement:
+		t.resolveMatchStatement(nil, n)
 	case ast.BLangExpression:
 		t.ResolveExpression(nil, n)
 	default:
@@ -827,7 +831,6 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	}
 
 	if isRelationalExpr(expr) {
-		// Relational operators always return boolean (no nil-lifting)
 		return &semtypes.BOOLEAN, false
 	}
 
@@ -1258,4 +1261,46 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {
 	setExpectedType(constant, expectedType)
 	symbol := constant.Symbol()
 	t.ctx.SetSymbolType(symbol, expectedType)
+}
+
+func (t *TypeResolver) resolveMatchStatement(chain *type_narrowing.Binding, stmt *ast.BLangMatchStatement) {
+	t.ResolveExpression(chain, stmt.Expr)
+	for i := range stmt.MatchClauses {
+		// FIXME:
+		clause := &stmt.MatchClauses[i]
+		t.resolveMatchClause(chain, clause)
+	}
+}
+
+func (t *TypeResolver) resolveMatchClause(chain *type_narrowing.Binding, clause *ast.BLangMatchClause) {
+	var acceptedTy semtypes.SemType = &semtypes.NEVER
+	for _, pattern := range clause.Patterns {
+		acceptedTy = semtypes.Union(acceptedTy, t.resolveMatchPattern(chain, pattern))
+	}
+
+	if clause.Guard != nil {
+		guardType := t.ResolveExpression(chain, clause.Guard)
+		acceptedTy = semtypes.Intersect(acceptedTy, guardType)
+	}
+
+	clause.AcceptedType = acceptedTy
+
+	// FIXME: need to think of a better way to allow this to resolve the clause body as well. Currently
+	// this is done by the type narrower
+}
+
+func (t *TypeResolver) resolveMatchPattern(chain *type_narrowing.Binding, pattern ast.BLangMatchPattern) semtypes.SemType {
+	switch p := pattern.(type) {
+	case *ast.BLangConstPattern:
+		ty := t.ResolveExpression(chain, p.Expr)
+		p.SetAcceptedType(ty)
+		return ty
+	case *ast.BLangWildCardMatchPattern:
+		ty := &semtypes.ANY
+		p.SetAcceptedType(ty)
+		return ty
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected match pattern type: %T", pattern), pattern.GetPosition())
+		return &semtypes.NEVER
+	}
 }

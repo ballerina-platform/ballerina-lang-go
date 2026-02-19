@@ -106,6 +106,13 @@ type (
 		BLangStatementBase
 		Expr BLangExpression
 	}
+
+	BLangMatchStatement struct {
+		BLangStatementBase
+		Expr         BLangExpression
+		MatchClauses []BLangMatchClause
+		IsExhaustive bool
+	}
 )
 
 var (
@@ -140,6 +147,8 @@ var (
 	_ BLangNode = &BLangWhile{}
 	_ BLangNode = &BLangForeach{}
 	_ BLangNode = &BLangSimpleVariableDef{}
+	_ BLangNode = &BLangReturn{}
+	_ BLangNode = &BLangMatchStatement{}
 )
 
 var (
@@ -520,4 +529,8 @@ func (this *BLangReturn) SetExpression(expression model.ExpressionNode) {
 
 func (this *BLangReturn) GetKind() model.NodeKind {
 	return model.NodeKind_RETURN
+}
+
+func (this *BLangMatchStatement) GetKind() model.NodeKind {
+	return model.NodeKind_MATCH_STATEMENT
 }

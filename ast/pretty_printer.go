@@ -122,6 +122,12 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTypeTestExpr(t)
 	case *BLangTupleTypeNode:
 		p.printTupleTypeNode(t)
+	case *BLangMatchStatement:
+		p.printMatchStatement(t)
+	case *BLangConstPattern:
+		p.printConstPattern(t)
+	case *BLangWildCardMatchPattern:
+		p.printWildCardMatchPattern(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -799,5 +805,56 @@ func (p *PrettyPrinter) printUserDefinedType(node *BLangUserDefinedType) {
 	} else {
 		p.printString(node.TypeName.Value)
 	}
+	p.endNode()
+}
+
+// Match statement printer
+func (p *PrettyPrinter) printMatchStatement(node *BLangMatchStatement) {
+	p.startNode()
+	p.printString("match")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	for i := range node.MatchClauses {
+		clause := &node.MatchClauses[i]
+		p.printMatchClause(clause)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMatchClause(node *BLangMatchClause) {
+	p.startNode()
+	p.printString("match-clause")
+	p.indentLevel++
+	// Print patterns
+	for _, pattern := range node.Patterns {
+		p.PrintInner(pattern.(BLangNode))
+	}
+	// Print guard if present
+	if node.Guard != nil {
+		p.startNode()
+		p.printString("match-guard")
+		p.indentLevel++
+		p.PrintInner(node.Guard.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	p.PrintInner(&node.Body)
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printConstPattern(node *BLangConstPattern) {
+	p.startNode()
+	p.printString("const-pattern")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printWildCardMatchPattern(node *BLangWildCardMatchPattern) {
+	p.startNode()
+	p.printString("wildcard-match-pattern")
 	p.endNode()
 }

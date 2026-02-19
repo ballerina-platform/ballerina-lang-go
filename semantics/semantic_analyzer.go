@@ -935,6 +935,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangMatchStatement:
+		return a
 	case *ast.BLangSimpleVariableDef:
 		analyzeSimpleVariableDef(a, n)
 		return a

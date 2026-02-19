@@ -104,6 +104,8 @@ func analyzeStatement(ctx *NarrowingContext, chain *Binding, stmt ast.BLangState
 		return analyzeStmtBlock(ctx, chain, stmt)
 	case *ast.BLangWhile:
 		return analyzeWhileStmt(ctx, chain, stmt)
+	case *ast.BLangMatchStatement:
+		return analyzeMatchStatement(ctx, chain, stmt)
 	// TODO: when we have panic that should also do the same
 	case *ast.BLangReturn:
 		if stmt.GetExpression() != nil {
@@ -337,6 +339,8 @@ func analyzeBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBin
 			ifFalse: mergeChains(ctx, lhsEffect.ifFalse, rhsEffect.ifFalse, semtypes.Intersect),
 		}
 	default:
+		visitor := &narrowedSymbolRefUpdator{ctx, chain, expr}
+		ast.Walk(visitor, expr)
 		return defaultExpressionEffect(chain)
 	}
 }
@@ -432,6 +436,80 @@ func varRefExp(chain *Binding, expr *ast.BLangExpression) (model.SymbolRef, bool
 		return narrowedSymbol, true
 	}
 	return baseSymbol, true
+}
+
+func analyzeMatchStatement(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangMatchStatement) statementEffect {
+	chain = analyzeExpression(ctx, chain, stmt.Expr).ifTrue
+
+	exprRef, isVarRef := varRefExp(chain, &stmt.Expr)
+	var exprType semtypes.SemType
+	if isVarRef {
+		exprType = ctx.SymbolType(exprRef)
+	} else {
+		exprType = stmt.Expr.GetDeterminedType()
+	}
+	remainingType := exprType
+	allNonCompletion := true
+	var bodyEffects []statementEffect
+
+	// FIXME:
+	tyCtx := semtypes.ContextFrom(ctx.compilerCtx.GetTypeEnv())
+
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+
+		if semtypes.IsEmpty(tyCtx, remainingType) {
+			ctx.compilerCtx.SemanticError("unreachable match clause", clause.GetPosition())
+		}
+
+		clauseAcceptedType := semtypes.Intersect(remainingType, clause.AcceptedType)
+
+		if semtypes.IsEmpty(tyCtx, clauseAcceptedType) {
+			ctx.compilerCtx.SemanticError("unreachable match clause", clause.GetPosition())
+		}
+
+		clause.AcceptedType = clauseAcceptedType
+
+		bodyChain := chain
+		if isVarRef {
+			baseRef := ctx.compilerCtx.UnnarrowedSymbol(exprRef)
+			narrowedSym := narrowSymbol(ctx, baseRef, clauseAcceptedType)
+			bodyChain = &Binding{
+				Ref:            baseRef,
+				NarrowedSymbol: narrowedSym,
+				Prev:           chain,
+			}
+		}
+
+		bodyEffect := analyzeStmtBlock(ctx, bodyChain, &clause.Body)
+		bodyEffects = append(bodyEffects, bodyEffect)
+		if !bodyEffect.nonCompletion {
+			allNonCompletion = false
+		}
+
+		remainingType = semtypes.Diff(remainingType, clause.AcceptedType)
+	}
+
+	stmt.IsExhaustive = semtypes.IsEmpty(tyCtx, remainingType)
+
+	if allNonCompletion {
+		return statementEffect{chain, true}
+	}
+
+	var result *Binding = nil
+	first := true
+	for _, effect := range bodyEffects {
+		if effect.nonCompletion {
+			continue
+		}
+		if first {
+			result = effect.binding
+			first = false
+		} else {
+			result = mergeChains(ctx, result, effect.binding, semtypes.Union)
+		}
+	}
+	return statementEffect{result, false}
 }
 
 func varRefExpInner(expr *ast.BLangExpression) (model.SymbolRef, bool) {
