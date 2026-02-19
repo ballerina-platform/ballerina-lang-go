@@ -542,7 +542,7 @@ func ListAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 	return ListMemberTypesFrom(ranges, types)
 }
 
-func mappingAtomicType(cx Context, t SemType) *MappingAtomicType {
+func ToMappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 	mappingAtomicInner := MAPPING_ATOMIC_INNER
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		if b.bitset == MAPPING.bitset {
@@ -1037,4 +1037,16 @@ func comparableNillableList(cx Context, t1, t2 SemType) bool {
 	}
 	memo.comparable = true
 	return true
+}
+
+func ContainsUndef(t SemType) bool {
+	switch t := t.(type) {
+	case *BasicTypeBitSet:
+		bitSet := t.bitset
+		return (bitSet & (1 << BT_UNDEF.Code)) != 0
+	case ComplexSemType:
+		return *getComplexSubtypeData(t, BT_UNDEF).(*bool)
+	default:
+		panic("unexpected semtype")
+	}
 }

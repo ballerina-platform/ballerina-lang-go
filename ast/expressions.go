@@ -281,6 +281,25 @@ type (
 		PositionalArgs []BLangExpression
 		// TODO: Add support for NamedArgs
 	}
+
+	BLangRecordKey struct {
+		BLangNodeBase
+		Expr        BLangExpression
+		ComputedKey bool
+	}
+
+	BLangRecordKeyValueField struct {
+		BLangNodeBase
+		Key       *BLangRecordKey
+		ValueExpr BLangExpression
+		Readonly  bool
+	}
+
+	BLangRecordLiteral struct {
+		BLangExpressionBase
+		Fields     []model.RecordField
+		AtomicType semtypes.MappingAtomicType
+	}
 )
 
 var (
@@ -316,6 +335,12 @@ var (
 	_ BLangExpression                                              = &BLangTypeConversionExpr{}
 	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
 	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
+	_ model.RecordLiteralNode                                      = &BLangRecordLiteral{}
+	_ model.RecordKeyValueFieldNode                                = &BLangRecordKeyValueField{}
+	_ BLangExpression                                              = &BLangRecordLiteral{}
+	_ BLangNode                                                    = &BLangRecordLiteral{}
+	_ model.Node                                                   = &BLangRecordKey{}
+	_ BLangNode                                                    = &BLangRecordKey{}
 )
 
 var (
@@ -348,6 +373,9 @@ var (
 	_ BLangNode = &BLangIndexBasedAccess{}
 	_ BLangNode = &BLangListConstructorExpr{}
 	_ BLangNode = &BLangTypeConversionExpr{}
+	_ BLangNode = &BLangRecordLiteral{}
+	_ BLangNode = &BLangRecordKeyValueField{}
+	_ BLangNode = &BLangRecordKey{}
 )
 
 var (
@@ -952,6 +980,41 @@ func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
 
 func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
+}
+
+func (this *BLangRecordKey) GetKind() model.NodeKind {
+	panic("BLangRecordKey has no NodeKind")
+}
+
+func (this *BLangRecordKeyValueField) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_KEY_VALUE
+}
+
+func (this *BLangRecordKeyValueField) GetKey() model.ExpressionNode {
+	if this.Key == nil {
+		return nil
+	}
+	return this.Key.Expr
+}
+
+func (this *BLangRecordKeyValueField) GetValue() model.ExpressionNode {
+	return this.ValueExpr
+}
+
+func (this *BLangRecordKeyValueField) IsKeyValueField() bool {
+	return true
+}
+
+func (this *BLangRecordLiteral) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_EXPR
+}
+
+func (this *BLangRecordLiteral) GetFields() []model.RecordField {
+	return this.Fields
+}
+
+func (this *BLangRecordLiteral) SetTypeCheckedType(ty BType) {
+	this.ExpectedType = ty
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

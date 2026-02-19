@@ -135,6 +135,7 @@ const (
 	ANON_PREFIX       = "$anon"
 	BUILTIN_ANON_TYPE = ANON_PREFIX + "Type$builtin$"
 	ANON_TYPE         = ANON_PREFIX + "Type$"
+	ANON_SYMBOL       = ANON_PREFIX + "Symbol$"
 )
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {

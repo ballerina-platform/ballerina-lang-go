@@ -1752,7 +1752,53 @@ func (n *NodeBuilder) TransformMethodCallExpression(methodCallExpressionNode *tr
 }
 
 func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorExpressionNode *tree.MappingConstructorExpressionNode) BLangNode {
-	panic("TransformMappingConstructorExpression unimplemented")
+	bLiteralNode := &BLangRecordLiteral{
+		Fields: make([]model.RecordField, 0),
+	}
+	fields := mappingConstructorExpressionNode.FieldNodes()
+	for i := 0; i < fields.Size(); i += 2 {
+		field := fields.Get(i)
+		switch field.Kind() {
+		case common.SPREAD_FIELD:
+			panic("mapping constructor spread field not implemented")
+		case common.COMPUTED_NAME_FIELD:
+			computedNameField := field.(*tree.ComputedNameFieldNode)
+			keyExpr := n.createExpression(computedNameField.FieldNameExpr())
+			key := &BLangRecordKey{
+				Expr:        keyExpr,
+				ComputedKey: true,
+			}
+			key.SetPosition(getPosition(computedNameField.FieldNameExpr()))
+			bLRecordKeyValueField := &BLangRecordKeyValueField{
+				Key:       key,
+				ValueExpr: n.createExpression(computedNameField.ValueExpr()),
+			}
+			bLRecordKeyValueField.SetPosition(getPosition(computedNameField))
+			bLiteralNode.Fields = append(bLiteralNode.Fields, bLRecordKeyValueField)
+		case common.SPECIFIC_FIELD:
+			specificField := field.(*tree.SpecificFieldNode)
+			if specificField.ValueExpr() == nil {
+				panic("mapping constructor var-name field not implemented")
+			}
+			keyExpr := n.createExpression(specificField.FieldName())
+			key := &BLangRecordKey{
+				Expr:        keyExpr,
+				ComputedKey: false,
+			}
+			key.SetPosition(getPosition(specificField.FieldName()))
+			bLRecordKeyValueField := &BLangRecordKeyValueField{
+				Key:       key,
+				ValueExpr: n.createExpression(specificField.ValueExpr()),
+				Readonly:  specificField.ReadonlyKeyword() != nil,
+			}
+			bLRecordKeyValueField.SetPosition(getPosition(specificField))
+			bLiteralNode.Fields = append(bLiteralNode.Fields, bLRecordKeyValueField)
+		default:
+			panic(fmt.Sprintf("unexpected mapping field kind: %v", field.Kind()))
+		}
+	}
+	bLiteralNode.SetPosition(getPosition(mappingConstructorExpressionNode))
+	return bLiteralNode
 }
 
 func (n *NodeBuilder) TransformIndexedExpression(indexedExpressionNode *tree.IndexedExpressionNode) BLangNode {
@@ -2054,7 +2100,23 @@ func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode
 }
 
 func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.MapTypeDescriptorNode) BLangNode {
-	panic("TransformMapTypeDescriptor unimplemented")
+	refType := &BLangBuiltInRefTypeNode{
+		TypeKind: model.TypeKind_MAP,
+	}
+	refType.SetPosition(getPosition(mapTypeDescriptorNode))
+
+	mapTypeParamsNode := mapTypeDescriptorNode.MapTypeParamsNode()
+	if mapTypeParamsNode == nil || mapTypeParamsNode.TypeNode() == nil {
+		panic("map type requires type parameter")
+	}
+	constraint := n.createTypeNode(mapTypeParamsNode.TypeNode())
+
+	constrainedType := &BLangConstrainedType{
+		Type:       model.TypeData{TypeDescriptor: refType},
+		Constraint: model.TypeData{TypeDescriptor: constraint},
+	}
+	constrainedType.SetPosition(refType.GetPosition())
+	return constrainedType
 }
 
 func (n *NodeBuilder) TransformNilLiteral(nilLiteralNode *tree.NilLiteralNode) BLangNode {
