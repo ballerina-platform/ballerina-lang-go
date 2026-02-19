@@ -636,7 +636,12 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		} else {
 			shape := semtypes.SingleShape(exprTy)
 			if !shape.IsEmpty() {
-				resultTy = semtypes.IntConst(^shape.Get().Value.(int64))
+				switch v := shape.Get().Value.(type) {
+				case int64:
+					resultTy = semtypes.IntConst(^v)
+				default:
+					resultTy = exprTy
+				}
 			} else {
 				resultTy = exprTy
 			}
