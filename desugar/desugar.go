@@ -20,9 +20,11 @@ package desugar
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/desugar/internal/dcontext"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"fmt"
+	"sync"
 )
 
 type desugaredNode[E model.Node] struct {
@@ -30,53 +32,66 @@ type desugaredNode[E model.Node] struct {
 	replacementNode E
 }
 
-type Context struct {
-	compilerCtx          *context.CompilerContext
-	pkg                  *ast.BLangPackage
-	importedSymbols      map[string]model.ExportedSymbolSpace
-	addedImplicitImports map[string]bool
+type FunctionContext struct {
+	pkgCtx               *dcontext.PackageContext
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
 	loopVarStack         []ast.BLangExpression // Stack to track loop variables (nil for while, varRef for desugared foreach)
 }
 
-func (ctx *Context) pushScope(scope model.Scope) {
+func (ctx *FunctionContext) internalError(msg string) {
+	ctx.pkgCtx.InternalError(msg)
+}
+
+func (ctx *FunctionContext) unimplemented(msg string) {
+	ctx.pkgCtx.Unimplemented(msg)
+}
+
+func (ctx *FunctionContext) getImportedSymbolSpace(pkgName string) (model.ExportedSymbolSpace, bool) {
+	return ctx.pkgCtx.GetImportedSymbolSpace(pkgName)
+}
+
+func (ctx *FunctionContext) addImplicitImport(pkgName string, imp ast.BLangImportPackage) {
+	ctx.pkgCtx.AddImplicitImport(pkgName, imp)
+}
+
+func (ctx *FunctionContext) pushScope(scope model.Scope) {
 	ctx.scopeStack = append(ctx.scopeStack, scope)
 }
 
-func (ctx *Context) popScope() {
+func (ctx *FunctionContext) popScope() {
 	if len(ctx.scopeStack) == 0 {
-		ctx.compilerCtx.InternalError("cannot pop from empty scope stack", nil)
+		ctx.internalError("cannot pop from empty scope stack")
 	}
 	ctx.scopeStack = ctx.scopeStack[:len(ctx.scopeStack)-1]
 }
 
-func (ctx *Context) currentScope() model.Scope {
+func (ctx *FunctionContext) currentScope() model.Scope {
 	if len(ctx.scopeStack) == 0 {
-		ctx.compilerCtx.InternalError("scope stack is empty", nil)
+		ctx.internalError("scope stack is empty")
 	}
 	return ctx.scopeStack[len(ctx.scopeStack)-1]
 }
 
-func (ctx *Context) pushLoopVar(varRef ast.BLangExpression) {
+func (ctx *FunctionContext) pushLoopVar(varRef ast.BLangExpression) {
 	ctx.loopVarStack = append(ctx.loopVarStack, varRef)
 }
 
-func (ctx *Context) popLoopVar() {
+func (ctx *FunctionContext) popLoopVar() {
 	if len(ctx.loopVarStack) == 0 {
-		ctx.compilerCtx.InternalError("cannot pop from empty loopVar stack", nil)
+		ctx.internalError("cannot pop from empty loopVar stack")
 	}
 	ctx.loopVarStack = ctx.loopVarStack[:len(ctx.loopVarStack)-1]
 }
 
-func (ctx *Context) currentLoopVar() ast.BLangExpression {
+func (ctx *FunctionContext) currentLoopVar() ast.BLangExpression {
 	if len(ctx.loopVarStack) == 0 {
 		return nil
 	}
 	return ctx.loopVarStack[len(ctx.loopVarStack)-1]
 }
 
-func (ctx *Context) nextDesugarSymbolName() string {
+func (ctx *FunctionContext) nextDesugarSymbolName() string {
 	name := fmt.Sprintf("$desugar$%d", ctx.desugarSymbolCounter)
 	ctx.desugarSymbolCounter++
 	return name
@@ -111,9 +126,9 @@ func (s *desugaredSymbol) IsPublic() bool {
 	return s.isPublic
 }
 
-func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
+func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
 	if len(ctx.scopeStack) == 0 {
-		ctx.compilerCtx.InternalError("cannot add desugared symbol when scope stack is empty", nil)
+		ctx.internalError("cannot add desugared symbol when scope stack is empty")
 	}
 	name := ctx.nextDesugarSymbolName()
 	symbol := &desugaredSymbol{
@@ -133,49 +148,76 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	if importedSymbols == nil {
 		importedSymbols = make(map[string]model.ExportedSymbolSpace)
 	}
-	desugarCtx := &Context{
-		compilerCtx:          compilerCtx,
-		pkg:                  pkg,
-		importedSymbols:      importedSymbols,
-		addedImplicitImports: make(map[string]bool),
+	pkgCtx := dcontext.NewPackageContext(compilerCtx, pkg, importedSymbols)
+
+	var wg sync.WaitGroup
+	var panicErr any
+
+	desugarFn := func(fn *ast.BLangFunction) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = r
+				}
+			}()
+			*fn = *desugarFunction(pkgCtx, fn)
+		}()
 	}
 
-	// Desugar all functions and replace them
+	// Desugar all functions
 	for i := range pkg.Functions {
-		fn := &pkg.Functions[i]
-		*fn = *desugarFunction(desugarCtx, fn)
+		desugarFn(&pkg.Functions[i])
 	}
 
-	// Desugar class definitions
+	// Desugar class definitions (each class concurrently, members sequentially)
 	for i := range pkg.ClassDefinitions {
 		class := &pkg.ClassDefinitions[i]
-		for j := range class.Functions {
-			fn := &class.Functions[j]
-			*fn = *desugarFunction(desugarCtx, fn)
-		}
-		if class.InitFunction != nil {
-			class.InitFunction = desugarFunction(desugarCtx, class.InitFunction)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = r
+				}
+			}()
+			for j := range class.Functions {
+				class.Functions[j] = *desugarFunction(pkgCtx, &class.Functions[j])
+			}
+			if class.InitFunction != nil {
+				*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
+			}
+		}()
 	}
 
 	// Desugar init, start, stop functions
 	if pkg.InitFunction != nil {
-		pkg.InitFunction = desugarFunction(desugarCtx, pkg.InitFunction)
+		desugarFn(pkg.InitFunction)
 	}
 	if pkg.StartFunction != nil {
-		pkg.StartFunction = desugarFunction(desugarCtx, pkg.StartFunction)
+		desugarFn(pkg.StartFunction)
 	}
 	if pkg.StopFunction != nil {
-		pkg.StopFunction = desugarFunction(desugarCtx, pkg.StopFunction)
+		desugarFn(pkg.StopFunction)
+	}
+
+	wg.Wait()
+	if panicErr != nil {
+		panic(panicErr)
 	}
 
 	return pkg
 }
 
 // desugarFunction returns a desugared function (may be same or new instance)
-func desugarFunction(cx *Context, fn *ast.BLangFunction) *ast.BLangFunction {
+func desugarFunction(pkgCtx *dcontext.PackageContext, fn *ast.BLangFunction) *ast.BLangFunction {
 	if fn.Body == nil {
 		return fn
+	}
+
+	cx := &FunctionContext{
+		pkgCtx: pkgCtx,
 	}
 
 	// Push function scope

@@ -23,7 +23,7 @@ import (
 	"fmt"
 )
 
-func walkExpression(cx *Context, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
+func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
 	switch expr := node.(type) {
 	case *ast.BLangBinaryExpr:
 		return walkBinaryExpr(cx, expr)
@@ -75,7 +75,7 @@ func walkExpression(cx *Context, node model.ExpressionNode) desugaredNode[model.
 	}
 }
 
-func walkBinaryExpr(cx *Context, expr *ast.BLangBinaryExpr) desugaredNode[model.ExpressionNode] {
+func walkBinaryExpr(cx *FunctionContext, expr *ast.BLangBinaryExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.LhsExpr != nil {
@@ -96,7 +96,7 @@ func walkBinaryExpr(cx *Context, expr *ast.BLangBinaryExpr) desugaredNode[model.
 	}
 }
 
-func walkUnaryExpr(cx *Context, expr *ast.BLangUnaryExpr) desugaredNode[model.ExpressionNode] {
+func walkUnaryExpr(cx *FunctionContext, expr *ast.BLangUnaryExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -111,7 +111,7 @@ func walkUnaryExpr(cx *Context, expr *ast.BLangUnaryExpr) desugaredNode[model.Ex
 	}
 }
 
-func walkElvisExpr(cx *Context, expr *ast.BLangElvisExpr) desugaredNode[model.ExpressionNode] {
+func walkElvisExpr(cx *FunctionContext, expr *ast.BLangElvisExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.LhsExpr != nil {
@@ -132,7 +132,7 @@ func walkElvisExpr(cx *Context, expr *ast.BLangElvisExpr) desugaredNode[model.Ex
 	}
 }
 
-func walkGroupExpr(cx *Context, expr *ast.BLangGroupExpr) desugaredNode[model.ExpressionNode] {
+func walkGroupExpr(cx *FunctionContext, expr *ast.BLangGroupExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expression != nil {
@@ -147,7 +147,7 @@ func walkGroupExpr(cx *Context, expr *ast.BLangGroupExpr) desugaredNode[model.Ex
 	}
 }
 
-func walkIndexBasedAccess(cx *Context, expr *ast.BLangIndexBasedAccess) desugaredNode[model.ExpressionNode] {
+func walkIndexBasedAccess(cx *FunctionContext, expr *ast.BLangIndexBasedAccess) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -168,7 +168,7 @@ func walkIndexBasedAccess(cx *Context, expr *ast.BLangIndexBasedAccess) desugare
 	}
 }
 
-func walkInvocation(cx *Context, expr *ast.BLangInvocation) desugaredNode[model.ExpressionNode] {
+func walkInvocation(cx *FunctionContext, expr *ast.BLangInvocation) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -189,7 +189,7 @@ func walkInvocation(cx *Context, expr *ast.BLangInvocation) desugaredNode[model.
 	}
 }
 
-func walkListConstructorExpr(cx *Context, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {
+func walkListConstructorExpr(cx *FunctionContext, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	for i := range expr.Exprs {
@@ -204,7 +204,7 @@ func walkListConstructorExpr(cx *Context, expr *ast.BLangListConstructorExpr) de
 	}
 }
 
-func walkErrorConstructorExpr(cx *Context, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
+func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.ErrorTypeRef != nil {
@@ -223,7 +223,7 @@ func walkErrorConstructorExpr(cx *Context, expr *ast.BLangErrorConstructorExpr) 
 	}
 }
 
-func walkCheckedExpr(cx *Context, expr *ast.BLangCheckedExpr) desugaredNode[model.ExpressionNode] {
+func walkCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -238,7 +238,7 @@ func walkCheckedExpr(cx *Context, expr *ast.BLangCheckedExpr) desugaredNode[mode
 	}
 }
 
-func walkCheckPanickedExpr(cx *Context, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
+func walkCheckPanickedExpr(cx *FunctionContext, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -253,7 +253,7 @@ func walkCheckPanickedExpr(cx *Context, expr *ast.BLangCheckPanickedExpr) desuga
 	}
 }
 
-func walkDynamicArgExpr(cx *Context, expr *ast.BLangDynamicArgExpr) desugaredNode[model.ExpressionNode] {
+func walkDynamicArgExpr(cx *FunctionContext, expr *ast.BLangDynamicArgExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Condition != nil {
@@ -274,10 +274,10 @@ func walkDynamicArgExpr(cx *Context, expr *ast.BLangDynamicArgExpr) desugaredNod
 	}
 }
 
-func walkLambdaFunction(cx *Context, expr *ast.BLangLambdaFunction) desugaredNode[model.ExpressionNode] {
+func walkLambdaFunction(cx *FunctionContext, expr *ast.BLangLambdaFunction) desugaredNode[model.ExpressionNode] {
 	// Desugar the function body
 	if expr.Function != nil {
-		expr.Function = desugarFunction(cx, expr.Function)
+		expr.Function = desugarFunction(cx.pkgCtx, expr.Function)
 	}
 
 	return desugaredNode[model.ExpressionNode]{
@@ -285,7 +285,7 @@ func walkLambdaFunction(cx *Context, expr *ast.BLangLambdaFunction) desugaredNod
 	}
 }
 
-func walkTypeConversionExpr(cx *Context, expr *ast.BLangTypeConversionExpr) desugaredNode[model.ExpressionNode] {
+func walkTypeConversionExpr(cx *FunctionContext, expr *ast.BLangTypeConversionExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expression != nil {
@@ -300,7 +300,7 @@ func walkTypeConversionExpr(cx *Context, expr *ast.BLangTypeConversionExpr) desu
 	}
 }
 
-func walkAnnotAccessExpr(cx *Context, expr *ast.BLangAnnotAccessExpr) desugaredNode[model.ExpressionNode] {
+func walkAnnotAccessExpr(cx *FunctionContext, expr *ast.BLangAnnotAccessExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -315,7 +315,7 @@ func walkAnnotAccessExpr(cx *Context, expr *ast.BLangAnnotAccessExpr) desugaredN
 	}
 }
 
-func walkCollectContextInvocation(cx *Context, expr *ast.BLangCollectContextInvocation) desugaredNode[model.ExpressionNode] {
+func walkCollectContextInvocation(cx *FunctionContext, expr *ast.BLangCollectContextInvocation) desugaredNode[model.ExpressionNode] {
 	// Walk the underlying invocation
 	result := walkInvocation(cx, &expr.Invocation)
 	expr.Invocation = *result.replacementNode.(*ast.BLangInvocation)
@@ -326,7 +326,7 @@ func walkCollectContextInvocation(cx *Context, expr *ast.BLangCollectContextInvo
 	}
 }
 
-func walkArrowFunction(cx *Context, expr *ast.BLangArrowFunction) desugaredNode[model.ExpressionNode] {
+func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desugaredNode[model.ExpressionNode] {
 	// Arrow functions have a body that may need desugaring
 	if expr.Body != nil {
 		result := walkExpression(cx, expr.Body.Expr)

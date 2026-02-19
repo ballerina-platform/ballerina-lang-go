@@ -31,3 +31,4 @@ go.work.sum
 # Generated test data files (run ./init.sh to regenerate)
 corpus/**/*.json
 parser/testdata/**/*.json
+/corpus/parser/*
