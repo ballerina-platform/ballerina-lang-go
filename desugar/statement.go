@@ -19,6 +19,7 @@ package desugar
 
 import (
 	"ballerina-lang-go/ast"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -428,15 +429,15 @@ func desugarForEachOnList(cx *Context, collection ast.BLangExpression, loopVarDe
 }
 
 func createLengthInvocation(cx *Context, collection ast.BLangExpression) *ast.BLangInvocation {
-	const pkgName = "lang.array"
+	pkgName := array.PackageName
 	space, ok := cx.importedSymbols[pkgName]
 	if !ok {
-		cx.compilerCtx.InternalError("lang.array symbol space not found", nil)
+		cx.compilerCtx.InternalError(pkgName+" symbol space not found", nil)
 		return nil
 	}
 	symbolRef, ok := space.GetSymbol("length")
 	if !ok {
-		cx.compilerCtx.InternalError("lang.array:length symbol not found", nil)
+		cx.compilerCtx.InternalError(pkgName+":length symbol not found", nil)
 		return nil
 	}
 	if !cx.addedImplicitImports[pkgName] {

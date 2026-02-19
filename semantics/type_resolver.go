@@ -19,6 +19,7 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -816,7 +817,7 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 	var symbolSpace model.ExportedSymbolSpace
 	var pkgAlias ast.BLangIdentifier
 	if semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST) {
-		pkgName := "lang.array"
+		pkgName := array.PackageName
 		space, ok := t.importedSymbols[pkgName]
 		if !ok {
 			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
