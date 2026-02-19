@@ -156,7 +156,13 @@ func walkIf(cx *Context, stmt *ast.BLangIf) desugaredNode[model.StatementNode] {
 
 	if stmt.ElseStmt != nil {
 		elseResult := walkStatement(cx, stmt.ElseStmt)
-		stmt.ElseStmt = elseResult.replacementNode.(ast.BLangStatement)
+		if len(elseResult.initStmts) > 0 {
+			stmt.ElseStmt = &ast.BLangBlockStmt{
+				Stmts: append(elseResult.initStmts, elseResult.replacementNode),
+			}
+		} else {
+			stmt.ElseStmt = elseResult.replacementNode.(ast.BLangStatement)
+		}
 	}
 
 	return desugaredNode[model.StatementNode]{
