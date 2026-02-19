@@ -624,7 +624,8 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 			case float64:
 				resultTy = semtypes.FloatConst(-v)
 			default:
-				resultTy = exprTy
+				t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+				return nil
 			}
 		} else {
 			resultTy = exprTy
