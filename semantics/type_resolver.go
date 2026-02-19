@@ -637,15 +637,24 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		}
 
 	case model.OperatorKind_BITWISE_COMPLEMENT:
+		if !semtypes.IsSubtypeSimple(exprTy, semtypes.INT) {
+			t.ctx.SemanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
 		if semtypes.IsSameType(t.tyCtx, exprTy, &semtypes.INT) {
 			resultTy = exprTy
-		} else {
-			shape := semtypes.SingleShape(exprTy)
-			if !shape.IsEmpty() {
-				resultTy = semtypes.IntConst(^shape.Get().Value.(int64))
-			} else {
-				resultTy = exprTy
+			break
+		}
+		shape := semtypes.SingleShape(exprTy)
+		if !shape.IsEmpty() {
+			value, ok := shape.Get().Value.(int64)
+			if !ok {
+				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for %s: %T", string(expr.GetOperatorKind()), shape.Get().Value), expr.GetPosition())
+				return nil
 			}
+			resultTy = semtypes.IntConst(^value)
+		} else {
+			resultTy = exprTy
 		}
 
 	case model.OperatorKind_NOT:
