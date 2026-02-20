@@ -135,6 +135,22 @@ type (
 		bLangTypeBase
 		detailType model.TypeData
 	}
+
+	BLangTupleTypeNode struct {
+		bLangTypeBase
+		Definition semtypes.Definition
+		// jBallerina uses BLangSimpleVariable for this but I think it is better to make it explicit
+		Members []BLangMemberTypeDesc
+		Rest    model.TypeDescriptor
+	}
+
+	BLangMemberTypeDesc struct {
+		bLangNodeBase
+		TypeDesc                        model.TypeDescriptor
+		AnnAttachments                  []model.AnnotationAttachmentNode
+		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
+		FlagSet                         common.UnorderedSet[model.Flag]
+	}
 )
 
 var (
@@ -149,6 +165,8 @@ var (
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
 	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
+	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
+	_ model.MemberTypeDesc           = &BLangMemberTypeDesc{}
 )
 
 var (
@@ -164,6 +182,7 @@ var (
 	_ BLangNode            = &BLangUserDefinedType{}
 	_ BLangNode            = &BLangValueType{}
 	_ model.TypeDescriptor = &BLangValueType{}
+	_ BLangNode            = &BLangTupleTypeNode{}
 )
 
 func (this *BLangArrayType) GetKind() model.NodeKind {
@@ -443,6 +462,57 @@ func (this *BLangErrorTypeNode) GetKind() model.NodeKind {
 	return model.NodeKind_ERROR_TYPE
 }
 
+func (this *BLangTupleTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_TUPLE_TYPE_NODE
+}
+
 func (this *BLangErrorTypeNode) IsDistinct() bool {
 	return this.FlagSet.Contains(model.Flag_DISTINCT)
+}
+
+func (this *BLangTupleTypeNode) GetMembers() []model.MemberTypeDesc {
+	members := make([]model.MemberTypeDesc, len(this.Members))
+	for i := range this.Members {
+		members[i] = &this.Members[i]
+	}
+	return members
+}
+
+func (this *BLangTupleTypeNode) GetRest() model.TypeDescriptor {
+	if this.Rest == nil {
+		return nil
+	}
+	return this.Rest
+}
+
+func (this *BLangMemberTypeDesc) GetKind() model.NodeKind {
+	return model.NodeKind_MEMBER_TYPE_DESC
+}
+
+func (this *BLangMemberTypeDesc) GetTypeDesc() model.TypeDescriptor {
+	return this.TypeDesc
+}
+
+func (this *BLangMemberTypeDesc) GetFlags() common.Set[model.Flag] {
+	return &this.FlagSet
+}
+
+func (this *BLangMemberTypeDesc) AddFlag(flag model.Flag) {
+	this.FlagSet.Add(flag)
+}
+
+func (this *BLangMemberTypeDesc) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	return this.AnnAttachments
+}
+
+func (this *BLangMemberTypeDesc) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+	this.AnnAttachments = append(this.AnnAttachments, annAttachment)
+}
+
+func (this *BLangMemberTypeDesc) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+	return this.MarkdownDocumentationAttachment
+}
+
+func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+	this.MarkdownDocumentationAttachment = documentationNode
 }

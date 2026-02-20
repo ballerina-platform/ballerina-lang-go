@@ -547,6 +547,14 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangErrorTypeNode:
 		WalkTypeData(v, &node.detailType)
 
+	case *BLangTupleTypeNode:
+		for i := range node.Members {
+			Walk(v, node.Members[i].TypeDesc.(BLangNode))
+		}
+		if node.Rest != nil {
+			Walk(v, node.Rest.(BLangNode))
+		}
+
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
 		Walk(v, &node.Identifier)
