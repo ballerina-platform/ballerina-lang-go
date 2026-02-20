@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"sync"
 )
 
 type binding struct {
@@ -63,8 +64,24 @@ func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty s
 }
 
 func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+	var wg sync.WaitGroup
+	var panicErr any = nil
 	for i := range pkg.Functions {
-		analyzeFunction(ctx, &pkg.Functions[i])
+		wg.Add(1)
+		fn := &pkg.Functions[i]
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = r
+				}
+			}()
+			analyzeFunction(ctx, fn)
+		}()
+	}
+	wg.Wait()
+	if panicErr != nil {
+		panic(panicErr)
 	}
 }
 
