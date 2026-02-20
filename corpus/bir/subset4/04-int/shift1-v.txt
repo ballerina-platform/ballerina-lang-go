@@ -1,0 +1,44 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    i = %1;
+    %4 = ConstantLoad 2
+    %3 = unknown i %4;
+    %5 = println(%3) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad 2
+    %6 = unknown i %7;
+    %8 = println(%6) -> bb2;
+  }
+  bb2 {
+    %9 = ConstantLoad 128
+    %10 = unknown %9;
+    j = %10;
+    %13 = ConstantLoad 2
+    %12 = unknown j %13;
+    %14 = println(%12) -> bb3;
+  }
+  bb3 {
+    %16 = ConstantLoad 2
+    %15 = unknown j %16;
+    %17 = println(%15) -> bb4;
+  }
+  bb4 {
+    %18 = ConstantLoad 128
+    k = %18;
+    %21 = ConstantLoad 2
+    %20 = unknown k %21;
+    %22 = println(%20) -> bb5;
+  }
+  bb5 {
+    %24 = ConstantLoad 2
+    %23 = unknown k %24;
+    %25 = println(%23) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

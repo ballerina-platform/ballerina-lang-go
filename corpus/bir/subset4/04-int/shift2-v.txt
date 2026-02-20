@@ -1,0 +1,43 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 200
+    u8 = %1;
+    %4 = ConstantLoad 2
+    %3 = unknown u8 %4;
+    a = %3;
+    %6 = println(a) -> bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad 2
+    %7 = unknown u8 %8;
+    b = %7;
+    %10 = println(b) -> bb2;
+  }
+  bb2 {
+    %11 = ConstantLoad 2000
+    u16 = %11;
+    %14 = ConstantLoad 2
+    %13 = unknown u16 %14;
+    c = %13;
+    %16 = println(c) -> bb3;
+  }
+  bb3 {
+    %17 = ConstantLoad 200000
+    u32 = %17;
+    %20 = ConstantLoad 2
+    %19 = unknown u32 %20;
+    d = %19;
+    %22 = println(d) -> bb4;
+  }
+  bb4 {
+    %24 = ConstantLoad 2
+    %23 = unknown u8 %24;
+    e = %23;
+    %26 = println(e) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

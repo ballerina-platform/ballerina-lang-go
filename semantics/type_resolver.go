@@ -504,6 +504,17 @@ func isBitWiseExpr(opExpr opExpr) bool {
 	}
 }
 
+func isShiftExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_LEFT_SHIFT,
+		model.OperatorKind_BITWISE_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		return true
+	default:
+		return false
+	}
+}
+
 func isRelationalExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
@@ -612,7 +623,17 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 	// Determine result type based on operator
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
-	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
+	case model.OperatorKind_SUB:
+		if numLit, ok := expr.Expr.(*ast.BLangNumericLiteral); ok {
+			resultValue := numLit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
+		} else if lit, ok := expr.Expr.(*ast.BLangLiteral); semtypes.IsSubtypeSimple(exprTy, semtypes.INT) && ok {
+			resultValue := lit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
+		} else {
+			resultTy = exprTy
+		}
+	case model.OperatorKind_ADD, model.OperatorKind_BITWISE_COMPLEMENT:
 		// Numeric unary operators: result type is same as operand type
 		resultTy = exprTy
 	case model.OperatorKind_NOT:
@@ -720,6 +741,15 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		}
 		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
 		return nil, false
+	}
+
+	if isShiftExpr(expr) {
+		ctx := t.tyCtx
+		if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
+		return &semtypes.INT, nilLifted
 	}
 
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
@@ -976,6 +1006,10 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		ast.Walk(tr, &ty.TypeName)
 		ast.Walk(tr, &ty.PkgAlias)
 		symbol := ty.Symbol()
+		if ty.PkgAlias.Value != "" {
+			// imported symbol should have been already resolved
+			return tr.ctx.SymbolType(symbol)
+		}
 		defn, ok := tr.typeDefns[symbol]
 		if !ok {
 			// This should have been detected by the symbol resolver

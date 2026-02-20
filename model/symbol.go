@@ -21,8 +21,8 @@ import (
 )
 
 type Scope interface {
-	GetSymbol(name string) (Symbol, bool)
-	GetPrefixedSymbol(prefix, name string) (Symbol, bool)
+	GetSymbol(name string) (SymbolRef, bool)
+	GetPrefixedSymbol(prefix, name string) (SymbolRef, bool)
 	AddSymbol(name string, symbol Symbol)
 }
 
@@ -203,27 +203,33 @@ func (ms *ModuleScope) Exports() ExportedSymbolSpace {
 	}
 }
 
-func (ms *ModuleScope) GetSymbol(name string) (Symbol, bool) {
-	ref, ok := ms.Main.GetSymbol(name)
-	if !ok {
-		return nil, false
-	}
-	return &ref, true
+func (ms *ModuleScope) GetSymbol(name string) (SymbolRef, bool) {
+	return ms.Main.GetSymbol(name)
 }
 
-func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (Symbol, bool) {
+func mapToLangPrefixIfNeeded(prefix string) string {
+	switch prefix {
+	case "int":
+		return "lang.int"
+	case "array":
+		return "lang.array"
+	default:
+		return prefix
+	}
+}
+
+func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) {
 	if prefix == "" {
-		return ms.GetSymbol(name)
+		return ms.Main.GetSymbol(name)
 	}
 	exported, ok := ms.Prefix[prefix]
 	if !ok {
-		return nil, false
+		exported, ok = ms.Prefix[mapToLangPrefixIfNeeded(prefix)]
+		if !ok {
+			return SymbolRef{}, false
+		}
 	}
-	ref, ok := exported.Main.GetSymbol(name)
-	if !ok {
-		return nil, false
-	}
-	return &ref, true
+	return exported.Main.GetSymbol(name)
 }
 
 func (ms *ModuleScope) AddSymbol(name string, symbol Symbol) {
@@ -238,15 +244,15 @@ func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	return space.Main.GetSymbol(name)
 }
 
-func (bs *BlockScopeBase) GetSymbol(name string) (Symbol, bool) {
+func (bs *BlockScopeBase) GetSymbol(name string) (SymbolRef, bool) {
 	ref, ok := bs.Main.GetSymbol(name)
 	if ok {
-		return &ref, true
+		return ref, true
 	}
 	return bs.Parent.GetSymbol(name)
 }
 
-func (bs *BlockScopeBase) GetPrefixedSymbol(prefix, name string) (Symbol, bool) {
+func (bs *BlockScopeBase) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) {
 	return bs.Parent.GetPrefixedSymbol(prefix, name)
 }
 
