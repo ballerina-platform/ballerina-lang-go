@@ -25,6 +25,7 @@ import (
 // Type interface (used by Symbol interface)
 type Type interface {
 	GetTypeKind() TypeKind
+	GetTypeData() TypeData
 }
 
 // ValueType is a type alias for Type (used for BType references)
@@ -252,6 +253,7 @@ const (
 	NodeKind_NAMED_ARG_BINDING_PATTERN
 	NodeKind_SIMPLE_BINDING_PATTERN
 	NodeKind_ARRAY_TYPE
+	NodeKind_MEMBER_TYPE_DESC
 	NodeKind_UNION_TYPE_NODE
 	NodeKind_INTERSECTION_TYPE_NODE
 	NodeKind_FINITE_TYPE_NODE
@@ -512,7 +514,6 @@ type DocumentationReferenceType string
 type Node interface {
 	GetKind() NodeKind
 	GetPosition() diagnostics.Location
-	GetTypeData() TypeData
 	GetDeterminedType() semtypes.SemType
 }
 
@@ -583,8 +584,8 @@ type AnnotationNode interface {
 	TopLevelNode
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
+	GetTypeDescriptor() TypeDescriptor
+	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
 type FunctionBodyNode = Node
@@ -601,8 +602,6 @@ type VariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
 	GetInitialExpression() ExpressionNode
 	SetInitialExpression(expr ExpressionNode)
 	GetIsDeclaredWithVar() bool
@@ -619,7 +618,6 @@ type SimpleVariableNode interface {
 }
 
 type ConstantNode interface {
-	GetTypeData() TypeData
 	GetAssociatedTypeDefinition() TypeDefinition
 }
 
@@ -632,8 +630,8 @@ type InvokableNode interface {
 	SetName(name IdentifierNode)
 	GetParameters() []SimpleVariableNode
 	AddParameter(param SimpleVariableNode)
-	GetReturnTypeData() TypeData
-	SetReturnTypeData(typeData TypeData)
+	GetReturnTypeDescriptor() TypeDescriptor
+	SetReturnTypeDescriptor(typeDescriptor TypeDescriptor)
 	GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode
 	AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 	GetBody() FunctionBodyNode
@@ -721,6 +719,18 @@ type ArrayTypeNode interface {
 	GetElementType() TypeData
 	GetDimensions() int
 	GetSizes() []ExpressionNode
+}
+
+type TupleTypeNode interface {
+	ReferenceTypeNode
+	GetMembers() []MemberTypeDesc
+	GetRest() TypeDescriptor
+}
+
+type MemberTypeDesc interface {
+	Node
+	AnnotatableNode
+	GetTypeDesc() TypeDescriptor
 }
 
 type FiniteTypeNode interface {
@@ -901,8 +911,8 @@ type GroupExpressionNode interface {
 
 type TypedescExpressionNode interface {
 	ExpressionNode
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
+	GetTypeDescriptor() TypeDescriptor
+	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
 type NamedArgNode interface {

@@ -131,8 +131,7 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i, param := range fn.RequiredParams {
 		ast.Walk(t, &param)
-		typeData := param.GetTypeData()
-		paramTypes[i] = typeData.Type
+		paramTypes[i] = param.GetDeterminedType()
 	}
 	var restTy semtypes.SemType
 	if fn.RestParam != nil {
@@ -143,10 +142,8 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
-	ast.WalkTypeData(t, &fn.ReturnTypeData)
-	returnTypeData := fn.GetReturnTypeData()
-	if returnTypeData.TypeDescriptor != nil {
-		returnTy = returnTypeData.Type
+	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
+		returnTy = t.resolveBType(retTd.(ast.BType), 0)
 	} else {
 		returnTy = &semtypes.NIL
 	}
@@ -187,12 +184,6 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 
-	// Set DeterminedType to NEVER for all nodes by default.
-	// Nodes with actual semantic types will overwrite this during resolution.
-	if node.GetDeterminedType() == nil {
-		node.SetDeterminedType(&semtypes.NEVER)
-	}
-
 	// Existing type-specific resolution switch
 	switch n := node.(type) {
 	case *ast.BLangConstant:
@@ -200,7 +191,7 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
-	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode, *ast.BLangUnionTypeNode, *ast.BLangErrorTypeNode:
+	case ast.BType:
 		t.resolveBType(node.(ast.BType), 0)
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
@@ -214,7 +205,11 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case ast.BLangExpression:
 		t.resolveExpression(n)
 	default:
-		return t
+		// Non-expression nodes with no specific handling: mark as NEVER and continue traversal
+	}
+	// Set DeterminedType to NEVER as fallback for nodes that didn't get a type assigned.
+	if node.GetDeterminedType() == nil {
+		node.SetDeterminedType(&semtypes.NEVER)
 	}
 	return t
 }
@@ -249,8 +244,7 @@ func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, dept
 }
 
 func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
-	typeData := n.GetTypeData()
-	bType := typeData.TypeDescriptor.(ast.BType)
+	bType := n.GetValueType()
 	var ty semtypes.SemType
 
 	switch bType.BTypeGetTag() {
@@ -327,8 +321,7 @@ func (t *TypeResolver) parseDecimalValue(strValue string, pos diagnostics.Locati
 }
 
 func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) {
-	typeData := n.GetTypeData()
-	bType := typeData.TypeDescriptor.(ast.BType)
+	bType := n.GetValueType()
 	typeTag := bType.BTypeGetTag()
 
 	var ty semtypes.SemType
@@ -397,13 +390,13 @@ func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semty
 }
 
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
-	typeData := node.GetTypeData()
-	if typeData.TypeDescriptor == nil {
+	typeNode := node.TypeNode()
+	if typeNode == nil {
 		return
 	}
 
 	// Resolve the type descriptor and get the semtype
-	semType := t.resolveBType(typeData.TypeDescriptor.(ast.BType), 0)
+	semType := t.resolveBType(typeNode, 0)
 
 	setExpectedType(node, semType)
 
@@ -414,17 +407,17 @@ func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 // resolveExpression is a dispatcher that resolves the intrinsic type of any expression
 func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemType {
 	// Check if already resolved
-	if typeData := expr.GetTypeData(); typeData.Type != nil {
-		return typeData.Type
+	if ty := expr.GetDeterminedType(); ty != nil {
+		return ty
 	}
 
 	switch e := expr.(type) {
 	case *ast.BLangLiteral:
 		t.resolveLiteral(e)
-		return e.GetTypeData().Type
+		return e.GetDeterminedType()
 	case *ast.BLangNumericLiteral:
 		t.resolveNumericLiteral(e)
-		return e.GetTypeData().Type
+		return e.GetDeterminedType()
 	case *ast.BLangSimpleVarRef:
 		return t.resolveSimpleVarRef(e)
 	case *ast.BLangBinaryExpr:
@@ -903,9 +896,9 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 	}
 	res := tr.resolveBTypeInner(btype, depth)
 	bLangNode.SetDeterminedType(res)
-	typeData := bLangNode.GetTypeData()
+	typeData := btype.GetTypeData()
 	typeData.Type = res
-	bLangNode.SetTypeData(typeData)
+	btype.SetTypeData(typeData)
 	return res
 }
 
@@ -933,6 +926,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.ANY
 		case model.TypeKind_DECIMAL:
 			return &semtypes.DECIMAL
+		case model.TypeKind_BYTE:
+			return semtypes.BYTE
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil
@@ -990,6 +985,22 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			result = semtypes.Union(result, ty)
 		}
 		return result
+	case *ast.BLangTupleTypeNode:
+		defn := ty.Definition
+		if defn == nil {
+			d := semtypes.NewListDefinition()
+			ty.Definition = &d
+			members := make([]semtypes.SemType, len(ty.Members))
+			for i, member := range ty.Members {
+				members[i] = tr.resolveBType(member.TypeDesc.(ast.BType), depth+1)
+			}
+			rest := semtypes.SemType(&semtypes.NEVER)
+			if ty.Rest != nil {
+				rest = tr.resolveBType(ty.Rest.(ast.BType), depth+1)
+			}
+			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest)
+		}
+		return defn.GetSemType(tr.ctx.GetTypeEnv())
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
@@ -1009,11 +1020,9 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {
 	}
 	ast.Walk(t, constant.Expr.(ast.BLangNode))
 	exprType := constant.Expr.(ast.BLangExpression).GetDeterminedType()
-	typeData := constant.GetTypeData()
 	var expectedType semtypes.SemType
-	if typeData.TypeDescriptor != nil {
-		ast.WalkTypeData(t, &typeData)
-		expectedType = typeData.Type
+	if typeNode := constant.TypeNode(); typeNode != nil {
+		expectedType = t.resolveBType(typeNode, 0)
 	} else {
 		expectedType = exprType
 	}
