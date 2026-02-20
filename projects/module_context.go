@@ -24,11 +24,13 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/desugar"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -53,10 +55,11 @@ type moduleContext struct {
 	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
-	bLangPkg       *ast.BLangPackage
-	bPackageSymbol interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
-	compilerCtx    *context.CompilerContext
-	birPkg         *bir.BIRPackage
+	bLangPkg        *ast.BLangPackage
+	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
+	compilerCtx     *context.CompilerContext
+	importedSymbols map[string]model.ExportedSymbolSpace
+	birPkg          *bir.BIRPackage
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
@@ -190,39 +193,21 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 	return slices.Clone(m.moduleDescDependencies)
 }
 
-// compile performs module compilation by delegating to compileInternal.
-func (m *moduleContext) compile() {
-	compileInternal(m)
-	m.compilationState = moduleCompilationStateCompiled
-}
-
-// compileInternal performs the actual compilation of a module:
-// parse sources, build BLangPackage (AST), and run semantic analysis.
-func compileInternal(moduleCtx *moduleContext) {
+// compilePhase1 performs parsing, AST building, symbol resolution, and type resolution.
+// This phase must run sequentially respecting module dependencies.
+func compilePhase1(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 	env := semtypes.CreateTypeEnv()
 	cx := context.NewCompilerContext(env)
 	moduleCtx.compilerCtx = cx
 
-	// Parse all source documents and collect syntax trees.
-	var syntaxTrees []*tree.SyntaxTree
-	for _, docID := range moduleCtx.srcDocIDs {
-		docCtx := moduleCtx.srcDocContextMap[docID]
-		if docCtx != nil {
-			st := docCtx.parse()
-			if st != nil {
-				syntaxTrees = append(syntaxTrees, st)
-			}
-		}
-	}
-
-	// Parse test source documents.
-	for _, docID := range moduleCtx.testSrcDocIDs {
-		docCtx := moduleCtx.testDocContextMap[docID]
-		if docCtx != nil {
-			docCtx.parse()
-		}
-	}
+	// Parse all source and test documents in parallel.
+	syntaxTrees := parseDocumentsParallel(
+		moduleCtx.srcDocIDs,
+		moduleCtx.srcDocContextMap,
+		moduleCtx.testSrcDocIDs,
+		moduleCtx.testDocContextMap,
+	)
 
 	if len(syntaxTrees) == 0 {
 		return
@@ -235,11 +220,24 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	// Resolve symbols (imports) before type resolution
 	importedSymbols := semantics.ResolveImports(cx, pkgNode, semantics.GetImplicitImports(cx))
+	moduleCtx.importedSymbols = importedSymbols
 	semantics.ResolveSymbols(cx, pkgNode, importedSymbols)
 
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkgNode)
+}
+
+// compilePhase2 performs CFG creation, semantic analysis, and CFG analysis.
+// This phase can run in parallel across modules after all modules complete Phase 1.
+func compilePhase2(moduleCtx *moduleContext) {
+	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
+		return
+	}
+
+	pkgNode := moduleCtx.bLangPkg
+	cx := moduleCtx.compilerCtx
+	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	// Create control flow graph before semantic analysis.
 	// CFG is needed for conditional type narrowing during semantic analysis.
@@ -266,7 +264,60 @@ func compileInternal(moduleCtx *moduleContext) {
 	semantics.AnalyzeCFG(cx, pkgNode, cfg)
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
-	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, importedSymbols)
+	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)
+
+	moduleCtx.compilationState = moduleCompilationStateCompiled
+}
+
+// parseDocumentsParallel parses source and test documents in parallel.
+// Returns syntax trees from source documents only (test docs are parsed but not returned).
+func parseDocumentsParallel(
+	srcDocIDs []DocumentID,
+	srcDocContextMap map[DocumentID]*documentContext,
+	testDocIDs []DocumentID,
+	testDocContextMap map[DocumentID]*documentContext,
+) []*tree.SyntaxTree {
+	var (
+		mu          sync.Mutex
+		wg          sync.WaitGroup
+		syntaxTrees []*tree.SyntaxTree
+	)
+
+	// Parse source documents - collect syntax trees
+	for _, docID := range srcDocIDs {
+		docCtx := srcDocContextMap[docID]
+		if docCtx == nil {
+			continue
+		}
+
+		wg.Add(1)
+		go func(dc *documentContext) {
+			defer wg.Done()
+			st := dc.parse()
+			if st != nil {
+				mu.Lock()
+				syntaxTrees = append(syntaxTrees, st)
+				mu.Unlock()
+			}
+		}(docCtx)
+	}
+
+	// Parse test documents - no syntax trees collected
+	for _, docID := range testDocIDs {
+		docCtx := testDocContextMap[docID]
+		if docCtx == nil {
+			continue
+		}
+
+		wg.Add(1)
+		go func(dc *documentContext) {
+			defer wg.Done()
+			dc.parse()
+		}(docCtx)
+	}
+
+	wg.Wait()
+	return syntaxTrees
 }
 
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
@@ -390,4 +441,26 @@ func (m *moduleContext) containsDocument(documentID DocumentID) bool {
 func (m *moduleContext) isTestDocument(documentID DocumentID) bool {
 	_, ok := m.testDocContextMap[documentID]
 	return ok
+}
+
+func (m *moduleContext) populateModuleLoadRequests() []*moduleLoadRequest {
+	var requests []*moduleLoadRequest
+	for _, docID := range m.srcDocIDs {
+		docCtx := m.srcDocContextMap[docID]
+		if docCtx != nil {
+			requests = append(requests, docCtx.moduleLoadRequests()...)
+		}
+	}
+	return requests
+}
+
+func (m *moduleContext) populateTestModuleLoadRequests() []*moduleLoadRequest {
+	var requests []*moduleLoadRequest
+	for _, docID := range m.testSrcDocIDs {
+		docCtx := m.testDocContextMap[docID]
+		if docCtx != nil {
+			requests = append(requests, docCtx.moduleLoadRequests()...)
+		}
+	}
+	return requests
 }

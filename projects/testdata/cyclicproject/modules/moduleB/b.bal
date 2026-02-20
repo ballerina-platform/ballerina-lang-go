@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
+import testorg/cyclic.moduleA;
 
-public function main() {
-    io:println(hello());
+public function fromB() returns string {
+    return moduleA:fromA();
 }
