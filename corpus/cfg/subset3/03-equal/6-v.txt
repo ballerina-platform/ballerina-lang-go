@@ -1,0 +1,34 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (literal true)
+          (literal false)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (literal true)
+          (literal true)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (literal false)
+          (literal true)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (literal false)
+          (literal false)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (literal true)
+          (literal true)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (literal false)
+          (literal true)))))
+  )
+)
