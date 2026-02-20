@@ -18,6 +18,7 @@ package model
 
 import (
 	"ballerina-lang-go/semtypes"
+	"sync"
 )
 
 type Scope interface {
@@ -117,6 +118,7 @@ type (
 	}
 
 	SymbolSpace struct {
+		mu          sync.RWMutex
 		pkg         PackageIdentifier
 		lookupTable map[string]int
 		Symbols     []Symbol
@@ -182,6 +184,22 @@ func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 		return SymbolRef{}, false
 	}
 	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}, true
+}
+
+// AppendSymbol appends a symbol to the space and returns its index. Thread-safe.
+func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
+	space.mu.Lock()
+	defer space.mu.Unlock()
+	index := len(space.Symbols)
+	space.Symbols = append(space.Symbols, symbol)
+	return index
+}
+
+// SymbolAt returns the symbol at the given index. Thread-safe.
+func (space *SymbolSpace) SymbolAt(index int) Symbol {
+	space.mu.RLock()
+	defer space.mu.RUnlock()
+	return space.Symbols[index]
 }
 
 func NewSymbolSpaceInner(packageId PackageID, index int) *SymbolSpace {
