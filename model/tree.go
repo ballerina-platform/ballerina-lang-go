@@ -253,6 +253,7 @@ const (
 	NodeKind_NAMED_ARG_BINDING_PATTERN
 	NodeKind_SIMPLE_BINDING_PATTERN
 	NodeKind_ARRAY_TYPE
+	NodeKind_MEMBER_TYPE_DESC
 	NodeKind_UNION_TYPE_NODE
 	NodeKind_INTERSECTION_TYPE_NODE
 	NodeKind_FINITE_TYPE_NODE
@@ -718,6 +719,18 @@ type ArrayTypeNode interface {
 	GetElementType() TypeData
 	GetDimensions() int
 	GetSizes() []ExpressionNode
+}
+
+type TupleTypeNode interface {
+	ReferenceTypeNode
+	GetMembers() []MemberTypeDesc
+	GetRest() TypeDescriptor
+}
+
+type MemberTypeDesc interface {
+	Node
+	AnnotatableNode
+	GetTypeDesc() TypeDescriptor
 }
 
 type FiniteTypeNode interface {
