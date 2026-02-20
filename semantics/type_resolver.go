@@ -671,7 +671,11 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 		// Equality operators always return boolean
 		resultTy = &semtypes.BOOLEAN
 	} else if isBitWiseExpr(expr) {
-		resultTy = &semtypes.INT
+		var nilLifted bool
+		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
+		if nilLifted {
+			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+		}
 	} else if isRangeExpr(expr) {
 		// Range operators: .., ...
 		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
@@ -696,7 +700,7 @@ var additiveSupportedTypes = semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
 func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
 	nilLifted := false
 
-	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
 		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
@@ -749,6 +753,10 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
+		return &semtypes.INT, nilLifted
+	}
+
+	if isBitWiseExpr(expr) {
 		return &semtypes.INT, nilLifted
 	}
 
