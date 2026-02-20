@@ -123,9 +123,8 @@ func (ctx *Context) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind
 		isPublic: isPublic,
 	}
 	ctx.currentScope().AddSymbol(name, symbol)
-	sym, _ := ctx.currentScope().GetSymbol(name)
-	ref := sym.(*model.SymbolRef)
-	return name, *ref
+	ref, _ := ctx.currentScope().GetSymbol(name)
+	return name, ref
 }
 
 // DesugarPackage returns a desugared package (may be new or same instance)

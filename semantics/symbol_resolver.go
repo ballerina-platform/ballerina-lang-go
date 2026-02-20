@@ -117,11 +117,7 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 }
 
 func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
-	sym, ok := ms.scope.GetPrefixedSymbol(prefix, name)
-	if !ok {
-		return model.SymbolRef{}, false
-	}
-	return *sym.(*model.SymbolRef), true
+	return ms.scope.GetPrefixedSymbol(prefix, name)
 }
 
 func (ms *moduleSymbolResolver) AddSymbol(name string, symbol model.Symbol) {
