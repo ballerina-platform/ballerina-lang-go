@@ -13,7 +13,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 // @productions multiplicative-expr return-stmt function-call-expr local-var-decl-stmt float-literal
 import ballerina/io;
 

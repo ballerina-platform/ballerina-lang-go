@@ -14,12 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions additive-expr function-call-expr local-var-decl-stmt string-literal
+// @productions additive-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {
-    string a = "hello";
-    string b = "world";
-    io:println(a + " " + b); // @output hello world
-    io:println("" + "x"); // @output x
+    int? x = ();
+    io:println(x - 1); // @output nil
 }
