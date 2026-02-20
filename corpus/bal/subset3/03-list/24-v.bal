@@ -23,9 +23,6 @@ public function main() {
     while i < 1000*1000 {
         v[i] = 1;
         i = i + 1;
-        if i % 1000 == 0 {
-            io:println(i);
-        }
     }
     v[123000] = 1001;
     i = 0;
