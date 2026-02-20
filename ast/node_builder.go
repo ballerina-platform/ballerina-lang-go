@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/identifierutil"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
@@ -32,6 +31,45 @@ import (
 
 	balCommon "ballerina-lang-go/common"
 )
+
+type typeTable struct {
+	booleanType *BTypeImpl
+	intType     *BTypeImpl
+	nilType     *BTypeImpl
+	stringType  *BTypeImpl
+	floatType   *BTypeImpl
+	decimalType *BTypeImpl
+}
+
+func newTypeTable() typeTable {
+	return typeTable{
+		booleanType: &BTypeImpl{tag: model.TypeTags_BOOLEAN, flags: Flags_READONLY},
+		intType:     &BTypeImpl{tag: model.TypeTags_INT, flags: Flags_READONLY},
+		nilType:     &BTypeImpl{tag: model.TypeTags_NIL, flags: Flags_READONLY},
+		stringType:  &BTypeImpl{tag: model.TypeTags_STRING, flags: Flags_READONLY},
+		floatType:   &BTypeImpl{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
+		decimalType: &BTypeImpl{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
+	}
+}
+
+func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
+	switch tag {
+	case model.TypeTags_BOOLEAN:
+		return t.booleanType
+	case model.TypeTags_INT:
+		return t.intType
+	case model.TypeTags_NIL:
+		return t.nilType
+	case model.TypeTags_STRING:
+		return t.stringType
+	case model.TypeTags_FLOAT:
+		return t.floatType
+	case model.TypeTags_DECIMAL:
+		return t.decimalType
+	default:
+		panic("not implemented")
+	}
+}
 
 type NodeBuilder struct {
 	PackageID            *model.PackageID
@@ -43,6 +81,7 @@ type NodeBuilder struct {
 	inCollectContext     bool
 	constantSet          map[string]bool // Track declared constants to detect redeclarations
 	cx                   *context.CompilerContext
+	types                typeTable
 }
 
 // NewNodeBuilder creates and initializes a new NodeBuilder instance
@@ -51,8 +90,13 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 		constantSet: make(map[string]bool),
 		cx:          cx,
 		PackageID:   cx.GetDefaultPackage(),
+		types:       newTypeTable(),
 	}
 	return nodeBuilder
+}
+
+func getBuiltinPos() diagnostics.Location {
+	return nil
 }
 
 var _ tree.NodeTransformer[BLangNode] = &NodeBuilder{}
@@ -812,7 +856,7 @@ func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.N
 // migrated from BLangNodeBuilder.java:6754:5
 func isSimpleLiteral(syntaxKind common.SyntaxKind) bool {
 	switch syntaxKind {
-	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL:
+	case common.STRING_LITERAL, common.NUMERIC_LITERAL, common.BOOLEAN_LITERAL, common.NIL_LITERAL, common.NULL_LITERAL:
 		return true
 	default:
 		return false
@@ -957,44 +1001,6 @@ func isTokenInRegExp(kind common.SyntaxKind) bool {
 	}
 }
 
-// validateUnicodePoints validates unicode escape sequences
-// migrated from BLangNodeBuilder.java:6233:5
-func validateUnicodePoints(text string, pos Location) {
-	// TODO: ai slop recheck this
-	unicodePattern := regexp.MustCompile(`\\(\\*)u\{([a-fA-F0-9]+)\}`)
-	matches := unicodePattern.FindAllStringSubmatch(text, -1)
-	for _, match := range matches {
-		if len(match) < 3 {
-			continue
-		}
-		leadingBackSlashes := match[1]
-		if identifierutil.IsEscapedNumericEscape(leadingBackSlashes) {
-			// e.g. \\u{61}, \\\\u{61}
-			continue
-		}
-
-		hexCodePoint := match[2]
-		decimalCodePoint, err := strconv.ParseInt(hexCodePoint, 16, 32)
-		if err != nil {
-			continue
-		}
-
-		// Constants for unicode validation
-		const MIN_UNICODE = 0xD800
-		const MIDDLE_LIMIT_UNICODE = 0xDFFF
-		const MAX_UNICODE = 0x10FFFF
-
-		if (decimalCodePoint >= MIN_UNICODE && decimalCodePoint <= MIDDLE_LIMIT_UNICODE) ||
-			decimalCodePoint > MAX_UNICODE {
-			offset := len(leadingBackSlashes) + len("\\u{")
-			// TODO: Add diagnostic logging when dlog is migrated
-			_ = offset
-			_ = hexCodePoint
-			_ = pos
-		}
-	}
-}
-
 // isNumericLiteral checks if syntax kind is numeric literal
 // migrated from BLangNodeBuilder.java:6809:5
 func isNumericLiteral(kind common.SyntaxKind) bool {
@@ -1056,7 +1062,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		numericLiteral := &BLangNumericLiteral{}
 		numericLiteral.pos = getPosition(literal)
 		typeData := model.TypeData{
-			TypeDescriptor: getTypeFromTag(typeTag),
+			TypeDescriptor: n.types.getTypeFromTag(typeTag),
 		}
 		numericLiteral.SetTypeData(typeData)
 		numericLiteral.Value = value
@@ -1093,7 +1099,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			// Try to unescape, but handle errors gracefully
 			// We may reach here when the string literal has syntax diagnostics.
 			// Therefore mock the compiler with an empty string on error.
-			text = identifierutil.UnescapeBallerina(text)
+			text = unescapeBallerinaString(text)
 		}
 
 		typeTag = model.TypeTags_STRING
@@ -1126,11 +1132,9 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
 	typeData := model.TypeData{
-		TypeDescriptor: getTypeFromTag(typeTag),
+		TypeDescriptor: n.types.getTypeFromTag(typeTag),
 	}
 	bLangNode.SetTypeData(typeData)
-	bType := typeData.TypeDescriptor.(BType)
-	bType.bTypeSetTag(typeTag)
 	bLiteral.SetValue(value)
 	bLiteral.SetOriginalValue(*originalValue)
 	return bLiteral
@@ -1687,7 +1691,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		nilLiteral.pos = getPosition(returnStatementNode)
 		nilLiteral.Value = nil
 		typeData := model.TypeData{
-			TypeDescriptor: getTypeFromTag(model.TypeTags_NIL),
+			TypeDescriptor: n.types.getTypeFromTag(model.TypeTags_NIL),
 		}
 		nilLiteral.SetTypeData(typeData)
 		bLReturn.SetExpression(nilLiteral)
@@ -1737,6 +1741,7 @@ func (n *NodeBuilder) TransformForEachStatement(forEachStatementNode *tree.ForEa
 
 func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.BinaryExpressionNode) BLangNode {
 	if binaryExpressionNode.Operator().Kind() == common.ELVIS_TOKEN {
+		panic("TransformBinaryExpression: elvis operator not supported")
 	}
 
 	bLBinaryExpr := BLangBinaryExpr{}
@@ -2548,6 +2553,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 	for i := dimensionSize - 1; i >= 0; i-- {
 		dimensionNode := dimensionNodes.Get(i)
 		if dimensionNode.ArrayLength() == nil {
+			sizes = append(sizes, nil)
 		} else {
 			panic("array length expression handling unimplemented")
 		}

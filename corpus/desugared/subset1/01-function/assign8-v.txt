@@ -3,11 +3,11 @@
   (function foo (
     (variable arr (type
       (array-type
-        (value-type int) ())))
+        (value-type int) dimensions: 1 ([]))))
     (variable i (type
       (value-type int)))) (
     (array-type
-      (value-type int) ()))
+      (value-type int) dimensions: 1 ([])))
     (block-function-body
       (assignment
         (index-based-access
@@ -24,7 +24,7 @@
       (var-def
         (variable arr (type
           (array-type
-            (value-type int) ())) (expr
+            (value-type int) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
       (assignment
         (wildcard-binding-pattern)

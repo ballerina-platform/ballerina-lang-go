@@ -24,14 +24,14 @@ nestedForeach<NIL>{
     %6 = ConstantLoad 1
     j = %6;
     %8 = ConstantLoad 3
-    $desugar$2 = %8;
+    $desugar$1 = %8;
     GOTO bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %10 = < j $desugar$2;
+    %10 = < j $desugar$1;
     %10 ? bb5 : bb6;
   }
   bb5 {

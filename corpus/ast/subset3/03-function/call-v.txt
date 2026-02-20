@@ -14,7 +14,7 @@
       (var-def
         (variable x (type
           (array-type
-            (value-type any) ())) (expr
+            (value-type any) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
       (expression-stmt
         (invocation push expr:
@@ -31,7 +31,7 @@
       (var-def
         (variable x (type
           (array-type
-            (value-type any) ())) (expr
+            (value-type any) dimensions: 1 ([]))) (expr
           (list-constructor-expr))))
       (expression-stmt
         (invocation push expr:
@@ -59,9 +59,9 @@
   (function foo (
     (variable x (type
       (array-type
-        (value-type any) ())))) (
+        (value-type any) dimensions: 1 ([]))))) (
     (array-type
-      (value-type any) ()))
+      (value-type any) dimensions: 1 ([])))
     (block-function-body
       (return
         (simple-var-ref x)))))

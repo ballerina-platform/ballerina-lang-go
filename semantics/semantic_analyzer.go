@@ -740,6 +740,8 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
+	} else if isShiftExpr(binaryExpr) {
+		analyzeShiftExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 	}
 
 	// for nil lifting expression we do semantic analysis as part of type resolver
@@ -777,6 +779,38 @@ func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy,
 		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
 		return
 	}
+	setExpectedType(binaryExpr, resultTy)
+}
+
+func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
+	ctx := a.tyCtx()
+	nilLifted := false
+	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
+		nilLifted = true
+		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
+		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
+	}
+	op := binaryExpr.GetOperatorKind()
+	var resultTy semtypes.SemType = &semtypes.INT
+
+	switch op {
+	case model.OperatorKind_BITWISE_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+	default:
+		resultTy = &semtypes.INT
+	}
+
+	if nilLifted {
+		resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+	}
+
 	setExpectedType(binaryExpr, resultTy)
 }
 
@@ -904,10 +938,28 @@ func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) {
 func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 	collection := foreachStmt.Collection
 	analyzeExpression(a, collection, nil)
+	variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
+	variableType := a.ctx().SymbolType(variable.Symbol())
 	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
-		variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
-		if !semtypes.IsSubtypeSimple(a.ctx().SymbolType(variable.Symbol()), semtypes.INT) {
+		if !semtypes.IsSubtypeSimple(variableType, semtypes.INT) {
 			a.semanticErr("foreach variable must be a subtype of int for range expression")
+		}
+	} else {
+		collectionType := collection.GetDeterminedType()
+		var expectedValueType semtypes.SemType
+		switch {
+		case semtypes.IsSubtypeSimple(collectionType, semtypes.LIST):
+			memberTypes := semtypes.ListAllMemberTypesInner(a.tyCtx(), collectionType)
+			var result semtypes.SemType = &semtypes.NEVER
+			for _, each := range memberTypes.SemTypes {
+				result = semtypes.Union(result, each)
+			}
+			expectedValueType = result
+		default:
+			a.unimplementedErr("unsupported foreach collection")
+		}
+		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
+			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
 		}
 	}
 }

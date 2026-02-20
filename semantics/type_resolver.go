@@ -19,6 +19,7 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -503,6 +504,17 @@ func isBitWiseExpr(opExpr opExpr) bool {
 	}
 }
 
+func isShiftExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_LEFT_SHIFT,
+		model.OperatorKind_BITWISE_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		return true
+	default:
+		return false
+	}
+}
+
 func isRelationalExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
@@ -611,30 +623,18 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 	// Determine result type based on operator
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
-	case model.OperatorKind_ADD:
-		resultTy = exprTy
 	case model.OperatorKind_SUB:
-		if !isNumericType(exprTy) {
-			t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil
-		}
-		shape := semtypes.SingleShape(exprTy)
-		if !shape.IsEmpty() {
-			switch v := shape.Get().Value.(type) {
-			case int64:
-				resultTy = semtypes.IntConst(-v)
-			case float64:
-				resultTy = semtypes.FloatConst(-v)
-			case *big.Rat:
-				negated := new(big.Rat).Neg(v)
-				resultTy = semtypes.DecimalConst(*negated)
-			default:
-				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for unary -: %T", v), expr.GetPosition())
-				return nil
-			}
+		if numLit, ok := expr.Expr.(*ast.BLangNumericLiteral); ok {
+			resultValue := numLit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
+		} else if lit, ok := expr.Expr.(*ast.BLangLiteral); semtypes.IsSubtypeSimple(exprTy, semtypes.INT) && ok {
+			resultValue := lit.Value.(int64) * -1
+			resultTy = semtypes.IntConst(resultValue)
 		} else {
 			resultTy = exprTy
 		}
+	case model.OperatorKind_ADD:
+		resultTy = exprTy
 
 	case model.OperatorKind_BITWISE_COMPLEMENT:
 		if !semtypes.IsSubtypeSimple(exprTy, semtypes.INT) {
@@ -764,6 +764,15 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		return nil, false
 	}
 
+	if isShiftExpr(expr) {
+		ctx := t.tyCtx
+		if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
+		return &semtypes.INT, nilLifted
+	}
+
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 	return nil, false
 }
@@ -859,7 +868,7 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 	var symbolSpace model.ExportedSymbolSpace
 	var pkgAlias ast.BLangIdentifier
 	if semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST) {
-		pkgName := "lang.array"
+		pkgName := array.PackageName
 		space, ok := t.importedSymbols[pkgName]
 		if !ok {
 			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
@@ -985,14 +994,17 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			memberTy := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
-
-			if ty.IsOpenArray() {
-				semTy = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), memberTy)
-			} else {
-				length := ty.Sizes[0].(*ast.BLangLiteral).Value.(int)
-				semTy = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{memberTy}, length)
+			t := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
+			for i := len(ty.Sizes); i > 0; i-- {
+				lenExp := ty.Sizes[i-1]
+				if lenExp == nil {
+					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
+				} else {
+					length := int(lenExp.(*ast.BLangLiteral).Value.(int64))
+					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
+				}
 			}
+			semTy = t
 		} else {
 			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
 		}
@@ -1015,6 +1027,10 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		ast.Walk(tr, &ty.TypeName)
 		ast.Walk(tr, &ty.PkgAlias)
 		symbol := ty.Symbol()
+		if ty.PkgAlias.Value != "" {
+			// imported symbol should have been already resolved
+			return tr.ctx.SymbolType(symbol)
+		}
 		defn, ok := tr.typeDefns[symbol]
 		if !ok {
 			// This should have been detected by the symbol resolver

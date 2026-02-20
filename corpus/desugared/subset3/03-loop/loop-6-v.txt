@@ -1,0 +1,47 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation foo ()))))
+      (var-def
+        (variable $desugar$1 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$0))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$1)
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (var-def
+            (variable i (type
+              (value-type int)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$0)
+                (simple-var-ref $desugar$1)))))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref i))))
+          (assignment
+            (simple-var-ref $desugar$1)
+            (binary-expr +
+              (simple-var-ref $desugar$1)
+              (numeric-literal 1)))))))
+  (function foo () (
+    (array-type
+      (value-type int) dimensions: 1 ([])))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal called foo))))
+      (return
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3))))))

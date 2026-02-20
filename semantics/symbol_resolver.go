@@ -21,8 +21,9 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	arraycompile "ballerina-lang-go/lib/array/compile"
-	iocompile "ballerina-lang-go/lib/io/compile"
+	array "ballerina-lang-go/lib/array/compile"
+	bint "ballerina-lang-go/lib/int"
+	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -116,15 +117,7 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 }
 
 func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
-	if prefix == "" {
-		ref, _, ok := ms.GetSymbol(name)
-		return ref, ok
-	}
-	exported, ok := ms.scope.Prefix[prefix]
-	if !ok {
-		return model.SymbolRef{}, false
-	}
-	return exported.Main.GetSymbol(name)
+	return ms.scope.GetPrefixedSymbol(prefix, name)
 }
 
 func (ms *moduleSymbolResolver) AddSymbol(name string, symbol model.Symbol) {
@@ -236,13 +229,13 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = iocompile.GetIoSymbols(ctx)
+				result[key] = io.GetIoSymbols(ctx)
 			} else if isLangImport(&imp, "array") {
 				key := "array"
 				if imp.Alias != nil {
 					key = imp.Alias.Value
 				}
-				result[key] = arraycompile.GetArraySymbols(ctx)
+				result[key] = array.GetArraySymbols(ctx)
 			} else {
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
@@ -258,7 +251,8 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
-	result["lang.array"] = arraycompile.GetArraySymbols(ctx)
+	result[array.PackageName] = array.GetArraySymbols(ctx)
+	result[bint.PackageName] = bint.GetArraySymbols(ctx)
 	return result
 }
 

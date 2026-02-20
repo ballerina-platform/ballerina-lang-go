@@ -1,0 +1,27 @@
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal called foo))))
+    (return
+      (list-constructor-expr
+        (literal 1)
+        (literal 2)
+        (literal 3)))
+  )
+)
+(main
+  (bb0 () (bb1))
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (invocation foo ())
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+  (bb3 (bb1) ())
+)

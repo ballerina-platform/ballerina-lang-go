@@ -264,6 +264,9 @@ func compileInternal(moduleCtx *moduleContext) {
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
 	semantics.AnalyzeCFG(cx, pkgNode, cfg)
+
+	// Desugar package "lowering" AST to an AST that BIR gen can handle.
+	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, importedSymbols)
 }
 
 // buildBLangPackage builds a BLangPackage from one or more syntax trees.
@@ -321,7 +324,6 @@ func generateCodeInternal(moduleCtx *moduleContext) {
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
 		return
 	}
-	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg)
 	moduleCtx.birPkg = bir.GenBir(moduleCtx.compilerCtx, moduleCtx.bLangPkg)
 }
 

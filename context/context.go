@@ -24,7 +24,6 @@ import (
 	"strconv"
 )
 
-// TODO: consider moving type resolution env in to this
 type CompilerContext struct {
 	anonTypeCount   map[*model.PackageID]int
 	packageInterner *model.PackageIDInterner

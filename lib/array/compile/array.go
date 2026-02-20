@@ -32,6 +32,8 @@ var ArrayPackageID = model.NewPackageID(
 	model.Name("0.0.1"),
 )
 
+const PackageName = "lang.array"
+
 func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*ArrayPackageID)
 	pushSymbol := model.NewGenericFunctionSymbol("push", space, createPushMonomorphizer(ctx))
