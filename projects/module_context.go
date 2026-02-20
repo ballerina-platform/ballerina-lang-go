@@ -30,6 +30,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/desugar"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/tools/diagnostics"
@@ -53,10 +54,11 @@ type moduleContext struct {
 	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
-	bLangPkg       *ast.BLangPackage
-	bPackageSymbol interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
-	compilerCtx    *context.CompilerContext
-	birPkg         *bir.BIRPackage
+	bLangPkg        *ast.BLangPackage
+	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
+	compilerCtx     *context.CompilerContext
+	importedSymbols map[string]model.ExportedSymbolSpace
+	birPkg          *bir.BIRPackage
 }
 
 // newModuleContext creates a moduleContext from ModuleConfig.
@@ -220,6 +222,7 @@ func compilePhase1(moduleCtx *moduleContext) {
 
 	// Resolve symbols (imports) before type resolution
 	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx))
+	moduleCtx.importedSymbols = importedSymbols
 	semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
 
 	// Add type resolution step
@@ -263,7 +266,7 @@ func compilePhase2(moduleCtx *moduleContext) {
 	semantics.AnalyzeCFG(cx, pkgNode, cfg)
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
-	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, importedSymbols)
+	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)
 
 	moduleCtx.compilationState = moduleCompilationStateCompiled
 }
