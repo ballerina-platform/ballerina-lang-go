@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"strconv"
+	"sync"
 )
 
 type CompilerContext struct {
@@ -29,7 +30,7 @@ type CompilerContext struct {
 	packageInterner  *model.PackageIDInterner
 	symbolSpaces     []*model.SymbolSpace
 	typeEnv          semtypes.Env
-	underlyingSymbol map[model.SymbolRef]model.SymbolRef
+	underlyingSymbol sync.Map
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -57,30 +58,27 @@ func (this *CompilerContext) NewBlockScope(parent model.Scope, pkg model.Package
 }
 
 func (this *CompilerContext) GetSymbol(symbol model.SymbolRef) model.Symbol {
-	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
-	return symbolSpace.Symbols[symbol.Index]
+	return this.symbolSpaces[symbol.SpaceIndex].SymbolAt(symbol.Index)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
 // not a narrowed symbol.
 func (this *CompilerContext) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
-	// TODO: this should lock on symbol space
 	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
-	symbolIndex := len(symbolSpace.Symbols)
 	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
-	symbolSpace.Symbols = append(symbolSpace.Symbols, &underlyingSymbolCopy)
+	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
 		Package:    baseRef.Package,
 		SpaceIndex: baseRef.SpaceIndex,
 		Index:      symbolIndex,
 	}
-	this.underlyingSymbol[narrowedSymbol] = baseRef
+	this.underlyingSymbol.Store(narrowedSymbol, baseRef)
 	return narrowedSymbol
 }
 
 func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
-	if underlying, ok := this.underlyingSymbol[symbol]; ok {
-		return underlying
+	if underlying, ok := this.underlyingSymbol.Load(symbol); ok {
+		return underlying.(model.SymbolRef)
 	}
 	return symbol
 }
@@ -144,10 +142,9 @@ func (this *CompilerContext) InternalError(message string, pos diagnostics.Locat
 
 func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {
 	return &CompilerContext{
-		anonTypeCount:    make(map[*model.PackageID]int),
-		packageInterner:  model.DefaultPackageIDInterner,
-		typeEnv:          typeEnv,
-		underlyingSymbol: make(map[model.SymbolRef]model.SymbolRef),
+		anonTypeCount:   make(map[*model.PackageID]int),
+		packageInterner: model.DefaultPackageIDInterner,
+		typeEnv:         typeEnv,
 	}
 }
 
