@@ -61,7 +61,9 @@ func (b *BaseProject) initBase(fsys fs.FS, sourceRoot string, buildOptions Build
 	b.sourceRoot = sourceRoot
 	b.buildOptions = buildOptions
 
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
+
 	b.environment = newEnvironment(fsys, cx)
 }
 

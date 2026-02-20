@@ -17,6 +17,10 @@
 package bir
 
 import (
+	"flag"
+	"os"
+	"testing"
+
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
@@ -25,9 +29,6 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"os"
-	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -89,7 +90,8 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	defer close(debugCtx.Channel)
 
 	// Create compiler context
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 
 	// Step 1: Parse syntax tree
 	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
