@@ -32,6 +32,45 @@ import (
 	balCommon "ballerina-lang-go/common"
 )
 
+type typeTable struct {
+	booleanType *BTypeImpl
+	intType     *BTypeImpl
+	nilType     *BTypeImpl
+	stringType  *BTypeImpl
+	floatType   *BTypeImpl
+	decimalType *BTypeImpl
+}
+
+func newTypeTable() typeTable {
+	return typeTable{
+		booleanType: &BTypeImpl{tag: model.TypeTags_BOOLEAN, flags: Flags_READONLY},
+		intType:     &BTypeImpl{tag: model.TypeTags_INT, flags: Flags_READONLY},
+		nilType:     &BTypeImpl{tag: model.TypeTags_NIL, flags: Flags_READONLY},
+		stringType:  &BTypeImpl{tag: model.TypeTags_STRING, flags: Flags_READONLY},
+		floatType:   &BTypeImpl{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
+		decimalType: &BTypeImpl{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
+	}
+}
+
+func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
+	switch tag {
+	case model.TypeTags_BOOLEAN:
+		return t.booleanType
+	case model.TypeTags_INT:
+		return t.intType
+	case model.TypeTags_NIL:
+		return t.nilType
+	case model.TypeTags_STRING:
+		return t.stringType
+	case model.TypeTags_FLOAT:
+		return t.floatType
+	case model.TypeTags_DECIMAL:
+		return t.decimalType
+	default:
+		panic("not implemented")
+	}
+}
+
 type NodeBuilder struct {
 	PackageID            *model.PackageID
 	anonTypeNameSuffixes []string // Stack for anonymous type name suffixes
@@ -42,6 +81,7 @@ type NodeBuilder struct {
 	inCollectContext     bool
 	constantSet          map[string]bool // Track declared constants to detect redeclarations
 	cx                   *context.CompilerContext
+	types                typeTable
 }
 
 // NewNodeBuilder creates and initializes a new NodeBuilder instance
@@ -50,8 +90,13 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 		constantSet: make(map[string]bool),
 		cx:          cx,
 		PackageID:   cx.GetDefaultPackage(),
+		types:       newTypeTable(),
 	}
 	return nodeBuilder
+}
+
+func getBuiltinPos() diagnostics.Location {
+	return nil
 }
 
 var _ tree.NodeTransformer[BLangNode] = &NodeBuilder{}
@@ -1017,7 +1062,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		numericLiteral := &BLangNumericLiteral{}
 		numericLiteral.pos = getPosition(literal)
 		typeData := model.TypeData{
-			TypeDescriptor: getTypeFromTag(typeTag),
+			TypeDescriptor: n.types.getTypeFromTag(typeTag),
 		}
 		numericLiteral.SetTypeData(typeData)
 		numericLiteral.Value = value
@@ -1087,11 +1132,9 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
 	typeData := model.TypeData{
-		TypeDescriptor: getTypeFromTag(typeTag),
+		TypeDescriptor: n.types.getTypeFromTag(typeTag),
 	}
 	bLangNode.SetTypeData(typeData)
-	bType := typeData.TypeDescriptor.(BType)
-	bType.bTypeSetTag(typeTag)
 	bLiteral.SetValue(value)
 	bLiteral.SetOriginalValue(*originalValue)
 	return bLiteral
@@ -1648,7 +1691,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		nilLiteral.pos = getPosition(returnStatementNode)
 		nilLiteral.Value = nil
 		typeData := model.TypeData{
-			TypeDescriptor: getTypeFromTag(model.TypeTags_NIL),
+			TypeDescriptor: n.types.getTypeFromTag(model.TypeTags_NIL),
 		}
 		nilLiteral.SetTypeData(typeData)
 		bLReturn.SetExpression(nilLiteral)
