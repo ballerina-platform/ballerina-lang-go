@@ -628,6 +628,9 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 				resultTy = semtypes.IntConst(-v)
 			case float64:
 				resultTy = semtypes.FloatConst(-v)
+			case *big.Rat:
+				negated := new(big.Rat).Neg(v)
+				resultTy = semtypes.DecimalConst(*negated)
 			default:
 				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for unary -: %T", v), expr.GetPosition())
 				return nil
