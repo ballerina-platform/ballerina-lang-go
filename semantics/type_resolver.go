@@ -612,15 +612,13 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
 	case model.OperatorKind_ADD:
-		// Unary +: result type is same as operand type
 		resultTy = exprTy
 	case model.OperatorKind_SUB:
 		if !isNumericType(exprTy) {
 			t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil
 		}
-
-		// Unary -: negate singleton values if finite
+		
 		shape := semtypes.SingleShape(exprTy)
 		if !shape.IsEmpty() {
 			switch v := shape.Get().Value.(type) {
