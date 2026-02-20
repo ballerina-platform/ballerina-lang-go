@@ -618,7 +618,6 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 			t.ctx.SemanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil
 		}
-		
 		shape := semtypes.SingleShape(exprTy)
 		if !shape.IsEmpty() {
 			switch v := shape.Get().Value.(type) {
