@@ -775,6 +775,12 @@ type ListConstructorExprNode interface {
 	GetExpressions() []ExpressionNode
 }
 
+type TypeTestExpressionNode interface {
+	ExpressionNode
+	GetExpression() ExpressionNode
+	GetType() TypeData
+}
+
 type CheckedExpressionNode = UnaryExpressionNode
 
 type CheckPanickedExpressionNode = UnaryExpressionNode
@@ -937,6 +943,7 @@ type StatementNode = Node
 type ContinueNode = StatementNode
 
 type AssignmentNode interface {
+	StatementNode
 	GetVariable() ExpressionNode
 	GetExpression() ExpressionNode
 	IsDeclaredWithVar() bool
@@ -946,11 +953,7 @@ type AssignmentNode interface {
 }
 
 type CompoundAssignmentNode interface {
-	StatementNode
-	GetVariable() ExpressionNode
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
-	SetVariable(variableReferenceNode VariableReferenceNode)
+	AssignmentNode
 	GetOperatorKind() OperatorKind
 }
 

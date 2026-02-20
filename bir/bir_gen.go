@@ -524,6 +524,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return listConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangTypeConversionExpr:
 		return typeConversionExpression(ctx, curBB, expr)
+	case *ast.BLangTypeTestExpr:
+		return typeTestExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
@@ -538,6 +540,22 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	typeCast.LhsOp = resultOperand
 	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
 	curBB.Instructions = append(curBB.Instructions, typeCast)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
+	}
+}
+
+func typeTestExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypeTestExpr) expressionEffect {
+	exprEffect := handleExpression(ctx, curBB, expr.Expr)
+	curBB = exprEffect.block
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	typeTest := &TypeTest{}
+	typeTest.LhsOp = resultOperand
+	typeTest.RhsOp = exprEffect.result
+	typeTest.Type = expr.Type.Type
+	typeTest.IsNegation = expr.IsNegation()
+	curBB.Instructions = append(curBB.Instructions, typeTest)
 	return expressionEffect{
 		result: resultOperand,
 		block:  curBB,
@@ -754,7 +772,7 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
-	symRef := expr.Symbol()
+	symRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(expr.Symbol())
 
 	// Try local variable lookup first
 	if operand, ok := ctx.varMap[symRef]; ok {
