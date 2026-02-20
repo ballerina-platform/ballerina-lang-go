@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
+	bint "ballerina-lang-go/lib/int"
 	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -116,15 +117,7 @@ func (ms *moduleSymbolResolver) GetScope() model.Scope {
 }
 
 func (ms *moduleSymbolResolver) GetPrefixedSymbol(prefix, name string) (model.SymbolRef, bool) {
-	if prefix == "" {
-		ref, _, ok := ms.GetSymbol(name)
-		return ref, ok
-	}
-	exported, ok := ms.scope.Prefix[prefix]
-	if !ok {
-		return model.SymbolRef{}, false
-	}
-	return exported.Main.GetSymbol(name)
+	return ms.scope.GetPrefixedSymbol(prefix, name)
 }
 
 func (ms *moduleSymbolResolver) AddSymbol(name string, symbol model.Symbol) {
@@ -259,6 +252,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
+	result[bint.PackageName] = bint.GetArraySymbols(ctx)
 	return result
 }
 
