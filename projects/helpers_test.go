@@ -36,5 +36,5 @@ func loadProject(path string, config ...directory.ProjectLoadConfig) (projects.P
 	}
 
 	fsys := os.DirFS(baseDir)
-	return directory.LoadProject(nil, fsys, path, config...)
+	return directory.LoadProject(fsys, path, config...)
 }

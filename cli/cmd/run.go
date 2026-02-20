@@ -165,8 +165,13 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		path = args[0]
 	}
 
+	info, err := os.Stat(path)
+	if err != nil {
+		printRunError(err)
+	}
+
 	baseDir := path
-	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+	if !info.IsDir() {
 		baseDir = filepath.Dir(path)
 		path = filepath.Base(path)
 	} else {
@@ -176,7 +181,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	fsys := os.DirFS(baseDir)
 
 	// Load project using ProjectLoader (auto-detects type)
-	result, err := directory.LoadProject(nil, fsys, path, directory.ProjectLoadConfig{
+	result, err := directory.LoadProject(fsys, path, directory.ProjectLoadConfig{
 		BuildOptions: &buildOpts,
 	})
 	if err != nil {

@@ -46,10 +46,7 @@ type ProjectLoadConfig struct {
 //   - Is .bala file -> error (not implemented)
 //
 // If no config is provided, default configuration is used.
-func LoadProject(ballerinaFs, projectFs fs.FS, path string, config ...ProjectLoadConfig) (projects.ProjectLoadResult, error) {
-	// TODO: Use ballerinaFs to access the .ballerina directory
-	_ = ballerinaFs
-
+func LoadProject(projectFs fs.FS, path string, config ...ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	// Apply defaults
 	var cfg ProjectLoadConfig
 	if len(config) > 0 {
@@ -66,7 +63,7 @@ func LoadProject(ballerinaFs, projectFs fs.FS, path string, config ...ProjectLoa
 	if info.IsDir() {
 		// Check for Ballerina.toml
 		tomlPath := filepath.Join(path, projects.BallerinaTomlFile)
-		if _, err := fs.Stat(projectFs, tomlPath); err == nil {
+		if info, err := fs.Stat(projectFs, tomlPath); err == nil && !info.IsDir() {
 			// Has Ballerina.toml - load as build project
 			return loadBuildProject(projectFs, path, cfg)
 		}
@@ -79,12 +76,11 @@ func LoadProject(ballerinaFs, projectFs fs.FS, path string, config ...ProjectLoa
 
 	// Check file extension
 	fileName := filepath.Base(path)
-	if strings.HasSuffix(fileName, projects.BalFileExtension) {
+	switch filepath.Ext(fileName) {
+	case projects.BalFileExtension:
 		// Single .bal file
 		return loadSingleFileProject(projectFs, path, cfg)
-	}
-
-	if strings.HasSuffix(fileName, projects.BalaFileExtension) {
+	case projects.BalaFileExtension:
 		// .bala file - not implemented
 		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "loading from .bala files is not implemented: " + path,

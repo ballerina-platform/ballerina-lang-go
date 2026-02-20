@@ -168,7 +168,7 @@ func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bi
 
 	fsys := os.DirFS(filepath.Dir(balFile))
 
-	result, err := directory.LoadProject(nil, fsys, filepath.Base(balFile))
+	result, err := directory.LoadProject(fsys, filepath.Base(balFile))
 	if err != nil {
 		panic(err)
 	}
