@@ -22,24 +22,24 @@ import (
 )
 
 var (
-	booleanType = &BTypeImpl{
+	booleanType = &BTypeBasic{
 		tag:   model.TypeTags_BOOLEAN,
 		flags: Flags_READONLY,
 	}
-	intType = &BTypeImpl{
+	intType = &BTypeBasic{
 		tag:   model.TypeTags_INT,
 		flags: Flags_READONLY,
 	}
 
-	nilType = &BTypeImpl{
+	nilType = &BTypeBasic{
 		tag:   model.TypeTags_NIL,
 		flags: Flags_READONLY,
 	}
-	stringType = &BTypeImpl{
+	stringType = &BTypeBasic{
 		tag:   model.TypeTags_STRING,
 		flags: Flags_READONLY,
 	}
-	floatType = &BTypeImpl{
+	floatType = &BTypeBasic{
 		tag:   model.TypeTags_FLOAT,
 		flags: Flags_READONLY,
 	}
