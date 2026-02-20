@@ -1142,6 +1142,35 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest)
 		}
 		return defn.GetSemType(tr.ctx.GetTypeEnv())
+	case *ast.BLangRecordType:
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv())
+		}
+		d := semtypes.NewMappingDefinition()
+		ty.Definition = &d
+		seen := make(map[string]bool)
+		var fields []semtypes.Field
+		for name, field := range ty.Fields() {
+			if seen[name] {
+				tr.ctx.SemanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
+				continue
+			}
+			seen[name] = true
+			fieldTy := tr.resolveBType(field.Type, depth+1)
+			ro := field.FlagSet.Contains(model.Flag_READONLY)
+			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
+			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
+		}
+		var rest semtypes.SemType
+		if ty.RestType != nil {
+			rest = tr.resolveBType(ty.RestType, depth+1)
+		} else if ty.IsOpen {
+			rest = semtypes.CreateAnydata(tr.tyCtx)
+		} else {
+			rest = &semtypes.NEVER
+		}
+		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

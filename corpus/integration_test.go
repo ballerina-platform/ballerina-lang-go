@@ -76,6 +76,8 @@ var (
 		"subset4/04-map/union1-v.bal",
 		"subset4/04-map/union2-e.bal",
 		"subset4/04-map/union3-v.bal",
+		"subset5/05-record/1-v.bal",
+		"subset5/05-record/cyclic-v.bal",
 	})
 
 	printlnOutputs = make(map[string]string)
