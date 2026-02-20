@@ -2059,7 +2059,40 @@ func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorExpr
 }
 
 func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tree.RecordTypeDescriptorNode) BLangNode {
-	panic("TransformRecordTypeDescriptor unimplemented")
+	recordType := &BLangRecordType{}
+	fields := recordTypeDescriptorNode.Fields()
+	for i := 0; i < fields.Size(); i++ {
+		field := fields.Get(i)
+		switch field.Kind() {
+		case common.RECORD_FIELD:
+			recordField := field.(*tree.RecordFieldNode)
+			fieldName := recordField.FieldName().Text()
+			bField := BField{
+				Type: n.createTypeNode(recordField.TypeName()).(BType),
+			}
+			bField.pos = getPosition(recordField)
+			if recordField.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			if recordField.QuestionMarkToken() != nil {
+				bField.FlagSet.Add(model.Flag_OPTIONAL)
+			}
+			recordType.AddField(fieldName, bField)
+		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
+			panic("default values are not supported")
+		case common.TYPE_REFERENCE:
+			typeRef := field.(*tree.TypeReferenceNode)
+			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))
+		default:
+			panic("unexpected field kind in record type descriptor")
+		}
+	}
+	if restDesc := recordTypeDescriptorNode.RecordRestDescriptor(); restDesc != nil {
+		recordType.RestType = n.createTypeNode(restDesc.TypeName()).(BType)
+	}
+	recordType.IsOpen = recordTypeDescriptorNode.BodyStartDelimiter().Kind() == common.OPEN_BRACE_TOKEN
+	recordType.pos = getPosition(recordTypeDescriptorNode)
+	return recordType
 }
 
 func (n *NodeBuilder) TransformReturnTypeDescriptor(returnTypeDescriptorNode *tree.ReturnTypeDescriptorNode) BLangNode {

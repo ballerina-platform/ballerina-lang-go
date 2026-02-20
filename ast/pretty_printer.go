@@ -122,6 +122,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTypeTestExpr(t)
 	case *BLangTupleTypeNode:
 		p.printTupleTypeNode(t)
+	case *BLangRecordType:
+		p.printRecordType(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -785,6 +787,37 @@ func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
 		p.PrintInner(node.Rest.(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
+	p.startNode()
+	p.printString("record-type")
+	p.indentLevel++
+	for name, field := range node.Fields() {
+		p.startNode()
+		p.printString("field")
+		p.printString(name)
+		if field.FlagSet.Contains(model.Flag_READONLY) {
+			p.printString("readonly")
+		}
+		if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+			p.printString("optional")
+		}
+		p.indentLevel++
+		p.PrintInner(field.Type.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	if node.RestType != nil {
+		p.startNode()
+		p.printString("rest")
+		p.indentLevel++
+		p.PrintInner(node.RestType.(BLangNode))
+		p.indentLevel--
+		p.endNode()
 	}
 	p.indentLevel--
 	p.endNode()

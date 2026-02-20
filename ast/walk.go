@@ -575,6 +575,14 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Rest.(BLangNode))
 		}
 
+	case *BLangRecordType:
+		for _, field := range node.fields {
+			Walk(v, field.Type.(BLangNode))
+		}
+		if node.RestType != nil {
+			Walk(v, node.RestType.(BLangNode))
+		}
+
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
 		Walk(v, &node.Identifier)

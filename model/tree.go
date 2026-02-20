@@ -20,7 +20,14 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"iter"
 )
+
+type Field interface {
+	AnnotatableNode
+	GetName() Name
+	GetType() Type
+}
 
 // Type interface (used by Symbol interface)
 type Type interface {
@@ -719,6 +726,12 @@ type ArrayTypeNode interface {
 	GetElementType() TypeData
 	GetDimensions() int
 	GetSizes() []ExpressionNode
+}
+
+type RecordTypeNode interface {
+	ReferenceTypeNode
+	GetRestFieldType() TypeData
+	GetFields() iter.Seq2[string, Field]
 }
 
 type TupleTypeNode interface {
