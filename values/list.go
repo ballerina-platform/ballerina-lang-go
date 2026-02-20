@@ -41,21 +41,30 @@ func (l *List) Get(idx int) BalValue {
 
 // FillingSet stores value at idx, resizing the list if necessary.
 func (l *List) FillingSet(idx int, value BalValue) {
-	if idx >= len(l.elems) {
-		if l.filler == NeverValue {
-			panic("can't fill values")
-		}
-		if idx >= math.MaxInt32 {
-			panic("list too long")
-		}
-		newElems := make([]BalValue, idx+1)
-		copy(newElems, l.elems)
-		for i := len(l.elems); i < idx; i++ {
-			newElems[i] = l.filler
-		}
-		l.elems = newElems
+	currentLen := len(l.elems)
+	if idx < currentLen {
+		l.elems[idx] = value
+		return
 	}
-	l.elems[idx] = value
+	if l.filler == NeverValue {
+		panic("can't fill values")
+	}
+	if idx >= math.MaxInt32 {
+		panic("list too long")
+	}
+	newLen := idx + 1
+	if newLen <= cap(l.elems) {
+		l.elems = l.elems[:newLen]
+		for i := currentLen; i < idx; i++ {
+			l.elems[i] = l.filler
+		}
+		l.elems[idx] = value
+		return
+	}
+	for len(l.elems) < idx {
+		l.elems = append(l.elems, l.filler)
+	}
+	l.elems = append(l.elems, value)
 }
 
 func (l *List) Append(values ...BalValue) {
