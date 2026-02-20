@@ -120,6 +120,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTypeConversionExpr(t)
 	case *BLangTypeTestExpr:
 		p.printTypeTestExpr(t)
+	case *BLangTupleTypeNode:
+		p.printTupleTypeNode(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -766,6 +768,25 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+// Tuple type node printer
+func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
+	p.startNode()
+	p.printString("tuple-type")
+	p.indentLevel++
+	for _, member := range node.Members {
+		p.PrintInner(member.TypeDesc.(BLangNode))
+	}
+	if node.Rest != nil {
+		p.printString("(rest")
+		p.indentLevel++
+		p.PrintInner(node.Rest.(BLangNode))
+		p.indentLevel--
+		p.printSticky(")")
+	}
+	p.indentLevel--
 	p.endNode()
 }
 

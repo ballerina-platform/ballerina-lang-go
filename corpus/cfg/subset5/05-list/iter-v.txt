@@ -1,0 +1,25 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal foo)))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref f)
+    (var-def
+      (variable i (type
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+  (bb3 (bb1) ())
+)
