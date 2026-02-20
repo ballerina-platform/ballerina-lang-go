@@ -671,11 +671,7 @@ func (t *TypeResolver) resolveBinaryExpr(expr *ast.BLangBinaryExpr) semtypes.Sem
 		// Equality operators always return boolean
 		resultTy = &semtypes.BOOLEAN
 	} else if isBitWiseExpr(expr) {
-		var nilLifted bool
-		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
-		if nilLifted {
-			resultTy = semtypes.Union(&semtypes.NIL, resultTy)
-		}
+		resultTy = &semtypes.INT
 	} else if isRangeExpr(expr) {
 		// Range operators: .., ...
 		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
@@ -753,10 +749,6 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
-		return &semtypes.INT, nilLifted
-	}
-
-	if isBitWiseExpr(expr) {
 		return &semtypes.INT, nilLifted
 	}
 
