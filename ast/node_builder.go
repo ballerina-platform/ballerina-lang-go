@@ -1000,13 +1000,13 @@ func (n *NodeBuilder) createSimpleLiteral(literal tree.Node) model.LiteralNode {
 
 // getIntegerLiteral parses integer literals (decimal/hex)
 // migrated from BLangNodeBuilder.java:6669:5
-func getIntegerLiteral(literal tree.Node, textValue string) any {
+func getIntegerLiteral(cx *context.CompilerContext, literal tree.Node, textValue string) any {
 	basicLiteralNode := literal.(*tree.BasicLiteralNode)
 	literalTokenKind := basicLiteralNode.LiteralToken().Kind()
 	switch literalTokenKind {
 	case common.DECIMAL_INTEGER_LITERAL_TOKEN:
 		if textValue[0] == '0' && len(textValue) > 1 {
-			panic("Syntax error: invalid integer literal: leading zero")
+			cx.SyntaxError("invalid integer literal: leading zero", getPosition(literal))
 		}
 		return parseLong(textValue, textValue, 10)
 	case common.HEX_INTEGER_LITERAL_TOKEN:
@@ -1126,7 +1126,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		switch literalTokenKind {
 		case common.DECIMAL_INTEGER_LITERAL_TOKEN, common.HEX_INTEGER_LITERAL_TOKEN:
 			typeTag = model.TypeTags_INT
-			value = getIntegerLiteral(literal, textValue)
+			value = getIntegerLiteral(n.cx, literal, textValue)
 			originalValue = &textValue
 			// TODO: can we fix below?
 			if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN && withinByteRange(value) {
