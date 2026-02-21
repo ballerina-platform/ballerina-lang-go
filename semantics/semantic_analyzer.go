@@ -753,6 +753,12 @@ var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, sem
 
 func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
 	ctx := a.tyCtx()
+	nilLifted := false
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
+		nilLifted = true
+		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
+		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
+	}
 	if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
 		a.semanticErr("expect integer types for bitwise operators")
 		return
@@ -779,13 +785,16 @@ func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy,
 		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
 		return
 	}
+	if nilLifted {
+		resultTy = semtypes.Union(&semtypes.NIL, resultTy)
+	}
 	setExpectedType(binaryExpr, resultTy)
 }
 
 func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
 	ctx := a.tyCtx()
 	nilLifted := false
-	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
 		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)

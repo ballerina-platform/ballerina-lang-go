@@ -16,6 +16,7 @@
 
 // @productions bitwise-and-expr unary-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
+
 public function main() {
     int i = 5;
     int j = 9;
@@ -32,5 +33,4 @@ public function main() {
     i = 9223372036854775807;
     j = -1;
     io:println(i & j); // @output 9223372036854775807
-
 }

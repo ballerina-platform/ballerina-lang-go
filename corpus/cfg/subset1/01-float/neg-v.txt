@@ -1,0 +1,12 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type float)) (expr
+        (literal 3.14))))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr -
+          (simple-var-ref x)))))
+  )
+)

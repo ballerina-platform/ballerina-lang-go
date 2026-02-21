@@ -2,8 +2,7 @@
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License.
-// You may obtain a copy of the License at
+// in compliance with the License. You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -14,23 +13,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions list-type-descriptor list-constructor-expr type-cast-expr while-stmt multiplicative-expr relational-expr additive-expr assign-stmt local-var-decl-stmt int-literal
+// @productions multiplicative-expr return-stmt function-call-expr local-var-decl-stmt float-literal
 import ballerina/io;
 
 public function main() {
-    any[] v = [];
-    int i = 0;
-    while i < 1000*1000 {
-        v[i] = 1;
-        i = i + 1;
-    }
-    v[123000] = 1001;
-    i = 0;
-    int sum = 0;
-    while i < v.length() {
-        sum = sum + <int>v[i];
-        i = i + 1;
-    }
-    io:println(sum); // @output 1001000
+    float x = 1.0;
+    float y = 0.0;
+    io:println(div(x, y));
 }
 
+function div(float x, float y) returns float {
+    return x / y; // @panic divide by zero
+}

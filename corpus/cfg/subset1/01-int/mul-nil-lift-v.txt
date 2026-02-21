@@ -1,0 +1,15 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (literal <nil>))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr *
+          (simple-var-ref x)
+          (literal 2)))))
+  )
+)

@@ -23,52 +23,39 @@ main<NIL>{
     %12 = ConstantLoad 1
     %11 = + i %12;
     i = %11;
-    %15 = ConstantLoad 1000
-    %14 = % i %15;
-    %16 = ConstantLoad 0
-    %13 = == %14 %16;
-    %13 ? bb4 : bb6;
-  }
-  bb3 {
-    %18 = ConstantLoad 1001
-    %19 = ConstantLoad 123000
-    v[%19] = %18;
-    %20 = ConstantLoad 0
-    i = %20;
-    %21 = ConstantLoad 0
-    sum = %21;
-    GOTO bb7;
-  }
-  bb4 {
-    %17 = println(i) -> bb5;
-  }
-  bb5 {
-    GOTO bb6;
-  }
-  bb6 {
     GOTO bb1;
   }
+  bb3 {
+    %13 = ConstantLoad 1001
+    %14 = ConstantLoad 123000
+    v[%14] = %13;
+    %15 = ConstantLoad 0
+    i = %15;
+    %16 = ConstantLoad 0
+    sum = %16;
+    GOTO bb4;
+  }
+  bb4 {
+    %19 = length(v) -> bb5;
+  }
+  bb5 {
+    %18 = < i %19;
+    %18 ? bb6 : bb7;
+  }
+  bb6 {
+    %21 = v[i];
+    %22 = <((INT), ())>(%21)
+    %20 = + sum %22;
+    sum = %20;
+    %24 = ConstantLoad 1
+    %23 = + i %24;
+    i = %23;
+    GOTO bb4;
+  }
   bb7 {
-    %24 = length(v) -> bb8;
+    %25 = println(sum) -> bb8;
   }
   bb8 {
-    %23 = < i %24;
-    %23 ? bb9 : bb10;
-  }
-  bb9 {
-    %26 = v[i];
-    %27 = <((INT), ())>(%26)
-    %25 = + sum %27;
-    sum = %25;
-    %29 = ConstantLoad 1
-    %28 = + i %29;
-    i = %28;
-    GOTO bb7;
-  }
-  bb10 {
-    %30 = println(sum) -> bb11;
-  }
-  bb11 {
     return;
   }
 }

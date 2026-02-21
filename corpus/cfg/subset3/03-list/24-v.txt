@@ -10,14 +10,14 @@
         (value-type int)) (expr
         (literal 0))))
   )
-  (bb1 (bb0 bb5) (bb2 bb3)
+  (bb1 (bb0 bb2) (bb2 bb3)
     (binary-expr <
       (simple-var-ref i)
       (binary-expr *
         (literal 1000)
         (literal 1000)))
   )
-  (bb2 (bb1) (bb4 bb5)
+  (bb2 (bb1) (bb1)
     (assignment
       (index-based-access
         (simple-var-ref v)
@@ -28,13 +28,8 @@
       (binary-expr +
         (simple-var-ref i)
         (literal 1)))
-    (binary-expr ==
-      (binary-expr %
-        (simple-var-ref i)
-        (literal 1000))
-      (literal 0))
   )
-  (bb3 (bb1) (bb6)
+  (bb3 (bb1) (bb4)
     (assignment
       (index-based-access
         (simple-var-ref v)
@@ -48,19 +43,13 @@
         (value-type int)) (expr
         (literal 0))))
   )
-  (bb4 (bb2) (bb5)
-    (expression-stmt
-      (invocation io println (
-        (simple-var-ref i))))
-  )
-  (bb5 (bb4 bb2) (bb1))
-  (bb6 (bb3 bb7) (bb7 bb8)
+  (bb4 (bb3 bb5) (bb5 bb6)
     (binary-expr <
       (simple-var-ref i)
       (invocation lang.array length (
         (simple-var-ref v))))
   )
-  (bb7 (bb6) (bb6)
+  (bb5 (bb4) (bb4)
     (assignment
       (simple-var-ref sum)
       (binary-expr +
@@ -76,7 +65,7 @@
         (simple-var-ref i)
         (literal 1)))
   )
-  (bb8 (bb6) ()
+  (bb6 (bb4) ()
     (expression-stmt
       (invocation io println (
         (simple-var-ref sum))))
