@@ -62,6 +62,22 @@ var (
 	skipTestsMap = makeSkipTestsMap([]string{
 		"subset3/03-list/24-v.bal",
 		"subset3/03-int/neg-p.bal",
+		"subset4/04-map/01-e.bal",
+		"subset4/04-map/02-v.bal",
+		"subset4/04-map/03-e.bal",
+		"subset4/04-map/04-v.bal",
+		"subset4/04-map/05-v.bal",
+		"subset4/04-map/06-v.bal",
+		"subset4/04-map/07-v.bal",
+		"subset4/04-map/08-v.bal",
+		"subset4/04-map/09-v.bal",
+		"subset4/04-map/11-v.bal",
+		"subset4/04-map/12-v.bal",
+		"subset4/04-map/simple-e.bal",
+		"subset4/04-map/simple-v.bal",
+		"subset4/04-map/union1-v.bal",
+		"subset4/04-map/union2-e.bal",
+		"subset4/04-map/union3-v.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

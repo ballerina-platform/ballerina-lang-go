@@ -131,6 +131,13 @@ type (
 		BLangTypeBase
 		detailType model.TypeData
 	}
+
+	BLangConstrainedType struct {
+		BLangTypeBase
+		Type       model.TypeData
+		Constraint model.TypeData
+		Definition semtypes.Definition
+	}
 )
 
 var (
@@ -145,6 +152,7 @@ var (
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
 	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
+	_ model.ConstrainedTypeNode      = &BLangConstrainedType{}
 )
 
 var (
@@ -159,7 +167,9 @@ var (
 	_ BLangNode            = &BLangArrayType{}
 	_ BLangNode            = &BLangUserDefinedType{}
 	_ BLangNode            = &BLangValueType{}
+	_ BLangNode            = &BLangConstrainedType{}
 	_ model.TypeDescriptor = &BLangValueType{}
+	_ model.TypeDescriptor = &BLangConstrainedType{}
 )
 
 func (this *BLangArrayType) GetKind() model.NodeKind {
@@ -429,4 +439,26 @@ func (this *BLangErrorTypeNode) GetKind() model.NodeKind {
 
 func (this *BLangErrorTypeNode) IsDistinct() bool {
 	return this.FlagSet.Contains(model.Flag_DISTINCT)
+}
+
+func (this *BLangConstrainedType) GetKind() model.NodeKind {
+	return model.NodeKind_CONSTRAINED_TYPE
+}
+
+func (this *BLangConstrainedType) GetType() model.TypeData {
+	return this.Type
+}
+
+func (this *BLangConstrainedType) GetConstraint() model.TypeData {
+	return this.Constraint
+}
+
+func (this *BLangConstrainedType) GetTypeKind() model.TypeKind {
+	if this.Type.TypeDescriptor == nil {
+		panic("base type is nil")
+	}
+	if builtIn, ok := this.Type.TypeDescriptor.(model.BuiltInReferenceTypeNode); ok {
+		return builtIn.GetTypeKind()
+	}
+	panic("BLangConstrainedType.Type does not implement BuiltInReferenceTypeNode")
 }

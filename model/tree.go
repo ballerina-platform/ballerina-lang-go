@@ -740,6 +740,12 @@ type ErrorTypeNode interface {
 	GetDetailType() TypeData
 }
 
+type ConstrainedTypeNode interface {
+	TypeDescriptor
+	GetType() TypeData
+	GetConstraint() TypeData
+}
+
 type UserDefinedTypeNode interface {
 	ReferenceTypeNode
 	GetPackageAlias() IdentifierNode
@@ -817,6 +823,17 @@ type RecordField interface {
 type RecordVarNameFieldNode interface {
 	RecordField
 	SimpleVariableReferenceNode
+}
+
+type RecordLiteralNode interface {
+	ExpressionNode
+	GetFields() []RecordField
+}
+
+type RecordKeyValueFieldNode interface {
+	RecordField
+	GetKey() ExpressionNode
+	GetValue() ExpressionNode
 }
 
 type MarkdownDocumentationTextAttributeNode interface {

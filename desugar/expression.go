@@ -20,6 +20,7 @@ package desugar
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 )
 
@@ -39,6 +40,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkInvocation(cx, expr)
 	case *ast.BLangListConstructorExpr:
 		return walkListConstructorExpr(cx, expr)
+	case *ast.BLangRecordLiteral:
+		return walkRecordLiteral(cx, expr)
 	case *ast.BLangErrorConstructorExpr:
 		return walkErrorConstructorExpr(cx, expr)
 	case *ast.BLangCheckedExpr:
@@ -335,6 +338,36 @@ func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desuga
 	}
 
 	return desugaredNode[model.ExpressionNode]{
+		replacementNode: expr,
+	}
+}
+
+func walkRecordLiteral(cx *Context, expr *ast.BLangRecordLiteral) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	for _, field := range expr.Fields {
+		kv := field.(*ast.BLangRecordKeyValueField)
+
+		if !kv.Key.ComputedKey {
+			if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
+				name := varRef.VariableName.Value
+				lit := &ast.BLangLiteral{
+					Value:         name,
+					OriginalValue: name,
+				}
+				s := semtypes.STRING
+				lit.SetDeterminedType(&s)
+				kv.Key.Expr = lit
+			}
+		}
+
+		result := walkExpression(cx, kv.ValueExpr)
+		initStmts = append(initStmts, result.initStmts...)
+		kv.ValueExpr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
 		replacementNode: expr,
 	}
 }

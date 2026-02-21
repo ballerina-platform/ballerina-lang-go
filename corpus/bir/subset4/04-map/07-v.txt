@@ -1,0 +1,32 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = wrap(%1) -> bb1;
+  }
+  bb1 {
+    %3 = println(%2) -> bb2;
+  }
+  bb2 {
+    %4 = ConstantLoad <nil>
+    %5 = wrap(%4) -> bb3;
+  }
+  bb3 {
+    %6 = wrap(%5) -> bb4;
+  }
+  bb4 {
+    %7 = println(%6) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+wrap<NIL>{
+  bb0 {
+    %2 = ConstantLoad value
+    %3 = newMap ((), (MAPPING)){%2=x}
+    %0 = %3;
+    return;
+  }
+}
