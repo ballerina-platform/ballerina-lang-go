@@ -190,7 +190,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for loading errors
 	diagResult := result.Diagnostics()
 	if diagResult.HasErrors() {
-		printDiagnostics(diagResult)
+		projects.PrintDiagnostics(fsys, os.Stderr, diagResult)
 		return fmt.Errorf("project loading contains errors")
 	}
 
@@ -203,7 +203,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for compilation errors
 	compilationDiags := compilation.DiagnosticResult()
 	if compilationDiags.HasErrors() {
-		printDiagnostics(compilationDiags)
+		projects.PrintDiagnostics(fsys, os.Stderr, compilationDiags)
 		return fmt.Errorf("compilation failed with errors")
 	}
 

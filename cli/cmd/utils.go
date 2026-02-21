@@ -21,9 +21,6 @@ import (
 	"io"
 	"os"
 
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/tools/diagnostics"
-
 	"github.com/spf13/cobra"
 )
 
@@ -52,31 +49,4 @@ func validateSourceFile(cmd *cobra.Command, args []string) error {
 	// Allow zero arguments - will default to current directory "."
 	// Path validation happens in directory.Load
 	return nil
-}
-
-// printDiagnostics prints all diagnostics from a DiagnosticResult to stderr.
-// Java: Similar to printing in RunCommand.execute()
-func printDiagnostics(diagResult projects.DiagnosticResult) {
-	for _, d := range diagResult.Diagnostics() {
-		fmt.Fprintln(os.Stderr, formatDiagnostic(d))
-	}
-}
-
-// formatDiagnostic formats a single diagnostic for CLI output.
-// Format: filepath:line:col: severity: message
-func formatDiagnostic(d diagnostics.Diagnostic) string {
-	loc := d.Location()
-	info := d.DiagnosticInfo()
-
-	// Format: filepath:line:col: severity: message
-	if loc != nil {
-		lineRange := loc.LineRange()
-		return fmt.Sprintf("%s:%d:%d: %s: %s",
-			lineRange.FileName(),
-			lineRange.StartLine().Line(),
-			lineRange.StartLine().Offset(),
-			info.Severity().String(),
-			d.Message())
-	}
-	return fmt.Sprintf("%s: %s", info.Severity().String(), d.Message())
 }
