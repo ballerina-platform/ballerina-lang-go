@@ -471,7 +471,8 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp1: *rhsOp1,
 			RhsOp2: *rhsOp2,
 		}
-	case bir.INSTRUCTION_KIND_TYPEOF, bir.INSTRUCTION_KIND_NOT, bir.INSTRUCTION_KIND_NEGATE:
+	case bir.INSTRUCTION_KIND_TYPEOF, bir.INSTRUCTION_KIND_NOT, bir.INSTRUCTION_KIND_NEGATE,
+		bir.INSTRUCTION_KIND_BITWISE_COMPLEMENT:
 		rhsOp := br.readOperand(varMap)
 		lhsOp := br.readOperand(varMap)
 		return &bir.UnaryOp{

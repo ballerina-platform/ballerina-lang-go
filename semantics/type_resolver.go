@@ -633,9 +633,30 @@ func (t *TypeResolver) resolveUnaryExpr(expr *ast.BLangUnaryExpr) semtypes.SemTy
 		} else {
 			resultTy = exprTy
 		}
-	case model.OperatorKind_ADD, model.OperatorKind_BITWISE_COMPLEMENT:
-		// Numeric unary operators: result type is same as operand type
+	case model.OperatorKind_ADD:
 		resultTy = exprTy
+
+	case model.OperatorKind_BITWISE_COMPLEMENT:
+		if !semtypes.IsSubtypeSimple(exprTy, semtypes.INT) {
+			t.ctx.SemanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
+		if semtypes.IsSameType(t.tyCtx, exprTy, &semtypes.INT) {
+			resultTy = exprTy
+			break
+		}
+		shape := semtypes.SingleShape(exprTy)
+		if !shape.IsEmpty() {
+			value, ok := shape.Get().Value.(int64)
+			if !ok {
+				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for %s: %T", string(expr.GetOperatorKind()), shape.Get().Value), expr.GetPosition())
+				return nil
+			}
+			resultTy = semtypes.IntConst(^value)
+		} else {
+			resultTy = exprTy
+		}
+
 	case model.OperatorKind_NOT:
 		// Logical NOT: result type is boolean
 		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {

@@ -49,8 +49,8 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	for {
 		instructions := bb.Instructions
 		term := bb.Terminator
-		for i := 0; i < len(instructions); i++ {
-			execInstruction(instructions[i], frame)
+		for _, instruction := range instructions {
+			execInstruction(instruction, frame)
 		}
 		bb = execTerminator(term, frame, reg, callStack)
 		if bb == nil {
@@ -136,6 +136,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 			execUnaryOpNot(v, frame)
 		case bir.INSTRUCTION_KIND_NEGATE:
 			execUnaryOpNegate(v, frame)
+		case bir.INSTRUCTION_KIND_BITWISE_COMPLEMENT:
+			execUnaryOpBitwiseComplement(v, frame)
 		case bir.INSTRUCTION_KIND_TYPEOF:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_TYPEOF")
 		default:
