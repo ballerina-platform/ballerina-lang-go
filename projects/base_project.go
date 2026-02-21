@@ -18,12 +18,20 @@
 
 package projects
 
+import (
+	"io/fs"
+
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/semtypes"
+)
+
 // BaseProject provides common functionality for all project types.
 // Project implementations should embed this struct to inherit common behavior.
 type BaseProject struct {
 	currentPackage *Package
 	sourceRoot     string
 	buildOptions   BuildOptions
+	environment    *Environment
 }
 
 // CurrentPackage returns the current package of this project.
@@ -49,15 +57,22 @@ func (b *BaseProject) InitPackage(pkg *Package) {
 
 // initBase initializes the base project fields.
 // This should only be called once when creating a new project.
-func (b *BaseProject) initBase(sourceRoot string, buildOptions BuildOptions) {
+func (b *BaseProject) initBase(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) {
 	b.sourceRoot = sourceRoot
 	b.buildOptions = buildOptions
+
+	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	b.environment = newEnvironment(fsys, cx)
 }
 
 // setCurrentPackage updates the project's current package.
 // This is package-private and called by PackageModifier.Apply().
 func (b *BaseProject) setCurrentPackage(pkg *Package) {
 	b.currentPackage = pkg
+}
+
+func (b *BaseProject) Environment() *Environment {
+	return b.environment
 }
 
 // Base returns the BaseProject pointer. This is used internally

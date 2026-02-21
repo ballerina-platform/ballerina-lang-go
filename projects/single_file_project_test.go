@@ -41,7 +41,7 @@ func TestLoadSingleFile(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err)
 
 	project := result.Project().(*projects.SingleFileProject)
@@ -75,7 +75,7 @@ func TestSingleFileTargetDirectory(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err)
 
 	project := result.Project().(*projects.SingleFileProject)
@@ -103,7 +103,7 @@ func TestDefaultBuildOptions(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err)
 
 	project := result.Project().(*projects.SingleFileProject)
@@ -133,7 +133,7 @@ func TestOverrideBuildOptions(t *testing.T) {
 		WithObservabilityIncluded(true).
 		Build()
 
-	result, err := directory.LoadProject(absPath, directory.ProjectLoadConfig{
+	result, err := loadProject(absPath, directory.ProjectLoadConfig{
 		BuildOptions: &buildOptions,
 	})
 	require.NoError(err)
@@ -161,7 +161,7 @@ func TestUpdateSingleFile(t *testing.T) {
 	newContent := "import ballerina/io;\n"
 
 	// Load the project
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err)
 
 	singleFileProject := result.Project().(*projects.SingleFileProject)
@@ -232,7 +232,7 @@ func TestProjectDuplicate(t *testing.T) {
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err)
 
 	originalProject := result.Project().(*projects.SingleFileProject)
