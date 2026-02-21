@@ -157,7 +157,7 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.printString(node.Name)
 	p.printSourceKind(node.sourceKind)
 	p.printPackageID(node.packageID)
-	p.printBLangNodeBase(&node.BLangNodeBase)
+	p.printBLangNodeBase(&node.bLangNodeBase)
 	p.indentLevel++
 	for _, topLevelNode := range node.TopLevelNodes {
 		p.PrintInner(topLevelNode.(BLangNode))
@@ -186,7 +186,7 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	p.endNode()
 }
 
-func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
+func (p *PrettyPrinter) printBLangNodeBase(node *bLangNodeBase) {
 	// no-op
 }
 
@@ -407,10 +407,10 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	p.startNode()
 	p.printString("variable")
 	p.printString(node.Name.Value)
-	if node.GetTypeData().TypeDescriptor != nil {
+	if node.TypeNode() != nil {
 		p.printString("(type")
 		p.indentLevel++
-		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -459,9 +459,9 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printSticky(")")
 	// Print return type if present
 	p.printString("(")
-	if node.ReturnTypeData.TypeDescriptor != nil {
+	if node.GetReturnTypeDescriptor() != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTypeData.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
 		p.indentLevel--
 	}
 
@@ -583,9 +583,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
 	p.printString("(")
-	if node.GetTypeData().TypeDescriptor != nil {
+	if node.TypeNode() != nil {
 		p.indentLevel++
-		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")

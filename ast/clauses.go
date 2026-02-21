@@ -28,16 +28,16 @@ type TypeParamEntry struct {
 
 type (
 	BLangCollectClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expression      model.ExpressionNode
 		NonGroupingKeys common.Set[string]
 	}
 	BLangDoClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Body *BLangBlockStmt
 	}
 	BLangOnFailClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Body                   *BLangBlockStmt
 		VariableDefinitionNode model.VariableDefinitionNode
 		VarType                BType

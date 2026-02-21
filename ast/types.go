@@ -47,6 +47,8 @@ type ObjectType interface {
 
 type BType interface {
 	model.Type
+	SetTypeData(ty model.TypeData)
+	GetTypeData() model.TypeData
 	BTypeGetTag() model.TypeTags
 	bTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
@@ -56,8 +58,9 @@ type BType interface {
 }
 
 type (
-	BLangTypeBase struct {
-		BLangNodeBase
+	bLangTypeBase struct {
+		bLangNodeBase
+		ty      model.TypeData
 		FlagSet common.UnorderedSet[model.Flag]
 		Grouped bool
 		tags    model.TypeTags
@@ -65,32 +68,33 @@ type (
 		flags   uint64
 	}
 
-	BTypeImpl struct {
+	BTypeBasic struct {
+		ty    model.TypeData
 		tag   model.TypeTags
 		name  model.Name
 		flags uint64
 	}
 	BLangArrayType struct {
-		BLangTypeBase
+		bLangTypeBase
 		Elemtype   model.TypeData
 		Sizes      []BLangExpression
 		Dimensions int
 		Definition semtypes.Definition
 	}
 	BLangBuiltInRefTypeNode struct {
-		BLangTypeBase
+		bLangTypeBase
 		TypeKind model.TypeKind
 	}
 
 	BLangValueType struct {
-		BLangTypeBase
+		bLangTypeBase
 		TypeKind model.TypeKind
 	}
 
 	// TODO: Is this just type reference? if not we need to rethink this when we have actual user defined types.
 	//   If the user defined type is recursive we need a way to get the Definition (similar to array type etc) from that.
 	BLangUserDefinedType struct {
-		BLangTypeBase
+		bLangTypeBase
 		PkgAlias BLangIdentifier
 		TypeName BLangIdentifier
 		symbol   model.SymbolRef
@@ -108,7 +112,7 @@ type (
 	}
 
 	BObjectType struct {
-		BTypeImpl
+		bLangTypeBase
 		BStructureTypeBase
 		MarkedIsolatedness bool
 		MutableType        *BObjectType
@@ -117,18 +121,18 @@ type (
 	}
 
 	BLangFiniteTypeNode struct {
-		BLangTypeBase
+		bLangTypeBase
 		ValueSpace []BLangExpression
 	}
 
 	BLangUnionTypeNode struct {
-		BLangTypeBase
+		bLangTypeBase
 		lhs model.TypeData
 		rhs model.TypeData
 	}
 
 	BLangErrorTypeNode struct {
-		BLangTypeBase
+		bLangTypeBase
 		detailType model.TypeData
 	}
 )
@@ -152,7 +156,7 @@ var (
 	_ BType = &BLangBuiltInRefTypeNode{}
 	_ BType = &BLangUserDefinedType{}
 	_ BType = &BObjectType{}
-	_ BType = &BTypeImpl{}
+	_ BType = &BTypeBasic{}
 )
 
 var (
@@ -187,7 +191,7 @@ func (this *BLangArrayType) IsOpenArray() bool {
 	return this.Dimensions == 0
 }
 
-func (this *BLangTypeBase) IsGrouped() bool {
+func (this *bLangTypeBase) IsGrouped() bool {
 	return this.Grouped
 }
 
@@ -280,7 +284,7 @@ func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	}
 }
 
-func (this *BLangTypeBase) GetTypeKind() model.TypeKind {
+func (this *bLangTypeBase) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.BTypeGetTag())
 }
 
@@ -290,84 +294,96 @@ func (this *BObjectType) GetKind() model.TypeKind {
 	return model.TypeKind_OBJECT
 }
 
-func (this *BLangTypeBase) bTypeSetTag(tag model.TypeTags) {
+func (this *bLangTypeBase) GetTypeData() model.TypeData {
+	return this.ty
+}
+
+func (this *bLangTypeBase) SetTypeData(ty model.TypeData) {
+	this.ty = ty
+}
+
+func (this *bLangTypeBase) bTypeSetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
-func (this *BLangTypeBase) BTypeGetTag() model.TypeTags {
+func (this *bLangTypeBase) BTypeGetTag() model.TypeTags {
 	return this.tags
 }
 
-func (this *BLangTypeBase) bTypeGetName() model.Name {
+func (this *bLangTypeBase) bTypeGetName() model.Name {
 	return this.name
 }
 
-func (this *BLangTypeBase) bTypeSetName(name model.Name) {
+func (this *bLangTypeBase) bTypeSetName(name model.Name) {
 	this.name = name
 }
 
-func (this *BLangTypeBase) bTypeGetFlags() uint64 {
+func (this *bLangTypeBase) bTypeGetFlags() uint64 {
 	return this.flags
 }
 
-func (this *BLangTypeBase) bTypeSetFlags(flags uint64) {
+func (this *bLangTypeBase) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) BTypeGetTag() model.TypeTags {
+func (this *BTypeBasic) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
-func (this *BTypeImpl) bTypeSetTag(tag model.TypeTags) {
+func (this *BTypeBasic) bTypeSetTag(tag model.TypeTags) {
 	this.tag = tag
 }
 
-func (this *BTypeImpl) bTypeGetName() model.Name {
+func (this *BTypeBasic) bTypeGetName() model.Name {
 	return this.name
 }
 
-func (this *BTypeImpl) bTypeSetName(name model.Name) {
+func (this *BTypeBasic) bTypeSetName(name model.Name) {
 	this.name = name
 }
 
-func (this *BTypeImpl) bTypeGetFlags() uint64 {
+func (this *BTypeBasic) bTypeGetFlags() uint64 {
 	return this.flags
 }
 
-func (this *BTypeImpl) bTypeSetFlags(flags uint64) {
+func (this *BTypeBasic) bTypeSetFlags(flags uint64) {
 	this.flags = flags
 }
 
-func (this *BTypeImpl) GetTypeKind() model.TypeKind {
+func (this *BTypeBasic) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.tag)
 }
 
-func (this *BTypeImpl) GetKind() model.NodeKind {
+func (this *BTypeBasic) GetKind() model.NodeKind {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) GetPosition() Location {
+func (this *BTypeBasic) GetPosition() Location {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) SetPosition(pos Location) {
+func (this *BTypeBasic) SetPosition(pos Location) {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) IsGrouped() bool {
+func (this *BTypeBasic) IsGrouped() bool {
 	panic("not implemented")
 }
 
-func (this *BTypeImpl) GetTypeData() model.TypeData {
-	panic("not implemented")
+func (this *BTypeBasic) GetTypeData() model.TypeData {
+	return this.ty
 }
 
-func (this *BTypeImpl) GetDeterminedType() semtypes.SemType {
+func (this *BTypeBasic) SetTypeData(ty model.TypeData) {
+	this.ty = ty
+}
+
+func (this *BTypeBasic) GetDeterminedType() semtypes.SemType {
 	panic("not implemented")
 }
 
 func NewBType(tag model.TypeTags, name model.Name, flags uint64) BType {
-	return &BTypeImpl{
+	return &BTypeBasic{
 		tag:   tag,
 		name:  name,
 		flags: flags,

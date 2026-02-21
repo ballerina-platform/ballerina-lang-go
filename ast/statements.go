@@ -30,7 +30,7 @@ type BLangStatement = model.StatementNode
 
 type (
 	BLangStatementBase struct {
-		BLangNodeBase
+		bLangNodeBase
 	}
 	BLangAssignment struct {
 		BLangStatementBase
