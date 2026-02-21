@@ -620,6 +620,8 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 		kind = INSTRUCTION_KIND_NOT
 	case model.OperatorKind_SUB:
 		kind = INSTRUCTION_KIND_NEGATE
+	case model.OperatorKind_BITWISE_COMPLEMENT:
+		kind = INSTRUCTION_KIND_BITWISE_COMPLEMENT
 	default:
 		panic("unexpected unary operator kind")
 	}

@@ -330,7 +330,18 @@ func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame) {
 	}
 }
 
+func execUnaryOpBitwiseComplement(unaryOp *bir.UnaryOp, frame *Frame) {
+	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
+	op := frame.GetOperand(rhsOp)
+	v, ok := op.(int64)
+	if !ok {
+		panic(fmt.Sprintf("unsupported type: %T (expected int64)", op))
+	}
+	frame.SetOperand(lhsOp, ^v)
+}
+
 func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
+
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	if handleNilLifting(op1, op2, lhsOp, frame) {
 		return
