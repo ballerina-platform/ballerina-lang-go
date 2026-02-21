@@ -398,7 +398,7 @@ func (m *moduleContext) getCompilationState() moduleCompilationState {
 
 // getDiagnostics returns the diagnostics produced during module compilation.
 func (m *moduleContext) getDiagnostics() []diagnostics.Diagnostic {
-	return m.moduleDiagnostics
+	return m.project.Environment().compilerContext().Diagnostics()
 }
 
 // duplicate creates a copy of the context.

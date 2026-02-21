@@ -17,6 +17,12 @@
 package semantics
 
 import (
+	"fmt"
+	"math/big"
+	"math/bits"
+	"strconv"
+	"strings"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
@@ -24,11 +30,6 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
-	"math/big"
-	"math/bits"
-	"strconv"
-	"strings"
 )
 
 type (
@@ -226,6 +227,7 @@ func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, dept
 	}
 	if depth == defn.CycleDepth {
 		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
+		return nil
 	}
 	defn.CycleDepth = depth
 	semType := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)

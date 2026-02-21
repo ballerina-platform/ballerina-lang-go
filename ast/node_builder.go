@@ -585,19 +585,105 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 	}
 }
 
+func getFileName(node tree.Node) string {
+	st := node.SyntaxTree()
+	if st != nil {
+		return st.FilePath()
+	}
+	return ""
+}
+
 func getPosition(node tree.Node) Location {
-	// FIXME:
-	return nil
+	if node == nil {
+		return nil
+	}
+
+	lineRange := node.LineRange()
+	textRange := node.TextRange()
+	fileName := getFileName(node)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		lineRange.StartLine.Line,
+		lineRange.EndLine.Line,
+		lineRange.StartLine.Column,
+		lineRange.EndLine.Column,
+		textRange.StartOffset,
+		textRange.Length,
+	)
 }
 
 func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
-	// FIXME:
-	return nil
+	if startNode == nil || endNode == nil {
+		return nil
+	}
+	startLineRange := startNode.LineRange()
+	endLineRange := endNode.LineRange()
+	startNodeTextRange := startNode.TextRange()
+	endNodeTextRange := endNode.TextRange()
+	length := startNodeTextRange.Length + endNodeTextRange.Length
+	fileName := getFileName(startNode)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		startLineRange.StartLine.Line,
+		endLineRange.EndLine.Line,
+		startLineRange.StartLine.Column,
+		endLineRange.EndLine.Column,
+		startNodeTextRange.StartOffset,
+		length,
+	)
 }
 
 func getPositionWithoutMetadata(node tree.Node) Location {
-	// FIXME:
-	return nil
+	if node == nil {
+		return nil
+	}
+	nodeLineRange := node.LineRange()
+	nonTerminalNode := node.(tree.NonTerminalNode)
+
+	var startLine, endLine, startColumn, endColumn, startOffset, length int
+
+	var firstChild, secondChild tree.Node
+	childIndex := 0
+	for child := range nonTerminalNode.ChildNodes() {
+		if childIndex == 0 {
+			firstChild = child
+			childIndex++
+		} else if childIndex == 1 {
+			secondChild = child
+			break
+		}
+	}
+
+	if firstChild != nil && firstChild.Kind() == common.METADATA {
+		secondLineRange := secondChild.LineRange()
+		startLine = secondLineRange.StartLine.Line
+		startColumn = secondLineRange.StartLine.Column
+		secondTextRange := secondChild.TextRange()
+		startOffset = secondTextRange.StartOffset
+		firstTextRange := firstChild.TextRange()
+		nodeTextRange := node.TextRange()
+		length = nodeTextRange.Length - firstTextRange.Length
+	} else {
+		startLine = nodeLineRange.StartLine.Line
+		startColumn = nodeLineRange.StartLine.Column
+		nodeTextRange := node.TextRange()
+		startOffset = nodeTextRange.StartOffset
+		length = nodeTextRange.Length
+	}
+
+	endLine = nodeLineRange.EndLine.Line
+	endColumn = nodeLineRange.EndLine.Column
+
+	fileName := getFileName(node)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		startLine,
+		endLine,
+		startColumn,
+		endColumn,
+		startOffset,
+		length,
+	)
 }
 
 func createIdentifier(pos Location, value, originalValue *string) BLangIdentifier {
