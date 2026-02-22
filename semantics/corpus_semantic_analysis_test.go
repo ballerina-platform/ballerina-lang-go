@@ -14,20 +14,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+package semantics_test
 
 import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 	"flag"
 	"strings"
 	"testing"
-
-	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/test_util"
 )
 
 func TestSemanticAnalysis(t *testing.T) {
@@ -50,50 +48,20 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	cx := context.NewCompilerContext(env)
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
-	}
-	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
-
-	// Step 2: Type Resolution
-	typeResolver := NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-
-	// Step 3: Control Flow Graph Generation
-	cfg := CreateControlFlowGraph(cx, pkg)
-
-	// Step 4: Type Narrowing
-	NarrowTypes(cx, pkg)
-
-	// Step 5: Semantic Analysis
-	semanticAnalyzer := NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-
-	// Step 6: Validate that all expressions have determinedTypes set
+	// Validate that all expressions have determinedTypes set
 	validator := &semanticAnalysisValidator{t: t, ctx: cx}
-	ast.Walk(validator, pkg)
+	ast.Walk(validator, result.Package)
 
 	// If we reach here, semantic analysis completed without panicking
 	t.Logf("Semantic analysis completed successfully for %s", testCase.InputPath)
-
-	// Step 7: CFG Analysis (reachability and explicit return) - this should panic for error cases
-	AnalyzeCFG(cx, pkg, cfg)
 }
 
 type semanticAnalysisValidator struct {
@@ -190,49 +158,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 		t.Logf("Semantic error correctly detected for %s", testCase.InputPath)
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
-	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
-		return
-	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
-	}
-	pkg := ast.ToPackage(compilationUnit)
-
-	// Step 1: Symbol Resolution
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
-
-	if cx.HasDiagnostics() {
-		return
-	}
-
-	// Step 2: Type Resolution
-	typeResolver := NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-
-	if cx.HasDiagnostics() {
-		return
-	}
-
-	// Step 3: Control Flow Graph Generation
-	cfg := CreateControlFlowGraph(cx, pkg)
-
-	// Step 4: Type Narrowing
-	NarrowTypes(cx, pkg)
-
-	// Step 5: Semantic Analysis - this should panic for error cases
-	semanticAnalyzer := NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-
-	// Step 6: CFG Analysis (reachability and explicit return) - this should panic for error cases
-	AnalyzeCFG(cx, pkg, cfg)
+	_, _ = testphases.RunPipeline(cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
 }
