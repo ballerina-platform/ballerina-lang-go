@@ -228,9 +228,8 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 		return
 	}
 
-	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(compilerCtx, importedSymbols)
-	typeResolver.ResolveTypes(compilerCtx, pkgNode)
+	// Add type resolution step (this only resolve types of top level nodes)
+	semantics.ResolveTypes(compilerCtx, pkgNode, importedSymbols)
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
