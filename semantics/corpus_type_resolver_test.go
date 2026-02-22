@@ -14,14 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+package semantics_test
 
 import (
 	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/test_util/testphases"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"flag"
@@ -48,28 +47,15 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseTypeResolution, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
-	}
-	pkg := ast.ToPackage(compilationUnit)
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
-	typeResolver := NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
 	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
 	validator := &typeResolutionValidator{t: t, ctx: cx, tyCtx: tyCtx}
-	ast.Walk(validator, pkg)
+	ast.Walk(validator, result.Package)
 
 	// If we reach here, type resolution completed without panicking
 	t.Logf("Type resolution completed successfully for %s", testCase.InputPath)
