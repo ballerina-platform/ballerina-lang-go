@@ -265,7 +265,6 @@ func (la *loopAnalyzer) internalErr(message string, loc diagnostics.Location) {
 	la.parent.ctx().InternalError(message, loc)
 }
 
-// When we support multiple packages we need to resolve types of all of them before semantic analysis
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
 		compilerCtx:  ctx,
@@ -350,7 +349,7 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
+func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
 		parent.semanticErr("'main' function must be public", function.GetPosition())
@@ -372,7 +371,7 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 
 	// Validate main function constraints
 	if function.Name.Value == "main" {
-		validateMainFunction(parent, function, fnSymbol)
+		validateMainFunction(parent, fnSymbol)
 	}
 
 	return fa
