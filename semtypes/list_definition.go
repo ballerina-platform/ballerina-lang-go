@@ -107,7 +107,7 @@ func (this *ListDefinition) define(env Env, initial []CellSemType, fixedLength i
 		atom = rec
 		env.setRecListAtomType(*rec, &atomicType)
 	} else {
-		atom = common.ToPointer(env.listAtom(&atomicType))
+		atom = new(env.listAtom(&atomicType))
 	}
 	return this.createSemType(env, atom)
 }

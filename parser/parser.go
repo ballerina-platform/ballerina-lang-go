@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/tools/text"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -108,7 +109,7 @@ type ParserErrorHandler interface {
 type invalidNodeInfo struct {
 	node           tree.STNode
 	diagnosticCode diagnostics.DiagnosticCode
-	args           []interface{}
+	args           []any
 }
 
 type abstractParser struct {
@@ -119,7 +120,7 @@ type abstractParser struct {
 	dbgContext           *debugcommon.DebugContext
 }
 
-func NewInvalidNodeInfoFromInvalidNodeDiagnosticCodeArgs(invalidNode tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...interface{}) invalidNodeInfo {
+func NewInvalidNodeInfoFromInvalidNodeDiagnosticCodeArgs(invalidNode tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) invalidNodeInfo {
 	this := invalidNodeInfo{}
 	this.node = invalidNode
 	this.diagnosticCode = diagnosticCode
@@ -258,7 +259,7 @@ func (this *abstractParser) cloneWithDiagnosticIfListEmpty(nodeList tree.STNode,
 	return target
 }
 
-func (this *abstractParser) updateLastNodeInListWithInvalidNode(nodeList []tree.STNode, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...interface{}) []tree.STNode {
+func (this *abstractParser) updateLastNodeInListWithInvalidNode(nodeList []tree.STNode, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) []tree.STNode {
 	prevNode := nodeList[len(nodeList)-1]
 	nodeList = nodeList[:len(nodeList)-1]
 	newNode := tree.CloneWithTrailingInvalidNodeMinutiae(prevNode, invalidParam, diagnosticCode, args)
@@ -266,11 +267,11 @@ func (this *abstractParser) updateLastNodeInListWithInvalidNode(nodeList []tree.
 	return nodeList
 }
 
-func (this *abstractParser) updateFirstNodeInListWithLeadingInvalidNode(nodeList []tree.STNode, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...interface{}) []tree.STNode {
+func (this *abstractParser) updateFirstNodeInListWithLeadingInvalidNode(nodeList []tree.STNode, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) []tree.STNode {
 	return this.updateANodeInListWithLeadingInvalidNode(nodeList, 0, invalidParam, diagnosticCode, args)
 }
 
-func (this *abstractParser) updateANodeInListWithLeadingInvalidNode(nodeList []tree.STNode, indexOfTheNode int, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...interface{}) []tree.STNode {
+func (this *abstractParser) updateANodeInListWithLeadingInvalidNode(nodeList []tree.STNode, indexOfTheNode int, invalidParam tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) []tree.STNode {
 	node := nodeList[indexOfTheNode]
 	newNode := tree.CloneWithLeadingInvalidNodeMinutiae(node, invalidParam, diagnosticCode, args)
 	nodeList[indexOfTheNode] = newNode
@@ -295,12 +296,12 @@ func (this *abstractParser) addInvalidNodeStackToTrailingMinutiae(node tree.STNo
 	return node
 }
 
-func (this *abstractParser) addInvalidNodeToNextToken(invalidNode tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...interface{}) {
+func (this *abstractParser) addInvalidNodeToNextToken(invalidNode tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) {
 	this.invalidNodeInfoStack = append(this.invalidNodeInfoStack, invalidNodeInfo{node: invalidNode, diagnosticCode: diagnosticCode, args: args})
 }
 
 func (this *abstractParser) addInvalidTokenToNextToken(invalidNode tree.STToken) {
-	this.invalidNodeInfoStack = append(this.invalidNodeInfoStack, invalidNodeInfo{node: invalidNode, diagnosticCode: &common.ERROR_INVALID_TOKEN, args: []interface{}{invalidNode.Text()}})
+	this.invalidNodeInfoStack = append(this.invalidNodeInfoStack, invalidNodeInfo{node: invalidNode, diagnosticCode: &common.ERROR_INVALID_TOKEN, args: []any{invalidNode.Text()}})
 }
 
 type BallerinaParser struct {
@@ -11569,7 +11570,7 @@ func (this *BallerinaParser) getLeadingTriviaList(leadingMinutiaeNode tree.STNod
 
 func (this *BallerinaParser) appendParsedDocumentationLines(markdownDocLineList []tree.STNode, parsedDocLines tree.STNode) []tree.STNode {
 	bucketCount := parsedDocLines.BucketCount()
-	for i := 0; i < bucketCount; i++ {
+	for i := range bucketCount {
 		markdownDocLine := parsedDocLines.ChildInBucket(i)
 		markdownDocLineList = append(markdownDocLineList, markdownDocLine)
 	}
@@ -14755,12 +14756,7 @@ func (this *BallerinaParser) isInsideABlock(nextToken tree.STToken) bool {
 	if nextToken.Kind() != common.CLOSE_BRACE_TOKEN {
 		return false
 	}
-	for _, ctx := range this.errorHandler.GetContextStack() {
-		if this.isBlockContext(ctx) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(this.errorHandler.GetContextStack(), this.isBlockContext)
 }
 
 func (this *BallerinaParser) isBlockContext(ctx common.ParserRuleContext) bool {

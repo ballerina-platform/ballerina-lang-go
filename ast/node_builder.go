@@ -1044,7 +1044,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			if isFiniteType {
 				// Remove f, d, and + suffixes
 				value = regexp.MustCompile("[fd+]").ReplaceAllString(textValue, "")
-				originalValue = balCommon.ToPointer(strings.ReplaceAll(textValue, "+", ""))
+				originalValue = new(strings.ReplaceAll(textValue, "+", ""))
 			} else {
 				value = textValue
 				originalValue = &textValue
@@ -1105,7 +1105,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		originalValue = balCommon.ToPointer(string(model.NIL_VALUE))
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NULL_LITERAL {
-		originalValue = balCommon.ToPointer("null")
+		originalValue = new("null")
 		typeTag = model.TypeTags_NIL
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.BINARY_EXPRESSION { // Should be base16 and base64
@@ -1601,8 +1601,8 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 		nameReference := n.createBLangNameReference(actionOrExpression)
 		bLVarRef := BLangSimpleVarRef{}
 		bLVarRef.pos = getPosition(actionOrExpression)
-		bLVarRef.PkgAlias = balCommon.ToPointer(createIdentifier(nameReference[0].GetPosition(), balCommon.ToPointer(nameReference[0].GetValue()), balCommon.ToPointer(nameReference[0].GetValue())))
-		bLVarRef.VariableName = balCommon.ToPointer(createIdentifier(nameReference[1].GetPosition(), balCommon.ToPointer(nameReference[1].GetValue()), balCommon.ToPointer(nameReference[1].GetValue())))
+		bLVarRef.PkgAlias = new(createIdentifier(nameReference[0].GetPosition(), new(nameReference[0].GetValue()), new(nameReference[0].GetValue())))
+		bLVarRef.VariableName = new(createIdentifier(nameReference[1].GetPosition(), new(nameReference[1].GetValue()), new(nameReference[1].GetValue())))
 		return &bLVarRef
 
 	} else if actionOrExpression.Kind() == common.BRACED_EXPRESSION {

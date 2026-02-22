@@ -36,7 +36,7 @@ func testRoTuple(env Env, members ...SemType) SemType {
 }
 
 // assertEqual asserts that two values are equal
-func assertEqual(t *testing.T, actual, expected interface{}, msgAndArgs ...interface{}) {
+func assertEqual(t *testing.T, actual, expected any, msgAndArgs ...any) {
 	t.Helper()
 	if actual != expected {
 		msg := fmt.Sprintf("got %v, want %v", actual, expected)
@@ -50,7 +50,7 @@ func assertEqual(t *testing.T, actual, expected interface{}, msgAndArgs ...inter
 }
 
 // assertTrue asserts that a condition is true
-func assertTrue(t *testing.T, condition bool, msgAndArgs ...interface{}) {
+func assertTrue(t *testing.T, condition bool, msgAndArgs ...any) {
 	t.Helper()
 	if !condition {
 		msg := "expected true"
@@ -64,7 +64,7 @@ func assertTrue(t *testing.T, condition bool, msgAndArgs ...interface{}) {
 }
 
 // assertFalse asserts that a condition is false
-func assertFalse(t *testing.T, condition bool, msgAndArgs ...interface{}) {
+func assertFalse(t *testing.T, condition bool, msgAndArgs ...any) {
 	t.Helper()
 	if condition {
 		msg := "expected false"

@@ -48,7 +48,7 @@ func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames
 	// migrated from TableSubtype.java:64:5
 	fieldNameSingletons := make([]SemType, len(fieldNames))
 	fieldTypes := make([]SemType, len(fieldNames))
-	for i := 0; i < len(fieldNames); i++ {
+	for i := range fieldNames {
 		key := StringConst(fieldNames[i])
 		fieldNameSingletons[i] = key
 		fieldTypes[i] = MappingMemberTypeInnerVal(cx, tableConstraint, key)

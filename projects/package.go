@@ -165,7 +165,7 @@ func (p *Package) BallerinaToml() *BallerinaToml {
 
 // DependenciesToml returns the Dependencies.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when DependenciesToml type is available.
-func (p *Package) DependenciesToml() interface{} {
+func (p *Package) DependenciesToml() any {
 	// TODO(P2.x): Return *DependenciesToml once the type is implemented.
 	// Java lazy-loads from packageContext.dependenciesTomlContext()
 	return nil
@@ -173,7 +173,7 @@ func (p *Package) DependenciesToml() interface{} {
 
 // CloudToml returns the Cloud.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when CloudToml type is available.
-func (p *Package) CloudToml() interface{} {
+func (p *Package) CloudToml() any {
 	// TODO(P2.x): Return *CloudToml once the type is implemented.
 	// Java lazy-loads from packageContext.cloudTomlContext()
 	return nil
@@ -181,7 +181,7 @@ func (p *Package) CloudToml() interface{} {
 
 // CompilerPluginToml returns the CompilerPlugin.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when CompilerPluginToml type is available.
-func (p *Package) CompilerPluginToml() interface{} {
+func (p *Package) CompilerPluginToml() any {
 	// TODO(P2.x): Return *CompilerPluginToml once the type is implemented.
 	// Java lazy-loads from packageContext.compilerPluginTomlContext()
 	return nil
@@ -189,7 +189,7 @@ func (p *Package) CompilerPluginToml() interface{} {
 
 // BalToolToml returns the BalTool.toml document for this package, or nil if absent.
 // TODO(P2.x): Implement when BalToolToml type is available.
-func (p *Package) BalToolToml() interface{} {
+func (p *Package) BalToolToml() any {
 	// TODO(P2.x): Return *BalToolToml once the type is implemented.
 	// Java lazy-loads from packageContext.balToolTomlContext()
 	return nil
@@ -197,7 +197,7 @@ func (p *Package) BalToolToml() interface{} {
 
 // ReadmeMd returns the README.md document for this package, or nil if absent.
 // TODO(P2.x): Implement when PackageReadmeMd type is available.
-func (p *Package) ReadmeMd() interface{} {
+func (p *Package) ReadmeMd() any {
 	// TODO(P2.x): Return *PackageReadmeMd once the type is implemented.
 	// Java lazy-loads from packageContext.readmeMdContext()
 	return nil
@@ -219,7 +219,7 @@ func (p *Package) TestResourceIDs() []DocumentID {
 
 // Resource returns a resource by its DocumentID, or nil if not found.
 // TODO(P2.x): Implement when Resource type is available.
-func (p *Package) Resource(documentID DocumentID) interface{} {
+func (p *Package) Resource(documentID DocumentID) any {
 	// TODO(P2.x): Return *Resource once the type is implemented.
 	// Java checks resourceIds first, then falls back to testResources.
 	return nil
@@ -237,7 +237,7 @@ func (p *Package) Resolution() *PackageResolution {
 
 // BuildToolResolution returns the build tool resolution for this package.
 // TODO(P3.x): Implement when BuildToolResolution type is available.
-func (p *Package) BuildToolResolution() interface{} {
+func (p *Package) BuildToolResolution() any {
 	// TODO(P3.x): Return *BuildToolResolution once the type is implemented.
 	// Java delegates to packageContext.getBuildToolResolution()
 	return nil
@@ -254,7 +254,7 @@ func (p *Package) RunCodeGenAndModifyPlugins() DiagnosticResult {
 // RunCodeGeneratorPlugins runs CodeGenerator tasks in engaged CompilerPlugins.
 // Returns nil. The real return type will be *CodeGeneratorResult.
 // TODO(P3.x): Implement when compiler plugin infrastructure is available.
-func (p *Package) RunCodeGeneratorPlugins() interface{} {
+func (p *Package) RunCodeGeneratorPlugins() any {
 	// TODO(P3.x): Return *CodeGeneratorResult once the type is implemented.
 	// Java delegates to CompilerPluginManager -> CodeGeneratorManager
 	return nil
@@ -263,7 +263,7 @@ func (p *Package) RunCodeGeneratorPlugins() interface{} {
 // RunCodeModifierPlugins runs CodeModifier tasks in engaged CompilerPlugins.
 // Returns nil. The real return type will be *CodeModifierResult.
 // TODO(P3.x): Implement when compiler plugin infrastructure is available.
-func (p *Package) RunCodeModifierPlugins() interface{} {
+func (p *Package) RunCodeModifierPlugins() any {
 	// TODO(P3.x): Return *CodeModifierResult once the type is implemented.
 	// Java delegates to CompilerPluginManager -> CodeModifierManager
 	return nil

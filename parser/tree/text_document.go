@@ -16,4 +16,4 @@
 
 package tree
 
-type TextDocument interface{}
+type TextDocument any

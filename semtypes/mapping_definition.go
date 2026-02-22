@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"sort"
 )
 
@@ -69,7 +68,7 @@ func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemT
 		atom = rec
 		env.setRecMappingAtomType(*rec, &atomicType)
 	} else {
-		atom = common.ToPointer(env.mappingAtom(&atomicType))
+		atom = new(env.mappingAtom(&atomicType))
 	}
 	return this.createSemType(env, atom)
 }

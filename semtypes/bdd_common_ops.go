@@ -16,8 +16,7 @@
 
 package semtypes
 
-type BddCommonOpsData interface {
-}
+type BddCommonOpsData any
 
 type BddCommonOps interface {
 	BddCommonOpsData

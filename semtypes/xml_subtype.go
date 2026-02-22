@@ -82,7 +82,7 @@ func makeXmlSequence(d XmlSubtype) SubtypeData {
 	// migrated from XmlSubtype.java:97:5
 	primitives := (XML_PRIMITIVE_NEVER | d.Primitives)
 	atom := (d.Primitives & XML_PRIMITIVE_SINGLETON)
-	sequence := BddUnion(BddAtom(common.ToPointer(CreateXMLRecAtom(atom))), d.Sequence)
+	sequence := BddUnion(BddAtom(new(CreateXMLRecAtom(atom))), d.Sequence)
 	return CreateXmlSubtype(primitives, sequence)
 }
 

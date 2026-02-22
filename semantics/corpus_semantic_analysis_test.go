@@ -171,7 +171,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	}
 	// We EXPECT a panic for error test cases
 	didPanic := false
-	var panicValue interface{}
+	var panicValue any
 
 	defer func() {
 		if r := recover(); r != nil {

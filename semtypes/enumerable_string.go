@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type EnumerableString struct {
 	value string
 }
@@ -48,5 +46,5 @@ func newEnumerableStringFromString(value string) EnumerableString {
 
 func EnumerableStringFrom(v string) EnumerableType[string] {
 	// migrated from EnumerableString.java:32:5
-	return common.ToPointer(newEnumerableStringFromString(v))
+	return new(newEnumerableStringFromString(v))
 }

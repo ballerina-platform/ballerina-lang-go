@@ -16,6 +16,8 @@
 
 package common
 
+import "slices"
+
 import "iter"
 
 type Optional[T any] struct {
@@ -51,8 +53,9 @@ func OptionalEmpty[T any]() Optional[T] {
 	}
 }
 
+//go:fix inline
 func ToPointer[t any](v t) *t {
-	return &v
+	return new(v)
 }
 
 func Assert(condition bool) {
@@ -127,12 +130,7 @@ func (s *OrderedSet[T]) Remove(value T) {
 }
 
 func (s *OrderedSet[T]) Contains(value T) bool {
-	for _, v := range s.values {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.values, value)
 }
 
 func (s *UnorderedSet[T]) Values() iter.Seq[T] {
