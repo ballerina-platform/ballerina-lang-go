@@ -22,8 +22,13 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"sync"
 )
+
+type ExpressionResolver interface {
+	ast.Visitor
+	ResolveExpression(chain *Binding, expr ast.BLangExpression) semtypes.SemType
+	ResolveStatement(chain *Binding, stmt ast.BLangStatement)
+}
 
 type Binding struct {
 	// Ref is the underlying symbol we are narrowing. This is never a narrowed symbol
@@ -34,6 +39,7 @@ type Binding struct {
 
 type NarrowingContext struct {
 	compilerCtx *context.CompilerContext
+	resolver    ExpressionResolver
 }
 
 func (ctx *NarrowingContext) SymbolType(ref model.SymbolRef) semtypes.SemType {
@@ -71,26 +77,10 @@ func narrowSymbol(ctx *NarrowingContext, underlying model.SymbolRef, ty semtypes
 	return narrowedSymbol
 }
 
-func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
-	nCtx := &NarrowingContext{ctx}
-	var wg sync.WaitGroup
-	var panicErr any = nil
+func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage, resolver ExpressionResolver) {
+	nCtx := &NarrowingContext{compilerCtx: ctx, resolver: resolver}
 	for i := range pkg.Functions {
-		wg.Add(1)
-		fn := &pkg.Functions[i]
-		go func() {
-			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					panicErr = r
-				}
-			}()
-			analyzeFunction(nCtx, fn)
-		}()
-	}
-	wg.Wait()
-	if panicErr != nil {
-		panic(panicErr)
+		analyzeFunction(nCtx, &pkg.Functions[i])
 	}
 }
 
@@ -104,6 +94,9 @@ func analyzeFunction(ctx *NarrowingContext, fn *ast.BLangFunction) {
 }
 
 func analyzeStatement(ctx *NarrowingContext, chain *Binding, stmt ast.BLangStatement) statementEffect {
+	// First resolve the statement types with the current binding chain
+	ctx.resolver.ResolveStatement(chain, stmt)
+
 	switch stmt := stmt.(type) {
 	case *ast.BLangIf:
 		return analyzeIfStatement(ctx, chain, stmt)
@@ -198,6 +191,9 @@ func mergeStatementEffects(ctx *NarrowingContext, s1, s2 statementEffect) statem
 }
 
 func analyzeExpression(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) expressionEffect {
+	// First resolve the expression type with the current binding chain
+	ctx.resolver.ResolveExpression(chain, expr)
+
 	switch expr := expr.(type) {
 	case *ast.BLangTypeTestExpr:
 		return analyzeTypeTestExpr(ctx, chain, expr)

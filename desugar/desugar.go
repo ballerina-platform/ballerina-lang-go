@@ -221,10 +221,7 @@ func desugarFunction(pkgCtx *dcontext.PackageContext, fn *ast.BLangFunction) *as
 
 	switch body := fn.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		result := walkBlockFunctionBody(cx, body)
-		if newBody, ok := result.replacementNode.(*ast.BLangBlockFunctionBody); ok {
-			fn.Body = newBody
-		}
+		walkBlockFunctionBody(cx, body)
 	case *ast.BLangExprFunctionBody:
 		if body.Expr != nil {
 			result := walkExpression(cx, body.Expr)

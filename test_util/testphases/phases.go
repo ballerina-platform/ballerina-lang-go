@@ -114,7 +114,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	}
 
 	// Phase 5: Type Narrowing
-	semantics.NarrowTypes(cx, result.Package)
+	semantics.NarrowTypes(cx, result.Package, importedSymbols)
 	if phase == PhaseTypeNarrowing {
 		return result, nil
 	}

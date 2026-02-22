@@ -952,7 +952,10 @@ type DynamicArgNode = ExpressionNode
 
 // Statement Interfaces
 
-type StatementNode = Node
+type StatementNode interface {
+	Node
+	IsStatement()
+}
 
 type ContinueNode = StatementNode
 

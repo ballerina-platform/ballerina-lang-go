@@ -238,7 +238,7 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	// Run type narrowing analysis.
-	semantics.NarrowTypes(compilerCtx, pkgNode)
+	semantics.NarrowTypes(compilerCtx, pkgNode, moduleCtx.importedSymbols)
 
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)

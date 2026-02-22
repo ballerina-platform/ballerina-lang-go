@@ -29,6 +29,7 @@ const (
 type BLangStatement = model.StatementNode
 
 type (
+	// TODO: make this private
 	BLangStatementBase struct {
 		bLangNodeBase
 	}
@@ -140,6 +141,23 @@ var (
 	_ BLangNode = &BLangForeach{}
 	_ BLangNode = &BLangSimpleVariableDef{}
 )
+
+var (
+	_ BLangStatement = &BLangAssignment{}
+	_ BLangStatement = &BLangBlockStmt{}
+	_ BLangStatement = &BLangBreak{}
+	_ BLangStatement = &BLangCompoundAssignment{}
+	_ BLangStatement = &BLangContinue{}
+	_ BLangStatement = &BLangDo{}
+	_ BLangStatement = &BLangExpressionStmt{}
+	_ BLangStatement = &BLangIf{}
+	_ BLangStatement = &BLangWhile{}
+	_ BLangStatement = &BLangForeach{}
+	_ BLangStatement = &BLangSimpleVariableDef{}
+	_ BLangStatement = &BLangReturn{}
+)
+
+func (*BLangStatementBase) IsStatement() {}
 
 func (this *BLangAssignment) GetVariable() model.ExpressionNode {
 	// migrated from BLangAssignment.java:48:5
