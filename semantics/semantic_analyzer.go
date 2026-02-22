@@ -829,94 +829,15 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 				return
 			}
 		}
-	} else if isBitWiseExpr(binaryExpr) {
-		analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 	} else if isRangeExpr(binaryExpr) {
 		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.INT) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.INT) {
 			a.semanticErr(fmt.Sprintf("expect int types for %s", string(binaryExpr.GetOperatorKind())))
 			return
 		}
-	} else if isShiftExpr(binaryExpr) {
-		analyzeShiftExpr(a, binaryExpr, lhsTy, rhsTy, expectedType)
 	}
-
 	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	validateResolvedType(a, binaryExpr, expectedType)
-}
-
-var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
-
-func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
-	ctx := a.tyCtx()
-	nilLifted := false
-	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
-		nilLifted = true
-		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
-		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
-	}
-	if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
-		a.semanticErr("expect integer types for bitwise operators")
-		return
-	}
-	var resultTy semtypes.SemType
-	switch binaryExpr.GetOperatorKind() {
-	case model.OperatorKind_BITWISE_AND:
-		resultTy = &semtypes.INT
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
-		resultTy = &semtypes.INT
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	default:
-		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())))
-		return
-	}
-	if nilLifted {
-		resultTy = semtypes.Union(&semtypes.NIL, resultTy)
-	}
-	setExpectedType(binaryExpr, resultTy)
-}
-
-func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) {
-	ctx := a.tyCtx()
-	nilLifted := false
-	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
-		nilLifted = true
-		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
-		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)
-	}
-	op := binaryExpr.GetOperatorKind()
-	var resultTy semtypes.SemType = &semtypes.INT
-
-	switch op {
-	case model.OperatorKind_BITWISE_RIGHT_SHIFT,
-		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
-
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	default:
-		resultTy = &semtypes.INT
-	}
-
-	if nilLifted {
-		resultTy = semtypes.Union(&semtypes.NIL, resultTy)
-	}
-
-	setExpectedType(binaryExpr, resultTy)
 }
 
 func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) {
@@ -954,7 +875,6 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 	if variable.Expr != nil {
 		analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType)
 	}
-	setExpectedType(simpleVariableDef, expectedType)
 }
 
 func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {

@@ -71,10 +71,10 @@ type PackageCFG struct {
 
 // CFGInvariantError represents a CFG invariant violation
 type CFGInvariantError struct {
-	FuncRef         model.SymbolRef
-	BlockID         int
-	BackedgeParent  int
-	Parents         []int
+	FuncRef        model.SymbolRef
+	BlockID        int
+	BackedgeParent int
+	Parents        []int
 }
 
 // ValidateInvariants checks that CFG invariants hold (e.g., backedgeParents is subset of parents).
