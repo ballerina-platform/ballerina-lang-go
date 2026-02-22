@@ -42,12 +42,12 @@ const (
 	PhaseSymbolResolution
 	// PhaseTypeResolution runs through type resolution
 	PhaseTypeResolution
-	// PhaseCFG runs through CFG generation
-	PhaseCFG
 	// PhaseTypeNarrowing runs through type narrowing
 	PhaseTypeNarrowing
 	// PhaseSemanticAnalysis runs through semantic analysis
 	PhaseSemanticAnalysis
+	// PhaseCFG runs through CFG generation
+	PhaseCFG
 	// PhaseCFGAnalysis runs through CFG analysis (reachability, explicit return)
 	PhaseCFGAnalysis
 	// PhaseDesugar runs through desugaring
@@ -114,22 +114,22 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 		return result, nil
 	}
 
-	// Phase 5: CFG Generation
-	result.CFG = semantics.CreateControlFlowGraph(cx, result.Package)
-	if phase == PhaseCFG {
-		return result, nil
-	}
-
-	// Phase 6: Type Narrowing
+	// Phase 5: Type Narrowing
 	semantics.NarrowTypes(cx, result.Package)
 	if phase == PhaseTypeNarrowing {
 		return result, nil
 	}
 
-	// Phase 7: Semantic Analysis
+	// Phase 6: Semantic Analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(result.Package)
 	if phase == PhaseSemanticAnalysis {
+		return result, nil
+	}
+
+	// Phase 7: CFG Generation
+	result.CFG = semantics.CreateControlFlowGraph(cx, result.Package)
+	if phase == PhaseCFG {
 		return result, nil
 	}
 
