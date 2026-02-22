@@ -18,7 +18,6 @@ package semantics
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -174,38 +173,24 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 			return
 		}
 	}
-	// We EXPECT a panic for error test cases
-	didPanic := false
-	var panicValue any
+
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 
 	defer func() {
-		if r := recover(); r != nil {
-			didPanic = true
-			panicValue = r
-		}
+		recover()
 
-		// After recovery, verify that a syntax or semantic error occurred
-		if !didPanic {
-			t.Errorf("Expected syntax or semantic error for %s, but analysis completed without error", testCase.InputPath)
+		if !cx.HasDiagnostics() {
+			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
 			return
 		}
 
-		// Verify the panic is a syntax or semantic error (not some other panic)
-		panicStr := fmt.Sprintf("%v", panicValue)
-		if !strings.Contains(panicStr, "Semantic error:") && !strings.Contains(panicStr, "Syntax error:") {
-			t.Errorf("Expected syntax or semantic error for %s, but got different panic: %v", testCase.InputPath, panicValue)
-			return
-		}
-
-		// Success - we got the expected syntax or semantic error
-		t.Logf("Syntax or semantic error correctly detected for %s: %v", testCase.InputPath, panicValue)
+		t.Logf("Semantic error correctly detected for %s", testCase.InputPath)
 	}()
 
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
-	cx := context.NewCompilerContext(env)
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)

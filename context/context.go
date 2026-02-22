@@ -17,8 +17,6 @@
 package context
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -84,10 +82,10 @@ func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.
 }
 
 func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
-	if pos != nil {
-		panic(fmt.Sprintf("Unimplemented: %s at %s", message, pos))
-	}
-	panic(fmt.Sprintf("Unimplemented: %s", message))
+	code := "UNIMPLEMENTED_ERROR"
+	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal)
+	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
+	this.diagnostics = append(this.diagnostics, dignostic)
 }
 
 func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
@@ -105,10 +103,14 @@ func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Locatio
 }
 
 func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
-	if pos != nil {
-		panic(fmt.Sprintf("Internal error: %s at %s", message, pos))
-	}
-	panic(fmt.Sprintf("Internal error: %s", message))
+	code := "INTERNAL_ERROR"
+	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal)
+	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
+	this.diagnostics = append(this.diagnostics, dignostic)
+}
+
+func (this *CompilerContext) HasDiagnostics() bool {
+	return len(this.diagnostics) > 0
 }
 
 func (this *CompilerContext) Diagnostics() []diagnostics.Diagnostic {
