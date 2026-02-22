@@ -19,13 +19,6 @@
 package projects
 
 import (
-	"fmt"
-	"maps"
-	"os"
-	"slices"
-	"strings"
-	"sync"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -34,6 +27,12 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+	"sync"
 )
 
 // moduleContext holds internal state for a Module.
@@ -248,10 +247,20 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
+	// Run type narrowing analysis.
+	semantics.NarrowTypes(moduleCtx.compilerCtx, pkgNode)
 
-	// Create control flow graph before semantic analysis.
-	// CFG is needed for conditional type narrowing during semantic analysis.
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(moduleCtx.compilerCtx)
+	semanticAnalyzer.Analyze(pkgNode)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
+	// Create control flow graph after semantic analysis.
 	cfg := semantics.CreateControlFlowGraph(compilerCtx, pkgNode)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	// Dump CFG if requested
 	if compilationOptions.DumpCFG() {
@@ -267,18 +276,15 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 
-	// Run type narrowing analysis before semantic analysis.
-	semantics.NarrowTypes(compilerCtx, pkgNode)
-
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
-	semanticAnalyzer.Analyze(pkgNode)
-
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
 	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)
