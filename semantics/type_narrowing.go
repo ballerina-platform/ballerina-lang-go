@@ -19,9 +19,13 @@ package semantics
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/semantics/type_narrowing"
 )
 
-func NarrowTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
-	type_narrowing.AnalyzePackage(ctx, pkg)
+func NarrowTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+	resolver := NewTypeResolver(ctx, pkg, importedSymbols)
+	type_narrowing.AnalyzePackage(ctx, pkg, resolver)
+	// Walk the package to set default determinedType for any remaining nodes
+	ast.Walk(resolver, pkg)
 }

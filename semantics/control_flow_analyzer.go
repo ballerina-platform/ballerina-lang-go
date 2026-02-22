@@ -291,9 +291,6 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 		loopData := analyzer.loops[len(analyzer.loops)-1]
 		analyzer.addEdge(curBB, loopData.loopHead)
 		return terminatedEffect()
-	case *ast.BLangFunction:
-		analyzer.ctx.InternalError("nested functions not supported", stmt.GetPosition())
-		panic("unreachable")
 	default:
 		// For unimplemented statement types, just add to current block and continue
 		analyzer.addNode(curBB, stmt)
