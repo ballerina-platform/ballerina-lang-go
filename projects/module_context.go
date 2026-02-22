@@ -239,8 +239,13 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	compilerCtx := moduleCtx.project.Environment().compilerContext()
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
-	// Create control flow graph before semantic analysis.
-	// CFG is needed for conditional type narrowing during semantic analysis.
+	// Run type narrowing analysis.
+	semantics.NarrowTypes(cx, pkgNode)
+
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer.Analyze(pkgNode)
+
+	// Create control flow graph after semantic analysis.
 	cfg := semantics.CreateControlFlowGraph(compilerCtx, pkgNode)
 
 	// Dump CFG if requested
@@ -257,14 +262,8 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 
-	// Run type narrowing analysis before semantic analysis.
-	semantics.NarrowTypes(compilerCtx, pkgNode)
-
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
-	semanticAnalyzer.Analyze(pkgNode)
-
-	// Run CFG analyses (reachability and explicit return) after semantic analysis.
-	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
+	// Run CFG analyses (reachability and explicit return).
+	semantics.AnalyzeCFG(cx, pkgNode, cfg)
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)

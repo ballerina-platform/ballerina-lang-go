@@ -21,17 +21,20 @@
 ## Interpreter stages
 
 1. Generate Syntax Tree
-2. Do symbol resolution
-3. Do type resolution
-4. Generate Control Flow Graph (CFG)
-5. Do semantic analysis
-6. Analyze CFG
+2. Generate Abstract syntax tree (AST)
+3. Do symbol resolution
+4. Do type resolution
+5. Type Narrowing
+6. Semantic analysis
+7. Generate Control Flow Graph (CFG)
+8. Analyze CFG
    - Reachability analysis
    - Explicit return analysis
-7. Generate BIR
-8. Interpret generated BIR
+9. Desugar AST
+10. Generate BIR
+11. Interpret generated BIR
 
-Stages up to 7 are considered front end.
+Stages up to 10 are considered front end, and stage 11 is backend
 
 Execution of these stages is defined in `module_context.go` (and `testphases/phases.go` for corpus tests)
 
