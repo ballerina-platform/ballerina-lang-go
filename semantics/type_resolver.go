@@ -783,8 +783,6 @@ func (t *TypeResolver) resolveBinaryExpr(chain *type_narrowing.Binding, expr *as
 	if isEqualityExpr(expr) {
 		// Equality operators always return boolean
 		resultTy = &semtypes.BOOLEAN
-	} else if isBitWiseExpr(expr) {
-		resultTy = &semtypes.INT
 	} else if isRangeExpr(expr) {
 		// Range operators: .., ...
 		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
@@ -802,6 +800,8 @@ func (t *TypeResolver) resolveBinaryExpr(chain *type_narrowing.Binding, expr *as
 }
 
 var additiveSupportedTypes = semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
+
+var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
 
 // NilLiftingExprResultTy calculates the result type for binary operators with nil-lifting support.
 // It returns the result type and a boolean indicating whether nil-lifting was applied.
@@ -862,7 +862,49 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
-		return &semtypes.INT, nilLifted
+		var resultTy semtypes.SemType = &semtypes.INT
+		switch expr.GetOperatorKind() {
+		case model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+			for _, ty := range bitWiseOpLookOrder {
+				if semtypes.IsSubtype(ctx, lhsTy, ty) {
+					resultTy = ty
+					break
+				}
+			}
+		}
+
+		return resultTy, nilLifted
+	}
+
+	if isBitWiseExpr(expr) {
+		ctx := t.tyCtx
+		if !semtypes.IsSubtype(ctx, lhsTy, &semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, &semtypes.INT) {
+			t.ctx.SemanticError("expect integer types for bitwise operators", expr.GetPosition())
+			return nil, false
+		}
+
+		var resultTy semtypes.SemType = &semtypes.INT
+		switch expr.GetOperatorKind() {
+		case model.OperatorKind_BITWISE_AND:
+			for _, ty := range bitWiseOpLookOrder {
+				if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
+					resultTy = ty
+					break
+				}
+			}
+		case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+			for _, ty := range bitWiseOpLookOrder {
+				if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
+					resultTy = ty
+					break
+				}
+			}
+		default:
+			t.ctx.InternalError(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil, false
+		}
+
+		return resultTy, nilLifted
 	}
 
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())

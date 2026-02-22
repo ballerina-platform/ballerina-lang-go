@@ -19,11 +19,11 @@ package semantics_test
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/test_util/testphases"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 	"flag"
 	"testing"
 )
