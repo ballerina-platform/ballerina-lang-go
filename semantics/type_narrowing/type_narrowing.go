@@ -32,6 +32,14 @@ type Binding struct {
 	Prev           *Binding
 }
 
+type NarrowingContext struct {
+	compilerCtx *context.CompilerContext
+}
+
+func (ctx *NarrowingContext) SymbolType(ref model.SymbolRef) semtypes.SemType {
+	return ctx.compilerCtx.SymbolType(ref)
+}
+
 func (b *Binding) isUnnarowing() bool {
 	return b.Ref == b.NarrowedSymbol
 }
@@ -57,13 +65,14 @@ func Lookup(chain *Binding, ref model.SymbolRef) (model.SymbolRef, bool) {
 	return Lookup(chain.Prev, ref)
 }
 
-func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
-	narrowedSymbol := ctx.CreateNarrowedSymbol(underlying)
-	ctx.SetSymbolType(narrowedSymbol, ty)
+func narrowSymbol(ctx *NarrowingContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
+	narrowedSymbol := ctx.compilerCtx.CreateNarrowedSymbol(underlying)
+	ctx.compilerCtx.SetSymbolType(narrowedSymbol, ty)
 	return narrowedSymbol
 }
 
 func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+	nCtx := &NarrowingContext{ctx}
 	var wg sync.WaitGroup
 	var panicErr any = nil
 	for i := range pkg.Functions {
@@ -76,7 +85,7 @@ func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 					panicErr = r
 				}
 			}()
-			analyzeFunction(ctx, fn)
+			analyzeFunction(nCtx, fn)
 		}()
 	}
 	wg.Wait()
@@ -85,7 +94,7 @@ func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 	}
 }
 
-func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) {
+func analyzeFunction(ctx *NarrowingContext, fn *ast.BLangFunction) {
 	switch body := fn.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
 		analyzeStmts(ctx, nil, body.Stmts)
@@ -94,7 +103,7 @@ func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) {
 	}
 }
 
-func analyzeStatement(ctx *context.CompilerContext, chain *Binding, stmt ast.BLangStatement) statementEffect {
+func analyzeStatement(ctx *NarrowingContext, chain *Binding, stmt ast.BLangStatement) statementEffect {
 	switch stmt := stmt.(type) {
 	case *ast.BLangIf:
 		return analyzeIfStatement(ctx, chain, stmt)
@@ -124,7 +133,8 @@ func analyzeStatement(ctx *context.CompilerContext, chain *Binding, stmt ast.BLa
 	}
 }
 
-func unnarrowSymbol(ctx *context.CompilerContext, chain *Binding, symbol model.SymbolRef) statementEffect {
+func unnarrowSymbol(ctx *NarrowingContext, chain *Binding, symbol model.SymbolRef) statementEffect {
+	// TODO: clean this up you need to unnarrow only if already narrowed
 	_, isNarrowed := Lookup(chain, symbol)
 	if !isNarrowed {
 		return statementEffect{chain, false}
@@ -137,7 +147,7 @@ func unnarrowSymbol(ctx *context.CompilerContext, chain *Binding, symbol model.S
 	return statementEffect{chain, false}
 }
 
-func analyzeWhileStmt(ctx *context.CompilerContext, chain *Binding, stmt *ast.BLangWhile) statementEffect {
+func analyzeWhileStmt(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangWhile) statementEffect {
 	expressionEffect := analyzeExpression(ctx, chain, stmt.Expr)
 	bodyEffect := analyzeStmtBlock(ctx, expressionEffect.ifTrue, &stmt.Body)
 	result := expressionEffect.ifFalse
@@ -147,11 +157,11 @@ func analyzeWhileStmt(ctx *context.CompilerContext, chain *Binding, stmt *ast.BL
 	return statementEffect{result, false}
 }
 
-func analyzeStmtBlock(ctx *context.CompilerContext, chain *Binding, stmt *ast.BLangBlockStmt) statementEffect {
+func analyzeStmtBlock(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangBlockStmt) statementEffect {
 	return analyzeStmts(ctx, chain, stmt.Stmts)
 }
 
-func analyzeStmts(ctx *context.CompilerContext, chain *Binding, stmts []ast.BLangStatement) statementEffect {
+func analyzeStmts(ctx *NarrowingContext, chain *Binding, stmts []ast.BLangStatement) statementEffect {
 	result := chain
 	for _, each := range stmts {
 		eachResult := analyzeStatement(ctx, result, each)
@@ -164,7 +174,7 @@ func analyzeStmts(ctx *context.CompilerContext, chain *Binding, stmts []ast.BLan
 	return statementEffect{result, false}
 }
 
-func analyzeIfStatement(ctx *context.CompilerContext, chain *Binding, stmt *ast.BLangIf) statementEffect {
+func analyzeIfStatement(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangIf) statementEffect {
 	expressionEffect := analyzeExpression(ctx, chain, stmt.Expr)
 	ifTrueEffect := analyzeStmtBlock(ctx, expressionEffect.ifTrue, &stmt.Body)
 	var ifFalseEffect statementEffect
@@ -176,7 +186,7 @@ func analyzeIfStatement(ctx *context.CompilerContext, chain *Binding, stmt *ast.
 	return mergeStatementEffects(ctx, ifTrueEffect, ifFalseEffect)
 }
 
-func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect) statementEffect {
+func mergeStatementEffects(ctx *NarrowingContext, s1, s2 statementEffect) statementEffect {
 	if s1.nonCompletion {
 		return s2
 	}
@@ -187,7 +197,7 @@ func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect)
 	return statementEffect{combined, false}
 }
 
-func analyzeExpression(ctx *context.CompilerContext, chain *Binding, expr ast.BLangExpression) expressionEffect {
+func analyzeExpression(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) expressionEffect {
 	switch expr := expr.(type) {
 	case *ast.BLangTypeTestExpr:
 		return analyzeTypeTestExpr(ctx, chain, expr)
@@ -205,7 +215,7 @@ func analyzeExpression(ctx *context.CompilerContext, chain *Binding, expr ast.BL
 }
 
 type narrowedSymbolRefUpdator struct {
-	ctx   *context.CompilerContext
+	ctx   *NarrowingContext
 	chain *Binding
 	root  ast.BLangNode
 }
@@ -234,7 +244,7 @@ func (u *narrowedSymbolRefUpdator) VisitTypeData(_ *model.TypeData) ast.Visitor 
 	return u
 }
 
-func updateVarRef(ctx *context.CompilerContext, chain *Binding, expr ast.BNodeWithSymbol) expressionEffect {
+func updateVarRef(ctx *NarrowingContext, chain *Binding, expr ast.BNodeWithSymbol) expressionEffect {
 	narrowedSymbol, isNarrowed := Lookup(chain, expr.Symbol())
 	if isNarrowed {
 		expr.SetSymbol(narrowedSymbol)
@@ -244,7 +254,7 @@ func updateVarRef(ctx *context.CompilerContext, chain *Binding, expr ast.BNodeWi
 	return defaultExpressionEffect(chain)
 }
 
-func analyzeUnaryExpr(ctx *context.CompilerContext, chain *Binding, expr *ast.BLangUnaryExpr) expressionEffect {
+func analyzeUnaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangUnaryExpr) expressionEffect {
 	if expr.Operator != model.OperatorKind_NOT {
 		return defaultExpressionEffect(chain)
 	}
@@ -255,7 +265,7 @@ func analyzeUnaryExpr(ctx *context.CompilerContext, chain *Binding, expr *ast.BL
 	}
 }
 
-func analyzeBinaryExpr(ctx *context.CompilerContext, chain *Binding, expr *ast.BLangBinaryExpr) expressionEffect {
+func analyzeBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBinaryExpr) expressionEffect {
 	switch expr.OpKind {
 	case model.OperatorKind_EQUAL:
 		lhsRef, lhsIsVarRef := varRefExp(chain, &expr.LhsExpr)
@@ -335,7 +345,7 @@ func analyzeBinaryExpr(ctx *context.CompilerContext, chain *Binding, expr *ast.B
 	}
 }
 
-func accumNarrowedTypes(ctx *context.CompilerContext, chain *Binding, accum map[model.SymbolRef]semtypes.SemType) {
+func accumNarrowedTypes(ctx *NarrowingContext, chain *Binding, accum map[model.SymbolRef]semtypes.SemType) {
 	if chain == nil {
 		return
 	}
@@ -347,7 +357,7 @@ func accumNarrowedTypes(ctx *context.CompilerContext, chain *Binding, accum map[
 	accumNarrowedTypes(ctx, chain.Prev, accum)
 }
 
-func mergeChains(ctx *context.CompilerContext, c1 *Binding, c2 *Binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *Binding {
+func mergeChains(ctx *NarrowingContext, c1 *Binding, c2 *Binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *Binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
 	accumNarrowedTypes(ctx, c1, m1)
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
@@ -387,13 +397,13 @@ func defaultStmtEffect(chain *Binding) statementEffect {
 	return statementEffect{binding: chain, nonCompletion: false}
 }
 
-func analyzeTypeTestExpr(ctx *context.CompilerContext, chain *Binding, expr *ast.BLangTypeTestExpr) expressionEffect {
+func analyzeTypeTestExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangTypeTestExpr) expressionEffect {
 	ref, isVarRef := varRefExp(chain, &expr.Expr)
 	if !isVarRef {
 		return defaultExpressionEffect(chain)
 	}
 	tx := ctx.SymbolType(ref)
-	ref = ctx.UnnarrowedSymbol(ref)
+	ref = ctx.compilerCtx.UnnarrowedSymbol(ref)
 	t := expr.Type.Type
 	trueTy := semtypes.Intersect(tx, t)
 	trueSym := narrowSymbol(ctx, ref, trueTy)
