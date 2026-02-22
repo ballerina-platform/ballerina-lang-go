@@ -19,13 +19,6 @@
 package projects
 
 import (
-	"fmt"
-	"maps"
-	"os"
-	"slices"
-	"strings"
-	"sync"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -34,6 +27,12 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+	"sync"
 )
 
 // moduleContext holds internal state for a Module.
@@ -223,9 +222,8 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	moduleCtx.importedSymbols = importedSymbols
 	semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
 
-	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(compilerCtx, importedSymbols)
-	typeResolver.ResolveTypes(compilerCtx, pkgNode)
+	// Add type resolution step (this only resolve types of top level nodes)
+	semantics.ResolveTypes(compilerCtx, pkgNode, importedSymbols)
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
@@ -240,9 +238,9 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	// Run type narrowing analysis.
-	semantics.NarrowTypes(cx, pkgNode)
+	semantics.NarrowTypes(compilerCtx, pkgNode)
 
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)
 
 	// Create control flow graph after semantic analysis.
@@ -263,7 +261,7 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	}
 
 	// Run CFG analyses (reachability and explicit return).
-	semantics.AnalyzeCFG(cx, pkgNode, cfg)
+	semantics.AnalyzeCFG(compilerCtx, pkgNode, cfg)
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)

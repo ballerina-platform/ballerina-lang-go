@@ -108,8 +108,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	}
 
 	// Phase 4: Type Resolution
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, result.Package)
+	semantics.ResolveTypes(cx, result.Package, importedSymbols)
 	if phase == PhaseTypeResolution {
 		return result, nil
 	}
