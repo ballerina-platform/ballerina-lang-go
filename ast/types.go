@@ -132,7 +132,7 @@ type (
 
 	BLangErrorTypeNode struct {
 		bLangTypeBase
-		detailType model.TypeData
+		DetailType model.TypeData
 	}
 
 	BLangConstrainedType struct {
@@ -503,11 +503,11 @@ func (this *BLangUnionTypeNode) SetRhs(typeData model.TypeData) {
 }
 
 func (this *BLangErrorTypeNode) GetDetailType() model.TypeData {
-	return this.detailType
+	return this.DetailType
 }
 
 func (this *BLangErrorTypeNode) IsTop() bool {
-	return this.detailType.TypeDescriptor == nil
+	return this.DetailType.TypeDescriptor == nil
 }
 
 func (this *BLangErrorTypeNode) GetKind() model.NodeKind {

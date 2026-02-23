@@ -86,6 +86,9 @@ var (
 		"subset5/05-record/inclusion-override-v.bal",
 		"subset5/05-record/inclusion-dup-override-v.bal",
 		"subset5/05-record/inclusion-rest-v.bal",
+		"subset5/05-error/constructor-1-e.bal",
+		"subset5/05-error/constructor-2-e.bal",
+		"subset5/05-error/simple-v.bal",
 	})
 )
 

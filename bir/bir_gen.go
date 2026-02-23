@@ -529,34 +529,104 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return typeTestExpression(ctx, curBB, expr)
 	case *ast.BLangMappingConstructorExpr:
 		return mappingConstructorExpression(ctx, curBB, expr)
+	case *ast.BLangErrorConstructorExpr:
+		return errorConstructorExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
 }
 
+type mappingField struct {
+	key   string
+	value ast.BLangExpression
+}
+
 func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangMappingConstructorExpr) expressionEffect {
-	var values []MappingConstructorEntry
+	var fields []mappingField
 	for _, field := range expr.Fields {
 		switch f := field.(type) {
 		case *ast.BLangMappingKeyValueField:
-			keyEffect := handleExpression(ctx, curBB, f.Key.Expr)
-			curBB = keyEffect.block
-			valueEffect := handleExpression(ctx, curBB, f.ValueExpr)
-			curBB = valueEffect.block
-			values = append(values, &MappingConstructorKeyValueEntry{
-				keyOp:   keyEffect.result,
-				valueOp: valueEffect.result,
-			})
+			keyName := mappingKeyName(f.Key)
+			fields = append(fields, mappingField{key: keyName, value: f.ValueExpr})
 		default:
 			ctx.birCx.CompilerContext.Unimplemented("non-key-value record field not implemented", expr.GetPosition())
 		}
 	}
-	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields)
+}
+
+func mappingKeyName(key *ast.BLangMappingKey) string {
+	switch expr := key.Expr.(type) {
+	case *ast.BLangLiteral:
+		return expr.Value.(string)
+	case *ast.BLangSimpleVarRef:
+		return expr.VariableName.Value
+	default:
+		panic(fmt.Sprintf("unexpected mapping key expression type: %T", key.Expr))
+	}
+}
+
+func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField) expressionEffect {
+	var entries []MappingConstructorEntry
+	for _, field := range fields {
+		keyOperand := ctx.addTempVar(&semtypes.STRING)
+		keyLoad := &ConstantLoad{}
+		keyLoad.Value = field.key
+		keyLoad.LhsOp = keyOperand
+		curBB.Instructions = append(curBB.Instructions, keyLoad)
+
+		valueEffect := handleExpression(ctx, curBB, field.value)
+		curBB = valueEffect.block
+		entries = append(entries, &MappingConstructorKeyValueEntry{
+			keyOp:   keyOperand,
+			valueOp: valueEffect.result,
+		})
+	}
+	resultOperand := ctx.addTempVar(mapType)
 	newMap := &NewMap{}
-	newMap.Type = expr.GetDeterminedType()
-	newMap.Values = values
+	newMap.Type = mapType
+	newMap.Values = entries
 	newMap.LhsOp = resultOperand
 	curBB.Instructions = append(curBB.Instructions, newMap)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
+	}
+}
+
+func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangErrorConstructorExpr) expressionEffect {
+	// Message is the first positional arg
+	msgEffect := handleExpression(ctx, curBB, expr.PositionalArgs[0])
+	curBB = msgEffect.block
+
+	// Cause is the optional second positional arg
+	var causeOp *BIROperand
+	if len(expr.PositionalArgs) > 1 {
+		causeEffect := handleExpression(ctx, curBB, expr.PositionalArgs[1])
+		curBB = causeEffect.block
+		causeOp = causeEffect.result
+	}
+
+	// Detail from named args
+	var detailOp *BIROperand
+	if len(expr.NamedArgs) > 0 {
+		var fields []mappingField
+		for _, namedArg := range expr.NamedArgs {
+			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
+		}
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, &semtypes.MAPPING, fields)
+		curBB = detailEffect.block
+		detailOp = detailEffect.result
+	}
+
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	newError := &NewError{}
+	newError.Type = expr.GetDeterminedType()
+	newError.MessageOp = msgEffect.result
+	newError.CauseOp = causeOp
+	newError.DetailOp = detailOp
+	newError.LhsOp = resultOperand
+	curBB.Instructions = append(curBB.Instructions, newError)
 	return expressionEffect{
 		result: resultOperand,
 		block:  curBB,

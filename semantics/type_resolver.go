@@ -17,19 +17,19 @@
 package semantics
 
 import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
 
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 type (
@@ -550,6 +550,10 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) (semtypes.Sem
 		return t.resolveTypeConversionExpr(e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(e)
+	case *ast.BLangNamedArgsExpression:
+		ty := t.resolveExpression(e.Expr)
+		setExpectedType(e, ty)
+		return ty
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, false
@@ -1303,11 +1307,12 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		if ty.IsTop() {
 			return &semtypes.ERROR, true
 		} else {
-			detailTy, ok := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType), depth+1)
+			detailTy, ok := tr.resolveBType(ty.DetailType.TypeDescriptor.(ast.BType), depth+1)
 			if !ok {
 				return nil, false
 			}
-			return semtypes.ErrorDetail(detailTy), true
+			ty.DetailType.Type = detailTy
+			return semtypes.ErrorWithDetail(detailTy), true
 		}
 	case *ast.BLangUserDefinedType:
 		ast.Walk(tr, &ty.TypeName)

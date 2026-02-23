@@ -18,10 +18,22 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type Error struct {
+func ErrorDetailType(ctx Context, errorType SemType) SemType {
+	errorType = Intersect(errorType, &ERROR)
+	if IsNever(errorType) || !IsSubtype(ctx, errorType, &ERROR) {
+		return &NEVER
+	}
+
+	clonableMap := Intersect(CreateCloneable(ctx), &MAPPING)
+	if IsSameType(ctx, errorType, &ERROR) {
+		return clonableMap
+	}
+	mappingSd := subtypeData(errorType, BT_ERROR)
+	mappingTy := basicSubtype(BT_MAPPING, mappingSd)
+	return Intersect(mappingTy, clonableMap)
 }
 
-func ErrorDetail(detail SemType) SemType {
+func ErrorWithDetail(detail SemType) SemType {
 	// migrated from Error.java:39:5
 	mappingSd := subtypeData(detail, BT_MAPPING)
 	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
