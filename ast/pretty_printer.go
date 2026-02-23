@@ -124,6 +124,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTupleTypeNode(t)
 	case *BLangRecordType:
 		p.printRecordType(t)
+	case *BLangFieldBaseAccess:
+		p.printFieldBaseAccess(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -819,6 +821,17 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 		p.indentLevel--
 		p.endNode()
 	}
+	p.indentLevel--
+	p.endNode()
+}
+
+// Field-based access expression printer
+func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
+	p.startNode()
+	p.printString("field-based-access")
+	p.printString(node.Field.Value)
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
 	p.endNode()
 }

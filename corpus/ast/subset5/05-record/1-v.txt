@@ -1,4 +1,5 @@
-(package
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
   (import-package ballerina io (as io))
   (function main () (
     (value-type null))
@@ -12,10 +13,10 @@
               (value-type string)))) (expr
           (mapping-constructor-expr
             (key-value
-              (literal foo)
+              (simple-var-ref foo)
               (literal 5))
             (key-value
-              (literal bar)
+              (simple-var-ref bar)
               (literal ff))))))
       (expression-stmt
         (invocation io println (

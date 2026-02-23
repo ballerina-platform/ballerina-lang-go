@@ -404,6 +404,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.IndexExpr.(BLangNode))
 		}
 
+	case *BLangFieldBaseAccess:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangListConstructorExpr:
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
