@@ -83,22 +83,20 @@ func (g *DependencyGraph[T]) ensureSorted() {
 func (g *DependencyGraph[T]) computeTopologicalSort() ([]T, [][]T) {
 	nodes := g.nodes()
 	visited := make(map[T]bool, len(nodes))
-	inStack := make(map[T]bool, len(nodes))
+	stackPos := make(map[T]int, len(nodes))
 	var stack []T
 	sorted := make([]T, 0, len(nodes))
 	var cycles [][]T
 
 	var visit func(vertex T)
 	visit = func(vertex T) {
-		inStack[vertex] = true
+		stackPos[vertex] = len(stack)
 		stack = append(stack, vertex)
 
 		for dep := range g.dependencies[vertex] {
-			if inStack[dep] {
+			if pos, inStack := stackPos[dep]; inStack {
 				// Found a cycle - extract it from the stack
-				if startIdx := slices.Index(stack, dep); startIdx >= 0 {
-					cycles = append(cycles, slices.Clone(stack[startIdx:]))
-				}
+				cycles = append(cycles, slices.Clone(stack[pos:]))
 			} else if !visited[dep] {
 				visit(dep)
 			}
@@ -106,7 +104,7 @@ func (g *DependencyGraph[T]) computeTopologicalSort() ([]T, [][]T) {
 		// Post-order: add to sorted list after processing all dependencies
 		sorted = append(sorted, vertex)
 		visited[vertex] = true
-		delete(inStack, vertex)
+		delete(stackPos, vertex)
 		stack = stack[:len(stack)-1]
 	}
 
