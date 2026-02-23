@@ -1,0 +1,10 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal 0.375))))
+    (expression-stmt
+      (invocation io println (
+        (literal 100.375))))
+  )
+)

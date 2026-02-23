@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"math/bits"
 	"strconv"
+	"strings"
 )
 
 type (
@@ -312,6 +313,7 @@ func stripFloatingPointTypeSuffix(s string) string {
 
 // parseFloatValue parses a string as float64 with error handling
 func (t *TypeResolver) parseFloatValue(strValue string, pos diagnostics.Location) float64 {
+	strValue = strings.TrimRight(strValue, "fF")
 	f, err := strconv.ParseFloat(strValue, 64)
 	if err != nil {
 		t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), pos)
@@ -794,8 +796,11 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	}
 
 	if isRelationalExpr(expr) {
-		// Relational operators always return boolean (no nil-lifting)
-		return &semtypes.BOOLEAN, false
+		if semtypes.Comparable(t.tyCtx, &lhsBasicTy, &rhsBasicTy) {
+			return &semtypes.BOOLEAN, false
+		}
+		t.ctx.SemanticError("values are not comparable", expr.GetPosition())
+		return nil, false
 	}
 
 	if isMultipcativeExpr(expr) {
@@ -806,7 +811,13 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		ctx := t.tyCtx
+		if semtypes.IsSubtype(ctx, &rhsBasicTy, &semtypes.INT) ||
+			(expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, &lhsBasicTy, &semtypes.INT)) {
+			t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+			return nil, false
+		}
+		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
@@ -819,7 +830,8 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		// TODO: special case xml + string case when we support xml
+		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
