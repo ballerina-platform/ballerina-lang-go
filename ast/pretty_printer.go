@@ -126,6 +126,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printRecordType(t)
 	case *BLangFieldBaseAccess:
 		p.printFieldBaseAccess(t)
+	case *BLangErrorConstructorExpr:
+		p.printErrorConstructorExpr(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -739,7 +741,7 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 	p.printString("error-type")
 	if !node.IsTop() {
 		p.indentLevel++
-		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.DetailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.endNode()
@@ -833,6 +835,42 @@ func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
+	p.endNode()
+}
+
+// Error constructor expression printer
+func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExpr) {
+	p.startNode()
+	p.printString("error-constructor-expr")
+	if node.ErrorTypeRef != nil {
+		p.indentLevel++
+		p.PrintInner(node.ErrorTypeRef)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.PositionalArgs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.PositionalArgs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	if len(node.NamedArgs) > 0 {
+		p.printString("(")
+		p.indentLevel++
+		for _, namedArg := range node.NamedArgs {
+			p.startNode()
+			p.printString("named-arg")
+			p.printString(namedArg.Name.Value)
+			p.indentLevel++
+			p.PrintInner(namedArg.Expr.(BLangNode))
+			p.indentLevel--
+			p.endNode()
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
 	p.endNode()
 }
 

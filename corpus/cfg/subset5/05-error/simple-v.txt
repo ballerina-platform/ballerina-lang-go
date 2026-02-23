@@ -1,0 +1,44 @@
+(bar
+  (bb0 () ()
+    (return
+      (error-constructor-expr
+        (user-defined-type ErrorWithDetail) (
+        (literal bar)) (
+        (named-arg message
+          (literal message))
+        (named-arg id
+          (literal 1)))))
+  )
+)
+(baz
+  (bb0 () ()
+    (var-def
+      (variable e (type
+        (error-type)) (expr
+        (error-constructor-expr
+          (user-defined-type ErrorWithDetail) (
+          (literal bar)) (
+          (named-arg message
+            (literal message))
+          (named-arg id
+            (literal 1)))))))
+    (return
+      (error-constructor-expr
+        (user-defined-type ErrorWithDetail) (
+        (literal bar)
+        (simple-var-ref e)) (
+        (named-arg message
+          (literal message))
+        (named-arg id
+          (literal 1)))))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (error-constructor-expr (
+        (literal foo)) (
+        (named-arg ff
+          (literal foo)))))
+  )
+)

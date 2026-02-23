@@ -447,6 +447,10 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveTypeConversionExpr(e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(e)
+	case *ast.BLangNamedArgsExpression:
+		ty := t.resolveExpression(e.Expr)
+		setExpectedType(e, ty)
+		return ty
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil
@@ -1101,8 +1105,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if ty.IsTop() {
 			return &semtypes.ERROR
 		} else {
-			detailTy := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType), depth+1)
-			return semtypes.ErrorDetail(detailTy)
+			detailTy := tr.resolveTypeDataPair(&ty.DetailType, depth+1)
+			return semtypes.ErrorWithDetail(detailTy)
 		}
 	case *ast.BLangUserDefinedType:
 		ast.Walk(tr, &ty.TypeName)
