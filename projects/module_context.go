@@ -199,8 +199,6 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 func compilePhase1(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 
-	cx := moduleCtx.compilerCtx
-
 	// Parse all source and test documents in parallel.
 	syntaxTrees := parseDocumentsParallel(
 		moduleCtx.srcDocIDs,
@@ -238,7 +236,7 @@ func compilePhase2(moduleCtx *moduleContext) {
 	}
 
 	pkgNode := moduleCtx.bLangPkg
-	cx := moduleCtx.compilerCtx
+	compilerCtx := moduleCtx.project.Environment().compilerContext()
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	// Create control flow graph before semantic analysis.
@@ -263,7 +261,7 @@ func compilePhase2(moduleCtx *moduleContext) {
 	semanticAnalyzer.Analyze(pkgNode)
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
-	semantics.AnalyzeCFG(cx, pkgNode, cfg)
+	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)

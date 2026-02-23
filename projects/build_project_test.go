@@ -617,7 +617,7 @@ func TestMultiModuleDependencyOrder(t *testing.T) {
 	require.NoError(err)
 
 	// Load the multi-module project
-	result, err := directory.LoadProject(absPath)
+	result, err := loadProject(absPath)
 	require.NoError(err, "Failed to load multi-module-project")
 
 	// Get package resolution which performs topological sorting
