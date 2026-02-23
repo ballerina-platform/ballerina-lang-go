@@ -49,3 +49,12 @@ func (this *MappingAtomicType) AtomKind() Kind {
 	// migrated from MappingAtomicType.java:74:5
 	return Kind_MAPPING_ATOM
 }
+
+func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
+	for i, n := range this.Names {
+		if n == name {
+			return CellInnerVal(this.Types[i])
+		}
+	}
+	return CellInnerVal(this.Rest)
+}

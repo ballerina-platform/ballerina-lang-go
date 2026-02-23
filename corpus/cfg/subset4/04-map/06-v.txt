@@ -1,0 +1,17 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable m (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type any))) (expr
+        (mapping-constructor-expr))))
+    (var-def
+      (variable x (type
+        (value-type any)) (expr
+        (simple-var-ref m))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)

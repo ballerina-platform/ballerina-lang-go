@@ -437,6 +437,8 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveIndexBasedAccess(e)
 	case *ast.BLangListConstructorExpr:
 		return t.resolveListConstructorExpr(e)
+	case *ast.BLangMappingConstructorExpr:
+		return t.resolveMappingConstructorExpr(e)
 	case *ast.BLangErrorConstructorExpr:
 		return t.resolveErrorConstructorExpr(e)
 	case *ast.BLangGroupExpr:
@@ -452,6 +454,36 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil
 	}
+}
+
+func (t *TypeResolver) resolveMappingConstructorExpr(e *ast.BLangMappingConstructorExpr) semtypes.SemType {
+	fields := make([]semtypes.Field, len(e.Fields))
+	for i, f := range e.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		valueTy := t.resolveExpression(kv.ValueExpr)
+		var broadTy semtypes.SemType
+		if semtypes.SingleShape(valueTy).IsEmpty() {
+			broadTy = valueTy
+		} else {
+			basicTy := semtypes.WidenToBasicTypes(valueTy)
+			broadTy = &basicTy
+		}
+		var keyName string
+		switch keyExpr := kv.Key.Expr.(type) {
+		case *ast.BLangLiteral:
+			keyName = keyExpr.GetOriginalValue()
+		case ast.BNodeWithSymbol:
+			t.ctx.SetSymbolType(keyExpr.Symbol(), valueTy)
+			keyName = t.ctx.SymbolName(keyExpr.Symbol())
+		}
+		fields[i] = semtypes.FieldFrom(keyName, broadTy, false, false)
+	}
+	md := semtypes.NewMappingDefinition()
+	mapTy := md.DefineMappingTypeWrapped(t.ctx.GetTypeEnv(), fields, &semtypes.NEVER)
+	setExpectedType(e, mapTy)
+	mat := semtypes.ToMappingAtomicType(t.tyCtx, mapTy)
+	e.AtomicType = *mat
+	return mapTy
 }
 
 func (t *TypeResolver) resolveTypeConversionExpr(e *ast.BLangTypeConversionExpr) semtypes.SemType {
@@ -776,6 +808,7 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 	return nil, false
 }
+
 func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemType {
 	od := semtypes.NewObjectDefinition()
 
@@ -824,8 +857,15 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 	var resultTy semtypes.SemType
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
-		// List indexing
 		resultTy = semtypes.ListMemberTypeInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
+		memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyExprTy)
+		maybeMissing := semtypes.ContainsUndef(memberTy)
+		// TODO: need to handle filling get but when do we have a filling get?
+		if maybeMissing {
+			memberTy = semtypes.Union(semtypes.Diff(memberTy, &semtypes.UNDEF), &semtypes.NIL)
+		}
+		resultTy = memberTy
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		// String indexing returns a string
 		resultTy = &semtypes.STRING
@@ -1045,6 +1085,30 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			result = semtypes.Union(result, ty)
 		}
 		return result
+	case *ast.BLangConstrainedType:
+		defn := ty.Definition
+		if defn == nil {
+			switch ty.GetTypeKind() {
+			case model.TypeKind_MAP:
+				d := semtypes.NewMappingDefinition()
+				ty.Definition = &d
+				rest := tr.resolveTypeDataPair(&ty.Constraint, depth+1)
+				return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), nil, rest)
+			default:
+				tr.ctx.Unimplemented("unsupported base type kind", nil)
+				return nil
+			}
+		} else {
+			return defn.GetSemType(tr.ctx.GetTypeEnv())
+		}
+	case *ast.BLangBuiltInRefTypeNode:
+		switch ty.TypeKind {
+		case model.TypeKind_MAP:
+			return &semtypes.MAPPING
+		default:
+			tr.ctx.InternalError("Unexpected builtin type kind", ty.GetPosition())
+		}
+		return nil
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

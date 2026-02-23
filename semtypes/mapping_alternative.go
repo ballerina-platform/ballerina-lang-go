@@ -16,51 +16,87 @@
 
 package semtypes
 
+import "slices"
+
 type MappingAlternative struct {
-	semType SemType
-	pos     []MappingAtomicType
+	SemType SemType
+	Pos     *MappingAtomicType
 	neg     []MappingAtomicType
 }
 
-func newMappingAlternativeFromSemType(semType SemType, pos []MappingAtomicType, neg []MappingAtomicType) MappingAlternative {
-	this := MappingAlternative{}
-	this.semType = semType
-	this.pos = pos
-	this.neg = neg
-	return this
-}
-
-func (this *MappingAlternative) MappingAlternatives(cx Context, t SemType) []MappingAlternative {
-	// migrated from MappingAlternative.java:39:5
+func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	if b, ok := t.(*BasicTypeBitSet); ok {
 		if (b.bitset & MAPPING.bitset) == 0 {
 			return nil
-		} else {
-			return []MappingAlternative{this.From(cx, &MAPPING, []Atom{}, []Atom{})}
 		}
-	} else {
-		paths := []BddPath{}
-		BddPaths(getComplexSubtypeData(t.(ComplexSemType), BT_MAPPING).(Bdd), &paths, BddPathFrom())
-		alts := []MappingAlternative{}
-		for _, bddPath := range paths {
-			semType := CreateBasicSemType(BT_MAPPING, bddPath.bdd)
-			if !IsNever(semType) {
-				alts = append(alts, this.From(cx, semType, bddPath.pos, bddPath.neg))
-			}
-		}
-		return alts
+		return []MappingAlternative{{SemType: &MAPPING, Pos: nil, neg: nil}}
 	}
+
+	paths := []BddPath{}
+	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BT_MAPPING).(Bdd), &paths, BddPathFrom())
+	alts := []MappingAlternative{}
+	for _, bddPath := range paths {
+		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))
+		for i := 0; i < len(bddPath.pos); i++ {
+			posAtoms[i] = cx.mappingAtomType(bddPath.pos[i])
+		}
+		intersectionSemType, intersectionAtomType, ok := intersectMappingAtoms(cx.Env(), posAtoms)
+		if ok {
+			negAtoms := make([]MappingAtomicType, len(bddPath.neg))
+			for i := 0; i < len(bddPath.neg); i++ {
+				negAtoms[i] = *cx.mappingAtomType(bddPath.neg[i])
+			}
+			alts = append(alts, MappingAlternative{SemType: intersectionSemType, Pos: intersectionAtomType, neg: negAtoms})
+		}
+	}
+	return alts
 }
 
-func (this *MappingAlternative) From(cx Context, semType SemType, pos []Atom, neg []Atom) MappingAlternative {
-	// migrated from MappingAlternative.java:63:5
-	p := make([]MappingAtomicType, len(pos))
-	n := make([]MappingAtomicType, len(neg))
-	for i := 0; i < len(pos); i++ {
-		p[i] = *cx.mappingAtomType(pos[i])
+func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *MappingAtomicType, bool) {
+	if len(atoms) == 0 {
+		return nil, nil, false
 	}
-	for i := 0; i < len(neg); i++ {
-		n[i] = *cx.mappingAtomType(neg[i])
+	atom := atoms[0]
+	for i := 1; i < len(atoms); i++ {
+		result := intersectMapping(env, atom, atoms[i])
+		if result == nil {
+			return nil, nil, false
+		}
+		atom = result
 	}
-	return newMappingAlternativeFromSemType(semType, p, n)
+	typeAtom := env.mappingAtom(atom)
+	ty := CreateBasicSemType(BT_MAPPING, BddAtom(&typeAtom))
+	return ty, atom, true
+}
+
+func MappingAlternativeAllowsFields(alt MappingAlternative, fieldNames []string) bool {
+	pos := alt.Pos
+	if pos != nil {
+		if CellInnerVal(pos.Rest) == &UNDEF {
+			if !slices.Equal(pos.Names, fieldNames) {
+				return false
+			}
+		}
+		i := 0
+		len := len(fieldNames)
+		for _, name := range pos.Names {
+			for {
+				if i >= len {
+					return false
+				}
+				if fieldNames[i] == name {
+					i += 1
+					break
+				}
+				if fieldNames[i] > name {
+					return false
+				}
+				i += 1
+			}
+		}
+	}
+	if len(alt.neg) != 0 {
+		panic("unexpected negative atom in mapping alternative")
+	}
+	return true
 }

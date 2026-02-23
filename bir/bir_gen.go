@@ -524,8 +524,39 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return listConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangTypeConversionExpr:
 		return typeConversionExpression(ctx, curBB, expr)
+	case *ast.BLangMappingConstructorExpr:
+		return mappingConstructorExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
+	}
+}
+
+func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangMappingConstructorExpr) expressionEffect {
+	var values []MappingConstructorEntry
+	for _, field := range expr.Fields {
+		switch f := field.(type) {
+		case *ast.BLangMappingKeyValueField:
+			keyEffect := handleExpression(ctx, curBB, f.Key.Expr)
+			curBB = keyEffect.block
+			valueEffect := handleExpression(ctx, curBB, f.ValueExpr)
+			curBB = valueEffect.block
+			values = append(values, &MappingConstructorKeyValueEntry{
+				keyOp:   keyEffect.result,
+				valueOp: valueEffect.result,
+			})
+		default:
+			ctx.birCx.CompilerContext.Unimplemented("non-key-value record field not implemented", expr.GetPosition())
+		}
+	}
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	newMap := &NewMap{}
+	newMap.Type = expr.GetDeterminedType()
+	newMap.Values = values
+	newMap.LhsOp = resultOperand
+	curBB.Instructions = append(curBB.Instructions, newMap)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
 	}
 }
 

@@ -406,6 +406,17 @@ func Walk(v Visitor, node BLangNode) {
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
 		}
+	case *BLangMappingConstructorExpr:
+		for _, f := range node.Fields {
+			if kv, ok := f.(*BLangMappingKeyValueField); ok {
+				if kv.Key != nil && kv.Key.Expr != nil {
+					Walk(v, kv.Key.Expr.(BLangNode))
+				}
+				if kv.ValueExpr != nil {
+					Walk(v, kv.ValueExpr.(BLangNode))
+				}
+			}
+		}
 	case *BLangErrorConstructorExpr:
 		if node.ErrorTypeRef != nil {
 			Walk(v, node.ErrorTypeRef)
@@ -544,6 +555,10 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangErrorTypeNode:
 		WalkTypeData(v, &node.detailType)
+
+	case *BLangConstrainedType:
+		WalkTypeData(v, &node.Type)
+		WalkTypeData(v, &node.Constraint)
 
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:

@@ -281,6 +281,25 @@ type (
 		PositionalArgs []BLangExpression
 		// TODO: Add support for NamedArgs
 	}
+
+	BLangMappingKey struct {
+		BLangNodeBase
+		Expr        BLangExpression
+		ComputedKey bool
+	}
+
+	BLangMappingKeyValueField struct {
+		BLangNodeBase
+		Key       *BLangMappingKey
+		ValueExpr BLangExpression
+		Readonly  bool
+	}
+
+	BLangMappingConstructorExpr struct {
+		BLangExpressionBase
+		Fields     []model.MappingField
+		AtomicType semtypes.MappingAtomicType
+	}
 )
 
 var (
@@ -293,7 +312,7 @@ var (
 	_ model.LiteralNode                                            = &BLangConstRef{}
 	_ model.LiteralNode                                            = &BLangLiteral{}
 	_ BLangExpression                                              = &BLangLiteral{}
-	_ model.RecordVarNameFieldNode                                 = &BLangConstRef{}
+	_ model.MappingVarNameFieldNode                                = &BLangConstRef{}
 	_ model.DynamicArgNode                                         = &BLangDynamicArgExpr{}
 	_ model.ElvisExpressionNode                                    = &BLangElvisExpr{}
 	_ model.MarkdownDocumentationTextAttributeNode                 = &BLangMarkdownDocumentationLine{}
@@ -316,6 +335,12 @@ var (
 	_ BLangExpression                                              = &BLangTypeConversionExpr{}
 	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
 	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
+	_ model.MappingConstructor                                     = &BLangMappingConstructorExpr{}
+	_ model.MappingKeyValueFieldNode                               = &BLangMappingKeyValueField{}
+	_ BLangExpression                                              = &BLangMappingConstructorExpr{}
+	_ BLangNode                                                    = &BLangMappingConstructorExpr{}
+	_ model.Node                                                   = &BLangMappingKey{}
+	_ BLangNode                                                    = &BLangMappingKey{}
 )
 
 var (
@@ -348,6 +373,9 @@ var (
 	_ BLangNode = &BLangIndexBasedAccess{}
 	_ BLangNode = &BLangListConstructorExpr{}
 	_ BLangNode = &BLangTypeConversionExpr{}
+	_ BLangNode = &BLangMappingConstructorExpr{}
+	_ BLangNode = &BLangMappingKeyValueField{}
+	_ BLangNode = &BLangMappingKey{}
 )
 
 var (
@@ -952,6 +980,41 @@ func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
 
 func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
+}
+
+func (this *BLangMappingKey) GetKind() model.NodeKind {
+	panic("BLangMappingKey has no NodeKind")
+}
+
+func (this *BLangMappingKeyValueField) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_KEY_VALUE
+}
+
+func (this *BLangMappingKeyValueField) GetKey() model.ExpressionNode {
+	if this.Key == nil {
+		return nil
+	}
+	return this.Key.Expr
+}
+
+func (this *BLangMappingKeyValueField) GetValue() model.ExpressionNode {
+	return this.ValueExpr
+}
+
+func (this *BLangMappingKeyValueField) IsKeyValueField() bool {
+	return true
+}
+
+func (this *BLangMappingConstructorExpr) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_EXPR
+}
+
+func (this *BLangMappingConstructorExpr) GetFields() []model.MappingField {
+	return this.Fields
+}
+
+func (this *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
+	this.ExpectedType = ty
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

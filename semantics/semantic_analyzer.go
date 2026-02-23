@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 type analyzer interface {
@@ -502,6 +503,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
 
+	case *ast.BLangMappingConstructorExpr:
+		analyzeMappingConstructorExpr(a, expr, expectedType)
+
 	case *ast.BLangErrorConstructorExpr:
 		analyzeErrorConstructorExpr(a, expr, expectedType)
 
@@ -613,6 +617,7 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	// Filter alternatives by length compatibility
 	var validAlts []semtypes.ListAlternative
 
+	// FIXME: is this needed?
 	for _, expr := range expr.Exprs {
 		analyzeExpression(a, expr, nil)
 	}
@@ -657,6 +662,97 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	}
 
 	return selectedSemType, *lat
+}
+
+func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) {
+	if expectedType != nil {
+		resultType, mappingAtomicType := selectMappingInherentType(a, expr, expectedType)
+		for _, f := range expr.Fields {
+			kv := f.(*ast.BLangMappingKeyValueField)
+			var keyName string
+			switch keyExpr := kv.Key.Expr.(type) {
+			case *ast.BLangLiteral:
+				keyName = keyExpr.GetOriginalValue()
+			case ast.BNodeWithSymbol:
+				keyName = a.ctx().SymbolName(keyExpr.Symbol())
+			}
+			requiredType := mappingAtomicType.FieldInnerVal(keyName)
+			analyzeExpression(a, kv.ValueExpr, requiredType)
+		}
+		expr.AtomicType = mappingAtomicType
+		setExpectedType(expr, resultType)
+	} else {
+		for _, f := range expr.Fields {
+			kv := f.(*ast.BLangMappingKeyValueField)
+			analyzeExpression(a, kv.ValueExpr, nil)
+		}
+	}
+	validateResolvedType(a, expr, expectedType)
+}
+
+func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.MappingAtomicType) {
+	expectedMappingType := semtypes.Intersect(expectedType, &semtypes.MAPPING)
+	tc := a.tyCtx()
+	if semtypes.IsEmpty(tc, expectedMappingType) {
+		a.semanticErr("mapping type not found in expected type")
+		return nil, semtypes.MappingAtomicType{}
+	}
+	mat := semtypes.ToMappingAtomicType(tc, expectedMappingType)
+	if mat != nil {
+		return expectedMappingType, *mat
+	}
+	alts := semtypes.MappingAlternatives(tc, expectedType)
+	var validAlts []semtypes.MappingAlternative
+
+	fieldNames := make([]string, len(expr.Fields))
+	for i, f := range expr.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		analyzeExpression(a, kv.ValueExpr, nil)
+		fieldNames[i] = kv.Key.Expr.(*ast.BLangLiteral).Value.(string)
+	}
+	sort.Strings(fieldNames)
+
+	for _, alt := range alts {
+		if semtypes.MappingAlternativeAllowsFields(alt, fieldNames) {
+			if alt.Pos != nil {
+				isValid := true
+				mat := alt.Pos
+				for _, f := range expr.Fields {
+					kv := f.(*ast.BLangMappingKeyValueField)
+					keyName := kv.Key.Expr.(*ast.BLangLiteral).Value.(string)
+					exprTy := kv.ValueExpr.GetDeterminedType()
+					ty := mat.FieldInnerVal(keyName)
+					if !semtypes.IsSubtype(tc, exprTy, ty) {
+						isValid = false
+						break
+					}
+				}
+				if isValid {
+					validAlts = append(validAlts, alt)
+				}
+			} else {
+				validAlts = append(validAlts, alt)
+			}
+		}
+	}
+	if len(validAlts) == 0 {
+		a.semanticErr("no applicable inherent type for mapping constructor")
+		return nil, semtypes.MappingAtomicType{}
+	}
+	if len(validAlts) > 1 {
+		a.semanticErr("ambiguous inherent type for mapping constructor")
+		return nil, semtypes.MappingAtomicType{}
+	}
+
+	// Extract atomic type from selected alternative
+	selectedSemType := validAlts[0].SemType
+	mat = semtypes.ToMappingAtomicType(tc, selectedSemType)
+	if mat == nil {
+		a.semanticErr("applicable type for mapping constructor is not atomic")
+		return nil, semtypes.MappingAtomicType{}
+	}
+
+	return selectedSemType, *mat
 }
 
 func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) {

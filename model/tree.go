@@ -740,6 +740,12 @@ type ErrorTypeNode interface {
 	GetDetailType() TypeData
 }
 
+type ConstrainedTypeNode interface {
+	TypeDescriptor
+	GetType() TypeData
+	GetConstraint() TypeData
+}
+
 type UserDefinedTypeNode interface {
 	ReferenceTypeNode
 	GetPackageAlias() IdentifierNode
@@ -809,14 +815,25 @@ type ElvisExpressionNode interface {
 	GetRightExpression() ExpressionNode
 }
 
-type RecordField interface {
+type MappingField interface {
 	Node
 	IsKeyValueField() bool
 }
 
-type RecordVarNameFieldNode interface {
-	RecordField
+type MappingVarNameFieldNode interface {
+	MappingField
 	SimpleVariableReferenceNode
+}
+
+type MappingConstructor interface {
+	ExpressionNode
+	GetFields() []MappingField
+}
+
+type MappingKeyValueFieldNode interface {
+	MappingField
+	GetKey() ExpressionNode
+	GetValue() ExpressionNode
 }
 
 type MarkdownDocumentationTextAttributeNode interface {
