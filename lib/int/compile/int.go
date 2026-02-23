@@ -14,10 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package int
+package compile
 
 import (
 	"ballerina-lang-go/context"
+	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -50,6 +51,15 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 		tySym.SetType(each.ty)
 		space.AddSymbol(each.name, &tySym)
 	}
+
+	toHexStringSignature := model.FunctionSignature{
+		ParamTypes: []semtypes.SemType{&semtypes.INT},
+		ReturnType: &semtypes.STRING,
+	}
+	toHexStringSymbol := model.NewFunctionSymbol("toHexString", toHexStringSignature, true)
+	space.AddSymbol("toHexString", toHexStringSymbol)
+	toHexStringRef, _ := space.GetSymbol("toHexString")
+	ctx.SetSymbolType(toHexStringRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &toHexStringSignature))
 
 	return model.ExportedSymbolSpace{
 		Main: space,

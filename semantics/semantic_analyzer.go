@@ -336,7 +336,7 @@ func isIoImport(importNode *ast.BLangImportPackage) bool {
 }
 
 func isImplicitImport(importNode *ast.BLangImportPackage) bool {
-	return isLangImport(importNode, "array")
+	return isLangImport(importNode, "array") || isLangImport(importNode, "int")
 }
 
 func isLangImport(importNode *ast.BLangImportPackage, name string) bool {

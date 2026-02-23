@@ -38,6 +38,7 @@ type typeTable struct {
 	stringType  *BTypeBasic
 	floatType   *BTypeBasic
 	decimalType *BTypeBasic
+	byteType    *BTypeImpl
 }
 
 func newTypeTable() typeTable {
@@ -48,6 +49,7 @@ func newTypeTable() typeTable {
 		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: Flags_READONLY},
 		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
 		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
+		byteType:    &BTypeImpl{tag: model.TypeTags_BYTE, flags: Flags_READONLY},
 	}
 }
 
@@ -65,6 +67,8 @@ func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
 		return t.floatType
 	case model.TypeTags_DECIMAL:
 		return t.decimalType
+	case model.TypeTags_BYTE:
+		return t.byteType
 	default:
 		panic("not implemented")
 	}

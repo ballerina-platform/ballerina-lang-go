@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+// @productions list-type-descriptor list-constructor-expr local-var-decl-stmt int-literal
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-)
+public function main() {
+    any[] answers = [0xACCACA, 0xDABACCA, 0xACCACACA];
+    io:println(answers[1]); // @output 229354698
+}

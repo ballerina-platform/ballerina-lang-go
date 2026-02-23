@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
+	bInt "ballerina-lang-go/lib/int/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -967,6 +968,25 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+				Alias:        &pkgAlias,
+			}
+			ast.Walk(t, &importNode)
+			t.pkg.Imports = append(t.pkg.Imports, importNode)
+		}
+	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.INT) {
+		pkgName := bInt.PackageName
+		space, ok := t.importedSymbols[pkgName]
+		if !ok {
+			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+			return nil
+		}
+		symbolSpace = space
+		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		if !t.implicitImports[pkgName] {
+			t.implicitImports[pkgName] = true
+			importNode := ast.BLangImportPackage{
+				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
