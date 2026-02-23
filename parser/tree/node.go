@@ -291,12 +291,7 @@ func (n *NodeBase) LineRange() LineRange {
 		return n.lineRange
 	}
 
-	syntaxTree := n.SyntaxTree()
-	if syntaxTree == nil {
-		return n.lineRange
-	}
-
-	textDocument := syntaxTree.TextDocument()
+	textDocument := n.SyntaxTree().TextDocument()
 	if textDocument == nil {
 		return n.lineRange
 	}

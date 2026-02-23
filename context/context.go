@@ -83,30 +83,26 @@ func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.
 
 func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
 	code := "UNIMPLEMENTED_ERROR"
-	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal)
-	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
-	this.diagnostics = append(this.diagnostics, dignostic)
-}
-
-func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
-	code := "SEMANTIC_ERROR"
-	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error)
-	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
-	this.diagnostics = append(this.diagnostics, dignostic)
-}
-
-func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
-	code := "SYNTAX_ERROR"
-	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error)
-	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
-	this.diagnostics = append(this.diagnostics, dignostic)
+	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal), pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
 }
 
 func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
 	code := "INTERNAL_ERROR"
-	diagnosticInfo := diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal)
-	dignostic := diagnostics.CreateDiagnostic(diagnosticInfo, pos)
-	this.diagnostics = append(this.diagnostics, dignostic)
+	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal), pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
+}
+
+func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
+	code := "SYNTAX_ERROR"
+	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error), pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
+}
+
+func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
+	code := "SEMANTIC_ERROR"
+	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error), pos)
+	this.diagnostics = append(this.diagnostics, diagnostic)
 }
 
 func (this *CompilerContext) HasDiagnostics() bool {

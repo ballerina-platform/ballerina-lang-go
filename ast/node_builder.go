@@ -587,10 +587,10 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 
 func getFileName(node tree.Node) string {
 	st := node.SyntaxTree()
-	if st != nil {
-		return st.FilePath()
+	if st == nil {
+		panic("syntax tree is nil")
 	}
-	return ""
+	return st.FilePath()
 }
 
 func getPosition(node tree.Node) Location {
@@ -613,9 +613,6 @@ func getPosition(node tree.Node) Location {
 }
 
 func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
-	if startNode == nil || endNode == nil {
-		return nil
-	}
 	startLineRange := startNode.LineRange()
 	endLineRange := endNode.LineRange()
 	startNodeTextRange := startNode.TextRange()
@@ -634,9 +631,6 @@ func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
 }
 
 func getPositionWithoutMetadata(node tree.Node) Location {
-	if node == nil {
-		return nil
-	}
 	nodeLineRange := node.LineRange()
 	nonTerminalNode := node.(tree.NonTerminalNode)
 
@@ -654,7 +648,7 @@ func getPositionWithoutMetadata(node tree.Node) Location {
 		}
 	}
 
-	if firstChild != nil && firstChild.Kind() == common.METADATA {
+	if firstChild != nil && firstChild.Kind() == common.METADATA && secondChild != nil {
 		secondLineRange := secondChild.LineRange()
 		startLine = secondLineRange.StartLine.Line
 		startColumn = secondLineRange.StartLine.Column

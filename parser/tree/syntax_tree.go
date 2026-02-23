@@ -30,7 +30,7 @@ type SyntaxTree struct {
 	// lineRange    LineRange
 }
 
-func NewSyntaxTreeFromNodeTextDocumentStringBool(rootNode Node, textDocument text.TextDocument, filePath string, clone bool) SyntaxTree {
+func NewSyntaxTreeFromNodeTextDocument(rootNode Node, textDocument text.TextDocument, filePath string, clone bool) SyntaxTree {
 	this := SyntaxTree{}
 	this.RootNode = modifyWithSyntaxTree(rootNode, clone, &this)
 	this.textDocument = textDocument
