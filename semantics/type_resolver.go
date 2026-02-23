@@ -428,6 +428,8 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveInvocation(e)
 	case *ast.BLangIndexBasedAccess:
 		return t.resolveIndexBasedAccess(e)
+	case *ast.BLangFieldBaseAccess:
+		return t.resolveFieldBaseAccess(e)
 	case *ast.BLangListConstructorExpr:
 		return t.resolveListConstructorExpr(e)
 	case *ast.BLangMappingConstructorExpr:
@@ -895,6 +897,26 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 	return resultTy
 }
 
+func (t *TypeResolver) resolveFieldBaseAccess(expr *ast.BLangFieldBaseAccess) semtypes.SemType {
+	containerExprTy := t.resolveExpression(expr.Expr)
+	keyTy := semtypes.StringConst(expr.Field.Value)
+
+	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
+		t.ctx.SemanticError("unsupported container type for field access", expr.GetPosition())
+		return nil
+	}
+
+	memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyTy)
+	maybeMissing := semtypes.ContainsUndef(memberTy)
+	if maybeMissing {
+		t.ctx.SemanticError("field base access is only possible for required fields", expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, memberTy)
+	return memberTy
+}
+
 func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.SemType {
 	// Lookup the function's type from the symbol
 	symbol := expr.RawSymbol
@@ -1041,6 +1063,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.DECIMAL
 		case model.TypeKind_BYTE:
 			return semtypes.BYTE
+		case model.TypeKind_ANYDATA:
+			return semtypes.CreateAnydata(tr.tyCtx)
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil

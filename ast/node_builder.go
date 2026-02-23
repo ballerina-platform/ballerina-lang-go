@@ -1749,7 +1749,26 @@ func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckEx
 }
 
 func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *tree.FieldAccessExpressionNode) BLangNode {
-	panic("TransformFieldAccessExpression unimplemented")
+	fieldName := fieldAccessExpressionNode.FieldName()
+	if fieldName.Kind() == common.QUALIFIED_NAME_REFERENCE {
+		panic("TransformFieldAccessExpression: QUALIFIED_NAME_REFERENCE unsupported")
+	}
+
+	bLFieldBasedAccess := &BLangFieldBaseAccess{}
+	simpleNameRef := fieldName.(*tree.SimpleNameReferenceNode)
+	bLFieldBasedAccess.Field = createIdentifierFromToken(getPosition(fieldAccessExpressionNode.FieldName()), simpleNameRef.Name())
+
+	containerExpr := fieldAccessExpressionNode.Expression()
+	if containerExpr.Kind() == common.BRACED_EXPRESSION {
+		bracedExpr := containerExpr.(*tree.BracedExpressionNode)
+		bLFieldBasedAccess.Expr = n.createExpression(bracedExpr.Expression())
+	} else {
+		bLFieldBasedAccess.Expr = n.createExpression(containerExpr)
+	}
+
+	bLFieldBasedAccess.pos = getPosition(fieldAccessExpressionNode)
+	bLFieldBasedAccess.OptionalFieldAccess = false
+	return bLFieldBasedAccess
 }
 
 func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode *tree.FunctionCallExpressionNode) BLangNode {

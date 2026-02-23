@@ -78,6 +78,10 @@ var (
 		"subset4/04-map/union3-v.bal",
 		"subset5/05-record/1-v.bal",
 		"subset5/05-record/cyclic-v.bal",
+		"subset5/05-record/field-access-1-v.bal",
+		"subset5/05-record/field-access-2-v.bal",
+		"subset5/05-record/field-access-3-e.bal",
+		"subset5/05-record/field-access-4-e.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

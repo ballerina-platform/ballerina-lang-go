@@ -1,20 +1,18 @@
 (main
   (bb0 () ()
     (var-def
-      (variable r
-        (type
-          (user-defined-type R))
-        (expr
-          (record-literal-expr
-            (key-value
-              (simple-var-ref x)
-              (literal 1))
-            (key-value
-              (literal y)
-              (record-literal-expr
-                (key-value
-                  (simple-var-ref x)
-                  (literal 2))))))))
+      (variable r (type
+        (user-defined-type R)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 1))
+          (key-value
+            (literal y)
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref x)
+                (literal 2))))))))
     (expression-stmt
       (invocation io println (
         (simple-var-ref r))))
