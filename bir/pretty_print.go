@@ -139,6 +139,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintNewArray(instruction.(*NewArray))
 	case *NewMap:
 		return p.PrintNewMap(instruction.(*NewMap))
+	case *NewError:
+		return p.PrintNewError(instruction.(*NewError))
 	case *TypeCast:
 		return p.PrintTypeCast(instruction.(*TypeCast))
 	case *TypeTest:
@@ -187,6 +189,17 @@ func (p *PrettyPrinter) PrintNewMap(m *NewMap) string {
 		}
 	}
 	return fmt.Sprintf("%s = newMap %s{%s}", p.PrintOperand(*m.LhsOp), p.PrintSemType(m.Type), values.String())
+}
+
+func (p *PrettyPrinter) PrintNewError(e *NewError) string {
+	args := p.PrintOperand(*e.MessageOp)
+	if e.CauseOp != nil {
+		args += ", " + p.PrintOperand(*e.CauseOp)
+	}
+	if e.DetailOp != nil {
+		args += ", " + p.PrintOperand(*e.DetailOp)
+	}
+	return fmt.Sprintf("%s = newError %s(%s)", p.PrintOperand(*e.LhsOp), p.PrintSemType(e.Type), args)
 }
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {

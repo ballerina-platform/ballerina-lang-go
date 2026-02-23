@@ -163,6 +163,8 @@ func NewFieldPairs(m1 *MappingAtomicType, m2 *MappingAtomicType) iter.Seq[FieldP
 		types2:          m2.Types,
 		len1:            len(m1.Names),
 		len2:            len(m2.Names),
+		rest1:           m1.Rest,
+		rest2:           m2.Rest,
 		shouldCalculate: true,
 	}
 	return i.toIterator()

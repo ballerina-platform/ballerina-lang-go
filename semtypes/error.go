@@ -18,10 +18,39 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type Error struct {
+func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, bool) {
+	errorType = Intersect(errorType, &ERROR)
+	if IsNever(errorType) || !IsSubtype(ctx, errorType, &ERROR) {
+		return MappingAtomicType{}, false
+	}
+
+	if IsSameType(ctx, errorType, &ERROR) {
+		return MappingAtomicTypeFrom(nil, nil, CellContaining(ctx.Env(), CreateCloneable(ctx))), true
+	}
+	mappingSd := subtypeData(errorType, BT_ERROR)
+	if bddNode, ok := mappingSd.(BddNode); ok {
+		if bddNode.Atom().Index() != 0 {
+			// Not readonly. Not sure if this can happen (due to ErroWithDetail) but just in case
+			return MappingAtomicType{}, false
+		}
+		if !isNothing(bddNode.Middle()) || !isNothing(bddNode.Right()) {
+			// Not atomic
+			return MappingAtomicType{}, false
+		}
+		if leftNode, ok := bddNode.Left().(BddNode); ok {
+			if !IsSimpleNode(leftNode.Left(), leftNode.Middle(), leftNode.Right()) {
+				// Also not atomic
+				return MappingAtomicType{}, false
+			}
+			return *ctx.mappingAtomType(leftNode.Atom()), true
+		} else {
+			return MappingAtomicType{}, false
+		}
+	}
+	return MappingAtomicType{}, false
 }
 
-func ErrorDetail(detail SemType) SemType {
+func ErrorWithDetail(detail SemType) SemType {
 	// migrated from Error.java:39:5
 	mappingSd := subtypeData(detail, BT_MAPPING)
 	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
