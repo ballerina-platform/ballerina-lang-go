@@ -45,6 +45,7 @@
 - [Equality expression](https://ballerina.io/spec/lang/master/#equality-expr)
 - Nested expressions (`(expression)`)
 - [Shift expression](https://ballerina.io/spec/lang/master/#section_6.25)
+- [Type test expression](https://ballerina.io/spec/lang/master/#section_6.28)
 
 ## Operators
 

@@ -54,6 +54,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkLambdaFunction(cx, expr)
 	case *ast.BLangTypeConversionExpr:
 		return walkTypeConversionExpr(cx, expr)
+	case *ast.BLangTypeTestExpr:
+		return walkTypeTestExpr(cx, expr)
 	case *ast.BLangAnnotAccessExpr:
 		return walkAnnotAccessExpr(cx, expr)
 	case *ast.BLangCollectContextInvocation:
@@ -295,6 +297,21 @@ func walkTypeConversionExpr(cx *FunctionContext, expr *ast.BLangTypeConversionEx
 		result := walkExpression(cx, expr.Expression)
 		initStmts = append(initStmts, result.initStmts...)
 		expr.Expression = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
+		replacementNode: expr,
+	}
+}
+
+func walkTypeTestExpr(cx *FunctionContext, expr *ast.BLangTypeTestExpr) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	if expr.Expr != nil {
+		result := walkExpression(cx, expr.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
 	return desugaredNode[model.ExpressionNode]{

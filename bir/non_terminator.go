@@ -89,6 +89,13 @@ type (
 		// numeric conversions, which can be done with pure types
 		Type semtypes.SemType
 	}
+
+	TypeTest struct {
+		BIRInstructionBase
+		RhsOp      *BIROperand
+		Type       semtypes.SemType
+		IsNegation bool
+	}
 )
 
 type (
@@ -106,6 +113,7 @@ var (
 	_ BIRInstruction          = &FieldAccess{}
 	_ BIRInstruction          = &NewArray{}
 	_ BIRInstruction          = &TypeCast{}
+	_ BIRAssignInstruction    = &TypeTest{}
 	_ BIRInstruction          = &NewMap{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
@@ -204,6 +212,14 @@ func (t *TypeCast) GetLhsOperand() *BIROperand {
 
 func (t *TypeCast) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_CAST
+}
+
+func (t *TypeTest) GetLhsOperand() *BIROperand {
+	return t.LhsOp
+}
+
+func (t *TypeTest) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_TYPE_TEST
 }
 
 func (n *NewMap) GetKind() InstructionKind {

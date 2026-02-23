@@ -2135,7 +2135,14 @@ func (n *NodeBuilder) TransformModuleVariableDeclaration(moduleVariableDeclarati
 }
 
 func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.TypeTestExpressionNode) BLangNode {
-	panic("TransformTypeTestExpression unimplemented")
+	typeTestExpr := &BLangTypeTestExpr{}
+	if typeTestExpressionNode.IsKeyword().Kind() == common.NOT_IS_KEYWORD {
+		typeTestExpr.isNegation = true
+	}
+	typeTestExpr.Expr = n.createExpression(typeTestExpressionNode.Expression())
+	typeTestExpr.Type = model.TypeData{TypeDescriptor: n.createTypeNode(typeTestExpressionNode.TypeDescriptor())}
+	typeTestExpr.SetPosition(getPosition(typeTestExpressionNode))
+	return typeTestExpr
 }
 
 func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode *tree.RemoteMethodCallActionNode) BLangNode {

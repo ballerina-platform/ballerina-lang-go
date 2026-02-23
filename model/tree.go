@@ -781,6 +781,12 @@ type ListConstructorExprNode interface {
 	GetExpressions() []ExpressionNode
 }
 
+type TypeTestExpressionNode interface {
+	ExpressionNode
+	GetExpression() ExpressionNode
+	GetType() TypeData
+}
+
 type CheckedExpressionNode = UnaryExpressionNode
 
 type CheckPanickedExpressionNode = UnaryExpressionNode

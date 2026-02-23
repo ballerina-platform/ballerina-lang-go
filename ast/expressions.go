@@ -282,6 +282,13 @@ type (
 		// TODO: Add support for NamedArgs
 	}
 
+	BLangTypeTestExpr struct {
+		BLangExpressionBase
+		Expr       BLangExpression
+		Type       model.TypeData
+		isNegation bool
+	}
+
 	BLangMappingKey struct {
 		BLangNodeBase
 		Expr        BLangExpression
@@ -335,6 +342,8 @@ var (
 	_ BLangExpression                                              = &BLangTypeConversionExpr{}
 	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
 	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
+	_ BLangExpression                                              = &BLangTypeTestExpr{}
+	_ model.TypeTestExpressionNode                                 = &BLangTypeTestExpr{}
 	_ model.MappingConstructor                                     = &BLangMappingConstructorExpr{}
 	_ model.MappingKeyValueFieldNode                               = &BLangMappingKeyValueField{}
 	_ BLangExpression                                              = &BLangMappingConstructorExpr{}
@@ -979,6 +988,26 @@ func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
 }
 
 func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangTypeTestExpr) GetKind() model.NodeKind {
+	return model.NodeKind_TYPE_TEST_EXPR
+}
+
+func (this *BLangTypeTestExpr) IsNegation() bool {
+	return this.isNegation
+}
+
+func (this *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangTypeTestExpr) GetType() model.TypeData {
+	return this.Type
+}
+
+func (this *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 

@@ -450,10 +450,32 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return ty
 	case *ast.BLangTypeConversionExpr:
 		return t.resolveTypeConversionExpr(e)
+	case *ast.BLangTypeTestExpr:
+		return t.resolveTypeTestExpr(e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil
 	}
+}
+
+func (t *TypeResolver) resolveTypeTestExpr(e *ast.BLangTypeTestExpr) semtypes.SemType {
+	exprTy := t.resolveExpression(e.Expr)
+	ast.WalkTypeData(t, &e.Type)
+	testedTy := e.Type.Type
+
+	var resultTy semtypes.SemType
+	if semtypes.IsSubtype(t.tyCtx, exprTy, testedTy) {
+		// Expression type is always a member of the tested type
+		resultTy = semtypes.BooleanConst(!e.IsNegation())
+	} else if semtypes.IsEmpty(t.tyCtx, semtypes.Intersect(exprTy, testedTy)) {
+		// Expression type has no overlap with the tested type
+		resultTy = semtypes.BooleanConst(e.IsNegation())
+	} else {
+		resultTy = &semtypes.BOOLEAN
+	}
+
+	setExpectedType(e, resultTy)
+	return resultTy
 }
 
 func (t *TypeResolver) resolveMappingConstructorExpr(e *ast.BLangMappingConstructorExpr) semtypes.SemType {

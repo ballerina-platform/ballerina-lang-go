@@ -517,6 +517,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypeConversionExpr:
 		validateTypeConversionExpr(a, expr, expectedType)
+	case *ast.BLangTypeTestExpr:
+		validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
