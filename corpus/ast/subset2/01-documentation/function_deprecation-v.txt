@@ -1,0 +1,41 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function oldFunction
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for deprecated function"))
+      (deprec-doc
+        (md-deprec-doc
+          (doc-lines
+            "This function is deprecated. Use `newFunction` instead.")
+          (deprec-lines
+            "# # Deprecated")))) () (
+    (value-type null))
+    (block-function-body))
+  (function add
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for deprecated function with parameters")
+        (md-doc-line "This function adds two numbers"))
+      (params
+        (md-param-doc (param-name x)
+          (doc-lines
+            "first number")))
+      (deprec-params-doc
+        (md-deprec-params-doc (params
+            (md-param-doc (param-name y)
+              (doc-lines
+                "second number")))))) (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

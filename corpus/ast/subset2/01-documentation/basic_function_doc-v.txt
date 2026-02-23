@@ -1,0 +1,11 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function basicFunction
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for basic function"))) () (
+    (value-type null))
+    (block-function-body))
+  (function main () (
+    (value-type null))
+    (block-function-body)))

@@ -69,7 +69,7 @@ func (d *documentContext) parseContent(content string, textDoc text.TextDocument
 	lexer := parser.NewLexer(charReader, nil)
 
 	// Create TokenReader from Lexer
-	tokenReader := parser.CreateTokenReader(*lexer, nil)
+	tokenReader := parser.CreateTokenReader(lexer, nil)
 
 	// Create Parser from TokenReader
 	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader, nil)

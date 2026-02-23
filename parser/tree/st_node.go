@@ -17,11 +17,12 @@
 package tree
 
 import (
-	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"reflect"
 	"strings"
+
+	"ballerina-lang-go/parser/common"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 // This represent green nodes in the syntax tree. Green nodes satisfy fallowing properties:
@@ -140,21 +141,6 @@ type (
 		args []any
 	}
 )
-
-// Type assertions to ensure interface compliance
-var _ STNode = &STInvalidTokenMinutiaeNode{}
-var _ STNode = &STMinutiae{}
-var _ STNode = &STInvalidNodeMinutiae{}
-var _ STNode = &STNodeList{}
-
-var _ STToken = &STMissingToken{}
-var _ STNode = &STMissingToken{}
-var _ STToken = &STLiteralValueToken{}
-var _ STNode = &STLiteralValueToken{}
-var _ STToken = &STInvalidToken{}
-var _ STNode = &STInvalidToken{}
-var _ STToken = &STIdentifierToken{}
-var _ STNode = &STIdentifierToken{}
 
 func (n *STLiteralValueToken) BucketCount() int {
 	return 1
@@ -1334,6 +1320,66 @@ func CreateMarkdownDocumentationNode(documentationLines STNode) STNode {
 		},
 		DocumentationLines: documentationLines,
 	}, documentationLines)
+}
+
+func CreateMarkdownParameterDocumentationLineNode(kind common.SyntaxKind, hashToken STNode, plusToken STNode, parameterName STNode, minusToken STNode, documentElements STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownParameterDocumentationLineNode{
+		STDocumentationNode: &STNodeBase{
+			kind: kind,
+		},
+		HashToken:        hashToken,
+		PlusToken:        plusToken,
+		ParameterName:    parameterName,
+		MinusToken:       minusToken,
+		DocumentElements: documentElements,
+	}, hashToken, plusToken, parameterName, minusToken, documentElements)
+}
+
+func CreateBallerinaNameReferenceNode(referenceType STNode, startBacktick STNode, nameReference STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STBallerinaNameReferenceNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.BALLERINA_NAME_REFERENCE,
+		},
+		ReferenceType: referenceType,
+		StartBacktick: startBacktick,
+		NameReference: nameReference,
+		EndBacktick:   endBacktick,
+	}, referenceType, startBacktick, nameReference, endBacktick)
+}
+
+func CreateInlineCodeReferenceNode(startBacktick STNode, codeReference STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STInlineCodeReferenceNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.INLINE_CODE_REFERENCE,
+		},
+		StartBacktick: startBacktick,
+		CodeReference: codeReference,
+		EndBacktick:   endBacktick,
+	}, startBacktick, codeReference, endBacktick)
+}
+
+func CreateMarkdownCodeBlockNode(startLineHashToken STNode, startBacktick STNode, langAttribute STNode, codeLines STNode, endLineHashToken STNode, endBacktick STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownCodeBlockNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.MARKDOWN_CODE_BLOCK,
+		},
+		StartLineHashToken: startLineHashToken,
+		StartBacktick:      startBacktick,
+		LangAttribute:      langAttribute,
+		CodeLines:          codeLines,
+		EndLineHashToken:   endLineHashToken,
+		EndBacktick:        endBacktick,
+	}, startLineHashToken, startBacktick, langAttribute, codeLines, endLineHashToken, endBacktick)
+}
+
+func CreateMarkdownCodeLineNode(hashToken STNode, codeDescription STNode) STNode {
+	return createNodeAndAddChildren(&STMarkdownCodeLineNode{
+		STDocumentationNode: &STNodeBase{
+			kind: common.MARKDOWN_CODE_LINE,
+		},
+		HashToken:       hashToken,
+		CodeDescription: codeDescription,
+	}, hashToken, codeDescription)
 }
 
 func CreateModulePartNode(imports STNode, members STNode, eofToken STNode) STNode {
@@ -3726,7 +3772,6 @@ func (n *STAmbiguousCollectionNode) ChildInBucket(bucket int) STNode {
 
 func (n *STAmbiguousCollectionNode) ChildBuckets() []STNode {
 	return []STNode{
-
 		n.CollectionStartToken,
 		CreateNodeList(n.Members...),
 		n.CollectionEndToken,
