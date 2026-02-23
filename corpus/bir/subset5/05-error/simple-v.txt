@@ -1,0 +1,46 @@
+module $anon.. v 0.0.0;
+foo<NIL>{
+  bb0 {
+    %1 = ConstantLoad foo
+    %2 = ConstantLoad ff
+    %3 = ConstantLoad foo
+    %4 = newMap ((MAPPING), ()){%2=%3}
+    %5 = newError ((ERROR), ())(%1, %4)
+    %0 = %5;
+    return;
+  }
+}
+bar<NIL>{
+  bb0 {
+    %1 = ConstantLoad bar
+    %2 = ConstantLoad message
+    %3 = ConstantLoad message
+    %4 = ConstantLoad id
+    %5 = ConstantLoad 1
+    %6 = newMap ((MAPPING), ()){%2=%3, %4=%5}
+    %7 = newError ((), (ERROR))(%1, %6)
+    %0 = %7;
+    return;
+  }
+}
+baz<NIL>{
+  bb0 {
+    %1 = ConstantLoad bar
+    %2 = ConstantLoad message
+    %3 = ConstantLoad message
+    %4 = ConstantLoad id
+    %5 = ConstantLoad 1
+    %6 = newMap ((MAPPING), ()){%2=%3, %4=%5}
+    %7 = newError ((), (ERROR))(%1, %6)
+    e = %7;
+    %9 = ConstantLoad bar
+    %10 = ConstantLoad message
+    %11 = ConstantLoad message
+    %12 = ConstantLoad id
+    %13 = ConstantLoad 1
+    %14 = newMap ((MAPPING), ()){%10=%11, %12=%13}
+    %15 = newError ((), (ERROR))(%9, e, %14)
+    %0 = %15;
+    return;
+  }
+}

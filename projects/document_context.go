@@ -83,6 +83,9 @@ func (d *documentContext) parseContent(content string, textDoc text.TextDocument
 
 	// Create the SyntaxTree
 	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocumentStringBool(moduleNode, textDoc, d.name, false)
+	if syntaxTree.HasDiagnostics() {
+		panic("Syntax error: syntax error at")
+	}
 	return &syntaxTree
 }
 

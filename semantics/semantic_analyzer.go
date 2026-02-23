@@ -526,6 +526,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		validateTypeConversionExpr(a, expr, expectedType)
 	case *ast.BLangTypeTestExpr:
 		validateResolvedType(a, expr, expectedType)
+	case *ast.BLangNamedArgsExpression:
+		analyzeExpression(a, expr.Expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
@@ -781,6 +783,24 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 	if argCount == 2 {
 		causeArg := expr.PositionalArgs[1]
 		analyzeExpression(a, causeArg, semtypes.Union(&semtypes.ERROR, &semtypes.NIL))
+	}
+	tyCtx := a.tyCtx()
+	detailType := semtypes.ErrorDetailType(tyCtx, expr.DeterminedType)
+	seen := make(map[string]bool, len(expr.NamedArgs))
+	clonableTy := semtypes.CreateCloneable(tyCtx)
+	for _, namedArg := range expr.NamedArgs {
+		name := namedArg.Name.GetValue()
+		if seen[name] {
+			a.semanticErr(fmt.Sprintf("duplicate named argument '%s' in error constructor", name))
+			return
+		}
+		seen[name] = true
+		fieldType := semtypes.MappingMemberTypeInnerVal(tyCtx, detailType, semtypes.StringConst(name))
+		analyzeExpression(a, namedArg.Expr, fieldType)
+		if !semtypes.IsSubtype(tyCtx, namedArg.Expr.GetDeterminedType(), clonableTy) {
+			a.semanticErr("named arguments must be subtypes of cloneable")
+			return
+		}
 	}
 
 	// Validate the resolved error type against expected type

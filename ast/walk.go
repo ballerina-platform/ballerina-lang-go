@@ -431,6 +431,9 @@ func Walk(v Visitor, node BLangNode) {
 		for _, arg := range node.PositionalArgs {
 			Walk(v, arg.(BLangNode))
 		}
+		for _, arg := range node.NamedArgs {
+			Walk(v, arg)
+		}
 
 	case *BLangInvocation:
 		if node.PkgAlias != nil {
@@ -567,7 +570,7 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.rhs)
 
 	case *BLangErrorTypeNode:
-		WalkTypeData(v, &node.detailType)
+		WalkTypeData(v, &node.DetailType)
 
 	case *BLangConstrainedType:
 		WalkTypeData(v, &node.Type)
@@ -722,6 +725,10 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangMarkdownReferenceDocumentation:
 		// Leaf node
+
+	case *BLangNamedArgsExpression:
+		Walk(v, &node.Name)
+		Walk(v, node.Expr.(BLangNode))
 
 	default:
 		panic(fmt.Sprintf("unexpected node type %T", node))
