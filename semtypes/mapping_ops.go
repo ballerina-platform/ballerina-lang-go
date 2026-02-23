@@ -32,21 +32,21 @@ func mappingSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 
 func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunction) bool {
 	// migrated from MappingOps.java:57:5
-	var combined MappingAtomicType
+	var combined *MappingAtomicType
 	if posList == nil {
-		combined = MAPPING_ATOMIC_INNER
+		combined = &MAPPING_ATOMIC_INNER
 	} else {
-		combined = *cx.mappingAtomType(posList.Atom)
+		combined = cx.mappingAtomType(posList.Atom)
 		p := posList.Next
 		for true {
 			if p == nil {
 				break
 			} else {
-				m := intersectMapping(cx.Env(), combined, *cx.mappingAtomType(p.Atom))
+				m := intersectMapping(cx.Env(), combined, cx.mappingAtomType(p.Atom))
 				if m == nil {
 					return true
 				} else {
-					combined = *m
+					combined = m
 				}
 				p = p.Next
 			}
@@ -63,12 +63,12 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	return (!mappingInhabited(cx, combined, negList))
 }
 
-func mappingInhabitedFast(cx Context, pos MappingAtomicType, negList *Conjunction) bool {
+func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList *Conjunction) bool {
 	// migrated from MappingOps.java:98:5
 	if negList == nil {
 		return true
 	} else {
-		neg := *cx.mappingAtomType(negList.Atom)
+		neg := cx.mappingAtomType(negList.Atom)
 		pairing := NewFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
 			return mappingInhabitedFast(cx, pos, negList.Next)
@@ -87,13 +87,13 @@ func mappingInhabitedFast(cx Context, pos MappingAtomicType, negList *Conjunctio
 	}
 }
 
-func mappingInhabited(cx Context, pos MappingAtomicType, negList *Conjunction) bool {
+func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) bool {
 	// migrated from MappingOps.java:127:5
 	if negList == nil {
 		return true
 	} else {
 		neg := cx.mappingAtomType(negList.Atom)
-		pairing := NewFieldPairs(pos, *neg)
+		pairing := NewFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
 			return mappingInhabited(cx, pos, negList.Next)
 		}
@@ -106,13 +106,13 @@ func mappingInhabited(cx Context, pos MappingAtomicType, negList *Conjunction) b
 			if !IsEmpty(cx, d) {
 				var mt MappingAtomicType
 				if fieldPair.Index1 == nil {
-					mt = insertField(pos, fieldPair.Name, *d)
+					mt = insertField(*pos, fieldPair.Name, *d)
 				} else {
 					posTypes := pos.Types
 					posTypes[*fieldPair.Index1] = *d
 					mt = MappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}
-				if mappingInhabited(cx, mt, negList.Next) {
+				if mappingInhabited(cx, &mt, negList.Next) {
 					return true
 				}
 			}
@@ -141,7 +141,7 @@ func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicT
 	return MappingAtomicTypeFrom(names, types, m.Rest)
 }
 
-func intersectMapping(env Env, m1 MappingAtomicType, m2 MappingAtomicType) *MappingAtomicType {
+func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *MappingAtomicType {
 	// migrated from MappingOps.java:186:5
 	var names []string
 	var types []CellSemType

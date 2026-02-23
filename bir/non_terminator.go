@@ -30,6 +30,11 @@ type BIRAssignInstruction interface {
 	GetLhsOperand() *BIROperand
 }
 
+type MappingConstructorEntry interface {
+	IsKeyValuePair() bool
+	ValueOp() *BIROperand
+}
+
 type (
 	Move struct {
 		BIRInstructionBase
@@ -69,6 +74,14 @@ type (
 		Filler values.BalValue
 	}
 
+	// JBallerina call this NewStruct but prints as NewMap
+	NewMap struct {
+		BIRInstructionBase
+		// Do we need the mapping atomic type as well?
+		Type   semtypes.SemType
+		Values []MappingConstructorEntry
+	}
+
 	TypeCast struct {
 		BIRInstructionBase
 		RhsOp *BIROperand
@@ -78,14 +91,23 @@ type (
 	}
 )
 
+type (
+	MappingConstructorKeyValueEntry struct {
+		keyOp   *BIROperand
+		valueOp *BIROperand
+	}
+)
+
 var (
-	_ BIRAssignInstruction = &Move{}
-	_ BIRAssignInstruction = &BinaryOp{}
-	_ BIRAssignInstruction = &UnaryOp{}
-	_ BIRAssignInstruction = &ConstantLoad{}
-	_ BIRInstruction       = &FieldAccess{}
-	_ BIRInstruction       = &NewArray{}
-	_ BIRInstruction       = &TypeCast{}
+	_ BIRAssignInstruction    = &Move{}
+	_ BIRAssignInstruction    = &BinaryOp{}
+	_ BIRAssignInstruction    = &UnaryOp{}
+	_ BIRAssignInstruction    = &ConstantLoad{}
+	_ BIRInstruction          = &FieldAccess{}
+	_ BIRInstruction          = &NewArray{}
+	_ BIRInstruction          = &TypeCast{}
+	_ BIRInstruction          = &NewMap{}
+	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
 func (m *Move) GetLhsOperand() *BIROperand {
@@ -182,4 +204,20 @@ func (t *TypeCast) GetLhsOperand() *BIROperand {
 
 func (t *TypeCast) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_CAST
+}
+
+func (n *NewMap) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_STRUCTURE
+}
+
+func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
+	return true
+}
+
+func (m *MappingConstructorKeyValueEntry) ValueOp() *BIROperand {
+	return m.valueOp
+}
+
+func (m *MappingConstructorKeyValueEntry) KeyOp() *BIROperand {
+	return m.keyOp
 }

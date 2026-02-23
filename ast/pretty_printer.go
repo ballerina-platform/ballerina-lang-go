@@ -104,6 +104,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printUnionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
+	case *BLangConstrainedType:
+		p.printConstrainedType(t)
 	case *BLangTypeDefinition:
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
@@ -112,6 +114,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFiniteTypeNode(t)
 	case *BLangListConstructorExpr:
 		p.printListConstructorExpr(t)
+	case *BLangMappingConstructorExpr:
+		p.printMappingConstructor(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
 	default:
@@ -647,6 +651,34 @@ func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr)
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printMappingConstructor(node *BLangMappingConstructorExpr) {
+	p.startNode()
+	p.printString("mapping-constructor-expr")
+	p.indentLevel++
+	for _, f := range node.Fields {
+		if kv, ok := f.(*BLangMappingKeyValueField); ok {
+			p.printMappingKeyValueField(kv)
+		}
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+// Mapping key-value field printer: prints as (key-value (key) (value))
+func (p *PrettyPrinter) printMappingKeyValueField(kv *BLangMappingKeyValueField) {
+	p.startNode()
+	p.printString("key-value")
+	p.indentLevel++
+	if kv.Key != nil && kv.Key.Expr != nil {
+		p.PrintInner(kv.Key.Expr.(BLangNode))
+	}
+	if kv.ValueExpr != nil {
+		p.PrintInner(kv.ValueExpr.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 // Wildcard binding pattern printer
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
 	p.startNode()
@@ -686,6 +718,20 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
+	p.startNode()
+	p.printString("constrained-type")
+	p.indentLevel++
+	if node.Type.TypeDescriptor != nil {
+		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
+	}
+	if node.Constraint.TypeDescriptor != nil {
+		p.PrintInner(node.Constraint.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
 	p.endNode()
 }
 

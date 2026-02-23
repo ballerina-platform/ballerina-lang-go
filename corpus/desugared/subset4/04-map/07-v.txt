@@ -1,0 +1,26 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation wrap (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation wrap (
+            (invocation wrap (
+              (literal <nil>))))))))))
+  (function wrap (
+    (variable x (type
+      (value-type any)))) (
+    (constrained-type
+      (builtin-ref-type map)
+      (value-type any)))
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (literal value)
+            (simple-var-ref x)))))))

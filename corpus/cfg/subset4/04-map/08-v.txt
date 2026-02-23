@@ -1,0 +1,36 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable m (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type any))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref foo)
+            (literal 17))
+          (key-value
+            (simple-var-ref bar)
+            (literal 42))))))
+    (var-def
+      (variable v (type
+        (value-type any)) (expr
+        (index-based-access
+          (simple-var-ref m)
+          (literal foo)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref v))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref m)
+          (literal bar)))))
+    (expression-stmt
+      (invocation io println (
+        (list-constructor-expr
+          (index-based-access
+            (simple-var-ref m)
+            (literal baz))))))
+  )
+)

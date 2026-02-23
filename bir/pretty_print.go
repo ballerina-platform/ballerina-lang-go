@@ -137,6 +137,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintFieldAccess(instruction.(*FieldAccess))
 	case *NewArray:
 		return p.PrintNewArray(instruction.(*NewArray))
+	case *NewMap:
+		return p.PrintNewMap(instruction.(*NewMap))
 	case *TypeCast:
 		return p.PrintTypeCast(instruction.(*TypeCast))
 	default:
@@ -157,6 +159,24 @@ func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
 		values.WriteString(p.PrintOperand(*v))
 	}
 	return fmt.Sprintf("%s = newArray %s[%s]{%s}", p.PrintOperand(*array.LhsOp), p.PrintSemType(array.Type), p.PrintOperand(*array.SizeOp), values.String())
+}
+
+func (p *PrettyPrinter) PrintNewMap(m *NewMap) string {
+	values := strings.Builder{}
+	for i, entry := range m.Values {
+		if i > 0 {
+			values.WriteString(", ")
+		}
+		if entry.IsKeyValuePair() {
+			kv := entry.(*MappingConstructorKeyValueEntry)
+			values.WriteString(p.PrintOperand(*kv.KeyOp()))
+			values.WriteString("=")
+			values.WriteString(p.PrintOperand(*kv.ValueOp()))
+		} else {
+			values.WriteString(p.PrintOperand(*entry.ValueOp()))
+		}
+	}
+	return fmt.Sprintf("%s = newMap %s{%s}", p.PrintOperand(*m.LhsOp), p.PrintSemType(m.Type), values.String())
 }
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {

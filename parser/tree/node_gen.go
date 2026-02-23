@@ -1211,6 +1211,10 @@ func (n MappingConstructorExpressionNode) Fields() NodeList[MappingFieldNode] {
 	return nodeListFrom[MappingFieldNode](into[NonTerminalNode](n.ChildInBucket(1)))
 }
 
+func (n MappingConstructorExpressionNode) FieldNodes() NodeList[Node] {
+	return nodeListFrom[Node](into[NonTerminalNode](n.ChildInBucket(1)))
+}
+
 func (n MappingConstructorExpressionNode) CloseBrace() Token {
 	val, ok := n.ChildInBucket(2).(Token)
 	if !ok {
