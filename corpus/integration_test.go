@@ -59,10 +59,7 @@ var (
 	errorRegex  = regexp.MustCompile(`//\s*@error`)
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{
-		"subset3/03-list/24-v.bal",
-		"subset3/03-int/neg-p.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex

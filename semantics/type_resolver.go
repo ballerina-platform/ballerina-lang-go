@@ -717,7 +717,7 @@ var additiveSupportedTypes = semtypes.Union(&semtypes.NUMBER, &semtypes.STRING)
 func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
 	nilLifted := false
 
-	if semtypes.IsSubtypeSimple(lhsTy, semtypes.NIL) || semtypes.IsSubtypeSimple(rhsTy, semtypes.NIL) {
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, &semtypes.NIL)
 		rhsTy = semtypes.Diff(rhsTy, &semtypes.NIL)

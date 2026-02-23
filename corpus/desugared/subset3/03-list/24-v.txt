@@ -29,18 +29,7 @@
             (simple-var-ref i)
             (binary-expr +
               (simple-var-ref i)
-              (literal 1)))
-          (if
-            (binary-expr ==
-              (binary-expr %
-                (simple-var-ref i)
-                (literal 1000))
-              (literal 0))
-            (block-stmt
-              (expression-stmt
-                (invocation io println (
-                  (simple-var-ref i))))) ())
-          (block-stmt)))
+              (literal 1)))))
       (assignment
         (index-based-access
           (simple-var-ref v)

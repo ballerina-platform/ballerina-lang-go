@@ -14,23 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions list-type-descriptor list-constructor-expr type-cast-expr while-stmt multiplicative-expr relational-expr additive-expr assign-stmt local-var-decl-stmt int-literal
+// @productions multiplicative-expr function-call-expr local-var-decl-stmt float-literal
 import ballerina/io;
 
 public function main() {
-    any[] v = [];
-    int i = 0;
-    while i < 1000*1000 {
-        v[i] = 1;
-        i = i + 1;
-    }
-    v[123000] = 1001;
-    i = 0;
-    int sum = 0;
-    while i < v.length() {
-        sum = sum + <int>v[i];
-        i = i + 1;
-    }
-    io:println(sum); // @output 1001000
+    float a = 10.0;
+    float b = 3.0;
+    io:println(a * b); // @output 30
 }
-
