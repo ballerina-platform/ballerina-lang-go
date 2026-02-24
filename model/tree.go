@@ -25,6 +25,7 @@ import (
 // Type interface (used by Symbol interface)
 type Type interface {
 	GetTypeKind() TypeKind
+	GetTypeData() TypeData
 }
 
 // ValueType is a type alias for Type (used for BType references)
@@ -512,7 +513,6 @@ type DocumentationReferenceType string
 type Node interface {
 	GetKind() NodeKind
 	GetPosition() diagnostics.Location
-	GetTypeData() TypeData
 	GetDeterminedType() semtypes.SemType
 }
 
@@ -583,8 +583,8 @@ type AnnotationNode interface {
 	TopLevelNode
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
+	GetTypeDescriptor() TypeDescriptor
+	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
 type FunctionBodyNode = Node
@@ -601,8 +601,6 @@ type VariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
 	GetInitialExpression() ExpressionNode
 	SetInitialExpression(expr ExpressionNode)
 	GetIsDeclaredWithVar() bool
@@ -619,7 +617,6 @@ type SimpleVariableNode interface {
 }
 
 type ConstantNode interface {
-	GetTypeData() TypeData
 	GetAssociatedTypeDefinition() TypeDefinition
 }
 
@@ -632,8 +629,8 @@ type InvokableNode interface {
 	SetName(name IdentifierNode)
 	GetParameters() []SimpleVariableNode
 	AddParameter(param SimpleVariableNode)
-	GetReturnTypeData() TypeData
-	SetReturnTypeData(typeData TypeData)
+	GetReturnTypeDescriptor() TypeDescriptor
+	SetReturnTypeDescriptor(typeDescriptor TypeDescriptor)
 	GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode
 	AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 	GetBody() FunctionBodyNode
@@ -924,8 +921,8 @@ type GroupExpressionNode interface {
 
 type TypedescExpressionNode interface {
 	ExpressionNode
-	GetTypeData() TypeData
-	SetTypeData(typeData TypeData)
+	GetTypeDescriptor() TypeDescriptor
+	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
 
 type NamedArgNode interface {

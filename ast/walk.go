@@ -188,7 +188,7 @@ func Walk(v Visitor, node BLangNode) {
 		for i := range node.AnnAttachments {
 			Walk(v, &node.AnnAttachments[i])
 		}
-		WalkTypeData(v, &node.TypeData)
+		walkTypeDescriptor(v, node.typeDescriptor)
 
 	case *BLangAnnotationAttachment:
 		Walk(v, node.Expr.(BLangNode))
@@ -216,15 +216,17 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
-		typeData := node.GetTypeData()
-		WalkTypeData(v, &typeData)
+		if tn := node.TypeNode(); tn != nil {
+			Walk(v, tn.(BLangNode))
+		}
 
 	case *BLangSimpleVariable:
 		if node.Name != nil {
 			Walk(v, node.Name)
 		}
-		typeData := node.GetTypeData()
-		WalkTypeData(v, &typeData)
+		if tn := node.TypeNode(); tn != nil {
+			Walk(v, tn.(BLangNode))
+		}
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
@@ -258,7 +260,7 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		WalkTypeData(v, &node.ReturnTypeData)
+		walkTypeDescriptor(v, node.returnTypeDescriptor)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
@@ -467,7 +469,7 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangTypedescExpr:
-		WalkTypeData(v, &node.TypeData)
+		walkTypeDescriptor(v, node.typeDescriptor)
 
 	case *BLangTypeConversionExpr:
 		if node.Expression != nil {
@@ -715,6 +717,15 @@ func WalkTypeData(v Visitor, typeData *model.TypeData) {
 		return
 	}
 	td := typeData.TypeDescriptor
+	if tdNode, ok := td.(BLangNode); ok {
+		Walk(v, tdNode)
+	}
+}
+
+func walkTypeDescriptor(v Visitor, td model.TypeDescriptor) {
+	if td == nil {
+		return
+	}
 	if tdNode, ok := td.(BLangNode); ok {
 		Walk(v, tdNode)
 	}

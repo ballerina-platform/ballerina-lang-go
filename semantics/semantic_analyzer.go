@@ -275,7 +275,7 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 }
 
 func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *constantAnalyzer {
-	expectedType := constant.GetTypeData().Type
+	expectedType := constant.GetDeterminedType()
 	return &constantAnalyzer{analyzerBase: analyzerBase{parent: parent}, constant: constant, expectedType: expectedType}
 }
 
@@ -429,7 +429,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			model.NodeKind_UNARY_EXPR:
 			bLangExpr := n.(ast.BLangExpression)
 			analyzeExpression(ca, bLangExpr, ca.expectedType)
-			exprTy := bLangExpr.GetTypeData().Type
+			exprTy := bLangExpr.GetDeterminedType()
 			if ca.expectedType != nil {
 				if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
 					ca.semanticErr("incompatible type for constant expression")
@@ -448,8 +448,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
 func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
-	typeData := expr.GetTypeData()
-	resolvedTy := typeData.Type
+	resolvedTy := expr.GetDeterminedType()
 	if resolvedTy == nil {
 		a.internalErr(fmt.Sprintf("expression type not resolved for %T at %v", expr, expr.GetPosition()))
 		return false
@@ -526,7 +525,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) {
 	analyzeExpression(a, expr.Expression, nil)
-	exprTy := expr.Expression.GetTypeData().Type
+	exprTy := expr.Expression.GetDeterminedType()
 	targetType := expr.TypeDescriptor.GetDeterminedType()
 	intersection := semtypes.Intersect(exprTy, targetType)
 	if semtypes.IsEmpty(a.tyCtx(), intersection) && !hasPotentialNumericConversions(exprTy, targetType) {
@@ -548,7 +547,7 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 	// Validate container expression
 	containerExpr := expr.Expr
 	analyzeExpression(a, containerExpr, nil)
-	containerExprTy := containerExpr.GetTypeData().Type
+	containerExprTy := containerExpr.GetDeterminedType()
 
 	// Determine expected key type based on container type
 	var keyExprExpectedType semtypes.SemType
@@ -782,7 +781,7 @@ func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedTy
 	analyzeExpression(a, unaryExpr.Expr, nil)
 
 	// Get the operand type
-	exprTy := unaryExpr.Expr.GetTypeData().Type
+	exprTy := unaryExpr.Expr.GetDeterminedType()
 
 	// Validate operand type based on operator
 	switch unaryExpr.GetOperatorKind() {
@@ -811,8 +810,8 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 	analyzeExpression(a, binaryExpr.RhsExpr, nil)
 
 	// Get operand types
-	lhsTy := binaryExpr.LhsExpr.GetTypeData().Type
-	rhsTy := binaryExpr.RhsExpr.GetTypeData().Type
+	lhsTy := binaryExpr.LhsExpr.GetDeterminedType()
+	rhsTy := binaryExpr.RhsExpr.GetDeterminedType()
 
 	ctx := a.tyCtx()
 	// Perform semantic validation based on operator type
@@ -934,8 +933,7 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
 		analyzeExpression(a, arg, nil)
-		typeData := arg.GetTypeData()
-		argTys[i] = typeData.Type
+		argTys[i] = arg.GetDeterminedType()
 	}
 
 	// Validate argument types against function parameter types
@@ -953,7 +951,7 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 
 func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpleVariableDef) {
 	variable := simpleVariableDef.GetVariable().(*ast.BLangSimpleVariable)
-	expectedType := variable.GetTypeData().Type
+	expectedType := variable.GetDeterminedType()
 	if variable.Expr != nil {
 		analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType)
 	}
@@ -1029,7 +1027,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) {
 		}
 	}
 	analyzeExpression(a, variable, nil)
-	expectedType := variable.GetTypeData().Type
+	expectedType := variable.GetDeterminedType()
 	expression := assignment.GetExpression().(ast.BLangExpression)
 	analyzeExpression(a, expression, expectedType)
 }
@@ -1072,8 +1070,5 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
-	typeData := e.GetTypeData()
-	typeData.Type = expectedType
-	e.SetTypeData(typeData)
 	e.SetDeterminedType(expectedType)
 }

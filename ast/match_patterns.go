@@ -20,7 +20,7 @@ import "ballerina-lang-go/model"
 
 type (
 	BLangMatchPatternBase struct {
-		BLangNodeBase
+		bLangNodeBase
 
 		MatchExpr             BLangExpression
 		MatchGuardIsAvailable bool

@@ -78,7 +78,7 @@ type (
 		Parameters []BLangMarkdownParameterDocumentation
 	}
 	BLangExpressionBase struct {
-		BLangNodeBase
+		bLangNodeBase
 		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType BType
 	}
@@ -184,6 +184,7 @@ type (
 	}
 	BLangLiteral struct {
 		BLangExpressionBase
+		valueType       BType
 		Value           any
 		OriginalValue   string
 		IsConstant      bool
@@ -253,7 +254,7 @@ type (
 
 	BLangTypedescExpr struct {
 		BLangExpressionBase
-		TypeData model.TypeData
+		typeDescriptor model.TypeDescriptor
 	}
 
 	BLangUnaryExpr struct {
@@ -431,14 +432,20 @@ func (this *BLangTypedescExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPEDESC_EXPRESSION
 }
 
-func (this *BLangTypedescExpr) GetTypeData() model.TypeData {
-	// migrated from BLangTypedescExpr.java:57:5
-	return this.TypeData
+func (this *BLangTypedescExpr) GetTypeDescriptor() model.TypeDescriptor {
+	return this.typeDescriptor
 }
 
-func (this *BLangTypedescExpr) SetTypeData(typeData model.TypeData) {
-	// migrated from BLangTypedescExpr.java:62:5
-	this.TypeData = typeData
+func (this *BLangTypedescExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	this.typeDescriptor = typeDescriptor
+}
+
+func (this *BLangLiteral) GetValueType() BType {
+	return this.valueType
+}
+
+func (this *BLangLiteral) SetValueType(bt BType) {
+	this.valueType = bt
 }
 
 func (this *BLangAlternateWorkerReceive) GetKind() model.NodeKind {
