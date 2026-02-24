@@ -7,15 +7,3 @@ error[SEMANTIC_ERROR]: Variable already defined: a
 19 |     float a = 4; // @error
    |     ^^^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: incompatible type: expected ((FLOAT), ()), got ((), (INT))
-  --> 3-e.bal:19:15
-   |
-19 |     float a = 4; // @error
-   |               ^
-
-error[SEMANTIC_ERROR]: missing return statement
-  --> 3-e.bal:19:5
-   |
-19 |     float a = 4; // @error
-   |     ^^^^^^^^^^^^
-

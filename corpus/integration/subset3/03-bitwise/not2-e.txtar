@@ -1,5 +1,9 @@
 -- stdout --
-panic: interface conversion: interface is nil, not semtypes.ComplexSemType
 
 -- stderr --
+error[SEMANTIC_ERROR]: expect int type for ~
+ --> not2-e.bal:5:16
+  |
+5 |     io:println(~b); // @error
+  |                ^^
 

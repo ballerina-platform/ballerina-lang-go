@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: Variable already defined: i
 20 |         float i = 5; // @error
    |         ^^^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: incompatible type: expected ((FLOAT), ()), got ((), (INT))
-  --> 4-e.bal:20:19
-   |
-20 |         float i = 5; // @error
-   |                   ^
-

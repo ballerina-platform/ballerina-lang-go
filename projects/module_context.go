@@ -239,6 +239,10 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	compilerCtx := moduleCtx.project.Environment().compilerContext()
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
 	// Create control flow graph before semantic analysis.
 	// CFG is needed for conditional type narrowing during semantic analysis.
 	cfg := semantics.CreateControlFlowGraph(compilerCtx, pkgNode)
@@ -262,6 +266,10 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)
+
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
 	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
