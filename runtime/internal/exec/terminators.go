@@ -20,16 +20,12 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
-	"fmt"
 )
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
 	opIndex := branchTerm.Op.Index
 	v := frame.GetOperand(opIndex)
-	cond, ok := v.(bool)
-	if !ok {
-		panic(fmt.Sprintf("invalid branch condition type at index %d: %T (expected bool)", opIndex, v))
-	}
+	cond := v.(bool)
 	if cond {
 		return branchTerm.TrueBB
 	}

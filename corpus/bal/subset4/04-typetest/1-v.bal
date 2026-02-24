@@ -24,4 +24,25 @@ public function main() {
     if x is string {
         io:println("string");
     }
+    any s = "hello";
+    if s is string {
+        io:println("string"); // @output string
+    }
+    if s is decimal {
+        io:println("int");
+    }
+    any y = true;
+    if y is boolean {
+        io:println("boolean"); // @output boolean
+    }
+    any z = <decimal>1;
+    if z is decimal {
+        io:println("decimal"); // @output decimal
+    }
+    if z is int {
+        io:println("string");
+    }
+    if z is boolean {
+        io:println("boolean");
+    }
 }
