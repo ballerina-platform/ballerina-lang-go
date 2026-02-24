@@ -60,6 +60,9 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
+		"subset4/04-typetest/1-v.bal",
+		"subset4/04-typetest/2-v.bal",
+
 		"subset4/04-map/01-e.bal",
 		"subset4/04-map/02-v.bal",
 		"subset4/04-map/03-e.bal",

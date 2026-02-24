@@ -141,6 +141,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintNewMap(instruction.(*NewMap))
 	case *TypeCast:
 		return p.PrintTypeCast(instruction.(*TypeCast))
+	case *TypeTest:
+		return p.PrintTypeTest(instruction.(*TypeTest))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -148,6 +150,14 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
 	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), cast.Type.String(), p.PrintOperand(*cast.RhsOp))
+}
+
+func (p *PrettyPrinter) PrintTypeTest(test *TypeTest) string {
+	op := "is"
+	if test.IsNegation {
+		op = "!is"
+	}
+	return fmt.Sprintf("%s = %s %s %s", p.PrintOperand(*test.LhsOp), p.PrintOperand(*test.RhsOp), op, test.Type.String())
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {

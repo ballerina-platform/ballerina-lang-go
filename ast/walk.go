@@ -477,6 +477,12 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.TypeDescriptor.(BLangNode))
 		}
 
+	case *BLangTypeTestExpr:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+		WalkTypeData(v, &node.Type)
+
 	case *BLangCommitExpr:
 		panic("unimplemented")
 

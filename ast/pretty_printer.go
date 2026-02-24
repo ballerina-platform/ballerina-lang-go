@@ -118,6 +118,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printMappingConstructor(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
+	case *BLangTypeTestExpr:
+		p.printTypeTestExpr(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -524,6 +526,22 @@ func (p *PrettyPrinter) printTypeConversionExpr(node *BLangTypeConversionExpr) {
 	p.PrintInner(node.Expression.(BLangNode))
 	if node.TypeDescriptor != nil {
 		p.PrintInner(node.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
+	p.startNode()
+	if node.isNegation {
+		p.printString("type-test-expr !is")
+	} else {
+		p.printString("type-test-expr is")
+	}
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	if node.Type.TypeDescriptor != nil {
+		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()
