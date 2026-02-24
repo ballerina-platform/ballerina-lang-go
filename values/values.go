@@ -56,15 +56,15 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 	case nil:
 		return &semtypes.NIL
 	case bool:
-		return &semtypes.BOOLEAN
+		return semtypes.BooleanConst(v)
 	case int64:
-		return &semtypes.INT
+		return semtypes.IntConst(v)
 	case float64:
-		return &semtypes.FLOAT
+		return semtypes.FloatConst(v)
 	case string:
-		return &semtypes.STRING
+		return semtypes.StringConst(v)
 	case *big.Rat:
-		return &semtypes.DECIMAL
+		return semtypes.DecimalConst(*v)
 	case *List:
 		return v.Type
 	default:
