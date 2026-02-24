@@ -178,7 +178,9 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	cx := context.NewCompilerContext(env)
 
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			t.Errorf("Semantic analysis panicked for %s: %v", testCase.InputPath, r)
+		}
 
 		if !cx.HasDiagnostics() {
 			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
@@ -207,9 +209,17 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
+	if cx.HasDiagnostics() {
+		return
+	}
+
 	// Step 2: Type Resolution
 	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
+
+	if cx.HasDiagnostics() {
+		return
+	}
 
 	// Step 3: Control Flow Graph Generation
 	cfg := CreateControlFlowGraph(cx, pkg)

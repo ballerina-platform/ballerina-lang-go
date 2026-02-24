@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: expect numeric type for -
 29 |     return -b; // @error
    |            ^^
 
-error[SEMANTIC_ERROR]: expect numeric type for -
-  --> negate-e.bal:29:12
-   |
-29 |     return -b; // @error
-   |            ^^
-

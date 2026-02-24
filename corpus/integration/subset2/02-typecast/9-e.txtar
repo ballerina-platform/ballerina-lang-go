@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
 20 |     boolean b = <boolean>n; // @error
    |                 ^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
-  --> 9-e.bal:20:17
-   |
-20 |     boolean b = <boolean>n; // @error
-   |                 ^^^^^^^^^^
-

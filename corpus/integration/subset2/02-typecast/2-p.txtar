@@ -1,5 +1,5 @@
 -- stdout --
-Runtime: bad type cast: cannot cast true to int
+Runtime panic: bad type cast: cannot cast true to int
 
 -- stderr --
 

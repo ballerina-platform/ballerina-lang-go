@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: invalid cycle detected for type definition A
 17 | type A A; // @error
    | ^^^^^^^^^
 
-error[SEMANTIC_ERROR]: type definition A is empty
-  --> cyclic-e.bal:17:1
-   |
-17 | type A A; // @error
-   | ^^^^^^^^^
-

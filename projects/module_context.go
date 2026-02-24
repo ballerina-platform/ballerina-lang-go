@@ -223,6 +223,10 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	moduleCtx.importedSymbols = importedSymbols
 	semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
 
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
 	// Add type resolution step
 	typeResolver := semantics.NewTypeResolver(compilerCtx, importedSymbols)
 	typeResolver.ResolveTypes(compilerCtx, pkgNode)

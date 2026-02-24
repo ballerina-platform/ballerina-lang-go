@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected ((STRING), ()), got ((), (INT
 18 |     error err = error(123);  // @error
    |                       ^^^
 
-error[SEMANTIC_ERROR]: incompatible type: expected ((STRING), ()), got ((), (INT))
-  --> error-constructor-non-string-message-e.bal:18:23
-   |
-18 |     error err = error(123);  // @error
-   |                       ^^^
-

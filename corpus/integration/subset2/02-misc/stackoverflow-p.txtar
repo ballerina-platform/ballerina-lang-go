@@ -1,5 +1,5 @@
 -- stdout --
-Runtime: stack overflow
+Runtime panic: stack overflow
 
 -- stderr --
 

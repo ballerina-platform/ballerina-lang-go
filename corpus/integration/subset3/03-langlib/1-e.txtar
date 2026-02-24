@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: incompatible arguments for function call
 20 |     int n = x.length(true); // @error
    |             ^^^^^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> 1-e.bal:20:13
-   |
-20 |     int n = x.length(true); // @error
-   |             ^^^^^^^^^^^^^^
-

@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected ((NIL, ERROR), ()), got ((), 
 18 |     error err = error("msg", 123);  // @error
    |                              ^^^
 
-error[SEMANTIC_ERROR]: incompatible type: expected ((NIL, ERROR), ()), got ((), (INT))
-  --> error-constructor-non-error-cause-e.bal:18:30
-   |
-18 |     error err = error("msg", 123);  // @error
-   |                              ^^^
-

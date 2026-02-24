@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: incompatible types for !=
 22 |     if x != () { // @error
    |        ^^^^^^^
 
-error[SEMANTIC_ERROR]: incompatible types for !=
-  --> 2-e.bal:22:8
-   |
-22 |     if x != () { // @error
-   |        ^^^^^^^
-

@@ -74,7 +74,9 @@ func (t *TypeResolver) ResolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 	}
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		t.resolveTypeDefinition(defn, 0)
+		if res := t.resolveTypeDefinition(defn, 0); res == nil {
+			return
+		}
 	}
 	for _, fn := range pkg.Functions {
 		t.resolveFunction(ctx, &fn)
@@ -203,7 +205,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		t.resolveNumericLiteral(n)
 		return nil
 	case *ast.BLangTypeDefinition:
-		t.resolveTypeDefinition(n, 0)
+		if res := t.resolveTypeDefinition(n, 0); res == nil {
+			return nil
+		}
 		return nil
 	case ast.BLangExpression:
 		if res := t.resolveExpression(n); res == nil {
@@ -233,6 +237,9 @@ func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, dept
 	}
 	defn.CycleDepth = depth
 	semType := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	if semType == nil {
+		return nil
+	}
 	if defn.DeterminedType == nil {
 		defn.SetDeterminedType(semType)
 		updateSymbolType(t.ctx, defn, semType)
@@ -1088,6 +1095,9 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) semtypes.SemTyp
 		return bLangNode.GetDeterminedType()
 	}
 	res := tr.resolveBTypeInner(btype, depth)
+	if res == nil {
+		return nil
+	}
 	bLangNode.SetDeterminedType(res)
 	typeData := btype.GetTypeData()
 	typeData.Type = res

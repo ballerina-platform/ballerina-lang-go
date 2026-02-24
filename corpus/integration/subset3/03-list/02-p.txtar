@@ -1,5 +1,5 @@
 -- stdout --
-Runtime: invalid array index: 3
+Runtime panic: invalid array index: 3
 
 -- stderr --
 

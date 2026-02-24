@@ -1,5 +1,5 @@
 -- stdout --
-Runtime: list too long
+Runtime panic: list too long
 
 -- stderr --
 

@@ -1,5 +1,9 @@
 -- stdout --
-panic: interface conversion: semtypes.AllOrNothingSubtype is not semtypes.BddNode: missing method Atom
 
 -- stderr --
+error[SEMANTIC_ERROR]: Unknown function: println
+  --> call15-e.bal:19:5
+   |
+19 |     io:println(0); // @error
+   |     ^^^^^^^^^^^^^
 

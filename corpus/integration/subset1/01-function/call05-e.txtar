@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: incompatible arguments for function call
 20 |     foo(1, false); // @error
    |     ^^^^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> call05-e.bal:20:5
-   |
-20 |     foo(1, false); // @error
-   |     ^^^^^^^^^^^^^
-

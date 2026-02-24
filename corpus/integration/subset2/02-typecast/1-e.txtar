@@ -7,9 +7,3 @@ error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
 20 |     int n = <int>b; // @error
    |             ^^^^^^
 
-error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
-  --> 1-e.bal:20:13
-   |
-20 |     int n = <int>b; // @error
-   |             ^^^^^^
-

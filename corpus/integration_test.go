@@ -318,7 +318,7 @@ func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf *bytes.Buffer) {
 	rt := runtime.NewRuntime()
 	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
 	if err := rt.Interpret(*birPkg); err != nil {
-		fmt.Fprintf(stdoutBuf, "Runtime: %v\n", err)
+		fmt.Fprintf(stdoutBuf, "Runtime panic: %v\n", err)
 	}
 }
 

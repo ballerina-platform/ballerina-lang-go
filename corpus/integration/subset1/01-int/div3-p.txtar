@@ -1,5 +1,5 @@
 -- stdout --
-Runtime: divide by zero
+Runtime panic: divide by zero
 
 -- stderr --
 

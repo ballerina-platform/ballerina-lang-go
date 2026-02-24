@@ -1,5 +1,9 @@
 -- stdout --
-panic: GenericSymbol must be Monomorphized
 
 -- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: i
+  --> 09-e.bal:24:22
+   |
+24 |     foreach int i in i ..< 10 { // @error
+   |                      ^
 

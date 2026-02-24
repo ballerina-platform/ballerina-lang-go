@@ -7,15 +7,3 @@ error[SEMANTIC_ERROR]: expect integer types for bitwise operators
 22 |     io:println(i & j); // @error
    |                ^^^^^
 
-error[SEMANTIC_ERROR]: expect integer types for bitwise operators
-  --> and1-e.bal:22:16
-   |
-22 |     io:println(i & j); // @error
-   |                ^^^^^
-
-error[SEMANTIC_ERROR]: expect integer types for bitwise operators
-  --> and1-e.bal:22:16
-   |
-22 |     io:println(i & j); // @error
-   |                ^^^^^
-
