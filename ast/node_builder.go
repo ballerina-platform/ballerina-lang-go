@@ -1663,7 +1663,10 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 }
 
 func (n *NodeBuilder) TransformPanicStatement(panicStatementNode *tree.PanicStatementNode) BLangNode {
-	panic("TransformPanicStatement unimplemented")
+	bLPanic := &BLangPanic{}
+	bLPanic.pos = getPosition(panicStatementNode)
+	bLPanic.Expr = n.createExpression(panicStatementNode.Expression())
+	return bLPanic
 }
 
 func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnStatementNode) BLangNode {

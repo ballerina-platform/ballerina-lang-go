@@ -1022,6 +1022,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangReturn:
 		returnFound(a, n)
 		return nil
+	case *ast.BLangPanic:
+		analyzeExpression(a, n.Expr, &semtypes.ERROR)
+		return nil
 	default:
 		return a
 	}

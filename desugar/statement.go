@@ -46,6 +46,8 @@ func walkStatement(cx *FunctionContext, node model.StatementNode) desugaredNode[
 		return walkSimpleVariableDef(cx, stmt)
 	case *ast.BLangReturn:
 		return walkReturn(cx, stmt)
+	case *ast.BLangPanic:
+		return walkPanic(cx, stmt)
 	case *ast.BLangBreak:
 		return desugaredNode[model.StatementNode]{replacementNode: stmt}
 	case *ast.BLangContinue:
@@ -233,6 +235,21 @@ func walkSimpleVariableDef(cx *FunctionContext, stmt *ast.BLangSimpleVariableDef
 		result := walkExpression(cx, stmt.Var.Expr.(ast.BLangExpression))
 		initStmts = append(initStmts, result.initStmts...)
 		stmt.Var.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: stmt,
+	}
+}
+
+func walkPanic(cx *FunctionContext, stmt *ast.BLangPanic) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	if stmt.Expr != nil {
+		result := walkExpression(cx, stmt.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		stmt.Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
 	return desugaredNode[model.StatementNode]{

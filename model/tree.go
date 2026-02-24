@@ -1043,6 +1043,11 @@ type ReturnNode interface {
 	SetExpression(expression ExpressionNode)
 }
 
+type PanicNode interface {
+	StatementNode
+	GetExpression() ExpressionNode
+}
+
 type DoNode interface {
 	StatementNode
 	GetBody() BlockStatementNode
