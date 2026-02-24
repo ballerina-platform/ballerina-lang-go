@@ -23,5 +23,129 @@
       (invocation io println (
         (literal string))))
   )
-  (bb4 (bb3 bb2) ())
+  (bb4 (bb3 bb2) (bb5 bb6)
+    (var-def
+      (variable s (type
+        (value-type any)) (expr
+        (literal hello))))
+    (type-test-expr is
+      (simple-var-ref s)
+      (value-type string))
+  )
+  (bb5 (bb4) (bb6)
+    (expression-stmt
+      (invocation io println (
+        (literal string))))
+  )
+  (bb6 (bb5 bb4) (bb7 bb8)
+    (type-test-expr is
+      (simple-var-ref s)
+      (value-type decimal))
+  )
+  (bb7 (bb6) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (literal decimal))))
+  )
+  (bb8 (bb7 bb6) (bb9 bb10)
+    (var-def
+      (variable f (type
+        (value-type any)) (expr
+        (literal 1))))
+    (type-test-expr is
+      (simple-var-ref f)
+      (value-type float))
+  )
+  (bb9 (bb8) (bb10)
+    (expression-stmt
+      (invocation io println (
+        (literal float))))
+  )
+  (bb10 (bb9 bb8) (bb11 bb12)
+    (type-test-expr is
+      (simple-var-ref f)
+      (value-type boolean))
+  )
+  (bb11 (bb10) (bb12)
+    (expression-stmt
+      (invocation io println (
+        (literal int))))
+  )
+  (bb12 (bb11 bb10) (bb13 bb14)
+    (var-def
+      (variable y (type
+        (value-type any)) (expr
+        (literal true))))
+    (type-test-expr is
+      (simple-var-ref y)
+      (value-type boolean))
+  )
+  (bb13 (bb12) (bb14)
+    (expression-stmt
+      (invocation io println (
+        (literal boolean))))
+  )
+  (bb14 (bb13 bb12) (bb15 bb16)
+    (type-test-expr is
+      (simple-var-ref y)
+      (value-type float))
+  )
+  (bb15 (bb14) (bb16)
+    (expression-stmt
+      (invocation io println (
+        (literal int))))
+  )
+  (bb16 (bb15 bb14) (bb17 bb18)
+    (var-def
+      (variable n (type
+        (value-type any)) (expr
+        (type-conversion-expr
+          (literal <nil>)
+          (value-type any)))))
+    (type-test-expr is
+      (simple-var-ref n)
+      (value-type null))
+  )
+  (bb17 (bb16) (bb18)
+    (expression-stmt
+      (invocation io println (
+        (literal nil))))
+  )
+  (bb18 (bb17 bb16) (bb19)
+    (type-test-expr is
+      (simple-var-ref n)
+      (value-type any))
+  )
+  (bb19 (bb18) (bb20)
+    (expression-stmt
+      (invocation io println (
+        (literal any))))
+  )
+  (bb20 (bb19) (bb21 bb22)
+    (var-def
+      (variable z (type
+        (value-type any)) (expr
+        (type-conversion-expr
+          (literal 1)
+          (value-type decimal)))))
+    (type-test-expr is
+      (simple-var-ref z)
+      (value-type decimal))
+  )
+  (bb21 (bb20) (bb22)
+    (expression-stmt
+      (invocation io println (
+        (literal decimal))))
+  )
+  (bb22 (bb21 bb20) (bb23 bb24)
+    (type-test-expr is
+      (simple-var-ref z)
+      (value-type int))
+  )
+  (bb23 (bb22) (bb24)
+    (expression-stmt
+      (invocation io println (
+        (literal int))))
+  )
+  (bb24 (bb23 bb22) ())
 )

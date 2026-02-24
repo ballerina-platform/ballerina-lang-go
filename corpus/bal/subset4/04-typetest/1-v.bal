@@ -24,25 +24,44 @@ public function main() {
     if x is string {
         io:println("string");
     }
+
     any s = "hello";
     if s is string {
         io:println("string"); // @output string
     }
     if s is decimal {
+        io:println("decimal");
+    }
+
+    any f = 1.0;
+    if f is float {
+        io:println("float"); // @output float
+    }
+    if f is boolean {
         io:println("int");
     }
+
     any y = true;
     if y is boolean {
         io:println("boolean"); // @output boolean
     }
+    if y is float {
+        io:println("int");
+    }
+
+    any n = <any>();
+    if n is () {
+        io:println("nil"); // @output nil
+    }
+    if n is any {
+        io:println("any"); // @output any
+    }
+
     any z = <decimal>1;
     if z is decimal {
         io:println("decimal"); // @output decimal
     }
     if z is int {
-        io:println("string");
-    }
-    if z is boolean {
-        io:println("boolean");
+        io:println("int");
     }
 }
