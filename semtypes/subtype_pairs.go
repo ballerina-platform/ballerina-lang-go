@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"iter"
 )
 
@@ -85,7 +84,7 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 			data2 := t.SubtypeData
 			i.i2++
 			if i.include(code) {
-				return common.ToPointer(CreateSubTypePair(code, nil, data2))
+				return new(CreateSubTypePair(code, nil, data2))
 			}
 		} else if i.i2 >= len(i.t2) {
 			t := i.get1()
@@ -93,7 +92,7 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 			data1 := t.SubtypeData
 			i.i1++
 			if i.include(code) {
-				return common.ToPointer(CreateSubTypePair(code, data1, nil))
+				return new(CreateSubTypePair(code, data1, nil))
 			}
 		} else {
 			t1 := i.get1()
@@ -107,17 +106,17 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 				i.i1++
 				i.i2++
 				if i.include(code1) {
-					return common.ToPointer(CreateSubTypePair(code1, data1, data2))
+					return new(CreateSubTypePair(code1, data1, data2))
 				}
 			} else if code1.Code < code2.Code {
 				i.i1++
 				if i.include(code1) {
-					return common.ToPointer(CreateSubTypePair(code1, data1, nil))
+					return new(CreateSubTypePair(code1, data1, nil))
 				}
 			} else {
 				i.i2++
 				if i.include(code2) {
-					return common.ToPointer(CreateSubTypePair(code2, nil, data2))
+					return new(CreateSubTypePair(code2, nil, data2))
 				}
 			}
 		}

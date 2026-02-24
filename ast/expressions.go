@@ -584,12 +584,12 @@ func (this *BLangSimpleVarRef) GetKind() model.NodeKind {
 	return model.NodeKind_SIMPLE_VARIABLE_REF
 }
 
-func (this *BLangConstRef) GetValue() interface{} {
+func (this *BLangConstRef) GetValue() any {
 	// migrated from BLangConstRef.java:38:5
 	return this.Value
 }
 
-func (this *BLangConstRef) SetValue(value interface{}) {
+func (this *BLangConstRef) SetValue(value any) {
 	// migrated from BLangConstRef.java:43:5
 	this.Value = value
 }

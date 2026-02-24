@@ -24,6 +24,7 @@ package projects_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -187,13 +188,7 @@ func TestUpdateSingleFile(t *testing.T) {
 	// Verify all document IDs are preserved
 	updatedDocIDs := updatedDoc.Module().DocumentIDs()
 	for _, docID := range oldDocument.Module().DocumentIDs() {
-		found := false
-		for _, updatedID := range updatedDocIDs {
-			if docID.Equals(updatedID) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(updatedDocIDs, docID.Equals)
 		assert.True(found)
 	}
 

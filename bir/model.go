@@ -26,7 +26,7 @@ import (
 
 type ConstValue struct {
 	Type  model.ValueType
-	Value interface{}
+	Value any
 }
 
 type BIRInstruction interface {

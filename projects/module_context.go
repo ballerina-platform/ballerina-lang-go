@@ -55,7 +55,7 @@ type moduleContext struct {
 
 	// Compilation artifacts.
 	bLangPkg        *ast.BLangPackage
-	bPackageSymbol  interface{} // TODO(S3): BPackageSymbol once compiler symbol types are migrated
+	bPackageSymbol  any // TODO(S3): BPackageSymbol once compiler symbol types are migrated
 	compilerCtx     *context.CompilerContext
 	importedSymbols map[string]model.ExportedSymbolSpace
 	birPkg          *bir.BIRPackage

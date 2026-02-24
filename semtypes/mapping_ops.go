@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type MappingOps struct {
 }
 
@@ -155,7 +153,7 @@ func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *Ma
 		types = append(types, t)
 	}
 	rest := intersectMemberSemTypes(env, m1.Rest, m2.Rest)
-	return common.ToPointer(MappingAtomicTypeFrom(names, types, rest))
+	return new(MappingAtomicTypeFrom(names, types, rest))
 }
 
 func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {

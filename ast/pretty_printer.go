@@ -258,7 +258,7 @@ func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
 	p.printString(string(typeKind))
 }
 
-func (p *PrettyPrinter) printFlags(flagSet interface{}) {
+func (p *PrettyPrinter) printFlags(flagSet any) {
 	// Check if flagSet has a Contains method
 	type flagChecker interface {
 		Contains(model.Flag) bool

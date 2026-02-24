@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"math"
 	"sort"
 )
@@ -97,7 +96,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	}
 	negLen := nt.Members.FixedLength
 	if negLen > 0 {
-		for i := 0; i < len(memberTypes); i++ {
+		for i := range memberTypes {
 			index := indices[i]
 			if index >= negLen {
 				break
@@ -123,7 +122,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 			}
 		}
 	}
-	for i := 0; i < len(memberTypes); i++ {
+	for i := range memberTypes {
 		d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.Rest, indices[i]))
 		if !IsEmpty(cx, d) {
 			return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
@@ -136,7 +135,7 @@ func listSampleTypes(cx Context, members FixedLengthArray, rest CellSemType, ind
 	// migrated from ListOps.java:181:5
 	var memberTypes []CellSemType
 	nRequired := 0
-	for i := 0; i < len(indices); i++ {
+	for i := range indices {
 		index := indices[i]
 		t := CellContainingInnerVal(cx.Env(), listMemberAt(members, rest, index))
 		if IsEmpty(cx, t) {
@@ -190,10 +189,7 @@ func listSamples(cx Context, members FixedLengthArray, rest SemType, neg *Conjun
 	}
 	for _, b := range boundaries {
 		segmentLength := b - lastBoundary
-		nSamples := segmentLength
-		if nNeg < segmentLength {
-			nSamples = nNeg
-		}
+		nSamples := min(nNeg, segmentLength)
 		for i := b - nSamples; i < b; i++ {
 			indices = append(indices, i)
 		}
@@ -220,21 +216,15 @@ func listIntersectWith(env Env, members1 FixedLengthArray, rest1 CellSemType,
 	// first two elements and rest will compare essentially 5th element, meaning we are ignoring 3 and 4 elements
 	max1 := members1.FixedLength
 	max2 := members2.FixedLength
-	maxLen := max1
-	if max2 > max1 {
-		maxLen = max2
-	}
+	maxLen := max(max2, max1)
 	var initial []CellSemType
-	for i := 0; i < maxLen; i++ {
+	for i := range maxLen {
 		intersected := intersectMemberSemTypes(env, listMemberAt(members1, rest1, i),
 			listMemberAt(members2, rest2, i))
 		initial = append(initial, intersected)
 	}
-	fixedLen := members1.FixedLength
-	if members2.FixedLength > fixedLen {
-		fixedLen = members2.FixedLength
-	}
-	return common.ToPointer(FixedLengthArrayFrom(initial, fixedLen)), common.ToPointer(intersectMemberSemTypes(env, rest1, rest2)), true
+	fixedLen := max(members2.FixedLength, members1.FixedLength)
+	return new(FixedLengthArrayFrom(initial, fixedLen)), new(intersectMemberSemTypes(env, rest1, rest2)), true
 }
 
 func fixedArrayShallowCopy(array FixedLengthArray) FixedLengthArray {
@@ -253,7 +243,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 		}
 		negLen := nt.Members.FixedLength
 		if negLen > 0 {
-			for i := 0; i < len(memberTypes); i++ {
+			for i := range memberTypes {
 				index := indices[i]
 				if index >= negLen {
 					break
@@ -278,17 +268,14 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 				}
 			}
 		}
-		for i := 0; i < len(memberTypes); i++ {
+		for i := range memberTypes {
 			d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				// Clone the slice
 				t := make([]SemType, len(memberTypes))
 				copy(t, memberTypes)
 				t[i] = d
-				nReq := nRequired
-				if i+1 > nRequired {
-					nReq = i + 1
-				}
+				nReq := max(i+1, nRequired)
 				if listInhabited(cx, indices, t, nReq, neg.Next) {
 					return true
 				}
@@ -337,10 +324,7 @@ func fixedArrayAnyEmpty(cx Context, array FixedLengthArray) bool {
 func fixedArrayGet(members FixedLengthArray, index int) CellSemType {
 	// migrated from ListOps.java:424:5
 	memberLen := len(members.Initial)
-	i := index
-	if memberLen-1 < index {
-		i = memberLen - 1
-	}
+	i := min(memberLen-1, index)
 	return members.Initial[i]
 }
 
@@ -362,7 +346,7 @@ func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest CellSemType, 
 		initLen := len(fixedArray.Initial)
 		fixedLen := fixedArray.FixedLength
 		if fixedLen != 0 {
-			for i := 0; i < initLen; i++ {
+			for i := range initLen {
 				if IntSubtypeContains(key, int64(i)) {
 					m = Union(m, CellInner(fixedArrayGet(fixedArray, i)))
 				}

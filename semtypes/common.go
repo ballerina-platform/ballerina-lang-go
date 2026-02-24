@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type (
 	bddPredicate        func(cx Context, posList *Conjunction, negList *Conjunction) bool
 	bddIsEmptyPredicate func(cx Context, b Bdd) bool
@@ -28,9 +26,9 @@ func bddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate b
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEvery(cx, bn.Left(), common.ToPointer(And(bn.Atom(), pos)), neg, predicate) &&
+		return bddEvery(cx, bn.Left(), new(And(bn.Atom(), pos)), neg, predicate) &&
 			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEvery(cx, bn.Right(), pos, common.ToPointer(And(bn.Atom(), neg)), predicate)
+			bddEvery(cx, bn.Right(), pos, new(And(bn.Atom(), neg)), predicate)
 	}
 }
 

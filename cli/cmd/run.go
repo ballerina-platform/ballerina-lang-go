@@ -139,16 +139,14 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 			logWriter = os.Stderr
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if runOpts.logFile != "" {
 				defer logWriter.Close()
 			}
 			for msg := range debugCtx.Channel {
 				fmt.Fprintf(logWriter, "%s\n", msg)
 			}
-		}()
+		})
 
 		// Ensure debug context cleanup on any exit path
 		defer func() {

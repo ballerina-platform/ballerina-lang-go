@@ -35,7 +35,7 @@ type PackageCompilation struct {
 	pluginDiagnostics     []diagnostics.Diagnostic
 	diagnosticResult      DiagnosticResult
 	compileOnce           sync.Once
-	compilerPluginManager interface{} // TODO(P6): CompilerPluginManager once plugin system is migrated
+	compilerPluginManager any // TODO(P6): CompilerPluginManager once plugin system is migrated
 }
 
 // newPackageCompilation creates a PackageCompilation and triggers compilation.
@@ -87,7 +87,7 @@ func (c *PackageCompilation) compileModulesInternal() {
 		// Each goroutine has panic recovery to convert panics to diagnostics.
 		var wg sync.WaitGroup
 		var panicsMu sync.Mutex
-		var panics []interface{}
+		var panics []any
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			wg.Add(1)
 			go func(m *moduleContext) {
@@ -146,7 +146,7 @@ func (c *PackageCompilation) DiagnosticResult() DiagnosticResult {
 // SemanticModel returns the semantic model for the specified module.
 // TODO(P6): Implement when SemanticModel/BallerinaSemanticModel is migrated.
 // Java source: PackageCompilation.getSemanticModel(ModuleId)
-func (c *PackageCompilation) SemanticModel(moduleID ModuleID) interface{} {
+func (c *PackageCompilation) SemanticModel(moduleID ModuleID) any {
 	// TODO(P6): Return *SemanticModel once the type is implemented.
 	return nil
 }
@@ -154,7 +154,7 @@ func (c *PackageCompilation) SemanticModel(moduleID ModuleID) interface{} {
 // CodeActionManager returns the code action manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCodeActionManager()
-func (c *PackageCompilation) CodeActionManager() interface{} {
+func (c *PackageCompilation) CodeActionManager() any {
 	// TODO(P6): Return CodeActionManager once the type is implemented.
 	return nil
 }
@@ -162,7 +162,7 @@ func (c *PackageCompilation) CodeActionManager() interface{} {
 // CompletionManager returns the completion manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCompletionManager()
-func (c *PackageCompilation) CompletionManager() interface{} {
+func (c *PackageCompilation) CompletionManager() any {
 	// TODO(P6): Return CompletionManager once the type is implemented.
 	return nil
 }
@@ -182,7 +182,7 @@ func (c *PackageCompilation) getPackageContext() *packageContext {
 // getCompilerPluginManager returns the compiler plugin manager.
 // TODO(P6): Return CompilerPluginManager once the type is implemented.
 // Java source: PackageCompilation.compilerPluginManager()
-func (c *PackageCompilation) getCompilerPluginManager() interface{} {
+func (c *PackageCompilation) getCompilerPluginManager() any {
 	return c.compilerPluginManager
 }
 

@@ -45,7 +45,7 @@ func Diff(t1, t2 SemType) SemType {
 	var all1, all2, some1, some2 int
 	if b1, ok := t1.(*BasicTypeBitSet); ok {
 		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return common.ToPointer(BasicTypeBitSetFrom(b1.bitset & ^b2.bitset))
+			return new(BasicTypeBitSetFrom(b1.bitset & ^b2.bitset))
 		} else {
 			if b1.bitset == 0 {
 				return t1
@@ -62,7 +62,7 @@ func Diff(t1, t2 SemType) SemType {
 		some1 = c1.Some()
 		if b2, ok := t2.(*BasicTypeBitSet); ok {
 			if b2.bitset == VT_MASK {
-				return common.ToPointer(BasicTypeBitSetFrom(0))
+				return new(BasicTypeBitSetFrom(0))
 			}
 			all2 = b2.bitset
 			some2 = 0
@@ -77,7 +77,7 @@ func Diff(t1, t2 SemType) SemType {
 	someBitSet = someBitSet & ^all.bitset
 	some := BasicTypeBitSetFrom(someBitSet)
 	if some.bitset == 0 {
-		return common.ToPointer(basicTypeUnion(all.bitset))
+		return new(basicTypeUnion(all.bitset))
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -100,7 +100,7 @@ func Diff(t1, t2 SemType) SemType {
 		}
 	}
 	if len(subtypes) == 0 {
-		return common.ToPointer(all)
+		return new(all)
 	}
 	return CreateComplexSemType(all.bitset, subtypes...)
 }
@@ -140,7 +140,7 @@ func Union(t1, t2 SemType) SemType {
 	var all1, all2, some1, some2 int
 	if b1, ok := t1.(*BasicTypeBitSet); ok {
 		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return common.ToPointer(BasicTypeBitSetFrom(b1.bitset | b2.bitset))
+			return new(BasicTypeBitSetFrom(b1.bitset | b2.bitset))
 		} else {
 			complexT2 := t2.(ComplexSemType)
 			all2 = complexT2.All()
@@ -164,7 +164,7 @@ func Union(t1, t2 SemType) SemType {
 	all := BasicTypeBitSetFrom(all1 | all2)
 	some := BasicTypeBitSetFrom((some1 | some2) & ^all.bitset)
 	if some.bitset == 0 {
-		return common.ToPointer(basicTypeUnion(all.bitset))
+		return new(basicTypeUnion(all.bitset))
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -187,7 +187,7 @@ func Union(t1, t2 SemType) SemType {
 		}
 	}
 	if len(subtypes) == 0 {
-		return common.ToPointer(all)
+		return new(all)
 	}
 	return CreateComplexSemType(all.bitset, subtypes...)
 }
@@ -197,7 +197,7 @@ func Intersect(t1, t2 SemType) SemType {
 	var all1, all2, some1, some2 int
 	if b1, ok := t1.(*BasicTypeBitSet); ok {
 		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return common.ToPointer(BasicTypeBitSetFrom(b1.bitset & b2.bitset))
+			return new(BasicTypeBitSetFrom(b1.bitset & b2.bitset))
 		} else {
 			if b1.bitset == 0 {
 				return t1
@@ -234,7 +234,7 @@ func Intersect(t1, t2 SemType) SemType {
 	some := BasicTypeBitSetFrom((some1 | all1) & (some2 | all2))
 	some = BasicTypeBitSetFrom(some.bitset & ^all.bitset)
 	if some.bitset == 0 {
-		return common.ToPointer(basicTypeUnion(all.bitset))
+		return new(basicTypeUnion(all.bitset))
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -254,7 +254,7 @@ func Intersect(t1, t2 SemType) SemType {
 		}
 	}
 	if len(subtypes) == 0 {
-		return common.ToPointer(all)
+		return new(all)
 	}
 	return CreateComplexSemType(all.bitset, subtypes...)
 }
@@ -430,7 +430,7 @@ func bddListAllRanges(cx Context, b Bdd, accum []Range) []Range {
 func distinctRanges(range1, range2 []Range) []Range {
 	combined := CombineRanges(range1, range2)
 	rangeResult := make([]Range, len(combined))
-	for i := 0; i < len(combined); i++ {
+	for i := range combined {
 		rangeResult[i] = combined[i].Range
 	}
 	return rangeResult
@@ -525,7 +525,7 @@ func ListAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 	fixedLength := int64(atomicType.Members.FixedLength)
 	if initialLength != 0 {
 		types = append(types, initial...)
-		for i := int64(0); i < initialLength; i++ {
+		for i := range initialLength {
 			ranges = append(ranges, RangeFrom(i, i))
 		}
 		if initialLength < fixedLength {
@@ -939,9 +939,9 @@ func CreateServiceObject(context Context) SemType {
 func CreateBasicSemType(typeCode BasicTypeCode, subtypeData SubtypeData) SemType {
 	if _, ok := subtypeData.(AllOrNothingSubtype); ok {
 		if isAllSubtype(subtypeData) {
-			return common.ToPointer(BasicTypeBitSetFrom(1 << typeCode.Code))
+			return new(BasicTypeBitSetFrom(1 << typeCode.Code))
 		} else {
-			return common.ToPointer(BasicTypeBitSetFrom(0))
+			return new(BasicTypeBitSetFrom(0))
 		}
 	} else {
 		return CreateComplexSemType(0,
