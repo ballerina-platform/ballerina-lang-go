@@ -283,6 +283,8 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return breakStatement(ctx, curBB, stmt)
 	case *ast.BLangContinue:
 		return continueStatement(ctx, curBB, stmt)
+	case *ast.BLangPanic:
+		return panicStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
@@ -432,6 +434,13 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
 	curBB.Terminator = &Return{}
+	return statementEffect{}
+}
+
+func panicStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangPanic) statementEffect {
+	errorEffect := handleExpression(ctx, curBB, stmt.Expr)
+	curBB = errorEffect.block
+	curBB.Terminator = &Panic{ErrorOp: errorEffect.result}
 	return statementEffect{}
 }
 

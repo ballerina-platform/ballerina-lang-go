@@ -145,6 +145,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintTypeCast(instruction.(*TypeCast))
 	case *TypeTest:
 		return p.PrintTypeTest(instruction.(*TypeTest))
+	case *Panic:
+		return p.PrintPanic(instruction.(*Panic))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -215,6 +217,10 @@ func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 
 func (p *PrettyPrinter) PrintReturn(r *Return) string {
 	return "return;"
+}
+
+func (p *PrettyPrinter) PrintPanic(pa *Panic) string {
+	return fmt.Sprintf("panic %s;", p.PrintOperand(*pa.ErrorOp))
 }
 
 func (p *PrettyPrinter) PrintBranch(b *Branch) string {

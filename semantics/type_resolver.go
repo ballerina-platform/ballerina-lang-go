@@ -120,6 +120,8 @@ func (t *TypeResolver) resolveStatement(stmt ast.BLangStatement) {
 		if s.Expr != nil {
 			t.resolveExpression(s.Expr)
 		}
+	case *ast.BLangPanic:
+		t.resolveExpression(s.Expr)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		// No expressions to resolve
 	default:

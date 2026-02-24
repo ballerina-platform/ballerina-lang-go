@@ -85,6 +85,9 @@ var (
 		"subset5/05-error/constructor-1-e.bal",
 		"subset5/05-error/constructor-2-e.bal",
 		"subset5/05-error/simple-v.bal",
+		"subset5/05-error/panic1-p.bal",
+		"subset5/05-error/panic2-p.bal",
+		"subset5/05-error/panic3-p.bal",
 	})
 
 	printlnOutputs = make(map[string]string)
