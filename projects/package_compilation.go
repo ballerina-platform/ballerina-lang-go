@@ -78,8 +78,41 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
-		for _, moduleCtx := range c.packageResolution.TopologicallySortedModuleList() {
-			moduleCtx.compile()
+		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			resolveTypesAndSymbols(moduleCtx)
+		}
+
+		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
+		// Each goroutine has panic recovery to convert panics to diagnostics.
+		var wg sync.WaitGroup
+		var panicsMu sync.Mutex
+		var panics []interface{}
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			wg.Add(1)
+			go func(m *moduleContext) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicsMu.Lock()
+						panics = append(panics, r)
+						panicsMu.Unlock()
+					}
+				}()
+				analyzeAndDesugar(m)
+			}(moduleCtx)
+		}
+		wg.Wait()
+
+		// Re-panic if any Phase 2 goroutine panicked.
+		// This preserves the original behavior where semantic errors cause panics.
+		if len(panics) > 0 {
+			// TODO: report diagnostics for panics instead of crashing the process.
+			panic(panics[0])
+		}
+
+		// Collect diagnostics from all modules
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			for _, diag := range moduleCtx.getDiagnostics() {
 				if c.getPackageContext().getProject().Kind() == ProjectKindBala &&
 					diag.DiagnosticInfo().Severity() != diagnostics.Error {

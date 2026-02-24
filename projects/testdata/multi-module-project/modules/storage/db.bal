@@ -16,6 +16,6 @@
 
 import ballerina/io;
 
-public function main() {
-    io:println(hello());
+public function initDatabase() {
+    io:println("DB initialized");
 }
