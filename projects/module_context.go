@@ -194,9 +194,9 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 	return slices.Clone(m.moduleDescDependencies)
 }
 
-// compilePhase1 performs parsing, AST building, symbol resolution, and type resolution.
+// resolveTypesAndSymbols performs parsing, AST building, symbol resolution, and type resolution.
 // This phase must run sequentially respecting module dependencies.
-func compilePhase1(moduleCtx *moduleContext) {
+func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 
 	// Parse all source and test documents in parallel.
@@ -228,9 +228,9 @@ func compilePhase1(moduleCtx *moduleContext) {
 	typeResolver.ResolveTypes(compilerCtx, pkgNode)
 }
 
-// compilePhase2 performs CFG creation, semantic analysis, and CFG analysis.
+// analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
 // This phase can run in parallel across modules after all modules complete Phase 1.
-func compilePhase2(moduleCtx *moduleContext) {
+func analyzeAndDesugar(moduleCtx *moduleContext) {
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
 		return
 	}

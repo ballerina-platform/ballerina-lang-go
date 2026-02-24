@@ -80,7 +80,7 @@ func (c *PackageCompilation) compileModulesInternal() {
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
-			compilePhase1(moduleCtx)
+			resolveTypesAndSymbols(moduleCtx)
 		}
 
 		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
@@ -99,7 +99,7 @@ func (c *PackageCompilation) compileModulesInternal() {
 						panicsMu.Unlock()
 					}
 				}()
-				compilePhase2(m)
+				analyzeAndDesugar(m)
 			}(moduleCtx)
 		}
 		wg.Wait()
