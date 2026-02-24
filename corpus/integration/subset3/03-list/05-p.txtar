@@ -1,0 +1,5 @@
+-- stdout --
+Runtime: invalid array index: -1
+
+-- stderr --
+

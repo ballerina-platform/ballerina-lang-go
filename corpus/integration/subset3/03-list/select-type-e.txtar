@@ -1,0 +1,21 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: ambiguous inherent type for list constructor
+  --> select-type-e.bal:20:24
+   |
+20 |     int[]|string[] x = []; // @error
+   |                        ^^
+
+internal[INTERNAL_ERROR]: expression type not resolved for *ast.BLangListConstructorExpr
+  --> select-type-e.bal:20:24
+   |
+20 |     int[]|string[] x = []; // @error
+   |                        ^^
+
+internal[INTERNAL_ERROR]: expression type not resolved for *ast.BLangListConstructorExpr
+  --> select-type-e.bal:20:24
+   |
+20 |     int[]|string[] x = []; // @error
+   |                        ^^
+

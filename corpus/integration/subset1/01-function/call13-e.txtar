@@ -1,0 +1,21 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: Unreachable code
+  --> call13-e.bal:23:5
+   |
+23 |     int y = 2; // @error
+   |     ^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: unreachable code
+  --> call13-e.bal:23:5
+   |
+23 |     int y = 2; // @error
+   |     ^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: unreachable code
+  --> call13-e.bal:24:5
+   |
+24 |     _ = y;
+   |     ^^^^^^
+

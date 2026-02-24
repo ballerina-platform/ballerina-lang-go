@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: 'main' function must be public
+  --> main1-e.bal:19:1
+   |
+19 | function main() { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

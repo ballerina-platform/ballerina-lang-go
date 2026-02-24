@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
+  --> 4-e.bal:19:13
+   |
+19 |     int n = <int>true; // @error
+   |             ^^^^^^^^^
+
+error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
+  --> 4-e.bal:19:13
+   |
+19 |     int n = <int>true; // @error
+   |             ^^^^^^^^^
+

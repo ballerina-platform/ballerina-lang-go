@@ -1,0 +1,5 @@
+-- stdout --
+panic: interface conversion: semtypes.AllOrNothingSubtype is not semtypes.BddNode: missing method Atom
+
+-- stderr --
+

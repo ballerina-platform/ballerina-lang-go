@@ -1,0 +1,21 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: unsupported container type for index based access
+  --> 17-e.bal:21:5
+   |
+21 |     x[0] = 5; // @error
+   |     ^^^^
+
+error[SEMANTIC_ERROR]: incompatible type for index based access
+  --> 17-e.bal:21:5
+   |
+21 |     x[0] = 5; // @error
+   |     ^^^^
+
+error[SEMANTIC_ERROR]: incompatible type for index based access
+  --> 17-e.bal:21:5
+   |
+21 |     x[0] = 5; // @error
+   |     ^^^^
+

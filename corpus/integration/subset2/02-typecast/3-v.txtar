@@ -1,0 +1,9 @@
+-- stdout --
+1
+nil
+true
+2
+false
+
+-- stderr --
+

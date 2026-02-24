@@ -1,0 +1,5 @@
+-- stdout --
+panic: GenericSymbol must be Monomorphized
+
+-- stderr --
+

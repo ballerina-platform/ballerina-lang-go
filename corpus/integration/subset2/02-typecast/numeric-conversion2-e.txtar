@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
+  --> numeric-conversion2-e.bal:20:21
+   |
+20 |     int|decimal i = <int|decimal>f; // @error
+   |                     ^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
+  --> numeric-conversion2-e.bal:20:21
+   |
+20 |     int|decimal i = <int|decimal>f; // @error
+   |                     ^^^^^^^^^^^^^^
+

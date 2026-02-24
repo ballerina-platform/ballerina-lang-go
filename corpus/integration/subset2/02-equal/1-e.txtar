@@ -1,0 +1,21 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible types for ==
+  --> 1-e.bal:21:12
+   |
+21 |     ignore(b == x); // @error
+   |            ^^^^^^
+
+error[SEMANTIC_ERROR]: incompatible types for ==
+  --> 1-e.bal:21:12
+   |
+21 |     ignore(b == x); // @error
+   |            ^^^^^^
+
+error[SEMANTIC_ERROR]: incompatible types for ==
+  --> 1-e.bal:21:12
+   |
+21 |     ignore(b == x); // @error
+   |            ^^^^^^
+

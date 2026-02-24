@@ -1,0 +1,11 @@
+-- stdout --
+[]
+[true]
+[nil]
+[-17]
+[false,nil,43]
+[[[[[[]]]]]]
+[false,[1,true,21],0]
+
+-- stderr --
+

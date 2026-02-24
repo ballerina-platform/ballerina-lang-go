@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: expect anydata types for !=
+  --> 4-e.bal:23:8
+   |
+23 |     if x != y { // @error
+   |        ^^^^^^
+
+error[SEMANTIC_ERROR]: expect anydata types for !=
+  --> 4-e.bal:23:8
+   |
+23 |     if x != y { // @error
+   |        ^^^^^^
+

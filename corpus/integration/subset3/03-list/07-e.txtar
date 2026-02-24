@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((BOOLEAN), ())
+  --> 07-e.bal:19:14
+   |
+19 |     return x[i]; // @error
+   |              ^
+
+error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((BOOLEAN), ())
+  --> 07-e.bal:19:14
+   |
+19 |     return x[i]; // @error
+   |              ^
+

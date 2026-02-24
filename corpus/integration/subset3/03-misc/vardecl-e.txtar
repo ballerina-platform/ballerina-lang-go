@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: Variable already defined: x
+  --> vardecl-e.bal:22:5
+   |
+22 |     int x = 2; // @error
+   |     ^^^^^^^^^^
+

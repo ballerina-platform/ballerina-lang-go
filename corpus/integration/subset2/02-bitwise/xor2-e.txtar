@@ -1,0 +1,21 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: expect integer types for bitwise operators
+  --> xor2-e.bal:22:16
+   |
+22 |     io:println(i ^ j); // @error
+   |                ^^^^^
+
+error[SEMANTIC_ERROR]: expect integer types for bitwise operators
+  --> xor2-e.bal:22:16
+   |
+22 |     io:println(i ^ j); // @error
+   |                ^^^^^
+
+error[SEMANTIC_ERROR]: expect integer types for bitwise operators
+  --> xor2-e.bal:22:16
+   |
+22 |     io:println(i ^ j); // @error
+   |                ^^^^^
+

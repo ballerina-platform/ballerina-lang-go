@@ -17,10 +17,11 @@
 package corpus
 
 import (
+	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,6 +35,8 @@ import (
 	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
+
+	"golang.org/x/tools/txtar"
 )
 
 const (
@@ -42,21 +45,18 @@ const (
 	colorRed    = "\033[31m"
 	colorYellow = "\033[33m"
 
-	corpusBalBaseDir = "../corpus/bal"
+	corpusBalBaseDir         = "../corpus/bal"
+	corpusIntegrationBaseDir = "../corpus/integration"
 
 	externOrgName    = "ballerina"
 	externModuleName = "io"
 	externFuncName   = "println"
 
 	panicPrefix = "panic: "
-
-	expectedCompileErrorMsg = "compile-time error (diagnostics)"
 )
 
 var (
-	outputRegex = regexp.MustCompile(`//\s*@output\s*(.*)`)
-	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
-	errorRegex  = regexp.MustCompile(`//\s*@error`)
+	update = flag.Bool("update", false, "update corpus integration test outputs")
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
@@ -87,9 +87,6 @@ var (
 		"subset5/05-record/inclusion-dup-override-v.bal",
 		"subset5/05-record/inclusion-rest-v.bal",
 	})
-
-	printlnOutputs = make(map[string]string)
-	printlnMu      sync.Mutex
 )
 
 type failedTest struct {
@@ -97,15 +94,15 @@ type failedTest struct {
 }
 
 type testResult struct {
-	success  bool
-	expected string
-	actual   string
+	success        bool
+	expectedStdout string
+	actualStdout   string
+	expectedStderr string
+	actualStderr   string
 }
 
 func TestIntegrationSuite(t *testing.T) {
-	var passedTotal, failedTotal, skippedTotal int
-	var failedTests []failedTest
-	var resultsMu sync.Mutex
+	flag.Parse()
 
 	corpusBalDir := corpusBalBaseDir
 	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
@@ -114,20 +111,32 @@ func TestIntegrationSuite(t *testing.T) {
 
 	balFiles := findBalFiles(corpusBalDir)
 
+	var passedTotal, failedTotal, skippedTotal int
+	var failedTests []failedTest
+	var resultsMu sync.Mutex
 	var wg sync.WaitGroup
 
 	for _, balFile := range balFiles {
 		if isFileSkipped(balFile) {
 			skippedTotal++
 			relPath, _ := filepath.Rel(corpusBalDir, balFile)
-			filePath := buildFilePath(relPath)
+			filePath := buildFilePath(filepath.ToSlash(relPath))
 			fmt.Printf("\t--- %sSKIPPED%s: %s\n", colorYellow, colorReset, filePath)
 			continue
 		}
-		relPath, _ := filepath.Rel(corpusBalDir, balFile)
+
+		relPath, err := filepath.Rel(corpusBalDir, balFile)
+		if err != nil {
+			t.Fatalf("failed to compute relative path for %s: %v", balFile, err)
+		}
+		relPath = filepath.ToSlash(relPath)
 		filePath := buildFilePath(relPath)
+
+		txtarRel := strings.TrimSuffix(relPath, ".bal") + ".txtar"
+		txtarPath := filepath.Join(corpusIntegrationBaseDir, filepath.FromSlash(txtarRel))
+
 		wg.Add(1)
-		go func(balFile, filePath, relPath string) {
+		go func(balFile, filePath, relPath, txtarPath string) {
 			defer wg.Done()
 
 			defer func() {
@@ -145,23 +154,62 @@ func TestIntegrationSuite(t *testing.T) {
 			}()
 
 			fmt.Printf("\t=== RUN   %s\n", filePath)
-			result := runTest(balFile)
+
+			if *update {
+				stdout, stderr := runIntegrationCase(balFile)
+				if err := updateIntegrationTestCase(txtarPath, stdout, stderr); err != nil {
+					resultsMu.Lock()
+					defer resultsMu.Unlock()
+
+					failedTotal++
+					fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
+					fmt.Printf("\t\tfailed to update txtar: %v\n", err)
+					failedTests = append(failedTests, failedTest{
+						relPath: filepath.ToSlash(relPath),
+					})
+					return
+				}
+
+				resultsMu.Lock()
+				passedTotal++
+				fmt.Printf("\t--- %sPASS%s: %s (updated)\n", colorGreen, colorReset, filePath)
+				resultsMu.Unlock()
+				return
+			}
+
+			expectedStdout, expectedStderr, err := loadExpectedFromTxtar(txtarPath)
+			if err != nil {
+				resultsMu.Lock()
+				defer resultsMu.Unlock()
+
+				failedTotal++
+				fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
+				fmt.Printf("\t\tfailed to load expected outputs from %s: %v\n", txtarPath, err)
+				failedTests = append(failedTests, failedTest{
+					relPath: filepath.ToSlash(relPath),
+				})
+				return
+			}
 
 			resultsMu.Lock()
 			defer resultsMu.Unlock()
 
+			result := runTest(balFile, expectedStdout, expectedStderr)
 			if result.success {
 				passedTotal++
 				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
-			} else {
-				failedTotal++
-				printTestFailure(filePath, result)
-				failedTests = append(failedTests, failedTest{
-					relPath: filepath.ToSlash(relPath),
-				})
+				return
 			}
-		}(balFile, filePath, relPath)
+
+			failedTotal++
+			fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
+			printTestFailure(result)
+			failedTests = append(failedTests, failedTest{
+				relPath: filepath.ToSlash(relPath),
+			})
+		}(balFile, filePath, relPath, txtarPath)
 	}
+
 	wg.Wait()
 
 	total := passedTotal + failedTotal + skippedTotal
@@ -171,22 +219,76 @@ func TestIntegrationSuite(t *testing.T) {
 	}
 }
 
-func runTest(balFile string) testResult {
-	expectedOutput := readExpectedOutput(balFile)
-	expectedPanic := readExpectedPanic(balFile)
-	isExpectedErrorTest := strings.HasSuffix(filepath.Base(balFile), "-e.bal") || hasError(balFile)
+func loadExpectedFromTxtar(txtarPath string) (expectedStdout, expectedStderr string, err error) {
+	archive, err := txtar.ParseFile(txtarPath)
+	if err != nil {
+		return "", "", err
+	}
 
-	compileFailed, compilePanicValue, birPkg := runCompilePhase(balFile)
-	panicOccurred, panicValue, printlnStr := runInterpretPhase(balFile, compileFailed, birPkg)
+	var stdoutFound, stderrFound bool
+	for _, f := range archive.Files {
+		switch f.Name {
+		case "stdout":
+			expectedStdout = string(f.Data)
+			stdoutFound = true
+		case "stderr":
+			expectedStderr = string(f.Data)
+			stderrFound = true
+		default:
+			return "", "", fmt.Errorf("unexpected file %q (only stdout/stderr are allowed)", f.Name)
+		}
+	}
 
-	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, isExpectedErrorTest, compileFailed, compilePanicValue)
+	if !stdoutFound || !stderrFound {
+		return "", "", fmt.Errorf("missing required files (need stdout and stderr)")
+	}
+
+	return expectedStdout, expectedStderr, nil
 }
 
-func runCompilePhase(balFile string) (failed bool, panicVal any, pkg *bir.BIRPackage) {
+func runTest(balFile string, expectedStdout, expectedStderr string) testResult {
+	actualStdout, actualStderr := runIntegrationCase(balFile)
+	return evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr)
+}
+
+func runIntegrationCase(balFile string) (stdout, stderr string) {
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
+
+	birPkg, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
+	if birPkg != nil && compileErr != nil {
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	runInterpretPhase(birPkg, &stdoutBuf)
+	return stdoutBuf.String(), stderrBuf.String()
+}
+
+func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
+	expectedStdoutNorm := normalizeOutput(expectedStdout)
+	expectedStderrNorm := normalizeOutput(expectedStderr)
+	actualStdoutNorm := normalizeOutput(actualStdout)
+	actualStderrNorm := normalizeOutput(actualStderr)
+
+	stdoutMatchesExpected := actualStdoutNorm == expectedStdoutNorm
+	stderrMatchesExpected := actualStderrNorm == expectedStderrNorm
+
+	return testResult{
+		success:        stdoutMatchesExpected && stderrMatchesExpected,
+		expectedStdout: expectedStdout,
+		actualStdout:   actualStdout,
+		expectedStderr: expectedStderr,
+		actualStderr:   actualStderr,
+	}
+}
+
+func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			failed = true
-			panicVal = r
+			msg := fmt.Sprintf("%v", r)
+			msg = strings.TrimPrefix(msg, panicPrefix)
+			fmt.Fprintf(stdoutBuf, "%s%s\n", panicPrefix, msg)
+			err = fmt.Errorf("compile panic")
 		}
 	}()
 
@@ -194,188 +296,38 @@ func runCompilePhase(balFile string) (failed bool, panicVal any, pkg *bir.BIRPac
 
 	result, err := directory.LoadProject(fsys, filepath.Base(balFile))
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
 	}
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
+
+	projects.PrintDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult())
 	if compilation.DiagnosticResult().HasErrors() {
-		failed = true
+		return nil, nil
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	return backend.BIR(), nil
+}
+
+func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf *bytes.Buffer) {
+	if birPkg == nil {
 		return
 	}
-	backend := projects.NewBallerinaBackend(compilation)
-	pkg = backend.BIR()
-	return
-}
-
-func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackage) (panicOccurred bool, panicValue any, output string) {
-	if compileFailed || birPkg == nil {
-		return false, nil, ""
-	}
-
-	printlnMu.Lock()
-	printlnOutputs[balFile] = ""
-	printlnMu.Unlock()
-
-	defer func() {
-		if r := recover(); r != nil {
-			panicOccurred = true
-			panicValue = r
-		}
-	}()
-
 	rt := runtime.NewRuntime()
-	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(balFile))
+	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
 	if err := rt.Interpret(*birPkg); err != nil {
-		panicOccurred = true
-		panicValue = err
-	}
-
-	printlnMu.Lock()
-	output = printlnOutputs[balFile]
-	delete(printlnOutputs, balFile)
-	printlnMu.Unlock()
-
-	return
-}
-
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue any, isExpectedErrorTest, compileFailed bool, compilePanicValue any) testResult {
-	if expectedPanic != "" {
-		if panicOccurred {
-			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
-			success := strings.Contains(panicStr, expectedPanic) || strings.Contains(outputStr, expectedPanic)
-			return testResult{
-				success:  success,
-				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-				actual:   fmt.Sprintf("%s%s", panicPrefix, panicStr),
-			}
-		}
-		if panicMsg := extractPanicFromOutput(outputStr, expectedPanic); panicMsg != "" {
-			success := strings.Contains(panicMsg, expectedPanic)
-			return testResult{
-				success:  success,
-				expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-				actual:   fmt.Sprintf("%s%s", panicPrefix, panicMsg),
-			}
-		}
-		return testResult{
-			success:  false,
-			expected: fmt.Sprintf("%s%s", panicPrefix, expectedPanic),
-			actual:   "no error detected",
-		}
-	}
-
-	if isExpectedErrorTest {
-		if compileFailed {
-			return testResult{success: true, expected: expectedOutput, actual: ""}
-		}
-		if panicOccurred {
-			return testResult{
-				success:  false,
-				expected: expectedCompileErrorMsg,
-				actual:   formatPanicActual(panicValue),
-			}
-		}
-		actual := trimNewline(outputStr)
-		if actual == "" {
-			actual = "program compiled and ran successfully (no output)"
-		}
-		return testResult{success: false, expected: expectedCompileErrorMsg, actual: actual}
-	}
-
-	if compileFailed {
-		return testResult{
-			success:  false,
-			expected: expectedOutput,
-			actual:   formatPanicActual(compilePanicValue),
-		}
-	}
-
-	if panicOccurred {
-		return testResult{
-			success:  false,
-			expected: expectedOutput,
-			actual:   formatPanicActual(panicValue),
-		}
-	}
-
-	expected := trimNewline(expectedOutput)
-	actual := trimNewline(outputStr)
-	success := actual == expected
-	return testResult{
-		success:  success,
-		expected: expected,
-		actual:   actual,
+		fmt.Fprintf(stdoutBuf, "Runtime: %v\n", err)
 	}
 }
 
-func trimNewline(s string) string {
+func normalizeOutput(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
 	return strings.TrimRight(s, "\n")
 }
 
-func extractPanicMessage(panicStr string) string {
-	if after, ok := strings.CutPrefix(panicStr, panicPrefix); ok {
-		return after
-	}
-	return panicStr
-}
-
-func formatPanicActual(panicValue any) string {
-	s := panicPrefix + extractPanicMessage(fmt.Sprintf("%v", panicValue))
-	if st, ok := panicValue.(interface{ Stack() []byte }); ok {
-		if stack := st.Stack(); len(stack) > 0 {
-			s += "\n" + string(stack)
-		}
-	}
-	return s
-}
-
-func extractPanicFromOutput(outputStr, expectedPanic string) string {
-	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
-		return ""
-	}
-	_, after, ok := strings.Cut(outputStr, panicPrefix)
-	if !ok {
-		return ""
-	}
-	panicMsg := strings.TrimSpace(after)
-	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
-		panicMsg = panicMsg[:newlineIdx]
-	}
-	return panicMsg
-}
-
-func readExpectedOutput(balFile string) string {
-	content := readFileContent(balFile)
-	matches := outputRegex.FindAllStringSubmatch(content, -1)
-	outputs := make([]string, 0, len(matches))
-	for _, m := range matches {
-		if len(m) > 1 {
-			outputs = append(outputs, strings.TrimSpace(m[1]))
-		}
-	}
-	return strings.Join(outputs, "\n")
-}
-
-func readExpectedPanic(balFile string) string {
-	content := readFileContent(balFile)
-	matches := panicRegex.FindStringSubmatch(content)
-	if len(matches) > 1 {
-		return strings.TrimSpace(matches[1])
-	}
-	return ""
-}
-
-func hasError(balFile string) bool {
-	content := readFileContent(balFile)
-	return errorRegex.MatchString(content)
-}
-
-func readFileContent(filePath string) string {
-	content, _ := os.ReadFile(filePath)
-	return string(content)
-}
-
-func capturePrintlnOutput(balFile string) func(args []values.BalValue) (values.BalValue, error) {
+func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) (values.BalValue, error) {
 	return func(args []values.BalValue) (values.BalValue, error) {
 		var b strings.Builder
 		visited := make(map[uintptr]bool)
@@ -386,9 +338,7 @@ func capturePrintlnOutput(balFile string) func(args []values.BalValue) (values.B
 			b.WriteString(valueToString(arg, visited))
 		}
 		b.WriteByte('\n')
-		printlnMu.Lock()
-		printlnOutputs[balFile] += b.String()
-		printlnMu.Unlock()
+		stdoutBuf.WriteString(b.String())
 
 		return nil, nil
 	}
@@ -479,6 +429,45 @@ func formatAnySlice(items []any, visited map[uintptr]bool) string {
 	return b.String()
 }
 
+func updateIntegrationTestCase(txtarPath, stdout, stderr string) error {
+	formatData := func(s string) []byte {
+		s = strings.ReplaceAll(s, "\r\n", "\n")
+		if s == "" {
+			return []byte("\n")
+		}
+		s = strings.TrimRight(s, "\n")
+		return fmt.Appendf(nil, "%s\n\n", s)
+	}
+
+	archive := &txtar.Archive{
+		Files: []txtar.File{
+			{Name: "stdout", Data: formatData(stdout)},
+			{Name: "stderr", Data: formatData(stderr)},
+		},
+	}
+
+	if err := os.MkdirAll(filepath.Dir(txtarPath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(txtarPath, txtar.Format(archive), 0o644)
+}
+
+func printTestFailure(result testResult) {
+	if result.expectedStdout != "" || result.actualStdout != "" {
+		fmt.Printf("\t\tstdout expected:\n")
+		printIndentedLines(result.expectedStdout, "\t\t\t")
+		fmt.Printf("\t\tstdout found:\n")
+		printIndentedLines(result.actualStdout, "\t\t\t")
+	}
+
+	if result.expectedStderr != "" || result.actualStderr != "" {
+		fmt.Printf("\t\tstderr expected:\n")
+		printIndentedLines(result.expectedStderr, "\t\t\t")
+		fmt.Printf("\t\tstderr found:\n")
+		printIndentedLines(result.actualStderr, "\t\t\t")
+	}
+}
+
 func printFinalSummary(total, passed, skipped, failed int, failedTests []failedTest) {
 	fmt.Printf("%d RUN\n", total)
 	if skipped > 0 {
@@ -499,17 +488,6 @@ func buildFilePath(relPath string) string {
 		return filepath.Base(relPath)
 	}
 	return relPath
-}
-
-func printTestFailure(filePath string, result testResult) {
-	fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
-	if result.expected == "" && result.actual == "" {
-		return
-	}
-	fmt.Printf("\t\texpected:\n")
-	printIndentedLines(result.expected, "\t\t\t")
-	fmt.Printf("\t\tfound:\n")
-	printIndentedLines(result.actual, "\t\t\t")
 }
 
 func printIndentedLines(text, indent string) {
