@@ -1102,7 +1102,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	} else if kind == common.NIL_LITERAL {
 		typeTag = model.TypeTags_NIL
 		value = nil
-		originalValue = balCommon.ToPointer(string(model.NIL_VALUE))
+		originalValue = new(string(model.NIL_VALUE))
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NULL_LITERAL {
 		originalValue = new("null")

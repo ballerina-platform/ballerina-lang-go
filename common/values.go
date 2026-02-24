@@ -16,9 +16,10 @@
 
 package common
 
-import "slices"
-
-import "iter"
+import (
+	"iter"
+	"slices"
+)
 
 type Optional[T any] struct {
 	value    T
@@ -51,11 +52,6 @@ func OptionalEmpty[T any]() Optional[T] {
 	return Optional[T]{
 		hasValue: false,
 	}
-}
-
-//go:fix inline
-func ToPointer[t any](v t) *t {
-	return new(v)
 }
 
 func Assert(condition bool) {
@@ -98,8 +94,10 @@ type (
 	}
 )
 
-var _ Set[any] = &UnorderedSet[any]{}
-var _ Set[any] = &OrderedSet[any]{}
+var (
+	_ Set[any] = &UnorderedSet[any]{}
+	_ Set[any] = &OrderedSet[any]{}
+)
 
 func (s *UnorderedSet[T]) Add(value T) {
 	if s.values == nil {
