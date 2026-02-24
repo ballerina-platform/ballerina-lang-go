@@ -23,10 +23,7 @@ import (
 )
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
-	opIndex := branchTerm.Op.Index
-	v := frame.GetOperand(opIndex)
-	cond := v.(bool)
-	if cond {
+	if frame.GetOperand(branchTerm.Op.Index).(bool) {
 		return branchTerm.TrueBB
 	}
 	return branchTerm.FalseBB
