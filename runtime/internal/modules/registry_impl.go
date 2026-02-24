@@ -26,7 +26,7 @@ import (
 type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
 	nativeFunctions map[string]*ExternFunction
-	typeCtx         semtypes.Context
+	typeEnv         semtypes.Env
 }
 
 func NewRegistry() *Registry {
@@ -46,12 +46,12 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 	return m
 }
 
-func (r *Registry) SetTypeCtx(cx semtypes.Context) {
-	r.typeCtx = cx
+func (r *Registry) SetTypeEnv(env semtypes.Env) {
+	r.typeEnv = env
 }
 
-func (r *Registry) GetTypeCtx() semtypes.Context {
-	return r.typeCtx
+func (r *Registry) GetTypeEnv() semtypes.Env {
+	return r.typeEnv
 }
 
 func (r *Registry) RegisterExternFunction(orgName string, moduleName string, funcName string, impl func(args []values.BalValue) (values.BalValue, error)) {

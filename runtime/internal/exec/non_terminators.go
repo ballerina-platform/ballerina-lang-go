@@ -78,7 +78,8 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 	sourceValue := frame.GetOperand(typeTest.RhsOp.Index)
 	valueType := values.SemTypeForValue(sourceValue)
-	typeCtx := reg.GetTypeCtx()
+	typeEnv := reg.GetTypeEnv()
+	typeCtx := semtypes.TypeCheckContext(typeEnv)
 	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
 	frame.SetOperand(typeTest.LhsOp.Index, matches)
 }
