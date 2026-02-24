@@ -45,7 +45,7 @@ type BType interface {
 	SetTypeData(ty model.TypeData)
 	GetTypeData() model.TypeData
 	BTypeGetTag() model.TypeTags
-	bTypeSetTag(tag model.TypeTags)
+	BTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
@@ -373,7 +373,7 @@ func (this *bLangTypeBase) SetTypeData(ty model.TypeData) {
 	this.ty = ty
 }
 
-func (this *bLangTypeBase) bTypeSetTag(tag model.TypeTags) {
+func (this *bLangTypeBase) BTypeSetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
@@ -401,7 +401,7 @@ func (this *BTypeBasic) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
-func (this *BTypeBasic) bTypeSetTag(tag model.TypeTags) {
+func (this *BTypeBasic) BTypeSetTag(tag model.TypeTags) {
 	this.tag = tag
 }
 

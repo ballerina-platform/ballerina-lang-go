@@ -251,10 +251,16 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 
 	switch bType.BTypeGetTag() {
 	case model.TypeTags_INT:
-		// INT literals are usually handled via BLangNumericLiteral path
-		// but we resolve the type here as well for completeness
-		value := n.GetValue().(int64)
-		ty = semtypes.IntConst(value)
+		switch v := n.GetValue().(type) {
+		case int64:
+			ty = semtypes.IntConst(v)
+		case float64:
+			bType.BTypeSetTag(model.TypeTags_FLOAT)
+			ty = semtypes.FloatConst(v)
+		default:
+			t.ctx.InternalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+			return
+		}
 	case model.TypeTags_BYTE:
 		value := n.GetValue().(int64)
 		ty = semtypes.IntConst(value)
@@ -404,6 +410,11 @@ func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semty
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	typeNode := node.TypeNode()
 	if typeNode == nil {
+		if node.Expr != nil {
+			exprTy := t.resolveExpression(node.Expr.(ast.BLangExpression))
+			setExpectedType(node, exprTy)
+			updateSymbolType(t.ctx, node, exprTy)
+		}
 		return
 	}
 
