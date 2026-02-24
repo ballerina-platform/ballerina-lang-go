@@ -1,0 +1,29 @@
+(ifElse
+  (bb0 () (bb1 bb2)
+    (simple-var-ref t)
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref b))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref n))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable n (type
+        (value-type int)) (expr
+        (type-conversion-expr
+          (invocation ifElse (
+            (literal true)
+            (literal true)
+            (literal 17)))
+          (value-type int)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref n))))
+  )
+)

@@ -1,0 +1,34 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad true
+    %2 = ConstantLoad true
+    %3 = ConstantLoad 17
+    %4 = ifElse(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = <((INT), ())>(%4)
+    n = %5;
+    %7 = println(n) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+ifElse<NIL>{
+  bb0 {
+    t ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = b;
+    return;
+  }
+  bb2 {
+    %0 = n;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}

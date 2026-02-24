@@ -59,6 +59,13 @@ func GetErrorTests(t *testing.T, kind TestKind) []TestCase {
 	})
 }
 
+// GetValidAndPanicTests returns all valid and panic test pairs for the given test kind
+func GetValidAndPanicTests(t *testing.T, kind TestKind) []TestCase {
+	return GetTests(t, kind, func(path string) bool {
+		return strings.HasSuffix(path, "-v.bal") || strings.HasSuffix(path, "-p.bal")
+	})
+}
+
 // GetTests returns test pairs for the given test kind, filtered by the provided function
 func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestCase {
 	inputBaseDirAlt := "bal"

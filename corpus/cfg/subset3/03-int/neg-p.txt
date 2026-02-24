@@ -1,0 +1,22 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable INT_MIN (type
+        (value-type int)) (expr
+        (binary-expr -
+          (unary-expr -
+            (literal 9223372036854775807))
+          (literal 1)))))
+    (expression-stmt
+      (invocation io println (
+        (invocation neg (
+          (simple-var-ref INT_MIN))))))
+  )
+)
+(neg
+  (bb0 () ()
+    (return
+      (unary-expr -
+        (simple-var-ref x)))
+  )
+)
