@@ -2119,8 +2119,7 @@ func (n *NodeBuilder) TransformModuleVariableDeclaration(moduleVariableDeclarati
 
 func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.TypeTestExpressionNode) BLangNode {
 	typeTestExpr := &BLangTypeTestExpr{}
-	typeTestExpr.isNegation =
-		typeTestExpressionNode.IsKeyword().Kind() == common.NOT_IS_KEYWORD
+	typeTestExpr.isNegation = typeTestExpressionNode.IsKeyword().Kind() == common.NOT_IS_KEYWORD
 	typeTestExpr.Expr = n.createExpression(typeTestExpressionNode.Expression())
 	typeTestExpr.Type = model.TypeData{TypeDescriptor: n.createTypeNode(typeTestExpressionNode.TypeDescriptor())}
 	typeTestExpr.SetPosition(getPosition(typeTestExpressionNode))
