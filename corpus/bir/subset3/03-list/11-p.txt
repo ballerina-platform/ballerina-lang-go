@@ -1,0 +1,37 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = newArray ((), (LIST))[%1]{}
+    v = %2;
+    %4 = ConstantLoad 1
+    val = %4;
+    %6 = ConstantLoad 0
+    i = %6;
+    GOTO bb1;
+  }
+  bb1 {
+    %9 = ConstantLoad 62
+    %8 = < i %9;
+    %8 ? bb2 : bb3;
+  }
+  bb2 {
+    %11 = ConstantLoad 2
+    %10 = * val %11;
+    val = %10;
+    %13 = ConstantLoad 1
+    %12 = + i %13;
+    i = %12;
+    GOTO bb1;
+  }
+  bb3 {
+    %14 = ConstantLoad 0
+    v[val] = %14;
+    %15 = v[val];
+    %16 = println(%15) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}

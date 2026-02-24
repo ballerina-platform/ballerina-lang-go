@@ -1,0 +1,16 @@
+module $anon.. v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad help
+    %2 = newError ((ERROR), ())(%1)
+    %3 = p(%2) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+p<NIL>{
+  bb0 {
+    panic e;
+  }
+}

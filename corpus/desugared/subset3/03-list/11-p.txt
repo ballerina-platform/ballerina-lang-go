@@ -1,0 +1,43 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable v (type
+          (array-type
+            (value-type any) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (var-def
+        (variable val (type
+          (value-type int)) (expr
+          (literal 1))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (literal 62))
+        (block-stmt
+          (assignment
+            (simple-var-ref val)
+            (binary-expr *
+              (simple-var-ref val)
+              (literal 2)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (literal 1)))))
+      (assignment
+        (index-based-access
+          (simple-var-ref v)
+          (simple-var-ref val))
+        (literal 0))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref v)
+            (simple-var-ref val))))))))
