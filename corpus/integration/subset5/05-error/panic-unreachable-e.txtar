@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unreachable code
+  --> panic-unreachable-e.bal:22:5
+   |
+22 |     io:println("foo"); // @error
+   |     ^^^^^^^^^^^^^^^^^^
+

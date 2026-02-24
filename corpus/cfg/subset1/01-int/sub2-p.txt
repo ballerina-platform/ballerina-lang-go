@@ -1,0 +1,22 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable INT_MAX (type
+        (value-type int)) (expr
+        (literal 9223372036854775807))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sub (
+          (simple-var-ref INT_MAX)
+          (unary-expr -
+            (literal 1)))))))
+  )
+)
+(sub
+  (bb0 () ()
+    (return
+      (binary-expr -
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

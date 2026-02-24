@@ -1,0 +1,24 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable INT_MIN (type
+          (value-type int)) (expr
+          (binary-expr -
+            (unary-expr -
+              (literal 9223372036854775807))
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation neg (
+            (simple-var-ref INT_MIN))))))))
+  (function neg (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (unary-expr -
+          (simple-var-ref x))))))
