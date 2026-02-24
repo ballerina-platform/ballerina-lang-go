@@ -291,13 +291,13 @@ type (
 	}
 
 	BLangMappingKey struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expr        BLangExpression
 		ComputedKey bool
 	}
 
 	BLangMappingKeyValueField struct {
-		BLangNodeBase
+		bLangNodeBase
 		Key       *BLangMappingKey
 		ValueExpr BLangExpression
 		Readonly  bool

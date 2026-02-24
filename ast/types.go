@@ -137,7 +137,7 @@ type (
 	}
 
 	BLangConstrainedType struct {
-		BLangTypeBase
+		bLangTypeBase
 		Type       model.TypeData
 		Constraint model.TypeData
 		Definition semtypes.Definition
