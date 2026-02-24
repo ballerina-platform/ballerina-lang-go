@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
@@ -70,9 +71,16 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
-	targetType := typeCast.Type
-	result := castValue(sourceValue, targetType)
+	result := castValue(sourceValue, typeCast.Type)
 	frame.SetOperand(typeCast.LhsOp.Index, result)
+}
+
+func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
+	sourceValue := frame.GetOperand(typeTest.RhsOp.Index)
+	valueType := values.SemTypeForValue(sourceValue)
+	typeCtx := reg.GetTypeCtx()
+	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
+	frame.SetOperand(typeTest.LhsOp.Index, matches)
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
