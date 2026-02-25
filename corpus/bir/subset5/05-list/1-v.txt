@@ -5,10 +5,13 @@ main<NIL>{
     %1 = ConstantLoad 1
     %2 = ConstantLoad 1.5
     %3 = ConstantLoad foo
-    %4 = ConstantLoad 3
-    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
-    foo = %5;
-    %7 = println(foo) -> bb1;
+    %4 = ConstantLoad true
+    %5 = ConstantLoad 1.23
+    %6 = <((DECIMAL), ())>(%5)
+    %7 = ConstantLoad 5
+    %8 = newArray ((), (LIST))[%7]{%1, %2, %3, %4, %6}
+    foo = %8;
+    %10 = println(foo) -> bb1;
   }
   bb1 {
     return;

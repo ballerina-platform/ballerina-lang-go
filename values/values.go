@@ -21,6 +21,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 )
 
 // Currently this is just an alias on any but I think we will need to add methods to this like type
@@ -82,10 +83,10 @@ func String(v BalValue, visited map[uintptr]bool) string {
 	if v == nil {
 		return ""
 	}
-	return formatValue(v, visited, true)
+	return toString(v, visited, true)
 }
 
-func formatValue(v BalValue, visited map[uintptr]bool, isDirect bool) string {
+func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 	switch t := v.(type) {
 	case nil:
 		return "null"
@@ -103,6 +104,11 @@ func formatValue(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return strconv.FormatFloat(t, 'g', -1, 64)
 	case bool:
 		return strconv.FormatBool(t)
+	case *big.Rat:
+		s := t.FloatString(20)
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+		return s
 	case *List:
 		return t.String(visited)
 	case *Map:

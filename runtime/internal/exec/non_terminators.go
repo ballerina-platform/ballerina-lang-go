@@ -181,8 +181,9 @@ func toDecimal(value any) *big.Rat {
 	case int64:
 		return big.NewRat(v, 1)
 	case float64:
+		s := strconv.FormatFloat(v, 'g', -1, 64)
 		r := new(big.Rat)
-		if r.SetFloat64(v) == nil {
+		if _, ok := r.SetString(s); !ok {
 			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
 		}
 		return r
@@ -192,12 +193,10 @@ func toDecimal(value any) *big.Rat {
 		if strings.Contains(v, "/") || !decimalStringRegex.MatchString(v) {
 			panic(fmt.Sprintf("cannot cast %v to decimal", v))
 		}
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
+		r := new(big.Rat)
+		if _, ok := r.SetString(v); !ok {
 			panic(fmt.Sprintf("cannot cast %v to decimal", v))
 		}
-		r := new(big.Rat)
-		r.SetFloat64(f)
 		return r
 	default:
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value))

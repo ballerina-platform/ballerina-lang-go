@@ -76,7 +76,7 @@ func (m *Map) String(visited map[uintptr]bool) string {
 		b.WriteString(fmt.Sprintf("%q", k))
 		b.WriteByte(':')
 		v := m.elems[k]
-		b.WriteString(formatValue(v, visited, false))
+		b.WriteString(toString(v, visited, false))
 	}
 	b.WriteByte('}')
 	return b.String()
