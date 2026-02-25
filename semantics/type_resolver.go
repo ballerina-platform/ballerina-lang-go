@@ -701,6 +701,10 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return t.resolveTypeConversionExpr(chain, e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(chain, e)
+	case *ast.BLangCheckedExpr:
+		return t.resolveCheckedExpr(chain, e)
+	case *ast.BLangCheckPanickedExpr:
+		return t.resolveCheckedExpr(chain, &e.BLangCheckedExpr)
 	case *ast.BLangNamedArgsExpression:
 		ty, effect, ok := t.resolveExpression(chain, e.Expr)
 		if !ok {
@@ -751,6 +755,20 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 		return resultTy, expressionEffect{ifTrue: falseChain, ifFalse: trueChain}, true
 	}
 	return resultTy, expressionEffect{ifTrue: trueChain, ifFalse: falseChain}, true
+}
+
+func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	errorIntersection := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if semtypes.IsEmpty(t.tyCtx, errorIntersection) {
+		e.IsRedundantChecking = true
+	}
+	resultTy := semtypes.Diff(exprTy, &semtypes.ERROR)
+	setExpectedType(e, resultTy)
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLangMappingConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
