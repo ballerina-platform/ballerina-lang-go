@@ -21,11 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
-	"unsafe"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/projects"
@@ -54,25 +52,12 @@ const (
 )
 
 var (
-	outputRegex = regexp.MustCompile(`//\s*@output\s*(.*)`)
+	outputRegex = regexp.MustCompile(`//\s*@output[ \t]*([^\n]*)`)
 	panicRegex  = regexp.MustCompile(`//\s*@panic\s+(.+)`)
 	errorRegex  = regexp.MustCompile(`//\s*@error`)
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{
-		"subset4/04-map/02-v.bal",
-		"subset4/04-map/04-v.bal",
-		"subset4/04-map/05-v.bal",
-		"subset4/04-map/06-v.bal",
-		"subset4/04-map/07-v.bal",
-		"subset4/04-map/08-v.bal",
-		"subset4/04-map/09-v.bal",
-		"subset4/04-map/11-v.bal",
-		"subset4/04-map/12-v.bal",
-		"subset4/04-map/simple-v.bal",
-		"subset4/04-map/union1-v.bal",
-		"subset4/04-map/union3-v.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 
 	printlnOutputs = make(map[string]string)
 	printlnMu      sync.Mutex
@@ -365,11 +350,8 @@ func capturePrintlnOutput(balFile string) func(args []values.BalValue) (values.B
 	return func(args []values.BalValue) (values.BalValue, error) {
 		var b strings.Builder
 		visited := make(map[uintptr]bool)
-		for i, arg := range args {
-			if i > 0 {
-				b.WriteByte(' ')
-			}
-			b.WriteString(valueToString(arg, visited))
+		for _, arg := range args {
+			b.WriteString(values.String(arg, visited))
 		}
 		b.WriteByte('\n')
 		printlnMu.Lock()
@@ -378,91 +360,6 @@ func capturePrintlnOutput(balFile string) func(args []values.BalValue) (values.B
 
 		return nil, nil
 	}
-}
-
-func valueToString(v values.BalValue, visited map[uintptr]bool) string {
-	if v == nil {
-		return "nil"
-	}
-	type stringer interface {
-		String() string
-	}
-	switch t := v.(type) {
-	case string:
-		return t
-	case int:
-		return strconv.Itoa(t)
-	case int8:
-		return strconv.FormatInt(int64(t), 10)
-	case int16:
-		return strconv.FormatInt(int64(t), 10)
-	case int32:
-		return strconv.FormatInt(int64(t), 10)
-	case int64:
-		return strconv.FormatInt(t, 10)
-	case uint:
-		return strconv.FormatUint(uint64(t), 10)
-	case uint8:
-		return strconv.FormatUint(uint64(t), 10)
-	case uint16:
-		return strconv.FormatUint(uint64(t), 10)
-	case uint32:
-		return strconv.FormatUint(uint64(t), 10)
-	case uint64:
-		return strconv.FormatUint(t, 10)
-	case float32:
-		return strconv.FormatFloat(float64(t), 'g', -1, 32)
-	case float64:
-		return strconv.FormatFloat(t, 'g', -1, 64)
-	case bool:
-		return strconv.FormatBool(t)
-	case *values.List:
-		if t == nil {
-			return "[]"
-		}
-		ptr := uintptr(unsafe.Pointer(t))
-		if visited[ptr] {
-			return "[...]"
-		}
-		// Check if this list contains itself (cycle detection before formatting)
-		for i := 0; i < t.Len(); i++ {
-			if item, ok := t.Get(i).(*values.List); ok {
-				if uintptr(unsafe.Pointer(item)) == ptr {
-					return "[...]"
-				}
-			}
-		}
-		visited[ptr] = true
-		var b strings.Builder
-		b.WriteByte('[')
-		for i := 0; i < t.Len(); i++ {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(valueToString(t.Get(i), visited))
-		}
-		b.WriteByte(']')
-		return b.String()
-	case []any:
-		return formatAnySlice(t, visited)
-	case stringer:
-		return t.String()
-	default:
-		return "<unsupported>"
-	}
-}
-
-func formatAnySlice(items []any, visited map[uintptr]bool) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i, item := range items {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(valueToString(item, visited))
-	}
-	b.WriteByte(']')
-	return b.String()
 }
 
 func printFinalSummary(total, passed, skipped, failed int, failedTests []failedTest) {
