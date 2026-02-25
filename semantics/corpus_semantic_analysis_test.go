@@ -182,7 +182,7 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 			t.Errorf("Semantic analysis panicked for %s: %v", testCase.InputPath, r)
 		}
 
-		if !cx.HasDiagnostics() {
+		if !cx.HasErrors() {
 			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
 			return
 		}

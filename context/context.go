@@ -82,31 +82,37 @@ func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.
 }
 
 func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
-	code := "UNIMPLEMENTED_ERROR"
-	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal), pos)
-	this.diagnostics = append(this.diagnostics, diagnostic)
+	this.addDiagnostic("UNIMPLEMENTED_ERROR", diagnostics.Internal, message, pos)
 }
 
 func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
-	code := "INTERNAL_ERROR"
-	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Internal), pos)
-	this.diagnostics = append(this.diagnostics, diagnostic)
+	this.addDiagnostic("INTERNAL_ERROR", diagnostics.Internal, message, pos)
 }
 
 func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
-	code := "SYNTAX_ERROR"
-	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error), pos)
-	this.diagnostics = append(this.diagnostics, diagnostic)
+	this.addDiagnostic("SYNTAX_ERROR", diagnostics.Error, message, pos)
 }
 
 func (this *CompilerContext) SemanticError(message string, pos diagnostics.Location) {
-	code := "SEMANTIC_ERROR"
-	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, diagnostics.Error), pos)
+	this.addDiagnostic("SEMANTIC_ERROR", diagnostics.Error, message, pos)
+}
+
+func (this *CompilerContext) addDiagnostic(code string, severity diagnostics.DiagnosticSeverity, message string, pos diagnostics.Location) {
+	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, severity), pos)
 	this.diagnostics = append(this.diagnostics, diagnostic)
 }
 
 func (this *CompilerContext) HasDiagnostics() bool {
 	return len(this.diagnostics) > 0
+}
+
+func (this *CompilerContext) HasErrors() bool {
+	for _, diag := range this.diagnostics {
+		if diag.DiagnosticInfo().Severity() == diagnostics.Error {
+			return true
+		}
+	}
+	return false
 }
 
 func (this *CompilerContext) Diagnostics() []diagnostics.Diagnostic {

@@ -587,15 +587,12 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 
 func getFileName(node tree.Node) string {
 	st := node.SyntaxTree()
-	if st == nil {
-		panic("syntax tree is nil")
-	}
 	return st.FilePath()
 }
 
 func getPosition(node tree.Node) Location {
 	if node == nil {
-		return nil
+		panic("node is nil")
 	}
 
 	lineRange := node.LineRange()
