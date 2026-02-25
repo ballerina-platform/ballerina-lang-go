@@ -16,5 +16,4 @@
 
 package semtypes
 
-type SubtypeData interface {
-}
+type SubtypeData any

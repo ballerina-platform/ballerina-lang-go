@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"fmt"
 	"runtime/debug"
+	"slices"
 	"strings"
 
 	debugcommon "ballerina-lang-go/common"
@@ -317,7 +318,7 @@ func (b *AbstractParserErrorHandlerBase) getDebugContext() *debugcommon.DebugCon
 // AbstractParserErrorHandler - Main interface
 // ============================================================================
 
-type AbstractParserTracer interface{}
+type AbstractParserTracer any
 
 type AbstractParserErrorHandler interface {
 	AbstractParserErrorHandlerData
@@ -630,12 +631,7 @@ func (m *AbstractParserErrorHandlerMethods) HasAncestorContext(context common.Pa
 		return fmt.Sprintf("(HasAncestorContext end (%s) %s)", formatParserRuleContext(context), formatBool(result))
 	}, dbgCtx)
 	ctxStack := m.Self.GetCtxStack()
-	for _, ctx := range ctxStack {
-		if ctx == context {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ctxStack, context)
 }
 
 func (m *AbstractParserErrorHandlerMethods) GetContextStack() (result []common.ParserRuleContext) {

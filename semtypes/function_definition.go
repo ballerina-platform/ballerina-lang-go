@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type FunctionDefinition struct {
 	rec     *RecAtom
 	semType SemType
@@ -68,7 +66,7 @@ func (this *FunctionDefinition) defineInternal(env Env, atomicType FunctionAtomi
 		atom = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
-		atom = common.ToPointer(env.functionAtom(&atomicType))
+		atom = new(env.functionAtom(&atomicType))
 	}
 	return this.createSemType(atom)
 }

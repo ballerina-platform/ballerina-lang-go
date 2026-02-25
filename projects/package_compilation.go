@@ -35,7 +35,7 @@ type PackageCompilation struct {
 	pluginDiagnostics     []diagnostics.Diagnostic
 	diagnosticResult      DiagnosticResult
 	compileOnce           sync.Once
-	compilerPluginManager interface{} // TODO(P6): CompilerPluginManager once plugin system is migrated
+	compilerPluginManager any // TODO(P6): CompilerPluginManager once plugin system is migrated
 }
 
 // newPackageCompilation creates a PackageCompilation and triggers compilation.
@@ -78,8 +78,41 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
-		for _, moduleCtx := range c.packageResolution.TopologicallySortedModuleList() {
-			moduleCtx.compile()
+		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			resolveTypesAndSymbols(moduleCtx)
+		}
+
+		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
+		// Each goroutine has panic recovery to convert panics to diagnostics.
+		var wg sync.WaitGroup
+		var panicsMu sync.Mutex
+		var panics []any
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			wg.Add(1)
+			go func(m *moduleContext) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicsMu.Lock()
+						panics = append(panics, r)
+						panicsMu.Unlock()
+					}
+				}()
+				analyzeAndDesugar(m)
+			}(moduleCtx)
+		}
+		wg.Wait()
+
+		// Re-panic if any Phase 2 goroutine panicked.
+		// This preserves the original behavior where semantic errors cause panics.
+		if len(panics) > 0 {
+			// TODO: report diagnostics for panics instead of crashing the process.
+			panic(panics[0])
+		}
+
+		// Collect diagnostics from all modules
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			for _, diag := range moduleCtx.getDiagnostics() {
 				if c.getPackageContext().getProject().Kind() == ProjectKindBala &&
 					diag.DiagnosticInfo().Severity() != diagnostics.Error {
@@ -113,7 +146,7 @@ func (c *PackageCompilation) DiagnosticResult() DiagnosticResult {
 // SemanticModel returns the semantic model for the specified module.
 // TODO(P6): Implement when SemanticModel/BallerinaSemanticModel is migrated.
 // Java source: PackageCompilation.getSemanticModel(ModuleId)
-func (c *PackageCompilation) SemanticModel(moduleID ModuleID) interface{} {
+func (c *PackageCompilation) SemanticModel(moduleID ModuleID) any {
 	// TODO(P6): Return *SemanticModel once the type is implemented.
 	return nil
 }
@@ -121,7 +154,7 @@ func (c *PackageCompilation) SemanticModel(moduleID ModuleID) interface{} {
 // CodeActionManager returns the code action manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCodeActionManager()
-func (c *PackageCompilation) CodeActionManager() interface{} {
+func (c *PackageCompilation) CodeActionManager() any {
 	// TODO(P6): Return CodeActionManager once the type is implemented.
 	return nil
 }
@@ -129,7 +162,7 @@ func (c *PackageCompilation) CodeActionManager() interface{} {
 // CompletionManager returns the completion manager.
 // TODO(P6): Implement when CompilerPluginManager is migrated.
 // Java source: PackageCompilation.getCompletionManager()
-func (c *PackageCompilation) CompletionManager() interface{} {
+func (c *PackageCompilation) CompletionManager() any {
 	// TODO(P6): Return CompletionManager once the type is implemented.
 	return nil
 }
@@ -149,7 +182,7 @@ func (c *PackageCompilation) getPackageContext() *packageContext {
 // getCompilerPluginManager returns the compiler plugin manager.
 // TODO(P6): Return CompilerPluginManager once the type is implemented.
 // Java source: PackageCompilation.compilerPluginManager()
-func (c *PackageCompilation) getCompilerPluginManager() interface{} {
+func (c *PackageCompilation) getCompilerPluginManager() any {
 	return c.compilerPluginManager
 }
 

@@ -153,7 +153,7 @@ func runTest(balFile string) testResult {
 	return evaluateTestResult(expectedOutput, expectedPanic, printlnStr, panicOccurred, panicValue, isExpectedErrorTest, compileFailed, compilePanicValue)
 }
 
-func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bir.BIRPackage) {
+func runCompilePhase(balFile string) (failed bool, panicVal any, pkg *bir.BIRPackage) {
 	defer func() {
 		if r := recover(); r != nil {
 			failed = true
@@ -178,7 +178,7 @@ func runCompilePhase(balFile string) (failed bool, panicVal interface{}, pkg *bi
 	return
 }
 
-func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackage) (panicOccurred bool, panicValue interface{}, output string) {
+func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackage) (panicOccurred bool, panicValue any, output string) {
 	if compileFailed || birPkg == nil {
 		return false, nil, ""
 	}
@@ -209,7 +209,7 @@ func runInterpretPhase(balFile string, compileFailed bool, birPkg *bir.BIRPackag
 	return
 }
 
-func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue interface{}, isExpectedErrorTest, compileFailed bool, compilePanicValue interface{}) testResult {
+func evaluateTestResult(expectedOutput, expectedPanic, outputStr string, panicOccurred bool, panicValue any, isExpectedErrorTest, compileFailed bool, compilePanicValue any) testResult {
 	if expectedPanic != "" {
 		if panicOccurred {
 			panicStr := extractPanicMessage(fmt.Sprintf("%v", panicValue))
@@ -284,13 +284,13 @@ func trimNewline(s string) string {
 }
 
 func extractPanicMessage(panicStr string) string {
-	if strings.HasPrefix(panicStr, panicPrefix) {
-		return strings.TrimPrefix(panicStr, panicPrefix)
+	if after, ok := strings.CutPrefix(panicStr, panicPrefix); ok {
+		return after
 	}
 	return panicStr
 }
 
-func formatPanicActual(panicValue interface{}) string {
+func formatPanicActual(panicValue any) string {
 	s := panicPrefix + extractPanicMessage(fmt.Sprintf("%v", panicValue))
 	if st, ok := panicValue.(interface{ Stack() []byte }); ok {
 		if stack := st.Stack(); len(stack) > 0 {
@@ -304,11 +304,11 @@ func extractPanicFromOutput(outputStr, expectedPanic string) string {
 	if !strings.Contains(outputStr, panicPrefix+expectedPanic) && !strings.Contains(outputStr, expectedPanic) {
 		return ""
 	}
-	panicIdx := strings.Index(outputStr, panicPrefix)
-	if panicIdx < 0 {
+	_, after, ok := strings.Cut(outputStr, panicPrefix)
+	if !ok {
 		return ""
 	}
-	panicMsg := strings.TrimSpace(outputStr[panicIdx+len(panicPrefix):])
+	panicMsg := strings.TrimSpace(after)
 	if newlineIdx := strings.Index(panicMsg, "\n"); newlineIdx >= 0 {
 		panicMsg = panicMsg[:newlineIdx]
 	}
@@ -400,8 +400,8 @@ func printIndentedLines(text, indent string) {
 		fmt.Printf("%s(empty)\n", indent)
 		return
 	}
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(text, "\n")
+	for line := range lines {
 		fmt.Printf("%s%s\n", indent, line)
 	}
 }

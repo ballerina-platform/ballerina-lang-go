@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type CellOps struct {
 	CommonOps
 }
@@ -38,7 +36,7 @@ func cellFormulaIsEmptyInner(cx Context, posList *Conjunction, negList *Conjunct
 		combined = cellAtomType(posList.Atom)
 		p := posList.Next
 		for p != nil {
-			combined = IntersectCellAtomicType(&combined, common.ToPointer(cellAtomType(p.Atom)))
+			combined = IntersectCellAtomicType(&combined, new(cellAtomType(p.Atom)))
 			p = p.Next
 		}
 	}

@@ -32,3 +32,6 @@ go.work.sum
 corpus/**/*.json
 parser/testdata/**/*.json
 /corpus/parser/*
+
+# IDE specific files
+.idea/

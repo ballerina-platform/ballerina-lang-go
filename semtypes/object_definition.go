@@ -39,7 +39,7 @@ func NewObjectDefinition() ObjectDefinition {
 func ObjectDefinitionDistinct(distinctId int) SemType {
 	// migrated from ObjectDefinition.java:55:9
 	common.Assert(distinctId >= 0)
-	bdd := BddAtom(common.ToPointer(CreateDistinctRecAtom(-distinctId - 1)))
+	bdd := BddAtom(new(CreateDistinctRecAtom(-distinctId - 1)))
 	return basicSubtype(BT_OBJECT, bdd)
 }
 
@@ -128,7 +128,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 		env,
 		[]Field{
 			FieldFrom("value", fieldValueTy, immutable, false),
-			common.ToPointer(MemberKindField).field(),
+			new(MemberKindField).field(),
 			visibilityAll,
 		},
 		&NEVER)
@@ -140,7 +140,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 		env,
 		[]Field{
 			FieldFrom("value", &FUNCTION, true, false),
-			common.ToPointer(MemberKindMethod).field(),
+			new(MemberKindMethod).field(),
 			visibilityAll,
 		},
 		&NEVER)

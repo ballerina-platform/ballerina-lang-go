@@ -41,6 +41,6 @@ func ErrorDetail(detail SemType) SemType {
 func ErrorDistinct(distinctId int) SemType {
 	// migrated from Error.java:57:5
 	common.Assert(distinctId >= 0)
-	bdd := BddAtom(common.ToPointer(CreateDistinctRecAtom(((-distinctId) - 1))))
+	bdd := BddAtom(new(CreateDistinctRecAtom(((-distinctId) - 1))))
 	return basicSubtype(BT_ERROR, bdd)
 }

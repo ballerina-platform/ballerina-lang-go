@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"math/big"
 )
 
@@ -35,8 +34,8 @@ func NewDecimalOps() DecimalOps {
 func (this *DecimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:36:5
 	var values []EnumerableType[big.Rat]
-	var v1 EnumerableSubtype[big.Rat] = common.ToPointer(t1.(DecimalSubtype))
-	var v2 EnumerableSubtype[big.Rat] = common.ToPointer(t2.(DecimalSubtype))
+	var v1 EnumerableSubtype[big.Rat] = new(t1.(DecimalSubtype))
+	var v2 EnumerableSubtype[big.Rat] = new(t2.(DecimalSubtype))
 	allowed := EnumerableSubtypeUnion(v1, v2, &values)
 	return CreateDecimalSubtype(allowed, values)
 }
@@ -44,8 +43,8 @@ func (this *DecimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 func (this *DecimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:44:5
 	var values []EnumerableType[big.Rat]
-	var v1 EnumerableSubtype[big.Rat] = common.ToPointer(t1.(DecimalSubtype))
-	var v2 EnumerableSubtype[big.Rat] = common.ToPointer(t2.(DecimalSubtype))
+	var v1 EnumerableSubtype[big.Rat] = new(t1.(DecimalSubtype))
+	var v2 EnumerableSubtype[big.Rat] = new(t2.(DecimalSubtype))
 	allowed := EnumerableSubtypeIntersect(v1, v2, &values)
 	return CreateDecimalSubtype(allowed, values)
 }

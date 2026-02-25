@@ -38,7 +38,7 @@ func New(t *testing.T) *Assert {
 }
 
 // True asserts that the condition is true.
-func (a *Assert) True(condition bool, msgAndArgs ...interface{}) {
+func (a *Assert) True(condition bool, msgAndArgs ...any) {
 	a.t.Helper()
 	if !condition {
 		a.fail("expected true but got false", msgAndArgs...)
@@ -46,7 +46,7 @@ func (a *Assert) True(condition bool, msgAndArgs ...interface{}) {
 }
 
 // False asserts that the condition is false.
-func (a *Assert) False(condition bool, msgAndArgs ...interface{}) {
+func (a *Assert) False(condition bool, msgAndArgs ...any) {
 	a.t.Helper()
 	if condition {
 		a.fail("expected false but got true", msgAndArgs...)
@@ -54,7 +54,7 @@ func (a *Assert) False(condition bool, msgAndArgs ...interface{}) {
 }
 
 // Nil asserts that the value is nil.
-func (a *Assert) Nil(value interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) Nil(value any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !isNil(value) {
 		a.fail("expected nil but got non-nil value", msgAndArgs...)
@@ -62,7 +62,7 @@ func (a *Assert) Nil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // NotNil asserts that the value is not nil.
-func (a *Assert) NotNil(value interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) NotNil(value any, msgAndArgs ...any) {
 	a.t.Helper()
 	if isNil(value) {
 		a.fail("expected non-nil but got nil", msgAndArgs...)
@@ -70,7 +70,7 @@ func (a *Assert) NotNil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // Equal asserts that two values are equal.
-func (a *Assert) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) Equal(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		a.t.Errorf("expected %v but got %v", expected, actual)
@@ -81,7 +81,7 @@ func (a *Assert) Equal(expected, actual interface{}, msgAndArgs ...interface{}) 
 }
 
 // NotEqual asserts that two values are not equal.
-func (a *Assert) NotEqual(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) NotEqual(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if reflect.DeepEqual(expected, actual) {
 		a.fail("expected values to be different but they are equal", msgAndArgs...)
@@ -90,7 +90,7 @@ func (a *Assert) NotEqual(expected, actual interface{}, msgAndArgs ...interface{
 
 // Same asserts that two pointers refer to the same object.
 // Java: Assert.assertSame(actual, expected)
-func (a *Assert) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) Same(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
 		a.fail("Same() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
@@ -103,7 +103,7 @@ func (a *Assert) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
 
 // NotSame asserts that two pointers refer to different objects.
 // Java: Assert.assertNotSame(actual, expected)
-func (a *Assert) NotSame(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) NotSame(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
 		a.fail("NotSame() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
@@ -115,7 +115,7 @@ func (a *Assert) NotSame(expected, actual interface{}, msgAndArgs ...interface{}
 }
 
 // Contains asserts that the string contains the substring.
-func (a *Assert) Contains(s, substr string, msgAndArgs ...interface{}) {
+func (a *Assert) Contains(s, substr string, msgAndArgs ...any) {
 	a.t.Helper()
 	if len(s) == 0 || len(substr) == 0 {
 		a.fail("expected string to contain substring", msgAndArgs...)
@@ -133,7 +133,7 @@ func (a *Assert) Contains(s, substr string, msgAndArgs ...interface{}) {
 }
 
 // Len asserts that the slice/map/string has the expected length.
-func (a *Assert) Len(object interface{}, expected int, msgAndArgs ...interface{}) {
+func (a *Assert) Len(object any, expected int, msgAndArgs ...any) {
 	a.t.Helper()
 	v := reflect.ValueOf(object)
 	var actual int
@@ -153,13 +153,13 @@ func (a *Assert) Len(object interface{}, expected int, msgAndArgs ...interface{}
 }
 
 // Empty asserts that the slice/map/string is empty.
-func (a *Assert) Empty(object interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) Empty(object any, msgAndArgs ...any) {
 	a.t.Helper()
 	a.Len(object, 0, msgAndArgs...)
 }
 
 // NotEmpty asserts that the slice/map/string is not empty.
-func (a *Assert) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
+func (a *Assert) NotEmpty(object any, msgAndArgs ...any) {
 	a.t.Helper()
 	v := reflect.ValueOf(object)
 	var length int
@@ -176,7 +176,7 @@ func (a *Assert) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
 }
 
 // NoError asserts that err is nil.
-func (a *Assert) NoError(err error, msgAndArgs ...interface{}) {
+func (a *Assert) NoError(err error, msgAndArgs ...any) {
 	a.t.Helper()
 	if err != nil {
 		a.t.Errorf("expected no error but got: %v", err)
@@ -187,7 +187,7 @@ func (a *Assert) NoError(err error, msgAndArgs ...interface{}) {
 }
 
 // Error asserts that err is not nil.
-func (a *Assert) Error(err error, msgAndArgs ...interface{}) {
+func (a *Assert) Error(err error, msgAndArgs ...any) {
 	a.t.Helper()
 	if err == nil {
 		a.fail("expected an error but got nil", msgAndArgs...)
@@ -195,13 +195,13 @@ func (a *Assert) Error(err error, msgAndArgs ...interface{}) {
 }
 
 // Fail fails the test immediately.
-func (a *Assert) Fail(msgAndArgs ...interface{}) {
+func (a *Assert) Fail(msgAndArgs ...any) {
 	a.t.Helper()
 	a.fail("test failed", msgAndArgs...)
 }
 
 // FailNow fails the test immediately and stops execution.
-func (a *Assert) FailNow(msgAndArgs ...interface{}) {
+func (a *Assert) FailNow(msgAndArgs ...any) {
 	a.t.Helper()
 	if len(msgAndArgs) > 0 {
 		a.t.Fatal(formatMessage(msgAndArgs...))
@@ -211,7 +211,7 @@ func (a *Assert) FailNow(msgAndArgs ...interface{}) {
 }
 
 // fail is a helper to report test failures.
-func (a *Assert) fail(defaultMsg string, msgAndArgs ...interface{}) {
+func (a *Assert) fail(defaultMsg string, msgAndArgs ...any) {
 	a.t.Helper()
 	if len(msgAndArgs) > 0 {
 		a.t.Error(formatMessage(msgAndArgs...))
@@ -221,7 +221,7 @@ func (a *Assert) fail(defaultMsg string, msgAndArgs ...interface{}) {
 }
 
 // formatMessage formats the message and arguments.
-func formatMessage(msgAndArgs ...interface{}) string {
+func formatMessage(msgAndArgs ...any) string {
 	if len(msgAndArgs) == 0 {
 		return ""
 	}
@@ -238,14 +238,14 @@ func formatMessage(msgAndArgs ...interface{}) string {
 }
 
 // isNil checks if a value is nil, handling interface nil correctly.
-func isNil(value interface{}) bool {
+func isNil(value any) bool {
 	if value == nil {
 		return true
 	}
 	v := reflect.ValueOf(value)
 	switch v.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map,
-		reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
 		return v.IsNil()
 	}
 	return false
@@ -253,7 +253,7 @@ func isNil(value interface{}) bool {
 
 // isComparable checks if a value can be compared using == or !=.
 // Returns true for nil and comparable types, false for slices, maps, and functions.
-func isComparable(value interface{}) bool {
+func isComparable(value any) bool {
 	if value == nil {
 		return true
 	}

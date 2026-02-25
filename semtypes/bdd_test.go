@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"testing"
 )
 
@@ -25,8 +24,8 @@ import (
 // Ported from SemTypeBddTest.java:bddTest()
 func TestBddDiff(t *testing.T) {
 	// Create two BDD atoms from different rec atoms
-	b1 := BddAtom(common.ToPointer(CreateRecAtom(1)))
-	b2 := BddAtom(common.ToPointer(CreateRecAtom(2)))
+	b1 := BddAtom(new(CreateRecAtom(1)))
+	b2 := BddAtom(new(CreateRecAtom(2)))
 
 	// Intersect them
 	b1and2 := BddIntersect(b1, b2)

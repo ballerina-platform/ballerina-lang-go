@@ -36,7 +36,7 @@ func NewRequire(t *testing.T) *Require {
 }
 
 // True requires that the condition is true, fails the test immediately if false.
-func (r *Require) True(condition bool, msgAndArgs ...interface{}) {
+func (r *Require) True(condition bool, msgAndArgs ...any) {
 	r.t.Helper()
 	if !condition {
 		r.failNow("expected true but got false", msgAndArgs...)
@@ -44,7 +44,7 @@ func (r *Require) True(condition bool, msgAndArgs ...interface{}) {
 }
 
 // False requires that the condition is false, fails the test immediately if true.
-func (r *Require) False(condition bool, msgAndArgs ...interface{}) {
+func (r *Require) False(condition bool, msgAndArgs ...any) {
 	r.t.Helper()
 	if condition {
 		r.failNow("expected false but got true", msgAndArgs...)
@@ -52,7 +52,7 @@ func (r *Require) False(condition bool, msgAndArgs ...interface{}) {
 }
 
 // Nil requires that the value is nil, fails the test immediately if not.
-func (r *Require) Nil(value interface{}, msgAndArgs ...interface{}) {
+func (r *Require) Nil(value any, msgAndArgs ...any) {
 	r.t.Helper()
 	if !isNil(value) {
 		r.failNow("expected nil but got non-nil value", msgAndArgs...)
@@ -60,7 +60,7 @@ func (r *Require) Nil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // NotNil requires that the value is not nil, fails the test immediately if nil.
-func (r *Require) NotNil(value interface{}, msgAndArgs ...interface{}) {
+func (r *Require) NotNil(value any, msgAndArgs ...any) {
 	r.t.Helper()
 	if isNil(value) {
 		r.failNow("expected non-nil but got nil", msgAndArgs...)
@@ -68,7 +68,7 @@ func (r *Require) NotNil(value interface{}, msgAndArgs ...interface{}) {
 }
 
 // Equal requires that two values are equal, fails the test immediately if not.
-func (r *Require) Equal(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (r *Require) Equal(expected, actual any, msgAndArgs ...any) {
 	r.t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		r.t.Fatalf("expected %v but got %v", expected, actual)
@@ -76,7 +76,7 @@ func (r *Require) Equal(expected, actual interface{}, msgAndArgs ...interface{})
 }
 
 // NotEqual requires that two values are not equal, fails the test immediately if equal.
-func (r *Require) NotEqual(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (r *Require) NotEqual(expected, actual any, msgAndArgs ...any) {
 	r.t.Helper()
 	if reflect.DeepEqual(expected, actual) {
 		r.failNow("expected values to be different but they are equal", msgAndArgs...)
@@ -85,7 +85,7 @@ func (r *Require) NotEqual(expected, actual interface{}, msgAndArgs ...interface
 
 // Same requires that two pointers refer to the same object.
 // Note: Panics are prevented by checking comparability first.
-func (r *Require) Same(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (r *Require) Same(expected, actual any, msgAndArgs ...any) {
 	r.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
 		r.failNow("Same() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
@@ -98,7 +98,7 @@ func (r *Require) Same(expected, actual interface{}, msgAndArgs ...interface{}) 
 
 // NotSame requires that two pointers refer to different objects.
 // Note: Panics are prevented by checking comparability first.
-func (r *Require) NotSame(expected, actual interface{}, msgAndArgs ...interface{}) {
+func (r *Require) NotSame(expected, actual any, msgAndArgs ...any) {
 	r.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
 		r.failNow("NotSame() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
@@ -110,7 +110,7 @@ func (r *Require) NotSame(expected, actual interface{}, msgAndArgs ...interface{
 }
 
 // Len requires that the slice/map/string has the expected length.
-func (r *Require) Len(object interface{}, expected int, msgAndArgs ...interface{}) {
+func (r *Require) Len(object any, expected int, msgAndArgs ...any) {
 	r.t.Helper()
 	v := reflect.ValueOf(object)
 	var actual int
@@ -127,13 +127,13 @@ func (r *Require) Len(object interface{}, expected int, msgAndArgs ...interface{
 }
 
 // Empty requires that the slice/map/string is empty.
-func (r *Require) Empty(object interface{}, msgAndArgs ...interface{}) {
+func (r *Require) Empty(object any, msgAndArgs ...any) {
 	r.t.Helper()
 	r.Len(object, 0, msgAndArgs...)
 }
 
 // NotEmpty requires that the slice/map/string is not empty.
-func (r *Require) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
+func (r *Require) NotEmpty(object any, msgAndArgs ...any) {
 	r.t.Helper()
 	v := reflect.ValueOf(object)
 	var length int
@@ -150,7 +150,7 @@ func (r *Require) NotEmpty(object interface{}, msgAndArgs ...interface{}) {
 }
 
 // NoError requires that err is nil, fails the test immediately if not.
-func (r *Require) NoError(err error, msgAndArgs ...interface{}) {
+func (r *Require) NoError(err error, msgAndArgs ...any) {
 	r.t.Helper()
 	if err != nil {
 		r.t.Fatalf("expected no error but got: %v", err)
@@ -158,7 +158,7 @@ func (r *Require) NoError(err error, msgAndArgs ...interface{}) {
 }
 
 // Error requires that err is not nil, fails the test immediately if nil.
-func (r *Require) Error(err error, msgAndArgs ...interface{}) {
+func (r *Require) Error(err error, msgAndArgs ...any) {
 	r.t.Helper()
 	if err == nil {
 		r.failNow("expected an error but got nil", msgAndArgs...)
@@ -166,13 +166,13 @@ func (r *Require) Error(err error, msgAndArgs ...interface{}) {
 }
 
 // Fail fails the test immediately.
-func (r *Require) Fail(msgAndArgs ...interface{}) {
+func (r *Require) Fail(msgAndArgs ...any) {
 	r.t.Helper()
 	r.failNow("test failed", msgAndArgs...)
 }
 
 // failNow is a helper to report fatal test failures.
-func (r *Require) failNow(defaultMsg string, msgAndArgs ...interface{}) {
+func (r *Require) failNow(defaultMsg string, msgAndArgs ...any) {
 	r.t.Helper()
 	if len(msgAndArgs) > 0 {
 		r.t.Fatal(formatMessage(msgAndArgs...))
