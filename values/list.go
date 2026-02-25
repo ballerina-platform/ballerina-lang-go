@@ -78,15 +78,8 @@ func (l *List) String(visited map[uintptr]bool) string {
 	if visited[ptr] {
 		return "[...]"
 	}
-	// Check if this list contains itself (cycle detection before formatting)
-	for i := 0; i < l.Len(); i++ {
-		if item, ok := l.Get(i).(*List); ok {
-			if uintptr(unsafe.Pointer(item)) == ptr {
-				return "[...]"
-			}
-		}
-	}
 	visited[ptr] = true
+	defer delete(visited, ptr)
 	var b strings.Builder
 	b.WriteByte('[')
 	for i := 0; i < l.Len(); i++ {

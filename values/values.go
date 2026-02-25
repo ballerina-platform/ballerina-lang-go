@@ -90,7 +90,10 @@ func formatValue(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		}
 		return "null"
 	case string:
-		return t
+		if isDirect {
+			return t
+		}
+		return strconv.Quote(t)
 	case int64:
 		return strconv.FormatInt(t, 10)
 	case float64:
