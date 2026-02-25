@@ -391,7 +391,12 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 	indexEffect := handleExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
 	fieldAccess := &FieldAccess{}
-	fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_STORE
+	containerType := varRef.Expr.GetDeterminedType()
+	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
+		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_STORE
+	} else {
+		fieldAccess.Kind = INSTRUCTION_KIND_MAP_STORE
+	}
 	fieldAccess.LhsOp = containerRefEffect.result
 	fieldAccess.KeyOp = indexEffect.result
 	fieldAccess.RhsOp = valueEffect.result
@@ -639,7 +644,12 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	// Assignment is handled in assignmentStatement to this is always a load
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	fieldAccess := &FieldAccess{}
-	fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
+	containerType := expr.Expr.GetDeterminedType()
+	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
+		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
+	} else {
+		fieldAccess.Kind = INSTRUCTION_KIND_MAP_LOAD
+	}
 	fieldAccess.LhsOp = resultOperand
 	indexEffect := handleExpression(ctx, bb, expr.IndexExpr)
 	fieldAccess.KeyOp = indexEffect.result

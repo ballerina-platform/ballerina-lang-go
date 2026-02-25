@@ -51,6 +51,18 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	frame.SetOperand(newArray.LhsOp.Index, list)
 }
 
+func execNewMap(newMap *bir.NewMap, frame *Frame) {
+	m := values.NewMap(newMap.Type)
+	for _, entry := range newMap.Values {
+		kv := entry.(*bir.MappingConstructorKeyValueEntry)
+		keyVal := frame.GetOperand(kv.KeyOp().Index)
+		keyStr := keyVal.(string)
+		valueVal := frame.GetOperand(kv.ValueOp().Index)
+		m.Put(keyStr, valueVal)
+	}
+	frame.SetOperand(newMap.GetLhsOperand().Index, m)
+}
+
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
@@ -67,6 +79,21 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
 	frame.SetOperand(access.LhsOp.Index, list.Get(idx))
+}
+
+func execMapStore(access *bir.FieldAccess, frame *Frame) {
+	m := frame.GetOperand(access.LhsOp.Index).(*values.Map)
+	keyVal := frame.GetOperand(access.KeyOp.Index)
+	keyStr := keyVal.(string)
+	valueVal := frame.GetOperand(access.RhsOp.Index)
+	m.Put(keyStr, valueVal)
+}
+
+func execMapLoad(access *bir.FieldAccess, frame *Frame) {
+	m := frame.GetOperand(access.RhsOp.Index).(*values.Map)
+	key := frame.GetOperand(access.KeyOp.Index).(string)
+	value, _ := m.Get(key)
+	frame.SetOperand(access.LhsOp.Index, value)
 }
 
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
@@ -90,6 +117,9 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
 	}
 	if b.All() == semtypes.ANY.All() {
+		if value == nil {
+			return nil
+		}
 		return value
 	}
 	bitsetValue := b.All()
