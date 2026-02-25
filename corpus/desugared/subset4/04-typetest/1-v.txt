@@ -24,4 +24,118 @@
             (expression-stmt
               (invocation io println (
                 (literal string))))) ())
-        (block-stmt)))))
+        (block-stmt
+          (var-def
+            (variable s (type
+              (value-type any)) (expr
+              (literal hello))))
+          (if
+            (type-test-expr is
+              (simple-var-ref s)
+              (value-type string))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (literal string))))) ())
+          (block-stmt
+            (if
+              (type-test-expr is
+                (simple-var-ref s)
+                (value-type decimal))
+              (block-stmt
+                (expression-stmt
+                  (invocation io println (
+                    (literal decimal))))) ())
+            (block-stmt
+              (var-def
+                (variable f (type
+                  (value-type any)) (expr
+                  (literal 1))))
+              (if
+                (type-test-expr is
+                  (simple-var-ref f)
+                  (value-type float))
+                (block-stmt
+                  (expression-stmt
+                    (invocation io println (
+                      (literal float))))) ())
+              (block-stmt
+                (if
+                  (type-test-expr is
+                    (simple-var-ref f)
+                    (value-type boolean))
+                  (block-stmt
+                    (expression-stmt
+                      (invocation io println (
+                        (literal int))))) ())
+                (block-stmt
+                  (var-def
+                    (variable y (type
+                      (value-type any)) (expr
+                      (literal true))))
+                  (if
+                    (type-test-expr is
+                      (simple-var-ref y)
+                      (value-type boolean))
+                    (block-stmt
+                      (expression-stmt
+                        (invocation io println (
+                          (literal boolean))))) ())
+                  (block-stmt
+                    (if
+                      (type-test-expr is
+                        (simple-var-ref y)
+                        (value-type float))
+                      (block-stmt
+                        (expression-stmt
+                          (invocation io println (
+                            (literal int))))) ())
+                    (block-stmt
+                      (var-def
+                        (variable n (type
+                          (value-type any)) (expr
+                          (type-conversion-expr
+                            (literal <nil>)
+                            (value-type any)))))
+                      (if
+                        (type-test-expr is
+                          (simple-var-ref n)
+                          (value-type null))
+                        (block-stmt
+                          (expression-stmt
+                            (invocation io println (
+                              (literal nil))))) ())
+                      (block-stmt
+                        (if
+                          (type-test-expr is
+                            (simple-var-ref n)
+                            (value-type any))
+                          (block-stmt
+                            (expression-stmt
+                              (invocation io println (
+                                (literal any))))) ())
+                        (block-stmt
+                          (var-def
+                            (variable z (type
+                              (value-type any)) (expr
+                              (type-conversion-expr
+                                (literal 1)
+                                (value-type decimal)))))
+                          (if
+                            (type-test-expr is
+                              (simple-var-ref z)
+                              (value-type decimal))
+                            (block-stmt
+                              (expression-stmt
+                                (invocation io println (
+                                  (literal decimal))))) ())
+                          (block-stmt
+                            (if
+                              (type-test-expr is
+                                (simple-var-ref z)
+                                (value-type int))
+                              (block-stmt
+                                (expression-stmt
+                                  (invocation io println (
+                                    (literal int))))) ())
+                            (block-stmt)))))))))))))))

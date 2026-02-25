@@ -128,6 +128,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 			birPkg.MainFunction = birFunc
 		}
 	}
+	birPkg.TypeEnv = ctx.GetTypeEnv()
 	return birPkg
 }
 

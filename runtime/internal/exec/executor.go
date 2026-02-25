@@ -26,8 +26,6 @@ import (
 const maxRecursionDepth = 1000
 
 func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
-	funcKey := birFunc.FunctionLookupKey
-
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].Type)
@@ -37,22 +35,18 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	for i := len(args) + 1; i < len(*localVars); i++ {
 		locals[i] = values.DefaultValueForType((*localVars)[i].Type)
 	}
-	frame := &Frame{locals: locals, functionKey: funcKey}
+	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
 	callStack.Push(frame)
 	defer callStack.Pop()
-
 	if len(callStack.elements) > maxRecursionDepth {
 		panic("stack overflow")
 	}
-	bbs := birFunc.BasicBlocks
-	bb := &bbs[0]
+	bb := &birFunc.BasicBlocks[0]
 	for {
-		instructions := bb.Instructions
-		term := bb.Terminator
-		for _, instruction := range instructions {
-			execInstruction(instruction, frame)
+		for _, inst := range bb.Instructions {
+			execInstruction(inst, frame, reg)
 		}
-		bb = execTerminator(term, frame, reg, callStack)
+		bb = execTerminator(bb.Terminator, frame, reg, callStack)
 		if bb == nil {
 			break
 		}
@@ -60,7 +54,7 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	return frame.locals[0]
 }
 
-func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
+func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) {
 	switch v := inst.(type) {
 	case *bir.ConstantLoad:
 		execConstantLoad(v, frame)
@@ -145,6 +139,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame) {
 		}
 	case *bir.TypeCast:
 		execTypeCast(v, frame)
+	case *bir.TypeTest:
+		execTypeTest(v, frame, reg)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}

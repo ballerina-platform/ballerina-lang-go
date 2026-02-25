@@ -50,3 +50,24 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 		return NeverValue
 	}
 }
+
+func SemTypeForValue(v BalValue) semtypes.SemType {
+	switch v := v.(type) {
+	case nil:
+		return &semtypes.NIL
+	case bool:
+		return semtypes.BooleanConst(v)
+	case int64:
+		return semtypes.IntConst(v)
+	case float64:
+		return semtypes.FloatConst(v)
+	case string:
+		return semtypes.StringConst(v)
+	case *big.Rat:
+		return semtypes.DecimalConst(*v)
+	case *List:
+		return v.Type
+	default:
+		return &semtypes.ANY
+	}
+}

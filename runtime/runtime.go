@@ -61,6 +61,7 @@ func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
 			}
 		}
 	}()
+	rt.registry.SetTypeEnv(pkg.TypeEnv)
 	exec.Interpret(pkg, rt.registry)
 	return err
 }

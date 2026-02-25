@@ -66,6 +66,7 @@ type (
 		Functions     []BIRFunction
 		Constants     []BIRConstant
 		MainFunction  *BIRFunction
+		TypeEnv       semtypes.Env
 	}
 
 	BIRImportModule struct {
