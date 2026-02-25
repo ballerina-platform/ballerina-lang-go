@@ -2386,7 +2386,27 @@ func (n *NodeBuilder) TransformExpressionFunctionBody(expressionFunctionBodyNode
 }
 
 func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree.TupleTypeDescriptorNode) BLangNode {
-	panic("TransformTupleTypeDescriptor unimplemented")
+	tupleTypeNode := &BLangTupleTypeNode{
+		Members: make([]BLangMemberTypeDesc, 0),
+	}
+
+	types := tupleTypeDescriptorNode.MemberTypeDesc()
+	for i := 0; i < types.Size(); i += 2 {
+		node := types.Get(i)
+		if node.Kind() == common.REST_TYPE {
+			restDescriptor := node.(*tree.RestDescriptorNode)
+			tupleTypeNode.Rest = n.createTypeNode(restDescriptor.TypeDescriptor())
+		} else {
+			memberNode := node.(*tree.MemberTypeDescriptorNode)
+			member := BLangMemberTypeDesc{
+				TypeDesc: n.createTypeNode(memberNode.TypeDescriptor()),
+			}
+			member.pos = getPosition(memberNode)
+			tupleTypeNode.Members = append(tupleTypeNode.Members, member)
+		}
+	}
+	tupleTypeNode.pos = getPosition(tupleTypeDescriptorNode)
+	return tupleTypeNode
 }
 
 func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDescriptorNode *tree.ParenthesisedTypeDescriptorNode) BLangNode {
