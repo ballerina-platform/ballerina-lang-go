@@ -191,7 +191,7 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangSimpleVariable:
 		t.resolveSimpleVariable(node.(*ast.BLangSimpleVariable))
-	case *ast.BLangArrayType, *ast.BLangBuiltInRefTypeNode, *ast.BLangValueType, *ast.BLangUserDefinedType, *ast.BLangFiniteTypeNode, *ast.BLangUnionTypeNode, *ast.BLangErrorTypeNode:
+	case ast.BType:
 		t.resolveBType(node.(ast.BType), 0)
 	case *ast.BLangLiteral:
 		t.resolveLiteral(n)
@@ -1039,6 +1039,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.ANY
 		case model.TypeKind_DECIMAL:
 			return &semtypes.DECIMAL
+		case model.TypeKind_BYTE:
+			return semtypes.BYTE
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil
@@ -1124,6 +1126,22 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			tr.ctx.InternalError("Unexpected builtin type kind", ty.GetPosition())
 		}
 		return nil
+	case *ast.BLangTupleTypeNode:
+		defn := ty.Definition
+		if defn == nil {
+			d := semtypes.NewListDefinition()
+			ty.Definition = &d
+			members := make([]semtypes.SemType, len(ty.Members))
+			for i, member := range ty.Members {
+				members[i] = tr.resolveBType(member.TypeDesc.(ast.BType), depth+1)
+			}
+			rest := semtypes.SemType(&semtypes.NEVER)
+			if ty.Rest != nil {
+				rest = tr.resolveBType(ty.Rest.(ast.BType), depth+1)
+			}
+			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest)
+		}
+		return defn.GetSemType(tr.ctx.GetTypeEnv())
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
