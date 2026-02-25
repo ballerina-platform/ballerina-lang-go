@@ -1748,7 +1748,18 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 }
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
-	panic("TransformCheckExpression unimplemented")
+	pos := getPosition(checkExpressionNode)
+	expr := n.createExpression(checkExpressionNode.Expression())
+	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
+		checkedExpr := &BLangCheckedExpr{}
+		checkedExpr.pos = pos
+		checkedExpr.Expr = expr
+		return checkedExpr
+	}
+	checkPanickedExpr := &BLangCheckPanickedExpr{}
+	checkPanickedExpr.pos = pos
+	checkPanickedExpr.Expr = expr
+	return checkPanickedExpr
 }
 
 func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *tree.FieldAccessExpressionNode) BLangNode {

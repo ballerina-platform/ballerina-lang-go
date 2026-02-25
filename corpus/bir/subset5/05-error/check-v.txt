@@ -1,0 +1,44 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = bar() -> bb1;
+  }
+  bb1 {
+    %2 = println(%1) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+foo<NIL>{
+  bb0 {
+    %1 = ConstantLoad foo
+    %2 = newError ((ERROR), ())(%1)
+    %0 = %2;
+    return;
+  }
+}
+bar<NIL>{
+  bb0 {
+    %1 = foo() -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %1;
+    %3 = $desugar$0 is ((ERROR), ())
+    %3 ? bb2 : bb3;
+  }
+  bb2 {
+    %0 = $desugar$0;
+    return;
+  }
+  bb3 {
+    a = $desugar$0;
+    %5 = println(a) -> bb4;
+  }
+  bb4 {
+    %6 = ConstantLoad unexpected
+    %7 = newError ((ERROR), ())(%6)
+    panic %7;
+  }
+}

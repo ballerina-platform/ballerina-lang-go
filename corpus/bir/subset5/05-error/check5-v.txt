@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad 3
+    %3 = newMap ((), (MAPPING)){%1=%2}
+    m = %3;
+    %6 = ConstantLoad x
+    %5 = m[%6];
+    %7 = nonNil(%5) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %7;
+    %9 = $desugar$0 is ((ERROR), ())
+    %9 ? bb2 : bb3;
+  }
+  bb2 {
+    panic $desugar$0;
+  }
+  bb3 {
+    %10 = unknown $desugar$0;
+    %11 = println(%10) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+nonNil<NIL>{
+  bb0 {
+    %3 = ConstantLoad <nil>
+    %2 = == n %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad nil
+    %5 = newError ((ERROR), ())(%4)
+    %0 = %5;
+    return;
+  }
+  bb2 {
+    %0 = n;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}

@@ -77,23 +77,31 @@ var (
 	_ analyzer = &loopAnalyzer{}
 )
 
-// FIXME: this is not correct since const analyzer will propagte to semantic analyzer
-func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if fa, ok := analyzer.(*functionAnalyzer); ok {
-		if returnStmt.Expr == nil {
-			if !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
-				fa.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
-			}
+// expectedReturnType walks up the analyzer chain and returns the enclosing function's return type.
+// Returns nil if not inside a function.
+func expectedReturnType(a analyzer) semtypes.SemType {
+	current := a
+	for current != nil {
+		if fa, ok := current.(*functionAnalyzer); ok {
+			return fa.retTy
 		}
-		analyzeExpression(fa, returnStmt.Expr, fa.retTy)
-	} else if analyzer.parentAnalyzer() != nil {
-		returnFound(analyzer.parentAnalyzer(), returnStmt)
-	} else {
-		analyzer.ctx().SemanticError("return statement not allowed in this context", analyzer.loc())
+		current = current.parentAnalyzer()
 	}
+	return nil
+}
+
+func returnFound(a analyzer, returnStmt *ast.BLangReturn) {
+	retTy := expectedReturnType(a)
+	if retTy == nil {
+		a.ctx().SemanticError("return statement not allowed in this context", a.loc())
+		return
+	}
+	if returnStmt.Expr == nil {
+		if !semtypes.IsSubtypeSimple(retTy, semtypes.NIL) {
+			a.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
+		}
+	}
+	analyzeExpression(a, returnStmt.Expr, retTy)
 }
 
 func (ab *analyzerBase) parentAnalyzer() analyzer {
@@ -526,11 +534,37 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		validateTypeConversionExpr(a, expr, expectedType)
 	case *ast.BLangTypeTestExpr:
 		validateResolvedType(a, expr, expectedType)
+	case *ast.BLangCheckedExpr:
+		analyzeCheckedExpr(a, expr, expectedType)
+	case *ast.BLangCheckPanickedExpr:
+		analyzeCheckPanickedExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		analyzeExpression(a, expr.Expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
+}
+
+func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedType semtypes.SemType) {
+	analyzeExpression(a, expr.Expr, nil)
+	retTy := expectedReturnType(a)
+	if retTy == nil {
+		a.ctx().SemanticError("check expression not allowed outside a function", expr.GetPosition())
+		return
+	}
+	exprTy := expr.Expr.GetDeterminedType()
+	errorPart := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if !semtypes.IsEmpty(a.tyCtx(), errorPart) {
+		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
+			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
+		}
+	}
+	validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr, expectedType semtypes.SemType) {
+	analyzeExpression(a, expr.Expr, nil)
+	validateResolvedType(a, expr, expectedType)
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) {

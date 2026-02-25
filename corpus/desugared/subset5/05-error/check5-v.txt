@@ -1,0 +1,50 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable m (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type int))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 3))))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation nonNil (
+            (index-based-access
+              (simple-var-ref m)
+              (literal x)))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (panic
+            (simple-var-ref $desugar$0))) ())
+      (expression-stmt
+        (invocation io println (
+          (unary-expr -
+            (simple-var-ref $desugar$0)))))))
+  (function nonNil (
+    (variable n (type
+      (union-type
+        (value-type int)
+        (value-type null))))) (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (simple-var-ref n)
+          (literal <nil>))
+        (block-stmt
+          (return
+            (error-constructor-expr (
+              (literal nil))))) (
+        (block-stmt
+          (return
+            (simple-var-ref n))))))))

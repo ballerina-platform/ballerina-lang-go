@@ -449,6 +449,10 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveTypeConversionExpr(e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(e)
+	case *ast.BLangCheckedExpr:
+		return t.resolveCheckedExpr(e)
+	case *ast.BLangCheckPanickedExpr:
+		return t.resolveCheckedExpr(&e.BLangCheckedExpr)
 	case *ast.BLangNamedArgsExpression:
 		ty := t.resolveExpression(e.Expr)
 		setExpectedType(e, ty)
@@ -475,6 +479,17 @@ func (t *TypeResolver) resolveTypeTestExpr(e *ast.BLangTypeTestExpr) semtypes.Se
 		resultTy = &semtypes.BOOLEAN
 	}
 
+	setExpectedType(e, resultTy)
+	return resultTy
+}
+
+func (t *TypeResolver) resolveCheckedExpr(e *ast.BLangCheckedExpr) semtypes.SemType {
+	exprTy := t.resolveExpression(e.Expr)
+	errorIntersection := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if semtypes.IsEmpty(t.tyCtx, errorIntersection) {
+		e.IsRedundantChecking = true
+	}
+	resultTy := semtypes.Diff(exprTy, &semtypes.ERROR)
 	setExpectedType(e, resultTy)
 	return resultTy
 }

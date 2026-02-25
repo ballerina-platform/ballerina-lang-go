@@ -83,30 +83,6 @@ func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.Symb
 	return symbol
 }
 
-// CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
-// not a narrowed symbol.
-func (this *CompilerContext) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
-	// TODO: this should lock on symbol space
-	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
-	symbolIndex := len(symbolSpace.Symbols)
-	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
-	symbolSpace.Symbols = append(symbolSpace.Symbols, &underlyingSymbolCopy)
-	narrowedSymbol := model.SymbolRef{
-		Package:    baseRef.Package,
-		SpaceIndex: baseRef.SpaceIndex,
-		Index:      symbolIndex,
-	}
-	this.underlyingSymbol[narrowedSymbol] = baseRef
-	return narrowedSymbol
-}
-
-func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
-	if underlying, ok := this.underlyingSymbol[symbol]; ok {
-		return underlying
-	}
-	return symbol
-}
-
 func (this *CompilerContext) SymbolName(symbol model.SymbolRef) string {
 	return this.GetSymbol(symbol).Name()
 }
@@ -166,10 +142,9 @@ func (this *CompilerContext) InternalError(message string, pos diagnostics.Locat
 
 func NewCompilerContext(typeEnv semtypes.Env) *CompilerContext {
 	return &CompilerContext{
-		anonTypeCount:    make(map[*model.PackageID]int),
-		packageInterner:  model.DefaultPackageIDInterner,
-		typeEnv:          typeEnv,
-		underlyingSymbol: make(map[model.SymbolRef]model.SymbolRef),
+		anonTypeCount:   make(map[*model.PackageID]int),
+		packageInterner: model.DefaultPackageIDInterner,
+		typeEnv:         typeEnv,
 	}
 }
 

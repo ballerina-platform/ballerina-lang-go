@@ -1,0 +1,59 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 6
+    %2 = ConstantLoad 2
+    %3 = div(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    %5 = ConstantLoad 5
+    %6 = ConstantLoad 0
+    %7 = div(%5,%6) -> bb3;
+  }
+  bb3 {
+    %8 = println(%7) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+div<NIL>{
+  bb0 {
+    %3 = nonZero(y) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %3;
+    %5 = $desugar$0 is ((ERROR), ())
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %0 = $desugar$0;
+    return;
+  }
+  bb3 {
+    %6 = / x $desugar$0;
+    %0 = %6;
+    return;
+  }
+}
+nonZero<NIL>{
+  bb0 {
+    %3 = ConstantLoad 0
+    %2 = == n %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad zero
+    %5 = newError ((ERROR), ())(%4)
+    %0 = %5;
+    return;
+  }
+  bb2 {
+    %0 = n;
+    return;
+  }
+}

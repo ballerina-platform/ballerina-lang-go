@@ -54,30 +54,30 @@ func WorkerPairId(sender, receiver string) string {
 
 type (
 	BLangMarkdownDocumentationLine struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Text string
 	}
 	BLangMarkdownParameterDocumentation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		ParameterName               *BLangIdentifier
 		ParameterDocumentationLines []string
 	}
 	BLangMarkdownReturnParameterDocumentation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		ReturnParameterDocumentationLines []string
 		ReturnType                        BType
 	}
 	BLangMarkDownDeprecationDocumentation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		DeprecationDocumentationLines []string
 		DeprecationLines              []string
 		IsCorrectDeprecationLine      bool
 	}
 	BLangMarkDownDeprecatedParametersDocumentation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Parameters []BLangMarkdownParameterDocumentation
 	}
-	BLangExpressionBase struct {
+	bLangExpressionBase struct {
 		bLangNodeBase
 		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType BType
@@ -89,13 +89,13 @@ type (
 	}
 
 	BLangTypeConversionExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Expression     BLangExpression
 		TypeDescriptor model.TypeDescriptor
 	}
 
 	BLangValueExpressionBase struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		IsLValue                   bool
 		IsCompoundAssignmentLValue bool
 	}
@@ -118,19 +118,19 @@ type (
 	}
 
 	BLangAlternateWorkerReceive struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		workerReceives []BLangWorkerReceive
 	}
 
 	BLangAnnotAccessExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Expr           BLangExpression
 		PkgAlias       *BLangIdentifier
 		AnnotationName *BLangIdentifier
 	}
 
 	BLangArrowFunction struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Params            []BLangSimpleVariable
 		FunctionName      *model.IdentifierNode
 		Body              *BLangExprFunctionBody
@@ -139,34 +139,33 @@ type (
 	}
 
 	BLangLambdaFunction struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Function *BLangFunction
 	}
 
 	BLangBinaryExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		LhsExpr BLangExpression
 		RhsExpr BLangExpression
 		OpKind  model.OperatorKind
 	}
 
 	BLangCheckedExpr struct {
-		BLangExpressionBase
-		Expr                    BLangExpression
-		EquivalentErrorTypeList []BType
-		IsRedundantChecking     bool
+		bLangExpressionBase
+		Expr                BLangExpression
+		IsRedundantChecking bool
 	}
 
 	BLangCheckPanickedExpr struct {
 		BLangCheckedExpr
 	}
 	BLangCollectContextInvocation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Invocation BLangInvocation
 	}
 
 	BLangCommitExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 	}
 	BLangVariableReferenceBase struct {
 		BLangValueExpressionBase
@@ -190,7 +189,7 @@ type (
 		OriginalValue string
 	}
 	BLangLiteral struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		valueType       BType
 		Value           any
 		OriginalValue   string
@@ -203,18 +202,18 @@ type (
 		Kind model.NodeKind
 	}
 	BLangDynamicArgExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Condition           BLangExpression
 		ConditionalArgument BLangExpression
 	}
 	BLangElvisExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		LhsExpr BLangExpression
 		RhsExpr BLangExpression
 	}
 
 	BLangWorkerSendReceiveExprBase struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		WorkerType       BType
 		WorkerIdentifier *BLangIdentifier
 		Channel          *Channel
@@ -236,7 +235,7 @@ type (
 	}
 
 	BLangInvocation struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		PkgAlias *BLangIdentifier
 		Name     *BLangIdentifier
 		// RawSymbol holds either a *model.SymbolRef (resolved) or a *deferredMethodSymbol (unresolved).
@@ -255,17 +254,17 @@ type (
 	}
 
 	BLangGroupExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Expression BLangExpression
 	}
 
 	BLangTypedescExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		typeDescriptor model.TypeDescriptor
 	}
 
 	BLangUnaryExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Expr     BLangExpression
 		Operator model.OperatorKind
 	}
@@ -277,21 +276,21 @@ type (
 	}
 
 	BLangListConstructorExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Exprs          []BLangExpression
 		IsTypedescExpr bool
 		AtomicType     semtypes.ListAtomicType
 	}
 
 	BLangErrorConstructorExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		ErrorTypeRef   *BLangUserDefinedType
 		PositionalArgs []BLangExpression
 		NamedArgs      []*BLangNamedArgsExpression
 	}
 
 	BLangTypeTestExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Expr       BLangExpression
 		Type       model.TypeData
 		isNegation bool
@@ -311,13 +310,13 @@ type (
 	}
 
 	BLangMappingConstructorExpr struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Fields     []model.MappingField
 		AtomicType semtypes.MappingAtomicType
 	}
 
 	BLangNamedArgsExpression struct {
-		BLangExpressionBase
+		bLangExpressionBase
 		Name BLangIdentifier
 		Expr BLangExpression
 		// JBallerina has symbols for these as well. Need to think if we need them as well (for go to definition)
@@ -563,6 +562,10 @@ func (this *BLangCheckedExpr) GetOperatorKind() model.OperatorKind {
 func (this *BLangCheckedExpr) GetKind() model.NodeKind {
 	// migrated from BLangCheckedExpr.java:78:5
 	return model.NodeKind_CHECK_EXPR
+}
+
+func (this *BLangCheckedExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }
 
 func (this *BLangCheckPanickedExpr) GetOperatorKind() model.OperatorKind {
