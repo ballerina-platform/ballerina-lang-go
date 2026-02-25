@@ -19,6 +19,8 @@ package values
 import (
 	"ballerina-lang-go/semtypes"
 	"math"
+	"strings"
+	"unsafe"
 )
 
 type List struct {
@@ -69,4 +71,30 @@ func (l *List) FillingSet(idx int, value BalValue) {
 
 func (l *List) Append(values ...BalValue) {
 	l.elems = append(l.elems, values...)
+}
+
+func (l *List) String(visited map[uintptr]bool) string {
+	ptr := uintptr(unsafe.Pointer(l))
+	if visited[ptr] {
+		return "[...]"
+	}
+	// Check if this list contains itself (cycle detection before formatting)
+	for i := 0; i < l.Len(); i++ {
+		if item, ok := l.Get(i).(*List); ok {
+			if uintptr(unsafe.Pointer(item)) == ptr {
+				return "[...]"
+			}
+		}
+	}
+	visited[ptr] = true
+	var b strings.Builder
+	b.WriteByte('[')
+	for i := 0; i < l.Len(); i++ {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(formatValue(l.Get(i), visited, false))
+	}
+	b.WriteByte(']')
+	return b.String()
 }
