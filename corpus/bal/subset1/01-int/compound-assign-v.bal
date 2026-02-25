@@ -28,8 +28,8 @@ public function main() {
         i += 1;
     }
 
-    io:println("Loop count: ", loopCount); // @output Loop count:  1000000
-    io:println("Final total: ", total); // @output Final total:  1000010000000
+    io:println("Loop count: ", loopCount); // @output Loop count: 1000000
+    io:println("Final total: ", total); // @output Final total: 1000010000000
 }
 
 function sum(int x, int y) returns int {
