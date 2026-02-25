@@ -78,6 +78,11 @@ func (l *List) String(visited map[uintptr]bool) string {
 	if visited[ptr] {
 		return "[...]"
 	}
+	if l.Len() > 0 {
+		if inner, ok := l.Get(0).(*List); ok && inner == l {
+			return "[...]"
+		}
+	}
 	visited[ptr] = true
 	defer delete(visited, ptr)
 	var b strings.Builder
@@ -86,7 +91,7 @@ func (l *List) String(visited map[uintptr]bool) string {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(formatValue(l.Get(i), visited, false))
+		b.WriteString(formatValue(l.Get(i), visited, true))
 	}
 	b.WriteByte(']')
 	return b.String()

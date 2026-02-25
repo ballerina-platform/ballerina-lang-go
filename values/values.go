@@ -79,15 +79,15 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 }
 
 func String(v BalValue, visited map[uintptr]bool) string {
+	if v == nil {
+		return ""
+	}
 	return formatValue(v, visited, true)
 }
 
 func formatValue(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 	switch t := v.(type) {
 	case nil:
-		if isDirect {
-			return ""
-		}
 		return "null"
 	case string:
 		if isDirect {

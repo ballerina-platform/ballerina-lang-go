@@ -55,7 +55,7 @@ func (m *Map) Put(key string, value BalValue) {
 func (m *Map) String(visited map[uintptr]bool) string {
 	ptr := uintptr(unsafe.Pointer(m))
 	if visited[ptr] {
-		return "<...>"
+		return "{...}"
 	}
 	visited[ptr] = true
 	defer delete(visited, ptr)

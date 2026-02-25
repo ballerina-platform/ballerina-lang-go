@@ -117,9 +117,6 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
 	}
 	if b.All() == semtypes.ANY.All() {
-		if value == nil {
-			return nil
-		}
 		return value
 	}
 	bitsetValue := b.All()
