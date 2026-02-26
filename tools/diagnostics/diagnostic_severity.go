@@ -25,6 +25,7 @@ const (
 	Info
 	Warning
 	Error
+	Fatal
 )
 
 func (ds DiagnosticSeverity) String() string {

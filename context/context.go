@@ -82,11 +82,11 @@ func (this *CompilerContext) NewPackageID(orgName model.Name, nameComps []model.
 }
 
 func (this *CompilerContext) Unimplemented(message string, pos diagnostics.Location) {
-	this.addDiagnostic("UNIMPLEMENTED_ERROR", diagnostics.Internal, message, pos)
+	this.addDiagnostic("UNIMPLEMENTED_ERROR", diagnostics.Fatal, message, pos)
 }
 
 func (this *CompilerContext) InternalError(message string, pos diagnostics.Location) {
-	this.addDiagnostic("INTERNAL_ERROR", diagnostics.Internal, message, pos)
+	this.addDiagnostic("INTERNAL_ERROR", diagnostics.Fatal, message, pos)
 }
 
 func (this *CompilerContext) SyntaxError(message string, pos diagnostics.Location) {
