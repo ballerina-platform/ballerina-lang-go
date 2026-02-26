@@ -1,0 +1,37 @@
+(main
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type string))) (expr
+        (literal 1))))
+    (var-def
+      (variable y (type
+        (union-type
+          (value-type boolean)
+          (value-type float))) (expr
+        (literal true))))
+    (binary-expr ||
+      (type-test-expr is
+        (simple-var-ref x)
+        (value-type int))
+      (type-test-expr is
+        (simple-var-ref y)
+        (value-type float)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal <nil>))
+  )
+  (bb2 (bb0) ()
+    (var-def
+      (variable unused1 (type
+        (value-type string)) (expr
+        (simple-var-ref x))))
+    (var-def
+      (variable unused2 (type
+        (value-type boolean)) (expr
+        (simple-var-ref y))))
+  )
+)

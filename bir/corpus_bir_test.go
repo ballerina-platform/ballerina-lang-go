@@ -14,17 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package bir
+package bir_test
 
 import (
-	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/desugar"
-	"ballerina-lang-go/parser"
-	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 	"flag"
 	"os"
 	"testing"
@@ -76,71 +73,21 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
-	// Create debug context with channel
-	debugCtx := &debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	// Drain channel in background to prevent blocking
-	go func() {
-		for range debugCtx.Channel {
-			// Discard debug messages
-		}
-	}()
-	defer close(debugCtx.Channel)
-
-	// Create compiler context
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-
-	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseBIR, testPair.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testPair.InputPath, err)
 		return
 	}
 
-	// Step 2: Get compilation unit (AST)
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testPair.InputPath)
-		return
-	}
-
-	// Step 3: Convert to AST package
-	pkg := ast.ToPackage(compilationUnit)
-
-	// Step 4: Resolve symbols
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
-
-	// Step 5: Resolve types
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-
-	// Step 6: Generate control flow graph
-	cfg := semantics.CreateControlFlowGraph(cx, pkg)
-
-	// Step 7: Run semantic analysis
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-
-	// Step 8: Run CFG analyses (reachability and explicit return)
-	semantics.AnalyzeCFG(cx, pkg, cfg)
-
-	// Step 9: Desugar AST (this is where foreach etc. will be transformed)
-	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
-
-	// Step 10: Generate BIR package
-	birPkg := GenBir(cx, pkg)
-
-	// Validate result
-	if birPkg == nil {
+	if result.BIRPackage == nil {
 		t.Errorf("BIR package is nil for %s", testPair.InputPath)
 		return
 	}
 
 	// Pretty print BIR output
-	prettyPrinter := PrettyPrinter{}
-	actualBIR := prettyPrinter.Print(*birPkg)
+	prettyPrinter := bir.PrettyPrinter{}
+	actualBIR := prettyPrinter.Print(*result.BIRPackage)
 
 	// If update flag is set, update expected file
 	if *update {

@@ -403,6 +403,13 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 
 func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
 	varName := model.Name(stmt.Var.GetName().GetValue())
+	if varName == model.IGNORE {
+		if stmt.Var.Expr == nil {
+			return statementEffect{block: bb}
+		}
+		exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
+		return statementEffect{block: exprResult.block}
+	}
 	if stmt.Var.Expr == nil {
 		ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
 		// just declare the variable
@@ -754,10 +761,6 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 		kind = INSTRUCTION_KIND_DIV
 	case model.OperatorKind_MOD:
 		kind = INSTRUCTION_KIND_MOD
-	case model.OperatorKind_AND:
-		kind = INSTRUCTION_KIND_AND
-	case model.OperatorKind_OR:
-		kind = INSTRUCTION_KIND_OR
 	case model.OperatorKind_EQUAL:
 		kind = INSTRUCTION_KIND_EQUAL
 	case model.OperatorKind_NOT_EQUAL:
@@ -807,12 +810,89 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 }
 
 func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
-	return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
+	switch expr.OpKind {
+	case model.OperatorKind_AND:
+		return logicalAndExpression(ctx, curBB, expr)
+	case model.OperatorKind_OR:
+		return logicalOrExpression(ctx, curBB, expr)
+	default:
+		return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
+	}
+}
+
+func logicalAndExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+
+	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
+	curBB = lhsEffect.block
+
+	mov := &Move{}
+	mov.LhsOp = resultOperand
+	mov.RhsOp = lhsEffect.result
+	curBB.Instructions = append(curBB.Instructions, mov)
+
+	evalRhsBB := ctx.addBB()
+	doneBB := ctx.addBB()
+
+	branch := &Branch{}
+	branch.Op = lhsEffect.result
+	branch.TrueBB = evalRhsBB
+	branch.FalseBB = doneBB
+	curBB.Terminator = branch
+
+	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
+	rhsBB := rhsEffect.block
+
+	rhsMov := &Move{}
+	rhsMov.LhsOp = resultOperand
+	rhsMov.RhsOp = rhsEffect.result
+	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
+	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  doneBB,
+	}
+}
+
+func logicalOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+
+	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
+	curBB = lhsEffect.block
+
+	mov := &Move{}
+	mov.LhsOp = resultOperand
+	mov.RhsOp = lhsEffect.result
+	curBB.Instructions = append(curBB.Instructions, mov)
+
+	evalRhsBB := ctx.addBB()
+	doneBB := ctx.addBB()
+
+	branch := &Branch{}
+	branch.Op = lhsEffect.result
+	branch.TrueBB = doneBB
+	branch.FalseBB = evalRhsBB
+	curBB.Terminator = branch
+
+	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
+	rhsBB := rhsEffect.block
+
+	rhsMov := &Move{}
+	rhsMov.LhsOp = resultOperand
+	rhsMov.RhsOp = rhsEffect.result
+	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
+	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  doneBB,
+	}
 }
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {
 	varName := expr.VariableName.GetValue()
-	symRef := expr.Symbol()
+	symRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(expr.Symbol())
 
 	// Try local variable lookup first
 	if operand, ok := ctx.varMap[symRef]; ok {

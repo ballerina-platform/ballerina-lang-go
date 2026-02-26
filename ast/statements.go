@@ -29,6 +29,7 @@ const (
 type BLangStatement = model.StatementNode
 
 type (
+	// TODO: make this private
 	BLangStatementBase struct {
 		bLangNodeBase
 	}
@@ -141,6 +142,23 @@ var (
 	_ BLangNode = &BLangSimpleVariableDef{}
 )
 
+var (
+	_ BLangStatement = &BLangAssignment{}
+	_ BLangStatement = &BLangBlockStmt{}
+	_ BLangStatement = &BLangBreak{}
+	_ BLangStatement = &BLangCompoundAssignment{}
+	_ BLangStatement = &BLangContinue{}
+	_ BLangStatement = &BLangDo{}
+	_ BLangStatement = &BLangExpressionStmt{}
+	_ BLangStatement = &BLangIf{}
+	_ BLangStatement = &BLangWhile{}
+	_ BLangStatement = &BLangForeach{}
+	_ BLangStatement = &BLangSimpleVariableDef{}
+	_ BLangStatement = &BLangReturn{}
+)
+
+func (*BLangStatementBase) IsStatement() {}
+
 func (this *BLangAssignment) GetVariable() model.ExpressionNode {
 	// migrated from BLangAssignment.java:48:5
 	return this.VarRef
@@ -200,6 +218,14 @@ func (this *BLangBlockStmt) AddStatement(statement model.StatementNode) {
 func (this *BLangBreak) GetKind() model.NodeKind {
 	// migrated from BLangBreak.java:45:5
 	return model.NodeKind_BREAK
+}
+
+func (this *BLangCompoundAssignment) IsDeclaredWithVar() bool {
+	return false
+}
+
+func (this *BLangCompoundAssignment) SetDeclaredWithVar(_ bool) {
+	panic("compound assignemnt can't be declared with var")
 }
 
 func (this *BLangCompoundAssignment) GetOperatorKind() model.OperatorKind {

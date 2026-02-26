@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = f(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad x
+    %4 = f(%3) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+f<NIL>{
+  bb0 {
+    %3 = ConstantLoad true
+    %2 = %3;
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = x is ((STRING), ())
+    %2 = %4;
+    GOTO bb2;
+  }
+  bb2 {
+    %2 ? bb3 : bb5;
+  }
+  bb3 {
+    unused1 = x;
+    %6 = ConstantLoad s
+    %7 = println(%6) -> bb4;
+  }
+  bb4 {
+    %8 = ConstantLoad <nil>
+    %0 = %8;
+    return;
+  }
+  bb5 {
+    unused2 = x;
+    %10 = ConstantLoad i
+    %11 = println(%10) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

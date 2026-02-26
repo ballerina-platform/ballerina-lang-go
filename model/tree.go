@@ -965,11 +965,15 @@ type DynamicArgNode = ExpressionNode
 
 // Statement Interfaces
 
-type StatementNode = Node
+type StatementNode interface {
+	Node
+	IsStatement()
+}
 
 type ContinueNode = StatementNode
 
 type AssignmentNode interface {
+	StatementNode
 	GetVariable() ExpressionNode
 	GetExpression() ExpressionNode
 	IsDeclaredWithVar() bool
@@ -979,11 +983,7 @@ type AssignmentNode interface {
 }
 
 type CompoundAssignmentNode interface {
-	StatementNode
-	GetVariable() ExpressionNode
-	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
-	SetVariable(variableReferenceNode VariableReferenceNode)
+	AssignmentNode
 	GetOperatorKind() OperatorKind
 }
 

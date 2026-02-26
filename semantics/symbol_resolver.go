@@ -338,6 +338,13 @@ type deferredMethodSymbol struct {
 
 var _ model.Symbol = &deferredMethodSymbol{}
 
+// IsDeferredMethodSymbol returns true if the symbol is a deferred method symbol
+// (a placeholder used during symbol resolution that will be resolved later).
+func IsDeferredMethodSymbol(symbol any) bool {
+	_, ok := symbol.(*deferredMethodSymbol)
+	return ok
+}
+
 func (d *deferredMethodSymbol) Name() string {
 	panic("method symbol has not been resolved yet")
 }
@@ -445,12 +452,17 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		_, scopeKind, ok := resolver.GetSymbol(name)
-		if ok && scopeKind == blockScopeKind {
-			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+		if name == string(model.IGNORE) {
+			symbol := model.NewValueSymbol(name, false, false, false)
+			addSymbolAndSetOnNode(resolver, name, &symbol, variable)
+		} else {
+			_, scopeKind, ok := resolver.GetSymbol(name)
+			if ok && scopeKind == blockScopeKind {
+				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+			}
+			symbol := model.NewValueSymbol(name, false, false, false)
+			addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 		}
-		symbol := model.NewValueSymbol(name, false, false, false)
-		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
 		return
