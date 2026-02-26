@@ -35,6 +35,7 @@ type Binding struct {
 	Ref            model.SymbolRef
 	NarrowedSymbol model.SymbolRef
 	Prev           *Binding
+	defaultType    semtypes.SemType
 }
 
 type NarrowingContext struct {
@@ -79,6 +80,12 @@ func narrowSymbol(ctx *NarrowingContext, underlying model.SymbolRef, ty semtypes
 
 func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage, resolver ExpressionResolver) {
 	nCtx := &NarrowingContext{compilerCtx: ctx, resolver: resolver}
+	for i := range pkg.Constants {
+		c := &pkg.Constants[i]
+		if c.Expr != nil {
+			analyzeExpression(nCtx, nil, c.Expr.(ast.BLangExpression))
+		}
+	}
 	for i := range pkg.Functions {
 		analyzeFunction(nCtx, &pkg.Functions[i])
 	}
@@ -94,36 +101,37 @@ func analyzeFunction(ctx *NarrowingContext, fn *ast.BLangFunction) {
 }
 
 func analyzeStatement(ctx *NarrowingContext, chain *Binding, stmt ast.BLangStatement) statementEffect {
-	// First resolve the statement types with the current binding chain
-	ctx.resolver.ResolveStatement(chain, stmt)
-
+	var effect statementEffect
 	switch stmt := stmt.(type) {
 	case *ast.BLangIf:
-		return analyzeIfStatement(ctx, chain, stmt)
+		effect = analyzeIfStatement(ctx, chain, stmt)
 	case *ast.BLangBlockStmt:
-		return analyzeStmtBlock(ctx, chain, stmt)
+		effect = analyzeStmtBlock(ctx, chain, stmt)
 	case *ast.BLangWhile:
-		return analyzeWhileStmt(ctx, chain, stmt)
+		effect = analyzeWhileStmt(ctx, chain, stmt)
 	// TODO: when we have panic that should also do the same
 	case *ast.BLangReturn:
 		if stmt.GetExpression() != nil {
 			analyzeExpression(ctx, chain, stmt.GetExpression().(ast.BLangExpression))
 		}
-		return statementEffect{nil, true}
+		effect = statementEffect{nil, true}
 	case model.AssignmentNode:
 		if stmt.GetExpression() != nil {
 			analyzeExpression(ctx, chain, stmt.GetExpression().(ast.BLangExpression))
 		}
 		if expr, ok := stmt.GetVariable().(model.NodeWithSymbol); ok {
 			// TODO: when we have closures capaturing variables should also trigger unnarowing.
-			return unnarrowSymbol(ctx, chain, expr.Symbol())
+			effect = unnarrowSymbol(ctx, chain, expr.Symbol())
+		} else {
+			effect = defaultStmtEffect(chain)
 		}
-		return defaultStmtEffect(chain)
 	default:
 		visitor := &narrowedSymbolRefUpdator{ctx, chain, stmt.(ast.BLangNode)}
 		ast.Walk(visitor, stmt.(ast.BLangNode))
-		return defaultStmtEffect(chain)
+		effect = defaultStmtEffect(chain)
 	}
+	ctx.resolver.ResolveStatement(effect.binding, stmt)
+	return effect
 }
 
 func unnarrowSymbol(ctx *NarrowingContext, chain *Binding, symbol model.SymbolRef) statementEffect {
@@ -190,10 +198,83 @@ func mergeStatementEffects(ctx *NarrowingContext, s1, s2 statementEffect) statem
 	return statementEffect{combined, false}
 }
 
+func isSingletonValue(ty semtypes.SemType, val any) bool {
+	singleShape := semtypes.SingleShape(ty)
+	if singleShape.IsPresent() {
+		value := singleShape.Get()
+		return value.Value == val
+	}
+	return false
+}
+
+func isLogicExp(exp *ast.BLangBinaryExpr) bool {
+	switch exp.GetOperatorKind() {
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return true
+	default:
+		return false
+	}
+}
+
+func walkAndResolve(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) {
+	visitor := &narrowedSymbolRefUpdator{ctx, chain, expr}
+	ast.Walk(visitor, expr)
+	ctx.resolver.ResolveExpression(chain, expr)
+}
+
+func singletonExprEffect(chain *Binding, expr ast.BLangExpression) (expressionEffect, bool) {
+	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
+	if isSingletonValue(expr.GetDeterminedType(), true) {
+		return expressionEffect{ifTrue: chain, ifFalse: &Binding{defaultType: &semtypes.NEVER, Prev: chain}}, true
+	} else if isSingletonValue(expr.GetDeterminedType(), false) {
+		return expressionEffect{ifTrue: &Binding{defaultType: &semtypes.NEVER, Prev: chain}, ifFalse: chain}, true
+	}
+	return expressionEffect{}, false
+}
+
+func analyzeLogicalBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBinaryExpr) expressionEffect {
+	isAnd := expr.OpKind == model.OperatorKind_AND
+
+	walkAndResolve(ctx, chain, expr.LhsExpr)
+	lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
+
+	propagated, other := lhsEffect.ifTrue, lhsEffect.ifFalse
+	if !isAnd {
+		propagated, other = lhsEffect.ifFalse, lhsEffect.ifTrue
+	}
+
+	walkAndResolve(ctx, propagated, expr.RhsExpr)
+	rhsEffect := analyzeExpression(ctx, propagated, expr.RhsExpr)
+
+	walkAndResolve(ctx, chain, expr)
+	if effect, ok := singletonExprEffect(chain, expr); ok {
+		return effect
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, propagated)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, propagated)
+	if !isAnd {
+		rhsDiffTrue, rhsDiffFalse = rhsDiffFalse, rhsDiffTrue
+	}
+
+	sameSide := mergeChains(ctx, propagated, rhsDiffTrue, semtypes.Intersect)
+	otherSide := mergeChains(ctx, other, mergeChains(ctx, propagated, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
+
+	if isAnd {
+		return expressionEffect{ifTrue: sameSide, ifFalse: otherSide}
+	}
+	return expressionEffect{ifTrue: otherSide, ifFalse: sameSide}
+}
+
 func analyzeExpression(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) expressionEffect {
 	// First resolve the expression type with the current binding chain
-	ctx.resolver.ResolveExpression(chain, expr)
-
+	if binaryExp, ok := expr.(*ast.BLangBinaryExpr); !ok || !isLogicExp(binaryExp) {
+		// With logical binary expression one part can narrow the other part
+		walkAndResolve(ctx, chain, expr)
+		if effect, ok := singletonExprEffect(chain, expr); ok {
+			return effect
+		}
+	}
 	switch expr := expr.(type) {
 	case *ast.BLangTypeTestExpr:
 		return analyzeTypeTestExpr(ctx, chain, expr)
@@ -203,9 +284,9 @@ func analyzeExpression(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpr
 		return analyzeUnaryExpr(ctx, chain, expr)
 	case *ast.BLangSimpleVarRef, *ast.BLangLocalVarRef, *ast.BLangConstRef:
 		return updateVarRef(ctx, chain, expr.(ast.BNodeWithSymbol))
+	case *ast.BLangGroupExpr:
+		return analyzeExpression(ctx, chain, expr.Expression)
 	default:
-		visitor := &narrowedSymbolRefUpdator{ctx, chain, expr}
-		ast.Walk(visitor, expr)
 		return defaultExpressionEffect(chain)
 	}
 }
@@ -222,15 +303,18 @@ func (u *narrowedSymbolRefUpdator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-	if node == u.root {
-		return u
-	}
 	if expr, ok := node.(ast.BLangExpression); ok {
-		analyzeExpression(u.ctx, u.chain, expr)
+		u.ctx.resolver.ResolveExpression(u.chain, expr)
+		if node != u.root {
+			analyzeExpression(u.ctx, u.chain, expr)
+		}
 		return nil
 	}
 	if stmt, ok := node.(ast.BLangStatement); ok {
-		analyzeStatement(u.ctx, u.chain, stmt)
+		u.ctx.resolver.ResolveStatement(u.chain, stmt)
+		if node != u.root {
+			analyzeStatement(u.ctx, u.chain, stmt)
+		}
 		return nil
 	}
 	return u
@@ -322,64 +406,79 @@ func analyzeBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBin
 			ifTrue:  effect.ifFalse,
 			ifFalse: effect.ifTrue,
 		}
-	case model.OperatorKind_AND:
-		lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
-		rhsEffect := analyzeExpression(ctx, lhsEffect.ifTrue, expr.RhsExpr)
-		return expressionEffect{
-			ifTrue:  mergeChains(ctx, lhsEffect.ifTrue, rhsEffect.ifTrue, semtypes.Intersect),
-			ifFalse: mergeChains(ctx, lhsEffect.ifFalse, mergeChains(ctx, lhsEffect.ifTrue, rhsEffect.ifFalse, semtypes.Intersect), semtypes.Union),
-		}
-	case model.OperatorKind_OR:
-		lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
-		rhsEffect := analyzeExpression(ctx, lhsEffect.ifFalse, expr.RhsExpr)
-		return expressionEffect{
-			ifTrue:  mergeChains(ctx, lhsEffect.ifTrue, mergeChains(ctx, lhsEffect.ifFalse, rhsEffect.ifTrue, semtypes.Intersect), semtypes.Union),
-			ifFalse: mergeChains(ctx, lhsEffect.ifFalse, rhsEffect.ifFalse, semtypes.Intersect),
-		}
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return analyzeLogicalBinaryExpr(ctx, chain, expr)
 	default:
 		return defaultExpressionEffect(chain)
 	}
 }
 
-func accumNarrowedTypes(ctx *NarrowingContext, chain *Binding, accum map[model.SymbolRef]semtypes.SemType) {
+func diff(c1, c2 *Binding) *Binding {
+	if c1 == c2 {
+		return nil
+	}
+	result := &Binding{Ref: c1.Ref, NarrowedSymbol: c1.NarrowedSymbol, defaultType: c1.defaultType}
+	cur := result
+	parent := c1.Prev
+	for parent != nil && parent != c2 {
+		cur.Prev = &Binding{Ref: parent.Ref, NarrowedSymbol: parent.NarrowedSymbol, defaultType: parent.defaultType}
+		cur = cur.Prev
+		parent = parent.Prev
+	}
+	return result
+}
+
+func accumNarrowedTypes(ctx *NarrowingContext, chain *Binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
 	if chain == nil {
-		return
+		return accumDefault
 	}
-	ref := chain.Ref
-	_, hasTy := accum[ref]
-	if !hasTy {
-		accum[ref] = ctx.SymbolType(chain.NarrowedSymbol)
+	if chain.defaultType == nil {
+		ref := chain.Ref
+		_, hasTy := accum[ref]
+		if !hasTy {
+			accum[ref] = ctx.SymbolType(chain.NarrowedSymbol)
+		}
+	} else if accumDefault == nil {
+		accumDefault = chain.defaultType
 	}
-	accumNarrowedTypes(ctx, chain.Prev, accum)
+	return accumNarrowedTypes(ctx, chain.Prev, accum, accumDefault)
 }
 
 func mergeChains(ctx *NarrowingContext, c1 *Binding, c2 *Binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *Binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c1, m1)
+	d1 := accumNarrowedTypes(ctx, c1, m1, nil)
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c2, m2)
+	d2 := accumNarrowedTypes(ctx, c2, m2, nil)
 	type typePair struct{ ty1, ty2 semtypes.SemType }
 	pairs := make(map[model.SymbolRef]typePair)
 	for s, ty1 := range m1 {
 		ty2, ok := m2[s]
 		if !ok {
-			ty2 = ctx.SymbolType(s)
+			if d2 != nil {
+				ty2 = d2
+			} else {
+				ty2 = ctx.SymbolType(s)
+			}
 		}
 		pairs[s] = typePair{ty1, ty2}
 	}
 	for s, ty2 := range m2 {
 		if _, ok := m1[s]; !ok {
-			pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			if d1 != nil {
+				pairs[s] = typePair{d1, ty2}
+			} else {
+				pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			}
 		}
 	}
-	var result *binding
+	var result *Binding
 	for s, p := range pairs {
 		ty := mergeOp(p.ty1, p.ty2)
 		narrowedSymbol := narrowSymbol(ctx, s, ty)
-		result = &binding{
-			ref:            s,
-			narrowedSymbol: narrowedSymbol,
-			prev:           result,
+		result = &Binding{
+			Ref:            s,
+			NarrowedSymbol: narrowedSymbol,
+			Prev:           result,
 		}
 	}
 	return result
