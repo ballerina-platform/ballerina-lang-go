@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: unreachable code
+  --> or2-e.bal:21:9
+   |
+21 |         io:println("unreachable"); // @error
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+

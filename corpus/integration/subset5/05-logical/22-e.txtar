@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown function: print
+  --> 22-e.bal:20:9
+   |
+20 |         io:print("x is never"); // @error
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+

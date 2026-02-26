@@ -1,0 +1,41 @@
+(f
+  (bb0 () (bb1 bb2)
+    (binary-expr &&
+      (type-test-expr is
+        (simple-var-ref x)
+        (value-type int))
+      (literal true))
+  )
+  (bb1 (bb0) ()
+    (var-def
+      (variable unused1 (type
+        (value-type int)) (expr
+        (simple-var-ref x))))
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (literal 1)))
+  )
+  (bb2 (bb0) ()
+    (var-def
+      (variable unused2 (type
+        (value-type string)) (expr
+        (simple-var-ref x))))
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (literal  world)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal hello))))))
+  )
+)
