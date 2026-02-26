@@ -2697,7 +2697,82 @@ func (n *NodeBuilder) TransformTypeReferenceTypeDesc(typeReferenceTypeDescNode *
 }
 
 func (n *NodeBuilder) TransformMatchStatement(matchStatementNode *tree.MatchStatementNode) BLangNode {
-	panic("TransformMatchStatement unimplemented")
+	matchStatement := &BLangMatchStatement{}
+	matchStmtExpr := n.createExpression(matchStatementNode.Condition())
+	matchStatement.Expr = matchStmtExpr
+
+	matchClauses := matchStatementNode.MatchClauses()
+	for matchClauseNode := range matchClauses.Iterator() {
+		bLangMatchClause := &BLangMatchClause{}
+		bLangMatchClause.pos = getPosition(matchClauseNode)
+
+		// Handle match guard
+		if matchClauseNode.MatchGuard() != nil {
+			matchGuardNode := matchClauseNode.MatchGuard()
+			bLangMatchClause.Guard = n.createExpression(matchGuardNode.Expression())
+		}
+
+		// Handle match patterns
+		matchPatterns := matchClauseNode.MatchPatterns()
+		for matchPattern := range matchPatterns.Iterator() {
+			bLangMatchPattern := n.transformMatchPattern(matchPattern, matchStmtExpr)
+			if bLangMatchPattern != nil {
+				bLangMatchClause.Patterns = append(bLangMatchClause.Patterns, bLangMatchPattern)
+			}
+		}
+
+		// Handle block statement
+		bLangMatchClause.Body = *n.TransformBlockStatement(matchClauseNode.BlockStatement()).(*BLangBlockStmt)
+
+		matchStatement.MatchClauses = append(matchStatement.MatchClauses, *bLangMatchClause)
+	}
+
+	matchStatement.pos = getPosition(matchStatementNode)
+	return matchStatement
+}
+
+func (n *NodeBuilder) transformMatchPattern(matchPattern tree.Node, matchStmtExpr BLangExpression) BLangMatchPattern {
+	matchPatternPos := getPosition(matchPattern)
+	kind := matchPattern.Kind()
+
+	switch kind {
+	case common.SIMPLE_NAME_REFERENCE:
+		nameRef := matchPattern.(*tree.SimpleNameReferenceNode)
+		if nameRef.Name().Text() != "_" {
+			panic("transformMatchPattern: expected wildcard '_' but got: " + nameRef.Name().Text())
+		}
+		bLangWildCard := &BLangWildCardMatchPattern{}
+		bLangWildCard.pos = matchPatternPos
+		return bLangWildCard
+
+	case common.IDENTIFIER_TOKEN:
+		idToken := matchPattern.(tree.Token)
+		if idToken.Text() != "_" {
+			panic("transformMatchPattern: expected wildcard '_' but got: " + idToken.Text())
+		}
+		bLangWildCard := &BLangWildCardMatchPattern{}
+		bLangWildCard.pos = matchPatternPos
+		return bLangWildCard
+
+	case common.NUMERIC_LITERAL,
+		common.STRING_LITERAL,
+		common.QUALIFIED_NAME_REFERENCE,
+		common.NULL_LITERAL,
+		common.NIL_LITERAL,
+		common.BOOLEAN_LITERAL,
+		common.UNARY_EXPRESSION:
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
+
+	case common.PIPE_TOKEN, common.COMMA_TOKEN:
+		// Skip separator tokens in match pattern lists
+		return nil
+
+	default:
+		panic(fmt.Sprintf("transformMatchPattern: unexpected match pattern kind: %v", kind))
+	}
 }
 
 func (n *NodeBuilder) TransformMatchClause(matchClauseNode *tree.MatchClauseNode) BLangNode {

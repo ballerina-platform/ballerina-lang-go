@@ -1,0 +1,34 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (literal 10))))
+      (match
+        (simple-var-ref a)
+        (match-clause
+          (const-pattern
+            (literal 2))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal 2))))))
+        (match-clause
+          (const-pattern
+            (literal 5))
+          (const-pattern
+            (literal 10))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal 5 or 10))))))
+        (match-clause
+          (wildcard-match-pattern)
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal something else))))))))))

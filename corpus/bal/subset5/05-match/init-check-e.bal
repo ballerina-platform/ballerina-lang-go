@@ -13,19 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ballerina/io;
 
-package semantics
-
-import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semantics/type_narrowing"
-)
-
-func NarrowTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
-	resolver := NewTypeResolver(ctx, pkg, importedSymbols)
-	type_narrowing.AnalyzePackage(ctx, pkg, resolver)
-	// Walk the package to set default determinedType for any remaining nodes
-	ast.Walk(resolver, pkg)
+public function main() {
+    int foo;
+    match foo { // @error
+        5 => {
+            io:println("5");
+        }
+        6 => {
+            io:println("6");
+        }
+    }
 }

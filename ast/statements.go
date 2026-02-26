@@ -29,6 +29,7 @@ const (
 type BLangStatement = model.StatementNode
 
 type (
+	// TODO: make this private
 	BLangStatementBase struct {
 		bLangNodeBase
 	}
@@ -105,6 +106,13 @@ type (
 		BLangStatementBase
 		Expr BLangExpression
 	}
+
+	BLangMatchStatement struct {
+		BLangStatementBase
+		Expr         BLangExpression
+		MatchClauses []BLangMatchClause
+		IsExhaustive bool
+	}
 )
 
 var (
@@ -139,7 +147,26 @@ var (
 	_ BLangNode = &BLangWhile{}
 	_ BLangNode = &BLangForeach{}
 	_ BLangNode = &BLangSimpleVariableDef{}
+	_ BLangNode = &BLangReturn{}
+	_ BLangNode = &BLangMatchStatement{}
 )
+
+var (
+	_ BLangStatement = &BLangAssignment{}
+	_ BLangStatement = &BLangBlockStmt{}
+	_ BLangStatement = &BLangBreak{}
+	_ BLangStatement = &BLangCompoundAssignment{}
+	_ BLangStatement = &BLangContinue{}
+	_ BLangStatement = &BLangDo{}
+	_ BLangStatement = &BLangExpressionStmt{}
+	_ BLangStatement = &BLangIf{}
+	_ BLangStatement = &BLangWhile{}
+	_ BLangStatement = &BLangForeach{}
+	_ BLangStatement = &BLangSimpleVariableDef{}
+	_ BLangStatement = &BLangReturn{}
+)
+
+func (*BLangStatementBase) IsStatement() {}
 
 func (this *BLangAssignment) GetVariable() model.ExpressionNode {
 	// migrated from BLangAssignment.java:48:5
@@ -502,4 +529,8 @@ func (this *BLangReturn) SetExpression(expression model.ExpressionNode) {
 
 func (this *BLangReturn) GetKind() model.NodeKind {
 	return model.NodeKind_RETURN
+}
+
+func (this *BLangMatchStatement) GetKind() model.NodeKind {
+	return model.NodeKind_MATCH_STATEMENT
 }

@@ -50,6 +50,8 @@ func walkStatement(cx *FunctionContext, node model.StatementNode) desugaredNode[
 		return desugaredNode[model.StatementNode]{replacementNode: stmt}
 	case *ast.BLangContinue:
 		return walkContinue(cx, stmt)
+	case *ast.BLangMatchStatement:
+		return walkMatchStatement(cx, stmt)
 	default:
 		panic("unexpected statement type")
 	}
@@ -68,7 +70,7 @@ func walkBlockStmt(cx *FunctionContext, stmt *ast.BLangBlockStmt) desugaredNode[
 	return desugaredNode[model.StatementNode]{replacementNode: stmt}
 }
 
-func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody) desugaredNode[model.StatementNode] {
+func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody) {
 	var allStmts []ast.BLangStatement
 
 	for _, stmt := range body.Stmts {
@@ -80,7 +82,6 @@ func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody
 	}
 
 	body.Stmts = allStmts
-	return desugaredNode[model.StatementNode]{replacementNode: body}
 }
 
 func walkAssignment(cx *FunctionContext, stmt *ast.BLangAssignment) desugaredNode[model.StatementNode] {
@@ -192,8 +193,7 @@ func walkWhile(cx *FunctionContext, stmt *ast.BLangWhile) desugaredNode[model.St
 
 	// Only walk onFail clause if it has a body
 	if stmt.OnFailClause.Body != nil {
-		onFailResult := walkOnFailClause(cx, &stmt.OnFailClause)
-		stmt.OnFailClause = *onFailResult.replacementNode.(*ast.BLangOnFailClause)
+		walkOnFailClause(cx, &stmt.OnFailClause)
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -208,8 +208,7 @@ func walkDo(cx *FunctionContext, stmt *ast.BLangDo) desugaredNode[model.Statemen
 
 	// Only walk onFail clause if it has a body
 	if stmt.OnFailClause.Body != nil {
-		onFailResult := walkOnFailClause(cx, &stmt.OnFailClause)
-		stmt.OnFailClause = *onFailResult.replacementNode.(*ast.BLangOnFailClause)
+		walkOnFailClause(cx, &stmt.OnFailClause)
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -217,13 +216,9 @@ func walkDo(cx *FunctionContext, stmt *ast.BLangDo) desugaredNode[model.Statemen
 	}
 }
 
-func walkOnFailClause(cx *FunctionContext, clause *ast.BLangOnFailClause) desugaredNode[model.StatementNode] {
+func walkOnFailClause(cx *FunctionContext, clause *ast.BLangOnFailClause) {
 	bodyResult := walkBlockStmt(cx, clause.Body)
 	clause.Body = bodyResult.replacementNode.(*ast.BLangBlockStmt)
-
-	return desugaredNode[model.StatementNode]{
-		replacementNode: clause,
-	}
 }
 
 func walkSimpleVariableDef(cx *FunctionContext, stmt *ast.BLangSimpleVariableDef) desugaredNode[model.StatementNode] {
@@ -571,4 +566,25 @@ func isRangeExpr(expr ast.BLangExpression) bool {
 		}
 	}
 	return false
+}
+
+func walkMatchStatement(cx *FunctionContext, stmt *ast.BLangMatchStatement) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	if stmt.Expr != nil {
+		result := walkExpression(cx, stmt.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+		bodyResult := walkBlockStmt(cx, &clause.Body)
+		clause.Body = *bodyResult.replacementNode.(*ast.BLangBlockStmt)
+	}
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: stmt,
+	}
 }

@@ -14,16 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package desugar
+package desugar_test
 
 import (
 	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/parser"
-	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 	"flag"
 	"testing"
 
@@ -52,48 +50,16 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-
-	// Step 1: Parse
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseDesugar, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
-	}
-	pkg := ast.ToPackage(compilationUnit)
 
-	// Step 2: Symbol Resolution
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx))
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
-
-	// Step 3: Type Resolution
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-
-	// Step 4: Control Flow Graph Generation
-	semantics.CreateControlFlowGraph(cx, pkg)
-
-	// Step 5: Type Narrowing
-	semantics.NarrowTypes(cx, pkg)
-
-	// Step 6: Semantic Analysis
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-
-	// Step 7: DESUGAR
-	DesugarPackage(cx, pkg, importedSymbols)
-
-	// Step 8: Serialize AST after desugaring
+	// Serialize AST after desugaring
 	prettyPrinter := ast.PrettyPrinter{}
-	actualAST := prettyPrinter.Print(pkg)
+	actualAST := prettyPrinter.Print(result.Package)
 
 	// If update flag is set, update expected file
 	if *update {
