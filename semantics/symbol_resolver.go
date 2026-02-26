@@ -318,7 +318,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
-		defineVariable(bs, n.GetVariable())
+		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
 	default:
 		return visitInnerSymbolResolver(bs, n)
 	}
@@ -485,15 +485,20 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	variable.SetSymbol(symRef)
 }
 
-func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
+func defineVariable[T symbolResolver](resolver T, variable model.VariableNode, isFinal bool) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		_, scopeKind, ok := resolver.GetSymbol(name)
-		if ok && scopeKind == blockScopeKind {
-			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+		if name != string(model.IGNORE) {
+			_, scopeKind, ok := resolver.GetSymbol(name)
+			if isFinal && ok {
+				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+				return
+			} else if ok && scopeKind == blockScopeKind {
+				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+			}
 		}
-		symbol := model.NewValueSymbol(name, false, false, false)
+		symbol := model.NewValueSymbol(name, false, isFinal, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
@@ -508,28 +513,13 @@ func resolveForeachSymbols(bs *blockSymbolResolver, n *ast.BLangForeach) {
 		ast.Walk(resolver, n.Collection.(ast.BLangNode))
 	}
 	if n.VariableDef != nil {
-		defineForeachLoopVar(resolver, n.VariableDef.GetVariable())
+		defineVariable(resolver, n.VariableDef.GetVariable(), true)
 		ast.Walk(resolver, n.VariableDef.Var)
 	}
 	ast.Walk(resolver, &n.Body)
 	if n.OnFailClause != nil {
 		ast.Walk(resolver, n.OnFailClause)
 	}
-}
-
-func defineForeachLoopVar[T symbolResolver](resolver T, variable model.VariableNode) {
-	v, ok := variable.(*ast.BLangSimpleVariable)
-	if !ok {
-		internalError(resolver, "Unsupported foreach loop variable", variable.GetPosition())
-		return
-	}
-	name := v.Name.Value
-	if _, _, exists := resolver.GetSymbol(name); exists {
-		semanticError(resolver, "Variable already defined: "+name, v.GetPosition())
-		return
-	}
-	symbol := model.NewValueSymbol(name, false, true, false)
-	addSymbolAndSetOnNode(resolver, name, &symbol, v)
 }
 
 func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {

@@ -3306,7 +3306,13 @@ func getNextMissingNodeName(pkgID *model.PackageID) string {
 func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos Location) model.VariableNode {
 	var varName tree.Token
 	switch bindingPattern.Kind() {
-	case common.MAPPING_BINDING_PATTERN, common.LIST_BINDING_PATTERN, common.ERROR_BINDING_PATTERN, common.REST_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
+	case common.WILDCARD_BINDING_PATTERN:
+		ignore := createIgnoreIdentifier(bindingPattern)
+		simpleVar := createSimpleVariableNode()
+		simpleVar.SetName(&ignore)
+		simpleVar.pos = varPos
+		return simpleVar
+	case common.MAPPING_BINDING_PATTERN, common.LIST_BINDING_PATTERN, common.ERROR_BINDING_PATTERN, common.REST_BINDING_PATTERN:
 		panic("unimplemented")
 	case common.CAPTURE_BINDING_PATTERN:
 		fallthrough

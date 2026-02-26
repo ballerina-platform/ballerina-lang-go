@@ -1,0 +1,48 @@
+(foo
+  (bb0 () (bb1 bb3)
+    (type-test-expr is
+      (simple-var-ref x)
+      (value-type int))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation intFoo (
+        (simple-var-ref x))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (var-def
+      (variable _ (type
+        (value-type string)) (expr
+        (simple-var-ref x))))
+    (expression-stmt
+      (invocation stringFoo (
+        (simple-var-ref x))))
+  )
+)
+(intFoo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal This is integer))))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation foo (
+        (literal 2))))
+    (expression-stmt
+      (invocation foo (
+        (literal test str))))
+  )
+)
+(stringFoo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr +
+          (literal This is )
+          (simple-var-ref s)))))
+  )
+)
