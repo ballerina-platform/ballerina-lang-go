@@ -141,8 +141,7 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	semantics.ResolveSymbols(cx, pkg, importedSymbols)
 
 	// Step 5: Resolve types
-	typeResolver := semantics.NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
+	semantics.ResolveTypes(cx, pkg, importedSymbols)
 
 	// Step 6: Generate control flow graph
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
