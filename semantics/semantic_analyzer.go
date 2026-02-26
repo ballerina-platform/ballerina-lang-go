@@ -877,6 +877,12 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpleVariableDef) {
 	variable := simpleVariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	expectedType := variable.GetDeterminedType()
+	if variable.GetName().GetValue() == string(model.IGNORE) {
+		if !semtypes.IsSubtypeSimple(expectedType, semtypes.ANY) {
+			a.semanticErr("wildcard binding pattern type must be a subtype of 'any'")
+			return
+		}
+	}
 	if variable.Expr != nil {
 		analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType)
 	}

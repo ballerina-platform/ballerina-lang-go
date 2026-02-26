@@ -403,6 +403,13 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 
 func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
 	varName := model.Name(stmt.Var.GetName().GetValue())
+	if varName == model.IGNORE {
+		if stmt.Var.Expr == nil {
+			return statementEffect{block: bb}
+		}
+		exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
+		return statementEffect{block: exprResult.block}
+	}
 	if stmt.Var.Expr == nil {
 		ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
 		// just declare the variable

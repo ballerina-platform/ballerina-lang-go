@@ -452,12 +452,17 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		_, scopeKind, ok := resolver.GetSymbol(name)
-		if ok && scopeKind == blockScopeKind {
-			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+		if name == string(model.IGNORE) {
+			symbol := model.NewValueSymbol(name, false, false, false)
+			addSymbolAndSetOnNode(resolver, name, &symbol, variable)
+		} else {
+			_, scopeKind, ok := resolver.GetSymbol(name)
+			if ok && scopeKind == blockScopeKind {
+				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+			}
+			symbol := model.NewValueSymbol(name, false, false, false)
+			addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 		}
-		symbol := model.NewValueSymbol(name, false, false, false)
-		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
 		return
