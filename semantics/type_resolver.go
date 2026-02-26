@@ -320,39 +320,35 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) bool {
 	case model.TypeTags_NIL:
 		ty = &semtypes.NIL
 	case model.TypeTags_DECIMAL:
-		var r *big.Rat
 		switch v := n.GetValue().(type) {
 		case string:
 			parsed, ok := t.parseDecimalValue(stripFloatingPointTypeSuffix(v), n.GetPosition())
 			if !ok {
 				return false
 			}
-			r = parsed
-			n.SetValue(r)
+			n.SetValue(parsed)
+			ty = semtypes.DecimalConst(*parsed)
 		case *big.Rat:
-			r = v
+			ty = semtypes.DecimalConst(*v)
 		default:
 			t.ctx.InternalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
 			return false
 		}
-		ty = semtypes.DecimalConst(*r)
 	case model.TypeTags_FLOAT:
-		var f float64
 		switch v := n.GetValue().(type) {
 		case string:
 			parsed, ok := t.parseFloatValue(v, n.GetPosition())
 			if !ok {
 				return false
 			}
-			f = parsed
-			n.SetValue(f)
+			n.SetValue(parsed)
+			ty = semtypes.FloatConst(parsed)
 		case float64:
-			f = v
+			ty = semtypes.FloatConst(v)
 		default:
 			t.ctx.InternalError(fmt.Sprintf("unexpected float literal value type: %T", v), n.GetPosition())
 			return false
 		}
-		ty = semtypes.FloatConst(f)
 	default:
 		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
 		return false
@@ -399,33 +395,24 @@ func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) bool {
 	bType := n.GetValueType()
 	typeTag := bType.BTypeGetTag()
 
-	var ty semtypes.SemType
+	var (
+		ty semtypes.SemType
+		ok bool
+	)
 
 	switch n.Kind {
 	case model.NodeKind_INTEGER_LITERAL:
-		var ok bool
 		ty, ok = t.resolveIntegerLiteral(n, typeTag)
-		if !ok {
-			return false
-		}
 	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
-		var ok bool
 		ty, ok = t.resolveDecimalFloatingPointLiteral(n, typeTag)
-		if !ok {
-			return false
-		}
 	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
-		var ok bool
 		ty, ok = t.resolveHexFloatingPointLiteral(n, typeTag)
-		if !ok {
-			return false
-		}
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
 		return false
 	}
 
-	if ty == nil {
+	if !ok || ty == nil {
 		return false
 	}
 
@@ -560,17 +547,9 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) (semtypes.Sem
 		setExpectedType(e, ty)
 		return ty, true
 	case *ast.BLangTypeConversionExpr:
-		ty, ok := t.resolveTypeConversionExpr(e)
-		if !ok {
-			return nil, false
-		}
-		return ty, true
+		return t.resolveTypeConversionExpr(e)
 	case *ast.BLangTypeTestExpr:
-		ty, ok := t.resolveTypeTestExpr(e)
-		if !ok {
-			return nil, false
-		}
-		return ty, true
+		return t.resolveTypeTestExpr(e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, false
@@ -1344,11 +1323,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			tr.ctx.InternalError("type definition not found", nil)
 			return nil, false
 		}
-		semTy, ok := tr.resolveTypeDefinition(defn, depth)
-		if !ok {
-			return nil, false
-		}
-		return semTy, true
+		return tr.resolveTypeDefinition(defn, depth)
 	case *ast.BLangFiniteTypeNode:
 		var result semtypes.SemType = &semtypes.NEVER
 		for _, value := range ty.ValueSpace {

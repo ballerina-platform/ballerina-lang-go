@@ -591,10 +591,6 @@ func getFileName(node tree.Node) string {
 }
 
 func getPosition(node tree.Node) Location {
-	if node == nil {
-		panic("node is nil")
-	}
-
 	lineRange := node.LineRange()
 	textRange := node.TextRange()
 	fileName := getFileName(node)

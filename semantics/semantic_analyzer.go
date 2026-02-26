@@ -1063,7 +1063,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return initializeLoopAnalyzer(a, n)
 	case *ast.BLangForeach:
-		validateForeach(a, n)
+		if !validateForeach(a, n) {
+			return nil
+		}
 		return initializeLoopAnalyzer(a, n)
 	case *ast.BLangIf:
 		if !analyzeIf(a, n) {
@@ -1156,16 +1158,17 @@ func analyzeWhile[A analyzer](a A, whileStmt *ast.BLangWhile) bool {
 	return analyzeExpression(a, whileStmt.Expr, &semtypes.BOOLEAN)
 }
 
-func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
+func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 	collection := foreachStmt.Collection
 	if !analyzeExpression(a, collection, nil) {
-		return
+		return false
 	}
 	variable := foreachStmt.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	variableType := a.ctx().SymbolType(variable.Symbol())
 	if binExpr, ok := collection.(*ast.BLangBinaryExpr); ok && isRangeExpr(binExpr) {
 		if !semtypes.IsSubtypeSimple(variableType, semtypes.INT) {
 			a.semanticErr("foreach variable must be a subtype of int for range expression", collection.GetPosition())
+			return false
 		}
 	} else {
 		collectionType := collection.GetDeterminedType()
@@ -1180,11 +1183,14 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 			expectedValueType = result
 		default:
 			a.unimplementedErr("unsupported foreach collection", collection.GetPosition())
+			return false
 		}
 		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
+			return false
 		}
 	}
+	return true
 }
 
 func recordKeyName(key *ast.BLangMappingKey) string {
