@@ -268,7 +268,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 		var r *big.Rat
 		switch v := n.GetValue().(type) {
 		case string:
-			r = t.parseDecimalValue(v, n.GetPosition())
+			r = t.parseDecimalValue(stripFloatingPointTypeSuffix(v), n.GetPosition())
 			n.SetValue(r)
 		case *big.Rat:
 			r = v
@@ -281,7 +281,7 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 		var f float64
 		switch v := n.GetValue().(type) {
 		case string:
-			f = t.parseFloatValue(v, n.GetPosition())
+			f = t.parseFloatValue(stripFloatingPointTypeSuffix(v), n.GetPosition())
 			n.SetValue(f)
 		case float64:
 			f = v
@@ -298,6 +298,15 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 
 	// Update symbol type if this literal has a symbol
 	updateSymbolType(t.ctx, n, ty)
+}
+
+// stripFloatingPointTypeSuffix removes the f/F/d/D type suffix from a floating point literal string
+func stripFloatingPointTypeSuffix(s string) string {
+	last := s[len(s)-1]
+	if last == 'f' || last == 'F' || last == 'd' || last == 'D' {
+		return s[:len(s)-1]
+	}
+	return s
 }
 
 // parseFloatValue parses a string as float64 with error handling
@@ -357,7 +366,7 @@ func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag
 }
 
 func (t *TypeResolver) resolveDecimalFloatingPointLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) semtypes.SemType {
-	strValue := n.GetValue().(string)
+	strValue := stripFloatingPointTypeSuffix(n.GetValue().(string))
 
 	switch typeTag {
 	case model.TypeTags_FLOAT:
