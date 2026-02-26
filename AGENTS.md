@@ -67,3 +67,7 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
 ### Opening interactive profiler on log running processes
 
 - After running the interpreter with profiling flags run `go tool pprof -http=:8080 http://localhost:6060/debug/pprof/profile?seconds=30` and open `localhost:8080` in the browser
+
+## Type
+
+- To check if a type is singleton type and get it's value use `semtype:SingleShape`

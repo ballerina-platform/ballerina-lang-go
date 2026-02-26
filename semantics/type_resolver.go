@@ -84,11 +84,11 @@ func (t *TypeResolver) resolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 		defn := &pkg.TypeDefinitions[i]
 		t.resolveTypeDefinition(defn, 0)
 	}
-	for i := range pkg.Constants {
-		t.resolveConstant(&pkg.Constants[i])
-	}
 	for i := range pkg.Functions {
 		t.resolveFunction(ctx, &pkg.Functions[i])
+	}
+	for i := range pkg.Constants {
+		t.resolveConstant(&pkg.Constants[i])
 	}
 	tctx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
 	for i := range pkg.TypeDefinitions {
@@ -625,6 +625,15 @@ func isAdditiveExpr(opExpr opExpr) bool {
 	}
 }
 
+func isLogicalExpr(opExpr opExpr) bool {
+	switch opExpr.GetOperatorKind() {
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return true
+	default:
+		return false
+	}
+}
+
 func isNumericType(ty semtypes.SemType) bool {
 	return semtypes.IsSubtypeSimple(ty, semtypes.NUMBER)
 }
@@ -786,6 +795,29 @@ func (t *TypeResolver) resolveBinaryExpr(chain *type_narrowing.Binding, expr *as
 	} else if isRangeExpr(expr) {
 		// Range operators: .., ...
 		resultTy = createIteratorType(t.ctx.GetTypeEnv(), &semtypes.INT, &semtypes.NIL)
+	} else if isLogicalExpr(expr) {
+		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.BOOLEAN) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.BOOLEAN) {
+			t.ctx.SemanticError(fmt.Sprintf("expect boolean types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			return nil
+		}
+		switch expr.GetOperatorKind() {
+		case model.OperatorKind_AND:
+			if semtypes.IsSameType(t.tyCtx, lhsTy, semtypes.BooleanConst(false)) || semtypes.IsSameType(t.tyCtx, rhsTy, semtypes.BooleanConst(false)) {
+				resultTy = semtypes.BooleanConst(false)
+			} else if semtypes.IsSameType(t.tyCtx, lhsTy, semtypes.BooleanConst(true)) && semtypes.IsSameType(t.tyCtx, rhsTy, semtypes.BooleanConst(true)) {
+				resultTy = semtypes.BooleanConst(true)
+			} else {
+				resultTy = &semtypes.BOOLEAN
+			}
+		case model.OperatorKind_OR:
+			if semtypes.IsSameType(t.tyCtx, lhsTy, semtypes.BooleanConst(true)) || semtypes.IsSameType(t.tyCtx, rhsTy, semtypes.BooleanConst(true)) {
+				resultTy = semtypes.BooleanConst(true)
+			} else if semtypes.IsSameType(t.tyCtx, lhsTy, semtypes.BooleanConst(false)) && semtypes.IsSameType(t.tyCtx, rhsTy, semtypes.BooleanConst(false)) {
+				resultTy = semtypes.BooleanConst(false)
+			} else {
+				resultTy = &semtypes.BOOLEAN
+			}
+		}
 	} else {
 		var nilLifted bool
 		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)

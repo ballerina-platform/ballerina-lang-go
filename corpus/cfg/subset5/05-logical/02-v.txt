@@ -1,0 +1,80 @@
+(lhsFalse
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal lhsFalse))))
+    (return
+      (literal false))
+  )
+)
+(lhsTrue
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal lhsTrue))))
+    (return
+      (literal true))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (invocation lhsTrue ())
+          (invocation rhsTrue ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (invocation lhsFalse ())
+          (invocation rhsTrue ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (invocation lhsTrue ())
+          (invocation rhsFalse ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (invocation lhsFalse ())
+          (invocation rhsFalse ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (invocation lhsTrue ())
+          (invocation rhsTrue ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (invocation lhsFalse ())
+          (invocation rhsTrue ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (invocation lhsTrue ())
+          (invocation rhsFalse ())))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (invocation lhsFalse ())
+          (invocation rhsFalse ())))))
+  )
+)
+(rhsFalse
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal rhsFalse))))
+    (return
+      (literal false))
+  )
+)
+(rhsTrue
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal rhsTrue))))
+    (return
+      (literal true))
+  )
+)

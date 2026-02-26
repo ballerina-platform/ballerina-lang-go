@@ -1,0 +1,28 @@
+(doesADragonExplodeInTheWoods
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal boom))))
+    (return
+      (literal true))
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable x (type
+        (value-type int)) (expr
+        (literal 1))))
+    (binary-expr ||
+      (binary-expr ==
+        (simple-var-ref x)
+        (literal 42))
+      (invocation doesADragonExplodeInTheWoods ()))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal unconditional))))
+  )
+  (bb2 (bb1) ())
+)

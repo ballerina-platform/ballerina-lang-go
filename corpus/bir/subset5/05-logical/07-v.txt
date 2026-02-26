@@ -1,0 +1,28 @@
+module $anon.. v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    x = %1;
+    %4 = ConstantLoad false
+    %3 = %4;
+    %4 ? bb2 : bb1;
+  }
+  bb1 {
+    %5 = x is ((STRING), ())
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
+    unused1 = x;
+    %7 = ConstantLoad <nil>
+    %0 = %7;
+    return;
+  }
+  bb4 {
+    unused2 = x;
+    return;
+  }
+}

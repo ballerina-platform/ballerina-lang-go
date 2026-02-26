@@ -1,0 +1,50 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    x = %1;
+    %3 = ConstantLoad true
+    a = %3;
+    %5 = ConstantLoad true
+    b = %5;
+    %8 = ConstantLoad true
+    %7 = %8;
+    %8 ? bb2 : bb1;
+  }
+  bb1 {
+    %12 = ConstantLoad 1
+    %11 = == x %12;
+    %10 = %11;
+    %11 ? bb3 : bb4;
+  }
+  bb2 {
+    %7 ? bb7 : bb9;
+  }
+  bb3 {
+    %10 = a;
+    GOTO bb4;
+  }
+  bb4 {
+    %9 = %10;
+    %10 ? bb5 : bb6;
+  }
+  bb5 {
+    %9 = b;
+    GOTO bb6;
+  }
+  bb6 {
+    %7 = %9;
+    GOTO bb2;
+  }
+  bb7 {
+    %13 = ConstantLoad x is 1
+    %14 = println(%13) -> bb8;
+  }
+  bb8 {
+    GOTO bb9;
+  }
+  bb9 {
+    return;
+  }
+}
