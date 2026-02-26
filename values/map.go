@@ -27,14 +27,12 @@ import (
 type Map struct {
 	Type  semtypes.SemType
 	elems map[string]BalValue
-	keys  []string
 }
 
 func NewMap(t semtypes.SemType) *Map {
 	return &Map{
 		Type:  t,
 		elems: make(map[string]BalValue),
-		keys:  []string{},
 	}
 }
 
@@ -44,9 +42,6 @@ func (m *Map) Get(key string) (BalValue, bool) {
 }
 
 func (m *Map) Put(key string, value BalValue) {
-	if _, exists := m.elems[key]; !exists {
-		m.keys = append(m.keys, key)
-	}
 	m.elems[key] = value
 }
 
@@ -59,14 +54,11 @@ func (m *Map) String(visited map[uintptr]bool) string {
 	}
 	visited[ptr] = true
 	defer delete(visited, ptr)
-	keys := m.keys
-	if len(keys) != len(m.elems) {
-		keys = make([]string, 0, len(m.elems))
-		for k := range m.elems {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
+	keys := make([]string, 0, len(m.elems))
+	for k := range m.elems {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	var b strings.Builder
 	b.WriteByte('{')
 	for i, k := range keys {
