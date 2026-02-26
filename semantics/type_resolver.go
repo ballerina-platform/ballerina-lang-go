@@ -120,6 +120,8 @@ func (t *TypeResolver) resolveStatement(stmt ast.BLangStatement) {
 		if s.Expr != nil {
 			t.resolveExpression(s.Expr)
 		}
+	case *ast.BLangPanic:
+		t.resolveExpression(s.Expr)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		// No expressions to resolve
 	default:
@@ -437,6 +439,8 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveInvocation(e)
 	case *ast.BLangIndexBasedAccess:
 		return t.resolveIndexBasedAccess(e)
+	case *ast.BLangFieldBaseAccess:
+		return t.resolveFieldBaseAccess(e)
 	case *ast.BLangListConstructorExpr:
 		return t.resolveListConstructorExpr(e)
 	case *ast.BLangMappingConstructorExpr:
@@ -454,6 +458,10 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveTypeConversionExpr(e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(e)
+	case *ast.BLangNamedArgsExpression:
+		ty := t.resolveExpression(e.Expr)
+		setExpectedType(e, ty)
+		return ty
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil
@@ -904,6 +912,26 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 	return resultTy
 }
 
+func (t *TypeResolver) resolveFieldBaseAccess(expr *ast.BLangFieldBaseAccess) semtypes.SemType {
+	containerExprTy := t.resolveExpression(expr.Expr)
+	keyTy := semtypes.StringConst(expr.Field.Value)
+
+	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
+		t.ctx.SemanticError("unsupported container type for field access", expr.GetPosition())
+		return nil
+	}
+
+	memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyTy)
+	maybeMissing := semtypes.ContainsUndef(memberTy)
+	if maybeMissing {
+		t.ctx.SemanticError("field base access is only possible for required fields", expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, memberTy)
+	return memberTy
+}
+
 func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.SemType {
 	// Lookup the function's type from the symbol
 	symbol := expr.RawSymbol
@@ -1050,6 +1078,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.DECIMAL
 		case model.TypeKind_BYTE:
 			return semtypes.BYTE
+		case model.TypeKind_ANYDATA:
+			return semtypes.CreateAnydata(tr.tyCtx)
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil
@@ -1086,8 +1116,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 		if ty.IsTop() {
 			return &semtypes.ERROR
 		} else {
-			detailTy := tr.resolveBType(ty.GetDetailType().TypeDescriptor.(ast.BType), depth+1)
-			return semtypes.ErrorDetail(detailTy)
+			detailTy := tr.resolveTypeDataPair(&ty.DetailType, depth+1)
+			return semtypes.ErrorWithDetail(detailTy)
 		}
 	case *ast.BLangUserDefinedType:
 		ast.Walk(tr, &ty.TypeName)
@@ -1151,6 +1181,35 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest)
 		}
 		return defn.GetSemType(tr.ctx.GetTypeEnv())
+	case *ast.BLangRecordType:
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv())
+		}
+		d := semtypes.NewMappingDefinition()
+		ty.Definition = &d
+		seen := make(map[string]bool)
+		var fields []semtypes.Field
+		for name, field := range ty.Fields() {
+			if seen[name] {
+				tr.ctx.SemanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
+				continue
+			}
+			seen[name] = true
+			fieldTy := tr.resolveBType(field.Type, depth+1)
+			ro := field.FlagSet.Contains(model.Flag_READONLY)
+			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
+			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
+		}
+		var rest semtypes.SemType
+		if ty.RestType != nil {
+			rest = tr.resolveBType(ty.RestType, depth+1)
+		} else if ty.IsOpen {
+			rest = semtypes.CreateAnydata(tr.tyCtx)
+		} else {
+			rest = &semtypes.NEVER
+		}
+		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

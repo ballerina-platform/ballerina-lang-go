@@ -35,7 +35,7 @@ var update = flag.Bool("update", false, "update expected desugared AST files")
 func TestDesugar(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.Desugar)
+	testPairs := test_util.GetValidAndPanicTests(t, test_util.Desugar)
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {

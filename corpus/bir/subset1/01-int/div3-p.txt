@@ -1,0 +1,22 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 672
+    %2 = ConstantLoad 0
+    %3 = div(%1,%2) -> bb1;
+  }
+  bb1 {
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+div<NIL>{
+  bb0 {
+    %3 = / x y;
+    %0 = %3;
+    return;
+  }
+}

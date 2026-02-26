@@ -122,6 +122,14 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTypeTestExpr(t)
 	case *BLangTupleTypeNode:
 		p.printTupleTypeNode(t)
+	case *BLangRecordType:
+		p.printRecordType(t)
+	case *BLangFieldBaseAccess:
+		p.printFieldBaseAccess(t)
+	case *BLangErrorConstructorExpr:
+		p.printErrorConstructorExpr(t)
+	case *BLangPanic:
+		p.printPanic(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -366,6 +374,15 @@ func (p *PrettyPrinter) printReturn(node *BLangReturn) {
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printPanic(node *BLangPanic) {
+	p.startNode()
+	p.printString("panic")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -735,7 +752,7 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 	p.printString("error-type")
 	if !node.IsTop() {
 		p.indentLevel++
-		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.DetailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.endNode()
@@ -787,6 +804,84 @@ func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
 		p.printSticky(")")
 	}
 	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
+	p.startNode()
+	p.printString("record-type")
+	p.indentLevel++
+	for name, field := range node.Fields() {
+		p.startNode()
+		p.printString("field")
+		p.printString(name)
+		if field.FlagSet.Contains(model.Flag_READONLY) {
+			p.printString("readonly")
+		}
+		if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+			p.printString("optional")
+		}
+		p.indentLevel++
+		p.PrintInner(field.Type.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	if node.RestType != nil {
+		p.startNode()
+		p.printString("rest")
+		p.indentLevel++
+		p.PrintInner(node.RestType.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+// Field-based access expression printer
+func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
+	p.startNode()
+	p.printString("field-based-access")
+	p.printString(node.Field.Value)
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Error constructor expression printer
+func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExpr) {
+	p.startNode()
+	p.printString("error-constructor-expr")
+	if node.ErrorTypeRef != nil {
+		p.indentLevel++
+		p.PrintInner(node.ErrorTypeRef)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.PositionalArgs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.PositionalArgs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	if len(node.NamedArgs) > 0 {
+		p.printString("(")
+		p.indentLevel++
+		for _, namedArg := range node.NamedArgs {
+			p.startNode()
+			p.printString("named-arg")
+			p.printString(namedArg.Name.Value)
+			p.indentLevel++
+			p.PrintInner(namedArg.Expr.(BLangNode))
+			p.indentLevel--
+			p.endNode()
+		}
+		p.indentLevel--
+		p.printSticky(")")
+	}
 	p.endNode()
 }
 

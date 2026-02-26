@@ -82,6 +82,14 @@ type (
 		Values []MappingConstructorEntry
 	}
 
+	NewError struct {
+		BIRInstructionBase
+		Type      semtypes.SemType
+		MessageOp *BIROperand
+		CauseOp   *BIROperand
+		DetailOp  *BIROperand
+	}
+
 	TypeCast struct {
 		BIRInstructionBase
 		RhsOp *BIROperand
@@ -115,6 +123,7 @@ var (
 	_ BIRInstruction          = &TypeCast{}
 	_ BIRAssignInstruction    = &TypeTest{}
 	_ BIRInstruction          = &NewMap{}
+	_ BIRAssignInstruction    = &NewError{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -224,6 +233,14 @@ func (t *TypeTest) GetKind() InstructionKind {
 
 func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
+}
+
+func (n *NewError) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_ERROR
+}
+
+func (n *NewError) GetLhsOperand() *BIROperand {
+	return n.LhsOp
 }
 
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {

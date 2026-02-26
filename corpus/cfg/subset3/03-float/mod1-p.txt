@@ -1,0 +1,25 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type float)) (expr
+        (literal 1))))
+    (var-def
+      (variable y (type
+        (value-type float)) (expr
+        (literal 0))))
+    (expression-stmt
+      (invocation io println (
+        (invocation mod (
+          (simple-var-ref x)
+          (simple-var-ref y))))))
+  )
+)
+(mod
+  (bb0 () ()
+    (return
+      (binary-expr %
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

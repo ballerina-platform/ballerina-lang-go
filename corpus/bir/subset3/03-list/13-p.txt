@@ -1,0 +1,22 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = newArray ((), (LIST))[%1]{}
+    v = %2;
+    %4 = ConstantLoad 1
+    %5 = unknown %4;
+    i = %5;
+    %7 = ConstantLoad 0
+    v[i] = %7;
+    %8 = length(v) -> bb1;
+  }
+  bb1 {
+    %9 = println(%8) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}

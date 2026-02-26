@@ -345,6 +345,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 
+	case *BLangPanic:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangBreak:
 		// Leaf node
 
@@ -404,6 +409,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.IndexExpr.(BLangNode))
 		}
 
+	case *BLangFieldBaseAccess:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangListConstructorExpr:
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
@@ -425,6 +435,9 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		for _, arg := range node.PositionalArgs {
 			Walk(v, arg.(BLangNode))
+		}
+		for _, arg := range node.NamedArgs {
+			Walk(v, arg)
 		}
 
 	case *BLangInvocation:
@@ -562,7 +575,7 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.rhs)
 
 	case *BLangErrorTypeNode:
-		WalkTypeData(v, &node.detailType)
+		WalkTypeData(v, &node.DetailType)
 
 	case *BLangConstrainedType:
 		WalkTypeData(v, &node.Type)
@@ -573,6 +586,14 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		if node.Rest != nil {
 			Walk(v, node.Rest.(BLangNode))
+		}
+
+	case *BLangRecordType:
+		for _, field := range node.fields {
+			Walk(v, field.Type.(BLangNode))
+		}
+		if node.RestType != nil {
+			Walk(v, node.RestType.(BLangNode))
 		}
 
 	// Section 9: Binding Patterns
@@ -709,6 +730,10 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangMarkdownReferenceDocumentation:
 		// Leaf node
+
+	case *BLangNamedArgsExpression:
+		Walk(v, &node.Name)
+		Walk(v, node.Expr.(BLangNode))
 
 	default:
 		panic(fmt.Sprintf("unexpected node type %T", node))

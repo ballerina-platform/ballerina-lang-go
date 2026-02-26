@@ -20,7 +20,14 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"iter"
 )
+
+type Field interface {
+	AnnotatableNode
+	GetName() Name
+	GetType() Type
+}
 
 // Type interface (used by Symbol interface)
 type Type interface {
@@ -721,6 +728,12 @@ type ArrayTypeNode interface {
 	GetSizes() []ExpressionNode
 }
 
+type RecordTypeNode interface {
+	ReferenceTypeNode
+	GetRestFieldType() TypeData
+	GetFields() iter.Seq2[string, Field]
+}
+
 type TupleTypeNode interface {
 	ReferenceTypeNode
 	GetMembers() []MemberTypeDesc
@@ -784,6 +797,13 @@ type IndexBasedAccessNode interface {
 	VariableReferenceNode
 	GetExpression() ExpressionNode
 	GetIndex() ExpressionNode
+}
+
+type FieldBasedAccessNode interface {
+	VariableReferenceNode
+	GetExpression() ExpressionNode
+	GetFieldName() IdentifierNode
+	IsOptionalFieldAccess() bool
 }
 
 type ListConstructorExprNode interface {
@@ -1024,6 +1044,11 @@ type ReturnNode interface {
 	StatementNode
 	GetExpression() ExpressionNode
 	SetExpression(expression ExpressionNode)
+}
+
+type PanicNode interface {
+	StatementNode
+	GetExpression() ExpressionNode
 }
 
 type DoNode interface {

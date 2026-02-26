@@ -1663,7 +1663,10 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 }
 
 func (n *NodeBuilder) TransformPanicStatement(panicStatementNode *tree.PanicStatementNode) BLangNode {
-	panic("TransformPanicStatement unimplemented")
+	bLPanic := &BLangPanic{}
+	bLPanic.pos = getPosition(panicStatementNode)
+	bLPanic.Expr = n.createExpression(panicStatementNode.Expression())
+	return bLPanic
 }
 
 func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnStatementNode) BLangNode {
@@ -1749,7 +1752,26 @@ func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckEx
 }
 
 func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *tree.FieldAccessExpressionNode) BLangNode {
-	panic("TransformFieldAccessExpression unimplemented")
+	fieldName := fieldAccessExpressionNode.FieldName()
+	if fieldName.Kind() == common.QUALIFIED_NAME_REFERENCE {
+		panic("TransformFieldAccessExpression: QUALIFIED_NAME_REFERENCE unsupported")
+	}
+
+	bLFieldBasedAccess := &BLangFieldBaseAccess{}
+	simpleNameRef := fieldName.(*tree.SimpleNameReferenceNode)
+	bLFieldBasedAccess.Field = createIdentifierFromToken(getPosition(fieldAccessExpressionNode.FieldName()), simpleNameRef.Name())
+
+	containerExpr := fieldAccessExpressionNode.Expression()
+	if containerExpr.Kind() == common.BRACED_EXPRESSION {
+		bracedExpr := containerExpr.(*tree.BracedExpressionNode)
+		bLFieldBasedAccess.Expr = n.createExpression(bracedExpr.Expression())
+	} else {
+		bLFieldBasedAccess.Expr = n.createExpression(containerExpr)
+	}
+
+	bLFieldBasedAccess.pos = getPosition(fieldAccessExpressionNode)
+	bLFieldBasedAccess.OptionalFieldAccess = false
+	return bLFieldBasedAccess
 }
 
 func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode *tree.FunctionCallExpressionNode) BLangNode {
@@ -2035,7 +2057,11 @@ func (n *NodeBuilder) TransformSpreadField(spreadFieldNode *tree.SpreadFieldNode
 }
 
 func (n *NodeBuilder) TransformNamedArgument(namedArgumentNode *tree.NamedArgumentNode) BLangNode {
-	panic("TransformNamedArgument unimplemented")
+	namedArg := &BLangNamedArgsExpression{}
+	namedArg.pos = getPosition(namedArgumentNode)
+	namedArg.Name = createIdentifierFromToken(getPosition(namedArgumentNode.ArgumentName()), namedArgumentNode.ArgumentName().Name())
+	namedArg.Expr = n.createExpression(namedArgumentNode.Expression())
+	return namedArg
 }
 
 func (n *NodeBuilder) TransformPositionalArgument(positionalArgumentNode *tree.PositionalArgumentNode) BLangNode {
@@ -2059,7 +2085,40 @@ func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorExpr
 }
 
 func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tree.RecordTypeDescriptorNode) BLangNode {
-	panic("TransformRecordTypeDescriptor unimplemented")
+	recordType := &BLangRecordType{}
+	fields := recordTypeDescriptorNode.Fields()
+	for i := 0; i < fields.Size(); i++ {
+		field := fields.Get(i)
+		switch field.Kind() {
+		case common.RECORD_FIELD:
+			recordField := field.(*tree.RecordFieldNode)
+			fieldName := recordField.FieldName().Text()
+			bField := BField{
+				Type: n.createTypeNode(recordField.TypeName()).(BType),
+			}
+			bField.pos = getPosition(recordField)
+			if recordField.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			if recordField.QuestionMarkToken() != nil {
+				bField.FlagSet.Add(model.Flag_OPTIONAL)
+			}
+			recordType.AddField(fieldName, bField)
+		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
+			panic("default values are not supported")
+		case common.TYPE_REFERENCE:
+			typeRef := field.(*tree.TypeReferenceNode)
+			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))
+		default:
+			panic("unexpected field kind in record type descriptor")
+		}
+	}
+	if restDesc := recordTypeDescriptorNode.RecordRestDescriptor(); restDesc != nil {
+		recordType.RestType = n.createTypeNode(restDesc.TypeName()).(BType)
+	}
+	recordType.IsOpen = recordTypeDescriptorNode.BodyStartDelimiter().Kind() == common.OPEN_BRACE_TOKEN
+	recordType.pos = getPosition(recordTypeDescriptorNode)
+	return recordType
 }
 
 func (n *NodeBuilder) TransformReturnTypeDescriptor(returnTypeDescriptorNode *tree.ReturnTypeDescriptorNode) BLangNode {
@@ -2362,7 +2421,7 @@ func (n *NodeBuilder) TransformTableTypeDescriptor(tableTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformTypeParameter(typeParameterNode *tree.TypeParameterNode) BLangNode {
-	panic("TransformTypeParameter unimplemented")
+	return n.createTypeNode(typeParameterNode.TypeNode()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformKeyTypeConstraint(keyTypeConstraintNode *tree.KeyTypeConstraintNode) BLangNode {
@@ -2816,6 +2875,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 
 	arguments := errorConstructorExpressionNode.Arguments()
 	positionalArgs := make([]BLangExpression, 0)
+	namedArgs := make([]*BLangNamedArgsExpression, 0)
 
 	for arg := range arguments.Iterator() {
 		switch arg.Kind() {
@@ -2825,7 +2885,9 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 			positionalArgs = append(positionalArgs, expr)
 
 		case common.NAMED_ARG:
-			n.cx.InternalError("named arguments not yet supported in error constructor", getPosition(arg))
+			namedArgNode := arg.(*tree.NamedArgumentNode)
+			namedArg := n.TransformNamedArgument(namedArgNode).(*BLangNamedArgsExpression)
+			namedArgs = append(namedArgs, namedArg)
 		case common.REST_ARG:
 			n.cx.InternalError("rest arguments not supported in error constructor", getPosition(arg))
 		default:
@@ -2834,6 +2896,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 	}
 
 	result.PositionalArgs = positionalArgs
+	result.NamedArgs = namedArgs
 
 	return result
 }
@@ -2852,7 +2915,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 	// Handle optional type parameter
 	typeParamNode := errorTypeDescriptorNode.TypeParamNode()
 	if typeParamNode != nil {
-		errorType.detailType = model.TypeData{
+		errorType.DetailType = model.TypeData{
 			TypeDescriptor: n.createTypeNode(typeParamNode),
 		}
 	}

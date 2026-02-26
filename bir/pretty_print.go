@@ -139,10 +139,14 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintNewArray(instruction.(*NewArray))
 	case *NewMap:
 		return p.PrintNewMap(instruction.(*NewMap))
+	case *NewError:
+		return p.PrintNewError(instruction.(*NewError))
 	case *TypeCast:
 		return p.PrintTypeCast(instruction.(*TypeCast))
 	case *TypeTest:
 		return p.PrintTypeTest(instruction.(*TypeTest))
+	case *Panic:
+		return p.PrintPanic(instruction.(*Panic))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -189,6 +193,17 @@ func (p *PrettyPrinter) PrintNewMap(m *NewMap) string {
 	return fmt.Sprintf("%s = newMap %s{%s}", p.PrintOperand(*m.LhsOp), p.PrintSemType(m.Type), values.String())
 }
 
+func (p *PrettyPrinter) PrintNewError(e *NewError) string {
+	args := p.PrintOperand(*e.MessageOp)
+	if e.CauseOp != nil {
+		args += ", " + p.PrintOperand(*e.CauseOp)
+	}
+	if e.DetailOp != nil {
+		args += ", " + p.PrintOperand(*e.DetailOp)
+	}
+	return fmt.Sprintf("%s = newError %s(%s)", p.PrintOperand(*e.LhsOp), p.PrintSemType(e.Type), args)
+}
+
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 	switch access.Kind {
 	case INSTRUCTION_KIND_ARRAY_STORE:
@@ -202,6 +217,10 @@ func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 
 func (p *PrettyPrinter) PrintReturn(r *Return) string {
 	return "return;"
+}
+
+func (p *PrettyPrinter) PrintPanic(pa *Panic) string {
+	return fmt.Sprintf("panic %s;", p.PrintOperand(*pa.ErrorOp))
 }
 
 func (p *PrettyPrinter) PrintBranch(b *Branch) string {

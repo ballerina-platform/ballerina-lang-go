@@ -100,7 +100,7 @@ type (
 		IsCompoundAssignmentLValue bool
 	}
 
-	BLangAccessExpressionBase struct {
+	bLangAccessExpressionBase struct {
 		BLangValueExpressionBase
 		Expr                BLangExpression
 		OriginalType        BType
@@ -108,6 +108,13 @@ type (
 		ErrorSafeNavigation bool
 		NilSafeNavigation   bool
 		LeafNode            bool
+	}
+
+	BLangFieldBaseAccess struct {
+		bLangAccessExpressionBase
+		Field BLangIdentifier
+		// I think this need a symbol to got to the field definition in type but Expr could be non atomic and
+		// this should still work
 	}
 
 	BLangAlternateWorkerReceive struct {
@@ -264,7 +271,7 @@ type (
 	}
 
 	BLangIndexBasedAccess struct {
-		BLangAccessExpressionBase
+		bLangAccessExpressionBase
 		IndexExpr         BLangExpression
 		IsStoreOnCreation bool
 	}
@@ -280,7 +287,7 @@ type (
 		BLangExpressionBase
 		ErrorTypeRef   *BLangUserDefinedType
 		PositionalArgs []BLangExpression
-		// TODO: Add support for NamedArgs
+		NamedArgs      []*BLangNamedArgsExpression
 	}
 
 	BLangTypeTestExpr struct {
@@ -307,6 +314,13 @@ type (
 		BLangExpressionBase
 		Fields     []model.MappingField
 		AtomicType semtypes.MappingAtomicType
+	}
+
+	BLangNamedArgsExpression struct {
+		BLangExpressionBase
+		Name BLangIdentifier
+		Expr BLangExpression
+		// JBallerina has symbols for these as well. Need to think if we need them as well (for go to definition)
 	}
 )
 
@@ -351,6 +365,8 @@ var (
 	_ BLangNode                                                    = &BLangMappingConstructorExpr{}
 	_ model.Node                                                   = &BLangMappingKey{}
 	_ BLangNode                                                    = &BLangMappingKey{}
+	_ BLangExpression                                              = &BLangNamedArgsExpression{}
+	_ model.NamedArgNode                                           = &BLangNamedArgsExpression{}
 )
 
 var (
@@ -965,6 +981,26 @@ func (this *BLangIndexBasedAccess) GetIndex() model.ExpressionNode {
 	return this.IndexExpr
 }
 
+func (this *BLangFieldBaseAccess) GetKind() model.NodeKind {
+	return model.NodeKind_FIELD_BASED_ACCESS_EXPR
+}
+
+func (this *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
+	return &this.Field
+}
+
+func (this *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
+	return this.OptionalFieldAccess
+}
+
+func (this *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
 func (this *BLangListConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_LIST_CONSTRUCTOR_EXPR
 }
@@ -990,8 +1026,11 @@ func (this *BLangErrorConstructorExpr) GetPositionalArgs() []model.ExpressionNod
 }
 
 func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
-	// Named arguments not yet supported
-	panic("unimplemented")
+	result := make([]model.NamedArgNode, len(this.NamedArgs))
+	for i, arg := range this.NamedArgs {
+		result[i] = arg
+	}
+	return result
 }
 
 func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
@@ -1051,6 +1090,38 @@ func (this *BLangMappingConstructorExpr) GetFields() []model.MappingField {
 
 func (this *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
 	this.ExpectedType = ty
+}
+
+func (this *BLangNamedArgsExpression) GetKind() model.NodeKind {
+	return model.NodeKind_NAMED_ARGS_EXPR
+}
+
+func (this *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
+	if id, ok := name.(*BLangIdentifier); ok {
+		this.Name = *id
+	} else {
+		panic("name is not a BLangIdentifier")
+	}
+}
+
+func (this *BLangNamedArgsExpression) GetName() model.IdentifierNode {
+	return &this.Name
+}
+
+func (this *BLangNamedArgsExpression) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangNamedArgsExpression) SetExpression(expr model.ExpressionNode) {
+	if e, ok := expr.(BLangExpression); ok {
+		this.Expr = e
+	} else {
+		panic("expr is not a BLangExpression")
+	}
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

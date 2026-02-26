@@ -46,6 +46,8 @@ func walkStatement(cx *FunctionContext, node model.StatementNode) desugaredNode[
 		return walkSimpleVariableDef(cx, stmt)
 	case *ast.BLangReturn:
 		return walkReturn(cx, stmt)
+	case *ast.BLangPanic:
+		return walkPanic(cx, stmt)
 	case *ast.BLangBreak:
 		return desugaredNode[model.StatementNode]{replacementNode: stmt}
 	case *ast.BLangContinue:
@@ -241,6 +243,21 @@ func walkSimpleVariableDef(cx *FunctionContext, stmt *ast.BLangSimpleVariableDef
 	}
 }
 
+func walkPanic(cx *FunctionContext, stmt *ast.BLangPanic) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	if stmt.Expr != nil {
+		result := walkExpression(cx, stmt.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: stmt,
+	}
+}
+
 func walkReturn(cx *FunctionContext, stmt *ast.BLangReturn) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
@@ -385,11 +402,9 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 
 	// Step 5: element access (collVar[$idx])
 	elementAccess := &ast.BLangIndexBasedAccess{
-		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
-			Expr: collVarRef,
-		},
 		IndexExpr: idxVarRef,
 	}
+	elementAccess.Expr = collVarRef
 	elementAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
 
 	// Step 6: patch loop var def initial expression
