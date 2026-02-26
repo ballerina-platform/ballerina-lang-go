@@ -84,6 +84,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	// Copy dependencies
 	depsCopy := slices.Clone(moduleConfig.Dependencies())
 
+	env := project.Environment().compilerEnvironment()
 	return &moduleContext{
 		project:                project,
 		moduleID:               moduleConfig.ModuleID(),
@@ -94,7 +95,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: depsCopy,
-		compilerCtx:            project.Environment().compilerContext(),
+		compilerCtx:            context.NewCompilerContext(env),
 	}
 }
 
@@ -119,6 +120,7 @@ func newModuleContextFromMaps(
 		testDocContextMap = make(map[DocumentID]*documentContext)
 	}
 
+	env := project.Environment().compilerEnvironment()
 	return &moduleContext{
 		project:                project,
 		moduleID:               moduleID,
@@ -129,7 +131,7 @@ func newModuleContextFromMaps(
 		testDocContextMap:      testDocContextMap,
 		testSrcDocIDs:          testSrcDocIDs,
 		moduleDescDependencies: slices.Clone(moduleDescDependencies),
-		compilerCtx:            project.Environment().compilerContext(),
+		compilerCtx:            context.NewCompilerContext(env),
 	}
 }
 
@@ -211,7 +213,7 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 		return
 	}
 
-	compilerCtx := moduleCtx.project.Environment().compilerContext()
+	compilerCtx := moduleCtx.compilerCtx
 
 	// Build BLangPackage from syntax trees.
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
@@ -240,7 +242,7 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	}
 
 	pkgNode := moduleCtx.bLangPkg
-	compilerCtx := moduleCtx.project.Environment().compilerContext()
+	compilerCtx := moduleCtx.compilerCtx
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 
 	if compilerCtx.HasDiagnostics() {
@@ -410,7 +412,7 @@ func (m *moduleContext) getCompilationState() moduleCompilationState {
 
 // getDiagnostics returns the diagnostics produced during module compilation.
 func (m *moduleContext) getDiagnostics() []diagnostics.Diagnostic {
-	return m.project.Environment().compilerContext().Diagnostics()
+	return m.compilerCtx.Diagnostics()
 }
 
 // duplicate creates a copy of the context.
