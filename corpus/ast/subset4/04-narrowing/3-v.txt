@@ -6,18 +6,18 @@
     (block-function-body
       (var-def
         (variable foo (type
-          (tuple-type
+          (union-type
             (value-type int)
-            (value-type float)
-            (value-type string)
-            (value-type boolean)
-            (value-type decimal))) (expr
-          (list-constructor-expr
-            (literal 1)
-            (literal 1.5)
-            (literal foo)
-            (literal true)
-            (literal 1.23d)))))
+            (value-type string))) (expr
+          (literal 2))))
+      (while
+        (binary-expr ==
+          (simple-var-ref foo)
+          (literal 2))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref foo)
+            (literal 5))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref foo)))))))

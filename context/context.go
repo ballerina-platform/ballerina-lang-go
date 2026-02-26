@@ -22,13 +22,15 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"strconv"
+	"sync"
 )
 
 type CompilerContext struct {
-	anonTypeCount   map[*model.PackageID]int
-	packageInterner *model.PackageIDInterner
-	symbolSpaces    []*model.SymbolSpace
-	typeEnv         semtypes.Env
+	anonTypeCount    map[*model.PackageID]int
+	packageInterner  *model.PackageIDInterner
+	symbolSpaces     []*model.SymbolSpace
+	typeEnv          semtypes.Env
+	underlyingSymbol sync.Map
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -56,8 +58,29 @@ func (this *CompilerContext) NewBlockScope(parent model.Scope, pkg model.Package
 }
 
 func (this *CompilerContext) GetSymbol(symbol model.SymbolRef) model.Symbol {
-	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
-	return symbolSpace.Symbols[symbol.Index]
+	return this.symbolSpaces[symbol.SpaceIndex].SymbolAt(symbol.Index)
+}
+
+// CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
+// not a narrowed symbol.
+func (this *CompilerContext) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
+	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
+	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
+	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
+	narrowedSymbol := model.SymbolRef{
+		Package:    baseRef.Package,
+		SpaceIndex: baseRef.SpaceIndex,
+		Index:      symbolIndex,
+	}
+	this.underlyingSymbol.Store(narrowedSymbol, baseRef)
+	return narrowedSymbol
+}
+
+func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
+	if underlying, ok := this.underlyingSymbol.Load(symbol); ok {
+		return underlying.(model.SymbolRef)
+	}
+	return symbol
 }
 
 func (this *CompilerContext) SymbolName(symbol model.SymbolRef) string {

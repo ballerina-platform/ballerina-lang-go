@@ -16,9 +16,7 @@
             (literal 1.5)
             (literal foo)
             (literal true)
-            (type-conversion-expr
-              (literal 1.23)
-              (value-type decimal))))))
+            (literal 123/100)))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref foo)))))))

@@ -119,7 +119,10 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 	// Step 6: Generate control flow graph
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 
-	// Step 7: Run semantic analysis
+	// Step 7: Run type narrowing
+	semantics.NarrowTypes(cx, pkg)
+
+	// Step 8: Run semantic analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(pkg)
 
