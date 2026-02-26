@@ -1,39 +1,30 @@
-package projects
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package corpus
 
 import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"strings"
 
+	"ballerina-lang-go/projects"
 	"ballerina-lang-go/tools/diagnostics"
-
-	"golang.org/x/term"
 )
-
-type outputStyle struct {
-	reset, red, yellow, cyan, bold string
-}
-
-func (s outputStyle) severityColor(severity diagnostics.DiagnosticSeverity) string {
-	if severity == diagnostics.Warning {
-		return s.yellow
-	}
-	return s.red
-}
-
-func outputStyleFor(w io.Writer) outputStyle {
-	s := outputStyle{}
-	if f, ok := w.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		s.reset = "\033[0m"
-		s.red = "\033[31m"
-		s.yellow = "\033[33m"
-		s.cyan = "\033[36m"
-		s.bold = "\033[1m"
-	}
-	return s
-}
 
 type diagnosticLocation struct {
 	filePath            string
@@ -56,15 +47,14 @@ func buildDiagnosticLocation(filePath string, startLine, startCol, endLine, endC
 	}
 }
 
-func PrintDiagnostics(fsys fs.FS, w io.Writer, diagResult DiagnosticResult) {
+func printDiagnostics(fsys fs.FS, w io.Writer, diagResult projects.DiagnosticResult) {
 	for _, d := range diagResult.Diagnostics() {
-		PrintDiagnostic(fsys, w, d)
+		printDiagnostic(fsys, w, d)
 	}
 }
 
-func PrintDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic) {
-	s := outputStyleFor(w)
-	printDiagnosticHeader(w, s, d)
+func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic) {
+	printDiagnosticHeader(w, d)
 
 	location := d.Location()
 	if location == nil {
@@ -78,33 +68,32 @@ func PrintDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic) {
 		lineRange.StartLine().Line(), lineRange.StartLine().Offset(),
 		lineRange.EndLine().Line(), lineRange.EndLine().Offset(),
 	)
-	printDiagnosticLocation(w, s, loc)
-	printSourceSnippet(w, s, loc, fsys, s.severityColor(d.DiagnosticInfo().Severity()))
+	printDiagnosticLocation(w, loc)
+	printSourceSnippet(w, loc, fsys)
 	fmt.Fprintln(w)
 }
 
-func printDiagnosticHeader(w io.Writer, s outputStyle, d diagnostics.Diagnostic) {
+func printDiagnosticHeader(w io.Writer, d diagnostics.Diagnostic) {
 	info := d.DiagnosticInfo()
 	codeStr := ""
 	if c := info.Code(); c != "" {
 		codeStr = fmt.Sprintf("[%s]", c)
 	}
-	fmt.Fprintf(w, "%s%s%s%s%s: %s%s%s\n",
-		s.bold, s.severityColor(info.Severity()), strings.ToLower(info.Severity().String()), codeStr, s.reset,
-		s.bold, d.Message(), s.reset,
+	fmt.Fprintf(w, "%s%s: %s\n",
+		strings.ToLower(info.Severity().String()), codeStr, d.Message(),
 	)
 }
 
-func printDiagnosticLocation(w io.Writer, s outputStyle, loc diagnosticLocation) {
-	fmt.Fprintf(w, "%*s%s-->%s %s:%d:%d\n",
-		loc.numWidth, "", s.cyan, s.reset, loc.filePath, loc.startLine+1, loc.startCol+1,
+func printDiagnosticLocation(w io.Writer, loc diagnosticLocation) {
+	fmt.Fprintf(w, "%*s--> %s:%d:%d\n",
+		loc.numWidth, "", loc.filePath, loc.startLine+1, loc.startCol+1,
 	)
 	if loc.filePath != "" {
-		fmt.Fprintf(w, "%*s %s|%s\n", loc.numWidth, "", s.cyan, s.reset)
+		fmt.Fprintf(w, "%*s |\n", loc.numWidth, "")
 	}
 }
 
-func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys fs.FS, severityColor string) {
+func printSourceSnippet(w io.Writer, loc diagnosticLocation, fsys fs.FS) {
 	content, err := fs.ReadFile(fsys, loc.filePath)
 	if err != nil {
 		return
@@ -114,7 +103,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 		return
 	}
 	lineContent := lines[loc.startLine]
-	fmt.Fprintf(w, "%s%s %s| %s\n", s.cyan, loc.lineNumStr, s.reset, lineContent)
+	fmt.Fprintf(w, "%s | %s\n", loc.lineNumStr, lineContent)
 	highlightLen := loc.endCol - loc.startCol
 	if loc.startLine != loc.endLine {
 		highlightLen = len(lineContent) - loc.startCol
@@ -123,7 +112,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 		highlightLen = 1
 	}
 	pointer := buildPointer(lineContent, loc.startCol, highlightLen)
-	fmt.Fprintf(w, "%*s %s| %s%s%s\n", loc.numWidth, "", s.cyan, severityColor, pointer, s.reset)
+	fmt.Fprintf(w, "%*s | %s\n", loc.numWidth, "", pointer)
 }
 
 func buildPointer(lineContent string, startCol, highlightLen int) string {
@@ -135,7 +124,7 @@ func buildPointer(lineContent string, startCol, highlightLen int) string {
 			b.WriteByte(' ')
 		}
 	}
-	for i := 0; i < highlightLen; i++ {
+	for range highlightLen {
 		b.WriteByte('^')
 	}
 	return b.String()
