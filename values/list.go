@@ -91,7 +91,7 @@ func (l *List) String(visited map[uintptr]bool) string {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(toString(l.Get(i), visited, true))
+		b.WriteString(toString(l.Get(i), visited, false))
 	}
 	b.WriteByte(']')
 	return b.String()
