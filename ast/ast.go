@@ -192,6 +192,7 @@ func UnMask(mask Flags) common.Set[model.Flag] {
 
 type BNodeWithSymbol interface {
 	model.NodeWithSymbol
+	BLangNode
 	SetSymbol(symbolRef model.SymbolRef)
 }
 

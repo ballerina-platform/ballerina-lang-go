@@ -257,6 +257,9 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 
+	// Run type narrowing analysis before semantic analysis.
+	semantics.NarrowTypes(compilerCtx, pkgNode)
+
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)
 
