@@ -27,4 +27,6 @@ public function main() {
     io:println(d2); // @output 3/2
     [int, float, decimal] a = [1, 1, 1]; // @output [1,1,1/1]
     io:println(a);
+    decimal dd = 100d;
+    io:println(dd); // @output 100/1
 }

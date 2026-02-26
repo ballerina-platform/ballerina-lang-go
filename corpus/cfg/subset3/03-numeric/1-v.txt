@@ -41,5 +41,12 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref a))))
+    (var-def
+      (variable dd (type
+        (value-type decimal)) (expr
+        (literal 100/1))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref dd))))
   )
 )
