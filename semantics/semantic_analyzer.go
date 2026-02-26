@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
+	"math/big"
 	"reflect"
 	"sort"
 )
@@ -467,13 +468,55 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 	return true
 }
 
+func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
+	if expectedType == nil {
+		return
+	}
+	resolvedTy := expr.GetDeterminedType()
+	// If already compatible, no widening needed
+	if semtypes.IsSubtype(a.tyCtx(), resolvedTy, expectedType) {
+		return
+	}
+	// Determine the single target numeric type
+	singleNumType := semtypes.SingleNumericType(expectedType)
+	if !singleNumType.IsPresent() {
+		return
+	}
+	targetNumType := singleNumType.Get()
+
+	// int → float
+	if targetNumType == semtypes.FLOAT {
+		if intVal, ok := expr.Value.(int64); ok {
+			floatVal := float64(intVal)
+			expr.Value = floatVal
+			expr.SetDeterminedType(semtypes.FloatConst(floatVal))
+		}
+		return
+	}
+	// int → decimal OR float → decimal
+	if targetNumType == semtypes.DECIMAL {
+		if intVal, ok := expr.Value.(int64); ok {
+			ratVal := new(big.Rat).SetInt64(intVal)
+			expr.Value = ratVal
+			expr.SetDeterminedType(semtypes.DecimalConst(*ratVal))
+		} else if floatVal, ok := expr.Value.(float64); ok {
+			ratVal := new(big.Rat).SetFloat64(floatVal)
+			expr.Value = ratVal
+			expr.SetDeterminedType(semtypes.DecimalConst(*ratVal))
+		}
+		return
+	}
+}
+
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
 	switch expr := expr.(type) {
 	// Literals - just validate
 	case *ast.BLangLiteral:
+		widenNumericLiteral(a, expr, expectedType)
 		validateResolvedType(a, expr, expectedType)
 
 	case *ast.BLangNumericLiteral:
+		widenNumericLiteral(a, &expr.BLangLiteral, expectedType)
 		validateResolvedType(a, expr, expectedType)
 
 	// Variable References - just validate
