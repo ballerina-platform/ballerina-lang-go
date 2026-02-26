@@ -19,34 +19,80 @@ package values
 import (
 	"ballerina-lang-go/semtypes"
 	"fmt"
-	"sort"
 	"strings"
 	"unsafe"
 )
 
+type mapEntry struct {
+	key        string
+	value      BalValue
+	prev, next *mapEntry
+}
+
 type Map struct {
-	Type  semtypes.SemType
-	elems map[string]BalValue
+	Type semtypes.SemType
+
+	data       map[string]*mapEntry
+	head, tail *mapEntry
 }
 
 func NewMap(t semtypes.SemType) *Map {
 	return &Map{
-		Type:  t,
-		elems: make(map[string]BalValue),
+		Type: t,
+		data: make(map[string]*mapEntry),
 	}
 }
 
 func (m *Map) Get(key string) (BalValue, bool) {
-	v, ok := m.elems[key]
-	return v, ok
+	if e, ok := m.data[key]; ok {
+		return e.value, true
+	}
+	return nil, false
 }
 
 func (m *Map) Put(key string, value BalValue) {
-	m.elems[key] = value
+	if e, ok := m.data[key]; ok {
+		e.value = value
+		return
+	}
+	e := &mapEntry{key: key, value: value}
+	m.data[key] = e
+	m.appendEntry(e)
 }
 
-// String formats the map in a deterministic, Ballerina-like form.
-// For simple cases this should match corpus expectations, e.g. {"a":1,"b":"b"}.
+func (m *Map) Delete(key string) {
+	e, ok := m.data[key]
+	if !ok {
+		return
+	}
+	m.unlinkEntry(e)
+	delete(m.data, key)
+}
+
+func (m *Map) appendEntry(e *mapEntry) {
+	if m.tail == nil {
+		m.head, m.tail = e, e
+		return
+	}
+	e.prev = m.tail
+	m.tail.next = e
+	m.tail = e
+}
+
+func (m *Map) unlinkEntry(e *mapEntry) {
+	if e.prev != nil {
+		e.prev.next = e.next
+	} else {
+		m.head = e.next
+	}
+	if e.next != nil {
+		e.next.prev = e.prev
+	} else {
+		m.tail = e.prev
+	}
+	e.prev, e.next = nil, nil
+}
+
 func (m *Map) String(visited map[uintptr]bool) string {
 	ptr := uintptr(unsafe.Pointer(m))
 	if visited[ptr] {
@@ -54,21 +100,18 @@ func (m *Map) String(visited map[uintptr]bool) string {
 	}
 	visited[ptr] = true
 	defer delete(visited, ptr)
-	keys := make([]string, 0, len(m.elems))
-	for k := range m.elems {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+
 	var b strings.Builder
 	b.WriteByte('{')
-	for i, k := range keys {
+	i := 0
+	for e := m.head; e != nil; e = e.next {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(fmt.Sprintf("%q", k))
+		b.WriteString(fmt.Sprintf("%q", e.key))
 		b.WriteByte(':')
-		v := m.elems[k]
-		b.WriteString(toString(v, visited, false))
+		b.WriteString(toString(e.value, visited, false))
+		i++
 	}
 	b.WriteByte('}')
 	return b.String()
