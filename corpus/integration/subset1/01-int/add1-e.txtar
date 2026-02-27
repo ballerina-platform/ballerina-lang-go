@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: expect numeric or string types for +
+  --> add1-e.bal:20:9
+   |
+20 |     foo(1 + true); // @error
+   |         ^^^^^^^^
+

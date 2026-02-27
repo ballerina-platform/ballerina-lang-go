@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: cannot assign to parameter
+  --> assign-e.bal:23:5
+   |
+23 |     n = 10; // @error
+   |     ^
+

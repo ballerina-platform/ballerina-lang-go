@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: included rest type declared in multiple type inclusions must be overridden
+  --> inclusion-rest-conflict-e.bal:28:9
+   |
+28 | type R3 record {|
+   |         ^^^^^^^^^
+

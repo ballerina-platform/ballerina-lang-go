@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((), (BOOLEAN))
+  --> 04-e.bal:19:14
+   |
+19 |     return x[true]; // @error
+   |              ^^^^
+

@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible types for ==
+  --> 2-e.bal:21:16
+   |
+21 |   printBoolean(7 == 8); // @error
+   |                ^^^^^^
+

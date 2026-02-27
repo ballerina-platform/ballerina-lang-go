@@ -17,6 +17,10 @@
 package semantics
 
 import (
+	"flag"
+	"strings"
+	"testing"
+
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
@@ -24,10 +28,6 @@ import (
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"fmt"
-	"strings"
-	"testing"
 )
 
 func TestSemanticAnalysis(t *testing.T) {
@@ -53,7 +53,8 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -172,37 +173,26 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 			return
 		}
 	}
-	// We EXPECT a panic for error test cases
-	didPanic := false
-	var panicValue any
+
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 
 	defer func() {
 		if r := recover(); r != nil {
-			didPanic = true
-			panicValue = r
+			t.Errorf("Semantic analysis panicked for %s: %v", testCase.InputPath, r)
 		}
 
-		// After recovery, verify that a syntax or semantic error occurred
-		if !didPanic {
-			t.Errorf("Expected syntax or semantic error for %s, but analysis completed without error", testCase.InputPath)
+		if !cx.HasErrors() {
+			t.Errorf("Expected semantic errors for %s, but no errors were recorded", testCase.InputPath)
 			return
 		}
 
-		// Verify the panic is a syntax or semantic error (not some other panic)
-		panicStr := fmt.Sprintf("%v", panicValue)
-		if !strings.Contains(panicStr, "Semantic error:") && !strings.Contains(panicStr, "Syntax error:") {
-			t.Errorf("Expected syntax or semantic error for %s, but got different panic: %v", testCase.InputPath, panicValue)
-			return
-		}
-
-		// Success - we got the expected syntax or semantic error
-		t.Logf("Syntax or semantic error correctly detected for %s: %v", testCase.InputPath, panicValue)
+		t.Logf("Semantic error correctly detected for %s", testCase.InputPath)
 	}()
 
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -219,9 +209,17 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
 	ResolveSymbols(cx, pkg, importedSymbols)
 
+	if cx.HasDiagnostics() {
+		return
+	}
+
 	// Step 2: Type Resolution
 	typeResolver := NewTypeResolver(cx, importedSymbols)
 	typeResolver.ResolveTypes(cx, pkg)
+
+	if cx.HasDiagnostics() {
+		return
+	}
 
 	// Step 3: Control Flow Graph Generation
 	cfg := CreateControlFlowGraph(cx, pkg)
