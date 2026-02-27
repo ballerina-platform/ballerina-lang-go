@@ -26,6 +26,8 @@
 - [Local variable declarations](https://ballerina.io/spec/lang/master/#local-var-decl-stmt)
   - Currently don't support `final`
 - [Return](https://ballerina.io/spec/lang/master/#return-stmt)
+- [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
+  - Currently only support range and list
 
 ## Expressions
 
@@ -45,6 +47,7 @@
 - [Relational expression](https://ballerina.io/spec/lang/master/#relational-expr)
 - [Equality expression](https://ballerina.io/spec/lang/master/#equality-expr)
 - Nested expressions (`(expression)`)
+- [Range expression](https://ballerina.io/spec/lang/master/#section_6.26)
 
 ## Operators
 
