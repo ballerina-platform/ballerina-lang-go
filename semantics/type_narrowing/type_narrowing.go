@@ -22,70 +22,76 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"sync"
 )
 
-type binding struct {
-	// ref is the underlying symbol we are narrowing. This is never a narrowed symbol
-	ref            model.SymbolRef
-	narrowedSymbol model.SymbolRef
-	prev           *binding
+type ExpressionResolver interface {
+	ast.Visitor
+	ResolveExpression(chain *Binding, expr ast.BLangExpression) semtypes.SemType
+	ResolveStatement(chain *Binding, stmt ast.BLangStatement)
 }
 
-func (b *binding) isUnnarowing() bool {
-	return b.ref == b.narrowedSymbol
+type Binding struct {
+	// Ref is the underlying symbol we are narrowing. This is never a narrowed symbol
+	Ref            model.SymbolRef
+	NarrowedSymbol model.SymbolRef
+	Prev           *Binding
+	defaultType    semtypes.SemType
+}
+
+type NarrowingContext struct {
+	compilerCtx *context.CompilerContext
+	resolver    ExpressionResolver
+}
+
+func (ctx *NarrowingContext) SymbolType(ref model.SymbolRef) semtypes.SemType {
+	return ctx.compilerCtx.SymbolType(ref)
+}
+
+func (b *Binding) isUnnarowing() bool {
+	return b.Ref == b.NarrowedSymbol
 }
 
 type expressionEffect struct {
-	ifTrue  *binding
-	ifFalse *binding
+	ifTrue  *Binding
+	ifFalse *Binding
 }
 
 type statementEffect struct {
-	binding *binding
+	binding *Binding
 	// if the statement is return/panic etc which spec treat narrowed type as never
 	nonCompletion bool
 }
 
-func lookup(chain *binding, ref model.SymbolRef) (model.SymbolRef, bool) {
+func Lookup(chain *Binding, ref model.SymbolRef) (model.SymbolRef, bool) {
 	if chain == nil {
 		return ref, false
 	}
-	if chain.ref == ref {
-		return chain.narrowedSymbol, !chain.isUnnarowing()
+	if chain.Ref == ref {
+		return chain.NarrowedSymbol, !chain.isUnnarowing()
 	}
-	return lookup(chain.prev, ref)
+	return Lookup(chain.Prev, ref)
 }
 
-func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
-	narrowedSymbol := ctx.CreateNarrowedSymbol(underlying)
-	ctx.SetSymbolType(narrowedSymbol, ty)
+func narrowSymbol(ctx *NarrowingContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
+	narrowedSymbol := ctx.compilerCtx.CreateNarrowedSymbol(underlying)
+	ctx.compilerCtx.SetSymbolType(narrowedSymbol, ty)
 	return narrowedSymbol
 }
 
-func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
-	var wg sync.WaitGroup
-	var panicErr any = nil
-	for i := range pkg.Functions {
-		wg.Add(1)
-		fn := &pkg.Functions[i]
-		go func() {
-			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					panicErr = r
-				}
-			}()
-			analyzeFunction(ctx, fn)
-		}()
+func AnalyzePackage(ctx *context.CompilerContext, pkg *ast.BLangPackage, resolver ExpressionResolver) {
+	nCtx := &NarrowingContext{compilerCtx: ctx, resolver: resolver}
+	for i := range pkg.Constants {
+		c := &pkg.Constants[i]
+		if c.Expr != nil {
+			analyzeExpression(nCtx, nil, c.Expr.(ast.BLangExpression))
+		}
 	}
-	wg.Wait()
-	if panicErr != nil {
-		panic(panicErr)
+	for i := range pkg.Functions {
+		analyzeFunction(nCtx, &pkg.Functions[i])
 	}
 }
 
-func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) {
+func analyzeFunction(ctx *NarrowingContext, fn *ast.BLangFunction) {
 	switch body := fn.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
 		analyzeStmts(ctx, nil, body.Stmts)
@@ -94,50 +100,55 @@ func analyzeFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) {
 	}
 }
 
-func analyzeStatement(ctx *context.CompilerContext, chain *binding, stmt ast.BLangStatement) statementEffect {
+func analyzeStatement(ctx *NarrowingContext, chain *Binding, stmt ast.BLangStatement) statementEffect {
+	var effect statementEffect
 	switch stmt := stmt.(type) {
 	case *ast.BLangIf:
-		return analyzeIfStatement(ctx, chain, stmt)
+		effect = analyzeIfStatement(ctx, chain, stmt)
 	case *ast.BLangBlockStmt:
-		return analyzeStmtBlock(ctx, chain, stmt)
+		effect = analyzeStmtBlock(ctx, chain, stmt)
 	case *ast.BLangWhile:
-		return analyzeWhileStmt(ctx, chain, stmt)
+		effect = analyzeWhileStmt(ctx, chain, stmt)
 	// TODO: when we have panic that should also do the same
 	case *ast.BLangReturn:
 		if stmt.GetExpression() != nil {
 			analyzeExpression(ctx, chain, stmt.GetExpression().(ast.BLangExpression))
 		}
-		return statementEffect{nil, true}
+		effect = statementEffect{nil, true}
 	case model.AssignmentNode:
 		if stmt.GetExpression() != nil {
 			analyzeExpression(ctx, chain, stmt.GetExpression().(ast.BLangExpression))
 		}
 		if expr, ok := stmt.GetVariable().(model.NodeWithSymbol); ok {
 			// TODO: when we have closures capaturing variables should also trigger unnarowing.
-			return unnarrowSymbol(ctx, chain, expr.Symbol())
+			effect = unnarrowSymbol(ctx, chain, expr.Symbol())
+		} else {
+			effect = defaultStmtEffect(chain)
 		}
-		return defaultStmtEffect(chain)
 	default:
 		visitor := &narrowedSymbolRefUpdator{ctx, chain, stmt.(ast.BLangNode)}
 		ast.Walk(visitor, stmt.(ast.BLangNode))
-		return defaultStmtEffect(chain)
+		effect = defaultStmtEffect(chain)
 	}
+	ctx.resolver.ResolveStatement(effect.binding, stmt)
+	return effect
 }
 
-func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.SymbolRef) statementEffect {
-	_, isNarrowed := lookup(chain, symbol)
+func unnarrowSymbol(ctx *NarrowingContext, chain *Binding, symbol model.SymbolRef) statementEffect {
+	// TODO: clean this up you need to unnarrow only if already narrowed
+	_, isNarrowed := Lookup(chain, symbol)
 	if !isNarrowed {
 		return statementEffect{chain, false}
 	}
-	chain = &binding{
-		ref:            symbol,
-		narrowedSymbol: symbol,
-		prev:           chain,
+	chain = &Binding{
+		Ref:            symbol,
+		NarrowedSymbol: symbol,
+		Prev:           chain,
 	}
 	return statementEffect{chain, false}
 }
 
-func analyzeWhileStmt(ctx *context.CompilerContext, chain *binding, stmt *ast.BLangWhile) statementEffect {
+func analyzeWhileStmt(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangWhile) statementEffect {
 	expressionEffect := analyzeExpression(ctx, chain, stmt.Expr)
 	bodyEffect := analyzeStmtBlock(ctx, expressionEffect.ifTrue, &stmt.Body)
 	result := expressionEffect.ifFalse
@@ -147,11 +158,11 @@ func analyzeWhileStmt(ctx *context.CompilerContext, chain *binding, stmt *ast.BL
 	return statementEffect{result, false}
 }
 
-func analyzeStmtBlock(ctx *context.CompilerContext, chain *binding, stmt *ast.BLangBlockStmt) statementEffect {
+func analyzeStmtBlock(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangBlockStmt) statementEffect {
 	return analyzeStmts(ctx, chain, stmt.Stmts)
 }
 
-func analyzeStmts(ctx *context.CompilerContext, chain *binding, stmts []ast.BLangStatement) statementEffect {
+func analyzeStmts(ctx *NarrowingContext, chain *Binding, stmts []ast.BLangStatement) statementEffect {
 	result := chain
 	for _, each := range stmts {
 		eachResult := analyzeStatement(ctx, result, each)
@@ -164,7 +175,7 @@ func analyzeStmts(ctx *context.CompilerContext, chain *binding, stmts []ast.BLan
 	return statementEffect{result, false}
 }
 
-func analyzeIfStatement(ctx *context.CompilerContext, chain *binding, stmt *ast.BLangIf) statementEffect {
+func analyzeIfStatement(ctx *NarrowingContext, chain *Binding, stmt *ast.BLangIf) statementEffect {
 	expressionEffect := analyzeExpression(ctx, chain, stmt.Expr)
 	ifTrueEffect := analyzeStmtBlock(ctx, expressionEffect.ifTrue, &stmt.Body)
 	var ifFalseEffect statementEffect
@@ -176,7 +187,7 @@ func analyzeIfStatement(ctx *context.CompilerContext, chain *binding, stmt *ast.
 	return mergeStatementEffects(ctx, ifTrueEffect, ifFalseEffect)
 }
 
-func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect) statementEffect {
+func mergeStatementEffects(ctx *NarrowingContext, s1, s2 statementEffect) statementEffect {
 	if s1.nonCompletion {
 		return s2
 	}
@@ -187,7 +198,83 @@ func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect)
 	return statementEffect{combined, false}
 }
 
-func analyzeExpression(ctx *context.CompilerContext, chain *binding, expr ast.BLangExpression) expressionEffect {
+func isSingletonValue(ty semtypes.SemType, val any) bool {
+	singleShape := semtypes.SingleShape(ty)
+	if singleShape.IsPresent() {
+		value := singleShape.Get()
+		return value.Value == val
+	}
+	return false
+}
+
+func isLogicExp(exp *ast.BLangBinaryExpr) bool {
+	switch exp.GetOperatorKind() {
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return true
+	default:
+		return false
+	}
+}
+
+func walkAndResolve(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) {
+	visitor := &narrowedSymbolRefUpdator{ctx, chain, expr}
+	ast.Walk(visitor, expr)
+	ctx.resolver.ResolveExpression(chain, expr)
+}
+
+func singletonExprEffect(chain *Binding, expr ast.BLangExpression) (expressionEffect, bool) {
+	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
+	if isSingletonValue(expr.GetDeterminedType(), true) {
+		return expressionEffect{ifTrue: chain, ifFalse: &Binding{defaultType: &semtypes.NEVER, Prev: chain}}, true
+	} else if isSingletonValue(expr.GetDeterminedType(), false) {
+		return expressionEffect{ifTrue: &Binding{defaultType: &semtypes.NEVER, Prev: chain}, ifFalse: chain}, true
+	}
+	return expressionEffect{}, false
+}
+
+func analyzeLogicalBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBinaryExpr) expressionEffect {
+	isAnd := expr.OpKind == model.OperatorKind_AND
+
+	walkAndResolve(ctx, chain, expr.LhsExpr)
+	lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
+
+	propagated, other := lhsEffect.ifTrue, lhsEffect.ifFalse
+	if !isAnd {
+		propagated, other = lhsEffect.ifFalse, lhsEffect.ifTrue
+	}
+
+	walkAndResolve(ctx, propagated, expr.RhsExpr)
+	rhsEffect := analyzeExpression(ctx, propagated, expr.RhsExpr)
+
+	walkAndResolve(ctx, chain, expr)
+	if effect, ok := singletonExprEffect(chain, expr); ok {
+		return effect
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, propagated)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, propagated)
+	if !isAnd {
+		rhsDiffTrue, rhsDiffFalse = rhsDiffFalse, rhsDiffTrue
+	}
+
+	sameSide := mergeChains(ctx, propagated, rhsDiffTrue, semtypes.Intersect)
+	otherSide := mergeChains(ctx, other, mergeChains(ctx, propagated, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
+
+	if isAnd {
+		return expressionEffect{ifTrue: sameSide, ifFalse: otherSide}
+	}
+	return expressionEffect{ifTrue: otherSide, ifFalse: sameSide}
+}
+
+func analyzeExpression(ctx *NarrowingContext, chain *Binding, expr ast.BLangExpression) expressionEffect {
+	// First resolve the expression type with the current binding chain
+	if binaryExp, ok := expr.(*ast.BLangBinaryExpr); !ok || !isLogicExp(binaryExp) {
+		// With logical binary expression one part can narrow the other part
+		walkAndResolve(ctx, chain, expr)
+		if effect, ok := singletonExprEffect(chain, expr); ok {
+			return effect
+		}
+	}
 	switch expr := expr.(type) {
 	case *ast.BLangTypeTestExpr:
 		return analyzeTypeTestExpr(ctx, chain, expr)
@@ -197,16 +284,16 @@ func analyzeExpression(ctx *context.CompilerContext, chain *binding, expr ast.BL
 		return analyzeUnaryExpr(ctx, chain, expr)
 	case *ast.BLangSimpleVarRef, *ast.BLangLocalVarRef, *ast.BLangConstRef:
 		return updateVarRef(ctx, chain, expr.(ast.BNodeWithSymbol))
+	case *ast.BLangGroupExpr:
+		return analyzeExpression(ctx, chain, expr.Expression)
 	default:
-		visitor := &narrowedSymbolRefUpdator{ctx, chain, expr}
-		ast.Walk(visitor, expr)
 		return defaultExpressionEffect(chain)
 	}
 }
 
 type narrowedSymbolRefUpdator struct {
-	ctx   *context.CompilerContext
-	chain *binding
+	ctx   *NarrowingContext
+	chain *Binding
 	root  ast.BLangNode
 }
 
@@ -216,15 +303,18 @@ func (u *narrowedSymbolRefUpdator) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-	if node == u.root {
-		return u
-	}
 	if expr, ok := node.(ast.BLangExpression); ok {
-		analyzeExpression(u.ctx, u.chain, expr)
+		u.ctx.resolver.ResolveExpression(u.chain, expr)
+		if node != u.root {
+			analyzeExpression(u.ctx, u.chain, expr)
+		}
 		return nil
 	}
 	if stmt, ok := node.(ast.BLangStatement); ok {
-		analyzeStatement(u.ctx, u.chain, stmt)
+		u.ctx.resolver.ResolveStatement(u.chain, stmt)
+		if node != u.root {
+			analyzeStatement(u.ctx, u.chain, stmt)
+		}
 		return nil
 	}
 	return u
@@ -234,8 +324,8 @@ func (u *narrowedSymbolRefUpdator) VisitTypeData(_ *model.TypeData) ast.Visitor 
 	return u
 }
 
-func updateVarRef(ctx *context.CompilerContext, chain *binding, expr ast.BNodeWithSymbol) expressionEffect {
-	narrowedSymbol, isNarrowed := lookup(chain, expr.Symbol())
+func updateVarRef(ctx *NarrowingContext, chain *Binding, expr ast.BNodeWithSymbol) expressionEffect {
+	narrowedSymbol, isNarrowed := Lookup(chain, expr.Symbol())
 	if isNarrowed {
 		expr.SetSymbol(narrowedSymbol)
 		narrowedType := ctx.SymbolType(narrowedSymbol)
@@ -244,7 +334,7 @@ func updateVarRef(ctx *context.CompilerContext, chain *binding, expr ast.BNodeWi
 	return defaultExpressionEffect(chain)
 }
 
-func analyzeUnaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.BLangUnaryExpr) expressionEffect {
+func analyzeUnaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangUnaryExpr) expressionEffect {
 	if expr.Operator != model.OperatorKind_NOT {
 		return defaultExpressionEffect(chain)
 	}
@@ -255,7 +345,7 @@ func analyzeUnaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.BL
 	}
 }
 
-func analyzeBinaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
+func analyzeBinaryExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangBinaryExpr) expressionEffect {
 	switch expr.OpKind {
 	case model.OperatorKind_EQUAL:
 		lhsRef, lhsIsVarRef := varRefExp(chain, &expr.LhsExpr)
@@ -265,17 +355,17 @@ func analyzeBinaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.B
 			t := expr.RhsExpr.GetDeterminedType()
 			trueTy := semtypes.Intersect(tx, t)
 			trueSym := narrowSymbol(ctx, lhsRef, trueTy)
-			trueChain := &binding{
-				ref:            lhsRef,
-				narrowedSymbol: trueSym,
-				prev:           chain,
+			trueChain := &Binding{
+				Ref:            lhsRef,
+				NarrowedSymbol: trueSym,
+				Prev:           chain,
 			}
 			falseTy := semtypes.Diff(tx, t)
 			falseSym := narrowSymbol(ctx, lhsRef, falseTy)
-			falseChain := &binding{
-				ref:            lhsRef,
-				narrowedSymbol: falseSym,
-				prev:           chain,
+			falseChain := &Binding{
+				Ref:            lhsRef,
+				NarrowedSymbol: falseSym,
+				Prev:           chain,
 			}
 			return expressionEffect{
 				ifTrue:  trueChain,
@@ -289,17 +379,17 @@ func analyzeBinaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.B
 			t := expr.LhsExpr.GetDeterminedType()
 			trueTy := semtypes.Intersect(tx, t)
 			trueSym := narrowSymbol(ctx, rhsRef, trueTy)
-			trueChain := &binding{
-				ref:            rhsRef,
-				narrowedSymbol: trueSym,
-				prev:           chain,
+			trueChain := &Binding{
+				Ref:            rhsRef,
+				NarrowedSymbol: trueSym,
+				Prev:           chain,
 			}
 			falseTy := semtypes.Diff(tx, t)
 			falseSym := narrowSymbol(ctx, rhsRef, falseTy)
-			falseChain := &binding{
-				ref:            rhsRef,
-				narrowedSymbol: falseSym,
-				prev:           chain,
+			falseChain := &Binding{
+				Ref:            rhsRef,
+				NarrowedSymbol: falseSym,
+				Prev:           chain,
 			}
 			return expressionEffect{
 				ifTrue:  trueChain,
@@ -316,99 +406,114 @@ func analyzeBinaryExpr(ctx *context.CompilerContext, chain *binding, expr *ast.B
 			ifTrue:  effect.ifFalse,
 			ifFalse: effect.ifTrue,
 		}
-	case model.OperatorKind_AND:
-		lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
-		rhsEffect := analyzeExpression(ctx, lhsEffect.ifTrue, expr.RhsExpr)
-		return expressionEffect{
-			ifTrue:  mergeChains(ctx, lhsEffect.ifTrue, rhsEffect.ifTrue, semtypes.Intersect),
-			ifFalse: mergeChains(ctx, lhsEffect.ifFalse, mergeChains(ctx, lhsEffect.ifTrue, rhsEffect.ifFalse, semtypes.Intersect), semtypes.Union),
-		}
-	case model.OperatorKind_OR:
-		lhsEffect := analyzeExpression(ctx, chain, expr.LhsExpr)
-		rhsEffect := analyzeExpression(ctx, lhsEffect.ifFalse, expr.RhsExpr)
-		return expressionEffect{
-			ifTrue:  mergeChains(ctx, lhsEffect.ifTrue, mergeChains(ctx, lhsEffect.ifFalse, rhsEffect.ifTrue, semtypes.Intersect), semtypes.Union),
-			ifFalse: mergeChains(ctx, lhsEffect.ifFalse, rhsEffect.ifFalse, semtypes.Intersect),
-		}
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return analyzeLogicalBinaryExpr(ctx, chain, expr)
 	default:
 		return defaultExpressionEffect(chain)
 	}
 }
 
-func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[model.SymbolRef]semtypes.SemType) {
-	if chain == nil {
-		return
+func diff(c1, c2 *Binding) *Binding {
+	if c1 == c2 {
+		return nil
 	}
-	ref := chain.ref
-	_, hasTy := accum[ref]
-	if !hasTy {
-		accum[ref] = ctx.SymbolType(chain.narrowedSymbol)
+	result := &Binding{Ref: c1.Ref, NarrowedSymbol: c1.NarrowedSymbol, defaultType: c1.defaultType}
+	cur := result
+	parent := c1.Prev
+	for parent != nil && parent != c2 {
+		cur.Prev = &Binding{Ref: parent.Ref, NarrowedSymbol: parent.NarrowedSymbol, defaultType: parent.defaultType}
+		cur = cur.Prev
+		parent = parent.Prev
 	}
-	accumNarrowedTypes(ctx, chain.prev, accum)
+	return result
 }
 
-func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *binding {
+func accumNarrowedTypes(ctx *NarrowingContext, chain *Binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
+	if chain == nil {
+		return accumDefault
+	}
+	if chain.defaultType == nil {
+		ref := chain.Ref
+		_, hasTy := accum[ref]
+		if !hasTy {
+			accum[ref] = ctx.SymbolType(chain.NarrowedSymbol)
+		}
+	} else if accumDefault == nil {
+		accumDefault = chain.defaultType
+	}
+	return accumNarrowedTypes(ctx, chain.Prev, accum, accumDefault)
+}
+
+func mergeChains(ctx *NarrowingContext, c1 *Binding, c2 *Binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *Binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c1, m1)
+	d1 := accumNarrowedTypes(ctx, c1, m1, nil)
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c2, m2)
+	d2 := accumNarrowedTypes(ctx, c2, m2, nil)
 	type typePair struct{ ty1, ty2 semtypes.SemType }
 	pairs := make(map[model.SymbolRef]typePair)
 	for s, ty1 := range m1 {
 		ty2, ok := m2[s]
 		if !ok {
-			ty2 = ctx.SymbolType(s)
+			if d2 != nil {
+				ty2 = d2
+			} else {
+				ty2 = ctx.SymbolType(s)
+			}
 		}
 		pairs[s] = typePair{ty1, ty2}
 	}
 	for s, ty2 := range m2 {
 		if _, ok := m1[s]; !ok {
-			pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			if d1 != nil {
+				pairs[s] = typePair{d1, ty2}
+			} else {
+				pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			}
 		}
 	}
-	var result *binding
+	var result *Binding
 	for s, p := range pairs {
 		ty := mergeOp(p.ty1, p.ty2)
 		narrowedSymbol := narrowSymbol(ctx, s, ty)
-		result = &binding{
-			ref:            s,
-			narrowedSymbol: narrowedSymbol,
-			prev:           result,
+		result = &Binding{
+			Ref:            s,
+			NarrowedSymbol: narrowedSymbol,
+			Prev:           result,
 		}
 	}
 	return result
 }
 
-func defaultExpressionEffect(chain *binding) expressionEffect {
+func defaultExpressionEffect(chain *Binding) expressionEffect {
 	return expressionEffect{ifTrue: chain, ifFalse: chain}
 }
 
-func defaultStmtEffect(chain *binding) statementEffect {
+func defaultStmtEffect(chain *Binding) statementEffect {
 	return statementEffect{binding: chain, nonCompletion: false}
 }
 
-func analyzeTypeTestExpr(ctx *context.CompilerContext, chain *binding, expr *ast.BLangTypeTestExpr) expressionEffect {
+func analyzeTypeTestExpr(ctx *NarrowingContext, chain *Binding, expr *ast.BLangTypeTestExpr) expressionEffect {
 	ref, isVarRef := varRefExp(chain, &expr.Expr)
 	if !isVarRef {
 		return defaultExpressionEffect(chain)
 	}
 	tx := ctx.SymbolType(ref)
-	ref = ctx.UnnarrowedSymbol(ref)
+	ref = ctx.compilerCtx.UnnarrowedSymbol(ref)
 	t := expr.Type.Type
 	trueTy := semtypes.Intersect(tx, t)
 	trueSym := narrowSymbol(ctx, ref, trueTy)
-	trueChain := &binding{
-		ref:            ref,
-		narrowedSymbol: trueSym,
-		prev:           chain,
+	trueChain := &Binding{
+		Ref:            ref,
+		NarrowedSymbol: trueSym,
+		Prev:           chain,
 	}
 
 	falseTy := semtypes.Diff(tx, t)
 	falseSym := narrowSymbol(ctx, ref, falseTy)
-	falseChain := &binding{
-		ref:            ref,
-		narrowedSymbol: falseSym,
-		prev:           chain,
+	falseChain := &Binding{
+		Ref:            ref,
+		NarrowedSymbol: falseSym,
+		Prev:           chain,
 	}
 	return expressionEffect{
 		ifTrue:  trueChain,
@@ -416,12 +521,12 @@ func analyzeTypeTestExpr(ctx *context.CompilerContext, chain *binding, expr *ast
 	}
 }
 
-func varRefExp(chain *binding, expr *ast.BLangExpression) (model.SymbolRef, bool) {
+func varRefExp(chain *Binding, expr *ast.BLangExpression) (model.SymbolRef, bool) {
 	baseSymbol, isVarRef := varRefExpInner(expr)
 	if !isVarRef {
 		return baseSymbol, false
 	}
-	narrowedSymbol, isNarrowed := lookup(chain, baseSymbol)
+	narrowedSymbol, isNarrowed := Lookup(chain, baseSymbol)
 	if isNarrowed {
 		return narrowedSymbol, true
 	}

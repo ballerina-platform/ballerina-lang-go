@@ -1,0 +1,43 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+doesADragonExplodeInTheWoods<NIL>{
+  bb0 {
+    %1 = ConstantLoad boom
+    %2 = println(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad true
+    %0 = %3;
+    return;
+  }
+}
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 1
+    x = %1;
+    %5 = ConstantLoad 42
+    %4 = == x %5;
+    %3 = %4;
+    %4 ? bb2 : bb1;
+  }
+  bb1 {
+    %6 = doesADragonExplodeInTheWoods() -> bb3;
+  }
+  bb2 {
+    %3 ? bb4 : bb6;
+  }
+  bb3 {
+    %3 = %6;
+    GOTO bb2;
+  }
+  bb4 {
+    %7 = ConstantLoad unconditional
+    %8 = println(%7) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    return;
+  }
+}

@@ -1,0 +1,30 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function doesADragonExplodeInTheWoods () (
+    (finite-type
+      (literal true)))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal boom))))
+      (return
+        (literal true))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (literal 1))))
+      (if
+        (binary-expr ||
+          (binary-expr ==
+            (simple-var-ref x)
+            (literal 42))
+          (invocation doesADragonExplodeInTheWoods ()))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unconditional))))) ())
+      (block-stmt))))

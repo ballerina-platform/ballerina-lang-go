@@ -68,7 +68,7 @@ func walkBlockStmt(cx *FunctionContext, stmt *ast.BLangBlockStmt) desugaredNode[
 	return desugaredNode[model.StatementNode]{replacementNode: stmt}
 }
 
-func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody) desugaredNode[model.StatementNode] {
+func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody) {
 	var allStmts []ast.BLangStatement
 
 	for _, stmt := range body.Stmts {
@@ -80,7 +80,6 @@ func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody
 	}
 
 	body.Stmts = allStmts
-	return desugaredNode[model.StatementNode]{replacementNode: body}
 }
 
 func walkAssignment(cx *FunctionContext, stmt *ast.BLangAssignment) desugaredNode[model.StatementNode] {
@@ -192,8 +191,7 @@ func walkWhile(cx *FunctionContext, stmt *ast.BLangWhile) desugaredNode[model.St
 
 	// Only walk onFail clause if it has a body
 	if stmt.OnFailClause.Body != nil {
-		onFailResult := walkOnFailClause(cx, &stmt.OnFailClause)
-		stmt.OnFailClause = *onFailResult.replacementNode.(*ast.BLangOnFailClause)
+		walkOnFailClause(cx, &stmt.OnFailClause)
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -208,8 +206,7 @@ func walkDo(cx *FunctionContext, stmt *ast.BLangDo) desugaredNode[model.Statemen
 
 	// Only walk onFail clause if it has a body
 	if stmt.OnFailClause.Body != nil {
-		onFailResult := walkOnFailClause(cx, &stmt.OnFailClause)
-		stmt.OnFailClause = *onFailResult.replacementNode.(*ast.BLangOnFailClause)
+		walkOnFailClause(cx, &stmt.OnFailClause)
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -217,13 +214,9 @@ func walkDo(cx *FunctionContext, stmt *ast.BLangDo) desugaredNode[model.Statemen
 	}
 }
 
-func walkOnFailClause(cx *FunctionContext, clause *ast.BLangOnFailClause) desugaredNode[model.StatementNode] {
+func walkOnFailClause(cx *FunctionContext, clause *ast.BLangOnFailClause) {
 	bodyResult := walkBlockStmt(cx, clause.Body)
 	clause.Body = bodyResult.replacementNode.(*ast.BLangBlockStmt)
-
-	return desugaredNode[model.StatementNode]{
-		replacementNode: clause,
-	}
 }
 
 func walkSimpleVariableDef(cx *FunctionContext, stmt *ast.BLangSimpleVariableDef) desugaredNode[model.StatementNode] {

@@ -1,0 +1,33 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type string))) (expr
+        (literal 1))))
+    (var-def
+      (variable a (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (var-def
+      (variable b (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (binary-expr ||
+      (literal true)
+      (binary-expr &&
+        (binary-expr &&
+          (binary-expr ==
+            (simple-var-ref x)
+            (literal 1))
+          (simple-var-ref a))
+        (simple-var-ref b)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal x is 1))))
+  )
+  (bb2 (bb1) ())
+)

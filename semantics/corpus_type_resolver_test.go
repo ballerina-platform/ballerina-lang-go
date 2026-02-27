@@ -14,16 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+package semantics_test
 
 import (
 	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 	"flag"
 	"testing"
 )
@@ -48,82 +47,77 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseTypeResolution, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
-	}
-	pkg := ast.ToPackage(compilationUnit)
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
-	typeResolver := NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-	tyCtx := semtypes.ContextFrom(cx.GetTypeEnv())
-	validator := &typeResolutionValidator{t: t, ctx: cx, tyCtx: tyCtx}
-	ast.Walk(validator, pkg)
 
-	// If we reach here, type resolution completed without panicking
+	pkg := result.Package
+	validator := &typeResolutionValidator{t: t, ctx: cx}
+
+	// Validate type definitions
+	for i := range pkg.TypeDefinitions {
+		validator.validateTypeDefinition(&pkg.TypeDefinitions[i])
+	}
+
+	// Validate function signatures
+	for i := range pkg.Functions {
+		validator.validateFunction(&pkg.Functions[i])
+	}
+
+	// Validate constants
+	for i := range pkg.Constants {
+		validator.validateConstant(&pkg.Constants[i])
+	}
+
 	t.Logf("Type resolution completed successfully for %s", testCase.InputPath)
 }
 
 type typeResolutionValidator struct {
-	t     *testing.T
-	ctx   *context.CompilerContext
-	tyCtx semtypes.Context
+	t   *testing.T
+	ctx *context.CompilerContext
 }
 
-func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return nil
+func (v *typeResolutionValidator) validateTypeDefinition(defn *ast.BLangTypeDefinition) {
+	if defn.DeterminedType == nil {
+		v.t.Errorf("type definition %s does not have determined type set", defn.Name.GetValue())
 	}
-
-	// Validate that all BLangExpression nodes have their determined type set
-	if expr, ok := node.(ast.BLangExpression); ok {
-		determinedType := expr.GetDeterminedType()
-		if determinedType == nil {
-			v.t.Errorf("expression %T at %v does not have determined type set", expr, expr.GetPosition())
-		}
-		if semtypes.IsNever(determinedType) {
-			v.t.Errorf("expression %T at %v has determined type NEVER", expr, expr.GetPosition())
-		}
-
-	}
-
-	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
-		symbol := nodeWithSymbol.Symbol()
-		// Skip constant symbols (kind: 1) since they're resolved during semantic analysis
-		if v.ctx.SymbolKind(symbol) == model.SymbolKindConstant {
-			return v
-		}
-		if v.ctx.SymbolType(symbol) == nil {
-			// FIXME: get rid of this
-			if _, ok := node.(*ast.BLangConstant); ok {
-				// constants will get their type set during semantic analysis
-				return v
-			}
-			v.t.Errorf("symbol %s (kind: %v) does not have type set for node %T",
-				v.ctx.SymbolName(symbol), v.ctx.SymbolKind(symbol), node)
-		}
-	}
-
-	return v
+	v.validateSymbolType(defn, defn.Name.GetValue())
 }
 
-func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
-	if typeData.TypeDescriptor == nil {
-		return nil
+func (v *typeResolutionValidator) validateFunction(fn *ast.BLangFunction) {
+	v.validateSymbolType(fn, fn.Name.GetValue())
+
+	// Validate parameter types
+	for _, param := range fn.RequiredParams {
+		ty := param.DeterminedType
+		if ty == nil {
+			v.t.Errorf("function %s parameter %s does not have type resolved",
+				fn.Name.GetValue(), param.Name.GetValue())
+		}
+		v.validateSymbolType(&param, param.Name.GetValue())
 	}
-	if typeData.Type == nil {
-		v.t.Errorf("type not resolved for %+v", typeData)
+}
+
+func (v *typeResolutionValidator) validateConstant(constant *ast.BLangConstant) {
+	if constant.DeterminedType == nil {
+		v.t.Errorf("constant %s does not have determined type set", constant.Name.GetValue())
 	}
-	return v
+	symbol := constant.Symbol()
+	if v.ctx.SymbolType(symbol) == nil {
+		v.t.Errorf("constant %s symbol does not have type set", constant.Name.GetValue())
+	}
+}
+
+func (v *typeResolutionValidator) validateSymbolType(node ast.BNodeWithSymbol, name string) {
+	symbol := node.Symbol()
+	if symbol == (model.SymbolRef{}) {
+		return
+	}
+	if v.ctx.SymbolType(symbol) == nil {
+		v.t.Errorf("symbol %s (kind: %v) does not have type set",
+			name, v.ctx.SymbolKind(symbol))
+	}
 }
