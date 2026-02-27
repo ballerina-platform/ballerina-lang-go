@@ -2943,6 +2943,9 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
+	if errorConstructorExpressionNode.HasDiagnostics() {
+		n.cx.SyntaxError("invalid error constructor", getPosition(errorConstructorExpressionNode))
+	}
 	result := &BLangErrorConstructorExpr{}
 	result.pos = getPosition(errorConstructorExpressionNode)
 

@@ -856,8 +856,8 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 	for _, namedArg := range expr.NamedArgs {
 		name := namedArg.Name.GetValue()
 		if seen[name] {
-			a.semanticErr(fmt.Sprintf("duplicate named argument '%s' in error constructor", name))
-			return
+			a.semanticErr(fmt.Sprintf("duplicate named argument '%s' in error constructor", name), namedArg.GetPosition())
+			return false
 		}
 		seen[name] = true
 		fieldType := semtypes.MappingMemberTypeInnerVal(tyCtx, detailType, semtypes.StringConst(name))
@@ -865,8 +865,8 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 			return false
 		}
 		if !semtypes.IsSubtype(tyCtx, namedArg.Expr.GetDeterminedType(), clonableTy) {
-			a.semanticErr("named arguments must be subtypes of cloneable")
-			return
+			a.semanticErr("named arguments must be subtypes of cloneable", namedArg.GetPosition())
+			return false
 		}
 	}
 

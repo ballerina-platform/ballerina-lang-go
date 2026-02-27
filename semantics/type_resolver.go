@@ -551,9 +551,12 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) (semtypes.Sem
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(e)
 	case *ast.BLangNamedArgsExpression:
-		ty := t.resolveExpression(e.Expr)
+		ty, ok := t.resolveExpression(e.Expr)
+		if !ok {
+			return nil, false
+		}
 		setExpectedType(e, ty)
-		return ty
+		return ty, true
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, false
