@@ -62,12 +62,18 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		execMove(v, frame)
 	case *bir.NewArray:
 		execNewArray(v, frame)
+	case *bir.NewMap:
+		execNewMap(v, frame)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:
 			execArrayStore(v, frame)
 		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
 			execArrayLoad(v, frame)
+		case bir.INSTRUCTION_KIND_MAP_STORE:
+			execMapStore(v, frame)
+		case bir.INSTRUCTION_KIND_MAP_LOAD:
+			execMapLoad(v, frame)
 		default:
 			fmt.Printf("UNKNOWN_FIELD_ACCESS_KIND(%d)\n", v.GetKind())
 		}

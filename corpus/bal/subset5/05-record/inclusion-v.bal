@@ -32,5 +32,5 @@ type R3 record {|
 
 public function main() {
     R3 r3 = {foo: 1, bar: 1.5, baz: "baz"};
-    io:println(r3);
+    io:println(r3); // @output {"foo":1,"bar":1.5,"baz":"baz"}
 }

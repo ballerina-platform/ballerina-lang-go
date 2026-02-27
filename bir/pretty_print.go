@@ -191,9 +191,9 @@ func (p *PrettyPrinter) PrintNewMap(m *NewMap) string {
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 	switch access.Kind {
-	case INSTRUCTION_KIND_ARRAY_STORE:
+	case INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE:
 		return fmt.Sprintf("%s[%s] = %s;", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.KeyOp), p.PrintOperand(*access.RhsOp))
-	case INSTRUCTION_KIND_ARRAY_LOAD:
+	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD:
 		return fmt.Sprintf("%s = %s[%s];", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
 	default:
 		panic(fmt.Sprintf("unknown field access kind: %d", access.Kind))

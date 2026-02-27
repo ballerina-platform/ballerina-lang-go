@@ -25,8 +25,5 @@ func (cs *callStack) Push(frame *Frame) {
 }
 
 func (cs *callStack) Pop() {
-	if len(cs.elements) == 0 {
-		panic("stack underflow")
-	}
 	cs.elements = cs.elements[:len(cs.elements)-1]
 }

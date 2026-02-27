@@ -30,5 +30,5 @@ public function main() {
     int x = r.x;
     io:println(x); // @output 1
     anydata z = r["z"];
-    io:println(z); // @output nil
+    io:println(z); // @output
 }

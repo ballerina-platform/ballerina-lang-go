@@ -19,5 +19,5 @@ import ballerina/io;
 
 public function main() {
     int? x = ();
-    io:println(x * 2); // @output nil
+    io:println(x * 2); // @output 
 }

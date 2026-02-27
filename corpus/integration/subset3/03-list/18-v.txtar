@@ -1,5 +1,5 @@
 -- stdout --
-[0,true,2,nil,4]
+[0,true,2,null,4]
 
 -- stderr --
 

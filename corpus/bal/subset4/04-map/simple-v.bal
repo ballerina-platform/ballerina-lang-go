@@ -20,5 +20,5 @@ public function main() {
     io:println(foo); // @output {"a":1,"b":"b"}
     any a = foo["a"];
     io:println(a); // @output 1
-    io:println(foo["b"]); // @output "b"
+    io:println(foo["b"]); // @output b
 }

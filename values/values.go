@@ -18,7 +18,10 @@ package values
 
 import (
 	"ballerina-lang-go/semtypes"
+	"math"
 	"math/big"
+	"strconv"
+	"strings"
 )
 
 // Currently this is just an alias on any but I think we will need to add methods to this like type
@@ -41,6 +44,8 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 		return ""
 	} else if semtypes.IsSubtypeSimple(t, semtypes.DECIMAL) {
 		return big.NewRat(0, 1)
+	} else if semtypes.IsSubtypeSimple(t, semtypes.MAPPING) {
+		return NewMap(t)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
 		// TODO: this needs to be properly implemeneted for lists
 		return NewList(0, &semtypes.NEVER, NeverValue)
@@ -67,7 +72,48 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return semtypes.DecimalConst(*v)
 	case *List:
 		return v.Type
+	case *Map:
+		return v.Type
 	default:
 		return &semtypes.ANY
+	}
+}
+
+func String(v BalValue, visited map[uintptr]bool) string {
+	if v == nil {
+		return ""
+	}
+	return toString(v, visited, true)
+}
+
+func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
+	switch t := v.(type) {
+	case nil:
+		return "null"
+	case string:
+		if isDirect {
+			return t
+		}
+		return strconv.Quote(t)
+	case int64:
+		return strconv.FormatInt(t, 10)
+	case float64:
+		if t == math.Trunc(t) {
+			return strconv.FormatFloat(t, 'f', 1, 64)
+		}
+		return strconv.FormatFloat(t, 'g', -1, 64)
+	case bool:
+		return strconv.FormatBool(t)
+	case *big.Rat:
+		s := t.FloatString(20)
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+		return s
+	case *List:
+		return t.String(visited)
+	case *Map:
+		return t.String(visited)
+	default:
+		return "<unsupported>"
 	}
 }

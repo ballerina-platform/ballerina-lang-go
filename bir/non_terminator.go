@@ -226,6 +226,10 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
+func (n *NewMap) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
 	return true
 }

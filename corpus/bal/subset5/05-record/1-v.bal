@@ -17,5 +17,5 @@ import ballerina/io;
 
 public function main() {
     record {|int foo; string bar;|} r = {foo: 5, bar: "ff"};
-    io:println(r); // @output {foo:5,bar:ff}
+    io:println(r); // @output {"foo":5,"bar":"ff"}
 }

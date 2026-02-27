@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: no applicable inherent type for mapping constructor
+  --> union2-e.bal:19:32
+   |
+19 |     map<int>|map<string> foo = {"a": 1, "b": "b"}; // @error
+   |                                ^^^^^^^^^^^^^^^^^^
+
