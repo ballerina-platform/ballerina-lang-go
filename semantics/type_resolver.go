@@ -437,6 +437,8 @@ func (t *TypeResolver) resolveExpression(expr ast.BLangExpression) semtypes.SemT
 		return t.resolveInvocation(e)
 	case *ast.BLangIndexBasedAccess:
 		return t.resolveIndexBasedAccess(e)
+	case *ast.BLangFieldBaseAccess:
+		return t.resolveFieldBaseAccess(e)
 	case *ast.BLangListConstructorExpr:
 		return t.resolveListConstructorExpr(e)
 	case *ast.BLangMappingConstructorExpr:
@@ -904,6 +906,26 @@ func (t *TypeResolver) resolveIndexBasedAccess(expr *ast.BLangIndexBasedAccess) 
 	return resultTy
 }
 
+func (t *TypeResolver) resolveFieldBaseAccess(expr *ast.BLangFieldBaseAccess) semtypes.SemType {
+	containerExprTy := t.resolveExpression(expr.Expr)
+	keyTy := semtypes.StringConst(expr.Field.Value)
+
+	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
+		t.ctx.SemanticError("unsupported container type for field access", expr.GetPosition())
+		return nil
+	}
+
+	memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyTy)
+	maybeMissing := semtypes.ContainsUndef(memberTy)
+	if maybeMissing {
+		t.ctx.SemanticError("field base access is only possible for required fields", expr.GetPosition())
+		return nil
+	}
+
+	setExpectedType(expr, memberTy)
+	return memberTy
+}
+
 func (t *TypeResolver) resolveInvocation(expr *ast.BLangInvocation) semtypes.SemType {
 	// Lookup the function's type from the symbol
 	symbol := expr.RawSymbol
@@ -1050,6 +1072,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return &semtypes.DECIMAL
 		case model.TypeKind_BYTE:
 			return semtypes.BYTE
+		case model.TypeKind_ANYDATA:
+			return semtypes.CreateAnydata(tr.tyCtx)
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil
@@ -1151,11 +1175,121 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) semtypes.S
 			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest)
 		}
 		return defn.GetSemType(tr.ctx.GetTypeEnv())
+	case *ast.BLangRecordType:
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv())
+		}
+		d := semtypes.NewMappingDefinition()
+		ty.Definition = &d
+
+		// Collect fields from type inclusions
+		includedFields := make(map[string]ast.BField)
+		mustOverride := make(map[string]bool)
+		needsRestOverride, includedRest := tr.accumIncludedFields(ty, includedFields, mustOverride, false, nil)
+
+		// Collect direct fields
+		seen := make(map[string]bool)
+		var fields []semtypes.Field
+		for name, field := range ty.Fields() {
+			if seen[name] {
+				tr.ctx.SemanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
+				continue
+			}
+			seen[name] = true
+			mustOverride[name] = false
+			delete(includedFields, name)
+			fieldTy := tr.resolveBType(field.Type, depth+1)
+			ro := field.FlagSet.Contains(model.Flag_READONLY)
+			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
+			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
+		}
+
+		// Check that fields appearing in multiple inclusions are overridden
+		for name, needed := range mustOverride {
+			if !needed {
+				continue
+			}
+			tr.ctx.SemanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
+		}
+
+		// Add included fields that are not overridden by direct fields
+		for name, field := range includedFields {
+			fieldTy := tr.resolveBType(field.Type, depth+1)
+			ro := field.FlagSet.Contains(model.Flag_READONLY)
+			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
+			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
+		}
+
+		// Determine rest type
+		var rest semtypes.SemType
+		if ty.RestType != nil {
+			rest = tr.resolveBType(ty.RestType, depth+1)
+		} else if ty.IsOpen {
+			rest = semtypes.CreateAnydata(tr.tyCtx)
+		} else if needsRestOverride {
+			tr.ctx.SemanticError("included rest type declared in multiple type inclusions must be overridden", ty.GetPosition())
+			rest = &semtypes.NEVER
+		} else if includedRest != nil {
+			rest = tr.resolveBType(includedRest, depth+1)
+		} else {
+			rest = &semtypes.NEVER
+		}
+		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest)
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
 		return nil
 	}
+}
+
+func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, includedFields map[string]ast.BField, mustOverride map[string]bool, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType) {
+	for _, inc := range recordTy.TypeInclusions {
+		udt, ok := inc.(*ast.BLangUserDefinedType)
+		if !ok {
+			tr.ctx.SemanticError("type inclusion must be a user-defined type", inc.(ast.BLangNode).GetPosition())
+			continue
+		}
+
+		// This is needed to update the type of the ref node
+		tr.resolveBType(inc, 0)
+
+		symbol := udt.Symbol()
+		tDefn, ok := tr.typeDefns[symbol]
+		if !ok {
+			tr.ctx.InternalError("type definition not found for inclusion", udt.GetPosition())
+			continue
+		}
+		recTy, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType)
+		if !ok {
+			tr.ctx.SemanticError("included type is not a record type", udt.GetPosition())
+			continue
+		}
+
+		needsRestOverride, includedRest = tr.accumIncludedFields(recTy, includedFields, mustOverride, needsRestOverride, includedRest)
+
+		// Collect fields from this inclusion
+		for name, field := range recTy.Fields() {
+			if mustOverride[name] {
+				continue
+			}
+			if _, exists := includedFields[name]; exists {
+				delete(includedFields, name)
+				mustOverride[name] = true
+			} else {
+				includedFields[name] = field
+			}
+		}
+
+		// Track rest type conflicts
+		if recTy.RestType != nil {
+			if includedRest != nil {
+				needsRestOverride = true
+			}
+			includedRest = recTy.RestType
+		}
+	}
+	return needsRestOverride, includedRest
 }
 
 func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) {

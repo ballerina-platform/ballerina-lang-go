@@ -100,7 +100,7 @@ type (
 		IsCompoundAssignmentLValue bool
 	}
 
-	BLangAccessExpressionBase struct {
+	bLangAccessExpressionBase struct {
 		BLangValueExpressionBase
 		Expr                BLangExpression
 		OriginalType        BType
@@ -108,6 +108,13 @@ type (
 		ErrorSafeNavigation bool
 		NilSafeNavigation   bool
 		LeafNode            bool
+	}
+
+	BLangFieldBaseAccess struct {
+		bLangAccessExpressionBase
+		Field BLangIdentifier
+		// I think this need a symbol to got to the field definition in type but Expr could be non atomic and
+		// this should still work
 	}
 
 	BLangAlternateWorkerReceive struct {
@@ -264,7 +271,7 @@ type (
 	}
 
 	BLangIndexBasedAccess struct {
-		BLangAccessExpressionBase
+		bLangAccessExpressionBase
 		IndexExpr         BLangExpression
 		IsStoreOnCreation bool
 	}
@@ -963,6 +970,26 @@ func (this *BLangIndexBasedAccess) GetExpression() model.ExpressionNode {
 
 func (this *BLangIndexBasedAccess) GetIndex() model.ExpressionNode {
 	return this.IndexExpr
+}
+
+func (this *BLangFieldBaseAccess) GetKind() model.NodeKind {
+	return model.NodeKind_FIELD_BASED_ACCESS_EXPR
+}
+
+func (this *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
+	return &this.Field
+}
+
+func (this *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
+	return this.OptionalFieldAccess
+}
+
+func (this *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }
 
 func (this *BLangListConstructorExpr) GetKind() model.NodeKind {

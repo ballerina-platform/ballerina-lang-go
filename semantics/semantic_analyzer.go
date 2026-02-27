@@ -464,6 +464,12 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy))
 		return false
 	}
+	if semtypes.IsNever(resolvedTy) {
+		if !semtypes.IsNever(expectedType) {
+			a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy))
+			return false
+		}
+	}
 
 	return true
 }
@@ -541,6 +547,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangIndexBasedAccess:
 		analyzeIndexBasedAccess(a, expr, expectedType)
 
+	case *ast.BLangFieldBaseAccess:
+		analyzeFieldBasedAccess(a, expr, expectedType)
 	// Collections and Groups - validate members and result
 	case *ast.BLangListConstructorExpr:
 		analyzeListConstructorExpr(a, expr, expectedType)
@@ -584,6 +592,11 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 
 func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
 	return semtypes.IsSubtypeSimple(exprTy, semtypes.NUMBER) && semtypes.SingleNumericType(targetType).IsPresent()
+}
+
+func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, expectedType semtypes.SemType) {
+	analyzeExpression(a, expr.Expr, nil)
+	validateResolvedType(a, expr, expectedType)
 }
 
 func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, expectedType semtypes.SemType) {
@@ -751,8 +764,7 @@ func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructo
 	fieldNames := make([]string, len(expr.Fields))
 	for i, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		analyzeExpression(a, kv.ValueExpr, nil)
-		fieldNames[i] = kv.Key.Expr.(*ast.BLangLiteral).Value.(string)
+		fieldNames[i] = recordKeyName(kv.Key)
 	}
 	sort.Strings(fieldNames)
 
@@ -763,7 +775,7 @@ func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructo
 				mat := alt.Pos
 				for _, f := range expr.Fields {
 					kv := f.(*ast.BLangMappingKeyValueField)
-					keyName := kv.Key.Expr.(*ast.BLangLiteral).Value.(string)
+					keyName := recordKeyName(kv.Key)
 					exprTy := kv.ValueExpr.GetDeterminedType()
 					ty := mat.FieldInnerVal(keyName)
 					if !semtypes.IsSubtype(tc, exprTy, ty) {
@@ -1109,6 +1121,17 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) {
 		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
 		}
+	}
+}
+
+func recordKeyName(key *ast.BLangMappingKey) string {
+	switch expr := key.Expr.(type) {
+	case *ast.BLangLiteral:
+		return expr.Value.(string)
+	case *ast.BLangSimpleVarRef:
+		return expr.VariableName.Value
+	default:
+		panic(fmt.Sprintf("unexpected record key expression type: %T", key.Expr))
 	}
 }
 
