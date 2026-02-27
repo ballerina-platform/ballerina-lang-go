@@ -1589,6 +1589,14 @@ func (this *BLangTypeDefinition) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_DEFINITION
 }
 
+func (this *BLangTypeDefinition) GetCycleDepth() int {
+	return this.CycleDepth
+}
+
+func (this *BLangTypeDefinition) SetCycleDepth(depth int) {
+	this.CycleDepth = depth
+}
+
 func (this *BLangXMLNS) GetNamespaceURI() model.ExpressionNode {
 	return this.namespaceURI
 }

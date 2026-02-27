@@ -37,7 +37,6 @@ type (
 	TypeResolver struct {
 		ctx             *context.CompilerContext
 		tyCtx           semtypes.Context
-		typeDefns       map[model.SymbolRef]*ast.BLangTypeDefinition
 		importedSymbols map[string]model.ExportedSymbolSpace
 		pkg             *ast.BLangPackage
 		implicitImports map[string]bool
@@ -50,7 +49,6 @@ func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, import
 	return &TypeResolver{
 		ctx:             ctx,
 		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
-		typeDefns:       make(map[model.SymbolRef]*ast.BLangTypeDefinition),
 		importedSymbols: importedSymbols,
 		implicitImports: make(map[string]bool),
 		pkg:             pkg,
@@ -70,7 +68,7 @@ func (t *TypeResolver) resolveTypes(ctx *context.CompilerContext, pkg *ast.BLang
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
 		symbol := defn.Symbol()
-		t.typeDefns[symbol] = defn
+		ctx.SetTypeDefinition(symbol, defn)
 	}
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
@@ -259,27 +257,27 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 	return t
 }
 
-func (t *TypeResolver) resolveTypeDefinition(defn *ast.BLangTypeDefinition, depth int) (semtypes.SemType, bool) {
-	if defn.DeterminedType != nil {
-		return defn.DeterminedType, true
+func (t *TypeResolver) resolveTypeDefinition(defn model.TypeDefinition, depth int) (semtypes.SemType, bool) {
+	if defn.GetDeterminedType() != nil {
+		return defn.GetDeterminedType(), true
 	}
 	// Walk Name identifier to ensure it gets DeterminedType set
-	if defn.Name != nil {
-		ast.Walk(t, defn.Name)
+	if defn.GetName() != nil {
+		ast.Walk(t, defn.GetName().(ast.BLangNode))
 	}
-	if depth == defn.CycleDepth {
-		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.Name.GetValue()), defn.GetPosition())
+	if depth == defn.GetCycleDepth() {
+		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.GetName().GetValue()), defn.GetPosition())
 		return nil, false
 	}
-	defn.CycleDepth = depth
+	defn.SetCycleDepth(depth)
 	semType, ok := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
 	if !ok {
 		return nil, false
 	}
-	if defn.DeterminedType == nil {
+	if defn.GetDeterminedType() == nil {
 		defn.SetDeterminedType(semType)
-		updateSymbolType(t.ctx, defn, semType)
-		defn.CycleDepth = -1
+		t.ctx.SetSymbolType(defn.Symbol(), semType)
+		defn.SetCycleDepth(-1)
 		typeData := defn.GetTypeData()
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
@@ -1380,7 +1378,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			// imported symbol should have been already resolved
 			return tr.ctx.SymbolType(symbol), true
 		}
-		defn, ok := tr.typeDefns[symbol]
+		defn, ok := tr.ctx.GetTypeDefinition(symbol)
 		if !ok {
 			// This should have been detected by the symbol resolver
 			tr.ctx.InternalError("type definition not found", nil)
@@ -1562,7 +1560,7 @@ func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, inclu
 		}
 
 		symbol := udt.Symbol()
-		tDefn, ok := tr.typeDefns[symbol]
+		tDefn, ok := tr.ctx.GetTypeDefinition(symbol)
 		if !ok {
 			tr.ctx.InternalError("type definition not found for inclusion", udt.GetPosition())
 			continue
