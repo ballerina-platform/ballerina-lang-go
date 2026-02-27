@@ -17,16 +17,15 @@
 package semantics
 
 import (
-	"fmt"
-	"math/big"
-	"reflect"
-	"sort"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
+	"math/big"
+	"reflect"
+	"sort"
 )
 
 type analyzer interface {
@@ -575,7 +574,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 
 	case *ast.BLangTypeTestExpr:
 		return validateResolvedType(a, expr, expectedType)
-
+	case *ast.BLangNamedArgsExpression:
+		return analyzeExpression(a, expr.Expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -848,6 +848,26 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 	msgArg := expr.PositionalArgs[0]
 	if !analyzeExpression(a, msgArg, &semtypes.STRING) {
 		return false
+	}
+	tyCtx := a.tyCtx()
+	detailType := semtypes.ErrorDetailType(tyCtx, expr.DeterminedType)
+	seen := make(map[string]bool, len(expr.NamedArgs))
+	clonableTy := semtypes.CreateCloneable(tyCtx)
+	for _, namedArg := range expr.NamedArgs {
+		name := namedArg.Name.GetValue()
+		if seen[name] {
+			a.semanticErr(fmt.Sprintf("duplicate named argument '%s' in error constructor", name), namedArg.GetPosition())
+			return false
+		}
+		seen[name] = true
+		fieldType := semtypes.MappingMemberTypeInnerVal(tyCtx, detailType, semtypes.StringConst(name))
+		if !analyzeExpression(a, namedArg.Expr, fieldType) {
+			return false
+		}
+		if !semtypes.IsSubtype(tyCtx, namedArg.Expr.GetDeterminedType(), clonableTy) {
+			a.semanticErr("named arguments must be subtypes of cloneable", namedArg.GetPosition())
+			return false
+		}
 	}
 
 	if argCount == 2 {

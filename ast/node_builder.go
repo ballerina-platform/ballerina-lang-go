@@ -2139,7 +2139,11 @@ func (n *NodeBuilder) TransformSpreadField(spreadFieldNode *tree.SpreadFieldNode
 }
 
 func (n *NodeBuilder) TransformNamedArgument(namedArgumentNode *tree.NamedArgumentNode) BLangNode {
-	panic("TransformNamedArgument unimplemented")
+	namedArg := &BLangNamedArgsExpression{}
+	namedArg.pos = getPosition(namedArgumentNode)
+	namedArg.Name = createIdentifierFromToken(getPosition(namedArgumentNode.ArgumentName()), namedArgumentNode.ArgumentName().Name())
+	namedArg.Expr = n.createExpression(namedArgumentNode.Expression())
+	return namedArg
 }
 
 func (n *NodeBuilder) TransformPositionalArgument(positionalArgumentNode *tree.PositionalArgumentNode) BLangNode {
@@ -2500,7 +2504,7 @@ func (n *NodeBuilder) TransformTableTypeDescriptor(tableTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformTypeParameter(typeParameterNode *tree.TypeParameterNode) BLangNode {
-	panic("TransformTypeParameter unimplemented")
+	return n.createTypeNode(typeParameterNode.TypeNode()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformKeyTypeConstraint(keyTypeConstraintNode *tree.KeyTypeConstraintNode) BLangNode {
@@ -2939,6 +2943,9 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
+	if errorConstructorExpressionNode.HasDiagnostics() {
+		n.cx.SyntaxError("invalid error constructor", getPosition(errorConstructorExpressionNode))
+	}
 	result := &BLangErrorConstructorExpr{}
 	result.pos = getPosition(errorConstructorExpressionNode)
 
@@ -2954,6 +2961,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 
 	arguments := errorConstructorExpressionNode.Arguments()
 	positionalArgs := make([]BLangExpression, 0)
+	namedArgs := make([]*BLangNamedArgsExpression, 0)
 
 	for arg := range arguments.Iterator() {
 		switch arg.Kind() {
@@ -2963,7 +2971,9 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 			positionalArgs = append(positionalArgs, expr)
 
 		case common.NAMED_ARG:
-			n.cx.InternalError("named arguments not yet supported in error constructor", getPosition(arg))
+			namedArgNode := arg.(*tree.NamedArgumentNode)
+			namedArg := n.TransformNamedArgument(namedArgNode).(*BLangNamedArgsExpression)
+			namedArgs = append(namedArgs, namedArg)
 		case common.REST_ARG:
 			n.cx.InternalError("rest arguments not supported in error constructor", getPosition(arg))
 		default:
@@ -2972,6 +2982,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 	}
 
 	result.PositionalArgs = positionalArgs
+	result.NamedArgs = namedArgs
 
 	return result
 }
@@ -2990,7 +3001,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 	// Handle optional type parameter
 	typeParamNode := errorTypeDescriptorNode.TypeParamNode()
 	if typeParamNode != nil {
-		errorType.detailType = model.TypeData{
+		errorType.DetailType = model.TypeData{
 			TypeDescriptor: n.createTypeNode(typeParamNode),
 		}
 	}
