@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: field 'x' of type that overrides included field is not a subtype of the included field type
+  --> inclusion-dup-override-e.bal:31:5
+   |
+31 |     string x; // @error
+   |     ^^^^^^^^^
+
+error[SEMANTIC_ERROR]: field 'x' of type that overrides included field is not a subtype of the included field type
+  --> inclusion-dup-override-e.bal:31:5
+   |
+31 |     string x; // @error
+   |     ^^^^^^^^^
+
