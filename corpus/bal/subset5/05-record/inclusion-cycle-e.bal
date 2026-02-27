@@ -14,25 +14,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/io;
 
-type R1 record {|
+type A record {| // @error
+    *B;
     int x;
+|};
+
+type B record {|
+    *A;
     string y;
 |};
 
-type R2 record {|
-    float x;
-    boolean z;
-|};
-
-type R3 record {|
-    *R1;
-    *R2;
-    string x;
-|};
-
 public function main() {
-    R3 r = {x: "override", y: "hello", z: true};
-    io:println(r); // @output {"x":"override","y":"hello","z":true}
 }

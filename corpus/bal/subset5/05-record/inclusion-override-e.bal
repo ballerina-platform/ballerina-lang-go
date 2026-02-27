@@ -14,7 +14,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/io;
 
 type Base record {|
     int x;
@@ -23,11 +22,6 @@ type Base record {|
 
 type Derived record {|
     *Base;
-    string x;
+    string x; // @error
     string z;
 |};
-
-public function main() {
-    Derived d = {x: "hello", y: "world", z: "!"};
-    io:println(d); // @output {"x":"hello","y":"world","z":"!"}
-}

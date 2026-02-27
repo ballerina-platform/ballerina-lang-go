@@ -17,19 +17,19 @@
 package semantics
 
 import (
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
 
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 type (
@@ -1393,9 +1393,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		ty.Definition = &d
 
 		// Collect fields from type inclusions
-		includedFields := make(map[string]ast.BField)
-		mustOverride := make(map[string]bool)
-		needsRestOverride, includedRest, ok := tr.accumIncludedFields(ty, includedFields, mustOverride, false, nil)
+		includedFields := make(map[string][]ast.BField)
+		needsRestOverride, includedRest, ok := tr.accumIncludedFields(ty, includedFields, false, nil)
 		if !ok {
 			return nil, false
 		}
@@ -1405,14 +1404,28 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		for name, field := range ty.Fields() {
 			if seen[name] {
 				tr.ctx.SemanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
-				continue
+				return nil, false
 			}
 			seen[name] = true
-			mustOverride[name] = false
-			delete(includedFields, name)
 			fieldTy, ok := tr.resolveBType(field.Type, depth+1)
 			if !ok {
 				return nil, false
+			}
+			// Subtype check against all included fields with this name
+			if overridden, exists := includedFields[name]; exists {
+				for _, incField := range overridden {
+					incFieldTy, ok := tr.resolveBType(incField.Type, depth+1)
+					if !ok {
+						return nil, false
+					}
+					if !semtypes.IsSubtype(tr.tyCtx, fieldTy, incFieldTy) {
+						tr.ctx.SemanticError(
+							fmt.Sprintf("field '%s' of type that overrides included field is not a subtype of the included field type", name),
+							field.GetPosition(),
+						)
+					}
+				}
+				delete(includedFields, name)
 			}
 			ro := field.FlagSet.Contains(model.Flag_READONLY)
 			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
@@ -1420,16 +1433,18 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		}
 
 		// Check that fields appearing in multiple inclusions are overridden
-		for name, needed := range mustOverride {
-			if !needed {
-				continue
+		for name, incFields := range includedFields {
+			if len(incFields) > 1 {
+				tr.ctx.SemanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
 			}
-			tr.ctx.SemanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
-			return nil, false
 		}
 
 		// Add included fields that are not overridden by direct fields
-		for name, field := range includedFields {
+		for name, incFields := range includedFields {
+			if len(incFields) > 1 {
+				continue // already reported as error
+			}
+			field := incFields[0]
 			fieldTy, ok := tr.resolveBType(field.Type, depth+1)
 			if !ok {
 				return nil, false
@@ -1469,7 +1484,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 	}
 }
 
-func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, includedFields map[string]ast.BField, mustOverride map[string]bool, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType, bool) {
+func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, includedFields map[string][]ast.BField, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType, bool) {
 	for _, inc := range recordTy.TypeInclusions {
 		udt, ok := inc.(*ast.BLangUserDefinedType)
 		if !ok {
@@ -1495,22 +1510,14 @@ func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, inclu
 			continue
 		}
 
-		needsRestOverride, includedRest, ok = tr.accumIncludedFields(recTy, includedFields, mustOverride, needsRestOverride, includedRest)
+		needsRestOverride, includedRest, ok = tr.accumIncludedFields(recTy, includedFields, needsRestOverride, includedRest)
 		if !ok {
 			return false, nil, false
 		}
 
 		// Collect fields from this inclusion
 		for name, field := range recTy.Fields() {
-			if mustOverride[name] {
-				continue
-			}
-			if _, exists := includedFields[name]; exists {
-				delete(includedFields, name)
-				mustOverride[name] = true
-			} else {
-				includedFields[name] = field
-			}
+			includedFields[name] = append(includedFields[name], field)
 		}
 
 		// Track rest type conflicts
