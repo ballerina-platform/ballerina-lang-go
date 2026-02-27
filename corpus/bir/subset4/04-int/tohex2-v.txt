@@ -1,0 +1,69 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad 42
+    i = %1;
+    %3 = toHexString(i) -> bb1;
+  }
+  bb1 {
+    s = %3;
+    %5 = println(s) -> bb2;
+  }
+  bb2 {
+    %7 = ConstantLoad 2a
+    %6 = == s %7;
+    %8 = println(%6) -> bb3;
+  }
+  bb3 {
+    %9 = ConstantLoad 0
+    %10 = toHexString(%9) -> bb4;
+  }
+  bb4 {
+    %11 = println(%10) -> bb5;
+  }
+  bb5 {
+    %12 = ConstantLoad 1
+    %13 = unknown %12;
+    %14 = toHexString(%13) -> bb6;
+  }
+  bb6 {
+    %15 = println(%14) -> bb7;
+  }
+  bb7 {
+    %16 = ConstantLoad 255
+    %17 = toHexString(%16) -> bb8;
+  }
+  bb8 {
+    %18 = println(%17) -> bb9;
+  }
+  bb9 {
+    %19 = ConstantLoad 170
+    %20 = unknown %19;
+    %21 = toHexString(%20) -> bb10;
+  }
+  bb10 {
+    %22 = println(%21) -> bb11;
+  }
+  bb11 {
+    %23 = ConstantLoad 9223372036854775807
+    %24 = toHexString(%23) -> bb12;
+  }
+  bb12 {
+    %25 = println(%24) -> bb13;
+  }
+  bb13 {
+    %27 = ConstantLoad 9223372036854775807
+    %28 = unknown %27;
+    %29 = ConstantLoad 1
+    %26 = - %28 %29;
+    %30 = toHexString(%26) -> bb14;
+  }
+  bb14 {
+    %31 = println(%30) -> bb15;
+  }
+  bb15 {
+    return;
+  }
+}

@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"iter"
 )
 
 type ProjectKind uint8
@@ -30,12 +31,6 @@ const (
 	ProjectKind_BALA_PROJECT
 	ProjectKind_WORKSPACE_PROJECT
 )
-
-// TODO: move these to model package
-type Field interface {
-	GetName() model.Name
-	GetType() model.Type
-}
 
 type SelectivelyImmutableReferenceType interface {
 	model.Type
@@ -50,7 +45,7 @@ type BType interface {
 	SetTypeData(ty model.TypeData)
 	GetTypeData() model.TypeData
 	BTypeGetTag() model.TypeTags
-	bTypeSetTag(tag model.TypeTags)
+	BTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() uint64
@@ -100,20 +95,24 @@ type (
 		symbol   model.SymbolRef
 	}
 
-	BStructureTypeBase struct {
-		Fields         common.OrderedMap[string, BField]
+	bStructureTypeBase struct {
+		names          []string
+		fields         []BField
 		TypeInclusions []BType
 	}
 
+	// TODO: think how to align this with BLangMemberTypeDesc. Ideally this should be an inclusion on that
 	BField struct {
-		Name     model.Name
-		Type     BType
-		Location Location
+		bLangNodeBase
+		Name           model.Name
+		Type           BType
+		FlagSet        common.UnorderedSet[model.Flag]
+		AnnAttachments []model.AnnotationAttachmentNode
 	}
 
 	BObjectType struct {
 		bLangTypeBase
-		BStructureTypeBase
+		bStructureTypeBase
 		MarkedIsolatedness bool
 		MutableType        *BObjectType
 		ClassDef           *BLangClassDefinition
@@ -157,13 +156,21 @@ type (
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
 		FlagSet                         common.UnorderedSet[model.Flag]
 	}
+
+	BLangRecordType struct {
+		bLangTypeBase
+		bStructureTypeBase
+		Definition semtypes.Definition
+		RestType   BType
+		IsOpen     bool
+	}
 )
 
 var (
 	_ model.ArrayTypeNode            = &BLangArrayType{}
 	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
 	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
-	_ Field                          = &BField{}
+	_ model.Field                    = &BField{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.NamedNode                = &BField{}
 	_ ObjectType                     = &BObjectType{}
@@ -174,6 +181,7 @@ var (
 	_ model.ConstrainedTypeNode      = &BLangConstrainedType{}
 	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
 	_ model.MemberTypeDesc           = &BLangMemberTypeDesc{}
+	_ model.RecordTypeNode           = &BLangRecordType{}
 )
 
 var (
@@ -281,6 +289,26 @@ func (this *BField) GetType() model.Type {
 	return this.Type
 }
 
+func (this *BField) GetKind() model.NodeKind {
+	panic("not implemented")
+}
+
+func (this *BField) GetFlags() common.Set[model.Flag] {
+	return &this.FlagSet
+}
+
+func (this *BField) AddFlag(flag model.Flag) {
+	this.FlagSet.Add(flag)
+}
+
+func (this *BField) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	return this.AnnAttachments
+}
+
+func (this *BField) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+	this.AnnAttachments = append(this.AnnAttachments, annAttachment)
+}
+
 func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
 	switch tag {
 	case model.TypeTags_INT:
@@ -316,6 +344,21 @@ func (this *bLangTypeBase) GetTypeKind() model.TypeKind {
 	return typeTagToTypeKind(this.BTypeGetTag())
 }
 
+func (this *bStructureTypeBase) Fields() iter.Seq2[string, BField] {
+	return func(yield func(string, BField) bool) {
+		for i, name := range this.names {
+			if !yield(name, this.fields[i]) {
+				break
+			}
+		}
+	}
+}
+
+func (this *bStructureTypeBase) AddField(name string, field BField) {
+	this.names = append(this.names, name)
+	this.fields = append(this.fields, field)
+}
+
 // BObjectType methods
 func (this *BObjectType) GetKind() model.TypeKind {
 	// migrated from BObjectType.java:89:5
@@ -330,7 +373,7 @@ func (this *bLangTypeBase) SetTypeData(ty model.TypeData) {
 	this.ty = ty
 }
 
-func (this *bLangTypeBase) bTypeSetTag(tag model.TypeTags) {
+func (this *bLangTypeBase) BTypeSetTag(tag model.TypeTags) {
 	this.tags = tag
 }
 
@@ -358,7 +401,7 @@ func (this *BTypeBasic) BTypeGetTag() model.TypeTags {
 	return this.tag
 }
 
-func (this *BTypeBasic) bTypeSetTag(tag model.TypeTags) {
+func (this *BTypeBasic) BTypeSetTag(tag model.TypeTags) {
 	this.tag = tag
 }
 
@@ -545,4 +588,22 @@ func (this *BLangMemberTypeDesc) GetMarkdownDocumentationAttachment() model.Mark
 
 func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	this.MarkdownDocumentationAttachment = documentationNode
+}
+
+func (this *BLangRecordType) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_TYPE
+}
+
+func (this *BLangRecordType) GetRestFieldType() model.TypeData {
+	return this.RestType.GetTypeData()
+}
+
+func (this *BLangRecordType) GetFields() iter.Seq2[string, model.Field] {
+	return func(yield func(string, model.Field) bool) {
+		for i, name := range this.names {
+			if !yield(name, &this.fields[i]) {
+				return
+			}
+		}
+	}
 }

@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -38,6 +39,7 @@ type typeTable struct {
 	stringType  *BTypeBasic
 	floatType   *BTypeBasic
 	decimalType *BTypeBasic
+	byteType    *BTypeBasic
 }
 
 func newTypeTable() typeTable {
@@ -48,6 +50,7 @@ func newTypeTable() typeTable {
 		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: Flags_READONLY},
 		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
 		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
+		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: Flags_READONLY},
 	}
 }
 
@@ -65,6 +68,8 @@ func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
 		return t.floatType
 	case model.TypeTags_DECIMAL:
 		return t.decimalType
+	case model.TypeTags_BYTE:
+		return t.byteType
 	default:
 		panic("not implemented")
 	}
@@ -931,7 +936,14 @@ func getIntegerLiteral(literal tree.Node, textValue string) any {
 func parseLong(originalNodeValue, processedNodeValue string, radix int) any {
 	val, err := strconv.ParseInt(processedNodeValue, radix, 64)
 	if err != nil {
-		panic("Unimplemented")
+		fVal, fErr := strconv.ParseFloat(processedNodeValue, 64)
+		if fErr != nil {
+			panic("Unimplemented")
+		}
+		if math.IsInf(fVal, 0) {
+			return originalNodeValue
+		}
+		return fVal
 	}
 	return val
 }
@@ -1125,7 +1137,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
 	bType := n.types.getTypeFromTag(typeTag).(BType)
-	bType.bTypeSetTag(typeTag)
+	bType.BTypeSetTag(typeTag)
 	switch bl := bLiteral.(type) {
 	case *BLangLiteral:
 		bl.SetValueType(bType)
@@ -1749,7 +1761,26 @@ func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckEx
 }
 
 func (n *NodeBuilder) TransformFieldAccessExpression(fieldAccessExpressionNode *tree.FieldAccessExpressionNode) BLangNode {
-	panic("TransformFieldAccessExpression unimplemented")
+	fieldName := fieldAccessExpressionNode.FieldName()
+	if fieldName.Kind() == common.QUALIFIED_NAME_REFERENCE {
+		panic("TransformFieldAccessExpression: QUALIFIED_NAME_REFERENCE unsupported")
+	}
+
+	bLFieldBasedAccess := &BLangFieldBaseAccess{}
+	simpleNameRef := fieldName.(*tree.SimpleNameReferenceNode)
+	bLFieldBasedAccess.Field = createIdentifierFromToken(getPosition(fieldAccessExpressionNode.FieldName()), simpleNameRef.Name())
+
+	containerExpr := fieldAccessExpressionNode.Expression()
+	if containerExpr.Kind() == common.BRACED_EXPRESSION {
+		bracedExpr := containerExpr.(*tree.BracedExpressionNode)
+		bLFieldBasedAccess.Expr = n.createExpression(bracedExpr.Expression())
+	} else {
+		bLFieldBasedAccess.Expr = n.createExpression(containerExpr)
+	}
+
+	bLFieldBasedAccess.pos = getPosition(fieldAccessExpressionNode)
+	bLFieldBasedAccess.OptionalFieldAccess = false
+	return bLFieldBasedAccess
 }
 
 func (n *NodeBuilder) TransformFunctionCallExpression(functionCallExpressionNode *tree.FunctionCallExpressionNode) BLangNode {
@@ -2059,7 +2090,41 @@ func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorExpr
 }
 
 func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tree.RecordTypeDescriptorNode) BLangNode {
-	panic("TransformRecordTypeDescriptor unimplemented")
+	recordType := &BLangRecordType{}
+	fields := recordTypeDescriptorNode.Fields()
+	for i := 0; i < fields.Size(); i++ {
+		field := fields.Get(i)
+		switch field.Kind() {
+		case common.RECORD_FIELD:
+			recordField := field.(*tree.RecordFieldNode)
+			fieldName := recordField.FieldName().Text()
+			bField := BField{
+				Name: model.Name(fieldName),
+				Type: n.createTypeNode(recordField.TypeName()).(BType),
+			}
+			bField.pos = getPosition(recordField)
+			if recordField.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			if recordField.QuestionMarkToken() != nil {
+				bField.FlagSet.Add(model.Flag_OPTIONAL)
+			}
+			recordType.AddField(fieldName, bField)
+		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
+			panic("default values are not supported")
+		case common.TYPE_REFERENCE:
+			typeRef := field.(*tree.TypeReferenceNode)
+			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))
+		default:
+			panic("unexpected field kind in record type descriptor")
+		}
+	}
+	if restDesc := recordTypeDescriptorNode.RecordRestDescriptor(); restDesc != nil {
+		recordType.RestType = n.createTypeNode(restDesc.TypeName()).(BType)
+	}
+	recordType.IsOpen = recordTypeDescriptorNode.BodyStartDelimiter().Kind() == common.OPEN_BRACE_TOKEN
+	recordType.pos = getPosition(recordTypeDescriptorNode)
+	return recordType
 }
 
 func (n *NodeBuilder) TransformReturnTypeDescriptor(returnTypeDescriptorNode *tree.ReturnTypeDescriptorNode) BLangNode {

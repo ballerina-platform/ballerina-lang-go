@@ -1045,7 +1045,14 @@ func ContainsUndef(t SemType) bool {
 		bitSet := t.bitset
 		return (bitSet & (1 << BT_UNDEF.Code)) != 0
 	case ComplexSemType:
-		return *getComplexSubtypeData(t, BT_UNDEF).(*bool)
+		switch data := getComplexSubtypeData(t, BT_UNDEF).(type) {
+		case AllOrNothingSubtype:
+			return data.isAll
+		case *bool:
+			return *data
+		default:
+			panic("unexpected subtype data")
+		}
 	default:
 		panic("unexpected semtype")
 	}

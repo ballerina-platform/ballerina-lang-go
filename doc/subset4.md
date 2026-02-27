@@ -30,7 +30,7 @@
 ## Expressions
 
 - [Literal](https://ballerina.io/spec/lang/master/#literal)
-  - Currently support `nil-literal`, `boolean-literal`, `numeric-literal` (see [restrictions](#numeric-literal)), and `string-literal` only
+  - Currently support `nil-literal`, `boolean-literal`, `numeric-literal` and `string-literal` only
 - [lvexpr](https://ballerina.io/spec/lang/master/#section_7.14.1)
   - Currently only support [variable-reference-lvexpr](https://ballerina.io/spec/lang/master/#variable-reference-lvexpr)
 - [`Call`](https://ballerina.io/spec/lang/master/#call-expr)
@@ -77,13 +77,10 @@
     - `Unsigned8`
     - `Unsigned16`
     - `Unsigned32`
+    - `toHexString`
 
 ## Method call
 
 - Method call syntax can be used for calling the following langlib functions:
   - `array:length`
   - `array:push`
-
-## numeric-literal
-
-- Currently [`HexIntLiterals`](https://ballerina.io/spec/lang/master/#HexIntLiteral) not supported

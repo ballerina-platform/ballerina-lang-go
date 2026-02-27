@@ -1,0 +1,109 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad true
+    %2 = ConstantLoad 1.375
+    %3 = ConstantLoad 0.375
+    %4 = aa(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    %5 = println(%4) -> bb2;
+  }
+  bb2 {
+    %6 = ConstantLoad false
+    %7 = ConstantLoad 1.375
+    %8 = ConstantLoad 0.375
+    %9 = aa(%6,%7,%8) -> bb3;
+  }
+  bb3 {
+    %10 = println(%9) -> bb4;
+  }
+  bb4 {
+    %11 = ConstantLoad true
+    %12 = ConstantLoad 17.75
+    %13 = ConstantLoad 2.75
+    %14 = fa(%11,%12,%13) -> bb5;
+  }
+  bb5 {
+    %15 = println(%14) -> bb6;
+  }
+  bb6 {
+    %16 = ConstantLoad false
+    %17 = ConstantLoad 17.75
+    %18 = ConstantLoad 2.75
+    %19 = fa(%16,%17,%18) -> bb7;
+  }
+  bb7 {
+    %20 = println(%19) -> bb8;
+  }
+  bb8 {
+    %21 = ConstantLoad true
+    %22 = ConstantLoad 1.5
+    %23 = ConstantLoad 0.5
+    %24 = ff(%21,%22,%23) -> bb9;
+  }
+  bb9 {
+    %25 = println(%24) -> bb10;
+  }
+  bb10 {
+    %26 = ConstantLoad false
+    %27 = ConstantLoad 1.5
+    %28 = ConstantLoad 0.5
+    %29 = ff(%26,%27,%28) -> bb11;
+  }
+  bb11 {
+    %30 = println(%29) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}
+aa<NIL>{
+  bb0 {
+    b ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = x;
+    return;
+  }
+  bb2 {
+    %0 = y;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}
+fa<NIL>{
+  bb0 {
+    b ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = x;
+    return;
+  }
+  bb2 {
+    %0 = y;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}
+ff<NIL>{
+  bb0 {
+    b ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = x;
+    return;
+  }
+  bb2 {
+    %0 = y;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}

@@ -1,0 +1,79 @@
+(aa
+  (bb0 () (bb1 bb2)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref x))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref y))
+  )
+)
+(fa
+  (bb0 () (bb1 bb2)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref x))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref y))
+  )
+)
+(ff
+  (bb0 () (bb1 bb2)
+    (simple-var-ref b)
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref x))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref y))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation aa (
+          (literal true)
+          (literal 1.375)
+          (literal 0.375))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation aa (
+          (literal false)
+          (literal 1.375)
+          (literal 0.375))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fa (
+          (literal true)
+          (literal 17.75)
+          (literal 2.75))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fa (
+          (literal false)
+          (literal 17.75)
+          (literal 2.75))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation ff (
+          (literal true)
+          (literal 1.5)
+          (literal 0.5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation ff (
+          (literal false)
+          (literal 1.5)
+          (literal 0.5))))))
+  )
+)

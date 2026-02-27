@@ -404,6 +404,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.IndexExpr.(BLangNode))
 		}
 
+	case *BLangFieldBaseAccess:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangListConstructorExpr:
 		for _, expr := range node.Exprs {
 			Walk(v, expr.(BLangNode))
@@ -573,6 +578,17 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		if node.Rest != nil {
 			Walk(v, node.Rest.(BLangNode))
+		}
+
+	case *BLangRecordType:
+		for _, inclusion := range node.TypeInclusions {
+			Walk(v, inclusion.(BLangNode))
+		}
+		for _, field := range node.fields {
+			Walk(v, field.Type.(BLangNode))
+		}
+		if node.RestType != nil {
+			Walk(v, node.RestType.(BLangNode))
 		}
 
 	// Section 9: Binding Patterns
