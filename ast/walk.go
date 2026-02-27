@@ -581,6 +581,9 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangRecordType:
+		for _, inclusion := range node.TypeInclusions {
+			Walk(v, inclusion.(BLangNode))
+		}
 		for _, field := range node.fields {
 			Walk(v, field.Type.(BLangNode))
 		}

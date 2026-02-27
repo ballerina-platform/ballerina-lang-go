@@ -1,0 +1,34 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Base
+    (record-type
+      (field x
+        (value-type int))
+      (field y
+        (value-type string))))
+  (type-definition Derived
+    (record-type
+      (field x
+        (value-type string))
+      (field z
+        (value-type string))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable d (type
+          (user-defined-type Derived)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal hello))
+            (key-value
+              (simple-var-ref y)
+              (literal world))
+            (key-value
+              (simple-var-ref z)
+              (literal !))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref d)))))))

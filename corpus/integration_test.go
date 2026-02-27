@@ -82,6 +82,10 @@ var (
 		"subset5/05-record/field-access-2-v.bal",
 		"subset5/05-record/field-access-3-e.bal",
 		"subset5/05-record/field-access-4-e.bal",
+		"subset5/05-record/inclusion-v.bal",
+		"subset5/05-record/inclusion-override-v.bal",
+		"subset5/05-record/inclusion-dup-override-v.bal",
+		"subset5/05-record/inclusion-rest-v.bal",
 	})
 
 	printlnOutputs = make(map[string]string)

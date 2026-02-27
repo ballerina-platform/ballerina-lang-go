@@ -552,6 +552,7 @@ func hasPotentialNumericConversions(exprTy, targetType semtypes.SemType) bool {
 }
 
 func analyzeFieldBasedAccess[A analyzer](a A, expr *ast.BLangFieldBaseAccess, expectedType semtypes.SemType) {
+	analyzeExpression(a, expr.Expr, nil)
 	validateResolvedType(a, expr, expectedType)
 }
 
