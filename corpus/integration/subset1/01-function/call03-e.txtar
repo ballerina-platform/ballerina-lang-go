@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+  --> call03-e.bal:20:5
+   |
+20 |     foo(1, 2, 3); // @error
+   |     ^^^^^^^^^^^^
+

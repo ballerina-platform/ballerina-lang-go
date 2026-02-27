@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((NIL), ()), got ((), (INT))
+  --> return4-e.bal:20:12
+   |
+20 |     return 17; // @error
+   |            ^^
+

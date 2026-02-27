@@ -585,19 +585,92 @@ func (n *NodeBuilder) TransformSyntaxNode(node tree.Node) BLangNode {
 	}
 }
 
+func getFileName(node tree.Node) string {
+	st := node.SyntaxTree()
+	return st.FilePath()
+}
+
 func getPosition(node tree.Node) Location {
-	// FIXME:
-	return nil
+	lineRange := node.LineRange()
+	textRange := node.TextRange()
+	fileName := getFileName(node)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		lineRange.StartLine.Line,
+		lineRange.EndLine.Line,
+		lineRange.StartLine.Column,
+		lineRange.EndLine.Column,
+		textRange.StartOffset,
+		textRange.Length,
+	)
 }
 
 func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
-	// FIXME:
-	return nil
+	startLineRange := startNode.LineRange()
+	endLineRange := endNode.LineRange()
+	startNodeTextRange := startNode.TextRange()
+	endNodeTextRange := endNode.TextRange()
+	length := startNodeTextRange.Length + endNodeTextRange.Length
+	fileName := getFileName(startNode)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		startLineRange.StartLine.Line,
+		endLineRange.EndLine.Line,
+		startLineRange.StartLine.Column,
+		endLineRange.EndLine.Column,
+		startNodeTextRange.StartOffset,
+		length,
+	)
 }
 
 func getPositionWithoutMetadata(node tree.Node) Location {
-	// FIXME:
-	return nil
+	nodeLineRange := node.LineRange()
+	nonTerminalNode := node.(tree.NonTerminalNode)
+
+	var startLine, endLine, startColumn, endColumn, startOffset, length int
+
+	var firstChild, secondChild tree.Node
+	childIndex := 0
+	for child := range nonTerminalNode.ChildNodes() {
+		if childIndex == 0 {
+			firstChild = child
+			childIndex++
+		} else if childIndex == 1 {
+			secondChild = child
+			break
+		}
+	}
+
+	if firstChild != nil && firstChild.Kind() == common.METADATA && secondChild != nil {
+		secondLineRange := secondChild.LineRange()
+		startLine = secondLineRange.StartLine.Line
+		startColumn = secondLineRange.StartLine.Column
+		secondTextRange := secondChild.TextRange()
+		startOffset = secondTextRange.StartOffset
+		firstTextRange := firstChild.TextRange()
+		nodeTextRange := node.TextRange()
+		length = nodeTextRange.Length - firstTextRange.Length
+	} else {
+		startLine = nodeLineRange.StartLine.Line
+		startColumn = nodeLineRange.StartLine.Column
+		nodeTextRange := node.TextRange()
+		startOffset = nodeTextRange.StartOffset
+		length = nodeTextRange.Length
+	}
+
+	endLine = nodeLineRange.EndLine.Line
+	endColumn = nodeLineRange.EndLine.Column
+
+	fileName := getFileName(node)
+	return diagnostics.NewBLangDiagnosticLocation(
+		fileName,
+		startLine,
+		endLine,
+		startColumn,
+		endColumn,
+		startOffset,
+		length,
+	)
 }
 
 func createIdentifier(pos Location, value, originalValue *string) BLangIdentifier {
@@ -914,13 +987,13 @@ func (n *NodeBuilder) createSimpleLiteral(literal tree.Node) model.LiteralNode {
 
 // getIntegerLiteral parses integer literals (decimal/hex)
 // migrated from BLangNodeBuilder.java:6669:5
-func getIntegerLiteral(literal tree.Node, textValue string) any {
+func getIntegerLiteral(cx *context.CompilerContext, literal tree.Node, textValue string) any {
 	basicLiteralNode := literal.(*tree.BasicLiteralNode)
 	literalTokenKind := basicLiteralNode.LiteralToken().Kind()
 	switch literalTokenKind {
 	case common.DECIMAL_INTEGER_LITERAL_TOKEN:
 		if textValue[0] == '0' && len(textValue) > 1 {
-			panic("Syntax error: invalid integer literal: leading zero")
+			cx.SyntaxError("invalid integer literal: leading zero", getPosition(literal))
 		}
 		return parseLong(textValue, textValue, 10)
 	case common.HEX_INTEGER_LITERAL_TOKEN:
@@ -1040,7 +1113,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		switch literalTokenKind {
 		case common.DECIMAL_INTEGER_LITERAL_TOKEN, common.HEX_INTEGER_LITERAL_TOKEN:
 			typeTag = model.TypeTags_INT
-			value = getIntegerLiteral(literal, textValue)
+			value = getIntegerLiteral(n.cx, literal, textValue)
 			originalValue = &textValue
 			// TODO: can we fix below?
 			if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN && withinByteRange(value) {

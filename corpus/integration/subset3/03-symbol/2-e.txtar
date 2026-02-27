@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: redeclared symbol 'foo'
+  --> 2-e.bal:17:7
+   |
+17 | const foo = 23; // @error
+   |       ^^^
+

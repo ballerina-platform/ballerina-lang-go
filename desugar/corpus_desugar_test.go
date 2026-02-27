@@ -17,6 +17,9 @@
 package desugar
 
 import (
+	"flag"
+	"testing"
+
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
@@ -24,8 +27,6 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -55,7 +56,8 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 
 	// Step 1: Parse
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)

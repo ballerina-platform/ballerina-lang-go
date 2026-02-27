@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: continue statement not allowed outside loop
+  --> continue1-e.bal:20:5
+   |
+20 |     continue; // @error
+   |     ^^^^^^^^^
+

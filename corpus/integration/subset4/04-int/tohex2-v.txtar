@@ -1,0 +1,12 @@
+-- stdout --
+2a
+true
+0
+-1
+ff
+-aa
+7fffffffffffffff
+-8000000000000000
+
+-- stderr --
+

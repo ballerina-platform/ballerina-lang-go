@@ -1,0 +1,5 @@
+-- stdout --
+[1,1.5,"foo",true,1.23]
+
+-- stderr --
+

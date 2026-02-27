@@ -1,0 +1,5 @@
+-- stdout --
+{"foo":1,"bar":1.5,"baz":"baz"}
+
+-- stderr --
+

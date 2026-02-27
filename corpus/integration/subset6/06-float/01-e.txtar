@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible types for ==
+  --> 01-e.bal:21:16
+   |
+21 |     io:println(1.0 == 2.0); // @error
+   |                ^^^^^^^^^^
+

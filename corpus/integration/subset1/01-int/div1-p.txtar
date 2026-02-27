@@ -1,0 +1,5 @@
+-- stdout --
+Runtime panic: arithmetic overflow
+
+-- stderr --
+

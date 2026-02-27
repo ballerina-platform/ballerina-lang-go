@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: break statement not allowed outside loop
+  --> break1-e.bal:20:5
+   |
+20 |     break; // @error
+   |     ^^^^^^
+

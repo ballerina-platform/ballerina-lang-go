@@ -1,0 +1,5 @@
+-- stdout --
+panic: unexpected expression type
+
+-- stderr --
+

@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((STRING), ()), got ((INT), ())
+  --> 01-e.bal:21:14
+   |
+21 |     ignore(m[i]); // @error
+   |              ^
+

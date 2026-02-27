@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: x
+  --> assign6-e.bal:20:9
+   |
+20 |     foo(x); // @error
+   |         ^
+
