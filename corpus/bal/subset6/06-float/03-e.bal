@@ -14,10 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+// @productions equality equality-expr floating-point-literal int-literal
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-)
+public function main() {
+    io:println(1 == 2.0); // @error
+}

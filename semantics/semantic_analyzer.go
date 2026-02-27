@@ -336,7 +336,7 @@ func isIoImport(importNode *ast.BLangImportPackage) bool {
 }
 
 func isImplicitImport(importNode *ast.BLangImportPackage) bool {
-	return isLangImport(importNode, "array")
+	return isLangImport(importNode, "array") || isLangImport(importNode, "int")
 }
 
 func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
@@ -519,7 +519,7 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	// Literals - just validate
 	case *ast.BLangLiteral:
 		widenNumericLiteral(a, expr, expectedType)
-		validateResolvedType(a, expr, expectedType)
+		analyzeLiteral(a, expr, expectedType)
 
 	case *ast.BLangNumericLiteral:
 		widenNumericLiteral(a, &expr.BLangLiteral, expectedType)
@@ -1133,6 +1133,18 @@ func recordKeyName(key *ast.BLangMappingKey) string {
 	default:
 		panic(fmt.Sprintf("unexpected record key expression type: %T", key.Expr))
 	}
+}
+
+func analyzeLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
+	if expectedType != nil && semtypes.IsSubtypeSimple(expectedType, semtypes.FLOAT) {
+		if intVal, ok := expr.GetValue().(int64); ok {
+			floatVal := float64(intVal)
+			setExpectedType(expr, semtypes.FloatConst(floatVal))
+			expr.SetValue(floatVal)
+			expr.GetValueType().BTypeSetTag(model.TypeTags_FLOAT)
+		}
+	}
+	validateResolvedType(a, expr, expectedType)
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {

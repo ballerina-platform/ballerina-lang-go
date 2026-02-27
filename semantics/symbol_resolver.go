@@ -22,7 +22,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
-	bint "ballerina-lang-go/lib/int"
+	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -252,7 +252,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
-	result[bint.PackageName] = bint.GetArraySymbols(ctx)
+	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
 	return result
 }
 

@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
+	bInt "ballerina-lang-go/lib/int/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -27,6 +28,7 @@ import (
 	"math/big"
 	"math/bits"
 	"strconv"
+	"strings"
 )
 
 type (
@@ -249,10 +251,16 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) {
 
 	switch bType.BTypeGetTag() {
 	case model.TypeTags_INT:
-		// INT literals are usually handled via BLangNumericLiteral path
-		// but we resolve the type here as well for completeness
-		value := n.GetValue().(int64)
-		ty = semtypes.IntConst(value)
+		switch v := n.GetValue().(type) {
+		case int64:
+			ty = semtypes.IntConst(v)
+		case float64:
+			bType.BTypeSetTag(model.TypeTags_FLOAT)
+			ty = semtypes.FloatConst(v)
+		default:
+			t.ctx.InternalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+			return
+		}
 	case model.TypeTags_BYTE:
 		value := n.GetValue().(int64)
 		ty = semtypes.IntConst(value)
@@ -311,6 +319,7 @@ func stripFloatingPointTypeSuffix(s string) string {
 
 // parseFloatValue parses a string as float64 with error handling
 func (t *TypeResolver) parseFloatValue(strValue string, pos diagnostics.Location) float64 {
+	strValue = strings.TrimRight(strValue, "fF")
 	f, err := strconv.ParseFloat(strValue, 64)
 	if err != nil {
 		t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), pos)
@@ -401,6 +410,11 @@ func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semty
 func (t *TypeResolver) resolveSimpleVariable(node *ast.BLangSimpleVariable) {
 	typeNode := node.TypeNode()
 	if typeNode == nil {
+		if node.Expr != nil {
+			exprTy := t.resolveExpression(node.Expr.(ast.BLangExpression))
+			setExpectedType(node, exprTy)
+			updateSymbolType(t.ctx, node, exprTy)
+		}
 		return
 	}
 
@@ -793,8 +807,11 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	}
 
 	if isRelationalExpr(expr) {
-		// Relational operators always return boolean (no nil-lifting)
-		return &semtypes.BOOLEAN, false
+		if semtypes.Comparable(t.tyCtx, &lhsBasicTy, &rhsBasicTy) {
+			return &semtypes.BOOLEAN, false
+		}
+		t.ctx.SemanticError("values are not comparable", expr.GetPosition())
+		return nil, false
 	}
 
 	if isMultipcativeExpr(expr) {
@@ -805,7 +822,13 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		ctx := t.tyCtx
+		if semtypes.IsSubtype(ctx, &rhsBasicTy, &semtypes.INT) ||
+			(expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, &lhsBasicTy, &semtypes.INT)) {
+			t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+			return nil, false
+		}
+		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
@@ -818,7 +841,8 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		if lhsBasicTy == rhsBasicTy {
 			return &lhsBasicTy, nilLifted
 		}
-		t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+		// TODO: special case xml + string case when we support xml
+		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
@@ -967,6 +991,25 @@ func (t *TypeResolver) resolveMethodCall(expr *ast.BLangInvocation, methodSymbol
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+				Alias:        &pkgAlias,
+			}
+			ast.Walk(t, &importNode)
+			t.pkg.Imports = append(t.pkg.Imports, importNode)
+		}
+	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.INT) {
+		pkgName := bInt.PackageName
+		space, ok := t.importedSymbols[pkgName]
+		if !ok {
+			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+			return nil
+		}
+		symbolSpace = space
+		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		if !t.implicitImports[pkgName] {
+			t.implicitImports[pkgName] = true
+			importNode := ast.BLangImportPackage{
+				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)

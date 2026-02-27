@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -38,6 +39,7 @@ type typeTable struct {
 	stringType  *BTypeBasic
 	floatType   *BTypeBasic
 	decimalType *BTypeBasic
+	byteType    *BTypeBasic
 }
 
 func newTypeTable() typeTable {
@@ -48,6 +50,7 @@ func newTypeTable() typeTable {
 		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: Flags_READONLY},
 		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
 		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
+		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: Flags_READONLY},
 	}
 }
 
@@ -65,6 +68,8 @@ func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
 		return t.floatType
 	case model.TypeTags_DECIMAL:
 		return t.decimalType
+	case model.TypeTags_BYTE:
+		return t.byteType
 	default:
 		panic("not implemented")
 	}
@@ -931,7 +936,14 @@ func getIntegerLiteral(literal tree.Node, textValue string) any {
 func parseLong(originalNodeValue, processedNodeValue string, radix int) any {
 	val, err := strconv.ParseInt(processedNodeValue, radix, 64)
 	if err != nil {
-		panic("Unimplemented")
+		fVal, fErr := strconv.ParseFloat(processedNodeValue, 64)
+		if fErr != nil {
+			panic("Unimplemented")
+		}
+		if math.IsInf(fVal, 0) {
+			return originalNodeValue
+		}
+		return fVal
 	}
 	return val
 }
@@ -1125,7 +1137,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(literal))
 	bType := n.types.getTypeFromTag(typeTag).(BType)
-	bType.bTypeSetTag(typeTag)
+	bType.BTypeSetTag(typeTag)
 	switch bl := bLiteral.(type) {
 	case *BLangLiteral:
 		bl.SetValueType(bType)

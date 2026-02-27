@@ -14,10 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+// @productions floating-point-literal relational-expr local-var-decl-stmt int-literal
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-)
+import ballerina/io;
+
+public function main() {
+    float f = 1.0;
+    int i = 0;
+    io:println(i > f); // @error
+}

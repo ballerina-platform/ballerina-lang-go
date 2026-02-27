@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+// @productions floating-point-literal
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-)
+public function main() {
+    io:println(0.375); // @output 0.375
+    io:println(100.375f); // @output 100.375
+}

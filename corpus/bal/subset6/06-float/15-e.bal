@@ -14,10 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+// @productions multiplicative-expr floating-point-literal local-var-decl-stmt int-literal
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-)
+import ballerina/io;
+
+public function main() {
+    float f = 10f;
+    int i = 2;
+    io:println(i / f); // @error
+
+}
