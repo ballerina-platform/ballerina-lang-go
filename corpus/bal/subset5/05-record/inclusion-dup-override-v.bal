@@ -34,5 +34,5 @@ type R3 record {|
 
 public function main() {
     R3 r = {x: "override", y: "hello", z: true};
-    io:println(r);
+    io:println(r); // @output {"x":"override","y":"hello","z":true}
 }

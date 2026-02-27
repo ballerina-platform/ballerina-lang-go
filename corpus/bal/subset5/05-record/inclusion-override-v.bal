@@ -29,5 +29,5 @@ type Derived record {|
 
 public function main() {
     Derived d = {x: "hello", y: "world", z: "!"};
-    io:println(d);
+    io:println(d); // @output {"x":"hello","y":"world","z":"!"}
 }

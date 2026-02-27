@@ -22,5 +22,5 @@ type R record {|
 
 public function main() {
     R r = {x: 1, "y": {x: 2}};
-    io:println(r); // @output {x:1,y:{x:2}}
+    io:println(r); // @output {"x":1,"y":{"x":2}}
 }

@@ -33,7 +33,7 @@ function testFloatAddition() {
     float a;
     a = 9.9;
     b = 10.1;
-    io:println(a + b); // @output 20
+    io:println(a + b); // @output 20.0
 }
 
 function testFloatMultiplication() {
@@ -49,7 +49,7 @@ function testFloatSubtraction() {
     float a;
     a = 25.5;
     b = 15.5;
-    io:println(a - b); // @output 10
+    io:println(a - b); // @output 10.0
 }
 
 function testFloatDivision() {
@@ -57,7 +57,7 @@ function testFloatDivision() {
     float a;
     a = 25.5;
     b = 5.1;
-    io:println(a / b); // @output 5
+    io:println(a / b); // @output 5.0
 }
 
 function testFloatParameter(float a) {
@@ -78,26 +78,26 @@ function testHexFloatingPointLiterals() {
     float b = 0x8.0;
     float c = 0xaP-1;
     float d = 0x3p2;
-    io:println(a); // @output 4779
-    io:println(b); // @output 8
-    io:println(c); // @output 5
-    io:println(d); // @output 12
+    io:println(a); // @output 4779.0
+    io:println(b); // @output 8.0
+    io:println(c); // @output 5.0
+    io:println(d); // @output 12.0
 }
 
 function testIntLiteralAssignment() {
     float x = 12;
     float y = 15;
-    io:println(x); // @output 12
-    io:println(y); // @output 15
+    io:println(x); // @output 12.0
+    io:println(y); // @output 15.0
 }
 
 function testDiscriminatedFloatLiteral() {
     float a = 1.0f;
     var b = 1.0f;
     float d = 2.2e3f;
-    io:println(a); // @output 1
-    io:println(b); // @output 1
-    io:println(d); // @output 2200
+    io:println(a); // @output 1.0
+    io:println(b); // @output 1.0
+    io:println(d); // @output 2200.0
 }
 
 function testHexaDecimalLiteralsWithFloat() {
