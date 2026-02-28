@@ -1,9 +1,9 @@
 -- stdout --
 
 -- stderr --
-error[SEMANTIC_ERROR]: error constructor must have at least 1 and at most 2 positional arguments
-  --> error-constructor-no-args-e.bal:18:17
+error[SYNTAX_ERROR]: missing arg within parenthesis
+  --> error-constructor-no-args-e.bal:18:22
    |
 18 |     error err = error();  // @error
-   |                 ^^^^^^^
+   |                      ^
 
