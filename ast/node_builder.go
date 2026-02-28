@@ -591,7 +591,7 @@ func getFileName(node tree.Node) string {
 }
 
 func innermostDiagnosticNode(node tree.Node) tree.Node {
-	if node == nil || !node.HasDiagnostics() {
+	if !node.HasDiagnostics() {
 		return nil
 	}
 	if nt, ok := node.(tree.NonTerminalNode); ok {
@@ -606,10 +606,8 @@ func innermostDiagnosticNode(node tree.Node) tree.Node {
 
 func diagnosticMessage(node tree.Node) string {
 	key := ""
-	if node != nil {
-		if diags := node.InternalNode().Diagnostics(); len(diags) > 0 {
-			key = diags[0].DiagnosticCode().MessageKey()
-		}
+	if diags := node.InternalNode().Diagnostics(); len(diags) > 0 {
+		key = diags[0].DiagnosticCode().MessageKey()
 	}
 	if key == "" {
 		return "syntax error"
@@ -3248,9 +3246,6 @@ func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNod
 }
 
 func (n *NodeBuilder) reportSyntaxDiagnostic(node tree.Node) {
-	if node == nil {
-		return
-	}
 	errorNode := innermostDiagnosticNode(node)
 	if errorNode == nil {
 		errorNode = node
