@@ -1,9 +1,9 @@
 -- stdout --
 
 -- stderr --
-error[SYNTAX_ERROR]: invalid error constructor
+error[SYNTAX_ERROR]: syntax error
   --> constructor-1-e.bal:25:12
    |
-25 |     return error ErrorWithDetail(message = "message", id = 1) // @error
+25 |     return error ErrorWithDetail(message = "message", id = 1); // @error
    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
