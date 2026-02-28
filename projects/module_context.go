@@ -220,6 +220,10 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	pkgNode := buildBLangPackage(compilerCtx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
 
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
 	// Resolve symbols (imports) before type resolution
 	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx))
 	moduleCtx.importedSymbols = importedSymbols
