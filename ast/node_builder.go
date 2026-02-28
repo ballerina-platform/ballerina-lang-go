@@ -590,6 +590,31 @@ func getFileName(node tree.Node) string {
 	return st.FilePath()
 }
 
+func innermostDiagnosticNode(node tree.Node) tree.Node {
+	if !node.HasDiagnostics() {
+		return nil
+	}
+	if nt, ok := node.(tree.NonTerminalNode); ok {
+		for child := range nt.ChildNodes() {
+			if child != nil && child.HasDiagnostics() {
+				return innermostDiagnosticNode(child)
+			}
+		}
+	}
+	return node
+}
+
+func diagnosticMessage(node tree.Node) string {
+	key := ""
+	if diags := node.InternalNode().Diagnostics(); len(diags) > 0 {
+		key = diags[0].DiagnosticCode().MessageKey()
+	}
+	if key == "" {
+		return "syntax error"
+	}
+	return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
+}
+
 func getPosition(node tree.Node) Location {
 	lineRange := node.LineRange()
 	textRange := node.TextRange()
@@ -757,7 +782,8 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 		return &bLUserDefinedType
 	case common.SIMPLE_NAME_REFERENCE:
 		if typeNode.HasDiagnostics() {
-			panic("unimplemented")
+			n.reportSyntaxDiagnostic(typeNode)
+			return n.types.nilType
 		}
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
@@ -1619,6 +1645,10 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 		currentStatement := statementNodes.Get(j)
 		// TODO: Remove this check once statements are non null guaranteed
 		if currentStatement == nil {
+			continue
+		}
+		if currentStatement.HasDiagnostics() {
+			n.reportSyntaxDiagnostic(currentStatement)
 			continue
 		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
@@ -3213,4 +3243,12 @@ func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNod
 	}
 
 	return createSimpleVariableNodeWithLocationTokenLocation(varPos, varName, getPosition(varName))
+}
+
+func (n *NodeBuilder) reportSyntaxDiagnostic(node tree.Node) {
+	errorNode := innermostDiagnosticNode(node)
+	if errorNode == nil {
+		errorNode = node
+	}
+	n.cx.SyntaxError(diagnosticMessage(errorNode), getPosition(errorNode))
 }
