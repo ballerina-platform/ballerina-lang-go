@@ -22,5 +22,5 @@ type Detail record {|
 type ErrorWithDetail error<Detail>;
 
 function bar() returns int|error {
-    return error ErrorWithDetail("bar", id = 1) // @error
+    return error ErrorWithDetail("bar", id = 1); // @error
 }
