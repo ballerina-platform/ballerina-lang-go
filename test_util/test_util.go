@@ -34,6 +34,7 @@ const (
 	BIR
 	CFG
 	Desugar
+	Integration
 )
 
 // TestCase represents a test case: input file and expected output file
@@ -81,6 +82,9 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 	case Desugar:
 		outputBaseDir = "desugared"
 		outputExt = ".txt"
+	case Integration:
+		outputBaseDir = "integration"
+		outputExt = ".txtar"
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)
 	files := discoverFiles(t, resolvedInputDir, filterFunc)
