@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -48,7 +49,7 @@ const (
 var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
-	skipTestsMap = makeSkipTestsMap([]string{})
+	skipIntegrationTests = []string{}
 )
 
 type testResult struct {
@@ -134,8 +135,8 @@ func formatExpectedGot(expected, got string) string {
 	return "expected:\n" + format(expected) + "\n\ngot:\n" + format(got)
 }
 
-func isTestSkipped(testPair test_util.TestCase) bool {
-	return skipTestsMap[filepath.ToSlash(testPair.Name)]
+func isTestSkipped(tc test_util.TestCase) bool {
+	return slices.Contains(skipIntegrationTests, filepath.ToSlash(tc.Name))
 }
 
 func loadExpectedFromTxtar(txtarPath string) (expectedStdout, expectedStderr string, err error) {
@@ -276,12 +277,4 @@ func updateIntegrationTestCase(txtarPath, stdout, stderr string) error {
 		return err
 	}
 	return os.WriteFile(txtarPath, txtar.Format(archive), 0o644)
-}
-
-func makeSkipTestsMap(paths []string) map[string]bool {
-	m := make(map[string]bool, len(paths))
-	for _, path := range paths {
-		m[filepath.ToSlash(path)] = true
-	}
-	return m
 }
