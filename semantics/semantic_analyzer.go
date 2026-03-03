@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 type analyzer interface {
@@ -470,17 +471,62 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 
 	ctx := a.tyCtx()
 	if !semtypes.IsSubtype(ctx, resolvedTy, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 		return false
 	}
 	if semtypes.IsNever(resolvedTy) {
 		if !semtypes.IsNever(expectedType) {
-			a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+			a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 			return false
 		}
 	}
 
 	return true
+}
+
+func formatIncompatibleTypeMessage(ctx semtypes.Context, expectedType semtypes.SemType, actualType semtypes.SemType) string {
+	expectedText := fmt.Sprintf("%v", expectedType)
+	actualText := fmt.Sprintf("%v", actualType)
+
+	// SemType.String() can collapse rich types (e.g., both sides as "((), (LIST))").
+	// Add stable details when the top-level rendering is identical.
+	if expectedText == actualText {
+		expectedText = renderTypeWithDetails(ctx, expectedType)
+		actualText = renderTypeWithDetails(ctx, actualType)
+	}
+
+	return fmt.Sprintf("incompatible type: expected %s, got %s", expectedText, actualText)
+}
+
+func renderTypeWithDetails(ctx semtypes.Context, ty semtypes.SemType) string {
+	base := fmt.Sprintf("%v", ty)
+	if ty == nil {
+		return base
+	}
+
+	details := make([]string, 0, 1)
+
+	if semtypes.IsSubtypeSimple(ty, semtypes.LIST) {
+		memberTypes := semtypes.ListAllMemberTypesInner(ctx, ty)
+		memberDetails := make([]string, 0, len(memberTypes.SemTypes))
+		for i := range memberTypes.SemTypes {
+			r := memberTypes.Ranges[i]
+			rangeLabel := fmt.Sprintf("%d..%d", r.Min, r.Max)
+			if r.Max == semtypes.MAX_VALUE {
+				rangeLabel = fmt.Sprintf("%d..*", r.Min)
+			}
+			memberDetails = append(memberDetails, fmt.Sprintf("%s:%v", rangeLabel, memberTypes.SemTypes[i]))
+		}
+		if len(memberDetails) > 0 {
+			sort.Strings(memberDetails)
+			details = append(details, "listMembers=["+strings.Join(memberDetails, ", ")+"]")
+		}
+	}
+
+	if len(details) == 0 {
+		return base
+	}
+	return fmt.Sprintf("%s {%s}", base, strings.Join(details, ", "))
 }
 
 func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
@@ -647,7 +693,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 		return false
 	}
 	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, exprTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, exprTy), expr.GetPosition())
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
