@@ -614,6 +614,9 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
 	}
 	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
+	if pushInvocation == nil {
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
 	bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
 	bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
 
