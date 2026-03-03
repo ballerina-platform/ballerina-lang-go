@@ -27,6 +27,27 @@ type TypeParamEntry struct {
 }
 
 type (
+	BLangInputClause struct {
+		BLangNodeBase
+		Collection             BLangExpression
+		VariableDefinitionNode model.VariableDefinitionNode
+		IsDeclaredWithVarFlag  bool
+	}
+	BLangFromClause struct {
+		BLangInputClause
+	}
+	BLangLetClause struct {
+		BLangNodeBase
+		LetVarDeclarations []model.VariableDefinitionNode
+	}
+	BLangWhereClause struct {
+		BLangNodeBase
+		Expression BLangExpression
+	}
+	BLangSelectClause struct {
+		BLangNodeBase
+		Expression BLangExpression
+	}
 	BLangCollectClause struct {
 		BLangNodeBase
 		Expression      model.ExpressionNode
@@ -48,16 +69,76 @@ type (
 )
 
 var (
+	_ model.FromClauseNode    = &BLangFromClause{}
+	_ model.Node              = &BLangLetClause{}
+	_ model.Node              = &BLangWhereClause{}
+	_ model.SelectClauseNode  = &BLangSelectClause{}
 	_ model.CollectClauseNode = &BLangCollectClause{}
 	_ model.DoClauseNode      = &BLangDoClause{}
 	_ model.OnFailClauseNode  = &BLangOnFailClause{}
 )
 
 var (
+	_ BLangNode = &BLangFromClause{}
+	_ BLangNode = &BLangLetClause{}
+	_ BLangNode = &BLangWhereClause{}
+	_ BLangNode = &BLangSelectClause{}
 	_ BLangNode = &BLangCollectClause{}
 	_ BLangNode = &BLangDoClause{}
 	_ BLangNode = &BLangOnFailClause{}
 )
+
+func (this *BLangFromClause) GetKind() model.NodeKind {
+	return model.NodeKind_FROM
+}
+
+func (this *BLangFromClause) GetCollection() model.ExpressionNode {
+	return this.Collection
+}
+
+func (this *BLangFromClause) SetCollection(collection model.ExpressionNode) {
+	if exp, ok := collection.(BLangExpression); ok {
+		this.Collection = exp
+		return
+	}
+	panic("collection is not a BLangExpression")
+}
+
+func (this *BLangFromClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
+	return this.VariableDefinitionNode
+}
+
+func (this *BLangFromClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
+	this.VariableDefinitionNode = variableDefinitionNode
+}
+
+func (this *BLangFromClause) IsDeclaredWithVar() bool {
+	return this.IsDeclaredWithVarFlag
+}
+
+func (this *BLangLetClause) GetKind() model.NodeKind {
+	return model.NodeKind_LET_CLAUSE
+}
+
+func (this *BLangWhereClause) GetKind() model.NodeKind {
+	return model.NodeKind_WHERE
+}
+
+func (this *BLangSelectClause) GetKind() model.NodeKind {
+	return model.NodeKind_SELECT
+}
+
+func (this *BLangSelectClause) GetExpression() model.ExpressionNode {
+	return this.Expression
+}
+
+func (this *BLangSelectClause) SetExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		this.Expression = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
+}
 
 func (this *BLangCollectClause) GetKind() model.NodeKind {
 	// migrated from BLangCollectClause.java:48:5

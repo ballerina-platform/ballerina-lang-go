@@ -19,7 +19,9 @@ package desugar
 
 import (
 	"ballerina-lang-go/ast"
+	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"fmt"
 )
 
@@ -57,6 +59,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkCollectContextInvocation(cx, expr)
 	case *ast.BLangArrowFunction:
 		return walkArrowFunction(cx, expr)
+	case *ast.BLangQueryExpr:
+		return walkQueryExpr(cx, expr)
 	case *ast.BLangLiteral:
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	case *ast.BLangNumericLiteral:
@@ -337,4 +341,237 @@ func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desuga
 	return desugaredNode[model.ExpressionNode]{
 		replacementNode: expr,
 	}
+}
+
+func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
+	if len(expr.QueryClauseList) < 2 {
+		cx.unimplemented("query expression currently supports only from + let + where + select clauses")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+
+	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
+	if !ok {
+		cx.internalError("query expression must start with from clause")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+	selectClause, ok := expr.QueryClauseList[len(expr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	if !ok {
+		cx.internalError("query expression must end with select clause")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+	loopVarDef, ok := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
+	if !ok {
+		cx.unimplemented("query from clause currently supports only simple variable definition")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+
+	queryTy := expr.GetDeterminedType()
+
+	var initStmts []model.StatementNode
+
+	collResult := walkExpression(cx, fromClause.Collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode.(ast.BLangExpression)
+	collTy := collExpr.GetDeterminedType()
+
+	collName, collSymbol := cx.addDesugardSymbol(collTy, model.SymbolKindVariable, false)
+	collVar := &ast.BLangSimpleVariable{
+		Name: &ast.BLangIdentifier{Value: collName},
+	}
+	collVar.SetDeterminedType(collTy)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	initStmts = append(initStmts, collVarDef)
+
+	collRef := &ast.BLangSimpleVarRef{
+		VariableName: collVar.Name,
+	}
+	collRef.SetSymbol(collSymbol)
+	collRef.SetDeterminedType(collTy)
+
+	resultName, resultSymbol := cx.addDesugardSymbol(queryTy, model.SymbolKindVariable, false)
+	resultVar := &ast.BLangSimpleVariable{
+		Name: &ast.BLangIdentifier{Value: resultName},
+	}
+	resultVar.SetDeterminedType(queryTy)
+	emptyList := &ast.BLangListConstructorExpr{
+		Exprs: []ast.BLangExpression{},
+	}
+	emptyList.SetDeterminedType(&semtypes.LIST)
+	emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
+	resultVar.SetInitialExpression(emptyList)
+	resultVar.SetSymbol(resultSymbol)
+	resultVarDef := &ast.BLangSimpleVariableDef{Var: resultVar}
+	initStmts = append(initStmts, resultVarDef)
+
+	resultRef := &ast.BLangSimpleVarRef{
+		VariableName: resultVar.Name,
+	}
+	resultRef.SetSymbol(resultSymbol)
+	resultRef.SetDeterminedType(queryTy)
+
+	zeroLiteral := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         int64(0),
+			OriginalValue: "0",
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	zeroLiteral.SetDeterminedType(&semtypes.INT)
+
+	idxName, idxSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxVar := &ast.BLangSimpleVariable{
+		Name: &ast.BLangIdentifier{Value: idxName},
+	}
+	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetInitialExpression(zeroLiteral)
+	idxVar.SetSymbol(idxSymbol)
+	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	initStmts = append(initStmts, idxVarDef)
+
+	idxRef := &ast.BLangSimpleVarRef{
+		VariableName: idxVar.Name,
+	}
+	idxRef.SetSymbol(idxSymbol)
+	idxRef.SetDeterminedType(&semtypes.INT)
+
+	lengthInvocation := createLengthInvocation(cx, collRef)
+	lenName, lenSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenVar := &ast.BLangSimpleVariable{
+		Name: &ast.BLangIdentifier{Value: lenName},
+	}
+	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetInitialExpression(lengthInvocation)
+	lenVar.SetSymbol(lenSymbol)
+	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	initStmts = append(initStmts, lenVarDef)
+
+	lenRef := &ast.BLangSimpleVarRef{
+		VariableName: lenVar.Name,
+	}
+	lenRef.SetSymbol(lenSymbol)
+	lenRef.SetDeterminedType(&semtypes.INT)
+
+	condition := &ast.BLangBinaryExpr{
+		LhsExpr: idxRef,
+		RhsExpr: lenRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	condition.SetDeterminedType(&semtypes.BOOLEAN)
+
+	elementAccess := &ast.BLangIndexBasedAccess{
+		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
+			Expr: collRef,
+		},
+		IndexExpr: idxRef,
+	}
+	loopVarTy := loopVarDef.Var.GetDeterminedType()
+	elementAccess.SetDeterminedType(loopVarTy)
+	loopVarDef.Var.SetInitialExpression(elementAccess)
+
+	bodyStmts := make([]ast.BLangStatement, 0, 8)
+	bodyStmts = append(bodyStmts, loopVarDef)
+
+	for i := 1; i < len(expr.QueryClauseList)-1; i++ {
+		switch clause := expr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+					cx.unimplemented("query let clause currently supports only initialized simple variable declarations")
+					return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+				}
+				letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
+				for _, s := range letResult.initStmts {
+					bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+				}
+				varDef.Var.SetInitialExpression(letResult.replacementNode.(ast.BLangExpression))
+				bodyStmts = append(bodyStmts, varDef)
+			}
+		case *ast.BLangWhereClause:
+			if clause.Expression == nil {
+				cx.unimplemented("query where clause requires a condition expression")
+				return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+			}
+			whereResult := walkExpression(cx, clause.Expression)
+			for _, s := range whereResult.initStmts {
+				bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+			}
+			whereCond := whereResult.replacementNode.(ast.BLangExpression)
+			notWhereCond := &ast.BLangUnaryExpr{
+				Expr:     whereCond,
+				Operator: model.OperatorKind_NOT,
+			}
+			notWhereCond.SetDeterminedType(&semtypes.BOOLEAN)
+			continueStmt := &ast.BLangContinue{}
+			continueStmt.SetDeterminedType(&semtypes.NEVER)
+			skipBody := ast.BLangBlockStmt{
+				Stmts: []ast.BLangStatement{
+					createIncrementStmt(idxRef),
+					continueStmt,
+				},
+			}
+			filterIf := &ast.BLangIf{
+				Expr: notWhereCond,
+				Body: skipBody,
+			}
+			filterIf.SetScope(cx.currentScope())
+			filterIf.SetDeterminedType(&semtypes.NEVER)
+			bodyStmts = append(bodyStmts, filterIf)
+		default:
+			cx.unimplemented("query expression currently supports only let + where clauses as intermediate clauses")
+			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		}
+	}
+
+	selectResult := walkExpression(cx, selectClause.Expression)
+	for _, s := range selectResult.initStmts {
+		bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+	}
+	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
+	bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
+	bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
+
+	whileStmt := &ast.BLangWhile{
+		Expr: condition,
+		Body: ast.BLangBlockStmt{
+			Stmts: bodyStmts,
+		},
+	}
+	whileStmt.SetScope(cx.currentScope())
+	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	initStmts = append(initStmts, whileStmt)
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
+		replacementNode: resultRef,
+	}
+}
+
+func createPushInvocation(cx *FunctionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
+	pkgName := array.PackageName
+	space, ok := cx.getImportedSymbolSpace(pkgName)
+	if !ok {
+		cx.internalError(pkgName + " symbol space not found")
+		return nil
+	}
+	symbolRef, ok := space.GetSymbol("push")
+	if !ok {
+		cx.internalError(pkgName + ":push symbol not found")
+		return nil
+	}
+	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
+		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+		Alias:        &ast.BLangIdentifier{Value: pkgName},
+	})
+	inv := &ast.BLangInvocation{
+		Name:     &ast.BLangIdentifier{Value: "push"},
+		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
+		ArgExprs: []ast.BLangExpression{listExpr, valueExpr},
+	}
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(&semtypes.NIL)
+	return inv
 }

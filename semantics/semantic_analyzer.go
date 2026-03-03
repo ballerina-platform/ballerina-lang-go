@@ -508,6 +508,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangGroupExpr:
 		analyzeExpression(a, expr.Expression, expectedType)
 
+	case *ast.BLangQueryExpr:
+		analyzeQueryExpr(a, expr, expectedType)
+
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard patterns have type ANY and are always valid
 		validateResolvedType(a, expr, expectedType)
@@ -516,6 +519,48 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	default:
 		a.internalErr("unexpected expression type: " + reflect.TypeOf(expr).String())
 	}
+}
+
+func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) {
+	if len(queryExpr.QueryClauseList) < 2 {
+		a.semanticErr("query expression requires from and select clauses")
+		return
+	}
+
+	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
+	if !ok {
+		a.semanticErr("query expression must start with a from clause")
+		return
+	}
+	analyzeExpression(a, fromClause.Collection, nil)
+
+	selectClause, ok := queryExpr.QueryClauseList[len(queryExpr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	if !ok {
+		a.semanticErr("query expression requires a select clause")
+		return
+	}
+
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+					a.semanticErr("let clause supports only initialized simple variable declarations")
+					return
+				}
+				analyzeExpression(a, varDef.Var.Expr.(ast.BLangExpression), varDef.Var.GetDeterminedType())
+			}
+		case *ast.BLangWhereClause:
+			analyzeExpression(a, clause.Expression, &semtypes.BOOLEAN)
+		default:
+			a.unimplementedErr("only let + where clauses are supported as intermediate query clauses")
+			return
+		}
+	}
+	analyzeExpression(a, selectClause.Expression, nil)
+
+	validateResolvedType(a, queryExpr, expectedType)
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) {

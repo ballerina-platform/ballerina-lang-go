@@ -290,6 +290,8 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangQueryExpr:
+		return newBlockSymbolResolverWithBlockScope(resolver, n)
 	case model.InvocationNode:
 		if n.GetExpression() != nil {
 			createDeferredMethodSymbol(resolver, n)

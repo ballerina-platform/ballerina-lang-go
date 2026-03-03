@@ -1104,6 +1104,31 @@ type ConstPatternNode interface {
 
 // Clause Interfaces
 
+type InputClauseNode interface {
+	Node
+	GetCollection() ExpressionNode
+	SetCollection(collection ExpressionNode)
+	GetVariableDefinitionNode() VariableDefinitionNode
+	SetVariableDefinitionNode(variableDefinitionNode VariableDefinitionNode)
+	IsDeclaredWithVar() bool
+}
+
+type FromClauseNode interface {
+	InputClauseNode
+}
+
+type SelectClauseNode interface {
+	Node
+	GetExpression() ExpressionNode
+	SetExpression(expression ExpressionNode)
+}
+
+type QueryExpressionNode interface {
+	ExpressionNode
+	GetQueryClauses() []Node
+	AddQueryClause(queryClause Node)
+}
+
 type CollectClauseNode interface {
 	Node
 	GetExpression() ExpressionNode
