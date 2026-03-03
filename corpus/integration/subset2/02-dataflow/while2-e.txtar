@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: variable may not be initialized
   --> while2-e.bal:21:11

@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: Unknown function: println
   --> call15-e.bal:19:5

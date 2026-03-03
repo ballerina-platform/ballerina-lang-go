@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((BOOLEAN), ()), got ((INT), ())
   --> while01-e.bal:21:11

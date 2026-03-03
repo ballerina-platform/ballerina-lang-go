@@ -189,17 +189,12 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
-	expectedStdoutNorm := normalizeNewlines(expectedStdout)
-	expectedStderrNorm := normalizeNewlines(expectedStderr)
-	actualStdoutNorm := normalizeNewlines(actualStdout)
-	actualStderrNorm := normalizeNewlines(actualStderr)
-
 	return testResult{
-		success:        actualStdoutNorm == expectedStdoutNorm && actualStderrNorm == expectedStderrNorm,
-		expectedStdout: expectedStdoutNorm,
-		actualStdout:   actualStdoutNorm,
-		expectedStderr: expectedStderrNorm,
-		actualStderr:   actualStderrNorm,
+		success:        actualStdout == expectedStdout && actualStderr == expectedStderr,
+		expectedStdout: expectedStdout,
+		actualStdout:   actualStdout,
+		expectedStderr: expectedStderr,
+		actualStderr:   actualStderr,
 	}
 }
 
@@ -243,10 +238,6 @@ func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf *bytes.Buffer) {
 	}
 }
 
-func normalizeNewlines(s string) string {
-	return strings.TrimRight(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
-}
-
 func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) (values.BalValue, error) {
 	return func(args []values.BalValue) (values.BalValue, error) {
 		var b strings.Builder
@@ -262,19 +253,10 @@ func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) 
 }
 
 func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
-	format := func(s string) []byte {
-		s = strings.ReplaceAll(s, "\r\n", "\n")
-		if s == "" {
-			return []byte("\n")
-		}
-		s = strings.TrimRight(s, "\n")
-		return fmt.Appendf(nil, "%s\n\n", s)
-	}
-
 	archive := &txtar.Archive{
 		Files: []txtar.File{
-			{Name: "stdout", Data: format(stdout)},
-			{Name: "stderr", Data: format(stderr)},
+			{Name: "stdout", Data: []byte(stdout)},
+			{Name: "stderr", Data: []byte(stderr)},
 		},
 	}
 

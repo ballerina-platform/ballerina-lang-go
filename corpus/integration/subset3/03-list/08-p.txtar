@@ -1,5 +1,3 @@
 -- stdout --
 Runtime panic: invalid array index: 0
-
 -- stderr --
-
