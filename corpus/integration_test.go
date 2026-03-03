@@ -66,7 +66,9 @@ type testResult struct {
 func TestIntegration(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.Integration)
+	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
+		return true
+	})
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
@@ -89,10 +91,10 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	if *update {
 		stdout, stderr := runIntegrationCase(testPair.InputPath)
-		if err := updateIntegrationTestCase(testPair.ExpectedPath, stdout, stderr); err != nil {
-			t.Fatalf("failed to update txtar: %v", err)
+		if updateIfNeeded(t, testPair.ExpectedPath, stdout, stderr) {
+			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
-		t.Fatalf("Updated expected output: %s", testPair.ExpectedPath)
+		return
 	}
 
 	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(testPair.ExpectedPath)
@@ -259,7 +261,7 @@ func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) 
 	}
 }
 
-func updateIntegrationTestCase(txtarPath, stdout, stderr string) error {
+func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
 	format := func(s string) []byte {
 		s = strings.ReplaceAll(s, "\r\n", "\n")
 		if s == "" {
@@ -276,8 +278,20 @@ func updateIntegrationTestCase(txtarPath, stdout, stderr string) error {
 		},
 	}
 
-	if err := os.MkdirAll(filepath.Dir(txtarPath), 0o755); err != nil {
-		return err
+	actual := txtar.Format(archive)
+
+	existing, err := os.ReadFile(expectedPath)
+	fileExists := err == nil
+
+	if fileExists && bytes.Equal(existing, actual) {
+		return false
 	}
-	return os.WriteFile(txtarPath, txtar.Format(archive), 0o644)
+	dir := filepath.Dir(expectedPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("Failed to create directory %s: %v", dir, err)
+	}
+	if err := os.WriteFile(expectedPath, actual, 0o644); err != nil {
+		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
+	}
+	return true
 }
