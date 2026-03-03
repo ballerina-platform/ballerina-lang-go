@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: let-clause variable type is incompatible with initializer expression
+  --> let1-e.bal:20:13
+   |
+20 |         let string y = x * 2
+   |             ^^^^^^^^^^^^^^^^
+
