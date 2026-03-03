@@ -1,5 +1,15 @@
 -- stdout --
-panic: unexpected expression type
 
 -- stderr --
+error[SYNTAX_ERROR]: invalid error constructor
+  --> error-constructor-too-many-args-e.bal:18:17
+   |
+18 |     error err = error("msg", error("cause"), "extra");  // @error
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[SYNTAX_ERROR]: invalid error constructor
+  --> error-constructor-too-many-args-e.bal:18:30
+   |
+18 |     error err = error("msg", error("cause"), "extra");  // @error
+   |                              ^^^^^^^^^^^^^^
 

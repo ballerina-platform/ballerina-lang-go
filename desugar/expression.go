@@ -253,6 +253,12 @@ func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstruct
 		expr.PositionalArgs[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
+	for i := range expr.NamedArgs {
+		result := walkExpression(cx, expr.NamedArgs[i].Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.NamedArgs[i].Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
 		replacementNode: expr,
