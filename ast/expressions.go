@@ -143,16 +143,16 @@ type (
 		Function *BLangFunction
 	}
 
-		BLangBinaryExpr struct {
-			BLangExpressionBase
-			LhsExpr BLangExpression
-			RhsExpr BLangExpression
-			OpKind  model.OperatorKind
-		}
-		BLangQueryExpr struct {
-			BLangExpressionBase
-			QueryClauseList []BLangNode
-		}
+	BLangBinaryExpr struct {
+		BLangExpressionBase
+		LhsExpr BLangExpression
+		RhsExpr BLangExpression
+		OpKind  model.OperatorKind
+	}
+	BLangQueryExpr struct {
+		BLangExpressionBase
+		QueryClauseList []BLangNode
+	}
 
 	BLangCheckedExpr struct {
 		BLangExpressionBase
