@@ -2173,7 +2173,87 @@ func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNo
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
-	panic("TransformObjectTypeDescriptor unimplemented")
+	objectType := &BLangObjectType{members: make(map[string]model.ObjectMember)}
+
+	// Process object type qualifiers (client/service/isolated)
+	qualifiers := objectTypeDescriptorNode.ObjectTypeQualifiers()
+	for q := range qualifiers.Iterator() {
+		switch q.Kind() {
+		case common.CLIENT_KEYWORD:
+			objectType.NetworkQuals = model.ObjectNetworkQualsClient
+		case common.SERVICE_KEYWORD:
+			objectType.NetworkQuals = model.ObjectNetworkQualsService
+		case common.ISOLATED_KEYWORD:
+			objectType.Isolated = true
+		}
+	}
+
+	// Process members
+	members := objectTypeDescriptorNode.Members()
+	for i := 0; i < members.Size(); i++ {
+		member := members.Get(i)
+		switch member.Kind() {
+		case common.OBJECT_FIELD:
+			objectField := member.(*tree.ObjectFieldNode)
+			fieldName := objectField.FieldName().Text()
+			bField := &BObjectField{
+				Ty: n.createTypeNode(objectField.TypeName()).(BType),
+			}
+			bField.name = fieldName
+			bField.pos = getPosition(objectField)
+			if vis := objectField.VisibilityQualifier(); vis != nil && vis.Kind() == common.PUBLIC_KEYWORD {
+				bField.visibility = model.VisibilityPublic
+			}
+			if objectType.AddMember(bField) {
+				n.cx.SyntaxError("redeclared symbol '"+fieldName+"'", bField.pos)
+			}
+		case common.METHOD_DECLARATION:
+			methodDecl := member.(*tree.MethodDeclarationNode)
+			methodName := methodDecl.MethodName().Text()
+			bMethod := &BMethodDecl{}
+			bMethod.name = methodName
+			bMethod.pos = getPosition(methodDecl)
+
+			// Process visibility from qualifier list
+			methodQuals := methodDecl.QualifierList()
+			for q := range methodQuals.Iterator() {
+				if q.Kind() == common.PUBLIC_KEYWORD {
+					bMethod.visibility = model.VisibilityPublic
+				}
+			}
+
+			// Build function type from method signature
+			funcSig := methodDecl.MethodSignature()
+			if funcSig != nil {
+				// Process parameters
+				params := funcSig.Parameters()
+				for param := range params.Iterator() {
+					reqParam := param.(*tree.RequiredParameterNode)
+					paramType := n.createTypeNode(reqParam.TypeName()).(BType)
+					var paramName *string
+					if pn := reqParam.ParamName(); pn != nil {
+						name := pn.Text()
+						paramName = &name
+					}
+					bMethod.Params = append(bMethod.Params, BLangFunctionTypeParameter{name: paramName, ty: paramType})
+				}
+
+				// Process return type
+				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
+					bMethod.ReturnTy = n.createTypeNode(retTypeDesc.Type()).(BType)
+				}
+			}
+
+			if objectType.AddMember(bMethod) {
+				n.cx.SyntaxError("redeclared symbol '"+methodName+"'", bMethod.pos)
+			}
+		default:
+			panic("unexpected member kind in object type descriptor")
+		}
+	}
+
+	objectType.pos = getPosition(objectTypeDescriptorNode)
+	return objectType
 }
 
 func (n *NodeBuilder) TransformObjectConstructorExpression(objectConstructorExpressionNode *tree.ObjectConstructorExpressionNode) BLangNode {

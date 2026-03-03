@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: type definition O is empty
+ --> infiniteObject-e.bal:1:1
+  |
+1 | type O object { // @error
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^
+

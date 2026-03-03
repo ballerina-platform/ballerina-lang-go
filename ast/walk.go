@@ -599,6 +599,22 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.RestType.(BLangNode))
 		}
 
+	case *BLangObjectType:
+		for member := range node.Members() {
+			Walk(v, member.(BLangNode))
+		}
+
+	case *BObjectField:
+		Walk(v, node.Ty.(BLangNode))
+
+	case *BMethodDecl:
+		for _, param := range node.Params {
+			Walk(v, param.ty.(BLangNode))
+		}
+		if node.ReturnTy != nil {
+			Walk(v, node.ReturnTy.(BLangNode))
+		}
+
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
 		Walk(v, &node.Identifier)

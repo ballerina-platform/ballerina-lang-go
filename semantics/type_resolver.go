@@ -1915,6 +1915,137 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			rest = &semtypes.NEVER
 		}
 		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest), true
+	case *ast.BLangFunctionType:
+		if ty.Definition != nil {
+			return ty.Definition.GetSemType(tr.ctx.GetTypeEnv()), true
+		}
+		fd := semtypes.NewFunctionDefinition()
+		ty.Definition = &fd
+		paramTypes := make([]semtypes.SemType, len(ty.Params))
+		for i, param := range ty.Params {
+			paramTy, ok := tr.resolveBType(param.Type(), depth+1)
+			if !ok {
+				return nil, false
+			}
+			paramTypes[i] = paramTy
+		}
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.DefineListTypeWrapped(tr.ctx.GetTypeEnv(), paramTypes, len(paramTypes), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		var returnTy semtypes.SemType
+		if ty.ReturnTy != nil {
+			var ok bool
+			returnTy, ok = tr.resolveBType(ty.ReturnTy, depth+1)
+			if !ok {
+				return nil, false
+			}
+		} else {
+			returnTy = &semtypes.NIL
+		}
+		return fd.Define(tr.ctx.GetTypeEnv(), paramListTy, returnTy,
+			semtypes.FunctionQualifiersFrom(tr.ctx.GetTypeEnv(), false, false)), true
+	case *ast.BLangObjectType:
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+		}
+		od := semtypes.NewObjectDefinition()
+		ty.Definition = &od
+
+		// Step 1: Accumulate included members
+		includedMembers := make(map[string][]model.ObjectMember)
+		for _, symRef := range ty.Inclusions {
+			// FIXME: this needs to allow classes when we support them
+			tDefn, ok := tr.ctx.GetTypeDefinition(symRef)
+			if !ok {
+				tr.ctx.InternalError("type definition not found for inclusion", ty.GetPosition())
+				continue
+			}
+			objTy, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+			if !ok {
+				tr.ctx.SemanticError("type inclusion must be an object type", ty.GetPosition())
+				continue
+			}
+			// Resolve the included type
+			_, ok = tr.resolveBType(objTy, depth+1)
+			if !ok {
+				return nil, false
+			}
+			for m := range objTy.Members() {
+				kind := m.MemberKind()
+				if kind == model.ObjectMemberKindField || kind == model.ObjectMemberKindMethod {
+					includedMembers[m.Name()] = append(includedMembers[m.Name()], m)
+				}
+			}
+		}
+
+		// Step 2: Build members from direct members
+		var members []semtypes.Member
+		for m := range ty.Members() {
+			valueTy, ok := tr.resolveObjectMemberType(m, depth)
+			if !ok {
+				return nil, false
+			}
+
+			name := m.Name()
+			// Check overrides against included members
+			if incMembers, exists := includedMembers[name]; exists {
+				for _, incMember := range incMembers {
+					incTy, ok := tr.resolveObjectMemberType(incMember, depth)
+					if !ok {
+						tr.ctx.InternalError(
+							fmt.Sprintf("failed to resolve included field type for %s", name),
+							ty.GetPosition(),
+						)
+						return nil, false
+					}
+					if !semtypes.IsSubtype(tr.tyCtx, valueTy, incTy) {
+						tr.ctx.SemanticError(
+							fmt.Sprintf("member '%s' that overrides included member is not a subtype of the included member type", name),
+							ty.GetPosition(),
+						)
+						return nil, false
+					}
+				}
+				delete(includedMembers, name)
+			}
+
+			members = append(members, semtypes.Member{
+				Name:       name,
+				ValueTy:    valueTy,
+				Kind:       semtypeMemberKind(m.MemberKind()),
+				Visibility: semtypeVisibility(m.Visibility()),
+				Immutable:  false,
+			})
+		}
+
+		// Check for duplicate included members that weren't overridden
+		for name, incMembers := range includedMembers {
+			if len(incMembers) > 1 {
+				tr.ctx.SemanticError(fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
+				return nil, false
+			}
+			inc := incMembers[0]
+			valueTy, ok := tr.resolveObjectMemberType(inc, depth)
+			if !ok {
+				tr.ctx.InternalError(
+					fmt.Sprintf("failed to resolve included field type for %s", name),
+					ty.GetPosition(),
+				)
+				return nil, false
+			}
+			members = append(members, semtypes.Member{
+				Name:       name,
+				ValueTy:    valueTy,
+				Kind:       semtypeMemberKind(inc.MemberKind()),
+				Visibility: semtypeVisibility(inc.Visibility()),
+				Immutable:  false,
+			})
+		}
+
+		// Step 3: Create semtype
+		networkQual := semtypeNetworkQualifier(ty.NetworkQuals)
+		qualifiers := semtypes.ObjectQualifiersFrom(ty.Isolated, false, networkQual)
+		return od.Define(tr.ctx.GetTypeEnv(), qualifiers, members), true
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)
@@ -1996,4 +2127,62 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) bool {
 	t.ctx.SetSymbolType(symbol, expectedType)
 
 	return true
+}
+
+func (tr *TypeResolver) resolveObjectMemberType(m model.ObjectMember, depth int) (semtypes.SemType, bool) {
+	switch m := m.(type) {
+	case *ast.BObjectField:
+		valueTy, ok := tr.resolveBType(m.Ty, depth+1)
+		if ok {
+			m.SetDeterminedType(valueTy)
+		}
+		return valueTy, ok
+	case *ast.BMethodDecl:
+		valueTy, ok := tr.resolveBType(&m.BLangFunctionType, depth+1)
+		if ok {
+			m.SetDeterminedType(valueTy)
+		}
+		return valueTy, ok
+	default:
+		return nil, false
+	}
+}
+
+func semtypeMemberKind(kind model.ObjectMemberKind) semtypes.MemberKind {
+	switch kind {
+	case model.ObjectMemberKindField:
+		return semtypes.MemberKindField
+	case model.ObjectMemberKindMethod:
+		return semtypes.MemberKindMethod
+	case model.ObjectMemberKindRemoteMethod:
+		return semtypes.MemberKindRemoteMethod
+	case model.ObjectMemberKindResouceMethod:
+		return semtypes.MemberKindResourceMethod
+	default:
+		panic("invalid member kind")
+	}
+}
+
+func semtypeVisibility(v model.Visibility) semtypes.Visibility {
+	switch v {
+	case model.VisibilityPublic:
+		return semtypes.VisibilityPublic
+	case model.VisibilityPrivate:
+		return semtypes.VisibilityPrivate
+	default:
+		panic("invalid visibility")
+	}
+}
+
+func semtypeNetworkQualifier(nq model.ObjectNetworkQuals) semtypes.NetworkQualifier {
+	switch nq {
+	case model.ObjectNetworkQualsNone:
+		return semtypes.NetworkQualifierNone
+	case model.ObjectNetworkQualsClient:
+		return semtypes.NetworkQualifierClient
+	case model.ObjectNetworkQualsService:
+		return semtypes.NetworkQualifierService
+	default:
+		panic("invalid network qualifier")
+	}
 }

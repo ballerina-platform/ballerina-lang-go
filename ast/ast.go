@@ -309,7 +309,7 @@ type (
 		ReferencedFields                []BLangSimpleVariable
 		LocalVarRefs                    []BLangLocalVarRef
 		OceEnvData                      *OCEDynamicEnvironmentData
-		ObjectType                      *BObjectType
+		ObjectType                      *BLangObjectType
 		CycleDepth                      int
 		Precedence                      int
 		IsServiceDecl                   bool
