@@ -55,6 +55,9 @@ func testSemanticAnalysis(t *testing.T, testCase test_util.TestCase) {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
+	if cx.HasErrors() {
+		t.Fatalf("compiler context has errors for %s: %v", testCase.InputPath, cx.Diagnostics())
+	}
 
 	// Validate that all expressions have determinedTypes set
 	validator := &semanticAnalysisValidator{t: t, ctx: cx}

@@ -229,7 +229,7 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	}
 
 	// Add type resolution step (this only resolve types of top level nodes)
-	semantics.ResolveTypes(compilerCtx, pkgNode, importedSymbols)
+	semantics.ResolveTopLevelNodes(compilerCtx, pkgNode, importedSymbols)
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
@@ -246,8 +246,12 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
-	// Run type narrowing analysis.
-	semantics.NarrowTypes(moduleCtx.compilerCtx, pkgNode)
+
+	// Resolve types of function bodies and inner nodes
+	semantics.ResolveLocalNodes(compilerCtx, pkgNode, moduleCtx.importedSymbols)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(moduleCtx.compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)

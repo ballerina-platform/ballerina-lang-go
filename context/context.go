@@ -25,6 +25,7 @@ import (
 type CompilerContext struct {
 	env         *CompilerEnvironment
 	diagnostics []diagnostics.Diagnostic
+	tyContext   semtypes.Context
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -129,13 +130,18 @@ func (this *CompilerContext) Diagnostics() []diagnostics.Diagnostic {
 
 func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 	return &CompilerContext{
-		env: env,
+		env:       env,
+		tyContext: semtypes.ContextFrom(env.typeEnv),
 	}
 }
 
 // GetTypeEnv returns the type environment for this context
 func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 	return this.env.GetTypeEnv()
+}
+
+func (this *CompilerContext) GetTypeCtx() semtypes.Context {
+	return this.tyContext
 }
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {

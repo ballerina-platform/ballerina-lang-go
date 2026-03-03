@@ -55,6 +55,9 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
+	if cx.HasErrors() {
+		t.Fatalf("compiler context has errors for %s: %v", testCase.InputPath, cx.Diagnostics())
+	}
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
 	ast.Walk(validator, result.Package)
 	// If we reach here, symbol resolution completed without panicking

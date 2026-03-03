@@ -92,7 +92,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 
 	// Phase 2: AST
 	result.CompilationUnit = ast.GetCompilationUnit(cx, syntaxTree)
-	if result.CompilationUnit == nil {
+	if result.CompilationUnit == nil || cx.HasDiagnostics() {
 		return nil, fmt.Errorf("AST generation failed: compilation unit is nil")
 	}
 	result.Package = ast.ToPackage(result.CompilationUnit)
@@ -103,44 +103,44 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	// Phase 3: Symbol Resolution
 	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx))
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
-	if phase == PhaseSymbolResolution || cx.HasErrors() {
+	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil
 	}
 
-	// Phase 4: Type Resolution
-	semantics.ResolveTypes(cx, result.Package, importedSymbols)
-	if phase == PhaseTypeResolution || cx.HasErrors() {
+	// Phase 4: Type Resolution (top level nodes)
+	semantics.ResolveTopLevelNodes(cx, result.Package, importedSymbols)
+	if phase == PhaseTypeResolution || cx.HasDiagnostics() {
 		return result, nil
 	}
 
-	// Phase 5: Type Narrowing
-	semantics.NarrowTypes(cx, result.Package)
-	if phase == PhaseTypeNarrowing || cx.HasErrors() {
+	// Phase 5: Type Resolution (inner nodes)
+	semantics.ResolveLocalNodes(cx, result.Package, importedSymbols)
+	if phase == PhaseTypeNarrowing || cx.HasDiagnostics() {
 		return result, nil
 	}
 
 	// Phase 6: Semantic Analysis
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
 	semanticAnalyzer.Analyze(result.Package)
-	if phase == PhaseSemanticAnalysis || cx.HasErrors() {
+	if phase == PhaseSemanticAnalysis || cx.HasDiagnostics() {
 		return result, nil
 	}
 
 	// Phase 7: CFG Generation
 	result.CFG = semantics.CreateControlFlowGraph(cx, result.Package)
-	if phase == PhaseCFG || cx.HasErrors() {
+	if phase == PhaseCFG || cx.HasDiagnostics() {
 		return result, nil
 	}
 
 	// Phase 8: CFG Analysis
 	semantics.AnalyzeCFG(cx, result.Package, result.CFG)
-	if phase == PhaseCFGAnalysis || cx.HasErrors() {
+	if phase == PhaseCFGAnalysis || cx.HasDiagnostics() {
 		return result, nil
 	}
 
 	// Phase 9: Desugar
 	result.Package = desugar.DesugarPackage(cx, result.Package, importedSymbols)
-	if phase == PhaseDesugar || cx.HasErrors() {
+	if phase == PhaseDesugar || cx.HasDiagnostics() {
 		return result, nil
 	}
 

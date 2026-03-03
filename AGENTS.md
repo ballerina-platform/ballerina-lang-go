@@ -24,7 +24,7 @@
 2. Generate Abstract syntax tree (AST)
 3. Do symbol resolution
 4. Do type resolution of top level nodes
-5. Type Narrowing (this will do the type resolution of inner nodes)
+5. Do type resolution of inner nodes (function bodies, type narrowing)
 6. Semantic analysis
 7. Generate Control Flow Graph (CFG)
 8. Analyze CFG
@@ -67,3 +67,9 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
 ### Opening interactive profiler on long running processes
 
 - After running the interpreter with profiling flags run `go tool pprof -http=:8080 http://localhost:6060/debug/pprof/profile?seconds=30` and open `localhost:8080` in the browser
+
+## AST
+
+- Each ast node has a type representing the value you get after evaluating that node
+  - For expressions this needs to be determined.
+  - For all other nodes (declarations, statements, identifiers, etc) which don't produce a value this is always NEVER
