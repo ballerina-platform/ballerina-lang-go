@@ -272,6 +272,8 @@ const (
 	NodeKind_VALUE_TYPE
 	NodeKind_RECORD_TYPE
 	NodeKind_OBJECT_TYPE
+	NodeKind_OBJECT_FIELD
+	NodeKind_METHOD_DECL
 	NodeKind_ERROR_TYPE
 	NodeKind_STREAM_TYPE
 	NodeKind_TABLE_TYPE
@@ -754,6 +756,42 @@ type FiniteTypeNode interface {
 	ReferenceTypeNode
 	GetValueSet() []ExpressionNode
 	AddValue(value ExpressionNode)
+}
+
+type ObjectMemberKind uint8
+
+const (
+	ObjectMemberKindField ObjectMemberKind = iota
+	ObjectMemberKindMethod
+	ObjectMemberKindRemoteMethod
+	ObjectMemberKindResouceMethod
+)
+
+type Visibility uint8
+
+const (
+	VisibilityPrivate Visibility = iota
+	VisibilityPublic
+)
+
+type ObjectMember interface {
+	MemberKind() ObjectMemberKind
+	Name() string
+	Visibility() Visibility
+}
+
+type ObjectNetworkQuals uint8
+
+const (
+	ObjectNetworkQualsNone ObjectNetworkQuals = iota
+	ObjectNetworkQualsClient
+	ObjectNetworkQualsService
+)
+
+type ObjectType interface {
+	ReferenceTypeNode
+	Members() iter.Seq[ObjectMember]
+	Member(name string) (ObjectMember, bool)
 }
 
 type UnionTypeNode interface {

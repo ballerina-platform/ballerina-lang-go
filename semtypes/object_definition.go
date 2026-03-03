@@ -51,7 +51,7 @@ func ObjectDefinitionDistinct(distinctId int) SemType {
 //	    "client"|"service" network
 //	  },
 //	   [field_name]: {
-//	     "field"|"method" kind,
+//	     "field"|"method"|"remote-method"|"resource-method" kind,
 //	     "public"|"private" visibility,
 //	      VAL value;
 //	   }
@@ -60,7 +60,7 @@ func ObjectDefinitionDistinct(distinctId int) SemType {
 //	     "public"|"private" visibility,
 //	      VAL value;
 //	   } | {
-//	      "method" kind,
+//	      "method"|"remote-method"|"resource-method" kind,
 //	      "public"|"private" visibility,
 //	      FUNCTION value;
 //	   }

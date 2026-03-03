@@ -37,6 +37,8 @@ type MemberKind uint8
 const (
 	MemberKindField MemberKind = iota
 	MemberKindMethod
+	MemberKindRemoteMethod
+	MemberKindResourceMethod
 )
 
 func (k *MemberKind) field() Field {
@@ -45,9 +47,27 @@ func (k *MemberKind) field() Field {
 		return Field{Name: "kind", Ty: StringConst("field"), Ro: true, Opt: false}
 	case MemberKindMethod:
 		return Field{Name: "kind", Ty: StringConst("method"), Ro: true, Opt: false}
+	case MemberKindRemoteMethod:
+		return Field{Name: "kind", Ty: StringConst("remote-method"), Ro: true, Opt: false}
+	case MemberKindResourceMethod:
+		return Field{Name: "kind", Ty: StringConst("resource-method"), Ro: true, Opt: false}
 	default:
 		panic("invalid member kind")
 	}
+}
+
+// toplevel field which matches methods, remote-methods and resource methods.
+func allMethodField() Field {
+	tys := []string{
+		"method",
+		"remote-method",
+		"resource-method",
+	}
+	var ty SemType = &NEVER
+	for _, each := range tys {
+		ty = Union(ty, StringConst(each))
+	}
+	return Field{Name: "kind", Ty: ty, Ro: true, Opt: false}
 }
 
 type Visibility uint8
@@ -72,4 +92,24 @@ func (v *Visibility) field() Field {
 	default:
 		panic("invalid visibility")
 	}
+}
+
+// ObjectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
+func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
+	objectTy := Intersect(ty, &OBJECT)
+	if IsEmpty(ctx, objectTy) {
+		return nil
+	}
+	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
+	return mappingMemberTypeInner(ctx, memberMap, StringConst("kind"))
+}
+
+// ObjectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
+func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
+	objectTy := Intersect(ty, &OBJECT)
+	if IsEmpty(ctx, objectTy) {
+		return nil
+	}
+	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
+	return mappingMemberTypeInner(ctx, memberMap, StringConst("visibility"))
 }
