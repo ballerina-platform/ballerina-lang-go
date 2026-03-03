@@ -18,8 +18,7 @@ package semtypes
 
 import "math"
 
-type EnumerableSubtypeData interface {
-}
+type EnumerableSubtypeData any
 
 type EnumerableSubtype[T any] interface {
 	EnumerableSubtypeData

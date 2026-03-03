@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: expect int types for ..<
+  --> 13-e.bal:24:22
+   |
+24 |     foreach int i in false ..< 10 { // @error
+   |                      ^^^^^^^^^^^^
+

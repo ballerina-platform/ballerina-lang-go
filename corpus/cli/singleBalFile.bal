@@ -15,8 +15,8 @@
 // under the License.
 
 // @output
-// Loop count:  1000000
-// Final total:  1000010000000
+// Loop count: 1000000
+// Final total: 1000010000000
 
 import ballerina/io;
 

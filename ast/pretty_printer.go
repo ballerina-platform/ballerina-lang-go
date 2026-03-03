@@ -104,6 +104,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printUnionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
+	case *BLangConstrainedType:
+		p.printConstrainedType(t)
 	case *BLangTypeDefinition:
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
@@ -112,8 +114,20 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFiniteTypeNode(t)
 	case *BLangListConstructorExpr:
 		p.printListConstructorExpr(t)
+	case *BLangMappingConstructorExpr:
+		p.printMappingConstructor(t)
 	case *BLangTypeConversionExpr:
 		p.printTypeConversionExpr(t)
+	case *BLangTypeTestExpr:
+		p.printTypeTestExpr(t)
+	case *BLangTupleTypeNode:
+		p.printTupleTypeNode(t)
+	case *BLangRecordType:
+		p.printRecordType(t)
+	case *BLangFieldBaseAccess:
+		p.printFieldBaseAccess(t)
+	case *BLangErrorConstructorExpr:
+		p.printErrorConstructorExpr(t)
 	case *BLangQueryExpr:
 		p.printQueryExpr(t)
 	case *BLangFromClause:
@@ -167,7 +181,7 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.printString(node.Name)
 	p.printSourceKind(node.sourceKind)
 	p.printPackageID(node.packageID)
-	p.printBLangNodeBase(&node.BLangNodeBase)
+	p.printBLangNodeBase(&node.bLangNodeBase)
 	p.indentLevel++
 	for _, topLevelNode := range node.TopLevelNodes {
 		p.PrintInner(topLevelNode.(BLangNode))
@@ -196,7 +210,7 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	p.endNode()
 }
 
-func (p *PrettyPrinter) printBLangNodeBase(node *BLangNodeBase) {
+func (p *PrettyPrinter) printBLangNodeBase(node *bLangNodeBase) {
 	// no-op
 }
 
@@ -262,7 +276,7 @@ func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
 	p.printString(string(typeKind))
 }
 
-func (p *PrettyPrinter) printFlags(flagSet interface{}) {
+func (p *PrettyPrinter) printFlags(flagSet any) {
 	// Check if flagSet has a Contains method
 	type flagChecker interface {
 		Contains(model.Flag) bool
@@ -417,10 +431,10 @@ func (p *PrettyPrinter) printSimpleVariable(node *BLangSimpleVariable) {
 	p.startNode()
 	p.printString("variable")
 	p.printString(node.Name.Value)
-	if node.GetTypeData().TypeDescriptor != nil {
+	if node.TypeNode() != nil {
 		p.printString("(type")
 		p.indentLevel++
-		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 		p.printSticky(")")
 	}
@@ -469,9 +483,9 @@ func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.printSticky(")")
 	// Print return type if present
 	p.printString("(")
-	if node.ReturnTypeData.TypeDescriptor != nil {
+	if node.GetReturnTypeDescriptor() != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTypeData.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.GetReturnTypeDescriptor().(BLangNode))
 		p.indentLevel--
 	}
 
@@ -530,6 +544,22 @@ func (p *PrettyPrinter) printTypeConversionExpr(node *BLangTypeConversionExpr) {
 	p.PrintInner(node.Expression.(BLangNode))
 	if node.TypeDescriptor != nil {
 		p.PrintInner(node.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
+	p.startNode()
+	if node.isNegation {
+		p.printString("type-test-expr !is")
+	} else {
+		p.printString("type-test-expr is")
+	}
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	if node.Type.TypeDescriptor != nil {
+		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
 	}
 	p.indentLevel--
 	p.endNode()
@@ -651,9 +681,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
 	p.printString("(")
-	if node.GetTypeData().TypeDescriptor != nil {
+	if node.TypeNode() != nil {
 		p.indentLevel++
-		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
+		p.PrintInner(node.TypeNode().(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -715,6 +745,34 @@ func (p *PrettyPrinter) printListConstructorExpr(node *BLangListConstructorExpr)
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printMappingConstructor(node *BLangMappingConstructorExpr) {
+	p.startNode()
+	p.printString("mapping-constructor-expr")
+	p.indentLevel++
+	for _, f := range node.Fields {
+		if kv, ok := f.(*BLangMappingKeyValueField); ok {
+			p.printMappingKeyValueField(kv)
+		}
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+// Mapping key-value field printer: prints as (key-value (key) (value))
+func (p *PrettyPrinter) printMappingKeyValueField(kv *BLangMappingKeyValueField) {
+	p.startNode()
+	p.printString("key-value")
+	p.indentLevel++
+	if kv.Key != nil && kv.Key.Expr != nil {
+		p.PrintInner(kv.Key.Expr.(BLangNode))
+	}
+	if kv.ValueExpr != nil {
+		p.PrintInner(kv.ValueExpr.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 // Wildcard binding pattern printer
 func (p *PrettyPrinter) printWildCardBindingPattern(node *BLangWildCardBindingPattern) {
 	p.startNode()
@@ -751,9 +809,23 @@ func (p *PrettyPrinter) printErrorTypeNode(node *BLangErrorTypeNode) {
 	p.printString("error-type")
 	if !node.IsTop() {
 		p.indentLevel++
-		p.PrintInner(node.detailType.TypeDescriptor.(BLangNode))
+		p.PrintInner(node.DetailType.TypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printConstrainedType(node *BLangConstrainedType) {
+	p.startNode()
+	p.printString("constrained-type")
+	p.indentLevel++
+	if node.Type.TypeDescriptor != nil {
+		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
+	}
+	if node.Constraint.TypeDescriptor != nil {
+		p.PrintInner(node.Constraint.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -769,6 +841,103 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 		p.indentLevel++
 		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
 		p.indentLevel--
+	}
+	p.endNode()
+}
+
+// Tuple type node printer
+func (p *PrettyPrinter) printTupleTypeNode(node *BLangTupleTypeNode) {
+	p.startNode()
+	p.printString("tuple-type")
+	p.indentLevel++
+	for _, member := range node.Members {
+		p.PrintInner(member.TypeDesc.(BLangNode))
+	}
+	if node.Rest != nil {
+		p.printString("(rest")
+		p.indentLevel++
+		p.PrintInner(node.Rest.(BLangNode))
+		p.indentLevel--
+		p.printSticky(")")
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
+	p.startNode()
+	p.printString("record-type")
+	p.indentLevel++
+	for name, field := range node.Fields() {
+		p.startNode()
+		p.printString("field")
+		p.printString(name)
+		if field.FlagSet.Contains(model.Flag_READONLY) {
+			p.printString("readonly")
+		}
+		if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+			p.printString("optional")
+		}
+		p.indentLevel++
+		p.PrintInner(field.Type.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	if node.RestType != nil {
+		p.startNode()
+		p.printString("rest")
+		p.indentLevel++
+		p.PrintInner(node.RestType.(BLangNode))
+		p.indentLevel--
+		p.endNode()
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+// Field-based access expression printer
+func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
+	p.startNode()
+	p.printString("field-based-access")
+	p.printString(node.Field.Value)
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Error constructor expression printer
+func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExpr) {
+	p.startNode()
+	p.printString("error-constructor-expr")
+	if node.ErrorTypeRef != nil {
+		p.indentLevel++
+		p.PrintInner(node.ErrorTypeRef)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.PositionalArgs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.PositionalArgs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	if len(node.NamedArgs) > 0 {
+		p.printString("(")
+		p.indentLevel++
+		for _, namedArg := range node.NamedArgs {
+			p.startNode()
+			p.printString("named-arg")
+			p.printString(namedArg.Name.Value)
+			p.indentLevel++
+			p.PrintInner(namedArg.Expr.(BLangNode))
+			p.indentLevel--
+			p.endNode()
+		}
+		p.indentLevel--
+		p.printSticky(")")
 	}
 	p.endNode()
 }

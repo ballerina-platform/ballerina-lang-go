@@ -22,7 +22,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	array "ballerina-lang-go/lib/array/compile"
-	bint "ballerina-lang-go/lib/int"
+	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -252,7 +252,7 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
-	result[bint.PackageName] = bint.GetArraySymbols(ctx)
+	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
 	return result
 }
 
@@ -290,6 +290,8 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangMappingConstructorExpr:
+		return resolveMappingConstructor(resolver, n)
 	case *ast.BLangQueryExpr:
 		return newBlockSymbolResolverWithBlockScope(resolver, n)
 	case model.InvocationNode:
@@ -306,6 +308,22 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referUserDefinedType(resolver, n)
 	}
 	return resolver
+}
+
+func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMappingConstructorExpr) ast.Visitor {
+	blockResolver := newBlockSymbolResolverWithBlockScope(resolver, n)
+	for _, field := range n.Fields {
+		if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
+			if !kv.Key.ComputedKey {
+				if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
+					name := varRef.VariableName.Value
+					symbol := model.NewValueSymbol(name, false, false, false)
+					addSymbolAndSetOnNode(blockResolver, name, &symbol, varRef)
+				}
+			}
+		}
+	}
+	return blockResolver
 }
 
 // since we don't have type information we can't determine if this is an actual method call or need to be converted

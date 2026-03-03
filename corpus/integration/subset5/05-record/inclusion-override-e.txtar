@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: field 'x' of type that overrides included field is not a subtype of the included field type
+  --> inclusion-override-e.bal:25:5
+   |
+25 |     string x; // @error
+   |     ^^^^^^^^^
+

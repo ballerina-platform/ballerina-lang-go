@@ -134,8 +134,8 @@ func (p *CFGPrettyPrinter) printNodes(nodes []model.Node) {
 			nodeStr := printer.Print(blangNode)
 
 			// Indent each line of the output
-			lines := strings.Split(nodeStr, "\n")
-			for _, line := range lines {
+			lines := strings.SplitSeq(nodeStr, "\n")
+			for line := range lines {
 				if line != "" {
 					p.buffer.WriteString("    ")
 					p.buffer.WriteString(line)

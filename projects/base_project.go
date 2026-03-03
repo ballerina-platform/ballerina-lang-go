@@ -61,8 +61,8 @@ func (b *BaseProject) initBase(fsys fs.FS, sourceRoot string, buildOptions Build
 	b.sourceRoot = sourceRoot
 	b.buildOptions = buildOptions
 
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
-	b.environment = newEnvironment(fsys, cx)
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	b.environment = newEnvironment(fsys, env)
 }
 
 // setCurrentPackage updates the project's current package.

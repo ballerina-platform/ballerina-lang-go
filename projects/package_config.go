@@ -146,7 +146,7 @@ func (p PackageConfig) HasReadmeMd() bool {
 
 // DependencyManifest returns the dependency manifest for this package.
 // TODO(P6): Replace interface{} with DependencyManifest type once migrated.
-func (p PackageConfig) DependencyManifest() interface{} {
+func (p PackageConfig) DependencyManifest() any {
 	return nil
 }
 
@@ -159,7 +159,7 @@ func (p PackageConfig) CompilationOptions() CompilationOptions {
 
 // PackageDescDependencyGraph returns the package descriptor dependency graph.
 // TODO(P6): Replace interface{} with DependencyGraph[PackageDescriptor] type once migrated.
-func (p PackageConfig) PackageDescDependencyGraph() interface{} {
+func (p PackageConfig) PackageDescDependencyGraph() any {
 	return nil
 }
 

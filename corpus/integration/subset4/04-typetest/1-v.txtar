@@ -1,0 +1,11 @@
+-- stdout --
+int
+string
+float
+boolean
+nil
+any
+decimal
+
+-- stderr --
+

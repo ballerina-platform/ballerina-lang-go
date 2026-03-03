@@ -17,6 +17,9 @@
 package semantics
 
 import (
+	"flag"
+	"testing"
+
 	"ballerina-lang-go/ast"
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
@@ -24,8 +27,6 @@ import (
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"testing"
 )
 
 func TestTypeResolver(t *testing.T) {
@@ -51,7 +52,8 @@ func testTypeResolution(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -96,14 +98,6 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 			v.t.Errorf("expression %T at %v has determined type NEVER", expr, expr.GetPosition())
 		}
 
-		// Also validate TypeData.Type is set
-		typeData := expr.GetTypeData()
-		if typeData.Type == nil {
-			v.t.Fatalf("expression %T at %v does not have TypeData.Type set", expr, expr.GetPosition())
-		}
-		if !semtypes.IsSameType(v.tyCtx, typeData.Type, determinedType) {
-			v.t.Errorf("expression %T at %v has TypeData.Type %v, which is not the same as determined type %v", expr, expr.GetPosition(), typeData.Type, determinedType)
-		}
 	}
 
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {

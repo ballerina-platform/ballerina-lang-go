@@ -95,7 +95,7 @@ func stringSubtypeListCoverage(subtype StringSubtype, values []string) StringSub
 		StringListIntersect(values, toStringArray(ch.Values()), &indices)
 		stringConsts = len(ch.Values())
 	} else if len(ch.Values()) == 0 {
-		for i := 0; i < len(values); i++ {
+		for i := range values {
 			if len(values[i]) == 1 {
 				indices = append(indices, i)
 			}
@@ -105,7 +105,7 @@ func stringSubtypeListCoverage(subtype StringSubtype, values []string) StringSub
 		StringListIntersect(values, toStringArray(nonChar.Values()), &indices)
 		stringConsts += len(nonChar.Values())
 	} else if len(nonChar.Values()) == 0 {
-		for i := 0; i < len(values); i++ {
+		for i := range values {
 			if len(values[i]) != 1 {
 				indices = append(indices, i)
 			}

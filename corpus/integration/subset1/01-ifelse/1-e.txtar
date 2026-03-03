@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((BOOLEAN), ()), got ((INT), ())
+  --> 1-e.bal:22:9
+   |
+22 |     if (foo()) { // @error
+   |         ^^^^^
+

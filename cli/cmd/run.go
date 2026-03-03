@@ -139,16 +139,14 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 			logWriter = os.Stderr
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if runOpts.logFile != "" {
 				defer logWriter.Close()
 			}
 			for msg := range debugCtx.Channel {
 				fmt.Fprintf(logWriter, "%s\n", msg)
 			}
-		}()
+		})
 
 		// Ensure debug context cleanup on any exit path
 		defer func() {
@@ -192,7 +190,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for loading errors
 	diagResult := result.Diagnostics()
 	if diagResult.HasErrors() {
-		printDiagnostics(diagResult)
+		printDiagnostics(fsys, os.Stderr, diagResult, !isTerminal())
 		return fmt.Errorf("project loading contains errors")
 	}
 
@@ -205,7 +203,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for compilation errors
 	compilationDiags := compilation.DiagnosticResult()
 	if compilationDiags.HasErrors() {
-		printDiagnostics(compilationDiags)
+		printDiagnostics(fsys, os.Stderr, compilationDiags, !isTerminal())
 		return fmt.Errorf("compilation failed with errors")
 	}
 

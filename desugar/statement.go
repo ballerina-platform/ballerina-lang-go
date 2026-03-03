@@ -385,11 +385,9 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 
 	// Step 5: element access (collVar[$idx])
 	elementAccess := &ast.BLangIndexBasedAccess{
-		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
-			Expr: collVarRef,
-		},
 		IndexExpr: idxVarRef,
 	}
+	elementAccess.Expr = collVarRef
 	elementAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
 
 	// Step 6: patch loop var def initial expression

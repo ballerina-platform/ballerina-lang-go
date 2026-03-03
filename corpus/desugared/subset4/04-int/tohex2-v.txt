@@ -1,0 +1,55 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang int (as lang.int))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 42))))
+      (var-def
+        (variable s (type
+          (value-type string)) (expr
+          (invocation lang.int toHexString (
+            (simple-var-ref i))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref s))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref s)
+            (literal 2a)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (literal 0))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (group-expr
+              (unary-expr -
+                (literal 1))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (literal 255))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (group-expr
+              (unary-expr -
+                (literal 170))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (literal 9223372036854775807))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation lang.int toHexString (
+            (group-expr
+              (binary-expr -
+                (unary-expr -
+                  (literal 9223372036854775807))
+                (literal 1)))))))))))

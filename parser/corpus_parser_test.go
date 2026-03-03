@@ -396,7 +396,7 @@ func createTestCase(t *testing.T, filePath string, baseDir string) test_util.Tes
 }
 
 func normalizeJSON(jsonStr string) string {
-	var obj interface{}
+	var obj any
 	normalizedJSON := jsonStr
 	if err := json.Unmarshal([]byte(jsonStr), &obj); err == nil {
 		if normalized, err := json.MarshalIndent(obj, "", "  "); err == nil {
@@ -416,7 +416,7 @@ func expectedJSON(t *testing.T, expectedJSONPath string) string {
 
 	// File exists - normalize and compare
 	expectedJSON := string(expectedJSONBytes)
-	var expectedObj interface{}
+	var expectedObj any
 	if err := json.Unmarshal([]byte(expectedJSON), &expectedObj); err == nil {
 		if normalized, err := json.MarshalIndent(expectedObj, "", "  "); err == nil {
 			expectedJSON = string(normalized)

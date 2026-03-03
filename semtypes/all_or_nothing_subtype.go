@@ -23,6 +23,7 @@ type AllOrNothingSubtype struct {
 var AllOrNothingSubtypeAll = newAllOrNothingSubtypeFromBool(true)
 var AllOrNothingSubtypeNothing = newAllOrNothingSubtypeFromBool(false)
 var _ SubtypeData = &AllOrNothingSubtype{}
+var _ Bdd = &AllOrNothingSubtype{}
 
 func newAllOrNothingSubtypeFromBool(isAll bool) AllOrNothingSubtype {
 	this := AllOrNothingSubtype{}

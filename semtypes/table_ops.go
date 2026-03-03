@@ -17,7 +17,6 @@
 package semtypes
 
 type TableOps struct {
-	CommonOps
 }
 
 var _ BasicTypeOps = &TableOps{}
@@ -36,11 +35,6 @@ func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	return listSubtypeIsEmpty(cx, b)
 }
 
-func NewTableOps() TableOps {
-	this := TableOps{}
-	return this
-}
-
 func (this *TableOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from TableOps.java:51:5
 	return tableSubtypeComplement(d)
@@ -49,4 +43,16 @@ func (this *TableOps) Complement(d SubtypeData) SubtypeData {
 func (this *TableOps) IsEmpty(cx Context, d SubtypeData) bool {
 	// migrated from TableOps.java:56:5
 	return tableSubtypeIsEmpty(cx, d)
+}
+
+func (this *TableOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeUnion(d1, d2)
+}
+
+func (this *TableOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeIntersect(d1, d2)
+}
+
+func (this *TableOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeDiff(d1, d2)
 }

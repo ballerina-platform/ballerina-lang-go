@@ -28,7 +28,7 @@ type TypeParamEntry struct {
 
 type (
 	BLangInputClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Collection             BLangExpression
 		VariableDefinitionNode model.VariableDefinitionNode
 		IsDeclaredWithVarFlag  bool
@@ -37,28 +37,28 @@ type (
 		BLangInputClause
 	}
 	BLangLetClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		LetVarDeclarations []model.VariableDefinitionNode
 	}
 	BLangWhereClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expression BLangExpression
 	}
 	BLangSelectClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expression BLangExpression
 	}
 	BLangCollectClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expression      model.ExpressionNode
 		NonGroupingKeys common.Set[string]
 	}
 	BLangDoClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Body *BLangBlockStmt
 	}
 	BLangOnFailClause struct {
-		BLangNodeBase
+		bLangNodeBase
 		Body                   *BLangBlockStmt
 		VariableDefinitionNode model.VariableDefinitionNode
 		VarType                BType

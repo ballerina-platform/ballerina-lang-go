@@ -20,7 +20,7 @@ import "ballerina-lang-go/model"
 
 type (
 	BLangBindingPatternBase struct {
-		BLangNodeBase
+		bLangNodeBase
 	}
 
 	BLangCaptureBindingPattern struct {

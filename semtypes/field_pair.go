@@ -93,22 +93,22 @@ func (i *mappingPairIterator) internalNext() *FieldPair {
 		if i.i2 >= i.len2 {
 			return nil
 		}
-		p = common.ToPointer(CreateFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &i.i2))
+		p = new(CreateFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &i.i2))
 		i.i2++
 	} else if i.i2 >= i.len2 {
-		p = common.ToPointer(CreateFieldPair(i.curName1(), i.curType1(), i.rest2, &i.i1, nil))
+		p = new(CreateFieldPair(i.curName1(), i.curType1(), i.rest2, &i.i1, nil))
 		i.i1++
 	} else {
 		name1 := i.curName1()
 		name2 := i.curName2()
 		if codePointCompare(name1, name2) {
-			p = common.ToPointer(CreateFieldPair(name1, i.curType1(), i.rest2, &i.i1, nil))
+			p = new(CreateFieldPair(name1, i.curType1(), i.rest2, &i.i1, nil))
 			i.i1++
 		} else if codePointCompare(name2, name1) {
-			p = common.ToPointer(CreateFieldPair(name2, i.rest1, i.curType2(), nil, &i.i2))
+			p = new(CreateFieldPair(name2, i.rest1, i.curType2(), nil, &i.i2))
 			i.i2++
 		} else {
-			p = common.ToPointer(CreateFieldPair(name1, i.curType1(), i.curType2(), &i.i1, &i.i2))
+			p = new(CreateFieldPair(name1, i.curType1(), i.curType2(), &i.i1, &i.i2))
 			i.i1++
 			i.i2++
 		}
@@ -155,14 +155,17 @@ func (i *mappingPairIterator) toIterator() iter.Seq[FieldPair] {
 	}
 }
 
-func NewFieldPairs(m1 MappingAtomicType, m2 MappingAtomicType) iter.Seq[FieldPair] {
+func NewFieldPairs(m1 *MappingAtomicType, m2 *MappingAtomicType) iter.Seq[FieldPair] {
 	i := &mappingPairIterator{
-		names1: m1.Names,
-		names2: m2.Names,
-		types1: m1.Types,
-		types2: m2.Types,
-		len1:   len(m1.Names),
-		len2:   len(m2.Names),
+		names1:          m1.Names,
+		names2:          m2.Names,
+		types1:          m1.Types,
+		types2:          m2.Types,
+		len1:            len(m1.Names),
+		len2:            len(m2.Names),
+		rest1:           m1.Rest,
+		rest2:           m2.Rest,
+		shouldCalculate: true,
 	}
 	return i.toIterator()
 }

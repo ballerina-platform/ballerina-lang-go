@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()), got ((INT, ERROR), ())
+  --> assign11-e.bal:21:9
+   |
+21 |     _ = x; // @error
+   |         ^
+

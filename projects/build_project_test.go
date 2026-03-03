@@ -23,6 +23,7 @@ package projects_test
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -242,13 +243,7 @@ func TestUpdateDocument(t *testing.T) {
 	// Verify all document IDs are preserved
 	updatedDocIDs := updatedDoc.Module().DocumentIDs()
 	for _, docID := range oldDocument.Module().DocumentIDs() {
-		found := false
-		for _, updatedID := range updatedDocIDs {
-			if docID.Equals(updatedID) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(updatedDocIDs, docID.Equals)
 		assert.True(found)
 	}
 
@@ -333,13 +328,7 @@ func TestAddDocument(t *testing.T) {
 
 	// Verify all old document IDs are preserved
 	for _, docID := range oldModule.DocumentIDs() {
-		found := false
-		for _, newDocID := range newModule.DocumentIDs() {
-			if docID.Equals(newDocID) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(newModule.DocumentIDs(), docID.Equals)
 		assert.True(found)
 	}
 
@@ -416,13 +405,7 @@ func TestAddTestDocument(t *testing.T) {
 
 	// Verify all old test document IDs are preserved
 	for _, docID := range oldModule.TestDocumentIDs() {
-		found := false
-		for _, newDocID := range newModule.TestDocumentIDs() {
-			if docID.Equals(newDocID) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(newModule.TestDocumentIDs(), docID.Equals)
 		assert.True(found)
 	}
 
@@ -497,13 +480,7 @@ func TestRemoveDocument(t *testing.T) {
 		if docID.Equals(removeDocumentID) {
 			continue // Skip the removed document
 		}
-		found := false
-		for _, newDocID := range newModule.DocumentIDs() {
-			if docID.Equals(newDocID) {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(newModule.DocumentIDs(), docID.Equals)
 		assert.True(found)
 	}
 
@@ -559,33 +536,15 @@ func TestAddModule(t *testing.T) {
 	assert.Equal(len(oldPackage.ModuleIDs())+1, len(newPackage.ModuleIDs()))
 
 	// Verify the new module ID is in the new package but not in the old package
-	foundInOld := false
-	for _, modID := range oldPackage.ModuleIDs() {
-		if modID == newModuleID {
-			foundInOld = true
-			break
-		}
-	}
+	foundInOld := slices.Contains(oldPackage.ModuleIDs(), newModuleID)
 	assert.False(foundInOld)
 
-	foundInNew := false
-	for _, modID := range newPackage.ModuleIDs() {
-		if modID == newModuleID {
-			foundInNew = true
-			break
-		}
-	}
+	foundInNew := slices.Contains(newPackage.ModuleIDs(), newModuleID)
 	assert.True(foundInNew)
 
 	// Verify all old module IDs are preserved
 	for _, modID := range oldPackage.ModuleIDs() {
-		found := false
-		for _, newModID := range newPackage.ModuleIDs() {
-			if modID == newModID {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(newPackage.ModuleIDs(), modID)
 		assert.True(found)
 	}
 
@@ -605,4 +564,28 @@ func TestAddModule(t *testing.T) {
 	testDoc := newModule.Document(testDocumentID)
 	require.NotNil(testDoc)
 	assert.Equal(testContent, testDoc.TextDocument().String())
+}
+
+// TestMultiModuleDependencyOrder tests that dependency resolution is performed for multi-module
+func TestMultiModuleDependencyOrder(t *testing.T) {
+	assert := test_util.New(t)
+	require := test_util.NewRequire(t)
+
+	projectPath := filepath.Join("testdata", "multi-module-project")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	// Load the multi-module project
+	result, err := loadProject(absPath)
+	require.NoError(err, "Failed to load multi-module-project")
+
+	// Get package resolution which performs topological sorting
+	resolution := result.Project().CurrentPackage().Resolution()
+	sortedModuleNames := resolution.TopologicallySortedModuleNames()
+	require.Len(sortedModuleNames, 3)
+
+	// Verify the order
+	assert.Equal("multimoduleproject.storage", sortedModuleNames[0])
+	assert.Equal("multimoduleproject.services", sortedModuleNames[1])
+	assert.Equal("multimoduleproject", sortedModuleNames[2])
 }

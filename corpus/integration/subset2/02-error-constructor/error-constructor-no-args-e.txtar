@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SYNTAX_ERROR]: invalid error constructor
+  --> error-constructor-no-args-e.bal:18:17
+   |
+18 |     error err = error();  // @error
+   |                 ^^^^^^^
+

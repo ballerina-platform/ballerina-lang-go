@@ -72,6 +72,18 @@ func (std *stringTextDocumentImpl) String() string {
 	return std.text
 }
 
+func (std *stringTextDocumentImpl) Line(line int) (TextLine, error) {
+	return std.Lines().TextLine(line)
+}
+
+func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (LinePosition, error) {
+	return std.Lines().LinePositionFromPosition(textPosition)
+}
+
+func (std *stringTextDocumentImpl) TextPositionFromLinePosition(linePosition LinePosition) (int, error) {
+	return std.Lines().TextPositionFromLinePosition(linePosition)
+}
+
 func (std stringTextDocumentImpl) TextLines() []string {
 	return std.Lines().TextLines()
 }

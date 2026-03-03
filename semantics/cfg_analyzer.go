@@ -34,40 +34,34 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 	var panicErr any = nil
 
 	// Run reachability analysis
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				panicErr = r
 			}
 		}()
 		analyzeReachability(ctx, cfg)
-	}()
+	})
 
 	// Run explicit return analysis
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				panicErr = r
 			}
 		}()
 		analyzeExplicitReturn(ctx, pkg, cfg)
-	}()
+	})
 
 	// Run uninitialized variable analysis
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				panicErr = r
 			}
 		}()
 		analyzeUninitializedVars(ctx, pkg, cfg)
-	}()
+	})
 
 	wg.Wait()
 	if panicErr != nil {

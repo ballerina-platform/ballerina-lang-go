@@ -17,15 +17,16 @@
 package ast
 
 import (
+	"flag"
+	"fmt"
+	"testing"
+
 	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
-	"flag"
-	"fmt"
-	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -53,7 +54,8 @@ func testASTGeneration(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
@@ -136,7 +138,8 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 	debugCtx := debugcommon.DebugContext{
 		Channel: make(chan string),
 	}
-	cx := context.NewCompilerContext(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	cx := context.NewCompilerContext(env)
 	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
 	if err != nil {
 		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)

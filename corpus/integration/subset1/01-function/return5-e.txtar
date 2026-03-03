@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((BOOLEAN), ()), got ((NIL), ())
+  --> return5-e.bal:25:5
+   |
+25 |     return; // @error
+   |     ^^^^^^^
+

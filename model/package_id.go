@@ -19,8 +19,6 @@ package model
 import (
 	"strings"
 	"sync"
-
-	"ballerina-lang-go/common"
 )
 
 const (
@@ -189,8 +187,8 @@ func NewPackageID(interner *PackageIDInterner, orgName Name, nameComps []Name, v
 	id := &PackageID{
 		OrgName:   &orgName,
 		NameComps: nameComps,
-		Name:      common.ToPointer(Name(name)),
-		PkgName:   common.ToPointer(Name(name)),
+		Name:      new(Name(name)),
+		PkgName:   new(Name(name)),
 		Version:   &version,
 		SkipTests: true,
 	}

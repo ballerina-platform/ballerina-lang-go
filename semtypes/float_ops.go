@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type FloatOps struct {
 	CommonOps
 }
@@ -32,8 +30,8 @@ func NewFloatOps() FloatOps {
 func (this *FloatOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:36:5
 	var values []EnumerableType[float64]
-	var v1 EnumerableSubtype[float64] = common.ToPointer(t1.(FloatSubtype))
-	var v2 EnumerableSubtype[float64] = common.ToPointer(t2.(FloatSubtype))
+	var v1 EnumerableSubtype[float64] = new(t1.(FloatSubtype))
+	var v2 EnumerableSubtype[float64] = new(t2.(FloatSubtype))
 	allowed := EnumerableSubtypeUnion(v1, v2, &values)
 	return CreateFloatSubtype(allowed, values)
 }
@@ -41,8 +39,8 @@ func (this *FloatOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 func (this *FloatOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:44:5
 	var values []EnumerableType[float64]
-	var v1 EnumerableSubtype[float64] = common.ToPointer(t1.(FloatSubtype))
-	var v2 EnumerableSubtype[float64] = common.ToPointer(t2.(FloatSubtype))
+	var v1 EnumerableSubtype[float64] = new(t1.(FloatSubtype))
+	var v2 EnumerableSubtype[float64] = new(t2.(FloatSubtype))
 	allowed := EnumerableSubtypeIntersect(v1, v2, &values)
 	return CreateFloatSubtype(allowed, values)
 }

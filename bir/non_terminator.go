@@ -30,6 +30,11 @@ type BIRAssignInstruction interface {
 	GetLhsOperand() *BIROperand
 }
 
+type MappingConstructorEntry interface {
+	IsKeyValuePair() bool
+	ValueOp() *BIROperand
+}
+
 type (
 	Move struct {
 		BIRInstructionBase
@@ -69,6 +74,22 @@ type (
 		Filler values.BalValue
 	}
 
+	// JBallerina call this NewStruct but prints as NewMap
+	NewMap struct {
+		BIRInstructionBase
+		// Do we need the mapping atomic type as well?
+		Type   semtypes.SemType
+		Values []MappingConstructorEntry
+	}
+
+	NewError struct {
+		BIRInstructionBase
+		Type      semtypes.SemType
+		MessageOp *BIROperand
+		CauseOp   *BIROperand
+		DetailOp  *BIROperand
+	}
+
 	TypeCast struct {
 		BIRInstructionBase
 		RhsOp *BIROperand
@@ -76,16 +97,34 @@ type (
 		// numeric conversions, which can be done with pure types
 		Type semtypes.SemType
 	}
+
+	TypeTest struct {
+		BIRInstructionBase
+		RhsOp      *BIROperand
+		Type       semtypes.SemType
+		IsNegation bool
+	}
+)
+
+type (
+	MappingConstructorKeyValueEntry struct {
+		keyOp   *BIROperand
+		valueOp *BIROperand
+	}
 )
 
 var (
-	_ BIRAssignInstruction = &Move{}
-	_ BIRAssignInstruction = &BinaryOp{}
-	_ BIRAssignInstruction = &UnaryOp{}
-	_ BIRAssignInstruction = &ConstantLoad{}
-	_ BIRInstruction       = &FieldAccess{}
-	_ BIRInstruction       = &NewArray{}
-	_ BIRInstruction       = &TypeCast{}
+	_ BIRAssignInstruction    = &Move{}
+	_ BIRAssignInstruction    = &BinaryOp{}
+	_ BIRAssignInstruction    = &UnaryOp{}
+	_ BIRAssignInstruction    = &ConstantLoad{}
+	_ BIRInstruction          = &FieldAccess{}
+	_ BIRInstruction          = &NewArray{}
+	_ BIRInstruction          = &TypeCast{}
+	_ BIRAssignInstruction    = &TypeTest{}
+	_ BIRInstruction          = &NewMap{}
+	_ BIRAssignInstruction    = &NewError{}
+	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
 func (m *Move) GetLhsOperand() *BIROperand {
@@ -182,4 +221,40 @@ func (t *TypeCast) GetLhsOperand() *BIROperand {
 
 func (t *TypeCast) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_CAST
+}
+
+func (t *TypeTest) GetLhsOperand() *BIROperand {
+	return t.LhsOp
+}
+
+func (t *TypeTest) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_TYPE_TEST
+}
+
+func (n *NewMap) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_STRUCTURE
+}
+
+func (n *NewError) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_ERROR
+}
+
+func (n *NewError) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
+func (n *NewMap) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
+func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
+	return true
+}
+
+func (m *MappingConstructorKeyValueEntry) ValueOp() *BIROperand {
+	return m.valueOp
+}
+
+func (m *MappingConstructorKeyValueEntry) KeyOp() *BIROperand {
+	return m.keyOp
 }

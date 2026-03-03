@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: Variable already defined: i
+  --> 4-e.bal:20:9
+   |
+20 |         float i = 5; // @error
+   |         ^^^^^^^^^^^^
+

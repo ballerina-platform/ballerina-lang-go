@@ -53,7 +53,7 @@ type orderedJSONObject struct {
 
 type fieldValue struct {
 	key   string
-	value interface{}
+	value any
 }
 
 func newOrderedJSONObject() *orderedJSONObject {
@@ -62,11 +62,11 @@ func newOrderedJSONObject() *orderedJSONObject {
 	}
 }
 
-func (oj *orderedJSONObject) addProperty(key string, value interface{}) {
+func (oj *orderedJSONObject) addProperty(key string, value any) {
 	oj.fields = append(oj.fields, fieldValue{key: key, value: value})
 }
 
-func (oj *orderedJSONObject) add(key string, value interface{}) {
+func (oj *orderedJSONObject) add(key string, value any) {
 	oj.fields = append(oj.fields, fieldValue{key: key, value: value})
 }
 
@@ -140,7 +140,7 @@ func GenerateJSON(treeNode STNode) string {
 //
 //	    return jsonNode;
 //	}
-func getJSON(treeNode STNode) interface{} {
+func getJSON(treeNode STNode) any {
 	jsonNode := newOrderedJSONObject()
 	nodeKind := treeNode.Kind()
 	jsonNode.addProperty(KIND_FIELD, kindName(nodeKind))
@@ -199,9 +199,9 @@ func addChildren(tree STNode, node *orderedJSONObject) {
 //	    node.add(key, children);
 //	}
 func addNodeList(tree STNode, node *orderedJSONObject, key string) {
-	children := make([]interface{}, 0)
+	children := make([]any, 0)
 	size := tree.BucketCount()
-	for i := 0; i < size; i++ {
+	for i := range size {
 		childNode := tree.ChildInBucket(i)
 		if childNode == nil || childNode.Kind() == common.NONE {
 			continue
@@ -272,9 +272,9 @@ func addTrivia(token STToken, jsonNode *orderedJSONObject) {
 //	    node.add(key, minutiaeJsonArray);
 //	}
 func addMinutiaeList(minutiaeList *STNodeList, node *orderedJSONObject, key string) {
-	minutiaeJsonArray := make([]interface{}, 0)
+	minutiaeJsonArray := make([]any, 0)
 	size := minutiaeList.Size()
-	for i := 0; i < size; i++ {
+	for i := range size {
 		minutiae := minutiaeList.Get(i)
 		minutiaeJson := newOrderedJSONObject()
 		minutiaeKind := minutiae.Kind()
@@ -331,7 +331,7 @@ func addDiagnostics(treeNode STNode, jsonNode *orderedJSONObject) {
 		return
 	}
 
-	diagnosticsJsonArray := make([]interface{}, 0, len(diagnostics))
+	diagnosticsJsonArray := make([]any, 0, len(diagnostics))
 	for _, syntaxDiagnostic := range diagnostics {
 		diagnosticsJsonArray = append(diagnosticsJsonArray, diagnosticJSONMessage(syntaxDiagnostic.code))
 	}

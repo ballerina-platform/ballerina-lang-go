@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: unreachable code
+  --> loop3-e.bal:26:5
+   |
+26 |     io:println("Done"); // @error
+   |     ^^^^^^^^^^^^^^^^^^^
+

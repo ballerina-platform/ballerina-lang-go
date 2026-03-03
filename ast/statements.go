@@ -30,7 +30,7 @@ type BLangStatement = model.StatementNode
 
 type (
 	BLangStatementBase struct {
-		BLangNodeBase
+		bLangNodeBase
 	}
 	BLangAssignment struct {
 		BLangStatementBase
@@ -200,6 +200,14 @@ func (this *BLangBlockStmt) AddStatement(statement model.StatementNode) {
 func (this *BLangBreak) GetKind() model.NodeKind {
 	// migrated from BLangBreak.java:45:5
 	return model.NodeKind_BREAK
+}
+
+func (this *BLangCompoundAssignment) IsDeclaredWithVar() bool {
+	return false
+}
+
+func (this *BLangCompoundAssignment) SetDeclaredWithVar(_ bool) {
+	panic("compound assignemnt can't be declared with var")
 }
 
 func (this *BLangCompoundAssignment) GetOperatorKind() model.OperatorKind {

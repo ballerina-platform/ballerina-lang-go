@@ -19,9 +19,10 @@ package tree
 //go:generate ../../tree-gen -config ../nodes.json -type node -template ../../compiler-tools/tree-gen/templates/node.go.tmpl -output node_gen.go
 
 import (
+	"iter"
+
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/tools/diagnostics"
-	"iter"
 )
 
 // This represent red nodes in the syntax tree. Red nodes satisfy fallowing properties:
@@ -121,8 +122,10 @@ func (sd *SyntaxDiagnostic) DiagnosticInfo() DiagnosticInfo {
 		return *sd.diagnosticInfo
 	}
 	diagnosticCode := sd.nodeDiagnostic.DiagnosticCode()
-	sd.diagnosticInfo = &DiagnosticInfo{code: diagnosticCode.DiagnosticId(),
-		messageFormat: diagnosticCode.MessageKey(), severity: DiagnosticSeverity(diagnosticCode.Severity())}
+	sd.diagnosticInfo = &DiagnosticInfo{
+		code:          diagnosticCode.DiagnosticId(),
+		messageFormat: diagnosticCode.MessageKey(), severity: DiagnosticSeverity(diagnosticCode.Severity()),
+	}
 	return *sd.diagnosticInfo
 }
 
@@ -210,27 +213,27 @@ func (n *NodeBase) Ancestors() []*Node {
 }
 
 func (n *NodeBase) TextRange() TextRange {
-	if n.textRange.length != 0 {
+	if n.textRange.Length != 0 {
 		return n.textRange
 	}
 	leadingMinutiaeDelta := int(n.internalNode.WidthWithLeadingMinutiae()) - int(n.internalNode.Width())
 	positionWithoutLeadingMinutiae := n.position + leadingMinutiaeDelta
 	n.textRange = TextRange{
-		startOffset: positionWithoutLeadingMinutiae,
-		endOffset:   positionWithoutLeadingMinutiae + int(n.internalNode.Width()),
-		length:      int(n.internalNode.Width()),
+		StartOffset: positionWithoutLeadingMinutiae,
+		EndOffset:   positionWithoutLeadingMinutiae + int(n.internalNode.Width()),
+		Length:      int(n.internalNode.Width()),
 	}
 	return n.textRange
 }
 
 func (n *NodeBase) TextRangeWithMinutiae() TextRange {
-	if n.textRangeWithMinutiae.length != 0 {
+	if n.textRangeWithMinutiae.Length != 0 {
 		return n.textRangeWithMinutiae
 	}
 	n.textRangeWithMinutiae = TextRange{
-		startOffset: n.position,
-		endOffset:   n.position + int(n.internalNode.WidthWithMinutiae()),
-		length:      int(n.internalNode.WidthWithMinutiae()),
+		StartOffset: n.position,
+		EndOffset:   n.position + int(n.internalNode.WidthWithMinutiae()),
+		Length:      int(n.internalNode.WidthWithMinutiae()),
 	}
 	return n.textRangeWithMinutiae
 }
@@ -284,13 +287,33 @@ func (n *NodeBase) SyntaxTree() *SyntaxTree {
 }
 
 func (n *NodeBase) LineRange() LineRange {
-	if n.lineRange.startLine.line != 0 || n.lineRange.endLine.line != 0 {
+	if n.lineRange.StartLine.Line != 0 || n.lineRange.EndLine.Line != 0 {
 		return n.lineRange
 	}
 
-	_ = n.SyntaxTree()
-	// TODO: implement line range calculation
-	// This requires accessing the text document from the syntax tree
+	textDocument := n.SyntaxTree().TextDocument()
+	if textDocument == nil {
+		return n.lineRange
+	}
+
+	textRange := n.TextRange()
+	startOffset := textRange.StartOffset
+	endOffset := textRange.EndOffset
+
+	startLinePos, err := textDocument.LinePositionFromTextPosition(startOffset)
+	if err != nil {
+		return n.lineRange
+	}
+	endLinePos, err := textDocument.LinePositionFromTextPosition(endOffset)
+	if err != nil {
+		return n.lineRange
+	}
+
+	n.lineRange = LineRange{
+		StartLine: LinePosition{Line: startLinePos.Line(), Column: startLinePos.Offset()},
+		EndLine:   LinePosition{Line: endLinePos.Line(), Column: endLinePos.Offset()},
+	}
+
 	return n.lineRange
 }
 
@@ -393,6 +416,17 @@ func into[T Node](node Node) T {
 	return typed
 }
 
+func (n *NonTerminalNodeBase) getChildPosition(bucket int) int {
+	childPos := n.position
+	for i := range bucket {
+		childNode := n.internalNode.ChildInBucket(i)
+		if IsSTNodePresent(childNode) {
+			childPos += int(childNode.WidthWithMinutiae())
+		}
+	}
+	return childPos
+}
+
 func (n *NonTerminalNodeBase) ChildInBucket(bucket int) Node {
 	child := n.childBuckets[bucket]
 	if child != nil {
@@ -402,10 +436,9 @@ func (n *NonTerminalNodeBase) ChildInBucket(bucket int) Node {
 	if !IsSTNodePresent(internalChild) {
 		return nil
 	}
-	child = createFacade[Node](internalChild, n.position, n)
+	child = createFacade[Node](internalChild, n.getChildPosition(bucket), n)
 	n.childBuckets[bucket] = child
 	return child
-
 }
 
 type Token interface {
@@ -429,19 +462,19 @@ func (t *TokenBase) Text() string {
 
 type LineRange struct {
 	// In java version there is fileNmae as well I think we can get this from textDocument
-	startLine LinePosition
-	endLine   LinePosition
+	StartLine LinePosition
+	EndLine   LinePosition
 }
 
 // TODO: int to match with java, i think a pair of u16 is enough
 type LinePosition struct {
-	line   int
-	column int
+	Line   int
+	Column int
 }
 type TextRange struct {
-	startOffset int
-	endOffset   int
-	length      int
+	StartOffset int
+	EndOffset   int
+	Length      int
 }
 
 func createFacade[T Node](node STNode, position int, parent NonTerminalNode) T {

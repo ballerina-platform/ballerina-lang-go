@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: unreachable code
+  --> const1-e.bal:25:5
+   |
+25 |     io:println("Done"); // @error
+   |     ^^^^^^^^^^^^^^^^^^^
+

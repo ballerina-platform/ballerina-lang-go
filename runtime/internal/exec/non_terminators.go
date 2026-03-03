@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
@@ -50,6 +51,18 @@ func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	frame.SetOperand(newArray.LhsOp.Index, list)
 }
 
+func execNewMap(newMap *bir.NewMap, frame *Frame) {
+	m := values.NewMap(newMap.Type)
+	for _, entry := range newMap.Values {
+		kv := entry.(*bir.MappingConstructorKeyValueEntry)
+		keyVal := frame.GetOperand(kv.KeyOp().Index)
+		keyStr := keyVal.(string)
+		valueVal := frame.GetOperand(kv.ValueOp().Index)
+		m.Put(keyStr, valueVal)
+	}
+	frame.SetOperand(newMap.GetLhsOperand().Index, m)
+}
+
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
@@ -68,11 +81,34 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
 	frame.SetOperand(access.LhsOp.Index, list.Get(idx))
 }
 
+func execMapStore(access *bir.FieldAccess, frame *Frame) {
+	m := frame.GetOperand(access.LhsOp.Index).(*values.Map)
+	keyVal := frame.GetOperand(access.KeyOp.Index)
+	keyStr := keyVal.(string)
+	valueVal := frame.GetOperand(access.RhsOp.Index)
+	m.Put(keyStr, valueVal)
+}
+
+func execMapLoad(access *bir.FieldAccess, frame *Frame) {
+	m := frame.GetOperand(access.RhsOp.Index).(*values.Map)
+	key := frame.GetOperand(access.KeyOp.Index).(string)
+	value, _ := m.Get(key)
+	frame.SetOperand(access.LhsOp.Index, value)
+}
+
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
-	targetType := typeCast.Type
-	result := castValue(sourceValue, targetType)
+	result := castValue(sourceValue, typeCast.Type)
 	frame.SetOperand(typeCast.LhsOp.Index, result)
+}
+
+func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
+	sourceValue := frame.GetOperand(typeTest.RhsOp.Index)
+	valueType := values.SemTypeForValue(sourceValue)
+	typeEnv := reg.GetTypeEnv()
+	typeCtx := semtypes.TypeCheckContext(typeEnv)
+	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
+	frame.SetOperand(typeTest.LhsOp.Index, matches)
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
@@ -145,8 +181,9 @@ func toDecimal(value any) *big.Rat {
 	case int64:
 		return big.NewRat(v, 1)
 	case float64:
+		s := strconv.FormatFloat(v, 'g', -1, 64)
 		r := new(big.Rat)
-		if r.SetFloat64(v) == nil {
+		if _, ok := r.SetString(s); !ok {
 			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
 		}
 		return r
@@ -156,12 +193,10 @@ func toDecimal(value any) *big.Rat {
 		if strings.Contains(v, "/") || !decimalStringRegex.MatchString(v) {
 			panic(fmt.Sprintf("cannot cast %v to decimal", v))
 		}
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
+		r := new(big.Rat)
+		if _, ok := r.SetString(v); !ok {
 			panic(fmt.Sprintf("cannot cast %v to decimal", v))
 		}
-		r := new(big.Rat)
-		r.SetFloat64(f)
 		return r
 	default:
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value))

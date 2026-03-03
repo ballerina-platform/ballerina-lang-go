@@ -21,6 +21,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"slices"
 	"sync"
 )
 
@@ -195,25 +196,13 @@ func (analyzer *functionControlFlowAnalyzer) addEdge(from, to bbRef) {
 	fromInt := int(from)
 
 	// Check if child edge already exists
-	childExists := false
-	for _, child := range analyzer.bbs[from].children {
-		if child == toInt {
-			childExists = true
-			break
-		}
-	}
+	childExists := slices.Contains(analyzer.bbs[from].children, toInt)
 	if !childExists {
 		analyzer.bbs[from].children = append(analyzer.bbs[from].children, toInt)
 	}
 
 	// Check if parent edge already exists
-	parentExists := false
-	for _, parent := range analyzer.bbs[to].parents {
-		if parent == fromInt {
-			parentExists = true
-			break
-		}
-	}
+	parentExists := slices.Contains(analyzer.bbs[to].parents, fromInt)
 	if !parentExists {
 		analyzer.bbs[to].parents = append(analyzer.bbs[to].parents, fromInt)
 	}

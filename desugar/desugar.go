@@ -153,16 +153,14 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	var panicErr any
 
 	desugarFn := func(fn *ast.BLangFunction) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					panicErr = r
 				}
 			}()
 			*fn = *desugarFunction(pkgCtx, fn)
-		}()
+		})
 	}
 
 	// Desugar all functions
@@ -173,9 +171,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	// Desugar class definitions (each class concurrently, members sequentially)
 	for i := range pkg.ClassDefinitions {
 		class := &pkg.ClassDefinitions[i]
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					panicErr = r
@@ -187,7 +183,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			if class.InitFunction != nil {
 				*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
 			}
-		}()
+		})
 	}
 
 	// Desugar init, start, stop functions

@@ -26,18 +26,18 @@ import (
 
 type Environment struct {
 	fsys        fs.FS
-	compilerCtx *context.CompilerContext
+	compilerEnv *context.CompilerEnvironment
 }
 
-func newEnvironment(fsys fs.FS, cx *context.CompilerContext) *Environment {
+func newEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
 	return &Environment{
 		fsys:        fsys,
-		compilerCtx: cx,
+		compilerEnv: env,
 	}
 }
 
-func (e *Environment) compilerContext() *context.CompilerContext {
-	return e.compilerCtx
+func (e *Environment) compilerEnvironment() *context.CompilerEnvironment {
+	return e.compilerEnv
 }
 
 func (e *Environment) fs() fs.FS {

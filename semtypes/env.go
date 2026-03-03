@@ -231,7 +231,7 @@ func (this *envImpl) cellAtomType(atom Atom) *CellAtomicType {
 // migrated from PredefinedTypeEnv.java:613-624
 func fillRecAtoms[E AtomicType](env *PredefinedTypeEnv, envRecAtomList *[]E, initializedRecAtoms []E) {
 	count := env.ReservedRecAtomCount()
-	for i := 0; i < count; i++ {
+	for i := range count {
 		if i < len(initializedRecAtoms) {
 			*envRecAtomList = append(*envRecAtomList, initializedRecAtoms[i])
 		} else {

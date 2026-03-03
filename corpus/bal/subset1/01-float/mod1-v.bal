@@ -20,5 +20,5 @@ import ballerina/io;
 public function main() {
     float a = 10.0;
     float b = 3.0;
-    io:println(a % b); // @output 1
+    io:println(a % b); // @output 1.0
 }

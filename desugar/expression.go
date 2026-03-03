@@ -37,10 +37,14 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkGroupExpr(cx, expr)
 	case *ast.BLangIndexBasedAccess:
 		return walkIndexBasedAccess(cx, expr)
+	case *ast.BLangFieldBaseAccess:
+		return walkFieldBaseAccess(cx, expr)
 	case *ast.BLangInvocation:
 		return walkInvocation(cx, expr)
 	case *ast.BLangListConstructorExpr:
 		return walkListConstructorExpr(cx, expr)
+	case *ast.BLangMappingConstructorExpr:
+		return walkMappingConstructorExpr(cx, expr)
 	case *ast.BLangErrorConstructorExpr:
 		return walkErrorConstructorExpr(cx, expr)
 	case *ast.BLangCheckedExpr:
@@ -53,6 +57,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkLambdaFunction(cx, expr)
 	case *ast.BLangTypeConversionExpr:
 		return walkTypeConversionExpr(cx, expr)
+	case *ast.BLangTypeTestExpr:
+		return walkTypeTestExpr(cx, expr)
 	case *ast.BLangAnnotAccessExpr:
 		return walkAnnotAccessExpr(cx, expr)
 	case *ast.BLangCollectContextInvocation:
@@ -172,6 +178,35 @@ func walkIndexBasedAccess(cx *FunctionContext, expr *ast.BLangIndexBasedAccess) 
 	}
 }
 
+func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	if expr.Expr != nil {
+		result := walkExpression(cx, expr.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	name := expr.Field.Value
+	lit := &ast.BLangLiteral{
+		Value:         name,
+		OriginalValue: name,
+	}
+	s := semtypes.STRING
+	lit.SetDeterminedType(&s)
+
+	indexAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: lit,
+	}
+	indexAccess.Expr = expr.Expr
+	indexAccess.SetDeterminedType(expr.GetDeterminedType())
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
+		replacementNode: indexAccess,
+	}
+}
+
 func walkInvocation(cx *FunctionContext, expr *ast.BLangInvocation) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
@@ -219,6 +254,12 @@ func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstruct
 		result := walkExpression(cx, expr.PositionalArgs[i])
 		initStmts = append(initStmts, result.initStmts...)
 		expr.PositionalArgs[i] = result.replacementNode.(ast.BLangExpression)
+	}
+
+	for i := range expr.NamedArgs {
+		result := walkExpression(cx, expr.NamedArgs[i].Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.NamedArgs[i].Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
 	return desugaredNode[model.ExpressionNode]{
@@ -304,6 +345,21 @@ func walkTypeConversionExpr(cx *FunctionContext, expr *ast.BLangTypeConversionEx
 	}
 }
 
+func walkTypeTestExpr(cx *FunctionContext, expr *ast.BLangTypeTestExpr) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	if expr.Expr != nil {
+		result := walkExpression(cx, expr.Expr)
+		initStmts = append(initStmts, result.initStmts...)
+		expr.Expr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
+		replacementNode: expr,
+	}
+}
+
 func walkAnnotAccessExpr(cx *FunctionContext, expr *ast.BLangAnnotAccessExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
@@ -339,6 +395,36 @@ func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desuga
 	}
 
 	return desugaredNode[model.ExpressionNode]{
+		replacementNode: expr,
+	}
+}
+
+func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConstructorExpr) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	for _, field := range expr.Fields {
+		kv := field.(*ast.BLangMappingKeyValueField)
+
+		if !kv.Key.ComputedKey {
+			if varRef, ok := kv.Key.Expr.(*ast.BLangSimpleVarRef); ok {
+				name := varRef.VariableName.Value
+				lit := &ast.BLangLiteral{
+					Value:         name,
+					OriginalValue: name,
+				}
+				s := semtypes.STRING
+				lit.SetDeterminedType(&s)
+				kv.Key.Expr = lit
+			}
+		}
+
+		result := walkExpression(cx, kv.ValueExpr)
+		initStmts = append(initStmts, result.initStmts...)
+		kv.ValueExpr = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
 		replacementNode: expr,
 	}
 }
@@ -461,11 +547,9 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	condition.SetDeterminedType(&semtypes.BOOLEAN)
 
 	elementAccess := &ast.BLangIndexBasedAccess{
-		BLangAccessExpressionBase: ast.BLangAccessExpressionBase{
-			Expr: collRef,
-		},
 		IndexExpr: idxRef,
 	}
+	elementAccess.Expr = collRef
 	loopVarTy := loopVarDef.Var.GetDeterminedType()
 	elementAccess.SetDeterminedType(loopVarTy)
 	loopVarDef.Var.SetInitialExpression(elementAccess)

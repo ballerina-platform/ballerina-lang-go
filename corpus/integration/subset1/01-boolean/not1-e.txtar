@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: expect boolean type for !
+  --> not1-e.bal:20:9
+   |
+20 |     foo(!1); // @error
+   |         ^^
+

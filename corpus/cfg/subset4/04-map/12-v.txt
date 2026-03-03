@@ -1,0 +1,39 @@
+(get
+  (bb0 () ()
+    (return
+      (type-conversion-expr
+        (index-based-access
+          (simple-var-ref m)
+          (simple-var-ref k))
+        (value-type int)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable m (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type any))) (expr
+        (mapping-constructor-expr))))
+    (expression-stmt
+      (invocation put (
+        (simple-var-ref m)
+        (literal five)
+        (literal 5))))
+    (expression-stmt
+      (invocation io println (
+        (invocation get (
+          (simple-var-ref m)
+          (literal five))))))
+  )
+)
+(put
+  (bb0 () ()
+    (assignment
+      (index-based-access
+        (simple-var-ref m)
+        (simple-var-ref k))
+      (simple-var-ref v))
+  )
+)

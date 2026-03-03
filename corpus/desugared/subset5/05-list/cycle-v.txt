@@ -1,0 +1,21 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition T
+    (tuple-type
+      (value-type int) (rest
+        (user-defined-type T))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable t (type
+          (user-defined-type T)) (expr
+          (list-constructor-expr
+            (literal 1)
+            (list-constructor-expr
+              (literal 2)
+              (list-constructor-expr
+                (literal 3)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref t)))))))

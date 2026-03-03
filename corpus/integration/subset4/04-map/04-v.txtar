@@ -1,0 +1,5 @@
+-- stdout --
+{"foo":true,"bar":null}
+
+-- stderr --
+

@@ -16,7 +16,10 @@
 
 package common
 
-import "iter"
+import (
+	"iter"
+	"slices"
+)
 
 type Optional[T any] struct {
 	value    T
@@ -49,10 +52,6 @@ func OptionalEmpty[T any]() Optional[T] {
 	return Optional[T]{
 		hasValue: false,
 	}
-}
-
-func ToPointer[t any](v t) *t {
-	return &v
 }
 
 func Assert(condition bool) {
@@ -95,8 +94,10 @@ type (
 	}
 )
 
-var _ Set[any] = &UnorderedSet[any]{}
-var _ Set[any] = &OrderedSet[any]{}
+var (
+	_ Set[any] = &UnorderedSet[any]{}
+	_ Set[any] = &OrderedSet[any]{}
+)
 
 func (s *UnorderedSet[T]) Add(value T) {
 	if s.values == nil {
@@ -127,12 +128,7 @@ func (s *OrderedSet[T]) Remove(value T) {
 }
 
 func (s *OrderedSet[T]) Contains(value T) bool {
-	for _, v := range s.values {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.values, value)
 }
 
 func (s *UnorderedSet[T]) Values() iter.Seq[T] {

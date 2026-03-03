@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "slices"
+
 import "ballerina-lang-go/common"
 
 type FloatSubtype struct {
@@ -68,10 +70,8 @@ func FloatSubtypeContains(d SubtypeData, f EnumerableFloat) bool {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
 	v := d.(FloatSubtype)
-	for _, val := range v.values {
-		if val == f {
-			return v.allowed
-		}
+	if slices.Contains(v.values, f) {
+		return v.allowed
 	}
 	return (!v.allowed)
 }

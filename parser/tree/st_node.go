@@ -993,7 +993,7 @@ func modifyWithDiagnostics[T STNode](base T, diagnostics []STNodeDiagnostic) T {
 	// Get the underlying value from the interface
 	baseValue := reflect.ValueOf(base)
 	// TODO: think of a better way to do this. We need to avoid mutating via the pointer
-	if baseValue.Kind() == reflect.Ptr {
+	if baseValue.Kind() == reflect.Pointer {
 		// If it's a pointer, create a new instance and copy the struct
 		elemType := baseValue.Elem().Type()
 		newValue := reflect.New(elemType)

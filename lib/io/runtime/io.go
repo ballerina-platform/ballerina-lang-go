@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"unsafe"
 )
 
 const (
@@ -35,33 +34,9 @@ func Println(vals ...values.BalValue) {
 	parts := make([]string, len(vals))
 	visited := make(map[uintptr]bool)
 	for i, v := range vals {
-		parts[i] = formatValue(v, visited)
+		parts[i] = values.String(v, visited)
 	}
-	fmt.Fprintln(os.Stdout, strings.Join(parts, " "))
-}
-
-func formatValue(v values.BalValue, visited map[uintptr]bool) string {
-	if v == nil {
-		return "nil"
-	}
-	if list, ok := v.(*values.List); ok {
-		ptr := uintptr(unsafe.Pointer(list))
-		if visited[ptr] {
-			return "[...]"
-		}
-		visited[ptr] = true
-		var b strings.Builder
-		b.WriteByte('[')
-		for i := 0; i < list.Len(); i++ {
-			if i > 0 {
-				b.WriteByte(',')
-			}
-			b.WriteString(formatValue(list.Get(i), visited))
-		}
-		b.WriteByte(']')
-		return b.String()
-	}
-	return fmt.Sprintf("%v", v)
+	fmt.Fprintln(os.Stdout, strings.Join(parts, ""))
 }
 
 func printlnExtern(args []values.BalValue) (values.BalValue, error) {

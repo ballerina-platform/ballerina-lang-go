@@ -1,0 +1,15 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: variable may not be initialized
+  --> while2-e.bal:21:11
+   |
+21 |     while a < 10 { // @error
+   |           ^
+
+error[SEMANTIC_ERROR]: variable may not be initialized
+  --> while2-e.bal:28:16
+   |
+28 |     io:println(a);
+   |                ^
+

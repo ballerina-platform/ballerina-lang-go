@@ -1,0 +1,6 @@
+-- stdout --
+{"value":1}
+{"value":{"value":null}}
+
+-- stderr --
+

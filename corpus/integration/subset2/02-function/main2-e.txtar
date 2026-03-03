@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: 'main' function must have return type 'error?'
+  --> main2-e.bal:20:1
+   |
+20 | public function main() returns int { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

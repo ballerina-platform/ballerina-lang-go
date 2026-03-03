@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: foreach variable must be a subtype of int for range expression
+  --> 11-e.bal:24:26
+   |
+24 |     foreach boolean i in 1 ..< 10 { // @error
+   |                          ^^^^^^^^
+

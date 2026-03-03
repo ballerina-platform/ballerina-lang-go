@@ -20,56 +20,48 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
-	"fmt"
 )
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
-	opIndex := branchTerm.Op.Index
-	value := frame.GetOperand(opIndex)
-	cond, ok := value.(bool)
-	if !ok {
-		panic(fmt.Sprintf("invalid branch condition type at index %d: %T (expected bool)", opIndex, value))
-	}
-	if cond {
+	if frame.GetOperand(branchTerm.Op.Index).(bool) {
 		return branchTerm.TrueBB
 	}
 	return branchTerm.FalseBB
 }
 
 func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
-	values := extractArgs(callInfo.Args, frame)
-	result := executeCall(callInfo, values, reg, callStack)
+	args := extractArgs(callInfo.Args, frame)
+	result := executeCall(callInfo, args, reg, callStack)
 	if callInfo.LhsOp != nil {
 		frame.SetOperand(callInfo.LhsOp.Index, result)
 	}
 	return callInfo.ThenBB
 }
 
-func executeCall(callInfo *bir.Call, values []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	if callInfo.CachedBIRFunc != nil {
-		return executeFunction(*callInfo.CachedBIRFunc, values, reg, callStack)
+		return executeFunction(*callInfo.CachedBIRFunc, args, reg, callStack)
 	}
 	if callInfo.CachedNativeFunc != nil {
-		result, err := callInfo.CachedNativeFunc(values)
+		result, err := callInfo.CachedNativeFunc(args)
 		if err != nil {
 			panic(err)
 		}
 		return result
 	}
-	return lookupAndExecute(callInfo, values, reg, callStack)
+	return lookupAndExecute(callInfo, args, reg, callStack)
 }
 
-func lookupAndExecute(callInfo *bir.Call, values []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
-	lookupKey := callInfo.FunctionLookupKey
-	fn := reg.GetBIRFunction(lookupKey)
+func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+	fn := reg.GetBIRFunction(callInfo.FunctionLookupKey)
 	if fn != nil {
 		callInfo.CachedBIRFunc = fn
-		return executeFunction(*fn, values, reg, callStack)
+		return executeFunction(*fn, args, reg, callStack)
 	}
-	externFn := reg.GetNativeFunction(lookupKey)
+	externFn := reg.GetNativeFunction(callInfo.FunctionLookupKey)
 	if externFn != nil {
 		callInfo.CachedNativeFunc = externFn.Impl
-		result, err := externFn.Impl(values)
+		result, err := externFn.Impl(args)
 		if err != nil {
 			panic(err)
 		}

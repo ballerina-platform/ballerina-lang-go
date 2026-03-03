@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: field base access is only possible for required fields
+  --> field-access-3-e.bal:24:17
+   |
+24 |     anydata z = r.z; // @error
+   |                 ^^^
+

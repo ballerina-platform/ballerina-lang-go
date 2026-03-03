@@ -17,7 +17,6 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"sort"
 )
 
@@ -48,9 +47,9 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg
 		}
 	} else {
 		bddNode := b.(BddNode)
-		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), common.ToPointer(And(bddNode.Atom(), pos)), neg),
-			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, common.ToPointer(And(bddNode.Atom(), neg))),
-				listProjBddInnerVal(cx, k, bddNode.Right(), pos, common.ToPointer(And(bddNode.Atom(), neg)))))
+		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), new(And(bddNode.Atom(), pos)), neg),
+			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, new(And(bddNode.Atom(), neg))),
+				listProjBddInnerVal(cx, k, bddNode.Right(), pos, new(And(bddNode.Atom(), neg)))))
 	}
 }
 
@@ -174,7 +173,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, neg.Next))
 			}
 		}
-		for i := 0; i < len(memberTypes); i++ {
+		for i := range memberTypes {
 			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				t := append([]CellSemType(nil), memberTypes...)

@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "slices"
+
 import "ballerina-lang-go/common"
 
 type StringSubtypeListCoverage struct {
@@ -66,18 +68,14 @@ func StringSubtypeContains(d SubtypeData, s string) bool {
 	nonChar := st.nonCharData
 	if len(s) == 1 {
 		charString := EnumerableCharStringFrom(s)
-		for _, value := range chara.Values() {
-			if value == charString {
-				return chara.Allowed()
-			}
+		if slices.Contains(chara.Values(), charString) {
+			return chara.Allowed()
 		}
 		return !nonChar.Allowed()
 	}
 	stringString := EnumerableStringFrom(s)
-	for _, value := range nonChar.Values() {
-		if value == stringString {
-			return nonChar.Allowed()
-		}
+	if slices.Contains(nonChar.Values(), stringString) {
+		return nonChar.Allowed()
 	}
 	return !nonChar.Allowed()
 }

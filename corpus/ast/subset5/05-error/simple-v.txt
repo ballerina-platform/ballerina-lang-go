@@ -1,0 +1,58 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition Detail
+    (record-type
+      (field message
+        (value-type string))
+      (field id
+        (value-type int))))
+  (type-definition ErrorWithDetail
+    (error-type
+      (user-defined-type Detail)))
+  (function foo () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (return
+        (error-constructor-expr (
+          (literal foo)) (
+          (named-arg ff
+            (literal foo)))))))
+  (function bar () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (return
+        (error-constructor-expr
+          (user-defined-type ErrorWithDetail) (
+          (literal bar)) (
+          (named-arg message
+            (literal message))
+          (named-arg id
+            (literal 1)))))))
+  (function baz () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (var-def
+        (variable e (type
+          (error-type)) (expr
+          (error-constructor-expr
+            (user-defined-type ErrorWithDetail) (
+            (literal bar)) (
+            (named-arg message
+              (literal message))
+            (named-arg id
+              (literal 1)))))))
+      (return
+        (error-constructor-expr
+          (user-defined-type ErrorWithDetail) (
+          (literal bar)
+          (simple-var-ref e)) (
+          (named-arg message
+            (literal message))
+          (named-arg id
+            (literal 1))))))))

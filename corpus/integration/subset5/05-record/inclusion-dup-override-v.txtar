@@ -1,0 +1,5 @@
+-- stdout --
+{"x":"override","y":"hello","z":true}
+
+-- stderr --
+

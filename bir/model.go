@@ -26,7 +26,7 @@ import (
 
 type ConstValue struct {
 	Type  model.ValueType
-	Value interface{}
+	Value any
 }
 
 type BIRInstruction interface {
@@ -66,6 +66,7 @@ type (
 		Functions     []BIRFunction
 		Constants     []BIRConstant
 		MainFunction  *BIRFunction
+		TypeEnv       semtypes.Env
 	}
 
 	BIRImportModule struct {

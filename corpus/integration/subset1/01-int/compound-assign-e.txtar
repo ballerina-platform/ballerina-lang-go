@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((), (STRING))
+  --> compound-assign-e.bal:21:10
+   |
+21 |     a += "abc"; // @error
+   |          ^^^^^
+

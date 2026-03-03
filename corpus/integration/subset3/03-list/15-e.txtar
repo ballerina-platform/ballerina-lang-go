@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (LIST)), got ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())
+  --> 15-e.bal:19:12
+   |
+19 |     return x; // @error
+   |            ^
+

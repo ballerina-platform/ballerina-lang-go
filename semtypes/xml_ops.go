@@ -16,12 +16,10 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type XmlOps struct {
 }
 
-var XML_SUBTYPE_RO = XmlSubtypeFrom(XML_PRIMITIVE_RO_MASK, BddAtom(common.ToPointer(CreateXMLRecAtom(XML_PRIMITIVE_RO_SINGLETON))))
+var XML_SUBTYPE_RO = XmlSubtypeFrom(XML_PRIMITIVE_RO_MASK, BddAtom(new(CreateXMLRecAtom(XML_PRIMITIVE_RO_SINGLETON))))
 var XML_SUBTYPE_TOP = XmlSubtypeFrom(XML_PRIMITIVE_ALL_MASK, BddAll())
 var _ BasicTypeOps = &XmlOps{}
 

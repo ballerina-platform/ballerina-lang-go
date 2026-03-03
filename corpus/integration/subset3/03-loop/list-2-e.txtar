@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: invalid type for variable
+  --> list-2-e.bal:21:13
+   |
+21 |     foreach boolean val in arr { // @error
+   |             ^^^^^^^^^^^
+

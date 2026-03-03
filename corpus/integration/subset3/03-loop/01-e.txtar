@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: Variable already defined: i
+  --> 01-e.bal:25:13
+   |
+25 |     foreach int i in 1 ..< to { // @error
+   |             ^^^^^
+

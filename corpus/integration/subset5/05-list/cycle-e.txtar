@@ -1,0 +1,9 @@
+-- stdout --
+
+-- stderr --
+error[SEMANTIC_ERROR]: type definition T is empty
+  --> cycle-e.bal:17:1
+   |
+17 | type T [T]; // @error
+   | ^^^^^^^^^^^
+

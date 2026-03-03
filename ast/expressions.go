@@ -78,7 +78,7 @@ type (
 		Parameters []BLangMarkdownParameterDocumentation
 	}
 	BLangExpressionBase struct {
-		BLangNodeBase
+		bLangNodeBase
 		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType BType
 	}
@@ -100,7 +100,7 @@ type (
 		IsCompoundAssignmentLValue bool
 	}
 
-	BLangAccessExpressionBase struct {
+	bLangAccessExpressionBase struct {
 		BLangValueExpressionBase
 		Expr                BLangExpression
 		OriginalType        BType
@@ -108,6 +108,13 @@ type (
 		ErrorSafeNavigation bool
 		NilSafeNavigation   bool
 		LeafNode            bool
+	}
+
+	BLangFieldBaseAccess struct {
+		bLangAccessExpressionBase
+		Field BLangIdentifier
+		// I think this need a symbol to got to the field definition in type but Expr could be non atomic and
+		// this should still work
 	}
 
 	BLangAlternateWorkerReceive struct {
@@ -188,6 +195,7 @@ type (
 	}
 	BLangLiteral struct {
 		BLangExpressionBase
+		valueType       BType
 		Value           any
 		OriginalValue   string
 		IsConstant      bool
@@ -257,7 +265,7 @@ type (
 
 	BLangTypedescExpr struct {
 		BLangExpressionBase
-		TypeData model.TypeData
+		typeDescriptor model.TypeDescriptor
 	}
 
 	BLangUnaryExpr struct {
@@ -267,7 +275,7 @@ type (
 	}
 
 	BLangIndexBasedAccess struct {
-		BLangAccessExpressionBase
+		bLangAccessExpressionBase
 		IndexExpr         BLangExpression
 		IsStoreOnCreation bool
 	}
@@ -283,7 +291,40 @@ type (
 		BLangExpressionBase
 		ErrorTypeRef   *BLangUserDefinedType
 		PositionalArgs []BLangExpression
-		// TODO: Add support for NamedArgs
+		NamedArgs      []*BLangNamedArgsExpression
+	}
+
+	BLangTypeTestExpr struct {
+		BLangExpressionBase
+		Expr       BLangExpression
+		Type       model.TypeData
+		isNegation bool
+	}
+
+	BLangMappingKey struct {
+		bLangNodeBase
+		Expr        BLangExpression
+		ComputedKey bool
+	}
+
+	BLangMappingKeyValueField struct {
+		bLangNodeBase
+		Key       *BLangMappingKey
+		ValueExpr BLangExpression
+		Readonly  bool
+	}
+
+	BLangMappingConstructorExpr struct {
+		BLangExpressionBase
+		Fields     []model.MappingField
+		AtomicType semtypes.MappingAtomicType
+	}
+
+	BLangNamedArgsExpression struct {
+		BLangExpressionBase
+		Name BLangIdentifier
+		Expr BLangExpression
+		// JBallerina has symbols for these as well. Need to think if we need them as well (for go to definition)
 	}
 )
 
@@ -298,7 +339,7 @@ var (
 	_ model.LiteralNode                                            = &BLangConstRef{}
 	_ model.LiteralNode                                            = &BLangLiteral{}
 	_ BLangExpression                                              = &BLangLiteral{}
-	_ model.RecordVarNameFieldNode                                 = &BLangConstRef{}
+	_ model.MappingVarNameFieldNode                                = &BLangConstRef{}
 	_ model.DynamicArgNode                                         = &BLangDynamicArgExpr{}
 	_ model.ElvisExpressionNode                                    = &BLangElvisExpr{}
 	_ model.MarkdownDocumentationTextAttributeNode                 = &BLangMarkdownDocumentationLine{}
@@ -322,6 +363,16 @@ var (
 	_ BLangExpression                                              = &BLangTypeConversionExpr{}
 	_ BLangExpression                                              = &BLangErrorConstructorExpr{}
 	_ BLangNode                                                    = &BLangErrorConstructorExpr{}
+	_ BLangExpression                                              = &BLangTypeTestExpr{}
+	_ model.TypeTestExpressionNode                                 = &BLangTypeTestExpr{}
+	_ model.MappingConstructor                                     = &BLangMappingConstructorExpr{}
+	_ model.MappingKeyValueFieldNode                               = &BLangMappingKeyValueField{}
+	_ BLangExpression                                              = &BLangMappingConstructorExpr{}
+	_ BLangNode                                                    = &BLangMappingConstructorExpr{}
+	_ model.Node                                                   = &BLangMappingKey{}
+	_ BLangNode                                                    = &BLangMappingKey{}
+	_ BLangExpression                                              = &BLangNamedArgsExpression{}
+	_ model.NamedArgNode                                           = &BLangNamedArgsExpression{}
 )
 
 var (
@@ -355,6 +406,9 @@ var (
 	_ BLangNode = &BLangIndexBasedAccess{}
 	_ BLangNode = &BLangListConstructorExpr{}
 	_ BLangNode = &BLangTypeConversionExpr{}
+	_ BLangNode = &BLangMappingConstructorExpr{}
+	_ BLangNode = &BLangMappingKeyValueField{}
+	_ BLangNode = &BLangMappingKey{}
 )
 
 var (
@@ -401,14 +455,20 @@ func (this *BLangTypedescExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPEDESC_EXPRESSION
 }
 
-func (this *BLangTypedescExpr) GetTypeData() model.TypeData {
-	// migrated from BLangTypedescExpr.java:57:5
-	return this.TypeData
+func (this *BLangTypedescExpr) GetTypeDescriptor() model.TypeDescriptor {
+	return this.typeDescriptor
 }
 
-func (this *BLangTypedescExpr) SetTypeData(typeData model.TypeData) {
-	// migrated from BLangTypedescExpr.java:62:5
-	this.TypeData = typeData
+func (this *BLangTypedescExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	this.typeDescriptor = typeDescriptor
+}
+
+func (this *BLangLiteral) GetValueType() BType {
+	return this.valueType
+}
+
+func (this *BLangLiteral) SetValueType(bt BType) {
+	this.valueType = bt
 }
 
 func (this *BLangAlternateWorkerReceive) GetKind() model.NodeKind {
@@ -567,12 +627,12 @@ func (this *BLangSimpleVarRef) GetKind() model.NodeKind {
 	return model.NodeKind_SIMPLE_VARIABLE_REF
 }
 
-func (this *BLangConstRef) GetValue() interface{} {
+func (this *BLangConstRef) GetValue() any {
 	// migrated from BLangConstRef.java:38:5
 	return this.Value
 }
 
-func (this *BLangConstRef) SetValue(value interface{}) {
+func (this *BLangConstRef) SetValue(value any) {
 	// migrated from BLangConstRef.java:43:5
 	this.Value = value
 }
@@ -952,6 +1012,26 @@ func (this *BLangIndexBasedAccess) GetIndex() model.ExpressionNode {
 	return this.IndexExpr
 }
 
+func (this *BLangFieldBaseAccess) GetKind() model.NodeKind {
+	return model.NodeKind_FIELD_BASED_ACCESS_EXPR
+}
+
+func (this *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
+	return &this.Field
+}
+
+func (this *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
+	return this.OptionalFieldAccess
+}
+
+func (this *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
 func (this *BLangListConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_LIST_CONSTRUCTOR_EXPR
 }
@@ -977,12 +1057,102 @@ func (this *BLangErrorConstructorExpr) GetPositionalArgs() []model.ExpressionNod
 }
 
 func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
-	// Named arguments not yet supported
-	panic("unimplemented")
+	result := make([]model.NamedArgNode, len(this.NamedArgs))
+	for i, arg := range this.NamedArgs {
+		result[i] = arg
+	}
+	return result
 }
 
 func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
+}
+
+func (this *BLangTypeTestExpr) GetKind() model.NodeKind {
+	return model.NodeKind_TYPE_TEST_EXPR
+}
+
+func (this *BLangTypeTestExpr) IsNegation() bool {
+	return this.isNegation
+}
+
+func (this *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangTypeTestExpr) GetType() model.TypeData {
+	return this.Type
+}
+
+func (this *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangMappingKey) GetKind() model.NodeKind {
+	panic("BLangMappingKey has no NodeKind")
+}
+
+func (this *BLangMappingKeyValueField) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_KEY_VALUE
+}
+
+func (this *BLangMappingKeyValueField) GetKey() model.ExpressionNode {
+	if this.Key == nil {
+		return nil
+	}
+	return this.Key.Expr
+}
+
+func (this *BLangMappingKeyValueField) GetValue() model.ExpressionNode {
+	return this.ValueExpr
+}
+
+func (this *BLangMappingKeyValueField) IsKeyValueField() bool {
+	return true
+}
+
+func (this *BLangMappingConstructorExpr) GetKind() model.NodeKind {
+	return model.NodeKind_RECORD_LITERAL_EXPR
+}
+
+func (this *BLangMappingConstructorExpr) GetFields() []model.MappingField {
+	return this.Fields
+}
+
+func (this *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
+	this.ExpectedType = ty
+}
+
+func (this *BLangNamedArgsExpression) GetKind() model.NodeKind {
+	return model.NodeKind_NAMED_ARGS_EXPR
+}
+
+func (this *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
+	if id, ok := name.(*BLangIdentifier); ok {
+		this.Name = *id
+	} else {
+		panic("name is not a BLangIdentifier")
+	}
+}
+
+func (this *BLangNamedArgsExpression) GetName() model.IdentifierNode {
+	return &this.Name
+}
+
+func (this *BLangNamedArgsExpression) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangNamedArgsExpression) SetExpression(expr model.ExpressionNode) {
+	if e, ok := expr.(BLangExpression); ok {
+		this.Expr = e
+	} else {
+		panic("expr is not a BLangExpression")
+	}
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

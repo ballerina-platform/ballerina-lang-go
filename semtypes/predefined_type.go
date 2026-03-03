@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
-
 type PredefinedType struct{}
 
 var (
@@ -55,7 +53,7 @@ var (
 	XML_TEXT                              = XmlSequence(XmlSingleton(XML_PRIMITIVE_TEXT))
 	XML_PI                                = XmlSingleton((XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW))
 	BDD_REC_ATOM_READONLY                 = 0
-	BDD_SUBTYPE_RO                        = BddAtom(common.ToPointer(CreateRecAtom(BDD_REC_ATOM_READONLY)))
+	BDD_SUBTYPE_RO                        = BddAtom(new(CreateRecAtom(BDD_REC_ATOM_READONLY)))
 	MAPPING_RO                            = basicSubtype(BT_MAPPING, BDD_SUBTYPE_RO)
 	CELL_ATOMIC_VAL                       = predefinedTypeEnv.cellAtomicVal()
 	ATOM_CELL_VAL                         = predefinedTypeEnv.atomCellVal()
@@ -94,7 +92,7 @@ var (
 	ATOM_MAPPING_OBJECT                   = predefinedTypeEnv.atomMappingObject()
 	MAPPING_SUBTYPE_OBJECT                = BddAtom(ATOM_MAPPING_OBJECT)
 	BDD_REC_ATOM_OBJECT_READONLY          = 1
-	OBJECT_RO_REC_ATOM                    = common.ToPointer(CreateRecAtom(BDD_REC_ATOM_OBJECT_READONLY))
+	OBJECT_RO_REC_ATOM                    = new(CreateRecAtom(BDD_REC_ATOM_OBJECT_READONLY))
 	MAPPING_SUBTYPE_OBJECT_RO             = BddAtom(OBJECT_RO_REC_ATOM)
 	MAPPING_ARRAY_RO                      = basicSubtype(BT_LIST, LIST_SUBTYPE_MAPPING_RO)
 	ATOM_CELL_MAPPING_ARRAY_RO            = predefinedTypeEnv.atomCellMappingArrayRO()

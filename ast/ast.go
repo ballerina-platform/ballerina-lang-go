@@ -192,6 +192,7 @@ func UnMask(mask Flags) common.Set[model.Flag] {
 
 type BNodeWithSymbol interface {
 	model.NodeWithSymbol
+	BLangNode
 	SetSymbol(symbolRef model.SymbolRef)
 }
 
@@ -228,14 +229,12 @@ type Location = diagnostics.Location
 
 type BLangNode interface {
 	model.Node
-	SetTypeData(ty model.TypeData)
 	SetDeterminedType(ty semtypes.SemType)
 	SetPosition(pos Location)
 }
 
 type (
-	BLangNodeBase struct {
-		ty             model.TypeData
+	bLangNodeBase struct {
 		DeterminedType semtypes.SemType
 
 		parent BLangNode
@@ -246,19 +245,18 @@ type (
 		internal           bool
 	}
 
-	// TODO: look into what is the difference between the public TypeData fields and ty
 	BLangAnnotation struct {
-		BLangNodeBase
+		bLangNodeBase
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		TypeData                        model.TypeData
+		typeDescriptor                  model.TypeDescriptor
 		FlagSet                         common.UnorderedSet[model.Flag]
 		attachPoints                    common.UnorderedSet[model.AttachPoint]
 	}
 
 	BLangAnnotationAttachment struct {
-		BLangNodeBase
+		bLangNodeBase
 		Expr           BLangExpression
 		AnnotationName *BLangIdentifier
 		PkgAlias       *BLangIdentifier
@@ -266,7 +264,7 @@ type (
 	}
 
 	BLangFunctionBodyBase struct {
-		BLangNodeBase
+		bLangNodeBase
 	}
 
 	BLangBlockFunctionBody struct {
@@ -280,14 +278,14 @@ type (
 	}
 
 	BLangIdentifier struct {
-		BLangNodeBase
+		bLangNodeBase
 		Value         string
 		OriginalValue string
 		isLiteral     bool
 	}
 
 	BLangImportPackage struct {
-		BLangNodeBase
+		bLangNodeBase
 		OrgName      *BLangIdentifier
 		PkgNameComps []BLangIdentifier
 		Alias        *BLangIdentifier
@@ -296,7 +294,7 @@ type (
 	}
 
 	BLangClassDefinition struct {
-		BLangNodeBase
+		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
 		AnnAttachments                  []BLangAnnotationAttachment
@@ -321,7 +319,7 @@ type (
 	}
 
 	BLangService struct {
-		BLangNodeBase
+		bLangNodeBase
 		symbol                          model.SymbolRef
 		ServiceVariable                 *BLangSimpleVariable
 		AttachedExprs                   []BLangExpression
@@ -338,7 +336,7 @@ type (
 	}
 
 	BLangCompilationUnit struct {
-		BLangNodeBase
+		bLangNodeBase
 		TopLevelNodes []model.TopLevelNode
 		Name          string
 		packageID     *model.PackageID
@@ -346,7 +344,7 @@ type (
 	}
 
 	BLangPackage struct {
-		BLangNodeBase
+		bLangNodeBase
 		CompUnits               []BLangCompilationUnit
 		Imports                 []BLangImportPackage
 		XmlnsList               []BLangXMLNS
@@ -378,7 +376,7 @@ type (
 		isLegacyMockingMap   map[string]bool
 	}
 	BLangXMLNS struct {
-		BLangNodeBase
+		bLangNodeBase
 		namespaceURI BLangExpression
 		prefix       *BLangIdentifier
 		CompUnit     *BLangIdentifier
@@ -390,7 +388,7 @@ type (
 		BLangXMLNS
 	}
 	BLangMarkdownDocumentation struct {
-		BLangNodeBase
+		bLangNodeBase
 		DocumentationLines                []BLangMarkdownDocumentationLine
 		Parameters                        []BLangMarkdownParameterDocumentation
 		References                        []BLangMarkdownReferenceDocumentation
@@ -399,7 +397,7 @@ type (
 		DeprecatedParametersDocumentation *BLangMarkDownDeprecatedParametersDocumentation
 	}
 	BLangMarkdownReferenceDocumentation struct {
-		BLangNodeBase
+		bLangNodeBase
 		Qualifier         string
 		TypeName          string
 		Identifier        string
@@ -409,7 +407,10 @@ type (
 	}
 
 	BLangVariableBase struct {
-		BLangNodeBase
+		bLangNodeBase
+		// We are using variable for function paramets and record td fields so we need to have
+		// type descriptors here. Not sure this is the best way to do this.
+		typeNode                        BType
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
 		Expr                            model.ExpressionNode
@@ -434,14 +435,14 @@ type (
 	}
 
 	BLangInvokableNodeBase struct {
-		BLangNodeBase
+		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       model.SimpleVariableNode
-		ReturnTypeData                  model.TypeData
+		returnTypeDescriptor            model.TypeDescriptor
 		ReturnTypeAnnAttachments        []model.AnnotationAttachmentNode
 		Body                            model.FunctionBodyNode
 		DefaultWorkerName               model.IdentifierNode
@@ -463,7 +464,7 @@ type (
 	}
 
 	BLangTypeDefinition struct {
-		BLangNodeBase
+		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
 		typeData                        model.TypeData
@@ -478,27 +479,19 @@ type (
 	}
 )
 
-func (this *BLangNodeBase) SetTypeData(ty model.TypeData) {
-	this.ty = ty
-}
-
-func (this *BLangNodeBase) GetTypeData() model.TypeData {
-	return this.ty
-}
-
-func (this *BLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
+func (this *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
 	this.DeterminedType = ty
 }
 
-func (this *BLangNodeBase) GetDeterminedType() semtypes.SemType {
+func (this *bLangNodeBase) GetDeterminedType() semtypes.SemType {
 	return this.DeterminedType
 }
 
-func (this *BLangNodeBase) GetPosition() Location {
+func (this *bLangNodeBase) GetPosition() Location {
 	return this.pos
 }
 
-func (this *BLangNodeBase) SetPosition(pos Location) {
+func (this *bLangNodeBase) SetPosition(pos Location) {
 	this.pos = pos
 }
 
@@ -524,6 +517,14 @@ func (n *BLangVariableBase) Symbol() model.SymbolRef {
 
 func (n *BLangVariableBase) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
+}
+
+func (n *BLangVariableBase) TypeNode() BType {
+	return n.typeNode
+}
+
+func (n *BLangVariableBase) SetTypeNode(bt BType) {
+	n.typeNode = bt
 }
 
 func (n *BLangInvokableNodeBase) Symbol() model.SymbolRef {
@@ -655,14 +656,12 @@ func (this *BLangAnnotation) SetName(name model.IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangAnnotation) GetTypeData() model.TypeData {
-	// migrated from BLangAnnotation.java:70:5
-	return this.TypeData
+func (this *BLangAnnotation) GetTypeDescriptor() model.TypeDescriptor {
+	return this.typeDescriptor
 }
 
-func (this *BLangAnnotation) SetTypeData(typeData model.TypeData) {
-	// migrated from BLangAnnotation.java:75:5
-	this.TypeData = typeData
+func (this *BLangAnnotation) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	this.typeDescriptor = typeDescriptor
 }
 
 func (this *BLangAnnotation) GetFlags() common.Set[model.Flag] {
@@ -1146,7 +1145,7 @@ func (this *BLangMarkdownDocumentation) GetReturnParameterDocumentation() *strin
 	if this.ReturnParameter == nil {
 		return nil
 	}
-	return common.ToPointer(this.ReturnParameter.GetReturnParameterDocumentation())
+	return new(this.ReturnParameter.GetReturnParameterDocumentation())
 }
 
 func (this *BLangMarkdownDocumentation) GetReferences() []model.MarkdownDocumentationReferenceAttributeNode {
@@ -1382,12 +1381,12 @@ func (b *BLangInvokableNodeBase) HasBody() bool {
 	return b.Body != nil
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeData() model.TypeData {
-	return b.ReturnTypeData
+func (b *BLangInvokableNodeBase) GetReturnTypeDescriptor() model.TypeDescriptor {
+	return b.returnTypeDescriptor
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeData(returnTypeData model.TypeData) {
-	b.ReturnTypeData = returnTypeData
+func (b *BLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	b.returnTypeDescriptor = typeDescriptor
 }
 
 func (b *BLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
