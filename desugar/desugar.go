@@ -182,8 +182,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 					panicErr = r
 				}
 			}()
-			for j := range class.Functions {
-				class.Functions[j] = *desugarFunction(pkgCtx, &class.Functions[j])
+			for name, method := range class.Methods {
+				m := method
+				class.Methods[name] = *desugarFunction(pkgCtx, &m)
 			}
 			if class.InitFunction != nil {
 				*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)

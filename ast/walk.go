@@ -171,15 +171,14 @@ func Walk(v Visitor, node BLangNode) {
 		if node.InitFunction != nil {
 			Walk(v, node.InitFunction)
 		}
-		for i := range node.Functions {
-			Walk(v, &node.Functions[i])
+		for _, method := range node.Methods {
+			m := method
+			Walk(v, &m)
 		}
 		for _, field := range node.Fields {
 			Walk(v, field.(BLangNode))
 		}
-		for _, typeRef := range node.TypeRefs {
-			Walk(v, typeRef.(BLangNode))
-		}
+		WalkTypeData(v, &node.typeData)
 
 	case *BLangAnnotation:
 		if node.Name != nil {

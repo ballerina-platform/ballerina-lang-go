@@ -18,8 +18,10 @@ package ast
 
 import (
 	"ballerina-lang-go/model"
+	"cmp"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -952,7 +954,10 @@ func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
 		p.printString("service")
 	}
 	p.indentLevel++
-	for member := range node.Members() {
+	members := slices.SortedFunc(node.Members(), func(a, b model.ObjectMember) int {
+		return cmp.Compare(a.Name(), b.Name())
+	})
+	for _, member := range members {
 		p.PrintInner(member.(BLangNode))
 	}
 	p.indentLevel--

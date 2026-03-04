@@ -666,12 +666,9 @@ type ClassDefinition interface {
 	TopLevelNode
 	OrderedNode
 	GetName() IdentifierNode
-	SetName(name IdentifierNode)
-	GetFunctions() []FunctionNode
-	AddFunction(function FunctionNode)
+	GetMethods() iter.Seq2[string, FunctionNode]
+	GetMethod(name string) FunctionNode
 	GetInitFunction() FunctionNode
-	AddField(field VariableNode)
-	AddTypeReference(typeRef *TypeData)
 }
 
 type ServiceNode interface {
