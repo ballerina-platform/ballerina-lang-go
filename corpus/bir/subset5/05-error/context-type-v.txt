@@ -1,0 +1,16 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad whoops
+    %2 = ConstantLoad errA
+    %3 = ConstantLoad <nil>
+    %4 = newMap ((MAPPING), ()){%2=%3}
+    %5 = newError ((), (ERROR))(%1, %4)
+    err1 = %5;
+    %7 = println(err1) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}

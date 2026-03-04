@@ -1,0 +1,25 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition Detail
+    (record-type
+      (field errA
+        (union-type
+          (user-defined-type ErrA)
+          (value-type null)))))
+  (type-definition ErrA
+    (error-type
+      (user-defined-type Detail)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable err1 (type
+          (user-defined-type ErrA)) (expr
+          (error-constructor-expr
+            (user-defined-type ErrA) (
+            (literal whoops)) (
+            (named-arg errA
+              (literal <nil>)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref err1)))))))
