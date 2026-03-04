@@ -124,8 +124,8 @@ func isNothingSubtype(t SubtypeData) bool {
 	return false
 }
 
-func memoSubtypeIsEmpty(cx Context, memoTable map[Bdd]*BddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
-	mm := memoTable[b]
+func memoSubtypeIsEmpty(cx Context, memoTable map[string]*BddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
+	mm := memoTable[b.canonicalKey()]
 	var m *BddMemo
 	if mm != nil {
 		res := mm.isEmpty
@@ -145,7 +145,7 @@ func memoSubtypeIsEmpty(cx Context, memoTable map[Bdd]*BddMemo, isEmptyPredicate
 	} else {
 		tmp := NewBddMemo()
 		m = &tmp
-		memoTable[b] = m
+		memoTable[b.canonicalKey()] = m
 	}
 	m.isEmpty = MemoStatus_PROVISIONAL
 	initStackDepth := cx.getMemoStackDepth()
