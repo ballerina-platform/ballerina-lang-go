@@ -1,7 +1,7 @@
 (main
   (bb0 () ()
     (var-def
-      (variable err1 (type
+      (variable err0 (type
         (user-defined-type ErrA)) (expr
         (error-constructor-expr
           (user-defined-type ErrA) (
@@ -10,6 +10,26 @@
             (literal <nil>)))))))
     (expression-stmt
       (invocation io println (
-        (simple-var-ref err1))))
+        (simple-var-ref err0))))
+    (var-def
+      (variable error1 (type
+        (user-defined-type ErrA)) (expr
+        (error-constructor-expr (
+          (literal Whoops)) (
+          (named-arg errA
+            (literal <nil>)))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref error1))))
+    (var-def
+      (variable error2 (type
+        (user-defined-type ErrA)) (expr
+        (error-constructor-expr (
+          (literal Whoops)) (
+          (named-arg errA
+            (simple-var-ref error1)))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref error2))))
   )
 )

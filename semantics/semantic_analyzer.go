@@ -844,12 +844,20 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 		a.semanticErr("error constructor must have at least 1 and at most 2 positional arguments", expr.GetPosition())
 		return false
 	}
+	tyCtx := a.tyCtx()
+	if expectedType != nil && semtypes.IsSameType(tyCtx, expr.DeterminedType, &semtypes.ERROR) {
+		// need to set the expected type based on the contextually expected type
+		errorPart := semtypes.Intersect(expectedType, &semtypes.ERROR)
+		if !semtypes.IsEmpty(tyCtx, errorPart) {
+			// Otherwise we will get an error at the end
+			setExpectedType(expr, errorPart)
+		}
+	}
 
 	msgArg := expr.PositionalArgs[0]
 	if !analyzeExpression(a, msgArg, &semtypes.STRING) {
 		return false
 	}
-	tyCtx := a.tyCtx()
 	mat, ok := semtypes.ErrorDetailAtomicType(tyCtx, expr.DeterminedType)
 	if !ok {
 		a.unimplementedErr("non-atomic detail types not supported", expr.GetPosition())

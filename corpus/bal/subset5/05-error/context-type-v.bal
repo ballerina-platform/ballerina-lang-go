@@ -23,6 +23,10 @@ type Detail record {|
 type ErrA error<Detail>;
 
 public function main() {
-    ErrA err1 = error ErrA("whoops", errA = ());
-    io:println(err1);
+    ErrA err0 = error ErrA("whoops", errA = ());
+    io:println(err0);
+    ErrA error1 = error("Whoops", errA = ());
+    io:println(error1);
+    ErrA error2 = error("Whoops", errA = error1);
+    io:println(error2);
 }
