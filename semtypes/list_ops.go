@@ -371,7 +371,7 @@ func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest CellSemType, 
 
 func BddListMemberTypeInnerVal(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
 	// migrated from ListOps.java:467:5
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		}

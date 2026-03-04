@@ -158,7 +158,7 @@ func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *Ma
 
 func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
 	// migrated from MappingOps.java:208:5
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		}

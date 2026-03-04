@@ -40,14 +40,14 @@ func IsSimpleNode(left Bdd, middle Bdd, right Bdd) bool {
 }
 
 func isAll(bdd Bdd) bool {
-	if allOrNothig, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothig, ok := bdd.(*BddAllOrNothing); ok {
 		return allOrNothig.isAll
 	}
 	return false
 }
 
 func isNothing(bdd Bdd) bool {
-	if allOrNothig, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothig, ok := bdd.(*BddAllOrNothing); ok {
 		return !allOrNothig.isAll
 	}
 	return false

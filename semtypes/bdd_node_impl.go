@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "fmt"
+
 type BddNodeImpl struct {
 	atom   Atom
 	left   Bdd
@@ -39,4 +41,9 @@ func (this *BddNodeImpl) Middle() Bdd {
 
 func (this *BddNodeImpl) Right() Bdd {
 	return this.right
+}
+
+func (this *BddNodeImpl) canonicalKey() string {
+	index := this.atom.Index()
+	return fmt.Sprintf("(%d (%s) (%s) (%s))", index, this.left.canonicalKey(), this.middle.canonicalKey(), this.right.canonicalKey())
 }

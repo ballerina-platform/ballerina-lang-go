@@ -20,9 +20,11 @@ type BddAllOrNothing struct {
 	isAll bool
 }
 
-var all = newBddAllOrNothingFromBool(true)
-var nothing = newBddAllOrNothingFromBool(false)
-var _ Bdd = &BddAllOrNothing{}
+var (
+	all         = newBddAllOrNothingFromBool(true)
+	nothing     = newBddAllOrNothingFromBool(false)
+	_       Bdd = &BddAllOrNothing{}
+)
 
 func newBddAllOrNothingFromBool(isAll bool) BddAllOrNothing {
 	this := BddAllOrNothing{}
@@ -30,14 +32,14 @@ func newBddAllOrNothingFromBool(isAll bool) BddAllOrNothing {
 	return this
 }
 
-func BddAll() BddAllOrNothing {
+func BddAll() *BddAllOrNothing {
 	// migrated from BddAllOrNothing.java:37:5
-	return all
+	return &all
 }
 
-func BddNothing() BddAllOrNothing {
+func BddNothing() *BddAllOrNothing {
 	// migrated from BddAllOrNothing.java:41:5
-	return nothing
+	return &nothing
 }
 
 func (this *BddAllOrNothing) IsAll() bool {
@@ -50,10 +52,18 @@ func (this *BddAllOrNothing) IsNothing() bool {
 	return (!this.isAll)
 }
 
-func (this *BddAllOrNothing) Complement() BddAllOrNothing {
+func (this *BddAllOrNothing) Complement() *BddAllOrNothing {
 	// migrated from BddAllOrNothing.java:53:5
 	if this.isAll {
-		return nothing
+		return &nothing
 	}
-	return all
+	return &all
+}
+
+func (this *BddAllOrNothing) canonicalKey() string {
+	if this.isAll {
+		return "true"
+	} else {
+		return "false"
+	}
 }

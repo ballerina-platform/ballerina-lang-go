@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "fmt"
+
 type BddNodeSimple struct {
 	atom Atom
 }
@@ -39,4 +41,9 @@ func (this *BddNodeSimple) Right() Bdd {
 
 func (this *BddNodeSimple) Atom() Atom {
 	return this.atom
+}
+
+func (this *BddNodeSimple) canonicalKey() string {
+	index := this.atom.Index()
+	return fmt.Sprintf("(%d (true) (false) (false))", index)
 }
