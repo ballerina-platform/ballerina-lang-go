@@ -1,11 +1,11 @@
 (package
   (type-definition Foo
     (object-type
+      (field bar
+        (value-type int))
       (method-decl foo (
         (param x
           (value-type int))
         (param y
           (value-type int))) (
-        (value-type int)))
-      (field bar
-        (value-type int)))))
+        (value-type int))))))
