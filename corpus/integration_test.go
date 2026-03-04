@@ -57,9 +57,7 @@ var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{
-		"subset5/05-error/simple-v.bal",
-	})
+	skipTestsMap = makeSkipTestsMap([]string{})
 )
 
 type failedTest struct {

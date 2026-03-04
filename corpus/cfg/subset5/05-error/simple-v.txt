@@ -5,7 +5,7 @@
         (user-defined-type ErrorWithDetail) (
         (literal bar)) (
         (named-arg message
-          (literal message))
+          (literal bar message))
         (named-arg id
           (literal 1)))))
   )
@@ -19,18 +19,18 @@
           (user-defined-type ErrorWithDetail) (
           (literal bar)) (
           (named-arg message
-            (literal message))
+            (literal bar message))
           (named-arg id
-            (literal 1)))))))
+            (literal 2)))))))
     (return
       (error-constructor-expr
         (user-defined-type ErrorWithDetail) (
-        (literal bar)
+        (literal baz)
         (simple-var-ref e)) (
         (named-arg message
-          (literal message))
+          (literal baz message))
         (named-arg id
-          (literal 1)))))
+          (literal 3)))))
   )
 )
 (foo
@@ -41,4 +41,58 @@
         (named-arg ff
           (literal foo)))))
   )
+)
+(main
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable fooResult (type
+        (union-type
+          (value-type int)
+          (error-type))) (expr
+        (invocation foo ()))))
+    (group-expr
+      (type-test-expr is
+        (simple-var-ref fooResult)
+        (error-type)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref fooResult))))
+  )
+  (bb2 (bb1 bb0) (bb3 bb4)
+    (var-def
+      (variable barResult (type
+        (union-type
+          (value-type int)
+          (error-type))) (expr
+        (invocation bar ()))))
+    (group-expr
+      (type-test-expr is
+        (simple-var-ref barResult)
+        (error-type)))
+  )
+  (bb3 (bb2) (bb4)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref barResult))))
+  )
+  (bb4 (bb3 bb2) (bb5 bb6)
+    (var-def
+      (variable bazResult (type
+        (union-type
+          (value-type int)
+          (error-type))) (expr
+        (invocation baz ()))))
+    (group-expr
+      (type-test-expr is
+        (simple-var-ref bazResult)
+        (error-type)))
+  )
+  (bb5 (bb4) (bb6)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref bazResult))))
+  )
+  (bb6 (bb5 bb4) ())
 )
