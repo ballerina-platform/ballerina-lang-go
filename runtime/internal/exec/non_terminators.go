@@ -63,6 +63,29 @@ func execNewMap(newMap *bir.NewMap, frame *Frame) {
 	frame.SetOperand(newMap.GetLhsOperand().Index, m)
 }
 
+func execNewError(newError *bir.NewError, frame *Frame) {
+	msgVal := frame.GetOperand(newError.MessageOp.Index)
+	message := msgVal.(string)
+
+	var cause values.BalValue
+	if newError.CauseOp != nil {
+		cause = frame.GetOperand(newError.CauseOp.Index)
+	}
+
+	var detailMap *values.Map
+	if newError.DetailOp != nil {
+		detailMap = frame.GetOperand(newError.DetailOp.Index).(*values.Map)
+	}
+
+	errVal := &values.Error{
+		Message:  message,
+		Cause:    cause,
+		Detail:   detailMap,
+		TypeName: newError.TypeName,
+	}
+	frame.SetOperand(newError.GetLhsOperand().Index, errVal)
+}
+
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
 	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
 	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
