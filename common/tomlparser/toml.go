@@ -16,22 +16,20 @@
 
 package tomlparser
 
-// TODO: Currently toml parser gets a single diagnostic at a time. After migrating the parser, should use the same for toml as well.
-
 import (
-	"errors"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
+	"reflect"
 	"strings"
 
+	"ballerina-lang-go/common/tomlparser/internal/parser"
 	"ballerina-lang-go/tools/diagnostics"
-
-	"github.com/BurntSushi/toml"
 )
 
 type Toml struct {
 	rootNode    map[string]any
-	metadata    toml.MetaData
 	diagnostics []Diagnostic
 	content     string
 }
@@ -97,22 +95,21 @@ func ReadStreamWithSchema(reader io.Reader, schema Schema) (*Toml, error) {
 	return ReadStringWithSchema(content, schema)
 }
 
+// ReadString parses TOML content using the native Go parser.
 func ReadString(content string) (*Toml, error) {
-	var data map[string]any
-	metadata, err := toml.Decode(content, &data)
+	p := parser.NewParser(content)
+	rootTable, parseErrors := p.Parse()
 
 	t := &Toml{
-		rootNode:    data,
-		metadata:    metadata,
-		diagnostics: make([]Diagnostic, 0),
+		rootNode:    rootTable.ToMap(),
+		diagnostics: convertParseErrors(parseErrors),
 		content:     content,
 	}
 
-	if err != nil {
-		t.diagnostics = append(t.diagnostics, parseErrorDiagnostic(err))
+	if len(parseErrors) > 0 {
+		return t, fmt.Errorf("TOML parse error: %s", parseErrors[0].Message)
 	}
-
-	return t, err
+	return t, nil
 }
 
 func ReadStringWithSchema(content string, schema Schema) (*Toml, error) {
@@ -205,7 +202,6 @@ func (t *Toml) GetTable(dottedKey string) (*Toml, bool) {
 
 	return &Toml{
 		rootNode:    table,
-		metadata:    t.metadata,
 		diagnostics: nil,
 		content:     "",
 	}, true
@@ -224,7 +220,6 @@ func (t *Toml) GetTables(dottedKey string) ([]*Toml, bool) {
 			for i, table := range tableArr {
 				result[i] = &Toml{
 					rootNode:    table,
-					metadata:    t.metadata,
 					diagnostics: nil,
 					content:     "",
 				}
@@ -239,7 +234,6 @@ func (t *Toml) GetTables(dottedKey string) ([]*Toml, bool) {
 		if table, ok := item.(map[string]any); ok {
 			result = append(result, &Toml{
 				rootNode:    table,
-				metadata:    t.metadata,
 				diagnostics: nil,
 				content:     "",
 			})
@@ -261,10 +255,132 @@ func (t *Toml) ToMap() map[string]any {
 	return t.rootNode
 }
 
+// To unmarshals the TOML document into target using a JSON bridge.
+// The target struct may use `toml:"field_name"` tags; these are translated to
+// JSON tags for the round-trip.  For simple cases (no custom tags) field names
+// are matched case-insensitively by encoding/json.
 func (t *Toml) To(target any) {
-	_, err := toml.Decode(t.content, target)
+	// Build a JSON-tagged intermediate map that maps TOML keys to struct field
+	// names or toml: tags, so json.Unmarshal can resolve them correctly.
+	remapped := remapForTarget(t.rootNode, reflect.TypeOf(target))
+	jsonBytes, err := json.Marshal(remapped)
 	if err != nil {
-		t.diagnostics = append(t.diagnostics, parseErrorDiagnostic(err))
+		t.diagnostics = append(t.diagnostics, Diagnostic{
+			Message:  fmt.Sprintf("internal serialisation error: %v", err),
+			Severity: diagnostics.Error,
+		})
+		return
+	}
+	if err := json.Unmarshal(jsonBytes, target); err != nil {
+		t.diagnostics = append(t.diagnostics, Diagnostic{
+			Message:  fmt.Sprintf("type mismatch: %v", err),
+			Severity: diagnostics.Error,
+		})
+	}
+}
+
+// remapForTarget rewrites the keys of m so they match the field names (or
+// json: tags) of the struct pointed to by targetType.  This is needed because
+// TOML keys may use snake_case while Go struct fields use PascalCase.
+// toml:"key" tags are honoured to locate the right field; the map is then
+// re-keyed using the field name (or json: tag if present) so that
+// json.Unmarshal can resolve it.
+func remapForTarget(m map[string]any, targetType reflect.Type) map[string]any {
+	// Dereference pointer types (target is typically a *Struct).
+	for targetType != nil && targetType.Kind() == reflect.Ptr {
+		targetType = targetType.Elem()
+	}
+	if targetType == nil || targetType.Kind() != reflect.Struct {
+		return normaliseMapKeys(m)
+	}
+
+	// Build a lookup: toml-key → field descriptor.
+	type fieldDesc struct {
+		jsonName  string
+		fieldType reflect.Type
+	}
+	lookup := make(map[string]fieldDesc, targetType.NumField())
+	for i := 0; i < targetType.NumField(); i++ {
+		f := targetType.Field(i)
+		tomlKey := strings.ToLower(f.Name)
+		if tag, ok := f.Tag.Lookup("toml"); ok && tag != "" && tag != "-" {
+			tomlKey = strings.Split(tag, ",")[0]
+		}
+		jsonName := f.Name
+		if tag, ok := f.Tag.Lookup("json"); ok && tag != "" && tag != "-" {
+			jsonName = strings.Split(tag, ",")[0]
+		}
+		lookup[tomlKey] = fieldDesc{jsonName: jsonName, fieldType: f.Type}
+		// Also store by lowercased field name for case-insensitive matching.
+		lookup[strings.ToLower(f.Name)] = fieldDesc{jsonName: jsonName, fieldType: f.Type}
+	}
+
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		desc, ok := lookup[k]
+		if !ok {
+			// Try case-insensitive match.
+			kl := strings.ToLower(k)
+			desc, ok = lookup[kl]
+		}
+		if !ok {
+			// No matching field — keep original key (json.Unmarshal will handle it).
+			out[k] = normaliseValue(v)
+			continue
+		}
+		// Recursively remap nested structs.
+		var remappedVal any
+		if subMap, ok2 := v.(map[string]any); ok2 {
+			remappedVal = remapForTarget(subMap, desc.fieldType)
+		} else if arr, ok2 := v.([]any); ok2 {
+			result := make([]any, len(arr))
+			for i, elem := range arr {
+				if elemMap, ok3 := elem.(map[string]any); ok3 {
+					result[i] = remapForTarget(elemMap, sliceElemType(desc.fieldType))
+				} else {
+					result[i] = normaliseValue(elem)
+				}
+			}
+			remappedVal = result
+		} else {
+			remappedVal = normaliseValue(v)
+		}
+		out[desc.jsonName] = remappedVal
+	}
+	return out
+}
+
+// sliceElemType returns the element type of a slice/array type, or the type
+// itself if it is not a slice/array.
+func sliceElemType(t reflect.Type) reflect.Type {
+	for t != nil && (t.Kind() == reflect.Slice || t.Kind() == reflect.Array || t.Kind() == reflect.Ptr) {
+		t = t.Elem()
+	}
+	return t
+}
+
+// normaliseMapKeys converts map[string]any recursively, ensuring all nested
+// maps are also map[string]any (needed for json.Marshal to work uniformly).
+func normaliseMapKeys(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		out[k] = normaliseValue(v)
+	}
+	return out
+}
+
+func normaliseValue(v any) any {
+	switch tv := v.(type) {
+	case map[string]any:
+		return normaliseMapKeys(tv)
+	case []any:
+		result := make([]any, len(tv))
+		for i, elem := range tv {
+			result[i] = normaliseValue(elem)
+		}
+		return result
+	default:
+		return v
 	}
 }
 
@@ -294,20 +410,26 @@ func (t *Toml) getValueByPath(keys []string) (any, bool) {
 	return current, true
 }
 
-func parseErrorDiagnostic(err error) Diagnostic {
-	diagnostic := Diagnostic{
-		Message:  err.Error(),
-		Severity: diagnostics.Error,
+// convertParseErrors converts internal ParseError values to public Diagnostics.
+func convertParseErrors(errs []parser.ParseError) []Diagnostic {
+	if len(errs) == 0 {
+		return make([]Diagnostic, 0)
 	}
-	var parseErr toml.ParseError
-	if errors.As(err, &parseErr) {
-		diagnostic.Message = parseErr.Message
-		diagnostic.Location = &Location{
-			StartLine:   parseErr.Position.Line,
-			StartColumn: parseErr.Position.Col,
-			EndLine:     parseErr.Position.Line,
-			EndColumn:   parseErr.Position.Col + parseErr.Position.Len,
+	result := make([]Diagnostic, 0, len(errs))
+	for _, e := range errs {
+		d := Diagnostic{
+			Message:  e.Message,
+			Severity: diagnostics.Error,
 		}
+		if e.Line > 0 {
+			d.Location = &Location{
+				StartLine:   e.Line,
+				StartColumn: e.Column,
+				EndLine:     e.EndLine,
+				EndColumn:   e.EndCol,
+			}
+		}
+		result = append(result, d)
 	}
-	return diagnostic
+	return result
 }

@@ -421,6 +421,213 @@ title = "Duplicate"
 	}
 }
 
+// readComprehensiveBallerinaToml parses testdata/comprehensive-ballerina.toml,
+// which covers every construct manifest_builder reads from a real Ballerina.toml.
+func readComprehensiveBallerinaToml(t *testing.T) *Toml {
+	t.Helper()
+	doc, err := Read(os.DirFS("testdata"), "comprehensive-ballerina.toml")
+	if err != nil {
+		t.Fatalf("failed to parse comprehensive-ballerina.toml: %v", err)
+	}
+	return doc
+}
+
+func TestBallerinaTomlParsesWithoutErrors(t *testing.T) {
+	readComprehensiveBallerinaToml(t)
+}
+
+func TestBallerinaToml_PackageScalarFields(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+
+	cases := []struct{ key, want string }{
+		{"package.org", "testorg"},
+		{"package.name", "my_service"},
+		{"package.version", "1.2.3"},
+		{"package.visibility", "private"},
+		{"package.icon", "icon.png"},
+		{"package.readme", "README.md"},
+		{"package.distribution", "2201.15.0"},
+		{"package.repository", "https://github.com/testorg/my_service"},
+	}
+	for _, c := range cases {
+		t.Run(c.key, func(t *testing.T) {
+			got, ok := doc.GetString(c.key)
+			if !ok {
+				t.Fatalf("GetString(%q) not found", c.key)
+			}
+			if got != c.want {
+				t.Errorf("got %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+func TestBallerinaToml_PackageBoolField(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+	got, ok := doc.GetBool("package.template")
+	if !ok {
+		t.Fatal("package.template not found")
+	}
+	if got {
+		t.Error("package.template should be false")
+	}
+}
+
+func TestBallerinaToml_PackageStringArrays(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+
+	t.Run("license", func(t *testing.T) {
+		arr, ok := doc.GetArray("package.license")
+		if !ok {
+			t.Fatal("package.license not found")
+		}
+		if len(arr) != 2 || arr[0] != "Apache-2.0" || arr[1] != "MIT" {
+			t.Errorf("license = %v, want [Apache-2.0 MIT]", arr)
+		}
+	})
+	t.Run("authors", func(t *testing.T) {
+		arr, ok := doc.GetArray("package.authors")
+		if !ok {
+			t.Fatal("package.authors not found")
+		}
+		if len(arr) != 2 {
+			t.Errorf("len(authors) = %d, want 2", len(arr))
+		}
+	})
+	t.Run("keywords", func(t *testing.T) {
+		arr, ok := doc.GetArray("package.keywords")
+		if !ok {
+			t.Fatal("package.keywords not found")
+		}
+		if len(arr) != 4 {
+			t.Errorf("len(keywords) = %d, want 4", len(arr))
+		}
+	})
+}
+
+func TestBallerinaToml_PackageModules(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+
+	pkg, ok := doc.GetTable("package")
+	if !ok {
+		t.Fatal("package table not found")
+	}
+	modules, ok := pkg.GetTables("modules")
+	if !ok {
+		t.Fatal("package.modules not found")
+	}
+	if len(modules) != 2 {
+		t.Fatalf("len(modules) = %d, want 2", len(modules))
+	}
+
+	t.Run("modules[0]", func(t *testing.T) {
+		name, ok := modules[0].GetString("name")
+		if !ok {
+			t.Fatal("modules[0].name not found")
+		}
+		if name != "my_service.auth" {
+			t.Errorf("got %q, want my_service.auth", name)
+		}
+		export, ok := modules[0].GetBool("export")
+		if !ok {
+			t.Fatal("modules[0].export not found")
+		}
+		if !export {
+			t.Error("modules[0].export should be true")
+		}
+	})
+	t.Run("modules[1]", func(t *testing.T) {
+		name, _ := modules[1].GetString("name")
+		if name != "my_service.db" {
+			t.Errorf("got %q, want my_service.db", name)
+		}
+		export, _ := modules[1].GetBool("export")
+		if export {
+			t.Error("modules[1].export should be false")
+		}
+	})
+}
+
+func TestBallerinaToml_BuildOptions(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+
+	boolCases := []struct {
+		key  string
+		want bool
+	}{
+		{"build-options.observabilityIncluded", true},
+		{"build-options.offline", false},
+		{"build-options.skipTests", false},
+		{"build-options.testReport", true},
+		{"build-options.codeCoverage", true},
+	}
+	for _, c := range boolCases {
+		t.Run(c.key, func(t *testing.T) {
+			got, ok := doc.GetBool(c.key)
+			if !ok {
+				t.Fatalf("GetBool(%q) not found", c.key)
+			}
+			if got != c.want {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+
+	t.Run("cloud", func(t *testing.T) {
+		got, ok := doc.GetString("build-options.cloud")
+		if !ok {
+			t.Fatal("build-options.cloud not found")
+		}
+		if got != "k8s" {
+			t.Errorf("got %q, want k8s", got)
+		}
+	})
+}
+
+func TestBallerinaToml_Dependencies(t *testing.T) {
+	doc := readComprehensiveBallerinaToml(t)
+
+	deps, ok := doc.GetTables("dependency")
+	if !ok {
+		t.Fatal("dependency not found")
+	}
+	if len(deps) != 2 {
+		t.Fatalf("len(dependency) = %d, want 2", len(deps))
+	}
+
+	t.Run("dependency[0]", func(t *testing.T) {
+		cases := []struct{ key, want string }{
+			{"org", "testorg"},
+			{"name", "mysql"},
+			{"version", "1.5.0"},
+			{"repository", "https://repo.central.ballerina.io"},
+		}
+		for _, c := range cases {
+			got, ok := deps[0].GetString(c.key)
+			if !ok {
+				t.Errorf("dependency[0].%s not found", c.key)
+				continue
+			}
+			if got != c.want {
+				t.Errorf("dependency[0].%s = %q, want %q", c.key, got, c.want)
+			}
+		}
+	})
+
+	t.Run("dependency[1]", func(t *testing.T) {
+		org, _ := deps[1].GetString("org")
+		name, _ := deps[1].GetString("name")
+		version, _ := deps[1].GetString("version")
+		if org != "testorg" || name != "http" || version != "2.10.2" {
+			t.Errorf("got {%s/%s@%s}, want {testorg/http@2.10.2}", org, name, version)
+		}
+		_, hasRepo := deps[1].GetString("repository")
+		if hasRepo {
+			t.Error("dependency[1] should not have a repository field")
+		}
+	})
+}
+
 func TestErrorLocation_SyntaxError(t *testing.T) {
 	invalidToml := `
 [section

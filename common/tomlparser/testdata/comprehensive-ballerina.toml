@@ -1,0 +1,45 @@
+# Comprehensive Ballerina.toml for parser testing.
+# Covers all major sections and value types used in real projects.
+
+[package]
+org = "testorg"
+name = "my_service"
+version = "1.2.3"
+description = "A comprehensive Ballerina service package for testing"
+license = ["Apache-2.0", "MIT"]
+authors = ["alice@example.com", "bob@example.com"]
+keywords = ["http", "service", "rest", "api"]
+repository = "https://github.com/testorg/my_service"
+visibility = "private"
+icon = "icon.png"
+readme = "README.md"
+distribution = "2201.15.0"
+template = false
+
+[[package.modules]]
+name = "my_service.auth"
+export = true
+readme = "modules/auth/README.md"
+
+[[package.modules]]
+name = "my_service.db"
+export = false
+
+[build-options]
+observabilityIncluded = true
+offline = false
+skipTests = false
+testReport = true
+codeCoverage = true
+cloud = "k8s"
+
+[[dependency]]
+org = "testorg"
+name = "mysql"
+version = "1.5.0"
+repository = "https://repo.central.ballerina.io"
+
+[[dependency]]
+org = "testorg"
+name = "http"
+version = "2.10.2"
