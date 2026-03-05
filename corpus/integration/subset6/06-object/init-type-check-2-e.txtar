@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (OBJECT)), got ((ERROR), (OBJECT))
+  --> init-type-check-2-e.bal:31:13
+   |
+31 |     Bar f = new (5); // @error
+   |             ^^^^^^^
+

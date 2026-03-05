@@ -298,6 +298,7 @@ type (
 		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
+		scope                           model.Scope
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
@@ -496,6 +497,14 @@ func (n *BLangClassDefinition) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
+func (n *BLangClassDefinition) Scope() model.Scope {
+	return n.scope
+}
+
+func (n *BLangClassDefinition) SetScope(scope model.Scope) {
+	n.scope = scope
+}
+
 func (n *BLangService) Symbol() model.SymbolRef {
 	return n.symbol
 }
@@ -542,6 +551,7 @@ var (
 	_ model.ImportPackageNode                           = &BLangImportPackage{}
 	_ model.ClassDefinition                             = &BLangClassDefinition{}
 	_ model.TypeDefinition                              = &BLangClassDefinition{}
+	_ NodeWithScope                                     = &BLangClassDefinition{}
 	_ model.PackageNode                                 = &BLangPackage{}
 	_ model.PackageNode                                 = &BLangTestablePackage{}
 	_ model.AnnotationNode                              = &BLangAnnotation{}
@@ -1960,6 +1970,8 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 			p.TypeDefinitions = append(p.TypeDefinitions, *node)
 		case *BLangAnnotation:
 			p.Annotations = append(p.Annotations, *node)
+		case *BLangClassDefinition:
+			p.ClassDefinitions = append(p.ClassDefinitions, *node)
 		default:
 			p.TopLevelNodes = append(p.TopLevelNodes, node)
 		}

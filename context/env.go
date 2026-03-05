@@ -76,6 +76,13 @@ func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) m
 	return narrowedSymbol
 }
 
+func (this *CompilerEnvironment) CreateFunctionSymbol(space *model.SymbolSpace, name string, signature model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	sym := model.NewFunctionSymbol(name, signature, false)
+	sym.SetType(fnTy)
+	symbolIndex := space.AppendSymbol(sym)
+	return space.RefAt(symbolIndex)
+}
+
 func (this *CompilerEnvironment) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
 	if underlying, ok := this.underlyingSymbol.Load(symbol); ok {
 		return underlying.(model.SymbolRef)

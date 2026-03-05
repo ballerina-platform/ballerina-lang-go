@@ -17,10 +17,12 @@
 package bir
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"fmt"
-	"strings"
 )
 
 type PrettyPrinter struct {
@@ -40,6 +42,13 @@ func (p *PrettyPrinter) writeLine(s string) {
 // write writes without indentation or newline
 func (p *PrettyPrinter) write(s string) {
 	p.sb.WriteString(s)
+}
+
+// writeIndent writes current indentation without content or newline
+func (p *PrettyPrinter) writeIndent() {
+	for i := 0; i < p.indentLevel; i++ {
+		p.sb.WriteString("  ")
+	}
 }
 
 // increaseIndent increases indentation level
@@ -66,6 +75,10 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 	for _, globalVar := range node.GlobalVars {
 		p.write(p.PrintGlobalVar(globalVar))
 		p.write(";\n")
+	}
+	for _, classDef := range node.ClassDefs {
+		p.PrintClassDef(classDef)
+		p.write("\n")
 	}
 	for _, function := range node.Functions {
 		p.PrintFunction(function)
@@ -98,6 +111,7 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 		p.PrintBasicBlock(basicBlock)
 	}
 	p.decreaseIndent()
+	p.writeIndent()
 	p.write("}")
 }
 
@@ -146,6 +160,8 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintTypeTest(instruction.(*TypeTest))
 	case *Panic:
 		return p.PrintPanic(instruction.(*Panic))
+	case *NewObject:
+		return p.PrintNewObject(instruction.(*NewObject))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -205,13 +221,40 @@ func (p *PrettyPrinter) PrintNewError(e *NewError) string {
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 	switch access.Kind {
-	case INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE:
+	case INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE, INSTRUCTION_KIND_OBJECT_STORE:
 		return fmt.Sprintf("%s[%s] = %s;", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.KeyOp), p.PrintOperand(*access.RhsOp))
-	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD:
+	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_OBJECT_LOAD:
 		return fmt.Sprintf("%s = %s[%s];", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
 	default:
 		panic(fmt.Sprintf("unknown field access kind: %d", access.Kind))
 	}
+}
+
+func (p *PrettyPrinter) PrintNewObject(n *NewObject) string {
+	return fmt.Sprintf("%s = newObject %s", p.PrintOperand(*n.LhsOp), n.ClassDef.Name.Value())
+}
+
+func (p *PrettyPrinter) PrintClassDef(classDef BIRClassDef) {
+	p.write("class ")
+	p.write(classDef.Name.Value())
+	p.write(" {\n")
+	p.increaseIndent()
+	for _, field := range classDef.Fields {
+		p.writeLine(fmt.Sprintf("%s %s", field.Name, p.PrintSemType(field.Ty)))
+	}
+	var methodNames []string
+	for name := range classDef.VTable {
+		methodNames = append(methodNames, name)
+	}
+	sort.Strings(methodNames)
+	for _, name := range methodNames {
+		p.write("\n")
+		p.writeIndent()
+		p.PrintFunction(*classDef.VTable[name])
+		p.write("\n")
+	}
+	p.decreaseIndent()
+	p.write("}")
 }
 
 func (p *PrettyPrinter) PrintReturn(r *Return) string {

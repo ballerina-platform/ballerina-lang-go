@@ -63,6 +63,11 @@ var (
 		"subset5/05-error/check5-v.bal",
 		"subset5/05-error/check6-e.bal",
 		"subset5/05-error/check7-e.bal",
+		"subset6/06-object/simple-v.bal",
+		"subset6/06-object/simple-2-v.bal",
+		"subset6/06-object/no-init-v.bal",
+		"subset6/06-object/union-init-1-v.bal",
+		"subset6/06-object/init-ref-v.bal",
 	}
 )
 

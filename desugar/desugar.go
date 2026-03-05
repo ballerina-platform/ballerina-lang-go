@@ -177,13 +177,12 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 					panicErr = r
 				}
 			}()
+			desugarClassDefinition(pkgCtx, class)
 			for name, method := range class.Methods {
 				m := method
 				class.Methods[name] = *desugarFunction(pkgCtx, &m)
 			}
-			if class.InitFunction != nil {
-				*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
-			}
+			*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
 		})
 	}
 
@@ -204,6 +203,68 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	}
 
 	return pkg
+}
+
+func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangClassDefinition) {
+	if class.InitFunction == nil {
+		fn := ast.BLangFunction{
+			BLangInvokableNodeBase: ast.BLangInvokableNodeBase{
+				Name: &ast.BLangIdentifier{Value: "init"},
+				Body: &ast.BLangBlockFunctionBody{},
+			},
+			ObjInitFunction: true,
+		}
+		fn.SetDeterminedType(&semtypes.NEVER)
+		fn.SetScope(pkgCtx.NewFunctionScope(class.Scope()))
+		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: &semtypes.NIL}, false)
+		classScope := class.Scope()
+		classScope.AddSymbol("init", initSymbol)
+		symRef, _ := classScope.GetSymbol("init")
+		fn.SetSymbol(symRef)
+		class.InitFunction = &fn
+	}
+
+	var initStmts []ast.BLangStatement
+	classScope := class.Scope()
+	selfRef, ok := classScope.GetSymbol("self")
+	if !ok {
+		pkgCtx.InternalError("self symbol not found in class scope")
+	}
+	classType := pkgCtx.GetSymbol(selfRef).Type()
+
+	for _, field := range class.Fields {
+		initExpr := field.GetInitialExpression()
+		if initExpr == nil {
+			continue
+		}
+
+		selfVarRef := &ast.BLangSimpleVarRef{
+			VariableName: &ast.BLangIdentifier{Value: "self"},
+		}
+		selfVarRef.SetSymbol(selfRef)
+		selfVarRef.SetDeterminedType(classType)
+
+		fieldAccess := &ast.BLangFieldBaseAccess{
+			Field: ast.BLangIdentifier{Value: field.GetName().GetValue()},
+		}
+		fieldAccess.Field.SetDeterminedType(&semtypes.NEVER)
+		fieldAccess.Expr = selfVarRef
+		fieldAccess.SetDeterminedType(field.GetDeterminedType())
+
+		assignment := &ast.BLangAssignment{
+			VarRef: fieldAccess,
+			Expr:   initExpr.(ast.BLangExpression),
+		}
+		assignment.SetDeterminedType(&semtypes.NEVER)
+
+		initStmts = append(initStmts, assignment)
+		field.SetInitialExpression(nil)
+	}
+
+	if len(initStmts) > 0 {
+		body := class.InitFunction.Body.(*ast.BLangBlockFunctionBody)
+		body.Stmts = append(initStmts, body.Stmts...)
+	}
 }
 
 // desugarFunction returns a desugared function (may be same or new instance)

@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "fmt"
+
 type RecAtom struct {
 	index      int
 	targetKind Kind
@@ -73,4 +75,12 @@ func (this *RecAtom) Kind() Kind {
 	// 	panic("Target kind is not set for the recursive type atom")
 	// }
 	return this.targetKind
+}
+
+func (this *RecAtom) canonicalKey() string {
+	return fmt.Sprintf("r%d", this.index)
+}
+
+func (this *RecAtom) String() string {
+	return fmt.Sprintf("r%d", this.index)
 }

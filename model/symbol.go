@@ -202,6 +202,11 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 	return index
 }
 
+// RefAt returns a SymbolRef for the symbol at the given index.
+func (space *SymbolSpace) RefAt(index int) SymbolRef {
+	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}
+}
+
 // SymbolAt returns the symbol at the given index. Thread-safe.
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	space.mu.RLock()

@@ -51,6 +51,10 @@ func (this *CompilerContext) CreateNarrowedSymbol(baseRef model.SymbolRef) model
 	return this.env.CreateNarrowedSymbol(baseRef)
 }
 
+func (this *CompilerContext) CreateFunctionSymbol(space *model.SymbolSpace, name string, signature model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	return this.env.CreateFunctionSymbol(space, name, signature, fnTy)
+}
+
 func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
 	return this.env.UnnarrowedSymbol(symbol)
 }

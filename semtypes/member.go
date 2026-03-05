@@ -96,8 +96,8 @@ func (v *Visibility) field() Field {
 
 // ObjectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
 func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
-	objectTy := Intersect(ty, &OBJECT)
-	if IsEmpty(ctx, objectTy) {
+	objectTy := convertObjectToMappingTy(ctx, ty)
+	if objectTy == nil {
 		return nil
 	}
 	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
@@ -106,10 +106,38 @@ func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 
 // ObjectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
 func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
-	objectTy := Intersect(ty, &OBJECT)
-	if IsEmpty(ctx, objectTy) {
+	objectTy := convertObjectToMappingTy(ctx, ty)
+	if objectTy == nil {
 		return nil
 	}
 	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
 	return mappingMemberTypeInner(ctx, memberMap, StringConst("visibility"))
+}
+
+// ObjectMemberType returns the type of the member
+func ObjectMemberType(ctx Context, name, ty SemType) SemType {
+	objectTy := convertObjectToMappingTy(ctx, ty)
+	if objectTy == nil {
+		return nil
+	}
+	memberMap := mappingMemberTypeInner(ctx, objectTy, name)
+	return mappingMemberTypeInner(ctx, memberMap, StringConst("value"))
+}
+
+func convertObjectToMappingTy(ctx Context, ty SemType) SemType {
+	objectTy := Intersect(ty, &OBJECT)
+	if IsEmpty(ctx, objectTy) {
+		return nil
+	}
+	bdd := subtypeData(objectTy, BT_OBJECT)
+	return CreateBasicSemType(BT_MAPPING, bdd)
+}
+
+func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
+	mappingTy := Intersect(ty, &MAPPING)
+	if IsEmpty(ctx, mappingTy) {
+		return nil
+	}
+	bdd := subtypeData(mappingTy, BT_MAPPING)
+	return CreateBasicSemType(BT_OBJECT, bdd)
 }
