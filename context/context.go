@@ -20,10 +20,12 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"sync"
 )
 
 type CompilerContext struct {
 	env         *CompilerEnvironment
+	mu          sync.Mutex
 	diagnostics []diagnostics.Diagnostic
 }
 
@@ -107,7 +109,9 @@ func (this *CompilerContext) SemanticError(message string, pos diagnostics.Locat
 
 func (this *CompilerContext) addDiagnostic(code string, severity diagnostics.DiagnosticSeverity, message string, pos diagnostics.Location) {
 	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, severity), pos)
+	this.mu.Lock()
 	this.diagnostics = append(this.diagnostics, diagnostic)
+	this.mu.Unlock()
 }
 
 func (this *CompilerContext) HasDiagnostics() bool {
