@@ -22,21 +22,21 @@ import "ballerina-lang-go/common/tomlparser/internal/lexer"
 
 const tokenBufferCap = 20
 
-// TokenReader wraps a Lexer with a lookahead ring buffer.
-type TokenReader struct {
+// tokenReader wraps a Lexer with a lookahead ring buffer.
+type tokenReader struct {
 	lex   *lexer.Lexer
 	buf   [tokenBufferCap]lexer.Token
 	start int // ring-buffer read head
 	size  int // number of tokens currently buffered
 }
 
-// NewTokenReader creates a TokenReader backed by lex.
-func NewTokenReader(lex *lexer.Lexer) *TokenReader {
-	return &TokenReader{lex: lex}
+// newTokenReader creates a tokenReader backed by lex.
+func newTokenReader(lex *lexer.Lexer) *tokenReader {
+	return &tokenReader{lex: lex}
 }
 
-// Read consumes and returns the next token.
-func (r *TokenReader) Read() lexer.Token {
+// read consumes and returns the next token.
+func (r *tokenReader) read() lexer.Token {
 	if r.size > 0 {
 		tok := r.buf[r.start]
 		r.start = (r.start + 1) % tokenBufferCap
@@ -46,17 +46,17 @@ func (r *TokenReader) Read() lexer.Token {
 	return r.lex.NextToken()
 }
 
-// Peek returns the next token without consuming it (1-ahead).
-func (r *TokenReader) Peek() lexer.Token {
-	return r.PeekK(1)
+// peek returns the next token without consuming it (1-ahead).
+func (r *tokenReader) peek() lexer.Token {
+	return r.peekK(1)
 }
 
-// PeekK returns the token k positions ahead (1-indexed) without consuming.
+// peekK returns the token k positions ahead (1-indexed) without consuming.
 // tokenBufferCap (20) is intentionally larger than any lookahead depth needed
 // for Ballerina.toml files (deepest real key: 2 dotted segments). A loop
 // caller hitting k > 20 would require 11+ dotted segments, which is
 // unreachable in any valid Ballerina manifest.
-func (r *TokenReader) PeekK(k int) lexer.Token {
+func (r *tokenReader) peekK(k int) lexer.Token {
 	// Fill buffer until we have k tokens.
 	for r.size < k {
 		if r.size >= tokenBufferCap {
@@ -76,15 +76,3 @@ func (r *TokenReader) PeekK(k int) lexer.Token {
 	}
 	return r.buf[(r.start+k-1)%tokenBufferCap]
 }
-
-// StartMode delegates to the lexer.
-func (r *TokenReader) StartMode(m lexer.ParserMode) { r.lex.StartMode(m) }
-
-// SwitchMode delegates to the lexer.
-func (r *TokenReader) SwitchMode(m lexer.ParserMode) { r.lex.SwitchMode(m) }
-
-// EndMode delegates to the lexer.
-func (r *TokenReader) EndMode() { r.lex.EndMode() }
-
-// CurrentMode returns the lexer's current mode.
-func (r *TokenReader) CurrentMode() lexer.ParserMode { return r.lex.CurrentMode() }

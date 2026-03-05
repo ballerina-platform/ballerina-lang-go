@@ -30,14 +30,14 @@ import (
 
 // Parser is a recursive-descent LL(k) parser for TOML.
 type Parser struct {
-	reader      *TokenReader
+	reader      *tokenReader
 	diagnostics []ParseError
 }
 
 // NewParser creates a Parser for the given TOML source string.
 func NewParser(source string) *Parser {
 	lex := lexer.NewLexer(source)
-	return &Parser{reader: NewTokenReader(lex)}
+	return &Parser{reader: newTokenReader(lex)}
 }
 
 // Parse parses the full document and returns the root table.
@@ -47,7 +47,7 @@ func (p *Parser) Parse() (*ast.TableNode, []ParseError) {
 
 	p.skipNewlines()
 
-	for p.reader.Peek().Kind != lexer.TokenEOF {
+	for p.reader.peek().Kind != lexer.TokenEOF {
 		p.parseTopLevelNode(root)
 		p.skipNewlines()
 	}
@@ -68,24 +68,24 @@ func (p *Parser) Parse() (*ast.TableNode, []ParseError) {
 
 // skipNewlines consumes any newline tokens.
 func (p *Parser) skipNewlines() {
-	for p.reader.Peek().Kind == lexer.TokenNewline {
-		p.reader.Read()
+	for p.reader.peek().Kind == lexer.TokenNewline {
+		p.reader.read()
 	}
 }
 
 func (p *Parser) parseTopLevelNode(root *ast.TableNode) {
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	switch tok.Kind {
 	case lexer.TokenEOF:
 		return
 
 	case lexer.TokenNewline:
-		p.reader.Read()
+		p.reader.read()
 		return
 
 	case lexer.TokenOpenBracket:
 		// Peek ahead: [[key]] vs [key]
-		second := p.reader.PeekK(2)
+		second := p.reader.peekK(2)
 		if second.Kind == lexer.TokenOpenBracket {
 			p.parseArrayOfTables(root)
 		} else {
@@ -119,7 +119,7 @@ func (p *Parser) parseTopLevelNode(root *ast.TableNode) {
 
 	default:
 		p.addError(fmt.Sprintf("unexpected token %q at top level", tok.Value), tok)
-		p.reader.Read()
+		p.reader.read()
 		p.skipToRecovery()
 	}
 }
@@ -130,7 +130,7 @@ func (p *Parser) parseTopLevelNode(root *ast.TableNode) {
 func (p *Parser) looksLikeTableHeader() bool {
 	k := 1
 	for {
-		t := p.reader.PeekK(k)
+		t := p.reader.peekK(k)
 		switch t.Kind {
 		case lexer.TokenEqual, lexer.TokenEOF, lexer.TokenNewline:
 			return false
@@ -146,13 +146,13 @@ func (p *Parser) looksLikeTableHeader() bool {
 func (p *Parser) lookAheadForCloseBracket() bool {
 	k := 1
 	for {
-		t := p.reader.PeekK(k)
+		t := p.reader.peekK(k)
 		switch t.Kind {
 		case lexer.TokenEOF, lexer.TokenNewline, lexer.TokenEqual:
 			return false
 		case lexer.TokenCloseBracket:
 			// Check if two consecutive ]]
-			next := p.reader.PeekK(k + 1)
+			next := p.reader.peekK(k + 1)
 			return next.Kind == lexer.TokenCloseBracket
 		}
 		k++
@@ -160,15 +160,15 @@ func (p *Parser) lookAheadForCloseBracket() bool {
 }
 
 func (p *Parser) parseTable(root *ast.TableNode) {
-	startTok := p.reader.Peek()
+	startTok := p.reader.peek()
 
 	// consume [
-	if p.reader.Peek().Kind != lexer.TokenOpenBracket {
-		p.addError("expected '[' for table header", p.reader.Peek())
+	if p.reader.peek().Kind != lexer.TokenOpenBracket {
+		p.addError("expected '[' for table header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	p.reader.Read()
+	p.reader.read()
 
 	keys := p.parseKeyList()
 	if len(keys) == 0 {
@@ -178,14 +178,21 @@ func (p *Parser) parseTable(root *ast.TableNode) {
 	}
 
 	// consume ]
-	if p.reader.Peek().Kind != lexer.TokenCloseBracket {
-		p.addError("expected ']' to close table header", p.reader.Peek())
+	if p.reader.peek().Kind != lexer.TokenCloseBracket {
+		p.addError("expected ']' to close table header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	closeTok := p.reader.Read()
+	closeTok := p.reader.read()
 	loc := locationOf(startTok, closeTok)
 
+	// TOML spec: nothing may follow ']' on the same line except whitespace/comment.
+	next := p.reader.peek()
+	if next.Kind != lexer.TokenNewline && next.Kind != lexer.TokenEOF {
+		p.addError("unexpected token after table header; expected newline", next)
+		p.skipToRecovery()
+		return
+	}
 	p.skipNewlines()
 
 	// Build the table node.
@@ -193,12 +200,12 @@ func (p *Parser) parseTable(root *ast.TableNode) {
 
 	// Parse key-value pairs that belong to this table (until the next [ or EOF).
 	for {
-		tok := p.reader.Peek()
+		tok := p.reader.peek()
 		if tok.Kind == lexer.TokenEOF || tok.Kind == lexer.TokenOpenBracket {
 			break
 		}
 		if tok.Kind == lexer.TokenNewline {
-			p.reader.Read()
+			p.reader.read()
 			continue
 		}
 		kv := p.parseKeyValue()
@@ -212,21 +219,21 @@ func (p *Parser) parseTable(root *ast.TableNode) {
 }
 
 func (p *Parser) parseArrayOfTables(root *ast.TableNode) {
-	startTok := p.reader.Peek()
+	startTok := p.reader.peek()
 
 	// consume [[
-	if p.reader.Peek().Kind != lexer.TokenOpenBracket {
-		p.addError("expected '[' for array-of-tables header", p.reader.Peek())
+	if p.reader.peek().Kind != lexer.TokenOpenBracket {
+		p.addError("expected '[' for array-of-tables header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	p.reader.Read()
-	if p.reader.Peek().Kind != lexer.TokenOpenBracket {
-		p.addError("expected second '[' for array-of-tables header", p.reader.Peek())
+	p.reader.read()
+	if p.reader.peek().Kind != lexer.TokenOpenBracket {
+		p.addError("expected second '[' for array-of-tables header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	p.reader.Read()
+	p.reader.read()
 
 	keys := p.parseKeyList()
 	if len(keys) == 0 {
@@ -236,31 +243,38 @@ func (p *Parser) parseArrayOfTables(root *ast.TableNode) {
 	}
 
 	// consume ]]
-	if p.reader.Peek().Kind != lexer.TokenCloseBracket {
-		p.addError("expected ']' to close array-of-tables header", p.reader.Peek())
+	if p.reader.peek().Kind != lexer.TokenCloseBracket {
+		p.addError("expected ']' to close array-of-tables header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	p.reader.Read()
-	if p.reader.Peek().Kind != lexer.TokenCloseBracket {
-		p.addError("expected second ']' to close array-of-tables header", p.reader.Peek())
+	p.reader.read()
+	if p.reader.peek().Kind != lexer.TokenCloseBracket {
+		p.addError("expected second ']' to close array-of-tables header", p.reader.peek())
 		p.skipToRecovery()
 		return
 	}
-	closeTok := p.reader.Read()
+	closeTok := p.reader.read()
 	loc := locationOf(startTok, closeTok)
 
+	// TOML spec: nothing may follow ']]' on the same line except whitespace/comment.
+	next := p.reader.peek()
+	if next.Kind != lexer.TokenNewline && next.Kind != lexer.TokenEOF {
+		p.addError("unexpected token after array-of-tables header; expected newline", next)
+		p.skipToRecovery()
+		return
+	}
 	p.skipNewlines()
 
 	// Build an anonymous table for the entries in this [[...]] block.
 	anonTable := ast.NewTableNode(keys[len(keys)-1], loc)
 	for {
-		tok := p.reader.Peek()
+		tok := p.reader.peek()
 		if tok.Kind == lexer.TokenEOF || tok.Kind == lexer.TokenOpenBracket {
 			break
 		}
 		if tok.Kind == lexer.TokenNewline {
-			p.reader.Read()
+			p.reader.read()
 			continue
 		}
 		kv := p.parseKeyValue()
@@ -274,7 +288,7 @@ func (p *Parser) parseArrayOfTables(root *ast.TableNode) {
 }
 
 func (p *Parser) parseKeyValue() *ast.KeyValueNode {
-	startTok := p.reader.Peek()
+	startTok := p.reader.peek()
 
 	keys := p.parseKeyList()
 	if len(keys) == 0 {
@@ -284,12 +298,12 @@ func (p *Parser) parseKeyValue() *ast.KeyValueNode {
 	}
 
 	// consume =
-	if p.reader.Peek().Kind != lexer.TokenEqual {
-		p.addError("expected '=' after key", p.reader.Peek())
+	if p.reader.peek().Kind != lexer.TokenEqual {
+		p.addError("expected '=' after key", p.reader.peek())
 		p.skipToRecovery()
 		return nil
 	}
-	p.reader.Read()
+	p.reader.read()
 
 	val := p.parseValue()
 	if val == nil {
@@ -297,10 +311,19 @@ func (p *Parser) parseKeyValue() *ast.KeyValueNode {
 		return nil
 	}
 
-	// Consume trailing newline (if present) — not inside inline table.
-	tok := p.reader.Peek()
-	if tok.Kind == lexer.TokenNewline {
-		p.reader.Read()
+	// Validate statement terminator.
+	// TokenNewline is consumed here; EOF, '[', ',', and '}' are left for the
+	// caller.  Anything else (e.g. a bare key on the same line) is an error.
+	tok := p.reader.peek()
+	switch tok.Kind {
+	case lexer.TokenNewline:
+		p.reader.read()
+	case lexer.TokenEOF, lexer.TokenOpenBracket, lexer.TokenComma, lexer.TokenCloseBrace:
+		// valid — leave for caller
+	default:
+		p.addError("expected newline or end of statement after value", tok)
+		p.skipToRecovery()
+		return nil
 	}
 
 	loc := ast.Location{
@@ -323,17 +346,17 @@ func (p *Parser) parseKeyValue() *ast.KeyValueNode {
 // parseKeyList reads one or more dot-separated key segments.
 // Returns a slice of key strings (never nil; may be empty on error).
 func (p *Parser) parseKeyList() []string {
-	first := p.parseSingleKeySegment()
-	if first == "" {
+	first, ok := p.parseSingleKeySegment()
+	if !ok {
 		return nil
 	}
 	keys := []string{first}
 
-	for p.reader.Peek().Kind == lexer.TokenDot {
-		p.reader.Read() // consume '.'
-		seg := p.parseSingleKeySegment()
-		if seg == "" {
-			p.addError("expected key segment after '.'", p.reader.Peek())
+	for p.reader.peek().Kind == lexer.TokenDot {
+		p.reader.read() // consume '.'
+		seg, ok := p.parseSingleKeySegment()
+		if !ok {
+			p.addError("expected key segment after '.'", p.reader.peek())
 			break
 		}
 		keys = append(keys, seg)
@@ -342,61 +365,63 @@ func (p *Parser) parseKeyList() []string {
 }
 
 // parseSingleKeySegment reads one key segment: identifier, quoted string, or boolean/number.
-func (p *Parser) parseSingleKeySegment() string {
-	tok := p.reader.Peek()
+// Returns (value, true) on success — including empty quoted keys — and ("", false) when no
+// valid key token is present.
+func (p *Parser) parseSingleKeySegment() (string, bool) {
+	tok := p.reader.peek()
 	switch tok.Kind {
 	case lexer.TokenIdentifier:
-		p.reader.Read()
-		return tok.Value
+		p.reader.read()
+		return tok.Value, true
 	case lexer.TokenTrue:
-		p.reader.Read()
-		return "true"
+		p.reader.read()
+		return "true", true
 	case lexer.TokenFalse:
-		p.reader.Read()
-		return "false"
+		p.reader.read()
+		return "false", true
 	case lexer.TokenDecimalInt, lexer.TokenDecimalFloat:
-		p.reader.Read()
-		return tok.Value
+		p.reader.read()
+		return tok.Value, true
 	case lexer.TokenDoubleQuote:
-		return p.parseBasicStringKey()
+		return p.parseBasicStringKey(), true
 	case lexer.TokenSingleQuote:
-		return p.parseLiteralStringKey()
+		return p.parseLiteralStringKey(), true
 	}
-	return ""
+	return "", false
 }
 
 // parseBasicStringKey reads "quoted key" and returns the unquoted string.
 func (p *Parser) parseBasicStringKey() string {
-	p.reader.Read() // consume opening "
+	p.reader.read() // consume opening "
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
-	if p.reader.Peek().Kind == lexer.TokenDoubleQuote {
-		p.reader.Read() // consume closing "
+	if p.reader.peek().Kind == lexer.TokenDoubleQuote {
+		p.reader.read() // consume closing "
 	}
 	return content
 }
 
 // parseLiteralStringKey reads 'quoted key' and returns the string.
 func (p *Parser) parseLiteralStringKey() string {
-	p.reader.Read() // consume opening '
+	p.reader.read() // consume opening '
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
-	if p.reader.Peek().Kind == lexer.TokenSingleQuote {
-		p.reader.Read() // consume closing '
+	if p.reader.peek().Kind == lexer.TokenSingleQuote {
+		p.reader.read() // consume closing '
 	}
 	return content
 }
 
 func (p *Parser) parseValue() ast.ValueNode {
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	switch tok.Kind {
 	case lexer.TokenDoubleQuote:
 		return p.parseBasicString()
@@ -407,10 +432,10 @@ func (p *Parser) parseValue() ast.ValueNode {
 	case lexer.TokenTripleSingleQuote:
 		return p.parseMultilineLiteralString()
 	case lexer.TokenTrue:
-		p.reader.Read()
+		p.reader.read()
 		return ast.NewBoolValueNode(true, singleLoc(tok))
 	case lexer.TokenFalse:
-		p.reader.Read()
+		p.reader.read()
 		return ast.NewBoolValueNode(false, singleLoc(tok))
 	case lexer.TokenDecimalInt, lexer.TokenDecimalFloat,
 		lexer.TokenHexInt, lexer.TokenOctInt, lexer.TokenBinaryInt,
@@ -428,16 +453,16 @@ func (p *Parser) parseValue() ast.ValueNode {
 }
 
 func (p *Parser) parseBasicString() ast.ValueNode {
-	openTok := p.reader.Read() // consume "
+	openTok := p.reader.read() // consume "
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenDoubleQuote {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("unterminated basic string", openTok)
 	}
@@ -447,19 +472,19 @@ func (p *Parser) parseBasicString() ast.ValueNode {
 
 func (p *Parser) parseMultilineBasicString() ast.ValueNode {
 	// TODO: TOML-P2 — full multiline string semantics (first-newline trim, backslash continuation)
-	openTok := p.reader.Read() // consume """
+	openTok := p.reader.read() // consume """
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
 	// Trim leading newline as per TOML spec for multiline strings.
 	content = strings.TrimPrefix(content, "\n")
 	content = strings.TrimPrefix(content, "\r\n")
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenTripleDoubleQuote {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("unterminated multiline basic string", openTok)
 	}
@@ -468,16 +493,16 @@ func (p *Parser) parseMultilineBasicString() ast.ValueNode {
 }
 
 func (p *Parser) parseLiteralString() ast.ValueNode {
-	openTok := p.reader.Read() // consume '
+	openTok := p.reader.read() // consume '
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenSingleQuote {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("unterminated literal string", openTok)
 	}
@@ -487,18 +512,18 @@ func (p *Parser) parseLiteralString() ast.ValueNode {
 
 func (p *Parser) parseMultilineLiteralString() ast.ValueNode {
 	// TODO: TOML-P2 — full multiline literal string semantics
-	openTok := p.reader.Read() // consume '''
+	openTok := p.reader.read() // consume '''
 	var content string
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == lexer.TokenIdentifier {
 		content = tok.Value
-		p.reader.Read()
+		p.reader.read()
 	}
 	content = strings.TrimPrefix(content, "\n")
 	content = strings.TrimPrefix(content, "\r\n")
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenTripleSingleQuote {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("unterminated multiline literal string", openTok)
 	}
@@ -508,20 +533,20 @@ func (p *Parser) parseMultilineLiteralString() ast.ValueNode {
 
 func (p *Parser) parseNumericValue() ast.ValueNode {
 	sign := ""
-	startTok := p.reader.Peek()
+	startTok := p.reader.peek()
 
 	if startTok.Kind == lexer.TokenPlus || startTok.Kind == lexer.TokenMinus {
-		p.reader.Read()
+		p.reader.read()
 		if startTok.Kind == lexer.TokenMinus {
 			sign = "-"
 		}
 	}
 
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 
 	switch tok.Kind {
 	case lexer.TokenDecimalInt:
-		p.reader.Read()
+		p.reader.read()
 		raw := strings.ReplaceAll(sign+tok.Value, "_", "")
 		val, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
@@ -531,7 +556,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		return ast.NewIntValueNode(val, locationOf(startTok, tok))
 
 	case lexer.TokenDecimalFloat:
-		p.reader.Read()
+		p.reader.read()
 		raw := strings.ReplaceAll(sign+tok.Value, "_", "")
 		val, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
@@ -542,7 +567,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 
 	case lexer.TokenHexInt:
 		// TODO: TOML-P2 — hex integers (rare in Ballerina.toml)
-		p.reader.Read()
+		p.reader.read()
 		raw := strings.ReplaceAll(tok.Value, "_", "")
 		raw = strings.TrimPrefix(strings.TrimPrefix(raw, "0x"), "0X")
 		val, err := strconv.ParseInt(raw, 16, 64)
@@ -554,7 +579,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 
 	case lexer.TokenOctInt:
 		// TODO: TOML-P2 — octal integers
-		p.reader.Read()
+		p.reader.read()
 		raw := strings.ReplaceAll(tok.Value, "_", "")
 		raw = strings.TrimPrefix(strings.TrimPrefix(raw, "0o"), "0O")
 		val, err := strconv.ParseInt(raw, 8, 64)
@@ -566,7 +591,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 
 	case lexer.TokenBinaryInt:
 		// TODO: TOML-P2 — binary integers
-		p.reader.Read()
+		p.reader.read()
 		raw := strings.ReplaceAll(tok.Value, "_", "")
 		raw = strings.TrimPrefix(strings.TrimPrefix(raw, "0b"), "0B")
 		val, err := strconv.ParseInt(raw, 2, 64)
@@ -578,7 +603,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 
 	case lexer.TokenInf:
 		// TODO: TOML-P2 — special floats
-		p.reader.Read()
+		p.reader.read()
 		if sign == "-" {
 			return ast.NewFloatValueNode(negInf(), locationOf(startTok, tok))
 		}
@@ -586,7 +611,7 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 
 	case lexer.TokenNan:
 		// TODO: TOML-P2 — special floats
-		p.reader.Read()
+		p.reader.read()
 		return ast.NewFloatValueNode(nanVal(), locationOf(startTok, tok))
 
 	default:
@@ -600,15 +625,15 @@ func negInf() float64 { return math.Inf(-1) }
 func nanVal() float64 { return math.NaN() }
 
 func (p *Parser) parseArray() ast.ValueNode {
-	openTok := p.reader.Read() // consume [
+	openTok := p.reader.read() // consume [
 	var elements []ast.ValueNode
 
 	for {
 		// Skip newlines inside arrays.
-		for p.reader.Peek().Kind == lexer.TokenNewline {
-			p.reader.Read()
+		for p.reader.peek().Kind == lexer.TokenNewline {
+			p.reader.read()
 		}
-		tok := p.reader.Peek()
+		tok := p.reader.peek()
 		if tok.Kind == lexer.TokenCloseBracket || tok.Kind == lexer.TokenEOF {
 			break
 		}
@@ -617,19 +642,19 @@ func (p *Parser) parseArray() ast.ValueNode {
 			elements = append(elements, val)
 		}
 		// Skip newlines after value.
-		for p.reader.Peek().Kind == lexer.TokenNewline {
-			p.reader.Read()
+		for p.reader.peek().Kind == lexer.TokenNewline {
+			p.reader.read()
 		}
-		if p.reader.Peek().Kind == lexer.TokenComma {
-			p.reader.Read() // consume comma
+		if p.reader.peek().Kind == lexer.TokenComma {
+			p.reader.read() // consume comma
 		} else {
 			break
 		}
 	}
 
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenCloseBracket {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("expected ']' to close array", openTok)
 	}
@@ -638,10 +663,10 @@ func (p *Parser) parseArray() ast.ValueNode {
 }
 
 func (p *Parser) parseInlineTable() ast.ValueNode {
-	openTok := p.reader.Read() // consume {
+	openTok := p.reader.read() // consume {
 	node := ast.NewInlineTableValueNode(singleLoc(openTok))
 
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind != lexer.TokenCloseBrace {
 		// Parse first key-value pair.
 		kv := p.parseKeyValue()
@@ -649,9 +674,9 @@ func (p *Parser) parseInlineTable() ast.ValueNode {
 			p.addChildKeyValueToInlineTable(node, kv)
 		}
 		// Parse remaining pairs separated by commas.
-		for p.reader.Peek().Kind == lexer.TokenComma {
-			p.reader.Read() // consume comma
-			if p.reader.Peek().Kind == lexer.TokenCloseBrace {
+		for p.reader.peek().Kind == lexer.TokenComma {
+			p.reader.read() // consume comma
+			if p.reader.peek().Kind == lexer.TokenCloseBrace {
 				break
 			}
 			kv = p.parseKeyValue()
@@ -661,9 +686,9 @@ func (p *Parser) parseInlineTable() ast.ValueNode {
 		}
 	}
 
-	closeTok := p.reader.Peek()
+	closeTok := p.reader.peek()
 	if closeTok.Kind == lexer.TokenCloseBrace {
-		closeTok = p.reader.Read()
+		closeTok = p.reader.read()
 	} else {
 		p.addError("expected '}' to close inline table", openTok)
 	}
@@ -707,7 +732,10 @@ func (p *Parser) addChildKeyValueToTable(parent *ast.TableNode, kv *ast.KeyValue
 
 // addChildTableToParent registers a parsed [table] node into the document root.
 func (p *Parser) addChildTableToParent(root *ast.TableNode, keys []string, tableNode *ast.TableNode) {
-	parent := p.getOrCreateParentTable(root, keys)
+	parent, ok := p.getOrCreateParentTable(root, keys, tableNode.Loc())
+	if !ok {
+		return
+	}
 	key := keys[len(keys)-1]
 
 	existing, ok := parent.Entries()[key]
@@ -728,7 +756,10 @@ func (p *Parser) addChildTableToParent(root *ast.TableNode, keys []string, table
 
 // addChildTableArrayToParent registers a [[table-array]] entry.
 func (p *Parser) addChildTableArrayToParent(root *ast.TableNode, keys []string, anonTable *ast.TableNode) {
-	parent := p.getOrCreateParentTable(root, keys)
+	parent, ok := p.getOrCreateParentTable(root, keys, anonTable.Loc())
+	if !ok {
+		return
+	}
 	key := keys[len(keys)-1]
 
 	existing, ok := parent.Entries()[key]
@@ -748,8 +779,9 @@ func (p *Parser) addChildTableArrayToParent(root *ast.TableNode, keys []string, 
 }
 
 // getOrCreateParentTable walks (or creates) intermediate tables for all
-// key segments except the last one.
-func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string) *ast.TableNode {
+// key segments except the last one.  Returns (node, false) and emits a
+// diagnostic (pointing at headerLoc) when an intermediate key is a scalar.
+func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, headerLoc ast.Location) (*ast.TableNode, bool) {
 	current := root
 	for i := 0; i < len(keys)-1; i++ {
 		seg := keys[i]
@@ -766,16 +798,16 @@ func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string) *ast
 			default:
 				p.addErrorAt(
 					fmt.Sprintf("key %q is not a table", seg),
-					root.Loc().StartLine, root.Loc().StartColumn)
-				return current
+					headerLoc.StartLine, headerLoc.StartColumn)
+				return nil, false
 			}
 		} else {
-			newTable := ast.NewGeneratedTableNode(seg, root.Loc())
+			newTable := ast.NewGeneratedTableNode(seg, headerLoc)
 			current.AddEntry(seg, newTable)
 			current = newTable
 		}
 	}
-	return current
+	return current, true
 }
 
 // insertIntoTable adds a node to a table, reporting a diagnostic on duplicate keys.

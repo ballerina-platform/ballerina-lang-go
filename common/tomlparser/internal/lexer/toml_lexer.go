@@ -92,15 +92,6 @@ func (l *Lexer) StartMode(m ParserMode) {
 	l.mode = m
 }
 
-// SwitchMode replaces the top of the stack with m (pop + push).
-func (l *Lexer) SwitchMode(m ParserMode) {
-	if len(l.stack) > 0 {
-		l.stack = l.stack[:len(l.stack)-1]
-	}
-	l.stack = append(l.stack, m)
-	l.mode = m
-}
-
 // EndMode pops the mode stack and restores the previous mode.
 func (l *Lexer) EndMode() {
 	if len(l.stack) == 0 {
@@ -109,11 +100,6 @@ func (l *Lexer) EndMode() {
 	}
 	l.mode = l.stack[len(l.stack)-1]
 	l.stack = l.stack[:len(l.stack)-1]
-}
-
-// CurrentMode returns the active parser mode.
-func (l *Lexer) CurrentMode() ParserMode {
-	return l.mode
 }
 
 // NextToken returns the next token from the input.
@@ -584,30 +570,50 @@ func (l *Lexer) processDecimalFloatLiteral(line, col int) Token {
 // processHexLiteral reads a 0x... hex integer.
 func (l *Lexer) processHexLiteral(line, col int) Token {
 	l.reader.Advance() // consume 'x' or 'X'
+	digitSeen := false
 	for isHexDigit(l.reader.Peek()) || l.reader.Peek() == '_' {
+		if isHexDigit(l.reader.Peek()) {
+			digitSeen = true
+		}
 		l.reader.Advance()
 	}
 	lexeme := l.reader.GetMarkedChars()
+	if !digitSeen {
+		l.addError("missing digit after base prefix", line, col)
+		return Token{Kind: TokenInvalid, Value: lexeme, Line: line, Column: col}
+	}
 	return Token{Kind: TokenHexInt, Value: lexeme, Line: line, Column: col}
 }
 
 // processOctalLiteral reads a 0o... octal integer.
 func (l *Lexer) processOctalLiteral(line, col int) Token {
 	l.reader.Advance() // consume 'o' or 'O'
+	digitSeen := false
 	for isOctalDigit(l.reader.Peek()) {
+		digitSeen = true
 		l.reader.Advance()
 	}
 	lexeme := l.reader.GetMarkedChars()
+	if !digitSeen {
+		l.addError("missing digit after base prefix", line, col)
+		return Token{Kind: TokenInvalid, Value: lexeme, Line: line, Column: col}
+	}
 	return Token{Kind: TokenOctInt, Value: lexeme, Line: line, Column: col}
 }
 
 // processBinaryLiteral reads a 0b... binary integer.
 func (l *Lexer) processBinaryLiteral(line, col int) Token {
 	l.reader.Advance() // consume 'b' or 'B'
+	digitSeen := false
 	for isBinaryDigit(l.reader.Peek()) {
+		digitSeen = true
 		l.reader.Advance()
 	}
 	lexeme := l.reader.GetMarkedChars()
+	if !digitSeen {
+		l.addError("missing digit after base prefix", line, col)
+		return Token{Kind: TokenInvalid, Value: lexeme, Line: line, Column: col}
+	}
 	return Token{Kind: TokenBinaryInt, Value: lexeme, Line: line, Column: col}
 }
 

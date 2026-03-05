@@ -295,15 +295,22 @@ func remapForTarget(m map[string]any, targetType reflect.Type) map[string]any {
 	}
 
 	// Build a lookup: toml-key → field descriptor.
+	// excluded holds the lowercased field names of toml:"-" fields so their
+	// TOML keys are dropped before reaching json.Unmarshal.
 	type fieldDesc struct {
 		jsonName  string
 		fieldType reflect.Type
 	}
 	lookup := make(map[string]fieldDesc, targetType.NumField())
+	excluded := make(map[string]bool)
 	for i := 0; i < targetType.NumField(); i++ {
 		f := targetType.Field(i)
+		if tag, ok := f.Tag.Lookup("toml"); ok && tag == "-" {
+			excluded[strings.ToLower(f.Name)] = true
+			continue
+		}
 		tomlKey := strings.ToLower(f.Name)
-		if tag, ok := f.Tag.Lookup("toml"); ok && tag != "" && tag != "-" {
+		if tag, ok := f.Tag.Lookup("toml"); ok && tag != "" {
 			tomlKey = strings.Split(tag, ",")[0]
 		}
 		jsonName := f.Name
@@ -311,8 +318,15 @@ func remapForTarget(m map[string]any, targetType reflect.Type) map[string]any {
 			jsonName = strings.Split(tag, ",")[0]
 		}
 		lookup[tomlKey] = fieldDesc{jsonName: jsonName, fieldType: f.Type}
-		// Also store by lowercased field name for case-insensitive matching.
-		lookup[strings.ToLower(f.Name)] = fieldDesc{jsonName: jsonName, fieldType: f.Type}
+		// Also store by lowercased field name for case-insensitive matching,
+		// but only if that slot is not already claimed by a tag from an earlier
+		// field — otherwise the name-based fallback would silently overwrite a
+		// deliberate tag-based mapping.
+		if lowerName := strings.ToLower(f.Name); lowerName != tomlKey {
+			if _, exists := lookup[lowerName]; !exists {
+				lookup[lowerName] = fieldDesc{jsonName: jsonName, fieldType: f.Type}
+			}
+		}
 	}
 
 	out := make(map[string]any, len(m))
@@ -324,7 +338,11 @@ func remapForTarget(m map[string]any, targetType reflect.Type) map[string]any {
 			desc, ok = lookup[kl]
 		}
 		if !ok {
-			// No matching field — keep original key (json.Unmarshal will handle it).
+			// Drop keys that map to a toml:"-" field; otherwise pass through
+			// so json.Unmarshal can handle unknown keys.
+			if excluded[strings.ToLower(k)] {
+				continue
+			}
 			out[k] = normaliseValue(v)
 			continue
 		}

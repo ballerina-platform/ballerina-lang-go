@@ -1,0 +1,7 @@
+# Dotted key sets fruit.color; explicit [fruit] also sets color.
+# Per TOML spec this is a duplicate-key error.
+# The explicit value must not be silently overwritten by the generated one.
+fruit.color = "from-dot"
+
+[fruit]
+color = "explicit"

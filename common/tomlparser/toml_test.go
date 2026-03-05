@@ -271,6 +271,57 @@ func TestToMap(t *testing.T) {
 	}
 }
 
+// TestToTagClobber checks that a name-based fallback entry does not overwrite a
+// tag-based entry written by an earlier field.
+//
+// Struct field Foo has toml:"bar", so lookup["bar"]=descFoo and lookup["foo"]=descFoo.
+// Struct field Bar has toml:"baz", so its name fallback would write lookup["bar"]=descBar,
+// clobbering descFoo.  After the fix the fallback write is skipped when the slot
+// is already occupied, preserving lookup["bar"]=descFoo.
+// TestToTagDashSkip verifies that a field tagged toml:"-" is never populated
+// from TOML input — neither by its lowercased name nor any other key.
+func TestToTagDashSkip(t *testing.T) {
+	doc, err := Read(os.DirFS("testdata"), "tag-dash-skip.toml")
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+
+	type Config struct {
+		Secret string `toml:"-"`
+		Name   string
+	}
+	var cfg Config
+	doc.To(&cfg)
+
+	if cfg.Secret != "" {
+		t.Errorf("Secret = %q, want \"\" (toml:\"-\" field must not be populated)", cfg.Secret)
+	}
+	if cfg.Name != "alice" {
+		t.Errorf("Name = %q, want \"alice\"", cfg.Name)
+	}
+}
+
+func TestToTagClobber(t *testing.T) {
+	doc, err := ReadString("bar = \"from_bar\"\nbaz = \"from_baz\"\n")
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+
+	type Config struct {
+		Foo string `toml:"bar"` // TOML key "bar" → field Foo
+		Bar string `toml:"baz"` // TOML key "baz" → field Bar; name fallback "bar" must not clobber Foo's tag
+	}
+	var cfg Config
+	doc.To(&cfg)
+
+	if cfg.Foo != "from_bar" {
+		t.Errorf("Foo = %q, want \"from_bar\" (tag-based entry was clobbered by name fallback)", cfg.Foo)
+	}
+	if cfg.Bar != "from_baz" {
+		t.Errorf("Bar = %q, want \"from_baz\"", cfg.Bar)
+	}
+}
+
 func TestTo(t *testing.T) {
 	toml, err := ReadString(sampleToml)
 	if err != nil {
@@ -391,7 +442,7 @@ func TestNonExistentKey(t *testing.T) {
 }
 
 // Consolidated essential location/diagnostics tests
-func TestErrorLocation_DuplicateKeys(t *testing.T) {
+func TestDuplicateKeys(t *testing.T) {
 	invalidToml := `
 title = "Test"
 title = "Duplicate"
@@ -537,11 +588,17 @@ func TestBallerinaToml_PackageModules(t *testing.T) {
 		}
 	})
 	t.Run("modules[1]", func(t *testing.T) {
-		name, _ := modules[1].GetString("name")
+		name, ok := modules[1].GetString("name")
+		if !ok {
+			t.Fatal("modules[1].name not found")
+		}
 		if name != "my_service.db" {
 			t.Errorf("got %q, want my_service.db", name)
 		}
-		export, _ := modules[1].GetBool("export")
+		export, ok := modules[1].GetBool("export")
+		if !ok {
+			t.Fatal("modules[1].export not found")
+		}
 		if export {
 			t.Error("modules[1].export should be false")
 		}
@@ -628,7 +685,7 @@ func TestBallerinaToml_Dependencies(t *testing.T) {
 	})
 }
 
-func TestErrorLocation_SyntaxError(t *testing.T) {
+func TestSyntaxError(t *testing.T) {
 	invalidToml := `
 [section
 key = "value"
@@ -656,6 +713,128 @@ key = "value"
 	}
 }
 
+// TestGeneratedTableMerge verifies that a dotted key (e.g. fruit.color = "yellow")
+// which implicitly creates a table is correctly merged when a later explicit
+// [fruit] section defines the same table; entries from the generated table must
+// be carried into the explicit one.
+func TestGeneratedTableMerge(t *testing.T) {
+	doc, err := Read(os.DirFS("testdata"), "generated-table-merge.toml")
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if got, ok := doc.GetString("fruit.color"); !ok || got != "yellow" {
+		t.Errorf("fruit.color = %q, want \"yellow\"", got)
+	}
+	if got, ok := doc.GetString("fruit.flavor"); !ok || got != "banana" {
+		t.Errorf("fruit.flavor = %q, want \"banana\"", got)
+	}
+}
+
+// TestGeneratedTableMergeConflict — when a dotted key and an explicit [table]
+// section both define the same sub-key, the explicit value must not be silently
+// overwritten by the generated (implicit) entry during the merge.
+func TestGeneratedTableMergeConflict(t *testing.T) {
+	doc, err := Read(os.DirFS("testdata"), "generated-table-merge-conflict.toml")
+	if doc == nil {
+		t.Fatalf("expected partial document even on error: %v", err)
+	}
+	if got, ok := doc.GetString("fruit.color"); !ok || got != "explicit" {
+		t.Errorf("fruit.color = %q, want \"explicit\" (explicit must not be overwritten by generated)", got)
+	}
+}
+
+// TestUnderscoreInOctalBinary verifies that underscore separators are accepted
+// inside octal and binary integer literals (e.g. 0o7_5_5, 0b1_0101_1100),
+// matching the behaviour already supported for hex literals.
+func TestUnderscoreInOctalBinary(t *testing.T) {
+	t.Run("octal", func(t *testing.T) {
+		doc, err := Read(os.DirFS("testdata"), "syntax-octal-underscore.toml")
+		if err != nil {
+			t.Fatalf("unexpected parse error: %v", err)
+		}
+		if v, ok := doc.GetInt("val"); !ok || v != 493 { // 0o755 = 493
+			t.Errorf("val = %d, want 493 (0o755)", v)
+		}
+	})
+	t.Run("binary", func(t *testing.T) {
+		doc, err := Read(os.DirFS("testdata"), "syntax-binary-underscore.toml")
+		if err != nil {
+			t.Fatalf("unexpected parse error: %v", err)
+		}
+		if v, ok := doc.GetInt("val"); !ok || v != 348 { // 0b101011100 = 348
+			t.Errorf("val = %d, want 348 (0b101011100)", v)
+		}
+	})
+}
+
+// TestBarePrefixInvalid verifies that bare 0x/0o/0b with no subsequent digit
+// are rejected at the lexer level per the TOML spec.
+func TestBarePrefixInvalid(t *testing.T) {
+	cases := []string{
+		"neg-bare-hex-prefix.toml",
+		"neg-bare-octal-prefix.toml",
+		"neg-bare-binary-prefix.toml",
+		"neg-hex-underscore-only.toml",
+		"neg-octal-underscore-only.toml",
+		"neg-binary-underscore-only.toml",
+	}
+	for _, file := range cases {
+		t.Run(file, func(t *testing.T) {
+			_, err := Read(os.DirFS("testdata"), file)
+			if err == nil {
+				t.Errorf("expected parse error for %s, got nil", file)
+			}
+		})
+	}
+}
+
+// TestTableHeaderSameLine verifies that a key-value pair on the same line as a
+// table header is rejected; TOML requires a newline after ']'.
+func TestTableHeaderSameLine(t *testing.T) {
+	_, err := Read(os.DirFS("testdata"), "neg-table-header-same-line.toml")
+	if err == nil {
+		t.Error("expected parse error for key-value on same line as table header, got nil")
+	}
+}
+
+// TestEmptyQuotedKey verifies that an empty quoted key ("") is accepted per
+// the TOML spec and its value is accessible under the empty-string key.
+func TestEmptyQuotedKey(t *testing.T) {
+	doc, err := Read(os.DirFS("testdata"), "empty-quoted-key.toml")
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if v, ok := doc.GetString(""); !ok || v != "empty basic" {
+		t.Errorf(`[""] = %q, want "empty basic"`, v)
+	}
+}
+
+// TestScalarAsTableParent verifies that using a scalar key as an intermediate
+// table parent (e.g. a = "scalar" then [a.b]) is rejected and does not mutate
+// the AST — neither "a" must be overwritten nor must "b" appear at root level.
+func TestScalarAsTableParent(t *testing.T) {
+	doc, err := Read(os.DirFS("testdata"), "neg-scalar-as-table-parent.toml")
+	if err == nil {
+		t.Fatal("expected parse error when scalar key is used as table parent, got nil")
+	}
+	if v, ok := doc.GetString("a"); !ok || v != "scalar" {
+		t.Errorf(`a = %q, want "scalar" (original scalar must survive)`, v)
+	}
+	// "b" must NOT have been registered at root level due to the failed traversal.
+	if _, ok := doc.Get("b"); ok {
+		t.Error(`"b" must not appear at root level after a failed parent traversal`)
+	}
+}
+
+// TestTwoKVSameLine verifies that two key-value pairs on the same line are
+// rejected; TOML requires each key-value pair to end with a newline.
+func TestTwoKVSameLine(t *testing.T) {
+	_, err := Read(os.DirFS("testdata"), "neg-two-kv-same-line.toml")
+	if err == nil {
+		t.Error("expected parse error for two key-value pairs on same line, got nil")
+	}
+}
+
 // TestErrorRecoveryStopsAtNewline verifies that a syntax error on one line
 // does not swallow subsequent valid lines. Recovery must stop at the newline
 // boundary so that the next valid key-value pair is still parsed.
@@ -671,10 +850,11 @@ func TestErrorRecoveryStopsAtNewline(t *testing.T) {
 	if tomlDoc == nil {
 		t.Fatal("expected partial Toml even on parse error")
 	}
-	_, ok := tomlDoc.Get("key")
+	val, ok := tomlDoc.Get("key")
 	if !ok {
 		t.Error("key = \"value\" was swallowed by overshoot recovery; " +
 			"skipToRecovery must stop at TokenNewline")
+	} else if s, ok2 := val.(string); !ok2 || s != "value" {
+		t.Errorf("key = %q (%T), want string \"value\"", val, val)
 	}
 }
-

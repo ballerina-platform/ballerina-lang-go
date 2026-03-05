@@ -124,7 +124,7 @@ func TestJava_SyntaxValues(t *testing.T) {
 
 	// Integers — basic
 	expectInt(t, doc, "key2", 123)
-	expectInt(t, doc, "int1", 99)   // +99
+	expectInt(t, doc, "int1", 99) // +99
 	expectInt(t, doc, "int2", 42)
 	expectInt(t, doc, "int3", 0)
 	expectInt(t, doc, "int4", -17)
@@ -185,7 +185,7 @@ func TestJava_SyntaxArrays(t *testing.T) {
 		t.Fatal("integers array not found")
 	}
 	if len(integers) != 3 {
-		t.Errorf("integers: len=%d, want 3", len(integers))
+		t.Fatalf("integers: len=%d, want 3", len(integers))
 	}
 	if v, _ := integers[0].(int64); v != 1 {
 		t.Errorf("integers[0] = %v, want 1", integers[0])
@@ -196,6 +196,9 @@ func TestJava_SyntaxArrays(t *testing.T) {
 		t.Fatal("colors array not found")
 	}
 	wantColors := []string{"red", "yellow", "green"}
+	if len(colors) != len(wantColors) {
+		t.Fatalf("colors: len=%d, want %d", len(colors), len(wantColors))
+	}
 	for i, want := range wantColors {
 		if got, _ := colors[i].(string); got != want {
 			t.Errorf("colors[%d] = %q, want %q", i, got, want)
@@ -207,7 +210,7 @@ func TestJava_SyntaxArrays(t *testing.T) {
 		t.Fatal("nested_array not found")
 	}
 	if len(nested) != 4 {
-		t.Errorf("nested_array: len=%d, want 4", len(nested))
+		t.Fatalf("nested_array: len=%d, want 4", len(nested))
 	}
 	// nested_array = [1, 2, [5,6], 3] — third element is a nested array
 	inner, ok := nested[2].([]any)
@@ -294,7 +297,7 @@ func TestJava_SyntaxArrayOfTables(t *testing.T) {
 		t.Fatal("products.hello array of tables not found")
 	}
 	if len(productHellos) != 3 {
-		t.Errorf("products.hello: len=%d, want 3", len(productHellos))
+		t.Fatalf("products.hello: len=%d, want 3", len(productHellos))
 	}
 	if name, _ := productHellos[0].GetString("name"); name != "Hammer" {
 		t.Errorf("products.hello[0].name = %q, want \"Hammer\"", name)
@@ -312,7 +315,7 @@ func TestJava_SyntaxArrayOfTables(t *testing.T) {
 		t.Fatal("fruits array of tables not found")
 	}
 	if len(fruits) != 2 {
-		t.Errorf("fruits: len=%d, want 2", len(fruits))
+		t.Fatalf("fruits: len=%d, want 2", len(fruits))
 	}
 	if name, _ := fruits[0].GetString("name"); name != "apple" {
 		t.Errorf("fruits[0].name = %q, want \"apple\"", name)
@@ -353,7 +356,7 @@ func TestJava_ObjectComplex(t *testing.T) {
 		t.Fatal("tableArr not found")
 	}
 	if len(tableArr) != 3 {
-		t.Errorf("tableArr: len=%d, want 3", len(tableArr))
+		t.Fatalf("tableArr: len=%d, want 3", len(tableArr))
 	}
 	if v, _ := tableArr[0].GetString("tableKv"); v != "tableArr kv first" {
 		t.Errorf("tableArr[0].tableKv = %q, want \"tableArr kv first\"", v)
@@ -373,7 +376,7 @@ func TestJava_ModifierDependencies(t *testing.T) {
 		t.Fatal("dependency array of tables not found")
 	}
 	if len(deps) != 2 {
-		t.Errorf("dependency: len=%d, want 2", len(deps))
+		t.Fatalf("dependency: len=%d, want 2", len(deps))
 	}
 
 	if org, _ := deps[0].GetString("org"); org != "wso2" {
@@ -431,7 +434,7 @@ func TestJava_NegDuplicateKey(t *testing.T) {
 // key1 and key2 must survive error recovery.
 func TestJava_NegMultiErrors(t *testing.T) {
 	doc := mustLoadWithError(t, "neg-multi-errors.toml")
-	expectDiagCount(t, doc, 1)
+	expectDiagCount(t, doc, 3)
 	expectInt(t, doc, "key1", 12)
 	expectInt(t, doc, "key2", 33)
 }

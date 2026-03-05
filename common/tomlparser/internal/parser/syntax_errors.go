@@ -60,27 +60,27 @@ func (p *Parser) addErrorAt(msg string, line, col int) {
 // an error is recorded and the bad token is consumed so parsing can proceed.
 // Returns the consumed token (may be of the wrong kind if recovery occurred).
 func (p *Parser) expectToken(kind lexer.TokenKind) lexer.Token {
-	tok := p.reader.Peek()
+	tok := p.reader.peek()
 	if tok.Kind == kind {
-		return p.reader.Read()
+		return p.reader.read()
 	}
 	p.addError(fmt.Sprintf("expected %v but got %v (%q)", tokenKindName(kind), tokenKindName(tok.Kind), tok.Value), tok)
 	// Consume the bad token for recovery.
-	return p.reader.Read()
+	return p.reader.read()
 }
 
 // skipToRecovery skips tokens until a safe re-synchronisation point.
 // Recovery points: EOF, newline, or open-bracket (start of next table header).
 func (p *Parser) skipToRecovery() {
 	for {
-		tok := p.reader.Peek()
+		tok := p.reader.peek()
 		switch tok.Kind {
 		case lexer.TokenEOF,
 			lexer.TokenNewline,
 			lexer.TokenOpenBracket:
 			return
 		}
-		p.reader.Read()
+		p.reader.read()
 	}
 }
 

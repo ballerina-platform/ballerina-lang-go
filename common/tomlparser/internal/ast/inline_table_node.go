@@ -55,9 +55,12 @@ func (n *InlineTableValueNode) SetLoc(loc Location) {
 }
 
 // NativeValue returns map[string]any.
+// Iterates over n.order (not the map directly) to match TableNode.ToMap's
+// established pattern and keep processing order deterministic.
 func (n *InlineTableValueNode) NativeValue() any {
 	m := make(map[string]any, len(n.entries))
-	for k, v := range n.entries {
+	for _, k := range n.order {
+		v := n.entries[k]
 		switch tv := v.(type) {
 		case *KeyValueNode:
 			m[k] = tv.NativeValue()

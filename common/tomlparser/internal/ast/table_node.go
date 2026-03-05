@@ -73,12 +73,14 @@ func (t *TableNode) ReplaceGeneratedTable(newTable *TableNode) {
 	if !ok || !existingTable.generated {
 		return
 	}
-	// Merge existing entries into the replacement table.
-	for k, v := range existingTable.entries {
+	// Merge generated entries into the replacement table.
+	// Only carry over keys that the explicit table has not already defined;
+	// an explicit entry must never be overwritten by a generated (implicit) one.
+	for _, k := range existingTable.order {
 		if _, exists := newTable.entries[k]; !exists {
 			newTable.order = append(newTable.order, k)
+			newTable.entries[k] = existingTable.entries[k]
 		}
-		newTable.entries[k] = v
 	}
 	t.entries[key] = newTable
 }
