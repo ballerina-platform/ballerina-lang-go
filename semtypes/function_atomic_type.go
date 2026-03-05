@@ -16,6 +16,8 @@
 
 package semtypes
 
+import "fmt"
+
 type FunctionAtomicType struct {
 	ParamType  SemType
 	RetType    SemType
@@ -52,6 +54,13 @@ func NewFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemTyp
 	this.Qualifiers = qualifiers
 	this.IsGeneric = isGeneric
 	return this
+}
+
+func (this *FunctionAtomicType) String() string {
+	if this.IsGeneric {
+		return fmt.Sprintf("(fn generic %s %s %s)", this.ParamType.String(), this.RetType.String(), this.Qualifiers.String())
+	}
+	return fmt.Sprintf("(fn %s %s %s)", this.ParamType.String(), this.RetType.String(), this.Qualifiers.String())
 }
 
 func (this *FunctionAtomicType) AtomKind() Kind {

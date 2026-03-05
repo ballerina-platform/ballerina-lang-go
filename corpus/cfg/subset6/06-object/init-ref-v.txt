@@ -1,0 +1,11 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (new ()))))
+    (expression-stmt
+      (invocation foo expr:
+        (simple-var-ref f) ()))
+  )
+)

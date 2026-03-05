@@ -134,6 +134,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printObjectField(t)
 	case *BMethodDecl:
 		p.printMethodDecl(t)
+	case *BLangClassDefinition:
+		p.printClassDefinition(t)
+	case *BLangNewExpression:
+		p.printNewExpression(t)
 	case *BLangFieldBaseAccess:
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
@@ -228,6 +232,9 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	}
 	for i := range node.TypeDefinitions {
 		p.printTypeDefinition(&node.TypeDefinitions[i])
+	}
+	for i := range node.ClassDefinitions {
+		p.printClassDefinition(&node.ClassDefinitions[i])
 	}
 	for i := range node.Functions {
 		p.printFunction(&node.Functions[i])
@@ -1084,6 +1091,56 @@ func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
+	p.startNode()
+	p.printString("class-definition")
+	p.printFlags(node.FlagSet)
+	p.printString(node.Name.Value)
+	p.indentLevel++
+	// Print fields
+	for _, field := range node.Fields {
+		p.PrintInner(field.(BLangNode))
+	}
+	// Print init function
+	if node.InitFunction != nil {
+		p.printFunction(node.InitFunction)
+	}
+	// Print methods sorted by name for determinism
+	methodNames := slices.SortedFunc(func(yield func(string) bool) {
+		for name := range node.Methods {
+			if !yield(name) {
+				return
+			}
+		}
+	}, cmp.Compare[string])
+	for _, name := range methodNames {
+		method := node.Methods[name]
+		p.printFunction(&method)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
+	p.startNode()
+	p.printString("new")
+	if node.UserDefinedType != nil {
+		p.indentLevel++
+		p.PrintInner(node.UserDefinedType)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.ArgsExprs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.ArgsExprs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
 	p.endNode()
 }
 

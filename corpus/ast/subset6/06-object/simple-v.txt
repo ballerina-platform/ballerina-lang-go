@@ -1,5 +1,6 @@
 (compilation-unit  regular-source
 (package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
   (type-definition Foo
     (object-type
       (field bar
@@ -9,4 +10,51 @@
           (value-type int))
         (param y
           (value-type int))) (
-        (value-type int))))))
+        (value-type int)))))
+  (class-definition Bar
+    (variable bar (type
+      (value-type int)) (expr
+      (literal 5)))
+    (variable baz (type
+      (value-type int)))
+    (function init (
+      (variable baz (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access baz
+            (simple-var-ref self))
+          (simple-var-ref baz))))
+    (function foo (
+      (variable a (type
+        (value-type int)))
+      (variable b (type
+        (value-type int)))) (
+      (value-type int))
+      (block-function-body
+        (return
+          (binary-expr +
+            (binary-expr +
+              (binary-expr +
+                (simple-var-ref a)
+                (simple-var-ref b))
+              (field-based-access bar
+                (simple-var-ref self)))
+            (field-based-access baz
+              (simple-var-ref self)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Foo)) (expr
+          (new
+            (user-defined-type Bar) (
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo expr:
+            (simple-var-ref f) (
+            (literal 10)
+            (literal 10)))))))))

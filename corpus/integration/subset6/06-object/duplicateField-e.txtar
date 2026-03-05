@@ -1,8 +1,8 @@
 -- stdout --
 -- stderr --
 error[SYNTAX_ERROR]: redeclared symbol 'foo'
- --> duplicateField-e.bal:3:5
-  |
-3 |     public int foo; // @error
-  |     ^^^^^^^^^^^^^^^
+  --> duplicateField-e.bal:19:5
+   |
+19 |     public int foo; // @error
+   |     ^^^^^^^^^^^^^^^
 

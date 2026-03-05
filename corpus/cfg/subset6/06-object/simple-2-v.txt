@@ -1,0 +1,15 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Bar)) (expr
+        (new (
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation foo expr:
+          (simple-var-ref f) (
+          (literal 10)
+          (literal 10))))))
+  )
+)

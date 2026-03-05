@@ -813,6 +813,14 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Name)
 		Walk(v, node.Expr.(BLangNode))
 
+	case *BLangNewExpression:
+		if node.UserDefinedType != nil {
+			Walk(v, node.UserDefinedType)
+		}
+		for _, arg := range node.ArgsExprs {
+			Walk(v, arg.(BLangNode))
+		}
+
 	default:
 		panic(fmt.Sprintf("unexpected node type %T", node))
 	}

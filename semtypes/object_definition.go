@@ -140,7 +140,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 		env,
 		[]Field{
 			FieldFrom("value", &FUNCTION, true, false),
-			new(MemberKindMethod).field(),
+			allMethodField(),
 			visibilityAll,
 		},
 		&NEVER)

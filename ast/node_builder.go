@@ -17,17 +17,16 @@
 package ast
 
 import (
-	"fmt"
-	"math"
-	"regexp"
-	"strconv"
-	"strings"
-
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/common"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
+	"math"
+	"regexp"
+	"strconv"
+	"strings"
 
 	balCommon "ballerina-lang-go/common"
 )
@@ -2667,11 +2666,28 @@ func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDesc
 }
 
 func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewExpressionNode *tree.ExplicitNewExpressionNode) BLangNode {
-	panic("TransformExplicitNewExpression unimplemented")
+	typeInit := &BLangNewExpression{}
+	typeInit.pos = getPosition(explicitNewExpressionNode)
+	typeInit.UserDefinedType = n.createTypeNode(explicitNewExpressionNode.TypeDescriptor()).(*BLangUserDefinedType)
+	if argList := explicitNewExpressionNode.ParenthesizedArgList(); argList != nil {
+		args := argList.Arguments()
+		for arg := range args.Iterator() {
+			typeInit.ArgsExprs = append(typeInit.ArgsExprs, n.createExpression(arg))
+		}
+	}
+	return typeInit
 }
 
 func (n *NodeBuilder) TransformImplicitNewExpression(implicitNewExpressionNode *tree.ImplicitNewExpressionNode) BLangNode {
-	panic("TransformImplicitNewExpression unimplemented")
+	typeInit := &BLangNewExpression{}
+	typeInit.pos = getPosition(implicitNewExpressionNode)
+	if argList := implicitNewExpressionNode.ParenthesizedArgList(); argList != nil {
+		args := argList.Arguments()
+		for arg := range args.Iterator() {
+			typeInit.ArgsExprs = append(typeInit.ArgsExprs, n.createExpression(arg))
+		}
+	}
+	return typeInit
 }
 
 func (n *NodeBuilder) TransformParenthesizedArgList(parenthesizedArgList *tree.ParenthesizedArgList) BLangNode {
@@ -3189,7 +3205,101 @@ func (n *NodeBuilder) TransformDoStatement(doStatementNode *tree.DoStatementNode
 }
 
 func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDefinitionNode) BLangNode {
-	panic("TransformClassDefinition unimplemented")
+	metadata := classDefinitionNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		panic("TransformClassDefinition: metadata not yet supported")
+	}
+
+	blangClass := NewBLangClassDefinition()
+	blangClass.pos = getPositionWithoutMetadata(classDefinitionNode)
+
+	// Set name
+	nameIdentifier := createIdentifierFromToken(getPosition(classDefinitionNode.ClassName()), classDefinitionNode.ClassName())
+	blangClass.Name = &nameIdentifier
+
+	// Handle visibility qualifier
+	if visQual := classDefinitionNode.VisibilityQualifier(); visQual != nil {
+		if visQual.Kind() == common.PUBLIC_KEYWORD {
+			blangClass.FlagSet.Add(model.Flag_PUBLIC)
+		}
+	}
+
+	// Handle class type qualifiers
+	n.setClassQualifiers(&blangClass, classDefinitionNode.ClassTypeQualifiers())
+
+	// Process members
+	members := classDefinitionNode.Members()
+	for i := 0; i < members.Size(); i++ {
+		member := members.Get(i)
+		switch member.Kind() {
+		case common.OBJECT_FIELD:
+			field := n.transformClassField(member.(*tree.ObjectFieldNode))
+			blangClass.AddField(field)
+		case common.FUNCTION_DEFINITION, common.OBJECT_METHOD_DEFINITION:
+			funcDef := member.(*tree.FunctionDefinition)
+			bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
+			bLFunction.pos = getPositionWithoutMetadata(funcDef)
+			bLFunction.AttachedFunction = true
+			bLFunction.FlagSet.Add(model.Flag_ATTACHED)
+
+			funcName := bLFunction.Name.Value
+			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
+				blangClass.InitFunction = bLFunction
+			} else {
+				blangClass.AddMethod(funcName, bLFunction)
+			}
+		default:
+			panic("TransformClassDefinition: unsupported member kind")
+		}
+	}
+
+	return &blangClass
+}
+
+func (n *NodeBuilder) setClassQualifiers(blangClass *BLangClassDefinition, qualifiers tree.NodeList[tree.Token]) {
+	for qualifier := range qualifiers.Iterator() {
+		switch qualifier.Kind() {
+		case common.DISTINCT_KEYWORD:
+			blangClass.FlagSet.Add(model.Flag_DISTINCT)
+		case common.CLIENT_KEYWORD:
+			blangClass.FlagSet.Add(model.Flag_CLIENT)
+		case common.READONLY_KEYWORD:
+			blangClass.FlagSet.Add(model.Flag_READONLY)
+		case common.SERVICE_KEYWORD:
+			blangClass.FlagSet.Add(model.Flag_SERVICE)
+		case common.ISOLATED_KEYWORD:
+			blangClass.FlagSet.Add(model.Flag_ISOLATED)
+		}
+	}
+}
+
+func (n *NodeBuilder) transformClassField(objectField *tree.ObjectFieldNode) *BLangSimpleVariable {
+	bLSimpleVar := createSimpleVariableNode()
+	identifier := createIdentifierFromToken(getPosition(objectField.FieldName()), objectField.FieldName())
+	bLSimpleVar.SetName(&identifier)
+	bLSimpleVar.pos = getPosition(objectField)
+	bLSimpleVar.SetTypeNode(n.createTypeNode(objectField.TypeName()).(BType))
+
+	if vis := objectField.VisibilityQualifier(); vis != nil {
+		if vis.Kind() == common.PUBLIC_KEYWORD {
+			bLSimpleVar.FlagSet.Add(model.Flag_PUBLIC)
+		} else if vis.Kind() == common.PRIVATE_KEYWORD {
+			bLSimpleVar.FlagSet.Add(model.Flag_PRIVATE)
+		}
+	}
+
+	qualifiers := objectField.QualifierList()
+	for qualifier := range qualifiers.Iterator() {
+		if qualifier.Kind() == common.FINAL_KEYWORD {
+			bLSimpleVar.FlagSet.Add(model.Flag_FINAL)
+		}
+	}
+
+	if expr := objectField.Expression(); expr != nil {
+		bLSimpleVar.SetInitialExpression(n.createExpression(expr))
+	}
+
+	return bLSimpleVar
 }
 
 func (n *NodeBuilder) TransformResourcePathParameter(resourcePathParameterNode *tree.ResourcePathParameterNode) BLangNode {
