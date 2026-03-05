@@ -16,9 +16,7 @@
 
 package semtypes
 
-type ErrorOps struct {
-	CommonOps
-}
+type ErrorOps struct{}
 
 var _ BasicTypeOps = &ErrorOps{}
 
@@ -49,4 +47,16 @@ func (this *ErrorOps) Complement(d SubtypeData) SubtypeData {
 func (this *ErrorOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ErrorOps.java:61:5
 	return errorSubtypeIsEmpty(cx, t)
+}
+
+func (this *ErrorOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeUnion(d1, d2)
+}
+
+func (this *ErrorOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeIntersect(d1, d2)
+}
+
+func (this *ErrorOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return bddSubtypeDiff(d1, d2)
 }

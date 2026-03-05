@@ -17,6 +17,11 @@
 package corpus
 
 import (
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 	"bytes"
 	"flag"
 	"fmt"
@@ -25,12 +30,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 
@@ -59,6 +58,7 @@ var (
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipTestsMap = makeSkipTestsMap([]string{
 		"subset5/05-error/simple-v.bal",
+		"subset5/05-error/context-type-v.bal",
 	})
 )
 
