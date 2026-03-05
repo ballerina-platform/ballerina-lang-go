@@ -19,7 +19,6 @@ package values
 import (
 	"strconv"
 	"strings"
-	"unsafe"
 )
 
 // Error represents a Ballerina error value at runtime.
@@ -32,13 +31,6 @@ type Error struct {
 
 // String returns the Ballerina string representation of the error.
 func (e *Error) String(visited map[uintptr]bool) string {
-	ptr := uintptr(unsafe.Pointer(e))
-	if visited[ptr] {
-		return "error(...)"
-	}
-	visited[ptr] = true
-	defer delete(visited, ptr)
-
 	var b strings.Builder
 	if e.TypeName != "" {
 		b.WriteString("error ")
