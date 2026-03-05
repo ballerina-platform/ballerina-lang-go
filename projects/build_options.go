@@ -231,12 +231,12 @@ func (b BuildOptions) TraceRecovery() bool {
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
 func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 	merged := BuildOptions{
-		skipTests:                 acceptoptionalBool(b.skipTests, theirs.skipTests),
-		codeCoverage:              acceptoptionalBool(b.codeCoverage, theirs.codeCoverage),
-		testReport:                acceptoptionalBool(b.testReport, theirs.testReport),
-		dumpBuildTime:             acceptoptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
-		exportComponentModel:      acceptoptionalBool(b.exportComponentModel, theirs.exportComponentModel),
-		showDependencyDiagnostics: acceptoptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
+		skipTests:                 acceptOptionalBool(b.skipTests, theirs.skipTests),
+		codeCoverage:              acceptOptionalBool(b.codeCoverage, theirs.codeCoverage),
+		testReport:                acceptOptionalBool(b.testReport, theirs.testReport),
+		dumpBuildTime:             acceptOptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
+		exportComponentModel:      acceptOptionalBool(b.exportComponentModel, theirs.exportComponentModel),
+		showDependencyDiagnostics: acceptOptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
 	}
 
 	if theirs.targetDir != "" {

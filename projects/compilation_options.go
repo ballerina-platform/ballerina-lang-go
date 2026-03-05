@@ -286,8 +286,8 @@ func (c CompilationOptions) LockingMode() PackageLockingMode {
 	return c.lockingMode
 }
 
-// acceptoptionalBool returns theirs if set, else ours.
-func acceptoptionalBool(ours, theirs optionalBool) optionalBool {
+// acceptOptionalBool returns theirs if set, else ours.
+func acceptOptionalBool(ours, theirs optionalBool) optionalBool {
 	if theirs.isSet() {
 		return theirs
 	}
@@ -297,28 +297,28 @@ func acceptoptionalBool(ours, theirs optionalBool) optionalBool {
 // AcceptTheirs merges the given compilation options by favoring theirs if there are conflicts.
 func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationOptions {
 	merged := CompilationOptions{
-		offlineBuild:                  acceptoptionalBool(c.offlineBuild, theirs.offlineBuild),
-		experimental:                  acceptoptionalBool(c.experimental, theirs.experimental),
-		observabilityIncluded:         acceptoptionalBool(c.observabilityIncluded, theirs.observabilityIncluded),
-		dumpAST:                       acceptoptionalBool(c.dumpAST, theirs.dumpAST),
-		dumpBIR:                       acceptoptionalBool(c.dumpBIR, theirs.dumpBIR),
-		dumpBIRFile:                   acceptoptionalBool(c.dumpBIRFile, theirs.dumpBIRFile),
-		dumpCFG:                       acceptoptionalBool(c.dumpCFG, theirs.dumpCFG),
-		dumpGraph:                     acceptoptionalBool(c.dumpGraph, theirs.dumpGraph),
-		dumpRawGraphs:                 acceptoptionalBool(c.dumpRawGraphs, theirs.dumpRawGraphs),
-		dumpTokens:                    acceptoptionalBool(c.dumpTokens, theirs.dumpTokens),
-		dumpST:                        acceptoptionalBool(c.dumpST, theirs.dumpST),
-		listConflictedClasses:         acceptoptionalBool(c.listConflictedClasses, theirs.listConflictedClasses),
-		sticky:                        acceptoptionalBool(c.sticky, theirs.sticky),
-		withCodeGenerators:            acceptoptionalBool(c.withCodeGenerators, theirs.withCodeGenerators),
-		withCodeModifiers:             acceptoptionalBool(c.withCodeModifiers, theirs.withCodeModifiers),
-		configSchemaGen:               acceptoptionalBool(c.configSchemaGen, theirs.configSchemaGen),
-		exportOpenAPI:                 acceptoptionalBool(c.exportOpenAPI, theirs.exportOpenAPI),
-		exportComponentModel:          acceptoptionalBool(c.exportComponentModel, theirs.exportComponentModel),
-		disableSyntaxTree:             acceptoptionalBool(c.disableSyntaxTree, theirs.disableSyntaxTree),
-		remoteManagement:              acceptoptionalBool(c.remoteManagement, theirs.remoteManagement),
-		optimizeDependencyCompilation: acceptoptionalBool(c.optimizeDependencyCompilation, theirs.optimizeDependencyCompilation),
-		traceRecovery:                 acceptoptionalBool(c.traceRecovery, theirs.traceRecovery),
+		offlineBuild:                  acceptOptionalBool(c.offlineBuild, theirs.offlineBuild),
+		experimental:                  acceptOptionalBool(c.experimental, theirs.experimental),
+		observabilityIncluded:         acceptOptionalBool(c.observabilityIncluded, theirs.observabilityIncluded),
+		dumpAST:                       acceptOptionalBool(c.dumpAST, theirs.dumpAST),
+		dumpBIR:                       acceptOptionalBool(c.dumpBIR, theirs.dumpBIR),
+		dumpBIRFile:                   acceptOptionalBool(c.dumpBIRFile, theirs.dumpBIRFile),
+		dumpCFG:                       acceptOptionalBool(c.dumpCFG, theirs.dumpCFG),
+		dumpGraph:                     acceptOptionalBool(c.dumpGraph, theirs.dumpGraph),
+		dumpRawGraphs:                 acceptOptionalBool(c.dumpRawGraphs, theirs.dumpRawGraphs),
+		dumpTokens:                    acceptOptionalBool(c.dumpTokens, theirs.dumpTokens),
+		dumpST:                        acceptOptionalBool(c.dumpST, theirs.dumpST),
+		listConflictedClasses:         acceptOptionalBool(c.listConflictedClasses, theirs.listConflictedClasses),
+		sticky:                        acceptOptionalBool(c.sticky, theirs.sticky),
+		withCodeGenerators:            acceptOptionalBool(c.withCodeGenerators, theirs.withCodeGenerators),
+		withCodeModifiers:             acceptOptionalBool(c.withCodeModifiers, theirs.withCodeModifiers),
+		configSchemaGen:               acceptOptionalBool(c.configSchemaGen, theirs.configSchemaGen),
+		exportOpenAPI:                 acceptOptionalBool(c.exportOpenAPI, theirs.exportOpenAPI),
+		exportComponentModel:          acceptOptionalBool(c.exportComponentModel, theirs.exportComponentModel),
+		disableSyntaxTree:             acceptOptionalBool(c.disableSyntaxTree, theirs.disableSyntaxTree),
+		remoteManagement:              acceptOptionalBool(c.remoteManagement, theirs.remoteManagement),
+		optimizeDependencyCompilation: acceptOptionalBool(c.optimizeDependencyCompilation, theirs.optimizeDependencyCompilation),
+		traceRecovery:                 acceptOptionalBool(c.traceRecovery, theirs.traceRecovery),
 	}
 
 	// Cloud (*string)

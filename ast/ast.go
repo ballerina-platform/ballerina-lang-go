@@ -601,7 +601,7 @@ func (this *BLangAnnotationAttachment) GetKind() model.NodeKind {
 	return model.NodeKind_ANNOTATION_ATTACHMENT
 }
 
-func (this *BLangAnnotationAttachment) GetPackgeAlias() model.IdentifierNode {
+func (this *BLangAnnotationAttachment) GetPackageAlias() model.IdentifierNode {
 	return this.PkgAlias
 }
 
