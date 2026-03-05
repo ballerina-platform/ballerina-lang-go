@@ -47,7 +47,7 @@ var _ ast.Visitor = &TypeResolver{}
 func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	return &TypeResolver{
 		ctx:             ctx,
-		tyCtx:           ctx.GetTypeCtx(),
+		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedSymbols: importedSymbols,
 		implicitImports: make(map[string]bool),
 		pkg:             pkg,
