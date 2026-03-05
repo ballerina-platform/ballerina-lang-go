@@ -104,6 +104,13 @@ func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *a
 	for i := range pkg.GlobalVars {
 		ast.Walk(t, &pkg.GlobalVars[i])
 	}
+
+	tctx := t.tyCtx
+	for _, defn := range pkg.TypeDefinitions {
+		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
+			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
+		}
+	}
 }
 
 func (t *TypeResolver) resolveInnerNodeTypes(pkg *ast.BLangPackage) {
@@ -112,12 +119,6 @@ func (t *TypeResolver) resolveInnerNodeTypes(pkg *ast.BLangPackage) {
 		if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
 			t.resolveBlockStatements(nil, body.Stmts)
 			body.SetDeterminedType(&semtypes.NEVER)
-		}
-	}
-	tctx := t.tyCtx
-	for _, defn := range pkg.TypeDefinitions {
-		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
-			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
 }
