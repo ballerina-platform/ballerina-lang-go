@@ -132,6 +132,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printCheckedExpr(t)
 	case *BLangCheckPanickedExpr:
 		p.printCheckPanickedExpr(t)
+	case *BLangTrapExpr:
+		p.printTrapExpr(t)
 	case *BLangPanic:
 		p.printPanic(t)
 	case *BLangMatchStatement:
@@ -911,6 +913,15 @@ func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
 func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
 	p.startNode()
 	p.printString("check-panicked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
+	p.startNode()
+	p.printString("trap-expr")
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--

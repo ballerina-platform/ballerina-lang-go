@@ -413,6 +413,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 
+	case *BLangTrapExpr:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangGroupExpr:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))

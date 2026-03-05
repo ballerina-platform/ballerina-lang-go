@@ -729,6 +729,8 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return t.resolveCheckedExpr(chain, e)
 	case *ast.BLangCheckPanickedExpr:
 		return t.resolveCheckedExpr(chain, &e.BLangCheckedExpr)
+	case *ast.BLangTrapExpr:
+		return t.resolveTrapExpr(chain, e)
 	case *ast.BLangNamedArgsExpression:
 		ty, effect, ok := t.resolveExpression(chain, e.Expr)
 		if !ok {
@@ -779,6 +781,16 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 		return resultTy, expressionEffect{ifTrue: falseChain, ifFalse: trueChain}, true
 	}
 	return resultTy, expressionEffect{ifTrue: trueChain, ifFalse: falseChain}, true
+}
+
+func (t *TypeResolver) resolveTrapExpr(chain *binding, e *ast.BLangTrapExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	resultTy := semtypes.Union(exprTy, &semtypes.ERROR)
+	setExpectedType(e, resultTy)
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
