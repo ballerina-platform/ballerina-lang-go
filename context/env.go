@@ -32,8 +32,8 @@ type CompilerEnvironment struct {
 	typeDefns        map[model.SymbolRef]model.TypeDefinition
 }
 
-func (this *CompilerEnvironment) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
-	space := model.NewSymbolSpaceInner(packageId, len(this.symbolSpaces))
+func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	space := model.NewSymbolSpaceInner(packageID, len(this.symbolSpaces))
 	this.symbolSpaces = append(this.symbolSpaces, space)
 	return space
 }

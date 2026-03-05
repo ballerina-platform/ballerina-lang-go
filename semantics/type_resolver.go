@@ -825,7 +825,7 @@ func isEqualityExpr(opExpr opExpr) bool {
 	}
 }
 
-func isMultipcativeExpr(opExpr opExpr) bool {
+func isMultiplicativeExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
 		return true
@@ -1105,7 +1105,7 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	return resultTy, effect, true
 }
 
-func isSingletonbool(ty semtypes.SemType, value bool) bool {
+func isSingletonBool(ty semtypes.SemType, value bool) bool {
 	singleShape := semtypes.SingleShape(ty)
 	if singleShape.IsPresent() {
 		return singleShape.Get().Value == value
@@ -1138,9 +1138,9 @@ func (t *TypeResolver) resolveLogicalExpr(chain *binding, expr *ast.BLangBinaryE
 			return nil, expressionEffect{}, false
 		}
 		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonbool(lhsTy, true) {
+		if isSingletonBool(lhsTy, true) {
 			resultTy = rhsTy
-		} else if isSingletonbool(lhsTy, false) {
+		} else if isSingletonBool(lhsTy, false) {
 			resultTy = semtypes.BooleanConst(false)
 		}
 		setExpectedType(expr, resultTy)
@@ -1158,9 +1158,9 @@ func (t *TypeResolver) resolveLogicalExpr(chain *binding, expr *ast.BLangBinaryE
 			return nil, expressionEffect{}, false
 		}
 		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonbool(lhsTy, true) {
+		if isSingletonBool(lhsTy, true) {
 			resultTy = semtypes.BooleanConst(true)
-		} else if isSingletonbool(lhsTy, false) {
+		} else if isSingletonBool(lhsTy, false) {
 			resultTy = rhsTy
 		}
 		setExpectedType(expr, resultTy)
@@ -1245,7 +1245,7 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		return nil, false
 	}
 
-	if isMultipcativeExpr(expr) {
+	if isMultiplicativeExpr(expr) {
 		if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
 			t.ctx.SemanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
