@@ -17,6 +17,7 @@
 package values
 
 import (
+	"ballerina-lang-go/semtypes"
 	"strconv"
 	"strings"
 )
@@ -27,6 +28,18 @@ type Error struct {
 	Cause    BalValue
 	Detail   *Map
 	TypeName string
+}
+
+func NewError(message string, cause BalValue, typeName string, detail *Map) *Error {
+	if detail == nil {
+		detail = NewMap(&semtypes.MAPPING)
+	}
+	return &Error{
+		Message:  message,
+		Cause:    cause,
+		Detail:   detail,
+		TypeName: typeName,
+	}
 }
 
 // String returns the Ballerina string representation of the error.
