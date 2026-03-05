@@ -52,6 +52,10 @@ func (r *TokenReader) Peek() lexer.Token {
 }
 
 // PeekK returns the token k positions ahead (1-indexed) without consuming.
+// tokenBufferCap (20) is intentionally larger than any lookahead depth needed
+// for Ballerina.toml files (deepest real key: 2 dotted segments). A loop
+// caller hitting k > 20 would require 11+ dotted segments, which is
+// unreachable in any valid Ballerina manifest.
 func (r *TokenReader) PeekK(k int) lexer.Token {
 	// Fill buffer until we have k tokens.
 	for r.size < k {

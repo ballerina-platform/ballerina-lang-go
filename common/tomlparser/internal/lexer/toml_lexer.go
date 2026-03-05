@@ -141,16 +141,16 @@ func (l *Lexer) NextToken() Token {
 	}
 }
 
-// skipLeadingTrivia consumes whitespace and comments before the next token.
+// skipLeadingTrivia consumes horizontal whitespace and comments before the
+// next token. Newlines are intentionally NOT consumed here so that readToken
+// can emit TokenNewline, keeping them visible to the parser for recovery
+// (skipToRecovery uses TokenNewline as a synchronisation boundary).
 func (l *Lexer) skipLeadingTrivia() {
 	for !l.reader.IsEOF() {
 		c := l.reader.Peek()
 		switch c {
 		case charSpace, charTab, charFormFeed:
 			l.reader.Advance()
-		case charNewline, charCarriageReturn:
-			// Leading newlines are consumed as trivia (they don't start NEW_LINE mode here)
-			l.consumeEndOfLine()
 		case charHash:
 			l.consumeComment()
 		default:
@@ -418,6 +418,18 @@ func (l *Lexer) readMultilineStringToken() Token {
 	for !l.reader.IsEOF() {
 		c := l.reader.Peek()
 		if c == charDoubleQuote && l.reader.PeekAt(1) == charDoubleQuote && l.reader.PeekAt(2) == charDoubleQuote {
+			// Per TOML spec: one or two '"' immediately before the closing '"""'
+			// are part of the content (e.g. """"word"""" = '"word"').
+			// Check for 5 consecutive '"' before 4, so we don't miscount.
+			if l.reader.PeekAt(4) == charDoubleQuote {
+				// """""…: first two '"' are content, remaining three close.
+				buf = append(buf, '"', '"')
+				l.reader.AdvanceN(2)
+			} else if l.reader.PeekAt(3) == charDoubleQuote {
+				// """"…: first '"' is content, remaining three close.
+				buf = append(buf, '"')
+				l.reader.Advance()
+			}
 			break
 		}
 		if c != charBackslash {

@@ -648,8 +648,33 @@ key = "value"
 	if diag.Location == nil {
 		t.Fatal("Expected location information, got nil")
 	}
-	// The error should be on line 3 where "key" starts
-	if diag.Location.StartLine != 3 {
-		t.Errorf("Expected StartLine 3, got %d", diag.Location.StartLine)
+	// The error is on line 2: the newline after "[section" is where ']' was expected.
+	// (Previously the error landed on line 3 because skipLeadingTrivia was eating
+	// the newline as trivia, making "key" the first visible token — that was wrong.)
+	if diag.Location.StartLine != 2 {
+		t.Errorf("Expected StartLine 2, got %d", diag.Location.StartLine)
 	}
 }
+
+// TestErrorRecoveryStopsAtNewline verifies that a syntax error on one line
+// does not swallow subsequent valid lines. Recovery must stop at the newline
+// boundary so that the next valid key-value pair is still parsed.
+// testdata/error-recovery.toml contains:
+//
+//	bad_key        ← missing '=', triggers skipToRecovery
+//	key = "value"  ← must survive recovery
+func TestErrorRecoveryStopsAtNewline(t *testing.T) {
+	tomlDoc, err := Read(os.DirFS("testdata"), "error-recovery.toml")
+	if err == nil {
+		t.Fatal("expected a parse error for the bad_key line, got nil")
+	}
+	if tomlDoc == nil {
+		t.Fatal("expected partial Toml even on parse error")
+	}
+	_, ok := tomlDoc.Get("key")
+	if !ok {
+		t.Error("key = \"value\" was swallowed by overshoot recovery; " +
+			"skipToRecovery must stop at TokenNewline")
+	}
+}
+
