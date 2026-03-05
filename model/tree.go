@@ -693,10 +693,14 @@ type TypeDefinition interface {
 	DocumentableNode
 	TopLevelNode
 	OrderedNode
+	NodeWithSymbol
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
 	GetTypeData() TypeData
 	SetTypeData(typeData TypeData)
+	SetDeterminedType(ty semtypes.SemType)
+	GetCycleDepth() int
+	SetCycleDepth(depth int)
 }
 
 type TypeData struct {

@@ -14,19 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+package semantics_test
 
 import (
 	"flag"
 	"testing"
 
 	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 )
 
 func TestSymbolResolver(t *testing.T) {
@@ -48,26 +48,18 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	cx := context.NewCompilerContext(env)
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseSymbolResolution, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-		return
+	if cx.HasErrors() {
+		t.Fatalf("compiler context has errors for %s: %v", testCase.InputPath, cx.Diagnostics())
 	}
-	pkg := ast.ToPackage(compilationUnit)
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
 	validator := &symbolResolutionValidator{t: t, testPath: testCase.InputPath}
-	ast.Walk(validator, pkg)
+	ast.Walk(validator, result.Package)
 	// If we reach here, symbol resolution completed without panicking
 	t.Logf("Symbol resolution completed successfully for %s", testCase.InputPath)
 }
@@ -82,8 +74,7 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 	if invocation, ok := node.(*ast.BLangInvocation); ok {
-		rawSymbol := invocation.RawSymbol
-		if _, ok := rawSymbol.(*deferredMethodSymbol); ok {
+		if semantics.IsDeferredMethodSymbol(invocation.RawSymbol) {
 			return nil
 		}
 	}

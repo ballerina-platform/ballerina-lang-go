@@ -17,13 +17,6 @@
 package projects
 
 import (
-	"fmt"
-	"maps"
-	"os"
-	"slices"
-	"strings"
-	"sync"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -32,6 +25,12 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+	"sync"
 )
 
 // moduleContext holds internal state for a Module.
@@ -227,9 +226,8 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 		return
 	}
 
-	// Add type resolution step
-	typeResolver := semantics.NewTypeResolver(compilerCtx, importedSymbols)
-	typeResolver.ResolveTypes(compilerCtx, pkgNode)
+	// Add type resolution step (this only resolve types of top level nodes)
+	semantics.ResolveTopLevelNodes(compilerCtx, pkgNode, importedSymbols)
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
@@ -247,9 +245,23 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 		return
 	}
 
-	// Create control flow graph before semantic analysis.
-	// CFG is needed for conditional type narrowing during semantic analysis.
+	// Resolve types of function bodies and inner nodes
+	semantics.ResolveLocalNodes(compilerCtx, pkgNode, moduleCtx.importedSymbols)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
+	semanticAnalyzer := semantics.NewSemanticAnalyzer(moduleCtx.compilerCtx)
+	semanticAnalyzer.Analyze(pkgNode)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
+
+	// Create control flow graph after semantic analysis.
 	cfg := semantics.CreateControlFlowGraph(compilerCtx, pkgNode)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	// Dump CFG if requested
 	if compilationOptions.DumpCFG() {
@@ -265,18 +277,15 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 		fmt.Fprintln(os.Stderr, "===================END CFG===================")
 	}
 
-	// Run type narrowing analysis before semantic analysis.
-	semantics.NarrowTypes(compilerCtx, pkgNode)
-
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(compilerCtx)
-	semanticAnalyzer.Analyze(pkgNode)
-
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
 	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)

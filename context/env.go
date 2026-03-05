@@ -17,11 +17,10 @@
 package context
 
 import (
-	"strconv"
-	"sync"
-
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"strconv"
+	"sync"
 )
 
 type CompilerEnvironment struct {
@@ -30,6 +29,7 @@ type CompilerEnvironment struct {
 	symbolSpaces     []*model.SymbolSpace
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
+	typeDefns        map[model.SymbolRef]model.TypeDefinition
 }
 
 func (this *CompilerEnvironment) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
@@ -111,11 +111,21 @@ func (this *CompilerEnvironment) NewPackageID(orgName model.Name, nameComps []mo
 	return model.NewPackageID(this.packageInterner, orgName, nameComps, version)
 }
 
+func (this *CompilerEnvironment) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
+	this.typeDefns[symbol] = defn
+}
+
+func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
+	defn, ok := this.typeDefns[symbol]
+	return defn, ok
+}
+
 func NewCompilerEnvironment(typeEnv semtypes.Env) *CompilerEnvironment {
 	return &CompilerEnvironment{
 		anonTypeCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
 		typeEnv:         typeEnv,
+		typeDefns:       make(map[model.SymbolRef]model.TypeDefinition),
 	}
 }
 
