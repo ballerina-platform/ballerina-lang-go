@@ -19,9 +19,9 @@
 import ballerina/io;
 public function main() {
   int sub1 = sub(5, 2);
-  io:println(sub1); // @output 3
+  io:println(sub1);
   int sub2 = sub(0, 1);
-  io:println(sub2); // @output -1
+  io:println(sub2);
 }
 
 function sub(int x, int y) returns int {

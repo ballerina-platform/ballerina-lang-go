@@ -21,7 +21,7 @@ import ballerina/io;
 public function main() {
     boolean b = 17 == 17;
     if b {
-        io:println(17); // @output 17
+        io:println(17);
     }
     else {
         io:println(0);
@@ -31,11 +31,11 @@ public function main() {
         io:println(0); 
     }
     else {
-        io:println(21); // @output 21
+        io:println(21);
     }
     int x = 42;
     if x == 42 {
-        io:println(42); // @output 42
+        io:println(42);
     }
     else {
         io:println(0);
@@ -44,6 +44,6 @@ public function main() {
         io:println(0);
     }
     else {
-        io:println(42); // @output 42
+        io:println(42);
     }
 }

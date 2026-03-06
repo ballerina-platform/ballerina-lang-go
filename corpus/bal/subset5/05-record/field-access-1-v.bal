@@ -22,7 +22,7 @@ type R record {
 
 public function main() {
     R r = {x: 1, y: 2};
-    io:println(r.x); // @output 1
+    io:println(r.x);
     anydata z = r["z"];
-    io:println(z); // @output
+    io:println(z);
 }

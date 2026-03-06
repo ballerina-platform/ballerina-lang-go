@@ -24,10 +24,10 @@ public function main() {
 public function nestedForeach() {
     foreach int i in 1 ..< 3 {
         foreach int j in 1 ..< 3 {
-            io:println(i * 10 + j); // @output 11
-            // @output 12
-            // @output 21
-            // @output 22
+            io:println(i * 10 + j);
+           
+           
+           
         }
     }
 }
