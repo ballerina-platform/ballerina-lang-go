@@ -217,10 +217,17 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	pkgNode := buildBLangPackage(compilerCtx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
 
+	pkgNode.PackageID = createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
+
 	// Resolve symbols (imports) before type resolution
-	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx))
+	publicSymbols := moduleCtx.getProject().Environment().PublicSymbols
+	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx), publicSymbols, moduleCtx.moduleDescriptor.Org().value)
 	moduleCtx.importedSymbols = importedSymbols
-	semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
+
+	publicSymbols[semantics.PackageIdentifier{
+		OrgName:    moduleCtx.moduleDescriptor.Org().value,
+		ModuleName: moduleCtx.moduleID.moduleName,
+	}] = semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
 
 	if compilerCtx.HasDiagnostics() {
 		return
@@ -391,6 +398,22 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 		}
 	}
 	return pkg
+}
+
+// createModelPackageID builds a model.PackageID from the module descriptor so BIR gen
+// produces module-qualified function lookup keys that match cross-module call sites.
+func createModelPackageID(compilerCtx *context.CompilerContext, desc ModuleDescriptor) *model.PackageID {
+	orgName := model.Name(desc.Org().Value())
+	moduleName := desc.Name().String()
+	nameComps := make([]model.Name, 0)
+	for _, part := range strings.Split(moduleName, ".") {
+		nameComps = append(nameComps, model.Name(part))
+	}
+	version := model.Name(desc.Version().String())
+	if version == "" {
+		version = model.DEFAULT_VERSION
+	}
+	return compilerCtx.NewPackageID(orgName, nameComps, version)
 }
 
 // generateCodeInternal generates BIR for this module from the compiled BLangPackage.

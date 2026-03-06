@@ -20,17 +20,22 @@ import (
 	"io/fs"
 
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semantics"
 )
 
 type Environment struct {
 	fsys        fs.FS
 	compilerEnv *context.CompilerEnvironment
+	// TODO: find better place to put this
+	PublicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace
 }
 
 func newEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
 	return &Environment{
-		fsys:        fsys,
-		compilerEnv: env,
+		fsys:          fsys,
+		compilerEnv:   env,
+		PublicSymbols: make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace),
 	}
 }
 

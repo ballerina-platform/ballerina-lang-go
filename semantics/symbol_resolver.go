@@ -17,16 +17,17 @@
 package semantics
 
 import (
-	"maps"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	array "ballerina-lang-go/lib/array/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
-	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"maps"
+	"strings"
+
+	array "ballerina-lang-go/lib/array/compile"
+	bInt "ballerina-lang-go/lib/int/compile"
+	io "ballerina-lang-go/lib/io/compile"
 )
 
 type scopeKind int
@@ -217,11 +218,13 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	ast.Walk(functionResolver, function)
 }
 
-func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace,
+	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace, defaultOrg string,
+) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// Check if this is ballerina/io import
+		// Check if this is ballerina import
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
 			if isIoImport(&imp) {
 				// Use alias if available, otherwise use package name
@@ -240,13 +243,47 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
 		} else {
-			ctx.Unimplemented("unsupported import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			id := resolveImportPackageIdentifier(&imp, defaultOrg)
+			if symbols, ok := publicSymbols[id]; ok {
+				var key string
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				} else {
+					comps := imp.GetPackageName()
+					key = comps[len(comps)-1].GetValue()
+				}
+				result[key] = symbols
+			} else {
+				ctx.SemanticError("Unknown import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			}
 		}
 	}
 
 	maps.Copy(result, implicitImports)
 
 	return result
+}
+
+type PackageIdentifier struct {
+	OrgName    string
+	ModuleName string
+}
+
+func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg string) PackageIdentifier {
+	nameComps := imp.GetPackageName()
+	nameParts := make([]string, len(nameComps))
+	for i, name := range nameComps {
+		nameParts[i] = name.GetValue()
+	}
+	moduleName := strings.Join(nameParts, ".")
+	orgNameIdentifier := imp.GetOrgName()
+	var orgName string
+	if orgNameIdentifier == nil || orgNameIdentifier.GetValue() == "" {
+		orgName = defaultOrg
+	} else {
+		orgName = orgNameIdentifier.GetValue()
+	}
+	return PackageIdentifier{orgName, moduleName}
 }
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {

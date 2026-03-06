@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/desugar"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
 	"fmt"
@@ -101,7 +102,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	}
 
 	// Phase 3: Symbol Resolution
-	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx))
+	importedSymbols := semantics.ResolveImports(cx, result.Package, semantics.GetImplicitImports(cx), make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), "")
 	semantics.ResolveSymbols(cx, result.Package, importedSymbols)
 	if phase == PhaseSymbolResolution || cx.HasDiagnostics() {
 		return result, nil

@@ -365,16 +365,16 @@ func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
 	var stdoutBuf bytes.Buffer
 	var stderrBuf bytes.Buffer
 
-	birPkg, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
-	if birPkg != nil && compileErr != nil {
+	birPkgs, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
+	if birPkgs != nil && compileErr != nil {
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 
-	runInterpretPhase(birPkg, &stdoutBuf)
+	runProjectInterpretPhase(birPkgs, &stdoutBuf)
 	return stdoutBuf.String(), stderrBuf.String()
 }
 
-func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *bir.BIRPackage, err error) {
+func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			msg := fmt.Sprintf("%v", r)
@@ -400,5 +400,19 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	}
 
 	backend := projects.NewBallerinaBackend(compilation)
-	return backend.BIR(), nil
+	return backend.BIRPackages(), nil
+}
+
+func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf *bytes.Buffer) {
+	if len(birPkgs) == 0 {
+		return
+	}
+	rt := runtime.NewRuntime()
+	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			fmt.Fprintf(stdoutBuf, "Runtime panic: %v\n", err)
+			return
+		}
+	}
 }
