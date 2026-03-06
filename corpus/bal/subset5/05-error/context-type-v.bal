@@ -14,14 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+import ballerina/io;
 
-import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/semantics/type_narrowing"
-)
+type Detail record {|
+    ErrA? errA;
+|};
 
-func NarrowTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
-	type_narrowing.AnalyzePackage(ctx, pkg)
+type ErrA error<Detail>;
+
+public function main() {
+    ErrA err0 = error ErrA("whoops", errA = ());
+    io:println(err0);
+    ErrA error1 = error("Whoops", errA = ());
+    io:println(error1);
+    ErrA error2 = error("Whoops", errA = error1);
+    io:println(error2);
 }

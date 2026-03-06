@@ -266,7 +266,6 @@ func (la *loopAnalyzer) internalErr(message string, loc diagnostics.Location) {
 	la.parent.ctx().InternalError(message, loc)
 }
 
-// When we support multiple packages we need to resolve types of all of them before semantic analysis
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
 		compilerCtx:  ctx,
@@ -351,10 +350,10 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
+func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
-		parent.semanticErr("'main' function must be public", function.GetPosition())
+		parent.semanticErr("'main' function must be public", pos)
 	}
 
 	// Check 2: Must return error?
@@ -362,7 +361,7 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 	actualReturnType := fnSymbol.Signature().ReturnType
 
 	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'main' function must have return type 'error?'", function.GetPosition())
+		parent.semanticErr("'main' function must have return type 'error?'", pos)
 	}
 }
 
@@ -373,7 +372,7 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 
 	// Validate main function constraints
 	if function.Name.Value == "main" {
-		validateMainFunction(parent, function, fnSymbol)
+		validateMainFunction(parent, fnSymbol, function.GetPosition())
 	}
 
 	return fa
@@ -943,12 +942,20 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 		a.semanticErr("error constructor must have at least 1 and at most 2 positional arguments", expr.GetPosition())
 		return false
 	}
+	tyCtx := a.tyCtx()
+	if expectedType != nil && semtypes.IsSameType(tyCtx, expr.DeterminedType, &semtypes.ERROR) {
+		// need to set the expected type based on the contextually expected type
+		errorPart := semtypes.Intersect(expectedType, &semtypes.ERROR)
+		if !semtypes.IsEmpty(tyCtx, errorPart) {
+			// Otherwise we will get an error at the end
+			setExpectedType(expr, errorPart)
+		}
+	}
 
 	msgArg := expr.PositionalArgs[0]
 	if !analyzeExpression(a, msgArg, &semtypes.STRING) {
 		return false
 	}
-	tyCtx := a.tyCtx()
 	mat, ok := semtypes.ErrorDetailAtomicType(tyCtx, expr.DeterminedType)
 	if !ok {
 		a.unimplementedErr("non-atomic detail types not supported", expr.GetPosition())
@@ -1061,13 +1068,10 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 	}
-
 	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	return validateResolvedType(a, binaryExpr, expectedType)
 }
-
-var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
 
 func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) bool {
 	ctx := a.tyCtx()

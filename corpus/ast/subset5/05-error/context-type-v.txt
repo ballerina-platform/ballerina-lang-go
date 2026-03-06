@@ -1,0 +1,46 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Detail
+    (record-type
+      (field errA
+        (union-type
+          (user-defined-type ErrA)
+          (value-type null)))))
+  (type-definition ErrA
+    (error-type
+      (user-defined-type Detail)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable err0 (type
+          (user-defined-type ErrA)) (expr
+          (error-constructor-expr
+            (user-defined-type ErrA) (
+            (literal whoops)) (
+            (named-arg errA
+              (literal <nil>)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref err0))))
+      (var-def
+        (variable error1 (type
+          (user-defined-type ErrA)) (expr
+          (error-constructor-expr (
+            (literal Whoops)) (
+            (named-arg errA
+              (literal <nil>)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref error1))))
+      (var-def
+        (variable error2 (type
+          (user-defined-type ErrA)) (expr
+          (error-constructor-expr (
+            (literal Whoops)) (
+            (named-arg errA
+              (simple-var-ref error1)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref error2)))))))

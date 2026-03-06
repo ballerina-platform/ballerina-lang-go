@@ -1,0 +1,33 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = ConstantLoad whoops
+    %2 = ConstantLoad errA
+    %3 = ConstantLoad <nil>
+    %4 = newMap ((MAPPING), ()){%2=%3}
+    %5 = newError ((), (ERROR))(%1, %4)
+    err0 = %5;
+    %7 = println(err0) -> bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad Whoops
+    %9 = ConstantLoad errA
+    %10 = ConstantLoad <nil>
+    %11 = newMap ((MAPPING), ()){%9=%10}
+    %12 = newError ((), (ERROR))(%8, %11)
+    error1 = %12;
+    %14 = println(error1) -> bb2;
+  }
+  bb2 {
+    %15 = ConstantLoad Whoops
+    %16 = ConstantLoad errA
+    %17 = newMap ((MAPPING), ()){%16=error1}
+    %18 = newError ((), (ERROR))(%15, %17)
+    error2 = %18;
+    %20 = println(error2) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
