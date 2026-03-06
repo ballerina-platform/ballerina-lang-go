@@ -209,24 +209,28 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	// Create backend and generate BIR
 	backend := projects.NewBallerinaBackend(compilation)
-	birPkg := backend.BIR()
+	birPkgs := backend.BIRPackages()
 
-	if birPkg == nil {
+	if len(birPkgs) == 0 {
 		return fmt.Errorf("BIR generation failed: no BIR package produced")
 	}
 
 	// Dump BIR if requested
 	if buildOpts.DumpBIR() {
 		prettyPrinter := bir.PrettyPrinter{}
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
-		fmt.Println(strings.TrimSpace(prettyPrinter.Print(*birPkg)))
-		fmt.Fprintln(os.Stderr, "===================END BIR===================")
+		for _, birPkg := range birPkgs {
+			fmt.Fprintln(os.Stderr)
+			fmt.Fprintln(os.Stderr, "==================BEGIN BIR==================")
+			fmt.Fprintln(os.Stderr, strings.TrimSpace(prettyPrinter.Print(*birPkg)))
+			fmt.Fprintln(os.Stderr, "===================END BIR===================")
+		}
 	}
 
 	rt := runtime.NewRuntime()
-	if err := rt.Interpret(*birPkg); err != nil {
-		return err
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			return err
+		}
 	}
 	return nil
 }

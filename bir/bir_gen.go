@@ -138,6 +138,8 @@ func processImports(compilerCtx *context.CompilerContext, genCtx *Context, impor
 			var orgName model.Name
 			if importPkg.OrgName != nil && importPkg.OrgName.Value != "" {
 				orgName = model.Name(importPkg.OrgName.Value)
+			} else if genCtx.packageID != nil && genCtx.packageID.OrgName != nil {
+				orgName = *genCtx.packageID.OrgName
 			} else {
 				orgName = model.ANON_ORG
 			}
