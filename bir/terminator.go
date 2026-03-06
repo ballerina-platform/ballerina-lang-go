@@ -89,7 +89,7 @@ func NewReturn(pos diagnostics.Location) *Return {
 	}
 }
 
-func NewGoto(pos diagnostics.Location, thenBB *BIRBasicBlock) *Goto {
+func NewGoto(thenBB *BIRBasicBlock, pos diagnostics.Location) *Goto {
 	return &Goto{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
@@ -110,7 +110,7 @@ func (c *Call) GetLhsOperand() *BIROperand {
 	return c.LhsOp
 }
 
-func NewCall(pos diagnostics.Location, kind InstructionKind, args []BIROperand, name model.Name, thenBB *BIRBasicBlock, lhsOp *BIROperand) *Call {
+func NewCall(kind InstructionKind, args []BIROperand, name model.Name, thenBB *BIRBasicBlock, lhsOp *BIROperand, pos diagnostics.Location) *Call {
 	return &Call{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
