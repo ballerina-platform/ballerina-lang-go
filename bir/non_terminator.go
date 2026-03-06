@@ -136,7 +136,7 @@ func (m *Move) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_MOVE
 }
 
-func NewMove(pos diagnostics.Location, fromOperand, toOperand *BIROperand) *Move {
+func NewMove(fromOperand, toOperand *BIROperand, pos diagnostics.Location) *Move {
 	toOperand.VariableDcl.Initialized = true
 	return &Move{
 		BIRInstructionBase: BIRInstructionBase{
@@ -157,7 +157,7 @@ func (b *BinaryOp) GetKind() InstructionKind {
 	return b.Kind
 }
 
-func NewBinaryOp(pos diagnostics.Location, kind InstructionKind, lhsOp, rhsOp1, rhsOp2 *BIROperand) *BinaryOp {
+func NewBinaryOp(kind InstructionKind, lhsOp, rhsOp1, rhsOp2 *BIROperand, pos diagnostics.Location) *BinaryOp {
 	return &BinaryOp{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -179,7 +179,7 @@ func (u *UnaryOp) GetKind() InstructionKind {
 	return u.Kind
 }
 
-func NewUnaryOp(pos diagnostics.Location, kind InstructionKind, lhsOp, rhsOp *BIROperand) *UnaryOp {
+func NewUnaryOp(kind InstructionKind, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *UnaryOp {
 	return &UnaryOp{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -200,7 +200,7 @@ func (c *ConstantLoad) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_CONST_LOAD
 }
 
-func NewConstantLoad(pos diagnostics.Location, lhsOp *BIROperand, value any) *ConstantLoad {
+func NewConstantLoad(lhsOp *BIROperand, typ model.ValueType, value any, pos diagnostics.Location) *ConstantLoad {
 	return &ConstantLoad{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -209,6 +209,7 @@ func NewConstantLoad(pos diagnostics.Location, lhsOp *BIROperand, value any) *Co
 			LhsOp: lhsOp,
 		},
 		Value: value,
+		Type:  typ,
 	}
 }
 
@@ -220,7 +221,7 @@ func (f *FieldAccess) GetKind() InstructionKind {
 	return f.Kind
 }
 
-func NewFieldAccess(pos diagnostics.Location, kind InstructionKind, lhsOp, keyOp, rhsOp *BIROperand) *FieldAccess {
+func NewFieldAccess(kind InstructionKind, lhsOp, keyOp, rhsOp *BIROperand, pos diagnostics.Location) *FieldAccess {
 	return &FieldAccess{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -242,7 +243,7 @@ func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
 }
 
-func NewArrayConstructor(pos diagnostics.Location, typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue) *NewArray {
+func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue, pos diagnostics.Location) *NewArray {
 	return &NewArray{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -277,6 +278,19 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
+func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, pos diagnostics.Location) *NewMap {
+	return &NewMap{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Type:   typ,
+		Values: values,
+	}
+}
+
 func (n *NewError) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ERROR
 }
@@ -285,7 +299,7 @@ func (n *NewError) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
-func NewErrorConstructor(pos diagnostics.Location, typ semtypes.SemType, typeName string, lhsOp, messageOp, causeOp, detailOp *BIROperand) *NewError {
+func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp, causeOp, detailOp *BIROperand, pos diagnostics.Location) *NewError {
 	return &NewError{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
