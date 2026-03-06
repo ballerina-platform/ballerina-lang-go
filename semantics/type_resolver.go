@@ -784,53 +784,8 @@ func (t *TypeResolver) resolveQueryExpr(expr *ast.BLangQueryExpr) (semtypes.SemT
 		updateSymbolType(t.ctx, varDef.Var, variableTy)
 	}
 
-	for i := 1; i < len(expr.QueryClauseList)-1; i++ {
-		switch clause := expr.QueryClauseList[i].(type) {
-		case *ast.BLangLetClause:
-			for _, variableDef := range clause.LetVarDeclarations {
-				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
-				if !ok || varDef.Var == nil {
-					t.ctx.Unimplemented("only simple variable declarations are supported in let clause",
-						clause.GetPosition())
-					return nil, false
-				}
-				if varDef.Var.Expr == nil {
-					t.ctx.SemanticError("let-clause variable declaration requires an initializer",
-						varDef.GetPosition())
-					return nil, false
-				}
-				initTy, ok := t.resolveExpression(varDef.Var.Expr.(ast.BLangExpression))
-				if !ok {
-					return nil, false
-				}
-				var variableTy semtypes.SemType = initTy
-				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
-					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
-					if !ok {
-						return nil, false
-					}
-					if !semtypes.IsSubtype(t.tyCtx, initTy, variableTy) {
-						t.ctx.SemanticError("let-clause variable type is incompatible with initializer expression",
-							varDef.GetPosition())
-						return nil, false
-					}
-				}
-				setExpectedType(varDef.Var, variableTy)
-				updateSymbolType(t.ctx, varDef.Var, variableTy)
-			}
-		case *ast.BLangWhereClause:
-			whereTy, ok := t.resolveExpression(clause.Expression)
-			if !ok {
-				return nil, false
-			}
-			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
-				t.ctx.SemanticError("where-clause expression must be boolean", clause.GetPosition())
-				return nil, false
-			}
-		default:
-			t.ctx.Unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
-			return nil, false
-		}
+	if ok := t.resolveQueryIntermediateClauses(expr); !ok {
+		return nil, false
 	}
 
 	selectTy, ok := t.resolveExpression(selectClause.Expression)
@@ -841,6 +796,58 @@ func (t *TypeResolver) resolveQueryExpr(expr *ast.BLangQueryExpr) (semtypes.SemT
 	queryTy := ld.DefineListTypeWrappedWithEnvSemType(t.ctx.GetTypeEnv(), selectTy)
 	setExpectedType(expr, queryTy)
 	return queryTy, true
+}
+
+func (t *TypeResolver) resolveQueryIntermediateClauses(queryExpr *ast.BLangQueryExpr) bool {
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil {
+					t.ctx.Unimplemented("only simple variable declarations are supported in let clause",
+						clause.GetPosition())
+					return false
+				}
+				if varDef.Var.Expr == nil {
+					t.ctx.SemanticError("let-clause variable declaration requires an initializer",
+						varDef.GetPosition())
+					return false
+				}
+				initTy, ok := t.resolveExpression(varDef.Var.Expr.(ast.BLangExpression))
+				if !ok {
+					return false
+				}
+				var variableTy semtypes.SemType = initTy
+				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
+					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
+					if !ok {
+						return false
+					}
+					if !semtypes.IsSubtype(t.tyCtx, initTy, variableTy) {
+						t.ctx.SemanticError("let-clause variable type is incompatible with initializer expression",
+							varDef.GetPosition())
+						return false
+					}
+				}
+				setExpectedType(varDef.Var, variableTy)
+				updateSymbolType(t.ctx, varDef.Var, variableTy)
+			}
+		case *ast.BLangWhereClause:
+			whereTy, ok := t.resolveExpression(clause.Expression)
+			if !ok {
+				return false
+			}
+			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
+				t.ctx.SemanticError("where-clause expression must be boolean", clause.GetPosition())
+				return false
+			}
+		default:
+			t.ctx.Unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			return false
+		}
+	}
+	return true
 }
 
 func (t *TypeResolver) resolveSimpleVarRef(expr *ast.BLangSimpleVarRef) (semtypes.SemType, bool) {

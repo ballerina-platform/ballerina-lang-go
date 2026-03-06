@@ -557,14 +557,52 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	bodyStmts := make([]ast.BLangStatement, 0, 8)
 	bodyStmts = append(bodyStmts, loopVarDef)
 
-	for i := 1; i < len(expr.QueryClauseList)-1; i++ {
-		switch clause := expr.QueryClauseList[i].(type) {
+	bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, bodyStmts)
+	if !ok {
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+
+	selectResult := walkExpression(cx, selectClause.Expression)
+	for _, s := range selectResult.initStmts {
+		bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+	}
+	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
+	if pushInvocation == nil {
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+	bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
+	bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
+
+	whileStmt := &ast.BLangWhile{
+		Expr: condition,
+		Body: ast.BLangBlockStmt{
+			Stmts: bodyStmts,
+		},
+	}
+	whileStmt.SetScope(cx.currentScope())
+	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	initStmts = append(initStmts, whileStmt)
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
+		replacementNode: resultRef,
+	}
+}
+
+func appendQueryIntermediateClauseStmts(
+	cx *FunctionContext,
+	queryExpr *ast.BLangQueryExpr,
+	idxRef ast.BLangExpression,
+	bodyStmts []ast.BLangStatement,
+) ([]ast.BLangStatement, bool) {
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangLetClause:
 			for _, variableDef := range clause.LetVarDeclarations {
 				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
 				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
 					cx.unimplemented("query let clause currently supports only initialized simple variable declarations")
-					return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+					return nil, false
 				}
 				letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
 				for _, s := range letResult.initStmts {
@@ -576,7 +614,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		case *ast.BLangWhereClause:
 			if clause.Expression == nil {
 				cx.unimplemented("query where clause requires a condition expression")
-				return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+				return nil, false
 			}
 			whereResult := walkExpression(cx, clause.Expression)
 			for _, s := range whereResult.initStmts {
@@ -605,35 +643,10 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 			bodyStmts = append(bodyStmts, filterIf)
 		default:
 			cx.unimplemented("query expression currently supports only let + where clauses as intermediate clauses")
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+			return nil, false
 		}
 	}
-
-	selectResult := walkExpression(cx, selectClause.Expression)
-	for _, s := range selectResult.initStmts {
-		bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
-	}
-	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
-	if pushInvocation == nil {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
-	bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
-
-	whileStmt := &ast.BLangWhile{
-		Expr: condition,
-		Body: ast.BLangBlockStmt{
-			Stmts: bodyStmts,
-		},
-	}
-	whileStmt.SetScope(cx.currentScope())
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
-	initStmts = append(initStmts, whileStmt)
-
-	return desugaredNode[model.ExpressionNode]{
-		initStmts:       initStmts,
-		replacementNode: resultRef,
-	}
+	return bodyStmts, true
 }
 
 func createPushInvocation(cx *FunctionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
