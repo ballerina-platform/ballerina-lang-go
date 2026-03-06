@@ -200,6 +200,18 @@ func (c *ConstantLoad) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_CONST_LOAD
 }
 
+func NewConstantLoad(pos diagnostics.Location, lhsOp *BIROperand, value any) *ConstantLoad {
+	return &ConstantLoad{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Value: value,
+	}
+}
+
 func (f *FieldAccess) GetLhsOperand() *BIROperand {
 	return f.LhsOp
 }
@@ -208,12 +220,41 @@ func (f *FieldAccess) GetKind() InstructionKind {
 	return f.Kind
 }
 
+func NewFieldAccess(pos diagnostics.Location, kind InstructionKind, lhsOp, keyOp, rhsOp *BIROperand) *FieldAccess {
+	return &FieldAccess{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Kind:  kind,
+		KeyOp: keyOp,
+		RhsOp: rhsOp,
+	}
+}
+
 func (n *NewArray) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
 func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
+}
+
+func NewArrayConstructor(pos diagnostics.Location, typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue) *NewArray {
+	return &NewArray{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Type:   typ,
+		SizeOp: sizeOp,
+		Values: values,
+		Filler: filler,
+	}
 }
 
 func (t *TypeCast) GetLhsOperand() *BIROperand {
@@ -242,6 +283,22 @@ func (n *NewError) GetKind() InstructionKind {
 
 func (n *NewError) GetLhsOperand() *BIROperand {
 	return n.LhsOp
+}
+
+func NewErrorConstructor(pos diagnostics.Location, typ semtypes.SemType, typeName string, lhsOp, messageOp, causeOp, detailOp *BIROperand) *NewError {
+	return &NewError{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Type:      typ,
+		TypeName:  typeName,
+		MessageOp: messageOp,
+		CauseOp:   causeOp,
+		DetailOp:  detailOp,
+	}
 }
 
 func (n *NewMap) GetLhsOperand() *BIROperand {
