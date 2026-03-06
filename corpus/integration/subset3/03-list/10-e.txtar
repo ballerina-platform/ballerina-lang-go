@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: unsupported container type for index based access
   --> 10-e.bal:19:12

@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((NIL, ERROR), ()), got ((), (INT))
   --> error-constructor-non-error-cause-e.bal:18:30

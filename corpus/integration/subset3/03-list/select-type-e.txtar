@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: ambiguous inherent type for list constructor
   --> select-type-e.bal:20:24

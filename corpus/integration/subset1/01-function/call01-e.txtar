@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((NIL), ()), got ((BOOLEAN), ())
   --> call01-e.bal:20:5
