@@ -18,14 +18,14 @@
 import ballerina/io;
 
 public function main() {
-    io:println(ifElse(true, 17, false)); // @output 17
-    io:println(ifElse(false, 32, true)); // @output true
-    io:println(<int>ifElse(true, 32, true)); // @output 32
+    io:println(ifElse(true, 17, false));
+    io:println(ifElse(false, 32, true));
+    io:println(<int>ifElse(true, 32, true));
     int x = <int>ifElse(true, 42, false);
-    io:println(x); // @output 42
-    io:println(<boolean>ifElse(false, 21, true)); // @output true
+    io:println(x);
+    io:println(<boolean>ifElse(false, 21, true));
     boolean b = <boolean>ifElse(false, 21, false);
-    io:println(b); // @output false
+    io:println(b);
 }
 
 function ifElse(boolean t, int n, boolean b) returns any {

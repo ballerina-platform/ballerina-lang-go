@@ -31,6 +31,6 @@ public function main() {
         sum = sum + <int>v[i];
         i = i + 1;
     }
-    io:println(sum); // @output 1001000
+    io:println(sum);
 }
 

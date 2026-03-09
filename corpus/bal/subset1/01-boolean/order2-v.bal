@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-    printComp(); //@output 1
+    printComp();
 }
 
 function printComp() {

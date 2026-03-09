@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: redeclared symbol 'foo'
   --> 2-e.bal:17:7

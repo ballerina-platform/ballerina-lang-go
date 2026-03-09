@@ -19,8 +19,8 @@ import ballerina/io;
 public function main() {
     any[] arr = [1, 2, 3];
     foreach any val in arr {
-        io:println(val); // @output 1
-        // @output 2
-        // @output 3
+        io:println(val);
+       
+       
     }
 }

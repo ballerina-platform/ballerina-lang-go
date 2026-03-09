@@ -30,10 +30,10 @@ public function breakInNestedLoops() {
             if j == 3 {
                 break;
             }
-            io:println(i * 10 + j); // @output 11
-            // @output 12
-            // @output 21
-            // @output 22
+            io:println(i * 10 + j);
+           
+           
+           
         }
     }
 }

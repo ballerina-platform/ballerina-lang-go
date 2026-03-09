@@ -20,5 +20,5 @@ type T [T]|int;
 
 public function main() {
     T t = [1];
-    io:println(t); // @output [1]
+    io:println(t);
 }

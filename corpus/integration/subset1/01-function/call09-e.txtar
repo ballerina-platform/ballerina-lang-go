@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: Unknown function: foo
   --> call09-e.bal:21:5

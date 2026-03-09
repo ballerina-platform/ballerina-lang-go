@@ -20,5 +20,5 @@ public function main() {
     while foo == 2 {
         foo += 5;
     }
-    io:println(foo); // @output 7
+    io:println(foo);
 }

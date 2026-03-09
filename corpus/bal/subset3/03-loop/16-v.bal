@@ -22,9 +22,9 @@ public function main() {
         if i == 8 {
             break;
         }
-        io:println(i); // @output 6
-                       // @output 7
+        io:println(i);
+                      
     }
-    io:println(true); // @output true
+    io:println(true);
 
 }

@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(foo()); // @output 0
+    printBoolean(foo());
 }
 
 function foo() returns boolean {

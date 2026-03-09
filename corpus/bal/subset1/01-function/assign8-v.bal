@@ -28,9 +28,9 @@ public function main() {
     _ = foo(arr, 0);
     _ = foo(arr, 1);
     _ = foo(arr, 2);
-    io:println(arr); // @output [10,11,12]
+    io:println(arr);
 
     string str = "test str";
     _ = str;
-    io:println(str); // @output test str
+    io:println(str);
 }

@@ -17,5 +17,5 @@ import ballerina/io;
 
 public function main() {
     [int, float, string, boolean, decimal] foo = [1, 1.5, "foo", true, 1.23d];
-    io:println(foo); // @output [1,1.5,"foo",true,1.23]
+    io:println(foo);
 }

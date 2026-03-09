@@ -20,7 +20,7 @@ import ballerina/io;
 
 public function main() {
     if (foo()) {
-        bar(100); // @output 100
+        bar(100);
     } else {
         baz(200);
     }
