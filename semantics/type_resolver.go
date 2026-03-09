@@ -524,7 +524,24 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		classDef.Methods[name] = method
 	}
 
-	// Build members
+	// Collect included members
+	includedFields := make(map[string][]semtypes.Member)
+	includedMethods := make(map[string][]semtypes.Member)
+	for _, symRef := range classDef.Inclusions {
+		incMembers, ok := t.collectIncludedMembers(symRef, classDef.GetPosition(), depth)
+		if !ok {
+			return nil, false
+		}
+		for _, m := range incMembers {
+			if m.Kind == semtypes.MemberKindField {
+				includedFields[m.Name] = append(includedFields[m.Name], m)
+			} else if m.Kind == semtypes.MemberKindMethod {
+				includedMethods[m.Name] = append(includedMethods[m.Name], m)
+			}
+		}
+	}
+
+	// Build direct field members
 	var members []semtypes.Member
 	for _, f := range classDef.Fields {
 		field := f.(*ast.BLangSimpleVariable)
@@ -533,13 +550,38 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if field.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
 		}
+		name := field.Name.Value
+		if incFields, exists := includedFields[name]; exists {
+			for _, incField := range incFields {
+				if !semtypes.IsSubtype(t.tyCtx, fieldTy, incField.ValueTy) {
+					t.ctx.SemanticError(
+						fmt.Sprintf("field '%s' that overrides included field is not a subtype of the included field type", name),
+						field.GetPosition(),
+					)
+					return nil, false
+				}
+			}
+			delete(includedFields, name)
+		}
 		members = append(members, semtypes.Member{
-			Name:       field.Name.Value,
+			Name:       name,
 			ValueTy:    fieldTy,
 			Kind:       semtypes.MemberKindField,
 			Visibility: vis,
 			Immutable:  false,
 		})
+	}
+
+	// Inherit unoverridden included fields
+	for name, incFields := range includedFields {
+		if len(incFields) > 1 {
+			t.ctx.SemanticError(
+				fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name),
+				classDef.GetPosition(),
+			)
+			return nil, false
+		}
+		members = append(members, incFields[0])
 	}
 
 	// PR-TODO: clean this up
@@ -579,6 +621,18 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if method.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
 		}
+		if incMethods, exists := includedMethods[name]; exists {
+			for _, incMethod := range incMethods {
+				if !semtypes.IsSubtype(t.tyCtx, methodTy, incMethod.ValueTy) {
+					t.ctx.SemanticError(
+						fmt.Sprintf("method '%s' that overrides included method is not a subtype of the included method type", name),
+						method.GetPosition(),
+					)
+					return nil, false
+				}
+			}
+			delete(includedMethods, name)
+		}
 		members = append(members, semtypes.Member{
 			Name:       name,
 			ValueTy:    methodTy,
@@ -586,6 +640,15 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 			Visibility: vis,
 			Immutable:  true,
 		})
+	}
+
+	// Verify all included methods are overridden
+	for name := range includedMethods {
+		t.ctx.SemanticError(
+			fmt.Sprintf("included method '%s' must be overridden in class definition", name),
+			classDef.GetPosition(),
+		)
+		return nil, false
 	}
 
 	// Define the object type
@@ -2374,29 +2437,14 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		ty.Definition = &od
 
 		// Step 1: Accumulate included members
-		includedMembers := make(map[string][]model.ObjectMember)
+		includedMembers := make(map[string][]semtypes.Member)
 		for _, symRef := range ty.Inclusions {
-			// FIXME: this needs to allow classes when we support them
-			tDefn, ok := tr.ctx.GetTypeDefinition(symRef)
-			if !ok {
-				tr.ctx.InternalError("type definition not found for inclusion", ty.GetPosition())
-				continue
-			}
-			objTy, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			if !ok {
-				tr.ctx.SemanticError("type inclusion must be an object type", ty.GetPosition())
-				continue
-			}
-			// Resolve the included type
-			_, ok = tr.resolveBType(objTy, depth+1)
+			incMembers, ok := tr.collectIncludedMembers(symRef, ty.GetPosition(), depth)
 			if !ok {
 				return nil, false
 			}
-			for m := range objTy.Members() {
-				kind := m.MemberKind()
-				if kind == model.ObjectMemberKindField || kind == model.ObjectMemberKindMethod {
-					includedMembers[m.Name()] = append(includedMembers[m.Name()], m)
-				}
+			for _, m := range incMembers {
+				includedMembers[m.Name] = append(includedMembers[m.Name], m)
 			}
 		}
 
@@ -2412,15 +2460,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			// Check overrides against included members
 			if incMembers, exists := includedMembers[name]; exists {
 				for _, incMember := range incMembers {
-					incTy, ok := tr.resolveObjectMemberType(incMember, depth)
-					if !ok {
-						tr.ctx.InternalError(
-							fmt.Sprintf("failed to resolve included field type for %s", name),
-							ty.GetPosition(),
-						)
-						return nil, false
-					}
-					if !semtypes.IsSubtype(tr.tyCtx, valueTy, incTy) {
+					if !semtypes.IsSubtype(tr.tyCtx, valueTy, incMember.ValueTy) {
 						tr.ctx.SemanticError(
 							fmt.Sprintf("member '%s' that overrides included member is not a subtype of the included member type", name),
 							ty.GetPosition(),
@@ -2440,28 +2480,13 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			})
 		}
 
-		// Check for duplicate included members that weren't overridden
+		// Inherit unoverridden included members
 		for name, incMembers := range includedMembers {
 			if len(incMembers) > 1 {
 				tr.ctx.SemanticError(fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
 				return nil, false
 			}
-			inc := incMembers[0]
-			valueTy, ok := tr.resolveObjectMemberType(inc, depth)
-			if !ok {
-				tr.ctx.InternalError(
-					fmt.Sprintf("failed to resolve included field type for %s", name),
-					ty.GetPosition(),
-				)
-				return nil, false
-			}
-			members = append(members, semtypes.Member{
-				Name:       name,
-				ValueTy:    valueTy,
-				Kind:       semtypeMemberKind(inc.MemberKind()),
-				Visibility: semtypeVisibility(inc.Visibility()),
-				Immutable:  inc.MemberKind() != model.ObjectMemberKindField,
-			})
+			members = append(members, incMembers[0])
 		}
 
 		// Step 3: Create semtype
@@ -2706,6 +2731,84 @@ func (tr *TypeResolver) resolveObjectMemberType(m model.ObjectMember, depth int)
 		}
 		return valueTy, ok
 	default:
+		return nil, false
+	}
+}
+
+func (tr *TypeResolver) collectIncludedMembers(symRef model.SymbolRef, pos diagnostics.Location, depth int) ([]semtypes.Member, bool) {
+	tDefn, ok := tr.ctx.GetTypeDefinition(symRef)
+	if !ok {
+		tr.ctx.InternalError("type definition not found for inclusion", pos)
+		return nil, false
+	}
+	switch defn := tDefn.(type) {
+	case *ast.BLangTypeDefinition:
+		objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+		if !ok {
+			tr.ctx.SemanticError("type inclusion must be an object type or class", pos)
+			return nil, false
+		}
+		_, ok = tr.resolveBType(objTy, depth+1)
+		if !ok {
+			return nil, false
+		}
+		var members []semtypes.Member
+		for m := range objTy.Members() {
+			kind := m.MemberKind()
+			if kind == model.ObjectMemberKindField || kind == model.ObjectMemberKindMethod {
+				valueTy, ok := tr.resolveObjectMemberType(m, depth)
+				if !ok {
+					return nil, false
+				}
+				members = append(members, semtypes.Member{
+					Name:       m.Name(),
+					ValueTy:    valueTy,
+					Kind:       semtypeMemberKind(kind),
+					Visibility: semtypeVisibility(m.Visibility()),
+					Immutable:  kind != model.ObjectMemberKindField,
+				})
+			}
+		}
+		return members, true
+	case *ast.BLangClassDefinition:
+		_, ok = tr.resolveClassDefinition(defn, depth+1)
+		if !ok {
+			return nil, false
+		}
+		var members []semtypes.Member
+		for _, f := range defn.Fields {
+			field := f.(*ast.BLangSimpleVariable)
+			fieldTy := tr.ctx.SymbolType(field.Symbol())
+			vis := semtypes.VisibilityPrivate
+			if field.FlagSet.Contains(model.Flag_PUBLIC) {
+				vis = semtypes.VisibilityPublic
+			}
+			members = append(members, semtypes.Member{
+				Name:       field.Name.Value,
+				ValueTy:    fieldTy,
+				Kind:       semtypes.MemberKindField,
+				Visibility: vis,
+				Immutable:  false,
+			})
+		}
+		for name := range defn.Methods {
+			method := defn.Methods[name]
+			methodTy := tr.ctx.SymbolType(method.Symbol())
+			vis := semtypes.VisibilityPrivate
+			if method.FlagSet.Contains(model.Flag_PUBLIC) {
+				vis = semtypes.VisibilityPublic
+			}
+			members = append(members, semtypes.Member{
+				Name:       name,
+				ValueTy:    methodTy,
+				Kind:       semtypes.MemberKindMethod,
+				Visibility: vis,
+				Immutable:  true,
+			})
+		}
+		return members, true
+	default:
+		tr.ctx.SemanticError("type inclusion must be an object type or class", pos)
 		return nil, false
 	}
 }

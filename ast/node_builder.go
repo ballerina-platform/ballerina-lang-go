@@ -2248,6 +2248,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			if objectType.AddMember(bMethod) {
 				n.cx.SyntaxError("redeclared symbol '"+methodName+"'", bMethod.pos)
 			}
+		case common.TYPE_REFERENCE:
+			typeRef := member.(*tree.TypeReferenceNode)
+			objectType.unresolvedInclusions = append(objectType.unresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
 		default:
 			panic("unexpected member kind in object type descriptor")
 		}
@@ -3248,6 +3251,9 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 			} else {
 				blangClass.AddMethod(funcName, bLFunction)
 			}
+		case common.TYPE_REFERENCE:
+			typeRef := member.(*tree.TypeReferenceNode)
+			blangClass.unresolvedInclusions = append(blangClass.unresolvedInclusions, n.createTypeNode(typeRef.TypeName()).(*BLangUserDefinedType))
 		default:
 			panic("TransformClassDefinition: unsupported member kind")
 		}
