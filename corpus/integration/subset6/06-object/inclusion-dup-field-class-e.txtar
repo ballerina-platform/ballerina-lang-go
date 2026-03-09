@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: included field 'x' declared in multiple type inclusions must be overridden
+  --> inclusion-dup-field-class-e.bal:25:1
+   |
+25 | class Bar { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^
+

@@ -1,0 +1,30 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition Foo
+    (object-type
+      (field x
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (type-definition Baz
+    (object-type
+      (field x
+        (union-type
+          (value-type int)
+          (value-type boolean)))))
+  (type-definition Bar
+    (object-type
+      (field x
+        (value-type int))))
+  (class-definition Qux
+    (variable x (type
+      (value-type int)))
+    (function init (
+      (variable x (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access x
+            (simple-var-ref self))
+          (simple-var-ref x))))))

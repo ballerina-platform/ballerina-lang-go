@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: included method 'getX' must be overridden in class definition
+  --> inclusion-missing-override-e.bal:22:1
+   |
+22 | class Bar { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^
+

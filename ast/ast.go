@@ -304,7 +304,8 @@ type (
 		InitFunction                    *BLangFunction
 		Methods                         map[string]BLangFunction
 		Fields                          []model.SimpleVariableNode
-		Inclusions                      []model.SymbolRef // This needs to be symbol because it could be a class definition as well
+		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
+		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
 		FlagSet                         common.Set[model.Flag]
 		typeData                        model.TypeData
 		Definition                      semtypes.Definition
@@ -813,6 +814,12 @@ func NewBLangClassDefinition() BLangClassDefinition {
 	this.FlagSet = &common.UnorderedSet[model.Flag]{}
 	this.FlagSet.Add(model.Flag_CLASS)
 	return this
+}
+
+func (this *BLangClassDefinition) PopUnresolvedInclusions() []*BLangUserDefinedType {
+	inclusions := this.unresolvedInclusions
+	this.unresolvedInclusions = nil
+	return inclusions
 }
 
 func (this *BLangClassDefinition) GetName() model.IdentifierNode {

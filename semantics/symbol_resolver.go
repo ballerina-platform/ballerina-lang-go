@@ -316,6 +316,8 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referSimpleVariableReference(resolver, n)
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
+	case *ast.BLangObjectType:
+		n.Inclusions = resolveInclusions(resolver, n.PopUnresolvedInclusions())
 	}
 	return resolver
 }
@@ -594,9 +596,20 @@ func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visi
 	return ms
 }
 
+func resolveInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) []model.SymbolRef {
+	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
+	for _, inc := range unresolvedInclusions {
+		ast.Walk(resolver, inc)
+		inclusions = append(inclusions, inc.Symbol())
+	}
+	return inclusions
+}
+
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
+
+	classDef.Inclusions = resolveInclusions(ms, classDef.PopUnresolvedInclusions())
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()
