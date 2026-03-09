@@ -156,9 +156,15 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintTypeTest(instruction.(*TypeTest))
 	case *Panic:
 		return p.PrintPanic(instruction.(*Panic))
+	case *FPLoad:
+		return p.PrintFPLoad(instruction.(*FPLoad))
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
+}
+
+func (p *PrettyPrinter) PrintFPLoad(fpLoad *FPLoad) string {
+	return fmt.Sprintf("%s = fp %s", p.PrintOperand(*fpLoad.LhsOp), fpLoad.FunctionLookupKey)
 }
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {

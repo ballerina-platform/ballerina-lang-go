@@ -70,6 +70,32 @@ func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.R
 	panic("function not found: " + callInfo.Name.Value())
 }
 
+func execFpCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
+	args := extractArgs(callInfo.Args, frame)
+	fnValue := frame.GetOperand(callInfo.FpOperand.Index).(*values.Function)
+	lookupKey := fnValue.LookupKey
+	fn := reg.GetBIRFunction(lookupKey)
+	var result values.BalValue
+	if fn != nil {
+		result = executeFunction(*fn, args, reg, callStack)
+	} else {
+		externFn := reg.GetNativeFunction(lookupKey)
+		if externFn != nil {
+			var err error
+			result, err = externFn.Impl(args)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			panic("function not found: " + callInfo.Name.Value())
+		}
+	}
+	if callInfo.LhsOp != nil {
+		frame.SetOperand(callInfo.LhsOp.Index, result)
+	}
+	return callInfo.ThenBB
+}
+
 func extractArgs(args []bir.BIROperand, frame *Frame) []values.BalValue {
 	values := make([]values.BalValue, len(args))
 	for i, op := range args {
