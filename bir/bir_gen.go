@@ -30,11 +30,17 @@ import (
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
 // TODO: may be we should have this in a separate package and keep BIR package clean (only definitions)
 
+type functionEntry struct {
+	lookupKey string
+	funcType  semtypes.SemType
+}
+
 type Context struct {
 	CompilerContext *context.CompilerContext
 	constantMap     map[model.SymbolRef]*BIRConstant
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
+	functionMap     map[model.SymbolRef]functionEntry
 }
 
 type stmtContext struct {
@@ -100,6 +106,12 @@ func (cx *stmtContext) addBB() *BIRBasicBlock {
 	return &bb
 }
 
+func buildFunctionLookupKey(ctx *Context, funcName string) string {
+	orgName := ctx.packageID.OrgName.Value()
+	pkgName := ctx.packageID.PkgName.Value()
+	return orgName + "/" + pkgName + ":" + funcName
+}
+
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg := &BIRPackage{}
 	birPkg.PackageID = ast.PackageID
@@ -108,6 +120,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		constantMap:     make(map[model.SymbolRef]*BIRConstant),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
+		functionMap:     make(map[model.SymbolRef]functionEntry),
 	}
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, typeDef := range ast.TypeDefinitions {
@@ -120,6 +133,16 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		c := TransformConstant(genCtx, &constant)
 		genCtx.constantMap[constant.Symbol()] = c
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
+	}
+	for i := range ast.Functions {
+		fn := &ast.Functions[i]
+		funcName := fn.GetName().GetValue()
+		lookupKey := buildFunctionLookupKey(genCtx, funcName)
+		symRef := fn.Symbol()
+		genCtx.functionMap[symRef] = functionEntry{
+			lookupKey: lookupKey,
+			funcType:  ctx.SymbolType(symRef),
+		}
 	}
 	for _, function := range ast.Functions {
 		birFunc := TransformFunction(genCtx, &function)
@@ -197,15 +220,13 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIR
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
+	entry := ctx.functionMap[astFunc.Symbol()]
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
-	orgName := ctx.packageID.OrgName.Value()
-	pkgName := ctx.packageID.PkgName.Value()
-	moduleKey := orgName + "/" + pkgName
-	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
+	birFunc.FunctionLookupKey = entry.lookupKey
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
@@ -796,26 +817,35 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	// TODO: deal with type
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := &Call{}
-	call.Kind = INSTRUCTION_KIND_CALL
 	call.Args = args
 	call.Name = model.Name(expr.GetName().GetValue())
 	call.ThenBB = thenBB
 	call.LhsOp = resultOperand
 
-	// Package qualified call - look up package ID from import alias
-	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
-		// Qualified call - look up package ID from import alias
-		call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
-	} else {
-		// Unqualified call (no PkgAlias) - assume same-module call and use current package
-		if ctx.birCx.packageID != nil {
-			call.CalleePkg = ctx.birCx.packageID
+	symRef := expr.Symbol()
+	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
+	if sym.Kind() == model.SymbolKindFunction {
+		// Regular function call
+		call.Kind = INSTRUCTION_KIND_CALL
+		if entry, ok := ctx.birCx.functionMap[symRef]; ok {
+			call.FunctionLookupKey = entry.lookupKey
+		} else {
+			// Imported function - resolve package from alias
+			if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+				call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
+			} else if ctx.birCx.packageID != nil {
+				call.CalleePkg = ctx.birCx.packageID
+			}
+			orgName := call.CalleePkg.OrgName.Value()
+			pkgName := call.CalleePkg.PkgName.Value()
+			call.FunctionLookupKey = orgName + "/" + pkgName + ":" + call.Name.Value()
 		}
+	} else {
+		// Function pointer call through a variable
+		call.Kind = INSTRUCTION_KIND_FP_CALL
+		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
+		call.FpOperand = ctx.varMap[unnarrowedRef]
 	}
-	orgName := call.CalleePkg.OrgName.Value()
-	pkgName := call.CalleePkg.PkgName.Value()
-	moduleKey := orgName + "/" + pkgName
-	call.FunctionLookupKey = moduleKey + ":" + call.Name.Value()
 	curBB.Terminator = call
 	return expressionEffect{
 		result: resultOperand,
@@ -997,6 +1027,20 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		constantLoad.Value = constant.ConstValue.Value
 		constantLoad.LhsOp = resultOperand
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
+		return expressionEffect{
+			result: resultOperand,
+			block:  curBB,
+		}
+	}
+
+	// Try function lookup
+	if entry, ok := ctx.birCx.functionMap[symRef]; ok {
+		resultOperand := ctx.addTempVar(entry.funcType)
+		fpLoad := &FPLoad{}
+		fpLoad.FunctionLookupKey = entry.lookupKey
+		fpLoad.Type = entry.funcType
+		fpLoad.LhsOp = resultOperand
+		curBB.Instructions = append(curBB.Instructions, fpLoad)
 		return expressionEffect{
 			result: resultOperand,
 			block:  curBB,

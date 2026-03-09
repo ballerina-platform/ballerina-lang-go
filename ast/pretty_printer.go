@@ -134,6 +134,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printCheckPanickedExpr(t)
 	case *BLangPanic:
 		p.printPanic(t)
+	case *BLangFunctionType:
+		p.printFunctionType(t)
+	case *BLangFunctionTypeParam:
+		p.printFunctionTypeParam(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -906,6 +910,44 @@ func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
+	p.endNode()
+}
+
+// Function type printer
+func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
+	p.startNode()
+	p.printString("function-type")
+	p.printString("(")
+	if len(node.RequiredParams) > 0 {
+		p.indentLevel++
+		for i := range node.RequiredParams {
+			param := &node.RequiredParams[i]
+			if param.TypeDesc != nil {
+				p.PrintInner(param.TypeDesc.(BLangNode))
+			}
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
+	p.startNode()
+	p.printString("function-type-param")
+	if node.Name != nil {
+		p.PrintInner(node.Name)
+	}
+	if node.TypeDesc != nil {
+		p.PrintInner(node.TypeDesc.(BLangNode))
+	}
 	p.endNode()
 }
 
