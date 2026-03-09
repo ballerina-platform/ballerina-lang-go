@@ -1,0 +1,5 @@
+# Fix - While transforming key values. Before adding the node.
+
+key = "hello"
+key1 = "hi"
+key1 = "yay"

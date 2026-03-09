@@ -1,0 +1,13 @@
+rootKey = 22
+
+[first.sub]
+hey = "sister"
+key  = "ewww"
+
+[first]
+key  = "sdsad"
+key1 = "eeww"
+
+[second]
+key = "yay"
+key1 = "test"
