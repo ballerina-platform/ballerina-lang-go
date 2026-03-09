@@ -1126,8 +1126,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangExpressionStmt:
-		res := analyzeExpression(a, n.Expr, &semtypes.NIL)
-		if !res {
+		if !analyzeExpression(a, n.Expr, nil) {
+			return nil
+		}
+		exprType := n.Expr.GetDeterminedType()
+		if !semtypes.IsSubtype(a.tyCtx(), exprType, &semtypes.NIL) {
+			a.semanticErr("expression value must be assigned", n.Expr.GetPosition())
 			return nil
 		}
 		return a
