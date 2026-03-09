@@ -554,8 +554,8 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	elementAccess.SetDeterminedType(loopVarTy)
 	loopVarDef.Var.SetInitialExpression(elementAccess)
 
-		var bodyStmts []ast.BLangStatement
-		bodyStmts = append(bodyStmts, loopVarDef)
+	var bodyStmts []ast.BLangStatement
+	bodyStmts = append(bodyStmts, loopVarDef)
 
 	bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, bodyStmts)
 	if !ok {
