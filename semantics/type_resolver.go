@@ -975,11 +975,12 @@ func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr
 		updateSymbolType(t.ctx, varDef.Var, variableTy)
 	}
 
-	if ok := t.resolveQueryIntermediateClauses(chain, expr); !ok {
+	queryChain, ok := t.resolveQueryIntermediateClauses(chain, expr)
+	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
-	selectTy, _, ok := t.resolveExpression(chain, selectClause.Expression)
+	selectTy, _, ok := t.resolveExpression(queryChain, selectClause.Expression)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -989,7 +990,8 @@ func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr
 	return queryTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr *ast.BLangQueryExpr) bool {
+func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
+	currentChain := chain
 	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangLetClause:
@@ -999,28 +1001,28 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 				if !ok || varDef.Var == nil {
 					t.ctx.Unimplemented("only simple variable declarations are supported in let clause",
 						clause.GetPosition())
-					return false
+					return nil, false
 				}
 				varDef.SetDeterminedType(&semtypes.NEVER)
 				if varDef.Var.Expr == nil {
 					t.ctx.SemanticError("let-clause variable declaration requires an initializer",
 						varDef.GetPosition())
-					return false
+					return nil, false
 				}
-				initTy, _, ok := t.resolveExpression(chain, varDef.Var.Expr.(ast.BLangExpression))
+				initTy, _, ok := t.resolveExpression(currentChain, varDef.Var.Expr.(ast.BLangExpression))
 				if !ok {
-					return false
+					return nil, false
 				}
 				var variableTy semtypes.SemType = initTy
 				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
 					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
 					if !ok {
-						return false
+						return nil, false
 					}
 					if !semtypes.IsSubtype(t.tyCtx, initTy, variableTy) {
 						t.ctx.SemanticError("let-clause variable type is incompatible with initializer expression",
 							varDef.GetPosition())
-						return false
+						return nil, false
 					}
 				}
 				setExpectedType(varDef.Var, variableTy)
@@ -1031,20 +1033,21 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 			}
 		case *ast.BLangWhereClause:
 			clause.SetDeterminedType(&semtypes.NEVER)
-			whereTy, _, ok := t.resolveExpression(chain, clause.Expression)
+			whereTy, effect, ok := t.resolveExpression(currentChain, clause.Expression)
 			if !ok {
-				return false
+				return nil, false
 			}
 			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
 				t.ctx.SemanticError("where-clause expression must be boolean", clause.GetPosition())
-				return false
+				return nil, false
 			}
+			currentChain = effect.ifTrue
 		default:
 			t.ctx.Unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
-			return false
+			return nil, false
 		}
 	}
-	return true
+	return currentChain, true
 }
 
 func (t *TypeResolver) resolveSimpleVarRef(chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {

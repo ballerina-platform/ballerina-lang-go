@@ -450,6 +450,11 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		cx.unimplemented("query from clause currently supports only simple variable definition")
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
+	cloneLoopVarDef := cloneSimpleVariableDef(loopVarDef)
+	if cloneLoopVarDef == nil || cloneLoopVarDef.Var == nil {
+		cx.internalError("failed to clone query from-clause variable definition")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
 
 	queryTy := expr.GetDeterminedType()
 
@@ -550,12 +555,12 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		IndexExpr: idxRef,
 	}
 	elementAccess.Expr = collRef
-	loopVarTy := loopVarDef.Var.GetDeterminedType()
+	loopVarTy := cloneLoopVarDef.Var.GetDeterminedType()
 	elementAccess.SetDeterminedType(loopVarTy)
-	loopVarDef.Var.SetInitialExpression(elementAccess)
+	cloneLoopVarDef.Var.SetInitialExpression(elementAccess)
 
 	var bodyStmts []ast.BLangStatement
-	bodyStmts = append(bodyStmts, loopVarDef)
+	bodyStmts = append(bodyStmts, cloneLoopVarDef)
 
 	bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, bodyStmts)
 	if !ok {
@@ -587,6 +592,23 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		initStmts:       initStmts,
 		replacementNode: resultRef,
 	}
+}
+
+func cloneSimpleVariableDef(varDef *ast.BLangSimpleVariableDef) *ast.BLangSimpleVariableDef {
+	if varDef == nil {
+		return nil
+	}
+	clone := *varDef
+	if varDef.Var == nil {
+		return &clone
+	}
+	cloneVar := *varDef.Var
+	if varDef.Var.Name != nil {
+		cloneName := *varDef.Var.Name
+		cloneVar.Name = &cloneName
+	}
+	clone.Var = &cloneVar
+	return &clone
 }
 
 func appendQueryIntermediateClauseStmts(
