@@ -1,7 +1,7 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = foo() -> bb1;
   }
@@ -34,7 +34,7 @@ main<NIL>{
     GOTO bb3;
   }
 }
-foo<NIL>{
+foo() -> ((), (LIST)){
   bb0 {
     %1 = ConstantLoad called foo
     %2 = println(%1) -> bb1;

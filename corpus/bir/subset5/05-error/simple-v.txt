@@ -1,5 +1,5 @@
 module $anon.. v 0.0.0;
-foo<NIL>{
+foo() -> ((INT, ERROR), ()){
   bb0 {
     %1 = ConstantLoad foo
     %2 = ConstantLoad ff
@@ -10,7 +10,7 @@ foo<NIL>{
     return;
   }
 }
-bar<NIL>{
+bar() -> ((INT, ERROR), ()){
   bb0 {
     %1 = ConstantLoad bar
     %2 = ConstantLoad message
@@ -23,7 +23,7 @@ bar<NIL>{
     return;
   }
 }
-baz<NIL>{
+baz() -> ((INT, ERROR), ()){
   bb0 {
     %1 = ConstantLoad bar
     %2 = ConstantLoad message

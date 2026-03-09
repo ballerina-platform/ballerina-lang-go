@@ -76,22 +76,21 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 
 func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 	p.write(function.Name.Value())
-	ty := function.Type
-	if ty != nil {
-		p.write("(")
-		for i, param := range ty.GetParameterTypes() {
-			if i > 0 {
+	p.write("(")
+	first := true
+	for _, v := range function.LocalVars {
+		if v.Kind == VAR_KIND_ARG {
+			if !first {
 				p.write(",")
 			}
-			p.write(p.PrintType(param))
+			p.write(p.PrintSemType(v.Type))
+			first = false
 		}
-		p.write(")")
-		if ty.GetReturnType() != nil {
-			p.write(" -> ")
-			p.write(p.PrintType(ty.GetReturnType()))
-		}
-	} else {
-		p.write("<NIL>")
+	}
+	p.write(")")
+	if function.ReturnVariable != nil && function.ReturnVariable.Type != nil {
+		p.write(" -> ")
+		p.write(p.PrintSemType(function.ReturnVariable.Type))
 	}
 	p.write("{\n")
 	p.increaseIndent()

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad true
     %2 = ConstantLoad 17
@@ -65,7 +65,7 @@ main<NIL>{
     return;
   }
 }
-ifElse<NIL>{
+ifElse(((BOOLEAN), ()),((INT), ()),((BOOLEAN), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
   bb0 {
     t ? bb1 : bb2;
   }

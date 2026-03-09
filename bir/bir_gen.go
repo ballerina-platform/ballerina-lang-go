@@ -208,9 +208,11 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
-	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), nil, VAR_KIND_RETURN)
+	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
+	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), nil, VAR_KIND_ARG, param.Symbol())
+		paramType := param.GetDeterminedType()
+		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
