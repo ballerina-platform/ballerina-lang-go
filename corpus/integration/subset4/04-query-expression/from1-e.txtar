@@ -6,3 +6,4 @@ error[SEMANTIC_ERROR]: incompatible type: expected ((), (LIST)) {listMembers=[0.
    |
 19 |     string[] out = from var x in xs select x; // @error
    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
