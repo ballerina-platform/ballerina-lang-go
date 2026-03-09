@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = newMap ((), (MAPPING)){}
     m = %1;
@@ -19,13 +19,13 @@ main<NIL>{
     return;
   }
 }
-put<NIL>{
+put(((), (MAPPING)),((STRING), ()),((INT), ())) -> ((NIL), ()){
   bb0 {
     m[k] = v;
     return;
   }
 }
-get<NIL>{
+get(((), (MAPPING)),((STRING), ())) -> ((INT), ()){
   bb0 {
     %3 = m[k];
     %4 = <((INT), ())>(%3)

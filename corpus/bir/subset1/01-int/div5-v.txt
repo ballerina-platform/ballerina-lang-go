@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %2 = ConstantLoad 60
     %3 = ConstantLoad 2
@@ -115,7 +115,7 @@ main<NIL>{
     return;
   }
 }
-div<NIL>{
+div(((INT), ()),((INT), ())) -> ((INT), ()){
   bb0 {
     %3 = / i j;
     %0 = %3;

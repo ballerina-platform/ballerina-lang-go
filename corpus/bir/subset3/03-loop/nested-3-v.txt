@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = whileInForeach() -> bb1;
   }
@@ -8,7 +8,7 @@ main<NIL>{
     return;
   }
 }
-whileInForeach<NIL>{
+whileInForeach() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad 1
     i = %1;
