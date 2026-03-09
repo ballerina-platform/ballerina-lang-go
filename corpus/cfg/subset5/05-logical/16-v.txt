@@ -1,0 +1,57 @@
+(main
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable b (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (var-def
+      (variable x (type
+        (union-type
+          (union-type
+            (value-type int)
+            (value-type string))
+          (value-type float))) (expr
+        (literal 1))))
+    (binary-expr &&
+      (simple-var-ref b)
+      (unary-expr !
+        (group-expr
+          (type-test-expr is
+            (simple-var-ref x)
+            (value-type int)))))
+  )
+  (bb1 (bb0) (bb2)
+    (var-def
+      (variable unused1 (type
+        (union-type
+          (value-type float)
+          (value-type string))) (expr
+        (simple-var-ref x))))
+  )
+  (bb2 (bb1 bb0) (bb3 bb5)
+    (binary-expr ||
+      (simple-var-ref b)
+      (unary-expr !
+        (group-expr
+          (type-test-expr is
+            (simple-var-ref x)
+            (value-type int)))))
+  )
+  (bb3 (bb2) (bb4)
+    (var-def
+      (variable unused2 (type
+        (union-type
+          (union-type
+            (value-type int)
+            (value-type string))
+          (value-type float))) (expr
+        (simple-var-ref x))))
+  )
+  (bb4 (bb3 bb5) ())
+  (bb5 (bb2) (bb4)
+    (var-def
+      (variable unused3 (type
+        (value-type int)) (expr
+        (simple-var-ref x))))
+  )
+)

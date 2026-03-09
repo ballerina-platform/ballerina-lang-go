@@ -1,0 +1,34 @@
+(package
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable b (type
+          (value-type boolean)) (expr
+          (literal true))))
+      (var-def
+        (variable x (type
+          (union-type
+            (value-type int)
+            (value-type string))) (expr
+          (literal 1))))
+      (if
+        (binary-expr &&
+          (simple-var-ref b)
+          (type-test-expr is
+            (simple-var-ref x)
+            (value-type string)))
+        (block-stmt
+          (var-def
+            (variable unused1 (type
+              (value-type string)) (expr
+              (simple-var-ref x))))
+          (return
+            (literal <nil>))) ())
+      (block-stmt
+        (var-def
+          (variable unused2 (type
+            (union-type
+              (value-type int)
+              (value-type string))) (expr
+            (simple-var-ref x))))))))
