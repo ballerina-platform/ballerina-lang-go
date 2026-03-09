@@ -110,6 +110,12 @@ type (
 		BIRInstructionBase
 		ClassDef *BIRClassDef
 	}
+
+	FPLoad struct {
+		BIRInstructionBase
+		FunctionLookupKey string
+		Type              semtypes.SemType
+	}
 )
 
 type (
@@ -131,6 +137,7 @@ var (
 	_ BIRInstruction          = &NewMap{}
 	_ BIRAssignInstruction    = &NewError{}
 	_ BIRAssignInstruction    = &NewObject{}
+	_ BIRAssignInstruction    = &FPLoad{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -279,6 +286,14 @@ func (t *TypeTest) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_TEST
 }
 
+func (f *FPLoad) GetLhsOperand() *BIROperand {
+	return f.LhsOp
+}
+
+func (f *FPLoad) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_FP_LOAD
+}
+
 func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
@@ -341,6 +356,19 @@ func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnost
 			LhsOp: lhsOp,
 		},
 		ClassDef: classDef,
+	}
+}
+
+func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand, pos diagnostics.Location) *FPLoad {
+	return &FPLoad{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		FunctionLookupKey: functionLookupKey,
+		Type:              typ,
 	}
 }
 

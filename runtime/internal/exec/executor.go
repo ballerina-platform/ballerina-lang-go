@@ -149,6 +149,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		execTypeCast(v, frame, reg)
 	case *bir.TypeTest:
 		execTypeTest(v, frame, reg)
+	case *bir.FPLoad:
+		execFPLoad(v, frame, reg)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
@@ -169,7 +171,7 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		case bir.INSTRUCTION_KIND_WAIT:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WAIT")
 		case bir.INSTRUCTION_KIND_FP_CALL:
-			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_FP_CALL")
+			return execFpCall(v, frame, reg, callStack)
 		case bir.INSTRUCTION_KIND_WK_RECEIVE:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WK_RECEIVE")
 		case bir.INSTRUCTION_KIND_WK_SEND:

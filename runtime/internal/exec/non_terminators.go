@@ -116,6 +116,14 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame, reg *modules.Registry) {
 	setOperandValue(typeCast.LhsOp, frame, reg, result)
 }
 
+func execFPLoad(fpLoad *bir.FPLoad, frame *Frame, reg *modules.Registry) {
+	fn := &values.Function{
+		Type:      fpLoad.Type,
+		LookupKey: fpLoad.FunctionLookupKey,
+	}
+	setOperandValue(fpLoad.LhsOp, frame, reg, fn)
+}
+
 func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 	sourceValue := getOperandValue(typeTest.RhsOp, frame, reg)
 	valueType := values.SemTypeForValue(sourceValue)

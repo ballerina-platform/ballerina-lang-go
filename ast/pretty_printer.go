@@ -168,6 +168,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printWildCardMatchPattern(t)
 	case *BLangMatchClause:
 		p.printMatchClause(t)
+	case *BLangFunctionType:
+		p.printFunctionType(t)
+	case *BLangFunctionTypeParam:
+		p.printFunctionTypeParam(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -992,16 +996,16 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 		p.printString("public")
 	}
 	p.printString("(")
-	if len(node.Params) > 0 {
+	if len(node.RequiredParams) > 0 {
 		p.indentLevel++
-		for _, param := range node.Params {
+		for _, param := range node.RequiredParams {
 			p.startNode()
 			p.printString("param")
-			if param.name != nil {
-				p.printString(*param.name)
+			if param.Name != nil {
+				p.printString(param.Name.Value)
 			}
 			p.indentLevel++
-			p.PrintInner(param.ty.(BLangNode))
+			p.PrintInner(param.TypeDesc.(BLangNode))
 			p.indentLevel--
 			p.endNode()
 		}
@@ -1009,9 +1013,9 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 	}
 	p.printSticky(")")
 	p.printString("(")
-	if node.ReturnTy != nil {
+	if node.ReturnTypeDescriptor != nil {
 		p.indentLevel++
-		p.PrintInner(node.ReturnTy.(BLangNode))
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
 		p.indentLevel--
 	}
 	p.printSticky(")")
@@ -1141,6 +1145,44 @@ func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
 		p.indentLevel--
 	}
 	p.printSticky(")")
+	p.endNode()
+}
+
+// Function type printer
+func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
+	p.startNode()
+	p.printString("function-type")
+	p.printString("(")
+	if len(node.RequiredParams) > 0 {
+		p.indentLevel++
+		for i := range node.RequiredParams {
+			param := &node.RequiredParams[i]
+			if param.TypeDesc != nil {
+				p.PrintInner(param.TypeDesc.(BLangNode))
+			}
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
+	p.startNode()
+	p.printString("function-type-param")
+	if node.Name != nil {
+		p.PrintInner(node.Name)
+	}
+	if node.TypeDesc != nil {
+		p.PrintInner(node.TypeDesc.(BLangNode))
+	}
 	p.endNode()
 }
 
