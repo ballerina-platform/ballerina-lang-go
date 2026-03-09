@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: Unknown symbol: y
   --> where2-e.bal:20:15

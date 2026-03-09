@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: from-clause variable type is incompatible with collection member type
   --> from2-e.bal:19:22

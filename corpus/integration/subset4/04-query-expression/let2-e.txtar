@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: Unknown symbol: b
   --> let2-e.bal:20:21

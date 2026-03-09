@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((), (LIST)) {listMembers=[0..*:((STRING), ())]}, got ((), (LIST)) {listMembers=[0..*:((INT), ())]}
   --> from1-e.bal:19:20
