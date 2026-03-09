@@ -28,7 +28,7 @@ func tableSubtypeComplement(t SubtypeData) SubtypeData {
 
 func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from TableOps.java:42:5
-	b := Bdd(t)
+	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
 		b = BddIntersect(b, LIST_SUBTYPE_THREE_ELEMENT)
 	}

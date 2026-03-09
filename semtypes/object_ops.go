@@ -38,7 +38,7 @@ func (this *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 
 func objectSubTypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ObjectOps.java:43:5
-	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), objectBddIsEmpty, Bdd(t))
+	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), objectBddIsEmpty, t.(Bdd))
 }
 
 func objectBddIsEmpty(cx Context, b Bdd) bool {

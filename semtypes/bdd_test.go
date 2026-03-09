@@ -33,15 +33,10 @@ func TestBddDiff(t *testing.T) {
 	// Calculate difference: (b1 ∩ b2) - b1
 	r := BddDiff(b1and2, b1)
 
-	// Type assert to BddAllOrNothing
-	allOrNothing, ok := r.(BddAllOrNothing)
+	// Type assert to *BddAllOrNothing
+	allOrNothing, ok := r.(*BddAllOrNothing)
 	if !ok {
-		// Try pointer type
-		allOrNothingPtr, ok := r.(*BddAllOrNothing)
-		if !ok {
-			t.Fatalf("expected BddAllOrNothing or *BddAllOrNothing, got %T", r)
-		}
-		allOrNothing = *allOrNothingPtr
+		t.Fatalf("expected *BddAllOrNothing, got %T", r)
 	}
 
 	// Assert that the result is not "all" (should be "nothing")

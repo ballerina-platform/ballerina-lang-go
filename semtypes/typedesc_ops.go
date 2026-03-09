@@ -24,12 +24,12 @@ var _ BasicTypeOps = &TypedescOps{}
 
 func typedescSubtypeComplement(t SubtypeData) SubtypeData {
 	// migrated from TypedescOps.java:38:5
-	return bddComplement(Bdd(t))
+	return bddComplement(t.(Bdd))
 }
 
 func typedescSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from TypedescOps.java:42:5
-	b := Bdd(t)
+	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
 		b = BddIntersect(b, BDD_SUBTYPE_RO)
 	}

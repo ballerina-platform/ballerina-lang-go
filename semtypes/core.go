@@ -411,7 +411,7 @@ func ListAllMemberTypesInner(cx Context, t SemType) ListMemberTypes {
 }
 
 func bddListAllRanges(cx Context, b Bdd, accum []Range) []Range {
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		} else {
@@ -562,7 +562,7 @@ func ToMappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 }
 
 func bddMappingAtomicType(env Env, bdd Bdd, top MappingAtomicType) *MappingAtomicType {
-	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return &top
 		}
@@ -617,7 +617,7 @@ func ToListAtomicType(cx Context, t SemType) *ListAtomicType {
 }
 
 func bddListAtomicType(env Env, bdd Bdd, top ListAtomicType) *ListAtomicType {
-	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return &top
 		}
@@ -663,7 +663,7 @@ func cellAtomicType(t SemType) *CellAtomicType {
 }
 
 func bddCellAtomicType(bdd Bdd, top CellAtomicType) *CellAtomicType {
-	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return &top
 		}
@@ -674,9 +674,9 @@ func bddCellAtomicType(bdd Bdd, top CellAtomicType) *CellAtomicType {
 	middleBdd := bddNode.Middle()
 	rightBdd := bddNode.Right()
 
-	if leftAll, ok := leftBdd.(BddAllOrNothing); ok && leftAll.IsAll() {
-		if middleNothing, ok := middleBdd.(BddAllOrNothing); ok && middleNothing.IsNothing() {
-			if rightNothing, ok := rightBdd.(BddAllOrNothing); ok && rightNothing.IsNothing() {
+	if leftAll, ok := leftBdd.(*BddAllOrNothing); ok && leftAll.IsAll() {
+		if middleNothing, ok := middleBdd.(*BddAllOrNothing); ok && middleNothing.IsNothing() {
+			if rightNothing, ok := rightBdd.(*BddAllOrNothing); ok && rightNothing.IsNothing() {
 				result := cellAtomType(bddNode.Atom())
 				return &result
 			}
@@ -974,7 +974,7 @@ func MappingAtomicTypesInUnion(cx Context, t SemType) common.Optional[[]MappingA
 }
 
 func collectBddMappingAtomicTypesInUnion(env Env, bdd Bdd, top MappingAtomicType, matList *[]MappingAtomicType) bool {
-	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			*matList = append(*matList, top)
 			return true
@@ -987,12 +987,12 @@ func collectBddMappingAtomicTypesInUnion(env Env, bdd Bdd, top MappingAtomicType
 		return true
 	}
 
-	bddNodeImpl := bdd.(BddNodeImpl)
+	bddNodeImpl := bdd.(*BddNodeImpl)
 	leftBdd := bddNodeImpl.Left()
 	rightBdd := bddNodeImpl.Right()
 
-	if leftNode, ok := leftBdd.(BddAllOrNothing); ok && leftNode.IsAll() {
-		if rightNode, ok := rightBdd.(BddAllOrNothing); ok && rightNode.IsNothing() {
+	if leftNode, ok := leftBdd.(*BddAllOrNothing); ok && leftNode.IsAll() {
+		if rightNode, ok := rightBdd.(*BddAllOrNothing); ok && rightNode.IsNothing() {
 			*matList = append(*matList, *env.mappingAtomType(bddNodeImpl.Atom()))
 			return collectBddMappingAtomicTypesInUnion(env, bddNodeImpl.Middle(), top, matList)
 		}
