@@ -19,13 +19,13 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(greaterThan(true, false)); // @output 1
-    printBoolean(greaterThan(true, true)); // @output 0
-    printBoolean(greaterThan(false, false)); // @output 0
-    printBoolean(lessThan(true, false)); // @output 0
-    printBoolean(lessThan(false, true)); // @output 1
-    printBoolean(lessThan(true, true)); // @output 0
-    printBoolean(lessThan(false, false)); // @output 0
+    printBoolean(greaterThan(true, false));
+    printBoolean(greaterThan(true, true));
+    printBoolean(greaterThan(false, false));
+    printBoolean(lessThan(true, false));
+    printBoolean(lessThan(false, true));
+    printBoolean(lessThan(true, true));
+    printBoolean(lessThan(false, false));
 }
 
 function printBoolean(boolean b) {

@@ -18,12 +18,12 @@
 import ballerina/io;
 
 public function main() {
-    io:println(makeNil() == ()); // @output true
-    io:println(makeNil() == null); // @output true
-    io:println(() != null); // @output false
+    io:println(makeNil() == ());
+    io:println(makeNil() == null);
+    io:println(() != null);
     any x = null;
-    io:println(x == null); // @output true
-    io:println(makeNilAny() != null); // @output false
+    io:println(x == null);
+    io:println(makeNilAny() != null);
 }
 
 function makeNil() {

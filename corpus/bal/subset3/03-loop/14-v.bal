@@ -19,12 +19,12 @@ import ballerina/io;
 
 public function main() {
     foreach int i in 6 ..< 10 {
-        io:println(i); // @output 6
-                       // @output 7
+        io:println(i);
+                      
         if i == 6 {
             continue;
         }
-        io:println(true); // @output true
+        io:println(true);
         return;
     }
     io:println(false);

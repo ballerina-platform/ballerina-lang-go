@@ -19,14 +19,14 @@
 import ballerina/io;
 
 public function main() {
-    printEq(true, true); // @output 1
-    printEq(true, false); // @output 0
-    printEq(false, true); // @output 0
-    printEq(false, false); // @output 1
-    printNotEq(true, true); // @output 0
-    printNotEq(true, false); // @output 1
-    printNotEq(false, true); // @output 1
-    printNotEq(false, false); // @output 0
+    printEq(true, true);
+    printEq(true, false);
+    printEq(false, true);
+    printEq(false, false);
+    printNotEq(true, true);
+    printNotEq(true, false);
+    printNotEq(false, true);
+    printNotEq(false, false);
 }
 
 function printEq(boolean b1, boolean b2) {

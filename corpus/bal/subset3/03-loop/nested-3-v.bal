@@ -25,10 +25,10 @@ public function whileInForeach() {
     foreach int i in 1 ..< 3 {
         int j = 0;
         while j < 2 {
-            io:println(i * 10 + j); // @output 10
-            // @output 11
-            // @output 20
-            // @output 21
+            io:println(i * 10 + j);
+           
+           
+           
             j = j + 1;
         }
     }

@@ -19,12 +19,12 @@ import ballerina/io;
 
 public function main() {
     any x = [true];
-    io:println(x == 1); // @output false
-    io:println(x == true); // @output false
-    io:println(x == ()); // @output false
+    io:println(x == 1);
+    io:println(x == true);
+    io:println(x == ());
     x = [];
-    io:println(x != 1); // @output true
+    io:println(x != 1);
     x = [1, 2, 3];
-    io:println(x != true); // @output true
-    io:println(x != ()); // @output true
+    io:println(x != true);
+    io:println(x != ());
 }

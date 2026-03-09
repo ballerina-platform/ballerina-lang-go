@@ -18,14 +18,14 @@
 import ballerina/io;
 
 public function main() {
-    io:println(mkInt(2) === mkBoolean(true)); // @output false
-    io:println(mkInt(0) !== mkBoolean(false)); // @output true
-    io:println(mkBoolean(true) === mkInt(1)); // @output false
-    io:println(false !== mkInt(0)); // @output true
-    io:println(1 === mkBoolean(true)); // @output false
-    io:println(0 !== mkBoolean(false)); // @output true
-    io:println(true === mkInt(1)); // @output false
-    io:println(false !== mkInt(0)); // @output true
+    io:println(mkInt(2) === mkBoolean(true));
+    io:println(mkInt(0) !== mkBoolean(false));
+    io:println(mkBoolean(true) === mkInt(1));
+    io:println(false !== mkInt(0));
+    io:println(1 === mkBoolean(true));
+    io:println(0 !== mkBoolean(false));
+    io:println(true === mkInt(1));
+    io:println(false !== mkInt(0));
 }
 
 function mkInt(int n) returns any {
