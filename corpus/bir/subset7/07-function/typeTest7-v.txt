@@ -1,0 +1,95 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main<NIL>{
+  bb0 {
+    %1 = fp $anon/.:f1
+    f = %1;
+    %3 = call(f) -> bb1;
+  }
+  bb1 {
+    %4 = println(%3) -> bb2;
+  }
+  bb2 {
+    %5 = fp $anon/.:f2
+    f = %5;
+    %6 = call(f) -> bb3;
+  }
+  bb3 {
+    %7 = println(%6) -> bb4;
+  }
+  bb4 {
+    %8 = fp $anon/.:f3
+    f = %8;
+    %9 = call(f) -> bb5;
+  }
+  bb5 {
+    %10 = println(%9) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+call<NIL>{
+  bb0 {
+    %2 = f is ((), (FUNCTION))
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %3 = ConstantLoad 1
+    %4 = f(%3) -> bb2;
+  }
+  bb2 {
+    %0 = %4;
+    return;
+  }
+  bb3 {
+    %5 = f is ((), (FUNCTION))
+    %5 ? bb4 : bb6;
+  }
+  bb4 {
+    %6 = ConstantLoad 1
+    %7 = ConstantLoad 2
+    %8 = f(%6,%7) -> bb5;
+  }
+  bb5 {
+    %0 = %8;
+    return;
+  }
+  bb6 {
+    %9 = ConstantLoad 1
+    %10 = ConstantLoad 2
+    %11 = ConstantLoad 3
+    %12 = f(%9,%10,%11) -> bb7;
+  }
+  bb7 {
+    %0 = %12;
+    return;
+  }
+  bb8 {
+    GOTO bb9;
+  }
+  bb9 {
+    return;
+  }
+}
+f1<NIL>{
+  bb0 {
+    %0 = i;
+    return;
+  }
+}
+f2<NIL>{
+  bb0 {
+    %3 = + i j;
+    %0 = %3;
+    return;
+  }
+}
+f3<NIL>{
+  bb0 {
+    %5 = + i j;
+    %4 = + %5 k;
+    %0 = %4;
+    return;
+  }
+}
