@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: no applicable inherent type for mapping constructor
+  --> mapping14-e.bal:36:11
+   |
+36 |     T a = { l1: "c", "other": 1 }; // @error
+   |           ^^^^^^^^^^^^^^^^^^^^^^^
+
