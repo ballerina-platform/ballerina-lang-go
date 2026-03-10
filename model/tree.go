@@ -762,6 +762,12 @@ type UnionTypeNode interface {
 	Rhs() *TypeData
 }
 
+type IntersectionTypeNode interface {
+	ReferenceTypeNode
+	Lhs() *TypeData
+	Rhs() *TypeData
+}
+
 type ErrorTypeNode interface {
 	Node
 	GetDetailType() TypeData

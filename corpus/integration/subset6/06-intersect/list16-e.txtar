@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
+  --> list16-e.bal:22:6
+   |
+22 |     (L1&L2)|() l = (); // @error
+   |      ^^^^^
+

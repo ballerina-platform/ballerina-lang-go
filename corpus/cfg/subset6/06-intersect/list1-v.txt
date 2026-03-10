@@ -1,0 +1,33 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable l (type
+        (intersection-type
+          (user-defined-type L1)
+          (user-defined-type L2))) (expr
+        (list-constructor-expr
+          (literal 5)
+          (literal 6)))))
+    (type-test-expr is
+      (simple-var-ref l)
+      (tuple-type
+        (value-type int)
+        (value-type int)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal int, int))))
+  )
+  (bb2 (bb1) (bb3)
+    (type-test-expr is
+      (simple-var-ref l)
+      (user-defined-type L1))
+  )
+  (bb3 (bb2) (bb4)
+    (expression-stmt
+      (invocation io println (
+        (literal int, int))))
+  )
+  (bb4 (bb3) ())
+)
