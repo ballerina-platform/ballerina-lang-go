@@ -1,0 +1,18 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation rem (
+          (unary-expr -
+            (literal 10000))
+          (literal 0))))))
+  )
+)
+(rem
+  (bb0 () ()
+    (return
+      (binary-expr %
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)

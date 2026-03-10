@@ -1,0 +1,21 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable amount (type
+        (value-type int)) (expr
+        (literal 64))))
+    (expression-stmt
+      (invocation io println (
+        (invocation shift (
+          (literal 1)
+          (simple-var-ref amount))))))
+  )
+)
+(shift
+  (bb0 () ()
+    (return
+      (binary-expr <<
+        (simple-var-ref x)
+        (simple-var-ref amount)))
+  )
+)

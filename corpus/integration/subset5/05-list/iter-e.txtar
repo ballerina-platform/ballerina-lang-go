@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: invalid type for variable
   --> iter-e.bal:22:13

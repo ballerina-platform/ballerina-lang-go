@@ -20,7 +20,7 @@ import ballerina/io;
 
 public function main() {
     int x = foo();
-    io:println(x); // @output 2
+    io:println(x);
 }
 
 function foo() returns int {

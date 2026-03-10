@@ -128,6 +128,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
 		p.printErrorConstructorExpr(t)
+	case *BLangPanic:
+		p.printPanic(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -372,6 +374,15 @@ func (p *PrettyPrinter) printReturn(node *BLangReturn) {
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printPanic(node *BLangPanic) {
+	p.startNode()
+	p.printString("panic")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 

@@ -19,13 +19,13 @@
 import ballerina/io;
 
 public function main() {
-  io:println(-2 + 5); // @output 3
-  io:println(5 + -2); // @output 3
-  io:println(5 + -2 * 3); //@output -1
-  printBoolean(-5 < 2); // @output 1
-  printBoolean(2 >= -5); // @output 1
-  printBoolean(!false >= false); // @output 1
-  printBoolean(false <= !false); // @output 1
+  io:println(-2 + 5);
+  io:println(5 + -2);
+  io:println(5 + -2 * 3);
+  printBoolean(-5 < 2);
+  printBoolean(2 >= -5);
+  printBoolean(!false >= false);
+  printBoolean(false <= !false);
 }
 
 

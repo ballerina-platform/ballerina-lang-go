@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: expect numeric type for -
   --> tohex1-e.bal:21:16

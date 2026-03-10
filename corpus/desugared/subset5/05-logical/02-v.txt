@@ -1,0 +1,77 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr &&
+            (invocation lhsTrue ())
+            (invocation rhsTrue ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr &&
+            (invocation lhsFalse ())
+            (invocation rhsTrue ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr &&
+            (invocation lhsTrue ())
+            (invocation rhsFalse ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr &&
+            (invocation lhsFalse ())
+            (invocation rhsFalse ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ||
+            (invocation lhsTrue ())
+            (invocation rhsTrue ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ||
+            (invocation lhsFalse ())
+            (invocation rhsTrue ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ||
+            (invocation lhsTrue ())
+            (invocation rhsFalse ())))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ||
+            (invocation lhsFalse ())
+            (invocation rhsFalse ())))))))
+  (function lhsTrue () (
+    (value-type boolean))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal lhsTrue))))
+      (return
+        (literal true))))
+  (function rhsTrue () (
+    (value-type boolean))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal rhsTrue))))
+      (return
+        (literal true))))
+  (function lhsFalse () (
+    (value-type boolean))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal lhsFalse))))
+      (return
+        (literal false))))
+  (function rhsFalse () (
+    (value-type boolean))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal rhsFalse))))
+      (return
+        (literal false)))))

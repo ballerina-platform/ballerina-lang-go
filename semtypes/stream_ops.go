@@ -29,7 +29,7 @@ func streamSubtypeComplement(t SubtypeData) SubtypeData {
 
 func streamSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from StreamOps.java:42:5
-	b := Bdd(t)
+	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
 		b = BddIntersect(b, LIST_SUBTYPE_TWO_ELEMENT)
 	}

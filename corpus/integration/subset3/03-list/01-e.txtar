@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((), (LIST)), got ((INT), ())
   --> 01-e.bal:20:15

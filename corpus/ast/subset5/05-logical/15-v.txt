@@ -1,0 +1,39 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (union-type
+            (union-type
+              (value-type int)
+              (value-type string))
+            (value-type float))) (expr
+          (literal 1))))
+      (if
+        (binary-expr &&
+          (unary-expr !
+            (group-expr
+              (type-test-expr is
+                (simple-var-ref x)
+                (value-type string))))
+          (unary-expr !
+            (group-expr
+              (type-test-expr is
+                (simple-var-ref x)
+                (value-type int)))))
+        (block-stmt
+          (var-def
+            (variable unused1 (type
+              (value-type float)) (expr
+              (simple-var-ref x))))
+          (return
+            (literal <nil>))) ())
+      (block-stmt
+        (var-def
+          (variable unused2 (type
+            (union-type
+              (value-type int)
+              (value-type string))) (expr
+            (simple-var-ref x))))))))

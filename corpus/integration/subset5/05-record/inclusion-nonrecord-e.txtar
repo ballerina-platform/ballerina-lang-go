@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: included type is not a record type
   --> inclusion-nonrecord-e.bal:21:6

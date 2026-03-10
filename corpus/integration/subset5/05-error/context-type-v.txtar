@@ -2,6 +2,4 @@
 error ErrA ("whoops",errA=null)
 error("Whoops",errA=null)
 error("Whoops",errA=error("Whoops",errA=null))
-
 -- stderr --
-

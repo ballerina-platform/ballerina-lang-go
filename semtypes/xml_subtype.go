@@ -102,7 +102,7 @@ func CreateXmlSemtype(xmlSubtype SubtypeData) SemType {
 func CreateXmlSubtype(primitives int, sequence Bdd) SubtypeData {
 	// migrated from XmlSubtype.java:112:5
 	p := (primitives & XML_PRIMITIVE_ALL_MASK)
-	if allOrNothing, ok := sequence.(BddAllOrNothing); ok && allOrNothing.IsAll() && (p == XML_PRIMITIVE_ALL_MASK) {
+	if allOrNothing, ok := sequence.(*BddAllOrNothing); ok && allOrNothing.IsAll() && (p == XML_PRIMITIVE_ALL_MASK) {
 		return CreateAll()
 	}
 	return CreateXmlSubtypeOrEmpty(p, sequence)
@@ -110,7 +110,7 @@ func CreateXmlSubtype(primitives int, sequence Bdd) SubtypeData {
 
 func CreateXmlSubtypeOrEmpty(primitives int, sequence Bdd) SubtypeData {
 	// migrated from XmlSubtype.java:121:5
-	if allOrNothing, ok := sequence.(BddAllOrNothing); ok && allOrNothing.IsNothing() && (primitives == 0) {
+	if allOrNothing, ok := sequence.(*BddAllOrNothing); ok && allOrNothing.IsNothing() && (primitives == 0) {
 		return CreateNothing()
 	}
 	return XmlSubtypeFrom(primitives, sequence)

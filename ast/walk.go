@@ -345,6 +345,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 
+	case *BLangPanic:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangBreak:
 		// Leaf node
 

@@ -2,6 +2,4 @@
 error("foo",ff="foo")
 error ErrorWithDetail ("bar",message="bar message",id=1)
 error ErrorWithDetail ("baz",error ErrorWithDetail ("bar",message="bar message",id=2),message="baz message",id=3)
-
 -- stderr --
-

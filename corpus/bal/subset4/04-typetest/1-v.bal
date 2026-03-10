@@ -19,7 +19,7 @@ import ballerina/io;
 public function main() {
     any x = 1;
     if x is int {
-        io:println("int"); // @output int
+        io:println("int");
     }
     if x is string {
         io:println("string");
@@ -27,7 +27,7 @@ public function main() {
 
     any s = "hello";
     if s is string {
-        io:println("string"); // @output string
+        io:println("string");
     }
     if s is decimal {
         io:println("decimal");
@@ -35,7 +35,7 @@ public function main() {
 
     any f = 1.0;
     if f is float {
-        io:println("float"); // @output float
+        io:println("float");
     }
     if f is boolean {
         io:println("int");
@@ -43,7 +43,7 @@ public function main() {
 
     any y = true;
     if y is boolean {
-        io:println("boolean"); // @output boolean
+        io:println("boolean");
     }
     if y is float {
         io:println("int");
@@ -51,15 +51,15 @@ public function main() {
 
     any n = <any>();
     if n is () {
-        io:println("nil"); // @output nil
+        io:println("nil");
     }
     if n is any {
-        io:println("any"); // @output any
+        io:println("any");
     }
 
     any z = <decimal>1;
     if z is decimal {
-        io:println("decimal"); // @output decimal
+        io:println("decimal");
     }
     if z is int {
         io:println("int");

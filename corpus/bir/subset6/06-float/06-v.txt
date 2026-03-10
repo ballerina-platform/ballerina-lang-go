@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad true
     %2 = ConstantLoad 1.375
@@ -59,7 +59,7 @@ main<NIL>{
     return;
   }
 }
-aa<NIL>{
+aa(((BOOLEAN), ()),((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()),((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
   bb0 {
     b ? bb1 : bb2;
   }
@@ -75,7 +75,7 @@ aa<NIL>{
     return;
   }
 }
-fa<NIL>{
+fa(((BOOLEAN), ()),((FLOAT), ()),((FLOAT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
   bb0 {
     b ? bb1 : bb2;
   }
@@ -91,7 +91,7 @@ fa<NIL>{
     return;
   }
 }
-ff<NIL>{
+ff(((BOOLEAN), ()),((FLOAT), ()),((FLOAT), ())) -> ((FLOAT), ()){
   bb0 {
     b ? bb1 : bb2;
   }

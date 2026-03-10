@@ -1,0 +1,14 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: expect boolean types for &&
+  --> 27-e.bal:18:17
+   |
+18 |     boolean b = a && true; // @error
+   |                 ^^^^^^^^^
+
+error[SEMANTIC_ERROR]: expect boolean types for ||
+  --> 27-e.bal:19:17
+   |
+19 |     boolean c = false || a; // @error
+   |                 ^^^^^^^^^^
+

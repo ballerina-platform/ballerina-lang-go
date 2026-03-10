@@ -338,6 +338,13 @@ type deferredMethodSymbol struct {
 
 var _ model.Symbol = &deferredMethodSymbol{}
 
+// IsDeferredMethodSymbol returns true if the symbol is a deferred method symbol
+// (a placeholder used during symbol resolution that will be resolved later).
+func IsDeferredMethodSymbol(symbol any) bool {
+	_, ok := symbol.(*deferredMethodSymbol)
+	return ok
+}
+
 func (d *deferredMethodSymbol) Name() string {
 	panic("method symbol has not been resolved yet")
 }

@@ -26,12 +26,12 @@ public function foreachInWhile() {
     while count > 0 {
         count = count - 1;
         foreach int i in 1 ..< 3 {
-            io:println(count * 10 + i); // @output 21
-            // @output 22
-            // @output 11
-            // @output 12
-            // @output 1
-            // @output 2
+            io:println(count * 10 + i);
+           
+           
+           
+           
+           
         }
     }
 }

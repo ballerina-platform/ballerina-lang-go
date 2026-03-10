@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: unused1
+  --> 23-e.bal:22:5
+   |
+22 |     unused1 = x;
+   |     ^^^^^^^
+

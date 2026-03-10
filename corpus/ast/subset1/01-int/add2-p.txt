@@ -1,0 +1,26 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable INT_MAX (type
+          (value-type int)) (expr
+          (literal 9223372036854775807))))
+      (expression-stmt
+        (invocation io println (
+          (invocation add (
+            (simple-var-ref INT_MAX)
+            (literal 1))))))))
+  (function add (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y))))))

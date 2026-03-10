@@ -22,7 +22,7 @@ type (
 )
 
 func bddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate bddPredicate) bool {
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
@@ -33,7 +33,7 @@ func bddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate b
 }
 
 func bddEveryPositive(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate bddPredicate) bool {
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
@@ -52,7 +52,7 @@ func andIfPositive(atom Atom, next *Conjunction) *Conjunction {
 }
 
 func bddPosMaybeEmpty(b Bdd) bool {
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return allOrNothing.IsAll()
 	} else {
 		bn := b.(BddNode)
@@ -124,8 +124,8 @@ func isNothingSubtype(t SubtypeData) bool {
 	return false
 }
 
-func memoSubtypeIsEmpty(cx Context, memoTable map[Bdd]*BddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
-	mm := memoTable[b]
+func memoSubtypeIsEmpty(cx Context, memoTable map[string]*BddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
+	mm := memoTable[b.canonicalKey()]
 	var m *BddMemo
 	if mm != nil {
 		res := mm.isEmpty
@@ -145,7 +145,7 @@ func memoSubtypeIsEmpty(cx Context, memoTable map[Bdd]*BddMemo, isEmptyPredicate
 	} else {
 		tmp := NewBddMemo()
 		m = &tmp
-		memoTable[b] = m
+		memoTable[b.canonicalKey()] = m
 	}
 	m.isEmpty = MemoStatus_PROVISIONAL
 	initStackDepth := cx.getMemoStackDepth()

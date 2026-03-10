@@ -20,15 +20,15 @@ public function main() {
     int[][] values = [[1, 2, 3], [4, 5], [6, 7, 8, 9]];
     foreach int i in 0 ..< 3 {
         foreach int value in values[i] {
-            io:println(value); // @output 1
-            // @output 2
-            // @output 3
-            // @output 4
-            // @output 5
-            // @output 6
-            // @output 7
-            // @output 8
-            // @output 9
+            io:println(value);
+           
+           
+           
+           
+           
+           
+           
+           
         }
     }
 }

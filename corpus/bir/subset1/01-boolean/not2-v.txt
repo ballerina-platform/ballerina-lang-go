@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad true
     %2 = not(%1) -> bb1;
@@ -19,7 +19,7 @@ main<NIL>{
     return;
   }
 }
-printBoolean<NIL>{
+printBoolean(((BOOLEAN), ())) -> ((NIL), ()){
   bb0 {
     b ? bb1 : bb3;
   }
@@ -41,7 +41,7 @@ printBoolean<NIL>{
     return;
   }
 }
-not<NIL>{
+not(((BOOLEAN), ())) -> ((BOOLEAN), ()){
   bb0 {
     %2 = ! b;
     %0 = %2;

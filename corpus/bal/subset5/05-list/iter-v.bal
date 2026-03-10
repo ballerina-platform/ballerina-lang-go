@@ -20,8 +20,8 @@ type Foo [int, byte, string];
 public function main() {
     Foo f = [1, 2, "foo"];
     foreach int|string i in f {
-        io:println(i); // @output 1
-        // @output 2
-        // @output foo
+        io:println(i);
+       
+       
     }
 }
