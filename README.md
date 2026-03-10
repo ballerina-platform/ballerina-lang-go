@@ -1,4 +1,4 @@
-## Native Ballerina interpreter
+## Native Ballerina Interpreter
 
 [![codecov](https://codecov.io/gh/ballerina-platform/ballerina-lang-go/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/ballerina-lang-go)
 
@@ -106,20 +106,22 @@ go test ./...
 
 ### Open an issue
 
-- **ballerina-lang-go (this repo):** [Open an issue](https://github.com/ballerina-platform/ballerina-lang-go/issues) for the native Go interpreter (compiles Ballerina to BIR and interprets BIR).
+- [Open an issue](https://github.com/ballerina-platform/ballerina-lang-go/issues) for bug reports or feature requests related to the native interpreter.
 
 ### Report security issues
 
 - Send an email to [security@ballerina.io](mailto:security@ballerina.io). For details, see the [security policy](SECURITY.md).
 
-## Contribute
+## Contribute to Ballerina
 
 As an open-source project, ballerina-lang-go welcomes contributions from the community. To start contributing, read the [contribution guidelines](CONTRIBUTING.md).
 
 ## License
 
-Ballerina code is distributed under the [Apache License 2.0](LICENSE).
+Ballerina code is distributed under [Apache License 2.0](./LICENSE).
 
----
+## Join the community
 
-[Code of conduct](CODE_OF_CONDUCT.md) • [Contributing](CONTRIBUTING.md) • [Security policy](SECURITY.md)
+* Get help on [Stack Overflow](https://stackoverflow.com/questions/tagged/ballerina) 
+* Join the conversations in [Discord community](https://discord.gg/ballerinalang).
+* For more details on how to engage with the community, see [Community](https://ballerina.io/community/).
