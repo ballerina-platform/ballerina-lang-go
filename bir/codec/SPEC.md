@@ -82,8 +82,6 @@ After the constant pool, the package data follows:
 +------------------+
 | Import Modules   | See Import Modules
 +------------------+
-| Constants        | See Constants
-+------------------+
 | Global Variables | See Global Variables
 +------------------+
 | Functions        | See Functions
@@ -101,24 +99,6 @@ After the constant pool, the package data follows:
 |   Pkg Name CP    | int32
 |   Module Name CP | int32
 |   Version CP     | int32
-+------------------+
-```
-
-### Constants
-
-```
-+------------------+
-| Count            | int64 (number of constants)
-+------------------+
-| For each constant: |
-|   Name CP        | int32
-|   Flags          | int64
-|   Origin         | uint8
-|   Position       | See Position
-|   Type CP        | int32 (currently -1, not implemented)
-|   Value Length   | int64
-|   Value Type CP  | int32
-|   Constant Value | See Constant Value
 +------------------+
 ```
 

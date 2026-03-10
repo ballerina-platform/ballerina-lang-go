@@ -53,7 +53,6 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	birbuf := &bytes.Buffer{}
 	bw.writePackageCPEntry(birbuf, pkg.PackageID)
 	bw.writeImportModuleDecls(birbuf, pkg)
-	bw.writeConstants(birbuf, pkg)
 	bw.writeGlobalVars(birbuf, pkg)
 	bw.writeFunctions(birbuf, pkg)
 
@@ -93,40 +92,16 @@ func (bw *birWriter) writeImportModuleDecls(buf *bytes.Buffer, pkg *bir.BIRPacka
 	}
 }
 
-func (bw *birWriter) writeConstants(buf *bytes.Buffer, pkg *bir.BIRPackage) {
-	bw.writeLength(buf, len(pkg.Constants))
-	for _, c := range pkg.Constants {
-		bw.writeConstant(buf, &c)
-	}
-}
-
-func (bw *birWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant) {
-	bw.writeStringCPEntry(buf, constant.Name.Value())
-	bw.writeFlags(buf, constant.Flags)
-	bw.writeOrigin(buf, constant.Origin)
-	bw.writePosition(buf, constant.Pos)
-	bw.writeType(buf, constant.Type)
-
-	birbuf := &bytes.Buffer{}
-	bw.writeType(birbuf, constant.ConstValue.Type)
-	bw.writeConstValue(birbuf, &constant.ConstValue)
-	bw.writeBufferLength(buf, birbuf)
-
-	_, err := buf.Write(birbuf.Bytes())
-	if err != nil {
-		panic(fmt.Sprintf("writing constant value bytes: %v", err))
-	}
-}
-
 func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.GlobalVars))
 	for _, gv := range pkg.GlobalVars {
 		bw.writePosition(buf, gv.Pos)
-		bw.writeKind(buf, gv.Kind)
-		bw.writeStringCPEntry(buf, gv.Name.Value())
+		bw.writeKind(buf, bir.VAR_KIND_GLOBAL)
+		name := gv.GetName()
+		bw.writeStringCPEntry(buf, name.Value())
 		bw.writeFlags(buf, gv.Flags)
 		bw.writeOrigin(buf, gv.Origin)
-		bw.writeType(buf, gv.Type)
+		bw.writeType(buf, gv.GetType())
 	}
 }
 
@@ -155,9 +130,10 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 
 	write(birbuf, fn.ReturnVariable != nil)
 	if fn.ReturnVariable != nil {
-		bw.writeKind(birbuf, fn.ReturnVariable.Kind)
-		bw.writeType(birbuf, fn.ReturnVariable.Type)
-		bw.writeStringCPEntry(birbuf, fn.ReturnVariable.Name.Value())
+		bw.writeKind(birbuf, bir.VAR_KIND_RETURN)
+		bw.writeType(birbuf, fn.ReturnVariable.GetType())
+		retName := fn.ReturnVariable.GetName()
+		bw.writeStringCPEntry(birbuf, retName.Value())
 	}
 
 	bw.writeLength(birbuf, len(fn.LocalVars))
@@ -177,31 +153,11 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	}
 }
 
-func (bw *birWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRVariableDcl) {
-	bw.writeKind(buf, localVar.Kind)
-	bw.writeType(buf, localVar.Type)
-	bw.writeStringCPEntry(buf, localVar.Name.Value())
-
-	if localVar.Kind == bir.VAR_KIND_ARG {
-		bw.writeStringCPEntry(buf, localVar.MetaVarName)
-	}
-
-	if localVar.Kind == bir.VAR_KIND_LOCAL {
-		bw.writeStringCPEntry(buf, localVar.MetaVarName)
-
-		endBBId := ""
-		if localVar.EndBB != nil {
-			endBBId = localVar.EndBB.Id.Value()
-		}
-		bw.writeStringCPEntry(buf, endBBId)
-
-		startBBId := ""
-		if localVar.StartBB != nil {
-			startBBId = localVar.StartBB.Id.Value()
-		}
-		bw.writeStringCPEntry(buf, startBBId)
-		bw.writeLength(buf, localVar.InsOffset)
-	}
+func (bw *birWriter) writeLocalVar(buf *bytes.Buffer, localVar *bir.BIRLocalVariableDcl) {
+	bw.writeKind(buf, bir.VAR_KIND_LOCAL)
+	bw.writeType(buf, localVar.GetType())
+	name := localVar.GetName()
+	bw.writeStringCPEntry(buf, name.Value())
 }
 
 func (bw *birWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
@@ -312,26 +268,21 @@ func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 		return
 	}
 
-	if op.VariableDcl.IgnoreVariable {
-		write(buf, true)
-		bw.writeType(buf, op.VariableDcl.Type)
-		return
-	}
-
 	write(buf, false)
-	bw.writeKind(buf, op.VariableDcl.Kind)
-	bw.writeScope(buf, op.VariableDcl.Scope)
-	bw.writeStringCPEntry(buf, op.VariableDcl.Name.Value())
-}
-
-func (bw *birWriter) writeConstValue(buf *bytes.Buffer, cv *bir.ConstValue) {
-	tag, err := bw.inferTag(cv.Value)
-	if err != nil {
-		panic(fmt.Sprintf("inferring const value tag: %v", err))
+	// Determine kind and scope from concrete type
+	var kind bir.VarKind
+	var scope bir.VarScope
+	if _, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		kind = bir.VAR_KIND_GLOBAL
+		scope = bir.VAR_SCOPE_GLOBAL
+	} else {
+		kind = bir.VAR_KIND_LOCAL
+		scope = bir.VAR_SCOPE_FUNCTION
 	}
-
-	write(buf, int8(tag))
-	bw.writeConstValueByTag(buf, tag, cv.Value)
+	bw.writeKind(buf, kind)
+	bw.writeScope(buf, scope)
+	name := op.VariableDcl.GetName()
+	bw.writeStringCPEntry(buf, name.Value())
 }
 
 func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
