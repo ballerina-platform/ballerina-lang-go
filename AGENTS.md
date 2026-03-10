@@ -75,3 +75,7 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
 - Each ast node has a type representing the value you get after evaluating that node
   - For expressions this needs to be determined.
   - For all other nodes (declarations, statements, identifiers, etc) which don't produce a value this is always NEVER
+
+## Type
+
+- To check if a type is singleton type and get it's value use `semtype:SingleShape`

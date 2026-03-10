@@ -231,6 +231,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	switch s := stmt.(type) {
 	case *ast.BLangReturn:
 		return analyzer.analyzeReturn(curBB, s)
+	case *ast.BLangPanic:
+		return analyzer.analyzePanic(curBB, s)
 	case *ast.BLangIf:
 		return analyzer.analyzeIf(curBB, s)
 	case *ast.BLangBlockStmt:
@@ -299,6 +301,11 @@ func (c *ternaryExpressionChecker) VisitTypeData(typeData *model.TypeData) ast.V
 func (analyzer *functionControlFlowAnalyzer) analyzeReturn(curBB bbRef, stmt *ast.BLangReturn) stmtEffect {
 	analyzer.addNode(curBB, stmt)
 	// Return terminates execution - current block has no children
+	return terminatedEffect()
+}
+
+func (analyzer *functionControlFlowAnalyzer) analyzePanic(curBB bbRef, stmt *ast.BLangPanic) stmtEffect {
+	analyzer.addNode(curBB, stmt)
 	return terminatedEffect()
 }
 

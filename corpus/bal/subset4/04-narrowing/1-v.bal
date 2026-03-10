@@ -16,7 +16,7 @@
 import ballerina/io;
 
 public function main() {
-    io:println(foo()); // @output g
+    io:println(foo());
 }
 
 function foo() returns string {

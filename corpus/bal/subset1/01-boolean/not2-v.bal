@@ -19,8 +19,8 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(not(true)); // @output 0
-    printBoolean(not(false)); // @output 1
+    printBoolean(not(true));
+    printBoolean(not(false));
 }
 
 function printBoolean(boolean b) {

@@ -251,6 +251,11 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			t.resolveOnFailClause(chain, s.OnFailClause)
 		}
 		return defaultStmtEffect(chain), ok
+	case *ast.BLangPanic:
+		if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+			return defaultStmtEffect(chain), false
+		}
+		return statementEffect{nil, true}, true
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return defaultStmtEffect(chain), true
 	default:
@@ -646,6 +651,9 @@ func (t *TypeResolver) resolveExpression(chain *binding, expr ast.BLangExpressio
 		setExpectedType(expr, &semtypes.NEVER)
 		return nil, expressionEffect{}, false
 	}
+	if singletonEffect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return ty, singletonEffect, true
+	}
 	return ty, effect, ok
 }
 
@@ -825,7 +833,7 @@ func isEqualityExpr(opExpr opExpr) bool {
 	}
 }
 
-func isMultipcativeExpr(opExpr opExpr) bool {
+func isMultiplicativeExpr(opExpr opExpr) bool {
 	switch opExpr.GetOperatorKind() {
 	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
 		return true
@@ -1105,7 +1113,7 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	return resultTy, effect, true
 }
 
-func isSingletonbool(ty semtypes.SemType, value bool) bool {
+func isSingletonBool(ty semtypes.SemType, value bool) bool {
 	singleShape := semtypes.SingleShape(ty)
 	if singleShape.IsPresent() {
 		return singleShape.Get().Value == value
@@ -1129,49 +1137,75 @@ func (t *TypeResolver) resolveEqualityExpr(chain *binding, expr *ast.BLangBinary
 func (t *TypeResolver) resolveLogicalExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
 	switch expr.OpKind {
 	case model.OperatorKind_AND:
-		lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonbool(lhsTy, true) {
-			resultTy = rhsTy
-		} else if isSingletonbool(lhsTy, false) {
-			resultTy = semtypes.BooleanConst(false)
-		}
-		setExpectedType(expr, resultTy)
-		return resultTy, expressionEffect{
-			ifTrue:  mergeChains(t.ctx, lhsEffect.ifTrue, rhsEffect.ifTrue, semtypes.Intersect),
-			ifFalse: mergeChains(t.ctx, lhsEffect.ifFalse, mergeChains(t.ctx, lhsEffect.ifTrue, rhsEffect.ifFalse, semtypes.Intersect), semtypes.Union),
-		}, true
+		return t.resolveAndExpr(chain, expr)
 	case model.OperatorKind_OR:
-		lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifFalse, expr.RhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonbool(lhsTy, true) {
-			resultTy = semtypes.BooleanConst(true)
-		} else if isSingletonbool(lhsTy, false) {
-			resultTy = rhsTy
-		}
-		setExpectedType(expr, resultTy)
-		return resultTy, expressionEffect{
-			ifTrue:  mergeChains(t.ctx, lhsEffect.ifTrue, mergeChains(t.ctx, lhsEffect.ifFalse, rhsEffect.ifTrue, semtypes.Intersect), semtypes.Union),
-			ifFalse: mergeChains(t.ctx, lhsEffect.ifFalse, rhsEffect.ifFalse, semtypes.Intersect),
-		}, true
+		return t.resolveOrExpr(chain, expr)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("Unexpected logical expression op %s", string(expr.OpKind)), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+}
+
+func (t *TypeResolver) resolveAndExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	var resultTy semtypes.SemType = &semtypes.BOOLEAN
+	if isSingletonBool(lhsTy, false) || isSingletonBool(rhsTy, false) {
+		resultTy = semtypes.BooleanConst(false)
+	} else if isSingletonBool(lhsTy, true) && isSingletonBool(rhsTy, true) {
+		resultTy = semtypes.BooleanConst(true)
+	} else if isSingletonBool(lhsTy, true) {
+		resultTy = rhsTy
+	}
+	setExpectedType(expr, resultTy)
+
+	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return resultTy, effect, true
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifTrue)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifTrue)
+	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffTrue, semtypes.Intersect)
+	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
+	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
+}
+
+func (t *TypeResolver) resolveOrExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifFalse, expr.RhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	var resultTy semtypes.SemType = &semtypes.BOOLEAN
+	if isSingletonBool(lhsTy, true) || isSingletonBool(rhsTy, true) {
+		resultTy = semtypes.BooleanConst(true)
+	} else if isSingletonBool(lhsTy, false) && isSingletonBool(rhsTy, false) {
+		resultTy = semtypes.BooleanConst(false)
+	} else if isSingletonBool(lhsTy, false) {
+		resultTy = rhsTy
+	}
+	setExpectedType(expr, resultTy)
+
+	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return resultTy, effect, true
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifFalse)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifFalse)
+	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffTrue, semtypes.Intersect), semtypes.Union)
+	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffFalse, semtypes.Intersect)
+	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
 }
 
 func (t *TypeResolver) equalityNarrowingEffect(chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
@@ -1245,7 +1279,7 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 		return nil, false
 	}
 
-	if isMultipcativeExpr(expr) {
+	if isMultiplicativeExpr(expr) {
 		if !isNumericType(&lhsBasicTy) || !isNumericType(&rhsBasicTy) {
 			t.ctx.SemanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false

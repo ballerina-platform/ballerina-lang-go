@@ -18,13 +18,13 @@
 // @productions boolean relational-expr boolean-literal return-stmt function-call-expr
 import ballerina/io;
 public function main() {
-    toNil(toNil(true) < toNil(false)); // @output true
-                                       // @output false
-                                       // @output false
+    toNil(toNil(true) < toNil(false));
+                                      
+                                      
 
-    toNil(toNil(false) <= toNil(true)); // @output false
-                                        // @output true
-                                        // @output true
+    toNil(toNil(false) <= toNil(true));
+                                       
+                                       
 }
 
 function toNil(boolean b) {

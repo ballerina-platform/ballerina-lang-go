@@ -433,7 +433,7 @@ const (
 	OperatorKind_UNDEFINED                    OperatorKind = "UNDEF"
 )
 
-func OperatorKind_valueFrom(opValue string) OperatorKind {
+func OperatorKindValueFrom(opValue string) OperatorKind {
 	switch opValue {
 	case "+":
 		return OperatorKind_ADD
@@ -1047,6 +1047,11 @@ type ReturnNode interface {
 	SetExpression(expression ExpressionNode)
 }
 
+type PanicNode interface {
+	StatementNode
+	GetExpression() ExpressionNode
+}
+
 type DoNode interface {
 	StatementNode
 	GetBody() BlockStatementNode
@@ -1218,7 +1223,7 @@ type IdentifierNode interface {
 }
 
 type AnnotationAttachmentNode interface {
-	GetPackgeAlias() IdentifierNode
+	GetPackageAlias() IdentifierNode
 	SetPackageAlias(pkgAlias IdentifierNode)
 	GetAnnotationName() IdentifierNode
 	SetAnnotationName(name IdentifierNode)

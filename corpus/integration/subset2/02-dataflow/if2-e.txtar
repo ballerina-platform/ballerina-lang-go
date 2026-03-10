@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: variable may not be initialized
   --> if2-e.bal:29:16

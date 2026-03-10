@@ -19,8 +19,7 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(); // @output 1
-                    // @output 2
+    printBoolean();
 }
 
 function printBoolean() {

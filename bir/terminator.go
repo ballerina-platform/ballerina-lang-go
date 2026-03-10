@@ -57,6 +57,11 @@ type (
 		TrueBB  *BIRBasicBlock
 		FalseBB *BIRBasicBlock
 	}
+
+	Panic struct {
+		BIRTerminatorBase
+		ErrorOp *BIROperand
+	}
 )
 
 var (
@@ -64,6 +69,7 @@ var (
 	_ BIRAssignInstruction = &Call{}
 	_ BIRTerminator        = &Return{}
 	_ BIRTerminator        = &Branch{}
+	_ BIRTerminator        = &Panic{}
 )
 
 func (g *Goto) GetKind() InstructionKind {
@@ -84,4 +90,8 @@ func (r *Return) GetKind() InstructionKind {
 
 func (b *Branch) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_BRANCH
+}
+
+func (p *Panic) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_PANIC
 }

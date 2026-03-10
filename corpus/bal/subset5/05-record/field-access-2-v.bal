@@ -28,7 +28,7 @@ type R1 record {
 public function main() {
     R|R1 r = {x: 1, y: 2};
     int x = r.x;
-    io:println(x); // @output 1
+    io:println(x);
     anydata z = r["z"];
-    io:println(z); // @output
+    io:println(z);
 }

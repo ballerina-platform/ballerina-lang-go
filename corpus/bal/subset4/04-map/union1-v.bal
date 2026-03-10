@@ -18,6 +18,6 @@ import ballerina/io;
 public function main() {
     map<int>|map<string> foo = {"a": 1, "b": 2};
     int|string? a = foo["a"];
-    io:println(a); // @output 1
+    io:println(a);
 }
 

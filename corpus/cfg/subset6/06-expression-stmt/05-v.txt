@@ -1,0 +1,22 @@
+(foo
+  (bb0 () ()
+    (return
+      (literal 1))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable arr (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (invocation foo ())
+          (literal 2)))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref arr)
+          (literal 0)))))
+  )
+)

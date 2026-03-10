@@ -37,22 +37,10 @@ fi
 cd "$SCRIPT_DIR"
 echo "✓ tree-gen built successfully"
 
-# Build update-corpus
-echo "Building update-corpus..."
-cd compiler-tools/update-corpus
-go build -o ../../update-corpus
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to build update-corpus"
-    exit 1
-fi
-cd "$SCRIPT_DIR"
-echo "✓ update-corpus built successfully"
-
 echo ""
 echo "All compiler-tools built successfully!"
 echo "Executables are available in the root directory:"
 echo "  - ./tree-gen"
-echo "  - ./update-corpus"
 
 # Generate test data files (corpus and parser/testdata JSON files)
 echo ""

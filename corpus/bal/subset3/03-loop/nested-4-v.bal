@@ -30,10 +30,10 @@ public function continueInNestedLoops() {
             if j == 2 {
                 continue;
             }
-            io:println(i * 10 + j); // @output 11
-            // @output 13
-            // @output 31
-            // @output 33
+            io:println(i * 10 + j);
+           
+           
+           
         }
     }
 }

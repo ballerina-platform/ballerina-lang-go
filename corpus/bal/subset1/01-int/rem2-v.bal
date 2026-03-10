@@ -20,7 +20,7 @@ import ballerina/io;
 
 public function main() {
     int INT_MIN = -9223372036854775807 - 1;
-    io:println(rem(INT_MIN, -1)); // @output 0
+    io:println(rem(INT_MIN, -1));
 }
 
 function rem(int x, int y) returns int {

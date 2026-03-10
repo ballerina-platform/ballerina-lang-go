@@ -28,8 +28,8 @@ type CompilerContext struct {
 	tyContext   semtypes.Context
 }
 
-func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
-	return this.env.NewSymbolSpace(packageId)
+func (this *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	return this.env.NewSymbolSpace(packageID)
 }
 
 func (this *CompilerContext) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {

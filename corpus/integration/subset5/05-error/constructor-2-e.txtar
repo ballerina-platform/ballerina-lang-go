@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: missing required field 'message' in error constructor
   --> constructor-2-e.bal:25:12

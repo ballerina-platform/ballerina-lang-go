@@ -19,17 +19,17 @@ import ballerina/io;
 public function main() {
     int i = 5;
     int j = 9;
-    io:println(i ^ j); // @output 12
+    io:println(i ^ j);
 
     i = 9223372036854775807;
     j = 9223372036854775807;
-    io:println(i ^ j); // @output 0
+    io:println(i ^ j);
 
     i = -1;
     j = -1;
-    io:println(i ^ j); // @output 0
+    io:println(i ^ j);
 
     i = 9223372036854775807;
     j = -1;
-    io:println(i ^ j); // @output -9223372036854775808
+    io:println(i ^ j);
 }

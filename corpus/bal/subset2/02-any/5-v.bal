@@ -19,13 +19,13 @@ import ballerina/io;
 public function main() {
     int x = 1;
     any v = x + 3;
-    io:println(v); // @output 4
+    io:println(v);
     v = x == 1;
-    io:println(v); // @output true
+    io:println(v);
     v = x > 2;
-    io:println(v); // @output false
+    io:println(v);
     v = !(x > 2);
-    io:println(v); // @output true
-    io:println(x >= 1); // @output true
-    io:println(x + 2); // @output 3
+    io:println(v);
+    io:println(x >= 1);
+    io:println(x + 2);
 }

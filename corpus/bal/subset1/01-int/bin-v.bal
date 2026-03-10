@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-  io:println(bin(6, 2, 3)); // @output 4
+  io:println(bin(6, 2, 3));
 }
 
 function bin(int x, int y, int z) returns int {

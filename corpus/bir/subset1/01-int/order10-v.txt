@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad 9223372036854775806
     %2 = ConstantLoad 9223372036854775806
@@ -225,14 +225,14 @@ main<NIL>{
     return;
   }
 }
-lte<NIL>{
+lte(((INT), ()),((INT), ())) -> ((BOOLEAN), ()){
   bb0 {
     %3 = <= a b;
     %0 = %3;
     return;
   }
 }
-printBoolean<NIL>{
+printBoolean(((BOOLEAN), ())) -> ((NIL), ()){
   bb0 {
     b ? bb1 : bb3;
   }

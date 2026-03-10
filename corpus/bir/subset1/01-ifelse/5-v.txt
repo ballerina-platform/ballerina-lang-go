@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad true
     %2 = ConstantLoad true
@@ -25,7 +25,7 @@ main<NIL>{
     return;
   }
 }
-printBranch<NIL>{
+printBranch(((BOOLEAN), ()),((BOOLEAN), ())) -> ((NIL), ()){
   bb0 {
     x ? bb1 : bb7;
   }

@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((BOOLEAN), ())
   --> return1-e.bal:25:12
