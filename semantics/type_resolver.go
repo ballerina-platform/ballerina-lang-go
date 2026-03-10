@@ -354,8 +354,15 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	}
 	var restTy semtypes.SemType = semtypes.NEVER
 	if fn.RestParam != nil {
-		t.ctx.Unimplemented("var args not supported", fn.RestParam.GetPosition())
-		return nil, false
+		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
+		ast.Walk(t, restParam)
+		elementType := restParam.GetDeterminedType()
+		restTy = elementType
+		// Set the rest param's type to readonly T[]
+		listDefn := semtypes.NewListDefinition()
+		restParamListTy := listDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
+		restParam.SetDeterminedType(restParamListTy)
+		updateSymbolType(t.ctx, restParam, restParamListTy)
 	}
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)

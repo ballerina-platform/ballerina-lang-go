@@ -1,0 +1,35 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (value-type any)) (expr
+          (simple-var-ref foo))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal expected)))))))))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal unexpected)))))))

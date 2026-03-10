@@ -279,6 +279,12 @@ func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *
 			Flags: flagSetToInt64(param.GetFlags()),
 		}
 	}
+	if astFunc.RestParam != nil {
+		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
+		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
+		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, restParam.Symbol())
+		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
+	}
 	birFunc.RequiredParams = requiredParams
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:

@@ -1,0 +1,213 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:foo
+    x = %1;
+    %3 = x is ((), (FUNCTION))
+    %3 ? bb1 : bb4;
+  }
+  bb1 {
+    %4 = ConstantLoad 1
+    %5 = x(%4) -> bb2;
+  }
+  bb2 {
+    %6 = println(%5) -> bb3;
+  }
+  bb3 {
+    GOTO bb6;
+  }
+  bb4 {
+    %7 = ConstantLoad error
+    %8 = println(%7) -> bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    %9 = fp $anon/.:bar
+    x = %9;
+    %10 = x is ((), (FUNCTION))
+    %10 ? bb7 : bb9;
+  }
+  bb7 {
+    %11 = ConstantLoad error
+    %12 = println(%11) -> bb8;
+  }
+  bb8 {
+    GOTO bb16;
+  }
+  bb9 {
+    %13 = x is ((), (FUNCTION))
+    %13 ? bb10 : bb13;
+  }
+  bb10 {
+    %14 = ConstantLoad 5
+    %15 = ConstantLoad 6
+    %16 = x(%14,%15) -> bb11;
+  }
+  bb11 {
+    %17 = println(%16) -> bb12;
+  }
+  bb12 {
+    GOTO bb15;
+  }
+  bb13 {
+    %18 = ConstantLoad error
+    %19 = println(%18) -> bb14;
+  }
+  bb14 {
+    GOTO bb15;
+  }
+  bb15 {
+    GOTO bb16;
+  }
+  bb16 {
+    %20 = fp $anon/.:fooBar
+    x = %20;
+    %21 = x is ((), (FUNCTION))
+    %21 ? bb17 : bb26;
+  }
+  bb17 {
+    %22 = ConstantLoad 1
+    %23 = x(%22) -> bb18;
+  }
+  bb18 {
+    %24 = println(%23) -> bb19;
+  }
+  bb19 {
+    %25 = ConstantLoad 1
+    %26 = ConstantLoad 2
+    %27 = x(%25,%26) -> bb20;
+  }
+  bb20 {
+    %28 = println(%27) -> bb21;
+  }
+  bb21 {
+    %29 = ConstantLoad 1
+    %30 = ConstantLoad 2
+    %31 = ConstantLoad 3
+    %32 = x(%29,%30,%31) -> bb22;
+  }
+  bb22 {
+    %33 = println(%32) -> bb23;
+  }
+  bb23 {
+    %34 = ConstantLoad 1
+    %35 = ConstantLoad 2
+    %36 = ConstantLoad 3
+    %37 = ConstantLoad 4
+    %38 = x(%34,%35,%36,%37) -> bb24;
+  }
+  bb24 {
+    %39 = println(%38) -> bb25;
+  }
+  bb25 {
+    GOTO bb36;
+  }
+  bb26 {
+    %40 = x is ((), (FUNCTION))
+    %40 ? bb27 : bb29;
+  }
+  bb27 {
+    %41 = ConstantLoad error
+    %42 = println(%41) -> bb28;
+  }
+  bb28 {
+    GOTO bb35;
+  }
+  bb29 {
+    %43 = x is ((), (FUNCTION))
+    %43 ? bb30 : bb32;
+  }
+  bb30 {
+    %44 = ConstantLoad error
+    %45 = println(%44) -> bb31;
+  }
+  bb31 {
+    GOTO bb34;
+  }
+  bb32 {
+    %46 = ConstantLoad error
+    %47 = println(%46) -> bb33;
+  }
+  bb33 {
+    GOTO bb34;
+  }
+  bb34 {
+    GOTO bb35;
+  }
+  bb35 {
+    GOTO bb36;
+  }
+  bb36 {
+    return;
+  }
+}
+bar(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = + x y;
+    %0 = %3;
+    return;
+  }
+}
+foo(((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = + x %3;
+    %0 = %2;
+    return;
+  }
+}
+fooBar(((INT), ()),((), (LIST))...) -> ((INT), ()){
+  bb0 {
+    %4 = length(y) -> bb1;
+  }
+  bb1 {
+    %5 = ConstantLoad 0
+    %3 = == %4 %5;
+    %3 ? bb2 : bb4;
+  }
+  bb2 {
+    %6 = foo(x) -> bb3;
+  }
+  bb3 {
+    %0 = %6;
+    return;
+  }
+  bb4 {
+    %8 = ConstantLoad 0
+    %7 = y[%8];
+    %9 = bar(x,%7) -> bb5;
+  }
+  bb5 {
+    curr = %9;
+    %11 = ConstantLoad 1
+    i = %11;
+    %13 = length(y) -> bb6;
+  }
+  bb6 {
+    $desugar$0 = %13;
+    GOTO bb7;
+  }
+  bb7 {
+    %15 = < i $desugar$0;
+    %15 ? bb8 : bb9;
+  }
+  bb8 {
+    %16 = y[i];
+    %17 = bar(curr,%16) -> bb10;
+  }
+  bb9 {
+    %0 = curr;
+    return;
+  }
+  bb10 {
+    curr = %17;
+    %19 = ConstantLoad 1
+    %18 = + i %19;
+    i = %18;
+    GOTO bb7;
+  }
+}

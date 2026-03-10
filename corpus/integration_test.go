@@ -85,6 +85,7 @@ var (
 		"subset6/06-object/init-error-return-v.bal",
 		"subset6/06-object/init-error-check-v.bal",
 		"subset6/06-object/self-field-shadow-e.bal",
+		"subset6/06-object/fn-shadowing-v.bal",
 		// cast #139
 		"subset6/06-map/length2-v.bal",
 	}
