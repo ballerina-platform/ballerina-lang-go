@@ -232,8 +232,15 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
 	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		paramType := param.GetDeterminedType()
+		paramType := ctx.CompilerContext.SymbolType(param.Symbol())
 		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
+		birFunc.RequiredParams = append(birFunc.RequiredParams, BIRParameter{Name: model.Name(param.GetName().GetValue())})
+	}
+	if astFunc.RestParam != nil {
+		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
+		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
+		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, VAR_KIND_ARG, restParam.Symbol())
+		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
