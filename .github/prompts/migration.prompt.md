@@ -21,8 +21,8 @@ Convert the selected Java source into idiomatic Go **with minimal semantic drift
 
 1. **One-to-one element mapping**
    - **Files**: Map each Java source file `<Name>.java` to one go file, named `lowercase-with-dashes.go` (e.g., `FooBar.java` -> `foo-bar.go`). Be consistent within the package.
-   - **Classes/Interfaces**: For each Java class or interface define a **Go interface** named after the Java type (exported) and an **unexported implementation struct**.
-   - **Methods**: Map each java method to a Go method or function. For overloads, pick distinct names (e.g., `Advance`, `AdvanceN`).
+   - **Classes/Interfaces**: For each Java class or interface, define a **Go interface** named after the Java type (exported) and an **unexported implementation struct**.
+   - **Methods**: Map each Java method to a Go method or function. For overloads, pick distinct names (e.g., `Advance`, `AdvanceN`).
 
 2. **Package structure**
    - Java: `package com.example.foo.something;`
