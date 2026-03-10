@@ -147,6 +147,78 @@ func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 	return name, ref
 }
 
+func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
+	var initStmts []ast.BLangStatement
+
+	for i := range pkg.GlobalVars {
+		globalVar := &pkg.GlobalVars[i]
+		if globalVar.Expr == nil {
+			continue
+		}
+		varRef := &ast.BLangSimpleVarRef{
+			VariableName: globalVar.Name,
+		}
+		varRef.SetSymbol(globalVar.Symbol())
+		varRef.SetDeterminedType(globalVar.GetDeterminedType())
+		assignment := &ast.BLangAssignment{
+			VarRef: varRef,
+			Expr:   globalVar.Expr.(ast.BLangExpression),
+		}
+		assignment.SetDeterminedType(&semtypes.NEVER)
+		initStmts = append(initStmts, assignment)
+	}
+
+	for i := range pkg.Constants {
+		constant := &pkg.Constants[i]
+		if constant.Expr == nil {
+			continue
+		}
+		varRef := &ast.BLangSimpleVarRef{
+			VariableName: constant.Name,
+		}
+		varRef.SetSymbol(constant.Symbol())
+		varRef.SetDeterminedType(constant.GetDeterminedType())
+		assignment := &ast.BLangAssignment{
+			VarRef: varRef,
+			Expr:   constant.Expr.(ast.BLangExpression),
+		}
+		assignment.SetDeterminedType(&semtypes.NEVER)
+		initStmts = append(initStmts, assignment)
+	}
+
+	if len(initStmts) == 0 && pkg.InitFunction == nil {
+		return
+	}
+
+	if pkg.InitFunction == nil {
+		initName := &ast.BLangIdentifier{Value: "init"}
+		initName.SetDeterminedType(&semtypes.NEVER)
+		pkg.InitFunction = &ast.BLangFunction{}
+		pkg.InitFunction.Name = initName
+		body := &ast.BLangBlockFunctionBody{
+			Stmts: initStmts,
+		}
+		body.SetDeterminedType(&semtypes.NEVER)
+		pkg.InitFunction.Body = body
+		pkg.InitFunction.SetDeterminedType(&semtypes.NEVER)
+		// Create a proper function symbol and scope for the synthetic init function
+		pkgID := pkg.PackageID
+		signature := model.FunctionSignature{ReturnType: &semtypes.NIL}
+		initSymbol := model.NewFunctionSymbol("init", signature, false)
+		symbolSpace := compilerCtx.NewSymbolSpace(*pkgID)
+		symbolSpace.AddSymbol("init", initSymbol)
+		symRef, _ := symbolSpace.GetSymbol("init")
+		pkg.InitFunction.SetSymbol(symRef)
+		fnScope := compilerCtx.NewFunctionScope(nil, *pkgID)
+		pkg.InitFunction.SetScope(fnScope)
+	} else {
+		body := pkg.InitFunction.Body.(*ast.BLangBlockFunctionBody)
+		body.Stmts = append(initStmts, body.Stmts...)
+	}
+
+	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
+}
+
 // DesugarPackage returns a desugared package (may be new or same instance)
 func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
 	if importedSymbols == nil {
@@ -192,9 +264,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	}
 
 	// Desugar init, start, stop functions
-	if pkg.InitFunction != nil {
-		desugarFn(pkg.InitFunction)
-	}
+	desugarInitFn(pkgCtx, compilerCtx, pkg)
 	if pkg.StartFunction != nil {
 		desugarFn(pkg.StartFunction)
 	}
