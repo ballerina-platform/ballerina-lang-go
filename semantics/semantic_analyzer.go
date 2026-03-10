@@ -531,6 +531,64 @@ func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType s
 	}
 }
 
+func widenNumericExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
+	if expectedType == nil {
+		return
+	}
+	switch e := expr.(type) {
+	case *ast.BLangLiteral:
+		widenNumericLiteral(a, e, expectedType)
+	case *ast.BLangNumericLiteral:
+		widenNumericLiteral(a, &e.BLangLiteral, expectedType)
+	case *ast.BLangUnaryExpr:
+		widenUnaryExpr(a, e, expectedType)
+	case *ast.BLangBinaryExpr:
+		widenBinaryExpr(a, e, expectedType)
+	}
+}
+
+func widenUnaryExpr[A analyzer](a A, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		widenNumericExpression(a, expr.Expr, expectedType)
+		if semtypes.IsSubtypeSimple(expr.Expr.GetDeterminedType(), target) {
+			expr.SetDeterminedType(target)
+		}
+	}
+}
+
+func widenBinaryExpr[A analyzer](a A, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	if !isAdditiveExpr(expr) && !isMultiplicativeExpr(expr) {
+		return
+	}
+
+	widenNumericExpression(a, expr.LhsExpr, expectedType)
+	widenNumericExpression(a, expr.RhsExpr, expectedType)
+	lhsOK := semtypes.IsSubtypeSimple(expr.LhsExpr.GetDeterminedType(), target)
+	rhsOK := semtypes.IsSubtypeSimple(expr.RhsExpr.GetDeterminedType(), target)
+	if lhsOK && rhsOK {
+		expr.SetDeterminedType(target)
+	}
+}
+
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
 	switch expr := expr.(type) {
 	case *ast.BLangLiteral:
@@ -548,9 +606,11 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		panic("not implemented")
 
 	case *ast.BLangBinaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeBinaryExpr(a, expr, expectedType)
 
 	case *ast.BLangUnaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeUnaryExpr(a, expr, expectedType)
 
 	case *ast.BLangInvocation:
