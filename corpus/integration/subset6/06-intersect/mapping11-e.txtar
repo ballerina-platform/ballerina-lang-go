@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT)), got ((), (INT))
+  --> mapping11-e.bal:31:26
+   |
+31 |     T a = { l1: 1, "l2": 5 }; // @error
+   |                          ^
+

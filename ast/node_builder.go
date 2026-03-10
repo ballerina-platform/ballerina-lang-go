@@ -2681,7 +2681,7 @@ func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDescriptorNode *tree.ParenthesisedTypeDescriptorNode) BLangNode {
-	panic("TransformParenthesisedTypeDescriptor unimplemented")
+	return n.createTypeNode(parenthesisedTypeDescriptorNode.Typedesc()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewExpressionNode *tree.ExplicitNewExpressionNode) BLangNode {
@@ -2749,7 +2749,18 @@ func (n *NodeBuilder) TransformQueryAction(queryActionNode *tree.QueryActionNode
 }
 
 func (n *NodeBuilder) TransformIntersectionTypeDescriptor(intersectionTypeDescriptorNode *tree.IntersectionTypeDescriptorNode) BLangNode {
-	panic("TransformIntersectionTypeDescriptor unimplemented")
+	lhs := intersectionTypeDescriptorNode.LeftTypeDesc()
+	rhs := intersectionTypeDescriptorNode.RightTypeDesc()
+	bLIntersectionType := &BLangIntersectionTypeNode{
+		lhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(lhs),
+		},
+		rhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(rhs),
+		},
+	}
+	bLIntersectionType.pos = getPosition(intersectionTypeDescriptorNode)
+	return bLIntersectionType
 }
 
 func (n *NodeBuilder) TransformImplicitAnonymousFunctionParameters(implicitAnonymousFunctionParameters *tree.ImplicitAnonymousFunctionParameters) BLangNode {

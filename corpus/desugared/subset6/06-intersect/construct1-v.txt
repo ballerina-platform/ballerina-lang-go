@@ -1,0 +1,28 @@
+(package
+  (type-definition R1
+    (record-type
+      (field x
+        (union-type
+          (value-type int)
+          (value-type null)))))
+  (type-definition R2
+    (record-type
+      (field x
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable r (type
+          (intersection-type
+            (user-defined-type R1)
+            (user-defined-type R2))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 1))))))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref r)))))

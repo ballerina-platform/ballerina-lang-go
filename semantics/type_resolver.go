@@ -671,6 +671,8 @@ func (t *TypeResolver) resolveSimpleVariable(chain *binding, node *ast.BLangSimp
 
 	semType, ok := t.resolveBType(typeNode, 0)
 	if !ok {
+		setExpectedType(node, &semtypes.NEVER)
+		updateSymbolType(t.ctx, node, &semtypes.NEVER)
 		return false
 	}
 
@@ -1761,6 +1763,21 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			return nil, false
 		}
 		return semtypes.Union(lhs, rhs), true
+	case *ast.BLangIntersectionTypeNode:
+		lhs, ok := tr.resolveTypeDataPair(ty.Lhs(), depth+1)
+		if !ok {
+			return nil, false
+		}
+		rhs, ok := tr.resolveTypeDataPair(ty.Rhs(), depth+1)
+		if !ok {
+			return nil, false
+		}
+		result := semtypes.Intersect(lhs, rhs)
+		if semtypes.IsEmpty(tr.tyCtx, result) {
+			tr.ctx.SemanticError("intersection type is empty (equivalent to never)", ty.GetPosition())
+			return nil, false
+		}
+		return result, true
 	case *ast.BLangErrorTypeNode:
 		if ty.IsDistinct() {
 			panic("distinct error types not supported")
