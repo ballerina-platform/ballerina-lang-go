@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 type Detail record {|
     string message;
     int id;
@@ -26,10 +28,27 @@ function foo() returns int|error {
 }
 
 function bar() returns int|error {
-    return error ErrorWithDetail("bar", message = "message", id = 1);
+    return error ErrorWithDetail("bar", message = "bar message", id = 1);
 }
 
 function baz() returns int|error {
-    error e = error ErrorWithDetail("bar", message = "message", id = 1);
-    return error ErrorWithDetail("bar", e, message = "message", id = 1);
+    error e = error ErrorWithDetail("bar", message = "bar message", id = 2);
+    return error ErrorWithDetail("baz", e, message = "baz message", id = 3);
+}
+
+public function main() {
+    int|error fooResult = foo();
+    if (fooResult is error) {
+        io:println(fooResult); // @output error("foo",ff="foo")
+    }
+
+    int|error barResult = bar();
+    if (barResult is error) {
+        io:println(barResult); // @output error ErrorWithDetail ("bar",message="bar message",id=1)
+    }
+
+    int|error bazResult = baz();
+    if (bazResult is error) {
+        io:println(bazResult); // @output error ErrorWithDetail ("baz",error ErrorWithDetail ("bar",message="bar message",id=2),message="baz message",id=3)
+    }
 }

@@ -74,6 +74,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Map:
 		return v.Type
+	case *Error:
+		return v.Type
 	default:
 		return &semtypes.ANY
 	}
@@ -112,6 +114,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 	case *List:
 		return t.String(visited)
 	case *Map:
+		return t.String(visited)
+	case *Error:
 		return t.String(visited)
 	default:
 		return "<unsupported>"
