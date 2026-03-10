@@ -1,0 +1,178 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition B
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition D
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (union-type
+            (union-type
+              (union-type
+                (user-defined-type B)
+                (user-defined-type D))
+              (user-defined-type F))
+            (value-type int))) (expr
+          (simple-var-ref foo))))
+      (if
+        (type-test-expr is
+          (simple-var-ref x)
+          (user-defined-type F))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation x (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal error)))))))
+      (assignment
+        (simple-var-ref x)
+        (simple-var-ref bar))
+      (if
+        (type-test-expr is
+          (simple-var-ref x)
+          (user-defined-type F))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal error))))) (
+        (if
+          (type-test-expr is
+            (simple-var-ref x)
+            (user-defined-type B))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (invocation x (
+                  (literal 5)
+                  (literal 6))))))) (
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal error)))))))))
+      (assignment
+        (simple-var-ref x)
+        (simple-var-ref fooBar))
+      (if
+        (type-test-expr is
+          (simple-var-ref x)
+          (user-defined-type D))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation x (
+                (literal 1))))))
+          (expression-stmt
+            (invocation io println (
+              (invocation x (
+                (literal 1)
+                (literal 2))))))
+          (expression-stmt
+            (invocation io println (
+              (invocation x (
+                (literal 1)
+                (literal 2)
+                (literal 3))))))
+          (expression-stmt
+            (invocation io println (
+              (invocation x (
+                (literal 1)
+                (literal 2)
+                (literal 3)
+                (literal 4))))))) (
+        (if
+          (type-test-expr is
+            (simple-var-ref x)
+            (user-defined-type F))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal error))))) (
+          (if
+            (type-test-expr is
+              (simple-var-ref x)
+              (user-defined-type B))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (literal error))))) (
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (literal error)))))))))))))
+  (function bar (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (literal 1)))))
+  (function fooBar (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (invocation length expr:
+            (simple-var-ref y) ())
+          (literal 0))
+        (block-stmt
+          (return
+            (invocation foo (
+              (simple-var-ref x))))) ())
+      (block-stmt
+        (var-def
+          (variable curr (type
+            (value-type int)) (expr
+            (invocation bar (
+              (simple-var-ref x)
+              (index-based-access
+                (simple-var-ref y)
+                (literal 0)))))))
+        (foreach
+          (var-def
+            (variable i (type
+              (value-type int))))
+          (binary-expr ..<
+            (literal 1)
+            (invocation length expr:
+              (simple-var-ref y) ()))
+          (block-stmt
+            (assignment
+              (simple-var-ref curr)
+              (invocation bar (
+                (simple-var-ref curr)
+                (index-based-access
+                  (simple-var-ref y)
+                  (simple-var-ref i)))))))
+        (return
+          (simple-var-ref curr))))))

@@ -1,0 +1,180 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (literal 1)))
+  )
+)
+(fooBar
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (invocation lang.array length (
+        (simple-var-ref y)))
+      (literal 0))
+  )
+  (bb1 (bb0) ()
+    (return
+      (invocation foo (
+        (simple-var-ref x))))
+  )
+  (bb2 (bb0) (bb3)
+    (var-def
+      (variable curr (type
+        (value-type int)) (expr
+        (invocation bar (
+          (simple-var-ref x)
+          (index-based-access
+            (simple-var-ref y)
+            (literal 0)))))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (binary-expr ..<
+      (literal 1)
+      (invocation lang.array length (
+        (simple-var-ref y))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb4 (bb3) (bb3)
+    (assignment
+      (simple-var-ref curr)
+      (invocation bar (
+        (simple-var-ref curr)
+        (index-based-access
+          (simple-var-ref y)
+          (simple-var-ref i)))))
+  )
+  (bb5 (bb3) ()
+    (return
+      (simple-var-ref curr))
+  )
+)
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable x (type
+        (union-type
+          (union-type
+            (union-type
+              (user-defined-type B)
+              (user-defined-type D))
+            (user-defined-type F))
+          (value-type int))) (expr
+        (simple-var-ref foo))))
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type F))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 1))))))
+  )
+  (bb2 (bb1 bb3) (bb4 bb6)
+    (assignment
+      (simple-var-ref x)
+      (simple-var-ref bar))
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type F))
+  )
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+  (bb4 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+  (bb5 (bb4 bb8) (bb10 bb12)
+    (assignment
+      (simple-var-ref x)
+      (simple-var-ref fooBar))
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type D))
+  )
+  (bb6 (bb2) (bb7 bb9)
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type B))
+  )
+  (bb7 (bb6) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 5)
+          (literal 6))))))
+  )
+  (bb8 (bb7 bb9) (bb5))
+  (bb9 (bb6) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+  (bb10 (bb5) (bb11)
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4))))))
+  )
+  (bb11 (bb10 bb14) ())
+  (bb12 (bb5) (bb13 bb15)
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type F))
+  )
+  (bb13 (bb12) (bb14)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+  (bb14 (bb13 bb17) (bb11))
+  (bb15 (bb12) (bb16 bb18)
+    (type-test-expr is
+      (simple-var-ref x)
+      (user-defined-type B))
+  )
+  (bb16 (bb15) (bb17)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+  (bb17 (bb16 bb18) (bb14))
+  (bb18 (bb15) (bb17)
+    (expression-stmt
+      (invocation io println (
+        (literal error))))
+  )
+)
