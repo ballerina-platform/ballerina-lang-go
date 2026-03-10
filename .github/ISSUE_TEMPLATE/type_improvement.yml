@@ -1,0 +1,69 @@
+name: Improvement Request
+description: File an improvement request
+title: "[Improvement]: "
+labels: ["Type/Improvement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this improvement request!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Give a brief description of the improvement
+    validations:
+      required: true
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Describe your problem(s)
+      description: Detailed description on the problem.
+    validations:
+      required: false
+  - type: textarea
+    id: solution-description
+    attributes:
+      label: Describe your solution(s)
+      description: Detailed description on the solution
+    validations:
+      required: false
+  - type: dropdown
+    id: labels
+    attributes:
+      label: Related area
+      description: Tag the issue with related area
+      multiple: false
+      options:
+        - Compilation
+        - Runtime
+        - CLI
+        - Parser
+        - Type checker
+        - Semantics
+        - Interpreter
+        - Tests
+        - Other Area
+    validations:
+      required: true
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: Related issue(s) (optional)
+      description: Any related issues such as sub tasks, similar problems, etc.
+    validations:
+      required: false
+  - type: textarea
+    id: suggested-labels
+    attributes:
+      label: Suggested label(s) (optional)
+      description: Optional comma-separated list of suggested labels.
+    validations:
+      required: false
+  - type: textarea
+    id: suggested-assignees
+    attributes:
+      label: Suggested assignee(s) (optional)
+      description: Optional comma-separated list of suggested team members.
+    validations:
+      required: false

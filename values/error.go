@@ -24,17 +24,19 @@ import (
 
 // Error represents a Ballerina error value at runtime.
 type Error struct {
+	Type     semtypes.SemType
 	Message  string
 	Cause    BalValue
 	Detail   *Map
 	TypeName string
 }
 
-func NewError(message string, cause BalValue, typeName string, detail *Map) *Error {
+func NewError(t semtypes.SemType, message string, cause BalValue, typeName string, detail *Map) *Error {
 	if detail == nil {
 		detail = NewMap(&semtypes.MAPPING)
 	}
 	return &Error{
+		Type:     t,
 		Message:  message,
 		Cause:    cause,
 		Detail:   detail,

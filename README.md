@@ -1,14 +1,15 @@
-# ballerina-lang-go
+## Native Ballerina Interpreter
 
 [![codecov](https://codecov.io/gh/ballerina-platform/ballerina-lang-go/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/ballerina-lang-go)
 
+[Ballerina](https://ballerina.io) is an open-source, cloud-native programming language optimized for integration. It has built-in support for JSON and XML, first-class constructs for services and concurrency, and structural typing. It is developed and supported by WSO2.
+
 ## Goals
 
-The primary goal of this effort is to come up with a native Ballerina compiler frontend that is fast, memory-efficient and has a fast startup. Eventually it could replace the current [jBallerina](https://github.com/ballerina-platform/ballerina-lang) compiler frontend.
+This project implements a **native Ballerina interpreter in Go**: compile Ballerina source to **Ballerina Intermediate Representation (BIR)** and interpret the BIR, with a focus on speed, low memory use, and fast startup. Development is organized by **subsets** of the language; each milestone adds support for a defined subset.
 
-## Implementation plan
-
-The implementation strategy involves a one-to-one mapping of the jBallerina compiler.
+- **Progress:** [GitHub Milestones](https://github.com/ballerina-platform/ballerina-lang-go/milestones)
+- **Subset docs:** [doc/](doc/) (language features and restrictions per subset)
 
 ## Usage
 
@@ -78,13 +79,14 @@ go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
 ./bal run --help
 ```
 
-#### Running a bal source 
+#### Running a bal source
 
 Currently, the following are supported:
 - Single .bal file
 - Ballerina package with only the default module
 
-E.g 
+E.g.
+
 ```bash
 ./bal run --dump-bir corpus/bal/subset1/01-boolean/equal1-v.bal
 ./bal run project-api-test/testdata/myproject
@@ -97,3 +99,29 @@ To run the tests, use the following command:
 ```bash
 go test ./...
 ```
+
+## Report issues
+
+> **Tip:** If you are unsure whether you have found a bug, search the [existing issues](https://github.com/ballerina-platform/ballerina-lang-go/issues) in the GitHub repo and open an issue if needed.
+
+### Open an issue
+
+- [Open an issue](https://github.com/ballerina-platform/ballerina-lang-go/issues) for bug reports or feature requests related to the native Go-based interpreter.
+
+### Report security issues
+
+- Send an email to [security@ballerina.io](mailto:security@ballerina.io). For details, see the [security policy](SECURITY.md).
+
+## Contribute to Ballerina
+
+As an open-source project, ballerina-lang-go welcomes contributions from the community. To start contributing, read the [contribution guidelines](CONTRIBUTING.md).
+
+## License
+
+Ballerina code is distributed under [Apache License 2.0](./LICENSE).
+
+## Join the community
+
+* Get help on [Stack Overflow](https://stackoverflow.com/questions/tagged/ballerina) 
+* Join the conversations in [Discord community](https://discord.gg/ballerinalang).
+* For more details on how to engage with the community, see [Community](https://ballerina.io/community/).

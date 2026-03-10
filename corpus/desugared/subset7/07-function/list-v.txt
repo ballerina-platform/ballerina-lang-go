@@ -1,0 +1,78 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function foo () (
+    (value-type int))
+    (block-function-body
+      (return
+        (index-based-access
+          (simple-var-ref vals)
+          (literal 0)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fs (type
+          (array-type
+            (user-defined-type F) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (simple-var-ref foo)
+            (lambda
+              (function $anonFunc$_0 (
+                (variable a (type
+                  (value-type int)))
+                (variable b (type
+                  (value-type int)))) (
+                (value-type int))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (simple-var-ref a)
+                      (simple-var-ref b))))))
+            (lambda
+              (function $anonFunc$_1 () (
+                (value-type int))
+                (block-function-body
+                  (return
+                    (binary-expr *
+                      (index-based-access
+                        (simple-var-ref vals)
+                        (literal 0))
+                      (index-based-access
+                        (simple-var-ref vals)
+                        (literal 1)))))))))))
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (index-based-access
+            (simple-var-ref fs)
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1)
+            (literal 2))))))
+      (assignment
+        (simple-var-ref f)
+        (index-based-access
+          (simple-var-ref fs)
+          (literal 1)))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1)
+            (literal 2))))))
+      (assignment
+        (simple-var-ref f)
+        (index-based-access
+          (simple-var-ref fs)
+          (literal 2)))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1)
+            (literal 2)))))))))

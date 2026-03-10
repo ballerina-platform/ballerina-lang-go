@@ -1,0 +1,33 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+$anonFunc$_0(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = + a b;
+    %0 = %3;
+    return;
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = fp $anon/.:$anonFunc$_0
+    %4 = exec(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    result = %4;
+    %6 = println(result) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+exec(((INT), ()),((INT), ()),((), (FUNCTION))) -> ((INT), ()){
+  bb0 {
+    %4 = f(a,b) -> bb1;
+  }
+  bb1 {
+    %0 = %4;
+    return;
+  }
+}

@@ -78,27 +78,33 @@ var (
 	_ analyzer = &loopAnalyzer{}
 )
 
-// FIXME: this is not correct since const analyzer will propagte to semantic analyzer
-func returnFound(analyzer analyzer, returnStmt *ast.BLangReturn) bool {
-	if analyzer == nil {
-		panic("unexpected")
-	}
-	if fa, ok := analyzer.(*functionAnalyzer); ok {
-		if returnStmt.Expr == nil {
-			if !semtypes.IsSubtypeSimple(fa.retTy, semtypes.NIL) {
-				fa.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
-				return false
-			}
-		} else if !analyzeExpression(fa, returnStmt.Expr, fa.retTy) {
-			return false
+// expectedReturnType walks up the analyzer chain and returns the enclosing function's return type.
+// Returns nil if not inside a function.
+func expectedReturnType(a analyzer) semtypes.SemType {
+	current := a
+	for current != nil {
+		if fa, ok := current.(*functionAnalyzer); ok {
+			return fa.retTy
 		}
-	} else if analyzer.parentAnalyzer() != nil {
-		return returnFound(analyzer.parentAnalyzer(), returnStmt)
-	} else {
-		analyzer.ctx().SemanticError("return statement not allowed in this context", analyzer.loc())
+		current = current.parentAnalyzer()
+	}
+	return nil
+}
+
+func returnFound(a analyzer, returnStmt *ast.BLangReturn) bool {
+	retTy := expectedReturnType(a)
+	if retTy == nil {
+		a.ctx().SemanticError("return statement not allowed in this context", a.loc())
 		return false
 	}
-
+	if returnStmt.Expr == nil {
+		if !semtypes.IsSubtypeSimple(retTy, semtypes.NIL) {
+			a.ctx().SemanticError("expect a return value", returnStmt.GetPosition())
+			return false
+		}
+	} else if !analyzeExpression(a, returnStmt.Expr, retTy) {
+		return false
+	}
 	return true
 }
 
@@ -522,6 +528,64 @@ func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType s
 	}
 }
 
+func widenNumericExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
+	if expectedType == nil {
+		return
+	}
+	switch e := expr.(type) {
+	case *ast.BLangLiteral:
+		widenNumericLiteral(a, e, expectedType)
+	case *ast.BLangNumericLiteral:
+		widenNumericLiteral(a, &e.BLangLiteral, expectedType)
+	case *ast.BLangUnaryExpr:
+		widenUnaryExpr(a, e, expectedType)
+	case *ast.BLangBinaryExpr:
+		widenBinaryExpr(a, e, expectedType)
+	}
+}
+
+func widenUnaryExpr[A analyzer](a A, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		widenNumericExpression(a, expr.Expr, expectedType)
+		if semtypes.IsSubtypeSimple(expr.Expr.GetDeterminedType(), target) {
+			expr.SetDeterminedType(&target)
+		}
+	}
+}
+
+func widenBinaryExpr[A analyzer](a A, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	if !isAdditiveExpr(expr) && !isMultiplicativeExpr(expr) {
+		return
+	}
+
+	widenNumericExpression(a, expr.LhsExpr, expectedType)
+	widenNumericExpression(a, expr.RhsExpr, expectedType)
+	lhsOK := semtypes.IsSubtypeSimple(expr.LhsExpr.GetDeterminedType(), target)
+	rhsOK := semtypes.IsSubtypeSimple(expr.RhsExpr.GetDeterminedType(), target)
+	if lhsOK && rhsOK {
+		expr.SetDeterminedType(&target)
+	}
+}
+
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
 	switch expr := expr.(type) {
 	case *ast.BLangLiteral:
@@ -539,9 +603,11 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		panic("not implemented")
 
 	case *ast.BLangBinaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeBinaryExpr(a, expr, expectedType)
 
 	case *ast.BLangUnaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeUnaryExpr(a, expr, expectedType)
 
 	case *ast.BLangInvocation:
@@ -573,12 +639,50 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 
 	case *ast.BLangTypeTestExpr:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangCheckedExpr:
+		return analyzeCheckedExpr(a, expr, expectedType)
+	case *ast.BLangCheckPanickedExpr:
+		return analyzeCheckPanickedExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
+	case *ast.BLangLambdaFunction:
+		return analyzeLambdaFunction(a, expr)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
 	}
+}
+
+func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedType semtypes.SemType) bool {
+	if !analyzeExpression(a, expr.Expr, nil) {
+		return false
+	}
+	retTy := expectedReturnType(a)
+	if retTy == nil {
+		a.ctx().SemanticError("check expression not allowed outside a function", expr.GetPosition())
+		return false
+	}
+	exprTy := expr.Expr.GetDeterminedType()
+	errorPart := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if !semtypes.IsEmpty(a.tyCtx(), errorPart) {
+		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
+			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
+		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr, expectedType semtypes.SemType) bool {
+	if !analyzeExpression(a, expr.Expr, nil) {
+		return false
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
+	fa := initializeFunctionAnalyzer(a, expr.Function)
+	ast.Walk(fa, expr.Function)
+	return true
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {

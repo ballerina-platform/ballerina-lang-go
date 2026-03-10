@@ -306,8 +306,15 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	}
 	var restTy semtypes.SemType = &semtypes.NEVER
 	if fn.RestParam != nil {
-		t.ctx.Unimplemented("var args not supported", fn.RestParam.GetPosition())
-		return nil, false
+		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
+		ast.Walk(t, restParam)
+		elementType := restParam.GetDeterminedType()
+		restTy = elementType
+		// Set the rest param's type to readonly T[]
+		listDefn := semtypes.NewListDefinition()
+		restParamListTy := listDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
+		restParam.SetDeterminedType(restParamListTy)
+		updateSymbolType(t.ctx, restParam, restParamListTy)
 	}
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
@@ -336,6 +343,27 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	fnSymbol.SetSignature(sig)
 
 	return fnType, true
+}
+
+func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
+	fnType, ok := t.resolveFunction(t.ctx, e.Function)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	switch body := e.Function.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		t.resolveBlockStatements(chain, body.Stmts)
+		body.SetDeterminedType(&semtypes.NEVER)
+	case *ast.BLangExprFunctionBody:
+		if _, _, ok := t.resolveExpression(chain, body.Expr.(ast.BLangExpression)); !ok {
+			return nil, expressionEffect{}, false
+		}
+		body.SetDeterminedType(&semtypes.NEVER)
+	}
+	e.Function.SetDeterminedType(&semtypes.NEVER)
+	e.Function.Name.SetDeterminedType(&semtypes.NEVER)
+	setExpectedType(e, fnType)
+	return fnType, defaultExpressionEffect(chain), true
 }
 
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
@@ -722,6 +750,10 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return t.resolveTypeConversionExpr(chain, e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(chain, e)
+	case *ast.BLangCheckedExpr:
+		return t.resolveCheckedExpr(chain, e)
+	case *ast.BLangCheckPanickedExpr:
+		return t.resolveCheckedExpr(chain, &e.BLangCheckedExpr)
 	case *ast.BLangNamedArgsExpression:
 		ty, effect, ok := t.resolveExpression(chain, e.Expr)
 		if !ok {
@@ -730,6 +762,8 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		setExpectedType(e, ty)
 		e.Name.SetDeterminedType(&semtypes.NEVER)
 		return ty, effect, true
+	case *ast.BLangLambdaFunction:
+		return t.resolveLambdaFunction(chain, e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -772,6 +806,20 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 		return resultTy, expressionEffect{ifTrue: falseChain, ifFalse: trueChain}, true
 	}
 	return resultTy, expressionEffect{ifTrue: trueChain, ifFalse: falseChain}, true
+}
+
+func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	errorIntersection := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if semtypes.IsEmpty(t.tyCtx, errorIntersection) {
+		e.IsRedundantChecking = true
+	}
+	resultTy := semtypes.Diff(exprTy, &semtypes.ERROR)
+	setExpectedType(e, resultTy)
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLangMappingConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -1613,6 +1661,7 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 	}
 
 	symbolRef = lookupSymbol(chain, symbolRef)
+	expr.SetSymbol(symbolRef)
 	fnTy := t.ctx.SymbolType(symbolRef)
 	if fnTy == nil {
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
@@ -1914,6 +1963,52 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			rest = &semtypes.NEVER
 		}
 		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest), true
+	case *ast.BLangFunctionType:
+		if ty.FlagSet.Contains(model.Flag_ANY_FUNCTION) {
+			return &semtypes.FUNCTION, true
+		}
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+		}
+		functionDefn := semtypes.NewFunctionDefinition()
+		ty.Definition = &functionDefn
+		// Resolve parameter types
+		paramTypes := make([]semtypes.SemType, len(ty.RequiredParams))
+		for i := range ty.RequiredParams {
+			paramTy, ok := tr.resolveBType(ty.RequiredParams[i].TypeDesc, depth+1)
+			if !ok {
+				return nil, false
+			}
+			paramTypes[i] = paramTy
+			ty.RequiredParams[i].SetDeterminedType(paramTy)
+		}
+		var restTy semtypes.SemType = &semtypes.NEVER
+		if ty.RestParam != nil {
+			restParamTy, ok := tr.resolveBType(ty.RestParam.TypeDesc, depth+1)
+			if !ok {
+				return nil, false
+			}
+			restTy = restParamTy
+			ty.RestParam.SetDeterminedType(restParamTy)
+		}
+		var returnTy semtypes.SemType
+		if ty.ReturnTypeDescriptor != nil {
+			var ok bool
+			returnTy, ok = tr.resolveBType(ty.ReturnTypeDescriptor.(ast.BType), depth+1)
+			if !ok {
+				return nil, false
+			}
+		} else {
+			returnTy = &semtypes.NIL
+		}
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.DefineListTypeWrapped(tr.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+		isolated := ty.FlagSet.Contains(model.Flag_ISOLATED)
+		transactional := ty.FlagSet.Contains(model.Flag_TRANSACTIONAL)
+		fnType := functionDefn.Define(tr.ctx.GetTypeEnv(), paramListTy, returnTy,
+			semtypes.FunctionQualifiersFrom(tr.ctx.GetTypeEnv(), isolated, transactional))
+		return fnType, true
 	default:
 		// TODO: here we need to implement type resolution logic for each type
 		tr.ctx.Unimplemented("unsupported type", nil)

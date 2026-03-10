@@ -603,6 +603,28 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.RestType.(BLangNode))
 		}
 
+	case *BLangFunctionType:
+		for i := range node.RequiredParams {
+			Walk(v, &node.RequiredParams[i])
+		}
+		if node.RestParam != nil {
+			Walk(v, node.RestParam)
+		}
+		if node.ReturnTypeDescriptor != nil {
+			Walk(v, node.ReturnTypeDescriptor.(BLangNode))
+		}
+
+	case *BLangFunctionTypeParam:
+		if node.Name != nil {
+			Walk(v, node.Name)
+		}
+		if node.TypeDesc != nil {
+			Walk(v, node.TypeDesc.(BLangNode))
+		}
+		if node.InitExpr != nil {
+			Walk(v, node.InitExpr.(BLangNode))
+		}
+
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
 		Walk(v, &node.Identifier)

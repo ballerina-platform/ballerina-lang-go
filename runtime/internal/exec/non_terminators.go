@@ -32,100 +32,108 @@ import (
 var decimalStringRegex = regexp.MustCompile(`^[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$`)
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
-	frame.SetOperand(constantLoad.LhsOp.Index, constantLoad.Value)
+	Store(frame, constantLoad.LhsOp.Address, constantLoad.Value)
 }
 
 func execMove(moveIns *bir.Move, frame *Frame) {
-	frame.SetOperand(moveIns.LhsOp.Index, frame.GetOperand(moveIns.RhsOp.Index))
+	Store(frame, moveIns.LhsOp.Address, Load(frame, moveIns.RhsOp.Address))
 }
 
 func execNewArray(newArray *bir.NewArray, frame *Frame) {
 	size := 0
 	if newArray.SizeOp != nil {
-		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
+		size = int(Load(frame, newArray.SizeOp.Address).(int64))
 	}
 	list := values.NewList(size, newArray.Type, newArray.Filler)
 	for i, value := range newArray.Values {
-		list.FillingSet(i, frame.GetOperand(value.Index))
+		list.FillingSet(i, Load(frame, value.Address))
 	}
-	frame.SetOperand(newArray.LhsOp.Index, list)
+	Store(frame, newArray.LhsOp.Address, list)
 }
 
 func execNewMap(newMap *bir.NewMap, frame *Frame) {
 	m := values.NewMap(newMap.Type)
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
-		keyVal := frame.GetOperand(kv.KeyOp().Index)
+		keyVal := Load(frame, kv.KeyOp().Address)
 		keyStr := keyVal.(string)
-		valueVal := frame.GetOperand(kv.ValueOp().Index)
+		valueVal := Load(frame, kv.ValueOp().Address)
 		m.Put(keyStr, valueVal)
 	}
-	frame.SetOperand(newMap.GetLhsOperand().Index, m)
+	Store(frame, newMap.GetLhsOperand().Address, m)
 }
 
 func execNewError(newError *bir.NewError, frame *Frame) {
-	msgVal := frame.GetOperand(newError.MessageOp.Index)
+	msgVal := Load(frame, newError.MessageOp.Address)
 	message := msgVal.(string)
 
 	var cause values.BalValue
 	if newError.CauseOp != nil {
-		cause = frame.GetOperand(newError.CauseOp.Index)
+		cause = Load(frame, newError.CauseOp.Address)
 	}
 
 	var detailMap *values.Map
 	if newError.DetailOp != nil {
-		detailMap = frame.GetOperand(newError.DetailOp.Index).(*values.Map)
+		detailMap = Load(frame, newError.DetailOp.Address).(*values.Map)
 	}
-	errVal := values.NewError(message, cause, newError.TypeName, detailMap)
-	frame.SetOperand(newError.GetLhsOperand().Index, errVal)
+	errVal := values.NewError(newError.Type, message, cause, newError.TypeName, detailMap)
+	Store(frame, newError.GetLhsOperand().Address, errVal)
 }
 
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {
-	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	list := Load(frame, access.LhsOp.Address).(*values.List)
+	idx := int(Load(frame, access.KeyOp.Address).(int64))
 	if idx < 0 {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	list.FillingSet(idx, frame.GetOperand(access.RhsOp.Index))
+	list.FillingSet(idx, Load(frame, access.RhsOp.Address))
 }
 
 func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
-	list := frame.GetOperand(access.RhsOp.Index).(*values.List)
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+	list := Load(frame, access.RhsOp.Address).(*values.List)
+	idx := int(Load(frame, access.KeyOp.Address).(int64))
 	if idx < 0 || idx >= list.Len() {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	frame.SetOperand(access.LhsOp.Index, list.Get(idx))
+	Store(frame, access.LhsOp.Address, list.Get(idx))
 }
 
 func execMapStore(access *bir.FieldAccess, frame *Frame) {
-	m := frame.GetOperand(access.LhsOp.Index).(*values.Map)
-	keyVal := frame.GetOperand(access.KeyOp.Index)
+	m := Load(frame, access.LhsOp.Address).(*values.Map)
+	keyVal := Load(frame, access.KeyOp.Address)
 	keyStr := keyVal.(string)
-	valueVal := frame.GetOperand(access.RhsOp.Index)
+	valueVal := Load(frame, access.RhsOp.Address)
 	m.Put(keyStr, valueVal)
 }
 
 func execMapLoad(access *bir.FieldAccess, frame *Frame) {
-	m := frame.GetOperand(access.RhsOp.Index).(*values.Map)
-	key := frame.GetOperand(access.KeyOp.Index).(string)
+	m := Load(frame, access.RhsOp.Address).(*values.Map)
+	key := Load(frame, access.KeyOp.Address).(string)
 	value, _ := m.Get(key)
-	frame.SetOperand(access.LhsOp.Index, value)
+	Store(frame, access.LhsOp.Address, value)
 }
 
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
-	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
+	sourceValue := Load(frame, typeCast.RhsOp.Address)
 	result := castValue(sourceValue, typeCast.Type)
-	frame.SetOperand(typeCast.LhsOp.Index, result)
+	Store(frame, typeCast.LhsOp.Address, result)
+}
+
+func execFPLoad(fpLoad *bir.FPLoad, frame *Frame) {
+	fn := &values.Function{
+		Type:      fpLoad.Type,
+		LookupKey: fpLoad.FunctionLookupKey,
+	}
+	Store(frame, fpLoad.LhsOp.Address, fn)
 }
 
 func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
-	sourceValue := frame.GetOperand(typeTest.RhsOp.Index)
+	sourceValue := Load(frame, typeTest.RhsOp.Address)
 	valueType := values.SemTypeForValue(sourceValue)
 	typeEnv := reg.GetTypeEnv()
 	typeCtx := semtypes.TypeCheckContext(typeEnv)
 	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
-	frame.SetOperand(typeTest.LhsOp.Index, matches)
+	Store(frame, typeTest.LhsOp.Address, matches)
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {

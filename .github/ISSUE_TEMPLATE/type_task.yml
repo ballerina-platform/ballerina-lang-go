@@ -1,0 +1,62 @@
+name: Task Request
+description: File a task request
+title: "[Task]: "
+labels: ["Type/Task", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this task form!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Give a brief description of the task
+    validations:
+      required: true
+  - type: textarea
+    id: task-description
+    attributes:
+      label: Describe your task(s)
+      description: Detailed description on the task.
+    validations:
+      required: false
+  - type: dropdown
+    id: labels
+    attributes:
+      label: Related area
+      description: Tag the issue with related area
+      multiple: false
+      options:
+        - Compilation
+        - Runtime
+        - CLI
+        - Parser
+        - Type checker
+        - Semantics
+        - Interpreter
+        - Tests
+        - Other Area
+    validations:
+      required: true
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: Related issue(s) (optional)
+      description: Any related issues such as sub tasks, similar problems, etc.
+    validations:
+      required: false
+  - type: textarea
+    id: suggested-labels
+    attributes:
+      label: Suggested label(s) (optional)
+      description: Optional comma-separated list of suggested labels.
+    validations:
+      required: false
+  - type: textarea
+    id: suggested-assignees
+    attributes:
+      label: Suggested assignee(s) (optional)
+      description: Optional comma-separated list of suggested team members.
+    validations:
+      required: false

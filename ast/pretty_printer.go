@@ -130,8 +130,18 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
 		p.printErrorConstructorExpr(t)
+	case *BLangCheckedExpr:
+		p.printCheckedExpr(t)
+	case *BLangCheckPanickedExpr:
+		p.printCheckPanickedExpr(t)
 	case *BLangPanic:
 		p.printPanic(t)
+	case *BLangFunctionType:
+		p.printFunctionType(t)
+	case *BLangFunctionTypeParam:
+		p.printFunctionTypeParam(t)
+	case *BLangLambdaFunction:
+		p.printLambdaFunction(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -894,6 +904,80 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 		}
 		p.indentLevel--
 		p.printSticky(")")
+	}
+	p.endNode()
+}
+
+// Checked expression printer
+func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
+	p.startNode()
+	p.printString("checked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Check panicked expression printer
+func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
+	p.startNode()
+	p.printString("check-panicked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Function type printer
+func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
+	p.startNode()
+	p.printString("function-type")
+	p.printString("(")
+	if len(node.RequiredParams) > 0 {
+		p.indentLevel++
+		for i := range node.RequiredParams {
+			param := &node.RequiredParams[i]
+			if param.TypeDesc != nil {
+				p.PrintInner(param.TypeDesc.(BLangNode))
+			}
+		}
+		p.indentLevel--
+	}
+	if node.RestParam != nil {
+		p.indentLevel++
+		p.PrintInner(node.RestParam)
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLambdaFunction(node *BLangLambdaFunction) {
+	p.startNode()
+	p.printString("lambda")
+	if node.Function != nil {
+		p.indentLevel++
+		p.PrintInner(node.Function)
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
+	p.startNode()
+	p.printString("function-type-param")
+	if node.Name != nil {
+		p.PrintInner(node.Name)
+	}
+	if node.TypeDesc != nil {
+		p.PrintInner(node.TypeDesc.(BLangNode))
 	}
 	p.endNode()
 }

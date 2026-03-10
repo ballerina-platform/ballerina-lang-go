@@ -1,5 +1,7 @@
 # Supported language features (subset 3)
 
+**Supported Ballerina code:** see [corpus/bal](../corpus/bal)—the [corpus/bal/subset3](../corpus/bal/subset3) directory contains the tests and examples that define what is supported in this subset.
+
 ## Module level declarations
 
 - [Import declarations](https://ballerina.io/spec/lang/master/#import-decl)
