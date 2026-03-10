@@ -251,6 +251,11 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			t.resolveOnFailClause(chain, s.OnFailClause)
 		}
 		return defaultStmtEffect(chain), ok
+	case *ast.BLangPanic:
+		if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+			return defaultStmtEffect(chain), false
+		}
+		return statementEffect{nil, true}, true
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return defaultStmtEffect(chain), true
 	default:

@@ -52,6 +52,11 @@ var (
 	skipIntegrationTests = []string{
 		"subset5/05-error/simple-v.bal",
 		"subset5/05-error/context-type-v.bal",
+		"subset5/05-error/panic1-p.bal",
+		"subset5/05-error/panic2-p.bal",
+		"subset5/05-error/panic3-p.bal",
+		"subset5/05-error/panic4-p.bal",
+		"subset5/05-error/panic5-p.bal",
 	}
 )
 

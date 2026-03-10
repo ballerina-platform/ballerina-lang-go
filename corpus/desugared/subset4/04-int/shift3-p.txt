@@ -1,0 +1,25 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable amount (type
+          (value-type int)) (expr
+          (literal 64))))
+      (expression-stmt
+        (invocation io println (
+          (invocation shift (
+            (literal 1)
+            (simple-var-ref amount))))))))
+  (function shift (
+    (variable x (type
+      (value-type int)))
+    (variable amount (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr <<
+          (simple-var-ref x)
+          (simple-var-ref amount))))))
