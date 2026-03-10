@@ -128,6 +128,10 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
 		p.printErrorConstructorExpr(t)
+	case *BLangCheckedExpr:
+		p.printCheckedExpr(t)
+	case *BLangCheckPanickedExpr:
+		p.printCheckPanickedExpr(t)
 	case *BLangPanic:
 		p.printPanic(t)
 	default:
@@ -882,6 +886,26 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 		p.indentLevel--
 		p.printSticky(")")
 	}
+	p.endNode()
+}
+
+// Checked expression printer
+func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
+	p.startNode()
+	p.printString("checked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Check panicked expression printer
+func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
+	p.startNode()
+	p.printString("check-panicked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 

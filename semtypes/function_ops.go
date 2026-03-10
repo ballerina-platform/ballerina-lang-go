@@ -168,10 +168,10 @@ func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 	}
 	switch ty := fnTy.(type) {
 	case *BasicTypeBitSet:
-		return &ANY
+		return &VAL
 	case ComplexSemType:
 		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
-		return functionReturnTypeInner(cx, argList, &ANY, bdd)
+		return functionReturnTypeInner(cx, argList, &VAL, bdd)
 	default:
 		panic("impossible")
 	}

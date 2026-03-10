@@ -266,32 +266,75 @@ func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstruct
 }
 
 func walkCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr) desugaredNode[model.ExpressionNode] {
-	var initStmts []model.StatementNode
-
-	if expr.Expr != nil {
-		result := walkExpression(cx, expr.Expr)
-		initStmts = append(initStmts, result.initStmts...)
-		expr.Expr = result.replacementNode.(ast.BLangExpression)
-	}
-
-	return desugaredNode[model.ExpressionNode]{
-		initStmts:       initStmts,
-		replacementNode: expr,
-	}
+	return desugarCheckedExpr(cx, expr, false)
 }
 
 func walkCheckPanickedExpr(cx *FunctionContext, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
+	return desugarCheckedExpr(cx, &expr.BLangCheckedExpr, true)
+}
+
+func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic bool) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
+	// Walk the inner expression first
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
 		initStmts = append(initStmts, result.initStmts...)
 		expr.Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
+	innerTy := expr.Expr.GetDeterminedType()
+	resultTy := expr.GetDeterminedType()
+
+	// TODO: extract util to add definition and get reference
+	// Create temp var: $desugar$N = <inner expr>
+	tempName, tempSymbol := cx.addDesugardSymbol(innerTy, model.SymbolKindVariable, false)
+	tempVarName := &ast.BLangIdentifier{Value: tempName}
+	tempVar := &ast.BLangSimpleVariable{Name: tempVarName}
+	tempVar.SetDeterminedType(innerTy)
+	tempVar.SetInitialExpression(expr.Expr)
+	tempVar.SetSymbol(tempSymbol)
+	tempVarDef := &ast.BLangSimpleVariableDef{Var: tempVar}
+	initStmts = append(initStmts, tempVarDef)
+
+	// Type test: $desugar$N is error
+	tempVarRefForTest := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	tempVarRefForTest.SetSymbol(tempSymbol)
+	tempVarRefForTest.SetDeterminedType(innerTy)
+
+	typeTestExpr := &ast.BLangTypeTestExpr{}
+	typeTestExpr.Expr = tempVarRefForTest
+	typeTestExpr.Type = model.TypeData{Type: &semtypes.ERROR}
+	typeTestExpr.SetDeterminedType(&semtypes.BOOLEAN)
+
+	// If body: return or panic
+	tempVarRefForBody := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	tempVarRefForBody.SetSymbol(tempSymbol)
+	tempVarRefForBody.SetDeterminedType(innerTy)
+
+	var bodyStmt ast.BLangStatement
+	if isPanic {
+		bodyStmt = &ast.BLangPanic{Expr: tempVarRefForBody}
+	} else {
+		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
+	}
+
+	ifStmt := &ast.BLangIf{
+		Expr: typeTestExpr,
+		Body: ast.BLangBlockStmt{
+			Stmts: []ast.BLangStatement{bodyStmt},
+		},
+	}
+	initStmts = append(initStmts, ifStmt)
+
+	// Replacement: var ref typed as non-error type
+	replacementVarRef := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	replacementVarRef.SetSymbol(tempSymbol)
+	replacementVarRef.SetDeterminedType(resultTy)
+
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
-		replacementNode: expr,
+		replacementNode: replacementVarRef,
 	}
 }
 
