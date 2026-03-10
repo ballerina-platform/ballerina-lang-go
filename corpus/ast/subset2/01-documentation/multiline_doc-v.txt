@@ -7,7 +7,15 @@
         (md-doc-line "")
         (md-doc-line "description line 2")
         (md-doc-line "")
-        (md-doc-line "description line 3"))) (
+        (md-doc-line "description line 3")
+        (md-doc-line "")
+        (md-doc-line "Inline code with double backticks ``x + 1``.")
+        (md-doc-line "")
+        (md-doc-line "Triple backtick code block with lang:")
+        (md-doc-line "```balint n = 42;```")
+        (md-doc-line "")
+        (md-doc-line "Triple backtick code block without lang:")
+        (md-doc-line "```int m = 43;```"))) (
     (variable param1 (type
       (value-type string)))
     (variable param2 (type

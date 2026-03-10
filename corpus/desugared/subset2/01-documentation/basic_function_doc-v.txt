@@ -2,7 +2,19 @@
   (function basicFunction
     (md-doc
       (doc-lines
-        (md-doc-line "Documentation for basic function"))) () (
+        (md-doc-line "Documentation for basic function.")
+        (md-doc-line "Name refs: simple `foo`, qualified `m:bar`, call `baz()`, method `obj.quux()`.")
+        (md-doc-line "Ref keywords: type`string`, variable`count`, function`main()`, method `x.toString()`.")
+        (md-doc-line "Qualified: `m:MyType` and `m:helper()`.")
+        (md-doc-line "Numeric escape in parameter name to exercise documentation lexer: \u{1000}Param."))
+      (references
+        (md-ref-doc (type BACKTICK_CONTENT) (identifier "baz") (reference-name "baz()"))
+        (md-ref-doc (type BACKTICK_CONTENT) (type-name "obj") (identifier "quux") (reference-name "obj.quux()"))
+        (md-ref-doc (type TYPE) (identifier "string") (reference-name "string"))
+        (md-ref-doc (type VARIABLE) (identifier "count") (reference-name "count"))
+        (md-ref-doc (type FUNCTION) (identifier "main") (reference-name "main()"))
+        (md-ref-doc (type BACKTICK_CONTENT) (type-name "x") (identifier "toString") (reference-name "x.toString()"))
+        (md-ref-doc (type BACKTICK_CONTENT) (qualifier "m") (identifier "helper") (reference-name "m:helper()")))) () (
     (value-type null))
     (block-function-body))
   (function main () (
