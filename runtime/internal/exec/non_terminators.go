@@ -76,7 +76,7 @@ func execNewError(newError *bir.NewError, frame *Frame) {
 	if newError.DetailOp != nil {
 		detailMap = frame.GetOperand(newError.DetailOp.Index).(*values.Map)
 	}
-	errVal := values.NewError(message, cause, newError.TypeName, detailMap)
+	errVal := values.NewError(newError.Type, message, cause, newError.TypeName, detailMap)
 	frame.SetOperand(newError.GetLhsOperand().Index, errVal)
 }
 

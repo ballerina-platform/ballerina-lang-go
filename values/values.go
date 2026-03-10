@@ -75,7 +75,7 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 	case *Map:
 		return v.Type
 	case *Error:
-		return &semtypes.ERROR
+		return v.Type
 	default:
 		return &semtypes.ANY
 	}
