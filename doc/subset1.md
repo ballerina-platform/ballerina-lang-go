@@ -1,6 +1,8 @@
-# Supported language features (subset 3)
+# Supported language features (subset 1)
 
-**Supported Ballerina code:** see [corpus/bal](../corpus/bal)—the [corpus/bal/subset3](../corpus/bal/subset3) directory contains the tests and examples that define what is supported in this subset.
+Subset 1 is the **first milestone**: a minimal core of the language (no destructuring, type cast, list constructor, or nil lifting).
+
+**Supported Ballerina code:** see [corpus/bal](../corpus/bal)—the [corpus/bal/subset1](../corpus/bal/subset1) directory contains the tests and examples that define what is supported in this subset.
 
 ## Module level declarations
 
@@ -16,8 +18,6 @@
 
 - [Assignment](https://ballerina.io/spec/lang/master/#assignment-stmt)
   - See supported [`lvexpr`](#expressions)
-- [Destructuring assignment statement](https://ballerina.io/spec/lang/master/#destructuring-assignment-stmt)
-  - Only support [`wildcard-binding-pattern`](https://ballerina.io/spec/lang/master/#wildcard-binding-pattern)
 - [Compound Assignment](https://ballerina.io/spec/lang/master/#compound-assignment-stmt)
   - See supported [binary operators](#operators)
   - Currently don't fully support [nil lifting](https://ballerina.io/spec/lang/master/#nil_lifting)
@@ -28,8 +28,7 @@
 - [Local variable declarations](https://ballerina.io/spec/lang/master/#local-var-decl-stmt)
   - Currently don't support `final`
 - [Return](https://ballerina.io/spec/lang/master/#return-stmt)
-- [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
-  - Currently only support range and list
+- [If-else statement](https://ballerina.io/spec/lang/master/#if-else-stmt)
 
 ## Expressions
 
@@ -38,18 +37,13 @@
 - [lvexpr](https://ballerina.io/spec/lang/master/#section_7.14.1)
   - Currently only support [variable-reference-lvexpr](https://ballerina.io/spec/lang/master/#variable-reference-lvexpr)
 - [`Call`](https://ballerina.io/spec/lang/master/#call-expr)
-- [List constructor](https://ballerina.io/spec/lang/master/#list-constructor-expr)
-  - Currently [spread-list-member](https://ballerina.io/spec/lang/master/#spread-list-member) not supported
+  - Currently only support `function-call-expr`
 - [Variable reference](https://ballerina.io/spec/lang/master/#variable-reference-expr)
   - Currently `xml-qualified-names` not supported
 - [Unary logical expression](https://ballerina.io/spec/lang/master/#unary-logical-expr)
-- [Nil lifted expression](https://ballerina.io/spec/lang/master/#nil-lifted-expr)
-  - Currently nil lifting is not fully supported
-  - Currently [`shift-expr`](https://ballerina.io/spec/lang/master/#shift-expr) not supported
 - [Relational expression](https://ballerina.io/spec/lang/master/#relational-expr)
 - [Equality expression](https://ballerina.io/spec/lang/master/#equality-expr)
 - Nested expressions (`(expression)`)
-- [Range expression](https://ballerina.io/spec/lang/master/#section_6.26)
 
 ## Operators
 
@@ -57,29 +51,28 @@
   - Equality ops `==`, `!=`, `===`, `!==`
   - Multiplicative ops `*`, `%`, `/`
   - Bitwise ops `&`, `|`, `^`
-  - Relational ops `<`, `<=`, `>`, `>=`,
+  - Relational ops `<`, `<=`, `>`, `>=`
   - Additive ops `+`, `-`
 - Unary operators
-  - logical `!`
-  - numeric ops `+`, `-`
+  - Logical `!`
+  - Numeric `+`, `-`
 
 # Subset restrictions
 
 ## Import declarations
 
-- Only fallowing libraries with given methods are supported
-  - `ballerina/io`
-    - `println`
-  - `ballerina/lang.array`
-    - `length`
-    - `push`
-
-## Method call
-
-- Method call syntax can be used for calling the following langlib functions:
-  - `array:length`
-  - `array:push`
+- Only `ballerina/io` is supported
+  - Only `println` function is supported
 
 ## numeric-literal
 
 - Currently [`HexIntLiterals`](https://ballerina.io/spec/lang/master/#HexIntLiteral) not supported
+
+## Not in subset 1
+
+- [Destructuring assignment](https://ballerina.io/spec/lang/master/#destructuring-assignment-stmt)
+- [Type cast expression](https://ballerina.io/spec/lang/master/#section_6.20)
+- [List constructor](https://ballerina.io/spec/lang/master/#list-constructor-expr)
+- [Nil lifted expression](https://ballerina.io/spec/lang/master/#nil-lifted-expr) (nil lifting)
+- [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
+- [Range expression](https://ballerina.io/spec/lang/master/#section_6.26)

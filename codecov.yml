@@ -1,2 +1,8 @@
 github_checks:
   annotations: true
+
+coverage:
+  status:
+    patch:
+      default:
+        target: 80%

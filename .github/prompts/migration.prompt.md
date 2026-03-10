@@ -20,13 +20,13 @@ Convert the selected Java source into idiomatic Go **with minimal semantic drift
 ## Package & File Mapping
 
 1. **One-to-one element mapping**
-    - **Files**: Map each Java source file `<Name>.java` to to one go file, named `lowercase-with-dashes.go` (e.g., `FooBar.java` -> `foo-bar.go`). Be consistent within the package.
-    - **Classes/Interfaces**: For each Java class or interface define a **Go interface** named after the Java type (exported) and an **unexported implementation struct**.
-    - **Methods**: Map each java method to a Go method or function. For overloads, pick distinct names (e.g., `Advance`, `AdvanceN`).
+   - **Files**: Map each Java source file `<Name>.java` to one go file, named `lowercase-with-dashes.go` (e.g., `FooBar.java` -> `foo-bar.go`). Be consistent within the package.
+   - **Classes/Interfaces**: For each Java class or interface, define a **Go interface** named after the Java type (exported) and an **unexported implementation struct**.
+   - **Methods**: Map each Java method to a Go method or function. For overloads, pick distinct names (e.g., `Advance`, `AdvanceN`).
 
 2. **Package structure**
-    - Java: `package com.example.foo.something;`
-    - Go: directory `foo/something` with `package something` in the file.
+   - Java: `package com.example.foo.something;`
+   - Go: directory `foo/something` with `package something` in the file.
 
 ## Types & Encapsulation
 
@@ -34,7 +34,7 @@ Convert the selected Java source into idiomatic Go **with minimal semantic drift
 
 - Define an **interface** named exactly after the Java class, e.g. `Foo`.
 - Define a constructor `NewFoo(...) Foo` returning the interface.
-- Define an **unexported** struct `fooImpl` implements the interface. Prefer composition/embedding for reuse.
+- Define an **unexported** struct `fooImpl` that implements the interface. Prefer composition/embedding for reuse.
 
 ### Fields -> Struct Fields
 
@@ -109,7 +109,7 @@ func (r *readerImpl) AdvanceN(n int) {}
 
 ## Naming & Comments
 
-- **Packages:** short, lowercase, single word (`something`).  
+- **Packages:** short, lowercase, single word (`something`).
 - **Exports:** capitalize to export. Keep names concise and avoid stutter (prefer `something.Reader` with type name `Reader`).
 
 ## Error Handling
@@ -120,7 +120,7 @@ func (r *readerImpl) AdvanceN(n int) {}
 
 ### Java exceptions -> Go typed errors
 
-- Define Java-specific exceptions as typed errros in `common/errors/errors.go` (package `errors`).
+- Define Java-specific exceptions as typed errors in `common/errors/errors.go` (package `errors`).
 
 ```go
 package errors
@@ -146,6 +146,6 @@ func (e IndexOutOfBoundsError) GetLength() int { return e.length }
 
 ## Guardrails & Non goals
 
-- **Do no** add file headers or license comments.
-- **Do not** introduce new public APIs unless requires by the Java surface.
+- **Do not** add file headers or license comments.
+- **Do not** introduce new public APIs unless required by the Java surface.
 - **Do not** add comments unless the Java source has them.
