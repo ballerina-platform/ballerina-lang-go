@@ -28,12 +28,12 @@ const maxRecursionDepth = 1000
 func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
-	locals[0] = values.DefaultValueForType((*localVars)[0].Type)
+	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
 	for i, arg := range args {
 		locals[i+1] = arg
 	}
 	for i := len(args) + 1; i < len(*localVars); i++ {
-		locals[i] = values.DefaultValueForType((*localVars)[i].Type)
+		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
 	}
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
 	callStack.Push(frame)
@@ -57,58 +57,58 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) {
 	switch v := inst.(type) {
 	case *bir.ConstantLoad:
-		execConstantLoad(v, frame)
+		execConstantLoad(v, frame, reg)
 	case *bir.Move:
-		execMove(v, frame)
+		execMove(v, frame, reg)
 	case *bir.NewArray:
-		execNewArray(v, frame)
+		execNewArray(v, frame, reg)
 	case *bir.NewMap:
-		execNewMap(v, frame)
+		execNewMap(v, frame, reg)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:
-			execArrayStore(v, frame)
+			execArrayStore(v, frame, reg)
 		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
-			execArrayLoad(v, frame)
+			execArrayLoad(v, frame, reg)
 		case bir.INSTRUCTION_KIND_MAP_STORE:
-			execMapStore(v, frame)
+			execMapStore(v, frame, reg)
 		case bir.INSTRUCTION_KIND_MAP_LOAD:
-			execMapLoad(v, frame)
+			execMapLoad(v, frame, reg)
 		default:
 			fmt.Printf("UNKNOWN_FIELD_ACCESS_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.BinaryOp:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ADD:
-			execBinaryOpAdd(v, frame)
+			execBinaryOpAdd(v, frame, reg)
 		case bir.INSTRUCTION_KIND_SUB:
-			execBinaryOpSub(v, frame)
+			execBinaryOpSub(v, frame, reg)
 		case bir.INSTRUCTION_KIND_MUL:
-			execBinaryOpMul(v, frame)
+			execBinaryOpMul(v, frame, reg)
 		case bir.INSTRUCTION_KIND_DIV:
-			execBinaryOpDiv(v, frame)
+			execBinaryOpDiv(v, frame, reg)
 		case bir.INSTRUCTION_KIND_MOD:
-			execBinaryOpMod(v, frame)
+			execBinaryOpMod(v, frame, reg)
 		case bir.INSTRUCTION_KIND_EQUAL:
-			execBinaryOpEqual(v, frame)
+			execBinaryOpEqual(v, frame, reg)
 		case bir.INSTRUCTION_KIND_NOT_EQUAL:
-			execBinaryOpNotEqual(v, frame)
+			execBinaryOpNotEqual(v, frame, reg)
 		case bir.INSTRUCTION_KIND_GREATER_THAN:
-			execBinaryOpGT(v, frame)
+			execBinaryOpGT(v, frame, reg)
 		case bir.INSTRUCTION_KIND_GREATER_EQUAL:
-			execBinaryOpGTE(v, frame)
+			execBinaryOpGTE(v, frame, reg)
 		case bir.INSTRUCTION_KIND_LESS_THAN:
-			execBinaryOpLT(v, frame)
+			execBinaryOpLT(v, frame, reg)
 		case bir.INSTRUCTION_KIND_LESS_EQUAL:
-			execBinaryOpLTE(v, frame)
+			execBinaryOpLTE(v, frame, reg)
 		case bir.INSTRUCTION_KIND_AND:
-			execBinaryOpAnd(v, frame)
+			execBinaryOpAnd(v, frame, reg)
 		case bir.INSTRUCTION_KIND_OR:
-			execBinaryOpOr(v, frame)
+			execBinaryOpOr(v, frame, reg)
 		case bir.INSTRUCTION_KIND_REF_EQUAL:
-			execBinaryOpRefEqual(v, frame)
+			execBinaryOpRefEqual(v, frame, reg)
 		case bir.INSTRUCTION_KIND_REF_NOT_EQUAL:
-			execBinaryOpRefNotEqual(v, frame)
+			execBinaryOpRefNotEqual(v, frame, reg)
 		case bir.INSTRUCTION_KIND_CLOSED_RANGE:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_CLOSED_RANGE")
 		case bir.INSTRUCTION_KIND_HALF_OPEN_RANGE:
@@ -116,35 +116,35 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		case bir.INSTRUCTION_KIND_ANNOT_ACCESS:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_ANNOT_ACCESS")
 		case bir.INSTRUCTION_KIND_BITWISE_AND:
-			execBinaryOpBitwiseAnd(v, frame)
+			execBinaryOpBitwiseAnd(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_OR:
-			execBinaryOpBitwiseOr(v, frame)
+			execBinaryOpBitwiseOr(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_XOR:
-			execBinaryOpBitwiseXor(v, frame)
+			execBinaryOpBitwiseXor(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_LEFT_SHIFT:
-			execBinaryOpBitwiseLeftShift(v, frame)
+			execBinaryOpBitwiseLeftShift(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT:
-			execBinaryOpBitwiseRightShift(v, frame)
+			execBinaryOpBitwiseRightShift(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT:
-			execBinaryOpBitwiseUnsignedRightShift(v, frame)
+			execBinaryOpBitwiseUnsignedRightShift(v, frame, reg)
 		default:
 			fmt.Printf("UNKNOWN_BINARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.UnaryOp:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_NOT:
-			execUnaryOpNot(v, frame)
+			execUnaryOpNot(v, frame, reg)
 		case bir.INSTRUCTION_KIND_NEGATE:
-			execUnaryOpNegate(v, frame)
+			execUnaryOpNegate(v, frame, reg)
 		case bir.INSTRUCTION_KIND_BITWISE_COMPLEMENT:
-			execUnaryOpBitwiseComplement(v, frame)
+			execUnaryOpBitwiseComplement(v, frame, reg)
 		case bir.INSTRUCTION_KIND_TYPEOF:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_TYPEOF")
 		default:
 			fmt.Printf("UNKNOWN_UNARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.TypeCast:
-		execTypeCast(v, frame)
+		execTypeCast(v, frame, reg)
 	case *bir.TypeTest:
 		execTypeTest(v, frame, reg)
 	default:
@@ -157,7 +157,7 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 	case *bir.Goto:
 		return v.ThenBB
 	case *bir.Branch:
-		return execBranch(v, frame)
+		return execBranch(v, frame, reg)
 	case *bir.Call:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_CALL:

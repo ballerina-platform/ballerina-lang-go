@@ -237,7 +237,8 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 }
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
-	return operand.VariableDcl.Name.Value()
+	name := operand.VariableDcl.GetName()
+	return name.Value()
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
@@ -294,9 +295,10 @@ func (p *PrettyPrinter) PrintMove(move *Move) string {
 
 func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 	sb := strings.Builder{}
-	sb.WriteString(globalVar.Name.Value())
+	name := globalVar.GetName()
+	sb.WriteString(name.Value())
 	sb.WriteString("  ")
-	sb.WriteString(p.PrintSemType(globalVar.Type))
+	sb.WriteString(p.PrintSemType(globalVar.GetType()))
 	return sb.String()
 }
 

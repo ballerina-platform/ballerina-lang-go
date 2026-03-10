@@ -33,6 +33,11 @@ type BIRInstruction interface {
 	GetKind() InstructionKind
 }
 
+type BIRVariableDcl interface {
+	GetType() semtypes.SemType
+	GetName() model.Name
+}
+
 type (
 	BIRNodeBase struct {
 		Pos diagnostics.Location
@@ -64,7 +69,7 @@ type (
 		TypeDefs      []BIRTypeDefinition
 		GlobalVars    []BIRGlobalVariableDcl
 		Functions     []BIRFunction
-		Constants     []BIRConstant
+		InitFunction  *BIRFunction
 		MainFunction  *BIRFunction
 		TypeEnv       semtypes.Env
 	}
@@ -89,24 +94,18 @@ type (
 		Index           int
 	}
 
-	BIRVariableDcl struct {
-		BIRDocumentableNodeBase
-		Type               semtypes.SemType
-		Name               model.Name
-		OriginalName       model.Name
-		MetaVarName        string
-		Kind               VarKind
-		Scope              VarScope
-		IgnoreVariable     bool
-		EndBB              *BIRBasicBlock
-		StartBB            *BIRBasicBlock
-		InsOffset          int
-		OnlyUsedInSingleBB bool
-		Initialized        bool
+	birVariableDclBase struct {
+		BIRNodeBase
+		Type semtypes.SemType
+		Name model.Name
+	}
+
+	BIRLocalVariableDcl struct {
+		birVariableDclBase
 	}
 
 	BIRGlobalVariableDcl struct {
-		BIRVariableDcl
+		birVariableDclBase
 		Flags  int64
 		PkgId  *model.PackageID
 		Origin model.SymbolOrigin
@@ -122,22 +121,13 @@ type (
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int
-		LocalVars      []BIRVariableDcl
-		ReturnVariable *BIRVariableDcl
+		LocalVars      []BIRLocalVariableDcl
+		ReturnVariable *BIRLocalVariableDcl
 		Parameters     []BIRFunctionParameter
 		BasicBlocks    []BIRBasicBlock
 		// FIXME:
 		DependentGlobalVars []BIRGlobalVariableDcl
 		FunctionLookupKey   string
-	}
-
-	BIRConstant struct {
-		BIRDocumentableNodeBase
-		Name       model.Name
-		Flags      int64
-		Type       semtypes.SemType
-		ConstValue ConstValue
-		Origin     model.SymbolOrigin
 	}
 
 	BIRBasicBlock struct {
@@ -155,18 +145,38 @@ type (
 	}
 
 	BIRFunctionParameter struct {
-		BIRVariableDcl
+		BIRLocalVariableDcl
 		HasDefaultExpr  bool
 		IsPathParameter bool
 	}
 
 	BIROperand struct {
 		BIRNodeBase
-		VariableDcl *BIRVariableDcl
-		// If Index > 0 then it is the index to the functions local var array
-		Index int
+		VariableDcl BIRVariableDcl
+		Index       int
 	}
 )
+
+var (
+	_ BIRVariableDcl = &BIRLocalVariableDcl{}
+	_ BIRVariableDcl = &BIRGlobalVariableDcl{}
+)
+
+func (v *birVariableDclBase) GetType() semtypes.SemType {
+	return v.Type
+}
+
+func (v *birVariableDclBase) GetName() model.Name {
+	return v.Name
+}
+
+func (v *birVariableDclBase) SetName(name model.Name) {
+	v.Name = name
+}
+
+func (v *birVariableDclBase) SetPos(pos diagnostics.Location) {
+	v.Pos = pos
+}
 
 // TODO: add interface asserts
 

@@ -22,7 +22,8 @@ import (
 )
 
 type BIRModule struct {
-	Pkg *bir.BIRPackage
+	Pkg     *bir.BIRPackage
+	Globals []values.BalValue
 }
 
 type ExternFunction struct {
@@ -31,7 +32,12 @@ type ExternFunction struct {
 }
 
 func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
+	globals := make([]values.BalValue, len(pkg.GlobalVars))
+	for i, gv := range pkg.GlobalVars {
+		globals[i] = values.DefaultValueForType(gv.GetType())
+	}
 	return &BIRModule{
-		Pkg: pkg,
+		Pkg:     pkg,
+		Globals: globals,
 	}
 }
