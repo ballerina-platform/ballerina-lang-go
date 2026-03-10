@@ -30,7 +30,7 @@ type Frame struct {
 func getOperandValue(op *bir.BIROperand, frame *Frame, reg *modules.Registry) values.BalValue {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
 		module := reg.GetModule(gv.PkgId)
-		return module.Globals[op.Index]
+		return module.Globals[*op.SymRef]
 	}
 	return frame.locals[op.Index]
 }
@@ -38,7 +38,7 @@ func getOperandValue(op *bir.BIROperand, frame *Frame, reg *modules.Registry) va
 func setOperandValue(op *bir.BIROperand, frame *Frame, reg *modules.Registry, value values.BalValue) {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
 		module := reg.GetModule(gv.PkgId)
-		module.Globals[op.Index] = value
+		module.Globals[*op.SymRef] = value
 	} else {
 		frame.locals[op.Index] = value
 	}

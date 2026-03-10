@@ -194,9 +194,9 @@ func (br *birReader) skipConstants() {
 	}
 }
 
-func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
+func (br *birReader) readGlobalVars() map[model.SymbolRef]bir.BIRGlobalVariableDcl {
 	count := br.readLength()
-	variables := make([]bir.BIRGlobalVariableDcl, count)
+	variables := make(map[model.SymbolRef]bir.BIRGlobalVariableDcl, count)
 	for i := 0; i < int(count); i++ {
 		pos := br.readPosition()
 		_ = br.readKind() // kind (ignored, concrete type determines it)
@@ -213,7 +213,9 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 		}
 		gv.SetPos(pos)
 		gv.SetName(name)
-		variables[i] = gv
+		// Use a synthetic SymbolRef since the binary format doesn't include it
+		symRef := model.SymbolRef{Index: i}
+		variables[symRef] = gv
 	}
 	return variables
 }

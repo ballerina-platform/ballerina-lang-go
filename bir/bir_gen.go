@@ -31,7 +31,6 @@ import (
 
 type Context struct {
 	CompilerContext *context.CompilerContext
-	globalVarMap    map[model.SymbolRef]*BIROperand
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
 }
@@ -101,21 +100,21 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg.PackageID = ast.PackageID
 	genCtx := &Context{
 		CompilerContext: ctx,
-		globalVarMap:    make(map[model.SymbolRef]*BIROperand),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
 	}
+	birPkg.GlobalVars = make(map[model.SymbolRef]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, typeDef := range ast.TypeDefinitions {
 		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
 	}
 	for _, globalVar := range ast.GlobalVars {
-		operand := addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
-		genCtx.globalVarMap[globalVar.Symbol()] = operand
+		symRef := globalVar.Symbol()
+		addGlobalVar(birPkg, symRef, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
 	for _, constant := range ast.Constants {
-		operand := addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
-		genCtx.globalVarMap[constant.Symbol()] = operand
+		symRef := constant.Symbol()
+		addGlobalVar(birPkg, symRef, transformConstantAsGlobal(genCtx, &constant))
 	}
 	if ast.InitFunction != nil {
 		birPkg.InitFunction = TransformFunction(genCtx, ast.InitFunction)
@@ -183,10 +182,8 @@ func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTyp
 	return nil
 }
 
-func addGlobalVar(birPkg *BIRPackage, dcl BIRGlobalVariableDcl) *BIROperand {
-	index := len(birPkg.GlobalVars)
-	birPkg.GlobalVars = append(birPkg.GlobalVars, dcl)
-	return &BIROperand{VariableDcl: &birPkg.GlobalVars[index], Index: index}
+func addGlobalVar(birPkg *BIRPackage, symRef model.SymbolRef, dcl BIRGlobalVariableDcl) {
+	birPkg.GlobalVars[symRef] = dcl
 }
 
 func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRGlobalVariableDcl {
@@ -897,16 +894,20 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		}
 	}
 
-	// Try global variable lookup (includes constants)
-	if operand, ok := ctx.birCx.globalVarMap[symRef]; ok {
-		return expressionEffect{
-			result: operand,
-			block:  curBB,
-		}
+	// Global variable reference
+	var pkgId *model.PackageID
+	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+		pkgId = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
+	} else {
+		pkgId = ctx.birCx.packageID
 	}
-
-	panic(fmt.Sprintf("variable %s not found (SymbolRef: Pkg=%v Index=%d SpaceIndex=%d)",
-		varName, symRef.Package, symRef.Index, symRef.SpaceIndex))
+	gv := &BIRGlobalVariableDcl{}
+	gv.Name = model.Name(varName)
+	gv.PkgId = pkgId
+	return expressionEffect{
+		result: &BIROperand{VariableDcl: gv, SymRef: &symRef},
+		block:  curBB,
+	}
 }
 
 func appendIfNotNil[T any](slice []T, item *T) []T {

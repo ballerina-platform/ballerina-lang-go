@@ -67,7 +67,7 @@ type (
 		// TODO: avoid duplicates here
 		ImportModules []BIRImportModule
 		TypeDefs      []BIRTypeDefinition
-		GlobalVars    []BIRGlobalVariableDcl
+		GlobalVars    map[model.SymbolRef]BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		InitFunction  *BIRFunction
 		MainFunction  *BIRFunction
@@ -154,6 +154,7 @@ type (
 		BIRNodeBase
 		VariableDcl BIRVariableDcl
 		Index       int
+		SymRef      *model.SymbolRef
 	}
 )
 
