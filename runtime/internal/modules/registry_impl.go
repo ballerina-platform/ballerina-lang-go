@@ -26,6 +26,7 @@ import (
 type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
 	nativeFunctions map[string]*ExternFunction
+	modules         map[string]*BIRModule
 	typeEnv         semtypes.Env
 }
 
@@ -33,7 +34,12 @@ func NewRegistry() *Registry {
 	return &Registry{
 		birFunctions:    make(map[string]*bir.BIRFunction),
 		nativeFunctions: make(map[string]*ExternFunction),
+		modules:         make(map[string]*BIRModule),
 	}
+}
+
+func moduleKey(pkgId *model.PackageID) string {
+	return pkgId.OrgName.Value() + "/" + pkgId.PkgName.Value()
 }
 
 func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule {
@@ -43,7 +49,14 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 			r.birFunctions[fn.FunctionLookupKey] = fn
 		}
 	}
+	if id != nil && !id.IsUnnamed() {
+		r.modules[moduleKey(id)] = m
+	}
 	return m
+}
+
+func (r *Registry) GetModule(pkgId *model.PackageID) *BIRModule {
+	return r.modules[moduleKey(pkgId)]
 }
 
 func (r *Registry) SetTypeEnv(env semtypes.Env) {

@@ -17,10 +17,12 @@
 package bir
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"fmt"
-	"strings"
 )
 
 type PrettyPrinter struct {
@@ -63,7 +65,14 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 		p.write(p.PrintImportModule(importModule))
 		p.write(";\n")
 	}
+	sortedGlobalVars := make([]BIRGlobalVariableDcl, 0, len(node.GlobalVars))
 	for _, globalVar := range node.GlobalVars {
+		sortedGlobalVars = append(sortedGlobalVars, globalVar)
+	}
+	sort.Slice(sortedGlobalVars, func(i, j int) bool {
+		return string(sortedGlobalVars[i].GetName()) < string(sortedGlobalVars[j].GetName())
+	})
+	for _, globalVar := range sortedGlobalVars {
 		p.write(p.PrintGlobalVar(globalVar))
 		p.write(";\n")
 	}
@@ -77,15 +86,23 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 	p.write(function.Name.Value())
 	p.write("(")
-	first := true
-	for _, v := range function.LocalVars {
-		if v.Kind == VAR_KIND_ARG {
-			if !first {
+	for i, v := range function.LocalVars[1:] {
+		if i < len(function.RequiredParams) {
+			if i > 0 {
 				p.write(",")
 			}
 			p.write(p.PrintSemType(v.Type))
-			first = false
+		} else {
+			break
 		}
+	}
+	if function.RestParams != nil {
+		variableIndex := 1 + len(function.RequiredParams)
+		if variableIndex != 1 {
+			p.write(",")
+		}
+		p.write(p.PrintSemType(function.LocalVars[variableIndex].Type))
+		p.write("...")
 	}
 	p.write(")")
 	if function.ReturnVariable != nil && function.ReturnVariable.Type != nil {
@@ -252,7 +269,8 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 }
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
-	return operand.VariableDcl.Name.Value()
+	name := operand.VariableDcl.GetName()
+	return name.Value()
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
