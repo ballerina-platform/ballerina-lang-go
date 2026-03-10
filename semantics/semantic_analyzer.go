@@ -784,13 +784,7 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 		}
 		for _, f := range expr.Fields {
 			kv := f.(*ast.BLangMappingKeyValueField)
-			var keyName string
-			switch keyExpr := kv.Key.Expr.(type) {
-			case *ast.BLangLiteral:
-				keyName = keyExpr.GetOriginalValue()
-			case ast.BNodeWithSymbol:
-				keyName = a.ctx().SymbolName(keyExpr.Symbol())
-			}
+			keyName := recordKeyName(kv.Key)
 			requiredType := mappingAtomicType.FieldInnerVal(keyName)
 			if !analyzeExpression(a, kv.ValueExpr, requiredType) {
 				return false

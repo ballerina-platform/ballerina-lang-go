@@ -1,0 +1,16 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (intersection-type
+          (user-defined-type A1)
+          (user-defined-type A2))) (expr
+        (list-constructor-expr
+          (literal 5)
+          (literal b)
+          (literal c)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+  )
+)

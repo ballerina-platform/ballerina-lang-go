@@ -1,0 +1,34 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable v1 (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 42)))))
+    (var-def
+      (variable v2 (type
+        (intersection-type
+          (array-type
+            (union-type
+              (value-type int)
+              (value-type float)) dimensions: 1 ([]))
+          (array-type
+            (union-type
+              (value-type int)
+              (value-type string)) dimensions: 1 ([])))) (expr
+        (simple-var-ref v1))))
+    (assignment
+      (simple-var-ref v1)
+      (simple-var-ref v2))
+    (var-def
+      (variable n (type
+        (value-type int)) (expr
+        (index-based-access
+          (simple-var-ref v2)
+          (literal 0)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref n))))
+  )
+)
