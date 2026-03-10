@@ -85,6 +85,7 @@ type (
 	NewError struct {
 		BIRInstructionBase
 		Type      semtypes.SemType
+		TypeName  string
 		MessageOp *BIROperand
 		CauseOp   *BIROperand
 		DetailOp  *BIROperand

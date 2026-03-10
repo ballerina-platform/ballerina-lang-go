@@ -638,6 +638,9 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	newError := &NewError{}
 	newError.Type = expr.GetDeterminedType()
+	if expr.ErrorTypeRef != nil {
+		newError.TypeName = expr.ErrorTypeRef.TypeName.Value
+	}
 	newError.MessageOp = msgEffect.result
 	newError.CauseOp = causeOp
 	newError.DetailOp = detailOp
