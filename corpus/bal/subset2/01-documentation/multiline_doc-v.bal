@@ -19,6 +19,18 @@
 # description line 2
 #
 # description line 3
+#
+# Inline code with double backticks ``x + 1``.
+#
+# Triple backtick code block with lang:
+# ```bal
+# int n = 42;
+# ```
+#
+# Triple backtick code block without lang:
+# ```
+# int m = 43;
+# ```
 function test(string param1, string param2) returns string {
     return "";
 }
