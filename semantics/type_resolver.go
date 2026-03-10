@@ -27,30 +27,29 @@ import (
 	"math/bits"
 	"strconv"
 	"strings"
+	"sync"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 )
 
-type (
-	TypeResolver struct {
-		ctx             *context.CompilerContext
-		tyCtx           semtypes.Context
-		importedSymbols map[string]model.ExportedSymbolSpace
-		pkg             *ast.BLangPackage
-		implicitImports map[string]bool
-	}
-)
+type TypeResolver struct {
+	ctx             *context.CompilerContext
+	tyCtx           semtypes.Context
+	importedSymbols map[string]model.ExportedSymbolSpace
+	pkg             *ast.BLangPackage
+	implicitImports map[string]ast.BLangImportPackage
+}
 
 var _ ast.Visitor = &TypeResolver{}
 
 func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	return &TypeResolver{
 		ctx:             ctx,
-		tyCtx:           ctx.GetTypeCtx(),
+		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedSymbols: importedSymbols,
-		implicitImports: make(map[string]bool),
 		pkg:             pkg,
+		implicitImports: make(map[string]ast.BLangImportPackage),
 	}
 }
 
@@ -64,8 +63,38 @@ func ResolveTopLevelNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, i
 
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+	resolvers := make([]*TypeResolver, len(pkg.Functions))
+	var wg sync.WaitGroup
+	for i := range pkg.Functions {
+		fn := &pkg.Functions[i]
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			resolvers[idx] = resolveFunctionBody(ctx, pkg, fn, importedSymbols)
+		}(i)
+	}
+	wg.Wait()
+
+	seen := make(map[string]bool, len(resolvers))
+	for _, t := range resolvers {
+		for name, importNode := range t.implicitImports {
+			if !seen[name] {
+				seen[name] = true
+				pkg.Imports = append(pkg.Imports, importNode)
+			}
+		}
+	}
+}
+
+func resolveFunctionBody(ctx *context.CompilerContext, pkg *ast.BLangPackage, fn *ast.BLangFunction, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	t := newTypeResolver(ctx, pkg, importedSymbols)
-	t.resolveInnerNodeTypes(pkg)
+	if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
+		t.resolveBlockStatements(nil, body.Stmts)
+		body.SetDeterminedType(&semtypes.NEVER)
+	} else {
+		ctx.Unimplemented("unsupported function body kind", fn.Body.GetPosition())
+	}
+	return t
 }
 
 func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
@@ -104,16 +133,7 @@ func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *a
 	for i := range pkg.GlobalVars {
 		ast.Walk(t, &pkg.GlobalVars[i])
 	}
-}
 
-func (t *TypeResolver) resolveInnerNodeTypes(pkg *ast.BLangPackage) {
-	for i := range pkg.Functions {
-		fn := &pkg.Functions[i]
-		if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
-			t.resolveBlockStatements(nil, body.Stmts)
-			body.SetDeterminedType(&semtypes.NEVER)
-		}
-	}
 	tctx := t.tyCtx
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
@@ -416,7 +436,6 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) bool {
 		case int64:
 			ty = semtypes.IntConst(v)
 		case float64:
-			bType.BTypeSetTag(model.TypeTags_FLOAT)
 			ty = semtypes.FloatConst(v)
 		default:
 			t.ctx.InternalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
@@ -1531,15 +1550,14 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if !t.implicitImports[pkgName] {
-			t.implicitImports[pkgName] = true
+		if _, exists := t.implicitImports[pkgName]; !exists {
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
-			t.pkg.Imports = append(t.pkg.Imports, importNode)
+			t.implicitImports[pkgName] = importNode
 		}
 	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.INT) {
 		pkgName := bInt.PackageName
@@ -1550,15 +1568,14 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if !t.implicitImports[pkgName] {
-			t.implicitImports[pkgName] = true
+		if _, exists := t.implicitImports[pkgName]; !exists {
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
-			t.pkg.Imports = append(t.pkg.Imports, importNode)
+			t.implicitImports[pkgName] = importNode
 		}
 	} else {
 		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())

@@ -176,12 +176,16 @@ func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
 	if _, ok := symbol.(*SymbolRef); ok {
 		panic("SymbolRef cannot be added to a SymbolSpace")
 	}
+	space.mu.Lock()
 	space.lookupTable[name] = len(space.Symbols)
 	space.Symbols = append(space.Symbols, symbol)
+	space.mu.Unlock()
 }
 
 func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
+	space.mu.RLock()
 	index, ok := space.lookupTable[name]
+	space.mu.RUnlock()
 	if !ok {
 		return SymbolRef{}, false
 	}
