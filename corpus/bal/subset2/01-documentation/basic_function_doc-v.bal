@@ -14,7 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-# Documentation for basic function
+# Documentation for basic function.
+# Name refs: simple `foo`, qualified `m:bar`, call `baz()`, method `obj.quux()`.
+# Ref keywords: type `string`, variable `count`, function `main()`, method `x.toString()`.
+# Qualified: `m:MyType` and `m:helper()`.
 function basicFunction() {
 }
 
