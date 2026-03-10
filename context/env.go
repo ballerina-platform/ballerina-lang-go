@@ -58,7 +58,7 @@ func (this *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Pac
 
 func (this *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
 	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
-	return symbolSpace.Symbols[symbol.Index]
+	return symbolSpace.SymbolAt(symbol.Index)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
