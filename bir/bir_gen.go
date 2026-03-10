@@ -117,7 +117,9 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		operand := addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
 		genCtx.globalVarMap[constant.Symbol()] = operand
 	}
-	generateInitFunction(genCtx, ast, birPkg)
+	if ast.InitFunction != nil {
+		birPkg.InitFunction = TransformFunction(genCtx, ast.InitFunction)
+	}
 	for _, function := range ast.Functions {
 		birFunc := TransformFunction(genCtx, &function)
 		birPkg.Functions = append(birPkg.Functions, *birFunc)
@@ -202,60 +204,6 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	return dcl
-}
-
-// TODO: instead this should be done in desugar and this should simply code gen init function
-func generateInitFunction(ctx *Context, astPkg *ast.BLangPackage, birPkg *BIRPackage) {
-	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
-	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), nil)
-	curBB := stmtCx.addBB()
-
-	for _, globalVar := range astPkg.GlobalVars {
-		if globalVar.Expr == nil {
-			continue
-		}
-		exprEffect := handleExpression(stmtCx, curBB, globalVar.Expr.(ast.BLangExpression))
-		curBB = exprEffect.block
-		curBB = emitGlobalInit(stmtCx, curBB, ctx.globalVarMap[globalVar.Symbol()], exprEffect)
-	}
-
-	for _, constant := range astPkg.Constants {
-		var exprEffect expressionEffect
-		if literal, ok := constant.Expr.(*ast.BLangLiteral); ok {
-			resultOperand := stmtCx.addTempVar(constant.DeterminedType)
-			constantLoad := &ConstantLoad{}
-			constantLoad.Value = literal.Value
-			constantLoad.LhsOp = resultOperand
-			curBB.Instructions = append(curBB.Instructions, constantLoad)
-			exprEffect = expressionEffect{result: resultOperand, block: curBB}
-		} else {
-			exprEffect = handleExpression(stmtCx, curBB, constant.Expr.(ast.BLangExpression))
-		}
-		curBB = emitGlobalInit(stmtCx, curBB, ctx.globalVarMap[constant.Symbol()], exprEffect)
-	}
-
-	curBB.Terminator = &Return{}
-
-	initFunc := &BIRFunction{}
-	initFunc.Name = model.INIT_FUNCTION_SUFFIX
-	initFunc.OriginalName = model.INIT_FUNCTION_SUFFIX
-	for _, bbPtr := range stmtCx.bbs {
-		initFunc.BasicBlocks = append(initFunc.BasicBlocks, *bbPtr)
-	}
-	for _, varPtr := range stmtCx.localVars {
-		initFunc.LocalVars = append(initFunc.LocalVars, *varPtr)
-	}
-	initFunc.ReturnVariable = stmtCx.retVar.VariableDcl.(*BIRLocalVariableDcl)
-	birPkg.InitFunction = initFunc
-}
-
-func emitGlobalInit(_ *stmtContext, curBB *BIRBasicBlock, globalOperand *BIROperand, valueEffect expressionEffect) *BIRBasicBlock {
-	curBB = valueEffect.block
-	mov := &Move{}
-	mov.LhsOp = globalOperand
-	mov.RhsOp = valueEffect.result
-	curBB.Instructions = append(curBB.Instructions, mov)
-	return curBB
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {

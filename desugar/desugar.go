@@ -142,6 +142,60 @@ func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 	return name, ref
 }
 
+func desugarInitFn(pkgCtx *dcontext.PackageContext, pkg *ast.BLangPackage) {
+	var initStmts []ast.BLangStatement
+
+	for i := range pkg.GlobalVars {
+		globalVar := &pkg.GlobalVars[i]
+		if globalVar.Expr == nil {
+			continue
+		}
+		varRef := &ast.BLangSimpleVarRef{
+			VariableName: globalVar.Name,
+		}
+		varRef.SetSymbol(globalVar.Symbol())
+		assignment := &ast.BLangAssignment{
+			VarRef: varRef,
+			Expr:   globalVar.Expr.(ast.BLangExpression),
+		}
+		initStmts = append(initStmts, assignment)
+	}
+
+	for i := range pkg.Constants {
+		constant := &pkg.Constants[i]
+		if constant.Expr == nil {
+			continue
+		}
+		varRef := &ast.BLangSimpleVarRef{
+			VariableName: constant.Name,
+		}
+		varRef.SetSymbol(constant.Symbol())
+		assignment := &ast.BLangAssignment{
+			VarRef: varRef,
+			Expr:   constant.Expr.(ast.BLangExpression),
+		}
+		initStmts = append(initStmts, assignment)
+	}
+
+	if len(initStmts) == 0 && pkg.InitFunction == nil {
+		return
+	}
+
+	if pkg.InitFunction == nil {
+		initName := &ast.BLangIdentifier{Value: "init"}
+		pkg.InitFunction = &ast.BLangFunction{}
+		pkg.InitFunction.Name = initName
+		pkg.InitFunction.Body = &ast.BLangBlockFunctionBody{
+			Stmts: initStmts,
+		}
+	} else {
+		body := pkg.InitFunction.Body.(*ast.BLangBlockFunctionBody)
+		body.Stmts = append(initStmts, body.Stmts...)
+	}
+
+	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
+}
+
 // DesugarPackage returns a desugared package (may be new or same instance)
 func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
 	if importedSymbols == nil {
@@ -187,9 +241,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	}
 
 	// Desugar init, start, stop functions
-	if pkg.InitFunction != nil {
-		desugarFn(pkg.InitFunction)
-	}
+	desugarInitFn(pkgCtx, pkg)
 	if pkg.StartFunction != nil {
 		desugarFn(pkg.StartFunction)
 	}
