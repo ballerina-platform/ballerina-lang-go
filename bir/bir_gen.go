@@ -31,7 +31,7 @@ import (
 
 type Context struct {
 	CompilerContext *context.CompilerContext
-	constantMap     map[model.SymbolRef]*BIRConstant
+	globalVarMap    map[model.SymbolRef]*BIROperand
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
 	// Ideally I would like to track this by SymbolRef, but in order to map NewExpr to class definition we will need
@@ -108,7 +108,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg.PackageID = ast.PackageID
 	genCtx := &Context{
 		CompilerContext: ctx,
-		constantMap:     make(map[model.SymbolRef]*BIRConstant),
+		globalVarMap:    make(map[model.SymbolRef]*BIROperand),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
 		classDefMap:     make(map[*semtypes.MappingAtomicType]*BIRClassDef),
@@ -118,12 +118,15 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
 	}
 	for _, globalVar := range ast.GlobalVars {
-		birPkg.GlobalVars = appendIfNotNil(birPkg.GlobalVars, TransformGlobalVariableDcl(genCtx, &globalVar))
+		operand := addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
+		genCtx.globalVarMap[globalVar.Symbol()] = operand
 	}
 	for _, constant := range ast.Constants {
-		c := TransformConstant(genCtx, &constant)
-		genCtx.constantMap[constant.Symbol()] = c
-		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
+		operand := addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
+		genCtx.globalVarMap[constant.Symbol()] = operand
+	}
+	if ast.InitFunction != nil {
+		birPkg.InitFunction = TransformFunction(genCtx, ast.InitFunction)
 	}
 	for i := range ast.ClassDefinitions {
 		transformClassDefinition(genCtx, &ast.ClassDefinitions[i], birPkg)
@@ -194,18 +197,29 @@ func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTyp
 	return nil
 }
 
-func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIRGlobalVariableDcl {
-	var name, originalName model.Name
-	name = model.Name(ast.GetName().GetValue())
-	originalName = name
-	birVarDcl := &BIRGlobalVariableDcl{}
-	birVarDcl.Pos = ast.GetPosition()
-	birVarDcl.Name = name
-	birVarDcl.OriginalName = originalName
-	birVarDcl.Scope = VAR_SCOPE_GLOBAL
-	birVarDcl.Kind = VAR_KIND_GLOBAL
-	birVarDcl.MetaVarName = name.Value()
-	return birVarDcl
+func addGlobalVar(birPkg *BIRPackage, dcl BIRGlobalVariableDcl) *BIROperand {
+	index := len(birPkg.GlobalVars)
+	birPkg.GlobalVars = append(birPkg.GlobalVars, dcl)
+	return &BIROperand{VariableDcl: &birPkg.GlobalVars[index].BIRVariableDcl, Index: index}
+}
+
+func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRGlobalVariableDcl {
+	name := model.Name(ast.GetName().GetValue())
+	dcl := BIRGlobalVariableDcl{}
+	dcl.Pos = ast.GetPosition()
+	dcl.Name = name
+	dcl.PkgId = ctx.packageID
+	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
+	return dcl
+}
+
+func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVariableDcl {
+	name := model.Name(c.GetName().GetValue())
+	dcl := BIRGlobalVariableDcl{}
+	dcl.Name = name
+	dcl.PkgId = ctx.packageID
+	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
+	return dcl
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
@@ -1065,14 +1079,10 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		}
 	}
 
-	// Try constant lookup
-	// FIXME: this is a hack until we have package level variable initialization
-	if constant, ok := ctx.birCx.constantMap[symRef]; ok {
-		resultOperand := ctx.addTempVar(constant.Type)
-		constantLoad := NewConstantLoad(resultOperand, constant.ConstValue.Type, constant.ConstValue.Value, expr.GetPosition())
-		curBB.Instructions = append(curBB.Instructions, constantLoad)
+	// Try global variable lookup (includes constants)
+	if operand, ok := ctx.birCx.globalVarMap[symRef]; ok {
 		return expressionEffect{
-			result: resultOperand,
+			result: operand,
 			block:  curBB,
 		}
 	}

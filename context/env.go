@@ -27,7 +27,7 @@ type CompilerEnvironment struct {
 	anonTypeCount    map[*model.PackageID]int
 	packageInterner  *model.PackageIDInterner
 	symbolSpaces     []*model.SymbolSpace
-	symbolSpacesMu   sync.RWMutex
+	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
 	typeDefns        map[model.SymbolRef]model.TypeDefinition

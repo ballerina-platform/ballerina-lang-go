@@ -66,6 +66,7 @@ type (
 		Constants     []BIRConstant
 		ClassDefs     []BIRClassDef
 		MainFunction  *BIRFunction
+		InitFunction  *BIRFunction
 		TypeEnv       semtypes.Env
 	}
 
