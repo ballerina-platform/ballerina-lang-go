@@ -1234,10 +1234,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 	}
 	expectedType := variable.GetDeterminedType()
 	expression := assignment.GetExpression().(ast.BLangExpression)
-	if !analyzeExpression(a, expression, expectedType) {
-		return false
-	}
-	return true
+	return analyzeExpression(a, expression, expectedType)
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) bool {
