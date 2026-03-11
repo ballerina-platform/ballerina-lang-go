@@ -36,7 +36,7 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	} else {
 		combined = cx.mappingAtomType(posList.Atom)
 		p := posList.Next
-		for true {
+		for {
 			if p == nil {
 				break
 			} else {
@@ -126,7 +126,7 @@ func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicT
 	orgTypes := m.Types
 	types := shallowCopyCellTypes(orgTypes, (len(orgTypes) + 1))
 	i := len(orgNames)
-	for true {
+	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
 			names[i] = name
 			types[i] = t
