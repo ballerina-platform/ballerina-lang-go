@@ -6,7 +6,9 @@
       (value-type int)) (
       (value-type int))))
   (type-definition F2
-    (function-type () (
+    (function-type (
+      (function-type-param
+      (value-type int))) (
       (value-type int))))
   (type-definition F
     (union-type

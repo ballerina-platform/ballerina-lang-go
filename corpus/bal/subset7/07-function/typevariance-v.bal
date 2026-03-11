@@ -15,16 +15,16 @@
 // under the License.
 
 import ballerina/io;
-type F function(int) returns int;
-type G function(int);
-
-type FG F|G;
+type F function(int, int) returns int;
 
 public function main() {
-    FG f = fooBar; // @error
-    io:println(f(1));
-}
-
-function fooBar(int x) returns int? {
-    return x + 1;
+    F f = function(int... a) returns int {
+            int sum = 0;
+            foreach int i in 0 ..< a.length() {
+                sum += a[i];
+            }
+            return sum;
+    };
+    int x = f(1, 2);
+    io:println(x); // @output 3
 }

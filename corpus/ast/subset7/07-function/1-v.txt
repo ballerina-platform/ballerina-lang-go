@@ -8,7 +8,9 @@
     (function-type () (
       (value-type null))))
   (type-definition F3
-    (function-type () (
+    (function-type (
+      (function-type-param
+      (value-type int))) (
       (value-type null))))
   (function main () (
     (value-type null))

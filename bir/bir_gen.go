@@ -36,6 +36,7 @@ type Context struct {
 	// Ideally I would like to track this by SymbolRef, but in order to map NewExpr to class definition we will need
 	// some changes to sementic analysis. Basically we need a way to map the type to the class declaration
 	classDefMap map[*semtypes.MappingAtomicType]*BIRClassDef
+	birPkg      *BIRPackage
 }
 
 type stmtContext struct {
@@ -111,6 +112,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
 		classDefMap:     make(map[*semtypes.MappingAtomicType]*BIRClassDef),
+		birPkg:          birPkg,
 	}
 	birPkg.GlobalVars = make(map[model.SymbolRef]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
@@ -533,6 +535,19 @@ func blockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStm
 	}
 }
 
+func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
+	birFunc := TransformFunction(ctx.birCx, expr.Function)
+	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
+	funcType := expr.GetDeterminedType()
+	resultOperand := ctx.addTempVar(funcType)
+	fpLoad := NewFPLoad(birFunc.FunctionLookupKey, funcType, resultOperand, expr.GetPosition())
+	curBB.Instructions = append(curBB.Instructions, fpLoad)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
+	}
+}
+
 func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatchStatement) statementEffect {
 	exprEffect := handleExpression(ctx, curBB, stmt.Expr)
 	curBB = exprEffect.block
@@ -625,8 +640,17 @@ func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new 
 	return result
 }
 
-func handleExprFunctionBody(ctx *stmtContext, ast *ast.BLangExprFunctionBody) {
-	panic("unimplemented")
+func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
+	curBB := ctx.addBB()
+	effect := handleExpression(ctx, curBB, body.Expr.(ast.BLangExpression))
+	curBB = effect.block
+	if curBB != nil {
+		retAssign := &Move{}
+		retAssign.LhsOp = ctx.retVar
+		retAssign.RhsOp = effect.result
+		curBB.Instructions = append(curBB.Instructions, retAssign)
+		curBB.Terminator = &Return{}
+	}
 }
 
 type expressionEffect struct {
@@ -668,6 +692,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return trapExpression(ctx, curBB, expr)
 	case *ast.BLangNewExpression:
 		return newExpression(ctx, curBB, expr)
+	case *ast.BLangLambdaFunction:
+		return lambdaFunction(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
 	}

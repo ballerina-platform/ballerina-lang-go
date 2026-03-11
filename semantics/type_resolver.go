@@ -393,6 +393,27 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	return fnType, true
 }
 
+func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
+	fnType, ok := t.resolveFunction(t.ctx, e.Function)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	switch body := e.Function.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		t.resolveBlockStatements(chain, body.Stmts)
+		body.SetDeterminedType(semtypes.NEVER)
+	case *ast.BLangExprFunctionBody:
+		if _, _, ok := t.resolveExpression(chain, body.Expr.(ast.BLangExpression)); !ok {
+			return nil, expressionEffect{}, false
+		}
+		body.SetDeterminedType(semtypes.NEVER)
+	}
+	e.Function.SetDeterminedType(semtypes.NEVER)
+	e.Function.Name.SetDeterminedType(semtypes.NEVER)
+	setExpectedType(e, fnType)
+	return fnType, defaultExpressionEffect(chain), true
+}
+
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return t
@@ -1024,6 +1045,8 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return ty, effect, true
 	case *ast.BLangNewExpression:
 		return t.resolveNewExpr(chain, e)
+	case *ast.BLangLambdaFunction:
+		return t.resolveLambdaFunction(chain, e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false

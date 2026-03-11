@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: b
+  --> 5-e.bal:21:20
+   |
+21 |         return a + b; // @error
+   |                    ^
+

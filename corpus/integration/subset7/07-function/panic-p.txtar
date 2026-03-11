@@ -1,0 +1,3 @@
+-- stdout --
+Runtime panic: divide by zero
+-- stderr --

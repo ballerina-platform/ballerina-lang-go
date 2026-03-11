@@ -12,7 +12,9 @@
       (value-type int))))
   (type-definition D
     (function-type (
-      (value-type int)) (
+      (value-type int)
+      (function-type-param
+      (value-type int))) (
       (value-type int))))
   (function main () (
     (value-type null))

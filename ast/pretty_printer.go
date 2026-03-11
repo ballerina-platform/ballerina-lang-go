@@ -172,6 +172,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFunctionType(t)
 	case *BLangFunctionTypeParam:
 		p.printFunctionTypeParam(t)
+	case *BLangLambdaFunction:
+		p.printLambdaFunction(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -1163,6 +1165,11 @@ func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
 		}
 		p.indentLevel--
 	}
+	if node.RestParam != nil {
+		p.indentLevel++
+		p.PrintInner(node.RestParam)
+		p.indentLevel--
+	}
 	p.printSticky(")")
 	p.printString("(")
 	if node.ReturnTypeDescriptor != nil {
@@ -1171,6 +1178,17 @@ func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
 		p.indentLevel--
 	}
 	p.printSticky(")")
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLambdaFunction(node *BLangLambdaFunction) {
+	p.startNode()
+	p.printString("lambda")
+	if node.Function != nil {
+		p.indentLevel++
+		p.PrintInner(node.Function)
+		p.indentLevel--
+	}
 	p.endNode()
 }
 

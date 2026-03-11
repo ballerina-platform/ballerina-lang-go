@@ -449,7 +449,6 @@ type (
 		bLangInvokableNodeBase
 		scope             model.Scope
 		Receiver          *BLangSimpleVariable
-		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
 		SendsToThis       common.OrderedSet[Channel]
 		AnonForkName      string
 		MapSymbolUpdated  bool

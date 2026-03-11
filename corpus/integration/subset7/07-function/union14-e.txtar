@@ -1,8 +1,8 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: Unknown symbol: foobar
+error[SEMANTIC_ERROR]: incompatible type: expected function, got function
   --> union14-e.bal:24:12
    |
-24 |     FG f = foobar; // @error
+24 |     FG f = fooBar; // @error
    |            ^^^^^^
 

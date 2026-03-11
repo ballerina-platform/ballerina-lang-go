@@ -655,6 +655,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeExpression(a, expr.Expr, expectedType)
 	case *ast.BLangNewExpression:
 		return analyzeNewExpression(a, expr, expectedType)
+	case *ast.BLangLambdaFunction:
+		return analyzeLambdaFunction(a, expr)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -815,6 +817,12 @@ func determineObjectType[A analyzer](a A, expr *ast.BLangNewExpression, objectTy
 	}
 	expr.SetDeterminedType(semtypes.Union(candidates[0].objType, semtypes.Diff(candidates[0].initReturnType, semtypes.NIL)))
 	return candidates[0].objType, true
+}
+
+func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
+	fa := initializeFunctionAnalyzer(a, expr.Function)
+	ast.Walk(fa, expr.Function)
+	return true
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
