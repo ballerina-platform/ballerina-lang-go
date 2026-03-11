@@ -15,16 +15,15 @@
 // under the License.
 
 import ballerina/io;
-type F function(int) returns int;
-type G function(int);
-
-type FG F|G;
+type F function(int, int) returns int;
 
 public function main() {
-    FG f = fooBar; // @error
-    io:println(f(1));
+    int result = exec(1, 2, function(int a, int b) returns int {
+        return a + b;
+    });
+    io:println(result); // @output 3
 }
 
-function fooBar(int x) returns int? {
-    return x + 1;
+function exec(int a, int b, F f) returns int {
+    return f(a, b);
 }

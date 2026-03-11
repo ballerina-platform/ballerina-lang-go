@@ -2634,7 +2634,7 @@ func (n *NodeBuilder) createFunctionTypeParam(param tree.ParameterNode) BLangFun
 
 	if dp, ok := param.(*tree.DefaultableParameterNode); ok {
 		defaultExpr := dp.Expression()
-		ftParam.InitExpr = n.TransformSyntaxNode(defaultExpr).(BLangExpression)
+		ftParam.InitExpr = n.createExpression(defaultExpr)
 	}
 
 	if annotations.Size() > 0 {
@@ -2648,12 +2648,29 @@ func (n *NodeBuilder) TransformFunctionSignature(functionSignatureNode *tree.Fun
 	panic("TransformFunctionSignature unimplemented")
 }
 
-func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(explicitAnonymousFunctionExpressionNode *tree.ExplicitAnonymousFunctionExpressionNode) BLangNode {
-	panic("TransformExplicitAnonymousFunctionExpression unimplemented")
+func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprNode *tree.ExplicitAnonymousFunctionExpressionNode) BLangNode {
+	bLFunction := &BLangFunction{}
+	name := n.cx.GetNextAnonymousFunctionKey(n.PackageID)
+	ident := createIdentifier(getBuiltinPos(), &name, &name)
+	bLFunction.Name = &ident
+	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
+	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(model.FunctionBodyNode)
+	bLFunction.Body = body
+	bLFunction.pos = getPosition(anonFuncExprNode)
+	bLFunction.FlagSet.Add(model.Flag_LAMBDA)
+	bLFunction.FlagSet.Add(model.Flag_ANONYMOUS)
+	setFunctionQualifiers(bLFunction, anonFuncExprNode.QualifierList())
+
+	lambdaFunc := &BLangLambdaFunction{Function: bLFunction}
+	lambdaFunc.pos = bLFunction.pos
+	return lambdaFunc
 }
 
 func (n *NodeBuilder) TransformExpressionFunctionBody(expressionFunctionBodyNode *tree.ExpressionFunctionBodyNode) BLangNode {
-	panic("TransformExpressionFunctionBody unimplemented")
+	exprBody := &BLangExprFunctionBody{}
+	exprBody.Expr = n.createExpression(expressionFunctionBodyNode.Expression())
+	exprBody.pos = getPosition(expressionFunctionBodyNode)
+	return exprBody
 }
 
 func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree.TupleTypeDescriptorNode) BLangNode {

@@ -7,7 +7,9 @@
   (type-definition F1
     (function-type (
       (value-type int)
-      (value-type int)) (
+      (value-type int)
+      (function-type-param
+      (value-type string))) (
       (value-type null))))
   (function main () (
     (value-type null))

@@ -218,6 +218,32 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	ast.Walk(functionResolver, function)
 }
 
+func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockSymbolResolver, function *ast.BLangFunction) {
+	// Check for shadowing on parameters against the enclosing function scope
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		name := param.Name.Value
+		if isShadowed(parent, name) {
+			semanticError(functionResolver, "Variable already defined: "+name, param.GetPosition())
+		}
+		symbol := model.NewValueSymbol(name, false, false, true)
+		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
+	}
+
+	if function.RestParam != nil {
+		if restParam, ok := function.RestParam.(*ast.BLangSimpleVariable); ok {
+			name := restParam.Name.Value
+			if isShadowed(parent, name) {
+				semanticError(functionResolver, "Variable already defined: "+name, restParam.GetPosition())
+			}
+			symbol := model.NewValueSymbol(name, false, false, true)
+			addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
+		}
+	}
+
+	ast.Walk(functionResolver, function)
+}
+
 func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace,
 	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace, defaultOrg string,
 ) map[string]model.ExportedSymbolSpace {
@@ -319,6 +345,16 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
+	case *ast.BLangLambdaFunction:
+		fn := n.Function
+		name := fn.Name.Value
+		signature := model.FunctionSignature{}
+		symbol := model.NewFunctionSymbol(name, signature, false)
+		addSymbolAndSetOnNode(bs, name, symbol, fn)
+		functionResolver := newFunctionResolver(bs, fn)
+		fn.SetScope(functionResolver.scope)
+		resolveLambdaFunction(functionResolver, bs, fn)
+		return nil
 	default:
 		return visitInnerSymbolResolver(bs, n)
 	}
@@ -487,25 +523,36 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	variable.SetSymbol(symRef)
 }
 
-func defineVariable[T symbolResolver](resolver T, variable model.VariableNode, isFinal bool) {
+// isShadowed checks if a name is already defined in an enclosing block scope.
+// Mapping constructor scopes contain record keys that are not real variable bindings, so they are skipped.
+func isShadowed(resolver *blockSymbolResolver, name string) bool {
+	if name == string(model.IGNORE) {
+		return false
+	}
+	current := resolver
+	for current != nil {
+		// Issue here is mapping constructor treats some of it's keys as simple variable ref; which is wrong but since they are variable they have symbols
+		// and we have to resolve them. But they are not real variables
+		if _, isMappingScope := current.node.(*ast.BLangMappingConstructorExpr); !isMappingScope {
+			if _, ok := current.scope.MainSpace().GetSymbol(name); ok {
+				return true
+			}
+		}
+		if next, ok := current.parent.(*blockSymbolResolver); ok {
+			current = next
+		} else {
+			break
+		}
+	}
+	return false
+}
+
+func defineVariable(resolver *blockSymbolResolver, variable model.VariableNode, isFinal bool) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		if name != string(model.IGNORE) {
-			sym, scopeKind, ok := resolver.GetSymbol(name)
-			// Function names and module level variables can be shadowed
-			if ok {
-				switch resolver.GetCtx().SymbolKind(sym) {
-				// You can shodow functions and type defintions
-				case model.SymbolKindFunction, model.SymbolKindType:
-				default:
-					// You can shodow module level variables
-					if scopeKind == blockScopeKind {
-						semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
-						return
-					}
-				}
-			}
+		if isShadowed(resolver, name) {
+			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, isFinal, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)

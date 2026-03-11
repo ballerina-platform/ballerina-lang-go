@@ -16,15 +16,13 @@
 
 import ballerina/io;
 type F function(int) returns int;
-type G function(int);
-
-type FG F|G;
-
 public function main() {
-    FG f = fooBar; // @error
-    io:println(f(1));
+    int b = 10;
+    F f = function(int x) returns int {
+        int b = x + 1; // @error
+        return b + 1;
+    };
+    io:println(b);
+    io:println(f(10));
 }
 
-function fooBar(int x) returns int? {
-    return x + 1;
-}
