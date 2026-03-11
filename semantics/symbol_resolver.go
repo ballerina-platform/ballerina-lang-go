@@ -490,12 +490,19 @@ func defineVariable[T symbolResolver](resolver T, variable model.VariableNode, i
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
 		if name != string(model.IGNORE) {
-			_, scopeKind, ok := resolver.GetSymbol(name)
-			if isFinal && ok {
-				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
-				return
-			} else if ok && scopeKind == blockScopeKind {
-				semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+			sym, scopeKind, ok := resolver.GetSymbol(name)
+			// Function names and module level variables can be shadowed
+			if ok {
+				switch resolver.GetCtx().SymbolKind(sym) {
+				// You can shodow functions and type defintions
+				case model.SymbolKindFunction, model.SymbolKindType:
+				default:
+					// You can shodow module level variables
+					if scopeKind == blockScopeKind {
+						semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+						return
+					}
+				}
 			}
 		}
 		symbol := model.NewValueSymbol(name, false, isFinal, false)
