@@ -1304,15 +1304,6 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		analyzeExpression(a, n.Expr, &semtypes.ERROR)
 		return nil
 	case *ast.BLangClassDefinition:
-		initFields := fieldsInitializedInInit(n.InitFunction)
-		for _, field := range n.Fields {
-			if field.GetInitialExpression() == nil {
-				name := field.GetName().GetValue()
-				if !initFields[name] {
-					a.semanticErr("field '"+name+"' is not initialized", field.GetPosition())
-				}
-			}
-		}
 		if n.InitFunction != nil {
 			fa := initializeFunctionAnalyzer(a, n.InitFunction)
 			ast.Walk(fa, n.InitFunction)
@@ -1326,34 +1317,6 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	default:
 		return a
 	}
-}
-
-type fieldInitCollector struct {
-	fields map[string]bool
-}
-
-func (f *fieldInitCollector) Visit(node ast.BLangNode) ast.Visitor {
-	if assignment, ok := node.(*ast.BLangAssignment); ok {
-		if fieldAccess, ok := assignment.VarRef.(*ast.BLangFieldBaseAccess); ok {
-			if isSelfFieldAccess(fieldAccess) {
-				f.fields[fieldAccess.Field.Value] = true
-			}
-		}
-	}
-	return f
-}
-
-func (f *fieldInitCollector) VisitTypeData(_ *model.TypeData) ast.Visitor {
-	return nil
-}
-
-func fieldsInitializedInInit(initFn *ast.BLangFunction) map[string]bool {
-	collector := &fieldInitCollector{fields: map[string]bool{}}
-	if initFn == nil {
-		return collector.fields
-	}
-	ast.Walk(collector, initFn)
-	return collector.fields
 }
 
 type assignmentNode interface {

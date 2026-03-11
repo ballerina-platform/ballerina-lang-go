@@ -1,3 +1,11 @@
+(init
+  (bb0 () ()
+    (assignment
+      (field-based-access baz
+        (simple-var-ref self))
+      (simple-var-ref baz))
+  )
+)
 (main
   (bb0 () ()
     (var-def

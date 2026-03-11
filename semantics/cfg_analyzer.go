@@ -31,38 +31,10 @@ import (
 // with centralized panic handling.
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	var panicErr any = nil
-
-	// Run reachability analysis
-	wg.Go(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicErr = r
-			}
-		}()
-		analyzeReachability(ctx, cfg)
-	})
-
-	// Run explicit return analysis
-	wg.Go(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicErr = r
-			}
-		}()
-		analyzeExplicitReturn(ctx, pkg, cfg)
-	})
-
-	// Run uninitialized variable analysis
-	wg.Go(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicErr = r
-			}
-		}()
-		analyzeUninitializedVars(ctx, pkg, cfg)
-	})
-
+	wg.Go(func() { analyzeReachability(ctx, cfg) })
+	wg.Go(func() { analyzeExplicitReturn(ctx, pkg, cfg) })
+	wg.Go(func() { analyzeUninitializedVars(ctx, pkg, cfg) })
+	wg.Go(func() { analyzeUninitializedFields(ctx, pkg, cfg) })
 	wg.Wait()
 	if panicErr != nil {
 		panic(panicErr)
