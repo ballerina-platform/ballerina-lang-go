@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> nil{
   bb0 {
     %1 = ConstantLoad lhs
     %2 = ConstantLoad 1
@@ -72,7 +72,7 @@ main<NIL>{
     return;
   }
 }
-exec<NIL>{
+exec({| lhs: int|float|string, op: function, rhs: int|float|string, never... |}) -> int|float|string{
   bb0 {
     %3 = ConstantLoad op
     %2 = op[%3];
@@ -88,57 +88,78 @@ exec<NIL>{
     return;
   }
 }
-foo<NIL>{
+foo(int|float|string,int|float|string) -> int{
   bb0 {
-    %4 = a is ((INT), ())
-    %5 = b is ((INT), ())
-    %3 = && %4 %5;
-    %3 ? bb1 : bb2;
+    %4 = a is int
+    %3 = %4;
+    %4 ? bb1 : bb2;
   }
   bb1 {
+    %5 = b is int
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
     %6 = + a b;
     %0 = %6;
     return;
   }
-  bb2 {
+  bb4 {
     %7 = ConstantLoad 1
     %8 = unknown %7;
     %0 = %8;
     return;
   }
 }
-bar<NIL>{
+bar(int|float|string,int|float|string) -> float{
   bb0 {
-    %4 = a is ((FLOAT), ())
-    %5 = b is ((FLOAT), ())
-    %3 = && %4 %5;
-    %3 ? bb1 : bb2;
+    %4 = a is float
+    %3 = %4;
+    %4 ? bb1 : bb2;
   }
   bb1 {
+    %5 = b is float
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
     %6 = + a b;
     %0 = %6;
     return;
   }
-  bb2 {
+  bb4 {
     %7 = ConstantLoad 1
     %8 = unknown %7;
     %0 = %8;
     return;
   }
 }
-baz<NIL>{
+baz(int|float|string,int|float|string) -> int|string{
   bb0 {
-    %4 = a is ((STRING), ())
-    %5 = b is ((STRING), ())
-    %3 = && %4 %5;
-    %3 ? bb1 : bb2;
+    %4 = a is string
+    %3 = %4;
+    %4 ? bb1 : bb2;
   }
   bb1 {
+    %5 = b is string
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
     %6 = + a b;
     %0 = %6;
     return;
   }
-  bb2 {
+  bb4 {
     %7 = ConstantLoad 1
     %8 = unknown %7;
     %0 = %8;

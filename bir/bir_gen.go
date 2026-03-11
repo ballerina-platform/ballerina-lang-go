@@ -17,14 +17,13 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
+	"fmt"
 )
 
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
@@ -80,7 +79,7 @@ func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType) *B
 	varDcl.Name = name
 	varDcl.Type = ty
 	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, Index: len(cx.localVars) - 1}
+	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(cx.localVars) - 1)}
 }
 
 func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {

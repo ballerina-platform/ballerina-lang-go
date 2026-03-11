@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (FUNCTION)), got ((), (FUNCTION))
+error[SEMANTIC_ERROR]: incompatible type: expected function, got function
   --> union6-e.bal:24:11
    |
 24 |     F f = foo; // @error
