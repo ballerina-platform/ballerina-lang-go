@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = fp $anon/.:foo
     f = %1;
@@ -25,7 +25,7 @@ main<NIL>{
     return;
   }
 }
-foo<NIL>{
+foo(((INT), ())) -> ((INT), ()){
   bb0 {
     %3 = ConstantLoad 1
     %2 = + x %3;
@@ -33,7 +33,7 @@ foo<NIL>{
     return;
   }
 }
-bar<NIL>{
+bar(((INT), ())) -> ((NIL), ()){
   bb0 {
     %2 = println(x) -> bb1;
   }
