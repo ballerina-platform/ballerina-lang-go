@@ -1056,7 +1056,7 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		birClassDef.VTable[methodName] = transformFunction(ctx, &method, &selfRef)
+		birClassDef.VTable[methodName] = transformFunction(ctx, method, &selfRef)
 	}
 
 	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())

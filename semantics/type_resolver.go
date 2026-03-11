@@ -73,8 +73,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 			fns = append(fns, classDef.InitFunction)
 		}
 		for name := range classDef.Methods {
-			method := classDef.Methods[name]
-			fns = append(fns, &method)
+			fns = append(fns, classDef.Methods[name])
 		}
 	}
 
@@ -507,12 +506,11 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	// Resolve method signatures
 	for name := range classDef.Methods {
 		method := classDef.Methods[name]
-		if _, ok := t.resolveFunction(t.ctx, &method); !ok {
+		if _, ok := t.resolveFunction(t.ctx, method); !ok {
 			return nil, false
 		}
 		method.SetDeterminedType(&semtypes.NEVER)
 		method.Name.SetDeterminedType(&semtypes.NEVER)
-		classDef.Methods[name] = method
 	}
 
 	// Collect included members

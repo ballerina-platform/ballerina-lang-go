@@ -631,8 +631,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		isPublic := method.FlagSet.Contains(model.Flag_PUBLIC)
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
-		addSymbolAndSetOnNode(classResolver, methodName, symbol, &method)
-		classDef.Methods[methodName] = method
+		addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
 	}
 
 	if classDef.InitFunction != nil {
@@ -654,12 +653,10 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		resolveFunction(initResolver, classDef.InitFunction)
 	}
 
-	for methodName, method := range classDef.Methods {
-		m := method
-		methodResolver := newFunctionResolver(classResolver, &m)
-		m.SetScope(methodResolver.scope)
-		resolveFunction(methodResolver, &m)
-		classDef.Methods[methodName] = m
+	for _, method := range classDef.Methods {
+		methodResolver := newFunctionResolver(classResolver, method)
+		method.SetScope(methodResolver.scope)
+		resolveFunction(methodResolver, method)
 	}
 }
 

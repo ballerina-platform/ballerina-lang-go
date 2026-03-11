@@ -117,6 +117,7 @@ type (
 	BMethodDecl struct {
 		bObjectFieldBase
 		BLangFunctionType
+		memberKind model.ObjectMemberKind
 	}
 
 	BLangObjectType struct {
@@ -423,7 +424,7 @@ func (this *BObjectField) GetKind() model.NodeKind {
 }
 
 func (this *BMethodDecl) MemberKind() model.ObjectMemberKind {
-	return model.ObjectMemberKindMethod
+	return this.memberKind
 }
 
 func (this *BMethodDecl) GetKind() model.NodeKind {
@@ -657,6 +658,10 @@ func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentatio
 }
 
 func (p *BLangFunctionTypeParameter) Type() BType { return p.ty }
+
+func (this *BLangFunctionType) GetTypeKind() model.TypeKind {
+	return model.TypeKind_FUNCTION
+}
 
 func (this *BLangFunctionType) GetKind() model.NodeKind {
 	return model.NodeKind_FUNCTION_TYPE

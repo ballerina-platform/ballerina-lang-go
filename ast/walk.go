@@ -172,8 +172,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.InitFunction)
 		}
 		for _, method := range node.Methods {
-			m := method
-			Walk(v, &m)
+			Walk(v, method)
 		}
 		for _, field := range node.Fields {
 			Walk(v, field.(BLangNode))

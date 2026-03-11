@@ -1281,8 +1281,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		for name := range n.Methods {
 			method := n.Methods[name]
-			fa := initializeFunctionAnalyzer(a, &method)
-			ast.Walk(fa, &method)
+			fa := initializeFunctionAnalyzer(a, method)
+			ast.Walk(fa, method)
 		}
 		return nil
 	default:
