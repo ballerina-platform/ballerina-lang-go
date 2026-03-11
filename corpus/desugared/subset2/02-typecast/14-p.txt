@@ -4,20 +4,14 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable a (type
-          (value-type float)) (expr
-          (literal 1e+10))))
-      (var-def
-        (variable b (type
-          (value-type float)) (expr
-          (binary-expr *
-            (simple-var-ref a)
-            (simple-var-ref a)))))
+        (variable d (type
+          (value-type decimal)) (expr
+          (literal 10000000000000000000/1))))
       (var-def
         (variable i (type
           (value-type int)) (expr
           (type-conversion-expr
-            (simple-var-ref b)
+            (simple-var-ref d)
             (value-type int)))))
       (expression-stmt
         (invocation io println (

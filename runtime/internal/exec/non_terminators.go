@@ -153,17 +153,49 @@ func toInt(value any) int64 {
 		}
 		return int64(v)
 	case *big.Rat:
-		if !v.IsInt() {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
-		}
-		num := v.Num()
-		if num.BitLen() > 63 {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
-		}
-		return num.Int64()
+		return decimalToInt(v)
 	default:
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", value))
 	}
+}
+
+func decimalToInt(v *big.Rat) int64 {
+	num := v.Num()
+	denom := v.Denom()
+	q := new(big.Int).Quo(num, denom)
+	r := new(big.Int).Rem(new(big.Int).Set(num), denom)
+	rAbs := new(big.Int).Abs(r)
+	rAbs.Mul(rAbs, big.NewInt(2))
+	cmp := rAbs.Cmp(denom)
+	isHalf := cmp == 0
+	roundUp := cmp > 0
+	if isHalf {
+		if q.Bit(0) == 0 {
+			roundUp = false
+		} else {
+			roundUp = true
+			if num.Sign() < 0 {
+				q.Sub(q, big.NewInt(1))
+			} else {
+				q.Add(q, big.NewInt(1))
+			}
+			if q.BitLen() > 63 {
+				panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+			}
+			return q.Int64()
+		}
+	}
+	if roundUp {
+		if num.Sign() >= 0 {
+			q.Add(q, big.NewInt(1))
+		} else {
+			q.Sub(q, big.NewInt(1))
+		}
+	}
+	if q.BitLen() > 63 {
+		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+	}
+	return q.Int64()
 }
 
 func toFloat(value any) float64 {

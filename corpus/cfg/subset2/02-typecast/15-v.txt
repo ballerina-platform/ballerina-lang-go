@@ -13,5 +13,18 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref i))))
+    (var-def
+      (variable d2 (type
+        (value-type decimal)) (expr
+        (literal 3/2))))
+    (var-def
+      (variable i2 (type
+        (value-type int)) (expr
+        (type-conversion-expr
+          (simple-var-ref d2)
+          (value-type int)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i2))))
   )
 )

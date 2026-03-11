@@ -14,11 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @productions type-cast-expr int-literal float-literal local-var-decl-stmt function-call-expr
+// @productions type-cast-expr float-literal decimal local-var-decl-stmt function-call-expr
 import ballerina/io;
 
 public function main() {
-    int i = 42;
-    float f = <float>i;
-    io:println(f);
+    float f = 2.75;
+    decimal d = <decimal>f;
+    io:println(d);
+
+    float f2 = 3.5;
+    float g = <float>f2;
+    io:println(g);
 }
+

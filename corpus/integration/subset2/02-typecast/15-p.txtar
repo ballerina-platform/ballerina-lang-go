@@ -1,3 +1,0 @@
--- stdout --
-Runtime panic: bad type cast: cannot cast 10000000000000000000/1 to int
--- stderr --

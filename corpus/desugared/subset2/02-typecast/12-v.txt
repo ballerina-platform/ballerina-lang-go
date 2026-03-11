@@ -4,28 +4,15 @@
     (value-type null))
     (block-function-body
       (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 42))))
+      (var-def
         (variable f (type
           (value-type float)) (expr
-          (literal 2.75))))
-      (var-def
-        (variable d (type
-          (value-type decimal)) (expr
           (type-conversion-expr
-            (simple-var-ref f)
-            (value-type decimal)))))
-      (expression-stmt
-        (invocation io println (
-          (simple-var-ref d))))
-      (var-def
-        (variable f2 (type
-          (value-type float)) (expr
-          (literal 3.5))))
-      (var-def
-        (variable g (type
-          (value-type float)) (expr
-          (type-conversion-expr
-            (simple-var-ref f2)
+            (simple-var-ref i)
             (value-type float)))))
       (expression-stmt
         (invocation io println (
-          (simple-var-ref g)))))))
+          (simple-var-ref f)))))))

@@ -21,4 +21,9 @@ public function main() {
     decimal d = 100D;
     int i = <int>d;
     io:println(i);
+
+    decimal d2 = 1.5;
+    int i2 = <int>d2;
+    io:println(i2);
 }
+

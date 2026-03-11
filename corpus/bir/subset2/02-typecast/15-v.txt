@@ -9,6 +9,13 @@ main() -> ((NIL), ()){
     %5 = println(i) -> bb1;
   }
   bb1 {
+    %6 = ConstantLoad 3/2
+    d2 = %6;
+    %8 = <((INT), ())>(d2)
+    i2 = %8;
+    %10 = println(i2) -> bb2;
+  }
+  bb2 {
     return;
   }
 }

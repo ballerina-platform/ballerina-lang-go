@@ -1,3 +1,0 @@
--- stdout --
-Runtime panic: bad type cast: cannot cast 3/2 to int
--- stderr --

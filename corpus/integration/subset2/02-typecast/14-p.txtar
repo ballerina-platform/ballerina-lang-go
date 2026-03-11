@@ -1,3 +1,3 @@
 -- stdout --
-Runtime panic: bad type cast: cannot cast 1e+20 to int
+Runtime panic: bad type cast: cannot cast 10000000000000000000/1 to int
 -- stderr --
