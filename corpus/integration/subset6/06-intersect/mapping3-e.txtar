@@ -1,8 +1,8 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: no applicable inherent type for mapping constructor
-  --> mapping3-e.bal:29:14
+error[SEMANTIC_ERROR]: incompatible type: expected ((), ()), got ((), (STRING))
+  --> mapping3-e.bal:29:29
    |
 29 |     R1R2 r = { l1: 1, "l2": "a" }; // @error
-   |              ^^^^^^^^^^^^^^^^^^^^
+   |                             ^^^
 
