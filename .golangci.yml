@@ -18,8 +18,6 @@ linters:
         - -SA4006
         # this result of append is never used, except maybe in other appends
         - -SA4010
-        # Simplify returning boolean expression
-        - -S1008
         # Type assertion to current type
         - -S1040
         # redundant break statement
