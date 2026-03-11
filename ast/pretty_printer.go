@@ -1118,7 +1118,7 @@ func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	}, cmp.Compare[string])
 	for _, name := range methodNames {
 		method := node.Methods[name]
-		p.printFunction(&method)
+		p.printFunction(method)
 	}
 	p.indentLevel--
 	p.endNode()

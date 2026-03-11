@@ -184,8 +184,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			}()
 			desugarClassDefinition(pkgCtx, class)
 			for name, method := range class.Methods {
-				m := method
-				class.Methods[name] = *desugarFunction(pkgCtx, &m)
+				class.Methods[name] = desugarFunction(pkgCtx, method)
 			}
 			*class.InitFunction = *desugarFunction(pkgCtx, class.InitFunction)
 		})

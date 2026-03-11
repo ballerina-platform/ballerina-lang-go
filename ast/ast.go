@@ -303,7 +303,7 @@ type (
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
-		Methods                         map[string]BLangFunction
+		Methods                         map[string]*BLangFunction
 		Fields                          []model.SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
 		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
@@ -816,7 +816,7 @@ func (this *BLangImportPackage) SetAlias(alias model.IdentifierNode) {
 func NewBLangClassDefinition() BLangClassDefinition {
 	this := BLangClassDefinition{}
 	this.CycleDepth = -1
-	this.Methods = map[string]BLangFunction{}
+	this.Methods = map[string]*BLangFunction{}
 	this.FlagSet = &common.UnorderedSet[model.Flag]{}
 	this.FlagSet.Add(model.Flag_CLASS)
 	return this
@@ -845,8 +845,7 @@ func (this *BLangClassDefinition) SetName(name model.IdentifierNode) {
 func (this *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionNode] {
 	return func(yield func(string, model.FunctionNode) bool) {
 		for name, method := range this.Methods {
-			m := method
-			if !yield(name, &m) {
+			if !yield(name, method) {
 				return
 			}
 		}
@@ -855,16 +854,16 @@ func (this *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionN
 
 func (this *BLangClassDefinition) GetMethod(name string) model.FunctionNode {
 	if method, ok := this.Methods[name]; ok {
-		return &method
+		return method
 	}
 	return nil
 }
 
 func (this *BLangClassDefinition) AddMethod(name string, function *BLangFunction) {
 	if this.Methods == nil {
-		this.Methods = map[string]BLangFunction{}
+		this.Methods = map[string]*BLangFunction{}
 	}
-	this.Methods[name] = *function
+	this.Methods[name] = function
 }
 
 func (this *BLangClassDefinition) GetInitFunction() model.FunctionNode {

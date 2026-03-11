@@ -761,7 +761,7 @@ const (
 	ObjectMemberKindField ObjectMemberKind = iota
 	ObjectMemberKindMethod
 	ObjectMemberKindRemoteMethod
-	ObjectMemberKindResouceMethod
+	ObjectMemberKindResourceMethod
 )
 
 type Visibility uint8

@@ -2214,12 +2214,18 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			bMethod := &BMethodDecl{}
 			bMethod.name = methodName
 			bMethod.pos = getPosition(methodDecl)
+			bMethod.memberKind = model.ObjectMemberKindMethod
 
-			// Process visibility from qualifier list
+			// Process visibility and method kind from qualifier list
 			methodQuals := methodDecl.QualifierList()
 			for q := range methodQuals.Iterator() {
-				if q.Kind() == common.PUBLIC_KEYWORD {
+				switch q.Kind() {
+				case common.PUBLIC_KEYWORD:
 					bMethod.visibility = model.VisibilityPublic
+				case common.REMOTE_KEYWORD:
+					bMethod.memberKind = model.ObjectMemberKindRemoteMethod
+				case common.RESOURCE_KEYWORD:
+					bMethod.memberKind = model.ObjectMemberKindResourceMethod
 				}
 			}
 
@@ -2242,6 +2248,8 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				// Process return type
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
 					bMethod.ReturnTy = n.createTypeNode(retTypeDesc.Type()).(BType)
+				} else {
+					bMethod.ReturnTy = &BLangValueType{TypeKind: model.TypeKind_NIL}
 				}
 			}
 
