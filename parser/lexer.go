@@ -959,7 +959,7 @@ func (l *Lexer) processExclamationMarkOperator() tree.STToken {
 func (l *Lexer) isNotIsToken() bool {
 	reader := l.reader
 	return (reader.Peek() == 'i' && reader.PeekN(1) == 's') &&
-		!(isIdentifierFollowingChar(reader.PeekN(2)) || reader.PeekN(2) == BACKSLASH)
+		(!isIdentifierFollowingChar(reader.PeekN(2)) && reader.PeekN(2) != BACKSLASH)
 }
 
 func (l *Lexer) processTokenStartWithGt() tree.STToken {
@@ -1154,19 +1154,21 @@ func (l *Lexer) processPipeOperator() tree.STToken {
 func (l *Lexer) processDot() tree.STToken {
 	reader := l.reader
 	nextChar := reader.Peek()
-	if nextChar == DOT {
+	switch nextChar {
+	case DOT:
 		nextNextChar := reader.PeekN(1)
-		if nextNextChar == DOT {
+		switch nextNextChar {
+		case DOT:
 			reader.AdvanceN(2)
 			return l.getSyntaxToken(common.ELLIPSIS_TOKEN)
-		} else if nextNextChar == LT {
+		case LT:
 			reader.AdvanceN(2)
 			return l.getSyntaxToken(common.DOUBLE_DOT_LT_TOKEN)
 		}
-	} else if nextChar == AT {
+	case AT:
 		reader.Advance()
 		return l.getSyntaxToken(common.ANNOT_CHAINING_TOKEN)
-	} else if nextChar == LT {
+	case LT:
 		reader.Advance()
 		return l.getSyntaxToken(common.DOT_LT_TOKEN)
 	}
