@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: function not found: f
+  --> union8-e.bal:24:5
+   |
+24 |     f(1); // @error
+   |     ^^^^
+

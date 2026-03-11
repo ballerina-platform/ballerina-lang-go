@@ -23,7 +23,7 @@ import (
 )
 
 func execBranch(branchTerm *bir.Branch, frame *Frame) *bir.BIRBasicBlock {
-	if frame.GetOperand(branchTerm.Op.Index).(bool) {
+	if Load(frame, branchTerm.Op.Address).(bool) {
 		return branchTerm.TrueBB
 	}
 	return branchTerm.FalseBB
@@ -33,7 +33,7 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 	args := extractArgs(callInfo.Args, frame)
 	result := executeCall(callInfo, args, reg, callStack)
 	if callInfo.LhsOp != nil {
-		frame.SetOperand(callInfo.LhsOp.Index, result)
+		Store(frame, callInfo.LhsOp.Address, result)
 	}
 	return callInfo.ThenBB
 }
@@ -70,10 +70,36 @@ func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.R
 	panic("function not found: " + callInfo.Name.Value())
 }
 
+func execFpCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
+	args := extractArgs(callInfo.Args, frame)
+	fnValue := Load(frame, callInfo.FpOperand.Address).(*values.Function)
+	lookupKey := fnValue.LookupKey
+	fn := reg.GetBIRFunction(lookupKey)
+	var result values.BalValue
+	if fn != nil {
+		result = executeFunction(*fn, args, reg, callStack)
+	} else {
+		externFn := reg.GetNativeFunction(lookupKey)
+		if externFn != nil {
+			var err error
+			result, err = externFn.Impl(args)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			panic("function not found: " + callInfo.Name.Value())
+		}
+	}
+	if callInfo.LhsOp != nil {
+		Store(frame, callInfo.LhsOp.Address, result)
+	}
+	return callInfo.ThenBB
+}
+
 func extractArgs(args []bir.BIROperand, frame *Frame) []values.BalValue {
 	values := make([]values.BalValue, len(args))
 	for i, op := range args {
-		values[i] = frame.GetOperand(op.Index)
+		values[i] = Load(frame, op.Address)
 	}
 	return values
 }

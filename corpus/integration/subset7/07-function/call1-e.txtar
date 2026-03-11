@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+  --> call1-e.bal:21:13
+   |
+21 |     any a = f(); // @error
+   |             ^^^
+

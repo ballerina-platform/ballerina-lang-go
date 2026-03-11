@@ -1,0 +1,65 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable a (type
+                (value-type int)))
+              (variable b (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (return
+                  (binary-expr +
+                    (simple-var-ref a)
+                    (simple-var-ref b)))))))))
+      (var-def
+        (variable g (type
+          (user-defined-type F)) (expr
+          (lambda
+            (function $anonFunc$_1 (
+              (variable a (type
+                (value-type int)))
+              (variable b (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (var-def
+                  (variable mul (type
+                    (user-defined-type F)) (expr
+                    (lambda
+                      (function $anonFunc$_2 (
+                        (variable x (type
+                          (value-type int)))
+                        (variable y (type
+                          (value-type int)))) (
+                        (value-type int))
+                        (block-function-body
+                          (return
+                            (binary-expr *
+                              (simple-var-ref x)
+                              (simple-var-ref y)))))))))
+                (return
+                  (invocation mul (
+                    (simple-var-ref a)
+                    (simple-var-ref b))))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g (
+            (literal 4)
+            (literal 2)))))))))

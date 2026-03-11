@@ -434,7 +434,7 @@ type (
 		DiagnosticLocation Location
 	}
 
-	BLangInvokableNodeBase struct {
+	bLangInvokableNodeBase struct {
 		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
@@ -447,14 +447,12 @@ type (
 		Body                            model.FunctionBodyNode
 		DefaultWorkerName               model.IdentifierNode
 		FlagSet                         common.UnorderedSet[model.Flag]
-		DesugaredReturnType             bool
 	}
 
 	BLangFunction struct {
-		BLangInvokableNodeBase
+		bLangInvokableNodeBase
 		scope             model.Scope
 		Receiver          *BLangSimpleVariable
-		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
 		SendsToThis       common.OrderedSet[Channel]
 		AnonForkName      string
 		MapSymbolUpdated  bool
@@ -527,11 +525,11 @@ func (n *BLangVariableBase) SetTypeNode(bt BType) {
 	n.typeNode = bt
 }
 
-func (n *BLangInvokableNodeBase) Symbol() model.SymbolRef {
+func (n *bLangInvokableNodeBase) Symbol() model.SymbolRef {
 	return n.symbol
 }
 
-func (n *BLangInvokableNodeBase) SetSymbol(symbolRef model.SymbolRef) {
+func (n *bLangInvokableNodeBase) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
@@ -1280,11 +1278,11 @@ func (this *BLangFunction) SetScope(scope model.Scope) {
 
 var _ NodeWithScope = &BLangFunction{}
 
-func (b *BLangInvokableNodeBase) GetName() model.IdentifierNode {
+func (b *bLangInvokableNodeBase) GetName() model.IdentifierNode {
 	return b.Name
 }
 
-func (b *BLangInvokableNodeBase) SetName(name model.IdentifierNode) {
+func (b *bLangInvokableNodeBase) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
 		b.Name = id
 	} else {
@@ -1292,33 +1290,33 @@ func (b *BLangInvokableNodeBase) SetName(name model.IdentifierNode) {
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *bLangInvokableNodeBase) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return b.AnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
+func (b *bLangInvokableNodeBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
 	attachments := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
 	copy(attachments, b.AnnAttachments)
 	return attachments
 }
 
-func (b *BLangInvokableNodeBase) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *bLangInvokableNodeBase) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	b.AnnAttachments = append(b.AnnAttachments, annAttachment)
 }
 
-func (b *BLangInvokableNodeBase) SetAnnAttachments(annAttachments []model.AnnotationAttachmentNode) {
+func (b *bLangInvokableNodeBase) SetAnnAttachments(annAttachments []model.AnnotationAttachmentNode) {
 	b.AnnAttachments = annAttachments
 }
 
-func (b *BLangInvokableNodeBase) AddFlag(flag model.Flag) {
+func (b *bLangInvokableNodeBase) AddFlag(flag model.Flag) {
 	b.FlagSet.Add(flag)
 }
 
-func (b *BLangInvokableNodeBase) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+func (b *bLangInvokableNodeBase) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	return b.MarkdownDocumentationAttachment
 }
 
-func (b *BLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment model.MarkdownDocumentationNode) {
+func (b *bLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocumentationAttachment model.MarkdownDocumentationNode) {
 	if doc, ok := markdownDocumentationAttachment.(*BLangMarkdownDocumentation); ok {
 		b.MarkdownDocumentationAttachment = doc
 	} else {
@@ -1326,7 +1324,7 @@ func (b *BLangInvokableNodeBase) SetMarkdownDocumentationAttachment(markdownDocu
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetParameters() []model.SimpleVariableNode {
+func (b *bLangInvokableNodeBase) GetParameters() []model.SimpleVariableNode {
 	result := make([]model.SimpleVariableNode, len(b.RequiredParams))
 	for i, param := range b.RequiredParams {
 		result[i] = &param
@@ -1334,7 +1332,7 @@ func (b *BLangInvokableNodeBase) GetParameters() []model.SimpleVariableNode {
 	return result
 }
 
-func (b *BLangInvokableNodeBase) AddParameter(param model.SimpleVariableNode) {
+func (b *bLangInvokableNodeBase) AddParameter(param model.SimpleVariableNode) {
 	if blangParam, ok := param.(*BLangSimpleVariable); ok {
 		b.RequiredParams = append(b.RequiredParams, *blangParam)
 	} else {
@@ -1342,7 +1340,7 @@ func (b *BLangInvokableNodeBase) AddParameter(param model.SimpleVariableNode) {
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetRequiredParams() []model.SimpleVariableNode {
+func (b *bLangInvokableNodeBase) GetRequiredParams() []model.SimpleVariableNode {
 	result := make([]model.SimpleVariableNode, len(b.RequiredParams))
 	for i, param := range b.RequiredParams {
 		result[i] = &param
@@ -1350,7 +1348,7 @@ func (b *BLangInvokableNodeBase) GetRequiredParams() []model.SimpleVariableNode 
 	return result
 }
 
-func (b *BLangInvokableNodeBase) SetRequiredParams(requiredParams []model.SimpleVariableNode) {
+func (b *bLangInvokableNodeBase) SetRequiredParams(requiredParams []model.SimpleVariableNode) {
 	b.RequiredParams = make([]BLangSimpleVariable, len(requiredParams))
 	for i, param := range requiredParams {
 		if blangParam, ok := param.(*BLangSimpleVariable); ok {
@@ -1361,88 +1359,80 @@ func (b *BLangInvokableNodeBase) SetRequiredParams(requiredParams []model.Simple
 	}
 }
 
-func (b *BLangInvokableNodeBase) GetRestParameters() model.SimpleVariableNode {
+func (b *bLangInvokableNodeBase) GetRestParameters() model.SimpleVariableNode {
 	return b.RestParam
 }
 
-func (b *BLangInvokableNodeBase) GetRestParam() model.SimpleVariableNode {
+func (b *bLangInvokableNodeBase) GetRestParam() model.SimpleVariableNode {
 	return b.RestParam
 }
 
-func (b *BLangInvokableNodeBase) SetRestParameter(restParam model.SimpleVariableNode) {
+func (b *bLangInvokableNodeBase) SetRestParameter(restParam model.SimpleVariableNode) {
 	b.RestParam = restParam
 }
 
-func (b *BLangInvokableNodeBase) SetRestParam(restParam model.SimpleVariableNode) {
+func (b *bLangInvokableNodeBase) SetRestParam(restParam model.SimpleVariableNode) {
 	b.RestParam = restParam
 }
 
-func (b *BLangInvokableNodeBase) HasBody() bool {
+func (b *bLangInvokableNodeBase) HasBody() bool {
 	return b.Body != nil
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeDescriptor() model.TypeDescriptor {
+func (b *bLangInvokableNodeBase) GetReturnTypeDescriptor() model.TypeDescriptor {
 	return b.returnTypeDescriptor
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor model.TypeDescriptor) {
 	b.returnTypeDescriptor = typeDescriptor
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *bLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return b.ReturnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetReturnTypeAnnAttachments() []model.AnnotationAttachmentNode {
+func (b *bLangInvokableNodeBase) GetReturnTypeAnnAttachments() []model.AnnotationAttachmentNode {
 	return b.ReturnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) AddReturnTypeAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *bLangInvokableNodeBase) AddReturnTypeAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	b.ReturnTypeAnnAttachments = append(b.ReturnTypeAnnAttachments, annAttachment)
 }
 
-func (b *BLangInvokableNodeBase) SetReturnTypeAnnAttachments(returnTypeAnnAttachments []model.AnnotationAttachmentNode) {
+func (b *bLangInvokableNodeBase) SetReturnTypeAnnAttachments(returnTypeAnnAttachments []model.AnnotationAttachmentNode) {
 	b.ReturnTypeAnnAttachments = returnTypeAnnAttachments
 }
 
-func (b *BLangInvokableNodeBase) GetBody() model.FunctionBodyNode {
+func (b *bLangInvokableNodeBase) GetBody() model.FunctionBodyNode {
 	return b.Body
 }
 
-func (b *BLangInvokableNodeBase) SetBody(body model.FunctionBodyNode) {
+func (b *bLangInvokableNodeBase) SetBody(body model.FunctionBodyNode) {
 	b.Body = body
 }
 
-func (b *BLangInvokableNodeBase) GetDefaultWorkerName() model.IdentifierNode {
+func (b *bLangInvokableNodeBase) GetDefaultWorkerName() model.IdentifierNode {
 	return b.DefaultWorkerName
 }
 
-func (b *BLangInvokableNodeBase) SetDefaultWorkerName(defaultWorkerName model.IdentifierNode) {
+func (b *bLangInvokableNodeBase) SetDefaultWorkerName(defaultWorkerName model.IdentifierNode) {
 	b.DefaultWorkerName = defaultWorkerName
 }
 
-func (b *BLangInvokableNodeBase) GetFlags() common.Set[model.Flag] {
+func (b *bLangInvokableNodeBase) GetFlags() common.Set[model.Flag] {
 	return &b.FlagSet
 }
 
-func (b *BLangInvokableNodeBase) GetFlagSet() common.Set[model.Flag] {
+func (b *bLangInvokableNodeBase) GetFlagSet() common.Set[model.Flag] {
 	return &b.FlagSet
 }
 
-func (b *BLangInvokableNodeBase) SetFlagSet(flagSet common.Set[model.Flag]) {
+func (b *bLangInvokableNodeBase) SetFlagSet(flagSet common.Set[model.Flag]) {
 	if set, ok := flagSet.(*common.UnorderedSet[model.Flag]); ok {
 		b.FlagSet = *set
 	} else {
 		panic("flagSet is not a common.UnorderedSet[Flag]")
 	}
-}
-
-func (b *BLangInvokableNodeBase) GetDesugaredReturnType() bool {
-	return b.DesugaredReturnType
-}
-
-func (b *BLangInvokableNodeBase) SetDesugaredReturnType(desugaredReturnType bool) {
-	b.DesugaredReturnType = desugaredReturnType
 }
 
 func (b *BLangVariableBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
