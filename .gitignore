@@ -35,3 +35,4 @@ parser/testdata/**/*.json
 
 # IDE specific files
 .idea/
+/tree-gen
