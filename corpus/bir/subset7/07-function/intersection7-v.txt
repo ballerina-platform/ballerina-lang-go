@@ -1,0 +1,61 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:foo
+    fx = %1;
+    %3 = ConstantLoad 1
+    %4 = fx(%3) -> bb1;
+  }
+  bb1 {
+    r1 = %4;
+    %6 = println(r1) -> bb2;
+  }
+  bb2 {
+    %7 = fp $anon/.:bar
+    fx = %7;
+    %8 = ConstantLoad 1
+    %9 = fx(%8) -> bb3;
+  }
+  bb3 {
+    r1 = %9;
+    %10 = fx(r1) -> bb4;
+  }
+  bb4 {
+    %11 = println(%10) -> bb5;
+  }
+  bb5 {
+    %12 = ConstantLoad aa
+    %13 = fx(%12) -> bb6;
+  }
+  bb6 {
+    r2 = %13;
+    %15 = println(r2) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}
+foo(((INT, STRING), ())) -> ((), (INT)){
+  bb0 {
+    %2 = ConstantLoad 2
+    %0 = %2;
+    return;
+  }
+}
+bar(((INT, STRING), ())) -> ((), (INT)){
+  bb0 {
+    %2 = a is ((INT), ())
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %3 = ConstantLoad 2
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %4 = ConstantLoad 3
+    %0 = %4;
+    return;
+  }
+}
