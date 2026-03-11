@@ -369,38 +369,39 @@ var (
 )
 
 var (
-	_ BLangNode = &BLangTypeConversionExpr{}
-	_ BLangNode = &BLangAlternateWorkerReceive{}
-	_ BLangNode = &BLangAnnotAccessExpr{}
-	_ BLangNode = &BLangArrowFunction{}
-	_ BLangNode = &BLangLambdaFunction{}
-	_ BLangNode = &BLangBinaryExpr{}
-	_ BLangNode = &BLangCheckedExpr{}
-	_ BLangNode = &BLangCheckPanickedExpr{}
-	_ BLangNode = &BLangCollectContextInvocation{}
-	_ BLangNode = &BLangCommitExpr{}
-	_ BLangNode = &BLangSimpleVarRef{}
-	_ BLangNode = &BLangLocalVarRef{}
-	_ BLangNode = &BLangConstRef{}
-	_ BLangNode = &BLangLiteral{}
-	_ BLangNode = &BLangNumericLiteral{}
-	_ BLangNode = &BLangDynamicArgExpr{}
-	_ BLangNode = &BLangElvisExpr{}
-	_ BLangNode = &BLangWorkerReceive{}
-	_ BLangNode = &BLangInvocation{}
-	_ BLangNode = &BLangMarkdownDocumentationLine{}
-	_ BLangNode = &BLangMarkdownParameterDocumentation{}
-	_ BLangNode = &BLangMarkdownReturnParameterDocumentation{}
-	_ BLangNode = &BLangMarkDownDeprecationDocumentation{}
-	_ BLangNode = &BLangMarkDownDeprecatedParametersDocumentation{}
-	_ BLangNode = &BLangGroupExpr{}
-	_ BLangNode = &BLangTypedescExpr{}
-	_ BLangNode = &BLangIndexBasedAccess{}
-	_ BLangNode = &BLangListConstructorExpr{}
-	_ BLangNode = &BLangTypeConversionExpr{}
-	_ BLangNode = &BLangMappingConstructorExpr{}
-	_ BLangNode = &BLangMappingKeyValueField{}
-	_ BLangNode = &BLangMappingKey{}
+	_ BLangNode       = &BLangTypeConversionExpr{}
+	_ BLangNode       = &BLangAlternateWorkerReceive{}
+	_ BLangNode       = &BLangAnnotAccessExpr{}
+	_ BLangNode       = &BLangArrowFunction{}
+	_ BLangNode       = &BLangLambdaFunction{}
+	_ BLangExpression = &BLangLambdaFunction{}
+	_ BLangNode       = &BLangBinaryExpr{}
+	_ BLangNode       = &BLangCheckedExpr{}
+	_ BLangNode       = &BLangCheckPanickedExpr{}
+	_ BLangNode       = &BLangCollectContextInvocation{}
+	_ BLangNode       = &BLangCommitExpr{}
+	_ BLangNode       = &BLangSimpleVarRef{}
+	_ BLangNode       = &BLangLocalVarRef{}
+	_ BLangNode       = &BLangConstRef{}
+	_ BLangNode       = &BLangLiteral{}
+	_ BLangNode       = &BLangNumericLiteral{}
+	_ BLangNode       = &BLangDynamicArgExpr{}
+	_ BLangNode       = &BLangElvisExpr{}
+	_ BLangNode       = &BLangWorkerReceive{}
+	_ BLangNode       = &BLangInvocation{}
+	_ BLangNode       = &BLangMarkdownDocumentationLine{}
+	_ BLangNode       = &BLangMarkdownParameterDocumentation{}
+	_ BLangNode       = &BLangMarkdownReturnParameterDocumentation{}
+	_ BLangNode       = &BLangMarkDownDeprecationDocumentation{}
+	_ BLangNode       = &BLangMarkDownDeprecatedParametersDocumentation{}
+	_ BLangNode       = &BLangGroupExpr{}
+	_ BLangNode       = &BLangTypedescExpr{}
+	_ BLangNode       = &BLangIndexBasedAccess{}
+	_ BLangNode       = &BLangListConstructorExpr{}
+	_ BLangNode       = &BLangTypeConversionExpr{}
+	_ BLangNode       = &BLangMappingConstructorExpr{}
+	_ BLangNode       = &BLangMappingKeyValueField{}
+	_ BLangNode       = &BLangMappingKey{}
 )
 
 var (
@@ -495,6 +496,9 @@ func (this *BLangLambdaFunction) SetFunctionNode(functionNode model.FunctionNode
 func (this *BLangLambdaFunction) GetKind() model.NodeKind {
 	// migrated from BLangLambdaFunction.java:58:5
 	return model.NodeKind_LAMBDA
+}
+
+func (this *BLangLambdaFunction) SetTypeCheckedType(ty BType) {
 }
 
 func (this *BLangAlternateWorkerReceive) ToActionString() string {

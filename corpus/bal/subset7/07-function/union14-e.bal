@@ -21,7 +21,7 @@ type G function(int);
 type FG F|G;
 
 public function main() {
-    FG f = foobar; // @error
+    FG f = fooBar; // @error
     io:println(f(1));
 }
 

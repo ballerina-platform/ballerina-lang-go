@@ -1,0 +1,72 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %3 = ConstantLoad 0
+    %2 = vals[%3];
+    %0 = %2;
+    return;
+  }
+}
+$anonFunc$_0(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = + a b;
+    %0 = %3;
+    return;
+  }
+}
+$anonFunc$_1(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %4 = ConstantLoad 0
+    %3 = vals[%4];
+    %6 = ConstantLoad 1
+    %5 = vals[%6];
+    %2 = * %3 %5;
+    %0 = %2;
+    return;
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:foo
+    %2 = fp $anon/.:$anonFunc$_0
+    %3 = fp $anon/.:$anonFunc$_1
+    %4 = ConstantLoad 3
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    fs = %5;
+    %8 = ConstantLoad 0
+    %7 = fs[%8];
+    f = %7;
+    %10 = ConstantLoad 1
+    %11 = ConstantLoad 2
+    %12 = f(%10,%11) -> bb1;
+  }
+  bb1 {
+    %13 = println(%12) -> bb2;
+  }
+  bb2 {
+    %15 = ConstantLoad 1
+    %14 = fs[%15];
+    f = %14;
+    %16 = ConstantLoad 1
+    %17 = ConstantLoad 2
+    %18 = f(%16,%17) -> bb3;
+  }
+  bb3 {
+    %19 = println(%18) -> bb4;
+  }
+  bb4 {
+    %21 = ConstantLoad 2
+    %20 = fs[%21];
+    f = %20;
+    %22 = ConstantLoad 1
+    %23 = ConstantLoad 2
+    %24 = f(%22,%23) -> bb5;
+  }
+  bb5 {
+    %25 = println(%24) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

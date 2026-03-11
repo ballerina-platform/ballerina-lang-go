@@ -645,6 +645,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeCheckPanickedExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
+	case *ast.BLangLambdaFunction:
+		return analyzeLambdaFunction(a, expr)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -675,6 +677,12 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
+	fa := initializeFunctionAnalyzer(a, expr.Function)
+	ast.Walk(fa, expr.Function)
+	return true
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {

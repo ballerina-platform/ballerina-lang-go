@@ -64,20 +64,20 @@ func execNewMap(newMap *bir.NewMap, frame *Frame) {
 }
 
 func execNewError(newError *bir.NewError, frame *Frame) {
-	msgVal := frame.GetOperand(newError.MessageOp.Index)
+	msgVal := Load(frame, newError.MessageOp.Address)
 	message := msgVal.(string)
 
 	var cause values.BalValue
 	if newError.CauseOp != nil {
-		cause = frame.GetOperand(newError.CauseOp.Index)
+		cause = Load(frame, newError.CauseOp.Address)
 	}
 
 	var detailMap *values.Map
 	if newError.DetailOp != nil {
-		detailMap = frame.GetOperand(newError.DetailOp.Index).(*values.Map)
+		detailMap = Load(frame, newError.DetailOp.Address).(*values.Map)
 	}
 	errVal := values.NewError(newError.Type, message, cause, newError.TypeName, detailMap)
-	frame.SetOperand(newError.GetLhsOperand().Index, errVal)
+	Store(frame, newError.GetLhsOperand().Address, errVal)
 }
 
 func execArrayStore(access *bir.FieldAccess, frame *Frame) {

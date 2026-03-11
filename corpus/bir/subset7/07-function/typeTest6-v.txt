@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = fp $anon/.:f1
     f = %1;
@@ -59,13 +59,13 @@ main<NIL>{
     return;
   }
 }
-f1<NIL>{
+f1(((INT), ())) -> ((INT), ()){
   bb0 {
     %0 = i;
     return;
   }
 }
-f2<NIL>{
+f2(((INT), ()),((INT), ())) -> ((INT), ()){
   bb0 {
     %3 = + i j;
     %0 = %3;
