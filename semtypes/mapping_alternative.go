@@ -16,7 +16,10 @@
 
 package semtypes
 
-import "slices"
+type MappingFieldInfo struct {
+	Name string
+	Ty   SemType
+}
 
 type MappingAlternative struct {
 	SemType SemType
@@ -69,29 +72,47 @@ func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *Mappi
 	return ty, atom, true
 }
 
-func MappingAlternativeAllowsFields(alt MappingAlternative, fieldNames []string) bool {
+// NOTE: selection is not affected by default values according to the spec, it is purely by field names
+// But we are checking the type as well to allow things like map<int>|map<string> given jballerina already allow this
+// and it's straightforward to support it.
+func MappingAlternativeAllowsFields(cx Context, alt MappingAlternative, fields []MappingFieldInfo) bool {
 	pos := alt.Pos
 	if pos != nil {
-		if CellInnerVal(pos.Rest) == &UNDEF {
-			if !slices.Equal(pos.Names, fieldNames) {
-				return false
+		if len(pos.Names) == 0 {
+			// map<T>
+			for _, each := range fields {
+				fieldTy := each.Ty
+				fieldName := each.Name
+				expectedTy := pos.FieldInnerVal(fieldName)
+				if !IsSubtype(cx, fieldTy, expectedTy) {
+					return false
+				}
+
 			}
-		}
-		i := 0
-		len := len(fieldNames)
-		for _, name := range pos.Names {
-			for {
-				if i >= len {
-					return false
-				}
-				if fieldNames[i] == name {
+		} else {
+			i := 0
+			len := len(fields)
+			for _, name := range pos.Names {
+				for {
+					if i >= len {
+						return false
+					}
+					fieldName := fields[i].Name
+					fieldTy := fields[i].Ty
+					expectedTy := pos.FieldInnerVal(fieldName)
+					if IsNever(expectedTy) || !IsSubtype(cx, fieldTy, expectedTy) {
+						return false
+					}
+					if fieldName == name {
+						i += 1
+						break
+					}
+					if fieldName > name {
+						return false
+					}
+					// in < case only type check is needed and FieldInnerVal give the rest type correctly
 					i += 1
-					break
 				}
-				if fieldNames[i] > name {
-					return false
-				}
-				i += 1
 			}
 		}
 	}

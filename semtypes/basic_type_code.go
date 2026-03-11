@@ -63,32 +63,32 @@ var VT_COUNT_INHERENTLY_IMMUTABLE = BT_FUTURE.Code
 var VT_INHERENTLY_IMMUTABLE = (1 << VT_COUNT_INHERENTLY_IMMUTABLE) - 1
 
 // Only used for .toString() method to aid debugging.
-var fieldNames = make(map[int]string)
+var _fieldNames = make(map[int]string)
 
 func init() {
 	// migrated from BasicTypeCode.java:79
 	// Static initializer block that populates fieldNames map
 	// In Java this used reflection, but in Go we manually populate it
-	fieldNames[BT_NIL.Code] = "BT_NIL"
-	fieldNames[BT_BOOLEAN.Code] = "BT_BOOLEAN"
-	fieldNames[BT_INT.Code] = "BT_INT"
-	fieldNames[BT_FLOAT.Code] = "BT_FLOAT"
-	fieldNames[BT_DECIMAL.Code] = "BT_DECIMAL"
-	fieldNames[BT_STRING.Code] = "BT_STRING"
-	fieldNames[BT_ERROR.Code] = "BT_ERROR"
-	fieldNames[BT_TYPEDESC.Code] = "BT_TYPEDESC"
-	fieldNames[BT_HANDLE.Code] = "BT_HANDLE"
-	fieldNames[BT_FUNCTION.Code] = "BT_FUNCTION"
-	fieldNames[BT_REGEXP.Code] = "BT_REGEXP"
-	fieldNames[BT_FUTURE.Code] = "BT_FUTURE"
-	fieldNames[BT_STREAM.Code] = "BT_STREAM"
-	fieldNames[BT_LIST.Code] = "BT_LIST"
-	fieldNames[BT_MAPPING.Code] = "BT_MAPPING"
-	fieldNames[BT_TABLE.Code] = "BT_TABLE"
-	fieldNames[BT_XML.Code] = "BT_XML"
-	fieldNames[BT_OBJECT.Code] = "BT_OBJECT"
-	fieldNames[BT_CELL.Code] = "BT_CELL"
-	fieldNames[BT_UNDEF.Code] = "BT_UNDEF"
+	_fieldNames[BT_NIL.Code] = "BT_NIL"
+	_fieldNames[BT_BOOLEAN.Code] = "BT_BOOLEAN"
+	_fieldNames[BT_INT.Code] = "BT_INT"
+	_fieldNames[BT_FLOAT.Code] = "BT_FLOAT"
+	_fieldNames[BT_DECIMAL.Code] = "BT_DECIMAL"
+	_fieldNames[BT_STRING.Code] = "BT_STRING"
+	_fieldNames[BT_ERROR.Code] = "BT_ERROR"
+	_fieldNames[BT_TYPEDESC.Code] = "BT_TYPEDESC"
+	_fieldNames[BT_HANDLE.Code] = "BT_HANDLE"
+	_fieldNames[BT_FUNCTION.Code] = "BT_FUNCTION"
+	_fieldNames[BT_REGEXP.Code] = "BT_REGEXP"
+	_fieldNames[BT_FUTURE.Code] = "BT_FUTURE"
+	_fieldNames[BT_STREAM.Code] = "BT_STREAM"
+	_fieldNames[BT_LIST.Code] = "BT_LIST"
+	_fieldNames[BT_MAPPING.Code] = "BT_MAPPING"
+	_fieldNames[BT_TABLE.Code] = "BT_TABLE"
+	_fieldNames[BT_XML.Code] = "BT_XML"
+	_fieldNames[BT_OBJECT.Code] = "BT_OBJECT"
+	_fieldNames[BT_CELL.Code] = "BT_CELL"
+	_fieldNames[BT_UNDEF.Code] = "BT_UNDEF"
 }
 
 func BasicTypeCodeFrom(code int) BasicTypeCode {
@@ -98,5 +98,5 @@ func BasicTypeCodeFrom(code int) BasicTypeCode {
 
 func (this BasicTypeCode) String() string {
 	// migrated from BasicTypeCode.java:93
-	return fieldNames[this.Code]
+	return _fieldNames[this.Code]
 }
