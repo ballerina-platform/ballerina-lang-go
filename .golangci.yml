@@ -12,8 +12,6 @@ linters:
         - -ST1020
         - -ST1021
         - -ST1022
-        # should use for {} instead of for true {}
-        - -S1006
         # receiver name should be a reflection of its identity; don't use generic names such as "this" or "self"
         - -ST1006
         # this value of ... is never used

@@ -85,7 +85,7 @@ func EnumerableListUnion[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], 
 	i2 := 0
 	len1 := len(v1)
 	len2 := len(v2)
-	for true {
+	for {
 		if i1 >= len1 {
 			if i2 >= len2 {
 				break
@@ -123,7 +123,7 @@ func EnumerableListIntersect[T any](v1 []EnumerableType[T], v2 []EnumerableType[
 	i2 := 0
 	len1 := len(v1)
 	len2 := len(v2)
-	for true {
+	for {
 		if (i1 >= len1) || (i2 >= len2) {
 			break
 		} else {
@@ -152,10 +152,8 @@ func EnumerableListDiff[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], r
 	i2 := 0
 	len1 := len(v1)
 	len2 := len(v2)
-	for true {
-		if i1 >= len1 {
-			break
-		}
+	for i1 < len1 {
+
 		if i2 >= len2 {
 			*result = append(*result, v1[i1])
 			i1 = (i1 + 1)
