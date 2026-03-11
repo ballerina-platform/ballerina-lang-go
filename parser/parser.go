@@ -204,10 +204,11 @@ func (this *abstractParser) consumeWithInvalidNodesWithToken(token tree.STToken)
 func (this *abstractParser) recover(token tree.STToken, currentCtx common.ParserRuleContext, isCompletion bool) *Solution {
 	isCompletion = isCompletion || token.Kind() == common.EOF_TOKEN
 	sol := this.errorHandler.Recover(currentCtx, token, isCompletion)
-	if sol.Action == ACTION_REMOVE {
+	switch sol.Action {
+	case ACTION_REMOVE:
 		this.insertedToken = nil
 		this.addInvalidTokenToNextToken(sol.RemovedToken)
-	} else if sol.Action == ACTION_INSERT {
+	case ACTION_INSERT:
 		this.insertedToken = tree.ToToken(sol.RecoveredNode)
 	}
 	return sol
@@ -319,8 +320,8 @@ func NewBallerinaParserFromTokenReader(tokenReader *TokenReader, dbgCtx *debugco
 		invalidNodeInfoStack: make([]invalidNodeInfo, 0),
 		insertedToken:        nil,
 	}
-	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.abstractParser.tokenReader, dbgCtx)
-	this.abstractParser.errorHandler = &errorHandler
+	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.tokenReader, dbgCtx)
+	this.errorHandler = &errorHandler
 	return this
 }
 
@@ -3869,10 +3870,8 @@ func (this *BallerinaParser) parseVarDeclRhsInner(metadata tree.STNode, publicQu
 	var expr tree.STNode
 	var semicolon tree.STNode
 	hasVarInit := false
-	isConfigurable := false
-	if isModuleVar && this.isSyntaxKindInList(varDeclQuals, common.CONFIGURABLE_KEYWORD) {
-		isConfigurable = true
-	}
+	isConfigurable := isModuleVar && this.isSyntaxKindInList(varDeclQuals, common.CONFIGURABLE_KEYWORD)
+
 	nextToken := this.peek()
 	switch nextToken.Kind() {
 	case common.EQUAL_TOKEN:
@@ -4765,11 +4764,12 @@ func (this *BallerinaParser) parseExpressionRhsInternal(currentPrecedenceLevel O
 				break
 			}
 		}
-		if nextTokenKind == common.DOUBLE_GT_TOKEN {
+		switch nextTokenKind {
+		case common.DOUBLE_GT_TOKEN:
 			operator = this.parseSignedRightShiftToken()
-		} else if nextTokenKind == common.TRIPPLE_GT_TOKEN {
+		case common.TRIPPLE_GT_TOKEN:
 			operator = this.parseUnsignedRightShiftToken()
-		} else {
+		default:
 			operator = this.parseBinaryOperator()
 		}
 		rhsExpr := this.parseExpressionWithConditional(nextOperatorPrecedence, isRhsExpr, false, isInConditionalExpr)
@@ -10197,8 +10197,7 @@ func (this *BallerinaParser) parseAnnotChainingToken() tree.STNode {
 func (this *BallerinaParser) parseFieldAccessIdentifier(isInConditionalExpr bool) tree.STNode {
 	nextToken := this.peek()
 	if !this.isPredeclaredIdentifier(nextToken.Kind()) {
-		var identifier tree.STNode
-		identifier = tree.CreateMissingTokenWithDiagnostics(common.IDENTIFIER_TOKEN,
+		var identifier tree.STNode = tree.CreateMissingTokenWithDiagnostics(common.IDENTIFIER_TOKEN,
 			&common.ERROR_MISSING_IDENTIFIER)
 		return this.parseQualifiedIdentifierNode(identifier, isInConditionalExpr)
 	}
@@ -13557,7 +13556,7 @@ func (this *BallerinaParser) isWildcardBP(node tree.STNode) bool {
 }
 
 func (this *BallerinaParser) isUnderscoreToken(token tree.STToken) bool {
-	return "_" == token.Text()
+	return token.Text() == "_"
 }
 
 func (this *BallerinaParser) getWildcardBindingPattern(identifier tree.STNode) tree.STNode {
@@ -14746,9 +14745,9 @@ func (this *BallerinaParser) getMappingField(identifier tree.STNode, colon tree.
 
 func (this *BallerinaParser) recoverWithBlockContext(nextToken tree.STToken, currentCtx common.ParserRuleContext) *Solution {
 	if this.isInsideABlock(nextToken) {
-		return this.abstractParser.recover(nextToken, currentCtx, true)
+		return this.recover(nextToken, currentCtx, true)
 	} else {
-		return this.abstractParser.recover(nextToken, currentCtx, false)
+		return this.recover(nextToken, currentCtx, false)
 	}
 }
 
