@@ -1,0 +1,8 @@
+(init
+  (bb0 () ()
+    (assignment
+      (field-based-access x
+        (simple-var-ref self))
+      (simple-var-ref x))
+  )
+)

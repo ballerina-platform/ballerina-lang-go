@@ -63,6 +63,16 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 		analyzeUninitializedVars(ctx, pkg, cfg)
 	})
 
+	// Run uninitialized field analysis
+	wg.Go(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicErr = r
+			}
+		}()
+		analyzeUninitializedFields(ctx, pkg, cfg)
+	})
+
 	wg.Wait()
 	if panicErr != nil {
 		panic(panicErr)

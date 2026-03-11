@@ -1,3 +1,10 @@
+(init
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal init called))))
+  )
+)
 (main
   (bb0 () ()
     (var-def

@@ -93,6 +93,26 @@ func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage)
 			mu.Unlock()
 		}()
 	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		if classDef.InitFunction == nil {
+			continue
+		}
+		wg.Add(1)
+		initFn := classDef.InitFunction
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					panicErr = r
+				}
+			}()
+			fnCfg := analyzeFunction(ctx, initFn)
+			mu.Lock()
+			cfg.funcCfgs[initFn.Symbol()] = fnCfg
+			mu.Unlock()
+		}()
+	}
 	wg.Wait()
 	if panicErr != nil {
 		panic(panicErr)
