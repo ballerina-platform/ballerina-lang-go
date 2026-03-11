@@ -19,6 +19,7 @@ package centralclient
 import (
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -329,7 +330,7 @@ func TestHandleNightlyBuild(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			nightlyFile := filepath.Join(balaCachePath, "nightly.build")
+			nightlyFile := path.Join(balaCachePath, "nightly.build")
 			_, statErr := fs.Stat(fsys, nightlyFile)
 
 			if tt.expectFile && statErr != nil {
@@ -374,7 +375,7 @@ func TestHandlePackageDeprecation(t *testing.T) {
 				t.Errorf("expected error: %v, got: %v", tt.expectedError, err)
 			}
 
-			deprecateFile := filepath.Join(balaCachePath, DeprecatedMetaFileName)
+			deprecateFile := path.Join(balaCachePath, DeprecatedMetaFileName)
 			data, statErr := fs.ReadFile(fsys, deprecateFile)
 
 			if tt.expectFile {
