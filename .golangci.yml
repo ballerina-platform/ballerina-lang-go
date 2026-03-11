@@ -1,0 +1,37 @@
+version: "2"
+linters:
+  default: standard
+  settings:
+    staticcheck:
+      checks:
+        # Default
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+        # should use for {} instead of for true {}
+        - -S1006
+        # receiver name should be a reflection of its identity; don't use generic names such as "this" or "self"
+        - -ST1006
+        # this value of ... is never used
+        - -SA4006
+        # this result of append is never used, except maybe in other appends
+        - -SA4010
+        # Simplify returning boolean expression
+        - -S1008
+        # Type assertion to current type
+        - -S1040
+        # redundant break statement
+        - -S1023
+        # ineffective break statement. Did you mean to break out of the outer loop?
+        - -SA4011
+        # empty branch
+        - -SA9003
+
+  disable:
+    - unused
+    - ineffassign
+    - errcheck
