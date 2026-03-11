@@ -1,0 +1,10 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (const stringConstWithoutType
+    (md-doc
+      (doc-lines
+        (md-doc-line "Documentation for constant without type"))) () (
+    (literal Some other value)))
+  (function main () (
+    (value-type null))
+    (block-function-body)))
