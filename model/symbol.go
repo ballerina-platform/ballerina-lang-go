@@ -205,11 +205,11 @@ func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	return space.Symbols[index]
 }
 
-func NewSymbolSpaceInner(packageId PackageID, index int) *SymbolSpace {
+func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 	pkg := PackageIdentifier{
-		Organization: packageId.OrgName.Value(),
-		Package:      packageId.PkgName.Value(),
-		Version:      packageId.Version.Value(),
+		Organization: packageID.OrgName.Value(),
+		Package:      packageID.PkgName.Value(),
+		Version:      packageID.Version.Value(),
 	}
 	return &SymbolSpace{index: index, pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
 }

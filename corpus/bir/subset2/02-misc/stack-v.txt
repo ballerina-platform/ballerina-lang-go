@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad 0
     %2 = ConstantLoad 5
@@ -10,7 +10,7 @@ main<NIL>{
     return;
   }
 }
-inc<NIL>{
+inc(((INT), ())) -> ((INT), ()){
   bb0 {
     %3 = ConstantLoad 1
     %2 = + n %3;
@@ -18,7 +18,7 @@ inc<NIL>{
     return;
   }
 }
-foo<NIL>{
+foo(((INT), ()),((INT), ())) -> ((NIL), ()){
   bb0 {
     %3 = == depth maxDepth;
     %3 ? bb1 : bb2;

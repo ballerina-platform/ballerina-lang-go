@@ -32,9 +32,9 @@ type Context interface {
 	setIsolatedObjectMemo(t SemType)
 	serviceObjectMemo() SemType
 	setServiceObjectMemo(t SemType)
-	mappingMemo() map[Bdd]*BddMemo
-	functionMemo() map[Bdd]*BddMemo
-	listMemo() map[Bdd]*BddMemo
+	mappingMemo() map[string]*BddMemo
+	functionMemo() map[string]*BddMemo
+	listMemo() map[string]*BddMemo
 	functionAtomType(atom Atom) *FunctionAtomicType
 	listAtomType(atom Atom) *ListAtomicType
 	mappingAtomType(atom Atom) *MappingAtomicType
@@ -47,9 +47,9 @@ var _ Context = &contextImpl{}
 type contextImpl struct {
 	_env          Env
 	_memoStack    []*BddMemo
-	_listMemo     map[Bdd]*BddMemo
-	_mappingMemo  map[Bdd]*BddMemo
-	_functionMemo map[Bdd]*BddMemo
+	_listMemo     map[string]*BddMemo
+	_mappingMemo  map[string]*BddMemo
+	_functionMemo map[string]*BddMemo
 
 	_jsonMemo           SemType
 	_anydataMemo        SemType
@@ -133,15 +133,15 @@ func (this *contextImpl) setServiceObjectMemo(t SemType) {
 	this._serviceObjectMemo = t
 }
 
-func (this *contextImpl) mappingMemo() map[Bdd]*BddMemo {
+func (this *contextImpl) mappingMemo() map[string]*BddMemo {
 	return this._mappingMemo
 }
 
-func (this *contextImpl) functionMemo() map[Bdd]*BddMemo {
+func (this *contextImpl) functionMemo() map[string]*BddMemo {
 	return this._functionMemo
 }
 
-func (this *contextImpl) listMemo() map[Bdd]*BddMemo {
+func (this *contextImpl) listMemo() map[string]*BddMemo {
 	return this._listMemo
 }
 
@@ -160,9 +160,9 @@ func (this *contextImpl) mappingAtomType(atom Atom) *MappingAtomicType {
 func ContextFrom(env Env) Context {
 	return &contextImpl{
 		_env:            env,
-		_listMemo:       make(map[Bdd]*BddMemo),
-		_mappingMemo:    make(map[Bdd]*BddMemo),
-		_functionMemo:   make(map[Bdd]*BddMemo),
+		_listMemo:       make(map[string]*BddMemo),
+		_mappingMemo:    make(map[string]*BddMemo),
+		_functionMemo:   make(map[string]*BddMemo),
 		_comparableMemo: make(map[comparableMemoKey]*comparableMemo),
 	}
 }

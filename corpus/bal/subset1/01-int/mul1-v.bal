@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-  io:println(mul(4, 2)); // @output 8
+  io:println(mul(4, 2));
 }
 
 function mul(int x, int y) returns int {

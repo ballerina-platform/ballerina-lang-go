@@ -44,7 +44,7 @@ func NewBddPath() BddPath {
 
 func BddPaths(b Bdd, paths *[]BddPath, accum BddPath) {
 	// migrated from BddPath.java:50:5
-	allOrNothing, ok := b.(BddAllOrNothing)
+	allOrNothing, ok := b.(*BddAllOrNothing)
 	if ok {
 		if allOrNothing.IsAll() {
 			*paths = append(*paths, accum)

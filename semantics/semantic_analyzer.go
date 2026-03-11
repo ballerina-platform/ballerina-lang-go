@@ -265,7 +265,6 @@ func (la *loopAnalyzer) internalErr(message string, loc diagnostics.Location) {
 	la.parent.ctx().InternalError(message, loc)
 }
 
-// When we support multiple packages we need to resolve types of all of them before semantic analysis
 func NewSemanticAnalyzer(ctx *context.CompilerContext) *SemanticAnalyzer {
 	return &SemanticAnalyzer{
 		compilerCtx:  ctx,
@@ -350,10 +349,10 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
-func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
+func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
-		parent.semanticErr("'main' function must be public", function.GetPosition())
+		parent.semanticErr("'main' function must be public", pos)
 	}
 
 	// Check 2: Must return error?
@@ -361,7 +360,7 @@ func validateMainFunction(parent analyzer, function *ast.BLangFunction, fnSymbol
 	actualReturnType := fnSymbol.Signature().ReturnType
 
 	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
-		parent.semanticErr("'main' function must have return type 'error?'", function.GetPosition())
+		parent.semanticErr("'main' function must have return type 'error?'", pos)
 	}
 }
 
@@ -372,7 +371,7 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 
 	// Validate main function constraints
 	if function.Name.Value == "main" {
-		validateMainFunction(parent, function, fnSymbol)
+		validateMainFunction(parent, fnSymbol, function.GetPosition())
 	}
 
 	return fa
@@ -698,25 +697,13 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	for _, expr := range expr.Exprs {
 		analyzeExpression(a, expr, nil)
 	}
+	members := make([]semtypes.ListMemberInfo, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		members[i] = semtypes.ListMemberInfo{Index: i, ValType: expr.GetDeterminedType()}
+	}
 	for _, alt := range alts {
-		if semtypes.ListAlternativeAllowsLength(alt, len(expr.Exprs)) {
-			if alt.Pos != nil {
-				isValid := true
-				lat := alt.Pos
-				for i, expr := range expr.Exprs {
-					exprTy := expr.GetDeterminedType()
-					ty := lat.MemberAtInnerVal(i)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.ListAlternativeAllowsMembers(tc, alt, members) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 
@@ -749,13 +736,7 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 		}
 		for _, f := range expr.Fields {
 			kv := f.(*ast.BLangMappingKeyValueField)
-			var keyName string
-			switch keyExpr := kv.Key.Expr.(type) {
-			case *ast.BLangLiteral:
-				keyName = keyExpr.GetOriginalValue()
-			case ast.BNodeWithSymbol:
-				keyName = a.ctx().SymbolName(keyExpr.Symbol())
-			}
+			keyName := recordKeyName(kv.Key)
 			requiredType := mappingAtomicType.FieldInnerVal(keyName)
 			if !analyzeExpression(a, kv.ValueExpr, requiredType) {
 				return false
@@ -788,34 +769,16 @@ func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructo
 	alts := semtypes.MappingAlternatives(tc, expectedType)
 	var validAlts []semtypes.MappingAlternative
 
-	fieldNames := make([]string, len(expr.Fields))
+	fields := make([]semtypes.MappingFieldInfo, len(expr.Fields))
 	for i, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		fieldNames[i] = recordKeyName(kv.Key)
+		fields[i] = semtypes.MappingFieldInfo{Name: recordKeyName(kv.Key), Ty: kv.ValueExpr.GetDeterminedType()}
 	}
-	sort.Strings(fieldNames)
+	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
 
 	for _, alt := range alts {
-		if semtypes.MappingAlternativeAllowsFields(alt, fieldNames) {
-			if alt.Pos != nil {
-				isValid := true
-				mat := alt.Pos
-				for _, f := range expr.Fields {
-					kv := f.(*ast.BLangMappingKeyValueField)
-					keyName := recordKeyName(kv.Key)
-					exprTy := kv.ValueExpr.GetDeterminedType()
-					ty := mat.FieldInnerVal(keyName)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.MappingAlternativeAllowsFields(tc, alt, fields) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 	if len(validAlts) == 0 {
@@ -969,14 +932,16 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 		if !analyzeShiftExpr(a, binaryExpr, lhsTy, rhsTy, expectedType) {
 			return false
 		}
+	} else if isLogicalExpression(binaryExpr) {
+		if !semtypes.IsSubtypeSimple(lhsTy, semtypes.BOOLEAN) || !semtypes.IsSubtypeSimple(rhsTy, semtypes.BOOLEAN) {
+			a.semanticErr(fmt.Sprintf("expect boolean types for %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())
+			return false
+		}
 	}
-
 	// for nil lifting expression we do semantic analysis as part of type resolver
 	// Validate the resolved result type against expected type
 	return validateResolvedType(a, binaryExpr, expectedType)
 }
-
-var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
 
 func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) bool {
 	ctx := a.tyCtx()
@@ -1130,8 +1095,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return a
 	case *ast.BLangExpressionStmt:
-		res := analyzeExpression(a, n.Expr, &semtypes.NIL)
-		if !res {
+		if !analyzeExpression(a, n.Expr, nil) {
+			return nil
+		}
+		exprType := n.Expr.GetDeterminedType()
+		if !semtypes.IsSubtype(a.tyCtx(), exprType, &semtypes.NIL) {
+			a.semanticErr("expression value must be assigned", n.Expr.GetPosition())
 			return nil
 		}
 		return a
@@ -1144,6 +1113,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		if !returnFound(a, n) {
 			return nil
 		}
+		return nil
+	case *ast.BLangPanic:
+		analyzeExpression(a, n.Expr, &semtypes.ERROR)
 		return nil
 	default:
 		return a

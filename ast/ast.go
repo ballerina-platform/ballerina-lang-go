@@ -601,7 +601,7 @@ func (this *BLangAnnotationAttachment) GetKind() model.NodeKind {
 	return model.NodeKind_ANNOTATION_ATTACHMENT
 }
 
-func (this *BLangAnnotationAttachment) GetPackgeAlias() model.IdentifierNode {
+func (this *BLangAnnotationAttachment) GetPackageAlias() model.IdentifierNode {
 	return this.PkgAlias
 }
 
@@ -1587,6 +1587,14 @@ func (this *BLangTypeDefinition) SetPrecedence(precedence int) {
 
 func (this *BLangTypeDefinition) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_DEFINITION
+}
+
+func (this *BLangTypeDefinition) GetCycleDepth() int {
+	return this.CycleDepth
+}
+
+func (this *BLangTypeDefinition) SetCycleDepth(depth int) {
+	this.CycleDepth = depth
 }
 
 func (this *BLangXMLNS) GetNamespaceURI() model.ExpressionNode {

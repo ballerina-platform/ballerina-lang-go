@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: expect numeric type for -
   --> negate-e.bal:29:12

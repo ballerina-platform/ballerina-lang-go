@@ -19,10 +19,10 @@
 import ballerina/io;
 
 public function main() {
-    printBranch(true, true); // @output 0
-    printBranch(true, false); // @output 1
-    printBranch(false, true); // @output 2
-    printBranch(false,false); // @output 3
+    printBranch(true, true);
+    printBranch(true, false);
+    printBranch(false, true);
+    printBranch(false,false);
 }
 
 function printBranch(boolean x, boolean y) {

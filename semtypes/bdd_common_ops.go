@@ -33,8 +33,7 @@ type bddOpMemo struct {
 	DiffMemo         map[bddOpMemoKey]Bdd
 }
 
-type BddCommonOpsBase struct {
-}
+type BddCommonOpsBase struct{}
 
 type BddCommonOpsMethods struct {
 	Self BddCommonOps
@@ -68,14 +67,14 @@ func bddUnionInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return b1
 	}
 
-	if allOrNothing1, ok := b1.(BddAllOrNothing); ok {
+	if allOrNothing1, ok := b1.(*BddAllOrNothing); ok {
 		if allOrNothing1.IsAll() {
 			return BddAll()
 		}
 		return b2
 	}
 
-	if allOrNothing2, ok := b2.(BddAllOrNothing); ok {
+	if allOrNothing2, ok := b2.(*BddAllOrNothing); ok {
 		if allOrNothing2.IsAll() {
 			return BddAll()
 		}
@@ -117,14 +116,14 @@ func bddIntersectInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return b1
 	}
 
-	if allOrNothing1, ok := b1.(BddAllOrNothing); ok {
+	if allOrNothing1, ok := b1.(*BddAllOrNothing); ok {
 		if allOrNothing1.IsAll() {
 			return b2
 		}
 		return BddNothing()
 	}
 
-	if allOrNothing2, ok := b2.(BddAllOrNothing); ok {
+	if allOrNothing2, ok := b2.(*BddAllOrNothing); ok {
 		if allOrNothing2.IsAll() {
 			return b1
 		}
@@ -166,14 +165,14 @@ func bddDiffInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return BddNothing()
 	}
 
-	if allOrNothing2, ok := b2.(BddAllOrNothing); ok {
+	if allOrNothing2, ok := b2.(*BddAllOrNothing); ok {
 		if allOrNothing2.IsAll() {
 			return BddNothing()
 		}
 		return b1
 	}
 
-	if allOrNothing1, ok := b1.(BddAllOrNothing); ok {
+	if allOrNothing1, ok := b1.(*BddAllOrNothing); ok {
 		if allOrNothing1.IsAll() {
 			return bddComplement(b2)
 		}
@@ -194,7 +193,7 @@ func bddDiffInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 
 func BddComplement(b Bdd) Bdd {
 	// migrated from BddCommonOps.java:190:5
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return allOrNothing.Complement()
 	}
 	return BddNodeComplement(b.(BddNode))
@@ -220,7 +219,7 @@ func BddNodeComplement(b BddNode) Bdd {
 
 func BddCreate(atom Atom, left Bdd, middle Bdd, right Bdd) Bdd {
 	// migrated from BddCommonOps.java:226:5
-	if allOrNothing, ok := middle.(BddAllOrNothing); ok && allOrNothing.IsAll() {
+	if allOrNothing, ok := middle.(*BddAllOrNothing); ok && allOrNothing.IsAll() {
 		return middle
 	}
 	if left == right {
@@ -247,7 +246,7 @@ func AtomCmp(a1 Atom, a2 Atom) int {
 
 func (this *BddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	// migrated from BddCommonOps.java:254:5
-	if allOrNothing, ok := b.(BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return "1"
 		}

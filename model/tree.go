@@ -433,7 +433,7 @@ const (
 	OperatorKind_UNDEFINED                    OperatorKind = "UNDEF"
 )
 
-func OperatorKind_valueFrom(opValue string) OperatorKind {
+func OperatorKindValueFrom(opValue string) OperatorKind {
 	switch opValue {
 	case "+":
 		return OperatorKind_ADD
@@ -693,10 +693,14 @@ type TypeDefinition interface {
 	DocumentableNode
 	TopLevelNode
 	OrderedNode
+	NodeWithSymbol
 	GetName() IdentifierNode
 	SetName(name IdentifierNode)
 	GetTypeData() TypeData
 	SetTypeData(typeData TypeData)
+	SetDeterminedType(ty semtypes.SemType)
+	GetCycleDepth() int
+	SetCycleDepth(depth int)
 }
 
 type TypeData struct {
@@ -753,6 +757,12 @@ type FiniteTypeNode interface {
 }
 
 type UnionTypeNode interface {
+	ReferenceTypeNode
+	Lhs() *TypeData
+	Rhs() *TypeData
+}
+
+type IntersectionTypeNode interface {
 	ReferenceTypeNode
 	Lhs() *TypeData
 	Rhs() *TypeData
@@ -1043,6 +1053,11 @@ type ReturnNode interface {
 	SetExpression(expression ExpressionNode)
 }
 
+type PanicNode interface {
+	StatementNode
+	GetExpression() ExpressionNode
+}
+
 type DoNode interface {
 	StatementNode
 	GetBody() BlockStatementNode
@@ -1214,7 +1229,7 @@ type IdentifierNode interface {
 }
 
 type AnnotationAttachmentNode interface {
-	GetPackgeAlias() IdentifierNode
+	GetPackageAlias() IdentifierNode
 	SetPackageAlias(pkgAlias IdentifierNode)
 	GetAnnotationName() IdentifierNode
 	SetAnnotationName(name IdentifierNode)

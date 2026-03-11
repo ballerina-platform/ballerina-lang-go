@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: unreachable code
+  --> 19-e.bal:19:9
+   |
+19 |         return; // @error
+   |         ^^^^^^^
+

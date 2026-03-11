@@ -19,9 +19,9 @@ import ballerina/io;
 public function main() {
     any[] v = [17, 42, -11];
     int i = 0;
-    io:println(v[i]); // @output 17
+    io:println(v[i]);
     i = 1;
-    io:println(v[i]); // @output 42
+    io:println(v[i]);
     i = 2;
-    io:println(v[i]); // @output -11
+    io:println(v[i]);
 }

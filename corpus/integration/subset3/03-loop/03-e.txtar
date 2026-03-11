@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SEMANTIC_ERROR]: Unknown symbol: i
   --> 03-e.bal:27:16

@@ -14,18 +14,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semantics
+package semantics_test
 
 import (
 	"flag"
 	"testing"
 
-	"ballerina-lang-go/ast"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/parser"
+	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -36,7 +35,7 @@ var updateCFG = flag.Bool("update", false, "update expected CFG text files")
 func TestCFGGeneration(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.CFG)
+	testPairs := test_util.GetValidAndPanicTests(t, test_util.CFG)
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
@@ -55,74 +54,28 @@ func testCFGGeneration(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
-	// Create debug context with channel
-	debugCtx := &debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	// Drain channel in background to prevent blocking
-	go func() {
-		for range debugCtx.Channel {
-			// Discard debug messages
-		}
-	}()
-	defer close(debugCtx.Channel)
-
-	// Create compiler context
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	cx := context.NewCompilerContext(env)
-
-	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseCFG, testPair.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testPair.InputPath, err)
 		return
 	}
 
-	// Step 2: Get compilation unit (AST)
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testPair.InputPath)
-		return
-	}
-
-	// Step 3: Convert to AST package
-	pkg := ast.ToPackage(compilationUnit)
-
-	// Step 4: Resolve symbols
-	importedSymbols := ResolveImports(cx, pkg, GetImplicitImports(cx))
-	ResolveSymbols(cx, pkg, importedSymbols)
-
-	// Step 5: Resolve types
-	typeResolver := NewTypeResolver(cx, importedSymbols)
-	typeResolver.ResolveTypes(cx, pkg)
-
-	// Step 6: Create CFG
-	cfg := CreateControlFlowGraph(cx, pkg)
-
-	// Validate result
+	cfg := result.CFG
 	if cfg == nil {
 		t.Errorf("CFG is nil for %s", testPair.InputPath)
 		return
 	}
 
 	// Validate backedgeParents is a subset of parents for every block
-	for symRef, fcfg := range cfg.funcCfgs {
-		for _, bb := range fcfg.bbs {
-			parentSet := make(map[int]bool, len(bb.parents))
-			for _, p := range bb.parents {
-				parentSet[p] = true
-			}
-			for _, p := range bb.backedgeParents {
-				if !parentSet[p] {
-					t.Errorf("CFG invariant violated in %s: function %v, block %d: backedgeParent %d is not in parents %v",
-						testPair.InputPath, symRef, bb.id, p, bb.parents)
-				}
-			}
-		}
+	for _, err := range cfg.ValidateInvariants() {
+		t.Errorf("CFG invariant violated in %s: function %v, block %d: backedgeParent %d is not in parents %v",
+			testPair.InputPath, err.FuncRef, err.BlockID, err.BackedgeParent, err.Parents)
 	}
 
 	// Pretty print CFG output
-	prettyPrinter := NewCFGPrettyPrinter(cx)
+	prettyPrinter := semantics.NewCFGPrettyPrinter(cx)
 	actualCFG := prettyPrinter.Print(cfg)
 
 	// If update flag is set, update expected file

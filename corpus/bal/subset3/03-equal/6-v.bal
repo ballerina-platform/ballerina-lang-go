@@ -18,10 +18,10 @@
 import ballerina/io;
 
 public function main() {
-    io:println(true > false); // @output true
-    io:println(true >= true); // @output true
-    io:println(false < true); // @output true
-    io:println(false <= false); // @output true
-    io:println(true > true); // @output false
-    io:println(false >= true); // @output false
+    io:println(true > false);
+    io:println(true >= true);
+    io:println(false < true);
+    io:println(false <= false);
+    io:println(true > true);
+    io:println(false >= true);
 }

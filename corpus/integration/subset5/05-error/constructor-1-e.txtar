@@ -1,5 +1,4 @@
 -- stdout --
-
 -- stderr --
 error[SYNTAX_ERROR]: invalid error constructor
   --> constructor-1-e.bal:25:12

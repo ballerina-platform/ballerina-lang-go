@@ -1,20 +1,18 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
 package projects
 
@@ -233,12 +231,12 @@ func (b BuildOptions) TraceRecovery() bool {
 // AcceptTheirs merges the given build options by favoring theirs if there are conflicts.
 func (b BuildOptions) AcceptTheirs(theirs BuildOptions) BuildOptions {
 	merged := BuildOptions{
-		skipTests:                 acceptoptionalBool(b.skipTests, theirs.skipTests),
-		codeCoverage:              acceptoptionalBool(b.codeCoverage, theirs.codeCoverage),
-		testReport:                acceptoptionalBool(b.testReport, theirs.testReport),
-		dumpBuildTime:             acceptoptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
-		exportComponentModel:      acceptoptionalBool(b.exportComponentModel, theirs.exportComponentModel),
-		showDependencyDiagnostics: acceptoptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
+		skipTests:                 acceptOptionalBool(b.skipTests, theirs.skipTests),
+		codeCoverage:              acceptOptionalBool(b.codeCoverage, theirs.codeCoverage),
+		testReport:                acceptOptionalBool(b.testReport, theirs.testReport),
+		dumpBuildTime:             acceptOptionalBool(b.dumpBuildTime, theirs.dumpBuildTime),
+		exportComponentModel:      acceptOptionalBool(b.exportComponentModel, theirs.exportComponentModel),
+		showDependencyDiagnostics: acceptOptionalBool(b.showDependencyDiagnostics, theirs.showDependencyDiagnostics),
 	}
 
 	if theirs.targetDir != "" {

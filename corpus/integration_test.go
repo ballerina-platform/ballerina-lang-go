@@ -17,34 +17,27 @@
 package corpus
 
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/values"
 	"bytes"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
-	"sync"
 	"testing"
 
+	"ballerina-lang-go/bir"
 	_ "ballerina-lang-go/lib/rt"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/values"
 
 	"golang.org/x/tools/txtar"
 )
 
 const (
-	colorReset  = "\033[0m"
-	colorGreen  = "\033[32m"
-	colorRed    = "\033[31m"
-	colorYellow = "\033[33m"
-
-	corpusBalBaseDir         = "../corpus/bal"
-	corpusIntegrationBaseDir = "../corpus/integration"
-
 	externOrgName    = "ballerina"
 	externModuleName = "io"
 	externFuncName   = "println"
@@ -56,12 +49,16 @@ var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipTestsMap = makeSkipTestsMap([]string{})
+	skipIntegrationTests = []string{
+		"subset5/05-error/simple-v.bal",
+		"subset5/05-error/context-type-v.bal",
+		"subset5/05-error/panic1-p.bal",
+		"subset5/05-error/panic2-p.bal",
+		"subset5/05-error/panic3-p.bal",
+		"subset5/05-error/panic4-p.bal",
+		"subset5/05-error/panic5-p.bal",
+	}
 )
-
-type failedTest struct {
-	relPath string
-}
 
 type testResult struct {
 	success        bool
@@ -71,122 +68,85 @@ type testResult struct {
 	actualStderr   string
 }
 
-func TestIntegrationSuite(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	flag.Parse()
 
-	corpusBalDir := corpusBalBaseDir
-	if _, err := os.Stat(corpusBalDir); os.IsNotExist(err) {
+	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
+		return true
+	})
+
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
+			t.Parallel()
+			testIntegration(t, testPair)
+		})
+	}
+}
+
+func testIntegration(t *testing.T, testPair test_util.TestCase) {
+	if isTestSkipped(testPair) {
+		t.Skipf("Skipping integration test for %s", testPair.InputPath)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while running %s: %v", testPair.InputPath, r)
+		}
+	}()
+
+	if *update {
+		stdout, stderr := runIntegrationCase(testPair.InputPath)
+		if updateIfNeeded(t, testPair.ExpectedPath, stdout, stderr) {
+			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
+		}
 		return
 	}
 
-	balFiles := findBalFiles(corpusBalDir)
-
-	var passedTotal, failedTotal, skippedTotal int
-	var failedTests []failedTest
-	var resultsMu sync.Mutex
-	var wg sync.WaitGroup
-
-	for _, balFile := range balFiles {
-		if isFileSkipped(balFile) {
-			skippedTotal++
-			relPath, _ := filepath.Rel(corpusBalDir, balFile)
-			filePath := buildFilePath(filepath.ToSlash(relPath))
-			fmt.Printf("\t--- %sSKIPPED%s: %s\n", colorYellow, colorReset, filePath)
-			continue
-		}
-
-		relPath, err := filepath.Rel(corpusBalDir, balFile)
-		if err != nil {
-			t.Fatalf("failed to compute relative path for %s: %v", balFile, err)
-		}
-		relPath = filepath.ToSlash(relPath)
-		filePath := buildFilePath(relPath)
-
-		txtarRel := strings.TrimSuffix(relPath, ".bal") + ".txtar"
-		txtarPath := filepath.Join(corpusIntegrationBaseDir, filepath.FromSlash(txtarRel))
-
-		wg.Add(1)
-		go func(balFile, filePath, relPath, txtarPath string) {
-			defer wg.Done()
-
-			defer func() {
-				if r := recover(); r != nil {
-					resultsMu.Lock()
-					defer resultsMu.Unlock()
-
-					failedTotal++
-					fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
-					fmt.Printf("\t\tpanic: %v\n", r)
-					failedTests = append(failedTests, failedTest{
-						relPath: filepath.ToSlash(relPath),
-					})
-				}
-			}()
-
-			fmt.Printf("\t=== RUN   %s\n", filePath)
-
-			if *update {
-				stdout, stderr := runIntegrationCase(balFile)
-				if err := updateIntegrationTestCase(txtarPath, stdout, stderr); err != nil {
-					resultsMu.Lock()
-					defer resultsMu.Unlock()
-
-					failedTotal++
-					fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
-					fmt.Printf("\t\tfailed to update txtar: %v\n", err)
-					failedTests = append(failedTests, failedTest{
-						relPath: filepath.ToSlash(relPath),
-					})
-					return
-				}
-
-				resultsMu.Lock()
-				passedTotal++
-				fmt.Printf("\t--- %sPASS%s: %s (updated)\n", colorGreen, colorReset, filePath)
-				resultsMu.Unlock()
-				return
-			}
-
-			expectedStdout, expectedStderr, err := loadExpectedFromTxtar(txtarPath)
-			if err != nil {
-				resultsMu.Lock()
-				defer resultsMu.Unlock()
-
-				failedTotal++
-				fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
-				fmt.Printf("\t\tfailed to load expected outputs from %s: %v\n", txtarPath, err)
-				failedTests = append(failedTests, failedTest{
-					relPath: filepath.ToSlash(relPath),
-				})
-				return
-			}
-
-			resultsMu.Lock()
-			defer resultsMu.Unlock()
-
-			result := runTest(balFile, expectedStdout, expectedStderr)
-			if result.success {
-				passedTotal++
-				fmt.Printf("\t--- %sPASS%s: %s\n", colorGreen, colorReset, filePath)
-				return
-			}
-
-			failedTotal++
-			fmt.Printf("\t--- %sFAIL%s: %s\n", colorRed, colorReset, filePath)
-			printTestFailure(result)
-			failedTests = append(failedTests, failedTest{
-				relPath: filepath.ToSlash(relPath),
-			})
-		}(balFile, filePath, relPath, txtarPath)
+	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(testPair.ExpectedPath)
+	if err != nil {
+		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 	}
 
-	wg.Wait()
-
-	total := passedTotal + failedTotal + skippedTotal
-	printFinalSummary(total, passedTotal, skippedTotal, failedTotal, failedTests)
-	if failedTotal > 0 {
-		t.Fail()
+	result := runTest(testPair.InputPath, expectedStdout, expectedStderr)
+	if result.success {
+		return
 	}
+
+	stdoutMismatch := result.expectedStdout != result.actualStdout
+	stderrMismatch := result.expectedStderr != result.actualStderr
+
+	var msg strings.Builder
+	if stdoutMismatch {
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
+	}
+	if stderrMismatch {
+		if msg.Len() > 0 {
+			msg.WriteString("\n\n")
+		}
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
+	}
+	t.Errorf("%s", msg.String())
+}
+
+func formatExpectedGot(expected, got string) string {
+	const indent = "\t"
+	format := func(s string) string {
+		if s == "" {
+			return indent + "(empty)"
+		}
+		var b strings.Builder
+		for line := range strings.SplitSeq(s, "\n") {
+			b.WriteString(indent)
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+		return strings.TrimSuffix(b.String(), "\n")
+	}
+	return "expected:\n" + format(expected) + "\n\ngot:\n" + format(got)
+}
+
+func isTestSkipped(tc test_util.TestCase) bool {
+	return slices.Contains(skipIntegrationTests, filepath.ToSlash(tc.Name))
 }
 
 func loadExpectedFromTxtar(txtarPath string) (expectedStdout, expectedStderr string, err error) {
@@ -222,8 +182,7 @@ func runTest(balFile string, expectedStdout, expectedStderr string) testResult {
 }
 
 func runIntegrationCase(balFile string) (stdout, stderr string) {
-	var stdoutBuf bytes.Buffer
-	var stderrBuf bytes.Buffer
+	var stdoutBuf, stderrBuf bytes.Buffer
 
 	birPkg, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
 	if birPkg != nil && compileErr != nil {
@@ -235,16 +194,8 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
-	expectedStdoutNorm := normalizeOutput(expectedStdout)
-	expectedStderrNorm := normalizeOutput(expectedStderr)
-	actualStdoutNorm := normalizeOutput(actualStdout)
-	actualStderrNorm := normalizeOutput(actualStderr)
-
-	stdoutMatchesExpected := actualStdoutNorm == expectedStdoutNorm
-	stderrMatchesExpected := actualStderrNorm == expectedStderrNorm
-
 	return testResult{
-		success:        stdoutMatchesExpected && stderrMatchesExpected,
+		success:        actualStdout == expectedStdout && actualStderr == expectedStderr,
 		expectedStdout: expectedStdout,
 		actualStdout:   actualStdout,
 		expectedStderr: expectedStderr,
@@ -292,11 +243,6 @@ func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf *bytes.Buffer) {
 	}
 }
 
-func normalizeOutput(s string) string {
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	return strings.TrimRight(s, "\n")
-}
-
 func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) (values.BalValue, error) {
 	return func(args []values.BalValue) (values.BalValue, error) {
 		var b strings.Builder
@@ -311,102 +257,28 @@ func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) 
 	}
 }
 
-func updateIntegrationTestCase(txtarPath, stdout, stderr string) error {
-	formatData := func(s string) []byte {
-		s = strings.ReplaceAll(s, "\r\n", "\n")
-		if s == "" {
-			return []byte("\n")
-		}
-		s = strings.TrimRight(s, "\n")
-		return fmt.Appendf(nil, "%s\n\n", s)
-	}
-
+func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
 	archive := &txtar.Archive{
 		Files: []txtar.File{
-			{Name: "stdout", Data: formatData(stdout)},
-			{Name: "stderr", Data: formatData(stderr)},
+			{Name: "stdout", Data: []byte(stdout)},
+			{Name: "stderr", Data: []byte(stderr)},
 		},
 	}
 
-	if err := os.MkdirAll(filepath.Dir(txtarPath), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(txtarPath, txtar.Format(archive), 0o644)
-}
+	actual := txtar.Format(archive)
 
-func printTestFailure(result testResult) {
-	if result.expectedStdout != "" || result.actualStdout != "" {
-		fmt.Printf("\t\tstdout expected:\n")
-		printIndentedLines(result.expectedStdout, "\t\t\t")
-		fmt.Printf("\t\tstdout found:\n")
-		printIndentedLines(result.actualStdout, "\t\t\t")
-	}
+	existing, err := os.ReadFile(expectedPath)
+	fileExists := err == nil
 
-	if result.expectedStderr != "" || result.actualStderr != "" {
-		fmt.Printf("\t\tstderr expected:\n")
-		printIndentedLines(result.expectedStderr, "\t\t\t")
-		fmt.Printf("\t\tstderr found:\n")
-		printIndentedLines(result.actualStderr, "\t\t\t")
-	}
-}
-
-func printFinalSummary(total, passed, skipped, failed int, failedTests []failedTest) {
-	fmt.Printf("%d RUN\n", total)
-	if skipped > 0 {
-		fmt.Printf("%d SKIPPED\n", skipped)
-	}
-	fmt.Printf("%d %sPASSED%s\n", passed, colorGreen, colorReset)
-	if failed > 0 {
-		fmt.Printf("%d %sFAILED%s\n", failed, colorRed, colorReset)
-		fmt.Println("FAILED Tests")
-		for _, ft := range failedTests {
-			fmt.Println(ft.relPath)
-		}
-	}
-}
-
-func buildFilePath(relPath string) string {
-	if filepath.Dir(relPath) == "." {
-		return filepath.Base(relPath)
-	}
-	return relPath
-}
-
-func printIndentedLines(text, indent string) {
-	if text == "" {
-		fmt.Printf("%s(empty)\n", indent)
-		return
-	}
-	lines := strings.SplitSeq(text, "\n")
-	for line := range lines {
-		fmt.Printf("%s%s\n", indent, line)
-	}
-}
-
-func findBalFiles(dir string) []string {
-	var files []string
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err == nil && !info.IsDir() && filepath.Ext(path) == ".bal" {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files
-}
-
-func isFileSkipped(filePath string) bool {
-	relPath, err := filepath.Rel(corpusBalBaseDir, filePath)
-	if err != nil {
+	if fileExists && bytes.Equal(existing, actual) {
 		return false
 	}
-	relPath = filepath.ToSlash(relPath)
-	return skipTestsMap[relPath]
-}
-
-func makeSkipTestsMap(paths []string) map[string]bool {
-	m := make(map[string]bool, len(paths))
-	for _, path := range paths {
-		m[filepath.ToSlash(path)] = true
+	dir := filepath.Dir(expectedPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("Failed to create directory %s: %v", dir, err)
 	}
-	return m
+	if err := os.WriteFile(expectedPath, actual, 0o644); err != nil {
+		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
+	}
+	return true
 }

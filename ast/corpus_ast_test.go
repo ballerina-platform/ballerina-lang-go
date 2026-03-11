@@ -14,19 +14,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package ast
+package ast_test
 
 import (
 	"flag"
 	"fmt"
 	"testing"
 
-	debugcommon "ballerina-lang-go/common"
+	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -34,7 +34,7 @@ import (
 func TestASTGeneration(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.AST)
+	testPairs := test_util.GetValidAndPanicTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
@@ -51,21 +51,15 @@ func testASTGeneration(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	cx := context.NewCompilerContext(env)
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseAST, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
+		return
 	}
-	compilationUnit := GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
-	}
-	prettyPrinter := PrettyPrinter{}
-	actualAST := prettyPrinter.Print(compilationUnit)
+	prettyPrinter := ast.PrettyPrinter{}
+	actualAST := prettyPrinter.Print(result.CompilationUnit)
 
 	// If update flag is set, update expected file
 	if *update {
@@ -101,7 +95,7 @@ type walkTestVisitor struct {
 	nodeCount    int
 }
 
-func (v *walkTestVisitor) Visit(node BLangNode) Visitor {
+func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
@@ -111,14 +105,14 @@ func (v *walkTestVisitor) Visit(node BLangNode) Visitor {
 	return v
 }
 
-func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) Visitor {
+func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return v
 }
 
 func TestWalkTraversal(t *testing.T) {
 	flag.Parse()
 
-	testPairs := test_util.GetValidTests(t, test_util.AST)
+	testPairs := test_util.GetValidAndPanicTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
@@ -135,24 +129,16 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	debugCtx := debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	cx := context.NewCompilerContext(env)
-	syntaxTree, err := parser.GetSyntaxTree(cx, &debugCtx, testCase.InputPath)
+	result, err := testphases.RunPipeline(cx, testphases.PhaseAST, testCase.InputPath)
 	if err != nil {
-		t.Errorf("error getting syntax tree for %s: %v", testCase.InputPath, err)
-		return
-	}
-	compilationUnit := GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testCase.InputPath)
+		t.Errorf("pipeline failed for %s: %v", testCase.InputPath, err)
 		return
 	}
 
 	visitor := &walkTestVisitor{visitedTypes: make(map[string]int)}
-	Walk(visitor, compilationUnit)
+	ast.Walk(visitor, result.CompilationUnit)
 
 	if visitor.nodeCount == 0 {
 		t.Errorf("Walk visited 0 nodes for %s", testCase.InputPath)

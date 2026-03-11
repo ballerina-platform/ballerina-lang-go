@@ -102,6 +102,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printCompoundAssignment(t)
 	case *BLangUnionTypeNode:
 		p.printUnionTypeNode(t)
+	case *BLangIntersectionTypeNode:
+		p.printIntersectionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
 	case *BLangConstrainedType:
@@ -128,6 +130,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
 		p.printErrorConstructorExpr(t)
+	case *BLangPanic:
+		p.printPanic(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -372,6 +376,15 @@ func (p *PrettyPrinter) printReturn(node *BLangReturn) {
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printPanic(node *BLangPanic) {
+	p.startNode()
+	p.printString("panic")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -728,6 +741,17 @@ func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
 func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
 	p.startNode()
 	p.printString("union-type")
+	p.indentLevel++
+	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Intersection type node printer
+func (p *PrettyPrinter) printIntersectionTypeNode(node *BLangIntersectionTypeNode) {
+	p.startNode()
+	p.printString("intersection-type")
 	p.indentLevel++
 	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
 	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))

@@ -21,12 +21,12 @@ public function main() {
     decimal d = 123;
     decimal d2 = 1.5;
     float f2 = 1.5;
-    io:println(f); // @output 123.0
-    io:println(d); // @output 123
-    io:println(f2); // @output 1.5
-    io:println(d2); // @output 1.5
+    io:println(f);
+    io:println(d);
+    io:println(f2);
+    io:println(d2);
     [int, float, decimal] a = [1, 1, 1];
-    io:println(a); // @output [1,1.0,1]
+    io:println(a);
     decimal dd = 100d;
-    io:println(dd); // @output 100
+    io:println(dd);
 }

@@ -345,6 +345,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 
+	case *BLangPanic:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+
 	case *BLangBreak:
 		// Leaf node
 
@@ -566,6 +571,10 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	case *BLangUnionTypeNode:
+		WalkTypeData(v, &node.lhs)
+		WalkTypeData(v, &node.rhs)
+
+	case *BLangIntersectionTypeNode:
 		WalkTypeData(v, &node.lhs)
 		WalkTypeData(v, &node.rhs)
 

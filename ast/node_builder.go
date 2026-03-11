@@ -1525,7 +1525,7 @@ func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStm
 	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
 	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
 	BLangNode(bLCompAssignment).SetPosition(getPosition(compoundAssignmentStmtNode))
-	bLCompAssignment.OpKind = model.OperatorKind_valueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
+	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
 	return bLCompAssignment
 }
 
@@ -1748,7 +1748,10 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 }
 
 func (n *NodeBuilder) TransformPanicStatement(panicStatementNode *tree.PanicStatementNode) BLangNode {
-	panic("TransformPanicStatement unimplemented")
+	bLPanic := &BLangPanic{}
+	bLPanic.pos = getPosition(panicStatementNode)
+	bLPanic.Expr = n.createExpression(panicStatementNode.Expression())
+	return bLPanic
 }
 
 func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnStatementNode) BLangNode {
@@ -1819,7 +1822,7 @@ func (n *NodeBuilder) TransformBinaryExpression(binaryExpressionNode *tree.Binar
 	if binaryExpressionNode.Operator() == nil {
 		operator = model.OperatorKind_UNDEFINED
 	} else {
-		operator = model.OperatorKind_valueFrom(binaryExpressionNode.Operator().Text())
+		operator = model.OperatorKindValueFrom(binaryExpressionNode.Operator().Text())
 	}
 	bLBinaryExpr.OpKind = operator
 	return &bLBinaryExpr
@@ -1959,7 +1962,7 @@ func (n *NodeBuilder) TransformTypeofExpression(typeofExpressionNode *tree.Typeo
 
 func (n *NodeBuilder) TransformUnaryExpression(unaryExpressionNode *tree.UnaryExpressionNode) BLangNode {
 	pos := getPosition(unaryExpressionNode)
-	operator := model.OperatorKind_valueFrom(unaryExpressionNode.UnaryOperator().Text())
+	operator := model.OperatorKindValueFrom(unaryExpressionNode.UnaryOperator().Text())
 	expr := n.createExpression(unaryExpressionNode.Expression())
 	return createBLangUnaryExpr(pos, operator, expr)
 }
@@ -2552,7 +2555,7 @@ func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree
 }
 
 func (n *NodeBuilder) TransformParenthesisedTypeDescriptor(parenthesisedTypeDescriptorNode *tree.ParenthesisedTypeDescriptorNode) BLangNode {
-	panic("TransformParenthesisedTypeDescriptor unimplemented")
+	return n.createTypeNode(parenthesisedTypeDescriptorNode.Typedesc()).(BLangNode)
 }
 
 func (n *NodeBuilder) TransformExplicitNewExpression(explicitNewExpressionNode *tree.ExplicitNewExpressionNode) BLangNode {
@@ -2620,7 +2623,18 @@ func (n *NodeBuilder) TransformQueryAction(queryActionNode *tree.QueryActionNode
 }
 
 func (n *NodeBuilder) TransformIntersectionTypeDescriptor(intersectionTypeDescriptorNode *tree.IntersectionTypeDescriptorNode) BLangNode {
-	panic("TransformIntersectionTypeDescriptor unimplemented")
+	lhs := intersectionTypeDescriptorNode.LeftTypeDesc()
+	rhs := intersectionTypeDescriptorNode.RightTypeDesc()
+	bLIntersectionType := &BLangIntersectionTypeNode{
+		lhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(lhs),
+		},
+		rhs: model.TypeData{
+			TypeDescriptor: n.createTypeNode(rhs),
+		},
+	}
+	bLIntersectionType.pos = getPosition(intersectionTypeDescriptorNode)
+	return bLIntersectionType
 }
 
 func (n *NodeBuilder) TransformImplicitAnonymousFunctionParameters(implicitAnonymousFunctionParameters *tree.ImplicitAnonymousFunctionParameters) BLangNode {

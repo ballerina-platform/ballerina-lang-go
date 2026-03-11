@@ -20,11 +20,11 @@ import ballerina/io;
 
 public function main() {
     boolean b = false;
-    printBoolean(b); // @output 0
+    printBoolean(b);
     b = true;
-    printBoolean(b); // @output 1
+    printBoolean(b);
     b = false;
-    printBoolean(b); // @output 0
+    printBoolean(b);
 }
 
 function printBoolean(boolean b) {

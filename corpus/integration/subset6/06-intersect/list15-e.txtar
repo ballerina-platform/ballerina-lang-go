@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT, STRING)), got ((), (STRING))
+  --> list15-e.bal:24:12
+   |
+24 |     a[2] = "x"; // @error
+   |            ^^^
+

@@ -1,0 +1,14 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
+  --> never2-e.bal:20:14
+   |
+20 | function foo(int&string arg) // @error
+   |              ^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
+  --> never2-e.bal:20:14
+   |
+20 | function foo(int&string arg) // @error
+   |              ^^^^^^^^^^
+

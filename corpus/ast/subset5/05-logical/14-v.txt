@@ -1,0 +1,69 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation f (
+          (literal a))))
+      (expression-stmt
+        (invocation f (
+          (literal ))))
+      (expression-stmt
+        (invocation f (
+          (literal 2))))))
+  (function f (
+    (variable x (type
+      (union-type
+        (value-type int)
+        (value-type string))))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (binary-expr &&
+          (type-test-expr is
+            (simple-var-ref x)
+            (value-type string))
+          (invocation isEmpty (
+            (simple-var-ref x))))
+        (block-stmt
+          (var-def
+            (variable unused1 (type
+              (value-type string)) (expr
+              (simple-var-ref x))))
+          (expression-stmt
+            (invocation io println (
+              (literal empty str))))
+          (return
+            (literal <nil>))) (
+        (if
+          (type-test-expr is
+            (simple-var-ref x)
+            (value-type int))
+          (block-stmt
+            (var-def
+              (variable unused2 (type
+                (value-type int)) (expr
+                (simple-var-ref x))))
+            (expression-stmt
+              (invocation io println (
+                (literal int))))
+            (return
+              (literal <nil>))) ())))
+      (var-def
+        (variable unused3 (type
+          (value-type string)) (expr
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (literal non-empty str))))))
+  (function isEmpty (
+    (variable s (type
+      (value-type string)))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr ==
+          (simple-var-ref s)
+          (literal ))))))

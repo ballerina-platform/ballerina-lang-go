@@ -25,10 +25,11 @@ import (
 type CompilerContext struct {
 	env         *CompilerEnvironment
 	diagnostics []diagnostics.Diagnostic
+	tyContext   semtypes.Context
 }
 
-func (this *CompilerContext) NewSymbolSpace(packageId model.PackageID) *model.SymbolSpace {
-	return this.env.NewSymbolSpace(packageId)
+func (this *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	return this.env.NewSymbolSpace(packageID)
 }
 
 func (this *CompilerContext) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
@@ -71,6 +72,14 @@ func (this *CompilerContext) SymbolIsPublic(symbol model.SymbolRef) bool {
 
 func (this *CompilerContext) SetSymbolType(symbol model.SymbolRef, ty semtypes.SemType) {
 	this.GetSymbol(symbol).SetType(ty)
+}
+
+func (this *CompilerContext) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
+	this.env.SetTypeDefinition(symbol, defn)
+}
+
+func (this *CompilerContext) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
+	return this.env.GetTypeDefinition(symbol)
 }
 
 func (this *CompilerContext) GetDefaultPackage() *model.PackageID {
@@ -121,13 +130,18 @@ func (this *CompilerContext) Diagnostics() []diagnostics.Diagnostic {
 
 func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 	return &CompilerContext{
-		env: env,
+		env:       env,
+		tyContext: semtypes.ContextFrom(env.typeEnv),
 	}
 }
 
 // GetTypeEnv returns the type environment for this context
 func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 	return this.env.GetTypeEnv()
+}
+
+func (this *CompilerContext) GetTypeCtx() semtypes.Context {
+	return this.tyContext
 }
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {

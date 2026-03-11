@@ -147,7 +147,7 @@ func FunctionParamListType(cx Context, fnTy SemType) SemType {
 }
 
 func functionParamListTypeInner(cx Context, accumTy SemType, bdd Bdd) SemType {
-	if allOrNothing, ok := bdd.(BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accumTy
 		}
@@ -182,7 +182,7 @@ func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemTy
 		return &NEVER
 	}
 	switch b := bdd.(type) {
-	case BddAllOrNothing:
+	case *BddAllOrNothing:
 		if b.IsAll() {
 			return accumReturn
 		}
