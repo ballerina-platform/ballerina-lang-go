@@ -162,38 +162,16 @@ func toInt(value any) int64 {
 func decimalToInt(v *big.Rat) int64 {
 	num := v.Num()
 	denom := v.Denom()
-	q := new(big.Int).Quo(num, denom)
-	r := new(big.Int).Rem(new(big.Int).Set(num), denom)
-	rAbs := new(big.Int).Abs(r)
-	rAbs.Mul(rAbs, big.NewInt(2))
-	cmp := rAbs.Cmp(denom)
-	isHalf := cmp == 0
-	roundUp := cmp > 0
-	if isHalf {
-		if q.Bit(0) == 0 {
-			roundUp = false
-		} else {
-			roundUp = true
-			if num.Sign() < 0 {
-				q.Sub(q, big.NewInt(1))
-			} else {
-				q.Add(q, big.NewInt(1))
-			}
-			if q.BitLen() > 63 {
-				panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
-			}
-			return q.Int64()
-		}
-	}
-	if roundUp {
+	q, r := new(big.Int).QuoRem(num, denom, new(big.Int))
+	if r.Sign() != 0 && new(big.Int).Mul(new(big.Int).Abs(r), big.NewInt(2)).Cmp(denom) >= 0 {
 		if num.Sign() >= 0 {
 			q.Add(q, big.NewInt(1))
 		} else {
 			q.Sub(q, big.NewInt(1))
 		}
 	}
-	if q.BitLen() > 63 {
-		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+	if !q.IsInt64() {
+		panic(fmt.Sprintf("cannot convert %v to int64: value out of range", v))
 	}
 	return q.Int64()
 }

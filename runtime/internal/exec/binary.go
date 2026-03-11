@@ -306,9 +306,15 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
 	boolCmp func(a, b bool) bool, nilEqualsNil bool) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	if op1 == nil || op2 == nil {
+		bothNil := op1 == nil && op2 == nil
+		frame.SetOperand(lhsOp, bothNil && nilEqualsNil)
+		return
+	}
+
 	switch v1 := op1.(type) {
 	case nil:
-		frame.SetOperand(lhsOp, nilEqualsNil)
+		frame.SetOperand(lhsOp, op2 == nil && nilEqualsNil)
 	case int64:
 		v2 := op2.(int64)
 		frame.SetOperand(lhsOp, intCmp(v1, v2))
