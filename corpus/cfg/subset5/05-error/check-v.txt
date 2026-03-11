@@ -1,0 +1,29 @@
+(bar
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (checked-expr
+          (invocation foo ())))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+    (panic
+      (error-constructor-expr (
+        (literal unexpected))))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (error-constructor-expr (
+        (literal foo))))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation bar ()))))
+  )
+)

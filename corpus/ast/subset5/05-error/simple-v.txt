@@ -1,5 +1,6 @@
 (compilation-unit  regular-source
 (package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
   (type-definition Detail
     (record-type
       (field message
@@ -29,7 +30,7 @@
           (user-defined-type ErrorWithDetail) (
           (literal bar)) (
           (named-arg message
-            (literal message))
+            (literal bar message))
           (named-arg id
             (literal 1)))))))
   (function baz () (
@@ -44,15 +45,66 @@
             (user-defined-type ErrorWithDetail) (
             (literal bar)) (
             (named-arg message
-              (literal message))
+              (literal bar message))
             (named-arg id
-              (literal 1)))))))
+              (literal 2)))))))
       (return
         (error-constructor-expr
           (user-defined-type ErrorWithDetail) (
-          (literal bar)
+          (literal baz)
           (simple-var-ref e)) (
           (named-arg message
-            (literal message))
+            (literal baz message))
           (named-arg id
-            (literal 1))))))))
+            (literal 3)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fooResult (type
+          (union-type
+            (value-type int)
+            (error-type))) (expr
+          (invocation foo ()))))
+      (if
+        (group-expr
+          (type-test-expr is
+            (simple-var-ref fooResult)
+            (error-type)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref fooResult))))) ())
+      (block-stmt
+        (var-def
+          (variable barResult (type
+            (union-type
+              (value-type int)
+              (error-type))) (expr
+            (invocation bar ()))))
+        (if
+          (group-expr
+            (type-test-expr is
+              (simple-var-ref barResult)
+              (error-type)))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (simple-var-ref barResult))))) ())
+        (block-stmt
+          (var-def
+            (variable bazResult (type
+              (union-type
+                (value-type int)
+                (error-type))) (expr
+              (invocation baz ()))))
+          (if
+            (group-expr
+              (type-test-expr is
+                (simple-var-ref bazResult)
+                (error-type)))
+            (block-stmt
+              (expression-stmt
+                (invocation io println (
+                  (simple-var-ref bazResult))))) ())
+          (block-stmt))))))

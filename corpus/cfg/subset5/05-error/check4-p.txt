@@ -1,0 +1,37 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable m (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type int))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (unary-expr -
+          (check-panicked-expr
+            (invocation nonNil (
+              (index-based-access
+                (simple-var-ref m)
+                (literal y)))))))))
+  )
+)
+(nonNil
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (simple-var-ref n)
+      (literal <nil>))
+  )
+  (bb1 (bb0) ()
+    (return
+      (error-constructor-expr (
+        (literal nil))))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref n))
+  )
+)

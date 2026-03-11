@@ -64,6 +64,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		execNewArray(v, frame)
 	case *bir.NewMap:
 		execNewMap(v, frame)
+	case *bir.NewError:
+		execNewError(v, frame)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:

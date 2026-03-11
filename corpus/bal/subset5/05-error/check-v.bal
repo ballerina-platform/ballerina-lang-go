@@ -13,20 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/io;
 
-type Detail record {|
-    ErrA? errA;
-|};
-
-type ErrA error<Detail>;
-
 public function main() {
-    ErrA err0 = error ErrA("whoops", errA = ());
-    io:println(err0); // @output error ErrA ("whoops",errA=null)
-    ErrA error1 = error("Whoops", errA = ());
-    io:println(error1); // @output error("Whoops",errA=null)
-    ErrA error2 = error("Whoops", errA = error1);
-    io:println(error2); // @output error("Whoops",errA=error("Whoops",errA=null))
+    io:println(bar()); // @output error("foo")
+}
+
+function foo() returns int|error {
+    return error("foo");
+}
+
+function bar() returns error {
+    int a = check foo();
+    io:println(a);
+    panic error("unexpected");
 }
