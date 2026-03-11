@@ -660,7 +660,11 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 					a.semanticErr("let clause supports only initialized simple variable declarations", clause.GetPosition())
 					return false
 				}
-				if !analyzeExpression(a, varDef.Var.Expr.(ast.BLangExpression), varDef.Var.GetDeterminedType()) {
+				var expectedType semtypes.SemType
+				if ast.SymbolIsSet(varDef.Var) {
+					expectedType = a.ctx().SymbolType(varDef.Var.Symbol())
+				}
+				if !analyzeExpression(a, varDef.Var.Expr.(ast.BLangExpression), expectedType) {
 					return false
 				}
 			}
@@ -1181,6 +1185,12 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpleVariableDef) bool {
 	variable := simpleVariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	expectedType := variable.GetDeterminedType()
+	if ast.SymbolIsSet(variable) {
+		symbolType := a.ctx().SymbolType(variable.Symbol())
+		if symbolType != nil {
+			expectedType = symbolType
+		}
+	}
 	if variable.Expr != nil && !analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType) {
 		return false
 	}

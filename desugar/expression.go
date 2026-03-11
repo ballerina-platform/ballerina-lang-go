@@ -555,7 +555,12 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		IndexExpr: idxRef,
 	}
 	elementAccess.Expr = collRef
-	loopVarTy := cloneLoopVarDef.Var.GetDeterminedType()
+	loopVarSymbol := cloneLoopVarDef.Var.Symbol()
+	loopVarTy := cx.symbolType(loopVarSymbol)
+	if loopVarTy == nil {
+		cx.internalError("query from-clause variable symbol type not found")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
 	elementAccess.SetDeterminedType(loopVarTy)
 	cloneLoopVarDef.Var.SetInitialExpression(elementAccess)
 

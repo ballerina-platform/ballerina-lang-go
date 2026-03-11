@@ -968,10 +968,10 @@ func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr
 			}
 		}
 
-		setExpectedType(varDef.Var, variableTy)
 		if varDef.Var.Name != nil {
 			varDef.Var.Name.SetDeterminedType(&semtypes.NEVER)
 		}
+		varDef.Var.SetDeterminedType(&semtypes.NEVER)
 		updateSymbolType(t.ctx, varDef.Var, variableTy)
 	}
 
@@ -1025,10 +1025,10 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 						return nil, false
 					}
 				}
-				setExpectedType(varDef.Var, variableTy)
 				if varDef.Var.Name != nil {
 					varDef.Var.Name.SetDeterminedType(&semtypes.NEVER)
 				}
+				varDef.Var.SetDeterminedType(&semtypes.NEVER)
 				updateSymbolType(t.ctx, varDef.Var, variableTy)
 			}
 		case *ast.BLangWhereClause:
