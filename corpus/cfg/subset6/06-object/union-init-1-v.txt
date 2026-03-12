@@ -1,9 +1,35 @@
-(init
-  (bb0 () ()
-    (assignment
-      (field-based-access baz
-        (simple-var-ref self))
-      (simple-var-ref baz))
+(Bar
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access baz
+          (simple-var-ref self))
+        (simple-var-ref baz))
+    )
+  )
+  (foo
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (binary-expr +
+            (binary-expr +
+              (simple-var-ref a)
+              (simple-var-ref b))
+            (field-based-access bar
+              (simple-var-ref self)))
+          (field-based-access baz
+            (simple-var-ref self))))
+    )
+  )
+)
+(Foo
+  (foo
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref a)
+          (simple-var-ref b)))
+    )
   )
 )
 (main

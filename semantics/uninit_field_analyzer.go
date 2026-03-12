@@ -216,7 +216,7 @@ func analyzeUninitializedFields(ctx *context.CompilerContext, pkg *ast.BLangPack
 			}
 			continue
 		}
-		fnCfg, ok := cfg.funcCfgs[classDef.InitFunction.Symbol()]
+		fnCfg, ok := cfg.lookupFunctionCfg(classDef.InitFunction.Symbol())
 		if !ok {
 			continue
 		}

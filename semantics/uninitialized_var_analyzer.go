@@ -321,6 +321,33 @@ func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackag
 			analyzeFunctionUninitializedVars(ctx, f, cfg)
 		}(fn)
 	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		if classDef.InitFunction != nil {
+			wg.Add(1)
+			go func(f *ast.BLangFunction) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicErr = r
+					}
+				}()
+				analyzeFunctionUninitializedVars(ctx, f, cfg)
+			}(classDef.InitFunction)
+		}
+		for _, method := range classDef.Methods {
+			wg.Add(1)
+			go func(f *ast.BLangFunction) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicErr = r
+					}
+				}()
+				analyzeFunctionUninitializedVars(ctx, f, cfg)
+			}(method)
+		}
+	}
 
 	wg.Wait()
 	if panicErr != nil {
@@ -330,7 +357,7 @@ func analyzeUninitializedVars(ctx *context.CompilerContext, pkg *ast.BLangPackag
 
 // analyzeFunctionUninitializedVars analyzes a single function for uninitialized variables
 func analyzeFunctionUninitializedVars(ctx *context.CompilerContext, fn *ast.BLangFunction, cfg *PackageCFG) {
-	fnCfg, ok := cfg.funcCfgs[fn.Symbol()]
+	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
 		return
 	}
