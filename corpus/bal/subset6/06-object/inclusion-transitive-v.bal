@@ -14,8 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Foo int;
+import ballerina/io;
 
-type Bar object {
-    *Foo; // @error
+type A object {
+    int x;
 };
+
+type B object {
+    *A;
+    int y;
+};
+
+class C {
+    *B;
+    int z = 0;
+
+    function init() {
+        self.x = 1;
+        self.y = 2;
+        self.z = 3;
+    }
+}
+
+public function main() {
+    C c = new;
+    io:println(c.x); // @output 1
+    io:println(c.y); // @output 2
+    io:println(c.z); // @output 3
+}

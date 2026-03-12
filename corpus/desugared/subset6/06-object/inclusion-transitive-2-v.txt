@@ -1,0 +1,72 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition A
+    (object-type
+      (field a
+        (value-type int))))
+  (type-definition B
+    (object-type
+      (field b
+        (value-type int))))
+  (type-definition D
+    (object-type
+      (field d
+        (value-type int))))
+  (class-definition E
+    (variable e (type
+      (value-type int)))
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal e))
+          (literal 0))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal a))
+          (literal 1))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal b))
+          (literal 2))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal d))
+          (literal 3))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal e))
+          (literal 4)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable e (type
+          (user-defined-type E)) (expr
+          (new ()))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref e)
+            (literal a)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref e)
+            (literal b)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref e)
+            (literal d)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref e)
+            (literal e))))))))
