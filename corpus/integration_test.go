@@ -78,6 +78,7 @@ var (
 		"subset6/06-object/inclusion-class-v.bal",
 		"subset6/06-object/inclusion-class-2-v.bal",
 		"subset6/06-object/inclusion-dup-override-v.bal",
+		"subset6/06-object/inclusion-inherited-field-v.bal",
 	}
 )
 

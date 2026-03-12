@@ -188,11 +188,14 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition())
 	}
-	for _, typeDef := range pkg.TypeDefinitions {
+	for i := range pkg.TypeDefinitions {
+		typeDef := &pkg.TypeDefinitions[i]
 		name := typeDef.Name.Value
 		isPublic := typeDef.FlagSet.Contains(model.Flag_PUBLIC)
 		symbol := model.NewTypeSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition())
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		cx.SetTypeDefinition(symRef, typeDef)
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
@@ -200,6 +203,8 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		isPublic := classDef.FlagSet.Contains(model.Flag_PUBLIC)
 		symbol := model.NewClassSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition())
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		cx.SetTypeDefinition(symRef, classDef)
 	}
 	ast.Walk(moduleResolver, pkg)
 	return moduleResolver.scope.Exports()
@@ -668,6 +673,42 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
 		addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
+	}
+
+	for _, incSymRef := range classDef.Inclusions {
+		tDefn, ok := ms.ctx.GetTypeDefinition(incSymRef)
+		if !ok {
+			continue
+		}
+		switch defn := tDefn.(type) {
+		case *ast.BLangTypeDefinition:
+			objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+			if !ok {
+				continue
+			}
+			for m := range objTy.Members() {
+				name := m.Name()
+				if _, _, exists := classResolver.GetSymbol(name); exists {
+					continue
+				}
+				if m.MemberKind() == model.ObjectMemberKindField {
+					isPublic := m.Visibility() == model.VisibilityPublic
+					symbol := model.NewValueSymbol(name, isPublic, false, false)
+					classResolver.AddSymbol(name, &symbol)
+				}
+			}
+		case *ast.BLangClassDefinition:
+			for _, f := range defn.Fields {
+				field := f.(*ast.BLangSimpleVariable)
+				name := field.Name.Value
+				if _, _, exists := classResolver.GetSymbol(name); exists {
+					continue
+				}
+				isPublic := field.FlagSet.Contains(model.Flag_PUBLIC)
+				symbol := model.NewValueSymbol(name, isPublic, false, false)
+				classResolver.AddSymbol(name, &symbol)
+			}
+		}
 	}
 
 	if classDef.InitFunction != nil {
