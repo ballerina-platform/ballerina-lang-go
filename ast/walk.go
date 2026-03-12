@@ -278,6 +278,9 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expr.(BLangNode))
 		}
 
+	case *BLangExternFunctionBody:
+		// Leaf node - no children to walk
+
 	// Section 4: Statements
 	case *BLangBlockStmt:
 		for _, stmt := range node.Stmts {
