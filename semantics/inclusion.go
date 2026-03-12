@@ -34,8 +34,21 @@ type includedMember struct {
 }
 
 func collectTransitiveInclusions(ctx *context.CompilerContext, inclusions []model.SymbolRef) transitiveInclusionResult {
+	visited := make(map[model.SymbolRef]bool)
+	return collectTransitiveInclusionsInner(ctx, inclusions, visited)
+}
+
+func collectTransitiveInclusionsInner(ctx *context.CompilerContext, inclusions []model.SymbolRef, visited map[model.SymbolRef]bool) transitiveInclusionResult {
 	var result transitiveInclusionResult
 	for _, symRef := range inclusions {
+		if visited[symRef] {
+			tDefn, ok := ctx.GetTypeDefinition(symRef)
+			if ok {
+				ctx.SemanticError("cyclic type inclusion", tDefn.(model.Node).GetPosition())
+			}
+			continue
+		}
+		visited[symRef] = true
 		tDefn, ok := ctx.GetTypeDefinition(symRef)
 		if !ok {
 			ctx.InternalError("type definition not found for inclusion", nil)
@@ -44,7 +57,7 @@ func collectTransitiveInclusions(ctx *context.CompilerContext, inclusions []mode
 		switch defn := tDefn.(type) {
 		case *ast.BLangTypeDefinition:
 			objTy := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			sub := collectTransitiveInclusions(ctx, objTy.Inclusions)
+			sub := collectTransitiveInclusionsInner(ctx, objTy.Inclusions, visited)
 			result.defns = append(result.defns, sub.defns...)
 			result.members = append(result.members, sub.members...)
 			result.defns = append(result.defns, defn)
@@ -52,7 +65,7 @@ func collectTransitiveInclusions(ctx *context.CompilerContext, inclusions []mode
 				result.members = append(result.members, includedMember{objectMember: m})
 			}
 		case *ast.BLangClassDefinition:
-			sub := collectTransitiveInclusions(ctx, defn.Inclusions)
+			sub := collectTransitiveInclusionsInner(ctx, defn.Inclusions, visited)
 			result.defns = append(result.defns, sub.defns...)
 			result.members = append(result.members, sub.members...)
 			result.defns = append(result.defns, defn)

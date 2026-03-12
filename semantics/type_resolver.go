@@ -78,6 +78,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 		}
 	}
 
+	var fieldResolvers []*TypeResolver
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		resolver := newTypeResolver(ctx, pkg, importedSymbols)
@@ -87,6 +88,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 				resolver.resolveExpression(nil, field.Expr.(ast.BLangExpression))
 			}
 		}
+		fieldResolvers = append(fieldResolvers, resolver)
 	}
 
 	resolvers := make([]*TypeResolver, len(fns))
@@ -100,7 +102,15 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	}
 	wg.Wait()
 
-	seen := make(map[string]bool, len(resolvers))
+	seen := make(map[string]bool, len(resolvers)+len(fieldResolvers))
+	for _, t := range fieldResolvers {
+		for name, importNode := range t.implicitImports {
+			if !seen[name] {
+				seen[name] = true
+				pkg.Imports = append(pkg.Imports, importNode)
+			}
+		}
+	}
 	for _, t := range resolvers {
 		for name, importNode := range t.implicitImports {
 			if !seen[name] {
@@ -506,8 +516,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	}
 
 	// Collect included members
-	includedFields := make(map[string][]semtypes.Member)
-	includedMethods := make(map[string][]semtypes.Member)
+	includedMembers := make(map[string][]semtypes.Member)
 	inc := collectTransitiveInclusions(t.ctx, classDef.Inclusions)
 	if !t.resolveIncludedDefns(inc.defns, depth) {
 		return nil, false
@@ -517,12 +526,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if !ok {
 			return nil, false
 		}
-		switch member.Kind {
-		case semtypes.MemberKindField:
-			includedFields[member.Name] = append(includedFields[member.Name], member)
-		case semtypes.MemberKindMethod:
-			includedMethods[member.Name] = append(includedMethods[member.Name], member)
-		}
+		includedMembers[member.Name] = append(includedMembers[member.Name], member)
 	}
 
 	// Build direct field members
@@ -535,9 +539,16 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 			vis = semtypes.VisibilityPublic
 		}
 		name := field.Name.Value
-		if incFields, exists := includedFields[name]; exists {
-			for _, incField := range incFields {
-				if !semtypes.IsSubtype(t.tyCtx, fieldTy, incField.ValueTy) {
+		if incMembers, exists := includedMembers[name]; exists {
+			for _, incMember := range incMembers {
+				if incMember.Kind != semtypes.MemberKindField {
+					t.ctx.SemanticError(
+						fmt.Sprintf("field '%s' conflicts with included member of different kind", name),
+						field.GetPosition(),
+					)
+					return nil, false
+				}
+				if !semtypes.IsSubtype(t.tyCtx, fieldTy, incMember.ValueTy) {
 					t.ctx.SemanticError(
 						fmt.Sprintf("field '%s' that overrides included field is not a subtype of the included field type", name),
 						field.GetPosition(),
@@ -545,7 +556,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 					return nil, false
 				}
 			}
-			delete(includedFields, name)
+			delete(includedMembers, name)
 		}
 		members = append(members, semtypes.Member{
 			Name:       name,
@@ -554,18 +565,6 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 			Visibility: vis,
 			Immutable:  false,
 		})
-	}
-
-	// Inherit unoverridden included fields
-	for name, incFields := range includedFields {
-		if len(incFields) > 1 {
-			t.ctx.SemanticError(
-				fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name),
-				classDef.GetPosition(),
-			)
-			return nil, false
-		}
-		members = append(members, incFields[0])
 	}
 
 	// PR-TODO: clean this up
@@ -605,9 +604,16 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if method.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
 		}
-		if incMethods, exists := includedMethods[name]; exists {
-			for _, incMethod := range incMethods {
-				if !semtypes.IsSubtype(t.tyCtx, methodTy, incMethod.ValueTy) {
+		if incMembers, exists := includedMembers[name]; exists {
+			for _, incMember := range incMembers {
+				if incMember.Kind != semtypes.MemberKindMethod {
+					t.ctx.SemanticError(
+						fmt.Sprintf("method '%s' conflicts with included member of different kind", name),
+						method.GetPosition(),
+					)
+					return nil, false
+				}
+				if !semtypes.IsSubtype(t.tyCtx, methodTy, incMember.ValueTy) {
 					t.ctx.SemanticError(
 						fmt.Sprintf("method '%s' that overrides included method is not a subtype of the included method type", name),
 						method.GetPosition(),
@@ -615,7 +621,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 					return nil, false
 				}
 			}
-			delete(includedMethods, name)
+			delete(includedMembers, name)
 		}
 		members = append(members, semtypes.Member{
 			Name:       name,
@@ -626,8 +632,28 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		})
 	}
 
-	// Verify all included methods are overridden
-	for name := range includedMethods {
+	// Verify all included members are overridden
+	for name, incMembers := range includedMembers {
+		// Included fields without override are inherited
+		if len(incMembers) == 1 && incMembers[0].Kind == semtypes.MemberKindField {
+			members = append(members, incMembers[0])
+			continue
+		}
+		// Multiple included fields with same name must be overridden
+		allFields := true
+		for _, m := range incMembers {
+			if m.Kind != semtypes.MemberKindField {
+				allFields = false
+				break
+			}
+		}
+		if allFields {
+			t.ctx.SemanticError(
+				fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name),
+				classDef.GetPosition(),
+			)
+			return nil, false
+		}
 		t.ctx.SemanticError(
 			fmt.Sprintf("included method '%s' must be overridden in class definition", name),
 			classDef.GetPosition(),
