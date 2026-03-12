@@ -17,12 +17,13 @@
 package semantics
 
 import (
+	"maps"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"maps"
 	"strings"
 
 	array "ballerina-lang-go/lib/array/compile"
@@ -361,7 +362,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
 	case *ast.BLangObjectType:
-		n.Inclusions = resolveInclusions(resolver, n.PopUnresolvedInclusions())
+		n.Inclusions = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
 	}
 	return resolver
 }
@@ -637,11 +638,32 @@ func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visi
 	return ms
 }
 
-func resolveInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) []model.SymbolRef {
+// resolveObjectInclusions update the AST node references with correct symbol references. Will add semantic errors if the type
+// reference is for something that can't be included. This means after this stage we have the gurantee symbol ref always refer
+// to a valid AST node.
+func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) []model.SymbolRef {
+	ctx := resolver.GetCtx()
 	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
 	for _, inc := range unresolvedInclusions {
 		ast.Walk(resolver, inc)
-		inclusions = append(inclusions, inc.Symbol())
+		symRef := inc.Symbol()
+		tDefn, ok := ctx.GetTypeDefinition(symRef)
+		if !ok {
+			ctx.InternalError("type definition not found for inclusion", inc.GetPosition())
+			continue
+		}
+		switch defn := tDefn.(type) {
+		case *ast.BLangTypeDefinition:
+			if _, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
+				ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
+				continue
+			}
+		case *ast.BLangClassDefinition:
+		default:
+			ctx.InternalError("unexpected type definition kind for inclusion", inc.GetPosition())
+			continue
+		}
+		inclusions = append(inclusions, symRef)
 	}
 	return inclusions
 }
@@ -650,7 +672,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
 
-	classDef.Inclusions = resolveInclusions(ms, classDef.PopUnresolvedInclusions())
+	classDef.Inclusions = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()
@@ -675,39 +697,28 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
 	}
 
-	for _, incSymRef := range classDef.Inclusions {
-		tDefn, ok := ms.ctx.GetTypeDefinition(incSymRef)
-		if !ok {
-			continue
-		}
-		switch defn := tDefn.(type) {
-		case *ast.BLangTypeDefinition:
-			objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			if !ok {
+	inc := collectTransitiveInclusions(ms.ctx, classDef.Inclusions)
+	for _, m := range inc.members {
+		switch {
+		case m.objectMember != nil:
+			if m.objectMember.MemberKind() != model.ObjectMemberKindField {
 				continue
 			}
-			for m := range objTy.Members() {
-				name := m.Name()
-				if _, _, exists := classResolver.GetSymbol(name); exists {
-					continue
-				}
-				if m.MemberKind() == model.ObjectMemberKindField {
-					isPublic := m.Visibility() == model.VisibilityPublic
-					symbol := model.NewValueSymbol(name, isPublic, false, false)
-					classResolver.AddSymbol(name, &symbol)
-				}
+			name := m.objectMember.Name()
+			if _, _, exists := classResolver.GetSymbol(name); exists {
+				continue
 			}
-		case *ast.BLangClassDefinition:
-			for _, f := range defn.Fields {
-				field := f.(*ast.BLangSimpleVariable)
-				name := field.Name.Value
-				if _, _, exists := classResolver.GetSymbol(name); exists {
-					continue
-				}
-				isPublic := field.FlagSet.Contains(model.Flag_PUBLIC)
-				symbol := model.NewValueSymbol(name, isPublic, false, false)
-				classResolver.AddSymbol(name, &symbol)
+			isPublic := m.objectMember.Visibility() == model.VisibilityPublic
+			symbol := model.NewValueSymbol(name, isPublic, false, false)
+			classResolver.AddSymbol(name, &symbol)
+		case m.classField != nil:
+			name := m.classField.Name.Value
+			if _, _, exists := classResolver.GetSymbol(name); exists {
+				continue
 			}
+			isPublic := m.classField.FlagSet.Contains(model.Flag_PUBLIC)
+			symbol := model.NewValueSymbol(name, isPublic, false, false)
+			classResolver.AddSymbol(name, &symbol)
 		}
 	}
 
