@@ -124,15 +124,6 @@ func resolveFunctionBody(ctx *context.CompilerContext, pkg *ast.BLangPackage, fn
 func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		symbol := defn.Symbol()
-		ctx.SetTypeDefinition(symbol, defn)
-	}
-	for i := range pkg.ClassDefinitions {
-		classDef := &pkg.ClassDefinitions[i]
-		ctx.SetTypeDefinition(classDef.Symbol(), classDef)
-	}
-	for i := range pkg.TypeDefinitions {
-		defn := &pkg.TypeDefinitions[i]
 		if _, ok := t.resolveTypeDefinition(defn, 0); !ok {
 			return
 		}
