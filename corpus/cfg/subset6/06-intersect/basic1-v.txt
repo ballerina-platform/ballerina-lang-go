@@ -1,0 +1,37 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable s1 (type
+        (user-defined-type S)) (expr
+        (literal Intersect!))))
+    (var-def
+      (variable s2 (type
+        (intersection-type
+          (union-type
+            (value-type int)
+            (value-type string))
+          (union-type
+            (value-type string)
+            (value-type float)))) (expr
+        (simple-var-ref s1))))
+    (var-def
+      (variable s3 (type
+        (intersection-type
+          (union-type
+            (value-type string)
+            (value-type null))
+          (value-type string))) (expr
+        (simple-var-ref s2))))
+    (var-def
+      (variable s4 (type
+        (intersection-type
+          (user-defined-type T1)
+          (union-type
+            (value-type string)
+            (value-type null)))) (expr
+        (simple-var-ref s3))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref s4))))
+  )
+)

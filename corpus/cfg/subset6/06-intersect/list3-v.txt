@@ -1,0 +1,29 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable l (type
+        (intersection-type
+          (tuple-type
+            (value-type int)
+            (value-type int))
+          (tuple-type
+            (value-type int)
+            (union-type
+              (value-type int)
+              (value-type string))))) (expr
+        (list-constructor-expr
+          (literal 5)
+          (literal 6)))))
+    (type-test-expr is
+      (simple-var-ref l)
+      (tuple-type
+        (value-type int)
+        (value-type int)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal int, int))))
+  )
+  (bb2 (bb1) ())
+)
