@@ -8,7 +8,7 @@ on:
 
 jobs:
   ubuntu-build:
-    name: Ubuntu Native Build
+    name: Native CI / Ubuntu Native Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -8,7 +8,7 @@ on:
 
 jobs:
   ubuntu-build:
-    name: Ubuntu WASM Build
+    name: WASM CI / Ubuntu WASM Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
