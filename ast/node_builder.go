@@ -1712,7 +1712,9 @@ func (n *NodeBuilder) TransformContinueStatement(continueStatementNode *tree.Con
 }
 
 func (n *NodeBuilder) TransformExternalFunctionBody(externalFunctionBodyNode *tree.ExternalFunctionBodyNode) BLangNode {
-	panic("TransformExternalFunctionBody unimplemented")
+	body := &BLangExternFunctionBody{}
+	body.pos = getPosition(externalFunctionBodyNode)
+	return body
 }
 
 func (n *NodeBuilder) TransformIfElseStatement(ifElseStatementNode *tree.IfElseStatementNode) BLangNode {
