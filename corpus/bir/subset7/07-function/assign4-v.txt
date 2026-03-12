@@ -1,0 +1,118 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:fooBar
+    x = %1;
+    %3 = fp $anon/.:foo
+    %4 = fp $anon/.:bar
+    %5 = ConstantLoad 1
+    %6 = x(%3,%4,%5) -> bb1;
+  }
+  bb1 {
+    %7 = println(%6) -> bb2;
+  }
+  bb2 {
+    %8 = fp $anon/.:foo
+    %9 = fp $anon/.:bar
+    %10 = ConstantLoad 1
+    %11 = ConstantLoad 2
+    %12 = x(%8,%9,%10,%11) -> bb3;
+  }
+  bb3 {
+    %13 = println(%12) -> bb4;
+  }
+  bb4 {
+    %14 = fp $anon/.:foo
+    %15 = fp $anon/.:bar
+    %16 = ConstantLoad 1
+    %17 = ConstantLoad 2
+    %18 = ConstantLoad 3
+    %19 = x(%14,%15,%16,%17,%18) -> bb5;
+  }
+  bb5 {
+    %20 = println(%19) -> bb6;
+  }
+  bb6 {
+    %21 = fp $anon/.:foo
+    %22 = fp $anon/.:bar
+    %23 = ConstantLoad 1
+    %24 = ConstantLoad 2
+    %25 = ConstantLoad 3
+    %26 = ConstantLoad 4
+    %27 = x(%21,%22,%23,%24,%25,%26) -> bb7;
+  }
+  bb7 {
+    %28 = println(%27) -> bb8;
+  }
+  bb8 {
+    return;
+  }
+}
+bar(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = + x y;
+    %0 = %3;
+    return;
+  }
+}
+foo(((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = + x %3;
+    %0 = %2;
+    return;
+  }
+}
+fooBar(((), (FUNCTION)),((), (FUNCTION)),((INT), ()),((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %6 = length(y) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad 0
+    %5 = == %6 %7;
+    %5 ? bb2 : bb4;
+  }
+  bb2 {
+    %8 = single(x) -> bb3;
+  }
+  bb3 {
+    %0 = %8;
+    return;
+  }
+  bb4 {
+    %10 = ConstantLoad 0
+    %9 = y[%10];
+    %11 = pair(x,%9) -> bb5;
+  }
+  bb5 {
+    curr = %11;
+    %13 = ConstantLoad 1
+    i = %13;
+    %15 = length(y) -> bb6;
+  }
+  bb6 {
+    $desugar$0 = %15;
+    GOTO bb7;
+  }
+  bb7 {
+    %17 = < i $desugar$0;
+    %17 ? bb8 : bb9;
+  }
+  bb8 {
+    %18 = y[i];
+    %19 = pair(curr,%18) -> bb10;
+  }
+  bb9 {
+    %0 = curr;
+    return;
+  }
+  bb10 {
+    curr = %19;
+    %21 = ConstantLoad 1
+    %20 = + i %21;
+    i = %20;
+    GOTO bb7;
+  }
+}

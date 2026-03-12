@@ -45,6 +45,7 @@ type (
 		FunctionLookupKey string
 		CachedBIRFunc     *BIRFunction
 		CachedNativeFunc  func(args []values.BalValue) (values.BalValue, error)
+		FpOperand         *BIROperand // For FP_CALL: the operand holding the function value
 	}
 
 	Return struct {

@@ -1,0 +1,161 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:foo
+    %2 = fp $anon/.:bar
+    %3 = fp $anon/.:baz
+    %4 = ConstantLoad 3
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    funcs = %5;
+    %7 = ConstantLoad 2
+    %8 = ConstantLoad 3
+    %9 = exec(funcs,%7,%8) -> bb1;
+  }
+  bb1 {
+    results = %9;
+    %11 = println(results) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+exec(((), (LIST)),((INT), ()),((INT), ())) -> ((), (LIST)){
+  bb0 {
+    %4 = ConstantLoad 0
+    %5 = newArray ((), (LIST))[%4]{}
+    results = %5;
+    %7 = ConstantLoad 0
+    i = %7;
+    %9 = length(funcs) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %9;
+    GOTO bb2;
+  }
+  bb2 {
+    %11 = < i $desugar$0;
+    %11 ? bb3 : bb4;
+  }
+  bb3 {
+    %12 = funcs[i];
+    func = %12;
+    %14 = func(a,b) -> bb5;
+  }
+  bb4 {
+    %0 = results;
+    return;
+  }
+  bb5 {
+    %15 = push(results,%14) -> bb6;
+  }
+  bb6 {
+    %17 = ConstantLoad 1
+    %16 = + i %17;
+    i = %16;
+    GOTO bb2;
+  }
+}
+foo(((INT, STRING), ()),((INT, STRING), ())) -> ((INT), ()){
+  bb0 {
+    %4 = a is ((INT), ())
+    %3 = %4;
+    %4 ? bb1 : bb2;
+  }
+  bb1 {
+    %5 = b is ((INT), ())
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
+    %6 = + a b;
+    %0 = %6;
+    return;
+  }
+  bb4 {
+    %7 = ConstantLoad 1
+    %8 = unknown %7;
+    %0 = %8;
+    return;
+  }
+}
+bar(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %2 = ConstantLoad 0
+    sum = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(vals) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = vals[i];
+    %9 = + sum %10;
+    sum = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}
+baz(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %2 = ConstantLoad 
+    init = %2;
+    %5 = ConstantLoad 0
+    %4 = vals[%5];
+    %6 = %4 is ((INT), ())
+    %6 ? bb1 : bb2;
+  }
+  bb1 {
+    %7 = ConstantLoad 0
+    init = %7;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = ConstantLoad 0
+    result = %8;
+    %10 = ConstantLoad 0
+    i = %10;
+    %12 = length(vals) -> bb3;
+  }
+  bb3 {
+    $desugar$0 = %12;
+    GOTO bb4;
+  }
+  bb4 {
+    %14 = < i $desugar$0;
+    %14 ? bb5 : bb6;
+  }
+  bb5 {
+    %16 = vals[i];
+    %17 = foo(init,%16) -> bb7;
+  }
+  bb6 {
+    %0 = result;
+    return;
+  }
+  bb7 {
+    %15 = + result %17;
+    result = %15;
+    %19 = ConstantLoad 1
+    %18 = + i %19;
+    i = %18;
+    GOTO bb4;
+  }
+}

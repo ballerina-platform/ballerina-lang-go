@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+ --> assign19-e.bal:6:16
+  |
+6 |     io:println(f(1, 2, 3)); // @error
+  |                ^^^^^^^^^^
+

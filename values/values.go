@@ -27,6 +27,13 @@ import (
 // Currently this is just an alias on any but I think we will need to add methods to this like type
 type BalValue any
 
+type Function struct {
+	Type      semtypes.SemType
+	LookupKey string
+	// TODO: fix type here and remove unwanted casts
+	ParentFrame any // *exec.Frame at runtime, nil for non-closures
+}
+
 func DefaultValueForType(t semtypes.SemType) BalValue {
 	if t == nil {
 		// TODO: this should panic when our operands properly have types
@@ -76,6 +83,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Error:
 		return v.Type
+	case *Function:
+		return v.Type
 	default:
 		return &semtypes.ANY
 	}
@@ -117,6 +126,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return t.String(visited)
 	case *Error:
 		return t.String(visited)
+	case *Function:
+		return "function " + t.LookupKey
 	default:
 		return "<unsupported>"
 	}

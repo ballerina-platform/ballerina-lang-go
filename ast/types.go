@@ -130,6 +130,12 @@ type (
 		rhs model.TypeData
 	}
 
+	BLangIntersectionTypeNode struct {
+		bLangTypeBase
+		lhs model.TypeData
+		rhs model.TypeData
+	}
+
 	BLangErrorTypeNode struct {
 		bLangTypeBase
 		DetailType model.TypeData
@@ -164,6 +170,22 @@ type (
 		RestType   BType
 		IsOpen     bool
 	}
+
+	BLangFunctionType struct {
+		bLangTypeBase
+		Definition           semtypes.Definition
+		RequiredParams       []BLangFunctionTypeParam
+		RestParam            *BLangFunctionTypeParam
+		ReturnTypeDescriptor model.TypeDescriptor
+	}
+
+	BLangFunctionTypeParam struct {
+		bLangNodeBase
+		Name           *BLangIdentifier
+		TypeDesc       BType
+		InitExpr       BLangExpression
+		AnnAttachments []model.AnnotationAttachmentNode
+	}
 )
 
 var (
@@ -177,11 +199,14 @@ var (
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
+	_ model.IntersectionTypeNode     = &BLangIntersectionTypeNode{}
 	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
 	_ model.ConstrainedTypeNode      = &BLangConstrainedType{}
 	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
 	_ model.MemberTypeDesc           = &BLangMemberTypeDesc{}
 	_ model.RecordTypeNode           = &BLangRecordType{}
+	_ model.FunctionTypeNode         = &BLangFunctionType{}
+	_ model.FunctionTypeParam        = &BLangFunctionTypeParam{}
 )
 
 var (
@@ -502,6 +527,26 @@ func (this *BLangUnionTypeNode) SetRhs(typeData model.TypeData) {
 	this.rhs = typeData
 }
 
+func (this *BLangIntersectionTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_INTERSECTION_TYPE_NODE
+}
+
+func (this *BLangIntersectionTypeNode) Lhs() *model.TypeData {
+	return &this.lhs
+}
+
+func (this *BLangIntersectionTypeNode) Rhs() *model.TypeData {
+	return &this.rhs
+}
+
+func (this *BLangIntersectionTypeNode) SetLhs(typeData model.TypeData) {
+	this.lhs = typeData
+}
+
+func (this *BLangIntersectionTypeNode) SetRhs(typeData model.TypeData) {
+	this.rhs = typeData
+}
+
 func (this *BLangErrorTypeNode) GetDetailType() model.TypeData {
 	return this.DetailType
 }
@@ -543,6 +588,7 @@ func (this *BLangConstrainedType) GetTypeKind() model.TypeKind {
 	}
 	panic("BLangConstrainedType.Type does not implement BuiltInReferenceTypeNode")
 }
+
 func (this *BLangTupleTypeNode) GetMembers() []model.MemberTypeDesc {
 	members := make([]model.MemberTypeDesc, len(this.Members))
 	for i := range this.Members {
@@ -588,6 +634,45 @@ func (this *BLangMemberTypeDesc) GetMarkdownDocumentationAttachment() model.Mark
 
 func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	this.MarkdownDocumentationAttachment = documentationNode
+}
+
+func (this *BLangFunctionType) GetKind() model.NodeKind {
+	return model.NodeKind_FUNCTION_TYPE
+}
+
+func (this *BLangFunctionTypeParam) GetKind() model.NodeKind {
+	return model.NodeKind_VARIABLE
+}
+
+func (this *BLangFunctionTypeParam) GetName() *string {
+	if this.Name == nil {
+		return nil
+	}
+	name := this.Name.Value
+	return &name
+}
+
+func (this *BLangFunctionTypeParam) GetTypeDesc() model.Type {
+	return this.TypeDesc
+}
+
+func (this *BLangFunctionType) GetParams() []model.FunctionTypeParam {
+	params := make([]model.FunctionTypeParam, len(this.RequiredParams))
+	for i := range this.RequiredParams {
+		params[i] = &this.RequiredParams[i]
+	}
+	return params
+}
+
+func (this *BLangFunctionType) GetRestParam() model.FunctionTypeParam {
+	if this.RestParam == nil {
+		return nil
+	}
+	return this.RestParam
+}
+
+func (this *BLangFunctionType) GetReturnTypeNode() model.TypeDescriptor {
+	return this.ReturnTypeDescriptor
 }
 
 func (this *BLangRecordType) GetKind() model.NodeKind {

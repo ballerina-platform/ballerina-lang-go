@@ -1,0 +1,119 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type byte)) (
+      (value-type null))))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (value-type null))))
+  (type-definition F2
+    (function-type (
+      (union-type
+        (value-type int)
+        (value-type float))) (
+      (value-type null))))
+  (type-definition F3
+    (function-type (
+      (union-type
+        (value-type int)
+        (value-type string))) (
+      (value-type null))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation f (
+          (literal 3))))
+      (expression-stmt
+        (invocation f (
+          (literal 10))))
+      (assignment
+        (simple-var-ref f)
+        (simple-var-ref bar))
+      (expression-stmt
+        (invocation f (
+          (literal 3))))
+      (expression-stmt
+        (invocation f (
+          (literal 10))))
+      (var-def
+        (variable a (type
+          (user-defined-type F1)) (expr
+          (simple-var-ref fooBar))))
+      (expression-stmt
+        (invocation a (
+          (literal 1))))
+      (var-def
+        (variable b (type
+          (user-defined-type F2)) (expr
+          (simple-var-ref fooBar))))
+      (expression-stmt
+        (invocation b (
+          (literal 1))))
+      (expression-stmt
+        (invocation b (
+          (literal 1.0))))
+      (var-def
+        (variable c (type
+          (user-defined-type F3)) (expr
+          (simple-var-ref fooBar))))
+      (expression-stmt
+        (invocation c (
+          (literal 1))))
+      (expression-stmt
+        (invocation c (
+          (literal c))))))
+  (function foo (
+    (variable a (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal foo called with )
+          (simple-var-ref a))))))
+  (function bar (
+    (variable b (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (literal bar called with )
+          (simple-var-ref b))))))
+  (function fooBar (
+    (variable a (type
+      (union-type
+        (union-type
+          (value-type int)
+          (value-type float))
+        (value-type string))))) (
+    (value-type null))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref a)
+          (value-type int))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal int))))) (
+        (if
+          (type-test-expr is
+            (simple-var-ref a)
+            (value-type float))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal float))))) (
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal string))))))))))))

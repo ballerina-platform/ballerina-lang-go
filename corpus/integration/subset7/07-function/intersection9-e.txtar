@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (STRING)), got ((), (STRING))
+  --> intersection9-e.bal:25:14
+   |
+25 |     "c" r1 = f(2); // @error
+   |              ^^^^
+

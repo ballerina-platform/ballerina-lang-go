@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
+  --> mapping17-e.bal:22:5
+   |
+22 |    (R1&R2)|() r = (); // @error
+   |     ^^^^^
+

@@ -1,0 +1,45 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+$anonFunc$_0(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %2 = ConstantLoad 0
+    sum = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(vals) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = vals[i];
+    %9 = + sum %10;
+    sum = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:$anonFunc$_0
+    f = %1;
+    f1 = f;
+    %4 = unknown f1 f;
+    %5 = println(%4) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}

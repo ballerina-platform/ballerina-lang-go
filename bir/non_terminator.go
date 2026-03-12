@@ -105,6 +105,13 @@ type (
 		Type       semtypes.SemType
 		IsNegation bool
 	}
+
+	FPLoad struct {
+		BIRInstructionBase
+		FunctionLookupKey string
+		Type              semtypes.SemType
+		IsClosure         bool
+	}
 )
 
 type (
@@ -125,6 +132,7 @@ var (
 	_ BIRAssignInstruction    = &TypeTest{}
 	_ BIRInstruction          = &NewMap{}
 	_ BIRAssignInstruction    = &NewError{}
+	_ BIRAssignInstruction    = &FPLoad{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -230,6 +238,14 @@ func (t *TypeTest) GetLhsOperand() *BIROperand {
 
 func (t *TypeTest) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_TEST
+}
+
+func (f *FPLoad) GetLhsOperand() *BIROperand {
+	return f.LhsOp
+}
+
+func (f *FPLoad) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_FP_LOAD
 }
 
 func (n *NewMap) GetKind() InstructionKind {

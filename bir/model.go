@@ -17,11 +17,10 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 )
 
 type ConstValue struct {
@@ -163,12 +162,30 @@ type (
 	BIROperand struct {
 		BIRNodeBase
 		VariableDcl *BIRVariableDcl
-		// If Index > 0 then it is the index to the functions local var array
-		Index int
+		Address     Address
 	}
 )
 
-// TODO: add interface asserts
+type Address struct {
+	Mode       AddressingMode
+	FrameIndex int
+	BaseIndex  int
+}
+
+type AddressingMode uint8
+
+const (
+	AddressingModeRelative AddressingMode = iota
+	AddressingModeAbsolute
+)
+
+func relativeAddress(frameIndex int) Address {
+	return Address{Mode: AddressingModeRelative, FrameIndex: frameIndex}
+}
+
+func absoluteAddress(baseIndex, frameIndex int) Address {
+	return Address{Mode: AddressingModeAbsolute, BaseIndex: baseIndex, FrameIndex: frameIndex}
+}
 
 type VarKind uint8
 

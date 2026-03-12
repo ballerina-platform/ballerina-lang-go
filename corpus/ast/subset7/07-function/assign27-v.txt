@@ -1,0 +1,76 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (union-type
+        (value-type int)
+        (value-type null)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable i (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (invocation f (
+            (literal 10))))))
+      (if
+        (group-expr
+          (type-test-expr is
+            (simple-var-ref i)
+            (value-type null)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal working))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected)))))))
+      (assignment
+        (simple-var-ref f)
+        (simple-var-ref bar))
+      (var-def
+        (variable j (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (invocation f (
+            (literal 10))))))
+      (if
+        (group-expr
+          (type-test-expr is
+            (simple-var-ref j)
+            (value-type int)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref j))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected)))))))))
+  (function foo (
+    (variable i (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref i))))))
+  (function bar (
+    (variable i (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref i)
+          (literal 1))))))

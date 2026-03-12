@@ -1,0 +1,36 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 2
+    %4 = newArray ((), (LIST))[%3]{%1, %2}
+    val = %4;
+    %6 = fp $anon/.:point2DIncOverride
+    fn = %6;
+    %8 = ConstantLoad 1
+    %9 = fn(val,%8) -> bb1;
+  }
+  bb1 {
+    result = %9;
+    %11 = println(result) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+point2DIncOverride(((), (LIST)),((INT), ())) -> ((), (LIST)){
+  bb0 {
+    %5 = ConstantLoad 0
+    %4 = point[%5];
+    %3 = + %4 increment;
+    %8 = ConstantLoad 1
+    %7 = point[%8];
+    %6 = + %7 increment;
+    %9 = ConstantLoad 2
+    %10 = newArray ((), (LIST))[%9]{%3, %6}
+    %0 = %10;
+    return;
+  }
+}

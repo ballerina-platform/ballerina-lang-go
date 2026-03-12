@@ -1,0 +1,111 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type () (
+      (value-type boolean))))
+  (type-definition B
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type boolean))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable x (type
+          (value-type boolean)) (expr
+          (invocation f ()))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (var-def
+        (variable b (type
+          (user-defined-type B)) (expr
+          (simple-var-ref bar))))
+      (var-def
+        (variable y (type
+          (value-type boolean)) (expr
+          (invocation b (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref y))))
+      (expression-stmt
+        (invocation io println (
+          (invocation b (
+            (literal 2)
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation FB (
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation FB (
+            (simple-var-ref notFoo)
+            (simple-var-ref bar)
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation FB (
+            (simple-var-ref notFoo)
+            (simple-var-ref bar)
+            (literal 2)
+            (literal 1))))))
+      (var-def
+        (variable b2 (type
+          (user-defined-type B)) (expr
+          (simple-var-ref bar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation b2 (
+            (literal 2)
+            (literal 1))))))))
+  (function foo () (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (literal true))))
+  (function notFoo () (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (literal false))))
+  (function bar (
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr >
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+  (function FB (
+    (variable a (type
+      (user-defined-type F)))
+    (variable b (type
+      (user-defined-type B)))
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type boolean))
+    (block-function-body
+      (return
+        (binary-expr ||
+          (invocation a ())
+          (invocation b (
+            (simple-var-ref x)
+            (simple-var-ref y))))))))

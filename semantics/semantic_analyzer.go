@@ -528,6 +528,64 @@ func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType s
 	}
 }
 
+func widenNumericExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
+	if expectedType == nil {
+		return
+	}
+	switch e := expr.(type) {
+	case *ast.BLangLiteral:
+		widenNumericLiteral(a, e, expectedType)
+	case *ast.BLangNumericLiteral:
+		widenNumericLiteral(a, &e.BLangLiteral, expectedType)
+	case *ast.BLangUnaryExpr:
+		widenUnaryExpr(a, e, expectedType)
+	case *ast.BLangBinaryExpr:
+		widenBinaryExpr(a, e, expectedType)
+	}
+}
+
+func widenUnaryExpr[A analyzer](a A, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		widenNumericExpression(a, expr.Expr, expectedType)
+		if semtypes.IsSubtypeSimple(expr.Expr.GetDeterminedType(), target) {
+			expr.SetDeterminedType(&target)
+		}
+	}
+}
+
+func widenBinaryExpr[A analyzer](a A, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
+	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
+		return
+	}
+	targetOpt := semtypes.SingleNumericType(expectedType)
+	if !targetOpt.IsPresent() {
+		return
+	}
+	target := targetOpt.Get()
+
+	if !isAdditiveExpr(expr) && !isMultiplicativeExpr(expr) {
+		return
+	}
+
+	widenNumericExpression(a, expr.LhsExpr, expectedType)
+	widenNumericExpression(a, expr.RhsExpr, expectedType)
+	lhsOK := semtypes.IsSubtypeSimple(expr.LhsExpr.GetDeterminedType(), target)
+	rhsOK := semtypes.IsSubtypeSimple(expr.RhsExpr.GetDeterminedType(), target)
+	if lhsOK && rhsOK {
+		expr.SetDeterminedType(&target)
+	}
+}
+
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
 	switch expr := expr.(type) {
 	case *ast.BLangLiteral:
@@ -545,9 +603,11 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		panic("not implemented")
 
 	case *ast.BLangBinaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeBinaryExpr(a, expr, expectedType)
 
 	case *ast.BLangUnaryExpr:
+		widenNumericExpression(a, expr, expectedType)
 		return analyzeUnaryExpr(a, expr, expectedType)
 
 	case *ast.BLangInvocation:
@@ -585,6 +645,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeCheckPanickedExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
+	case *ast.BLangLambdaFunction:
+		return analyzeLambdaFunction(a, expr)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -615,6 +677,12 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
+	fa := initializeFunctionAnalyzer(a, expr.Function)
+	ast.Walk(fa, expr.Function)
+	return true
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
@@ -733,25 +801,13 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	for _, expr := range expr.Exprs {
 		analyzeExpression(a, expr, nil)
 	}
+	members := make([]semtypes.ListMemberInfo, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		members[i] = semtypes.ListMemberInfo{Index: i, ValType: expr.GetDeterminedType()}
+	}
 	for _, alt := range alts {
-		if semtypes.ListAlternativeAllowsLength(alt, len(expr.Exprs)) {
-			if alt.Pos != nil {
-				isValid := true
-				lat := alt.Pos
-				for i, expr := range expr.Exprs {
-					exprTy := expr.GetDeterminedType()
-					ty := lat.MemberAtInnerVal(i)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.ListAlternativeAllowsMembers(tc, alt, members) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 
@@ -784,13 +840,7 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 		}
 		for _, f := range expr.Fields {
 			kv := f.(*ast.BLangMappingKeyValueField)
-			var keyName string
-			switch keyExpr := kv.Key.Expr.(type) {
-			case *ast.BLangLiteral:
-				keyName = keyExpr.GetOriginalValue()
-			case ast.BNodeWithSymbol:
-				keyName = a.ctx().SymbolName(keyExpr.Symbol())
-			}
+			keyName := recordKeyName(kv.Key)
 			requiredType := mappingAtomicType.FieldInnerVal(keyName)
 			if !analyzeExpression(a, kv.ValueExpr, requiredType) {
 				return false
@@ -823,34 +873,16 @@ func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructo
 	alts := semtypes.MappingAlternatives(tc, expectedType)
 	var validAlts []semtypes.MappingAlternative
 
-	fieldNames := make([]string, len(expr.Fields))
+	fields := make([]semtypes.MappingFieldInfo, len(expr.Fields))
 	for i, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		fieldNames[i] = recordKeyName(kv.Key)
+		fields[i] = semtypes.MappingFieldInfo{Name: recordKeyName(kv.Key), Ty: kv.ValueExpr.GetDeterminedType()}
 	}
-	sort.Strings(fieldNames)
+	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
 
 	for _, alt := range alts {
-		if semtypes.MappingAlternativeAllowsFields(alt, fieldNames) {
-			if alt.Pos != nil {
-				isValid := true
-				mat := alt.Pos
-				for _, f := range expr.Fields {
-					kv := f.(*ast.BLangMappingKeyValueField)
-					keyName := recordKeyName(kv.Key)
-					exprTy := kv.ValueExpr.GetDeterminedType()
-					ty := mat.FieldInnerVal(keyName)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.MappingAlternativeAllowsFields(tc, alt, fields) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 	if len(validAlts) == 0 {
@@ -984,7 +1016,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 		switch binaryExpr.GetOperatorKind() {
-		case model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL:
+		case model.OperatorKind_EQUAL, model.OperatorKind_NOT_EQUAL:
 			anyData := semtypes.CreateAnydata(ctx)
 			if !semtypes.IsSubtype(ctx, lhsTy, anyData) && !semtypes.IsSubtype(ctx, rhsTy, anyData) {
 				a.semanticErr(fmt.Sprintf("expect anydata types for %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())

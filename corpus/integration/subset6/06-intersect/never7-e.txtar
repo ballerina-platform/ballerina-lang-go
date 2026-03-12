@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
+  --> never7-e.bal:18:5
+   |
+18 |     int & T? next; // @error
+   |     ^^^^^^^^
+

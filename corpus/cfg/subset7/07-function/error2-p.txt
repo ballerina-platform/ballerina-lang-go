@@ -1,0 +1,73 @@
+(bar
+  (bb0 () ()
+    (return
+      (check-panicked-expr
+        (invocation foo (
+          (index-based-access
+            (simple-var-ref vals)
+            (literal 0))
+          (index-based-access
+            (simple-var-ref vals)
+            (literal 1))))))
+  )
+)
+(foo
+  (bb0 () (bb1)
+    (var-def
+      (variable sum (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref vals))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (var-def
+      (variable val (type
+        (value-type int)) (expr
+        (index-based-access
+          (simple-var-ref vals)
+          (simple-var-ref i)))))
+    (binary-expr <
+      (simple-var-ref val)
+      (literal 0))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref sum))
+  )
+  (bb4 (bb2) ()
+    (return
+      (error-constructor-expr (
+        (literal negative value))))
+  )
+  (bb5 (bb2) (bb1)
+    (compound-assignment +
+      (simple-var-ref sum)
+      (simple-var-ref val))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref bar))))
+    (var-def
+      (variable res (type
+        (value-type int)) (expr
+        (invocation f (
+          (literal 1)
+          (unary-expr -
+            (literal 1)))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

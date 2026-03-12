@@ -25,6 +25,6 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
 	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
 	if pkg.MainFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
-		executeFunction(*pkg.MainFunction, nil, reg, callStack)
+		executeFunction(*pkg.MainFunction, nil, reg, callStack, nil)
 	}
 }

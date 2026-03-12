@@ -1,0 +1,30 @@
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+)
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable f (type
+        (value-type any)) (expr
+        (simple-var-ref foo))))
+    (type-test-expr is
+      (simple-var-ref f)
+      (user-defined-type F))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal expected))))
+  )
+)

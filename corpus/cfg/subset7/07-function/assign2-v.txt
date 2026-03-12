@@ -1,0 +1,113 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Accum)) (expr
+        (simple-var-ref sum))))
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (invocation f (
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4)
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+    (var-def
+      (variable g (type
+        (user-defined-type Accum)) (expr
+        (simple-var-ref max))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (invocation g (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (invocation g (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5)))
+          (invocation g (
+            (literal 1)
+            (literal 2)
+            (literal 3))))))))
+  )
+)
+(max
+  (bb0 () (bb1)
+    (var-def
+      (variable max (type
+        (value-type int)) (expr
+        (index-based-access
+          (simple-var-ref values)
+          (literal 0)))))
+  )
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref values))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (group-expr
+      (binary-expr >
+        (index-based-access
+          (simple-var-ref values)
+          (simple-var-ref i))
+        (simple-var-ref max)))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref max))
+  )
+  (bb4 (bb2) (bb5)
+    (assignment
+      (simple-var-ref max)
+      (index-based-access
+        (simple-var-ref values)
+        (simple-var-ref i)))
+  )
+  (bb5 (bb4 bb2) (bb1))
+)
+(sum
+  (bb0 () (bb1)
+    (var-def
+      (variable sum (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref values))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref sum)
+      (index-based-access
+        (simple-var-ref values)
+        (simple-var-ref i)))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref sum))
+  )
+)

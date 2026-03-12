@@ -1,0 +1,55 @@
+(foo
+  (bb0 () ()
+    (return
+      (literal c))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable r1 (type
+        (union-type
+          (finite-type
+            (literal c))
+          (finite-type
+            (literal b)))) (expr
+        (invocation f (
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r1))))
+    (var-def
+      (variable val (type
+        (union-type
+          (finite-type
+            (literal 3))
+          (finite-type
+            (literal 4)))) (expr
+        (literal 3))))
+    (var-def
+      (variable r2 (type
+        (finite-type
+          (literal c))) (expr
+        (invocation f (
+          (simple-var-ref val))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r2))))
+    (var-def
+      (variable r3 (type
+        (union-type
+          (finite-type
+            (literal c))
+          (finite-type
+            (literal d)))) (expr
+        (invocation f (
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r3))))
+  )
+)

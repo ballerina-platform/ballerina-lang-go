@@ -1,0 +1,27 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad 3
+    %6 = ConstantLoad 4
+    %7 = f(%3,%4,%5,%6) -> bb1;
+  }
+  bb1 {
+    rest = %7;
+    %9 = println(rest) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+foo(((), (LIST))) -> ((), (INT)){
+  bb0 {
+    %2 = ConstantLoad 0
+    %0 = %2;
+    return;
+  }
+}

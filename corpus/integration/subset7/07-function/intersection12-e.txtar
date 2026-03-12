@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+  --> intersection12-e.bal:36:16
+   |
+36 |     T1|T2 v1 = f(a, a); // @error
+   |                ^^^^^^^
+

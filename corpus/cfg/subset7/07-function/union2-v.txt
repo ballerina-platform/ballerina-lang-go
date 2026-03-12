@@ -1,0 +1,42 @@
+(bar
+  (bb0 () ()
+    (return
+      (literal hello))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (union-type
+          (user-defined-type F1)
+          (user-defined-type F2))) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable ret (type
+        (union-type
+          (value-type int)
+          (value-type string))) (expr
+        (invocation f (
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref ret))))
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref bar))
+    (assignment
+      (simple-var-ref ret)
+      (invocation f (
+        (literal 5))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref ret))))
+  )
+)
