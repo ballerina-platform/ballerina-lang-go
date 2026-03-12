@@ -20,7 +20,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,7 +29,7 @@ import (
 var tempBalaCache string
 
 func TestMain(t *testing.M) {
-	tempBalaCache = filepath.Join("build", "temp-test-utils-bala-cache")
+	tempBalaCache = path.Join("build", "temp-test-utils-bala-cache")
 	if err := os.MkdirAll(tempBalaCache, 0o755); err != nil {
 		panic(err)
 	}
