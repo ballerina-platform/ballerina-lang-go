@@ -343,7 +343,7 @@ func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMapping
 func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
 	invocation := n.(*ast.BLangInvocation)
 	name := invocation.Name.GetValue()
-	scope := resolver.GetScope().(model.BlockLevelScope)
+	scope := resolver.GetScope().(model.SymbolSpaceProvider)
 	invocation.RawSymbol = &deferredMethodSymbol{name: name, space: scope.MainSpace()}
 }
 
