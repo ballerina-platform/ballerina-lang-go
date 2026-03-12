@@ -16,7 +16,11 @@
 
 package semtypes
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
 
 type MappingAtomicType struct {
 	Names []string
@@ -43,6 +47,18 @@ func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType
 		Types: types,
 		Rest:  rest,
 	}
+}
+
+func (this *MappingAtomicType) String() string {
+	var builder strings.Builder
+	builder.WriteString("(mapping")
+	for i, name := range this.Names {
+		builder.WriteString(fmt.Sprintf(" (%s %s)", name, this.Types[i].String()))
+	}
+	builder.WriteString(" ")
+	builder.WriteString(this.Rest.String())
+	builder.WriteString(")")
+	return builder.String()
 }
 
 func (this *MappingAtomicType) AtomKind() Kind {

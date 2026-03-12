@@ -17,14 +17,12 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/ast"
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
+	"fmt"
 )
 
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
@@ -35,6 +33,9 @@ type Context struct {
 	constantMap     map[model.SymbolRef]*BIRConstant
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
+	// Ideally I would like to track this by SymbolRef, but in order to map NewExpr to class definition we will need
+	// some changes to sementic analysis. Basically we need a way to map the type to the class declaration
+	classDefMap map[*semtypes.MappingAtomicType]*BIRClassDef
 }
 
 type stmtContext struct {
@@ -108,6 +109,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		constantMap:     make(map[model.SymbolRef]*BIRConstant),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
+		classDefMap:     make(map[*semtypes.MappingAtomicType]*BIRClassDef),
 	}
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, typeDef := range ast.TypeDefinitions {
@@ -120,6 +122,9 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		c := TransformConstant(genCtx, &constant)
 		genCtx.constantMap[constant.Symbol()] = c
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
+	}
+	for i := range ast.ClassDefinitions {
+		transformClassDefinition(genCtx, &ast.ClassDefinitions[i], birPkg)
 	}
 	for _, function := range ast.Functions {
 		birFunc := TransformFunction(genCtx, &function)
@@ -197,6 +202,10 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIR
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
+	return transformFunction(ctx, astFunc, nil)
+}
+
+func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *model.SymbolRef) *BIRFunction {
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
@@ -206,13 +215,14 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	pkgName := ctx.packageID.PkgName.Value()
 	moduleKey := orgName + "/" + pkgName
 	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
-	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
 	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
+	if selfSymbolRef != nil {
+		stmtCx.addLocalVar(model.Name("self"), ctx.CompilerContext.SymbolType(*selfSymbolRef), VAR_KIND_SELF, *selfSymbolRef)
+	}
 	for _, param := range astFunc.RequiredParams {
-		paramType := param.GetDeterminedType()
-		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
+		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), ctx.CompilerContext.SymbolType(param.Symbol()), VAR_KIND_ARG, param.Symbol())
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
@@ -398,6 +408,8 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 	containerType := varRef.Expr.GetDeterminedType()
 	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
 		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_STORE
+	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
+		fieldAccess.Kind = INSTRUCTION_KIND_OBJECT_STORE
 	} else {
 		fieldAccess.Kind = INSTRUCTION_KIND_MAP_STORE
 	}
@@ -411,9 +423,10 @@ func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BL
 }
 
 func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangSimpleVariableDef) statementEffect {
+	ty := ctx.birCx.CompilerContext.SymbolType(stmt.Var.Symbol())
 	varName := model.Name(stmt.Var.GetName().GetValue())
 	if stmt.Var.Expr == nil {
-		ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
+		ctx.addLocalVar(varName, ty, VAR_KIND_LOCAL, stmt.Var.Symbol())
 		// just declare the variable
 		return statementEffect{
 			block: bb,
@@ -422,7 +435,7 @@ func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 	exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
 	curBB := exprResult.block
 	move := &Move{}
-	move.LhsOp = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
+	move.LhsOp = ctx.addLocalVar(varName, ty, VAR_KIND_LOCAL, stmt.Var.Symbol())
 	move.RhsOp = exprResult.result
 	curBB.Instructions = append(curBB.Instructions, move)
 	return statementEffect{
@@ -547,8 +560,10 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return mappingConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangErrorConstructorExpr:
 		return errorConstructorExpression(ctx, curBB, expr)
+	case *ast.BLangNewExpression:
+		return newExpression(ctx, curBB, expr)
 	default:
-		panic("unexpected expression type")
+		panic(fmt.Sprintf("unexpected expression type: %T", expr))
 	}
 }
 
@@ -731,6 +746,8 @@ func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexB
 	containerType := expr.Expr.GetDeterminedType()
 	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
 		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
+	} else if semtypes.IsSubtypeSimple(containerType, semtypes.OBJECT) {
+		fieldAccess.Kind = INSTRUCTION_KIND_OBJECT_LOAD
 	} else {
 		fieldAccess.Kind = INSTRUCTION_KIND_MAP_LOAD
 	}
@@ -787,13 +804,19 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
 	curBB := bb
 	var args []BIROperand
+
+	if expr.Expr != nil {
+		receiverEffect := handleExpression(ctx, curBB, expr.Expr)
+		curBB = receiverEffect.block
+		args = append(args, *receiverEffect.result)
+	}
+
 	for _, arg := range expr.ArgExprs {
 		argEffect := handleExpression(ctx, curBB, arg)
 		curBB = argEffect.block
 		args = append(args, *argEffect.result)
 	}
 	thenBB := ctx.addBB()
-	// TODO: deal with type
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := &Call{}
 	call.Kind = INSTRUCTION_KIND_CALL
@@ -802,12 +825,14 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call.ThenBB = thenBB
 	call.LhsOp = resultOperand
 
+	if expr.Expr != nil {
+		call.IsVirtual = true
+	}
+
 	// Package qualified call - look up package ID from import alias
 	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
-		// Qualified call - look up package ID from import alias
 		call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
 	} else {
-		// Unqualified call (no PkgAlias) - assume same-module call and use current package
 		if ctx.birCx.packageID != nil {
 			call.CalleePkg = ctx.birCx.packageID
 		}
@@ -1005,6 +1030,83 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 
 	panic(fmt.Sprintf("variable %s not found (SymbolRef: Pkg=%v Index=%d SpaceIndex=%d)",
 		varName, symRef.Package, symRef.Index, symRef.SpaceIndex))
+}
+
+func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, birPkg *BIRPackage) {
+	className := model.Name(class.GetName().GetValue())
+	classScope := class.Scope()
+	selfRef, ok := classScope.GetSymbol("self")
+	if !ok {
+		ctx.CompilerContext.InternalError("self symbol not found in class scope", class.GetPosition())
+	}
+
+	birClassDef := &BIRClassDef{
+		Name:   className,
+		VTable: make(map[string]*BIRFunction),
+	}
+
+	for _, field := range class.Fields {
+		birClassDef.Fields = append(birClassDef.Fields, ObjectField{
+			Name: field.GetName().GetValue(),
+			Ty:   field.GetDeterminedType(),
+		})
+	}
+
+	initFunc := transformFunction(ctx, class.InitFunction, &selfRef)
+	birClassDef.VTable["init"] = initFunc
+
+	for methodName, method := range class.Methods {
+		birClassDef.VTable[methodName] = transformFunction(ctx, method, &selfRef)
+	}
+
+	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())
+	classType := class.Definition.GetSemType(ctx.CompilerContext.GetTypeEnv())
+	atomicType := semtypes.ToObjectAtomicType(semCtx, classType)
+	if atomicType != nil {
+		ctx.classDefMap[atomicType] = birClassDef
+	} else {
+		ctx.CompilerContext.InternalError("failed to determine object atomic type", class.GetPosition())
+	}
+
+	birPkg.ClassDefs = append(birPkg.ClassDefs, *birClassDef)
+}
+
+func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExpression) expressionEffect {
+	classDef := ctx.birCx.classDefMap[expr.AtomicType]
+	if classDef == nil {
+		ctx.birCx.CompilerContext.InternalError("failed to find the class definition", expr.GetPosition())
+	}
+
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	newObj := &NewObject{}
+	newObj.ClassDef = classDef
+	newObj.LhsOp = resultOperand
+	curBB.Instructions = append(curBB.Instructions, newObj)
+
+	var args []BIROperand
+	args = append(args, *resultOperand)
+	for _, arg := range expr.ArgsExprs {
+		argEffect := handleExpression(ctx, curBB, arg)
+		curBB = argEffect.block
+		args = append(args, *argEffect.result)
+	}
+
+	thenBB := ctx.addBB()
+	initFunc := classDef.VTable["init"]
+	call := &Call{}
+	call.Kind = INSTRUCTION_KIND_CALL
+	call.Args = args
+	call.Name = initFunc.Name
+	call.ThenBB = thenBB
+	call.LhsOp = ctx.addTempVar(expr.DeterminedType)
+	call.IsVirtual = true
+	call.CachedBIRFunc = initFunc
+	curBB.Terminator = call
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  thenBB,
+	}
 }
 
 func appendIfNotNil[T any](slice []T, item *T) []T {

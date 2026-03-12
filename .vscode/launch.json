@@ -12,6 +12,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cli/cmd",
+            "buildFlags": "-tags debug",
             "args": [
                 "run",
                 "${file}"
@@ -23,6 +24,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cli/cmd",
+            "buildFlags": "-tags debug",
             "args": [
                 "run",
                 "${fileDirname}"

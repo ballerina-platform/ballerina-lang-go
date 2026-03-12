@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: included member 'x' declared in multiple type inclusions must be overridden
+  --> inclusion-dup-field-obj-e.bal:25:10
+   |
+25 | type Bar object { // @error
+   |          ^^^^^^^^^^^^^^^^^^
+

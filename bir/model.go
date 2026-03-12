@@ -65,8 +65,20 @@ type (
 		GlobalVars    []BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		Constants     []BIRConstant
+		ClassDefs     []BIRClassDef
 		MainFunction  *BIRFunction
 		TypeEnv       semtypes.Env
+	}
+
+	ObjectField struct {
+		Name string
+		Ty   semtypes.SemType
+	}
+
+	BIRClassDef struct {
+		Name   model.Name
+		Fields []ObjectField
+		VTable map[string]*BIRFunction
 	}
 
 	BIRImportModule struct {

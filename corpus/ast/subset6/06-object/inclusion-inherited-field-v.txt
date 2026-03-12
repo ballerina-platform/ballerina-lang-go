@@ -1,0 +1,55 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Foo
+    (object-type
+      (method-decl getX () (
+        (value-type int)))
+      (field x
+        (value-type int))
+      (field y
+        (value-type string))))
+  (class-definition Bar
+    (variable z (type
+      (value-type int)) (expr
+      (literal 0)))
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access x
+            (simple-var-ref self))
+          (literal 42))
+        (assignment
+          (field-based-access y
+            (simple-var-ref self))
+          (literal hello))
+        (assignment
+          (field-based-access z
+            (simple-var-ref self))
+          (literal 1))))
+    (function getX () (
+      (value-type int))
+      (block-function-body
+        (return
+          (field-based-access x
+            (simple-var-ref self))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable b (type
+          (user-defined-type Bar)) (expr
+          (new ()))))
+      (expression-stmt
+        (invocation io println (
+          (invocation getX expr:
+            (simple-var-ref b) ()))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access y
+            (simple-var-ref b)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access z
+            (simple-var-ref b))))))))

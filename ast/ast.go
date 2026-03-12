@@ -23,6 +23,7 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"iter"
 	"strings"
 )
 
@@ -297,25 +298,19 @@ type (
 		bLangNodeBase
 		Name                            *BLangIdentifier
 		symbol                          model.SymbolRef
+		scope                           model.Scope
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		InitFunction                    *BLangFunction
-		Functions                       []BLangFunction
+		Methods                         map[string]*BLangFunction
 		Fields                          []model.SimpleVariableNode
-		TypeRefs                        []model.TypeDescriptor
+		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
+		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
 		FlagSet                         common.Set[model.Flag]
-		GeneratedInitFunction           *BLangFunction
-		Receiver                        *BLangSimpleVariable
-		ReferencedFields                []BLangSimpleVariable
-		LocalVarRefs                    []BLangLocalVarRef
-		OceEnvData                      *OCEDynamicEnvironmentData
-		ObjectType                      *BObjectType
+		typeData                        model.TypeData
+		Definition                      semtypes.Definition
 		CycleDepth                      int
-		Precedence                      int
-		IsServiceDecl                   bool
-		HasClosureVars                  bool
-		IsObjectContructorDecl          bool
-		DefinitionCompleted             bool
+		precedence                      int
 	}
 
 	BLangService struct {
@@ -503,6 +498,14 @@ func (n *BLangClassDefinition) SetSymbol(symbolRef model.SymbolRef) {
 	n.symbol = symbolRef
 }
 
+func (n *BLangClassDefinition) Scope() model.Scope {
+	return n.scope
+}
+
+func (n *BLangClassDefinition) SetScope(scope model.Scope) {
+	n.scope = scope
+}
+
 func (n *BLangService) Symbol() model.SymbolRef {
 	return n.symbol
 }
@@ -548,6 +551,8 @@ var (
 	_ model.IdentifierNode                              = &BLangIdentifier{}
 	_ model.ImportPackageNode                           = &BLangImportPackage{}
 	_ model.ClassDefinition                             = &BLangClassDefinition{}
+	_ model.TypeDefinition                              = &BLangClassDefinition{}
+	_ NodeWithScope                                     = &BLangClassDefinition{}
 	_ model.PackageNode                                 = &BLangPackage{}
 	_ model.PackageNode                                 = &BLangTestablePackage{}
 	_ model.AnnotationNode                              = &BLangAnnotation{}
@@ -804,13 +809,17 @@ func (this *BLangImportPackage) SetAlias(alias model.IdentifierNode) {
 
 func NewBLangClassDefinition() BLangClassDefinition {
 	this := BLangClassDefinition{}
-	this.CycleDepth = (-1)
-	this.IsObjectContructorDecl = false
-	// Default field initializations
+	this.CycleDepth = -1
+	this.Methods = map[string]*BLangFunction{}
 	this.FlagSet = &common.UnorderedSet[model.Flag]{}
 	this.FlagSet.Add(model.Flag_CLASS)
-
 	return this
+}
+
+func (this *BLangClassDefinition) PopUnresolvedInclusions() []*BLangUserDefinedType {
+	inclusions := this.unresolvedInclusions
+	this.unresolvedInclusions = nil
+	return inclusions
 }
 
 func (this *BLangClassDefinition) GetName() model.IdentifierNode {
@@ -827,22 +836,28 @@ func (this *BLangClassDefinition) SetName(name model.IdentifierNode) {
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangClassDefinition) GetFunctions() []model.FunctionNode {
-	// migrated from BLangClassDefinition.java:98:5
-	result := make([]model.FunctionNode, len(this.Functions))
-	for i := range this.Functions {
-		result[i] = &this.Functions[i]
+func (this *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionNode] {
+	return func(yield func(string, model.FunctionNode) bool) {
+		for name, method := range this.Methods {
+			if !yield(name, method) {
+				return
+			}
+		}
 	}
-	return result
 }
 
-func (this *BLangClassDefinition) AddFunction(function model.FunctionNode) {
-	// migrated from BLangClassDefinition.java:103:5
-	if function, ok := function.(*BLangFunction); ok {
-		this.Functions = append(this.Functions, *function)
-		return
+func (this *BLangClassDefinition) GetMethod(name string) model.FunctionNode {
+	if method, ok := this.Methods[name]; ok {
+		return method
 	}
-	panic("function is not a BLangFunction")
+	return nil
+}
+
+func (this *BLangClassDefinition) AddMethod(name string, function *BLangFunction) {
+	if this.Methods == nil {
+		this.Methods = map[string]*BLangFunction{}
+	}
+	this.Methods[name] = function
 }
 
 func (this *BLangClassDefinition) GetInitFunction() model.FunctionNode {
@@ -859,9 +874,8 @@ func (this *BLangClassDefinition) AddField(field model.VariableNode) {
 	panic("field is not a BLangSimpleVariable")
 }
 
-func (this *BLangClassDefinition) AddTypeReference(typeRef *model.TypeData) {
-	// migrated from BLangClassDefinition.java:118:5
-	this.TypeRefs = append(this.TypeRefs, typeRef.TypeDescriptor)
+func (this *BLangClassDefinition) AddInclusion(symbolRef model.SymbolRef) {
+	this.Inclusions = append(this.Inclusions, symbolRef)
 }
 
 func (this *BLangClassDefinition) GetKind() model.NodeKind {
@@ -912,13 +926,27 @@ func (this *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentati
 }
 
 func (this *BLangClassDefinition) GetPrecedence() int {
-	// migrated from BLangClassDefinition.java:188:5
-	return this.Precedence
+	return this.precedence
 }
 
 func (this *BLangClassDefinition) SetPrecedence(precedence int) {
-	// migrated from BLangClassDefinition.java:193:5
-	this.Precedence = precedence
+	this.precedence = precedence
+}
+
+func (this *BLangClassDefinition) GetTypeData() model.TypeData {
+	return this.typeData
+}
+
+func (this *BLangClassDefinition) SetTypeData(typeData model.TypeData) {
+	this.typeData = typeData
+}
+
+func (this *BLangClassDefinition) GetCycleDepth() int {
+	return this.CycleDepth
+}
+
+func (this *BLangClassDefinition) SetCycleDepth(depth int) {
+	this.CycleDepth = depth
 }
 
 func (this *BLangCompilationUnit) AddTopLevelNode(node model.TopLevelNode) {
@@ -1948,6 +1976,8 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 			p.TypeDefinitions = append(p.TypeDefinitions, *node)
 		case *BLangAnnotation:
 			p.Annotations = append(p.Annotations, *node)
+		case *BLangClassDefinition:
+			p.ClassDefinitions = append(p.ClassDefinitions, *node)
 		default:
 			p.TopLevelNodes = append(p.TopLevelNodes, node)
 		}

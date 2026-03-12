@@ -50,11 +50,15 @@ func (this *BddNodeImpl) Right() Bdd {
 func newBddNodeImpl(atom Atom, left, middle, right Bdd) *BddNodeImpl {
 	node := &BddNodeImpl{atom: atom, left: left, middle: middle, right: right}
 	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%d (%s) (%s) (%s))", atom.Index(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey())
+		return fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey())
 	})
 	return node
 }
 
 func (this *BddNodeImpl) canonicalKey() string {
 	return this.canonicalKeyFunc()
+}
+
+func (this *BddNodeImpl) String() string {
+	return fmt.Sprintf("(%s (%s) (%s) (%s))", this.atom.String(), this.left.String(), this.middle.String(), this.right.String())
 }

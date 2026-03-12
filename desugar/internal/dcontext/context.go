@@ -56,6 +56,14 @@ func (ctx *PackageContext) GetImportedSymbolSpace(pkgName string) (model.Exporte
 	return space, ok
 }
 
+func (ctx *PackageContext) NewFunctionScope(parent model.Scope) *model.FunctionScope {
+	return ctx.compilerCtx.NewFunctionScope(parent, *ctx.pkg.PackageID)
+}
+
+func (ctx *PackageContext) GetSymbol(ref model.SymbolRef) model.Symbol {
+	return ctx.compilerCtx.GetSymbol(ref)
+}
+
 func (ctx *PackageContext) InternalError(msg string) {
 	ctx.compilerCtx.InternalError(msg, nil)
 }

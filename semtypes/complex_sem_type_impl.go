@@ -41,5 +41,5 @@ func (this *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
 func (c *complexSemTypeImpl) String() string {
 	allTypes := bitsetToTypeNames(c.all)
 	someTypes := bitsetToTypeNames(c.some)
-	return fmt.Sprintf("((%s), (%s))", allTypes, someTypes)
+	return fmt.Sprintf("((%s), (%s)%s)", allTypes, someTypes, subtypeDataListStr(c.subtypeDataList))
 }

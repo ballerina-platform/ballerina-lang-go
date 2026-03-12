@@ -63,6 +63,16 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 		analyzeUninitializedVars(ctx, pkg, cfg)
 	})
 
+	// Run uninitialized field analysis
+	wg.Go(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicErr = r
+			}
+		}()
+		analyzeUninitializedFields(ctx, pkg, cfg)
+	})
+
 	wg.Wait()
 	if panicErr != nil {
 		panic(panicErr)
@@ -74,7 +84,7 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 	var wg sync.WaitGroup
 	var panicErr any = nil
-	for _, fnCfg := range cfg.funcCfgs {
+	for _, fcfg := range cfg.allFunctionCfgs {
 		wg.Add(1)
 		go func(fcfg *functionCFG) {
 			defer wg.Done()
@@ -90,7 +100,7 @@ func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 					}
 				}
 			}
-		}(&fnCfg)
+		}(fcfg)
 	}
 	wg.Wait()
 
@@ -118,6 +128,20 @@ func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, 
 			analyzeFunctionExplicitReturn(ctx, f, cfg)
 		}(fn)
 	}
+	for i := range pkg.ClassDefinitions {
+		for _, method := range pkg.ClassDefinitions[i].Methods {
+			wg.Add(1)
+			go func(f *ast.BLangFunction) {
+				defer wg.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						panicErr = r
+					}
+				}()
+				analyzeFunctionExplicitReturn(ctx, f, cfg)
+			}(method)
+		}
+	}
 	wg.Wait()
 
 	if panicErr != nil {
@@ -132,7 +156,7 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 		return
 	}
 
-	fnCfg, ok := cfg.funcCfgs[fn.Symbol()]
+	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
 		return
 	}

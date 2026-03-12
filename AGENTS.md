@@ -79,3 +79,4 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
 ## Type
 
 - To check if a type is singleton type and get it's value use `semtype:SingleShape`
+- If you run in to type check issues use debug build tag to ennabled more detailed error messages for types

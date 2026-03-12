@@ -16,7 +16,11 @@
 
 package semtypes
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
 
 type ListAtomicType struct {
 	Members FixedLengthArray
@@ -47,6 +51,22 @@ func ListAtomicTypeFrom(members FixedLengthArray, rest CellSemType) ListAtomicTy
 	// migrated from ListAtomicType.java:34:5
 
 	return NewListAtomicTypeFromMembersRest(members, rest)
+}
+
+func (this *ListAtomicType) String() string {
+	var builder strings.Builder
+	builder.WriteString("(list (")
+	for i, m := range this.Members.Initial {
+		if i > 0 {
+			builder.WriteString(" ")
+		}
+		builder.WriteString(m.String())
+	}
+	builder.WriteString(fmt.Sprintf(" fixedLen=%d", this.Members.FixedLength))
+	builder.WriteString(") ")
+	builder.WriteString(this.Rest.String())
+	builder.WriteString(")")
+	return builder.String()
 }
 
 func (this *ListAtomicType) AtomKind() Kind {

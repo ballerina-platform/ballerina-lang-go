@@ -1,0 +1,41 @@
+module $anon.. v 0.0.0;
+class Foo {
+  x ((INT), ())
+
+  getX() -> ((INT), ()){
+    bb0 {
+      %3 = ConstantLoad x
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init(((INT), ())) -> ((NIL), ()){
+    bb0 {
+      %3 = ConstantLoad x
+      self[%3] = x;
+      return;
+    }
+  }
+}
+class Bar {
+  x ((INT), ())
+
+  getX() -> ((INT), ()){
+    bb0 {
+      %3 = ConstantLoad x
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init(((INT), ())) -> ((NIL), ()){
+    bb0 {
+      %3 = ConstantLoad x
+      self[%3] = x;
+      return;
+    }
+  }
+}

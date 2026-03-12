@@ -60,3 +60,11 @@ func (this *AllOrNothingSubtype) canonicalKey() string {
 		return "false"
 	}
 }
+
+func (this *AllOrNothingSubtype) String() string {
+	if this.isAll {
+		return "all"
+	} else {
+		return "nothing"
+	}
+}

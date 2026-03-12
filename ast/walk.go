@@ -171,15 +171,13 @@ func Walk(v Visitor, node BLangNode) {
 		if node.InitFunction != nil {
 			Walk(v, node.InitFunction)
 		}
-		for i := range node.Functions {
-			Walk(v, &node.Functions[i])
+		for _, method := range node.Methods {
+			Walk(v, method)
 		}
 		for _, field := range node.Fields {
 			Walk(v, field.(BLangNode))
 		}
-		for _, typeRef := range node.TypeRefs {
-			Walk(v, typeRef.(BLangNode))
-		}
+		WalkTypeData(v, &node.typeData)
 
 	case *BLangAnnotation:
 		if node.Name != nil {
@@ -599,6 +597,22 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.RestType.(BLangNode))
 		}
 
+	case *BLangObjectType:
+		for member := range node.Members() {
+			Walk(v, member.(BLangNode))
+		}
+
+	case *BObjectField:
+		Walk(v, node.Ty.(BLangNode))
+
+	case *BMethodDecl:
+		for _, param := range node.Params {
+			Walk(v, param.ty.(BLangNode))
+		}
+		if node.ReturnTy != nil {
+			Walk(v, node.ReturnTy.(BLangNode))
+		}
+
 	// Section 9: Binding Patterns
 	case *BLangCaptureBindingPattern:
 		Walk(v, &node.Identifier)
@@ -737,6 +751,14 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangNamedArgsExpression:
 		Walk(v, &node.Name)
 		Walk(v, node.Expr.(BLangNode))
+
+	case *BLangNewExpression:
+		if node.UserDefinedType != nil {
+			Walk(v, node.UserDefinedType)
+		}
+		for _, arg := range node.ArgsExprs {
+			Walk(v, arg.(BLangNode))
+		}
 
 	default:
 		panic(fmt.Sprintf("unexpected node type %T", node))

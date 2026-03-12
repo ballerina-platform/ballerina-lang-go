@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (OBJECT)), got ((), (OBJECT))
+  --> type-check-e.bal:39:13
+   |
+39 |     Foo f = new Bar(5); // @error
+   |             ^^^^^^^^^^
+

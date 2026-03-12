@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: missing return statement
+  --> method-missing-return-e.bal:21:5
+   |
+21 |     function bar() returns int {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
