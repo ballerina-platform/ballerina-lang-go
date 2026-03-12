@@ -1,0 +1,91 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad 3
+    %6 = ConstantLoad 4
+    %7 = ConstantLoad 5
+    %8 = f(%3,%4,%5,%6,%7) -> bb1;
+  }
+  bb1 {
+    %9 = fp $anon/.:bar
+    g = %9;
+    %11 = ConstantLoad 1
+    %12 = ConstantLoad 2
+    %13 = ConstantLoad 3
+    %14 = ConstantLoad 4
+    %15 = ConstantLoad 5
+    %16 = g(%11,%12,%13,%14,%15) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+foo(int,[int...]...) -> nil{
+  bb0 {
+    result = init;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = rest[i];
+    %9 = + result %10;
+    result = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %13 = println(result) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+bar([int...]...) -> nil{
+  bb0 {
+    %2 = ConstantLoad 1
+    result = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = rest[i];
+    %9 = * result %10;
+    result = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %13 = println(result) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (FUNCTION)), got ((), (FUNCTION))
+error[SEMANTIC_ERROR]: incompatible type: expected function(int...) returns int:Unsigned8&function(int, int) returns int, got function(int, int) returns int
   --> intersection4-e.bal:23:12
    |
 23 |     Fx f = bar; // @error

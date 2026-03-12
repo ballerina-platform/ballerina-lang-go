@@ -1,0 +1,163 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable funcs (type
+          (array-type
+            (user-defined-type F) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (simple-var-ref baz)))))
+      (var-def
+        (variable results (type
+          (array-type
+            (value-type int) dimensions: 1 ([]))) (expr
+          (invocation exec (
+            (simple-var-ref funcs)
+            (literal 2)
+            (literal 3))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref results))))))
+  (function exec (
+    (variable funcs (type
+      (array-type
+        (user-defined-type F) dimensions: 1 ([]))))
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))) (
+    (array-type
+      (value-type int) dimensions: 1 ([])))
+    (block-function-body
+      (var-def
+        (variable results (type
+          (array-type
+            (value-type int) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref funcs) ()))
+        (block-stmt
+          (var-def
+            (variable func (type
+              (user-defined-type F)) (expr
+              (index-based-access
+                (simple-var-ref funcs)
+                (simple-var-ref i)))))
+          (expression-stmt
+            (invocation push expr:
+              (simple-var-ref results) (
+              (invocation func (
+                (simple-var-ref a)
+                (simple-var-ref b))))))))
+      (return
+        (simple-var-ref results))))
+  (function foo (
+    (variable a (type
+      (union-type
+        (value-type int)
+        (value-type string))))
+    (variable b (type
+      (union-type
+        (value-type int)
+        (value-type string))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (group-expr
+          (binary-expr &&
+            (type-test-expr is
+              (simple-var-ref a)
+              (value-type int))
+            (type-test-expr is
+              (simple-var-ref b)
+              (value-type int))))
+        (block-stmt
+          (return
+            (binary-expr +
+              (simple-var-ref a)
+              (simple-var-ref b)))) ())
+      (block-stmt
+        (return
+          (unary-expr -
+            (literal 1))))))
+  (function bar () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref vals) ()))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref sum)
+            (index-based-access
+              (simple-var-ref vals)
+              (simple-var-ref i)))))
+      (return
+        (simple-var-ref sum))))
+  (function baz () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable init (type
+          (union-type
+            (value-type int)
+            (value-type string))) (expr
+          (literal ))))
+      (if
+        (type-test-expr is
+          (index-based-access
+            (simple-var-ref vals)
+            (literal 0))
+          (value-type int))
+        (block-stmt
+          (assignment
+            (simple-var-ref init)
+            (literal 0))) ())
+      (block-stmt
+        (var-def
+          (variable result (type
+            (value-type int)) (expr
+            (literal 0))))
+        (foreach
+          (var-def
+            (variable i (type
+              (value-type int))))
+          (binary-expr ..<
+            (literal 0)
+            (invocation length expr:
+              (simple-var-ref vals) ()))
+          (block-stmt
+            (compound-assignment +
+              (simple-var-ref result)
+              (invocation foo (
+                (simple-var-ref init)
+                (index-based-access
+                  (simple-var-ref vals)
+                  (simple-var-ref i)))))))
+        (return
+          (simple-var-ref result))))))

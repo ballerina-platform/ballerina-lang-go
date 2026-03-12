@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = fp $anon/.:moveFn
     fn = %1;
@@ -10,7 +10,7 @@ main() -> ((NIL), ()){
     %6 = ConstantLoad 20
     %7 = ConstantLoad colour
     %8 = ConstantLoad red
-    %9 = newMap ((), (MAPPING)){%3=%4, %5=%6, %7=%8}
+    %9 = newMap {| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%3=%4, %5=%6, %7=%8}
     cp = %9;
     %11 = ConstantLoad 10
     %12 = ConstantLoad 20
@@ -25,7 +25,7 @@ main() -> ((NIL), ()){
     %17 = ConstantLoad 10
     %18 = ConstantLoad y
     %19 = ConstantLoad 20
-    %20 = newMap ((), (MAPPING)){%16=%17, %18=%19}
+    %20 = newMap {| x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%16=%17, %18=%19}
     p = %20;
     %22 = ConstantLoad 10
     %23 = ConstantLoad 20
@@ -39,9 +39,9 @@ main() -> ((NIL), ()){
     return;
   }
 }
-moveFn(((), (MAPPING)),((INT), ()),((INT), ())) -> ((), (MAPPING)){
+moveFn({| x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |},int,int) -> {| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{
   bb0 {
-    %4 = p is ((), (MAPPING))
+    %4 = p is {| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}
     %4 ? bb1 : bb3;
   }
   bb1 {
@@ -64,12 +64,12 @@ moveFn(((), (MAPPING)),((INT), ()),((INT), ())) -> ((), (MAPPING)){
     %12 = movedPoint[%13];
     %14 = ConstantLoad colour
     %15 = ConstantLoad white
-    %16 = newMap ((), (MAPPING)){%8=%9, %11=%12, %14=%15}
+    %16 = newMap {| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{%8=%9, %11=%12, %14=%15}
     %0 = %16;
     return;
   }
 }
-movePoint(((), (MAPPING)),((INT), ()),((INT), ())) -> ((), (MAPPING)){
+movePoint({| x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |},int,int) -> {| x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{
   bb0 {
     %6 = ConstantLoad x
     %5 = p[%6];
@@ -85,7 +85,7 @@ movePoint(((), (MAPPING)),((INT), ()),((INT), ())) -> ((), (MAPPING)){
     return;
   }
 }
-moveColoredPoint(((), (MAPPING)),((INT), ()),((INT), ())) -> ((), (MAPPING)){
+moveColoredPoint({| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |},int,int) -> {| colour: string, x: int, y: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table... |}{
   bb0 {
     %6 = ConstantLoad colour
     %5 = p[%6];

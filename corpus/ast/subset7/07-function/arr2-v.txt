@@ -1,0 +1,66 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type () (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fns (type
+          (array-type
+            (user-defined-type F) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (simple-var-ref one)
+            (simple-var-ref two)
+            (simple-var-ref three)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum (
+            (simple-var-ref fns))))))))
+  (function one () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 1))))
+  (function two () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 2))))
+  (function three () (
+    (value-type int))
+    (block-function-body
+      (return
+        (literal 3))))
+  (function sum (
+    (variable fns (type
+      (array-type
+        (user-defined-type F) dimensions: 1 ([]))))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable tmp (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref fns) ()))
+        (block-stmt
+          (var-def
+            (variable fn (type
+              (user-defined-type F)) (expr
+              (index-based-access
+                (simple-var-ref fns)
+                (simple-var-ref i)))))
+          (compound-assignment +
+            (simple-var-ref tmp)
+            (invocation fn ()))))
+      (return
+        (simple-var-ref tmp)))))

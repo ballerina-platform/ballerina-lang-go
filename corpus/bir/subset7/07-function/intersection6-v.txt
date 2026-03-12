@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = fp $anon/.:foo
     fx = %1;
@@ -22,9 +22,9 @@ main() -> ((NIL), ()){
     return;
   }
 }
-foo(((INT, STRING), ())) -> ((INT), ()){
+foo(int|string) -> int{
   bb0 {
-    %2 = a is ((STRING), ())
+    %2 = a is string
     %2 ? bb1 : bb2;
   }
   bb1 {

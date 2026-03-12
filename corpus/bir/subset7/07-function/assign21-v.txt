@@ -1,0 +1,157 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad 3
+    %6 = ConstantLoad 4
+    %7 = ConstantLoad 5
+    %8 = f(%3,%4,%5,%6,%7) -> bb1;
+  }
+  bb1 {
+    result = %8;
+    %10 = println(result) -> bb2;
+  }
+  bb2 {
+    %11 = fp $anon/.:bar
+    g = %11;
+    %13 = ConstantLoad 1
+    %14 = ConstantLoad 2
+    %15 = ConstantLoad 3
+    %16 = ConstantLoad 4
+    %17 = ConstantLoad 5
+    %18 = g(%13,%14,%15,%16,%17) -> bb3;
+  }
+  bb3 {
+    %19 = println(%18) -> bb4;
+  }
+  bb4 {
+    %20 = ConstantLoad 1
+    %21 = ConstantLoad 2
+    %22 = g(%20,%21) -> bb5;
+  }
+  bb5 {
+    %23 = ConstantLoad 3
+    %24 = ConstantLoad 4
+    %25 = g(%23,%24) -> bb6;
+  }
+  bb6 {
+    %26 = ConstantLoad 5
+    %27 = f(%22,%25,%26) -> bb7;
+  }
+  bb7 {
+    %28 = println(%27) -> bb8;
+  }
+  bb8 {
+    %29 = fp $anon/.:baz
+    h = %29;
+    %31 = ConstantLoad 1
+    %32 = ConstantLoad 2
+    %33 = ConstantLoad 3
+    %34 = h(%31,%32,%33) -> bb9;
+  }
+  bb9 {
+    %35 = println(%34) -> bb10;
+  }
+  bb10 {
+    return;
+  }
+}
+foo(int,[int...]...) -> int{
+  bb0 {
+    result = init;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = rest[i];
+    %9 = + result %10;
+    result = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+}
+bar([int...]...) -> int{
+  bb0 {
+    %2 = ConstantLoad 1
+    result = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = rest[i];
+    %9 = * result %10;
+    result = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+}
+baz(int,[int...]...) -> [int...]{
+  bb0 {
+    %3 = ConstantLoad 1
+    %4 = newArray [int...][%3]{init}
+    result = %4;
+    current = init;
+    %7 = ConstantLoad 0
+    i = %7;
+    %9 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %9;
+    GOTO bb2;
+  }
+  bb2 {
+    %11 = < i $desugar$0;
+    %11 ? bb3 : bb4;
+  }
+  bb3 {
+    %13 = rest[i];
+    %12 = + current %13;
+    current = %12;
+    %14 = push(result,current) -> bb5;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+  bb5 {
+    %16 = ConstantLoad 1
+    %15 = + i %16;
+    i = %15;
+    GOTO bb2;
+  }
+}

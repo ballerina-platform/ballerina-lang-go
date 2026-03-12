@@ -1,0 +1,65 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+$anonFunc$_0(int) -> int{
+  bb0 {
+    %3 = + (1, x) y;
+    %2 = + %3 (1, z);
+    %0 = %2;
+    return;
+  }
+}
+$anonFunc$_1(int) -> int{
+  bb0 {
+    %2 = + (1, x) y;
+    %0 = %2;
+    return;
+  }
+}
+foo(int,int,boolean) -> function(int) returns int{
+  bb0 {
+    flag ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = closure_fp $anon/.:$anonFunc$_0
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %5 = closure_fp $anon/.:$anonFunc$_1
+    %0 = %5;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 2
+    %2 = ConstantLoad 3
+    %3 = ConstantLoad true
+    %4 = foo(%1,%2,%3) -> bb1;
+  }
+  bb1 {
+    bar = %4;
+    %6 = ConstantLoad 1
+    %7 = bar(%6) -> bb2;
+  }
+  bb2 {
+    %8 = println(%7) -> bb3;
+  }
+  bb3 {
+    %9 = ConstantLoad 2
+    %10 = ConstantLoad 3
+    %11 = ConstantLoad false
+    %12 = foo(%9,%10,%11) -> bb4;
+  }
+  bb4 {
+    bar = %12;
+    %13 = ConstantLoad 1
+    %14 = bar(%13) -> bb5;
+  }
+  bb5 {
+    %15 = println(%14) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

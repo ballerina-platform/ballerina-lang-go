@@ -1,0 +1,115 @@
+(fSum
+  (bb0 () (bb1)
+    (var-def
+      (variable sum (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref funcs))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (index-based-access
+          (simple-var-ref funcs)
+          (simple-var-ref i)))))
+    (compound-assignment +
+      (simple-var-ref sum)
+      (invocation f (
+        (simple-var-ref i))))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref sum))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (literal 1)))
+  )
+)
+(genFs
+  (bb0 () (bb1)
+    (var-def
+      (variable array (type
+        (array-type
+          (user-defined-type F) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+  )
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (literal 10000000))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb6)
+    (var-def
+      (variable v (type
+        (value-type int)) (expr
+        (simple-var-ref i))))
+    (binary-expr ==
+      (binary-expr %
+        (simple-var-ref i)
+        (literal 2))
+      (literal 0))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref array))
+  )
+  (bb4 (bb2) (bb5)
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (lambda
+          (function $anonFunc$_0 (
+            (variable x (type
+              (value-type int)))) (
+            (value-type int))
+            (block-function-body
+              (return
+                (binary-expr +
+                  (binary-expr +
+                    (simple-var-ref v)
+                    (simple-var-ref x))
+                  (simple-var-ref base)))))))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref array)
+        (simple-var-ref f))))
+  )
+  (bb5 (bb4 bb6) (bb1))
+  (bb6 (bb2) (bb5)
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref array)
+        (simple-var-ref foo))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable funcs (type
+        (array-type
+          (user-defined-type F) dimensions: 1 ([]))) (expr
+        (invocation genFs (
+          (literal 10))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fSum (
+          (simple-var-ref funcs))))))
+  )
+)

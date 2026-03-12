@@ -314,6 +314,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeStringCPEntry(buf, instr.FunctionLookupKey)
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
+		write(buf, instr.IsClosure)
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
@@ -381,6 +382,9 @@ func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	bw.writeScope(buf, scope)
 	name := op.VariableDcl.GetName()
 	bw.writeStringCPEntry(buf, name.Value())
+	write(buf, uint8(op.Address.Mode))
+	write(buf, int32(op.Address.FrameIndex))
+	write(buf, int32(op.Address.BaseIndex))
 }
 
 func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {

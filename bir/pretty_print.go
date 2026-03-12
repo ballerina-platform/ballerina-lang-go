@@ -201,7 +201,11 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 }
 
 func (p *PrettyPrinter) PrintFPLoad(fpLoad *FPLoad) string {
-	return fmt.Sprintf("%s = fp %s", p.PrintOperand(*fpLoad.LhsOp), fpLoad.FunctionLookupKey)
+	kind := "fp"
+	if fpLoad.IsClosure {
+		kind = "closure_fp"
+	}
+	return fmt.Sprintf("%s = %s %s", p.PrintOperand(*fpLoad.LhsOp), kind, fpLoad.FunctionLookupKey)
 }
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
@@ -323,6 +327,9 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
 	name := operand.VariableDcl.GetName()
+	if operand.Address.Mode == AddressingModeAbsolute {
+		return fmt.Sprintf("(%d, %s)", operand.Address.BaseIndex, name)
+	}
 	return name.Value()
 }
 
@@ -408,5 +415,4 @@ func (p *PrettyPrinter) PrintPackageID(packageID *model.PackageID) string {
 	pkgName := string(*packageID.PkgName)
 	version := string(*packageID.Version)
 	return fmt.Sprintf("%s.%s v %s", orgName, pkgName, version)
-
 }

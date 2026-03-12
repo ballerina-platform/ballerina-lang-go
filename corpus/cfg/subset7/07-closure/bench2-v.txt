@@ -1,0 +1,80 @@
+(bench
+  (bb0 () (bb1)
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable sum (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (literal 10000000))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb6)
+    (var-def
+      (variable v (type
+        (value-type int)) (expr
+        (simple-var-ref i))))
+    (binary-expr ==
+      (binary-expr %
+        (simple-var-ref i)
+        (literal 2))
+      (literal 0))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref sum))
+  )
+  (bb4 (bb2) (bb5)
+    (assignment
+      (simple-var-ref f)
+      (lambda
+        (function $anonFunc$_0 (
+          (variable x (type
+            (value-type int)))) (
+          (value-type int))
+          (block-function-body
+            (return
+              (binary-expr +
+                (binary-expr +
+                  (simple-var-ref v)
+                  (simple-var-ref x))
+                (simple-var-ref base)))))))
+  )
+  (bb5 (bb4 bb6) (bb1)
+    (compound-assignment +
+      (simple-var-ref sum)
+      (invocation f (
+        (simple-var-ref base))))
+  )
+  (bb6 (bb2) (bb5)
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref foo))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (binary-expr +
+          (simple-var-ref x)
+          (literal 1))
+        (literal 2)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation bench (
+          (literal 10))))))
+  )
+)

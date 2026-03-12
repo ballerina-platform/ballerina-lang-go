@@ -26,7 +26,7 @@ import (
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack, parentFrame *Frame) values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
@@ -56,7 +56,7 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	for i := offset; i < len(*localVars); i++ {
 		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
 	}
-	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
+	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
 	callStack.Push(frame)
 	if len(callStack.elements) > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))

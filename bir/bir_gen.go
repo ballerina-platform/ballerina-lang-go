@@ -17,13 +17,14 @@
 package bir
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
-	"fmt"
 )
 
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
@@ -48,8 +49,10 @@ type stmtContext struct {
 	nextScopeId  int
 	errorEntries []BIRErrorEntry
 	// TODO: do better
-	varMap  map[model.SymbolRef]*BIROperand
-	loopCtx *loopContext
+	varMap    map[model.SymbolRef]*BIROperand
+	loopCtx   *loopContext
+	enclosing *stmtContext // enclosing function's context for closures
+	isClosure bool         // set to true when a captured variable is resolved via enclosing chain
 }
 
 type loopContext struct {
@@ -91,6 +94,29 @@ func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, symbol 
 	operand := cx.addLocalVarInner(name, ty)
 	cx.varMap[symbol] = operand
 	return operand
+}
+
+// lookupEnclosing walks the enclosing context chain to find a captured variable.
+// Returns the operand with an absolute address and true if found, or nil and false otherwise.
+func (cx *stmtContext) lookupEnclosing(symRef model.SymbolRef) (*BIROperand, bool) {
+	enclosing := cx.enclosing
+	levelsUp := 1
+	for enclosing != nil {
+		if outerOp, ok := enclosing.varMap[symRef]; ok {
+			baseIndex := levelsUp
+			if outerOp.Address.Mode == AddressingModeAbsolute {
+				baseIndex = levelsUp + outerOp.Address.BaseIndex
+			}
+			cx.isClosure = true
+			return &BIROperand{
+				VariableDcl: outerOp.VariableDcl,
+				Address:     absoluteAddress(baseIndex, outerOp.Address.FrameIndex),
+			}, true
+		}
+		levelsUp++
+		enclosing = enclosing.enclosing
+	}
+	return nil, false
 }
 
 func (cx *stmtContext) addBB() *BIRBasicBlock {
@@ -228,19 +254,20 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
-	return transformFunction(ctx, astFunc, nil)
+	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
+	return transformFunctionInner(stmtCx, astFunc, nil)
 }
 
-func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *model.SymbolRef) *BIRFunction {
+func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, selfSymbolRef *model.SymbolRef) *BIRFunction {
 	symRef := astFunc.Symbol()
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
+	ctx := stmtCx.birCx
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	common.Assert(astFunc.Receiver == nil)
-	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
 	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType)
 	if selfSymbolRef != nil {
@@ -527,19 +554,6 @@ func blockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStm
 	}
 }
 
-func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
-	birFunc := TransformFunction(ctx.birCx, expr.Function)
-	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
-	funcType := expr.GetDeterminedType()
-	resultOperand := ctx.addTempVar(funcType)
-	fpLoad := NewFPLoad(birFunc.FunctionLookupKey, funcType, resultOperand, expr.GetPosition())
-	curBB.Instructions = append(curBB.Instructions, fpLoad)
-	return expressionEffect{
-		result: resultOperand,
-		block:  curBB,
-	}
-}
-
 func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatchStatement) statementEffect {
 	exprEffect := handleExpression(ctx, curBB, stmt.Expr)
 	curBB = exprEffect.block
@@ -642,6 +656,25 @@ func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 		retAssign.RhsOp = effect.result
 		curBB.Instructions = append(curBB.Instructions, retAssign)
 		curBB.Terminator = &Return{}
+	}
+}
+
+func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
+	innerCtx := &stmtContext{birCx: ctx.birCx, varMap: make(map[model.SymbolRef]*BIROperand), enclosing: ctx}
+	birFunc := transformFunctionInner(innerCtx, expr.Function, nil)
+	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
+	funcType := expr.GetDeterminedType()
+	resultOperand := ctx.addTempVar(funcType)
+	fpLoad := &FPLoad{}
+	fpLoad.Pos = expr.GetPosition()
+	fpLoad.FunctionLookupKey = birFunc.FunctionLookupKey
+	fpLoad.Type = funcType
+	fpLoad.IsClosure = innerCtx.isClosure
+	fpLoad.LhsOp = resultOperand
+	curBB.Instructions = append(curBB.Instructions, fpLoad)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
 	}
 }
 
@@ -943,7 +976,11 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		// Function pointer call through a variable
 		call.Kind = INSTRUCTION_KIND_FP_CALL
 		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
-		call.FpOperand = ctx.varMap[unnarrowedRef]
+		if op, ok := ctx.varMap[unnarrowedRef]; ok {
+			call.FpOperand = op
+		} else if captured, ok := ctx.lookupEnclosing(unnarrowedRef); ok {
+			call.FpOperand = captured
+		}
 	}
 	curBB.Terminator = call
 	return expressionEffect{
@@ -1097,6 +1134,14 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		}
 	}
 
+	// Try captured variable lookup via enclosing chain
+	if captured, ok := ctx.lookupEnclosing(symRef); ok {
+		return expressionEffect{
+			result: captured,
+			block:  curBB,
+		}
+	}
+
 	// Try function lookup
 	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
 	if sym.Kind() == model.SymbolKindFunction {
@@ -1175,11 +1220,11 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		})
 	}
 
-	initFunc := transformFunction(ctx, class.InitFunction, &selfRef)
+	initFunc := transformFunctionInner(&stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}, class.InitFunction, &selfRef)
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		birClassDef.VTable[methodName] = transformFunction(ctx, method, &selfRef)
+		birClassDef.VTable[methodName] = transformFunctionInner(&stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}, method, &selfRef)
 	}
 
 	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())

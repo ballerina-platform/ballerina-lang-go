@@ -1,0 +1,118 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(int) -> int{
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = + x %3;
+    %0 = %2;
+    return;
+  }
+}
+$anonFunc$_0(int) -> int{
+  bb0 {
+    %3 = + @parent[1]:v x;
+    %2 = + %3 @parent[1]:base;
+    %0 = %2;
+    return;
+  }
+}
+genFs(int) -> [function(int) returns int...]{
+  bb0 {
+    %2 = ConstantLoad 0
+    %3 = newArray [function(int) returns int...][%2]{}
+    array = %3;
+    %5 = ConstantLoad 0
+    i = %5;
+    %7 = ConstantLoad 10000000
+    $desugar$0 = %7;
+    GOTO bb1;
+  }
+  bb1 {
+    %9 = < i $desugar$0;
+    %9 ? bb2 : bb3;
+  }
+  bb2 {
+    v = i;
+    %13 = ConstantLoad 2
+    %12 = % i %13;
+    %14 = ConstantLoad 0
+    %11 = == %12 %14;
+    %11 ? bb4 : bb6;
+  }
+  bb3 {
+    %0 = array;
+    return;
+  }
+  bb4 {
+    %15 = closure_fp $anon/.:$anonFunc$_0
+    f = %15;
+    %17 = push(array,f) -> bb5;
+  }
+  bb5 {
+    GOTO bb8;
+  }
+  bb6 {
+    %18 = fp $anon/.:foo
+    %19 = push(array,%18) -> bb7;
+  }
+  bb7 {
+    GOTO bb8;
+  }
+  bb8 {
+    %21 = ConstantLoad 1
+    %20 = + i %21;
+    i = %20;
+    GOTO bb1;
+  }
+}
+fSum([function(int) returns int...]) -> int{
+  bb0 {
+    %2 = ConstantLoad 0
+    sum = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(funcs) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %9 = funcs[i];
+    f = %9;
+    %12 = f(i) -> bb5;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+  bb5 {
+    %11 = + sum %12;
+    sum = %11;
+    %14 = ConstantLoad 1
+    %13 = + i %14;
+    i = %13;
+    GOTO bb2;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 10
+    %2 = genFs(%1) -> bb1;
+  }
+  bb1 {
+    funcs = %2;
+    %4 = fSum(funcs) -> bb2;
+  }
+  bb2 {
+    %5 = println(%4) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

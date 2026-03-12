@@ -250,7 +250,19 @@ func execBinaryOpRefNotEqual(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.
 }
 
 func refEqual(op1, op2 values.BalValue) bool {
-	return (op1 == nil && op2 == nil) || (op1 != nil && op2 != nil && op1 == op2)
+	if op1 == nil && op2 == nil {
+		return true
+	}
+	if op1 == nil || op2 == nil {
+		return false
+	}
+	if f1, ok := op1.(*values.Function); ok {
+		if f2, ok := op2.(*values.Function); ok {
+			return f1.LookupKey == f2.LookupKey
+		}
+		return false
+	}
+	return op1 == op2
 }
 
 func execBinaryOpBitwiseAnd(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {

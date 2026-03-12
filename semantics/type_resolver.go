@@ -325,7 +325,7 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 	case *ast.BLangMatchStatement:
 		return t.resolveMatchStatement(chain, s)
 	case *ast.BLangBreak, *ast.BLangContinue:
-		return defaultStmtEffect(chain), true
+		return statementEffect{binding: nil, nonCompletion: true}, true
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
 		return defaultStmtEffect(chain), false
@@ -2155,11 +2155,25 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+	fnTy = semtypes.Intersect(fnTy, semtypes.FUNCTION)
+	tyCtx := t.tyCtx
+	if semtypes.IsEmpty(tyCtx, fnTy) {
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
+		t.ctx.SemanticError("not a function value", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 
-	retTy := semtypes.FunctionReturnType(t.tyCtx, fnTy, argListTy)
+	retTy := semtypes.FunctionReturnType(tyCtx, fnTy, argListTy)
+	if retTy == nil {
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
+		t.ctx.SemanticError("incompatible arguments for function call", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 
 	setExpectedType(expr, retTy)
 
@@ -2470,6 +2484,9 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			}
 			paramTypes[i] = paramTy
 			ty.RequiredParams[i].SetDeterminedType(paramTy)
+			if ty.RequiredParams[i].Name != nil {
+				ty.RequiredParams[i].Name.SetDeterminedType(semtypes.NEVER)
+			}
 		}
 		var restTy semtypes.SemType = semtypes.NEVER
 		if ty.RestParam != nil {

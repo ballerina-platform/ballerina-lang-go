@@ -1,0 +1,84 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (literal 5))))
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable x (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (compound-assignment +
+                  (simple-var-ref a)
+                  (literal 1))
+                (return
+                  (binary-expr +
+                    (simple-var-ref x)
+                    (simple-var-ref a)))))))))
+      (assignment
+        (simple-var-ref a)
+        (literal 10))
+      (var-def
+        (variable f1 (type
+          (user-defined-type F)) (expr
+          (lambda
+            (function $anonFunc$_1 (
+              (variable x (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (compound-assignment +
+                  (simple-var-ref a)
+                  (literal 2))
+                (return
+                  (binary-expr +
+                    (simple-var-ref x)
+                    (simple-var-ref a)))))))))
+      (var-def
+        (variable b (type
+          (value-type int)) (expr
+          (binary-expr +
+            (simple-var-ref a)
+            (literal 5)))))
+      (var-def
+        (variable c (type
+          (value-type int)) (expr
+          (invocation f (
+            (simple-var-ref b))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref c))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a))))
+      (var-def
+        (variable d (type
+          (value-type int)) (expr
+          (invocation f1 (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref d))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 6))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a)))))))

@@ -1,0 +1,58 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (literal 5))))
+      (var-def
+        (variable b (type
+          (value-type int)) (expr
+          (literal 10))))
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable x (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (var-def
+                  (variable c (type
+                    (value-type int)) (expr
+                    (binary-expr *
+                      (simple-var-ref a)
+                      (literal 2)))))
+                (var-def
+                  (variable g (type
+                    (user-defined-type F)) (expr
+                    (lambda
+                      (function $anonFunc$_1 (
+                        (variable y (type
+                          (value-type int)))) (
+                        (value-type int))
+                        (block-function-body
+                          (return
+                            (binary-expr +
+                              (binary-expr +
+                                (binary-expr +
+                                  (binary-expr +
+                                    (simple-var-ref x)
+                                    (simple-var-ref y))
+                                  (simple-var-ref a))
+                                (simple-var-ref b))
+                              (simple-var-ref c)))))))))
+                (return
+                  (invocation g (
+                    (simple-var-ref x))))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 5)))))))))
