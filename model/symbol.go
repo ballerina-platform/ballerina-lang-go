@@ -178,6 +178,7 @@ var (
 	_ FunctionSymbol        = &functionSymbol{}
 	_ GenericFunctionSymbol = &genericFunctionSymbol{}
 	_ Symbol                = &SymbolRef{}
+	_ SymbolSpaceProvider   = &ModuleScope{}
 )
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -243,6 +244,10 @@ func (ms *ModuleScope) Exports() ExportedSymbolSpace {
 
 func (ms *ModuleScope) GetSymbol(name string) (SymbolRef, bool) {
 	return ms.Main.GetSymbol(name)
+}
+
+func (ms *ModuleScope) MainSpace() *SymbolSpace {
+	return ms.Main
 }
 
 func mapToLangPrefixIfNeeded(prefix string) string {
