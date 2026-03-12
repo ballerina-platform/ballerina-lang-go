@@ -1,0 +1,83 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:sum
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad 2
+    %4 = ConstantLoad 3
+    %5 = ConstantLoad 4
+    %6 = ConstantLoad 5
+    %7 = ConstantLoad 5
+    %8 = newArray ((), (LIST))[%7]{%2, %3, %4, %5, %6}
+    %9 = ConstantLoad 0
+    %10 = fold(%1,%8,%9) -> bb1;
+  }
+  bb1 {
+    %11 = println(%10) -> bb2;
+  }
+  bb2 {
+    %12 = fp $anon/.:mul
+    %13 = ConstantLoad 1
+    %14 = ConstantLoad 2
+    %15 = ConstantLoad 3
+    %16 = ConstantLoad 4
+    %17 = ConstantLoad 5
+    %18 = ConstantLoad 5
+    %19 = newArray ((), (LIST))[%18]{%13, %14, %15, %16, %17}
+    %20 = ConstantLoad 1
+    %21 = fold(%12,%19,%20) -> bb3;
+  }
+  bb3 {
+    %22 = println(%21) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+fold(((), (FUNCTION)),((), (LIST)),((INT), ())) -> ((INT), ()){
+  bb0 {
+    result = init;
+    %5 = ConstantLoad 0
+    i = %5;
+    %7 = length(a) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %7;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 = < i $desugar$0;
+    %9 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = a[i];
+    %11 = f(result,%10) -> bb5;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+  bb5 {
+    result = %11;
+    %13 = ConstantLoad 1
+    %12 = + i %13;
+    i = %12;
+    GOTO bb2;
+  }
+}
+sum(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = + a b;
+    %0 = %3;
+    return;
+  }
+}
+mul(((INT), ()),((INT), ())) -> ((INT), ()){
+  bb0 {
+    %3 = * a b;
+    %0 = %3;
+    return;
+  }
+}

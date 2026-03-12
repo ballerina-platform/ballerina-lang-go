@@ -1,0 +1,95 @@
+(bar
+  (bb0 () (bb1 bb2)
+    (binary-expr <
+      (simple-var-ref a)
+      (literal 0))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref a))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal true))
+  )
+)
+(barbaz
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref a)
+      (value-type byte))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref a))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal true))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (simple-var-ref a))
+  )
+)
+(foobar
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref a)
+      (value-type byte))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref a))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal 0))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref bar))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (unary-expr -
+            (literal 1)))))))
+    (var-def
+      (variable f1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref foobar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f1 (
+          (literal 1))))))
+    (assignment
+      (simple-var-ref f1)
+      (simple-var-ref barbaz))
+    (expression-stmt
+      (invocation io println (
+        (invocation f1 (
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f1 (
+          (unary-expr -
+            (literal 1)))))))
+  )
+)

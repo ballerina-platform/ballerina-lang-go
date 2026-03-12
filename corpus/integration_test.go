@@ -63,6 +63,9 @@ var (
 		"subset5/05-error/check5-v.bal",
 		"subset5/05-error/check6-e.bal",
 		"subset5/05-error/check7-e.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/260
+		"subset7/07-function/assign12-v.bal",
+		"subset7/07-function/assign17-v.bal",
 	}
 )
 

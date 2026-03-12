@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (FUNCTION)), got ((), (FUNCTION))
+ --> assign13-e.bal:5:11
+  |
+5 |     F f = foo; // @error
+  |           ^^^
+

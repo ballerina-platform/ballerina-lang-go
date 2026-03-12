@@ -119,10 +119,14 @@ func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
 	Store(frame, typeCast.LhsOp.Address, result)
 }
 
+// create a function value at current point
 func execFPLoad(fpLoad *bir.FPLoad, frame *Frame) {
 	fn := &values.Function{
 		Type:      fpLoad.Type,
 		LookupKey: fpLoad.FunctionLookupKey,
+	}
+	if fpLoad.IsClosure {
+		fn.ParentFrame = frame
 	}
 	Store(frame, fpLoad.LhsOp.Address, fn)
 }

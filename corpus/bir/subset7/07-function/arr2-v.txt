@@ -1,0 +1,75 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = fp $anon/.:one
+    %2 = fp $anon/.:two
+    %3 = fp $anon/.:three
+    %4 = ConstantLoad 3
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    fns = %5;
+    %7 = sum(fns) -> bb1;
+  }
+  bb1 {
+    %8 = println(%7) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+one() -> ((INT), ()){
+  bb0 {
+    %1 = ConstantLoad 1
+    %0 = %1;
+    return;
+  }
+}
+two() -> ((INT), ()){
+  bb0 {
+    %1 = ConstantLoad 2
+    %0 = %1;
+    return;
+  }
+}
+three() -> ((INT), ()){
+  bb0 {
+    %1 = ConstantLoad 3
+    %0 = %1;
+    return;
+  }
+}
+sum(((), (LIST))) -> ((INT), ()){
+  bb0 {
+    %2 = ConstantLoad 0
+    tmp = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(fns) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %9 = fns[i];
+    fn = %9;
+    %12 = fn() -> bb5;
+  }
+  bb4 {
+    %0 = tmp;
+    return;
+  }
+  bb5 {
+    %11 = + tmp %12;
+    tmp = %11;
+    %14 = ConstantLoad 1
+    %13 = + i %14;
+    i = %13;
+    GOTO bb2;
+  }
+}

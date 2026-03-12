@@ -1,0 +1,95 @@
+(bar
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal bar called with )
+        (simple-var-ref b))))
+  )
+)
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal foo called with )
+        (simple-var-ref a))))
+  )
+)
+(fooBar
+  (bb0 () (bb1 bb3)
+    (type-test-expr is
+      (simple-var-ref a)
+      (value-type int))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal int))))
+  )
+  (bb2 (bb1 bb5) ())
+  (bb3 (bb0) (bb4 bb6)
+    (type-test-expr is
+      (simple-var-ref a)
+      (value-type float))
+  )
+  (bb4 (bb3) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal float))))
+  )
+  (bb5 (bb4 bb6) (bb2))
+  (bb6 (bb3) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal string))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation f (
+        (literal 3))))
+    (expression-stmt
+      (invocation f (
+        (literal 10))))
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref bar))
+    (expression-stmt
+      (invocation f (
+        (literal 3))))
+    (expression-stmt
+      (invocation f (
+        (literal 10))))
+    (var-def
+      (variable a (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref fooBar))))
+    (expression-stmt
+      (invocation a (
+        (literal 1))))
+    (var-def
+      (variable b (type
+        (user-defined-type F2)) (expr
+        (simple-var-ref fooBar))))
+    (expression-stmt
+      (invocation b (
+        (literal 1))))
+    (expression-stmt
+      (invocation b (
+        (literal 1))))
+    (var-def
+      (variable c (type
+        (user-defined-type F3)) (expr
+        (simple-var-ref fooBar))))
+    (expression-stmt
+      (invocation c (
+        (literal 1))))
+    (expression-stmt
+      (invocation c (
+        (literal c))))
+  )
+)

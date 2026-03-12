@@ -1,0 +1,49 @@
+(foo
+  (bb0 () (bb1)
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (field-based-access x
+          (simple-var-ref init)))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref rest))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref a)
+      (field-based-access x
+        (index-based-access
+          (simple-var-ref rest)
+          (simple-var-ref i))))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref a))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 1)))
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 2))))))))
+  )
+)

@@ -110,6 +110,7 @@ type (
 		BIRInstructionBase
 		FunctionLookupKey string
 		Type              semtypes.SemType
+		IsClosure         bool
 	}
 )
 

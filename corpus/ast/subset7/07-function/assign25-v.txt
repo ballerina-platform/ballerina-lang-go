@@ -1,0 +1,61 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition R
+    (record-type
+      (field x
+        (value-type int))))
+  (type-definition R1
+    (record-type
+      (field x
+        (value-type int))))
+  (type-definition F
+    (function-type (
+      (user-defined-type R1)
+      (user-defined-type R1)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref x)
+                (literal 1)))
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref x)
+                (literal 2))))))))))
+  (function foo (
+    (variable init (type
+      (user-defined-type R)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (field-based-access x
+            (simple-var-ref init)))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref rest) ()))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref a)
+            (field-based-access x
+              (index-based-access
+                (simple-var-ref rest)
+                (simple-var-ref i))))))
+      (return
+        (simple-var-ref a)))))

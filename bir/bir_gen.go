@@ -45,8 +45,10 @@ type stmtContext struct {
 	scope       *BIRScope
 	nextScopeId int
 	// TODO: do better
-	varMap  map[model.SymbolRef]*BIROperand
-	loopCtx *loopContext
+	varMap    map[model.SymbolRef]*BIROperand
+	loopCtx   *loopContext
+	enclosing *stmtContext // enclosing function's context for closures
+	isClosure bool         // set to true when a captured variable is resolved via enclosing chain
 }
 
 type loopContext struct {
@@ -91,6 +93,29 @@ func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, kind Va
 	operand := cx.addLocalVarInner(name, ty, kind)
 	cx.varMap[symbol] = operand
 	return operand
+}
+
+// lookupEnclosing walks the enclosing context chain to find a captured variable.
+// Returns the operand with an absolute address and true if found, or nil and false otherwise.
+func (cx *stmtContext) lookupEnclosing(symRef model.SymbolRef) (*BIROperand, bool) {
+	enclosing := cx.enclosing
+	levelsUp := 1
+	for enclosing != nil {
+		if outerOp, ok := enclosing.varMap[symRef]; ok {
+			baseIndex := levelsUp
+			if outerOp.Address.Mode == AddressingModeAbsolute {
+				baseIndex = levelsUp + outerOp.Address.BaseIndex
+			}
+			cx.isClosure = true
+			return &BIROperand{
+				VariableDcl: outerOp.VariableDcl,
+				Address:     absoluteAddress(baseIndex, outerOp.Address.FrameIndex),
+			}, true
+		}
+		levelsUp++
+		enclosing = enclosing.enclosing
+	}
+	return nil, false
 }
 
 func (cx *stmtContext) addBB() *BIRBasicBlock {
@@ -202,43 +227,47 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIR
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
+	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
+	return transformFunctionInner(stmtCx, astFunc)
+}
+
+func transformFunctionInner(ctx *stmtContext, astFunc *ast.BLangFunction) *BIRFunction {
 	symRef := astFunc.Symbol()
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
-	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
+	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.birCx, symRef)
 	common.Assert(astFunc.Receiver == nil)
-	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
-	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
-	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
+	funcSym := ctx.birCx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
+	ctx.retVar = ctx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		paramType := ctx.CompilerContext.SymbolType(param.Symbol())
-		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
+		paramType := ctx.birCx.CompilerContext.SymbolType(param.Symbol())
+		ctx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
 		birFunc.RequiredParams = append(birFunc.RequiredParams, BIRParameter{Name: model.Name(param.GetName().GetValue())})
 	}
 	if astFunc.RestParam != nil {
 		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
-		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
-		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, VAR_KIND_ARG, restParam.Symbol())
+		ty := ctx.birCx.CompilerContext.SymbolType(restParam.Symbol())
+		ctx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, VAR_KIND_ARG, restParam.Symbol())
 		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		handleBlockFunctionBody(stmtCx, body)
+		handleBlockFunctionBody(ctx, body)
 	case *ast.BLangExprFunctionBody:
-		handleExprFunctionBody(stmtCx, body)
+		handleExprFunctionBody(ctx, body)
 	default:
 		panic("unexpected function body type")
 	}
-	for _, bbPtr := range stmtCx.bbs {
+	for _, bbPtr := range ctx.bbs {
 		birFunc.BasicBlocks = append(birFunc.BasicBlocks, *bbPtr)
 	}
-	for _, varPtr := range stmtCx.localVars {
+	for _, varPtr := range ctx.localVars {
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
-	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl
+	birFunc.ReturnVariable = ctx.retVar.VariableDcl
 	return birFunc
 }
 
@@ -532,13 +561,15 @@ func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 }
 
 func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
-	birFunc := TransformFunction(ctx.birCx, expr.Function)
+	innerCtx := &stmtContext{birCx: ctx.birCx, varMap: make(map[model.SymbolRef]*BIROperand), enclosing: ctx}
+	birFunc := transformFunctionInner(innerCtx, expr.Function)
 	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
 	funcType := expr.GetDeterminedType()
 	resultOperand := ctx.addTempVar(funcType)
 	fpLoad := &FPLoad{}
 	fpLoad.FunctionLookupKey = birFunc.FunctionLookupKey
 	fpLoad.Type = funcType
+	fpLoad.IsClosure = innerCtx.isClosure
 	fpLoad.LhsOp = resultOperand
 	curBB.Instructions = append(curBB.Instructions, fpLoad)
 	return expressionEffect{
@@ -853,7 +884,11 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		// Function pointer call through a variable
 		call.Kind = INSTRUCTION_KIND_FP_CALL
 		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
-		call.FpOperand = ctx.varMap[unnarrowedRef]
+		if op, ok := ctx.varMap[unnarrowedRef]; ok {
+			call.FpOperand = op
+		} else if captured, ok := ctx.lookupEnclosing(unnarrowedRef); ok {
+			call.FpOperand = captured
+		}
 	}
 	curBB.Terminator = call
 	return expressionEffect{
@@ -1024,6 +1059,14 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	if operand, ok := ctx.varMap[symRef]; ok {
 		return expressionEffect{
 			result: operand,
+			block:  curBB,
+		}
+	}
+
+	// Try captured variable lookup via enclosing chain
+	if captured, ok := ctx.lookupEnclosing(symRef); ok {
+		return expressionEffect{
+			result: captured,
 			block:  curBB,
 		}
 	}

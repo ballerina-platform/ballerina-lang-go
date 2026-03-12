@@ -1,0 +1,11 @@
+-- stdout --
+foo called with 3
+foo called with 10
+bar called with 3
+bar called with 10
+int
+int
+float
+int
+string
+-- stderr --

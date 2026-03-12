@@ -154,7 +154,11 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 }
 
 func (p *PrettyPrinter) PrintFPLoad(fpLoad *FPLoad) string {
-	return fmt.Sprintf("%s = fp %s", p.PrintOperand(*fpLoad.LhsOp), fpLoad.FunctionLookupKey)
+	kind := "fp"
+	if fpLoad.IsClosure {
+		kind = "closure_fp"
+	}
+	return fmt.Sprintf("%s = %s %s", p.PrintOperand(*fpLoad.LhsOp), kind, fpLoad.FunctionLookupKey)
 }
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
@@ -248,7 +252,11 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 }
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
-	return operand.VariableDcl.Name.Value()
+	name := operand.VariableDcl.Name.Value()
+	if operand.Address.Mode == AddressingModeAbsolute {
+		return fmt.Sprintf("@parent[%d]:%s", operand.Address.BaseIndex, name)
+	}
+	return name
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {

@@ -1,0 +1,131 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition P
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition Q
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition R
+    (function-type (
+      (user-defined-type P)
+      (user-defined-type Q)
+      (value-type int)
+      (function-type-param
+      (value-type int))) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (user-defined-type R)) (expr
+          (simple-var-ref fooBar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation x (
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation x (
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation x (
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (literal 1)
+            (literal 2)
+            (literal 3))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation x (
+            (simple-var-ref foo)
+            (simple-var-ref bar)
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4))))))))
+  (function bar (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (literal 1)))))
+  (function fooBar (
+    (variable single (type
+      (user-defined-type P)))
+    (variable pair (type
+      (user-defined-type Q)))
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (invocation lang.array length (
+            (simple-var-ref y)))
+          (literal 0))
+        (block-stmt
+          (return
+            (invocation single (
+              (simple-var-ref x))))) ())
+      (block-stmt
+        (var-def
+          (variable curr (type
+            (value-type int)) (expr
+            (invocation pair (
+              (simple-var-ref x)
+              (index-based-access
+                (simple-var-ref y)
+                (literal 0)))))))
+        (var-def
+          (variable i (type
+            (value-type int)) (expr
+            (literal 1))))
+        (var-def
+          (variable $desugar$0 (expr
+            (invocation lang.array length (
+              (simple-var-ref y))))))
+        (while
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref $desugar$0))
+          (block-stmt
+            (assignment
+              (simple-var-ref curr)
+              (invocation pair (
+                (simple-var-ref curr)
+                (index-based-access
+                  (simple-var-ref y)
+                  (simple-var-ref i)))))
+            (assignment
+              (simple-var-ref i)
+              (binary-expr +
+                (simple-var-ref i)
+                (numeric-literal 1)))))
+        (return
+          (simple-var-ref curr))))))
