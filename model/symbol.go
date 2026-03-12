@@ -135,6 +135,13 @@ type (
 		symbolBase
 	}
 
+	ClassSymbol struct {
+		TypeSymbol
+		InitFunction SymbolRef
+		HasInit      bool
+		Methods      map[string]SymbolRef
+	}
+
 	ValueSymbol struct {
 		symbolBase
 		isConst     bool
@@ -165,6 +172,7 @@ var (
 	_ Scope                 = &FunctionScope{}
 	_ Scope                 = &BlockScope{}
 	_ Symbol                = &TypeSymbol{}
+	_ Symbol                = &ClassSymbol{}
 	_ Symbol                = &ValueSymbol{}
 	_ Symbol                = &functionSymbol{}
 	_ FunctionSymbol        = &functionSymbol{}
@@ -374,6 +382,15 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+	}
+}
+
+func NewClassSymbol(name string, isPublic bool) ClassSymbol {
+	return ClassSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+		Methods: make(map[string]SymbolRef),
 	}
 }
 

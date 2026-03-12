@@ -25,10 +25,6 @@ import (
 	"sync"
 )
 
-// FIXME: Get rid of panic handling when we have proper error handling
-
-// AnalyzeCFG runs reachability, explicit return, and uninitialized variable analyses concurrently
-// with centralized panic handling.
 func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
 	wg.Go(func() { analyzeReachability(ctx, cfg) })
@@ -36,25 +32,16 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 	wg.Go(func() { analyzeUninitializedVars(ctx, pkg, cfg) })
 	wg.Go(func() { analyzeUninitializedFields(ctx, pkg, cfg) })
 	wg.Wait()
-	if panicErr != nil {
-		panic(panicErr)
-	}
 }
 
 // analyzeReachability checks for unreachable code in all functions.
 // This is now a private function called by AnalyzeCFG.
 func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	var panicErr any = nil
-	for _, fnCfg := range cfg.funcCfgs {
+	for _, fcfg := range cfg.allFunctionCfgs {
 		wg.Add(1)
 		go func(fcfg *functionCFG) {
 			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					panicErr = r
-				}
-			}()
 			for _, bb := range fcfg.bbs {
 				if !bb.isReachable() {
 					for _, node := range bb.nodes {
@@ -62,13 +49,9 @@ func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 					}
 				}
 			}
-		}(&fnCfg)
+		}(fcfg)
 	}
 	wg.Wait()
-
-	if panicErr != nil {
-		panic(panicErr)
-	}
 }
 
 // analyzeExplicitReturn validates that functions with non-nil return types
@@ -76,25 +59,24 @@ func analyzeReachability(ctx *context.CompilerContext, cfg *PackageCFG) {
 // This is now a private function called by AnalyzeCFG.
 func analyzeExplicitReturn(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *PackageCFG) {
 	var wg sync.WaitGroup
-	var panicErr any = nil
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		wg.Add(1)
 		go func(f *ast.BLangFunction) {
 			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					panicErr = r
-				}
-			}()
 			analyzeFunctionExplicitReturn(ctx, f, cfg)
 		}(fn)
 	}
-	wg.Wait()
-
-	if panicErr != nil {
-		panic(panicErr)
+	for i := range pkg.ClassDefinitions {
+		for _, method := range pkg.ClassDefinitions[i].Methods {
+			wg.Add(1)
+			go func(f *ast.BLangFunction) {
+				defer wg.Done()
+				analyzeFunctionExplicitReturn(ctx, f, cfg)
+			}(method)
+		}
 	}
+	wg.Wait()
 }
 
 func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFunction, cfg *PackageCFG) {
@@ -104,7 +86,7 @@ func analyzeFunctionExplicitReturn(ctx *context.CompilerContext, fn *ast.BLangFu
 		return
 	}
 
-	fnCfg, ok := cfg.funcCfgs[fn.Symbol()]
+	fnCfg, ok := cfg.lookupFunctionCfg(fn.Symbol())
 	if !ok {
 		return
 	}

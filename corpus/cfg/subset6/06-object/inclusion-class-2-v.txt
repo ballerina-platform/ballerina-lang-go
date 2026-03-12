@@ -1,16 +1,34 @@
-(init
-  (bb0 () ()
-    (assignment
-      (field-based-access x
-        (simple-var-ref self))
-      (simple-var-ref x))
+(Bar
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (simple-var-ref x))
+    )
+  )
+  (getX
+    (bb0 () ()
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
   )
 )
-(init
-  (bb0 () ()
-    (assignment
-      (field-based-access x
-        (simple-var-ref self))
-      (simple-var-ref x))
+(Foo
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (simple-var-ref x))
+    )
+  )
+  (getX
+    (bb0 () ()
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
   )
 )

@@ -198,7 +198,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		classDef := &pkg.ClassDefinitions[i]
 		name := classDef.Name.Value
 		isPublic := classDef.FlagSet.Contains(model.Flag_PUBLIC)
-		symbol := model.NewTypeSymbol(name, isPublic)
+		symbol := model.NewClassSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition())
 	}
 	ast.Walk(moduleResolver, pkg)
@@ -693,6 +693,15 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		methodResolver := newFunctionResolver(classResolver, method)
 		method.SetScope(methodResolver.scope)
 		resolveFunction(methodResolver, method)
+	}
+
+	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
+	if classDef.InitFunction != nil {
+		classSym.InitFunction = classDef.InitFunction.Symbol()
+		classSym.HasInit = true
+	}
+	for methodName, method := range classDef.Methods {
+		classSym.Methods[methodName] = method.Symbol()
 	}
 }
 
