@@ -276,6 +276,8 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			return defaultStmtEffect(chain), false
 		}
 		return statementEffect{nil, true}, true
+	case *ast.BLangMatchStatement:
+		return t.resolveMatchStatement(chain, s)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return defaultStmtEffect(chain), true
 	default:
@@ -378,6 +380,9 @@ func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangTypeDefinition:
 		t.resolveTypeDefinition(n, 0)
+		return nil
+	case *ast.BLangMatchStatement:
+		t.resolveMatchStatement(nil, n)
 		return nil
 	case ast.BLangExpression:
 		if _, _, ok := t.resolveExpression(nil, n); !ok {
@@ -1996,4 +2001,144 @@ func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) bool {
 	t.ctx.SetSymbolType(symbol, expectedType)
 
 	return true
+}
+
+func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatchStatement) (statementEffect, bool) {
+	_, exprEffect, ok := t.resolveExpression(chain, stmt.Expr)
+	if !ok {
+		return defaultStmtEffect(chain), false
+	}
+	chain = exprEffect.ifTrue
+
+	exprRef, isVarRef := varRefExp(chain, &stmt.Expr)
+	var remainingType semtypes.SemType
+	if isVarRef {
+		remainingType = t.ctx.SymbolType(exprRef)
+	} else {
+		remainingType = stmt.Expr.GetDeterminedType()
+	}
+	allNonCompletion := true
+	var bodyEffects []statementEffect
+
+	tyCtx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
+
+	for i := range stmt.MatchClauses {
+		clause := &stmt.MatchClauses[i]
+
+		if semtypes.IsEmpty(tyCtx, remainingType) {
+			t.ctx.SemanticError("unreachable match clause", clause.GetPosition())
+		}
+
+		var bodyChain *binding
+		var ok bool
+		clause.AcceptedType, bodyChain, ok = t.matchClauseAcceptedType(chain, clause)
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		clauseAcceptedType := semtypes.Intersect(remainingType, clause.AcceptedType)
+
+		clauseIsEmpty := semtypes.IsEmpty(tyCtx, clauseAcceptedType)
+		if clauseIsEmpty {
+			t.ctx.SemanticError("unmatchable match clause", clause.GetPosition())
+		}
+
+		clause.AcceptedType = clauseAcceptedType
+
+		if clauseIsEmpty {
+			_, ok := t.resolveMatchClause(bodyChain, clause)
+			if !ok {
+				return defaultStmtEffect(chain), false
+			}
+			continue
+		}
+
+		if isVarRef {
+			baseRef := t.ctx.UnnarrowedSymbol(exprRef)
+			narrowedSym := narrowSymbol(t.ctx, baseRef, clauseAcceptedType)
+			bodyChain = &binding{
+				ref:            baseRef,
+				narrowedSymbol: narrowedSym,
+				prev:           bodyChain,
+			}
+		}
+
+		bodyEffect, ok := t.resolveMatchClause(bodyChain, clause)
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		bodyEffects = append(bodyEffects, bodyEffect)
+		if !bodyEffect.nonCompletion {
+			allNonCompletion = false
+		}
+
+		remainingType = semtypes.Diff(remainingType, clause.AcceptedType)
+	}
+
+	stmt.IsExhaustive = semtypes.IsEmpty(tyCtx, remainingType)
+
+	if stmt.IsExhaustive && allNonCompletion {
+		return statementEffect{chain, true}, true
+	}
+
+	var result *binding
+	first := true
+	for _, effect := range bodyEffects {
+		if effect.nonCompletion {
+			continue
+		}
+		if first {
+			result = effect.binding
+			first = false
+		} else {
+			result = mergeChains(t.ctx, result, effect.binding, semtypes.Union)
+		}
+	}
+	return statementEffect{result, false}, true
+}
+
+func (t *TypeResolver) matchClauseAcceptedType(chain *binding, clause *ast.BLangMatchClause) (semtypes.SemType, *binding, bool) {
+	var acceptedTy semtypes.SemType = &semtypes.NEVER
+	for _, pattern := range clause.Patterns {
+		patternTy, ok := t.resolveMatchPattern(chain, pattern)
+		if !ok {
+			return nil, nil, false
+		}
+		acceptedTy = semtypes.Union(acceptedTy, patternTy)
+	}
+	if clause.Guard != nil {
+		_, guardEffect, _ := t.resolveExpression(chain, clause.Guard)
+		return acceptedTy, guardEffect.ifTrue, true
+	}
+	return acceptedTy, chain, true
+}
+
+func (t *TypeResolver) resolveMatchClause(chain *binding, clause *ast.BLangMatchClause) (statementEffect, bool) {
+	bodyEffect, ok := t.resolveBlockStatements(chain, clause.Body.Stmts)
+	if !ok {
+		return defaultStmtEffect(chain), false
+	}
+	clause.Body.SetDeterminedType(&semtypes.NEVER)
+	clause.SetDeterminedType(&semtypes.NEVER)
+	return bodyEffect, true
+}
+
+func (t *TypeResolver) resolveMatchPattern(chain *binding, pattern ast.BLangMatchPattern) (semtypes.SemType, bool) {
+	switch p := pattern.(type) {
+	case *ast.BLangConstPattern:
+		ty, _, ok := t.resolveExpression(chain, p.Expr)
+		if !ok {
+			return nil, false
+		}
+		p.SetAcceptedType(ty)
+		p.SetDeterminedType(&semtypes.NEVER)
+		return ty, true
+	case *ast.BLangWildCardMatchPattern:
+		ty := &semtypes.ANY
+		p.SetAcceptedType(ty)
+		p.SetDeterminedType(&semtypes.NEVER)
+		return ty, true
+	default:
+		t.ctx.InternalError(fmt.Sprintf("unexpected match pattern type: %T", pattern), pattern.GetPosition())
+		return &semtypes.NEVER, false
+	}
 }

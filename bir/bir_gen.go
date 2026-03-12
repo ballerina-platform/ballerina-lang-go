@@ -287,6 +287,8 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return continueStatement(ctx, curBB, stmt)
 	case *ast.BLangPanic:
 		return panicStatement(ctx, curBB, stmt)
+	case *ast.BLangMatchStatement:
+		return matchStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
@@ -506,6 +508,115 @@ func blockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStm
 	return statementEffect{
 		block: curBB,
 	}
+}
+
+func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatchStatement) statementEffect {
+	exprEffect := handleExpression(ctx, curBB, stmt.Expr)
+	curBB = exprEffect.block
+	matchOperand := exprEffect.result
+	finalBB := ctx.addBB()
+
+	for _, clause := range stmt.MatchClauses {
+		clauseBodyBB := ctx.addBB()
+
+		if isUnconditionalWildcard(&clause) {
+			curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: clauseBodyBB}}
+			bodyEffect := blockStatement(ctx, clauseBodyBB, &clause.Body)
+			if bodyEffect.block != nil {
+				bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+			}
+			continue
+		}
+
+		var condOperand *BIROperand
+		for _, pattern := range clause.Patterns {
+			switch p := pattern.(type) {
+			case *ast.BLangConstPattern:
+				patternEffect := handleExpression(ctx, curBB, p.Expr)
+				curBB = patternEffect.block
+				eqResult := ctx.addTempVar(&semtypes.BOOLEAN)
+				binaryOp := &BinaryOp{}
+				binaryOp.Kind = INSTRUCTION_KIND_EQUAL
+				binaryOp.LhsOp = eqResult
+				binaryOp.RhsOp1 = *matchOperand
+				binaryOp.RhsOp2 = *patternEffect.result
+				curBB.Instructions = append(curBB.Instructions, binaryOp)
+				condOperand = orOperands(ctx, curBB, condOperand, eqResult)
+			case *ast.BLangWildCardMatchPattern:
+				// Wildcard in multi-pattern — always matches; but may have guard
+				trueOperand := ctx.addTempVar(&semtypes.BOOLEAN)
+				constLoad := &ConstantLoad{}
+				constLoad.Value = true
+				constLoad.LhsOp = trueOperand
+				curBB.Instructions = append(curBB.Instructions, constLoad)
+				condOperand = orOperands(ctx, curBB, condOperand, trueOperand)
+			default:
+				ctx.birCx.CompilerContext.InternalError("unexpected match pattern type", pattern.GetPosition())
+			}
+		}
+
+		if clause.Guard != nil {
+			guardEffect := handleExpression(ctx, curBB, clause.Guard)
+			curBB = guardEffect.block
+			condOperand = andOperands(ctx, curBB, condOperand, guardEffect.result)
+		}
+
+		nextCheckBB := ctx.addBB()
+		branch := &Branch{}
+		branch.Op = condOperand
+		branch.TrueBB = clauseBodyBB
+		branch.FalseBB = nextCheckBB
+		curBB.Terminator = branch
+
+		bodyEffect := blockStatement(ctx, clauseBodyBB, &clause.Body)
+		if bodyEffect.block != nil {
+			bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+		}
+
+		curBB = nextCheckBB
+	}
+
+	if !stmt.IsExhaustive {
+		curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+	}
+
+	return statementEffect{block: finalBB}
+}
+
+func isUnconditionalWildcard(clause *ast.BLangMatchClause) bool {
+	if clause.Guard != nil {
+		return false
+	}
+	if len(clause.Patterns) != 1 {
+		return false
+	}
+	_, ok := clause.Patterns[0].(*ast.BLangWildCardMatchPattern)
+	return ok
+}
+
+func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
+	if existing == nil {
+		return new
+	}
+	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	binaryOp := &BinaryOp{}
+	binaryOp.Kind = INSTRUCTION_KIND_OR
+	binaryOp.LhsOp = result
+	binaryOp.RhsOp1 = *existing
+	binaryOp.RhsOp2 = *new
+	bb.Instructions = append(bb.Instructions, binaryOp)
+	return result
+}
+
+func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
+	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	binaryOp := &BinaryOp{}
+	binaryOp.Kind = INSTRUCTION_KIND_AND
+	binaryOp.LhsOp = result
+	binaryOp.RhsOp1 = *existing
+	binaryOp.RhsOp2 = *new
+	bb.Instructions = append(bb.Instructions, binaryOp)
+	return result
 }
 
 func handleExprFunctionBody(ctx *stmtContext, ast *ast.BLangExprFunctionBody) {

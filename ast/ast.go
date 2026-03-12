@@ -236,13 +236,8 @@ type BLangNode interface {
 type (
 	bLangNodeBase struct {
 		DeterminedType semtypes.SemType
-
-		parent BLangNode
-
-		pos                Location
-		desugared          bool
-		constantPropagated bool
-		internal           bool
+		parent         BLangNode
+		pos            Location
 	}
 
 	BLangAnnotation struct {

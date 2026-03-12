@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: union types not supported for *
+  --> simple-narrow-e.bal:26:21
+   |
+26 |             value = a * 2; // @error
+   |                     ^^^^^
+
