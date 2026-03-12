@@ -1,0 +1,13 @@
+# Keys
+
+key = "basic key" #Bare key
+underscore_key = "Underscore Key" #Key with underscore
+dash-key = "Dash Key" #Key with dash
+1234 = "Int Key" #Int keys
+
+#Quoted Keys
+"127.0.0.1" = "value"  #check
+"character encoding" = "value"
+"ʎǝʞ" = "value"
+'key2' = "value"
+'quoted "value"' = "value"

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> ((NIL), ()){
   bb0 {
     %1 = ConstantLoad 1
     %2 = wrap(%1) -> bb1;
@@ -22,7 +22,7 @@ main<NIL>{
     return;
   }
 }
-wrap<NIL>{
+wrap(((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())) -> ((), (MAPPING)){
   bb0 {
     %2 = ConstantLoad value
     %3 = newMap ((), (MAPPING)){%2=x}

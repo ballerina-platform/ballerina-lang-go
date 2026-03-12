@@ -1,0 +1,12 @@
+(foo
+  (bb0 () ())
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation foo ()))
+    (expression-stmt
+      (invocation io println (
+        (literal done))))
+  )
+)

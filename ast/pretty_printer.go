@@ -138,6 +138,12 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printWhereClause(t)
 	case *BLangSelectClause:
 		p.printSelectClause(t)
+	case *BLangCheckedExpr:
+		p.printCheckedExpr(t)
+	case *BLangCheckPanickedExpr:
+		p.printCheckPanickedExpr(t)
+	case *BLangPanic:
+		p.printPanic(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -382,6 +388,15 @@ func (p *PrettyPrinter) printReturn(node *BLangReturn) {
 		p.PrintInner(node.Expr.(BLangNode))
 		p.indentLevel--
 	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printPanic(node *BLangPanic) {
+	p.startNode()
+	p.printString("panic")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 
@@ -939,6 +954,26 @@ func (p *PrettyPrinter) printErrorConstructorExpr(node *BLangErrorConstructorExp
 		p.indentLevel--
 		p.printSticky(")")
 	}
+	p.endNode()
+}
+
+// Checked expression printer
+func (p *PrettyPrinter) printCheckedExpr(node *BLangCheckedExpr) {
+	p.startNode()
+	p.printString("checked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Check panicked expression printer
+func (p *PrettyPrinter) printCheckPanickedExpr(node *BLangCheckPanickedExpr) {
+	p.startNode()
+	p.printString("check-panicked-expr")
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 

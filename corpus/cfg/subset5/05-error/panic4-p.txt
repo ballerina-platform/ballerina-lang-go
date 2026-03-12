@@ -1,0 +1,27 @@
+(main
+  (bb0 () (bb1))
+  (bb1 (bb0 bb5) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (literal 3))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb4 bb5)
+    (binary-expr ==
+      (simple-var-ref i)
+      (literal 1))
+  )
+  (bb3 (bb1) ())
+  (bb4 (bb2) ()
+    (panic
+      (error-constructor-expr (
+        (literal range panic))))
+  )
+  (bb5 (bb2) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+)

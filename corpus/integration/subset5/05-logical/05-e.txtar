@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((STRING), ()), got ((INT, STRING), ())
+  --> 05-e.bal:20:26
+   |
+20 |         string unused1 = x; // @error
+   |                          ^
+

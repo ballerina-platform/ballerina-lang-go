@@ -29,47 +29,47 @@ const (
 type BLangStatement = model.StatementNode
 
 type (
-	BLangStatementBase struct {
+	bLangStatementBase struct {
 		bLangNodeBase
 	}
 	BLangAssignment struct {
-		BLangStatementBase
+		bLangStatementBase
 		VarRef BLangExpression
 		Expr   BLangExpression
 	}
 	BLangBlockStmt struct {
-		BLangStatementBase
+		bLangStatementBase
 		Stmts            []BLangStatement
 		FailureBreakMode FailureBreakMode
 		IsLetExpr        bool
 	}
 	BLangBreak struct {
-		BLangStatementBase
+		bLangStatementBase
 	}
 
 	BLangCompoundAssignment struct {
-		BLangStatementBase
+		bLangStatementBase
 		VarRef       model.ExpressionNode
 		Expr         BLangExpression
 		OpKind       model.OperatorKind
 		ModifiedExpr BLangExpression
 	}
 	BLangContinue struct {
-		BLangStatementBase
+		bLangStatementBase
 	}
 	BLangDo struct {
-		BLangStatementBase
+		bLangStatementBase
 		Body         BLangBlockStmt
 		OnFailClause BLangOnFailClause
 	}
 
 	BLangExpressionStmt struct {
-		BLangStatementBase
+		bLangStatementBase
 		Expr BLangExpression
 	}
 
 	BLangIf struct {
-		BLangStatementBase
+		bLangStatementBase
 		scope    model.Scope
 		Expr     BLangExpression
 		Body     BLangBlockStmt
@@ -77,7 +77,7 @@ type (
 	}
 
 	BLangWhile struct {
-		BLangStatementBase
+		bLangStatementBase
 		scope        model.Scope
 		Expr         BLangExpression
 		Body         BLangBlockStmt
@@ -85,7 +85,7 @@ type (
 	}
 
 	BLangForeach struct {
-		BLangStatementBase
+		bLangStatementBase
 		scope             model.Scope
 		VariableDef       *BLangSimpleVariableDef
 		Collection        BLangExpression
@@ -95,14 +95,19 @@ type (
 	}
 
 	BLangSimpleVariableDef struct {
-		BLangStatementBase
+		bLangStatementBase
 		Var      *BLangSimpleVariable
 		IsInFork bool
 		IsWorker bool
 	}
 
 	BLangReturn struct {
-		BLangStatementBase
+		bLangStatementBase
+		Expr BLangExpression
+	}
+
+	BLangPanic struct {
+		bLangStatementBase
 		Expr BLangExpression
 	}
 )
@@ -119,6 +124,7 @@ var (
 	_ model.ForeachNode             = &BLangForeach{}
 	_ model.VariableDefinitionNode  = &BLangSimpleVariableDef{}
 	_ model.ReturnNode              = &BLangReturn{}
+	_ model.PanicNode               = &BLangPanic{}
 )
 
 var (
@@ -139,6 +145,8 @@ var (
 	_ BLangNode = &BLangWhile{}
 	_ BLangNode = &BLangForeach{}
 	_ BLangNode = &BLangSimpleVariableDef{}
+	_ BLangNode = &BLangReturn{}
+	_ BLangNode = &BLangPanic{}
 )
 
 func (this *BLangAssignment) GetVariable() model.ExpressionNode {
@@ -502,4 +510,12 @@ func (this *BLangReturn) SetExpression(expression model.ExpressionNode) {
 
 func (this *BLangReturn) GetKind() model.NodeKind {
 	return model.NodeKind_RETURN
+}
+
+func (this *BLangPanic) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangPanic) GetKind() model.NodeKind {
+	return model.NodeKind_PANIC
 }

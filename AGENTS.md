@@ -1,3 +1,5 @@
+This document defines how AI/code agents should work with this repository: coding style, compiler/interpreter stages, and testing conventions. Follow these rules when generating or editing code here.
+
 ## Coding style
 
 - Don't make symbols public unless asked for or needed
@@ -34,7 +36,7 @@
 10. Generate BIR
 11. Interpret generated BIR
 
-Stages up to 10 are considered front end, and stage 11 is backend
+Stages 1–10 are the compilation pipeline (source → BIR); stage 11 is the interpreter (BIR execution).
 
 Execution of these stages is defined in `module_context.go` (and `testphases/phases.go` for corpus tests)
 
@@ -73,3 +75,7 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
 - Each ast node has a type representing the value you get after evaluating that node
   - For expressions this needs to be determined.
   - For all other nodes (declarations, statements, identifiers, etc) which don't produce a value this is always NEVER
+
+## Type
+
+- To check if a type is singleton type and get it's value use `semtype:SingleShape`

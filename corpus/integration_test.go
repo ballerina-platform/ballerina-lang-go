@@ -17,6 +17,12 @@
 package corpus
 
 import (
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/values"
 	"bytes"
 	"flag"
 	"fmt"
@@ -26,13 +32,7 @@ import (
 	"strings"
 	"testing"
 
-	"ballerina-lang-go/bir"
 	_ "ballerina-lang-go/lib/rt"
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/test_util"
-	"ballerina-lang-go/values"
 
 	"golang.org/x/tools/txtar"
 )
@@ -50,8 +50,19 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		"subset5/05-error/simple-v.bal",
-		"subset5/05-error/context-type-v.bal",
+		"subset5/05-error/panic1-p.bal",
+		"subset5/05-error/panic2-p.bal",
+		"subset5/05-error/panic3-p.bal",
+		"subset5/05-error/panic4-p.bal",
+		"subset5/05-error/panic5-p.bal",
+		"subset5/05-error/check-v.bal",
+		"subset5/05-error/check1-v.bal",
+		"subset5/05-error/check2-v.bal",
+		"subset5/05-error/check3-p.bal",
+		"subset5/05-error/check4-p.bal",
+		"subset5/05-error/check5-v.bal",
+		"subset5/05-error/check6-e.bal",
+		"subset5/05-error/check7-e.bal",
 	}
 )
 

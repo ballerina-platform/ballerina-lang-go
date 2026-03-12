@@ -1,0 +1,14 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation p (
+        (error-constructor-expr (
+          (literal help))))))
+  )
+)
+(p
+  (bb0 () ()
+    (panic
+      (simple-var-ref e))
+  )
+)

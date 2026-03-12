@@ -20,10 +20,12 @@ type AllOrNothingSubtype struct {
 	isAll bool
 }
 
-var AllOrNothingSubtypeAll = newAllOrNothingSubtypeFromBool(true)
-var AllOrNothingSubtypeNothing = newAllOrNothingSubtypeFromBool(false)
-var _ SubtypeData = &AllOrNothingSubtype{}
-var _ Bdd = &AllOrNothingSubtype{}
+var (
+	AllOrNothingSubtypeAll                 = newAllOrNothingSubtypeFromBool(true)
+	AllOrNothingSubtypeNothing             = newAllOrNothingSubtypeFromBool(false)
+	_                          SubtypeData = &AllOrNothingSubtype{}
+	_                          Bdd         = &AllOrNothingSubtype{}
+)
 
 func newAllOrNothingSubtypeFromBool(isAll bool) AllOrNothingSubtype {
 	this := AllOrNothingSubtype{}
@@ -49,4 +51,12 @@ func (this *AllOrNothingSubtype) IsAllSubtype() bool {
 func (this *AllOrNothingSubtype) IsNothingSubtype() bool {
 	// migrated from AllOrNothingSubtype.java:50:5
 	return (!this.isAll)
+}
+
+func (this *AllOrNothingSubtype) canonicalKey() string {
+	if this.isAll {
+		return "true"
+	} else {
+		return "false"
+	}
 }

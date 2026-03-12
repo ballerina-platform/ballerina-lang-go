@@ -208,9 +208,11 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
-	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), nil, VAR_KIND_RETURN)
+	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
+	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), nil, VAR_KIND_ARG, param.Symbol())
+		paramType := param.GetDeterminedType()
+		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
@@ -283,6 +285,8 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return breakStatement(ctx, curBB, stmt)
 	case *ast.BLangContinue:
 		return continueStatement(ctx, curBB, stmt)
+	case *ast.BLangPanic:
+		return panicStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
@@ -437,6 +441,13 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
 	curBB.Terminator = &Return{}
+	return statementEffect{}
+}
+
+func panicStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangPanic) statementEffect {
+	errorEffect := handleExpression(ctx, curBB, stmt.Expr)
+	curBB = errorEffect.block
+	curBB.Terminator = &Panic{ErrorOp: errorEffect.result}
 	return statementEffect{}
 }
 
@@ -627,6 +638,9 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	newError := &NewError{}
 	newError.Type = expr.GetDeterminedType()
+	if expr.ErrorTypeRef != nil {
+		newError.TypeName = expr.ErrorTypeRef.TypeName.Value
+	}
 	newError.MessageOp = msgEffect.result
 	newError.CauseOp = causeOp
 	newError.DetailOp = detailOp
@@ -834,10 +848,6 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 		kind = INSTRUCTION_KIND_DIV
 	case model.OperatorKind_MOD:
 		kind = INSTRUCTION_KIND_MOD
-	case model.OperatorKind_AND:
-		kind = INSTRUCTION_KIND_AND
-	case model.OperatorKind_OR:
-		kind = INSTRUCTION_KIND_OR
 	case model.OperatorKind_EQUAL:
 		kind = INSTRUCTION_KIND_EQUAL
 	case model.OperatorKind_NOT_EQUAL:
@@ -887,7 +897,84 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 }
 
 func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
-	return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
+	switch expr.OpKind {
+	case model.OperatorKind_AND:
+		return logicalAndExpression(ctx, curBB, expr)
+	case model.OperatorKind_OR:
+		return logicalOrExpression(ctx, curBB, expr)
+	default:
+		return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
+	}
+}
+
+func logicalAndExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+
+	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
+	curBB = lhsEffect.block
+
+	mov := &Move{}
+	mov.LhsOp = resultOperand
+	mov.RhsOp = lhsEffect.result
+	curBB.Instructions = append(curBB.Instructions, mov)
+
+	evalRhsBB := ctx.addBB()
+	doneBB := ctx.addBB()
+
+	branch := &Branch{}
+	branch.Op = lhsEffect.result
+	branch.TrueBB = evalRhsBB
+	branch.FalseBB = doneBB
+	curBB.Terminator = branch
+
+	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
+	rhsBB := rhsEffect.block
+
+	rhsMov := &Move{}
+	rhsMov.LhsOp = resultOperand
+	rhsMov.RhsOp = rhsEffect.result
+	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
+	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  doneBB,
+	}
+}
+
+func logicalOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBinaryExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+
+	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
+	curBB = lhsEffect.block
+
+	mov := &Move{}
+	mov.LhsOp = resultOperand
+	mov.RhsOp = lhsEffect.result
+	curBB.Instructions = append(curBB.Instructions, mov)
+
+	evalRhsBB := ctx.addBB()
+	doneBB := ctx.addBB()
+
+	branch := &Branch{}
+	branch.Op = lhsEffect.result
+	branch.TrueBB = doneBB
+	branch.FalseBB = evalRhsBB
+	curBB.Terminator = branch
+
+	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
+	rhsBB := rhsEffect.block
+
+	rhsMov := &Move{}
+	rhsMov.LhsOp = resultOperand
+	rhsMov.RhsOp = rhsEffect.result
+	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
+	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  doneBB,
+	}
 }
 
 func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangSimpleVarRef) expressionEffect {

@@ -28,6 +28,9 @@ type binding struct {
 	ref            model.SymbolRef
 	narrowedSymbol model.SymbolRef
 	prev           *binding
+	// defaultType is used for unreachable branches (e.g. false branch of constant true)
+	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
+	defaultType semtypes.SemType
 }
 
 func (b *binding) isUnnarrowing() bool {
@@ -76,35 +79,47 @@ func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.S
 	return statementEffect{chain, false}
 }
 
-func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[model.SymbolRef]semtypes.SemType) {
+func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
 	if chain == nil {
-		return
+		return accumDefault
 	}
-	ref := chain.ref
-	_, hasTy := accum[ref]
-	if !hasTy {
-		accum[ref] = ctx.SymbolType(chain.narrowedSymbol)
+	if chain.defaultType == nil {
+		ref := chain.ref
+		_, hasTy := accum[ref]
+		if !hasTy {
+			accum[ref] = ctx.SymbolType(chain.narrowedSymbol)
+		}
+	} else if accumDefault == nil {
+		accumDefault = chain.defaultType
 	}
-	accumNarrowedTypes(ctx, chain.prev, accum)
+	return accumNarrowedTypes(ctx, chain.prev, accum, accumDefault)
 }
 
 func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c1, m1)
+	d1 := accumNarrowedTypes(ctx, c1, m1, nil)
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
-	accumNarrowedTypes(ctx, c2, m2)
+	d2 := accumNarrowedTypes(ctx, c2, m2, nil)
 	type typePair struct{ ty1, ty2 semtypes.SemType }
 	pairs := make(map[model.SymbolRef]typePair)
 	for s, ty1 := range m1 {
 		ty2, ok := m2[s]
 		if !ok {
-			ty2 = ctx.SymbolType(s)
+			if d2 != nil {
+				ty2 = d2
+			} else {
+				ty2 = ctx.SymbolType(s)
+			}
 		}
 		pairs[s] = typePair{ty1, ty2}
 	}
 	for s, ty2 := range m2 {
 		if _, ok := m1[s]; !ok {
-			pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			if d1 != nil {
+				pairs[s] = typePair{d1, ty2}
+			} else {
+				pairs[s] = typePair{ctx.SymbolType(s), ty2}
+			}
 		}
 	}
 	var result *binding
@@ -129,6 +144,34 @@ func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect)
 	}
 	combined := mergeChains(ctx, s1.binding, s2.binding, semtypes.Union)
 	return statementEffect{combined, false}
+}
+
+func diff(c1, c2 *binding) *binding {
+	if c1 == c2 {
+		return nil
+	}
+	result := &binding{ref: c1.ref, narrowedSymbol: c1.narrowedSymbol, defaultType: c1.defaultType}
+	cur := result
+	parent := c1.prev
+	for parent != nil && parent != c2 {
+		cur.prev = &binding{ref: parent.ref, narrowedSymbol: parent.narrowedSymbol, defaultType: parent.defaultType}
+		cur = cur.prev
+		parent = parent.prev
+	}
+	return result
+}
+
+func singletonExprEffect(chain *binding, expr ast.BLangExpression) (expressionEffect, bool) {
+	ty := expr.GetDeterminedType()
+	if ty == nil {
+		return expressionEffect{}, false
+	}
+	if isSingletonBool(ty, true) {
+		return expressionEffect{ifTrue: chain, ifFalse: &binding{defaultType: &semtypes.NEVER, prev: chain}}, true
+	} else if isSingletonBool(ty, false) {
+		return expressionEffect{ifTrue: &binding{defaultType: &semtypes.NEVER, prev: chain}, ifFalse: chain}, true
+	}
+	return expressionEffect{}, false
 }
 
 func defaultExpressionEffect(chain *binding) expressionEffect {

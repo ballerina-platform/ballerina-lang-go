@@ -1,0 +1,7 @@
+# Dotted key creates a generated 'fruit' table.
+# The explicit [fruit] section adds a new key 'flavor'.
+# After the merge, both keys must be present.
+fruit.color = "yellow"
+
+[fruit]
+flavor = "banana"

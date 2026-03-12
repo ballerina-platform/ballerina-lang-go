@@ -20,12 +20,13 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"sync"
 )
 
 type CompilerContext struct {
 	env         *CompilerEnvironment
+	mu          sync.Mutex
 	diagnostics []diagnostics.Diagnostic
-	tyContext   semtypes.Context
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
@@ -108,7 +109,9 @@ func (this *CompilerContext) SemanticError(message string, pos diagnostics.Locat
 
 func (this *CompilerContext) addDiagnostic(code string, severity diagnostics.DiagnosticSeverity, message string, pos diagnostics.Location) {
 	diagnostic := diagnostics.CreateDiagnostic(diagnostics.NewDiagnosticInfo(&code, message, severity), pos)
+	this.mu.Lock()
 	this.diagnostics = append(this.diagnostics, diagnostic)
+	this.mu.Unlock()
 }
 
 func (this *CompilerContext) HasDiagnostics() bool {
@@ -130,18 +133,13 @@ func (this *CompilerContext) Diagnostics() []diagnostics.Diagnostic {
 
 func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 	return &CompilerContext{
-		env:       env,
-		tyContext: semtypes.ContextFrom(env.typeEnv),
+		env: env,
 	}
 }
 
 // GetTypeEnv returns the type environment for this context
 func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 	return this.env.GetTypeEnv()
-}
-
-func (this *CompilerContext) GetTypeCtx() semtypes.Context {
-	return this.tyContext
 }
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {

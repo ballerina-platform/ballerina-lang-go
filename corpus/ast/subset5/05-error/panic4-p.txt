@@ -1,0 +1,26 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (literal 3))
+        (block-stmt
+          (if
+            (binary-expr ==
+              (simple-var-ref i)
+              (literal 1))
+            (block-stmt
+              (panic
+                (error-constructor-expr (
+                  (literal range panic))))) ())
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (simple-var-ref i))))))))))

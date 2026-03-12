@@ -1,0 +1,22 @@
+-- stdout --
+lhsTrue
+rhsTrue
+true
+lhsFalse
+false
+lhsTrue
+rhsFalse
+false
+lhsFalse
+false
+lhsTrue
+true
+lhsFalse
+rhsTrue
+true
+lhsTrue
+true
+lhsFalse
+rhsFalse
+false
+-- stderr --

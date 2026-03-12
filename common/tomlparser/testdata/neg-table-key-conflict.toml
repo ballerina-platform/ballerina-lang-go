@@ -1,0 +1,7 @@
+#Fix - //TODO revisit dotted.
+
+[table]
+key = "value"
+key1 = "value1"
+[table.key1]
+key2 = "value2"

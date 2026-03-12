@@ -27,30 +27,29 @@ import (
 	"math/bits"
 	"strconv"
 	"strings"
+	"sync"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 )
 
-type (
-	TypeResolver struct {
-		ctx             *context.CompilerContext
-		tyCtx           semtypes.Context
-		importedSymbols map[string]model.ExportedSymbolSpace
-		pkg             *ast.BLangPackage
-		implicitImports map[string]bool
-	}
-)
+type TypeResolver struct {
+	ctx             *context.CompilerContext
+	tyCtx           semtypes.Context
+	importedSymbols map[string]model.ExportedSymbolSpace
+	pkg             *ast.BLangPackage
+	implicitImports map[string]ast.BLangImportPackage
+}
 
 var _ ast.Visitor = &TypeResolver{}
 
 func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	return &TypeResolver{
 		ctx:             ctx,
-		tyCtx:           ctx.GetTypeCtx(),
+		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedSymbols: importedSymbols,
-		implicitImports: make(map[string]bool),
 		pkg:             pkg,
+		implicitImports: make(map[string]ast.BLangImportPackage),
 	}
 }
 
@@ -64,8 +63,38 @@ func ResolveTopLevelNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, i
 
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+	resolvers := make([]*TypeResolver, len(pkg.Functions))
+	var wg sync.WaitGroup
+	for i := range pkg.Functions {
+		fn := &pkg.Functions[i]
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			resolvers[idx] = resolveFunctionBody(ctx, pkg, fn, importedSymbols)
+		}(i)
+	}
+	wg.Wait()
+
+	seen := make(map[string]bool, len(resolvers))
+	for _, t := range resolvers {
+		for name, importNode := range t.implicitImports {
+			if !seen[name] {
+				seen[name] = true
+				pkg.Imports = append(pkg.Imports, importNode)
+			}
+		}
+	}
+}
+
+func resolveFunctionBody(ctx *context.CompilerContext, pkg *ast.BLangPackage, fn *ast.BLangFunction, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	t := newTypeResolver(ctx, pkg, importedSymbols)
-	t.resolveInnerNodeTypes(pkg)
+	if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
+		t.resolveBlockStatements(nil, body.Stmts)
+		body.SetDeterminedType(&semtypes.NEVER)
+	} else {
+		ctx.Unimplemented("unsupported function body kind", fn.Body.GetPosition())
+	}
+	return t
 }
 
 func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
@@ -104,16 +133,7 @@ func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *a
 	for i := range pkg.GlobalVars {
 		ast.Walk(t, &pkg.GlobalVars[i])
 	}
-}
 
-func (t *TypeResolver) resolveInnerNodeTypes(pkg *ast.BLangPackage) {
-	for i := range pkg.Functions {
-		fn := &pkg.Functions[i]
-		if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
-			t.resolveBlockStatements(nil, body.Stmts)
-			body.SetDeterminedType(&semtypes.NEVER)
-		}
-	}
 	tctx := t.tyCtx
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
@@ -251,6 +271,11 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			t.resolveOnFailClause(chain, s.OnFailClause)
 		}
 		return defaultStmtEffect(chain), ok
+	case *ast.BLangPanic:
+		if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+			return defaultStmtEffect(chain), false
+		}
+		return statementEffect{nil, true}, true
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return defaultStmtEffect(chain), true
 	default:
@@ -411,7 +436,6 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) bool {
 		case int64:
 			ty = semtypes.IntConst(v)
 		case float64:
-			bType.BTypeSetTag(model.TypeTags_FLOAT)
 			ty = semtypes.FloatConst(v)
 		default:
 			t.ctx.InternalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
@@ -646,6 +670,9 @@ func (t *TypeResolver) resolveExpression(chain *binding, expr ast.BLangExpressio
 		setExpectedType(expr, &semtypes.NEVER)
 		return nil, expressionEffect{}, false
 	}
+	if singletonEffect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return ty, singletonEffect, true
+	}
 	return ty, effect, ok
 }
 
@@ -695,6 +722,10 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return t.resolveTypeConversionExpr(chain, e)
 	case *ast.BLangTypeTestExpr:
 		return t.resolveTypeTestExpr(chain, e)
+	case *ast.BLangCheckedExpr:
+		return t.resolveCheckedExpr(chain, e)
+	case *ast.BLangCheckPanickedExpr:
+		return t.resolveCheckedExpr(chain, &e.BLangCheckedExpr)
 	case *ast.BLangNamedArgsExpression:
 		ty, effect, ok := t.resolveExpression(chain, e.Expr)
 		if !ok {
@@ -745,6 +776,20 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 		return resultTy, expressionEffect{ifTrue: falseChain, ifFalse: trueChain}, true
 	}
 	return resultTy, expressionEffect{ifTrue: trueChain, ifFalse: falseChain}, true
+}
+
+func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	errorIntersection := semtypes.Intersect(exprTy, &semtypes.ERROR)
+	if semtypes.IsEmpty(t.tyCtx, errorIntersection) {
+		e.IsRedundantChecking = true
+	}
+	resultTy := semtypes.Diff(exprTy, &semtypes.ERROR)
+	setExpectedType(e, resultTy)
+	return resultTy, defaultExpressionEffect(chain), true
 }
 
 func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLangMappingConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -1272,49 +1317,75 @@ func (t *TypeResolver) resolveEqualityExpr(chain *binding, expr *ast.BLangBinary
 func (t *TypeResolver) resolveLogicalExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
 	switch expr.OpKind {
 	case model.OperatorKind_AND:
-		lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonBool(lhsTy, true) {
-			resultTy = rhsTy
-		} else if isSingletonBool(lhsTy, false) {
-			resultTy = semtypes.BooleanConst(false)
-		}
-		setExpectedType(expr, resultTy)
-		return resultTy, expressionEffect{
-			ifTrue:  mergeChains(t.ctx, lhsEffect.ifTrue, rhsEffect.ifTrue, semtypes.Intersect),
-			ifFalse: mergeChains(t.ctx, lhsEffect.ifFalse, mergeChains(t.ctx, lhsEffect.ifTrue, rhsEffect.ifFalse, semtypes.Intersect), semtypes.Union),
-		}, true
+		return t.resolveAndExpr(chain, expr)
 	case model.OperatorKind_OR:
-		lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifFalse, expr.RhsExpr)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		var resultTy semtypes.SemType = &semtypes.BOOLEAN
-		if isSingletonBool(lhsTy, true) {
-			resultTy = semtypes.BooleanConst(true)
-		} else if isSingletonBool(lhsTy, false) {
-			resultTy = rhsTy
-		}
-		setExpectedType(expr, resultTy)
-		return resultTy, expressionEffect{
-			ifTrue:  mergeChains(t.ctx, lhsEffect.ifTrue, mergeChains(t.ctx, lhsEffect.ifFalse, rhsEffect.ifTrue, semtypes.Intersect), semtypes.Union),
-			ifFalse: mergeChains(t.ctx, lhsEffect.ifFalse, rhsEffect.ifFalse, semtypes.Intersect),
-		}, true
+		return t.resolveOrExpr(chain, expr)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("Unexpected logical expression op %s", string(expr.OpKind)), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+}
+
+func (t *TypeResolver) resolveAndExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	var resultTy semtypes.SemType = &semtypes.BOOLEAN
+	if isSingletonBool(lhsTy, false) || isSingletonBool(rhsTy, false) {
+		resultTy = semtypes.BooleanConst(false)
+	} else if isSingletonBool(lhsTy, true) && isSingletonBool(rhsTy, true) {
+		resultTy = semtypes.BooleanConst(true)
+	} else if isSingletonBool(lhsTy, true) {
+		resultTy = rhsTy
+	}
+	setExpectedType(expr, resultTy)
+
+	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return resultTy, effect, true
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifTrue)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifTrue)
+	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffTrue, semtypes.Intersect)
+	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
+	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
+}
+
+func (t *TypeResolver) resolveOrExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifFalse, expr.RhsExpr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	var resultTy semtypes.SemType = &semtypes.BOOLEAN
+	if isSingletonBool(lhsTy, true) || isSingletonBool(rhsTy, true) {
+		resultTy = semtypes.BooleanConst(true)
+	} else if isSingletonBool(lhsTy, false) && isSingletonBool(rhsTy, false) {
+		resultTy = semtypes.BooleanConst(false)
+	} else if isSingletonBool(lhsTy, false) {
+		resultTy = rhsTy
+	}
+	setExpectedType(expr, resultTy)
+
+	if effect, isSingleton := singletonExprEffect(chain, expr); isSingleton {
+		return resultTy, effect, true
+	}
+
+	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifFalse)
+	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifFalse)
+	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffTrue, semtypes.Intersect), semtypes.Union)
+	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffFalse, semtypes.Intersect)
+	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
 }
 
 func (t *TypeResolver) equalityNarrowingEffect(chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
@@ -1622,15 +1693,14 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if !t.implicitImports[pkgName] {
-			t.implicitImports[pkgName] = true
+		if _, exists := t.implicitImports[pkgName]; !exists {
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
-			t.pkg.Imports = append(t.pkg.Imports, importNode)
+			t.implicitImports[pkgName] = importNode
 		}
 	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.INT) {
 		pkgName := bInt.PackageName
@@ -1641,15 +1711,14 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if !t.implicitImports[pkgName] {
-			t.implicitImports[pkgName] = true
+		if _, exists := t.implicitImports[pkgName]; !exists {
 			importNode := ast.BLangImportPackage{
 				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
 				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
-			t.pkg.Imports = append(t.pkg.Imports, importNode)
+			t.implicitImports[pkgName] = importNode
 		}
 	} else {
 		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())
