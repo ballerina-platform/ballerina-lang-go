@@ -1052,6 +1052,11 @@ type PanicNode interface {
 	GetExpression() ExpressionNode
 }
 
+type TrapNode interface {
+	ExpressionNode
+	GetExpression() ExpressionNode
+}
+
 type DoNode interface {
 	StatementNode
 	GetBody() BlockStatementNode

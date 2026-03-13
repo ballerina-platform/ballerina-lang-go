@@ -97,6 +97,16 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 	for _, basicBlock := range function.BasicBlocks {
 		p.PrintBasicBlock(basicBlock)
 	}
+	if len(function.ErrorTable) > 0 {
+		p.writeLine("")
+		p.writeLine("error-table {")
+		p.increaseIndent()
+		for _, entry := range function.ErrorTable {
+			p.writeLine(fmt.Sprintf("[%s, %s] -> %s, %s", entry.Start.Id.Value(), entry.End.Id.Value(), entry.Target.Id.Value(), p.PrintOperand(*entry.ErrorOp)))
+		}
+		p.decreaseIndent()
+		p.writeLine("}")
+	}
 	p.decreaseIndent()
 	p.write("}")
 }

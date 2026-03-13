@@ -572,6 +572,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeCheckedExpr(a, expr, expectedType)
 	case *ast.BLangCheckPanickedExpr:
 		return analyzeCheckPanickedExpr(a, expr, expectedType)
+	case *ast.BLangTrapExpr:
+		return analyzeTrapExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
 	default:
@@ -595,6 +597,13 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
 			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
 		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeTrapExpr[A analyzer](a A, expr *ast.BLangTrapExpr, expectedType semtypes.SemType) bool {
+	if !analyzeExpression(a, expr.Expr, nil) {
+		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
 }

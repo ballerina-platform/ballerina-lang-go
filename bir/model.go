@@ -17,11 +17,10 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 )
 
 type ConstValue struct {
@@ -126,9 +125,19 @@ type (
 		ReturnVariable *BIRVariableDcl
 		Parameters     []BIRFunctionParameter
 		BasicBlocks    []BIRBasicBlock
+		ErrorTable     []BIRErrorEntry
 		// FIXME:
 		DependentGlobalVars []BIRGlobalVariableDcl
 		FunctionLookupKey   string
+	}
+
+	BIRErrorEntry struct {
+		// Range
+		Start *BIRBasicBlock
+		End   *BIRBasicBlock
+
+		Target  *BIRBasicBlock
+		ErrorOp *BIROperand
 	}
 
 	BIRConstant struct {

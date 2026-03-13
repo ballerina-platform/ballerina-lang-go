@@ -66,6 +66,9 @@ var (
 		"subset5/05-error/check5-v.bal",
 		"subset5/05-error/check6-e.bal",
 		"subset5/05-error/check7-e.bal",
+		"subset5/05-error/trap1-v.bal",
+		"subset5/05-error/trap2-v.bal",
+		"subset5/05-error/trap3-v.bal",
 	}
 )
 
