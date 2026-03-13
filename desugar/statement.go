@@ -77,11 +77,9 @@ func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody
 	var allStmts []ast.BLangStatement
 
 	for _, stmt := range body.Stmts {
-		result := walkStatement(cx, stmt.(model.StatementNode))
-		for _, initStmt := range result.initStmts {
-			allStmts = append(allStmts, initStmt.(ast.BLangStatement))
-		}
-		allStmts = append(allStmts, result.replacementNode.(ast.BLangStatement))
+		result := walkStatement(cx, stmt)
+		allStmts = append(allStmts, result.initStmts...)
+		allStmts = append(allStmts, result.replacementNode)
 	}
 
 	body.Stmts = allStmts
