@@ -149,6 +149,10 @@ type (
 		RhsExpr BLangExpression
 		OpKind  model.OperatorKind
 	}
+	BLangQueryExpr struct {
+		bLangExpressionBase
+		QueryClauseList []BLangNode
+	}
 
 	BLangCheckedExpr struct {
 		bLangExpressionBase
@@ -331,6 +335,7 @@ type (
 
 var (
 	_ model.BinaryExpressionNode                                   = &BLangBinaryExpr{}
+	_ model.QueryExpressionNode                                    = &BLangQueryExpr{}
 	_ model.CheckedExpressionNode                                  = &BLangCheckedExpr{}
 	_ model.CheckPanickedExpressionNode                            = &BLangCheckPanickedExpr{}
 	_ model.CollectContextInvocationNode                           = &BLangCollectContextInvocation{}
@@ -351,6 +356,7 @@ var (
 	_ model.LambdaFunctionNode                                     = &BLangLambdaFunction{}
 	_ model.InvocationNode                                         = &BLangInvocation{}
 	_ BLangExpression                                              = &BLangInvocation{}
+	_ BLangExpression                                              = &BLangQueryExpr{}
 	_ model.GroupExpressionNode                                    = &BLangGroupExpr{}
 	_ model.TypedescExpressionNode                                 = &BLangTypedescExpr{}
 	_ model.LiteralNode                                            = &BLangNumericLiteral{}
@@ -383,6 +389,7 @@ var (
 	_ BLangNode = &BLangArrowFunction{}
 	_ BLangNode = &BLangLambdaFunction{}
 	_ BLangNode = &BLangBinaryExpr{}
+	_ BLangNode = &BLangQueryExpr{}
 	_ BLangNode = &BLangCheckedExpr{}
 	_ BLangNode = &BLangCheckPanickedExpr{}
 	_ BLangNode = &BLangCollectContextInvocation{}
@@ -556,6 +563,26 @@ func (this *BLangBinaryExpr) GetOperatorKind() model.OperatorKind {
 func (this *BLangBinaryExpr) GetKind() model.NodeKind {
 	// migrated from BLangBinaryExpr.java:60:5
 	return model.NodeKind_BINARY_EXPR
+}
+
+func (this *BLangQueryExpr) GetKind() model.NodeKind {
+	return model.NodeKind_QUERY_EXPR
+}
+
+func (this *BLangQueryExpr) GetQueryClauses() []model.Node {
+	result := make([]model.Node, len(this.QueryClauseList))
+	for i := range this.QueryClauseList {
+		result[i] = this.QueryClauseList[i]
+	}
+	return result
+}
+
+func (this *BLangQueryExpr) AddQueryClause(queryClause model.Node) {
+	if node, ok := queryClause.(BLangNode); ok {
+		this.QueryClauseList = append(this.QueryClauseList, node)
+		return
+	}
+	panic("query clause is not a BLangNode")
 }
 
 func (this *BLangCheckedExpr) GetExpression() model.ExpressionNode {
@@ -950,6 +977,10 @@ func (this *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
 }
 
 func (this *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangQueryExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 

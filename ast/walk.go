@@ -382,6 +382,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.RhsExpr.(BLangNode))
 		}
 
+	case *BLangQueryExpr:
+		for i := range node.QueryClauseList {
+			Walk(v, node.QueryClauseList[i])
+		}
+
 	case *BLangUnaryExpr:
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
@@ -685,6 +690,29 @@ func Walk(v Visitor, node BLangNode) {
 		}
 
 	// Section 10: Clauses
+	case *BLangFromClause:
+		if node.Collection != nil {
+			Walk(v, node.Collection.(BLangNode))
+		}
+		if node.VariableDefinitionNode != nil {
+			Walk(v, node.VariableDefinitionNode.(BLangNode))
+		}
+
+	case *BLangSelectClause:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
+	case *BLangLetClause:
+		for i := range node.LetVarDeclarations {
+			Walk(v, node.LetVarDeclarations[i].(BLangNode))
+		}
+
+	case *BLangWhereClause:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
 	case *BLangOnFailClause:
 		if node.Body != nil {
 			Walk(v, node.Body)

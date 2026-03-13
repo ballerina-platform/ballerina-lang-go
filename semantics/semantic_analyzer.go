@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 type analyzer interface {
@@ -464,17 +465,62 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 
 	ctx := a.tyCtx()
 	if !semtypes.IsSubtype(ctx, resolvedTy, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 		return false
 	}
 	if semtypes.IsNever(resolvedTy) {
 		if !semtypes.IsNever(expectedType) {
-			a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+			a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 			return false
 		}
 	}
 
 	return true
+}
+
+func formatIncompatibleTypeMessage(ctx semtypes.Context, expectedType semtypes.SemType, actualType semtypes.SemType) string {
+	expectedText := fmt.Sprintf("%v", expectedType)
+	actualText := fmt.Sprintf("%v", actualType)
+
+	// SemType.String() can collapse rich types (e.g., both sides as "((), (LIST))").
+	// Add stable details when the top-level rendering is identical.
+	if expectedText == actualText {
+		expectedText = renderTypeWithDetails(ctx, expectedType)
+		actualText = renderTypeWithDetails(ctx, actualType)
+	}
+
+	return fmt.Sprintf("incompatible type: expected %s, got %s", expectedText, actualText)
+}
+
+func renderTypeWithDetails(ctx semtypes.Context, ty semtypes.SemType) string {
+	base := fmt.Sprintf("%v", ty)
+	if ty == nil {
+		return base
+	}
+
+	details := make([]string, 0, 1)
+
+	if semtypes.IsSubtypeSimple(ty, semtypes.LIST) {
+		memberTypes := semtypes.ListAllMemberTypesInner(ctx, ty)
+		memberDetails := make([]string, 0, len(memberTypes.SemTypes))
+		for i := range memberTypes.SemTypes {
+			r := memberTypes.Ranges[i]
+			rangeLabel := fmt.Sprintf("%d..%d", r.Min, r.Max)
+			if r.Max == semtypes.MAX_VALUE {
+				rangeLabel = fmt.Sprintf("%d..*", r.Min)
+			}
+			memberDetails = append(memberDetails, fmt.Sprintf("%s:%v", rangeLabel, memberTypes.SemTypes[i]))
+		}
+		if len(memberDetails) > 0 {
+			sort.Strings(memberDetails)
+			details = append(details, "listMembers=["+strings.Join(memberDetails, ", ")+"]")
+		}
+	}
+
+	if len(details) == 0 {
+		return base
+	}
+	return fmt.Sprintf("%s {%s}", base, strings.Join(details, ", "))
 }
 
 func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
@@ -560,6 +606,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangGroupExpr:
 		return analyzeExpression(a, expr.Expression, expectedType)
 
+	case *ast.BLangQueryExpr:
+		return analyzeQueryExpr(a, expr, expectedType)
+
 	case *ast.BLangWildCardBindingPattern:
 		return validateResolvedType(a, expr, expectedType)
 
@@ -615,6 +664,60 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 	return validateResolvedType(a, expr, expectedType)
 }
 
+func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
+	if len(queryExpr.QueryClauseList) < 2 {
+		a.semanticErr("query expression requires from and select clauses", queryExpr.GetPosition())
+		return false
+	}
+
+	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
+	if !ok {
+		a.semanticErr("query expression must start with a from clause", queryExpr.GetPosition())
+		return false
+	}
+	if !analyzeExpression(a, fromClause.Collection, nil) {
+		return false
+	}
+
+	selectClause, ok := queryExpr.QueryClauseList[len(queryExpr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	if !ok {
+		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
+		return false
+	}
+
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+					a.semanticErr("let clause supports only initialized simple variable declarations", clause.GetPosition())
+					return false
+				}
+				var expectedType semtypes.SemType
+				if ast.SymbolIsSet(varDef.Var) {
+					expectedType = a.ctx().SymbolType(varDef.Var.Symbol())
+				}
+				if !analyzeExpression(a, varDef.Var.Expr.(ast.BLangExpression), expectedType) {
+					return false
+				}
+			}
+		case *ast.BLangWhereClause:
+			if !analyzeExpression(a, clause.Expression, &semtypes.BOOLEAN) {
+				return false
+			}
+		default:
+			a.unimplementedErr("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			return false
+		}
+	}
+
+	if !analyzeExpression(a, selectClause.Expression, nil) {
+		return false
+	}
+	return validateResolvedType(a, queryExpr, expectedType)
+}
+
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
 	if !analyzeExpression(a, expr.Expression, nil) {
 		return false
@@ -627,7 +730,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 		return false
 	}
 	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, exprTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, targetType), expr.GetPosition())
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
@@ -1125,6 +1228,12 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 		if !semtypes.IsSubtypeSimple(expectedType, semtypes.ANY) {
 			a.semanticErr("wildcard binding pattern type must be a subtype of 'any'", variable.GetPosition())
 			return false
+		}
+	}
+	if ast.SymbolIsSet(variable) {
+		symbolType := a.ctx().SymbolType(variable.Symbol())
+		if symbolType != nil {
+			expectedType = symbolType
 		}
 	}
 	if variable.Expr != nil && !analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType) {

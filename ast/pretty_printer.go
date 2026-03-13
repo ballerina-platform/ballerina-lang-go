@@ -128,6 +128,16 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
 		p.printErrorConstructorExpr(t)
+	case *BLangQueryExpr:
+		p.printQueryExpr(t)
+	case *BLangFromClause:
+		p.printFromClause(t)
+	case *BLangLetClause:
+		p.printLetClause(t)
+	case *BLangWhereClause:
+		p.printWhereClause(t)
+	case *BLangSelectClause:
+		p.printSelectClause(t)
 	case *BLangCheckedExpr:
 		p.printCheckedExpr(t)
 	case *BLangCheckPanickedExpr:
@@ -575,6 +585,64 @@ func (p *PrettyPrinter) printTypeTestExpr(node *BLangTypeTestExpr) {
 	p.PrintInner(node.Expr.(BLangNode))
 	if node.Type.TypeDescriptor != nil {
 		p.PrintInner(node.Type.TypeDescriptor.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printQueryExpr(node *BLangQueryExpr) {
+	p.startNode()
+	p.printString("query-expr")
+	p.indentLevel++
+	for i := range node.QueryClauseList {
+		p.PrintInner(node.QueryClauseList[i])
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
+	p.startNode()
+	p.printString("from-clause")
+	p.indentLevel++
+	if node.VariableDefinitionNode != nil {
+		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+	}
+	if node.Collection != nil {
+		p.PrintInner(node.Collection)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
+	p.startNode()
+	p.printString("let-clause")
+	p.indentLevel++
+	for i := range node.LetVarDeclarations {
+		p.PrintInner(node.LetVarDeclarations[i].(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printWhereClause(node *BLangWhereClause) {
+	p.startNode()
+	p.printString("where-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printSelectClause(node *BLangSelectClause) {
+	p.startNode()
+	p.printString("select-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression)
 	}
 	p.indentLevel--
 	p.endNode()

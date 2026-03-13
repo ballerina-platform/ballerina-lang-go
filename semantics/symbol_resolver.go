@@ -329,6 +329,8 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 	switch n := node.(type) {
 	case *ast.BLangMappingConstructorExpr:
 		return resolveMappingConstructor(resolver, n)
+	case *ast.BLangQueryExpr:
+		return newBlockSymbolResolverWithBlockScope(resolver, n)
 	case model.InvocationNode:
 		if n.GetExpression() != nil {
 			createDeferredMethodSymbol(resolver, n)

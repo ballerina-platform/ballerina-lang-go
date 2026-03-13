@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"sync"
 )
 
@@ -54,6 +55,10 @@ func (ctx *PackageContext) AddImplicitImport(pkgName string, imp ast.BLangImport
 func (ctx *PackageContext) GetImportedSymbolSpace(pkgName string) (model.ExportedSymbolSpace, bool) {
 	space, ok := ctx.importedSymbols[pkgName]
 	return space, ok
+}
+
+func (ctx *PackageContext) SymbolType(symbol model.SymbolRef) semtypes.SemType {
+	return ctx.compilerCtx.SymbolType(symbol)
 }
 
 func (ctx *PackageContext) InternalError(msg string) {
