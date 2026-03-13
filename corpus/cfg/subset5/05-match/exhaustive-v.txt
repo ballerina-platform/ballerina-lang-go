@@ -1,0 +1,32 @@
+(main
+  (bb0 () (bb2 bb3 bb4)
+    (var-def
+      (variable a (type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 1))
+            (finite-type
+              (literal 2)))
+          (finite-type
+            (literal 3)))) (expr
+        (literal 2))))
+    (simple-var-ref a)
+  )
+  (bb1 (bb2 bb3 bb4) ())
+  (bb2 (bb0) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (literal 1))))
+  )
+  (bb3 (bb0) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (literal 2))))
+  )
+  (bb4 (bb0) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (literal 3))))
+  )
+)

@@ -323,17 +323,6 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	alias := importNode.Alias.GetValue()
 
-	// Only support ballerina/io
-	if importNode.OrgName == nil || importNode.OrgName.GetValue() != "ballerina" {
-		sa.unimplementedErr("unsupported import organization: only 'ballerina' imports are supported", importNode.GetPosition())
-		return
-	}
-
-	if !isIoImport(importNode) && !isImplicitImport(importNode) {
-		sa.unimplementedErr("unsupported import package: only 'ballerina/io' is supported", importNode.GetPosition())
-		return
-	}
-
 	// Check for duplicate imports
 	if _, exists := sa.importedPkgs[alias]; exists {
 		sa.semanticErr(fmt.Sprintf("import alias '%s' already defined", alias), importNode.GetPosition())
@@ -1151,6 +1140,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangMatchStatement:
+		return a
 	case *ast.BLangSimpleVariableDef:
 		if !analyzeSimpleVariableDef(a, n) {
 			return nil

@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  ubuntu-build:
+    name: Ubuntu Native Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

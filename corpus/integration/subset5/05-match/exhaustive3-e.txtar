@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: unmatchable match clause
+  --> exhaustive3-e.bal:27:9
+   |
+27 |         "any" => { // @error
+   |         ^^^^^^^^^^^^^^^^^^^^
+

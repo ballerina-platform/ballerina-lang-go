@@ -38,6 +38,9 @@ import (
 )
 
 const (
+	corpusProjectBaseDir            = "../corpus/project"
+	corpusProjectIntegrationBaseDir = "../corpus/integration/project"
+
 	externOrgName    = "ballerina"
 	externModuleName = "io"
 	externFuncName   = "println"
@@ -191,7 +194,7 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 
 	birPkg, compileErr := runCompilePhase(balFile, &stdoutBuf, &stderrBuf)
-	if birPkg != nil && compileErr != nil {
+	if birPkg == nil || compileErr != nil {
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 
@@ -287,4 +290,140 @@ func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
 		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
 	}
 	return true
+}
+
+func TestProjectIntegration(t *testing.T) {
+	flag.Parse()
+
+	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
+		return
+	}
+
+	projectDirs := findProjectDirs(corpusProjectBaseDir)
+
+	for _, projDir := range projectDirs {
+		dirName := filepath.Base(projDir)
+		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
+
+		t.Run(dirName, func(t *testing.T) {
+			t.Parallel()
+			testProjectIntegration(t, dirName, projDir, txtarPath)
+		})
+	}
+}
+
+func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while running %s: %v", dirName, r)
+		}
+	}()
+
+	if *update {
+		stdout, stderr := runProjectIntegrationCase(projDir)
+		if updateIfNeeded(t, txtarPath, stdout, stderr) {
+			t.Fatalf("Updated expected file: %s", txtarPath)
+		}
+		return
+	}
+
+	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(txtarPath)
+	if err != nil {
+		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
+	}
+
+	stdout, stderr := runProjectIntegrationCase(projDir)
+	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+	if result.success {
+		return
+	}
+
+	stdoutMismatch := result.expectedStdout != result.actualStdout
+	stderrMismatch := result.expectedStderr != result.actualStderr
+
+	var msg strings.Builder
+	if stdoutMismatch {
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
+	}
+	if stderrMismatch {
+		if msg.Len() > 0 {
+			msg.WriteString("\n\n")
+		}
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
+	}
+	t.Errorf("%s", msg.String())
+}
+
+func findProjectDirs(dir string) []string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var dirs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, "-v") || strings.HasSuffix(name, "-e") || strings.HasSuffix(name, "-p") {
+			dirs = append(dirs, filepath.Join(dir, name))
+		}
+	}
+	return dirs
+}
+
+func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
+
+	birPkgs, compileErr := runProjectCompilePhase(projectDir, &stdoutBuf, &stderrBuf)
+	if birPkgs == nil || compileErr != nil {
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	runProjectInterpretPhase(birPkgs, &stdoutBuf)
+	return stdoutBuf.String(), stderrBuf.String()
+}
+
+func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffer) (pkgs []*bir.BIRPackage, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			msg := fmt.Sprintf("%v", r)
+			msg = strings.TrimPrefix(msg, panicPrefix)
+			fmt.Fprintf(stdoutBuf, "%s%s\n", panicPrefix, msg)
+			err = fmt.Errorf("compile panic")
+		}
+	}()
+
+	fsys := os.DirFS(projectDir)
+
+	result, err := directory.LoadProject(fsys, ".")
+	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
+	}
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+
+	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult())
+	if compilation.DiagnosticResult().HasErrors() {
+		return nil, nil
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	return backend.BIRPackages(), nil
+}
+
+func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf *bytes.Buffer) {
+	if len(birPkgs) == 0 {
+		return
+	}
+	rt := runtime.NewRuntime()
+	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			fmt.Fprintf(stdoutBuf, "Runtime panic: %v\n", err)
+			return
+		}
+	}
 }

@@ -340,6 +340,23 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
+	case *BLangMatchStatement:
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+		for i := range node.MatchClauses {
+			Walk(v, &node.MatchClauses[i])
+		}
+
+	case *BLangMatchClause:
+		for _, pattern := range node.Patterns {
+			Walk(v, pattern.(BLangNode))
+		}
+		if node.Guard != nil {
+			Walk(v, node.Guard.(BLangNode))
+		}
+		Walk(v, &node.Body)
+
 	case *BLangSimpleVariableDef:
 		Walk(v, node.Var)
 
@@ -729,6 +746,9 @@ func Walk(v Visitor, node BLangNode) {
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))
 		}
+
+	case *BLangWildCardMatchPattern:
+		// Leaf node
 
 	// Section 13: Misc Leaf
 	case *BLangIdentifier:
