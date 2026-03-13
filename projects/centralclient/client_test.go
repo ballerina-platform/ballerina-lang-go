@@ -100,13 +100,13 @@ func TestPullPackageSuccessWithDeprecation(t *testing.T) {
 	clientContext := ClientContext{IsBuild: false}
 
 	err = client.PullPackage("wso2", "sf", "1.3.5", memFS,
-		filepath.Join("bala", "wso2", "sf"), "2020r2-any", testBalVersion, clientContext)
+		path.Join("bala", "wso2", "sf"), "2020r2-any", testBalVersion, clientContext)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	balaDir := filepath.Join("bala", "wso2", "sf", "1.3.5", "2020r2-any")
-	deprecatedFile := filepath.Join(balaDir, "deprecated.txt")
+	balaDir := path.Join("bala", "wso2", "sf", "1.3.5", "2020r2-any")
+	deprecatedFile := path.Join(balaDir, "deprecated.txt")
 
 	if _, err := fs.Stat(memFS, deprecatedFile); err != nil {
 		t.Errorf("deprecated.txt file does not exist")
@@ -141,7 +141,7 @@ func TestPullPackageConnectionResetRetry(t *testing.T) {
 	clientContext := ClientContext{IsBuild: false}
 
 	err = client.PullPackage("foo", "sf", "1.3.5", memFS,
-		filepath.Join("bala", "foo", "sf"), "2020r2-any", testBalVersion, clientContext)
+		path.Join("bala", "foo", "sf"), "2020r2-any", testBalVersion, clientContext)
 	if err != nil {
 		t.Fatalf("unexpected error after retries: %v", err)
 	}
@@ -150,11 +150,11 @@ func TestPullPackageConnectionResetRetry(t *testing.T) {
 		t.Errorf("expected 3 total attempts (2 failures + 1 success), got %d", attemptCount)
 	}
 
-	balaDir := filepath.Join("bala", "foo", "sf", "1.3.5", "2020r2-any")
+	balaDir := path.Join("bala", "foo", "sf", "1.3.5", "2020r2-any")
 	requiredFiles := []string{"bala.json", "package.json"}
 
 	for _, file := range requiredFiles {
-		filePath := filepath.Join(balaDir, file)
+		filePath := path.Join(balaDir, file)
 		if _, err := fs.Stat(memFS, filePath); err != nil {
 			t.Errorf("required file does not exist after retry: %s", file)
 		}

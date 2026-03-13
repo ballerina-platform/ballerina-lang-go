@@ -55,7 +55,11 @@ func findRepoRoot(t *testing.T) string {
 func buildBalBinary(t *testing.T, repoRoot string) string {
 	t.Helper()
 	tmp := t.TempDir()
-	balBin := filepath.Join(tmp, "bal")
+	balName := "bal"
+	if runtime.GOOS == "windows" {
+		balName = "bal.exe"
+	}
+	balBin := filepath.Join(tmp, balName)
 
 	cmd := exec.Command("go", "build", "-o", balBin, "./cli/cmd")
 	cmd.Dir = repoRoot

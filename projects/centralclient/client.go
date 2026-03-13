@@ -26,7 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -471,7 +471,7 @@ func (c *centralAPIClientImpl) getConnectorsInternal(params map[string]string, s
 		return nil, err
 	}
 
-	baseURL.Path = filepath.Join(baseURL.Path, ConnectorsPath)
+	baseURL.Path = path.Join(baseURL.Path, ConnectorsPath)
 	query := baseURL.Query()
 	for key, value := range params {
 		query.Set(key, value)
@@ -622,7 +622,7 @@ func (c *centralAPIClientImpl) getTriggersInternal(params map[string]string, sup
 		return nil, err
 	}
 
-	baseURL.Path = filepath.Join(baseURL.Path, TriggersPath)
+	baseURL.Path = path.Join(baseURL.Path, TriggersPath)
 	query := baseURL.Query()
 	for key, value := range params {
 		query.Set(key, value)
