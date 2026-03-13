@@ -106,7 +106,7 @@ go test ./...
 
 ### Open an issue
 
-- [Open an issue](https://github.com/ballerina-platform/ballerina-lang-go/issues) for bug reports or feature requests related to the native Go-based interpreter.
+- [Open an issue](https://github.com/ballerina-platform/ballerina-lang-go/issues) for bug reports or feature requests related to the native interpreter.
 
 ### Report security issues
 

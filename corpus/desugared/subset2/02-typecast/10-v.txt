@@ -1,0 +1,31 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable d (type
+          (value-type decimal)) (expr
+          (literal 41/4))))
+      (var-def
+        (variable e (type
+          (value-type decimal)) (expr
+          (type-conversion-expr
+            (simple-var-ref d)
+            (value-type decimal)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref e))))
+      (var-def
+        (variable d2 (type
+          (value-type decimal)) (expr
+          (literal 5/4))))
+      (var-def
+        (variable f (type
+          (value-type float)) (expr
+          (type-conversion-expr
+            (simple-var-ref d2)
+            (value-type float)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref f)))))))

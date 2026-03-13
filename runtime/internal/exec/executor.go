@@ -103,10 +103,6 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 			execBinaryOpLT(v, frame)
 		case bir.INSTRUCTION_KIND_LESS_EQUAL:
 			execBinaryOpLTE(v, frame)
-		case bir.INSTRUCTION_KIND_AND:
-			execBinaryOpAnd(v, frame)
-		case bir.INSTRUCTION_KIND_OR:
-			execBinaryOpOr(v, frame)
 		case bir.INSTRUCTION_KIND_REF_EQUAL:
 			execBinaryOpRefEqual(v, frame)
 		case bir.INSTRUCTION_KIND_REF_NOT_EQUAL:
