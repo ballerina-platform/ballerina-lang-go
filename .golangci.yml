@@ -1,4 +1,5 @@
 version: "2"
+
 linters:
   default: standard
   settings:
@@ -20,10 +21,6 @@ linters:
         - -SA4010
         # Type assertion to current type
         - -S1040
-        # redundant break statement
-        - -S1023
-        # ineffective break statement. Did you mean to break out of the outer loop?
-        - -SA4011
         # empty branch
         - -SA9003
 

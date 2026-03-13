@@ -378,7 +378,6 @@ func (l *Lexer) processIdentifierEnd() {
 		case NEWLINE, CARRIAGE_RETURN, TAB:
 			reader.Advance()
 			l.reportLexerError(common.ERROR_INVALID_ESCAPE_SEQUENCE, "")
-			break
 		case 'u':
 			// NumericEscape
 			if reader.PeekN(2) == OPEN_BRACE {
@@ -615,7 +614,6 @@ func (l *Lexer) getNextNonWhiteSpaceOrNonCommentChar() rune {
 		switch nextChar {
 		case SPACE, TAB, FORM_FEED, CARRIAGE_RETURN, NEWLINE:
 			lookaheadCount++
-			break
 		case SLASH:
 			if reader.PeekN(lookaheadCount+1) == SLASH {
 				lookaheadCount += 2
@@ -638,7 +636,6 @@ func (l *Lexer) skipComment(lookaheadCount int) int {
 		switch nextChar {
 		case NEWLINE:
 		case CARRIAGE_RETURN:
-			break
 		default:
 			lookaheadCount += 1
 			nextChar = reader.PeekN(lookaheadCount)
@@ -688,7 +685,6 @@ func (l *Lexer) processNumericLiteral(startChar rune) tree.STToken {
 				nextChar = reader.Peek()
 				continue
 			}
-			break
 		}
 		break
 	}
@@ -810,10 +806,8 @@ func (l *Lexer) isDecimalNumberFollowedIdentifier() bool {
 		if lookaheadChar == 'd' || lookaheadChar == 'D' || lookaheadChar == 'f' || lookaheadChar == 'F' {
 			lookahead++
 		}
-		break
 	case 'd', 'D', 'f', 'F':
 		lookahead++
-		break
 	default:
 		break
 	}
@@ -890,7 +884,6 @@ func (l *Lexer) processHexLiteral() tree.STToken {
 		case 'p', 'P':
 			return l.processExponent(true)
 		}
-		break
 	case 'p', 'P':
 		if !containsHexDigit {
 			l.reportLexerError(common.ERROR_MISSING_HEX_NUMBER_AFTER_HEX_INDICATOR)
@@ -1105,10 +1098,8 @@ func (l *Lexer) processStringLiteral() tree.STToken {
 		switch nextChar {
 		case NEWLINE, CARRIAGE_RETURN:
 			l.reportLexerError(common.ERROR_MISSING_DOUBLE_QUOTE)
-			break
 		case DOUBLE_QUOTE:
 			reader.Advance()
-			break
 		case BACKSLASH:
 			switch reader.PeekN(1) {
 			case 't', 'n', 'r', BACKSLASH, DOUBLE_QUOTE:
@@ -1217,7 +1208,6 @@ func (l *Lexer) processSyntaxTrivia(triviaList *[]tree.STNode, isLeading bool) {
 		switch c {
 		case SPACE, TAB, FORM_FEED:
 			*triviaList = append(*triviaList, l.processWhitespaces())
-			break
 		case CARRIAGE_RETURN, NEWLINE:
 			*triviaList = append(*triviaList, l.processEndOfLine())
 			if isLeading {
@@ -1243,7 +1233,6 @@ func (l *Lexer) processComment() tree.STNode {
 	for !reader.IsEOF() {
 		switch nextToken {
 		case NEWLINE, CARRIAGE_RETURN:
-			break
 		default:
 			reader.Advance()
 			nextToken = reader.Peek()
@@ -1281,7 +1270,6 @@ func (l *Lexer) processWhitespaces() tree.STNode {
 			reader.Advance()
 			continue
 		default:
-			break
 		}
 		break
 	}
@@ -1295,10 +1283,8 @@ func (l *Lexer) readTokenInBracedContentInInterpolation() tree.STToken {
 	switch nextChar {
 	case OPEN_BRACE:
 		l.StartMode(PARSER_MODE_INTERPOLATION_BRACED_CONTENT)
-		break
 	case CLOSE_BRACE:
 		l.EndMode()
-		break
 	case BACKTICK:
 		// Recursively end backtick string related contexts
 		for l.context.mode != PARSER_MODE_DEFAULT_MODE {
@@ -1395,7 +1381,6 @@ func (l *Lexer) readRegExpTemplateToken() tree.STToken {
 				}
 				continue
 			case BACKTICK:
-				break
 			case OPEN_BRACKET:
 				shouldProcessInterpolations = false
 				continue
