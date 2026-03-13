@@ -8440,7 +8440,7 @@ func (this *BallerinaParser) parseTemplateContentAsXML() tree.STNode {
 			xmlStringBuilder.WriteString(contentToken.Text())
 		} else {
 			xmlStringBuilder.WriteString("${}")
-			expressions = append(expressions, contentItem)
+			expressions = append(expressions, contentItem) //nolint:staticcheck // will be used in the future
 		}
 		nextToken = this.peek()
 	}

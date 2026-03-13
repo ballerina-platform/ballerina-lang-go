@@ -1551,7 +1551,7 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 
 	var qualifiers []tree.Token
 	if finalKeyword != nil {
-		qualifiers = append(qualifiers, finalKeyword)
+		qualifiers = append(qualifiers, finalKeyword) //nolint:staticcheck // will be used in the future
 	}
 	// qualifierList := tree.CreateNodeListWithFacade(qualifiers)
 
