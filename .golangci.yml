@@ -17,8 +17,6 @@ linters:
         - -ST1006
         # this value of ... is never used
         - -SA4006
-        # empty branch
-        - -SA9003
 
   disable:
     - unused
