@@ -163,6 +163,12 @@ type (
 	BLangCheckPanickedExpr struct {
 		BLangCheckedExpr
 	}
+
+	BLangTrapExpr struct {
+		bLangExpressionBase
+		Expr BLangExpression
+	}
+
 	BLangCollectContextInvocation struct {
 		bLangExpressionBase
 		Invocation BLangInvocation
@@ -372,6 +378,8 @@ var (
 	_ BLangNode                                                    = &BLangMappingKey{}
 	_ BLangExpression                                              = &BLangNamedArgsExpression{}
 	_ model.NamedArgNode                                           = &BLangNamedArgsExpression{}
+	_ model.TrapNode                                               = &BLangTrapExpr{}
+	_ BLangExpression                                              = &BLangTrapExpr{}
 )
 
 var (
@@ -408,6 +416,7 @@ var (
 	_ BLangNode = &BLangMappingConstructorExpr{}
 	_ BLangNode = &BLangMappingKeyValueField{}
 	_ BLangNode = &BLangMappingKey{}
+	_ BLangNode = &BLangTrapExpr{}
 )
 
 var (
@@ -1156,6 +1165,18 @@ func (this *BLangNamedArgsExpression) SetExpression(expr model.ExpressionNode) {
 	} else {
 		panic("expr is not a BLangExpression")
 	}
+}
+
+func (this *BLangTrapExpr) GetKind() model.NodeKind {
+	return model.NodeKind_TRAP_EXPR
+}
+
+func (this *BLangTrapExpr) GetExpression() model.ExpressionNode {
+	return this.Expr
+}
+
+func (this *BLangTrapExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {

@@ -2373,7 +2373,12 @@ func (n *NodeBuilder) TransformBuiltinSimpleNameReference(builtinSimpleNameRefer
 }
 
 func (n *NodeBuilder) TransformTrapExpression(trapExpressionNode *tree.TrapExpressionNode) BLangNode {
-	panic("TransformTrapExpression unimplemented")
+	pos := getPosition(trapExpressionNode)
+	expr := n.createExpression(trapExpressionNode.Expression())
+	trapExpr := &BLangTrapExpr{}
+	trapExpr.pos = pos
+	trapExpr.Expr = expr
+	return trapExpr
 }
 
 func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressionNode *tree.ListConstructorExpressionNode) BLangNode {
@@ -2921,7 +2926,85 @@ func (n *NodeBuilder) TransformTypeReferenceTypeDesc(typeReferenceTypeDescNode *
 }
 
 func (n *NodeBuilder) TransformMatchStatement(matchStatementNode *tree.MatchStatementNode) BLangNode {
-	panic("TransformMatchStatement unimplemented")
+	matchStatement := &BLangMatchStatement{}
+	matchStmtExpr := n.createExpression(matchStatementNode.Condition())
+	matchStatement.Expr = matchStmtExpr
+
+	matchClauses := matchStatementNode.MatchClauses()
+	for matchClauseNode := range matchClauses.Iterator() {
+		bLangMatchClause := &BLangMatchClause{}
+		bLangMatchClause.pos = getPosition(matchClauseNode)
+
+		// Handle match guard
+		if matchClauseNode.MatchGuard() != nil {
+			matchGuardNode := matchClauseNode.MatchGuard()
+			bLangMatchClause.Guard = n.createExpression(matchGuardNode.Expression())
+		}
+
+		// Handle match patterns
+		matchPatterns := matchClauseNode.MatchPatterns()
+		for matchPattern := range matchPatterns.Iterator() {
+			bLangMatchPattern := n.transformMatchPattern(matchPattern, matchStmtExpr)
+			if bLangMatchPattern != nil {
+				bLangMatchClause.Patterns = append(bLangMatchClause.Patterns, bLangMatchPattern)
+			}
+		}
+
+		// Handle block statement
+		bLangMatchClause.Body = *n.TransformBlockStatement(matchClauseNode.BlockStatement()).(*BLangBlockStmt)
+
+		matchStatement.MatchClauses = append(matchStatement.MatchClauses, *bLangMatchClause)
+	}
+
+	matchStatement.pos = getPosition(matchStatementNode)
+	return matchStatement
+}
+
+func (n *NodeBuilder) transformMatchPattern(matchPattern tree.Node, matchStmtExpr BLangExpression) BLangMatchPattern {
+	matchPatternPos := getPosition(matchPattern)
+	kind := matchPattern.Kind()
+
+	switch kind {
+	case common.SIMPLE_NAME_REFERENCE:
+		nameRef := matchPattern.(*tree.SimpleNameReferenceNode)
+		if nameRef.Name().Text() != "_" {
+			n.cx.SemanticError("expected wildcard '_' but got: "+nameRef.Name().Text(), matchPatternPos)
+			return nil
+		}
+		bLangWildCard := &BLangWildCardMatchPattern{}
+		bLangWildCard.pos = matchPatternPos
+		return bLangWildCard
+
+	case common.IDENTIFIER_TOKEN:
+		idToken := matchPattern.(tree.Token)
+		if idToken.Text() != "_" {
+			n.cx.SemanticError("expected wildcard '_' but got: "+idToken.Text(), matchPatternPos)
+			return nil
+		}
+		bLangWildCard := &BLangWildCardMatchPattern{}
+		bLangWildCard.pos = matchPatternPos
+		return bLangWildCard
+
+	case common.NUMERIC_LITERAL,
+		common.STRING_LITERAL,
+		common.QUALIFIED_NAME_REFERENCE,
+		common.NULL_LITERAL,
+		common.NIL_LITERAL,
+		common.BOOLEAN_LITERAL,
+		common.UNARY_EXPRESSION:
+		bLangConstPattern := &BLangConstPattern{}
+		bLangConstPattern.Expr = n.createExpression(matchPattern)
+		bLangConstPattern.pos = matchPatternPos
+		return bLangConstPattern
+
+	case common.PIPE_TOKEN, common.COMMA_TOKEN:
+		// Skip separator tokens in match pattern lists
+		return nil
+
+	default:
+		n.cx.InternalError(fmt.Sprintf("unexpected match pattern kind: %v", kind), matchPatternPos)
+		return nil
+	}
 }
 
 func (n *NodeBuilder) TransformMatchClause(matchClauseNode *tree.MatchClauseNode) BLangNode {
@@ -3296,7 +3379,13 @@ func getNextMissingNodeName(pkgID *model.PackageID) string {
 func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos Location) model.VariableNode {
 	var varName tree.Token
 	switch bindingPattern.Kind() {
-	case common.MAPPING_BINDING_PATTERN, common.LIST_BINDING_PATTERN, common.ERROR_BINDING_PATTERN, common.REST_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
+	case common.WILDCARD_BINDING_PATTERN:
+		ignore := createIgnoreIdentifier(bindingPattern)
+		simpleVar := createSimpleVariableNode()
+		simpleVar.SetName(&ignore)
+		simpleVar.pos = varPos
+		return simpleVar
+	case common.MAPPING_BINDING_PATTERN, common.LIST_BINDING_PATTERN, common.ERROR_BINDING_PATTERN, common.REST_BINDING_PATTERN:
 		panic("unimplemented")
 	case common.CAPTURE_BINDING_PATTERN:
 		fallthrough

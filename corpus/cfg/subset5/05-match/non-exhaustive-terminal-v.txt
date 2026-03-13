@@ -1,0 +1,22 @@
+(main
+  (bb0 () (bb2 bb3 bb1)
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (literal 3))))
+    (simple-var-ref a)
+  )
+  (bb1 (bb0) ()
+    (expression-stmt
+      (invocation io println (
+        (literal reachable))))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal <nil>))
+  )
+  (bb3 (bb0) ()
+    (return
+      (literal <nil>))
+  )
+)

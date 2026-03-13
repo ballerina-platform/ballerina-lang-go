@@ -61,3 +61,14 @@ func (b *BallerinaBackend) TargetPlatform() TargetPlatform {
 func (b *BallerinaBackend) BIR() *bir.BIRPackage {
 	return b.packageContext.getDefaultModuleContext().getBIRPackage()
 }
+
+// BIRPackages returns all BIR packages in topological order.
+func (b *BallerinaBackend) BIRPackages() []*bir.BIRPackage {
+	var pkgs []*bir.BIRPackage
+	for _, moduleCtx := range b.packageCompilation.Resolution().topologicallySortedModuleList {
+		if birPkg := moduleCtx.getBIRPackage(); birPkg != nil {
+			pkgs = append(pkgs, birPkg)
+		}
+	}
+	return pkgs
+}

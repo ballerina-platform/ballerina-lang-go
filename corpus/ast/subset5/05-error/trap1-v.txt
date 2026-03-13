@@ -1,0 +1,22 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable res (type
+          (union-type
+            (error-type)
+            (value-type int))) (expr
+          (trap-expr
+            (invocation foo ())))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res))))))
+  (function foo () (
+    (value-type int))
+    (block-function-body
+      (panic
+        (error-constructor-expr (
+          (literal foo)))))))

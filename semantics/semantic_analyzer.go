@@ -324,17 +324,6 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 func (sa *SemanticAnalyzer) processImport(importNode *ast.BLangImportPackage) {
 	alias := importNode.Alias.GetValue()
 
-	// Only support ballerina/io
-	if importNode.OrgName == nil || importNode.OrgName.GetValue() != "ballerina" {
-		sa.unimplementedErr("unsupported import organization: only 'ballerina' imports are supported", importNode.GetPosition())
-		return
-	}
-
-	if !isIoImport(importNode) && !isImplicitImport(importNode) {
-		sa.unimplementedErr("unsupported import package: only 'ballerina/io' is supported", importNode.GetPosition())
-		return
-	}
-
 	// Check for duplicate imports
 	if _, exists := sa.importedPkgs[alias]; exists {
 		sa.semanticErr(fmt.Sprintf("import alias '%s' already defined", alias), importNode.GetPosition())
@@ -632,6 +621,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeCheckedExpr(a, expr, expectedType)
 	case *ast.BLangCheckPanickedExpr:
 		return analyzeCheckPanickedExpr(a, expr, expectedType)
+	case *ast.BLangTrapExpr:
+		return analyzeTrapExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
 	default:
@@ -655,6 +646,13 @@ func analyzeCheckedExpr[A analyzer](a A, expr *ast.BLangCheckedExpr, expectedTyp
 		if !semtypes.IsSubtype(a.tyCtx(), errorPart, retTy) {
 			a.ctx().SemanticError("error type of check expression is not a subtype of the enclosing function's return type", expr.GetPosition())
 		}
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeTrapExpr[A analyzer](a A, expr *ast.BLangTrapExpr, expectedType semtypes.SemType) bool {
+	if !analyzeExpression(a, expr.Expr, nil) {
+		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
 }
@@ -1226,6 +1224,12 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpleVariableDef) bool {
 	variable := simpleVariableDef.GetVariable().(*ast.BLangSimpleVariable)
 	expectedType := variable.GetDeterminedType()
+	if variable.GetName().GetValue() == string(model.IGNORE) {
+		if !semtypes.IsSubtypeSimple(expectedType, semtypes.ANY) {
+			a.semanticErr("wildcard binding pattern type must be a subtype of 'any'", variable.GetPosition())
+			return false
+		}
+	}
 	if ast.SymbolIsSet(variable) {
 		symbolType := a.ctx().SymbolType(variable.Symbol())
 		if symbolType != nil {
@@ -1260,6 +1264,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangMatchStatement:
+		return a
 	case *ast.BLangSimpleVariableDef:
 		if !analyzeSimpleVariableDef(a, n) {
 			return nil
