@@ -730,7 +730,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 		return false
 	}
 	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
-		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, exprTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, targetType), expr.GetPosition())
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
