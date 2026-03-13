@@ -27,7 +27,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"ballerina-lang-go/common/bfs"
@@ -68,7 +68,7 @@ func createBalaInHomeRepo(balaDownloadResponse *http.Response, fsys fs.FS, pkgPa
 	platform := getPlatformFromBala(balaFile, pkgName, pkgVersion)
 
 	// <user.home>.ballerina/bala_cache/<org-name>/<pkg-name>/<pkg-version>
-	balaCacheWithPkgPath := filepath.Join(pkgPathInBalaCache, validPkgVersion, platform)
+	balaCacheWithPkgPath := path.Join(pkgPathInBalaCache, validPkgVersion, platform)
 
 	info, err := fs.Stat(fsys, balaCacheWithPkgPath)
 	if err == nil && info.IsDir() {
@@ -78,7 +78,7 @@ func createBalaInHomeRepo(balaDownloadResponse *http.Response, fsys fs.FS, pkgPa
 		}
 
 		if len(entries) > 0 {
-			deprecatedFilePath := filepath.Join(balaCacheWithPkgPath, DeprecatedMetaFileName)
+			deprecatedFilePath := path.Join(balaCacheWithPkgPath, DeprecatedMetaFileName)
 			if _, err := fs.Stat(fsys, deprecatedFilePath); err == nil && deprecationMsg == "" {
 				if err := bfs.Remove(fsys, deprecatedFilePath); err != nil {
 					return NewPackageAlreadyExistsError(clientContext.formatLog(fmt.Sprintf("error accessing bala : %s", balaCacheWithPkgPath)), validPkgVersion)
@@ -95,17 +95,17 @@ func createBalaInHomeRepo(balaDownloadResponse *http.Response, fsys fs.FS, pkgPa
 
 	// Create the following temp path
 	// bala/<org-name>/<pkg-name>/<pkg-version_temp/<platform>
-	tempPath := filepath.Join(pkgPathInBalaCache, fmt.Sprintf("%s_temp", validPkgVersion), platform)
+	tempPath := path.Join(pkgPathInBalaCache, fmt.Sprintf("%s_temp", validPkgVersion), platform)
 	if err := createBalaFileDirectory(fsys, tempPath, clientContext); err != nil {
 		return err
 	}
 
-	if err := writeBalaFile(balaDownloadResponse, fsys, filepath.Join(tempPath, balaFile), fmt.Sprintf("%s/%s:%s", pkgOrg, pkgName, validPkgVersion), trueDigest, clientContext); err != nil {
+	if err := writeBalaFile(balaDownloadResponse, fsys, path.Join(tempPath, balaFile), fmt.Sprintf("%s/%s:%s", pkgOrg, pkgName, validPkgVersion), trueDigest, clientContext); err != nil {
 		return err
 	}
 
-	tempDir := filepath.Dir(tempPath)
-	platformDir := filepath.Dir(balaCacheWithPkgPath)
+	tempDir := path.Dir(tempPath)
+	platformDir := path.Dir(balaCacheWithPkgPath)
 
 	if err := bfs.Move(fsys, tempDir, platformDir); err != nil {
 		return NewCentralClientError(clientContext.formatLog("error creating directory for bala file"))
@@ -173,7 +173,7 @@ func writeBalaFile(balaDownloadResponse *http.Response, fsys fs.FS, balaPath, fu
 		return err
 	}
 
-	if err := extractBala(fsys, balaPath, filepath.Dir(balaPath), trueDigest, fullPkgName, clientContext); err != nil {
+	if err := extractBala(fsys, balaPath, path.Dir(balaPath), trueDigest, fullPkgName, clientContext); err != nil {
 		return NewCentralClientError(clientContext.formatLog(fmt.Sprintf("error occurred extracting bala file: %s", err.Error())))
 	}
 
@@ -258,18 +258,18 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 	}
 
 	for _, file := range reader.File {
-		path := filepath.Join(balaFileDestPath, file.Name)
+		filePath := path.Join(balaFileDestPath, file.Name)
 
 		if file.FileInfo().IsDir() {
-			bfs.MkdirAll(fsys, path, file.Mode())
+			bfs.MkdirAll(fsys, filePath, file.Mode())
 			continue
 		}
 
-		if err := bfs.MkdirAll(fsys, filepath.Dir(path), 0o755); err != nil {
+		if err := bfs.MkdirAll(fsys, path.Dir(filePath), 0o755); err != nil {
 			return err
 		}
 
-		outFile, err := bfs.OpenFile(fsys, path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		outFile, err := bfs.OpenFile(fsys, filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 		if err != nil {
 			return err
 		}
@@ -280,7 +280,7 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 			return err
 		}
 
-		err = bfs.WriteFile(fsys, path, func() []byte {
+		err = bfs.WriteFile(fsys, filePath, func() []byte {
 			data, _ := io.ReadAll(rc)
 			return data
 		}(), file.Mode())
@@ -297,7 +297,7 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 
 func handleNightlyBuild(isNightlyBuild bool, fsys fs.FS, balaCacheWithPkgPath string, clientContext ClientContext) error {
 	if isNightlyBuild {
-		nightlyBuildMetaFile := filepath.Join(balaCacheWithPkgPath, "nightly.build")
+		nightlyBuildMetaFile := path.Join(balaCacheWithPkgPath, "nightly.build")
 		if _, err := fs.Stat(fsys, nightlyBuildMetaFile); os.IsNotExist(err) {
 			errMsg := "error occurred while creating nightly.build file."
 			return createMetaFile(fsys, nightlyBuildMetaFile, errMsg, clientContext)
@@ -308,7 +308,7 @@ func handleNightlyBuild(isNightlyBuild bool, fsys fs.FS, balaCacheWithPkgPath st
 
 func handlePackageDeprecation(deprecateMsg string, fsys fs.FS, balaCacheWithPkgPath string, clientContext ClientContext) error {
 	if deprecateMsg != "" {
-		deprecateMsgFile := filepath.Join(balaCacheWithPkgPath, DeprecatedMetaFileName)
+		deprecateMsgFile := path.Join(balaCacheWithPkgPath, DeprecatedMetaFileName)
 		if _, err := fs.Stat(fsys, deprecateMsgFile); os.IsNotExist(err) {
 			errMsg := fmt.Sprintf("error occurred while creating the file '%s'.", DeprecatedMetaFileName)
 			if err := createMetaFile(fsys, deprecateMsgFile, errMsg, clientContext); err != nil {
