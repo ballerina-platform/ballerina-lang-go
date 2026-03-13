@@ -2373,7 +2373,12 @@ func (n *NodeBuilder) TransformBuiltinSimpleNameReference(builtinSimpleNameRefer
 }
 
 func (n *NodeBuilder) TransformTrapExpression(trapExpressionNode *tree.TrapExpressionNode) BLangNode {
-	panic("TransformTrapExpression unimplemented")
+	pos := getPosition(trapExpressionNode)
+	expr := n.createExpression(trapExpressionNode.Expression())
+	trapExpr := &BLangTrapExpr{}
+	trapExpr.pos = pos
+	trapExpr.Expr = expr
+	return trapExpr
 }
 
 func (n *NodeBuilder) TransformListConstructorExpression(listConstructorExpressionNode *tree.ListConstructorExpressionNode) BLangNode {

@@ -38,12 +38,13 @@ type Context struct {
 }
 
 type stmtContext struct {
-	birCx       *Context
-	bbs         []*BIRBasicBlock
-	localVars   []*BIRVariableDcl
-	retVar      *BIROperand
-	scope       *BIRScope
-	nextScopeId int
+	birCx        *Context
+	bbs          []*BIRBasicBlock
+	localVars    []*BIRVariableDcl
+	retVar       *BIROperand
+	scope        *BIRScope
+	nextScopeId  int
+	errorEntries []BIRErrorEntry
 	// TODO: do better
 	varMap  map[model.SymbolRef]*BIROperand
 	loopCtx *loopContext
@@ -230,6 +231,7 @@ func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
 	for _, varPtr := range stmtCx.localVars {
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
+	birFunc.ErrorTable = stmtCx.errorEntries
 	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl
 	return birFunc
 }
@@ -660,6 +662,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return mappingConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangErrorConstructorExpr:
 		return errorConstructorExpression(ctx, curBB, expr)
+	case *ast.BLangTrapExpr:
+		return trapExpression(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
@@ -1118,6 +1122,36 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 
 	panic(fmt.Sprintf("variable %s not found (SymbolRef: Pkg=%v Index=%d SpaceIndex=%d)",
 		varName, symRef.Package, symRef.Index, symRef.SpaceIndex))
+}
+
+func trapExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTrapExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+
+	trapStartBB := ctx.addBB()
+	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: trapStartBB}}
+
+	innerEffect := handleExpression(ctx, trapStartBB, expr.Expr)
+	trapEndBB := innerEffect.block
+
+	mov := &Move{}
+	mov.LhsOp = resultOperand
+	mov.RhsOp = innerEffect.result
+	trapEndBB.Instructions = append(trapEndBB.Instructions, mov)
+
+	afterTrapBB := ctx.addBB()
+	trapEndBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: afterTrapBB}}
+
+	ctx.errorEntries = append(ctx.errorEntries, BIRErrorEntry{
+		Start:   trapStartBB,
+		End:     trapEndBB,
+		Target:  afterTrapBB,
+		ErrorOp: resultOperand,
+	})
+
+	return expressionEffect{
+		result: resultOperand,
+		block:  afterTrapBB,
+	}
 }
 
 func appendIfNotNil[T any](slice []T, item *T) []T {

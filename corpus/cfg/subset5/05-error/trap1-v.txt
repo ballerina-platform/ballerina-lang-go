@@ -1,0 +1,21 @@
+(foo
+  (bb0 () ()
+    (panic
+      (error-constructor-expr (
+        (literal foo))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable res (type
+        (union-type
+          (error-type)
+          (value-type int))) (expr
+        (trap-expr
+          (invocation foo ())))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

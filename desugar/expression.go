@@ -50,6 +50,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return walkCheckedExpr(cx, expr)
 	case *ast.BLangCheckPanickedExpr:
 		return walkCheckPanickedExpr(cx, expr)
+	case *ast.BLangTrapExpr:
+		return walkTrapExpr(cx, expr)
 	case *ast.BLangDynamicArgExpr:
 		return walkDynamicArgExpr(cx, expr)
 	case *ast.BLangLambdaFunction:
@@ -271,6 +273,17 @@ func walkCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr) desugaredN
 
 func walkCheckPanickedExpr(cx *FunctionContext, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
 	return desugarCheckedExpr(cx, &expr.BLangCheckedExpr, true)
+}
+
+func walkTrapExpr(cx *FunctionContext, expr *ast.BLangTrapExpr) desugaredNode[model.ExpressionNode] {
+	result := walkExpression(cx, expr.Expr)
+	if len(result.initStmts) > 0 {
+		// I don't think this can ever happen but if it does we need to think about how to add these statements in to the
+		// trap region in BIR gen
+		cx.internalError("Init statements will be hoisted outside of trap region")
+	}
+	expr.Expr = result.replacementNode.(ast.BLangExpression)
+	return desugaredNode[model.ExpressionNode]{initStmts: nil, replacementNode: expr}
 }
 
 func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic bool) desugaredNode[model.ExpressionNode] {

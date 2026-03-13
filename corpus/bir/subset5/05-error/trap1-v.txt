@@ -1,0 +1,32 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    GOTO bb1;
+  }
+  bb1 {
+    %2 = foo() -> bb2;
+  }
+  bb2 {
+    %1 = %2;
+    GOTO bb3;
+  }
+  bb3 {
+    res = %1;
+    %4 = println(res) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+  
+  error-table {
+    [bb1, bb2] -> bb3, %1
+  }
+}
+foo() -> ((INT), ()){
+  bb0 {
+    %1 = ConstantLoad foo
+    %2 = newError ((ERROR), ())(%1)
+    panic %2;
+  }
+}
