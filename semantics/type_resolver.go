@@ -1833,7 +1833,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 				}
 				members[i] = memberTy
 			}
-			rest, ok := semtypes.SemType(&semtypes.NEVER), true
+			rest, ok := semtypes.SemType(&semtypes.NEVER), true //nolint:ineffassign // ok default overwritten when ty.Rest is non-nil
 			if ty.Rest != nil {
 				rest, ok = tr.resolveBType(ty.Rest.(ast.BType), depth+1)
 				if !ok {
