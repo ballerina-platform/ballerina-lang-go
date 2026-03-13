@@ -12479,7 +12479,7 @@ func (this *BallerinaParser) parseTypedBindingPatternOrMemberAccess(typeDescOrEx
 			var memberList []tree.STNode
 			memberList = append(memberList, this.getBindingPattern(member, true))
 			memberList = append(memberList, memberEnd)
-			bindingPattern, memberList := this.parseAsListBindingPattern(openBracket, memberList)
+			bindingPattern, memberList := this.parseAsListBindingPattern(openBracket, memberList) //nolint:staticcheck,ineffassign // memberList will be used when list binding pattern is fully implemented
 			typeDesc := this.getTypeDescFromExpr(typeDescOrExpr)
 			return tree.CreateTypedBindingPatternNode(typeDesc, bindingPattern)
 		}
@@ -12731,6 +12731,7 @@ func (this *BallerinaParser) mergeTypesWithIntersection(lhsTypeDesc tree.STNode,
 			if !ok {
 				panic("expected *tree.STUnionTypeDescriptorNode")
 			}
+			//nolint:staticcheck // rhsTypeDesc reassigned but not yet used in return path
 			rhsTypeDesc = this.replaceLeftMostUnionWithAIntersection(lhsUnionTypeDesc.RightTypeDesc,
 				bitwiseAndToken, rhsUnionTypeDesc)
 			return this.replaceLeftMostUnionWithAUnion(lhsUnionTypeDesc.LeftTypeDesc,
@@ -13170,7 +13171,7 @@ func (this *BallerinaParser) parseStmtStartsWithTupleTypeOrExprRhs(annots tree.S
 func (this *BallerinaParser) parseAsTupleTypeDesc(annots tree.STNode, openBracket tree.STNode, memberList []tree.STNode, member tree.STNode, isRoot bool) tree.STNode {
 	memberList = this.getTupleMemberList(memberList)
 	this.startContext(common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS)
-	tupleTypeMembers, memberList := this.parseTupleTypeMembers(member, memberList)
+	tupleTypeMembers, memberList := this.parseTupleTypeMembers(member, memberList) //nolint:staticcheck,ineffassign // memberList will be used when tuple rest descriptor is fully implemented
 	closeBracket := this.parseCloseBracket()
 	this.endContext()
 	tupleType := tree.CreateTupleTypeDescriptorNode(openBracket, tupleTypeMembers, closeBracket)
@@ -13527,7 +13528,7 @@ func (this *BallerinaParser) parseStatementStartsWithOpenBrace() tree.STNode {
 	default:
 		var stmts []tree.STNode
 		stmts = append(stmts, member)
-		statements, stmts := this.parseStatementsInner(stmts)
+		statements, stmts := this.parseStatementsInner(stmts) //nolint:staticcheck,ineffassign // stmts will be used for error recovery
 		closeBrace := this.parseCloseBrace()
 		this.endContext()
 		return tree.CreateBlockStatementNode(openBrace, statements, closeBrace)
@@ -13574,7 +13575,7 @@ func (this *BallerinaParser) parseStmtAsMappingBPOrMappingConsStart(openBrace tr
 		bpOrConstructor = this.parseMappingBindingPatternOrMappingConstructorWithCloseBrace(openBrace, members, closeBrace)
 	} else {
 		members = append(members, memberEnd)
-		bpOrConstructor, members = this.parseMappingBindingPatternOrMappingConstructor(openBrace, members)
+		bpOrConstructor, members = this.parseMappingBindingPatternOrMappingConstructor(openBrace, members) //nolint:staticcheck,ineffassign // members will be used when mapping binding pattern is fully implemented
 	}
 	switch bpOrConstructor.Kind() {
 	case common.MAPPING_CONSTRUCTOR:
