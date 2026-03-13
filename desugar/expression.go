@@ -252,6 +252,7 @@ func walkListConstructorExpr(cx *FunctionContext, expr *ast.BLangListConstructor
 func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
+	//nolint:staticcheck // TODO
 	if expr.ErrorTypeRef != nil {
 		// ErrorTypeRef is a type descriptor, not an expression, so we don't walk it
 	}
