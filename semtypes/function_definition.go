@@ -28,45 +28,45 @@ func NewFunctionDefinition() FunctionDefinition {
 	return this
 }
 
-func (this *FunctionDefinition) GetSemType(env Env) SemType {
+func (f *FunctionDefinition) GetSemType(env Env) SemType {
 	// migrated from FunctionDefinition.java:43:5
-	if this.semType != nil {
-		return this.semType
+	if f.semType != nil {
+		return f.semType
 	}
 	rec := env.recFunctionAtom()
-	this.rec = &rec
-	return this.createSemType(&rec)
+	f.rec = &rec
+	return f.createSemType(&rec)
 }
 
-func (this *FunctionDefinition) createSemType(rec Atom) SemType {
+func (f *FunctionDefinition) createSemType(rec Atom) SemType {
 	// migrated from FunctionDefinition.java:53:5
 	bdd := BddAtom(rec)
 	s := basicSubtype(BTFunction, bdd)
-	this.semType = s
+	f.semType = s
 	return s
 }
 
-func (this *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
+func (f *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	// migrated from FunctionDefinition.java:60:5
 	atomicType := FunctionAtomicTypeFrom(args, ret, qualifiers.semType)
-	return this.defineInternal(env, atomicType)
+	return f.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
+func (f *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	// migrated from FunctionDefinition.java:65:5
 	atomicType := FunctionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
-	return this.defineInternal(env, atomicType)
+	return f.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) defineInternal(env Env, atomicType FunctionAtomicType) SemType {
+func (f *FunctionDefinition) defineInternal(env Env, atomicType FunctionAtomicType) SemType {
 	// migrated from FunctionDefinition.java:70:5
 	var atom Atom
-	rec := this.rec
+	rec := f.rec
 	if rec != nil {
 		atom = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
 		atom = new(env.functionAtom(&atomicType))
 	}
-	return this.createSemType(atom)
+	return f.createSemType(atom)
 }

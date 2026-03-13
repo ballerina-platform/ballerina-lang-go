@@ -31,12 +31,12 @@ func CharStringSubtypeFrom(allowed bool, values []EnumerableType[string]) CharSt
 	}
 }
 
-func (this *CharStringSubtype) Allowed() bool {
+func (c *CharStringSubtype) Allowed() bool {
 	// migrated from CharStringSubtype.java:43:5
-	return this.allowed
+	return c.allowed
 }
 
-func (this *CharStringSubtype) Values() []EnumerableType[string] {
+func (c *CharStringSubtype) Values() []EnumerableType[string] {
 	// migrated from CharStringSubtype.java:48:5
-	return this.values
+	return c.values
 }

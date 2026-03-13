@@ -42,34 +42,34 @@ func BddNothing() *BddAllOrNothing {
 	return &nothing
 }
 
-func (this *BddAllOrNothing) IsAll() bool {
+func (b *BddAllOrNothing) IsAll() bool {
 	// migrated from BddAllOrNothing.java:45:5
-	return this.isAll
+	return b.isAll
 }
 
-func (this *BddAllOrNothing) IsNothing() bool {
+func (b *BddAllOrNothing) IsNothing() bool {
 	// migrated from BddAllOrNothing.java:49:5
-	return (!this.isAll)
+	return (!b.isAll)
 }
 
-func (this *BddAllOrNothing) Complement() *BddAllOrNothing {
+func (b *BddAllOrNothing) Complement() *BddAllOrNothing {
 	// migrated from BddAllOrNothing.java:53:5
-	if this.isAll {
+	if b.isAll {
 		return &nothing
 	}
 	return &all
 }
 
-func (this *BddAllOrNothing) canonicalKey() string {
-	if this.isAll {
+func (b *BddAllOrNothing) canonicalKey() string {
+	if b.isAll {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (this *BddAllOrNothing) String() string {
-	if this.isAll {
+func (b *BddAllOrNothing) String() string {
+	if b.isAll {
 		return "all"
 	} else {
 		return "nothing"

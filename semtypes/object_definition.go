@@ -67,7 +67,7 @@ func ObjectDefinitionDistinct(distinctId int) SemType {
 //	}
 //
 // migrated from ObjectDefinition.java:81:5
-func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, members []Member) SemType {
+func (o *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, members []Member) SemType {
 	common.Assert(objectDefinitionValidateMembers(members))
 	// migrated from ObjectDefinition.java:82:9
 	var mut CellMutability
@@ -87,8 +87,8 @@ func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, membe
 	var cellFields []CellField
 	cellFields = append(cellFields, memberStream...)
 	cellFields = append(cellFields, qualifierStream...)
-	mappingType := this.mappingDefinition.Define(env, cellFields, this.restMemberType(env, mut, qualifiers.readonly))
-	return this.objectContaining(mappingType)
+	mappingType := o.mappingDefinition.Define(env, cellFields, o.restMemberType(env, mut, qualifiers.readonly))
+	return o.objectContaining(mappingType)
 }
 
 // migrated from ObjectDefinition.java:93:5
@@ -106,7 +106,7 @@ func objectDefinitionValidateMembers(members []Member) bool {
 }
 
 // migrated from ObjectDefinition.java:98:5
-func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
+func (o *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	// migrated from ObjectDefinition.java:99:9
 	bdd := subtypeData(mappingType, BTMapping)
 	// migrated from ObjectDefinition.java:100:9
@@ -114,7 +114,7 @@ func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 }
 
 // migrated from ObjectDefinition.java:104:5
-func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) CellSemType {
+func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) CellSemType {
 	// migrated from ObjectDefinition.java:105:9
 	fieldDefn := NewMappingDefinition()
 	// migrated from ObjectDefinition.java:106:9
@@ -171,7 +171,7 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 }
 
 // migrated from ObjectDefinition.java:143:5
-func (this *ObjectDefinition) GetSemType(env Env) SemType {
+func (o *ObjectDefinition) GetSemType(env Env) SemType {
 	// migrated from ObjectDefinition.java:144:9
-	return this.objectContaining(this.mappingDefinition.GetSemType(env))
+	return o.objectContaining(o.mappingDefinition.GetSemType(env))
 }

@@ -27,13 +27,13 @@ type ListAtomicType struct {
 
 var _ AtomicType = &ListAtomicType{}
 
-func (this *ListAtomicType) equals(other AtomicType) bool {
+func (l *ListAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*ListAtomicType); ok {
-		if other.Rest != this.Rest {
+		if other.Rest != l.Rest {
 			return false
 		}
-		return other.Members.FixedLength == this.Members.FixedLength &&
-			slices.Equal(other.Members.Initial, this.Members.Initial)
+		return other.Members.FixedLength == l.Members.FixedLength &&
+			slices.Equal(other.Members.Initial, l.Members.Initial)
 	}
 	return false
 }
@@ -51,7 +51,7 @@ func ListAtomicTypeFrom(members FixedLengthArray, rest CellSemType) ListAtomicTy
 	return NewListAtomicTypeFromMembersRest(members, rest)
 }
 
-func (this *ListAtomicType) AtomKind() Kind {
+func (l *ListAtomicType) AtomKind() Kind {
 	// migrated from ListAtomicType.java:38:5
 	return Kind_LIST_ATOM
 }

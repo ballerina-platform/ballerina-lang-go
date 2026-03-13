@@ -89,15 +89,15 @@ func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) ProperSu
 	return newFloatSubtypeFromBoolEnumerableFloats(allowed, values)
 }
 
-func (this *FloatSubtype) Allowed() bool {
+func (f *FloatSubtype) Allowed() bool {
 	// migrated from FloatSubtype.java:93:5
-	return this.allowed
+	return f.allowed
 }
 
-func (this *FloatSubtype) Values() []EnumerableType[float64] {
+func (f *FloatSubtype) Values() []EnumerableType[float64] {
 	// migrated from FloatSubtype.java:98:5
 	var values []EnumerableType[float64]
-	for _, value := range this.values {
+	for _, value := range f.values {
 		values = append(values, &value)
 	}
 	return values

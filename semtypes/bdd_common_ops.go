@@ -244,9 +244,9 @@ func AtomCmp(a1 Atom, a2 Atom) int {
 	return a1.Index() - a2.Index()
 }
 
-func (this *BddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
+func (b *BddCommonOpsMethods) BddToString(bdd Bdd, inner bool) string {
 	// migrated from BddCommonOps.java:254:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := bdd.(*BddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return "1"
 		}
@@ -254,14 +254,14 @@ func (this *BddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	}
 
 	var str string
-	bdd := b.(BddNode)
-	a := bdd.Atom()
+	bddNode := bdd.(BddNode)
+	a := bddNode.Atom()
 	if recAtom, ok := a.(*RecAtom); ok {
 		str = "r" + string(rune(recAtom.Index()))
 	} else {
 		str = "a" + string(rune(a.Index()))
 	}
-	str = str + "?" + this.BddToString(bdd.Left(), true) + ":" + this.BddToString(bdd.Middle(), true) + ":" + this.BddToString(bdd.Right(), true)
+	str = str + "?" + b.BddToString(bddNode.Left(), true) + ":" + b.BddToString(bddNode.Middle(), true) + ":" + b.BddToString(bddNode.Right(), true)
 	if inner {
 		str = "(" + str + ")"
 	}

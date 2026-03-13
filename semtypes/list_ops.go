@@ -387,27 +387,27 @@ func NewListOps() ListOps {
 	return this
 }
 
-func (this *ListOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *ListOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from ListOps.java:479:5
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *ListOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *ListOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from ListOps.java:484:5
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *ListOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *ListOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from ListOps.java:489:5
 	return bddSubtypeDiff(d1, d2)
 }
 
-func (this *ListOps) Complement(d SubtypeData) SubtypeData {
+func (l *ListOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from ListOps.java:494:5
 	return bddSubtypeComplement(d)
 }
 
-func (this *ListOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (l *ListOps) IsEmpty(cx Context, d SubtypeData) bool {
 	// migrated from ListOps.java:499:5
 	return listSubtypeIsEmpty(cx, d)
 }

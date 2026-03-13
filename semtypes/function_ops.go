@@ -20,29 +20,29 @@ type FunctionOps struct{}
 
 var _ BasicTypeOps = &FunctionOps{}
 
-func (this *FunctionOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (f *FunctionOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from FunctionOps.java:45:5
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
 		return BddEvery(cx, b, nil, nil, functionFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
-func (this *FunctionOps) Complement(t SubtypeData) SubtypeData {
+func (f *FunctionOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from FunctionOps.java:49:5
 	return BddComplement(t.(Bdd))
 }
 
-func (this *FunctionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FunctionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FunctionOps.java:51:5
 	return BddDiff(t1.(Bdd), t2.(Bdd))
 }
 
-func (this *FunctionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FunctionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FunctionOps.java:53:5
 	return BddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
-func (this *FunctionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FunctionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FunctionOps.java:55:5
 	return BddUnion(t1.(Bdd), t2.(Bdd))
 }
@@ -117,7 +117,7 @@ func NewFunctionOps() FunctionOps {
 	return this
 }
 
-func (this *FunctionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *Conjunction) bool {
+func (f *FunctionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *Conjunction) bool {
 	// migrated from FunctionOps.java:126:5
 	if pos == nil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
@@ -125,7 +125,7 @@ func (this *FunctionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *
 		s := cx.FunctionAtomType(pos.Atom)
 		s0 := s.ParamType
 		s1 := s.RetType
-		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, pos.Next)) && (IsSubtype(cx, t1, Complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), pos.Next)))
+		return ((IsSubtype(cx, t0, s0) || f.functionTheta(cx, Diff(s0, t0), s1, pos.Next)) && (IsSubtype(cx, t1, Complement(s1)) || f.functionTheta(cx, s0, Intersect(s1, t1), pos.Next)))
 	}
 }
 

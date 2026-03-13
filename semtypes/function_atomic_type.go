@@ -25,10 +25,10 @@ type FunctionAtomicType struct {
 
 var _ AtomicType = &FunctionAtomicType{}
 
-func (this *FunctionAtomicType) equals(other AtomicType) bool {
+func (f *FunctionAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*FunctionAtomicType); ok {
-		return other.ParamType == this.ParamType && other.RetType == this.RetType &&
-			other.Qualifiers == this.Qualifiers && other.IsGeneric == this.IsGeneric
+		return other.ParamType == f.ParamType && other.RetType == f.RetType &&
+			other.Qualifiers == f.Qualifiers && other.IsGeneric == f.IsGeneric
 	}
 	return false
 }
@@ -54,7 +54,7 @@ func NewFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemTyp
 	return this
 }
 
-func (this *FunctionAtomicType) AtomKind() Kind {
+func (f *FunctionAtomicType) AtomKind() Kind {
 	// migrated from FunctionAtomicType.java:40:5
 	return Kind_FUNCTION_ATOM
 }

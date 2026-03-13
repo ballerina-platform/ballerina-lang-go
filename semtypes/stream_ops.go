@@ -41,12 +41,12 @@ func NewStreamOps() StreamOps {
 	return this
 }
 
-func (this *StreamOps) Complement(t SubtypeData) SubtypeData {
+func (s *StreamOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from StreamOps.java:51:5
 	return streamSubtypeComplement(t)
 }
 
-func (this *StreamOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (s *StreamOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from StreamOps.java:56:5
 	return streamSubtypeIsEmpty(cx, t)
 }
