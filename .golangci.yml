@@ -15,12 +15,9 @@ linters:
         - -ST1022
         # receiver name should be a reflection of its identity; don't use generic names such as "this" or "self"
         - -ST1006
-        # this value of ... is never used
-        - -SA4006
 
   disable:
     - unused
-    - ineffassign
     - errcheck
 issues:
   max-issues-per-linter: 0

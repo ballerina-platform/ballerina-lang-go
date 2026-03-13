@@ -1234,7 +1234,7 @@ func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, r
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
-		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL)
+		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL) //nolint:staticcheck,ineffassign // rhsTy will be used when nil-lifted binary ops are fully implemented
 	}
 	op := binaryExpr.GetOperatorKind()
 	var resultTy semtypes.SemType = semtypes.INT

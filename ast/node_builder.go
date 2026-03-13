@@ -1557,7 +1557,7 @@ func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *
 
 	var qualifiers []tree.Token
 	if finalKeyword != nil {
-		qualifiers = append(qualifiers, finalKeyword) //nolint:staticcheck // TODO
+		qualifiers = append(qualifiers, finalKeyword) //nolint:staticcheck,ineffassign // qualifierList creation not yet implemented
 	}
 	// qualifierList := tree.CreateNodeListWithFacade(qualifiers)
 
@@ -2275,7 +2275,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 
 				// Process return type
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
-					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type()).(model.TypeDescriptor)
+					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type())
 				} else {
 					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: model.TypeKind_NIL}
 				}
