@@ -31,9 +31,9 @@ const (
 	CellMutability_CELL_MUT_UNLIMITED
 )
 
-func (this *CellAtomicType) equals(other AtomicType) bool {
+func (c *CellAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*CellAtomicType); ok {
-		return other.Ty == this.Ty && other.Mut == this.Mut
+		return other.Ty == c.Ty && other.Mut == c.Mut
 	}
 	return false
 }
@@ -54,7 +54,7 @@ func CellAtomicTypeFrom(ty SemType, mut CellMutability) CellAtomicType {
 	return NewCellAtomicTypeFromTyMut(ty, mut)
 }
 
-func (this *CellAtomicType) AtomKind() Kind {
+func (c *CellAtomicType) AtomKind() Kind {
 	// migrated from CellAtomicType.java:39:5
 	return Kind_CELL_ATOM
 }

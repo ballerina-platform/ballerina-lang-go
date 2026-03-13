@@ -39,24 +39,24 @@ func errorBddIsEmpty(cx Context, b Bdd) bool {
 	return bddEveryPositive(cx, b, nil, nil, mappingFormulaIsEmpty)
 }
 
-func (this *ErrorOps) Complement(d SubtypeData) SubtypeData {
+func (e *ErrorOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from ErrorOps.java:56:5
 	return errorSubtypeComplement(d)
 }
 
-func (this *ErrorOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (e *ErrorOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ErrorOps.java:61:5
 	return errorSubtypeIsEmpty(cx, t)
 }
 
-func (this *ErrorOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (e *ErrorOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *ErrorOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (e *ErrorOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *ErrorOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (e *ErrorOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }

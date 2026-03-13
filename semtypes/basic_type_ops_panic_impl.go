@@ -26,27 +26,27 @@ func NewBasicTypeOpsPanicImpl() BasicTypeOpsPanicImpl {
 	return this
 }
 
-func (this *BasicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *BasicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from BasicTypeOpsPanicImpl.java:30:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *BasicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from BasicTypeOpsPanicImpl.java:35:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *BasicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from BasicTypeOpsPanicImpl.java:40:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Complement(t SubtypeData) SubtypeData {
+func (b *BasicTypeOpsPanicImpl) Complement(t SubtypeData) SubtypeData {
 	// migrated from BasicTypeOpsPanicImpl.java:45:5
 	panic("Unary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
+func (b *BasicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from BasicTypeOpsPanicImpl.java:50:5
 	panic("Unary boolean operation should not be called")
 }

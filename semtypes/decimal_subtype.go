@@ -91,15 +91,15 @@ func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) Subtyp
 	return newDecimalSubtypeFromBoolEnumerableDecimals(allowed, values)
 }
 
-func (this *DecimalSubtype) Allowed() bool {
+func (d *DecimalSubtype) Allowed() bool {
 	// migrated from DecimalSubtype.java:94:5
-	return this.allowed
+	return d.allowed
 }
 
-func (this *DecimalSubtype) Values() []EnumerableType[big.Rat] {
+func (d *DecimalSubtype) Values() []EnumerableType[big.Rat] {
 	// migrated from DecimalSubtype.java:99:5
 	var values []EnumerableType[big.Rat]
-	for _, value := range this.values {
+	for _, value := range d.values {
 		values = append(values, &value)
 	}
 	return values

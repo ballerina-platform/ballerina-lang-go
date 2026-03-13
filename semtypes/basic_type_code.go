@@ -96,7 +96,7 @@ func BasicTypeCodeFrom(code int) BasicTypeCode {
 	return BasicTypeCode{Code: code}
 }
 
-func (this BasicTypeCode) String() string {
+func (b BasicTypeCode) String() string {
 	// migrated from BasicTypeCode.java:93
-	return fieldNames[this.Code]
+	return fieldNames[b.Code]
 }

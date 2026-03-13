@@ -26,7 +26,7 @@ func NewStringOps() StringOps {
 	return this
 }
 
-func (this *StringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (s *StringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from StringOps.java:45:5
 	sd1 := d1.(StringSubtype)
 	sd2 := d2.(StringSubtype)
@@ -37,7 +37,7 @@ func (this *StringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateStringSubtype(CharStringSubtypeFrom(charsAllowed, chars), NonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *StringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (s *StringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from StringOps.java:64:5
 	if allOrNothing1, ok := d1.(*AllOrNothingSubtype); ok {
 		if allOrNothing1.IsAllSubtype() {
@@ -62,12 +62,12 @@ func (this *StringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateStringSubtype(CharStringSubtypeFrom(charsAllowed, chars), NonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *StringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (s *StringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from StringOps.java:86:5
-	return this.Intersect(d1, this.Complement(d2))
+	return s.Intersect(d1, s.Complement(d2))
 }
 
-func (this *StringOps) Complement(d SubtypeData) SubtypeData {
+func (s *StringOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from StringOps.java:91:5
 	st := d.(StringSubtype)
 	if len(st.GetChar().Values()) == 0 && len(st.GetNonChar().Values()) == 0 {
@@ -80,7 +80,7 @@ func (this *StringOps) Complement(d SubtypeData) SubtypeData {
 	return CreateStringSubtype(CharStringSubtypeFrom(!st.GetChar().Allowed(), st.GetChar().Values()), NonCharStringSubtypeFrom(!st.GetNonChar().Allowed(), st.GetNonChar().Values()))
 }
 
-func (this *StringOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (s *StringOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from StringOps.java:106:5
 	return notIsEmpty(cx, t)
 }

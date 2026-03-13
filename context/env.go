@@ -32,91 +32,91 @@ type CompilerEnvironment struct {
 	typeDefns        map[model.SymbolRef]model.TypeDefinition
 }
 
-func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
-	space := model.NewSymbolSpaceInner(packageID, len(this.symbolSpaces))
-	this.symbolSpaces = append(this.symbolSpaces, space)
+func (c *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	space := model.NewSymbolSpaceInner(packageID, len(c.symbolSpaces))
+	c.symbolSpaces = append(c.symbolSpaces, space)
 	return space
 }
 
-func (this *CompilerEnvironment) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
+func (c *CompilerEnvironment) NewFunctionScope(parent model.Scope, pkg model.PackageID) *model.FunctionScope {
 	return &model.FunctionScope{
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
-			Main:   this.NewSymbolSpace(pkg),
+			Main:   c.NewSymbolSpace(pkg),
 		},
 	}
 }
 
-func (this *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.PackageID) *model.BlockScope {
+func (c *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.PackageID) *model.BlockScope {
 	return &model.BlockScope{
 		BlockScopeBase: model.BlockScopeBase{
 			Parent: parent,
-			Main:   this.NewSymbolSpace(pkg),
+			Main:   c.NewSymbolSpace(pkg),
 		},
 	}
 }
 
-func (this *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
-	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
+func (c *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
+	symbolSpace := c.symbolSpaces[symbol.SpaceIndex]
 	return symbolSpace.SymbolAt(symbol.Index)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
 // not a narrowed symbol.
-func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
-	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
-	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
+func (c *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
+	symbolSpace := c.symbolSpaces[baseRef.SpaceIndex]
+	underlyingSymbolCopy := *c.GetSymbol(baseRef).(*model.ValueSymbol)
 	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
 		Package:    baseRef.Package,
 		SpaceIndex: baseRef.SpaceIndex,
 		Index:      symbolIndex,
 	}
-	this.underlyingSymbol.Store(narrowedSymbol, baseRef)
+	c.underlyingSymbol.Store(narrowedSymbol, baseRef)
 	return narrowedSymbol
 }
 
-func (this *CompilerEnvironment) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
-	if underlying, ok := this.underlyingSymbol.Load(symbol); ok {
+func (c *CompilerEnvironment) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
+	if underlying, ok := c.underlyingSymbol.Load(symbol); ok {
 		return underlying.(model.SymbolRef)
 	}
 	return symbol
 }
 
-func (this *CompilerEnvironment) SymbolName(symbol model.SymbolRef) string {
-	return this.GetSymbol(symbol).Name()
+func (c *CompilerEnvironment) SymbolName(symbol model.SymbolRef) string {
+	return c.GetSymbol(symbol).Name()
 }
 
-func (this *CompilerEnvironment) SymbolType(symbol model.SymbolRef) semtypes.SemType {
-	return this.GetSymbol(symbol).Type()
+func (c *CompilerEnvironment) SymbolType(symbol model.SymbolRef) semtypes.SemType {
+	return c.GetSymbol(symbol).Type()
 }
 
-func (this *CompilerEnvironment) SymbolKind(symbol model.SymbolRef) model.SymbolKind {
-	return this.GetSymbol(symbol).Kind()
+func (c *CompilerEnvironment) SymbolKind(symbol model.SymbolRef) model.SymbolKind {
+	return c.GetSymbol(symbol).Kind()
 }
 
-func (this *CompilerEnvironment) SymbolIsPublic(symbol model.SymbolRef) bool {
-	return this.GetSymbol(symbol).IsPublic()
+func (c *CompilerEnvironment) SymbolIsPublic(symbol model.SymbolRef) bool {
+	return c.GetSymbol(symbol).IsPublic()
 }
 
-func (this *CompilerEnvironment) SetSymbolType(symbol model.SymbolRef, ty semtypes.SemType) {
-	this.GetSymbol(symbol).SetType(ty)
+func (c *CompilerEnvironment) SetSymbolType(symbol model.SymbolRef, ty semtypes.SemType) {
+	c.GetSymbol(symbol).SetType(ty)
 }
 
-func (this *CompilerEnvironment) GetDefaultPackage() *model.PackageID {
-	return this.packageInterner.GetDefaultPackage()
+func (c *CompilerEnvironment) GetDefaultPackage() *model.PackageID {
+	return c.packageInterner.GetDefaultPackage()
 }
 
-func (this *CompilerEnvironment) NewPackageID(orgName model.Name, nameComps []model.Name, version model.Name) *model.PackageID {
-	return model.NewPackageID(this.packageInterner, orgName, nameComps, version)
+func (c *CompilerEnvironment) NewPackageID(orgName model.Name, nameComps []model.Name, version model.Name) *model.PackageID {
+	return model.NewPackageID(c.packageInterner, orgName, nameComps, version)
 }
 
-func (this *CompilerEnvironment) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
-	this.typeDefns[symbol] = defn
+func (c *CompilerEnvironment) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
+	c.typeDefns[symbol] = defn
 }
 
-func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
-	defn, ok := this.typeDefns[symbol]
+func (c *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
+	defn, ok := c.typeDefns[symbol]
 	return defn, ok
 }
 
@@ -130,8 +130,8 @@ func NewCompilerEnvironment(typeEnv semtypes.Env) *CompilerEnvironment {
 }
 
 // GetTypeEnv returns the type environment for this context
-func (this *CompilerEnvironment) GetTypeEnv() semtypes.Env {
-	return this.typeEnv
+func (c *CompilerEnvironment) GetTypeEnv() semtypes.Env {
+	return c.typeEnv
 }
 
 const (
@@ -140,9 +140,9 @@ const (
 	ANON_TYPE         = ANON_PREFIX + "Type$"
 )
 
-func (this *CompilerEnvironment) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
-	nextValue := this.anonTypeCount[packageID]
-	this.anonTypeCount[packageID] = nextValue + 1
+func (c *CompilerEnvironment) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
+	nextValue := c.anonTypeCount[packageID]
+	c.anonTypeCount[packageID] = nextValue + 1
 	if packageID != nil && model.ANNOTATIONS_PKG != packageID {
 		return BUILTIN_ANON_TYPE + "_" + strconv.Itoa(nextValue)
 	}

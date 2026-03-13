@@ -49,8 +49,8 @@ func NewOCEDynamicEnvironmentData() *OCEDynamicEnvironmentData {
 }
 
 // CleanUp clears all collections and resets pointer fields
-func (this *OCEDynamicEnvironmentData) CleanUp() {
-	this.Parents = nil
-	this.LambdaFunctionsList = nil
-	this.DesugaredClosureVars = nil
+func (o *OCEDynamicEnvironmentData) CleanUp() {
+	o.Parents = nil
+	o.LambdaFunctionsList = nil
+	o.DesugaredClosureVars = nil
 }

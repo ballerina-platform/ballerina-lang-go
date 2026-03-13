@@ -45,18 +45,18 @@ func streamContaining(tupleType SemType) SemType {
 }
 
 // migrated from StreamDefinition.java:42:5
-func (this *StreamDefinition) GetSemType(env Env) SemType {
+func (s *StreamDefinition) GetSemType(env Env) SemType {
 	// migrated from StreamDefinition.java:43:9
-	return streamContaining(this.listDefinition.GetSemType(env))
+	return streamContaining(s.listDefinition.GetSemType(env))
 }
 
 // migrated from StreamDefinition.java:46:5
-func (this *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
+func (s *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
 	// migrated from StreamDefinition.java:47:9
 	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
 		return &STREAM
 	}
 	// migrated from StreamDefinition.java:50:9
-	tuple := this.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)
+	tuple := s.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)
 	return streamContaining(tuple)
 }

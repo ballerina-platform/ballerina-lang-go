@@ -60,69 +60,69 @@ var _ BLangNode = &BLangConstPattern{}
 var _ BLangNode = &BLangMatchClause{}
 var _ BLangNode = &BLangWildCardMatchPattern{}
 
-func (this *BLangConstPattern) GetKind() model.NodeKind {
+func (b *BLangConstPattern) GetKind() model.NodeKind {
 	// migrated from BLangConstPattern.java:53:5
 	return model.NodeKind_CONST_MATCH_PATTERN
 }
 
-func (this *BLangConstPattern) GetExpression() model.ExpressionNode {
+func (b *BLangConstPattern) GetExpression() model.ExpressionNode {
 	// migrated from BLangConstPattern.java:58:5
-	return this.Expr
+	return b.Expr
 }
 
-func (this *BLangConstPattern) SetExpression(expression model.ExpressionNode) {
+func (b *BLangConstPattern) SetExpression(expression model.ExpressionNode) {
 	// migrated from BLangConstPattern.java:63:5
 	if expr, ok := expression.(BLangExpression); ok {
-		this.Expr = expr
+		b.Expr = expr
 	} else {
 		panic("Expected BLangExpression")
 	}
 }
 
-func (this *BLangWildCardMatchPattern) GetKind() model.NodeKind {
+func (b *BLangWildCardMatchPattern) GetKind() model.NodeKind {
 	return model.NodeKind_WILDCARD_MATCH_PATTERN
 }
 
-func (this *BLangMatchClause) GetKind() model.NodeKind {
+func (b *BLangMatchClause) GetKind() model.NodeKind {
 	return model.NodeKind_MATCH_CLAUSE
 }
 
-func (this *BLangMatchClause) GetMatchGuard() model.MatchGuard {
-	return this.Guard
+func (b *BLangMatchClause) GetMatchGuard() model.MatchGuard {
+	return b.Guard
 }
 
-func (this *BLangMatchClause) GetBlockStatementNode() model.BlockStatementNode {
-	return &this.Body
+func (b *BLangMatchClause) GetBlockStatementNode() model.BlockStatementNode {
+	return &b.Body
 }
 
-func (this *BLangMatchClause) GetMatchPatterns() []model.MatchPatternNode {
-	result := make([]model.MatchPatternNode, len(this.Patterns))
-	for i, p := range this.Patterns {
+func (b *BLangMatchClause) GetMatchPatterns() []model.MatchPatternNode {
+	result := make([]model.MatchPatternNode, len(b.Patterns))
+	for i, p := range b.Patterns {
 		result[i] = p
 	}
 	return result
 }
 
-func (this *BLangMatchClause) SetMatchClause(node BLangMatchGuard) {
-	this.Guard = node
+func (b *BLangMatchClause) SetMatchClause(node BLangMatchGuard) {
+	b.Guard = node
 }
 
-func (this *BLangMatchClause) SetBlockStatementNode(node BLangBlockStmt) {
-	this.Body = node
+func (b *BLangMatchClause) SetBlockStatementNode(node BLangBlockStmt) {
+	b.Body = node
 }
 
-func (this *BLangMatchClause) SetMatchPatterns(nodes []BLangMatchPattern) {
-	this.Patterns = nodes
+func (b *BLangMatchClause) SetMatchPatterns(nodes []BLangMatchPattern) {
+	b.Patterns = nodes
 }
 
-func (this *BLangMatchClause) GetAcceptedType() semtypes.SemType {
-	return this.AcceptedType
+func (b *BLangMatchClause) GetAcceptedType() semtypes.SemType {
+	return b.AcceptedType
 }
 
-func (this *bLangMatchPatternBase) GetAcceptedType() semtypes.SemType {
-	return this.AcceptedType
+func (b *bLangMatchPatternBase) GetAcceptedType() semtypes.SemType {
+	return b.AcceptedType
 }
 
-func (this *bLangMatchPatternBase) SetAcceptedType(t semtypes.SemType) {
-	this.AcceptedType = t
+func (b *bLangMatchPatternBase) SetAcceptedType(t semtypes.SemType) {
+	b.AcceptedType = t
 }

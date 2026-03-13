@@ -37,16 +37,16 @@ func NewBddMemo() BddMemo {
 	return this
 }
 
-func (this *BddMemo) SetIsEmpty(isEmpty bool) {
+func (b *BddMemo) SetIsEmpty(isEmpty bool) {
 	// migrated from BddMemo.java:33:5
 	if isEmpty {
-		this.isEmpty = MemoStatus_TRUE
+		b.isEmpty = MemoStatus_TRUE
 	} else {
-		this.isEmpty = MemoStatus_FALSE
+		b.isEmpty = MemoStatus_FALSE
 	}
 }
 
-func (this *BddMemo) IsEmpty() bool {
+func (b *BddMemo) IsEmpty() bool {
 	// migrated from BddMemo.java:37:5
-	return (this.isEmpty == MemoStatus_TRUE)
+	return (b.isEmpty == MemoStatus_TRUE)
 }

@@ -35,10 +35,10 @@ func CreateTypeAtom(index int, atomicType AtomicType) TypeAtom {
 	}
 }
 
-func (this *TypeAtom) Index() int {
-	return this.index
+func (t *TypeAtom) Index() int {
+	return t.index
 }
 
-func (this *TypeAtom) Kind() Kind {
-	return this.AtomicType.AtomKind()
+func (t *TypeAtom) Kind() Kind {
+	return t.AtomicType.AtomKind()
 }
