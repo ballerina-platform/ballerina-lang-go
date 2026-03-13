@@ -285,7 +285,7 @@ func TestCheckHashInternal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.content != nil {
-				bfs.WriteFile(fsys, tt.filePath, tt.content, 0o644)
+				_ = bfs.WriteFile(fsys, tt.filePath, tt.content, 0o644)
 			}
 
 			result, err := checkHashInternal(fsys, tt.filePath)
@@ -418,7 +418,7 @@ func TestWriteDeprecatedMsg(t *testing.T) {
 			metaFilePath := "bala/deprecated.txt"
 
 			if tt.fileExists {
-				bfs.WriteFile(fsys, metaFilePath, []byte("old message"), 0o644)
+				_ = bfs.WriteFile(fsys, metaFilePath, []byte("old message"), 0o644)
 			}
 
 			err := writeDeprecatedMsg(fsys, metaFilePath, tt.message, ctx)
