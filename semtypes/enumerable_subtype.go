@@ -103,15 +103,12 @@ func EnumerableListUnion[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], 
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-				break
 			case LT:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
-				break
 			case GT:
 				*result = append(*result, s2)
 				i2 = (i2 + 1)
-				break
 			}
 		}
 	}
@@ -134,13 +131,10 @@ func EnumerableListIntersect[T any](v1 []EnumerableType[T], v2 []EnumerableType[
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-				break
 			case LT:
 				i1 = (i1 + 1)
-				break
 			case GT:
 				i2 = (i2 + 1)
-				break
 			}
 		}
 	}
@@ -164,14 +158,11 @@ func EnumerableListDiff[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], r
 			case EQ:
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-				break
 			case LT:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
-				break
 			case GT:
 				i2 = (i2 + 1)
-				break
 			}
 		}
 	}

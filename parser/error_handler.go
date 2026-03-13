@@ -1113,7 +1113,6 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 		switch currentCtx {
 		case common.PARSER_RULE_CONTEXT_EOF:
 			hasMatch = (nextToken.Kind() == common.EOF_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FUNC_NAME,
 			common.PARSER_RULE_CONTEXT_CLASS_NAME,
 			common.PARSER_RULE_CONTEXT_VARIABLE_NAME,
@@ -1140,254 +1139,180 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 			common.PARSER_RULE_CONTEXT_ENUM_MEMBER_NAME,
 			common.PARSER_RULE_CONTEXT_NAMED_ARG_BINDING_PATTERN:
 			hasMatch = (nextToken.Kind() == common.IDENTIFIER_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_IMPORT_PREFIX:
 			hasMatch = ((nextToken.Kind() == common.IDENTIFIER_TOKEN) || isPredeclaredPrefix(nextToken.Kind()))
-			break
 		case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER_PREDECLARED_PREFIX:
 			hasMatch = isPredeclaredPrefix(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS,
 			common.PARSER_RULE_CONTEXT_PARENTHESISED_TYPE_DESC_START,
 			common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN:
 			hasMatch = (nextToken.Kind() == common.OPEN_PAREN_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS,
 			common.PARSER_RULE_CONTEXT_ARG_LIST_CLOSE_PAREN:
 			hasMatch = (nextToken.Kind() == common.CLOSE_PAREN_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SIMPLE_TYPE_DESCRIPTOR:
 			hasMatch = (((isSimpleType(nextToken.Kind()) || (nextToken.Kind() == common.ERROR_KEYWORD)) || (nextToken.Kind() == common.STREAM_KEYWORD)) || (nextToken.Kind() == common.TYPEDESC_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_BRACE:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_BRACE:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ASSIGN_OP:
 			hasMatch = (nextToken.Kind() == common.EQUAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SEMICOLON:
 			hasMatch = (nextToken.Kind() == common.SEMICOLON_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BINARY_OPERATOR:
 			hasMatch = this.isBinaryOperator(nextToken)
-			break
 		case common.PARSER_RULE_CONTEXT_COMMA,
 			common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_END_COMMA,
 			common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END_COMMA:
 			hasMatch = (nextToken.Kind() == common.COMMA_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_END:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACE_PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_START:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACE_PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ELLIPSIS:
 			hasMatch = (nextToken.Kind() == common.ELLIPSIS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_QUESTION_MARK:
 			hasMatch = (nextToken.Kind() == common.QUESTION_MARK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FIRST_OBJECT_CONS_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_OBJECT_CONS_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FIRST_OBJECT_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_OBJECT_TYPE_QUALIFIER:
 			hasMatch = (((nextToken.Kind() == common.CLIENT_KEYWORD) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.SERVICE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_FIRST_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_THIRD_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FOURTH_CLASS_TYPE_QUALIFIER:
 			hasMatch = (((((nextToken.Kind() == common.DISTINCT_KEYWORD) || (nextToken.Kind() == common.CLIENT_KEYWORD)) || (nextToken.Kind() == common.READONLY_KEYWORD)) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.SERVICE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_BRACKET,
 			common.PARSER_RULE_CONTEXT_TUPLE_TYPE_DESC_START:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACKET_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_BRACKET:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACKET_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_METHOD_CALL_DOT:
 			hasMatch = (nextToken.Kind() == common.DOT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BOOLEAN_LITERAL:
 			hasMatch = ((nextToken.Kind() == common.TRUE_KEYWORD) || (nextToken.Kind() == common.FALSE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_DECIMAL_INTEGER_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DECIMAL_INTEGER_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH,
 			common.PARSER_RULE_CONTEXT_ABSOLUTE_PATH_SINGLE_SLASH,
 			common.PARSER_RULE_CONTEXT_RESOURCE_METHOD_CALL_SLASH_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BASIC_LITERAL:
 			hasMatch = this.isBasicLiteral(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_COLON,
 			common.PARSER_RULE_CONTEXT_VAR_REF_COLON,
 			common.PARSER_RULE_CONTEXT_TYPE_REF_COLON:
 			hasMatch = (nextToken.Kind() == common.COLON_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_STRING_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.STRING_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_UNARY_OPERATOR:
 			hasMatch = this.isUnaryOperator(nextToken)
-			break
 		case common.PARSER_RULE_CONTEXT_HEX_INTEGER_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.HEX_INTEGER_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_AT:
 			hasMatch = (nextToken.Kind() == common.AT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_RIGHT_ARROW:
 			hasMatch = (nextToken.Kind() == common.RIGHT_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PARAMETERIZED_TYPE:
 			hasMatch = isParameterizedTypeToken(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_LT,
 			common.PARSER_RULE_CONTEXT_STREAM_TYPE_PARAM_START_TOKEN,
 			common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_START_LT:
 			hasMatch = (nextToken.Kind() == common.LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_GT,
 			common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_END_GT:
 			hasMatch = (nextToken.Kind() == common.GT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FIELD_IDENT:
 			hasMatch = (nextToken.Kind() == common.FIELD_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_FUNCTION_IDENT:
 			hasMatch = (nextToken.Kind() == common.FUNCTION_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_IDENT_AFTER_OBJECT_IDENT:
 			hasMatch = ((nextToken.Kind() == common.FUNCTION_KEYWORD) || (nextToken.Kind() == common.FIELD_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_SINGLE_KEYWORD_ATTACH_POINT_IDENT:
 			hasMatch = this.isSingleKeywordAttachPointIdent(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_OBJECT_IDENT:
 			hasMatch = (nextToken.Kind() == common.OBJECT_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_RECORD_IDENT:
 			hasMatch = (nextToken.Kind() == common.RECORD_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_SERVICE_IDENT:
 			hasMatch = (nextToken.Kind() == common.SERVICE_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_REMOTE_IDENT:
 			hasMatch = (nextToken.Kind() == common.REMOTE_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_DECIMAL_FLOATING_POINT_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_HEX_FLOATING_POINT_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.HEX_FLOATING_POINT_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PIPE:
 			hasMatch = (nextToken.Kind() == common.PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_TEMPLATE_START, common.PARSER_RULE_CONTEXT_TEMPLATE_END:
 			hasMatch = (nextToken.Kind() == common.BACKTICK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ASTERISK:
 			hasMatch = (nextToken.Kind() == common.ASTERISK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BITWISE_AND_OPERATOR:
 			hasMatch = (nextToken.Kind() == common.BITWISE_AND_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_EXPR_FUNC_BODY_START,
 			common.PARSER_RULE_CONTEXT_RIGHT_DOUBLE_ARROW:
 			hasMatch = (nextToken.Kind() == common.RIGHT_DOUBLE_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PLUS_TOKEN:
 			hasMatch = (nextToken.Kind() == common.PLUS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_MINUS_TOKEN:
 			hasMatch = (nextToken.Kind() == common.MINUS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SIGNED_INT_OR_FLOAT_RHS:
 			hasMatch = isIntOrFloat(nextToken)
-			break
 		case common.PARSER_RULE_CONTEXT_SYNC_SEND_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SYNC_SEND_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PEER_WORKER_NAME:
 			hasMatch = ((nextToken.Kind() == common.FUNCTION_KEYWORD) || (nextToken.Kind() == common.IDENTIFIER_TOKEN))
-			break
 		case common.PARSER_RULE_CONTEXT_LEFT_ARROW_TOKEN:
 			hasMatch = (nextToken.Kind() == common.LEFT_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN:
 			hasMatch = (nextToken.Kind() == common.ANNOT_CHAINING_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN:
 			hasMatch = (nextToken.Kind() == common.OPTIONAL_CHAINING_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_TRANSACTIONAL_KEYWORD:
 			hasMatch = (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_SERVICE_DECL_QUALIFIER:
 			hasMatch = (nextToken.Kind() == common.ISOLATED_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_UNION_OR_INTERSECTION_TOKEN:
 			hasMatch = ((nextToken.Kind() == common.PIPE_TOKEN) || (nextToken.Kind() == common.BITWISE_AND_TOKEN))
-			break
 		case common.PARSER_RULE_CONTEXT_DOT_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DOT_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_DOUBLE_SLASH_DOUBLE_ASTERISK_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DOUBLE_SLASH_DOUBLE_ASTERISK_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH_ASTERISK_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_ASTERISK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_KEY_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.KEY_KEYWORD) || isKeyKeyword(nextToken))
-			break
 		case common.PARSER_RULE_CONTEXT_NATURAL_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.NATURAL_KEYWORD) || isNaturalKeyword(nextToken))
-			break
 		case common.PARSER_RULE_CONTEXT_VAR_KEYWORD:
 			hasMatch = (nextToken.Kind() == common.VAR_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_ORDER_DIRECTION:
 			hasMatch = ((nextToken.Kind() == common.ASCENDING_KEYWORD) || (nextToken.Kind() == common.DESCENDING_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OBJECT_MEMBER_VISIBILITY_QUAL:
 			hasMatch = ((nextToken.Kind() == common.PRIVATE_KEYWORD) || (nextToken.Kind() == common.PUBLIC_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_SECOND_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_THIRD_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_FOURTH_QUALIFIER:
 			hasMatch = ((((nextToken.Kind() == common.ISOLATED_KEYWORD) || (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD)) || (nextToken.Kind() == common.REMOTE_KEYWORD)) || (nextToken.Kind() == common.RESOURCE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_FUNC_DEF_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_DEF_SECOND_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_TYPE_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_TYPE_SECOND_QUALIFIER:
 			hasMatch = ((nextToken.Kind() == common.ISOLATED_KEYWORD) || (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_MODULE_VAR_FIRST_QUAL,
 			common.PARSER_RULE_CONTEXT_MODULE_VAR_SECOND_QUAL,
 			common.PARSER_RULE_CONTEXT_MODULE_VAR_THIRD_QUAL:
 			hasMatch = (((nextToken.Kind() == common.FINAL_KEYWORD) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.CONFIGURABLE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_COMPOUND_BINARY_OPERATOR:
 			hasMatch = isCompoundBinaryOperator(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_IS_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.IS_KEYWORD) || (nextToken.Kind() == common.NOT_IS_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_VARIABLE_REF,
 			common.PARSER_RULE_CONTEXT_TYPE_REFERENCE_IN_TYPE_INCLUSION,
 			common.PARSER_RULE_CONTEXT_TYPE_REFERENCE,
@@ -1421,7 +1346,6 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 			}
 			skipRule = true
 			hasMatch = true
-			break
 		}
 		if !hasMatch {
 			return this.fixAndContinue(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
@@ -2263,22 +2187,16 @@ func (this *BallerinaParserErrorHandler) seekMatchInAlternativePaths(currentCtx 
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE:
 		alternativeRules = TOP_LEVEL_NODE
-		break
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_MODIFIER:
 		alternativeRules = TOP_LEVEL_NODE_WITHOUT_MODIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_METADATA:
 		alternativeRules = TOP_LEVEL_NODE_WITHOUT_METADATA
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_START:
 		alternativeRules = FUNC_DEF_START
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = FUNC_DEF_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_START_WITHOUT_FIRST_QUAL:
 		alternativeRules = FUNC_TYPE_DESC_START_WITHOUT_FIRST_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_OPTIONAL_RETURNS:
 		parentCtx := this.GetParentContext()
 		var alternatives []common.ParserRuleContext
@@ -2300,308 +2218,208 @@ func (this *BallerinaParserErrorHandler) seekMatchInAlternativePaths(currentCtx 
 			alternatives = FUNC_TYPE_OR_DEF_OPTIONAL_RETURNS
 		}
 		alternativeRules = alternatives
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY_OR_TYPE_DESC_RHS:
 		alternativeRules = FUNC_BODY_OR_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_RHS_OR_ANON_FUNC_BODY:
 		alternativeRules = FUNC_TYPE_DESC_RHS_OR_ANON_FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_ANON_FUNC_BODY:
 		alternativeRules = ANON_FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY:
 		alternativeRules = FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_LIST:
 		alternativeRules = PARAM_LIST
-		break
 	case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM_NAME_RHS:
 		alternativeRules = REQUIRED_PARAM_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_DESCRIPTOR_RHS:
 		alternativeRules = FIELD_DESCRIPTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_OR_REST_DESCIPTOR_RHS:
 		alternativeRules = FIELD_OR_REST_DESCIPTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_BODY_END:
 		alternativeRules = RECORD_BODY_END
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_BODY_START:
 		alternativeRules = RECORD_BODY_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESCRIPTOR:
 		if !this.isInTypeDescContext() {
 			panic("assertion failed")
 		}
 		alternativeRules = TYPE_DESCRIPTORS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_WITHOUT_ISOLATED:
 		alternativeRules = TYPE_DESCRIPTOR_WITHOUT_ISOLATED
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DESCRIPTOR:
 		alternativeRules = CLASS_DESCRIPTOR
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_OR_RECORD_END:
 		alternativeRules = RECORD_FIELD_OR_RECORD_END
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_START:
 		alternativeRules = RECORD_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_WITHOUT_METADATA:
 		alternativeRules = RECORD_FIELD_WITHOUT_METADATA
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_START:
 		alternativeRules = CLASS_MEMBER_OR_OBJECT_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER_START:
 		alternativeRules = OBJECT_CONSTRUCTOR_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_WITHOUT_META:
 		alternativeRules = CLASS_MEMBER_OR_OBJECT_MEMBER_WITHOUT_META
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONS_MEMBER_WITHOUT_META:
 		alternativeRules = OBJECT_CONS_MEMBER_WITHOUT_META
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_FIELD_INITIALIZER:
 		alternativeRules = OPTIONAL_FIELD_INITIALIZER
-		break
 	case common.PARSER_RULE_CONTEXT_ON_FAIL_OPTIONAL_BINDING_PATTERN:
 		alternativeRules = ON_FAIL_OPTIONAL_BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_START:
 		alternativeRules = OBJECT_METHOD_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_SECOND_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_SECOND_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_THIRD_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_THIRD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD:
 		alternativeRules = OBJECT_FUNC_OR_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY:
 		alternativeRules = OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_START:
 		alternativeRules = OBJECT_TYPE_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_START:
 		alternativeRules = OBJECT_CONSTRUCTOR_START
-		break
 	case common.PARSER_RULE_CONTEXT_IMPORT_PREFIX_DECL:
 		alternativeRules = IMPORT_PREFIX_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_IMPORT_DECL_ORG_OR_MODULE_NAME_RHS:
 		alternativeRules = IMPORT_DECL_ORG_OR_MODULE_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_AFTER_IMPORT_MODULE_NAME:
 		alternativeRules = AFTER_IMPORT_MODULE_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_ABSOLUTE_PATH:
 		alternativeRules = OPTIONAL_ABSOLUTE_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_CONST_DECL_TYPE:
 		alternativeRules = CONST_DECL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_CONST_DECL_RHS:
 		alternativeRules = CONST_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETER_START:
 		alternativeRules = PARAMETER_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETER_START_WITHOUT_ANNOTATION:
 		alternativeRules = PARAMETER_START_WITHOUT_ANNOTATION
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_DECL_OPTIONAL_TYPE:
 		alternativeRules = ANNOT_DECL_OPTIONAL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_DECL_RHS:
 		alternativeRules = ANNOT_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_OPTIONAL_ATTACH_POINTS:
 		alternativeRules = ANNOT_OPTIONAL_ATTACH_POINTS
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT:
 		alternativeRules = ATTACH_POINT
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT_IDENT:
 		alternativeRules = ATTACH_POINT_IDENT
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT_END:
 		alternativeRules = ATTACH_POINT_END
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAMESPACE_PREFIX_DECL:
 		alternativeRules = XML_NAMESPACE_PREFIX_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_START:
 		alternativeRules = ENUM_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_RHS:
 		alternativeRules = ENUM_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_END:
 		alternativeRules = ENUM_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY_OPTIONAL_ANNOTS:
 		alternativeRules = EXTERNAL_FUNC_BODY_OPTIONAL_ANNOTS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BP_OR_LIST_CONSTRUCTOR_MEMBER:
 		alternativeRules = LIST_BP_OR_LIST_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_TYPE_DESC_OR_LIST_CONST_MEMBER:
 		alternativeRules = TUPLE_TYPE_DESC_OR_LIST_CONST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR_MEMBER:
 		alternativeRules = MAPPING_BP_OR_MAPPING_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_START,
 		common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION_START:
 		alternativeRules = FUNC_TYPE_DESC_START
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_CLASS_DEFINITION_START:
 		alternativeRules = MODULE_CLASS_DEFINITION_START
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_SECOND_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_SECOND_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_THIRD_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_THIRD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_TYPE_REF:
 		alternativeRules = OBJECT_CONSTRUCTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FIELD_QUALIFIER:
 		alternativeRules = OBJECT_FIELD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CONFIG_VAR_DECL_RHS:
 		alternativeRules = CONFIG_VAR_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_SERVICE_DECL_TYPE:
 		alternativeRules = OPTIONAL_SERVICE_DECL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_IDENT_RHS:
 		alternativeRules = SERVICE_IDENT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH_START:
 		alternativeRules = ABSOLUTE_RESOURCE_PATH_START
-		break
 	case common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH_END:
 		alternativeRules = ABSOLUTE_RESOURCE_PATH_END
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL_OR_VAR_DECL:
 		alternativeRules = SERVICE_DECL_OR_VAR_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RELATIVE_PATH:
 		alternativeRules = OPTIONAL_RELATIVE_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_START:
 		alternativeRules = RELATIVE_RESOURCE_PATH_START
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_PATH_SEGMENT:
 		alternativeRules = RESOURCE_PATH_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_PATH_PARAM_OPTIONAL_ANNOTS:
 		alternativeRules = PATH_PARAM_OPTIONAL_ANNOTS
-		break
 	case common.PARSER_RULE_CONTEXT_PATH_PARAM_ELLIPSIS:
 		alternativeRules = PATH_PARAM_ELLIPSIS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PATH_PARAM_NAME:
 		alternativeRules = OPTIONAL_PATH_PARAM_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_END:
 		alternativeRules = RELATIVE_RESOURCE_PATH_END
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL_START:
 		alternativeRules = SERVICE_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_TYPE_PARAMETER:
 		alternativeRules = OPTIONAL_TYPE_PARAMETER
-		break
 	case common.PARSER_RULE_CONTEXT_MAP_TYPE_OR_TYPE_REF:
 		alternativeRules = MAP_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_OR_TYPE_REF:
 		alternativeRules = OBJECT_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_STREAM_TYPE_OR_TYPE_REF:
 		alternativeRules = STREAM_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_TYPE_OR_TYPE_REF:
 		alternativeRules = TABLE_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETERIZED_TYPE_OR_TYPE_REF:
 		alternativeRules = PARAMETERIZED_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS_OR_TYPE_REF:
 		alternativeRules = TYPE_DESC_RHS_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TRANSACTION_STMT_RHS_OR_TYPE_REF:
 		alternativeRules = TRANSACTION_STMT_RHS_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONS_OR_QUERY_EXPR_OR_VAR_REF:
 		alternativeRules = TABLE_CONS_OR_QUERY_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPR_OR_VAR_REF:
 		alternativeRules = QUERY_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_CONS_EXPR_OR_VAR_REF:
 		alternativeRules = ERROR_CONS_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER:
 		alternativeRules = QUALIFIED_IDENTIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_DECL_START:
 		alternativeRules = MODULE_VAR_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_WITHOUT_FIRST_QUAL:
 		alternativeRules = MODULE_VAR_WITHOUT_FIRST_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_WITHOUT_SECOND_QUAL:
 		alternativeRules = MODULE_VAR_WITHOUT_SECOND_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_TYPE_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_TYPE_DESC_RHS:
 		alternativeRules = FUNC_DEF_OR_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPR_START_OR_INFERRED_TYPEDESC_DEFAULT_START:
 		alternativeRules = EXPR_START_OR_INFERRED_TYPEDESC_DEFAULT_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM_START_OR_INFERRED_TYPEDESC_DEFAULT_END:
 		alternativeRules = TYPE_CAST_PARAM_START_OR_INFERRED_TYPEDESC_DEFAULT_END
-		break
 	case common.PARSER_RULE_CONTEXT_END_OF_PARAMS_OR_NEXT_PARAM_START:
 		alternativeRules = END_OF_PARAMS_OR_NEXT_PARAM_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_START:
 		alternativeRules = PARAM_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_RHS:
 		alternativeRules = PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_PARAM_RHS:
 		alternativeRules = FUNC_TYPE_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_DECL_START:
 		alternativeRules = ANNOTATION_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_TOP_LEVEL_SEMICOLON:
 		alternativeRules = OPTIONAL_TOP_LEVEL_SEMICOLON
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_MEMBER:
 		alternativeRules = TUPLE_MEMBER
-		break
 	default:
 		return this.seekMatchInStmtRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
 			isEntryPoint)
@@ -2621,260 +2439,177 @@ func (this *BallerinaParserErrorHandler) seekMatchInStmtRelatedAlternativePaths(
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_VAR_DECL_STMT_RHS:
 		alternativeRules = VAR_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_STATEMENT, common.PARSER_RULE_CONTEXT_STATEMENT_WITHOUT_ANNOTS:
 		return this.seekInStatements(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
 	case common.PARSER_RULE_CONTEXT_TYPE_NAME_OR_VAR_NAME:
 		alternativeRules = TYPE_OR_VAR_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_ELSE_BLOCK:
 		alternativeRules = ELSE_BLOCK
-		break
 	case common.PARSER_RULE_CONTEXT_ELSE_BODY:
 		alternativeRules = ELSE_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_CALL_STMT_START:
 		alternativeRules = CALL_STATEMENT
-		break
 	case common.PARSER_RULE_CONTEXT_RETURN_STMT_RHS:
 		alternativeRules = RETURN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ARRAY_LENGTH:
 		alternativeRules = ARRAY_LENGTH
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_WITH_EXPR_RHS:
 		alternativeRules = STMT_START_WITH_EXPR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPR_STMT_RHS:
 		alternativeRules = EXPR_STMT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT_START:
 		alternativeRules = EXPRESSION_STATEMENT_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS:
 		if !this.isInTypeDescContext() {
 			panic("assertion failed")
 		}
 		alternativeRules = TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_STREAM_TYPE_FIRST_PARAM_RHS:
 		alternativeRules = STREAM_TYPE_FIRST_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNCTION_KEYWORD_RHS:
 		alternativeRules = FUNCTION_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_FUNC_KEYWORD_RHS_START:
 		alternativeRules = FUNC_TYPE_FUNC_KEYWORD_RHS_START
-		break
 	case common.PARSER_RULE_CONTEXT_WORKER_NAME_RHS:
 		alternativeRules = WORKER_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN:
 		alternativeRules = BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERNS_START:
 		alternativeRules = LIST_BINDING_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN_MEMBER_END:
 		alternativeRules = LIST_BINDING_PATTERN_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN_MEMBER:
 		alternativeRules = LIST_BINDING_PATTERN_CONTENTS
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN_END:
 		alternativeRules = MAPPING_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_BINDING_PATTERN_END:
 		alternativeRules = FIELD_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN_MEMBER:
 		alternativeRules = MAPPING_BINDING_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN_ERROR_KEYWORD_RHS:
 		alternativeRules = ERROR_BINDING_PATTERN_ERROR_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_BINDING_PATTERN_START:
 		alternativeRules = ERROR_ARG_LIST_BINDING_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_END:
 		alternativeRules = ERROR_MESSAGE_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_RHS:
 		alternativeRules = ERROR_MESSAGE_BINDING_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_BINDING_PATTERN:
 		alternativeRules = ERROR_FIELD_BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_BINDING_PATTERN_END:
 		alternativeRules = ERROR_FIELD_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_KEY_CONSTRAINTS_RHS:
 		alternativeRules = KEY_CONSTRAINTS_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_TYPE_DESC_RHS:
 		alternativeRules = TABLE_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TUPLE_RHS:
 		alternativeRules = TYPE_DESC_IN_TUPLE_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_TYPE_MEMBER_RHS:
 		alternativeRules = TUPLE_TYPE_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_MEMBER_END:
 		alternativeRules = LIST_CONSTRUCTOR_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_NIL_OR_PARENTHESISED_TYPE_DESC_RHS:
 		alternativeRules = NIL_OR_PARENTHESISED_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_REMOTE_OR_RESOURCE_CALL_OR_ASYNC_SEND_RHS:
 		alternativeRules = REMOTE_OR_RESOURCE_CALL_OR_ASYNC_SEND_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_REMOTE_CALL_OR_ASYNC_SEND_END:
 		alternativeRules = REMOTE_CALL_OR_ASYNC_SEND_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_PATH:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_PATH_SEGMENT:
 		alternativeRules = RESOURCE_ACCESS_PATH_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_COMPUTED_SEGMENT_OR_REST_SEGMENT:
 		alternativeRules = COMPUTED_SEGMENT_OR_REST_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_SEGMENT_RHS:
 		alternativeRules = RESOURCE_ACCESS_SEGMENT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_METHOD:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_METHOD
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_ACTION_ARG_LIST:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_ACTION_ARG_LIST
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_WORKERS:
 		alternativeRules = RECEIVE_WORKERS
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_FIELD:
 		alternativeRules = RECEIVE_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_FIELD_END:
 		alternativeRules = RECEIVE_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_KEYWORD_RHS:
 		alternativeRules = WAIT_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FIELD_NAME_RHS:
 		alternativeRules = WAIT_FIELD_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FIELD_END:
 		alternativeRules = WAIT_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FUTURE_EXPR_END:
 		alternativeRules = WAIT_FUTURE_EXPR_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PEER_WORKER:
 		alternativeRules = OPTIONAL_PEER_WORKER
-		break
 	case common.PARSER_RULE_CONTEXT_ROLLBACK_RHS:
 		alternativeRules = ROLLBACK_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_KEYWORD_RHS:
 		alternativeRules = RETRY_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_TYPE_PARAM_RHS:
 		alternativeRules = RETRY_TYPE_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_BODY:
 		alternativeRules = RETRY_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_MEMBER:
 		alternativeRules = LIST_BP_OR_TUPLE_TYPE_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_RHS:
 		alternativeRules = LIST_BP_OR_TUPLE_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER_END:
 		alternativeRules = BRACKETED_LIST_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER:
 		alternativeRules = BRACKETED_LIST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_RHS,
 		common.PARSER_RULE_CONTEXT_BINDING_PATTERN_OR_EXPR_RHS,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_OR_EXPR_RHS:
 		alternativeRules = BRACKETED_LIST_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN_OR_VAR_REF_RHS:
 		alternativeRules = BINDING_PATTERN_OR_VAR_REF_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS_OR_BP_RHS:
 		alternativeRules = TYPE_DESC_RHS_OR_BP_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_MEMBER_OR_ARRAY_LENGTH:
 		alternativeRules = LIST_BINDING_MEMBER_OR_ARRAY_LENGTH
-		break
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_LIST_MEMBER_RHS:
 		alternativeRules = MATCH_PATTERN_LIST_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_START:
 		alternativeRules = MATCH_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERNS_START:
 		alternativeRules = LIST_MATCH_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN_MEMBER:
 		alternativeRules = LIST_MATCH_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN_MEMBER_RHS:
 		alternativeRules = LIST_MATCH_PATTERN_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERNS_START:
 		alternativeRules = FIELD_MATCH_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERN_MEMBER:
 		alternativeRules = FIELD_MATCH_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERN_MEMBER_RHS:
 		alternativeRules = FIELD_MATCH_PATTERN_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN_OR_CONST_PATTERN:
 		alternativeRules = ERROR_MATCH_PATTERN_OR_CONST_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN_ERROR_KEYWORD_RHS:
 		alternativeRules = ERROR_MATCH_PATTERN_ERROR_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_START:
 		alternativeRules = ERROR_ARG_LIST_MATCH_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END:
 		alternativeRules = ERROR_MESSAGE_MATCH_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_RHS:
 		alternativeRules = ERROR_MESSAGE_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN:
 		alternativeRules = ERROR_FIELD_MATCH_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN_RHS:
 		alternativeRules = ERROR_FIELD_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN_RHS:
 		alternativeRules = NAMED_ARG_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_JOIN_CLAUSE_START:
 		alternativeRules = JOIN_CLAUSE_START
-		break
 	case common.PARSER_RULE_CONTEXT_INTERMEDIATE_CLAUSE_START:
 		alternativeRules = INTERMEDIATE_CLAUSE_START
-		break
 	case common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS:
 		alternativeRules = REGULAR_COMPOUND_STMT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_WORKER_DECL_START:
 		alternativeRules = NAMED_WORKER_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_ASSIGNMENT_STMT_RHS:
 		alternativeRules = ASSIGNMENT_STMT_RHS
-		break
 	default:
 		return this.seekMatchInExprRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
 			isEntryPoint)
@@ -2894,161 +2629,111 @@ func (this *BallerinaParserErrorHandler) seekMatchInExprRelatedAlternativePaths(
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_EXPRESSION, common.PARSER_RULE_CONTEXT_TERMINAL_EXPRESSION:
 		alternativeRules = EXPRESSION_START
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_START:
 		alternativeRules = ARG_START
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_START_OR_ARG_LIST_END:
 		alternativeRules = ARG_START_OR_ARG_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_OR_POSITIONAL_ARG_RHS:
 		alternativeRules = NAMED_OR_POSITIONAL_ARG_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_END:
 		alternativeRules = ARG_END
-		break
 	case common.PARSER_RULE_CONTEXT_ACCESS_EXPRESSION:
 		return this.seekInAccessExpression(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
 	case common.PARSER_RULE_CONTEXT_FIRST_MAPPING_FIELD:
 		alternativeRules = FIRST_MAPPING_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_FIELD:
 		alternativeRules = MAPPING_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD:
 		alternativeRules = SPECIFIC_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD_RHS:
 		alternativeRules = SPECIFIC_FIELD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_FIELD_END:
 		alternativeRules = MAPPING_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_LET_VAR_DECL_START:
 		alternativeRules = LET_VAR_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST_END:
 		alternativeRules = ORDER_KEY_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT:
 		alternativeRules = GROUPING_KEY_LIST_ELEMENT
-		break
 	case common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT_END:
 		alternativeRules = GROUPING_KEY_LIST_ELEMENT_END
-		break
 	case common.PARSER_RULE_CONTEXT_TEMPLATE_MEMBER:
 		alternativeRules = TEMPLATE_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TEMPLATE_STRING_RHS:
 		alternativeRules = TEMPLATE_STRING_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION_START:
 		alternativeRules = CONSTANT_EXPRESSION
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_FIRST_MEMBER:
 		alternativeRules = LIST_CONSTRUCTOR_FIRST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_MEMBER:
 		alternativeRules = LIST_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM:
 		alternativeRules = TYPE_CAST_PARAM
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM_RHS:
 		alternativeRules = TYPE_CAST_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_KEYWORD_RHS:
 		alternativeRules = TABLE_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ROW_LIST_RHS:
 		alternativeRules = ROW_LIST_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_ROW_END:
 		alternativeRules = TABLE_ROW_END
-		break
 	case common.PARSER_RULE_CONTEXT_KEY_SPECIFIER_RHS:
 		alternativeRules = KEY_SPECIFIER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_KEY_RHS:
 		alternativeRules = TABLE_KEY_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NEW_KEYWORD_RHS:
 		alternativeRules = NEW_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_START:
 		alternativeRules = TABLE_CONSTRUCTOR_OR_QUERY_START
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_RHS:
 		alternativeRules = TABLE_CONSTRUCTOR_OR_QUERY_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS:
 		alternativeRules = QUERY_PIPELINE_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BRACED_EXPR_OR_ANON_FUNC_PARAM_RHS,
 		common.PARSER_RULE_CONTEXT_ANON_FUNC_PARAM_RHS:
 		alternativeRules = BRACED_EXPR_OR_ANON_FUNC_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_END:
 		alternativeRules = PARAM_END
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_REF_RHS:
 		alternativeRules = ANNOTATION_REF_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_INFER_PARAM_END_OR_PARENTHESIS_END:
 		alternativeRules = INFER_PARAM_END_OR_PARENTHESIS_END
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR:
 		alternativeRules = XML_NAVIGATE_EXPR
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN_RHS:
 		alternativeRules = XML_NAME_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN_START:
 		alternativeRules = XML_ATOMIC_NAME_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_IDENTIFIER_RHS:
 		alternativeRules = XML_ATOMIC_NAME_IDENTIFIER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_START:
 		alternativeRules = XML_STEP_START
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND:
 		alternativeRules = XML_STEP_EXTEND
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_START_END:
 		alternativeRules = XML_STEP_START_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_MATCH_GUARD:
 		alternativeRules = OPTIONAL_MATCH_GUARD
-		break
 	case common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR_END:
 		alternativeRules = MEMBER_ACCESS_KEY_EXPR_END
-		break
 	case common.PARSER_RULE_CONTEXT_LISTENERS_LIST_END:
 		alternativeRules = LISTENERS_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONS_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_CONS_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_RESULT_CLAUSE:
 		alternativeRules = RESULT_CLAUSE
-		break
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_RHS:
 		return this.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, false)
 	case common.PARSER_RULE_CONTEXT_VARIABLE_REF_RHS:
 		return this.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, true)
 	case common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR_RHS:
 		alternativeRules = ERROR_CONSTRUCTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER_SEPARATOR:
 		alternativeRules = SINGLE_OR_ALTERNATE_WORKER_SEPARATOR
-		break
 	case common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION_START:
 		alternativeRules = NATURAL_EXPRESSION_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PARENTHESIZED_ARG_LIST:
 		alternativeRules = OPTIONAL_PARENTHESIZED_ARG_LIST
-		break
 	default:
 		panic("seekMatchInExprRelatedAlternativePaths found: " + currentCtx.String())
 	}
@@ -3096,44 +2781,33 @@ func (this *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int,
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ARG_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_ARG_LIST_END}
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MULTI_WAIT_FIELDS,
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_BRACE, common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_COMPUTED_FIELD_NAME:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_BRACKET, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_OPEN_BRACKET}
-		break
 	case common.PARSER_RULE_CONTEXT_LISTENERS_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_LISTENERS_LIST_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR,
 		common.PARSER_RULE_CONTEXT_BRACKETED_LIST,
 		common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_CLOSE_BRACKET}
-		break
 	case common.PARSER_RULE_CONTEXT_LET_EXPR_LET_VAR_DECL:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_IN_KEYWORD, common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_LET_CLAUSE_END}
-		break
 	case common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_ORDER_DIRECTION, common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	default:
 		if this.isParameter(parentCtx) {
 			alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_COMMA}
 		}
-		break
 	}
 	if alternatives != nil {
 		if allowFuncCall {
@@ -4356,7 +4030,6 @@ func (this *BallerinaParserErrorHandler) startContextIfRequired(currentCtx commo
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PATH_PARAM,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER_IN_GROUPING_KEY:
 		this.StartContext(currentCtx)
-		break
 	default:
 		break
 	}
@@ -4366,7 +4039,6 @@ func (this *BallerinaParserErrorHandler) startContextIfRequired(currentCtx commo
 		common.PARSER_RULE_CONTEXT_ON_CONFLICT_CLAUSE,
 		common.PARSER_RULE_CONTEXT_ON_CLAUSE:
 		this.SwitchContext(currentCtx)
-		break
 	default:
 		break
 	}
@@ -5524,13 +5196,11 @@ func (this *BallerinaParserErrorHandler) getNextRuleForFuncTypeFuncKeywordRhs() 
 			common.PARSER_RULE_CONTEXT_CLASS_MEMBER,
 			common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER:
 			this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
-			break
 		case common.PARSER_RULE_CONTEXT_COMP_UNIT:
 			fallthrough
 		default:
 			this.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
 			this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
-			break
 		}
 	} else if this.GetGrandParentContext() == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
 		this.SwitchContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
