@@ -123,6 +123,9 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		birPkg.Constants = appendIfNotNil(birPkg.Constants, c)
 	}
 	for _, function := range ast.Functions {
+		if function.FlagSet.Contains(model.Flag_NATIVE) {
+			continue
+		}
 		birFunc := TransformFunction(genCtx, &function)
 		birPkg.Functions = append(birPkg.Functions, *birFunc)
 		if birFunc.Name.Value() == "main" {
