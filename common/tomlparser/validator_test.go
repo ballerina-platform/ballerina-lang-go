@@ -61,7 +61,7 @@ func TestSchemaFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open schema file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	schema, err := NewSchemaFromFile(file)
 	if err != nil {
@@ -239,7 +239,7 @@ func TestReadStreamWithSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open TOML file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	tomlDoc, err := ReadStreamWithSchema(file, schema)
 	if err != nil {

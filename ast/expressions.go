@@ -441,710 +441,710 @@ func (n *BLangInvocation) SetSymbol(symbolRef model.SymbolRef) {
 	n.RawSymbol = &symbolRef
 }
 
-func (this *BLangGroupExpr) GetKind() model.NodeKind {
+func (b *BLangGroupExpr) GetKind() model.NodeKind {
 	// migrated from BLangGroupExpr.java:57:5
 	return model.NodeKind_GROUP_EXPR
 }
 
-func (this *BLangGroupExpr) GetExpression() model.ExpressionNode {
+func (b *BLangGroupExpr) GetExpression() model.ExpressionNode {
 	// migrated from BLangGroupExpr.java:62:5
-	return this.Expression
+	return b.Expression
 }
 
-func (this *BLangTypedescExpr) GetKind() model.NodeKind {
+func (b *BLangTypedescExpr) GetKind() model.NodeKind {
 	// migrated from BLangTypedescExpr.java:52:5
 	return model.NodeKind_TYPEDESC_EXPRESSION
 }
 
-func (this *BLangTypedescExpr) GetTypeDescriptor() model.TypeDescriptor {
-	return this.typeDescriptor
+func (b *BLangTypedescExpr) GetTypeDescriptor() model.TypeDescriptor {
+	return b.typeDescriptor
 }
 
-func (this *BLangTypedescExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
-	this.typeDescriptor = typeDescriptor
+func (b *BLangTypedescExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	b.typeDescriptor = typeDescriptor
 }
 
-func (this *BLangLiteral) GetValueType() BType {
-	return this.valueType
+func (b *BLangLiteral) GetValueType() BType {
+	return b.valueType
 }
 
-func (this *BLangLiteral) SetValueType(bt BType) {
-	this.valueType = bt
+func (b *BLangLiteral) SetValueType(bt BType) {
+	b.valueType = bt
 }
 
-func (this *BLangAlternateWorkerReceive) GetKind() model.NodeKind {
+func (b *BLangAlternateWorkerReceive) GetKind() model.NodeKind {
 	// migrated from BLangAlternateWorkerReceive.java:37:5
 	return model.NodeKind_ALTERNATE_WORKER_RECEIVE
 }
 
-func (this *BLangAnnotAccessExpr) GetKind() model.NodeKind {
+func (b *BLangAnnotAccessExpr) GetKind() model.NodeKind {
 	// migrated from BLangAnnotAccessExpr.java:48:5
 	return model.NodeKind_ANNOT_ACCESS_EXPRESSION
 }
 
-func (this *BLangArrowFunction) GetKind() model.NodeKind {
+func (b *BLangArrowFunction) GetKind() model.NodeKind {
 	// migrated from BLangArrowFunction.java:67:5
 	return model.NodeKind_ARROW_EXPR
 }
 
-func (this *BLangLambdaFunction) GetFunctionNode() model.FunctionNode {
+func (b *BLangLambdaFunction) GetFunctionNode() model.FunctionNode {
 	// migrated from BLangLambdaFunction.java:48:5
-	return this.Function
+	return b.Function
 }
 
-func (this *BLangLambdaFunction) SetFunctionNode(functionNode model.FunctionNode) {
+func (b *BLangLambdaFunction) SetFunctionNode(functionNode model.FunctionNode) {
 	// migrated from BLangLambdaFunction.java:53:5
 	if fn, ok := functionNode.(*BLangFunction); ok {
-		this.Function = fn
+		b.Function = fn
 	} else {
 		panic("functionNode is not a BLangFunction")
 	}
 }
 
-func (this *BLangLambdaFunction) GetKind() model.NodeKind {
+func (b *BLangLambdaFunction) GetKind() model.NodeKind {
 	// migrated from BLangLambdaFunction.java:58:5
 	return model.NodeKind_LAMBDA
 }
 
-func (this *BLangAlternateWorkerReceive) ToActionString() string {
+func (b *BLangAlternateWorkerReceive) ToActionString() string {
 	// migrated from BLangAlternateWorkerReceive.java:70:5
 	panic("Not implemented")
 }
 
-func (this *BLangWorkerReceive) GetWorkerName() model.IdentifierNode {
+func (b *BLangWorkerReceive) GetWorkerName() model.IdentifierNode {
 	// migrated from BLangWorkerReceive.java:40:5
-	return this.WorkerIdentifier
+	return b.WorkerIdentifier
 }
 
-func (this *BLangWorkerReceive) SetWorkerName(identifierNode model.IdentifierNode) {
+func (b *BLangWorkerReceive) SetWorkerName(identifierNode model.IdentifierNode) {
 	// migrated from BLangWorkerReceive.java:45:5
 	if id, ok := identifierNode.(*BLangIdentifier); ok {
-		this.WorkerIdentifier = id
+		b.WorkerIdentifier = id
 	} else {
 		panic("identifierNode is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangWorkerReceive) GetKind() model.NodeKind {
+func (b *BLangWorkerReceive) GetKind() model.NodeKind {
 	// migrated from BLangWorkerReceive.java:50:5
 	return model.NodeKind_WORKER_RECEIVE
 }
 
-func (this *BLangWorkerReceive) ToActionString() string {
+func (b *BLangWorkerReceive) ToActionString() string {
 	// migrated from BLangWorkerReceive.java:70:5
-	if this.WorkerIdentifier != nil {
-		return fmt.Sprintf(" <- %s", this.WorkerIdentifier.Value)
+	if b.WorkerIdentifier != nil {
+		return fmt.Sprintf(" <- %s", b.WorkerIdentifier.Value)
 	}
 	return " <- "
 }
 
-func (this *BLangBinaryExpr) GetLeftExpression() model.ExpressionNode {
+func (b *BLangBinaryExpr) GetLeftExpression() model.ExpressionNode {
 	// migrated from BLangBinaryExpr.java:45:5
-	return this.LhsExpr
+	return b.LhsExpr
 }
 
-func (this *BLangBinaryExpr) GetRightExpression() model.ExpressionNode {
+func (b *BLangBinaryExpr) GetRightExpression() model.ExpressionNode {
 	// migrated from BLangBinaryExpr.java:50:5
-	return this.RhsExpr
+	return b.RhsExpr
 }
 
-func (this *BLangBinaryExpr) GetOperatorKind() model.OperatorKind {
+func (b *BLangBinaryExpr) GetOperatorKind() model.OperatorKind {
 	// migrated from BLangBinaryExpr.java:55:5
-	return this.OpKind
+	return b.OpKind
 }
 
-func (this *BLangBinaryExpr) GetKind() model.NodeKind {
+func (b *BLangBinaryExpr) GetKind() model.NodeKind {
 	// migrated from BLangBinaryExpr.java:60:5
 	return model.NodeKind_BINARY_EXPR
 }
 
-func (this *BLangCheckedExpr) GetExpression() model.ExpressionNode {
+func (b *BLangCheckedExpr) GetExpression() model.ExpressionNode {
 	// migrated from BLangCheckedExpr.java:53:5
-	return this.Expr
+	return b.Expr
 }
 
-func (this *BLangCheckedExpr) GetOperatorKind() model.OperatorKind {
+func (b *BLangCheckedExpr) GetOperatorKind() model.OperatorKind {
 	// migrated from BLangCheckedExpr.java:58:5
 	return model.OperatorKind_CHECK
 }
 
-func (this *BLangCheckedExpr) GetKind() model.NodeKind {
+func (b *BLangCheckedExpr) GetKind() model.NodeKind {
 	// migrated from BLangCheckedExpr.java:78:5
 	return model.NodeKind_CHECK_EXPR
 }
 
-func (this *BLangCheckedExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangCheckedExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangCheckPanickedExpr) GetOperatorKind() model.OperatorKind {
+func (b *BLangCheckPanickedExpr) GetOperatorKind() model.OperatorKind {
 	// migrated from BLangCheckPanickedExpr.java:39:5
 	return model.OperatorKind_CHECK_PANIC
 }
 
-func (this *BLangCheckPanickedExpr) GetKind() model.NodeKind {
+func (b *BLangCheckPanickedExpr) GetKind() model.NodeKind {
 	// migrated from BLangCheckPanickedExpr.java:59:5
 	return model.NodeKind_CHECK_PANIC_EXPR
 }
 
-func (this *BLangCollectContextInvocation) GetKind() model.NodeKind {
+func (b *BLangCollectContextInvocation) GetKind() model.NodeKind {
 	// migrated from BLangCollectContextInvocation.java:36:5
 	return model.NodeKind_COLLECT_CONTEXT_INVOCATION
 }
 
-func (this *BLangCommitExpr) GetKind() model.NodeKind {
+func (b *BLangCommitExpr) GetKind() model.NodeKind {
 	// migrated from BLangCommitExpr.java:33:5
 	return model.NodeKind_COMMIT
 }
 
-func (this *BLangSimpleVarRef) GetPackageAlias() model.IdentifierNode {
+func (b *BLangSimpleVarRef) GetPackageAlias() model.IdentifierNode {
 	// migrated from BLangSimpleVarRef.java:43:5
-	return this.PkgAlias
+	return b.PkgAlias
 }
 
-func (this *BLangSimpleVarRef) GetVariableName() model.IdentifierNode {
+func (b *BLangSimpleVarRef) GetVariableName() model.IdentifierNode {
 	// migrated from BLangSimpleVarRef.java:48:5
-	return this.VariableName
+	return b.VariableName
 }
 
-func (this *BLangSimpleVarRef) GetKind() model.NodeKind {
+func (b *BLangSimpleVarRef) GetKind() model.NodeKind {
 	// migrated from BLangSimpleVarRef.java:78:5
 	return model.NodeKind_SIMPLE_VARIABLE_REF
 }
 
-func (this *BLangConstRef) GetValue() any {
+func (b *BLangConstRef) GetValue() any {
 	// migrated from BLangConstRef.java:38:5
-	return this.Value
+	return b.Value
 }
 
-func (this *BLangConstRef) SetValue(value any) {
+func (b *BLangConstRef) SetValue(value any) {
 	// migrated from BLangConstRef.java:43:5
-	this.Value = value
+	b.Value = value
 }
 
-func (this *BLangConstRef) GetIsConstant() bool {
+func (b *BLangConstRef) GetIsConstant() bool {
 	return true
 }
 
-func (this *BLangConstRef) SetIsConstant(isConstant bool) {
+func (b *BLangConstRef) SetIsConstant(isConstant bool) {
 	if !isConstant {
 		panic("isConstant is not true")
 	}
 }
 
-func (this *BLangConstRef) GetOriginalValue() string {
+func (b *BLangConstRef) GetOriginalValue() string {
 	// migrated from BLangConstRef.java:48:5
-	return this.OriginalValue
+	return b.OriginalValue
 }
 
-func (this *BLangConstRef) SetOriginalValue(originalValue string) {
+func (b *BLangConstRef) SetOriginalValue(originalValue string) {
 	// migrated from BLangConstRef.java:53:5
-	this.OriginalValue = originalValue
+	b.OriginalValue = originalValue
 }
 
-func (this *BLangConstRef) GetKind() model.NodeKind {
+func (b *BLangConstRef) GetKind() model.NodeKind {
 	// migrated from BLangConstRef.java:73:5
 	return model.NodeKind_CONSTANT_REF
 }
 
-func (this *BLangConstRef) IsKeyValueField() bool {
+func (b *BLangConstRef) IsKeyValueField() bool {
 	// migrated from BLangConstRef.java:78:5
 	return false
 }
 
-func (this *BLangLiteral) GetValue() any {
+func (b *BLangLiteral) GetValue() any {
 	// migrated from BLangLiteral.java:48:5
-	return this.Value
+	return b.Value
 }
 
-func (this *BLangLiteral) GetIsConstant() bool {
-	return this.IsConstant
+func (b *BLangLiteral) GetIsConstant() bool {
+	return b.IsConstant
 }
 
-func (this *BLangLiteral) SetIsConstant(isConstant bool) {
-	this.IsConstant = isConstant
+func (b *BLangLiteral) SetIsConstant(isConstant bool) {
+	b.IsConstant = isConstant
 }
 
-func (this *BLangLiteral) SetValue(value any) {
+func (b *BLangLiteral) SetValue(value any) {
 	// migrated from BLangLiteral.java:68:5
-	this.Value = value
+	b.Value = value
 }
 
-func (this *BLangLiteral) GetOriginalValue() string {
+func (b *BLangLiteral) GetOriginalValue() string {
 	// migrated from BLangLiteral.java:73:5
-	return this.OriginalValue
+	return b.OriginalValue
 }
 
-func (this *BLangLiteral) SetOriginalValue(originalValue string) {
+func (b *BLangLiteral) SetOriginalValue(originalValue string) {
 	// migrated from BLangLiteral.java:78:5
-	this.OriginalValue = originalValue
+	b.OriginalValue = originalValue
 }
 
-func (this *BLangLiteral) GetKind() model.NodeKind {
+func (b *BLangLiteral) GetKind() model.NodeKind {
 	// migrated from BLangLiteral.java:83:5
 	return model.NodeKind_LITERAL
 }
 
-func (this *BLangDynamicArgExpr) GetKind() model.NodeKind {
+func (b *BLangDynamicArgExpr) GetKind() model.NodeKind {
 	// migrated from BLangDynamicArgExpr.java:55:5
 	return model.NodeKind_DYNAMIC_PARAM_EXPR
 }
 
-func (this *BLangElvisExpr) GetLeftExpression() model.ExpressionNode {
+func (b *BLangElvisExpr) GetLeftExpression() model.ExpressionNode {
 	// migrated from BLangElvisExpr.java:38:5
-	return this.LhsExpr
+	return b.LhsExpr
 }
 
-func (this *BLangElvisExpr) GetRightExpression() model.ExpressionNode {
+func (b *BLangElvisExpr) GetRightExpression() model.ExpressionNode {
 	// migrated from BLangElvisExpr.java:43:5
-	return this.RhsExpr
+	return b.RhsExpr
 }
 
-func (this *BLangElvisExpr) GetKind() model.NodeKind {
+func (b *BLangElvisExpr) GetKind() model.NodeKind {
 	// migrated from BLangElvisExpr.java:48:5
 	return model.NodeKind_ELVIS_EXPR
 }
 
-func (this *BLangMarkdownDocumentationLine) GetText() string {
-	return this.Text
+func (b *BLangMarkdownDocumentationLine) GetText() string {
+	return b.Text
 }
 
-func (this *BLangMarkdownDocumentationLine) SetText(text string) {
-	this.Text = text
+func (b *BLangMarkdownDocumentationLine) SetText(text string) {
+	b.Text = text
 }
 
-func (this *BLangMarkdownDocumentationLine) GetKind() model.NodeKind {
+func (b *BLangMarkdownDocumentationLine) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_DESCRIPTION
 }
 
-func (this *BLangMarkdownParameterDocumentation) GetParameterName() model.IdentifierNode {
-	return this.ParameterName
+func (b *BLangMarkdownParameterDocumentation) GetParameterName() model.IdentifierNode {
+	return b.ParameterName
 }
 
-func (this *BLangMarkdownParameterDocumentation) SetParameterName(parameterName model.IdentifierNode) {
+func (b *BLangMarkdownParameterDocumentation) SetParameterName(parameterName model.IdentifierNode) {
 	if identifier, ok := parameterName.(*BLangIdentifier); ok {
-		this.ParameterName = identifier
+		b.ParameterName = identifier
 	} else {
 		panic("parameterName is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentationLines() []string {
-	return this.ParameterDocumentationLines
+func (b *BLangMarkdownParameterDocumentation) GetParameterDocumentationLines() []string {
+	return b.ParameterDocumentationLines
 }
 
-func (this *BLangMarkdownParameterDocumentation) AddParameterDocumentationLine(text string) {
-	this.ParameterDocumentationLines = append(this.ParameterDocumentationLines, text)
+func (b *BLangMarkdownParameterDocumentation) AddParameterDocumentationLine(text string) {
+	b.ParameterDocumentationLines = append(b.ParameterDocumentationLines, text)
 }
 
-func (this *BLangMarkdownParameterDocumentation) GetParameterDocumentation() string {
-	return strings.ReplaceAll(strings.Join(this.ParameterDocumentationLines, "\n"), "\r", "")
+func (b *BLangMarkdownParameterDocumentation) GetParameterDocumentation() string {
+	return strings.ReplaceAll(strings.Join(b.ParameterDocumentationLines, "\n"), "\r", "")
 }
 
-func (this *BLangMarkdownParameterDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkdownParameterDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_PARAMETER
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumentationLines() []string {
-	return this.ReturnParameterDocumentationLines
+func (b *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumentationLines() []string {
+	return b.ReturnParameterDocumentationLines
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) AddReturnParameterDocumentationLine(text string) {
-	this.ReturnParameterDocumentationLines = append(this.ReturnParameterDocumentationLines, text)
+func (b *BLangMarkdownReturnParameterDocumentation) AddReturnParameterDocumentationLine(text string) {
+	b.ReturnParameterDocumentationLines = append(b.ReturnParameterDocumentationLines, text)
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumentation() string {
-	return strings.ReplaceAll(strings.Join(this.ReturnParameterDocumentationLines, "\n"), "\r", "")
+func (b *BLangMarkdownReturnParameterDocumentation) GetReturnParameterDocumentation() string {
+	return strings.ReplaceAll(strings.Join(b.ReturnParameterDocumentationLines, "\n"), "\r", "")
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) GetReturnType() model.ValueType {
-	return this.ReturnType
+func (b *BLangMarkdownReturnParameterDocumentation) GetReturnType() model.ValueType {
+	return b.ReturnType
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty model.ValueType) {
+func (b *BLangMarkdownReturnParameterDocumentation) SetReturnType(ty model.ValueType) {
 	if bt, ok := ty.(BType); ok {
-		this.ReturnType = bt
+		b.ReturnType = bt
 	} else {
 		panic("ty is not a *BType")
 	}
 }
 
-func (this *BLangMarkdownReturnParameterDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkdownReturnParameterDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_PARAMETER
 }
 
-func (this *BLangMarkDownDeprecationDocumentation) AddDeprecationDocumentationLine(text string) {
-	this.DeprecationDocumentationLines = append(this.DeprecationDocumentationLines, text)
+func (b *BLangMarkDownDeprecationDocumentation) AddDeprecationDocumentationLine(text string) {
+	b.DeprecationDocumentationLines = append(b.DeprecationDocumentationLines, text)
 }
 
-func (this *BLangMarkDownDeprecationDocumentation) AddDeprecationLine(text string) {
-	this.DeprecationLines = append(this.DeprecationLines, text)
+func (b *BLangMarkDownDeprecationDocumentation) AddDeprecationLine(text string) {
+	b.DeprecationLines = append(b.DeprecationLines, text)
 }
 
-func (this *BLangMarkDownDeprecationDocumentation) GetDocumentation() string {
-	return strings.ReplaceAll(strings.Join(this.DeprecationDocumentationLines, "\n"), "\r", "")
+func (b *BLangMarkDownDeprecationDocumentation) GetDocumentation() string {
+	return strings.ReplaceAll(strings.Join(b.DeprecationDocumentationLines, "\n"), "\r", "")
 }
 
-func (this *BLangMarkDownDeprecationDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkDownDeprecationDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_DEPRECATION
 }
 
-func (this *BLangMarkDownDeprecatedParametersDocumentation) AddParameter(parameter model.MarkdownDocumentationParameterAttributeNode) {
+func (b *BLangMarkDownDeprecatedParametersDocumentation) AddParameter(parameter model.MarkdownDocumentationParameterAttributeNode) {
 	if param, ok := parameter.(*BLangMarkdownParameterDocumentation); ok {
-		this.Parameters = append(this.Parameters, *param)
+		b.Parameters = append(b.Parameters, *param)
 	} else {
 		panic("parameter is not a BLangMarkdownParameterDocumentation")
 	}
 }
 
-func (this *BLangMarkDownDeprecatedParametersDocumentation) GetParameters() []model.MarkdownDocumentationParameterAttributeNode {
-	result := make([]model.MarkdownDocumentationParameterAttributeNode, len(this.Parameters))
-	for i := range this.Parameters {
-		result[i] = &this.Parameters[i]
+func (b *BLangMarkDownDeprecatedParametersDocumentation) GetParameters() []model.MarkdownDocumentationParameterAttributeNode {
+	result := make([]model.MarkdownDocumentationParameterAttributeNode, len(b.Parameters))
+	for i := range b.Parameters {
+		result[i] = &b.Parameters[i]
 	}
 	return result
 }
 
-func (this *BLangMarkDownDeprecatedParametersDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkDownDeprecatedParametersDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
 }
 
-func (this *BLangWorkerSendExprBase) GetExpr() model.ExpressionNode {
-	return this.Expr
+func (b *BLangWorkerSendExprBase) GetExpr() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangWorkerSendExprBase) GetWorkerName() model.IdentifierNode {
-	return this.WorkerIdentifier
+func (b *BLangWorkerSendExprBase) GetWorkerName() model.IdentifierNode {
+	return b.WorkerIdentifier
 }
 
-func (this *BLangWorkerSendExprBase) SetWorkerName(identifierNode model.IdentifierNode) {
+func (b *BLangWorkerSendExprBase) SetWorkerName(identifierNode model.IdentifierNode) {
 	if id, ok := identifierNode.(*BLangIdentifier); ok {
-		this.WorkerIdentifier = id
+		b.WorkerIdentifier = id
 	} else {
 		panic("identifierNode is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangInvocation) GetPackageAlias() model.IdentifierNode {
-	return this.PkgAlias
+func (b *BLangInvocation) GetPackageAlias() model.IdentifierNode {
+	return b.PkgAlias
 }
 
-func (this *BLangInvocation) GetName() model.IdentifierNode {
-	return this.Name
+func (b *BLangInvocation) GetName() model.IdentifierNode {
+	return b.Name
 }
 
-func (this *BLangInvocation) GetArgumentExpressions() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(this.ArgExprs))
-	for i := range this.ArgExprs {
-		result[i] = this.ArgExprs[i]
+func (b *BLangInvocation) GetArgumentExpressions() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(b.ArgExprs))
+	for i := range b.ArgExprs {
+		result[i] = b.ArgExprs[i]
 	}
 	return result
 }
 
-func (this *BLangInvocation) GetRequiredArgs() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(this.RequiredArgs))
-	for i := range this.RequiredArgs {
-		result[i] = this.RequiredArgs[i]
+func (b *BLangInvocation) GetRequiredArgs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(b.RequiredArgs))
+	for i := range b.RequiredArgs {
+		result[i] = b.RequiredArgs[i]
 	}
 	return result
 }
 
-func (this *BLangInvocation) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangInvocation) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangInvocation) IsIterableOperation() bool {
+func (b *BLangInvocation) IsIterableOperation() bool {
 	return false
 }
 
-func (this *BLangInvocation) IsAsync() bool {
-	return this.Async
+func (b *BLangInvocation) IsAsync() bool {
+	return b.Async
 }
 
-func (this *BLangInvocation) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
+func (b *BLangInvocation) GetFlags() common.Set[model.Flag] {
+	return &b.FlagSet
 }
 
-func (this *BLangInvocation) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
+func (b *BLangInvocation) AddFlag(flag model.Flag) {
+	b.FlagSet.Add(flag)
 }
 
-func (this *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
-	for i := range this.AnnAttachments {
-		result[i] = &this.AnnAttachments[i]
+func (b *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	result := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i := range b.AnnAttachments {
+		result[i] = &b.AnnAttachments[i]
 	}
 	return result
 }
 
-func (this *BLangInvocation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangInvocation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	if att, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, *att)
+		b.AnnAttachments = append(b.AnnAttachments, *att)
 	} else {
 		panic("annAttachment is not a BLangAnnotationAttachment")
 	}
 }
 
-func (this *BLangInvocation) GetKind() model.NodeKind {
+func (b *BLangInvocation) GetKind() model.NodeKind {
 	return model.NodeKind_INVOCATION
 }
 
-func (this *BLangTypeConversionExpr) GetKind() model.NodeKind {
+func (b *BLangTypeConversionExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_CONVERSION_EXPR
 }
 
-func (this *BLangTypeConversionExpr) GetExpression() model.ExpressionNode {
-	return this.Expression
+func (b *BLangTypeConversionExpr) GetExpression() model.ExpressionNode {
+	return b.Expression
 }
 
-func (this *BLangTypeConversionExpr) SetExpression(expression model.ExpressionNode) {
+func (b *BLangTypeConversionExpr) SetExpression(expression model.ExpressionNode) {
 	if expr, ok := expression.(BLangExpression); ok {
-		this.Expression = expr
+		b.Expression = expr
 	} else {
 		panic("expression is not a BLangExpression")
 	}
 }
 
-func (this *BLangTypeConversionExpr) GetTypeDescriptor() model.TypeDescriptor {
-	return this.TypeDescriptor
+func (b *BLangTypeConversionExpr) GetTypeDescriptor() model.TypeDescriptor {
+	return b.TypeDescriptor
 }
 
-func (this *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
-	this.TypeDescriptor = typeDescriptor
+func (b *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	b.TypeDescriptor = typeDescriptor
 }
 
-func (this *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
+func (b *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
 	panic("not implemented")
 }
 
-func (this *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
+func (b *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
 	panic("not implemented")
 }
 
-func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	panic("not implemented")
 }
 
-func (this *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	panic("not implemented")
 }
 
-func (this *BLangTypeConversionExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangTypeConversionExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangNumericLiteral) GetKind() model.NodeKind {
+func (b *BLangNumericLiteral) GetKind() model.NodeKind {
 	return model.NodeKind_NUMERIC_LITERAL
 }
 
-func (this *BLangLiteral) SetTypeCheckedType(ty BType) {
+func (b *BLangLiteral) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangInvocation) SetTypeCheckedType(ty BType) {
+func (b *BLangInvocation) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
+func (b *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangUnaryExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangUnaryExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangIndexBasedAccess) SetTypeCheckedType(ty BType) {
+func (b *BLangIndexBasedAccess) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangListConstructorExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangListConstructorExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangGroupExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangGroupExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangUnaryExpr) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangUnaryExpr) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangUnaryExpr) GetOperatorKind() model.OperatorKind {
-	return this.Operator
+func (b *BLangUnaryExpr) GetOperatorKind() model.OperatorKind {
+	return b.Operator
 }
 
-func (this *BLangUnaryExpr) GetKind() model.NodeKind {
+func (b *BLangUnaryExpr) GetKind() model.NodeKind {
 	return model.NodeKind_UNARY_EXPR
 }
 
-func (this *BLangIndexBasedAccess) GetKind() model.NodeKind {
+func (b *BLangIndexBasedAccess) GetKind() model.NodeKind {
 	return model.NodeKind_INDEX_BASED_ACCESS_EXPR
 }
 
-func (this *BLangIndexBasedAccess) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangIndexBasedAccess) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangIndexBasedAccess) GetIndex() model.ExpressionNode {
-	return this.IndexExpr
+func (b *BLangIndexBasedAccess) GetIndex() model.ExpressionNode {
+	return b.IndexExpr
 }
 
-func (this *BLangFieldBaseAccess) GetKind() model.NodeKind {
+func (b *BLangFieldBaseAccess) GetKind() model.NodeKind {
 	return model.NodeKind_FIELD_BASED_ACCESS_EXPR
 }
 
-func (this *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangFieldBaseAccess) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
-	return &this.Field
+func (b *BLangFieldBaseAccess) GetFieldName() model.IdentifierNode {
+	return &b.Field
 }
 
-func (this *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
-	return this.OptionalFieldAccess
+func (b *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
+	return b.OptionalFieldAccess
 }
 
-func (this *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
+func (b *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangListConstructorExpr) GetKind() model.NodeKind {
+func (b *BLangListConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_LIST_CONSTRUCTOR_EXPR
 }
 
-func (this *BLangListConstructorExpr) GetExpressions() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(this.Exprs))
-	for i := range this.Exprs {
-		result[i] = this.Exprs[i]
+func (b *BLangListConstructorExpr) GetExpressions() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(b.Exprs))
+	for i := range b.Exprs {
+		result[i] = b.Exprs[i]
 	}
 	return result
 }
 
-func (this *BLangErrorConstructorExpr) GetKind() model.NodeKind {
+func (b *BLangErrorConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
 }
 
-func (this *BLangErrorConstructorExpr) GetPositionalArgs() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(this.PositionalArgs))
-	for i, arg := range this.PositionalArgs {
+func (b *BLangErrorConstructorExpr) GetPositionalArgs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(b.PositionalArgs))
+	for i, arg := range b.PositionalArgs {
 		result[i] = arg
 	}
 	return result
 }
 
-func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
-	result := make([]model.NamedArgNode, len(this.NamedArgs))
-	for i, arg := range this.NamedArgs {
+func (b *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
+	result := make([]model.NamedArgNode, len(b.NamedArgs))
+	for i, arg := range b.NamedArgs {
 		result[i] = arg
 	}
 	return result
 }
 
-func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangTypeTestExpr) GetKind() model.NodeKind {
+func (b *BLangTypeTestExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_TEST_EXPR
 }
 
-func (this *BLangTypeTestExpr) IsNegation() bool {
-	return this.isNegation
+func (b *BLangTypeTestExpr) IsNegation() bool {
+	return b.isNegation
 }
 
-func (this *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangTypeTestExpr) GetType() model.TypeData {
-	return this.Type
+func (b *BLangTypeTestExpr) GetType() model.TypeData {
+	return b.Type
 }
 
-func (this *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangMappingKey) GetKind() model.NodeKind {
+func (b *BLangMappingKey) GetKind() model.NodeKind {
 	panic("BLangMappingKey has no NodeKind")
 }
 
-func (this *BLangMappingKeyValueField) GetKind() model.NodeKind {
+func (b *BLangMappingKeyValueField) GetKind() model.NodeKind {
 	return model.NodeKind_RECORD_LITERAL_KEY_VALUE
 }
 
-func (this *BLangMappingKeyValueField) GetKey() model.ExpressionNode {
-	if this.Key == nil {
+func (b *BLangMappingKeyValueField) GetKey() model.ExpressionNode {
+	if b.Key == nil {
 		return nil
 	}
-	return this.Key.Expr
+	return b.Key.Expr
 }
 
-func (this *BLangMappingKeyValueField) GetValue() model.ExpressionNode {
-	return this.ValueExpr
+func (b *BLangMappingKeyValueField) GetValue() model.ExpressionNode {
+	return b.ValueExpr
 }
 
-func (this *BLangMappingKeyValueField) IsKeyValueField() bool {
+func (b *BLangMappingKeyValueField) IsKeyValueField() bool {
 	return true
 }
 
-func (this *BLangMappingConstructorExpr) GetKind() model.NodeKind {
+func (b *BLangMappingConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_RECORD_LITERAL_EXPR
 }
 
-func (this *BLangMappingConstructorExpr) GetFields() []model.MappingField {
-	return this.Fields
+func (b *BLangMappingConstructorExpr) GetFields() []model.MappingField {
+	return b.Fields
 }
 
-func (this *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
-	this.ExpectedType = ty
+func (b *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
+	b.ExpectedType = ty
 }
 
-func (this *BLangNamedArgsExpression) GetKind() model.NodeKind {
+func (b *BLangNamedArgsExpression) GetKind() model.NodeKind {
 	return model.NodeKind_NAMED_ARGS_EXPR
 }
 
-func (this *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
+func (b *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func (this *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
+func (b *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = *id
+		b.Name = *id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangNamedArgsExpression) GetName() model.IdentifierNode {
-	return &this.Name
+func (b *BLangNamedArgsExpression) GetName() model.IdentifierNode {
+	return &b.Name
 }
 
-func (this *BLangNamedArgsExpression) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangNamedArgsExpression) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangNamedArgsExpression) SetExpression(expr model.ExpressionNode) {
+func (b *BLangNamedArgsExpression) SetExpression(expr model.ExpressionNode) {
 	if e, ok := expr.(BLangExpression); ok {
-		this.Expr = e
+		b.Expr = e
 	} else {
 		panic("expr is not a BLangExpression")
 	}
 }
 
-func (this *BLangTrapExpr) GetKind() model.NodeKind {
+func (b *BLangTrapExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TRAP_EXPR
 }
 
-func (this *BLangTrapExpr) GetExpression() model.ExpressionNode {
-	return this.Expr
+func (b *BLangTrapExpr) GetExpression() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangTrapExpr) SetTypeCheckedType(ty BType) {
+func (b *BLangTrapExpr) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 

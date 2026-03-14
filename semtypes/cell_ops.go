@@ -165,27 +165,27 @@ func NewCellOps() CellOps {
 	return this
 }
 
-func (this *CellOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *CellOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from CellOps.java:180:5
 	return cellSubtypeUnion(t1, t2)
 }
 
-func (this *CellOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *CellOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from CellOps.java:185:5
 	return cellSubtypeIntersect(t1, t2)
 }
 
-func (this *CellOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *CellOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from CellOps.java:190:5
 	return cellSubtypeDiff(t1, t2)
 }
 
-func (this *CellOps) Complement(t SubtypeData) SubtypeData {
+func (c *CellOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from CellOps.java:195:5
 	return cellSubtypeComplement(t)
 }
 
-func (this *CellOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (c *CellOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from CellOps.java:200:5
 	return cellFormulaIsEmpty(cx, t)
 }

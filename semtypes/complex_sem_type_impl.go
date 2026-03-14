@@ -26,16 +26,16 @@ type complexSemTypeImpl struct {
 
 var _ ComplexSemType = &complexSemTypeImpl{}
 
-func (this *complexSemTypeImpl) All() int {
-	return this.all
+func (c *complexSemTypeImpl) All() int {
+	return c.all
 }
 
-func (this *complexSemTypeImpl) Some() int {
-	return this.some
+func (c *complexSemTypeImpl) Some() int {
+	return c.some
 }
 
-func (this *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
-	return this.subtypeDataList
+func (c *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
+	return c.subtypeDataList
 }
 
 func (c *complexSemTypeImpl) String() string {

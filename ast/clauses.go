@@ -59,79 +59,79 @@ var (
 	_ BLangNode = &BLangOnFailClause{}
 )
 
-func (this *BLangCollectClause) GetKind() model.NodeKind {
+func (b *BLangCollectClause) GetKind() model.NodeKind {
 	// migrated from BLangCollectClause.java:48:5
 	return model.NodeKind_COLLECT
 }
 
-func (this *BLangCollectClause) GetExpression() model.ExpressionNode {
+func (b *BLangCollectClause) GetExpression() model.ExpressionNode {
 	// migrated from BLangCollectClause.java:68:5
-	return this.Expression
+	return b.Expression
 }
 
-func (this *BLangCollectClause) SetExpression(expression model.ExpressionNode) {
+func (b *BLangCollectClause) SetExpression(expression model.ExpressionNode) {
 	// migrated from BLangCollectClause.java:73:5
 	if exp, ok := expression.(BLangExpression); ok {
-		this.Expression = exp
+		b.Expression = exp
 	} else {
 		panic("Expected BLangExpression")
 	}
 }
 
-func (this *BLangDoClause) GetBody() model.BlockStatementNode {
+func (b *BLangDoClause) GetBody() model.BlockStatementNode {
 	// migrated from BLangDoClause.java:46:5
-	return this.Body
+	return b.Body
 }
 
-func (this *BLangDoClause) SetBody(body model.BlockStatementNode) {
+func (b *BLangDoClause) SetBody(body model.BlockStatementNode) {
 	// migrated from BLangDoClause.java:51:5
 	if body, ok := body.(*BLangBlockStmt); ok {
-		this.Body = body
+		b.Body = body
 		return
 	}
 	panic("body is not a BLangBlockStmt")
 }
 
-func (this *BLangDoClause) GetKind() model.NodeKind {
+func (b *BLangDoClause) GetKind() model.NodeKind {
 	// migrated from BLangDoClause.java:66:5
 	return model.NodeKind_DO
 }
 
-func (this *BLangOnFailClause) SetDeclaredWithVar() {
+func (b *BLangOnFailClause) SetDeclaredWithVar() {
 	// migrated from BLangOnFailClause.java:53:5
-	this.isDeclaredWithVar = true
+	b.isDeclaredWithVar = true
 }
 
-func (this *BLangOnFailClause) IsDeclaredWithVar() bool {
+func (b *BLangOnFailClause) IsDeclaredWithVar() bool {
 	// migrated from BLangOnFailClause.java:58:5
-	return this.isDeclaredWithVar
+	return b.isDeclaredWithVar
 }
 
-func (this *BLangOnFailClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
+func (b *BLangOnFailClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
 	// migrated from BLangOnFailClause.java:63:5
-	return this.VariableDefinitionNode
+	return b.VariableDefinitionNode
 }
 
-func (this *BLangOnFailClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
+func (b *BLangOnFailClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
 	// migrated from BLangOnFailClause.java:68:5
-	this.VariableDefinitionNode = variableDefinitionNode
+	b.VariableDefinitionNode = variableDefinitionNode
 }
 
-func (this *BLangOnFailClause) GetBody() model.BlockStatementNode {
+func (b *BLangOnFailClause) GetBody() model.BlockStatementNode {
 	// migrated from BLangOnFailClause.java:73:5
-	return this.Body
+	return b.Body
 }
 
-func (this *BLangOnFailClause) SetBody(body model.BlockStatementNode) {
+func (b *BLangOnFailClause) SetBody(body model.BlockStatementNode) {
 	// migrated from BLangOnFailClause.java:98:5
 	if body, ok := body.(*BLangBlockStmt); ok {
-		this.Body = body
+		b.Body = body
 		return
 	}
 	panic("body is not a BLangBlockStmt")
 }
 
-func (this *BLangOnFailClause) GetKind() model.NodeKind {
+func (b *BLangOnFailClause) GetKind() model.NodeKind {
 	// migrated from BLangOnFailClause.java:93:5
 	return model.NodeKind_ON_FAIL
 }

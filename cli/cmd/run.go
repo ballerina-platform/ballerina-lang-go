@@ -106,7 +106,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		printError(profErr, "", false)
 		return profErr
 	}
-	defer profiler.Stop()
+	defer func() { _ = profiler.Stop() }()
 
 	var debugCtx *debugcommon.DebugContext
 	var wg sync.WaitGroup
@@ -141,10 +141,10 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 		wg.Go(func() {
 			if runOpts.logFile != "" {
-				defer logWriter.Close()
+				defer func() { _ = logWriter.Close() }()
 			}
 			for msg := range debugCtx.Channel {
-				fmt.Fprintf(logWriter, "%s\n", msg)
+				_, _ = fmt.Fprintf(logWriter, "%s\n", msg)
 			}
 		})
 

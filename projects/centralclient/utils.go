@@ -261,7 +261,7 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 		filePath := path.Join(balaFileDestPath, file.Name)
 
 		if file.FileInfo().IsDir() {
-			bfs.MkdirAll(fsys, filePath, file.Mode())
+			_ = bfs.MkdirAll(fsys, filePath, file.Mode())
 			continue
 		}
 
@@ -276,7 +276,7 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 
 		rc, err := file.Open()
 		if err != nil {
-			outFile.Close()
+			_ = outFile.Close()
 			return err
 		}
 
@@ -284,8 +284,8 @@ func extractBala(fsys fs.FS, balaFilePath, balaFileDestPath, trueDigest, package
 			data, _ := io.ReadAll(rc)
 			return data
 		}(), file.Mode())
-		outFile.Close()
-		rc.Close()
+		_ = outFile.Close()
+		_ = rc.Close()
 
 		if err != nil {
 			return err
@@ -335,7 +335,7 @@ func createMetaFile(fsys fs.FS, metaFilePath string, errMsg string, clientContex
 	if err != nil {
 		return NewCentralClientError(clientContext.formatLog(errMsg))
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	return nil
 }
 
@@ -344,7 +344,7 @@ func checkHashInternal(fsys fs.FS, filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {

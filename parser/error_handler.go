@@ -165,9 +165,9 @@ func NewSolutionWithDepth(action Action, ctx common.ParserRuleContext, tokenKind
 	}
 }
 
-func (this *Solution) ToString() string {
+func (s *Solution) ToString() string {
 	actionStr := "UNKNOWN"
-	switch this.Action {
+	switch s.Action {
 	case ACTION_INSERT:
 		actionStr = "INSERT"
 	case ACTION_REMOVE:
@@ -175,7 +175,7 @@ func (this *Solution) ToString() string {
 	case ACTION_KEEP:
 		actionStr = "KEEP"
 	}
-	return actionStr + "'" + this.TokenText + "'"
+	return actionStr + "'" + s.TokenText + "'"
 }
 
 // ============================================================================
@@ -478,11 +478,12 @@ func (m *AbstractParserErrorHandlerMethods) ConsumeInvalidToken() (result tree.S
 }
 
 func (m *AbstractParserErrorHandlerMethods) applyFix(currentCtx common.ParserRuleContext, fix *Solution) {
-	if fix.Action == ACTION_REMOVE {
+	switch fix.Action {
+	case ACTION_REMOVE:
 		fix.RemovedToken = m.Self.ConsumeInvalidToken()
 		fix.RecoveredNode = m.Self.GetTokenReader().Peek()
 		fix.TokenKind = m.Self.GetTokenReader().Peek().Kind()
-	} else if fix.Action == ACTION_INSERT {
+	case ACTION_INSERT:
 		fix.RecoveredNode = m.handleMissingToken(currentCtx, fix)
 	}
 }
@@ -1066,12 +1067,12 @@ var (
 func NewBallerinaParserErrorHandlerFromTokenReader(tokenReader *TokenReader, dbgCtx *debugcommon.DebugContext) BallerinaParserErrorHandler {
 	this := BallerinaParserErrorHandler{}
 	this.AbstractParserErrorHandlerBase = *NewAbstractParserErrorHandlerBase(tokenReader, dbgCtx)
-	this.AbstractParserErrorHandlerMethods.Self = &this
+	this.Self = &this
 	return this
 }
 
-func (this *BallerinaParserErrorHandler) isEndOfObjectTypeNode(nextLookahead int) bool {
-	nextToken := this.tokenReader.PeekN(nextLookahead)
+func (b *BallerinaParserErrorHandler) isEndOfObjectTypeNode(nextLookahead int) bool {
+	nextToken := b.tokenReader.PeekN(nextLookahead)
 	switch nextToken.Kind() {
 	case common.CLOSE_BRACE_TOKEN,
 		common.EOF_TOKEN,
@@ -1080,7 +1081,7 @@ func (this *BallerinaParserErrorHandler) isEndOfObjectTypeNode(nextLookahead int
 		common.SERVICE_KEYWORD:
 		return true
 	default:
-		nextNextToken := this.tokenReader.PeekN(nextLookahead + 1)
+		nextNextToken := b.tokenReader.PeekN(nextLookahead + 1)
 		switch nextNextToken.Kind() {
 		case common.CLOSE_BRACE_TOKEN,
 			common.EOF_TOKEN,
@@ -1094,8 +1095,8 @@ func (this *BallerinaParserErrorHandler) isEndOfObjectTypeNode(nextLookahead int
 	}
 }
 
-func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, isEntryPoint bool) (result *Result) {
-	dbgCtx := this.getDebugContext()
+func (b *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, isEntryPoint bool) (result *Result) {
+	dbgCtx := b.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(SeekMatch start %s %d %d %s)", formatParserRuleContext(currentCtx), lookahead, currentDepth, formatBool(isEntryPoint))
 	}, dbgCtx)
@@ -1107,12 +1108,11 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 	matchingRulesCount := 0
 	for currentDepth < LOOKAHEAD_LIMIT {
 		skipRule = false
-		lookahead = this.getNextLookahead(lookahead)
-		nextToken := this.tokenReader.PeekN(lookahead)
+		lookahead = b.getNextLookahead(lookahead)
+		nextToken := b.tokenReader.PeekN(lookahead)
 		switch currentCtx {
 		case common.PARSER_RULE_CONTEXT_EOF:
 			hasMatch = (nextToken.Kind() == common.EOF_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FUNC_NAME,
 			common.PARSER_RULE_CONTEXT_CLASS_NAME,
 			common.PARSER_RULE_CONTEXT_VARIABLE_NAME,
@@ -1139,254 +1139,180 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 			common.PARSER_RULE_CONTEXT_ENUM_MEMBER_NAME,
 			common.PARSER_RULE_CONTEXT_NAMED_ARG_BINDING_PATTERN:
 			hasMatch = (nextToken.Kind() == common.IDENTIFIER_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_IMPORT_PREFIX:
 			hasMatch = ((nextToken.Kind() == common.IDENTIFIER_TOKEN) || isPredeclaredPrefix(nextToken.Kind()))
-			break
 		case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER_PREDECLARED_PREFIX:
 			hasMatch = isPredeclaredPrefix(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS,
 			common.PARSER_RULE_CONTEXT_PARENTHESISED_TYPE_DESC_START,
 			common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN:
 			hasMatch = (nextToken.Kind() == common.OPEN_PAREN_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS,
 			common.PARSER_RULE_CONTEXT_ARG_LIST_CLOSE_PAREN:
 			hasMatch = (nextToken.Kind() == common.CLOSE_PAREN_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SIMPLE_TYPE_DESCRIPTOR:
 			hasMatch = (((isSimpleType(nextToken.Kind()) || (nextToken.Kind() == common.ERROR_KEYWORD)) || (nextToken.Kind() == common.STREAM_KEYWORD)) || (nextToken.Kind() == common.TYPEDESC_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_BRACE:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_BRACE:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ASSIGN_OP:
 			hasMatch = (nextToken.Kind() == common.EQUAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SEMICOLON:
 			hasMatch = (nextToken.Kind() == common.SEMICOLON_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BINARY_OPERATOR:
-			hasMatch = this.isBinaryOperator(nextToken)
-			break
+			hasMatch = b.isBinaryOperator(nextToken)
 		case common.PARSER_RULE_CONTEXT_COMMA,
 			common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_END_COMMA,
 			common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END_COMMA:
 			hasMatch = (nextToken.Kind() == common.COMMA_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_END:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACE_PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_START:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACE_PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ELLIPSIS:
 			hasMatch = (nextToken.Kind() == common.ELLIPSIS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_QUESTION_MARK:
 			hasMatch = (nextToken.Kind() == common.QUESTION_MARK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FIRST_OBJECT_CONS_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_OBJECT_CONS_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FIRST_OBJECT_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_OBJECT_TYPE_QUALIFIER:
 			hasMatch = (((nextToken.Kind() == common.CLIENT_KEYWORD) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.SERVICE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_FIRST_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_SECOND_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_THIRD_CLASS_TYPE_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FOURTH_CLASS_TYPE_QUALIFIER:
 			hasMatch = (((((nextToken.Kind() == common.DISTINCT_KEYWORD) || (nextToken.Kind() == common.CLIENT_KEYWORD)) || (nextToken.Kind() == common.READONLY_KEYWORD)) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.SERVICE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OPEN_BRACKET,
 			common.PARSER_RULE_CONTEXT_TUPLE_TYPE_DESC_START:
 			hasMatch = (nextToken.Kind() == common.OPEN_BRACKET_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_CLOSE_BRACKET:
 			hasMatch = (nextToken.Kind() == common.CLOSE_BRACKET_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_METHOD_CALL_DOT:
 			hasMatch = (nextToken.Kind() == common.DOT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BOOLEAN_LITERAL:
 			hasMatch = ((nextToken.Kind() == common.TRUE_KEYWORD) || (nextToken.Kind() == common.FALSE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_DECIMAL_INTEGER_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DECIMAL_INTEGER_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH,
 			common.PARSER_RULE_CONTEXT_ABSOLUTE_PATH_SINGLE_SLASH,
 			common.PARSER_RULE_CONTEXT_RESOURCE_METHOD_CALL_SLASH_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BASIC_LITERAL:
-			hasMatch = this.isBasicLiteral(nextToken.Kind())
-			break
+			hasMatch = b.isBasicLiteral(nextToken.Kind())
 		case common.PARSER_RULE_CONTEXT_COLON,
 			common.PARSER_RULE_CONTEXT_VAR_REF_COLON,
 			common.PARSER_RULE_CONTEXT_TYPE_REF_COLON:
 			hasMatch = (nextToken.Kind() == common.COLON_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_STRING_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.STRING_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_UNARY_OPERATOR:
-			hasMatch = this.isUnaryOperator(nextToken)
-			break
+			hasMatch = b.isUnaryOperator(nextToken)
 		case common.PARSER_RULE_CONTEXT_HEX_INTEGER_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.HEX_INTEGER_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_AT:
 			hasMatch = (nextToken.Kind() == common.AT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_RIGHT_ARROW:
 			hasMatch = (nextToken.Kind() == common.RIGHT_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PARAMETERIZED_TYPE:
 			hasMatch = isParameterizedTypeToken(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_LT,
 			common.PARSER_RULE_CONTEXT_STREAM_TYPE_PARAM_START_TOKEN,
 			common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_START_LT:
 			hasMatch = (nextToken.Kind() == common.LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_GT,
 			common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_END_GT:
 			hasMatch = (nextToken.Kind() == common.GT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_FIELD_IDENT:
 			hasMatch = (nextToken.Kind() == common.FIELD_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_FUNCTION_IDENT:
 			hasMatch = (nextToken.Kind() == common.FUNCTION_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_IDENT_AFTER_OBJECT_IDENT:
 			hasMatch = ((nextToken.Kind() == common.FUNCTION_KEYWORD) || (nextToken.Kind() == common.FIELD_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_SINGLE_KEYWORD_ATTACH_POINT_IDENT:
-			hasMatch = this.isSingleKeywordAttachPointIdent(nextToken.Kind())
-			break
+			hasMatch = b.isSingleKeywordAttachPointIdent(nextToken.Kind())
 		case common.PARSER_RULE_CONTEXT_OBJECT_IDENT:
 			hasMatch = (nextToken.Kind() == common.OBJECT_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_RECORD_IDENT:
 			hasMatch = (nextToken.Kind() == common.RECORD_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_SERVICE_IDENT:
 			hasMatch = (nextToken.Kind() == common.SERVICE_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_REMOTE_IDENT:
 			hasMatch = (nextToken.Kind() == common.REMOTE_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_DECIMAL_FLOATING_POINT_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_HEX_FLOATING_POINT_LITERAL_TOKEN:
 			hasMatch = (nextToken.Kind() == common.HEX_FLOATING_POINT_LITERAL_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PIPE:
 			hasMatch = (nextToken.Kind() == common.PIPE_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_TEMPLATE_START, common.PARSER_RULE_CONTEXT_TEMPLATE_END:
 			hasMatch = (nextToken.Kind() == common.BACKTICK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ASTERISK:
 			hasMatch = (nextToken.Kind() == common.ASTERISK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_BITWISE_AND_OPERATOR:
 			hasMatch = (nextToken.Kind() == common.BITWISE_AND_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_EXPR_FUNC_BODY_START,
 			common.PARSER_RULE_CONTEXT_RIGHT_DOUBLE_ARROW:
 			hasMatch = (nextToken.Kind() == common.RIGHT_DOUBLE_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PLUS_TOKEN:
 			hasMatch = (nextToken.Kind() == common.PLUS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_MINUS_TOKEN:
 			hasMatch = (nextToken.Kind() == common.MINUS_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SIGNED_INT_OR_FLOAT_RHS:
 			hasMatch = isIntOrFloat(nextToken)
-			break
 		case common.PARSER_RULE_CONTEXT_SYNC_SEND_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SYNC_SEND_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_PEER_WORKER_NAME:
 			hasMatch = ((nextToken.Kind() == common.FUNCTION_KEYWORD) || (nextToken.Kind() == common.IDENTIFIER_TOKEN))
-			break
 		case common.PARSER_RULE_CONTEXT_LEFT_ARROW_TOKEN:
 			hasMatch = (nextToken.Kind() == common.LEFT_ARROW_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN:
 			hasMatch = (nextToken.Kind() == common.ANNOT_CHAINING_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN:
 			hasMatch = (nextToken.Kind() == common.OPTIONAL_CHAINING_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_TRANSACTIONAL_KEYWORD:
 			hasMatch = (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_SERVICE_DECL_QUALIFIER:
 			hasMatch = (nextToken.Kind() == common.ISOLATED_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_UNION_OR_INTERSECTION_TOKEN:
 			hasMatch = ((nextToken.Kind() == common.PIPE_TOKEN) || (nextToken.Kind() == common.BITWISE_AND_TOKEN))
-			break
 		case common.PARSER_RULE_CONTEXT_DOT_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DOT_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_DOUBLE_SLASH_DOUBLE_ASTERISK_LT_TOKEN:
 			hasMatch = (nextToken.Kind() == common.DOUBLE_SLASH_DOUBLE_ASTERISK_LT_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_SLASH_ASTERISK_TOKEN:
 			hasMatch = (nextToken.Kind() == common.SLASH_ASTERISK_TOKEN)
-			break
 		case common.PARSER_RULE_CONTEXT_KEY_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.KEY_KEYWORD) || isKeyKeyword(nextToken))
-			break
 		case common.PARSER_RULE_CONTEXT_NATURAL_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.NATURAL_KEYWORD) || isNaturalKeyword(nextToken))
-			break
 		case common.PARSER_RULE_CONTEXT_VAR_KEYWORD:
 			hasMatch = (nextToken.Kind() == common.VAR_KEYWORD)
-			break
 		case common.PARSER_RULE_CONTEXT_ORDER_DIRECTION:
 			hasMatch = ((nextToken.Kind() == common.ASCENDING_KEYWORD) || (nextToken.Kind() == common.DESCENDING_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OBJECT_MEMBER_VISIBILITY_QUAL:
 			hasMatch = ((nextToken.Kind() == common.PRIVATE_KEYWORD) || (nextToken.Kind() == common.PUBLIC_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_SECOND_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_THIRD_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_OBJECT_METHOD_FOURTH_QUALIFIER:
 			hasMatch = ((((nextToken.Kind() == common.ISOLATED_KEYWORD) || (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD)) || (nextToken.Kind() == common.REMOTE_KEYWORD)) || (nextToken.Kind() == common.RESOURCE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_FUNC_DEF_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_DEF_SECOND_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_TYPE_FIRST_QUALIFIER,
 			common.PARSER_RULE_CONTEXT_FUNC_TYPE_SECOND_QUALIFIER:
 			hasMatch = ((nextToken.Kind() == common.ISOLATED_KEYWORD) || (nextToken.Kind() == common.TRANSACTIONAL_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_MODULE_VAR_FIRST_QUAL,
 			common.PARSER_RULE_CONTEXT_MODULE_VAR_SECOND_QUAL,
 			common.PARSER_RULE_CONTEXT_MODULE_VAR_THIRD_QUAL:
 			hasMatch = (((nextToken.Kind() == common.FINAL_KEYWORD) || (nextToken.Kind() == common.ISOLATED_KEYWORD)) || (nextToken.Kind() == common.CONFIGURABLE_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_COMPOUND_BINARY_OPERATOR:
 			hasMatch = isCompoundBinaryOperator(nextToken.Kind())
-			break
 		case common.PARSER_RULE_CONTEXT_IS_KEYWORD:
 			hasMatch = ((nextToken.Kind() == common.IS_KEYWORD) || (nextToken.Kind() == common.NOT_IS_KEYWORD))
-			break
 		case common.PARSER_RULE_CONTEXT_VARIABLE_REF,
 			common.PARSER_RULE_CONTEXT_TYPE_REFERENCE_IN_TYPE_INCLUSION,
 			common.PARSER_RULE_CONTEXT_TYPE_REFERENCE,
@@ -1408,22 +1334,21 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 			common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER_IN_GROUPING_KEY:
 			fallthrough
 		default:
-			if this.isKeyword(currentCtx) {
-				expectedTokenKind := this.getExpectedKeywordKind(currentCtx)
+			if b.isKeyword(currentCtx) {
+				expectedTokenKind := b.getExpectedKeywordKind(currentCtx)
 				hasMatch = ((nextToken.Kind() == expectedTokenKind) || isKeywordMatch(expectedTokenKind, nextToken))
 				break
 			}
-			if this.HasAlternativePaths(currentCtx) {
-				result := this.seekMatchInAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
+			if b.HasAlternativePaths(currentCtx) {
+				result := b.seekMatchInAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
 					isEntryPoint)
 				return &result
 			}
 			skipRule = true
 			hasMatch = true
-			break
 		}
 		if !hasMatch {
-			return this.fixAndContinue(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
+			return b.fixAndContinue(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
 		}
 		if !skipRule {
 			currentDepth++
@@ -1431,21 +1356,21 @@ func (this *BallerinaParserErrorHandler) SeekMatch(currentCtx common.ParserRuleC
 			lookahead++
 			isEntryPoint = false
 		}
-		currentCtx = this.GetNextRule(currentCtx, lookahead)
+		currentCtx = b.GetNextRule(currentCtx, lookahead)
 	}
 	result = NewResult(make([]*Solution, 0), matchingRulesCount)
 	result.solution = NewSolution(ACTION_KEEP, currentCtx, common.NONE, currentCtx.String())
 	return result
 }
 
-func (this *BallerinaParserErrorHandler) getNextLookahead(lookahead int) int {
-	for this.tokenReader.PeekN(lookahead).Kind() == common.DOCUMENTATION_STRING {
+func (b *BallerinaParserErrorHandler) getNextLookahead(lookahead int) int {
+	for b.tokenReader.PeekN(lookahead).Kind() == common.DOCUMENTATION_STRING {
 		lookahead++
 	}
 	return lookahead
 }
 
-func (this *BallerinaParserErrorHandler) isKeyword(currentCtx common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) isKeyword(currentCtx common.ParserRuleContext) bool {
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_EOF,
 		common.PARSER_RULE_CONTEXT_PUBLIC_KEYWORD,
@@ -1532,7 +1457,7 @@ func (this *BallerinaParserErrorHandler) isKeyword(currentCtx common.ParserRuleC
 	}
 }
 
-func (this *BallerinaParserErrorHandler) HasAlternativePaths(currentCtx common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) HasAlternativePaths(currentCtx common.ParserRuleContext) bool {
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE,
 		common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_MODIFIER,
@@ -1789,7 +1714,7 @@ func (this *BallerinaParserErrorHandler) HasAlternativePaths(currentCtx common.P
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getShortestAlternative(currentCtx common.ParserRuleContext) common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getShortestAlternative(currentCtx common.ParserRuleContext) common.ParserRuleContext {
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE,
 		common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_MODIFIER,
@@ -2250,8 +2175,8 @@ func (this *BallerinaParserErrorHandler) getShortestAlternative(currentCtx commo
 	}
 }
 
-func (this *BallerinaParserErrorHandler) seekMatchInAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
-	dbgCtx := this.getDebugContext()
+func (b *BallerinaParserErrorHandler) seekMatchInAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
+	dbgCtx := b.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(seekMatchInAlternativePaths start %s %d %d %d %s)", formatParserRuleContext(currentCtx), lookahead, currentDepth, matchingRulesCount, formatBool(isEntryPoint))
 	}, dbgCtx)
@@ -2262,353 +2187,248 @@ func (this *BallerinaParserErrorHandler) seekMatchInAlternativePaths(currentCtx 
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE:
 		alternativeRules = TOP_LEVEL_NODE
-		break
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_MODIFIER:
 		alternativeRules = TOP_LEVEL_NODE_WITHOUT_MODIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_METADATA:
 		alternativeRules = TOP_LEVEL_NODE_WITHOUT_METADATA
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_START:
 		alternativeRules = FUNC_DEF_START
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = FUNC_DEF_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_START_WITHOUT_FIRST_QUAL:
 		alternativeRules = FUNC_TYPE_DESC_START_WITHOUT_FIRST_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_OPTIONAL_RETURNS:
-		parentCtx := this.GetParentContext()
+		parentCtx := b.GetParentContext()
 		var alternatives []common.ParserRuleContext
-		if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF {
-			grandParentCtx := this.GetGrandParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_FUNC_DEF:
+			grandParentCtx := b.GetGrandParentContext()
 			if grandParentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
 				alternatives = METHOD_DECL_OPTIONAL_RETURNS
 			} else {
 				alternatives = FUNC_DEF_OPTIONAL_RETURNS
 			}
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION {
+		case common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION:
 			alternatives = ANNON_FUNC_OPTIONAL_RETURNS
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC {
+		case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC:
 			alternatives = FUNC_TYPE_OPTIONAL_RETURNS
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_OR_ANON_FUNC {
+		case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_OR_ANON_FUNC:
 			alternatives = FUNC_TYPE_OR_ANON_FUNC_OPTIONAL_RETURNS
-		} else {
+		default:
 			alternatives = FUNC_TYPE_OR_DEF_OPTIONAL_RETURNS
 		}
 		alternativeRules = alternatives
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY_OR_TYPE_DESC_RHS:
 		alternativeRules = FUNC_BODY_OR_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_RHS_OR_ANON_FUNC_BODY:
 		alternativeRules = FUNC_TYPE_DESC_RHS_OR_ANON_FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_ANON_FUNC_BODY:
 		alternativeRules = ANON_FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY:
 		alternativeRules = FUNC_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_LIST:
 		alternativeRules = PARAM_LIST
-		break
 	case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM_NAME_RHS:
 		alternativeRules = REQUIRED_PARAM_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_DESCRIPTOR_RHS:
 		alternativeRules = FIELD_DESCRIPTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_OR_REST_DESCIPTOR_RHS:
 		alternativeRules = FIELD_OR_REST_DESCIPTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_BODY_END:
 		alternativeRules = RECORD_BODY_END
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_BODY_START:
 		alternativeRules = RECORD_BODY_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESCRIPTOR:
-		if !this.isInTypeDescContext() {
+		if !b.isInTypeDescContext() {
 			panic("assertion failed")
 		}
 		alternativeRules = TYPE_DESCRIPTORS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_WITHOUT_ISOLATED:
 		alternativeRules = TYPE_DESCRIPTOR_WITHOUT_ISOLATED
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DESCRIPTOR:
 		alternativeRules = CLASS_DESCRIPTOR
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_OR_RECORD_END:
 		alternativeRules = RECORD_FIELD_OR_RECORD_END
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_START:
 		alternativeRules = RECORD_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD_WITHOUT_METADATA:
 		alternativeRules = RECORD_FIELD_WITHOUT_METADATA
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_START:
 		alternativeRules = CLASS_MEMBER_OR_OBJECT_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER_START:
 		alternativeRules = OBJECT_CONSTRUCTOR_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_WITHOUT_META:
 		alternativeRules = CLASS_MEMBER_OR_OBJECT_MEMBER_WITHOUT_META
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONS_MEMBER_WITHOUT_META:
 		alternativeRules = OBJECT_CONS_MEMBER_WITHOUT_META
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_FIELD_INITIALIZER:
 		alternativeRules = OPTIONAL_FIELD_INITIALIZER
-		break
 	case common.PARSER_RULE_CONTEXT_ON_FAIL_OPTIONAL_BINDING_PATTERN:
 		alternativeRules = ON_FAIL_OPTIONAL_BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_START:
 		alternativeRules = OBJECT_METHOD_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_SECOND_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_SECOND_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_METHOD_WITHOUT_THIRD_QUALIFIER:
 		alternativeRules = OBJECT_METHOD_WITHOUT_THIRD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD:
 		alternativeRules = OBJECT_FUNC_OR_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY:
 		alternativeRules = OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_START:
 		alternativeRules = OBJECT_TYPE_START
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_START:
 		alternativeRules = OBJECT_CONSTRUCTOR_START
-		break
 	case common.PARSER_RULE_CONTEXT_IMPORT_PREFIX_DECL:
 		alternativeRules = IMPORT_PREFIX_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_IMPORT_DECL_ORG_OR_MODULE_NAME_RHS:
 		alternativeRules = IMPORT_DECL_ORG_OR_MODULE_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_AFTER_IMPORT_MODULE_NAME:
 		alternativeRules = AFTER_IMPORT_MODULE_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_ABSOLUTE_PATH:
 		alternativeRules = OPTIONAL_ABSOLUTE_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_CONST_DECL_TYPE:
 		alternativeRules = CONST_DECL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_CONST_DECL_RHS:
 		alternativeRules = CONST_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETER_START:
 		alternativeRules = PARAMETER_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETER_START_WITHOUT_ANNOTATION:
 		alternativeRules = PARAMETER_START_WITHOUT_ANNOTATION
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_DECL_OPTIONAL_TYPE:
 		alternativeRules = ANNOT_DECL_OPTIONAL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_DECL_RHS:
 		alternativeRules = ANNOT_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOT_OPTIONAL_ATTACH_POINTS:
 		alternativeRules = ANNOT_OPTIONAL_ATTACH_POINTS
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT:
 		alternativeRules = ATTACH_POINT
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT_IDENT:
 		alternativeRules = ATTACH_POINT_IDENT
-		break
 	case common.PARSER_RULE_CONTEXT_ATTACH_POINT_END:
 		alternativeRules = ATTACH_POINT_END
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAMESPACE_PREFIX_DECL:
 		alternativeRules = XML_NAMESPACE_PREFIX_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_START:
 		alternativeRules = ENUM_MEMBER_START
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_RHS:
 		alternativeRules = ENUM_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_END:
 		alternativeRules = ENUM_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY_OPTIONAL_ANNOTS:
 		alternativeRules = EXTERNAL_FUNC_BODY_OPTIONAL_ANNOTS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BP_OR_LIST_CONSTRUCTOR_MEMBER:
 		alternativeRules = LIST_BP_OR_LIST_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_TYPE_DESC_OR_LIST_CONST_MEMBER:
 		alternativeRules = TUPLE_TYPE_DESC_OR_LIST_CONST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR_MEMBER:
 		alternativeRules = MAPPING_BP_OR_MAPPING_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_START,
 		common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION_START:
 		alternativeRules = FUNC_TYPE_DESC_START
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_CLASS_DEFINITION_START:
 		alternativeRules = MODULE_CLASS_DEFINITION_START
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_SECOND_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_SECOND_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CLASS_DEF_WITHOUT_THIRD_QUALIFIER:
 		alternativeRules = CLASS_DEF_WITHOUT_THIRD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_TYPE_REF:
 		alternativeRules = OBJECT_CONSTRUCTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_FIELD_QUALIFIER:
 		alternativeRules = OBJECT_FIELD_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_CONFIG_VAR_DECL_RHS:
 		alternativeRules = CONFIG_VAR_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_SERVICE_DECL_TYPE:
 		alternativeRules = OPTIONAL_SERVICE_DECL_TYPE
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_IDENT_RHS:
 		alternativeRules = SERVICE_IDENT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH_START:
 		alternativeRules = ABSOLUTE_RESOURCE_PATH_START
-		break
 	case common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH_END:
 		alternativeRules = ABSOLUTE_RESOURCE_PATH_END
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL_OR_VAR_DECL:
 		alternativeRules = SERVICE_DECL_OR_VAR_DECL
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RELATIVE_PATH:
 		alternativeRules = OPTIONAL_RELATIVE_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_START:
 		alternativeRules = RELATIVE_RESOURCE_PATH_START
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_PATH_SEGMENT:
 		alternativeRules = RESOURCE_PATH_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_PATH_PARAM_OPTIONAL_ANNOTS:
 		alternativeRules = PATH_PARAM_OPTIONAL_ANNOTS
-		break
 	case common.PARSER_RULE_CONTEXT_PATH_PARAM_ELLIPSIS:
 		alternativeRules = PATH_PARAM_ELLIPSIS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PATH_PARAM_NAME:
 		alternativeRules = OPTIONAL_PATH_PARAM_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_END:
 		alternativeRules = RELATIVE_RESOURCE_PATH_END
-		break
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL_START:
 		alternativeRules = SERVICE_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_TYPE_PARAMETER:
 		alternativeRules = OPTIONAL_TYPE_PARAMETER
-		break
 	case common.PARSER_RULE_CONTEXT_MAP_TYPE_OR_TYPE_REF:
 		alternativeRules = MAP_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_OR_TYPE_REF:
 		alternativeRules = OBJECT_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_STREAM_TYPE_OR_TYPE_REF:
 		alternativeRules = STREAM_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_TYPE_OR_TYPE_REF:
 		alternativeRules = TABLE_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_PARAMETERIZED_TYPE_OR_TYPE_REF:
 		alternativeRules = PARAMETERIZED_TYPE_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS_OR_TYPE_REF:
 		alternativeRules = TYPE_DESC_RHS_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TRANSACTION_STMT_RHS_OR_TYPE_REF:
 		alternativeRules = TRANSACTION_STMT_RHS_OR_TYPE_REF
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONS_OR_QUERY_EXPR_OR_VAR_REF:
 		alternativeRules = TABLE_CONS_OR_QUERY_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPR_OR_VAR_REF:
 		alternativeRules = QUERY_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_CONS_EXPR_OR_VAR_REF:
 		alternativeRules = ERROR_CONS_EXPR_OR_VAR_REF
-		break
 	case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER:
 		alternativeRules = QUALIFIED_IDENTIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_DECL_START:
 		alternativeRules = MODULE_VAR_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_WITHOUT_FIRST_QUAL:
 		alternativeRules = MODULE_VAR_WITHOUT_FIRST_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_MODULE_VAR_WITHOUT_SECOND_QUAL:
 		alternativeRules = MODULE_VAR_WITHOUT_SECOND_QUAL
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_TYPE_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_TYPE_DESC_RHS:
 		alternativeRules = FUNC_DEF_OR_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPR_START_OR_INFERRED_TYPEDESC_DEFAULT_START:
 		alternativeRules = EXPR_START_OR_INFERRED_TYPEDESC_DEFAULT_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM_START_OR_INFERRED_TYPEDESC_DEFAULT_END:
 		alternativeRules = TYPE_CAST_PARAM_START_OR_INFERRED_TYPEDESC_DEFAULT_END
-		break
 	case common.PARSER_RULE_CONTEXT_END_OF_PARAMS_OR_NEXT_PARAM_START:
 		alternativeRules = END_OF_PARAMS_OR_NEXT_PARAM_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_START:
 		alternativeRules = PARAM_START
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_RHS:
 		alternativeRules = PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_PARAM_RHS:
 		alternativeRules = FUNC_TYPE_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_DECL_START:
 		alternativeRules = ANNOTATION_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_TOP_LEVEL_SEMICOLON:
 		alternativeRules = OPTIONAL_TOP_LEVEL_SEMICOLON
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_MEMBER:
 		alternativeRules = TUPLE_MEMBER
-		break
 	default:
-		return this.seekMatchInStmtRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
+		return b.seekMatchInStmtRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
 			isEntryPoint)
 	}
-	return *this.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
+	return *b.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
 }
 
-func (this *BallerinaParserErrorHandler) seekMatchInStmtRelatedAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
-	dbgCtx := this.getDebugContext()
+func (b *BallerinaParserErrorHandler) seekMatchInStmtRelatedAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
+	dbgCtx := b.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(seekMatchInStmtRelatedAlternativePaths start %s %d %d %d %s)", formatParserRuleContext(currentCtx), lookahead, currentDepth, matchingRulesCount, formatBool(isEntryPoint))
 	}, dbgCtx)
@@ -2619,269 +2439,186 @@ func (this *BallerinaParserErrorHandler) seekMatchInStmtRelatedAlternativePaths(
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_VAR_DECL_STMT_RHS:
 		alternativeRules = VAR_DECL_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_STATEMENT, common.PARSER_RULE_CONTEXT_STATEMENT_WITHOUT_ANNOTS:
-		return this.seekInStatements(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
+		return b.seekInStatements(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
 	case common.PARSER_RULE_CONTEXT_TYPE_NAME_OR_VAR_NAME:
 		alternativeRules = TYPE_OR_VAR_NAME
-		break
 	case common.PARSER_RULE_CONTEXT_ELSE_BLOCK:
 		alternativeRules = ELSE_BLOCK
-		break
 	case common.PARSER_RULE_CONTEXT_ELSE_BODY:
 		alternativeRules = ELSE_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_CALL_STMT_START:
 		alternativeRules = CALL_STATEMENT
-		break
 	case common.PARSER_RULE_CONTEXT_RETURN_STMT_RHS:
 		alternativeRules = RETURN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ARRAY_LENGTH:
 		alternativeRules = ARRAY_LENGTH
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_WITH_EXPR_RHS:
 		alternativeRules = STMT_START_WITH_EXPR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPR_STMT_RHS:
 		alternativeRules = EXPR_STMT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT_START:
 		alternativeRules = EXPRESSION_STATEMENT_START
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS:
-		if !this.isInTypeDescContext() {
+		if !b.isInTypeDescContext() {
 			panic("assertion failed")
 		}
 		alternativeRules = TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_STREAM_TYPE_FIRST_PARAM_RHS:
 		alternativeRules = STREAM_TYPE_FIRST_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNCTION_KEYWORD_RHS:
 		alternativeRules = FUNCTION_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_FUNC_KEYWORD_RHS_START:
 		alternativeRules = FUNC_TYPE_FUNC_KEYWORD_RHS_START
-		break
 	case common.PARSER_RULE_CONTEXT_WORKER_NAME_RHS:
 		alternativeRules = WORKER_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN:
 		alternativeRules = BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERNS_START:
 		alternativeRules = LIST_BINDING_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN_MEMBER_END:
 		alternativeRules = LIST_BINDING_PATTERN_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN_MEMBER:
 		alternativeRules = LIST_BINDING_PATTERN_CONTENTS
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN_END:
 		alternativeRules = MAPPING_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_BINDING_PATTERN_END:
 		alternativeRules = FIELD_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN_MEMBER:
 		alternativeRules = MAPPING_BINDING_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN_ERROR_KEYWORD_RHS:
 		alternativeRules = ERROR_BINDING_PATTERN_ERROR_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_BINDING_PATTERN_START:
 		alternativeRules = ERROR_ARG_LIST_BINDING_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_END:
 		alternativeRules = ERROR_MESSAGE_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_BINDING_PATTERN_RHS:
 		alternativeRules = ERROR_MESSAGE_BINDING_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_BINDING_PATTERN:
 		alternativeRules = ERROR_FIELD_BINDING_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_BINDING_PATTERN_END:
 		alternativeRules = ERROR_FIELD_BINDING_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_KEY_CONSTRAINTS_RHS:
 		alternativeRules = KEY_CONSTRAINTS_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_TYPE_DESC_RHS:
 		alternativeRules = TABLE_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TUPLE_RHS:
 		alternativeRules = TYPE_DESC_IN_TUPLE_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TUPLE_TYPE_MEMBER_RHS:
 		alternativeRules = TUPLE_TYPE_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_MEMBER_END:
 		alternativeRules = LIST_CONSTRUCTOR_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_NIL_OR_PARENTHESISED_TYPE_DESC_RHS:
 		alternativeRules = NIL_OR_PARENTHESISED_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_REMOTE_OR_RESOURCE_CALL_OR_ASYNC_SEND_RHS:
 		alternativeRules = REMOTE_OR_RESOURCE_CALL_OR_ASYNC_SEND_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_REMOTE_CALL_OR_ASYNC_SEND_END:
 		alternativeRules = REMOTE_CALL_OR_ASYNC_SEND_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_PATH:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_PATH
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_PATH_SEGMENT:
 		alternativeRules = RESOURCE_ACCESS_PATH_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_COMPUTED_SEGMENT_OR_REST_SEGMENT:
 		alternativeRules = COMPUTED_SEGMENT_OR_REST_SEGMENT
-		break
 	case common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_SEGMENT_RHS:
 		alternativeRules = RESOURCE_ACCESS_SEGMENT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_METHOD:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_METHOD
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_ACTION_ARG_LIST:
 		alternativeRules = OPTIONAL_RESOURCE_ACCESS_ACTION_ARG_LIST
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_WORKERS:
 		alternativeRules = RECEIVE_WORKERS
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_FIELD:
 		alternativeRules = RECEIVE_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_RECEIVE_FIELD_END:
 		alternativeRules = RECEIVE_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_KEYWORD_RHS:
 		alternativeRules = WAIT_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FIELD_NAME_RHS:
 		alternativeRules = WAIT_FIELD_NAME_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FIELD_END:
 		alternativeRules = WAIT_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_WAIT_FUTURE_EXPR_END:
 		alternativeRules = WAIT_FUTURE_EXPR_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PEER_WORKER:
 		alternativeRules = OPTIONAL_PEER_WORKER
-		break
 	case common.PARSER_RULE_CONTEXT_ROLLBACK_RHS:
 		alternativeRules = ROLLBACK_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_KEYWORD_RHS:
 		alternativeRules = RETRY_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_TYPE_PARAM_RHS:
 		alternativeRules = RETRY_TYPE_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_RETRY_BODY:
 		alternativeRules = RETRY_BODY
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_MEMBER:
 		alternativeRules = LIST_BP_OR_TUPLE_TYPE_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_RHS:
 		alternativeRules = LIST_BP_OR_TUPLE_TYPE_DESC_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER_END:
 		alternativeRules = BRACKETED_LIST_MEMBER_END
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER:
 		alternativeRules = BRACKETED_LIST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST_RHS,
 		common.PARSER_RULE_CONTEXT_BINDING_PATTERN_OR_EXPR_RHS,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_OR_EXPR_RHS:
 		alternativeRules = BRACKETED_LIST_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN_OR_VAR_REF_RHS:
 		alternativeRules = BINDING_PATTERN_OR_VAR_REF_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS_OR_BP_RHS:
 		alternativeRules = TYPE_DESC_RHS_OR_BP_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_MEMBER_OR_ARRAY_LENGTH:
 		alternativeRules = LIST_BINDING_MEMBER_OR_ARRAY_LENGTH
-		break
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_LIST_MEMBER_RHS:
 		alternativeRules = MATCH_PATTERN_LIST_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_START:
 		alternativeRules = MATCH_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERNS_START:
 		alternativeRules = LIST_MATCH_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN_MEMBER:
 		alternativeRules = LIST_MATCH_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN_MEMBER_RHS:
 		alternativeRules = LIST_MATCH_PATTERN_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERNS_START:
 		alternativeRules = FIELD_MATCH_PATTERNS_START
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERN_MEMBER:
 		alternativeRules = FIELD_MATCH_PATTERN_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_FIELD_MATCH_PATTERN_MEMBER_RHS:
 		alternativeRules = FIELD_MATCH_PATTERN_MEMBER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN_OR_CONST_PATTERN:
 		alternativeRules = ERROR_MATCH_PATTERN_OR_CONST_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN_ERROR_KEYWORD_RHS:
 		alternativeRules = ERROR_MATCH_PATTERN_ERROR_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_START:
 		alternativeRules = ERROR_ARG_LIST_MATCH_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END:
 		alternativeRules = ERROR_MESSAGE_MATCH_PATTERN_END
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_RHS:
 		alternativeRules = ERROR_MESSAGE_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN:
 		alternativeRules = ERROR_FIELD_MATCH_PATTERN
-		break
 	case common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN_RHS:
 		alternativeRules = ERROR_FIELD_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN_RHS:
 		alternativeRules = NAMED_ARG_MATCH_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_JOIN_CLAUSE_START:
 		alternativeRules = JOIN_CLAUSE_START
-		break
 	case common.PARSER_RULE_CONTEXT_INTERMEDIATE_CLAUSE_START:
 		alternativeRules = INTERMEDIATE_CLAUSE_START
-		break
 	case common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS:
 		alternativeRules = REGULAR_COMPOUND_STMT_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_WORKER_DECL_START:
 		alternativeRules = NAMED_WORKER_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_ASSIGNMENT_STMT_RHS:
 		alternativeRules = ASSIGNMENT_STMT_RHS
-		break
 	default:
-		return this.seekMatchInExprRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
+		return b.seekMatchInExprRelatedAlternativePaths(currentCtx, lookahead, currentDepth, matchingRulesCount,
 			isEntryPoint)
 	}
-	return *this.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
+	return *b.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
 }
 
-func (this *BallerinaParserErrorHandler) seekMatchInExprRelatedAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
-	dbgCtx := this.getDebugContext()
+func (b *BallerinaParserErrorHandler) seekMatchInExprRelatedAlternativePaths(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, matchingRulesCount int, isEntryPoint bool) (result Result) {
+	dbgCtx := b.getDebugContext()
 	traceRecovery(currentCtx, func() string {
 		return fmt.Sprintf("(seekMatchInExprRelatedAlternativePaths start %s %d %d %d %s)", formatParserRuleContext(currentCtx), lookahead, currentDepth, matchingRulesCount, formatBool(isEntryPoint))
 	}, dbgCtx)
@@ -2892,186 +2629,136 @@ func (this *BallerinaParserErrorHandler) seekMatchInExprRelatedAlternativePaths(
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_EXPRESSION, common.PARSER_RULE_CONTEXT_TERMINAL_EXPRESSION:
 		alternativeRules = EXPRESSION_START
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_START:
 		alternativeRules = ARG_START
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_START_OR_ARG_LIST_END:
 		alternativeRules = ARG_START_OR_ARG_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_NAMED_OR_POSITIONAL_ARG_RHS:
 		alternativeRules = NAMED_OR_POSITIONAL_ARG_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ARG_END:
 		alternativeRules = ARG_END
-		break
 	case common.PARSER_RULE_CONTEXT_ACCESS_EXPRESSION:
-		return this.seekInAccessExpression(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
+		return b.seekInAccessExpression(currentCtx, lookahead, currentDepth, matchingRulesCount, isEntryPoint)
 	case common.PARSER_RULE_CONTEXT_FIRST_MAPPING_FIELD:
 		alternativeRules = FIRST_MAPPING_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_FIELD:
 		alternativeRules = MAPPING_FIELD_START
-		break
 	case common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD:
 		alternativeRules = SPECIFIC_FIELD
-		break
 	case common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD_RHS:
 		alternativeRules = SPECIFIC_FIELD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_FIELD_END:
 		alternativeRules = MAPPING_FIELD_END
-		break
 	case common.PARSER_RULE_CONTEXT_LET_VAR_DECL_START:
 		alternativeRules = LET_VAR_DECL_START
-		break
 	case common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST_END:
 		alternativeRules = ORDER_KEY_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT:
 		alternativeRules = GROUPING_KEY_LIST_ELEMENT
-		break
 	case common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT_END:
 		alternativeRules = GROUPING_KEY_LIST_ELEMENT_END
-		break
 	case common.PARSER_RULE_CONTEXT_TEMPLATE_MEMBER:
 		alternativeRules = TEMPLATE_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TEMPLATE_STRING_RHS:
 		alternativeRules = TEMPLATE_STRING_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION_START:
 		alternativeRules = CONSTANT_EXPRESSION
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_FIRST_MEMBER:
 		alternativeRules = LIST_CONSTRUCTOR_FIRST_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR_MEMBER:
 		alternativeRules = LIST_CONSTRUCTOR_MEMBER
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM:
 		alternativeRules = TYPE_CAST_PARAM
-		break
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM_RHS:
 		alternativeRules = TYPE_CAST_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_KEYWORD_RHS:
 		alternativeRules = TABLE_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_ROW_LIST_RHS:
 		alternativeRules = ROW_LIST_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_ROW_END:
 		alternativeRules = TABLE_ROW_END
-		break
 	case common.PARSER_RULE_CONTEXT_KEY_SPECIFIER_RHS:
 		alternativeRules = KEY_SPECIFIER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_KEY_RHS:
 		alternativeRules = TABLE_KEY_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_NEW_KEYWORD_RHS:
 		alternativeRules = NEW_KEYWORD_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_START:
 		alternativeRules = TABLE_CONSTRUCTOR_OR_QUERY_START
-		break
 	case common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_RHS:
 		alternativeRules = TABLE_CONSTRUCTOR_OR_QUERY_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS:
 		alternativeRules = QUERY_PIPELINE_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_BRACED_EXPR_OR_ANON_FUNC_PARAM_RHS,
 		common.PARSER_RULE_CONTEXT_ANON_FUNC_PARAM_RHS:
 		alternativeRules = BRACED_EXPR_OR_ANON_FUNC_PARAM_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_PARAM_END:
 		alternativeRules = PARAM_END
-		break
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_REF_RHS:
 		alternativeRules = ANNOTATION_REF_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_INFER_PARAM_END_OR_PARENTHESIS_END:
 		alternativeRules = INFER_PARAM_END_OR_PARENTHESIS_END
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR:
 		alternativeRules = XML_NAVIGATE_EXPR
-		break
 	case common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN_RHS:
 		alternativeRules = XML_NAME_PATTERN_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN_START:
 		alternativeRules = XML_ATOMIC_NAME_PATTERN_START
-		break
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_IDENTIFIER_RHS:
 		alternativeRules = XML_ATOMIC_NAME_IDENTIFIER_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_START:
 		alternativeRules = XML_STEP_START
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND:
 		alternativeRules = XML_STEP_EXTEND
-		break
 	case common.PARSER_RULE_CONTEXT_XML_STEP_START_END:
 		alternativeRules = XML_STEP_START_END
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_MATCH_GUARD:
 		alternativeRules = OPTIONAL_MATCH_GUARD
-		break
 	case common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR_END:
 		alternativeRules = MEMBER_ACCESS_KEY_EXPR_END
-		break
 	case common.PARSER_RULE_CONTEXT_LISTENERS_LIST_END:
 		alternativeRules = LISTENERS_LIST_END
-		break
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONS_WITHOUT_FIRST_QUALIFIER:
 		alternativeRules = OBJECT_CONS_WITHOUT_FIRST_QUALIFIER
-		break
 	case common.PARSER_RULE_CONTEXT_RESULT_CLAUSE:
 		alternativeRules = RESULT_CLAUSE
-		break
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_RHS:
-		return this.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, false)
+		return b.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, false)
 	case common.PARSER_RULE_CONTEXT_VARIABLE_REF_RHS:
-		return this.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, true)
+		return b.seekMatchInExpressionRhs(lookahead, currentDepth, matchingRulesCount, isEntryPoint, true)
 	case common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR_RHS:
 		alternativeRules = ERROR_CONSTRUCTOR_RHS
-		break
 	case common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER_SEPARATOR:
 		alternativeRules = SINGLE_OR_ALTERNATE_WORKER_SEPARATOR
-		break
 	case common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION_START:
 		alternativeRules = NATURAL_EXPRESSION_START
-		break
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_PARENTHESIZED_ARG_LIST:
 		alternativeRules = OPTIONAL_PARENTHESIZED_ARG_LIST
-		break
 	default:
 		panic("seekMatchInExprRelatedAlternativePaths found: " + currentCtx.String())
 	}
-	return *this.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
+	return *b.seekInAlternativesPaths(lookahead, currentDepth, matchingRulesCount, alternativeRules, isEntryPoint)
 }
 
-func (this *BallerinaParserErrorHandler) seekInStatements(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, currentMatches int, isEntryPoint bool) Result {
-	nextToken := this.tokenReader.PeekN(lookahead)
+func (b *BallerinaParserErrorHandler) seekInStatements(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, currentMatches int, isEntryPoint bool) Result {
+	nextToken := b.tokenReader.PeekN(lookahead)
 	if nextToken.Kind() == common.SEMICOLON_TOKEN {
-		result := this.seekMatchInSubTree(common.PARSER_RULE_CONTEXT_STATEMENT, lookahead+1, currentDepth+1,
+		result := b.seekMatchInSubTree(common.PARSER_RULE_CONTEXT_STATEMENT, lookahead+1, currentDepth+1,
 			isEntryPoint)
 		result.pushFix(NewSolutionWithDepth(ACTION_REMOVE, currentCtx, nextToken.Kind(), nextToken.Text(), currentDepth))
-		return *this.getFinalResult(currentMatches, result)
+		return *b.getFinalResult(currentMatches, result)
 	}
-	return *this.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, STATEMENTS, isEntryPoint)
+	return *b.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, STATEMENTS, isEntryPoint)
 }
 
-func (this *BallerinaParserErrorHandler) seekInAccessExpression(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, currentMatches int, isEntryPoint bool) Result {
-	nextToken := this.tokenReader.PeekN(lookahead)
+func (b *BallerinaParserErrorHandler) seekInAccessExpression(currentCtx common.ParserRuleContext, lookahead int, currentDepth int, currentMatches int, isEntryPoint bool) Result {
+	nextToken := b.tokenReader.PeekN(lookahead)
 	currentDepth++
 	if nextToken.Kind() != common.IDENTIFIER_TOKEN {
-		return *this.fixAndContinue(currentCtx, lookahead, currentDepth, currentMatches, isEntryPoint)
+		return *b.fixAndContinue(currentCtx, lookahead, currentDepth, currentMatches, isEntryPoint)
 	}
 	var nextContext common.ParserRuleContext
-	nextNextToken := this.tokenReader.PeekN(lookahead + 1)
+	nextNextToken := b.tokenReader.PeekN(lookahead + 1)
 	switch nextNextToken.Kind() {
 	case common.OPEN_PAREN_TOKEN:
 		nextContext = common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
@@ -3080,64 +2767,53 @@ func (this *BallerinaParserErrorHandler) seekInAccessExpression(currentCtx commo
 	case common.OPEN_BRACKET_TOKEN:
 		nextContext = common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR
 	default:
-		nextContext = this.getNextRuleForExpr()
+		nextContext = b.getNextRuleForExpr()
 	}
 	currentMatches++
 	lookahead++
-	result := this.SeekMatch(nextContext, lookahead, currentDepth, isEntryPoint)
-	return *this.getFinalResult(currentMatches, result)
+	result := b.SeekMatch(nextContext, lookahead, currentDepth, isEntryPoint)
+	return *b.getFinalResult(currentMatches, result)
 }
 
-func (this *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int, currentDepth int, currentMatches int, isEntryPoint bool, allowFuncCall bool) Result {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int, currentDepth int, currentMatches int, isEntryPoint bool, allowFuncCall bool) Result {
+	parentCtx := b.GetParentContext()
 	var alternatives []common.ParserRuleContext
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ARG_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_ARG_LIST_END}
-		break
 	case common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MULTI_WAIT_FIELDS,
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_BRACE, common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_COMPUTED_FIELD_NAME:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_BRACKET, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_OPEN_BRACKET}
-		break
 	case common.PARSER_RULE_CONTEXT_LISTENERS_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_LISTENERS_LIST_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR,
 		common.PARSER_RULE_CONTEXT_BRACKETED_LIST,
 		common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_CLOSE_BRACKET}
-		break
 	case common.PARSER_RULE_CONTEXT_LET_EXPR_LET_VAR_DECL:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_IN_KEYWORD, common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_COMMA, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_LET_CLAUSE_END}
-		break
 	case common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_ORDER_DIRECTION, common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT_END, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION:
 		alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR}
-		break
 	default:
-		if this.isParameter(parentCtx) {
+		if b.isParameter(parentCtx) {
 			alternatives = []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_COMMA}
 		}
-		break
 	}
 	if alternatives != nil {
 		if allowFuncCall {
-			alternatives = this.modifyAlternativesWithArgListStart(alternatives)
+			alternatives = b.modifyAlternativesWithArgListStart(alternatives)
 		}
-		return *this.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, alternatives, isEntryPoint)
+		return *b.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, alternatives, isEntryPoint)
 	}
 	var nextContext common.ParserRuleContext
 	if ((parentCtx == common.PARSER_RULE_CONTEXT_IF_BLOCK) || (parentCtx == common.PARSER_RULE_CONTEXT_WHILE_BLOCK)) || (parentCtx == common.PARSER_RULE_CONTEXT_FOREACH_STMT) {
@@ -3146,7 +2822,7 @@ func (this *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int,
 		nextContext = common.PARSER_RULE_CONTEXT_MATCH_BODY
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_CALL_STMT {
 		nextContext = common.PARSER_RULE_CONTEXT_METHOD_CALL_DOT
-	} else if (((((this.isStatement(parentCtx) || (parentCtx == common.PARSER_RULE_CONTEXT_RECORD_FIELD)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_LISTENER_DECL)) || (parentCtx == common.PARSER_RULE_CONTEXT_CONSTANT_DECL) {
+	} else if (((((b.isStatement(parentCtx) || (parentCtx == common.PARSER_RULE_CONTEXT_RECORD_FIELD)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_LISTENER_DECL)) || (parentCtx == common.PARSER_RULE_CONTEXT_CONSTANT_DECL) {
 		nextContext = common.PARSER_RULE_CONTEXT_SEMICOLON
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ANNOTATIONS {
 		nextContext = common.PARSER_RULE_CONTEXT_ANNOTATION_END
@@ -3165,7 +2841,7 @@ func (this *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int,
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_MATCH_BODY {
 		nextContext = common.PARSER_RULE_CONTEXT_RIGHT_DOUBLE_ARROW
 	} else if (parentCtx == common.PARSER_RULE_CONTEXT_SELECT_CLAUSE) || (parentCtx == common.PARSER_RULE_CONTEXT_COLLECT_CLAUSE) {
-		nextToken := this.tokenReader.PeekN(lookahead)
+		nextToken := b.tokenReader.PeekN(lookahead)
 		switch nextToken.Kind() {
 		case common.ON_KEYWORD, common.CONFLICT_KEYWORD:
 			nextContext = common.PARSER_RULE_CONTEXT_ON_CONFLICT_CLAUSE
@@ -3181,21 +2857,21 @@ func (this *BallerinaParserErrorHandler) seekMatchInExpressionRhs(lookahead int,
 	} else {
 		panic("seekMatchInExpressionRhs found: " + parentCtx.String())
 	}
-	alternatives = this.getExpressionRhsAlternatives(nextContext)
+	alternatives = b.getExpressionRhsAlternatives(nextContext)
 	if allowFuncCall {
-		alternatives = this.modifyAlternativesWithArgListStart(alternatives)
+		alternatives = b.modifyAlternativesWithArgListStart(alternatives)
 	}
-	return *this.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, alternatives, isEntryPoint)
+	return *b.seekInAlternativesPaths(lookahead, currentDepth, currentMatches, alternatives, isEntryPoint)
 }
 
-func (this *BallerinaParserErrorHandler) getExpressionRhsAlternatives(nextContext common.ParserRuleContext) []common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getExpressionRhsAlternatives(nextContext common.ParserRuleContext) []common.ParserRuleContext {
 	if ((nextContext == common.PARSER_RULE_CONTEXT_SEMICOLON) || (nextContext == common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION_END)) || (nextContext == common.PARSER_RULE_CONTEXT_MATCH_BODY) {
 		return []common.ParserRuleContext{nextContext, common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_IS_KEYWORD, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_RIGHT_ARROW, common.PARSER_RULE_CONTEXT_SYNC_SEND_TOKEN}
 	}
 	return []common.ParserRuleContext{common.PARSER_RULE_CONTEXT_BINARY_OPERATOR, common.PARSER_RULE_CONTEXT_IS_KEYWORD, common.PARSER_RULE_CONTEXT_DOT, common.PARSER_RULE_CONTEXT_ANNOT_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_OPTIONAL_CHAINING_TOKEN, common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION, common.PARSER_RULE_CONTEXT_XML_NAVIGATE_EXPR, common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR, common.PARSER_RULE_CONTEXT_RIGHT_ARROW, common.PARSER_RULE_CONTEXT_SYNC_SEND_TOKEN, nextContext}
 }
 
-func (this *BallerinaParserErrorHandler) modifyAlternativesWithArgListStart(alternatives []common.ParserRuleContext) []common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) modifyAlternativesWithArgListStart(alternatives []common.ParserRuleContext) []common.ParserRuleContext {
 	// Create new slice with capacity for one additional element
 	newAlternatives := make([]common.ParserRuleContext, len(alternatives)+1)
 	// Copy all existing elements
@@ -3205,8 +2881,8 @@ func (this *BallerinaParserErrorHandler) modifyAlternativesWithArgListStart(alte
 	return newAlternatives
 }
 
-func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
-	this.startContextIfRequired(currentCtx)
+func (b *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
+	b.startContextIfRequired(currentCtx)
 	var parentCtx common.ParserRuleContext
 	var nextToken tree.STToken
 	switch currentCtx {
@@ -3233,40 +2909,40 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY_BLOCK:
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 	case common.PARSER_RULE_CONTEXT_STATEMENT, common.PARSER_RULE_CONTEXT_STATEMENT_WITHOUT_ANNOTS:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_CLOSE_BRACE
 	case common.PARSER_RULE_CONTEXT_ASSIGN_OP:
-		return this.getNextRuleForEqualOp()
+		return b.getNextRuleForEqualOp()
 	case common.PARSER_RULE_CONTEXT_COMPOUND_BINARY_OPERATOR:
 		return common.PARSER_RULE_CONTEXT_ASSIGN_OP
 	case common.PARSER_RULE_CONTEXT_CLOSE_BRACE:
-		return this.getNextRuleForCloseBrace(nextLookahead)
+		return b.getNextRuleForCloseBrace(nextLookahead)
 	case common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS:
-		return this.getNextRuleForCloseParenthesis()
+		return b.getNextRuleForCloseParenthesis()
 	case common.PARSER_RULE_CONTEXT_EXPRESSION, common.PARSER_RULE_CONTEXT_BASIC_LITERAL:
-		return this.getNextRuleForExpr()
+		return b.getNextRuleForExpr()
 	case common.PARSER_RULE_CONTEXT_FUNC_NAME:
-		grandParentCtx := this.GetGrandParentContext()
+		grandParentCtx := b.GetGrandParentContext()
 		if (grandParentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER) || (grandParentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER) {
 			return common.PARSER_RULE_CONTEXT_OPTIONAL_RELATIVE_PATH
 		}
 		return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_OPEN_BRACE:
-		return this.getNextRuleForOpenBrace()
+		return b.getNextRuleForOpenBrace()
 	case common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS:
-		return this.getNextRuleForOpenParenthesis()
+		return b.getNextRuleForOpenParenthesis()
 	case common.PARSER_RULE_CONTEXT_SEMICOLON:
-		return this.getNextRuleForSemicolon(nextLookahead)
+		return b.getNextRuleForSemicolon(nextLookahead)
 	case common.PARSER_RULE_CONTEXT_SIMPLE_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_VARIABLE_NAME, common.PARSER_RULE_CONTEXT_PARAMETER_NAME_RHS:
-		return this.getNextRuleForVarName()
+		return b.getNextRuleForVarName()
 	case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM,
 		common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM,
 		common.PARSER_RULE_CONTEXT_REST_PARAM:
 		return common.PARSER_RULE_CONTEXT_PARAM_START
 	case common.PARSER_RULE_CONTEXT_REST_PARAM_RHS:
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_REST_PARAM)
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_REST_PARAM)
 		return common.PARSER_RULE_CONTEXT_ELLIPSIS
 	case common.PARSER_RULE_CONTEXT_ASSIGNMENT_STMT:
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
@@ -3277,14 +2953,14 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_BINARY_OPERATOR:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_COMMA:
-		return this.getNextRuleForComma()
+		return b.getNextRuleForComma()
 	case common.PARSER_RULE_CONTEXT_AFTER_PARAMETER_TYPE:
-		return this.getNextRuleForParamType()
+		return b.getNextRuleForParamType()
 	case common.PARSER_RULE_CONTEXT_MODULE_TYPE_DEFINITION:
 		return common.PARSER_RULE_CONTEXT_TYPE_KEYWORD
 	case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_END:
-		this.EndContext()
-		nextToken = this.tokenReader.PeekN(nextLookahead)
+		b.EndContext()
+		nextToken = b.tokenReader.PeekN(nextLookahead)
 		if nextToken.Kind() == common.EOF_TOKEN {
 			return common.PARSER_RULE_CONTEXT_EOF
 		}
@@ -3292,7 +2968,7 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_CLOSED_RECORD_BODY_START:
 		return common.PARSER_RULE_CONTEXT_RECORD_FIELD_OR_RECORD_END
 	case common.PARSER_RULE_CONTEXT_ELLIPSIS:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		switch parentCtx {
 		case common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR,
 			common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR,
@@ -3312,16 +2988,16 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 			return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 		}
 	case common.PARSER_RULE_CONTEXT_QUESTION_MARK:
-		return this.getNextRuleForQuestionMark()
+		return b.getNextRuleForQuestionMark()
 	case common.PARSER_RULE_CONTEXT_RECORD_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_RECORD_KEYWORD
 	case common.PARSER_RULE_CONTEXT_ASTERISK:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		switch parentCtx {
 		case common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR:
 			return common.PARSER_RULE_CONTEXT_CLOSE_BRACKET
 		case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN:
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN_RHS
 		case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM,
 			common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM:
@@ -3341,11 +3017,11 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_FIRST_OBJECT_TYPE_QUALIFIER:
 		return common.PARSER_RULE_CONTEXT_OBJECT_TYPE_WITHOUT_FIRST_QUALIFIER
 	case common.PARSER_RULE_CONTEXT_OPEN_BRACKET:
-		return this.getNextRuleForOpenBracket()
+		return b.getNextRuleForOpenBracket()
 	case common.PARSER_RULE_CONTEXT_CLOSE_BRACKET:
-		return this.getNextRuleForCloseBracket()
+		return b.getNextRuleForCloseBracket()
 	case common.PARSER_RULE_CONTEXT_DOT:
-		return this.getNextRuleForDot()
+		return b.getNextRuleForDot()
 	case common.PARSER_RULE_CONTEXT_METHOD_CALL_DOT:
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 	case common.PARSER_RULE_CONTEXT_BLOCK_STMT:
@@ -3365,12 +3041,13 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_IMPORT_PREFIX, common.PARSER_RULE_CONTEXT_NAMESPACE_PREFIX:
 		return common.PARSER_RULE_CONTEXT_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_SLASH:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_ABSOLUTE_RESOURCE_PATH:
 			return common.PARSER_RULE_CONTEXT_IDENTIFIER
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH {
+		case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH:
 			return common.PARSER_RULE_CONTEXT_RESOURCE_PATH_SEGMENT
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION {
+		case common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION:
 			return common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_PATH_SEGMENT
 		}
 		return common.PARSER_RULE_CONTEXT_IMPORT_MODULE_NAME
@@ -3393,16 +3070,16 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_MAPPING_FIELD_NAME:
 		return common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD_RHS
 	case common.PARSER_RULE_CONTEXT_COLON:
-		return this.getNextRuleForColon()
+		return b.getNextRuleForColon()
 	case common.PARSER_RULE_CONTEXT_VAR_REF_COLON:
-		this.StartContext(common.PARSER_RULE_CONTEXT_VARIABLE_REF)
+		b.StartContext(common.PARSER_RULE_CONTEXT_VARIABLE_REF)
 		return common.PARSER_RULE_CONTEXT_IDENTIFIER
 	case common.PARSER_RULE_CONTEXT_TYPE_REF_COLON:
-		this.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
-		this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
+		b.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
 		return common.PARSER_RULE_CONTEXT_IDENTIFIER
 	case common.PARSER_RULE_CONTEXT_STRING_LITERAL_TOKEN:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_SERVICE_DECL {
 			return common.PARSER_RULE_CONTEXT_ON_KEYWORD
 		}
@@ -3445,14 +3122,14 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 		return common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER_START_IDENTIFIER
 	case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER_START_IDENTIFIER,
 		common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_IDENTIFIER:
-		nextToken = this.tokenReader.PeekN(nextLookahead)
+		nextToken = b.tokenReader.PeekN(nextLookahead)
 		if nextToken.Kind() == common.COLON_TOKEN {
 			return common.PARSER_RULE_CONTEXT_COLON
 		}
 		fallthrough
 	case common.PARSER_RULE_CONTEXT_IDENTIFIER,
 		common.PARSER_RULE_CONTEXT_SIMPLE_TYPE_DESC_IDENTIFIER:
-		return this.getNextRuleForIdentifier()
+		return b.getNextRuleForIdentifier()
 	case common.PARSER_RULE_CONTEXT_QUALIFIED_IDENTIFIER_PREDECLARED_PREFIX:
 		return common.PARSER_RULE_CONTEXT_COLON
 	case common.PARSER_RULE_CONTEXT_PATH_SEGMENT_IDENT:
@@ -3465,7 +3142,7 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_DECIMAL_INTEGER_LITERAL_TOKEN,
 		common.PARSER_RULE_CONTEXT_HEX_INTEGER_LITERAL_TOKEN:
-		return this.getNextRuleForDecimalIntegerLiteral()
+		return b.getNextRuleForDecimalIntegerLiteral()
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT_START
 	case common.PARSER_RULE_CONTEXT_LOCK_STMT:
@@ -3525,28 +3202,28 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 	case common.PARSER_RULE_CONTEXT_ABSOLUTE_PATH_SINGLE_SLASH:
 		return common.PARSER_RULE_CONTEXT_SERVICE_DECL_RHS
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL_RHS:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ON_KEYWORD
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_BLOCK:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 	case common.PARSER_RULE_CONTEXT_SERVICE_VAR_DECL_RHS:
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
 		return common.PARSER_RULE_CONTEXT_TYPED_BINDING_PATTERN_TYPE_RHS
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH:
 		return common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_START
 	case common.PARSER_RULE_CONTEXT_RESOURCE_PATH_PARAM:
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACKET
 	case common.PARSER_RULE_CONTEXT_RESOURCE_ACCESSOR_DEF_OR_DECL_RHS:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR:
 		return common.PARSER_RULE_CONTEXT_ERROR_KEYWORD
 	case common.PARSER_RULE_CONTEXT_ERROR_CONS_ERROR_KEYWORD_RHS:
-		this.StartContext(common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR)
+		b.StartContext(common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR)
 		return common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR_RHS
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN_RHS:
-		return this.getNextRuleForBindingPatternDefault()
+		return b.getNextRuleForBindingPatternDefault()
 	case common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS:
 		return common.PARSER_RULE_CONTEXT_TUPLE_MEMBER
 	case common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER:
@@ -3555,14 +3232,14 @@ func (this *BallerinaParserErrorHandler) GetNextRule(currentCtx common.ParserRul
 		return common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND
 	case common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND_END,
 		common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER_END:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	default:
-		return this.getNextRuleInternal(currentCtx, nextLookahead)
+		return b.getNextRuleInternal(currentCtx, nextLookahead)
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
 	var parentCtx common.ParserRuleContext
 	var grandParentCtx common.ParserRuleContext
 	switch currentCtx {
@@ -3573,14 +3250,15 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST:
 		return common.PARSER_RULE_CONTEXT_LT
 	case common.PARSER_RULE_CONTEXT_PIPE:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_ALTERNATE_WAIT_EXPRS {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_ALTERNATE_WAIT_EXPRS:
 			return common.PARSER_RULE_CONTEXT_EXPRESSION
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN {
+		case common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN:
 			return common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_MATCH_PATTERN {
+		case common.PARSER_RULE_CONTEXT_MATCH_PATTERN:
 			return common.PARSER_RULE_CONTEXT_MATCH_PATTERN_START
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER {
+		case common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER:
 			return common.PARSER_RULE_CONTEXT_PEER_WORKER_NAME
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESCRIPTOR
@@ -3596,7 +3274,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_END_OF_TYPE_DESC:
-		return this.getNextRuleForTypeDescriptor()
+		return b.getNextRuleForTypeDescriptor()
 	case common.PARSER_RULE_CONTEXT_TYPED_BINDING_PATTERN:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESCRIPTOR
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN_STARTING_IDENTIFIER:
@@ -3612,17 +3290,17 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_FIELD_BINDING_PATTERN_NAME:
 		return common.PARSER_RULE_CONTEXT_FIELD_BINDING_PATTERN_END
 	case common.PARSER_RULE_CONTEXT_LT:
-		return this.getNextRuleForLt()
+		return b.getNextRuleForLt()
 	case common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_START_LT:
 		return common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_END_GT
 	case common.PARSER_RULE_CONTEXT_GT:
-		return this.getNextRuleForGt()
+		return b.getNextRuleForGt()
 	case common.PARSER_RULE_CONTEXT_STREAM_TYPE_PARAM_START_TOKEN:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_STREAM_TYPE_DESC
 	case common.PARSER_RULE_CONTEXT_INFERRED_TYPEDESC_DEFAULT_END_GT:
 		return common.PARSER_RULE_CONTEXT_END_OF_PARAMS_OR_NEXT_PARAM_START
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM_START:
-		this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_CAST)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_CAST)
 		return common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM
 	case common.PARSER_RULE_CONTEXT_TEMPLATE_END:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
@@ -3637,25 +3315,26 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN:
 		return common.PARSER_RULE_CONTEXT_ARG_LIST
 	case common.PARSER_RULE_CONTEXT_ARG_LIST_END:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ARG_LIST_CLOSE_PAREN
 	case common.PARSER_RULE_CONTEXT_ARG_LIST_CLOSE_PAREN:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR {
-			this.EndContext()
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR:
+			b.EndContext()
+		case common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS:
 			return common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION {
+		case common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION:
 			return common.PARSER_RULE_CONTEXT_ACTION_END
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION {
+		case common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION:
 			return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	case common.PARSER_RULE_CONTEXT_ARG_LIST:
 		return common.PARSER_RULE_CONTEXT_ARG_START_OR_ARG_LIST_END
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION_END:
-		this.EndContext()
-		this.EndContext()
+		b.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_ANNOTATION_DECL,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER,
@@ -3677,7 +3356,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 		return common.PARSER_RULE_CONTEXT_CLASS_DESCRIPTOR
 	case common.PARSER_RULE_CONTEXT_VAR_DECL_STARTED_WITH_DENTIFIER,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS_IN_TYPED_BP:
-		this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_ROW_TYPE_PARAM:
 		return common.PARSER_RULE_CONTEXT_LT
@@ -3708,21 +3387,21 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION:
 		return common.PARSER_RULE_CONTEXT_FROM_CLAUSE
 	case common.PARSER_RULE_CONTEXT_QUERY_CONSTRUCT_TYPE_RHS:
-		this.StartContext(common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION)
+		b.StartContext(common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION)
 		return common.PARSER_RULE_CONTEXT_FROM_CLAUSE
 	case common.PARSER_RULE_CONTEXT_EXPRESSION_START_TABLE_KEYWORD_RHS:
-		this.StartContext(common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_EXPRESSION)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_EXPRESSION)
 		return common.PARSER_RULE_CONTEXT_TABLE_KEYWORD_RHS
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION_RHS:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 		}
 		return common.PARSER_RULE_CONTEXT_RESULT_CLAUSE
 	case common.PARSER_RULE_CONTEXT_INTERMEDIATE_CLAUSE:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 		}
 		return common.PARSER_RULE_CONTEXT_INTERMEDIATE_CLAUSE_START
 	case common.PARSER_RULE_CONTEXT_QUERY_ACTION_RHS:
@@ -3734,41 +3413,41 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_EXPR_FUNC_BODY_START:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_MODULE_LEVEL_AMBIGUOUS_FUNC_TYPE_DESC_RHS:
-		this.EndContext()
-		this.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
-		this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
+		b.EndContext()
+		b.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_STMT_LEVEL_AMBIGUOUS_FUNC_TYPE_DESC_RHS:
-		this.EndContext()
-		if !this.isInTypeDescContext() {
-			this.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
-			this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
+		b.EndContext()
+		if !b.isInTypeDescContext() {
+			b.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+			b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_END:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_BRACED_EXPR_OR_ANON_FUNC_PARAMS:
 		return common.PARSER_RULE_CONTEXT_IMPLICIT_ANON_FUNC_PARAM
 	case common.PARSER_RULE_CONTEXT_IMPLICIT_ANON_FUNC_PARAM:
 		return common.PARSER_RULE_CONTEXT_BRACED_EXPR_OR_ANON_FUNC_PARAM_RHS
 	case common.PARSER_RULE_CONTEXT_EXPLICIT_ANON_FUNC_EXPR_BODY_START:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPR_FUNC_BODY_START
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER:
 		return common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER_START
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER, common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER:
 		return common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_START
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_END:
-		return this.getNextRuleForAnnotationEnd(nextLookahead)
+		return b.getNextRuleForAnnotationEnd(nextLookahead)
 	case common.PARSER_RULE_CONTEXT_PLUS_TOKEN, common.PARSER_RULE_CONTEXT_MINUS_TOKEN:
 		return common.PARSER_RULE_CONTEXT_SIGNED_INT_OR_FLOAT_RHS
 	case common.PARSER_RULE_CONTEXT_SIGNED_INT_OR_FLOAT_RHS:
-		return this.getNextRuleForExpr()
+		return b.getNextRuleForExpr()
 	case common.PARSER_RULE_CONTEXT_TUPLE_TYPE_DESC_START:
 		return common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS
 	case common.PARSER_RULE_CONTEXT_METHOD_NAME:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS {
 			return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
 		}
@@ -3786,7 +3465,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_WAIT_FIELD_NAME:
 		return common.PARSER_RULE_CONTEXT_WAIT_FIELD_NAME_RHS
 	case common.PARSER_RULE_CONTEXT_ALTERNATE_WAIT_EXPR_LIST_END:
-		return this.getNextRuleForWaitExprListEnd()
+		return b.getNextRuleForWaitExprListEnd()
 	case common.PARSER_RULE_CONTEXT_MULTI_WAIT_FIELDS:
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 	case common.PARSER_RULE_CONTEXT_ALTERNATE_WAIT_EXPRS:
@@ -3796,16 +3475,16 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_DO_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_DO_KEYWORD
 	case common.PARSER_RULE_CONTEXT_LET_CLAUSE_END:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS
 	case common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE_END,
 		common.PARSER_RULE_CONTEXT_ORDER_CLAUSE_END,
 		common.PARSER_RULE_CONTEXT_JOIN_CLAUSE_END:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_QUERY_PIPELINE_RHS
 	case common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR:
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACKET
@@ -3838,10 +3517,10 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_MATCH_PATTERN_START
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_END:
-		this.EndContext()
-		return this.getNextRuleForMatchPattern()
+		b.EndContext()
+		return b.getNextRuleForMatchPattern()
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN_RHS:
-		return this.getNextRuleForMatchPattern()
+		return b.getNextRuleForMatchPattern()
 	case common.PARSER_RULE_CONTEXT_RIGHT_DOUBLE_ARROW:
 		return common.PARSER_RULE_CONTEXT_BLOCK_STMT
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN:
@@ -3887,7 +3566,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_OBJECT_MEMBER_VISIBILITY_QUAL:
 		return common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY
 	case common.PARSER_RULE_CONTEXT_OBJECT_FIELD_START:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER
 		}
@@ -3895,7 +3574,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_ON_KEYWORD
 	case common.PARSER_RULE_CONTEXT_OBJECT_FIELD_RHS:
-		grandParentCtx = this.GetGrandParentContext()
+		grandParentCtx = b.GetGrandParentContext()
 		if grandParentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR {
 			return common.PARSER_RULE_CONTEXT_SEMICOLON
 		} else {
@@ -3922,55 +3601,56 @@ func (this *BallerinaParserErrorHandler) getNextRuleInternal(currentCtx common.P
 	case common.PARSER_RULE_CONTEXT_MAP_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_MAP_KEYWORD
 	case common.PARSER_RULE_CONTEXT_FUNC_TYPE_FUNC_KEYWORD_RHS:
-		return this.getNextRuleForFuncTypeFuncKeywordRhs()
+		return b.getNextRuleForFuncTypeFuncKeywordRhs()
 	case common.PARSER_RULE_CONTEXT_TRANSACTION_STMT_TRANSACTION_KEYWORD_RHS:
-		this.StartContext(common.PARSER_RULE_CONTEXT_TRANSACTION_STMT)
+		b.StartContext(common.PARSER_RULE_CONTEXT_TRANSACTION_STMT)
 		return common.PARSER_RULE_CONTEXT_BLOCK_STMT
 	case common.PARSER_RULE_CONTEXT_BRACED_EXPRESSION:
 		return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_ARRAY_LENGTH_START:
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
-		this.StartContext(common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR)
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
+		b.StartContext(common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR)
 		return common.PARSER_RULE_CONTEXT_ARRAY_LENGTH
 	case common.PARSER_RULE_CONTEXT_RESOURCE_METHOD_CALL_SLASH_TOKEN:
 		return common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION
 	case common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION:
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_RESOURCE_ACCESS_PATH
 	case common.PARSER_RULE_CONTEXT_ACTION_END:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION {
-			this.EndContext()
+			b.EndContext()
 		}
-		return this.getNextRuleForAction()
+		return b.getNextRuleForAction()
 	case common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION:
 		return common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION_START
 	default:
-		return this.getNextRuleForKeywords(currentCtx, nextLookahead)
+		return b.getNextRuleForKeywords(currentCtx, nextLookahead)
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx common.ParserRuleContext, nextLookahead int) common.ParserRuleContext {
 	var parentCtx common.ParserRuleContext
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_PUBLIC_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if (((parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER) {
 			return common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY
-		} else if this.isParameter(parentCtx) {
+		} else if b.isParameter(parentCtx) {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PARAM
 		}
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_MODIFIER
 	case common.PARSER_RULE_CONTEXT_PRIVATE_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_OBJECT_FUNC_OR_FIELD_WITHOUT_VISIBILITY
 	case common.PARSER_RULE_CONTEXT_ON_KEYWORD:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_ANNOTATION_DECL {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_ANNOTATION_DECL:
 			return common.PARSER_RULE_CONTEXT_ANNOT_ATTACH_POINTS_LIST
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_ON_CONFLICT_CLAUSE {
+		case common.PARSER_RULE_CONTEXT_ON_CONFLICT_CLAUSE:
 			return common.PARSER_RULE_CONTEXT_CONFLICT_KEYWORD
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_ON_CLAUSE {
+		case common.PARSER_RULE_CONTEXT_ON_CLAUSE:
 			return common.PARSER_RULE_CONTEXT_EXPRESSION
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE {
+		case common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE:
 			return common.PARSER_RULE_CONTEXT_FAIL_KEYWORD
 		}
 		return common.PARSER_RULE_CONTEXT_LISTENERS_LIST
@@ -3979,13 +3659,13 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_LISTENER_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER
 	case common.PARSER_RULE_CONTEXT_FINAL_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER) || (parentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER) {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN
 	case common.PARSER_RULE_CONTEXT_CONST_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_ANNOTATION_DECL {
 			return common.PARSER_RULE_CONTEXT_ANNOTATION_KEYWORD
 		}
@@ -4018,7 +3698,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_CHECKING_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_FAIL_KEYWORD:
-		if this.GetParentContext() == common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE {
+		if b.GetParentContext() == common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE {
 			return common.PARSER_RULE_CONTEXT_ON_FAIL_OPTIONAL_BINDING_PATTERN
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
@@ -4027,10 +3707,11 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_IMPORT_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_IMPORT_ORG_OR_MODULE_NAME
 	case common.PARSER_RULE_CONTEXT_AS_KEYWORD:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_IMPORT_DECL {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_IMPORT_DECL:
 			return common.PARSER_RULE_CONTEXT_IMPORT_PREFIX
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_XML_NAMESPACE_DECLARATION {
+		case common.PARSER_RULE_CONTEXT_XML_NAMESPACE_DECLARATION:
 			return common.PARSER_RULE_CONTEXT_NAMESPACE_PREFIX
 		}
 		panic("next rule of as keyword found: " + parentCtx.String())
@@ -4041,12 +3722,13 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_FUNCTION_KEYWORD:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION:
 			return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC {
+		case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC:
 			return common.PARSER_RULE_CONTEXT_FUNC_TYPE_FUNC_KEYWORD_RHS_START
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF {
+		case common.PARSER_RULE_CONTEXT_FUNC_DEF:
 			return common.PARSER_RULE_CONTEXT_FUNC_NAME
 		}
 		return common.PARSER_RULE_CONTEXT_FUNCTION_KEYWORD_RHS
@@ -4057,13 +3739,13 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_TYPE_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_TYPE_NAME
 	case common.PARSER_RULE_CONTEXT_OBJECT_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR {
 			return common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_TYPE_REF
 		}
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_OBJECT_KEYWORD_RHS:
-		this.StartContext(common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR)
+		b.StartContext(common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR)
 		return common.PARSER_RULE_CONTEXT_OPEN_BRACE
 	case common.PARSER_RULE_CONTEXT_ABSTRACT_KEYWORD, common.PARSER_RULE_CONTEXT_CLIENT_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_OBJECT_KEYWORD
@@ -4074,39 +3756,40 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_FOREACH_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN
 	case common.PARSER_RULE_CONTEXT_IN_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_EXPR_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_KEY_KEYWORD:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_KEY_CONSTRAINTS_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_ERROR_KEYWORD:
-		return this.getNextRuleForErrorKeyword()
+		return b.getNextRuleForErrorKeyword()
 	case common.PARSER_RULE_CONTEXT_LET_KEYWORD:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION {
-			nextToken := this.tokenReader.PeekN(nextLookahead)
-			nextNextToken := this.tokenReader.PeekN(nextLookahead + 1)
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION:
+			nextToken := b.tokenReader.PeekN(nextLookahead)
+			nextNextToken := b.tokenReader.PeekN(nextLookahead + 1)
 			if isEndOfLetVarDeclarations(nextToken, nextNextToken) {
 				return common.PARSER_RULE_CONTEXT_LET_CLAUSE_END
 			}
 			return common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+		case common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL:
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL
 		}
 		return common.PARSER_RULE_CONTEXT_LET_EXPR_LET_VAR_DECL
 	case common.PARSER_RULE_CONTEXT_TABLE_KEYWORD:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_ROW_TYPE_PARAM
 		}
 		return common.PARSER_RULE_CONTEXT_TABLE_KEYWORD_RHS
 	case common.PARSER_RULE_CONTEXT_STREAM_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_EXPRESSION {
 			return common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION
 		}
@@ -4122,15 +3805,15 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_SELECT_KEYWORD, common.PARSER_RULE_CONTEXT_COLLECT_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_WHERE_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_ORDER_KEYWORD, common.PARSER_RULE_CONTEXT_GROUP_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_BY_KEYWORD
 	case common.PARSER_RULE_CONTEXT_BY_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE {
 			return common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT
 		}
@@ -4138,9 +3821,9 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_ORDER_DIRECTION:
 		return common.PARSER_RULE_CONTEXT_ORDER_KEY_LIST_END
 	case common.PARSER_RULE_CONTEXT_FROM_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_LET_CLAUSE_LET_VAR_DECL {
-			this.EndContext()
+			b.EndContext()
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN
 	case common.PARSER_RULE_CONTEXT_JOIN_KEYWORD:
@@ -4150,10 +3833,11 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_FLUSH_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_PEER_WORKER
 	case common.PARSER_RULE_CONTEXT_PEER_WORKER_NAME:
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_MULTI_RECEIVE_WORKERS {
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_MULTI_RECEIVE_WORKERS:
 			return common.PARSER_RULE_CONTEXT_RECEIVE_FIELD_END
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER {
+		case common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER:
 			return common.PARSER_RULE_CONTEXT_SINGLE_OR_ALTERNATE_WORKER_SEPARATOR
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
@@ -4168,7 +3852,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_RETRY_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_RETRY_KEYWORD_RHS
 	case common.PARSER_RULE_CONTEXT_TRANSACTIONAL_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_NAMED_WORKER_DECL {
 			return common.PARSER_RULE_CONTEXT_WORKER_KEYWORD
 		}
@@ -4178,7 +3862,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_MATCH_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_READONLY_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if ((parentCtx == common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR) || (parentCtx == common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR)) || (parentCtx == common.PARSER_RULE_CONTEXT_MAPPING_FIELD) {
 			return common.PARSER_RULE_CONTEXT_SPECIFIC_FIELD
 		}
@@ -4186,26 +3870,26 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	case common.PARSER_RULE_CONTEXT_DISTINCT_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESCRIPTOR
 	case common.PARSER_RULE_CONTEXT_VAR_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if ((parentCtx == common.PARSER_RULE_CONTEXT_REST_MATCH_PATTERN) || (parentCtx == common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN)) || (parentCtx == common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG) {
 			return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 		}
 		return common.PARSER_RULE_CONTEXT_BINDING_PATTERN
 	case common.PARSER_RULE_CONTEXT_EQUALS_KEYWORD:
-		if this.GetParentContext() != common.PARSER_RULE_CONTEXT_ON_CLAUSE {
+		if b.GetParentContext() != common.PARSER_RULE_CONTEXT_ON_CLAUSE {
 			panic("assertion failed")
 		}
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_CONFLICT_KEYWORD:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_LIMIT_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_OUTER_KEYWORD:
 		return common.PARSER_RULE_CONTEXT_JOIN_KEYWORD
 	case common.PARSER_RULE_CONTEXT_MAP_KEYWORD:
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_EXPRESSION {
 			return common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION
 		}
@@ -4215,7 +3899,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForKeywords(currentCtx commo
 	}
 }
 
-func (this *BallerinaParserErrorHandler) startContextIfRequired(currentCtx common.ParserRuleContext) {
+func (b *BallerinaParserErrorHandler) startContextIfRequired(currentCtx common.ParserRuleContext) {
 	switch currentCtx {
 	case common.PARSER_RULE_CONTEXT_COMP_UNIT,
 		common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE,
@@ -4345,8 +4029,7 @@ func (this *BallerinaParserErrorHandler) startContextIfRequired(currentCtx commo
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_SERVICE,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PATH_PARAM,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER_IN_GROUPING_KEY:
-		this.StartContext(currentCtx)
-		break
+		b.StartContext(currentCtx)
 	default:
 		break
 	}
@@ -4355,83 +4038,81 @@ func (this *BallerinaParserErrorHandler) startContextIfRequired(currentCtx commo
 		common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION,
 		common.PARSER_RULE_CONTEXT_ON_CONFLICT_CLAUSE,
 		common.PARSER_RULE_CONTEXT_ON_CLAUSE:
-		this.SwitchContext(currentCtx)
-		break
+		b.SwitchContext(currentCtx)
 	default:
 		break
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForCloseParenthesis() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForCloseParenthesis() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_PARAM_LIST {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_FUNC_OPTIONAL_RETURNS
-	} else if this.isParameter(parentCtx) {
-		this.EndContext()
-		this.EndContext()
+	} else if b.isParameter(parentCtx) {
+		b.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_FUNC_OPTIONAL_RETURNS
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_NIL_LITERAL {
-		this.EndContext()
-		return this.getNextRuleForExpr()
+		b.EndContext()
+		return b.getNextRuleForExpr()
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_KEY_SPECIFIER {
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR_OR_QUERY_RHS
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PARENTHESIS {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
-	} else if this.isInTypeDescContext() {
+	} else if b.isInTypeDescContext() {
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_BRACED_EXPR_OR_ANON_FUNC_PARAMS {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_INFER_PARAM_END_OR_PARENTHESIS_END
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_BRACED_EXPRESSION {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN {
-		this.EndContext()
-		return this.getNextRuleForMatchPattern()
+		b.EndContext()
+		return b.getNextRuleForMatchPattern()
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN {
-		this.EndContext()
-		this.EndContext()
-		return this.getNextRuleForMatchPattern()
+		b.EndContext()
+		b.EndContext()
+		return b.getNextRuleForMatchPattern()
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN {
-		this.EndContext()
-		return this.getNextRuleForBindingPatternDefault()
+		b.EndContext()
+		return b.getNextRuleForBindingPatternDefault()
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG {
-		this.EndContext()
-		this.EndContext()
-		return this.getNextRuleForBindingPatternDefault()
+		b.EndContext()
+		b.EndContext()
+		return b.getNextRuleForBindingPatternDefault()
 	}
 	return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForOpenParenthesis() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForOpenParenthesis() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT {
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_STATEMENT_START
-	} else if ((this.isStatement(parentCtx) || this.isExpressionContext(parentCtx)) || (parentCtx == common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR)) || (parentCtx == common.PARSER_RULE_CONTEXT_BRACED_EXPRESSION) {
+	} else if ((b.isStatement(parentCtx) || b.isExpressionContext(parentCtx)) || (parentCtx == common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR)) || (parentCtx == common.PARSER_RULE_CONTEXT_BRACED_EXPRESSION) {
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	} else if ((((parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE) || (parentCtx == common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC)) || (parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF)) || (parentCtx == common.PARSER_RULE_CONTEXT_ANON_FUNC_EXPRESSION)) || (parentCtx == common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_OR_ANON_FUNC) {
-		this.StartContext(common.PARSER_RULE_CONTEXT_PARAM_LIST)
+		b.StartContext(common.PARSER_RULE_CONTEXT_PARAM_LIST)
 		return common.PARSER_RULE_CONTEXT_PARAM_LIST
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_NIL_LITERAL {
 		return common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_KEY_SPECIFIER {
 		return common.PARSER_RULE_CONTEXT_KEY_SPECIFIER_RHS
-	} else if this.isInTypeDescContext() {
-		this.StartContext(common.PARSER_RULE_CONTEXT_KEY_SPECIFIER)
+	} else if b.isInTypeDescContext() {
+		b.StartContext(common.PARSER_RULE_CONTEXT_KEY_SPECIFIER)
 		return common.PARSER_RULE_CONTEXT_KEY_SPECIFIER_RHS
-	} else if this.isParameter(parentCtx) {
+	} else if b.isParameter(parentCtx) {
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN {
 		return common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG
-	} else if this.isInMatchPatternCtx(parentCtx) {
-		this.StartContext(common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN)
+	} else if b.isInMatchPatternCtx(parentCtx) {
+		b.StartContext(common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN)
 		return common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN {
 		return common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_BINDING_PATTERN_START
@@ -4439,7 +4120,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForOpenParenthesis() common.
 	return common.PARSER_RULE_CONTEXT_EXPRESSION
 }
 
-func (this *BallerinaParserErrorHandler) isInMatchPatternCtx(context common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) isInMatchPatternCtx(context common.ParserRuleContext) bool {
 	switch context {
 	case common.PARSER_RULE_CONTEXT_MATCH_PATTERN,
 		common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN,
@@ -4452,8 +4133,8 @@ func (this *BallerinaParserErrorHandler) isInMatchPatternCtx(context common.Pars
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForOpenBrace() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForOpenBrace() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER
@@ -4486,7 +4167,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForOpenBrace() common.Parser
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isExpressionContext(ctx common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) isExpressionContext(ctx common.ParserRuleContext) bool {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_LISTENERS_LIST,
 		common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR,
@@ -4511,29 +4192,29 @@ func (this *BallerinaParserErrorHandler) isExpressionContext(ctx common.ParserRu
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForParamType() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
-	if (parentCtx == common.PARSER_RULE_CONTEXT_REQUIRED_PARAM) || (parentCtx == common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM) {
-		if this.HasAncestorContext(common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC) {
+func (b *BallerinaParserErrorHandler) getNextRuleForParamType() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
+	switch parentCtx {
+	case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM, common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM:
+		if b.HasAncestorContext(common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC) {
 			return common.PARSER_RULE_CONTEXT_FUNC_TYPE_PARAM_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_PARAM_RHS
-	} else if parentCtx == common.PARSER_RULE_CONTEXT_REST_PARAM {
+	case common.PARSER_RULE_CONTEXT_REST_PARAM:
 		return common.PARSER_RULE_CONTEXT_ELLIPSIS
-	} else {
+	default:
 		panic("getNextRuleForParamType found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForComma() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForComma() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_PARAM_LIST,
 		common.PARSER_RULE_CONTEXT_REQUIRED_PARAM,
 		common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM,
 		common.PARSER_RULE_CONTEXT_REST_PARAM:
-		this.EndContext()
+		b.EndContext()
 		return parentCtx
 	case common.PARSER_RULE_CONTEXT_ARG_LIST:
 		return common.PARSER_RULE_CONTEXT_ARG_START
@@ -4586,66 +4267,66 @@ func (this *BallerinaParserErrorHandler) getNextRuleForComma() common.ParserRule
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN
 	case common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN_RHS
 	default:
 		panic("getNextRuleForComma found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForTypeDescriptor() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForTypeDescriptor() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_ANNOTATION_DECL:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_ANNOTATION_TAG
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_RECORD_FIELD:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_BINDING_PATTERN
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PARAM:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_AFTER_PARAMETER_TYPE
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_DEF:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_ANGLE_BRACKETS:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_GT
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_RETURN_TYPE_DESC:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
-		parentCtx = this.GetParentContext()
+		parentCtx = b.GetParentContext()
 		switch parentCtx {
 		case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC:
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		case common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE:
 			return common.PARSER_RULE_CONTEXT_FUNC_BODY_OR_TYPE_DESC_RHS
 		case common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_OR_ANON_FUNC:
 			return common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC_RHS_OR_ANON_FUNC_BODY
 		case common.PARSER_RULE_CONTEXT_FUNC_DEF:
-			grandParentCtx := this.GetGrandParentContext()
+			grandParentCtx := b.GetGrandParentContext()
 			if grandParentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
 				return common.PARSER_RULE_CONTEXT_SEMICOLON
 			} else {
@@ -4659,13 +4340,13 @@ func (this *BallerinaParserErrorHandler) getNextRuleForTypeDescriptor() common.P
 			panic("next rule of type-desc-in-return-type found: " + parentCtx.String())
 		}
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_EXPRESSION:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	case common.PARSER_RULE_CONTEXT_COMP_UNIT:
-		this.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER,
 		common.PARSER_RULE_CONTEXT_CLASS_MEMBER,
@@ -4678,29 +4359,29 @@ func (this *BallerinaParserErrorHandler) getNextRuleForTypeDescriptor() common.P
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PARENTHESIS:
 		return common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TUPLE:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TUPLE_RHS
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST:
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TUPLE_RHS
 	case common.PARSER_RULE_CONTEXT_TYPE_REFERENCE_IN_TYPE_INCLUSION:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_SERVICE:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_ABSOLUTE_PATH
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PATH_PARAM:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_PATH_PARAM_ELLIPSIS
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER_IN_GROUPING_KEY:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_BINDING_PATTERN_STARTING_IDENTIFIER
 	default:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isInTypeDescContext() bool {
-	switch this.GetParentContext() {
+func (b *BallerinaParserErrorHandler) isInTypeDescContext() bool {
+	switch b.GetParentContext() {
 	case common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_ANNOTATION_DECL,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER,
 		common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER_IN_GROUPING_KEY,
@@ -4725,8 +4406,8 @@ func (this *BallerinaParserErrorHandler) isInTypeDescContext() bool {
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForEqualOp() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForEqualOp() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY:
 		return common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY_OPTIONAL_ANNOTS
@@ -4745,78 +4426,78 @@ func (this *BallerinaParserErrorHandler) getNextRuleForEqualOp() common.ParserRu
 		common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE:
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_MATCH_PATTERN
 	case common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN:
 		return common.PARSER_RULE_CONTEXT_BINDING_PATTERN
 	default:
-		if this.isStatement(parentCtx) {
+		if b.isStatement(parentCtx) {
 			return common.PARSER_RULE_CONTEXT_EXPRESSION
 		}
 		panic("getNextRuleForEqualOp found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForCloseBrace(nextLookahead int) common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForCloseBrace(nextLookahead int) common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	var nextToken tree.STToken
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_FUNC_BODY_BLOCK:
-		this.EndContext()
-		return this.getNextRuleForCloseBraceInFuncBody()
+		b.EndContext()
+		return b.getNextRuleForCloseBraceInFuncBody()
 	case common.PARSER_RULE_CONTEXT_CLASS_MEMBER:
-		this.EndContext()
+		b.EndContext()
 		fallthrough
 	case common.PARSER_RULE_CONTEXT_SERVICE_DECL, common.PARSER_RULE_CONTEXT_MODULE_CLASS_DEFINITION:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_TOP_LEVEL_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_SERVICE_DECL {
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 		}
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER:
-		this.EndContext()
+		b.EndContext()
 		fallthrough
 	case common.PARSER_RULE_CONTEXT_RECORD_TYPE_DESCRIPTOR,
 		common.PARSER_RULE_CONTEXT_OBJECT_TYPE_DESCRIPTOR:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_BLOCK_STMT, common.PARSER_RULE_CONTEXT_AMBIGUOUS_STMT:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		switch parentCtx {
 		case common.PARSER_RULE_CONTEXT_LOCK_STMT,
 			common.PARSER_RULE_CONTEXT_FOREACH_STMT,
 			common.PARSER_RULE_CONTEXT_WHILE_BLOCK,
 			common.PARSER_RULE_CONTEXT_DO_BLOCK,
 			common.PARSER_RULE_CONTEXT_RETRY_STMT:
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS
 		case common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE:
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_STATEMENT
 		case common.PARSER_RULE_CONTEXT_IF_BLOCK:
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_ELSE_BLOCK
 		case common.PARSER_RULE_CONTEXT_TRANSACTION_STMT:
-			this.EndContext()
-			parentCtx = this.GetParentContext()
+			b.EndContext()
+			parentCtx = b.GetParentContext()
 			if parentCtx == common.PARSER_RULE_CONTEXT_RETRY_STMT {
-				this.EndContext()
+				b.EndContext()
 			}
 			return common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS
 		case common.PARSER_RULE_CONTEXT_NAMED_WORKER_DECL:
-			this.EndContext()
-			parentCtx = this.GetParentContext()
+			b.EndContext()
+			parentCtx = b.GetParentContext()
 			if parentCtx == common.PARSER_RULE_CONTEXT_FORK_STMT {
-				nextToken = this.tokenReader.PeekN(nextLookahead)
+				nextToken = b.tokenReader.PeekN(nextLookahead)
 				switch nextToken.Kind() {
 				case common.CLOSE_BRACE_TOKEN:
 					return common.PARSER_RULE_CONTEXT_CLOSE_BRACE
@@ -4834,55 +4515,54 @@ func (this *BallerinaParserErrorHandler) getNextRuleForCloseBrace(nextLookahead 
 			return common.PARSER_RULE_CONTEXT_STATEMENT
 		}
 	case common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR {
 			return common.PARSER_RULE_CONTEXT_TABLE_ROW_END
 		}
 		if parentCtx == common.PARSER_RULE_CONTEXT_ANNOTATIONS {
 			return common.PARSER_RULE_CONTEXT_ANNOTATION_END
 		}
-		return this.getNextRuleForExpr()
+		return b.getNextRuleForExpr()
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST:
 		return common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER_END
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN,
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR:
-		this.EndContext()
-		return this.getNextRuleForBindingPatternDefault()
+		b.EndContext()
+		return b.getNextRuleForBindingPatternDefault()
 	case common.PARSER_RULE_CONTEXT_FORK_STMT:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_STATEMENT
 	case common.PARSER_RULE_CONTEXT_INTERPOLATION:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TEMPLATE_MEMBER
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MULTI_RECEIVE_WORKERS,
 		common.PARSER_RULE_CONTEXT_MULTI_WAIT_FIELDS,
 		common.PARSER_RULE_CONTEXT_NATURAL_EXPRESSION:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	case common.PARSER_RULE_CONTEXT_ENUM_MEMBER_LIST:
-		this.EndContext()
-		this.EndContext()
+		b.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_TOP_LEVEL_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_MATCH_BODY:
-		this.EndContext()
-		this.EndContext()
+		b.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS
 	case common.PARSER_RULE_CONTEXT_MAPPING_MATCH_PATTERN:
-		this.EndContext()
-		return this.getNextRuleForMatchPattern()
+		b.EndContext()
+		return b.getNextRuleForMatchPattern()
 	case common.PARSER_RULE_CONTEXT_MATCH_STMT:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_REGULAR_COMPOUND_STMT_RHS
 	default:
 		panic("getNextRuleForCloseBrace found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForCloseBraceInFuncBody() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForCloseBraceInFuncBody() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER:
 		return common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER_START
@@ -4891,23 +4571,22 @@ func (this *BallerinaParserErrorHandler) getNextRuleForCloseBraceInFuncBody() co
 	case common.PARSER_RULE_CONTEXT_COMP_UNIT:
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_TOP_LEVEL_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_FUNC_DEF, common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE:
-		this.EndContext()
-		return this.getNextRuleForCloseBraceInFuncBody()
+		b.EndContext()
+		return b.getNextRuleForCloseBraceInFuncBody()
 	default:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForAnnotationEnd(nextLookahead int) common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getNextRuleForAnnotationEnd(nextLookahead int) common.ParserRuleContext {
 	var parentCtx common.ParserRuleContext
-	var nextToken tree.STToken
-	nextToken = this.tokenReader.PeekN(nextLookahead)
+	var nextToken = b.tokenReader.PeekN(nextLookahead)
 	if nextToken.Kind() == common.AT_TOKEN {
 		return common.PARSER_RULE_CONTEXT_AT
 	}
-	this.EndContext()
-	parentCtx = this.GetParentContext()
+	b.EndContext()
+	parentCtx = b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_COMP_UNIT:
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE_WITHOUT_METADATA
@@ -4939,15 +4618,15 @@ func (this *BallerinaParserErrorHandler) getNextRuleForAnnotationEnd(nextLookahe
 	case common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS:
 		return common.PARSER_RULE_CONTEXT_TUPLE_MEMBER
 	default:
-		if this.isParameter(parentCtx) {
+		if b.isParameter(parentCtx) {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_PARAM
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ASSIGNMENT_STMT:
 		return common.PARSER_RULE_CONTEXT_ASSIGNMENT_STMT_RHS
@@ -4962,7 +4641,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 	case common.PARSER_RULE_CONTEXT_FOREACH_STMT:
 		return common.PARSER_RULE_CONTEXT_IN_KEYWORD
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN_STARTING_IDENTIFIER:
-		return this.getNextRuleForBindingPatternWithCapture(true)
+		return b.getNextRuleForBindingPatternWithCapture(true)
 	case common.PARSER_RULE_CONTEXT_TYPED_BINDING_PATTERN,
 		common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN,
 		common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_MEMBER,
@@ -4971,7 +4650,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 		common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN,
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN:
-		return this.getNextRuleForBindingPatternDefault()
+		return b.getNextRuleForBindingPatternDefault()
 	case common.PARSER_RULE_CONTEXT_LISTENER_DECL, common.PARSER_RULE_CONTEXT_CONSTANT_DECL:
 		return common.PARSER_RULE_CONTEXT_VAR_DECL_STMT_RHS
 	case common.PARSER_RULE_CONTEXT_RECORD_FIELD:
@@ -4994,8 +4673,8 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 	case common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION, common.PARSER_RULE_CONTEXT_JOIN_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_IN_KEYWORD
 	case common.PARSER_RULE_CONTEXT_REST_MATCH_PATTERN:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_MAPPING_MATCH_PATTERN {
 			return common.PARSER_RULE_CONTEXT_CLOSE_BRACE
 		}
@@ -5008,7 +4687,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 	case common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_BLOCK_STMT
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN_RHS
@@ -5017,58 +4696,58 @@ func (this *BallerinaParserErrorHandler) getNextRuleForVarName() common.ParserRu
 	case common.PARSER_RULE_CONTEXT_GROUP_BY_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_GROUPING_KEY_LIST_ELEMENT_END
 	default:
-		if this.isStatement(parentCtx) {
+		if b.isStatement(parentCtx) {
 			return common.PARSER_RULE_CONTEXT_VAR_DECL_STMT_RHS
 		}
 		panic("getNextRuleForVarName found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForSemicolon(nextLookahead int) common.ParserRuleContext {
+func (b *BallerinaParserErrorHandler) getNextRuleForSemicolon(nextLookahead int) common.ParserRuleContext {
 	var nextToken tree.STToken
-	parentCtx := this.GetParentContext()
+	parentCtx := b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY {
-		this.EndContext()
-		return this.getNextRuleForSemicolon(nextLookahead)
+		b.EndContext()
+		return b.getNextRuleForSemicolon(nextLookahead)
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION {
-		this.EndContext()
-		return this.getNextRuleForSemicolon(nextLookahead)
-	} else if this.isExpressionContext(parentCtx) {
-		this.EndContext()
+		b.EndContext()
+		return b.getNextRuleForSemicolon(nextLookahead)
+	} else if b.isExpressionContext(parentCtx) {
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_STATEMENT
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_VAR_DECL_STMT {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_COMP_UNIT {
 			return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 		}
 		return common.PARSER_RULE_CONTEXT_STATEMENT
-	} else if this.isStatement(parentCtx) {
-		this.EndContext()
+	} else if b.isStatement(parentCtx) {
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_STATEMENT
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_RECORD_FIELD {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_RECORD_FIELD_OR_RECORD_END
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_XML_NAMESPACE_DECLARATION {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_COMP_UNIT {
 			return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 		}
 		return common.PARSER_RULE_CONTEXT_STATEMENT
 	} else if ((parentCtx == common.PARSER_RULE_CONTEXT_MODULE_TYPE_DEFINITION) || (parentCtx == common.PARSER_RULE_CONTEXT_LISTENER_DECL)) || (parentCtx == common.PARSER_RULE_CONTEXT_ANNOTATION_DECL) {
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_CONSTANT_DECL {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_BODY_BLOCK {
 			return common.PARSER_RULE_CONTEXT_STATEMENT
 		}
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 	} else if ((parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER) || (parentCtx == common.PARSER_RULE_CONTEXT_CLASS_MEMBER)) || (parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER) {
-		if this.isEndOfObjectTypeNode(nextLookahead) {
-			this.EndContext()
+		if b.isEndOfObjectTypeNode(nextLookahead) {
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_CLOSE_BRACE
 		}
 		if parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER {
@@ -5077,27 +4756,27 @@ func (this *BallerinaParserErrorHandler) getNextRuleForSemicolon(nextLookahead i
 			return common.PARSER_RULE_CONTEXT_CLASS_MEMBER_OR_OBJECT_MEMBER_START
 		}
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_IMPORT_DECL {
-		this.EndContext()
-		nextToken = this.tokenReader.PeekN(nextLookahead)
+		b.EndContext()
+		nextToken = b.tokenReader.PeekN(nextLookahead)
 		if nextToken.Kind() == common.EOF_TOKEN {
 			return common.PARSER_RULE_CONTEXT_EOF
 		}
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_ANNOT_ATTACH_POINTS_LIST {
-		this.EndContext()
-		this.EndContext()
-		nextToken = this.tokenReader.PeekN(nextLookahead)
+		b.EndContext()
+		b.EndContext()
+		nextToken = b.tokenReader.PeekN(nextLookahead)
 		if nextToken.Kind() == common.EOF_TOKEN {
 			return common.PARSER_RULE_CONTEXT_EOF
 		}
 		return common.PARSER_RULE_CONTEXT_TOP_LEVEL_NODE
 	} else if (parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF) || (parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE) {
-		this.EndContext()
-		nextToken = this.tokenReader.PeekN(nextLookahead)
+		b.EndContext()
+		nextToken = b.tokenReader.PeekN(nextLookahead)
 		if nextToken.Kind() == common.EOF_TOKEN {
 			return common.PARSER_RULE_CONTEXT_EOF
 		}
-		return this.getNextRuleForSemicolon(nextLookahead)
+		return b.getNextRuleForSemicolon(nextLookahead)
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_MODULE_CLASS_DEFINITION {
 		return common.PARSER_RULE_CONTEXT_CLASS_MEMBER
 	} else if parentCtx == common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR {
@@ -5109,8 +4788,8 @@ func (this *BallerinaParserErrorHandler) getNextRuleForSemicolon(nextLookahead i
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForDot() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForDot() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_IMPORT_DECL:
 		return common.PARSER_RULE_CONTEXT_IMPORT_MODULE_NAME
@@ -5125,11 +4804,11 @@ func (this *BallerinaParserErrorHandler) getNextRuleForDot() common.ParserRuleCo
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForQuestionMark() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForQuestionMark() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_OPTIONAL_TYPE_DESCRIPTOR:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
@@ -5138,8 +4817,8 @@ func (this *BallerinaParserErrorHandler) getNextRuleForQuestionMark() common.Par
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForOpenBracket() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForOpenBracket() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_ARRAY_LENGTH
@@ -5156,110 +4835,109 @@ func (this *BallerinaParserErrorHandler) getNextRuleForOpenBracket() common.Pars
 	case common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION:
 		return common.PARSER_RULE_CONTEXT_COMPUTED_SEGMENT_OR_REST_SEGMENT
 	default:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS
 		}
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForCloseBracket() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForCloseBracket() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR, common.PARSER_RULE_CONTEXT_TUPLE_MEMBERS:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST {
-			return this.getNextRuleForCloseBracket()
+			return b.getNextRuleForCloseBracket()
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	case common.PARSER_RULE_CONTEXT_COMPUTED_FIELD_NAME:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_COLON
 	case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN:
-		this.EndContext()
-		return this.getNextRuleForBindingPatternDefault()
+		b.EndContext()
+		return b.getNextRuleForBindingPatternDefault()
 	case common.PARSER_RULE_CONTEXT_LIST_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_TABLE_CONSTRUCTOR,
 		common.PARSER_RULE_CONTEXT_MEMBER_ACCESS_KEY_EXPR:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS {
 			return common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND
 		}
-		return this.getNextRuleForExpr()
+		return b.getNextRuleForExpr()
 	case common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST {
 			return common.PARSER_RULE_CONTEXT_BRACKETED_LIST_MEMBER_END
 		}
 		return common.PARSER_RULE_CONTEXT_STMT_START_BRACKETED_LIST_RHS
 	case common.PARSER_RULE_CONTEXT_BRACKETED_LIST:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_BRACKETED_LIST_RHS
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN:
-		this.EndContext()
-		return this.getNextRuleForMatchPattern()
+		b.EndContext()
+		return b.getNextRuleForMatchPattern()
 	case common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH:
 		return common.PARSER_RULE_CONTEXT_RELATIVE_RESOURCE_PATH_END
 	case common.PARSER_RULE_CONTEXT_CLIENT_RESOURCE_ACCESS_ACTION:
 		return common.PARSER_RULE_CONTEXT_RESOURCE_ACCESS_SEGMENT_RHS
 	default:
-		return this.getNextRuleForExpr()
+		return b.getNextRuleForExpr()
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForDecimalIntegerLiteral() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForDecimalIntegerLiteral() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION:
-		this.EndContext()
-		return this.getNextRuleForConstExpr()
+		b.EndContext()
+		return b.getNextRuleForConstExpr()
 	default:
 		return common.PARSER_RULE_CONTEXT_CLOSE_BRACKET
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForExpr() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForExpr() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION {
-		this.EndContext()
-		return this.getNextRuleForConstExpr()
+		b.EndContext()
+		return b.getNextRuleForConstExpr()
 	}
 	return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForExprStartsWithVarRef() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
-	if parentCtx == common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION {
-		this.EndContext()
-		return this.getNextRuleForConstExpr()
-	} else if parentCtx == common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR {
+func (b *BallerinaParserErrorHandler) getNextRuleForExprStartsWithVarRef() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
+	switch parentCtx {
+	case common.PARSER_RULE_CONTEXT_CONSTANT_EXPRESSION:
+		b.EndContext()
+		return b.getNextRuleForConstExpr()
+	case common.PARSER_RULE_CONTEXT_ARRAY_TYPE_DESCRIPTOR:
 		return common.PARSER_RULE_CONTEXT_CLOSE_BRACKET
-	} else if parentCtx == common.PARSER_RULE_CONTEXT_CALL_STMT {
+	case common.PARSER_RULE_CONTEXT_CALL_STMT:
 		return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
 	}
 	return common.PARSER_RULE_CONTEXT_VARIABLE_REF_RHS
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForConstExpr() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForConstExpr() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_XML_NAMESPACE_DECLARATION:
 		return common.PARSER_RULE_CONTEXT_XML_NAMESPACE_PREFIX_DECL
 	default:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
-		return this.getNextRuleForMatchPattern()
+		return b.getNextRuleForMatchPattern()
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForLt() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForLt() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_TYPE_CAST:
 		return common.PARSER_RULE_CONTEXT_TYPE_CAST_PARAM
@@ -5268,49 +4946,50 @@ func (this *BallerinaParserErrorHandler) getNextRuleForLt() common.ParserRuleCon
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForGt() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForGt() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_STREAM_TYPE_DESC {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_CLASS_DESCRIPTOR_IN_NEW_EXPR {
-			this.EndContext()
+			b.EndContext()
 			return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
 		}
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	}
-	if this.isInTypeDescContext() {
+	if b.isInTypeDescContext() {
 		return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 	}
-	if parentCtx == common.PARSER_RULE_CONTEXT_ROW_TYPE_PARAM {
-		this.EndContext()
+	switch parentCtx {
+	case common.PARSER_RULE_CONTEXT_ROW_TYPE_PARAM:
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_TABLE_TYPE_DESC_RHS
-	} else if parentCtx == common.PARSER_RULE_CONTEXT_RETRY_STMT {
+	case common.PARSER_RULE_CONTEXT_RETRY_STMT:
 		return common.PARSER_RULE_CONTEXT_RETRY_TYPE_PARAM_RHS
 	}
 	if parentCtx == common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		if parentCtx == common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS {
 			return common.PARSER_RULE_CONTEXT_XML_STEP_EXTEND
 		}
 		return common.PARSER_RULE_CONTEXT_XML_STEP_START_END
 	}
-	this.EndContext()
+	b.EndContext()
 	return common.PARSER_RULE_CONTEXT_EXPRESSION
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForBindingPatternDefault() common.ParserRuleContext {
-	return this.getNextRuleForBindingPatternWithCapture(false)
+func (b *BallerinaParserErrorHandler) getNextRuleForBindingPatternDefault() common.ParserRuleContext {
+	return b.getNextRuleForBindingPatternWithCapture(false)
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForBindingPatternWithCapture(isCaptureBP bool) common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForBindingPatternWithCapture(isCaptureBP bool) common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_BINDING_PATTERN_STARTING_IDENTIFIER,
 		common.PARSER_RULE_CONTEXT_TYPED_BINDING_PATTERN:
-		this.EndContext()
-		return this.getNextRuleForBindingPatternWithCapture(isCaptureBP)
+		b.EndContext()
+		return b.getNextRuleForBindingPatternWithCapture(isCaptureBP)
 	case common.PARSER_RULE_CONTEXT_FOREACH_STMT,
 		common.PARSER_RULE_CONTEXT_QUERY_EXPRESSION,
 		common.PARSER_RULE_CONTEXT_JOIN_CLAUSE:
@@ -5323,16 +5002,17 @@ func (this *BallerinaParserErrorHandler) getNextRuleForBindingPatternWithCapture
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR:
 		return common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN_END
 	case common.PARSER_RULE_CONTEXT_REST_BINDING_PATTERN:
-		this.EndContext()
-		parentCtx = this.GetParentContext()
-		if parentCtx == common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN {
+		b.EndContext()
+		parentCtx = b.GetParentContext()
+		switch parentCtx {
+		case common.PARSER_RULE_CONTEXT_LIST_BINDING_PATTERN:
 			return common.PARSER_RULE_CONTEXT_CLOSE_BRACKET
-		} else if parentCtx == common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN {
+		case common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN:
 			return common.PARSER_RULE_CONTEXT_CLOSE_PARENTHESIS
 		}
 		return common.PARSER_RULE_CONTEXT_CLOSE_BRACE
 	case common.PARSER_RULE_CONTEXT_AMBIGUOUS_STMT:
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
 		if isCaptureBP {
 			return common.PARSER_RULE_CONTEXT_VAR_DECL_STMT_RHS
 		} else {
@@ -5357,46 +5037,45 @@ func (this *BallerinaParserErrorHandler) getNextRuleForBindingPatternWithCapture
 	case common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ERROR_FIELD_BINDING_PATTERN_END
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN_RHS
 	case common.PARSER_RULE_CONTEXT_ON_FAIL_CLAUSE:
 		return common.PARSER_RULE_CONTEXT_BLOCK_STMT
 	default:
-		return this.getNextRuleForMatchPattern()
+		return b.getNextRuleForMatchPattern()
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForWaitExprListEnd() common.ParserRuleContext {
-	this.EndContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForWaitExprListEnd() common.ParserRuleContext {
+	b.EndContext()
 	return common.PARSER_RULE_CONTEXT_EXPRESSION_RHS
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForIdentifier() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForIdentifier() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_VARIABLE_REF:
-		this.EndContext()
-		return this.getNextRuleForExprStartsWithVarRef()
+		b.EndContext()
+		return b.getNextRuleForExprStartsWithVarRef()
 	case common.PARSER_RULE_CONTEXT_TYPE_REFERENCE:
-		this.EndContext()
-		return this.getNextRuleForTypeReference()
+		b.EndContext()
+		return b.getNextRuleForTypeReference()
 	case common.PARSER_RULE_CONTEXT_TYPE_REFERENCE_IN_TYPE_INCLUSION:
-		this.EndContext()
-		if this.isInTypeDescContext() {
+		b.EndContext()
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		return common.PARSER_RULE_CONTEXT_SEMICOLON
 	case common.PARSER_RULE_CONTEXT_ANNOT_REFERENCE:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ANNOTATION_REF_RHS
 	case common.PARSER_RULE_CONTEXT_ANNOTATION_DECL:
 		return common.PARSER_RULE_CONTEXT_ANNOT_OPTIONAL_ATTACH_POINTS
 	case common.PARSER_RULE_CONTEXT_FIELD_ACCESS_IDENTIFIER:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_VARIABLE_REF_RHS
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_XML_NAME_PATTERN_RHS
 	case common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ASSIGN_OP
@@ -5415,16 +5094,15 @@ func (this *BallerinaParserErrorHandler) getNextRuleForIdentifier() common.Parse
 	case common.PARSER_RULE_CONTEXT_XML_STEP_EXTENDS:
 		return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
 	default:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		panic("getNextRuleForIdentifier found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForColon() common.ParserRuleContext {
-	var parentCtx common.ParserRuleContext
-	parentCtx = this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForColon() common.ParserRuleContext {
+	var parentCtx = b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_MAPPING_CONSTRUCTOR:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
@@ -5433,13 +5111,13 @@ func (this *BallerinaParserErrorHandler) getNextRuleForColon() common.ParserRule
 	case common.PARSER_RULE_CONTEXT_MULTI_WAIT_FIELDS:
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_CONDITIONAL_EXPRESSION:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_EXPRESSION
 	case common.PARSER_RULE_CONTEXT_MAPPING_BINDING_PATTERN,
 		common.PARSER_RULE_CONTEXT_MAPPING_BP_OR_MAPPING_CONSTRUCTOR:
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 	case common.PARSER_RULE_CONTEXT_FIELD_BINDING_PATTERN:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_VARIABLE_NAME
 	case common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_PATTERN:
 		return common.PARSER_RULE_CONTEXT_XML_ATOMIC_NAME_IDENTIFIER_RHS
@@ -5450,8 +5128,8 @@ func (this *BallerinaParserErrorHandler) getNextRuleForColon() common.ParserRule
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForMatchPattern() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForMatchPattern() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_LIST_MATCH_PATTERN_MEMBER_RHS
@@ -5463,15 +5141,15 @@ func (this *BallerinaParserErrorHandler) getNextRuleForMatchPattern() common.Par
 		common.PARSER_RULE_CONTEXT_NAMED_ARG_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ERROR_FIELD_MATCH_PATTERN_RHS
 	case common.PARSER_RULE_CONTEXT_ERROR_ARG_LIST_MATCH_PATTERN_FIRST_ARG:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ERROR_MESSAGE_MATCH_PATTERN_END
 	default:
 		return common.PARSER_RULE_CONTEXT_OPTIONAL_MATCH_GUARD
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForTypeReference() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForTypeReference() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ERROR_CONSTRUCTOR:
 		return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
@@ -5481,21 +5159,21 @@ func (this *BallerinaParserErrorHandler) getNextRuleForTypeReference() common.Pa
 		common.PARSER_RULE_CONTEXT_ERROR_BINDING_PATTERN:
 		return common.PARSER_RULE_CONTEXT_OPEN_PARENTHESIS
 	case common.PARSER_RULE_CONTEXT_CLASS_DESCRIPTOR_IN_NEW_EXPR:
-		this.EndContext()
+		b.EndContext()
 		return common.PARSER_RULE_CONTEXT_ARG_LIST_OPEN_PAREN
 	default:
-		if this.isInTypeDescContext() {
+		if b.isInTypeDescContext() {
 			return common.PARSER_RULE_CONTEXT_TYPE_DESC_RHS
 		}
 		panic("getNextRuleForTypeReference found: " + parentCtx.String())
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForErrorKeyword() common.ParserRuleContext {
-	if this.isInTypeDescContext() {
+func (b *BallerinaParserErrorHandler) getNextRuleForErrorKeyword() common.ParserRuleContext {
+	if b.isInTypeDescContext() {
 		return common.PARSER_RULE_CONTEXT_LT
 	}
-	parentCtx := this.GetParentContext()
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN:
 		return common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN_ERROR_KEYWORD_RHS
@@ -5508,36 +5186,34 @@ func (this *BallerinaParserErrorHandler) getNextRuleForErrorKeyword() common.Par
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForFuncTypeFuncKeywordRhs() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForFuncTypeFuncKeywordRhs() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	if parentCtx == common.PARSER_RULE_CONTEXT_FUNC_DEF_OR_FUNC_TYPE {
-		this.EndContext()
-		parentCtx = this.GetParentContext()
+		b.EndContext()
+		parentCtx = b.GetParentContext()
 		switch parentCtx {
 		case common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER,
 			common.PARSER_RULE_CONTEXT_CLASS_MEMBER,
 			common.PARSER_RULE_CONTEXT_OBJECT_CONSTRUCTOR_MEMBER:
-			this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
-			break
+			b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
 		case common.PARSER_RULE_CONTEXT_COMP_UNIT:
 			fallthrough
 		default:
-			this.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
-			this.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
-			break
+			b.StartContext(common.PARSER_RULE_CONTEXT_VAR_DECL_STMT)
+			b.StartContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_IN_TYPE_BINDING_PATTERN)
 		}
-	} else if this.GetGrandParentContext() == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
-		this.SwitchContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
+	} else if b.GetGrandParentContext() == common.PARSER_RULE_CONTEXT_OBJECT_TYPE_MEMBER {
+		b.SwitchContext(common.PARSER_RULE_CONTEXT_TYPE_DESC_BEFORE_IDENTIFIER)
 	}
-	if !this.isInTypeDescContext() {
+	if !b.isInTypeDescContext() {
 		panic("assertion failed")
 	}
-	this.StartContext(common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC)
+	b.StartContext(common.PARSER_RULE_CONTEXT_FUNC_TYPE_DESC)
 	return common.PARSER_RULE_CONTEXT_FUNC_TYPE_FUNC_KEYWORD_RHS_START
 }
 
-func (this *BallerinaParserErrorHandler) getNextRuleForAction() common.ParserRuleContext {
-	parentCtx := this.GetParentContext()
+func (b *BallerinaParserErrorHandler) getNextRuleForAction() common.ParserRuleContext {
+	parentCtx := b.GetParentContext()
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_MATCH_STMT:
 		return common.PARSER_RULE_CONTEXT_MATCH_BODY
@@ -5548,7 +5224,7 @@ func (this *BallerinaParserErrorHandler) getNextRuleForAction() common.ParserRul
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isStatement(parentCtx common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) isStatement(parentCtx common.ParserRuleContext) bool {
 	switch parentCtx {
 	case common.PARSER_RULE_CONTEXT_STATEMENT,
 		common.PARSER_RULE_CONTEXT_STATEMENT_WITHOUT_ANNOTS,
@@ -5581,7 +5257,7 @@ func (this *BallerinaParserErrorHandler) isStatement(parentCtx common.ParserRule
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isBinaryOperator(token tree.STToken) bool {
+func (b *BallerinaParserErrorHandler) isBinaryOperator(token tree.STToken) bool {
 	switch token.Kind() {
 	case common.PLUS_TOKEN,
 		common.MINUS_TOKEN,
@@ -5615,7 +5291,7 @@ func (this *BallerinaParserErrorHandler) isBinaryOperator(token tree.STToken) bo
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isParameter(ctx common.ParserRuleContext) bool {
+func (b *BallerinaParserErrorHandler) isParameter(ctx common.ParserRuleContext) bool {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_REQUIRED_PARAM, common.PARSER_RULE_CONTEXT_DEFAULTABLE_PARAM, common.PARSER_RULE_CONTEXT_REST_PARAM, common.PARSER_RULE_CONTEXT_PARAM_LIST:
 		return true
@@ -5624,20 +5300,20 @@ func (this *BallerinaParserErrorHandler) isParameter(ctx common.ParserRuleContex
 	}
 }
 
-func (this *BallerinaParserErrorHandler) GetInsertSolution(ctx common.ParserRuleContext) *Solution {
-	kind := this.GetExpectedTokenKind(ctx)
+func (b *BallerinaParserErrorHandler) GetInsertSolution(ctx common.ParserRuleContext) *Solution {
+	kind := b.GetExpectedTokenKind(ctx)
 	if kind != common.NONE {
 		return NewSolution(ACTION_INSERT, ctx, kind, ctx.String())
 	}
-	if this.HasAlternativePaths(ctx) {
-		ctx = this.getShortestAlternative(ctx)
-		return this.GetInsertSolution(ctx)
+	if b.HasAlternativePaths(ctx) {
+		ctx = b.getShortestAlternative(ctx)
+		return b.GetInsertSolution(ctx)
 	}
-	ctx = this.GetNextRule(ctx, 1)
-	return this.GetInsertSolution(ctx)
+	ctx = b.GetNextRule(ctx, 1)
+	return b.GetInsertSolution(ctx)
 }
 
-func (this *BallerinaParserErrorHandler) GetExpectedTokenKind(ctx common.ParserRuleContext) common.SyntaxKind {
+func (b *BallerinaParserErrorHandler) GetExpectedTokenKind(ctx common.ParserRuleContext) common.SyntaxKind {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_FUNC_BODY:
 		return common.EQUAL_TOKEN
@@ -5722,11 +5398,11 @@ func (this *BallerinaParserErrorHandler) GetExpectedTokenKind(ctx common.ParserR
 	case common.PARSER_RULE_CONTEXT_ERROR_MATCH_PATTERN, common.PARSER_RULE_CONTEXT_NIL_LITERAL:
 		return common.OPEN_PAREN_TOKEN
 	default:
-		return this.getExpectedSeperatorTokenKind(ctx)
+		return b.getExpectedSeperatorTokenKind(ctx)
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getExpectedSeperatorTokenKind(ctx common.ParserRuleContext) common.SyntaxKind {
+func (b *BallerinaParserErrorHandler) getExpectedSeperatorTokenKind(ctx common.ParserRuleContext) common.SyntaxKind {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_BITWISE_AND_OPERATOR:
 		return common.BITWISE_AND_TOKEN
@@ -5822,11 +5498,11 @@ func (this *BallerinaParserErrorHandler) getExpectedSeperatorTokenKind(ctx commo
 		common.PARSER_RULE_CONTEXT_RIGHT_DOUBLE_ARROW:
 		return common.RIGHT_DOUBLE_ARROW_TOKEN
 	default:
-		return this.getExpectedKeywordKind(ctx)
+		return b.getExpectedKeywordKind(ctx)
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getExpectedKeywordKind(ctx common.ParserRuleContext) common.SyntaxKind {
+func (b *BallerinaParserErrorHandler) getExpectedKeywordKind(ctx common.ParserRuleContext) common.SyntaxKind {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_EXTERNAL_KEYWORD:
 		return common.EXTERNAL_KEYWORD
@@ -6005,11 +5681,11 @@ func (this *BallerinaParserErrorHandler) getExpectedKeywordKind(ctx common.Parse
 	case common.PARSER_RULE_CONTEXT_NATURAL_KEYWORD:
 		return common.NATURAL_KEYWORD
 	default:
-		return this.getExpectedQualifierKind(ctx)
+		return b.getExpectedQualifierKind(ctx)
 	}
 }
 
-func (this *BallerinaParserErrorHandler) getExpectedQualifierKind(ctx common.ParserRuleContext) common.SyntaxKind {
+func (b *BallerinaParserErrorHandler) getExpectedQualifierKind(ctx common.ParserRuleContext) common.SyntaxKind {
 	switch ctx {
 	case common.PARSER_RULE_CONTEXT_FIRST_OBJECT_CONS_QUALIFIER,
 		common.PARSER_RULE_CONTEXT_SECOND_OBJECT_CONS_QUALIFIER,
@@ -6042,7 +5718,7 @@ func (this *BallerinaParserErrorHandler) getExpectedQualifierKind(ctx common.Par
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isBasicLiteral(kind common.SyntaxKind) bool {
+func (b *BallerinaParserErrorHandler) isBasicLiteral(kind common.SyntaxKind) bool {
 	switch kind {
 	case common.DECIMAL_INTEGER_LITERAL_TOKEN,
 		common.HEX_INTEGER_LITERAL_TOKEN,
@@ -6058,7 +5734,7 @@ func (this *BallerinaParserErrorHandler) isBasicLiteral(kind common.SyntaxKind) 
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isUnaryOperator(token tree.STToken) bool {
+func (b *BallerinaParserErrorHandler) isUnaryOperator(token tree.STToken) bool {
 	switch token.Kind() {
 	case common.PLUS_TOKEN,
 		common.MINUS_TOKEN,
@@ -6070,7 +5746,7 @@ func (this *BallerinaParserErrorHandler) isUnaryOperator(token tree.STToken) boo
 	}
 }
 
-func (this *BallerinaParserErrorHandler) isSingleKeywordAttachPointIdent(tokenKind common.SyntaxKind) bool {
+func (b *BallerinaParserErrorHandler) isSingleKeywordAttachPointIdent(tokenKind common.SyntaxKind) bool {
 	switch tokenKind {
 	case common.ANNOTATION_KEYWORD,
 		common.EXTERNAL_KEYWORD,

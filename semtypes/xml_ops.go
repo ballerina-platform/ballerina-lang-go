@@ -28,7 +28,7 @@ func NewXmlOps() XmlOps {
 	return this
 }
 
-func (this *XmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *XmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from XmlOps.java:45:5
 	v1 := d1.(*XmlSubtype)
 	v2 := d2.(*XmlSubtype)
@@ -36,7 +36,7 @@ func (this *XmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateXmlSubtype(primitives, BddUnion(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *XmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from XmlOps.java:53:5
 	v1 := d1.(*XmlSubtype)
 	v2 := d2.(*XmlSubtype)
@@ -44,7 +44,7 @@ func (this *XmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateXmlSubtypeOrEmpty(primitives, BddIntersect(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *XmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from XmlOps.java:61:5
 	v1 := d1.(*XmlSubtype)
 	v2 := d2.(*XmlSubtype)
@@ -52,21 +52,21 @@ func (this *XmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateXmlSubtypeOrEmpty(primitives, BddDiff(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Complement(d SubtypeData) SubtypeData {
+func (x *XmlOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from XmlOps.java:69:5
-	return this.Diff(XML_SUBTYPE_TOP, d)
+	return x.Diff(XML_SUBTYPE_TOP, d)
 }
 
-func (this *XmlOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (x *XmlOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from XmlOps.java:74:5
 	sd := t.(*XmlSubtype)
 	if sd.Primitives != 0 {
 		return false
 	}
-	return this.xmlBddEmpty(cx, sd.Sequence)
+	return x.xmlBddEmpty(cx, sd.Sequence)
 }
 
-func (this *XmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
+func (x *XmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
 	// migrated from XmlOps.java:83:5
 	return bddEvery(cx, bdd, nil, nil, xmlFormulaIsEmpty)
 }

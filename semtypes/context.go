@@ -70,91 +70,91 @@ type comparableMemoKey struct {
 	semType2 SemType
 }
 
-func (this *contextImpl) pushToMemoStack(m *BddMemo) {
-	this._memoStack = append(this._memoStack, m)
+func (c *contextImpl) pushToMemoStack(m *BddMemo) {
+	c._memoStack = append(c._memoStack, m)
 }
 
-func (this *contextImpl) getMemoStackDepth() int {
-	return len(this._memoStack)
+func (c *contextImpl) getMemoStackDepth() int {
+	return len(c._memoStack)
 }
 
-func (this *contextImpl) getMemoStack(i int) *BddMemo {
-	return this._memoStack[i]
+func (c *contextImpl) getMemoStack(i int) *BddMemo {
+	return c._memoStack[i]
 }
 
-func (this *contextImpl) popFromMemoStack() *BddMemo {
-	lastIndex := len(this._memoStack) - 1
-	memo := this._memoStack[lastIndex]
-	this._memoStack = this._memoStack[:lastIndex]
+func (c *contextImpl) popFromMemoStack() *BddMemo {
+	lastIndex := len(c._memoStack) - 1
+	memo := c._memoStack[lastIndex]
+	c._memoStack = c._memoStack[:lastIndex]
 	return memo
 }
 
-func (this *contextImpl) Env() Env {
-	return this._env
+func (c *contextImpl) Env() Env {
+	return c._env
 }
 
-func (this *contextImpl) jsonMemo() SemType {
-	return this._jsonMemo
+func (c *contextImpl) jsonMemo() SemType {
+	return c._jsonMemo
 }
 
-func (this *contextImpl) setJsonMemo(t SemType) {
-	this._jsonMemo = t
+func (c *contextImpl) setJsonMemo(t SemType) {
+	c._jsonMemo = t
 }
 
-func (this *contextImpl) anydataMemo() SemType {
-	return this._anydataMemo
+func (c *contextImpl) anydataMemo() SemType {
+	return c._anydataMemo
 }
 
-func (this *contextImpl) setAnydataMemo(t SemType) {
-	this._anydataMemo = t
+func (c *contextImpl) setAnydataMemo(t SemType) {
+	c._anydataMemo = t
 }
 
-func (this *contextImpl) cloneableMemo() SemType {
-	return this._cloneableMemo
+func (c *contextImpl) cloneableMemo() SemType {
+	return c._cloneableMemo
 }
 
-func (this *contextImpl) setCloneableMemo(t SemType) {
-	this._cloneableMemo = t
+func (c *contextImpl) setCloneableMemo(t SemType) {
+	c._cloneableMemo = t
 }
 
-func (this *contextImpl) isolatedObjectMemo() SemType {
-	return this._isolatedObjectMemo
+func (c *contextImpl) isolatedObjectMemo() SemType {
+	return c._isolatedObjectMemo
 }
 
-func (this *contextImpl) setIsolatedObjectMemo(t SemType) {
-	this._isolatedObjectMemo = t
+func (c *contextImpl) setIsolatedObjectMemo(t SemType) {
+	c._isolatedObjectMemo = t
 }
 
-func (this *contextImpl) serviceObjectMemo() SemType {
-	return this._serviceObjectMemo
+func (c *contextImpl) serviceObjectMemo() SemType {
+	return c._serviceObjectMemo
 }
 
-func (this *contextImpl) setServiceObjectMemo(t SemType) {
-	this._serviceObjectMemo = t
+func (c *contextImpl) setServiceObjectMemo(t SemType) {
+	c._serviceObjectMemo = t
 }
 
-func (this *contextImpl) mappingMemo() map[string]*BddMemo {
-	return this._mappingMemo
+func (c *contextImpl) mappingMemo() map[string]*BddMemo {
+	return c._mappingMemo
 }
 
-func (this *contextImpl) functionMemo() map[string]*BddMemo {
-	return this._functionMemo
+func (c *contextImpl) functionMemo() map[string]*BddMemo {
+	return c._functionMemo
 }
 
-func (this *contextImpl) listMemo() map[string]*BddMemo {
-	return this._listMemo
+func (c *contextImpl) listMemo() map[string]*BddMemo {
+	return c._listMemo
 }
 
-func (this *contextImpl) functionAtomType(atom Atom) *FunctionAtomicType {
-	return this._env.functionAtomType(atom)
+func (c *contextImpl) functionAtomType(atom Atom) *FunctionAtomicType {
+	return c._env.functionAtomType(atom)
 }
 
-func (this *contextImpl) listAtomType(atom Atom) *ListAtomicType {
-	return this._env.listAtomType(atom)
+func (c *contextImpl) listAtomType(atom Atom) *ListAtomicType {
+	return c._env.listAtomType(atom)
 }
 
-func (this *contextImpl) mappingAtomType(atom Atom) *MappingAtomicType {
-	return this._env.mappingAtomType(atom)
+func (c *contextImpl) mappingAtomType(atom Atom) *MappingAtomicType {
+	return c._env.mappingAtomType(atom)
 }
 
 func ContextFrom(env Env) Context {
@@ -167,10 +167,10 @@ func ContextFrom(env Env) Context {
 	}
 }
 
-func (this *contextImpl) comparableMemo(t1, t2 SemType) *comparableMemo {
-	return this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
+func (c *contextImpl) comparableMemo(t1, t2 SemType) *comparableMemo {
+	return c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
 }
 
-func (this *contextImpl) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
-	this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
+func (c *contextImpl) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
+	c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
 }

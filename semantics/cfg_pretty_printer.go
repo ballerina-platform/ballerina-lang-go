@@ -89,7 +89,7 @@ func (p *CFGPrettyPrinter) printFunctionCFG(funcName string, cfg functionCFG) {
 func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 	// Print basic block header: (bb<id> (<parents>) (<children>)
 	p.buffer.WriteString("  (bb")
-	p.buffer.WriteString(fmt.Sprintf("%d", bb.id))
+	fmt.Fprintf(&p.buffer, "%d", bb.id)
 	p.buffer.WriteString(" ")
 
 	// Print parents
@@ -98,7 +98,7 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 		if i > 0 {
 			p.buffer.WriteString(" ")
 		}
-		p.buffer.WriteString(fmt.Sprintf("bb%d", parent))
+		fmt.Fprintf(&p.buffer, "bb%d", parent)
 	}
 	p.buffer.WriteString(")")
 	p.buffer.WriteString(" ")
@@ -109,7 +109,7 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 		if i > 0 {
 			p.buffer.WriteString(" ")
 		}
-		p.buffer.WriteString(fmt.Sprintf("bb%d", child))
+		fmt.Fprintf(&p.buffer, "bb%d", child)
 	}
 	p.buffer.WriteString(")")
 

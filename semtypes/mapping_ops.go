@@ -36,7 +36,7 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	} else {
 		combined = cx.mappingAtomType(posList.Atom)
 		p := posList.Next
-		for true {
+		for {
 			if p == nil {
 				break
 			} else {
@@ -126,7 +126,7 @@ func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicT
 	orgTypes := m.Types
 	types := shallowCopyCellTypes(orgTypes, (len(orgTypes) + 1))
 	i := len(orgNames)
-	for true {
+	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
 			names[i] = name
 			types[i] = t
@@ -213,27 +213,27 @@ func NewMappingOps() MappingOps {
 	return MappingOps{}
 }
 
-func (this *MappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *MappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from MappingOps.java:258:5
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *MappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *MappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from MappingOps.java:263:5
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *MappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *MappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from MappingOps.java:268:5
 	return bddSubtypeDiff(d1, d2)
 }
 
-func (this *MappingOps) Complement(d SubtypeData) SubtypeData {
+func (m *MappingOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from MappingOps.java:273:5
 	return bddSubtypeComplement(d)
 }
 
-func (this *MappingOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (m *MappingOps) IsEmpty(cx Context, d SubtypeData) bool {
 	// migrated from MappingOps.java:278:5
 	return mappingSubtypeIsEmpty(cx, d)
 }

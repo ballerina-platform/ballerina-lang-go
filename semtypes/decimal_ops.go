@@ -31,7 +31,7 @@ func NewDecimalOps() DecimalOps {
 	return this
 }
 
-func (this *DecimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (d *DecimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:36:5
 	var values []EnumerableType[big.Rat]
 	var v1 EnumerableSubtype[big.Rat] = new(t1.(DecimalSubtype))
@@ -40,7 +40,7 @@ func (this *DecimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return CreateDecimalSubtype(allowed, values)
 }
 
-func (this *DecimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (d *DecimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:44:5
 	var values []EnumerableType[big.Rat]
 	var v1 EnumerableSubtype[big.Rat] = new(t1.(DecimalSubtype))
@@ -49,18 +49,18 @@ func (this *DecimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return CreateDecimalSubtype(allowed, values)
 }
 
-func (this *DecimalOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (d *DecimalOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:52:5
-	return this.Intersect(t1, this.Complement(t2))
+	return d.Intersect(t1, d.Complement(t2))
 }
 
-func (this *DecimalOps) Complement(t SubtypeData) SubtypeData {
+func (d *DecimalOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from DecimalOps.java:57:5
 	s := t.(DecimalSubtype)
 	return CreateDecimalSubtype((!s.allowed), s.Values())
 }
 
-func (this *DecimalOps) IsEmpty(tc Context, t SubtypeData) bool {
+func (d *DecimalOps) IsEmpty(tc Context, t SubtypeData) bool {
 	// migrated from DecimalOps.java:63:5
 	return notIsEmpty(tc, t)
 }

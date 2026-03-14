@@ -26,12 +26,12 @@ type MappingAtomicType struct {
 
 var _ AtomicType = &MappingAtomicType{}
 
-func (this *MappingAtomicType) equals(other AtomicType) bool {
+func (m *MappingAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*MappingAtomicType); ok {
-		if other.Rest != this.Rest {
+		if other.Rest != m.Rest {
 			return false
 		}
-		return slices.Equal(other.Names, this.Names) && slices.Equal(other.Types, this.Types)
+		return slices.Equal(other.Names, m.Names) && slices.Equal(other.Types, m.Types)
 	}
 	return false
 }
@@ -45,16 +45,16 @@ func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType
 	}
 }
 
-func (this *MappingAtomicType) AtomKind() Kind {
+func (m *MappingAtomicType) AtomKind() Kind {
 	// migrated from MappingAtomicType.java:74:5
 	return Kind_MAPPING_ATOM
 }
 
-func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
-	for i, n := range this.Names {
+func (m *MappingAtomicType) FieldInnerVal(name string) SemType {
+	for i, n := range m.Names {
 		if n == name {
-			return CellInnerVal(this.Types[i])
+			return CellInnerVal(m.Types[i])
 		}
 	}
-	return CellInnerVal(this.Rest)
+	return CellInnerVal(m.Rest)
 }

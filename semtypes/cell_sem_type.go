@@ -44,23 +44,23 @@ func CellSemTypeFrom(subtypeDataList []ProperSubtypeData) CellSemType {
 	return NewCellSemType(subtypeDataList)
 }
 
-func (this CellSemType) All() int {
+func (c CellSemType) All() int {
 	// migrated from CellSemType.java:46
 	return 0
 }
 
-func (this CellSemType) Some() int {
+func (c CellSemType) Some() int {
 	// migrated from CellSemType.java:51
 	return CELL.bitset
 }
 
-func (this CellSemType) SubtypeDataList() []ProperSubtypeData {
+func (c CellSemType) SubtypeDataList() []ProperSubtypeData {
 	// migrated from CellSemType.java:56
-	return []ProperSubtypeData{this.subtypeData}
+	return []ProperSubtypeData{c.subtypeData}
 }
 
-func (this CellSemType) String() string {
-	allTypes := bitsetToTypeNames(this.All())
-	someTypes := bitsetToTypeNames(this.Some())
+func (c CellSemType) String() string {
+	allTypes := bitsetToTypeNames(c.All())
+	someTypes := bitsetToTypeNames(c.Some())
 	return fmt.Sprintf("((%s), (%s))", allTypes, someTypes)
 }

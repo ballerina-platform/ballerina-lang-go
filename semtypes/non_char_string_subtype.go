@@ -35,12 +35,12 @@ func NonCharStringSubtypeFrom(allowed bool, values []EnumerableType[string]) Non
 	return newNonCharStringSubtypeFromBoolEnumerableStrings(allowed, values)
 }
 
-func (this *NonCharStringSubtype) Allowed() bool {
+func (n *NonCharStringSubtype) Allowed() bool {
 	// migrated from NonCharStringSubtype.java:43:5
-	return this.allowed
+	return n.allowed
 }
 
-func (this *NonCharStringSubtype) Values() []EnumerableType[string] {
+func (n *NonCharStringSubtype) Values() []EnumerableType[string] {
 	// migrated from NonCharStringSubtype.java:48:5
-	return this.values
+	return n.values
 }

@@ -254,9 +254,7 @@ func convertExprBodyToBlockBody(
 
 	// Build block with init statements + return
 	stmts := make([]ast.BLangStatement, 0, len(result.initStmts)+1)
-	for _, initStmt := range result.initStmts {
-		stmts = append(stmts, initStmt.(ast.BLangStatement))
-	}
+	stmts = append(stmts, result.initStmts...)
 	stmts = append(stmts, returnStmt)
 
 	return &ast.BLangBlockFunctionBody{

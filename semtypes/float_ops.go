@@ -27,7 +27,7 @@ func NewFloatOps() FloatOps {
 	return this
 }
 
-func (this *FloatOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FloatOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:36:5
 	var values []EnumerableType[float64]
 	var v1 EnumerableSubtype[float64] = new(t1.(FloatSubtype))
@@ -36,7 +36,7 @@ func (this *FloatOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return CreateFloatSubtype(allowed, values)
 }
 
-func (this *FloatOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FloatOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:44:5
 	var values []EnumerableType[float64]
 	var v1 EnumerableSubtype[float64] = new(t1.(FloatSubtype))
@@ -45,18 +45,18 @@ func (this *FloatOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return CreateFloatSubtype(allowed, values)
 }
 
-func (this *FloatOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *FloatOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:51:5
-	return this.Intersect(t1, this.Complement(t2))
+	return f.Intersect(t1, f.Complement(t2))
 }
 
-func (this *FloatOps) Complement(t SubtypeData) SubtypeData {
+func (f *FloatOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from FloatOps.java:56:5
 	s := t.(FloatSubtype)
 	return CreateFloatSubtype((!s.allowed), s.Values())
 }
 
-func (this *FloatOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (f *FloatOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from FloatOps.java:62:5
 	return notIsEmpty(cx, t)
 }
