@@ -240,12 +240,7 @@ func TransformConstant(ctx *Context, c *ast.BLangConstant) *BIRConstant {
 	valueExpr := c.Expr
 	if literal, ok := valueExpr.(*ast.BLangLiteral); ok {
 		// FIXME: once we have constant propagation these should be propagated and no longer needed
-		return &BIRConstant{
-			Name: model.Name(c.GetName().GetValue()),
-			ConstValue: ConstValue{
-				Value: literal.Value,
-			},
-		}
+		return NewBIRConstant(model.Name(c.GetName().GetValue()), literal.GetValueType(), literal.Value, c.GetPosition())
 	}
 	// TODO: need this think how to actually implement constant value initialization. May be we add these to init function?
 	panic("unexpected constant value type")
@@ -259,7 +254,7 @@ func handleBlockFunctionBody(ctx *stmtContext, ast *ast.BLangBlockFunctionBody) 
 	}
 	// Add implicit return
 	if curBB != nil {
-		curBB.Terminator = &Return{}
+		curBB.Terminator = NewReturn(curBB.Pos)
 	}
 }
 
@@ -301,14 +296,14 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
 	// First do the operation
 	ref := stmt.VarRef.(ast.BLangExpression)
-	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType())
+	valueEffect := binaryExpressionInner(ctx, curBB, stmt.OpKind, ref, stmt.Expr, stmt.Expr.GetDeterminedType(), stmt.GetPosition())
 	// Then do the assignment
-	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect)
+	return assignmentStatementInner(ctx, valueEffect.block, ref, valueEffect, stmt.GetPosition())
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
 	onContinueBB := ctx.loopCtx.onContinueBB
-	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: onContinueBB}}
+	curBB.Terminator = NewGoto(onContinueBB, stmt.GetPosition())
 	return statementEffect{
 		// We don't know where to add the next statement so we return nil
 		block: nil,
@@ -317,7 +312,7 @@ func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCo
 
 func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak) statementEffect {
 	onBreakBB := ctx.loopCtx.onBreakBB
-	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: onBreakBB}}
+	curBB.Terminator = NewGoto(onBreakBB, stmt.GetPosition())
 	return statementEffect{
 		// We don't know where to add the next statement so we return nil
 		block: nil,
@@ -327,23 +322,19 @@ func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak
 func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) statementEffect {
 	loopHead := ctx.addBB()
 	// jump to loop head
-	bb.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+	bb.Terminator = NewGoto(loopHead, stmt.GetPosition())
 	condEffect := handleExpression(ctx, loopHead, stmt.Expr)
 
 	loopBody := ctx.addBB()
 	loopEnd := ctx.addBB()
 	// conditionally jump to loop body
-	branch := &Branch{}
-	branch.Op = condEffect.result
-	branch.TrueBB = loopBody
-	branch.FalseBB = loopEnd
-	condEffect.block.Terminator = branch
+	condEffect.block.Terminator = NewBranch(condEffect.result, loopBody, loopEnd, stmt.GetPosition())
 
 	ctx.addLoopCtx(loopEnd, loopHead)
 	bodyEffect := blockStatement(ctx, loopBody, &stmt.Body)
 	// This could happen if the while block always ends return, break or continue
 	if bodyEffect.block != nil {
-		bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: loopHead}}
+		bodyEffect.block.Terminator = NewGoto(loopHead, stmt.GetPosition())
 	}
 
 	ctx.popLoopCtx()
@@ -354,62 +345,56 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 
 func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAssignment) statementEffect {
 	valueEffect := handleExpression(ctx, bb, stmt.Expr)
-	return assignmentStatementInner(ctx, valueEffect.block, stmt.VarRef, valueEffect)
+	return assignmentStatementInner(ctx, valueEffect.block, stmt.VarRef, valueEffect, stmt.GetPosition())
 }
 
-func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLangExpression, valueEffect expressionEffect) statementEffect {
+func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLangExpression, valueEffect expressionEffect, pos ast.Location) statementEffect {
 	switch varRef := ref.(type) {
 	case *ast.BLangIndexBasedAccess:
-		return assignToMemberStatement(ctx, bb, varRef, valueEffect)
+		return assignToMemberStatement(ctx, bb, varRef, valueEffect, pos)
 	case *ast.BLangWildCardBindingPattern:
-		return assignToWildcardBindingPattern(ctx, bb, varRef, valueEffect)
+		return assignToWildcardBindingPattern(ctx, bb, varRef, valueEffect, pos)
 	case *ast.BLangSimpleVarRef:
-		return assignToSimpleVariable(ctx, bb, varRef, valueEffect)
+		return assignToSimpleVariable(ctx, bb, varRef, valueEffect, pos)
 	default:
 		panic("unexpected variable reference type")
 	}
 }
 
-func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, valueEffect expressionEffect) statementEffect {
+func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, valueEffect expressionEffect, pos ast.Location) statementEffect {
 	refEffect := wildcardBindingPattern(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
-	mov := &Move{}
-	mov.LhsOp = refEffect.result
-	mov.RhsOp = valueEffect.result
+	mov := NewMove(valueEffect.result, refEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, mov)
 	return statementEffect{
 		block: currBB,
 	}
 }
 
-func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, valueEffect expressionEffect) statementEffect {
+func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, valueEffect expressionEffect, pos ast.Location) statementEffect {
 	refEffect := simpleVariableReference(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
-	mov := &Move{}
-	mov.LhsOp = refEffect.result
-	mov.RhsOp = valueEffect.result
+	mov := NewMove(valueEffect.result, refEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, mov)
 	return statementEffect{
 		block: currBB,
 	}
 }
 
-func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect) statementEffect {
+func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect, pos ast.Location) statementEffect {
 	currBB := valueEffect.block
 	containerRefEffect := handleExpression(ctx, currBB, varRef.Expr)
 	currBB = containerRefEffect.block
 	indexEffect := handleExpression(ctx, currBB, varRef.IndexExpr)
 	currBB = indexEffect.block
-	fieldAccess := &FieldAccess{}
 	containerType := varRef.Expr.GetDeterminedType()
+	var fieldAccessKind InstructionKind
 	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_STORE
+		fieldAccessKind = INSTRUCTION_KIND_ARRAY_STORE
 	} else {
-		fieldAccess.Kind = INSTRUCTION_KIND_MAP_STORE
+		fieldAccessKind = INSTRUCTION_KIND_MAP_STORE
 	}
-	fieldAccess.LhsOp = containerRefEffect.result
-	fieldAccess.KeyOp = indexEffect.result
-	fieldAccess.RhsOp = valueEffect.result
+	fieldAccess := NewFieldAccess(fieldAccessKind, containerRefEffect.result, indexEffect.result, valueEffect.result, pos)
 	currBB.Instructions = append(currBB.Instructions, fieldAccess)
 	return statementEffect{
 		block: currBB,
@@ -427,9 +412,8 @@ func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 	}
 	exprResult := handleExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
 	curBB := exprResult.block
-	move := &Move{}
-	move.LhsOp = ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
-	move.RhsOp = exprResult.result
+	lhsOp := ctx.addLocalVar(varName, nil, VAR_KIND_LOCAL, stmt.Var.Symbol())
+	move := NewMove(exprResult.result, lhsOp, stmt.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, move)
 	return statementEffect{
 		block: curBB,
@@ -438,22 +422,22 @@ func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 
 func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn) statementEffect {
 	curBB := bb
+	pos := stmt.GetPosition()
 	if stmt.Expr != nil {
 		valueEffect := handleExpression(ctx, curBB, stmt.Expr)
 		curBB = valueEffect.block
-		mov := &Move{}
-		mov.LhsOp = ctx.retVar
-		mov.RhsOp = valueEffect.result
+		mov := NewMove(valueEffect.result, ctx.retVar, pos)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
-	curBB.Terminator = &Return{}
+	ret := NewReturn(pos)
+	curBB.Terminator = ret
 	return statementEffect{}
 }
 
 func panicStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangPanic) statementEffect {
 	errorEffect := handleExpression(ctx, curBB, stmt.Expr)
 	curBB = errorEffect.block
-	curBB.Terminator = &Panic{ErrorOp: errorEffect.result}
+	curBB.Terminator = NewPanic(errorEffect.result, stmt.GetPosition())
 	return statementEffect{}
 }
 
@@ -475,28 +459,20 @@ func ifStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangIf) stat
 	if stmt.ElseStmt != nil {
 		elseBB := ctx.addBB()
 		// Add branch to current BB
-		branch := &Branch{}
-		branch.Op = cond.result
-		branch.TrueBB = thenBB
-		branch.FalseBB = elseBB
-		curBB.Terminator = branch
+		curBB.Terminator = NewBranch(cond.result, thenBB, elseBB, stmt.GetPosition())
 
 		elseEffect := handleStatement(ctx, elseBB, stmt.ElseStmt)
 		finalBB = ctx.addBB()
 		if elseEffect.block != nil {
-			elseEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+			elseEffect.block.Terminator = NewGoto(finalBB, stmt.GetPosition())
 		}
 	} else {
 		finalBB = ctx.addBB()
-		branch := &Branch{}
-		branch.Op = cond.result
-		branch.TrueBB = thenBB
-		branch.FalseBB = finalBB
-		curBB.Terminator = branch
+		curBB.Terminator = NewBranch(cond.result, thenBB, finalBB, stmt.GetPosition())
 	}
 	// this could be nil if the control flow moved out of the if (ex: break, continue, return, etc)
 	if thenEffect.block != nil {
-		thenEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+		thenEffect.block.Terminator = NewGoto(finalBB, stmt.GetPosition())
 	}
 	return statementEffect{
 		block: finalBB,
@@ -685,7 +661,7 @@ func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *
 			ctx.birCx.CompilerContext.Unimplemented("non-key-value record field not implemented", expr.GetPosition())
 		}
 	}
-	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields)
+	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, expr.GetPosition())
 }
 
 func mappingKeyName(key *ast.BLangMappingKey) string {
@@ -699,13 +675,11 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 	}
 }
 
-func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField) expressionEffect {
+func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, pos ast.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
 		keyOperand := ctx.addTempVar(&semtypes.STRING)
-		keyLoad := &ConstantLoad{}
-		keyLoad.Value = field.key
-		keyLoad.LhsOp = keyOperand
+		keyLoad := NewConstantLoad(keyOperand, nil, field.key, pos)
 		curBB.Instructions = append(curBB.Instructions, keyLoad)
 
 		valueEffect := handleExpression(ctx, curBB, field.value)
@@ -716,10 +690,7 @@ func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, m
 		})
 	}
 	resultOperand := ctx.addTempVar(mapType)
-	newMap := &NewMap{}
-	newMap.Type = mapType
-	newMap.Values = entries
-	newMap.LhsOp = resultOperand
+	newMap := NewMapConstructor(mapType, resultOperand, entries, pos)
 	curBB.Instructions = append(curBB.Instructions, newMap)
 	return expressionEffect{
 		result: resultOperand,
@@ -747,21 +718,17 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 		for _, namedArg := range expr.NamedArgs {
 			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
 		}
-		detailEffect := mappingConstructorExpressionInner(ctx, curBB, &semtypes.MAPPING, fields)
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, &semtypes.MAPPING, fields, expr.GetPosition())
 		curBB = detailEffect.block
 		detailOp = detailEffect.result
 	}
 
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	newError := &NewError{}
-	newError.Type = expr.GetDeterminedType()
+	typeName := ""
 	if expr.ErrorTypeRef != nil {
-		newError.TypeName = expr.ErrorTypeRef.TypeName.Value
+		typeName = expr.ErrorTypeRef.TypeName.Value
 	}
-	newError.MessageOp = msgEffect.result
-	newError.CauseOp = causeOp
-	newError.DetailOp = detailOp
-	newError.LhsOp = resultOperand
+	newError := NewErrorConstructor(expr.GetDeterminedType(), typeName, resultOperand, msgEffect.result, causeOp, detailOp, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, newError)
 	return expressionEffect{
 		result: resultOperand,
@@ -774,6 +741,7 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	curBB = exprEffect.block
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	typeCast := &TypeCast{}
+	typeCast.Pos = expr.GetPosition()
 	typeCast.RhsOp = exprEffect.result
 	typeCast.LhsOp = resultOperand
 	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
@@ -789,6 +757,7 @@ func typeTestExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangT
 	curBB = exprEffect.block
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	typeTest := &TypeTest{}
+	typeTest.Pos = expr.GetPosition()
 	typeTest.LhsOp = resultOperand
 	typeTest.RhsOp = exprEffect.result
 	typeTest.Type = expr.Type.Type
@@ -809,31 +778,23 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	}
 
 	lat := expr.AtomicType
+	exprPos := expr.GetPosition()
 	for i := len(expr.Exprs); i < lat.Members.FixedLength; i++ {
 		ty := lat.MemberAt(i)
 		fillerVal := values.DefaultValueForType(ty)
 		fillerOperand := ctx.addTempVar(ty)
-		fillerLoad := &ConstantLoad{}
-		fillerLoad.Value = fillerVal
-		fillerLoad.LhsOp = fillerOperand
+		fillerLoad := NewConstantLoad(fillerOperand, nil, fillerVal, exprPos)
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
 	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
 
 	sizeOperand := ctx.addTempVar(&semtypes.INT)
-	constantLoad := &ConstantLoad{}
-	constantLoad.LhsOp = sizeOperand
-	constantLoad.Value = int64(len(initValues))
+	constantLoad := NewConstantLoad(sizeOperand, nil, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(&semtypes.LIST)
-	newArray := &NewArray{}
-	newArray.LhsOp = resultOperand
-	newArray.SizeOp = sizeOperand
-	newArray.Values = initValues
-	newArray.Type = expr.GetDeterminedType()
-	newArray.Filler = fillerVal
+	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, fillerVal, exprPos)
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
 		result: resultOperand,
@@ -844,18 +805,16 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 func indexBasedAccess(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangIndexBasedAccess) expressionEffect {
 	// Assignment is handled in assignmentStatement to this is always a load
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	fieldAccess := &FieldAccess{}
 	containerType := expr.Expr.GetDeterminedType()
+	var fieldAccessKind InstructionKind
 	if semtypes.IsSubtypeSimple(containerType, semtypes.LIST) {
-		fieldAccess.Kind = INSTRUCTION_KIND_ARRAY_LOAD
+		fieldAccessKind = INSTRUCTION_KIND_ARRAY_LOAD
 	} else {
-		fieldAccess.Kind = INSTRUCTION_KIND_MAP_LOAD
+		fieldAccessKind = INSTRUCTION_KIND_MAP_LOAD
 	}
-	fieldAccess.LhsOp = resultOperand
 	indexEffect := handleExpression(ctx, bb, expr.IndexExpr)
-	fieldAccess.KeyOp = indexEffect.result
 	containerRefEffect := handleExpression(ctx, indexEffect.block, expr.Expr)
-	fieldAccess.RhsOp = containerRefEffect.result
+	fieldAccess := NewFieldAccess(fieldAccessKind, resultOperand, indexEffect.result, containerRefEffect.result, expr.GetPosition())
 	bb.Instructions = append(bb.Instructions, fieldAccess)
 	return expressionEffect{
 		result: resultOperand,
@@ -889,11 +848,8 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	opEffect := handleExpression(ctx, bb, expr.Expr)
 
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	unaryOp := &UnaryOp{}
-	unaryOp.Kind = kind
-	unaryOp.LhsOp = resultOperand
 	curBB := opEffect.block
-	unaryOp.RhsOp = opEffect.result
+	unaryOp := NewUnaryOp(kind, resultOperand, opEffect.result, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, unaryOp)
 	return expressionEffect{
 		result: resultOperand,
@@ -912,12 +868,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	thenBB := ctx.addBB()
 	// TODO: deal with type
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	call := &Call{}
-	call.Kind = INSTRUCTION_KIND_CALL
-	call.Args = args
-	call.Name = model.Name(expr.GetName().GetValue())
-	call.ThenBB = thenBB
-	call.LhsOp = resultOperand
+	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
 
 	// Package qualified call - look up package ID from import alias
 	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
@@ -942,9 +893,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	constantLoad := &ConstantLoad{}
-	constantLoad.Value = expr.Value
-	constantLoad.LhsOp = resultOperand
+	constantLoad := NewConstantLoad(resultOperand, expr.GetValueType(), expr.Value, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, constantLoad)
 	return expressionEffect{
 		result: resultOperand,
@@ -952,7 +901,7 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression, resultType semtypes.SemType) expressionEffect {
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression, resultType semtypes.SemType, pos ast.Location) expressionEffect {
 	var kind InstructionKind
 	switch opKind {
 	case model.OperatorKind_ADD:
@@ -997,15 +946,11 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 		panic("unexpected binary operator kind")
 	}
 	resultOperand := ctx.addTempVar(resultType)
-	binaryOp := &BinaryOp{}
-	binaryOp.Kind = kind
-	binaryOp.LhsOp = resultOperand
 	op1Effect := handleExpression(ctx, curBB, lhsExpr)
 	curBB = op1Effect.block
 	op2Effect := handleExpression(ctx, curBB, rhsExpr)
 	curBB = op2Effect.block
-	binaryOp.RhsOp1 = *op1Effect.result
-	binaryOp.RhsOp2 = *op2Effect.result
+	binaryOp := NewBinaryOp(kind, resultOperand, op1Effect.result, op2Effect.result, pos)
 	curBB.Instructions = append(curBB.Instructions, binaryOp)
 	return expressionEffect{
 		result: resultOperand,
@@ -1020,7 +965,7 @@ func binaryExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangBin
 	case model.OperatorKind_OR:
 		return logicalOrExpression(ctx, curBB, expr)
 	default:
-		return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType())
+		return binaryExpressionInner(ctx, curBB, expr.OpKind, expr.LhsExpr, expr.RhsExpr, expr.GetDeterminedType(), expr.GetPosition())
 	}
 }
 
@@ -1030,28 +975,21 @@ func logicalAndExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLan
 	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
 	curBB = lhsEffect.block
 
-	mov := &Move{}
-	mov.LhsOp = resultOperand
-	mov.RhsOp = lhsEffect.result
+	mov := NewMove(lhsEffect.result, resultOperand, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, mov)
 
 	evalRhsBB := ctx.addBB()
 	doneBB := ctx.addBB()
 
-	branch := &Branch{}
-	branch.Op = lhsEffect.result
-	branch.TrueBB = evalRhsBB
-	branch.FalseBB = doneBB
-	curBB.Terminator = branch
+	curBB.Terminator = NewBranch(lhsEffect.result, evalRhsBB, doneBB, expr.GetPosition())
 
 	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
 	rhsBB := rhsEffect.block
 
-	rhsMov := &Move{}
-	rhsMov.LhsOp = resultOperand
-	rhsMov.RhsOp = rhsEffect.result
+	rhsMov := NewMove(rhsEffect.result, resultOperand, expr.GetPosition())
+
 	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
-	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+	rhsBB.Terminator = NewGoto(doneBB, expr.GetPosition())
 
 	return expressionEffect{
 		result: resultOperand,
@@ -1065,28 +1003,20 @@ func logicalOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLang
 	lhsEffect := handleExpression(ctx, curBB, expr.LhsExpr)
 	curBB = lhsEffect.block
 
-	mov := &Move{}
-	mov.LhsOp = resultOperand
-	mov.RhsOp = lhsEffect.result
+	mov := NewMove(lhsEffect.result, resultOperand, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, mov)
 
 	evalRhsBB := ctx.addBB()
 	doneBB := ctx.addBB()
 
-	branch := &Branch{}
-	branch.Op = lhsEffect.result
-	branch.TrueBB = doneBB
-	branch.FalseBB = evalRhsBB
-	curBB.Terminator = branch
+	curBB.Terminator = NewBranch(lhsEffect.result, doneBB, evalRhsBB, expr.GetPosition())
 
 	rhsEffect := handleExpression(ctx, evalRhsBB, expr.RhsExpr)
 	rhsBB := rhsEffect.block
 
-	rhsMov := &Move{}
-	rhsMov.LhsOp = resultOperand
-	rhsMov.RhsOp = rhsEffect.result
+	rhsMov := NewMove(rhsEffect.result, resultOperand, expr.GetPosition())
 	rhsBB.Instructions = append(rhsBB.Instructions, rhsMov)
-	rhsBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: doneBB}}
+	rhsBB.Terminator = NewGoto(doneBB, expr.GetPosition())
 
 	return expressionEffect{
 		result: resultOperand,
@@ -1110,9 +1040,7 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	// FIXME: this is a hack until we have package level variable initialization
 	if constant, ok := ctx.birCx.constantMap[symRef]; ok {
 		resultOperand := ctx.addTempVar(constant.Type)
-		constantLoad := &ConstantLoad{}
-		constantLoad.Value = constant.ConstValue.Value
-		constantLoad.LhsOp = resultOperand
+		constantLoad := NewConstantLoad(resultOperand, constant.ConstValue.Type, constant.ConstValue.Value, expr.GetPosition())
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
 		return expressionEffect{
 			result: resultOperand,
