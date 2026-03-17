@@ -18,7 +18,6 @@ package semtypes
 
 import (
 	"ballerina-lang-go/common"
-	"fmt"
 )
 
 type XmlSubtype struct {
@@ -54,10 +53,6 @@ func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) XmlSubtype {
 func XmlSubtypeFrom(primitives int, sequence Bdd) XmlSubtype {
 	// migrated from XmlSubtype.java:71:5
 	return newXmlSubtypeFromIntBdd(primitives, sequence)
-}
-
-func (this XmlSubtype) String() string {
-	return fmt.Sprintf("(xml 0x%x %s)", this.Primitives, this.Sequence.String())
 }
 
 func XmlSingleton(primitives int) SemType {

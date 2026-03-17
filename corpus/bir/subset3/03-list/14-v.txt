@@ -1,12 +1,12 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad <nil>
     %2 = ConstantLoad 1234567890123456789
     %3 = ConstantLoad true
     %4 = ConstantLoad 3
-    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    %5 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object...][%4]{%1, %2, %3}
     v = %5;
     %8 = ConstantLoad 2
     %7 = v[%8];
@@ -21,7 +21,7 @@ main() -> ((NIL), ()){
     %14 = ConstantLoad 0
     %13 = v[%14];
     %15 = ConstantLoad 1
-    %16 = newArray ((), (LIST))[%15]{%13}
+    %16 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%15]{%13}
     %17 = println(%16) -> bb3;
   }
   bb3 {

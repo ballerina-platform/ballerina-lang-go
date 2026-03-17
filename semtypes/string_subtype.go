@@ -17,10 +17,9 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
-	"fmt"
 	"slices"
-	"strings"
+
+	"ballerina-lang-go/common"
 )
 
 type StringSubtypeListCoverage struct {
@@ -33,9 +32,11 @@ type StringSubtype struct {
 	nonCharData NonCharStringSubtype
 }
 
-var EMPTY_STRING_ARR = []EnumerableType[string]{}
-var EMPTY_CHAR_ARR = []EnumerableType[string]{}
-var _ ProperSubtypeData = &StringSubtype{}
+var (
+	EMPTY_STRING_ARR                   = []EnumerableType[string]{}
+	EMPTY_CHAR_ARR                     = []EnumerableType[string]{}
+	_                ProperSubtypeData = &StringSubtype{}
+)
 
 func NewStringSubtypeListCoverageFromBoolInts(isSubtype bool, indices []int) StringSubtypeListCoverage {
 	this := StringSubtypeListCoverage{}
@@ -59,34 +60,6 @@ func newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(charData CharStri
 func StringSubtypeFrom(chara CharStringSubtype, nonChar NonCharStringSubtype) StringSubtype {
 	// migrated from StringSubtype.java:56:5
 	return newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar)
-}
-
-func (this StringSubtype) String() string {
-	var builder strings.Builder
-	builder.WriteString("(string")
-	formatStr := func(v EnumerableType[string]) string {
-		return fmt.Sprintf("%q", v.Value())
-	}
-	if len(this.charData.values) > 0 || !this.charData.allowed {
-		builder.WriteString(" ")
-		builder.WriteString(allowedTag("char", this.charData.allowed))
-		for _, v := range this.charData.values {
-			builder.WriteString(" ")
-			builder.WriteString(formatStr(v))
-		}
-		builder.WriteString(")")
-	}
-	if len(this.nonCharData.values) > 0 || !this.nonCharData.allowed {
-		builder.WriteString(" ")
-		builder.WriteString(allowedTag("nonChar", this.nonCharData.allowed))
-		for _, v := range this.nonCharData.values {
-			builder.WriteString(" ")
-			builder.WriteString(formatStr(v))
-		}
-		builder.WriteString(")")
-	}
-	builder.WriteString(")")
-	return builder.String()
 }
 
 func StringSubtypeContains(d SubtypeData, s string) bool {

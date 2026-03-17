@@ -18,7 +18,6 @@ package semtypes
 
 import (
 	"ballerina-lang-go/common"
-	"fmt"
 )
 
 type CellMutability uint
@@ -60,8 +59,4 @@ func CellAtomicTypeFrom(ty SemType, mut CellMutability) CellAtomicType {
 func (this *CellAtomicType) AtomKind() Kind {
 	// migrated from CellAtomicType.java:39:5
 	return Kind_CELL_ATOM
-}
-
-func (this *CellAtomicType) String() string {
-	return fmt.Sprintf("(cell %s %d)", this.Ty.String(), this.Mut)
 }

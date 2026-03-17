@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = printClosestSquareNum(%1) -> bb1;
@@ -21,7 +21,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-printClosestSquareNum(((INT), ())) -> ((NIL), ()){
+printClosestSquareNum(int) -> nil{
   bb0 {
     i = x;
     GOTO bb1;
@@ -55,7 +55,7 @@ printClosestSquareNum(((INT), ())) -> ((NIL), ()){
     GOTO bb1;
   }
 }
-isSquareNumber(((INT), ())) -> ((BOOLEAN), ()){
+isSquareNumber(int) -> boolean{
   bb0 {
     %2 = ConstantLoad 0
     i = %2;

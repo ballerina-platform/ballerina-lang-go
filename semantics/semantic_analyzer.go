@@ -17,15 +17,16 @@
 package semantics
 
 import (
+	"fmt"
+	"math/big"
+	"reflect"
+	"sort"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
-	"math/big"
-	"reflect"
-	"sort"
 )
 
 type analyzer interface {
@@ -487,13 +488,7 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 }
 
 func formatIncompatibleTypeMessage(ctx semtypes.Context, expectedType semtypes.SemType, actualType semtypes.SemType) string {
-	expectedText := semtypes.CompactString(expectedType)
-	actualText := semtypes.CompactString(actualType)
-	if expectedText == actualText {
-		expectedText = semtypes.String(ctx, expectedType)
-		actualText = semtypes.String(ctx, actualType)
-	}
-	return fmt.Sprintf("incompatible type: expected %s, got %s", expectedText, actualText)
+	return fmt.Sprintf("incompatible type: expected %s, got %s", semtypes.ToString(ctx, expectedType), semtypes.ToString(ctx, actualType))
 }
 
 func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {

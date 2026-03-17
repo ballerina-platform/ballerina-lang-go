@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = breakInNestedLoops() -> bb1;
   }
@@ -8,7 +8,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-breakInNestedLoops() -> ((NIL), ()){
+breakInNestedLoops() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     i = %1;

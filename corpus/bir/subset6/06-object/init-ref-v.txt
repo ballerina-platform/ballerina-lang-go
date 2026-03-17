@@ -2,7 +2,7 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 class Foo {
 
-  foo() -> ((NIL), ()){
+  foo() -> nil{
     bb0 {
       %2 = init(self) -> bb1;
     }
@@ -11,7 +11,7 @@ class Foo {
     }
   }
 
-  init() -> ((NIL), ()){
+  init() -> nil{
     bb0 {
       %2 = ConstantLoad init called
       %3 = println(%2) -> bb1;
@@ -21,7 +21,7 @@ class Foo {
     }
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = newObject Foo
     %2 = init(%1) -> bb1;

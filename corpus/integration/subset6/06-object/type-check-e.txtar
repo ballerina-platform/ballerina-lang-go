@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (OBJECT)) {subtypes=[OBJECT:bdd=(t94 (true) (false) (false))]}, got ((), (OBJECT)) {subtypes=[OBJECT:bdd=(t152 (true) (false) (false))]}
+error[SEMANTIC_ERROR]: incompatible type: expected object, got object
   --> type-check-e.bal:39:13
    |
 39 |     Foo f = new Bar(5); // @error

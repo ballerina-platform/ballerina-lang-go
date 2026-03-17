@@ -28,6 +28,7 @@ import (
 type PrettyPrinter struct {
 	indentLevel int
 	sb          strings.Builder
+	cx          semtypes.Context
 }
 
 // writeLine writes a line with current indentation and newline
@@ -64,6 +65,7 @@ func (p *PrettyPrinter) decreaseIndent() {
 func (p *PrettyPrinter) Print(node BIRPackage) string {
 	// Reset the builder
 	p.sb.Reset()
+	p.cx = semtypes.TypeCheckContext(node.TypeEnv)
 
 	p.write("module ")
 	p.write(p.PrintPackageID(node.PackageID))
@@ -197,7 +199,7 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 }
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
-	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), cast.Type.String(), p.PrintOperand(*cast.RhsOp))
+	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), semtypes.ToString(p.cx, cast.Type), p.PrintOperand(*cast.RhsOp))
 }
 
 func (p *PrettyPrinter) PrintTypeTest(test *TypeTest) string {
@@ -205,7 +207,7 @@ func (p *PrettyPrinter) PrintTypeTest(test *TypeTest) string {
 	if test.IsNegation {
 		op = "!is"
 	}
-	return fmt.Sprintf("%s = %s %s %s", p.PrintOperand(*test.LhsOp), p.PrintOperand(*test.RhsOp), op, test.Type.String())
+	return fmt.Sprintf("%s = %s %s %s", p.PrintOperand(*test.LhsOp), p.PrintOperand(*test.RhsOp), op, semtypes.ToString(p.cx, test.Type))
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
@@ -391,7 +393,7 @@ func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
 	if typeNode == nil {
 		return "<UNKNOWN>"
 	}
-	return typeNode.String()
+	return semtypes.ToString(p.cx, typeNode)
 }
 
 func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {

@@ -1,9 +1,9 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 class Foo {
-  val ((INT), ())
+  val int
 
-  getVal() -> ((INT), ()){
+  getVal() -> int{
     bb0 {
       %3 = ConstantLoad val
       %2 = self[%3];
@@ -12,7 +12,7 @@ class Foo {
     }
   }
 
-  init(((INT), ())) -> ((NIL, ERROR), ()){
+  init(int) -> nil|error{
     bb0 {
       %3 = ConstantLoad 0
       %4 = ConstantLoad val
@@ -23,7 +23,7 @@ class Foo {
     }
     bb1 {
       %7 = ConstantLoad negative value
-      %8 = newError ((ERROR), ())(%7)
+      %8 = newError error(%7)
       %0 = %8;
       return;
     }
@@ -34,14 +34,14 @@ class Foo {
     }
   }
 }
-createFoo(((INT), ())) -> ((INT, ERROR), ()){
+createFoo(int) -> int|error{
   bb0 {
     %2 = newObject Foo
     %3 = init(%2,v) -> bb1;
   }
   bb1 {
     $desugar$0 = %3;
-    %5 = $desugar$0 is ((ERROR), ())
+    %5 = $desugar$0 is error
     %5 ? bb2 : bb3;
   }
   bb2 {
@@ -57,7 +57,7 @@ createFoo(((INT), ())) -> ((INT, ERROR), ()){
     return;
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 10
     %2 = createFoo(%1) -> bb1;

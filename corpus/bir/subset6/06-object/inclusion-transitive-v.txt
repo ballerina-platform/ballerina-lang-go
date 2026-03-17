@@ -1,9 +1,9 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 class C {
-  z ((INT), ())
+  z int
 
-  init() -> ((NIL), ()){
+  init() -> nil{
     bb0 {
       %2 = ConstantLoad 0
       %3 = ConstantLoad z
@@ -21,7 +21,7 @@ class C {
     }
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = newObject C
     %2 = init(%1) -> bb1;

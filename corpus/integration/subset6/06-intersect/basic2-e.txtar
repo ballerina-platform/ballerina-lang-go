@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((STRING), ()), got ((), (INT))
+error[SEMANTIC_ERROR]: incompatible type: expected string, got 17
   --> basic2-e.bal:21:15
    |
 21 |     T1&T2 x = 17; // @error

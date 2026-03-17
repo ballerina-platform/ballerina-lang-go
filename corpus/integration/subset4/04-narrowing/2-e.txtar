@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((FLOAT, STRING), ()), got ((INT, FLOAT, STRING), ())
+error[SEMANTIC_ERROR]: incompatible type: expected float|string, got int|float|string
   --> 2-e.bal:30:22
    |
 30 |     string|float y = x; // @error
