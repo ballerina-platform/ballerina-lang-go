@@ -46,7 +46,7 @@ func TestDesugar(t *testing.T) {
 }
 
 type walkTestVisitor struct {
-	unpositionedNodes []ast.BLangNode
+	t *testing.T
 }
 
 func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
@@ -55,7 +55,7 @@ func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	}
 
 	if node.GetPosition() == nil {
-		v.unpositionedNodes = append(v.unpositionedNodes, node)
+		v.t.Errorf("node with missing position: %T", node)
 	}
 
 	return v
@@ -102,16 +102,8 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 
-	visitor := &walkTestVisitor{}
+	visitor := &walkTestVisitor{t: t}
 	ast.Walk(visitor, result.CompilationUnit)
-
-	if len(visitor.unpositionedNodes) > 0 {
-		t.Errorf("Found %d nodes with missing positions in %s", len(visitor.unpositionedNodes), testCase.InputPath)
-		for _, node := range visitor.unpositionedNodes {
-			t.Logf("Node with missing position: %T", node)
-		}
-		return
-	}
 
 	t.Logf("Desugar completed successfully for %s", testCase.InputPath)
 }

@@ -98,12 +98,10 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	return nodeBuilder
 }
 
-func getBuiltinPos() diagnostics.Location {
-	return diagnostics.NewBLangDiagnosticLocation(
-		string(model.EMPTY),
-		-1, -1, -1, -1, -1, -1,
-	)
-}
+var builtinPos = diagnostics.NewBLangDiagnosticLocation(
+	string(model.EMPTY),
+	-1, -1, -1, -1, -1, -1,
+)
 
 var _ tree.NodeTransformer[BLangNode] = &NodeBuilder{}
 
@@ -890,7 +888,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	iToken := node.(tree.Token)
 
 	emptyStr := ""
-	pkgAlias := createIdentifier(getBuiltinPos(), &emptyStr, &emptyStr)
+	pkgAlias := createIdentifier(builtinPos, &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(iToken), iToken)
 	return []BLangIdentifier{pkgAlias, name}
 }
@@ -1335,7 +1333,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 	} else {
 		// Default return type is nil when not specified
 		nilReturnType := &BLangValueType{TypeKind: model.TypeKind_NIL}
-		nilReturnType.pos = getBuiltinPos()
+		nilReturnType.pos = builtinPos
 		bLFunction.SetReturnTypeDescriptor(nilReturnType)
 	}
 }
@@ -1437,7 +1435,7 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 	importDcl.OrgName = &orgIdentifier
 
 	// 7. Set version (always empty for import declarations)
-	emptyVersion := createIdentifier(getBuiltinPos(), nil, nil)
+	emptyVersion := createIdentifier(builtinPos, nil, nil)
 	importDcl.Version = &emptyVersion
 
 	// 8. Handle alias/prefix
@@ -1751,7 +1749,7 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 		onFailClauseNode := whileStatementNode.OnFailClause()
 		bLWhile.SetOnFailClause(n.TransformOnFailClause(onFailClauseNode).(*BLangOnFailClause))
 	} else {
-		bLWhile.OnFailClause.pos = getBuiltinPos()
+		bLWhile.OnFailClause.pos = builtinPos
 	}
 	return bLWhile
 }
@@ -2087,7 +2085,7 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, constantNameValue)
 	genName := n.getNextAnonymousTypeKey(n.PackageID, n.anonTypeNameSuffixes)
 	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	anonTypeGenName := createIdentifier(getBuiltinPos(), &genName, &constantNameValue)
+	anonTypeGenName := createIdentifier(builtinPos, &genName, &constantNameValue)
 	typeDef.SetName(&anonTypeGenName)
 	typeDef.AddFlag(model.Flag_PUBLIC)
 	typeDef.AddFlag(model.Flag_ANONYMOUS)
@@ -2129,7 +2127,7 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 	} else if simpleVar.Name.pos == nil {
 		// Param doesn't have a name and also is not a missing node
 		// Therefore, assigning the built-in location
-		simpleVar.Name.pos = getBuiltinPos()
+		simpleVar.Name.pos = builtinPos
 	}
 
 	simpleVar.FlagSet.Add(model.Flag_REQUIRED_PARAM)
