@@ -17,17 +17,18 @@
 package semantics
 
 import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
 	"sync"
+
+	"ballerina-lang-go/ast"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"

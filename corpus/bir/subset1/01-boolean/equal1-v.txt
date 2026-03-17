@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad true
     %2 = ConstantLoad true
@@ -45,7 +45,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-printEq(((BOOLEAN), ()),((BOOLEAN), ())) -> ((NIL), ()){
+printEq(boolean,boolean) -> nil{
   bb0 {
     %3 = == b1 b2;
     %3 ? bb1 : bb3;
@@ -68,7 +68,7 @@ printEq(((BOOLEAN), ()),((BOOLEAN), ())) -> ((NIL), ()){
     return;
   }
 }
-printNotEq(((BOOLEAN), ()),((BOOLEAN), ())) -> ((NIL), ()){
+printNotEq(boolean,boolean) -> nil{
   bb0 {
     %3 = != b1 b2;
     %3 ? bb1 : bb3;

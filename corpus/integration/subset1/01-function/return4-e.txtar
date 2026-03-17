@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((NIL), ()), got ((), (INT))
+error[SEMANTIC_ERROR]: incompatible type: expected nil, got 17
   --> return4-e.bal:20:12
    |
 20 |     return 17; // @error

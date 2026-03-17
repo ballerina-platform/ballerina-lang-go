@@ -1,13 +1,13 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 5
     %2 = ConstantLoad 6
     %3 = ConstantLoad 2
-    %4 = newArray ((), (LIST))[%3]{%1, %2}
+    %4 = newArray [int, int, never...][%3]{%1, %2}
     l = %4;
-    %6 = l is ((), (LIST))
+    %6 = l is [int, int, never...]
     %6 ? bb1 : bb3;
   }
   bb1 {
@@ -18,7 +18,7 @@ main() -> ((NIL), ()){
     GOTO bb3;
   }
   bb3 {
-    %9 = l is ((), (LIST))
+    %9 = l is [int, int, never...]
     %9 ? bb4 : bb6;
   }
   bb4 {

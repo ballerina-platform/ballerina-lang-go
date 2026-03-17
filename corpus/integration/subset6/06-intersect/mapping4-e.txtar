@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), ()), got ((), (STRING))
+error[SEMANTIC_ERROR]: incompatible type: expected never, got "a"
   --> mapping4-e.bal:27:30
    |
 27 |     R1&R2 r = { l1: 1, "l2": "a" }; // @error

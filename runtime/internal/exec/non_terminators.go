@@ -17,14 +17,15 @@
 package exec
 
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/values"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
+
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
@@ -140,7 +141,8 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 	case bitsetValue&semtypes.BOOLEAN.All() != 0:
 		return value.(bool)
 	}
-	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", b.String()))
+	// TODO: fix this when fixing #260
+	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", semtypes.ToString(nil, b)))
 }
 
 func toInt(value any) int64 {

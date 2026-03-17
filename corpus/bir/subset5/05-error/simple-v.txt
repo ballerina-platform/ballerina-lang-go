@@ -1,57 +1,57 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-foo() -> ((INT, ERROR), ()){
+foo() -> int|error{
   bb0 {
     %1 = ConstantLoad foo
     %2 = ConstantLoad ff
     %3 = ConstantLoad foo
-    %4 = newMap ((MAPPING), ()){%2=%3}
-    %5 = newError ((ERROR), ())(%1, %4)
+    %4 = newMap mapping{%2=%3}
+    %5 = newError error(%1, %4)
     %0 = %5;
     return;
   }
 }
-bar() -> ((INT, ERROR), ()){
+bar() -> int|error{
   bb0 {
     %1 = ConstantLoad bar
     %2 = ConstantLoad message
     %3 = ConstantLoad bar message
     %4 = ConstantLoad id
     %5 = ConstantLoad 1
-    %6 = newMap ((MAPPING), ()){%2=%3, %4=%5}
-    %7 = newError ((), (ERROR))(%1, %6)
+    %6 = newMap mapping{%2=%3, %4=%5}
+    %7 = newError error<readonly&{| id: int, message: string, never... |}>(%1, %6)
     %0 = %7;
     return;
   }
 }
-baz() -> ((INT, ERROR), ()){
+baz() -> int|error{
   bb0 {
     %1 = ConstantLoad bar
     %2 = ConstantLoad message
     %3 = ConstantLoad bar message
     %4 = ConstantLoad id
     %5 = ConstantLoad 2
-    %6 = newMap ((MAPPING), ()){%2=%3, %4=%5}
-    %7 = newError ((), (ERROR))(%1, %6)
+    %6 = newMap mapping{%2=%3, %4=%5}
+    %7 = newError error<readonly&{| id: int, message: string, never... |}>(%1, %6)
     e = %7;
     %9 = ConstantLoad baz
     %10 = ConstantLoad message
     %11 = ConstantLoad baz message
     %12 = ConstantLoad id
     %13 = ConstantLoad 3
-    %14 = newMap ((MAPPING), ()){%10=%11, %12=%13}
-    %15 = newError ((), (ERROR))(%9, e, %14)
+    %14 = newMap mapping{%10=%11, %12=%13}
+    %15 = newError error<readonly&{| id: int, message: string, never... |}>(%9, e, %14)
     %0 = %15;
     return;
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = foo() -> bb1;
   }
   bb1 {
     fooResult = %1;
-    %3 = fooResult is ((ERROR), ())
+    %3 = fooResult is error
     %3 ? bb2 : bb4;
   }
   bb2 {
@@ -65,7 +65,7 @@ main() -> ((NIL), ()){
   }
   bb5 {
     barResult = %5;
-    %7 = barResult is ((ERROR), ())
+    %7 = barResult is error
     %7 ? bb6 : bb8;
   }
   bb6 {
@@ -79,7 +79,7 @@ main() -> ((NIL), ()){
   }
   bb9 {
     bazResult = %9;
-    %11 = bazResult is ((ERROR), ())
+    %11 = bazResult is error
     %11 ? bb10 : bb12;
   }
   bb10 {

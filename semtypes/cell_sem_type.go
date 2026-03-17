@@ -16,8 +16,6 @@
 
 package semtypes
 
-import "fmt"
-
 // Migrated from io.ballerina.types.CellSemType
 
 type CellSemType struct {
@@ -57,10 +55,4 @@ func (this CellSemType) Some() int {
 func (this CellSemType) SubtypeDataList() []ProperSubtypeData {
 	// migrated from CellSemType.java:56
 	return []ProperSubtypeData{this.subtypeData}
-}
-
-func (this CellSemType) String() string {
-	allTypes := bitsetToTypeNames(this.All())
-	someTypes := bitsetToTypeNames(this.Some())
-	return fmt.Sprintf("((%s), (%s))", allTypes, someTypes)
 }

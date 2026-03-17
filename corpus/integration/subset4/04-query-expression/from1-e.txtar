@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (LIST)) {listMembers=[0..*:((STRING), ())]}, got ((), (LIST)) {listMembers=[0..*:((INT), ())]}
+error[SEMANTIC_ERROR]: incompatible type: expected [string...], got [int...]
   --> from1-e.bal:19:20
    |
 19 |     string[] out = from var x in xs select x; // @error

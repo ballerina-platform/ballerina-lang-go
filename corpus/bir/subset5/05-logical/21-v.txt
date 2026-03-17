@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = f(%1) -> bb1;
@@ -19,9 +19,9 @@ main() -> ((NIL), ()){
     return;
   }
 }
-f(((INT, STRING), ())) -> ((INT, STRING), ()){
+f(int|string) -> int|string{
   bb0 {
-    %3 = x is ((INT), ())
+    %3 = x is int
     %2 = %3;
     %3 ? bb1 : bb2;
   }

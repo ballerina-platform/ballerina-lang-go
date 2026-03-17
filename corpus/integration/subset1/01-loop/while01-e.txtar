@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((BOOLEAN), ()), got ((INT), ())
+error[SEMANTIC_ERROR]: incompatible type: expected boolean, got int
   --> while01-e.bal:21:11
    |
 21 |     while i { // @error
