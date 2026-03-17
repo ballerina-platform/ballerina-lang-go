@@ -486,11 +486,6 @@ func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConst
 }
 
 func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
-	if len(expr.QueryClauseList) < 2 {
-		cx.unimplemented("query expression currently supports only from + let + where + select clauses")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-
 	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
 	if !ok {
 		cx.internalError("query expression must start with from clause")
