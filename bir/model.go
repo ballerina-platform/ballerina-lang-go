@@ -31,6 +31,11 @@ type ConstValue struct {
 
 type BIRInstruction interface {
 	GetKind() InstructionKind
+	GetPos() diagnostics.Location
+}
+
+func (b BIRNodeBase) GetPos() diagnostics.Location {
+	return b.Pos
 }
 
 type BIRVariableDcl interface {
