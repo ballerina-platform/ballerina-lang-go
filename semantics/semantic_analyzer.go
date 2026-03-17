@@ -1304,6 +1304,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		analyzeExpression(a, n.Expr, &semtypes.ERROR)
 		return nil
 	case *ast.BLangClassDefinition:
+		for _, f := range n.Fields {
+			field := f.(*ast.BLangSimpleVariable)
+			if field.Expr != nil {
+				expectedType := a.ctx().SymbolType(field.Symbol())
+				analyzeExpression(a, field.Expr.(ast.BLangExpression), expectedType)
+			}
+		}
 		if n.InitFunction != nil {
 			fa := initializeFunctionAnalyzer(a, n.InitFunction)
 			ast.Walk(fa, n.InitFunction)
