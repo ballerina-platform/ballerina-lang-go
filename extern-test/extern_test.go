@@ -74,12 +74,12 @@ func TestExternValid(t *testing.T) {
 	})
 
 	// Register foo() returns "$foo"
-	runtime.RegisterExternFunction(rt, "$anon", ".", "foo", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, "$anon", "1-v", "foo", func(args []values.BalValue) (values.BalValue, error) {
 		return "$foo", nil
 	})
 
 	// Register bar(a, b) returns a + ", " + b
-	runtime.RegisterExternFunction(rt, "$anon", ".", "bar", func(args []values.BalValue) (values.BalValue, error) {
+	runtime.RegisterExternFunction(rt, "$anon", "1-v", "bar", func(args []values.BalValue) (values.BalValue, error) {
 		a := values.String(args[0], nil)
 		b := values.String(args[1], nil)
 		return a + ", " + b, nil
