@@ -213,15 +213,20 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
+	dcl.Flags = flagSetToInt64(ast.GetFlags())
+	dcl.Origin = model.SymbolOrigin_SOURCE
 	return dcl
 }
 
 func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVariableDcl {
 	name := model.Name(c.GetName().GetValue())
 	dcl := BIRGlobalVariableDcl{}
+	dcl.Pos = c.GetPosition()
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
+	dcl.Flags = flagSetToInt64(c.GetFlags())
+	dcl.Origin = model.SymbolOrigin_SOURCE
 	return dcl
 }
 
