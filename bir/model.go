@@ -17,10 +17,11 @@
 package bir
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
 )
 
 type ConstValue struct {
@@ -30,6 +31,11 @@ type ConstValue struct {
 
 type BIRInstruction interface {
 	GetKind() InstructionKind
+	GetPos() diagnostics.Location
+}
+
+func (b BIRNodeBase) GetPos() diagnostics.Location {
+	return b.Pos
 }
 
 type (
