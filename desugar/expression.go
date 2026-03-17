@@ -18,11 +18,12 @@
 package desugar
 
 import (
+	"fmt"
+
 	"ballerina-lang-go/ast"
 	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"fmt"
 )
 
 func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
@@ -196,12 +197,13 @@ func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) de
 		Value:         name,
 		OriginalValue: name,
 	}
-	s := semtypes.STRING
-	lit.SetDeterminedType(&s)
+	lit.SetPosition(expr.Field.GetPosition())
+	lit.SetDeterminedType(new(semtypes.STRING))
 
 	indexAccess := &ast.BLangIndexBasedAccess{
 		IndexExpr: lit,
 	}
+	indexAccess.SetPosition(expr.GetPosition())
 	indexAccess.Expr = expr.Expr
 	indexAccess.SetDeterminedType(expr.GetDeterminedType())
 
@@ -304,49 +306,63 @@ func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic
 	innerTy := expr.Expr.GetDeterminedType()
 	resultTy := expr.GetDeterminedType()
 
+	basePos := expr.Expr.GetPosition()
+
 	// TODO: extract util to add definition and get reference
 	// Create temp var: $desugar$N = <inner expr>
 	tempName, tempSymbol := cx.addDesugardSymbol(innerTy, model.SymbolKindVariable, false)
 	tempVarName := &ast.BLangIdentifier{Value: tempName}
+	tempVarName.SetPosition(basePos)
 	tempVar := &ast.BLangSimpleVariable{Name: tempVarName}
+	tempVar.SetPosition(basePos)
 	tempVar.SetDeterminedType(innerTy)
 	tempVar.SetInitialExpression(expr.Expr)
 	tempVar.SetSymbol(tempSymbol)
 	tempVarDef := &ast.BLangSimpleVariableDef{Var: tempVar}
+	tempVarDef.SetPosition(basePos)
 	initStmts = append(initStmts, tempVarDef)
 
 	// Type test: $desugar$N is error
 	tempVarRefForTest := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	tempVarRefForTest.SetPosition(basePos)
 	tempVarRefForTest.SetSymbol(tempSymbol)
 	tempVarRefForTest.SetDeterminedType(innerTy)
 
 	typeTestExpr := &ast.BLangTypeTestExpr{}
+	typeTestExpr.SetPosition(basePos)
 	typeTestExpr.Expr = tempVarRefForTest
 	typeTestExpr.Type = model.TypeData{Type: &semtypes.ERROR}
 	typeTestExpr.SetDeterminedType(&semtypes.BOOLEAN)
 
 	// If body: return or panic
 	tempVarRefForBody := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	tempVarRefForBody.SetPosition(basePos)
 	tempVarRefForBody.SetSymbol(tempSymbol)
 	tempVarRefForBody.SetDeterminedType(innerTy)
 
 	var bodyStmt ast.BLangStatement
 	if isPanic {
 		bodyStmt = &ast.BLangPanic{Expr: tempVarRefForBody}
+		bodyStmt.(ast.BLangNode).SetPosition(basePos)
 	} else {
 		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
+		bodyStmt.(ast.BLangNode).SetPosition(basePos)
 	}
 
+	ifBody := ast.BLangBlockStmt{
+		Stmts: []ast.BLangStatement{bodyStmt},
+	}
+	ifBody.SetPosition(basePos)
 	ifStmt := &ast.BLangIf{
 		Expr: typeTestExpr,
-		Body: ast.BLangBlockStmt{
-			Stmts: []ast.BLangStatement{bodyStmt},
-		},
+		Body: ifBody,
 	}
+	ifStmt.SetPosition(basePos)
 	initStmts = append(initStmts, ifStmt)
 
 	// Replacement: var ref typed as non-error type
 	replacementVarRef := &ast.BLangSimpleVarRef{VariableName: tempVarName}
+	replacementVarRef.SetPosition(basePos)
 	replacementVarRef.SetSymbol(tempSymbol)
 	replacementVarRef.SetDeterminedType(resultTy)
 
@@ -485,8 +501,8 @@ func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConst
 					Value:         name,
 					OriginalValue: name,
 				}
-				s := semtypes.STRING
-				lit.SetDeterminedType(&s)
+				lit.SetPosition(varRef.GetPosition())
+				lit.SetDeterminedType(new(semtypes.STRING))
 				kv.Key.Expr = lit
 			}
 		}
