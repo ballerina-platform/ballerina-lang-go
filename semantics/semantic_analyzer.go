@@ -360,16 +360,25 @@ func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos di
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
-	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
-	fa.retTy = fnSymbol.Signature().ReturnType
-
+	fa := initializeFunctionAnalyzerInner(parent, function)
 	// Validate main function constraints
 	if function.Name.Value == "main" {
+		fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 		validateMainFunction(parent, fnSymbol, function.GetPosition())
 	}
 
 	return fa
+}
+
+func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
+	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
+	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature().ReturnType
+	return fa
+}
+
+func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
+	return initializeFunctionAnalyzerInner(parent, function)
 }
 
 func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
@@ -1312,12 +1321,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			}
 		}
 		if n.InitFunction != nil {
-			fa := initializeFunctionAnalyzer(a, n.InitFunction)
+			fa := initializeMethodAnalyzer(a, n.InitFunction)
 			ast.Walk(fa, n.InitFunction)
 		}
 		for name := range n.Methods {
 			method := n.Methods[name]
-			fa := initializeFunctionAnalyzer(a, method)
+			fa := initializeMethodAnalyzer(a, method)
 			ast.Walk(fa, method)
 		}
 		return nil

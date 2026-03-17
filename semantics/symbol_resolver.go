@@ -676,7 +676,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()
-		if _, _, exists := classResolver.GetSymbol(name); exists {
+		if _, sk, exists := classResolver.GetSymbol(name); exists && sk == blockScopeKind {
 			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
 			continue
 		}
@@ -687,7 +687,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 
 	for methodName := range classDef.Methods {
 		method := classDef.Methods[methodName]
-		if _, _, exists := classResolver.GetSymbol(methodName); exists {
+		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
 			semanticError(classResolver, "redeclared symbol '"+methodName+"'", method.Name.GetPosition())
 			continue
 		}
