@@ -16,6 +16,8 @@
 
 package projects
 
+import "context"
+
 // PackageResolution holds the result of package dependency resolution.
 // It builds a topologically sorted list of modules within the root package,
 // respecting inter-module dependencies discovered from import statements.
@@ -23,21 +25,28 @@ type PackageResolution struct {
 	rootPackageContext            *packageContext
 	moduleResolver                *moduleResolver
 	moduleDependencyGraph         *DependencyGraph[ModuleDescriptor]
+	packageDependencyGraph        *DependencyGraph[PackageDescriptor]
 	topologicallySortedModuleList []*moduleContext
+	resolvedDependencies          map[string]*PackageDescriptor // org/name -> PackageDescriptor
 	diagnosticResult              DiagnosticResult
+	environment                   *Environment
 }
 
-func newPackageResolution(pkgCtx *packageContext) *PackageResolution {
+func newPackageResolution(pkgCtx *packageContext, env *Environment) *PackageResolution {
 	r := &PackageResolution{
-		rootPackageContext: pkgCtx,
+		rootPackageContext:   pkgCtx,
+		resolvedDependencies: make(map[string]*PackageDescriptor),
+		environment:          env,
 	}
 
-	// Create module resolver with all module descriptors
-	moduleDescs := r.collectModuleDescriptors()
-	r.moduleResolver = newModuleResolver(pkgCtx.getDescriptor(), moduleDescs)
+	// Create module resolver using the environment's PackageResolver
+	r.moduleResolver = newModuleResolver(pkgCtx.getDescriptor(), env)
 
 	// Build dependency graph from imports
 	r.buildModuleDependencyGraph()
+
+	// Build package dependency graph
+	r.buildPackageDependencyGraph()
 
 	// Resolve dependencies (topological sort)
 	r.resolveDependencies()
@@ -82,9 +91,9 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
 
 		// Resolve requests and add edges
-		responses := r.moduleResolver.resolveModuleLoadRequests(requests)
+		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
 		for _, resp := range responses {
-			if resp.resolved {
+			if resp.resolutionStatus == ResolutionStatusResolved {
 				toDesc := resp.moduleDesc
 				// Only add edge if the dependency is a different module
 				if !fromDesc.Equals(toDesc) {
@@ -95,6 +104,57 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 	}
 
 	r.moduleDependencyGraph = builder.build()
+}
+
+func (r *PackageResolution) buildPackageDependencyGraph() {
+	builder := newDependencyGraphBuilder[PackageDescriptor]()
+
+	// Add root package as a node
+	rootDesc := r.rootPackageContext.getDescriptor()
+	builder.addNode(rootDesc)
+
+	// Collect all external package dependencies from module responses
+	for _, modID := range r.rootPackageContext.moduleIDs {
+		modCtx := r.rootPackageContext.moduleContextMap[modID]
+		if modCtx == nil {
+			continue
+		}
+
+		requests := modCtx.populateModuleLoadRequests()
+		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
+
+		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
+		for _, resp := range responses {
+			if resp.resolutionStatus == ResolutionStatusResolved && resp.packageDescriptor != nil {
+				pkgDesc := resp.packageDescriptor
+				key := pkgDesc.Org().Value() + "/" + pkgDesc.Name().Value()
+
+				// Track resolved dependency
+				r.resolvedDependencies[key] = pkgDesc
+
+				// Add to graph
+				builder.addNode(*pkgDesc)
+				builder.addDependency(rootDesc, *pkgDesc)
+			}
+		}
+	}
+
+	r.packageDependencyGraph = builder.build()
+}
+
+// ResolvedDependencies returns the map of resolved external package dependencies.
+func (r *PackageResolution) ResolvedDependencies() map[string]*PackageDescriptor {
+	return r.resolvedDependencies
+}
+
+// PackageDependencyGraph returns the package-level dependency graph.
+func (r *PackageResolution) PackageDependencyGraph() *DependencyGraph[PackageDescriptor] {
+	return r.packageDependencyGraph
+}
+
+// ModuleDependencyGraph returns the module-level dependency graph.
+func (r *PackageResolution) ModuleDependencyGraph() *DependencyGraph[ModuleDescriptor] {
+	return r.moduleDependencyGraph
 }
 
 func (r *PackageResolution) resolveDependencies() {

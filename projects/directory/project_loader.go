@@ -28,61 +28,51 @@ import (
 )
 
 // ProjectLoadConfig holds configuration for project loading.
-// All fields are optional - nil values use defaults.
 type ProjectLoadConfig struct {
-	// BuildOptions configures compilation behavior. If nil, defaults are used.
 	BuildOptions *projects.BuildOptions
-
-	// Future fields can be added here, e.g.:
-	// EnvironmentBuilder *EnvironmentBuilder
 }
 
-// LoadProject loads a project from the given path.
-// It detects the project type and delegates to the appropriate loader:
-//   - Has Ballerina.toml -> loadBuildProject
-//   - Is .bal file -> loadSingleFileProject
-//   - Is .bala file -> error (not implemented)
-//
-// If no config is provided, default configuration is used.
-func LoadProject(projectFs fs.FS, projectPath string, config ...ProjectLoadConfig) (projects.ProjectLoadResult, error) {
-	// Apply defaults
+func LoadProject(projectFs fs.FS, ballerinaHomeFs fs.FS, projectPath string, config ...ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	var cfg ProjectLoadConfig
 	if len(config) > 0 {
 		cfg = config[0]
 	}
 
-	// Check if path exists
 	info, err := fs.Stat(projectFs, projectPath)
 	if err != nil {
 		return projects.ProjectLoadResult{}, err
 	}
 
-	// Detect project type
+	// 1. Check for .bala file
+	if !info.IsDir() && path.Ext(projectPath) == projects.BalaFileExtension {
+		return projects.ProjectLoadResult{}, &projects.ProjectError{
+			Message: "loading from .bala files is not implemented: " + projectPath,
+		}
+	}
+
+	// 2. TODO: workspace detection (not implemented)
+
 	if info.IsDir() {
-		// Check for Ballerina.toml
+		// 3. Check for Ballerina.toml (build project)
 		tomlPath := path.Join(projectPath, projects.BallerinaTomlFile)
 		if info, err := fs.Stat(projectFs, tomlPath); err == nil && !info.IsDir() {
-			// Has Ballerina.toml - load as build project
-			return loadBuildProject(projectFs, projectPath, cfg)
+			return loadBuildProject(projectFs, ballerinaHomeFs, projectPath, cfg)
 		}
 
-		// Directory without Ballerina.toml - error
+		// 4. Check for package.json (bala directory)
+		packageJSONPath := path.Join(projectPath, "package.json")
+		if info, err := fs.Stat(projectFs, packageJSONPath); err == nil && !info.IsDir() {
+			return loadBalaProject(projectFs, projectPath, cfg)
+		}
+
 		return projects.ProjectLoadResult{}, &projects.ProjectError{
 			Message: "not a valid Ballerina project directory (missing Ballerina.toml): " + projectPath,
 		}
 	}
 
-	// Check file extension
-	fileName := path.Base(projectPath)
-	switch path.Ext(fileName) {
-	case projects.BalFileExtension:
-		// Single .bal file
+	// 5. Single .bal file
+	if path.Ext(projectPath) == projects.BalFileExtension {
 		return loadSingleFileProject(projectFs, projectPath, cfg)
-	case projects.BalaFileExtension:
-		// .bala file - not implemented
-		return projects.ProjectLoadResult{}, &projects.ProjectError{
-			Message: "loading from .bala files is not implemented: " + projectPath,
-		}
 	}
 
 	return projects.ProjectLoadResult{}, &projects.ProjectError{
@@ -90,17 +80,12 @@ func LoadProject(projectFs fs.FS, projectPath string, config ...ProjectLoadConfi
 	}
 }
 
-// loadBuildProject loads a build project from the given path.
-// It merges build options from Ballerina.toml (manifest defaults) with the caller's
-// options using AcceptTheirs, so caller-provided options override manifest defaults.
-func loadBuildProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
-	// Use internal.CreateBuildProjectConfig to scan and create package config
+func loadBuildProject(fsys fs.FS, ballerinaHomeFs fs.FS, projectPath string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	packageConfig, err := internal.CreateBuildProjectConfig(fsys, projectPath)
 	if err != nil {
 		return projects.ProjectLoadResult{}, err
 	}
 
-	// Merge build options: manifest defaults are the base, caller's options override.
 	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
 	var mergedOpts projects.BuildOptions
 	if cfg.BuildOptions != nil {
@@ -109,26 +94,78 @@ func loadBuildProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig) (pr
 		mergedOpts = manifestBuildOptions
 	}
 
-	// Create the project
 	project := projects.NewBuildProject(fsys, projectPath, mergedOpts)
+	setupRepositories(project.Environment(), ballerinaHomeFs)
 
-	// Create package from config
 	compilationOptions := mergedOpts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
 	project.InitPackage(pkg)
 
-	// Collect diagnostics from manifest
 	var diags []diagnostics.Diagnostic
-	manifestDiags := packageConfig.PackageManifest().Diagnostics()
-	diags = append(diags, manifestDiags...)
-
-	// Create diagnostic result
+	diags = append(diags, packageConfig.PackageManifest().Diagnostics()...)
 	diagResult := projects.NewDiagnosticResult(diags)
 
 	return projects.NewProjectLoadResult(project, diagResult), nil
 }
 
-// loadSingleFileProject loads a single .bal file as a project.
+func loadBalaProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
+	project, err := loadBalaProjectInternal(fsys, projectPath, cfg, nil)
+	if err != nil {
+		return projects.ProjectLoadResult{}, err
+	}
+	return projects.NewProjectLoadResult(project, projects.NewDiagnosticResult(nil)), nil
+}
+
+func loadBalaProjectInternal(fsys fs.FS, projectPath string, cfg ProjectLoadConfig, sharedEnv *projects.Environment) (*projects.BalaProject, error) {
+	result, err := internal.CreateBalaProjectConfig(fsys, projectPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var buildOpts projects.BuildOptions
+	if cfg.BuildOptions != nil {
+		buildOpts = *cfg.BuildOptions
+	} else {
+		buildOpts = projects.NewBuildOptions()
+	}
+
+	project := projects.NewBalaProjectWithEnv(fsys, projectPath, buildOpts, result.Platform, sharedEnv)
+
+	compilationOptions := buildOpts.CompilationOptions()
+	pkg := projects.NewPackageFromConfig(project, result.PackageConfig, compilationOptions)
+	project.InitPackage(pkg)
+
+	return project, nil
+}
+
+func LoadBalaProject(fsys fs.FS, platformDir string, sharedEnv *projects.Environment) (*projects.BalaProject, error) {
+	return loadBalaProjectInternal(fsys, platformDir, ProjectLoadConfig{}, sharedEnv)
+}
+
+func setupRepositories(env *projects.Environment, ballerinaHomeFs fs.FS) {
+	if ballerinaHomeFs == nil {
+		return
+	}
+
+	centralRepo := projects.NewFileSystemRepository(
+		"central",
+		ballerinaHomeFs,
+		path.Join(projects.RepositoriesDirName, projects.CentralRepositoryName, projects.BalaDirName),
+		env,
+		LoadBalaProject,
+	)
+	env.AddRepository(centralRepo)
+
+	localRepo := projects.NewFileSystemRepository(
+		"local",
+		ballerinaHomeFs,
+		path.Join(projects.RepositoriesDirName, "local", projects.BalaDirName),
+		env,
+		LoadBalaProject,
+	)
+	env.AddRepository(localRepo)
+}
+
 func loadSingleFileProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	info, err := fs.Stat(fsys, projectPath)
 	if err != nil {
@@ -148,13 +185,11 @@ func loadSingleFileProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig
 		}
 	}
 
-	// Read file content
 	content, err := fs.ReadFile(fsys, projectPath)
 	if err != nil {
 		return projects.ProjectLoadResult{}, err
 	}
 
-	// Get build options or use defaults
 	var buildOpts projects.BuildOptions
 	if cfg.BuildOptions != nil {
 		buildOpts = *cfg.BuildOptions
@@ -163,14 +198,10 @@ func loadSingleFileProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig
 	}
 
 	sourceDir := path.Dir(projectPath)
-
-	// Derive package name from filename (without extension)
 	packageName := strings.TrimSuffix(fileName, projects.BalFileExtension)
 
-	// Create the project
 	project := projects.NewSingleFileProject(fsys, sourceDir, buildOpts, fileName)
 
-	// Create package descriptor with anonymous org and default version
 	defaultVersion, _ := projects.NewPackageVersionFromString(projects.DefaultVersion)
 	packageDesc := projects.NewPackageDescriptor(
 		projects.NewPackageOrg(projects.DefaultOrg),
@@ -178,50 +209,33 @@ func loadSingleFileProject(fsys fs.FS, projectPath string, cfg ProjectLoadConfig
 		defaultVersion,
 	)
 
-	// Create manifest with minimal info
 	manifest := projects.NewPackageManifest(packageDesc)
-
-	// Create package ID
 	packageID := projects.NewPackageID(packageName)
-
-	// Create module descriptor for default module
 	moduleDesc := projects.NewModuleDescriptorForDefaultModule(packageDesc)
-
-	// Create module ID
 	moduleID := projects.NewModuleID(moduleDesc.Name().String(), packageID)
 
-	// Create document config
 	docID := projects.NewDocumentID(fileName, moduleID)
 	docConfig := projects.NewDocumentConfig(docID, fileName, string(content))
 
-	// Create module config with single source file
 	moduleConfig := projects.NewModuleConfig(
 		moduleID,
 		moduleDesc,
 		[]projects.DocumentConfig{docConfig},
-		nil, // no test docs
-		nil, // no readme
-		nil, // no dependencies
+		nil,
+		nil,
+		nil,
 	)
 
-	// Create package config
 	packageConfig := projects.NewPackageConfig(projects.PackageConfigParams{
 		PackageID:       packageID,
 		PackageManifest: manifest,
 		PackagePath:     sourceDir,
 		DefaultModule:   moduleConfig,
-		OtherModules:    nil,
-		BallerinaToml:   nil,
-		ReadmeMd:        nil,
 	})
 
-	// Create package from config
 	compilationOptions := buildOpts.CompilationOptions()
 	pkg := projects.NewPackageFromConfig(project, packageConfig, compilationOptions)
 	project.InitPackage(pkg)
 
-	// Single file projects have no diagnostics
-	diagResult := projects.NewDiagnosticResult([]diagnostics.Diagnostic{})
-
-	return projects.NewProjectLoadResult(project, diagResult), nil
+	return projects.NewProjectLoadResult(project, projects.NewDiagnosticResult(nil)), nil
 }

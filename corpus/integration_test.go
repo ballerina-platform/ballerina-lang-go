@@ -229,7 +229,13 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 
 	fsys := os.DirFS(filepath.Dir(balFile))
 
-	result, err := directory.LoadProject(fsys, filepath.Base(balFile))
+	ballerinaHome, err := projects.NewBallerinaHome()
+	if err != nil {
+		return nil, err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+
+	result, err := directory.LoadProject(fsys, ballerinaHomeFs, filepath.Base(balFile))
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -363,7 +369,13 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 
 	fsys := os.DirFS(projectDir)
 
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaHome, err := projects.NewBallerinaHome()
+	if err != nil {
+		return nil, err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+
+	result, err := directory.LoadProject(fsys, ballerinaHomeFs, ".")
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
