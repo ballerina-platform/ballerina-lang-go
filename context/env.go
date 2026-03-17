@@ -27,14 +27,17 @@ type CompilerEnvironment struct {
 	anonTypeCount    map[*model.PackageID]int
 	packageInterner  *model.PackageIDInterner
 	symbolSpaces     []*model.SymbolSpace
+	symbolSpacesMu   sync.RWMutex
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
 	typeDefns        map[model.SymbolRef]model.TypeDefinition
 }
 
 func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	this.symbolSpacesMu.Lock()
 	space := model.NewSymbolSpaceInner(packageID, len(this.symbolSpaces))
 	this.symbolSpaces = append(this.symbolSpaces, space)
+	this.symbolSpacesMu.Unlock()
 	return space
 }
 
@@ -57,14 +60,18 @@ func (this *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Pac
 }
 
 func (this *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
+	this.symbolSpacesMu.RLock()
 	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
+	this.symbolSpacesMu.RUnlock()
 	return symbolSpace.SymbolAt(symbol.Index)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
 // not a narrowed symbol.
 func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
+	this.symbolSpacesMu.RLock()
 	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
+	this.symbolSpacesMu.RUnlock()
 	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
 	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
