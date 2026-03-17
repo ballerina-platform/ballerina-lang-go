@@ -222,6 +222,22 @@ func execBinaryOpLTE(binaryOp *bir.BinaryOp, frame *Frame) {
 	)
 }
 
+func execBinaryOpAnd(binaryOp *bir.BinaryOp, frame *Frame) {
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	if handleNilLifting(op1, op2, lhsOp, frame) {
+		return
+	}
+	frame.SetOperand(lhsOp, op1.(bool) && op2.(bool))
+}
+
+func execBinaryOpOr(binaryOp *bir.BinaryOp, frame *Frame) {
+	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	if handleNilLifting(op1, op2, lhsOp, frame) {
+		return
+	}
+	frame.SetOperand(lhsOp, op1.(bool) || op2.(bool))
+}
+
 func execBinaryOpRefEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	frame.SetOperand(lhsOp, refEqual(op1, op2))
@@ -313,8 +329,6 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	}
 
 	switch v1 := op1.(type) {
-	case nil:
-		frame.SetOperand(lhsOp, op2 == nil && nilEqualsNil)
 	case int64:
 		v2 := op2.(int64)
 		frame.SetOperand(lhsOp, intCmp(v1, v2))
