@@ -91,9 +91,9 @@ func getDiff(expectedAST, actualAST string) string {
 
 // walkTestVisitor tracks node types visited during Walk traversal
 type walkTestVisitor struct {
-	visitedTypes      map[string]int
-	nodeCount         int
-	unpositionedNodes []ast.BLangNode
+	t            *testing.T
+	visitedTypes map[string]int
+	nodeCount    int
 }
 
 func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
@@ -105,7 +105,7 @@ func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	v.visitedTypes[typeName]++
 
 	if node.GetPosition() == nil {
-		v.unpositionedNodes = append(v.unpositionedNodes, node)
+		v.t.Errorf("node with missing position: %T", node)
 	}
 
 	return v
@@ -143,7 +143,10 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 
-	visitor := &walkTestVisitor{visitedTypes: make(map[string]int)}
+	visitor := &walkTestVisitor{
+		t:            t,
+		visitedTypes: make(map[string]int),
+	}
 	ast.Walk(visitor, result.CompilationUnit)
 
 	if visitor.nodeCount == 0 {
@@ -154,13 +157,6 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 		t.Logf("File: %s, Total nodes: %d", testCase.InputPath, visitor.nodeCount)
 		for typeName, count := range visitor.visitedTypes {
 			t.Logf("  %s: %d nodes", typeName, count)
-		}
-	}
-
-	if len(visitor.unpositionedNodes) > 0 {
-		t.Errorf("Found %d nodes with missing positions in %s", len(visitor.unpositionedNodes), testCase.InputPath)
-		for _, node := range visitor.unpositionedNodes {
-			t.Logf("Node with missing position: %T", node)
 		}
 	}
 }

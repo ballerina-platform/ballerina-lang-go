@@ -310,59 +310,52 @@ func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic
 	// Create temp var: $desugar$N = <inner expr>
 	tempName, tempSymbol := cx.addDesugardSymbol(innerTy, model.SymbolKindVariable, false)
 	tempVarName := &ast.BLangIdentifier{Value: tempName}
-	tempVarName.SetPosition(basePos)
 	tempVar := &ast.BLangSimpleVariable{Name: tempVarName}
-	tempVar.SetPosition(basePos)
 	tempVar.SetDeterminedType(innerTy)
 	tempVar.SetInitialExpression(expr.Expr)
 	tempVar.SetSymbol(tempSymbol)
 	tempVarDef := &ast.BLangSimpleVariableDef{Var: tempVar}
-	tempVarDef.SetPosition(basePos)
+	setPositionIfMissing(tempVarDef, basePos)
 	initStmts = append(initStmts, tempVarDef)
 
 	// Type test: $desugar$N is error
 	tempVarRefForTest := &ast.BLangSimpleVarRef{VariableName: tempVarName}
-	tempVarRefForTest.SetPosition(basePos)
 	tempVarRefForTest.SetSymbol(tempSymbol)
 	tempVarRefForTest.SetDeterminedType(innerTy)
 
 	typeTestExpr := &ast.BLangTypeTestExpr{}
-	typeTestExpr.SetPosition(basePos)
 	typeTestExpr.Expr = tempVarRefForTest
 	typeTestExpr.Type = model.TypeData{Type: &semtypes.ERROR}
 	typeTestExpr.SetDeterminedType(&semtypes.BOOLEAN)
 
 	// If body: return or panic
 	tempVarRefForBody := &ast.BLangSimpleVarRef{VariableName: tempVarName}
-	tempVarRefForBody.SetPosition(basePos)
 	tempVarRefForBody.SetSymbol(tempSymbol)
 	tempVarRefForBody.SetDeterminedType(innerTy)
 
 	var bodyStmt ast.BLangStatement
 	if isPanic {
 		bodyStmt = &ast.BLangPanic{Expr: tempVarRefForBody}
-		bodyStmt.(ast.BLangNode).SetPosition(basePos)
 	} else {
 		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
-		bodyStmt.(ast.BLangNode).SetPosition(basePos)
 	}
+	setPositionIfMissing(bodyStmt.(ast.BLangNode), basePos)
 
 	ifBody := ast.BLangBlockStmt{
 		Stmts: []ast.BLangStatement{bodyStmt},
 	}
-	ifBody.SetPosition(basePos)
 	ifStmt := &ast.BLangIf{
 		Expr: typeTestExpr,
 		Body: ifBody,
 	}
-	ifStmt.SetPosition(basePos)
 	initStmts = append(initStmts, ifStmt)
+	setPositionIfMissing(ifStmt, basePos)
 
 	// Replacement: var ref typed as non-error type
 	replacementVarRef := &ast.BLangSimpleVarRef{VariableName: tempVarName}
-	replacementVarRef.SetPosition(basePos)
 	replacementVarRef.SetSymbol(tempSymbol)
 	replacementVarRef.SetDeterminedType(resultTy)
+	setPositionIfMissing(replacementVarRef, basePos)
 
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
@@ -524,6 +517,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 
 	queryTy := expr.GetDeterminedType()
+	basePos := expr.GetPosition()
 
 	var initStmts []model.StatementNode
 
@@ -540,6 +534,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	collVar.SetInitialExpression(collExpr)
 	collVar.SetSymbol(collSymbol)
 	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	setPositionIfMissing(collVarDef, basePos)
 	initStmts = append(initStmts, collVarDef)
 
 	collRef := &ast.BLangSimpleVarRef{
@@ -561,6 +556,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	resultVar.SetInitialExpression(emptyList)
 	resultVar.SetSymbol(resultSymbol)
 	resultVarDef := &ast.BLangSimpleVariableDef{Var: resultVar}
+	setPositionIfMissing(resultVarDef, basePos)
 	initStmts = append(initStmts, resultVarDef)
 
 	resultRef := &ast.BLangSimpleVarRef{
@@ -586,6 +582,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	idxVar.SetInitialExpression(zeroLiteral)
 	idxVar.SetSymbol(idxSymbol)
 	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	setPositionIfMissing(idxVarDef, basePos)
 	initStmts = append(initStmts, idxVarDef)
 
 	idxRef := &ast.BLangSimpleVarRef{
@@ -603,6 +600,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	lenVar.SetInitialExpression(lengthInvocation)
 	lenVar.SetSymbol(lenSymbol)
 	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	setPositionIfMissing(lenVarDef, basePos)
 	initStmts = append(initStmts, lenVarDef)
 
 	lenRef := &ast.BLangSimpleVarRef{
@@ -658,7 +656,10 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 	whileStmt.SetScope(cx.currentScope())
 	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
 	initStmts = append(initStmts, whileStmt)
+
+	setPositionIfMissing(resultRef, basePos)
 
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
