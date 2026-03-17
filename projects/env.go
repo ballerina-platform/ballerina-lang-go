@@ -24,19 +24,33 @@ import (
 	"ballerina-lang-go/semantics"
 )
 
+// Environment represents an environment shared by a set of projects.
+// Java source: io.ballerina.projects.environment.Environment
+//
+// It maintains a global package cache for all loaded packages (internal and external).
 type Environment struct {
-	fsys        fs.FS
-	compilerEnv *context.CompilerEnvironment
+	fsys            fs.FS
+	compilerEnv     *context.CompilerEnvironment
+	packageCache    *PackageCache
+	packageResolver PackageResolver
 	// TODO: find better place to put this
 	publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace
 }
 
-func newEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
+// NewEnvironment creates a new Environment.
+func NewEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
+	cache := newPackageCache()
 	return &Environment{
-		fsys:          fsys,
-		compilerEnv:   env,
+		fsys:            fsys,
+		compilerEnv:     env,
+		packageCache:    cache,
+		packageResolver: NewPackageResolver(cache),
 		publicSymbols: make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace),
 	}
+}
+
+func newEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
+	return NewEnvironment(fsys, env)
 }
 
 func (e *Environment) compilerEnvironment() *context.CompilerEnvironment {
@@ -45,4 +59,29 @@ func (e *Environment) compilerEnvironment() *context.CompilerEnvironment {
 
 func (e *Environment) fs() fs.FS {
 	return e.fsys
+}
+
+// PackageCache returns the environment's package cache.
+func (e *Environment) PackageCache() *PackageCache {
+	return e.packageCache
+}
+
+// PackageResolver returns the environment's package resolver.
+func (e *Environment) PackageResolver() PackageResolver {
+	return e.packageResolver
+}
+
+// addPublicSymbolsFrom copies public symbols from another environment.
+// This is used internally when integrating external packages.
+func (e *Environment) addPublicSymbolsFrom(other *Environment) {
+	for k, v := range other.publicSymbols {
+		e.publicSymbols[k] = v
+	}
+}
+
+// AddRepository adds a repository to the environment's package resolver.
+// Repositories are searched in the order they are added.
+// This allows wiring repositories after Environment creation to avoid circular imports.
+func (e *Environment) AddRepository(repo Repository) {
+	e.packageResolver.AddRepository(repo)
 }

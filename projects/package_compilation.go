@@ -17,6 +17,7 @@
 package projects
 
 import (
+	"context"
 	"sync"
 
 	"ballerina-lang-go/context"
@@ -77,6 +78,11 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
+		// Phase 0: Compile external package dependencies first.
+		// This ensures their symbols are available for import resolution.
+		// Java equivalent: Dependencies are topologically sorted and compiled before the importing package.
+		c.compileExternalDependencies()
+
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
@@ -238,4 +244,72 @@ func (c *PackageCompilation) getCompilerBackend(platform TargetPlatform, creator
 	backend := creator(platform)
 	c.compilerBackends[platform] = backend
 	return backend
+}
+
+// compileExternalDependencies compiles all external package dependencies before
+// compiling the root package modules. This ensures external symbols are available
+// for import resolution.
+//
+// Java equivalent: In Java, dependencies are topologically sorted across packages,
+// so external packages are compiled before importing packages. This method replicates
+// that behavior by triggering compilation of cached external packages and copying
+// their public symbols to the current environment.
+func (c *PackageCompilation) compileExternalDependencies() {
+	env := c.getPackageContext().getProject().Environment()
+	packageCache := env.PackageCache()
+	packageResolver := env.PackageResolver()
+	rootPkgDesc := c.getPackageContext().getDescriptor()
+
+	// Iterate over resolved external dependencies
+	for _, pkgDesc := range c.packageResolution.ResolvedDependencies() {
+		if pkgDesc == nil {
+			continue
+		}
+
+		// Skip the current package - it's being compiled, not an external dependency.
+		// This can happen when modules import other modules in the same package
+		// using the org prefix (e.g., "import testorg/mypackage.submodule").
+		if pkgDesc.Org().Value() == rootPkgDesc.Org().Value() &&
+			pkgDesc.Name().Value() == rootPkgDesc.Name().Value() {
+			continue
+		}
+
+		// Look up the package in the cache
+		cachedPkg := packageCache.Get(pkgDesc.Org().Value(), pkgDesc.Name().Value(), pkgDesc.Version().String())
+
+		// If not in cache, try to resolve from repositories
+		if cachedPkg == nil {
+			request := NewResolutionRequest(*pkgDesc)
+			responses := packageResolver.ResolvePackages(
+				context.Background(),
+				[]ResolutionRequest{request},
+				NewResolutionOptions(),
+			)
+			if len(responses) > 0 && responses[0].Package() != nil {
+				cachedPkg = responses[0].Package()
+			}
+		}
+
+		if cachedPkg == nil {
+			// Package not available in cache or repositories
+			continue
+		}
+
+		// Get the external package's project and environment
+		externalProject := cachedPkg.Project()
+		if externalProject == nil {
+			continue
+		}
+
+		// Trigger compilation of the external package.
+		// With shared environment, symbols are added directly to the shared publicSymbols map.
+		_ = cachedPkg.Compilation()
+
+		// Copy symbols from the external package's environment.
+		// With shared environment (Option 3), this is typically a no-op since
+		// externalProject.Environment() == env. Kept as fallback for compatibility.
+		if externalProject.Environment() != env {
+			env.addPublicSymbolsFrom(externalProject.Environment())
+		}
+	}
 }

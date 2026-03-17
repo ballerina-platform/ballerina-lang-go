@@ -26,8 +26,8 @@ import (
 	"ballerina-lang-go/projects/repository"
 )
 
-func TestLocalCacheRepository_GetVersions(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
+func TestRepository_GetVersions(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name     string
@@ -80,8 +80,8 @@ func TestLocalCacheRepository_GetVersions(t *testing.T) {
 	}
 }
 
-func TestLocalCacheRepository_GetLatestVersion(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
+func TestRepository_GetLatestVersion(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name     string
@@ -109,8 +109,8 @@ func TestLocalCacheRepository_GetLatestVersion(t *testing.T) {
 	}
 }
 
-func TestLocalCacheRepository_Exists(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
+func TestRepository_Exists(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name     string
@@ -140,8 +140,8 @@ func TestLocalCacheRepository_Exists(t *testing.T) {
 	}
 }
 
-func TestLocalCacheRepository_ContextCancellation(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
+func TestRepository_ContextCancellation(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
@@ -167,21 +167,21 @@ func TestLocalCacheRepository_ContextCancellation(t *testing.T) {
 	})
 }
 
-func TestLocalCacheRepository_Name(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
-	if repo.Name() != "local-cache" {
-		t.Errorf("expected 'local-cache', got %q", repo.Name())
+func TestRepository_Name(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
+	if repo.Name() != "filesystem" {
+		t.Errorf("expected 'filesystem', got %q", repo.Name())
 	}
 }
 
-func TestLocalCacheRepository_BasePath(t *testing.T) {
-	repo := repository.NewLocalCacheRepository("testdata/cache")
-	if repo.BasePath() != "testdata/cache" {
-		t.Errorf("expected 'testdata/cache', got %q", repo.BasePath())
+func TestRepository_Root(t *testing.T) {
+	repo := repository.NewRepository("testdata/repo/bala")
+	if repo.Root() != "testdata/repo/bala" {
+		t.Errorf("expected 'testdata/repo/bala', got %q", repo.Root())
 	}
 }
 
-func TestLocalCacheRepository_ImplementsInterface(t *testing.T) {
+func TestRepository_ImplementsWritableRepository(t *testing.T) {
 	// Compile-time check - if this compiles, the interface is satisfied
-	var _ repository.Repository = (*repository.LocalCacheRepository)(nil)
+	var _ repository.WritableRepository = (*repository.Repository)(nil)
 }

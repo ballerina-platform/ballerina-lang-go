@@ -14,32 +14,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package projects_test
+package projects
 
 import (
-	"os"
-	"path/filepath"
+	"io/fs"
 
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/semtypes"
 )
 
-func loadProject(path string, config ...directory.ProjectLoadConfig) (projects.ProjectLoadResult, error) {
-	baseDir := path
-	if info, err := os.Stat(path); err == nil && !info.IsDir() {
-		baseDir = filepath.Dir(path)
-		path = filepath.Base(path)
-	} else {
-		path = "."
-	}
+type ProjectEnvironmentBuilder struct {
+	fsys fs.FS
+}
 
-	fsys := os.DirFS(baseDir)
+func NewProjectEnvironmentBuilder(fsys fs.FS) *ProjectEnvironmentBuilder {
+	return &ProjectEnvironmentBuilder{fsys: fsys}
+}
 
-	ballerinaHome, err := projects.NewBallerinaHome()
-	if err != nil {
-		return projects.ProjectLoadResult{}, err
-	}
-	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
-
-	return directory.LoadProject(fsys, ballerinaHomeFs, path, config...)
+func (b *ProjectEnvironmentBuilder) Build() *Environment {
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	return NewEnvironment(b.fsys, env)
 }

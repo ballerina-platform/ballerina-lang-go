@@ -207,7 +207,8 @@ func (p *packageContext) getPackageCompilation() *PackageCompilation {
 // Uses sync.Once for thread-safe lazy initialization.
 func (p *packageContext) getResolution() *PackageResolution {
 	p.resolutionOnce.Do(func() {
-		p.packageResolution = newPackageResolution(p)
+		env := p.project.Environment()
+		p.packageResolution = newPackageResolution(p, env)
 	})
 	return p.packageResolution
 }
