@@ -341,8 +341,8 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.BLangFieldBaseAccess:
-		if isSelfFieldAccess(n) && isInsideClass(resolver) {
-			resolveSelfFieldAccess(resolver, n)
+		if classDef := getEnclosingClassDef(resolver); isSelfFieldAccess(n) && classDef != nil {
+			resolveSelfFieldAccess(resolver, n, classDef)
 			return nil
 		}
 	case *ast.BLangMappingConstructorExpr:
@@ -757,14 +757,14 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	}
 }
 
-func isInsideClass(resolver symbolResolver) bool {
+func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
 	for {
 		bs, ok := resolver.(*blockSymbolResolver)
 		if !ok {
-			return false
+			return nil
 		}
-		if _, ok := bs.node.(*ast.BLangClassDefinition); ok {
-			return true
+		if classDef, ok := bs.node.(*ast.BLangClassDefinition); ok {
+			return classDef
 		}
 		resolver = bs.parent
 	}
@@ -778,12 +778,12 @@ func isSelfFieldAccess(n *ast.BLangFieldBaseAccess) bool {
 	return varRef.VariableName.Value == "self"
 }
 
-func resolveSelfFieldAccess[T symbolResolver](resolver T, n *ast.BLangFieldBaseAccess) {
+func resolveSelfFieldAccess[T symbolResolver](resolver T, n *ast.BLangFieldBaseAccess, classDef *ast.BLangClassDefinition) {
 	varRef := n.Expr.(*ast.BLangSimpleVarRef)
 	referSimpleVariableReference(resolver, varRef)
 	fieldName := n.Field.Value
-	_, _, ok := resolver.GetSymbol(fieldName)
-	if !ok {
+	classScope := classDef.Scope().(model.BlockLevelScope)
+	if _, ok := classScope.MainSpace().GetSymbol(fieldName); !ok {
 		semanticError(resolver, "undefined member '"+fieldName+"'", n.Field.GetPosition())
 	}
 }
