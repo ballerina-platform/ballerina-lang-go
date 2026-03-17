@@ -88,10 +88,14 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 
 func resolveFunctionBody(ctx *context.CompilerContext, pkg *ast.BLangPackage, fn *ast.BLangFunction, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
 	t := newTypeResolver(ctx, pkg, importedSymbols)
-	if body, ok := fn.Body.(*ast.BLangBlockFunctionBody); ok {
+	switch body := fn.Body.(type) {
+	case *ast.BLangExternFunctionBody:
+		// No body to resolve
+		_ = body
+	case *ast.BLangBlockFunctionBody:
 		t.resolveBlockStatements(nil, body.Stmts)
 		body.SetDeterminedType(&semtypes.NEVER)
-	} else {
+	default:
 		ctx.Unimplemented("unsupported function body kind", fn.Body.GetPosition())
 	}
 	return t

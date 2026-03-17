@@ -153,6 +153,8 @@ func (analyzer *functionControlFlowAnalyzer) analyzeFn(fn *ast.BLangFunction) fu
 		analyzer.analyzeBlockFunctionBody(fnBody)
 	case *ast.BLangExprFunctionBody:
 		analyzer.analyzeExprFunctionBody(fnBody)
+	case *ast.BLangExternFunctionBody:
+		// No body to analyze
 	}
 	return analyzer.getCfg()
 }
