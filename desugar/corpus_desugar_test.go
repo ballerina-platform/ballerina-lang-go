@@ -22,6 +22,7 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
@@ -42,6 +43,26 @@ func TestDesugar(t *testing.T) {
 			testDesugar(t, testPair)
 		})
 	}
+}
+
+type walkTestVisitor struct {
+	unpositionedNodes []ast.BLangNode
+}
+
+func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+
+	if node.GetPosition() == nil {
+		v.unpositionedNodes = append(v.unpositionedNodes, node)
+	}
+
+	return v
+}
+
+func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return v
 }
 
 func testDesugar(t *testing.T, testCase test_util.TestCase) {
@@ -78,6 +99,17 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 	if actualAST != expectedAST {
 		t.Errorf("Desugared AST mismatch for %s\nExpected file: %s\n%s",
 			testCase.InputPath, testCase.ExpectedPath, getDiff(expectedAST, actualAST))
+		return
+	}
+
+	visitor := &walkTestVisitor{}
+	ast.Walk(visitor, result.CompilationUnit)
+
+	if len(visitor.unpositionedNodes) > 0 {
+		t.Errorf("Found %d nodes with missing positions in %s", len(visitor.unpositionedNodes), testCase.InputPath)
+		for _, node := range visitor.unpositionedNodes {
+			t.Logf("Node with missing position: %T", node)
+		}
 		return
 	}
 
