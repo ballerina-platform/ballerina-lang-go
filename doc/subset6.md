@@ -53,6 +53,7 @@
 - [Type test expression](https://ballerina.io/spec/lang/master/#section_6.28)
 - [Field access expression](https://ballerina.io/spec/lang/master/#section_6.10)
 - [Range expression](https://ballerina.io/spec/lang/master/#section_6.26)
+- [New expression](https://ballerina.io/spec/lang/master/#section_6.8.2)
 
 ## Operators
 
