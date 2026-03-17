@@ -17,11 +17,10 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"fmt"
 )
 
 type ConstValue struct {
@@ -126,9 +125,19 @@ type (
 		ReturnVariable *BIRVariableDcl
 		Parameters     []BIRFunctionParameter
 		BasicBlocks    []BIRBasicBlock
+		ErrorTable     []BIRErrorEntry
 		// FIXME:
 		DependentGlobalVars []BIRGlobalVariableDcl
 		FunctionLookupKey   string
+	}
+
+	BIRErrorEntry struct {
+		// Range
+		Start *BIRBasicBlock
+		End   *BIRBasicBlock
+
+		Target  *BIRBasicBlock
+		ErrorOp *BIROperand
 	}
 
 	BIRConstant struct {
@@ -307,5 +316,21 @@ func BB(number int) BIRBasicBlock {
 	return BIRBasicBlock{
 		Number: number,
 		Id:     model.Name(fmt.Sprintf("bb%d", number)),
+	}
+}
+
+func NewBIRConstant(name model.Name, constantValueType model.ValueType, constantValue any, pos diagnostics.Location) *BIRConstant {
+	return &BIRConstant{
+		BIRDocumentableNodeBase: BIRDocumentableNodeBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+		},
+		Name: name,
+		Type: constantValueType.GetTypeData().Type,
+		ConstValue: ConstValue{
+			Type:  constantValueType,
+			Value: constantValue,
+		},
 	}
 }

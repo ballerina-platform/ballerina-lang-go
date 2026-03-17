@@ -1,0 +1,56 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+stringFoo(((STRING), ())) -> ((NIL), ()){
+  bb0 {
+    %3 = ConstantLoad This is 
+    %2 = + %3 s;
+    %4 = println(%2) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+intFoo(((INT), ())) -> ((NIL), ()){
+  bb0 {
+    %2 = ConstantLoad This is integer
+    %3 = println(%2) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+foo(((INT, STRING), ())) -> ((NIL), ()){
+  bb0 {
+    %2 = x is ((INT), ())
+    %2 ? bb1 : bb3;
+  }
+  bb1 {
+    %3 = intFoo(x) -> bb2;
+  }
+  bb2 {
+    GOTO bb5;
+  }
+  bb3 {
+    _ = x;
+    %5 = stringFoo(x) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    return;
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 2
+    %2 = foo(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad test str
+    %4 = foo(%3) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}

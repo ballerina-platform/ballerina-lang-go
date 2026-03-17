@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -281,7 +282,12 @@ func TestNewCommandWithOnlyNonAlphanumeric(t *testing.T) {
 	}{
 		{"hash", "#"},
 		{"underscore only", "_"},
-		{"dots only", "..."},
+	}
+	if runtime.GOOS != "windows" {
+		testCases = append(testCases, struct {
+			name    string
+			dirName string
+		}{"dots only", "..."})
 	}
 
 	for _, tc := range testCases {

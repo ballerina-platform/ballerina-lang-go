@@ -1052,6 +1052,11 @@ type PanicNode interface {
 	GetExpression() ExpressionNode
 }
 
+type TrapNode interface {
+	ExpressionNode
+	GetExpression() ExpressionNode
+}
+
 type DoNode interface {
 	StatementNode
 	GetBody() BlockStatementNode
@@ -1153,12 +1158,27 @@ type RestBindingPatternNode interface {
 
 // Match Pattern Interfaces
 
-type MatchPatternNode = Node
+type MatchStatement interface {
+	StatementNode
+	GetExpression() ExpressionNode
+	GetClauses() []MatchClause
+}
+type MatchClause interface {
+	Node
+	GetMatchGuard() MatchGuard
+	GetBlockStatementNode() BlockStatementNode
+	GetMatchPatterns() []MatchPatternNode
+	GetAcceptedType() semtypes.SemType
+}
+
+type MatchPatternNode interface {
+	Node
+	GetAcceptedType() semtypes.SemType
+}
 
 type ConstPatternNode interface {
-	Node
+	MatchPatternNode
 	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
 }
 
 // Clause Interfaces
@@ -1244,6 +1264,8 @@ type OrderedNode interface {
 	GetPrecedence() int
 	SetPrecedence(precedence int)
 }
+
+type MatchGuard = ExpressionNode
 
 type AttachPoint struct {
 	Point  Point

@@ -17,16 +17,17 @@
 package semantics
 
 import (
-	"maps"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	array "ballerina-lang-go/lib/array/compile"
-	bInt "ballerina-lang-go/lib/int/compile"
-	io "ballerina-lang-go/lib/io/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
+	"maps"
+	"strings"
+
+	array "ballerina-lang-go/lib/array/compile"
+	bInt "ballerina-lang-go/lib/int/compile"
+	io "ballerina-lang-go/lib/io/compile"
 )
 
 type scopeKind int
@@ -217,11 +218,13 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	ast.Walk(functionResolver, function)
 }
 
-func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace) map[string]model.ExportedSymbolSpace {
+func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implicitImports map[string]model.ExportedSymbolSpace,
+	publicSymbols map[PackageIdentifier]model.ExportedSymbolSpace, defaultOrg string,
+) map[string]model.ExportedSymbolSpace {
 	result := make(map[string]model.ExportedSymbolSpace)
 
 	for _, imp := range pkg.Imports {
-		// Check if this is ballerina/io import
+		// Check if this is ballerina import
 		if imp.OrgName != nil && imp.OrgName.Value == "ballerina" {
 			if isIoImport(&imp) {
 				// Use alias if available, otherwise use package name
@@ -240,13 +243,47 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
 		} else {
-			ctx.Unimplemented("unsupported import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
+			id := resolveImportPackageIdentifier(&imp, defaultOrg)
+			if symbols, ok := publicSymbols[id]; ok {
+				var key string
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				} else {
+					comps := imp.GetPackageName()
+					key = comps[len(comps)-1].GetValue()
+				}
+				result[key] = symbols
+			} else {
+				ctx.SemanticError("Unknown import: "+id.OrgName+"/"+id.ModuleName, imp.GetPosition())
+			}
 		}
 	}
 
 	maps.Copy(result, implicitImports)
 
 	return result
+}
+
+type PackageIdentifier struct {
+	OrgName    string
+	ModuleName string
+}
+
+func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg string) PackageIdentifier {
+	nameComps := imp.GetPackageName()
+	nameParts := make([]string, len(nameComps))
+	for i, name := range nameComps {
+		nameParts[i] = name.GetValue()
+	}
+	moduleName := strings.Join(nameParts, ".")
+	orgNameIdentifier := imp.GetOrgName()
+	var orgName string
+	if orgNameIdentifier == nil || orgNameIdentifier.GetValue() == "" {
+		orgName = defaultOrg
+	} else {
+		orgName = orgNameIdentifier.GetValue()
+	}
+	return PackageIdentifier{orgName, moduleName}
 }
 
 func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedSymbolSpace {
@@ -281,7 +318,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
-		defineVariable(bs, n.GetVariable())
+		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
 	default:
 		return visitInnerSymbolResolver(bs, n)
 	}
@@ -448,15 +485,27 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	variable.SetSymbol(symRef)
 }
 
-func defineVariable[T symbolResolver](resolver T, variable model.VariableNode) {
+func defineVariable[T symbolResolver](resolver T, variable model.VariableNode, isFinal bool) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		_, scopeKind, ok := resolver.GetSymbol(name)
-		if ok && scopeKind == blockScopeKind {
-			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+		if name != string(model.IGNORE) {
+			sym, scopeKind, ok := resolver.GetSymbol(name)
+			// Function names and module level variables can be shadowed
+			if ok {
+				switch resolver.GetCtx().SymbolKind(sym) {
+				// You can shodow functions and type defintions
+				case model.SymbolKindFunction, model.SymbolKindType:
+				default:
+					// You can shodow module level variables
+					if scopeKind == blockScopeKind {
+						semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
+						return
+					}
+				}
+			}
 		}
-		symbol := model.NewValueSymbol(name, false, false, false)
+		symbol := model.NewValueSymbol(name, false, isFinal, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
 	default:
 		internalError(resolver, "Unsupported variable", variable.GetPosition())
@@ -471,28 +520,13 @@ func resolveForeachSymbols(bs *blockSymbolResolver, n *ast.BLangForeach) {
 		ast.Walk(resolver, n.Collection.(ast.BLangNode))
 	}
 	if n.VariableDef != nil {
-		defineForeachLoopVar(resolver, n.VariableDef.GetVariable())
+		defineVariable(resolver, n.VariableDef.GetVariable(), true)
 		ast.Walk(resolver, n.VariableDef.Var)
 	}
 	ast.Walk(resolver, &n.Body)
 	if n.OnFailClause != nil {
 		ast.Walk(resolver, n.OnFailClause)
 	}
-}
-
-func defineForeachLoopVar[T symbolResolver](resolver T, variable model.VariableNode) {
-	v, ok := variable.(*ast.BLangSimpleVariable)
-	if !ok {
-		internalError(resolver, "Unsupported foreach loop variable", variable.GetPosition())
-		return
-	}
-	name := v.Name.Value
-	if _, _, exists := resolver.GetSymbol(name); exists {
-		semanticError(resolver, "Variable already defined: "+name, v.GetPosition())
-		return
-	}
-	symbol := model.NewValueSymbol(name, false, true, false)
-	addSymbolAndSetOnNode(resolver, name, &symbol, v)
 }
 
 func (bs *blockSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
