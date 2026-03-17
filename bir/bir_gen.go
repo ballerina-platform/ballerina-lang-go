@@ -525,9 +525,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 			case *ast.BLangWildCardMatchPattern:
 				// Wildcard in multi-pattern — always matches; but may have guard
 				trueOperand := ctx.addTempVar(&semtypes.BOOLEAN)
-				constLoad := &ConstantLoad{}
-				constLoad.Value = true
-				constLoad.LhsOp = trueOperand
+				constLoad := NewConstantLoad(trueOperand, nil, true, p.GetPosition())
 				curBB.Instructions = append(curBB.Instructions, constLoad)
 				condOperand = orOperands(ctx, curBB, condOperand, trueOperand, p.GetPosition())
 			default:
