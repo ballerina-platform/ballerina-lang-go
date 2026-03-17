@@ -318,3 +318,19 @@ func BB(number int) BIRBasicBlock {
 		Id:     model.Name(fmt.Sprintf("bb%d", number)),
 	}
 }
+
+func NewBIRConstant(name model.Name, constantValueType model.ValueType, constantValue any, pos diagnostics.Location) *BIRConstant {
+	return &BIRConstant{
+		BIRDocumentableNodeBase: BIRDocumentableNodeBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+		},
+		Name: name,
+		Type: constantValueType.GetTypeData().Type,
+		ConstValue: ConstValue{
+			Type:  constantValueType,
+			Value: constantValue,
+		},
+	}
+}

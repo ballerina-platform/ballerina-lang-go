@@ -17,13 +17,14 @@
 package ast
 
 import (
+	"strings"
+
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"strings"
 )
 
 type Flags uint64
@@ -258,18 +259,23 @@ type (
 		AttachPoints   common.OrderedSet[model.Point]
 	}
 
-	BLangFunctionBodyBase struct {
+	bLangFunctionBodyBase struct {
 		bLangNodeBase
 	}
 
 	BLangBlockFunctionBody struct {
-		BLangFunctionBodyBase
+		bLangFunctionBodyBase
 		Stmts []BLangStatement
 	}
 
 	BLangExprFunctionBody struct {
-		BLangFunctionBodyBase
+		bLangFunctionBodyBase
 		Expr model.ExpressionNode
+	}
+
+	BLangExternFunctionBody struct {
+		bLangFunctionBodyBase
+		AnnAttachments []BLangAnnotationAttachment
 	}
 
 	BLangIdentifier struct {
@@ -556,6 +562,7 @@ var (
 	_ model.MarkdownDocumentationReferenceAttributeNode = &BLangMarkdownReferenceDocumentation{}
 	_ model.ExprFunctionBodyNode                        = &BLangExprFunctionBody{}
 	_ model.FunctionNode                                = &BLangFunction{}
+	_ model.FunctionBodyNode                            = &BLangExternFunctionBody{}
 )
 
 var (
@@ -704,6 +711,10 @@ func (this *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNod
 func (this *BLangBlockFunctionBody) GetKind() model.NodeKind {
 	// migrated from BLangBlockFunctionBody.java:73:5
 	return model.NodeKind_BLOCK_FUNCTION_BODY
+}
+
+func (this *BLangExternFunctionBody) GetKind() model.NodeKind {
+	return model.NodeKind_EXTERN_FUNCTION_BODY
 }
 
 func (this *BLangExprFunctionBody) GetKind() model.NodeKind {
