@@ -1,0 +1,66 @@
+(Bar
+  (init
+    (bb0 () (bb1 bb2)
+      (binary-expr <
+        (simple-var-ref v)
+        (literal 0))
+    )
+    (bb1 (bb0) ()
+      (return
+        (error-constructor-expr (
+          (literal value must be non-negative))))
+    )
+    (bb2 (bb0) ()
+      (assignment
+        (field-based-access val
+          (simple-var-ref self))
+        (simple-var-ref v))
+    )
+  )
+  (getVal
+    (bb0 () ()
+      (return
+        (field-based-access val
+          (simple-var-ref self)))
+    )
+  )
+)
+(main
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable r1 (type
+        (union-type
+          (user-defined-type Bar)
+          (error-type))) (expr
+        (new (
+          (literal 5))))))
+    (type-test-expr is
+      (simple-var-ref r1)
+      (user-defined-type Bar))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation getVal expr:
+          (simple-var-ref r1) ()))))
+  )
+  (bb2 (bb1 bb0) (bb3 bb4)
+    (var-def
+      (variable r2 (type
+        (union-type
+          (user-defined-type Bar)
+          (error-type))) (expr
+        (new (
+          (unary-expr -
+            (literal 1)))))))
+    (type-test-expr is
+      (simple-var-ref r2)
+      (error-type))
+  )
+  (bb3 (bb2) (bb4)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r2))))
+  )
+  (bb4 (bb3 bb2) ())
+)

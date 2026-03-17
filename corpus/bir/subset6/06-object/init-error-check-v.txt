@@ -1,0 +1,79 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Foo {
+  val ((INT), ())
+
+  getVal() -> ((INT), ()){
+    bb0 {
+      %3 = ConstantLoad val
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init(((INT), ())) -> ((NIL, ERROR), ()){
+    bb0 {
+      %3 = ConstantLoad 0
+      %4 = ConstantLoad val
+      self[%4] = %3;
+      %6 = ConstantLoad 0
+      %5 = < v %6;
+      %5 ? bb1 : bb2;
+    }
+    bb1 {
+      %7 = ConstantLoad negative value
+      %8 = newError ((ERROR), ())(%7)
+      %0 = %8;
+      return;
+    }
+    bb2 {
+      %9 = ConstantLoad val
+      self[%9] = v;
+      return;
+    }
+  }
+}
+createFoo(((INT), ())) -> ((INT, ERROR), ()){
+  bb0 {
+    %2 = newObject Foo
+    %3 = init(%2,v) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %3;
+    %5 = $desugar$0 is ((ERROR), ())
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %0 = $desugar$0;
+    return;
+  }
+  bb3 {
+    f = $desugar$0;
+    %7 = getVal(f) -> bb4;
+  }
+  bb4 {
+    %0 = %7;
+    return;
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 10
+    %2 = createFoo(%1) -> bb1;
+  }
+  bb1 {
+    %3 = println(%2) -> bb2;
+  }
+  bb2 {
+    %4 = ConstantLoad 1
+    %5 = unknown %4;
+    %6 = createFoo(%5) -> bb3;
+  }
+  bb3 {
+    %7 = println(%6) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}

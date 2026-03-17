@@ -1156,14 +1156,14 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 		ctx.birCx.CompilerContext.InternalError("failed to find the class definition", expr.GetPosition())
 	}
 
-	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	object := ctx.addTempVar(expr.GetDeterminedType())
 	newObj := &NewObject{}
 	newObj.ClassDef = classDef
-	newObj.LhsOp = resultOperand
+	newObj.LhsOp = object
 	curBB.Instructions = append(curBB.Instructions, newObj)
 
 	var args []BIROperand
-	args = append(args, *resultOperand)
+	args = append(args, *object)
 	for _, arg := range expr.ArgsExprs {
 		argEffect := handleExpression(ctx, curBB, arg)
 		curBB = argEffect.block
@@ -1177,13 +1177,14 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 	call.Args = args
 	call.Name = initFunc.Name
 	call.ThenBB = thenBB
-	call.LhsOp = ctx.addTempVar(expr.DeterminedType)
+	result := ctx.addTempVar(expr.DeterminedType)
+	call.LhsOp = result
 	call.IsVirtual = true
 	call.CachedBIRFunc = initFunc
 	curBB.Terminator = call
 
 	return expressionEffect{
-		result: resultOperand,
+		result: result,
 		block:  thenBB,
 	}
 }

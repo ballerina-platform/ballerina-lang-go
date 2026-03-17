@@ -1,0 +1,75 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition Bar
+    (variable val (type
+      (value-type int)))
+    (function init (
+      (variable v (type
+        (value-type int)))) (
+      (union-type
+        (error-type)
+        (value-type null)))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal val))
+          (literal 0))
+        (if
+          (binary-expr <
+            (simple-var-ref v)
+            (literal 0))
+          (block-stmt
+            (return
+              (error-constructor-expr (
+                (literal value must be non-negative))))) ())
+        (block-stmt
+          (assignment
+            (index-based-access
+              (simple-var-ref self)
+              (literal val))
+            (simple-var-ref v)))))
+    (function getVal () (
+      (value-type int))
+      (block-function-body
+        (return
+          (index-based-access
+            (simple-var-ref self)
+            (literal val))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable r1 (type
+          (union-type
+            (user-defined-type Bar)
+            (error-type))) (expr
+          (new (
+            (literal 5))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref r1)
+          (user-defined-type Bar))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation getVal expr:
+                (simple-var-ref r1) ()))))) ())
+      (block-stmt
+        (var-def
+          (variable r2 (type
+            (union-type
+              (user-defined-type Bar)
+              (error-type))) (expr
+            (new (
+              (unary-expr -
+                (literal 1)))))))
+        (if
+          (type-test-expr is
+            (simple-var-ref r2)
+            (error-type))
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (simple-var-ref r2))))) ())
+        (block-stmt)))))

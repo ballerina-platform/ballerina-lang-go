@@ -27,7 +27,7 @@ main() -> ((NIL), ()){
     %2 = init(%1) -> bb1;
   }
   bb1 {
-    c = %1;
+    c = %2;
     %5 = ConstantLoad x
     %4 = c[%5];
     %6 = println(%4) -> bb2;

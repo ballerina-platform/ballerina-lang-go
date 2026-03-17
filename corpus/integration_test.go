@@ -81,6 +81,8 @@ var (
 		"subset6/06-object/inclusion-inherited-field-v.bal",
 		"subset6/06-object/inclusion-transitive-v.bal",
 		"subset6/06-object/inclusion-transitive-2-v.bal",
+		"subset6/06-object/init-error-return-v.bal",
+		"subset6/06-object/init-error-check-v.bal",
 	}
 )
 

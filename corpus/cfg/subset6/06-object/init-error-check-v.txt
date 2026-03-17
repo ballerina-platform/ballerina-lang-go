@@ -1,0 +1,54 @@
+(Foo
+  (init
+    (bb0 () (bb1 bb2)
+      (binary-expr <
+        (simple-var-ref v)
+        (literal 0))
+    )
+    (bb1 (bb0) ()
+      (return
+        (error-constructor-expr (
+          (literal negative value))))
+    )
+    (bb2 (bb0) ()
+      (assignment
+        (field-based-access val
+          (simple-var-ref self))
+        (simple-var-ref v))
+    )
+  )
+  (getVal
+    (bb0 () ()
+      (return
+        (field-based-access val
+          (simple-var-ref self)))
+    )
+  )
+)
+(createFoo
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (checked-expr
+          (new
+            (user-defined-type Foo) (
+            (simple-var-ref v)))))))
+    (return
+      (invocation getVal expr:
+        (simple-var-ref f) ()))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation createFoo (
+          (literal 10))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation createFoo (
+          (unary-expr -
+            (literal 1)))))))
+  )
+)
