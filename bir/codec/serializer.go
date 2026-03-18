@@ -190,7 +190,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.ConstantLoad:
-		bw.writeType(buf, instr.Type)
+		write(buf, int32(-1))
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
