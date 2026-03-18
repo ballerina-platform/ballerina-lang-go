@@ -2605,10 +2605,10 @@ func (n *NodeBuilder) TransformQueryConstructType(queryConstructTypeNode *tree.Q
 func (n *NodeBuilder) TransformFromClause(fromClauseNode *tree.FromClauseNode) BLangNode {
 	fromClause := &BLangFromClause{}
 	fromClause.pos = getPosition(fromClauseNode)
-	fromClause.Collection = n.createExpression(fromClauseNode.Expression())
+	fromClause.SetCollection(n.createExpression(fromClauseNode.Expression()))
 	bindingPatternNode := fromClauseNode.TypedBindingPattern()
-	fromClause.VariableDefinitionNode = n.createBLangVarDef(getPosition(bindingPatternNode), bindingPatternNode,
-		nil, nil)
+	fromClause.SetVariableDefinitionNode(n.createBLangVarDef(getPosition(bindingPatternNode), bindingPatternNode,
+		nil, nil))
 	fromClause.IsDeclaredWithVarFlag = isDeclaredWithVar(bindingPatternNode.TypeDescriptor())
 	return fromClause
 }
@@ -2655,7 +2655,7 @@ func (n *NodeBuilder) TransformQueryPipeline(queryPipelineNode *tree.QueryPipeli
 func (n *NodeBuilder) TransformSelectClause(selectClauseNode *tree.SelectClauseNode) BLangNode {
 	selectClause := &BLangSelectClause{}
 	selectClause.pos = getPosition(selectClauseNode)
-	selectClause.Expression = n.createExpression(selectClauseNode.Expression())
+	selectClause.SetExpression(n.createExpression(selectClauseNode.Expression()))
 	return selectClause
 }
 
@@ -2677,14 +2677,14 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	}
 
 	fromClause := n.TransformSyntaxNode(queryPipeline.FromClause())
-	queryExpr.QueryClauseList = append(queryExpr.QueryClauseList, fromClause)
+	queryExpr.AddQueryClause(fromClause)
 
 	intermediateClauses := queryPipeline.IntermediateClauses()
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
 		case common.FROM_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE:
-			queryExpr.QueryClauseList = append(queryExpr.QueryClauseList, n.TransformSyntaxNode(clause))
+			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
 			n.cx.Unimplemented("only from + let + where + select query clauses are supported for now", getPosition(clause))
 		}
@@ -2692,7 +2692,7 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 
 	resultClause := queryExpressionNode.ResultClause()
 	if resultClause != nil && resultClause.Kind() == common.SELECT_CLAUSE {
-		queryExpr.QueryClauseList = append(queryExpr.QueryClauseList, n.TransformSyntaxNode(resultClause))
+		queryExpr.AddQueryClause(n.TransformSyntaxNode(resultClause))
 	} else if resultClause != nil {
 		n.cx.Unimplemented("only select result clauses are supported for now", getPosition(resultClause))
 	}
