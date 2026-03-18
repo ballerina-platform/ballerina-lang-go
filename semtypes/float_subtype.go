@@ -23,7 +23,6 @@ import (
 )
 
 type FloatSubtype struct {
-	EnumerableSubtype[float64]
 	allowed bool
 	values  []EnumerableFloat
 }
@@ -78,7 +77,7 @@ func FloatSubtypeContains(d SubtypeData, f EnumerableFloat) bool {
 	return (!v.allowed)
 }
 
-func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) SubtypeData {
+func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) ProperSubtypeData {
 	// migrated from FloatSubtype.java:86:5
 	if len(values) == 0 {
 		if allowed {

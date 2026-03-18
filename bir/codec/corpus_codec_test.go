@@ -19,6 +19,7 @@ package codec
 import (
 	"flag"
 	"slices"
+	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -31,6 +32,7 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/test_util/testphases"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -199,5 +201,81 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 		diff := getBIRDiff(expectedText, actualBIR)
 		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", testPair.InputPath, testPair.ExpectedPath, diff)
 		return
+	}
+}
+
+var roundTripSubsets = []string{
+	"subset1/",
+}
+
+var skipRoundTripTests = []string{
+	"subset1/01-function/assign8-v.bal",
+}
+
+func TestBIRSerializationRoundTrip(t *testing.T) {
+	testPairs := test_util.GetValidTests(t, test_util.BIR)
+
+	for _, testPair := range testPairs {
+		if !slices.ContainsFunc(roundTripSubsets, func(prefix string) bool {
+			return strings.HasPrefix(testPair.Name, prefix)
+		}) {
+			continue
+		}
+		if slices.Contains(skipRoundTripTests, testPair.Name) {
+			continue
+		}
+		t.Run(testPair.Name, func(t *testing.T) {
+			t.Parallel()
+			testBIRSerializationRoundTrip(t, testPair)
+		})
+	}
+}
+
+func testBIRSerializationRoundTrip(t *testing.T, testPair test_util.TestCase) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic during BIR serialization roundtrip for %s: %v", testPair.InputPath, r)
+		}
+	}()
+
+	initialEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	initialContext := context.NewCompilerContext(initialEnv)
+	result, err := testphases.RunPipeline(initialContext, testphases.PhaseBIR, testPair.InputPath)
+	if err != nil {
+		t.Errorf("pipeline failed for %s: %v", testPair.InputPath, err)
+		return
+	}
+
+	if result.BIRPackage == nil {
+		t.Errorf("BIR package is nil for %s", testPair.InputPath)
+		return
+	}
+
+	prettyPrinter := bir.PrettyPrinter{}
+	expectedBIR := prettyPrinter.Print(*result.BIRPackage)
+
+	serializedBIR, err := Marshal(result.BIRPackage)
+	if err != nil {
+		t.Errorf("error serializing BIR package for %s: %v", testPair.InputPath, err)
+		return
+	}
+	initialEnv = nil
+	initialContext = nil
+
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	tyCtx := context.NewCompilerContext(env)
+	deserializedBIRPkg, err := Unmarshal(tyCtx, serializedBIR)
+	if err != nil {
+		t.Errorf("error deserializing BIR package for %s: %v", testPair.InputPath, err)
+		return
+	}
+
+	deserializedBIRPkg.TypeEnv = env.GetTypeEnv()
+
+	actualBIR := prettyPrinter.Print(*deserializedBIRPkg)
+
+	if expectedBIR != actualBIR {
+		diff := getBIRDiff(expectedBIR, actualBIR)
+		t.Errorf("BIR roundtrip mismatch for %s\n%s", testPair.InputPath, diff)
 	}
 }

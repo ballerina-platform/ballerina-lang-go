@@ -23,7 +23,6 @@ import (
 )
 
 type DecimalSubtype struct {
-	EnumerableSubtype[big.Rat]
 	allowed bool
 	values  []EnumerableDecimal
 }
@@ -80,7 +79,7 @@ func DecimalSubtypeContains(d SubtypeData, f EnumerableDecimal) bool {
 	return (!v.allowed)
 }
 
-func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) SubtypeData {
+func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) ProperSubtypeData {
 	// migrated from DecimalSubtype.java:87:5
 	if len(values) == 0 {
 		if allowed {

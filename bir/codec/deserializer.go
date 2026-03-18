@@ -22,14 +22,17 @@ import (
 	"fmt"
 
 	"ballerina-lang-go/bir"
+	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
 type birReader struct {
 	r   *bytes.Reader
 	cp  []any
+	tp  *typepool.TypePool
 	ctx *context.CompilerContext
 }
 
@@ -62,6 +65,7 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		panic(fmt.Sprintf("unsupported BIR version: %d", version))
 	}
 
+	br.readTypePool()
 	br.readConstantPool()
 
 	var pkgIdx int32
@@ -80,6 +84,26 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		GlobalVars:    globalVars,
 		Functions:     functions,
 	}, nil
+}
+
+func (br *birReader) readTypePool() {
+	var tpSize int64
+	br.read(&tpSize)
+	tpBytes := make([]byte, tpSize)
+	_, err := br.r.Read(tpBytes)
+	if err != nil {
+		panic(fmt.Sprintf("reading type pool bytes: %v", err))
+	}
+	br.tp = typepool.UnmarshalTypePool(tpBytes)
+}
+
+func (br *birReader) readType() semtypes.SemType {
+	var idx int32
+	br.read(&idx)
+	if idx == -1 {
+		return nil
+	}
+	return br.tp.Get(typepool.Index(idx))
 }
 
 func (br *birReader) readConstantPool() {
@@ -180,11 +204,7 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 		origin := br.readOrigin()
 		pos := br.readPosition()
 
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
+		ty := br.readType()
 		constant := bir.BIRConstant{
 			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
 				BIRNodeBase: bir.BIRNodeBase{
@@ -194,7 +214,7 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 			Name:   name,
 			Flags:  flags,
 			Origin: origin,
-			Type:   nil,
+			Type:   ty,
 		}
 
 		br.readLength()
@@ -223,11 +243,7 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 		flags := br.readFlags()
 		origin := br.readOrigin()
 
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
+		ty := br.readType()
 		variables[i] = bir.BIRGlobalVariableDcl{
 			BIRVariableDcl: bir.BIRVariableDcl{
 				BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
@@ -237,7 +253,7 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 				},
 				Kind: kind,
 				Name: name,
-				Type: nil,
+				Type: ty,
 			},
 			Flags:  flags,
 			Origin: origin,
@@ -288,17 +304,13 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	var returnVar *bir.BIRVariableDcl
 	if hasReturnVar {
 		returnVarKind := br.readKind()
-		var returnVarTypeIdx int32
-		br.read(&returnVarTypeIdx)
-
-		// TODO: Implement Types
-		// returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
+		returnVarType := br.readType()
 		returnVarName := br.readStringCPEntry()
 
 		returnVar = &bir.BIRVariableDcl{
 			Kind: returnVarKind,
 			Name: returnVarName,
-			Type: nil,
+			Type: returnVarType,
 		}
 		varMap[returnVarName.Value()] = returnVar
 	}
@@ -375,17 +387,13 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 
 func (br *birReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BIRVariableDcl {
 	kind := br.readKind()
-	var typeIdx int32
-	br.read(&typeIdx)
-
-	// TODO: Implement Types
-	// t := br.getTypeFromCP(int(typeIdx))
+	ty := br.readType()
 	name := br.readStringCPEntry()
 
 	localVar := &bir.BIRVariableDcl{
 		Kind: kind,
 		Name: name,
-		Type: nil,
+		Type: ty,
 	}
 
 	switch kind {
@@ -475,6 +483,7 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp: rhsOp,
 		}
 	case bir.INSTRUCTION_KIND_CONST_LOAD:
+		// Const load type placeholder (not used — type inferred from value)
 		var constLoadTypeIdx int32
 		br.read(&constLoadTypeIdx)
 
@@ -515,33 +524,27 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp: rhsOp,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
-
+		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
+			Type:   ty,
 			SizeOp: sizeOp,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
 		rhsOp := br.readOperand(varMap)
-
-		var typeIdx int32
-		br.read(&typeIdx)
+		ty := br.readType()
 
 		return &bir.TypeCast{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			RhsOp: rhsOp,
-			Type:  nil,
+			Type:  ty,
 		}
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
@@ -634,14 +637,11 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 	br.read(&ignoreVariable)
 
 	if ignoreVariable {
-		var varTypeIdx int32
-		br.read(&varTypeIdx)
-
-		// TODO: Implement Types
-		// varType := br.getTypeFromCP(int(varTypeIdx))
+		ty := br.readType()
 		return &bir.BIROperand{
 			VariableDcl: &bir.BIRVariableDcl{
-				Type: nil,
+				Type:           ty,
+				IgnoreVariable: true,
 			},
 		}
 	}
