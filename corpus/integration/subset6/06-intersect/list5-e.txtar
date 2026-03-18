@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: no applicable inherent type for list constructor
+  --> list5-e.bal:22:15
+   |
+22 |     L1&L2 l = [5, 6]; // @error
+   |               ^^^^^^
+

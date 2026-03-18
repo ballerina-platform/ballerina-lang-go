@@ -1,0 +1,24 @@
+(package
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable x (type
+          (intersection-type
+            (constrained-type
+              (builtin-ref-type map)
+              (union-type
+                (value-type int)
+                (value-type string)))
+            (constrained-type
+              (builtin-ref-type map)
+              (union-type
+                (value-type int)
+                (value-type null))))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 1))))))
+      (assignment
+        (wildcard-binding-pattern)
+        (simple-var-ref x)))))

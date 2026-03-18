@@ -1,0 +1,31 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable l (type
+          (intersection-type
+            (tuple-type
+              (value-type int)
+              (value-type int))
+            (tuple-type
+              (value-type int)
+              (union-type
+                (value-type int)
+                (value-type string))))) (expr
+          (list-constructor-expr
+            (literal 5)
+            (literal 6)))))
+      (if
+        (type-test-expr is
+          (simple-var-ref l)
+          (tuple-type
+            (value-type int)
+            (value-type int)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal int, int))))) ())
+      (block-stmt))))
