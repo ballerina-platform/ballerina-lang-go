@@ -48,7 +48,7 @@ func testSymbolResolution(t *testing.T, testCase test_util.TestCase) {
 		}
 	}()
 
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
 	result, err := testphases.RunPipeline(cx, testphases.PhaseSymbolResolution, testCase.InputPath)
 	if err != nil {

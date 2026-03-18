@@ -198,43 +198,52 @@ func (m *moduleContext) getModuleDescDependencies() []ModuleDescriptor {
 func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	moduleCtx.moduleDiagnostics = nil
 
+	compilerCtx := moduleCtx.compilerCtx
+
 	// Parse all source and test documents in parallel.
+	compilerCtx.StartStage(context.StageParse)
 	syntaxTrees := parseDocumentsParallel(
 		moduleCtx.srcDocIDs,
 		moduleCtx.srcDocContextMap,
 		moduleCtx.testSrcDocIDs,
 		moduleCtx.testDocContextMap,
 	)
+	compilerCtx.EndStage()
 
 	if len(syntaxTrees) == 0 {
 		return
 	}
 
-	compilerCtx := moduleCtx.compilerCtx
-
 	// Build BLangPackage from syntax trees.
+	compilerCtx.StartStage(context.StageASTBuild)
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 	pkgNode := buildBLangPackage(compilerCtx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
-
 	pkgNode.PackageID = createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
+	compilerCtx.EndStage()
 
 	// Resolve symbols (imports) before type resolution
+	compilerCtx.StartStage(context.StageImportResolution)
 	publicSymbols := moduleCtx.getProject().Environment().publicSymbols
 	importedSymbols := semantics.ResolveImports(compilerCtx, pkgNode, semantics.GetImplicitImports(compilerCtx), publicSymbols, moduleCtx.moduleDescriptor.Org().value)
 	moduleCtx.importedSymbols = importedSymbols
+	compilerCtx.EndStage()
 
+	compilerCtx.StartStage(context.StageSymbolResolution)
 	publicSymbols[semantics.PackageIdentifier{
 		OrgName:    moduleCtx.moduleDescriptor.Org().value,
 		ModuleName: moduleCtx.moduleID.moduleName,
 	}] = semantics.ResolveSymbols(compilerCtx, pkgNode, importedSymbols)
+	compilerCtx.EndStage()
 
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
 	// Add type resolution step (this only resolve types of top level nodes)
+	compilerCtx.StartStage(context.StageTopLevelTypeResolution)
 	semantics.ResolveTopLevelNodes(compilerCtx, pkgNode, importedSymbols)
+	compilerCtx.EndStage()
 }
 
 // analyzeAndDesugar performs CFG creation, semantic analysis, CFG analysis, and desugaring.
@@ -253,19 +262,25 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	}
 
 	// Resolve types of function bodies and inner nodes
+	compilerCtx.StartStage(context.StageLocalNodeResolution)
 	semantics.ResolveLocalNodes(compilerCtx, pkgNode, moduleCtx.importedSymbols)
+	compilerCtx.EndStage()
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
+	compilerCtx.StartStage(context.StageSemanticAnalysis)
 	semanticAnalyzer := semantics.NewSemanticAnalyzer(moduleCtx.compilerCtx)
 	semanticAnalyzer.Analyze(pkgNode)
+	compilerCtx.EndStage()
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
 	// Create control flow graph after semantic analysis.
+	compilerCtx.StartStage(context.StageCFGCreation)
 	cfg := semantics.CreateControlFlowGraph(compilerCtx, pkgNode)
+	compilerCtx.EndStage()
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
@@ -289,13 +304,17 @@ func analyzeAndDesugar(moduleCtx *moduleContext) {
 	}
 
 	// Run CFG analyses (reachability and explicit return) after semantic analysis.
+	compilerCtx.StartStage(context.StageCFGAnalysis)
 	semantics.AnalyzeCFG(moduleCtx.compilerCtx, pkgNode, cfg)
+	compilerCtx.EndStage()
 	if compilerCtx.HasDiagnostics() {
 		return
 	}
 
 	// Desugar package "lowering" AST to an AST that BIR gen can handle.
+	compilerCtx.StartStage(context.StageDesugaring)
 	moduleCtx.bLangPkg = desugar.DesugarPackage(moduleCtx.compilerCtx, moduleCtx.bLangPkg, moduleCtx.importedSymbols)
+	compilerCtx.EndStage()
 
 	moduleCtx.compilationState = moduleCompilationStateCompiled
 }
@@ -422,7 +441,9 @@ func generateCodeInternal(moduleCtx *moduleContext) {
 	if moduleCtx.bLangPkg == nil || moduleCtx.compilerCtx == nil {
 		return
 	}
+	moduleCtx.compilerCtx.StartStage(context.StageBIRGeneration)
 	moduleCtx.birPkg = bir.GenBir(moduleCtx.compilerCtx, moduleCtx.bLangPkg)
+	moduleCtx.compilerCtx.EndStage()
 }
 
 // getBLangPackage returns the compiled BLangPackage.
