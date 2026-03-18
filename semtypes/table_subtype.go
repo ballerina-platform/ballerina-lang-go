@@ -31,7 +31,7 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 		members := lat.Members
 		switch members.FixedLength {
 		case 0:
-			normalizedKc = &VAL
+			normalizedKc = VAL
 		case 1:
 			normalizedKc = cellAtomicType(members.Initial[0]).Ty
 		default:
@@ -40,7 +40,7 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 	} else {
 		normalizedKc = keyConstraint
 	}
-	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, &VAL)
+	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, VAL)
 }
 
 func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
@@ -71,8 +71,8 @@ func TableContaining(env Env, tableConstraint SemType) SemType {
 
 func TableContainingWithEnvSemTypeCellMutability(env Env, tableConstraint SemType, mut CellMutability) SemType {
 	// migrated from TableSubtype.java:89:5
-	var normalizedKc SemType = &VAL
-	var normalizedKs SemType = &VAL
+	var normalizedKc SemType = VAL
+	var normalizedKs SemType = VAL
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, mut)
 }
 

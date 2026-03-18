@@ -179,7 +179,7 @@ func atomIndex[E AtomicType](initializedAtoms []InitializedTypeAtom[E], atom E) 
 // migrated from PredefinedTypeEnv.java:186-192
 func (this *PredefinedTypeEnv) cellAtomicVal() *CellAtomicType {
 	if this._cellAtomicVal == nil {
-		val := CellAtomicTypeFrom(&VAL, CellMutability_CELL_MUT_LIMITED)
+		val := CellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
 		this._cellAtomicVal = &val
 		this.addInitializedCellAtom(&val)
 	}
@@ -201,7 +201,7 @@ func (this *PredefinedTypeEnv) atomCellVal() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:202-208
 func (this *PredefinedTypeEnv) cellAtomicNever() *CellAtomicType {
 	if this._cellAtomicNever == nil {
-		val := CellAtomicTypeFrom(&NEVER, CellMutability_CELL_MUT_LIMITED)
+		val := CellAtomicTypeFrom(NEVER, CellMutability_CELL_MUT_LIMITED)
 		this._cellAtomicNever = &val
 		this.addInitializedCellAtom(&val)
 	}
@@ -223,7 +223,7 @@ func (this *PredefinedTypeEnv) atomCellNever() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:218-224
 func (this *PredefinedTypeEnv) cellAtomicInner() *CellAtomicType {
 	if this._callAtomicInner == nil {
-		val := CellAtomicTypeFrom(&INNER, CellMutability_CELL_MUT_LIMITED)
+		val := CellAtomicTypeFrom(INNER, CellMutability_CELL_MUT_LIMITED)
 		this._callAtomicInner = &val
 		this.addInitializedCellAtom(&val)
 	}
@@ -245,7 +245,7 @@ func (this *PredefinedTypeEnv) atomCellInner() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:234-241
 func (this *PredefinedTypeEnv) cellAtomicInnerMapping() *CellAtomicType {
 	if this._cellAtomicInnerMapping == nil {
-		val := CellAtomicTypeFrom(Union(&MAPPING, &UNDEF), CellMutability_CELL_MUT_LIMITED)
+		val := CellAtomicTypeFrom(Union(MAPPING, UNDEF), CellMutability_CELL_MUT_LIMITED)
 		this._cellAtomicInnerMapping = &val
 		this.addInitializedCellAtom(&val)
 	}
@@ -267,7 +267,7 @@ func (this *PredefinedTypeEnv) atomCellInnerMapping() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:251-258
 func (this *PredefinedTypeEnv) cellAtomicInnerMappingRO() *CellAtomicType {
 	if this._cellAtomicInnerMappingRO == nil {
-		val := CellAtomicTypeFrom(Union(MAPPING_RO, &UNDEF), CellMutability_CELL_MUT_LIMITED)
+		val := CellAtomicTypeFrom(Union(MAPPING_RO, UNDEF), CellMutability_CELL_MUT_LIMITED)
 		this._cellAtomicInnerMappingRO = &val
 		this.addInitializedCellAtom(&val)
 	}
@@ -355,7 +355,7 @@ func (this *PredefinedTypeEnv) atomCellInnerRO() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:319-325
 func (this *PredefinedTypeEnv) cellAtomicUndef() *CellAtomicType {
 	if this._cellAtomicUndef == nil {
-		val := CellAtomicTypeFrom(&UNDEF, CellMutability_CELL_MUT_NONE)
+		val := CellAtomicTypeFrom(UNDEF, CellMutability_CELL_MUT_NONE)
 		this._cellAtomicUndef = &val
 		this.addInitializedCellAtom(&val)
 	}

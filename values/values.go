@@ -48,7 +48,7 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 		return NewMap(t)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
 		// TODO: this needs to be properly implemeneted for lists
-		return NewList(0, &semtypes.NEVER, NeverValue)
+		return NewList(0, semtypes.NEVER, NeverValue)
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
@@ -59,7 +59,7 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 func SemTypeForValue(v BalValue) semtypes.SemType {
 	switch v := v.(type) {
 	case nil:
-		return &semtypes.NIL
+		return semtypes.NIL
 	case bool:
 		return semtypes.BooleanConst(v)
 	case int64:
@@ -77,7 +77,7 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 	case *Error:
 		return v.Type
 	default:
-		return &semtypes.ANY
+		return semtypes.ANY
 	}
 }
 

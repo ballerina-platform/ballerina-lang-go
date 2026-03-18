@@ -30,7 +30,7 @@ const (
 )
 
 func bitCount(b BasicTypeBitSet) int {
-	return bits.OnesCount(uint(b.bitset))
+	return bits.OnesCount(uint(b.All()))
 }
 
 func cellAtomType(atom Atom) CellAtomicType {
@@ -44,28 +44,28 @@ func cellAtomType(atom Atom) CellAtomicType {
 
 func Diff(t1, t2 SemType) SemType {
 	var all1, all2, some1, some2 int
-	if b1, ok := t1.(*BasicTypeBitSet); ok {
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return new(BasicTypeBitSetFrom(b1.bitset & ^b2.bitset))
+	if b1, ok := t1.(BasicTypeBitSet); ok {
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			return BasicTypeBitSetFrom(b1.All() & ^b2.All())
 		} else {
-			if b1.bitset == 0 {
+			if b1.All() == 0 {
 				return t1
 			}
 			complexT2 := t2.(ComplexSemType)
 			all2 = complexT2.All()
 			some2 = complexT2.Some()
 		}
-		all1 = b1.bitset
+		all1 = b1.All()
 		some1 = 0
 	} else {
 		c1 := t1.(ComplexSemType)
 		all1 = c1.All()
 		some1 = c1.Some()
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			if b2.bitset == ValueTypeMask {
-				return new(BasicTypeBitSetFrom(0))
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			if b2.All() == ValueTypeMask {
+				return BasicTypeBitSetFrom(0)
 			}
-			all2 = b2.bitset
+			all2 = b2.All()
 			some2 = 0
 		} else {
 			c2 := t2.(ComplexSemType)
@@ -75,10 +75,10 @@ func Diff(t1, t2 SemType) SemType {
 	}
 	all := BasicTypeBitSetFrom(all1 & ^(all2 | some2))
 	someBitSet := (all1 | some1) & ^all2
-	someBitSet = someBitSet & ^all.bitset
+	someBitSet = someBitSet & ^all.All()
 	some := BasicTypeBitSetFrom(someBitSet)
-	if some.bitset == 0 {
-		return new(basicTypeUnion(all.bitset))
+	if some.All() == 0 {
+		return basicTypeUnion(all.All())
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -97,13 +97,13 @@ func Diff(t1, t2 SemType) SemType {
 			subtypes = append(subtypes, BasicSubtypeFrom(code, data.(ProperSubtypeData)))
 		} else if allOrNothing.IsAllSubtype() {
 			c := code.Code()
-			all = BasicTypeBitSetFrom(all.bitset | (1 << c))
+			all = BasicTypeBitSetFrom(all.All() | (1 << c))
 		}
 	}
 	if len(subtypes) == 0 {
-		return new(all)
+		return all
 	}
-	return CreateComplexSemType(all.bitset, subtypes...)
+	return CreateComplexSemType(all.All(), subtypes...)
 }
 
 func unpackComplexSemType(t ComplexSemType) []BasicSubtype {
@@ -139,22 +139,22 @@ func getComplexSubtypeData(t ComplexSemType, code BasicTypeCode) SubtypeData {
 func Union(t1, t2 SemType) SemType {
 	common.Assert(t1 != nil && t2 != nil)
 	var all1, all2, some1, some2 int
-	if b1, ok := t1.(*BasicTypeBitSet); ok {
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return new(BasicTypeBitSetFrom(b1.bitset | b2.bitset))
+	if b1, ok := t1.(BasicTypeBitSet); ok {
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			return BasicTypeBitSetFrom(b1.All() | b2.All())
 		} else {
 			complexT2 := t2.(ComplexSemType)
 			all2 = complexT2.All()
 			some2 = complexT2.Some()
 		}
-		all1 = b1.bitset
+		all1 = b1.All()
 		some1 = 0
 	} else {
 		complexT1 := t1.(ComplexSemType)
 		all1 = complexT1.All()
 		some1 = complexT1.Some()
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			all2 = b2.bitset
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			all2 = b2.All()
 			some2 = 0
 		} else {
 			complexT2 := t2.(ComplexSemType)
@@ -163,9 +163,9 @@ func Union(t1, t2 SemType) SemType {
 		}
 	}
 	all := BasicTypeBitSetFrom(all1 | all2)
-	some := BasicTypeBitSetFrom((some1 | some2) & ^all.bitset)
-	if some.bitset == 0 {
-		return new(basicTypeUnion(all.bitset))
+	some := BasicTypeBitSetFrom((some1 | some2) & ^all.All())
+	if some.All() == 0 {
+		return basicTypeUnion(all.All())
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -182,48 +182,48 @@ func Union(t1, t2 SemType) SemType {
 		}
 		if allOrNothing, ok := data.(AllOrNothingSubtype); ok && allOrNothing.IsAllSubtype() {
 			c := code.Code()
-			all = BasicTypeBitSetFrom(all.bitset | (1 << c))
+			all = BasicTypeBitSetFrom(all.All() | (1 << c))
 		} else {
 			subtypes = append(subtypes, BasicSubtypeFrom(code, data.(ProperSubtypeData)))
 		}
 	}
 	if len(subtypes) == 0 {
-		return new(all)
+		return all
 	}
-	return CreateComplexSemType(all.bitset, subtypes...)
+	return CreateComplexSemType(all.All(), subtypes...)
 }
 
 func Intersect(t1, t2 SemType) SemType {
 	common.Assert(t1 != nil && t2 != nil)
 	var all1, all2, some1, some2 int
-	if b1, ok := t1.(*BasicTypeBitSet); ok {
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			return new(BasicTypeBitSetFrom(b1.bitset & b2.bitset))
+	if b1, ok := t1.(BasicTypeBitSet); ok {
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			return BasicTypeBitSetFrom(b1.All() & b2.All())
 		} else {
-			if b1.bitset == 0 {
+			if b1.All() == 0 {
 				return t1
 			}
-			if b1.bitset == ValueTypeMask {
+			if b1.All() == ValueTypeMask {
 				return t2
 			}
 			complexT2 := t2.(ComplexSemType)
 			all2 = complexT2.All()
 			some2 = complexT2.Some()
 		}
-		all1 = b1.bitset
+		all1 = b1.All()
 		some1 = 0
 	} else {
 		complexT1 := t1.(ComplexSemType)
 		all1 = complexT1.All()
 		some1 = complexT1.Some()
-		if b2, ok := t2.(*BasicTypeBitSet); ok {
-			if b2.bitset == 0 {
+		if b2, ok := t2.(BasicTypeBitSet); ok {
+			if b2.All() == 0 {
 				return t2
 			}
-			if b2.bitset == ValueTypeMask {
+			if b2.All() == ValueTypeMask {
 				return t1
 			}
-			all2 = b2.bitset
+			all2 = b2.All()
 			some2 = 0
 		} else {
 			complexT2 := t2.(ComplexSemType)
@@ -233,9 +233,9 @@ func Intersect(t1, t2 SemType) SemType {
 	}
 	all := BasicTypeBitSetFrom(all1 & all2)
 	some := BasicTypeBitSetFrom((some1 | all1) & (some2 | all2))
-	some = BasicTypeBitSetFrom(some.bitset & ^all.bitset)
-	if some.bitset == 0 {
-		return new(basicTypeUnion(all.bitset))
+	some = BasicTypeBitSetFrom(some.All() & ^all.All())
+	if some.All() == 0 {
+		return basicTypeUnion(all.All())
 	}
 	var subtypes []BasicSubtype
 	for pair := range newSubtypePairs(t1, t2, some) {
@@ -255,9 +255,9 @@ func Intersect(t1, t2 SemType) SemType {
 		}
 	}
 	if len(subtypes) == 0 {
-		return new(all)
+		return all
 	}
-	return CreateComplexSemType(all.bitset, subtypes...)
+	return CreateComplexSemType(all.All(), subtypes...)
 }
 
 func intersectMemberSemTypes(env Env, t1, t2 CellSemType) CellSemType {
@@ -266,7 +266,7 @@ func intersectMemberSemTypes(env Env, t1, t2 CellSemType) CellSemType {
 	common.Assert(c1 != nil && c2 != nil)
 	atomicType := IntersectCellAtomicType(c1, c2)
 	var mut CellMutability
-	if atomicType.Ty == &UNDEF {
+	if atomicType.Ty == UNDEF {
 		mut = CellMutability_CELL_MUT_NONE
 	} else {
 		mut = atomicType.Mut
@@ -275,20 +275,20 @@ func intersectMemberSemTypes(env Env, t1, t2 CellSemType) CellSemType {
 }
 
 func Complement(t SemType) SemType {
-	return Diff(&VAL, t)
+	return Diff(VAL, t)
 }
 
 func IsNever(t SemType) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return b.bitset == 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return b.All() == 0
 	}
 	return false
 }
 
 func IsEmpty(cx Context, t SemType) bool {
 	common.Assert(t != nil && cx != nil)
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return b.bitset == 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return b.All() == 0
 	} else {
 		ct := t.(ComplexSemType)
 		if ct.All() != 0 {
@@ -309,13 +309,13 @@ func IsSubtype(cx Context, t1, t2 SemType) bool {
 
 func IsSubtypeSimple(t1 SemType, t2 BasicTypeBitSet) bool {
 	var bits int
-	if b1, ok := t1.(*BasicTypeBitSet); ok {
-		bits = b1.bitset
+	if b1, ok := t1.(BasicTypeBitSet); ok {
+		bits = b1.All()
 	} else {
 		complexT1 := t1.(ComplexSemType)
 		bits = complexT1.All() | complexT1.Some()
 	}
-	return (bits & ^t2.bitset) == 0
+	return (bits & ^t2.All()) == 0
 }
 
 func IsSameType(cx Context, t1, t2 SemType) bool {
@@ -323,8 +323,8 @@ func IsSameType(cx Context, t1, t2 SemType) bool {
 }
 
 func WidenToBasicTypes(t SemType) BasicTypeBitSet {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return *b
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return b
 	} else {
 		complexSemType := t.(ComplexSemType)
 		return BasicTypeBitSetFrom(complexSemType.All() | complexSemType.Some())
@@ -332,7 +332,7 @@ func WidenToBasicTypes(t SemType) BasicTypeBitSet {
 }
 
 func WideUnsigned(t SemType) SemType {
-	if b, ok := t.(*BasicTypeBitSet); ok {
+	if b, ok := t.(BasicTypeBitSet); ok {
 		return b
 	} else {
 		if !IsSubtypeSimple(t, INT) {
@@ -340,7 +340,7 @@ func WideUnsigned(t SemType) SemType {
 		}
 		data := IntSubtypeWidenUnsigned(subtypeData(t, BTInt))
 		if _, ok := data.(AllOrNothingSubtype); ok {
-			return &INT
+			return INT
 		} else {
 			return basicSubtype(BTInt, data.(ProperSubtypeData))
 		}
@@ -368,28 +368,28 @@ func stringSubtype(t SemType) SubtypeData {
 }
 
 func ListMemberTypeInnerVal(cx Context, t, k SemType) SemType {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if (b.bitset & LIST.bitset) != 0 {
-			return &VAL
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if (b.All() & LIST.All()) != 0 {
+			return VAL
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	} else {
 		keyData := intSubtype(k)
 		if isNothingSubtype(keyData) {
-			return &NEVER
+			return NEVER
 		}
-		return BddListMemberTypeInnerVal(cx, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), keyData, &VAL)
+		return BddListMemberTypeInnerVal(cx, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), keyData, VAL)
 	}
 }
 
-var LIST_MEMBER_TYPES_ALL = ListMemberTypesFrom([]Range{RangeFrom(0, int64(MAX_VALUE))}, []SemType{&VAL})
+var LIST_MEMBER_TYPES_ALL = ListMemberTypesFrom([]Range{RangeFrom(0, int64(MAX_VALUE))}, []SemType{VAL})
 
 var LIST_MEMBER_TYPES_NONE = ListMemberTypesFrom([]Range{}, []SemType{})
 
 func ListAllMemberTypesInner(cx Context, t SemType) ListMemberTypes {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if (b.bitset & LIST.bitset) != 0 {
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if (b.All() & LIST.All()) != 0 {
 			return LIST_MEMBER_TYPES_ALL
 		} else {
 			return LIST_MEMBER_TYPES_NONE
@@ -545,8 +545,8 @@ func ListAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 
 func ToMappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 	mappingAtomicInner := MAPPING_ATOMIC_INNER
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if b.bitset == MAPPING.bitset {
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if b.All() == MAPPING.All() {
 			return &mappingAtomicInner
 		} else {
 			return nil
@@ -578,30 +578,30 @@ func bddMappingAtomicType(env Env, bdd Bdd, top MappingAtomicType) *MappingAtomi
 }
 
 func MappingMemberTypeInnerVal(cx Context, t, k SemType) SemType {
-	return Diff(MappingMemberTypeInner(cx, t, k), &UNDEF)
+	return Diff(MappingMemberTypeInner(cx, t, k), UNDEF)
 }
 
 func MappingMemberTypeInner(cx Context, t, k SemType) SemType {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if (b.bitset & MAPPING.bitset) != 0 {
-			return &VAL
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if (b.All() & MAPPING.All()) != 0 {
+			return VAL
 		} else {
-			return &UNDEF
+			return UNDEF
 		}
 	} else {
 		keyData := stringSubtype(k)
 		if isNothingSubtype(keyData) {
-			return &UNDEF
+			return UNDEF
 		}
 		return BddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), keyData,
-			&INNER)
+			INNER)
 	}
 }
 
 func ToListAtomicType(cx Context, t SemType) *ListAtomicType {
 	listAtomicInner := LIST_ATOMIC_INNER
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if b.bitset == LIST.bitset {
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if b.All() == LIST.All() {
 			return &listAtomicInner
 		} else {
 			return nil
@@ -633,7 +633,7 @@ func bddListAtomicType(env Env, bdd Bdd, top ListAtomicType) *ListAtomicType {
 }
 
 func CellInnerVal(t CellSemType) SemType {
-	return Diff(CellInner(t), &UNDEF)
+	return Diff(CellInner(t), UNDEF)
 }
 
 func CellInner(t CellSemType) SemType {
@@ -645,12 +645,12 @@ func CellInner(t CellSemType) SemType {
 func CellContainingInnerVal(env Env, t CellSemType) CellSemType {
 	cat := cellAtomicType(t)
 	common.Assert(cat != nil)
-	return CellContainingWithEnvSemTypeCellMutability(env, Diff(cat.Ty, &UNDEF), cat.Mut)
+	return CellContainingWithEnvSemTypeCellMutability(env, Diff(cat.Ty, UNDEF), cat.Mut)
 }
 
 func cellAtomicType(t SemType) *CellAtomicType {
-	if bt, ok := t.(*BasicTypeBitSet); ok {
-		if *bt == CELL {
+	if bt, ok := t.(BasicTypeBitSet); ok {
+		if bt == CELL {
 			return CELL_ATOMIC_VAL
 		} else {
 			return nil
@@ -687,9 +687,9 @@ func bddCellAtomicType(bdd Bdd, top CellAtomicType) *CellAtomicType {
 }
 
 func SingleShape(t SemType) common.Optional[Value] {
-	if t == &NIL {
+	if t == NIL {
 		return common.OptionalOf(ValueFrom(nil))
-	} else if _, ok := t.(*BasicTypeBitSet); ok {
+	} else if _, ok := t.(BasicTypeBitSet); ok {
 		return common.OptionalEmpty[Value]()
 	} else if IsSubtypeSimple(t, INT) {
 		sd := getComplexSubtypeData(t.(ComplexSemType), BTInt)
@@ -737,7 +737,7 @@ func SingleShape(t SemType) common.Optional[Value] {
 
 func Singleton(v any) SemType {
 	if v == nil {
-		return &NIL
+		return NIL
 	}
 
 	if lng, ok := v.(int64); ok {
@@ -771,8 +771,8 @@ func ContainsConst(t SemType, v any) bool {
 }
 
 func ContainsNil(t SemType) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return (b.bitset & (1 << BTNil.Code())) != 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return (b.All() & (1 << BTNil.Code())) != 0
 	} else {
 		// todo: Need to verify this behavior
 		complexSubtypeData := getComplexSubtypeData(t.(ComplexSemType), BTNil).(AllOrNothingSubtype)
@@ -781,8 +781,8 @@ func ContainsNil(t SemType) bool {
 }
 
 func ContainsConstString(t SemType, s string) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return (b.bitset & (1 << BTString.Code())) != 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return (b.All() & (1 << BTString.Code())) != 0
 	} else {
 		return StringSubtypeContains(
 			getComplexSubtypeData(t.(ComplexSemType), BTString), s)
@@ -790,8 +790,8 @@ func ContainsConstString(t SemType, s string) bool {
 }
 
 func ContainsConstInt(t SemType, n int64) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return (b.bitset & (1 << BTInt.Code())) != 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return (b.All() & (1 << BTInt.Code())) != 0
 	} else {
 		return IntSubtypeContains(
 			getComplexSubtypeData(t.(ComplexSemType), BTInt), n)
@@ -799,8 +799,8 @@ func ContainsConstInt(t SemType, n int64) bool {
 }
 
 func ContainsConstFloat(t SemType, n float64) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return (b.bitset & (1 << BTFloat.Code())) != 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return (b.All() & (1 << BTFloat.Code())) != 0
 	} else {
 		return FloatSubtypeContains(
 			getComplexSubtypeData(t.(ComplexSemType), BTFloat), EnumerableFloatFrom(n))
@@ -808,8 +808,8 @@ func ContainsConstFloat(t SemType, n float64) bool {
 }
 
 func ContainsConstDecimal(t SemType, n big.Rat) bool {
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		return (b.bitset & (1 << BTDecimal.Code())) != 0
+	if b, ok := t.(BasicTypeBitSet); ok {
+		return (b.All() & (1 << BTDecimal.Code())) != 0
 	} else {
 		return DecimalSubtypeContains(
 			getComplexSubtypeData(t.(ComplexSemType), BTDecimal), EnumerableDecimalFrom(n))
@@ -817,8 +817,8 @@ func ContainsConstDecimal(t SemType, n big.Rat) bool {
 }
 
 func ContainsConstBoolean(t SemType, b bool) bool {
-	if bType, ok := t.(*BasicTypeBitSet); ok {
-		return (bType.bitset & (1 << BTBoolean.Code())) != 0
+	if bType, ok := t.(BasicTypeBitSet); ok {
+		return (bType.All() & (1 << BTBoolean.Code())) != 0
 	} else {
 		return BooleanSubtypeContains(
 			getComplexSubtypeData(t.(ComplexSemType), BTBoolean), b)
@@ -826,9 +826,9 @@ func ContainsConstBoolean(t SemType, b bool) bool {
 }
 
 func SingleNumericType(semType SemType) common.Optional[BasicTypeBitSet] {
-	numType := Intersect(semType, &NUMBER)
-	if b, ok := numType.(*BasicTypeBitSet); ok {
-		if b.bitset == NEVER.bitset {
+	numType := Intersect(semType, NUMBER)
+	if b, ok := numType.(BasicTypeBitSet); ok {
+		if b.All() == NEVER.All() {
 			return common.OptionalEmpty[BasicTypeBitSet]()
 		}
 	}
@@ -845,8 +845,8 @@ func SingleNumericType(semType SemType) common.Optional[BasicTypeBitSet] {
 }
 
 func subtypeData(s SemType, code BasicTypeCode) SubtypeData {
-	if b, ok := s.(*BasicTypeBitSet); ok {
-		if (b.bitset & (1 << code.Code())) != 0 {
+	if b, ok := s.(BasicTypeBitSet); ok {
+		if (b.All() & (1 << code.Code())) != 0 {
 			return CreateAll()
 		}
 		return CreateNothing()
@@ -868,7 +868,7 @@ func CreateJson(context Context) SemType {
 	}
 	listDef := &ListDefinition{}
 	mapDef := &MappingDefinition{}
-	j := Union(&SIMPLE_OR_STRING, Union(listDef.GetSemType(env), mapDef.GetSemType(env)))
+	j := Union(SIMPLE_OR_STRING, Union(listDef.GetSemType(env), mapDef.GetSemType(env)))
 	listDef.DefineListTypeWrappedWithEnvSemType(env, j)
 	mapDef.DefineMappingTypeWrapped(env, nil, j)
 	context.setJsonMemo(j)
@@ -885,7 +885,7 @@ func CreateAnydata(context Context) SemType {
 	listDef := &ListDefinition{}
 	mapDef := &MappingDefinition{}
 	tableTy := TableContaining(env, mapDef.GetSemType(env))
-	ad := Union(Union(&SIMPLE_OR_STRING, Union(&XML, Union(&REGEXP, tableTy))),
+	ad := Union(Union(SIMPLE_OR_STRING, Union(XML, Union(REGEXP, tableTy))),
 		Union(listDef.GetSemType(env), mapDef.GetSemType(env)))
 	listDef.DefineListTypeWrappedWithEnvSemType(env, ad)
 	mapDef.DefineMappingTypeWrapped(env, nil, ad)
@@ -903,7 +903,7 @@ func CreateCloneable(context Context) SemType {
 	listDef := &ListDefinition{}
 	mapDef := &MappingDefinition{}
 	tableTy := TableContaining(env, mapDef.GetSemType(env))
-	ad := Union(VAL_READONLY, Union(&XML, Union(listDef.GetSemType(env), Union(tableTy,
+	ad := Union(VAL_READONLY, Union(XML, Union(listDef.GetSemType(env), Union(tableTy,
 		mapDef.GetSemType(env)))))
 	listDef.DefineListTypeWrappedWithEnvSemType(env, ad)
 	mapDef.DefineMappingTypeWrapped(env, []Field{}, ad)
@@ -940,9 +940,9 @@ func CreateServiceObject(context Context) SemType {
 func CreateBasicSemType(typeCode BasicTypeCode, subtypeData SubtypeData) SemType {
 	if _, ok := subtypeData.(AllOrNothingSubtype); ok {
 		if isAllSubtype(subtypeData) {
-			return new(BasicTypeBitSetFrom(1 << typeCode.Code()))
+			return BasicTypeBitSetFrom(1 << typeCode.Code())
 		} else {
-			return new(BasicTypeBitSetFrom(0))
+			return BasicTypeBitSetFrom(0)
 		}
 	} else {
 		return CreateComplexSemType(0,
@@ -953,8 +953,8 @@ func CreateBasicSemType(typeCode BasicTypeCode, subtypeData SubtypeData) SemType
 func MappingAtomicTypesInUnion(cx Context, t SemType) common.Optional[[]MappingAtomicType] {
 	matList := []MappingAtomicType{}
 	mappingAtomicInner := MAPPING_ATOMIC_INNER
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if b.bitset == MAPPING.bitset {
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if b.All() == MAPPING.All() {
 			matList = append(matList, mappingAtomicInner)
 			return common.OptionalOf(matList)
 		}
@@ -1003,7 +1003,7 @@ func collectBddMappingAtomicTypesInUnion(env Env, bdd Bdd, top MappingAtomicType
 }
 
 func Comparable(cx Context, t1, t2 SemType) bool {
-	semType := Diff(Union(t1, t2), &NIL)
+	semType := Diff(Union(t1, t2), NIL)
 	if IsSubtypeSimple(semType, SIMPLE_OR_STRING) {
 		nOrderings := bitCount(WidenToBasicTypes(semType))
 		return nOrderings <= 1
@@ -1042,8 +1042,8 @@ func comparableNillableList(cx Context, t1, t2 SemType) bool {
 
 func ContainsUndef(t SemType) bool {
 	switch t := t.(type) {
-	case *BasicTypeBitSet:
-		bitSet := t.bitset
+	case BasicTypeBitSet:
+		bitSet := t.All()
 		return (bitSet & (1 << BTUndef.Code())) != 0
 	case ComplexSemType:
 		switch data := getComplexSubtypeData(t, BTUndef).(type) {

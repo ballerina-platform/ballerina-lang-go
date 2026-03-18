@@ -16,16 +16,12 @@
 
 package semtypes
 
-type BasicTypeBitSet struct {
-	bitset int
-}
+type BasicTypeBitSet int
 
-var _ SemType = &BasicTypeBitSet{}
-
-func (bitset *BasicTypeBitSet) All() int {
-	return bitset.bitset
+func (bitset BasicTypeBitSet) All() int {
+	return int(bitset)
 }
 
 func BasicTypeBitSetFrom(bitset int) BasicTypeBitSet {
-	return BasicTypeBitSet{bitset: bitset}
+	return BasicTypeBitSet(bitset)
 }

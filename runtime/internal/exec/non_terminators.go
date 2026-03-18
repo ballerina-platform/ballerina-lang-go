@@ -126,7 +126,10 @@ func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
-	b := targetType.(*semtypes.BasicTypeBitSet)
+	b, ok := targetType.(semtypes.BasicTypeBitSet)
+	if !ok {
+		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
+	}
 	if b.All() == semtypes.ANY.All() {
 		return value
 	}

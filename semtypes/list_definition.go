@@ -52,7 +52,7 @@ func (this *ListDefinition) TupleTypeWrapped(env Env, members ...SemType) SemTyp
 
 func (this *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemType {
 	// migrated from ListDefinition.java:71:5
-	return this.DefineListTypeWrapped(env, members, len(members), &NEVER, CellMutability_CELL_MUT_NONE)
+	return this.DefineListTypeWrapped(env, members, len(members), NEVER, CellMutability_CELL_MUT_NONE)
 }
 
 func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
@@ -68,13 +68,13 @@ func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fi
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, &UNDEF), restMut)
+	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.define(env, initialCells, fixedLength, restCell)
 }
 
 func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesInt(env Env, initial []SemType, size int) SemType {
 	// migrated from ListDefinition.java:85:5
-	return this.DefineListTypeWrapped(env, initial, size, &NEVER, CellMutability_CELL_MUT_LIMITED)
+	return this.DefineListTypeWrapped(env, initial, size, NEVER, CellMutability_CELL_MUT_LIMITED)
 }
 
 func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesIntSemType(env Env, initial []SemType, fixedLength int, rest SemType) SemType {
