@@ -148,6 +148,9 @@ func toInt(value any) int64 {
 	case int64:
 		return v
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+		}
 		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
 			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
 		}
