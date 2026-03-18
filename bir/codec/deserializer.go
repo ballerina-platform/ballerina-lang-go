@@ -21,7 +21,6 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
@@ -155,11 +154,6 @@ func (br *birReader) getPackageFromCP(index int) *model.PackageID {
 	return v.(*model.PackageID)
 }
 
-// FIXME: Read actual type
-func (br *birReader) getTypeFromCP(_ int) ast.BType {
-	return nil
-}
-
 func (br *birReader) readImports() []bir.BIRImportModule {
 	count := br.readLength()
 	imports := make([]bir.BIRImportModule, count)
@@ -208,11 +202,9 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 		var cTypeIdx int32
 		br.read(&cTypeIdx)
 
-		cv := br.getTypeFromCP(int(cTypeIdx))
-		value := br.readConstValue(cv)
+		value := br.readConstValue()
 
 		constant.ConstValue = bir.ConstValue{
-			Type:  cv,
 			Value: value,
 		}
 
@@ -486,8 +478,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 		var constLoadTypeIdx int32
 		br.read(&constLoadTypeIdx)
 
-		constLoadType := br.getTypeFromCP(int(constLoadTypeIdx))
-
 		lhsOp := br.readOperand(varMap)
 
 		var isWrapped bool
@@ -501,7 +491,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 
 		if isWrapped {
 			value = bir.ConstValue{
-				Type:  nil,
 				Value: value,
 			}
 		}
@@ -510,7 +499,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			Type:  constLoadType,
 			Value: value,
 		}
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD,
@@ -677,7 +665,7 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 	}
 }
 
-func (br *birReader) readConstValue(_ ast.BType) any {
+func (br *birReader) readConstValue() any {
 	var tagByte int8
 	br.read(&tagByte)
 

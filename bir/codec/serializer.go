@@ -108,7 +108,7 @@ func (bw *birWriter) writeConstant(buf *bytes.Buffer, constant *bir.BIRConstant)
 	bw.writeType(buf, constant.Type)
 
 	birbuf := &bytes.Buffer{}
-	bw.writeType(birbuf, constant.ConstValue.Type)
+	write(birbuf, int32(-1))
 	bw.writeConstValue(birbuf, &constant.ConstValue)
 	bw.writeBufferLength(buf, birbuf)
 
@@ -234,7 +234,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.ConstantLoad:
-		bw.writeType(buf, instr.Type)
+		write(buf, int32(-1))
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
