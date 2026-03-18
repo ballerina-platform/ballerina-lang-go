@@ -167,9 +167,9 @@ func singletonExprEffect(chain *binding, expr ast.BLangExpression) (expressionEf
 		return expressionEffect{}, false
 	}
 	if isSingletonBool(ty, true) {
-		return expressionEffect{ifTrue: chain, ifFalse: &binding{defaultType: &semtypes.NEVER, prev: chain}}, true
+		return expressionEffect{ifTrue: chain, ifFalse: &binding{defaultType: semtypes.NEVER, prev: chain}}, true
 	} else if isSingletonBool(ty, false) {
-		return expressionEffect{ifTrue: &binding{defaultType: &semtypes.NEVER, prev: chain}, ifFalse: chain}, true
+		return expressionEffect{ifTrue: &binding{defaultType: semtypes.NEVER, prev: chain}, ifFalse: chain}, true
 	}
 	return expressionEffect{}, false
 }

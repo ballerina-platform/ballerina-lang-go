@@ -49,7 +49,7 @@ func (this CellSemType) All() int {
 
 func (this CellSemType) Some() int {
 	// migrated from CellSemType.java:51
-	return CELL.bitset
+	return CELL.All()
 }
 
 func (this CellSemType) SubtypeDataList() []ProperSubtypeData {

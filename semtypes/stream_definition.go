@@ -54,7 +54,7 @@ func (this *StreamDefinition) GetSemType(env Env) SemType {
 func (this *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
 	// migrated from StreamDefinition.java:47:9
 	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
-		return &STREAM
+		return STREAM
 	}
 	// migrated from StreamDefinition.java:50:9
 	tuple := this.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)

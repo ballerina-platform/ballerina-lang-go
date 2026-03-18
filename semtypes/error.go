@@ -19,12 +19,12 @@ package semtypes
 import "ballerina-lang-go/common"
 
 func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, bool) {
-	errorType = Intersect(errorType, &ERROR)
-	if IsNever(errorType) || !IsSubtype(ctx, errorType, &ERROR) {
+	errorType = Intersect(errorType, ERROR)
+	if IsNever(errorType) || !IsSubtype(ctx, errorType, ERROR) {
 		return MappingAtomicType{}, false
 	}
 
-	if IsSameType(ctx, errorType, &ERROR) {
+	if IsSameType(ctx, errorType, ERROR) {
 		return MappingAtomicTypeFrom(nil, nil, CellContaining(ctx.Env(), CreateCloneable(ctx))), true
 	}
 	mappingSd := subtypeData(errorType, BTError)
@@ -55,14 +55,14 @@ func ErrorWithDetail(detail SemType) SemType {
 	mappingSd := subtypeData(detail, BTMapping)
 	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
-			return &ERROR
+			return ERROR
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	}
 	sd := BddIntersect(mappingSd.(Bdd), BDD_SUBTYPE_RO)
 	if sd == BDD_SUBTYPE_RO {
-		return &ERROR
+		return ERROR
 	}
 	return basicSubtype(BTError, sd.(ProperSubtypeData))
 }

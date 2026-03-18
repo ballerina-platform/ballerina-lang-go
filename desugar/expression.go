@@ -198,7 +198,7 @@ func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) de
 		OriginalValue: name,
 	}
 	lit.SetPosition(expr.GetPosition())
-	lit.SetDeterminedType(new(semtypes.STRING))
+	lit.SetDeterminedType(semtypes.STRING)
 
 	indexAccess := &ast.BLangIndexBasedAccess{
 		IndexExpr: lit,
@@ -327,8 +327,8 @@ func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic
 
 	typeTestExpr := &ast.BLangTypeTestExpr{}
 	typeTestExpr.Expr = tempVarRefForTest
-	typeTestExpr.Type = model.TypeData{Type: &semtypes.ERROR}
-	typeTestExpr.SetDeterminedType(&semtypes.BOOLEAN)
+	typeTestExpr.Type = model.TypeData{Type: semtypes.ERROR}
+	typeTestExpr.SetDeterminedType(semtypes.BOOLEAN)
 
 	// If body: return or panic
 	tempVarRefForBody := &ast.BLangSimpleVarRef{VariableName: tempVarName}
@@ -495,7 +495,7 @@ func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConst
 					OriginalValue: name,
 				}
 				lit.SetPosition(varRef.GetPosition())
-				lit.SetDeterminedType(new(semtypes.STRING))
+				lit.SetDeterminedType(semtypes.STRING)
 				kv.Key.Expr = lit
 			}
 		}
@@ -568,7 +568,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	emptyList := &ast.BLangListConstructorExpr{
 		Exprs: []ast.BLangExpression{},
 	}
-	emptyList.SetDeterminedType(&semtypes.LIST)
+	emptyList.SetDeterminedType(semtypes.LIST)
 	emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
 	resultVar.SetInitialExpression(emptyList)
 	resultVar.SetSymbol(resultSymbol)
@@ -589,13 +589,13 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		},
 		Kind: model.NodeKind_NUMERIC_LITERAL,
 	}
-	zeroLiteral.SetDeterminedType(&semtypes.INT)
+	zeroLiteral.SetDeterminedType(semtypes.INT)
 
-	idxName, idxSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxName, idxSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	idxVar := &ast.BLangSimpleVariable{
 		Name: &ast.BLangIdentifier{Value: idxName},
 	}
-	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetDeterminedType(semtypes.INT)
 	idxVar.SetInitialExpression(zeroLiteral)
 	idxVar.SetSymbol(idxSymbol)
 	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
@@ -606,14 +606,14 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		VariableName: idxVar.Name,
 	}
 	idxRef.SetSymbol(idxSymbol)
-	idxRef.SetDeterminedType(&semtypes.INT)
+	idxRef.SetDeterminedType(semtypes.INT)
 
 	lengthInvocation := createLengthInvocation(cx, collRef)
-	lenName, lenSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenName, lenSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	lenVar := &ast.BLangSimpleVariable{
 		Name: &ast.BLangIdentifier{Value: lenName},
 	}
-	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetDeterminedType(semtypes.INT)
 	lenVar.SetInitialExpression(lengthInvocation)
 	lenVar.SetSymbol(lenSymbol)
 	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
@@ -624,14 +624,14 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		VariableName: lenVar.Name,
 	}
 	lenRef.SetSymbol(lenSymbol)
-	lenRef.SetDeterminedType(&semtypes.INT)
+	lenRef.SetDeterminedType(semtypes.INT)
 
 	condition := &ast.BLangBinaryExpr{
 		LhsExpr: idxRef,
 		RhsExpr: lenRef,
 		OpKind:  model.OperatorKind_LESS_THAN,
 	}
-	condition.SetDeterminedType(&semtypes.BOOLEAN)
+	condition.SetDeterminedType(semtypes.BOOLEAN)
 
 	elementAccess := &ast.BLangIndexBasedAccess{
 		IndexExpr: idxRef,
@@ -672,7 +672,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		},
 	}
 	whileStmt.SetScope(cx.currentScope())
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
 	setPositionIfMissing(whileStmt, basePos)
 	initStmts = append(initStmts, whileStmt)
 
@@ -737,9 +737,9 @@ func appendQueryIntermediateClauseStmts(
 				Expr:     whereCond,
 				Operator: model.OperatorKind_NOT,
 			}
-			notWhereCond.SetDeterminedType(&semtypes.BOOLEAN)
+			notWhereCond.SetDeterminedType(semtypes.BOOLEAN)
 			continueStmt := &ast.BLangContinue{}
-			continueStmt.SetDeterminedType(&semtypes.NEVER)
+			continueStmt.SetDeterminedType(semtypes.NEVER)
 			skipBody := ast.BLangBlockStmt{
 				Stmts: []ast.BLangStatement{
 					createIncrementStmt(idxRef),
@@ -751,7 +751,7 @@ func appendQueryIntermediateClauseStmts(
 				Body: skipBody,
 			}
 			filterIf.SetScope(cx.currentScope())
-			filterIf.SetDeterminedType(&semtypes.NEVER)
+			filterIf.SetDeterminedType(semtypes.NEVER)
 			bodyStmts = append(bodyStmts, filterIf)
 		default:
 			cx.unimplemented("query expression currently supports only let + where clauses as intermediate clauses")
@@ -784,6 +784,6 @@ func createPushInvocation(cx *FunctionContext, listExpr ast.BLangExpression, val
 		ArgExprs: []ast.BLangExpression{listExpr, valueExpr},
 	}
 	inv.SetSymbol(symbolRef)
-	inv.SetDeterminedType(&semtypes.NIL)
+	inv.SetDeterminedType(semtypes.NIL)
 	return inv
 }

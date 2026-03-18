@@ -166,7 +166,7 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 			VarRef: varRef,
 			Expr:   initExpr,
 		}
-		assignment.SetDeterminedType(&semtypes.NEVER)
+		assignment.SetDeterminedType(semtypes.NEVER)
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
@@ -188,7 +188,7 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 			VarRef: varRef,
 			Expr:   initExpr,
 		}
-		assignment.SetDeterminedType(&semtypes.NEVER)
+		assignment.SetDeterminedType(semtypes.NEVER)
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
@@ -200,18 +200,18 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 
 	if pkg.InitFunction == nil {
 		initName := &ast.BLangIdentifier{Value: "init"}
-		initName.SetDeterminedType(&semtypes.NEVER)
+		initName.SetDeterminedType(semtypes.NEVER)
 		pkg.InitFunction = &ast.BLangFunction{}
 		pkg.InitFunction.Name = initName
 		body := &ast.BLangBlockFunctionBody{
 			Stmts: initStmts,
 		}
-		body.SetDeterminedType(&semtypes.NEVER)
+		body.SetDeterminedType(semtypes.NEVER)
 		pkg.InitFunction.Body = body
-		pkg.InitFunction.SetDeterminedType(&semtypes.NEVER)
+		pkg.InitFunction.SetDeterminedType(semtypes.NEVER)
 		// Create a proper function symbol and scope for the synthetic init function
 		pkgID := pkg.PackageID
-		signature := model.FunctionSignature{ReturnType: &semtypes.NIL}
+		signature := model.FunctionSignature{ReturnType: semtypes.NIL}
 		initSymbol := model.NewFunctionSymbol("init", signature, false)
 		symbolSpace := compilerCtx.NewSymbolSpace(*pkgID)
 		symbolSpace.AddSymbol("init", initSymbol)
@@ -296,9 +296,9 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 			},
 			ObjInitFunction: true,
 		}
-		fn.SetDeterminedType(&semtypes.NEVER)
+		fn.SetDeterminedType(semtypes.NEVER)
 		fn.SetScope(pkgCtx.NewFunctionScope(class.Scope()))
-		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: &semtypes.NIL}, false)
+		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
 		classScope := class.Scope()
 		classScope.AddSymbol("init", initSymbol)
 		symRef, _ := classScope.GetSymbol("init")
@@ -331,7 +331,7 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 		fieldAccess := &ast.BLangFieldBaseAccess{
 			Field: ast.BLangIdentifier{Value: field.GetName().GetValue()},
 		}
-		fieldAccess.Field.SetDeterminedType(&semtypes.NEVER)
+		fieldAccess.Field.SetDeterminedType(semtypes.NEVER)
 		fieldAccess.Expr = selfVarRef
 		fieldAccess.SetDeterminedType(pkgCtx.GetSymbolType(field.Symbol()))
 
@@ -339,7 +339,7 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 			VarRef: fieldAccess,
 			Expr:   initExprBal,
 		}
-		assignment.SetDeterminedType(&semtypes.NEVER)
+		assignment.SetDeterminedType(semtypes.NEVER)
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)

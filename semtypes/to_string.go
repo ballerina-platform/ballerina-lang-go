@@ -42,7 +42,7 @@ func ToString(cx Context, ty SemType) string {
 
 func (s *toStringState) semTypeToString(ty SemType) string {
 	switch ty := ty.(type) {
-	case *BasicTypeBitSet:
+	case BasicTypeBitSet:
 		return basicTypeToString(ty)
 	case ComplexSemType:
 		return s.complexSemtypeToString(ty)
@@ -51,7 +51,7 @@ func (s *toStringState) semTypeToString(ty SemType) string {
 	}
 }
 
-func basicTypeToString(ty *BasicTypeBitSet) string {
+func basicTypeToString(ty BasicTypeBitSet) string {
 	if ty.All() == 0 {
 		return "never"
 	}

@@ -24,7 +24,7 @@ import (
 func TestSimpleBasicType(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
-	ty := Union(&INT, &STRING)
+	ty := Union(INT, STRING)
 	actual := ToString(cx, ty)
 	expected := "int|string"
 	if actual != expected {
@@ -117,7 +117,7 @@ func TestStringUnion(t *testing.T) {
 func TestBasicTypeUnion(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
-	actual := ToString(cx, Union(StringConst("a"), &INT))
+	actual := ToString(cx, Union(StringConst("a"), INT))
 	expected := "int|\"a\""
 	if actual != expected {
 		t.Errorf("got %s expected %s", actual, expected)
@@ -158,7 +158,7 @@ func TestDecimalSingleton(t *testing.T) {
 func TestNilType(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
-	actual := ToString(cx, &NIL)
+	actual := ToString(cx, NIL)
 	expected := "nil"
 	if actual != expected {
 		t.Errorf("got %s expected %s", actual, expected)
@@ -169,7 +169,7 @@ func TestListAtomicType(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld := NewListDefinition()
-	ty := ld.DefineListTypeWrapped(env, nil, 0, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty := ld.DefineListTypeWrapped(env, nil, 0, INT, CellMutability_CELL_MUT_LIMITED)
 	actual := ToString(cx, ty)
 	expected := "[int...]"
 	if actual != expected {
@@ -181,7 +181,7 @@ func TestListAtomicType1(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld := NewListDefinition()
-	ty := ld.DefineListTypeWrapped(env, []SemType{&STRING}, 3, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty := ld.DefineListTypeWrapped(env, []SemType{STRING}, 3, INT, CellMutability_CELL_MUT_LIMITED)
 	actual := ToString(cx, ty)
 	expected := "[string, string, string, int...]"
 	if actual != expected {
@@ -193,10 +193,10 @@ func TestListTypeUnion(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld1 := NewListDefinition()
-	ty1 := ld1.DefineListTypeWrapped(env, []SemType{&STRING}, 3, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty1 := ld1.DefineListTypeWrapped(env, []SemType{STRING}, 3, INT, CellMutability_CELL_MUT_LIMITED)
 
 	ld2 := NewListDefinition()
-	ty2 := ld2.DefineListTypeWrapped(env, nil, 0, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty2 := ld2.DefineListTypeWrapped(env, nil, 0, INT, CellMutability_CELL_MUT_LIMITED)
 	actual := ToString(cx, Union(ty1, ty2))
 	expected := "[string, string, string, int...]|[int...]"
 	if actual != expected {
@@ -208,7 +208,7 @@ func TestListTypeDiff(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld1 := NewListDefinition()
-	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, INT, CellMutability_CELL_MUT_LIMITED)
 
 	ld2 := NewListDefinition()
 	ty2 := ld2.DefineListTypeWrapped(env, nil, 0, SINT32, CellMutability_CELL_MUT_LIMITED)
@@ -223,7 +223,7 @@ func TestListTypeIntersect(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld1 := NewListDefinition()
-	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, INT, CellMutability_CELL_MUT_LIMITED)
 
 	ld2 := NewListDefinition()
 	ty2 := ld2.DefineListTypeWrapped(env, nil, 0, SINT32, CellMutability_CELL_MUT_LIMITED)
@@ -238,7 +238,7 @@ func TestMappingAtomicType(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	md := NewMappingDefinition()
-	ty := md.DefineMappingTypeWrapped(env, nil, &INT)
+	ty := md.DefineMappingTypeWrapped(env, nil, INT)
 	actual := ToString(cx, ty)
 	expected := "{| int... |}"
 	if actual != expected {
@@ -251,10 +251,10 @@ func TestMappingWithFields(t *testing.T) {
 	cx := ContextFrom(env)
 	md := NewMappingDefinition()
 	fields := []Field{
-		{Name: "name", Ty: &STRING},
-		{Name: "age", Ty: &INT},
+		{Name: "name", Ty: STRING},
+		{Name: "age", Ty: INT},
 	}
-	ty := md.DefineMappingTypeWrapped(env, fields, &NEVER)
+	ty := md.DefineMappingTypeWrapped(env, fields, NEVER)
 	actual := ToString(cx, ty)
 	expected := "{| age: int, name: string, never... |}"
 	if actual != expected {
@@ -266,10 +266,10 @@ func TestMappingTypeUnion(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	md1 := NewMappingDefinition()
-	ty1 := md1.DefineMappingTypeWrapped(env, []Field{{Name: "x", Ty: &INT}}, &NEVER)
+	ty1 := md1.DefineMappingTypeWrapped(env, []Field{{Name: "x", Ty: INT}}, NEVER)
 
 	md2 := NewMappingDefinition()
-	ty2 := md2.DefineMappingTypeWrapped(env, []Field{{Name: "y", Ty: &STRING}}, &NEVER)
+	ty2 := md2.DefineMappingTypeWrapped(env, []Field{{Name: "y", Ty: STRING}}, NEVER)
 	actual := ToString(cx, Union(ty1, ty2))
 	expected := "{| x: int, never... |}|{| y: string, never... |}"
 	if actual != expected {
@@ -281,7 +281,7 @@ func TestMappingTypeDiff(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	md1 := NewMappingDefinition()
-	ty1 := md1.DefineMappingTypeWrapped(env, nil, &INT)
+	ty1 := md1.DefineMappingTypeWrapped(env, nil, INT)
 
 	md2 := NewMappingDefinition()
 	ty2 := md2.DefineMappingTypeWrapped(env, nil, SINT32)
@@ -296,7 +296,7 @@ func TestMappingTypeIntersect(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	md1 := NewMappingDefinition()
-	ty1 := md1.DefineMappingTypeWrapped(env, nil, &INT)
+	ty1 := md1.DefineMappingTypeWrapped(env, nil, INT)
 
 	md2 := NewMappingDefinition()
 	ty2 := md2.DefineMappingTypeWrapped(env, nil, SINT32)
@@ -311,7 +311,7 @@ func TestMappingTypeRO(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	md := NewMappingDefinition()
-	ty := md.DefineMappingTypeWrapped(env, nil, &INT)
+	ty := md.DefineMappingTypeWrapped(env, nil, INT)
 	actual := ToString(cx, Intersect(ty, VAL_READONLY))
 	expected := "readonly&{| int... |}"
 	if actual != expected {
@@ -323,7 +323,7 @@ func TestListTypeRO(t *testing.T) {
 	env := CreateTypeEnv()
 	cx := ContextFrom(env)
 	ld1 := NewListDefinition()
-	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, &INT, CellMutability_CELL_MUT_LIMITED)
+	ty1 := ld1.DefineListTypeWrapped(env, nil, 0, INT, CellMutability_CELL_MUT_LIMITED)
 
 	ty2 := VAL_READONLY
 	actual := ToString(cx, Intersect(ty1, ty2))

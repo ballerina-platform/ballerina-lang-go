@@ -55,7 +55,7 @@ func (this *MappingDefinition) GetSemType(env Env) SemType {
 
 func (this *MappingDefinition) SetSemTypeToNever() {
 	// migrated from MappingDefinition.java:72:5
-	this.semType = &NEVER
+	this.semType = NEVER
 }
 
 func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemType) SemType {
@@ -85,7 +85,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 		ty := field.Ty
 		var optTy SemType
 		if field.Opt {
-			optTy = Union(ty, &UNDEF)
+			optTy = Union(ty, UNDEF)
 		} else {
 			optTy = ty
 		}
@@ -103,7 +103,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, &UNDEF), restMut)
+	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.Define(env, cellFields, restCell)
 }
 

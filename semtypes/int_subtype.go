@@ -84,7 +84,7 @@ func IntWidthSigned(bits int64) SemType {
 	// migrated from IntSubtype.java:82:5
 	validIntWidth(true, bits)
 	if bits == 64 {
-		return &INT
+		return INT
 	}
 	t := CreateSingleRangeSubtype((-(int64(1) << (bits - int64(1)))), ((int64(1) << (bits - int64(1))) - int64(1)))
 	return basicSubtype(BTInt, t)

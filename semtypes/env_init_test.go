@@ -33,16 +33,16 @@ func TestEnvInitAtomTable(t *testing.T) {
 	envImpl.atomTableMutex.Unlock()
 
 	// Ensure atoms are in the table by calling Env methods
-	cellAtomicVal := CellAtomicTypeFrom(&VAL, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicVal := CellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
 	typeAtom0 := env.cellAtom(&cellAtomicVal)
 
-	cellAtomicNever := CellAtomicTypeFrom(&NEVER, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicNever := CellAtomicTypeFrom(NEVER, CellMutability_CELL_MUT_LIMITED)
 	typeAtom1 := env.cellAtom(&cellAtomicNever)
 
-	cellAtomicInner := CellAtomicTypeFrom(&INNER, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicInner := CellAtomicTypeFrom(INNER, CellMutability_CELL_MUT_LIMITED)
 	typeAtom2 := env.cellAtom(&cellAtomicInner)
 
-	cellAtomicInnerMapping := CellAtomicTypeFrom(Union(&MAPPING, &UNDEF), CellMutability_CELL_MUT_LIMITED)
+	cellAtomicInnerMapping := CellAtomicTypeFrom(Union(MAPPING, UNDEF), CellMutability_CELL_MUT_LIMITED)
 	typeAtom3 := env.cellAtom(&cellAtomicInnerMapping)
 
 	listAtomicMapping := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING)
@@ -56,7 +56,7 @@ func TestEnvInitAtomTable(t *testing.T) {
 	cellAtomicInnerRo := CellAtomicTypeFrom(INNER_READONLY, CellMutability_CELL_MUT_NONE)
 	typeAtom7 := env.cellAtom(&cellAtomicInnerRo)
 
-	cellAtomicUndef := CellAtomicTypeFrom(&UNDEF, CellMutability_CELL_MUT_NONE)
+	cellAtomicUndef := CellAtomicTypeFrom(UNDEF, CellMutability_CELL_MUT_NONE)
 	typeAtom8 := env.cellAtom(&cellAtomicUndef)
 
 	listAtomicTwoElement := ListAtomicTypeFrom(

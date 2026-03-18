@@ -16,36 +16,37 @@
 
 package semtypes
 
-type PredefinedType struct{}
+const (
+	NEVER            = BasicTypeBitSet(0)
+	NIL              = BasicTypeBitSet(1 << int(BTNil))
+	BOOLEAN          = BasicTypeBitSet(1 << int(BTBoolean))
+	INT              = BasicTypeBitSet(1 << int(BTInt))
+	FLOAT            = BasicTypeBitSet(1 << int(BTFloat))
+	DECIMAL          = BasicTypeBitSet(1 << int(BTDecimal))
+	STRING           = BasicTypeBitSet(1 << int(BTString))
+	ERROR            = BasicTypeBitSet(1 << int(BTError))
+	LIST             = BasicTypeBitSet(1 << int(BTList))
+	MAPPING          = BasicTypeBitSet(1 << int(BTMapping))
+	TABLE            = BasicTypeBitSet(1 << int(BTTable))
+	CELL             = BasicTypeBitSet(1 << int(BTCell))
+	UNDEF            = BasicTypeBitSet(1 << int(BTUndef))
+	REGEXP           = BasicTypeBitSet(1 << int(BTRegexp))
+	FUNCTION         = BasicTypeBitSet(1 << int(BTFunction))
+	TYPEDESC         = BasicTypeBitSet(1 << int(BTTypeDesc))
+	HANDLE           = BasicTypeBitSet(1 << int(BTHandle))
+	XML              = BasicTypeBitSet(1 << int(BTXML))
+	OBJECT           = BasicTypeBitSet(1 << int(BTObject))
+	STREAM           = BasicTypeBitSet(1 << int(BTStream))
+	FUTURE           = BasicTypeBitSet(1 << int(BTFuture))
+	VAL              = BasicTypeBitSet(ValueTypeMask)
+	INNER            = BasicTypeBitSet(VAL | UNDEF)
+	ANY              = BasicTypeBitSet(ValueTypeMask & ^(1 << int(BTError)))
+	SIMPLE_OR_STRING = BasicTypeBitSet((1 << int(BTNil)) | (1 << int(BTBoolean)) | (1 << int(BTInt)) | (1 << int(BTFloat)) | (1 << int(BTDecimal)) | (1 << int(BTString)))
+	NUMBER           = BasicTypeBitSet((1 << int(BTInt)) | (1 << int(BTFloat)) | (1 << int(BTDecimal)))
+)
 
 var (
 	predefinedTypeEnv                     = PredefinedTypeEnvGetInstance()
-	NEVER                                 = basicTypeUnion(0)
-	NIL                                   = BasicType(BTNil)
-	BOOLEAN                               = BasicType(BTBoolean)
-	INT                                   = BasicType(BTInt)
-	FLOAT                                 = BasicType(BTFloat)
-	DECIMAL                               = BasicType(BTDecimal)
-	STRING                                = BasicType(BTString)
-	ERROR                                 = BasicType(BTError)
-	LIST                                  = BasicType(BTList)
-	MAPPING                               = BasicType(BTMapping)
-	TABLE                                 = BasicType(BTTable)
-	CELL                                  = BasicType(BTCell)
-	UNDEF                                 = BasicType(BTUndef)
-	REGEXP                                = BasicType(BTRegexp)
-	FUNCTION                              = BasicType(BTFunction)
-	TYPEDESC                              = BasicType(BTTypeDesc)
-	HANDLE                                = BasicType(BTHandle)
-	XML                                   = BasicType(BTXML)
-	OBJECT                                = BasicType(BTObject)
-	STREAM                                = BasicType(BTStream)
-	FUTURE                                = BasicType(BTFuture)
-	VAL                                   = basicTypeUnion(ValueTypeMask)
-	INNER                                 = BasicTypeBitSetFrom((VAL.bitset | UNDEF.bitset))
-	ANY                                   = basicTypeUnion((ValueTypeMask & (^(1 << BTError.Code()))))
-	SIMPLE_OR_STRING                      = basicTypeUnion(((((((1 << BTNil.Code()) | (1 << BTBoolean.Code())) | (1 << BTInt.Code())) | (1 << BTFloat.Code())) | (1 << BTDecimal.Code())) | (1 << BTString.Code())))
-	NUMBER                                = basicTypeUnion((((1 << BTInt.Code()) | (1 << BTFloat.Code())) | (1 << BTDecimal.Code())))
 	BYTE                                  = IntWidthUnsigned(8)
 	STRING_CHAR                           = StringChar()
 	XML_ELEMENT                           = XmlSingleton((XML_PRIMITIVE_ELEMENT_RO | XML_PRIMITIVE_ELEMENT_RW))
@@ -100,7 +101,7 @@ var (
 	ATOM_LIST_THREE_ELEMENT_RO            = predefinedTypeEnv.atomListThreeElementRO()
 	LIST_SUBTYPE_THREE_ELEMENT_RO         = BddAtom(ATOM_LIST_THREE_ELEMENT_RO)
 	VAL_READONLY                          = CreateComplexSemType(ValueTypeInherentlyImmutable, BasicSubtypeFrom(BTList, BDD_SUBTYPE_RO), BasicSubtypeFrom(BTMapping, BDD_SUBTYPE_RO), BasicSubtypeFrom(BTTable, LIST_SUBTYPE_THREE_ELEMENT_RO), BasicSubtypeFrom(BTXML, XML_SUBTYPE_RO), BasicSubtypeFrom(BTObject, MAPPING_SUBTYPE_OBJECT_RO))
-	INNER_READONLY                        = Union(VAL_READONLY, &UNDEF)
+	INNER_READONLY                        = Union(VAL_READONLY, UNDEF)
 	CELL_ATOMIC_INNER_RO                  = predefinedTypeEnv.cellAtomicInnerRO()
 	ATOM_CELL_INNER_RO                    = predefinedTypeEnv.atomCellInnerRO()
 	CELL_SEMTYPE_INNER_RO                 = basicSubtype(BTCell, BddAtom(ATOM_CELL_INNER_RO)).(CellSemType)
@@ -122,11 +123,6 @@ var (
 	MAPPING_ATOMIC_OBJECT_RO              = predefinedTypeEnv.getMappingAtomicObjectRO()
 	LIST_ATOMIC_RO                        = predefinedTypeEnv.listAtomicRO()
 )
-
-func newPredefinedType() PredefinedType {
-	this := PredefinedType{}
-	return this
-}
 
 func basicTypeUnion(bitset int) BasicTypeBitSet {
 	// migrated from PredefinedType.java:250:5
