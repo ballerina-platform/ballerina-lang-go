@@ -24,12 +24,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"regexp"
 	"strconv"
-	"strings"
 )
-
-var decimalStringRegex = regexp.MustCompile(`^[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$`)
 
 func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
 	frame.SetOperand(constantLoad.LhsOp.Index, constantLoad.Value)
@@ -129,10 +125,7 @@ func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
-	b, ok := targetType.(*semtypes.BasicTypeBitSet)
-	if !ok {
-		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
-	}
+	b := targetType.(*semtypes.BasicTypeBitSet)
 	if b.All() == semtypes.ANY.All() {
 		return value
 	}
@@ -145,10 +138,7 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 	case bitsetValue&semtypes.DECIMAL.All() != 0:
 		return toDecimal(value)
 	case bitsetValue&semtypes.BOOLEAN.All() != 0:
-		if v, ok := value.(bool); ok {
-			return v
-		}
-		panic(fmt.Sprintf("bad type cast: cannot cast %v to boolean", value))
+		return value.(bool)
 	}
 	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", b.String()))
 }
@@ -166,17 +156,27 @@ func toInt(value any) int64 {
 		}
 		return int64(v)
 	case *big.Rat:
-		if !v.IsInt() {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
-		}
-		num := v.Num()
-		if num.BitLen() > 63 {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
-		}
-		return num.Int64()
+		return decimalToInt(v)
 	default:
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", value))
 	}
+}
+
+func decimalToInt(v *big.Rat) int64 {
+	num := v.Num()
+	denom := v.Denom()
+	q, r := new(big.Int).QuoRem(num, denom, new(big.Int))
+	if r.Sign() != 0 && new(big.Int).Mul(new(big.Int).Abs(r), big.NewInt(2)).Cmp(denom) >= 0 {
+		if num.Sign() >= 0 {
+			q.Add(q, big.NewInt(1))
+		} else {
+			q.Sub(q, big.NewInt(1))
+		}
+	}
+	if !q.IsInt64() {
+		panic(fmt.Sprintf("cannot convert %v to int64: value out of range", v))
+	}
+	return q.Int64()
 }
 
 func toFloat(value any) float64 {
@@ -198,23 +198,12 @@ func toDecimal(value any) *big.Rat {
 	case int64:
 		return big.NewRat(v, 1)
 	case float64:
-		s := strconv.FormatFloat(v, 'g', -1, 64)
 		r := new(big.Rat)
-		if _, ok := r.SetString(s); !ok {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", v))
-		}
+		s := strconv.FormatFloat(v, 'g', -1, 64)
+		r.SetString(s)
 		return r
 	case *big.Rat:
 		return v
-	case string:
-		if strings.Contains(v, "/") || !decimalStringRegex.MatchString(v) {
-			panic(fmt.Sprintf("cannot cast %v to decimal", v))
-		}
-		r := new(big.Rat)
-		if _, ok := r.SetString(v); !ok {
-			panic(fmt.Sprintf("cannot cast %v to decimal", v))
-		}
-		return r
 	default:
 		panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value))
 	}

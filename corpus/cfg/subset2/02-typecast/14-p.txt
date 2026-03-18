@@ -1,0 +1,17 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable d (type
+        (value-type decimal)) (expr
+        (literal 10000000000000000000/1))))
+    (var-def
+      (variable i (type
+        (value-type int)) (expr
+        (type-conversion-expr
+          (simple-var-ref d)
+          (value-type int)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+)
