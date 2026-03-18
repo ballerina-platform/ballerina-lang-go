@@ -1,0 +1,20 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable l (type
+        (intersection-type
+          (user-defined-type L1)
+          (user-defined-type L2))) (expr
+        (list-constructor-expr
+          (literal 5)
+          (literal 6)))))
+    (assignment
+      (index-based-access
+        (simple-var-ref l)
+        (literal 0))
+      (literal 100))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref l))))
+  )
+)

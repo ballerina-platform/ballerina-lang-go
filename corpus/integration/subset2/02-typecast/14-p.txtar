@@ -1,0 +1,3 @@
+-- stdout --
+Runtime panic: cannot convert 10000000000000000000/1 to int64: value out of range
+-- stderr --

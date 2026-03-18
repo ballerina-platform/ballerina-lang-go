@@ -102,6 +102,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printCompoundAssignment(t)
 	case *BLangUnionTypeNode:
 		p.printUnionTypeNode(t)
+	case *BLangIntersectionTypeNode:
+		p.printIntersectionTypeNode(t)
 	case *BLangErrorTypeNode:
 		p.printErrorTypeNode(t)
 	case *BLangConstrainedType:
@@ -821,6 +823,17 @@ func (p *PrettyPrinter) printFiniteTypeNode(node *BLangFiniteTypeNode) {
 func (p *PrettyPrinter) printUnionTypeNode(node *BLangUnionTypeNode) {
 	p.startNode()
 	p.printString("union-type")
+	p.indentLevel++
+	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
+	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+// Intersection type node printer
+func (p *PrettyPrinter) printIntersectionTypeNode(node *BLangIntersectionTypeNode) {
+	p.startNode()
+	p.printString("intersection-type")
 	p.indentLevel++
 	p.PrintInner(node.lhs.TypeDescriptor.(BLangNode))
 	p.PrintInner(node.rhs.TypeDescriptor.(BLangNode))
