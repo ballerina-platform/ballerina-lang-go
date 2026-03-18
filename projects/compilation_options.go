@@ -144,6 +144,7 @@ type CompilationOptions struct {
 	remoteManagement              optionalBool
 	optimizeDependencyCompilation optionalBool
 	traceRecovery                 optionalBool
+	stats                         optionalBool
 	cloud                         *string
 	dumpCFGFormat                 CFGFormat
 	lockingMode                   PackageLockingMode
@@ -280,6 +281,11 @@ func (c CompilationOptions) TraceRecovery() bool {
 	return c.traceRecovery.valueOr(false)
 }
 
+// Stats returns whether compilation stats collection is enabled.
+func (c CompilationOptions) Stats() bool {
+	return c.stats.valueOr(false)
+}
+
 // LockingMode returns the package locking mode.
 // Returns PackageLockingModeUnknown if not explicitly set.
 func (c CompilationOptions) LockingMode() PackageLockingMode {
@@ -319,6 +325,7 @@ func (c CompilationOptions) AcceptTheirs(theirs CompilationOptions) CompilationO
 		remoteManagement:              acceptOptionalBool(c.remoteManagement, theirs.remoteManagement),
 		optimizeDependencyCompilation: acceptOptionalBool(c.optimizeDependencyCompilation, theirs.optimizeDependencyCompilation),
 		traceRecovery:                 acceptOptionalBool(c.traceRecovery, theirs.traceRecovery),
+		stats:                         acceptOptionalBool(c.stats, theirs.stats),
 	}
 
 	// Cloud (*string)
@@ -502,6 +509,12 @@ func (b *CompilationOptionsBuilder) WithDumpST(value bool) *CompilationOptionsBu
 // WithTraceRecovery sets error recovery tracing flag.
 func (b *CompilationOptionsBuilder) WithTraceRecovery(value bool) *CompilationOptionsBuilder {
 	b.options.traceRecovery = optionalBoolOf(value)
+	return b
+}
+
+// WithStats sets compilation stats collection flag.
+func (b *CompilationOptionsBuilder) WithStats(value bool) *CompilationOptionsBuilder {
+	b.options.stats = optionalBoolOf(value)
 	return b
 }
 
