@@ -1,0 +1,110 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
+    %4 = ConstantLoad 3
+    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    xs = %5;
+    $desugar$0 = xs;
+    %8 = ConstantLoad 0
+    %9 = newArray ((LIST), ())[%8]{}
+    $desugar$1 = %9;
+    %11 = ConstantLoad 0
+    $desugar$2 = %11;
+    %13 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %13;
+    GOTO bb2;
+  }
+  bb2 {
+    %15 = < $desugar$2 $desugar$3;
+    %15 ? bb3 : bb4;
+  }
+  bb3 {
+    %16 = $desugar$0[$desugar$2];
+    x = %16;
+    %19 = ConstantLoad 1
+    %18 = > x %19;
+    %20 = ! %18;
+    %20 ? bb5 : bb6;
+  }
+  bb4 {
+    out1 = $desugar$1;
+    $desugar$4 = xs;
+    %31 = ConstantLoad 0
+    %32 = newArray ((LIST), ())[%31]{}
+    $desugar$5 = %32;
+    %34 = ConstantLoad 0
+    $desugar$6 = %34;
+    %36 = length($desugar$4) -> bb8;
+  }
+  bb5 {
+    %22 = ConstantLoad 1
+    %21 = + $desugar$2 %22;
+    $desugar$2 = %21;
+    GOTO bb2;
+  }
+  bb6 {
+    %24 = ConstantLoad 10
+    %23 = * x %24;
+    y = %23;
+    %26 = push($desugar$1,y) -> bb7;
+  }
+  bb7 {
+    %28 = ConstantLoad 1
+    %27 = + $desugar$2 %28;
+    $desugar$2 = %27;
+    GOTO bb2;
+  }
+  bb8 {
+    $desugar$7 = %36;
+    GOTO bb9;
+  }
+  bb9 {
+    %38 = < $desugar$6 $desugar$7;
+    %38 ? bb10 : bb11;
+  }
+  bb10 {
+    %39 = $desugar$4[$desugar$6];
+    x = %39;
+    %42 = ConstantLoad 2
+    %41 = * x %42;
+    y = %41;
+    %45 = ConstantLoad 4
+    %44 = > y %45;
+    %46 = ! %44;
+    %46 ? bb12 : bb13;
+  }
+  bb11 {
+    out2 = $desugar$5;
+    %55 = println(out1) -> bb15;
+  }
+  bb12 {
+    %48 = ConstantLoad 1
+    %47 = + $desugar$6 %48;
+    $desugar$6 = %47;
+    GOTO bb9;
+  }
+  bb13 {
+    %50 = ConstantLoad 1
+    %49 = + y %50;
+    %51 = push($desugar$5,%49) -> bb14;
+  }
+  bb14 {
+    %53 = ConstantLoad 1
+    %52 = + $desugar$6 %53;
+    $desugar$6 = %52;
+    GOTO bb9;
+  }
+  bb15 {
+    %56 = println(out2) -> bb16;
+  }
+  bb16 {
+    return;
+  }
+}

@@ -464,17 +464,27 @@ func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedTyp
 
 	ctx := a.tyCtx()
 	if !semtypes.IsSubtype(ctx, resolvedTy, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 		return false
 	}
 	if semtypes.IsNever(resolvedTy) {
 		if !semtypes.IsNever(expectedType) {
-			a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, resolvedTy), expr.GetPosition())
+			a.semanticErr(formatIncompatibleTypeMessage(ctx, expectedType, resolvedTy), expr.GetPosition())
 			return false
 		}
 	}
 
 	return true
+}
+
+func formatIncompatibleTypeMessage(ctx semtypes.Context, expectedType semtypes.SemType, actualType semtypes.SemType) string {
+	expectedText := semtypes.CompactString(expectedType)
+	actualText := semtypes.CompactString(actualType)
+	if expectedText == actualText {
+		expectedText = semtypes.String(ctx, expectedType)
+		actualText = semtypes.String(ctx, actualType)
+	}
+	return fmt.Sprintf("incompatible type: expected %s, got %s", expectedText, actualText)
 }
 
 func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
@@ -560,6 +570,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 	case *ast.BLangGroupExpr:
 		return analyzeExpression(a, expr.Expression, expectedType)
 
+	case *ast.BLangQueryExpr:
+		return analyzeQueryExpr(a, expr, expectedType)
+
 	case *ast.BLangWildCardBindingPattern:
 		return validateResolvedType(a, expr, expectedType)
 
@@ -615,6 +628,55 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 	return validateResolvedType(a, expr, expectedType)
 }
 
+func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
+	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
+	if !ok {
+		a.semanticErr("query expression must start with a from clause", queryExpr.GetPosition())
+		return false
+	}
+	if !analyzeExpression(a, fromClause.Collection, nil) {
+		return false
+	}
+
+	selectClause, ok := queryExpr.QueryClauseList[len(queryExpr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	if !ok {
+		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
+		return false
+	}
+
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+					a.semanticErr("let clause supports only initialized simple variable declarations", clause.GetPosition())
+					return false
+				}
+				var expectedType semtypes.SemType
+				if ast.SymbolIsSet(varDef.Var) {
+					expectedType = a.ctx().SymbolType(varDef.Var.Symbol())
+				}
+				if !analyzeExpression(a, varDef.Var.Expr.(ast.BLangExpression), expectedType) {
+					return false
+				}
+			}
+		case *ast.BLangWhereClause:
+			if !analyzeExpression(a, clause.Expression, &semtypes.BOOLEAN) {
+				return false
+			}
+		default:
+			a.unimplementedErr("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			return false
+		}
+	}
+
+	if !analyzeExpression(a, selectClause.Expression, nil) {
+		return false
+	}
+	return validateResolvedType(a, queryExpr, expectedType)
+}
+
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
 	if !analyzeExpression(a, expr.Expression, nil) {
 		return false
@@ -627,7 +689,7 @@ func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionEx
 		return false
 	}
 	if expectedType != nil && !semtypes.IsSubtype(a.tyCtx(), targetType, expectedType) {
-		a.semanticErr(fmt.Sprintf("incompatible type: expected %v, got %v", expectedType, exprTy), expr.GetPosition())
+		a.semanticErr(formatIncompatibleTypeMessage(a.tyCtx(), expectedType, targetType), expr.GetPosition())
 		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
@@ -1089,6 +1151,12 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 		if !semtypes.IsSubtypeSimple(expectedType, semtypes.ANY) {
 			a.semanticErr("wildcard binding pattern type must be a subtype of 'any'", variable.GetPosition())
 			return false
+		}
+	}
+	if ast.SymbolIsSet(variable) {
+		symbolType := a.ctx().SymbolType(variable.Symbol())
+		if symbolType != nil {
+			expectedType = symbolType
 		}
 	}
 	if variable.Expr != nil && !analyzeExpression(a, variable.Expr.(ast.BLangExpression), expectedType) {

@@ -56,6 +56,10 @@ func (ctx *FunctionContext) addImplicitImport(pkgName string, imp ast.BLangImpor
 	ctx.pkgCtx.AddImplicitImport(pkgName, imp)
 }
 
+func (ctx *FunctionContext) symbolType(symbol model.SymbolRef) semtypes.SemType {
+	return ctx.pkgCtx.SymbolType(symbol)
+}
+
 func (ctx *FunctionContext) pushScope(scope model.Scope) {
 	ctx.scopeStack = append(ctx.scopeStack, scope)
 }

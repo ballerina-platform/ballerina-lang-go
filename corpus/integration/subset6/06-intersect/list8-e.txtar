@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT)), got ((), (INT))
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT)) {subtypes=[INT:ranges=[0..255]]}, got ((), (INT)) {subtypes=[INT:ranges=[500..500]]}
   --> list8-e.bal:23:12
    |
 23 |     l[0] = 500; // @error

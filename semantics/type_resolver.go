@@ -723,6 +723,8 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return t.resolveErrorConstructorExpr(chain, e)
 	case *ast.BLangGroupExpr:
 		return t.resolveGroupExpr(chain, e)
+	case *ast.BLangQueryExpr:
+		return t.resolveQueryExpr(chain, e)
 	case *ast.BLangWildCardBindingPattern:
 		ty := &semtypes.ANY
 		setExpectedType(e, ty)
@@ -973,6 +975,147 @@ func (t *TypeResolver) resolveGroupExpr(chain *binding, expr *ast.BLangGroupExpr
 	setExpectedType(expr, innerTy)
 
 	return innerTy, effect, true
+}
+
+func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr) (semtypes.SemType, expressionEffect, bool) {
+	if len(expr.QueryClauseList) < 2 {
+		t.ctx.SemanticError("query expression requires from and select clauses", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
+	if !ok {
+		t.ctx.SemanticError("query expression must start with a from clause", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	fromClause.SetDeterminedType(&semtypes.NEVER)
+
+	selectClause, ok := expr.QueryClauseList[len(expr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	if !ok {
+		t.ctx.SemanticError("query expression requires a select clause", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	selectClause.SetDeterminedType(&semtypes.NEVER)
+
+	collectionTy, _, ok := t.resolveExpression(chain, fromClause.Collection)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	var elementTy semtypes.SemType
+	switch {
+	case semtypes.IsSubtypeSimple(collectionTy, semtypes.LIST):
+		memberTypes := semtypes.ListAllMemberTypesInner(t.tyCtx, collectionTy)
+		var result semtypes.SemType = &semtypes.NEVER
+		for _, each := range memberTypes.SemTypes {
+			result = semtypes.Union(result, each)
+		}
+		elementTy = result
+	default:
+		t.ctx.Unimplemented("query from-clause currently supports only list collections", fromClause.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	if fromClause.VariableDefinitionNode != nil {
+		varDef, ok := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
+		if !ok || varDef.Var == nil {
+			t.ctx.Unimplemented("only simple variable bindings are supported in from clause", fromClause.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		varDef.SetDeterminedType(&semtypes.NEVER)
+
+		var variableTy semtypes.SemType = elementTy
+		if !fromClause.IsDeclaredWithVarFlag && varDef.Var.TypeNode() != nil {
+			variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
+			if !ok {
+				return nil, expressionEffect{}, false
+			}
+			if !semtypes.IsSubtype(t.tyCtx, elementTy, variableTy) {
+				t.ctx.SemanticError("from-clause variable type is incompatible with collection member type",
+					varDef.GetPosition())
+				return nil, expressionEffect{}, false
+			}
+		}
+
+		if varDef.Var.Name != nil {
+			varDef.Var.Name.SetDeterminedType(&semtypes.NEVER)
+		}
+		varDef.Var.SetDeterminedType(&semtypes.NEVER)
+		updateSymbolType(t.ctx, varDef.Var, variableTy)
+	}
+
+	queryChain, ok := t.resolveQueryIntermediateClauses(chain, expr)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	selectTy, _, ok := t.resolveExpression(queryChain, selectClause.Expression)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	ld := semtypes.NewListDefinition()
+	queryTy := ld.DefineListTypeWrappedWithEnvSemType(t.ctx.GetTypeEnv(), selectTy)
+	setExpectedType(expr, queryTy)
+	return queryTy, defaultExpressionEffect(chain), true
+}
+
+func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
+	currentChain := chain
+	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangLetClause:
+			clause.SetDeterminedType(&semtypes.NEVER)
+			for _, variableDef := range clause.LetVarDeclarations {
+				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
+				if !ok || varDef.Var == nil {
+					t.ctx.Unimplemented("only simple variable declarations are supported in let clause",
+						clause.GetPosition())
+					return nil, false
+				}
+				varDef.SetDeterminedType(&semtypes.NEVER)
+				if varDef.Var.Expr == nil {
+					t.ctx.SemanticError("let-clause variable declaration requires an initializer",
+						varDef.GetPosition())
+					return nil, false
+				}
+				initTy, _, ok := t.resolveExpression(currentChain, varDef.Var.Expr.(ast.BLangExpression))
+				if !ok {
+					return nil, false
+				}
+				var variableTy semtypes.SemType = initTy
+				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
+					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
+					if !ok {
+						return nil, false
+					}
+					if !semtypes.IsSubtype(t.tyCtx, initTy, variableTy) {
+						t.ctx.SemanticError("let-clause variable type is incompatible with initializer expression",
+							varDef.GetPosition())
+						return nil, false
+					}
+				}
+				if varDef.Var.Name != nil {
+					varDef.Var.Name.SetDeterminedType(&semtypes.NEVER)
+				}
+				varDef.Var.SetDeterminedType(&semtypes.NEVER)
+				updateSymbolType(t.ctx, varDef.Var, variableTy)
+			}
+		case *ast.BLangWhereClause:
+			clause.SetDeterminedType(&semtypes.NEVER)
+			whereTy, effect, ok := t.resolveExpression(currentChain, clause.Expression)
+			if !ok {
+				return nil, false
+			}
+			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
+				t.ctx.SemanticError("where-clause expression must be boolean", clause.GetPosition())
+				return nil, false
+			}
+			currentChain = effect.ifTrue
+		default:
+			t.ctx.Unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			return nil, false
+		}
+	}
+	return currentChain, true
 }
 
 func (t *TypeResolver) resolveSimpleVarRef(chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {

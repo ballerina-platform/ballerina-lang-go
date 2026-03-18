@@ -1,0 +1,79 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad 10
+    %2 = ConstantLoad 20
+    %3 = ConstantLoad 2
+    %4 = newArray ((), (LIST))[%3]{%1, %2}
+    xs = %4;
+    $desugar$0 = xs;
+    %7 = ConstantLoad 0
+    %8 = newArray ((LIST), ())[%7]{}
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    $desugar$2 = %10;
+    %12 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %12;
+    GOTO bb2;
+  }
+  bb2 {
+    %14 = < $desugar$2 $desugar$3;
+    %14 ? bb3 : bb4;
+  }
+  bb3 {
+    %15 = $desugar$0[$desugar$2];
+    x = %15;
+    %18 = ConstantLoad 1
+    %17 = + x %18;
+    %19 = ConstantLoad 2
+    %20 = newArray ((), (LIST))[%19]{x, %17}
+    $desugar$4 = %20;
+    %22 = ConstantLoad 0
+    %23 = newArray ((LIST), ())[%22]{}
+    $desugar$5 = %23;
+    %25 = ConstantLoad 0
+    $desugar$6 = %25;
+    %27 = length($desugar$4) -> bb5;
+  }
+  bb4 {
+    out = $desugar$1;
+    %41 = println(out) -> bb11;
+  }
+  bb5 {
+    $desugar$7 = %27;
+    GOTO bb6;
+  }
+  bb6 {
+    %29 = < $desugar$6 $desugar$7;
+    %29 ? bb7 : bb8;
+  }
+  bb7 {
+    %30 = $desugar$4[$desugar$6];
+    s = %30;
+    %33 = ConstantLoad 2
+    %32 = * s %33;
+    %34 = push($desugar$5,%32) -> bb9;
+  }
+  bb8 {
+    %37 = push($desugar$1,$desugar$5) -> bb10;
+  }
+  bb9 {
+    %36 = ConstantLoad 1
+    %35 = + $desugar$6 %36;
+    $desugar$6 = %35;
+    GOTO bb6;
+  }
+  bb10 {
+    %39 = ConstantLoad 1
+    %38 = + $desugar$2 %39;
+    $desugar$2 = %38;
+    GOTO bb2;
+  }
+  bb11 {
+    return;
+  }
+}
