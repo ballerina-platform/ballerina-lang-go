@@ -22,7 +22,9 @@ import (
 	"math"
 
 	"ballerina-lang-go/bir"
+	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -33,11 +35,13 @@ const (
 
 type birWriter struct {
 	cp *ConstantPool
+	tp *typepool.TypePool
 }
 
 func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &birWriter{
 		cp: NewConstantPool(),
+		tp: typepool.NewTypePool(),
 	}
 	return writer.serialize(pkg)
 }
@@ -63,6 +67,13 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	}
 
 	write(buf, int32(BIR_VERSION))
+
+	tpBytes := typepool.MarshalTypePool(bw.tp)
+	write(buf, int64(len(tpBytes)))
+	_, err = buf.Write(tpBytes)
+	if err != nil {
+		panic(fmt.Sprintf("writing type pool bytes: %v", err))
+	}
 
 	cpBytes, err := bw.cp.Serialize()
 	if err != nil {
@@ -433,9 +444,12 @@ func (bw *birWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) 
 	write(buf, int64(birbuf.Len()))
 }
 
-// FIXME: Write actual type
-func (bw *birWriter) writeType(buf *bytes.Buffer, _ any) {
-	write(buf, int32(-1))
+func (bw *birWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) {
+	if ty == nil {
+		write(buf, int32(-1))
+		return
+	}
+	write(buf, int32(bw.tp.Put(ty)))
 }
 
 func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {

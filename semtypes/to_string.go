@@ -326,7 +326,7 @@ func intSubtypeToString(st IntSubtype) string {
 }
 
 func booleanSubtypeToString(st BooleanSubtype) string {
-	if st.value {
+	if st.Value {
 		return "true"
 	}
 	return "false"
