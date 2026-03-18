@@ -69,7 +69,7 @@ func TestRunMissingBalFileDoesNotPanic(t *testing.T) {
 		t.Fatalf("expected non-panicking error for missing file, got stderr:\n%s", stderr)
 	}
 	if !strings.Contains(stderr, "no such file or directory") {
-		t.Fatalf("expected missing file error, got stderr:\n%s", stderr)
+		t.Fatalf("expected missing file path in error, got stderr:\n%s", stderr)
 	}
 }
 
