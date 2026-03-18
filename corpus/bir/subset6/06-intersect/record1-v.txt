@@ -1,0 +1,28 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad 3
+    %3 = ConstantLoad y
+    %4 = ConstantLoad 2.5
+    %5 = newMap ((), (MAPPING)){%1=%2, %3=%4}
+    r = %5;
+    rr = r;
+    r = rr;
+    %8 = r;
+    %10 = ConstantLoad x
+    %9 = rr[%10];
+    x = %9;
+    %12 = println(x) -> bb1;
+  }
+  bb1 {
+    %14 = ConstantLoad y
+    %13 = rr[%14];
+    y = %13;
+    %16 = println(y) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
