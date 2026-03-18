@@ -43,6 +43,36 @@ func TestSingleBalFile(t *testing.T) {
 	}
 }
 
+func TestRunMissingBalFileDoesNotPanic(t *testing.T) {
+	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
+		t.Skip("skipping CLI integration test on WASM (js/wasm)")
+	}
+
+	repoRoot := findRepoRoot(t)
+	balBin := buildBalBinary(t, repoRoot)
+	missingFile := filepath.Join(repoRoot, "corpus", "bal", "subset4", "04-query-expression", "limit1-v.bal")
+
+	cmd := exec.Command(balBin, "run", missingFile)
+	cmd.Dir = repoRoot
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+
+	err := cmd.Run()
+	if err == nil {
+		t.Fatalf("expected bal run to fail for missing file path: %s", missingFile)
+	}
+
+	stderr := stderrBuf.String()
+	if strings.Contains(stderr, "panic:") {
+		t.Fatalf("expected non-panicking error for missing file, got stderr:\n%s", stderr)
+	}
+	if !strings.Contains(stderr, "no such file or directory") {
+		t.Fatalf("expected missing file error, got stderr:\n%s", stderr)
+	}
+}
+
 func findRepoRoot(t *testing.T) string {
 	t.Helper()
 	repoRoot, err := filepath.Abs("..")

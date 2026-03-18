@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT)), got ((), (INT))
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (INT)) {subtypes=[INT:ranges=[3..3]]}, got ((), (INT)) {subtypes=[INT:ranges=[1..1]]}
   --> mapping14-e.bal:36:31
    |
 36 |     T a = { l1: "c", "other": 1 }; // @error

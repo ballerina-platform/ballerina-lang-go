@@ -166,6 +166,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		printRunError(err)
+		return err
 	}
 
 	baseDir := path
