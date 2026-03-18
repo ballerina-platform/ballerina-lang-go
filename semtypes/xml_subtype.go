@@ -70,7 +70,7 @@ func XmlSequence(constituentType SemType) SemType {
 		return constituentType
 	} else {
 		cct := constituentType.(ComplexSemType)
-		xmlSubtype := getComplexSubtypeData(cct, BT_XML)
+		xmlSubtype := getComplexSubtypeData(cct, BTXML)
 		if _, ok := xmlSubtype.(AllOrNothingSubtype); ok {
 			// xmlSubtype stays as is
 		} else {
@@ -97,7 +97,7 @@ func CreateXmlSemtype(xmlSubtype SubtypeData) SemType {
 			return &NEVER
 		}
 	} else {
-		return basicSubtype(BT_XML, xmlSubtype.(ProperSubtypeData))
+		return basicSubtype(BTXML, xmlSubtype.(ProperSubtypeData))
 	}
 }
 

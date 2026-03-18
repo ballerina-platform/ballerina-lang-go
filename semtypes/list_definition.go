@@ -133,7 +133,7 @@ func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLe
 func (this *ListDefinition) createSemType(env Env, atom Atom) ComplexSemType {
 	// migrated from ListDefinition.java:137:5
 	bdd := BddAtom(atom)
-	complexSemType := basicSubtype(BT_LIST, bdd)
+	complexSemType := basicSubtype(BTList, bdd)
 	this.semType = complexSemType
 	return complexSemType
 }

@@ -18,8 +18,7 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type TypedescSubtype struct {
-}
+type TypedescSubtype struct{}
 
 func newTypedescSubtype() TypedescSubtype {
 	this := TypedescSubtype{}
@@ -34,6 +33,6 @@ func TypedescContaining(env Env, constraint SemType) SemType {
 
 	mappingDef := NewMappingDefinition()
 	mappingType := mappingDef.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, nil, constraint, CellMutability_CELL_MUT_NONE)
-	bdd := subtypeData(mappingType, BT_MAPPING).(Bdd)
-	return CreateBasicSemType(BT_TYPEDESC, bdd)
+	bdd := subtypeData(mappingType, BTMapping).(Bdd)
+	return CreateBasicSemType(BTTypeDesc, bdd)
 }

@@ -39,9 +39,9 @@ func NewStreamDefinition() StreamDefinition {
 // migrated from StreamDefinition.java:54:5
 func streamContaining(tupleType SemType) SemType {
 	// migrated from StreamDefinition.java:55:9
-	bdd := subtypeData(tupleType, BT_LIST)
+	bdd := subtypeData(tupleType, BTList)
 	// migrated from StreamDefinition.java:56:9
-	return CreateBasicSemType(BT_STREAM, bdd)
+	return CreateBasicSemType(BTStream, bdd)
 }
 
 // migrated from StreamDefinition.java:42:5

@@ -32,7 +32,7 @@ type subtypePairIterator struct {
 }
 
 func (i *subtypePairIterator) include(code BasicTypeCode) bool {
-	return (i.bits.bitset & (1 << code.Code)) != 0
+	return (i.bits.bitset & (1 << code.Code())) != 0
 }
 
 func (i *subtypePairIterator) get1() BasicSubtype {
@@ -108,7 +108,7 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 				if i.include(code1) {
 					return new(CreateSubTypePair(code1, data1, data2))
 				}
-			} else if code1.Code < code2.Code {
+			} else if code1.Code() < code2.Code() {
 				i.i1++
 				if i.include(code1) {
 					return new(CreateSubTypePair(code1, data1, nil))

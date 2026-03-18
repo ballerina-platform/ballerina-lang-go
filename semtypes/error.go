@@ -27,7 +27,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 	if IsSameType(ctx, errorType, &ERROR) {
 		return MappingAtomicTypeFrom(nil, nil, CellContaining(ctx.Env(), CreateCloneable(ctx))), true
 	}
-	mappingSd := subtypeData(errorType, BT_ERROR)
+	mappingSd := subtypeData(errorType, BTError)
 	if bddNode, ok := mappingSd.(BddNode); ok {
 		if bddNode.Atom().Index() != 0 {
 			// Not readonly. Not sure if this can happen (due to ErroWithDetail) but just in case
@@ -52,7 +52,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 
 func ErrorWithDetail(detail SemType) SemType {
 	// migrated from Error.java:39:5
-	mappingSd := subtypeData(detail, BT_MAPPING)
+	mappingSd := subtypeData(detail, BTMapping)
 	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
 			return &ERROR
@@ -64,12 +64,12 @@ func ErrorWithDetail(detail SemType) SemType {
 	if sd == BDD_SUBTYPE_RO {
 		return &ERROR
 	}
-	return basicSubtype(BT_ERROR, sd.(ProperSubtypeData))
+	return basicSubtype(BTError, sd.(ProperSubtypeData))
 }
 
 func ErrorDistinct(distinctId int) SemType {
 	// migrated from Error.java:57:5
 	common.Assert(distinctId >= 0)
 	bdd := BddAtom(new(CreateDistinctRecAtom(((-distinctId) - 1))))
-	return basicSubtype(BT_ERROR, bdd)
+	return basicSubtype(BTError, bdd)
 }

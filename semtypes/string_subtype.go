@@ -135,7 +135,7 @@ func StringConst(value string) SemType {
 		chara = CharStringSubtypeFrom(true, EMPTY_CHAR_ARR)
 		nonChar = NonCharStringSubtypeFrom(true, []EnumerableType[string]{EnumerableStringFrom(value)})
 	}
-	return basicSubtype(BT_STRING, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
+	return basicSubtype(BTString, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
 }
 
 func codePointCount(s string, start, end int) int {
@@ -157,5 +157,5 @@ func StringChar() SemType {
 		CharStringSubtypeFrom(false, EMPTY_CHAR_ARR),
 		NonCharStringSubtypeFrom(true, EMPTY_STRING_ARR),
 	)
-	return basicSubtype(BT_STRING, st)
+	return basicSubtype(BTString, st)
 }

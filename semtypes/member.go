@@ -129,8 +129,8 @@ func convertObjectToMappingTy(ctx Context, ty SemType) SemType {
 	if IsEmpty(ctx, objectTy) {
 		return nil
 	}
-	bdd := subtypeData(objectTy, BT_OBJECT)
-	return CreateBasicSemType(BT_MAPPING, bdd)
+	bdd := subtypeData(objectTy, BTObject)
+	return CreateBasicSemType(BTMapping, bdd)
 }
 
 func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
@@ -138,6 +138,6 @@ func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
 	if IsEmpty(ctx, mappingTy) {
 		return nil
 	}
-	bdd := subtypeData(mappingTy, BT_MAPPING)
-	return CreateBasicSemType(BT_OBJECT, bdd)
+	bdd := subtypeData(mappingTy, BTMapping)
+	return CreateBasicSemType(BTObject, bdd)
 }

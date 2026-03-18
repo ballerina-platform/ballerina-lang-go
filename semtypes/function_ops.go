@@ -16,8 +16,7 @@
 
 package semtypes
 
-type FunctionOps struct {
-}
+type FunctionOps struct{}
 
 var _ BasicTypeOps = &FunctionOps{}
 
@@ -139,7 +138,7 @@ func FunctionParamListType(cx Context, fnTy SemType) SemType {
 	case *BasicTypeBitSet:
 		return &NEVER
 	case ComplexSemType:
-		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
+		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionParamListTypeInner(cx, &NEVER, bdd)
 	default:
 		panic("impossible")
@@ -170,7 +169,7 @@ func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 	case *BasicTypeBitSet:
 		return &VAL
 	case ComplexSemType:
-		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
+		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
 		return functionReturnTypeInner(cx, argList, &VAL, bdd)
 	default:
 		panic("impossible")

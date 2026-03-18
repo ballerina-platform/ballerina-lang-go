@@ -110,7 +110,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
 	// migrated from MappingDefinition.java:116:5
 	bdd := BddAtom(atom)
-	s := basicSubtype(BT_MAPPING, bdd)
+	s := basicSubtype(BTMapping, bdd)
 	this.semType = s
 	return s
 }

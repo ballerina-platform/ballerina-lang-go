@@ -49,7 +49,7 @@ func newDecimalSubtypeFromBoolEnumerableDecimals(allowed bool, values []Enumerab
 }
 
 func DecimalConst(value big.Rat) SemType {
-	return basicSubtype(BT_DECIMAL, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
+	return basicSubtype(BTDecimal, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
 }
 
 func DecimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
