@@ -1,0 +1,103 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition R1
+    (record-type
+      (field l1
+        (union-type
+          (union-type
+            (finite-type
+              (literal a))
+            (finite-type
+              (literal b)))
+          (finite-type
+            (literal c))))
+      (rest
+        (union-type
+          (union-type
+            (finite-type
+              (literal 1))
+            (finite-type
+              (literal 2)))
+          (finite-type
+            (literal 3))))))
+  (type-definition R2
+    (record-type
+      (field l1
+        (union-type
+          (union-type
+            (finite-type
+              (literal b))
+            (finite-type
+              (literal c)))
+          (finite-type
+            (literal d))))
+      (rest
+        (union-type
+          (union-type
+            (finite-type
+              (literal 2))
+            (finite-type
+              (literal 3)))
+          (finite-type
+            (literal 4))))))
+  (type-definition R3
+    (record-type
+      (field l1
+        (union-type
+          (union-type
+            (finite-type
+              (literal c))
+            (finite-type
+              (literal d)))
+          (finite-type
+            (literal e))))
+      (rest
+        (union-type
+          (union-type
+            (finite-type
+              (literal 3))
+            (finite-type
+              (literal 4)))
+          (finite-type
+            (literal 5))))))
+  (type-definition T
+    (intersection-type
+      (intersection-type
+        (user-defined-type R1)
+        (user-defined-type R2))
+      (user-defined-type R3)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type T)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal l1)
+              (literal c))
+            (key-value
+              (literal other)
+              (literal 3))))))
+      (var-def
+        (variable l1 (type
+          (finite-type
+            (literal c))) (expr
+          (index-based-access
+            (simple-var-ref a)
+            (literal l1)))))
+      (var-def
+        (variable l2 (type
+          (union-type
+            (finite-type
+              (literal 3))
+            (value-type null))) (expr
+          (index-based-access
+            (simple-var-ref a)
+            (literal other)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref l1))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref l2)))))))

@@ -793,25 +793,13 @@ func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr,
 	for _, expr := range expr.Exprs {
 		analyzeExpression(a, expr, nil)
 	}
+	members := make([]semtypes.ListMemberInfo, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		members[i] = semtypes.ListMemberInfo{Index: i, ValType: expr.GetDeterminedType()}
+	}
 	for _, alt := range alts {
-		if semtypes.ListAlternativeAllowsLength(alt, len(expr.Exprs)) {
-			if alt.Pos != nil {
-				isValid := true
-				lat := alt.Pos
-				for i, expr := range expr.Exprs {
-					exprTy := expr.GetDeterminedType()
-					ty := lat.MemberAtInnerVal(i)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.ListAlternativeAllowsMembers(tc, alt, members) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 
@@ -844,13 +832,7 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 		}
 		for _, f := range expr.Fields {
 			kv := f.(*ast.BLangMappingKeyValueField)
-			var keyName string
-			switch keyExpr := kv.Key.Expr.(type) {
-			case *ast.BLangLiteral:
-				keyName = keyExpr.GetOriginalValue()
-			case ast.BNodeWithSymbol:
-				keyName = a.ctx().SymbolName(keyExpr.Symbol())
-			}
+			keyName := recordKeyName(kv.Key)
 			requiredType := mappingAtomicType.FieldInnerVal(keyName)
 			if !analyzeExpression(a, kv.ValueExpr, requiredType) {
 				return false
@@ -883,34 +865,16 @@ func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructo
 	alts := semtypes.MappingAlternatives(tc, expectedType)
 	var validAlts []semtypes.MappingAlternative
 
-	fieldNames := make([]string, len(expr.Fields))
+	fields := make([]semtypes.MappingFieldInfo, len(expr.Fields))
 	for i, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		fieldNames[i] = recordKeyName(kv.Key)
+		fields[i] = semtypes.MappingFieldInfo{Name: recordKeyName(kv.Key), Ty: kv.ValueExpr.GetDeterminedType()}
 	}
-	sort.Strings(fieldNames)
+	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
 
 	for _, alt := range alts {
-		if semtypes.MappingAlternativeAllowsFields(alt, fieldNames) {
-			if alt.Pos != nil {
-				isValid := true
-				mat := alt.Pos
-				for _, f := range expr.Fields {
-					kv := f.(*ast.BLangMappingKeyValueField)
-					keyName := recordKeyName(kv.Key)
-					exprTy := kv.ValueExpr.GetDeterminedType()
-					ty := mat.FieldInnerVal(keyName)
-					if !semtypes.IsSubtype(tc, exprTy, ty) {
-						isValid = false
-						break
-					}
-				}
-				if isValid {
-					validAlts = append(validAlts, alt)
-				}
-			} else {
-				validAlts = append(validAlts, alt)
-			}
+		if semtypes.MappingAlternativeAllowsFields(tc, alt, fields) {
+			validAlts = append(validAlts, alt)
 		}
 	}
 	if len(validAlts) == 0 {

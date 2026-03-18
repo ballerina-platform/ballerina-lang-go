@@ -130,6 +130,12 @@ type (
 		rhs model.TypeData
 	}
 
+	BLangIntersectionTypeNode struct {
+		bLangTypeBase
+		lhs model.TypeData
+		rhs model.TypeData
+	}
+
 	BLangErrorTypeNode struct {
 		bLangTypeBase
 		DetailType model.TypeData
@@ -177,6 +183,7 @@ var (
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
+	_ model.IntersectionTypeNode     = &BLangIntersectionTypeNode{}
 	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
 	_ model.ConstrainedTypeNode      = &BLangConstrainedType{}
 	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
@@ -499,6 +506,26 @@ func (this *BLangUnionTypeNode) SetLhs(typeData model.TypeData) {
 }
 
 func (this *BLangUnionTypeNode) SetRhs(typeData model.TypeData) {
+	this.rhs = typeData
+}
+
+func (this *BLangIntersectionTypeNode) GetKind() model.NodeKind {
+	return model.NodeKind_INTERSECTION_TYPE_NODE
+}
+
+func (this *BLangIntersectionTypeNode) Lhs() *model.TypeData {
+	return &this.lhs
+}
+
+func (this *BLangIntersectionTypeNode) Rhs() *model.TypeData {
+	return &this.rhs
+}
+
+func (this *BLangIntersectionTypeNode) SetLhs(typeData model.TypeData) {
+	this.lhs = typeData
+}
+
+func (this *BLangIntersectionTypeNode) SetRhs(typeData model.TypeData) {
 	this.rhs = typeData
 }
 

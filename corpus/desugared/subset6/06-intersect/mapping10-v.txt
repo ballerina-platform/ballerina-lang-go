@@ -1,0 +1,54 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition R1
+    (record-type
+      (field l1
+        (value-type int))
+      (rest
+        (union-type
+          (finite-type
+            (literal 1))
+          (finite-type
+            (literal 2))))))
+  (type-definition R2
+    (record-type
+      (field l1
+        (union-type
+          (finite-type
+            (literal 1))
+          (finite-type
+            (literal 2))))
+      (rest
+        (value-type int))))
+  (type-definition T
+    (intersection-type
+      (user-defined-type R1)
+      (user-defined-type R2)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type T)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal l1)
+              (literal 1))
+            (key-value
+              (literal l2)
+              (literal 1))))))
+      (var-def
+        (variable l2 (type
+          (union-type
+            (union-type
+              (finite-type
+                (literal 1))
+              (finite-type
+                (literal 2)))
+            (value-type null))) (expr
+          (index-based-access
+            (simple-var-ref a)
+            (literal l2)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref l2)))))))

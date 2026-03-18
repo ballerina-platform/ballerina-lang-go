@@ -1,0 +1,32 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable t (type
+        (value-type boolean)) (expr
+        (literal true))))
+    (var-def
+      (variable f (type
+        (value-type boolean)) (expr
+        (literal false))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (simple-var-ref t)
+          (simple-var-ref t)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr &&
+          (simple-var-ref t)
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (simple-var-ref f)
+          (simple-var-ref t)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ||
+          (simple-var-ref f)
+          (simple-var-ref f)))))
+  )
+)

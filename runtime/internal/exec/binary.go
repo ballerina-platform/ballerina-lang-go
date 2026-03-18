@@ -148,33 +148,17 @@ func execBinaryOpEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	case nil:
 		frame.SetOperand(lhsOp, op2 == nil)
 	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			frame.SetOperand(lhsOp, v1 == v2)
-		default:
-			frame.SetOperand(lhsOp, false)
-		}
+		v2 := op2.(int64)
+		frame.SetOperand(lhsOp, v1 == v2)
 	case float64:
-		switch v2 := op2.(type) {
-		case float64:
-			frame.SetOperand(lhsOp, v1 == v2)
-		default:
-			frame.SetOperand(lhsOp, false)
-		}
+		v2 := op2.(float64)
+		frame.SetOperand(lhsOp, v1 == v2)
 	case string:
-		switch v2 := op2.(type) {
-		case string:
-			frame.SetOperand(lhsOp, v1 == v2)
-		default:
-			frame.SetOperand(lhsOp, false)
-		}
+		v2 := op2.(string)
+		frame.SetOperand(lhsOp, v1 == v2)
 	case bool:
-		switch v2 := op2.(type) {
-		case bool:
-			frame.SetOperand(lhsOp, v1 == v2)
-		default:
-			frame.SetOperand(lhsOp, false)
-		}
+		v2 := op2.(bool)
+		frame.SetOperand(lhsOp, v1 == v2)
 	default:
 		frame.SetOperand(lhsOp, false)
 	}
@@ -186,33 +170,17 @@ func execBinaryOpNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	case nil:
 		frame.SetOperand(lhsOp, op2 != nil)
 	case int64:
-		switch v2 := op2.(type) {
-		case int64:
-			frame.SetOperand(lhsOp, v1 != v2)
-		default:
-			frame.SetOperand(lhsOp, true)
-		}
+		v2 := op2.(int64)
+		frame.SetOperand(lhsOp, v1 != v2)
 	case float64:
-		switch v2 := op2.(type) {
-		case float64:
-			frame.SetOperand(lhsOp, v1 != v2)
-		default:
-			frame.SetOperand(lhsOp, true)
-		}
+		v2 := op2.(float64)
+		frame.SetOperand(lhsOp, v1 != v2)
 	case string:
-		switch v2 := op2.(type) {
-		case string:
-			frame.SetOperand(lhsOp, v1 != v2)
-		default:
-			frame.SetOperand(lhsOp, true)
-		}
+		v2 := op2.(string)
+		frame.SetOperand(lhsOp, v1 != v2)
 	case bool:
-		switch v2 := op2.(type) {
-		case bool:
-			frame.SetOperand(lhsOp, v1 != v2)
-		default:
-			frame.SetOperand(lhsOp, true)
-		}
+		v2 := op2.(bool)
+		frame.SetOperand(lhsOp, v1 != v2)
 	default:
 		frame.SetOperand(lhsOp, true)
 	}
@@ -333,15 +301,11 @@ func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame) {
 func execUnaryOpBitwiseComplement(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
 	op := frame.GetOperand(rhsOp)
-	v, ok := op.(int64)
-	if !ok {
-		panic(fmt.Sprintf("unsupported type: %T (expected int64)", op))
-	}
+	v := op.(int64)
 	frame.SetOperand(lhsOp, ^v)
 }
 
 func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
-
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	if handleNilLifting(op1, op2, lhsOp, frame) {
 		return
@@ -358,40 +322,22 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
 	boolCmp func(a, b bool) bool, nilEqualsNil bool) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
+	if op1 == nil || op2 == nil {
+		bothNil := op1 == nil && op2 == nil
+		frame.SetOperand(lhsOp, bothNil && nilEqualsNil)
+		return
+	}
+
 	switch v1 := op1.(type) {
-	case nil:
-		if op2 == nil {
-			frame.SetOperand(lhsOp, nilEqualsNil)
-		} else {
-			frame.SetOperand(lhsOp, false)
-		}
 	case int64:
-		switch v2 := op2.(type) {
-		case nil:
-			frame.SetOperand(lhsOp, false)
-		case int64:
-			frame.SetOperand(lhsOp, intCmp(v1, v2))
-		default:
-			panic(fmt.Sprintf("type mismatch: int64 vs %T", op2))
-		}
+		v2 := op2.(int64)
+		frame.SetOperand(lhsOp, intCmp(v1, v2))
 	case float64:
-		switch v2 := op2.(type) {
-		case nil:
-			frame.SetOperand(lhsOp, false)
-		case float64:
-			frame.SetOperand(lhsOp, floatCmp(v1, v2))
-		default:
-			panic(fmt.Sprintf("type mismatch: float64 vs %T", op2))
-		}
+		v2 := op2.(float64)
+		frame.SetOperand(lhsOp, floatCmp(v1, v2))
 	case bool:
-		switch v2 := op2.(type) {
-		case nil:
-			frame.SetOperand(lhsOp, false)
-		case bool:
-			frame.SetOperand(lhsOp, boolCmp(v1, v2))
-		default:
-			panic(fmt.Sprintf("type mismatch: bool vs %T", op2))
-		}
+		v2 := op2.(bool)
+		frame.SetOperand(lhsOp, boolCmp(v1, v2))
 	default:
 		panic(fmt.Sprintf("unsupported type: %T", op1))
 	}

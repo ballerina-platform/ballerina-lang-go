@@ -604,6 +604,10 @@ func Walk(v Visitor, node BLangNode) {
 		WalkTypeData(v, &node.lhs)
 		WalkTypeData(v, &node.rhs)
 
+	case *BLangIntersectionTypeNode:
+		WalkTypeData(v, &node.lhs)
+		WalkTypeData(v, &node.rhs)
+
 	case *BLangErrorTypeNode:
 		WalkTypeData(v, &node.DetailType)
 

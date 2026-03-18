@@ -16,6 +16,11 @@
 
 package semtypes
 
+type ListMemberInfo struct {
+	Index   int
+	ValType SemType
+}
+
 // ListAlternative represents a single alternative path through a union of list types.
 // Unlike MappingAlternative which uses slices for both pos and neg, ListAlternative
 // uses a single pointer for pos because it represents the intersection of all positive
@@ -88,10 +93,11 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 	return ty, *atom, true
 }
 
-// ListAlternativeAllowsLength checks if a list alternative allows a specific length.
-// This is used to filter list type alternatives based on the constructor's element count.
-func ListAlternativeAllowsLength(alt ListAlternative, length int) bool {
+// ListAlternativeAllowsMembers checks if a list alternative allows the given members
+// by validating both the length and the type of each member.
+func ListAlternativeAllowsMembers(cx Context, alt ListAlternative, members []ListMemberInfo) bool {
 	pos := alt.Pos
+	length := len(members)
 
 	if pos != nil {
 		minLength := pos.Members.FixedLength
@@ -99,10 +105,22 @@ func ListAlternativeAllowsLength(alt ListAlternative, length int) bool {
 
 		if IsNever(restInner) {
 			// Fixed length - must match exactly
-			return length == minLength
+			if length != minLength {
+				return false
+			}
+		} else {
+			// Variable length - must meet minimum
+			if length < minLength {
+				return false
+			}
 		}
-		// Variable length - must meet minimum
-		return length >= minLength
+
+		for _, m := range members {
+			ty := pos.MemberAtInnerVal(m.Index)
+			if IsNever(ty) || !IsSubtype(cx, m.ValType, ty) {
+				return false
+			}
+		}
 	}
 
 	// No positive constraint
