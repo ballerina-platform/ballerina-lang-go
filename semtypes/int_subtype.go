@@ -41,7 +41,7 @@ func CreateSingleRangeSubtype(min, max int64) IntSubtype {
 
 func IntConst(value int64) SemType {
 	// migrated from IntSubtype.java:51:5
-	return basicSubtype(BT_INT, CreateSingleRangeSubtype(value, value))
+	return basicSubtype(BTInt, CreateSingleRangeSubtype(value, value))
 }
 
 func validIntWidth(signed bool, bits int64) {
@@ -83,14 +83,14 @@ func IntWidthSigned(bits int64) SemType {
 		return &INT
 	}
 	t := CreateSingleRangeSubtype((-(int64(1) << (bits - int64(1)))), ((int64(1) << (bits - int64(1))) - int64(1)))
-	return basicSubtype(BT_INT, t)
+	return basicSubtype(BTInt, t)
 }
 
 func IntWidthUnsigned(bits int) SemType {
 	// migrated from IntSubtype.java:91:5
 	validIntWidth(false, int64(bits))
 	t := CreateSingleRangeSubtype(int64(0), ((int64(1) << bits) - int64(1)))
-	return basicSubtype(BT_INT, t)
+	return basicSubtype(BTInt, t)
 }
 
 func IntSubtypeWidenUnsigned(d SubtypeData) SubtypeData {

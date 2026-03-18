@@ -47,7 +47,7 @@ func BooleanSubtypeContains(d SubtypeData, b bool) bool {
 func BooleanConst(value bool) SemType {
 	// migrated from BooleanSubtype.java:52:5
 	t := BooleanSubtypeFrom(value)
-	return basicSubtype(BT_BOOLEAN, t)
+	return basicSubtype(BTBoolean, t)
 }
 
 func BooleanSubtypeSingleValue(d SubtypeData) common.Optional[bool] {

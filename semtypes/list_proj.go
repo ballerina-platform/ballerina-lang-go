@@ -33,7 +33,7 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 		if isNothingSubtype(keyData) {
 			return &NEVER
 		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BT_LIST).(Bdd), nil, nil)
+		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), nil, nil)
 	}
 }
 

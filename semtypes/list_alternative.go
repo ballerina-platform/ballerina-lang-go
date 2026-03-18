@@ -44,7 +44,7 @@ func ListAlternatives(cx Context, t SemType) []ListAlternative {
 	}
 
 	paths := []BddPath{}
-	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BT_LIST).(Bdd), &paths, BddPathFrom())
+	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), &paths, BddPathFrom())
 	alts := []ListAlternative{}
 	for _, bddPath := range paths {
 		posAtoms := make([]*ListAtomicType, len(bddPath.pos))
@@ -89,7 +89,7 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 		}
 	}
 	typeAtom := env.listAtom(atom)
-	ty := CreateBasicSemType(BT_LIST, BddAtom(&typeAtom))
+	ty := CreateBasicSemType(BTList, BddAtom(&typeAtom))
 	return ty, *atom, true
 }
 

@@ -16,9 +16,11 @@
 
 package semtypes
 
-import "slices"
+import (
+	"slices"
 
-import "ballerina-lang-go/common"
+	"ballerina-lang-go/common"
+)
 
 type StringSubtypeListCoverage struct {
 	IsSubtype bool
@@ -30,9 +32,11 @@ type StringSubtype struct {
 	nonCharData NonCharStringSubtype
 }
 
-var EMPTY_STRING_ARR = []EnumerableType[string]{}
-var EMPTY_CHAR_ARR = []EnumerableType[string]{}
-var _ ProperSubtypeData = &StringSubtype{}
+var (
+	EMPTY_STRING_ARR                   = []EnumerableType[string]{}
+	EMPTY_CHAR_ARR                     = []EnumerableType[string]{}
+	_                ProperSubtypeData = &StringSubtype{}
+)
 
 func NewStringSubtypeListCoverageFromBoolInts(isSubtype bool, indices []int) StringSubtypeListCoverage {
 	this := StringSubtypeListCoverage{}
@@ -131,7 +135,7 @@ func StringConst(value string) SemType {
 		chara = CharStringSubtypeFrom(true, EMPTY_CHAR_ARR)
 		nonChar = NonCharStringSubtypeFrom(true, []EnumerableType[string]{EnumerableStringFrom(value)})
 	}
-	return basicSubtype(BT_STRING, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
+	return basicSubtype(BTString, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
 }
 
 func codePointCount(s string, start, end int) int {
@@ -153,5 +157,5 @@ func StringChar() SemType {
 		CharStringSubtypeFrom(false, EMPTY_CHAR_ARR),
 		NonCharStringSubtypeFrom(true, EMPTY_STRING_ARR),
 	)
-	return basicSubtype(BT_STRING, st)
+	return basicSubtype(BTString, st)
 }

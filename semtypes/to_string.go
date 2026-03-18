@@ -60,7 +60,7 @@ func basicTypeToString(ty *BasicTypeBitSet) string {
 
 func basicTypeBitSetToString(bits int) string {
 	var parts []string
-	for i := 0; i < int(VT_COUNT); i++ {
+	for i := 0; i < int(ValueTypeCount); i++ {
 		if bits&(1<<i) != 0 {
 			code := BasicTypeCodeFrom(i)
 			name := strings.TrimPrefix(code.String(), "BT_")
@@ -96,11 +96,11 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 		return stringSubtypeToString(st)
 	case Bdd:
 		switch sub.BasicTypeCode {
-		case BT_LIST:
+		case BTList:
 			return s.bddListToString(st)
-		case BT_MAPPING:
+		case BTMapping:
 			return s.bddMappingToString(st)
-		case BT_ERROR:
+		case BTError:
 			return s.bddErrorToString(st)
 		default:
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")

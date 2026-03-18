@@ -26,6 +26,6 @@ func FutureContaining(env Env, constraint SemType) SemType {
 
 	mappingDef := NewMappingDefinition()
 	mappingType := mappingDef.DefineMappingTypeWrapped(env, nil, constraint)
-	bdd := subtypeData(mappingType, BT_MAPPING).(Bdd)
-	return CreateBasicSemType(BT_FUTURE, bdd)
+	bdd := subtypeData(mappingType, BTMapping).(Bdd)
+	return CreateBasicSemType(BTFuture, bdd)
 }

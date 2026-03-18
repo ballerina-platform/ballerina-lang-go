@@ -37,7 +37,7 @@ func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 		if isNothingSubtype(keyData) {
 			return &UNDEF
 		}
-		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BT_MAPPING).(Bdd), keyData, &INNER)
+		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), keyData, &INNER)
 	}
 }
 

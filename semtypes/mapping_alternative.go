@@ -36,7 +36,7 @@ func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	}
 
 	paths := []BddPath{}
-	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BT_MAPPING).(Bdd), &paths, BddPathFrom())
+	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), &paths, BddPathFrom())
 	alts := []MappingAlternative{}
 	for _, bddPath := range paths {
 		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))
@@ -68,7 +68,7 @@ func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *Mappi
 		atom = result
 	}
 	typeAtom := env.mappingAtom(atom)
-	ty := CreateBasicSemType(BT_MAPPING, BddAtom(&typeAtom))
+	ty := CreateBasicSemType(BTMapping, BddAtom(&typeAtom))
 	return ty, atom, true
 }
 

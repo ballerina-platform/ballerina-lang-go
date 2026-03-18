@@ -16,8 +16,7 @@
 
 package semtypes
 
-type TableSubtype struct {
-}
+type TableSubtype struct{}
 
 func newTableSubtype() TableSubtype {
 	this := TableSubtype{}
@@ -86,8 +85,8 @@ func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, nor
 	typeParamArray := typeParamArrDef.DefineListTypeWrappedWithEnvSemTypeCellMutability(env, tableConstraint, mut)
 	listDef := NewListDefinition()
 	tupleType := listDef.TupleTypeWrapped(env, typeParamArray, normalizedKc, normalizedKs)
-	bdd := subtypeData(tupleType, BT_LIST).(Bdd)
-	return CreateBasicSemType(BT_TABLE, bdd)
+	bdd := subtypeData(tupleType, BTList).(Bdd)
+	return CreateBasicSemType(BTTable, bdd)
 }
 
 func tableContainingWithEnvSemTypeSemTypeSemType(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType) SemType {

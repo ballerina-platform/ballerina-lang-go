@@ -40,7 +40,7 @@ func ObjectDefinitionDistinct(distinctId int) SemType {
 	// migrated from ObjectDefinition.java:55:9
 	common.Assert(distinctId >= 0)
 	bdd := BddAtom(new(CreateDistinctRecAtom(-distinctId - 1)))
-	return basicSubtype(BT_OBJECT, bdd)
+	return basicSubtype(BTObject, bdd)
 }
 
 // Each object type is represented as mapping type (with its basic type set to object) as fallows
@@ -108,9 +108,9 @@ func objectDefinitionValidateMembers(members []Member) bool {
 // migrated from ObjectDefinition.java:98:5
 func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	// migrated from ObjectDefinition.java:99:9
-	bdd := subtypeData(mappingType, BT_MAPPING)
+	bdd := subtypeData(mappingType, BTMapping)
 	// migrated from ObjectDefinition.java:100:9
-	return CreateBasicSemType(BT_OBJECT, bdd)
+	return CreateBasicSemType(BTObject, bdd)
 }
 
 // migrated from ObjectDefinition.java:104:5
