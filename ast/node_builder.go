@@ -577,18 +577,23 @@ func getFileName(node tree.Node) string {
 	return st.FilePath()
 }
 
-func innermostDiagnosticNode(node tree.Node) tree.Node {
+func innermostDiagnosticNodes(node tree.Node) []tree.Node {
 	if !node.HasDiagnostics() {
 		return nil
 	}
+
+	var nodes []tree.Node
 	if nt, ok := node.(tree.NonTerminalNode); ok {
 		for child := range nt.ChildNodes() {
 			if child != nil && child.HasDiagnostics() {
-				return innermostDiagnosticNode(child)
+				nodes = append(nodes, innermostDiagnosticNodes(child)...)
 			}
 		}
 	}
-	return node
+	if len(nodes) > 0 {
+		return nodes
+	}
+	return []tree.Node{node}
 }
 
 func diagnosticMessage(node tree.Node) string {
@@ -1769,7 +1774,7 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 			continue
 		}
 		if currentStatement.HasDiagnostics() {
-			n.reportSyntaxDiagnostic(currentStatement)
+			n.reportSyntaxDiagnostics(currentStatement)
 			continue
 		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
@@ -4098,10 +4103,12 @@ func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNod
 	return createSimpleVariableNodeWithLocationTokenLocation(varPos, varName, getPosition(varName))
 }
 
-func (n *NodeBuilder) reportSyntaxDiagnostic(node tree.Node) {
-	errorNode := innermostDiagnosticNode(node)
-	if errorNode == nil {
-		errorNode = node
+func (n *NodeBuilder) reportSyntaxDiagnostics(node tree.Node) {
+	diagnostics := innermostDiagnosticNodes(node)
+	if len(diagnostics) == 0 {
+		return
 	}
-	n.cx.SyntaxError(diagnosticMessage(errorNode), getPosition(errorNode))
+	for _, diagnostic := range diagnostics {
+		n.cx.SyntaxError(diagnosticMessage(diagnostic), getPosition(diagnostic))
+	}
 }
