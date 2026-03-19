@@ -66,6 +66,9 @@ func TestSemTypeStringAndCompactStringBranches(t *testing.T) {
 }
 
 func TestRenderSubtypeDataVariants(t *testing.T) {
+	intSubtype := CreateSingleRangeSubtype(10, MAX_VALUE)
+	assertTrue(t, strings.Contains(renderSubtypeData(&intSubtype), "ranges=[10..*]"))
+
 	booleanSubtype := BooleanSubtypeFrom(true)
 	assertTrue(t, strings.Contains(renderSubtypeData(booleanSubtype), "value=true"))
 	assertTrue(t, strings.Contains(renderSubtypeData(&booleanSubtype), "value=true"))
@@ -104,4 +107,14 @@ func TestRenderSubtypeDetailsGuardsAndSkipMask(t *testing.T) {
 
 	details := renderSubtypeDetails(intMask, []ProperSubtypeData{intSubtype}, 0)
 	assertTrue(t, strings.Contains(details, "INT:ranges=[1..2]"))
+
+	outOfRangeMask := 1 << VT_COUNT
+	assertEqual(t, renderSubtypeDetails(outOfRangeMask, []ProperSubtypeData{intSubtype}, 0), "")
+}
+
+func TestRenderListMemberDetailsEmpty(t *testing.T) {
+	env := CreateTypeEnv()
+	ctx := ContextFrom(env)
+
+	assertEqual(t, renderListMemberDetails(ctx, &INT), "")
 }
