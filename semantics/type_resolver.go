@@ -1753,24 +1753,10 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		t.ctx.SemanticError("method not found: "+methodSymbol.name, expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
-	argTys := make([]semtypes.SemType, len(expr.ArgExprs)+1)
 	argExprs := make([]ast.BLangExpression, len(expr.ArgExprs)+1)
 	argExprs[0] = expr.Expr
-	argTys[0] = recieverTy
 	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := t.resolveExpression(chain, arg)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		argTys[i+1] = argTy
 		argExprs[i+1] = arg
-	}
-	baseSymbol := t.ctx.GetSymbol(symbolRef)
-	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
-		symbolRef = genericFn.Monomorphize(argTys)
-	} else if _, ok := baseSymbol.(model.FunctionSymbol); !ok {
-		t.ctx.InternalError("symbol is not a function symbol", expr.GetPosition())
-		return nil, expressionEffect{}, false
 	}
 	expr.SetSymbol(symbolRef)
 	expr.ArgExprs = argExprs
@@ -1802,6 +1788,7 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 		return nil, expressionEffect{}, false
 	}
 
+	// FIXME: this should be based on the symbol and leave "narrowing" semantic analysis
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 

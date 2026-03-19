@@ -734,6 +734,7 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 }
 
 func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) bool {
+	// FIXME: this is analyzing same expression multiple times
 	for _, memberExpr := range expr.Exprs {
 		if !analyzeExpression(a, memberExpr, nil) {
 			return false
@@ -1116,21 +1117,22 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 		a.semanticErr("function not found: "+invocation.Name.GetValue(), invocation.GetPosition())
 		return false
 	}
-
+	tyCtx := a.tyCtx()
+	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	// Validate each argument expression
 	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
-		if !analyzeExpression(a, arg, nil) {
+		key := semtypes.IntConst(int64(i))
+		if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
 			return false
 		}
 		argTys[i] = arg.GetDeterminedType()
 	}
 
 	// Validate argument types against function parameter types
-	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if !semtypes.IsSubtype(a.tyCtx(), argListTy, paramListTy) {
+	if !semtypes.IsSubtype(tyCtx, argListTy, paramListTy) {
 		a.semanticErr("incompatible arguments for function call", invocation.GetPosition())
 		return false
 	}

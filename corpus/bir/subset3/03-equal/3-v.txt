@@ -12,33 +12,33 @@ main() -> nil{
   bb1 {
     %7 = ConstantLoad 1
     %8 = ConstantLoad 1
-    %9 = newArray [int, never...][%8]{%7}
+    %9 = newArray list[%8]{%7}
     %10 = ConstantLoad 1
     %11 = printEq(%9,%10) -> bb2;
   }
   bb2 {
     %12 = ConstantLoad 1
     %13 = ConstantLoad 1
-    %14 = newArray [int, never...][%13]{%12}
+    %14 = newArray list[%13]{%12}
     %15 = ConstantLoad 1
     %16 = ConstantLoad 1
-    %17 = newArray [int, never...][%16]{%15}
+    %17 = newArray list[%16]{%15}
     %18 = printEq(%14,%17) -> bb3;
   }
   bb3 {
     %19 = ConstantLoad 0
-    %20 = newArray [never...][%19]{}
+    %20 = newArray list[%19]{}
     %21 = ConstantLoad 0
-    %22 = newArray [never...][%21]{}
+    %22 = newArray list[%21]{}
     %23 = printEq(%20,%22) -> bb4;
   }
   bb4 {
     %24 = ConstantLoad 1
     %25 = ConstantLoad 1
-    %26 = newArray [int, never...][%25]{%24}
+    %26 = newArray list[%25]{%24}
     %27 = ConstantLoad 2
     %28 = ConstantLoad 1
-    %29 = newArray [int, never...][%28]{%27}
+    %29 = newArray list[%28]{%27}
     %30 = printEq(%26,%29) -> bb5;
   }
   bb5 {

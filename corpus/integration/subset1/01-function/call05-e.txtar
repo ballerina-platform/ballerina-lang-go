@@ -1,8 +1,8 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> call05-e.bal:20:5
+error[SEMANTIC_ERROR]: incompatible type: expected int, got false
+  --> call05-e.bal:20:12
    |
 20 |     foo(1, false); // @error
-   |     ^^^^^^^^^^^^^
+   |            ^^^^^
 

@@ -1,8 +1,8 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible arguments for function call
-  --> 1-e.bal:20:13
+error[SEMANTIC_ERROR]: incompatible type: expected never, got true
+  --> 1-e.bal:20:22
    |
 20 |     int n = x.length(true); // @error
-   |             ^^^^^^^^^^^^^^
+   |                      ^^^^
 
