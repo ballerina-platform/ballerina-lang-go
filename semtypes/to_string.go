@@ -106,6 +106,9 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
 		}
+	case XmlSubtype:
+		name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
+		return strings.ToLower(name)
 	default:
 		panic(fmt.Sprintf("unimplemented: ToString for %s", sub.BasicTypeCode.String()))
 	}

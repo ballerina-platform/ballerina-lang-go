@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 
 	"ballerina-lang-go/bir"
 	typepool "ballerina-lang-go/bir/codec/type-pool"
@@ -349,7 +350,24 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
 					t.ThenBB = target
 				}
+			case *bir.Panic:
+				// Panic has no ThenBB
 			}
+		}
+	}
+
+	errorTableCount := br.readLength()
+	errorTable := make([]bir.BIRErrorEntry, errorTableCount)
+	for j := 0; j < int(errorTableCount); j++ {
+		startId := br.readStringCPEntry()
+		endId := br.readStringCPEntry()
+		targetId := br.readStringCPEntry()
+		errorOp := br.readOperand(varMap)
+		errorTable[j] = bir.BIRErrorEntry{
+			Start:   bbMap[startId.Value()],
+			End:     bbMap[endId.Value()],
+			Target:  bbMap[targetId.Value()],
+			ErrorOp: errorOp,
 		}
 	}
 
@@ -382,6 +400,7 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 		ReturnVariable: returnVar,
 		LocalVars:      localVars,
 		BasicBlocks:    basicBlocks,
+		ErrorTable:     errorTable,
 	}
 }
 
@@ -527,12 +546,18 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
+		valuesCount := br.readLength()
+		values := make([]*bir.BIROperand, valuesCount)
+		for k := 0; k < int(valuesCount); k++ {
+			values[k] = br.readOperand(varMap)
+		}
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			Type:   ty,
 			SizeOp: sizeOp,
+			Values: values,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
@@ -545,6 +570,68 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			},
 			RhsOp: rhsOp,
 			Type:  ty,
+		}
+	case bir.INSTRUCTION_KIND_TYPE_TEST:
+		rhsOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
+		ty := br.readType()
+		var isNegation bool
+		br.read(&isNegation)
+		return &bir.TypeTest{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			RhsOp:      rhsOp,
+			Type:       ty,
+			IsNegation: isNegation,
+		}
+	case bir.INSTRUCTION_KIND_NEW_STRUCTURE:
+		ty := br.readType()
+		lhsOp := br.readOperand(varMap)
+		valuesCount := br.readLength()
+		values := make([]bir.MappingConstructorEntry, valuesCount)
+		for k := 0; k < int(valuesCount); k++ {
+			var isKeyValuePair bool
+			br.read(&isKeyValuePair)
+			if isKeyValuePair {
+				keyOp := br.readOperand(varMap)
+				valueOp := br.readOperand(varMap)
+				values[k] = bir.NewMappingConstructorKeyValueEntry(keyOp, valueOp)
+			}
+		}
+		return &bir.NewMap{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			Type:   ty,
+			Values: values,
+		}
+	case bir.INSTRUCTION_KIND_NEW_ERROR:
+		ty := br.readType()
+		lhsOp := br.readOperand(varMap)
+		typeName := br.readStringCPEntry()
+		messageOp := br.readOperand(varMap)
+		var hasCauseOp bool
+		br.read(&hasCauseOp)
+		var causeOp *bir.BIROperand
+		if hasCauseOp {
+			causeOp = br.readOperand(varMap)
+		}
+		var hasDetailOp bool
+		br.read(&hasDetailOp)
+		var detailOp *bir.BIROperand
+		if hasDetailOp {
+			detailOp = br.readOperand(varMap)
+		}
+		return &bir.NewError{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			Type:      ty,
+			TypeName:  string(typeName),
+			MessageOp: messageOp,
+			CauseOp:   causeOp,
+			DetailOp:  detailOp,
 		}
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
@@ -627,6 +714,11 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 				},
 			},
 		}
+	case bir.INSTRUCTION_KIND_PANIC:
+		errorOp := br.readOperand(varMap)
+		return &bir.Panic{
+			ErrorOp: errorOp,
+		}
 	default:
 		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))
 	}
@@ -697,10 +789,19 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		var val bool
 		br.read(&val)
 		return val
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING:
 		var idx int32
 		br.read(&idx)
 		return br.getStringFromCP(int(idx))
+	case model.TypeTags_DECIMAL:
+		var idx int32
+		br.read(&idx)
+		str := br.getStringFromCP(int(idx))
+		r := new(big.Rat)
+		if _, ok := r.SetString(str); !ok {
+			panic(fmt.Sprintf("invalid decimal value: %s", str))
+		}
+		return r
 	case model.TypeTags_NIL:
 		var idx int32
 		br.read(&idx)

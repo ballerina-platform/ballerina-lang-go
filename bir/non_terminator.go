@@ -316,6 +316,13 @@ func (n *NewMap) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
+func NewMappingConstructorKeyValueEntry(keyOp, valueOp *BIROperand) *MappingConstructorKeyValueEntry {
+	return &MappingConstructorKeyValueEntry{
+		keyOp:   keyOp,
+		valueOp: valueOp,
+	}
+}
+
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
 	return true
 }

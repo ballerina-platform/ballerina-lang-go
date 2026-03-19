@@ -19,7 +19,6 @@ package codec
 import (
 	"flag"
 	"slices"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/ast"

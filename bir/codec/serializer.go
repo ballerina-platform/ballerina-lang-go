@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
 
 	"ballerina-lang-go/bir"
 	typepool "ballerina-lang-go/bir/codec/type-pool"
@@ -181,6 +182,14 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 		bw.writeBasicBlock(birbuf, &bb)
 	}
 
+	bw.writeLength(birbuf, len(fn.ErrorTable))
+	for _, entry := range fn.ErrorTable {
+		bw.writeStringCPEntry(birbuf, entry.Start.Id.Value())
+		bw.writeStringCPEntry(birbuf, entry.End.Id.Value())
+		bw.writeStringCPEntry(birbuf, entry.Target.Id.Value())
+		bw.writeOperand(birbuf, entry.ErrorOp)
+	}
+
 	bw.writeBufferLength(buf, birbuf)
 	_, err := buf.Write(birbuf.Bytes())
 	if err != nil {
@@ -272,11 +281,45 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
+		bw.writeLength(buf, len(instr.Values))
+		for _, v := range instr.Values {
+			bw.writeOperand(buf, v)
+		}
 	case *bir.TypeCast:
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeType(buf, instr.Type)
 		// TODO: Write checkTypes
+	case *bir.TypeTest:
+		bw.writeOperand(buf, instr.RhsOp)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeType(buf, instr.Type)
+		write(buf, instr.IsNegation)
+	case *bir.NewMap:
+		bw.writeType(buf, instr.Type)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeLength(buf, len(instr.Values))
+		for _, entry := range instr.Values {
+			write(buf, entry.IsKeyValuePair())
+			if entry.IsKeyValuePair() {
+				kvEntry := entry.(*bir.MappingConstructorKeyValueEntry)
+				bw.writeOperand(buf, kvEntry.KeyOp())
+				bw.writeOperand(buf, kvEntry.ValueOp())
+			}
+		}
+	case *bir.NewError:
+		bw.writeType(buf, instr.Type)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeStringCPEntry(buf, instr.TypeName)
+		bw.writeOperand(buf, instr.MessageOp)
+		write(buf, instr.CauseOp != nil)
+		if instr.CauseOp != nil {
+			bw.writeOperand(buf, instr.CauseOp)
+		}
+		write(buf, instr.DetailOp != nil)
+		if instr.DetailOp != nil {
+			bw.writeOperand(buf, instr.DetailOp)
+		}
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
@@ -309,6 +352,8 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
 	case *bir.Return:
+	case *bir.Panic:
+		bw.writeOperand(buf, term.ErrorOp)
 	default:
 		panic(fmt.Sprintf("unsupported terminator type: %T", term))
 	}
@@ -410,6 +455,8 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			} else {
 				val = ""
 			}
+		case *big.Rat:
+			val = v.RatString()
 		default:
 			panic(fmt.Sprintf("expected string for tag %v, got %T", tag, value))
 		}
@@ -446,6 +493,8 @@ func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
 		return model.TypeTags_BOOLEAN, nil
 	case byte:
 		return model.TypeTags_BYTE, nil
+	case *big.Rat:
+		return model.TypeTags_DECIMAL, nil
 	case nil:
 		return model.TypeTags_NIL, nil
 	default:
