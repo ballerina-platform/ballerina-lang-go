@@ -17,6 +17,13 @@
 package projects
 
 import (
+	"fmt"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -25,12 +32,6 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/tools/diagnostics"
-	"fmt"
-	"maps"
-	"os"
-	"slices"
-	"strings"
-	"sync"
 )
 
 // moduleContext holds internal state for a Module.
@@ -216,6 +217,10 @@ func resolveTypesAndSymbols(moduleCtx *moduleContext) {
 	compilationOptions := moduleCtx.project.BuildOptions().CompilationOptions()
 	pkgNode := buildBLangPackage(compilerCtx, syntaxTrees, compilationOptions)
 	moduleCtx.bLangPkg = pkgNode
+
+	if compilerCtx.HasDiagnostics() {
+		return
+	}
 
 	pkgNode.PackageID = createModelPackageID(compilerCtx, moduleCtx.moduleDescriptor)
 
