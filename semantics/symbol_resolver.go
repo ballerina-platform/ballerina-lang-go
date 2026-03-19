@@ -276,12 +276,11 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 		nameParts[i] = name.GetValue()
 	}
 	moduleName := strings.Join(nameParts, ".")
-	orgNameIdentifier := imp.GetOrgName()
 	var orgName string
-	if orgNameIdentifier == nil || orgNameIdentifier.GetValue() == "" {
+	if imp.OrgName == nil || imp.OrgName.GetValue() == "" {
 		orgName = defaultOrg
 	} else {
-		orgName = orgNameIdentifier.GetValue()
+		orgName = imp.OrgName.GetValue()
 	}
 	return PackageIdentifier{orgName, moduleName}
 }

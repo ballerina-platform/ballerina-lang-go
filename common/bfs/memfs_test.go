@@ -40,7 +40,7 @@ func TestWriteFileOpenAndStat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open error: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
@@ -147,12 +147,12 @@ func TestMove_FileAndDirectory(t *testing.T) {
 	if f, err := fsys.Open("dst/x.txt"); err != nil {
 		t.Fatalf("dst/x.txt open error: %v", err)
 	} else {
-		f.Close()
+		_ = f.Close()
 	}
 	if f, err := fsys.Open("dst/sub/y.txt"); err != nil {
 		t.Fatalf("dst/sub/y.txt open error: %v", err)
 	} else {
-		f.Close()
+		_ = f.Close()
 	}
 
 	if err := Move(fsys, "nope", "new"); err == nil || !os.IsNotExist(err) {
@@ -184,7 +184,7 @@ func TestMkdirAll(t *testing.T) {
 		if info.Mode()&fs.ModeDir == 0 {
 			t.Errorf("%s mode should have ModeDir set", dir)
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	// Test creating directory that already exists (should not error)
@@ -209,7 +209,7 @@ func TestMkdirAll(t *testing.T) {
 	if !info.IsDir() {
 		t.Errorf("single should be a directory")
 	}
-	f.Close()
+	_ = f.Close()
 }
 
 func TestMkdirAll_ReadDir(t *testing.T) {

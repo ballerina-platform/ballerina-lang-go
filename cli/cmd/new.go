@@ -129,7 +129,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 
 	// Print success message
 	if nameWarning != "" {
-		fmt.Fprintln(cmd.ErrOrStderr(), nameWarning)
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), nameWarning)
 	}
 
 	// Use relative path in output if originally provided as relative
@@ -137,7 +137,7 @@ func runNew(cmd *cobra.Command, args []string) error {
 	if filepath.IsAbs(projectPath) {
 		displayPath = absPath
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Created new package '%s' at %s.\n", packageName, displayPath)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Created new package '%s' at %s.\n", packageName, displayPath)
 
 	return nil
 }
@@ -200,7 +200,7 @@ func initPackage(projectPath, packageName, orgName string) error {
 	var createdFiles []string
 	cleanup := func() {
 		for i := len(createdFiles) - 1; i >= 0; i-- {
-			os.Remove(createdFiles[i])
+			_ = os.Remove(createdFiles[i])
 		}
 	}
 

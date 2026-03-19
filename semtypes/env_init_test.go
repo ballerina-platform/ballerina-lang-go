@@ -29,7 +29,7 @@ func TestEnvInitAtomTable(t *testing.T) {
 	}
 
 	envImpl.atomTableMutex.Lock()
-	atomTable := envImpl.atomTable
+	atomTable := envImpl.atomTable //nolint:staticcheck,ineffassign // atomTable will be used for direct atom table assertions
 	envImpl.atomTableMutex.Unlock()
 
 	// Ensure atoms are in the table by calling Env methods

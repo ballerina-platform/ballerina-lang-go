@@ -200,11 +200,7 @@ func (n ListenerDeclarationNode) EqualsToken() Token {
 }
 
 func (n ListenerDeclarationNode) Initializer() Node {
-	val, ok := n.ChildInBucket(6).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(6)
 }
 
 func (n ListenerDeclarationNode) SemicolonToken() Token {
@@ -256,11 +252,7 @@ func (n TypeDefinitionNode) TypeName() Token {
 }
 
 func (n TypeDefinitionNode) TypeDescriptor() Node {
-	val, ok := n.ChildInBucket(4).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(4)
 }
 
 func (n TypeDefinitionNode) SemicolonToken() Token {
@@ -362,11 +354,7 @@ func (n AssignmentStatementNode) Kind() common.SyntaxKind {
 }
 
 func (n AssignmentStatementNode) VarRef() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n AssignmentStatementNode) EqualsToken() Token {
@@ -690,11 +678,7 @@ func (n IfElseStatementNode) IfBody() *BlockStatementNode {
 }
 
 func (n IfElseStatementNode) ElseBody() Node {
-	val, ok := n.ChildInBucket(3).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(3)
 }
 
 type ElseBlockNode struct {
@@ -846,19 +830,11 @@ func (n LocalTypeDefinitionStatementNode) TypeKeyword() Token {
 }
 
 func (n LocalTypeDefinitionStatementNode) TypeName() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n LocalTypeDefinitionStatementNode) TypeDescriptor() Node {
-	val, ok := n.ChildInBucket(3).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(3)
 }
 
 func (n LocalTypeDefinitionStatementNode) SemicolonToken() Token {
@@ -970,11 +946,7 @@ func (n ForEachStatementNode) InKeyword() Token {
 }
 
 func (n ForEachStatementNode) ActionOrExpressionNode() Node {
-	val, ok := n.ChildInBucket(3).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(3)
 }
 
 func (n ForEachStatementNode) BlockStatement() *BlockStatementNode {
@@ -1000,11 +972,7 @@ type BinaryExpressionNode struct {
 }
 
 func (n BinaryExpressionNode) LhsExpr() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n BinaryExpressionNode) Operator() Token {
@@ -1016,11 +984,7 @@ func (n BinaryExpressionNode) Operator() Token {
 }
 
 func (n BinaryExpressionNode) RhsExpr() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type BracedExpressionNode struct {
@@ -1412,11 +1376,7 @@ func (n ConstantDeclarationNode) EqualsToken() Token {
 }
 
 func (n ConstantDeclarationNode) Initializer() Node {
-	val, ok := n.ChildInBucket(6).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(6)
 }
 
 func (n ConstantDeclarationNode) SemicolonToken() Token {
@@ -1442,11 +1402,7 @@ func (n DefaultableParameterNode) Annotations() NodeList[*AnnotationNode] {
 }
 
 func (n DefaultableParameterNode) TypeName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n DefaultableParameterNode) ParamName() Token {
@@ -1466,11 +1422,7 @@ func (n DefaultableParameterNode) EqualsToken() Token {
 }
 
 func (n DefaultableParameterNode) Expression() Node {
-	val, ok := n.ChildInBucket(4).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(4)
 }
 
 type RequiredParameterNode struct {
@@ -1486,11 +1438,7 @@ func (n RequiredParameterNode) Annotations() NodeList[*AnnotationNode] {
 }
 
 func (n RequiredParameterNode) TypeName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n RequiredParameterNode) ParamName() Token {
@@ -1522,11 +1470,7 @@ func (n IncludedRecordParameterNode) AsteriskToken() Token {
 }
 
 func (n IncludedRecordParameterNode) TypeName() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n IncludedRecordParameterNode) ParamName() Token {
@@ -1550,11 +1494,7 @@ func (n RestParameterNode) Annotations() NodeList[*AnnotationNode] {
 }
 
 func (n RestParameterNode) TypeName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n RestParameterNode) EllipsisToken() Token {
@@ -1640,11 +1580,7 @@ func (n SpecificFieldNode) ReadonlyKeyword() Token {
 }
 
 func (n SpecificFieldNode) FieldName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n SpecificFieldNode) Colon() Token {
@@ -1942,11 +1878,7 @@ func (n ReturnTypeDescriptorNode) Annotations() NodeList[*AnnotationNode] {
 }
 
 func (n ReturnTypeDescriptorNode) Type() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type NilTypeDescriptorNode struct {
@@ -1982,11 +1914,7 @@ func (n OptionalTypeDescriptorNode) Kind() common.SyntaxKind {
 }
 
 func (n OptionalTypeDescriptorNode) TypeDescriptor() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n OptionalTypeDescriptorNode) QuestionMarkToken() Token {
@@ -2026,11 +1954,7 @@ func (n ObjectFieldNode) QualifierList() NodeList[Token] {
 }
 
 func (n ObjectFieldNode) TypeName() Node {
-	val, ok := n.ChildInBucket(3).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(3)
 }
 
 func (n ObjectFieldNode) FieldName() Token {
@@ -2090,11 +2014,7 @@ func (n RecordFieldNode) ReadonlyKeyword() Token {
 }
 
 func (n RecordFieldNode) TypeName() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n RecordFieldNode) FieldName() Token {
@@ -2146,11 +2066,7 @@ func (n RecordFieldWithDefaultValueNode) ReadonlyKeyword() Token {
 }
 
 func (n RecordFieldWithDefaultValueNode) TypeName() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n RecordFieldWithDefaultValueNode) FieldName() Token {
@@ -2194,11 +2110,7 @@ func (n RecordRestDescriptorNode) Kind() common.SyntaxKind {
 }
 
 func (n RecordRestDescriptorNode) TypeName() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n RecordRestDescriptorNode) EllipsisToken() Token {
@@ -2234,11 +2146,7 @@ func (n TypeReferenceNode) AsteriskToken() Token {
 }
 
 func (n TypeReferenceNode) TypeName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n TypeReferenceNode) SemicolonToken() Token {
@@ -2266,11 +2174,7 @@ func (n AnnotationNode) AtToken() Token {
 }
 
 func (n AnnotationNode) AnnotReference() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n AnnotationNode) AnnotValue() *MappingConstructorExpressionNode {
@@ -2290,11 +2194,7 @@ func (n MetadataNode) Kind() common.SyntaxKind {
 }
 
 func (n MetadataNode) DocumentationString() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n MetadataNode) Annotations() NodeList[*AnnotationNode] {
@@ -2386,11 +2286,7 @@ func (n TypeTestExpressionNode) IsKeyword() Token {
 }
 
 func (n TypeTestExpressionNode) TypeDescriptor() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type ActionNode = ExpressionNode
@@ -2536,11 +2432,7 @@ func (n AnnotationDeclarationNode) AnnotationKeyword() Token {
 }
 
 func (n AnnotationDeclarationNode) TypeDescriptor() Node {
-	val, ok := n.ChildInBucket(4).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(4)
 }
 
 func (n AnnotationDeclarationNode) AnnotationTag() Token {
@@ -2768,11 +2660,7 @@ func (n NamedWorkerDeclarationNode) WorkerName() *IdentifierToken {
 }
 
 func (n NamedWorkerDeclarationNode) ReturnTypeDesc() Node {
-	val, ok := n.ChildInBucket(4).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(4)
 }
 
 func (n NamedWorkerDeclarationNode) WorkerBody() *BlockStatementNode {
@@ -2856,11 +2744,7 @@ func (n QualifiedNameReferenceNode) ModulePrefix() Token {
 }
 
 func (n QualifiedNameReferenceNode) Colon() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n QualifiedNameReferenceNode) Identifier() *IdentifierToken {
@@ -2984,11 +2868,7 @@ func (n TypeCastParamNode) Annotations() NodeList[*AnnotationNode] {
 }
 
 func (n TypeCastParamNode) Type() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type UnionTypeDescriptorNode struct {
@@ -3120,11 +3000,7 @@ func (n StreamTypeDescriptorNode) StreamKeywordToken() Token {
 }
 
 func (n StreamTypeDescriptorNode) StreamTypeParamsNode() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type StreamTypeParamsNode struct {
@@ -3144,11 +3020,7 @@ func (n StreamTypeParamsNode) LtToken() Token {
 }
 
 func (n StreamTypeParamsNode) LeftTypeDescNode() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n StreamTypeParamsNode) CommaToken() Token {
@@ -3160,11 +3032,7 @@ func (n StreamTypeParamsNode) CommaToken() Token {
 }
 
 func (n StreamTypeParamsNode) RightTypeDescNode() Node {
-	val, ok := n.ChildInBucket(3).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(3)
 }
 
 func (n StreamTypeParamsNode) GtToken() Token {
@@ -3698,19 +3566,11 @@ func (n TableTypeDescriptorNode) TableKeywordToken() Token {
 }
 
 func (n TableTypeDescriptorNode) RowTypeParameterNode() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n TableTypeDescriptorNode) KeyConstraintNode() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type TypeParameterNode struct {
@@ -3762,11 +3622,7 @@ func (n KeyTypeConstraintNode) KeyKeywordToken() Token {
 }
 
 func (n KeyTypeConstraintNode) TypeParameterNode() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type FunctionTypeDescriptorNode struct {
@@ -4468,11 +4324,7 @@ func (n IntersectionTypeDescriptorNode) Kind() common.SyntaxKind {
 }
 
 func (n IntersectionTypeDescriptorNode) LeftTypeDesc() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n IntersectionTypeDescriptorNode) BitwiseAndToken() Token {
@@ -4484,11 +4336,7 @@ func (n IntersectionTypeDescriptorNode) BitwiseAndToken() Token {
 }
 
 func (n IntersectionTypeDescriptorNode) RightTypeDesc() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type ImplicitAnonymousFunctionParameters struct {
@@ -4528,11 +4376,7 @@ func (n ImplicitAnonymousFunctionExpressionNode) Kind() common.SyntaxKind {
 }
 
 func (n ImplicitAnonymousFunctionExpressionNode) Params() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ImplicitAnonymousFunctionExpressionNode) RightDoubleArrow() Token {
@@ -4876,11 +4720,7 @@ func (n ErrorBindingPatternNode) ErrorKeyword() Token {
 }
 
 func (n ErrorBindingPatternNode) TypeReference() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n ErrorBindingPatternNode) OpenParenthesis() Token {
@@ -5016,11 +4856,7 @@ func (n ReceiveActionNode) LeftArrow() Token {
 }
 
 func (n ReceiveActionNode) ReceiveWorkers() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReceiveFieldsNode struct {
@@ -5160,11 +4996,7 @@ func (n WaitActionNode) WaitKeyword() Token {
 }
 
 func (n WaitActionNode) WaitFutureExpr() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type WaitFieldsListNode struct {
@@ -5484,11 +5316,7 @@ func (n ArrayDimensionNode) OpenBracket() Token {
 }
 
 func (n ArrayDimensionNode) ArrayLength() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n ArrayDimensionNode) CloseBracket() Token {
@@ -5726,11 +5554,7 @@ func (n XMLStepExpressionNode) Expression() ExpressionNode {
 }
 
 func (n XMLStepExpressionNode) XmlStepStart() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n XMLStepExpressionNode) XmlStepExtend() NodeList[Node] {
@@ -6126,11 +5950,7 @@ func (n FieldMatchPatternNode) ColonToken() Token {
 }
 
 func (n FieldMatchPatternNode) MatchPattern() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type ErrorMatchPatternNode struct {
@@ -6202,11 +6022,7 @@ func (n NamedArgMatchPatternNode) EqualToken() Token {
 }
 
 func (n NamedArgMatchPatternNode) MatchPattern() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type DocumentationNode = NonTerminalNode
@@ -6304,11 +6120,7 @@ func (n BallerinaNameReferenceNode) StartBacktick() Token {
 }
 
 func (n BallerinaNameReferenceNode) NameReference() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n BallerinaNameReferenceNode) EndBacktick() Token {
@@ -6998,11 +6810,7 @@ func (n ReAtomQuantifierNode) Kind() common.SyntaxKind {
 }
 
 func (n ReAtomQuantifierNode) ReAtom() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReAtomQuantifierNode) ReQuantifier() *ReQuantifierNode {
@@ -7022,11 +6830,7 @@ func (n ReAtomCharOrEscapeNode) Kind() common.SyntaxKind {
 }
 
 func (n ReAtomCharOrEscapeNode) ReAtomCharOrEscape() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 type ReQuoteEscapeNode struct {
@@ -7046,11 +6850,7 @@ func (n ReQuoteEscapeNode) SlashToken() Token {
 }
 
 func (n ReQuoteEscapeNode) ReSyntaxChar() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReSimpleCharClassEscapeNode struct {
@@ -7070,11 +6870,7 @@ func (n ReSimpleCharClassEscapeNode) SlashToken() Token {
 }
 
 func (n ReSimpleCharClassEscapeNode) ReSimpleCharClassCode() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReUnicodePropertyEscapeNode struct {
@@ -7094,11 +6890,7 @@ func (n ReUnicodePropertyEscapeNode) SlashToken() Token {
 }
 
 func (n ReUnicodePropertyEscapeNode) Property() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 func (n ReUnicodePropertyEscapeNode) OpenBraceToken() Token {
@@ -7136,19 +6928,11 @@ func (n ReUnicodeScriptNode) Kind() common.SyntaxKind {
 }
 
 func (n ReUnicodeScriptNode) ScriptStart() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReUnicodeScriptNode) ReUnicodePropertyValue() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReUnicodeGeneralCategoryNode struct {
@@ -7160,19 +6944,11 @@ func (n ReUnicodeGeneralCategoryNode) Kind() common.SyntaxKind {
 }
 
 func (n ReUnicodeGeneralCategoryNode) CategoryStart() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReUnicodeGeneralCategoryNode) ReUnicodeGeneralCategoryName() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReCharacterClassNode struct {
@@ -7200,11 +6976,7 @@ func (n ReCharacterClassNode) Negation() Token {
 }
 
 func (n ReCharacterClassNode) ReCharSet() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 func (n ReCharacterClassNode) CloseBracket() Token {
@@ -7232,11 +7004,7 @@ func (n ReCharSetRangeWithReCharSetNode) ReCharSetRange() *ReCharSetRangeNode {
 }
 
 func (n ReCharSetRangeWithReCharSetNode) ReCharSet() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReCharSetRangeNode struct {
@@ -7248,11 +7016,7 @@ func (n ReCharSetRangeNode) Kind() common.SyntaxKind {
 }
 
 func (n ReCharSetRangeNode) LhsReCharSetAtom() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReCharSetRangeNode) MinusToken() Token {
@@ -7264,11 +7028,7 @@ func (n ReCharSetRangeNode) MinusToken() Token {
 }
 
 func (n ReCharSetRangeNode) RhsReCharSetAtom() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type ReCharSetAtomWithReCharSetNoDashNode struct {
@@ -7280,19 +7040,11 @@ func (n ReCharSetAtomWithReCharSetNoDashNode) Kind() common.SyntaxKind {
 }
 
 func (n ReCharSetAtomWithReCharSetNoDashNode) ReCharSetAtom() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReCharSetAtomWithReCharSetNoDashNode) ReCharSetNoDash() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReCharSetRangeNoDashWithReCharSetNode struct {
@@ -7312,11 +7064,7 @@ func (n ReCharSetRangeNoDashWithReCharSetNode) ReCharSetRangeNoDash() *ReCharSet
 }
 
 func (n ReCharSetRangeNoDashWithReCharSetNode) ReCharSet() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReCharSetRangeNoDashNode struct {
@@ -7328,11 +7076,7 @@ func (n ReCharSetRangeNoDashNode) Kind() common.SyntaxKind {
 }
 
 func (n ReCharSetRangeNoDashNode) ReCharSetAtomNoDash() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReCharSetRangeNoDashNode) MinusToken() Token {
@@ -7344,11 +7088,7 @@ func (n ReCharSetRangeNoDashNode) MinusToken() Token {
 }
 
 func (n ReCharSetRangeNoDashNode) ReCharSetAtom() Node {
-	val, ok := n.ChildInBucket(2).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(2)
 }
 
 type ReCharSetAtomNoDashWithReCharSetNoDashNode struct {
@@ -7360,19 +7100,11 @@ func (n ReCharSetAtomNoDashWithReCharSetNoDashNode) Kind() common.SyntaxKind {
 }
 
 func (n ReCharSetAtomNoDashWithReCharSetNoDashNode) ReCharSetAtomNoDash() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReCharSetAtomNoDashWithReCharSetNoDashNode) ReCharSetNoDash() Node {
-	val, ok := n.ChildInBucket(1).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(1)
 }
 
 type ReCapturingGroupsNode struct {
@@ -7496,11 +7228,7 @@ func (n ReAssertionNode) Kind() common.SyntaxKind {
 }
 
 func (n ReAssertionNode) ReAssertion() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 type ReQuantifierNode struct {
@@ -7512,11 +7240,7 @@ func (n ReQuantifierNode) Kind() common.SyntaxKind {
 }
 
 func (n ReQuantifierNode) ReBaseQuantifier() Node {
-	val, ok := n.ChildInBucket(0).(Node)
-	if !ok {
-		return nil
-	}
-	return val
+	return n.ChildInBucket(0)
 }
 
 func (n ReQuantifierNode) NonGreedyChar() Token {
