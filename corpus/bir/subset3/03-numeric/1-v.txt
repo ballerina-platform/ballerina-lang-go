@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 123
     f = %1;
@@ -26,7 +26,7 @@ main() -> ((NIL), ()){
     %14 = ConstantLoad 1
     %15 = ConstantLoad 1/1
     %16 = ConstantLoad 3
-    %17 = newArray ((), (LIST))[%16]{%13, %14, %15}
+    %17 = newArray [int, float, decimal, never...][%16]{%13, %14, %15}
     a = %17;
     %19 = println(a) -> bb5;
   }

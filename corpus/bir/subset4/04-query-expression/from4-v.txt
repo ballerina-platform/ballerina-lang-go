@@ -1,16 +1,16 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 10
     %2 = ConstantLoad 20
     %3 = ConstantLoad 2
-    %4 = newArray ((), (LIST))[%3]{%1, %2}
+    %4 = newArray [int...][%3]{%1, %2}
     xs = %4;
     $desugar$0 = xs;
     %7 = ConstantLoad 0
-    %8 = newArray ((LIST), ())[%7]{}
+    %8 = newArray list[%7]{}
     $desugar$1 = %8;
     %10 = ConstantLoad 0
     $desugar$2 = %10;
@@ -30,10 +30,10 @@ main() -> ((NIL), ()){
     %18 = ConstantLoad 1
     %17 = + x %18;
     %19 = ConstantLoad 2
-    %20 = newArray ((), (LIST))[%19]{x, %17}
+    %20 = newArray [int, int, never...][%19]{x, %17}
     $desugar$4 = %20;
     %22 = ConstantLoad 0
-    %23 = newArray ((LIST), ())[%22]{}
+    %23 = newArray list[%22]{}
     $desugar$5 = %23;
     %25 = ConstantLoad 0
     $desugar$6 = %25;

@@ -1,17 +1,17 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = ConstantLoad 2
     %3 = ConstantLoad 3
     %4 = ConstantLoad 3
-    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    %5 = newArray [int...][%4]{%1, %2, %3}
     xs = %5;
     $desugar$0 = xs;
     %8 = ConstantLoad 0
-    %9 = newArray ((LIST), ())[%8]{}
+    %9 = newArray list[%8]{}
     $desugar$1 = %9;
     %11 = ConstantLoad 0
     $desugar$2 = %11;

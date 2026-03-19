@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 5
     %2 = printInts(%1) -> bb1;
@@ -9,7 +9,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-printInts(((INT), ())) -> ((NIL), ()){
+printInts(int) -> nil{
   bb0 {
     i = maxExclusive;
     GOTO bb1;
@@ -36,7 +36,7 @@ printInts(((INT), ())) -> ((NIL), ()){
     GOTO bb1;
   }
 }
-decrease(((INT), ())) -> ((INT), ()){
+decrease(int) -> int{
   bb0 {
     %3 = ConstantLoad 1
     %2 = - x %3;

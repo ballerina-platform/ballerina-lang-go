@@ -64,11 +64,11 @@ func XmlSequence(constituentType SemType) SemType {
 	if IsNever(constituentType) {
 		return XmlSequence(XmlSingleton(XML_PRIMITIVE_NEVER))
 	}
-	if _, ok := constituentType.(*BasicTypeBitSet); ok {
+	if _, ok := constituentType.(BasicTypeBitSet); ok {
 		return constituentType
 	} else {
 		cct := constituentType.(ComplexSemType)
-		xmlSubtype := getComplexSubtypeData(cct, BT_XML)
+		xmlSubtype := getComplexSubtypeData(cct, BTXML)
 		if _, ok := xmlSubtype.(AllOrNothingSubtype); ok {
 			// xmlSubtype stays as is
 		} else {
@@ -90,12 +90,12 @@ func CreateXmlSemtype(xmlSubtype SubtypeData) SemType {
 	// migrated from XmlSubtype.java:104:5
 	if allOrNothingSubtype, ok := xmlSubtype.(AllOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
-			return &XML
+			return XML
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	} else {
-		return basicSubtype(BT_XML, xmlSubtype.(ProperSubtypeData))
+		return basicSubtype(BTXML, xmlSubtype.(ProperSubtypeData))
 	}
 }
 

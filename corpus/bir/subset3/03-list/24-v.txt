@@ -1,10 +1,10 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 0
-    %2 = newArray ((), (LIST))[%1]{}
+    %2 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object...][%1]{}
     v = %2;
     %4 = ConstantLoad 0
     i = %4;
@@ -44,7 +44,7 @@ main() -> ((NIL), ()){
   }
   bb6 {
     %21 = v[i];
-    %22 = <((INT), ())>(%21)
+    %22 = <int>(%21)
     %20 = + sum %22;
     sum = %20;
     %24 = ConstantLoad 1

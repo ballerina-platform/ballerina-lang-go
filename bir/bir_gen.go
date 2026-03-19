@@ -517,7 +517,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 			case *ast.BLangConstPattern:
 				patternEffect := handleExpression(ctx, curBB, p.Expr)
 				curBB = patternEffect.block
-				eqResult := ctx.addTempVar(&semtypes.BOOLEAN)
+				eqResult := ctx.addTempVar(semtypes.BOOLEAN)
 				binaryOp := &BinaryOp{}
 				binaryOp.Kind = INSTRUCTION_KIND_EQUAL
 				binaryOp.LhsOp = eqResult
@@ -527,7 +527,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 				condOperand = orOperands(ctx, curBB, condOperand, eqResult)
 			case *ast.BLangWildCardMatchPattern:
 				// Wildcard in multi-pattern — always matches; but may have guard
-				trueOperand := ctx.addTempVar(&semtypes.BOOLEAN)
+				trueOperand := ctx.addTempVar(semtypes.BOOLEAN)
 				constLoad := &ConstantLoad{}
 				constLoad.Value = true
 				constLoad.LhsOp = trueOperand
@@ -581,7 +581,7 @@ func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *
 	if existing == nil {
 		return new
 	}
-	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	result := ctx.addTempVar(semtypes.BOOLEAN)
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = INSTRUCTION_KIND_OR
 	binaryOp.LhsOp = result
@@ -592,7 +592,7 @@ func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *
 }
 
 func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
-	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	result := ctx.addTempVar(semtypes.BOOLEAN)
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = INSTRUCTION_KIND_AND
 	binaryOp.LhsOp = result
@@ -681,7 +681,7 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, pos ast.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
-		keyOperand := ctx.addTempVar(&semtypes.STRING)
+		keyOperand := ctx.addTempVar(semtypes.STRING)
 		keyLoad := NewConstantLoad(keyOperand, nil, field.key, pos)
 		curBB.Instructions = append(curBB.Instructions, keyLoad)
 
@@ -721,7 +721,7 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 		for _, namedArg := range expr.NamedArgs {
 			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
 		}
-		detailEffect := mappingConstructorExpressionInner(ctx, curBB, &semtypes.MAPPING, fields, expr.GetPosition())
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, expr.GetPosition())
 		curBB = detailEffect.block
 		detailOp = detailEffect.result
 	}
@@ -792,11 +792,11 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 	}
 	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
 
-	sizeOperand := ctx.addTempVar(&semtypes.INT)
+	sizeOperand := ctx.addTempVar(semtypes.INT)
 	constantLoad := NewConstantLoad(sizeOperand, nil, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
-	resultOperand := ctx.addTempVar(&semtypes.LIST)
+	resultOperand := ctx.addTempVar(semtypes.LIST)
 	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, fillerVal, exprPos)
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-doesADragonExplodeInTheWoods() -> ((), (BOOLEAN)){
+doesADragonExplodeInTheWoods() -> true{
   bb0 {
     %1 = ConstantLoad boom
     %2 = println(%1) -> bb1;
@@ -11,7 +11,7 @@ doesADragonExplodeInTheWoods() -> ((), (BOOLEAN)){
     return;
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;

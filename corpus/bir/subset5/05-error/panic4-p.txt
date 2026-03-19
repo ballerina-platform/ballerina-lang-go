@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 0
     i = %1;
@@ -22,7 +22,7 @@ main() -> ((NIL), ()){
   }
   bb4 {
     %8 = ConstantLoad range panic
-    %9 = newError ((ERROR), ())(%8)
+    %9 = newError error(%8)
     panic %9;
   }
   bb5 {

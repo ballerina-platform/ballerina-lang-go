@@ -283,18 +283,18 @@ func createIncrementStmt(loopVar ast.BLangExpression) *ast.BLangAssignment {
 		},
 		Kind: model.NodeKind_NUMERIC_LITERAL,
 	}
-	oneLiteral.SetDeterminedType(&semtypes.INT)
+	oneLiteral.SetDeterminedType(semtypes.INT)
 	addExpr := &ast.BLangBinaryExpr{
 		LhsExpr: loopVar,
 		RhsExpr: oneLiteral,
 		OpKind:  model.OperatorKind_ADD,
 	}
-	addExpr.SetDeterminedType(&semtypes.INT)
+	addExpr.SetDeterminedType(semtypes.INT)
 	incrementStmt := &ast.BLangAssignment{
 		VarRef: loopVar,
 		Expr:   addExpr,
 	}
-	incrementStmt.SetDeterminedType(&semtypes.NEVER)
+	incrementStmt.SetDeterminedType(semtypes.NEVER)
 	return incrementStmt
 }
 
@@ -363,12 +363,12 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		},
 		Kind: model.NodeKind_NUMERIC_LITERAL,
 	}
-	zeroLiteral.SetDeterminedType(&semtypes.INT)
+	zeroLiteral.SetDeterminedType(semtypes.INT)
 
-	idxName, idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxName, idxVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	idxVarName := &ast.BLangIdentifier{Value: idxName}
 	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
-	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetDeterminedType(semtypes.INT)
 	idxVar.SetInitialExpression(zeroLiteral)
 	idxVar.SetSymbol(idxVarSymbol)
 	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
@@ -376,15 +376,15 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 
 	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
 	idxVarRef.SetSymbol(idxVarSymbol)
-	idxVarRef.SetDeterminedType(&semtypes.INT)
+	idxVarRef.SetDeterminedType(semtypes.INT)
 
 	// Step 3: length variable ($desugar$M = length(collVar))
 	lengthInvocation := createLengthInvocation(cx, collVarRef)
 
-	lenName, lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	lenVarName := &ast.BLangIdentifier{Value: lenName}
 	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
-	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetDeterminedType(semtypes.INT)
 	lenVar.SetInitialExpression(lengthInvocation)
 	lenVar.SetSymbol(lenVarSymbol)
 	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
@@ -392,7 +392,7 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 
 	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
 	lenVarRef.SetSymbol(lenVarSymbol)
-	lenVarRef.SetDeterminedType(&semtypes.INT)
+	lenVarRef.SetDeterminedType(semtypes.INT)
 
 	// Step 4: while condition ($idx < $len)
 	whileCondition := &ast.BLangBinaryExpr{
@@ -400,7 +400,7 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		RhsExpr: lenVarRef,
 		OpKind:  model.OperatorKind_LESS_THAN,
 	}
-	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
 
 	// Step 5: element access (collVar[$idx])
 	elementAccess := &ast.BLangIndexBasedAccess{
@@ -437,7 +437,7 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		Body: *newBody,
 	}
 	whileStmt.SetScope(foreachScope)
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
 
 	return desugaredNode[model.StatementNode]{
 		initStmts:       initStmts,
@@ -468,7 +468,7 @@ func createLengthInvocation(cx *FunctionContext, collection ast.BLangExpression)
 		ArgExprs: []ast.BLangExpression{collection},
 	}
 	inv.SetSymbol(symbolRef)
-	inv.SetDeterminedType(&semtypes.INT)
+	inv.SetDeterminedType(semtypes.INT)
 	return inv
 }
 
@@ -491,10 +491,10 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 	}
 	loopVarRef.SetSymbol(loopVarDef.Var.Symbol())
 
-	endName, endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	endName, endVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	endVarName := &ast.BLangIdentifier{Value: endName}
 	endVar := &ast.BLangSimpleVariable{Name: endVarName}
-	endVar.SetDeterminedType(&semtypes.INT)
+	endVar.SetDeterminedType(semtypes.INT)
 	endVar.SetInitialExpression(endExpr)
 	endVar.SetSymbol(endVarSymbol)
 
@@ -520,7 +520,7 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 		RhsExpr: endVarRef,
 		OpKind:  compOp,
 	}
-	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
 
 	incrementStmt := createIncrementStmt(loopVarRef)
 
@@ -552,7 +552,7 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 		Body: *newBody,
 	}
 	whileStmt.SetScope(foreachScope)
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
 
 	return desugaredNode[model.StatementNode]{
 		initStmts:       initStmts,

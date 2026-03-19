@@ -16,8 +16,7 @@
 
 package semtypes
 
-type TableSubtype struct {
-}
+type TableSubtype struct{}
 
 func newTableSubtype() TableSubtype {
 	this := TableSubtype{}
@@ -32,7 +31,7 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 		members := lat.Members
 		switch members.FixedLength {
 		case 0:
-			normalizedKc = &VAL
+			normalizedKc = VAL
 		case 1:
 			normalizedKc = cellAtomicType(members.Initial[0]).Ty
 		default:
@@ -41,7 +40,7 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 	} else {
 		normalizedKc = keyConstraint
 	}
-	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, &VAL)
+	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, VAL)
 }
 
 func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
@@ -72,8 +71,8 @@ func TableContaining(env Env, tableConstraint SemType) SemType {
 
 func TableContainingWithEnvSemTypeCellMutability(env Env, tableConstraint SemType, mut CellMutability) SemType {
 	// migrated from TableSubtype.java:89:5
-	var normalizedKc SemType = &VAL
-	var normalizedKs SemType = &VAL
+	var normalizedKc SemType = VAL
+	var normalizedKs SemType = VAL
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, mut)
 }
 
@@ -86,8 +85,8 @@ func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, nor
 	typeParamArray := typeParamArrDef.DefineListTypeWrappedWithEnvSemTypeCellMutability(env, tableConstraint, mut)
 	listDef := NewListDefinition()
 	tupleType := listDef.TupleTypeWrapped(env, typeParamArray, normalizedKc, normalizedKs)
-	bdd := subtypeData(tupleType, BT_LIST).(Bdd)
-	return CreateBasicSemType(BT_TABLE, bdd)
+	bdd := subtypeData(tupleType, BTList).(Bdd)
+	return CreateBasicSemType(BTTable, bdd)
 }
 
 func tableContainingWithEnvSemTypeSemTypeSemType(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType) SemType {

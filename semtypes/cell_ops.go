@@ -31,7 +31,7 @@ func cellFormulaIsEmptyInner(cx Context, posList *Conjunction, negList *Conjunct
 	// migrated from CellOps.java:57:5
 	var combined CellAtomicType
 	if posList == nil {
-		combined = CellAtomicTypeFrom(&VAL, CellMutability_CELL_MUT_UNLIMITED)
+		combined = CellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_UNLIMITED)
 	} else {
 		combined = cellAtomType(posList.Atom)
 		p := posList.Next
@@ -68,7 +68,7 @@ func cellMutNoneInhabited(cx Context, pos SemType, negList *Conjunction) bool {
 func cellNegListUnion(negList *Conjunction) SemType {
 	// migrated from CellOps.java:91:5
 	var negUnion SemType
-	negUnion = &NEVER
+	negUnion = NEVER
 	neg := negList
 	for neg != nil {
 		negUnion = Union(negUnion, cellAtomType(neg.Atom).Ty)
@@ -94,7 +94,7 @@ func cellMutUnlimitedInhabited(cx Context, pos SemType, negList *Conjunction) bo
 	neg := negList
 	for neg != nil {
 		cellAtom := cellAtomType(neg.Atom)
-		if cellAtom.Mut == CellMutability_CELL_MUT_LIMITED && IsSameType(cx, &VAL, cellAtom.Ty) {
+		if cellAtom.Mut == CellMutability_CELL_MUT_LIMITED && IsSameType(cx, VAL, cellAtom.Ty) {
 			return false
 		}
 		neg = neg.Next
@@ -106,7 +106,7 @@ func cellMutUnlimitedInhabited(cx Context, pos SemType, negList *Conjunction) bo
 func cellNegListUnlimitedUnion(negList *Conjunction) SemType {
 	// migrated from CellOps.java:128:5
 	var negUnion SemType
-	negUnion = &NEVER
+	negUnion = NEVER
 	neg := negList
 	for neg != nil {
 		cellAtom := cellAtomType(neg.Atom)
