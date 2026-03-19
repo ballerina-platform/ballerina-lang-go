@@ -19,7 +19,6 @@ package ast_test
 import (
 	"flag"
 	"fmt"
-	"os"
 	"testing"
 
 	"ballerina-lang-go/ast"
@@ -32,12 +31,9 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-func TestMain(m *testing.M) {
-	flag.Parse()
-	os.Exit(m.Run())
-}
-
 func TestASTGeneration(t *testing.T) {
+	flag.Parse()
+
 	testPairs := test_util.GetValidAndPanicTests(t, test_util.AST)
 
 	for _, testPair := range testPairs {

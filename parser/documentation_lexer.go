@@ -1,4 +1,4 @@
-// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -111,7 +111,6 @@ func (dl *documentationLexer) processIdentifierEnd() {
 		case NEWLINE, CARRIAGE_RETURN, TAB:
 			reader.Advance()
 			dl.reportLexerError(common.WARNING_INVALID_ESCAPE_SEQUENCE, "")
-			break
 		case 'u':
 			// NumericEscape
 			if reader.PeekN(2) == OPEN_BRACE {
@@ -168,11 +167,10 @@ func (dl *documentationLexer) processSyntaxTrivia(triviaList *[]tree.STNode, isL
 		switch c {
 		case SPACE, TAB, FORM_FEED:
 			*triviaList = append(*triviaList, dl.processWhitespaces())
-			break
 		case CARRIAGE_RETURN, NEWLINE:
 			*triviaList = append(*triviaList, dl.processEndOfLine())
 			if isLeading {
-				break
+				continue
 			}
 			return
 		default:
@@ -191,7 +189,6 @@ func (dl *documentationLexer) processWhitespaces() tree.STNode {
 			continue
 		case CARRIAGE_RETURN, NEWLINE:
 		default:
-			break
 		}
 		break
 	}
@@ -320,11 +317,9 @@ func (dl *documentationLexer) getCodeLineStartHashToken() tree.STToken {
 		} else {
 			dl.SwitchMode(dl.previousBacktickMode)
 		}
-		break
 	case CARRIAGE_RETURN, NEWLINE:
 		dl.reader.Mark()
 		triviaList = append(triviaList, dl.processEndOfLine())
-		break
 	default:
 		dl.SwitchMode(dl.previousBacktickMode)
 	}
@@ -417,7 +412,7 @@ func (dl *documentationLexer) processDeprecationLiteralToken() tree.STToken {
 	}
 
 	// Look ahead for a "Deprecated" word match.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if lookAheadChar != deprecatedChars[i] {
 			// No match. Hence return a documentation internal token.
 			return dl.readDocInternalToken()
@@ -465,9 +460,7 @@ func (dl *documentationLexer) readDocInternalToken() tree.STToken {
 		switch nextChar {
 		case NEWLINE, CARRIAGE_RETURN:
 			dl.EndMode()
-			break
 		case BACKTICK:
-			break
 		default:
 			if isIdentifierInitialChar(nextChar) {
 				hasDocumentationReference := dl.processDocumentationReference(nextChar)
@@ -487,7 +480,6 @@ func (dl *documentationLexer) readDocInternalToken() tree.STToken {
 	if dl.getLexeme() == "" {
 		return dl.readDocReferenceTypeToken()
 	}
-
 	return dl.getLiteral(common.DOCUMENTATION_DESCRIPTION)
 }
 
@@ -515,7 +507,6 @@ func (dl *documentationLexer) processDocumentationReference(nextChar rune) bool 
 					return true
 				}
 			default:
-				break
 			}
 			break
 		}
@@ -571,7 +562,6 @@ func (dl *documentationLexer) readDocReferenceTypeToken() tree.STToken {
 	for isIdentifierInitialChar(dl.peek()) {
 		dl.reader.Advance()
 	}
-
 	return dl.processReferenceType()
 }
 
@@ -638,7 +628,6 @@ func (dl *documentationLexer) processInvalidChars() {
 	for !dl.reader.IsEOF() {
 		switch nextChar {
 		case BACKTICK, NEWLINE, CARRIAGE_RETURN:
-			break
 		default:
 			dl.reader.Advance()
 			nextChar = dl.peek()
@@ -669,7 +658,6 @@ func (dl *documentationLexer) readCodeContent(backtickCount int) tree.STToken {
 		case CARRIAGE_RETURN, NEWLINE:
 			dl.previousBacktickMode = dl.context.mode
 			dl.SwitchMode(PARSER_MODE_DOC_CODE_LINE_START_HASH)
-			break
 		default:
 			dl.reader.Advance()
 			nextChar = dl.peek()
@@ -682,7 +670,6 @@ func (dl *documentationLexer) readCodeContent(backtickCount int) tree.STToken {
 		// We only reach here for ``<empty_code>`` and ```<empty_code>```
 		return dl.readCodeReferenceEndToken()
 	}
-
 	return dl.getLiteral(common.CODE_CONTENT)
 }
 
@@ -708,7 +695,6 @@ func (dl *documentationLexer) readCodeReferenceEndToken() tree.STToken {
 			}
 		}
 	}
-
 	return dl.getDocSyntaxToken(common.EOF_TOKEN)
 }
 
@@ -722,6 +708,5 @@ func (dl *documentationLexer) readCodeLineStartHashToken() tree.STToken {
 		dl.reader.Advance()
 		return dl.getCodeLineStartHashToken()
 	}
-
 	return dl.getDocSyntaxToken(common.EOF_TOKEN)
 }

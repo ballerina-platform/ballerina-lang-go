@@ -1,0 +1,68 @@
+module $anon.. v 0.0.0;
+class File {
+  path string
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 
+      %3 = ConstantLoad path
+      self[%3] = %2;
+      return;
+    }
+  }
+
+  open(string) -> boolean{
+    bb0 {
+      %3 = ConstantLoad true
+      %0 = %3;
+      return;
+    }
+  }
+}
+insert(int|float|string,int,[string...]...) -> nil{
+  bb0 {
+    return;
+  }
+}
+getX() -> string|error{
+  bb0 {
+    %1 = ConstantLoad 
+    %0 = %1;
+    return;
+  }
+}
+updatePeople([string, int, float, never...],int) -> nil{
+  bb0 {
+    return;
+  }
+}
+searchPeople() -> [string, int, float, never...]{
+  bb0 {
+    %1 = ConstantLoad 
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad 1
+    %4 = ConstantLoad 3
+    %5 = newArray [string, int, float, never...][%4]{%1, %2, %3}
+    %0 = %5;
+    return;
+  }
+}
+add(int,int) -> int{
+  bb0 {
+    %4 = x;
+    %5 = y;
+    %3 = + %4 %5;
+    %0 = %3;
+    return;
+  }
+}
+foo(error) -> nil{
+  bb0 {
+    return;
+  }
+}
+foo_unicode(error) -> nil{
+  bb0 {
+    return;
+  }
+}

@@ -1,9 +1,0 @@
-(main
-  (bb0 () ())
-)
-(test
-  (bb0 () ()
-    (return
-      (literal ))
-  )
-)

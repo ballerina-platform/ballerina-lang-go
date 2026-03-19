@@ -1048,7 +1048,7 @@ func (p *PrettyPrinter) printMarkdownParameterDocumentation(node *BLangMarkdownP
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
 			}
-			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			fmt.Fprintf(&p.buffer, "\"%s\"", strings.ReplaceAll(line, "\"", "\\\""))
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
@@ -1079,7 +1079,7 @@ func (p *PrettyPrinter) printMarkdownReturnParameterDocumentation(node *BLangMar
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
 			}
-			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			fmt.Fprintf(&p.buffer, "\"%s\"", strings.ReplaceAll(line, "\"", "\\\""))
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
@@ -1118,7 +1118,7 @@ func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDow
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
 			}
-			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			fmt.Fprintf(&p.buffer, "\"%s\"", strings.ReplaceAll(line, "\"", "\\\""))
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--
@@ -1139,7 +1139,7 @@ func (p *PrettyPrinter) printMarkDownDeprecationDocumentation(node *BLangMarkDow
 			for i := 0; i < p.indentLevel; i++ {
 				p.buffer.WriteString("  ")
 			}
-			p.buffer.WriteString(fmt.Sprintf("\"%s\"", strings.ReplaceAll(line, "\"", "\\\"")))
+			fmt.Fprintf(&p.buffer, "\"%s\"", strings.ReplaceAll(line, "\"", "\\\""))
 			p.addSpaceBeforeNode = false
 		}
 		p.indentLevel--

@@ -211,7 +211,6 @@ func (p *DocumentationParser) parseCodeBlock(startLineHash tree.STNode, startBac
 		endBacktick = tree.CloneWithTrailingInvalidNodeMinutiae(endBacktick, invalidToken,
 			&common.WARNING_CANNOT_HAVE_DOCUMENTATION_INLINE_WITH_A_CODE_REFERENCE_BLOCK)
 	}
-
 	return p.createMarkdownCodeBlockNode(startLineHash, startBacktick, langAttribute, codeLines, endLineHash, endBacktick)
 }
 
@@ -452,7 +451,6 @@ func (p *DocumentationParser) parseParameterDocumentationLine(hashToken tree.STN
 	} else {
 		kind = common.MARKDOWN_PARAMETER_DOCUMENTATION_LINE
 	}
-
 	return p.createMarkdownParameterDocumentationLineNode(kind, hashToken, plusToken, parameterName, dashToken, docElementList)
 }
 
@@ -509,11 +507,9 @@ func (p *DocumentationParser) getReferenceGenre(referenceType tree.STNode) Refer
 	if referenceType == nil || referenceType.Kind() == common.NONE {
 		return ReferenceGenre_NO_KEY
 	}
-
 	if referenceType.Kind() == common.FUNCTION_DOC_REFERENCE_TOKEN {
 		return ReferenceGenre_FUNCTION_KEY
 	}
-
 	return ReferenceGenre_SPECIAL_KEY
 }
 
@@ -572,15 +568,13 @@ func (p *DocumentationParser) parseBacktickExpr(identifier tree.STNode) tree.STN
 	}
 
 	switch nextToken.Kind() {
-	case common.BACKTICK_TOKEN:
-		return referenceName
 	case common.DOT_TOKEN:
 		dotToken := p.consume()
 		return p.parseMethodCall(referenceName, dotToken)
 	case common.OPEN_PAREN_TOKEN:
 		return p.parseFuncCall(referenceName)
 	default:
-		panic("Unsupported token kind in parseBacktickExpr")
+		return referenceName
 	}
 }
 

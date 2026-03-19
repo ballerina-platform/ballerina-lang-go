@@ -19,14 +19,6 @@ import (
 	"ballerina-lang-go/parser/tree"
 )
 
-type Lexer interface {
-	NextToken() tree.STToken
-	StartMode(mode ParserMode)
-	SwitchMode(mode ParserMode)
-	EndMode()
-	GetCurrentMode() ParserMode
-}
-
 type TokenReader struct {
 	lexer             Lexer
 	currentToken      tree.STToken

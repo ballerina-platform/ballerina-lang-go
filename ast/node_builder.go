@@ -17,16 +17,17 @@
 package ast
 
 import (
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser/common"
-	"ballerina-lang-go/parser/tree"
-	"ballerina-lang-go/tools/diagnostics"
 	"fmt"
 	"math"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/parser/common"
+	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/tools/diagnostics"
 
 	balCommon "ballerina-lang-go/common"
 )
@@ -661,14 +662,7 @@ func getPositionWithoutMetadata(node tree.Node) Location {
 
 // getDocumentationString extracts the documentation string from metadata
 func getDocumentationString(metadata *tree.MetadataNode) tree.Node {
-	if metadata == nil || metadata.IsMissing() {
-		return nil
-	}
-	docString := metadata.DocumentationString()
-	if docString == nil || docString.IsMissing() {
-		return nil
-	}
-	return docString
+	return metadata.DocumentationString()
 }
 
 // createMarkdownDocumentationAttachment creates a BLangMarkdownDocumentation from a documentation string node
@@ -3475,10 +3469,6 @@ func (n *NodeBuilder) addReferencesAndReturnDocumentationText(references *[]BLan
 }
 
 func (n *NodeBuilder) transformDocumentationBacktickContent(backtickContent tree.Node, bLangRefDoc *BLangMarkdownReferenceDocumentation) {
-	if backtickContent == nil || backtickContent.IsMissing() {
-		return
-	}
-
 	switch backtickContent.Kind() {
 	case common.CODE_CONTENT:
 		// reaching here means ballerina name reference is syntactically invalid.
@@ -3669,13 +3659,15 @@ func (n *NodeBuilder) TransformDoStatement(doStatementNode *tree.DoStatementNode
 }
 
 func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDefinitionNode) BLangNode {
-	metadata := classDefinitionNode.Metadata()
-	if metadata != nil && !metadata.IsMissing() {
-		panic("TransformClassDefinition: metadata not yet supported")
-	}
-
 	blangClass := NewBLangClassDefinition()
 	blangClass.pos = getPositionWithoutMetadata(classDefinitionNode)
+
+	metadata := classDefinitionNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		// TODO: Handle annotations
+		docString := getDocumentationString(metadata)
+		blangClass.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
 
 	// Set name
 	nameIdentifier := createIdentifierFromToken(getPosition(classDefinitionNode.ClassName()), classDefinitionNode.ClassName())

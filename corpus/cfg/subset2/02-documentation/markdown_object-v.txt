@@ -1,0 +1,44 @@
+(TestConnector
+  (testAction
+    (bb0 () ()
+      (var-def
+        (variable value (type
+          (value-type boolean)) (expr
+          (literal false))))
+      (return
+        (simple-var-ref value))
+    )
+  )
+  (testSend
+    (bb0 () ()
+      (var-def
+        (variable value (type
+          (value-type boolean)) (expr
+          (literal false))))
+      (return
+        (simple-var-ref value))
+    )
+  )
+)
+(TestConnector2
+  (testAction
+    (bb0 () ()
+      (var-def
+        (variable value (type
+          (value-type boolean)) (expr
+          (literal false))))
+      (return
+        (simple-var-ref value))
+    )
+  )
+  (testSend
+    (bb0 () ()
+      (var-def
+        (variable value (type
+          (value-type boolean)) (expr
+          (literal false))))
+      (return
+        (simple-var-ref value))
+    )
+  )
+)

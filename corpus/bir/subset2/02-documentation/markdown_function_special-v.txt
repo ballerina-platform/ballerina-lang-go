@@ -1,0 +1,20 @@
+module $anon.. v 0.0.0;
+class bar {
+
+  baz() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+}
+foo() -> nil{
+  bb0 {
+    return;
+  }
+}

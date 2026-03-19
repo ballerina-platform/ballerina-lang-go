@@ -31,6 +31,14 @@ import (
 
 const INITIAL_TRIVIA_CAPACITY = 10
 
+type Lexer interface {
+	NextToken() tree.STToken
+	StartMode(mode ParserMode)
+	SwitchMode(mode ParserMode)
+	EndMode()
+	GetCurrentMode() ParserMode
+}
+
 // TODO: introduce diagnostic context with flags and a channel
 type lexer struct {
 	reader  text.CharReader
