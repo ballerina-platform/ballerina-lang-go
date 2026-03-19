@@ -17,15 +17,16 @@
 package parser
 
 import (
-	"ballerina-lang-go/parser/tree"
-	"ballerina-lang-go/test_util"
-	"ballerina-lang-go/tools/text"
 	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/parser/tree"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/tools/text"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -183,62 +184,11 @@ var regexParserIgnoreList = []string{
 	"types/regexp/regexp_value_test.bal",
 }
 
-// Documentation parser ignore list (46 files failing)
-var documentationParserIgnoreList = []string{
-	"annotations/deprecation_annotation_crlf.bal",
-	"annotations/deprecation_annotation_negative.bal",
-	"annotations/deprecation_annotation.bal",
-	"bala/test_projects/test_documentation/test_documentation_symbol.bal",
-	"bala/test_projects/test_project_errors/errors.bal",
-	"bala/test_projects/test_project/deprecation_annotation.bal",
-	"bala/test_projects/test_project/modules/errors/errors.bal",
-	"documentation/default_value_initialization/main.bal",
-	"documentation/deprecated_annotation_project/main.bal",
-	"documentation/docerina_project/main.bal",
-	"documentation/docerina_project/modules/world/world.bal",
-	"documentation/errors_project/errors.bal",
-	"documentation/markdown_annotation.bal",
-	"documentation/markdown_constant.bal",
-	"documentation/markdown_doc_inline_triple.bal",
-	"documentation/markdown_doc_inline.bal",
-	"documentation/markdown_finite_types.bal",
-	"documentation/markdown_function_special.bal",
-	"documentation/markdown_function.bal",
-	"documentation/markdown_multiline_documentation.bal",
-	"documentation/markdown_multiple.bal",
-	"documentation/markdown_native_function.bal",
-	"documentation/markdown_negative.bal",
-	"documentation/markdown_object.bal",
-	"documentation/markdown_on_disallowed_constructs.bal",
-	"documentation/markdown_on_method_object_type_def.bal",
-	"documentation/markdown_service.bal",
-	"documentation/markdown_type.bal",
-	"documentation/markdown_with_lambda.bal",
-	"documentation/multi_line_docs_project/main.bal",
-	"documentation/record_object_fields_project/main.bal",
-	"documentation/type_models_project/type_models.bal",
-	"enums/enum_metadata_test.bal",
-	"expressions/naturalexpr/natural_expr.bal",
-	"jvm/largePackage/modules/records/bigRecord2.bal",
-	"jvm/largePackage/modules/records/bigRecord3.bal",
-	"object/object_annotation.bal",
-	"object/object_doc_annotation.bal",
-	"object/object_documentation_negative.bal",
-	"record/record_annotation.bal",
-	"record/record_doc_annotation.bal",
-	"record/record_documentation_negative.bal",
-	"runtime/api/types/modules/typeref/typeref.bal",
-	"statements/vardeclr/module_error_var_decl_annotation_negetive.bal",
-	"statements/vardeclr/module_record_var_decl_annotation_negetive.bal",
-	"statements/vardeclr/module_tuple_var_decl_annotation_negetive.bal",
-}
-
 // shouldIgnoreFile checks if a file should be ignored based on the ignore lists
 func shouldIgnoreFile(filePath string) bool {
 	allIgnoreLists := [][]string{
 		xmlParserIgnoreList,
 		regexParserIgnoreList,
-		documentationParserIgnoreList,
 	}
 
 	for _, ignoreList := range allIgnoreLists {
@@ -344,7 +294,7 @@ func parseFile(t *testing.T, testCase test_util.TestCase) {
 
 	lexer := NewLexer(reader, nil)
 
-	tokenReader := CreateTokenReader(*lexer, nil)
+	tokenReader := CreateTokenReader(lexer, nil)
 
 	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, nil)
 
