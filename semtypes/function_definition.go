@@ -41,7 +41,7 @@ func (this *FunctionDefinition) GetSemType(env Env) SemType {
 func (this *FunctionDefinition) createSemType(rec Atom) SemType {
 	// migrated from FunctionDefinition.java:53:5
 	bdd := BddAtom(rec)
-	s := basicSubtype(BT_FUNCTION, bdd)
+	s := basicSubtype(BTFunction, bdd)
 	this.semType = s
 	return s
 }

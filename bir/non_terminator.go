@@ -17,7 +17,6 @@
 package bir
 
 import (
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
@@ -56,7 +55,6 @@ type (
 	ConstantLoad struct {
 		BIRInstructionBase
 		Value any
-		Type  model.ValueType
 	}
 
 	FieldAccess struct {
@@ -200,7 +198,7 @@ func (c *ConstantLoad) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_CONST_LOAD
 }
 
-func NewConstantLoad(lhsOp *BIROperand, typ model.ValueType, value any, pos diagnostics.Location) *ConstantLoad {
+func NewConstantLoad(lhsOp *BIROperand, value any, pos diagnostics.Location) *ConstantLoad {
 	return &ConstantLoad{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -209,7 +207,6 @@ func NewConstantLoad(lhsOp *BIROperand, typ model.ValueType, value any, pos diag
 			LhsOp: lhsOp,
 		},
 		Value: value,
-		Type:  typ,
 	}
 }
 
@@ -317,6 +314,13 @@ func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp
 
 func (n *NewMap) GetLhsOperand() *BIROperand {
 	return n.LhsOp
+}
+
+func NewMappingConstructorKeyValueEntry(keyOp, valueOp *BIROperand) *MappingConstructorKeyValueEntry {
+	return &MappingConstructorKeyValueEntry{
+		keyOp:   keyOp,
+		valueOp: valueOp,
+	}
 }
 
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {

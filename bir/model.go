@@ -24,7 +24,6 @@ import (
 )
 
 type ConstValue struct {
-	Type  model.ValueType
 	Value any
 }
 
@@ -75,17 +74,14 @@ type (
 
 	BIRTypeDefinition struct {
 		BIRDocumentableNodeBase
-		Name            model.Name
-		OriginalName    model.Name
-		InternalName    model.Name
-		AttachedFuncs   []BIRFunction
-		Flags           int64
-		Type            model.TypeDescriptor
-		IsBuiltin       bool
-		ReferencedTypes []model.TypeDescriptor
-		ReferenceType   model.TypeDescriptor
-		Origin          model.SymbolOrigin
-		Index           int
+		Name          model.Name
+		OriginalName  model.Name
+		InternalName  model.Name
+		AttachedFuncs []BIRFunction
+		Flags         int64
+		IsBuiltin     bool
+		Origin        model.SymbolOrigin
+		Index         int
 	}
 
 	BIRVariableDcl struct {
@@ -117,7 +113,6 @@ type (
 		OriginalName   model.Name
 		Flags          int64
 		Origin         model.SymbolOrigin
-		Type           model.InvokableType
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int
@@ -319,7 +314,7 @@ func BB(number int) BIRBasicBlock {
 	}
 }
 
-func NewBIRConstant(name model.Name, constantValueType model.ValueType, constantValue any, pos diagnostics.Location) *BIRConstant {
+func NewBIRConstant(name model.Name, ty semtypes.SemType, constantValue any, pos diagnostics.Location) *BIRConstant {
 	return &BIRConstant{
 		BIRDocumentableNodeBase: BIRDocumentableNodeBase{
 			BIRNodeBase: BIRNodeBase{
@@ -327,9 +322,8 @@ func NewBIRConstant(name model.Name, constantValueType model.ValueType, constant
 			},
 		},
 		Name: name,
-		Type: constantValueType.GetTypeData().Type,
+		Type: ty,
 		ConstValue: ConstValue{
-			Type:  constantValueType,
 			Value: constantValue,
 		},
 	}

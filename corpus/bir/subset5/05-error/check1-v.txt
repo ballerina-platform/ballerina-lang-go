@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 6
     %2 = ConstantLoad 2
@@ -21,13 +21,13 @@ main() -> ((NIL), ()){
     return;
   }
 }
-div(((INT), ()),((INT), ())) -> ((INT, ERROR), ()){
+div(int,int) -> int|error{
   bb0 {
     %3 = nonZero(y) -> bb1;
   }
   bb1 {
     $desugar$0 = %3;
-    %5 = $desugar$0 is ((ERROR), ())
+    %5 = $desugar$0 is error
     %5 ? bb2 : bb3;
   }
   bb2 {
@@ -40,7 +40,7 @@ div(((INT), ()),((INT), ())) -> ((INT, ERROR), ()){
     return;
   }
 }
-nonZero(((INT), ())) -> ((INT, ERROR), ()){
+nonZero(int) -> int|error{
   bb0 {
     %3 = ConstantLoad 0
     %2 = == n %3;
@@ -48,7 +48,7 @@ nonZero(((INT), ())) -> ((INT, ERROR), ()){
   }
   bb1 {
     %4 = ConstantLoad zero
-    %5 = newError ((ERROR), ())(%4)
+    %5 = newError error(%4)
     %0 = %5;
     return;
   }

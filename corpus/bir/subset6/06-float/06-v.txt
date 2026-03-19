@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad true
     %2 = ConstantLoad 1.375
@@ -59,7 +59,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-aa(((BOOLEAN), ()),((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()),((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+aa(boolean,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     b ? bb1 : bb2;
   }
@@ -75,7 +75,7 @@ aa(((BOOLEAN), ()),((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE
     return;
   }
 }
-fa(((BOOLEAN), ()),((FLOAT), ()),((FLOAT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+fa(boolean,float,float) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     b ? bb1 : bb2;
   }
@@ -91,7 +91,7 @@ fa(((BOOLEAN), ()),((FLOAT), ()),((FLOAT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, D
     return;
   }
 }
-ff(((BOOLEAN), ()),((FLOAT), ()),((FLOAT), ())) -> ((FLOAT), ()){
+ff(boolean,float,float) -> float{
   bb0 {
     b ? bb1 : bb2;
   }

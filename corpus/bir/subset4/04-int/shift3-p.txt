@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 64
     amount = %1;
@@ -14,7 +14,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-shift(((INT), ()),((INT), ())) -> ((INT), ()){
+shift(int,int) -> int{
   bb0 {
     %3 = unknown x amount;
     %0 = %3;

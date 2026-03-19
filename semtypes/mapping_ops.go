@@ -24,7 +24,7 @@ var _ BasicTypeOps = &MappingOps{}
 func mappingSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from MappingOps.java:202:5
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, mappingFormulaIsEmpty)
+		return BddEvery(cx, b, nil, nil, mappingFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
@@ -34,13 +34,13 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	if posList == nil {
 		combined = &MAPPING_ATOMIC_INNER
 	} else {
-		combined = cx.mappingAtomType(posList.Atom)
+		combined = cx.MappingAtomType(posList.Atom)
 		p := posList.Next
 		for true {
 			if p == nil {
 				break
 			} else {
-				m := intersectMapping(cx.Env(), combined, cx.mappingAtomType(p.Atom))
+				m := intersectMapping(cx.Env(), combined, cx.MappingAtomType(p.Atom))
 				if m == nil {
 					return true
 				} else {
@@ -66,7 +66,7 @@ func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList *Conjuncti
 	if negList == nil {
 		return true
 	} else {
-		neg := cx.mappingAtomType(negList.Atom)
+		neg := cx.MappingAtomType(negList.Atom)
 		pairing := NewFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
 			return mappingInhabitedFast(cx, pos, negList.Next)
@@ -90,7 +90,7 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) 
 	if negList == nil {
 		return true
 	} else {
-		neg := cx.mappingAtomType(negList.Atom)
+		neg := cx.MappingAtomType(negList.Atom)
 		pairing := NewFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
 			return mappingInhabited(cx, pos, negList.Next)
@@ -162,10 +162,10 @@ func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		}
-		return &NEVER
+		return NEVER
 	} else {
 		bdd := b.(BddNode)
-		return Union(BddMappingMemberTypeInner(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.mappingAtomType(bdd.Atom()), key), accum)), Union(BddMappingMemberTypeInner(cx, bdd.Middle(), key, accum), BddMappingMemberTypeInner(cx, bdd.Right(), key, accum)))
+		return Union(BddMappingMemberTypeInner(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.MappingAtomType(bdd.Atom()), key), accum)), Union(BddMappingMemberTypeInner(cx, bdd.Middle(), key, accum), BddMappingMemberTypeInner(cx, bdd.Right(), key, accum)))
 	}
 }
 
@@ -181,7 +181,7 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 		}
 	}
 	if memberType == nil {
-		return &UNDEF
+		return UNDEF
 	}
 	return memberType
 }

@@ -29,7 +29,7 @@ var _ BasicTypeOps = &ListOps{}
 func listSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ListOps.java:67:5
 	return memoSubtypeIsEmpty(cx, cx.listMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, listFormulaIsEmpty)
+		return BddEvery(cx, b, nil, nil, listFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
@@ -43,7 +43,7 @@ func listFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
 		rest = atom.Rest
 	} else {
 		// combine all the positive tuples using intersection
-		lt := cx.listAtomType(pos.Atom)
+		lt := cx.ListAtomType(pos.Atom)
 		members = lt.Members
 		rest = lt.Rest
 		p := pos.Next
@@ -59,7 +59,7 @@ func listFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
 			} else {
 				d := p.Atom
 				p = p.Next
-				lt = cx.listAtomType(d)
+				lt = cx.ListAtomType(d)
 				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
 					return true
@@ -90,7 +90,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	if neg == nil {
 		return true
 	}
-	nt := cx.listAtomType(neg.Atom)
+	nt := cx.ListAtomType(neg.Atom)
 	if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
 		return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
 	}
@@ -158,7 +158,7 @@ func listSamples(cx Context, members FixedLengthArray, rest SemType, neg *Conjun
 	nNeg := 0
 	for {
 		if tem != nil {
-			lt := cx.listAtomType(tem.Atom)
+			lt := cx.ListAtomType(tem.Atom)
 			m := lt.Members
 			if len(m.Initial) > maxInitialLength {
 				maxInitialLength = len(m.Initial)
@@ -237,7 +237,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 	if neg == nil {
 		return true
 	} else {
-		nt := cx.listAtomType(neg.Atom)
+		nt := cx.ListAtomType(neg.Atom)
 		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
 			return listInhabited(cx, indices, memberTypes, nRequired, neg.Next)
 		}
@@ -330,7 +330,7 @@ func fixedArrayGet(members FixedLengthArray, index int) CellSemType {
 
 func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemType {
 	// migrated from ListOps.java:430:5
-	return Diff(listAtomicMemberTypeInner(atomic, key), &UNDEF)
+	return Diff(listAtomicMemberTypeInner(atomic, key), UNDEF)
 }
 
 func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
@@ -342,7 +342,7 @@ func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest CellSemType, 
 	// migrated from ListOps.java:438:5
 	if intSubtype, ok := key.(IntSubtype); ok {
 		var m SemType
-		m = &NEVER
+		m = NEVER
 		initLen := len(fixedArray.Initial)
 		fixedLen := fixedArray.FixedLength
 		if fixedLen != 0 {
@@ -375,10 +375,10 @@ func BddListMemberTypeInnerVal(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		}
-		return &NEVER
+		return NEVER
 	} else {
 		bddNode := b.(BddNode)
-		return Union(BddListMemberTypeInnerVal(cx, bddNode.Left(), key, Intersect(listAtomicMemberTypeInnerVal(*cx.listAtomType(bddNode.Atom()), key), accum)), Union(BddListMemberTypeInnerVal(cx, bddNode.Middle(), key, accum), BddListMemberTypeInnerVal(cx, bddNode.Right(), key, accum)))
+		return Union(BddListMemberTypeInnerVal(cx, bddNode.Left(), key, Intersect(listAtomicMemberTypeInnerVal(*cx.ListAtomType(bddNode.Atom()), key), accum)), Union(BddListMemberTypeInnerVal(cx, bddNode.Middle(), key, accum), BddListMemberTypeInnerVal(cx, bddNode.Right(), key, accum)))
 	}
 }
 

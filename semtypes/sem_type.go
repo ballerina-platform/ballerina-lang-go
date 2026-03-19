@@ -18,5 +18,4 @@ package semtypes
 
 type SemType interface {
 	All() int
-	String() string
 }

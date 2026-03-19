@@ -1,7 +1,7 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = foo() -> bb1;
   }
@@ -34,7 +34,7 @@ main() -> ((NIL), ()){
     GOTO bb3;
   }
 }
-foo() -> ((), (LIST)){
+foo() -> [int...]{
   bb0 {
     %1 = ConstantLoad called foo
     %2 = println(%1) -> bb1;
@@ -44,7 +44,7 @@ foo() -> ((), (LIST)){
     %4 = ConstantLoad 2
     %5 = ConstantLoad 3
     %6 = ConstantLoad 3
-    %7 = newArray ((), (LIST))[%6]{%3, %4, %5}
+    %7 = newArray [int...][%6]{%3, %4, %5}
     %0 = %7;
     return;
   }

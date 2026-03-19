@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %2 = ConstantLoad 9223372036854775807
     %3 = unknown %2;
@@ -16,7 +16,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-neg(((INT), ())) -> ((INT), ()){
+neg(int) -> int{
   bb0 {
     %2 = unknown x;
     %0 = %2;

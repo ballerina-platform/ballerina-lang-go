@@ -16,12 +16,13 @@
 
 package semtypes
 
-import "slices"
+import (
+	"slices"
 
-import "ballerina-lang-go/common"
+	"ballerina-lang-go/common"
+)
 
 type FloatSubtype struct {
-	EnumerableSubtype[float64]
 	allowed bool
 	values  []EnumerableFloat
 }
@@ -47,7 +48,7 @@ func newFloatSubtypeFromBoolEnumerableFloats(allowed bool, values []EnumerableTy
 }
 
 func FloatConst(value float64) SemType {
-	return basicSubtype(BT_FLOAT, newFloatSubtypeFromBoolEnumerableFloat(true, EnumerableFloatFrom(value)))
+	return basicSubtype(BTFloat, newFloatSubtypeFromBoolEnumerableFloat(true, EnumerableFloatFrom(value)))
 }
 
 func FloatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
@@ -76,7 +77,7 @@ func FloatSubtypeContains(d SubtypeData, f EnumerableFloat) bool {
 	return (!v.allowed)
 }
 
-func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) SubtypeData {
+func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) ProperSubtypeData {
 	// migrated from FloatSubtype.java:86:5
 	if len(values) == 0 {
 		if allowed {

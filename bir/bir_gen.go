@@ -243,7 +243,7 @@ func TransformConstant(ctx *Context, c *ast.BLangConstant) *BIRConstant {
 	valueExpr := c.Expr
 	if literal, ok := valueExpr.(*ast.BLangLiteral); ok {
 		// FIXME: once we have constant propagation these should be propagated and no longer needed
-		return NewBIRConstant(model.Name(c.GetName().GetValue()), literal.GetValueType(), literal.Value, c.GetPosition())
+		return NewBIRConstant(model.Name(c.GetName().GetValue()), literal.GetValueType().GetTypeData().Type, literal.Value, c.GetPosition())
 	}
 	// TODO: need this think how to actually implement constant value initialization. May be we add these to init function?
 	panic("unexpected constant value type")
@@ -517,7 +517,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 			case *ast.BLangConstPattern:
 				patternEffect := handleExpression(ctx, curBB, p.Expr)
 				curBB = patternEffect.block
-				eqResult := ctx.addTempVar(&semtypes.BOOLEAN)
+				eqResult := ctx.addTempVar(semtypes.BOOLEAN)
 				binaryOp := &BinaryOp{}
 				binaryOp.Kind = INSTRUCTION_KIND_EQUAL
 				binaryOp.LhsOp = eqResult
@@ -527,7 +527,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 				condOperand = orOperands(ctx, curBB, condOperand, eqResult)
 			case *ast.BLangWildCardMatchPattern:
 				// Wildcard in multi-pattern — always matches; but may have guard
-				trueOperand := ctx.addTempVar(&semtypes.BOOLEAN)
+				trueOperand := ctx.addTempVar(semtypes.BOOLEAN)
 				constLoad := &ConstantLoad{}
 				constLoad.Value = true
 				constLoad.LhsOp = trueOperand
@@ -581,7 +581,7 @@ func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *
 	if existing == nil {
 		return new
 	}
-	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	result := ctx.addTempVar(semtypes.BOOLEAN)
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = INSTRUCTION_KIND_OR
 	binaryOp.LhsOp = result
@@ -592,7 +592,7 @@ func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *
 }
 
 func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
-	result := ctx.addTempVar(&semtypes.BOOLEAN)
+	result := ctx.addTempVar(semtypes.BOOLEAN)
 	binaryOp := &BinaryOp{}
 	binaryOp.Kind = INSTRUCTION_KIND_AND
 	binaryOp.LhsOp = result
@@ -681,8 +681,8 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, pos ast.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
-		keyOperand := ctx.addTempVar(&semtypes.STRING)
-		keyLoad := NewConstantLoad(keyOperand, nil, field.key, pos)
+		keyOperand := ctx.addTempVar(semtypes.STRING)
+		keyLoad := NewConstantLoad(keyOperand, field.key, pos)
 		curBB.Instructions = append(curBB.Instructions, keyLoad)
 
 		valueEffect := handleExpression(ctx, curBB, field.value)
@@ -721,7 +721,7 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 		for _, namedArg := range expr.NamedArgs {
 			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
 		}
-		detailEffect := mappingConstructorExpressionInner(ctx, curBB, &semtypes.MAPPING, fields, expr.GetPosition())
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, expr.GetPosition())
 		curBB = detailEffect.block
 		detailOp = detailEffect.result
 	}
@@ -786,17 +786,17 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 		ty := lat.MemberAt(i)
 		fillerVal := values.DefaultValueForType(ty)
 		fillerOperand := ctx.addTempVar(ty)
-		fillerLoad := NewConstantLoad(fillerOperand, nil, fillerVal, exprPos)
+		fillerLoad := NewConstantLoad(fillerOperand, fillerVal, exprPos)
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
 	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
 
-	sizeOperand := ctx.addTempVar(&semtypes.INT)
-	constantLoad := NewConstantLoad(sizeOperand, nil, int64(len(initValues)), exprPos)
+	sizeOperand := ctx.addTempVar(semtypes.INT)
+	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
-	resultOperand := ctx.addTempVar(&semtypes.LIST)
+	resultOperand := ctx.addTempVar(semtypes.LIST)
 	newArray := NewArrayConstructor(expr.GetDeterminedType(), resultOperand, sizeOperand, initValues, fillerVal, exprPos)
 	bb.Instructions = append(bb.Instructions, newArray)
 	return expressionEffect{
@@ -896,7 +896,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	constantLoad := NewConstantLoad(resultOperand, expr.GetValueType(), expr.Value, expr.GetPosition())
+	constantLoad := NewConstantLoad(resultOperand, expr.Value, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, constantLoad)
 	return expressionEffect{
 		result: resultOperand,
@@ -1043,7 +1043,7 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	// FIXME: this is a hack until we have package level variable initialization
 	if constant, ok := ctx.birCx.constantMap[symRef]; ok {
 		resultOperand := ctx.addTempVar(constant.Type)
-		constantLoad := NewConstantLoad(resultOperand, constant.ConstValue.Type, constant.ConstValue.Value, expr.GetPosition())
+		constantLoad := NewConstantLoad(resultOperand, constant.ConstValue.Value, expr.GetPosition())
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
 		return expressionEffect{
 			result: resultOperand,

@@ -17,12 +17,12 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"math/big"
+
+	"ballerina-lang-go/common"
 )
 
 type DecimalSubtype struct {
-	EnumerableSubtype[big.Rat]
 	allowed bool
 	values  []EnumerableDecimal
 }
@@ -48,7 +48,7 @@ func newDecimalSubtypeFromBoolEnumerableDecimals(allowed bool, values []Enumerab
 }
 
 func DecimalConst(value big.Rat) SemType {
-	return basicSubtype(BT_DECIMAL, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
+	return basicSubtype(BTDecimal, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
 }
 
 func DecimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
@@ -79,7 +79,7 @@ func DecimalSubtypeContains(d SubtypeData, f EnumerableDecimal) bool {
 	return (!v.allowed)
 }
 
-func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) SubtypeData {
+func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) ProperSubtypeData {
 	// migrated from DecimalSubtype.java:87:5
 	if len(values) == 0 {
 		if allowed {

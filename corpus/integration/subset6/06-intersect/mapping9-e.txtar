@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((NIL, INT), ())
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
   --> mapping9-e.bal:31:14
    |
 31 |     int l2 = a["l2"]; // @error

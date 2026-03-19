@@ -20,17 +20,20 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 
-	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
+	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
 type birReader struct {
 	r   *bytes.Reader
 	cp  []any
+	tp  *typepool.TypePool
 	ctx *context.CompilerContext
 }
 
@@ -63,6 +66,7 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		panic(fmt.Sprintf("unsupported BIR version: %d", version))
 	}
 
+	br.readTypePool()
 	br.readConstantPool()
 
 	var pkgIdx int32
@@ -80,7 +84,28 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		Constants:     constants,
 		GlobalVars:    globalVars,
 		Functions:     functions,
+		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
+}
+
+func (br *birReader) readTypePool() {
+	var tpSize int64
+	br.read(&tpSize)
+	tpBytes := make([]byte, tpSize)
+	_, err := br.r.Read(tpBytes)
+	if err != nil {
+		panic(fmt.Sprintf("reading type pool bytes: %v", err))
+	}
+	br.tp = typepool.UnmarshalTypePool(tpBytes, br.ctx.GetTypeEnv())
+}
+
+func (br *birReader) readType() semtypes.SemType {
+	var idx int32
+	br.read(&idx)
+	if idx == -1 {
+		return nil
+	}
+	return br.tp.Get(typepool.Index(idx))
 }
 
 func (br *birReader) readConstantPool() {
@@ -155,11 +180,6 @@ func (br *birReader) getPackageFromCP(index int) *model.PackageID {
 	return v.(*model.PackageID)
 }
 
-// FIXME: Read actual type
-func (br *birReader) getTypeFromCP(_ int) ast.BType {
-	return nil
-}
-
 func (br *birReader) readImports() []bir.BIRImportModule {
 	count := br.readLength()
 	imports := make([]bir.BIRImportModule, count)
@@ -186,11 +206,7 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 		origin := br.readOrigin()
 		pos := br.readPosition()
 
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
+		ty := br.readType()
 		constant := bir.BIRConstant{
 			BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
 				BIRNodeBase: bir.BIRNodeBase{
@@ -200,7 +216,7 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 			Name:   name,
 			Flags:  flags,
 			Origin: origin,
-			Type:   nil,
+			Type:   ty,
 		}
 
 		br.readLength()
@@ -208,11 +224,9 @@ func (br *birReader) readConstants() []bir.BIRConstant {
 		var cTypeIdx int32
 		br.read(&cTypeIdx)
 
-		cv := br.getTypeFromCP(int(cTypeIdx))
-		value := br.readConstValue(cv)
+		value := br.readConstValue()
 
 		constant.ConstValue = bir.ConstValue{
-			Type:  cv,
 			Value: value,
 		}
 
@@ -231,11 +245,7 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 		flags := br.readFlags()
 		origin := br.readOrigin()
 
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
+		ty := br.readType()
 		variables[i] = bir.BIRGlobalVariableDcl{
 			BIRVariableDcl: bir.BIRVariableDcl{
 				BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
@@ -245,7 +255,7 @@ func (br *birReader) readGlobalVars() []bir.BIRGlobalVariableDcl {
 				},
 				Kind: kind,
 				Name: name,
-				Type: nil,
+				Type: ty,
 			},
 			Flags:  flags,
 			Origin: origin,
@@ -296,17 +306,13 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	var returnVar *bir.BIRVariableDcl
 	if hasReturnVar {
 		returnVarKind := br.readKind()
-		var returnVarTypeIdx int32
-		br.read(&returnVarTypeIdx)
-
-		// TODO: Implement Types
-		// returnVarType := br.getTypeFromCP(int(returnVarTypeIdx))
+		returnVarType := br.readType()
 		returnVarName := br.readStringCPEntry()
 
 		returnVar = &bir.BIRVariableDcl{
 			Kind: returnVarKind,
 			Name: returnVarName,
-			Type: nil,
+			Type: returnVarType,
 		}
 		varMap[returnVarName.Value()] = returnVar
 	}
@@ -345,7 +351,24 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
 					t.ThenBB = target
 				}
+			case *bir.Panic:
+				// Panic has no ThenBB
 			}
+		}
+	}
+
+	errorTableCount := br.readLength()
+	errorTable := make([]bir.BIRErrorEntry, errorTableCount)
+	for j := 0; j < int(errorTableCount); j++ {
+		startId := br.readStringCPEntry()
+		endId := br.readStringCPEntry()
+		targetId := br.readStringCPEntry()
+		errorOp := br.readOperand(varMap)
+		errorTable[j] = bir.BIRErrorEntry{
+			Start:   bbMap[startId.Value()],
+			End:     bbMap[endId.Value()],
+			Target:  bbMap[targetId.Value()],
+			ErrorOp: errorOp,
 		}
 	}
 
@@ -378,22 +401,19 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 		ReturnVariable: returnVar,
 		LocalVars:      localVars,
 		BasicBlocks:    basicBlocks,
+		ErrorTable:     errorTable,
 	}
 }
 
 func (br *birReader) readLocalVar(varMap map[string]*bir.BIRVariableDcl) *bir.BIRVariableDcl {
 	kind := br.readKind()
-	var typeIdx int32
-	br.read(&typeIdx)
-
-	// TODO: Implement Types
-	// t := br.getTypeFromCP(int(typeIdx))
+	ty := br.readType()
 	name := br.readStringCPEntry()
 
 	localVar := &bir.BIRVariableDcl{
 		Kind: kind,
 		Name: name,
-		Type: nil,
+		Type: ty,
 	}
 
 	switch kind {
@@ -483,10 +503,9 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp: rhsOp,
 		}
 	case bir.INSTRUCTION_KIND_CONST_LOAD:
+		// Const load type placeholder (not used — type inferred from value)
 		var constLoadTypeIdx int32
 		br.read(&constLoadTypeIdx)
-
-		constLoadType := br.getTypeFromCP(int(constLoadTypeIdx))
 
 		lhsOp := br.readOperand(varMap)
 
@@ -501,7 +520,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 
 		if isWrapped {
 			value = bir.ConstValue{
-				Type:  nil,
 				Value: value,
 			}
 		}
@@ -510,7 +528,6 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			Type:  constLoadType,
 			Value: value,
 		}
 	case bir.INSTRUCTION_KIND_MAP_STORE, bir.INSTRUCTION_KIND_MAP_LOAD,
@@ -527,33 +544,95 @@ func (br *birReader) readInstruction(varMap map[string]*bir.BIRVariableDcl) bir.
 			RhsOp: rhsOp,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ARRAY:
-		var typeIdx int32
-		br.read(&typeIdx)
-
-		// TODO: Implement Types
-		// t := br.getTypeFromCP(int(typeIdx))
-
+		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
 		sizeOp := br.readOperand(varMap)
+		valuesCount := br.readLength()
+		values := make([]*bir.BIROperand, valuesCount)
+		for k := 0; k < int(valuesCount); k++ {
+			values[k] = br.readOperand(varMap)
+		}
 		return &bir.NewArray{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
+			Type:   ty,
 			SizeOp: sizeOp,
+			Values: values,
 		}
 	case bir.INSTRUCTION_KIND_TYPE_CAST:
 		lhsOp := br.readOperand(varMap)
 		rhsOp := br.readOperand(varMap)
-
-		var typeIdx int32
-		br.read(&typeIdx)
+		ty := br.readType()
 
 		return &bir.TypeCast{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
 			RhsOp: rhsOp,
-			Type:  nil,
+			Type:  ty,
+		}
+	case bir.INSTRUCTION_KIND_TYPE_TEST:
+		rhsOp := br.readOperand(varMap)
+		lhsOp := br.readOperand(varMap)
+		ty := br.readType()
+		var isNegation bool
+		br.read(&isNegation)
+		return &bir.TypeTest{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			RhsOp:      rhsOp,
+			Type:       ty,
+			IsNegation: isNegation,
+		}
+	case bir.INSTRUCTION_KIND_NEW_STRUCTURE:
+		ty := br.readType()
+		lhsOp := br.readOperand(varMap)
+		valuesCount := br.readLength()
+		values := make([]bir.MappingConstructorEntry, valuesCount)
+		for k := 0; k < int(valuesCount); k++ {
+			var isKeyValuePair bool
+			br.read(&isKeyValuePair)
+			if isKeyValuePair {
+				keyOp := br.readOperand(varMap)
+				valueOp := br.readOperand(varMap)
+				values[k] = bir.NewMappingConstructorKeyValueEntry(keyOp, valueOp)
+			}
+		}
+		return &bir.NewMap{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			Type:   ty,
+			Values: values,
+		}
+	case bir.INSTRUCTION_KIND_NEW_ERROR:
+		ty := br.readType()
+		lhsOp := br.readOperand(varMap)
+		typeName := br.readStringCPEntry()
+		messageOp := br.readOperand(varMap)
+		var hasCauseOp bool
+		br.read(&hasCauseOp)
+		var causeOp *bir.BIROperand
+		if hasCauseOp {
+			causeOp = br.readOperand(varMap)
+		}
+		var hasDetailOp bool
+		br.read(&hasDetailOp)
+		var detailOp *bir.BIROperand
+		if hasDetailOp {
+			detailOp = br.readOperand(varMap)
+		}
+		return &bir.NewError{
+			BIRInstructionBase: bir.BIRInstructionBase{
+				LhsOp: lhsOp,
+			},
+			Type:      ty,
+			TypeName:  string(typeName),
+			MessageOp: messageOp,
+			CauseOp:   causeOp,
+			DetailOp:  detailOp,
 		}
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
@@ -636,6 +715,11 @@ func (br *birReader) readTerminator(varMap map[string]*bir.BIRVariableDcl) bir.B
 				},
 			},
 		}
+	case bir.INSTRUCTION_KIND_PANIC:
+		errorOp := br.readOperand(varMap)
+		return &bir.Panic{
+			ErrorOp: errorOp,
+		}
 	default:
 		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))
 	}
@@ -646,14 +730,11 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 	br.read(&ignoreVariable)
 
 	if ignoreVariable {
-		var varTypeIdx int32
-		br.read(&varTypeIdx)
-
-		// TODO: Implement Types
-		// varType := br.getTypeFromCP(int(varTypeIdx))
+		ty := br.readType()
 		return &bir.BIROperand{
 			VariableDcl: &bir.BIRVariableDcl{
-				Type: nil,
+				Type:           ty,
+				IgnoreVariable: true,
 			},
 		}
 	}
@@ -677,7 +758,7 @@ func (br *birReader) readOperand(varMap map[string]*bir.BIRVariableDcl) *bir.BIR
 	}
 }
 
-func (br *birReader) readConstValue(_ ast.BType) any {
+func (br *birReader) readConstValue() any {
 	var tagByte int8
 	br.read(&tagByte)
 
@@ -709,10 +790,19 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 		var val bool
 		br.read(&val)
 		return val
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING:
 		var idx int32
 		br.read(&idx)
 		return br.getStringFromCP(int(idx))
+	case model.TypeTags_DECIMAL:
+		var idx int32
+		br.read(&idx)
+		str := br.getStringFromCP(int(idx))
+		r := new(big.Rat)
+		if _, ok := r.SetString(str); !ok {
+			panic(fmt.Sprintf("invalid decimal value: %s", str))
+		}
+		return r
 	case model.TypeTags_NIL:
 		var idx int32
 		br.read(&idx)

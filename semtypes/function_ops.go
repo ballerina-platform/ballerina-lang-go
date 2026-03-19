@@ -16,15 +16,14 @@
 
 package semtypes
 
-type FunctionOps struct {
-}
+type FunctionOps struct{}
 
 var _ BasicTypeOps = &FunctionOps{}
 
 func (this *FunctionOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from FunctionOps.java:45:5
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, functionFormulaIsEmpty)
+		return BddEvery(cx, b, nil, nil, functionFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
@@ -58,7 +57,7 @@ func functionPathIsEmpty(cx Context, rets SemType, params SemType, qualifiers Se
 	if neg == nil {
 		return false
 	} else {
-		t := cx.functionAtomType(neg.Atom)
+		t := cx.FunctionAtomType(neg.Atom)
 		t0 := t.ParamType
 		t1 := t.RetType
 		t2 := t.Qualifiers
@@ -82,7 +81,7 @@ func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos *Conjunction) bool
 	if pos == nil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
-		s := cx.functionAtomType(pos.Atom)
+		s := cx.FunctionAtomType(pos.Atom)
 		s0 := s.ParamType
 		s1 := s.RetType
 		return (((IsSubtype(cx, t0, s0) || IsSubtype(cx, functionIntersectRet(cx, pos.Next), Complement(t1))) && functionPhiInner(cx, t0, Intersect(t1, s1), pos.Next)) && functionPhiInner(cx, Diff(t0, s0), t1, pos.Next))
@@ -92,25 +91,25 @@ func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos *Conjunction) bool
 func functionUnionParams(cx Context, pos *Conjunction) SemType {
 	// migrated from FunctionOps.java:104:5
 	if pos == nil {
-		return &NEVER
+		return NEVER
 	}
-	return Union(cx.functionAtomType(pos.Atom).ParamType, functionUnionParams(cx, pos.Next))
+	return Union(cx.FunctionAtomType(pos.Atom).ParamType, functionUnionParams(cx, pos.Next))
 }
 
 func functionUnionQualifiers(cx Context, pos *Conjunction) SemType {
 	// migrated from FunctionOps.java:111:5
 	if pos == nil {
-		return &NEVER
+		return NEVER
 	}
-	return Union(cx.functionAtomType(pos.Atom).Qualifiers, functionUnionQualifiers(cx, pos.Next))
+	return Union(cx.FunctionAtomType(pos.Atom).Qualifiers, functionUnionQualifiers(cx, pos.Next))
 }
 
 func functionIntersectRet(cx Context, pos *Conjunction) SemType {
 	// migrated from FunctionOps.java:119:5
 	if pos == nil {
-		return &VAL
+		return VAL
 	}
-	return Intersect(cx.functionAtomType(pos.Atom).RetType, functionIntersectRet(cx, pos.Next))
+	return Intersect(cx.FunctionAtomType(pos.Atom).RetType, functionIntersectRet(cx, pos.Next))
 }
 
 func NewFunctionOps() FunctionOps {
@@ -123,7 +122,7 @@ func (this *FunctionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *
 	if pos == nil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
-		s := cx.functionAtomType(pos.Atom)
+		s := cx.FunctionAtomType(pos.Atom)
 		s0 := s.ParamType
 		s1 := s.RetType
 		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, pos.Next)) && (IsSubtype(cx, t1, Complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), pos.Next)))
@@ -136,11 +135,11 @@ func FunctionParamListType(cx Context, fnTy SemType) SemType {
 		return nil
 	}
 	switch ty := fnTy.(type) {
-	case *BasicTypeBitSet:
-		return &NEVER
+	case BasicTypeBitSet:
+		return NEVER
 	case ComplexSemType:
-		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
-		return functionParamListTypeInner(cx, &NEVER, bdd)
+		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
+		return functionParamListTypeInner(cx, NEVER, bdd)
 	default:
 		panic("impossible")
 	}
@@ -151,10 +150,10 @@ func functionParamListTypeInner(cx Context, accumTy SemType, bdd Bdd) SemType {
 		if allOrNothing.IsAll() {
 			return accumTy
 		}
-		return &ANY
+		return ANY
 	}
 	bddNode := bdd.(BddNode)
-	atomArgListTy := cx.functionAtomType(bddNode.Atom()).ParamType
+	atomArgListTy := cx.FunctionAtomType(bddNode.Atom()).ParamType
 	return Intersect(functionParamListTypeInner(cx, Union(accumTy, atomArgListTy), bddNode.Left()),
 		Intersect(functionParamListTypeInner(cx, accumTy, bddNode.Middle()),
 			functionParamListTypeInner(cx, accumTy, bddNode.Right())))
@@ -167,11 +166,11 @@ func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 		return nil
 	}
 	switch ty := fnTy.(type) {
-	case *BasicTypeBitSet:
-		return &VAL
+	case BasicTypeBitSet:
+		return VAL
 	case ComplexSemType:
-		bdd := getComplexSubtypeData(ty, BT_FUNCTION).(Bdd)
-		return functionReturnTypeInner(cx, argList, &VAL, bdd)
+		bdd := getComplexSubtypeData(ty, BTFunction).(Bdd)
+		return functionReturnTypeInner(cx, argList, VAL, bdd)
 	default:
 		panic("impossible")
 	}
@@ -179,16 +178,16 @@ func FunctionReturnType(cx Context, fnTy SemType, argList SemType) SemType {
 
 func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemType, bdd Bdd) SemType {
 	if IsEmpty(cx, accumArgList) || IsEmpty(cx, accumReturn) {
-		return &NEVER
+		return NEVER
 	}
 	switch b := bdd.(type) {
 	case *BddAllOrNothing:
 		if b.IsAll() {
 			return accumReturn
 		}
-		return &NEVER
+		return NEVER
 	case BddNode:
-		fnAtom := cx.functionAtomType(b.Atom())
+		fnAtom := cx.FunctionAtomType(b.Atom())
 		atomArgListTy := fnAtom.ParamType
 		atomReturnTy := fnAtom.RetType
 		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.Left()),

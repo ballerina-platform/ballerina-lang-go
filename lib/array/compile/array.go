@@ -39,8 +39,8 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	pushSymbol := model.NewGenericFunctionSymbol("push", space, createPushMonomorphizer(ctx))
 	space.AddSymbol("push", pushSymbol)
 	lenghtSignature := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{&semtypes.LIST},
-		ReturnType: &semtypes.INT,
+		ParamTypes: []semtypes.SemType{semtypes.LIST},
+		ReturnType: semtypes.INT,
 	}
 
 	lengthSymbol := model.NewFunctionSymbol("length", lenghtSignature, true)
@@ -68,7 +68,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		if _, ok := monomorphized[ty]; ok {
 			return monomorphized[ty]
 		}
-		topType := &semtypes.LIST
+		topType := semtypes.LIST
 		tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
 		if !semtypes.IsSubtype(tyCtx, ty, topType) {
 			ctx.SemanticError("expect first argument to be a subtype of (any|error)[]", nil)
@@ -78,7 +78,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		pushSignature := model.FunctionSignature{
 			ParamTypes:    []semtypes.SemType{ty},
 			RestParamType: valType,
-			ReturnType:    &semtypes.NIL,
+			ReturnType:    semtypes.NIL,
 		}
 		pushSymbol := model.NewFunctionSymbol("push", pushSignature, true)
 		symbolName := fmt.Sprintf("push_%d", nextIndex)

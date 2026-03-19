@@ -22,18 +22,18 @@ import (
 
 func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 	// migrated from ListProj.java:73:5
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if (b.bitset & LIST.bitset) != 0 {
-			return &VAL
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if (b.All() & LIST.All()) != 0 {
+			return VAL
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	} else {
 		keyData := intSubtype(k)
 		if isNothingSubtype(keyData) {
-			return &NEVER
+			return NEVER
 		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BT_LIST).(Bdd), nil, nil)
+		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), nil, nil)
 	}
 }
 
@@ -43,7 +43,7 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	} else {
 		bddNode := b.(BddNode)
@@ -59,10 +59,10 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 	var rest CellSemType
 	if pos == nil {
 		members = FixedLengthArrayEmpty()
-		rest = CellContaining(cx.Env(), Union(&VAL, &UNDEF))
+		rest = CellContaining(cx.Env(), Union(VAL, UNDEF))
 	} else {
 		// combine all the positive tuples using intersection
-		lt := cx.listAtomType(pos.Atom)
+		lt := cx.ListAtomType(pos.Atom)
 		members = lt.Members
 		rest = lt.Rest
 		p := pos.Next
@@ -77,21 +77,21 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 			} else {
 				d := p.Atom
 				p = p.Next
-				lt = cx.listAtomType(d)
+				lt = cx.ListAtomType(d)
 				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
-					return &NEVER
+					return NEVER
 				}
 				members = *intersectedMembers
 				rest = *intersectedRest
 			}
 		}
 		if fixedArrayAnyEmpty(cx, members) {
-			return &NEVER
+			return NEVER
 		}
 		// Ensure that we can use isNever on rest in listInhabited
 		if !IsNever(CellInnerVal(rest)) && IsEmpty(cx, rest) {
-			rest = RoCellContaining(cx.Env(), &NEVER)
+			rest = RoCellContaining(cx.Env(), NEVER)
 		}
 	}
 	// return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
@@ -146,7 +146,7 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 
 func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []CellSemType, nRequired int, neg *Conjunction) SemType {
 	// migrated from ListProj.java:192:5
-	var p SemType = &NEVER
+	var p SemType = NEVER
 	if neg == nil {
 		length := len(memberTypes)
 		for _, k := range keyIndices {
@@ -155,7 +155,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			}
 		}
 	} else {
-		nt := cx.listAtomType(neg.Atom)
+		nt := cx.ListAtomType(neg.Atom)
 		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
 			return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.Next)
 		}

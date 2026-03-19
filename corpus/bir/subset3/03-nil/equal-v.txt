@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %2 = makeNil() -> bb1;
   }
@@ -42,14 +42,14 @@ main() -> ((NIL), ()){
     return;
   }
 }
-makeNil() -> ((NIL), ()){
+makeNil() -> nil{
   bb0 {
     %1 = ConstantLoad <nil>
     %0 = %1;
     return;
   }
 }
-makeNilAny() -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+makeNilAny() -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     %1 = ConstantLoad <nil>
     %0 = %1;
