@@ -137,7 +137,6 @@ func (m *Move) GetKind() InstructionKind {
 }
 
 func NewMove(fromOperand, toOperand *BIROperand, pos diagnostics.Location) *Move {
-	toOperand.VariableDcl.Initialized = true
 	return &Move{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
