@@ -369,6 +369,13 @@ func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand
 	}
 }
 
+func NewMappingConstructorKeyValueEntry(keyOp, valueOp *BIROperand) *MappingConstructorKeyValueEntry {
+	return &MappingConstructorKeyValueEntry{
+		keyOp:   keyOp,
+		valueOp: valueOp,
+	}
+}
+
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
 	return true
 }

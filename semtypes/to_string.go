@@ -108,6 +108,9 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
 		}
+	case XmlSubtype:
+		name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
+		return strings.ToLower(name)
 	default:
 		panic(fmt.Sprintf("unimplemented: ToString for %s", sub.BasicTypeCode.String()))
 	}
@@ -172,7 +175,7 @@ func (s *toStringState) bddErrorToString(bdd Bdd) string {
 
 func (s *toStringState) bddFunctionToString(bdd Bdd) string {
 	var formulas []string
-	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.functionAtomToString(c.Atom))
@@ -205,7 +208,7 @@ func (s *toStringState) functionAtomToString(atom Atom) string {
 }
 
 func (s *toStringState) functionAtomicTypeToString(atom Atom) string {
-	atomic := s.cx.functionAtomType(atom)
+	atomic := s.cx.FunctionAtomType(atom)
 	paramsStr := s.functionParamsToString(atomic.ParamType)
 	retStr := s.semTypeToString(atomic.RetType)
 	return "function(" + paramsStr + ") returns " + retStr
@@ -230,7 +233,7 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 		if !ok {
 			continue
 		}
-		listAtomic := s.cx.listAtomType(node.Atom())
+		listAtomic := s.cx.ListAtomType(node.Atom())
 		var parts []string
 		for i := 0; i < listAtomic.Members.FixedLength; i++ {
 			member := listMemberAt(listAtomic.Members, listAtomic.Rest, i)
