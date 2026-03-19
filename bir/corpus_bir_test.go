@@ -74,7 +74,7 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
 	result, err := testphases.RunPipeline(cx, testphases.PhaseBIR, testPair.InputPath)
 	if err != nil {

@@ -17,16 +17,51 @@
 package context
 
 import (
+	"sync"
+	"time"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"sync"
 )
+
+type CompilationStage string
+
+const (
+	StageParse                  CompilationStage = "Parse"
+	StageASTBuild               CompilationStage = "AST Build"
+	StageImportResolution       CompilationStage = "Import Resolution"
+	StageSymbolResolution       CompilationStage = "Symbol Resolution"
+	StageTopLevelTypeResolution CompilationStage = "Top-Level Type Resolution"
+	StageLocalNodeResolution    CompilationStage = "Local Node Resolution"
+	StageSemanticAnalysis       CompilationStage = "Semantic Analysis"
+	StageCFGCreation            CompilationStage = "CFG Creation"
+	StageCFGAnalysis            CompilationStage = "CFG Analysis"
+	StageDesugaring             CompilationStage = "Desugaring"
+	StageBIRGeneration          CompilationStage = "BIR Generation"
+)
+
+type StageTiming struct {
+	Name     CompilationStage
+	Duration time.Duration
+}
+
+type ModuleStats struct {
+	ModuleName string
+	Stages     []StageTiming
+}
+
+type activeStage struct {
+	name  CompilationStage
+	start time.Time
+}
 
 type CompilerContext struct {
 	env         *CompilerEnvironment
 	mu          sync.Mutex
 	diagnostics []diagnostics.Diagnostic
+	moduleStats *ModuleStats
+	stage       activeStage
 }
 
 func (this *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
@@ -144,4 +179,32 @@ func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	return this.env.GetNextAnonymousTypeKey(packageID)
+}
+
+func (this *CompilerContext) InitModuleStats(moduleName string) {
+	if !this.env.statsEnabled {
+		return
+	}
+	this.moduleStats = &ModuleStats{ModuleName: moduleName}
+}
+
+func (this *CompilerContext) StartStage(name CompilationStage) {
+	if !this.env.statsEnabled {
+		return
+	}
+	this.stage = activeStage{name: name, start: time.Now()}
+}
+
+func (this *CompilerContext) EndStage() {
+	if !this.env.statsEnabled {
+		return
+	}
+	this.moduleStats.Stages = append(this.moduleStats.Stages, StageTiming{
+		Name:     this.stage.name,
+		Duration: time.Since(this.stage.start),
+	})
+}
+
+func (this *CompilerContext) GetModuleStats() *ModuleStats {
+	return this.moduleStats
 }

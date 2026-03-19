@@ -40,6 +40,8 @@ var runOpts struct {
 	dumpCFG       bool
 	dumpBIR       bool
 	traceRecovery bool
+	stats         bool
+	statsOneline  bool
 	logFile       string
 	format        string // Output format (dot, etc.)
 }
@@ -83,6 +85,8 @@ func init() {
 	runCmd.Flags().BoolVar(&runOpts.dumpCFG, "dump-cfg", false, "Dump control flow graph")
 	runCmd.Flags().BoolVar(&runOpts.dumpBIR, "dump-bir", false, "Dump Ballerina Intermediate Representation")
 	runCmd.Flags().BoolVar(&runOpts.traceRecovery, "trace-recovery", false, "Enable error recovery tracing")
+	runCmd.Flags().BoolVar(&runOpts.stats, "stats", false, "Print per-stage compilation timing statistics")
+	runCmd.Flags().BoolVar(&runOpts.statsOneline, "stats-oneline", false, "Print per-stage compilation timing totals only")
 	runCmd.Flags().StringVar(&runOpts.logFile, "log-file", "", "Write debug output to specified file")
 	runCmd.Flags().StringVar(&runOpts.format, "format", "", "Output format for dump operations (dot)")
 	profiler.RegisterFlags(runCmd)
@@ -99,6 +103,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		WithDumpTokens(runOpts.dumpTokens).
 		WithDumpST(runOpts.dumpST).
 		WithTraceRecovery(runOpts.traceRecovery).
+		WithStats(runOpts.stats || runOpts.statsOneline).
 		Build()
 
 	if err := profiler.Start(); err != nil {
@@ -213,6 +218,12 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	if len(birPkgs) == 0 {
 		return fmt.Errorf("BIR generation failed: no BIR package produced")
+	}
+
+	if runOpts.statsOneline {
+		fmt.Fprint(os.Stderr, compilation.StatsReportOneline())
+	} else if buildOpts.Stats() {
+		fmt.Fprint(os.Stderr, compilation.StatsReport())
 	}
 
 	// Dump BIR if requested

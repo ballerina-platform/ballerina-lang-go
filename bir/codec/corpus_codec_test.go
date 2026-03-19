@@ -118,7 +118,7 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	defer close(debugCtx.Channel)
 
 	// Create compiler context
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
 
 	// Step 1: Parse syntax tree
