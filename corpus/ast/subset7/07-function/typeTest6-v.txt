@@ -1,0 +1,72 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F2
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (union-type
+            (user-defined-type F)
+            (user-defined-type F2))) (expr
+          (simple-var-ref f1))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1)
+                (literal 2)))))))))
+      (assignment
+        (simple-var-ref f)
+        (simple-var-ref f2))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1)
+                (literal 2)))))))))))
+  (function f1 (
+    (variable i (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref i))))
+  (function f2 (
+    (variable i (type
+      (value-type int)))
+    (variable j (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref i)
+          (simple-var-ref j))))))

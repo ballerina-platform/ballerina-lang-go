@@ -142,6 +142,10 @@ func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 	return this.env.GetTypeEnv()
 }
 
+func (this *CompilerContext) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
+	return this.env.GetNextAnonymousFunctionKey(packageID)
+}
+
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	return this.env.GetNextAnonymousTypeKey(packageID)
 }

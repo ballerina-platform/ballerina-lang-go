@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected ((), (FUNCTION)) {subtypes=[FUNCTION:bdd=(49 (true) ((57 (true) (false) (false))) (false))]}, got ((), (FUNCTION)) {subtypes=[FUNCTION:bdd=(72 (true) (false) (false))]}
+  --> union16-e.bal:24:12
+   |
+24 |     FG f = fooBar; // @error
+   |            ^^^^^^
+

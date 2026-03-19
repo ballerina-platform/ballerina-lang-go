@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Variable already defined: b
+  --> shadow-e.bal:21:20
+   |
+21 |     F f = function(int b) returns int { // @error
+   |                    ^^^^^
+

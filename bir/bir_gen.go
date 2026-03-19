@@ -17,14 +17,13 @@
 package bir
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
+	"fmt"
 )
 
 // Since BLangNodeVisitor is anyway deprecated in jBallerina, we'll try to do this more cleanly
@@ -35,6 +34,7 @@ type Context struct {
 	constantMap     map[model.SymbolRef]*BIRConstant
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
+	birPkg          *BIRPackage
 }
 
 type stmtContext struct {
@@ -81,7 +81,7 @@ func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType, ki
 	varDcl.Scope = VAR_SCOPE_FUNCTION
 	varDcl.MetaVarName = name.Value()
 	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, Index: len(cx.localVars) - 1}
+	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(cx.localVars) - 1)}
 }
 
 func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {
@@ -101,6 +101,10 @@ func (cx *stmtContext) addBB() *BIRBasicBlock {
 	return &bb
 }
 
+func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
+	return symRef.Package.Organization + "/" + symRef.Package.Package + ":" + ctx.CompilerContext.GetSymbol(symRef).Name()
+}
+
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg := &BIRPackage{}
 	birPkg.PackageID = ast.PackageID
@@ -109,6 +113,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		constantMap:     make(map[model.SymbolRef]*BIRConstant),
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
+		birPkg:          birPkg,
 	}
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, typeDef := range ast.TypeDefinitions {
@@ -203,22 +208,27 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) *BIR
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
+	symRef := astFunc.Symbol()
 	funcName := model.Name(astFunc.GetName().GetValue())
 	birFunc := &BIRFunction{}
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
-	orgName := ctx.packageID.OrgName.Value()
-	pkgName := ctx.packageID.PkgName.Value()
-	moduleKey := orgName + "/" + pkgName
-	birFunc.FunctionLookupKey = moduleKey + ":" + funcName.Value()
+	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
 	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType, VAR_KIND_RETURN)
 	for _, param := range astFunc.RequiredParams {
-		paramType := param.GetDeterminedType()
+		paramType := ctx.CompilerContext.SymbolType(param.Symbol())
 		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), paramType, VAR_KIND_ARG, param.Symbol())
+		birFunc.RequiredParams = append(birFunc.RequiredParams, BIRParameter{Name: model.Name(param.GetName().GetValue())})
+	}
+	if astFunc.RestParam != nil {
+		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
+		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
+		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, VAR_KIND_ARG, restParam.Symbol())
+		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
 	}
 	switch body := astFunc.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
@@ -493,6 +503,22 @@ func blockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangBlockStm
 	}
 }
 
+func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
+	birFunc := TransformFunction(ctx.birCx, expr.Function)
+	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
+	funcType := expr.GetDeterminedType()
+	resultOperand := ctx.addTempVar(funcType)
+	fpLoad := &FPLoad{}
+	fpLoad.FunctionLookupKey = birFunc.FunctionLookupKey
+	fpLoad.Type = funcType
+	fpLoad.LhsOp = resultOperand
+	curBB.Instructions = append(curBB.Instructions, fpLoad)
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
+	}
+}
+
 func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatchStatement) statementEffect {
 	exprEffect := handleExpression(ctx, curBB, stmt.Expr)
 	curBB = exprEffect.block
@@ -602,8 +628,17 @@ func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new 
 	return result
 }
 
-func handleExprFunctionBody(ctx *stmtContext, ast *ast.BLangExprFunctionBody) {
-	panic("unimplemented")
+func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
+	curBB := ctx.addBB()
+	effect := handleExpression(ctx, curBB, body.Expr.(ast.BLangExpression))
+	curBB = effect.block
+	if curBB != nil {
+		retAssign := &Move{}
+		retAssign.LhsOp = ctx.retVar
+		retAssign.RhsOp = effect.result
+		curBB.Instructions = append(curBB.Instructions, retAssign)
+		curBB.Terminator = &Return{}
+	}
 }
 
 type expressionEffect struct {
@@ -643,6 +678,8 @@ func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpr
 		return errorConstructorExpression(ctx, curBB, expr)
 	case *ast.BLangTrapExpr:
 		return trapExpression(ctx, curBB, expr)
+	case *ast.BLangLambdaFunction:
+		return lambdaFunction(ctx, curBB, expr)
 	default:
 		panic("unexpected expression type")
 	}
@@ -873,20 +910,23 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
 
-	// Package qualified call - look up package ID from import alias
-	if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
-		// Qualified call - look up package ID from import alias
-		call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
-	} else {
-		// Unqualified call (no PkgAlias) - assume same-module call and use current package
-		if ctx.birCx.packageID != nil {
+	symRef := expr.Symbol()
+	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
+	if sym.Kind() == model.SymbolKindFunction {
+		// Regular function call
+		call.Kind = INSTRUCTION_KIND_CALL
+		call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.birCx, symRef)
+		if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
+			call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
+		} else if ctx.birCx.packageID != nil {
 			call.CalleePkg = ctx.birCx.packageID
 		}
+	} else {
+		// Function pointer call through a variable
+		call.Kind = INSTRUCTION_KIND_FP_CALL
+		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
+		call.FpOperand = ctx.varMap[unnarrowedRef]
 	}
-	orgName := call.CalleePkg.OrgName.Value()
-	pkgName := call.CalleePkg.PkgName.Value()
-	moduleKey := orgName + "/" + pkgName
-	call.FunctionLookupKey = moduleKey + ":" + call.Name.Value()
 	curBB.Terminator = call
 	return expressionEffect{
 		result: resultOperand,
@@ -1045,6 +1085,23 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 		resultOperand := ctx.addTempVar(constant.Type)
 		constantLoad := NewConstantLoad(resultOperand, constant.ConstValue.Type, constant.ConstValue.Value, expr.GetPosition())
 		curBB.Instructions = append(curBB.Instructions, constantLoad)
+		return expressionEffect{
+			result: resultOperand,
+			block:  curBB,
+		}
+	}
+
+	// Try function lookup
+	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
+	if sym.Kind() == model.SymbolKindFunction {
+		funcType := ctx.birCx.CompilerContext.SymbolType(symRef)
+		lookupKey := buildFunctionLookupKeyFromSymbol(ctx.birCx, symRef)
+		resultOperand := ctx.addTempVar(funcType)
+		fpLoad := &FPLoad{}
+		fpLoad.FunctionLookupKey = lookupKey
+		fpLoad.Type = funcType
+		fpLoad.LhsOp = resultOperand
+		curBB.Instructions = append(curBB.Instructions, fpLoad)
 		return expressionEffect{
 			result: resultOperand,
 			block:  curBB,

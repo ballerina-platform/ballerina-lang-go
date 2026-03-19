@@ -738,6 +738,19 @@ type RecordTypeNode interface {
 	GetFields() iter.Seq2[string, Field]
 }
 
+type FunctionTypeParam interface {
+	Node
+	GetName() *string
+	GetTypeDesc() Type
+}
+
+type FunctionTypeNode interface {
+	ReferenceTypeNode
+	GetParams() []FunctionTypeParam
+	GetRestParam() FunctionTypeParam
+	GetReturnTypeNode() TypeDescriptor
+}
+
 type TupleTypeNode interface {
 	ReferenceTypeNode
 	GetMembers() []MemberTypeDesc

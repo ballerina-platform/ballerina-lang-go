@@ -37,13 +37,13 @@ func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame) {
 		if v1 < 0 && v2 < 0 && v1 < math.MinInt64-v2 {
 			panic("arithmetic overflow")
 		}
-		frame.SetOperand(lhsOp, v1+v2)
+		Store(frame, lhsOp, v1+v2)
 	case float64:
 		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, v1+v2)
+		Store(frame, lhsOp, v1+v2)
 	case string:
 		v2 := op2.(string)
-		frame.SetOperand(lhsOp, v1+v2)
+		Store(frame, lhsOp, v1+v2)
 	default:
 		panic(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2))
 	}
@@ -63,10 +63,10 @@ func execBinaryOpSub(binaryOp *bir.BinaryOp, frame *Frame) {
 		if v2 < 0 && v1 > math.MaxInt64+v2 {
 			panic("arithmetic overflow")
 		}
-		frame.SetOperand(lhsOp, v1-v2)
+		Store(frame, lhsOp, v1-v2)
 	case float64:
 		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, v1-v2)
+		Store(frame, lhsOp, v1-v2)
 	default:
 		panic(fmt.Sprintf("unsupported type combination: %T - %T", op1, op2))
 	}
@@ -84,10 +84,10 @@ func execBinaryOpMul(binaryOp *bir.BinaryOp, frame *Frame) {
 		if v1 != 0 && v2 != 0 && ((v1 == math.MinInt64 && v2 == -1) || (v1 == -1 && v2 == math.MinInt64) || result/v2 != v1) {
 			panic("arithmetic overflow")
 		}
-		frame.SetOperand(lhsOp, result)
+		Store(frame, lhsOp, result)
 	case float64:
 		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, v1*v2)
+		Store(frame, lhsOp, v1*v2)
 	default:
 		panic(fmt.Sprintf("unsupported type combination: %T * %T", op1, op2))
 	}
@@ -107,13 +107,13 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame) {
 		if v1 == math.MinInt64 && v2 == -1 {
 			panic("arithmetic overflow")
 		}
-		frame.SetOperand(lhsOp, v1/v2)
+		Store(frame, lhsOp, v1/v2)
 	case float64:
 		v2 := op2.(float64)
 		if v2 == 0 {
 			panic("divide by zero")
 		}
-		frame.SetOperand(lhsOp, v1/v2)
+		Store(frame, lhsOp, v1/v2)
 	default:
 		panic(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2))
 	}
@@ -130,13 +130,13 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame) {
 		if v2 == 0 {
 			panic("divide by zero")
 		}
-		frame.SetOperand(lhsOp, v1%v2)
+		Store(frame, lhsOp, v1%v2)
 	case float64:
 		v2 := op2.(float64)
 		if v2 == 0 {
 			panic("divide by zero")
 		}
-		frame.SetOperand(lhsOp, math.Mod(v1, v2))
+		Store(frame, lhsOp, math.Mod(v1, v2))
 	default:
 		panic(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2))
 	}
@@ -146,21 +146,37 @@ func execBinaryOpEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case nil:
-		frame.SetOperand(lhsOp, op2 == nil)
+		Store(frame, lhsOp, op2 == nil)
 	case int64:
-		v2 := op2.(int64)
-		frame.SetOperand(lhsOp, v1 == v2)
+		switch v2 := op2.(type) {
+		case int64:
+			Store(frame, lhsOp, v1 == v2)
+		default:
+			Store(frame, lhsOp, false)
+		}
 	case float64:
-		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, v1 == v2)
+		switch v2 := op2.(type) {
+		case float64:
+			Store(frame, lhsOp, v1 == v2)
+		default:
+			Store(frame, lhsOp, false)
+		}
 	case string:
-		v2 := op2.(string)
-		frame.SetOperand(lhsOp, v1 == v2)
+		switch v2 := op2.(type) {
+		case string:
+			Store(frame, lhsOp, v1 == v2)
+		default:
+			Store(frame, lhsOp, false)
+		}
 	case bool:
-		v2 := op2.(bool)
-		frame.SetOperand(lhsOp, v1 == v2)
+		switch v2 := op2.(type) {
+		case bool:
+			Store(frame, lhsOp, v1 == v2)
+		default:
+			Store(frame, lhsOp, false)
+		}
 	default:
-		frame.SetOperand(lhsOp, false)
+		Store(frame, lhsOp, false)
 	}
 }
 
@@ -168,21 +184,37 @@ func execBinaryOpNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	switch v1 := op1.(type) {
 	case nil:
-		frame.SetOperand(lhsOp, op2 != nil)
+		Store(frame, lhsOp, op2 != nil)
 	case int64:
-		v2 := op2.(int64)
-		frame.SetOperand(lhsOp, v1 != v2)
+		switch v2 := op2.(type) {
+		case int64:
+			Store(frame, lhsOp, v1 != v2)
+		default:
+			Store(frame, lhsOp, true)
+		}
 	case float64:
-		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, v1 != v2)
+		switch v2 := op2.(type) {
+		case float64:
+			Store(frame, lhsOp, v1 != v2)
+		default:
+			Store(frame, lhsOp, true)
+		}
 	case string:
-		v2 := op2.(string)
-		frame.SetOperand(lhsOp, v1 != v2)
+		switch v2 := op2.(type) {
+		case string:
+			Store(frame, lhsOp, v1 != v2)
+		default:
+			Store(frame, lhsOp, true)
+		}
 	case bool:
-		v2 := op2.(bool)
-		frame.SetOperand(lhsOp, v1 != v2)
+		switch v2 := op2.(type) {
+		case bool:
+			Store(frame, lhsOp, v1 != v2)
+		default:
+			Store(frame, lhsOp, true)
+		}
 	default:
-		frame.SetOperand(lhsOp, true)
+		Store(frame, lhsOp, true)
 	}
 }
 
@@ -227,7 +259,7 @@ func execBinaryOpAnd(binaryOp *bir.BinaryOp, frame *Frame) {
 	if handleNilLifting(op1, op2, lhsOp, frame) {
 		return
 	}
-	frame.SetOperand(lhsOp, op1.(bool) && op2.(bool))
+	Store(frame, lhsOp, op1.(bool) && op2.(bool))
 }
 
 func execBinaryOpOr(binaryOp *bir.BinaryOp, frame *Frame) {
@@ -235,17 +267,17 @@ func execBinaryOpOr(binaryOp *bir.BinaryOp, frame *Frame) {
 	if handleNilLifting(op1, op2, lhsOp, frame) {
 		return
 	}
-	frame.SetOperand(lhsOp, op1.(bool) || op2.(bool))
+	Store(frame, lhsOp, op1.(bool) || op2.(bool))
 }
 
 func execBinaryOpRefEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
-	frame.SetOperand(lhsOp, refEqual(op1, op2))
+	Store(frame, lhsOp, refEqual(op1, op2))
 }
 
 func execBinaryOpRefNotEqual(binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
-	frame.SetOperand(lhsOp, !refEqual(op1, op2))
+	Store(frame, lhsOp, !refEqual(op1, op2))
 }
 
 func refEqual(op1, op2 values.BalValue) bool {
@@ -278,21 +310,21 @@ func execBinaryOpBitwiseUnsignedRightShift(binaryOp *bir.BinaryOp, frame *Frame)
 
 func execUnaryOpNot(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
-	op := frame.GetOperand(rhsOp)
-	frame.SetOperand(lhsOp, !op.(bool))
+	op := Load(frame, rhsOp)
+	Store(frame, lhsOp, !op.(bool))
 }
 
 func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
-	op := frame.GetOperand(rhsOp)
+	op := Load(frame, rhsOp)
 	switch v := op.(type) {
 	case int64:
 		if v == math.MinInt64 {
 			panic("arithmetic overflow")
 		}
-		frame.SetOperand(lhsOp, -v)
+		Store(frame, lhsOp, -v)
 	case float64:
-		frame.SetOperand(lhsOp, -v)
+		Store(frame, lhsOp, -v)
 	default:
 		panic(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op))
 	}
@@ -300,9 +332,12 @@ func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame) {
 
 func execUnaryOpBitwiseComplement(unaryOp *bir.UnaryOp, frame *Frame) {
 	rhsOp, lhsOp := extractUnaryOpIndices(unaryOp)
-	op := frame.GetOperand(rhsOp)
-	v := op.(int64)
-	frame.SetOperand(lhsOp, ^v)
+	op := Load(frame, rhsOp)
+	v, ok := op.(int64)
+	if !ok {
+		panic(fmt.Sprintf("unsupported type: %T (expected int64)", op))
+	}
+	Store(frame, lhsOp, ^v)
 }
 
 func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
@@ -315,44 +350,45 @@ func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b i
 	if isShift {
 		validateShiftAmount(v2)
 	}
-	frame.SetOperand(lhsOp, bitOp(v1, v2))
+	Store(frame, lhsOp, bitOp(v1, v2))
 }
 
 func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame,
 	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
-	boolCmp func(a, b bool) bool, nilEqualsNil bool) {
+	boolCmp func(a, b bool) bool, nilEqualsNil bool,
+) {
 	op1, op2, lhsOp := getBinaryOperands(binaryOp, frame)
 	if op1 == nil || op2 == nil {
 		bothNil := op1 == nil && op2 == nil
-		frame.SetOperand(lhsOp, bothNil && nilEqualsNil)
+		Store(frame, lhsOp, bothNil && nilEqualsNil)
 		return
 	}
 
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
-		frame.SetOperand(lhsOp, intCmp(v1, v2))
+		Store(frame, lhsOp, intCmp(v1, v2))
 	case float64:
 		v2 := op2.(float64)
-		frame.SetOperand(lhsOp, floatCmp(v1, v2))
+		Store(frame, lhsOp, floatCmp(v1, v2))
 	case bool:
 		v2 := op2.(bool)
-		frame.SetOperand(lhsOp, boolCmp(v1, v2))
+		Store(frame, lhsOp, boolCmp(v1, v2))
 	default:
 		panic(fmt.Sprintf("unsupported type: %T", op1))
 	}
 }
 
-func getBinaryOperands(binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue, lhsOp int) {
-	rhsOp1 := binaryOp.RhsOp1.Index
-	rhsOp2 := binaryOp.RhsOp2.Index
-	lhsOp = binaryOp.LhsOp.Index
-	return frame.GetOperand(rhsOp1), frame.GetOperand(rhsOp2), lhsOp
+func getBinaryOperands(binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue, lhsOp bir.Address) {
+	rhsOp1 := binaryOp.RhsOp1.Address
+	rhsOp2 := binaryOp.RhsOp2.Address
+	lhsOp = binaryOp.LhsOp.Address
+	return Load(frame, rhsOp1), Load(frame, rhsOp2), lhsOp
 }
 
-func extractUnaryOpIndices(unaryOp *bir.UnaryOp) (rhsOp, lhsOp int) {
-	rhsOp = unaryOp.RhsOp.Index
-	lhsOp = unaryOp.LhsOp.Index
+func extractUnaryOpIndices(unaryOp *bir.UnaryOp) (rhsOp, lhsOp bir.Address) {
+	rhsOp = unaryOp.RhsOp.Address
+	lhsOp = unaryOp.LhsOp.Address
 	return
 }
 
@@ -362,9 +398,9 @@ func validateShiftAmount(amount int64) {
 	}
 }
 
-func handleNilLifting(op1, op2 values.BalValue, lhsOp int, frame *Frame) bool {
+func handleNilLifting(op1, op2 values.BalValue, lhsOp bir.Address, frame *Frame) bool {
 	if op1 == nil || op2 == nil {
-		frame.SetOperand(lhsOp, nil)
+		Store(frame, lhsOp, nil)
 		return true
 	}
 	return false
