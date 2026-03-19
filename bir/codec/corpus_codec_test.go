@@ -17,26 +17,16 @@
 package codec
 
 import (
-	"flag"
-	"slices"
 	"testing"
 
-	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/desugar"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/parser"
-	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
-
-var update = flag.Bool("update", false, "update expected BIR text files")
 
 // getBIRDiff generates a detailed diff string showing differences between expected and actual BIR text.
 func getBIRDiff(expectedText, actualText string) string {
@@ -47,9 +37,6 @@ func getBIRDiff(expectedText, actualText string) string {
 
 // TestBIRSerialization tests BIR serialization and deserialization roundtrip from .bal source files in the corpus.
 func TestBIRSerialization(t *testing.T) {
-	t.Skip("BIR serialization test disabled")
-	flag.Parse()
-
 	testPairs := test_util.GetValidTests(t, test_util.BIR)
 
 	for _, testPair := range testPairs {
@@ -60,166 +47,7 @@ func TestBIRSerialization(t *testing.T) {
 	}
 }
 
-// Ignore due to missing types on serialization
-var ignoreBIRTests = []string{
-	"subset2/02-typecast/numeric-conversion-v.bal",
-	"subset2/02-typecast/3-v.bal",
-	"subset2/02-typecast/5-v.bal",
-	"subset2/02-typecast/7-v.bal",
-	"subset3/03-list/21-v.bal",
-	"subset3/03-list/09-v.bal",
-	"subset2/02-type/cyclic2-v.bal",
-	"subset3/03-list/14-v.bal",
-	"subset3/03-function/direct-call-v.bal",
-	"subset2/02-type/cyclic-v.bal",
-	"subset3/03-list/06-v.bal",
-	"subset3/03-function/call-v.bal",
-	"subset3/03-list/24-v.bal",
-	"subset3/03-list/19-v.bal",
-	"subset3/03-list/select-type-v.bal",
-	"subset3/03-list/20-v.bal",
-	"subset3/03-list/18-v.bal",
-	"subset3/03-list/16-v.bal",
-	"subset3/03-list/23-v.bal",
-	"subset1/01-function/assign8-v.bal",
-	"subset3/03-list/03-v.bal",
-	"subset3/03-list/22-v.bal",
-	"subset3/03-list/12-v.bal",
-}
-
-func shouldIgnoreTest(testName string) bool {
-	return slices.Contains(ignoreBIRTests, testName)
-}
-
-// testBIRSerialization tests BIR serialization roundtrip for a single .bal file.
 func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
-	if shouldIgnoreTest(testPair.Name) {
-		t.Logf("Skipping BIR test for %s", testPair.InputPath)
-		return
-	}
-
-	// Catch panics during BIR generation
-	defer func() {
-		if r := recover(); r != nil {
-			t.Log(testPair.Name)
-			t.Errorf("panic while generating BIR from %s: %v", testPair.InputPath, r)
-		}
-	}()
-
-	// Create debug context with channel
-	debugCtx := &debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	// Drain channel in background to prevent blocking
-	go func() {
-		for range debugCtx.Channel {
-			// Discard debug messages
-		}
-	}()
-	defer close(debugCtx.Channel)
-
-	// Create compiler context
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
-	cx := context.NewCompilerContext(env)
-
-	// Step 1: Parse syntax tree
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, testPair.InputPath)
-	if err != nil {
-		t.Errorf("error getting syntax tree from %s: %v", testPair.InputPath, err)
-		return
-	}
-
-	// Step 2: Get compilation unit (AST)
-	compilationUnit := ast.GetCompilationUnit(cx, syntaxTree)
-	if compilationUnit == nil {
-		t.Errorf("compilation unit is nil for %s", testPair.InputPath)
-		return
-	}
-
-	// Step 3: Convert to AST package
-	pkg := ast.ToPackage(compilationUnit)
-
-	// Step 4: Resolve symbols
-	importedSymbols := semantics.ResolveImports(cx, pkg, semantics.GetImplicitImports(cx), make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace), "")
-	semantics.ResolveSymbols(cx, pkg, importedSymbols)
-
-	// Step 5: Resolve types
-	semantics.ResolveTopLevelNodes(cx, pkg, importedSymbols)
-
-	// Step 6: Generate control flow graph
-	cfg := semantics.CreateControlFlowGraph(cx, pkg)
-
-	// Step 7: Run semantic analysis
-	semanticAnalyzer := semantics.NewSemanticAnalyzer(cx)
-	semanticAnalyzer.Analyze(pkg)
-
-	// Step 8: Run CFG analyses (reachability and explicit return)
-	semantics.AnalyzeCFG(cx, pkg, cfg)
-
-	// Step 9: Desugar AST
-	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
-
-	// Step 10: Generate BIR package
-	birPkg := bir.GenBir(cx, pkg)
-
-	if birPkg == nil {
-		t.Errorf("BIR package is nil for %s", testPair.InputPath)
-		return
-	}
-
-	// Serialize BIR package
-	serializedBIR, err := Marshal(birPkg)
-	if err != nil {
-		t.Errorf("error serializing BIR package for %s: %v", testPair.InputPath, err)
-		return
-	}
-
-	deserializedBIRPkg, err := Unmarshal(cx, serializedBIR)
-	if err != nil {
-		t.Errorf("error deserializing BIR package for %s: %v", testPair.InputPath, err)
-		return
-	}
-
-	// Pretty print BIR output
-	prettyPrinter := bir.PrettyPrinter{}
-	actualBIR := prettyPrinter.Print(*deserializedBIRPkg)
-
-	// If update flag is set, update expected file
-	if *update {
-		if test_util.UpdateIfNeeded(t, testPair.ExpectedPath, actualBIR) {
-			t.Fatalf("Updated expected BIR file: %s", testPair.ExpectedPath)
-		}
-		return
-	}
-
-	// Read expected BIR text file
-	expectedText := test_util.ReadExpectedFile(t, testPair.ExpectedPath)
-
-	// Compare BIR text strings exactly
-	if actualBIR != expectedText {
-		diff := getBIRDiff(expectedText, actualBIR)
-		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", testPair.InputPath, testPair.ExpectedPath, diff)
-		return
-	}
-}
-
-var skipRoundTripTests []string
-
-func TestBIRSerializationRoundTrip(t *testing.T) {
-	testPairs := test_util.GetValidTests(t, test_util.BIR)
-
-	for _, testPair := range testPairs {
-		if slices.Contains(skipRoundTripTests, testPair.Name) {
-			continue
-		}
-		t.Run(testPair.Name, func(t *testing.T) {
-			t.Parallel()
-			testBIRSerializationRoundTrip(t, testPair)
-		})
-	}
-}
-
-func testBIRSerializationRoundTrip(t *testing.T, testPair test_util.TestCase) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("panic during BIR serialization roundtrip for %s: %v", testPair.InputPath, r)
