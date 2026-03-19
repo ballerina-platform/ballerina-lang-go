@@ -86,6 +86,7 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		GlobalVars:    globalVars,
 		ClassDefs:     classDefs,
 		Functions:     functions,
+		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
 }
 
@@ -97,7 +98,7 @@ func (br *birReader) readTypePool() {
 	if err != nil {
 		panic(fmt.Sprintf("reading type pool bytes: %v", err))
 	}
-	br.tp = typepool.UnmarshalTypePool(tpBytes)
+	br.tp = typepool.UnmarshalTypePool(tpBytes, br.ctx.GetTypeEnv())
 }
 
 func (br *birReader) readType() semtypes.SemType {

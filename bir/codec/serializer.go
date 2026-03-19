@@ -36,14 +36,16 @@ const (
 )
 
 type birWriter struct {
-	cp *ConstantPool
-	tp *typepool.TypePool
+	cp  *ConstantPool
+	tp  *typepool.TypePool
+	env semtypes.Env
 }
 
 func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &birWriter{
-		cp: NewConstantPool(),
-		tp: typepool.NewTypePool(),
+		cp:  NewConstantPool(),
+		tp:  typepool.NewTypePool(),
+		env: pkg.TypeEnv,
 	}
 	return writer.serialize(pkg)
 }
@@ -71,7 +73,7 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 
 	write(buf, int32(BIR_VERSION))
 
-	tpBytes := typepool.MarshalTypePool(bw.tp)
+	tpBytes := typepool.MarshalTypePool(bw.tp, bw.env)
 	write(buf, int64(len(tpBytes)))
 	_, err = buf.Write(tpBytes)
 	if err != nil {

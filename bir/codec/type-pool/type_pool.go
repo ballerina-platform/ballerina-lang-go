@@ -70,14 +70,18 @@ func (pool *TypePool) Put(ty semtypes.SemType) Index {
 	panic("unreachable")
 }
 
-func fromTypePool(pool *TypePool) binaryPool {
+func fromTypePool(pool *TypePool, env semtypes.Env) binaryPool {
 	bp := binaryPool{}
-	for _, ty := range pool.tys {
+	cx := semtypes.ContextFrom(env)
+	sc := newBddSerializationContext(pool, cx, &bp)
+	for i := 0; i < len(pool.tys); i++ {
+		ty := pool.tys[i]
 		cst := ty.(semtypes.ComplexSemType)
+		subtypes := semtypes.Unpack(cst)
 		start := uint32(len(bp.subtypeData))
-		for _, sd := range cst.SubtypeDataList() {
+		for _, bs := range subtypes {
 			var entry subtypeDataEntry
-			switch data := sd.(type) {
+			switch data := bs.SubtypeData.(type) {
 			case semtypes.IntSubtype:
 				entry = subtypeDataEntry{kind: intSubtypeData, index: uint32(len(bp.intSubtypes))}
 				bp.intSubtypes = append(bp.intSubtypes, fromIntSubtype(&data))
@@ -93,10 +97,34 @@ func fromTypePool(pool *TypePool) binaryPool {
 			case semtypes.StringSubtype:
 				entry = subtypeDataEntry{kind: stringSubtypeData, index: uint32(len(bp.stringSubtype))}
 				bp.stringSubtype = append(bp.stringSubtype, fromStringSubtype(&data))
+			case semtypes.XmlSubtype:
+				entry = subtypeDataEntry{kind: xmlSubtypeData, index: uint32(len(bp.xmlSubtypes))}
+				bp.xmlSubtypes = append(bp.xmlSubtypes, sc.serializeXmlSubtype(data))
 			case semtypes.Bdd:
-				panic("unimplemented")
+				switch bs.BasicTypeCode {
+				case semtypes.BTList:
+					entry = subtypeDataEntry{kind: listBddSubtypeData, index: uint32(len(bp.listBdds))}
+					bp.listBdds = append(bp.listBdds, sc.serializeListBdd(data))
+				case semtypes.BTMapping:
+					entry = subtypeDataEntry{kind: mappingBddSubtypeData, index: uint32(len(bp.mappingBdds))}
+					bp.mappingBdds = append(bp.mappingBdds, sc.serializeMappingBdd(data))
+				case semtypes.BTFunction:
+					entry = subtypeDataEntry{kind: functionBddSubtypeData, index: uint32(len(bp.functionBdds))}
+					bp.functionBdds = append(bp.functionBdds, sc.serializeFunctionBdd(data))
+				case semtypes.BTError:
+					entry = subtypeDataEntry{kind: errorBddSubtypeData, index: uint32(len(bp.errorBdds))}
+					bp.errorBdds = append(bp.errorBdds, sc.serializeMappingBdd(data))
+				case semtypes.BTTable:
+					entry = subtypeDataEntry{kind: tableBddSubtypeData, index: uint32(len(bp.tableBdds))}
+					bp.tableBdds = append(bp.tableBdds, sc.serializeListBdd(data))
+				case semtypes.BTObject:
+					entry = subtypeDataEntry{kind: objectBddSubtypeData, index: uint32(len(bp.objectBdds))}
+					bp.objectBdds = append(bp.objectBdds, sc.serializeMappingBdd(data))
+				default:
+					panic(fmt.Sprintf("unsupported BDD basic type code: %v", bs.BasicTypeCode))
+				}
 			default:
-				panic("unexpected subtype data type")
+				panic(fmt.Sprintf("unexpected subtype data type: %T (basic type code: %v)", bs.SubtypeData, bs.BasicTypeCode))
 			}
 			bp.subtypeData = append(bp.subtypeData, entry)
 		}
@@ -113,39 +141,34 @@ func fromTypePool(pool *TypePool) binaryPool {
 	bp.nFloatSubtypes = uint32(len(bp.floatSubtype))
 	bp.nDecimalSubtypes = uint32(len(bp.decimalSubtype))
 	bp.nStringSubtypes = uint32(len(bp.stringSubtype))
+	bp.nListBdds = uint32(len(bp.listBdds))
+	bp.nMappingBdds = uint32(len(bp.mappingBdds))
+	bp.nFunctionBdds = uint32(len(bp.functionBdds))
+	bp.nErrorBdds = uint32(len(bp.errorBdds))
+	bp.nTableBdds = uint32(len(bp.tableBdds))
+	bp.nObjectBdds = uint32(len(bp.objectBdds))
+	bp.nXmlAtomicTypes = uint32(len(bp.xmlAtomicTypes))
+	bp.nXmlSubtypes = uint32(len(bp.xmlSubtypes))
+	bp.nListAtomicTypes = uint32(len(bp.listAtomicTypes))
+	bp.nMappingAtomicTypes = uint32(len(bp.mappingAtomicTypes))
+	bp.nFunctionAtomicTypes = uint32(len(bp.functionAtomicTypes))
 	return bp
 }
 
-func toTypePool(bp binaryPool) *TypePool {
-	pool := &TypePool{memo: make(map[semtypes.SemType]Index)}
-	for _, te := range bp.types {
-		var subtypeDataList []semtypes.ProperSubtypeData
-		for _, sde := range bp.subtypeData[te.subtypeDataStart:te.subtypeDataEnd] {
-			var data semtypes.ProperSubtypeData
-			switch sde.kind {
-			case intSubtypeData:
-				data = toIntSubtype(bp.intSubtypes[sde.index])
-			case booleanSubtypeData:
-				data = toBooleanSubtype(bp.booleanSubtype[sde.index])
-			case floatSubtypeData:
-				data = toFloatSubtype(bp.floatSubtype[sde.index])
-			case decimalSubtypeData:
-				data = toDecimalSubtype(bp.decimalSubtype[sde.index])
-			case stringSubtypeData:
-				data = toStringSubtype(bp.stringSubtype[sde.index])
-			}
-			subtypeDataList = append(subtypeDataList, data)
-		}
-		ty := semtypes.CreateComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(
-			int(te.all), int(te.some), subtypeDataList,
-		)
-		pool.tys = append(pool.tys, ty)
+func toTypePool(bp binaryPool, env semtypes.Env) *TypePool {
+	pool := &TypePool{
+		memo: make(map[semtypes.SemType]Index),
+		tys:  make([]semtypes.SemType, len(bp.types)),
+	}
+	dc := newBddDeserializationContext(pool, env, &bp)
+	for i := range bp.types {
+		dc.deserializeType(i)
 	}
 	return pool
 }
 
-func MarshalTypePool(pool *TypePool) []byte {
-	bp := fromTypePool(pool)
+func MarshalTypePool(pool *TypePool, env semtypes.Env) []byte {
+	bp := fromTypePool(pool, env)
 	buf := &bytes.Buffer{}
 
 	write(buf, bp.nIntSubtypes)
@@ -170,13 +193,61 @@ func MarshalTypePool(pool *TypePool) []byte {
 		marshalStringSubtype(buf, entry)
 	}
 
+	write(buf, bp.nListBdds)
+	write(buf, bp.nMappingBdds)
+	write(buf, bp.nFunctionBdds)
+	write(buf, bp.nErrorBdds)
+	write(buf, bp.nTableBdds)
+	write(buf, bp.nObjectBdds)
+	for _, entry := range bp.listBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.mappingBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.functionBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.errorBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.tableBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.objectBdds {
+		marshalBddDnf(buf, entry)
+	}
+
+	write(buf, bp.nListAtomicTypes)
+	write(buf, bp.nMappingAtomicTypes)
+	write(buf, bp.nFunctionAtomicTypes)
+	write(buf, bp.nXmlAtomicTypes)
+	for _, entry := range bp.listAtomicTypes {
+		marshalListAtomicType(buf, entry)
+	}
+	for _, entry := range bp.mappingAtomicTypes {
+		marshalMappingAtomicType(buf, entry)
+	}
+	for _, entry := range bp.functionAtomicTypes {
+		marshalFunctionAtomicType(buf, entry)
+	}
+	for _, entry := range bp.xmlAtomicTypes {
+		write(buf, entry.index)
+	}
+
+	write(buf, bp.nXmlSubtypes)
+	for _, entry := range bp.xmlSubtypes {
+		write(buf, entry.primitives)
+		marshalBddDnf(buf, entry.sequence)
+	}
+
 	marshalSubtypeData(buf, bp.subtypeData)
 	marshalTypes(buf, bp.types)
 
 	return buf.Bytes()
 }
 
-func UnmarshalTypePool(data []byte) *TypePool {
+func UnmarshalTypePool(data []byte, env semtypes.Env) *TypePool {
 	r := bytes.NewReader(data)
 	bp := binaryPool{}
 
@@ -207,10 +278,69 @@ func UnmarshalTypePool(data []byte) *TypePool {
 		bp.stringSubtype[i] = unmarshalStringSubtype(r)
 	}
 
+	read(r, &bp.nListBdds)
+	read(r, &bp.nMappingBdds)
+	read(r, &bp.nFunctionBdds)
+	read(r, &bp.nErrorBdds)
+	read(r, &bp.nTableBdds)
+	read(r, &bp.nObjectBdds)
+	bp.listBdds = make([]unionOfIntersections, bp.nListBdds)
+	for i := range bp.listBdds {
+		bp.listBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.mappingBdds = make([]unionOfIntersections, bp.nMappingBdds)
+	for i := range bp.mappingBdds {
+		bp.mappingBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.functionBdds = make([]unionOfIntersections, bp.nFunctionBdds)
+	for i := range bp.functionBdds {
+		bp.functionBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.errorBdds = make([]unionOfIntersections, bp.nErrorBdds)
+	for i := range bp.errorBdds {
+		bp.errorBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.tableBdds = make([]unionOfIntersections, bp.nTableBdds)
+	for i := range bp.tableBdds {
+		bp.tableBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.objectBdds = make([]unionOfIntersections, bp.nObjectBdds)
+	for i := range bp.objectBdds {
+		bp.objectBdds[i] = unmarshalBddDnf(r)
+	}
+
+	read(r, &bp.nListAtomicTypes)
+	read(r, &bp.nMappingAtomicTypes)
+	read(r, &bp.nFunctionAtomicTypes)
+	read(r, &bp.nXmlAtomicTypes)
+	bp.listAtomicTypes = make([]listAtomicTypeEntry, bp.nListAtomicTypes)
+	for i := range bp.listAtomicTypes {
+		bp.listAtomicTypes[i] = unmarshalListAtomicType(r)
+	}
+	bp.mappingAtomicTypes = make([]mappingAtomicTypeEntry, bp.nMappingAtomicTypes)
+	for i := range bp.mappingAtomicTypes {
+		bp.mappingAtomicTypes[i] = unmarshalMappingAtomicType(r)
+	}
+	bp.functionAtomicTypes = make([]functionAtomicTypeEntry, bp.nFunctionAtomicTypes)
+	for i := range bp.functionAtomicTypes {
+		bp.functionAtomicTypes[i] = unmarshalFunctionAtomicType(r)
+	}
+	bp.xmlAtomicTypes = make([]xmlAtomicTypeEntry, bp.nXmlAtomicTypes)
+	for i := range bp.xmlAtomicTypes {
+		read(r, &bp.xmlAtomicTypes[i].index)
+	}
+
+	read(r, &bp.nXmlSubtypes)
+	bp.xmlSubtypes = make([]xmlSubtypeEntry, bp.nXmlSubtypes)
+	for i := range bp.xmlSubtypes {
+		read(r, &bp.xmlSubtypes[i].primitives)
+		bp.xmlSubtypes[i].sequence = unmarshalBddDnf(r)
+	}
+
 	bp.subtypeData = unmarshalSubtypeData(r)
 	bp.types = unmarshalTypes(r)
 
-	return toTypePool(bp)
+	return toTypePool(bp, env)
 }
 
 // binaryPool represent how type pool is represented in memory
@@ -225,8 +355,33 @@ type binaryPool struct {
 	floatSubtype     []floatSubtypeEntry
 	decimalSubtype   []decimalSubtypeEntry
 	stringSubtype    []stringSubtypeEntry
-	subtypeData      []subtypeDataEntry
-	types            []typeEntry
+
+	nListBdds     uint32
+	nMappingBdds  uint32
+	nFunctionBdds uint32
+	nErrorBdds    uint32
+	nTableBdds    uint32
+	nObjectBdds   uint32
+	listBdds      []unionOfIntersections
+	mappingBdds   []unionOfIntersections
+	functionBdds  []unionOfIntersections
+	errorBdds     []unionOfIntersections
+	tableBdds     []unionOfIntersections
+	objectBdds    []unionOfIntersections
+
+	nListAtomicTypes     uint32
+	nMappingAtomicTypes  uint32
+	nFunctionAtomicTypes uint32
+	nXmlAtomicTypes      uint32
+	nXmlSubtypes         uint32
+	listAtomicTypes      []listAtomicTypeEntry
+	mappingAtomicTypes   []mappingAtomicTypeEntry
+	functionAtomicTypes  []functionAtomicTypeEntry
+	xmlAtomicTypes       []xmlAtomicTypeEntry
+	xmlSubtypes          []xmlSubtypeEntry
+
+	subtypeData []subtypeDataEntry
+	types       []typeEntry
 }
 
 type typeEntry struct {
@@ -272,6 +427,13 @@ const (
 	floatSubtypeData
 	decimalSubtypeData
 	stringSubtypeData
+	listBddSubtypeData
+	mappingBddSubtypeData
+	functionBddSubtypeData
+	errorBddSubtypeData
+	tableBddSubtypeData
+	xmlSubtypeData
+	objectBddSubtypeData
 )
 
 func marshalSubtypeData(buf *bytes.Buffer, entries []subtypeDataEntry) {

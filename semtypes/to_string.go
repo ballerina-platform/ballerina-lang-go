@@ -118,7 +118,7 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 
 func (s *toStringState) bddListToString(bdd Bdd) string {
 	var formulas []string
-	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.listAtomToString(c.Atom))
@@ -156,7 +156,7 @@ func (s *toStringState) listAtomToString(atom Atom) string {
 }
 
 func (s *toStringState) listAtomicTypeToString(atom Atom) string {
-	atomic := s.cx.listAtomType(atom)
+	atomic := s.cx.ListAtomType(atom)
 	var parts []string
 	for i := 0; i < atomic.Members.FixedLength; i++ {
 		member := listMemberAt(atomic.Members, atomic.Rest, i)
@@ -250,7 +250,7 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 
 func (s *toStringState) bddMappingToString(bdd Bdd) string {
 	var formulas []string
-	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.mappingAtomToString(c.Atom))
@@ -286,7 +286,7 @@ func (s *toStringState) mappingAtomToString(atom Atom) string {
 }
 
 func (s *toStringState) mappingAtomicTypeToString(atom Atom) string {
-	atomic := s.cx.mappingAtomType(atom)
+	atomic := s.cx.MappingAtomType(atom)
 	var parts []string
 	for i, name := range atomic.Names {
 		parts = append(parts, name+": "+s.semTypeToString(CellInnerVal(atomic.Types[i])))

@@ -41,13 +41,13 @@ func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	for _, bddPath := range paths {
 		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))
 		for i := 0; i < len(bddPath.pos); i++ {
-			posAtoms[i] = cx.mappingAtomType(bddPath.pos[i])
+			posAtoms[i] = cx.MappingAtomType(bddPath.pos[i])
 		}
 		intersectionSemType, intersectionAtomType, ok := intersectMappingAtoms(cx.Env(), posAtoms)
 		if ok {
 			negAtoms := make([]MappingAtomicType, len(bddPath.neg))
 			for i := 0; i < len(bddPath.neg); i++ {
-				negAtoms[i] = *cx.mappingAtomType(bddPath.neg[i])
+				negAtoms[i] = *cx.MappingAtomType(bddPath.neg[i])
 			}
 			alts = append(alts, MappingAlternative{SemType: intersectionSemType, Pos: intersectionAtomType, neg: negAtoms})
 		}
