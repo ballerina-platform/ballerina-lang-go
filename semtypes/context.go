@@ -35,9 +35,9 @@ type Context interface {
 	mappingMemo() map[string]*BddMemo
 	functionMemo() map[string]*BddMemo
 	listMemo() map[string]*BddMemo
-	functionAtomType(atom Atom) *FunctionAtomicType
-	listAtomType(atom Atom) *ListAtomicType
-	mappingAtomType(atom Atom) *MappingAtomicType
+	FunctionAtomType(atom Atom) *FunctionAtomicType
+	ListAtomType(atom Atom) *ListAtomicType
+	MappingAtomType(atom Atom) *MappingAtomicType
 	comparableMemo(t1, t2 SemType) *comparableMemo
 	setComparableMemo(t1, t2 SemType, memo *comparableMemo)
 }
@@ -145,15 +145,15 @@ func (this *contextImpl) listMemo() map[string]*BddMemo {
 	return this._listMemo
 }
 
-func (this *contextImpl) functionAtomType(atom Atom) *FunctionAtomicType {
+func (this *contextImpl) FunctionAtomType(atom Atom) *FunctionAtomicType {
 	return this._env.functionAtomType(atom)
 }
 
-func (this *contextImpl) listAtomType(atom Atom) *ListAtomicType {
+func (this *contextImpl) ListAtomType(atom Atom) *ListAtomicType {
 	return this._env.listAtomType(atom)
 }
 
-func (this *contextImpl) mappingAtomType(atom Atom) *MappingAtomicType {
+func (this *contextImpl) MappingAtomType(atom Atom) *MappingAtomicType {
 	return this._env.mappingAtomType(atom)
 }
 

@@ -203,23 +203,12 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	}
 }
 
-var roundTripSubsets = []string{
-	"subset1/",
-}
-
-var skipRoundTripTests = []string{
-	"subset1/01-function/assign8-v.bal",
-}
+var skipRoundTripTests []string
 
 func TestBIRSerializationRoundTrip(t *testing.T) {
 	testPairs := test_util.GetValidTests(t, test_util.BIR)
 
 	for _, testPair := range testPairs {
-		if !slices.ContainsFunc(roundTripSubsets, func(prefix string) bool {
-			return strings.HasPrefix(testPair.Name, prefix)
-		}) {
-			continue
-		}
 		if slices.Contains(skipRoundTripTests, testPair.Name) {
 			continue
 		}
@@ -258,6 +247,7 @@ func testBIRSerializationRoundTrip(t *testing.T, testPair test_util.TestCase) {
 		t.Errorf("error serializing BIR package for %s: %v", testPair.InputPath, err)
 		return
 	}
+	// Make sure we are using a different type env.
 	initialEnv = nil
 	initialContext = nil
 

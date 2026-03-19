@@ -17,22 +17,22 @@
 package semtypes
 
 type (
-	bddPredicate        func(cx Context, posList *Conjunction, negList *Conjunction) bool
+	BddPredicate        func(cx Context, posList *Conjunction, negList *Conjunction) bool
 	bddIsEmptyPredicate func(cx Context, b Bdd) bool
 )
 
-func bddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate bddPredicate) bool {
+func BddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate BddPredicate) bool {
 	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEvery(cx, bn.Left(), new(And(bn.Atom(), pos)), neg, predicate) &&
-			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEvery(cx, bn.Right(), pos, new(And(bn.Atom(), neg)), predicate)
+		return BddEvery(cx, bn.Left(), new(And(bn.Atom(), pos)), neg, predicate) &&
+			BddEvery(cx, bn.Middle(), pos, neg, predicate) &&
+			BddEvery(cx, bn.Right(), pos, new(And(bn.Atom(), neg)), predicate)
 	}
 }
 
-func bddEveryPositive(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate bddPredicate) bool {
+func bddEveryPositive(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate BddPredicate) bool {
 	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {

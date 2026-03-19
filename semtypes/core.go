@@ -420,7 +420,7 @@ func bddListAllRanges(cx Context, b Bdd, accum []Range) []Range {
 		}
 	} else {
 		bddNode := b.(BddNode)
-		listMemberTypes := ListAtomicTypeAllMemberTypesInnerVal(cx.listAtomType(bddNode.Atom()))
+		listMemberTypes := ListAtomicTypeAllMemberTypesInnerVal(cx.ListAtomType(bddNode.Atom()))
 		return distinctRanges(bddListAllRanges(cx, bddNode.Left(),
 			distinctRanges(listMemberTypes.Ranges, accum)),
 			distinctRanges(bddListAllRanges(cx, bddNode.Middle(), accum),
