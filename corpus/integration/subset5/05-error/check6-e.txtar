@@ -6,13 +6,7 @@ error[SEMANTIC_ERROR]: error type of check expression is not a subtype of the en
 2 |     foo(check error("error")); // @error
   |         ^^^^^^^^^^^^^^^^^^^^
 
-error[SEMANTIC_ERROR]: error type of check expression is not a subtype of the enclosing function's return type
- --> check6-e.bal:2:9
-  |
-2 |     foo(check error("error")); // @error
-  |         ^^^^^^^^^^^^^^^^^^^^
-
-error[SEMANTIC_ERROR]: error type of check expression is not a subtype of the enclosing function's return type
+error[SEMANTIC_ERROR]: incompatible type: expected nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, got never
  --> check6-e.bal:2:9
   |
 2 |     foo(check error("error")); // @error
