@@ -16,7 +16,10 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+	"fmt"
+)
 
 type BooleanSubtype struct {
 	value bool
@@ -33,6 +36,10 @@ func newBooleanSubtypeFromBool(value bool) BooleanSubtype {
 func BooleanSubtypeFrom(value bool) BooleanSubtype {
 	// migrated from BooleanSubtype.java:40:5
 	return newBooleanSubtypeFromBool(value)
+}
+
+func (this BooleanSubtype) String() string {
+	return fmt.Sprintf("(boolean %t)", this.value)
 }
 
 func BooleanSubtypeContains(d SubtypeData, b bool) bool {

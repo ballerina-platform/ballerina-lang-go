@@ -105,6 +105,11 @@ type (
 		Type       semtypes.SemType
 		IsNegation bool
 	}
+
+	NewObject struct {
+		BIRInstructionBase
+		ClassDef *BIRClassDef
+	}
 )
 
 type (
@@ -125,6 +130,7 @@ var (
 	_ BIRAssignInstruction    = &TypeTest{}
 	_ BIRInstruction          = &NewMap{}
 	_ BIRAssignInstruction    = &NewError{}
+	_ BIRAssignInstruction    = &NewObject{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -316,6 +322,14 @@ func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp
 }
 
 func (n *NewMap) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
+func (n *NewObject) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_INSTANCE
+}
+
+func (n *NewObject) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 

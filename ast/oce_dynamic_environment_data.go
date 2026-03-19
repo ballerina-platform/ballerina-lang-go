@@ -20,10 +20,11 @@ import (
 	"ballerina-lang-go/model"
 )
 
+// TODO: get rid of this
 // OCEDynamicEnvironmentData represents the dynamic environment data for object constructor expressions
 type OCEDynamicEnvironmentData struct {
 	// TypeInit                       *BLangTypeInit
-	ObjectType *BObjectType
+	ObjectType *BLangObjectType
 	// AttachedFunctionInvocation     *BLangAttachedFunctionInvocation
 	LambdaFunctionsList            []BLangLambdaFunction
 	CloneRef                       *OCEDynamicEnvironmentData

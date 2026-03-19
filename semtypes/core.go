@@ -542,6 +542,14 @@ func ListAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 	return ListMemberTypesFrom(ranges, types)
 }
 
+func ToObjectAtomicType(cx Context, t SemType) *MappingAtomicType {
+	mappingTy := convertObjectToMappingTy(cx, t)
+	if mappingTy == nil {
+		return nil
+	}
+	return ToMappingAtomicType(cx, mappingTy)
+}
+
 func ToMappingAtomicType(cx Context, t SemType) *MappingAtomicType {
 	mappingAtomicInner := MAPPING_ATOMIC_INNER
 	if b, ok := t.(*BasicTypeBitSet); ok {

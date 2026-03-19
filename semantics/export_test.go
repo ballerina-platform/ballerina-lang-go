@@ -30,7 +30,7 @@ type CFGInvariantError struct {
 // Returns a list of violations, or nil if all invariants hold.
 func (cfg *PackageCFG) ValidateInvariants() []CFGInvariantError {
 	var errors []CFGInvariantError
-	for symRef, fcfg := range cfg.funcCfgs {
+	for symRef, fcfg := range cfg.allFunctionCfgs {
 		for _, bb := range fcfg.bbs {
 			parentSet := make(map[int]bool, len(bb.parents))
 			for _, p := range bb.parents {

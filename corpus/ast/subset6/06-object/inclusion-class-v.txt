@@ -1,0 +1,26 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (type-definition Foo
+    (object-type
+      (method-decl getX () (
+        (value-type int)))
+      (field x
+        (value-type int))))
+  (class-definition Bar
+    (variable x (type
+      (value-type int)))
+    (function init (
+      (variable x (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access x
+            (simple-var-ref self))
+          (simple-var-ref x))))
+    (function getX () (
+      (value-type int))
+      (block-function-body
+        (return
+          (field-based-access x
+            (simple-var-ref self)))))))

@@ -55,10 +55,10 @@ func (e *CFGDotExporter) Export(cfg *PackageCFG) string {
 		cfg  functionCFG
 	}
 
-	entries := make([]fnEntry, 0, len(cfg.funcCfgs))
-	for ref, fnCfg := range cfg.funcCfgs {
+	var entries []fnEntry
+	for ref, fcfg := range cfg.allFunctionCfgs {
 		name := e.ctx.SymbolName(ref)
-		entries = append(entries, fnEntry{ref: ref, name: name, cfg: fnCfg})
+		entries = append(entries, fnEntry{ref: ref, name: name, cfg: *fcfg})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {

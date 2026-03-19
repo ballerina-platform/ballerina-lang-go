@@ -1,0 +1,77 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Bar {
+  val ((INT), ())
+
+  getVal() -> ((INT), ()){
+    bb0 {
+      %3 = ConstantLoad val
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init(((INT), ())) -> ((NIL, ERROR), ()){
+    bb0 {
+      %3 = ConstantLoad 0
+      %4 = ConstantLoad val
+      self[%4] = %3;
+      %6 = ConstantLoad 0
+      %5 = < v %6;
+      %5 ? bb1 : bb2;
+    }
+    bb1 {
+      %7 = ConstantLoad value must be non-negative
+      %8 = newError ((ERROR), ())(%7)
+      %0 = %8;
+      return;
+    }
+    bb2 {
+      %9 = ConstantLoad val
+      self[%9] = v;
+      return;
+    }
+  }
+}
+main() -> ((NIL), ()){
+  bb0 {
+    %1 = newObject Bar
+    %2 = ConstantLoad 5
+    %3 = init(%1,%2) -> bb1;
+  }
+  bb1 {
+    r1 = %3;
+    %5 = r1 is ((), (OBJECT))
+    %5 ? bb2 : bb5;
+  }
+  bb2 {
+    %6 = getVal(r1) -> bb3;
+  }
+  bb3 {
+    %7 = println(%6) -> bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    %8 = newObject Bar
+    %9 = ConstantLoad 1
+    %10 = unknown %9;
+    %11 = init(%8,%10) -> bb6;
+  }
+  bb6 {
+    r2 = %11;
+    %13 = r2 is ((ERROR), ())
+    %13 ? bb7 : bb9;
+  }
+  bb7 {
+    %14 = println(r2) -> bb8;
+  }
+  bb8 {
+    GOTO bb9;
+  }
+  bb9 {
+    return;
+  }
+}

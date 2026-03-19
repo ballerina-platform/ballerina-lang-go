@@ -1,0 +1,11 @@
+(package
+  (type-definition Foo
+    (object-type
+      (method-decl getX () (
+        (value-type int)))
+      (field x
+        (value-type int))))
+  (type-definition Bar
+    (object-type
+      (field y
+        (value-type string)))))

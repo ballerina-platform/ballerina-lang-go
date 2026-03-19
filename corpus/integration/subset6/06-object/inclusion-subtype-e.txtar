@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: member 'x' that overrides included member is not a subtype of the included member type
+  --> inclusion-subtype-e.bal:21:10
+   |
+21 | type Bar object { // @error
+   |          ^^^^^^^^^^^^^^^^^^
+

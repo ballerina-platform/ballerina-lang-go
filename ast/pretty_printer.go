@@ -18,8 +18,10 @@ package ast
 
 import (
 	"ballerina-lang-go/model"
+	"cmp"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -126,6 +128,16 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTupleTypeNode(t)
 	case *BLangRecordType:
 		p.printRecordType(t)
+	case *BLangObjectType:
+		p.printObjectType(t)
+	case *BObjectField:
+		p.printObjectField(t)
+	case *BMethodDecl:
+		p.printMethodDecl(t)
+	case *BLangClassDefinition:
+		p.printClassDefinition(t)
+	case *BLangNewExpression:
+		p.printNewExpression(t)
 	case *BLangFieldBaseAccess:
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
@@ -220,6 +232,9 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	}
 	for i := range node.TypeDefinitions {
 		p.printTypeDefinition(&node.TypeDefinitions[i])
+	}
+	for i := range node.ClassDefinitions {
+		p.printClassDefinition(&node.ClassDefinitions[i])
 	}
 	for i := range node.Functions {
 		p.printFunction(&node.Functions[i])
@@ -933,6 +948,76 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
+	p.startNode()
+	p.printString("object-type")
+	if node.Isolated {
+		p.printString("isolated")
+	}
+	switch node.NetworkQuals {
+	case model.ObjectNetworkQualsClient:
+		p.printString("client")
+	case model.ObjectNetworkQualsService:
+		p.printString("service")
+	}
+	p.indentLevel++
+	members := slices.SortedFunc(node.Members(), func(a, b model.ObjectMember) int {
+		return cmp.Compare(a.Name(), b.Name())
+	})
+	for _, member := range members {
+		p.PrintInner(member.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printObjectField(node *BObjectField) {
+	p.startNode()
+	p.printString("field")
+	p.printString(node.Name())
+	if node.Visibility() == model.VisibilityPublic {
+		p.printString("public")
+	}
+	p.indentLevel++
+	p.PrintInner(node.Ty.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
+	p.startNode()
+	p.printString("method-decl")
+	p.printString(node.Name())
+	if node.Visibility() == model.VisibilityPublic {
+		p.printString("public")
+	}
+	p.printString("(")
+	if len(node.Params) > 0 {
+		p.indentLevel++
+		for _, param := range node.Params {
+			p.startNode()
+			p.printString("param")
+			if param.name != nil {
+				p.printString(*param.name)
+			}
+			p.indentLevel++
+			p.PrintInner(param.ty.(BLangNode))
+			p.indentLevel--
+			p.endNode()
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTy != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTy.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
 // Field-based access expression printer
 func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
 	p.startNode()
@@ -1006,6 +1091,56 @@ func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
+	p.startNode()
+	p.printString("class-definition")
+	p.printFlags(node.FlagSet)
+	p.printString(node.Name.Value)
+	p.indentLevel++
+	// Print fields
+	for _, field := range node.Fields {
+		p.PrintInner(field.(BLangNode))
+	}
+	// Print init function
+	if node.InitFunction != nil {
+		p.printFunction(node.InitFunction)
+	}
+	// Print methods sorted by name for determinism
+	methodNames := slices.SortedFunc(func(yield func(string) bool) {
+		for name := range node.Methods {
+			if !yield(name) {
+				return
+			}
+		}
+	}, cmp.Compare[string])
+	for _, name := range methodNames {
+		method := node.Methods[name]
+		p.printFunction(method)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
+	p.startNode()
+	p.printString("new")
+	if node.UserDefinedType != nil {
+		p.indentLevel++
+		p.PrintInner(node.UserDefinedType)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.ArgsExprs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.ArgsExprs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
 	p.endNode()
 }
 
