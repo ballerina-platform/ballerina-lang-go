@@ -20,6 +20,7 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 	"fmt"
 )
@@ -70,6 +71,11 @@ func (rt *Runtime) Interpret(pkg bir.BIRPackage) (err error) {
 // for every newly created runtime.
 func RegisterModuleInitializer(init ModuleInitializer) {
 	moduleInitializers = append(moduleInitializers, init)
+}
+
+// GetTypeEnv returns the semantic type environment from the runtime's registry.
+func (rt *Runtime) GetTypeEnv() semtypes.Env {
+	return rt.registry.GetTypeEnv()
 }
 
 // RegisterExternFunction registers a native (extern) function implementation in

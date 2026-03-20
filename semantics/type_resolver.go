@@ -32,6 +32,7 @@ import (
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
+	bMap "ballerina-lang-go/lib/map/compile"
 )
 
 type TypeResolver struct {
@@ -2056,6 +2057,24 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 			importNode := ast.BLangImportPackage{
 				OrgName:      orgIdent,
 				PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgIntIdent},
+				Alias:        &pkgAlias,
+			}
+			ast.Walk(t, &importNode)
+			t.implicitImports[pkgName] = importNode
+		}
+	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING) {
+		pkgName := bMap.PackageName
+		space, ok := t.importedSymbols[pkgName]
+		if !ok {
+			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		symbolSpace = space
+		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		if _, exists := t.implicitImports[pkgName]; !exists {
+			importNode := ast.BLangImportPackage{
+				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
