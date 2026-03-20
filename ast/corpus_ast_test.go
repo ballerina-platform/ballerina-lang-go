@@ -91,6 +91,7 @@ func getDiff(expectedAST, actualAST string) string {
 
 // walkTestVisitor tracks node types visited during Walk traversal
 type walkTestVisitor struct {
+	t            *testing.T
 	visitedTypes map[string]int
 	nodeCount    int
 }
@@ -102,6 +103,11 @@ func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	v.nodeCount++
 	typeName := fmt.Sprintf("%T", node)
 	v.visitedTypes[typeName]++
+
+	if node.GetPosition() == nil {
+		v.t.Errorf("node with missing position: %T", node)
+	}
+
 	return v
 }
 
@@ -137,7 +143,10 @@ func testWalkTraversal(t *testing.T, testCase test_util.TestCase) {
 		return
 	}
 
-	visitor := &walkTestVisitor{visitedTypes: make(map[string]int)}
+	visitor := &walkTestVisitor{
+		t:            t,
+		visitedTypes: make(map[string]int),
+	}
 	ast.Walk(visitor, result.CompilationUnit)
 
 	if visitor.nodeCount == 0 {

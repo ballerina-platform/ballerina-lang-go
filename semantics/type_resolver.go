@@ -1716,10 +1716,18 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		basePos := expr.GetPosition()
+		pkgAlias.SetPosition(basePos)
 		if _, exists := t.implicitImports[pkgName]; !exists {
+			orgIdent := &ast.BLangIdentifier{Value: "ballerina"}
+			orgIdent.SetPosition(basePos)
+			pkgLangIdent := ast.BLangIdentifier{Value: "lang"}
+			pkgLangIdent.SetPosition(basePos)
+			pkgArrayIdent := ast.BLangIdentifier{Value: "array"}
+			pkgArrayIdent.SetPosition(basePos)
 			importNode := ast.BLangImportPackage{
-				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+				OrgName:      orgIdent,
+				PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgArrayIdent},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)
@@ -1734,10 +1742,20 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		}
 		symbolSpace = space
 		pkgAlias = ast.BLangIdentifier{Value: pkgName}
+		// Use the receiver expression's position as a base location for
+		// all synthesized identifier nodes related to the implicit import.
+		basePos := expr.GetPosition()
+		pkgAlias.SetPosition(basePos)
 		if _, exists := t.implicitImports[pkgName]; !exists {
+			orgIdent := &ast.BLangIdentifier{Value: "ballerina"}
+			orgIdent.SetPosition(basePos)
+			pkgLangIdent := ast.BLangIdentifier{Value: "lang"}
+			pkgLangIdent.SetPosition(basePos)
+			pkgIntIdent := ast.BLangIdentifier{Value: "int"}
+			pkgIntIdent.SetPosition(basePos)
 			importNode := ast.BLangImportPackage{
-				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
+				OrgName:      orgIdent,
+				PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgIntIdent},
 				Alias:        &pkgAlias,
 			}
 			ast.Walk(t, &importNode)

@@ -257,7 +257,7 @@ func handleBlockFunctionBody(ctx *stmtContext, ast *ast.BLangBlockFunctionBody) 
 	}
 	// Add implicit return
 	if curBB != nil {
-		curBB.Terminator = NewReturn(curBB.Pos)
+		curBB.Terminator = NewReturn(ast.GetPosition())
 	}
 }
 
@@ -503,10 +503,10 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 		clauseBodyBB := ctx.addBB()
 
 		if isUnconditionalWildcard(&clause) {
-			curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: clauseBodyBB}}
+			curBB.Terminator = NewGoto(clauseBodyBB, stmt.GetPosition())
 			bodyEffect := blockStatement(ctx, clauseBodyBB, &clause.Body)
 			if bodyEffect.block != nil {
-				bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+				bodyEffect.block.Terminator = NewGoto(finalBB, stmt.GetPosition())
 			}
 			continue
 		}
@@ -518,21 +518,16 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 				patternEffect := handleExpression(ctx, curBB, p.Expr)
 				curBB = patternEffect.block
 				eqResult := ctx.addTempVar(&semtypes.BOOLEAN)
-				binaryOp := &BinaryOp{}
-				binaryOp.Kind = INSTRUCTION_KIND_EQUAL
-				binaryOp.LhsOp = eqResult
-				binaryOp.RhsOp1 = *matchOperand
-				binaryOp.RhsOp2 = *patternEffect.result
+				eqPos := p.Expr.GetPosition()
+				binaryOp := NewBinaryOp(INSTRUCTION_KIND_EQUAL, eqResult, matchOperand, patternEffect.result, eqPos)
 				curBB.Instructions = append(curBB.Instructions, binaryOp)
-				condOperand = orOperands(ctx, curBB, condOperand, eqResult)
+				condOperand = orOperands(ctx, curBB, condOperand, eqResult, eqPos)
 			case *ast.BLangWildCardMatchPattern:
 				// Wildcard in multi-pattern — always matches; but may have guard
 				trueOperand := ctx.addTempVar(&semtypes.BOOLEAN)
-				constLoad := &ConstantLoad{}
-				constLoad.Value = true
-				constLoad.LhsOp = trueOperand
+				constLoad := NewConstantLoad(trueOperand, nil, true, p.GetPosition())
 				curBB.Instructions = append(curBB.Instructions, constLoad)
-				condOperand = orOperands(ctx, curBB, condOperand, trueOperand)
+				condOperand = orOperands(ctx, curBB, condOperand, trueOperand, p.GetPosition())
 			default:
 				ctx.birCx.CompilerContext.InternalError("unexpected match pattern type", pattern.GetPosition())
 			}
@@ -541,26 +536,22 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 		if clause.Guard != nil {
 			guardEffect := handleExpression(ctx, curBB, clause.Guard)
 			curBB = guardEffect.block
-			condOperand = andOperands(ctx, curBB, condOperand, guardEffect.result)
+			condOperand = andOperands(ctx, curBB, condOperand, guardEffect.result, clause.Guard.GetPosition())
 		}
 
 		nextCheckBB := ctx.addBB()
-		branch := &Branch{}
-		branch.Op = condOperand
-		branch.TrueBB = clauseBodyBB
-		branch.FalseBB = nextCheckBB
-		curBB.Terminator = branch
+		curBB.Terminator = NewBranch(condOperand, clauseBodyBB, nextCheckBB, stmt.GetPosition())
 
 		bodyEffect := blockStatement(ctx, clauseBodyBB, &clause.Body)
 		if bodyEffect.block != nil {
-			bodyEffect.block.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+			bodyEffect.block.Terminator = NewGoto(finalBB, stmt.GetPosition())
 		}
 
 		curBB = nextCheckBB
 	}
 
 	if !stmt.IsExhaustive {
-		curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: finalBB}}
+		curBB.Terminator = NewGoto(finalBB, stmt.GetPosition())
 	}
 
 	return statementEffect{block: finalBB}
@@ -577,27 +568,19 @@ func isUnconditionalWildcard(clause *ast.BLangMatchClause) bool {
 	return ok
 }
 
-func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
+func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos ast.Location) *BIROperand {
 	if existing == nil {
 		return new
 	}
 	result := ctx.addTempVar(&semtypes.BOOLEAN)
-	binaryOp := &BinaryOp{}
-	binaryOp.Kind = INSTRUCTION_KIND_OR
-	binaryOp.LhsOp = result
-	binaryOp.RhsOp1 = *existing
-	binaryOp.RhsOp2 = *new
+	binaryOp := NewBinaryOp(INSTRUCTION_KIND_OR, result, existing, new, pos)
 	bb.Instructions = append(bb.Instructions, binaryOp)
 	return result
 }
 
-func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand) *BIROperand {
+func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos ast.Location) *BIROperand {
 	result := ctx.addTempVar(&semtypes.BOOLEAN)
-	binaryOp := &BinaryOp{}
-	binaryOp.Kind = INSTRUCTION_KIND_AND
-	binaryOp.LhsOp = result
-	binaryOp.RhsOp1 = *existing
-	binaryOp.RhsOp2 = *new
+	binaryOp := NewBinaryOp(INSTRUCTION_KIND_AND, result, existing, new, pos)
 	bb.Instructions = append(bb.Instructions, binaryOp)
 	return result
 }
@@ -1059,18 +1042,16 @@ func trapExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTrapE
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 
 	trapStartBB := ctx.addBB()
-	curBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: trapStartBB}}
+	curBB.Terminator = NewGoto(trapStartBB, expr.GetPosition())
 
 	innerEffect := handleExpression(ctx, trapStartBB, expr.Expr)
 	trapEndBB := innerEffect.block
 
-	mov := &Move{}
-	mov.LhsOp = resultOperand
-	mov.RhsOp = innerEffect.result
+	mov := NewMove(innerEffect.result, resultOperand, expr.GetPosition())
 	trapEndBB.Instructions = append(trapEndBB.Instructions, mov)
 
 	afterTrapBB := ctx.addBB()
-	trapEndBB.Terminator = &Goto{BIRTerminatorBase: BIRTerminatorBase{ThenBB: afterTrapBB}}
+	trapEndBB.Terminator = NewGoto(afterTrapBB, expr.GetPosition())
 
 	ctx.errorEntries = append(ctx.errorEntries, BIRErrorEntry{
 		Start:   trapStartBB,
