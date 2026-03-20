@@ -28,6 +28,7 @@ import (
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
+	bMap "ballerina-lang-go/lib/map/compile"
 )
 
 type scopeKind int
@@ -239,6 +240,12 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 					key = imp.Alias.Value
 				}
 				result[key] = array.GetArraySymbols(ctx)
+			} else if isLangImport(&imp, "map") {
+				key := "map"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bMap.GetMapSymbols(ctx)
 			} else {
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
@@ -290,6 +297,7 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
+	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	return result
 }
 
