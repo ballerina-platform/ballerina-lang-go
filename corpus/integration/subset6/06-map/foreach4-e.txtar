@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: invalid type for variable
+  --> foreach4-e.bal:21:13
+   |
+21 |     foreach int val in m { // @error
+   |             ^^^^^^^
+

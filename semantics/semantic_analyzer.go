@@ -1303,6 +1303,8 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 				result = semtypes.Union(result, each)
 			}
 			expectedValueType = result
+		case semtypes.IsSubtypeSimple(collectionType, semtypes.MAPPING):
+			expectedValueType = semtypes.MappingMemberTypeInnerVal(a.tyCtx(), collectionType, &semtypes.STRING)
 		default:
 			a.unimplementedErr("unsupported foreach collection", collection.GetPosition())
 			return false

@@ -1,0 +1,34 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable m (type
+        (union-type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type int))
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type string)))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref a)
+            (literal 1))
+          (key-value
+            (simple-var-ref b)
+            (literal 2))))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref m)
+    (var-def
+      (variable val (type
+        (union-type
+          (value-type int)
+          (value-type string)))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref val))))
+  )
+  (bb3 (bb1) ())
+)
