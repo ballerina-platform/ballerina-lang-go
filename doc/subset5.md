@@ -84,9 +84,16 @@
     - `Unsigned16`
     - `Unsigned32`
     - `toHexString`
+  - `ballerina/lang.map`
+    - `length`
+    - `remove`
+    - `keys`
 
 ## Method call
 
 - Method call syntax can be used for calling the following langlib functions:
   - `array:length`
   - `array:push`
+  - `map:length`
+  - `map:remove`
+  - `map:keys`

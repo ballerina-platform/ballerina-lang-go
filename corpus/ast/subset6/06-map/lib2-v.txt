@@ -1,0 +1,44 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (import-package ballerina lang map (as map))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable foo (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type any))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref a)
+              (literal a))
+            (key-value
+              (simple-var-ref b)
+              (literal b))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation map length (
+            (simple-var-ref foo))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation map keys (
+            (simple-var-ref foo))))))
+      (var-def
+        (variable b (type
+          (value-type any)) (expr
+          (invocation map remove (
+            (simple-var-ref foo)
+            (literal b))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref b))))
+      (expression-stmt
+        (invocation io println (
+          (invocation map length (
+            (simple-var-ref foo))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation map keys (
+            (simple-var-ref foo)))))))))
