@@ -18,7 +18,6 @@ package semantics
 
 import (
 	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -60,13 +59,14 @@ func lookupBinding(chain *binding, ref model.SymbolRef) (model.SymbolRef, bool) 
 	return lookupBinding(chain.prev, ref)
 }
 
-func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
-	narrowedSymbol := ctx.CreateNarrowedSymbol(underlying)
-	ctx.SetSymbolType(narrowedSymbol, ty)
+func narrowSymbol(t typeResolver, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
+	narrowedSymbol := t.createNarrowedSymbol(underlying)
+	t.setSymbolType(narrowedSymbol, ty)
 	return narrowedSymbol
 }
 
-func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.SymbolRef) statementEffect {
+// PR-TODO: remove type resolver argument
+func unnarrowSymbol(_ typeResolver, chain *binding, symbol model.SymbolRef) statementEffect {
 	_, isNarrowed := lookupBinding(chain, symbol)
 	if !isNarrowed {
 		return statementEffect{chain, false}
@@ -79,7 +79,7 @@ func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.S
 	return statementEffect{chain, false}
 }
 
-func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
+func accumNarrowedTypes(t typeResolver, chain *binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
 	if chain == nil {
 		return accumDefault
 	}
@@ -87,19 +87,19 @@ func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[
 		ref := chain.ref
 		_, hasTy := accum[ref]
 		if !hasTy {
-			accum[ref] = ctx.SymbolType(chain.narrowedSymbol)
+			accum[ref] = t.symbolType(chain.narrowedSymbol)
 		}
 	} else if accumDefault == nil {
 		accumDefault = chain.defaultType
 	}
-	return accumNarrowedTypes(ctx, chain.prev, accum, accumDefault)
+	return accumNarrowedTypes(t, chain.prev, accum, accumDefault)
 }
 
-func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *binding {
+func mergeChains(t typeResolver, c1 *binding, c2 *binding, mergeOp func(semtypes.SemType, semtypes.SemType) semtypes.SemType) *binding {
 	m1 := make(map[model.SymbolRef]semtypes.SemType)
-	d1 := accumNarrowedTypes(ctx, c1, m1, nil)
+	d1 := accumNarrowedTypes(t, c1, m1, nil)
 	m2 := make(map[model.SymbolRef]semtypes.SemType)
-	d2 := accumNarrowedTypes(ctx, c2, m2, nil)
+	d2 := accumNarrowedTypes(t, c2, m2, nil)
 	type typePair struct{ ty1, ty2 semtypes.SemType }
 	pairs := make(map[model.SymbolRef]typePair)
 	for s, ty1 := range m1 {
@@ -108,7 +108,7 @@ func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp
 			if d2 != nil {
 				ty2 = d2
 			} else {
-				ty2 = ctx.SymbolType(s)
+				ty2 = t.symbolType(s)
 			}
 		}
 		pairs[s] = typePair{ty1, ty2}
@@ -118,14 +118,14 @@ func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp
 			if d1 != nil {
 				pairs[s] = typePair{d1, ty2}
 			} else {
-				pairs[s] = typePair{ctx.SymbolType(s), ty2}
+				pairs[s] = typePair{t.symbolType(s), ty2}
 			}
 		}
 	}
 	var result *binding
 	for s, p := range pairs {
 		ty := mergeOp(p.ty1, p.ty2)
-		sym := narrowSymbol(ctx, s, ty)
+		sym := narrowSymbol(t, s, ty)
 		result = &binding{
 			ref:            s,
 			narrowedSymbol: sym,
@@ -135,14 +135,14 @@ func mergeChains(ctx *context.CompilerContext, c1 *binding, c2 *binding, mergeOp
 	return result
 }
 
-func mergeStatementEffects(ctx *context.CompilerContext, s1, s2 statementEffect) statementEffect {
+func mergeStatementEffects(t typeResolver, s1, s2 statementEffect) statementEffect {
 	if s1.nonCompletion {
 		return s2
 	}
 	if s2.nonCompletion {
 		return s1
 	}
-	combined := mergeChains(ctx, s1.binding, s2.binding, semtypes.Union)
+	combined := mergeChains(t, s1.binding, s2.binding, semtypes.Union)
 	return statementEffect{combined, false}
 }
 
