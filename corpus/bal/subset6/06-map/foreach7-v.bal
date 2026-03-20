@@ -14,11 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+type Person record {|
+    string name;
+    int age;
+|};
+
+public function main() {
+    Person p = {name: "John", age: 30};
+    foreach string|int val in p {
+        io:println(val);
+    }
+}

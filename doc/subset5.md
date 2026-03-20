@@ -29,7 +29,7 @@
   - Currently don't support `final`
 - [Return](https://ballerina.io/spec/lang/master/#return-stmt)
 - [Foreach](https://ballerina.io/spec/lang/master/#section_7.21.1)
-  - Currently only support range and list
+  - Currently only support range, list and map
 
 ## Expressions
 
@@ -84,9 +84,16 @@
     - `Unsigned16`
     - `Unsigned32`
     - `toHexString`
+  - `ballerina/lang.map`
+    - `length`
+    - `remove`
+    - `keys`
 
 ## Method call
 
 - Method call syntax can be used for calling the following langlib functions:
   - `array:length`
   - `array:push`
+  - `map:length`
+  - `map:remove`
+  - `map:keys`

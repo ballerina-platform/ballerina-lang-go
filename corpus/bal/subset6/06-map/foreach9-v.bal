@@ -14,11 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+type OpenRecord record {
+    string name;
+};
+
+public function main() {
+    OpenRecord r = {name: "John", "age": 30};
+    foreach any val in r {
+        io:println(val);
+    }
+}

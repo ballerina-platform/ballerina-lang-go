@@ -14,11 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+public function main() {
+    map<any> foo = {a: "a", b: "b"};
+    io:println(foo.length()); //@output 2
+    io:println(foo.keys()); // @output ["a","b"]
+    any b = foo.remove("b");
+    io:println(b); // @output "b"
+    io:println(foo.length()); //@output 1
+    io:println(foo.keys()); // @output ["a"]
+}

@@ -1,0 +1,28 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable p (type
+        (user-defined-type Person)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref name)
+            (literal John))
+          (key-value
+            (simple-var-ref age)
+            (literal 30))))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref p)
+    (var-def
+      (variable val (type
+        (union-type
+          (value-type string)
+          (value-type int)))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref val))))
+  )
+  (bb3 (bb1) ())
+)

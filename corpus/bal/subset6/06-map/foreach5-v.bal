@@ -14,11 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+function getMap() returns map<int> {
+    return {x: 10, y: 20};
+}
+
+public function main() {
+    foreach int val in getMap() {
+        io:println(val);
+    }
+}
