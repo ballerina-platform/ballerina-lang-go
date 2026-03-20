@@ -26,7 +26,7 @@ func FunctionSignatureToSemType(env semtypes.Env, fs *model.FunctionSignature) s
 	if fs.RestParamType != nil {
 		restTy = fs.RestParamType
 	} else {
-		restTy = &semtypes.NEVER
+		restTy = semtypes.NEVER
 	}
 
 	// Build the parameter list type

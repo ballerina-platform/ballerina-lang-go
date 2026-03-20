@@ -1,0 +1,61 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable t1 (type
+        (tuple-type
+          (value-type int)
+          (value-type float)
+          (value-type decimal))) (expr
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3/1)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref t1))))
+    (var-def
+      (variable t2 (type
+        (tuple-type
+          (value-type float)
+          (value-type decimal))) (expr
+        (list-constructor-expr
+          (literal 1.5)
+          (literal 3/2)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref t2))))
+    (var-def
+      (variable a1 (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a1))))
+    (var-def
+      (variable a2 (type
+        (array-type
+          (value-type float) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a2))))
+    (var-def
+      (variable a3 (type
+        (array-type
+          (value-type decimal) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 1/1)
+          (literal 2/1)
+          (literal 3/1)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a3))))
+  )
+)

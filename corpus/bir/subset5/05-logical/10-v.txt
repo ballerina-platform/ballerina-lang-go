@@ -1,14 +1,14 @@
 module $anon.. v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;
-    %4 = x is ((INT), ())
+    %4 = x is int
     %3 = %4;
     %4 ? bb2 : bb1;
   }
   bb1 {
-    %5 = x is ((FLOAT), ())
+    %5 = x is float
     %3 = %5;
     GOTO bb2;
   }

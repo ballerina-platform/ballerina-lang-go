@@ -162,7 +162,7 @@ func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		}
-		return &NEVER
+		return NEVER
 	} else {
 		bdd := b.(BddNode)
 		return Union(BddMappingMemberTypeInner(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.mappingAtomType(bdd.Atom()), key), accum)), Union(BddMappingMemberTypeInner(cx, bdd.Middle(), key, accum), BddMappingMemberTypeInner(cx, bdd.Right(), key, accum)))
@@ -181,7 +181,7 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 		}
 	}
 	if memberType == nil {
-		return &UNDEF
+		return UNDEF
 	}
 	return memberType
 }

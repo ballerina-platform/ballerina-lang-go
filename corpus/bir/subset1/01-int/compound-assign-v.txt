@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1000000
     loopCount = %1;
@@ -44,14 +44,14 @@ main() -> ((NIL), ()){
     return;
   }
 }
-sum(((INT), ()),((INT), ())) -> ((INT), ()){
+sum(int,int) -> int{
   bb0 {
     %3 = + x y;
     %0 = %3;
     return;
   }
 }
-addOffset(((INT), ())) -> ((INT), ()){
+addOffset(int) -> int{
   bb0 {
     %3 = ConstantLoad 10
     %2 = + value %3;

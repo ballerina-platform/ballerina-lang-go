@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-stringFoo(((STRING), ())) -> ((NIL), ()){
+stringFoo(string) -> nil{
   bb0 {
     %3 = ConstantLoad This is 
     %2 = + %3 s;
@@ -10,7 +10,7 @@ stringFoo(((STRING), ())) -> ((NIL), ()){
     return;
   }
 }
-intFoo(((INT), ())) -> ((NIL), ()){
+intFoo(int) -> nil{
   bb0 {
     %2 = ConstantLoad This is integer
     %3 = println(%2) -> bb1;
@@ -19,9 +19,9 @@ intFoo(((INT), ())) -> ((NIL), ()){
     return;
   }
 }
-foo(((INT, STRING), ())) -> ((NIL), ()){
+foo(int|string) -> nil{
   bb0 {
-    %2 = x is ((INT), ())
+    %2 = x is int
     %2 ? bb1 : bb3;
   }
   bb1 {
@@ -41,7 +41,7 @@ foo(((INT, STRING), ())) -> ((NIL), ()){
     return;
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 2
     %2 = foo(%1) -> bb1;

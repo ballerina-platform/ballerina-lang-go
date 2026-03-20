@@ -1,0 +1,110 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition FloatRecord
+    (record-type
+      (field x
+        (value-type float))
+      (field y
+        (value-type float))))
+  (type-definition DecimalRecord
+    (record-type
+      (field amount
+        (value-type decimal))
+      (field tax
+        (value-type decimal))))
+  (type-definition MixedRecord
+    (record-type
+      (field count
+        (value-type int))
+      (field ratio
+        (value-type float))
+      (field price
+        (value-type decimal))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fr (type
+          (user-defined-type FloatRecord)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 1))
+            (key-value
+              (literal y)
+              (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref fr))))
+      (var-def
+        (variable dr (type
+          (user-defined-type DecimalRecord)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal amount)
+              (literal 100/1))
+            (key-value
+              (literal tax)
+              (literal 15/1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref dr))))
+      (var-def
+        (variable mr (type
+          (user-defined-type MixedRecord)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal count)
+              (literal 10))
+            (key-value
+              (literal ratio)
+              (literal 2))
+            (key-value
+              (literal price)
+              (literal 50/1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref mr))))
+      (var-def
+        (variable dr2 (type
+          (user-defined-type DecimalRecord)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal amount)
+              (literal 3/2))
+            (key-value
+              (literal tax)
+              (literal 1/2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref dr2))))
+      (var-def
+        (variable mf (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type float))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal a)
+              (literal 1))
+            (key-value
+              (literal b)
+              (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref mf))))
+      (var-def
+        (variable md (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type decimal))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal a)
+              (literal 1/1))
+            (key-value
+              (literal b)
+              (literal 2/1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref md)))))))

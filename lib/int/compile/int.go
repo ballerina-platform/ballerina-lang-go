@@ -53,8 +53,8 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	}
 
 	toHexStringSignature := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{&semtypes.INT},
-		ReturnType: &semtypes.STRING,
+		ParamTypes: []semtypes.SemType{semtypes.INT},
+		ReturnType: semtypes.STRING,
 	}
 	toHexStringSymbol := model.NewFunctionSymbol("toHexString", toHexStringSignature, true)
 	space.AddSymbol("toHexString", toHexStringSymbol)

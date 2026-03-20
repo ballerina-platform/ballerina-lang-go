@@ -1,0 +1,55 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function takeInt (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function takeFloat (
+    (variable x (type
+      (value-type float)))) (
+    (value-type float))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function takeDecimal (
+    (variable x (type
+      (value-type decimal)))) (
+    (value-type decimal))
+    (block-function-body
+      (return
+        (simple-var-ref x))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation takeInt (
+            (literal 42))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeFloat (
+            (literal 42))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeDecimal (
+            (literal 42))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeFloat (
+            (literal 1.5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeDecimal (
+            (literal 1.5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeFloat (
+            (literal 1.5f))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation takeDecimal (
+            (literal 100d)))))))))

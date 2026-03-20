@@ -18,7 +18,7 @@ package semtypes
 
 func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 	// migrated from BMappingProj.java:48:5
-	return Diff(mappingMemberTypeInner(cx, t, k), &UNDEF)
+	return Diff(mappingMemberTypeInner(cx, t, k), UNDEF)
 }
 
 // This computes the spec operation called "member type of K in T",
@@ -26,18 +26,18 @@ func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 // This is what Castagna calls projection.
 func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 	// migrated from BMappingProj.java:55:5
-	if b, ok := t.(*BasicTypeBitSet); ok {
-		if (b.bitset & MAPPING.bitset) != 0 {
-			return &VAL
+	if b, ok := t.(BasicTypeBitSet); ok {
+		if (b.All() & MAPPING.All()) != 0 {
+			return VAL
 		} else {
-			return &UNDEF
+			return UNDEF
 		}
 	} else {
 		keyData := stringSubtype(k)
 		if isNothingSubtype(keyData) {
-			return &UNDEF
+			return UNDEF
 		}
-		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BT_MAPPING).(Bdd), keyData, &INNER)
+		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), keyData, INNER)
 	}
 }
 
@@ -47,7 +47,7 @@ func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		} else {
-			return &NEVER
+			return NEVER
 		}
 	} else {
 		bddNode := b.(BddNode)
@@ -70,7 +70,7 @@ func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData
 		}
 	}
 	if memberType == nil {
-		return &UNDEF
+		return UNDEF
 	} else {
 		return memberType
 	}

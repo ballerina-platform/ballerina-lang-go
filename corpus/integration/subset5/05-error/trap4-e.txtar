@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((INT), ()), got ((INT, ERROR), ())
+error[SEMANTIC_ERROR]: incompatible type: expected int, got int|error
   --> trap4-e.bal:20:15
    |
 20 |     int res = trap 1 / 0; // @error

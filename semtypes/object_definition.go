@@ -40,7 +40,7 @@ func ObjectDefinitionDistinct(distinctId int) SemType {
 	// migrated from ObjectDefinition.java:55:9
 	common.Assert(distinctId >= 0)
 	bdd := BddAtom(new(CreateDistinctRecAtom(-distinctId - 1)))
-	return basicSubtype(BT_OBJECT, bdd)
+	return basicSubtype(BTObject, bdd)
 }
 
 // Each object type is represented as mapping type (with its basic type set to object) as fallows
@@ -108,9 +108,9 @@ func objectDefinitionValidateMembers(members []Member) bool {
 // migrated from ObjectDefinition.java:98:5
 func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	// migrated from ObjectDefinition.java:99:9
-	bdd := subtypeData(mappingType, BT_MAPPING)
+	bdd := subtypeData(mappingType, BTMapping)
 	// migrated from ObjectDefinition.java:100:9
-	return CreateBasicSemType(BT_OBJECT, bdd)
+	return CreateBasicSemType(BTObject, bdd)
 }
 
 // migrated from ObjectDefinition.java:104:5
@@ -122,7 +122,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 	if immutable {
 		fieldValueTy = VAL_READONLY
 	} else {
-		fieldValueTy = &VAL
+		fieldValueTy = VAL
 	}
 	fieldMemberType := fieldDefn.DefineMappingTypeWrapped(
 		env,
@@ -131,7 +131,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 			new(MemberKindField).field(),
 			visibilityAll,
 		},
-		&NEVER)
+		NEVER)
 
 	// migrated from ObjectDefinition.java:116:9
 	methodDefn := NewMappingDefinition()
@@ -139,11 +139,11 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 	methodMemberType := methodDefn.DefineMappingTypeWrapped(
 		env,
 		[]Field{
-			FieldFrom("value", &FUNCTION, true, false),
+			FieldFrom("value", FUNCTION, true, false),
 			new(MemberKindMethod).field(),
 			visibilityAll,
 		},
-		&NEVER)
+		NEVER)
 	return CellContainingWithEnvSemTypeCellMutability(env, Union(fieldMemberType, methodMemberType), mut)
 }
 
@@ -166,7 +166,7 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 			(&member.Kind).field(),
 			(&member.Visibility).field(),
 		},
-		&NEVER)
+		NEVER)
 	return CellFieldFrom(member.Name, CellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 

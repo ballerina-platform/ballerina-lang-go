@@ -1,14 +1,14 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = ConstantLoad 2
     %3 = ConstantLoad 3
     %4 = ConstantLoad 4
     %5 = ConstantLoad 4
-    %6 = newArray ((), (LIST))[%5]{%1, %2, %3, %4}
+    %6 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object...][%5]{%1, %2, %3, %4}
     v = %6;
     %8 = ConstantLoad 5
     %9 = push(v,%8) -> bb1;

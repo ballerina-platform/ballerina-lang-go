@@ -1,0 +1,51 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3/1
+    %4 = ConstantLoad 3
+    %5 = newArray [int, float, decimal, never...][%4]{%1, %2, %3}
+    t1 = %5;
+    %7 = println(t1) -> bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad 1.5
+    %9 = ConstantLoad 3/2
+    %10 = ConstantLoad 2
+    %11 = newArray [float, decimal, never...][%10]{%8, %9}
+    t2 = %11;
+    %13 = println(t2) -> bb2;
+  }
+  bb2 {
+    %14 = ConstantLoad 1
+    %15 = ConstantLoad 2
+    %16 = ConstantLoad 3
+    %17 = ConstantLoad 3
+    %18 = newArray [int...][%17]{%14, %15, %16}
+    a1 = %18;
+    %20 = println(a1) -> bb3;
+  }
+  bb3 {
+    %21 = ConstantLoad 1
+    %22 = ConstantLoad 2
+    %23 = ConstantLoad 3
+    %24 = ConstantLoad 3
+    %25 = newArray [float...][%24]{%21, %22, %23}
+    a2 = %25;
+    %27 = println(a2) -> bb4;
+  }
+  bb4 {
+    %28 = ConstantLoad 1/1
+    %29 = ConstantLoad 2/1
+    %30 = ConstantLoad 3/1
+    %31 = ConstantLoad 3
+    %32 = newArray [decimal...][%31]{%28, %29, %30}
+    a3 = %32;
+    %34 = println(a3) -> bb5;
+  }
+  bb5 {
+    return;
+  }
+}

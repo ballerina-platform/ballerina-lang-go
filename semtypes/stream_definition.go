@@ -39,9 +39,9 @@ func NewStreamDefinition() StreamDefinition {
 // migrated from StreamDefinition.java:54:5
 func streamContaining(tupleType SemType) SemType {
 	// migrated from StreamDefinition.java:55:9
-	bdd := subtypeData(tupleType, BT_LIST)
+	bdd := subtypeData(tupleType, BTList)
 	// migrated from StreamDefinition.java:56:9
-	return CreateBasicSemType(BT_STREAM, bdd)
+	return CreateBasicSemType(BTStream, bdd)
 }
 
 // migrated from StreamDefinition.java:42:5
@@ -54,7 +54,7 @@ func (this *StreamDefinition) GetSemType(env Env) SemType {
 func (this *StreamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
 	// migrated from StreamDefinition.java:47:9
 	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
-		return &STREAM
+		return STREAM
 	}
 	// migrated from StreamDefinition.java:50:9
 	tuple := this.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)
