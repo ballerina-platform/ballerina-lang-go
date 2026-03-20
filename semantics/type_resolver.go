@@ -1706,69 +1706,20 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 		t.ctx.Unimplemented("method calls not implemented", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
-	var symbolSpace model.ExportedSymbolSpace
+	var symbolRef model.SymbolRef
 	var pkgAlias ast.BLangIdentifier
-	if semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST) {
-		pkgName := array.PackageName
-		space, ok := t.importedSymbols[pkgName]
-		if !ok {
-			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
-			return nil, expressionEffect{}, false
-		}
-		symbolSpace = space
-		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if _, exists := t.implicitImports[pkgName]; !exists {
-			importNode := ast.BLangImportPackage{
-				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
-				Alias:        &pkgAlias,
-			}
-			ast.Walk(t, &importNode)
-			t.implicitImports[pkgName] = importNode
-		}
-	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.INT) {
-		pkgName := bInt.PackageName
-		space, ok := t.importedSymbols[pkgName]
-		if !ok {
-			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
-			return nil, expressionEffect{}, false
-		}
-		symbolSpace = space
-		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if _, exists := t.implicitImports[pkgName]; !exists {
-			importNode := ast.BLangImportPackage{
-				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "int"}},
-				Alias:        &pkgAlias,
-			}
-			ast.Walk(t, &importNode)
-			t.implicitImports[pkgName] = importNode
-		}
-	} else if semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING) {
-		pkgName := bMap.PackageName
-		space, ok := t.importedSymbols[pkgName]
-		if !ok {
-			t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
-			return nil, expressionEffect{}, false
-		}
-		symbolSpace = space
-		pkgAlias = ast.BLangIdentifier{Value: pkgName}
-		if _, exists := t.implicitImports[pkgName]; !exists {
-			importNode := ast.BLangImportPackage{
-				OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-				PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
-				Alias:        &pkgAlias,
-			}
-			ast.Walk(t, &importNode)
-			t.implicitImports[pkgName] = importNode
-		}
-	} else {
+	switch {
+	case semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST):
+		symbolRef, pkgAlias, ok = t.resolveLangLibImport(array.PackageName, methodSymbol.name, expr)
+	case semtypes.IsSubtypeSimple(recieverTy, semtypes.INT):
+		symbolRef, pkgAlias, ok = t.resolveLangLibImport(bInt.PackageName, methodSymbol.name, expr)
+	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
+		symbolRef, pkgAlias, ok = t.resolveLangLibImport(bMap.PackageName, methodSymbol.name, expr)
+	default:
 		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
-	symbolRef, ok := symbolSpace.GetSymbol(methodSymbol.name)
 	if !ok {
-		t.ctx.SemanticError("method not found: "+methodSymbol.name, expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs)+1)
@@ -1795,6 +1746,31 @@ func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocati
 	expr.Expr = nil
 	expr.PkgAlias = &pkgAlias
 	return t.resolveFunctionCall(chain, expr, symbolRef)
+}
+
+func (t *TypeResolver) resolveLangLibImport(pkgName string, methodName string, expr *ast.BLangInvocation) (model.SymbolRef, ast.BLangIdentifier, bool) {
+	symbolSpace, ok := t.importedSymbols[pkgName]
+	if !ok {
+		t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+		return model.SymbolRef{}, ast.BLangIdentifier{}, false
+	}
+	pkgAlias := ast.BLangIdentifier{Value: pkgName}
+	if _, exists := t.implicitImports[pkgName]; !exists {
+		moduleName := strings.TrimPrefix(pkgName, "lang.")
+		importNode := ast.BLangImportPackage{
+			OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+			PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: moduleName}},
+			Alias:        &pkgAlias,
+		}
+		ast.Walk(t, &importNode)
+		t.implicitImports[pkgName] = importNode
+	}
+	symbolRef, ok := symbolSpace.GetSymbol(methodName)
+	if !ok {
+		t.ctx.SemanticError("method not found: "+methodName, expr.GetPosition())
+		return model.SymbolRef{}, ast.BLangIdentifier{}, false
+	}
+	return symbolRef, pkgAlias, true
 }
 
 func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
