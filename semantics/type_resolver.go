@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"ballerina-lang-go/ast"
+	balCommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -640,19 +641,12 @@ func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.S
 	var ty semtypes.SemType
 
 	switch bType.BTypeGetTag() {
-	case model.TypeTags_INT:
-		switch v := n.GetValue().(type) {
-		case int64:
-			ty = semtypes.IntConst(v)
-		case float64:
-			ty = semtypes.FloatConst(v)
-		default:
-			t.internalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+	case model.TypeTags_INT, model.TypeTags_BYTE, model.TypeTags_FLOAT, model.TypeTags_DECIMAL:
+		var ok bool
+		ty, ok = resolveNumericLiteralValue(t, n, expectedType)
+		if !ok {
 			return false
 		}
-	case model.TypeTags_BYTE:
-		value := n.GetValue().(int64)
-		ty = semtypes.IntConst(value)
 	case model.TypeTags_BOOLEAN:
 		value := n.GetValue().(bool)
 		ty = semtypes.BooleanConst(value)
@@ -661,50 +655,11 @@ func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.S
 		ty = semtypes.StringConst(value)
 	case model.TypeTags_NIL:
 		ty = semtypes.NIL
-	case model.TypeTags_DECIMAL:
-		switch v := n.GetValue().(type) {
-		case string:
-			parsed, ok := parseDecimalValue(t, stripFloatingPointTypeSuffix(v), n.GetPosition())
-			if !ok {
-				return false
-			}
-			n.SetValue(parsed)
-			ty = semtypes.DecimalConst(*parsed)
-		case *big.Rat:
-			ty = semtypes.DecimalConst(*v)
-		case int64:
-			r := new(big.Rat).SetInt64(v)
-			n.SetValue(r)
-			ty = semtypes.DecimalConst(*r)
-		default:
-			t.internalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
-			return false
-		}
-	case model.TypeTags_FLOAT:
-		switch v := n.GetValue().(type) {
-		case string:
-			parsed, ok := parseFloatValue(t, v, n.GetPosition())
-			if !ok {
-				return false
-			}
-			n.SetValue(parsed)
-			ty = semtypes.FloatConst(parsed)
-		case float64:
-			ty = semtypes.FloatConst(v)
-		case int64:
-			floatVal := float64(v)
-			n.SetValue(floatVal)
-			ty = semtypes.FloatConst(floatVal)
-		default:
-			t.internalError(fmt.Sprintf("unexpected float literal value type: %T", v), n.GetPosition())
-			return false
-		}
 	default:
 		t.unimplemented("unsupported literal type", n.GetPosition())
 		return false
 	}
 
-	ty = widenNumericType(n, ty, expectedType, t.typeContext())
 	setExpectedType(n, ty)
 
 	// Update symbol type if this literal has a symbol
@@ -712,41 +667,149 @@ func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.S
 	return true
 }
 
-// widenNumericType widens a numeric literal type to match the expected type.
-// For example, an int literal 1 can be widened to float or decimal when the context requires it.
-func widenNumericType(expr *ast.BLangLiteral, ty, expectedType semtypes.SemType, tyCtx semtypes.Context) semtypes.SemType {
-	if expectedType == nil {
-		return ty
+func hasFloatTypeSuffix(s string) bool {
+	if len(s) == 0 {
+		return false
 	}
-	if semtypes.IsSubtype(tyCtx, ty, expectedType) {
-		return ty
-	}
-	singleNum := semtypes.SingleNumericType(expectedType)
-	if !singleNum.IsPresent() {
-		return ty
-	}
-	target := singleNum.Get()
+	last := s[len(s)-1]
+	return last == 'f' || last == 'F'
+}
 
-	if target == semtypes.FLOAT {
-		if intVal, ok := expr.Value.(int64); ok {
-			floatVal := float64(intVal)
-			expr.Value = floatVal
-			return semtypes.FloatConst(floatVal)
+func determineCandidatesFromLiteral(t typeResolver, n *ast.BLangLiteral) semtypes.SemType {
+	switch n.GetValueType().BTypeGetTag() {
+	case model.TypeTags_INT, model.TypeTags_BYTE:
+		return semtypes.NUMBER
+	case model.TypeTags_FLOAT:
+		if hasFloatTypeSuffix(n.OriginalValue) {
+			return semtypes.FLOAT
 		}
+		if balCommon.HasHexIndicator(n.OriginalValue) {
+			return semtypes.FLOAT
+		}
+		return semtypes.Union(semtypes.FLOAT, semtypes.DECIMAL)
+	case model.TypeTags_DECIMAL:
+		return semtypes.DECIMAL
+	default:
+		t.internalError(fmt.Sprintf("unexpected type tag %v for numeric literal", n.GetValueType().BTypeGetTag()), n.GetPosition())
+		return semtypes.NEVER
 	}
-	if target == semtypes.DECIMAL {
-		if intVal, ok := expr.Value.(int64); ok {
-			ratVal := new(big.Rat).SetInt64(intVal)
-			expr.Value = ratVal
-			return semtypes.DecimalConst(*ratVal)
+}
+
+func determineCandidatesFromNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral) semtypes.SemType {
+	switch n.Kind {
+	case model.NodeKind_INTEGER_LITERAL:
+		return semtypes.NUMBER
+	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
+		if hasFloatTypeSuffix(n.OriginalValue) {
+			return semtypes.FLOAT
 		}
-		if floatVal, ok := expr.Value.(float64); ok {
-			ratVal := new(big.Rat).SetFloat64(floatVal)
-			expr.Value = ratVal
-			return semtypes.DecimalConst(*ratVal)
+		if balCommon.IsDecimalDiscriminated(n.OriginalValue) {
+			return semtypes.DECIMAL
 		}
+		return semtypes.Union(semtypes.FLOAT, semtypes.DECIMAL)
+	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
+		return semtypes.FLOAT
+	default:
+		t.internalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
+		return semtypes.NEVER
 	}
-	return ty
+}
+
+func narrowCandidates(candidates, expectedType semtypes.SemType) semtypes.SemType {
+	if expectedType == nil {
+		return candidates
+	}
+	narrowed := semtypes.Intersect(candidates, expectedType)
+	if !semtypes.IsNever(narrowed) {
+		return narrowed
+	}
+	return candidates
+}
+
+func pickNumericType(t typeResolver, n *ast.BLangLiteral, candidates semtypes.SemType) (semtypes.SemType, bool) {
+	switch {
+	case semtypes.ContainsBasicType(candidates, semtypes.INT):
+		return resolveAsInt(t, n)
+	case semtypes.ContainsBasicType(candidates, semtypes.FLOAT):
+		return resolveAsFloat(t, n)
+	case semtypes.ContainsBasicType(candidates, semtypes.DECIMAL):
+		return resolveAsDecimal(t, n)
+	default:
+		t.semanticError("no valid candidate to resolve numeric literal", n.GetPosition())
+		return nil, false
+	}
+}
+
+func resolveAsInt(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var intVal int64
+	switch v := n.GetValue().(type) {
+	case int64:
+		intVal = v
+	case float64:
+		intVal = int64(v)
+	case string:
+		parsed, err := strconv.ParseInt(v, 0, 64)
+		if err != nil {
+			t.syntaxError(fmt.Sprintf("invalid int literal: %s", v), n.GetPosition())
+			return nil, false
+		}
+		intVal = parsed
+	default:
+		t.internalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(intVal)
+	return semtypes.IntConst(intVal), true
+}
+
+func resolveAsFloat(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var floatVal float64
+	switch v := n.GetValue().(type) {
+	case string:
+		parsed, ok := parseFloatValue(t, v, n.GetPosition())
+		if !ok {
+			return nil, false
+		}
+		floatVal = parsed
+	case float64:
+		floatVal = v
+	case int64:
+		floatVal = float64(v)
+	default:
+		t.internalError(fmt.Sprintf("unexpected float literal value type: %T", v), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(floatVal)
+	return semtypes.FloatConst(floatVal), true
+}
+
+func resolveAsDecimal(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var ratVal *big.Rat
+	switch v := n.GetValue().(type) {
+	case string:
+		parsed, ok := parseDecimalValue(t, stripFloatingPointTypeSuffix(v), n.GetPosition())
+		if !ok {
+			return nil, false
+		}
+		ratVal = parsed
+	case *big.Rat:
+		ratVal = v
+	case int64:
+		ratVal = new(big.Rat).SetInt64(v)
+	case float64:
+		ratVal = new(big.Rat).SetFloat64(v)
+	default:
+		t.internalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(ratVal)
+	return semtypes.DecimalConst(*ratVal), true
+}
+
+func resolveNumericLiteralValue(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) (semtypes.SemType, bool) {
+	candidates := determineCandidatesFromLiteral(t, n)
+	candidates = narrowCandidates(candidates, expectedType)
+	return pickNumericType(t, n, candidates)
 }
 
 // stripFloatingPointTypeSuffix removes the f/F/d/D type suffix from a floating point literal string
@@ -778,76 +841,17 @@ func parseDecimalValue(t typeResolver, strValue string, pos diagnostics.Location
 }
 
 func resolveNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral, expectedType semtypes.SemType) bool {
-	bType := n.GetValueType()
-	typeTag := bType.BTypeGetTag()
+	candidates := determineCandidatesFromNumericLiteral(t, n)
+	candidates = narrowCandidates(candidates, expectedType)
 
-	var (
-		ty semtypes.SemType
-		ok bool
-	)
-
-	switch n.Kind {
-	case model.NodeKind_INTEGER_LITERAL:
-		ty, ok = resolveIntegerLiteral(t, n, typeTag)
-	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
-		ty, ok = resolveDecimalFloatingPointLiteral(t, n, typeTag)
-	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
-		ty, ok = resolveHexFloatingPointLiteral(t, n, typeTag)
-	default:
-		t.internalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
+	ty, ok := pickNumericType(t, &n.BLangLiteral, candidates)
+	if !ok {
 		return false
 	}
 
-	if !ok || ty == nil {
-		return false
-	}
-
-	ty = widenNumericType(&n.BLangLiteral, ty, expectedType, t.typeContext())
 	setExpectedType(n, ty)
-
 	updateSymbolType(t, n, ty)
 	return true
-}
-
-func resolveIntegerLiteral(t typeResolver, n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	value := n.GetValue().(int64)
-
-	switch typeTag {
-	case model.TypeTags_INT, model.TypeTags_BYTE:
-		return semtypes.IntConst(value), true
-	default:
-		t.internalError(fmt.Sprintf("unexpected type tag %v for integer literal", typeTag), n.GetPosition())
-		return nil, false
-	}
-}
-
-func resolveDecimalFloatingPointLiteral(t typeResolver, n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	strValue := stripFloatingPointTypeSuffix(n.GetValue().(string))
-
-	switch typeTag {
-	case model.TypeTags_FLOAT:
-		f, ok := parseFloatValue(t, strValue, n.GetPosition())
-		if !ok {
-			return nil, false
-		}
-		n.SetValue(f)
-		return semtypes.FloatConst(f), true
-	case model.TypeTags_DECIMAL:
-		r, ok := parseDecimalValue(t, strValue, n.GetPosition())
-		if !ok {
-			return nil, false
-		}
-		n.SetValue(r)
-		return semtypes.DecimalConst(*r), true
-	default:
-		t.internalError(fmt.Sprintf("unexpected type tag %v for decimal floating point literal", typeTag), n.GetPosition())
-		return nil, false
-	}
-}
-
-func resolveHexFloatingPointLiteral(t typeResolver, n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	t.unimplemented("hex floating point literals not supported", n.GetPosition())
-	return nil, false
 }
 
 // updateSymbolType updates the symbol's type if the node has an associated symbol.
