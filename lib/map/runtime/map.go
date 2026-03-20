@@ -40,7 +40,7 @@ func mapKeys(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue,
 		stringArrayOnce.Do(func() {
 			env := rt.GetTypeEnv()
 			ld := semtypes.NewListDefinition()
-			stringArrayTy = ld.DefineListTypeWrappedWithEnvSemType(env, &semtypes.STRING)
+			stringArrayTy = ld.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 		})
 		m := args[0].(*values.Map)
 		keys := m.Keys()

@@ -41,8 +41,8 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 
 	// length: (MAPPING) -> INT
 	lengthSignature := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{&semtypes.MAPPING},
-		ReturnType: &semtypes.INT,
+		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
+		ReturnType: semtypes.INT,
 	}
 	lengthSymbol := model.NewFunctionSymbol("length", lengthSignature, true)
 	space.AddSymbol("length", lengthSymbol)
@@ -51,9 +51,9 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 
 	// keys: (MAPPING) -> string[]
 	stringArrayLd := semtypes.NewListDefinition()
-	stringArrayTy := stringArrayLd.DefineListTypeWrappedWithEnvSemType(env, &semtypes.STRING)
+	stringArrayTy := stringArrayLd.DefineListTypeWrappedWithEnvSemType(env, semtypes.STRING)
 	keysSignature := model.FunctionSignature{
-		ParamTypes: []semtypes.SemType{&semtypes.MAPPING},
+		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
 		ReturnType: stringArrayTy,
 	}
 	keysSymbol := model.NewFunctionSymbol("keys", keysSignature, true)
@@ -87,13 +87,13 @@ func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.Generi
 			return ref
 		}
 		tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
-		if !semtypes.IsSubtype(tyCtx, ty, &semtypes.MAPPING) {
+		if !semtypes.IsSubtype(tyCtx, ty, semtypes.MAPPING) {
 			ctx.SemanticError("expect first argument to be a subtype of map<any|error>", nil)
 			return model.SymbolRef{}
 		}
-		memberType := semtypes.MappingMemberTypeInnerValProj(tyCtx, ty, &semtypes.STRING)
+		memberType := semtypes.MappingMemberTypeInnerValProj(tyCtx, ty, semtypes.STRING)
 		removeSignature := model.FunctionSignature{
-			ParamTypes: []semtypes.SemType{ty, &semtypes.STRING},
+			ParamTypes: []semtypes.SemType{ty, semtypes.STRING},
 			ReturnType: memberType,
 		}
 		removeSymbol := model.NewFunctionSymbol("remove", removeSignature, true)
