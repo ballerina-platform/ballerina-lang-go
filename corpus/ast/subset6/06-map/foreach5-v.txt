@@ -1,0 +1,28 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function getMap () (
+    (constrained-type
+      (builtin-ref-type map)
+      (value-type int)))
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 10))
+          (key-value
+            (simple-var-ref y)
+            (literal 20))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable val (type
+            (value-type int))))
+        (invocation getMap ())
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref val)))))))))

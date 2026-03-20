@@ -20,6 +20,7 @@ package desugar
 import (
 	"ballerina-lang-go/ast"
 	array "ballerina-lang-go/lib/array/compile"
+	maplib "ballerina-lang-go/lib/map/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -334,6 +335,9 @@ func visitForEach(cx *FunctionContext, stmt *ast.BLangForeach) desugaredNode[mod
 	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.LIST) {
 		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
+	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.MAPPING) {
+		return desugarForEachOnMap(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	}
 	cx.unimplemented("unsupported collection type in foreach")
 	return desugaredNode[model.StatementNode]{}
 }
@@ -494,6 +498,177 @@ func createLengthInvocation(cx *FunctionContext, collection ast.BLangExpression)
 	}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
+	return inv
+}
+
+func desugarForEachOnMap(cx *FunctionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	basePos := collection.GetPosition()
+
+	// Step 1: evaluate collection once into a temp variable
+	collResult := walkExpression(cx, collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode
+
+	collType := collExpr.GetDeterminedType()
+	collName, collVarSymbol := cx.addDesugardSymbol(collType, model.SymbolKindVariable, false)
+	collVarName := &ast.BLangIdentifier{Value: collName}
+	collVar := &ast.BLangSimpleVariable{Name: collVarName}
+	collVar.SetDeterminedType(collType)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collVarSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	setPositionIfMissing(collVarDef, basePos)
+	initStmts = append(initStmts, collVarDef)
+
+	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
+	collVarRef.SetSymbol(collVarSymbol)
+	collVarRef.SetDeterminedType(collType)
+
+	// Step 2: keys variable ($desugar$N = lang.map:keys(collVar))
+	keysInvocation := createKeysInvocation(cx, collVarRef)
+	keysType := keysInvocation.GetDeterminedType()
+
+	keysName, keysVarSymbol := cx.addDesugardSymbol(keysType, model.SymbolKindVariable, false)
+	keysVarName := &ast.BLangIdentifier{Value: keysName}
+	keysVar := &ast.BLangSimpleVariable{Name: keysVarName}
+	keysVar.SetDeterminedType(keysType)
+	keysVar.SetInitialExpression(keysInvocation)
+	keysVar.SetSymbol(keysVarSymbol)
+	keysVarDef := &ast.BLangSimpleVariableDef{Var: keysVar}
+	setPositionIfMissing(keysVarDef, basePos)
+	initStmts = append(initStmts, keysVarDef)
+
+	keysVarRef := &ast.BLangSimpleVarRef{VariableName: keysVarName}
+	keysVarRef.SetSymbol(keysVarSymbol)
+	keysVarRef.SetDeterminedType(keysType)
+
+	// Step 3: index variable ($desugar$N = 0)
+	zeroLiteral := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         int64(0),
+			OriginalValue: "0",
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	zeroLiteral.SetDeterminedType(semtypes.INT)
+
+	idxName, idxVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	idxVarName := &ast.BLangIdentifier{Value: idxName}
+	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
+	idxVar.SetDeterminedType(semtypes.INT)
+	idxVar.SetInitialExpression(zeroLiteral)
+	idxVar.SetSymbol(idxVarSymbol)
+	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	setPositionIfMissing(idxVarDef, basePos)
+	initStmts = append(initStmts, idxVarDef)
+
+	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
+	idxVarRef.SetSymbol(idxVarSymbol)
+	idxVarRef.SetDeterminedType(semtypes.INT)
+
+	// Step 4: length variable ($desugar$N = lang.array:length(keysVar))
+	lengthInvocation := createLengthInvocation(cx, keysVarRef)
+
+	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	lenVarName := &ast.BLangIdentifier{Value: lenName}
+	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
+	lenVar.SetDeterminedType(semtypes.INT)
+	lenVar.SetInitialExpression(lengthInvocation)
+	lenVar.SetSymbol(lenVarSymbol)
+	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	setPositionIfMissing(lenVarDef, basePos)
+	initStmts = append(initStmts, lenVarDef)
+
+	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
+	lenVarRef.SetSymbol(lenVarSymbol)
+	lenVarRef.SetDeterminedType(semtypes.INT)
+
+	// Step 5: while condition ($idx < $len)
+	whileCondition := &ast.BLangBinaryExpr{
+		LhsExpr: idxVarRef,
+		RhsExpr: lenVarRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
+
+	// Step 6: key access (keysVar[$idx]) then map access (collVar[key])
+	keyAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: idxVarRef,
+	}
+	keyAccess.Expr = keysVarRef
+	keyAccess.SetDeterminedType(semtypes.STRING)
+
+	mapAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: keyAccess,
+	}
+	mapAccess.Expr = collVarRef
+	mapAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
+
+	// Step 7: patch loop var def initial expression
+	loopVarDef.Var.SetInitialExpression(mapAccess)
+
+	// Step 8: build body
+	incrementStmt := createIncrementStmt(idxVarRef)
+	cx.pushLoopVar(idxVarRef)
+
+	newBodyStmts := make([]model.StatementNode, 0, len(body.Stmts)+2)
+	newBodyStmts = append(newBodyStmts, loopVarDef)
+	newBodyStmts = append(newBodyStmts, body.Stmts...)
+	if len(newBodyStmts) > 0 {
+		if isAppendReachable(newBodyStmts[len(newBodyStmts)-1]) {
+			newBodyStmts = append(newBodyStmts, incrementStmt)
+		}
+	}
+	body.Stmts = newBodyStmts
+
+	bodyResult := walkBlockStmt(cx, body)
+	newBody := bodyResult.replacementNode.(*ast.BLangBlockStmt)
+
+	cx.popLoopVar()
+
+	// Step 9: create while loop
+	whileStmt := &ast.BLangWhile{
+		Expr: whileCondition,
+		Body: *newBody,
+	}
+	whileStmt.SetScope(foreachScope)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: whileStmt,
+	}
+}
+
+func createKeysInvocation(cx *FunctionContext, collection ast.BLangExpression) *ast.BLangInvocation {
+	pkgName := maplib.PackageName
+	space, ok := cx.getImportedSymbolSpace(pkgName)
+	if !ok {
+		cx.internalError(pkgName + " symbol space not found")
+		return nil
+	}
+	symbolRef, ok := space.GetSymbol("keys")
+	if !ok {
+		cx.internalError(pkgName + ":keys symbol not found")
+		return nil
+	}
+	fnSymbol := space.Main.SymbolAt(symbolRef.Index).(model.FunctionSymbol)
+	returnType := fnSymbol.Signature().ReturnType
+	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
+		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
+		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
+		Alias:        &ast.BLangIdentifier{Value: pkgName},
+	})
+	inv := &ast.BLangInvocation{
+		Name:     &ast.BLangIdentifier{Value: "keys"},
+		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
+		ArgExprs: []ast.BLangExpression{collection},
+	}
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(returnType)
 	return inv
 }
 
