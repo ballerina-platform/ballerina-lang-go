@@ -398,7 +398,7 @@ func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 
-	runProjectInterpretPhase(birPkgs, &stdoutBuf)
+	runProjectInterpretPhase(birPkgs, &stdoutBuf, &stderrBuf)
 	return stdoutBuf.String(), stderrBuf.String()
 }
 
@@ -431,7 +431,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	return backend.BIRPackages(), nil
 }
 
-func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf *bytes.Buffer) {
+func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
 	if len(birPkgs) == 0 {
 		return
 	}
@@ -439,7 +439,7 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf *bytes.Buffer
 	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
-			fmt.Fprintf(stdoutBuf, "Runtime panic: %v\n", err)
+			fmt.Fprintln(stderrBuf, err.Error())
 			return
 		}
 	}
