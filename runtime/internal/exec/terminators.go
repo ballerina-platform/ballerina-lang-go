@@ -67,7 +67,7 @@ func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.R
 		}
 		return result
 	}
-	panic("function not found: " + callInfo.Name.Value())
+	panic(values.NewErrorWithMessage("function not found: " + callInfo.Name.Value()))
 }
 
 func extractArgs(args []bir.BIROperand, frame *Frame, reg *modules.Registry) []values.BalValue {
@@ -76,4 +76,9 @@ func extractArgs(args []bir.BIROperand, frame *Frame, reg *modules.Registry) []v
 		values[i] = getOperandValue(&op, frame, reg)
 	}
 	return values
+}
+
+func execPanic(panicTerm *bir.Panic, frame *Frame, reg *modules.Registry) *bir.BIRBasicBlock {
+	errVal := getOperandValue(panicTerm.ErrorOp, frame, reg)
+	panic(errVal)
 }

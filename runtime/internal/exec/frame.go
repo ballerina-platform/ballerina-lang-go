@@ -19,12 +19,14 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
 
 type Frame struct {
-	locals      []values.BalValue // variable index → value (indexed by BIROperand.Index)
-	functionKey string            // function key (package name + function name)
+	locals      []values.BalValue    // variable index → value (indexed by BIROperand.Index)
+	functionKey string               // function key (package name + function name)
+	location    diagnostics.Location // source location of the currently executing instruction/terminator
 }
 
 func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
@@ -42,4 +44,14 @@ func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Regis
 	} else {
 		currentFrame.locals[op.Index] = value
 	}
+}
+
+// SetLocation updates the current source location associated with this frame.
+func (f *Frame) SetLocation(loc diagnostics.Location) {
+	f.location = loc
+}
+
+// Location returns the current source location associated with this frame.
+func (f *Frame) Location() diagnostics.Location {
+	return f.location
 }
