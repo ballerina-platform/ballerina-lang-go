@@ -84,6 +84,7 @@ var (
 		"subset6/06-object/inclusion-transitive-2-v.bal",
 		"subset6/06-object/init-error-return-v.bal",
 		"subset6/06-object/init-error-check-v.bal",
+		"subset6/06-object/self-field-shadow-e.bal",
 		// cast #139
 		"subset6/06-map/length2-v.bal",
 	}
