@@ -53,11 +53,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		"subset5/05-error/panic1-p.bal",
-		"subset5/05-error/panic2-p.bal",
-		"subset5/05-error/panic3-p.bal",
-		"subset5/05-error/panic4-p.bal",
-		"subset5/05-error/panic5-p.bal",
 		"subset5/05-error/check-v.bal",
 		"subset5/05-error/check1-v.bal",
 		"subset5/05-error/check2-v.bal",
@@ -215,7 +210,7 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 
-	runInterpretPhase(birPkg, &stdoutBuf)
+	runInterpretPhase(birPkg, &stdoutBuf, &stderrBuf)
 	return stdoutBuf.String(), stderrBuf.String()
 }
 
@@ -258,14 +253,15 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	return backend.BIR(), nil
 }
 
-func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf *bytes.Buffer) {
+func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffer) {
 	if birPkg == nil {
 		return
 	}
 	rt := runtime.NewRuntime()
 	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
 	if err := rt.Interpret(*birPkg); err != nil {
-		fmt.Fprintf(stdoutBuf, "Runtime panic: %v\n", err)
+		// For now just write the error string to stderr to match corpus expectations
+		fmt.Fprintln(stderrBuf, err.Error())
 	}
 }
 
