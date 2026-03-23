@@ -1156,9 +1156,7 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 	}
 
 	object := ctx.addTempVar(expr.GetDeterminedType())
-	newObj := &NewObject{}
-	newObj.ClassDef = classDef
-	newObj.LhsOp = object
+	newObj := NewObjectConstructor(classDef, object, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, newObj)
 
 	var args []BIROperand
@@ -1171,13 +1169,8 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 
 	thenBB := ctx.addBB()
 	initFunc := classDef.VTable["init"]
-	call := &Call{}
-	call.Kind = INSTRUCTION_KIND_CALL
-	call.Args = args
-	call.Name = initFunc.Name
-	call.ThenBB = thenBB
 	result := ctx.addTempVar(expr.DeterminedType)
-	call.LhsOp = result
+	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, thenBB, result, expr.GetPosition())
 	call.IsVirtual = true
 	call.CachedBIRFunc = initFunc
 	curBB.Terminator = call

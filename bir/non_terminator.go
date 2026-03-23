@@ -332,6 +332,18 @@ func (n *NewObject) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
+func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnostics.Location) *NewObject {
+	return &NewObject{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		ClassDef: classDef,
+	}
+}
+
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {
 	return true
 }
