@@ -17,12 +17,6 @@
 package corpus
 
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/test_util"
-	"ballerina-lang-go/values"
 	"bytes"
 	"flag"
 	"fmt"
@@ -31,6 +25,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 
@@ -78,6 +79,8 @@ var (
 		"subset6/06-object/inclusion-transitive-2-v.bal",
 		"subset6/06-object/init-error-return-v.bal",
 		"subset6/06-object/init-error-check-v.bal",
+		// cast #139
+		"subset6/06-map/length2-v.bal",
 	}
 )
 
