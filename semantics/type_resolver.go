@@ -423,12 +423,6 @@ func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 		return nil
 	}
 	typeData.Type = ty
-
-	// Update symbol type if the type descriptor has a symbol
-	if tdNode, ok := typeData.TypeDescriptor.(ast.BLangNode); ok {
-		updateSymbolType(t.ctx, tdNode, ty)
-	}
-
 	return t
 }
 
