@@ -197,7 +197,7 @@ func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) de
 		Value:         name,
 		OriginalValue: name,
 	}
-	lit.SetPosition(expr.Field.GetPosition())
+	lit.SetPosition(expr.GetPosition())
 	lit.SetDeterminedType(new(semtypes.STRING))
 
 	indexAccess := &ast.BLangIndexBasedAccess{
@@ -656,7 +656,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 
 	selectResult := walkExpression(cx, selectClause.Expression)
 	for _, s := range selectResult.initStmts {
-		bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+		bodyStmts = append(bodyStmts, s)
 	}
 	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
 	if pushInvocation == nil {
@@ -718,7 +718,7 @@ func appendQueryIntermediateClauseStmts(
 				}
 				letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
 				for _, s := range letResult.initStmts {
-					bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+					bodyStmts = append(bodyStmts, s)
 				}
 				varDef.Var.SetInitialExpression(letResult.replacementNode.(ast.BLangExpression))
 				bodyStmts = append(bodyStmts, varDef)
@@ -730,7 +730,7 @@ func appendQueryIntermediateClauseStmts(
 			}
 			whereResult := walkExpression(cx, clause.Expression)
 			for _, s := range whereResult.initStmts {
-				bodyStmts = append(bodyStmts, s.(ast.BLangStatement))
+				bodyStmts = append(bodyStmts, s)
 			}
 			whereCond := whereResult.replacementNode.(ast.BLangExpression)
 			notWhereCond := &ast.BLangUnaryExpr{
