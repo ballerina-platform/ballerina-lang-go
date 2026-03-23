@@ -63,7 +63,7 @@ func allMethodField() Field {
 		"remote-method",
 		"resource-method",
 	}
-	var ty SemType = &NEVER
+	var ty SemType = NEVER
 	for _, each := range tys {
 		ty = Union(ty, StringConst(each))
 	}
@@ -125,19 +125,19 @@ func ObjectMemberType(ctx Context, name, ty SemType) SemType {
 }
 
 func convertObjectToMappingTy(ctx Context, ty SemType) SemType {
-	objectTy := Intersect(ty, &OBJECT)
+	objectTy := Intersect(ty, OBJECT)
 	if IsEmpty(ctx, objectTy) {
 		return nil
 	}
-	bdd := subtypeData(objectTy, BT_OBJECT)
-	return CreateBasicSemType(BT_MAPPING, bdd)
+	bdd := subtypeData(objectTy, BTObject)
+	return CreateBasicSemType(BTMapping, bdd)
 }
 
 func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
-	mappingTy := Intersect(ty, &MAPPING)
+	mappingTy := Intersect(ty, MAPPING)
 	if IsEmpty(ctx, mappingTy) {
 		return nil
 	}
-	bdd := subtypeData(mappingTy, BT_MAPPING)
-	return CreateBasicSemType(BT_OBJECT, bdd)
+	bdd := subtypeData(mappingTy, BTMapping)
+	return CreateBasicSemType(BTObject, bdd)
 }

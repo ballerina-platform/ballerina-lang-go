@@ -1,8 +1,8 @@
 module $anon.. v 0.0.0;
 class Bar {
-  x ((INT), ())
+  x int
 
-  getX() -> ((INT), ()){
+  getX() -> int{
     bb0 {
       %3 = ConstantLoad x
       %2 = self[%3];
@@ -11,7 +11,7 @@ class Bar {
     }
   }
 
-  init(((INT), ())) -> ((NIL), ()){
+  init(int) -> nil{
     bb0 {
       %3 = ConstantLoad x
       self[%3] = x;

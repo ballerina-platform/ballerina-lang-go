@@ -330,7 +330,7 @@ func fixedArrayGet(members FixedLengthArray, index int) CellSemType {
 
 func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemType {
 	// migrated from ListOps.java:430:5
-	return Diff(listAtomicMemberTypeInner(atomic, key), &UNDEF)
+	return Diff(listAtomicMemberTypeInner(atomic, key), UNDEF)
 }
 
 func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
@@ -342,7 +342,7 @@ func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest CellSemType, 
 	// migrated from ListOps.java:438:5
 	if intSubtype, ok := key.(IntSubtype); ok {
 		var m SemType
-		m = &NEVER
+		m = NEVER
 		initLen := len(fixedArray.Initial)
 		fixedLen := fixedArray.FixedLength
 		if fixedLen != 0 {
@@ -375,7 +375,7 @@ func BddListMemberTypeInnerVal(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		}
-		return &NEVER
+		return NEVER
 	} else {
 		bddNode := b.(BddNode)
 		return Union(BddListMemberTypeInnerVal(cx, bddNode.Left(), key, Intersect(listAtomicMemberTypeInnerVal(*cx.listAtomType(bddNode.Atom()), key), accum)), Union(BddListMemberTypeInnerVal(cx, bddNode.Middle(), key, accum), BddListMemberTypeInnerVal(cx, bddNode.Right(), key, accum)))

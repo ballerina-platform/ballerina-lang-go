@@ -1,10 +1,10 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;
-    %3 = x is ((INT), ())
+    %3 = x is int
     %3 ? bb1 : bb3;
   }
   bb1 {
@@ -15,7 +15,7 @@ main() -> ((NIL), ()){
     GOTO bb3;
   }
   bb3 {
-    %6 = x is ((STRING), ())
+    %6 = x is string
     %6 ? bb4 : bb6;
   }
   bb4 {
@@ -28,7 +28,7 @@ main() -> ((NIL), ()){
   bb6 {
     %9 = ConstantLoad hello
     s = %9;
-    %11 = s is ((STRING), ())
+    %11 = s is string
     %11 ? bb7 : bb9;
   }
   bb7 {
@@ -39,7 +39,7 @@ main() -> ((NIL), ()){
     GOTO bb9;
   }
   bb9 {
-    %14 = s is ((DECIMAL), ())
+    %14 = s is decimal
     %14 ? bb10 : bb12;
   }
   bb10 {
@@ -52,7 +52,7 @@ main() -> ((NIL), ()){
   bb12 {
     %17 = ConstantLoad 1
     f = %17;
-    %19 = f is ((FLOAT), ())
+    %19 = f is float
     %19 ? bb13 : bb15;
   }
   bb13 {
@@ -63,7 +63,7 @@ main() -> ((NIL), ()){
     GOTO bb15;
   }
   bb15 {
-    %22 = f is ((BOOLEAN), ())
+    %22 = f is boolean
     %22 ? bb16 : bb18;
   }
   bb16 {
@@ -76,7 +76,7 @@ main() -> ((NIL), ()){
   bb18 {
     %25 = ConstantLoad true
     y = %25;
-    %27 = y is ((BOOLEAN), ())
+    %27 = y is boolean
     %27 ? bb19 : bb21;
   }
   bb19 {
@@ -87,7 +87,7 @@ main() -> ((NIL), ()){
     GOTO bb21;
   }
   bb21 {
-    %30 = y is ((FLOAT), ())
+    %30 = y is float
     %30 ? bb22 : bb24;
   }
   bb22 {
@@ -99,9 +99,9 @@ main() -> ((NIL), ()){
   }
   bb24 {
     %33 = ConstantLoad <nil>
-    %34 = <((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())>(%33)
+    %34 = <nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object>(%33)
     n = %34;
-    %36 = n is ((NIL), ())
+    %36 = n is nil
     %36 ? bb25 : bb27;
   }
   bb25 {
@@ -112,7 +112,7 @@ main() -> ((NIL), ()){
     GOTO bb27;
   }
   bb27 {
-    %39 = n is ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ())
+    %39 = n is nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object
     %39 ? bb28 : bb30;
   }
   bb28 {
@@ -124,9 +124,9 @@ main() -> ((NIL), ()){
   }
   bb30 {
     %42 = ConstantLoad 1
-    %43 = <((DECIMAL), ())>(%42)
+    %43 = <decimal>(%42)
     z = %43;
-    %45 = z is ((DECIMAL), ())
+    %45 = z is decimal
     %45 ? bb31 : bb33;
   }
   bb31 {
@@ -137,7 +137,7 @@ main() -> ((NIL), ()){
     GOTO bb33;
   }
   bb33 {
-    %48 = z is ((INT), ())
+    %48 = z is int
     %48 ? bb34 : bb36;
   }
   bb34 {

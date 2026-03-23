@@ -58,7 +58,3 @@ func newBddNodeSimple(atom Atom) *BddNodeSimple {
 func (this *BddNodeSimple) canonicalKey() string {
 	return this.canonicalKeyFunc()
 }
-
-func (this *BddNodeSimple) String() string {
-	return fmt.Sprintf("(%s (all) (nothing) (nothing))", this.atom.String())
-}

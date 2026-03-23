@@ -1,7 +1,7 @@
 module $anon.. v 0.0.0;
-c1  ((), (INT));
-c2  ((), (INT));
-main() -> ((NIL), ()){
+c1  43;
+c2  44;
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 100
     %2 = %1;

@@ -1,10 +1,10 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad x
     %2 = ConstantLoad 3
-    %3 = newMap ((), (MAPPING)){%1=%2}
+    %3 = newMap {| int... |}{%1=%2}
     m = %3;
     %6 = ConstantLoad x
     %5 = m[%6];
@@ -12,7 +12,7 @@ main() -> ((NIL), ()){
   }
   bb1 {
     $desugar$0 = %7;
-    %9 = $desugar$0 is ((ERROR), ())
+    %9 = $desugar$0 is error
     %9 ? bb2 : bb3;
   }
   bb2 {
@@ -26,7 +26,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-nonNil(((NIL, INT), ())) -> ((INT, ERROR), ()){
+nonNil(nil|int) -> int|error{
   bb0 {
     %3 = ConstantLoad <nil>
     %2 = == n %3;
@@ -34,7 +34,7 @@ nonNil(((NIL, INT), ())) -> ((INT, ERROR), ()){
   }
   bb1 {
     %4 = ConstantLoad nil
-    %5 = newError ((ERROR), ())(%4)
+    %5 = newError error(%4)
     %0 = %5;
     return;
   }

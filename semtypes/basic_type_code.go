@@ -16,87 +16,130 @@
 
 package semtypes
 
-// Migrated from io.ballerina.types.BasicTypeCode
+// BasicTypeCode represent bit field that indicate which basic type a semType belongs to.
+type BasicTypeCode int
 
-/**
- * Represent bit field that indicate which basic type a semType belongs to.
- *
- * @since 2201.12.0
- */
-type BasicTypeCode struct {
-	Code int
+func (bt BasicTypeCode) Code() int {
+	return int(bt)
 }
+
+const (
+	typeCodeNil      = 0x00
+	typeCodeBoolean  = 0x01
+	typeCodeInt      = 0x02
+	typeCodeFloat    = 0x03
+	typeCodeDecimal  = 0x04
+	typeCodeString   = 0x05
+	typeCodeError    = 0x06
+	typeCodeTypedesc = 0x07
+	typeCodeHandle   = 0x08
+	typeCodeFunction = 0x09
+	typeCodeRegexp   = 0x0A
+	typeCodeFuture   = 0x0B
+	typeCodeStream   = 0x0C
+	typeCodeList     = 0x0D
+	typeCodeMapping  = 0x0E
+	typeCodeTable    = 0x0F
+	typeCodeXML      = 0x10
+	typeCodeObject   = 0x11
+	typeCodeCell     = 0x12
+	typeCodeUndef    = 0x13
+)
 
 // Inherently immutable
-var BT_NIL = BasicTypeCodeFrom(0x00)
-var BT_BOOLEAN = BasicTypeCodeFrom(0x01)
-var BT_INT = BasicTypeCodeFrom(0x02)
-var BT_FLOAT = BasicTypeCodeFrom(0x03)
-var BT_DECIMAL = BasicTypeCodeFrom(0x04)
-var BT_STRING = BasicTypeCodeFrom(0x05)
-var BT_ERROR = BasicTypeCodeFrom(0x06)
-var BT_TYPEDESC = BasicTypeCodeFrom(0x07)
-var BT_HANDLE = BasicTypeCodeFrom(0x08)
-var BT_FUNCTION = BasicTypeCodeFrom(0x09)
-var BT_REGEXP = BasicTypeCodeFrom(0x0A)
+const (
+	BTNil      = BasicTypeCode(typeCodeNil)
+	BTBoolean  = BasicTypeCode(typeCodeBoolean)
+	BTInt      = BasicTypeCode(typeCodeInt)
+	BTFloat    = BasicTypeCode(typeCodeFloat)
+	BTDecimal  = BasicTypeCode(typeCodeDecimal)
+	BTString   = BasicTypeCode(typeCodeString)
+	BTError    = BasicTypeCode(typeCodeError)
+	BTTypeDesc = BasicTypeCode(typeCodeTypedesc)
+	BTHandle   = BasicTypeCode(typeCodeHandle)
+	BTFunction = BasicTypeCode(typeCodeFunction)
+	BTRegexp   = BasicTypeCode(typeCodeRegexp)
+)
 
 // Inherently mutable
-var BT_FUTURE = BasicTypeCodeFrom(0x0B)
-var BT_STREAM = BasicTypeCodeFrom(0x0C)
+const (
+	BTFuture = BasicTypeCode(typeCodeFuture)
+	BTStream = BasicTypeCode(typeCodeStream)
+)
 
 // Selectively immutable
-var BT_LIST = BasicTypeCodeFrom(0x0D)
-var BT_MAPPING = BasicTypeCodeFrom(0x0E)
-var BT_TABLE = BasicTypeCodeFrom(0x0F)
-var BT_XML = BasicTypeCodeFrom(0x10)
-var BT_OBJECT = BasicTypeCodeFrom(0x11)
+const (
+	BTList    = BasicTypeCode(typeCodeList)
+	BTMapping = BasicTypeCode(typeCodeMapping)
+	BTTable   = BasicTypeCode(typeCodeTable)
+	BTXML     = BasicTypeCode(typeCodeXML)
+	BTObject  = BasicTypeCode(typeCodeObject)
+)
 
 // Non-val
-var BT_CELL = BasicTypeCodeFrom(0x12)
-var BT_UNDEF = BasicTypeCodeFrom(0x13)
+const (
+	BTCell  = BasicTypeCode(typeCodeCell)
+	BTUndef = BasicTypeCode(typeCodeUndef)
+)
 
 // Helper bit fields (does not represent basic type tag)
-var VT_COUNT = BT_OBJECT.Code + 1
-var VT_MASK = (1 << VT_COUNT) - 1
+const (
+	ValueTypeCount = int(BTObject) + 1
+	ValueTypeMask  = (1 << ValueTypeCount) - 1
+)
 
-var VT_COUNT_INHERENTLY_IMMUTABLE = BT_FUTURE.Code
-var VT_INHERENTLY_IMMUTABLE = (1 << VT_COUNT_INHERENTLY_IMMUTABLE) - 1
-
-// Only used for .toString() method to aid debugging.
-var _fieldNames = make(map[int]string)
-
-func init() {
-	// migrated from BasicTypeCode.java:79
-	// Static initializer block that populates fieldNames map
-	// In Java this used reflection, but in Go we manually populate it
-	_fieldNames[BT_NIL.Code] = "BT_NIL"
-	_fieldNames[BT_BOOLEAN.Code] = "BT_BOOLEAN"
-	_fieldNames[BT_INT.Code] = "BT_INT"
-	_fieldNames[BT_FLOAT.Code] = "BT_FLOAT"
-	_fieldNames[BT_DECIMAL.Code] = "BT_DECIMAL"
-	_fieldNames[BT_STRING.Code] = "BT_STRING"
-	_fieldNames[BT_ERROR.Code] = "BT_ERROR"
-	_fieldNames[BT_TYPEDESC.Code] = "BT_TYPEDESC"
-	_fieldNames[BT_HANDLE.Code] = "BT_HANDLE"
-	_fieldNames[BT_FUNCTION.Code] = "BT_FUNCTION"
-	_fieldNames[BT_REGEXP.Code] = "BT_REGEXP"
-	_fieldNames[BT_FUTURE.Code] = "BT_FUTURE"
-	_fieldNames[BT_STREAM.Code] = "BT_STREAM"
-	_fieldNames[BT_LIST.Code] = "BT_LIST"
-	_fieldNames[BT_MAPPING.Code] = "BT_MAPPING"
-	_fieldNames[BT_TABLE.Code] = "BT_TABLE"
-	_fieldNames[BT_XML.Code] = "BT_XML"
-	_fieldNames[BT_OBJECT.Code] = "BT_OBJECT"
-	_fieldNames[BT_CELL.Code] = "BT_CELL"
-	_fieldNames[BT_UNDEF.Code] = "BT_UNDEF"
-}
+const (
+	ValueTypeCountInherentlyImmutable = int(BTFuture)
+	ValueTypeInherentlyImmutable      = (1 << ValueTypeCountInherentlyImmutable) - 1
+)
 
 func BasicTypeCodeFrom(code int) BasicTypeCode {
-	// migrated from BasicTypeCode.java:72
-	return BasicTypeCode{Code: code}
+	return BasicTypeCode(code)
 }
 
-func (this BasicTypeCode) String() string {
-	// migrated from BasicTypeCode.java:93
-	return _fieldNames[this.Code]
+func (bt BasicTypeCode) String() string {
+	switch bt {
+	case typeCodeNil:
+		return "BT_NIL"
+	case typeCodeBoolean:
+		return "BT_BOOLEAN"
+	case typeCodeInt:
+		return "BT_INT"
+	case typeCodeFloat:
+		return "BT_FLOAT"
+	case typeCodeDecimal:
+		return "BT_DECIMAL"
+	case typeCodeString:
+		return "BT_STRING"
+	case typeCodeError:
+		return "BT_ERROR"
+	case typeCodeTypedesc:
+		return "BT_TYPEDESC"
+	case typeCodeHandle:
+		return "BT_HANDLE"
+	case typeCodeFunction:
+		return "BT_FUNCTION"
+	case typeCodeRegexp:
+		return "BT_REGEXP"
+	case typeCodeFuture:
+		return "BT_FUTURE"
+	case typeCodeStream:
+		return "BT_STREAM"
+	case typeCodeList:
+		return "BT_LIST"
+	case typeCodeMapping:
+		return "BT_MAPPING"
+	case typeCodeTable:
+		return "BT_TABLE"
+	case typeCodeXML:
+		return "BT_XML"
+	case typeCodeObject:
+		return "BT_OBJECT"
+	case typeCodeCell:
+		return "BT_CELL"
+	case typeCodeUndef:
+		return "BT_UNDEF"
+	default:
+		return "<UNKNOWN>"
+	}
 }

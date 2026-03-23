@@ -20,7 +20,6 @@ type Atom interface {
 	Index() int
 	Kind() Kind
 	canonicalKey() string
-	String() string
 }
 
 type atomIdentifier struct {

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad foo
     %2 = ConstantLoad 1
@@ -8,7 +8,7 @@ main() -> ((NIL), ()){
     %4 = ConstantLoad 1.5
     %5 = ConstantLoad baz
     %6 = ConstantLoad baz
-    %7 = newMap ((), (MAPPING)){%1=%2, %3=%4, %5=%6}
+    %7 = newMap {| bar: float, baz: string, foo: int, never... |}{%1=%2, %3=%4, %5=%6}
     r3 = %7;
     %9 = println(r3) -> bb1;
   }

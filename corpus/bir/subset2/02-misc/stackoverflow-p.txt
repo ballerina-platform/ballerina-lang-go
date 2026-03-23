@@ -1,5 +1,5 @@
 module $anon.. v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = f() -> bb1;
   }
@@ -7,7 +7,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-f() -> ((NIL), ()){
+f() -> nil{
   bb0 {
     %1 = f() -> bb1;
   }

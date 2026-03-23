@@ -1,13 +1,13 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     %2 = ConstantLoad 2
     %3 = ConstantLoad 3
     %4 = ConstantLoad 3
-    %5 = newArray ((), (LIST))[%4]{%1, %2, %3}
+    %5 = newArray [int...][%4]{%1, %2, %3}
     arr = %5;
     $desugar$0 = arr;
     %8 = ConstantLoad 0
@@ -34,7 +34,7 @@ main() -> ((NIL), ()){
   }
   bb5 {
     %17 = ConstantLoad list panic
-    %18 = newError ((ERROR), ())(%17)
+    %18 = newError error(%17)
     panic %18;
   }
   bb6 {

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %2 = ConstantLoad 2
     %3 = mkInt(%2) -> bb1;
@@ -41,20 +41,20 @@ main() -> ((NIL), ()){
     return;
   }
 }
-mkNil() -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+mkNil() -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     %1 = ConstantLoad <nil>
     %0 = %1;
     return;
   }
 }
-mkInt(((INT), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+mkInt(int) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     %0 = n;
     return;
   }
 }
-mkBoolean(((BOOLEAN), ())) -> ((NIL, BOOLEAN, INT, FLOAT, DECIMAL, STRING, TYPEDESC, HANDLE, FUNCTION, REGEXP, FUTURE, STREAM, LIST, MAPPING, TABLE, XML, OBJECT), ()){
+mkBoolean(boolean) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
   bb0 {
     %0 = b;
     return;

@@ -1,9 +1,9 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 class Bar {
-  z ((INT), ())
+  z int
 
-  getX() -> ((INT), ()){
+  getX() -> int{
     bb0 {
       %3 = ConstantLoad x
       %2 = self[%3];
@@ -12,7 +12,7 @@ class Bar {
     }
   }
 
-  init() -> ((NIL), ()){
+  init() -> nil{
     bb0 {
       %2 = ConstantLoad 0
       %3 = ConstantLoad z
@@ -30,7 +30,7 @@ class Bar {
     }
   }
 }
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = newObject Bar
     %2 = init(%1) -> bb1;

@@ -58,7 +58,3 @@ func newBddNodeImpl(atom Atom, left, middle, right Bdd) *BddNodeImpl {
 func (this *BddNodeImpl) canonicalKey() string {
 	return this.canonicalKeyFunc()
 }
-
-func (this *BddNodeImpl) String() string {
-	return fmt.Sprintf("(%s (%s) (%s) (%s))", this.atom.String(), this.left.String(), this.middle.String(), this.right.String())
-}

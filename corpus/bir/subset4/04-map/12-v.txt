@@ -1,8 +1,8 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
-    %1 = newMap ((), (MAPPING)){}
+    %1 = newMap {| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |}{}
     m = %1;
     %3 = ConstantLoad five
     %4 = ConstantLoad 5
@@ -19,16 +19,16 @@ main() -> ((NIL), ()){
     return;
   }
 }
-put(((), (MAPPING)),((STRING), ()),((INT), ())) -> ((NIL), ()){
+put({| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |},string,int) -> nil{
   bb0 {
     m[k] = v;
     return;
   }
 }
-get(((), (MAPPING)),((STRING), ())) -> ((INT), ()){
+get({| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |},string) -> int{
   bb0 {
     %3 = m[k];
-    %4 = <((INT), ())>(%3)
+    %4 = <int>(%3)
     %0 = %4;
     return;
   }

@@ -18,5 +18,4 @@ package semtypes
 
 type ProperSubtypeData interface {
 	SubtypeData
-	String() string
 }

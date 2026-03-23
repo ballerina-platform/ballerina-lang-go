@@ -17,9 +17,9 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"math/big"
-	"strings"
+
+	"ballerina-lang-go/common"
 )
 
 type DecimalSubtype struct {
@@ -49,18 +49,7 @@ func newDecimalSubtypeFromBoolEnumerableDecimals(allowed bool, values []Enumerab
 }
 
 func DecimalConst(value big.Rat) SemType {
-	return basicSubtype(BT_DECIMAL, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
-}
-
-func (this DecimalSubtype) String() string {
-	var builder strings.Builder
-	builder.WriteString(allowedTag("decimal", this.allowed))
-	for _, v := range this.values {
-		builder.WriteString(" ")
-		builder.WriteString(v.value.RatString())
-	}
-	builder.WriteString(")")
-	return builder.String()
+	return basicSubtype(BTDecimal, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
 }
 
 func DecimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
