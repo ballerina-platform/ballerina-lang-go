@@ -29,9 +29,9 @@ main() -> nil{
     return;
   }
 }
-call(function) -> int{
+call(function(int) returns int|function(int, int) returns int|function(int, int, int) returns int) -> int{
   bb0 {
-    %2 = f is function
+    %2 = f is function(int) returns int
     %2 ? bb1 : bb3;
   }
   bb1 {
@@ -43,7 +43,7 @@ call(function) -> int{
     return;
   }
   bb3 {
-    %5 = f is function
+    %5 = f is function(int, int) returns int
     %5 ? bb4 : bb6;
   }
   bb4 {

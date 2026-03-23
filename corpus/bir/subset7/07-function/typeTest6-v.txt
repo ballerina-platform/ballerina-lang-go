@@ -4,7 +4,7 @@ main() -> nil{
   bb0 {
     %1 = fp $anon/.:f1
     f = %1;
-    %3 = f is function
+    %3 = f is function(int) returns int
     %3 ? bb1 : bb4;
   }
   bb1 {
@@ -31,7 +31,7 @@ main() -> nil{
   bb7 {
     %11 = fp $anon/.:f2
     f = %11;
-    %12 = f is function
+    %12 = f is function(int) returns int
     %12 ? bb8 : bb11;
   }
   bb8 {

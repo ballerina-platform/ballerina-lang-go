@@ -22,7 +22,7 @@ main() -> nil{
     return;
   }
 }
-exec(int,int,function) -> int{
+exec(int,int,function(int, int) returns int) -> int{
   bb0 {
     %4 = f(a,b) -> bb1;
   }

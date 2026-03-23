@@ -39,7 +39,7 @@ $anonFunc$_0(int,int) -> int{
     return;
   }
 }
-lambdaReturn() -> function{
+lambdaReturn() -> function(int, int) returns int{
   bb0 {
     %1 = fp $anon/.:$anonFunc$_0
     %0 = %1;
@@ -53,7 +53,7 @@ $anonFunc$_1(int,int) -> int{
     return;
   }
 }
-lambdaStruct() -> {| a: int, b: int, f: function, never... |}{
+lambdaStruct() -> {| a: int, b: int, f: function(int, int) returns int, never... |}{
   bb0 {
     %1 = ConstantLoad a
     %2 = ConstantLoad 1
@@ -61,7 +61,7 @@ lambdaStruct() -> {| a: int, b: int, f: function, never... |}{
     %4 = ConstantLoad 2
     %5 = ConstantLoad f
     %6 = fp $anon/.:$anonFunc$_1
-    %7 = newMap {| a: int, b: int, f: function, never... |}{%1=%2, %3=%4, %5=%6}
+    %7 = newMap {| a: int, b: int, f: function(int, int) returns int, never... |}{%1=%2, %3=%4, %5=%6}
     %0 = %7;
     return;
   }

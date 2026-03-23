@@ -19,7 +19,7 @@ $anonFunc$_0(int) -> int{
     return;
   }
 }
-foo() -> function{
+foo() -> function(int) returns int{
   bb0 {
     %1 = fp $anon/.:$anonFunc$_0
     %0 = %1;

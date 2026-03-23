@@ -5,7 +5,7 @@ main() -> nil{
   bb0 {
     %1 = fp $anon/.:foo
     x = %1;
-    %3 = x is function
+    %3 = x is function(int) returns int
     %3 ? bb1 : bb4;
   }
   bb1 {
@@ -28,7 +28,7 @@ main() -> nil{
   bb6 {
     %9 = fp $anon/.:bar
     x = %9;
-    %10 = x is function
+    %10 = x is function(int) returns int
     %10 ? bb7 : bb9;
   }
   bb7 {
@@ -39,7 +39,7 @@ main() -> nil{
     GOTO bb16;
   }
   bb9 {
-    %13 = x is function
+    %13 = x is function(int, int) returns int
     %13 ? bb10 : bb13;
   }
   bb10 {
@@ -66,7 +66,7 @@ main() -> nil{
   bb16 {
     %20 = fp $anon/.:fooBar
     x = %20;
-    %21 = x is function
+    %21 = x is function(int, int...) returns int
     %21 ? bb17 : bb26;
   }
   bb17 {
@@ -107,7 +107,7 @@ main() -> nil{
     GOTO bb36;
   }
   bb26 {
-    %40 = x is function
+    %40 = x is function(int) returns int
     %40 ? bb27 : bb29;
   }
   bb27 {
@@ -118,7 +118,7 @@ main() -> nil{
     GOTO bb35;
   }
   bb29 {
-    %43 = x is function
+    %43 = x is function(int, int) returns int
     %43 ? bb30 : bb32;
   }
   bb30 {

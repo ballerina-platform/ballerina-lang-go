@@ -8,7 +8,7 @@ main() -> nil{
     %4 = ConstantLoad 2
     %5 = ConstantLoad op
     %6 = fp $anon/.:foo
-    %7 = newMap {| lhs: int|float|string, op: function, rhs: int|float|string, never... |}{%1=%2, %3=%4, %5=%6}
+    %7 = newMap {| lhs: int|float|string, op: function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string, rhs: int|float|string, never... |}{%1=%2, %3=%4, %5=%6}
     op = %7;
     %9 = exec(op) -> bb1;
   }
@@ -22,7 +22,7 @@ main() -> nil{
     %14 = ConstantLoad 2
     %15 = ConstantLoad op
     %16 = fp $anon/.:bar
-    %17 = newMap {| lhs: int|float|string, op: function, rhs: int|float|string, never... |}{%11=%12, %13=%14, %15=%16}
+    %17 = newMap {| lhs: int|float|string, op: function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string, rhs: int|float|string, never... |}{%11=%12, %13=%14, %15=%16}
     op = %17;
     %18 = exec(op) -> bb3;
   }
@@ -36,7 +36,7 @@ main() -> nil{
     %23 = ConstantLoad 2
     %24 = ConstantLoad op
     %25 = fp $anon/.:foo
-    %26 = newMap {| lhs: int, op: function, rhs: float, never... |}{%20=%21, %22=%23, %24=%25}
+    %26 = newMap {| lhs: int, op: function(int|float|string, int|float|string) returns int, rhs: float, never... |}{%20=%21, %22=%23, %24=%25}
     %27 = exec(%26) -> bb5;
   }
   bb5 {
@@ -49,7 +49,7 @@ main() -> nil{
     %32 = ConstantLoad b
     %33 = ConstantLoad op
     %34 = fp $anon/.:baz
-    %35 = newMap {| lhs: string, op: function, rhs: string, never... |}{%29=%30, %31=%32, %33=%34}
+    %35 = newMap {| lhs: string, op: function(int|float|string, int|float|string) returns int|string, rhs: string, never... |}{%29=%30, %31=%32, %33=%34}
     %36 = exec(%35) -> bb7;
   }
   bb7 {
@@ -62,7 +62,7 @@ main() -> nil{
     %41 = ConstantLoad 1
     %42 = ConstantLoad op
     %43 = fp $anon/.:baz
-    %44 = newMap {| lhs: string, op: function, rhs: int, never... |}{%38=%39, %40=%41, %42=%43}
+    %44 = newMap {| lhs: string, op: function(int|float|string, int|float|string) returns int|string, rhs: int, never... |}{%38=%39, %40=%41, %42=%43}
     %45 = exec(%44) -> bb9;
   }
   bb9 {
@@ -72,7 +72,7 @@ main() -> nil{
     return;
   }
 }
-exec({| lhs: int|float|string, op: function, rhs: int|float|string, never... |}) -> int|float|string{
+exec({| lhs: int|float|string, op: function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string|function(int|float|string, int|float|string) returns int|float|string, rhs: int|float|string, never... |}) -> int|float|string{
   bb0 {
     %3 = ConstantLoad op
     %2 = op[%3];

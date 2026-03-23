@@ -32,7 +32,7 @@ main() -> nil{
     %2 = fp $anon/.:$anonFunc$_0
     %3 = fp $anon/.:$anonFunc$_1
     %4 = ConstantLoad 3
-    %5 = newArray [function...][%4]{%1, %2, %3}
+    %5 = newArray [function(int, int) returns int...][%4]{%1, %2, %3}
     fs = %5;
     %8 = ConstantLoad 0
     %7 = fs[%8];
