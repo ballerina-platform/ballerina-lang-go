@@ -70,7 +70,6 @@ type (
 		PackageID *model.PackageID
 		// TODO: avoid duplicates here
 		ImportModules []BIRImportModule
-		TypeDefs      []BIRTypeDefinition
 		GlobalVars    map[model.SymbolRef]BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		InitFunction  *BIRFunction
@@ -93,18 +92,6 @@ type (
 	BIRImportModule struct {
 		BIRNodeBase
 		PackageID *model.PackageID
-	}
-
-	BIRTypeDefinition struct {
-		BIRDocumentableNodeBase
-		Name          model.Name
-		OriginalName  model.Name
-		InternalName  model.Name
-		AttachedFuncs []BIRFunction
-		Flags         int64
-		IsBuiltin     bool
-		Origin        model.SymbolOrigin
-		Index         int
 	}
 
 	birVariableDclBase struct {

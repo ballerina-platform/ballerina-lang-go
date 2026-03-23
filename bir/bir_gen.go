@@ -116,9 +116,6 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	}
 	birPkg.GlobalVars = make(map[model.SymbolRef]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
-	for _, typeDef := range ast.TypeDefinitions {
-		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
-	}
 	for _, globalVar := range ast.GlobalVars {
 		symRef := globalVar.Symbol()
 		addGlobalVar(birPkg, symRef, TransformGlobalVariableDcl(genCtx, &globalVar))
@@ -192,11 +189,6 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 			Version: &version,
 		},
 	}
-}
-
-func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTypeDefinition {
-	// FIXME: implement this
-	return nil
 }
 
 func addGlobalVar(birPkg *BIRPackage, symRef model.SymbolRef, dcl BIRGlobalVariableDcl) {
