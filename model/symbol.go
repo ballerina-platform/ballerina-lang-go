@@ -135,6 +135,13 @@ type (
 		symbolBase
 	}
 
+	ClassSymbol struct {
+		TypeSymbol
+		InitFunction SymbolRef
+		HasInit      bool
+		Methods      map[string]SymbolRef
+	}
+
 	ValueSymbol struct {
 		symbolBase
 		isConst     bool
@@ -165,11 +172,13 @@ var (
 	_ Scope                 = &FunctionScope{}
 	_ Scope                 = &BlockScope{}
 	_ Symbol                = &TypeSymbol{}
+	_ Symbol                = &ClassSymbol{}
 	_ Symbol                = &ValueSymbol{}
 	_ Symbol                = &functionSymbol{}
 	_ FunctionSymbol        = &functionSymbol{}
 	_ GenericFunctionSymbol = &genericFunctionSymbol{}
 	_ Symbol                = &SymbolRef{}
+	_ SymbolSpaceProvider   = &ModuleScope{}
 )
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -202,6 +211,11 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 	return index
 }
 
+// RefAt returns a SymbolRef for the symbol at the given index.
+func (space *SymbolSpace) RefAt(index int) SymbolRef {
+	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}
+}
+
 // SymbolAt returns the symbol at the given index. Thread-safe.
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	space.mu.RLock()
@@ -230,6 +244,10 @@ func (ms *ModuleScope) Exports() ExportedSymbolSpace {
 
 func (ms *ModuleScope) GetSymbol(name string) (SymbolRef, bool) {
 	return ms.Main.GetSymbol(name)
+}
+
+func (ms *ModuleScope) MainSpace() *SymbolSpace {
+	return ms.Main
 }
 
 func mapToLangPrefixIfNeeded(prefix string) string {
@@ -369,6 +387,15 @@ func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) 
 func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 	return TypeSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+	}
+}
+
+func NewClassSymbol(name string, isPublic bool) ClassSymbol {
+	return ClassSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+		Methods: make(map[string]SymbolRef),
 	}
 }
 

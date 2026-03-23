@@ -93,22 +93,28 @@ func (i *mappingPairIterator) internalNext() *FieldPair {
 		if i.i2 >= i.len2 {
 			return nil
 		}
-		p = new(CreateFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &i.i2))
+		idx2 := i.i2
+		p = new(CreateFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &idx2))
 		i.i2++
 	} else if i.i2 >= i.len2 {
-		p = new(CreateFieldPair(i.curName1(), i.curType1(), i.rest2, &i.i1, nil))
+		idx1 := i.i1
+		p = new(CreateFieldPair(i.curName1(), i.curType1(), i.rest2, &idx1, nil))
 		i.i1++
 	} else {
 		name1 := i.curName1()
 		name2 := i.curName2()
 		if codePointCompare(name1, name2) {
-			p = new(CreateFieldPair(name1, i.curType1(), i.rest2, &i.i1, nil))
+			idx1 := i.i1
+			p = new(CreateFieldPair(name1, i.curType1(), i.rest2, &idx1, nil))
 			i.i1++
 		} else if codePointCompare(name2, name1) {
-			p = new(CreateFieldPair(name2, i.rest1, i.curType2(), nil, &i.i2))
+			idx2 := i.i2
+			p = new(CreateFieldPair(name2, i.rest1, i.curType2(), nil, &idx2))
 			i.i2++
 		} else {
-			p = new(CreateFieldPair(name1, i.curType1(), i.curType2(), &i.i1, &i.i2))
+			idx1 := i.i1
+			idx2 := i.i2
+			p = new(CreateFieldPair(name1, i.curType1(), i.curType2(), &idx1, &idx2))
 			i.i1++
 			i.i2++
 		}

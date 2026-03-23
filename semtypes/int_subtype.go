@@ -16,7 +16,11 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+	"fmt"
+	"strings"
+)
 
 type IntSubtype struct {
 	Ranges []Range
@@ -127,6 +131,21 @@ func IntSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
 		return common.OptionalEmpty[int64]()
 	}
 	return common.OptionalOf(min)
+}
+
+func (this IntSubtype) String() string {
+	var builder strings.Builder
+	builder.WriteString("(int")
+	for _, r := range this.Ranges {
+		builder.WriteString(" ")
+		if r.Min == r.Max {
+			builder.WriteString(fmt.Sprintf("%d", r.Min))
+		} else {
+			builder.WriteString(fmt.Sprintf("%d..%d", r.Min, r.Max))
+		}
+	}
+	builder.WriteString(")")
+	return builder.String()
 }
 
 func IntSubtypeContains(d SubtypeData, n int64) bool {

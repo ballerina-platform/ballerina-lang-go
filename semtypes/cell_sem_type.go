@@ -62,5 +62,5 @@ func (this CellSemType) SubtypeDataList() []ProperSubtypeData {
 func (this CellSemType) String() string {
 	allTypes := bitsetToTypeNames(this.All())
 	someTypes := bitsetToTypeNames(this.Some())
-	return fmt.Sprintf("((%s), (%s))", allTypes, someTypes)
+	return fmt.Sprintf("((%s), (%s)%s)", allTypes, someTypes, subtypeDataListStr(this.SubtypeDataList()))
 }

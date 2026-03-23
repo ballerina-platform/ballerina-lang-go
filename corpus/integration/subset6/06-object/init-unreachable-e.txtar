@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unreachable code
+  --> init-unreachable-e.bal:23:9
+   |
+23 |         int x = 2; // @error
+   |         ^^^^^^^^^^
+

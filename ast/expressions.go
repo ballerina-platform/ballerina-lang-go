@@ -331,6 +331,13 @@ type (
 		Expr BLangExpression
 		// JBallerina has symbols for these as well. Need to think if we need them as well (for go to definition)
 	}
+
+	BLangNewExpression struct {
+		bLangExpressionBase
+		AtomicType      *semtypes.MappingAtomicType
+		UserDefinedType *BLangUserDefinedType
+		ArgsExprs       []BLangExpression
+	}
 )
 
 var (
@@ -380,6 +387,7 @@ var (
 	_ model.NamedArgNode                                           = &BLangNamedArgsExpression{}
 	_ model.TrapNode                                               = &BLangTrapExpr{}
 	_ BLangExpression                                              = &BLangTrapExpr{}
+	_ BLangExpression                                              = &BLangNewExpression{}
 )
 
 var (
@@ -417,6 +425,7 @@ var (
 	_ BLangNode = &BLangMappingKeyValueField{}
 	_ BLangNode = &BLangMappingKey{}
 	_ BLangNode = &BLangTrapExpr{}
+	_ BLangNode = &BLangNewExpression{}
 )
 
 var (
@@ -1176,6 +1185,14 @@ func (this *BLangTrapExpr) GetExpression() model.ExpressionNode {
 }
 
 func (this *BLangTrapExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangNewExpression) GetKind() model.NodeKind {
+	return model.NodeKind_TYPE_INIT_EXPR
+}
+
+func (this *BLangNewExpression) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 

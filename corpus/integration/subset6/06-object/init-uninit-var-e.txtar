@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: variable may not be initialized
+  --> init-uninit-var-e.bal:22:20
+   |
+22 |         io:println(x); // @error
+   |                    ^
+

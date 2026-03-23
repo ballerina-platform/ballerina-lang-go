@@ -34,6 +34,10 @@ func (fakeSemType) String() string {
 
 type customProperSubtype struct{}
 
+func (c customProperSubtype) String() string {
+	return "customProperSubtype"
+}
+
 func TestSemTypeStringAddsSubtypeDetails(t *testing.T) {
 	rendered := String(nil, IntConst(42))
 

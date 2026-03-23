@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: ambiguous object type
+  --> atomic-init-1-e.bal:47:16
+   |
+47 |     FooBar f = new FooBar(5); // @error
+   |                ^^^^^^^^^^^^^
+

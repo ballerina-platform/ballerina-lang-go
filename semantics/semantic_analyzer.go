@@ -360,16 +360,25 @@ func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos di
 }
 
 func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
-	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
-	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
-	fa.retTy = fnSymbol.Signature().ReturnType
-
+	fa := initializeFunctionAnalyzerInner(parent, function)
 	// Validate main function constraints
 	if function.Name.Value == "main" {
+		fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 		validateMainFunction(parent, fnSymbol, function.GetPosition())
 	}
 
 	return fa
+}
+
+func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
+	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
+	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+	fa.retTy = fnSymbol.Signature().ReturnType
+	return fa
+}
+
+func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
+	return initializeFunctionAnalyzerInner(parent, function)
 }
 
 func initializeLoopAnalyzer(parent analyzer, loop ast.BLangNode) *loopAnalyzer {
@@ -589,6 +598,8 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		return analyzeTrapExpr(a, expr, expectedType)
 	case *ast.BLangNamedArgsExpression:
 		return analyzeExpression(a, expr.Expr, expectedType)
+	case *ast.BLangNewExpression:
+		return analyzeNewExpression(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -675,6 +686,80 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		return false
 	}
 	return validateResolvedType(a, queryExpr, expectedType)
+}
+
+func analyzeNewExpression[A analyzer](a A, expr *ast.BLangNewExpression, expectedType semtypes.SemType) bool {
+	determinedTy := expr.GetDeterminedType()
+	if determinedTy == nil {
+		a.internalErr("type init type not resolved", expr.GetPosition())
+		return false
+	}
+	cx := a.tyCtx()
+	// Implicit new: determined type is the broad OBJECT type, refine from expected type
+	if determinedTy == &semtypes.OBJECT {
+		if expectedType == nil {
+			a.semanticErr("cannot infer type for implicit new expression", expr.GetPosition())
+			return false
+		}
+		intersection := semtypes.Intersect(expectedType, &semtypes.OBJECT)
+		if semtypes.IsEmpty(cx, intersection) {
+			a.semanticErr("expected type is not an object type", expr.GetPosition())
+			return false
+		}
+		determinedTy = intersection
+		expr.SetDeterminedType(intersection)
+	}
+
+	objTy, ok := determineObjectType(a, expr, determinedTy)
+	if !ok {
+		return false
+	}
+
+	atomicType := semtypes.ToObjectAtomicType(cx, objTy)
+	if atomicType == nil {
+		a.semanticErr("non atomic object types not supported", expr.GetPosition())
+		return false
+	}
+	expr.AtomicType = atomicType
+	// Validate against expected type
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func determineObjectType[A analyzer](a A, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
+	cx := a.tyCtx()
+	alts := semtypes.ObjectAlternatives(cx, objectTy)
+
+	argTys := make([]semtypes.SemType, len(expr.ArgsExprs))
+	for i, arg := range expr.ArgsExprs {
+		if !analyzeExpression(a, arg, nil) {
+			return nil, false
+		}
+		argTys[i] = arg.GetDeterminedType()
+	}
+
+	argLd := semtypes.NewListDefinition()
+	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), &semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	type candidate struct {
+		objType        semtypes.SemType
+		initReturnType semtypes.SemType
+	}
+	var candidates []candidate
+	for _, alt := range alts {
+		paramListTy := semtypes.FunctionParamListType(cx, alt.InitFnType)
+		if semtypes.IsSubtype(cx, argListTy, paramListTy) {
+			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, argListTy)
+			candidates = append(candidates, candidate{objType: alt.ObjectType, initReturnType: retTy})
+		}
+	}
+	if len(candidates) == 0 {
+		a.semanticErr("failed to determine object type with fitting init function", expr.GetPosition())
+		return nil, false
+	} else if len(candidates) > 1 {
+		a.semanticErr("ambiguous object type", expr.GetPosition())
+		return nil, false
+	}
+	expr.SetDeterminedType(semtypes.Union(candidates[0].objType, semtypes.Diff(candidates[0].initReturnType, &semtypes.NIL)))
+	return candidates[0].objType, true
 }
 
 func validateTypeConversionExpr[A analyzer](a A, expr *ast.BLangTypeConversionExpr, expectedType semtypes.SemType) bool {
@@ -1226,6 +1311,24 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangPanic:
 		analyzeExpression(a, n.Expr, &semtypes.ERROR)
+		return nil
+	case *ast.BLangClassDefinition:
+		for _, f := range n.Fields {
+			field := f.(*ast.BLangSimpleVariable)
+			if field.Expr != nil {
+				expectedType := a.ctx().SymbolType(field.Symbol())
+				analyzeExpression(a, field.Expr.(ast.BLangExpression), expectedType)
+			}
+		}
+		if n.InitFunction != nil {
+			fa := initializeMethodAnalyzer(a, n.InitFunction)
+			ast.Walk(fa, n.InitFunction)
+		}
+		for name := range n.Methods {
+			method := n.Methods[name]
+			fa := initializeMethodAnalyzer(a, method)
+			ast.Walk(fa, method)
+		}
 		return nil
 	default:
 		return a

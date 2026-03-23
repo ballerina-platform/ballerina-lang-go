@@ -212,3 +212,26 @@ func bitsetToTypeNames(bitset int) string {
 
 	return builder.String()
 }
+
+func subtypeDataListStr(list []ProperSubtypeData) string {
+	if !isDebug || len(list) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString(" [")
+	for i, d := range list {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(d.String())
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
+func allowedTag(name string, allowed bool) string {
+	if allowed {
+		return fmt.Sprintf("(%s", name)
+	}
+	return fmt.Sprintf("(%s!", name)
+}

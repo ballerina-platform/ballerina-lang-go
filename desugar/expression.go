@@ -79,6 +79,8 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	case *ast.BLangConstRef:
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	case *ast.BLangNewExpression:
+		return walkNewExpression(cx, expr)
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard binding pattern can appear in variable references (e.g., _ = expr)
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
@@ -451,6 +453,21 @@ func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desuga
 	}
 
 	return desugaredNode[model.ExpressionNode]{
+		replacementNode: expr,
+	}
+}
+
+func walkNewExpression(cx *FunctionContext, expr *ast.BLangNewExpression) desugaredNode[model.ExpressionNode] {
+	var initStmts []model.StatementNode
+
+	for i := range expr.ArgsExprs {
+		result := walkExpression(cx, expr.ArgsExprs[i])
+		initStmts = append(initStmts, result.initStmts...)
+		expr.ArgsExprs[i] = result.replacementNode.(ast.BLangExpression)
+	}
+
+	return desugaredNode[model.ExpressionNode]{
+		initStmts:       initStmts,
 		replacementNode: expr,
 	}
 }
