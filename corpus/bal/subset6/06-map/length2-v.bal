@@ -14,11 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package rt
+import ballerina/io;
 
-import (
-	_ "ballerina-lang-go/lib/array/runtime"
-	_ "ballerina-lang-go/lib/int/runtime"
-	_ "ballerina-lang-go/lib/io/runtime"
-	_ "ballerina-lang-go/lib/map/runtime"
-)
+public function main() {
+    any[] days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    map<any> dayNumber = {};
+    foreach int i in 0 ..< days.length() {
+        dayNumber[<string>days[i]] = i + 1;
+    }
+    io:println(dayNumber["Sunday"]); // @output 7
+}
