@@ -26,6 +26,11 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 	// Execute init function to initialize globals
 	if pkg.InitFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
+		defer func() {
+			if r := recover(); r != nil {
+				err = getFormattedError(r, callStack)
+			}
+		}()
 		executeFunction(*pkg.InitFunction, nil, reg, callStack)
 	}
 	if pkg.MainFunction != nil {

@@ -30,5 +30,7 @@ func (cs *callStack) Pop() {
 
 // Frames returns the current frames in the call stack from bottom to top.
 func (cs *callStack) Frames() []*Frame {
-	return cs.elements
+	frames := make([]*Frame, len(cs.elements))
+	copy(frames, cs.elements)
+	return frames
 }

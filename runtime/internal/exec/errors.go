@@ -59,19 +59,12 @@ func formatCallStack(cs *callStack) []string {
 		lr := loc.LineRange()
 		file := filepath.Base(lr.FileName())
 		line := lr.StartLine().Line() + 1
-		if file == "" || line <= 0 {
-			out = append(out, fmt.Sprintf("%s(unknown)", prettyFunctionName(f.functionKey)))
-			continue
-		}
 		out = append(out, fmt.Sprintf("%s(%s:%d)", prettyFunctionName(f.functionKey), file, line))
 	}
 	return out
 }
 
 func formatRuntimePanic(message string, stack []string) string {
-	if len(stack) == 0 {
-		return "error: " + message
-	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "error: %s\n", message)
 	fmt.Fprintf(&b, "        at %s\n", stack[0])
