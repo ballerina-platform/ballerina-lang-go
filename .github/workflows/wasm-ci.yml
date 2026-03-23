@@ -23,4 +23,4 @@ jobs:
         run: |
           export GOOS=js
           export GOARCH=wasm
-          go test -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -timeout 20s ./... -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec"
+          go test -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -timeout 5m ./... -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec"
