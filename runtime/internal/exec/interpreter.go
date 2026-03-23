@@ -23,6 +23,11 @@ import (
 
 func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
 	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
+	// Execute init function to initialize globals
+	if pkg.InitFunction != nil {
+		callStack := &callStack{elements: make([]*Frame, 0, 32)}
+		executeFunction(*pkg.InitFunction, nil, reg, callStack)
+	}
 	if pkg.MainFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
 		executeFunction(*pkg.MainFunction, nil, reg, callStack)

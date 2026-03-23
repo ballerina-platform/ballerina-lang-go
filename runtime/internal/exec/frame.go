@@ -16,24 +16,30 @@
 
 package exec
 
-import "ballerina-lang-go/values"
+import (
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/values"
+)
 
 type Frame struct {
 	locals      []values.BalValue // variable index → value (indexed by BIROperand.Index)
 	functionKey string            // function key (package name + function name)
-	// TODO: When globals are implemented, negative indices will refer to globals
-	// and positive indices will refer to locals. The package will have its own
-	// array for globals, initialized with the init function.
 }
 
-// GetOperand retrieves the value of an operand by its index.
-// TODO: When globals are implemented, check if index < 0 and access globals array.
-func (f *Frame) GetOperand(index int) values.BalValue {
-	return f.locals[index]
+func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		module := reg.GetModule(gv.PkgId)
+		return module.Globals[*op.SymRef]
+	}
+	return currentFrame.locals[op.Index]
 }
 
-// SetOperand sets the value of an operand by its index.
-// TODO: When globals are implemented, check if index < 0 and set in globals array.
-func (f *Frame) SetOperand(index int, value values.BalValue) {
-	f.locals[index] = value
+func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry, value values.BalValue) {
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		module := reg.GetModule(gv.PkgId)
+		module.Globals[*op.SymRef] = value
+	} else {
+		currentFrame.locals[op.Index] = value
+	}
 }

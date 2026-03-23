@@ -14,31 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package modules
+import ballerina/io;
 
-import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/values"
-)
+import testorg/modulelevelvar.constants;
 
-type BIRModule struct {
-	Pkg     *bir.BIRPackage
-	Globals map[model.SymbolRef]values.BalValue
-}
+const SCALE_FACTOR = 2;
 
-type ExternFunction struct {
-	Name string
-	Impl func(args []values.BalValue) (values.BalValue, error)
-}
-
-func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
-	globals := make(map[model.SymbolRef]values.BalValue, len(pkg.GlobalVars))
-	for symRef, gv := range pkg.GlobalVars {
-		globals[symRef] = values.DefaultValueForType(gv.GetType())
-	}
-	return &BIRModule{
-		Pkg:     pkg,
-		Globals: globals,
-	}
+public function printScaledRange() {
+    io:println(constants:MIN_SIZE * SCALE_FACTOR);
+    io:println(constants:MAX_SIZE * SCALE_FACTOR);
 }
