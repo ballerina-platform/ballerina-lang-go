@@ -413,9 +413,9 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangContinue:
 		ca.semanticErr("continue statement not allowed in constant expression", n.GetPosition())
 		return nil
+	case model.TypeDescriptor:
 	case *ast.BLangTypeDefinition:
-		typeData := n.GetTypeData()
-		expectedType := typeData.Type
+		expectedType := node.GetDeterminedType()
 		if expectedType == nil {
 			ca.internalErr("type not resolved", n.GetPosition())
 			return nil

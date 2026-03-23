@@ -1,0 +1,13 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (value-type float)) (expr
+        (binary-expr +
+          (simple-var-ref F)
+          (literal 2.5)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)
