@@ -155,6 +155,8 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 		if globalVar.Expr == nil {
 			continue
 		}
+		initExpr := globalVar.Expr.(ast.BLangExpression)
+		basePos := initExpr.GetPosition()
 		varRef := &ast.BLangSimpleVarRef{
 			VariableName: globalVar.Name,
 		}
@@ -162,9 +164,11 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 		varRef.SetDeterminedType(globalVar.GetDeterminedType())
 		assignment := &ast.BLangAssignment{
 			VarRef: varRef,
-			Expr:   globalVar.Expr.(ast.BLangExpression),
+			Expr:   initExpr,
 		}
 		assignment.SetDeterminedType(&semtypes.NEVER)
+		setPositionIfMissing(assignment, basePos)
+
 		initStmts = append(initStmts, assignment)
 	}
 
@@ -173,6 +177,8 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 		if constant.Expr == nil {
 			continue
 		}
+		initExpr := constant.Expr.(ast.BLangExpression)
+		basePos := initExpr.GetPosition()
 		varRef := &ast.BLangSimpleVarRef{
 			VariableName: constant.Name,
 		}
@@ -180,9 +186,11 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 		varRef.SetDeterminedType(constant.GetDeterminedType())
 		assignment := &ast.BLangAssignment{
 			VarRef: varRef,
-			Expr:   constant.Expr.(ast.BLangExpression),
+			Expr:   initExpr,
 		}
 		assignment.SetDeterminedType(&semtypes.NEVER)
+		setPositionIfMissing(assignment, basePos)
+
 		initStmts = append(initStmts, assignment)
 	}
 
@@ -311,6 +319,8 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 		if initExpr == nil {
 			continue
 		}
+		initExprBal := initExpr.(ast.BLangExpression)
+		basePos := initExprBal.GetPosition()
 
 		selfVarRef := &ast.BLangSimpleVarRef{
 			VariableName: &ast.BLangIdentifier{Value: "self"},
@@ -327,9 +337,10 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 
 		assignment := &ast.BLangAssignment{
 			VarRef: fieldAccess,
-			Expr:   initExpr.(ast.BLangExpression),
+			Expr:   initExprBal,
 		}
 		assignment.SetDeterminedType(&semtypes.NEVER)
+		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
 		field.SetInitialExpression(nil)

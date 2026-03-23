@@ -22,6 +22,7 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
@@ -42,6 +43,26 @@ func TestDesugar(t *testing.T) {
 			testDesugar(t, testPair)
 		})
 	}
+}
+
+type walkTestVisitor struct {
+	t *testing.T
+}
+
+func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return nil
+	}
+
+	if node.GetPosition() == nil {
+		v.t.Errorf("node with missing position: %T", node)
+	}
+
+	return v
+}
+
+func (v *walkTestVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return v
 }
 
 func testDesugar(t *testing.T, testCase test_util.TestCase) {
@@ -80,6 +101,9 @@ func testDesugar(t *testing.T, testCase test_util.TestCase) {
 			testCase.InputPath, testCase.ExpectedPath, getDiff(expectedAST, actualAST))
 		return
 	}
+
+	visitor := &walkTestVisitor{t: t}
+	ast.Walk(visitor, result.CompilationUnit)
 
 	t.Logf("Desugar completed successfully for %s", testCase.InputPath)
 }
