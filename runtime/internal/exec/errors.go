@@ -51,7 +51,7 @@ func formatCallStack(cs *callStack) []string {
 			break
 		}
 		f := frames[i]
-		loc := f.Location()
+		loc := f.location
 		if loc == nil {
 			out = append(out, fmt.Sprintf("%s(unknown)", f.functionKey))
 			continue

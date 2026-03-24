@@ -65,11 +65,11 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	for {
 		for _, inst := range bb.Instructions {
 			posProvider := inst.(interface{ GetPos() diagnostics.Location })
-			frame.SetLocation(posProvider.GetPos())
+			frame.location = posProvider.GetPos()
 			execInstruction(inst, frame, reg)
 		}
 		posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
-		frame.SetLocation(posProvider.GetPos())
+		frame.location = posProvider.GetPos()
 		bb = execTerminator(bb.Terminator, frame, reg, callStack)
 		if bb == nil {
 			break

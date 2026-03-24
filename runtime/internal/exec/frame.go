@@ -67,13 +67,3 @@ func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Regis
 		Store(currentFrame, op.Address, value)
 	}
 }
-
-// SetLocation updates the current source location associated with this frame.
-func (f *Frame) SetLocation(loc diagnostics.Location) {
-	f.location = loc
-}
-
-// Location returns the current source location associated with this frame.
-func (f *Frame) Location() diagnostics.Location {
-	return f.location
-}
