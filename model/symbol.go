@@ -17,8 +17,9 @@
 package model
 
 import (
-	"ballerina-lang-go/semtypes"
 	"sync"
+
+	"ballerina-lang-go/semtypes"
 )
 
 type Scope interface {
@@ -45,6 +46,7 @@ type Symbol interface {
 	Kind() SymbolKind
 	SetType(semtypes.SemType)
 	IsPublic() bool
+	Copy() Symbol
 }
 
 // symbolTypeSetter is a private interface for updating symbol types during type resolution.
@@ -343,8 +345,16 @@ func (ref *SymbolRef) IsPublic() bool {
 	panic("unexpected")
 }
 
+func (ref *SymbolRef) Copy() Symbol {
+	panic("SymbolRef can't be copied")
+}
+
 func (ts *TypeSymbol) Kind() SymbolKind {
 	return SymbolKindType
+}
+
+func (ts *TypeSymbol) Copy() Symbol {
+	panic("TypeSymbol cannot be copied")
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
@@ -357,8 +367,18 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 	return SymbolKindVariable
 }
 
+func (vs *ValueSymbol) Copy() Symbol {
+	cp := *vs
+	return &cp
+}
+
 func (fs *functionSymbol) Kind() SymbolKind {
 	return SymbolKindFunction
+}
+
+func (fs *functionSymbol) Copy() Symbol {
+	cp := *fs
+	return &cp
 }
 
 func (fs *functionSymbol) Signature() FunctionSignature {
@@ -428,6 +448,10 @@ func (s *genericFunctionSymbol) Signature() FunctionSignature {
 }
 
 func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) Copy() Symbol {
 	panic("GenericSymbol must be Monomorphized")
 }
 

@@ -1,0 +1,24 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:f1
+    a = %1;
+    %3 = <function(int) returns int>(a)
+    test = %3;
+    %5 = ConstantLoad 1
+    %6 = test(%5) -> bb1;
+  }
+  bb1 {
+    %7 = println(%6) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+f1(int) -> int{
+  bb0 {
+    %0 = i;
+    return;
+  }
+}

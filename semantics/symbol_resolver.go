@@ -469,6 +469,10 @@ func (d *deferredMethodSymbol) IsPublic() bool {
 	panic("method symbol has not been resolved yet")
 }
 
+func (d *deferredMethodSymbol) Copy() model.Symbol {
+	panic("method symbol has not been resolved yet")
+}
+
 func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedType) {
 	name := n.GetTypeName().GetValue()
 	var prefix string
@@ -490,26 +494,33 @@ func referUserDefinedType[T symbolResolver](resolver T, n *ast.BLangUserDefinedT
 	}
 }
 
+type symbolRefNode interface {
+	SetSymbol(symbolRef model.SymbolRef)
+}
+
+func resolveSymbolRef[T symbolResolver](resolver T, name, prefix string, pos diagnostics.Location, target symbolRefNode) {
+	if prefix != "" {
+		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
+		if !ok {
+			semanticError(resolver, "Unknown symbol: "+name, pos)
+		}
+		target.SetSymbol(symRef)
+	} else {
+		symRef, _, ok := resolver.GetSymbol(name)
+		if !ok {
+			semanticError(resolver, "Unknown symbol: "+name, pos)
+		}
+		target.SetSymbol(symRef)
+	}
+}
+
 func referSimpleVariableReference[T symbolResolver](resolver T, n model.SimpleVariableReferenceNode) {
 	name := n.GetVariableName().GetValue()
 	var prefix string
 	if n.GetPackageAlias() != nil {
 		prefix = n.GetPackageAlias().GetValue()
 	}
-	symbolicNode := n.(ast.BNodeWithSymbol)
-	if prefix != "" {
-		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
-		if !ok {
-			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
-		}
-		symbolicNode.SetSymbol(symRef)
-	} else {
-		symRef, _, ok := resolver.GetSymbol(name)
-		if !ok {
-			semanticError(resolver, "Unknown symbol: "+name, n.GetPosition())
-		}
-		symbolicNode.SetSymbol(symRef)
-	}
+	resolveSymbolRef(resolver, name, prefix, n.GetPosition(), n.(ast.BNodeWithSymbol))
 }
 
 type functionRefNode interface {
@@ -520,21 +531,7 @@ type functionRefNode interface {
 }
 
 func resolveFunctionRef[T symbolResolver](resolver T, functionRef functionRefNode) {
-	name := functionRef.GetName().GetValue()
-	prefix := functionRef.GetPackageAlias().GetValue()
-	if prefix != "" {
-		symRef, ok := resolver.GetPrefixedSymbol(prefix, name)
-		if !ok {
-			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
-		}
-		functionRef.SetSymbol(symRef)
-	} else {
-		symRef, _, ok := resolver.GetSymbol(name)
-		if !ok {
-			semanticError(resolver, "Unknown function: "+name, functionRef.GetPosition())
-		}
-		functionRef.SetSymbol(symRef)
-	}
+	resolveSymbolRef(resolver, functionRef.GetName().GetValue(), functionRef.GetPackageAlias().GetValue(), functionRef.GetPosition(), functionRef)
 }
 
 type variableNode interface {
@@ -544,12 +541,7 @@ type variableNode interface {
 }
 
 func referVariable[T symbolResolver](resolver T, variable variableNode) {
-	name := variable.GetName().GetValue()
-	symRef, _, ok := resolver.GetSymbol(name)
-	if !ok {
-		semanticError(resolver, "Unknown variable: "+name, variable.GetPosition())
-	}
-	variable.SetSymbol(symRef)
+	resolveSymbolRef(resolver, variable.GetName().GetValue(), "", variable.GetPosition(), variable)
 }
 
 // isShadowed checks if a name is already defined in an enclosing block scope.

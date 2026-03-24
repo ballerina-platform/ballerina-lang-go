@@ -1,0 +1,166 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad lhs
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad rhs
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad fn
+    %6 = fp $anon/.:add
+    %7 = newMap {| fn: function(int, int) returns int|function(int) returns int, lhs: int, rhs: int, never... |}{%1=%2, %3=%4, %5=%6}
+    a = %7;
+    %9 = executeOp(a) -> bb1;
+  }
+  bb1 {
+    %10 = println(%9) -> bb2;
+  }
+  bb2 {
+    %11 = fp $anon/.:nAdd
+    %12 = ConstantLoad fn
+    a[%12] = %11;
+    %13 = executeOp(a) -> bb3;
+  }
+  bb3 {
+    %14 = println(%13) -> bb4;
+  }
+  bb4 {
+    %15 = fp $anon/.:increment
+    %16 = ConstantLoad fn
+    a[%16] = %15;
+    %17 = executeOp(a) -> bb5;
+  }
+  bb5 {
+    %18 = println(%17) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+executeOp({| fn: function(int, int) returns int|function(int) returns int, lhs: int, rhs: int, never... |}) -> int{
+  bb0 {
+    %3 = ConstantLoad fn
+    %2 = op[%3];
+    fn = %2;
+    %5 = fn is function(int, int) returns int
+    %5 ? bb1 : bb3;
+  }
+  bb1 {
+    %7 = ConstantLoad lhs
+    %6 = op[%7];
+    %9 = ConstantLoad rhs
+    %8 = op[%9];
+    %10 = fn(%6,%8) -> bb2;
+  }
+  bb2 {
+    %0 = %10;
+    return;
+  }
+  bb3 {
+    %11 = <function(int) returns int>(fn)
+    f = %11;
+    %14 = ConstantLoad lhs
+    %13 = op[%14];
+    %15 = f(%13) -> bb4;
+  }
+  bb4 {
+    %0 = %15;
+    return;
+  }
+  bb5 {
+    return;
+  }
+}
+add(int|string,int|string) -> int{
+  bb0 {
+    %4 = lhs is string
+    %3 = %4;
+    %4 ? bb2 : bb1;
+  }
+  bb1 {
+    %5 = rhs is string
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
+    %6 = ConstantLoad 0
+    %0 = %6;
+    return;
+  }
+  bb4 {
+    %7 = + lhs rhs;
+    %0 = %7;
+    return;
+  }
+}
+nAdd(int|string,[int|string...]...) -> int{
+  bb0 {
+    %4 = init is string
+    %3 = %4;
+    %4 ? bb2 : bb1;
+  }
+  bb1 {
+    %5 = rest is [string...]
+    %3 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %3 ? bb3 : bb4;
+  }
+  bb3 {
+    %6 = ConstantLoad 1
+    %7 = unknown %6;
+    %0 = %7;
+    return;
+  }
+  bb4 {
+    result = init;
+    %9 = ConstantLoad 0
+    i = %9;
+    %11 = length(rest) -> bb5;
+  }
+  bb5 {
+    $desugar$0 = %11;
+    GOTO bb6;
+  }
+  bb6 {
+    %13 = < i $desugar$0;
+    %13 ? bb7 : bb8;
+  }
+  bb7 {
+    %14 = rest[i];
+    %15 = add(result,%14) -> bb9;
+  }
+  bb8 {
+    %0 = result;
+    return;
+  }
+  bb9 {
+    result = %15;
+    %17 = ConstantLoad 1
+    %16 = + i %17;
+    i = %16;
+    GOTO bb6;
+  }
+}
+increment(int|string) -> int{
+  bb0 {
+    %2 = lhs is string
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %3 = ConstantLoad 0
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %5 = ConstantLoad 1
+    %4 = + lhs %5;
+    %0 = %4;
+    return;
+  }
+}

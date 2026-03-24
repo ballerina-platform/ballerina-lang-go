@@ -1,0 +1,127 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad op
+    %2 = fp $anon/.:add
+    %3 = ConstantLoad left
+    %4 = ConstantLoad 1
+    %5 = ConstantLoad right
+    %6 = ConstantLoad 2
+    %7 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%1=%2, %3=%4, %5=%6}
+    a = %7;
+    %9 = exec(a) -> bb1;
+  }
+  bb1 {
+    %10 = println(%9) -> bb2;
+  }
+  bb2 {
+    %11 = ConstantLoad op
+    %12 = fp $anon/.:mul
+    %13 = ConstantLoad left
+    %14 = ConstantLoad 1
+    %15 = ConstantLoad right
+    %16 = ConstantLoad 2
+    %17 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%11=%12, %13=%14, %15=%16}
+    b = %17;
+    %19 = exec(b) -> bb3;
+  }
+  bb3 {
+    %20 = println(%19) -> bb4;
+  }
+  bb4 {
+    %21 = ConstantLoad op
+    %22 = fp $anon/.:addAny
+    %23 = ConstantLoad left
+    %24 = ConstantLoad 2
+    %25 = ConstantLoad right
+    %26 = ConstantLoad 2
+    %27 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%21=%22, %23=%24, %25=%26}
+    c = %27;
+    %29 = exec(c) -> bb5;
+  }
+  bb5 {
+    %30 = println(%29) -> bb6;
+  }
+  bb6 {
+    %31 = fp $anon/.:add
+    %32 = ConstantLoad op
+    c[%32] = %31;
+    %33 = exec(c) -> bb7;
+  }
+  bb7 {
+    %34 = println(%33) -> bb8;
+  }
+  bb8 {
+    %35 = fp $anon/.:addAny
+    %36 = ConstantLoad op
+    a[%36] = %35;
+    %37 = exec(a) -> bb9;
+  }
+  bb9 {
+    %38 = println(%37) -> bb10;
+  }
+  bb10 {
+    return;
+  }
+}
+exec({| left: int, op: function(int, int) returns int, right: int, never... |}) -> int{
+  bb0 {
+    %3 = ConstantLoad op
+    %2 = op[%3];
+    f = %2;
+    %6 = ConstantLoad left
+    %5 = op[%6];
+    %8 = ConstantLoad right
+    %7 = op[%8];
+    %9 = f(%5,%7) -> bb1;
+  }
+  bb1 {
+    %0 = %9;
+    return;
+  }
+}
+add(int,int) -> int{
+  bb0 {
+    %3 = + left right;
+    %0 = %3;
+    return;
+  }
+}
+mul(int,int) -> int{
+  bb0 {
+    %3 = * left right;
+    %0 = %3;
+    return;
+  }
+}
+addAny(int,[int...]...) -> int{
+  bb0 {
+    sum = init;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = < i $desugar$0;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    %10 = rest[i];
+    %9 = + sum %10;
+    sum = %9;
+    %12 = ConstantLoad 1
+    %11 = + i %12;
+    i = %11;
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}

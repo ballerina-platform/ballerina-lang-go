@@ -1,0 +1,53 @@
+(incFn
+  (bb0 () (bb1 bb2)
+    (group-expr
+      (binary-expr ==
+        (simple-var-ref kind)
+        (literal pos)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref posInc))
+  )
+  (bb2 (bb0) ()
+    (return
+      (simple-var-ref negInc))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable inc (type
+        (user-defined-type IncFunc)) (expr
+        (invocation incFn (
+          (literal pos))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation inc (
+          (literal 1))))))
+    (assignment
+      (simple-var-ref inc)
+      (invocation incFn (
+        (literal neg))))
+    (expression-stmt
+      (invocation io println (
+        (invocation inc (
+          (literal 1))))))
+  )
+)
+(negInc
+  (bb0 () ()
+    (return
+      (binary-expr -
+        (simple-var-ref a)
+        (literal 1)))
+  )
+)
+(posInc
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (literal 1)))
+  )
+)

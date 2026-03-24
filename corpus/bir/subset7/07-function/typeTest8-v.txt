@@ -1,0 +1,29 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(string,string) -> string{
+  bb0 {
+    %3 = + x y;
+    %0 = %3;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    %2 = %1 is function(string, int|string) returns string
+    %3 = println(%2) -> bb1;
+  }
+  bb1 {
+    %4 = fp $anon/.:foo
+    %5 = %4 is function("a", "a") returns string
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    %7 = fp $anon/.:foo
+    %8 = %7 is function("a", "a") returns int|string
+    %9 = println(%8) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

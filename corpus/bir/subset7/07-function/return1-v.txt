@@ -1,0 +1,67 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad pos
+    %2 = incFn(%1) -> bb1;
+  }
+  bb1 {
+    inc = %2;
+    %4 = ConstantLoad 1
+    %5 = inc(%4) -> bb2;
+  }
+  bb2 {
+    %6 = println(%5) -> bb3;
+  }
+  bb3 {
+    %7 = ConstantLoad neg
+    %8 = incFn(%7) -> bb4;
+  }
+  bb4 {
+    inc = %8;
+    %9 = ConstantLoad 1
+    %10 = inc(%9) -> bb5;
+  }
+  bb5 {
+    %11 = println(%10) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+incFn("neg"|"pos") -> function(int) returns int{
+  bb0 {
+    %3 = ConstantLoad pos
+    %2 = == kind %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = fp $anon/.:posInc
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %5 = fp $anon/.:negInc
+    %0 = %5;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}
+posInc(int) -> int{
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = + a %3;
+    %0 = %2;
+    return;
+  }
+}
+negInc(int) -> int{
+  bb0 {
+    %3 = ConstantLoad 1
+    %2 = - a %3;
+    %0 = %2;
+    return;
+  }
+}
