@@ -30,7 +30,8 @@ printI(int|function() returns int) -> nil{
     %4 = i() -> bb4;
   }
   bb4 {
-    %5 = println(%4) -> bb5;
+    %5 = %4;
+    %6 = println(%5) -> bb5;
   }
   bb5 {
     GOTO bb6;

@@ -8,22 +8,26 @@ main() -> nil{
   bb1 {
     inc = %2;
     %4 = ConstantLoad 1
-    %5 = inc(%4) -> bb2;
+    %5 = %4;
+    %6 = inc(%5) -> bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %7 = %6;
+    %8 = println(%7) -> bb3;
   }
   bb3 {
-    %7 = ConstantLoad neg
-    %8 = incFn(%7) -> bb4;
+    %9 = ConstantLoad neg
+    %10 = incFn(%9) -> bb4;
   }
   bb4 {
-    inc = %8;
-    %9 = ConstantLoad 1
-    %10 = inc(%9) -> bb5;
+    inc = %10;
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %13 = inc(%12) -> bb5;
   }
   bb5 {
-    %11 = println(%10) -> bb6;
+    %14 = %13;
+    %15 = println(%14) -> bb6;
   }
   bb6 {
     return;
@@ -51,16 +55,20 @@ incFn("neg"|"pos") -> function(int) returns int{
 }
 posInc(int) -> int{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = + a %3;
+    %3 = a;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
     %0 = %2;
     return;
   }
 }
 negInc(int) -> int{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = - a %3;
+    %3 = a;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = - %3 %5;
     %0 = %2;
     return;
   }

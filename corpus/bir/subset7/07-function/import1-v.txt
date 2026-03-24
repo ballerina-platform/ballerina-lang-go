@@ -5,16 +5,19 @@ main() -> nil{
     %1 = fp ballerina/io:println
     f = %1;
     %3 = ConstantLoad 1
-    %4 = f(%3) -> bb1;
+    %4 = %3;
+    %5 = f(%4) -> bb1;
   }
   bb1 {
-    %5 = fp ballerina/io:println
-    f1 = %5;
-    %7 = ConstantLoad 1
-    %8 = ConstantLoad 2
-    %9 = ConstantLoad hello
-    %10 = ConstantLoad world
-    %11 = f1(%7,%8,%9,%10) -> bb2;
+    %6 = fp ballerina/io:println
+    f1 = %6;
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %10 = ConstantLoad 2
+    %11 = %10;
+    %12 = ConstantLoad hello
+    %13 = ConstantLoad world
+    %14 = f1(%9,%11,%12,%13) -> bb2;
   }
   bb2 {
     return;

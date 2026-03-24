@@ -91,6 +91,10 @@ var (
 		"subset7/07-function/typeCast1-v.bal",
 		"subset7/07-function/typeCast2-v.bal",
 		"subset7/07-function/typeCast3-p.bal",
+		"subset7/07-closure/equality4-v.bal",
+		"subset7/07-closure/equality4-v.bal",
+		"subset7/07-closure/typeCast1-v.bal",
+		"subset7/07-closure/typeCast2-p.bal",
 	}
 )
 

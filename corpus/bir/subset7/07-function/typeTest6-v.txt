@@ -9,48 +9,58 @@ main() -> nil{
   }
   bb1 {
     %4 = ConstantLoad 1
-    %5 = f(%4) -> bb2;
+    %5 = %4;
+    %6 = f(%5) -> bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %7 = %6;
+    %8 = println(%7) -> bb3;
   }
   bb3 {
     GOTO bb7;
   }
   bb4 {
-    %7 = ConstantLoad 1
-    %8 = ConstantLoad 2
-    %9 = f(%7,%8) -> bb5;
+    %9 = ConstantLoad 1
+    %10 = %9;
+    %11 = ConstantLoad 2
+    %12 = %11;
+    %13 = f(%10,%12) -> bb5;
   }
   bb5 {
-    %10 = println(%9) -> bb6;
+    %14 = %13;
+    %15 = println(%14) -> bb6;
   }
   bb6 {
     GOTO bb7;
   }
   bb7 {
-    %11 = fp $anon/.:f2
-    f = %11;
-    %12 = f is function(int) returns int
-    %12 ? bb8 : bb11;
+    %16 = fp $anon/.:f2
+    f = %16;
+    %17 = f is function(int) returns int
+    %17 ? bb8 : bb11;
   }
   bb8 {
-    %13 = ConstantLoad 1
-    %14 = f(%13) -> bb9;
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %20 = f(%19) -> bb9;
   }
   bb9 {
-    %15 = println(%14) -> bb10;
+    %21 = %20;
+    %22 = println(%21) -> bb10;
   }
   bb10 {
     GOTO bb14;
   }
   bb11 {
-    %16 = ConstantLoad 1
-    %17 = ConstantLoad 2
-    %18 = f(%16,%17) -> bb12;
+    %23 = ConstantLoad 1
+    %24 = %23;
+    %25 = ConstantLoad 2
+    %26 = %25;
+    %27 = f(%24,%26) -> bb12;
   }
   bb12 {
-    %19 = println(%18) -> bb13;
+    %28 = %27;
+    %29 = println(%28) -> bb13;
   }
   bb13 {
     GOTO bb14;
@@ -67,7 +77,9 @@ f1(int) -> int{
 }
 f2(int,int) -> int{
   bb0 {
-    %3 = + i j;
+    %4 = i;
+    %5 = j;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }

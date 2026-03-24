@@ -1,0 +1,47 @@
+(foo
+  (bb0 () ()
+    (return
+      (lambda
+        (function $anonFunc$_0 () (
+          (value-type int))
+          (block-function-body
+            (var-def
+              (variable sum (type
+                (value-type int)) (expr
+                (simple-var-ref x))))
+            (foreach
+              (var-def
+                (variable i (type
+                  (value-type int))))
+              (binary-expr ..<
+                (literal 0)
+                (invocation lang.array length (
+                  (simple-var-ref a))))
+              (block-stmt
+                (compound-assignment +
+                  (simple-var-ref sum)
+                  (index-based-access
+                    (simple-var-ref a)
+                    (simple-var-ref i)))))
+            (return
+              (simple-var-ref sum))))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (invocation foo (
+          (literal 10))))))
+    (var-def
+      (variable x (type
+        (value-type int)) (expr
+        (invocation f (
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)

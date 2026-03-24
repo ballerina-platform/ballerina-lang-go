@@ -11,7 +11,8 @@ main() -> nil{
     %7 = ConstantLoad 0
     %6 = v2[%7];
     n = %6;
-    %9 = println(n) -> bb1;
+    %9 = n;
+    %10 = println(%9) -> bb1;
   }
   bb1 {
     return;

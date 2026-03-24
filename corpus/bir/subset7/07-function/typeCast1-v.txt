@@ -7,10 +7,12 @@ main() -> nil{
     %3 = <function(int) returns int>(a)
     test = %3;
     %5 = ConstantLoad 1
-    %6 = test(%5) -> bb1;
+    %6 = %5;
+    %7 = test(%6) -> bb1;
   }
   bb1 {
-    %7 = println(%6) -> bb2;
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     return;

@@ -10,7 +10,8 @@ main() -> nil{
     m = %3;
     %6 = ConstantLoad key
     %5 = m[%6];
-    %7 = println(%5) -> bb2;
+    %7 = %5;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
     return;

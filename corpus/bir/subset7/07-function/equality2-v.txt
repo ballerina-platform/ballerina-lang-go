@@ -14,17 +14,23 @@ $anonFunc$_0([int...]...) -> int{
     GOTO bb2;
   }
   bb2 {
-    %8 = < i $desugar$0;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
     %8 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 4
-    %1 = (1, vals)[(1, i)];
-    %0 = + (1, sum) %1;
+    PushScopeFrame 8
+    %1 = (1, sum);
+    %2 = (1, vals)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
     (1, sum) = %0;
-    %3 = ConstantLoad 1
-    %2 = + (1, i) %3;
-    (1, i) = %2;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
     PopScopeFrame
     GOTO bb2;
   }
@@ -39,7 +45,8 @@ main() -> nil{
     f = %1;
     f1 = f;
     %4 = unknown f1 f;
-    %5 = println(%4) -> bb1;
+    %5 = %4;
+    %6 = println(%5) -> bb1;
   }
   bb1 {
     return;

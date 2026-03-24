@@ -3,33 +3,41 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 17
-    %2 = neg(%1) -> bb1;
+    %2 = %1;
+    %3 = neg(%2) -> bb1;
   }
   bb1 {
-    neg1 = %2;
-    %4 = println(neg1) -> bb2;
+    neg1 = %3;
+    %5 = neg1;
+    %6 = println(%5) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad 0
-    %6 = neg(%5) -> bb3;
+    %7 = ConstantLoad 0
+    %8 = %7;
+    %9 = neg(%8) -> bb3;
   }
   bb3 {
-    %7 = println(%6) -> bb4;
+    %10 = %9;
+    %11 = println(%10) -> bb4;
   }
   bb4 {
-    %8 = ConstantLoad 1
-    %9 = unknown %8;
-    %10 = neg(%9) -> bb5;
+    %12 = ConstantLoad 1
+    %13 = unknown %12;
+    %14 = %13;
+    %15 = neg(%14) -> bb5;
   }
   bb5 {
-    %11 = println(%10) -> bb6;
+    %16 = %15;
+    %17 = println(%16) -> bb6;
   }
   bb6 {
-    %12 = ConstantLoad 1
-    %13 = negneg(%12) -> bb7;
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %20 = negneg(%19) -> bb7;
   }
   bb7 {
-    %14 = println(%13) -> bb8;
+    %21 = %20;
+    %22 = println(%21) -> bb8;
   }
   bb8 {
     return;

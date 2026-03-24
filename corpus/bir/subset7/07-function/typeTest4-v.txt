@@ -9,10 +9,12 @@ main() -> nil{
   }
   bb1 {
     %4 = ConstantLoad 1
-    %5 = a(%4) -> bb2;
+    %5 = %4;
+    %6 = a(%5) -> bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %7 = %6;
+    %8 = println(%7) -> bb3;
   }
   bb3 {
     GOTO bb4;

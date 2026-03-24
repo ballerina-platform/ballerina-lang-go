@@ -12,7 +12,8 @@ main() -> nil{
     %7 = sum(fns) -> bb1;
   }
   bb1 {
-    %8 = println(%7) -> bb2;
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     return;
@@ -52,25 +53,31 @@ sum([function() returns int...]) -> int{
     GOTO bb2;
   }
   bb2 {
-    %8 = < i $desugar$0;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
     %8 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 6
+    PushScopeFrame 10
     %0 = (1, fns)[(1, i)];
     fn = %0;
-    %3 = fn() -> bb5;
+    %3 = (1, tmp);
+    %4 = fn() -> bb5;
   }
   bb4 {
     %0 = tmp;
     return;
   }
   bb5 {
-    %2 = + (1, tmp) %3;
+    %5 = %4;
+    %2 = + %3 %5;
     (1, tmp) = %2;
-    %5 = ConstantLoad 1
-    %4 = + (1, i) %5;
-    (1, i) = %4;
+    %7 = (1, i);
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %6 = + %7 %9;
+    (1, i) = %6;
     PopScopeFrame
     GOTO bb2;
   }

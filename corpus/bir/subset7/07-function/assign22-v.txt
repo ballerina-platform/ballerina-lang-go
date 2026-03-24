@@ -6,21 +6,31 @@ main() -> nil{
     %1 = fp $anon/.:foo
     f = %1;
     %3 = ConstantLoad 1
-    %4 = ConstantLoad 2
-    %5 = ConstantLoad 3
-    %6 = ConstantLoad 4
-    %7 = ConstantLoad 5
-    %8 = f(%3,%4,%5,%6,%7) -> bb1;
+    %4 = %3;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %7 = ConstantLoad 3
+    %8 = %7;
+    %9 = ConstantLoad 4
+    %10 = %9;
+    %11 = ConstantLoad 5
+    %12 = %11;
+    %13 = f(%4,%6,%8,%10,%12) -> bb1;
   }
   bb1 {
-    %9 = fp $anon/.:bar
-    g = %9;
-    %11 = ConstantLoad 1
-    %12 = ConstantLoad 2
-    %13 = ConstantLoad 3
-    %14 = ConstantLoad 4
-    %15 = ConstantLoad 5
-    %16 = g(%11,%12,%13,%14,%15) -> bb2;
+    %14 = fp $anon/.:bar
+    g = %14;
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %18 = ConstantLoad 2
+    %19 = %18;
+    %20 = ConstantLoad 3
+    %21 = %20;
+    %22 = ConstantLoad 4
+    %23 = %22;
+    %24 = ConstantLoad 5
+    %25 = %24;
+    %26 = g(%17,%19,%21,%23,%25) -> bb2;
   }
   bb2 {
     return;
@@ -38,22 +48,29 @@ foo(int,[int...]...) -> nil{
     GOTO bb2;
   }
   bb2 {
-    %8 = < i $desugar$0;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
     %8 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 4
-    %1 = (1, rest)[(1, i)];
-    %0 = + (1, result) %1;
+    PushScopeFrame 8
+    %1 = (1, result);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
     (1, result) = %0;
-    %3 = ConstantLoad 1
-    %2 = + (1, i) %3;
-    (1, i) = %2;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
     PopScopeFrame
     GOTO bb2;
   }
   bb4 {
-    %9 = println(result) -> bb5;
+    %11 = result;
+    %12 = println(%11) -> bb5;
   }
   bb5 {
     return;
@@ -72,22 +89,29 @@ bar([int...]...) -> nil{
     GOTO bb2;
   }
   bb2 {
-    %8 = < i $desugar$0;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
     %8 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 4
-    %1 = (1, rest)[(1, i)];
-    %0 = * (1, result) %1;
+    PushScopeFrame 8
+    %1 = (1, result);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = * %1 %3;
     (1, result) = %0;
-    %3 = ConstantLoad 1
-    %2 = + (1, i) %3;
-    (1, i) = %2;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
     PopScopeFrame
     GOTO bb2;
   }
   bb4 {
-    %9 = println(result) -> bb5;
+    %11 = result;
+    %12 = println(%11) -> bb5;
   }
   bb5 {
     return;

@@ -13,46 +13,50 @@ main() -> nil{
   }
   bb2 {
     b = %1;
-    %5 = println(b) -> bb3;
+    %5 = b;
+    %6 = println(%5) -> bb3;
   }
   bb3 {
-    %7 = ConstantLoad true
-    %6 = %7;
-    %7 ? bb4 : bb5;
+    %8 = ConstantLoad true
+    %7 = %8;
+    %8 ? bb4 : bb5;
   }
   bb4 {
-    %8 = ConstantLoad false
-    %6 = %8;
+    %9 = ConstantLoad false
+    %7 = %9;
     GOTO bb5;
   }
   bb5 {
-    %9 = println(%6) -> bb6;
+    %10 = %7;
+    %11 = println(%10) -> bb6;
   }
   bb6 {
-    %11 = ConstantLoad false
-    %10 = %11;
-    %11 ? bb7 : bb8;
+    %13 = ConstantLoad false
+    %12 = %13;
+    %13 ? bb7 : bb8;
   }
   bb7 {
-    %12 = ConstantLoad true
-    %10 = %12;
+    %14 = ConstantLoad true
+    %12 = %14;
     GOTO bb8;
   }
   bb8 {
-    %13 = println(%10) -> bb9;
+    %15 = %12;
+    %16 = println(%15) -> bb9;
   }
   bb9 {
-    %15 = ConstantLoad false
-    %14 = %15;
-    %15 ? bb10 : bb11;
+    %18 = ConstantLoad false
+    %17 = %18;
+    %18 ? bb10 : bb11;
   }
   bb10 {
-    %16 = ConstantLoad false
-    %14 = %16;
+    %19 = ConstantLoad false
+    %17 = %19;
     GOTO bb11;
   }
   bb11 {
-    %17 = println(%14) -> bb12;
+    %20 = %17;
+    %21 = println(%20) -> bb12;
   }
   bb12 {
     return;

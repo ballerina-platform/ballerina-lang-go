@@ -2,14 +2,18 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 foo(int,int) -> int{
   bb0 {
-    %3 = + a b;
+    %4 = a;
+    %5 = b;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
 }
 bar(int,int) -> int{
   bb0 {
-    %3 = + a b;
+    %4 = a;
+    %5 = b;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
@@ -21,13 +25,15 @@ main() -> nil{
     %3 = fp $anon/.:foo
     f2 = %3;
     %5 = unknown f1 f2;
-    %6 = println(%5) -> bb1;
+    %6 = %5;
+    %7 = println(%6) -> bb1;
   }
   bb1 {
-    %7 = fp $anon/.:bar
-    f3 = %7;
-    %9 = unknown f1 f3;
-    %10 = println(%9) -> bb2;
+    %8 = fp $anon/.:bar
+    f3 = %8;
+    %10 = unknown f1 f3;
+    %11 = %10;
+    %12 = println(%11) -> bb2;
   }
   bb2 {
     return;

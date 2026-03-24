@@ -3,23 +3,31 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad true
-    %2 = ConstantLoad true
-    %3 = printBranch(%1,%2) -> bb1;
+    %2 = %1;
+    %3 = ConstantLoad true
+    %4 = %3;
+    %5 = printBranch(%2,%4) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad true
-    %5 = ConstantLoad false
-    %6 = printBranch(%4,%5) -> bb2;
+    %6 = ConstantLoad true
+    %7 = %6;
+    %8 = ConstantLoad false
+    %9 = %8;
+    %10 = printBranch(%7,%9) -> bb2;
   }
   bb2 {
-    %7 = ConstantLoad false
-    %8 = ConstantLoad true
-    %9 = printBranch(%7,%8) -> bb3;
+    %11 = ConstantLoad false
+    %12 = %11;
+    %13 = ConstantLoad true
+    %14 = %13;
+    %15 = printBranch(%12,%14) -> bb3;
   }
   bb3 {
-    %10 = ConstantLoad false
-    %11 = ConstantLoad false
-    %12 = printBranch(%10,%11) -> bb4;
+    %16 = ConstantLoad false
+    %17 = %16;
+    %18 = ConstantLoad false
+    %19 = %18;
+    %20 = printBranch(%17,%19) -> bb4;
   }
   bb4 {
     return;
@@ -34,14 +42,16 @@ printBranch(boolean,boolean) -> nil{
   }
   bb2 {
     %3 = ConstantLoad 0
-    %4 = println(%3) -> bb3;
+    %4 = %3;
+    %5 = println(%4) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %5 = ConstantLoad 1
-    %6 = println(%5) -> bb5;
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = println(%7) -> bb5;
   }
   bb5 {
     GOTO bb6;
@@ -53,15 +63,17 @@ printBranch(boolean,boolean) -> nil{
     y ? bb8 : bb10;
   }
   bb8 {
-    %7 = ConstantLoad 2
-    %8 = println(%7) -> bb9;
+    %9 = ConstantLoad 2
+    %10 = %9;
+    %11 = println(%10) -> bb9;
   }
   bb9 {
     GOTO bb12;
   }
   bb10 {
-    %9 = ConstantLoad 3
-    %10 = println(%9) -> bb11;
+    %12 = ConstantLoad 3
+    %13 = %12;
+    %14 = println(%13) -> bb11;
   }
   bb11 {
     GOTO bb12;

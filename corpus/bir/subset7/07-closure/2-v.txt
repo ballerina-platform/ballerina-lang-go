@@ -2,24 +2,33 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 $anonFunc$_1(int) -> int{
   bb0 {
-    %4 = + (1, x) y;
-    %3 = + %4 (2, a);
-    %2 = + %3 (1, b);
+    %5 = (1, x);
+    %6 = y;
+    %4 = + %5 %6;
+    %7 = %4;
+    %8 = (2, a);
+    %3 = + %7 %8;
+    %9 = %3;
+    %10 = (1, b);
+    %2 = + %9 %10;
     %0 = %2;
     return;
   }
 }
 $anonFunc$_0(int) -> int{
   bb0 {
-    %3 = ConstantLoad 2
-    %2 = * (1, a) %3;
+    %3 = (1, a);
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %2 = * %3 %5;
     b = %2;
-    %5 = closure_fp $anon/.:$anonFunc$_1
-    g = %5;
-    %7 = g(x) -> bb1;
+    %7 = closure_fp $anon/.:$anonFunc$_1
+    g = %7;
+    %9 = x;
+    %10 = g(%9) -> bb1;
   }
   bb1 {
-    %0 = %7;
+    %0 = %10;
     return;
   }
 }
@@ -30,10 +39,12 @@ main() -> nil{
     %3 = closure_fp $anon/.:$anonFunc$_0
     f = %3;
     %5 = ConstantLoad 5
-    %6 = f(%5) -> bb1;
+    %6 = %5;
+    %7 = f(%6) -> bb1;
   }
   bb1 {
-    %7 = println(%6) -> bb2;
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     return;

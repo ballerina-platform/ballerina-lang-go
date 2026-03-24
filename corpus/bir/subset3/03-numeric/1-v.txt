@@ -10,30 +10,35 @@ main() -> nil{
     d2 = %5;
     %7 = ConstantLoad 1.5
     f2 = %7;
-    %9 = println(f) -> bb1;
+    %9 = f;
+    %10 = println(%9) -> bb1;
   }
   bb1 {
-    %10 = println(d) -> bb2;
+    %11 = d;
+    %12 = println(%11) -> bb2;
   }
   bb2 {
-    %11 = println(f2) -> bb3;
+    %13 = f2;
+    %14 = println(%13) -> bb3;
   }
   bb3 {
-    %12 = println(d2) -> bb4;
+    %15 = d2;
+    %16 = println(%15) -> bb4;
   }
   bb4 {
-    %13 = ConstantLoad 1
-    %14 = ConstantLoad 1
-    %15 = ConstantLoad 1/1
-    %16 = ConstantLoad 3
-    %17 = newArray [int, float, decimal, never...][%16]{%13, %14, %15}
-    a = %17;
-    %19 = println(a) -> bb5;
+    %17 = ConstantLoad 1
+    %18 = ConstantLoad 1
+    %19 = ConstantLoad 1/1
+    %20 = ConstantLoad 3
+    %21 = newArray [int, float, decimal, never...][%20]{%17, %18, %19}
+    a = %21;
+    %23 = println(a) -> bb5;
   }
   bb5 {
-    %20 = ConstantLoad 100/1
-    dd = %20;
-    %22 = println(dd) -> bb6;
+    %24 = ConstantLoad 100/1
+    dd = %24;
+    %26 = dd;
+    %27 = println(%26) -> bb6;
   }
   bb6 {
     return;

@@ -9,7 +9,8 @@ main() -> nil{
     %5 ? bb2 : bb3;
   }
   bb1 {
-    %15 = println(value) -> bb7;
+    %16 = value;
+    %17 = println(%16) -> bb7;
   }
   bb2 {
     value = a;
@@ -25,7 +26,8 @@ main() -> nil{
   }
   bb4 {
     %12 = ConstantLoad 2
-    %11 = * a %12;
+    %13 = %12;
+    %11 = * a %13;
     value = %11;
     GOTO bb1;
   }
@@ -33,9 +35,9 @@ main() -> nil{
     GOTO bb6;
   }
   bb6 {
-    %13 = ConstantLoad 1
-    %14 = unknown %13;
-    value = %14;
+    %14 = ConstantLoad 1
+    %15 = unknown %14;
+    value = %15;
     GOTO bb1;
   }
   bb7 {

@@ -5,22 +5,28 @@ main() -> nil{
     %1 = fp $anon/.:foo
     f = %1;
     %3 = ConstantLoad 1
-    %4 = ConstantLoad 2
-    %5 = f(%3,%4) -> bb1;
+    %4 = %3;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %7 = f(%4,%6) -> bb1;
   }
   bb1 {
-    x = %5;
-    %7 = println(x) -> bb2;
+    x = %7;
+    %9 = x;
+    %10 = println(%9) -> bb2;
   }
   bb2 {
-    %8 = fp $anon/.:foo
-    fb = %8;
-    %10 = ConstantLoad 8
-    %11 = ConstantLoad 2
-    %12 = fb(%10,%11) -> bb3;
+    %11 = fp $anon/.:foo
+    fb = %11;
+    %13 = ConstantLoad 8
+    %14 = %13;
+    %15 = ConstantLoad 2
+    %16 = %15;
+    %17 = fb(%14,%16) -> bb3;
   }
   bb3 {
-    %13 = println(%12) -> bb4;
+    %18 = %17;
+    %19 = println(%18) -> bb4;
   }
   bb4 {
     return;
@@ -28,10 +34,12 @@ main() -> nil{
 }
 foo(int,int) -> int:Unsigned8{
   bb0 {
-    %3 = + a b;
+    %4 = a;
+    %5 = b;
+    %3 = + %4 %5;
     sum = %3;
-    %5 = <int:Unsigned8>(sum)
-    %0 = %5;
+    %7 = <int:Unsigned8>(sum)
+    %0 = %7;
     return;
   }
 }

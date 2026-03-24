@@ -6,13 +6,19 @@ class Bar {
 
   foo(int,int) -> int{
     bb0 {
-      %6 = + a b;
-      %8 = ConstantLoad bar
-      %7 = self[%8];
-      %5 = + %6 %7;
-      %10 = ConstantLoad baz
-      %9 = self[%10];
-      %4 = + %5 %9;
+      %7 = a;
+      %8 = b;
+      %6 = + %7 %8;
+      %9 = %6;
+      %11 = ConstantLoad bar
+      %10 = self[%11];
+      %12 = %10;
+      %5 = + %9 %12;
+      %13 = %5;
+      %15 = ConstantLoad baz
+      %14 = self[%15];
+      %16 = %14;
+      %4 = + %13 %16;
       %0 = %4;
       return;
     }
@@ -38,11 +44,14 @@ main() -> nil{
   bb1 {
     f = %2;
     %4 = ConstantLoad 10
-    %5 = ConstantLoad 10
-    %6 = foo(f,%4,%5) -> bb2;
+    %5 = %4;
+    %6 = ConstantLoad 10
+    %7 = %6;
+    %8 = foo(f,%5,%7) -> bb2;
   }
   bb2 {
-    %7 = println(%6) -> bb3;
+    %9 = %8;
+    %10 = println(%9) -> bb3;
   }
   bb3 {
     return;

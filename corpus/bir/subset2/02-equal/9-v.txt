@@ -6,24 +6,32 @@ main() -> nil{
     f1 = %1;
     %3 = ConstantLoad 2
     f2 = %3;
-    %5 = == f1 f1;
-    %6 = println(%5) -> bb1;
+    %6 = f1;
+    %7 = f1;
+    %5 = == %6 %7;
+    %8 = %5;
+    %9 = println(%8) -> bb1;
   }
   bb1 {
-    %7 = != f1 f2;
-    %8 = println(%7) -> bb2;
+    %11 = f1;
+    %12 = f2;
+    %10 = != %11 %12;
+    %13 = %10;
+    %14 = println(%13) -> bb2;
   }
   bb2 {
-    %9 = ConstantLoad foo
-    s1 = %9;
-    %11 = ConstantLoad bar
-    s2 = %11;
-    %13 = == s1 s1;
-    %14 = println(%13) -> bb3;
+    %15 = ConstantLoad foo
+    s1 = %15;
+    %17 = ConstantLoad bar
+    s2 = %17;
+    %19 = == s1 s1;
+    %20 = %19;
+    %21 = println(%20) -> bb3;
   }
   bb3 {
-    %15 = != s1 s2;
-    %16 = println(%15) -> bb4;
+    %22 = != s1 s2;
+    %23 = %22;
+    %24 = println(%23) -> bb4;
   }
   bb4 {
     return;

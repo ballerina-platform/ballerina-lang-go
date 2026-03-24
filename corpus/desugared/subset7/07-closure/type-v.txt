@@ -1,0 +1,88 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F2
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition Fs
+    (function-type (
+      (union-type
+        (value-type int)
+        (value-type string))) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable base (type
+          (value-type int)) (expr
+          (literal 10))))
+      (var-def
+        (variable f (type
+          (user-defined-type F2)) (expr
+          (lambda
+            (function $anonFunc$_0 () (
+              (value-type int))
+              (block-function-body
+                (var-def
+                  (variable sum (type
+                    (value-type int)) (expr
+                    (simple-var-ref base))))
+                (var-def
+                  (variable i (type
+                    (value-type int)) (expr
+                    (literal 0))))
+                (var-def
+                  (variable $desugar$0 (expr
+                    (invocation lang.array length (
+                      (simple-var-ref vals))))))
+                (while
+                  (binary-expr <
+                    (simple-var-ref i)
+                    (simple-var-ref $desugar$0))
+                  (block-stmt
+                    (compound-assignment +
+                      (simple-var-ref sum)
+                      (index-based-access
+                        (simple-var-ref vals)
+                        (simple-var-ref i)))
+                    (assignment
+                      (simple-var-ref i)
+                      (binary-expr +
+                        (simple-var-ref i)
+                        (numeric-literal 1)))))
+                (return
+                  (simple-var-ref sum))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 2)
+            (literal 3))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F1))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected)))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type Fs))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected))))) ())
+      (block-stmt))))

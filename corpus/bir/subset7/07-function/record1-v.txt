@@ -14,53 +14,58 @@ main() -> nil{
     %9 = exec(a) -> bb1;
   }
   bb1 {
-    %10 = println(%9) -> bb2;
+    %10 = %9;
+    %11 = println(%10) -> bb2;
   }
   bb2 {
-    %11 = ConstantLoad op
-    %12 = fp $anon/.:mul
-    %13 = ConstantLoad left
-    %14 = ConstantLoad 1
-    %15 = ConstantLoad right
-    %16 = ConstantLoad 2
-    %17 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%11=%12, %13=%14, %15=%16}
-    b = %17;
-    %19 = exec(b) -> bb3;
+    %12 = ConstantLoad op
+    %13 = fp $anon/.:mul
+    %14 = ConstantLoad left
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad right
+    %17 = ConstantLoad 2
+    %18 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%12=%13, %14=%15, %16=%17}
+    b = %18;
+    %20 = exec(b) -> bb3;
   }
   bb3 {
-    %20 = println(%19) -> bb4;
+    %21 = %20;
+    %22 = println(%21) -> bb4;
   }
   bb4 {
-    %21 = ConstantLoad op
-    %22 = fp $anon/.:addAny
-    %23 = ConstantLoad left
-    %24 = ConstantLoad 2
-    %25 = ConstantLoad right
+    %23 = ConstantLoad op
+    %24 = fp $anon/.:addAny
+    %25 = ConstantLoad left
     %26 = ConstantLoad 2
-    %27 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%21=%22, %23=%24, %25=%26}
-    c = %27;
-    %29 = exec(c) -> bb5;
+    %27 = ConstantLoad right
+    %28 = ConstantLoad 2
+    %29 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%23=%24, %25=%26, %27=%28}
+    c = %29;
+    %31 = exec(c) -> bb5;
   }
   bb5 {
-    %30 = println(%29) -> bb6;
+    %32 = %31;
+    %33 = println(%32) -> bb6;
   }
   bb6 {
-    %31 = fp $anon/.:add
-    %32 = ConstantLoad op
-    c[%32] = %31;
-    %33 = exec(c) -> bb7;
+    %34 = fp $anon/.:add
+    %35 = ConstantLoad op
+    c[%35] = %34;
+    %36 = exec(c) -> bb7;
   }
   bb7 {
-    %34 = println(%33) -> bb8;
+    %37 = %36;
+    %38 = println(%37) -> bb8;
   }
   bb8 {
-    %35 = fp $anon/.:addAny
-    %36 = ConstantLoad op
-    a[%36] = %35;
-    %37 = exec(a) -> bb9;
+    %39 = fp $anon/.:addAny
+    %40 = ConstantLoad op
+    a[%40] = %39;
+    %41 = exec(a) -> bb9;
   }
   bb9 {
-    %38 = println(%37) -> bb10;
+    %42 = %41;
+    %43 = println(%42) -> bb10;
   }
   bb10 {
     return;
@@ -73,25 +78,31 @@ exec({| left: int, op: function(int, int) returns int, right: int, never... |}) 
     f = %2;
     %6 = ConstantLoad left
     %5 = op[%6];
-    %8 = ConstantLoad right
-    %7 = op[%8];
-    %9 = f(%5,%7) -> bb1;
+    %7 = %5;
+    %9 = ConstantLoad right
+    %8 = op[%9];
+    %10 = %8;
+    %11 = f(%7,%10) -> bb1;
   }
   bb1 {
-    %0 = %9;
+    %0 = %11;
     return;
   }
 }
 add(int,int) -> int{
   bb0 {
-    %3 = + left right;
+    %4 = left;
+    %5 = right;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
 }
 mul(int,int) -> int{
   bb0 {
-    %3 = * left right;
+    %4 = left;
+    %5 = right;
+    %3 = * %4 %5;
     %0 = %3;
     return;
   }
@@ -108,17 +119,23 @@ addAny(int,[int...]...) -> int{
     GOTO bb2;
   }
   bb2 {
-    %8 = < i $desugar$0;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
     %8 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 4
-    %1 = (1, rest)[(1, i)];
-    %0 = + (1, sum) %1;
+    PushScopeFrame 8
+    %1 = (1, sum);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
     (1, sum) = %0;
-    %3 = ConstantLoad 1
-    %2 = + (1, i) %3;
-    (1, i) = %2;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
     PopScopeFrame
     GOTO bb2;
   }

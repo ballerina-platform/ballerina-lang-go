@@ -2,11 +2,15 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 $anonFunc$_0(int) -> int{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = + (1, a) %3;
+    %3 = (1, a);
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
     (1, a) = %2;
-    %4 = + x (1, a);
-    %0 = %4;
+    %7 = x;
+    %8 = (1, a);
+    %6 = + %7 %8;
+    %0 = %6;
     return;
   }
 }
@@ -18,17 +22,22 @@ main() -> nil{
     f = %3;
     %5 = ConstantLoad 10
     a = %5;
-    %7 = ConstantLoad 5
-    %6 = + a %7;
+    %7 = a;
+    %8 = ConstantLoad 5
+    %9 = %8;
+    %6 = + %7 %9;
     b = %6;
-    %9 = f(b) -> bb1;
+    %11 = b;
+    %12 = f(%11) -> bb1;
   }
   bb1 {
-    c = %9;
-    %11 = println(c) -> bb2;
+    c = %12;
+    %14 = c;
+    %15 = println(%14) -> bb2;
   }
   bb2 {
-    %12 = println(a) -> bb3;
+    %16 = a;
+    %17 = println(%16) -> bb3;
   }
   bb3 {
     return;

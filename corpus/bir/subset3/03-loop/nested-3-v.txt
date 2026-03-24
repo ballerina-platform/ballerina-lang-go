@@ -17,11 +17,13 @@ whileInForeach() -> nil{
     GOTO bb1;
   }
   bb1 {
-    %5 = < i $desugar$0;
+    %6 = i;
+    %7 = $desugar$0;
+    %5 = < %6 %7;
     %5 ? bb2 : bb3;
   }
   bb2 {
-    PushScopeFrame 6
+    PushScopeFrame 10
     %0 = ConstantLoad 0
     j = %0;
     GOTO bb4;
@@ -30,28 +32,39 @@ whileInForeach() -> nil{
     return;
   }
   bb4 {
-    %3 = ConstantLoad 2
-    %2 = < j %3;
+    %3 = j;
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %2 = < %3 %5;
     %2 ? bb5 : bb6;
   }
   bb5 {
-    PushScopeFrame 6
-    %2 = ConstantLoad 10
-    %1 = * (2, i) %2;
-    %0 = + %1 (1, j);
-    %3 = println(%0) -> bb7;
+    PushScopeFrame 13
+    %2 = (2, i);
+    %3 = ConstantLoad 10
+    %4 = %3;
+    %1 = * %2 %4;
+    %5 = %1;
+    %6 = (1, j);
+    %0 = + %5 %6;
+    %7 = %0;
+    %8 = println(%7) -> bb7;
   }
   bb6 {
-    %5 = ConstantLoad 1
-    %4 = + (1, i) %5;
-    (1, i) = %4;
+    %7 = (1, i);
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %6 = + %7 %9;
+    (1, i) = %6;
     PopScopeFrame
     GOTO bb1;
   }
   bb7 {
-    %5 = ConstantLoad 1
-    %4 = + (1, j) %5;
-    (1, j) = %4;
+    %10 = (1, j);
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %9 = + %10 %12;
+    (1, j) = %9;
     PopScopeFrame
     GOTO bb4;
   }

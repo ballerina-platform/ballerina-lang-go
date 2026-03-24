@@ -12,25 +12,29 @@ main() -> nil{
     %7 = ConstantLoad 5
     %8 = newArray [int, int, int, int, int, never...][%7]{%2, %3, %4, %5, %6}
     %9 = ConstantLoad 0
-    %10 = fold(%1,%8,%9) -> bb1;
+    %10 = %9;
+    %11 = fold(%1,%8,%10) -> bb1;
   }
   bb1 {
-    %11 = println(%10) -> bb2;
+    %12 = %11;
+    %13 = println(%12) -> bb2;
   }
   bb2 {
-    %12 = fp $anon/.:mul
-    %13 = ConstantLoad 1
-    %14 = ConstantLoad 2
-    %15 = ConstantLoad 3
-    %16 = ConstantLoad 4
-    %17 = ConstantLoad 5
-    %18 = ConstantLoad 5
-    %19 = newArray [int, int, int, int, int, never...][%18]{%13, %14, %15, %16, %17}
-    %20 = ConstantLoad 1
-    %21 = fold(%12,%19,%20) -> bb3;
+    %14 = fp $anon/.:mul
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad 2
+    %17 = ConstantLoad 3
+    %18 = ConstantLoad 4
+    %19 = ConstantLoad 5
+    %20 = ConstantLoad 5
+    %21 = newArray [int, int, int, int, int, never...][%20]{%15, %16, %17, %18, %19}
+    %22 = ConstantLoad 1
+    %23 = %22;
+    %24 = fold(%14,%21,%23) -> bb3;
   }
   bb3 {
-    %22 = println(%21) -> bb4;
+    %25 = %24;
+    %26 = println(%25) -> bb4;
   }
   bb4 {
     return;
@@ -48,37 +52,47 @@ fold(function(int, int) returns int,[int...],int) -> int{
     GOTO bb2;
   }
   bb2 {
-    %9 = < i $desugar$0;
+    %10 = i;
+    %11 = $desugar$0;
+    %9 = < %10 %11;
     %9 ? bb3 : bb4;
   }
   bb3 {
-    PushScopeFrame 4
-    %0 = (1, a)[(1, i)];
-    %1 = f((1, result),%0) -> bb5;
+    PushScopeFrame 8
+    %0 = (1, result);
+    %1 = (1, a)[(1, i)];
+    %2 = %1;
+    %3 = f(%0,%2) -> bb5;
   }
   bb4 {
     %0 = result;
     return;
   }
   bb5 {
-    (1, result) = %1;
-    %3 = ConstantLoad 1
-    %2 = + (1, i) %3;
-    (1, i) = %2;
+    (1, result) = %3;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
     PopScopeFrame
     GOTO bb2;
   }
 }
 sum(int,int) -> int{
   bb0 {
-    %3 = + a b;
+    %4 = a;
+    %5 = b;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
 }
 mul(int,int) -> int{
   bb0 {
-    %3 = * a b;
+    %4 = a;
+    %5 = b;
+    %3 = * %4 %5;
     %0 = %3;
     return;
   }

@@ -11,36 +11,49 @@ main() -> nil{
     GOTO bb1;
   }
   bb1 {
-    %7 = < i loopCount;
+    %8 = i;
+    %9 = loopCount;
+    %7 = < %8 %9;
     %7 ? bb2 : bb3;
   }
   bb2 {
-    PushScopeFrame 9
-    %1 = ConstantLoad 1
-    %0 = + (1, i) %1;
-    %2 = sum((1, i),%0) -> bb4;
+    PushScopeFrame 18
+    %0 = (1, i);
+    %2 = (1, i);
+    %3 = ConstantLoad 1
+    %4 = %3;
+    %1 = + %2 %4;
+    %5 = %1;
+    %6 = sum(%0,%5) -> bb4;
   }
   bb3 {
-    %8 = ConstantLoad Loop count: 
-    %9 = println(%8,loopCount) -> bb6;
+    %10 = ConstantLoad Loop count: 
+    %11 = loopCount;
+    %12 = println(%10,%11) -> bb6;
   }
   bb4 {
-    a = %2;
-    %4 = addOffset(a) -> bb5;
+    a = %6;
+    %8 = a;
+    %9 = addOffset(%8) -> bb5;
   }
   bb5 {
-    b = %4;
-    %6 = + (1, total) b;
-    (1, total) = %6;
-    %8 = ConstantLoad 1
-    %7 = + (1, i) %8;
-    (1, i) = %7;
+    b = %9;
+    %12 = (1, total);
+    %13 = b;
+    %11 = + %12 %13;
+    (1, total) = %11;
+    %15 = (1, i);
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %14 = + %15 %17;
+    (1, i) = %14;
     PopScopeFrame
     GOTO bb1;
   }
   bb6 {
-    %10 = ConstantLoad Final total: 
-    %11 = println(%10,total) -> bb7;
+    %13 = ConstantLoad Final total: 
+    %14 = total;
+    %15 = println(%13,%14) -> bb7;
   }
   bb7 {
     return;
@@ -48,15 +61,19 @@ main() -> nil{
 }
 sum(int,int) -> int{
   bb0 {
-    %3 = + x y;
+    %4 = x;
+    %5 = y;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
 }
 addOffset(int) -> int{
   bb0 {
-    %3 = ConstantLoad 10
-    %2 = + value %3;
+    %3 = value;
+    %4 = ConstantLoad 10
+    %5 = %4;
+    %2 = + %3 %5;
     %0 = %2;
     return;
   }

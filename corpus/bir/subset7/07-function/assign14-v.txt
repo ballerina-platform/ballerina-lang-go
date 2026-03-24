@@ -7,7 +7,8 @@ main() -> nil{
     %3 = a() -> bb1;
   }
   bb1 {
-    %4 = println(%3) -> bb2;
+    %4 = %3;
+    %5 = println(%4) -> bb2;
   }
   bb2 {
     return;

@@ -137,7 +137,6 @@ func (cx *stmtContext) lookupVariable(symRef model.SymbolRef) (*BIROperand, bool
 			if outerOp.Address.Mode == AddressingModeAbsolute {
 				baseIndex = levelsUp + outerOp.Address.BaseIndex
 			}
-			cx.isClosure = crossedFunction
 			return &BIROperand{
 				VariableDcl: outerOp.VariableDcl,
 				Address:     absoluteAddress(baseIndex, outerOp.Address.FrameIndex),
@@ -728,6 +727,9 @@ func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambd
 	fpLoad.IsClosure = innerCtx.isClosure
 	fpLoad.LhsOp = resultOperand
 	curBB.Instructions = append(curBB.Instructions, fpLoad)
+	// If the inner function is a closure, this function also needs parent frame
+	// access to maintain the frame chain for nested closures
+	ctx.isClosure = ctx.isClosure || innerCtx.isClosure
 	return expressionEffect{
 		result: resultOperand,
 		block:  curBB,
@@ -737,6 +739,18 @@ func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambd
 type expressionEffect struct {
 	result *BIROperand
 	block  *BIRBasicBlock
+}
+
+// snapshotIfNeeded stores values without storage identity in a temp var before referencing so that modification in one part
+// of an expression dont' affect the other.
+func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos ast.Location) expressionEffect {
+	op := effect.result
+	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && hasNoStorageIdentity(op.VariableDcl.GetType()) {
+		tempOp := ctx.addTempVar(op.VariableDcl.GetType())
+		effect.block.Instructions = append(effect.block.Instructions, NewMove(op, tempOp, pos))
+		effect.result = tempOp
+	}
+	return effect
 }
 
 func handleExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangExpression) expressionEffect {
@@ -1006,6 +1020,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 
 	for _, arg := range expr.ArgExprs {
 		argEffect := handleExpression(ctx, curBB, arg)
+		argEffect = snapshotIfNeeded(ctx, argEffect, expr.GetPosition())
 		curBB = argEffect.block
 		args = append(args, *argEffect.result)
 	}
@@ -1100,8 +1115,10 @@ func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.
 	}
 	resultOperand := ctx.addTempVar(resultType)
 	op1Effect := handleExpression(ctx, curBB, lhsExpr)
+	op1Effect = snapshotIfNeeded(ctx, op1Effect, pos)
 	curBB = op1Effect.block
 	op2Effect := handleExpression(ctx, curBB, rhsExpr)
+	op2Effect = snapshotIfNeeded(ctx, op2Effect, pos)
 	curBB = op2Effect.block
 	binaryOp := NewBinaryOp(kind, resultOperand, op1Effect.result, op2Effect.result, pos)
 	curBB.Instructions = append(curBB.Instructions, binaryOp)
@@ -1324,4 +1341,8 @@ func appendIfNotNil[T any](slice []T, item *T) []T {
 		slice = append(slice, *item)
 	}
 	return slice
+}
+
+func hasNoStorageIdentity(ty semtypes.SemType) bool {
+	return semtypes.IsSubtypeSimple(ty, semtypes.SIMPLE_BASIC)
 }

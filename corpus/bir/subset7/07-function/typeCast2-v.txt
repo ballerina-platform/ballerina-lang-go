@@ -14,30 +14,33 @@ main() -> nil{
     %3 = <function(1|2) returns "a"|"b">(fx)
     f1 = %3;
     %5 = ConstantLoad 1
-    %6 = f1(%5) -> bb1;
+    %6 = %5;
+    %7 = f1(%6) -> bb1;
   }
   bb1 {
-    %7 = println(%6) -> bb2;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
-    %8 = <function(2|3) returns "b"|"c">(fx)
-    f2 = %8;
-    %10 = ConstantLoad 3
-    %11 = f2(%10) -> bb3;
+    %9 = <function(2|3) returns "b"|"c">(fx)
+    f2 = %9;
+    %11 = ConstantLoad 3
+    %12 = %11;
+    %13 = f2(%12) -> bb3;
   }
   bb3 {
-    %12 = println(%11) -> bb4;
+    %14 = println(%13) -> bb4;
   }
   bb4 {
-    %13 = fp $anon/.:foo
-    f11 = %13;
-    %15 = <function(1|2) returns "a"|"b"&function(2|3) returns "b"|"c">(f11)
-    fxx = %15;
-    %17 = ConstantLoad 3
-    %18 = fxx(%17) -> bb5;
+    %15 = fp $anon/.:foo
+    f11 = %15;
+    %17 = <function(1|2) returns "a"|"b"&function(2|3) returns "b"|"c">(f11)
+    fxx = %17;
+    %19 = ConstantLoad 3
+    %20 = %19;
+    %21 = fxx(%20) -> bb5;
   }
   bb5 {
-    %19 = println(%18) -> bb6;
+    %22 = println(%21) -> bb6;
   }
   bb6 {
     return;
