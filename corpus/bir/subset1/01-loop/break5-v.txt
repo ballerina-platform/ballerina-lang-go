@@ -23,39 +23,42 @@ foo(int) -> int{
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad 1
-    %5 = - i %6;
-    i = %5;
-    %8 = - x i;
-    %9 = ConstantLoad 2
-    %7 = == %8 %9;
-    %7 ? bb4 : bb6;
+    PushScopeFrame 6
+    %1 = ConstantLoad 1
+    %0 = - (1, i) %1;
+    (1, i) = %0;
+    %3 = - (1, x) (1, i);
+    %4 = ConstantLoad 2
+    %2 = == %3 %4;
+    %2 ? bb4 : bb6;
   }
   bb3 {
-    %12 = ConstantLoad 0
-    %11 = < i %12;
-    %11 ? bb7 : bb8;
+    %6 = ConstantLoad 0
+    %5 = < i %6;
+    %5 ? bb7 : bb8;
   }
   bb4 {
-    %10 = println(i) -> bb5;
+    %5 = println((1, i)) -> bb5;
   }
   bb5 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb6 {
+    PopScopeFrame
     GOTO bb1;
   }
   bb7 {
-    %13 = ConstantLoad 1
-    %14 = unknown %13;
-    %0 = %14;
+    %7 = ConstantLoad 1
+    %8 = unknown %7;
+    %0 = %8;
     return;
   }
   bb8 {
-    %15 = foo(i) -> bb9;
+    %9 = foo(i) -> bb9;
   }
   bb9 {
-    %0 = %15;
+    %0 = %9;
     return;
   }
 }

@@ -36,18 +36,20 @@ main() -> nil{
     %9 ? bb5 : bb6;
   }
   bb5 {
-    %11 = $desugar$1[$desugar$2];
-    %10 = $desugar$0[%11];
-    val = %10;
-    %13 = println(val) -> bb7;
+    PushScopeFrame 6
+    %1 = (1, $desugar$1)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    val = %0;
+    %3 = println(val) -> bb7;
   }
   bb6 {
     return;
   }
   bb7 {
-    %15 = ConstantLoad 1
-    %14 = + $desugar$2 %15;
-    $desugar$2 = %14;
+    %5 = ConstantLoad 1
+    %4 = + (1, $desugar$2) %5;
+    (1, $desugar$2) = %4;
+    PopScopeFrame
     GOTO bb4;
   }
 }

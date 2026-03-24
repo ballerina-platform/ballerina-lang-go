@@ -18,13 +18,15 @@ foo() -> nil{
     b ? bb2 : bb3;
   }
   bb2 {
-    %3 = ConstantLoad 0
-    %4 = println(%3) -> bb4;
+    PushScopeFrame 2
+    %0 = ConstantLoad 0
+    %1 = println(%0) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
+    PopScopeFrame
     GOTO bb1;
   }
 }

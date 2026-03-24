@@ -52,18 +52,20 @@ fold(function(int, int) returns int,[int...],int) -> int{
     %9 ? bb3 : bb4;
   }
   bb3 {
-    %10 = a[i];
-    %11 = f(result,%10) -> bb5;
+    PushScopeFrame 4
+    %0 = (1, a)[(1, i)];
+    %1 = f((1, result),%0) -> bb5;
   }
   bb4 {
     %0 = result;
     return;
   }
   bb5 {
-    result = %11;
-    %13 = ConstantLoad 1
-    %12 = + i %13;
-    i = %12;
+    (1, result) = %1;
+    %3 = ConstantLoad 1
+    %2 = + (1, i) %3;
+    (1, i) = %2;
+    PopScopeFrame
     GOTO bb2;
   }
 }

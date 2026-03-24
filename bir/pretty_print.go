@@ -195,6 +195,10 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintNewObject(instruction)
 	case *FPLoad:
 		return p.PrintFPLoad(instruction)
+	case *PushScopeFrame:
+		return p.PrintPushScopeFrame(instruction)
+	case *PopScopeFrame:
+		return "PopScopeFrame"
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -206,6 +210,10 @@ func (p *PrettyPrinter) PrintFPLoad(fpLoad *FPLoad) string {
 		kind = "closure_fp"
 	}
 	return fmt.Sprintf("%s = %s %s", p.PrintOperand(*fpLoad.LhsOp), kind, fpLoad.FunctionLookupKey)
+}
+
+func (p *PrettyPrinter) PrintPushScopeFrame(push *PushScopeFrame) string {
+	return fmt.Sprintf("PushScopeFrame %d", push.NumLocals)
 }
 
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {

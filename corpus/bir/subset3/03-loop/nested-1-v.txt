@@ -21,35 +21,39 @@ nestedForeach() -> nil{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad 1
-    j = %6;
-    %8 = ConstantLoad 3
-    $desugar$1 = %8;
+    PushScopeFrame 7
+    %0 = ConstantLoad 1
+    j = %0;
+    %2 = ConstantLoad 3
+    $desugar$1 = %2;
     GOTO bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %10 = < j $desugar$1;
-    %10 ? bb5 : bb6;
+    %4 = < j $desugar$1;
+    %4 ? bb5 : bb6;
   }
   bb5 {
-    %13 = ConstantLoad 10
-    %12 = * i %13;
-    %11 = + %12 j;
-    %14 = println(%11) -> bb7;
+    PushScopeFrame 6
+    %2 = ConstantLoad 10
+    %1 = * (2, i) %2;
+    %0 = + %1 (1, j);
+    %3 = println(%0) -> bb7;
   }
   bb6 {
-    %18 = ConstantLoad 1
-    %17 = + i %18;
-    i = %17;
+    %6 = ConstantLoad 1
+    %5 = + (1, i) %6;
+    (1, i) = %5;
+    PopScopeFrame
     GOTO bb1;
   }
   bb7 {
-    %16 = ConstantLoad 1
-    %15 = + j %16;
-    j = %15;
+    %5 = ConstantLoad 1
+    %4 = + (1, j) %5;
+    (1, j) = %4;
+    PopScopeFrame
     GOTO bb4;
   }
 }

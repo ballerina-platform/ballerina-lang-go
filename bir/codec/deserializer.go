@@ -635,6 +635,12 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		fpLoad := bir.NewFPLoad(string(functionLookupKey), ty, lhsOp, nil)
 		fpLoad.IsClosure = isClosure
 		return fpLoad
+	case bir.INSTRUCTION_KIND_PUSH_SCOPE:
+		var numLocals int32
+		br.read(&numLocals)
+		return &bir.PushScopeFrame{NumLocals: int(numLocals)}
+	case bir.INSTRUCTION_KIND_POP_SCOPE:
+		return &bir.PopScopeFrame{}
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}

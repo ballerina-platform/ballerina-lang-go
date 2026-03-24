@@ -12,13 +12,15 @@ main() -> nil{
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad 5
-    %5 = + foo %6;
-    foo = %5;
+    PushScopeFrame 2
+    %1 = ConstantLoad 5
+    %0 = + (1, foo) %1;
+    (1, foo) = %0;
+    PopScopeFrame
     GOTO bb1;
   }
   bb3 {
-    %7 = println(foo) -> bb4;
+    %5 = println(foo) -> bb4;
   }
   bb4 {
     return;

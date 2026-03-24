@@ -39,15 +39,17 @@ main() -> nil{
     %5 ? bb4 : bb5;
   }
   bb4 {
-    %6 = println(i) -> bb6;
+    PushScopeFrame 3
+    %0 = println((1, i)) -> bb6;
   }
   bb5 {
     return;
   }
   bb6 {
-    %8 = ConstantLoad 1
-    %7 = + i %8;
-    i = %7;
+    %2 = ConstantLoad 1
+    %1 = + (1, i) %2;
+    (1, i) = %1;
+    PopScopeFrame
     GOTO bb3;
   }
 }

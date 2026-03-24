@@ -11,21 +11,24 @@ main() -> nil{
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %5 = ConstantLoad 1
-    %4 = + i %5;
-    i = %4;
-    %7 = ConstantLoad 10
-    %6 = > i %7;
-    %6 ? bb4 : bb5;
+    PushScopeFrame 4
+    %1 = ConstantLoad 1
+    %0 = + (1, i) %1;
+    (1, i) = %0;
+    %3 = ConstantLoad 10
+    %2 = > (1, i) %3;
+    %2 ? bb4 : bb5;
   }
   bb3 {
-    %8 = ConstantLoad Done
-    %9 = println(%8) -> bb6;
+    %4 = ConstantLoad Done
+    %5 = println(%4) -> bb6;
   }
   bb4 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb5 {
+    PopScopeFrame
     GOTO bb1;
   }
   bb6 {

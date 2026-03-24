@@ -17,19 +17,21 @@ main() -> nil{
     %8 ? bb2 : bb3;
   }
   bb2 {
-    %11 = ConstantLoad 2
-    %10 = * val %11;
-    val = %10;
-    %13 = ConstantLoad 1
-    %12 = + i %13;
-    i = %12;
+    PushScopeFrame 4
+    %1 = ConstantLoad 2
+    %0 = * (1, val) %1;
+    (1, val) = %0;
+    %3 = ConstantLoad 1
+    %2 = + (1, i) %3;
+    (1, i) = %2;
+    PopScopeFrame
     GOTO bb1;
   }
   bb3 {
-    %14 = ConstantLoad 0
-    v[val] = %14;
-    %15 = v[val];
-    %16 = println(%15) -> bb4;
+    %10 = ConstantLoad 0
+    v[val] = %10;
+    %11 = v[val];
+    %12 = println(%11) -> bb4;
   }
   bb4 {
     return;

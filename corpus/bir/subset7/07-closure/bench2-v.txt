@@ -13,7 +13,7 @@ foo(int) -> int{
 $anonFunc$_0(int) -> int{
   bb0 {
     %3 = + (1, v) x;
-    %2 = + %3 (1, base);
+    %2 = + %3 (2, base);
     %0 = %2;
     return;
   }
@@ -35,36 +35,38 @@ bench(int) -> int{
     %10 ? bb2 : bb3;
   }
   bb2 {
-    v = i;
-    %14 = ConstantLoad 2
-    %13 = % i %14;
-    %15 = ConstantLoad 0
-    %12 = == %13 %15;
-    %12 ? bb4 : bb5;
+    PushScopeFrame 11
+    v = (1, i);
+    %3 = ConstantLoad 2
+    %2 = % (1, i) %3;
+    %4 = ConstantLoad 0
+    %1 = == %2 %4;
+    %1 ? bb4 : bb5;
   }
   bb3 {
     %0 = sum;
     return;
   }
   bb4 {
-    %16 = closure_fp $anon/.:$anonFunc$_0
-    f = %16;
+    %5 = closure_fp $anon/.:$anonFunc$_0
+    (1, f) = %5;
     GOTO bb6;
   }
   bb5 {
-    %17 = fp $anon/.:foo
-    f = %17;
+    %6 = fp $anon/.:foo
+    (1, f) = %6;
     GOTO bb6;
   }
   bb6 {
-    %19 = f(base) -> bb7;
+    %8 = f((1, base)) -> bb7;
   }
   bb7 {
-    %18 = + sum %19;
-    sum = %18;
-    %21 = ConstantLoad 1
-    %20 = + i %21;
-    i = %20;
+    %7 = + (1, sum) %8;
+    (1, sum) = %7;
+    %10 = ConstantLoad 1
+    %9 = + (1, i) %10;
+    (1, i) = %9;
+    PopScopeFrame
     GOTO bb1;
   }
 }

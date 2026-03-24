@@ -38,14 +38,16 @@ foo({| x: int, nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|
     %10 ? bb3 : bb4;
   }
   bb3 {
-    %13 = ConstantLoad x
-    %14 = rest[i];
-    %12 = %14[%13];
-    %11 = + a %12;
-    a = %11;
-    %16 = ConstantLoad 1
-    %15 = + i %16;
-    i = %15;
+    PushScopeFrame 6
+    %2 = ConstantLoad x
+    %3 = (1, rest)[(1, i)];
+    %1 = %3[%2];
+    %0 = + (1, a) %1;
+    (1, a) = %0;
+    %5 = ConstantLoad 1
+    %4 = + (1, i) %5;
+    (1, i) = %4;
+    PopScopeFrame
     GOTO bb2;
   }
   bb4 {

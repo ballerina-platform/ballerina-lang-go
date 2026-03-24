@@ -112,12 +112,14 @@ addAny(int,[int...]...) -> int{
     %8 ? bb3 : bb4;
   }
   bb3 {
-    %10 = rest[i];
-    %9 = + sum %10;
-    sum = %9;
-    %12 = ConstantLoad 1
-    %11 = + i %12;
-    i = %11;
+    PushScopeFrame 4
+    %1 = (1, rest)[(1, i)];
+    %0 = + (1, sum) %1;
+    (1, sum) = %0;
+    %3 = ConstantLoad 1
+    %2 = + (1, i) %3;
+    (1, i) = %2;
+    PopScopeFrame
     GOTO bb2;
   }
   bb4 {

@@ -20,35 +20,39 @@ foreachInWhile() -> nil{
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad 1
-    %5 = - count %6;
-    count = %5;
-    %7 = ConstantLoad 1
-    i = %7;
-    %9 = ConstantLoad 3
-    $desugar$0 = %9;
+    PushScopeFrame 7
+    %1 = ConstantLoad 1
+    %0 = - (1, count) %1;
+    (1, count) = %0;
+    %2 = ConstantLoad 1
+    i = %2;
+    %4 = ConstantLoad 3
+    $desugar$0 = %4;
     GOTO bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %11 = < i $desugar$0;
-    %11 ? bb5 : bb6;
+    %6 = < i $desugar$0;
+    %6 ? bb5 : bb6;
   }
   bb5 {
-    %14 = ConstantLoad 10
-    %13 = * count %14;
-    %12 = + %13 i;
-    %15 = println(%12) -> bb7;
+    PushScopeFrame 6
+    %2 = ConstantLoad 10
+    %1 = * (2, count) %2;
+    %0 = + %1 (1, i);
+    %3 = println(%0) -> bb7;
   }
   bb6 {
+    PopScopeFrame
     GOTO bb1;
   }
   bb7 {
-    %17 = ConstantLoad 1
-    %16 = + i %17;
-    i = %16;
+    %5 = ConstantLoad 1
+    %4 = + (1, i) %5;
+    (1, i) = %4;
+    PopScopeFrame
     GOTO bb4;
   }
 }

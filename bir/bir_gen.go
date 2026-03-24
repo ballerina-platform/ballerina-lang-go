@@ -43,16 +43,20 @@ type Context struct {
 type stmtContext struct {
 	birCx        *Context
 	bbs          []*BIRBasicBlock
-	localVars    []*BIRLocalVariableDcl
-	retVar       *BIROperand
 	scope        *BIRScope
 	nextScopeId  int
 	errorEntries []BIRErrorEntry
-	// TODO: do better
-	varMap    map[model.SymbolRef]*BIROperand
-	loopCtx   *loopContext
-	enclosing *stmtContext // enclosing function's context for closures
-	isClosure bool         // set to true when a captured variable is resolved via enclosing chain
+	loopCtx      *loopContext
+	isClosure    bool          // set to true when a captured variable is resolved across a function boundary
+	scopeCtx     *scopeContext // current scope (holds localVars, varMap, retVar)
+}
+
+type scopeContext struct {
+	localVars          []*BIRLocalVariableDcl
+	varMap             map[model.SymbolRef]*BIROperand
+	retVar             *BIROperand
+	parent             *scopeContext
+	isFunctionBoundary bool // true at the root scope of each function
 }
 
 type loopContext struct {
@@ -78,45 +82,83 @@ func (cx *stmtContext) popLoopCtx() {
 	cx.loopCtx = cx.loopCtx.enclosing
 }
 
+func (cx *stmtContext) pushScope() {
+	retVar := cx.scopeCtx.retVar
+	baseIndex := cx.scopeDepth() + 1
+	cx.scopeCtx = &scopeContext{
+		varMap: make(map[model.SymbolRef]*BIROperand),
+		retVar: &BIROperand{
+			VariableDcl: retVar.VariableDcl,
+			Address:     absoluteAddress(baseIndex, retVar.Address.FrameIndex),
+		},
+		parent: cx.scopeCtx,
+	}
+}
+
+func (cx *stmtContext) popScope() {
+	if cx.scopeCtx.parent == nil {
+		panic("no enclosing scope")
+	}
+	cx.scopeCtx = cx.scopeCtx.parent
+}
+
 func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType) *BIROperand {
 	varDcl := &BIRLocalVariableDcl{}
 	varDcl.Name = name
 	varDcl.Type = ty
-	cx.localVars = append(cx.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(cx.localVars) - 1)}
+	sc := cx.scopeCtx
+	sc.localVars = append(sc.localVars, varDcl)
+	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(sc.localVars) - 1)}
 }
 
 func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {
-	return cx.addLocalVarInner(model.Name(fmt.Sprintf("%%%d", len(cx.localVars))), ty)
+	return cx.addLocalVarInner(model.Name(fmt.Sprintf("%%%d", len(cx.scopeCtx.localVars))), ty)
 }
 
 func (cx *stmtContext) addLocalVar(name model.Name, ty semtypes.SemType, symbol model.SymbolRef) *BIROperand {
 	operand := cx.addLocalVarInner(name, ty)
-	cx.varMap[symbol] = operand
+	cx.scopeCtx.varMap[symbol] = operand
 	return operand
 }
 
-// lookupEnclosing walks the enclosing context chain to find a captured variable.
-// Returns the operand with an absolute address and true if found, or nil and false otherwise.
-func (cx *stmtContext) lookupEnclosing(symRef model.SymbolRef) (*BIROperand, bool) {
-	enclosing := cx.enclosing
+// lookupVariable looks up a variable by symbol, checking the local scope first,
+// then walking the parent scope chain (crossing function boundaries for closures).
+// Returns the operand, whether it crossed a function boundary, and whether it was found.
+func (cx *stmtContext) lookupVariable(symRef model.SymbolRef) (*BIROperand, bool, bool) {
+	if operand, ok := cx.scopeCtx.varMap[symRef]; ok {
+		return operand, false, true
+	}
 	levelsUp := 1
-	for enclosing != nil {
-		if outerOp, ok := enclosing.varMap[symRef]; ok {
+	crossedFunction := cx.scopeCtx.isFunctionBoundary
+	parent := cx.scopeCtx.parent
+	for parent != nil {
+		if outerOp, ok := parent.varMap[symRef]; ok {
 			baseIndex := levelsUp
 			if outerOp.Address.Mode == AddressingModeAbsolute {
 				baseIndex = levelsUp + outerOp.Address.BaseIndex
 			}
-			cx.isClosure = true
+			cx.isClosure = crossedFunction
 			return &BIROperand{
 				VariableDcl: outerOp.VariableDcl,
 				Address:     absoluteAddress(baseIndex, outerOp.Address.FrameIndex),
-			}, true
+			}, crossedFunction, true
 		}
+		crossedFunction = crossedFunction || parent.isFunctionBoundary
 		levelsUp++
-		enclosing = enclosing.enclosing
+		parent = parent.parent
 	}
-	return nil, false
+	return nil, false, false
+}
+
+// scopeDepth returns the number of block scopes between the current scope and the function root.
+func (cx *stmtContext) scopeDepth() int {
+	depth := 0
+	scope := cx.scopeCtx
+	for !scope.isFunctionBoundary {
+		depth++
+		scope = scope.parent
+	}
+	return depth
 }
 
 func (cx *stmtContext) addBB() *BIRBasicBlock {
@@ -254,7 +296,7 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 }
 
 func TransformFunction(ctx *Context, astFunc *ast.BLangFunction) *BIRFunction {
-	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}
+	stmtCx := &stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}
 	return transformFunctionInner(stmtCx, astFunc, nil)
 }
 
@@ -269,7 +311,7 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	common.Assert(astFunc.Receiver == nil)
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
-	stmtCx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType)
+	stmtCx.scopeCtx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType)
 	if selfSymbolRef != nil {
 		stmtCx.addLocalVar(model.Name("self"), ctx.CompilerContext.SymbolType(*selfSymbolRef), *selfSymbolRef)
 	}
@@ -299,11 +341,11 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 	for _, bbPtr := range stmtCx.bbs {
 		birFunc.BasicBlocks = append(birFunc.BasicBlocks, *bbPtr)
 	}
-	for _, varPtr := range stmtCx.localVars {
+	for _, varPtr := range stmtCx.scopeCtx.localVars {
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
 	birFunc.ErrorTable = stmtCx.errorEntries
-	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl.(*BIRLocalVariableDcl)
+	birFunc.ReturnVariable = stmtCx.scopeCtx.retVar.VariableDcl.(*BIRLocalVariableDcl)
 	return birFunc
 }
 
@@ -363,6 +405,7 @@ func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangC
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
+	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: stmt.GetPosition()}}})
 	onContinueBB := ctx.loopCtx.onContinueBB
 	curBB.Terminator = NewGoto(onContinueBB, stmt.GetPosition())
 	return statementEffect{
@@ -372,6 +415,7 @@ func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCo
 }
 
 func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak) statementEffect {
+	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: stmt.GetPosition()}}})
 	onBreakBB := ctx.loopCtx.onBreakBB
 	curBB.Terminator = NewGoto(onBreakBB, stmt.GetPosition())
 	return statementEffect{
@@ -391,14 +435,26 @@ func whileStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangWhile) s
 	// conditionally jump to loop body
 	condEffect.block.Terminator = NewBranch(condEffect.result, loopBody, loopEnd, stmt.GetPosition())
 
+	// Push scope frame for loop body — each iteration gets its own frame
+	pushScope := &PushScopeFrame{}
+	pushScope.Pos = stmt.GetPosition()
+	loopBody.Instructions = append(loopBody.Instructions, pushScope)
+	ctx.pushScope()
+
 	ctx.addLoopCtx(loopEnd, loopHead)
 	bodyEffect := blockStatement(ctx, loopBody, &stmt.Body)
+
+	// Fill in scope frame local vars now that body has been processed
+	pushScope.NumLocals = len(ctx.scopeCtx.localVars)
+
 	// This could happen if the while block always ends return, break or continue
 	if bodyEffect.block != nil {
+		bodyEffect.block.Instructions = append(bodyEffect.block.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: stmt.GetPosition()}}})
 		bodyEffect.block.Terminator = NewGoto(loopHead, stmt.GetPosition())
 	}
 
 	ctx.popLoopCtx()
+	ctx.popScope()
 	return statementEffect{
 		block: loopEnd,
 	}
@@ -490,7 +546,7 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 	if stmt.Expr != nil {
 		valueEffect := handleExpression(ctx, curBB, stmt.Expr)
 		curBB = valueEffect.block
-		mov := NewMove(valueEffect.result, ctx.retVar, pos)
+		mov := NewMove(valueEffect.result, ctx.scopeCtx.retVar, pos)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
 	ret := NewReturn(pos)
@@ -652,7 +708,7 @@ func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 	curBB = effect.block
 	if curBB != nil {
 		retAssign := &Move{}
-		retAssign.LhsOp = ctx.retVar
+		retAssign.LhsOp = ctx.scopeCtx.retVar
 		retAssign.RhsOp = effect.result
 		curBB.Instructions = append(curBB.Instructions, retAssign)
 		curBB.Terminator = &Return{}
@@ -660,7 +716,7 @@ func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 }
 
 func lambdaFunction(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLambdaFunction) expressionEffect {
-	innerCtx := &stmtContext{birCx: ctx.birCx, varMap: make(map[model.SymbolRef]*BIROperand), enclosing: ctx}
+	innerCtx := &stmtContext{birCx: ctx.birCx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), parent: ctx.scopeCtx, isFunctionBoundary: true}}
 	birFunc := transformFunctionInner(innerCtx, expr.Function, nil)
 	ctx.birCx.birPkg.Functions = append(ctx.birCx.birPkg.Functions, *birFunc)
 	funcType := expr.GetDeterminedType()
@@ -976,10 +1032,9 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		// Function pointer call through a variable
 		call.Kind = INSTRUCTION_KIND_FP_CALL
 		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
-		if op, ok := ctx.varMap[unnarrowedRef]; ok {
+		if op, crossedFunction, ok := ctx.lookupVariable(unnarrowedRef); ok {
 			call.FpOperand = op
-		} else if captured, ok := ctx.lookupEnclosing(unnarrowedRef); ok {
-			call.FpOperand = captured
+			ctx.isClosure = ctx.isClosure || crossedFunction
 		}
 	}
 	curBB.Terminator = call
@@ -1126,18 +1181,10 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	varName := expr.VariableName.GetValue()
 	symRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(expr.Symbol())
 
-	// Try local variable lookup first
-	if operand, ok := ctx.varMap[symRef]; ok {
+	if operand, crossedFunction, ok := ctx.lookupVariable(symRef); ok {
+		ctx.isClosure = ctx.isClosure || crossedFunction
 		return expressionEffect{
 			result: operand,
-			block:  curBB,
-		}
-	}
-
-	// Try captured variable lookup via enclosing chain
-	if captured, ok := ctx.lookupEnclosing(symRef); ok {
-		return expressionEffect{
-			result: captured,
 			block:  curBB,
 		}
 	}
@@ -1220,11 +1267,11 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		})
 	}
 
-	initFunc := transformFunctionInner(&stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}, class.InitFunction, &selfRef)
+	initFunc := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, class.InitFunction, &selfRef)
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		birClassDef.VTable[methodName] = transformFunctionInner(&stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}, method, &selfRef)
+		birClassDef.VTable[methodName] = transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
 	}
 
 	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())

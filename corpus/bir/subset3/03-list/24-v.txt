@@ -18,42 +18,46 @@ main() -> nil{
     %6 ? bb2 : bb3;
   }
   bb2 {
-    %10 = ConstantLoad 1
-    v[i] = %10;
-    %12 = ConstantLoad 1
-    %11 = + i %12;
-    i = %11;
+    PushScopeFrame 3
+    %0 = ConstantLoad 1
+    (1, v)[(1, i)] = %0;
+    %2 = ConstantLoad 1
+    %1 = + (1, i) %2;
+    (1, i) = %1;
+    PopScopeFrame
     GOTO bb1;
   }
   bb3 {
-    %13 = ConstantLoad 1001
-    %14 = ConstantLoad 123000
-    v[%14] = %13;
-    %15 = ConstantLoad 0
-    i = %15;
-    %16 = ConstantLoad 0
-    sum = %16;
+    %10 = ConstantLoad 1001
+    %11 = ConstantLoad 123000
+    v[%11] = %10;
+    %12 = ConstantLoad 0
+    i = %12;
+    %13 = ConstantLoad 0
+    sum = %13;
     GOTO bb4;
   }
   bb4 {
-    %19 = length(v) -> bb5;
+    %16 = length(v) -> bb5;
   }
   bb5 {
-    %18 = < i %19;
-    %18 ? bb6 : bb7;
+    %15 = < i %16;
+    %15 ? bb6 : bb7;
   }
   bb6 {
-    %21 = v[i];
-    %22 = <int>(%21)
-    %20 = + sum %22;
-    sum = %20;
-    %24 = ConstantLoad 1
-    %23 = + i %24;
-    i = %23;
+    PushScopeFrame 5
+    %1 = (1, v)[(1, i)];
+    %2 = <int>(%1)
+    %0 = + (1, sum) %2;
+    (1, sum) = %0;
+    %4 = ConstantLoad 1
+    %3 = + (1, i) %4;
+    (1, i) = %3;
+    PopScopeFrame
     GOTO bb4;
   }
   bb7 {
-    %25 = println(sum) -> bb8;
+    %17 = println(sum) -> bb8;
   }
   bb8 {
     return;

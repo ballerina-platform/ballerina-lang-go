@@ -28,20 +28,22 @@ main() -> nil{
     %17 ? bb3 : bb4;
   }
   bb3 {
-    %19 = ConstantLoad 1
-    %18 = + i %19;
-    %20 = days[i];
-    %21 = <string>(%20)
-    dayNumber[%21] = %18;
-    %23 = ConstantLoad 1
-    %22 = + i %23;
-    i = %22;
+    PushScopeFrame 6
+    %1 = ConstantLoad 1
+    %0 = + (1, i) %1;
+    %2 = (1, days)[(1, i)];
+    %3 = <string>(%2)
+    (1, dayNumber)[%3] = %0;
+    %5 = ConstantLoad 1
+    %4 = + (1, i) %5;
+    (1, i) = %4;
+    PopScopeFrame
     GOTO bb2;
   }
   bb4 {
-    %25 = ConstantLoad Sunday
-    %24 = dayNumber[%25];
-    %26 = println(%24) -> bb5;
+    %19 = ConstantLoad Sunday
+    %18 = dayNumber[%19];
+    %20 = println(%18) -> bb5;
   }
   bb5 {
     return;

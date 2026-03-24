@@ -56,20 +56,22 @@ sum([function() returns int...]) -> int{
     %8 ? bb3 : bb4;
   }
   bb3 {
-    %9 = fns[i];
-    fn = %9;
-    %12 = fn() -> bb5;
+    PushScopeFrame 6
+    %0 = (1, fns)[(1, i)];
+    fn = %0;
+    %3 = fn() -> bb5;
   }
   bb4 {
     %0 = tmp;
     return;
   }
   bb5 {
-    %11 = + tmp %12;
-    tmp = %11;
-    %14 = ConstantLoad 1
-    %13 = + i %14;
-    i = %13;
+    %2 = + (1, tmp) %3;
+    (1, tmp) = %2;
+    %5 = ConstantLoad 1
+    %4 = + (1, i) %5;
+    (1, i) = %4;
+    PopScopeFrame
     GOTO bb2;
   }
 }

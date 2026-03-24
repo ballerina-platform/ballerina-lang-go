@@ -25,7 +25,8 @@ loop() -> int{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %0 = i;
+    PushScopeFrame 0
+    (1, %0) = (1, i);
     return;
   }
   bb3 {

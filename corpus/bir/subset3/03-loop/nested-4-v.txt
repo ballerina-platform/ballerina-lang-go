@@ -21,57 +21,63 @@ continueInNestedLoops() -> nil{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %7 = ConstantLoad 2
-    %6 = == i %7;
-    %6 ? bb4 : bb5;
+    PushScopeFrame 11
+    %1 = ConstantLoad 2
+    %0 = == (1, i) %1;
+    %0 ? bb4 : bb5;
   }
   bb3 {
     return;
   }
   bb4 {
-    %9 = ConstantLoad 1
-    %8 = + i %9;
-    i = %8;
+    %3 = ConstantLoad 1
+    %2 = + (1, i) %3;
+    (1, i) = %2;
+    PopScopeFrame
     GOTO bb1;
   }
   bb5 {
-    %10 = ConstantLoad 1
-    j = %10;
-    %12 = ConstantLoad 4
-    $desugar$1 = %12;
+    %4 = ConstantLoad 1
+    j = %4;
+    %6 = ConstantLoad 4
+    $desugar$1 = %6;
     GOTO bb6;
   }
   bb6 {
-    %14 = < j $desugar$1;
-    %14 ? bb7 : bb8;
+    %8 = < j $desugar$1;
+    %8 ? bb7 : bb8;
   }
   bb7 {
-    %16 = ConstantLoad 2
-    %15 = == j %16;
-    %15 ? bb9 : bb10;
+    PushScopeFrame 10
+    %1 = ConstantLoad 2
+    %0 = == (1, j) %1;
+    %0 ? bb9 : bb10;
   }
   bb8 {
-    %26 = ConstantLoad 1
-    %25 = + i %26;
-    i = %25;
+    %10 = ConstantLoad 1
+    %9 = + (1, i) %10;
+    (1, i) = %9;
+    PopScopeFrame
     GOTO bb1;
   }
   bb9 {
-    %18 = ConstantLoad 1
-    %17 = + j %18;
-    j = %17;
+    %3 = ConstantLoad 1
+    %2 = + (1, j) %3;
+    (1, j) = %2;
+    PopScopeFrame
     GOTO bb6;
   }
   bb10 {
-    %21 = ConstantLoad 10
-    %20 = * i %21;
-    %19 = + %20 j;
-    %22 = println(%19) -> bb11;
+    %6 = ConstantLoad 10
+    %5 = * (2, i) %6;
+    %4 = + %5 (1, j);
+    %7 = println(%4) -> bb11;
   }
   bb11 {
-    %24 = ConstantLoad 1
-    %23 = + j %24;
-    j = %23;
+    %9 = ConstantLoad 1
+    %8 = + (1, j) %9;
+    (1, j) = %8;
+    PopScopeFrame
     GOTO bb6;
   }
 }

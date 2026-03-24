@@ -315,6 +315,10 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		write(buf, instr.IsClosure)
+	case *bir.PushScopeFrame:
+		write(buf, int32(instr.NumLocals))
+	case *bir.PopScopeFrame:
+		// no fields to write
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}

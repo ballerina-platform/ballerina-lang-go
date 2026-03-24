@@ -23,27 +23,29 @@ main() -> nil{
     %12 ? bb3 : bb4;
   }
   bb3 {
-    %13 = $desugar$0[$desugar$1];
-    val = %13;
-    %16 = ConstantLoad 2
-    %15 = == val %16;
-    %15 ? bb5 : bb6;
+    PushScopeFrame 9
+    %0 = (1, $desugar$0)[(1, $desugar$1)];
+    val = %0;
+    %3 = ConstantLoad 2
+    %2 = == val %3;
+    %2 ? bb5 : bb6;
   }
   bb4 {
     return;
   }
   bb5 {
-    %17 = ConstantLoad list panic
-    %18 = newError error(%17)
-    panic %18;
+    %4 = ConstantLoad list panic
+    %5 = newError error(%4)
+    panic %5;
   }
   bb6 {
-    %19 = println(val) -> bb7;
+    %6 = println(val) -> bb7;
   }
   bb7 {
-    %21 = ConstantLoad 1
-    %20 = + $desugar$1 %21;
-    $desugar$1 = %20;
+    %8 = ConstantLoad 1
+    %7 = + (1, $desugar$1) %8;
+    (1, $desugar$1) = %7;
+    PopScopeFrame
     GOTO bb2;
   }
 }

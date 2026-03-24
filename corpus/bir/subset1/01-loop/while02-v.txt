@@ -20,15 +20,17 @@ printInts(int) -> nil{
     %4 ? bb2 : bb3;
   }
   bb2 {
-    %5 = println(i) -> bb4;
+    PushScopeFrame 3
+    %0 = println((1, i)) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %7 = ConstantLoad 1
-    %6 = + i %7;
-    i = %6;
+    %2 = ConstantLoad 1
+    %1 = + (1, i) %2;
+    (1, i) = %1;
+    PopScopeFrame
     GOTO bb1;
   }
 }

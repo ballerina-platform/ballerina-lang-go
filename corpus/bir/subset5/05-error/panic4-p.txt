@@ -13,25 +13,27 @@ main() -> nil{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %7 = ConstantLoad 1
-    %6 = == i %7;
-    %6 ? bb4 : bb5;
+    PushScopeFrame 7
+    %1 = ConstantLoad 1
+    %0 = == (1, i) %1;
+    %0 ? bb4 : bb5;
   }
   bb3 {
     return;
   }
   bb4 {
-    %8 = ConstantLoad range panic
-    %9 = newError error(%8)
-    panic %9;
+    %2 = ConstantLoad range panic
+    %3 = newError error(%2)
+    panic %3;
   }
   bb5 {
-    %10 = println(i) -> bb6;
+    %4 = println((1, i)) -> bb6;
   }
   bb6 {
-    %12 = ConstantLoad 1
-    %11 = + i %12;
-    i = %11;
+    %6 = ConstantLoad 1
+    %5 = + (1, i) %6;
+    (1, i) = %5;
+    PopScopeFrame
     GOTO bb1;
   }
 }

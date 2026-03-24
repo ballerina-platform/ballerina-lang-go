@@ -34,22 +34,25 @@ printIfBetween(int,int,int) -> nil{
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = == i n;
-    %6 ? bb4 : bb6;
+    PushScopeFrame 4
+    %0 = == (1, i) (1, n);
+    %0 ? bb4 : bb6;
   }
   bb3 {
     return;
   }
   bb4 {
-    %7 = println(n) -> bb5;
+    %1 = println((1, n)) -> bb5;
   }
   bb5 {
+    PopScopeFrame
     GOTO bb3;
   }
   bb6 {
-    %9 = ConstantLoad 1
-    %8 = + i %9;
-    i = %8;
+    %3 = ConstantLoad 1
+    %2 = + (1, i) %3;
+    (1, i) = %2;
+    PopScopeFrame
     GOTO bb1;
   }
 }

@@ -26,39 +26,41 @@ main() -> nil{
     %15 ? bb3 : bb4;
   }
   bb3 {
-    %16 = $desugar$0[$desugar$2];
-    x = %16;
-    %19 = ConstantLoad 2
-    %18 = * x %19;
-    a = %18;
-    %22 = ConstantLoad 3
-    %21 = + a %22;
-    b = %21;
-    %25 = ConstantLoad 2
-    %24 = * b %25;
-    %26 = push($desugar$1,%24) -> bb5;
+    PushScopeFrame 13
+    %0 = (1, $desugar$0)[(1, $desugar$2)];
+    x = %0;
+    %3 = ConstantLoad 2
+    %2 = * x %3;
+    a = %2;
+    %6 = ConstantLoad 3
+    %5 = + a %6;
+    b = %5;
+    %9 = ConstantLoad 2
+    %8 = * b %9;
+    %10 = push((1, $desugar$1),%8) -> bb5;
   }
   bb4 {
     out = $desugar$1;
-    %31 = ConstantLoad 0
-    %30 = out[%31];
-    %32 = println(%30) -> bb6;
+    %18 = ConstantLoad 0
+    %17 = out[%18];
+    %19 = println(%17) -> bb6;
   }
   bb5 {
-    %28 = ConstantLoad 1
-    %27 = + $desugar$2 %28;
-    $desugar$2 = %27;
+    %12 = ConstantLoad 1
+    %11 = + (1, $desugar$2) %12;
+    (1, $desugar$2) = %11;
+    PopScopeFrame
     GOTO bb2;
   }
   bb6 {
-    %34 = ConstantLoad 1
-    %33 = out[%34];
-    %35 = println(%33) -> bb7;
+    %21 = ConstantLoad 1
+    %20 = out[%21];
+    %22 = println(%20) -> bb7;
   }
   bb7 {
-    %37 = ConstantLoad 2
-    %36 = out[%37];
-    %38 = println(%36) -> bb8;
+    %24 = ConstantLoad 2
+    %23 = out[%24];
+    %25 = println(%23) -> bb8;
   }
   bb8 {
     return;
