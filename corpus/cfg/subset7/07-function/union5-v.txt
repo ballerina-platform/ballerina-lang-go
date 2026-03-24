@@ -1,0 +1,29 @@
+(foo
+  (bb0 () ()
+    (return
+      (literal 4))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable res (type
+        (union-type
+          (union-type
+            (finite-type
+              (literal 3))
+            (finite-type
+              (literal 4)))
+          (finite-type
+            (literal 5)))) (expr
+        (invocation f (
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

@@ -1,0 +1,77 @@
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable f (type
+        (union-type
+          (user-defined-type F)
+          (value-type int))) (expr
+        (simple-var-ref foo))))
+    (type-test-expr is
+      (simple-var-ref f)
+      (function-type () ()))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+  )
+  (bb2 (bb1 bb3) (bb4 bb6)
+    (var-def
+      (variable g (type
+        (union-type
+          (user-defined-type F)
+          (value-type null))) (expr
+        (simple-var-ref foo))))
+    (binary-expr ==
+      (simple-var-ref g)
+      (literal <nil>))
+  )
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+  (bb4 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+  (bb5 (bb4 bb6) (bb7 bb9)
+    (var-def
+      (variable h (type
+        (union-type
+          (user-defined-type F)
+          (value-type null))) (expr
+        (literal <nil>))))
+    (binary-expr ==
+      (simple-var-ref h)
+      (literal <nil>))
+  )
+  (bb6 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (invocation g (
+          (literal 2))))))
+  )
+  (bb7 (bb5) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (literal working))))
+  )
+  (bb8 (bb7 bb9) ())
+  (bb9 (bb5) (bb8)
+    (expression-stmt
+      (invocation io println (
+        (invocation h (
+          (literal 3))))))
+  )
+)

@@ -29,10 +29,30 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
-	for i, arg := range args {
-		locals[i+1] = arg
+	requiredCount := len(birFunc.RequiredParams)
+	// Map required args to locals
+	for i := 0; i < requiredCount; i++ {
+		locals[i+1] = args[i]
 	}
-	for i := len(args) + 1; i < len(*localVars); i++ {
+	var offset int
+	if birFunc.RestParams != nil {
+		// Collect remaining args into a list for the rest param
+		restArgs := args[requiredCount:]
+		restParamIdx := requiredCount + 1
+		restParamType := (*localVars)[restParamIdx].GetType()
+		list := values.NewList(len(restArgs), restParamType, nil)
+		for j, arg := range restArgs {
+			list.FillingSet(j, arg)
+		}
+		locals[restParamIdx] = list
+		offset = restParamIdx + 1
+	} else {
+		if len(args) > requiredCount {
+			panic("too many arguments")
+		}
+		offset = requiredCount + 1
+	}
+	for i := offset; i < len(*localVars); i++ {
 		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
 	}
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
@@ -149,6 +169,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		execTypeCast(v, frame, reg)
 	case *bir.TypeTest:
 		execTypeTest(v, frame, reg)
+	case *bir.FPLoad:
+		execFPLoad(v, frame, reg)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
@@ -169,7 +191,7 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		case bir.INSTRUCTION_KIND_WAIT:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WAIT")
 		case bir.INSTRUCTION_KIND_FP_CALL:
-			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_FP_CALL")
+			return execFpCall(v, frame, reg, callStack)
 		case bir.INSTRUCTION_KIND_WK_RECEIVE:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WK_RECEIVE")
 		case bir.INSTRUCTION_KIND_WK_SEND:

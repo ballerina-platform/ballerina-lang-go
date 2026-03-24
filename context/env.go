@@ -25,6 +25,7 @@ import (
 
 type CompilerEnvironment struct {
 	anonTypeCount    map[*model.PackageID]int
+	anonFuncCount    map[*model.PackageID]int
 	packageInterner  *model.PackageIDInterner
 	symbolSpaces     []*model.SymbolSpace
 	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
@@ -137,6 +138,7 @@ func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (mode
 func NewCompilerEnvironment(typeEnv semtypes.Env) *CompilerEnvironment {
 	return &CompilerEnvironment{
 		anonTypeCount:   make(map[*model.PackageID]int),
+		anonFuncCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
 		typeEnv:         typeEnv,
 		typeDefns:       make(map[model.SymbolRef]model.TypeDefinition),
@@ -153,6 +155,12 @@ const (
 	BUILTIN_ANON_TYPE = ANON_PREFIX + "Type$builtin$"
 	ANON_TYPE         = ANON_PREFIX + "Type$"
 )
+
+func (this *CompilerEnvironment) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
+	nextValue := this.anonFuncCount[packageID]
+	this.anonFuncCount[packageID] = nextValue + 1
+	return ANON_PREFIX + "Func$_" + strconv.Itoa(nextValue)
+}
 
 func (this *CompilerEnvironment) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	nextValue := this.anonTypeCount[packageID]

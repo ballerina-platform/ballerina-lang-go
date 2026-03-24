@@ -778,8 +778,12 @@ func isDeclaredWithVar(typeNode tree.Node) bool {
 func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, initializer tree.Node, visibilityQualifier tree.Token, annotations tree.NodeList[*tree.AnnotationNode]) *BLangSimpleVariable {
 	bLSimpleVar := createSimpleVariableNode()
 
-	identifier := createIdentifierFromToken(getPosition(name), name)
-	identifier.pos = getPosition(name)
+	var namePos Location
+	if name != nil {
+		namePos = getPosition(name)
+	}
+	identifier := createIdentifierFromToken(namePos, name)
+	identifier.pos = namePos
 	bLSimpleVar.SetName(&identifier)
 
 	if isDeclaredWithVar(typeName) {
@@ -2140,7 +2144,26 @@ func (n *NodeBuilder) TransformIncludedRecordParameter(includedRecordParameterNo
 }
 
 func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParameterNode) BLangNode {
-	panic("TransformRestParameter unimplemented")
+	paramName := restParameterNode.ParamName()
+
+	if paramName != nil {
+		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
+	}
+
+	simpleVar := n.createSimpleVarWithTokenNodeNodeList(paramName, restParameterNode.TypeName(), restParameterNode.Annotations())
+
+	simpleVar.pos = getPosition(restParameterNode)
+
+	if paramName != nil {
+		simpleVar.Name.pos = getPosition(paramName)
+		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	} else if simpleVar.Name.pos == nil {
+		simpleVar.Name.pos = builtinPos
+	}
+
+	simpleVar.FlagSet.Add(model.Flag_REST_PARAM)
+
+	return simpleVar
 }
 
 func (n *NodeBuilder) TransformImportOrgName(importOrgNameNode *tree.ImportOrgNameNode) BLangNode {
@@ -2243,19 +2266,18 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				for param := range params.Iterator() {
 					reqParam := param.(*tree.RequiredParameterNode)
 					paramType := n.createTypeNode(reqParam.TypeName()).(BType)
-					var paramName *string
+					var nameIdent *BLangIdentifier
 					if pn := reqParam.ParamName(); pn != nil {
-						name := pn.Text()
-						paramName = &name
+						nameIdent = &BLangIdentifier{Value: pn.Text()}
 					}
-					bMethod.Params = append(bMethod.Params, BLangFunctionTypeParameter{name: paramName, ty: paramType})
+					bMethod.RequiredParams = append(bMethod.RequiredParams, BLangFunctionTypeParam{Name: nameIdent, TypeDesc: paramType})
 				}
 
 				// Process return type
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
-					bMethod.ReturnTy = n.createTypeNode(retTypeDesc.Type()).(BType)
+					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type()).(model.TypeDescriptor)
 				} else {
-					bMethod.ReturnTy = &BLangValueType{TypeKind: model.TypeKind_NIL}
+					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: model.TypeKind_NIL}
 				}
 			}
 
@@ -2640,19 +2662,112 @@ func (n *NodeBuilder) TransformKeyTypeConstraint(keyTypeConstraintNode *tree.Key
 }
 
 func (n *NodeBuilder) TransformFunctionTypeDescriptor(functionTypeDescriptorNode *tree.FunctionTypeDescriptorNode) BLangNode {
-	panic("TransformFunctionTypeDescriptor unimplemented")
+	funcType := &BLangFunctionType{}
+	funcType.pos = getPosition(functionTypeDescriptorNode)
+
+	if funcSignature := functionTypeDescriptorNode.FunctionSignature(); funcSignature != nil {
+		// Set Parameters
+		parameters := funcSignature.Parameters()
+		for param := range parameters.Iterator() {
+			ftParam := n.createFunctionTypeParam(param)
+			if _, isRestParam := param.(*tree.RestParameterNode); isRestParam {
+				funcType.RestParam = &ftParam
+			} else {
+				funcType.RequiredParams = append(funcType.RequiredParams, ftParam)
+			}
+		}
+
+		// Set Return Type
+		if retNode := funcSignature.ReturnTypeDesc(); retNode != nil {
+			funcType.ReturnTypeDescriptor = n.createTypeNode(retNode.Type())
+		} else {
+			retType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+			retType.pos = builtinPos
+			funcType.ReturnTypeDescriptor = retType
+		}
+	} else {
+		funcType.FlagSet.Add(model.Flag_ANY_FUNCTION)
+	}
+
+	qualifierList := functionTypeDescriptorNode.QualifierList()
+	for token := range qualifierList.Iterator() {
+		switch token.Kind() {
+		case common.ISOLATED_KEYWORD:
+			funcType.FlagSet.Add(model.Flag_ISOLATED)
+		case common.TRANSACTIONAL_KEYWORD:
+			funcType.FlagSet.Add(model.Flag_TRANSACTIONAL)
+		}
+	}
+
+	return funcType
+}
+
+type typedParameterNode interface {
+	tree.ParameterNode
+	ParamName() tree.Token
+	TypeName() tree.Node
+	Annotations() tree.NodeList[*tree.AnnotationNode]
+}
+
+func (n *NodeBuilder) createFunctionTypeParam(param tree.ParameterNode) BLangFunctionTypeParam {
+	typedParam, ok := param.(typedParameterNode)
+	if !ok {
+		panic("createFunctionTypeParam: unsupported parameter type")
+	}
+	paramName := typedParam.ParamName()
+	typeName := typedParam.TypeName()
+	annotations := typedParam.Annotations()
+
+	ftParam := BLangFunctionTypeParam{}
+	ftParam.pos = getPosition(param)
+
+	if paramName != nil {
+		name := createIdentifierFromToken(getPosition(paramName), paramName)
+		name.pos = getPosition(paramName)
+		ftParam.Name = &name
+	}
+
+	ftParam.TypeDesc = n.createTypeNode(typeName).(BType)
+
+	if dp, ok := param.(*tree.DefaultableParameterNode); ok {
+		defaultExpr := dp.Expression()
+		ftParam.InitExpr = n.createExpression(defaultExpr)
+	}
+
+	if annotations.Size() > 0 {
+		panic("function type param annotations not yet supported")
+	}
+
+	return ftParam
 }
 
 func (n *NodeBuilder) TransformFunctionSignature(functionSignatureNode *tree.FunctionSignatureNode) BLangNode {
 	panic("TransformFunctionSignature unimplemented")
 }
 
-func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(explicitAnonymousFunctionExpressionNode *tree.ExplicitAnonymousFunctionExpressionNode) BLangNode {
-	panic("TransformExplicitAnonymousFunctionExpression unimplemented")
+func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprNode *tree.ExplicitAnonymousFunctionExpressionNode) BLangNode {
+	bLFunction := &BLangFunction{}
+	name := n.cx.GetNextAnonymousFunctionKey(n.PackageID)
+	ident := createIdentifier(builtinPos, &name, &name)
+	bLFunction.Name = &ident
+	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
+	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(model.FunctionBodyNode)
+	bLFunction.Body = body
+	bLFunction.pos = getPosition(anonFuncExprNode)
+	bLFunction.FlagSet.Add(model.Flag_LAMBDA)
+	bLFunction.FlagSet.Add(model.Flag_ANONYMOUS)
+	setFunctionQualifiers(bLFunction, anonFuncExprNode.QualifierList())
+
+	lambdaFunc := &BLangLambdaFunction{Function: bLFunction}
+	lambdaFunc.pos = bLFunction.pos
+	return lambdaFunc
 }
 
 func (n *NodeBuilder) TransformExpressionFunctionBody(expressionFunctionBodyNode *tree.ExpressionFunctionBodyNode) BLangNode {
-	panic("TransformExpressionFunctionBody unimplemented")
+	exprBody := &BLangExprFunctionBody{}
+	exprBody.Expr = n.createExpression(expressionFunctionBodyNode.Expression())
+	exprBody.pos = getPosition(expressionFunctionBodyNode)
+	return exprBody
 }
 
 func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree.TupleTypeDescriptorNode) BLangNode {
@@ -3583,6 +3698,8 @@ func stringToTypeKind(typeText string) model.TypeKind {
 		return model.TypeKind_HANDLE
 	case "readonly":
 		return model.TypeKind_READONLY
+	case "function":
+		return model.TypeKind_FUNCTION
 	default:
 		panic("stringToTypeKind: invalid type name: " + typeText)
 	}

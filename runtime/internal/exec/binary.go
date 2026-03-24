@@ -318,7 +318,8 @@ func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Regi
 
 func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry,
 	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
-	boolCmp func(a, b bool) bool, nilEqualsNil bool) {
+	boolCmp func(a, b bool) bool, nilEqualsNil bool,
+) {
 	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
 	if op1 == nil || op2 == nil {
 		bothNil := op1 == nil && op2 == nil
