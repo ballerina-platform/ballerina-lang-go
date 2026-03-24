@@ -47,9 +47,7 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space.AddSymbol("length", lengthSymbol)
 	lengthRef, _ := space.GetSymbol("length")
 	ctx.SetSymbolType(lengthRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &lenghtSignature))
-	return model.ExportedSymbolSpace{
-		Main: space,
-	}
+	return model.NewExportedSymbolSpace(space, nil)
 }
 
 func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {

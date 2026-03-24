@@ -65,9 +65,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	removeSymbol := model.NewGenericFunctionSymbol("remove", space, createRemoveMonomorphizer(ctx))
 	space.AddSymbol("remove", removeSymbol)
 
-	return model.ExportedSymbolSpace{
-		Main: space,
-	}
+	return model.NewExportedSymbolSpace(space, nil)
 }
 
 func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {

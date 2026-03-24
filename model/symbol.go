@@ -100,8 +100,8 @@ type (
 
 	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module
 	ExportedSymbolSpace struct {
-		Main       *SymbolSpace
-		Annotation *SymbolSpace
+		main       *SymbolSpace
+		annotation *SymbolSpace
 	}
 
 	BlockScopeBase struct {
@@ -235,13 +235,7 @@ func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
-	// FIXME: this needs to only export public symbols but this means we need to correct indexes in symbol refs how to do that?
-	// -- Or do we need to do that correction
-	// I think the correct way to do this is for references to fail on lookup if the symbol is not exported
-	return ExportedSymbolSpace{
-		Main:       ms.Main,
-		Annotation: ms.Annotation,
-	}
+	return NewExportedSymbolSpace(ms.Main, ms.Annotation)
 }
 
 func (ms *ModuleScope) GetSymbol(name string) (SymbolRef, bool) {
@@ -274,7 +268,7 @@ func (ms *ModuleScope) GetPrefixedSymbol(prefix, name string) (SymbolRef, bool) 
 			return SymbolRef{}, false
 		}
 	}
-	return exported.Main.GetSymbol(name)
+	return exported.GetSymbol(name)
 }
 
 func (ms *ModuleScope) AddSymbol(name string, symbol Symbol) {
@@ -285,8 +279,20 @@ func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
 	ms.Annotation.AddSymbol(name, symbol)
 }
 
+func NewExportedSymbolSpace(main, annotation *SymbolSpace) ExportedSymbolSpace {
+	return ExportedSymbolSpace{main: main, annotation: annotation}
+}
+
 func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
-	return space.Main.GetSymbol(name)
+	ref, ok := space.main.GetSymbol(name)
+	if !ok {
+		return SymbolRef{}, false
+	}
+	sym := space.main.SymbolAt(ref.Index)
+	if !sym.IsPublic() {
+		return SymbolRef{}, false
+	}
+	return ref, true
 }
 
 func (bs *BlockScopeBase) GetSymbol(name string) (SymbolRef, bool) {
