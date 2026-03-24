@@ -77,6 +77,20 @@ func execNewError(newError *bir.NewError, frame *Frame, reg *modules.Registry) {
 	setOperandValue(newError.GetLhsOperand(), frame, reg, errVal)
 }
 
+func execNewObject(newObject *bir.NewObject, frame *Frame, reg *modules.Registry) {
+	fieldValues := make(map[string]values.BalValue, len(newObject.ClassDef.Fields))
+	for _, field := range newObject.ClassDef.Fields {
+		fieldValues[field.Name] = values.DefaultValueForType(field.Ty)
+	}
+	methodKeys := make(map[string]string, len(newObject.ClassDef.VTable))
+	for methodName, method := range newObject.ClassDef.VTable {
+		methodKeys[methodName] = method.FunctionLookupKey
+	}
+	objType := newObject.GetLhsOperand().VariableDcl.GetType()
+	obj := values.NewObject(objType, fieldValues, methodKeys)
+	setOperandValue(newObject.GetLhsOperand(), frame, reg, obj)
+}
+
 func execArrayStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
 	list := getOperandValue(access.LhsOp, frame, reg).(*values.List)
 	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
@@ -107,6 +121,20 @@ func execMapLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
 	m := getOperandValue(access.RhsOp, frame, reg).(*values.Map)
 	key := getOperandValue(access.KeyOp, frame, reg).(string)
 	value, _ := m.Get(key)
+	setOperandValue(access.LhsOp, frame, reg, value)
+}
+
+func execObjectStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	obj := getOperandValue(access.LhsOp, frame, reg).(*values.Object)
+	field := getOperandValue(access.KeyOp, frame, reg).(string)
+	value := getOperandValue(access.RhsOp, frame, reg)
+	obj.Put(field, value)
+}
+
+func execObjectLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	obj := getOperandValue(access.RhsOp, frame, reg).(*values.Object)
+	field := getOperandValue(access.KeyOp, frame, reg).(string)
+	value, _ := obj.Get(field)
 	setOperandValue(access.LhsOp, frame, reg, value)
 }
 

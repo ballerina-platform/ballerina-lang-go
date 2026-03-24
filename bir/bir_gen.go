@@ -246,6 +246,7 @@ func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
+	birFunc.Flags = flagSetToInt64(astFunc.GetFlags())
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	common.Assert(astFunc.Receiver == nil)
 	stmtCx := &stmtContext{birCx: ctx, varMap: make(map[model.SymbolRef]*BIROperand)}

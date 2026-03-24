@@ -48,6 +48,12 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 			fn := &m.Pkg.Functions[i]
 			r.birFunctions[fn.FunctionLookupKey] = fn
 		}
+		for i := range m.Pkg.ClassDefs {
+			classDef := &m.Pkg.ClassDefs[i]
+			for _, fn := range classDef.VTable {
+				r.birFunctions[fn.FunctionLookupKey] = fn
+			}
+		}
 	}
 	if id != nil && !id.IsUnnamed() {
 		r.modules[moduleKey(id)] = m

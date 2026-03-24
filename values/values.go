@@ -54,6 +54,8 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
 		// TODO: this needs to be properly implemeneted for lists
 		return NewList(0, semtypes.NEVER, NeverValue)
+	} else if semtypes.IsSubtypeSimple(t, semtypes.OBJECT) {
+		return nil
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
@@ -82,6 +84,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 	case *Error:
 		return v.Type
 	case *Function:
+		return v.Type
+	case *Object:
 		return v.Type
 	default:
 		return semtypes.ANY
@@ -126,6 +130,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return t.String(visited)
 	case *Function:
 		return "function " + t.LookupKey
+	case *Object:
+		return "object"
 	default:
 		return "<unsupported>"
 	}

@@ -39,6 +39,14 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 }
 
 func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+	if callInfo.IsVirtual {
+		fn := resolveVirtualCallTarget(callInfo, args, reg)
+		result := executeFunction(*fn, args, reg, callStack)
+		if callInfo.Name.Value() == "init" {
+			return args[0]
+		}
+		return result
+	}
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(*callInfo.CachedBIRFunc, args, reg, callStack)
 	}
@@ -50,6 +58,20 @@ func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Regist
 		return result
 	}
 	return lookupAndExecute(callInfo, args, reg, callStack)
+}
+
+func resolveVirtualCallTarget(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry) *bir.BIRFunction {
+	if callInfo.CachedBIRFunc != nil {
+		return callInfo.CachedBIRFunc
+	}
+	receiverObj := args[0].(*values.Object)
+	lookupKey, found := receiverObj.MethodLookupKey(string(callInfo.Name))
+	if !found {
+		panic("function not found: " + callInfo.Name.Value())
+	}
+	fn := reg.GetBIRFunction(lookupKey)
+	callInfo.CachedBIRFunc = fn
+	return fn
 }
 
 func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
