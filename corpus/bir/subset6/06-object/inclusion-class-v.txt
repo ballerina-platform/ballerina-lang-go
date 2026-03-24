@@ -1,4 +1,5 @@
 module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
 class Bar {
   x int
 
@@ -17,5 +18,22 @@ class Bar {
       self[%3] = x;
       return;
     }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject Bar
+    %2 = ConstantLoad 42
+    %3 = init(%1,%2) -> bb1;
+  }
+  bb1 {
+    f = %3;
+    %5 = getX(f) -> bb2;
+  }
+  bb2 {
+    %6 = println(%5) -> bb3;
+  }
+  bb3 {
+    return;
   }
 }

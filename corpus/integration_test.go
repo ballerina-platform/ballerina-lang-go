@@ -70,6 +70,7 @@ var (
 		"subset5/05-error/trap1-v.bal",
 		"subset5/05-error/trap2-v.bal",
 		"subset5/05-error/trap3-v.bal",
+		"subset6/06-object/self-field-shadow-e.bal",
 		// cast #139
 		"subset6/06-map/length2-v.bal",
 	}
