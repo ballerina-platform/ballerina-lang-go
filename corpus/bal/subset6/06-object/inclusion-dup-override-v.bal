@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 type Foo object {
     int|string x;
 };
@@ -36,4 +38,9 @@ class Qux {
     function init(int x) {
         self.x = x;
     }
+}
+
+public function main() {
+    Qux q = new Qux(7);
+    io:println(q.x); // @output 7
 }
