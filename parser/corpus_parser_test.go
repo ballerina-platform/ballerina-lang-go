@@ -342,11 +342,11 @@ func parseFile(t *testing.T, testCase test_util.TestCase) {
 
 	reader := text.CharReaderFromText(string(content))
 
-	lexer := NewLexer(reader, nil)
+	lexer := NewLexer(reader)
 
-	tokenReader := CreateTokenReader(*lexer, nil)
+	tokenReader := CreateTokenReader(*lexer)
 
-	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, nil)
+	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)
 
 	ast := ballerinaParser.Parse()
 

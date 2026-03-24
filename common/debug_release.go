@@ -14,25 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//go:build !debug
+
 package common
 
-// FIXME: move this to context
+import "io"
+
 const (
 	DUMP_TOKENS uint16 = 1 << iota
 	DUMP_ST
 	DEBUG_ERROR_RECOVERY
 )
 
-type DebugContext struct {
-	Flags   uint16
-	Channel chan string
-}
-
-var DebugCtx DebugContext
-
-func Init(flags uint16) {
-	DebugCtx = DebugContext{
-		Flags:   flags,
-		Channel: make(chan string),
-	}
-}
+func InitDebug(_ uint16, _ io.Writer)          {}
+func DebugFlags() uint16                       { return 0 }
+func DebugWriter() io.Writer                   { return io.Discard }
+func DebugEnabled(_ uint16) bool               { return false }
+func DebugWriteLazy(_ uint16, _ func() string) {}

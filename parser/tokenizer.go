@@ -16,22 +16,19 @@
 package parser
 
 import (
-	debugcommon "ballerina-lang-go/common"
 	"ballerina-lang-go/parser/tree"
 )
 
 type TokenReader struct {
 	lexer             Lexer
-	dbgContext        *debugcommon.DebugContext
 	currentToken      tree.STToken
 	tokenBuffer       tokenBuffer
 	currentTokenIndex int
 }
 
-func CreateTokenReader(lexer Lexer, dbgContext *debugcommon.DebugContext) *TokenReader {
+func CreateTokenReader(lexer Lexer) *TokenReader {
 	return &TokenReader{
 		lexer:             lexer,
-		dbgContext:        dbgContext,
 		currentToken:      nil,
 		currentTokenIndex: 0,
 		tokenBuffer: tokenBuffer{

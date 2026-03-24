@@ -27,8 +27,6 @@ import (
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
 	"fmt"
-
-	debugcommon "ballerina-lang-go/common"
 )
 
 // Phase represents a frontend compilation phase
@@ -70,20 +68,8 @@ type PipelineResult struct {
 func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
 	result := &PipelineResult{}
 
-	// Create debug context with channel
-	debugCtx := &debugcommon.DebugContext{
-		Channel: make(chan string),
-	}
-	// Drain channel in background to prevent blocking
-	go func() {
-		for range debugCtx.Channel {
-			// Discard debug messages
-		}
-	}()
-	defer close(debugCtx.Channel)
-
 	// Phase 1: Parse
-	syntaxTree, err := parser.GetSyntaxTree(cx, debugCtx, inputPath)
+	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath)
 	if err != nil {
 		return nil, fmt.Errorf("parsing failed: %w", err)
 	}
