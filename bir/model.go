@@ -180,10 +180,31 @@ type (
 	BIROperand struct {
 		BIRNodeBase
 		VariableDcl BIRVariableDcl
-		Index       int
+		Address     Address
 		SymRef      *model.SymbolRef
 	}
 )
+
+type Address struct {
+	Mode       AddressingMode
+	FrameIndex int
+	BaseIndex  int
+}
+
+type AddressingMode uint8
+
+const (
+	AddressingModeRelative AddressingMode = iota
+	AddressingModeAbsolute
+)
+
+func relativeAddress(frameIndex int) Address {
+	return Address{Mode: AddressingModeRelative, FrameIndex: frameIndex}
+}
+
+func absoluteAddress(baseIndex, frameIndex int) Address {
+	return Address{Mode: AddressingModeAbsolute, BaseIndex: baseIndex, FrameIndex: frameIndex}
+}
 
 var (
 	_ BIRVariableDcl = &BIRLocalVariableDcl{}

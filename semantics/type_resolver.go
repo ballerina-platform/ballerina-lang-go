@@ -354,8 +354,15 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	}
 	var restTy semtypes.SemType = semtypes.NEVER
 	if fn.RestParam != nil {
-		t.ctx.Unimplemented("var args not supported", fn.RestParam.GetPosition())
-		return nil, false
+		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
+		ast.Walk(t, restParam)
+		elementType := restParam.GetDeterminedType()
+		restTy = elementType
+		// Set the rest param's type to readonly T[]
+		listDefn := semtypes.NewListDefinition()
+		restParamListTy := listDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
+		restParam.SetDeterminedType(restParamListTy)
+		updateSymbolType(t.ctx, restParam, restParamListTy)
 	}
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
@@ -386,6 +393,27 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	return fnType, true
 }
 
+func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
+	fnType, ok := t.resolveFunction(t.ctx, e.Function)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	switch body := e.Function.Body.(type) {
+	case *ast.BLangBlockFunctionBody:
+		t.resolveBlockStatements(chain, body.Stmts)
+		body.SetDeterminedType(semtypes.NEVER)
+	case *ast.BLangExprFunctionBody:
+		if _, _, ok := t.resolveExpression(chain, body.Expr.(ast.BLangExpression)); !ok {
+			return nil, expressionEffect{}, false
+		}
+		body.SetDeterminedType(semtypes.NEVER)
+	}
+	e.Function.SetDeterminedType(semtypes.NEVER)
+	e.Function.Name.SetDeterminedType(semtypes.NEVER)
+	setExpectedType(e, fnType)
+	return fnType, defaultExpressionEffect(chain), true
+}
+
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return t
@@ -395,12 +423,6 @@ func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 		return nil
 	}
 	typeData.Type = ty
-
-	// Update symbol type if the type descriptor has a symbol
-	if tdNode, ok := typeData.TypeDescriptor.(ast.BLangNode); ok {
-		updateSymbolType(t.ctx, tdNode, ty)
-	}
-
 	return t
 }
 
@@ -1017,6 +1039,8 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		return ty, effect, true
 	case *ast.BLangNewExpression:
 		return t.resolveNewExpr(chain, e)
+	case *ast.BLangLambdaFunction:
+		return t.resolveLambdaFunction(chain, e)
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -2125,6 +2149,7 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 	}
 
 	symbolRef = lookupSymbol(chain, symbolRef)
+	expr.SetSymbol(symbolRef)
 	fnTy := t.ctx.SymbolType(symbolRef)
 	if fnTy == nil {
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
@@ -2427,33 +2452,51 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		}
 		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest), true
 	case *ast.BLangFunctionType:
-		if ty.Definition != nil {
-			return ty.Definition.GetSemType(tr.ctx.GetTypeEnv()), true
+		if ty.FlagSet.Contains(model.Flag_ANY_FUNCTION) {
+			return semtypes.FUNCTION, true
 		}
-		fd := semtypes.NewFunctionDefinition()
-		ty.Definition = &fd
-		paramTypes := make([]semtypes.SemType, len(ty.Params))
-		for i, param := range ty.Params {
-			paramTy, ok := tr.resolveBType(param.Type(), depth+1)
+		defn := ty.Definition
+		if defn != nil {
+			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+		}
+		functionDefn := semtypes.NewFunctionDefinition()
+		ty.Definition = &functionDefn
+		// Resolve parameter types
+		paramTypes := make([]semtypes.SemType, len(ty.RequiredParams))
+		for i := range ty.RequiredParams {
+			paramTy, ok := tr.resolveBType(ty.RequiredParams[i].TypeDesc, depth+1)
 			if !ok {
 				return nil, false
 			}
 			paramTypes[i] = paramTy
+			ty.RequiredParams[i].SetDeterminedType(paramTy)
 		}
-		paramListDefn := semtypes.NewListDefinition()
-		paramListTy := paramListDefn.DefineListTypeWrapped(tr.ctx.GetTypeEnv(), paramTypes, len(paramTypes), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		var restTy semtypes.SemType = semtypes.NEVER
+		if ty.RestParam != nil {
+			restParamTy, ok := tr.resolveBType(ty.RestParam.TypeDesc, depth+1)
+			if !ok {
+				return nil, false
+			}
+			restTy = restParamTy
+			ty.RestParam.SetDeterminedType(restParamTy)
+		}
 		var returnTy semtypes.SemType
-		if ty.ReturnTy != nil {
+		if ty.ReturnTypeDescriptor != nil {
 			var ok bool
-			returnTy, ok = tr.resolveBType(ty.ReturnTy, depth+1)
+			returnTy, ok = tr.resolveBType(ty.ReturnTypeDescriptor.(ast.BType), depth+1)
 			if !ok {
 				return nil, false
 			}
 		} else {
 			returnTy = semtypes.NIL
 		}
-		return fd.Define(tr.ctx.GetTypeEnv(), paramListTy, returnTy,
-			semtypes.FunctionQualifiersFrom(tr.ctx.GetTypeEnv(), false, false)), true
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.DefineListTypeWrapped(tr.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+		isolated := ty.FlagSet.Contains(model.Flag_ISOLATED)
+		transactional := ty.FlagSet.Contains(model.Flag_TRANSACTIONAL)
+		fnType := functionDefn.Define(tr.ctx.GetTypeEnv(), paramListTy, returnTy,
+			semtypes.FunctionQualifiersFrom(tr.ctx.GetTypeEnv(), isolated, transactional))
+		return fnType, true
 	case *ast.BLangObjectType:
 		defn := ty.Definition
 		if defn != nil {

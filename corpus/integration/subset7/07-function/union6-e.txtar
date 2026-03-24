@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected function(1|2) returns 3|4|function(2|3) returns 4|5, got function(1) returns 4
+  --> union6-e.bal:24:11
+   |
+24 |     F f = foo; // @error
+   |           ^^^
+

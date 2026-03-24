@@ -1,0 +1,83 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition R
+    (record-type
+      (field a
+        (value-type int))
+      (field b
+        (value-type int))
+      (field f
+        (user-defined-type F))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f1 (type
+          (user-defined-type F)) (expr
+          (invocation lambdaReturn ()))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f1 (
+            (literal 1)
+            (literal 2))))))
+      (var-def
+        (variable r (type
+          (user-defined-type R)) (expr
+          (invocation lambdaStruct ()))))
+      (var-def
+        (variable f2 (type
+          (user-defined-type F)) (expr
+          (index-based-access
+            (simple-var-ref r)
+            (literal f)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f2 (
+            (literal 1)
+            (literal 2))))))))
+  (function lambdaReturn () (
+    (user-defined-type F))
+    (block-function-body
+      (return
+        (lambda
+          (function $anonFunc$_0 (
+            (variable a (type
+              (value-type int)))
+            (variable b (type
+              (value-type int)))) (
+            (value-type int))
+            (block-function-body
+              (return
+                (binary-expr +
+                  (simple-var-ref a)
+                  (simple-var-ref b)))))))))
+  (function lambdaStruct () (
+    (user-defined-type R))
+    (block-function-body
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (literal a)
+            (literal 1))
+          (key-value
+            (literal b)
+            (literal 2))
+          (key-value
+            (literal f)
+            (lambda
+              (function $anonFunc$_1 (
+                (variable a (type
+                  (value-type int)))
+                (variable b (type
+                  (value-type int)))) (
+                (value-type int))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (simple-var-ref a)
+                      (simple-var-ref b))))))))))))

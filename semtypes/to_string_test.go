@@ -332,3 +332,82 @@ func TestListTypeRO(t *testing.T) {
 		t.Errorf("got %s expected %s", actual, expected)
 	}
 }
+
+func TestFunctionType(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := funcHelper(env, createTupleType(env, INT), INT)
+	actual := ToString(cx, ty)
+	expected := "function(int) returns int"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeMultipleParams(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := funcHelper(env, createTupleType(env, INT, STRING), INT)
+	actual := ToString(cx, ty)
+	expected := "function(int, string) returns int"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeNoParams(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := funcHelper(env, createTupleType(env), NIL)
+	actual := ToString(cx, ty)
+	expected := "function() returns nil"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeUnion(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty1 := funcHelper(env, createTupleType(env, INT), INT)
+	ty2 := funcHelper(env, createTupleType(env, STRING), STRING)
+	actual := ToString(cx, Union(ty1, ty2))
+	expected := "function(int) returns int|function(string) returns string"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeIntersect(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty1 := funcHelper(env, createTupleType(env, INT), INT)
+	ty2 := funcHelper(env, createTupleType(env, STRING), STRING)
+	actual := ToString(cx, Intersect(ty1, ty2))
+	expected := "function(int) returns int&function(string) returns string"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeWithUnionReturn(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := funcHelper(env, createTupleType(env, INT), Union(INT, NIL))
+	actual := ToString(cx, ty)
+	expected := "function(int) returns nil|int"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}
+
+func TestFunctionTypeWithUnionParams(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	ty := funcHelper(env, createTupleType(env, Union(INT, STRING)), NIL)
+	actual := ToString(cx, ty)
+	expected := "function(int|string) returns nil"
+	if actual != expected {
+		t.Errorf("got %s expected %s", actual, expected)
+	}
+}

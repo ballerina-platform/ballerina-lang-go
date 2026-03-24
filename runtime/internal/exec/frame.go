@@ -24,9 +24,31 @@ import (
 )
 
 type Frame struct {
-	locals      []values.BalValue    // variable index → value (indexed by BIROperand.Index)
+	locals      []values.BalValue    // variable index → value (indexed by BIROperand.Address.FrameIndex)
 	functionKey string               // function key (package name + function name)
 	location    diagnostics.Location // source location of the currently executing instruction/terminator
+	parent      *Frame
+}
+
+func resolveFrame(frame *Frame, address bir.Address) *Frame {
+	if address.Mode == bir.AddressingModeAbsolute {
+		f := frame
+		for i := 0; i < address.BaseIndex; i++ {
+			f = f.parent
+		}
+		return f
+	}
+	return frame
+}
+
+// Load retrieves the value at the given address in the frame.
+func Load(frame *Frame, address bir.Address) values.BalValue {
+	return resolveFrame(frame, address).locals[address.FrameIndex]
+}
+
+// Store sets the value at the given address in the frame.
+func Store(frame *Frame, address bir.Address, value values.BalValue) {
+	resolveFrame(frame, address).locals[address.FrameIndex] = value
 }
 
 func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
@@ -34,7 +56,7 @@ func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Regis
 		module := reg.GetModule(gv.PkgId)
 		return module.Globals[*op.SymRef]
 	}
-	return currentFrame.locals[op.Index]
+	return Load(currentFrame, op.Address)
 }
 
 func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry, value values.BalValue) {
@@ -42,7 +64,7 @@ func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Regis
 		module := reg.GetModule(gv.PkgId)
 		module.Globals[*op.SymRef] = value
 	} else {
-		currentFrame.locals[op.Index] = value
+		Store(currentFrame, op.Address, value)
 	}
 }
 

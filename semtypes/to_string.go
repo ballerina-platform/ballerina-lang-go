@@ -102,6 +102,8 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 			return s.bddMappingToString(st)
 		case BTError:
 			return s.bddErrorToString(st)
+		case BTFunction:
+			return s.bddFunctionToString(st)
 		default:
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
@@ -166,6 +168,81 @@ func (s *toStringState) bddErrorToString(bdd Bdd) string {
 	// Error types use mapping atoms for their detail type
 	detail := s.bddMappingToString(bdd)
 	return "error<" + detail + ">"
+}
+
+func (s *toStringState) bddFunctionToString(bdd Bdd) string {
+	var formulas []string
+	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+		var posParts []string
+		for c := pos; c != nil; c = c.Next {
+			posParts = append(posParts, s.functionAtomToString(c.Atom))
+		}
+		for i, j := 0, len(posParts)-1; i < j; i, j = i+1, j-1 {
+			posParts[i], posParts[j] = posParts[j], posParts[i]
+		}
+		var negParts []string
+		for c := neg; c != nil; c = c.Next {
+			negParts = append(negParts, "¬"+s.functionAtomToString(c.Atom))
+		}
+		for i, j := 0, len(negParts)-1; i < j; i, j = i+1, j-1 {
+			negParts[i], negParts[j] = negParts[j], negParts[i]
+		}
+		parts := append(posParts, negParts...)
+		formulas = append(formulas, strings.Join(parts, "&"))
+		return true
+	})
+	return strings.Join(formulas, "|")
+}
+
+func (s *toStringState) functionAtomToString(atom Atom) string {
+	key := atomKey{kind: atom.Kind(), index: atom.Index()}
+	if s.visited[key] {
+		return "..."
+	}
+	s.visited[key] = true
+	defer delete(s.visited, key)
+	return s.functionAtomicTypeToString(atom)
+}
+
+func (s *toStringState) functionAtomicTypeToString(atom Atom) string {
+	atomic := s.cx.functionAtomType(atom)
+	paramsStr := s.functionParamsToString(atomic.ParamType)
+	retStr := s.semTypeToString(atomic.RetType)
+	return "function(" + paramsStr + ") returns " + retStr
+}
+
+func (s *toStringState) functionParamsToString(paramType SemType) string {
+	// ParamType is a list SemType representing the parameter tuple.
+	// Try to extract individual parameter types from the list atom.
+	cst, ok := paramType.(ComplexSemType)
+	if !ok {
+		return s.semTypeToString(paramType)
+	}
+	for _, sub := range Unpack(cst) {
+		if sub.BasicTypeCode != BTList {
+			continue
+		}
+		bdd, ok := sub.SubtypeData.(Bdd)
+		if !ok {
+			continue
+		}
+		node, ok := bdd.(BddNode)
+		if !ok {
+			continue
+		}
+		listAtomic := s.cx.listAtomType(node.Atom())
+		var parts []string
+		for i := 0; i < listAtomic.Members.FixedLength; i++ {
+			member := listMemberAt(listAtomic.Members, listAtomic.Rest, i)
+			parts = append(parts, s.semTypeToString(CellInnerVal(member)))
+		}
+		restInner := CellInnerVal(listAtomic.Rest)
+		if !IsNever(restInner) {
+			parts = append(parts, s.semTypeToString(restInner)+"...")
+		}
+		return strings.Join(parts, ", ")
+	}
+	return s.semTypeToString(paramType)
 }
 
 func (s *toStringState) bddMappingToString(bdd Bdd) string {

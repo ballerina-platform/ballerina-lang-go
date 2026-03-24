@@ -185,14 +185,18 @@ type (
 
 	BLangFunctionType struct {
 		bLangTypeBase
-		Definition semtypes.Definition
-		Params     []BLangFunctionTypeParameter
-		ReturnTy   BType
+		Definition           semtypes.Definition
+		RequiredParams       []BLangFunctionTypeParam
+		RestParam            *BLangFunctionTypeParam
+		ReturnTypeDescriptor model.TypeDescriptor
 	}
 
-	BLangFunctionTypeParameter struct {
-		name *string
-		ty   BType
+	BLangFunctionTypeParam struct {
+		bLangNodeBase
+		Name           *BLangIdentifier
+		TypeDesc       BType
+		InitExpr       BLangExpression
+		AnnAttachments []model.AnnotationAttachmentNode
 	}
 )
 
@@ -217,6 +221,8 @@ var (
 	_ model.ObjectMember             = &BObjectField{}
 	_ BLangNode                      = &BObjectField{}
 	_ BLangNode                      = &BMethodDecl{}
+	_ model.FunctionTypeNode         = &BLangFunctionType{}
+	_ model.FunctionTypeParam        = &BLangFunctionTypeParam{}
 )
 
 var (
@@ -684,14 +690,47 @@ func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentatio
 	this.MarkdownDocumentationAttachment = documentationNode
 }
 
-func (p *BLangFunctionTypeParameter) Type() BType { return p.ty }
-
 func (this *BLangFunctionType) GetTypeKind() model.TypeKind {
 	return model.TypeKind_FUNCTION
 }
 
 func (this *BLangFunctionType) GetKind() model.NodeKind {
 	return model.NodeKind_FUNCTION_TYPE
+}
+
+func (this *BLangFunctionTypeParam) GetKind() model.NodeKind {
+	return model.NodeKind_VARIABLE
+}
+
+func (this *BLangFunctionTypeParam) GetName() *string {
+	if this.Name == nil {
+		return nil
+	}
+	name := this.Name.Value
+	return &name
+}
+
+func (this *BLangFunctionTypeParam) GetTypeDesc() model.Type {
+	return this.TypeDesc
+}
+
+func (this *BLangFunctionType) GetParams() []model.FunctionTypeParam {
+	params := make([]model.FunctionTypeParam, len(this.RequiredParams))
+	for i := range this.RequiredParams {
+		params[i] = &this.RequiredParams[i]
+	}
+	return params
+}
+
+func (this *BLangFunctionType) GetRestParam() model.FunctionTypeParam {
+	if this.RestParam == nil {
+		return nil
+	}
+	return this.RestParam
+}
+
+func (this *BLangFunctionType) GetReturnTypeNode() model.TypeDescriptor {
+	return this.ReturnTypeDescriptor
 }
 
 func (this *BLangRecordType) GetKind() model.NodeKind {

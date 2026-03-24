@@ -290,12 +290,10 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangClassDefinition) {
 	if class.InitFunction == nil {
 		fn := ast.BLangFunction{
-			BLangInvokableNodeBase: ast.BLangInvokableNodeBase{
-				Name: &ast.BLangIdentifier{Value: "init"},
-				Body: &ast.BLangBlockFunctionBody{},
-			},
 			ObjInitFunction: true,
 		}
+		fn.Name = &ast.BLangIdentifier{Value: "init"}
+		fn.Body = &ast.BLangBlockFunctionBody{}
 		fn.SetDeterminedType(semtypes.NEVER)
 		fn.SetScope(pkgCtx.NewFunctionScope(class.Scope()))
 		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
