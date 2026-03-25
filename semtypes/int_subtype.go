@@ -139,9 +139,9 @@ func (this IntSubtype) String() string {
 	for _, r := range this.Ranges {
 		builder.WriteString(" ")
 		if r.Min == r.Max {
-			builder.WriteString(fmt.Sprintf("%d", r.Min))
+			fmt.Fprintf(&builder, "%d", r.Min)
 		} else {
-			builder.WriteString(fmt.Sprintf("%d..%d", r.Min, r.Max))
+			fmt.Fprintf(&builder, "%d..%d", r.Min, r.Max)
 		}
 	}
 	builder.WriteString(")")

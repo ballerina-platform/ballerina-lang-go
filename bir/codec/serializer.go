@@ -245,7 +245,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
-		var tagValue any = instr.Value
+		var tagValue = instr.Value
 		if cv, isConstValue := instr.Value.(bir.ConstValue); isConstValue {
 			isWrapped = true
 			tagValue = cv.Value
@@ -548,7 +548,7 @@ func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) 
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
 	var eCol int32 = math.MaxInt32
-	var sourceFileName string = ""
+	var sourceFileName = ""
 
 	if pos != nil {
 		sLine = int32(pos.LineRange().StartLine().Line())

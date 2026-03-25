@@ -1198,6 +1198,7 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 	classDef := ctx.birCx.classDefMap[expr.AtomicType]
 	if classDef == nil {
 		ctx.birCx.CompilerContext.InternalError("failed to find the class definition", expr.GetPosition())
+		return expressionEffect{}
 	}
 
 	object := ctx.addTempVar(expr.GetDeterminedType())

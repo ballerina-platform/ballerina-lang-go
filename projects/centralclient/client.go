@@ -143,7 +143,7 @@ func (c *centralAPIClientImpl) getPackageInternal(orgNamePath, packageNamePath, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, resourceURL)
 
@@ -218,7 +218,7 @@ func (c *centralAPIClientImpl) getPackageVersionsInternal(orgNamePath, packageNa
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, resourceURL)
 
@@ -327,7 +327,7 @@ func (c *centralAPIClientImpl) resolvePackageNamesInternal(request models.Packag
 	if err != nil {
 		return nil, NewCentralClientError(fmt.Sprintf("%s%s", ErrPackageResolution, err.Error()))
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", PackagePathPrefix, ResolveModules))
 
@@ -407,7 +407,7 @@ func (c *centralAPIClientImpl) resolveDependenciesInternal(request models.Packag
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", PackagePathPrefix, ResolveDependencies))
 
@@ -489,7 +489,7 @@ func (c *centralAPIClientImpl) getConnectorsInternal(params map[string]string, s
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", Separator, ConnectorsPath))
 
@@ -535,7 +535,7 @@ func (c *centralAPIClientImpl) getConnectorInternal(id, supportedPlatform, balle
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", ConnectorPathPrefix, id))
 
@@ -584,7 +584,7 @@ func (c *centralAPIClientImpl) getConnectorByInfoInternal(connector models.Conne
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, resourcePath)
 
@@ -640,7 +640,7 @@ func (c *centralAPIClientImpl) getTriggersInternal(params map[string]string, sup
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", Separator, ConnectorsPath))
 
@@ -686,7 +686,7 @@ func (c *centralAPIClientImpl) getTriggerInternal(id, supportedPlatform, balleri
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, fmt.Sprintf("%s%s", TriggerPathPrefix, id))
 
@@ -761,7 +761,7 @@ func (c *centralAPIClientImpl) pullPackageInternal(org, name, version string, fs
 	if err != nil {
 		return NewCentralClientError(clientContext.formatLog(fmt.Sprintf("%s'%s'", ErrCannotPullPackage, getPackageSignature(org, name, version))))
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logRequestConnectVerbose(req, resourceURL)
 
@@ -804,7 +804,7 @@ func (c *centralAPIClientImpl) pullPackageInternal(org, name, version string, fs
 			if err != nil {
 				return NewCentralClientError(clientContext.formatLog(fmt.Sprintf("%s'%s': %s", ErrCannotPullPackage, getPackageSignature(org, name, version), err.Error())))
 			}
-			defer downloadResp.Body.Close()
+			defer func() { _ = downloadResp.Body.Close() }()
 
 			c.logRequestConnectVerbose(downloadReq, balaURL)
 			c.logResponseVerbose(downloadResp, "")
@@ -906,7 +906,7 @@ func (r *customRetryTransport) RoundTrip(req *http.Request) (*http.Response, err
 			if err != nil {
 				return nil, err
 			}
-			req.Body.Close()
+			_ = req.Body.Close()
 			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
 
@@ -922,7 +922,7 @@ func (r *customRetryTransport) RoundTrip(req *http.Request) (*http.Response, err
 		var bodyContent string
 		if resp.Body != nil {
 			bodyBytes, readErr := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if readErr == nil {
 				bodyContent = string(bodyBytes)
 			}
