@@ -1,3 +1,5 @@
 -- stdout --
-Runtime panic: arithmetic overflow
 -- stderr --
+error: arithmetic overflow
+        at sub(sub2-p.bal:26)
+           main(sub2-p.bal:22)

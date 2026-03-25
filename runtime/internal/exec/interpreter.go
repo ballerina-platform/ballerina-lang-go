@@ -21,15 +21,26 @@ import (
 	"ballerina-lang-go/runtime/internal/modules"
 )
 
-func Interpret(pkg bir.BIRPackage, reg *modules.Registry) {
+func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
 	// Execute init function to initialize globals
 	if pkg.InitFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
+		defer func() {
+			if r := recover(); r != nil {
+				err = getFormattedError(r, callStack)
+			}
+		}()
 		executeFunction(*pkg.InitFunction, nil, reg, callStack)
 	}
 	if pkg.MainFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
+		defer func() {
+			if r := recover(); r != nil {
+				err = getFormattedError(r, callStack)
+			}
+		}()
 		executeFunction(*pkg.MainFunction, nil, reg, callStack)
 	}
+	return err
 }

@@ -37,3 +37,8 @@ parser/testdata/**/*.json
 # IDE specific files
 .idea/
 /tree-gen
+
+# Local Go caches (used by tooling like golangci-lint)
+.gopath/
+.gocache/
+.gomodcache/

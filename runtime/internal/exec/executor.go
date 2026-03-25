@@ -19,6 +19,7 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 	"fmt"
 )
@@ -57,20 +58,24 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	}
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
 	callStack.Push(frame)
-	defer callStack.Pop()
 	if len(callStack.elements) > maxRecursionDepth {
-		panic("stack overflow")
+		panic(values.NewErrorWithMessage("stack overflow"))
 	}
 	bb := &birFunc.BasicBlocks[0]
 	for {
 		for _, inst := range bb.Instructions {
+			posProvider := inst.(interface{ GetPos() diagnostics.Location })
+			frame.location = posProvider.GetPos()
 			execInstruction(inst, frame, reg)
 		}
+		posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
+		frame.location = posProvider.GetPos()
 		bb = execTerminator(bb.Terminator, frame, reg, callStack)
 		if bb == nil {
 			break
 		}
 	}
+	callStack.Pop()
 	return frame.locals[0]
 }
 
@@ -182,6 +187,8 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		return v.ThenBB
 	case *bir.Branch:
 		return execBranch(v, frame, reg)
+	case *bir.Panic:
+		return execPanic(v, frame, reg)
 	case *bir.Call:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_CALL:
