@@ -23,10 +23,10 @@ import (
 	"math/big"
 
 	"ballerina-lang-go/bir"
-	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/semtypes/typepool"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
