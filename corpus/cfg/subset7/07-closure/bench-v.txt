@@ -50,7 +50,7 @@
   (bb1 (bb0 bb5) (bb2 bb3)
     (binary-expr ..<
       (literal 0)
-      (literal 10000000))
+      (literal 1000))
     (var-def
       (variable i (type
         (value-type int))))

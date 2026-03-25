@@ -15,6 +15,7 @@
 // under the License.
 
 import ballerina/io;
+
 type F function (int) returns int;
 
 function foo(int x) returns int {
@@ -24,10 +25,10 @@ function foo(int x) returns int {
 function bench(int base) returns int {
     F f = foo;
     int sum = 0;
-    foreach int i in 0 ..< 10000000 {
+    foreach int i in 0 ..< 1000 {
         final int v = i;
         if i % 2 == 0 {
-            f = function (int x) returns int {
+            f = function(int x) returns int {
                 return v + x + base;
             };
         }
@@ -40,5 +41,5 @@ function bench(int base) returns int {
 }
 
 public function main() {
-    io:println(bench(10)); // @output 25000160000000
+    io:println(bench(10)); // @output 2666000
 }

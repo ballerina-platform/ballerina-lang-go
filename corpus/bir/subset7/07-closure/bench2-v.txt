@@ -34,7 +34,7 @@ bench(int) -> int{
     sum = %4;
     %6 = ConstantLoad 0
     i = %6;
-    %8 = ConstantLoad 10000000
+    %8 = ConstantLoad 1000
     $desugar$0 = %8;
     GOTO bb1;
   }

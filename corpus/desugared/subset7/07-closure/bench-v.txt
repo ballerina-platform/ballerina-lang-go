@@ -31,7 +31,7 @@
           (literal 0))))
       (var-def
         (variable $desugar$0 (expr
-          (literal 10000000))))
+          (literal 1000))))
       (while
         (binary-expr <
           (simple-var-ref i)

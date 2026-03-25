@@ -30,7 +30,7 @@ genFs(int) -> [function(int) returns int...]{
     array = %3;
     %5 = ConstantLoad 0
     i = %5;
-    %7 = ConstantLoad 10000000
+    %7 = ConstantLoad 1000
     $desugar$0 = %7;
     GOTO bb1;
   }

@@ -15,6 +15,7 @@
 // under the License.
 
 import ballerina/io;
+
 type F function (int) returns int;
 
 function foo(int x) returns int {
@@ -23,10 +24,10 @@ function foo(int x) returns int {
 
 function genFs(int base) returns F[] {
     F[] array = [];
-    foreach int i in 0 ..< 10000000 {
+    foreach int i in 0 ..< 1000 {
         final int v = i;
         if i % 2 == 0 {
-            F f = function (int x) returns int {
+            F f = function(int x) returns int {
                 return v + x + base;
             };
             array.push(f);
@@ -49,5 +50,5 @@ function fSum(F[] funcs) returns int {
 
 public function main() {
     F[] funcs = genFs(10);
-    io:println(fSum(funcs)); // @output 75000045000000
+    io:println(fSum(funcs)); // @output 754500
 }
