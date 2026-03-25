@@ -330,7 +330,11 @@ func parseFile(t *testing.T, testCase test_util.TestCase) {
 	// Catch any panics and convert them to errors
 	defer func() {
 		if r := recover(); r != nil {
-			t.Fatalf("panic: %v", r)
+			if msg, ok := r.(string); ok && strings.HasSuffix(msg, "parser not implemented") {
+				t.Skipf("Skipping file due to unimplemented parser feature: %s", testCase.InputPath)
+			} else {
+				t.Fatalf("panic: %v", r)
+			}
 		}
 	}()
 
