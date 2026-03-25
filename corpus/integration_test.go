@@ -54,17 +54,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		"subset5/05-error/check-v.bal",
-		"subset5/05-error/check1-v.bal",
-		"subset5/05-error/check2-v.bal",
-		"subset5/05-error/check3-p.bal",
-		"subset5/05-error/check4-p.bal",
-		"subset5/05-error/check5-v.bal",
-		"subset5/05-error/check6-e.bal",
-		"subset5/05-error/check7-e.bal",
-		"subset5/05-error/trap1-v.bal",
-		"subset5/05-error/trap2-v.bal",
-		"subset5/05-error/trap3-v.bal",
 		"subset6/06-object/simple-v.bal",
 		"subset6/06-object/simple-2-v.bal",
 		"subset6/06-object/no-init-v.bal",
