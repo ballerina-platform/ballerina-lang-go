@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected 3, got 1
    |
 36 |     T a = { l1: "c", "other": 1 }; // @error
    |                               ^
-

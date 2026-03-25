@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected nil|boolean|int|float|decimal
    |
 20 |     _ = error("Error"); // @error
    |         ^^^^^^^^^^^^^^
-

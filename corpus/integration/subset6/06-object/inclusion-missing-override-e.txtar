@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: included method 'getX' must be overridden in class defini
    |
 22 | class Bar { // @error
    | ^^^^^^^^^^^^^^^^^^^^^
-

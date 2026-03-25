@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible arguments for function call
    |
 21 |     io:println(f(1, 2, 3)); // @error
    |                ^^^^^^^^^^
-

@@ -5,4 +5,3 @@ error[SYNTAX_ERROR]: redeclared symbol 'foo'
    |
 19 |     public int foo; // @error
    |     ^^^^^^^^^^^^^^^
-

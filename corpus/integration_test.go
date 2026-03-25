@@ -145,7 +145,7 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	if *update {
 		stdout, stderr := runIntegrationCase(testPair.InputPath)
-		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(stdout, stderr)) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
 			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
 		return
@@ -162,7 +162,7 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	}
 
 	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := normalizeIntegrationStderr(result.expectedStderr) != normalizeIntegrationStderr(result.actualStderr)
+	stderrMismatch := result.expectedStderr != normalizeIntegrationStderr(result.actualStderr)
 
 	var msg strings.Builder
 	if stdoutMismatch {
@@ -228,7 +228,7 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
-	stderrMatch := normalizeIntegrationStderr(expectedStderr) == normalizeIntegrationStderr(actualStderr)
+	stderrMatch := expectedStderr == normalizeIntegrationStderr(actualStderr)
 	return testResult{
 		success:        actualStdout == expectedStdout && stderrMatch,
 		expectedStdout: expectedStdout,

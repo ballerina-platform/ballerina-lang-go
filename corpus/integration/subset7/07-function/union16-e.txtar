@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected function(int) returns int|fun
    |
 24 |     FG f = fooBar; // @error
    |            ^^^^^^
-

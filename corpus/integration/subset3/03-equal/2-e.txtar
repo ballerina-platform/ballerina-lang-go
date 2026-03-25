@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible types for !=
    |
 22 |     if x != () { // @error
    |        ^^^^^^^
-

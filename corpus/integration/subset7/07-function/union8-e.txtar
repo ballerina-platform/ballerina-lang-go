@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: function not found: f
    |
 24 |     f(1); // @error
    |     ^^^^
-

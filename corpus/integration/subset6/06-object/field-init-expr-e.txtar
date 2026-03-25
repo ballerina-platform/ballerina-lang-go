@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected string, got int
    |
 25 |     string name = 1 + 2; // @error
    |                   ^^^^^
-

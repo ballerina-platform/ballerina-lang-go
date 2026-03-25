@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got true
    |
 19 |     return x[true]; // @error
    |              ^^^^
-

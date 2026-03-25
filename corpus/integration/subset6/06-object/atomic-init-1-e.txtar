@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: ambiguous object type
    |
 47 |     FooBar f = new FooBar(5); // @error
    |                ^^^^^^^^^^^^^
-

@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected nil|boolean|int|float|decimal
   |
 2 |     foo(check error("error")); // @error
   |         ^^^^^^^^^^^^^^^^^^^^
-

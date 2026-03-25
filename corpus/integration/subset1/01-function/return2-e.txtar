@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected boolean, got int
    |
 25 |     return n; // @error
    |            ^
-

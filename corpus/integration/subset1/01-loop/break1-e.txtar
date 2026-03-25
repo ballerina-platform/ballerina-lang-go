@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: break statement not allowed outside loop
    |
 20 |     break; // @error
    |     ^^^^^^
-

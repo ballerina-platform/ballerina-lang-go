@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unknown symbol: y
    |
 20 |         where y > 1
    |               ^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int|object, got error|object
    |
 31 |     int|Bar f = new (5); // @error
    |                 ^^^^^^^
-

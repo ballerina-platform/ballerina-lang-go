@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int:Unsigned8, got 500
    |
 23 |     l[0] = 500; // @error
    |            ^^^
-

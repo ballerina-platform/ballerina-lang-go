@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: included member 'x' declared in multiple type inclusions 
    |
 25 | type Bar object { // @error
    |          ^^^^^^^^^^^^^^^^^^
-

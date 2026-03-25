@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: list type not found in expected type
    |
 19 |     map<any> m = [];  // @error
    |                  ^^
-

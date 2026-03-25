@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unknown symbol: foo
    |
 21 |     foo(x); // @error
    |     ^^^^^^
-

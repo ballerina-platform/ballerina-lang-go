@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expect anydata types for ==
    |
 30 |     boolean test = f1 == f2; // @error
    |                    ^^^^^^^^
-
