@@ -386,15 +386,6 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 	return sb.String()
 }
 
-func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
-	if typeNode == nil {
-		return "<UNKNOWN>"
-	}
-	sb := strings.Builder{}
-	sb.WriteString(string(typeNode.GetTypeKind()))
-	return sb.String()
-}
-
 func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
 	if typeNode == nil {
 		return "<UNKNOWN>"

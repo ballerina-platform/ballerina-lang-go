@@ -25,7 +25,6 @@ import (
 )
 
 type ConstValue struct {
-	Type  model.ValueType
 	Value any
 }
 
@@ -71,7 +70,6 @@ type (
 		PackageID *model.PackageID
 		// TODO: avoid duplicates here
 		ImportModules []BIRImportModule
-		TypeDefs      []BIRTypeDefinition
 		GlobalVars    map[model.SymbolRef]BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		InitFunction  *BIRFunction
@@ -94,21 +92,6 @@ type (
 	BIRImportModule struct {
 		BIRNodeBase
 		PackageID *model.PackageID
-	}
-
-	BIRTypeDefinition struct {
-		BIRDocumentableNodeBase
-		Name            model.Name
-		OriginalName    model.Name
-		InternalName    model.Name
-		AttachedFuncs   []BIRFunction
-		Flags           int64
-		Type            model.TypeDescriptor
-		IsBuiltin       bool
-		ReferencedTypes []model.TypeDescriptor
-		ReferenceType   model.TypeDescriptor
-		Origin          model.SymbolOrigin
-		Index           int
 	}
 
 	birVariableDclBase struct {
@@ -134,7 +117,6 @@ type (
 		OriginalName   model.Name
 		Flags          int64
 		Origin         model.SymbolOrigin
-		Type           model.InvokableType
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int
