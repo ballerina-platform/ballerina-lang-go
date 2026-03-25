@@ -198,9 +198,6 @@ func normalizeIntegrationStderr(stderr string) string {
 	}
 
 	diagnostics := splitStderrDiagnostics(stderr)
-	if len(diagnostics) == 0 {
-		return ""
-	}
 
 	slices.Sort(diagnostics)
 	return strings.Join(diagnostics, "\n\n") + "\n"
@@ -320,7 +317,7 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 
 	if *update {
 		stdout, stderr := runProjectIntegrationCase(projDir)
-		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(stdout, stderr)) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
 			t.Fatalf("Updated expected file: %s", txtarPath)
 		}
 		return
@@ -342,13 +339,19 @@ func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
 
 	var msg strings.Builder
 	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(
+			result.expectedStdout,
+			result.actualStdout,
+		))
 	}
 	if stderrMismatch {
 		if msg.Len() > 0 {
 			msg.WriteString("\n\n")
 		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(result.expectedStderr, result.actualStderr))
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(
+			result.expectedStderr,
+			normalizeIntegrationStderr(result.actualStderr),
+		))
 	}
 	t.Errorf("%s", msg.String())
 }
