@@ -30,27 +30,39 @@ main() -> nil{
     %2 = init(%1) -> bb1;
   }
   bb1 {
-    e = %2;
-    %5 = ConstantLoad a
-    %4 = e[%5];
-    %6 = println(%4) -> bb2;
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
   }
   bb2 {
-    %8 = ConstantLoad b
-    %7 = e[%8];
-    %9 = println(%7) -> bb3;
+    %3 = %1;
+    GOTO bb4;
   }
   bb3 {
-    %11 = ConstantLoad d
-    %10 = e[%11];
-    %12 = println(%10) -> bb4;
+    %3 = %2;
+    GOTO bb4;
   }
   bb4 {
-    %14 = ConstantLoad e
-    %13 = e[%14];
-    %15 = println(%13) -> bb5;
+    e = %3;
+    %7 = ConstantLoad a
+    %6 = e[%7];
+    %8 = println(%6) -> bb5;
   }
   bb5 {
+    %10 = ConstantLoad b
+    %9 = e[%10];
+    %11 = println(%9) -> bb6;
+  }
+  bb6 {
+    %13 = ConstantLoad d
+    %12 = e[%13];
+    %14 = println(%12) -> bb7;
+  }
+  bb7 {
+    %16 = ConstantLoad e
+    %15 = e[%16];
+    %17 = println(%15) -> bb8;
+  }
+  bb8 {
     return;
   }
 }

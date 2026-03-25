@@ -40,20 +40,32 @@ createFoo(int) -> int|error{
     %3 = init(%2,v) -> bb1;
   }
   bb1 {
-    $desugar$0 = %3;
-    %5 = $desugar$0 is error
+    %5 = %3 is nil
     %5 ? bb2 : bb3;
   }
   bb2 {
+    %4 = %2;
+    GOTO bb4;
+  }
+  bb3 {
+    %4 = %3;
+    GOTO bb4;
+  }
+  bb4 {
+    $desugar$0 = %4;
+    %7 = $desugar$0 is error
+    %7 ? bb5 : bb6;
+  }
+  bb5 {
     %0 = $desugar$0;
     return;
   }
-  bb3 {
+  bb6 {
     f = $desugar$0;
-    %7 = getVal(f) -> bb4;
+    %9 = getVal(f) -> bb7;
   }
-  bb4 {
-    %0 = %7;
+  bb7 {
+    %0 = %9;
     return;
   }
 }

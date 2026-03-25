@@ -18,12 +18,24 @@ main() -> nil{
     %3 = init(%1,%2) -> bb1;
   }
   bb1 {
-    q = %3;
-    %6 = ConstantLoad x
-    %5 = q[%6];
-    %7 = println(%5) -> bb2;
+    %5 = %3 is nil
+    %5 ? bb2 : bb3;
   }
   bb2 {
+    %4 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %4 = %3;
+    GOTO bb4;
+  }
+  bb4 {
+    q = %4;
+    %8 = ConstantLoad x
+    %7 = q[%8];
+    %9 = println(%7) -> bb5;
+  }
+  bb5 {
     return;
   }
 }

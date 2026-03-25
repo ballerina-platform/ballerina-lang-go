@@ -29,18 +29,30 @@ main() -> nil{
     %2 = init(%1) -> bb1;
   }
   bb1 {
-    b = %2;
-    %4 = getX(b) -> bb2;
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
   }
   bb2 {
-    %5 = println(%4) -> bb3;
+    %3 = %1;
+    GOTO bb4;
   }
   bb3 {
-    %7 = ConstantLoad y
-    %6 = b[%7];
-    %8 = println(%6) -> bb4;
+    %3 = %2;
+    GOTO bb4;
   }
   bb4 {
+    b = %3;
+    %6 = getX(b) -> bb5;
+  }
+  bb5 {
+    %7 = println(%6) -> bb6;
+  }
+  bb6 {
+    %9 = ConstantLoad y
+    %8 = b[%9];
+    %10 = println(%8) -> bb7;
+  }
+  bb7 {
     return;
   }
 }

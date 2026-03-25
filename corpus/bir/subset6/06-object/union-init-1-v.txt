@@ -52,15 +52,27 @@ main() -> nil{
     %3 = init(%1,%2) -> bb1;
   }
   bb1 {
-    f = %3;
-    %5 = ConstantLoad 10
-    %6 = ConstantLoad 10
-    %7 = foo(f,%5,%6) -> bb2;
+    %5 = %3 is nil
+    %5 ? bb2 : bb3;
   }
   bb2 {
-    %8 = println(%7) -> bb3;
+    %4 = %1;
+    GOTO bb4;
   }
   bb3 {
+    %4 = %3;
+    GOTO bb4;
+  }
+  bb4 {
+    f = %4;
+    %7 = ConstantLoad 10
+    %8 = ConstantLoad 10
+    %9 = foo(f,%7,%8) -> bb5;
+  }
+  bb5 {
+    %10 = println(%9) -> bb6;
+  }
+  bb6 {
     return;
   }
 }

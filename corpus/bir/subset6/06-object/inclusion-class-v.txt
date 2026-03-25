@@ -27,13 +27,25 @@ main() -> nil{
     %3 = init(%1,%2) -> bb1;
   }
   bb1 {
-    f = %3;
-    %5 = getX(f) -> bb2;
+    %5 = %3 is nil
+    %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %4 = %1;
+    GOTO bb4;
   }
   bb3 {
+    %4 = %3;
+    GOTO bb4;
+  }
+  bb4 {
+    f = %4;
+    %7 = getX(f) -> bb5;
+  }
+  bb5 {
+    %8 = println(%7) -> bb6;
+  }
+  bb6 {
     return;
   }
 }

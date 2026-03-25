@@ -1,4 +1,4 @@
 -- stdout --
 10
-0
+error("negative value")
 -- stderr --
