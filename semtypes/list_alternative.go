@@ -49,13 +49,13 @@ func ListAlternatives(cx Context, t SemType) []ListAlternative {
 	for _, bddPath := range paths {
 		posAtoms := make([]*ListAtomicType, len(bddPath.pos))
 		for i := 0; i < len(bddPath.pos); i++ {
-			posAtoms[i] = cx.listAtomType(bddPath.pos[i])
+			posAtoms[i] = cx.ListAtomType(bddPath.pos[i])
 		}
 		intersectionSemType, intersectionAtomType, ok := intersectListAtoms(cx.Env(), posAtoms)
 		if ok {
 			negAtoms := make([]*ListAtomicType, len(bddPath.neg))
 			for i := 0; i < len(bddPath.neg); i++ {
-				negAtoms[i] = cx.listAtomType(bddPath.neg[i])
+				negAtoms[i] = cx.ListAtomType(bddPath.neg[i])
 			}
 			alts = append(alts, ListAlternative{
 				SemType: intersectionSemType,

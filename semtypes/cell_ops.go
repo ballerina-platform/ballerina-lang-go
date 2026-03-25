@@ -24,7 +24,7 @@ var _ BasicTypeOps = &CellOps{}
 
 func cellFormulaIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from CellOps.java:53:5
-	return bddEvery(cx, t.(Bdd), nil, nil, cellFormulaIsEmptyInner)
+	return BddEvery(cx, t.(Bdd), nil, nil, cellFormulaIsEmptyInner)
 }
 
 func cellFormulaIsEmptyInner(cx Context, posList *Conjunction, negList *Conjunction) bool {

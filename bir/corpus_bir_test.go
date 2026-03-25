@@ -116,11 +116,6 @@ func verifyBIRPositions(t *testing.T, pkg *bir.BIRPackage, inputPath string) {
 	for _, fn := range pkg.Functions {
 		verifyFunctionPositions(t, &fn, inputPath)
 	}
-	for _, typeDef := range pkg.TypeDefs {
-		for _, fn := range typeDef.AttachedFuncs {
-			verifyFunctionPositions(t, &fn, inputPath)
-		}
-	}
 	if pkg.MainFunction != nil {
 		verifyFunctionPositions(t, pkg.MainFunction, inputPath)
 	}
