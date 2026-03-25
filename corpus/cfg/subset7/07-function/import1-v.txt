@@ -1,0 +1,21 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref io println))))
+    (expression-stmt
+      (invocation f (
+        (literal 1))))
+    (var-def
+      (variable f1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref io println))))
+    (expression-stmt
+      (invocation f1 (
+        (literal 1)
+        (literal 2)
+        (literal hello)
+        (literal world))))
+  )
+)

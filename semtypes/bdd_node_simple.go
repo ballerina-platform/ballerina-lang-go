@@ -50,7 +50,7 @@ func (this *BddNodeSimple) Atom() Atom {
 func newBddNodeSimple(atom Atom) *BddNodeSimple {
 	node := &BddNodeSimple{atom: atom}
 	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%d (true) (false) (false))", atom.Index())
+		return fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey())
 	})
 	return node
 }

@@ -66,37 +66,85 @@ type functionCFG struct {
 }
 
 type PackageCFG struct {
-	funcCfgs map[model.SymbolRef]functionCFG
+	funcCfgs   map[model.SymbolRef]functionCFG
+	methodCfgs map[model.SymbolRef]map[model.SymbolRef]functionCFG
+}
+
+func (cfg *PackageCFG) lookupFunctionCfg(ref model.SymbolRef) (functionCFG, bool) {
+	if fcfg, ok := cfg.funcCfgs[ref]; ok {
+		return fcfg, true
+	}
+	for _, classMethods := range cfg.methodCfgs {
+		if fcfg, ok := classMethods[ref]; ok {
+			return fcfg, true
+		}
+	}
+	return functionCFG{}, false
+}
+
+func (cfg *PackageCFG) allFunctionCfgs(yield func(model.SymbolRef, *functionCFG) bool) {
+	for ref, fcfg := range cfg.funcCfgs {
+		if !yield(ref, &fcfg) {
+			return
+		}
+	}
+	for _, classMethods := range cfg.methodCfgs {
+		for ref, fcfg := range classMethods {
+			if !yield(ref, &fcfg) {
+				return
+			}
+		}
+	}
 }
 
 func CreateControlFlowGraph(ctx *context.CompilerContext, pkg *ast.BLangPackage) *PackageCFG {
 	cfg := &PackageCFG{
-		funcCfgs: make(map[model.SymbolRef]functionCFG),
+		funcCfgs:   make(map[model.SymbolRef]functionCFG),
+		methodCfgs: make(map[model.SymbolRef]map[model.SymbolRef]functionCFG),
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	// FIXME: clean this up when we have proper error handling
-	var panicErr any = nil
 	for _, fn := range pkg.Functions {
 		wg.Add(1)
 		fn := fn // Capture loop variable
 		go func() {
 			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					panicErr = r
-				}
-			}()
 			fnCfg := analyzeFunction(ctx, &fn)
 			mu.Lock()
 			cfg.funcCfgs[fn.Symbol()] = fnCfg
 			mu.Unlock()
 		}()
 	}
-	wg.Wait()
-	if panicErr != nil {
-		panic(panicErr)
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		classRef := classDef.Symbol()
+		mu.Lock()
+		cfg.methodCfgs[classRef] = make(map[model.SymbolRef]functionCFG)
+		mu.Unlock()
+		if classDef.InitFunction != nil {
+			wg.Add(1)
+			initFn := classDef.InitFunction
+			go func() {
+				defer wg.Done()
+				fnCfg := analyzeFunction(ctx, initFn)
+				mu.Lock()
+				cfg.methodCfgs[classRef][initFn.Symbol()] = fnCfg
+				mu.Unlock()
+			}()
+		}
+		for _, method := range classDef.Methods {
+			wg.Add(1)
+			method := method
+			go func() {
+				defer wg.Done()
+				fnCfg := analyzeFunction(ctx, method)
+				mu.Lock()
+				cfg.methodCfgs[classRef][method.Symbol()] = fnCfg
+				mu.Unlock()
+			}()
+		}
 	}
+	wg.Wait()
 	return cfg
 }
 

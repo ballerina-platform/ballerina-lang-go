@@ -1,0 +1,40 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 5
+    %4 = f(%3) -> bb1;
+  }
+  bb1 {
+    ret = %4;
+    %6 = println(ret) -> bb2;
+  }
+  bb2 {
+    %7 = fp $anon/.:bar
+    f = %7;
+    %8 = ConstantLoad 5
+    %9 = f(%8) -> bb3;
+  }
+  bb3 {
+    ret = %9;
+    %10 = println(ret) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}
+foo(int) -> int{
+  bb0 {
+    %0 = x;
+    return;
+  }
+}
+bar(int) -> string{
+  bb0 {
+    %2 = ConstantLoad hello
+    %0 = %2;
+    return;
+  }
+}

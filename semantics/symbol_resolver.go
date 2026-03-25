@@ -17,17 +17,19 @@
 package semantics
 
 import (
+	"maps"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"maps"
 	"strings"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
 	io "ballerina-lang-go/lib/io/compile"
+	bMap "ballerina-lang-go/lib/map/compile"
 )
 
 type scopeKind int
@@ -188,11 +190,23 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition())
 	}
-	for _, typeDef := range pkg.TypeDefinitions {
+	for i := range pkg.TypeDefinitions {
+		typeDef := &pkg.TypeDefinitions[i]
 		name := typeDef.Name.Value
 		isPublic := typeDef.FlagSet.Contains(model.Flag_PUBLIC)
 		symbol := model.NewTypeSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition())
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		cx.SetTypeDefinition(symRef, typeDef)
+	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		name := classDef.Name.Value
+		isPublic := classDef.FlagSet.Contains(model.Flag_PUBLIC)
+		symbol := model.NewClassSymbol(name, isPublic)
+		addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition())
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		cx.SetTypeDefinition(symRef, classDef)
 	}
 	ast.Walk(moduleResolver, pkg)
 	return moduleResolver.scope.Exports()
@@ -210,6 +224,32 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 	if function.RestParam != nil {
 		if restParam, ok := function.RestParam.(*ast.BLangSimpleVariable); ok {
 			name := restParam.Name.Value
+			symbol := model.NewValueSymbol(name, false, false, true)
+			addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
+		}
+	}
+
+	ast.Walk(functionResolver, function)
+}
+
+func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockSymbolResolver, function *ast.BLangFunction) {
+	// Check for shadowing on parameters against the enclosing function scope
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		name := param.Name.Value
+		if isShadowed(parent, name) {
+			semanticError(functionResolver, "Variable already defined: "+name, param.GetPosition())
+		}
+		symbol := model.NewValueSymbol(name, false, false, true)
+		addSymbolAndSetOnNode(functionResolver, name, &symbol, param)
+	}
+
+	if function.RestParam != nil {
+		if restParam, ok := function.RestParam.(*ast.BLangSimpleVariable); ok {
+			name := restParam.Name.Value
+			if isShadowed(parent, name) {
+				semanticError(functionResolver, "Variable already defined: "+name, restParam.GetPosition())
+			}
 			symbol := model.NewValueSymbol(name, false, false, true)
 			addSymbolAndSetOnNode(functionResolver, name, &symbol, restParam)
 		}
@@ -239,6 +279,12 @@ func ResolveImports(ctx *context.CompilerContext, pkg *ast.BLangPackage, implici
 					key = imp.Alias.Value
 				}
 				result[key] = array.GetArraySymbols(ctx)
+			} else if isLangImport(&imp, "map") {
+				key := "map"
+				if imp.Alias != nil {
+					key = imp.Alias.Value
+				}
+				result[key] = bMap.GetMapSymbols(ctx)
 			} else {
 				ctx.Unimplemented("unsupported ballerina import: "+imp.OrgName.Value+"/"+imp.PkgNameComps[0].Value, imp.GetPosition())
 			}
@@ -276,12 +322,11 @@ func resolveImportPackageIdentifier(imp *ast.BLangImportPackage, defaultOrg stri
 		nameParts[i] = name.GetValue()
 	}
 	moduleName := strings.Join(nameParts, ".")
-	orgNameIdentifier := imp.GetOrgName()
 	var orgName string
-	if orgNameIdentifier == nil || orgNameIdentifier.GetValue() == "" {
+	if imp.OrgName == nil || imp.OrgName.GetValue() == "" {
 		orgName = defaultOrg
 	} else {
-		orgName = orgNameIdentifier.GetValue()
+		orgName = imp.OrgName.GetValue()
 	}
 	return PackageIdentifier{orgName, moduleName}
 }
@@ -290,6 +335,7 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result := make(map[string]model.ExportedSymbolSpace)
 	result[array.PackageName] = array.GetArraySymbols(ctx)
 	result[bInt.PackageName] = bInt.GetArraySymbols(ctx)
+	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	return result
 }
 
@@ -319,6 +365,16 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
 		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
+	case *ast.BLangLambdaFunction:
+		fn := n.Function
+		name := fn.Name.Value
+		signature := model.FunctionSignature{}
+		symbol := model.NewFunctionSymbol(name, signature, false)
+		addSymbolAndSetOnNode(bs, name, symbol, fn)
+		functionResolver := newFunctionResolver(bs, fn)
+		fn.SetScope(functionResolver.scope)
+		resolveLambdaFunction(functionResolver, bs, fn)
+		return nil
 	default:
 		return visitInnerSymbolResolver(bs, n)
 	}
@@ -327,6 +383,11 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) ast.Visitor {
 	switch n := node.(type) {
+	case *ast.BLangFieldBaseAccess:
+		if classDef := getEnclosingClassDef(resolver); isSelfFieldAccess(n) && classDef != nil {
+			resolveSelfFieldAccess(resolver, n, classDef)
+			return nil
+		}
 	case *ast.BLangMappingConstructorExpr:
 		return resolveMappingConstructor(resolver, n)
 	case *ast.BLangQueryExpr:
@@ -343,6 +404,8 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		referSimpleVariableReference(resolver, n)
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
+	case *ast.BLangObjectType:
+		n.Inclusions = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
 	}
 	return resolver
 }
@@ -368,11 +431,13 @@ func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMapping
 func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
 	invocation := n.(*ast.BLangInvocation)
 	name := invocation.Name.GetValue()
-	invocation.RawSymbol = &deferredMethodSymbol{name: name}
+	scope := resolver.GetScope().(model.SymbolSpaceProvider)
+	invocation.RawSymbol = &deferredMethodSymbol{name: name, space: scope.MainSpace()}
 }
 
 type deferredMethodSymbol struct {
-	name string
+	name  string
+	space *model.SymbolSpace
 }
 
 var _ model.Symbol = &deferredMethodSymbol{}
@@ -487,25 +552,36 @@ func referVariable[T symbolResolver](resolver T, variable variableNode) {
 	variable.SetSymbol(symRef)
 }
 
-func defineVariable[T symbolResolver](resolver T, variable model.VariableNode, isFinal bool) {
+// isShadowed checks if a name is already defined in an enclosing block scope.
+// Mapping constructor scopes contain record keys that are not real variable bindings, so they are skipped.
+func isShadowed(resolver *blockSymbolResolver, name string) bool {
+	if name == string(model.IGNORE) {
+		return false
+	}
+	current := resolver
+	for current != nil {
+		// Issue here is mapping constructor treats some of it's keys as simple variable ref; which is wrong but since they are variable they have symbols
+		// and we have to resolve them. But they are not real variables
+		if _, isMappingScope := current.node.(*ast.BLangMappingConstructorExpr); !isMappingScope {
+			if _, ok := current.scope.MainSpace().GetSymbol(name); ok {
+				return true
+			}
+		}
+		if next, ok := current.parent.(*blockSymbolResolver); ok {
+			current = next
+		} else {
+			break
+		}
+	}
+	return false
+}
+
+func defineVariable(resolver *blockSymbolResolver, variable model.VariableNode, isFinal bool) {
 	switch variable := variable.(type) {
 	case *ast.BLangSimpleVariable:
 		name := variable.Name.Value
-		if name != string(model.IGNORE) {
-			sym, scopeKind, ok := resolver.GetSymbol(name)
-			// Function names and module level variables can be shadowed
-			if ok {
-				switch resolver.GetCtx().SymbolKind(sym) {
-				// You can shodow functions and type defintions
-				case model.SymbolKindFunction, model.SymbolKindType:
-				default:
-					// You can shodow module level variables
-					if scopeKind == blockScopeKind {
-						semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
-						return
-					}
-				}
-			}
+		if isShadowed(resolver, name) {
+			semanticError(resolver, "Variable already defined: "+name, variable.GetPosition())
 		}
 		symbol := model.NewValueSymbol(name, false, isFinal, false)
 		addSymbolAndSetOnNode(resolver, name, &symbol, variable)
@@ -598,6 +674,15 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		}
 		n.SetSymbol(symRef)
 		return ms
+	case *ast.BLangClassDefinition:
+		name := n.Name.Value
+		symRef, _, ok := ms.GetSymbol(name)
+		if !ok {
+			internalError(ms, "Module level class symbol not found: "+name, n.Name.GetPosition())
+		}
+		n.SetSymbol(symRef)
+		resolveClassDefinition(ms, n)
+		return nil
 	default:
 		return visitInnerSymbolResolver(ms, n)
 	}
@@ -605,6 +690,156 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 
 func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
 	return ms
+}
+
+// resolveObjectInclusions update the AST node references with correct symbol references. Will add semantic errors if the type
+// reference is for something that can't be included. This means after this stage we have the gurantee symbol ref always refer
+// to a valid AST node.
+func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) []model.SymbolRef {
+	ctx := resolver.GetCtx()
+	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
+	for _, inc := range unresolvedInclusions {
+		ast.Walk(resolver, inc)
+		symRef := inc.Symbol()
+		tDefn, ok := ctx.GetTypeDefinition(symRef)
+		if !ok {
+			ctx.InternalError("type definition not found for inclusion", inc.GetPosition())
+			continue
+		}
+		switch defn := tDefn.(type) {
+		case *ast.BLangTypeDefinition:
+			if _, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
+				ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
+				continue
+			}
+		case *ast.BLangClassDefinition:
+		default:
+			ctx.InternalError("unexpected type definition kind for inclusion", inc.GetPosition())
+			continue
+		}
+		inclusions = append(inclusions, symRef)
+	}
+	return inclusions
+}
+
+func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
+	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
+	classDef.SetScope(classResolver.scope)
+
+	classDef.Inclusions = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
+
+	for _, field := range classDef.Fields {
+		name := field.GetName().GetValue()
+		if _, sk, exists := classResolver.GetSymbol(name); exists && sk == blockScopeKind {
+			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
+			continue
+		}
+		isPublic := field.GetFlags().Contains(model.Flag_PUBLIC)
+		symbol := model.NewValueSymbol(name, isPublic, false, false)
+		classResolver.AddSymbol(name, &symbol)
+	}
+
+	for methodName := range classDef.Methods {
+		method := classDef.Methods[methodName]
+		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
+			semanticError(classResolver, "redeclared symbol '"+methodName+"'", method.Name.GetPosition())
+			continue
+		}
+		isPublic := method.FlagSet.Contains(model.Flag_PUBLIC)
+		signature := model.FunctionSignature{}
+		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
+		addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
+	}
+
+	inc := collectTransitiveInclusions(ms.ctx, classDef.Inclusions)
+	for _, m := range inc.members {
+		switch {
+		case m.objectMember != nil:
+			if m.objectMember.MemberKind() != model.ObjectMemberKindField {
+				continue
+			}
+			name := m.objectMember.Name()
+			if _, _, exists := classResolver.GetSymbol(name); exists {
+				continue
+			}
+			isPublic := m.objectMember.Visibility() == model.VisibilityPublic
+			symbol := model.NewValueSymbol(name, isPublic, false, false)
+			classResolver.AddSymbol(name, &symbol)
+		case m.classField != nil:
+			name := m.classField.Name.Value
+			if _, _, exists := classResolver.GetSymbol(name); exists {
+				continue
+			}
+			isPublic := m.classField.FlagSet.Contains(model.Flag_PUBLIC)
+			symbol := model.NewValueSymbol(name, isPublic, false, false)
+			classResolver.AddSymbol(name, &symbol)
+		}
+	}
+
+	if classDef.InitFunction != nil {
+		signature := model.FunctionSignature{}
+		symbol := model.NewFunctionSymbol("init", signature, false)
+		addSymbolAndSetOnNode(classResolver, "init", symbol, classDef.InitFunction)
+	}
+
+	selfSymbol := model.NewValueSymbol("self", false, false, false)
+	classResolver.AddSymbol("self", &selfSymbol)
+
+	for _, field := range classDef.Fields {
+		ast.Walk(classResolver, field.(ast.BLangNode))
+	}
+
+	if classDef.InitFunction != nil {
+		initResolver := newFunctionResolver(classResolver, classDef.InitFunction)
+		classDef.InitFunction.SetScope(initResolver.scope)
+		resolveFunction(initResolver, classDef.InitFunction)
+	}
+
+	for _, method := range classDef.Methods {
+		methodResolver := newFunctionResolver(classResolver, method)
+		method.SetScope(methodResolver.scope)
+		resolveFunction(methodResolver, method)
+	}
+
+	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
+	if classDef.InitFunction != nil {
+		classSym.InitFunction = classDef.InitFunction.Symbol()
+		classSym.HasInit = true
+	}
+	for methodName, method := range classDef.Methods {
+		classSym.Methods[methodName] = method.Symbol()
+	}
+}
+
+func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {
+	for {
+		bs, ok := resolver.(*blockSymbolResolver)
+		if !ok {
+			return nil
+		}
+		if classDef, ok := bs.node.(*ast.BLangClassDefinition); ok {
+			return classDef
+		}
+		resolver = bs.parent
+	}
+}
+
+func isSelfFieldAccess(n *ast.BLangFieldBaseAccess) bool {
+	varRef, ok := n.Expr.(*ast.BLangSimpleVarRef)
+	if !ok {
+		return false
+	}
+	return varRef.VariableName.Value == "self"
+}
+
+func resolveSelfFieldAccess[T symbolResolver](resolver T, n *ast.BLangFieldBaseAccess, classDef *ast.BLangClassDefinition) {
+	varRef := n.Expr.(*ast.BLangSimpleVarRef)
+	referSimpleVariableReference(resolver, varRef)
+	fieldName := n.Field.Value
+	classScope := classDef.Scope().(model.BlockLevelScope)
+	if _, ok := classScope.MainSpace().GetSymbol(fieldName); !ok {
+		semanticError(resolver, "undefined member '"+fieldName+"'", n.Field.GetPosition())
+	}
 }
 
 func internalError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {

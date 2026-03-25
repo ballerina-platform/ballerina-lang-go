@@ -16,7 +16,11 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+	"fmt"
+	"strings"
+)
 
 type IntSubtype struct {
 	Ranges []Range
@@ -41,7 +45,7 @@ func CreateSingleRangeSubtype(min, max int64) IntSubtype {
 
 func IntConst(value int64) SemType {
 	// migrated from IntSubtype.java:51:5
-	return basicSubtype(BT_INT, CreateSingleRangeSubtype(value, value))
+	return basicSubtype(BTInt, CreateSingleRangeSubtype(value, value))
 }
 
 func validIntWidth(signed bool, bits int64) {
@@ -80,17 +84,17 @@ func IntWidthSigned(bits int64) SemType {
 	// migrated from IntSubtype.java:82:5
 	validIntWidth(true, bits)
 	if bits == 64 {
-		return &INT
+		return INT
 	}
 	t := CreateSingleRangeSubtype((-(int64(1) << (bits - int64(1)))), ((int64(1) << (bits - int64(1))) - int64(1)))
-	return basicSubtype(BT_INT, t)
+	return basicSubtype(BTInt, t)
 }
 
 func IntWidthUnsigned(bits int) SemType {
 	// migrated from IntSubtype.java:91:5
 	validIntWidth(false, int64(bits))
 	t := CreateSingleRangeSubtype(int64(0), ((int64(1) << bits) - int64(1)))
-	return basicSubtype(BT_INT, t)
+	return basicSubtype(BTInt, t)
 }
 
 func IntSubtypeWidenUnsigned(d SubtypeData) SubtypeData {
@@ -127,6 +131,21 @@ func IntSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
 		return common.OptionalEmpty[int64]()
 	}
 	return common.OptionalOf(min)
+}
+
+func (this IntSubtype) String() string {
+	var builder strings.Builder
+	builder.WriteString("(int")
+	for _, r := range this.Ranges {
+		builder.WriteString(" ")
+		if r.Min == r.Max {
+			fmt.Fprintf(&builder, "%d", r.Min)
+		} else {
+			fmt.Fprintf(&builder, "%d..%d", r.Min, r.Max)
+		}
+	}
+	builder.WriteString(")")
+	return builder.String()
 }
 
 func IntSubtypeContains(d SubtypeData, n int64) bool {

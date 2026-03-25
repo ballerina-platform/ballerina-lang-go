@@ -87,6 +87,8 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 		return
 	}
 
+	verifyBIRPositions(t, result.BIRPackage, testPair.InputPath)
+
 	// Pretty print BIR output
 	prettyPrinter := bir.PrettyPrinter{}
 	actualBIR := prettyPrinter.Print(*result.BIRPackage)
@@ -107,5 +109,32 @@ func testBIRGeneration(t *testing.T, testPair test_util.TestCase) {
 		diff := getBIRDiff(expectedText, actualBIR)
 		t.Errorf("BIR text mismatch for %s\nExpected file: %s\n%s", testPair.InputPath, testPair.ExpectedPath, diff)
 		return
+	}
+}
+
+func verifyBIRPositions(t *testing.T, pkg *bir.BIRPackage, inputPath string) {
+	for _, fn := range pkg.Functions {
+		verifyFunctionPositions(t, &fn, inputPath)
+	}
+	for _, typeDef := range pkg.TypeDefs {
+		for _, fn := range typeDef.AttachedFuncs {
+			verifyFunctionPositions(t, &fn, inputPath)
+		}
+	}
+	if pkg.MainFunction != nil {
+		verifyFunctionPositions(t, pkg.MainFunction, inputPath)
+	}
+}
+
+func verifyFunctionPositions(t *testing.T, fn *bir.BIRFunction, inputPath string) {
+	for _, bb := range fn.BasicBlocks {
+		for _, inst := range bb.Instructions {
+			if inst.GetPos() == nil {
+				t.Errorf("instruction %T in %s (BB: %s) has no position info for %s", inst, fn.Name, bb.Id, inputPath)
+			}
+		}
+		if bb.Terminator != nil && bb.Terminator.GetPos() == nil {
+			t.Errorf("terminator %T in %s (BB: %s) has no position info for %s", bb.Terminator, fn.Name, bb.Id, inputPath)
+		}
 	}
 }

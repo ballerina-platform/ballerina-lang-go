@@ -17,115 +17,127 @@
 package exec
 
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
-	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/values"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
+
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/values"
 )
 
-func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame) {
-	frame.SetOperand(constantLoad.LhsOp.Index, constantLoad.Value)
+func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame, reg *modules.Registry) {
+	setOperandValue(constantLoad.LhsOp, frame, reg, constantLoad.Value)
 }
 
-func execMove(moveIns *bir.Move, frame *Frame) {
-	frame.SetOperand(moveIns.LhsOp.Index, frame.GetOperand(moveIns.RhsOp.Index))
+func execMove(moveIns *bir.Move, frame *Frame, reg *modules.Registry) {
+	setOperandValue(moveIns.LhsOp, frame, reg, getOperandValue(moveIns.RhsOp, frame, reg))
 }
 
-func execNewArray(newArray *bir.NewArray, frame *Frame) {
+func execNewArray(newArray *bir.NewArray, frame *Frame, reg *modules.Registry) {
 	size := 0
 	if newArray.SizeOp != nil {
-		size = int(frame.GetOperand(newArray.SizeOp.Index).(int64))
+		size = int(getOperandValue(newArray.SizeOp, frame, reg).(int64))
 	}
 	list := values.NewList(size, newArray.Type, newArray.Filler)
 	for i, value := range newArray.Values {
-		list.FillingSet(i, frame.GetOperand(value.Index))
+		list.FillingSet(i, getOperandValue(value, frame, reg))
 	}
-	frame.SetOperand(newArray.LhsOp.Index, list)
+	setOperandValue(newArray.LhsOp, frame, reg, list)
 }
 
-func execNewMap(newMap *bir.NewMap, frame *Frame) {
+func execNewMap(newMap *bir.NewMap, frame *Frame, reg *modules.Registry) {
 	m := values.NewMap(newMap.Type)
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
-		keyVal := frame.GetOperand(kv.KeyOp().Index)
+		keyVal := getOperandValue(kv.KeyOp(), frame, reg)
 		keyStr := keyVal.(string)
-		valueVal := frame.GetOperand(kv.ValueOp().Index)
+		valueVal := getOperandValue(kv.ValueOp(), frame, reg)
 		m.Put(keyStr, valueVal)
 	}
-	frame.SetOperand(newMap.GetLhsOperand().Index, m)
+	setOperandValue(newMap.GetLhsOperand(), frame, reg, m)
 }
 
-func execNewError(newError *bir.NewError, frame *Frame) {
-	msgVal := frame.GetOperand(newError.MessageOp.Index)
+func execNewError(newError *bir.NewError, frame *Frame, reg *modules.Registry) {
+	msgVal := getOperandValue(newError.MessageOp, frame, reg)
 	message := msgVal.(string)
 
 	var cause values.BalValue
 	if newError.CauseOp != nil {
-		cause = frame.GetOperand(newError.CauseOp.Index)
+		cause = getOperandValue(newError.CauseOp, frame, reg)
 	}
 
 	var detailMap *values.Map
 	if newError.DetailOp != nil {
-		detailMap = frame.GetOperand(newError.DetailOp.Index).(*values.Map)
+		detailMap = getOperandValue(newError.DetailOp, frame, reg).(*values.Map)
 	}
 	errVal := values.NewError(newError.Type, message, cause, newError.TypeName, detailMap)
-	frame.SetOperand(newError.GetLhsOperand().Index, errVal)
+	setOperandValue(newError.GetLhsOperand(), frame, reg, errVal)
 }
 
-func execArrayStore(access *bir.FieldAccess, frame *Frame) {
-	list := frame.GetOperand(access.LhsOp.Index).(*values.List)
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+func execArrayStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	list := getOperandValue(access.LhsOp, frame, reg).(*values.List)
+	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
 	if idx < 0 {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	list.FillingSet(idx, frame.GetOperand(access.RhsOp.Index))
+	list.FillingSet(idx, getOperandValue(access.RhsOp, frame, reg))
 }
 
-func execArrayLoad(access *bir.FieldAccess, frame *Frame) {
-	list := frame.GetOperand(access.RhsOp.Index).(*values.List)
-	idx := int(frame.GetOperand(access.KeyOp.Index).(int64))
+func execArrayLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	list := getOperandValue(access.RhsOp, frame, reg).(*values.List)
+	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
 	if idx < 0 || idx >= list.Len() {
 		panic(fmt.Sprintf("invalid array index: %d", idx))
 	}
-	frame.SetOperand(access.LhsOp.Index, list.Get(idx))
+	setOperandValue(access.LhsOp, frame, reg, list.Get(idx))
 }
 
-func execMapStore(access *bir.FieldAccess, frame *Frame) {
-	m := frame.GetOperand(access.LhsOp.Index).(*values.Map)
-	keyVal := frame.GetOperand(access.KeyOp.Index)
+func execMapStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	m := getOperandValue(access.LhsOp, frame, reg).(*values.Map)
+	keyVal := getOperandValue(access.KeyOp, frame, reg)
 	keyStr := keyVal.(string)
-	valueVal := frame.GetOperand(access.RhsOp.Index)
+	valueVal := getOperandValue(access.RhsOp, frame, reg)
 	m.Put(keyStr, valueVal)
 }
 
-func execMapLoad(access *bir.FieldAccess, frame *Frame) {
-	m := frame.GetOperand(access.RhsOp.Index).(*values.Map)
-	key := frame.GetOperand(access.KeyOp.Index).(string)
+func execMapLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
+	m := getOperandValue(access.RhsOp, frame, reg).(*values.Map)
+	key := getOperandValue(access.KeyOp, frame, reg).(string)
 	value, _ := m.Get(key)
-	frame.SetOperand(access.LhsOp.Index, value)
+	setOperandValue(access.LhsOp, frame, reg, value)
 }
 
-func execTypeCast(typeCast *bir.TypeCast, frame *Frame) {
-	sourceValue := frame.GetOperand(typeCast.RhsOp.Index)
+func execTypeCast(typeCast *bir.TypeCast, frame *Frame, reg *modules.Registry) {
+	sourceValue := getOperandValue(typeCast.RhsOp, frame, reg)
 	result := castValue(sourceValue, typeCast.Type)
-	frame.SetOperand(typeCast.LhsOp.Index, result)
+	setOperandValue(typeCast.LhsOp, frame, reg, result)
+}
+
+func execFPLoad(fpLoad *bir.FPLoad, frame *Frame, reg *modules.Registry) {
+	fn := &values.Function{
+		Type:      fpLoad.Type,
+		LookupKey: fpLoad.FunctionLookupKey,
+	}
+	setOperandValue(fpLoad.LhsOp, frame, reg, fn)
 }
 
 func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
-	sourceValue := frame.GetOperand(typeTest.RhsOp.Index)
+	sourceValue := getOperandValue(typeTest.RhsOp, frame, reg)
 	valueType := values.SemTypeForValue(sourceValue)
 	typeEnv := reg.GetTypeEnv()
 	typeCtx := semtypes.TypeCheckContext(typeEnv)
 	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
-	frame.SetOperand(typeTest.LhsOp.Index, matches)
+	setOperandValue(typeTest.LhsOp, frame, reg, matches)
 }
 
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
-	b := targetType.(*semtypes.BasicTypeBitSet)
+	b, ok := targetType.(semtypes.BasicTypeBitSet)
+	if !ok {
+		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
+	}
 	if b.All() == semtypes.ANY.All() {
 		return value
 	}
@@ -140,7 +152,8 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 	case bitsetValue&semtypes.BOOLEAN.All() != 0:
 		return value.(bool)
 	}
-	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", b.String()))
+	// TODO: fix this when fixing #260
+	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", semtypes.ToString(nil, b)))
 }
 
 func toInt(value any) int64 {

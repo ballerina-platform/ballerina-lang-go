@@ -25,16 +25,20 @@ import (
 
 type CompilerEnvironment struct {
 	anonTypeCount    map[*model.PackageID]int
+	anonFuncCount    map[*model.PackageID]int
 	packageInterner  *model.PackageIDInterner
 	symbolSpaces     []*model.SymbolSpace
+	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
 	typeDefns        map[model.SymbolRef]model.TypeDefinition
 }
 
 func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
+	this.symbolSpacesMu.Lock()
 	space := model.NewSymbolSpaceInner(packageID, len(this.symbolSpaces))
 	this.symbolSpaces = append(this.symbolSpaces, space)
+	this.symbolSpacesMu.Unlock()
 	return space
 }
 
@@ -57,14 +61,18 @@ func (this *CompilerEnvironment) NewBlockScope(parent model.Scope, pkg model.Pac
 }
 
 func (this *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol {
+	this.symbolSpacesMu.RLock()
 	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
+	this.symbolSpacesMu.RUnlock()
 	return symbolSpace.SymbolAt(symbol.Index)
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol
 // not a narrowed symbol.
 func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) model.SymbolRef {
+	this.symbolSpacesMu.RLock()
 	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
+	this.symbolSpacesMu.RUnlock()
 	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
 	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
@@ -74,6 +82,13 @@ func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) m
 	}
 	this.underlyingSymbol.Store(narrowedSymbol, baseRef)
 	return narrowedSymbol
+}
+
+func (this *CompilerEnvironment) CreateFunctionSymbol(space *model.SymbolSpace, name string, signature model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	sym := model.NewFunctionSymbol(name, signature, false)
+	sym.SetType(fnTy)
+	symbolIndex := space.AppendSymbol(sym)
+	return space.RefAt(symbolIndex)
 }
 
 func (this *CompilerEnvironment) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
@@ -123,6 +138,7 @@ func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (mode
 func NewCompilerEnvironment(typeEnv semtypes.Env) *CompilerEnvironment {
 	return &CompilerEnvironment{
 		anonTypeCount:   make(map[*model.PackageID]int),
+		anonFuncCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
 		typeEnv:         typeEnv,
 		typeDefns:       make(map[model.SymbolRef]model.TypeDefinition),
@@ -139,6 +155,12 @@ const (
 	BUILTIN_ANON_TYPE = ANON_PREFIX + "Type$builtin$"
 	ANON_TYPE         = ANON_PREFIX + "Type$"
 )
+
+func (this *CompilerEnvironment) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
+	nextValue := this.anonFuncCount[packageID]
+	this.anonFuncCount[packageID] = nextValue + 1
+	return ANON_PREFIX + "Func$_" + strconv.Itoa(nextValue)
+}
 
 func (this *CompilerEnvironment) GetNextAnonymousTypeKey(packageID *model.PackageID) string {
 	nextValue := this.anonTypeCount[packageID]

@@ -1,12 +1,12 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad l1
     %2 = ConstantLoad c
     %3 = ConstantLoad other
     %4 = ConstantLoad 3
-    %5 = newMap ((), (MAPPING)){%1=%2, %3=%4}
+    %5 = newMap {| l1: "c", 3... |}{%1=%2, %3=%4}
     a = %5;
     %8 = ConstantLoad l1
     %7 = a[%8];

@@ -36,7 +36,7 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	} else {
 		combined = cx.mappingAtomType(posList.Atom)
 		p := posList.Next
-		for true {
+		for {
 			if p == nil {
 				break
 			} else {
@@ -126,7 +126,7 @@ func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicT
 	orgTypes := m.Types
 	types := shallowCopyCellTypes(orgTypes, (len(orgTypes) + 1))
 	i := len(orgNames)
-	for true {
+	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
 			names[i] = name
 			types[i] = t
@@ -162,7 +162,7 @@ func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		if allOrNothing.IsAll() {
 			return accum
 		}
-		return &NEVER
+		return NEVER
 	} else {
 		bdd := b.(BddNode)
 		return Union(BddMappingMemberTypeInner(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.mappingAtomType(bdd.Atom()), key), accum)), Union(BddMappingMemberTypeInner(cx, bdd.Middle(), key, accum), BddMappingMemberTypeInner(cx, bdd.Right(), key, accum)))
@@ -181,7 +181,7 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 		}
 	}
 	if memberType == nil {
-		return &UNDEF
+		return UNDEF
 	}
 	return memberType
 }

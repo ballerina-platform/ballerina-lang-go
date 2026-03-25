@@ -1,0 +1,157 @@
+(bar
+  (bb0 () (bb1 bb2)
+    (binary-expr &&
+      (type-test-expr is
+        (simple-var-ref a)
+        (value-type float))
+      (type-test-expr is
+        (simple-var-ref b)
+        (value-type float)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+)
+(baz
+  (bb0 () (bb1 bb2)
+    (binary-expr &&
+      (type-test-expr is
+        (simple-var-ref a)
+        (value-type string))
+      (type-test-expr is
+        (simple-var-ref b)
+        (value-type string)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+)
+(exec
+  (bb0 () ()
+    (var-def
+      (variable fn (type
+        (user-defined-type OpFn)) (expr
+        (field-based-access op
+          (simple-var-ref op)))))
+    (return
+      (invocation fn (
+        (field-based-access lhs
+          (simple-var-ref op))
+        (field-based-access rhs
+          (simple-var-ref op)))))
+  )
+)
+(foo
+  (bb0 () (bb1 bb2)
+    (binary-expr &&
+      (type-test-expr is
+        (simple-var-ref a)
+        (value-type int))
+      (type-test-expr is
+        (simple-var-ref b)
+        (value-type int)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable op (type
+        (user-defined-type BinaryOp)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref lhs)
+            (literal 1))
+          (key-value
+            (simple-var-ref rhs)
+            (literal 2))
+          (key-value
+            (simple-var-ref op)
+            (simple-var-ref foo))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation exec (
+          (simple-var-ref op))))))
+    (assignment
+      (simple-var-ref op)
+      (mapping-constructor-expr
+        (key-value
+          (simple-var-ref lhs)
+          (literal 1))
+        (key-value
+          (simple-var-ref rhs)
+          (literal 2))
+        (key-value
+          (simple-var-ref op)
+          (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation exec (
+          (simple-var-ref op))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation exec (
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref lhs)
+              (literal 1))
+            (key-value
+              (simple-var-ref rhs)
+              (literal 2))
+            (key-value
+              (simple-var-ref op)
+              (simple-var-ref foo))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation exec (
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref lhs)
+              (literal a))
+            (key-value
+              (simple-var-ref rhs)
+              (literal b))
+            (key-value
+              (simple-var-ref op)
+              (simple-var-ref baz))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation exec (
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref lhs)
+              (literal a))
+            (key-value
+              (simple-var-ref rhs)
+              (literal 1))
+            (key-value
+              (simple-var-ref op)
+              (simple-var-ref baz))))))))
+  )
+)

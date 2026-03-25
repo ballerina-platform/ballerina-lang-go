@@ -16,7 +16,10 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+	"fmt"
+)
 
 type BooleanSubtype struct {
 	value bool
@@ -35,6 +38,10 @@ func BooleanSubtypeFrom(value bool) BooleanSubtype {
 	return newBooleanSubtypeFromBool(value)
 }
 
+func (this BooleanSubtype) String() string {
+	return fmt.Sprintf("(boolean %t)", this.value)
+}
+
 func BooleanSubtypeContains(d SubtypeData, b bool) bool {
 	// migrated from BooleanSubtype.java:44:5
 	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
@@ -47,7 +54,7 @@ func BooleanSubtypeContains(d SubtypeData, b bool) bool {
 func BooleanConst(value bool) SemType {
 	// migrated from BooleanSubtype.java:52:5
 	t := BooleanSubtypeFrom(value)
-	return basicSubtype(BT_BOOLEAN, t)
+	return basicSubtype(BTBoolean, t)
 }
 
 func BooleanSubtypeSingleValue(d SubtypeData) common.Optional[bool] {

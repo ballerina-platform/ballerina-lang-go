@@ -1,0 +1,84 @@
+(call
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref f)
+      (user-defined-type F))
+  )
+  (bb1 (bb0) ()
+    (return
+      (invocation f (
+        (literal 1))))
+  )
+  (bb2 (bb0) (bb3 bb4)
+    (type-test-expr is
+      (simple-var-ref f)
+      (user-defined-type F2))
+  )
+  (bb3 (bb2) ()
+    (return
+      (invocation f (
+        (literal 1)
+        (literal 2))))
+  )
+  (bb4 (bb2) ()
+    (return
+      (invocation f (
+        (literal 1)
+        (literal 2)
+        (literal 3))))
+  )
+)
+(f1
+  (bb0 () ()
+    (return
+      (simple-var-ref i))
+  )
+)
+(f2
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref i)
+        (simple-var-ref j)))
+  )
+)
+(f3
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (binary-expr +
+          (simple-var-ref i)
+          (simple-var-ref j))
+        (simple-var-ref k)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (union-type
+          (union-type
+            (user-defined-type F)
+            (user-defined-type F2))
+          (user-defined-type F3))) (expr
+        (simple-var-ref f1))))
+    (expression-stmt
+      (invocation io println (
+        (invocation call (
+          (simple-var-ref f))))))
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref f2))
+    (expression-stmt
+      (invocation io println (
+        (invocation call (
+          (simple-var-ref f))))))
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref f3))
+    (expression-stmt
+      (invocation io println (
+        (invocation call (
+          (simple-var-ref f))))))
+  )
+)

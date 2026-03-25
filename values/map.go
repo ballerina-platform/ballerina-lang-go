@@ -93,6 +93,18 @@ func (m *Map) unlinkEntry(e *mapEntry) {
 	e.prev, e.next = nil, nil
 }
 
+func (m *Map) Len() int {
+	return len(m.data)
+}
+
+func (m *Map) Keys() []string {
+	keys := make([]string, 0, len(m.data))
+	for e := m.head; e != nil; e = e.next {
+		keys = append(keys, e.key)
+	}
+	return keys
+}
+
 func (m *Map) String(visited map[uintptr]bool) string {
 	ptr := uintptr(unsafe.Pointer(m))
 	if visited[ptr] {
@@ -108,7 +120,7 @@ func (m *Map) String(visited map[uintptr]bool) string {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(fmt.Sprintf("%q", e.key))
+		fmt.Fprintf(&b, "%q", e.key)
 		b.WriteByte(':')
 		b.WriteString(toString(e.value, visited, false))
 		i++

@@ -1,6 +1,6 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;
@@ -71,7 +71,7 @@ main() -> ((NIL), ()){
     return;
   }
 }
-printBoolean(((BOOLEAN), ())) -> ((NIL), ()){
+printBoolean(boolean) -> nil{
   bb0 {
     b ? bb1 : bb3;
   }
@@ -93,14 +93,14 @@ printBoolean(((BOOLEAN), ())) -> ((NIL), ()){
     return;
   }
 }
-lessThan(((INT), ()),((INT), ())) -> ((BOOLEAN), ()){
+lessThan(int,int) -> boolean{
   bb0 {
     %3 = < x y;
     %0 = %3;
     return;
   }
 }
-greaterThan(((INT), ()),((INT), ())) -> ((BOOLEAN), ()){
+greaterThan(int,int) -> boolean{
   bb0 {
     %3 = > x y;
     %0 = %3;

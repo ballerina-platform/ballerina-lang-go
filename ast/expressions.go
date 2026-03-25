@@ -331,6 +331,13 @@ type (
 		Expr BLangExpression
 		// JBallerina has symbols for these as well. Need to think if we need them as well (for go to definition)
 	}
+
+	BLangNewExpression struct {
+		bLangExpressionBase
+		AtomicType      *semtypes.MappingAtomicType
+		UserDefinedType *BLangUserDefinedType
+		ArgsExprs       []BLangExpression
+	}
 )
 
 var (
@@ -380,43 +387,46 @@ var (
 	_ model.NamedArgNode                                           = &BLangNamedArgsExpression{}
 	_ model.TrapNode                                               = &BLangTrapExpr{}
 	_ BLangExpression                                              = &BLangTrapExpr{}
+	_ BLangExpression                                              = &BLangNewExpression{}
 )
 
 var (
-	_ BLangNode = &BLangTypeConversionExpr{}
-	_ BLangNode = &BLangAlternateWorkerReceive{}
-	_ BLangNode = &BLangAnnotAccessExpr{}
-	_ BLangNode = &BLangArrowFunction{}
-	_ BLangNode = &BLangLambdaFunction{}
-	_ BLangNode = &BLangBinaryExpr{}
-	_ BLangNode = &BLangQueryExpr{}
-	_ BLangNode = &BLangCheckedExpr{}
-	_ BLangNode = &BLangCheckPanickedExpr{}
-	_ BLangNode = &BLangCollectContextInvocation{}
-	_ BLangNode = &BLangCommitExpr{}
-	_ BLangNode = &BLangSimpleVarRef{}
-	_ BLangNode = &BLangLocalVarRef{}
-	_ BLangNode = &BLangConstRef{}
-	_ BLangNode = &BLangLiteral{}
-	_ BLangNode = &BLangNumericLiteral{}
-	_ BLangNode = &BLangDynamicArgExpr{}
-	_ BLangNode = &BLangElvisExpr{}
-	_ BLangNode = &BLangWorkerReceive{}
-	_ BLangNode = &BLangInvocation{}
-	_ BLangNode = &BLangMarkdownDocumentationLine{}
-	_ BLangNode = &BLangMarkdownParameterDocumentation{}
-	_ BLangNode = &BLangMarkdownReturnParameterDocumentation{}
-	_ BLangNode = &BLangMarkDownDeprecationDocumentation{}
-	_ BLangNode = &BLangMarkDownDeprecatedParametersDocumentation{}
-	_ BLangNode = &BLangGroupExpr{}
-	_ BLangNode = &BLangTypedescExpr{}
-	_ BLangNode = &BLangIndexBasedAccess{}
-	_ BLangNode = &BLangListConstructorExpr{}
-	_ BLangNode = &BLangTypeConversionExpr{}
-	_ BLangNode = &BLangMappingConstructorExpr{}
-	_ BLangNode = &BLangMappingKeyValueField{}
-	_ BLangNode = &BLangMappingKey{}
-	_ BLangNode = &BLangTrapExpr{}
+	_ BLangNode       = &BLangTypeConversionExpr{}
+	_ BLangNode       = &BLangAlternateWorkerReceive{}
+	_ BLangNode       = &BLangAnnotAccessExpr{}
+	_ BLangNode       = &BLangArrowFunction{}
+	_ BLangNode       = &BLangLambdaFunction{}
+	_ BLangExpression = &BLangLambdaFunction{}
+	_ BLangNode       = &BLangBinaryExpr{}
+	_ BLangNode       = &BLangQueryExpr{}
+	_ BLangNode       = &BLangCheckedExpr{}
+	_ BLangNode       = &BLangCheckPanickedExpr{}
+	_ BLangNode       = &BLangCollectContextInvocation{}
+	_ BLangNode       = &BLangCommitExpr{}
+	_ BLangNode       = &BLangSimpleVarRef{}
+	_ BLangNode       = &BLangLocalVarRef{}
+	_ BLangNode       = &BLangConstRef{}
+	_ BLangNode       = &BLangLiteral{}
+	_ BLangNode       = &BLangNumericLiteral{}
+	_ BLangNode       = &BLangDynamicArgExpr{}
+	_ BLangNode       = &BLangElvisExpr{}
+	_ BLangNode       = &BLangWorkerReceive{}
+	_ BLangNode       = &BLangInvocation{}
+	_ BLangNode       = &BLangMarkdownDocumentationLine{}
+	_ BLangNode       = &BLangMarkdownParameterDocumentation{}
+	_ BLangNode       = &BLangMarkdownReturnParameterDocumentation{}
+	_ BLangNode       = &BLangMarkDownDeprecationDocumentation{}
+	_ BLangNode       = &BLangMarkDownDeprecatedParametersDocumentation{}
+	_ BLangNode       = &BLangGroupExpr{}
+	_ BLangNode       = &BLangTypedescExpr{}
+	_ BLangNode       = &BLangIndexBasedAccess{}
+	_ BLangNode       = &BLangListConstructorExpr{}
+	_ BLangNode       = &BLangTypeConversionExpr{}
+	_ BLangNode       = &BLangMappingConstructorExpr{}
+	_ BLangNode       = &BLangMappingKeyValueField{}
+	_ BLangNode       = &BLangMappingKey{}
+	_ BLangNode       = &BLangTrapExpr{}
+	_ BLangNode       = &BLangNewExpression{}
 )
 
 var (
@@ -511,6 +521,9 @@ func (this *BLangLambdaFunction) SetFunctionNode(functionNode model.FunctionNode
 func (this *BLangLambdaFunction) GetKind() model.NodeKind {
 	// migrated from BLangLambdaFunction.java:58:5
 	return model.NodeKind_LAMBDA
+}
+
+func (this *BLangLambdaFunction) SetTypeCheckedType(ty BType) {
 }
 
 func (this *BLangAlternateWorkerReceive) ToActionString() string {
@@ -1176,6 +1189,14 @@ func (this *BLangTrapExpr) GetExpression() model.ExpressionNode {
 }
 
 func (this *BLangTrapExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
+}
+
+func (this *BLangNewExpression) GetKind() model.NodeKind {
+	return model.NodeKind_TYPE_INIT_EXPR
+}
+
+func (this *BLangNewExpression) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 

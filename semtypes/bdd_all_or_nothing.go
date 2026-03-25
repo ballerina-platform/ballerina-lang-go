@@ -67,3 +67,11 @@ func (this *BddAllOrNothing) canonicalKey() string {
 		return "false"
 	}
 }
+
+func (this *BddAllOrNothing) String() string {
+	if this.isAll {
+		return "all"
+	} else {
+		return "nothing"
+	}
+}

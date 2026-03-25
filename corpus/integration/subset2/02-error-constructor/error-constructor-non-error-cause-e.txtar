@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected ((NIL, ERROR), ()), got ((), (INT))
+error[SEMANTIC_ERROR]: incompatible type: expected nil|error, got 123
   --> error-constructor-non-error-cause-e.bal:18:30
    |
 18 |     error err = error("msg", 123);  // @error

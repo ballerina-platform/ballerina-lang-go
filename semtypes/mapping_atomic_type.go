@@ -16,7 +16,9 @@
 
 package semtypes
 
-import "slices"
+import (
+	"slices"
+)
 
 type MappingAtomicType struct {
 	Names []string

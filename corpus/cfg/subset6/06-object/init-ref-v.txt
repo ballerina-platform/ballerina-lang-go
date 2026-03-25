@@ -1,0 +1,27 @@
+(Foo
+  (init
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal init called))))
+    )
+  )
+  (foo
+    (bb0 () ()
+      (expression-stmt
+        (invocation init expr:
+          (simple-var-ref self) ()))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (new ()))))
+    (expression-stmt
+      (invocation foo expr:
+        (simple-var-ref f) ()))
+  )
+)

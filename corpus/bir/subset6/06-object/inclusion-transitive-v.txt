@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class C {
+  z int
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 0
+      %3 = ConstantLoad z
+      self[%3] = %2;
+      %4 = ConstantLoad 1
+      %5 = ConstantLoad x
+      self[%5] = %4;
+      %6 = ConstantLoad 2
+      %7 = ConstantLoad y
+      self[%7] = %6;
+      %8 = ConstantLoad 3
+      %9 = ConstantLoad z
+      self[%9] = %8;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject C
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    c = %2;
+    %5 = ConstantLoad x
+    %4 = c[%5];
+    %6 = println(%4) -> bb2;
+  }
+  bb2 {
+    %8 = ConstantLoad y
+    %7 = c[%8];
+    %9 = println(%7) -> bb3;
+  }
+  bb3 {
+    %11 = ConstantLoad z
+    %10 = c[%11];
+    %12 = println(%10) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}

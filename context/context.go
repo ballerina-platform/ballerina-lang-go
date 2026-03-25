@@ -51,6 +51,10 @@ func (this *CompilerContext) CreateNarrowedSymbol(baseRef model.SymbolRef) model
 	return this.env.CreateNarrowedSymbol(baseRef)
 }
 
+func (this *CompilerContext) CreateFunctionSymbol(space *model.SymbolSpace, name string, signature model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	return this.env.CreateFunctionSymbol(space, name, signature, fnTy)
+}
+
 func (this *CompilerContext) UnnarrowedSymbol(symbol model.SymbolRef) model.SymbolRef {
 	return this.env.UnnarrowedSymbol(symbol)
 }
@@ -140,6 +144,10 @@ func NewCompilerContext(env *CompilerEnvironment) *CompilerContext {
 // GetTypeEnv returns the type environment for this context
 func (this *CompilerContext) GetTypeEnv() semtypes.Env {
 	return this.env.GetTypeEnv()
+}
+
+func (this *CompilerContext) GetNextAnonymousFunctionKey(packageID *model.PackageID) string {
+	return this.env.GetNextAnonymousFunctionKey(packageID)
 }
 
 func (this *CompilerContext) GetNextAnonymousTypeKey(packageID *model.PackageID) string {

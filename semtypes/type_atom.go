@@ -16,7 +16,11 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"fmt"
+
+	"ballerina-lang-go/common"
+)
 
 type TypeAtom struct {
 	index      int
@@ -41,4 +45,8 @@ func (this *TypeAtom) Index() int {
 
 func (this *TypeAtom) Kind() Kind {
 	return this.AtomicType.AtomKind()
+}
+
+func (this *TypeAtom) canonicalKey() string {
+	return fmt.Sprintf("t%d", this.index)
 }

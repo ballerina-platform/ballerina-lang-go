@@ -17,15 +17,18 @@
 package bir
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"fmt"
-	"strings"
 )
 
 type PrettyPrinter struct {
 	indentLevel int
 	sb          strings.Builder
+	cx          semtypes.Context
 }
 
 // writeLine writes a line with current indentation and newline
@@ -42,6 +45,13 @@ func (p *PrettyPrinter) write(s string) {
 	p.sb.WriteString(s)
 }
 
+// writeIndent writes current indentation without content or newline
+func (p *PrettyPrinter) writeIndent() {
+	for i := 0; i < p.indentLevel; i++ {
+		p.sb.WriteString("  ")
+	}
+}
+
 // increaseIndent increases indentation level
 func (p *PrettyPrinter) increaseIndent() {
 	p.indentLevel++
@@ -55,6 +65,7 @@ func (p *PrettyPrinter) decreaseIndent() {
 func (p *PrettyPrinter) Print(node BIRPackage) string {
 	// Reset the builder
 	p.sb.Reset()
+	p.cx = semtypes.TypeCheckContext(node.TypeEnv)
 
 	p.write("module ")
 	p.write(p.PrintPackageID(node.PackageID))
@@ -63,9 +74,20 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 		p.write(p.PrintImportModule(importModule))
 		p.write(";\n")
 	}
+	sortedGlobalVars := make([]BIRGlobalVariableDcl, 0, len(node.GlobalVars))
 	for _, globalVar := range node.GlobalVars {
+		sortedGlobalVars = append(sortedGlobalVars, globalVar)
+	}
+	sort.Slice(sortedGlobalVars, func(i, j int) bool {
+		return string(sortedGlobalVars[i].GetName()) < string(sortedGlobalVars[j].GetName())
+	})
+	for _, globalVar := range sortedGlobalVars {
 		p.write(p.PrintGlobalVar(globalVar))
 		p.write(";\n")
+	}
+	for _, classDef := range node.ClassDefs {
+		p.PrintClassDef(classDef)
+		p.write("\n")
 	}
 	for _, function := range node.Functions {
 		p.PrintFunction(function)
@@ -77,15 +99,27 @@ func (p *PrettyPrinter) Print(node BIRPackage) string {
 func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 	p.write(function.Name.Value())
 	p.write("(")
-	first := true
-	for _, v := range function.LocalVars {
-		if v.Kind == VAR_KIND_ARG {
-			if !first {
+	paramStart := 1
+	if len(function.LocalVars) > 1 && function.LocalVars[1].GetName() == "self" {
+		paramStart = 2
+	}
+	for i, v := range function.LocalVars[paramStart:] {
+		if i < len(function.RequiredParams) {
+			if i > 0 {
 				p.write(",")
 			}
 			p.write(p.PrintSemType(v.Type))
-			first = false
+		} else {
+			break
 		}
+	}
+	if function.RestParams != nil {
+		variableIndex := paramStart + len(function.RequiredParams)
+		if variableIndex != 1 {
+			p.write(",")
+		}
+		p.write(p.PrintSemType(function.LocalVars[variableIndex].Type))
+		p.write("...")
 	}
 	p.write(")")
 	if function.ReturnVariable != nil && function.ReturnVariable.Type != nil {
@@ -108,6 +142,7 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 		p.writeLine("}")
 	}
 	p.decreaseIndent()
+	p.writeIndent()
 	p.write("}")
 }
 
@@ -125,44 +160,52 @@ func (p *PrettyPrinter) PrintBasicBlock(basicBlock BIRBasicBlock) {
 }
 
 func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
-	switch instruction.(type) {
+	switch instruction := instruction.(type) {
 	case *Move:
-		return p.PrintMove(instruction.(*Move))
+		return p.PrintMove(instruction)
 	case *BinaryOp:
-		return p.PrintBinaryOp(instruction.(*BinaryOp))
+		return p.PrintBinaryOp(instruction)
 	case *UnaryOp:
-		return p.PrintUnaryOp(instruction.(*UnaryOp))
+		return p.PrintUnaryOp(instruction)
 	case *ConstantLoad:
-		return p.PrintConstantLoad(instruction.(*ConstantLoad))
+		return p.PrintConstantLoad(instruction)
 	case *Goto:
-		return p.PrintGoto(instruction.(*Goto))
+		return p.PrintGoto(instruction)
 	case *Call:
-		return p.PrintCall(instruction.(*Call))
+		return p.PrintCall(instruction)
 	case *Return:
-		return p.PrintReturn(instruction.(*Return))
+		return p.PrintReturn(instruction)
 	case *Branch:
-		return p.PrintBranch(instruction.(*Branch))
+		return p.PrintBranch(instruction)
 	case *FieldAccess:
-		return p.PrintFieldAccess(instruction.(*FieldAccess))
+		return p.PrintFieldAccess(instruction)
 	case *NewArray:
-		return p.PrintNewArray(instruction.(*NewArray))
+		return p.PrintNewArray(instruction)
 	case *NewMap:
-		return p.PrintNewMap(instruction.(*NewMap))
+		return p.PrintNewMap(instruction)
 	case *NewError:
-		return p.PrintNewError(instruction.(*NewError))
+		return p.PrintNewError(instruction)
 	case *TypeCast:
-		return p.PrintTypeCast(instruction.(*TypeCast))
+		return p.PrintTypeCast(instruction)
 	case *TypeTest:
-		return p.PrintTypeTest(instruction.(*TypeTest))
+		return p.PrintTypeTest(instruction)
 	case *Panic:
-		return p.PrintPanic(instruction.(*Panic))
+		return p.PrintPanic(instruction)
+	case *NewObject:
+		return p.PrintNewObject(instruction)
+	case *FPLoad:
+		return p.PrintFPLoad(instruction)
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
 }
 
+func (p *PrettyPrinter) PrintFPLoad(fpLoad *FPLoad) string {
+	return fmt.Sprintf("%s = fp %s", p.PrintOperand(*fpLoad.LhsOp), fpLoad.FunctionLookupKey)
+}
+
 func (p *PrettyPrinter) PrintTypeCast(cast *TypeCast) string {
-	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), cast.Type.String(), p.PrintOperand(*cast.RhsOp))
+	return fmt.Sprintf("%s = <%s>(%s)", p.PrintOperand(*cast.LhsOp), semtypes.ToString(p.cx, cast.Type), p.PrintOperand(*cast.RhsOp))
 }
 
 func (p *PrettyPrinter) PrintTypeTest(test *TypeTest) string {
@@ -170,7 +213,7 @@ func (p *PrettyPrinter) PrintTypeTest(test *TypeTest) string {
 	if test.IsNegation {
 		op = "!is"
 	}
-	return fmt.Sprintf("%s = %s %s %s", p.PrintOperand(*test.LhsOp), p.PrintOperand(*test.RhsOp), op, test.Type.String())
+	return fmt.Sprintf("%s = %s %s %s", p.PrintOperand(*test.LhsOp), p.PrintOperand(*test.RhsOp), op, semtypes.ToString(p.cx, test.Type))
 }
 
 func (p *PrettyPrinter) PrintNewArray(array *NewArray) string {
@@ -215,13 +258,40 @@ func (p *PrettyPrinter) PrintNewError(e *NewError) string {
 
 func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 	switch access.Kind {
-	case INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE:
+	case INSTRUCTION_KIND_MAP_STORE, INSTRUCTION_KIND_ARRAY_STORE, INSTRUCTION_KIND_OBJECT_STORE:
 		return fmt.Sprintf("%s[%s] = %s;", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.KeyOp), p.PrintOperand(*access.RhsOp))
-	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD:
+	case INSTRUCTION_KIND_MAP_LOAD, INSTRUCTION_KIND_ARRAY_LOAD, INSTRUCTION_KIND_OBJECT_LOAD:
 		return fmt.Sprintf("%s = %s[%s];", p.PrintOperand(*access.LhsOp), p.PrintOperand(*access.RhsOp), p.PrintOperand(*access.KeyOp))
 	default:
 		panic(fmt.Sprintf("unknown field access kind: %d", access.Kind))
 	}
+}
+
+func (p *PrettyPrinter) PrintNewObject(n *NewObject) string {
+	return fmt.Sprintf("%s = newObject %s", p.PrintOperand(*n.LhsOp), n.ClassDef.Name.Value())
+}
+
+func (p *PrettyPrinter) PrintClassDef(classDef BIRClassDef) {
+	p.write("class ")
+	p.write(classDef.Name.Value())
+	p.write(" {\n")
+	p.increaseIndent()
+	for _, field := range classDef.Fields {
+		p.writeLine(fmt.Sprintf("%s %s", field.Name, p.PrintSemType(field.Ty)))
+	}
+	var methodNames []string
+	for name := range classDef.VTable {
+		methodNames = append(methodNames, name)
+	}
+	sort.Strings(methodNames)
+	for _, name := range methodNames {
+		p.write("\n")
+		p.writeIndent()
+		p.PrintFunction(*classDef.VTable[name])
+		p.write("\n")
+	}
+	p.decreaseIndent()
+	p.write("}")
 }
 
 func (p *PrettyPrinter) PrintReturn(r *Return) string {
@@ -252,7 +322,8 @@ func (p *PrettyPrinter) PrintCall(call *Call) string {
 }
 
 func (p *PrettyPrinter) PrintOperand(operand BIROperand) string {
-	return operand.VariableDcl.Name.Value()
+	name := operand.VariableDcl.GetName()
+	return name.Value()
 }
 
 func (p *PrettyPrinter) PrintConstantLoad(load *ConstantLoad) string {
@@ -328,7 +399,7 @@ func (p *PrettyPrinter) PrintSemType(typeNode semtypes.SemType) string {
 	if typeNode == nil {
 		return "<UNKNOWN>"
 	}
-	return typeNode.String()
+	return semtypes.ToString(p.cx, typeNode)
 }
 
 func (p *PrettyPrinter) PrintImportModule(importModules BIRImportModule) string {

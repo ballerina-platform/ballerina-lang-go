@@ -1,0 +1,50 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Bar {
+  bar int
+  baz int
+
+  foo(int,int) -> int{
+    bb0 {
+      %6 = + a b;
+      %8 = ConstantLoad bar
+      %7 = self[%8];
+      %5 = + %6 %7;
+      %10 = ConstantLoad baz
+      %9 = self[%10];
+      %4 = + %5 %9;
+      %0 = %4;
+      return;
+    }
+  }
+
+  init(int) -> nil{
+    bb0 {
+      %3 = ConstantLoad 5
+      %4 = ConstantLoad bar
+      self[%4] = %3;
+      %5 = ConstantLoad baz
+      self[%5] = baz;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject Bar
+    %2 = ConstantLoad 5
+    %3 = init(%1,%2) -> bb1;
+  }
+  bb1 {
+    f = %3;
+    %5 = ConstantLoad 10
+    %6 = ConstantLoad 10
+    %7 = foo(f,%5,%6) -> bb2;
+  }
+  bb2 {
+    %8 = println(%7) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

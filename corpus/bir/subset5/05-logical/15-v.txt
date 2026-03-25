@@ -1,15 +1,15 @@
 module $anon.. v 0.0.0;
-main() -> ((NIL), ()){
+main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;
-    %4 = x is ((STRING), ())
+    %4 = x is string
     %5 = ! %4;
     %3 = %5;
     %5 ? bb1 : bb2;
   }
   bb1 {
-    %6 = x is ((INT), ())
+    %6 = x is int
     %7 = ! %6;
     %3 = %7;
     GOTO bb2;

@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: field 'bar' is not initialized
+  --> uninit-field-e.bal:18:5
+   |
+18 |     int bar; // @error
+   |     ^^^^^^^^
+

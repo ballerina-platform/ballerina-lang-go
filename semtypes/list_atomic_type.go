@@ -16,7 +16,9 @@
 
 package semtypes
 
-import "slices"
+import (
+	"slices"
+)
 
 type ListAtomicType struct {
 	Members FixedLengthArray

@@ -33,20 +33,20 @@ func TestTypeCellDisparity(t *testing.T) {
 	}{
 		{
 			name:     "INT vs cell(INT, NONE)",
-			t1:       &INT,
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_NONE),
+			t1:       INT,
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_NONE),
 			relation: RelationNoRelation,
 		},
 		{
 			name:     "INT vs cell(INT, LIMITED)",
-			t1:       &INT,
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_LIMITED),
+			t1:       INT,
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_LIMITED),
 			relation: RelationNoRelation,
 		},
 		{
 			name:     "INT vs cell(INT, UNLIMITED)",
-			t1:       &INT,
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED),
+			t1:       INT,
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationNoRelation,
 		},
 	}
@@ -72,32 +72,32 @@ func TestBasicCellSubtyping(t *testing.T) {
 	}{
 		{
 			name:      "INT vs INT",
-			t1:        &INT,
-			t2:        &INT,
+			t1:        INT,
+			t2:        INT,
 			relations: [3]Relation{RelationEqual, RelationEqual, RelationEqual},
 		},
 		{
 			name:      "BOOLEAN vs BOOLEAN",
-			t1:        &BOOLEAN,
-			t2:        &BOOLEAN,
+			t1:        BOOLEAN,
+			t2:        BOOLEAN,
 			relations: [3]Relation{RelationEqual, RelationEqual, RelationEqual},
 		},
 		{
 			name:      "BYTE vs INT",
 			t1:        BYTE,
-			t2:        &INT,
+			t2:        INT,
 			relations: [3]Relation{RelationSubtype, RelationSubtype, RelationSubtype},
 		},
 		{
 			name:      "BOOLEAN vs INT",
-			t1:        &BOOLEAN,
-			t2:        &INT,
+			t1:        BOOLEAN,
+			t2:        INT,
 			relations: [3]Relation{RelationNoRelation, RelationNoRelation, RelationNoRelation},
 		},
 		{
 			name:      "BOOLEAN vs INT|BOOLEAN",
-			t1:        &BOOLEAN,
-			t2:        Union(&INT, &BOOLEAN),
+			t1:        BOOLEAN,
+			t2:        Union(INT, BOOLEAN),
 			relations: [3]Relation{RelationSubtype, RelationSubtype, RelationSubtype},
 		},
 	}
@@ -137,58 +137,58 @@ func TestCellSubtyping1(t *testing.T) {
 		// Set 1
 		{
 			name:     "cell(INT,NONE)|cell(BOOLEAN,NONE) vs cell(INT|BOOLEAN,NONE)",
-			t1:       Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_NONE)),
-			t2:       testCell(env, Union(&INT, &BOOLEAN), CellMutability_CELL_MUT_NONE),
+			t1:       Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, BOOLEAN, CellMutability_CELL_MUT_NONE)),
+			t2:       testCell(env, Union(INT, BOOLEAN), CellMutability_CELL_MUT_NONE),
 			relation: RelationEqual,
 		},
 		{
 			name:     "cell(INT,LIMITED)|cell(BOOLEAN,LIMITED) vs cell(INT|BOOLEAN,LIMITED)",
-			t1:       Union(testCell(env, &INT, CellMutability_CELL_MUT_LIMITED), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_LIMITED)),
-			t2:       testCell(env, Union(&INT, &BOOLEAN), CellMutability_CELL_MUT_LIMITED),
+			t1:       Union(testCell(env, INT, CellMutability_CELL_MUT_LIMITED), testCell(env, BOOLEAN, CellMutability_CELL_MUT_LIMITED)),
+			t2:       testCell(env, Union(INT, BOOLEAN), CellMutability_CELL_MUT_LIMITED),
 			relation: RelationSubtype,
 		},
 		{
 			name:     "cell(INT,UNLIMITED)|cell(BOOLEAN,UNLIMITED) vs cell(INT|BOOLEAN,UNLIMITED)",
-			t1:       Union(testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, Union(&INT, &BOOLEAN), CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Union(testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED), testCell(env, BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, Union(INT, BOOLEAN), CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationEqual,
 		},
 		// Set 2
 		{
 			name:     "cell(INT,NONE)|cell(BOOLEAN,NONE)|cell(STRING,NONE) vs cell(INT|BOOLEAN|STRING,NONE)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_NONE)), testCell(env, &STRING, CellMutability_CELL_MUT_NONE)),
-			t2:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_NONE),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, BOOLEAN, CellMutability_CELL_MUT_NONE)), testCell(env, STRING, CellMutability_CELL_MUT_NONE)),
+			t2:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_NONE),
 			relation: RelationEqual,
 		},
 		{
 			name:     "cell(INT,LIMITED)|cell(BOOLEAN,LIMITED)|cell(STRING,LIMITED) vs cell(INT|BOOLEAN|STRING,LIMITED)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_LIMITED), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_LIMITED)), testCell(env, &STRING, CellMutability_CELL_MUT_LIMITED)),
-			t2:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_LIMITED),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_LIMITED), testCell(env, BOOLEAN, CellMutability_CELL_MUT_LIMITED)), testCell(env, STRING, CellMutability_CELL_MUT_LIMITED)),
+			t2:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_LIMITED),
 			relation: RelationSubtype,
 		},
 		{
 			name:     "cell(INT,UNLIMITED)|cell(BOOLEAN,UNLIMITED)|cell(STRING,UNLIMITED) vs cell(INT|BOOLEAN|STRING,UNLIMITED)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, &STRING, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED), testCell(env, BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, STRING, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationEqual,
 		},
 		// Set 3
 		{
 			name:     "cell(roTuple(INT),NONE)|cell(roTuple(BOOLEAN),NONE) vs cell(roTuple(INT|BOOLEAN),NONE)",
-			t1:       Union(testCell(env, testRoTuple(env, &INT), CellMutability_CELL_MUT_NONE), testCell(env, testRoTuple(env, &BOOLEAN), CellMutability_CELL_MUT_NONE)),
-			t2:       testCell(env, testRoTuple(env, Union(&INT, &BOOLEAN)), CellMutability_CELL_MUT_NONE),
+			t1:       Union(testCell(env, testRoTuple(env, INT), CellMutability_CELL_MUT_NONE), testCell(env, testRoTuple(env, BOOLEAN), CellMutability_CELL_MUT_NONE)),
+			t2:       testCell(env, testRoTuple(env, Union(INT, BOOLEAN)), CellMutability_CELL_MUT_NONE),
 			relation: RelationEqual,
 		},
 		{
 			name:     "cell(tuple(INT),LIMITED)|cell(tuple(BOOLEAN),LIMITED) vs cell(tuple(INT|BOOLEAN),LIMITED)",
-			t1:       Union(testCell(env, testTuple(env, &INT), CellMutability_CELL_MUT_LIMITED), testCell(env, testTuple(env, &BOOLEAN), CellMutability_CELL_MUT_LIMITED)),
-			t2:       testCell(env, testTuple(env, Union(&INT, &BOOLEAN)), CellMutability_CELL_MUT_LIMITED),
+			t1:       Union(testCell(env, testTuple(env, INT), CellMutability_CELL_MUT_LIMITED), testCell(env, testTuple(env, BOOLEAN), CellMutability_CELL_MUT_LIMITED)),
+			t2:       testCell(env, testTuple(env, Union(INT, BOOLEAN)), CellMutability_CELL_MUT_LIMITED),
 			relation: RelationSubtype,
 		},
 		{
 			name:     "cell(tuple(INT),UNLIMITED)|cell(tuple(BOOLEAN),UNLIMITED) vs cell(tuple(INT|BOOLEAN),UNLIMITED)",
-			t1:       Union(testCell(env, testTuple(env, &INT), CellMutability_CELL_MUT_UNLIMITED), testCell(env, testTuple(env, &BOOLEAN), CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, testTuple(env, Union(&INT, &BOOLEAN)), CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Union(testCell(env, testTuple(env, INT), CellMutability_CELL_MUT_UNLIMITED), testCell(env, testTuple(env, BOOLEAN), CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, testTuple(env, Union(INT, BOOLEAN)), CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationSubtype,
 		},
 	}
@@ -215,63 +215,63 @@ func TestCellSubtyping2(t *testing.T) {
 		// test 1
 		{
 			name:     "cell(INT,NONE)|cell(BOOLEAN,UNLIMITED)|cell(STRING,LIMITED) vs cell(INT|BOOLEAN|STRING,UNLIMITED)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, &STRING, CellMutability_CELL_MUT_LIMITED)),
-			t2:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, STRING, CellMutability_CELL_MUT_LIMITED)),
+			t2:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationSubtype,
 		},
 		// test 2
 		{
 			name:     "cell(INT|BOOLEAN|STRING,NONE) vs cell(INT,NONE)|cell(BOOLEAN,UNLIMITED)|cell(STRING,LIMITED)",
-			t1:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_NONE),
-			t2:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, &STRING, CellMutability_CELL_MUT_LIMITED)),
+			t1:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_NONE),
+			t2:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, STRING, CellMutability_CELL_MUT_LIMITED)),
 			relation: RelationSubtype,
 		},
 		// test 3
 		{
 			name:     "cell(INT,NONE)|cell(BOOLEAN,UNLIMITED)|cell(STRING,LIMITED) vs cell(INT|BOOLEAN|STRING,LIMITED)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, &STRING, CellMutability_CELL_MUT_LIMITED)),
-			t2:       testCell(env, Union(Union(&INT, &BOOLEAN), &STRING), CellMutability_CELL_MUT_LIMITED),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, BOOLEAN, CellMutability_CELL_MUT_UNLIMITED)), testCell(env, STRING, CellMutability_CELL_MUT_LIMITED)),
+			t2:       testCell(env, Union(Union(INT, BOOLEAN), STRING), CellMutability_CELL_MUT_LIMITED),
 			relation: RelationNoRelation,
 		},
 		// test 4
 		{
 			name:     "cell(INT,NONE)|cell(INT,LIMITED)|cell(INT,UNLIMITED) vs cell(INT,UNLIMITED)",
-			t1:       Union(Union(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Union(Union(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationEqual,
 		},
 		// test 5
 		{
 			name:     "cell(INT,NONE)∩cell(INT,LIMITED)∩cell(INT,UNLIMITED) vs cell(INT,UNLIMITED)",
-			t1:       Intersect(Intersect(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED),
+			t1:       Intersect(Intersect(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED),
 			relation: RelationSubtype,
 		},
 		// test 6
 		{
 			name:     "cell(INT,NONE)∩cell(INT,LIMITED)∩cell(INT,UNLIMITED) vs cell(INT,LIMITED)",
-			t1:       Intersect(Intersect(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_LIMITED),
+			t1:       Intersect(Intersect(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_LIMITED),
 			relation: RelationSubtype,
 		},
 		// test 7
 		{
 			name:     "cell(INT,NONE)∩cell(INT,LIMITED)∩cell(INT,UNLIMITED) vs cell(INT,NONE)",
-			t1:       Intersect(Intersect(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, &INT, CellMutability_CELL_MUT_UNLIMITED)),
-			t2:       testCell(env, &INT, CellMutability_CELL_MUT_NONE),
+			t1:       Intersect(Intersect(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, INT, CellMutability_CELL_MUT_UNLIMITED)),
+			t2:       testCell(env, INT, CellMutability_CELL_MUT_NONE),
 			relation: RelationEqual,
 		},
 		// test 8
 		{
 			name:     "cell(INT,NONE)∩cell(INT,LIMITED)∩cell(BYTE,LIMITED) vs cell(BYTE,LIMITED)",
-			t1:       Intersect(Intersect(testCell(env, &INT, CellMutability_CELL_MUT_NONE), testCell(env, &INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, BYTE, CellMutability_CELL_MUT_LIMITED)),
+			t1:       Intersect(Intersect(testCell(env, INT, CellMutability_CELL_MUT_NONE), testCell(env, INT, CellMutability_CELL_MUT_LIMITED)), testCell(env, BYTE, CellMutability_CELL_MUT_LIMITED)),
 			t2:       testCell(env, BYTE, CellMutability_CELL_MUT_LIMITED),
 			relation: RelationSubtype,
 		},
 		// test 9
 		{
 			name:     "cell(INT,NONE)∩(cell(BYTE,LIMITED)|cell(BOOLEAN,LIMITED)) vs cell(BYTE,NONE)",
-			t1:       Intersect(testCell(env, &INT, CellMutability_CELL_MUT_NONE), Union(testCell(env, BYTE, CellMutability_CELL_MUT_LIMITED), testCell(env, &BOOLEAN, CellMutability_CELL_MUT_LIMITED))),
+			t1:       Intersect(testCell(env, INT, CellMutability_CELL_MUT_NONE), Union(testCell(env, BYTE, CellMutability_CELL_MUT_LIMITED), testCell(env, BOOLEAN, CellMutability_CELL_MUT_LIMITED))),
 			t2:       testCell(env, BYTE, CellMutability_CELL_MUT_NONE),
 			relation: RelationEqual,
 		},

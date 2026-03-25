@@ -16,24 +16,52 @@
 
 package exec
 
-import "ballerina-lang-go/values"
+import (
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/values"
+)
 
 type Frame struct {
-	locals      []values.BalValue // variable index → value (indexed by BIROperand.Index)
+	locals      []values.BalValue // variable index → value (indexed by BIROperand.Address.FrameIndex)
 	functionKey string            // function key (package name + function name)
-	// TODO: When globals are implemented, negative indices will refer to globals
-	// and positive indices will refer to locals. The package will have its own
-	// array for globals, initialized with the init function.
+	parent      *Frame
 }
 
-// GetOperand retrieves the value of an operand by its index.
-// TODO: When globals are implemented, check if index < 0 and access globals array.
-func (f *Frame) GetOperand(index int) values.BalValue {
-	return f.locals[index]
+func resolveFrame(frame *Frame, address bir.Address) *Frame {
+	if address.Mode == bir.AddressingModeAbsolute {
+		f := frame
+		for i := 0; i < address.BaseIndex; i++ {
+			f = f.parent
+		}
+		return f
+	}
+	return frame
 }
 
-// SetOperand sets the value of an operand by its index.
-// TODO: When globals are implemented, check if index < 0 and set in globals array.
-func (f *Frame) SetOperand(index int, value values.BalValue) {
-	f.locals[index] = value
+// Load retrieves the value at the given address in the frame.
+func Load(frame *Frame, address bir.Address) values.BalValue {
+	return resolveFrame(frame, address).locals[address.FrameIndex]
+}
+
+// Store sets the value at the given address in the frame.
+func Store(frame *Frame, address bir.Address, value values.BalValue) {
+	resolveFrame(frame, address).locals[address.FrameIndex] = value
+}
+
+func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		module := reg.GetModule(gv.PkgId)
+		return module.Globals[*op.SymRef]
+	}
+	return Load(currentFrame, op.Address)
+}
+
+func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry, value values.BalValue) {
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		module := reg.GetModule(gv.PkgId)
+		module.Globals[*op.SymRef] = value
+	} else {
+		Store(currentFrame, op.Address, value)
+	}
 }

@@ -27,6 +27,11 @@ import (
 // Currently this is just an alias on any but I think we will need to add methods to this like type
 type BalValue any
 
+type Function struct {
+	Type      semtypes.SemType
+	LookupKey string
+}
+
 func DefaultValueForType(t semtypes.SemType) BalValue {
 	if t == nil {
 		// TODO: this should panic when our operands properly have types
@@ -48,7 +53,7 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 		return NewMap(t)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.LIST) {
 		// TODO: this needs to be properly implemeneted for lists
-		return NewList(0, &semtypes.NEVER, NeverValue)
+		return NewList(0, semtypes.NEVER, NeverValue)
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
@@ -59,7 +64,7 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 func SemTypeForValue(v BalValue) semtypes.SemType {
 	switch v := v.(type) {
 	case nil:
-		return &semtypes.NIL
+		return semtypes.NIL
 	case bool:
 		return semtypes.BooleanConst(v)
 	case int64:
@@ -76,8 +81,10 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Error:
 		return v.Type
+	case *Function:
+		return v.Type
 	default:
-		return &semtypes.ANY
+		return semtypes.ANY
 	}
 }
 
@@ -117,6 +124,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return t.String(visited)
 	case *Error:
 		return t.String(visited)
+	case *Function:
+		return "function " + t.LookupKey
 	default:
 		return "<unsupported>"
 	}

@@ -21,11 +21,11 @@ import "ballerina-lang-go/common"
 func FutureContaining(env Env, constraint SemType) SemType {
 	// migrated from FutureSubtype.java:43:5
 	if common.PointerEqualToValue(VAL, constraint) {
-		return &FUTURE
+		return FUTURE
 	}
 
 	mappingDef := NewMappingDefinition()
 	mappingType := mappingDef.DefineMappingTypeWrapped(env, nil, constraint)
-	bdd := subtypeData(mappingType, BT_MAPPING).(Bdd)
-	return CreateBasicSemType(BT_FUTURE, bdd)
+	bdd := subtypeData(mappingType, BTMapping).(Bdd)
+	return CreateBasicSemType(BTFuture, bdd)
 }

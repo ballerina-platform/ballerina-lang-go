@@ -42,54 +42,106 @@ func NewCFGPrettyPrinter(ctx *context.CompilerContext) *CFGPrettyPrinter {
 func (p *CFGPrettyPrinter) Print(cfg *PackageCFG) string {
 	p.buffer.Reset()
 
-	// Sort functions by name for deterministic output
 	type fnEntry struct {
-		ref  model.SymbolRef
 		name string
 		cfg  functionCFG
 	}
 
-	entries := make([]fnEntry, 0, len(cfg.funcCfgs))
-	for ref, fnCfg := range cfg.funcCfgs {
-		name := p.ctx.SymbolName(ref)
-		entries = append(entries, fnEntry{ref: ref, name: name, cfg: fnCfg})
+	type classEntry struct {
+		name    string
+		initCfg *functionCFG
+		methods []fnEntry
 	}
 
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].name < entries[j].name
+	var classes []classEntry
+	for classRef, classMethods := range cfg.methodCfgs {
+		cs := p.ctx.GetSymbol(classRef).(*model.ClassSymbol)
+		ce := classEntry{name: cs.Name()}
+		if cs.HasInit {
+			if fcfg, ok := classMethods[cs.InitFunction]; ok {
+				ce.initCfg = &fcfg
+			}
+		}
+		for methodRef, fcfg := range classMethods {
+			if cs.HasInit && methodRef == cs.InitFunction {
+				continue
+			}
+			ce.methods = append(ce.methods, fnEntry{name: p.ctx.SymbolName(methodRef), cfg: fcfg})
+		}
+		sort.Slice(ce.methods, func(i, j int) bool {
+			return ce.methods[i].name < ce.methods[j].name
+		})
+		classes = append(classes, ce)
+	}
+	sort.Slice(classes, func(i, j int) bool {
+		return classes[i].name < classes[j].name
 	})
 
-	// Print each function's CFG
-	for i, entry := range entries {
-		if i > 0 {
+	// Collect top-level functions
+	var topLevel []fnEntry
+	for ref, fnCfg := range cfg.funcCfgs {
+		topLevel = append(topLevel, fnEntry{name: p.ctx.SymbolName(ref), cfg: fnCfg})
+	}
+	sort.Slice(topLevel, func(i, j int) bool {
+		return topLevel[i].name < topLevel[j].name
+	})
+
+	printed := 0
+	for _, ce := range classes {
+		if ce.initCfg == nil && len(ce.methods) == 0 {
+			continue
+		}
+		if printed > 0 {
 			p.buffer.WriteString("\n")
 		}
-		p.printFunctionCFG(entry.name, entry.cfg)
+		p.buffer.WriteString("(")
+		p.buffer.WriteString(ce.name)
+		p.buffer.WriteString("\n")
+		if ce.initCfg != nil {
+			p.printFunctionCFG("init", *ce.initCfg, 2)
+			p.buffer.WriteString("\n")
+		}
+		for _, me := range ce.methods {
+			p.printFunctionCFG(me.name, me.cfg, 2)
+			p.buffer.WriteString("\n")
+		}
+		p.buffer.WriteString(")")
+		printed++
+	}
+
+	for _, entry := range topLevel {
+		if printed > 0 {
+			p.buffer.WriteString("\n")
+		}
+		p.printFunctionCFG(entry.name, entry.cfg, 0)
+		printed++
 	}
 
 	return p.buffer.String()
 }
 
-// printFunctionCFG prints the CFG for a single function
-func (p *CFGPrettyPrinter) printFunctionCFG(funcName string, cfg functionCFG) {
-	// Print function name
+func (p *CFGPrettyPrinter) printFunctionCFG(funcName string, cfg functionCFG, indent int) {
+	prefix := strings.Repeat(" ", indent)
+	p.buffer.WriteString(prefix)
 	p.buffer.WriteString("(")
 	p.buffer.WriteString(funcName)
 	p.buffer.WriteString("\n")
 
-	// Print each basic block
 	for _, bb := range cfg.bbs {
-		p.printBasicBlock(&bb)
+		p.printBasicBlock(&bb, indent)
 	}
 
+	p.buffer.WriteString(prefix)
 	p.buffer.WriteString(")")
 }
 
-// printBasicBlock prints a single basic block
-func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
-	// Print basic block header: (bb<id> (<parents>) (<children>)
-	p.buffer.WriteString("  (bb")
-	p.buffer.WriteString(fmt.Sprintf("%d", bb.id))
+func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock, indent int) {
+	prefix := strings.Repeat(" ", indent+2)
+	nodePrefix := strings.Repeat(" ", indent+4)
+
+	p.buffer.WriteString(prefix)
+	p.buffer.WriteString("(bb")
+	fmt.Fprintf(&p.buffer, "%d", bb.id)
 	p.buffer.WriteString(" ")
 
 	// Print parents
@@ -98,7 +150,7 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 		if i > 0 {
 			p.buffer.WriteString(" ")
 		}
-		p.buffer.WriteString(fmt.Sprintf("bb%d", parent))
+		fmt.Fprintf(&p.buffer, "bb%d", parent)
 	}
 	p.buffer.WriteString(")")
 	p.buffer.WriteString(" ")
@@ -109,35 +161,30 @@ func (p *CFGPrettyPrinter) printBasicBlock(bb *basicBlock) {
 		if i > 0 {
 			p.buffer.WriteString(" ")
 		}
-		p.buffer.WriteString(fmt.Sprintf("bb%d", child))
+		fmt.Fprintf(&p.buffer, "bb%d", child)
 	}
 	p.buffer.WriteString(")")
 
 	// Print nodes if any
 	if len(bb.nodes) > 0 {
 		p.buffer.WriteString("\n")
-		p.printNodes(bb.nodes)
-		p.buffer.WriteString("  ")
+		p.printNodes(bb.nodes, nodePrefix)
+		p.buffer.WriteString(prefix)
 	}
 
 	p.buffer.WriteString(")\n")
 }
 
-// printNodes prints the AST nodes within a basic block
-func (p *CFGPrettyPrinter) printNodes(nodes []model.Node) {
-	// Create a new PrettyPrinter for each basic block
-
+func (p *CFGPrettyPrinter) printNodes(nodes []model.Node, prefix string) {
 	for _, node := range nodes {
-		// Cast model.Node to ast.BLangNode
 		if blangNode, ok := node.(ast.BLangNode); ok {
 			printer := &ast.PrettyPrinter{}
 			nodeStr := printer.Print(blangNode)
 
-			// Indent each line of the output
 			lines := strings.SplitSeq(nodeStr, "\n")
 			for line := range lines {
 				if line != "" {
-					p.buffer.WriteString("    ")
+					p.buffer.WriteString(prefix)
 					p.buffer.WriteString(line)
 					p.buffer.WriteString("\n")
 				}

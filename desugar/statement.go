@@ -20,6 +20,7 @@ package desugar
 import (
 	"ballerina-lang-go/ast"
 	array "ballerina-lang-go/lib/array/compile"
+	maplib "ballerina-lang-go/lib/map/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -76,11 +77,9 @@ func walkBlockFunctionBody(cx *FunctionContext, body *ast.BLangBlockFunctionBody
 	var allStmts []ast.BLangStatement
 
 	for _, stmt := range body.Stmts {
-		result := walkStatement(cx, stmt.(model.StatementNode))
-		for _, initStmt := range result.initStmts {
-			allStmts = append(allStmts, initStmt.(ast.BLangStatement))
-		}
-		allStmts = append(allStmts, result.replacementNode.(ast.BLangStatement))
+		result := walkStatement(cx, stmt)
+		allStmts = append(allStmts, result.initStmts...)
+		allStmts = append(allStmts, result.replacementNode)
 	}
 
 	body.Stmts = allStmts
@@ -162,11 +161,13 @@ func walkIf(cx *FunctionContext, stmt *ast.BLangIf) desugaredNode[model.Statemen
 	if stmt.ElseStmt != nil {
 		elseResult := walkStatement(cx, stmt.ElseStmt)
 		if len(elseResult.initStmts) > 0 {
-			stmt.ElseStmt = &ast.BLangBlockStmt{
+			elseBlock := &ast.BLangBlockStmt{
 				Stmts: append(elseResult.initStmts, elseResult.replacementNode),
 			}
+			elseBlock.SetPosition(stmt.GetPosition())
+			stmt.ElseStmt = elseBlock
 		} else {
-			stmt.ElseStmt = elseResult.replacementNode.(ast.BLangStatement)
+			stmt.ElseStmt = elseResult.replacementNode
 		}
 	}
 
@@ -276,6 +277,8 @@ func walkReturn(cx *FunctionContext, stmt *ast.BLangReturn) desugaredNode[model.
 }
 
 func createIncrementStmt(loopVar ast.BLangExpression) *ast.BLangAssignment {
+	basePos := loopVar.GetPosition()
+
 	oneLiteral := &ast.BLangNumericLiteral{
 		BLangLiteral: ast.BLangLiteral{
 			Value:         int64(1),
@@ -283,18 +286,19 @@ func createIncrementStmt(loopVar ast.BLangExpression) *ast.BLangAssignment {
 		},
 		Kind: model.NodeKind_NUMERIC_LITERAL,
 	}
-	oneLiteral.SetDeterminedType(&semtypes.INT)
+	oneLiteral.SetDeterminedType(semtypes.INT)
 	addExpr := &ast.BLangBinaryExpr{
 		LhsExpr: loopVar,
 		RhsExpr: oneLiteral,
 		OpKind:  model.OperatorKind_ADD,
 	}
-	addExpr.SetDeterminedType(&semtypes.INT)
+	addExpr.SetDeterminedType(semtypes.INT)
 	incrementStmt := &ast.BLangAssignment{
 		VarRef: loopVar,
 		Expr:   addExpr,
 	}
-	incrementStmt.SetDeterminedType(&semtypes.NEVER)
+	incrementStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(incrementStmt, basePos)
 	return incrementStmt
 }
 
@@ -329,12 +333,17 @@ func visitForEach(cx *FunctionContext, stmt *ast.BLangForeach) desugaredNode[mod
 	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.LIST) {
 		return desugarForEachOnList(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
+	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.MAPPING) {
+		return desugarForEachOnMap(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
+	}
 	cx.unimplemented("unsupported collection type in foreach")
 	return desugaredNode[model.StatementNode]{}
 }
 
 func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
+
+	basePos := collection.GetPosition()
 
 	// Step 1: evaluate collection once into a temp variable
 	collResult := walkExpression(cx, collection)
@@ -349,6 +358,7 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 	collVar.SetInitialExpression(collExpr)
 	collVar.SetSymbol(collVarSymbol)
 	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	setPositionIfMissing(collVarDef, basePos)
 	initStmts = append(initStmts, collVarDef)
 
 	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
@@ -363,36 +373,38 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		},
 		Kind: model.NodeKind_NUMERIC_LITERAL,
 	}
-	zeroLiteral.SetDeterminedType(&semtypes.INT)
+	zeroLiteral.SetDeterminedType(semtypes.INT)
 
-	idxName, idxVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	idxName, idxVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	idxVarName := &ast.BLangIdentifier{Value: idxName}
 	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
-	idxVar.SetDeterminedType(&semtypes.INT)
+	idxVar.SetDeterminedType(semtypes.INT)
 	idxVar.SetInitialExpression(zeroLiteral)
 	idxVar.SetSymbol(idxVarSymbol)
 	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	setPositionIfMissing(idxVarDef, basePos)
 	initStmts = append(initStmts, idxVarDef)
 
 	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
 	idxVarRef.SetSymbol(idxVarSymbol)
-	idxVarRef.SetDeterminedType(&semtypes.INT)
+	idxVarRef.SetDeterminedType(semtypes.INT)
 
 	// Step 3: length variable ($desugar$M = length(collVar))
 	lengthInvocation := createLengthInvocation(cx, collVarRef)
 
-	lenName, lenVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	lenVarName := &ast.BLangIdentifier{Value: lenName}
 	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
-	lenVar.SetDeterminedType(&semtypes.INT)
+	lenVar.SetDeterminedType(semtypes.INT)
 	lenVar.SetInitialExpression(lengthInvocation)
 	lenVar.SetSymbol(lenVarSymbol)
 	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	setPositionIfMissing(lenVarDef, basePos)
 	initStmts = append(initStmts, lenVarDef)
 
 	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
 	lenVarRef.SetSymbol(lenVarSymbol)
-	lenVarRef.SetDeterminedType(&semtypes.INT)
+	lenVarRef.SetDeterminedType(semtypes.INT)
 
 	// Step 4: while condition ($idx < $len)
 	whileCondition := &ast.BLangBinaryExpr{
@@ -400,7 +412,7 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		RhsExpr: lenVarRef,
 		OpKind:  model.OperatorKind_LESS_THAN,
 	}
-	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
 
 	// Step 5: element access (collVar[$idx])
 	elementAccess := &ast.BLangIndexBasedAccess{
@@ -437,7 +449,8 @@ func desugarForEachOnList(cx *FunctionContext, collection ast.BLangExpression, l
 		Body: *newBody,
 	}
 	whileStmt.SetScope(foreachScope)
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
 
 	return desugaredNode[model.StatementNode]{
 		initStmts:       initStmts,
@@ -457,23 +470,210 @@ func createLengthInvocation(cx *FunctionContext, collection ast.BLangExpression)
 		cx.internalError(pkgName + ":length symbol not found")
 		return nil
 	}
+	basePos := collection.GetPosition()
+
+	orgIdent := &ast.BLangIdentifier{Value: "ballerina"}
+	pkgLangIdent := ast.BLangIdentifier{Value: "lang"}
+	pkgArrayIdent := ast.BLangIdentifier{Value: "array"}
+	aliasIdent := &ast.BLangIdentifier{Value: pkgName}
+
+	imp := ast.BLangImportPackage{
+		OrgName:      orgIdent,
+		PkgNameComps: []ast.BLangIdentifier{pkgLangIdent, pkgArrayIdent},
+		Alias:        aliasIdent,
+	}
+	setPositionIfMissing(&imp, basePos)
+
+	cx.addImplicitImport(pkgName, imp)
+
+	nameIdent := &ast.BLangIdentifier{Value: "length"}
+	pkgAliasIdent := &ast.BLangIdentifier{Value: pkgName}
+
+	inv := &ast.BLangInvocation{
+		Name:     nameIdent,
+		PkgAlias: pkgAliasIdent,
+		ArgExprs: []ast.BLangExpression{collection},
+	}
+	inv.SetSymbol(symbolRef)
+	inv.SetDeterminedType(semtypes.INT)
+	return inv
+}
+
+func desugarForEachOnMap(cx *FunctionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+
+	basePos := collection.GetPosition()
+
+	// Step 1: evaluate collection once into a temp variable
+	collResult := walkExpression(cx, collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode
+
+	collType := collExpr.GetDeterminedType()
+	collName, collVarSymbol := cx.addDesugardSymbol(collType, model.SymbolKindVariable, false)
+	collVarName := &ast.BLangIdentifier{Value: collName}
+	collVar := &ast.BLangSimpleVariable{Name: collVarName}
+	collVar.SetDeterminedType(collType)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collVarSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	setPositionIfMissing(collVarDef, basePos)
+	initStmts = append(initStmts, collVarDef)
+
+	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
+	collVarRef.SetSymbol(collVarSymbol)
+	collVarRef.SetDeterminedType(collType)
+
+	// Step 2: keys variable ($desugar$N = lang.map:keys(collVar))
+	keysInvocation := createKeysInvocation(cx, collVarRef)
+	keysType := keysInvocation.GetDeterminedType()
+
+	keysName, keysVarSymbol := cx.addDesugardSymbol(keysType, model.SymbolKindVariable, false)
+	keysVarName := &ast.BLangIdentifier{Value: keysName}
+	keysVar := &ast.BLangSimpleVariable{Name: keysVarName}
+	keysVar.SetDeterminedType(keysType)
+	keysVar.SetInitialExpression(keysInvocation)
+	keysVar.SetSymbol(keysVarSymbol)
+	keysVarDef := &ast.BLangSimpleVariableDef{Var: keysVar}
+	setPositionIfMissing(keysVarDef, basePos)
+	initStmts = append(initStmts, keysVarDef)
+
+	keysVarRef := &ast.BLangSimpleVarRef{VariableName: keysVarName}
+	keysVarRef.SetSymbol(keysVarSymbol)
+	keysVarRef.SetDeterminedType(keysType)
+
+	// Step 3: index variable ($desugar$N = 0)
+	zeroLiteral := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         int64(0),
+			OriginalValue: "0",
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	zeroLiteral.SetDeterminedType(semtypes.INT)
+
+	idxName, idxVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	idxVarName := &ast.BLangIdentifier{Value: idxName}
+	idxVar := &ast.BLangSimpleVariable{Name: idxVarName}
+	idxVar.SetDeterminedType(semtypes.INT)
+	idxVar.SetInitialExpression(zeroLiteral)
+	idxVar.SetSymbol(idxVarSymbol)
+	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
+	setPositionIfMissing(idxVarDef, basePos)
+	initStmts = append(initStmts, idxVarDef)
+
+	idxVarRef := &ast.BLangSimpleVarRef{VariableName: idxVarName}
+	idxVarRef.SetSymbol(idxVarSymbol)
+	idxVarRef.SetDeterminedType(semtypes.INT)
+
+	// Step 4: length variable ($desugar$N = lang.array:length(keysVar))
+	lengthInvocation := createLengthInvocation(cx, keysVarRef)
+
+	lenName, lenVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	lenVarName := &ast.BLangIdentifier{Value: lenName}
+	lenVar := &ast.BLangSimpleVariable{Name: lenVarName}
+	lenVar.SetDeterminedType(semtypes.INT)
+	lenVar.SetInitialExpression(lengthInvocation)
+	lenVar.SetSymbol(lenVarSymbol)
+	lenVarDef := &ast.BLangSimpleVariableDef{Var: lenVar}
+	setPositionIfMissing(lenVarDef, basePos)
+	initStmts = append(initStmts, lenVarDef)
+
+	lenVarRef := &ast.BLangSimpleVarRef{VariableName: lenVarName}
+	lenVarRef.SetSymbol(lenVarSymbol)
+	lenVarRef.SetDeterminedType(semtypes.INT)
+
+	// Step 5: while condition ($idx < $len)
+	whileCondition := &ast.BLangBinaryExpr{
+		LhsExpr: idxVarRef,
+		RhsExpr: lenVarRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
+
+	// Step 6: key access (keysVar[$idx]) then map access (collVar[key])
+	keyAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: idxVarRef,
+	}
+	keyAccess.Expr = keysVarRef
+	keyAccess.SetDeterminedType(semtypes.STRING)
+
+	mapAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: keyAccess,
+	}
+	mapAccess.Expr = collVarRef
+	mapAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
+
+	// Step 7: patch loop var def initial expression
+	loopVarDef.Var.SetInitialExpression(mapAccess)
+
+	// Step 8: build body
+	incrementStmt := createIncrementStmt(idxVarRef)
+	cx.pushLoopVar(idxVarRef)
+
+	newBodyStmts := make([]model.StatementNode, 0, len(body.Stmts)+2)
+	newBodyStmts = append(newBodyStmts, loopVarDef)
+	newBodyStmts = append(newBodyStmts, body.Stmts...)
+	if len(newBodyStmts) > 0 {
+		if isAppendReachable(newBodyStmts[len(newBodyStmts)-1]) {
+			newBodyStmts = append(newBodyStmts, incrementStmt)
+		}
+	}
+	body.Stmts = newBodyStmts
+
+	bodyResult := walkBlockStmt(cx, body)
+	newBody := bodyResult.replacementNode.(*ast.BLangBlockStmt)
+
+	cx.popLoopVar()
+
+	// Step 9: create while loop
+	whileStmt := &ast.BLangWhile{
+		Expr: whileCondition,
+		Body: *newBody,
+	}
+	whileStmt.SetScope(foreachScope)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: whileStmt,
+	}
+}
+
+func createKeysInvocation(cx *FunctionContext, collection ast.BLangExpression) *ast.BLangInvocation {
+	pkgName := maplib.PackageName
+	space, ok := cx.getImportedSymbolSpace(pkgName)
+	if !ok {
+		cx.internalError(pkgName + " symbol space not found")
+		return nil
+	}
+	symbolRef, ok := space.GetSymbol("keys")
+	if !ok {
+		cx.internalError(pkgName + ":keys symbol not found")
+		return nil
+	}
+	fnSymbol := space.Main.SymbolAt(symbolRef.Index).(model.FunctionSymbol)
+	returnType := fnSymbol.Signature().ReturnType
 	cx.addImplicitImport(pkgName, ast.BLangImportPackage{
 		OrgName:      &ast.BLangIdentifier{Value: "ballerina"},
-		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
+		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
 	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "length"},
+		Name:     &ast.BLangIdentifier{Value: "keys"},
 		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
 		ArgExprs: []ast.BLangExpression{collection},
 	}
 	inv.SetSymbol(symbolRef)
-	inv.SetDeterminedType(&semtypes.INT)
+	inv.SetDeterminedType(returnType)
 	return inv
 }
 
 func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
+
+	basePos := rangeExpr.GetPosition()
 
 	startResult := walkExpression(cx, rangeExpr.LhsExpr)
 	initStmts = append(initStmts, startResult.initStmts...)
@@ -491,16 +691,17 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 	}
 	loopVarRef.SetSymbol(loopVarDef.Var.Symbol())
 
-	endName, endVarSymbol := cx.addDesugardSymbol(&semtypes.INT, model.SymbolKindVariable, false)
+	endName, endVarSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	endVarName := &ast.BLangIdentifier{Value: endName}
 	endVar := &ast.BLangSimpleVariable{Name: endVarName}
-	endVar.SetDeterminedType(&semtypes.INT)
+	endVar.SetDeterminedType(semtypes.INT)
 	endVar.SetInitialExpression(endExpr)
 	endVar.SetSymbol(endVarSymbol)
 
 	endVarDef := &ast.BLangSimpleVariableDef{
 		Var: endVar,
 	}
+	setPositionIfMissing(endVarDef, basePos)
 	initStmts = append(initStmts, endVarDef)
 
 	endVarRef := &ast.BLangSimpleVarRef{
@@ -520,7 +721,7 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 		RhsExpr: endVarRef,
 		OpKind:  compOp,
 	}
-	whileCondition.SetDeterminedType(&semtypes.BOOLEAN)
+	whileCondition.SetDeterminedType(semtypes.BOOLEAN)
 
 	incrementStmt := createIncrementStmt(loopVarRef)
 
@@ -535,8 +736,10 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 		}
 	} else {
 		// just replace it with a no-op
+		emptyBlock := &ast.BLangBlockStmt{}
+		setPositionIfMissing(emptyBlock, basePos)
 		return desugaredNode[model.StatementNode]{
-			replacementNode: &ast.BLangBlockStmt{},
+			replacementNode: emptyBlock,
 		}
 	}
 	body.Stmts = newBodyStmts
@@ -552,7 +755,8 @@ func desugarForEachOnRange(cx *FunctionContext, rangeExpr *ast.BLangBinaryExpr, 
 		Body: *newBody,
 	}
 	whileStmt.SetScope(foreachScope)
-	whileStmt.SetDeterminedType(&semtypes.NEVER)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
 
 	return desugaredNode[model.StatementNode]{
 		initStmts:       initStmts,

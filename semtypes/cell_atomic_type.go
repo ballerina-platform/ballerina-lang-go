@@ -16,7 +16,9 @@
 
 package semtypes
 
-import "ballerina-lang-go/common"
+import (
+	"ballerina-lang-go/common"
+)
 
 type CellMutability uint
 

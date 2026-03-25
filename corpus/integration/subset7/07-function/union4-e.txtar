@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got int|string
+  --> union4-e.bal:25:15
+   |
+25 |     int ret = f(1, 2); // @error
+   |               ^^^^^^^
+

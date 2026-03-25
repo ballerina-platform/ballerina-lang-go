@@ -55,10 +55,10 @@ func (e *CFGDotExporter) Export(cfg *PackageCFG) string {
 		cfg  functionCFG
 	}
 
-	entries := make([]fnEntry, 0, len(cfg.funcCfgs))
-	for ref, fnCfg := range cfg.funcCfgs {
+	var entries []fnEntry
+	for ref, fcfg := range cfg.allFunctionCfgs {
 		name := e.ctx.SymbolName(ref)
-		entries = append(entries, fnEntry{ref: ref, name: name, cfg: fnCfg})
+		entries = append(entries, fnEntry{ref: ref, name: name, cfg: *fcfg})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -78,8 +78,8 @@ func (e *CFGDotExporter) Export(cfg *PackageCFG) string {
 func (e *CFGDotExporter) exportFunctionCFG(funcName string, cfg functionCFG) {
 	// Create subgraph for this function
 	clusterName := fmt.Sprintf("cluster_%s", funcName)
-	e.buffer.WriteString(fmt.Sprintf("    subgraph %s {\n", clusterName))
-	e.buffer.WriteString(fmt.Sprintf("        label=\"function: %s\";\n", html.EscapeString(funcName)))
+	fmt.Fprintf(&e.buffer, "    subgraph %s {\n", clusterName)
+	fmt.Fprintf(&e.buffer, "        label=\"function: %s\";\n", html.EscapeString(funcName))
 	e.buffer.WriteString("        style=rounded;\n")
 	e.buffer.WriteString("        bgcolor=white;\n\n")
 
@@ -113,18 +113,18 @@ func (e *CFGDotExporter) exportBasicBlock(funcName string, bb *basicBlock) {
 	}
 
 	// Create HTML-like label with table
-	e.buffer.WriteString(fmt.Sprintf("        %s [label=<\n", nodeID))
+	fmt.Fprintf(&e.buffer, "        %s [label=<\n", nodeID)
 	e.buffer.WriteString("            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n")
 
 	// Header row with block ID
-	e.buffer.WriteString(fmt.Sprintf("                <TR><TD BGCOLOR=\"%s\" COLSPAN=\"1\"><B>bb%d</B></TD></TR>\n", fillColor, bb.id))
+	fmt.Fprintf(&e.buffer, "                <TR><TD BGCOLOR=\"%s\" COLSPAN=\"1\"><B>bb%d</B></TD></TR>\n", fillColor, bb.id)
 
 	// AST nodes in the block
 	if len(bb.nodes) > 0 {
 		for _, node := range bb.nodes {
 			if blangNode, ok := node.(ast.BLangNode); ok {
 				nodeStr := e.formatNode(blangNode)
-				e.buffer.WriteString(fmt.Sprintf("                <TR><TD ALIGN=\"LEFT\">%s</TD></TR>\n", nodeStr))
+				fmt.Fprintf(&e.buffer, "                <TR><TD ALIGN=\"LEFT\">%s</TD></TR>\n", nodeStr)
 			}
 		}
 	} else {
@@ -133,7 +133,7 @@ func (e *CFGDotExporter) exportBasicBlock(funcName string, bb *basicBlock) {
 	}
 
 	e.buffer.WriteString("            </TABLE>\n")
-	e.buffer.WriteString(fmt.Sprintf("        >, fillcolor=%s];\n", fillColor))
+	fmt.Fprintf(&e.buffer, "        >, fillcolor=%s];\n", fillColor)
 }
 
 // formatNode formats an AST node for display in the DOT label
@@ -183,6 +183,6 @@ func (e *CFGDotExporter) exportEdges(funcName string, bb *basicBlock) {
 			label = fmt.Sprintf(" [label=\"case %d\"]", i)
 		}
 
-		e.buffer.WriteString(fmt.Sprintf("        %s -> %s%s;\n", sourceID, targetID, label))
+		fmt.Fprintf(&e.buffer, "        %s -> %s%s;\n", sourceID, targetID, label)
 	}
 }

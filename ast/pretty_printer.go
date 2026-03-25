@@ -18,8 +18,10 @@ package ast
 
 import (
 	"ballerina-lang-go/model"
+	"cmp"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -126,6 +128,16 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printTupleTypeNode(t)
 	case *BLangRecordType:
 		p.printRecordType(t)
+	case *BLangObjectType:
+		p.printObjectType(t)
+	case *BObjectField:
+		p.printObjectField(t)
+	case *BMethodDecl:
+		p.printMethodDecl(t)
+	case *BLangClassDefinition:
+		p.printClassDefinition(t)
+	case *BLangNewExpression:
+		p.printNewExpression(t)
 	case *BLangFieldBaseAccess:
 		p.printFieldBaseAccess(t)
 	case *BLangErrorConstructorExpr:
@@ -156,6 +168,12 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printWildCardMatchPattern(t)
 	case *BLangMatchClause:
 		p.printMatchClause(t)
+	case *BLangFunctionType:
+		p.printFunctionType(t)
+	case *BLangFunctionTypeParam:
+		p.printFunctionTypeParam(t)
+	case *BLangLambdaFunction:
+		p.printLambdaFunction(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -220,6 +238,9 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	}
 	for i := range node.TypeDefinitions {
 		p.printTypeDefinition(&node.TypeDefinitions[i])
+	}
+	for i := range node.ClassDefinitions {
+		p.printClassDefinition(&node.ClassDefinitions[i])
 	}
 	for i := range node.Functions {
 		p.printFunction(&node.Functions[i])
@@ -933,6 +954,76 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
+	p.startNode()
+	p.printString("object-type")
+	if node.Isolated {
+		p.printString("isolated")
+	}
+	switch node.NetworkQuals {
+	case model.ObjectNetworkQualsClient:
+		p.printString("client")
+	case model.ObjectNetworkQualsService:
+		p.printString("service")
+	}
+	p.indentLevel++
+	members := slices.SortedFunc(node.Members(), func(a, b model.ObjectMember) int {
+		return cmp.Compare(a.Name(), b.Name())
+	})
+	for _, member := range members {
+		p.PrintInner(member.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printObjectField(node *BObjectField) {
+	p.startNode()
+	p.printString("field")
+	p.printString(node.Name())
+	if node.Visibility() == model.VisibilityPublic {
+		p.printString("public")
+	}
+	p.indentLevel++
+	p.PrintInner(node.Ty.(BLangNode))
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
+	p.startNode()
+	p.printString("method-decl")
+	p.printString(node.Name())
+	if node.Visibility() == model.VisibilityPublic {
+		p.printString("public")
+	}
+	p.printString("(")
+	if len(node.RequiredParams) > 0 {
+		p.indentLevel++
+		for _, param := range node.RequiredParams {
+			p.startNode()
+			p.printString("param")
+			if param.Name != nil {
+				p.printString(param.Name.Value)
+			}
+			p.indentLevel++
+			p.PrintInner(param.TypeDesc.(BLangNode))
+			p.indentLevel--
+			p.endNode()
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
 // Field-based access expression printer
 func (p *PrettyPrinter) printFieldBaseAccess(node *BLangFieldBaseAccess) {
 	p.startNode()
@@ -1006,6 +1097,110 @@ func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
 	p.indentLevel++
 	p.PrintInner(node.Expr.(BLangNode))
 	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
+	p.startNode()
+	p.printString("class-definition")
+	p.printFlags(node.FlagSet)
+	p.printString(node.Name.Value)
+	p.indentLevel++
+	// Print fields
+	for _, field := range node.Fields {
+		p.PrintInner(field.(BLangNode))
+	}
+	// Print init function
+	if node.InitFunction != nil {
+		p.printFunction(node.InitFunction)
+	}
+	// Print methods sorted by name for determinism
+	methodNames := slices.SortedFunc(func(yield func(string) bool) {
+		for name := range node.Methods {
+			if !yield(name) {
+				return
+			}
+		}
+	}, cmp.Compare[string])
+	for _, name := range methodNames {
+		method := node.Methods[name]
+		p.printFunction(method)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNewExpression(node *BLangNewExpression) {
+	p.startNode()
+	p.printString("new")
+	if node.UserDefinedType != nil {
+		p.indentLevel++
+		p.PrintInner(node.UserDefinedType)
+		p.indentLevel--
+	}
+	p.printString("(")
+	if len(node.ArgsExprs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.ArgsExprs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
+// Function type printer
+func (p *PrettyPrinter) printFunctionType(node *BLangFunctionType) {
+	p.startNode()
+	p.printString("function-type")
+	p.printString("(")
+	if len(node.RequiredParams) > 0 {
+		p.indentLevel++
+		for i := range node.RequiredParams {
+			param := &node.RequiredParams[i]
+			if param.TypeDesc != nil {
+				p.PrintInner(param.TypeDesc.(BLangNode))
+			}
+		}
+		p.indentLevel--
+	}
+	if node.RestParam != nil {
+		p.indentLevel++
+		p.PrintInner(node.RestParam)
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.printString("(")
+	if node.ReturnTypeDescriptor != nil {
+		p.indentLevel++
+		p.PrintInner(node.ReturnTypeDescriptor.(BLangNode))
+		p.indentLevel--
+	}
+	p.printSticky(")")
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLambdaFunction(node *BLangLambdaFunction) {
+	p.startNode()
+	p.printString("lambda")
+	if node.Function != nil {
+		p.indentLevel++
+		p.PrintInner(node.Function)
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printFunctionTypeParam(node *BLangFunctionTypeParam) {
+	p.startNode()
+	p.printString("function-type-param")
+	if node.Name != nil {
+		p.PrintInner(node.Name)
+	}
+	if node.TypeDesc != nil {
+		p.PrintInner(node.TypeDesc.(BLangNode))
+	}
 	p.endNode()
 }
 

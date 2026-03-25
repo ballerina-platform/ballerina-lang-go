@@ -105,6 +105,17 @@ type (
 		Type       semtypes.SemType
 		IsNegation bool
 	}
+
+	NewObject struct {
+		BIRInstructionBase
+		ClassDef *BIRClassDef
+	}
+
+	FPLoad struct {
+		BIRInstructionBase
+		FunctionLookupKey string
+		Type              semtypes.SemType
+	}
 )
 
 type (
@@ -125,6 +136,8 @@ var (
 	_ BIRAssignInstruction    = &TypeTest{}
 	_ BIRInstruction          = &NewMap{}
 	_ BIRAssignInstruction    = &NewError{}
+	_ BIRAssignInstruction    = &NewObject{}
+	_ BIRAssignInstruction    = &FPLoad{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -137,7 +150,6 @@ func (m *Move) GetKind() InstructionKind {
 }
 
 func NewMove(fromOperand, toOperand *BIROperand, pos diagnostics.Location) *Move {
-	toOperand.VariableDcl.Initialized = true
 	return &Move{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -274,6 +286,14 @@ func (t *TypeTest) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_TEST
 }
 
+func (f *FPLoad) GetLhsOperand() *BIROperand {
+	return f.LhsOp
+}
+
+func (f *FPLoad) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_FP_LOAD
+}
+
 func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
@@ -317,6 +337,39 @@ func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp
 
 func (n *NewMap) GetLhsOperand() *BIROperand {
 	return n.LhsOp
+}
+
+func (n *NewObject) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_NEW_INSTANCE
+}
+
+func (n *NewObject) GetLhsOperand() *BIROperand {
+	return n.LhsOp
+}
+
+func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnostics.Location) *NewObject {
+	return &NewObject{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		ClassDef: classDef,
+	}
+}
+
+func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand, pos diagnostics.Location) *FPLoad {
+	return &FPLoad{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		FunctionLookupKey: functionLookupKey,
+		Type:              typ,
+	}
 }
 
 func (m *MappingConstructorKeyValueEntry) IsKeyValuePair() bool {

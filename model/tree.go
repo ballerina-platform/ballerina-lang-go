@@ -272,6 +272,8 @@ const (
 	NodeKind_VALUE_TYPE
 	NodeKind_RECORD_TYPE
 	NodeKind_OBJECT_TYPE
+	NodeKind_OBJECT_FIELD
+	NodeKind_METHOD_DECL
 	NodeKind_ERROR_TYPE
 	NodeKind_STREAM_TYPE
 	NodeKind_TABLE_TYPE
@@ -664,12 +666,9 @@ type ClassDefinition interface {
 	TopLevelNode
 	OrderedNode
 	GetName() IdentifierNode
-	SetName(name IdentifierNode)
-	GetFunctions() []FunctionNode
-	AddFunction(function FunctionNode)
+	GetMethods() iter.Seq2[string, FunctionNode]
+	GetMethod(name string) FunctionNode
 	GetInitFunction() FunctionNode
-	AddField(field VariableNode)
-	AddTypeReference(typeRef *TypeData)
 }
 
 type ServiceNode interface {
@@ -738,6 +737,19 @@ type RecordTypeNode interface {
 	GetFields() iter.Seq2[string, Field]
 }
 
+type FunctionTypeParam interface {
+	Node
+	GetName() *string
+	GetTypeDesc() Type
+}
+
+type FunctionTypeNode interface {
+	ReferenceTypeNode
+	GetParams() []FunctionTypeParam
+	GetRestParam() FunctionTypeParam
+	GetReturnTypeNode() TypeDescriptor
+}
+
 type TupleTypeNode interface {
 	ReferenceTypeNode
 	GetMembers() []MemberTypeDesc
@@ -754,6 +766,42 @@ type FiniteTypeNode interface {
 	ReferenceTypeNode
 	GetValueSet() []ExpressionNode
 	AddValue(value ExpressionNode)
+}
+
+type ObjectMemberKind uint8
+
+const (
+	ObjectMemberKindField ObjectMemberKind = iota
+	ObjectMemberKindMethod
+	ObjectMemberKindRemoteMethod
+	ObjectMemberKindResourceMethod
+)
+
+type Visibility uint8
+
+const (
+	VisibilityPrivate Visibility = iota
+	VisibilityPublic
+)
+
+type ObjectMember interface {
+	MemberKind() ObjectMemberKind
+	Name() string
+	Visibility() Visibility
+}
+
+type ObjectNetworkQuals uint8
+
+const (
+	ObjectNetworkQualsNone ObjectNetworkQuals = iota
+	ObjectNetworkQualsClient
+	ObjectNetworkQualsService
+)
+
+type ObjectType interface {
+	ReferenceTypeNode
+	Members() iter.Seq[ObjectMember]
+	Member(name string) (ObjectMember, bool)
 }
 
 type UnionTypeNode interface {

@@ -19,6 +19,7 @@ package semtypes
 type Atom interface {
 	Index() int
 	Kind() Kind
+	canonicalKey() string
 }
 
 type atomIdentifier struct {

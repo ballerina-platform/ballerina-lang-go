@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: type inclusion must be an object type or class
+  --> inclusion-nonobject-e.bal:20:6
+   |
+20 |     *Foo; // @error
+   |      ^^^
+

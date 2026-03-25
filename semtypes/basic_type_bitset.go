@@ -16,23 +16,12 @@
 
 package semtypes
 
-import "fmt"
+type BasicTypeBitSet int
 
-type BasicTypeBitSet struct {
-	bitset int
-}
-
-var _ SemType = &BasicTypeBitSet{}
-
-func (bitset *BasicTypeBitSet) All() int {
-	return bitset.bitset
+func (bitset BasicTypeBitSet) All() int {
+	return int(bitset)
 }
 
 func BasicTypeBitSetFrom(bitset int) BasicTypeBitSet {
-	return BasicTypeBitSet{bitset: bitset}
-}
-
-func (b BasicTypeBitSet) String() string {
-	allTypes := bitsetToTypeNames(b.bitset)
-	return fmt.Sprintf("((%s), ())", allTypes)
+	return BasicTypeBitSet(bitset)
 }

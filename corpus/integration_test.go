@@ -17,12 +17,6 @@
 package corpus
 
 import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/test_util"
-	"ballerina-lang-go/values"
 	"bytes"
 	"flag"
 	"fmt"
@@ -31,6 +25,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/projects/directory"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 
@@ -69,6 +70,24 @@ var (
 		"subset5/05-error/trap1-v.bal",
 		"subset5/05-error/trap2-v.bal",
 		"subset5/05-error/trap3-v.bal",
+		"subset6/06-object/simple-v.bal",
+		"subset6/06-object/simple-2-v.bal",
+		"subset6/06-object/no-init-v.bal",
+		"subset6/06-object/union-init-1-v.bal",
+		"subset6/06-object/init-ref-v.bal",
+		"subset6/06-object/inclusion-obj-v.bal",
+		"subset6/06-object/inclusion-class-v.bal",
+		"subset6/06-object/inclusion-class-2-v.bal",
+		"subset6/06-object/inclusion-dup-override-v.bal",
+		"subset6/06-object/inclusion-inherited-field-v.bal",
+		"subset6/06-object/inclusion-transitive-v.bal",
+		"subset6/06-object/inclusion-transitive-2-v.bal",
+		"subset6/06-object/init-error-return-v.bal",
+		"subset6/06-object/init-error-check-v.bal",
+		"subset6/06-object/self-field-shadow-e.bal",
+		"subset6/06-object/fn-shadowing-v.bal",
+		// cast #139
+		"subset6/06-map/length2-v.bal",
 	}
 )
 

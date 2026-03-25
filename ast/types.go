@@ -1,5 +1,5 @@
-// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
@@ -31,14 +31,6 @@ const (
 	ProjectKind_BALA_PROJECT
 	ProjectKind_WORKSPACE_PROJECT
 )
-
-type SelectivelyImmutableReferenceType interface {
-	model.Type
-}
-
-type ObjectType interface {
-	SelectivelyImmutableReferenceType
-}
 
 type BType interface {
 	model.Type
@@ -110,13 +102,32 @@ type (
 		AnnAttachments []model.AnnotationAttachmentNode
 	}
 
-	BObjectType struct {
+	bObjectFieldBase struct {
+		bLangNodeBase
+		name       string
+		visibility model.Visibility
+	}
+
+	BObjectField struct {
+		bObjectFieldBase
+		Ty BType
+		// TODO: add metadata
+	}
+
+	BMethodDecl struct {
+		bObjectFieldBase
+		BLangFunctionType
+		memberKind model.ObjectMemberKind
+	}
+
+	BLangObjectType struct {
 		bLangTypeBase
-		bStructureTypeBase
-		MarkedIsolatedness bool
-		MutableType        *BObjectType
-		ClassDef           *BLangClassDefinition
-		TypeIdSet          *BTypeIdSet
+		Inclusions           []model.SymbolRef // This needs to be symbol because it could be a class definition as well
+		unresolvedInclusions []*BLangUserDefinedType
+		members              map[string]model.ObjectMember
+		Definition           semtypes.Definition
+		Isolated             bool
+		NetworkQuals         model.ObjectNetworkQuals
 	}
 
 	BLangFiniteTypeNode struct {
@@ -147,6 +158,7 @@ type (
 		Constraint model.TypeData
 		Definition semtypes.Definition
 	}
+
 	BLangTupleTypeNode struct {
 		bLangTypeBase
 		Definition semtypes.Definition
@@ -170,6 +182,22 @@ type (
 		RestType   BType
 		IsOpen     bool
 	}
+
+	BLangFunctionType struct {
+		bLangTypeBase
+		Definition           semtypes.Definition
+		RequiredParams       []BLangFunctionTypeParam
+		RestParam            *BLangFunctionTypeParam
+		ReturnTypeDescriptor model.TypeDescriptor
+	}
+
+	BLangFunctionTypeParam struct {
+		bLangNodeBase
+		Name           *BLangIdentifier
+		TypeDesc       BType
+		InitExpr       BLangExpression
+		AnnAttachments []model.AnnotationAttachmentNode
+	}
 )
 
 var (
@@ -179,7 +207,6 @@ var (
 	_ model.Field                    = &BField{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.NamedNode                = &BField{}
-	_ ObjectType                     = &BObjectType{}
 	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
 	_ BNodeWithSymbol                = &BLangUserDefinedType{}
 	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
@@ -189,14 +216,22 @@ var (
 	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
 	_ model.MemberTypeDesc           = &BLangMemberTypeDesc{}
 	_ model.RecordTypeNode           = &BLangRecordType{}
+	_ model.ObjectType               = &BLangObjectType{}
+	_ model.ObjectMember             = &BMethodDecl{}
+	_ model.ObjectMember             = &BObjectField{}
+	_ BLangNode                      = &BObjectField{}
+	_ BLangNode                      = &BMethodDecl{}
+	_ model.FunctionTypeNode         = &BLangFunctionType{}
+	_ model.FunctionTypeParam        = &BLangFunctionTypeParam{}
 )
 
 var (
-	_ BType = &BLangUserDefinedType{}
-	_ BType = &BLangBuiltInRefTypeNode{}
-	_ BType = &BLangUserDefinedType{}
-	_ BType = &BObjectType{}
-	_ BType = &BTypeBasic{}
+	_ BType     = &BLangUserDefinedType{}
+	_ BType     = &BLangBuiltInRefTypeNode{}
+	_ BType     = &BLangUserDefinedType{}
+	_ BType     = &BTypeBasic{}
+	_ BType     = &BLangFunctionType{}
+	_ BLangNode = &BLangFunctionType{}
 )
 
 var (
@@ -366,10 +401,47 @@ func (this *bStructureTypeBase) AddField(name string, field BField) {
 	this.fields = append(this.fields, field)
 }
 
-// BObjectType methods
-func (this *BObjectType) GetKind() model.TypeKind {
-	// migrated from BObjectType.java:89:5
-	return model.TypeKind_OBJECT
+func (this *BLangObjectType) GetKind() model.NodeKind {
+	return model.NodeKind_OBJECT_TYPE
+}
+
+func (this *BLangObjectType) Members() iter.Seq[model.ObjectMember] {
+	return func(yield func(model.ObjectMember) bool) {
+		for _, member := range this.members {
+			if !yield(member) {
+				return
+			}
+		}
+	}
+}
+
+func (this *BLangObjectType) Member(name string) (model.ObjectMember, bool) {
+	member, ok := this.members[name]
+	return member, ok
+}
+
+func (this *bObjectFieldBase) Name() string {
+	return this.name
+}
+
+func (this *bObjectFieldBase) Visibility() model.Visibility {
+	return this.visibility
+}
+
+func (this *BObjectField) MemberKind() model.ObjectMemberKind {
+	return model.ObjectMemberKindField
+}
+
+func (this *BObjectField) GetKind() model.NodeKind {
+	return model.NodeKind_OBJECT_FIELD
+}
+
+func (this *BMethodDecl) MemberKind() model.ObjectMemberKind {
+	return this.memberKind
+}
+
+func (this *BMethodDecl) GetKind() model.NodeKind {
+	return model.NodeKind_METHOD_DECL
 }
 
 func (this *bLangTypeBase) GetTypeData() model.TypeData {
@@ -570,6 +642,7 @@ func (this *BLangConstrainedType) GetTypeKind() model.TypeKind {
 	}
 	panic("BLangConstrainedType.Type does not implement BuiltInReferenceTypeNode")
 }
+
 func (this *BLangTupleTypeNode) GetMembers() []model.MemberTypeDesc {
 	members := make([]model.MemberTypeDesc, len(this.Members))
 	for i := range this.Members {
@@ -617,6 +690,49 @@ func (this *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentatio
 	this.MarkdownDocumentationAttachment = documentationNode
 }
 
+func (this *BLangFunctionType) GetTypeKind() model.TypeKind {
+	return model.TypeKind_FUNCTION
+}
+
+func (this *BLangFunctionType) GetKind() model.NodeKind {
+	return model.NodeKind_FUNCTION_TYPE
+}
+
+func (this *BLangFunctionTypeParam) GetKind() model.NodeKind {
+	return model.NodeKind_VARIABLE
+}
+
+func (this *BLangFunctionTypeParam) GetName() *string {
+	if this.Name == nil {
+		return nil
+	}
+	name := this.Name.Value
+	return &name
+}
+
+func (this *BLangFunctionTypeParam) GetTypeDesc() model.Type {
+	return this.TypeDesc
+}
+
+func (this *BLangFunctionType) GetParams() []model.FunctionTypeParam {
+	params := make([]model.FunctionTypeParam, len(this.RequiredParams))
+	for i := range this.RequiredParams {
+		params[i] = &this.RequiredParams[i]
+	}
+	return params
+}
+
+func (this *BLangFunctionType) GetRestParam() model.FunctionTypeParam {
+	if this.RestParam == nil {
+		return nil
+	}
+	return this.RestParam
+}
+
+func (this *BLangFunctionType) GetReturnTypeNode() model.TypeDescriptor {
+	return this.ReturnTypeDescriptor
+}
+
 func (this *BLangRecordType) GetKind() model.NodeKind {
 	return model.NodeKind_RECORD_TYPE
 }
@@ -633,4 +749,20 @@ func (this *BLangRecordType) GetFields() iter.Seq2[string, model.Field] {
 			}
 		}
 	}
+}
+
+// AddMember insert a new member. If there was already a member by the same name return true
+func (this *BLangObjectType) AddMember(member model.ObjectMember) bool {
+	name := member.Name()
+	if _, hadValue := this.members[name]; hadValue {
+		return true
+	}
+	this.members[name] = member
+	return false
+}
+
+func (this *BLangObjectType) PopUnresolvedInclusions() []*BLangUserDefinedType {
+	inclusions := this.unresolvedInclusions
+	this.unresolvedInclusions = nil
+	return inclusions
 }
