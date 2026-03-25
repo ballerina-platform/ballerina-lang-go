@@ -24,6 +24,8 @@ import (
 	"net/http"
 	_ "net/http/pprof" // Auto-registers pprof handlers
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -31,8 +33,11 @@ import (
 
 type enabledProfiler struct {
 	server  *http.Server
+	cpuFile *os.File
 	enabled bool
 	addr    string
+	cpuProf string
+	memProf string
 }
 
 func init() {
@@ -42,9 +47,24 @@ func init() {
 func (p *enabledProfiler) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&p.enabled, "prof", false, "Enable profiling")
 	cmd.Flags().StringVar(&p.addr, "prof-addr", ":6060", "Profiling server address")
+	cmd.Flags().StringVar(&p.cpuProf, "cpuprofile", "", "Write CPU profile to file")
+	cmd.Flags().StringVar(&p.memProf, "memprofile", "", "Write memory allocation profile to file")
 }
 
 func (p *enabledProfiler) Start() error {
+	if p.cpuProf != "" {
+		f, err := os.Create(p.cpuProf)
+		if err != nil {
+			return fmt.Errorf("could not create CPU profile: %w", err)
+		}
+		p.cpuFile = f
+		if err := pprof.StartCPUProfile(f); err != nil {
+			f.Close()
+			return fmt.Errorf("could not start CPU profile: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "CPU profiling to %s\n", p.cpuProf)
+	}
+
 	if !p.enabled {
 		return nil
 	}
@@ -72,6 +92,26 @@ func (p *enabledProfiler) Start() error {
 }
 
 func (p *enabledProfiler) Stop() error {
+	if p.cpuFile != nil {
+		pprof.StopCPUProfile()
+		p.cpuFile.Close()
+		fmt.Fprintf(os.Stderr, "CPU profile written to %s\n", p.cpuProf)
+	}
+
+	if p.memProf != "" {
+		f, err := os.Create(p.memProf)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not create memory profile: %v\n", err)
+		} else {
+			runtime.GC()
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				fmt.Fprintf(os.Stderr, "could not write memory profile: %v\n", err)
+			}
+			f.Close()
+			fmt.Fprintf(os.Stderr, "Memory profile written to %s\n", p.memProf)
+		}
+	}
+
 	if p.server == nil {
 		return nil
 	}
