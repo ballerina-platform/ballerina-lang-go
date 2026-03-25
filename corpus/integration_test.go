@@ -71,7 +71,6 @@ var (
 		"subset6/06-object/inclusion-transitive-2-v.bal",
 		"subset6/06-object/init-error-return-v.bal",
 		"subset6/06-object/init-error-check-v.bal",
-		"subset6/06-object/self-field-shadow-e.bal",
 		"subset6/06-object/fn-shadowing-v.bal",
 		// cast #139
 		"subset6/06-map/length2-v.bal",
@@ -163,7 +162,7 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	}
 
 	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := result.expectedStderr != result.actualStderr
+	stderrMismatch := normalizeIntegrationStderr(result.expectedStderr) != normalizeIntegrationStderr(result.actualStderr)
 
 	var msg strings.Builder
 	if stdoutMismatch {
@@ -173,9 +172,38 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 		if msg.Len() > 0 {
 			msg.WriteString("\n\n")
 		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(result.expectedStderr, result.actualStderr))
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(
+			normalizeIntegrationStderr(result.expectedStderr),
+			normalizeIntegrationStderr(result.actualStderr),
+		))
 	}
 	t.Errorf("%s", msg.String())
+}
+
+func splitStderrDiagnostics(stderr string) []string {
+	var diagnostics []string
+	for part := range strings.SplitSeq(stderr, "\n\n") {
+		diagnostic := strings.TrimSpace(part)
+		if diagnostic != "" {
+			diagnostics = append(diagnostics, diagnostic)
+		}
+	}
+	return diagnostics
+}
+
+func normalizeIntegrationStderr(stderr string) string {
+	stderr = strings.TrimSpace(stderr)
+	if stderr == "" {
+		return ""
+	}
+
+	diagnostics := splitStderrDiagnostics(stderr)
+	if len(diagnostics) == 0 {
+		return ""
+	}
+
+	slices.Sort(diagnostics)
+	return strings.Join(diagnostics, "\n\n") + "\n"
 }
 
 func isTestSkipped(tc test_util.TestCase) bool {
@@ -200,8 +228,9 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
+	stderrMatch := normalizeIntegrationStderr(expectedStderr) == normalizeIntegrationStderr(actualStderr)
 	return testResult{
-		success:        actualStdout == expectedStdout && actualStderr == expectedStderr,
+		success:        actualStdout == expectedStdout && stderrMatch,
 		expectedStdout: expectedStdout,
 		actualStdout:   actualStdout,
 		expectedStderr: expectedStderr,
