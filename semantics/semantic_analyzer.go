@@ -1234,7 +1234,7 @@ func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, r
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
-		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL)
+		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL) //nolint:staticcheck,ineffassign // rhsTy will be used when nil-lifted binary ops are fully implemented
 	}
 	op := binaryExpr.GetOperatorKind()
 	var resultTy semtypes.SemType = semtypes.INT
@@ -1432,10 +1432,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 	}
 	expectedType := variable.GetDeterminedType()
 	expression := assignment.GetExpression().(ast.BLangExpression)
-	if !analyzeExpression(a, expression, expectedType) {
-		return false
-	}
-	return true
+	return analyzeExpression(a, expression, expectedType)
 }
 
 func analyzeIf[A analyzer](a A, ifStmt *ast.BLangIf) bool {
@@ -1469,6 +1466,8 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 				result = semtypes.Union(result, each)
 			}
 			expectedValueType = result
+		case semtypes.IsSubtypeSimple(collectionType, semtypes.MAPPING):
+			expectedValueType = semtypes.MappingMemberTypeInnerVal(a.tyCtx(), collectionType, semtypes.STRING)
 		default:
 			a.unimplementedErr("unsupported foreach collection", collection.GetPosition())
 			return false

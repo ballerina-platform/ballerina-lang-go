@@ -1,3 +1,5 @@
 -- stdout --
-Runtime panic: divide by zero
 -- stderr --
+error: divide by zero
+        at div(div3-p.bal:26)
+           main(div3-p.bal:22)

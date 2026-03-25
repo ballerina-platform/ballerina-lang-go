@@ -1,0 +1,26 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable r (type
+        (user-defined-type OpenRecord)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref name)
+            (literal John))
+          (key-value
+            (literal age)
+            (literal 30))))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref r)
+    (var-def
+      (variable val (type
+        (value-type any))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref val))))
+  )
+  (bb3 (bb1) ())
+)

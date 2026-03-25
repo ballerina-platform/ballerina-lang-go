@@ -160,41 +160,41 @@ func (p *PrettyPrinter) PrintBasicBlock(basicBlock BIRBasicBlock) {
 }
 
 func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
-	switch instruction.(type) {
+	switch instruction := instruction.(type) {
 	case *Move:
-		return p.PrintMove(instruction.(*Move))
+		return p.PrintMove(instruction)
 	case *BinaryOp:
-		return p.PrintBinaryOp(instruction.(*BinaryOp))
+		return p.PrintBinaryOp(instruction)
 	case *UnaryOp:
-		return p.PrintUnaryOp(instruction.(*UnaryOp))
+		return p.PrintUnaryOp(instruction)
 	case *ConstantLoad:
-		return p.PrintConstantLoad(instruction.(*ConstantLoad))
+		return p.PrintConstantLoad(instruction)
 	case *Goto:
-		return p.PrintGoto(instruction.(*Goto))
+		return p.PrintGoto(instruction)
 	case *Call:
-		return p.PrintCall(instruction.(*Call))
+		return p.PrintCall(instruction)
 	case *Return:
-		return p.PrintReturn(instruction.(*Return))
+		return p.PrintReturn(instruction)
 	case *Branch:
-		return p.PrintBranch(instruction.(*Branch))
+		return p.PrintBranch(instruction)
 	case *FieldAccess:
-		return p.PrintFieldAccess(instruction.(*FieldAccess))
+		return p.PrintFieldAccess(instruction)
 	case *NewArray:
-		return p.PrintNewArray(instruction.(*NewArray))
+		return p.PrintNewArray(instruction)
 	case *NewMap:
-		return p.PrintNewMap(instruction.(*NewMap))
+		return p.PrintNewMap(instruction)
 	case *NewError:
-		return p.PrintNewError(instruction.(*NewError))
+		return p.PrintNewError(instruction)
 	case *TypeCast:
-		return p.PrintTypeCast(instruction.(*TypeCast))
+		return p.PrintTypeCast(instruction)
 	case *TypeTest:
-		return p.PrintTypeTest(instruction.(*TypeTest))
+		return p.PrintTypeTest(instruction)
 	case *Panic:
-		return p.PrintPanic(instruction.(*Panic))
+		return p.PrintPanic(instruction)
 	case *NewObject:
-		return p.PrintNewObject(instruction.(*NewObject))
+		return p.PrintNewObject(instruction)
 	case *FPLoad:
-		return p.PrintFPLoad(instruction.(*FPLoad))
+		return p.PrintFPLoad(instruction)
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -383,15 +383,6 @@ func (p *PrettyPrinter) PrintGlobalVar(globalVar BIRGlobalVariableDcl) string {
 	sb.WriteString(globalVar.Name.Value())
 	sb.WriteString("  ")
 	sb.WriteString(p.PrintSemType(globalVar.Type))
-	return sb.String()
-}
-
-func (p *PrettyPrinter) PrintType(typeNode model.ValueType) string {
-	if typeNode == nil {
-		return "<UNKNOWN>"
-	}
-	sb := strings.Builder{}
-	sb.WriteString(string(typeNode.GetTypeKind()))
 	return sb.String()
 }
 

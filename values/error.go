@@ -44,6 +44,10 @@ func NewError(t semtypes.SemType, message string, cause BalValue, typeName strin
 	}
 }
 
+func NewErrorWithMessage(message string) *Error {
+	return NewError(semtypes.ERROR, message, nil, "", nil)
+}
+
 // String returns the Ballerina string representation of the error.
 func (e *Error) String(visited map[uintptr]bool) string {
 	var b strings.Builder

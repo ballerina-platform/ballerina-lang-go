@@ -1,0 +1,5 @@
+-- stdout --
+0
+-- stderr --
+error: range panic
+        at main(panic4-p.bal:23)

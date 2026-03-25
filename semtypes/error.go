@@ -42,7 +42,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 				// Also not atomic
 				return MappingAtomicType{}, false
 			}
-			return *ctx.mappingAtomType(leftNode.Atom()), true
+			return *ctx.MappingAtomType(leftNode.Atom()), true
 		} else {
 			return MappingAtomicType{}, false
 		}

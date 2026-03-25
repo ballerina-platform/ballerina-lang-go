@@ -1,3 +1,5 @@
 -- stdout --
-Runtime panic: arithmetic overflow
 -- stderr --
+error: arithmetic overflow
+        at div(div1-p.bal:27)
+           main(div1-p.bal:23)

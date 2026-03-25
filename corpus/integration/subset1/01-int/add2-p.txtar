@@ -1,3 +1,5 @@
 -- stdout --
-Runtime panic: arithmetic overflow
 -- stderr --
+error: arithmetic overflow
+        at add(add2-p.bal:27)
+           main(add2-p.bal:23)

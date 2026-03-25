@@ -1,0 +1,5 @@
+-- stdout --
+-- stderr --
+error: help
+        at p(panic3-p.bal:23)
+           main(panic3-p.bal:19)

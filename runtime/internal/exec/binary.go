@@ -33,10 +33,10 @@ func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 	case int64:
 		v2 := op2.(int64)
 		if v1 > 0 && v2 > 0 && v1 > math.MaxInt64-v2 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		if v1 < 0 && v2 < 0 && v1 < math.MinInt64-v2 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1+v2)
 	case float64:
@@ -46,7 +46,7 @@ func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 		v2 := op2.(string)
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1+v2)
 	default:
-		panic(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T + %T", op1, op2)))
 	}
 }
 
@@ -59,17 +59,17 @@ func execBinaryOpSub(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 	case int64:
 		v2 := op2.(int64)
 		if v2 > 0 && v1 < math.MinInt64+v2 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		if v2 < 0 && v1 > math.MaxInt64+v2 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1-v2)
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1-v2)
 	default:
-		panic(fmt.Sprintf("unsupported type combination: %T - %T", op1, op2))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T - %T", op1, op2)))
 	}
 }
 
@@ -83,14 +83,14 @@ func execBinaryOpMul(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 		v2 := op2.(int64)
 		result := v1 * v2
 		if v1 != 0 && v2 != 0 && ((v1 == math.MinInt64 && v2 == -1) || (v1 == -1 && v2 == math.MinInt64) || result/v2 != v1) {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, result)
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1*v2)
 	default:
-		panic(fmt.Sprintf("unsupported type combination: %T * %T", op1, op2))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T * %T", op1, op2)))
 	}
 }
 
@@ -103,20 +103,20 @@ func execBinaryOpDiv(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 	case int64:
 		v2 := op2.(int64)
 		if v2 == 0 {
-			panic("divide by zero")
+			panic(values.NewErrorWithMessage("divide by zero"))
 		}
 		if v1 == math.MinInt64 && v2 == -1 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1/v2)
 	case float64:
 		v2 := op2.(float64)
 		if v2 == 0 {
-			panic("divide by zero")
+			panic(values.NewErrorWithMessage("divide by zero"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1/v2)
 	default:
-		panic(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2)))
 	}
 }
 
@@ -129,17 +129,17 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 	case int64:
 		v2 := op2.(int64)
 		if v2 == 0 {
-			panic("divide by zero")
+			panic(values.NewErrorWithMessage("divide by zero"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1%v2)
 	case float64:
 		v2 := op2.(float64)
 		if v2 == 0 {
-			panic("divide by zero")
+			panic(values.NewErrorWithMessage("divide by zero"))
 		}
 		setOperandValue(binaryOp.LhsOp, frame, reg, math.Mod(v1, v2))
 	default:
-		panic(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2)))
 	}
 }
 
@@ -287,13 +287,13 @@ func execUnaryOpNegate(unaryOp *bir.UnaryOp, frame *Frame, reg *modules.Registry
 	switch v := op.(type) {
 	case int64:
 		if v == math.MinInt64 {
-			panic("arithmetic overflow")
+			panic(values.NewErrorWithMessage("arithmetic overflow"))
 		}
 		setOperandValue(unaryOp.LhsOp, frame, reg, -v)
 	case float64:
 		setOperandValue(unaryOp.LhsOp, frame, reg, -v)
 	default:
-		panic(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T (expected int64 or float64)", op)))
 	}
 }
 
@@ -338,7 +338,7 @@ func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Regi
 		v2 := op2.(bool)
 		setOperandValue(binaryOp.LhsOp, frame, reg, boolCmp(v1, v2))
 	default:
-		panic(fmt.Sprintf("unsupported type: %T", op1))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T", op1)))
 	}
 }
 
@@ -348,7 +348,7 @@ func getBinaryRhsValues(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Regis
 
 func validateShiftAmount(amount int64) {
 	if amount < 0 || amount >= 64 {
-		panic(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount)))
 	}
 }
 

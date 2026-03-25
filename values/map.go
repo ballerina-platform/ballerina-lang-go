@@ -120,7 +120,7 @@ func (m *Map) String(visited map[uintptr]bool) string {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(fmt.Sprintf("%q", e.key))
+		fmt.Fprintf(&b, "%q", e.key)
 		b.WriteByte(':')
 		b.WriteString(toString(e.value, visited, false))
 		i++

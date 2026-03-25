@@ -16,8 +16,7 @@
 
 package semtypes
 
-type BooleanOps struct {
-}
+type BooleanOps struct{}
 
 var _ BasicTypeOps = &BooleanOps{}
 
@@ -25,7 +24,7 @@ func (this *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:33:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
-	if v1.value == v2.value {
+	if v1.Value == v2.Value {
 		return v1
 	} else {
 		return CreateAll()
@@ -36,7 +35,7 @@ func (this *BooleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:40:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
-	if v1.value == v2.value {
+	if v1.Value == v2.Value {
 		return v1
 	} else {
 		return CreateNothing()
@@ -47,7 +46,7 @@ func (this *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:47:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
-	if v1.value == v2.value {
+	if v1.Value == v2.Value {
 		return CreateNothing()
 	} else {
 		return v1
@@ -57,7 +56,7 @@ func (this *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 func (this *BooleanOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:54:5
 	v := d.(BooleanSubtype)
-	t := BooleanSubtypeFrom(!v.value)
+	t := BooleanSubtypeFrom(!v.Value)
 	return t
 }
 
