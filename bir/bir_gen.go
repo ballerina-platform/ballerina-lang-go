@@ -1221,13 +1221,33 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 		args = append(args, *argEffect.result)
 	}
 
-	thenBB := ctx.addBB()
 	initFunc := classDef.VTable["init"]
-	result := ctx.addTempVar(expr.DeterminedType)
-	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, thenBB, result, expr.GetPosition())
+	initResult := ctx.addTempVar(initFunc.ReturnVariable.Type)
+	initDoneBB := ctx.addBB()
+	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, initDoneBB, initResult, expr.GetPosition())
 	call.IsVirtual = true
 	call.CachedBIRFunc = initFunc
 	curBB.Terminator = call
+
+	result := ctx.addTempVar(expr.DeterminedType)
+	isInitResultNil := ctx.addTempVar(semtypes.BOOLEAN)
+	nilCheck := &TypeTest{}
+	nilCheck.Pos = expr.GetPosition()
+	nilCheck.LhsOp = isInitResultNil
+	nilCheck.RhsOp = initResult
+	nilCheck.Type = semtypes.NIL
+	initDoneBB.Instructions = append(initDoneBB.Instructions, nilCheck)
+
+	assignObjectBB := ctx.addBB()
+	assignErrorBB := ctx.addBB()
+	thenBB := ctx.addBB()
+	initDoneBB.Terminator = NewBranch(isInitResultNil, assignObjectBB, assignErrorBB, expr.GetPosition())
+
+	assignObjectBB.Instructions = append(assignObjectBB.Instructions, NewMove(object, result, expr.GetPosition()))
+	assignObjectBB.Terminator = NewGoto(thenBB, expr.GetPosition())
+
+	assignErrorBB.Instructions = append(assignErrorBB.Instructions, NewMove(initResult, result, expr.GetPosition()))
+	assignErrorBB.Terminator = NewGoto(thenBB, expr.GetPosition())
 
 	return expressionEffect{
 		result: result,
