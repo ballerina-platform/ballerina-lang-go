@@ -112,7 +112,7 @@ func execMapLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
 
 func execTypeCast(typeCast *bir.TypeCast, frame *Frame, reg *modules.Registry) {
 	sourceValue := getOperandValue(typeCast.RhsOp, frame, reg)
-	result := castValue(sourceValue, typeCast.Type)
+	result := castValue(sourceValue, typeCast.Type, reg)
 	setOperandValue(typeCast.LhsOp, frame, reg, result)
 }
 
@@ -133,14 +133,15 @@ func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 	setOperandValue(typeTest.LhsOp, frame, reg, matches)
 }
 
-func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
-	b, ok := targetType.(semtypes.BasicTypeBitSet)
-	if !ok {
-		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported target type %T", targetType)))
-	}
-	if b.All() == semtypes.ANY.All() {
+func castValue(value values.BalValue, targetType semtypes.SemType, reg *modules.Registry) values.BalValue {
+	typeEnv := reg.GetTypeEnv()
+	typeCtx := semtypes.TypeCheckContext(typeEnv)
+	valueType := values.SemTypeForValue(value)
+	if semtypes.IsSubtype(typeCtx, valueType, targetType) {
 		return value
 	}
+
+	b := targetType.(semtypes.BasicTypeBitSet)
 	bitsetValue := b.All()
 	switch {
 	case bitsetValue&semtypes.INT.All() != 0:
@@ -150,10 +151,9 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 	case bitsetValue&semtypes.DECIMAL.All() != 0:
 		return toDecimal(value)
 	case bitsetValue&semtypes.BOOLEAN.All() != 0:
-		return value.(bool)
+		return toBoolean(value)
 	}
-	// TODO: fix this when fixing #260
-	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported basic type %s", semtypes.ToString(nil, b))))
+	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported target type %s", semtypes.ToString(typeCtx, targetType))))
 }
 
 func toInt(value any) int64 {
@@ -162,10 +162,10 @@ func toInt(value any) int64 {
 		return v
 	case float64:
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", v)))
+			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast non-finite value %v to int", v)))
 		}
 		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
-			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", v)))
+			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast out-of-range value %v to int", v)))
 		}
 		return int64(v)
 	case *big.Rat:
@@ -220,4 +220,11 @@ func toDecimal(value any) *big.Rat {
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))
 	}
+}
+
+func toBoolean(value any) bool {
+	if v, ok := value.(bool); ok {
+		return v
+	}
+	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to boolean", value)))
 }
