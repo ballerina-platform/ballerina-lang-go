@@ -1,0 +1,67 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition RecordA
+    (record-type
+      (field id
+        (value-type int))
+      (field name
+        (value-type string))))
+  (type-definition RecordB
+    (record-type
+      (field id
+        (value-type int))
+      (field score
+        (value-type float))))
+  (function process (
+    (variable input (type
+      (union-type
+        (user-defined-type RecordA)
+        (user-defined-type RecordB))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref input)
+          (user-defined-type RecordA))
+        (block-stmt
+          (return
+            (binary-expr +
+              (field-based-access id
+                (simple-var-ref input))
+              (literal 1)))) (
+        (block-stmt
+          (return
+            (field-based-access id
+              (simple-var-ref input))))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type RecordA)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref id)
+              (literal 1))
+            (key-value
+              (simple-var-ref name)
+              (literal test))))))
+      (var-def
+        (variable b (type
+          (user-defined-type RecordB)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref id)
+              (literal 2))
+            (key-value
+              (simple-var-ref score)
+              (literal 3.5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation process (
+            (simple-var-ref a))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation process (
+            (simple-var-ref b)))))))))

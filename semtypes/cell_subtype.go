@@ -35,5 +35,5 @@ func CellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMut
 	atom := env.cellAtom(&atomicCell)
 	bdd := BddAtom(&atom)
 	complexSemType := basicSubtype(BTCell, bdd)
-	return CellSemTypeFrom(complexSemType.SubtypeDataList())
+	return *CellSemTypeFrom(complexSemType.SubtypeDataList())
 }
