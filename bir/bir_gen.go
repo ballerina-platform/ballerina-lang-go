@@ -108,7 +108,7 @@ func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType) *B
 	varDcl.Type = ty
 	sc := cx.scopeCtx
 	sc.localVars = append(sc.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(sc.localVars) - 1)}
+	return &BIROperand{VariableDcl: varDcl, Address: RelativeAddress(len(sc.localVars) - 1)}
 }
 
 func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {

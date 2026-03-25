@@ -100,8 +100,8 @@ type (
 
 	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module
 	ExportedSymbolSpace struct {
-		main       *SymbolSpace
-		annotation *SymbolSpace
+		Main       *SymbolSpace
+		Annotation *SymbolSpace
 	}
 
 	BlockScopeBase struct {
@@ -121,7 +121,7 @@ type (
 
 	SymbolSpace struct {
 		mu          sync.RWMutex
-		pkg         PackageIdentifier
+		Pkg         PackageIdentifier
 		lookupTable map[string]int
 		Symbols     []Symbol
 		index       int
@@ -197,7 +197,7 @@ func (space *SymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	if !ok {
 		return SymbolRef{}, false
 	}
-	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}, true
+	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}, true
 }
 
 // AppendSymbol appends a symbol to the space and returns its index. Thread-safe.
@@ -212,7 +212,7 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 
 // RefAt returns a SymbolRef for the symbol at the given index.
 func (space *SymbolSpace) RefAt(index int) SymbolRef {
-	return SymbolRef{Package: space.pkg, Index: index, SpaceIndex: space.index}
+	return SymbolRef{Package: space.Pkg, Index: index, SpaceIndex: space.index}
 }
 
 // SymbolAt returns the symbol at the given index. Thread-safe.
@@ -228,7 +228,7 @@ func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 		Package:      packageID.PkgName.Value(),
 		Version:      packageID.Version.Value(),
 	}
-	return &SymbolSpace{index: index, pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
+	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -277,15 +277,15 @@ func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
 }
 
 func NewExportedSymbolSpace(main, annotation *SymbolSpace) ExportedSymbolSpace {
-	return ExportedSymbolSpace{main: main, annotation: annotation}
+	return ExportedSymbolSpace{Main: main, Annotation: annotation}
 }
 
 func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
-	ref, ok := space.main.GetSymbol(name)
+	ref, ok := space.Main.GetSymbol(name)
 	if !ok {
 		return SymbolRef{}, false
 	}
-	sym := space.main.SymbolAt(ref.Index)
+	sym := space.Main.SymbolAt(ref.Index)
 	if !sym.IsPublic() {
 		return SymbolRef{}, false
 	}

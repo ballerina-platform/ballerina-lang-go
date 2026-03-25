@@ -178,7 +178,7 @@ const (
 	AddressingModeAbsolute
 )
 
-func relativeAddress(frameIndex int) Address {
+func RelativeAddress(frameIndex int) Address {
 	return Address{Mode: AddressingModeRelative, FrameIndex: frameIndex}
 }
 
