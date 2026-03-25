@@ -583,7 +583,7 @@ func marshalMappingAtomicType(buf *bytes.Buffer, entry mappingAtomicTypeEntry) {
 	for _, idx := range entry.types {
 		write(buf, int32(idx))
 	}
-	var rest int32 = int32(entry.rest)
+	rest := int32(entry.rest)
 	write(buf, rest)
 	write(buf, entry.mut)
 }
@@ -595,7 +595,10 @@ func unmarshalMappingAtomicType(r *bytes.Reader) mappingAtomicTypeEntry {
 	for j := range entry.names {
 		read(r, &entry.names[j].len)
 		entry.names[j].values = make([]byte, entry.names[j].len)
-		r.Read(entry.names[j].values)
+		_, err := r.Read(entry.names[j].values)
+		if err != nil {
+			panic("error while reading mapping entry")
+		}
 	}
 	entry.types = make([]Index, entry.nFields)
 	for j := range entry.types {
