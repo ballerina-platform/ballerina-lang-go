@@ -125,6 +125,7 @@ type (
 		Parameters     []BIRFunctionParameter
 		BasicBlocks    []BIRBasicBlock
 		ErrorTable     []BIRErrorEntry
+		HasErrorTable  bool
 		// FIXME:
 		DependentGlobalVars []BIRGlobalVariableDcl
 		FunctionLookupKey   string

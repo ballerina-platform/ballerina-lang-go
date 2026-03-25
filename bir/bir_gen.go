@@ -276,6 +276,26 @@ func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
 	birFunc.ErrorTable = stmtCx.errorEntries
+	birFunc.HasErrorTable = len(birFunc.ErrorTable) > 0
+	if birFunc.HasErrorTable {
+		bbMap := make(map[string]*BIRBasicBlock, len(birFunc.BasicBlocks))
+		for i := range birFunc.BasicBlocks {
+			bb := &birFunc.BasicBlocks[i]
+			bbMap[bb.Id.Value()] = bb
+		}
+		for i := range birFunc.ErrorTable {
+			entry := &birFunc.ErrorTable[i]
+			if entry.Start != nil {
+				entry.Start = bbMap[entry.Start.Id.Value()]
+			}
+			if entry.End != nil {
+				entry.End = bbMap[entry.End.Id.Value()]
+			}
+			if entry.Target != nil {
+				entry.Target = bbMap[entry.Target.Id.Value()]
+			}
+		}
+	}
 	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl.(*BIRLocalVariableDcl)
 	return birFunc
 }
