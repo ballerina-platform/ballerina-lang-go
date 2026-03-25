@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: type definition O is empty
    |
 17 | type O object { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     public O foo;
+   |     ^^^^^^^^^^^^^
+19 |     public int bar;
+   |     ^^^^^^^^^^^^^^^
+20 | };
+   | ^^

@@ -30,20 +30,23 @@ type diagnosticLocation struct {
 	filePath            string
 	startLine, startCol int
 	endLine, endCol     int
-	lineNumStr          string
 	numWidth            int
 }
 
 func buildDiagnosticLocation(filePath string, startLine, startCol, endLine, endCol int) diagnosticLocation {
-	lineNumStr := fmt.Sprintf("%d", startLine+1)
+	startLineNumStr := fmt.Sprintf("%d", startLine+1)
+	endLineNumStr := fmt.Sprintf("%d", endLine+1)
+	numWidth := len(startLineNumStr)
+	if w := len(endLineNumStr); w > numWidth {
+		numWidth = w
+	}
 	return diagnosticLocation{
-		filePath:   filePath,
-		startLine:  startLine,
-		startCol:   startCol,
-		endLine:    endLine,
-		endCol:     endCol,
-		lineNumStr: lineNumStr,
-		numWidth:   len(lineNumStr),
+		filePath:  filePath,
+		startLine: startLine,
+		startCol:  startCol,
+		endLine:   endLine,
+		endCol:    endCol,
+		numWidth:  numWidth,
 	}
 }
 
@@ -102,17 +105,113 @@ func printSourceSnippet(w io.Writer, loc diagnosticLocation, fsys fs.FS) {
 	if loc.startLine >= len(lines) {
 		return
 	}
-	lineContent := lines[loc.startLine]
-	_, _ = fmt.Fprintf(w, "%s | %s\n", loc.lineNumStr, lineContent)
-	highlightLen := loc.endCol - loc.startCol
-	if loc.startLine != loc.endLine {
-		highlightLen = len(lineContent) - loc.startCol
+
+	for line := loc.startLine; line <= loc.endLine && line < len(lines); line++ {
+		lineContent := lines[line]
+		lineNumStr := fmt.Sprintf("%d", line+1)
+
+		startCol := 0
+		var endCol int
+
+		switch {
+		case loc.startLine == loc.endLine:
+			startCol = loc.startCol
+			endCol = loc.endCol
+		case line == loc.startLine:
+			startCol = loc.startCol
+			endCol = len(lineContent)
+		case line == loc.endLine:
+			startCol = 0
+			endCol = loc.endCol
+		default:
+			startCol = 0
+			endCol = len(lineContent)
+		}
+
+		var ok bool
+		var highlightLen int
+		startCol, _, highlightLen, ok = computeTrimmedCaretSpan(lineContent, startCol, endCol)
+		if !ok {
+			continue
+		}
+
+		_, _ = fmt.Fprintf(w, "%s | %s\n", lineNumStr, lineContent)
+		pointer := buildPointer(lineContent, startCol, highlightLen)
+		_, _ = fmt.Fprintf(w, "%*s | %s\n", loc.numWidth, "", pointer)
 	}
+}
+
+func computeTrimmedCaretSpan(lineContent string, startCol, endCol int) (trimStartCol, trimEndCol, highlightLen int, ok bool) {
+	firstNonWS := -1
+	for i := 0; i < len(lineContent); i++ {
+		if lineContent[i] != ' ' && lineContent[i] != '\t' {
+			firstNonWS = i
+			break
+		}
+	}
+	lastNonWS := len(lineContent)
+	hasNonWS := firstNonWS != -1
+	if hasNonWS {
+		for lastNonWS > firstNonWS && (lineContent[lastNonWS-1] == ' ' || lineContent[lastNonWS-1] == '\t') {
+			lastNonWS--
+		}
+	}
+
+	if startCol < 0 {
+		startCol = 0
+	}
+	if endCol < 0 {
+		endCol = 0
+	}
+	if startCol > len(lineContent) {
+		startCol = len(lineContent)
+	}
+	if endCol > len(lineContent) {
+		endCol = len(lineContent)
+	}
+
+	if !hasNonWS {
+		return startCol, startCol, 0, true
+	}
+
+	if hasNonWS {
+		if startCol < firstNonWS {
+			startCol = firstNonWS
+		}
+		if endCol > lastNonWS {
+			endCol = lastNonWS
+		}
+		if endCol < startCol {
+			endCol = startCol
+		}
+	}
+
+	highlightLen = endCol - startCol
+	maxHighlightLen := len(lineContent) - startCol
+	if maxHighlightLen < 1 {
+		if hasNonWS {
+			startCol = firstNonWS
+			endCol = firstNonWS + 1
+			highlightLen = 1
+			return startCol, endCol, highlightLen, true
+		}
+		return 0, 0, 0, false
+	}
+
 	if highlightLen < 1 {
-		highlightLen = 1
+		if hasNonWS {
+			startCol = firstNonWS
+			endCol = firstNonWS + 1
+			highlightLen = 1
+			return startCol, endCol, highlightLen, true
+		}
+		return 0, 0, 0, false
 	}
-	pointer := buildPointer(lineContent, loc.startCol, highlightLen)
-	_, _ = fmt.Fprintf(w, "%*s | %s\n", loc.numWidth, "", pointer)
+
+	if highlightLen > maxHighlightLen {
+		highlightLen = maxHighlightLen
+	}
+	return startCol, endCol, highlightLen, true
 }
 
 func buildPointer(lineContent string, startCol, highlightLen int) string {

@@ -5,9 +5,21 @@ error[SEMANTIC_ERROR]: cyclic type inclusion
    |
 17 | type A object { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     *B;
+   |     ^^^
+19 |     int x;
+   |     ^^^^^^
+20 | };
+   | ^^
 
 error[SEMANTIC_ERROR]: cyclic type inclusion
   --> inclusion-cycle-e.bal:22:1
    |
 22 | type B object {
    | ^^^^^^^^^^^^^^^
+23 |     *A;
+   |     ^^^
+24 |     int y;
+   |     ^^^^^^
+25 | };
+   | ^^

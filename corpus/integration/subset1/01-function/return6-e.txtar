@@ -5,3 +5,7 @@ error[SEMANTIC_ERROR]: missing return statement
    |
 24 | function foo() returns boolean {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+25 |      
+   | 
+26 | } // @error
+   | ^

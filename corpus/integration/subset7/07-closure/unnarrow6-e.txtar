@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: union types not supported for +
    |
 26 |         int res = runner(function(int a) returns int {
    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+27 |                     v1 = true;
+   |                     ^^^^^^^^^^
+28 |                     return 5;
+   |                     ^^^^^^^^^
+29 |                   }, 2) + v1; // @error
+   |                   ^^^^^^^^^^

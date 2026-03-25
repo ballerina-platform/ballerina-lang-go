@@ -5,3 +5,7 @@ error[SEMANTIC_ERROR]: 'main' function must be public
    |
 19 | function main() { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+20 |     io:println(1);
+   |     ^^^^^^^^^^^^^^
+21 | }
+   | ^
