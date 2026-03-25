@@ -139,9 +139,6 @@ type (
 
 	ClassSymbol struct {
 		TypeSymbol
-		InitFunction SymbolRef
-		HasInit      bool
-		Methods      map[string]SymbolRef
 	}
 
 	ValueSymbol struct {
@@ -421,7 +418,6 @@ func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 		TypeSymbol: TypeSymbol{
 			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		},
-		Methods: make(map[string]SymbolRef),
 	}
 }
 

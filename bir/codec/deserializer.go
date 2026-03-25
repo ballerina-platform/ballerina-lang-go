@@ -76,7 +76,7 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 	pkgID := br.getPackageFromCP(int(pkgIdx))
 	imports := br.readImports()
-	globalVars := br.readGlobalVars()
+	globalVars := br.readGlobalVars(pkgID)
 	classDefs := br.readClassDefs()
 	functions := br.readFunctions()
 
@@ -199,9 +199,9 @@ func (br *birReader) readImports() []bir.BIRImportModule {
 	return imports
 }
 
-func (br *birReader) readGlobalVars() map[model.SymbolRef]bir.BIRGlobalVariableDcl {
+func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGlobalVariableDcl {
 	count := br.readLength()
-	variables := make(map[model.SymbolRef]bir.BIRGlobalVariableDcl, count)
+	variables := make(map[string]bir.BIRGlobalVariableDcl, count)
 	for i := 0; i < int(count); i++ {
 		pos := br.readPosition()
 		_ = br.readKind() // kind (ignored, concrete type determines it)
@@ -211,16 +211,18 @@ func (br *birReader) readGlobalVars() map[model.SymbolRef]bir.BIRGlobalVariableD
 
 		ty := br.readType()
 
+		lookupKey := pkgID.OrgName.Value() + "/" + pkgID.PkgName.Value() + ":" + name.Value()
 		gv := bir.BIRGlobalVariableDcl{
-			Flags:  flags,
-			Origin: origin,
+			Flags:              flags,
+			Origin:             origin,
+			GlobalVarLookupKey: lookupKey,
 		}
 		gv.Pos = pos
 		gv.Name = name
 		gv.Type = ty
+		gv.PkgId = pkgID
 
-		symRef := model.SymbolRef{Index: i}
-		variables[symRef] = gv
+		variables[lookupKey] = gv
 	}
 	return variables
 }
