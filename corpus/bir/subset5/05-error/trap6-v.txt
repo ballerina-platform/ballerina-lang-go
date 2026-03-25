@@ -1,0 +1,104 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(int) -> int{
+  bb0 {
+    %3 = ConstantLoad 0
+    %2 = == x %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad zero!
+    %5 = newError error(%4)
+    panic %5;
+  }
+  bb2 {
+    %7 = ConstantLoad 2
+    %6 = * x %7;
+    %0 = %6;
+    return;
+  }
+}
+boom() -> int{
+  bb0 {
+    %1 = ConstantLoad deep
+    %2 = newError error(%1)
+    panic %2;
+  }
+}
+bar(int|error,int|error) -> int|error{
+  bb0 {
+    %3 = x is error
+    %3 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = x;
+    return;
+  }
+  bb2 {
+    %4 = y is error
+    %4 ? bb3 : bb4;
+  }
+  bb3 {
+    %0 = y;
+    return;
+  }
+  bb4 {
+    %5 = + x y;
+    %0 = %5;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    GOTO bb1;
+  }
+  bb1 {
+    GOTO bb2;
+  }
+  bb2 {
+    %3 = ConstantLoad 0
+    %4 = foo(%3) -> bb3;
+  }
+  bb3 {
+    %2 = %4;
+    GOTO bb4;
+  }
+  bb4 {
+    GOTO bb5;
+  }
+  bb5 {
+    GOTO bb6;
+  }
+  bb6 {
+    %7 = boom() -> bb7;
+  }
+  bb7 {
+    %6 = %7;
+    GOTO bb8;
+  }
+  bb8 {
+    %5 = %6;
+    GOTO bb9;
+  }
+  bb9 {
+    %8 = bar(%2,%5) -> bb10;
+  }
+  bb10 {
+    %1 = %8;
+    GOTO bb11;
+  }
+  bb11 {
+    result = %1;
+    %10 = println(result) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+  
+  error-table {
+    [bb2, bb3] -> bb4, %2
+    [bb6, bb7] -> bb8, %6
+    [bb5, bb8] -> bb9, %5
+    [bb1, bb10] -> bb11, %1
+  }
+}
