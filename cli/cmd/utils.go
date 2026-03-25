@@ -37,15 +37,15 @@ func printError(err error, usage string, showHelp bool) {
 
 // printErrorTo prints an error message in the standard Ballerina CLI format to the given writer.
 func printErrorTo(w io.Writer, err error, usage string, showHelp bool) {
-	fmt.Fprintf(w, "ballerina: %s\n", err.Error())
+	_, _ = fmt.Fprintf(w, "ballerina: %s\n", err.Error())
 	if usage != "" {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "USAGE:")
-		fmt.Fprintf(w, "    %s\n", usage)
+		_, _ = fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w, "USAGE:")
+		_, _ = fmt.Fprintf(w, "    %s\n", usage)
 	}
 	if showHelp {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "For more information try --help")
+		_, _ = fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w, "For more information try --help")
 	}
 }
 
@@ -117,7 +117,7 @@ func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, noColors
 
 	location := d.Location()
 	if location == nil {
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 		return
 	}
 
@@ -129,7 +129,7 @@ func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, noColors
 	)
 	printDiagnosticLocation(w, s, loc)
 	printSourceSnippet(w, s, loc, fsys, s.severityColor(d.DiagnosticInfo().Severity()))
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func printDiagnosticHeader(w io.Writer, s outputStyle, d diagnostics.Diagnostic) {
@@ -138,18 +138,18 @@ func printDiagnosticHeader(w io.Writer, s outputStyle, d diagnostics.Diagnostic)
 	if c := info.Code(); c != "" {
 		codeStr = fmt.Sprintf("[%s]", c)
 	}
-	fmt.Fprintf(w, "%s%s%s%s%s: %s%s%s\n",
+	_, _ = fmt.Fprintf(w, "%s%s%s%s%s: %s%s%s\n",
 		s.bold, s.severityColor(info.Severity()), strings.ToLower(info.Severity().String()), codeStr, s.reset,
 		s.bold, d.Message(), s.reset,
 	)
 }
 
 func printDiagnosticLocation(w io.Writer, s outputStyle, loc diagnosticLocation) {
-	fmt.Fprintf(w, "%*s%s-->%s %s:%d:%d\n",
+	_, _ = fmt.Fprintf(w, "%*s%s-->%s %s:%d:%d\n",
 		loc.numWidth, "", s.cyan, s.reset, loc.filePath, loc.startLine+1, loc.startCol+1,
 	)
 	if loc.filePath != "" {
-		fmt.Fprintf(w, "%*s %s|%s\n", loc.numWidth, "", s.cyan, s.reset)
+		_, _ = fmt.Fprintf(w, "%*s %s|%s\n", loc.numWidth, "", s.cyan, s.reset)
 	}
 }
 
@@ -163,7 +163,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 		return
 	}
 	lineContent := lines[loc.startLine]
-	fmt.Fprintf(w, "%s%s |%s %s\n", s.cyan, loc.lineNumStr, s.reset, lineContent)
+	_, _ = fmt.Fprintf(w, "%s%s |%s %s\n", s.cyan, loc.lineNumStr, s.reset, lineContent)
 	highlightLen := loc.endCol - loc.startCol
 	if loc.startLine != loc.endLine {
 		highlightLen = len(lineContent) - loc.startCol
@@ -172,7 +172,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 		highlightLen = 1
 	}
 	pointer := buildPointer(lineContent, loc.startCol, highlightLen)
-	fmt.Fprintf(w, "%*s %s| %s%s%s\n", loc.numWidth, "", s.cyan, severityColor, pointer, s.reset)
+	_, _ = fmt.Fprintf(w, "%*s %s| %s%s%s\n", loc.numWidth, "", s.cyan, severityColor, pointer, s.reset)
 }
 
 func buildPointer(lineContent string, startCol, highlightLen int) string {

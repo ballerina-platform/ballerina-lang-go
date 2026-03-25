@@ -62,7 +62,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 		rest = CellContaining(cx.Env(), Union(VAL, UNDEF))
 	} else {
 		// combine all the positive tuples using intersection
-		lt := cx.listAtomType(pos.Atom)
+		lt := cx.ListAtomType(pos.Atom)
 		members = lt.Members
 		rest = lt.Rest
 		p := pos.Next
@@ -77,7 +77,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 			} else {
 				d := p.Atom
 				p = p.Next
-				lt = cx.listAtomType(d)
+				lt = cx.ListAtomType(d)
 				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
 					return NEVER
@@ -155,7 +155,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			}
 		}
 	} else {
-		nt := cx.listAtomType(neg.Atom)
+		nt := cx.ListAtomType(neg.Atom)
 		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
 			return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.Next)
 		}

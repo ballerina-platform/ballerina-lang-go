@@ -53,7 +53,7 @@ func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 		bddNode := b.(BddNode)
 		return Union(
 			bddMappingMemberTypeInner(cx, bddNode.Left(), key,
-				Intersect(mappingAtomicMemberTypeInnerProj(cx.mappingAtomType(bddNode.Atom()), key), accum)),
+				Intersect(mappingAtomicMemberTypeInnerProj(cx.MappingAtomType(bddNode.Atom()), key), accum)),
 			Union(bddMappingMemberTypeInner(cx, bddNode.Middle(), key, accum),
 				bddMappingMemberTypeInner(cx, bddNode.Right(), key, accum)))
 	}

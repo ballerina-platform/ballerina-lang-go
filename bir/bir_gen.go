@@ -116,9 +116,6 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	}
 	birPkg.GlobalVars = make(map[model.SymbolRef]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
-	for _, typeDef := range ast.TypeDefinitions {
-		birPkg.TypeDefs = appendIfNotNil(birPkg.TypeDefs, TransformTypeDefinition(genCtx, &typeDef))
-	}
 	for _, globalVar := range ast.GlobalVars {
 		symRef := globalVar.Symbol()
 		addGlobalVar(birPkg, symRef, TransformGlobalVariableDcl(genCtx, &globalVar))
@@ -192,11 +189,6 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 			Version: &version,
 		},
 	}
-}
-
-func TransformTypeDefinition(ctx *Context, ast *ast.BLangTypeDefinition) *BIRTypeDefinition {
-	// FIXME: implement this
-	return nil
 }
 
 func addGlobalVar(birPkg *BIRPackage, symRef model.SymbolRef, dcl BIRGlobalVariableDcl) {
@@ -580,7 +572,7 @@ func matchStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangMatch
 			case *ast.BLangWildCardMatchPattern:
 				// Wildcard in multi-pattern — always matches; but may have guard
 				trueOperand := ctx.addTempVar(semtypes.BOOLEAN)
-				constLoad := NewConstantLoad(trueOperand, nil, true, p.GetPosition())
+				constLoad := NewConstantLoad(trueOperand, true, p.GetPosition())
 				curBB.Instructions = append(curBB.Instructions, constLoad)
 				condOperand = orOperands(ctx, curBB, condOperand, trueOperand, p.GetPosition())
 			default:
@@ -733,7 +725,7 @@ func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, m
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
 		keyOperand := ctx.addTempVar(semtypes.STRING)
-		keyLoad := NewConstantLoad(keyOperand, nil, field.key, pos)
+		keyLoad := NewConstantLoad(keyOperand, field.key, pos)
 		curBB.Instructions = append(curBB.Instructions, keyLoad)
 
 		valueEffect := handleExpression(ctx, curBB, field.value)
@@ -837,14 +829,14 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 		ty := lat.MemberAt(i)
 		fillerVal := values.DefaultValueForType(ty)
 		fillerOperand := ctx.addTempVar(ty)
-		fillerLoad := NewConstantLoad(fillerOperand, nil, fillerVal, exprPos)
+		fillerLoad := NewConstantLoad(fillerOperand, fillerVal, exprPos)
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
 	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
 
 	sizeOperand := ctx.addTempVar(semtypes.INT)
-	constantLoad := NewConstantLoad(sizeOperand, nil, int64(len(initValues)), exprPos)
+	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)
 	bb.Instructions = append(bb.Instructions, constantLoad)
 
 	resultOperand := ctx.addTempVar(semtypes.LIST)
@@ -962,7 +954,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	constantLoad := NewConstantLoad(resultOperand, expr.GetValueType(), expr.Value, expr.GetPosition())
+	constantLoad := NewConstantLoad(resultOperand, expr.Value, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, constantLoad)
 	return expressionEffect{
 		result: resultOperand,
@@ -1206,6 +1198,7 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 	classDef := ctx.birCx.classDefMap[expr.AtomicType]
 	if classDef == nil {
 		ctx.birCx.CompilerContext.InternalError("failed to find the class definition", expr.GetPosition())
+		return expressionEffect{}
 	}
 
 	object := ctx.addTempVar(expr.GetDeterminedType())

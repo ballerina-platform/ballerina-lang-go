@@ -68,7 +68,7 @@ func (this *XmlOps) IsEmpty(cx Context, t SubtypeData) bool {
 
 func (this *XmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
 	// migrated from XmlOps.java:83:5
-	return bddEvery(cx, bdd, nil, nil, xmlFormulaIsEmpty)
+	return BddEvery(cx, bdd, nil, nil, xmlFormulaIsEmpty)
 }
 
 func xmlFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {

@@ -20,9 +20,13 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
+	"sort"
 
 	"ballerina-lang-go/bir"
+	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -32,12 +36,16 @@ const (
 )
 
 type birWriter struct {
-	cp *ConstantPool
+	cp  *ConstantPool
+	tp  *typepool.TypePool
+	env semtypes.Env
 }
 
 func Marshal(pkg *bir.BIRPackage) ([]byte, error) {
 	writer := &birWriter{
-		cp: NewConstantPool(),
+		cp:  NewConstantPool(),
+		tp:  typepool.NewTypePool(),
+		env: pkg.TypeEnv,
 	}
 	return writer.serialize(pkg)
 }
@@ -54,6 +62,7 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	bw.writePackageCPEntry(birbuf, pkg.PackageID)
 	bw.writeImportModuleDecls(birbuf, pkg)
 	bw.writeGlobalVars(birbuf, pkg)
+	bw.writeClassDefs(birbuf, pkg)
 	bw.writeFunctions(birbuf, pkg)
 
 	buf := &bytes.Buffer{}
@@ -63,6 +72,13 @@ func (bw *birWriter) serialize(pkg *bir.BIRPackage) (result []byte, err error) {
 	}
 
 	write(buf, int32(BIR_VERSION))
+
+	tpBytes := typepool.MarshalTypePool(bw.tp, bw.env)
+	write(buf, int64(len(tpBytes)))
+	_, err = buf.Write(tpBytes)
+	if err != nil {
+		panic(fmt.Sprintf("writing type pool bytes: %v", err))
+	}
 
 	cpBytes, err := bw.cp.Serialize()
 	if err != nil {
@@ -105,6 +121,32 @@ func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	}
 }
 
+func (bw *birWriter) writeClassDefs(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+	bw.writeLength(buf, len(pkg.ClassDefs))
+	for _, classDef := range pkg.ClassDefs {
+		bw.writeClassDef(buf, &classDef)
+	}
+}
+
+func (bw *birWriter) writeClassDef(buf *bytes.Buffer, classDef *bir.BIRClassDef) {
+	bw.writeStringCPEntry(buf, classDef.Name.Value())
+	bw.writeLength(buf, len(classDef.Fields))
+	for _, field := range classDef.Fields {
+		bw.writeStringCPEntry(buf, field.Name)
+		bw.writeType(buf, field.Ty)
+	}
+	var methodNames []string
+	for name := range classDef.VTable {
+		methodNames = append(methodNames, name)
+	}
+	sort.Strings(methodNames)
+	bw.writeLength(buf, len(methodNames))
+	for _, name := range methodNames {
+		bw.writeStringCPEntry(buf, name)
+		bw.writeFunction(buf, classDef.VTable[name])
+	}
+}
+
 func (bw *birWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 	bw.writeLength(buf, len(pkg.Functions))
 	for _, fn := range pkg.Functions {
@@ -124,6 +166,7 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 		bw.writeStringCPEntry(buf, requiredParam.Name.Value())
 		bw.writeFlags(buf, requiredParam.Flags)
 	}
+	write(buf, fn.RestParams != nil)
 
 	birbuf := &bytes.Buffer{}
 	bw.writeLength(birbuf, fn.ArgsCount)
@@ -144,6 +187,14 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writeLength(birbuf, len(fn.BasicBlocks))
 	for _, bb := range fn.BasicBlocks {
 		bw.writeBasicBlock(birbuf, &bb)
+	}
+
+	bw.writeLength(birbuf, len(fn.ErrorTable))
+	for _, entry := range fn.ErrorTable {
+		bw.writeStringCPEntry(birbuf, entry.Start.Id.Value())
+		bw.writeStringCPEntry(birbuf, entry.End.Id.Value())
+		bw.writeStringCPEntry(birbuf, entry.Target.Id.Value())
+		bw.writeOperand(birbuf, entry.ErrorOp)
 	}
 
 	bw.writeBufferLength(buf, birbuf)
@@ -190,11 +241,11 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.ConstantLoad:
-		bw.writeType(buf, instr.Type)
+		write(buf, int32(-1))
 		bw.writeOperand(buf, instr.LhsOp)
 
 		isWrapped := false
-		var tagValue any = instr.Value
+		var tagValue = instr.Value
 		if cv, isConstValue := instr.Value.(bir.ConstValue); isConstValue {
 			isWrapped = true
 			tagValue = cv.Value
@@ -217,11 +268,52 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.SizeOp)
+		bw.writeLength(buf, len(instr.Values))
+		for _, v := range instr.Values {
+			bw.writeOperand(buf, v)
+		}
 	case *bir.TypeCast:
 		bw.writeOperand(buf, instr.LhsOp)
 		bw.writeOperand(buf, instr.RhsOp)
 		bw.writeType(buf, instr.Type)
 		// TODO: Write checkTypes
+	case *bir.TypeTest:
+		bw.writeOperand(buf, instr.RhsOp)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeType(buf, instr.Type)
+		write(buf, instr.IsNegation)
+	case *bir.NewMap:
+		bw.writeType(buf, instr.Type)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeLength(buf, len(instr.Values))
+		for _, entry := range instr.Values {
+			write(buf, entry.IsKeyValuePair())
+			if entry.IsKeyValuePair() {
+				kvEntry := entry.(*bir.MappingConstructorKeyValueEntry)
+				bw.writeOperand(buf, kvEntry.KeyOp())
+				bw.writeOperand(buf, kvEntry.ValueOp())
+			}
+		}
+	case *bir.NewError:
+		bw.writeType(buf, instr.Type)
+		bw.writeOperand(buf, instr.LhsOp)
+		bw.writeStringCPEntry(buf, instr.TypeName)
+		bw.writeOperand(buf, instr.MessageOp)
+		write(buf, instr.CauseOp != nil)
+		if instr.CauseOp != nil {
+			bw.writeOperand(buf, instr.CauseOp)
+		}
+		write(buf, instr.DetailOp != nil)
+		if instr.DetailOp != nil {
+			bw.writeOperand(buf, instr.DetailOp)
+		}
+	case *bir.NewObject:
+		bw.writeStringCPEntry(buf, instr.ClassDef.Name.Value())
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.FPLoad:
+		bw.writeStringCPEntry(buf, instr.FunctionLookupKey)
+		bw.writeType(buf, instr.Type)
+		bw.writeOperand(buf, instr.LhsOp)
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}
@@ -253,7 +345,13 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		}
 
 		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
+
+		if term.Kind == bir.INSTRUCTION_KIND_FP_CALL {
+			bw.writeOperand(buf, term.FpOperand)
+		}
 	case *bir.Return:
+	case *bir.Panic:
+		bw.writeOperand(buf, term.ErrorOp)
 	default:
 		panic(fmt.Sprintf("unsupported terminator type: %T", term))
 	}
@@ -350,6 +448,8 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			} else {
 				val = ""
 			}
+		case *big.Rat:
+			val = v.RatString()
 		default:
 			panic(fmt.Sprintf("expected string for tag %v, got %T", tag, value))
 		}
@@ -386,6 +486,8 @@ func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
 		return model.TypeTags_BOOLEAN, nil
 	case byte:
 		return model.TypeTags_BYTE, nil
+	case *big.Rat:
+		return model.TypeTags_DECIMAL, nil
 	case nil:
 		return model.TypeTags_NIL, nil
 	default:
@@ -433,9 +535,12 @@ func (bw *birWriter) writeBufferLength(buf *bytes.Buffer, birbuf *bytes.Buffer) 
 	write(buf, int64(birbuf.Len()))
 }
 
-// FIXME: Write actual type
-func (bw *birWriter) writeType(buf *bytes.Buffer, _ any) {
-	write(buf, int32(-1))
+func (bw *birWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) {
+	if ty == nil {
+		write(buf, int32(-1))
+		return
+	}
+	write(buf, int32(bw.tp.Put(ty)))
 }
 
 func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {
@@ -443,7 +548,7 @@ func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) 
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
 	var eCol int32 = math.MaxInt32
-	var sourceFileName string = ""
+	var sourceFileName = ""
 
 	if pos != nil {
 		sLine = int32(pos.LineRange().StartLine().Line())
