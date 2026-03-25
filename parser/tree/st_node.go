@@ -1109,11 +1109,11 @@ func toSexprIndented(node STNode, indentLevel int) string {
 
 	// Width
 	builder.WriteString(" ")
-	builder.WriteString(fmt.Sprintf("%d", node.Width()))
+	fmt.Fprintf(&builder, "%d", node.Width())
 
 	// Flags (hex format)
 	builder.WriteString(" ")
-	builder.WriteString(fmt.Sprintf("0x%02x", node.Flags()))
+	fmt.Fprintf(&builder, "0x%02x", node.Flags())
 
 	// Diagnostics
 	builder.WriteString(" (")
@@ -1126,7 +1126,7 @@ func toSexprIndented(node STNode, indentLevel int) string {
 		builder.WriteString(diag.code.DiagnosticId())
 		for _, arg := range diag.args {
 			builder.WriteString(" ")
-			builder.WriteString(fmt.Sprintf("%v", arg))
+			fmt.Fprintf(&builder, "%v", arg)
 		}
 	}
 	builder.WriteString(")")

@@ -37,9 +37,9 @@ func GetDiff(expected, actual string) string {
 			actualLine = actualLines[i]
 		}
 		if expectedLine != actualLine {
-			diff.WriteString(fmt.Sprintf("Line %d:\n", i+1))
-			diff.WriteString(fmt.Sprintf("  Expected: %q\n", expectedLine))
-			diff.WriteString(fmt.Sprintf("  Actual:   %q\n", actualLine))
+			fmt.Fprintf(&diff, "Line %d:\n", i+1)
+			fmt.Fprintf(&diff, "  Expected: %q\n", expectedLine)
+			fmt.Fprintf(&diff, "  Actual:   %q\n", actualLine)
 		}
 	}
 	return diff.String()

@@ -1338,7 +1338,7 @@ func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr
 		}
 		varDef.SetDeterminedType(semtypes.NEVER)
 
-		var variableTy semtypes.SemType = elementTy
+		var variableTy = elementTy
 		if !fromClause.IsDeclaredWithVarFlag && varDef.Var.TypeNode() != nil {
 			variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
 			if !ok {
@@ -1396,7 +1396,7 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 				if !ok {
 					return nil, false
 				}
-				var variableTy semtypes.SemType = initTy
+				var variableTy = initTy
 				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
 					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
 					if !ok {
@@ -2348,7 +2348,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 				}
 				members[i] = memberTy
 			}
-			rest, ok := semtypes.SemType(semtypes.NEVER), true
+			rest, ok := semtypes.SemType(semtypes.NEVER), true //nolint:ineffassign // ok default overwritten when ty.Rest is non-nil
 			if ty.Rest != nil {
 				rest, ok = tr.resolveBType(ty.Rest.(ast.BType), depth+1)
 				if !ok {

@@ -147,12 +147,13 @@ func (l *Lexer) skipLeadingTrivia() {
 
 func (l *Lexer) consumeEndOfLine() {
 	c := l.reader.Peek()
-	if c == charCarriageReturn {
+	switch c {
+	case charCarriageReturn:
 		l.reader.Advance()
 		if l.reader.Peek() == charNewline {
 			l.reader.Advance()
 		}
-	} else if c == charNewline {
+	case charNewline:
 		l.reader.Advance()
 	}
 }

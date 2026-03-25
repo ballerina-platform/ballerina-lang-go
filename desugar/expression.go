@@ -252,6 +252,7 @@ func walkListConstructorExpr(cx *FunctionContext, expr *ast.BLangListConstructor
 func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
+	//nolint:staticcheck // TODO
 	if expr.ErrorTypeRef != nil {
 		// ErrorTypeRef is a type descriptor, not an expression, so we don't walk it
 	}
@@ -655,9 +656,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 
 	selectResult := walkExpression(cx, selectClause.Expression)
-	for _, s := range selectResult.initStmts {
-		bodyStmts = append(bodyStmts, s)
-	}
+	bodyStmts = append(bodyStmts, selectResult.initStmts...)
 	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
 	if pushInvocation == nil {
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
@@ -717,9 +716,7 @@ func appendQueryIntermediateClauseStmts(
 					return nil, false
 				}
 				letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
-				for _, s := range letResult.initStmts {
-					bodyStmts = append(bodyStmts, s)
-				}
+				bodyStmts = append(bodyStmts, letResult.initStmts...)
 				varDef.Var.SetInitialExpression(letResult.replacementNode.(ast.BLangExpression))
 				bodyStmts = append(bodyStmts, varDef)
 			}
@@ -729,9 +726,7 @@ func appendQueryIntermediateClauseStmts(
 				return nil, false
 			}
 			whereResult := walkExpression(cx, clause.Expression)
-			for _, s := range whereResult.initStmts {
-				bodyStmts = append(bodyStmts, s)
-			}
+			bodyStmts = append(bodyStmts, whereResult.initStmts...)
 			whereCond := whereResult.replacementNode.(ast.BLangExpression)
 			notWhereCond := &ast.BLangUnaryExpr{
 				Expr:     whereCond,
