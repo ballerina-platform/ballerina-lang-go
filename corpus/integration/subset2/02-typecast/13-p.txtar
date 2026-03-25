@@ -1,3 +1,4 @@
 -- stdout --
-Runtime panic: bad type cast: cannot cast 1e+20 to int
 -- stderr --
+error: bad type cast: cannot cast 1e+20 to int
+        at main(13-p.bal:23)

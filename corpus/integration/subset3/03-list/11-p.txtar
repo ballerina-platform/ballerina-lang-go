@@ -1,3 +1,4 @@
 -- stdout --
-Runtime panic: list too long
 -- stderr --
+error: list too long
+        at main(11-p.bal:28)
