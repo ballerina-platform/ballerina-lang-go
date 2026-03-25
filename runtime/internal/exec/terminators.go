@@ -43,6 +43,9 @@ func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Regist
 		fn := resolveVirtualCallTarget(callInfo, args, reg)
 		result := executeFunction(*fn, args, reg, callStack)
 		if callInfo.Name.Value() == "init" {
+			if result != nil {
+				return result
+			}
 			return args[0]
 		}
 		return result
