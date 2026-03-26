@@ -37,9 +37,7 @@ type (
 
 	Call struct {
 		BIRTerminatorBase
-		Kind InstructionKind
-		// IsMethodCall corresponds to a Ballerina method-call-expr (`expr.name(args)`),
-		// where the callee is resolved from the receiver object value at runtime.
+		Kind              InstructionKind
 		IsMethodCall      bool
 		Args              []BIROperand
 		Name              model.Name

@@ -1,0 +1,89 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition Foo
+    (object-type
+      (method-decl foo () (
+        (value-type int)))
+      (field x
+        (value-type int))))
+  (class-definition F1
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal x))
+          (literal 1))))
+    (function foo () (
+      (value-type int))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal f1))))
+        (return
+          (index-based-access
+            (simple-var-ref self)
+            (literal x))))))
+  (class-definition F2
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal x))
+          (literal 2))))
+    (function foo () (
+      (value-type int))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal f2))))
+        (return
+          (index-based-access
+            (simple-var-ref self)
+            (literal x))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fs (type
+          (array-type
+            (user-defined-type Foo) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (new
+              (user-defined-type F1) ())
+            (new
+              (user-defined-type F2) ())))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref fs))))
+      (var-def
+        (variable $desugar$1 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$0))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$1)
+          (simple-var-ref $desugar$2))
+        (block-stmt
+          (var-def
+            (variable f (type
+              (user-defined-type Foo)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$0)
+                (simple-var-ref $desugar$1)))))
+          (expression-stmt
+            (invocation io println (
+              (invocation foo expr:
+                (simple-var-ref f) ()))))
+          (assignment
+            (simple-var-ref $desugar$1)
+            (binary-expr +
+              (simple-var-ref $desugar$1)
+              (numeric-literal 1))))))))

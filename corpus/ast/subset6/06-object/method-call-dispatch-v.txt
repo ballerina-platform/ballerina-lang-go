@@ -1,0 +1,65 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Foo
+    (object-type
+      (method-decl foo () (
+        (value-type int)))
+      (field x
+        (value-type int))))
+  (class-definition F1
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access x
+            (simple-var-ref self))
+          (literal 1))))
+    (function foo () (
+      (value-type int))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal f1))))
+        (return
+          (field-based-access x
+            (simple-var-ref self))))))
+  (class-definition F2
+    (function init () (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access x
+            (simple-var-ref self))
+          (literal 2))))
+    (function foo () (
+      (value-type int))
+      (block-function-body
+        (expression-stmt
+          (invocation io println (
+            (literal f2))))
+        (return
+          (field-based-access x
+            (simple-var-ref self))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fs (type
+          (array-type
+            (user-defined-type Foo) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (new
+              (user-defined-type F1) ())
+            (new
+              (user-defined-type F2) ())))))
+      (foreach
+        (var-def
+          (variable f (type
+            (user-defined-type Foo))))
+        (simple-var-ref fs)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation foo expr:
+                (simple-var-ref f) ())))))))))

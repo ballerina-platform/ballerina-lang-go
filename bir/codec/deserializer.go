@@ -713,12 +713,12 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 		}
 
 		return &bir.Call{
-			Kind:      termInstructionKind,
+			Kind:         termInstructionKind,
 			IsMethodCall: isMethodCall,
-			CalleePkg: pkg,
-			Name:      name,
-			Args:      args,
-			FpOperand: fpOperand,
+			CalleePkg:    pkg,
+			Name:         name,
+			Args:         args,
+			FpOperand:    fpOperand,
 			BIRTerminatorBase: bir.BIRTerminatorBase{
 				ThenBB: &bir.BIRBasicBlock{
 					Id: thenBBId,
