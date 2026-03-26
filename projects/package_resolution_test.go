@@ -18,8 +18,8 @@ package projects_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"ballerina-lang-go/projects"
@@ -186,16 +186,7 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	require := test_util.NewRequire(t)
 	assert := test_util.New(t)
 
-	// Step (a): Load the external package from cache using repository
-	cachePath, err := filepath.Abs("testdata/repo/bala")
-	require.NoError(err)
-
-	repo := repository.NewRepository(cachePath)
-	externalProject, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
-	require.NoError(err)
-	require.NotNil(externalProject)
-
-	// Step (b): Load the test project using loadProject helper
+	// Step 1: Load the test project
 	projectPath := filepath.Join("testdata", "project-with-external-dep")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
@@ -206,38 +197,40 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 
 	mainProject := result.Project()
 	require.NotNil(mainProject)
+	env := mainProject.Environment()
 
-	// Step (c): Cache the external package in the main project's environment
-	// This is critical because each project creates its own Environment,
-	// and the external package must be in the same Environment's PackageCache
-	// for resolution to work.
-	mainProject.Environment().PackageCache().Cache(externalProject.CurrentPackage())
+	// Step 2: Add a test repository with shared environment
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
 
-	// Verify the external package is now cached in the main project's environment
-	cachedPkg := mainProject.Environment().PackageCache().Get("mockorg", "mockpkg", "1.0.0")
-	require.NotNil(cachedPkg, "external package should be cached in main project's environment")
+	testRepo := projects.NewFileSystemRepository(
+		"test-repo",
+		os.DirFS(testRepoPath),
+		".",
+		env,
+		projects.LoadBalaProject,
+	)
+	env.AddRepository(testRepo)
 
-	// Step (d): Get the package and call Resolution()
+	// Step 3: Get the package
 	pkg := mainProject.CurrentPackage()
 	require.NotNil(pkg)
 
+	// Step 4: Trigger compilation (resolves dependencies internally)
+	compilation := pkg.Compilation()
+	require.NotNil(compilation, "compilation should not be nil")
+
+	// Step 5: Verify external package was resolved and cached
+	cachedPkg := env.PackageCache().Get("mockorg", "mockpkg", "1.0.0")
+	require.NotNil(cachedPkg, "mockpkg should be cached after compilation")
+
+	// Step 6: Verify dependency graph
 	resolution := pkg.Resolution()
 	require.NotNil(resolution)
 
-	// Step (e): Verify ModuleDependencyGraph exists
-	moduleDependencyGraph := resolution.ModuleDependencyGraph()
-	assert.NotNil(moduleDependencyGraph, "module dependency graph should exist")
-
-	// Step (f): Verify PackageDependencyGraph shows the external dependency
 	packageDependencyGraph := resolution.PackageDependencyGraph()
 	assert.NotNil(packageDependencyGraph, "package dependency graph should exist")
 
-	// The package dependency graph should have at least 2 nodes (root + external)
-	// We use ToTopologicallySortedList() which returns all nodes in the graph
-	nodes := packageDependencyGraph.ToTopologicallySortedList()
-	assert.True(len(nodes) >= 1, "expected at least 1 node in package dependency graph")
-
-	// Step (g): Check ResolvedDependencies contains "mockorg/mockpkg"
 	resolvedDeps := resolution.ResolvedDependencies()
 	mockpkgDesc, found := resolvedDeps["mockorg/mockpkg"]
 	require.True(found, "resolved dependencies should contain mockorg/mockpkg")
@@ -245,28 +238,97 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	assert.Equal("mockpkg", mockpkgDesc.Name().Value())
 	assert.Equal("1.0.0", mockpkgDesc.Version().String())
 
-	// Step (h): Call Compilation() to trigger compilation
-	compilation := pkg.Compilation()
-	require.NotNil(compilation, "compilation should not be nil")
-
-	// Step (i): Verify compilation completes (DiagnosticResult exists)
+	// Step 7: Verify compilation completed without errors
 	diagnosticResult := compilation.DiagnosticResult()
 	assert.NotNil(diagnosticResult, "diagnostic result should exist")
 
-	// Log any diagnostics for debugging
 	for _, diag := range diagnosticResult.Diagnostics() {
 		t.Logf("Diagnostic: %s", diag.Message())
 	}
 
-	// Step (j): Verify NO "Unknown import" errors
-	// This is the key assertion: external package symbols should be resolved
-	hasUnknownImport := false
+	assert.Equal(0, diagnosticResult.DiagnosticCount(), "expected no compilation errors")
+}
+
+// TestPackageResolution_TransitiveDependency tests package resolution with transitive dependencies.
+// The dependency chain is: project -> middlepkg -> leafpkg
+//
+// This test verifies that when compiling a project, the compilation process internally
+// resolves and compiles dependencies in the correct order, including transitive dependencies.
+func TestPackageResolution_TransitiveDependency(t *testing.T) {
+	require := test_util.NewRequire(t)
+	assert := test_util.New(t)
+
+	// Step 1: Load the test project
+	projectPath := filepath.Join("testdata", "project-with-transitive-dep")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	result, err := loadProject(absPath)
+	require.NoError(err)
+	require.NotNil(result)
+
+	mainProject := result.Project()
+	require.NotNil(mainProject)
+	env := mainProject.Environment()
+
+	// Step 2: Add a test repository 
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
+
+	testRepo := projects.NewFileSystemRepository(
+		"test-repo",
+		os.DirFS(testRepoPath),
+		".", // basePath relative to fsys root
+		env,
+		projects.LoadBalaProject,
+	)
+	env.AddRepository(testRepo)
+
+	// Step 3: Get the package and verify initial state
+	pkg := mainProject.CurrentPackage()
+	require.NotNil(pkg)
+
+	// Only the main package should be cached initially
+	assert.Equal(1, env.PackageCache().Size(), "only main package should be cached initially")
+
+	// Step 4: Trigger compilation and verify compilation completes successfully
+	compilation := pkg.Compilation()
+	require.NotNil(compilation, "compilation should not be nil")
+
+	diagnosticResult := compilation.DiagnosticResult()
+	assert.Equal(0, diagnosticResult.DiagnosticCount())
+
 	for _, diag := range diagnosticResult.Diagnostics() {
-		if strings.Contains(diag.Message(), "Unknown import") ||
-			strings.Contains(diag.Message(), "unknown import") {
-			hasUnknownImport = true
-			break
-		}
+		t.Logf("Diagnostic: %s", diag.Message())
 	}
-	assert.False(hasUnknownImport, "should NOT have 'Unknown import' errors - external package symbols should be resolved")
+
+	// Step 5: Verify external packages were resolved and cached during compilation
+	assert.Equal(3, env.PackageCache().Size(), "expected 3 packages in cache after compilation")
+
+	cachedMiddle := env.PackageCache().Get("mockorg", "middlepkg", "1.0.0")
+	require.NotNil(cachedMiddle, "middlepkg should be cached after compilation")
+
+	cachedLeaf := env.PackageCache().Get("mockorg", "leafpkg", "1.0.0")
+	require.NotNil(cachedLeaf, "leafpkg should be cached after compilation")
+
+	// Step 6: Verify dependency graph shows direct dependency
+	resolution := pkg.Resolution()
+	require.NotNil(resolution)
+
+	resolvedDeps := resolution.ResolvedDependencies()
+	middlepkgDesc, found := resolvedDeps["mockorg/middlepkg"]
+	require.True(found, "resolved dependencies should contain mockorg/middlepkg")
+	assert.Equal("mockorg", middlepkgDesc.Org().Value())
+	assert.Equal("middlepkg", middlepkgDesc.Name().Value())
+	assert.Equal("1.0.0", middlepkgDesc.Version().String())
+
+	// Step 7: Verify middlepkg's dependencies include leafpkg (transitive chain)
+	middleResolution := cachedMiddle.Resolution()
+	require.NotNil(middleResolution)
+
+	middleResolvedDeps := middleResolution.ResolvedDependencies()
+	leafpkgDesc, found := middleResolvedDeps["mockorg/leafpkg"]
+	require.True(found, "middlepkg's resolved dependencies should contain mockorg/leafpkg")
+	assert.Equal("mockorg", leafpkgDesc.Org().Value())
+	assert.Equal("leafpkg", leafpkgDesc.Name().Value())
 }
