@@ -3,15 +3,18 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 5
-    %2 = printBranch(%1) -> bb1;
+    %2 = %1;
+    %3 = printBranch(%2) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad 10
-    %4 = printBranch(%3) -> bb2;
+    %4 = ConstantLoad 10
+    %5 = %4;
+    %6 = printBranch(%5) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad 15
-    %6 = printBranch(%5) -> bb3;
+    %7 = ConstantLoad 15
+    %8 = %7;
+    %9 = printBranch(%8) -> bb3;
   }
   bb3 {
     return;
@@ -19,20 +22,24 @@ main() -> nil{
 }
 printBranch(int) -> nil{
   bb0 {
-    %3 = ConstantLoad 10
-    %2 = < x %3;
+    %3 = x;
+    %4 = ConstantLoad 10
+    %5 = %4;
+    %2 = < %3 %5;
     %2 ? bb1 : bb3;
   }
   bb1 {
-    %4 = ConstantLoad 1
-    %5 = println(%4) -> bb2;
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %6 = ConstantLoad 0
-    %7 = println(%6) -> bb4;
+    %9 = ConstantLoad 0
+    %10 = %9;
+    %11 = println(%10) -> bb4;
   }
   bb4 {
     GOTO bb5;

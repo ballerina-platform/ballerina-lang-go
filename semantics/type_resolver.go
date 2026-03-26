@@ -41,6 +41,9 @@ type TypeResolver struct {
 	importedSymbols map[string]model.ExportedSymbolSpace
 	pkg             *ast.BLangPackage
 	implicitImports map[string]ast.BLangImportPackage
+	// capturedNarrowedVars tracks base symbols of narrowed variables captured across
+	// a function boundary during lambda body resolution. nil when not inside a lambda.
+	capturedNarrowedVars map[model.SymbolRef]bool
 }
 
 var _ ast.Visitor = &TypeResolver{}
@@ -219,11 +222,7 @@ func (t *TypeResolver) resolveStatement(chain *binding, stmt ast.BLangStatement)
 func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
 	switch s := stmt.(type) {
 	case *ast.BLangSimpleVariableDef:
-		variable := s.GetVariable().(*ast.BLangSimpleVariable)
-		if !t.resolveSimpleVariable(chain, variable) {
-			return defaultStmtEffect(chain), false
-		}
-		return defaultStmtEffect(chain), true
+		return t.resolveVariableDefStmt(chain, s)
 	case *ast.BLangAssignment:
 		if _, _, ok := t.resolveExpression(nil, s.GetVariable().(ast.BLangExpression)); !ok {
 			return defaultStmtEffect(chain), false
@@ -232,7 +231,7 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			return defaultStmtEffect(chain), false
 		}
 		if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
-			return unnarrowSymbol(t.ctx, chain, expr.Symbol()), true
+			return t.unnarrowSymbol(chain, expr.Symbol()), true
 		}
 		return defaultStmtEffect(chain), true
 	case *ast.BLangCompoundAssignment:
@@ -243,7 +242,7 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 			return defaultStmtEffect(chain), false
 		}
 		if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
-			return unnarrowSymbol(t.ctx, chain, expr.Symbol()), true
+			return t.unnarrowSymbol(chain, expr.Symbol()), true
 		}
 		return defaultStmtEffect(chain), true
 	case *ast.BLangExpressionStmt:
@@ -325,7 +324,7 @@ func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangState
 	case *ast.BLangMatchStatement:
 		return t.resolveMatchStatement(chain, s)
 	case *ast.BLangBreak, *ast.BLangContinue:
-		return defaultStmtEffect(chain), true
+		return statementEffect{binding: nil, nonCompletion: true}, true
 	default:
 		t.ctx.InternalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
 		return defaultStmtEffect(chain), false
@@ -398,20 +397,45 @@ func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaF
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
+
+	// Push function boundary marker onto the chain
+	boundaryChain := &binding{functionBoundary: true, prev: chain}
+
+	// Save and reset capture tracker (supports nested lambdas)
+	prevCaptured := t.capturedNarrowedVars
+	t.capturedNarrowedVars = make(map[model.SymbolRef]bool)
+
 	switch body := e.Function.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		t.resolveBlockStatements(chain, body.Stmts)
+		t.resolveBlockStatements(boundaryChain, body.Stmts)
 		body.SetDeterminedType(semtypes.NEVER)
 	case *ast.BLangExprFunctionBody:
-		if _, _, ok := t.resolveExpression(chain, body.Expr.(ast.BLangExpression)); !ok {
+		if _, _, ok := t.resolveExpression(boundaryChain, body.Expr.(ast.BLangExpression)); !ok {
+			t.capturedNarrowedVars = prevCaptured
 			return nil, expressionEffect{}, false
 		}
 		body.SetDeterminedType(semtypes.NEVER)
 	}
+
+	// Unnarrow all captured variables
+	outerChain := chain
+	for ref := range t.capturedNarrowedVars {
+		outerChain = t.unnarrowSymbol(outerChain, ref).binding
+	}
+
+	// propagate captured variables to parent
+	if prevCaptured != nil {
+		for ref := range t.capturedNarrowedVars {
+			prevCaptured[ref] = true
+		}
+	}
+
+	t.capturedNarrowedVars = prevCaptured
+
 	e.Function.SetDeterminedType(semtypes.NEVER)
 	e.Function.Name.SetDeterminedType(semtypes.NEVER)
 	setExpectedType(e, fnType)
-	return fnType, defaultExpressionEffect(chain), true
+	return fnType, defaultExpressionEffect(outerChain), true
 }
 
 func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
@@ -914,11 +938,46 @@ func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semty
 	}
 }
 
+func (t *TypeResolver) resolveVariableDefStmt(chain *binding, s *ast.BLangSimpleVariableDef) (statementEffect, bool) {
+	variable := s.GetVariable().(*ast.BLangSimpleVariable)
+	variable.Name.SetDeterminedType(semtypes.NEVER)
+
+	// Resolve type node if present
+	typeNode := variable.TypeNode()
+	if typeNode != nil {
+		semType, ok := t.resolveBType(typeNode, 0)
+		if !ok {
+			setExpectedType(variable, semtypes.NEVER)
+			updateSymbolType(t.ctx, variable, semtypes.NEVER)
+			return defaultStmtEffect(chain), false
+		}
+		setExpectedType(variable, semType)
+		updateSymbolType(t.ctx, variable, semType)
+	}
+
+	// Resolve initializer expression and capture its effect (e.g., lambda unnarrowing)
+	effectChain := chain
+	if variable.Expr != nil {
+		exprTy, effect, ok := t.resolveExpression(chain, variable.Expr.(ast.BLangExpression))
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		effectChain = effect.ifTrue
+		// For type-inferred variables, set the type from the expression
+		if typeNode == nil {
+			setExpectedType(variable, exprTy)
+			updateSymbolType(t.ctx, variable, exprTy)
+		}
+	}
+
+	return defaultStmtEffect(effectChain), true
+}
+
 func lookupSymbol(chain *binding, ref model.SymbolRef) model.SymbolRef {
 	if chain == nil {
 		return ref
 	}
-	narrowedRef, isNarrowed := lookupBinding(chain, ref)
+	narrowedRef, isNarrowed, _ := lookupBinding(chain, ref)
 	if isNarrowed {
 		return narrowedRef
 	}
@@ -1434,9 +1493,13 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 }
 
 func (t *TypeResolver) resolveSimpleVarRef(chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {
-	sym, isNarrowed := lookupBinding(chain, expr.Symbol())
+	baseSymbol := expr.Symbol()
+	sym, isNarrowed, isCaptured := lookupBinding(chain, baseSymbol)
 	if isNarrowed {
 		expr.SetSymbol(sym)
+	}
+	if isCaptured && t.capturedNarrowedVars != nil {
+		t.capturedNarrowedVars[baseSymbol] = true
 	}
 	ty := t.ctx.SymbolType(sym)
 	setExpectedType(expr, ty)
@@ -1445,18 +1508,11 @@ func (t *TypeResolver) resolveSimpleVarRef(chain *binding, expr *ast.BLangSimple
 }
 
 func (t *TypeResolver) resolveLocalVarRef(chain *binding, expr *ast.BLangLocalVarRef) (semtypes.SemType, expressionEffect, bool) {
-	sym, isNarrowed := lookupBinding(chain, expr.Symbol())
-	if isNarrowed {
-		expr.SetSymbol(sym)
-	}
-	ty := t.ctx.SymbolType(sym)
-	setExpectedType(expr, ty)
-	setVarRefIdentifierTypes(&expr.BLangSimpleVarRef)
-	return ty, defaultExpressionEffect(chain), true
+	return t.resolveSimpleVarRef(chain, &expr.BLangSimpleVarRef)
 }
 
 func (t *TypeResolver) resolveConstRef(chain *binding, expr *ast.BLangConstRef) (semtypes.SemType, expressionEffect, bool) {
-	sym, isNarrowed := lookupBinding(chain, expr.Symbol())
+	sym, isNarrowed, _ := lookupBinding(chain, expr.Symbol())
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
@@ -1599,11 +1655,11 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	if isLogicalExpression(expr) {
 		return t.resolveLogicalExpr(chain, expr)
 	}
-	lhsTy, _, ok := t.resolveExpression(chain, expr.LhsExpr)
+	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := t.resolveExpression(chain, expr.RhsExpr)
+	rhsTy, _, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1611,7 +1667,7 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	var resultTy semtypes.SemType
 
 	if isEqualityExpr(expr) {
-		return t.resolveEqualityExpr(chain, expr)
+		return t.resolveEqualityExpr(lhsEffect.ifTrue, expr)
 	} else if isRangeExpr(expr) {
 		resultTy = createIteratorType(t.ctx.GetTypeEnv(), semtypes.INT, semtypes.NIL)
 	} else {
@@ -1627,7 +1683,7 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 
 	setExpectedType(expr, resultTy)
 
-	effect := defaultExpressionEffect(chain)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
 	return resultTy, effect, true
 }
 
@@ -2134,11 +2190,13 @@ func (t *TypeResolver) resolveLangLibImport(pkgName string, methodName string, e
 
 func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
+	currentChain := chain
 	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := t.resolveExpression(chain, arg)
+		argTy, argEffect, ok := t.resolveExpression(currentChain, arg)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
+		currentChain = argEffect.ifTrue
 		argTys[i] = argTy
 	}
 
@@ -2148,22 +2206,36 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 		expr.SetSymbol(symbolRef)
 	}
 
-	symbolRef = lookupSymbol(chain, symbolRef)
+	symbolRef = lookupSymbol(currentChain, symbolRef)
 	expr.SetSymbol(symbolRef)
 	fnTy := t.ctx.SymbolType(symbolRef)
 	if fnTy == nil {
 		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+	fnTy = semtypes.Intersect(fnTy, semtypes.FUNCTION)
+	tyCtx := t.tyCtx
+	if semtypes.IsEmpty(tyCtx, fnTy) {
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
+		t.ctx.SemanticError("not a function value", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 
-	retTy := semtypes.FunctionReturnType(t.tyCtx, fnTy, argListTy)
+	retTy := semtypes.FunctionReturnType(tyCtx, fnTy, argListTy)
+	if retTy == nil {
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
+		t.ctx.SemanticError("incompatible arguments for function call", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 
 	setExpectedType(expr, retTy)
 
-	return retTy, defaultExpressionEffect(chain), true
+	return retTy, defaultExpressionEffect(currentChain), true
 }
 
 func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) (semtypes.SemType, bool) {
@@ -2470,6 +2542,9 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			}
 			paramTypes[i] = paramTy
 			ty.RequiredParams[i].SetDeterminedType(paramTy)
+			if ty.RequiredParams[i].Name != nil {
+				ty.RequiredParams[i].Name.SetDeterminedType(semtypes.NEVER)
+			}
 		}
 		var restTy semtypes.SemType = semtypes.NEVER
 		if ty.RestParam != nil {

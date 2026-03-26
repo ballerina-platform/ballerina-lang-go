@@ -26,8 +26,8 @@ import (
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
-	frame := createFunctionFrame(&birFunc, args, callStack)
+func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack, parentFrame *Frame) values.BalValue {
+	frame := createFunctionFrame(&birFunc, args, callStack, parentFrame)
 	bb := &birFunc.BasicBlocks[0]
 	if len(birFunc.ErrorTable) > 0 {
 		executeFunctionWithTrap(&birFunc, bb, frame, reg, callStack)
@@ -38,9 +38,9 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	return frame.locals[0]
 }
 
-func createFunctionFrame(birFunc *bir.BIRFunction, args []values.BalValue, callStack *callStack) *Frame {
+func createFunctionFrame(birFunc *bir.BIRFunction, args []values.BalValue, callStack *callStack, parentFrame *Frame) *Frame {
 	locals := initLocalsForFunction(birFunc, args)
-	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
+	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
 	callStack.Push(frame)
 	if len(callStack.elements) > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))
@@ -83,9 +83,10 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 }
 
 func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
+	currentFrame := frame
 	for {
 		curBBNumber := bb.Number
-		nextBB, recovered := executeBasicBlockWithTrap(bb, frame, reg, callStack)
+		nextBB, nextFrame, recovered := executeBasicBlockWithTrap(bb, frame, currentFrame, reg, callStack)
 
 		if recovered != nil {
 			// Resolve the innermost error-table entry covering the current block and
@@ -96,12 +97,15 @@ func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, fr
 			}
 			unwindCallStackToFrame(callStack, frame)
 			errVal := panicValueToErrorValue(recovered)
-			setOperandValue(handler.ErrorOp, frame, reg, errVal)
+			// After unwinding, the active frame is the function frame.
+			currentFrame = frame
+			setOperandValue(handler.ErrorOp, currentFrame, reg, errVal)
 			bb = &birFunc.BasicBlocks[handler.Target]
 			continue
 		}
 
 		bb = nextBB
+		currentFrame = nextFrame
 		if bb == nil {
 			break
 		}
@@ -109,37 +113,44 @@ func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, fr
 }
 
 func executeFunctionNoTrap(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
+	currentFrame := frame
 	for {
-		bb = executeBasicBlock(bb, frame, reg, callStack)
+		var nextBB *bir.BIRBasicBlock
+		nextBB, currentFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+		bb = nextBB
 		if bb == nil {
 			break
 		}
 	}
 }
 
-func executeBasicBlockWithTrap(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) (nextBB *bir.BIRBasicBlock, recovered any) {
+func executeBasicBlockWithTrap(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
 	defer func() {
 		if r := recover(); r != nil {
 			recovered = r
 		}
 	}()
-	nextBB = executeBasicBlock(bb, frame, reg, callStack)
-	return nextBB, nil
+	nextBB, nextFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+	return nextBB, nextFrame, nil
 }
 
-func executeBasicBlock(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
+func executeBasicBlock(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
 		posProvider := inst.(interface{ GetPos() diagnostics.Location })
 		frame.location = posProvider.GetPos()
-		execInstruction(inst, frame, reg)
+		currentFrame = execInstruction(inst, currentFrame, reg)
 	}
 	posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
 	frame.location = posProvider.GetPos()
-	return execTerminator(bb.Terminator, frame, reg, callStack)
+	return execTerminator(bb.Terminator, currentFrame, reg, callStack), currentFrame
 }
 
-func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) {
+func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) *Frame {
 	switch v := inst.(type) {
+	case *bir.PushScopeFrame:
+		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
+	case *bir.PopScopeFrame:
+		return frame.parent
 	case *bir.ConstantLoad:
 		execConstantLoad(v, frame, reg)
 	case *bir.Move:
@@ -238,6 +249,7 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
+	return frame
 }
 
 func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {

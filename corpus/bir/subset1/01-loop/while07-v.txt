@@ -3,19 +3,23 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
-    %2 = printClosestSquareNum(%1) -> bb1;
+    %2 = %1;
+    %3 = printClosestSquareNum(%2) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad 0
-    %4 = printClosestSquareNum(%3) -> bb2;
+    %4 = ConstantLoad 0
+    %5 = %4;
+    %6 = printClosestSquareNum(%5) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad 5
-    %6 = printClosestSquareNum(%5) -> bb3;
+    %7 = ConstantLoad 5
+    %8 = %7;
+    %9 = printClosestSquareNum(%8) -> bb3;
   }
   bb3 {
-    %7 = ConstantLoad 17
-    %8 = printClosestSquareNum(%7) -> bb4;
+    %10 = ConstantLoad 17
+    %11 = %10;
+    %12 = printClosestSquareNum(%11) -> bb4;
   }
   bb4 {
     return;
@@ -27,31 +31,39 @@ printClosestSquareNum(int) -> nil{
     GOTO bb1;
   }
   bb1 {
-    %4 = ConstantLoad 0
-    %3 = >= i %4;
+    %4 = i;
+    %5 = ConstantLoad 0
+    %6 = %5;
+    %3 = >= %4 %6;
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %5 = isSquareNumber(i) -> bb4;
+    PushScopeFrame 9
+    %0 = (1, i);
+    %1 = isSquareNumber(%0) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %5 ? bb5 : bb7;
+    %1 ? bb5 : bb7;
   }
   bb5 {
-    %6 = println(i) -> bb6;
+    %2 = (1, i);
+    %3 = println(%2) -> bb6;
   }
   bb6 {
-    %7 = ConstantLoad <nil>
-    %0 = %7;
+    %4 = ConstantLoad <nil>
+    (1, %0) = %4;
     return;
   }
   bb7 {
-    %9 = ConstantLoad 1
-    %8 = - i %9;
-    i = %8;
+    %6 = (1, i);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = - %6 %8;
+    (1, i) = %5;
+    PopScopeFrame
     GOTO bb1;
   }
 }
@@ -62,41 +74,55 @@ isSquareNumber(int) -> boolean{
     GOTO bb1;
   }
   bb1 {
-    %4 = <= i x;
+    %5 = i;
+    %6 = x;
+    %4 = <= %5 %6;
     %4 ? bb2 : bb3;
   }
   bb2 {
-    %6 = * i i;
-    %5 = == %6 x;
-    %5 ? bb4 : bb5;
+    PushScopeFrame 18
+    %2 = (1, i);
+    %3 = (1, i);
+    %1 = * %2 %3;
+    %4 = %1;
+    %5 = (1, x);
+    %0 = == %4 %5;
+    %0 ? bb4 : bb5;
   }
   bb3 {
-    %13 = ConstantLoad false
-    %0 = %13;
-    return;
-  }
-  bb4 {
-    %7 = ConstantLoad true
+    %7 = ConstantLoad false
     %0 = %7;
     return;
   }
+  bb4 {
+    %6 = ConstantLoad true
+    (1, %0) = %6;
+    return;
+  }
   bb5 {
-    %9 = * i i;
-    %8 = > %9 x;
-    %8 ? bb6 : bb7;
+    %9 = (1, i);
+    %10 = (1, i);
+    %8 = * %9 %10;
+    %11 = %8;
+    %12 = (1, x);
+    %7 = > %11 %12;
+    %7 ? bb6 : bb7;
   }
   bb6 {
-    %10 = ConstantLoad false
-    %0 = %10;
+    %13 = ConstantLoad false
+    (1, %0) = %13;
     return;
   }
   bb7 {
     GOTO bb8;
   }
   bb8 {
-    %12 = ConstantLoad 1
-    %11 = + i %12;
-    i = %11;
+    %15 = (1, i);
+    %16 = ConstantLoad 1
+    %17 = %16;
+    %14 = + %15 %17;
+    (1, i) = %14;
+    PopScopeFrame
     GOTO bb1;
   }
 }

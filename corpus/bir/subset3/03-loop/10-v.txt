@@ -9,30 +9,42 @@ main() -> nil{
     GOTO bb1;
   }
   bb1 {
-    %5 = < i $desugar$0;
+    %6 = i;
+    %7 = $desugar$0;
+    %5 = < %6 %7;
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = println(i) -> bb4;
+    PushScopeFrame 14
+    %0 = (1, i);
+    %1 = println(%0) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %8 = ConstantLoad 8
-    %7 = == i %8;
-    %7 ? bb5 : bb6;
+    %3 = (1, i);
+    %4 = ConstantLoad 8
+    %5 = %4;
+    %2 = == %3 %5;
+    %2 ? bb5 : bb6;
   }
   bb5 {
-    %10 = ConstantLoad 1
-    %9 = + i %10;
-    i = %9;
+    %7 = (1, i);
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %6 = + %7 %9;
+    (1, i) = %6;
+    PopScopeFrame
     GOTO bb1;
   }
   bb6 {
+    %11 = (1, i);
     %12 = ConstantLoad 1
-    %11 = + i %12;
-    i = %11;
+    %13 = %12;
+    %10 = + %11 %13;
+    (1, i) = %10;
+    PopScopeFrame
     GOTO bb1;
   }
 }

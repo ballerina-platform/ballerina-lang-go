@@ -16,21 +16,28 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %7 = < $desugar$1 $desugar$2;
+    %8 = $desugar$1;
+    %9 = $desugar$2;
+    %7 = < %8 %9;
     %7 ? bb4 : bb5;
   }
   bb4 {
-    %8 = $desugar$0[$desugar$1];
-    i = %8;
-    %10 = println(i) -> bb6;
+    PushScopeFrame 8
+    %0 = (1, $desugar$0)[(1, $desugar$1)];
+    i = %0;
+    %2 = i;
+    %3 = println(%2) -> bb6;
   }
   bb5 {
     return;
   }
   bb6 {
-    %12 = ConstantLoad 1
-    %11 = + $desugar$1 %12;
-    $desugar$1 = %11;
+    %5 = (1, $desugar$1);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$1) = %4;
+    PopScopeFrame
     GOTO bb3;
   }
 }

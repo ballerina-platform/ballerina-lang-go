@@ -3,223 +3,298 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 9223372036854775806
-    %2 = ConstantLoad 9223372036854775806
-    %3 = lt(%1,%2) -> bb1;
+    %2 = %1;
+    %3 = ConstantLoad 9223372036854775806
+    %4 = %3;
+    %5 = lt(%2,%4) -> bb1;
   }
   bb1 {
-    %4 = printBoolean(%3) -> bb2;
+    %6 = %5;
+    %7 = printBoolean(%6) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad 9223372036854775806
-    %6 = ConstantLoad 1
-    %7 = lt(%5,%6) -> bb3;
+    %8 = ConstantLoad 9223372036854775806
+    %9 = %8;
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %12 = lt(%9,%11) -> bb3;
   }
   bb3 {
-    %8 = printBoolean(%7) -> bb4;
+    %13 = %12;
+    %14 = printBoolean(%13) -> bb4;
   }
   bb4 {
-    %9 = ConstantLoad 9223372036854775806
-    %10 = ConstantLoad 0
-    %11 = lt(%9,%10) -> bb5;
+    %15 = ConstantLoad 9223372036854775806
+    %16 = %15;
+    %17 = ConstantLoad 0
+    %18 = %17;
+    %19 = lt(%16,%18) -> bb5;
   }
   bb5 {
-    %12 = printBoolean(%11) -> bb6;
+    %20 = %19;
+    %21 = printBoolean(%20) -> bb6;
   }
   bb6 {
-    %13 = ConstantLoad 9223372036854775806
-    %14 = ConstantLoad 1
-    %15 = unknown %14;
-    %16 = lt(%13,%15) -> bb7;
+    %22 = ConstantLoad 9223372036854775806
+    %23 = %22;
+    %24 = ConstantLoad 1
+    %25 = unknown %24;
+    %26 = %25;
+    %27 = lt(%23,%26) -> bb7;
   }
   bb7 {
-    %17 = printBoolean(%16) -> bb8;
+    %28 = %27;
+    %29 = printBoolean(%28) -> bb8;
   }
   bb8 {
-    %18 = ConstantLoad 9223372036854775806
-    %19 = ConstantLoad 9223372036854775806
-    %20 = unknown %19;
-    %21 = lt(%18,%20) -> bb9;
+    %30 = ConstantLoad 9223372036854775806
+    %31 = %30;
+    %32 = ConstantLoad 9223372036854775806
+    %33 = unknown %32;
+    %34 = %33;
+    %35 = lt(%31,%34) -> bb9;
   }
   bb9 {
-    %22 = printBoolean(%21) -> bb10;
+    %36 = %35;
+    %37 = printBoolean(%36) -> bb10;
   }
   bb10 {
-    %23 = ConstantLoad 1
-    %24 = ConstantLoad 9223372036854775806
-    %25 = lt(%23,%24) -> bb11;
+    %38 = ConstantLoad 1
+    %39 = %38;
+    %40 = ConstantLoad 9223372036854775806
+    %41 = %40;
+    %42 = lt(%39,%41) -> bb11;
   }
   bb11 {
-    %26 = printBoolean(%25) -> bb12;
+    %43 = %42;
+    %44 = printBoolean(%43) -> bb12;
   }
   bb12 {
-    %27 = ConstantLoad 1
-    %28 = ConstantLoad 1
-    %29 = lt(%27,%28) -> bb13;
+    %45 = ConstantLoad 1
+    %46 = %45;
+    %47 = ConstantLoad 1
+    %48 = %47;
+    %49 = lt(%46,%48) -> bb13;
   }
   bb13 {
-    %30 = printBoolean(%29) -> bb14;
+    %50 = %49;
+    %51 = printBoolean(%50) -> bb14;
   }
   bb14 {
-    %31 = ConstantLoad 1
-    %32 = ConstantLoad 0
-    %33 = lt(%31,%32) -> bb15;
+    %52 = ConstantLoad 1
+    %53 = %52;
+    %54 = ConstantLoad 0
+    %55 = %54;
+    %56 = lt(%53,%55) -> bb15;
   }
   bb15 {
-    %34 = printBoolean(%33) -> bb16;
+    %57 = %56;
+    %58 = printBoolean(%57) -> bb16;
   }
   bb16 {
-    %35 = ConstantLoad 1
-    %36 = ConstantLoad 1
-    %37 = unknown %36;
-    %38 = lt(%35,%37) -> bb17;
+    %59 = ConstantLoad 1
+    %60 = %59;
+    %61 = ConstantLoad 1
+    %62 = unknown %61;
+    %63 = %62;
+    %64 = lt(%60,%63) -> bb17;
   }
   bb17 {
-    %39 = printBoolean(%38) -> bb18;
+    %65 = %64;
+    %66 = printBoolean(%65) -> bb18;
   }
   bb18 {
-    %40 = ConstantLoad 1
-    %41 = ConstantLoad 9223372036854775806
-    %42 = unknown %41;
-    %43 = lt(%40,%42) -> bb19;
+    %67 = ConstantLoad 1
+    %68 = %67;
+    %69 = ConstantLoad 9223372036854775806
+    %70 = unknown %69;
+    %71 = %70;
+    %72 = lt(%68,%71) -> bb19;
   }
   bb19 {
-    %44 = printBoolean(%43) -> bb20;
+    %73 = %72;
+    %74 = printBoolean(%73) -> bb20;
   }
   bb20 {
-    %45 = ConstantLoad 0
-    %46 = ConstantLoad 9223372036854775806
-    %47 = lt(%45,%46) -> bb21;
+    %75 = ConstantLoad 0
+    %76 = %75;
+    %77 = ConstantLoad 9223372036854775806
+    %78 = %77;
+    %79 = lt(%76,%78) -> bb21;
   }
   bb21 {
-    %48 = printBoolean(%47) -> bb22;
+    %80 = %79;
+    %81 = printBoolean(%80) -> bb22;
   }
   bb22 {
-    %49 = ConstantLoad 0
-    %50 = ConstantLoad 1
-    %51 = lt(%49,%50) -> bb23;
+    %82 = ConstantLoad 0
+    %83 = %82;
+    %84 = ConstantLoad 1
+    %85 = %84;
+    %86 = lt(%83,%85) -> bb23;
   }
   bb23 {
-    %52 = printBoolean(%51) -> bb24;
+    %87 = %86;
+    %88 = printBoolean(%87) -> bb24;
   }
   bb24 {
-    %53 = ConstantLoad 0
-    %54 = ConstantLoad 0
-    %55 = lt(%53,%54) -> bb25;
+    %89 = ConstantLoad 0
+    %90 = %89;
+    %91 = ConstantLoad 0
+    %92 = %91;
+    %93 = lt(%90,%92) -> bb25;
   }
   bb25 {
-    %56 = printBoolean(%55) -> bb26;
+    %94 = %93;
+    %95 = printBoolean(%94) -> bb26;
   }
   bb26 {
-    %57 = ConstantLoad 0
-    %58 = ConstantLoad 1
-    %59 = unknown %58;
-    %60 = lt(%57,%59) -> bb27;
+    %96 = ConstantLoad 0
+    %97 = %96;
+    %98 = ConstantLoad 1
+    %99 = unknown %98;
+    %100 = %99;
+    %101 = lt(%97,%100) -> bb27;
   }
   bb27 {
-    %61 = printBoolean(%60) -> bb28;
+    %102 = %101;
+    %103 = printBoolean(%102) -> bb28;
   }
   bb28 {
-    %62 = ConstantLoad 0
-    %63 = ConstantLoad 9223372036854775806
-    %64 = unknown %63;
-    %65 = lt(%62,%64) -> bb29;
+    %104 = ConstantLoad 0
+    %105 = %104;
+    %106 = ConstantLoad 9223372036854775806
+    %107 = unknown %106;
+    %108 = %107;
+    %109 = lt(%105,%108) -> bb29;
   }
   bb29 {
-    %66 = printBoolean(%65) -> bb30;
+    %110 = %109;
+    %111 = printBoolean(%110) -> bb30;
   }
   bb30 {
-    %67 = ConstantLoad 1
-    %68 = unknown %67;
-    %69 = ConstantLoad 9223372036854775806
-    %70 = lt(%68,%69) -> bb31;
+    %112 = ConstantLoad 1
+    %113 = unknown %112;
+    %114 = %113;
+    %115 = ConstantLoad 9223372036854775806
+    %116 = %115;
+    %117 = lt(%114,%116) -> bb31;
   }
   bb31 {
-    %71 = printBoolean(%70) -> bb32;
+    %118 = %117;
+    %119 = printBoolean(%118) -> bb32;
   }
   bb32 {
-    %72 = ConstantLoad 1
-    %73 = unknown %72;
-    %74 = ConstantLoad 1
-    %75 = lt(%73,%74) -> bb33;
+    %120 = ConstantLoad 1
+    %121 = unknown %120;
+    %122 = %121;
+    %123 = ConstantLoad 1
+    %124 = %123;
+    %125 = lt(%122,%124) -> bb33;
   }
   bb33 {
-    %76 = printBoolean(%75) -> bb34;
+    %126 = %125;
+    %127 = printBoolean(%126) -> bb34;
   }
   bb34 {
-    %77 = ConstantLoad 1
-    %78 = unknown %77;
-    %79 = ConstantLoad 0
-    %80 = lt(%78,%79) -> bb35;
+    %128 = ConstantLoad 1
+    %129 = unknown %128;
+    %130 = %129;
+    %131 = ConstantLoad 0
+    %132 = %131;
+    %133 = lt(%130,%132) -> bb35;
   }
   bb35 {
-    %81 = printBoolean(%80) -> bb36;
+    %134 = %133;
+    %135 = printBoolean(%134) -> bb36;
   }
   bb36 {
-    %82 = ConstantLoad 1
-    %83 = unknown %82;
-    %84 = ConstantLoad 1
-    %85 = unknown %84;
-    %86 = lt(%83,%85) -> bb37;
+    %136 = ConstantLoad 1
+    %137 = unknown %136;
+    %138 = %137;
+    %139 = ConstantLoad 1
+    %140 = unknown %139;
+    %141 = %140;
+    %142 = lt(%138,%141) -> bb37;
   }
   bb37 {
-    %87 = printBoolean(%86) -> bb38;
+    %143 = %142;
+    %144 = printBoolean(%143) -> bb38;
   }
   bb38 {
-    %88 = ConstantLoad 1
-    %89 = unknown %88;
-    %90 = ConstantLoad 9223372036854775806
-    %91 = unknown %90;
-    %92 = lt(%89,%91) -> bb39;
+    %145 = ConstantLoad 1
+    %146 = unknown %145;
+    %147 = %146;
+    %148 = ConstantLoad 9223372036854775806
+    %149 = unknown %148;
+    %150 = %149;
+    %151 = lt(%147,%150) -> bb39;
   }
   bb39 {
-    %93 = printBoolean(%92) -> bb40;
+    %152 = %151;
+    %153 = printBoolean(%152) -> bb40;
   }
   bb40 {
-    %94 = ConstantLoad 9223372036854775806
-    %95 = unknown %94;
-    %96 = ConstantLoad 9223372036854775806
-    %97 = lt(%95,%96) -> bb41;
+    %154 = ConstantLoad 9223372036854775806
+    %155 = unknown %154;
+    %156 = %155;
+    %157 = ConstantLoad 9223372036854775806
+    %158 = %157;
+    %159 = lt(%156,%158) -> bb41;
   }
   bb41 {
-    %98 = printBoolean(%97) -> bb42;
+    %160 = %159;
+    %161 = printBoolean(%160) -> bb42;
   }
   bb42 {
-    %99 = ConstantLoad 9223372036854775806
-    %100 = unknown %99;
-    %101 = ConstantLoad 1
-    %102 = lt(%100,%101) -> bb43;
+    %162 = ConstantLoad 9223372036854775806
+    %163 = unknown %162;
+    %164 = %163;
+    %165 = ConstantLoad 1
+    %166 = %165;
+    %167 = lt(%164,%166) -> bb43;
   }
   bb43 {
-    %103 = printBoolean(%102) -> bb44;
+    %168 = %167;
+    %169 = printBoolean(%168) -> bb44;
   }
   bb44 {
-    %104 = ConstantLoad 9223372036854775806
-    %105 = unknown %104;
-    %106 = ConstantLoad 0
-    %107 = lt(%105,%106) -> bb45;
+    %170 = ConstantLoad 9223372036854775806
+    %171 = unknown %170;
+    %172 = %171;
+    %173 = ConstantLoad 0
+    %174 = %173;
+    %175 = lt(%172,%174) -> bb45;
   }
   bb45 {
-    %108 = printBoolean(%107) -> bb46;
+    %176 = %175;
+    %177 = printBoolean(%176) -> bb46;
   }
   bb46 {
-    %109 = ConstantLoad 9223372036854775806
-    %110 = unknown %109;
-    %111 = ConstantLoad 1
-    %112 = unknown %111;
-    %113 = lt(%110,%112) -> bb47;
+    %178 = ConstantLoad 9223372036854775806
+    %179 = unknown %178;
+    %180 = %179;
+    %181 = ConstantLoad 1
+    %182 = unknown %181;
+    %183 = %182;
+    %184 = lt(%180,%183) -> bb47;
   }
   bb47 {
-    %114 = printBoolean(%113) -> bb48;
+    %185 = %184;
+    %186 = printBoolean(%185) -> bb48;
   }
   bb48 {
-    %115 = ConstantLoad 9223372036854775806
-    %116 = unknown %115;
-    %117 = ConstantLoad 9223372036854775806
-    %118 = unknown %117;
-    %119 = lt(%116,%118) -> bb49;
+    %187 = ConstantLoad 9223372036854775806
+    %188 = unknown %187;
+    %189 = %188;
+    %190 = ConstantLoad 9223372036854775806
+    %191 = unknown %190;
+    %192 = %191;
+    %193 = lt(%189,%192) -> bb49;
   }
   bb49 {
-    %120 = printBoolean(%119) -> bb50;
+    %194 = %193;
+    %195 = printBoolean(%194) -> bb50;
   }
   bb50 {
     return;
@@ -227,7 +302,9 @@ main() -> nil{
 }
 lt(int,int) -> boolean{
   bb0 {
-    %3 = < a b;
+    %4 = a;
+    %5 = b;
+    %3 = < %4 %5;
     %0 = %3;
     return;
   }
@@ -238,14 +315,16 @@ printBoolean(boolean) -> nil{
   }
   bb1 {
     %2 = ConstantLoad 1
-    %3 = println(%2) -> bb2;
+    %3 = %2;
+    %4 = println(%3) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad 0
-    %5 = println(%4) -> bb4;
+    %5 = ConstantLoad 0
+    %6 = %5;
+    %7 = println(%6) -> bb4;
   }
   bb4 {
     GOTO bb5;

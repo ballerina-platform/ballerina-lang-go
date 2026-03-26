@@ -1,0 +1,154 @@
+(add
+  (bb0 () (bb1 bb2)
+    (binary-expr ||
+      (type-test-expr is
+        (simple-var-ref lhs)
+        (value-type string))
+      (type-test-expr is
+        (simple-var-ref rhs)
+        (value-type string)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal 0))
+  )
+  (bb2 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref lhs)
+        (simple-var-ref rhs)))
+  )
+)
+(executeOp
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable fn (type
+        (union-type
+          (user-defined-type BinaryFn)
+          (user-defined-type UnaryFn))) (expr
+        (field-based-access fn
+          (simple-var-ref op)))))
+    (type-test-expr is
+      (simple-var-ref fn)
+      (user-defined-type BinaryFn))
+  )
+  (bb1 (bb0) ()
+    (return
+      (invocation fn (
+        (field-based-access lhs
+          (simple-var-ref op))
+        (field-based-access rhs
+          (simple-var-ref op)))))
+  )
+  (bb2 (bb0) ()
+    (var-def
+      (variable f (type
+        (user-defined-type UnaryFn)) (expr
+        (type-conversion-expr
+          (simple-var-ref fn)
+          (user-defined-type UnaryFn)))))
+    (return
+      (invocation f (
+        (field-based-access lhs
+          (simple-var-ref op)))))
+  )
+)
+(increment
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref lhs)
+      (value-type string))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal 0))
+  )
+  (bb2 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref lhs)
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (user-defined-type Op)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref lhs)
+            (literal 1))
+          (key-value
+            (simple-var-ref rhs)
+            (literal 2))
+          (key-value
+            (simple-var-ref fn)
+            (simple-var-ref add))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation executeOp (
+          (simple-var-ref a))))))
+    (assignment
+      (field-based-access fn
+        (simple-var-ref a))
+      (simple-var-ref nAdd))
+    (expression-stmt
+      (invocation io println (
+        (invocation executeOp (
+          (simple-var-ref a))))))
+    (assignment
+      (field-based-access fn
+        (simple-var-ref a))
+      (simple-var-ref increment))
+    (expression-stmt
+      (invocation io println (
+        (invocation executeOp (
+          (simple-var-ref a))))))
+  )
+)
+(nAdd
+  (bb0 () (bb1 bb2)
+    (binary-expr ||
+      (type-test-expr is
+        (simple-var-ref init)
+        (value-type string))
+      (type-test-expr is
+        (simple-var-ref rest)
+        (array-type
+          (value-type string) dimensions: 1 ([]))))
+  )
+  (bb1 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+  (bb2 (bb0) (bb3)
+    (var-def
+      (variable result (type
+        (value-type int)) (expr
+        (simple-var-ref init))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref rest))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb4 (bb3) (bb3)
+    (assignment
+      (simple-var-ref result)
+      (invocation add (
+        (simple-var-ref result)
+        (index-based-access
+          (simple-var-ref rest)
+          (simple-var-ref i)))))
+  )
+  (bb5 (bb3) ()
+    (return
+      (simple-var-ref result))
+  )
+)

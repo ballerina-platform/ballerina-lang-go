@@ -1,0 +1,79 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (union-type
+        (value-type int)
+        (error-type)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable res (type
+          (union-type
+            (value-type int)
+            (error-type))) (expr
+          (invocation f (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref res)
+            (error-type)))))
+      (assignment
+        (simple-var-ref res)
+        (invocation f (
+          (literal 1)
+          (unary-expr -
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (simple-var-ref res)
+            (error-type)))))))
+  (function foo () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref vals) ()))
+        (block-stmt
+          (var-def
+            (variable val (type
+              (value-type int)) (expr
+              (index-based-access
+                (simple-var-ref vals)
+                (simple-var-ref i)))))
+          (if
+            (binary-expr <
+              (simple-var-ref val)
+              (literal 0))
+            (block-stmt
+              (return
+                (error-constructor-expr (
+                  (literal negative value))))) ())
+          (block-stmt
+            (compound-assignment +
+              (simple-var-ref sum)
+              (simple-var-ref val)))))
+      (return
+        (simple-var-ref sum)))))

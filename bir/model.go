@@ -167,8 +167,8 @@ type (
 
 type Address struct {
 	Mode       AddressingMode
-	FrameIndex int
-	BaseIndex  int
+	FrameIndex int // Index within the frame
+	BaseIndex  int // Number of frames to move up
 }
 
 type AddressingMode uint8
@@ -336,6 +336,8 @@ const (
 	INSTRUCTION_KIND_NEW_RE_QUANTIFIER
 	INSTRUCTION_KIND_RECORD_DEFAULT_FP_LOAD
 	INSTRUCTION_KIND_BITWISE_COMPLEMENT
+	INSTRUCTION_KIND_PUSH_SCOPE
+	INSTRUCTION_KIND_POP_SCOPE
 )
 
 const (

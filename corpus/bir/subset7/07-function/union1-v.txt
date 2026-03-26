@@ -16,11 +16,14 @@ main() -> nil{
   }
   bb3 {
     %6 = ConstantLoad 1
-    %7 = ConstantLoad 2
-    %8 = f(%6,%7) -> bb4;
+    %7 = %6;
+    %8 = ConstantLoad 2
+    %9 = %8;
+    %10 = f(%7,%9) -> bb4;
   }
   bb4 {
-    %9 = println(%8) -> bb5;
+    %11 = %10;
+    %12 = println(%11) -> bb5;
   }
   bb5 {
     GOTO bb6;
@@ -31,7 +34,9 @@ main() -> nil{
 }
 foo(int,int) -> int{
   bb0 {
-    %3 = + lhs rhs;
+    %4 = lhs;
+    %5 = rhs;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }

@@ -1,0 +1,121 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (union-type
+        (user-defined-type F1)
+        (user-defined-type F)))))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable val (type
+          (value-type int)) (expr
+          (literal 10))))
+      (var-def
+        (variable f (type
+          (union-type
+            (user-defined-type F1)
+            (user-defined-type F))) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable p1 (type
+                (value-type int)))) (
+              (user-defined-type F1))
+              (block-function-body
+                (return
+                  (lambda
+                    (function $anonFunc$_1 (
+                      (variable p2 (type
+                        (value-type int)))) (
+                      (user-defined-type F1))
+                      (block-function-body
+                        (return
+                          (lambda
+                            (function $anonFunc$_2 (
+                              (variable p3 (type
+                                (value-type int)))) (
+                              (user-defined-type F))
+                              (block-function-body
+                                (var-def
+                                  (variable a (type
+                                    (user-defined-type F)) (expr
+                                    (lambda
+                                      (function $anonFunc$_3 (
+                                        (variable p4 (type
+                                          (value-type int)))) (
+                                        (value-type int))
+                                        (block-function-body
+                                          (compound-assignment *
+                                            (simple-var-ref val)
+                                            (literal 2))
+                                          (return
+                                            (binary-expr +
+                                              (binary-expr +
+                                                (binary-expr +
+                                                  (binary-expr +
+                                                    (simple-var-ref val)
+                                                    (simple-var-ref p1))
+                                                  (simple-var-ref p2))
+                                                (simple-var-ref p3))
+                                              (simple-var-ref p4)))))))))
+                                (return
+                                  (lambda
+                                    (function $anonFunc$_4 (
+                                      (variable p4 (type
+                                        (value-type int)))) (
+                                      (value-type int))
+                                      (block-function-body
+                                        (assignment
+                                          (simple-var-ref val)
+                                          (binary-expr +
+                                            (simple-var-ref val)
+                                            (invocation a (
+                                              (simple-var-ref p3)))))
+                                        (return
+                                          (binary-expr +
+                                            (binary-expr +
+                                              (binary-expr +
+                                                (binary-expr +
+                                                  (simple-var-ref val)
+                                                  (simple-var-ref p1))
+                                                (simple-var-ref p2))
+                                              (simple-var-ref p3))
+                                            (simple-var-ref p4)))))))))))))))))))))
+      (var-def
+        (variable p (type
+          (value-type int)) (expr
+          (literal 1))))
+      (while
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F1))
+        (block-stmt
+          (assignment
+            (simple-var-ref f)
+            (invocation f (
+              (simple-var-ref p))))
+          (compound-assignment +
+            (simple-var-ref p)
+            (literal 1))))
+      (if
+        (type-test-expr !is
+          (simple-var-ref f)
+          (user-defined-type F))
+        (block-stmt
+          (return
+            (literal <nil>))) ())
+      (block-stmt
+        (expression-stmt
+          (invocation io println (
+            (invocation f (
+              (simple-var-ref p))))))
+        (expression-stmt
+          (invocation io println (
+            (simple-var-ref val))))))))

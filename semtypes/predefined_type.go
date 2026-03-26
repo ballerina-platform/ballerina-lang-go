@@ -43,6 +43,7 @@ const (
 	ANY              = BasicTypeBitSet(ValueTypeMask & ^(1 << int(BTError)))
 	SIMPLE_OR_STRING = BasicTypeBitSet((1 << int(BTNil)) | (1 << int(BTBoolean)) | (1 << int(BTInt)) | (1 << int(BTFloat)) | (1 << int(BTDecimal)) | (1 << int(BTString)))
 	NUMBER           = BasicTypeBitSet((1 << int(BTInt)) | (1 << int(BTFloat)) | (1 << int(BTDecimal)))
+	SIMPLE_BASIC     = NIL | BOOLEAN | INT | FLOAT | DECIMAL
 )
 
 var (

@@ -10,13 +10,14 @@ main() -> nil{
     r = %5;
     %8 = ConstantLoad x
     %7 = r[%8];
-    %9 = println(%7) -> bb1;
+    %9 = %7;
+    %10 = println(%9) -> bb1;
   }
   bb1 {
-    %11 = ConstantLoad z
-    %10 = r[%11];
-    z = %10;
-    %13 = println(z) -> bb2;
+    %12 = ConstantLoad z
+    %11 = r[%12];
+    z = %11;
+    %14 = println(z) -> bb2;
   }
   bb2 {
     return;

@@ -1,0 +1,72 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition R
+    (record-type
+      (field x
+        (value-type int))))
+  (type-definition R1
+    (record-type
+      (field x
+        (value-type int))))
+  (type-definition F
+    (function-type (
+      (user-defined-type R1)
+      (user-defined-type R1)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (mapping-constructor-expr
+              (key-value
+                (literal x)
+                (literal 1)))
+            (mapping-constructor-expr
+              (key-value
+                (literal x)
+                (literal 2))))))))))
+  (function foo (
+    (variable init (type
+      (user-defined-type R)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (index-based-access
+            (simple-var-ref init)
+            (literal x)))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref rest))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref a)
+            (index-based-access
+              (index-based-access
+                (simple-var-ref rest)
+                (simple-var-ref i))
+              (literal x)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref a)))))

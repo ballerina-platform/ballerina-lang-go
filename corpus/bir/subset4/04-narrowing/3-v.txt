@@ -8,17 +8,21 @@ main() -> nil{
   }
   bb1 {
     %4 = ConstantLoad 2
-    %3 = == foo %4;
+    %5 = %4;
+    %3 = == foo %5;
     %3 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad 5
-    %5 = + foo %6;
-    foo = %5;
+    PushScopeFrame 3
+    %1 = ConstantLoad 5
+    %2 = %1;
+    %0 = + (1, foo) %2;
+    (1, foo) = %0;
+    PopScopeFrame
     GOTO bb1;
   }
   bb3 {
-    %7 = println(foo) -> bb4;
+    %6 = println(foo) -> bb4;
   }
   bb4 {
     return;

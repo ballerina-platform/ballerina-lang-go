@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected function(int) returns int&function(string) returns int, got function(int) returns int
+  --> intersection2-e.bal:23:13
+   |
+23 |     Fx fx = foo; // @error
+   |             ^^^
+

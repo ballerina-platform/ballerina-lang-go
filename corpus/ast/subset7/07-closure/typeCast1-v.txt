@@ -1,0 +1,107 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (union-type
+        (finite-type
+          (literal 1))
+        (finite-type
+          (literal 2)))) (
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b))))))
+  (type-definition F2
+    (function-type (
+      (union-type
+        (finite-type
+          (literal 2))
+        (finite-type
+          (literal 3)))) (
+      (union-type
+        (finite-type
+          (literal b))
+        (finite-type
+          (literal c))))))
+  (type-definition Fx
+    (intersection-type
+      (user-defined-type F1)
+      (user-defined-type F2)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable returnVal (type
+          (finite-type
+            (literal b))) (expr
+          (literal b))))
+      (var-def
+        (variable fx (type
+          (user-defined-type Fx)) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable a (type
+                (union-type
+                  (union-type
+                    (finite-type
+                      (literal 1))
+                    (finite-type
+                      (literal 2)))
+                  (finite-type
+                    (literal 3)))))) (
+              (finite-type
+                (literal b)))
+              (block-function-body
+                (return
+                  (simple-var-ref returnVal))))))))
+      (var-def
+        (variable f1 (type
+          (user-defined-type F1)) (expr
+          (type-conversion-expr
+            (simple-var-ref fx)
+            (user-defined-type F1)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f1 (
+            (literal 1))))))
+      (var-def
+        (variable f2 (type
+          (user-defined-type F2)) (expr
+          (type-conversion-expr
+            (simple-var-ref fx)
+            (user-defined-type F2)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f2 (
+            (literal 3))))))
+      (var-def
+        (variable f11 (type
+          (user-defined-type F1)) (expr
+          (lambda
+            (function $anonFunc$_1 (
+              (variable a (type
+                (union-type
+                  (union-type
+                    (finite-type
+                      (literal 1))
+                    (finite-type
+                      (literal 2)))
+                  (finite-type
+                    (literal 3)))))) (
+              (finite-type
+                (literal b)))
+              (block-function-body
+                (return
+                  (simple-var-ref returnVal))))))))
+      (var-def
+        (variable fxx (type
+          (user-defined-type Fx)) (expr
+          (type-conversion-expr
+            (simple-var-ref f11)
+            (user-defined-type Fx)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation fxx (
+            (literal 3)))))))))

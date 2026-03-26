@@ -11,7 +11,8 @@ main() -> nil{
   }
   bb2 {
     %5 = ConstantLoad 2
-    %6 = f(%5) -> bb3;
+    %6 = %5;
+    %7 = f(%6) -> bb3;
   }
   bb3 {
     return;

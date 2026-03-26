@@ -1,0 +1,110 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Accum
+    (function-type (
+      (function-type-param
+      (value-type int))) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Accum)) (expr
+          (simple-var-ref sum))))
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (invocation f (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a))))
+      (var-def
+        (variable g (type
+          (user-defined-type Accum)) (expr
+          (simple-var-ref max))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (invocation g (
+              (literal 1)
+              (literal 2)
+              (literal 3)
+              (literal 4)
+              (literal 5))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (invocation g (
+              (literal 1)
+              (literal 2)
+              (literal 3)
+              (literal 4)
+              (literal 5)))
+            (invocation g (
+              (literal 1)
+              (literal 2)
+              (literal 3))))))))))
+  (function sum () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref values) ()))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref sum)
+            (index-based-access
+              (simple-var-ref values)
+              (simple-var-ref i)))))
+      (return
+        (simple-var-ref sum))))
+  (function max () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable max (type
+          (value-type int)) (expr
+          (index-based-access
+            (simple-var-ref values)
+            (literal 0)))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref values) ()))
+        (block-stmt
+          (if
+            (group-expr
+              (binary-expr >
+                (index-based-access
+                  (simple-var-ref values)
+                  (simple-var-ref i))
+                (simple-var-ref max)))
+            (block-stmt
+              (assignment
+                (simple-var-ref max)
+                (index-based-access
+                  (simple-var-ref values)
+                  (simple-var-ref i)))) ())
+          (block-stmt)))
+      (return
+        (simple-var-ref max)))))

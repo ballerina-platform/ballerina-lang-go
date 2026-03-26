@@ -1,0 +1,65 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition IncFunc
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable inc (type
+          (user-defined-type IncFunc)) (expr
+          (invocation incFn (
+            (literal pos))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation inc (
+            (literal 1))))))
+      (assignment
+        (simple-var-ref inc)
+        (invocation incFn (
+          (literal neg))))
+      (expression-stmt
+        (invocation io println (
+          (invocation inc (
+            (literal 1))))))))
+  (function incFn (
+    (variable kind (type
+      (union-type
+        (finite-type
+          (literal pos))
+        (finite-type
+          (literal neg)))))) (
+    (user-defined-type IncFunc))
+    (block-function-body
+      (if
+        (group-expr
+          (binary-expr ==
+            (simple-var-ref kind)
+            (literal pos)))
+        (block-stmt
+          (return
+            (simple-var-ref posInc))) (
+        (block-stmt
+          (return
+            (simple-var-ref negInc)))))))
+  (function posInc (
+    (variable a (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref a)
+          (literal 1)))))
+  (function negInc (
+    (variable a (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr -
+          (simple-var-ref a)
+          (literal 1))))))

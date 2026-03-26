@@ -1,0 +1,117 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (union-type
+        (union-type
+          (value-type string)
+          (value-type int))
+        (value-type boolean)))))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (union-type
+        (union-type
+          (value-type string)
+          (value-type byte))
+        (value-type boolean)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1))))))
+      (assignment
+        (simple-var-ref f)
+        (simple-var-ref bar))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (unary-expr -
+              (literal 1)))))))
+      (var-def
+        (variable f1 (type
+          (user-defined-type F1)) (expr
+          (simple-var-ref foobar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f1 (
+            (literal 1))))))
+      (assignment
+        (simple-var-ref f1)
+        (simple-var-ref barbaz))
+      (expression-stmt
+        (invocation io println (
+          (invocation f1 (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f1 (
+            (unary-expr -
+              (literal 1)))))))))
+  (function foo (
+    (variable a (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (simple-var-ref a))))
+  (function bar (
+    (variable a (type
+      (value-type int)))) (
+    (union-type
+      (value-type int)
+      (value-type boolean)))
+    (block-function-body
+      (if
+        (binary-expr <
+          (simple-var-ref a)
+          (literal 0))
+        (block-stmt
+          (return
+            (simple-var-ref a))) ())
+      (block-stmt
+        (return
+          (literal true)))))
+  (function foobar (
+    (variable a (type
+      (value-type int)))) (
+    (value-type byte))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref a)
+          (value-type byte))
+        (block-stmt
+          (return
+            (simple-var-ref a))) ())
+      (block-stmt
+        (return
+          (literal 0)))))
+  (function barbaz (
+    (variable a (type
+      (value-type int)))) (
+    (union-type
+      (value-type byte)
+      (value-type boolean)))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref a)
+          (value-type byte))
+        (block-stmt
+          (return
+            (simple-var-ref a))) ())
+      (block-stmt
+        (return
+          (literal true))))))

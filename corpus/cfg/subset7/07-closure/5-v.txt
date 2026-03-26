@@ -1,0 +1,68 @@
+(foo
+  (bb0 () ()
+    (return
+      (lambda
+        (function $anonFunc$_0 (
+          (variable x (type
+            (value-type int)))) (
+          (user-defined-type F))
+          (block-function-body
+            (var-def
+              (variable b (type
+                (value-type int)) (expr
+                (binary-expr *
+                  (simple-var-ref a)
+                  (literal 2)))))
+            (return
+              (lambda
+                (function $anonFunc$_1 (
+                  (variable y (type
+                    (value-type int)))) (
+                  (value-type int))
+                  (block-function-body
+                    (return
+                      (binary-expr +
+                        (binary-expr +
+                          (binary-expr +
+                            (simple-var-ref x)
+                            (simple-var-ref y))
+                          (simple-var-ref a))
+                        (simple-var-ref b)))))))))))
+  )
+)
+(main
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (invocation foo (
+          (literal 5))))))
+    (var-def
+      (variable res (type
+        (union-type
+          (user-defined-type F)
+          (value-type int))) (expr
+        (invocation f (
+          (literal 5))))))
+    (type-test-expr is
+      (simple-var-ref res)
+      (user-defined-type F))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation res (
+          (literal 5))))))
+  )
+  (bb2 (bb1 bb0) (bb3 bb4)
+    (type-test-expr is
+      (simple-var-ref res)
+      (value-type int))
+  )
+  (bb3 (bb2) (bb4)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+  (bb4 (bb3 bb2) ())
+)

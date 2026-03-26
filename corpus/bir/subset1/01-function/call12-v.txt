@@ -5,13 +5,16 @@ main() -> nil{
     %1 = getArg1() -> bb1;
   }
   bb1 {
-    %2 = getArg2() -> bb2;
+    %2 = %1;
+    %3 = getArg2() -> bb2;
   }
   bb2 {
-    %3 = foo(%1,%2) -> bb3;
+    %4 = %3;
+    %5 = foo(%2,%4) -> bb3;
   }
   bb3 {
-    %4 = println(%3) -> bb4;
+    %6 = %5;
+    %7 = println(%6) -> bb4;
   }
   bb4 {
     return;
@@ -19,7 +22,9 @@ main() -> nil{
 }
 foo(int,int) -> int{
   bb0 {
-    %3 = * i j;
+    %4 = i;
+    %5 = j;
+    %3 = * %4 %5;
     %0 = %3;
     return;
   }

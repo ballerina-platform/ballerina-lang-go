@@ -1,0 +1,25 @@
+(f1
+  (bb0 () ()
+    (return
+      (simple-var-ref i))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (value-type any)) (expr
+        (simple-var-ref f1))))
+    (var-def
+      (variable test (type
+        (value-type boolean)) (expr
+        (type-test-expr is
+          (simple-var-ref a)
+          (union-type
+            (user-defined-type F)
+            (user-defined-type F0))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref test))))
+  )
+)

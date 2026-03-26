@@ -3,17 +3,20 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 2
-    %2 = mkInt(%1) -> bb1;
+    %2 = %1;
+    %3 = mkInt(%2) -> bb1;
   }
   bb1 {
-    x = %2;
+    x = %3;
     y = x;
-    %5 = unknown x y;
-    %6 = println(%5) -> bb2;
+    %6 = unknown x y;
+    %7 = %6;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
-    %7 = unknown x y;
-    %8 = println(%7) -> bb3;
+    %9 = unknown x y;
+    %10 = %9;
+    %11 = println(%10) -> bb3;
   }
   bb3 {
     return;
