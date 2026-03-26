@@ -31,9 +31,9 @@ type BalaProject struct {
 // Compile-time check to verify BalaProject implements Project interface
 var _ Project = (*BalaProject)(nil)
 
-// NewBalaProject creates a new BalaProject with the given bala path and build options.
+// newBalaProject creates a new BalaProject with the given bala path and build options.
 // The sourceRoot should be the platform directory (e.g., ~/.ballerina/.../1.0.0/any/).
-func NewBalaProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, platform string) *BalaProject {
+func newBalaProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, platform string) *BalaProject {
 	project := &BalaProject{
 		platform: platform,
 	}
@@ -41,10 +41,10 @@ func NewBalaProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, pl
 	return project
 }
 
-// NewBalaProjectWithEnv creates a new BalaProject with a shared Environment.
+// newBalaProjectWithEnv creates a new BalaProject with a shared Environment.
 // Use this when loading dependency packages that need to share the same
 // PackageCache as the root project.
-func NewBalaProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, platform string, sharedEnv *Environment) *BalaProject {
+func newBalaProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, platform string, sharedEnv *Environment) *BalaProject {
 	project := &BalaProject{
 		platform: platform,
 	}
@@ -120,7 +120,7 @@ func (b *BalaProject) Save() {
 // Duplicate creates a deep copy of the bala project.
 func (b *BalaProject) Duplicate() Project {
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
-	newProject := NewBalaProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions, b.platform)
+	newProject := newBalaProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions, b.platform)
 	ResetPackage(b, newProject)
 	return newProject
 }

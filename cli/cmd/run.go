@@ -26,7 +26,6 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 
 	"github.com/spf13/cobra"
@@ -169,7 +168,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
 
-	result, err := directory.LoadProject(fsys, ballerinaHomeFs, path, directory.ProjectLoadConfig{
+	result, err := projects.Load(fsys, ballerinaHomeFs, path, projects.ProjectLoadConfig{
 		BuildOptions: &buildOpts,
 	})
 	if err != nil {

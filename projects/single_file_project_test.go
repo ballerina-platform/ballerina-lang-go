@@ -27,7 +27,6 @@ import (
 	"testing"
 
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/test_util"
 )
 
@@ -132,7 +131,7 @@ func TestOverrideBuildOptions(t *testing.T) {
 		WithObservabilityIncluded(true).
 		Build()
 
-	result, err := loadProject(absPath, directory.ProjectLoadConfig{
+	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		BuildOptions: &buildOptions,
 	})
 	require.NoError(err)

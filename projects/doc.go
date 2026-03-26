@@ -37,38 +37,38 @@
 //
 // # Project Types
 //
-// Two concrete project implementations are provided:
+// Three concrete project implementations are provided:
 //
 //   - [BuildProject]: A standard project with a Ballerina.toml manifest
 //   - [SingleFileProject]: A standalone .bal file without a manifest
+//   - [BalaProject]: A pre-compiled package loaded from a .bala archive
 //
-// Projects are loaded using [directory.LoadProject] which auto-detects the
+// Projects are loaded using [Load] which auto-detects the
 // project type based on the path:
 //   - Directory with Ballerina.toml -> BuildProject
+//   - Directory with package.json (bala) -> BalaProject
 //   - Single .bal file -> SingleFileProject
 //
 // # Loading Projects
 //
-// Use the directory subpackage to load projects from the filesystem:
-//
-//	import "ballerina-lang-go/projects/directory"
+// Use [Load] to load projects from the filesystem:
 //
 //	// Load with default options
-//	result, err := directory.LoadProject("./myproject")
+//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject")
 //
 //	// Load with custom build options
 //	buildOpts := projects.NewBuildOptionsBuilder().
 //	    WithOffline(true).
 //	    WithSkipTests(true).
 //	    Build()
-//	result, err := directory.LoadProject("./myproject", directory.ProjectLoadConfig{
+//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject", projects.ProjectLoadConfig{
 //	    BuildOptions: &buildOpts,
 //	})
 //
 //	// Load a single .bal file
-//	result, err := directory.LoadProject("./main.bal")
+//	result, err := projects.Load(fsys, ballerinaHomeFs, "./main.bal")
 //
-// The [directory.ProjectLoadConfig] struct allows optional configuration:
+// The [ProjectLoadConfig] struct allows optional configuration:
 //   - BuildOptions: Compilation settings (offline mode, skip tests, etc.)
 //   - Future fields can be added without breaking existing callers
 //
@@ -84,7 +84,7 @@
 // Complete example:
 //
 //	// Load project
-//	result, err := directory.LoadProject("./myproject")
+//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -130,6 +130,5 @@
 //
 // # Subpackages
 //
-//   - projects/directory: Project loading from filesystem ([LoadProject], [ProjectLoadConfig])
-//   - projects/internal: Internal helpers (ManifestBuilder, PackageConfigCreator)
+//   - projects/repository: Repository abstraction for accessing Ballerina packages
 package projects
