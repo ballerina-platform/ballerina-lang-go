@@ -1,0 +1,32 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = %3;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %7 = ConstantLoad 3
+    %8 = %7;
+    %9 = ConstantLoad 4
+    %10 = %9;
+    %11 = f(%4,%6,%8,%10) -> bb1;
+  }
+  bb1 {
+    rest = %11;
+    %13 = rest;
+    %14 = println(%13) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+foo([int...]...) -> int:Unsigned8{
+  bb0 {
+    %2 = ConstantLoad 0
+    %0 = %2;
+    return;
+  }
+}

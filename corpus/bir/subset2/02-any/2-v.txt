@@ -3,21 +3,25 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad true
-    %2 = println(%1) -> bb1;
+    %2 = %1;
+    %3 = println(%2) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad false
-    %4 = println(%3) -> bb2;
+    %4 = ConstantLoad false
+    %5 = %4;
+    %6 = println(%5) -> bb2;
   }
   bb2 {
-    %5 = ConstantLoad true
-    b = %5;
-    %7 = println(b) -> bb3;
+    %7 = ConstantLoad true
+    b = %7;
+    %9 = b;
+    %10 = println(%9) -> bb3;
   }
   bb3 {
-    %8 = ConstantLoad false
-    b = %8;
-    %9 = println(b) -> bb4;
+    %11 = ConstantLoad false
+    b = %11;
+    %12 = b;
+    %13 = println(%12) -> bb4;
   }
   bb4 {
     return;

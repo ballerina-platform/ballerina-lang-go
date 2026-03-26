@@ -31,6 +31,10 @@ type binding struct {
 	// defaultType is used for unreachable branches (e.g. false branch of constant true)
 	// see https://github.com/ballerina-platform/ballerina-spec/issues/1029
 	defaultType semtypes.SemType
+	// functionBoundary marks the entry point of a lambda/closure function scope.
+	// When lookupBinding crosses this marker and finds a narrowed binding beyond it,
+	// the variable is captured from the outer scope and should be treated as unnarrowed.
+	functionBoundary bool
 }
 
 func (b *binding) isUnnarrowing() bool {
@@ -48,16 +52,30 @@ type statementEffect struct {
 	nonCompletion bool
 }
 
-// lookupBinding will return "effective" symbol for the current point for a given base symbol. If that based symbol is
-// narrowed at this point it will return the (narrowed symbol, true) else it will return (base symbol, false)
-func lookupBinding(chain *binding, ref model.SymbolRef) (model.SymbolRef, bool) {
+// lookupBinding returns the effective symbol for a given base symbol at the current point.
+// Returns (effectiveSymbol, isNarrowed, isCaptured).
+// isCaptured is true when a narrowed variable was found beyond a function boundary marker,
+// meaning it's captured by a closure. In that case, the unnarrowed base symbol is returned.
+func lookupBinding(chain *binding, ref model.SymbolRef) (model.SymbolRef, bool, bool) {
+	return lookupBindingInner(chain, ref, false)
+}
+
+func lookupBindingInner(chain *binding, ref model.SymbolRef, crossedBoundary bool) (model.SymbolRef, bool, bool) {
 	if chain == nil {
-		return ref, false
+		return ref, false, false
+	}
+	if chain.functionBoundary {
+		return lookupBindingInner(chain.prev, ref, true)
 	}
 	if chain.ref == ref {
-		return chain.narrowedSymbol, !chain.isUnnarrowing()
+		isNarrowed := !chain.isUnnarrowing()
+		if crossedBoundary && isNarrowed {
+			// Captured narrowed variable — return unnarrowed base symbol
+			return ref, false, true
+		}
+		return chain.narrowedSymbol, isNarrowed, false
 	}
-	return lookupBinding(chain.prev, ref)
+	return lookupBindingInner(chain.prev, ref, crossedBoundary)
 }
 
 func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty semtypes.SemType) model.SymbolRef {
@@ -66,8 +84,11 @@ func narrowSymbol(ctx *context.CompilerContext, underlying model.SymbolRef, ty s
 	return narrowedSymbol
 }
 
-func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.SymbolRef) statementEffect {
-	_, isNarrowed := lookupBinding(chain, symbol)
+func (t *TypeResolver) unnarrowSymbol(chain *binding, symbol model.SymbolRef) statementEffect {
+	_, isNarrowed, isCaptured := lookupBinding(chain, symbol)
+	if isCaptured && t.capturedNarrowedVars != nil {
+		t.capturedNarrowedVars[symbol] = true
+	}
 	if !isNarrowed {
 		return statementEffect{chain, false}
 	}
@@ -82,6 +103,10 @@ func unnarrowSymbol(ctx *context.CompilerContext, chain *binding, symbol model.S
 func accumNarrowedTypes(ctx *context.CompilerContext, chain *binding, accum map[model.SymbolRef]semtypes.SemType, accumDefault semtypes.SemType) semtypes.SemType {
 	if chain == nil {
 		return accumDefault
+	}
+	if chain.functionBoundary {
+		// This is just a marker move to the next one
+		return accumNarrowedTypes(ctx, chain.prev, accum, accumDefault)
 	}
 	if chain.defaultType == nil {
 		ref := chain.ref
@@ -187,7 +212,7 @@ func varRefExp(chain *binding, expr *ast.BLangExpression) (model.SymbolRef, bool
 	if !isVarRef {
 		return baseSymbol, false
 	}
-	narrowedSym, isNarrowed := lookupBinding(chain, baseSymbol)
+	narrowedSym, isNarrowed, _ := lookupBinding(chain, baseSymbol)
 	if isNarrowed {
 		return narrowedSym, true
 	}

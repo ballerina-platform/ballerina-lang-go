@@ -3,62 +3,96 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %3 = ConstantLoad 8
-    %4 = ConstantLoad 5
-    %2 = + %3 %4;
-    %5 = ConstantLoad 11
-    %1 = - %2 %5;
-    %6 = println(%1) -> bb1;
+    %4 = %3;
+    %5 = ConstantLoad 5
+    %6 = %5;
+    %2 = + %4 %6;
+    %7 = %2;
+    %8 = ConstantLoad 11
+    %9 = %8;
+    %1 = - %7 %9;
+    %10 = %1;
+    %11 = println(%10) -> bb1;
   }
   bb1 {
-    %9 = ConstantLoad 8
-    %10 = ConstantLoad 11
-    %8 = - %9 %10;
-    %11 = ConstantLoad 5
-    %7 = + %8 %11;
-    %12 = println(%7) -> bb2;
+    %14 = ConstantLoad 8
+    %15 = %14;
+    %16 = ConstantLoad 11
+    %17 = %16;
+    %13 = - %15 %17;
+    %18 = %13;
+    %19 = ConstantLoad 5
+    %20 = %19;
+    %12 = + %18 %20;
+    %21 = %12;
+    %22 = println(%21) -> bb2;
   }
   bb2 {
-    %16 = ConstantLoad 3
-    %17 = ConstantLoad 5
-    %15 = + %16 %17;
-    %18 = ConstantLoad 5
-    %14 = - %15 %18;
-    %19 = ConstantLoad 9
-    %13 = + %14 %19;
-    %20 = println(%13) -> bb3;
+    %26 = ConstantLoad 3
+    %27 = %26;
+    %28 = ConstantLoad 5
+    %29 = %28;
+    %25 = + %27 %29;
+    %30 = %25;
+    %31 = ConstantLoad 5
+    %32 = %31;
+    %24 = - %30 %32;
+    %33 = %24;
+    %34 = ConstantLoad 9
+    %35 = %34;
+    %23 = + %33 %35;
+    %36 = %23;
+    %37 = println(%36) -> bb3;
   }
   bb3 {
-    %21 = ConstantLoad 3
-    %22 = ConstantLoad 5
-    %23 = ConstantLoad 5
-    %24 = unknown %23;
-    %25 = ConstantLoad 9
-    %26 = add(%21,%22,%24,%25) -> bb4;
+    %38 = ConstantLoad 3
+    %39 = %38;
+    %40 = ConstantLoad 5
+    %41 = %40;
+    %42 = ConstantLoad 5
+    %43 = unknown %42;
+    %44 = %43;
+    %45 = ConstantLoad 9
+    %46 = %45;
+    %47 = add(%39,%41,%44,%46) -> bb4;
   }
   bb4 {
-    %27 = println(%26) -> bb5;
+    %48 = %47;
+    %49 = println(%48) -> bb5;
   }
   bb5 {
-    %31 = ConstantLoad 3
-    %32 = ConstantLoad 5
-    %30 = - %31 %32;
-    %33 = ConstantLoad 9
-    %29 = + %30 %33;
-    %34 = ConstantLoad 4
-    %28 = - %29 %34;
-    %35 = println(%28) -> bb6;
+    %53 = ConstantLoad 3
+    %54 = %53;
+    %55 = ConstantLoad 5
+    %56 = %55;
+    %52 = - %54 %56;
+    %57 = %52;
+    %58 = ConstantLoad 9
+    %59 = %58;
+    %51 = + %57 %59;
+    %60 = %51;
+    %61 = ConstantLoad 4
+    %62 = %61;
+    %50 = - %60 %62;
+    %63 = %50;
+    %64 = println(%63) -> bb6;
   }
   bb6 {
-    %36 = ConstantLoad 3
-    %37 = ConstantLoad 5
-    %38 = unknown %37;
-    %39 = ConstantLoad 9
-    %40 = ConstantLoad 4
-    %41 = unknown %40;
-    %42 = add(%36,%38,%39,%41) -> bb7;
+    %65 = ConstantLoad 3
+    %66 = %65;
+    %67 = ConstantLoad 5
+    %68 = unknown %67;
+    %69 = %68;
+    %70 = ConstantLoad 9
+    %71 = %70;
+    %72 = ConstantLoad 4
+    %73 = unknown %72;
+    %74 = %73;
+    %75 = add(%66,%69,%71,%74) -> bb7;
   }
   bb7 {
-    %43 = println(%42) -> bb8;
+    %76 = %75;
+    %77 = println(%76) -> bb8;
   }
   bb8 {
     return;
@@ -66,9 +100,15 @@ main() -> nil{
 }
 add(int,int,int,int) -> int{
   bb0 {
-    %7 = + a b;
-    %6 = + %7 c;
-    %5 = + %6 d;
+    %8 = a;
+    %9 = b;
+    %7 = + %8 %9;
+    %10 = %7;
+    %11 = c;
+    %6 = + %10 %11;
+    %12 = %6;
+    %13 = d;
+    %5 = + %12 %13;
     %0 = %5;
     return;
   }

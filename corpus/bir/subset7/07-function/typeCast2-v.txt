@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(1|2|3) -> "b"{
+  bb0 {
+    %2 = ConstantLoad b
+    %0 = %2;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    fx = %1;
+    %3 = <function(1|2) returns "a"|"b">(fx)
+    f1 = %3;
+    %5 = ConstantLoad 1
+    %6 = %5;
+    %7 = f1(%6) -> bb1;
+  }
+  bb1 {
+    %8 = println(%7) -> bb2;
+  }
+  bb2 {
+    %9 = <function(2|3) returns "b"|"c">(fx)
+    f2 = %9;
+    %11 = ConstantLoad 3
+    %12 = %11;
+    %13 = f2(%12) -> bb3;
+  }
+  bb3 {
+    %14 = println(%13) -> bb4;
+  }
+  bb4 {
+    %15 = fp $anon/.:foo
+    f11 = %15;
+    %17 = <function(1|2) returns "a"|"b"&function(2|3) returns "b"|"c">(f11)
+    fxx = %17;
+    %19 = ConstantLoad 3
+    %20 = %19;
+    %21 = fxx(%20) -> bb5;
+  }
+  bb5 {
+    %22 = println(%21) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

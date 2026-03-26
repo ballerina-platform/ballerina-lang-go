@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: expect anydata types for ==
+  --> equality1-e.bal:30:20
+   |
+30 |     boolean test = f1 == f2; // @error
+   |                    ^^^^^^^^
+

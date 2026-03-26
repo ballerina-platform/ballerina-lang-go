@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: union types not supported for +
+  --> unnarrow6-e.bal:26:19
+   |
+26 |         int res = runner(function(int a) returns int {
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

@@ -10,52 +10,57 @@ main() -> nil{
   }
   bb1 {
     %4 = ConstantLoad 1
-    %5 = x(%4) -> bb2;
+    %5 = %4;
+    %6 = x(%5) -> bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %7 = %6;
+    %8 = println(%7) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %7 = ConstantLoad error
-    %8 = println(%7) -> bb5;
+    %9 = ConstantLoad error
+    %10 = println(%9) -> bb5;
   }
   bb5 {
     GOTO bb6;
   }
   bb6 {
-    %9 = fp $anon/.:bar
-    x = %9;
-    %10 = x is function(int) returns int
-    %10 ? bb7 : bb9;
+    %11 = fp $anon/.:bar
+    x = %11;
+    %12 = x is function(int) returns int
+    %12 ? bb7 : bb9;
   }
   bb7 {
-    %11 = ConstantLoad error
-    %12 = println(%11) -> bb8;
+    %13 = ConstantLoad error
+    %14 = println(%13) -> bb8;
   }
   bb8 {
     GOTO bb16;
   }
   bb9 {
-    %13 = x is function(int, int) returns int
-    %13 ? bb10 : bb13;
+    %15 = x is function(int, int) returns int
+    %15 ? bb10 : bb13;
   }
   bb10 {
-    %14 = ConstantLoad 5
-    %15 = ConstantLoad 6
-    %16 = x(%14,%15) -> bb11;
+    %16 = ConstantLoad 5
+    %17 = %16;
+    %18 = ConstantLoad 6
+    %19 = %18;
+    %20 = x(%17,%19) -> bb11;
   }
   bb11 {
-    %17 = println(%16) -> bb12;
+    %21 = %20;
+    %22 = println(%21) -> bb12;
   }
   bb12 {
     GOTO bb15;
   }
   bb13 {
-    %18 = ConstantLoad error
-    %19 = println(%18) -> bb14;
+    %23 = ConstantLoad error
+    %24 = println(%23) -> bb14;
   }
   bb14 {
     GOTO bb15;
@@ -64,73 +69,87 @@ main() -> nil{
     GOTO bb16;
   }
   bb16 {
-    %20 = fp $anon/.:fooBar
-    x = %20;
-    %21 = x is function(int, int...) returns int
-    %21 ? bb17 : bb26;
+    %25 = fp $anon/.:fooBar
+    x = %25;
+    %26 = x is function(int, int...) returns int
+    %26 ? bb17 : bb26;
   }
   bb17 {
-    %22 = ConstantLoad 1
-    %23 = x(%22) -> bb18;
+    %27 = ConstantLoad 1
+    %28 = %27;
+    %29 = x(%28) -> bb18;
   }
   bb18 {
-    %24 = println(%23) -> bb19;
+    %30 = %29;
+    %31 = println(%30) -> bb19;
   }
   bb19 {
-    %25 = ConstantLoad 1
-    %26 = ConstantLoad 2
-    %27 = x(%25,%26) -> bb20;
+    %32 = ConstantLoad 1
+    %33 = %32;
+    %34 = ConstantLoad 2
+    %35 = %34;
+    %36 = x(%33,%35) -> bb20;
   }
   bb20 {
-    %28 = println(%27) -> bb21;
+    %37 = %36;
+    %38 = println(%37) -> bb21;
   }
   bb21 {
-    %29 = ConstantLoad 1
-    %30 = ConstantLoad 2
-    %31 = ConstantLoad 3
-    %32 = x(%29,%30,%31) -> bb22;
+    %39 = ConstantLoad 1
+    %40 = %39;
+    %41 = ConstantLoad 2
+    %42 = %41;
+    %43 = ConstantLoad 3
+    %44 = %43;
+    %45 = x(%40,%42,%44) -> bb22;
   }
   bb22 {
-    %33 = println(%32) -> bb23;
+    %46 = %45;
+    %47 = println(%46) -> bb23;
   }
   bb23 {
-    %34 = ConstantLoad 1
-    %35 = ConstantLoad 2
-    %36 = ConstantLoad 3
-    %37 = ConstantLoad 4
-    %38 = x(%34,%35,%36,%37) -> bb24;
+    %48 = ConstantLoad 1
+    %49 = %48;
+    %50 = ConstantLoad 2
+    %51 = %50;
+    %52 = ConstantLoad 3
+    %53 = %52;
+    %54 = ConstantLoad 4
+    %55 = %54;
+    %56 = x(%49,%51,%53,%55) -> bb24;
   }
   bb24 {
-    %39 = println(%38) -> bb25;
+    %57 = %56;
+    %58 = println(%57) -> bb25;
   }
   bb25 {
     GOTO bb36;
   }
   bb26 {
-    %40 = x is function(int) returns int
-    %40 ? bb27 : bb29;
+    %59 = x is function(int) returns int
+    %59 ? bb27 : bb29;
   }
   bb27 {
-    %41 = ConstantLoad error
-    %42 = println(%41) -> bb28;
+    %60 = ConstantLoad error
+    %61 = println(%60) -> bb28;
   }
   bb28 {
     GOTO bb35;
   }
   bb29 {
-    %43 = x is function(int, int) returns int
-    %43 ? bb30 : bb32;
+    %62 = x is function(int, int) returns int
+    %62 ? bb30 : bb32;
   }
   bb30 {
-    %44 = ConstantLoad error
-    %45 = println(%44) -> bb31;
+    %63 = ConstantLoad error
+    %64 = println(%63) -> bb31;
   }
   bb31 {
     GOTO bb34;
   }
   bb32 {
-    %46 = ConstantLoad error
-    %47 = println(%46) -> bb33;
+    %65 = ConstantLoad error
+    %66 = println(%65) -> bb33;
   }
   bb33 {
     GOTO bb34;
@@ -147,15 +166,19 @@ main() -> nil{
 }
 bar(int,int) -> int{
   bb0 {
-    %3 = + x y;
+    %4 = x;
+    %5 = y;
+    %3 = + %4 %5;
     %0 = %3;
     return;
   }
 }
 foo(int) -> int{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = + x %3;
+    %3 = x;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
     %0 = %2;
     return;
   }
@@ -165,49 +188,62 @@ fooBar(int,[int...]...) -> int{
     %4 = length(y) -> bb1;
   }
   bb1 {
-    %5 = ConstantLoad 0
-    %3 = == %4 %5;
+    %5 = %4;
+    %6 = ConstantLoad 0
+    %7 = %6;
+    %3 = == %5 %7;
     %3 ? bb2 : bb4;
   }
   bb2 {
-    %6 = foo(x) -> bb3;
+    %8 = x;
+    %9 = foo(%8) -> bb3;
   }
   bb3 {
-    %0 = %6;
+    %0 = %9;
     return;
   }
   bb4 {
-    %8 = ConstantLoad 0
-    %7 = y[%8];
-    %9 = bar(x,%7) -> bb5;
+    %10 = x;
+    %12 = ConstantLoad 0
+    %11 = y[%12];
+    %13 = %11;
+    %14 = bar(%10,%13) -> bb5;
   }
   bb5 {
-    curr = %9;
-    %11 = ConstantLoad 1
-    i = %11;
-    %13 = length(y) -> bb6;
+    curr = %14;
+    %16 = ConstantLoad 1
+    i = %16;
+    %18 = length(y) -> bb6;
   }
   bb6 {
-    $desugar$0 = %13;
+    $desugar$0 = %18;
     GOTO bb7;
   }
   bb7 {
-    %15 = < i $desugar$0;
-    %15 ? bb8 : bb9;
+    %21 = i;
+    %22 = $desugar$0;
+    %20 = < %21 %22;
+    %20 ? bb8 : bb9;
   }
   bb8 {
-    %16 = y[i];
-    %17 = bar(curr,%16) -> bb10;
+    PushScopeFrame 8
+    %0 = (1, curr);
+    %1 = (1, y)[(1, i)];
+    %2 = %1;
+    %3 = bar(%0,%2) -> bb10;
   }
   bb9 {
     %0 = curr;
     return;
   }
   bb10 {
-    curr = %17;
-    %19 = ConstantLoad 1
-    %18 = + i %19;
-    i = %18;
+    (1, curr) = %3;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
     GOTO bb7;
   }
 }

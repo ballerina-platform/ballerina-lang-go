@@ -1,0 +1,56 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+
+error[SEMANTIC_ERROR]: cannot assign to constant
+  --> modify-e.bal:24:13
+   |
+24 |             a = 10; // @error
+   |             ^
+

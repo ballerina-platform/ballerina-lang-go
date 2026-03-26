@@ -1,0 +1,228 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition S1
+    (union-type
+      (union-type
+        (union-type
+          (union-type
+            (union-type
+              (union-type
+                (union-type
+                  (union-type
+                    (union-type
+                      (union-type
+                        (finite-type
+                          (literal 1))
+                        (finite-type
+                          (literal 2)))
+                      (finite-type
+                        (literal 3)))
+                    (finite-type
+                      (literal 4)))
+                  (finite-type
+                    (literal 5)))
+                (finite-type
+                  (literal 7)))
+              (finite-type
+                (literal 8)))
+            (finite-type
+              (literal 13)))
+          (finite-type
+            (literal 11)))
+        (finite-type
+          (literal 12)))
+      (finite-type
+        (literal 14))))
+  (type-definition S2
+    (union-type
+      (union-type
+        (union-type
+          (union-type
+            (union-type
+              (union-type
+                (union-type
+                  (union-type
+                    (union-type
+                      (finite-type
+                        (literal 4))
+                      (finite-type
+                        (literal 7)))
+                    (finite-type
+                      (literal 13)))
+                  (finite-type
+                    (literal 8)))
+                (finite-type
+                  (literal 12)))
+              (finite-type
+                (literal 14)))
+            (finite-type
+              (literal 10)))
+          (finite-type
+            (literal 9)))
+        (finite-type
+          (literal 15)))
+      (finite-type
+        (literal 16))))
+  (type-definition S3
+    (union-type
+      (union-type
+        (union-type
+          (union-type
+            (union-type
+              (union-type
+                (union-type
+                  (union-type
+                    (finite-type
+                      (literal 6))
+                    (finite-type
+                      (literal 5)))
+                  (finite-type
+                    (literal 3)))
+                (finite-type
+                  (literal 4)))
+              (finite-type
+                (literal 7)))
+            (finite-type
+              (literal 13)))
+          (finite-type
+            (literal 8)))
+        (finite-type
+          (literal 9)))
+      (finite-type
+        (literal 10))))
+  (type-definition F1
+    (function-type (
+      (user-defined-type S1)) (
+      (user-defined-type S1))))
+  (type-definition F2
+    (function-type (
+      (user-defined-type S2)) (
+      (user-defined-type S2))))
+  (type-definition F3
+    (function-type (
+      (user-defined-type S3)) (
+      (user-defined-type S3))))
+  (type-definition F
+    (intersection-type
+      (intersection-type
+        (user-defined-type F1)
+        (user-defined-type F2))
+      (user-defined-type F3)))
+  (type-definition A
+    (union-type
+      (union-type
+        (union-type
+          (finite-type
+            (literal 11))
+          (finite-type
+            (literal 12)))
+        (finite-type
+          (literal 15)))
+      (finite-type
+        (literal 13))))
+  (type-definition B
+    (union-type
+      (finite-type
+        (literal 8))
+      (finite-type
+        (literal 9))))
+  (type-definition C
+    (union-type
+      (union-type
+        (finite-type
+          (literal 2))
+        (finite-type
+          (literal 3)))
+      (finite-type
+        (literal 4))))
+  (type-definition S23
+    (intersection-type
+      (user-defined-type S2)
+      (user-defined-type S3)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable v0 (type
+          (user-defined-type S1)) (expr
+          (invocation f (
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref v0))))
+      (var-def
+        (variable a (type
+          (user-defined-type A)) (expr
+          (literal 11))))
+      (var-def
+        (variable v1 (type
+          (union-type
+            (user-defined-type S1)
+            (user-defined-type S2))) (expr
+          (invocation f (
+            (simple-var-ref a))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref v1))))
+      (var-def
+        (variable b (type
+          (user-defined-type B)) (expr
+          (literal 9))))
+      (var-def
+        (variable v2 (type
+          (intersection-type
+            (user-defined-type S2)
+            (user-defined-type S3))) (expr
+          (invocation f (
+            (simple-var-ref b))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref v2))))
+      (var-def
+        (variable c (type
+          (user-defined-type C)) (expr
+          (literal 2))))
+      (var-def
+        (variable v3 (type
+          (user-defined-type S1)) (expr
+          (invocation f (
+            (simple-var-ref c))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref v3))))
+      (var-def
+        (variable d (type
+          (union-type
+            (user-defined-type B)
+            (user-defined-type C))) (expr
+          (literal 2))))
+      (var-def
+        (variable v4 (type
+          (union-type
+            (user-defined-type S1)
+            (user-defined-type S23))) (expr
+          (invocation f (
+            (simple-var-ref d))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref v4))))))
+  (function foo (
+    (variable s (type
+      (union-type
+        (union-type
+          (user-defined-type S1)
+          (user-defined-type S2))
+        (user-defined-type S3))))) (
+    (intersection-type
+      (intersection-type
+        (user-defined-type S1)
+        (user-defined-type S2))
+      (user-defined-type S3)))
+    (block-function-body
+      (return
+        (literal 13)))))

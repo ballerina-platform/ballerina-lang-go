@@ -8,19 +8,21 @@ main() -> nil{
     m = %3;
     %6 = ConstantLoad y
     %5 = m[%6];
-    %7 = nonNil(%5) -> bb1;
+    %7 = %5;
+    %8 = nonNil(%7) -> bb1;
   }
   bb1 {
-    $desugar$0 = %7;
-    %9 = $desugar$0 is error
-    %9 ? bb2 : bb3;
+    $desugar$0 = %8;
+    %10 = $desugar$0 is error
+    %10 ? bb2 : bb3;
   }
   bb2 {
     panic $desugar$0;
   }
   bb3 {
-    %10 = unknown $desugar$0;
-    %11 = println(%10) -> bb4;
+    %11 = unknown $desugar$0;
+    %12 = %11;
+    %13 = println(%12) -> bb4;
   }
   bb4 {
     return;
@@ -28,14 +30,16 @@ main() -> nil{
 }
 nonNil(nil|int) -> int|error{
   bb0 {
-    %3 = ConstantLoad <nil>
-    %2 = == n %3;
+    %3 = n;
+    %4 = ConstantLoad <nil>
+    %5 = %4;
+    %2 = == %3 %5;
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %4 = ConstantLoad nil
-    %5 = newError error(%4)
-    %0 = %5;
+    %6 = ConstantLoad nil
+    %7 = newError error(%6)
+    %0 = %7;
     return;
   }
   bb2 {

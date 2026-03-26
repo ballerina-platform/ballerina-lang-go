@@ -3,10 +3,12 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad 10
-    %2 = foo(%1) -> bb1;
+    %2 = %1;
+    %3 = foo(%2) -> bb1;
   }
   bb1 {
-    %3 = println(%2) -> bb2;
+    %4 = %3;
+    %5 = println(%4) -> bb2;
   }
   bb2 {
     return;
@@ -14,18 +16,23 @@ main() -> nil{
 }
 foo(int) -> int{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = - x %3;
+    %3 = x;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = - %3 %5;
     i = %2;
-    %6 = ConstantLoad 0
-    %5 = != i %6;
-    %5 ? bb1 : bb3;
+    %8 = i;
+    %9 = ConstantLoad 0
+    %10 = %9;
+    %7 = != %8 %10;
+    %7 ? bb1 : bb3;
   }
   bb1 {
-    %7 = foo(i) -> bb2;
+    %11 = i;
+    %12 = foo(%11) -> bb2;
   }
   bb2 {
-    %0 = %7;
+    %0 = %12;
     return;
   }
   bb3 {

@@ -14,32 +14,33 @@ main() -> nil{
     %8 = ConstantLoad 1
     %9 = newArray [int, never...][%8]{%7}
     %10 = ConstantLoad 1
-    %11 = printEq(%9,%10) -> bb2;
+    %11 = %10;
+    %12 = printEq(%9,%11) -> bb2;
   }
   bb2 {
-    %12 = ConstantLoad 1
     %13 = ConstantLoad 1
-    %14 = newArray [int, never...][%13]{%12}
-    %15 = ConstantLoad 1
+    %14 = ConstantLoad 1
+    %15 = newArray [int, never...][%14]{%13}
     %16 = ConstantLoad 1
-    %17 = newArray [int, never...][%16]{%15}
-    %18 = printEq(%14,%17) -> bb3;
+    %17 = ConstantLoad 1
+    %18 = newArray [int, never...][%17]{%16}
+    %19 = printEq(%15,%18) -> bb3;
   }
   bb3 {
-    %19 = ConstantLoad 0
-    %20 = newArray [never...][%19]{}
-    %21 = ConstantLoad 0
-    %22 = newArray [never...][%21]{}
-    %23 = printEq(%20,%22) -> bb4;
+    %20 = ConstantLoad 0
+    %21 = newArray [never...][%20]{}
+    %22 = ConstantLoad 0
+    %23 = newArray [never...][%22]{}
+    %24 = printEq(%21,%23) -> bb4;
   }
   bb4 {
-    %24 = ConstantLoad 1
     %25 = ConstantLoad 1
-    %26 = newArray [int, never...][%25]{%24}
-    %27 = ConstantLoad 2
-    %28 = ConstantLoad 1
-    %29 = newArray [int, never...][%28]{%27}
-    %30 = printEq(%26,%29) -> bb5;
+    %26 = ConstantLoad 1
+    %27 = newArray [int, never...][%26]{%25}
+    %28 = ConstantLoad 2
+    %29 = ConstantLoad 1
+    %30 = newArray [int, never...][%29]{%28}
+    %31 = printEq(%27,%30) -> bb5;
   }
   bb5 {
     return;
@@ -48,11 +49,13 @@ main() -> nil{
 printEq(nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> nil{
   bb0 {
     %3 = unknown x y;
-    %4 = println(%3) -> bb1;
+    %4 = %3;
+    %5 = println(%4) -> bb1;
   }
   bb1 {
-    %5 = unknown x y;
-    %6 = println(%5) -> bb2;
+    %6 = unknown x y;
+    %7 = %6;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
     return;

@@ -1,0 +1,68 @@
+(foo
+  (bb0 () ()
+    (return
+      (literal 3))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable v1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable r1 (type
+        (user-defined-type S1)) (expr
+        (invocation f (
+          (simple-var-ref v1))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r1))))
+    (var-def
+      (variable v2 (type
+        (union-type
+          (user-defined-type B)
+          (user-defined-type C))) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable r2 (type
+        (union-type
+          (user-defined-type S1)
+          (user-defined-type S23))) (expr
+        (invocation f (
+          (simple-var-ref v2))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r2))))
+    (var-def
+      (variable v3 (type
+        (user-defined-type C)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable r3 (type
+        (user-defined-type S1)) (expr
+        (invocation f (
+          (simple-var-ref v3))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r3))))
+    (var-def
+      (variable v4 (type
+        (user-defined-type B)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable r4 (type
+        (intersection-type
+          (user-defined-type S2)
+          (user-defined-type S3))) (expr
+        (invocation f (
+          (simple-var-ref v4))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref r4))))
+  )
+)

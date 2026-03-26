@@ -1,0 +1,196 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition BinaryFn
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition UnaryFn
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition Op
+    (record-type
+      (field lhs
+        (value-type int))
+      (field rhs
+        (value-type int))
+      (field fn
+        (union-type
+          (user-defined-type BinaryFn)
+          (user-defined-type UnaryFn)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type Op)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal lhs)
+              (literal 1))
+            (key-value
+              (literal rhs)
+              (literal 2))
+            (key-value
+              (literal fn)
+              (simple-var-ref add))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation executeOp (
+            (simple-var-ref a))))))
+      (assignment
+        (index-based-access
+          (simple-var-ref a)
+          (literal fn))
+        (simple-var-ref nAdd))
+      (expression-stmt
+        (invocation io println (
+          (invocation executeOp (
+            (simple-var-ref a))))))
+      (assignment
+        (index-based-access
+          (simple-var-ref a)
+          (literal fn))
+        (simple-var-ref increment))
+      (expression-stmt
+        (invocation io println (
+          (invocation executeOp (
+            (simple-var-ref a))))))))
+  (function executeOp (
+    (variable op (type
+      (user-defined-type Op)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable fn (type
+          (union-type
+            (user-defined-type BinaryFn)
+            (user-defined-type UnaryFn))) (expr
+          (index-based-access
+            (simple-var-ref op)
+            (literal fn)))))
+      (if
+        (type-test-expr is
+          (simple-var-ref fn)
+          (user-defined-type BinaryFn))
+        (block-stmt
+          (return
+            (invocation fn (
+              (index-based-access
+                (simple-var-ref op)
+                (literal lhs))
+              (index-based-access
+                (simple-var-ref op)
+                (literal rhs)))))) (
+        (block-stmt
+          (var-def
+            (variable f (type
+              (user-defined-type UnaryFn)) (expr
+              (type-conversion-expr
+                (simple-var-ref fn)
+                (user-defined-type UnaryFn)))))
+          (return
+            (invocation f (
+              (index-based-access
+                (simple-var-ref op)
+                (literal lhs))))))))))
+  (function add (
+    (variable lhs (type
+      (union-type
+        (value-type int)
+        (value-type string))))
+    (variable rhs (type
+      (union-type
+        (value-type int)
+        (value-type string))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (binary-expr ||
+          (type-test-expr is
+            (simple-var-ref lhs)
+            (value-type string))
+          (type-test-expr is
+            (simple-var-ref rhs)
+            (value-type string)))
+        (block-stmt
+          (return
+            (literal 0))) ())
+      (block-stmt
+        (return
+          (binary-expr +
+            (simple-var-ref lhs)
+            (simple-var-ref rhs))))))
+  (function nAdd (
+    (variable init (type
+      (union-type
+        (value-type int)
+        (value-type string))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (binary-expr ||
+          (type-test-expr is
+            (simple-var-ref init)
+            (value-type string))
+          (type-test-expr is
+            (simple-var-ref rest)
+            (array-type
+              (value-type string) dimensions: 1 ([]))))
+        (block-stmt
+          (return
+            (unary-expr -
+              (literal 1)))) ())
+      (block-stmt
+        (var-def
+          (variable result (type
+            (value-type int)) (expr
+            (simple-var-ref init))))
+        (var-def
+          (variable i (type
+            (value-type int)) (expr
+            (literal 0))))
+        (var-def
+          (variable $desugar$0 (expr
+            (invocation lang.array length (
+              (simple-var-ref rest))))))
+        (while
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref $desugar$0))
+          (block-stmt
+            (assignment
+              (simple-var-ref result)
+              (invocation add (
+                (simple-var-ref result)
+                (index-based-access
+                  (simple-var-ref rest)
+                  (simple-var-ref i)))))
+            (assignment
+              (simple-var-ref i)
+              (binary-expr +
+                (simple-var-ref i)
+                (numeric-literal 1)))))
+        (return
+          (simple-var-ref result)))))
+  (function increment (
+    (variable lhs (type
+      (union-type
+        (value-type int)
+        (value-type string))))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref lhs)
+          (value-type string))
+        (block-stmt
+          (return
+            (literal 0))) ())
+      (block-stmt
+        (return
+          (binary-expr +
+            (simple-var-ref lhs)
+            (literal 1)))))))

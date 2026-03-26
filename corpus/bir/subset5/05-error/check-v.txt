@@ -34,11 +34,12 @@ bar() -> error{
   }
   bb3 {
     a = $desugar$0;
-    %5 = println(a) -> bb4;
+    %5 = a;
+    %6 = println(%5) -> bb4;
   }
   bb4 {
-    %6 = ConstantLoad unexpected
-    %7 = newError error(%6)
-    panic %7;
+    %7 = ConstantLoad unexpected
+    %8 = newError error(%7)
+    panic %8;
   }
 }

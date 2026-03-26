@@ -6,14 +6,16 @@ main() -> nil{
   }
   bb1 {
     %3 = ConstantLoad 1
-    %4 = ConstantLoad 0
-    %2 = / %3 %4;
+    %4 = %3;
+    %5 = ConstantLoad 0
+    %6 = %5;
+    %2 = / %4 %6;
     %1 = %2;
     GOTO bb2;
   }
   bb2 {
     res = %1;
-    %6 = println(res) -> bb3;
+    %8 = println(res) -> bb3;
   }
   bb3 {
     return;

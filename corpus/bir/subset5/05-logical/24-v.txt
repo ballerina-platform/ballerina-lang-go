@@ -14,7 +14,8 @@ main() -> nil{
   }
   bb1 {
     %12 = ConstantLoad 1
-    %11 = == x %12;
+    %13 = %12;
+    %11 = == x %13;
     %10 = %11;
     %11 ? bb3 : bb4;
   }
@@ -38,8 +39,8 @@ main() -> nil{
     GOTO bb2;
   }
   bb7 {
-    %13 = ConstantLoad x is 1
-    %14 = println(%13) -> bb8;
+    %14 = ConstantLoad x is 1
+    %15 = println(%14) -> bb8;
   }
   bb8 {
     GOTO bb9;

@@ -7,26 +7,31 @@ main() -> nil{
     %2 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object...][%1]{}
     v = %2;
     %4 = ConstantLoad 0
-    %5 = push(v,%4) -> bb1;
+    %5 = %4;
+    %6 = push(v,%5) -> bb1;
   }
   bb1 {
-    %6 = ConstantLoad true
-    %7 = push(v,%6) -> bb2;
+    %7 = ConstantLoad true
+    %8 = %7;
+    %9 = push(v,%8) -> bb2;
   }
   bb2 {
-    %8 = ConstantLoad 2
-    %9 = push(v,%8) -> bb3;
+    %10 = ConstantLoad 2
+    %11 = %10;
+    %12 = push(v,%11) -> bb3;
   }
   bb3 {
-    %10 = ConstantLoad <nil>
-    %11 = push(v,%10) -> bb4;
+    %13 = ConstantLoad <nil>
+    %14 = %13;
+    %15 = push(v,%14) -> bb4;
   }
   bb4 {
-    %12 = ConstantLoad 4
-    %13 = push(v,%12) -> bb5;
+    %16 = ConstantLoad 4
+    %17 = %16;
+    %18 = push(v,%17) -> bb5;
   }
   bb5 {
-    %14 = println(v) -> bb6;
+    %19 = println(v) -> bb6;
   }
   bb6 {
     return;

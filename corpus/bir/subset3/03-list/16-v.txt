@@ -12,7 +12,8 @@ main() -> nil{
     %7 = length(v) -> bb1;
   }
   bb1 {
-    %8 = println(%7) -> bb2;
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     return;

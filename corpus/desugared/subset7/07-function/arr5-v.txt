@@ -1,0 +1,55 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition Point
+    (array-type
+      (value-type int) dimensions: 1 ([])))
+  (type-definition Point2D
+    (tuple-type
+      (value-type int)
+      (value-type int)))
+  (type-definition IncrementFn
+    (function-type (
+      (user-defined-type Point2D)
+      (value-type int)) (
+      (user-defined-type Point))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable val (type
+          (user-defined-type Point2D)) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)))))
+      (var-def
+        (variable fn (type
+          (user-defined-type IncrementFn)) (expr
+          (simple-var-ref point2DIncOverride))))
+      (var-def
+        (variable result (type
+          (user-defined-type Point)) (expr
+          (invocation fn (
+            (simple-var-ref val)
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result))))))
+  (function point2DIncOverride (
+    (variable point (type
+      (user-defined-type Point)))
+    (variable increment (type
+      (value-type int)))) (
+    (user-defined-type Point))
+    (block-function-body
+      (return
+        (list-constructor-expr
+          (binary-expr +
+            (index-based-access
+              (simple-var-ref point)
+              (literal 0))
+            (simple-var-ref increment))
+          (binary-expr +
+            (index-based-access
+              (simple-var-ref point)
+              (literal 1))
+            (simple-var-ref increment)))))))

@@ -14,40 +14,44 @@ main() -> nil{
     GOTO bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %6 = %5;
+    %7 = println(%6) -> bb3;
   }
   bb3 {
-    %7 = t;
+    %8 = t;
     t ? bb4 : bb5;
   }
   bb4 {
-    %7 = f;
+    %8 = f;
     GOTO bb5;
   }
   bb5 {
-    %8 = println(%7) -> bb6;
+    %9 = %8;
+    %10 = println(%9) -> bb6;
   }
   bb6 {
-    %9 = f;
+    %11 = f;
     f ? bb8 : bb7;
   }
   bb7 {
-    %9 = t;
+    %11 = t;
     GOTO bb8;
   }
   bb8 {
-    %10 = println(%9) -> bb9;
+    %12 = %11;
+    %13 = println(%12) -> bb9;
   }
   bb9 {
-    %11 = f;
+    %14 = f;
     f ? bb11 : bb10;
   }
   bb10 {
-    %11 = f;
+    %14 = f;
     GOTO bb11;
   }
   bb11 {
-    %12 = println(%11) -> bb12;
+    %15 = %14;
+    %16 = println(%15) -> bb12;
   }
   bb12 {
     return;

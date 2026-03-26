@@ -1,0 +1,163 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition Op
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition BinaryOperation
+    (record-type
+      (field op
+        (user-defined-type Op))
+      (field left
+        (value-type int))
+      (field right
+        (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type BinaryOperation)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal op)
+              (simple-var-ref add))
+            (key-value
+              (literal left)
+              (literal 1))
+            (key-value
+              (literal right)
+              (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation exec (
+            (simple-var-ref a))))))
+      (var-def
+        (variable b (type
+          (user-defined-type BinaryOperation)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal op)
+              (simple-var-ref mul))
+            (key-value
+              (literal left)
+              (literal 1))
+            (key-value
+              (literal right)
+              (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation exec (
+            (simple-var-ref b))))))
+      (var-def
+        (variable c (type
+          (user-defined-type BinaryOperation)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal op)
+              (simple-var-ref addAny))
+            (key-value
+              (literal left)
+              (literal 2))
+            (key-value
+              (literal right)
+              (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation exec (
+            (simple-var-ref c))))))
+      (assignment
+        (index-based-access
+          (simple-var-ref c)
+          (literal op))
+        (simple-var-ref add))
+      (expression-stmt
+        (invocation io println (
+          (invocation exec (
+            (simple-var-ref c))))))
+      (assignment
+        (index-based-access
+          (simple-var-ref a)
+          (literal op))
+        (simple-var-ref addAny))
+      (expression-stmt
+        (invocation io println (
+          (invocation exec (
+            (simple-var-ref a))))))))
+  (function exec (
+    (variable op (type
+      (user-defined-type BinaryOperation)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Op)) (expr
+          (index-based-access
+            (simple-var-ref op)
+            (literal op)))))
+      (return
+        (invocation f (
+          (index-based-access
+            (simple-var-ref op)
+            (literal left))
+          (index-based-access
+            (simple-var-ref op)
+            (literal right)))))))
+  (function add (
+    (variable left (type
+      (value-type int)))
+    (variable right (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref left)
+          (simple-var-ref right)))))
+  (function mul (
+    (variable left (type
+      (value-type int)))
+    (variable right (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr *
+          (simple-var-ref left)
+          (simple-var-ref right)))))
+  (function addAny (
+    (variable init (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (simple-var-ref init))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref rest))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref sum)
+            (index-based-access
+              (simple-var-ref rest)
+              (simple-var-ref i)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref sum)))))

@@ -5,7 +5,8 @@ main() -> nil{
     %1 = fp $anon/.:foo
     f = %1;
     %3 = ConstantLoad 1
-    %4 = f(%3) -> bb1;
+    %4 = %3;
+    %5 = f(%4) -> bb1;
   }
   bb1 {
     return;
@@ -13,7 +14,8 @@ main() -> nil{
 }
 foo(int) -> nil{
   bb0 {
-    %2 = println(x) -> bb1;
+    %2 = x;
+    %3 = println(%2) -> bb1;
   }
   bb1 {
     return;

@@ -1,0 +1,165 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b)))) (
+      (value-type boolean))))
+  (type-definition G
+    (function-type (
+      (user-defined-type F)
+      (function-type-param
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b))))) (
+      (array-type
+        (value-type boolean) dimensions: 1 ([])))))
+  (type-definition G1
+    (function-type (
+      (user-defined-type F)
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b)))
+      (function-type-param
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b))))) (
+      (array-type
+        (value-type boolean) dimensions: 1 ([])))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal a))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal b))))))
+      (var-def
+        (variable g (type
+          (user-defined-type G)) (expr
+          (simple-var-ref bar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g (
+            (simple-var-ref f)
+            (literal a)
+            (literal b))))))
+      (var-def
+        (variable g1 (type
+          (user-defined-type G1)) (expr
+          (simple-var-ref bar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g1 (
+            (simple-var-ref f)
+            (literal a)
+            (literal b))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g1 (
+            (simple-var-ref f)
+            (literal a)
+            (literal b)
+            (literal b))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g1 (
+            (simple-var-ref f)
+            (literal a))))))))
+  (function foo (
+    (variable value (type
+      (union-type
+        (union-type
+          (finite-type
+            (literal a))
+          (finite-type
+            (literal b)))
+        (finite-type
+          (literal c)))))) (
+    (value-type boolean))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (simple-var-ref value)
+          (literal a))
+        (block-stmt
+          (return
+            (literal true))) (
+        (if
+          (binary-expr ==
+            (simple-var-ref value)
+            (literal b))
+          (block-stmt
+            (return
+              (literal false))) (
+          (block-stmt
+            (expression-stmt
+              (invocation io println (
+                (literal unexpected))))
+            (return
+              (literal true)))))))))
+  (function bar (
+    (variable func (type
+      (user-defined-type F)))) (
+    (array-type
+      (value-type boolean) dimensions: 1 ([])))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (array-type
+            (value-type boolean) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref vals) ()))
+        (block-stmt
+          (var-def
+            (variable val (type
+              (union-type
+                (union-type
+                  (finite-type
+                    (literal a))
+                  (finite-type
+                    (literal b)))
+                (finite-type
+                  (literal c)))) (expr
+              (index-based-access
+                (simple-var-ref vals)
+                (simple-var-ref i)))))
+          (if
+            (type-test-expr is
+              (simple-var-ref val)
+              (finite-type
+                (literal c)))
+            (block-stmt
+              (continue)) ())
+          (block-stmt
+            (expression-stmt
+              (invocation push expr:
+                (simple-var-ref result) (
+                (invocation func (
+                  (simple-var-ref val)))))))))
+      (return
+        (simple-var-ref result)))))

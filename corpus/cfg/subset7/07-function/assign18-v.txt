@@ -1,0 +1,182 @@
+(bar
+  (bb0 () (bb1)
+    (var-def
+      (variable result (type
+        (value-type int)) (expr
+        (simple-var-ref a))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref c))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref result)
+      (index-based-access
+        (simple-var-ref c)
+        (simple-var-ref i)))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref result))
+  )
+)
+(foo
+  (bb0 () (bb1)
+    (var-def
+      (variable result (type
+        (value-type int)) (expr
+        (binary-expr +
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref c))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref result)
+      (index-based-access
+        (simple-var-ref c)
+        (simple-var-ref i)))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref result))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1)
+          (literal 2))))))
+    (var-def
+      (variable f1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f1 (
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (var-def
+      (variable f2 (type
+        (user-defined-type F2)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f2 (
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4))))))
+    (var-def
+      (variable g (type
+        (user-defined-type G)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation g (
+          (literal 10)
+          (literal 20))))))
+    (var-def
+      (variable g1 (type
+        (user-defined-type G1)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation g1 (
+          (literal 10)
+          (literal 20)
+          (literal 30))))))
+    (var-def
+      (variable g2 (type
+        (user-defined-type G2)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (invocation g2 (
+          (literal 10)
+          (literal 20)
+          (literal 30)
+          (literal 40))))))
+    (var-def
+      (variable fb (type
+        (user-defined-type F)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fb (
+          (literal 1)
+          (literal 2))))))
+    (var-def
+      (variable fb1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fb1 (
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (var-def
+      (variable fb2 (type
+        (user-defined-type F2)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation fb2 (
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4))))))
+    (var-def
+      (variable gb (type
+        (user-defined-type G)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation gb (
+          (literal 10)
+          (literal 20))))))
+    (var-def
+      (variable gb1 (type
+        (user-defined-type G1)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation gb1 (
+          (literal 10)
+          (literal 20)
+          (literal 30))))))
+    (var-def
+      (variable gb2 (type
+        (user-defined-type G2)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation gb2 (
+          (literal 10)
+          (literal 20)
+          (literal 30)
+          (literal 40))))))
+  )
+)

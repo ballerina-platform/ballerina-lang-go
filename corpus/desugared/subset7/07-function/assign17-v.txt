@@ -1,0 +1,54 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition FB
+    (function-type (
+      (value-type byte)
+      (value-type byte)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (invocation f (
+            (literal 1)
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (var-def
+        (variable fb (type
+          (user-defined-type FB)) (expr
+          (simple-var-ref foo))))
+      (expression-stmt
+        (invocation io println (
+          (invocation fb (
+            (literal 8)
+            (literal 2))))))))
+  (function foo (
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))) (
+    (value-type byte))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (binary-expr +
+            (simple-var-ref a)
+            (simple-var-ref b)))))
+      (return
+        (type-conversion-expr
+          (simple-var-ref sum)
+          (value-type byte))))))

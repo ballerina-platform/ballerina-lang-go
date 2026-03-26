@@ -14,13 +14,15 @@ main() -> nil{
     %10 = ConstantLoad x
     %9 = rr[%10];
     x = %9;
-    %12 = println(x) -> bb1;
+    %12 = x;
+    %13 = println(%12) -> bb1;
   }
   bb1 {
-    %14 = ConstantLoad y
-    %13 = rr[%14];
-    y = %13;
-    %16 = println(y) -> bb2;
+    %15 = ConstantLoad y
+    %14 = rr[%15];
+    y = %14;
+    %17 = y;
+    %18 = println(%17) -> bb2;
   }
   bb2 {
     return;

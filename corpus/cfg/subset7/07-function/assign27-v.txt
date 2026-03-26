@@ -1,0 +1,71 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref i)
+        (literal 1)))
+  )
+)
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref i))))
+  )
+)
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable f (type
+        (user-defined-type F)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable i (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (invocation f (
+          (literal 10))))))
+    (group-expr
+      (type-test-expr is
+        (simple-var-ref i)
+        (value-type null)))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal working))))
+  )
+  (bb2 (bb1 bb3) (bb4 bb6)
+    (assignment
+      (simple-var-ref f)
+      (simple-var-ref bar))
+    (var-def
+      (variable j (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (invocation f (
+          (literal 10))))))
+    (group-expr
+      (type-test-expr is
+        (simple-var-ref j)
+        (value-type int)))
+  )
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+  (bb4 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref j))))
+  )
+  (bb5 (bb4 bb6) ())
+  (bb6 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+)

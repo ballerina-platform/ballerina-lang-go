@@ -21,10 +21,11 @@ test1() -> nil{
   }
   bb1 {
     %5 = ConstantLoad 1
-    %6 = push(%4,%5) -> bb2;
+    %6 = %5;
+    %7 = push(%4,%6) -> bb2;
   }
   bb2 {
-    %7 = println(x) -> bb3;
+    %8 = println(x) -> bb3;
   }
   bb3 {
     return;
@@ -39,29 +40,33 @@ test2() -> nil{
   }
   bb1 {
     %5 = ConstantLoad 2
-    %6 = push(%4,%5) -> bb2;
+    %6 = %5;
+    %7 = push(%4,%6) -> bb2;
   }
   bb2 {
-    %7 = println(x) -> bb3;
+    %8 = println(x) -> bb3;
   }
   bb3 {
-    %8 = length(x) -> bb4;
+    %9 = length(x) -> bb4;
   }
   bb4 {
-    %9 = println(%8) -> bb5;
+    %10 = %9;
+    %11 = println(%10) -> bb5;
   }
   bb5 {
-    %10 = ConstantLoad 3
-    %11 = push(x,%10) -> bb6;
+    %12 = ConstantLoad 3
+    %13 = %12;
+    %14 = push(x,%13) -> bb6;
   }
   bb6 {
-    %12 = println(x) -> bb7;
+    %15 = println(x) -> bb7;
   }
   bb7 {
-    %13 = length(x) -> bb8;
+    %16 = length(x) -> bb8;
   }
   bb8 {
-    %14 = println(%13) -> bb9;
+    %17 = %16;
+    %18 = println(%17) -> bb9;
   }
   bb9 {
     return;

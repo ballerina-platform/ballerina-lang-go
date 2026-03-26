@@ -2,8 +2,10 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 foo([int...],int) -> [int...]{
   bb0 {
-    %4 = ConstantLoad 10
-    %3 = + i %4;
+    %4 = i;
+    %5 = ConstantLoad 10
+    %6 = %5;
+    %3 = + %4 %6;
     arr[i] = %3;
     %0 = arr;
     return;
@@ -15,27 +17,30 @@ main() -> nil{
     %2 = newArray [int...][%1]{}
     arr = %2;
     %4 = ConstantLoad 0
-    %5 = foo(arr,%4) -> bb1;
+    %5 = %4;
+    %6 = foo(arr,%5) -> bb1;
   }
   bb1 {
-    %6 = %5;
-    %7 = ConstantLoad 1
-    %8 = foo(arr,%7) -> bb2;
+    %7 = %6;
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %10 = foo(arr,%9) -> bb2;
   }
   bb2 {
-    %9 = %8;
-    %10 = ConstantLoad 2
-    %11 = foo(arr,%10) -> bb3;
+    %11 = %10;
+    %12 = ConstantLoad 2
+    %13 = %12;
+    %14 = foo(arr,%13) -> bb3;
   }
   bb3 {
-    %12 = %11;
-    %13 = println(arr) -> bb4;
+    %15 = %14;
+    %16 = println(arr) -> bb4;
   }
   bb4 {
-    %14 = ConstantLoad test str
-    str = %14;
-    %16 = str;
-    %17 = println(str) -> bb5;
+    %17 = ConstantLoad test str
+    str = %17;
+    %19 = str;
+    %20 = println(str) -> bb5;
   }
   bb5 {
     return;

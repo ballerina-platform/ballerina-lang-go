@@ -1,0 +1,119 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = %3;
+    %5 = f(%4) -> bb1;
+  }
+  bb1 {
+    %6 = println(%5) -> bb2;
+  }
+  bb2 {
+    %7 = fp $anon/.:bar
+    f = %7;
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %10 = f(%9) -> bb3;
+  }
+  bb3 {
+    %11 = println(%10) -> bb4;
+  }
+  bb4 {
+    %12 = ConstantLoad 1
+    %13 = unknown %12;
+    %14 = %13;
+    %15 = f(%14) -> bb5;
+  }
+  bb5 {
+    %16 = println(%15) -> bb6;
+  }
+  bb6 {
+    %17 = fp $anon/.:foobar
+    f1 = %17;
+    %19 = ConstantLoad 1
+    %20 = %19;
+    %21 = f1(%20) -> bb7;
+  }
+  bb7 {
+    %22 = println(%21) -> bb8;
+  }
+  bb8 {
+    %23 = fp $anon/.:barbaz
+    f1 = %23;
+    %24 = ConstantLoad 1
+    %25 = %24;
+    %26 = f1(%25) -> bb9;
+  }
+  bb9 {
+    %27 = println(%26) -> bb10;
+  }
+  bb10 {
+    %28 = ConstantLoad 1
+    %29 = unknown %28;
+    %30 = %29;
+    %31 = f1(%30) -> bb11;
+  }
+  bb11 {
+    %32 = println(%31) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}
+foo(int) -> int{
+  bb0 {
+    %0 = a;
+    return;
+  }
+}
+bar(int) -> boolean|int{
+  bb0 {
+    %3 = a;
+    %4 = ConstantLoad 0
+    %5 = %4;
+    %2 = < %3 %5;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = a;
+    return;
+  }
+  bb2 {
+    %6 = ConstantLoad true
+    %0 = %6;
+    return;
+  }
+}
+foobar(int) -> int:Unsigned8{
+  bb0 {
+    %2 = a is int:Unsigned8
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = a;
+    return;
+  }
+  bb2 {
+    %3 = ConstantLoad 0
+    %0 = %3;
+    return;
+  }
+}
+barbaz(int) -> boolean|int:Unsigned8{
+  bb0 {
+    %2 = a is int:Unsigned8
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %0 = a;
+    return;
+  }
+  bb2 {
+    %3 = ConstantLoad true
+    %0 = %3;
+    return;
+  }
+}
