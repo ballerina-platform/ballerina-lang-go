@@ -890,11 +890,7 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	exprEffect := handleExpression(ctx, curBB, expr.Expression)
 	curBB = exprEffect.block
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	typeCast := &TypeCast{}
-	typeCast.Pos = expr.GetPosition()
-	typeCast.RhsOp = exprEffect.result
-	typeCast.LhsOp = resultOperand
-	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
+	typeCast := NewTypeCast(expr.TypeDescriptor.GetDeterminedType(), resultOperand, exprEffect.result, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, typeCast)
 	return expressionEffect{
 		result: resultOperand,
@@ -1333,11 +1329,7 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 
 	result := ctx.addTempVar(expr.DeterminedType)
 	isInitResultNil := ctx.addTempVar(semtypes.BOOLEAN)
-	nilCheck := &TypeTest{}
-	nilCheck.Pos = expr.GetPosition()
-	nilCheck.LhsOp = isInitResultNil
-	nilCheck.RhsOp = initResult
-	nilCheck.Type = semtypes.NIL
+	nilCheck := NewTypeTest(semtypes.NIL, isInitResultNil, initResult, expr.GetPosition())
 	initDoneBB.Instructions = append(initDoneBB.Instructions, nilCheck)
 
 	assignObjectBB := ctx.addBB()
