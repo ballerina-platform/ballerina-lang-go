@@ -324,7 +324,7 @@ var _ WritableRepository = (*Repository)(nil)
 // It queries a remote registry (like Ballerina Central) for package metadata and
 // downloads packages on demand, caching them locally for subsequent access.
 type RemoteRepository struct {
-	*Repository          // Embedded local cache
+	*Repository // Embedded local cache
 	client      *http.Client
 	baseURL     string
 }

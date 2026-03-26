@@ -186,31 +186,34 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	require := test_util.NewRequire(t)
 	assert := test_util.New(t)
 
-	// Step 1: Load the test project
+	// Step 1: Prepare the test repository path
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
+
+	// Step 2: Load the test project with the test repository configured upfront
 	projectPath := filepath.Join("testdata", "project-with-external-dep")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := loadProject(absPath)
+	result, err := loadProject(absPath, projects.ProjectLoadConfig{
+		RepositoryFactories: []projects.RepositoryFactory{
+			func(env *projects.Environment) projects.Repository {
+				return projects.NewFileSystemRepository(
+					"test-repo",
+					os.DirFS(testRepoPath),
+					".",
+					env,
+					projects.LoadBalaProject,
+				)
+			},
+		},
+	})
 	require.NoError(err)
 	require.NotNil(result)
 
 	mainProject := result.Project()
 	require.NotNil(mainProject)
 	env := mainProject.Environment()
-
-	// Step 2: Add a test repository with shared environment
-	testRepoPath, err := filepath.Abs("testdata/repo/bala")
-	require.NoError(err)
-
-	testRepo := projects.NewFileSystemRepository(
-		"test-repo",
-		os.DirFS(testRepoPath),
-		".",
-		env,
-		projects.LoadBalaProject,
-	)
-	env.AddRepository(testRepo)
 
 	// Step 3: Get the package
 	pkg := mainProject.CurrentPackage()
@@ -258,31 +261,34 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	require := test_util.NewRequire(t)
 	assert := test_util.New(t)
 
-	// Step 1: Load the test project
+	// Step 1: Prepare the test repository path
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
+
+	// Step 2: Load the test project with the test repository configured upfront
 	projectPath := filepath.Join("testdata", "project-with-transitive-dep")
 	absPath, err := filepath.Abs(projectPath)
 	require.NoError(err)
 
-	result, err := loadProject(absPath)
+	result, err := loadProject(absPath, projects.ProjectLoadConfig{
+		RepositoryFactories: []projects.RepositoryFactory{
+			func(env *projects.Environment) projects.Repository {
+				return projects.NewFileSystemRepository(
+					"test-repo",
+					os.DirFS(testRepoPath),
+					".", // basePath relative to fsys root
+					env,
+					projects.LoadBalaProject,
+				)
+			},
+		},
+	})
 	require.NoError(err)
 	require.NotNil(result)
 
 	mainProject := result.Project()
 	require.NotNil(mainProject)
 	env := mainProject.Environment()
-
-	// Step 2: Add a test repository 
-	testRepoPath, err := filepath.Abs("testdata/repo/bala")
-	require.NoError(err)
-
-	testRepo := projects.NewFileSystemRepository(
-		"test-repo",
-		os.DirFS(testRepoPath),
-		".", // basePath relative to fsys root
-		env,
-		projects.LoadBalaProject,
-	)
-	env.AddRepository(testRepo)
 
 	// Step 3: Get the package and verify initial state
 	pkg := mainProject.CurrentPackage()

@@ -24,14 +24,33 @@ import (
 )
 
 type ProjectEnvironmentBuilder struct {
-	fsys fs.FS
+	fsys                fs.FS
+	repositoryFactories []RepositoryFactory
 }
 
 func NewProjectEnvironmentBuilder(fsys fs.FS) *ProjectEnvironmentBuilder {
 	return &ProjectEnvironmentBuilder{fsys: fsys}
 }
 
+// WithRepositoryFactories sets the repository factories to be used when building the environment.
+// The factories will be invoked with the created Environment to allow repositories
+// to reference the shared Environment.
+func (b *ProjectEnvironmentBuilder) WithRepositoryFactories(factories []RepositoryFactory) *ProjectEnvironmentBuilder {
+	b.repositoryFactories = factories
+	return b
+}
+
 func (b *ProjectEnvironmentBuilder) Build() *Environment {
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
-	return NewEnvironment(b.fsys, env)
+	projEnv := NewEnvironment(b.fsys, env)
+
+	// Create and add repositories from factories
+	for _, factory := range b.repositoryFactories {
+		if factory != nil {
+			repo := factory(projEnv)
+			projEnv.addRepository(repo)
+		}
+	}
+
+	return projEnv
 }

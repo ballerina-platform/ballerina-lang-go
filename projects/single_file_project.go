@@ -48,6 +48,27 @@ func newSingleFileProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptio
 	return project
 }
 
+// newSingleFileProjectWithEnv creates a new SingleFileProject with a pre-configured Environment.
+// Use this when the Environment has been configured with repositories upfront.
+func newSingleFileProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, documentPath string, env *Environment) *SingleFileProject {
+	// Create temp directory for build outputs
+	targetDir, err := os.MkdirTemp("", "ballerina-cache*")
+	if err != nil {
+		targetDir = "" // Fallback to empty string if temp directory creation fails
+	}
+
+	project := &SingleFileProject{
+		documentPath: documentPath,
+		targetDir:    targetDir,
+	}
+	if env != nil {
+		project.initBaseWithEnv(sourceRoot, buildOptions, env)
+	} else {
+		project.initBase(fsys, sourceRoot, buildOptions)
+	}
+	return project
+}
+
 // Kind returns the project kind (SINGLE_FILE).
 func (s *SingleFileProject) Kind() ProjectKind {
 	return ProjectKindSingleFile

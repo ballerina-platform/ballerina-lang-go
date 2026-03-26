@@ -45,7 +45,7 @@ func NewEnvironment(fsys fs.FS, env *context.CompilerEnvironment) *Environment {
 		compilerEnv:     env,
 		packageCache:    cache,
 		packageResolver: NewPackageResolver(cache),
-		publicSymbols: make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace),
+		publicSymbols:   make(map[semantics.PackageIdentifier]model.ExportedSymbolSpace),
 	}
 }
 
@@ -79,9 +79,10 @@ func (e *Environment) addPublicSymbolsFrom(other *Environment) {
 	}
 }
 
-// AddRepository adds a repository to the environment's package resolver.
+// addRepository adds a repository to the environment's package resolver.
 // Repositories are searched in the order they are added.
-// This allows wiring repositories after Environment creation to avoid circular imports.
-func (e *Environment) AddRepository(repo Repository) {
+// This is private to enforce Environment immutability - repositories should be
+// configured during Environment creation via RepositoryFactories.
+func (e *Environment) addRepository(repo Repository) {
 	e.packageResolver.AddRepository(repo)
 }
