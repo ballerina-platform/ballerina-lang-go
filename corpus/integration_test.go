@@ -35,7 +35,6 @@ import (
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -232,7 +231,7 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
 
-	result, err := directory.LoadProject(fsys, ballerinaHomeFs, filepath.Base(balFile))
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(balFile))
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -372,7 +371,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
 
-	result, err := directory.LoadProject(fsys, ballerinaHomeFs, ".")
+	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err

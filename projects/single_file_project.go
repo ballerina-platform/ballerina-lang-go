@@ -32,8 +32,8 @@ type SingleFileProject struct {
 // Compile-time check to verify SingleFileProject implements Project interface
 var _ Project = (*SingleFileProject)(nil)
 
-// NewSingleFileProject creates a new SingleFileProject with the given parameters.
-func NewSingleFileProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, documentPath string) *SingleFileProject {
+// newSingleFileProject creates a new SingleFileProject with the given parameters.
+func newSingleFileProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, documentPath string) *SingleFileProject {
 	// Create temp directory for build outputs
 	targetDir, err := os.MkdirTemp("", "ballerina-cache*")
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *SingleFileProject) Duplicate() Project {
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(s.buildOptions)
 
 	// Create new project instance
-	newProject := NewSingleFileProject(s.Environment().fs(), s.sourceRoot, duplicateBuildOptions, s.documentPath)
+	newProject := newSingleFileProject(s.Environment().fs(), s.sourceRoot, duplicateBuildOptions, s.documentPath)
 
 	// Duplicate and set the package
 	ResetPackage(s, newProject)

@@ -17,16 +17,16 @@
 package extern_test
 
 import (
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/values"
 	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 )
@@ -41,7 +41,14 @@ func TestExternValid(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHome, err := projects.NewBallerinaHome()
+	if err != nil {
+		t.Fatalf("failed to get ballerina home: %v", err)
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -103,7 +110,14 @@ func TestExternTypeMismatchArg(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHome, err := projects.NewBallerinaHome()
+	if err != nil {
+		t.Fatalf("failed to get ballerina home: %v", err)
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -134,7 +148,14 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHome, err := projects.NewBallerinaHome()
+	if err != nil {
+		t.Fatalf("failed to get ballerina home: %v", err)
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}

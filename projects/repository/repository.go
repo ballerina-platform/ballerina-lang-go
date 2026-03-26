@@ -41,7 +41,6 @@ import (
 	"slices"
 
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 )
 
 const (
@@ -144,7 +143,7 @@ func (r *Repository) GetPackage(ctx context.Context, org, name, version string) 
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
 
-	result, err := directory.LoadProject(os.DirFS(balaPath), ballerinaHomeFs, ".")
+	result, err := projects.Load(os.DirFS(balaPath), ballerinaHomeFs, ".")
 	if err != nil {
 		return nil, err
 	}

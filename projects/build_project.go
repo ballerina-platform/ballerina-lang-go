@@ -29,8 +29,8 @@ type BuildProject struct {
 // Compile-time check to verify BuildProject implements Project interface
 var _ Project = (*BuildProject)(nil)
 
-// NewBuildProject creates a new BuildProject with the given source root and build options.
-func NewBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *BuildProject {
+// newBuildProject creates a new BuildProject with the given source root and build options.
+func newBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *BuildProject {
 	project := &BuildProject{}
 	project.initBase(fsys, sourceRoot, buildOptions)
 	return project
@@ -148,7 +148,7 @@ func (b *BuildProject) Duplicate() Project {
 	// Create duplicate build options using AcceptTheirs pattern
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
 	// Create new project and package instances
-	newProject := NewBuildProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions)
+	newProject := newBuildProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions)
 	ResetPackage(b, newProject)
 
 	return newProject
