@@ -684,8 +684,8 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 			},
 		}
 	case bir.INSTRUCTION_KIND_CALL, bir.INSTRUCTION_KIND_FP_CALL:
-		var isVirtual bool
-		br.read(&isVirtual)
+		var isMethodCall bool
+		br.read(&isMethodCall)
 
 		pkg := br.readPackageCPEntry()
 		name := br.readStringCPEntry()
@@ -714,7 +714,7 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 
 		return &bir.Call{
 			Kind:      termInstructionKind,
-			IsVirtual: isVirtual,
+			IsMethodCall: isMethodCall,
 			CalleePkg: pkg,
 			Name:      name,
 			Args:      args,

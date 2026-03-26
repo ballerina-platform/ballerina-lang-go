@@ -167,8 +167,16 @@ func (cx *stmtContext) addBB() *BIRBasicBlock {
 	return &bb
 }
 
+func buildLookupKey(pkg model.PackageIdentifier, qualifiedName string) string {
+	return pkg.Organization + "/" + pkg.Package + ":" + qualifiedName
+}
+
 func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
-	return symRef.Package.Organization + "/" + symRef.Package.Package + ":" + ctx.CompilerContext.GetSymbol(symRef).Name()
+	return buildLookupKey(symRef.Package, ctx.CompilerContext.GetSymbol(symRef).Name())
+}
+
+func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {
+	return buildLookupKey(symRef.Package, className+"."+ctx.CompilerContext.GetSymbol(symRef).Name())
 }
 
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
@@ -1026,7 +1034,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
 
 	if expr.Expr != nil {
-		call.IsVirtual = true
+		call.IsMethodCall = true
 	}
 
 	symRef := expr.Symbol()
@@ -1282,10 +1290,13 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 	}
 
 	initFunc := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, class.InitFunction, &selfRef)
+	initFunc.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), class.InitFunction.Symbol())
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		birClassDef.VTable[methodName] = transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+		fn := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+		fn.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		birClassDef.VTable[methodName] = fn
 	}
 
 	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())
@@ -1323,8 +1334,9 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 	initResult := ctx.addTempVar(initFunc.ReturnVariable.Type)
 	initDoneBB := ctx.addBB()
 	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, initDoneBB, initResult, expr.GetPosition())
-	call.IsVirtual = true
+	call.IsMethodCall = true
 	call.CachedBIRFunc = initFunc
+	call.CachedMethodLookupKey = initFunc.FunctionLookupKey
 	curBB.Terminator = call
 
 	result := ctx.addTempVar(expr.DeterminedType)
