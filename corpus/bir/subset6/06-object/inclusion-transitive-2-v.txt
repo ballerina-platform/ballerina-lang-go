@@ -45,22 +45,26 @@ main() -> nil{
     e = %3;
     %7 = ConstantLoad a
     %6 = e[%7];
-    %8 = println(%6) -> bb5;
+    %8 = %6;
+    %9 = println(%8) -> bb5;
   }
   bb5 {
-    %10 = ConstantLoad b
-    %9 = e[%10];
-    %11 = println(%9) -> bb6;
+    %11 = ConstantLoad b
+    %10 = e[%11];
+    %12 = %10;
+    %13 = println(%12) -> bb6;
   }
   bb6 {
-    %13 = ConstantLoad d
-    %12 = e[%13];
-    %14 = println(%12) -> bb7;
+    %15 = ConstantLoad d
+    %14 = e[%15];
+    %16 = %14;
+    %17 = println(%16) -> bb7;
   }
   bb7 {
-    %16 = ConstantLoad e
-    %15 = e[%16];
-    %17 = println(%15) -> bb8;
+    %19 = ConstantLoad e
+    %18 = e[%19];
+    %20 = %18;
+    %21 = println(%20) -> bb8;
   }
   bb8 {
     return;

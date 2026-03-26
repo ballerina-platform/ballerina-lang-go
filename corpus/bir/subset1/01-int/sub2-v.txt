@@ -3,125 +3,182 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad 9223372036854775806
-    %3 = ConstantLoad 9223372036854775806
-    %1 = - %2 %3;
-    %4 = println(%1) -> bb1;
+    %3 = %2;
+    %4 = ConstantLoad 9223372036854775806
+    %5 = %4;
+    %1 = - %3 %5;
+    %6 = %1;
+    %7 = println(%6) -> bb1;
   }
   bb1 {
-    %6 = ConstantLoad 1
-    %7 = ConstantLoad 9223372036854775806
-    %5 = - %6 %7;
-    %8 = println(%5) -> bb2;
+    %9 = ConstantLoad 1
+    %10 = %9;
+    %11 = ConstantLoad 9223372036854775806
+    %12 = %11;
+    %8 = - %10 %12;
+    %13 = %8;
+    %14 = println(%13) -> bb2;
   }
   bb2 {
-    %10 = ConstantLoad 0
-    %11 = ConstantLoad 9223372036854775806
-    %9 = - %10 %11;
-    %12 = println(%9) -> bb3;
+    %16 = ConstantLoad 0
+    %17 = %16;
+    %18 = ConstantLoad 9223372036854775806
+    %19 = %18;
+    %15 = - %17 %19;
+    %20 = %15;
+    %21 = println(%20) -> bb3;
   }
   bb3 {
-    %14 = ConstantLoad 9223372036854775806
-    %15 = ConstantLoad 1
-    %13 = - %14 %15;
-    %16 = println(%13) -> bb4;
+    %23 = ConstantLoad 9223372036854775806
+    %24 = %23;
+    %25 = ConstantLoad 1
+    %26 = %25;
+    %22 = - %24 %26;
+    %27 = %22;
+    %28 = println(%27) -> bb4;
   }
   bb4 {
-    %18 = ConstantLoad 1
-    %19 = ConstantLoad 1
-    %17 = - %18 %19;
-    %20 = println(%17) -> bb5;
+    %30 = ConstantLoad 1
+    %31 = %30;
+    %32 = ConstantLoad 1
+    %33 = %32;
+    %29 = - %31 %33;
+    %34 = %29;
+    %35 = println(%34) -> bb5;
   }
   bb5 {
-    %22 = ConstantLoad 0
-    %23 = ConstantLoad 1
-    %21 = - %22 %23;
-    %24 = println(%21) -> bb6;
+    %37 = ConstantLoad 0
+    %38 = %37;
+    %39 = ConstantLoad 1
+    %40 = %39;
+    %36 = - %38 %40;
+    %41 = %36;
+    %42 = println(%41) -> bb6;
   }
   bb6 {
-    %26 = ConstantLoad 1
-    %27 = unknown %26;
-    %28 = ConstantLoad 1
-    %25 = - %27 %28;
-    %29 = println(%25) -> bb7;
+    %44 = ConstantLoad 1
+    %45 = unknown %44;
+    %46 = %45;
+    %47 = ConstantLoad 1
+    %48 = %47;
+    %43 = - %46 %48;
+    %49 = %43;
+    %50 = println(%49) -> bb7;
   }
   bb7 {
-    %31 = ConstantLoad 9223372036854775806
-    %32 = ConstantLoad 0
-    %30 = - %31 %32;
-    %33 = println(%30) -> bb8;
+    %52 = ConstantLoad 9223372036854775806
+    %53 = %52;
+    %54 = ConstantLoad 0
+    %55 = %54;
+    %51 = - %53 %55;
+    %56 = %51;
+    %57 = println(%56) -> bb8;
   }
   bb8 {
-    %35 = ConstantLoad 1
-    %36 = ConstantLoad 0
-    %34 = - %35 %36;
-    %37 = println(%34) -> bb9;
+    %59 = ConstantLoad 1
+    %60 = %59;
+    %61 = ConstantLoad 0
+    %62 = %61;
+    %58 = - %60 %62;
+    %63 = %58;
+    %64 = println(%63) -> bb9;
   }
   bb9 {
-    %39 = ConstantLoad 0
-    %40 = ConstantLoad 0
-    %38 = - %39 %40;
-    %41 = println(%38) -> bb10;
+    %66 = ConstantLoad 0
+    %67 = %66;
+    %68 = ConstantLoad 0
+    %69 = %68;
+    %65 = - %67 %69;
+    %70 = %65;
+    %71 = println(%70) -> bb10;
   }
   bb10 {
-    %43 = ConstantLoad 1
-    %44 = unknown %43;
-    %45 = ConstantLoad 0
-    %42 = - %44 %45;
-    %46 = println(%42) -> bb11;
+    %73 = ConstantLoad 1
+    %74 = unknown %73;
+    %75 = %74;
+    %76 = ConstantLoad 0
+    %77 = %76;
+    %72 = - %75 %77;
+    %78 = %72;
+    %79 = println(%78) -> bb11;
   }
   bb11 {
-    %48 = ConstantLoad 9223372036854775806
-    %49 = unknown %48;
-    %50 = ConstantLoad 0
-    %47 = - %49 %50;
-    %51 = println(%47) -> bb12;
+    %81 = ConstantLoad 9223372036854775806
+    %82 = unknown %81;
+    %83 = %82;
+    %84 = ConstantLoad 0
+    %85 = %84;
+    %80 = - %83 %85;
+    %86 = %80;
+    %87 = println(%86) -> bb12;
   }
   bb12 {
-    %53 = ConstantLoad 9223372036854775806
-    %54 = ConstantLoad 1
-    %55 = unknown %54;
-    %52 = - %53 %55;
-    %56 = println(%52) -> bb13;
+    %89 = ConstantLoad 9223372036854775806
+    %90 = %89;
+    %91 = ConstantLoad 1
+    %92 = unknown %91;
+    %93 = %92;
+    %88 = - %90 %93;
+    %94 = %88;
+    %95 = println(%94) -> bb13;
   }
   bb13 {
-    %58 = ConstantLoad 1
-    %59 = ConstantLoad 1
-    %60 = unknown %59;
-    %57 = - %58 %60;
-    %61 = println(%57) -> bb14;
+    %97 = ConstantLoad 1
+    %98 = %97;
+    %99 = ConstantLoad 1
+    %100 = unknown %99;
+    %101 = %100;
+    %96 = - %98 %101;
+    %102 = %96;
+    %103 = println(%102) -> bb14;
   }
   bb14 {
-    %63 = ConstantLoad 0
-    %64 = ConstantLoad 1
-    %65 = unknown %64;
-    %62 = - %63 %65;
-    %66 = println(%62) -> bb15;
+    %105 = ConstantLoad 0
+    %106 = %105;
+    %107 = ConstantLoad 1
+    %108 = unknown %107;
+    %109 = %108;
+    %104 = - %106 %109;
+    %110 = %104;
+    %111 = println(%110) -> bb15;
   }
   bb15 {
-    %68 = ConstantLoad 1
-    %69 = unknown %68;
-    %70 = ConstantLoad 1
-    %71 = unknown %70;
-    %67 = - %69 %71;
-    %72 = println(%67) -> bb16;
+    %113 = ConstantLoad 1
+    %114 = unknown %113;
+    %115 = %114;
+    %116 = ConstantLoad 1
+    %117 = unknown %116;
+    %118 = %117;
+    %112 = - %115 %118;
+    %119 = %112;
+    %120 = println(%119) -> bb16;
   }
   bb16 {
-    %74 = ConstantLoad 9223372036854775806
-    %75 = ConstantLoad 9223372036854775806
-    %73 = - %74 %75;
-    %76 = println(%73) -> bb17;
+    %122 = ConstantLoad 9223372036854775806
+    %123 = %122;
+    %124 = ConstantLoad 9223372036854775806
+    %125 = %124;
+    %121 = - %123 %125;
+    %126 = %121;
+    %127 = println(%126) -> bb17;
   }
   bb17 {
-    %78 = ConstantLoad 1
-    %79 = ConstantLoad 9223372036854775806
-    %77 = - %78 %79;
-    %80 = println(%77) -> bb18;
+    %129 = ConstantLoad 1
+    %130 = %129;
+    %131 = ConstantLoad 9223372036854775806
+    %132 = %131;
+    %128 = - %130 %132;
+    %133 = %128;
+    %134 = println(%133) -> bb18;
   }
   bb18 {
-    %82 = ConstantLoad 0
-    %83 = ConstantLoad 9223372036854775806
-    %81 = - %82 %83;
-    %84 = println(%81) -> bb19;
+    %136 = ConstantLoad 0
+    %137 = %136;
+    %138 = ConstantLoad 9223372036854775806
+    %139 = %138;
+    %135 = - %137 %139;
+    %140 = %135;
+    %141 = println(%140) -> bb19;
   }
   bb19 {
     return;

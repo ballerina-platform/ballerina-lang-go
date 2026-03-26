@@ -1,0 +1,158 @@
+(bar
+  (bb0 () (bb1)
+    (var-def
+      (variable sum (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref vals))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (compound-assignment +
+      (simple-var-ref sum)
+      (index-based-access
+        (simple-var-ref vals)
+        (simple-var-ref i)))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref sum))
+  )
+)
+(baz
+  (bb0 () (bb1 bb2)
+    (var-def
+      (variable init (type
+        (union-type
+          (value-type int)
+          (value-type string))) (expr
+        (literal ))))
+    (type-test-expr is
+      (index-based-access
+        (simple-var-ref vals)
+        (literal 0))
+      (value-type int))
+  )
+  (bb1 (bb0) (bb2)
+    (assignment
+      (simple-var-ref init)
+      (literal 0))
+  )
+  (bb2 (bb1 bb0) (bb3)
+    (var-def
+      (variable result (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref vals))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb4 (bb3) (bb3)
+    (compound-assignment +
+      (simple-var-ref result)
+      (invocation foo (
+        (simple-var-ref init)
+        (index-based-access
+          (simple-var-ref vals)
+          (simple-var-ref i)))))
+  )
+  (bb5 (bb3) ()
+    (return
+      (simple-var-ref result))
+  )
+)
+(exec
+  (bb0 () (bb1)
+    (var-def
+      (variable results (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref funcs))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (var-def
+      (variable func (type
+        (user-defined-type F)) (expr
+        (index-based-access
+          (simple-var-ref funcs)
+          (simple-var-ref i)))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref results)
+        (invocation func (
+          (simple-var-ref a)
+          (simple-var-ref b))))))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref results))
+  )
+)
+(foo
+  (bb0 () (bb1 bb2)
+    (group-expr
+      (binary-expr &&
+        (type-test-expr is
+          (simple-var-ref a)
+          (value-type int))
+        (type-test-expr is
+          (simple-var-ref b)
+          (value-type int))))
+  )
+  (bb1 (bb0) ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+  (bb2 (bb0) ()
+    (return
+      (unary-expr -
+        (literal 1)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable funcs (type
+        (array-type
+          (user-defined-type F) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (simple-var-ref foo)
+          (simple-var-ref bar)
+          (simple-var-ref baz)))))
+    (var-def
+      (variable results (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (invocation exec (
+          (simple-var-ref funcs)
+          (literal 2)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref results))))
+  )
+)

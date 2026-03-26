@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected function(int, int) returns int, got function(int, int, int) returns int
+  --> record2-e.bal:27:31
+   |
+27 |     BinaryOperation a = { op: ternary, left: 1, right: 2 }; // @error
+   |                               ^^^^^^^
+

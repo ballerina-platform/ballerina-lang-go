@@ -7,42 +7,54 @@ main() -> nil{
     %3 = newArray list[%2]{%1}
     x = %3;
     %6 = ConstantLoad 1
-    %5 = == x %6;
-    %7 = println(%5) -> bb1;
+    %7 = %6;
+    %5 = == x %7;
+    %8 = %5;
+    %9 = println(%8) -> bb1;
   }
   bb1 {
-    %9 = ConstantLoad true
-    %8 = == x %9;
-    %10 = println(%8) -> bb2;
+    %11 = ConstantLoad true
+    %12 = %11;
+    %10 = == x %12;
+    %13 = %10;
+    %14 = println(%13) -> bb2;
   }
   bb2 {
-    %12 = ConstantLoad <nil>
-    %11 = == x %12;
-    %13 = println(%11) -> bb3;
+    %16 = ConstantLoad <nil>
+    %17 = %16;
+    %15 = == x %17;
+    %18 = %15;
+    %19 = println(%18) -> bb3;
   }
   bb3 {
-    %14 = ConstantLoad 0
-    %15 = newArray list[%14]{}
-    x = %15;
-    %17 = ConstantLoad 1
-    %16 = != x %17;
-    %18 = println(%16) -> bb4;
+    %20 = ConstantLoad 0
+    %21 = newArray list[%20]{}
+    x = %21;
+    %23 = ConstantLoad 1
+    %24 = %23;
+    %22 = != x %24;
+    %25 = %22;
+    %26 = println(%25) -> bb4;
   }
   bb4 {
-    %19 = ConstantLoad 1
-    %20 = ConstantLoad 2
-    %21 = ConstantLoad 3
-    %22 = ConstantLoad 3
-    %23 = newArray list[%22]{%19, %20, %21}
-    x = %23;
-    %25 = ConstantLoad true
-    %24 = != x %25;
-    %26 = println(%24) -> bb5;
+    %27 = ConstantLoad 1
+    %28 = ConstantLoad 2
+    %29 = ConstantLoad 3
+    %30 = ConstantLoad 3
+    %31 = newArray list[%30]{%27, %28, %29}
+    x = %31;
+    %33 = ConstantLoad true
+    %34 = %33;
+    %32 = != x %34;
+    %35 = %32;
+    %36 = println(%35) -> bb5;
   }
   bb5 {
-    %28 = ConstantLoad <nil>
-    %27 = != x %28;
-    %29 = println(%27) -> bb6;
+    %38 = ConstantLoad <nil>
+    %39 = %38;
+    %37 = != x %39;
+    %40 = %37;
+    %41 = println(%40) -> bb6;
   }
   bb6 {
     return;

@@ -43,7 +43,8 @@ main() -> nil{
     %7 = getX(f) -> bb5;
   }
   bb5 {
-    %8 = println(%7) -> bb6;
+    %8 = %7;
+    %9 = println(%8) -> bb6;
   }
   bb6 {
     return;

@@ -33,7 +33,8 @@ main() -> nil{
     q = %4;
     %8 = ConstantLoad x
     %7 = q[%8];
-    %9 = println(%7) -> bb5;
+    %9 = %7;
+    %10 = println(%9) -> bb5;
   }
   bb5 {
     return;

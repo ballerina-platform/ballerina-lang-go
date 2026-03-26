@@ -1,0 +1,89 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (binary-expr +
+            (simple-var-ref x)
+            (literal 1))
+          (literal 2)))))
+  (function bench (
+    (variable base (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (literal 1000))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (var-def
+            (variable v (type
+              (value-type int)) (expr
+              (simple-var-ref i))))
+          (if
+            (binary-expr ==
+              (binary-expr %
+                (simple-var-ref i)
+                (literal 2))
+              (literal 0))
+            (block-stmt
+              (assignment
+                (simple-var-ref f)
+                (lambda
+                  (function $anonFunc$_0 (
+                    (variable x (type
+                      (value-type int)))) (
+                    (value-type int))
+                    (block-function-body
+                      (return
+                        (binary-expr +
+                          (binary-expr +
+                            (simple-var-ref v)
+                            (simple-var-ref x))
+                          (simple-var-ref base)))))))) (
+            (block-stmt
+              (assignment
+                (simple-var-ref f)
+                (simple-var-ref foo)))))
+          (compound-assignment +
+            (simple-var-ref sum)
+            (invocation f (
+              (simple-var-ref base))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref sum))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation bench (
+            (literal 10)))))))))

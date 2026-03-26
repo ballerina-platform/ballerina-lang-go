@@ -3,39 +3,51 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad 2
-    %3 = mkInt(%2) -> bb1;
+    %3 = %2;
+    %4 = mkInt(%3) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad 2
-    %1 = unknown %3 %4;
-    %5 = println(%1) -> bb2;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %1 = unknown %4 %6;
+    %7 = %1;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
-    %7 = ConstantLoad 17
-    %8 = ConstantLoad 17
-    %9 = mkInt(%8) -> bb3;
+    %10 = ConstantLoad 17
+    %11 = %10;
+    %12 = ConstantLoad 17
+    %13 = %12;
+    %14 = mkInt(%13) -> bb3;
   }
   bb3 {
-    %6 = unknown %7 %9;
-    %10 = println(%6) -> bb4;
+    %9 = unknown %11 %14;
+    %15 = %9;
+    %16 = println(%15) -> bb4;
   }
   bb4 {
-    %12 = ConstantLoad true
-    %13 = mkBoolean(%12) -> bb5;
+    %18 = ConstantLoad true
+    %19 = %18;
+    %20 = mkBoolean(%19) -> bb5;
   }
   bb5 {
-    %14 = ConstantLoad true
-    %11 = unknown %13 %14;
-    %15 = println(%11) -> bb6;
+    %21 = ConstantLoad true
+    %22 = %21;
+    %17 = unknown %20 %22;
+    %23 = %17;
+    %24 = println(%23) -> bb6;
   }
   bb6 {
-    %17 = ConstantLoad false
-    %18 = ConstantLoad false
-    %19 = mkBoolean(%18) -> bb7;
+    %26 = ConstantLoad false
+    %27 = %26;
+    %28 = ConstantLoad false
+    %29 = %28;
+    %30 = mkBoolean(%29) -> bb7;
   }
   bb7 {
-    %16 = unknown %17 %19;
-    %20 = println(%16) -> bb8;
+    %25 = unknown %27 %30;
+    %31 = %25;
+    %32 = println(%31) -> bb8;
   }
   bb8 {
     return;

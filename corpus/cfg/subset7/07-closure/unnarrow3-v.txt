@@ -1,0 +1,47 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (value-type int)) (expr
+        (literal 10))))
+    (var-def
+      (variable f (type
+        (user-defined-type F1)) (expr
+        (lambda
+          (function $anonFunc$_0 () (
+            (user-defined-type F))
+            (block-function-body
+              (if
+                (type-test-expr is
+                  (simple-var-ref a)
+                  (value-type byte))
+                (block-stmt
+                  (return
+                    (lambda
+                      (function $anonFunc$_1 () (
+                        (value-type int))
+                        (block-function-body
+                          (return
+                            (binary-expr *
+                              (simple-var-ref a)
+                              (unary-expr -
+                                (literal 1))))))))) ())
+              (block-stmt
+                (return
+                  (lambda
+                    (function $anonFunc$_2 () (
+                      (value-type int))
+                      (block-function-body
+                        (return
+                          (binary-expr *
+                            (simple-var-ref a)
+                            (literal 10))))))))))))))
+    (var-def
+      (variable f0 (type
+        (user-defined-type F)) (expr
+        (invocation f ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f0 ()))))
+  )
+)

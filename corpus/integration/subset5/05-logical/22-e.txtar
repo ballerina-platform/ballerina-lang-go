@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: Unknown function: print
+error[SEMANTIC_ERROR]: Unknown symbol: print
   --> 22-e.bal:20:9
    |
 20 |         io:print("x is never"); // @error

@@ -149,6 +149,9 @@ func execFPLoad(fpLoad *bir.FPLoad, frame *Frame, reg *modules.Registry) {
 		Type:      fpLoad.Type,
 		LookupKey: fpLoad.FunctionLookupKey,
 	}
+	if fpLoad.IsClosure {
+		fn.ParentFrame = frame
+	}
 	setOperandValue(fpLoad.LhsOp, frame, reg, fn)
 }
 

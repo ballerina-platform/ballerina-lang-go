@@ -1,0 +1,92 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref bar))))
+      (var-def
+        (variable res (type
+          (value-type int)) (expr
+          (invocation f (
+            (literal 1)
+            (unary-expr -
+              (literal 1)))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res))))))
+  (function bar () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation foo (
+            (index-based-access
+              (simple-var-ref vals)
+              (literal 0))
+            (index-based-access
+              (simple-var-ref vals)
+              (literal 1)))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (panic
+            (simple-var-ref $desugar$0))) ())
+      (return
+        (simple-var-ref $desugar$0))))
+  (function foo () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref vals))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (var-def
+            (variable val (type
+              (value-type int)) (expr
+              (index-based-access
+                (simple-var-ref vals)
+                (simple-var-ref i)))))
+          (if
+            (binary-expr <
+              (simple-var-ref val)
+              (literal 0))
+            (block-stmt
+              (return
+                (error-constructor-expr (
+                  (literal negative value))))) ())
+          (block-stmt
+            (compound-assignment +
+              (simple-var-ref sum)
+              (simple-var-ref val)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref sum)))))

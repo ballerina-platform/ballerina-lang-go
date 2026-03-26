@@ -1,0 +1,99 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (literal 1)))
+  )
+)
+(fooBar
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (invocation lang.array length (
+        (simple-var-ref y)))
+      (literal 0))
+  )
+  (bb1 (bb0) ()
+    (return
+      (invocation single (
+        (simple-var-ref x))))
+  )
+  (bb2 (bb0) (bb3)
+    (var-def
+      (variable curr (type
+        (value-type int)) (expr
+        (invocation pair (
+          (simple-var-ref x)
+          (index-based-access
+            (simple-var-ref y)
+            (literal 0)))))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (binary-expr ..<
+      (literal 1)
+      (invocation lang.array length (
+        (simple-var-ref y))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb4 (bb3) (bb3)
+    (assignment
+      (simple-var-ref curr)
+      (invocation pair (
+        (simple-var-ref curr)
+        (index-based-access
+          (simple-var-ref y)
+          (simple-var-ref i)))))
+  )
+  (bb5 (bb3) ()
+    (return
+      (simple-var-ref curr))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (user-defined-type R)) (expr
+        (simple-var-ref fooBar))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (simple-var-ref foo)
+          (simple-var-ref bar)
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (simple-var-ref foo)
+          (simple-var-ref bar)
+          (literal 1)
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (simple-var-ref foo)
+          (simple-var-ref bar)
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation x (
+          (simple-var-ref foo)
+          (simple-var-ref bar)
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4))))))
+  )
+)

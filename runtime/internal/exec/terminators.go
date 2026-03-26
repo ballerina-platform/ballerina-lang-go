@@ -41,10 +41,10 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	if callInfo.IsVirtual {
 		fn := resolveObjectMethod(callInfo, args, reg)
-		return executeFunction(*fn, args, reg, callStack)
+		return executeFunction(*fn, args, reg, callStack, nil)
 	}
 	if callInfo.CachedBIRFunc != nil {
-		return executeFunction(*callInfo.CachedBIRFunc, args, reg, callStack)
+		return executeFunction(*callInfo.CachedBIRFunc, args, reg, callStack, nil)
 	}
 	if callInfo.CachedNativeFunc != nil {
 		result, err := callInfo.CachedNativeFunc(args)
@@ -74,7 +74,7 @@ func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.R
 	fn := reg.GetBIRFunction(callInfo.FunctionLookupKey)
 	if fn != nil {
 		callInfo.CachedBIRFunc = fn
-		return executeFunction(*fn, args, reg, callStack)
+		return executeFunction(*fn, args, reg, callStack, nil)
 	}
 	externFn := reg.GetNativeFunction(callInfo.FunctionLookupKey)
 	if externFn != nil {
@@ -92,10 +92,14 @@ func execFpCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callSta
 	args := extractArgs(callInfo.Args, frame, reg)
 	fnValue := getOperandValue(callInfo.FpOperand, frame, reg).(*values.Function)
 	lookupKey := fnValue.LookupKey
+	var parentFrame *Frame
+	if fnValue.ParentFrame != nil {
+		parentFrame = fnValue.ParentFrame.(*Frame)
+	}
 	fn := reg.GetBIRFunction(lookupKey)
 	var result values.BalValue
 	if fn != nil {
-		result = executeFunction(*fn, args, reg, callStack)
+		result = executeFunction(*fn, args, reg, callStack, parentFrame)
 	} else {
 		externFn := reg.GetNativeFunction(lookupKey)
 		if externFn != nil {

@@ -6,66 +6,90 @@ main() -> nil{
     x = %1;
     %3 = ConstantLoad 2
     y = %3;
-    %5 = < x y;
-    %6 = printBoolean(%5) -> bb1;
+    %6 = x;
+    %7 = y;
+    %5 = < %6 %7;
+    %8 = %5;
+    %9 = printBoolean(%8) -> bb1;
   }
   bb1 {
-    %7 = ConstantLoad 1
-    %8 = ConstantLoad 2
-    %9 = greaterThan(%7,%8) -> bb2;
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %12 = ConstantLoad 2
+    %13 = %12;
+    %14 = greaterThan(%11,%13) -> bb2;
   }
   bb2 {
-    %10 = printBoolean(%9) -> bb3;
+    %15 = %14;
+    %16 = printBoolean(%15) -> bb3;
   }
   bb3 {
-    %11 = ConstantLoad 2
-    %12 = ConstantLoad 1
-    %13 = greaterThan(%11,%12) -> bb4;
+    %17 = ConstantLoad 2
+    %18 = %17;
+    %19 = ConstantLoad 1
+    %20 = %19;
+    %21 = greaterThan(%18,%20) -> bb4;
   }
   bb4 {
-    %14 = printBoolean(%13) -> bb5;
+    %22 = %21;
+    %23 = printBoolean(%22) -> bb5;
   }
   bb5 {
-    %15 = ConstantLoad 2
-    %16 = ConstantLoad 1
-    %17 = unknown %16;
-    %18 = greaterThan(%15,%17) -> bb6;
+    %24 = ConstantLoad 2
+    %25 = %24;
+    %26 = ConstantLoad 1
+    %27 = unknown %26;
+    %28 = %27;
+    %29 = greaterThan(%25,%28) -> bb6;
   }
   bb6 {
-    %19 = printBoolean(%18) -> bb7;
+    %30 = %29;
+    %31 = printBoolean(%30) -> bb7;
   }
   bb7 {
-    %20 = ConstantLoad 1
-    %21 = ConstantLoad 2
-    %22 = lessThan(%20,%21) -> bb8;
+    %32 = ConstantLoad 1
+    %33 = %32;
+    %34 = ConstantLoad 2
+    %35 = %34;
+    %36 = lessThan(%33,%35) -> bb8;
   }
   bb8 {
-    %23 = printBoolean(%22) -> bb9;
+    %37 = %36;
+    %38 = printBoolean(%37) -> bb9;
   }
   bb9 {
-    %24 = ConstantLoad 0
-    %25 = ConstantLoad 0
-    %26 = lessThan(%24,%25) -> bb10;
+    %39 = ConstantLoad 0
+    %40 = %39;
+    %41 = ConstantLoad 0
+    %42 = %41;
+    %43 = lessThan(%40,%42) -> bb10;
   }
   bb10 {
-    %27 = printBoolean(%26) -> bb11;
+    %44 = %43;
+    %45 = printBoolean(%44) -> bb11;
   }
   bb11 {
-    %28 = ConstantLoad 2
-    %29 = ConstantLoad 1
-    %30 = lessThan(%28,%29) -> bb12;
+    %46 = ConstantLoad 2
+    %47 = %46;
+    %48 = ConstantLoad 1
+    %49 = %48;
+    %50 = lessThan(%47,%49) -> bb12;
   }
   bb12 {
-    %31 = printBoolean(%30) -> bb13;
+    %51 = %50;
+    %52 = printBoolean(%51) -> bb13;
   }
   bb13 {
-    %32 = ConstantLoad 1
-    %33 = unknown %32;
-    %34 = ConstantLoad 17
-    %35 = lessThan(%33,%34) -> bb14;
+    %53 = ConstantLoad 1
+    %54 = unknown %53;
+    %55 = %54;
+    %56 = ConstantLoad 17
+    %57 = %56;
+    %58 = lessThan(%55,%57) -> bb14;
   }
   bb14 {
-    %36 = printBoolean(%35) -> bb15;
+    %59 = %58;
+    %60 = printBoolean(%59) -> bb15;
   }
   bb15 {
     return;
@@ -77,14 +101,16 @@ printBoolean(boolean) -> nil{
   }
   bb1 {
     %2 = ConstantLoad 1
-    %3 = println(%2) -> bb2;
+    %3 = %2;
+    %4 = println(%3) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad 0
-    %5 = println(%4) -> bb4;
+    %5 = ConstantLoad 0
+    %6 = %5;
+    %7 = println(%6) -> bb4;
   }
   bb4 {
     GOTO bb5;
@@ -95,14 +121,18 @@ printBoolean(boolean) -> nil{
 }
 lessThan(int,int) -> boolean{
   bb0 {
-    %3 = < x y;
+    %4 = x;
+    %5 = y;
+    %3 = < %4 %5;
     %0 = %3;
     return;
   }
 }
 greaterThan(int,int) -> boolean{
   bb0 {
-    %3 = > x y;
+    %4 = x;
+    %5 = y;
+    %3 = > %4 %5;
     %0 = %3;
     return;
   }

@@ -42,17 +42,20 @@ main() -> nil{
     c = %3;
     %7 = ConstantLoad x
     %6 = c[%7];
-    %8 = println(%6) -> bb5;
+    %8 = %6;
+    %9 = println(%8) -> bb5;
   }
   bb5 {
-    %10 = ConstantLoad y
-    %9 = c[%10];
-    %11 = println(%9) -> bb6;
+    %11 = ConstantLoad y
+    %10 = c[%11];
+    %12 = %10;
+    %13 = println(%12) -> bb6;
   }
   bb6 {
-    %13 = ConstantLoad z
-    %12 = c[%13];
-    %14 = println(%12) -> bb7;
+    %15 = ConstantLoad z
+    %14 = c[%15];
+    %16 = %14;
+    %17 = println(%16) -> bb7;
   }
   bb7 {
     return;

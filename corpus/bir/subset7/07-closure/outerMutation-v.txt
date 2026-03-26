@@ -1,0 +1,48 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+runner(function(int) returns int,int) -> int{
+  bb0 {
+    %3 = val;
+    %4 = f(%3) -> bb1;
+  }
+  bb1 {
+    %0 = %4;
+    return;
+  }
+}
+$anonFunc$_0(int) -> int{
+  bb0 {
+    %3 = (1, val);
+    %4 = a;
+    %2 = + %3 %4;
+    (1, val) = %2;
+    %5 = ConstantLoad 5
+    %0 = %5;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 10
+    val = %1;
+    %4 = val;
+    %5 = closure_fp $anon/.:$anonFunc$_0
+    %6 = ConstantLoad 2
+    %7 = %6;
+    %8 = runner(%5,%7) -> bb1;
+  }
+  bb1 {
+    %9 = %8;
+    %3 = + %4 %9;
+    res = %3;
+    %11 = res;
+    %12 = println(%11) -> bb2;
+  }
+  bb2 {
+    %13 = val;
+    %14 = println(%13) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

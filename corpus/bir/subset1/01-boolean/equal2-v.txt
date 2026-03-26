@@ -3,105 +3,125 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad true
-    %3 = ConstantLoad true
-    %1 = == %2 %3;
+    %3 = %2;
+    %4 = ConstantLoad true
+    %5 = %4;
+    %1 = == %3 %5;
     b = %1;
     b ? bb1 : bb3;
   }
   bb1 {
-    %5 = ConstantLoad 4
-    %6 = println(%5) -> bb2;
+    %7 = ConstantLoad 4
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %7 = ConstantLoad 5
-    %8 = println(%7) -> bb4;
+    %10 = ConstantLoad 5
+    %11 = %10;
+    %12 = println(%11) -> bb4;
   }
   bb4 {
     GOTO bb5;
   }
   bb5 {
-    %10 = ConstantLoad false
-    %11 = ConstantLoad false
-    %9 = == %10 %11;
-    b = %9;
+    %14 = ConstantLoad false
+    %15 = %14;
+    %16 = ConstantLoad false
+    %17 = %16;
+    %13 = == %15 %17;
+    b = %13;
     b ? bb6 : bb8;
   }
   bb6 {
-    %12 = ConstantLoad 6
-    %13 = println(%12) -> bb7;
+    %18 = ConstantLoad 6
+    %19 = %18;
+    %20 = println(%19) -> bb7;
   }
   bb7 {
     GOTO bb10;
   }
   bb8 {
-    %14 = ConstantLoad 7
-    %15 = println(%14) -> bb9;
+    %21 = ConstantLoad 7
+    %22 = %21;
+    %23 = println(%22) -> bb9;
   }
   bb9 {
     GOTO bb10;
   }
   bb10 {
-    %17 = ConstantLoad true
-    %18 = ConstantLoad true
-    %16 = != %17 %18;
-    b = %16;
+    %25 = ConstantLoad true
+    %26 = %25;
+    %27 = ConstantLoad true
+    %28 = %27;
+    %24 = != %26 %28;
+    b = %24;
     b ? bb11 : bb13;
   }
   bb11 {
-    %19 = ConstantLoad 8
-    %20 = println(%19) -> bb12;
+    %29 = ConstantLoad 8
+    %30 = %29;
+    %31 = println(%30) -> bb12;
   }
   bb12 {
     GOTO bb15;
   }
   bb13 {
-    %21 = ConstantLoad 9
-    %22 = println(%21) -> bb14;
+    %32 = ConstantLoad 9
+    %33 = %32;
+    %34 = println(%33) -> bb14;
   }
   bb14 {
     GOTO bb15;
   }
   bb15 {
-    %23 = ConstantLoad true
-    b = %23;
-    %25 = ConstantLoad true
-    %24 = == b %25;
-    %24 ? bb16 : bb18;
+    %35 = ConstantLoad true
+    b = %35;
+    %37 = b;
+    %38 = ConstantLoad true
+    %39 = %38;
+    %36 = == %37 %39;
+    %36 ? bb16 : bb18;
   }
   bb16 {
-    %26 = ConstantLoad 10
-    %27 = println(%26) -> bb17;
+    %40 = ConstantLoad 10
+    %41 = %40;
+    %42 = println(%41) -> bb17;
   }
   bb17 {
     GOTO bb20;
   }
   bb18 {
-    %28 = ConstantLoad 11
-    %29 = println(%28) -> bb19;
+    %43 = ConstantLoad 11
+    %44 = %43;
+    %45 = println(%44) -> bb19;
   }
   bb19 {
     GOTO bb20;
   }
   bb20 {
-    %30 = ConstantLoad false
-    b = %30;
-    %32 = ConstantLoad true
-    %31 = == %32 b;
-    %31 ? bb21 : bb23;
+    %46 = ConstantLoad false
+    b = %46;
+    %48 = ConstantLoad true
+    %49 = %48;
+    %50 = b;
+    %47 = == %49 %50;
+    %47 ? bb21 : bb23;
   }
   bb21 {
-    %33 = ConstantLoad 12
-    %34 = println(%33) -> bb22;
+    %51 = ConstantLoad 12
+    %52 = %51;
+    %53 = println(%52) -> bb22;
   }
   bb22 {
     GOTO bb25;
   }
   bb23 {
-    %35 = ConstantLoad 13
-    %36 = println(%35) -> bb24;
+    %54 = ConstantLoad 13
+    %55 = %54;
+    %56 = println(%55) -> bb24;
   }
   bb24 {
     GOTO bb25;

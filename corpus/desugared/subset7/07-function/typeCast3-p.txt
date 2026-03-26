@@ -1,0 +1,64 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (union-type
+        (finite-type
+          (literal 1))
+        (finite-type
+          (literal 2)))) (
+      (union-type
+        (finite-type
+          (literal a))
+        (finite-type
+          (literal b))))))
+  (type-definition F2
+    (function-type (
+      (union-type
+        (finite-type
+          (literal 2))
+        (finite-type
+          (literal 3)))) (
+      (union-type
+        (finite-type
+          (literal b))
+        (finite-type
+          (literal c))))))
+  (type-definition Fx
+    (intersection-type
+      (user-defined-type F1)
+      (user-defined-type F2)))
+  (function foo (
+    (variable a (type
+      (union-type
+        (union-type
+          (finite-type
+            (literal 1))
+          (finite-type
+            (literal 2)))
+        (finite-type
+          (literal 3)))))) (
+    (union-type
+      (finite-type
+        (literal a))
+      (finite-type
+        (literal b))))
+    (block-function-body
+      (return
+        (literal b))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F1)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable fx (type
+          (user-defined-type Fx)) (expr
+          (type-conversion-expr
+            (simple-var-ref f)
+            (user-defined-type Fx)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref fx)))))))

@@ -52,17 +52,19 @@ main() -> nil{
     %6 = getX(b) -> bb5;
   }
   bb5 {
-    %7 = println(%6) -> bb6;
+    %7 = %6;
+    %8 = println(%7) -> bb6;
   }
   bb6 {
-    %9 = ConstantLoad y
-    %8 = b[%9];
-    %10 = println(%8) -> bb7;
+    %10 = ConstantLoad y
+    %9 = b[%10];
+    %11 = println(%9) -> bb7;
   }
   bb7 {
-    %12 = ConstantLoad z
-    %11 = b[%12];
-    %13 = println(%11) -> bb8;
+    %13 = ConstantLoad z
+    %12 = b[%13];
+    %14 = %12;
+    %15 = println(%14) -> bb8;
   }
   bb8 {
     return;

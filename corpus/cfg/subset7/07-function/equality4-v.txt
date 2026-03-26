@@ -1,0 +1,42 @@
+(bar
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+)
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref a)
+        (simple-var-ref b)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f1 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref foo))))
+    (var-def
+      (variable f2 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref foo))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref f1)
+          (simple-var-ref f2)))))
+    (var-def
+      (variable f3 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref bar))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref f1)
+          (simple-var-ref f3)))))
+  )
+)

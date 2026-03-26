@@ -3,14 +3,18 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad true
-    %2 = ConstantLoad true
-    %3 = ConstantLoad 17
-    %4 = ifElse(%1,%2,%3) -> bb1;
+    %2 = %1;
+    %3 = ConstantLoad true
+    %4 = %3;
+    %5 = ConstantLoad 17
+    %6 = %5;
+    %7 = ifElse(%2,%4,%6) -> bb1;
   }
   bb1 {
-    %5 = <int>(%4)
-    n = %5;
-    %7 = println(n) -> bb2;
+    %8 = <int>(%7)
+    n = %8;
+    %10 = n;
+    %11 = println(%10) -> bb2;
   }
   bb2 {
     return;

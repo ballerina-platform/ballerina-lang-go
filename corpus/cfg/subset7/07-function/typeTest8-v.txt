@@ -1,0 +1,44 @@
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (type-test-expr is
+          (simple-var-ref foo)
+          (function-type (
+            (value-type string)
+            (union-type
+              (value-type string)
+              (value-type int))) (
+            (value-type string)))))))
+    (expression-stmt
+      (invocation io println (
+        (type-test-expr is
+          (simple-var-ref foo)
+          (function-type (
+            (finite-type
+              (literal a))
+            (finite-type
+              (literal a))) (
+            (value-type string)))))))
+    (expression-stmt
+      (invocation io println (
+        (type-test-expr is
+          (simple-var-ref foo)
+          (function-type (
+            (finite-type
+              (literal a))
+            (finite-type
+              (literal a))) (
+            (union-type
+              (value-type string)
+              (value-type int))))))))
+  )
+)

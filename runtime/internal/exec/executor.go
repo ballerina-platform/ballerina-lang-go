@@ -27,7 +27,7 @@ import (
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack, parentFrame *Frame) values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
@@ -62,21 +62,22 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	for i := offset; i < len(*localVars); i++ {
 		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
 	}
-	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey}
+	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
 	callStack.Push(frame)
 	if len(callStack.elements) > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))
 	}
+	currentFrame := frame
 	bb := &birFunc.BasicBlocks[0]
 	for {
 		for _, inst := range bb.Instructions {
 			posProvider := inst.(interface{ GetPos() diagnostics.Location })
 			frame.location = posProvider.GetPos()
-			execInstruction(inst, frame, reg)
+			currentFrame = execInstruction(inst, currentFrame, reg)
 		}
 		posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
 		frame.location = posProvider.GetPos()
-		bb = execTerminator(bb.Terminator, frame, reg, callStack)
+		bb = execTerminator(bb.Terminator, currentFrame, reg, callStack)
 		if bb == nil {
 			break
 		}
@@ -85,12 +86,12 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 	return frame.locals[0]
 }
 
-func hasFunctionFlag(flags int64, flag model.Flag) bool {
-	return flags&(1<<int64(flag)) != 0
-}
-
-func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) {
+func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) *Frame {
 	switch v := inst.(type) {
+	case *bir.PushScopeFrame:
+		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
+	case *bir.PopScopeFrame:
+		return frame.parent
 	case *bir.ConstantLoad:
 		execConstantLoad(v, frame, reg)
 	case *bir.Move:
@@ -195,6 +196,7 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
+	return frame
 }
 
 func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
@@ -242,4 +244,8 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return nil
+}
+
+func hasFunctionFlag(flags int64, flag model.Flag) bool {
+	return flags&(1<<int64(flag)) != 0
 }

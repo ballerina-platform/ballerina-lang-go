@@ -131,6 +131,11 @@ func (s *desugaredSymbol) IsPublic() bool {
 	return s.isPublic
 }
 
+func (s *desugaredSymbol) Copy() model.Symbol {
+	cp := *s
+	return &cp
+}
+
 func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
 	if len(ctx.scopeStack) == 0 {
 		ctx.internalError("cannot add desugared symbol when scope stack is empty")

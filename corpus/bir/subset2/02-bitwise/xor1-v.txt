@@ -6,35 +6,47 @@ main() -> nil{
     i = %1;
     %3 = ConstantLoad 9
     j = %3;
-    %5 = unknown i j;
-    %6 = println(%5) -> bb1;
+    %6 = i;
+    %7 = j;
+    %5 = unknown %6 %7;
+    %8 = %5;
+    %9 = println(%8) -> bb1;
   }
   bb1 {
-    %7 = ConstantLoad 9223372036854775807
-    i = %7;
-    %8 = ConstantLoad 9223372036854775807
-    j = %8;
-    %9 = unknown i j;
-    %10 = println(%9) -> bb2;
+    %10 = ConstantLoad 9223372036854775807
+    i = %10;
+    %11 = ConstantLoad 9223372036854775807
+    j = %11;
+    %13 = i;
+    %14 = j;
+    %12 = unknown %13 %14;
+    %15 = %12;
+    %16 = println(%15) -> bb2;
   }
   bb2 {
-    %11 = ConstantLoad 1
-    %12 = unknown %11;
-    i = %12;
-    %13 = ConstantLoad 1
-    %14 = unknown %13;
-    j = %14;
-    %15 = unknown i j;
-    %16 = println(%15) -> bb3;
+    %17 = ConstantLoad 1
+    %18 = unknown %17;
+    i = %18;
+    %19 = ConstantLoad 1
+    %20 = unknown %19;
+    j = %20;
+    %22 = i;
+    %23 = j;
+    %21 = unknown %22 %23;
+    %24 = %21;
+    %25 = println(%24) -> bb3;
   }
   bb3 {
-    %17 = ConstantLoad 9223372036854775807
-    i = %17;
-    %18 = ConstantLoad 1
-    %19 = unknown %18;
-    j = %19;
-    %20 = unknown i j;
-    %21 = println(%20) -> bb4;
+    %26 = ConstantLoad 9223372036854775807
+    i = %26;
+    %27 = ConstantLoad 1
+    %28 = unknown %27;
+    j = %28;
+    %30 = i;
+    %31 = j;
+    %29 = unknown %30 %31;
+    %32 = %29;
+    %33 = println(%32) -> bb4;
   }
   bb4 {
     return;

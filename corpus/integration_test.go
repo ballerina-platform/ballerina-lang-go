@@ -68,6 +68,18 @@ var (
 		"subset6/06-object/self-field-shadow-e.bal",
 		// cast #139
 		"subset6/06-map/length2-v.bal",
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/260
+		"subset7/07-function/assign12-v.bal",
+		"subset7/07-function/assign17-v.bal",
+		"subset7/07-function/record3-v.bal",
+		"subset7/07-function/record4-v.bal",
+		"subset7/07-function/typeCast1-v.bal",
+		"subset7/07-function/typeCast2-v.bal",
+		"subset7/07-function/typeCast3-p.bal",
+		"subset7/07-closure/equality4-v.bal",
+		"subset7/07-closure/equality4-v.bal",
+		"subset7/07-closure/typeCast1-v.bal",
+		"subset7/07-closure/typeCast2-p.bal",
 	}
 )
 

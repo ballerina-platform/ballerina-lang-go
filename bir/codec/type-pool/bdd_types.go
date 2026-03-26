@@ -111,19 +111,19 @@ func newBddSerializationContext(pool *TypePool, cx semtypes.Context, bp *binaryP
 }
 
 func (sc *bddSerializationContext) serializeListBdd(bdd semtypes.Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.listAtomMap, sc.serializeListAtom)
+	return sc.serializeBdd(bdd, sc.listAtomMap, sc.serializeListAtom, semtypes.Kind_LIST_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeMappingBdd(bdd semtypes.Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.mappingAtomMap, sc.serializeMappingAtom)
+	return sc.serializeBdd(bdd, sc.mappingAtomMap, sc.serializeMappingAtom, semtypes.Kind_MAPPING_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeFunctionBdd(bdd semtypes.Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.functionAtomMap, sc.serializeFunctionAtom)
+	return sc.serializeBdd(bdd, sc.functionAtomMap, sc.serializeFunctionAtom, semtypes.Kind_FUNCTION_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeXmlBdd(bdd semtypes.Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.xmlAtomMap, sc.serializeXMLAtom)
+	return sc.serializeBdd(bdd, sc.xmlAtomMap, sc.serializeXMLAtom, semtypes.Kind_XML_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeXmlSubtype(xs semtypes.XmlSubtype) xmlSubtypeEntry {
@@ -137,16 +137,24 @@ func (sc *bddSerializationContext) serializeBdd(
 	bdd semtypes.Bdd,
 	atomMap map[semtypes.Atom]int32,
 	serializeAtom func(semtypes.Atom) int32,
+	atomKind semtypes.Kind,
 ) unionOfIntersections {
 	var conjs []conjunction
 	semtypes.BddEvery(sc.cx, bdd, nil, nil, func(_ semtypes.Context, pos *semtypes.Conjunction, neg *semtypes.Conjunction) bool {
 		var posAtoms []atomEntry
 		for c := pos; c != nil; c = c.Next {
-			posAtoms = append(posAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom))
+			posAtoms = append(posAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom, atomKind))
+		}
+		// Reverse since conjunction is built in reverse order by BddEvery
+		for i, j := 0, len(posAtoms)-1; i < j; i, j = i+1, j-1 {
+			posAtoms[i], posAtoms[j] = posAtoms[j], posAtoms[i]
 		}
 		var negAtoms []atomEntry
 		for c := neg; c != nil; c = c.Next {
-			negAtoms = append(negAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom))
+			negAtoms = append(negAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom, atomKind))
+		}
+		for i, j := 0, len(negAtoms)-1; i < j; i, j = i+1, j-1 {
+			negAtoms[i], negAtoms[j] = negAtoms[j], negAtoms[i]
 		}
 		conjs = append(conjs, conjunction{
 			nPosAtoms: uint32(len(posAtoms)),
@@ -166,9 +174,12 @@ func (sc *bddSerializationContext) resolveAtom(
 	atom semtypes.Atom,
 	atomMap map[semtypes.Atom]int32,
 	serializeAtom func(semtypes.Atom) int32,
+	atomKind semtypes.Kind,
 ) atomEntry {
 	if recAtom, ok := atom.(*semtypes.RecAtom); ok && recAtom.Index() == semtypes.BDD_REC_ATOM_READONLY {
-		return atomEntry{isRec: false, index: 0}
+		if atomKind == semtypes.Kind_LIST_ATOM || atomKind == semtypes.Kind_MAPPING_ATOM {
+			return atomEntry{isRec: false, index: 0}
+		}
 	}
 	if idx, ok := atomMap[atom]; ok {
 		return atomEntry{isRec: true, index: idx}
@@ -442,7 +453,6 @@ func (dc *bddDeserializationContext) deserializeFunctionAtom(atomIndex int32) se
 		dc.functionAtoms[atomIndex] = atom
 		return atom
 	}
-
 	def := semtypes.NewFunctionDefinition()
 	dc.functionAtomDefs[atomIndex] = &def
 

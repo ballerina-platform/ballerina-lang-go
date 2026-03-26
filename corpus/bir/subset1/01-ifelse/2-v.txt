@@ -3,11 +3,13 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %1 = ConstantLoad true
-    %2 = printBoolean(%1) -> bb1;
+    %2 = %1;
+    %3 = printBoolean(%2) -> bb1;
   }
   bb1 {
-    %3 = ConstantLoad false
-    %4 = printBoolean(%3) -> bb2;
+    %4 = ConstantLoad false
+    %5 = %4;
+    %6 = printBoolean(%5) -> bb2;
   }
   bb2 {
     return;
@@ -19,14 +21,16 @@ printBoolean(boolean) -> nil{
   }
   bb1 {
     %2 = ConstantLoad 1
-    %3 = println(%2) -> bb2;
+    %3 = %2;
+    %4 = println(%3) -> bb2;
   }
   bb2 {
     GOTO bb5;
   }
   bb3 {
-    %4 = ConstantLoad 0
-    %5 = println(%4) -> bb4;
+    %5 = ConstantLoad 0
+    %6 = %5;
+    %7 = println(%6) -> bb4;
   }
   bb4 {
     GOTO bb5;

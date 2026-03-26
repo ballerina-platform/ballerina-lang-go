@@ -4,10 +4,13 @@ main() -> nil{
   bb0 {
     %1 = ConstantLoad 5
     a = %1;
-    %4 = ConstantLoad 2
-    %3 = + a %4;
+    %4 = a;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %3 = + %4 %6;
     b = %3;
-    %6 = println(b) -> bb1;
+    %8 = b;
+    %9 = println(%8) -> bb1;
   }
   bb1 {
     return;
