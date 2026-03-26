@@ -140,18 +140,13 @@ func castValue(value values.BalValue, targetType semtypes.SemType, reg *modules.
 	if semtypes.IsSubtype(typeCtx, valueType, targetType) {
 		return value
 	}
-
-	b := targetType.(semtypes.BasicTypeBitSet)
-	bitsetValue := b.All()
 	switch {
-	case bitsetValue&semtypes.INT.All() != 0:
+	case semtypes.IsSubtypeSimple(targetType, semtypes.INT):
 		return toInt(value)
-	case bitsetValue&semtypes.FLOAT.All() != 0:
+	case semtypes.IsSubtypeSimple(targetType, semtypes.FLOAT):
 		return toFloat(value)
-	case bitsetValue&semtypes.DECIMAL.All() != 0:
+	case semtypes.IsSubtypeSimple(targetType, semtypes.DECIMAL):
 		return toDecimal(value)
-	case bitsetValue&semtypes.BOOLEAN.All() != 0:
-		return toBoolean(value)
 	}
 	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported target type %s", semtypes.ToString(typeCtx, targetType))))
 }
