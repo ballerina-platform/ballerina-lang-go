@@ -97,7 +97,7 @@ func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, fr
 			unwindCallStackToFrame(callStack, frame)
 			errVal := panicValueToErrorValue(recovered)
 			setOperandValue(handler.ErrorOp, frame, reg, errVal)
-			bb = handler.Target
+			bb = &birFunc.BasicBlocks[handler.Target]
 			continue
 		}
 
@@ -302,8 +302,8 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 	found := false
 	for i := range birFunc.ErrorTable {
 		entry := &birFunc.ErrorTable[i]
-		start := entry.Start.Number
-		end := entry.End.Number
+		start := entry.Start
+		end := entry.End
 		if bbNumber < start || bbNumber > end {
 			continue
 		}

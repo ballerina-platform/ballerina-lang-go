@@ -276,25 +276,6 @@ func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
 	birFunc.ErrorTable = stmtCx.errorEntries
-	if len(birFunc.ErrorTable) > 0 {
-		bbMap := make(map[string]*BIRBasicBlock, len(birFunc.BasicBlocks))
-		for i := range birFunc.BasicBlocks {
-			bb := &birFunc.BasicBlocks[i]
-			bbMap[bb.Id.Value()] = bb
-		}
-		for i := range birFunc.ErrorTable {
-			entry := &birFunc.ErrorTable[i]
-			if entry.Start != nil {
-				entry.Start = bbMap[entry.Start.Id.Value()]
-			}
-			if entry.End != nil {
-				entry.End = bbMap[entry.End.Id.Value()]
-			}
-			if entry.Target != nil {
-				entry.Target = bbMap[entry.Target.Id.Value()]
-			}
-		}
-	}
 	birFunc.ReturnVariable = stmtCx.retVar.VariableDcl.(*BIRLocalVariableDcl)
 	return birFunc
 }
@@ -1162,9 +1143,9 @@ func trapExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTrapE
 	trapEndBB.Terminator = NewGoto(afterTrapBB, expr.GetPosition())
 
 	ctx.errorEntries = append(ctx.errorEntries, BIRErrorEntry{
-		Start:   trapStartBB,
-		End:     trapEndBB,
-		Target:  afterTrapBB,
+		Start:   trapStartBB.Number,
+		End:     trapEndBB.Number,
+		Target:  afterTrapBB.Number,
 		ErrorOp: resultOperand,
 	})
 

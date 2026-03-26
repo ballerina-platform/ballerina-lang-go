@@ -327,6 +327,7 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	basicBlocks := make([]bir.BIRBasicBlock, basicBlockCount)
 	for j := 0; j < int(basicBlockCount); j++ {
 		block := br.readBasicBlock(varMap)
+		block.Number = j
 		basicBlocks[j] = *block
 		bbMap[block.Id.Value()] = &basicBlocks[j]
 	}
@@ -364,9 +365,9 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 		targetId := br.readStringCPEntry()
 		errorOp := br.readOperand(varMap)
 		errorTable[j] = bir.BIRErrorEntry{
-			Start:   bbMap[startId.Value()],
-			End:     bbMap[endId.Value()],
-			Target:  bbMap[targetId.Value()],
+			Start:   bbMap[startId.Value()].Number,
+			End:     bbMap[endId.Value()].Number,
+			Target:  bbMap[targetId.Value()].Number,
 			ErrorOp: errorOp,
 		}
 	}
