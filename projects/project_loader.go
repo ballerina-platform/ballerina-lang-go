@@ -24,9 +24,15 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+// RepositoryFactory is a function that creates a Repository given an Environment.
+// This allows repository creation to be deferred until the Environment is created,
+// while still allowing repositories to reference the shared Environment.
+type RepositoryFactory func(env *Environment) Repository
+
 // ProjectLoadConfig holds configuration for project loading.
 type ProjectLoadConfig struct {
-	BuildOptions *BuildOptions
+	BuildOptions        *BuildOptions
+	RepositoryFactories []RepositoryFactory
 }
 
 // ProjectLoader loads Ballerina projects from the filesystem.
@@ -57,8 +63,10 @@ func (l *ProjectLoader) loadBuildProject(projectPath string, cfg ProjectLoadConf
 		mergedOpts = manifestBuildOptions
 	}
 
-	project := newBuildProject(l.projectFs, projectPath, mergedOpts)
-	l.setupRepositories(project.Environment())
+	// Create environment with repositories configured upfront
+	env := l.createEnvironmentWithRepositories(cfg.RepositoryFactories)
+
+	project := newBuildProjectWithEnv(l.projectFs, projectPath, mergedOpts, env)
 
 	compilationOptions := mergedOpts.CompilationOptions()
 	pkg := NewPackageFromConfig(project, packageConfig, compilationOptions)
@@ -114,28 +122,38 @@ func LoadBalaProject(fsys fs.FS, platformDir string, sharedEnv *Environment) (*B
 	return loader.loadBalaProjectInEnvironment(platformDir, sharedEnv)
 }
 
-func (l *ProjectLoader) setupRepositories(env *Environment) {
-	if l.ballerinaHomeFs == nil {
-		return
+// createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
+// This ensures the Environment is immutable after creation.
+func (l *ProjectLoader) createEnvironmentWithRepositories(additionalFactories []RepositoryFactory) *Environment {
+	// Collect all repository factories: default ones first, then additional
+	var factories []RepositoryFactory
+
+	// Add default repositories from ballerinaHomeFs
+	if l.ballerinaHomeFs != nil {
+		factories = append(factories, func(env *Environment) Repository {
+			return NewFileSystemRepository(
+				"central",
+				l.ballerinaHomeFs,
+				path.Join(RepositoriesDirName, CentralRepositoryName, BalaDirName),
+				env,
+				LoadBalaProject,
+			)
+		})
+		factories = append(factories, func(env *Environment) Repository {
+			return NewFileSystemRepository(
+				"local",
+				l.ballerinaHomeFs,
+				path.Join(RepositoriesDirName, "local", BalaDirName),
+				env,
+				LoadBalaProject,
+			)
+		})
 	}
 
-	centralRepo := NewFileSystemRepository(
-		"central",
-		l.ballerinaHomeFs,
-		path.Join(RepositoriesDirName, CentralRepositoryName, BalaDirName),
-		env,
-		LoadBalaProject,
-	)
-	env.AddRepository(centralRepo)
+	// Add additional factories from config
+	factories = append(factories, additionalFactories...)
 
-	localRepo := NewFileSystemRepository(
-		"local",
-		l.ballerinaHomeFs,
-		path.Join(RepositoriesDirName, "local", BalaDirName),
-		env,
-		LoadBalaProject,
-	)
-	env.AddRepository(localRepo)
+	return NewProjectEnvironmentBuilder(l.projectFs).WithRepositoryFactories(factories).Build()
 }
 
 func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoadConfig) (ProjectLoadResult, error) {
@@ -172,7 +190,10 @@ func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoa
 	sourceDir := path.Dir(projectPath)
 	packageName := strings.TrimSuffix(fileName, BalFileExtension)
 
-	project := newSingleFileProject(l.projectFs, sourceDir, buildOpts, fileName)
+	// Create environment with repositories configured upfront
+	env := l.createEnvironmentWithRepositories(cfg.RepositoryFactories)
+
+	project := newSingleFileProjectWithEnv(l.projectFs, sourceDir, buildOpts, fileName, env)
 
 	defaultVersion, _ := NewPackageVersionFromString(DefaultVersion)
 	packageDesc := NewPackageDescriptor(

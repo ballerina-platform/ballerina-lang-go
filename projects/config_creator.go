@@ -21,7 +21,6 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -59,7 +58,7 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 	}
 
 	// Read and parse package.json
-	packageJSONPath := filepath.Join(balaPath, "package.json")
+	packageJSONPath := path.Join(balaPath, "package.json")
 	pkgJSON, err := readBalaPackageJSON(fsys, packageJSONPath)
 	if err != nil {
 		return balaProjectConfigResult{}, err
@@ -86,7 +85,7 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 	packageID := NewPackageID(pkgJSON.Name)
 
 	// Scan modules directory
-	modulesPath := filepath.Join(balaPath, ModulesDir)
+	modulesPath := path.Join(balaPath, ModulesDir)
 	moduleConfigs, defaultModuleConfig, err := scanBalaModules(fsys, modulesPath, packageDesc, packageID, pkgJSON.Name)
 	if err != nil {
 		return balaProjectConfigResult{}, err
@@ -160,7 +159,7 @@ func scanBalaModules(fsys fs.FS, modulesPath string, packageDesc PackageDescript
 		}
 
 		moduleDirName := entry.Name()
-		modulePath := filepath.Join(modulesPath, moduleDirName)
+		modulePath := path.Join(modulesPath, moduleDirName)
 
 		// Determine if this is the default module or a named module
 		// Default module has the same name as the package
@@ -254,7 +253,7 @@ func scanBalaBalFiles(fsys fs.FS, dirPath string, moduleID ModuleID) ([]Document
 
 	// Create DocumentConfigs
 	for _, fileName := range fileNames {
-		filePath := filepath.Join(dirPath, fileName)
+		filePath := path.Join(dirPath, fileName)
 		content, err := fs.ReadFile(fsys, filePath)
 		if err != nil {
 			return nil, err
