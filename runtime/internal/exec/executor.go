@@ -29,7 +29,7 @@ const maxRecursionDepth = 1000
 func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
 	frame := createFunctionFrame(&birFunc, args, callStack)
 	bb := &birFunc.BasicBlocks[0]
-	if birFunc.HasErrorTable {
+	if len(birFunc.ErrorTable) > 0 {
 		executeFunctionWithTrap(&birFunc, bb, frame, reg, callStack)
 	} else {
 		executeFunctionNoTrap(bb, frame, reg, callStack)

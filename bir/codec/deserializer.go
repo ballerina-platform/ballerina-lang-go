@@ -398,7 +398,6 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 		LocalVars:      localVars,
 		BasicBlocks:    basicBlocks,
 		ErrorTable:     errorTable,
-		HasErrorTable:  len(errorTable) > 0,
 	}
 }
 

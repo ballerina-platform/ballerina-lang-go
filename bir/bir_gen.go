@@ -276,8 +276,7 @@ func transformFunction(ctx *Context, astFunc *ast.BLangFunction, selfSymbolRef *
 		birFunc.LocalVars = append(birFunc.LocalVars, *varPtr)
 	}
 	birFunc.ErrorTable = stmtCx.errorEntries
-	birFunc.HasErrorTable = len(birFunc.ErrorTable) > 0
-	if birFunc.HasErrorTable {
+	if len(birFunc.ErrorTable) > 0 {
 		bbMap := make(map[string]*BIRBasicBlock, len(birFunc.BasicBlocks))
 		for i := range birFunc.BasicBlocks {
 			bb := &birFunc.BasicBlocks[i]
