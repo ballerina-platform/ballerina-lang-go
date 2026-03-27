@@ -17,26 +17,9 @@
 package main
 
 import (
-	"os"
-
-	"github.com/spf13/cobra"
+	"testing"
 )
 
-var rootCmd = &cobra.Command{
-	Use:           "bal",
-	Short:         "The build system and package manager of Ballerina",
-	Long:          `The build system and package manager of Ballerina`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-}
-
-func main() {
-	rootCmd.AddCommand(newCmd)
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(completionCmd)
-	rootCmd.AddCommand(versionCmd)
-
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+func TestBalVersion(t *testing.T) {
+	assertBalCommandMatchesTxtarFragments(t, []string{"version"}, "version", "version.txtar")
 }

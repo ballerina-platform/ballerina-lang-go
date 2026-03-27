@@ -1,0 +1,9 @@
+-- stdout --
+The build system and package manager of Ballerina
+Available Commands:
+new
+run
+version
+-- stderr --
+-- exitcode --
+0
