@@ -739,7 +739,12 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		}
 	}
 
-	if !analyzeExpression(a, selectClause.Expression, nil) {
+	var selectExpectedTy semtypes.SemType
+	if queryExpr.QueryConstructType == model.TypeKind_MAP {
+		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
+	}
+
+	if !analyzeExpression(a, selectClause.Expression, selectExpectedTy) {
 		return false
 	}
 	return validateResolvedType(a, queryExpr, expectedType)

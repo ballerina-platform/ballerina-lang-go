@@ -79,7 +79,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 				newFromClause(newIntLiteral(42), nil, true),
 				newSelectClause(newIntLiteral(1)),
 			),
-			diagSub: "query from-clause currently supports only list collections",
+			diagSub: "query from-clause currently supports only list or map collections",
 		},
 		{
 			name: "from binding variable is nil",
@@ -200,6 +200,73 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			assertDiagnosticContains(t, cx, testCase.diagSub)
 		})
 	}
+}
+
+func TestResolveQueryExprMapCollection(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	space := cx.NewSymbolSpace(*cx.GetDefaultPackage())
+	mapSymbol := model.NewValueSymbol("m", false, false, false)
+	space.AddSymbol("m", &mapSymbol)
+	mapSymbolRef, _ := space.GetSymbol("m")
+	cx.SetSymbolType(mapSymbolRef, semtypes.MAPPING)
+
+	mapRef := &ast.BLangSimpleVarRef{
+		VariableName: &ast.BLangIdentifier{
+			Value: "m",
+		},
+	}
+	mapRef.SetPosition(queryTestPos)
+	mapRef.SetSymbol(mapSymbolRef)
+
+	query := newQueryExpr(
+		newFromClause(mapRef, nil, true),
+		newSelectClause(newIntLiteral(1)),
+	)
+	queryTy, _, ok := resolver.resolveQueryExpr(nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for map collection")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+}
+
+func TestResolveQueryExprMapConstructType(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1), nil, true),
+		newSelectClause(newListLiteral(newStringLiteral("k"), newIntLiteral(1))),
+	)
+	query.QueryConstructType = model.TypeKind_MAP
+
+	queryTy, _, ok := resolver.resolveQueryExpr(nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for map construct type")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.MAPPING) {
+		t.Fatalf("expected query result type to be mapping, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1), nil, true),
+		newSelectClause(newIntLiteral(1)),
+	)
+	query.QueryConstructType = model.TypeKind_MAP
+
+	_, _, ok := resolver.resolveQueryExpr(nil, query)
+	if ok {
+		t.Fatalf("expected resolveQueryExpr to fail for invalid map select expression")
+	}
+	assertDiagnosticContains(t, cx, "incompatible type")
 }
 
 func newTestQueryResolver() (*TypeResolver, *context.CompilerContext) {
@@ -335,6 +402,22 @@ func newIntListLiteral(values ...int64) *ast.BLangListConstructorExpr {
 	}
 	listExpr := &ast.BLangListConstructorExpr{
 		Exprs: exprs,
+	}
+	listExpr.SetPosition(queryTestPos)
+	return listExpr
+}
+
+func newStringLiteral(value string) *ast.BLangLiteral {
+	literal := &ast.BLangLiteral{}
+	literal.SetPosition(queryTestPos)
+	literal.SetValue(value)
+	literal.SetValueType(ast.NewBType(model.TypeTags_STRING, "", 0))
+	return literal
+}
+
+func newListLiteral(values ...ast.BLangExpression) *ast.BLangListConstructorExpr {
+	listExpr := &ast.BLangListConstructorExpr{
+		Exprs: values,
 	}
 	listExpr.SetPosition(queryTestPos)
 	return listExpr
