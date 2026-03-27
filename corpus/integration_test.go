@@ -284,6 +284,39 @@ public function main() {
 	}
 }
 
+func TestIntegrationQueryExprConstructMapAssignedToRecord(t *testing.T) {
+	const source = `import ballerina/io;
+
+function keyFor(int x) returns string {
+    if x <= 2 {
+        return "a";
+    }
+    return "b";
+}
+
+public function main() {
+    map<int> xs = {"k1": 1, "k2": 2, "k3": 3};
+    record {} out = map from var x in xs select [keyFor(x), x];
+    io:println(out);
+}`
+
+	tmpDir := t.TempDir()
+	balPath := filepath.Join(tmpDir, "main.bal")
+	if err := os.WriteFile(balPath, []byte(source), 0o600); err != nil {
+		t.Fatalf("failed to write temp source file: %v", err)
+	}
+
+	stdout, stderr := runIntegrationCase(balPath)
+	if strings.TrimSpace(stderr) != "" {
+		t.Fatalf("expected empty stderr, got: %q", stderr)
+	}
+
+	got := strings.TrimSpace(stdout)
+	if got != "{\"a\":2,\"b\":3}" {
+		t.Fatalf("unexpected output for map query assigned to record{}: got %q", got)
+	}
+}
+
 func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	if isTestSkipped(testPair) {
 		t.Skipf("Skipping integration test for %s", testPair.InputPath)
