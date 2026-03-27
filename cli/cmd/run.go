@@ -229,6 +229,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	rt := runtime.NewRuntime()
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
+			printError(err, "", false)
 			return err
 		}
 	}

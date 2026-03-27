@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got "not-an-int"
+  --> syntax-error.bal:20:13
+   |
+20 |     int x = "not-an-int";
+   |             ^^^^^^^^^^^^
+-- exitcode --
+1
