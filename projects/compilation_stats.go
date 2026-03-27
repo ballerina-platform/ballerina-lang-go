@@ -40,13 +40,7 @@ var analysisStages = []context.CompilationStage{
 	context.StageDesugaring,
 }
 
-func formatStatsReport(moduleList []*moduleContext) string {
-	var allStats []*context.ModuleStats
-	for _, m := range moduleList {
-		if s := m.compilerCtx.GetModuleStats(); s != nil {
-			allStats = append(allStats, s)
-		}
-	}
+func formatStatsReport(allStats []*context.ModuleStats) string {
 	if len(allStats) == 0 {
 		return ""
 	}
@@ -138,13 +132,7 @@ func formatStatsReport(moduleList []*moduleContext) string {
 	return b.String()
 }
 
-func formatStatsReportOneline(moduleList []*moduleContext) string {
-	var allStats []*context.ModuleStats
-	for _, m := range moduleList {
-		if s := m.compilerCtx.GetModuleStats(); s != nil {
-			allStats = append(allStats, s)
-		}
-	}
+func formatStatsReportOneline(allStats []*context.ModuleStats) string {
 	if len(allStats) == 0 {
 		return ""
 	}

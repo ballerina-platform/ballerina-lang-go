@@ -19,6 +19,7 @@ package projects
 import (
 	"sync"
 
+	"ballerina-lang-go/context"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -169,13 +170,23 @@ func (c *PackageCompilation) CompletionManager() any {
 // StatsReport returns a formatted compilation stats report with per-module breakdown.
 // Returns empty string if stats were not enabled.
 func (c *PackageCompilation) StatsReport() string {
-	return formatStatsReport(c.packageResolution.topologicallySortedModuleList)
+	return formatStatsReport(collectModuleStats(c.packageResolution.topologicallySortedModuleList))
 }
 
 // StatsReportOneline returns a compact stats report showing only per-stage totals.
 // Returns empty string if stats were not enabled.
 func (c *PackageCompilation) StatsReportOneline() string {
-	return formatStatsReportOneline(c.packageResolution.topologicallySortedModuleList)
+	return formatStatsReportOneline(collectModuleStats(c.packageResolution.topologicallySortedModuleList))
+}
+
+func collectModuleStats(moduleList []*moduleContext) []*context.ModuleStats {
+	var allStats []*context.ModuleStats
+	for _, m := range moduleList {
+		if s := m.compilerCtx.GetModuleStats(); s != nil {
+			allStats = append(allStats, s)
+		}
+	}
+	return allStats
 }
 
 // getCompilationOptions returns the compilation options.
