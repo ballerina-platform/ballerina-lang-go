@@ -18,16 +18,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
-
-var update = flag.Bool("update", false, "update CLI test outputs")
 
 func TestBalRunCorpus(t *testing.T) {
 	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
@@ -35,14 +33,9 @@ func TestBalRunCorpus(t *testing.T) {
 	}
 	flag.Parse()
 
-	repoRoot, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatalf("unable to determine repo root: %v", err)
-	}
-	coverDir := getCoverageDir(t)
-	balBin := buildBalBinary(t, repoRoot, coverDir)
-	testDataRoot := filepath.Join(repoRoot, "corpus", "cli", "testdata")
-	outputsRoot := filepath.Join(repoRoot, "corpus", "cli", "run")
+	balBin, repoRoot, coverDir := integrationTestBal(t)
+	testDataRoot := filepath.Join(repoRoot, "corpus", "cli", "testdata", "run")
+	outputsRoot := filepath.Join(repoRoot, "corpus", "cli", "output", "run")
 
 	singleBalFiles := listPaths(t, filepath.Join(testDataRoot, "single-bal-files"), true)
 	projects := listPaths(t, filepath.Join(testDataRoot, "projects"), false)
@@ -82,25 +75,30 @@ func listPaths(t *testing.T, dir string, balFilesOnly bool) []string {
 func runAndValidateCase(t *testing.T, balBin, repoRoot, coverDir, outputsRoot, runPath, outputKey string) {
 	t.Helper()
 	t.Run(strings.ReplaceAll(outputKey, string(filepath.Separator), "_"), func(t *testing.T) {
-		stdout, stderr, exitCode := runBalCommand(t, balBin, runPath, repoRoot, coverDir)
+		stdout, stderr, exitCode := runCLICommand(t, balBin, repoRoot, coverDir, "run", runPath)
 		expectedPath := filepath.Join(outputsRoot, outputKey+".txtar")
 		actualOutput := normalizeNewlines(stdout)
 		actualError := normalizeNewlines(stderr)
-		actualExitCode := fmt.Sprintf("%d", exitCode)
+		actualExitCode := strconv.Itoa(exitCode)
 
 		if *update {
-			updateOutputArchive(t, expectedPath, actualOutput, actualError, actualExitCode)
+			if updateOutputArchiveIfNeeded(t, expectedPath, actualOutput, actualError, actualExitCode) {
+				t.Fatalf("Updated expected file: %s", expectedPath)
+			}
 			return
 		}
 
 		expectedOutput, expectedError, expectedExitCode := readExpectedTxtar(t, expectedPath)
 		if expectedOutput != actualOutput || expectedError != actualError || expectedExitCode != actualExitCode {
 			t.Fatalf(
-				"unexpected output for %s\nstdout mismatch:\n%s\nstderr mismatch:\n%s\nexitcode mismatch:\n%s",
+				"unexpected output for %s\nexpected stdout:\n%s\nactual stdout:\n%s\nexpected stderr:\n%s\nactual stderr:\n%s\nexpected exitcode: %s\nactual exitcode: %s",
 				runPath,
-				formatExpectedGot(expectedOutput, actualOutput),
-				formatExpectedGot(expectedError, actualError),
-				formatExpectedGot(expectedExitCode, actualExitCode),
+				expectedOutput,
+				actualOutput,
+				expectedError,
+				actualError,
+				expectedExitCode,
+				actualExitCode,
 			)
 		}
 	})

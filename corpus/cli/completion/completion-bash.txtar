@@ -1,6 +1,0 @@
--- stdout --
-__start_bal()
-complete -o default -F __start_bal bal
--- stderr --
--- exitcode --
-0

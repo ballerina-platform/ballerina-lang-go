@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"golang.org/x/tools/txtar"
@@ -35,26 +37,33 @@ const (
 	coverDirEnv = "BAL_GOCOVERDIR"
 )
 
-func getCoverageDir(t *testing.T) string {
-	t.Helper()
-	coverDir, ok := os.LookupEnv(coverDirEnv)
-	if !ok || coverDir == "" {
-		return ""
+var (
+	update = flag.Bool("update", false, "update CLI test outputs")
+
+	integrationBalOnce  sync.Once
+	integrationBalBin   string
+	integrationRepoRoot string
+	integrationCoverDir string
+	integrationBalErr   error
+)
+
+func resolveCoverageDir() (string, error) {
+	coverDir := os.Getenv(coverDirEnv)
+	if coverDir == "" {
+		return "", nil
 	}
 	if err := os.MkdirAll(coverDir, 0o755); err != nil {
-		t.Fatalf("failed to create %s %q: %v", coverDirEnv, coverDir, err)
+		return "", fmt.Errorf("failed to create %s %q: %w", coverDirEnv, coverDir, err)
 	}
-	return coverDir
+	return coverDir, nil
 }
 
-func buildBalBinary(t *testing.T, repoRoot, coverDir string) string {
-	t.Helper()
-	tmp := t.TempDir()
+func buildBalBinaryAt(repoRoot, coverDir, outDir string) (string, error) {
 	balName := "bal"
 	if runtime.GOOS == "windows" {
 		balName = "bal.exe"
 	}
-	balBin := filepath.Join(tmp, balName)
+	balBin := filepath.Join(outDir, balName)
 
 	args := []string{"build", "-o", balBin}
 	if coverDir != "" {
@@ -65,14 +74,33 @@ func buildBalBinary(t *testing.T, repoRoot, coverDir string) string {
 	cmd := exec.Command("go", args...)
 	cmd.Dir = repoRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("failed to build bal binary: %v\n%s", err, string(out))
+		return "", fmt.Errorf("failed to build bal binary: %w\n%s", err, string(out))
 	}
-	return balBin
+	return balBin, nil
 }
 
-func runBalCommand(t *testing.T, balBin, runPath, repoRoot, coverDir string) (stdout, stderr string, exitCode int) {
+func integrationTestBal(t *testing.T) (balBin, repoRoot, coverDir string) {
 	t.Helper()
-	return runCLICommand(t, balBin, repoRoot, coverDir, "run", runPath)
+	integrationBalOnce.Do(func() {
+		integrationRepoRoot, integrationBalErr = filepath.Abs("..")
+		if integrationBalErr != nil {
+			return
+		}
+		integrationCoverDir, integrationBalErr = resolveCoverageDir()
+		if integrationBalErr != nil {
+			return
+		}
+		tmpDir, err := os.MkdirTemp("", "bal-cli-test")
+		if err != nil {
+			integrationBalErr = err
+			return
+		}
+		integrationBalBin, integrationBalErr = buildBalBinaryAt(integrationRepoRoot, integrationCoverDir, tmpDir)
+	})
+	if integrationBalErr != nil {
+		t.Fatalf("cli integration test binary: %v", integrationBalErr)
+	}
+	return integrationBalBin, integrationRepoRoot, integrationCoverDir
 }
 
 func runCLICommand(t *testing.T, balBin, repoRoot, coverDir string, args ...string) (stdout, stderr string, exitCode int) {
@@ -95,8 +123,15 @@ func runCLICommand(t *testing.T, balBin, repoRoot, coverDir string, args ...stri
 	if errors.As(err, &exitErr) {
 		return stdoutBuf.String(), stderrBuf.String(), exitErr.ExitCode()
 	}
-	t.Fatalf("failed to run bal command: %v", err)
-	return "", "", 1
+	t.Fatalf(
+		"failed to execute command %q (repo: %s): %v\nstdout:\n%s\nstderr:\n%s",
+		strings.Join(args, " "),
+		repoRoot,
+		err,
+		stdoutBuf.String(),
+		stderrBuf.String(),
+	)
+	return "", "", 0
 }
 
 func normalizeNewlines(s string) string {
@@ -132,7 +167,7 @@ func readExpectedTxtar(t *testing.T, txtarPath string) (stdout, stderr, exitCode
 	return stdout, stderr, exitCode
 }
 
-func updateOutputArchive(t *testing.T, expectedPath, stdout, stderr, exitCode string) {
+func updateOutputArchiveIfNeeded(t *testing.T, expectedPath, stdout, stderr, exitCode string) bool {
 	t.Helper()
 	archive := &txtar.Archive{
 		Files: []txtar.File{
@@ -141,12 +176,58 @@ func updateOutputArchive(t *testing.T, expectedPath, stdout, stderr, exitCode st
 			{Name: "exitcode", Data: []byte(exitCode)},
 		},
 	}
-	content := txtar.Format(archive)
+	actual := txtar.Format(archive)
+	existing, err := os.ReadFile(expectedPath)
+	fileExists := err == nil
+	if fileExists && bytes.Equal(existing, actual) {
+		return false
+	}
 	if err := os.MkdirAll(filepath.Dir(expectedPath), 0o755); err != nil {
 		t.Fatalf("failed to create output directory for %s: %v", expectedPath, err)
 	}
-	if err := os.WriteFile(expectedPath, content, 0o644); err != nil {
+	if err := os.WriteFile(expectedPath, actual, 0o644); err != nil {
 		t.Fatalf("failed to write output archive %s: %v", expectedPath, err)
+	}
+	return true
+}
+
+func assertBalCommandMatchesTxtarFragments(t *testing.T, args []string, txtarPathParts ...string) {
+	t.Helper()
+	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
+		t.Skip("skipping CLI integration test on WASM (js/wasm)")
+	}
+	flag.Parse()
+
+	balBin, repoRoot, coverDir := integrationTestBal(t)
+
+	stdout, stderr, exitCode := runCLICommand(t, balBin, repoRoot, coverDir, args...)
+
+	stdout = normalizeNewlines(stdout)
+	stderr = normalizeNewlines(stderr)
+	expectedPath := filepath.Join(append([]string{repoRoot, "corpus", "cli", "output"}, txtarPathParts...)...)
+
+	if *update {
+		if updateOutputArchiveIfNeeded(t, expectedPath, stdout, stderr, strconv.Itoa(exitCode)) {
+			t.Fatalf("Updated expected file: %s", expectedPath)
+		}
+		return
+	}
+
+	expectedStdoutFragments, expectedStderr, expectedExitCode := readExpectedTxtar(t, expectedPath)
+
+	if stderr != expectedStderr {
+		t.Fatalf("unexpected stderr for command %q with expected file %s\n%s", strings.Join(args, " "), expectedPath, formatExpectedGot(expectedStderr, stderr))
+	}
+	if strconv.Itoa(exitCode) != expectedExitCode {
+		t.Fatalf("unexpected exit code for command %q with expected file %s\n%s", strings.Join(args, " "), expectedPath, formatExpectedGot(expectedExitCode, strconv.Itoa(exitCode)))
+	}
+	for _, fragment := range strings.Split(expectedStdoutFragments, "\n") {
+		if strings.TrimSpace(fragment) == "" {
+			continue
+		}
+		if !strings.Contains(stdout, fragment) {
+			t.Fatalf("stdout missing expected fragment %q for command %q with expected file %s\nstdout:\n%s", fragment, strings.Join(args, " "), expectedPath, stdout)
+		}
 	}
 }
 
@@ -163,42 +244,4 @@ func formatExpectedGot(expected, got string) string {
 		return strings.Join(lines, "\n")
 	}
 	return fmt.Sprintf("expected:\n%s\n\ngot:\n%s", format(expected), format(got))
-}
-
-func assertBalCommandMatchesTxtarFragments(t *testing.T, args []string, txtarPathParts ...string) {
-	t.Helper()
-	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
-		t.Skip("skipping CLI integration test on WASM (js/wasm)")
-	}
-
-	repoRoot, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatalf("unable to determine repo root: %v", err)
-	}
-	coverDir := getCoverageDir(t)
-	balBin := buildBalBinary(t, repoRoot, coverDir)
-
-	stdout, stderr, exitCode := runCLICommand(t, balBin, repoRoot, coverDir, args...)
-
-	stdout = normalizeNewlines(stdout)
-	stderr = normalizeNewlines(stderr)
-	expectedStdoutFragments, expectedStderr, expectedExitCode := readExpectedTxtar(
-		t,
-		filepath.Join(append([]string{repoRoot, "corpus", "cli"}, txtarPathParts...)...),
-	)
-
-	if stderr != expectedStderr {
-		t.Fatalf("unexpected stderr:\n%s", formatExpectedGot(expectedStderr, stderr))
-	}
-	if strconv.Itoa(exitCode) != expectedExitCode {
-		t.Fatalf("unexpected exit code:\n%s", formatExpectedGot(expectedExitCode, strconv.Itoa(exitCode)))
-	}
-	for _, fragment := range strings.Split(expectedStdoutFragments, "\n") {
-		if strings.TrimSpace(fragment) == "" {
-			continue
-		}
-		if !strings.Contains(stdout, fragment) {
-			t.Fatalf("output missing %q\nstdout:\n%s", fragment, stdout)
-		}
-	}
 }
