@@ -284,6 +284,70 @@ public function main() {
 	}
 }
 
+func TestIntegrationQueryExprFromRecordToList(t *testing.T) {
+	const source = `import ballerina/io;
+
+public function main() {
+    record {| int k1; int k2; int k3; |} xs = {k1: 1, k2: 2, k3: 3};
+    int[] out = from var x in xs select x * 2;
+    io:println(out);
+}`
+
+	tmpDir := t.TempDir()
+	balPath := filepath.Join(tmpDir, "main.bal")
+	if err := os.WriteFile(balPath, []byte(source), 0o600); err != nil {
+		t.Fatalf("failed to write temp source file: %v", err)
+	}
+
+	stdout, stderr := runIntegrationCase(balPath)
+	if strings.TrimSpace(stderr) != "" {
+		t.Fatalf("expected empty stderr, got: %q", stderr)
+	}
+
+	got := strings.TrimSpace(stdout)
+	if got != "[2,4,6]" {
+		t.Fatalf("unexpected output for record-to-list query expression: got %q", got)
+	}
+}
+
+func TestIntegrationQueryExprFromRecordToMap(t *testing.T) {
+	const source = `import ballerina/io;
+
+function keyFor(int x) returns string {
+    if x == 1 {
+        return "a";
+    }
+    if x == 2 {
+        return "b";
+    }
+    return "c";
+}
+
+public function main() {
+    record {| int k1; int k2; int k3; |} xs = {k1: 1, k2: 2, k3: 3};
+    map<int> out = map from var x in xs select [keyFor(x), x * 10];
+    io:println(out["a"]);
+    io:println(out["b"]);
+    io:println(out["c"]);
+}`
+
+	tmpDir := t.TempDir()
+	balPath := filepath.Join(tmpDir, "main.bal")
+	if err := os.WriteFile(balPath, []byte(source), 0o600); err != nil {
+		t.Fatalf("failed to write temp source file: %v", err)
+	}
+
+	stdout, stderr := runIntegrationCase(balPath)
+	if strings.TrimSpace(stderr) != "" {
+		t.Fatalf("expected empty stderr, got: %q", stderr)
+	}
+
+	got := strings.TrimSpace(stdout)
+	if got != "10\n20\n30" {
+		t.Fatalf("unexpected output for record-to-map query expression: got %q", got)
+	}
+}
+
 func TestIntegrationQueryExprConstructMapAssignedToRecord(t *testing.T) {
 	const source = `import ballerina/io;
 
