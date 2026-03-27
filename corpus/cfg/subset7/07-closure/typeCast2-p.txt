@@ -1,0 +1,40 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable returnVal (type
+        (finite-type
+          (literal b))) (expr
+        (literal b))))
+    (var-def
+      (variable f (type
+        (user-defined-type F1)) (expr
+        (lambda
+          (function $anonFunc$_0 (
+            (variable a (type
+              (union-type
+                (union-type
+                  (finite-type
+                    (literal 1))
+                  (finite-type
+                    (literal 2)))
+                (finite-type
+                  (literal 3)))))) (
+            (union-type
+              (finite-type
+                (literal a))
+              (finite-type
+                (literal b))))
+            (block-function-body
+              (return
+                (simple-var-ref returnVal))))))))
+    (var-def
+      (variable fx (type
+        (user-defined-type Fx)) (expr
+        (type-conversion-expr
+          (simple-var-ref f)
+          (user-defined-type Fx)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref fx))))
+  )
+)

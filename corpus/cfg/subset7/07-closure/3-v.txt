@@ -1,0 +1,28 @@
+(addTo
+  (bb0 () ()
+    (return
+      (lambda
+        (function $anonFunc$_0 (
+          (variable y (type
+            (value-type int)))) (
+          (value-type int))
+          (block-function-body
+            (return
+              (binary-expr +
+                (simple-var-ref x)
+                (simple-var-ref y)))))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable add2 (type
+        (user-defined-type F)) (expr
+        (invocation addTo (
+          (literal 2))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation add2 (
+          (literal 3))))))
+  )
+)

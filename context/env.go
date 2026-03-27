@@ -73,8 +73,8 @@ func (this *CompilerEnvironment) CreateNarrowedSymbol(baseRef model.SymbolRef) m
 	this.symbolSpacesMu.RLock()
 	symbolSpace := this.symbolSpaces[baseRef.SpaceIndex]
 	this.symbolSpacesMu.RUnlock()
-	underlyingSymbolCopy := *this.GetSymbol(baseRef).(*model.ValueSymbol)
-	symbolIndex := symbolSpace.AppendSymbol(&underlyingSymbolCopy)
+	underlyingSymbolCopy := this.GetSymbol(baseRef).Copy()
+	symbolIndex := symbolSpace.AppendSymbol(underlyingSymbolCopy)
 	narrowedSymbol := model.SymbolRef{
 		Package:    baseRef.Package,
 		SpaceIndex: baseRef.SpaceIndex,

@@ -15,24 +15,26 @@ main() -> nil{
   bb0 {
     %1 = ConstantLoad 1
     x = %1;
-    %5 = ConstantLoad 42
-    %4 = == x %5;
+    %5 = x;
+    %6 = ConstantLoad 42
+    %7 = %6;
+    %4 = == %5 %7;
     %3 = %4;
     %4 ? bb2 : bb1;
   }
   bb1 {
-    %6 = doesADragonExplodeInTheWoods() -> bb3;
+    %8 = doesADragonExplodeInTheWoods() -> bb3;
   }
   bb2 {
     %3 ? bb4 : bb6;
   }
   bb3 {
-    %3 = %6;
+    %3 = %8;
     GOTO bb2;
   }
   bb4 {
-    %7 = ConstantLoad unconditional
-    %8 = println(%7) -> bb5;
+    %9 = ConstantLoad unconditional
+    %10 = println(%9) -> bb5;
   }
   bb5 {
     GOTO bb6;

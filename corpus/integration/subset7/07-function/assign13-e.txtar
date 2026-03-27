@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected function(int, int) returns int, got function(int:Unsigned8, int:Unsigned8) returns int
+  --> assign13-e.bal:20:11
+   |
+20 |     F f = foo; // @error
+   |           ^^^
+

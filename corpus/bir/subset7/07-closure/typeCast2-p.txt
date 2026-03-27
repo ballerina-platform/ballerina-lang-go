@@ -1,0 +1,22 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+$anonFunc$_0(1|2|3) -> "a"|"b"{
+  bb0 {
+    %0 = (1, returnVal);
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad b
+    returnVal = %1;
+    %3 = closure_fp $anon/.:$anonFunc$_0
+    f = %3;
+    %5 = <function(1|2) returns "a"|"b"&function(2|3) returns "b"|"c">(f)
+    fx = %5;
+    %7 = println(fx) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}

@@ -113,6 +113,16 @@ type (
 		BIRInstructionBase
 		FunctionLookupKey string
 		Type              semtypes.SemType
+		IsClosure         bool
+	}
+
+	PushScopeFrame struct {
+		BIRInstructionBase
+		NumLocals int
+	}
+
+	PopScopeFrame struct {
+		BIRInstructionBase
 	}
 )
 
@@ -136,6 +146,8 @@ var (
 	_ BIRAssignInstruction    = &NewError{}
 	_ BIRAssignInstruction    = &NewObject{}
 	_ BIRAssignInstruction    = &FPLoad{}
+	_ BIRInstruction          = &PushScopeFrame{}
+	_ BIRInstruction          = &PopScopeFrame{}
 	_ MappingConstructorEntry = &MappingConstructorKeyValueEntry{}
 )
 
@@ -354,6 +366,22 @@ func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnost
 		},
 		ClassDef: classDef,
 	}
+}
+
+func (p *PushScopeFrame) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_PUSH_SCOPE
+}
+
+func (p *PushScopeFrame) GetLhsOperand() *BIROperand {
+	return nil
+}
+
+func (p *PopScopeFrame) GetKind() InstructionKind {
+	return INSTRUCTION_KIND_POP_SCOPE
+}
+
+func (p *PopScopeFrame) GetLhsOperand() *BIROperand {
+	return nil
 }
 
 func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand, pos diagnostics.Location) *FPLoad {

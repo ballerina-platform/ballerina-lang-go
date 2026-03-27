@@ -1,0 +1,68 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function foo (
+    (variable x (type
+      (value-type int)))
+    (variable z (type
+      (value-type int)))
+    (variable flag (type
+      (value-type boolean)))) (
+    (user-defined-type F))
+    (block-function-body
+      (if
+        (simple-var-ref flag)
+        (block-stmt
+          (return
+            (lambda
+              (function $anonFunc$_0 (
+                (variable y (type
+                  (value-type int)))) (
+                (value-type int))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (binary-expr +
+                        (simple-var-ref x)
+                        (simple-var-ref y))
+                      (simple-var-ref z)))))))) ())
+      (block-stmt
+        (return
+          (lambda
+            (function $anonFunc$_1 (
+              (variable y (type
+                (value-type int)))) (
+              (value-type int))
+              (block-function-body
+                (return
+                  (binary-expr +
+                    (simple-var-ref x)
+                    (simple-var-ref y))))))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable bar (type
+          (user-defined-type F)) (expr
+          (invocation foo (
+            (literal 2)
+            (literal 3)
+            (literal true))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation bar (
+            (literal 1))))))
+      (assignment
+        (simple-var-ref bar)
+        (invocation foo (
+          (literal 2)
+          (literal 3)
+          (literal false))))
+      (expression-stmt
+        (invocation io println (
+          (invocation bar (
+            (literal 1)))))))))

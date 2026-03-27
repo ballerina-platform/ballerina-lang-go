@@ -1,0 +1,135 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable fn (type
+        (user-defined-type MoveFn)) (expr
+        (simple-var-ref moveFn))))
+    (var-def
+      (variable cp (type
+        (user-defined-type ColouredPoint)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 10))
+          (key-value
+            (simple-var-ref y)
+            (literal 20))
+          (key-value
+            (simple-var-ref colour)
+            (literal red))))))
+    (var-def
+      (variable cp2 (type
+        (user-defined-type Point)) (expr
+        (invocation fn (
+          (simple-var-ref cp)
+          (literal 10)
+          (literal 20))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref cp2))))
+    (var-def
+      (variable p (type
+        (user-defined-type Point)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref x)
+            (literal 10))
+          (key-value
+            (simple-var-ref y)
+            (literal 20))))))
+    (var-def
+      (variable p2 (type
+        (user-defined-type Point)) (expr
+        (invocation fn (
+          (simple-var-ref p)
+          (literal 10)
+          (literal 20))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref p2))))
+  )
+)
+(moveColoredPoint
+  (bb0 () (bb1 bb2)
+    (binary-expr !=
+      (field-based-access colour
+        (simple-var-ref p))
+      (literal white))
+  )
+  (bb1 (bb0) (bb2)
+    (assignment
+      (field-based-access x
+        (simple-var-ref p))
+      (binary-expr +
+        (field-based-access x
+          (simple-var-ref p))
+        (simple-var-ref dx)))
+    (assignment
+      (field-based-access y
+        (simple-var-ref p))
+      (binary-expr +
+        (field-based-access y
+          (simple-var-ref p))
+        (simple-var-ref dy)))
+  )
+  (bb2 (bb1 bb0) ()
+    (return
+      (simple-var-ref p))
+  )
+)
+(moveFn
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref p)
+      (user-defined-type ColouredPoint))
+  )
+  (bb1 (bb0) ()
+    (return
+      (invocation moveColoredPoint (
+        (simple-var-ref p)
+        (simple-var-ref dx)
+        (simple-var-ref dy))))
+  )
+  (bb2 (bb0) ()
+    (var-def
+      (variable movedPoint (type
+        (user-defined-type Point)) (expr
+        (invocation movePoint (
+          (simple-var-ref p)
+          (simple-var-ref dx)
+          (simple-var-ref dy))))))
+    (return
+      (mapping-constructor-expr
+        (key-value
+          (simple-var-ref x)
+          (field-based-access x
+            (simple-var-ref movedPoint)))
+        (key-value
+          (simple-var-ref y)
+          (field-based-access y
+            (simple-var-ref movedPoint)))
+        (key-value
+          (simple-var-ref colour)
+          (literal white))))
+  )
+)
+(movePoint
+  (bb0 () ()
+    (assignment
+      (field-based-access x
+        (simple-var-ref p))
+      (binary-expr +
+        (field-based-access x
+          (simple-var-ref p))
+        (simple-var-ref dx)))
+    (assignment
+      (field-based-access y
+        (simple-var-ref p))
+      (binary-expr +
+        (field-based-access y
+          (simple-var-ref p))
+        (simple-var-ref dy)))
+    (return
+      (simple-var-ref p))
+  )
+)

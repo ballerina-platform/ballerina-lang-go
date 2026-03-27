@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+  --> assign16-e.bal:23:5
+   |
+23 |     a(1.0); // @error
+   |     ^^^^^^
+

@@ -1,0 +1,66 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable fns (type
+        (array-type
+          (user-defined-type F) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (simple-var-ref one)
+          (simple-var-ref two)
+          (simple-var-ref three)))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sum (
+          (simple-var-ref fns))))))
+  )
+)
+(one
+  (bb0 () ()
+    (return
+      (literal 1))
+  )
+)
+(sum
+  (bb0 () (bb1)
+    (var-def
+      (variable tmp (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ..<
+      (literal 0)
+      (invocation lang.array length (
+        (simple-var-ref fns))))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (var-def
+      (variable fn (type
+        (user-defined-type F)) (expr
+        (index-based-access
+          (simple-var-ref fns)
+          (simple-var-ref i)))))
+    (compound-assignment +
+      (simple-var-ref tmp)
+      (invocation fn ()))
+  )
+  (bb3 (bb1) ()
+    (return
+      (simple-var-ref tmp))
+  )
+)
+(three
+  (bb0 () ()
+    (return
+      (literal 3))
+  )
+)
+(two
+  (bb0 () ()
+    (return
+      (literal 2))
+  )
+)

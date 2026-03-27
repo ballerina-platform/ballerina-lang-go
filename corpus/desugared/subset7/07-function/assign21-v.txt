@@ -1,0 +1,180 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)
+      (function-type-param
+      (value-type int))) (
+      (value-type int))))
+  (type-definition G
+    (function-type (
+      (value-type int)
+      (value-type int)
+      (function-type-param
+      (value-type int))) (
+      (array-type
+        (value-type int) dimensions: 1 ([])))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable result (type
+          (value-type int)) (expr
+          (invocation f (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result))))
+      (var-def
+        (variable g (type
+          (user-defined-type F)) (expr
+          (simple-var-ref bar))))
+      (expression-stmt
+        (invocation io println (
+          (invocation g (
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (invocation g (
+              (literal 1)
+              (literal 2)))
+            (invocation g (
+              (literal 3)
+              (literal 4)))
+            (literal 5))))))
+      (var-def
+        (variable h (type
+          (user-defined-type G)) (expr
+          (simple-var-ref baz))))
+      (expression-stmt
+        (invocation io println (
+          (invocation h (
+            (literal 1)
+            (literal 2)
+            (literal 3))))))))
+  (function foo (
+    (variable init (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (value-type int)) (expr
+          (simple-var-ref init))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref rest))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref result)
+            (index-based-access
+              (simple-var-ref rest)
+              (simple-var-ref i)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref result))))
+  (function bar () (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (value-type int)) (expr
+          (literal 1))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref rest))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment *
+            (simple-var-ref result)
+            (index-based-access
+              (simple-var-ref rest)
+              (simple-var-ref i)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref result))))
+  (function baz (
+    (variable init (type
+      (value-type int)))) (
+    (array-type
+      (value-type int) dimensions: 1 ([])))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (array-type
+            (value-type int) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (simple-var-ref init)))))
+      (var-def
+        (variable current (type
+          (value-type int)) (expr
+          (simple-var-ref init))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation lang.array length (
+            (simple-var-ref rest))))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref current)
+            (index-based-access
+              (simple-var-ref rest)
+              (simple-var-ref i)))
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref result)
+              (simple-var-ref current))))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref result)))))

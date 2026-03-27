@@ -30,6 +30,8 @@ type BalValue any
 type Function struct {
 	Type      semtypes.SemType
 	LookupKey string
+	// TODO: fix type here and remove unwanted casts
+	ParentFrame any // *exec.Frame at runtime, nil for non-closures
 }
 
 func DefaultValueForType(t semtypes.SemType) BalValue {

@@ -1,0 +1,101 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F2
+    (function-type (
+      (value-type byte)) (
+      (value-type int))))
+  (type-definition F3
+    (function-type (
+      (value-type byte)) (
+      (union-type
+        (value-type int)
+        (value-type string)))))
+  (type-definition Fx
+    (intersection-type
+      (user-defined-type F1)
+      (user-defined-type F2)))
+  (type-definition Fy
+    (intersection-type
+      (user-defined-type F1)
+      (user-defined-type F3)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable fx (type
+          (user-defined-type Fx)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable r1 (type
+          (value-type int)) (expr
+          (invocation fx (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r1))))
+      (assignment
+        (simple-var-ref fx)
+        (simple-var-ref bar))
+      (var-def
+        (variable r2 (type
+          (value-type int)) (expr
+          (invocation fx (
+            (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r2))))
+      (var-def
+        (variable fy (type
+          (user-defined-type Fy)) (expr
+          (simple-var-ref foo))))
+      (var-def
+        (variable r3 (type
+          (union-type
+            (value-type int)
+            (value-type string))) (expr
+          (invocation fy (
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref r3))))))
+  (function foo (
+    (variable a (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref a)
+          (literal 1)))))
+  (function bar (
+    (variable a (type
+      (value-type int)))) (
+    (value-type byte))
+    (block-function-body
+      (return
+        (literal 5))))
+  (function baz (
+    (variable a (type
+      (value-type byte)))) (
+    (union-type
+      (value-type int)
+      (value-type string)))
+    (block-function-body
+      (if
+        (group-expr
+          (binary-expr >
+            (simple-var-ref a)
+            (literal 0)))
+        (block-stmt
+          (return
+            (binary-expr -
+              (simple-var-ref a)
+              (literal 1)))) (
+        (block-stmt
+          (return
+            (literal zero))))))))

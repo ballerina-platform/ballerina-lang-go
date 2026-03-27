@@ -6,7 +6,8 @@ main() -> nil{
     d = %1;
     %3 = <int>(d)
     i = %3;
-    %5 = println(i) -> bb1;
+    %5 = i;
+    %6 = println(%5) -> bb1;
   }
   bb1 {
     return;

@@ -1,0 +1,37 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+import ballerina/io;
+type F function(int) returns int;
+
+function foo(boolean flag, int offset) returns F {
+    return function(int x) returns int {
+        int offset = 10; // @error
+        if (flag) {
+            return x + offset;
+        }
+        else {
+            return x - offset;
+        }
+    };
+}
+
+public function main() {
+    F f = foo(true, 10);
+    io:println(f(5));
+    f = foo(false, 10);
+    io:println(f(5));
+}

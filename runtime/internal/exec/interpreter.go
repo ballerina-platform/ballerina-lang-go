@@ -31,7 +31,7 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 				err = getFormattedError(r, callStack)
 			}
 		}()
-		executeFunction(*pkg.InitFunction, nil, reg, callStack)
+		executeFunction(*pkg.InitFunction, nil, reg, callStack, nil)
 	}
 	if pkg.MainFunction != nil {
 		callStack := &callStack{elements: make([]*Frame, 0, 32)}
@@ -40,7 +40,7 @@ func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
 				err = getFormattedError(r, callStack)
 			}
 		}()
-		executeFunction(*pkg.MainFunction, nil, reg, callStack)
+		executeFunction(*pkg.MainFunction, nil, reg, callStack, nil)
 	}
 	return err
 }
