@@ -114,7 +114,7 @@ const (
 type ResolutionResponse struct {
 	resolvedPackage *Package
 	request         ResolutionRequest
-	status          ResolutionStatus
+	status          resolutionStatus
 }
 
 // NewResolvedResponse creates a successful resolution response.
@@ -122,7 +122,7 @@ func NewResolvedResponse(pkg *Package, request ResolutionRequest) ResolutionResp
 	return ResolutionResponse{
 		resolvedPackage: pkg,
 		request:         request,
-		status:          ResolutionStatusResolved,
+		status:          resolutionStatusResolved,
 	}
 }
 
@@ -130,7 +130,7 @@ func NewResolvedResponse(pkg *Package, request ResolutionRequest) ResolutionResp
 func NewUnresolvedResponse(request ResolutionRequest) ResolutionResponse {
 	return ResolutionResponse{
 		request: request,
-		status:  ResolutionStatusUnresolved,
+		status:  resolutionStatusUnresolved,
 	}
 }
 
@@ -140,8 +140,5 @@ func (r ResolutionResponse) Package() *Package { return r.resolvedPackage }
 // Request returns the original resolution request.
 func (r ResolutionResponse) Request() ResolutionRequest { return r.request }
 
-// Status returns the resolution status.
-func (r ResolutionResponse) Status() ResolutionStatus { return r.status }
-
 // IsResolved returns true if the package was successfully resolved.
-func (r ResolutionResponse) IsResolved() bool { return r.status == ResolutionStatusResolved }
+func (r ResolutionResponse) IsResolved() bool { return r.status == resolutionStatusResolved }

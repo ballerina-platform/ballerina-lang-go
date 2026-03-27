@@ -38,13 +38,9 @@ func newBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *
 
 // newBuildProjectWithEnv creates a new BuildProject with a pre-configured Environment.
 // Use this when the Environment has been configured with repositories upfront.
-func newBuildProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, env *Environment) *BuildProject {
+func newBuildProjectWithEnv(sourceRoot string, buildOptions BuildOptions, env *Environment) *BuildProject {
 	project := &BuildProject{}
-	if env != nil {
-		project.initBaseWithEnv(sourceRoot, buildOptions, env)
-	} else {
-		project.initBase(fsys, sourceRoot, buildOptions)
-	}
+	project.initBaseWithEnv(sourceRoot, buildOptions, env)
 	return project
 }
 
@@ -159,8 +155,8 @@ func (b *BuildProject) Save() {
 func (b *BuildProject) Duplicate() Project {
 	// Create duplicate build options using AcceptTheirs pattern
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
-	// Create new project and package instances
-	newProject := newBuildProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions)
+	// Create new environment with fresh caches but same repository config
+	newProject := newBuildProjectWithEnv(b.sourceRoot, duplicateBuildOptions, b.Environment().Duplicate())
 	ResetPackage(b, newProject)
 
 	return newProject

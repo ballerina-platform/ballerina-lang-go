@@ -18,6 +18,7 @@ package projects_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ballerina-lang-go/projects"
@@ -65,7 +66,7 @@ func TestBalaProject_LoadSingleModule(t *testing.T) {
 	doc := defaultModule.Document(docIDs[0])
 	require.NotNil(doc)
 	assert.Equal("lib.bal", doc.Name())
-	assert.Contains(doc.TextDocument().String(), "public function greet")
+	assert.True(strings.Contains(doc.TextDocument().String(), "public function greet"))
 }
 
 func TestBalaProject_LoadMultiModule(t *testing.T) {
@@ -123,7 +124,7 @@ func TestBalaProject_Platform(t *testing.T) {
 
 	// Cast to BalaProject to access Platform()
 	balaProject, ok := result.Project().(*projects.BalaProject)
-	require.True(ok)
+	assert.True(ok)
 
 	assert.Equal("any", balaProject.Platform())
 }
@@ -167,5 +168,5 @@ func TestBalaProject_TargetDir(t *testing.T) {
 	require.NoError(err)
 
 	// Bala projects have no target directory
-	assert.Empty(result.Project().TargetDir())
+	assert.True(result.Project().TargetDir() == "")
 }

@@ -275,13 +275,14 @@ func (c *PackageCompilation) compileExternalDependencies() {
 		// Look up the package in the cache
 		cachedPkg := packageCache.Get(pkgDesc.Org().Value(), pkgDesc.Name().Value(), pkgDesc.Version().String())
 
-		// If not in cache, try to resolve from repositories
+		// If not in cache, try to resolve from repositories using the original
+		// resolution options from project load (respects offline mode, etc.)
 		if cachedPkg == nil {
 			request := NewResolutionRequest(*pkgDesc)
 			responses := packageResolver.ResolvePackages(
 				context.Background(),
 				[]ResolutionRequest{request},
-				NewResolutionOptions(),
+				env.ResolutionOptions(),
 			)
 			if len(responses) > 0 && responses[0].Package() != nil {
 				cachedPkg = responses[0].Package()

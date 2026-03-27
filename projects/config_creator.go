@@ -18,6 +18,7 @@ package projects
 
 import (
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"os"
 	"path"
@@ -79,7 +80,10 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 	)
 
 	// Create manifest from package.json
-	manifest := NewPackageManifest(packageDesc)
+	manifest := NewPackageManifestFromParams(PackageManifestParams{
+		PackageDesc:     packageDesc,
+		ExportedModules: pkgJSON.Export,
+	})
 
 	// Create package ID
 	packageID := NewPackageID(pkgJSON.Name)
@@ -136,10 +140,14 @@ func scanBalaModules(fsys fs.FS, modulesPath string, packageDesc PackageDescript
 	// Check if modules directory exists
 	info, err := fs.Stat(fsys, modulesPath)
 	if err != nil {
-		// No modules directory - create empty default module
-		moduleDesc := NewModuleDescriptorForDefaultModule(packageDesc)
-		moduleID := NewModuleID(moduleDesc.Name().String(), packageID)
-		return nil, NewModuleConfig(moduleID, moduleDesc, nil, nil, nil, nil), nil
+		if errors.Is(err, fs.ErrNotExist) {
+			// No modules directory - create empty default module
+			moduleDesc := NewModuleDescriptorForDefaultModule(packageDesc)
+			moduleID := NewModuleID(moduleDesc.Name().String(), packageID)
+			return nil, NewModuleConfig(moduleID, moduleDesc, nil, nil, nil, nil), nil
+		}
+		// Propagate other errors (permission, I/O, etc.)
+		return nil, ModuleConfig{}, err
 	}
 	if !info.IsDir() {
 		return nil, ModuleConfig{}, &ProjectError{
@@ -408,7 +416,9 @@ func createOtherModuleConfigs(fsys fs.FS, projectPath string, packageDesc Packag
 	}
 
 	if !info.IsDir() {
-		return nil, nil
+		return nil, &ProjectError{
+			Message: "modules path exists but is not a directory: " + modulesDir,
+		}
 	}
 
 	// List subdirectories in modules/

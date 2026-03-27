@@ -33,6 +33,7 @@ type RepositoryFactory func(env *Environment) Repository
 type ProjectLoadConfig struct {
 	BuildOptions        *BuildOptions
 	RepositoryFactories []RepositoryFactory
+	ResolutionOptions   ResolutionOptions
 }
 
 // ProjectLoader loads Ballerina projects from the filesystem.
@@ -64,9 +65,9 @@ func (l *ProjectLoader) loadBuildProject(projectPath string, cfg ProjectLoadConf
 	}
 
 	// Create environment with repositories configured upfront
-	env := l.createEnvironmentWithRepositories(cfg.RepositoryFactories)
+	env := l.createEnvironmentWithRepositories(cfg)
 
-	project := newBuildProjectWithEnv(l.projectFs, projectPath, mergedOpts, env)
+	project := newBuildProjectWithEnv(projectPath, mergedOpts, env)
 
 	compilationOptions := mergedOpts.CompilationOptions()
 	pkg := NewPackageFromConfig(project, packageConfig, compilationOptions)
@@ -100,7 +101,15 @@ func (l *ProjectLoader) loadBalaProjectInternal(projectPath string, cfg ProjectL
 		buildOpts = NewBuildOptions()
 	}
 
-	project := newBalaProjectWithEnv(l.projectFs, projectPath, buildOpts, result.Platform, sharedEnv)
+	// If no shared environment is provided, create one with repositories configured.
+	// This ensures top-level bala loads (e.g., `Load()` on a bala directory) get
+	// proper repository setup for resolving their own dependencies.
+	env := sharedEnv
+	if env == nil {
+		env = l.createEnvironmentWithRepositories(cfg)
+	}
+
+	project := newBalaProjectWithEnv(projectPath, buildOpts, result.Platform, env)
 
 	compilationOptions := buildOpts.CompilationOptions()
 	pkg := NewPackageFromConfig(project, result.PackageConfig, compilationOptions)
@@ -124,36 +133,14 @@ func LoadBalaProject(fsys fs.FS, platformDir string, sharedEnv *Environment) (*B
 
 // createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
 // This ensures the Environment is immutable after creation.
-func (l *ProjectLoader) createEnvironmentWithRepositories(additionalFactories []RepositoryFactory) *Environment {
-	// Collect all repository factories: default ones first, then additional
-	var factories []RepositoryFactory
-
-	// Add default repositories from ballerinaHomeFs
-	if l.ballerinaHomeFs != nil {
-		factories = append(factories, func(env *Environment) Repository {
-			return NewFileSystemRepository(
-				"central",
-				l.ballerinaHomeFs,
-				path.Join(RepositoriesDirName, CentralRepositoryName, BalaDirName),
-				env,
-				LoadBalaProject,
-			)
-		})
-		factories = append(factories, func(env *Environment) Repository {
-			return NewFileSystemRepository(
-				"local",
-				l.ballerinaHomeFs,
-				path.Join(RepositoriesDirName, "local", BalaDirName),
-				env,
-				LoadBalaProject,
-			)
-		})
-	}
-
-	// Add additional factories from config
-	factories = append(factories, additionalFactories...)
-
-	return NewProjectEnvironmentBuilder(l.projectFs).WithRepositoryFactories(factories).Build()
+//
+// Repository factories should be provided via ProjectLoadConfig.RepositoryFactories.
+// Use repository.DefaultFactories(ballerinaHomeFs) to get the standard central and local repositories.
+func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig) *Environment {
+	return NewProjectEnvironmentBuilder(l.projectFs).
+		WithRepositoryFactories(cfg.RepositoryFactories).
+		WithResolutionOptions(cfg.ResolutionOptions).
+		Build()
 }
 
 func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoadConfig) (ProjectLoadResult, error) {
@@ -191,9 +178,9 @@ func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoa
 	packageName := strings.TrimSuffix(fileName, BalFileExtension)
 
 	// Create environment with repositories configured upfront
-	env := l.createEnvironmentWithRepositories(cfg.RepositoryFactories)
+	env := l.createEnvironmentWithRepositories(cfg)
 
-	project := newSingleFileProjectWithEnv(l.projectFs, sourceDir, buildOpts, fileName, env)
+	project := newSingleFileProjectWithEnv(sourceDir, buildOpts, fileName, env)
 
 	defaultVersion, _ := NewPackageVersionFromString(DefaultVersion)
 	packageDesc := NewPackageDescriptor(

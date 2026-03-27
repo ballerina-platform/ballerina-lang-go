@@ -50,7 +50,7 @@ func newSingleFileProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptio
 
 // newSingleFileProjectWithEnv creates a new SingleFileProject with a pre-configured Environment.
 // Use this when the Environment has been configured with repositories upfront.
-func newSingleFileProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, documentPath string, env *Environment) *SingleFileProject {
+func newSingleFileProjectWithEnv(sourceRoot string, buildOptions BuildOptions, documentPath string, env *Environment) *SingleFileProject {
 	// Create temp directory for build outputs
 	targetDir, err := os.MkdirTemp("", "ballerina-cache*")
 	if err != nil {
@@ -61,11 +61,7 @@ func newSingleFileProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions Bui
 		documentPath: documentPath,
 		targetDir:    targetDir,
 	}
-	if env != nil {
-		project.initBaseWithEnv(sourceRoot, buildOptions, env)
-	} else {
-		project.initBase(fsys, sourceRoot, buildOptions)
-	}
+	project.initBaseWithEnv(sourceRoot, buildOptions, env)
 	return project
 }
 
@@ -151,8 +147,8 @@ func (s *SingleFileProject) Duplicate() Project {
 	// Create duplicate build options using AcceptTheirs pattern
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(s.buildOptions)
 
-	// Create new project instance
-	newProject := newSingleFileProject(s.Environment().fs(), s.sourceRoot, duplicateBuildOptions, s.documentPath)
+	// Create new environment with fresh caches but same repository config
+	newProject := newSingleFileProjectWithEnv(s.sourceRoot, duplicateBuildOptions, s.documentPath, s.Environment().Duplicate())
 
 	// Duplicate and set the package
 	ResetPackage(s, newProject)

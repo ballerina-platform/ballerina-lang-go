@@ -93,7 +93,7 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 		// Resolve requests and add edges
 		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
 		for _, resp := range responses {
-			if resp.resolutionStatus == ResolutionStatusResolved {
+			if resp.resolutionStatus == resolutionStatusResolved {
 				toDesc := resp.moduleDesc
 				// Only add edge if the dependency is a different module
 				if !fromDesc.Equals(toDesc) {
@@ -125,7 +125,7 @@ func (r *PackageResolution) buildPackageDependencyGraph() {
 
 		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
 		for _, resp := range responses {
-			if resp.resolutionStatus == ResolutionStatusResolved && resp.packageDescriptor != nil {
+			if resp.resolutionStatus == resolutionStatusResolved && resp.packageDescriptor != nil {
 				pkgDesc := resp.packageDescriptor
 				key := pkgDesc.Org().Value() + "/" + pkgDesc.Name().Value()
 
