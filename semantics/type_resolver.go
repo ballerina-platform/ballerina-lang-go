@@ -39,7 +39,6 @@ import (
 )
 
 type typeResolver interface {
-	ast.Visitor
 	typeContext() semtypes.Context
 	expectedReturnType() semtypes.SemType
 	parent() typeResolver
@@ -84,8 +83,6 @@ type packageTypeResolver struct {
 	// a function boundary during lambda body resolution. nil when not inside a lambda.
 	capturedNarrowedVars map[model.SymbolRef]bool
 }
-
-var _ ast.Visitor = &packageTypeResolver{}
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
 func (t *packageTypeResolver) expectedReturnType() semtypes.SemType { return nil }
@@ -174,11 +171,6 @@ func (t *packageTypeResolver) getCapturedVars() map[model.SymbolRef]bool {
 
 func (t *packageTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
 	t.capturedNarrowedVars = vars
-}
-
-func (t *packageTypeResolver) Visit(node ast.BLangNode) ast.Visitor { return visit(t, node) }
-func (t *packageTypeResolver) VisitTypeData(td *model.TypeData) ast.Visitor {
-	return visitTypeData(t, td)
 }
 
 type functionTypeResolver struct {
@@ -275,11 +267,6 @@ func (f *functionTypeResolver) getCapturedVars() map[model.SymbolRef]bool {
 
 func (f *functionTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
 	f.capturedNarrowedVars = vars
-}
-
-func (f *functionTypeResolver) Visit(node ast.BLangNode) ast.Visitor { return visit(f, node) }
-func (f *functionTypeResolver) VisitTypeData(td *model.TypeData) ast.Visitor {
-	return visitTypeData(f, td)
 }
 
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageTypeResolver {
@@ -408,7 +395,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext,
 		resolveConstant(t, &pkg.Constants[i])
 	}
 	for i := range pkg.Imports {
-		ast.Walk(t, &pkg.Imports[i])
+		setOtherNodesAsNever(&pkg.Imports[i])
 	}
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
@@ -425,7 +412,8 @@ func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext,
 		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
 	}
 	for i := range pkg.GlobalVars {
-		ast.Walk(t, &pkg.GlobalVars[i])
+		resolveSimpleVariable(t, nil, &pkg.GlobalVars[i])
+		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 
 	tctx := t.tyCtx
@@ -590,13 +578,15 @@ func resolveOnFailClause(t typeResolver, chain *binding, clause *ast.BLangOnFail
 func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.SemType, bool) {
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
-		ast.Walk(t, &fn.RequiredParams[i])
+		resolveSimpleVariable(t, nil, &fn.RequiredParams[i])
+		setOtherNodesAsNever(&fn.RequiredParams[i])
 		paramTypes[i] = fn.RequiredParams[i].GetDeterminedType()
 	}
 	var restTy semtypes.SemType = semtypes.NEVER
 	if fn.RestParam != nil {
 		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
-		ast.Walk(t, restParam)
+		resolveSimpleVariable(t, nil, restParam)
+		setOtherNodesAsNever(restParam)
 		elementType := restParam.GetDeterminedType()
 		restTy = elementType
 		// Set the rest param's type to readonly T[]
@@ -614,7 +604,7 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 		if !ok {
 			return nil, false
 		}
-		ast.Walk(t, retTd.(ast.BLangNode))
+		setOtherNodesAsNever(retTd.(ast.BLangNode))
 	} else {
 		returnTy = semtypes.NIL
 	}
@@ -689,55 +679,37 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 	return fnType, defaultExpressionEffect(outerChain), true
 }
 
-func visitTypeData(t typeResolver, typeData *model.TypeData) ast.Visitor {
+func resolveTypeData(t typeResolver, typeData *model.TypeData) bool {
 	if typeData.TypeDescriptor == nil {
-		return t
+		return true
 	}
 	ty, ok := resolveBType(t, typeData.TypeDescriptor.(ast.BType), 0)
 	if !ok {
-		return nil
+		return false
 	}
 	typeData.Type = ty
-	return t
+	return true
 }
 
-func visit(t typeResolver, node ast.BLangNode) ast.Visitor {
+type neverVisitor struct{}
+
+func (neverVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-
-	switch n := node.(type) {
-	case *ast.BLangConstant:
-		resolveConstant(t, n)
-		return nil
-	case *ast.BLangSimpleVariable:
-		resolveSimpleVariable(t, nil, node.(*ast.BLangSimpleVariable))
-	case ast.BType:
-		resolveBType(t, node.(ast.BType), 0)
-	case *ast.BLangLiteral:
-		resolveLiteral(t, n, nil)
-		return nil
-	case *ast.BLangNumericLiteral:
-		resolveNumericLiteral(t, n, nil)
-		return nil
-	case *ast.BLangTypeDefinition:
-		resolveTypeDefinition(t, n, 0)
-		return nil
-	case *ast.BLangMatchStatement:
-		resolveMatchStatement(t, nil, n)
-		return nil
-	case ast.BLangExpression:
-		if _, _, ok := resolveExpression(t, nil, n, nil); !ok {
-			return nil
-		}
-	default:
-		// Non-expression nodes with no specific handling: mark as NEVER and continue traversal
-	}
-	// Set DeterminedType to NEVER as fallback for nodes that didn't get a type assigned.
 	if node.GetDeterminedType() == nil {
 		node.SetDeterminedType(semtypes.NEVER)
 	}
-	return t
+	return neverVisitor{}
+}
+
+func (neverVisitor) VisitTypeData(_ *model.TypeData) ast.Visitor {
+	return neverVisitor{}
+}
+
+// setOtherNodesAsNever set type of every ast node who's determined type is not set as NEVER
+func setOtherNodesAsNever(node ast.BLangNode) {
+	ast.Walk(neverVisitor{}, node)
 }
 
 func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int) (semtypes.SemType, bool) {
@@ -747,9 +719,8 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 	if classDef, ok := defn.(*ast.BLangClassDefinition); ok {
 		return resolveClassDefinitionType(t, classDef, depth)
 	}
-	// Walk Name identifier to ensure it gets DeterminedType set
 	if defn.GetName() != nil {
-		ast.Walk(t, defn.GetName().(ast.BLangNode))
+		setOtherNodesAsNever(defn.GetName().(ast.BLangNode))
 	}
 	if depth == defn.GetCycleDepth() {
 		t.semanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.GetName().GetValue()), defn.GetPosition())
@@ -780,7 +751,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	if classDef.GetDeterminedType() != nil {
 		return classDef.GetDeterminedType(), true
 	}
-	ast.Walk(t, classDef.Name)
+	setOtherNodesAsNever(classDef.Name)
 	if depth == classDef.GetCycleDepth() {
 		t.semanticError(fmt.Sprintf("invalid cycle detected for class definition %s", classDef.Name.GetValue()), classDef.GetPosition())
 		return nil, false
@@ -1416,7 +1387,12 @@ func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExp
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	ast.WalkTypeData(t, &e.Type)
+	resolveTypeData(t, &e.Type)
+	if e.Type.TypeDescriptor != nil {
+		if tdNode, ok := e.Type.TypeDescriptor.(ast.BLangNode); ok {
+			setOtherNodesAsNever(tdNode)
+		}
+	}
 	testedTy := e.Type.Type
 
 	var resultTy semtypes.SemType
@@ -2624,7 +2600,7 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 			PkgNameComps: []ast.BLangIdentifier{langIdent, moduleIdent},
 			Alias:        &pkgAlias,
 		}
-		ast.Walk(t, &importNode)
+		setOtherNodesAsNever(&importNode)
 		t.addImplicitImport(pkgName, importNode)
 	}
 	symbolRef, ok := symbolSpace.GetSymbol(methodName)
@@ -2812,8 +2788,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			return semtypes.ErrorWithDetail(detailTy), true
 		}
 	case *ast.BLangUserDefinedType:
-		ast.Walk(t, &ty.TypeName)
-		ast.Walk(t, &ty.PkgAlias)
+		setOtherNodesAsNever(&ty.TypeName)
+		setOtherNodesAsNever(&ty.PkgAlias)
 		symbol := ty.Symbol()
 		if ty.PkgAlias.Value != "" {
 			return t.symbolType(symbol), true
@@ -3144,7 +3120,7 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 		return false
 	}
 	if constant.Name != nil {
-		ast.Walk(t, constant.Name)
+		setOtherNodesAsNever(constant.Name)
 	}
 
 	var annotationType semtypes.SemType
