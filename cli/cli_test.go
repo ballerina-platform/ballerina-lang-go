@@ -26,16 +26,21 @@ import (
 	"testing"
 )
 
+const (
+	coverDirEnv = "BAL_GOCOVERDIR"
+)
+
 func TestSingleBalFile(t *testing.T) {
 	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
 		t.Skip("skipping CLI integration test on WASM (js/wasm)")
 	}
 
 	repoRoot := findRepoRoot(t)
+	coverDir := getCoverageDir(t)
 	balFile := filepath.Join(repoRoot, "corpus", "cli", "singleBalFile.bal")
-	balBin := buildBalBinary(t, repoRoot)
+	balBin := buildBalBinary(t, repoRoot, coverDir)
 
-	stdout, stderr := runBalCommand(t, balBin, balFile, repoRoot)
+	stdout, stderr := runBalCommand(t, balBin, balFile, repoRoot, coverDir)
 	expected := readExpectedOutput(t, balFile)
 
 	if normalizeNewlines(stdout) != normalizeNewlines(expected) {
@@ -52,7 +57,19 @@ func findRepoRoot(t *testing.T) string {
 	return repoRoot
 }
 
-func buildBalBinary(t *testing.T, repoRoot string) string {
+func getCoverageDir(t *testing.T) string {
+	t.Helper()
+	coverDir, ok := os.LookupEnv(coverDirEnv)
+	if !ok || coverDir == "" {
+		return ""
+	}
+	if err := os.MkdirAll(coverDir, 0o755); err != nil {
+		t.Fatalf("failed to create %s %q: %v", coverDirEnv, coverDir, err)
+	}
+	return coverDir
+}
+
+func buildBalBinary(t *testing.T, repoRoot, coverDir string) string {
 	t.Helper()
 	tmp := t.TempDir()
 	balName := "bal"
@@ -61,7 +78,13 @@ func buildBalBinary(t *testing.T, repoRoot string) string {
 	}
 	balBin := filepath.Join(tmp, balName)
 
-	cmd := exec.Command("go", "build", "-o", balBin, "./cli/cmd")
+	args := []string{"build", "-o", balBin}
+	if coverDir != "" {
+		args = append(args, "-cover", "-coverpkg=./...")
+	}
+	args = append(args, "./cli/cmd")
+
+	cmd := exec.Command("go", args...)
 	cmd.Dir = repoRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build bal binary: %v\n%s", err, string(out))
@@ -69,10 +92,13 @@ func buildBalBinary(t *testing.T, repoRoot string) string {
 	return balBin
 }
 
-func runBalCommand(t *testing.T, balBin, balFile, repoRoot string) (stdout, stderr string) {
+func runBalCommand(t *testing.T, balBin, balFile, repoRoot, coverDir string) (stdout, stderr string) {
 	t.Helper()
 	cmd := exec.Command(balBin, "run", balFile)
 	cmd.Dir = repoRoot
+	if coverDir != "" {
+		cmd.Env = append(os.Environ(), "GOCOVERDIR="+coverDir)
+	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
