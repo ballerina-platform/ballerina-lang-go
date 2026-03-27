@@ -76,8 +76,6 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 		return
 	}
 	// Make sure we are using a different type env.
-	initialEnv = nil
-	initialContext = nil
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
 	tyCtx := context.NewCompilerContext(env)

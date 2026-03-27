@@ -81,7 +81,7 @@ func execArrayStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry
 	list := getOperandValue(access.LhsOp, frame, reg).(*values.List)
 	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
 	if idx < 0 {
-		panic(fmt.Sprintf("invalid array index: %d", idx))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
 	list.FillingSet(idx, getOperandValue(access.RhsOp, frame, reg))
 }
@@ -90,7 +90,7 @@ func execArrayLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry)
 	list := getOperandValue(access.RhsOp, frame, reg).(*values.List)
 	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
 	if idx < 0 || idx >= list.Len() {
-		panic(fmt.Sprintf("invalid array index: %d", idx))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
 	setOperandValue(access.LhsOp, frame, reg, list.Get(idx))
 }
@@ -136,7 +136,7 @@ func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
 func castValue(value values.BalValue, targetType semtypes.SemType) values.BalValue {
 	b, ok := targetType.(semtypes.BasicTypeBitSet)
 	if !ok {
-		panic(fmt.Sprintf("bad type cast: unsupported target type %T", targetType))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported target type %T", targetType)))
 	}
 	if b.All() == semtypes.ANY.All() {
 		return value
@@ -153,7 +153,7 @@ func castValue(value values.BalValue, targetType semtypes.SemType) values.BalVal
 		return value.(bool)
 	}
 	// TODO: fix this when fixing #260
-	panic(fmt.Sprintf("bad type cast: unsupported basic type %s", semtypes.ToString(nil, b)))
+	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported basic type %s", semtypes.ToString(nil, b))))
 }
 
 func toInt(value any) int64 {
@@ -162,16 +162,16 @@ func toInt(value any) int64 {
 		return v
 	case float64:
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", v)))
 		}
 		if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
-			panic(fmt.Sprintf("bad type cast: cannot cast %v to int", v))
+			panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", v)))
 		}
 		return int64(v)
 	case *big.Rat:
 		return decimalToInt(v)
 	default:
-		panic(fmt.Sprintf("bad type cast: cannot cast %v to int", value))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to int", value)))
 	}
 }
 
@@ -187,7 +187,7 @@ func decimalToInt(v *big.Rat) int64 {
 		}
 	}
 	if !q.IsInt64() {
-		panic(fmt.Sprintf("cannot convert %v to int64: value out of range", v))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("cannot convert %v to int64: value out of range", v)))
 	}
 	return q.Int64()
 }
@@ -202,7 +202,7 @@ func toFloat(value any) float64 {
 		f, _ := v.Float64()
 		return f
 	default:
-		panic(fmt.Sprintf("bad type cast: cannot cast %v to float", value))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to float", value)))
 	}
 }
 
@@ -218,6 +218,6 @@ func toDecimal(value any) *big.Rat {
 	case *big.Rat:
 		return v
 	default:
-		panic(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value))
+		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))
 	}
 }

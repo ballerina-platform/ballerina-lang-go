@@ -19,12 +19,14 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
+	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
 
 type Frame struct {
-	locals      []values.BalValue // variable index → value (indexed by BIROperand.Address.FrameIndex)
-	functionKey string            // function key (package name + function name)
+	locals      []values.BalValue    // variable index → value (indexed by BIROperand.Address.FrameIndex)
+	functionKey string               // function key (package name + function name)
+	location    diagnostics.Location // source location of the currently executing instruction/terminator
 	parent      *Frame
 }
 
