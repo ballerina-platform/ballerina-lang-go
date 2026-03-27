@@ -71,6 +71,8 @@ type typeResolver interface {
 	trackCapturedVar(ref model.SymbolRef)
 	getCapturedVars() map[model.SymbolRef]bool
 	setCapturedVars(vars map[model.SymbolRef]bool)
+
+	ensureResolved(ref model.SymbolRef) bool
 }
 
 type packageTypeResolver struct {
@@ -82,6 +84,11 @@ type packageTypeResolver struct {
 	// capturedNarrowedVars tracks base symbols of narrowed variables captured across
 	// a function boundary during lambda body resolution. nil when not inside a lambda.
 	capturedNarrowedVars map[model.SymbolRef]bool
+
+	// packageVarNodes maps a constant's symbol ref to its AST node.
+	// While a constant is being resolved, its entry is set to nil (cycle detection).
+	packageVarNodes map[model.SymbolRef]*ast.BLangConstant
+	functionNodes   map[model.SymbolRef]*ast.BLangFunction
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -269,6 +276,10 @@ func (f *functionTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
 	f.capturedNarrowedVars = vars
 }
 
+func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef) bool {
+	return f.parentResolver.ensureResolved(ref)
+}
+
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageTypeResolver {
 	return &packageTypeResolver{
 		ctx:             ctx,
@@ -276,7 +287,35 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		importedSymbols: importedSymbols,
 		pkg:             pkg,
 		implicitImports: make(map[string]ast.BLangImportPackage),
+		packageVarNodes: make(map[model.SymbolRef]*ast.BLangConstant),
+		functionNodes:   make(map[model.SymbolRef]*ast.BLangFunction),
 	}
+}
+
+func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef) bool {
+	if t.symbolType(ref) != nil {
+		return true
+	}
+	// Type definitions manage their own cycle detection via CycleDepth
+	if defn, ok := t.getTypeDefinition(ref); ok {
+		_, ok := resolveTypeDefinition(t, defn, 0)
+		return ok
+	}
+	if c, inMap := t.packageVarNodes[ref]; inMap {
+		if c == nil {
+			// we are already resolving this
+			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), nil)
+			return false
+		}
+		t.packageVarNodes[ref] = nil // mark as in-progress
+		defer delete(t.packageVarNodes, ref)
+		return resolveConstant(t, c)
+	}
+	if fn, ok := t.functionNodes[ref]; ok {
+		_, ok := resolveFunctionSignature(t, fn)
+		return ok
+	}
+	return true
 }
 
 // ResolveTopLevelNodes resolves type definitions, function signatures, and constants.
@@ -370,9 +409,15 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		symbol := defn.Symbol()
-		ctx.SetTypeDefinition(symbol, defn)
+		ctx.SetTypeDefinition(defn.Symbol(), defn)
 	}
+	for i := range pkg.Constants {
+		t.packageVarNodes[pkg.Constants[i].Symbol()] = &pkg.Constants[i]
+	}
+	for i := range pkg.Functions {
+		t.functionNodes[pkg.Functions[i].Symbol()] = &pkg.Functions[i]
+	}
+
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
 		if _, ok := resolveTypeDefinition(t, defn, 0); !ok {
@@ -392,7 +437,9 @@ func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext,
 		}
 	}
 	for i := range pkg.Constants {
-		resolveConstant(t, &pkg.Constants[i])
+		if !resolveConstant(t, &pkg.Constants[i]) {
+			return
+		}
 	}
 	for i := range pkg.Imports {
 		setOtherNodesAsNever(&pkg.Imports[i])
@@ -576,6 +623,9 @@ func resolveOnFailClause(t typeResolver, chain *binding, clause *ast.BLangOnFail
 }
 
 func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.SemType, bool) {
+	if ty := t.symbolType(fn.Symbol()); ty != nil {
+		return ty, true
+	}
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
 		resolveSimpleVariable(t, nil, &fn.RequiredParams[i])
@@ -1855,6 +1905,7 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 	if isCaptured {
 		t.trackCapturedVar(baseSymbol)
 	}
+	t.ensureResolved(sym)
 	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(expr)
@@ -1870,6 +1921,7 @@ func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (s
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
+	t.ensureResolved(sym)
 	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(&expr.BLangSimpleVarRef)
@@ -3115,6 +3167,9 @@ func accumIncludedFields(t typeResolver, recordTy *ast.BLangRecordType, included
 }
 
 func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
+	if t.symbolType(constant.Symbol()) != nil {
+		return true
+	}
 	if constant.Expr == nil {
 		t.internalError("constant expression is nil", constant.GetPosition())
 		return false
