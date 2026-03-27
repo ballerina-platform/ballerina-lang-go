@@ -29,10 +29,11 @@ import (
 //
 // It maintains a global package cache for all loaded packages (internal and external).
 type Environment struct {
-	fsys            fs.FS
-	compilerEnv     *context.CompilerEnvironment
-	packageCache    *PackageCache
-	packageResolver PackageResolver
+	fsys              fs.FS
+	compilerEnv       *context.CompilerEnvironment
+	packageCache      *PackageCache
+	packageResolver   PackageResolver
+	resolutionOptions ResolutionOptions
 	// TODO: find better place to put this
 	publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace
 }
@@ -71,6 +72,11 @@ func (e *Environment) PackageResolver() PackageResolver {
 	return e.packageResolver
 }
 
+// ResolutionOptions returns the environment's resolution options.
+func (e *Environment) ResolutionOptions() ResolutionOptions {
+	return e.resolutionOptions
+}
+
 // addPublicSymbolsFrom copies public symbols from another environment.
 // This is used internally when integrating external packages.
 func (e *Environment) addPublicSymbolsFrom(other *Environment) {
@@ -85,4 +91,19 @@ func (e *Environment) addPublicSymbolsFrom(other *Environment) {
 // configured during Environment creation via RepositoryFactories.
 func (e *Environment) addRepository(repo Repository) {
 	e.packageResolver.AddRepository(repo)
+}
+
+// Duplicate creates a new Environment with fresh caches but the same repository
+// configuration and resolution options. This matches Java's behavior where
+// duplicate() creates a new Environment but preserves workspace context.
+func (e *Environment) Duplicate() *Environment {
+	newEnv := NewEnvironment(e.fsys, e.compilerEnv)
+	newEnv.resolutionOptions = e.resolutionOptions
+
+	// Copy repositories from original resolver
+	for _, repo := range e.packageResolver.Repositories() {
+		newEnv.addRepository(repo)
+	}
+
+	return newEnv
 }

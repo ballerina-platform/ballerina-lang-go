@@ -44,15 +44,11 @@ func newBalaProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, pl
 // newBalaProjectWithEnv creates a new BalaProject with a shared Environment.
 // Use this when loading dependency packages that need to share the same
 // PackageCache as the root project.
-func newBalaProjectWithEnv(fsys fs.FS, sourceRoot string, buildOptions BuildOptions, platform string, sharedEnv *Environment) *BalaProject {
+func newBalaProjectWithEnv(sourceRoot string, buildOptions BuildOptions, platform string, env *Environment) *BalaProject {
 	project := &BalaProject{
 		platform: platform,
 	}
-	if sharedEnv != nil {
-		project.initBaseWithEnv(sourceRoot, buildOptions, sharedEnv)
-	} else {
-		project.initBase(fsys, sourceRoot, buildOptions)
-	}
+	project.initBaseWithEnv(sourceRoot, buildOptions, env)
 	return project
 }
 
@@ -82,12 +78,26 @@ func (b *BalaProject) DocumentID(filePath string) (DocumentID, bool) {
 		for _, docID := range module.DocumentIDs() {
 			doc := module.Document(docID)
 			if doc != nil && doc.Name() == filepath.Base(filePath) {
-				return docID, true
+				// Validate full path to handle same-named files in different modules
+				docPath := b.documentPathForModule(docID, module)
+				if docPath == filePath {
+					return docID, true
+				}
 			}
 		}
 	}
 
 	return DocumentID{}, false
+}
+
+// documentPathForModule returns the file path for a document within a module.
+func (b *BalaProject) documentPathForModule(docID DocumentID, module *Module) string {
+	doc := module.Document(docID)
+	if doc == nil {
+		return ""
+	}
+	moduleName := module.ModuleName().String()
+	return filepath.Join(b.sourceRoot, ModulesDir, moduleName, doc.Name())
 }
 
 // DocumentPath returns the file path for the given DocumentID.
@@ -120,7 +130,7 @@ func (b *BalaProject) Save() {
 // Duplicate creates a deep copy of the bala project.
 func (b *BalaProject) Duplicate() Project {
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
-	newProject := newBalaProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions, b.platform)
+	newProject := newBalaProjectWithEnv(b.sourceRoot, duplicateBuildOptions, b.platform, b.Environment().Duplicate())
 	ResetPackage(b, newProject)
 	return newProject
 }

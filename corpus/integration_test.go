@@ -227,6 +227,7 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 
 	ballerinaHome, err := projects.NewBallerinaHome()
 	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
@@ -367,6 +368,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 
 	ballerinaHome, err := projects.NewBallerinaHome()
 	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())

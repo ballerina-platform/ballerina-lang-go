@@ -35,6 +35,9 @@ type PackageResolver interface {
 	// AddRepository adds a repository to the resolver.
 	// Repositories are searched in the order they are added.
 	AddRepository(repo Repository)
+
+	// Repositories returns the list of repositories in this resolver.
+	Repositories() []Repository
 }
 
 // defaultPackageResolver is the default implementation of PackageResolver.
@@ -48,6 +51,11 @@ type defaultPackageResolver struct {
 // Repositories are searched in the order they are added.
 func (r *defaultPackageResolver) AddRepository(repo Repository) {
 	r.repositories = append(r.repositories, repo)
+}
+
+// Repositories returns the list of repositories in this resolver.
+func (r *defaultPackageResolver) Repositories() []Repository {
+	return r.repositories
 }
 
 // NewPackageResolver creates a new PackageResolver with the given cache and repositories.

@@ -51,10 +51,20 @@
 //
 // # Loading Projects
 //
-// Use [Load] to load projects from the filesystem:
+// Use [Load] to load projects from the filesystem. First, set up the required filesystems:
+//
+//	// Set up project filesystem (the directory containing the project)
+//	fsys := os.DirFS("/path/to/project/parent")
+//
+//	// Set up Ballerina home filesystem (for langlib and cached packages)
+//	ballerinaHome, err := projects.NewBallerinaHome()
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
 //
 //	// Load with default options
-//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject")
+//	result, err := projects.Load(fsys, ballerinaHomeFs, "myproject")
 //
 //	// Load with custom build options
 //	buildOpts := projects.NewBuildOptionsBuilder().
@@ -68,9 +78,10 @@
 //	// Load a single .bal file
 //	result, err := projects.Load(fsys, ballerinaHomeFs, "./main.bal")
 //
-// The [ProjectLoadConfig] struct allows optional configuration:
+// [ProjectLoadConfig] allows optional configuration:
 //   - BuildOptions: Compilation settings (offline mode, skip tests, etc.)
-//   - Future fields can be added without breaking existing callers
+//   - RepositoryFactories: Functions that create package repositories for dependency resolution
+//   - ResolutionOptions: Settings for package resolution (offline mode, sticky versions, etc.)
 //
 // # Compilation Pipeline
 //

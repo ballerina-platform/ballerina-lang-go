@@ -37,43 +37,45 @@ func newModuleLoadRequestKey(request *moduleLoadRequest) moduleLoadRequestKey {
 	}
 }
 
-// ResolutionStatus indicates whether a module/package was resolved.
+// resolutionStatus indicates whether a module/package was resolved.
 // Java source: io.ballerina.projects.environment.ResolutionResponse.ResolutionStatus
-type ResolutionStatus int
+type resolutionStatus int
 
 const (
-	// ResolutionStatusResolved indicates the module/package was found.
-	ResolutionStatusResolved ResolutionStatus = iota
-	// ResolutionStatusUnresolved indicates the module/package was not found.
-	ResolutionStatusUnresolved
+	// resolutionStatusResolved indicates the module/package was found.
+	resolutionStatusResolved resolutionStatus = iota
+	// resolutionStatusUnresolved indicates the module/package was not found.
+	resolutionStatusUnresolved
 )
 
-// ImportModuleResponse represents the result of resolving a moduleLoadRequest.
-// Java source: io.ballerina.projects.internal.ImportModuleResponse
-type ImportModuleResponse struct {
+// importModuleResponse represents the result of resolving a moduleLoadRequest.
+// Java source: io.ballerina.projects.internal.importModuleResponse
+type importModuleResponse struct {
 	packageDescriptor *PackageDescriptor // Package containing the module (nil for same package)
 	moduleDesc        ModuleDescriptor   // Module descriptor
-	resolutionStatus  ResolutionStatus
+	resolutionStatus  resolutionStatus
 }
 
 // moduleResolver resolves module dependencies using PackageResolver.
 // Java source: io.ballerina.projects.internal.ModuleResolver
 type moduleResolver struct {
-	rootPkgDesc     PackageDescriptor
-	responseMap     map[moduleLoadRequestKey]*ImportModuleResponse
-	packageResolver PackageResolver
+	rootPkgDesc       PackageDescriptor
+	responseMap       map[moduleLoadRequestKey]*importModuleResponse
+	packageResolver   PackageResolver
+	resolutionOptions ResolutionOptions
 }
 
 func newModuleResolver(rootPkgDesc PackageDescriptor, env *Environment) *moduleResolver {
 	return &moduleResolver{
-		rootPkgDesc:     rootPkgDesc,
-		responseMap:     make(map[moduleLoadRequestKey]*ImportModuleResponse),
-		packageResolver: env.PackageResolver(),
+		rootPkgDesc:       rootPkgDesc,
+		responseMap:       make(map[moduleLoadRequestKey]*importModuleResponse),
+		packageResolver:   env.PackageResolver(),
+		resolutionOptions: env.ResolutionOptions(),
 	}
 }
 
-func (r *moduleResolver) resolveModuleLoadRequests(ctx context.Context, requests []*moduleLoadRequest) []*ImportModuleResponse {
-	responses := make([]*ImportModuleResponse, 0, len(requests))
+func (r *moduleResolver) resolveModuleLoadRequests(ctx context.Context, requests []*moduleLoadRequest) []*importModuleResponse {
+	responses := make([]*importModuleResponse, 0, len(requests))
 
 	for _, request := range requests {
 		key := newModuleLoadRequestKey(request)
@@ -93,7 +95,7 @@ func (r *moduleResolver) resolveModuleLoadRequests(ctx context.Context, requests
 	return responses
 }
 
-func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoadRequest) *ImportModuleResponse {
+func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoadRequest) *importModuleResponse {
 	// Determine org - use request org or default to root package org
 	org := r.rootPkgDesc.Org().Value()
 	if request.orgName != nil {
@@ -104,24 +106,31 @@ func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoad
 	pkgName := extractPackageName(request.moduleName)
 
 	// Look up packages via PackageResolver
-	packages := r.packageResolver.ResolveByName(ctx, org, pkgName, NewResolutionOptions())
-	for _, pkg := range packages {
+	// Packages are returned oldest-first, so iterate in reverse to get the newest version
+	packages := r.packageResolver.ResolveByName(ctx, org, pkgName, r.resolutionOptions)
+	for i := len(packages) - 1; i >= 0; i-- {
+		pkg := packages[i]
 		// Check if module exists in this package
 		for _, mod := range pkg.Modules() {
 			if mod.ModuleName().String() == request.moduleName {
 				pkgDesc := pkg.Manifest().PackageDescriptor()
-				return &ImportModuleResponse{
-					packageDescriptor: &pkgDesc,
+				// Only set packageDescriptor for external packages (nil for same-package)
+				var pkgDescPtr *PackageDescriptor
+				if !pkgDesc.Equals(r.rootPkgDesc) {
+					pkgDescPtr = &pkgDesc
+				}
+				return &importModuleResponse{
+					packageDescriptor: pkgDescPtr,
 					moduleDesc:        mod.Descriptor(),
-					resolutionStatus:  ResolutionStatusResolved,
+					resolutionStatus:  resolutionStatusResolved,
 				}
 			}
 		}
 	}
 
 	// Module not found
-	return &ImportModuleResponse{
-		resolutionStatus: ResolutionStatusUnresolved,
+	return &importModuleResponse{
+		resolutionStatus: resolutionStatusUnresolved,
 	}
 }
 

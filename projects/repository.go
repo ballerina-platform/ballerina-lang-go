@@ -44,31 +44,3 @@ type Repository interface {
 	// Java source: io.ballerina.projects.repos.PackageRepository.getLatestVersion
 	GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error)
 }
-
-// RepositoryError represents an error from a repository operation.
-// Java source: io.ballerina.projects.repos.RepositoryException
-type RepositoryError struct {
-	Repository string
-	Message    string
-	Cause      error
-}
-
-func (e *RepositoryError) Error() string {
-	if e.Cause != nil {
-		return e.Repository + ": " + e.Message + ": " + e.Cause.Error()
-	}
-	return e.Repository + ": " + e.Message
-}
-
-func (e *RepositoryError) Unwrap() error {
-	return e.Cause
-}
-
-// NewRepositoryError creates a new RepositoryError.
-func NewRepositoryError(repository, message string, cause error) *RepositoryError {
-	return &RepositoryError{
-		Repository: repository,
-		Message:    message,
-		Cause:      cause,
-	}
-}

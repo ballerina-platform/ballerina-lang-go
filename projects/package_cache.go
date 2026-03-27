@@ -39,9 +39,20 @@ func newPackageCache() *PackageCache {
 	}
 }
 
-// packageCacheKey generates a cache key for a package.
-func packageCacheKey(org, name, version string) string {
+// PackageCacheKey generates a cache key for a package.
+func PackageCacheKey(org, name, version string) string {
 	return org + "/" + name + "/" + version
+}
+
+// initMaps ensures the internal maps are initialized.
+// Must be called with the lock held.
+func (c *PackageCache) initMaps() {
+	if c.projectsByID == nil {
+		c.projectsByID = make(map[PackageID]Project)
+	}
+	if c.projectsByOrgNameVer == nil {
+		c.projectsByOrgNameVer = make(map[string]Project)
+	}
 }
 
 // Cache adds a package to the cache.
@@ -53,11 +64,13 @@ func (c *PackageCache) Cache(pkg *Package) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	c.initMaps()
+
 	project := pkg.Project()
 	c.projectsByID[pkg.PackageID()] = project
 
 	desc := pkg.Manifest().PackageDescriptor()
-	key := packageCacheKey(desc.Org().Value(), desc.Name().Value(), desc.Version().String())
+	key := PackageCacheKey(desc.Org().Value(), desc.Name().Value(), desc.Version().String())
 	c.projectsByOrgNameVer[key] = project
 }
 
@@ -67,7 +80,7 @@ func (c *PackageCache) Get(org, name, version string) *Package {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	key := packageCacheKey(org, name, version)
+	key := PackageCacheKey(org, name, version)
 	project := c.projectsByOrgNameVer[key]
 	if project != nil {
 		return project.CurrentPackage()

@@ -62,12 +62,12 @@ func TestPackageResolution_WithCache(t *testing.T) {
 	repo := repository.NewRepository(cachePath)
 
 	// Load mock package from repository (auto-caches via InitPackage)
-	project, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
+	pkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
 	require.NoError(err)
-	require.NotNil(project)
+	require.NotNil(pkg)
 
 	// Verify package is auto-cached in environment
-	cache := project.Environment().PackageCache()
+	cache := pkg.Project().Environment().PackageCache()
 	assert.Equal(1, cache.Size())
 
 	// Verify package is cached and can be retrieved
@@ -146,12 +146,12 @@ func TestRepository_Integration(t *testing.T) {
 
 	repo := repository.NewRepository(cachePath)
 
-	// Test GetVersions
-	versions, err := repo.GetVersions(context.Background(), "mockorg", "mockpkg")
+	// Test GetPackageVersions
+	versions, err := repo.GetPackageVersions(context.Background(), "mockorg", "mockpkg")
 	require.NoError(err)
 	hasVersion := false
 	for _, v := range versions {
-		if v == "1.0.0" {
+		if v.String() == "1.0.0" {
 			hasVersion = true
 			break
 		}
@@ -159,9 +159,10 @@ func TestRepository_Integration(t *testing.T) {
 	assert.True(hasVersion, "expected versions to contain 1.0.0")
 
 	// Test GetLatestVersion
-	latest, err := repo.GetLatestVersion(context.Background(), "mockorg", "mockpkg")
+	latest, found, err := repo.GetLatestVersion(context.Background(), "mockorg", "mockpkg")
 	require.NoError(err)
-	assert.Equal("1.0.0", latest)
+	assert.True(found)
+	assert.Equal("1.0.0", latest.String())
 
 	// Test Exists
 	exists, err := repo.Exists(context.Background(), "mockorg", "mockpkg", "1.0.0")
@@ -174,10 +175,10 @@ func TestRepository_Integration(t *testing.T) {
 	assert.False(exists)
 
 	// Test GetPackage
-	project, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
+	loadedPkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
 	require.NoError(err)
-	require.NotNil(project)
-	assert.Equal(projects.ProjectKindBala, project.Kind())
+	require.NotNil(loadedPkg)
+	assert.Equal(projects.ProjectKindBala, loadedPkg.Project().Kind())
 }
 
 // TestPackageResolution_ExternalDependencyCompilation tests package resolution with external dependencies
@@ -198,7 +199,7 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		RepositoryFactories: []projects.RepositoryFactory{
 			func(env *projects.Environment) projects.Repository {
-				return projects.NewFileSystemRepository(
+				return repository.NewFileSystemRepository(
 					"test-repo",
 					os.DirFS(testRepoPath),
 					".",
@@ -236,7 +237,7 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 
 	resolvedDeps := resolution.ResolvedDependencies()
 	mockpkgDesc, found := resolvedDeps["mockorg/mockpkg"]
-	require.True(found, "resolved dependencies should contain mockorg/mockpkg")
+	assert.True(found, "resolved dependencies should contain mockorg/mockpkg")
 	assert.Equal("mockorg", mockpkgDesc.Org().Value())
 	assert.Equal("mockpkg", mockpkgDesc.Name().Value())
 	assert.Equal("1.0.0", mockpkgDesc.Version().String())
@@ -273,7 +274,7 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		RepositoryFactories: []projects.RepositoryFactory{
 			func(env *projects.Environment) projects.Repository {
-				return projects.NewFileSystemRepository(
+				return repository.NewFileSystemRepository(
 					"test-repo",
 					os.DirFS(testRepoPath),
 					".", // basePath relative to fsys root
@@ -323,7 +324,7 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 
 	resolvedDeps := resolution.ResolvedDependencies()
 	middlepkgDesc, found := resolvedDeps["mockorg/middlepkg"]
-	require.True(found, "resolved dependencies should contain mockorg/middlepkg")
+	assert.True(found, "resolved dependencies should contain mockorg/middlepkg")
 	assert.Equal("mockorg", middlepkgDesc.Org().Value())
 	assert.Equal("middlepkg", middlepkgDesc.Name().Value())
 	assert.Equal("1.0.0", middlepkgDesc.Version().String())
@@ -334,7 +335,7 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 
 	middleResolvedDeps := middleResolution.ResolvedDependencies()
 	leafpkgDesc, found := middleResolvedDeps["mockorg/leafpkg"]
-	require.True(found, "middlepkg's resolved dependencies should contain mockorg/leafpkg")
+	assert.True(found, "middlepkg's resolved dependencies should contain mockorg/leafpkg")
 	assert.Equal("mockorg", leafpkgDesc.Org().Value())
 	assert.Equal("leafpkg", leafpkgDesc.Name().Value())
 }

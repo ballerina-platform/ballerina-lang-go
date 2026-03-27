@@ -23,10 +23,11 @@ import (
 	"slices"
 	"testing"
 
+	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/repository"
 )
 
-func TestRepository_GetVersions(t *testing.T) {
+func TestRepository_GetPackageVersions(t *testing.T) {
 	repo := repository.NewRepository("testdata/repo/bala")
 
 	tests := []struct {
@@ -51,13 +52,13 @@ func TestRepository_GetVersions(t *testing.T) {
 			name:     "non-existent package",
 			org:      "ballerina",
 			pkg:      "nonexistent",
-			expected: []string{},
+			expected: nil,
 		},
 		{
 			name:     "non-existent org",
 			org:      "nonexistent",
 			pkg:      "http",
-			expected: []string{},
+			expected: nil,
 		},
 		{
 			name:     "testorg with multiple versions",
@@ -69,12 +70,17 @@ func TestRepository_GetVersions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			versions, err := repo.GetVersions(context.Background(), tt.org, tt.pkg)
+			versions, err := repo.GetPackageVersions(context.Background(), tt.org, tt.pkg)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !slices.Equal(versions, tt.expected) {
-				t.Errorf("got %v, want %v", versions, tt.expected)
+			// Convert to strings for comparison
+			var got []string
+			for _, v := range versions {
+				got = append(got, v.String())
+			}
+			if !slices.Equal(got, tt.expected) {
+				t.Errorf("got %v, want %v", got, tt.expected)
 			}
 		})
 	}
@@ -84,26 +90,34 @@ func TestRepository_GetLatestVersion(t *testing.T) {
 	repo := repository.NewRepository("testdata/repo/bala")
 
 	tests := []struct {
-		name     string
-		org      string
-		pkg      string
-		expected string
+		name      string
+		org       string
+		pkg       string
+		expected  string
+		wantFound bool
 	}{
-		{"latest of multiple", "ballerina", "http", "2.10.1"},
-		{"single version", "ballerina", "io", "1.6.0"},
-		{"non-existent package", "ballerina", "nonexistent", ""},
-		{"non-existent org", "nonexistent", "http", ""},
-		{"testorg latest", "testorg", "testpkg", "2.0.0"},
+		{"latest of multiple", "ballerina", "http", "2.10.1", true},
+		{"single version", "ballerina", "io", "1.6.0", true},
+		{"non-existent package", "ballerina", "nonexistent", "", false},
+		{"non-existent org", "nonexistent", "http", "", false},
+		{"testorg latest", "testorg", "testpkg", "2.0.0", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			version, err := repo.GetLatestVersion(context.Background(), tt.org, tt.pkg)
+			version, found, err := repo.GetLatestVersion(context.Background(), tt.org, tt.pkg)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if version != tt.expected {
-				t.Errorf("got %q, want %q", version, tt.expected)
+			if found != tt.wantFound {
+				t.Errorf("found = %v, want %v", found, tt.wantFound)
+			}
+			var got string
+			if found {
+				got = version.String()
+			}
+			if got != tt.expected {
+				t.Errorf("got %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -145,15 +159,15 @@ func TestRepository_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	t.Run("GetVersions cancelled", func(t *testing.T) {
-		_, err := repo.GetVersions(ctx, "ballerina", "http")
+	t.Run("GetPackageVersions cancelled", func(t *testing.T) {
+		_, err := repo.GetPackageVersions(ctx, "ballerina", "http")
 		if err != context.Canceled {
 			t.Errorf("expected context.Canceled, got %v", err)
 		}
 	})
 
 	t.Run("GetLatestVersion cancelled", func(t *testing.T) {
-		_, err := repo.GetLatestVersion(ctx, "ballerina", "http")
+		_, _, err := repo.GetLatestVersion(ctx, "ballerina", "http")
 		if err != context.Canceled {
 			t.Errorf("expected context.Canceled, got %v", err)
 		}
@@ -184,4 +198,9 @@ func TestRepository_Root(t *testing.T) {
 func TestRepository_ImplementsWritableRepository(t *testing.T) {
 	// Compile-time check - if this compiles, the interface is satisfied
 	var _ repository.WritableRepository = (*repository.Repository)(nil)
+}
+
+func TestRepository_ImplementsProjectsRepository(t *testing.T) {
+	// Compile-time check - if this compiles, Repository implements projects.Repository
+	var _ projects.Repository = (*repository.Repository)(nil)
 }
