@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Package test_util provides assertion utilities for testing.
 package test_util
 
 import (
@@ -24,7 +23,6 @@ import (
 )
 
 // Assert provides assertion methods for testing.
-// Usage: assert := testutil.New(t)
 type Assert struct {
 	t *testing.T
 }
@@ -48,14 +46,6 @@ func (a *Assert) False(condition bool, msgAndArgs ...any) {
 	a.t.Helper()
 	if condition {
 		a.fail("expected false but got true", msgAndArgs...)
-	}
-}
-
-// Nil asserts that the value is nil.
-func (a *Assert) Nil(value any, msgAndArgs ...any) {
-	a.t.Helper()
-	if !isNil(value) {
-		a.fail("expected nil but got non-nil value", msgAndArgs...)
 	}
 }
 
@@ -87,7 +77,6 @@ func (a *Assert) NotEqual(expected, actual any, msgAndArgs ...any) {
 }
 
 // Same asserts that two pointers refer to the same object.
-// Java: Assert.assertSame(actual, expected)
 func (a *Assert) Same(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
@@ -100,7 +89,6 @@ func (a *Assert) Same(expected, actual any, msgAndArgs ...any) {
 }
 
 // NotSame asserts that two pointers refer to different objects.
-// Java: Assert.assertNotSame(actual, expected)
 func (a *Assert) NotSame(expected, actual any, msgAndArgs ...any) {
 	a.t.Helper()
 	if !isComparable(expected) || !isComparable(actual) {
@@ -109,24 +97,6 @@ func (a *Assert) NotSame(expected, actual any, msgAndArgs ...any) {
 	}
 	if expected == actual {
 		a.fail("expected different instances but got same instance", msgAndArgs...)
-	}
-}
-
-// Contains asserts that the string contains the substring.
-func (a *Assert) Contains(s, substr string, msgAndArgs ...any) {
-	a.t.Helper()
-	if len(s) == 0 || len(substr) == 0 {
-		a.fail("expected string to contain substring", msgAndArgs...)
-		return
-	}
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return
-		}
-	}
-	a.t.Errorf("expected %q to contain %q", s, substr)
-	if len(msgAndArgs) > 0 {
-		a.t.Log(formatMessage(msgAndArgs...))
 	}
 }
 
@@ -150,12 +120,6 @@ func (a *Assert) Len(object any, expected int, msgAndArgs ...any) {
 	}
 }
 
-// Empty asserts that the slice/map/string is empty.
-func (a *Assert) Empty(object any, msgAndArgs ...any) {
-	a.t.Helper()
-	a.Len(object, 0, msgAndArgs...)
-}
-
 // NotEmpty asserts that the slice/map/string is not empty.
 func (a *Assert) NotEmpty(object any, msgAndArgs ...any) {
 	a.t.Helper()
@@ -173,42 +137,6 @@ func (a *Assert) NotEmpty(object any, msgAndArgs ...any) {
 	}
 }
 
-// NoError asserts that err is nil.
-func (a *Assert) NoError(err error, msgAndArgs ...any) {
-	a.t.Helper()
-	if err != nil {
-		a.t.Errorf("expected no error but got: %v", err)
-		if len(msgAndArgs) > 0 {
-			a.t.Log(formatMessage(msgAndArgs...))
-		}
-	}
-}
-
-// Error asserts that err is not nil.
-func (a *Assert) Error(err error, msgAndArgs ...any) {
-	a.t.Helper()
-	if err == nil {
-		a.fail("expected an error but got nil", msgAndArgs...)
-	}
-}
-
-// Fail fails the test immediately.
-func (a *Assert) Fail(msgAndArgs ...any) {
-	a.t.Helper()
-	a.fail("test failed", msgAndArgs...)
-}
-
-// FailNow fails the test immediately and stops execution.
-func (a *Assert) FailNow(msgAndArgs ...any) {
-	a.t.Helper()
-	if len(msgAndArgs) > 0 {
-		a.t.Fatal(formatMessage(msgAndArgs...))
-	} else {
-		a.t.FailNow()
-	}
-}
-
-// fail is a helper to report test failures.
 func (a *Assert) fail(defaultMsg string, msgAndArgs ...any) {
 	a.t.Helper()
 	if len(msgAndArgs) > 0 {
@@ -218,7 +146,6 @@ func (a *Assert) fail(defaultMsg string, msgAndArgs ...any) {
 	}
 }
 
-// formatMessage formats the message and arguments.
 func formatMessage(msgAndArgs ...any) string {
 	if len(msgAndArgs) == 0 {
 		return ""
@@ -235,7 +162,6 @@ func formatMessage(msgAndArgs ...any) string {
 	return ""
 }
 
-// isNil checks if a value is nil, handling interface nil correctly.
 func isNil(value any) bool {
 	if value == nil {
 		return true
@@ -249,8 +175,6 @@ func isNil(value any) bool {
 	return false
 }
 
-// isComparable checks if a value can be compared using == or !=.
-// Returns true for nil and comparable types, false for slices, maps, and functions.
 func isComparable(value any) bool {
 	if value == nil {
 		return true

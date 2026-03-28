@@ -22,7 +22,6 @@ import (
 )
 
 // Require provides fatal assertion methods that stop test execution on failure.
-// Usage: require := testutil.NewRequire(t)
 type Require struct {
 	t *testing.T
 }
@@ -33,27 +32,14 @@ func NewRequire(t *testing.T) *Require {
 	return &Require{t: t}
 }
 
-// True requires that the condition is true, fails the test immediately if false.
-func (r *Require) True(condition bool, msgAndArgs ...any) {
+// NoError requires that err is nil, fails the test immediately if not.
+func (r *Require) NoError(err error, msgAndArgs ...any) {
 	r.t.Helper()
-	if !condition {
-		r.failNow("expected true but got false", msgAndArgs...)
-	}
-}
-
-// False requires that the condition is false, fails the test immediately if true.
-func (r *Require) False(condition bool, msgAndArgs ...any) {
-	r.t.Helper()
-	if condition {
-		r.failNow("expected false but got true", msgAndArgs...)
-	}
-}
-
-// Nil requires that the value is nil, fails the test immediately if not.
-func (r *Require) Nil(value any, msgAndArgs ...any) {
-	r.t.Helper()
-	if !isNil(value) {
-		r.failNow("expected nil but got non-nil value", msgAndArgs...)
+	if err != nil {
+		if len(msgAndArgs) > 0 {
+			r.t.Fatalf("%s: %v", formatMessage(msgAndArgs...), err)
+		}
+		r.t.Fatalf("expected no error but got: %v", err)
 	}
 }
 
@@ -65,45 +51,11 @@ func (r *Require) NotNil(value any, msgAndArgs ...any) {
 	}
 }
 
-// Equal requires that two values are equal, fails the test immediately if not.
-func (r *Require) Equal(expected, actual any, msgAndArgs ...any) {
-	r.t.Helper()
-	if !reflect.DeepEqual(expected, actual) {
-		r.t.Fatalf("expected %v but got %v", expected, actual)
-	}
-}
-
 // NotEqual requires that two values are not equal, fails the test immediately if equal.
 func (r *Require) NotEqual(expected, actual any, msgAndArgs ...any) {
 	r.t.Helper()
 	if reflect.DeepEqual(expected, actual) {
 		r.failNow("expected values to be different but they are equal", msgAndArgs...)
-	}
-}
-
-// Same requires that two pointers refer to the same object.
-// Note: Panics are prevented by checking comparability first.
-func (r *Require) Same(expected, actual any, msgAndArgs ...any) {
-	r.t.Helper()
-	if !isComparable(expected) || !isComparable(actual) {
-		r.failNow("Same() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
-		return
-	}
-	if expected != actual {
-		r.failNow("expected same instance but got different instances", msgAndArgs...)
-	}
-}
-
-// NotSame requires that two pointers refer to different objects.
-// Note: Panics are prevented by checking comparability first.
-func (r *Require) NotSame(expected, actual any, msgAndArgs ...any) {
-	r.t.Helper()
-	if !isComparable(expected) || !isComparable(actual) {
-		r.failNow("NotSame() requires comparable types (not slices, maps, or functions)", msgAndArgs...)
-		return
-	}
-	if expected == actual {
-		r.failNow("expected different instances but got same instance", msgAndArgs...)
 	}
 }
 
@@ -124,12 +76,6 @@ func (r *Require) Len(object any, expected int, msgAndArgs ...any) {
 	}
 }
 
-// Empty requires that the slice/map/string is empty.
-func (r *Require) Empty(object any, msgAndArgs ...any) {
-	r.t.Helper()
-	r.Len(object, 0, msgAndArgs...)
-}
-
 // NotEmpty requires that the slice/map/string is not empty.
 func (r *Require) NotEmpty(object any, msgAndArgs ...any) {
 	r.t.Helper()
@@ -147,29 +93,6 @@ func (r *Require) NotEmpty(object any, msgAndArgs ...any) {
 	}
 }
 
-// NoError requires that err is nil, fails the test immediately if not.
-func (r *Require) NoError(err error, msgAndArgs ...any) {
-	r.t.Helper()
-	if err != nil {
-		r.t.Fatalf("expected no error but got: %v", err)
-	}
-}
-
-// Error requires that err is not nil, fails the test immediately if nil.
-func (r *Require) Error(err error, msgAndArgs ...any) {
-	r.t.Helper()
-	if err == nil {
-		r.failNow("expected an error but got nil", msgAndArgs...)
-	}
-}
-
-// Fail fails the test immediately.
-func (r *Require) Fail(msgAndArgs ...any) {
-	r.t.Helper()
-	r.failNow("test failed", msgAndArgs...)
-}
-
-// failNow is a helper to report fatal test failures.
 func (r *Require) failNow(defaultMsg string, msgAndArgs ...any) {
 	r.t.Helper()
 	if len(msgAndArgs) > 0 {
