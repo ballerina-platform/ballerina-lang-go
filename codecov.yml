@@ -2,10 +2,12 @@ github_checks:
   annotations: true
 
 ignore:
-  - "test_util/**/*"
+  - "test_util"
 
 coverage:
   status:
     patch:
       default:
         target: 80%
+        paths:
+          - "!test_util"
