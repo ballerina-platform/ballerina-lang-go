@@ -1,0 +1,10 @@
+-- stdout --
+==================BEGIN BIR==================
+main() -> nil{
+fibonacci
+ConstantLoad F(
+F(9) = 34
+-- stderr --
+<<ANY>>
+-- exitcode --
+0

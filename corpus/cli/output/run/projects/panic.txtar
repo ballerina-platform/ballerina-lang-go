@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-ballerina: error: arithmetic overflow
+error: arithmetic overflow
         at testorg/cli_panic_project:addOne(main.bal:23)
            testorg/cli_panic_project:main(main.bal:19)
 -- exitcode --

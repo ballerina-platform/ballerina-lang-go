@@ -35,6 +35,10 @@ func printError(err error, usage string, showHelp bool) {
 	printErrorTo(os.Stderr, err, usage, showHelp)
 }
 
+func printRuntimeError(err error) {
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+}
+
 // printErrorTo prints an error message in the standard Ballerina CLI format to the given writer.
 func printErrorTo(w io.Writer, err error, usage string, showHelp bool) {
 	_, _ = fmt.Fprintf(w, "ballerina: %s\n", err.Error())

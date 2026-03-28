@@ -1,0 +1,10 @@
+-- stdout --
+(compilation-unit  regular-source
+(function main
+(while
+(function fibonacci
+F(9) = 34
+-- stderr --
+<<ANY>>
+-- exitcode --
+0

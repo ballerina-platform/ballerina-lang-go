@@ -1,0 +1,11 @@
+-- stdout --
+F(0) = 0
+(public 6
+(function 8
+(while 5
+(ident, "fibonacci"
+F(9) = 34
+-- stderr --
+<<ANY>>
+-- exitcode --
+0

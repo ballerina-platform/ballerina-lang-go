@@ -5,7 +5,6 @@ Usage:
   bal [command]
 
 Available Commands:
-  completion  Manage shell completions for bal
   help        Help about any command
   new         Create a new Ballerina package
   run         Build and run the current package or a Ballerina source file

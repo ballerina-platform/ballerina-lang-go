@@ -33,7 +33,7 @@ func TestBalRunCorpus(t *testing.T) {
 	}
 	flag.Parse()
 
-	balBin, repoRoot, coverDir := integrationTestBal(t)
+	balBin, repoRoot, coverDir := integrationTestBal(t, false)
 	testDataRoot := filepath.Join(repoRoot, "corpus", "cli", "testdata", "run")
 	outputsRoot := filepath.Join(repoRoot, "corpus", "cli", "output", "run")
 

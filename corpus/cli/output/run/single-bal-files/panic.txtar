@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-ballerina: error: arithmetic overflow
+error: arithmetic overflow
         at addOne(panic.bal:23)
            main(panic.bal:19)
 -- exitcode --

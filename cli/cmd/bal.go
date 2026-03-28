@@ -33,7 +33,6 @@ var rootCmd = &cobra.Command{
 func main() {
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
