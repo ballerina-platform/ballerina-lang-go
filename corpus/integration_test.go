@@ -34,8 +34,6 @@ import (
 	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
-
-	"golang.org/x/tools/txtar"
 )
 
 const (
@@ -92,7 +90,6 @@ var (
 		"subset7/07-function/typeCast2-v.bal",
 		"subset7/07-function/typeCast3-p.bal",
 		"subset7/07-closure/equality4-v.bal",
-		"subset7/07-closure/equality4-v.bal",
 		"subset7/07-closure/typeCast1-v.bal",
 		"subset7/07-closure/typeCast2-p.bal",
 	}
@@ -121,6 +118,26 @@ func TestIntegration(t *testing.T) {
 	}
 }
 
+func TestProjectIntegration(t *testing.T) {
+	flag.Parse()
+
+	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
+		return
+	}
+
+	projectDirs := findProjectDirs(corpusProjectBaseDir)
+
+	for _, projDir := range projectDirs {
+		dirName := filepath.Base(projDir)
+		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
+
+		t.Run(dirName, func(t *testing.T) {
+			t.Parallel()
+			testProjectIntegration(t, dirName, projDir, txtarPath)
+		})
+	}
+}
+
 func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	if isTestSkipped(testPair) {
 		t.Skipf("Skipping integration test for %s", testPair.InputPath)
@@ -134,13 +151,13 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	if *update {
 		stdout, stderr := runIntegrationCase(testPair.InputPath)
-		if updateIfNeeded(t, testPair.ExpectedPath, stdout, stderr) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(stdout, stderr)) {
 			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
 		return
 	}
 
-	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(testPair.ExpectedPath)
+	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
 	if err != nil {
 		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 	}
@@ -155,63 +172,19 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	var msg strings.Builder
 	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
 	}
 	if stderrMismatch {
 		if msg.Len() > 0 {
 			msg.WriteString("\n\n")
 		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(result.expectedStderr, result.actualStderr))
 	}
 	t.Errorf("%s", msg.String())
 }
 
-func formatExpectedGot(expected, got string) string {
-	const indent = "\t"
-	format := func(s string) string {
-		if s == "" {
-			return indent + "(empty)"
-		}
-		var b strings.Builder
-		for line := range strings.SplitSeq(s, "\n") {
-			b.WriteString(indent)
-			b.WriteString(line)
-			b.WriteString("\n")
-		}
-		return strings.TrimSuffix(b.String(), "\n")
-	}
-	return "expected:\n" + format(expected) + "\n\ngot:\n" + format(got)
-}
-
 func isTestSkipped(tc test_util.TestCase) bool {
 	return slices.Contains(skipIntegrationTests, filepath.ToSlash(tc.Name))
-}
-
-func loadExpectedFromTxtar(txtarPath string) (expectedStdout, expectedStderr string, err error) {
-	archive, err := txtar.ParseFile(txtarPath)
-	if err != nil {
-		return "", "", err
-	}
-
-	var stdoutFound, stderrFound bool
-	for _, f := range archive.Files {
-		switch f.Name {
-		case "stdout":
-			expectedStdout = string(f.Data)
-			stdoutFound = true
-		case "stderr":
-			expectedStderr = string(f.Data)
-			stderrFound = true
-		default:
-			return "", "", fmt.Errorf("unexpected file %q (only stdout/stderr are allowed)", f.Name)
-		}
-	}
-
-	if !stdoutFound || !stderrFound {
-		return "", "", fmt.Errorf("missing required files (need stdout and stderr)")
-	}
-
-	return expectedStdout, expectedStderr, nil
 }
 
 func runTest(balFile string, expectedStdout, expectedStderr string) testResult {
@@ -296,94 +269,6 @@ func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) 
 	}
 }
 
-func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
-	archive := &txtar.Archive{
-		Files: []txtar.File{
-			{Name: "stdout", Data: []byte(stdout)},
-			{Name: "stderr", Data: []byte(stderr)},
-		},
-	}
-
-	actual := txtar.Format(archive)
-
-	existing, err := os.ReadFile(expectedPath)
-	fileExists := err == nil
-
-	if fileExists && bytes.Equal(existing, actual) {
-		return false
-	}
-	dir := filepath.Dir(expectedPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("Failed to create directory %s: %v", dir, err)
-	}
-	if err := os.WriteFile(expectedPath, actual, 0o644); err != nil {
-		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
-	}
-	return true
-}
-
-func TestProjectIntegration(t *testing.T) {
-	flag.Parse()
-
-	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
-		return
-	}
-
-	projectDirs := findProjectDirs(corpusProjectBaseDir)
-
-	for _, projDir := range projectDirs {
-		dirName := filepath.Base(projDir)
-		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
-
-		t.Run(dirName, func(t *testing.T) {
-			t.Parallel()
-			testProjectIntegration(t, dirName, projDir, txtarPath)
-		})
-	}
-}
-
-func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("panic while running %s: %v", dirName, r)
-		}
-	}()
-
-	if *update {
-		stdout, stderr := runProjectIntegrationCase(projDir)
-		if updateIfNeeded(t, txtarPath, stdout, stderr) {
-			t.Fatalf("Updated expected file: %s", txtarPath)
-		}
-		return
-	}
-
-	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(txtarPath)
-	if err != nil {
-		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
-	}
-
-	stdout, stderr := runProjectIntegrationCase(projDir)
-	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
-	if result.success {
-		return
-	}
-
-	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := result.expectedStderr != result.actualStderr
-
-	var msg strings.Builder
-	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
-	}
-	if stderrMismatch {
-		if msg.Len() > 0 {
-			msg.WriteString("\n\n")
-		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
-	}
-	t.Errorf("%s", msg.String())
-}
-
 func findProjectDirs(dir string) []string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -400,6 +285,48 @@ func findProjectDirs(dir string) []string {
 		}
 	}
 	return dirs
+}
+
+func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while running %s: %v", dirName, r)
+		}
+	}()
+
+	if *update {
+		stdout, stderr := runProjectIntegrationCase(projDir)
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(stdout, stderr)) {
+			t.Fatalf("Updated expected file: %s", txtarPath)
+		}
+		return
+	}
+
+	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(txtarPath)
+	if err != nil {
+		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
+	}
+
+	stdout, stderr := runProjectIntegrationCase(projDir)
+	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+	if result.success {
+		return
+	}
+
+	stdoutMismatch := result.expectedStdout != result.actualStdout
+	stderrMismatch := result.expectedStderr != result.actualStderr
+
+	var msg strings.Builder
+	if stdoutMismatch {
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
+	}
+	if stderrMismatch {
+		if msg.Len() > 0 {
+			msg.WriteString("\n\n")
+		}
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(result.expectedStderr, result.actualStderr))
+	}
+	t.Errorf("%s", msg.String())
 }
 
 func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
