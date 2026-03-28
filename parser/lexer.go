@@ -30,11 +30,9 @@ import (
 
 const INITIAL_TRIVIA_CAPACITY = 10
 
-// TODO: introduce diagnostic context with flags and a channel
 type Lexer struct {
-	reader   text.CharReader
-	context  LexerContext
-	debugCtx *debugcommon.DebugContext
+	reader  text.CharReader
+	context LexerContext
 }
 
 type LexerContext struct {
@@ -44,11 +42,10 @@ type LexerContext struct {
 	diagnostics       []tree.STNodeDiagnostic
 }
 
-func NewLexer(reader text.CharReader, debugCtx *debugcommon.DebugContext) *Lexer {
+func NewLexer(reader text.CharReader) *Lexer {
 	return &Lexer{
-		reader:   reader,
-		context:  LexerContext{},
-		debugCtx: debugCtx,
+		reader:  reader,
+		context: LexerContext{},
 	}
 }
 
@@ -102,9 +99,7 @@ func (l *Lexer) NextToken() tree.STToken {
 		token = tree.AddSyntaxDiagnostics(token, l.context.diagnostics)
 		l.context.diagnostics = nil
 	}
-	if l.debugCtx != nil && l.debugCtx.Flags&debugcommon.DUMP_TOKENS != 0 {
-		l.debugCtx.Channel <- tree.ToSexpr(token)
-	}
+	debugcommon.DebugWriteLazy(debugcommon.DUMP_TOKENS, func() string { return tree.ToSexpr(token) })
 	return token
 }
 
