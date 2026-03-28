@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"ballerina-lang-go/bir"
 	debugcommon "ballerina-lang-go/common"
@@ -108,8 +107,6 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 	defer func() { _ = profiler.Stop() }()
 
-	var debugCtx *debugcommon.DebugContext
-	var wg sync.WaitGroup
 	flags := uint16(0)
 
 	if buildOpts.DumpTokens() {
@@ -123,9 +120,6 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 
 	if flags != 0 {
-		debugcommon.Init(flags)
-		debugCtx = &debugcommon.DebugCtx
-
 		var logWriter *os.File
 		var err error
 		if runOpts.logFile != "" {
@@ -135,26 +129,11 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 				printError(cmdErr, "", false)
 				return cmdErr
 			}
+			defer func() { _ = logWriter.Close() }()
+			debugcommon.InitDebug(flags, logWriter)
 		} else {
-			logWriter = os.Stderr
+			debugcommon.InitDebug(flags, os.Stderr)
 		}
-
-		wg.Go(func() {
-			if runOpts.logFile != "" {
-				defer func() { _ = logWriter.Close() }()
-			}
-			for msg := range debugCtx.Channel {
-				_, _ = fmt.Fprintf(logWriter, "%s\n", msg)
-			}
-		})
-
-		// Ensure debug context cleanup on any exit path
-		defer func() {
-			if debugCtx != nil {
-				close(debugCtx.Channel)
-				wg.Wait()
-			}
-		}()
 	}
 
 	// Default to current directory if no path provided (bal run == bal run .)
