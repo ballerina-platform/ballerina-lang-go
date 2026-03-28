@@ -227,7 +227,7 @@ func assertBalCommandMatchesTxtarFragmentsForBinary(t *testing.T, balBin, repoRo
 		t.Fatalf("failed to parse txtar file %s: %v", expectedPath, err)
 	}
 
-	if strings.TrimSpace(expectedStderr) != "<<ANY>>" && stderr != expectedStderr {
+	if stderr != expectedStderr {
 		t.Fatalf("unexpected stderr for command %q with expected file %s\n%s", strings.Join(args, " "), expectedPath, test_util.FormatExpectedGot(expectedStderr, stderr))
 	}
 	if strconv.Itoa(exitCode) != expectedExitCode {
