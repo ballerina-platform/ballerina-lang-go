@@ -219,10 +219,3 @@ func toDecimal(value any) *big.Rat {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))
 	}
 }
-
-func toBoolean(value any) bool {
-	if v, ok := value.(bool); ok {
-		return v
-	}
-	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to boolean", value)))
-}
