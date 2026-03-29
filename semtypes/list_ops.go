@@ -36,7 +36,7 @@ func listSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 func listFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
 	// migrated from ListOps.java:73:5
 	var members FixedLengthArray
-	var rest CellSemType
+	var rest *ComplexSemType
 	if pos == nil {
 		atom := LIST_ATOMIC_INNER
 		members = atom.Members
@@ -76,7 +76,7 @@ func listFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
 	memberTypes, nRequired := listSampleTypes(cx, members, rest, indices)
 	memberTypesArray := make([]SemType, len(memberTypes))
 	for i, t := range memberTypes {
-		memberTypesArray[i] = &t
+		memberTypesArray[i] = t
 	}
 	if !listInhabitedFast(cx, indices, memberTypesArray, nRequired, neg) {
 		// assert !listInhabited(cx, indices, memberTypes, nRequired, neg)
@@ -131,9 +131,9 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	return false
 }
 
-func listSampleTypes(cx Context, members FixedLengthArray, rest CellSemType, indices []int) ([]CellSemType, int) {
+func listSampleTypes(cx Context, members FixedLengthArray, rest *ComplexSemType, indices []int) ([]*ComplexSemType, int) {
 	// migrated from ListOps.java:181:5
-	var memberTypes []CellSemType
+	var memberTypes []*ComplexSemType
 	nRequired := 0
 	for i := range indices {
 		index := indices[i]
@@ -204,8 +204,8 @@ func listSamples(cx Context, members FixedLengthArray, rest SemType, neg *Conjun
 	return indices
 }
 
-func listIntersectWith(env Env, members1 FixedLengthArray, rest1 CellSemType,
-	members2 FixedLengthArray, rest2 CellSemType) (*FixedLengthArray, *CellSemType, bool) {
+func listIntersectWith(env Env, members1 FixedLengthArray, rest1 *ComplexSemType,
+	members2 FixedLengthArray, rest2 *ComplexSemType) (*FixedLengthArray, **ComplexSemType, bool) {
 	// migrated from ListOps.java:270:5
 	if listLengthsDisjoint(members1, rest1, members2, rest2) {
 		return nil, nil, false
@@ -217,7 +217,7 @@ func listIntersectWith(env Env, members1 FixedLengthArray, rest1 CellSemType,
 	max1 := members1.FixedLength
 	max2 := members2.FixedLength
 	maxLen := max(max2, max1)
-	var initial []CellSemType
+	var initial []*ComplexSemType
 	for i := range maxLen {
 		intersected := intersectMemberSemTypes(env, listMemberAt(members1, rest1, i),
 			listMemberAt(members2, rest2, i))
@@ -285,12 +285,12 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 	}
 }
 
-func listMemberAtInnerVal(fixedArray FixedLengthArray, rest CellSemType, index int) SemType {
+func listMemberAtInnerVal(fixedArray FixedLengthArray, rest *ComplexSemType, index int) SemType {
 	// migrated from ListOps.java:391:5
 	return CellInnerVal(listMemberAt(fixedArray, rest, index))
 }
 
-func listLengthsDisjoint(members1 FixedLengthArray, rest1 CellSemType, members2 FixedLengthArray, rest2 CellSemType) bool {
+func listLengthsDisjoint(members1 FixedLengthArray, rest1 *ComplexSemType, members2 FixedLengthArray, rest2 *ComplexSemType) bool {
 	// migrated from ListOps.java:395:5
 	len1 := members1.FixedLength
 	len2 := members2.FixedLength
@@ -303,7 +303,7 @@ func listLengthsDisjoint(members1 FixedLengthArray, rest1 CellSemType, members2 
 	return false
 }
 
-func listMemberAt(fixedArray FixedLengthArray, rest CellSemType, index int) CellSemType {
+func listMemberAt(fixedArray FixedLengthArray, rest *ComplexSemType, index int) *ComplexSemType {
 	// migrated from ListOps.java:408:5
 	if index < fixedArray.FixedLength {
 		return fixedArrayGet(fixedArray, index)
@@ -321,7 +321,7 @@ func fixedArrayAnyEmpty(cx Context, array FixedLengthArray) bool {
 	return false
 }
 
-func fixedArrayGet(members FixedLengthArray, index int) CellSemType {
+func fixedArrayGet(members FixedLengthArray, index int) *ComplexSemType {
 	// migrated from ListOps.java:424:5
 	memberLen := len(members.Initial)
 	i := min(memberLen-1, index)
@@ -338,7 +338,7 @@ func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
 	return listAtomicMemberTypeAtInner(atomic.Members, atomic.Rest, key)
 }
 
-func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest CellSemType, key SubtypeData) SemType {
+func listAtomicMemberTypeAtInner(fixedArray FixedLengthArray, rest *ComplexSemType, key SubtypeData) SemType {
 	// migrated from ListOps.java:438:5
 	if intSubtype, ok := key.(IntSubtype); ok {
 		var m SemType

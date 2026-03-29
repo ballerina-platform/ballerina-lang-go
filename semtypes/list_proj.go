@@ -33,7 +33,7 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 		if isNothingSubtype(keyData) {
 			return NEVER
 		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), nil, nil)
+		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(*ComplexSemType), BTList).(Bdd), nil, nil)
 	}
 }
 
@@ -56,7 +56,7 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg
 func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conjunction) SemType {
 	// migrated from ListProj.java:99:5
 	var members FixedLengthArray
-	var rest CellSemType
+	var rest *ComplexSemType
 	if pos == nil {
 		members = FixedLengthArrayEmpty()
 		rest = CellContaining(cx.Env(), Union(VAL, UNDEF))
@@ -144,7 +144,7 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 	return indices1, keyIndices
 }
 
-func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []CellSemType, nRequired int, neg *Conjunction) SemType {
+func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg *Conjunction) SemType {
 	// migrated from ListProj.java:192:5
 	var p SemType = NEVER
 	if neg == nil {
@@ -169,14 +169,14 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 				if indices[i] >= negLen {
 					break
 				}
-				t := append([]CellSemType(nil), memberTypes[0:i]...)
+				t := append([]*ComplexSemType(nil), memberTypes[0:i]...)
 				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, neg.Next))
 			}
 		}
 		for i := range memberTypes {
 			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
-				t := append([]CellSemType(nil), memberTypes...)
+				t := append([]*ComplexSemType(nil), memberTypes...)
 				t[i] = CellContaining(cx.Env(), d)
 				var maxVal int
 				if nRequired > (i + 1) {

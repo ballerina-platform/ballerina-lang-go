@@ -22,23 +22,24 @@ import (
 
 type MappingAtomicType struct {
 	Names []string
-	Types []CellSemType
-	Rest  CellSemType
+	// PR-TODO: why pointer?
+	Types []*ComplexSemType
+	Rest  *ComplexSemType
 }
 
 var _ AtomicType = &MappingAtomicType{}
 
 func (this *MappingAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*MappingAtomicType); ok {
-		if other.Rest != this.Rest {
+		if !this.Rest.equals(other.Rest) {
 			return false
 		}
-		return slices.Equal(other.Names, this.Names) && slices.Equal(other.Types, this.Types)
+		return slices.Equal(other.Names, this.Names) && slices.EqualFunc(other.Types, this.Types, (*ComplexSemType).equals)
 	}
 	return false
 }
 
-func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType) MappingAtomicType {
+func MappingAtomicTypeFrom(names []string, types []*ComplexSemType, rest *ComplexSemType) MappingAtomicType {
 	// migrated from MappingAtomicType.java:52:5
 	return MappingAtomicType{
 		Names: names,

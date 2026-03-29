@@ -377,7 +377,7 @@ func (this *PredefinedTypeEnv) atomCellUndef() *TypeAtom {
 // migrated from PredefinedTypeEnv.java:335-342
 func (this *PredefinedTypeEnv) listAtomicTwoElement() *ListAtomicType {
 	if this._listAtomicTwoElement == nil {
-		val := ListAtomicTypeFrom(FixedLengthArrayFrom([]CellSemType{CELL_SEMTYPE_VAL}, 2), CELL_SEMTYPE_UNDEF)
+		val := ListAtomicTypeFrom(FixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_VAL}, 2), CELL_SEMTYPE_UNDEF)
 		this._listAtomicTwoElement = &val
 		this.addInitializedListAtom(&val)
 	}
@@ -423,7 +423,7 @@ func (this *PredefinedTypeEnv) mappingAtomicObjectMemberRO() *MappingAtomicType 
 	if this._mappingAtomicObjectMemberRO == nil {
 		val := MappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
-			[]CellSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL_RO, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
+			[]*ComplexSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL_RO, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
 		this._mappingAtomicObjectMemberRO = &val
 		this.addInitializedMapAtom(&val)
@@ -514,7 +514,7 @@ func (this *PredefinedTypeEnv) mappingAtomicObjectMember() *MappingAtomicType {
 	if this._mappingAtomicObjectMember == nil {
 		val := MappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
-			[]CellSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
+			[]*ComplexSemType{CELL_SEMTYPE_OBJECT_MEMBER_KIND, CELL_SEMTYPE_VAL, CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
 		this._mappingAtomicObjectMember = &val
 		this.addInitializedMapAtom(&val)
@@ -561,7 +561,7 @@ func (this *PredefinedTypeEnv) mappingAtomicObject() *MappingAtomicType {
 	if this._mappingAtomicObject == nil {
 		val := MappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
-			[]CellSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
+			[]*ComplexSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER)
 		this._mappingAtomicObject = &val
 		this.addInitializedMapAtom(&val)
@@ -595,7 +595,7 @@ func (this *PredefinedTypeEnv) listAtomicRO() *ListAtomicType {
 // migrated from PredefinedTypeEnv.java:516-522
 func (this *PredefinedTypeEnv) mappingAtomicRO() *MappingAtomicType {
 	if this._mappingAtomicRO == nil {
-		val := MappingAtomicTypeFrom([]string{}, []CellSemType{}, CELL_SEMTYPE_INNER_RO)
+		val := MappingAtomicTypeFrom([]string{}, []*ComplexSemType{}, CELL_SEMTYPE_INNER_RO)
 		this._mappingAtomicRO = &val
 		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
 	}
@@ -608,7 +608,7 @@ func (this *PredefinedTypeEnv) getMappingAtomicObjectRO() *MappingAtomicType {
 	if this._mappingAtomicObjectRO == nil {
 		val := MappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
-			[]CellSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
+			[]*ComplexSemType{CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER_RO)
 		this._mappingAtomicObjectRO = &val
 		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
@@ -665,7 +665,7 @@ func (this *PredefinedTypeEnv) atomCellMappingArrayRO() *TypeAtom {
 func (this *PredefinedTypeEnv) listAtomicThreeElement() *ListAtomicType {
 	if this._listAtomicThreeElement == nil {
 		val := ListAtomicTypeFrom(
-			FixedLengthArrayFrom([]CellSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING, CELL_SEMTYPE_VAL}, 3),
+			FixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING, CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
 		this._listAtomicThreeElement = &val
 		this.addInitializedListAtom(&val)
@@ -689,7 +689,7 @@ func (this *PredefinedTypeEnv) atomListThreeElement() *TypeAtom {
 func (this *PredefinedTypeEnv) listAtomicThreeElementRO() *ListAtomicType {
 	if this._listAtomicThreeElementRO == nil {
 		val := ListAtomicTypeFrom(
-			FixedLengthArrayFrom([]CellSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING_RO, CELL_SEMTYPE_VAL}, 3),
+			FixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_LIST_SUBTYPE_MAPPING_RO, CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
 		this._listAtomicThreeElementRO = &val
 		this.addInitializedListAtom(&val)

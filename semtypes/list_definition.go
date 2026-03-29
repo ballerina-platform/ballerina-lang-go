@@ -20,7 +20,7 @@ import "ballerina-lang-go/common"
 
 type ListDefinition struct {
 	rec     *RecAtom
-	semType ComplexSemType
+	semType SemType
 }
 
 var _ Definition = &ListDefinition{}
@@ -58,7 +58,7 @@ func (this *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemT
 func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
 	// migrated from ListDefinition.java:76:5
 	common.Assert(rest != nil)
-	var initialCells []CellSemType
+	var initialCells []*ComplexSemType
 	for _, member := range initial {
 		initialCells = append(initialCells, CellContainingWithEnvSemTypeCellMutability(env, member, mut))
 	}
@@ -97,7 +97,7 @@ func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env,
 	return this.DefineListTypeWrapped(env, initial, len(initial), rest, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) define(env Env, initial []CellSemType, fixedLength int, rest CellSemType) ComplexSemType {
+func (this *ListDefinition) define(env Env, initial []*ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
 	// migrated from ListDefinition.java:105:5
 	members := this.fixedLengthNormalize(FixedLengthArrayFrom(initial, fixedLength))
 	atomicType := ListAtomicTypeFrom(members, rest)
@@ -122,7 +122,7 @@ func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLe
 	last := initial[i]
 	i = (i - 1)
 	for i >= 0 {
-		if last != initial[i] {
+		if !last.equals(initial[i]) {
 			break
 		}
 		i = (i - 1)
@@ -130,7 +130,7 @@ func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLe
 	return FixedLengthArrayFrom(initial[:i+2], array.FixedLength)
 }
 
-func (this *ListDefinition) createSemType(env Env, atom Atom) ComplexSemType {
+func (this *ListDefinition) createSemType(env Env, atom Atom) *ComplexSemType {
 	// migrated from ListDefinition.java:137:5
 	bdd := BddAtom(atom)
 	complexSemType := basicSubtype(BTList, bdd)

@@ -19,13 +19,14 @@ package semtypes
 import "ballerina-lang-go/common"
 
 type FixedLengthArray struct {
-	Initial     []CellSemType
+	// PR-TODO: remove pointer
+	Initial     []*ComplexSemType
 	FixedLength int
 }
 
-func NewFixedLengthArrayFromInitialFixedLength(initial []CellSemType, fixedLength int) FixedLengthArray {
+func NewFixedLengthArrayFromInitialFixedLength(initial []*ComplexSemType, fixedLength int) FixedLengthArray {
 	this := FixedLengthArray{}
-	copiedInitial := make([]CellSemType, len(initial))
+	copiedInitial := make([]*ComplexSemType, len(initial))
 	copy(copiedInitial, initial)
 	common.Assert(fixedLength >= 0)
 	this.Initial = copiedInitial
@@ -33,7 +34,7 @@ func NewFixedLengthArrayFromInitialFixedLength(initial []CellSemType, fixedLengt
 	return this
 }
 
-func FixedLengthArrayFrom(initial []CellSemType, fixedLength int) FixedLengthArray {
+func FixedLengthArrayFrom(initial []*ComplexSemType, fixedLength int) FixedLengthArray {
 	// migrated from FixedLengthArray.java:45:5
 	return NewFixedLengthArrayFromInitialFixedLength(initial, fixedLength)
 }

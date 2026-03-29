@@ -16,22 +16,29 @@
 
 package semtypes
 
-type complexSemTypeImpl struct {
+import "slices"
+
+type ComplexSemType struct {
 	all             int
 	some            int
 	subtypeDataList []ProperSubtypeData
 }
 
-var _ ComplexSemType = &complexSemTypeImpl{}
+var _ SemType = &ComplexSemType{}
 
-func (this *complexSemTypeImpl) All() int {
+func (this *ComplexSemType) All() int {
 	return this.all
 }
 
-func (this *complexSemTypeImpl) Some() int {
+func (this *ComplexSemType) Some() int {
 	return this.some
 }
 
-func (this *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
+func (this *ComplexSemType) SubtypeDataList() []ProperSubtypeData {
 	return this.subtypeDataList
+}
+
+func (this *ComplexSemType) equals(other *ComplexSemType) bool {
+	return this == other || (this.all == other.all && this.some == other.some &&
+		slices.Equal(this.subtypeDataList, other.subtypeDataList))
 }

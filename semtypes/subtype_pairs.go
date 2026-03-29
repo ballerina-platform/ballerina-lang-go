@@ -152,5 +152,5 @@ func unpackToBasicSubtypes(t SemType) []BasicSubtype {
 	if _, ok := t.(BasicTypeBitSet); ok {
 		return nil
 	}
-	return unpackComplexSemType(t.(ComplexSemType))
+	return unpackComplexSemType(t.(*ComplexSemType))
 }

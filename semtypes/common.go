@@ -76,22 +76,6 @@ func bddSubtypeComplement(t SubtypeData) SubtypeData {
 	return bddComplement(t.(Bdd))
 }
 
-func shallowCopyTypes(v []SemType) []SemType {
-	return append([]SemType{}, v...)
-}
-
-func shallowCopyStrings(v []string, newLength int) []string {
-	result := make([]string, newLength)
-	copy(result, v)
-	return result
-}
-
-func shallowCopyCellTypes(v []CellSemType, newLength int) []CellSemType {
-	result := make([]CellSemType, newLength)
-	copy(result, v)
-	return result
-}
-
 func notIsEmpty(cx Context, t SubtypeData) bool {
 	return false
 }

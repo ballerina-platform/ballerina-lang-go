@@ -100,14 +100,14 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) 
 			if IsEmpty(cx, intersect) {
 				return mappingInhabited(cx, pos, negList.Next)
 			}
-			d := Diff(fieldPair.Type1, fieldPair.Type2).(*CellSemType)
+			d := Diff(fieldPair.Type1, fieldPair.Type2).(*ComplexSemType)
 			if !IsEmpty(cx, d) {
 				var mt MappingAtomicType
 				if fieldPair.Index1 == nil {
-					mt = insertField(*pos, fieldPair.Name, *d)
+					mt = insertField(*pos, fieldPair.Name, d)
 				} else {
 					posTypes := pos.Types
-					posTypes[*fieldPair.Index1] = *d
+					posTypes[*fieldPair.Index1] = d
 					mt = MappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}
 				if mappingInhabited(cx, &mt, negList.Next) {
@@ -119,13 +119,13 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) 
 	}
 }
 
-func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicType {
+func insertField(m MappingAtomicType, name string, t *ComplexSemType) MappingAtomicType {
 	// migrated from MappingOps.java:167:5
-	orgNames := m.Names
-	names := shallowCopyStrings(orgNames, (len(orgNames) + 1))
-	orgTypes := m.Types
-	types := shallowCopyCellTypes(orgTypes, (len(orgTypes) + 1))
-	i := len(orgNames)
+	names := append([]string(nil), m.Names...)
+	names = append(names, "")
+	types := append([]*ComplexSemType(nil), m.Types...)
+	types = append(types, nil)
+	i := len(names) - 1
 	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
 			names[i] = name
@@ -142,7 +142,7 @@ func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicT
 func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *MappingAtomicType {
 	// migrated from MappingOps.java:186:5
 	var names []string
-	var types []CellSemType
+	var types []*ComplexSemType
 	pairing := NewFieldPairs(m1, m2)
 	for fieldPair := range pairing {
 		names = append(names, fieldPair.Name)
