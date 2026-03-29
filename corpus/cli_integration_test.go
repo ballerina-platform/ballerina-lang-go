@@ -46,10 +46,12 @@ var (
 )
 
 func TestBalHelp(t *testing.T) {
+	t.Parallel()
 	assertBalCommandMatchesTxtarFragments(t, []string{"--help"}, "help", "help.txtar")
 }
 
 func TestBalVersion(t *testing.T) {
+	t.Parallel()
 	assertBalCommandMatchesTxtarFragments(t, []string{"version"}, "version", "version.txtar")
 }
 
@@ -76,6 +78,7 @@ func TestBalRunDumpFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assertBalCommandMatchesTxtarFragmentsForBinary(t, balBin, repoRoot, coverDir,
 				[]string{"run", tt.flag, singleBal},
 				"run-dump-flags", tt.file)
@@ -299,6 +302,7 @@ func listBalRunCorpusPaths(t *testing.T, dir string, balFilesOnly bool) []string
 func runBalRunCorpusCase(t *testing.T, balBin, repoRoot, coverDir, outputsRoot, runPath, outputKey string) {
 	t.Helper()
 	t.Run(strings.ReplaceAll(outputKey, string(filepath.Separator), "_"), func(t *testing.T) {
+		t.Parallel()
 		stdout, stderr, exitCode := runCLICommand(t, balBin, repoRoot, coverDir, "run", runPath)
 		expectedPath := filepath.Join(outputsRoot, outputKey+".txtar")
 		actualOutput := test_util.NormalizeNewlines(stdout)
