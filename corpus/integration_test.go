@@ -95,6 +95,11 @@ var (
 	}
 )
 
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
+
 type testResult struct {
 	success        bool
 	expectedStdout string
@@ -104,8 +109,6 @@ type testResult struct {
 }
 
 func TestIntegration(t *testing.T) {
-	flag.Parse()
-
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
 		return true
 	})
@@ -119,8 +122,6 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestProjectIntegration(t *testing.T) {
-	flag.Parse()
-
 	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
 		return
 	}

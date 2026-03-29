@@ -19,7 +19,6 @@ package corpus
 import (
 	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -73,7 +72,6 @@ func TestBalRunDumpFlags(t *testing.T) {
 		{"dump-ast", "--dump-ast", "dump-ast.txtar"},
 		{"dump-cfg", "--dump-cfg", "dump-cfg.txtar"},
 	}
-	flag.Parse()
 	balBin, repoRoot, coverDir := integrationTestBalCLI(t, true)
 
 	for _, tt := range tests {
@@ -90,8 +88,6 @@ func TestBalRunCorpus(t *testing.T) {
 	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
 		t.Skip("skipping CLI integration test on WASM (js/wasm)")
 	}
-	flag.Parse()
-
 	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
 	testDataRoot := filepath.Join(repoRoot, "corpus", "cli", "testdata", "run")
 	outputsRoot := filepath.Join(repoRoot, "corpus", "cli", "output", "run")
@@ -115,8 +111,6 @@ func assertBalCommandMatchesTxtarFragments(t *testing.T, args []string, txtarPat
 	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
 		t.Skip("skipping CLI integration test on WASM (js/wasm)")
 	}
-	flag.Parse()
-
 	balBin, repoRoot, coverDir := integrationTestBalCLI(t, false)
 	assertBalCommandMatchesTxtarFragmentsForBinary(t, balBin, repoRoot, coverDir, args, txtarPathParts...)
 }
