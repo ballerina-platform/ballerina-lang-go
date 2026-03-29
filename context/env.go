@@ -17,10 +17,11 @@
 package context
 
 import (
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
 	"strconv"
 	"sync"
+
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 )
 
 type CompilerEnvironment struct {
@@ -66,6 +67,15 @@ func (this *CompilerEnvironment) GetSymbol(symbol model.SymbolRef) model.Symbol 
 	symbolSpace := this.symbolSpaces[symbol.SpaceIndex]
 	this.symbolSpacesMu.RUnlock()
 	return symbolSpace.SymbolAt(symbol.Index)
+}
+
+func (this *CompilerEnvironment) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	this.symbolSpacesMu.RLock()
+	space := this.symbolSpaces[ref.SpaceIndex]
+	this.symbolSpacesMu.RUnlock()
+	space.AddSymbol(name, symbol)
+	newRef, _ := space.GetSymbol(name)
+	return newRef
 }
 
 // CreateNarrowedSymbol create a narrowed symbol for the given baseRef symbol. IMPORTANT: baseRef must be the actual symbol

@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: not an isolated expression
+  --> default-query2-e.bal:21:20
+   |
+21 |     int[] values = from int i in [1, 2, 3]
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^
+22 |         select i; // @error 
+   |         ^^^^^^^^

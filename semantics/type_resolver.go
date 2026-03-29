@@ -73,6 +73,9 @@ type typeResolver interface {
 	setCapturedVars(vars map[model.SymbolRef]bool)
 
 	ensureResolved(ref model.SymbolRef) bool
+
+	setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType)
+	getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool)
 }
 
 type packageTypeResolver struct {
@@ -87,8 +90,9 @@ type packageTypeResolver struct {
 
 	// packageVarNodes maps a constant's symbol ref to its AST node.
 	// While a constant is being resolved, its entry is set to nil (cycle detection).
-	packageVarNodes map[model.SymbolRef]*ast.BLangConstant
-	functionNodes   map[model.SymbolRef]*ast.BLangFunction
+	packageVarNodes    map[model.SymbolRef]*ast.BLangConstant
+	functionNodes      map[model.SymbolRef]*ast.BLangFunction
+	mappingAtomToBType map[*semtypes.MappingAtomicType]ast.BType
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -152,6 +156,15 @@ func (t *packageTypeResolver) compilerContext() *context.CompilerContext {
 	return t.ctx
 }
 
+func (t *packageTypeResolver) setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType) {
+	t.mappingAtomToBType[mat] = bType
+}
+
+func (t *packageTypeResolver) getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool) {
+	bType, ok := t.mappingAtomToBType[mat]
+	return bType, ok
+}
+
 func (t *packageTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
 	s, ok := t.importedSymbols[name]
 	return s, ok
@@ -186,6 +199,7 @@ type functionTypeResolver struct {
 	retTy                semtypes.SemType
 	implicitImports      map[string]ast.BLangImportPackage
 	capturedNarrowedVars map[model.SymbolRef]bool
+	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
 }
 
 func (f *functionTypeResolver) typeContext() semtypes.Context        { return f.tyCtx }
@@ -280,15 +294,27 @@ func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef) bool {
 	return f.parentResolver.ensureResolved(ref)
 }
 
+func (f *functionTypeResolver) setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType) {
+	f.mappingAtomToBType[mat] = bType
+}
+
+func (f *functionTypeResolver) getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool) {
+	if bType, ok := f.mappingAtomToBType[mat]; ok {
+		return bType, true
+	}
+	return f.parentResolver.getMappingAtomBType(mat)
+}
+
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageTypeResolver {
 	return &packageTypeResolver{
-		ctx:             ctx,
-		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
-		importedSymbols: importedSymbols,
-		pkg:             pkg,
-		implicitImports: make(map[string]ast.BLangImportPackage),
-		packageVarNodes: make(map[model.SymbolRef]*ast.BLangConstant),
-		functionNodes:   make(map[model.SymbolRef]*ast.BLangFunction),
+		ctx:                ctx,
+		tyCtx:              semtypes.ContextFrom(ctx.GetTypeEnv()),
+		importedSymbols:    importedSymbols,
+		pkg:                pkg,
+		implicitImports:    make(map[string]ast.BLangImportPackage),
+		packageVarNodes:    make(map[model.SymbolRef]*ast.BLangConstant),
+		functionNodes:      make(map[model.SymbolRef]*ast.BLangFunction),
+		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
 	}
 }
 
@@ -326,9 +352,67 @@ func ResolveTopLevelNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, i
 	t.resolveTopLevelTypes(ctx, pkg)
 }
 
+func populateMappingAtomBTypes(t typeResolver, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		semType := t.symbolType(defn.Symbol())
+		if semType == nil {
+			continue
+		}
+		switch bType := defn.GetTypeData().TypeDescriptor.(type) {
+		case *ast.BLangRecordType:
+			mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+			if mat == nil {
+				t.internalError("failed to extract mapping atomic type for record type", defn.GetPosition())
+			}
+			t.setMappingAtomBType(mat, bType)
+		case *ast.BLangConstrainedType:
+			if bType.GetTypeKind() == model.TypeKind_MAP {
+				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+				if mat == nil {
+					t.internalError("failed to extract mapping atomic type for map type", defn.GetPosition())
+				}
+				t.setMappingAtomBType(mat, bType)
+			}
+		}
+	}
+	for _, symbolSpace := range importedSymbols {
+		main := symbolSpace.Main
+		for i, sym := range main.Symbols() {
+			if sym.Kind() != model.SymbolKindType || !sym.IsPublic() {
+				continue
+			}
+			ref := main.RefAt(i)
+			defn, ok := t.getTypeDefinition(ref)
+			if !ok {
+				continue
+			}
+			semType := t.symbolType(ref)
+			if semType == nil {
+				continue
+			}
+			switch bType := defn.GetTypeData().TypeDescriptor.(type) {
+			case *ast.BLangRecordType:
+				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+				if mat != nil {
+					t.setMappingAtomBType(mat, bType)
+				}
+			case *ast.BLangConstrainedType:
+				if bType.GetTypeKind() == model.TypeKind_MAP {
+					mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+					if mat != nil {
+						t.setMappingAtomBType(mat, bType)
+					}
+				}
+			}
+		}
+	}
+}
+
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
 	p := newPackageTypeResolver(ctx, pkg, importedSymbols)
+	populateMappingAtomBTypes(p, pkg, importedSymbols)
 	var fns []*ast.BLangFunction
 	for i := range pkg.Functions {
 		fns = append(fns, &pkg.Functions[i])
@@ -347,9 +431,10 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		ft := &functionTypeResolver{
-			parentResolver:  p,
-			tyCtx:           semtypes.ContextFrom(p.typeEnv()),
-			implicitImports: make(map[string]ast.BLangImportPackage),
+			parentResolver:     p,
+			tyCtx:              semtypes.ContextFrom(p.typeEnv()),
+			implicitImports:    make(map[string]ast.BLangImportPackage),
+			mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
 		}
 		for _, f := range classDef.Fields {
 			field := f.(*ast.BLangSimpleVariable)
@@ -387,10 +472,11 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 		return nil
 	}
 	ft := &functionTypeResolver{
-		parentResolver:  p,
-		tyCtx:           semtypes.ContextFrom(p.typeEnv()),
-		retTy:           fnSym.Signature().ReturnType,
-		implicitImports: make(map[string]ast.BLangImportPackage),
+		parentResolver:     p,
+		tyCtx:              semtypes.ContextFrom(p.typeEnv()),
+		retTy:              fnSym.Signature().ReturnType,
+		implicitImports:    make(map[string]ast.BLangImportPackage),
+		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
 	}
 	switch body := fn.Body.(type) {
 	case *ast.BLangExternFunctionBody:
@@ -683,10 +769,11 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 	// Create a function type resolver for the lambda so expectedReturnType() is correct
 	fnSym := t.getSymbol(e.Function.Symbol()).(model.FunctionSymbol)
 	ft := &functionTypeResolver{
-		parentResolver:  t,
-		tyCtx:           semtypes.ContextFrom(t.typeEnv()),
-		retTy:           fnSym.Signature().ReturnType,
-		implicitImports: make(map[string]ast.BLangImportPackage),
+		parentResolver:     t,
+		tyCtx:              semtypes.ContextFrom(t.typeEnv()),
+		retTy:              fnSym.Signature().ReturnType,
+		implicitImports:    make(map[string]ast.BLangImportPackage),
+		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
 	}
 
 	// Push function boundary marker onto the chain
@@ -1571,7 +1658,11 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 		}
 	}
 
-	e.AtomicType = mat
+	e.AtomicType = *mat
+	// We can have cases where this is no the case like any a = {foo:"bar"}
+	if bType, ok := t.getMappingAtomBType(mat); ok {
+		e.ContextuallyExpectedType = bType
+	}
 	setExpectedType(e, resultType)
 	return resultType, defaultExpressionEffect(chain), true
 }
@@ -1594,16 +1685,16 @@ func resolveMappingKey(t typeResolver, kv *ast.BLangMappingKeyValueField) {
 	kv.SetDeterminedType(semtypes.NEVER)
 }
 
-func selectMappingInherentType(t typeResolver, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.MappingAtomicType, bool) {
+func selectMappingInherentType(t typeResolver, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, *semtypes.MappingAtomicType, bool) {
 	expectedMappingType := semtypes.Intersect(expectedType, semtypes.MAPPING)
 	tc := t.typeContext()
 	if semtypes.IsEmpty(tc, expectedMappingType) {
 		t.semanticError("mapping type not found in expected type", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}, false
+		return nil, nil, false
 	}
 	mat := semtypes.ToMappingAtomicType(tc, expectedMappingType)
 	if mat != nil {
-		return expectedMappingType, *mat, true
+		return expectedMappingType, mat, true
 	}
 	alts := semtypes.MappingAlternatives(tc, expectedType)
 	var validAlts []semtypes.MappingAlternative
@@ -1622,21 +1713,21 @@ func selectMappingInherentType(t typeResolver, expr *ast.BLangMappingConstructor
 	}
 	if len(validAlts) == 0 {
 		t.semanticError("no applicable inherent type for mapping constructor", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}, false
+		return nil, nil, false
 	}
 	if len(validAlts) > 1 {
 		t.semanticError("ambiguous inherent type for mapping constructor", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}, false
+		return nil, nil, false
 	}
 
 	selectedSemType := validAlts[0].SemType
 	mat = semtypes.ToMappingAtomicType(tc, selectedSemType)
 	if mat == nil {
 		t.semanticError("applicable type for mapping constructor is not atomic", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}, false
+		return nil, nil, false
 	}
 
-	return selectedSemType, *mat, true
+	return selectedSemType, mat, true
 }
 
 func resolveTypeConversionExpr(t typeResolver, chain *binding, e *ast.BLangTypeConversionExpr) (semtypes.SemType, expressionEffect, bool) {
@@ -1931,7 +2022,9 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 	if isCaptured {
 		t.trackCapturedVar(baseSymbol)
 	}
-	t.ensureResolved(sym)
+	if !t.ensureResolved(sym) {
+		return nil, defaultExpressionEffect(chain), false
+	}
 	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(expr)
@@ -1947,7 +2040,9 @@ func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (s
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
-	t.ensureResolved(sym)
+	if !t.ensureResolved(sym) {
+		return nil, defaultExpressionEffect(chain), false
+	}
 	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(&expr.BLangSimpleVarRef)
@@ -2902,7 +2997,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				if !ok {
 					return nil, false
 				}
-				return d.DefineMappingTypeWrapped(t.typeEnv(), nil, rest), true
+				semType := d.DefineMappingTypeWrapped(t.typeEnv(), nil, rest)
+				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+				t.setMappingAtomBType(mat, ty)
+				return semType, true
 			default:
 				t.unimplemented("unsupported base type kind", nil)
 				return nil, false
@@ -2981,6 +3079,11 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				}
 				delete(includedFields, name)
 			}
+			if field.DefaultExpr != nil {
+				if _, _, ok := resolveExpression(t, nil, field.DefaultExpr, fieldTy); !ok {
+					return nil, false
+				}
+			}
 			ro := field.FlagSet.Contains(model.Flag_READONLY)
 			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
 			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
@@ -3027,7 +3130,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		} else {
 			rest = semtypes.NEVER
 		}
-		return d.DefineMappingTypeWrapped(t.typeEnv(), fields, rest), true
+		semType := d.DefineMappingTypeWrapped(t.typeEnv(), fields, rest)
+		mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+		t.setMappingAtomBType(mat, ty)
+		return semType, true
 	case *ast.BLangFunctionType:
 		if ty.FlagSet.Contains(model.Flag_ANY_FUNCTION) {
 			return semtypes.FUNCTION, true

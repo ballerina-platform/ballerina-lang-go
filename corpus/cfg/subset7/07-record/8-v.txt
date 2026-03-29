@@ -1,0 +1,92 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type R)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref id)
+            (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access id
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access name
+          (simple-var-ref f)))))
+    (var-def
+      (variable f2 (type
+        (user-defined-type R)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref id)
+            (literal 2))
+          (key-value
+            (simple-var-ref value)
+            (literal 20))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access id
+          (simple-var-ref f2)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref f2)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access name
+          (simple-var-ref f2)))))
+    (var-def
+      (variable f3 (type
+        (user-defined-type R)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref id)
+            (literal 3))
+          (key-value
+            (simple-var-ref name)
+            (literal custom))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access id
+          (simple-var-ref f3)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref f3)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access name
+          (simple-var-ref f3)))))
+    (var-def
+      (variable f4 (type
+        (user-defined-type R)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref id)
+            (literal 4))
+          (key-value
+            (simple-var-ref value)
+            (literal 30))
+          (key-value
+            (simple-var-ref name)
+            (literal both))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access id
+          (simple-var-ref f4)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref f4)))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access name
+          (simple-var-ref f4)))))
+  )
+)
