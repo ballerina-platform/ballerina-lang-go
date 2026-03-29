@@ -18,4 +18,6 @@ package semtypes
 
 type SemType interface {
 	All() int
+	Some() int
+	SubtypeDataList() []ProperSubtypeData
 }

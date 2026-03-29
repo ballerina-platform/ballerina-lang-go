@@ -44,7 +44,7 @@ func ListAlternatives(cx Context, t SemType) []ListAlternative {
 	}
 
 	paths := []BddPath{}
-	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), &paths, BddPathFrom())
+	BddPaths(getComplexSubtypeData(t.(*ComplexSemType), BTList).(Bdd), &paths, BddPathFrom())
 	alts := []ListAlternative{}
 	for _, bddPath := range paths {
 		posAtoms := make([]*ListAtomicType, len(bddPath.pos))

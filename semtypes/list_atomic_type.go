@@ -22,30 +22,30 @@ import (
 
 type ListAtomicType struct {
 	Members FixedLengthArray
-	Rest    CellSemType
+	Rest    *ComplexSemType
 }
 
 var _ AtomicType = &ListAtomicType{}
 
 func (this *ListAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*ListAtomicType); ok {
-		if other.Rest != this.Rest {
+		if !this.Rest.equals(other.Rest) {
 			return false
 		}
 		return other.Members.FixedLength == this.Members.FixedLength &&
-			slices.Equal(other.Members.Initial, this.Members.Initial)
+			slices.EqualFunc(other.Members.Initial, this.Members.Initial, (*ComplexSemType).equals)
 	}
 	return false
 }
 
-func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest CellSemType) ListAtomicType {
+func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	this := ListAtomicType{}
 	this.Members = members
 	this.Rest = rest
 	return this
 }
 
-func ListAtomicTypeFrom(members FixedLengthArray, rest CellSemType) ListAtomicType {
+func ListAtomicTypeFrom(members FixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	// migrated from ListAtomicType.java:34:5
 
 	return NewListAtomicTypeFromMembersRest(members, rest)
@@ -60,6 +60,6 @@ func (atomic *ListAtomicType) MemberAtInnerVal(index int) SemType {
 	return CellInnerVal(atomic.MemberAt(index))
 }
 
-func (atomic *ListAtomicType) MemberAt(index int) CellSemType {
+func (atomic *ListAtomicType) MemberAt(index int) *ComplexSemType {
 	return listMemberAt(atomic.Members, atomic.Rest, index)
 }

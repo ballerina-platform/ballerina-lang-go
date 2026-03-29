@@ -58,7 +58,7 @@ func (this *MappingDefinition) SetSemTypeToNever() {
 	this.semType = NEVER
 }
 
-func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemType) SemType {
+func (this *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
 	// migrated from MappingDefinition.java:76:5
 	sfh := this.splitFields(fields)
 	atomicType := MappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
@@ -124,7 +124,7 @@ func (this *MappingDefinition) splitFields(fields []CellField) SplitField {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
 	var names []string
-	var types []CellSemType
+	var types []*ComplexSemType
 	for _, field := range sortedFields {
 		names = append(names, field.Name)
 		types = append(types, field.Type)

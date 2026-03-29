@@ -114,7 +114,7 @@ func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 }
 
 // migrated from ObjectDefinition.java:104:5
-func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) CellSemType {
+func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
 	// migrated from ObjectDefinition.java:105:9
 	fieldDefn := NewMappingDefinition()
 	// migrated from ObjectDefinition.java:106:9

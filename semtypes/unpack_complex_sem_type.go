@@ -26,7 +26,7 @@ func newUnpackComplexSemType() UnpackComplexSemType {
 	return this
 }
 
-func Unpack(t ComplexSemType) []BasicSubtype {
+func Unpack(t *ComplexSemType) []BasicSubtype {
 	// migrated from UnpackComplexSemType.java:37:5
 	some := t.Some()
 	var subtypeList []BasicSubtype

@@ -58,7 +58,7 @@ func (pool *TypePool) Put(ty semtypes.SemType) Index {
 	switch ty := ty.(type) {
 	case semtypes.BasicTypeBitSet:
 		return Index(ty.All() | 1<<31)
-	case semtypes.ComplexSemType:
+	case *semtypes.ComplexSemType:
 		if cached, ok := pool.memo[ty]; ok {
 			return cached
 		}
@@ -76,7 +76,7 @@ func fromTypePool(pool *TypePool, env semtypes.Env) binaryPool {
 	sc := newBddSerializationContext(pool, cx, &bp)
 	for i := 0; i < len(pool.tys); i++ {
 		ty := pool.tys[i]
-		cst := ty.(semtypes.ComplexSemType)
+		cst := ty.(*semtypes.ComplexSemType)
 		subtypes := semtypes.Unpack(cst)
 		start := uint32(len(bp.subtypeData))
 		for _, bs := range subtypes {

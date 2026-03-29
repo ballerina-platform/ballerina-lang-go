@@ -18,10 +18,10 @@ package semtypes
 
 type CellField struct {
 	Name string
-	Type CellSemType
+	Type *ComplexSemType
 }
 
-func CellFieldFrom(name string, ty CellSemType) CellField {
+func CellFieldFrom(name string, ty *ComplexSemType) CellField {
 	// migrated from CellField.java:31:5
 	return CellField{
 		Name: name,

@@ -22,6 +22,14 @@ func (bitset BasicTypeBitSet) All() int {
 	return int(bitset)
 }
 
+func (bitset BasicTypeBitSet) Some() int {
+	return 0
+}
+
+func (bitset BasicTypeBitSet) SubtypeDataList() []ProperSubtypeData {
+	return nil
+}
+
 func BasicTypeBitSetFrom(bitset int) BasicTypeBitSet {
 	return BasicTypeBitSet(bitset)
 }

@@ -23,13 +23,13 @@ import (
 
 type FieldPair struct {
 	Name   string
-	Type1  CellSemType
-	Type2  CellSemType
+	Type1  *ComplexSemType
+	Type2  *ComplexSemType
 	Index1 *int
 	Index2 *int
 }
 
-func CreateFieldPair(name string, type1 CellSemType, type2 CellSemType, index1 *int, index2 *int) FieldPair {
+func CreateFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 *int, index2 *int) FieldPair {
 	// migrated from FieldPair.java:34:5
 
 	return FieldPair{
@@ -44,14 +44,14 @@ func CreateFieldPair(name string, type1 CellSemType, type2 CellSemType, index1 *
 type mappingPairIterator struct {
 	names1          []string
 	names2          []string
-	types1          []CellSemType
-	types2          []CellSemType
+	types1          []*ComplexSemType
+	types2          []*ComplexSemType
 	len1            int
 	len2            int
 	i1              int
 	i2              int
-	rest1           CellSemType
-	rest2           CellSemType
+	rest1           *ComplexSemType
+	rest2           *ComplexSemType
 	doneIteration   bool
 	shouldCalculate bool
 	cache           *FieldPair
@@ -122,7 +122,7 @@ func (i *mappingPairIterator) internalNext() *FieldPair {
 	return p
 }
 
-func (i *mappingPairIterator) curType1() CellSemType {
+func (i *mappingPairIterator) curType1() *ComplexSemType {
 	return i.types1[i.i1]
 }
 
@@ -130,7 +130,7 @@ func (i *mappingPairIterator) curName1() string {
 	return i.names1[i.i1]
 }
 
-func (i *mappingPairIterator) curType2() CellSemType {
+func (i *mappingPairIterator) curType2() *ComplexSemType {
 	return i.types2[i.i2]
 }
 

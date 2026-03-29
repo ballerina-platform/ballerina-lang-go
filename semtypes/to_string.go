@@ -44,7 +44,7 @@ func (s *toStringState) semTypeToString(ty SemType) string {
 	switch ty := ty.(type) {
 	case BasicTypeBitSet:
 		return basicTypeToString(ty)
-	case ComplexSemType:
+	case *ComplexSemType:
 		return s.complexSemtypeToString(ty)
 	default:
 		panic("Unexpect semtype kind")
@@ -70,7 +70,7 @@ func basicTypeBitSetToString(bits int) string {
 	return strings.Join(parts, "|")
 }
 
-func (s *toStringState) complexSemtypeToString(ty ComplexSemType) string {
+func (s *toStringState) complexSemtypeToString(ty *ComplexSemType) string {
 	var parts []string
 	allStr := basicTypeBitSetToString(ty.All())
 	if allStr != "" {
@@ -217,7 +217,7 @@ func (s *toStringState) functionAtomicTypeToString(atom Atom) string {
 func (s *toStringState) functionParamsToString(paramType SemType) string {
 	// ParamType is a list SemType representing the parameter tuple.
 	// Try to extract individual parameter types from the list atom.
-	cst, ok := paramType.(ComplexSemType)
+	cst, ok := paramType.(*ComplexSemType)
 	if !ok {
 		return s.semTypeToString(paramType)
 	}
