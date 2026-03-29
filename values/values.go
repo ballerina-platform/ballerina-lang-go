@@ -58,6 +58,8 @@ func DefaultValueForType(t semtypes.SemType) BalValue {
 		return NewList(0, semtypes.NEVER, NeverValue)
 	} else if semtypes.IsSubtypeSimple(t, semtypes.OBJECT) {
 		return nil
+	} else if semtypes.IsSubtypeSimple(t, semtypes.HANDLE) {
+		return nil
 	} else if semtypes.ContainsBasicType(t, semtypes.NIL) {
 		return nil
 	} else {
