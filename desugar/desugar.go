@@ -102,6 +102,36 @@ func (ctx *FunctionContext) nextDesugarSymbolName() string {
 	return name
 }
 
+func (ctx *FunctionContext) addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	return ctx.pkgCtx.AddSymbolToSameSpace(ref, name, symbol)
+}
+
+func (ctx *FunctionContext) newFunctionScope(parent model.Scope) *model.FunctionScope {
+	return ctx.pkgCtx.NewFunctionScope(parent)
+}
+
+func (ctx *FunctionContext) setSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	ctx.pkgCtx.SetSymbolType(ref, ty)
+}
+
+func (ctx *FunctionContext) getSymbol(ref model.SymbolRef) model.Symbol {
+	return ctx.pkgCtx.GetSymbol(ref)
+}
+
+func (ctx *FunctionContext) typeEnv() semtypes.Env {
+	return ctx.pkgCtx.TypeEnv()
+}
+
+type desugarContext interface {
+	nextDesugarSymbolName() string
+	addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef
+	newFunctionScope(parent model.Scope) *model.FunctionScope
+	setSymbolType(ref model.SymbolRef, ty semtypes.SemType)
+	getSymbol(ref model.SymbolRef) model.Symbol
+	typeEnv() semtypes.Env
+	internalError(msg string)
+}
+
 type desugaredSymbol struct {
 	name     string
 	ty       semtypes.SemType
@@ -232,6 +262,83 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
 }
 
+func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *ast.BLangFunction {
+	retStmt := &ast.BLangReturn{Expr: defaultExpr}
+	retStmt.SetDeterminedType(semtypes.NEVER)
+	body := &ast.BLangBlockFunctionBody{Stmts: []ast.BLangStatement{retStmt}}
+	body.SetDeterminedType(semtypes.NEVER)
+
+	fn := &ast.BLangFunction{}
+	fn.Name = &ast.BLangIdentifier{Value: name}
+	fn.Name.SetDeterminedType(semtypes.NEVER)
+	fn.Body = body
+	fn.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(fn, defaultExpr.GetPosition())
+	return fn
+}
+
+type desugaredRecordFieldResult struct {
+	fn     *ast.BLangFunction
+	symRef model.SymbolRef
+}
+
+type desugaredTypeDescResult struct {
+	recordFields []desugaredRecordFieldResult
+}
+
+func desugarTypeDesc(ctx desugarContext, typeDesc ast.BType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+	switch td := typeDesc.(type) {
+	case *ast.BLangRecordType:
+		return desugarRecordTypeDesc(ctx, td, ownerSymRef, parentScope)
+	}
+	return desugaredTypeDescResult{}
+}
+
+func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+	var fields []desugaredRecordFieldResult
+	for _, field := range recType.FieldPtrs() {
+		if field.DefaultExpr == nil {
+			continue
+		}
+		fieldSemType := field.Type.(ast.BLangNode).GetDeterminedType()
+		fnName := ctx.nextDesugarSymbolName()
+		signature := model.FunctionSignature{ReturnType: fieldSemType}
+		fnSymbol := model.NewFunctionSymbol(fnName, signature, false)
+		env := ctx.typeEnv()
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.TupleTypeWrapped(env)
+		fnDefn := semtypes.NewFunctionDefinition()
+		fnType := fnDefn.Define(env, paramListTy, fieldSemType, semtypes.FunctionQualifiersFrom(env, false, false))
+		fnSymbol.SetType(fnType)
+		symRef := ctx.addSymbolToSameSpace(ownerSymRef, fnName, fnSymbol)
+		fnScope := ctx.newFunctionScope(parentScope)
+
+		fn := createDefaultValueFunction(fnName, field.DefaultExpr)
+		fn.SetSymbol(symRef)
+		fn.SetScope(fnScope)
+
+		field.DefaultFnRef = symRef
+		fields = append(fields, desugaredRecordFieldResult{fn: fn, symRef: symRef})
+	}
+	return desugaredTypeDescResult{recordFields: fields}
+}
+
+func desugarTopLevelTypeDescs(pkgCtx *dcontext.PackageContext, pkg *ast.BLangPackage) {
+	cx := &FunctionContext{pkgCtx: pkgCtx}
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		typeDesc, ok := defn.GetTypeData().TypeDescriptor.(ast.BType)
+		if !ok {
+			pkgCtx.InternalError("type definition has no BType type descriptor")
+			return
+		}
+		result := desugarTypeDesc(cx, typeDesc, defn.Symbol(), nil)
+		for _, rf := range result.recordFields {
+			pkg.Functions = append(pkg.Functions, *rf.fn)
+		}
+	}
+}
+
 // DesugarPackage returns a desugared package (may be new or same instance)
 func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
 	if importedSymbols == nil {
@@ -252,6 +359,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			*fn = *desugarFunction(pkgCtx, fn)
 		})
 	}
+
+	// Desugar type definition default expressions into standalone functions
+	desugarTopLevelTypeDescs(pkgCtx, pkg)
 
 	// Desugar all functions
 	for i := range pkg.Functions {

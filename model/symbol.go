@@ -17,6 +17,7 @@
 package model
 
 import (
+	"iter"
 	"sync"
 
 	"ballerina-lang-go/semtypes"
@@ -123,7 +124,7 @@ type (
 		mu          sync.RWMutex
 		Pkg         PackageIdentifier
 		lookupTable map[string]int
-		Symbols     []Symbol
+		symbols     []Symbol
 		index       int
 	}
 
@@ -185,8 +186,8 @@ func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
 		panic("SymbolRef cannot be added to a SymbolSpace")
 	}
 	space.mu.Lock()
-	space.lookupTable[name] = len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	space.lookupTable[name] = len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	space.mu.Unlock()
 }
 
@@ -205,8 +206,8 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 	// We really need this lock only for module level symbols but we don't distinguish between module level space and other spaces
 	space.mu.Lock()
 	defer space.mu.Unlock()
-	index := len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	index := len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	return index
 }
 
@@ -216,10 +217,35 @@ func (space *SymbolSpace) RefAt(index int) SymbolRef {
 }
 
 // SymbolAt returns the symbol at the given index. Thread-safe.
+func (space *SymbolSpace) SpaceIndex() int {
+	return space.index
+}
+
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	space.mu.RLock()
 	defer space.mu.RUnlock()
-	return space.Symbols[index]
+	return space.symbols[index]
+}
+
+func (space *SymbolSpace) Len() int {
+	space.mu.RLock()
+	defer space.mu.RUnlock()
+	return len(space.symbols)
+}
+
+// Symbols returns an iterator over the symbols in the space. This is for
+// reading only — callers must not modify the yielded symbols or add new symbols
+// to the space during iteration.
+func (space *SymbolSpace) Symbols() iter.Seq2[int, Symbol] {
+	return func(yield func(int, Symbol) bool) {
+		space.mu.RLock()
+		defer space.mu.RUnlock()
+		for i, sym := range space.symbols {
+			if !yield(i, sym) {
+				return
+			}
+		}
+	}
 }
 
 func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
@@ -228,7 +254,7 @@ func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 		Package:      packageID.PkgName.Value(),
 		Version:      packageID.Version.Value(),
 	}
-	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
+	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -368,6 +394,10 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 		return SymbolKindParemeter
 	}
 	return SymbolKindVariable
+}
+
+func (vs *ValueSymbol) IsConst() bool {
+	return vs.isConst || vs.isParameter
 }
 
 func (vs *ValueSymbol) Copy() Symbol {

@@ -1,0 +1,44 @@
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable rs (type
+        (array-type
+          (user-defined-type R) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (binary-expr ...
+      (literal 0)
+      (literal 9))
+    (var-def
+      (variable i (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (var-def
+      (variable f (type
+        (record-type
+          (field value
+            (value-type int)
+            (simple-var-ref i)))) (expr
+        (mapping-constructor-expr))))
+    (expression-stmt
+      (invocation lang.array push (
+        (simple-var-ref rs)
+        (simple-var-ref f))))
+  )
+  (bb3 (bb1) (bb4))
+  (bb4 (bb3 bb5) (bb5 bb6)
+    (simple-var-ref rs)
+    (var-def
+      (variable r (type
+        (user-defined-type R))))
+  )
+  (bb5 (bb4) (bb4)
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref r)))))
+  )
+  (bb6 (bb4) ())
+)

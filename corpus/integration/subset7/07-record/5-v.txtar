@@ -1,0 +1,15 @@
+-- stdout --
+10
+10
+hello
+20
+hello
+1
+10
+5
+10
+hello
+5
+20
+world
+-- stderr --

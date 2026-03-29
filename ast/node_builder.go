@@ -2443,7 +2443,18 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			}
 			recordType.AddField(fieldName, bField)
 		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
-			panic("default values are not supported")
+			recordFieldDV := field.(*tree.RecordFieldWithDefaultValueNode)
+			fieldName := recordFieldDV.FieldName().Text()
+			bField := BField{
+				Name:        model.Name(fieldName),
+				Type:        n.createTypeNode(recordFieldDV.TypeName()).(BType),
+				DefaultExpr: n.createExpression(recordFieldDV.Expression()),
+			}
+			bField.pos = getPosition(recordFieldDV)
+			if recordFieldDV.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			recordType.AddField(fieldName, bField)
 		case common.TYPE_REFERENCE:
 			typeRef := field.(*tree.TypeReferenceNode)
 			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))

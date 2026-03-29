@@ -1286,6 +1286,9 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 		}
 		p.indentLevel++
 		p.PrintInner(field.Type.(BLangNode))
+		if field.DefaultExpr != nil {
+			p.PrintInner(field.DefaultExpr.(BLangNode))
+		}
 		p.indentLevel--
 		p.endNode()
 	}

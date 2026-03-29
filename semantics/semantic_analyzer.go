@@ -1084,6 +1084,9 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangPanic:
 		analyzeExpression(a, n.Expr, semtypes.ERROR)
 		return nil
+	case *ast.BLangRecordType:
+		validateRecordFieldDefaults(a, n)
+		return nil
 	case *ast.BLangClassDefinition:
 		for _, f := range n.Fields {
 			field := f.(*ast.BLangSimpleVariable)
@@ -1202,4 +1205,102 @@ func recordKeyName(key *ast.BLangMappingKey) string {
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
 	e.SetDeterminedType(expectedType)
+}
+
+// validateRecordFieldDefaults checks that all record field default expressions satisfy
+// isolation rules: all variable references must be const, regardless of scope.
+// Record field defaults are evaluated at record construction time and must not capture
+// mutable state from any scope.
+func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
+	for _, field := range node.Fields() {
+		if field.DefaultExpr != nil {
+			if !isIsolatedFuncInner(a, nil, field.DefaultExpr.(ast.BLangNode)) {
+				a.semanticErr("not an isolated expression", field.DefaultExpr.(ast.BLangNode).GetPosition())
+			}
+		}
+	}
+}
+
+// ancestorSpaceIndices collects the SpaceIndex values of all scopes above the given
+// function scope (its parent chain up to the module scope). Variables from these scopes
+// are non-local (module-level or captured) and must be const in an isolated function.
+// If funcScope is nil (module-level context), returns nil to signal that all refs must be const.
+// NOTE: this works with narrowing because we create narrowed symbol in the same space as the symbol being narrowed.
+func ancestorSpaceIndices(funcScope *model.FunctionScope) map[int]struct{} {
+	if funcScope == nil {
+		return nil
+	}
+	ancestors := make(map[int]struct{})
+	scope := funcScope.Parent
+	for scope != nil {
+		switch s := scope.(type) {
+		case *model.ModuleScope:
+			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
+			return ancestors
+		case *model.FunctionScope:
+			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
+			scope = s.Parent
+		case *model.BlockScope:
+			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
+			scope = s.Parent
+		default:
+			return ancestors
+		}
+	}
+	return ancestors
+}
+
+// PR-TODO: Make this generic over Expressions and statements
+func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) bool {
+	ancestors := ancestorSpaceIndices(funcScope)
+	return everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
+		switch inner := inner.(type) {
+		case *ast.BLangInvocation:
+			analyzer.unimplementedErr("isolated functions not implemented", inner.GetPosition())
+			return false
+		case *ast.BLangSimpleVarRef:
+			sym := a.ctx().GetSymbol(inner.Symbol())
+			if varSym, ok := sym.(*model.ValueSymbol); ok {
+				if ancestors == nil {
+					return varSym.IsConst()
+				}
+				if _, isAncestor := ancestors[inner.Symbol().SpaceIndex]; isAncestor {
+					return varSym.IsConst()
+				}
+				return true
+			} else {
+				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
+				return false
+			}
+		default:
+			return true
+		}
+	})
+}
+
+type everyNodeVisitor[A analyzer] struct {
+	analyzer  A
+	predicate func(A, ast.BLangNode) bool
+	result    bool
+}
+
+func (v *everyNodeVisitor[A]) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
+		return v
+	}
+	if !v.predicate(v.analyzer, node) {
+		v.result = false
+		return nil
+	}
+	return v
+}
+
+func (v *everyNodeVisitor[A]) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+	return v
+}
+
+func everyNode[A analyzer](a A, node ast.BLangNode, predicate func(A, ast.BLangNode) bool) bool {
+	visitor := &everyNodeVisitor[A]{analyzer: a, predicate: predicate, result: true}
+	ast.Walk(visitor, node)
+	return visitor.result
 }

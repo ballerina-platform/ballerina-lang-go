@@ -108,14 +108,14 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 		return write(buf, int64(0))
 	}
 
-	if err := write(buf, int64(len(space.Symbols))); err != nil {
+	if err := write(buf, int64(space.Len())); err != nil {
 		return err
 	}
 	if err := sw.writePackageIdentifier(buf, space.Pkg); err != nil {
 		return err
 	}
 
-	for _, sym := range space.Symbols {
+	for _, sym := range space.Symbols() {
 		if err := sw.writeSymbol(buf, sym); err != nil {
 			return err
 		}

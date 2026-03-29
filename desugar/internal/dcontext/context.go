@@ -17,11 +17,13 @@
 package dcontext
 
 import (
+	"fmt"
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"sync"
 )
 
 // PackageContext holds shared state for desugaring a single package.
@@ -32,6 +34,7 @@ type PackageContext struct {
 	importedSymbols      map[string]model.ExportedSymbolSpace
 	importMu             sync.Mutex
 	addedImplicitImports map[string]bool
+	desugarSymbolCounter int
 }
 
 func NewPackageContext(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *PackageContext {
@@ -71,6 +74,24 @@ func (ctx *PackageContext) GetSymbol(ref model.SymbolRef) model.Symbol {
 
 func (ctx *PackageContext) GetSymbolType(ref model.SymbolRef) semtypes.SemType {
 	return ctx.compilerCtx.SymbolType(ref)
+}
+
+func (ctx *PackageContext) SetSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	ctx.compilerCtx.SetSymbolType(ref, ty)
+}
+
+func (ctx *PackageContext) TypeEnv() semtypes.Env {
+	return ctx.compilerCtx.GetTypeEnv()
+}
+
+func (ctx *PackageContext) NextDesugarSymbolName() string {
+	name := fmt.Sprintf("$desugar$%d", ctx.desugarSymbolCounter)
+	ctx.desugarSymbolCounter++
+	return name
+}
+
+func (ctx *PackageContext) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	return ctx.compilerCtx.AddSymbolToSameSpace(ref, name, symbol)
 }
 
 func (ctx *PackageContext) InternalError(msg string) {
