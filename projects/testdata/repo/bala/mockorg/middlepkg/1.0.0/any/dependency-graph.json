@@ -1,0 +1,22 @@
+{
+  "packages": [
+    {
+      "org": "mockorg",
+      "name": "middlepkg",
+      "version": "1.0.0",
+      "transitive": false,
+      "dependencies": [
+        {
+          "org": "mockorg",
+          "name": "leafpkg",
+          "version": "1.0.0",
+          "transitive": false,
+          "dependencies": [],
+          "modules": []
+        }
+      ],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

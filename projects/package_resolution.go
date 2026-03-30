@@ -108,12 +108,19 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 
 func (r *PackageResolution) buildPackageDependencyGraph() {
 	builder := newDependencyGraphBuilder[PackageDescriptor]()
+	ctx := context.Background()
 
 	// Add root package as a node
 	rootDesc := r.rootPackageContext.getDescriptor()
 	builder.addNode(rootDesc)
 
-	// Collect all external package dependencies from module responses
+	// Visited set keyed by org/name (first-seen wins for version conflicts)
+	visited := make(map[string]bool)
+	rootKey := rootDesc.Org().Value() + "/" + rootDesc.Name().Value()
+	visited[rootKey] = true
+
+	// Collect direct dependencies from root package's module imports
+	var directDeps []*PackageDescriptor
 	for _, modID := range r.rootPackageContext.moduleIDs {
 		modCtx := r.rootPackageContext.moduleContextMap[modID]
 		if modCtx == nil {
@@ -123,23 +130,86 @@ func (r *PackageResolution) buildPackageDependencyGraph() {
 		requests := modCtx.populateModuleLoadRequests()
 		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
 
-		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
+		responses := r.moduleResolver.resolveModuleLoadRequests(ctx, requests)
 		for _, resp := range responses {
 			if resp.resolutionStatus == resolutionStatusResolved && resp.packageDescriptor != nil {
 				pkgDesc := resp.packageDescriptor
 				key := pkgDesc.Org().Value() + "/" + pkgDesc.Name().Value()
 
-				// Track resolved dependency
-				r.resolvedDependencies[key] = pkgDesc
-
-				// Add to graph
-				builder.addNode(*pkgDesc)
-				builder.addDependency(rootDesc, *pkgDesc)
+				if !visited[key] {
+					visited[key] = true
+					r.resolvedDependencies[key] = pkgDesc
+					builder.addNode(*pkgDesc)
+					builder.addDependency(rootDesc, *pkgDesc)
+					directDeps = append(directDeps, pkgDesc)
+				}
 			}
 		}
 	}
 
+	// BFS for transitive dependencies
+	r.resolveTransitiveDependencies(ctx, builder, directDeps, visited)
+
 	r.packageDependencyGraph = builder.build()
+}
+
+// resolveTransitiveDependencies uses BFS to resolve transitive dependencies.
+// Uses first-seen wins for version conflict resolution.
+func (r *PackageResolution) resolveTransitiveDependencies(
+	ctx context.Context,
+	builder *dependencyGraphBuilder[PackageDescriptor],
+	directDeps []*PackageDescriptor,
+	visited map[string]bool,
+) {
+	// BFS queue of package descriptors to process
+	queue := make([]PackageDescriptor, 0, len(directDeps))
+	for _, dep := range directDeps {
+		queue = append(queue, *dep)
+	}
+
+	resolver := r.environment.PackageResolver()
+	options := r.environment.ResolutionOptions()
+
+	for len(queue) > 0 {
+		// Dequeue
+		current := queue[0]
+		queue = queue[1:]
+
+		// Load the package to get its manifest dependencies
+		request := NewResolutionRequest(current)
+		responses := resolver.ResolvePackages(ctx, []ResolutionRequest{request}, options)
+		if len(responses) == 0 || !responses[0].IsResolved() {
+			continue
+		}
+
+		pkg := responses[0].Package()
+		if pkg == nil {
+			continue
+		}
+
+		// Get transitive dependencies from the package's manifest
+		for _, dep := range pkg.Manifest().Dependencies() {
+			key := dep.Org().Value() + "/" + dep.Name().Value()
+
+			// Skip if already visited (first-seen wins)
+			if visited[key] {
+				continue
+			}
+			visited[key] = true
+
+			depDesc := NewPackageDescriptor(dep.Org(), dep.Name(), dep.Version())
+
+			// Track resolved dependency
+			r.resolvedDependencies[key] = &depDesc
+
+			// Add to graph
+			builder.addNode(depDesc)
+			builder.addDependency(current, depDesc)
+
+			// Enqueue for further traversal
+			queue = append(queue, depDesc)
+		}
+	}
 }
 
 // ResolvedDependencies returns the map of resolved external package dependencies.
@@ -147,8 +217,8 @@ func (r *PackageResolution) ResolvedDependencies() map[string]*PackageDescriptor
 	return r.resolvedDependencies
 }
 
-// PackageDependencyGraph returns the package-level dependency graph.
-func (r *PackageResolution) PackageDependencyGraph() *DependencyGraph[PackageDescriptor] {
+// DependencyGraph returns the package-level dependency graph.
+func (r *PackageResolution) DependencyGraph() *DependencyGraph[PackageDescriptor] {
 	return r.packageDependencyGraph
 }
 

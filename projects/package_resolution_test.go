@@ -232,7 +232,7 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	resolution := pkg.Resolution()
 	require.NotNil(resolution)
 
-	packageDependencyGraph := resolution.PackageDependencyGraph()
+	packageDependencyGraph := resolution.DependencyGraph()
 	assert.NotNil(packageDependencyGraph, "package dependency graph should exist")
 
 	resolvedDeps := resolution.ResolvedDependencies()
@@ -318,24 +318,90 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	cachedLeaf := env.PackageCache().Get("mockorg", "leafpkg", "1.0.0")
 	require.NotNil(cachedLeaf, "leafpkg should be cached after compilation")
 
-	// Step 6: Verify dependency graph shows direct dependency
+	// Step 6: Verify dependency graph shows both direct and transitive dependencies
 	resolution := pkg.Resolution()
 	require.NotNil(resolution)
 
 	resolvedDeps := resolution.ResolvedDependencies()
+
+	// Verify direct dependency (middlepkg)
 	middlepkgDesc, found := resolvedDeps["mockorg/middlepkg"]
 	assert.True(found, "resolved dependencies should contain mockorg/middlepkg")
 	assert.Equal("mockorg", middlepkgDesc.Org().Value())
 	assert.Equal("middlepkg", middlepkgDesc.Name().Value())
 	assert.Equal("1.0.0", middlepkgDesc.Version().String())
 
-	// Step 7: Verify middlepkg's dependencies include leafpkg (transitive chain)
-	middleResolution := cachedMiddle.Resolution()
-	require.NotNil(middleResolution)
-
-	middleResolvedDeps := middleResolution.ResolvedDependencies()
-	leafpkgDesc, found := middleResolvedDeps["mockorg/leafpkg"]
-	assert.True(found, "middlepkg's resolved dependencies should contain mockorg/leafpkg")
+	// Step 7: Verify transitive dependency (leafpkg) is also in main project's resolved deps
+	leafpkgDesc, found := resolvedDeps["mockorg/leafpkg"]
+	assert.True(found, "resolved dependencies should contain transitive dep mockorg/leafpkg")
 	assert.Equal("mockorg", leafpkgDesc.Org().Value())
 	assert.Equal("leafpkg", leafpkgDesc.Name().Value())
+	assert.Equal("1.0.0", leafpkgDesc.Version().String())
+
+	// Step 8: Verify package dependency graph has correct edges
+	packageDependencyGraph := resolution.DependencyGraph()
+	require.NotNil(packageDependencyGraph)
+
+	// The graph should show: project -> middlepkg -> leafpkg
+	nodes := packageDependencyGraph.ToTopologicallySortedList()
+	assert.Len(nodes, 3, "expected 3 nodes in package dependency graph (project, middlepkg, leafpkg)")
+}
+
+// TestPackageResolution_MultiModuleDependencies tests package resolution with multi-module
+// dependencies at both direct and transitive levels.
+// Structure:
+//   - project imports mockorg/multiA (default module) and mockorg/multiA.util (submodule)
+//   - multiA depends on mockorg/multiB (which has multiB and multiB.helper modules)
+//
+// This verifies that:
+//  1. Multi-module packages are correctly resolved as single package dependencies
+//  2. Importing different modules from the same package doesn't create duplicate entries
+//  3. Transitive multi-module dependencies are correctly resolved
+func TestPackageResolution_MultiModuleDependencies(t *testing.T) {
+	require := test_util.NewRequire(t)
+	assert := test_util.New(t)
+
+	// Step 1: Prepare the test repository path
+	testRepoPath, err := filepath.Abs("testdata/repo/bala")
+	require.NoError(err)
+
+	// Step 2: Load the test project with the test repository
+	projectPath := filepath.Join("testdata", "project-with-multimod-dep")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	result, err := loadProject(absPath, projects.ProjectLoadConfig{
+		RepositoryFactories: []projects.RepositoryFactory{
+			func(env *projects.Environment) projects.Repository {
+				return repository.NewFileSystemRepository(
+					"test-repo",
+					os.DirFS(testRepoPath),
+					".",
+					env,
+					projects.LoadBalaProject,
+				)
+			},
+		},
+	})
+	require.NoError(err)
+	require.NotNil(result)
+
+	mainProject := result.Project()
+	pkg := mainProject.CurrentPackage()
+
+	// Step 3: Verify resolved dependencies
+	resolution := pkg.Resolution()
+	packageDependencyGraph := resolution.DependencyGraph()
+	nodes := packageDependencyGraph.ToTopologicallySortedList()
+	assert.Len(nodes, 3, "expected 3 nodes: project, multiA, multiB")
+
+	// Step 4: Trigger compilation
+	compilation := pkg.Compilation()
+	require.NotNil(compilation)
+
+	diagnosticResult := compilation.DiagnosticResult()
+	for _, diag := range diagnosticResult.Diagnostics() {
+		t.Logf("Diagnostic: %s", diag.Message())
+	}
+	assert.Equal(0, diagnosticResult.DiagnosticCount(), "expected no compilation errors")
 }
