@@ -16,14 +16,11 @@
 
 package semtypes
 
-import (
-	"fmt"
-	"sync"
-)
+import "fmt"
 
 type bddNodeSimple struct {
-	atom             Atom
-	canonicalKeyFunc func() string
+	atom      Atom
+	canonical string
 }
 
 var _ BddNode = &bddNodeSimple{}
@@ -48,13 +45,12 @@ func (this *bddNodeSimple) Atom() Atom {
 }
 
 func newBddNodeSimple(atom Atom) *bddNodeSimple {
-	node := &bddNodeSimple{atom: atom}
-	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey())
-	})
-	return node
+	return &bddNodeSimple{
+		atom:      atom,
+		canonical: fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey()),
+	}
 }
 
 func (this *bddNodeSimple) canonicalKey() string {
-	return this.canonicalKeyFunc()
+	return this.canonical
 }

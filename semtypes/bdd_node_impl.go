@@ -16,17 +16,14 @@
 
 package semtypes
 
-import (
-	"fmt"
-	"sync"
-)
+import "fmt"
 
 type bddNodeImpl struct {
-	atom             Atom
-	left             Bdd
-	middle           Bdd
-	right            Bdd
-	canonicalKeyFunc func() string
+	atom      Atom
+	left      Bdd
+	middle    Bdd
+	right     Bdd
+	canonical string
 }
 
 var _ BddNode = &bddNodeImpl{}
@@ -48,13 +45,15 @@ func (this *bddNodeImpl) Right() Bdd {
 }
 
 func newBddNodeImpl(atom Atom, left, middle, right Bdd) *bddNodeImpl {
-	node := &bddNodeImpl{atom: atom, left: left, middle: middle, right: right}
-	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey())
-	})
-	return node
+	return &bddNodeImpl{
+		atom:      atom,
+		left:      left,
+		middle:    middle,
+		right:     right,
+		canonical: fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey()),
+	}
 }
 
 func (this *bddNodeImpl) canonicalKey() string {
-	return this.canonicalKeyFunc()
+	return this.canonical
 }
