@@ -29,25 +29,34 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %19 = < $desugar$2 $desugar$4;
+    %20 = $desugar$2;
+    %21 = $desugar$4;
+    %19 = < %20 %21;
     %19 ? bb4 : bb5;
   }
   bb4 {
-    %21 = $desugar$3[$desugar$2];
-    %20 = $desugar$0[%21];
-    x = %20;
-    %24 = ConstantLoad 2
-    %23 = * x %24;
-    %25 = push($desugar$1,%23) -> bb6;
+    PushScopeFrame 13
+    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    x = %0;
+    %4 = x;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %3 = * %4 %6;
+    %7 = %3;
+    %8 = push((1, $desugar$1),%7) -> bb6;
   }
   bb5 {
     out = $desugar$1;
-    %29 = println(out) -> bb7;
+    %23 = println(out) -> bb7;
   }
   bb6 {
-    %27 = ConstantLoad 1
-    %26 = + $desugar$2 %27;
-    $desugar$2 = %26;
+    %10 = (1, $desugar$2);
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %9 = + %10 %12;
+    (1, $desugar$2) = %9;
+    PopScopeFrame
     GOTO bb3;
   }
   bb7 {

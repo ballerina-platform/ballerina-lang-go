@@ -4,28 +4,32 @@ import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
 keyFor(int) -> string{
   bb0 {
-    %3 = ConstantLoad 1
-    %2 = == x %3;
+    %3 = x;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = == %3 %5;
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %4 = ConstantLoad a
-    %0 = %4;
+    %6 = ConstantLoad a
+    %0 = %6;
     return;
   }
   bb2 {
-    %6 = ConstantLoad 2
-    %5 = == x %6;
-    %5 ? bb3 : bb4;
+    %8 = x;
+    %9 = ConstantLoad 2
+    %10 = %9;
+    %7 = == %8 %10;
+    %7 ? bb3 : bb4;
   }
   bb3 {
-    %7 = ConstantLoad b
-    %0 = %7;
+    %11 = ConstantLoad b
+    %0 = %11;
     return;
   }
   bb4 {
-    %8 = ConstantLoad c
-    %0 = %8;
+    %12 = ConstantLoad c
+    %0 = %12;
     return;
   }
 }
@@ -55,46 +59,58 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %18 = < $desugar$2 $desugar$4;
+    %19 = $desugar$2;
+    %20 = $desugar$4;
+    %18 = < %19 %20;
     %18 ? bb4 : bb5;
   }
   bb4 {
-    %20 = $desugar$3[$desugar$2];
-    %19 = $desugar$0[%20];
-    x = %19;
-    %22 = keyFor(x) -> bb6;
+    PushScopeFrame 20
+    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    x = %0;
+    %3 = x;
+    %4 = keyFor(%3) -> bb6;
   }
   bb5 {
     out = $desugar$1;
-    %36 = ConstantLoad a
-    %35 = out[%36];
-    %37 = println(%35) -> bb7;
+    %23 = ConstantLoad a
+    %22 = out[%23];
+    %24 = %22;
+    %25 = println(%24) -> bb7;
   }
   bb6 {
-    %24 = ConstantLoad 10
-    %23 = * x %24;
-    %25 = ConstantLoad 2
-    %26 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%25]{%22, %23}
-    $desugar$5 = %26;
-    %29 = ConstantLoad 1
-    %28 = $desugar$5[%29];
-    %31 = ConstantLoad 0
-    %30 = $desugar$5[%31];
-    $desugar$1[%30] = %28;
-    %33 = ConstantLoad 1
-    %32 = + $desugar$2 %33;
-    $desugar$2 = %32;
+    %6 = x;
+    %7 = ConstantLoad 10
+    %8 = %7;
+    %5 = * %6 %8;
+    %9 = ConstantLoad 2
+    %10 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%9]{%4, %5}
+    $desugar$5 = %10;
+    %13 = ConstantLoad 1
+    %12 = $desugar$5[%13];
+    %15 = ConstantLoad 0
+    %14 = $desugar$5[%15];
+    (1, $desugar$1)[%14] = %12;
+    %17 = (1, $desugar$2);
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %16 = + %17 %19;
+    (1, $desugar$2) = %16;
+    PopScopeFrame
     GOTO bb3;
   }
   bb7 {
-    %39 = ConstantLoad b
-    %38 = out[%39];
-    %40 = println(%38) -> bb8;
+    %27 = ConstantLoad b
+    %26 = out[%27];
+    %28 = %26;
+    %29 = println(%28) -> bb8;
   }
   bb8 {
-    %42 = ConstantLoad c
-    %41 = out[%42];
-    %43 = println(%41) -> bb9;
+    %31 = ConstantLoad c
+    %30 = out[%31];
+    %32 = %30;
+    %33 = println(%32) -> bb9;
   }
   bb9 {
     return;

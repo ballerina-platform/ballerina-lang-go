@@ -4,18 +4,20 @@ import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
 keyFor(int) -> string{
   bb0 {
-    %3 = ConstantLoad 2
-    %2 = <= x %3;
+    %3 = x;
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %2 = <= %3 %5;
     %2 ? bb1 : bb2;
   }
   bb1 {
-    %4 = ConstantLoad a
-    %0 = %4;
+    %6 = ConstantLoad a
+    %0 = %6;
     return;
   }
   bb2 {
-    %5 = ConstantLoad b
-    %0 = %5;
+    %7 = ConstantLoad b
+    %0 = %7;
     return;
   }
 }
@@ -45,31 +47,38 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %18 = < $desugar$2 $desugar$4;
+    %19 = $desugar$2;
+    %20 = $desugar$4;
+    %18 = < %19 %20;
     %18 ? bb4 : bb5;
   }
   bb4 {
-    %20 = $desugar$3[$desugar$2];
-    %19 = $desugar$0[%20];
-    x = %19;
-    %22 = keyFor(x) -> bb6;
+    PushScopeFrame 16
+    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    x = %0;
+    %3 = x;
+    %4 = keyFor(%3) -> bb6;
   }
   bb5 {
     out = $desugar$1;
-    %33 = println(out) -> bb7;
+    %22 = println(out) -> bb7;
   }
   bb6 {
-    %23 = ConstantLoad 2
-    %24 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%23]{%22, x}
-    $desugar$5 = %24;
-    %27 = ConstantLoad 1
-    %26 = $desugar$5[%27];
-    %29 = ConstantLoad 0
-    %28 = $desugar$5[%29];
-    $desugar$1[%28] = %26;
-    %31 = ConstantLoad 1
-    %30 = + $desugar$2 %31;
-    $desugar$2 = %30;
+    %5 = ConstantLoad 2
+    %6 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%5]{%4, x}
+    $desugar$5 = %6;
+    %9 = ConstantLoad 1
+    %8 = $desugar$5[%9];
+    %11 = ConstantLoad 0
+    %10 = $desugar$5[%11];
+    (1, $desugar$1)[%10] = %8;
+    %13 = (1, $desugar$2);
+    %14 = ConstantLoad 1
+    %15 = %14;
+    %12 = + %13 %15;
+    (1, $desugar$2) = %12;
+    PopScopeFrame
     GOTO bb3;
   }
   bb7 {
