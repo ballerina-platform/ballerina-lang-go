@@ -1,0 +1,66 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function earlyReturn (
+    (variable n (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (simple-var-ref n))
+        (block-stmt
+          (if
+            (binary-expr ==
+              (simple-var-ref i)
+              (literal 3))
+            (block-stmt
+              (return
+                (binary-expr *
+                  (simple-var-ref i)
+                  (literal 10)))) ())
+          (block-stmt)))
+      (return
+        (unary-expr -
+          (literal 1)))))
+  (function normalReturn (
+    (variable n (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (simple-var-ref n))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref sum)
+            (simple-var-ref i))))
+      (return
+        (simple-var-ref sum))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation earlyReturn (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation earlyReturn (
+            (literal 2))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation normalReturn (
+            (literal 5)))))))))

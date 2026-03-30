@@ -9,14 +9,16 @@ main() -> nil{
   }
   bb2 {
     %2 = ConstantLoad 100
-    %3 = bar(%2) -> bb3;
+    %3 = %2;
+    %4 = bar(%3) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %4 = ConstantLoad 200
-    %5 = baz(%4) -> bb5;
+    %5 = ConstantLoad 200
+    %6 = %5;
+    %7 = baz(%6) -> bb5;
   }
   bb5 {
     GOTO bb6;
@@ -34,7 +36,8 @@ foo() -> boolean{
 }
 bar(int) -> nil{
   bb0 {
-    %2 = println(x) -> bb1;
+    %2 = x;
+    %3 = println(%2) -> bb1;
   }
   bb1 {
     return;
@@ -42,7 +45,8 @@ bar(int) -> nil{
 }
 baz(int) -> nil{
   bb0 {
-    %2 = println(x) -> bb1;
+    %2 = x;
+    %3 = println(%2) -> bb1;
   }
   bb1 {
     return;

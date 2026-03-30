@@ -1,0 +1,79 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F2
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (type-definition Fs
+    (function-type (
+      (union-type
+        (value-type int)
+        (value-type string))) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable base (type
+          (value-type int)) (expr
+          (literal 10))))
+      (var-def
+        (variable f (type
+          (user-defined-type F2)) (expr
+          (lambda
+            (function $anonFunc$_0 () (
+              (value-type int))
+              (block-function-body
+                (var-def
+                  (variable sum (type
+                    (value-type int)) (expr
+                    (simple-var-ref base))))
+                (foreach
+                  (var-def
+                    (variable i (type
+                      (value-type int))))
+                  (binary-expr ..<
+                    (literal 0)
+                    (invocation length expr:
+                      (simple-var-ref vals) ()))
+                  (block-stmt
+                    (compound-assignment +
+                      (simple-var-ref sum)
+                      (index-based-access
+                        (simple-var-ref vals)
+                        (simple-var-ref i)))))
+                (return
+                  (simple-var-ref sum))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation f (
+            (literal 2)
+            (literal 3))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type F1))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (invocation f (
+                (literal 1))))))) (
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected)))))))
+      (if
+        (type-test-expr is
+          (simple-var-ref f)
+          (user-defined-type Fs))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal unexpected))))) ())
+      (block-stmt))))

@@ -11,13 +11,16 @@ main() -> nil{
 printComp() -> nil{
   bb0 {
     %2 = ConstantLoad true
-    %3 = ConstantLoad false
-    %1 = > %2 %3;
+    %3 = %2;
+    %4 = ConstantLoad false
+    %5 = %4;
+    %1 = > %3 %5;
     %1 ? bb1 : bb3;
   }
   bb1 {
-    %4 = ConstantLoad 1
-    %5 = println(%4) -> bb2;
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
     GOTO bb3;

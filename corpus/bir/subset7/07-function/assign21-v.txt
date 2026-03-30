@@ -1,0 +1,205 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    f = %1;
+    %3 = ConstantLoad 1
+    %4 = %3;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %7 = ConstantLoad 3
+    %8 = %7;
+    %9 = ConstantLoad 4
+    %10 = %9;
+    %11 = ConstantLoad 5
+    %12 = %11;
+    %13 = f(%4,%6,%8,%10,%12) -> bb1;
+  }
+  bb1 {
+    result = %13;
+    %15 = result;
+    %16 = println(%15) -> bb2;
+  }
+  bb2 {
+    %17 = fp $anon/.:bar
+    g = %17;
+    %19 = ConstantLoad 1
+    %20 = %19;
+    %21 = ConstantLoad 2
+    %22 = %21;
+    %23 = ConstantLoad 3
+    %24 = %23;
+    %25 = ConstantLoad 4
+    %26 = %25;
+    %27 = ConstantLoad 5
+    %28 = %27;
+    %29 = g(%20,%22,%24,%26,%28) -> bb3;
+  }
+  bb3 {
+    %30 = %29;
+    %31 = println(%30) -> bb4;
+  }
+  bb4 {
+    %32 = ConstantLoad 1
+    %33 = %32;
+    %34 = ConstantLoad 2
+    %35 = %34;
+    %36 = g(%33,%35) -> bb5;
+  }
+  bb5 {
+    %37 = %36;
+    %38 = ConstantLoad 3
+    %39 = %38;
+    %40 = ConstantLoad 4
+    %41 = %40;
+    %42 = g(%39,%41) -> bb6;
+  }
+  bb6 {
+    %43 = %42;
+    %44 = ConstantLoad 5
+    %45 = %44;
+    %46 = f(%37,%43,%45) -> bb7;
+  }
+  bb7 {
+    %47 = %46;
+    %48 = println(%47) -> bb8;
+  }
+  bb8 {
+    %49 = fp $anon/.:baz
+    h = %49;
+    %51 = ConstantLoad 1
+    %52 = %51;
+    %53 = ConstantLoad 2
+    %54 = %53;
+    %55 = ConstantLoad 3
+    %56 = %55;
+    %57 = h(%52,%54,%56) -> bb9;
+  }
+  bb9 {
+    %58 = println(%57) -> bb10;
+  }
+  bb10 {
+    return;
+  }
+}
+foo(int,[int...]...) -> int{
+  bb0 {
+    result = init;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, result);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
+    (1, result) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+}
+bar([int...]...) -> int{
+  bb0 {
+    %2 = ConstantLoad 1
+    result = %2;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, result);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = * %1 %3;
+    (1, result) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+}
+baz(int,[int...]...) -> [int...]{
+  bb0 {
+    %3 = ConstantLoad 1
+    %4 = newArray [int...][%3]{init}
+    result = %4;
+    current = init;
+    %7 = ConstantLoad 0
+    i = %7;
+    %9 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %9;
+    GOTO bb2;
+  }
+  bb2 {
+    %12 = i;
+    %13 = $desugar$0;
+    %11 = < %12 %13;
+    %11 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 10
+    %1 = (1, current);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
+    (1, current) = %0;
+    %4 = (1, current);
+    %5 = push((1, result),%4) -> bb5;
+  }
+  bb4 {
+    %0 = result;
+    return;
+  }
+  bb5 {
+    %7 = (1, i);
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %6 = + %7 %9;
+    (1, i) = %6;
+    PopScopeFrame
+    GOTO bb2;
+  }
+}

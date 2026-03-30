@@ -1161,7 +1161,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 		switch binaryExpr.GetOperatorKind() {
-		case model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL:
+		case model.OperatorKind_EQUAL, model.OperatorKind_NOT_EQUAL:
 			anyData := semtypes.CreateAnydata(ctx)
 			if !semtypes.IsSubtype(ctx, lhsTy, anyData) && !semtypes.IsSubtype(ctx, rhsTy, anyData) {
 				a.semanticErr(fmt.Sprintf("expect anydata types for %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())

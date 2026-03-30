@@ -17,7 +17,8 @@ main() -> nil{
     %13 = println(l1) -> bb1;
   }
   bb1 {
-    %14 = println(l2) -> bb2;
+    %14 = l2;
+    %15 = println(%14) -> bb2;
   }
   bb2 {
     return;

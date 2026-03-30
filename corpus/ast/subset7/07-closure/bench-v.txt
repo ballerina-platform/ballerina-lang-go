@@ -1,0 +1,116 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (literal 1)))))
+  (function genFs (
+    (variable base (type
+      (value-type int)))) (
+    (array-type
+      (user-defined-type F) dimensions: 1 ([])))
+    (block-function-body
+      (var-def
+        (variable array (type
+          (array-type
+            (user-defined-type F) dimensions: 1 ([]))) (expr
+          (list-constructor-expr))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (literal 1000))
+        (block-stmt
+          (var-def
+            (variable v (type
+              (value-type int)) (expr
+              (simple-var-ref i))))
+          (if
+            (binary-expr ==
+              (binary-expr %
+                (simple-var-ref i)
+                (literal 2))
+              (literal 0))
+            (block-stmt
+              (var-def
+                (variable f (type
+                  (user-defined-type F)) (expr
+                  (lambda
+                    (function $anonFunc$_0 (
+                      (variable x (type
+                        (value-type int)))) (
+                      (value-type int))
+                      (block-function-body
+                        (return
+                          (binary-expr +
+                            (binary-expr +
+                              (simple-var-ref v)
+                              (simple-var-ref x))
+                            (simple-var-ref base)))))))))
+              (expression-stmt
+                (invocation push expr:
+                  (simple-var-ref array) (
+                  (simple-var-ref f))))) (
+            (block-stmt
+              (expression-stmt
+                (invocation push expr:
+                  (simple-var-ref array) (
+                  (simple-var-ref foo)))))))))
+      (return
+        (simple-var-ref array))))
+  (function fSum (
+    (variable funcs (type
+      (array-type
+        (user-defined-type F) dimensions: 1 ([]))))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref funcs) ()))
+        (block-stmt
+          (var-def
+            (variable f (type
+              (user-defined-type F)) (expr
+              (index-based-access
+                (simple-var-ref funcs)
+                (simple-var-ref i)))))
+          (compound-assignment +
+            (simple-var-ref sum)
+            (invocation f (
+              (simple-var-ref i))))))
+      (return
+        (simple-var-ref sum))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable funcs (type
+          (array-type
+            (user-defined-type F) dimensions: 1 ([]))) (expr
+          (invocation genFs (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation fSum (
+            (simple-var-ref funcs)))))))))

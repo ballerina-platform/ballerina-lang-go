@@ -630,7 +630,17 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		functionLookupKey := br.readStringCPEntry()
 		ty := br.readType()
 		lhsOp := br.readOperand(varMap)
-		return bir.NewFPLoad(string(functionLookupKey), ty, lhsOp, nil)
+		var isClosure bool
+		br.read(&isClosure)
+		fpLoad := bir.NewFPLoad(string(functionLookupKey), ty, lhsOp, nil)
+		fpLoad.IsClosure = isClosure
+		return fpLoad
+	case bir.INSTRUCTION_KIND_PUSH_SCOPE:
+		var numLocals int32
+		br.read(&numLocals)
+		return &bir.PushScopeFrame{NumLocals: int(numLocals)}
+	case bir.INSTRUCTION_KIND_POP_SCOPE:
+		return &bir.PopScopeFrame{}
 	default:
 		panic(fmt.Sprintf("unsupported instruction kind: %d", instructionKind))
 	}
@@ -752,8 +762,19 @@ func (br *birReader) readOperand(varMap map[string]bir.BIRVariableDcl) *bir.BIRO
 		varMap[name.Value()] = varDcl
 	}
 
+	var mode uint8
+	var frameIndex, baseIndex int32
+	br.read(&mode)
+	br.read(&frameIndex)
+	br.read(&baseIndex)
+
 	return &bir.BIROperand{
 		VariableDcl: varDcl,
+		Address: bir.Address{
+			Mode:       bir.AddressingMode(mode),
+			FrameIndex: int(frameIndex),
+			BaseIndex:  int(baseIndex),
+		},
 	}
 }
 

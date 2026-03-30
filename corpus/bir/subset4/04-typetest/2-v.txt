@@ -7,7 +7,8 @@ main() -> nil{
     %3 = newArray [int...][%2]{%1}
     foo = %3;
     %5 = foo is [int...]
-    %6 = println(%5) -> bb1;
+    %6 = %5;
+    %7 = println(%6) -> bb1;
   }
   bb1 {
     return;

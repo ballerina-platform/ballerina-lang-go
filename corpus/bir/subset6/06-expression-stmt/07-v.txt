@@ -5,7 +5,8 @@ main() -> nil{
     %1 = foo() -> bb1;
   }
   bb1 {
-    %2 = println(%1) -> bb2;
+    %2 = %1;
+    %3 = println(%2) -> bb2;
   }
   bb2 {
     return;

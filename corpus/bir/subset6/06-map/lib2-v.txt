@@ -12,33 +12,35 @@ main() -> nil{
     %7 = length(foo) -> bb1;
   }
   bb1 {
-    %8 = println(%7) -> bb2;
+    %8 = %7;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
-    %9 = keys(foo) -> bb3;
+    %10 = keys(foo) -> bb3;
   }
   bb3 {
-    %10 = println(%9) -> bb4;
+    %11 = println(%10) -> bb4;
   }
   bb4 {
-    %11 = ConstantLoad b
-    %12 = remove(foo,%11) -> bb5;
+    %12 = ConstantLoad b
+    %13 = remove(foo,%12) -> bb5;
   }
   bb5 {
-    b = %12;
-    %14 = println(b) -> bb6;
+    b = %13;
+    %15 = println(b) -> bb6;
   }
   bb6 {
-    %15 = length(foo) -> bb7;
+    %16 = length(foo) -> bb7;
   }
   bb7 {
-    %16 = println(%15) -> bb8;
+    %17 = %16;
+    %18 = println(%17) -> bb8;
   }
   bb8 {
-    %17 = keys(foo) -> bb9;
+    %19 = keys(foo) -> bb9;
   }
   bb9 {
-    %18 = println(%17) -> bb10;
+    %20 = println(%19) -> bb10;
   }
   bb10 {
     return;

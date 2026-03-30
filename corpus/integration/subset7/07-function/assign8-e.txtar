@@ -1,0 +1,8 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected function(int, int...) returns nil, got function(int) returns nil
+  --> assign8-e.bal:20:11
+   |
+20 |     F f = foo; // @error
+   |           ^^^
+

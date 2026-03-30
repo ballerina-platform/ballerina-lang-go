@@ -9,17 +9,19 @@ main() -> nil{
   }
   bb1 {
     %4 = ConstantLoad 1
-    %5 = f(%4) -> bb2;
+    %5 = %4;
+    %6 = f(%5) -> bb2;
   }
   bb2 {
-    %6 = println(%5) -> bb3;
+    %7 = %6;
+    %8 = println(%7) -> bb3;
   }
   bb3 {
     GOTO bb6;
   }
   bb4 {
-    %7 = ConstantLoad expected
-    %8 = println(%7) -> bb5;
+    %9 = ConstantLoad expected
+    %10 = println(%9) -> bb5;
   }
   bb5 {
     GOTO bb6;

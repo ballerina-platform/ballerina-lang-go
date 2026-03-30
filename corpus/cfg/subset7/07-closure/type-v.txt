@@ -1,0 +1,65 @@
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable base (type
+        (value-type int)) (expr
+        (literal 10))))
+    (var-def
+      (variable f (type
+        (user-defined-type F2)) (expr
+        (lambda
+          (function $anonFunc$_0 () (
+            (value-type int))
+            (block-function-body
+              (var-def
+                (variable sum (type
+                  (value-type int)) (expr
+                  (simple-var-ref base))))
+              (foreach
+                (var-def
+                  (variable i (type
+                    (value-type int))))
+                (binary-expr ..<
+                  (literal 0)
+                  (invocation lang.array length (
+                    (simple-var-ref vals))))
+                (block-stmt
+                  (compound-assignment +
+                    (simple-var-ref sum)
+                    (index-based-access
+                      (simple-var-ref vals)
+                      (simple-var-ref i)))))
+              (return
+                (simple-var-ref sum))))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 2)
+          (literal 3))))))
+    (type-test-expr is
+      (simple-var-ref f)
+      (user-defined-type F1))
+  )
+  (bb1 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (invocation f (
+          (literal 1))))))
+  )
+  (bb2 (bb1 bb3) (bb4 bb5)
+    (type-test-expr is
+      (simple-var-ref f)
+      (user-defined-type Fs))
+  )
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+  (bb4 (bb2) (bb5)
+    (expression-stmt
+      (invocation io println (
+        (literal unexpected))))
+  )
+  (bb5 (bb4 bb2) ())
+)

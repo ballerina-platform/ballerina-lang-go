@@ -5,7 +5,8 @@ main() -> nil{
     %1 = ConstantLoad true
     c = %1;
     d = c;
-    %4 = println(d) -> bb1;
+    %4 = d;
+    %5 = println(%4) -> bb1;
   }
   bb1 {
     return;

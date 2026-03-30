@@ -16,20 +16,22 @@ printBoolean() -> nil{
   }
   bb1 {
     %3 = ConstantLoad 1
-    %4 = println(%3) -> bb2;
+    %4 = %3;
+    %5 = println(%4) -> bb2;
   }
   bb2 {
     GOTO bb3;
   }
   bb3 {
-    %5 = ConstantLoad false
-    b = %5;
-    %7 = ! b;
-    %7 ? bb4 : bb6;
+    %6 = ConstantLoad false
+    b = %6;
+    %8 = ! b;
+    %8 ? bb4 : bb6;
   }
   bb4 {
-    %8 = ConstantLoad 2
-    %9 = println(%8) -> bb5;
+    %9 = ConstantLoad 2
+    %10 = %9;
+    %11 = println(%10) -> bb5;
   }
   bb5 {
     GOTO bb6;

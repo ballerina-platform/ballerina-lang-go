@@ -1,0 +1,146 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad op
+    %2 = fp $anon/.:add
+    %3 = ConstantLoad left
+    %4 = ConstantLoad 1
+    %5 = ConstantLoad right
+    %6 = ConstantLoad 2
+    %7 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%1=%2, %3=%4, %5=%6}
+    a = %7;
+    %9 = exec(a) -> bb1;
+  }
+  bb1 {
+    %10 = %9;
+    %11 = println(%10) -> bb2;
+  }
+  bb2 {
+    %12 = ConstantLoad op
+    %13 = fp $anon/.:mul
+    %14 = ConstantLoad left
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad right
+    %17 = ConstantLoad 2
+    %18 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%12=%13, %14=%15, %16=%17}
+    b = %18;
+    %20 = exec(b) -> bb3;
+  }
+  bb3 {
+    %21 = %20;
+    %22 = println(%21) -> bb4;
+  }
+  bb4 {
+    %23 = ConstantLoad op
+    %24 = fp $anon/.:addAny
+    %25 = ConstantLoad left
+    %26 = ConstantLoad 2
+    %27 = ConstantLoad right
+    %28 = ConstantLoad 2
+    %29 = newMap {| left: int, op: function(int, int) returns int, right: int, never... |}{%23=%24, %25=%26, %27=%28}
+    c = %29;
+    %31 = exec(c) -> bb5;
+  }
+  bb5 {
+    %32 = %31;
+    %33 = println(%32) -> bb6;
+  }
+  bb6 {
+    %34 = fp $anon/.:add
+    %35 = ConstantLoad op
+    c[%35] = %34;
+    %36 = exec(c) -> bb7;
+  }
+  bb7 {
+    %37 = %36;
+    %38 = println(%37) -> bb8;
+  }
+  bb8 {
+    %39 = fp $anon/.:addAny
+    %40 = ConstantLoad op
+    a[%40] = %39;
+    %41 = exec(a) -> bb9;
+  }
+  bb9 {
+    %42 = %41;
+    %43 = println(%42) -> bb10;
+  }
+  bb10 {
+    return;
+  }
+}
+exec({| left: int, op: function(int, int) returns int, right: int, never... |}) -> int{
+  bb0 {
+    %3 = ConstantLoad op
+    %2 = op[%3];
+    f = %2;
+    %6 = ConstantLoad left
+    %5 = op[%6];
+    %7 = %5;
+    %9 = ConstantLoad right
+    %8 = op[%9];
+    %10 = %8;
+    %11 = f(%7,%10) -> bb1;
+  }
+  bb1 {
+    %0 = %11;
+    return;
+  }
+}
+add(int,int) -> int{
+  bb0 {
+    %4 = left;
+    %5 = right;
+    %3 = + %4 %5;
+    %0 = %3;
+    return;
+  }
+}
+mul(int,int) -> int{
+  bb0 {
+    %4 = left;
+    %5 = right;
+    %3 = * %4 %5;
+    %0 = %3;
+    return;
+  }
+}
+addAny(int,[int...]...) -> int{
+  bb0 {
+    sum = init;
+    %4 = ConstantLoad 0
+    i = %4;
+    %6 = length(rest) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %6;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
+    %8 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, sum);
+    %2 = (1, rest)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
+    (1, sum) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}

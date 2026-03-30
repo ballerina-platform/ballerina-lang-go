@@ -9,20 +9,26 @@ main() -> nil{
     GOTO bb1;
   }
   bb1 {
-    %5 = < _ $desugar$0;
+    %6 = _;
+    %7 = $desugar$0;
+    %5 = < %6 %7;
     %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = ConstantLoad hello
-    %7 = println(%6) -> bb4;
+    PushScopeFrame 6
+    %0 = ConstantLoad hello
+    %1 = println(%0) -> bb4;
   }
   bb3 {
     return;
   }
   bb4 {
-    %9 = ConstantLoad 1
-    %8 = + _ %9;
-    _ = %8;
+    %3 = (1, _);
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
+    (1, _) = %2;
+    PopScopeFrame
     GOTO bb1;
   }
 }

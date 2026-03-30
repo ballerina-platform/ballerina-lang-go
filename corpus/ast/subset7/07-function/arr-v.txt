@@ -1,0 +1,87 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)
+      (value-type int)) (
+      (value-type int))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (invocation fold (
+            (simple-var-ref sum)
+            (list-constructor-expr
+              (literal 1)
+              (literal 2)
+              (literal 3)
+              (literal 4)
+              (literal 5))
+            (literal 0))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation fold (
+            (simple-var-ref mul)
+            (list-constructor-expr
+              (literal 1)
+              (literal 2)
+              (literal 3)
+              (literal 4)
+              (literal 5))
+            (literal 1))))))))
+  (function fold (
+    (variable f (type
+      (user-defined-type F)))
+    (variable a (type
+      (array-type
+        (value-type int) dimensions: 1 ([]))))
+    (variable init (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable result (type
+          (value-type int)) (expr
+          (simple-var-ref init))))
+      (foreach
+        (var-def
+          (variable i (type
+            (value-type int))))
+        (binary-expr ..<
+          (literal 0)
+          (invocation length expr:
+            (simple-var-ref a) ()))
+        (block-stmt
+          (assignment
+            (simple-var-ref result)
+            (invocation f (
+              (simple-var-ref result)
+              (index-based-access
+                (simple-var-ref a)
+                (simple-var-ref i)))))))
+      (return
+        (simple-var-ref result))))
+  (function sum (
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+  (function mul (
+    (variable a (type
+      (value-type int)))
+    (variable b (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr *
+          (simple-var-ref a)
+          (simple-var-ref b))))))

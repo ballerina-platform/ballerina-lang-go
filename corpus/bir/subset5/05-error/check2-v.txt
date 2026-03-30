@@ -12,7 +12,8 @@ main() -> nil{
     return;
   }
   bb2 {
-    %4 = println($desugar$0) -> bb3;
+    %4 = $desugar$0;
+    %5 = println(%4) -> bb3;
   }
   bb3 {
     return;

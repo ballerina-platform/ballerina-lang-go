@@ -1,0 +1,106 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+$anonFunc$_0([int...]...) -> int{
+  bb0 {
+    sum = (1, base);
+    %3 = ConstantLoad 0
+    i = %3;
+    %5 = length(vals) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = i;
+    %9 = $desugar$0;
+    %7 = < %8 %9;
+    %7 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, sum);
+    %2 = (1, vals)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
+    (1, sum) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}
+$anonFunc$_1([int...]...) -> int{
+  bb0 {
+    sum = (1, base);
+    %3 = ConstantLoad 0
+    i = %3;
+    %5 = length(vals) -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %5;
+    GOTO bb2;
+  }
+  bb2 {
+    %8 = i;
+    %9 = $desugar$0;
+    %7 = < %8 %9;
+    %7 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %1 = (1, sum);
+    %2 = (1, vals)[(1, i)];
+    %3 = %2;
+    %0 = + %1 %3;
+    (1, sum) = %0;
+    %5 = (1, i);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, i) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb4 {
+    %0 = sum;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 10
+    base = %1;
+    %3 = closure_fp $anon/.:$anonFunc$_0
+    f1 = %3;
+    f2 = f1;
+    %6 = unknown f1 f2;
+    %7 = %6;
+    %8 = println(%7) -> bb1;
+  }
+  bb1 {
+    %9 = closure_fp $anon/.:$anonFunc$_1
+    f3 = %9;
+    %11 = unknown f1 f3;
+    %12 = %11;
+    %13 = println(%12) -> bb2;
+  }
+  bb2 {
+    %14 = <function(int...) returns int>(f1)
+    f4 = %14;
+    %16 = unknown f1 f4;
+    %17 = %16;
+    %18 = println(%17) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}

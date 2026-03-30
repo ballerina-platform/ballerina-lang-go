@@ -1,0 +1,71 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (lambda
+              (function $anonFunc$_0 (
+                (variable x (type
+                  (value-type string)))
+                (variable y (type
+                  (value-type string)))) (
+                (value-type string))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (simple-var-ref x)
+                      (simple-var-ref y))))))
+            (function-type (
+              (value-type string)
+              (union-type
+                (value-type string)
+                (value-type int))) (
+              (value-type string)))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (lambda
+              (function $anonFunc$_1 (
+                (variable x (type
+                  (value-type string)))
+                (variable y (type
+                  (value-type string)))) (
+                (value-type string))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (simple-var-ref x)
+                      (simple-var-ref y))))))
+            (function-type (
+              (finite-type
+                (literal a))
+              (finite-type
+                (literal a))) (
+              (value-type string)))))))
+      (expression-stmt
+        (invocation io println (
+          (type-test-expr is
+            (lambda
+              (function $anonFunc$_2 (
+                (variable x (type
+                  (value-type string)))
+                (variable y (type
+                  (value-type string)))) (
+                (value-type string))
+                (block-function-body
+                  (return
+                    (binary-expr +
+                      (simple-var-ref x)
+                      (simple-var-ref y))))))
+            (function-type (
+              (finite-type
+                (literal a))
+              (finite-type
+                (literal a))) (
+              (union-type
+                (value-type string)
+                (value-type int)))))))))))

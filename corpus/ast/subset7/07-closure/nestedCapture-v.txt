@@ -1,0 +1,66 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition F
+    (function-type (
+      (value-type int)) (
+      (value-type int))))
+  (type-definition F1
+    (function-type (
+      (value-type int)) (
+      (user-defined-type F))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (value-type int)) (expr
+          (literal 5))))
+      (var-def
+        (variable f1 (type
+          (user-defined-type F1)) (expr
+          (lambda
+            (function $anonFunc$_0 (
+              (variable y (type
+                (value-type int)))) (
+              (user-defined-type F))
+              (block-function-body
+                (var-def
+                  (variable b (type
+                    (value-type int)) (expr
+                    (binary-expr *
+                      (simple-var-ref y)
+                      (literal 2)))))
+                (return
+                  (lambda
+                    (function $anonFunc$_1 (
+                      (variable x (type
+                        (value-type int)))) (
+                      (value-type int))
+                      (block-function-body
+                        (compound-assignment +
+                          (simple-var-ref a)
+                          (simple-var-ref x))
+                        (return
+                          (binary-expr +
+                            (simple-var-ref a)
+                            (simple-var-ref b)))))))))))))
+      (var-def
+        (variable f (type
+          (user-defined-type F)) (expr
+          (invocation f1 (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (invocation f (
+            (literal 20))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref i))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a)))))))

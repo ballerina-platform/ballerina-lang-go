@@ -26,22 +26,28 @@ main() -> nil{
     GOTO bb3;
   }
   bb3 {
-    %16 = < $desugar$2 $desugar$3;
+    %17 = $desugar$2;
+    %18 = $desugar$3;
+    %16 = < %17 %18;
     %16 ? bb4 : bb5;
   }
   bb4 {
-    %18 = $desugar$1[$desugar$2];
-    %17 = $desugar$0[%18];
-    val = %17;
-    %20 = println(val) -> bb6;
+    PushScopeFrame 8
+    %1 = (1, $desugar$1)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    val = %0;
+    %3 = println(val) -> bb6;
   }
   bb5 {
     return;
   }
   bb6 {
-    %22 = ConstantLoad 1
-    %21 = + $desugar$2 %22;
-    $desugar$2 = %21;
+    %5 = (1, $desugar$2);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$2) = %4;
+    PopScopeFrame
     GOTO bb3;
   }
 }

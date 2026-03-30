@@ -3,113 +3,185 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad 60
-    %3 = ConstantLoad 2
-    %1 = / %2 %3;
-    %4 = println(%1) -> bb1;
+    %3 = %2;
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %1 = / %3 %5;
+    %6 = %1;
+    %7 = println(%6) -> bb1;
   }
   bb1 {
-    %7 = ConstantLoad 120
-    %8 = ConstantLoad 3
-    %6 = / %7 %8;
-    %9 = ConstantLoad 4
-    %5 = / %6 %9;
-    %10 = println(%5) -> bb2;
+    %10 = ConstantLoad 120
+    %11 = %10;
+    %12 = ConstantLoad 3
+    %13 = %12;
+    %9 = / %11 %13;
+    %14 = %9;
+    %15 = ConstantLoad 4
+    %16 = %15;
+    %8 = / %14 %16;
+    %17 = %8;
+    %18 = println(%17) -> bb2;
   }
   bb2 {
-    %13 = ConstantLoad 120
-    %14 = ConstantLoad 3
-    %12 = / %13 %14;
-    %16 = ConstantLoad 16
-    %17 = ConstantLoad 4
-    %15 = / %16 %17;
-    %11 = / %12 %15;
-    %18 = println(%11) -> bb3;
+    %21 = ConstantLoad 120
+    %22 = %21;
+    %23 = ConstantLoad 3
+    %24 = %23;
+    %20 = / %22 %24;
+    %25 = %20;
+    %27 = ConstantLoad 16
+    %28 = %27;
+    %29 = ConstantLoad 4
+    %30 = %29;
+    %26 = / %28 %30;
+    %31 = %26;
+    %19 = / %25 %31;
+    %32 = %19;
+    %33 = println(%32) -> bb3;
   }
   bb3 {
-    %21 = ConstantLoad 120
-    %22 = ConstantLoad 3
-    %20 = / %21 %22;
-    %24 = ConstantLoad 16
-    %25 = ConstantLoad 4
-    %23 = / %24 %25;
-    %19 = / %20 %23;
-    %26 = println(%19) -> bb4;
+    %36 = ConstantLoad 120
+    %37 = %36;
+    %38 = ConstantLoad 3
+    %39 = %38;
+    %35 = / %37 %39;
+    %40 = %35;
+    %42 = ConstantLoad 16
+    %43 = %42;
+    %44 = ConstantLoad 4
+    %45 = %44;
+    %41 = / %43 %45;
+    %46 = %41;
+    %34 = / %40 %46;
+    %47 = %34;
+    %48 = println(%47) -> bb4;
   }
   bb4 {
-    %30 = ConstantLoad 120
-    %31 = ConstantLoad 3
-    %29 = / %30 %31;
-    %33 = ConstantLoad 16
-    %34 = ConstantLoad 4
-    %32 = / %33 %34;
-    %28 = / %29 %32;
-    %35 = ConstantLoad 2
-    %27 = / %28 %35;
-    %36 = println(%27) -> bb5;
+    %52 = ConstantLoad 120
+    %53 = %52;
+    %54 = ConstantLoad 3
+    %55 = %54;
+    %51 = / %53 %55;
+    %56 = %51;
+    %58 = ConstantLoad 16
+    %59 = %58;
+    %60 = ConstantLoad 4
+    %61 = %60;
+    %57 = / %59 %61;
+    %62 = %57;
+    %50 = / %56 %62;
+    %63 = %50;
+    %64 = ConstantLoad 2
+    %65 = %64;
+    %49 = / %63 %65;
+    %66 = %49;
+    %67 = println(%66) -> bb5;
   }
   bb5 {
-    %40 = ConstantLoad 120
-    %41 = ConstantLoad 3
-    %39 = / %40 %41;
-    %43 = ConstantLoad 16
-    %44 = ConstantLoad 4
-    %42 = / %43 %44;
-    %38 = / %39 %42;
-    %46 = ConstantLoad 10
-    %47 = ConstantLoad 5
-    %45 = / %46 %47;
-    %37 = / %38 %45;
-    %48 = println(%37) -> bb6;
+    %71 = ConstantLoad 120
+    %72 = %71;
+    %73 = ConstantLoad 3
+    %74 = %73;
+    %70 = / %72 %74;
+    %75 = %70;
+    %77 = ConstantLoad 16
+    %78 = %77;
+    %79 = ConstantLoad 4
+    %80 = %79;
+    %76 = / %78 %80;
+    %81 = %76;
+    %69 = / %75 %81;
+    %82 = %69;
+    %84 = ConstantLoad 10
+    %85 = %84;
+    %86 = ConstantLoad 5
+    %87 = %86;
+    %83 = / %85 %87;
+    %88 = %83;
+    %68 = / %82 %88;
+    %89 = %68;
+    %90 = println(%89) -> bb6;
   }
   bb6 {
-    %52 = ConstantLoad 120
-    %53 = ConstantLoad 3
-    %51 = / %52 %53;
-    %55 = ConstantLoad 16
-    %56 = ConstantLoad 4
-    %54 = / %55 %56;
-    %50 = / %51 %54;
-    %59 = ConstantLoad 400
-    %60 = ConstantLoad 20
-    %58 = / %59 %60;
-    %62 = ConstantLoad 100
-    %63 = ConstantLoad 10
-    %61 = / %62 %63;
-    %57 = / %58 %61;
-    %49 = / %50 %57;
-    %64 = println(%49) -> bb7;
+    %94 = ConstantLoad 120
+    %95 = %94;
+    %96 = ConstantLoad 3
+    %97 = %96;
+    %93 = / %95 %97;
+    %98 = %93;
+    %100 = ConstantLoad 16
+    %101 = %100;
+    %102 = ConstantLoad 4
+    %103 = %102;
+    %99 = / %101 %103;
+    %104 = %99;
+    %92 = / %98 %104;
+    %105 = %92;
+    %108 = ConstantLoad 400
+    %109 = %108;
+    %110 = ConstantLoad 20
+    %111 = %110;
+    %107 = / %109 %111;
+    %112 = %107;
+    %114 = ConstantLoad 100
+    %115 = %114;
+    %116 = ConstantLoad 10
+    %117 = %116;
+    %113 = / %115 %117;
+    %118 = %113;
+    %106 = / %112 %118;
+    %119 = %106;
+    %91 = / %105 %119;
+    %120 = %91;
+    %121 = println(%120) -> bb7;
   }
   bb7 {
-    %65 = ConstantLoad 120
-    %66 = ConstantLoad 3
-    %67 = div(%65,%66) -> bb8;
+    %122 = ConstantLoad 120
+    %123 = %122;
+    %124 = ConstantLoad 3
+    %125 = %124;
+    %126 = div(%123,%125) -> bb8;
   }
   bb8 {
-    %68 = ConstantLoad 16
-    %69 = ConstantLoad 4
-    %70 = div(%68,%69) -> bb9;
+    %127 = %126;
+    %128 = ConstantLoad 16
+    %129 = %128;
+    %130 = ConstantLoad 4
+    %131 = %130;
+    %132 = div(%129,%131) -> bb9;
   }
   bb9 {
-    %71 = div(%67,%70) -> bb10;
+    %133 = %132;
+    %134 = div(%127,%133) -> bb10;
   }
   bb10 {
-    %72 = ConstantLoad 400
-    %73 = ConstantLoad 20
-    %74 = div(%72,%73) -> bb11;
+    %135 = %134;
+    %136 = ConstantLoad 400
+    %137 = %136;
+    %138 = ConstantLoad 20
+    %139 = %138;
+    %140 = div(%137,%139) -> bb11;
   }
   bb11 {
-    %75 = ConstantLoad 100
-    %76 = ConstantLoad 10
-    %77 = div(%75,%76) -> bb12;
+    %141 = %140;
+    %142 = ConstantLoad 100
+    %143 = %142;
+    %144 = ConstantLoad 10
+    %145 = %144;
+    %146 = div(%143,%145) -> bb12;
   }
   bb12 {
-    %78 = div(%74,%77) -> bb13;
+    %147 = %146;
+    %148 = div(%141,%147) -> bb13;
   }
   bb13 {
-    %79 = div(%71,%78) -> bb14;
+    %149 = %148;
+    %150 = div(%135,%149) -> bb14;
   }
   bb14 {
-    %80 = println(%79) -> bb15;
+    %151 = %150;
+    %152 = println(%151) -> bb15;
   }
   bb15 {
     return;
@@ -117,7 +189,9 @@ main() -> nil{
 }
 div(int,int) -> int{
   bb0 {
-    %3 = / i j;
+    %4 = i;
+    %5 = j;
+    %3 = / %4 %5;
     %0 = %3;
     return;
   }

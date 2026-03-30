@@ -5,15 +5,18 @@ main() -> nil{
     %2 = makeNil() -> bb1;
   }
   bb1 {
-    %3 = makeNil() -> bb2;
+    %3 = %2;
+    %4 = makeNil() -> bb2;
   }
   bb2 {
-    %1 = == %2 %3;
+    %5 = %4;
+    %1 = == %3 %5;
     %1 ? bb3 : bb5;
   }
   bb3 {
-    %4 = ConstantLoad 1
-    %5 = println(%4) -> bb4;
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %8 = println(%7) -> bb4;
   }
   bb4 {
     GOTO bb5;

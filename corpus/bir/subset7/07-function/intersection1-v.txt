@@ -1,0 +1,84 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = fp $anon/.:foo
+    fx = %1;
+    %3 = ConstantLoad 1
+    %4 = %3;
+    %5 = fx(%4) -> bb1;
+  }
+  bb1 {
+    r1 = %5;
+    %7 = r1;
+    %8 = println(%7) -> bb2;
+  }
+  bb2 {
+    %9 = fp $anon/.:bar
+    fx = %9;
+    %10 = ConstantLoad 1
+    %11 = %10;
+    %12 = fx(%11) -> bb3;
+  }
+  bb3 {
+    r2 = %12;
+    %14 = r2;
+    %15 = println(%14) -> bb4;
+  }
+  bb4 {
+    %16 = fp $anon/.:foo
+    fy = %16;
+    %18 = ConstantLoad 2
+    %19 = %18;
+    %20 = fy(%19) -> bb5;
+  }
+  bb5 {
+    r3 = %20;
+    %22 = println(r3) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}
+foo(int) -> int{
+  bb0 {
+    %3 = a;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
+    %0 = %2;
+    return;
+  }
+}
+bar(int) -> int:Unsigned8{
+  bb0 {
+    %2 = ConstantLoad 5
+    %0 = %2;
+    return;
+  }
+}
+baz(int:Unsigned8) -> int|string{
+  bb0 {
+    %3 = a;
+    %4 = ConstantLoad 0
+    %5 = %4;
+    %2 = > %3 %5;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %7 = a;
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %6 = - %7 %9;
+    %0 = %6;
+    return;
+  }
+  bb2 {
+    %10 = ConstantLoad zero
+    %0 = %10;
+    return;
+  }
+  bb3 {
+    return;
+  }
+}

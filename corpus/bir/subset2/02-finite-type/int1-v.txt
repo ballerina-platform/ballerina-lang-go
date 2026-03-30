@@ -7,11 +7,13 @@ main() -> nil{
     %3 = ConstantLoad 2
     c = %3;
     d = c;
-    %5 = println(d) -> bb1;
+    %5 = d;
+    %6 = println(%5) -> bb1;
   }
   bb1 {
     e = c;
-    %7 = println(e) -> bb2;
+    %8 = e;
+    %9 = println(%8) -> bb2;
   }
   bb2 {
     return;

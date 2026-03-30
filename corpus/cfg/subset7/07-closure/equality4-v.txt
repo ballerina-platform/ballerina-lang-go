@@ -1,0 +1,87 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable base (type
+        (value-type int)) (expr
+        (literal 10))))
+    (var-def
+      (variable f1 (type
+        (user-defined-type F1)) (expr
+        (lambda
+          (function $anonFunc$_0 () (
+            (value-type int))
+            (block-function-body
+              (var-def
+                (variable sum (type
+                  (value-type int)) (expr
+                  (simple-var-ref base))))
+              (foreach
+                (var-def
+                  (variable i (type
+                    (value-type int))))
+                (binary-expr ..<
+                  (literal 0)
+                  (invocation lang.array length (
+                    (simple-var-ref vals))))
+                (block-stmt
+                  (compound-assignment +
+                    (simple-var-ref sum)
+                    (index-based-access
+                      (simple-var-ref vals)
+                      (simple-var-ref i)))))
+              (return
+                (simple-var-ref sum))))))))
+    (var-def
+      (variable f2 (type
+        (user-defined-type F1)) (expr
+        (simple-var-ref f1))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref f1)
+          (simple-var-ref f2)))))
+    (var-def
+      (variable f3 (type
+        (user-defined-type F1)) (expr
+        (lambda
+          (function $anonFunc$_1 () (
+            (value-type int))
+            (block-function-body
+              (var-def
+                (variable sum (type
+                  (value-type int)) (expr
+                  (simple-var-ref base))))
+              (foreach
+                (var-def
+                  (variable i (type
+                    (value-type int))))
+                (binary-expr ..<
+                  (literal 0)
+                  (invocation lang.array length (
+                    (simple-var-ref vals))))
+                (block-stmt
+                  (compound-assignment +
+                    (simple-var-ref sum)
+                    (index-based-access
+                      (simple-var-ref vals)
+                      (simple-var-ref i)))))
+              (return
+                (simple-var-ref sum))))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref f1)
+          (simple-var-ref f3)))))
+    (var-def
+      (variable f4 (type
+        (user-defined-type F)) (expr
+        (type-conversion-expr
+          (simple-var-ref f1)
+          (user-defined-type F)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ===
+          (simple-var-ref f1)
+          (simple-var-ref f4)))))
+  )
+)

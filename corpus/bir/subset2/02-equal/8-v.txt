@@ -3,79 +3,103 @@ import ballerina.io v 0.0.0;
 main() -> nil{
   bb0 {
     %2 = ConstantLoad 2
-    %3 = mkInt(%2) -> bb1;
+    %3 = %2;
+    %4 = mkInt(%3) -> bb1;
   }
   bb1 {
-    %4 = ConstantLoad 2
-    %1 = == %3 %4;
-    %5 = println(%1) -> bb2;
+    %5 = ConstantLoad 2
+    %6 = %5;
+    %1 = == %4 %6;
+    %7 = %1;
+    %8 = println(%7) -> bb2;
   }
   bb2 {
-    %7 = ConstantLoad 17
-    %8 = ConstantLoad 17
-    %9 = mkInt(%8) -> bb3;
+    %10 = ConstantLoad 17
+    %11 = %10;
+    %12 = ConstantLoad 17
+    %13 = %12;
+    %14 = mkInt(%13) -> bb3;
   }
   bb3 {
-    %6 = != %7 %9;
-    %10 = println(%6) -> bb4;
+    %9 = != %11 %14;
+    %15 = %9;
+    %16 = println(%15) -> bb4;
   }
   bb4 {
-    %12 = ConstantLoad true
-    %13 = mkBoolean(%12) -> bb5;
+    %18 = ConstantLoad true
+    %19 = %18;
+    %20 = mkBoolean(%19) -> bb5;
   }
   bb5 {
-    %14 = ConstantLoad true
-    %11 = == %13 %14;
-    %15 = println(%11) -> bb6;
+    %21 = ConstantLoad true
+    %22 = %21;
+    %17 = == %20 %22;
+    %23 = %17;
+    %24 = println(%23) -> bb6;
   }
   bb6 {
-    %17 = ConstantLoad false
-    %18 = ConstantLoad false
-    %19 = mkBoolean(%18) -> bb7;
+    %26 = ConstantLoad false
+    %27 = %26;
+    %28 = ConstantLoad false
+    %29 = %28;
+    %30 = mkBoolean(%29) -> bb7;
   }
   bb7 {
-    %16 = != %17 %19;
-    %20 = println(%16) -> bb8;
+    %25 = != %27 %30;
+    %31 = %25;
+    %32 = println(%31) -> bb8;
   }
   bb8 {
-    %21 = ConstantLoad 2
-    n = %21;
-    %24 = ConstantLoad 2
-    %25 = mkInt(%24) -> bb9;
+    %33 = ConstantLoad 2
+    n = %33;
+    %36 = ConstantLoad 2
+    %37 = %36;
+    %38 = mkInt(%37) -> bb9;
   }
   bb9 {
-    %23 = == %25 n;
-    %26 = println(%23) -> bb10;
+    %39 = n;
+    %35 = == %38 %39;
+    %40 = %35;
+    %41 = println(%40) -> bb10;
   }
   bb10 {
-    %27 = ConstantLoad 17
-    n = %27;
-    %29 = ConstantLoad 17
-    %30 = mkInt(%29) -> bb11;
+    %42 = ConstantLoad 17
+    n = %42;
+    %44 = n;
+    %45 = ConstantLoad 17
+    %46 = %45;
+    %47 = mkInt(%46) -> bb11;
   }
   bb11 {
-    %28 = != n %30;
-    %31 = println(%28) -> bb12;
+    %43 = != %44 %47;
+    %48 = %43;
+    %49 = println(%48) -> bb12;
   }
   bb12 {
-    %32 = ConstantLoad true
-    b = %32;
-    %35 = ConstantLoad true
-    %36 = mkBoolean(%35) -> bb13;
+    %50 = ConstantLoad true
+    b = %50;
+    %53 = ConstantLoad true
+    %54 = %53;
+    %55 = mkBoolean(%54) -> bb13;
   }
   bb13 {
-    %34 = == %36 b;
-    %37 = println(%34) -> bb14;
+    %56 = b;
+    %52 = == %55 %56;
+    %57 = %52;
+    %58 = println(%57) -> bb14;
   }
   bb14 {
-    %38 = ConstantLoad false
-    b = %38;
-    %40 = ConstantLoad false
-    %41 = mkBoolean(%40) -> bb15;
+    %59 = ConstantLoad false
+    b = %59;
+    %61 = b;
+    %62 = ConstantLoad false
+    %63 = %62;
+    %64 = mkBoolean(%63) -> bb15;
   }
   bb15 {
-    %39 = != b %41;
-    %42 = println(%39) -> bb16;
+    %60 = != %61 %64;
+    %65 = %60;
+    %66 = println(%65) -> bb16;
   }
   bb16 {
     return;

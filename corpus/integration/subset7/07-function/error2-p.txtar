@@ -1,0 +1,5 @@
+-- stdout --
+-- stderr --
+error: negative value
+        at bar(error2-p.bal:26)
+           main(error2-p.bal:21)
