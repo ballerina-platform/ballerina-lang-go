@@ -25,6 +25,8 @@ type context struct {
 	_mappingMemo  map[string]*bddMemo
 	_functionMemo map[string]*bddMemo
 
+	_conjunctions []conjunction
+
 	_jsonMemo           SemType
 	_anydataMemo        SemType
 	_cloneableMemo      SemType
@@ -131,6 +133,28 @@ func (this *context) MappingAtomType(atom Atom) *MappingAtomicType {
 	return this._env.mappingAtomType(atom)
 }
 
+func (this *context) pushConjunction(atom Atom, next conjunctionHandle) conjunctionHandle {
+	idx := conjunctionHandle(len(this._conjunctions) + 1)
+	this._conjunctions = append(this._conjunctions, conjunction{Atom: atom, Next: next})
+	return idx
+}
+
+func (this *context) conjunctionAtom(h conjunctionHandle) Atom {
+	return this._conjunctions[h-1].Atom
+}
+
+func (this *context) conjunctionNext(h conjunctionHandle) conjunctionHandle {
+	return this._conjunctions[h-1].Next
+}
+
+func (this *context) conjunctionStackDepth() int32 {
+	return int32(len(this._conjunctions))
+}
+
+func (this *context) resetConjunctionStack(depth int32) {
+	this._conjunctions = this._conjunctions[:depth]
+}
+
 func ContextFrom(env Env) Context {
 	return &context{
 		_env:            env,
@@ -138,6 +162,7 @@ func ContextFrom(env Env) Context {
 		_mappingMemo:    make(map[string]*bddMemo),
 		_functionMemo:   make(map[string]*bddMemo),
 		_comparableMemo: make(map[comparableMemoKey]*comparableMemo),
+		_conjunctions:   make([]conjunction, 0, 64),
 	}
 }
 

@@ -23,7 +23,7 @@ var _ BasicTypeOps = &functionOps{}
 func (this *functionOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from functionOps.java:45:5
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, functionFormulaIsEmpty)
+		return bddEvery(cx, b, conjunctionNil, conjunctionNil, functionFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
@@ -47,69 +47,71 @@ func (this *functionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
-func functionFormulaIsEmpty(cx Context, pos *conjunction, neg *conjunction) bool {
+func functionFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
 	// migrated from functionOps.java:51:5
 	return functionPathIsEmpty(cx, functionIntersectRet(cx, pos), functionUnionParams(cx, pos), functionUnionQualifiers(cx, pos), pos, neg)
 }
 
-func functionPathIsEmpty(cx Context, rets SemType, params SemType, qualifiers SemType, pos *conjunction, neg *conjunction) bool {
+func functionPathIsEmpty(cx Context, rets SemType, params SemType, qualifiers SemType, pos conjunctionHandle, neg conjunctionHandle) bool {
 	// migrated from functionOps.java:56:5
-	if neg == nil {
+	if neg == conjunctionNil {
 		return false
 	} else {
-		t := cx.FunctionAtomType(neg.Atom)
+		t := cx.FunctionAtomType(cx.conjunctionAtom(neg))
+		negNext := cx.conjunctionNext(neg)
 		t0 := t.ParamType
 		t1 := t.RetType
 		t2 := t.Qualifiers
 		if t.IsGeneric {
-			return (((IsSubtype(cx, qualifiers, t2) && IsSubtype(cx, params, t0)) && IsSubtype(cx, rets, t1)) || functionPathIsEmpty(cx, rets, params, qualifiers, pos, neg.Next))
+			return (((IsSubtype(cx, qualifiers, t2) && IsSubtype(cx, params, t0)) && IsSubtype(cx, rets, t1)) || functionPathIsEmpty(cx, rets, params, qualifiers, pos, negNext))
 		}
-		return (((IsSubtype(cx, qualifiers, t2) && IsSubtype(cx, t0, params)) && functionPhi(cx, t0, complement(t1), pos)) || functionPathIsEmpty(cx, rets, params, qualifiers, pos, neg.Next))
+		return (((IsSubtype(cx, qualifiers, t2) && IsSubtype(cx, t0, params)) && functionPhi(cx, t0, complement(t1), pos)) || functionPathIsEmpty(cx, rets, params, qualifiers, pos, negNext))
 	}
 }
 
-func functionPhi(cx Context, t0 SemType, t1 SemType, pos *conjunction) bool {
+func functionPhi(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
 	// migrated from functionOps.java:81:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return ((!IsNever(t0)) && (IsEmpty(cx, t0) || IsEmpty(cx, t1)))
 	}
 	return functionPhiInner(cx, t0, t1, pos)
 }
 
-func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos *conjunction) bool {
+func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
 	// migrated from functionOps.java:89:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
-		s := cx.FunctionAtomType(pos.Atom)
+		s := cx.FunctionAtomType(cx.conjunctionAtom(pos))
+		posNext := cx.conjunctionNext(pos)
 		s0 := s.ParamType
 		s1 := s.RetType
-		return (((IsSubtype(cx, t0, s0) || IsSubtype(cx, functionIntersectRet(cx, pos.Next), complement(t1))) && functionPhiInner(cx, t0, Intersect(t1, s1), pos.Next)) && functionPhiInner(cx, Diff(t0, s0), t1, pos.Next))
+		return (((IsSubtype(cx, t0, s0) || IsSubtype(cx, functionIntersectRet(cx, posNext), complement(t1))) && functionPhiInner(cx, t0, Intersect(t1, s1), posNext)) && functionPhiInner(cx, Diff(t0, s0), t1, posNext))
 	}
 }
 
-func functionUnionParams(cx Context, pos *conjunction) SemType {
+func functionUnionParams(cx Context, pos conjunctionHandle) SemType {
 	// migrated from functionOps.java:104:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return NEVER
 	}
-	return Union(cx.FunctionAtomType(pos.Atom).ParamType, functionUnionParams(cx, pos.Next))
+	return Union(cx.FunctionAtomType(cx.conjunctionAtom(pos)).ParamType, functionUnionParams(cx, cx.conjunctionNext(pos)))
 }
 
-func functionUnionQualifiers(cx Context, pos *conjunction) SemType {
+func functionUnionQualifiers(cx Context, pos conjunctionHandle) SemType {
 	// migrated from functionOps.java:111:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return NEVER
 	}
-	return Union(cx.FunctionAtomType(pos.Atom).Qualifiers, functionUnionQualifiers(cx, pos.Next))
+	return Union(cx.FunctionAtomType(cx.conjunctionAtom(pos)).Qualifiers, functionUnionQualifiers(cx, cx.conjunctionNext(pos)))
 }
 
-func functionIntersectRet(cx Context, pos *conjunction) SemType {
+func functionIntersectRet(cx Context, pos conjunctionHandle) SemType {
 	// migrated from functionOps.java:119:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return VAL
 	}
-	return Intersect(cx.FunctionAtomType(pos.Atom).RetType, functionIntersectRet(cx, pos.Next))
+	return Intersect(cx.FunctionAtomType(cx.conjunctionAtom(pos)).RetType, functionIntersectRet(cx, cx.conjunctionNext(pos)))
 }
 
 func NewFunctionOps() functionOps {
@@ -117,15 +119,16 @@ func NewFunctionOps() functionOps {
 	return this
 }
 
-func (this *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos *conjunction) bool {
+func (this *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
 	// migrated from functionOps.java:126:5
-	if pos == nil {
+	if pos == conjunctionNil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
-		s := cx.FunctionAtomType(pos.Atom)
+		s := cx.FunctionAtomType(cx.conjunctionAtom(pos))
+		posNext := cx.conjunctionNext(pos)
 		s0 := s.ParamType
 		s1 := s.RetType
-		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, pos.Next)) && (IsSubtype(cx, t1, complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), pos.Next)))
+		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, posNext)) && (IsSubtype(cx, t1, complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), posNext)))
 	}
 }
 

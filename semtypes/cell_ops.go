@@ -24,26 +24,26 @@ var _ BasicTypeOps = &cellOps{}
 
 func cellFormulaIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from cellOps.java:53:5
-	return bddEvery(cx, t.(Bdd), nil, nil, cellFormulaIsEmptyInner)
+	return bddEvery(cx, t.(Bdd), conjunctionNil, conjunctionNil, cellFormulaIsEmptyInner)
 }
 
-func cellFormulaIsEmptyInner(cx Context, posList *conjunction, negList *conjunction) bool {
+func cellFormulaIsEmptyInner(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool {
 	// migrated from cellOps.java:57:5
 	var combined cellAtomicType
-	if posList == nil {
+	if posList == conjunctionNil {
 		combined = cellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_UNLIMITED)
 	} else {
-		combined = cellAtomType(posList.Atom)
-		p := posList.Next
-		for p != nil {
-			combined = intersectCellAtomicType(&combined, new(cellAtomType(p.Atom)))
-			p = p.Next
+		combined = cellAtomType(cx.conjunctionAtom(posList))
+		p := cx.conjunctionNext(posList)
+		for p != conjunctionNil {
+			combined = intersectCellAtomicType(&combined, new(cellAtomType(cx.conjunctionAtom(p))))
+			p = cx.conjunctionNext(p)
 		}
 	}
 	return !cellInhabited(cx, combined, negList)
 }
 
-func cellInhabited(cx Context, posCell cellAtomicType, negList *conjunction) bool {
+func cellInhabited(cx Context, posCell cellAtomicType, negList conjunctionHandle) bool {
 	// migrated from cellOps.java:72:5
 	pos := posCell.Ty
 	if IsEmpty(cx, pos) {
@@ -59,61 +59,61 @@ func cellInhabited(cx Context, posCell cellAtomicType, negList *conjunction) boo
 	}
 }
 
-func cellMutNoneInhabited(cx Context, pos SemType, negList *conjunction) bool {
+func cellMutNoneInhabited(cx Context, pos SemType, negList conjunctionHandle) bool {
 	// migrated from cellOps.java:84:5
-	negListUnionResult := cellNegListUnion(negList)
+	negListUnionResult := cellNegListUnion(cx, negList)
 	return IsNever(negListUnionResult) || !IsEmpty(cx, Diff(pos, negListUnionResult))
 }
 
-func cellNegListUnion(negList *conjunction) SemType {
+func cellNegListUnion(cx Context, negList conjunctionHandle) SemType {
 	// migrated from cellOps.java:91:5
 	var negUnion SemType
 	negUnion = NEVER
 	neg := negList
-	for neg != nil {
-		negUnion = Union(negUnion, cellAtomType(neg.Atom).Ty)
-		neg = neg.Next
+	for neg != conjunctionNil {
+		negUnion = Union(negUnion, cellAtomType(cx.conjunctionAtom(neg)).Ty)
+		neg = cx.conjunctionNext(neg)
 	}
 	return negUnion
 }
 
-func cellMutLimitedInhabited(cx Context, pos SemType, negList *conjunction) bool {
+func cellMutLimitedInhabited(cx Context, pos SemType, negList conjunctionHandle) bool {
 	// migrated from cellOps.java:101:5
-	if negList == nil {
+	if negList == conjunctionNil {
 		return true
 	}
-	negAtomicCell := cellAtomType(negList.Atom)
+	negAtomicCell := cellAtomType(cx.conjunctionAtom(negList))
 	if negAtomicCell.Mut >= CellMutability_CELL_MUT_LIMITED && IsEmpty(cx, Diff(pos, negAtomicCell.Ty)) {
 		return false
 	}
-	return cellMutLimitedInhabited(cx, pos, negList.Next)
+	return cellMutLimitedInhabited(cx, pos, cx.conjunctionNext(negList))
 }
 
-func cellMutUnlimitedInhabited(cx Context, pos SemType, negList *conjunction) bool {
+func cellMutUnlimitedInhabited(cx Context, pos SemType, negList conjunctionHandle) bool {
 	// migrated from cellOps.java:113:5
 	neg := negList
-	for neg != nil {
-		cellAtom := cellAtomType(neg.Atom)
+	for neg != conjunctionNil {
+		cellAtom := cellAtomType(cx.conjunctionAtom(neg))
 		if cellAtom.Mut == CellMutability_CELL_MUT_LIMITED && IsSameType(cx, VAL, cellAtom.Ty) {
 			return false
 		}
-		neg = neg.Next
+		neg = cx.conjunctionNext(neg)
 	}
-	negListUnionResult := cellNegListUnlimitedUnion(negList)
+	negListUnionResult := cellNegListUnlimitedUnion(cx, negList)
 	return IsNever(negListUnionResult) || !IsEmpty(cx, Diff(pos, negListUnionResult))
 }
 
-func cellNegListUnlimitedUnion(negList *conjunction) SemType {
+func cellNegListUnlimitedUnion(cx Context, negList conjunctionHandle) SemType {
 	// migrated from cellOps.java:128:5
 	var negUnion SemType
 	negUnion = NEVER
 	neg := negList
-	for neg != nil {
-		cellAtom := cellAtomType(neg.Atom)
+	for neg != conjunctionNil {
+		cellAtom := cellAtomType(cx.conjunctionAtom(neg))
 		if cellAtom.Mut == CellMutability_CELL_MUT_UNLIMITED {
 			negUnion = Union(negUnion, cellAtom.Ty)
 		}
-		neg = neg.Next
+		neg = cx.conjunctionNext(neg)
 	}
 	return negUnion
 }

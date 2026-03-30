@@ -17,38 +17,43 @@
 package semtypes
 
 type (
-	BddPredicate        func(cx Context, posList *conjunction, negList *conjunction) bool
+	BddPredicate        func(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool
 	bddIsEmptyPredicate func(cx Context, b Bdd) bool
 )
 
-func bddEvery(cx Context, b Bdd, pos *conjunction, neg *conjunction, predicate BddPredicate) bool {
+func bddEvery(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
+	saved := cx.conjunctionStackDepth()
+	defer cx.resetConjunctionStack(saved)
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEvery(cx, bn.Left(), new(and(bn.Atom(), pos)), neg, predicate) &&
+		result := bddEvery(cx, bn.Left(), cx.pushConjunction(bn.Atom(), pos), neg, predicate) &&
 			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEvery(cx, bn.Right(), pos, new(and(bn.Atom(), neg)), predicate)
+			bddEvery(cx, bn.Right(), pos, cx.pushConjunction(bn.Atom(), neg), predicate)
+		return result
 	}
 }
 
-func bddEveryPositive(cx Context, b Bdd, pos *conjunction, neg *conjunction, predicate BddPredicate) bool {
+func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEveryPositive(cx, bn.Left(), andIfPositive(bn.Atom(), pos), neg, predicate) &&
+		saved := cx.conjunctionStackDepth()
+		result := bddEveryPositive(cx, bn.Left(), andIfPositive(cx, bn.Atom(), pos), neg, predicate) &&
 			bddEveryPositive(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEveryPositive(cx, bn.Right(), pos, andIfPositive(bn.Atom(), neg), predicate)
+			bddEveryPositive(cx, bn.Right(), pos, andIfPositive(cx, bn.Atom(), neg), predicate)
+		cx.resetConjunctionStack(saved)
+		return result
 	}
 }
 
-func andIfPositive(atom Atom, next *conjunction) *conjunction {
+func andIfPositive(cx Context, atom Atom, next conjunctionHandle) conjunctionHandle {
 	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() < 0 {
 		return next
 	}
-	tmp := and(atom, next)
-	return &tmp
+	return cx.pushConjunction(atom, next)
 }
 
 func bddPosMaybeEmpty(b Bdd) bool {

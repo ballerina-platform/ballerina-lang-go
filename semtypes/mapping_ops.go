@@ -23,29 +23,29 @@ var _ BasicTypeOps = &mappingOps{}
 func mappingSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from mappingOps.java:202:5
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, mappingFormulaIsEmpty)
+		return bddEvery(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
-func mappingFormulaIsEmpty(cx Context, posList *conjunction, negList *conjunction) bool {
+func mappingFormulaIsEmpty(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool {
 	// migrated from mappingOps.java:57:5
 	var combined *MappingAtomicType
-	if posList == nil {
+	if posList == conjunctionNil {
 		combined = &MAPPING_ATOMIC_INNER
 	} else {
-		combined = cx.MappingAtomType(posList.Atom)
-		p := posList.Next
+		combined = cx.MappingAtomType(cx.conjunctionAtom(posList))
+		p := cx.conjunctionNext(posList)
 		for {
-			if p == nil {
+			if p == conjunctionNil {
 				break
 			} else {
-				m := intersectMapping(cx.Env(), combined, cx.MappingAtomType(p.Atom))
+				m := intersectMapping(cx.Env(), combined, cx.MappingAtomType(cx.conjunctionAtom(p)))
 				if m == nil {
 					return true
 				} else {
 					combined = m
 				}
-				p = p.Next
+				p = cx.conjunctionNext(p)
 			}
 		}
 		for _, t := range combined.Types {
@@ -60,44 +60,46 @@ func mappingFormulaIsEmpty(cx Context, posList *conjunction, negList *conjunctio
 	return (!mappingInhabited(cx, combined, negList))
 }
 
-func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList *conjunction) bool {
+func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
 	// migrated from mappingOps.java:98:5
-	if negList == nil {
+	if negList == conjunctionNil {
 		return true
 	} else {
-		neg := cx.MappingAtomType(negList.Atom)
+		neg := cx.MappingAtomType(cx.conjunctionAtom(negList))
+		negNext := cx.conjunctionNext(negList)
 		pairing := newFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
-			return mappingInhabitedFast(cx, pos, negList.Next)
+			return mappingInhabitedFast(cx, pos, negNext)
 		}
 		for fieldPair := range pairing {
 			intersect := Intersect(fieldPair.Type1, fieldPair.Type2)
 			if IsEmpty(cx, intersect) {
-				return mappingInhabitedFast(cx, pos, negList.Next)
+				return mappingInhabitedFast(cx, pos, negNext)
 			}
 			d := Diff(fieldPair.Type1, fieldPair.Type2)
 			if !IsEmpty(cx, d) {
-				return mappingInhabitedFast(cx, pos, negList.Next)
+				return mappingInhabitedFast(cx, pos, negNext)
 			}
 		}
 		return false
 	}
 }
 
-func mappingInhabited(cx Context, pos *MappingAtomicType, negList *conjunction) bool {
+func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
 	// migrated from mappingOps.java:127:5
-	if negList == nil {
+	if negList == conjunctionNil {
 		return true
 	} else {
-		neg := cx.MappingAtomType(negList.Atom)
+		neg := cx.MappingAtomType(cx.conjunctionAtom(negList))
+		negNext := cx.conjunctionNext(negList)
 		pairing := newFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
-			return mappingInhabited(cx, pos, negList.Next)
+			return mappingInhabited(cx, pos, negNext)
 		}
 		for fieldPair := range pairing {
 			intersect := Intersect(fieldPair.Type1, fieldPair.Type2)
 			if IsEmpty(cx, intersect) {
-				return mappingInhabited(cx, pos, negList.Next)
+				return mappingInhabited(cx, pos, negNext)
 			}
 			d := Diff(fieldPair.Type1, fieldPair.Type2).(*ComplexSemType)
 			if !IsEmpty(cx, d) {
@@ -109,7 +111,7 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList *conjunction) 
 					posTypes[*fieldPair.Index1] = d
 					mt = mappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}
-				if mappingInhabited(cx, &mt, negList.Next) {
+				if mappingInhabited(cx, &mt, negNext) {
 					return true
 				}
 			}
