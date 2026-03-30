@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// Package test_util provides corpus test discovery, expected-output helpers, and lightweight assert/require helpers for tests.
 package test_util
 
 import (
@@ -92,7 +93,7 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 		outputExt = ".txtar"
 	}
 	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)
-	files := discoverFiles(t, resolvedInputDir, filterFunc)
+	files := walkDir(t, resolvedInputDir, filterFunc)
 	testPairs := make([]TestCase, 0, len(files))
 	for _, inputPath := range files {
 		expectedPath := computeExpectedPath(inputPath, resolvedInputDir, resolvedOutputDir, outputExt)
@@ -127,11 +128,6 @@ func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, strin
 	}
 	t.Fatalf("Could not find corpus directory")
 	return "", ""
-}
-
-// discoverFiles walks the directory tree and collects all .bal files that match the filter
-func discoverFiles(t *testing.T, baseDir string, filterFunc func(string) bool) []string {
-	return walkDir(t, baseDir, filterFunc)
 }
 
 // walkDir recursively walks a directory and collects all .bal files that match the filter

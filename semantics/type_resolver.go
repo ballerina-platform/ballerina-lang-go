@@ -2310,6 +2310,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			return semtypes.BYTE, true
 		case model.TypeKind_ANYDATA:
 			return semtypes.CreateAnydata(tr.tyCtx), true
+		case model.TypeKind_HANDLE:
+			return semtypes.HANDLE, true
 		default:
 			tr.ctx.InternalError("unexpected type kind", nil)
 			return nil, false

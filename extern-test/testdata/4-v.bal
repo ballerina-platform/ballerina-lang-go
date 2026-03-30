@@ -1,4 +1,4 @@
-// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -14,25 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package common
+import ballerina/io;
 
-// FIXME: move this to context
-const (
-	DUMP_TOKENS uint16 = 1 << iota
-	DUMP_ST
-	DEBUG_ERROR_RECOVERY
-)
-
-type DebugContext struct {
-	Flags   uint16
-	Channel chan string
+public function main() {
+    handle h = createHandle();
+    string result = useHandle(h);
+    io:println(result); //@output handle_value
 }
 
-var DebugCtx DebugContext
+function createHandle() returns handle = external;
 
-func Init(flags uint16) {
-	DebugCtx = DebugContext{
-		Flags:   flags,
-		Channel: make(chan string),
-	}
-}
+function useHandle(handle h) returns string = external;

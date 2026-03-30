@@ -65,13 +65,13 @@ func (d *documentContext) parseContent(content string, textDoc text.TextDocument
 	charReader := text.CharReaderFromText(content)
 
 	// Create Lexer
-	lexer := parser.NewLexer(charReader, nil)
+	lexer := parser.NewLexer(charReader)
 
 	// Create TokenReader from Lexer
-	tokenReader := parser.CreateTokenReader(*lexer, nil)
+	tokenReader := parser.CreateTokenReader(*lexer)
 
 	// Create Parser from TokenReader
-	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader, nil)
+	ballerinaParser := parser.NewBallerinaParserFromTokenReader(tokenReader)
 
 	// Parse the content
 	rootNode := ballerinaParser.Parse().(*tree.STModulePart)

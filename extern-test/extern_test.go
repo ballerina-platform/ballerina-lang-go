@@ -156,3 +156,65 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 		t.Error("expected a type-related error diagnostic")
 	}
 }
+
+func TestExternHandle(t *testing.T) {
+	balFile := filepath.Join(testDataDir, "4-v.bal")
+	absPath, err := filepath.Abs(balFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		for _, d := range compilation.DiagnosticResult().Diagnostics() {
+			t.Logf("diagnostic: %v", d)
+		}
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	var stdoutBuf bytes.Buffer
+	rt := runtime.NewRuntime()
+
+	runtime.RegisterExternFunction(rt, "ballerina", "io", "println", func(args []values.BalValue) (values.BalValue, error) {
+		var b strings.Builder
+		visited := make(map[uintptr]bool)
+		for _, arg := range args {
+			b.WriteString(values.String(arg, visited))
+		}
+		b.WriteByte('\n')
+		stdoutBuf.WriteString(b.String())
+		return nil, nil
+	})
+
+	type myHandle struct {
+		data string
+	}
+
+	runtime.RegisterExternFunction(rt, "$anon", "4-v", "createHandle", func(args []values.BalValue) (values.BalValue, error) {
+		return &myHandle{data: "handle_value"}, nil
+	})
+
+	runtime.RegisterExternFunction(rt, "$anon", "4-v", "useHandle", func(args []values.BalValue) (values.BalValue, error) {
+		h := args[0].(*myHandle)
+		return h.data, nil
+	})
+
+	if err := rt.Interpret(*birPkg); err != nil {
+		t.Fatalf("runtime error: %v", err)
+	}
+
+	expected := "handle_value\n"
+	if stdoutBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}

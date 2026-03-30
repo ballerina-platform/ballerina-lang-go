@@ -20,13 +20,17 @@ jobs:
           go-version: '1.26'
 
       - name: Run tests with coverage
-        run: go test -race -count=1 -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+        run: |
+          mkdir -p .cover/cli_executable
+          BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
+            go test -race -count=1 -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+          go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out
+          files: coverage.out,coverage-cli-executable.out
           fail_ci_if_error: true
 
       - name: Check gofmt

@@ -118,7 +118,6 @@ type abstractParser struct {
 	tokenReader          *TokenReader
 	invalidNodeInfoStack []invalidNodeInfo
 	insertedToken        tree.STToken
-	dbgContext           *debugcommon.DebugContext
 }
 
 func NewInvalidNodeInfoFromInvalidNodeDiagnosticCodeArgs(invalidNode tree.STNode, diagnosticCode diagnostics.DiagnosticCode, args ...any) invalidNodeInfo {
@@ -129,7 +128,7 @@ func NewInvalidNodeInfoFromInvalidNodeDiagnosticCodeArgs(invalidNode tree.STNode
 	return this
 }
 
-func NewAbstractParserFromTokenReaderErrorHandler(tokenReader *TokenReader, errorHandler ParserErrorHandler, dbgContext *debugcommon.DebugContext) abstractParser {
+func NewAbstractParserFromTokenReaderErrorHandler(tokenReader *TokenReader, errorHandler ParserErrorHandler) abstractParser {
 	this := abstractParser{}
 	this.invalidNodeInfoStack = make([]invalidNodeInfo, 0)
 	this.insertedToken = nil
@@ -137,11 +136,10 @@ func NewAbstractParserFromTokenReaderErrorHandler(tokenReader *TokenReader, erro
 
 	this.tokenReader = tokenReader
 	this.errorHandler = errorHandler
-	this.dbgContext = dbgContext
 	return this
 }
 
-func NewAbstractParserFromTokenReader(tokenReader *TokenReader, dbgContext *debugcommon.DebugContext) abstractParser {
+func NewAbstractParserFromTokenReader(tokenReader *TokenReader) abstractParser {
 	this := abstractParser{}
 	this.invalidNodeInfoStack = make([]invalidNodeInfo, 0)
 	this.insertedToken = nil
@@ -149,7 +147,6 @@ func NewAbstractParserFromTokenReader(tokenReader *TokenReader, dbgContext *debu
 
 	this.tokenReader = tokenReader
 	this.errorHandler = nil
-	this.dbgContext = dbgContext
 	return this
 }
 
@@ -310,17 +307,16 @@ type BallerinaParser struct {
 	abstractParser
 }
 
-func NewBallerinaParserFromTokenReader(tokenReader *TokenReader, dbgCtx *debugcommon.DebugContext) BallerinaParser {
+func NewBallerinaParserFromTokenReader(tokenReader *TokenReader) BallerinaParser {
 	this := BallerinaParser{}
 	// Default field initializations
 
 	this.abstractParser = abstractParser{
 		tokenReader:          tokenReader,
-		dbgContext:           dbgCtx,
 		invalidNodeInfoStack: make([]invalidNodeInfo, 0),
 		insertedToken:        nil,
 	}
-	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.tokenReader, dbgCtx)
+	errorHandler := NewBallerinaParserErrorHandlerFromTokenReader(this.tokenReader)
 	this.errorHandler = &errorHandler
 	return this
 }
@@ -606,9 +602,7 @@ func isDigit(c byte) bool {
 
 func (this *BallerinaParser) Parse() tree.STNode {
 	ast := this.parseCompUnit()
-	if debugcommon.DebugCtx.Flags&debugcommon.DUMP_ST != 0 {
-		debugcommon.DebugCtx.Channel <- tree.GenerateJSON(ast)
-	}
+	debugcommon.DebugWriteLazy(debugcommon.DUMP_ST, func() string { return tree.GenerateJSON(ast) })
 	return ast
 }
 
@@ -14681,7 +14675,7 @@ func (this *BallerinaParser) isSpecialMethodName(token tree.STToken) bool {
 }
 
 // TODO: clean this interface we should only need compiler context.
-func GetSyntaxTree(ctx *context.CompilerContext, debugCtx *debugcommon.DebugContext, fileName string) (*tree.SyntaxTree, error) {
+func GetSyntaxTree(ctx *context.CompilerContext, fileName string) (*tree.SyntaxTree, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file %s: %v", fileName, err)
@@ -14690,14 +14684,14 @@ func GetSyntaxTree(ctx *context.CompilerContext, debugCtx *debugcommon.DebugCont
 	// Create CharReader from file content
 	reader := text.CharReaderFromText(string(content))
 
-	// Create Lexer with DebugContext
-	lexer := NewLexer(reader, debugCtx)
+	// Create Lexer
+	lexer := NewLexer(reader)
 
 	// Create TokenReader from Lexer
-	tokenReader := CreateTokenReader(*lexer, debugCtx)
+	tokenReader := CreateTokenReader(*lexer)
 
 	// Create Parser from TokenReader
-	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader, debugCtx)
+	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)
 
 	// Parse the entire file (parser will internally call tokenizer)
 	rootNode := ballerinaParser.Parse().(*tree.STModulePart)

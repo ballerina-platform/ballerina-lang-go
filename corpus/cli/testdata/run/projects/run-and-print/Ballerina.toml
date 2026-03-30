@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "cli_run_and_print"
+version = "0.1.0"

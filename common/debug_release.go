@@ -1,4 +1,4 @@
-// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -14,32 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// @output
-// Loop count: 1000000
-// Final total: 1000010000000
+//go:build !debug
 
-import ballerina/io;
+package common
 
-public function main() {
-    int loopCount = 1000000;
-    int i = 0;
-    int total = 0;
+import "io"
 
-    while (i < loopCount) {
-        int a = sum(i, i + 1);
-        int b = addOffset(a);
-        total = total + b;
-        i = i + 1;
-    }
+const (
+	DUMP_TOKENS uint16 = 1 << iota
+	DUMP_ST
+	DEBUG_ERROR_RECOVERY
+)
 
-    io:println("Loop count: ", loopCount);
-    io:println("Final total: ", total);
-}
-
-function sum(int x, int y) returns int {
-    return x + y;
-}
-
-function addOffset(int value) returns int {
-    return value + 10;
-}
+func InitDebug(_ uint16, _ io.Writer)          {}
+func DebugFlags() uint16                       { return 0 }
+func DebugWriter() io.Writer                   { return io.Discard }
+func DebugEnabled(_ uint16) bool               { return false }
+func DebugWriteLazy(_ uint16, _ func() string) {}
