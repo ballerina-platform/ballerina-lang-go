@@ -1,0 +1,78 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+keyFor(int) -> string{
+  bb0 {
+    %3 = ConstantLoad 2
+    %2 = <= x %3;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad a
+    %0 = %4;
+    return;
+  }
+  bb2 {
+    %5 = ConstantLoad b
+    %0 = %5;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
+    %4 = ConstantLoad 4
+    %5 = ConstantLoad 4
+    %6 = newArray [int...][%5]{%1, %2, %3, %4}
+    xs = %6;
+    $desugar$0 = xs;
+    %9 = newMap {| int... |}{}
+    $desugar$1 = %9;
+    %11 = ConstantLoad 0
+    $desugar$2 = %11;
+    %13 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %13;
+    GOTO bb2;
+  }
+  bb2 {
+    %15 = < $desugar$2 $desugar$3;
+    %15 ? bb3 : bb4;
+  }
+  bb3 {
+    %16 = $desugar$0[$desugar$2];
+    x = %16;
+    %18 = keyFor(x) -> bb5;
+  }
+  bb4 {
+    out = $desugar$1;
+    %30 = ConstantLoad a
+    %29 = out[%30];
+    %31 = println(%29) -> bb6;
+  }
+  bb5 {
+    %19 = ConstantLoad 2
+    %20 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%19]{%18, x}
+    $desugar$4 = %20;
+    %23 = ConstantLoad 1
+    %22 = $desugar$4[%23];
+    %25 = ConstantLoad 0
+    %24 = $desugar$4[%25];
+    $desugar$1[%24] = %22;
+    %27 = ConstantLoad 1
+    %26 = + $desugar$2 %27;
+    $desugar$2 = %26;
+    GOTO bb2;
+  }
+  bb6 {
+    %33 = ConstantLoad b
+    %32 = out[%33];
+    %34 = println(%32) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}

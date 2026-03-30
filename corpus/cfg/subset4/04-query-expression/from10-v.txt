@@ -1,0 +1,39 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable xs (type
+        (record-type
+          (field k1
+            (value-type int))
+          (field k2
+            (value-type int))
+          (field k3
+            (value-type int)))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref k1)
+            (literal 1))
+          (key-value
+            (simple-var-ref k2)
+            (literal 2))
+          (key-value
+            (simple-var-ref k3)
+            (literal 3))))))
+    (var-def
+      (variable out (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (binary-expr *
+              (simple-var-ref x)
+              (literal 2)))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref out))))
+  )
+)

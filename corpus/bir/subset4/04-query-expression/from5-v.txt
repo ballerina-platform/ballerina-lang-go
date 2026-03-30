@@ -1,0 +1,56 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad a
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad b
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad c
+    %6 = ConstantLoad 3
+    %7 = newMap {| int... |}{%1=%2, %3=%4, %5=%6}
+    xs = %7;
+    $desugar$0 = xs;
+    %10 = ConstantLoad 0
+    %11 = newArray list[%10]{}
+    $desugar$1 = %11;
+    %13 = ConstantLoad 0
+    $desugar$2 = %13;
+    %15 = keys($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %15;
+    %17 = length($desugar$3) -> bb2;
+  }
+  bb2 {
+    $desugar$4 = %17;
+    GOTO bb3;
+  }
+  bb3 {
+    %19 = < $desugar$2 $desugar$4;
+    %19 ? bb4 : bb5;
+  }
+  bb4 {
+    %21 = $desugar$3[$desugar$2];
+    %20 = $desugar$0[%21];
+    x = %20;
+    %24 = ConstantLoad 2
+    %23 = * x %24;
+    %25 = push($desugar$1,%23) -> bb6;
+  }
+  bb5 {
+    out = $desugar$1;
+    %29 = println(out) -> bb7;
+  }
+  bb6 {
+    %27 = ConstantLoad 1
+    %26 = + $desugar$2 %27;
+    $desugar$2 = %26;
+    GOTO bb3;
+  }
+  bb7 {
+    return;
+  }
+}
