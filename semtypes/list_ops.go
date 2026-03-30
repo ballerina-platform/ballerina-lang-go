@@ -28,36 +28,36 @@ var _ BasicTypeOps = &listOps{}
 func listSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from listOps.java:67:5
 	return memoSubtypeIsEmpty(cx, cx.listMemo(), func(cx Context, b Bdd) bool {
-		return bddEvery(cx, b, nil, nil, listFormulaIsEmpty)
+		return bddEvery(cx, b, conjunctionNil, conjunctionNil, listFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
-func listFormulaIsEmpty(cx Context, pos *conjunction, neg *conjunction) bool {
+func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
 	// migrated from listOps.java:73:5
 	var members fixedLengthArray
 	var rest *ComplexSemType
-	if pos == nil {
+	if pos == conjunctionNil {
 		atom := LIST_ATOMIC_INNER
 		members = atom.Members
 		rest = atom.Rest
 	} else {
 		// combine all the positive tuples using intersection
-		lt := cx.ListAtomType(pos.Atom)
+		lt := cx.ListAtomType(cx.conjunctionAtom(pos))
 		members = lt.Members
 		rest = lt.Rest
-		p := pos.Next
+		p := cx.conjunctionNext(pos)
 		// the neg case is in case we grow the array in listInhabited
-		if p != nil || neg != nil {
+		if p != conjunctionNil || neg != conjunctionNil {
 			// Jbal note: we don't need this as we already created copies when converting from array to list.
 			// Just keeping this for the sake of source similarity between Bal code and Java.
 			members = fixedArrayShallowCopy(members)
 		}
 		for {
-			if p == nil {
+			if p == conjunctionNil {
 				break
 			} else {
-				d := p.Atom
-				p = p.Next
+				d := cx.conjunctionAtom(p)
+				p = cx.conjunctionNext(p)
 				lt = cx.ListAtomType(d)
 				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
@@ -84,14 +84,15 @@ func listFormulaIsEmpty(cx Context, pos *conjunction, neg *conjunction) bool {
 	return !listInhabited(cx, indices, memberTypesArray, nRequired, neg)
 }
 
-func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequired int, neg *conjunction) bool {
+func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequired int, neg conjunctionHandle) bool {
 	// migrated from listOps.java:130:5
-	if neg == nil {
+	if neg == conjunctionNil {
 		return true
 	}
-	nt := cx.ListAtomType(neg.Atom)
+	nt := cx.ListAtomType(cx.conjunctionAtom(neg))
+	negNext := cx.conjunctionNext(neg)
 	if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
-		return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
+		return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 	}
 	negLen := nt.Members.FixedLength
 	if negLen > 0 {
@@ -103,12 +104,12 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 			negMemberType := listMemberAt(nt.Members, nt.Rest, index)
 			common := Intersect(memberTypes[i], negMemberType)
 			if IsEmpty(cx, common) {
-				return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
+				return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 			}
 		}
 		lenMemberTypes := len(memberTypes)
 		if lenMemberTypes < len(indices) && indices[lenMemberTypes] < negLen {
-			return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
+			return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 		}
 
 		for i := nRequired; i < len(memberTypes); i++ {
@@ -116,7 +117,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 				break
 			}
 			t := memberTypes[:i]
-			if listInhabitedFast(cx, indices, t, nRequired, neg.Next) {
+			if listInhabitedFast(cx, indices, t, nRequired, negNext) {
 				return true
 			}
 		}
@@ -124,7 +125,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	for i := range memberTypes {
 		d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.Rest, indices[i]))
 		if !IsEmpty(cx, d) {
-			return listInhabitedFast(cx, indices, memberTypes, nRequired, neg.Next)
+			return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 		}
 	}
 	return false
@@ -148,7 +149,7 @@ func listSampleTypes(cx Context, members fixedLengthArray, rest *ComplexSemType,
 	return memberTypes, nRequired
 }
 
-func listSamples(cx Context, members fixedLengthArray, rest SemType, neg *conjunction) []int {
+func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunctionHandle) []int {
 	// migrated from listOps.java:209:5
 	maxInitialLength := len(members.Initial)
 	var fixedLengths []int
@@ -156,8 +157,8 @@ func listSamples(cx Context, members fixedLengthArray, rest SemType, neg *conjun
 	tem := neg
 	nNeg := 0
 	for {
-		if tem != nil {
-			lt := cx.ListAtomType(tem.Atom)
+		if tem != conjunctionNil {
+			lt := cx.ListAtomType(cx.conjunctionAtom(tem))
 			m := lt.Members
 			if len(m.Initial) > maxInitialLength {
 				maxInitialLength = len(m.Initial)
@@ -166,7 +167,7 @@ func listSamples(cx Context, members fixedLengthArray, rest SemType, neg *conjun
 				fixedLengths = append(fixedLengths, m.FixedLength)
 			}
 			nNeg = nNeg + 1
-			tem = tem.Next
+			tem = cx.conjunctionNext(tem)
 		} else {
 			break
 		}
@@ -232,14 +233,15 @@ func fixedArrayShallowCopy(array fixedLengthArray) fixedLengthArray {
 	return fixedLengthArrayFrom(array.Initial, array.FixedLength)
 }
 
-func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired int, neg *conjunction) bool {
+func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired int, neg conjunctionHandle) bool {
 	// migrated from listOps.java:306:5
-	if neg == nil {
+	if neg == conjunctionNil {
 		return true
 	} else {
-		nt := cx.ListAtomType(neg.Atom)
+		nt := cx.ListAtomType(cx.conjunctionAtom(neg))
+		negNext := cx.conjunctionNext(neg)
 		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
-			return listInhabited(cx, indices, memberTypes, nRequired, neg.Next)
+			return listInhabited(cx, indices, memberTypes, nRequired, negNext)
 		}
 		negLen := nt.Members.FixedLength
 		if negLen > 0 {
@@ -251,19 +253,19 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 				negMemberType := listMemberAt(nt.Members, nt.Rest, index)
 				common := Intersect(memberTypes[i], negMemberType)
 				if IsEmpty(cx, common) {
-					return listInhabited(cx, indices, memberTypes, nRequired, neg.Next)
+					return listInhabited(cx, indices, memberTypes, nRequired, negNext)
 				}
 			}
 			lenMemberTypes := len(memberTypes)
 			if lenMemberTypes < len(indices) && indices[lenMemberTypes] < negLen {
-				return listInhabited(cx, indices, memberTypes, nRequired, neg.Next)
+				return listInhabited(cx, indices, memberTypes, nRequired, negNext)
 			}
 			for i := nRequired; i < len(memberTypes); i++ {
 				if indices[i] >= negLen {
 					break
 				}
 				t := memberTypes[:i]
-				if listInhabited(cx, indices, t, nRequired, neg.Next) {
+				if listInhabited(cx, indices, t, nRequired, negNext) {
 					return true
 				}
 			}
@@ -276,7 +278,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 				copy(t, memberTypes)
 				t[i] = d
 				nReq := max(i+1, nRequired)
-				if listInhabited(cx, indices, t, nReq, neg.Next) {
+				if listInhabited(cx, indices, t, nReq, negNext) {
 					return true
 				}
 			}

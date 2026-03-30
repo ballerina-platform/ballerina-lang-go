@@ -43,7 +43,7 @@ func objectSubTypeIsEmpty(cx Context, t SubtypeData) bool {
 
 func objectBddIsEmpty(cx Context, b Bdd) bool {
 	// migrated from objectOps.java:47:5
-	return bddEveryPositive(cx, b, nil, nil, mappingFormulaIsEmpty)
+	return bddEveryPositive(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 }
 
 func newObjectOps() objectOps {

@@ -69,42 +69,37 @@ func (this *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
 
 func (this *xmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
 	// migrated from xmlOps.java:83:5
-	return bddEvery(cx, bdd, nil, nil, xmlFormulaIsEmpty)
+	return bddEvery(cx, bdd, conjunctionNil, conjunctionNil, xmlFormulaIsEmpty)
 }
 
-func xmlFormulaIsEmpty(cx Context, pos *conjunction, neg *conjunction) bool {
+func xmlFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
 	// migrated from xmlOps.java:87:5
-	allPosBits := collectAllPrimitives(pos) & XML_PRIMITIVE_ALL_MASK
-	return xmlHasTotalNegative(allPosBits, neg)
+	allPosBits := collectAllPrimitives(cx, pos) & XML_PRIMITIVE_ALL_MASK
+	return xmlHasTotalNegative(cx, allPosBits, neg)
 }
 
-func collectAllPrimitives(con *conjunction) int {
+func collectAllPrimitives(cx Context, con conjunctionHandle) int {
 	// migrated from xmlOps.java:92:5
 	bits := 0
 	current := con
-	for current != nil {
-		bits &= getIndex(current)
-		current = current.Next
+	for current != conjunctionNil {
+		bits &= cx.conjunctionAtom(current).(*recAtom).Index()
+		current = cx.conjunctionNext(current)
 	}
 	return bits
 }
 
-func xmlHasTotalNegative(allBits int, con *conjunction) bool {
+func xmlHasTotalNegative(cx Context, allBits int, con conjunctionHandle) bool {
 	// migrated from xmlOps.java:102:5
 	if allBits == 0 {
 		return true
 	}
 	n := con
-	for n != nil {
-		if (allBits & (^getIndex(con))) == 0 {
+	for n != conjunctionNil {
+		if (allBits & (^cx.conjunctionAtom(n).(*recAtom).Index())) == 0 {
 			return true
 		}
-		n = n.Next
+		n = cx.conjunctionNext(n)
 	}
 	return false
-}
-
-func getIndex(con *conjunction) int {
-	// migrated from xmlOps.java:117:5
-	return con.Atom.(*recAtom).Index()
 }

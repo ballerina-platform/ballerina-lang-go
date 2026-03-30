@@ -36,7 +36,7 @@ func errorSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 
 func errorBddIsEmpty(cx Context, b Bdd) bool {
 	// migrated from errorOps.java:52:5
-	return bddEveryPositive(cx, b, nil, nil, mappingFormulaIsEmpty)
+	return bddEveryPositive(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 }
 
 func (this *errorOps) complement(d SubtypeData) SubtypeData {

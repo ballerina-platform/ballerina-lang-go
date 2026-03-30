@@ -138,18 +138,18 @@ func (sc *bddSerializationContext) serializeBdd(
 	atomKind Kind,
 ) unionOfIntersections {
 	var conjs []atomConjunction
-	bddEvery(sc.cx, bdd, nil, nil, func(_ Context, pos *conjunction, neg *conjunction) bool {
+	bddEvery(sc.cx, bdd, conjunctionNil, conjunctionNil, func(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
 		var posAtoms []atomEntry
-		for c := pos; c != nil; c = c.Next {
-			posAtoms = append(posAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom, atomKind))
+		for c := pos; c != conjunctionNil; c = cx.conjunctionNext(c) {
+			posAtoms = append(posAtoms, sc.resolveAtom(cx.conjunctionAtom(c), atomMap, serializeAtom, atomKind))
 		}
 		// Reverse since conjunction is built in reverse order by bddEvery
 		for i, j := 0, len(posAtoms)-1; i < j; i, j = i+1, j-1 {
 			posAtoms[i], posAtoms[j] = posAtoms[j], posAtoms[i]
 		}
 		var negAtoms []atomEntry
-		for c := neg; c != nil; c = c.Next {
-			negAtoms = append(negAtoms, sc.resolveAtom(c.Atom, atomMap, serializeAtom, atomKind))
+		for c := neg; c != conjunctionNil; c = cx.conjunctionNext(c) {
+			negAtoms = append(negAtoms, sc.resolveAtom(cx.conjunctionAtom(c), atomMap, serializeAtom, atomKind))
 		}
 		for i, j := 0, len(negAtoms)-1; i < j; i, j = i+1, j-1 {
 			negAtoms[i], negAtoms[j] = negAtoms[j], negAtoms[i]
