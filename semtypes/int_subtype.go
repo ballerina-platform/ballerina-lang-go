@@ -17,35 +17,36 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"fmt"
 	"strings"
+
+	"ballerina-lang-go/common"
 )
 
-type IntSubtype struct {
-	Ranges []Range
+type intSubtype struct {
+	Ranges []intRange
 }
 
-var _ ProperSubtypeData = &IntSubtype{}
+var _ ProperSubtypeData = &intSubtype{}
 
-func NewIntSubtypeFromRanges(ranges []Range) IntSubtype {
-	this := IntSubtype{}
+func newIntSubtypeFromRanges(ranges []intRange) intSubtype {
+	this := intSubtype{}
 	this.Ranges = ranges
 	return this
 }
 
-func CreateIntSubtype(ranges ...Range) IntSubtype {
-	// migrated from IntSubtype.java:43:5
-	return NewIntSubtypeFromRanges(ranges)
+func createIntSubtype(ranges ...intRange) intSubtype {
+	// migrated from intSubtype.java:43:5
+	return newIntSubtypeFromRanges(ranges)
 }
 
-func CreateSingleRangeSubtype(min, max int64) IntSubtype {
-	return NewIntSubtypeFromRanges([]Range{RangeFrom(min, max)})
+func createSingleRangeSubtype(min, max int64) intSubtype {
+	return newIntSubtypeFromRanges([]intRange{rangeFrom(min, max)})
 }
 
 func IntConst(value int64) SemType {
-	// migrated from IntSubtype.java:51:5
-	return basicSubtype(BTInt, CreateSingleRangeSubtype(value, value))
+	// migrated from intSubtype.java:51:5
+	return getBasicSubtype(BTInt, createSingleRangeSubtype(value, value))
 }
 
 func validIntWidth(signed bool, bits int64) {
@@ -70,59 +71,59 @@ func validIntWidth(signed bool, bits int64) {
 	}
 }
 
-func ValidIntWidthSigned(bits int) {
-	// migrated from IntSubtype.java:74:5
+func validIntWidthSigned(bits int) {
+	// migrated from intSubtype.java:74:5
 	validIntWidth(true, int64(bits))
 }
 
-func ValidIntWidthUnsigned(bits int) {
-	// migrated from IntSubtype.java:78:5
+func validIntWidthUnsigned(bits int) {
+	// migrated from intSubtype.java:78:5
 	validIntWidth(false, int64(bits))
 }
 
-func IntWidthSigned(bits int64) SemType {
-	// migrated from IntSubtype.java:82:5
+func intWidthSigned(bits int64) SemType {
+	// migrated from intSubtype.java:82:5
 	validIntWidth(true, bits)
 	if bits == 64 {
 		return INT
 	}
-	t := CreateSingleRangeSubtype((-(int64(1) << (bits - int64(1)))), ((int64(1) << (bits - int64(1))) - int64(1)))
-	return basicSubtype(BTInt, t)
+	t := createSingleRangeSubtype((-(int64(1) << (bits - int64(1)))), ((int64(1) << (bits - int64(1))) - int64(1)))
+	return getBasicSubtype(BTInt, t)
 }
 
-func IntWidthUnsigned(bits int) SemType {
-	// migrated from IntSubtype.java:91:5
+func intWidthUnsigned(bits int) SemType {
+	// migrated from intSubtype.java:91:5
 	validIntWidth(false, int64(bits))
-	t := CreateSingleRangeSubtype(int64(0), ((int64(1) << bits) - int64(1)))
-	return basicSubtype(BTInt, t)
+	t := createSingleRangeSubtype(int64(0), ((int64(1) << bits) - int64(1)))
+	return getBasicSubtype(BTInt, t)
 }
 
-func IntSubtypeWidenUnsigned(d SubtypeData) SubtypeData {
-	// migrated from IntSubtype.java:98:5
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func intSubtypeWidenUnsigned(d SubtypeData) SubtypeData {
+	// migrated from intSubtype.java:98:5
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return d
 	}
-	v := d.(IntSubtype)
+	v := d.(intSubtype)
 	if v.Ranges[0].Min < int64(0) {
-		return CreateAll()
+		return createAll()
 	}
 	r := v.Ranges[len(v.Ranges)-1]
 	i := int64(8)
 	for i <= int64(32) {
 		if r.Max < (int64(1) << i) {
-			w := CreateSingleRangeSubtype(int64(0), ((int64(1) << i) - 1))
+			w := createSingleRangeSubtype(int64(0), ((int64(1) << i) - 1))
 			return w
 		}
 		i = (i * 2)
 	}
-	return CreateAll()
+	return createAll()
 }
 
-func IntSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func intSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[int64]()
 	}
-	v := d.(IntSubtype)
+	v := d.(intSubtype)
 	if len(v.Ranges) != 1 {
 		return common.OptionalEmpty[int64]()
 	}
@@ -133,7 +134,7 @@ func IntSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
 	return common.OptionalOf(min)
 }
 
-func (this IntSubtype) String() string {
+func (this intSubtype) String() string {
 	var builder strings.Builder
 	builder.WriteString("(int")
 	for _, r := range this.Ranges {
@@ -148,12 +149,12 @@ func (this IntSubtype) String() string {
 	return builder.String()
 }
 
-func IntSubtypeContains(d SubtypeData, n int64) bool {
-	// migrated from IntSubtype.java:137:5
-	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
+func intSubtypeContains(d SubtypeData, n int64) bool {
+	// migrated from intSubtype.java:137:5
+	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
-	v := d.(IntSubtype)
+	v := d.(intSubtype)
 	for _, r := range v.Ranges {
 		if (r.Min <= n) && (n <= r.Max) {
 			return true

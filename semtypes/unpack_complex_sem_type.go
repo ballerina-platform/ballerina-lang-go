@@ -18,21 +18,20 @@ package semtypes
 
 import "math/bits"
 
-type UnpackComplexSemType struct {
-}
+type unpackComplexSemType struct{}
 
-func newUnpackComplexSemType() UnpackComplexSemType {
-	this := UnpackComplexSemType{}
+func newUnpackComplexSemType() unpackComplexSemType {
+	this := unpackComplexSemType{}
 	return this
 }
 
-func Unpack(t *ComplexSemType) []BasicSubtype {
-	// migrated from UnpackComplexSemType.java:37:5
+func unpack(t *ComplexSemType) []basicSubtype {
+	// migrated from unpackComplexSemType.java:37:5
 	some := t.Some()
-	var subtypeList []BasicSubtype
-	for _, data := range t.SubtypeDataList() {
+	var subtypeList []basicSubtype
+	for _, data := range t.subtypeDataList() {
 		code := bits.TrailingZeros(uint(some))
-		subtypeList = append(subtypeList, BasicSubtypeFrom(BasicTypeCodeFrom(code), data))
+		subtypeList = append(subtypeList, basicSubtypeFrom(basicTypeCodeFrom(code), data))
 		some = some & ^(1 << code)
 	}
 	return subtypeList

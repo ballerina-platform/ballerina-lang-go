@@ -16,51 +16,51 @@
 
 package semtypes
 
-type BooleanOps struct{}
+type booleanOps struct{}
 
-var _ BasicTypeOps = &BooleanOps{}
+var _ BasicTypeOps = &booleanOps{}
 
-func (this *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from BooleanOps.java:33:5
-	v1 := d1.(BooleanSubtype)
-	v2 := d2.(BooleanSubtype)
+func (this *booleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from booleanOps.java:33:5
+	v1 := d1.(booleanSubtype)
+	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
 		return v1
 	} else {
-		return CreateAll()
+		return createAll()
 	}
 }
 
-func (this *BooleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from BooleanOps.java:40:5
-	v1 := d1.(BooleanSubtype)
-	v2 := d2.(BooleanSubtype)
+func (this *booleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from booleanOps.java:40:5
+	v1 := d1.(booleanSubtype)
+	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
 		return v1
 	} else {
-		return CreateNothing()
+		return createNothing()
 	}
 }
 
-func (this *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from BooleanOps.java:47:5
-	v1 := d1.(BooleanSubtype)
-	v2 := d2.(BooleanSubtype)
+func (this *booleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from booleanOps.java:47:5
+	v1 := d1.(booleanSubtype)
+	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
-		return CreateNothing()
+		return createNothing()
 	} else {
 		return v1
 	}
 }
 
-func (this *BooleanOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from BooleanOps.java:54:5
-	v := d.(BooleanSubtype)
-	t := BooleanSubtypeFrom(!v.Value)
+func (this *booleanOps) complement(d SubtypeData) SubtypeData {
+	// migrated from booleanOps.java:54:5
+	v := d.(booleanSubtype)
+	t := booleanSubtypeFrom(!v.Value)
 	return t
 }
 
-func (this *BooleanOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from BooleanOps.java:61:5
+func (this *booleanOps) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from booleanOps.java:61:5
 	return notIsEmpty(cx, t)
 }

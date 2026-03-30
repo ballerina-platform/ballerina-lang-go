@@ -119,5 +119,5 @@ func assertSemTypeRelation(t *testing.T, ctx Context, t1, t2 SemType, expected R
 // testCell creates a cell type containing the given type with specified mutability
 // Ported from CellTypeTest.java:cell()
 func testCell(env Env, ty SemType, mut CellMutability) *ComplexSemType {
-	return CellContainingWithEnvSemTypeCellMutability(env, ty, mut)
+	return cellContainingWithEnvSemTypeCellMutability(env, ty, mut)
 }

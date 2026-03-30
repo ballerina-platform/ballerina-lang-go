@@ -33,7 +33,7 @@ func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 			return UNDEF
 		}
 	} else {
-		keyData := stringSubtype(k)
+		keyData := getStringSubtype(k)
 		if isNothingSubtype(keyData) {
 			return UNDEF
 		}
@@ -43,7 +43,7 @@ func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 
 func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
 	// migrated from BMappingProj.java:68:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		} else {
@@ -80,16 +80,16 @@ func mappingAtomicApplicableMemberTypesInnerProj(atomic *MappingAtomicType, key 
 	// migrated from BMappingProj.java:94:5
 	types := make([]SemType, len(atomic.Types))
 	for i, t := range atomic.Types {
-		types[i] = CellInner(t)
+		types[i] = cellInner(t)
 	}
 
 	var memberTypes []SemType
-	rest := CellInner(atomic.Rest)
+	rest := cellInner(atomic.Rest)
 	if isAllSubtype(key) {
 		memberTypes = append(memberTypes, types...)
 		memberTypes = append(memberTypes, rest)
 	} else {
-		coverage := stringSubtypeListCoverage(key.(StringSubtype), atomic.Names)
+		coverage := getStringSubtypeListCoverage(key.(stringSubtype), atomic.Names)
 		for _, index := range coverage.Indices {
 			memberTypes = append(memberTypes, types[index])
 		}

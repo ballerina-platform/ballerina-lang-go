@@ -19,7 +19,7 @@ package semtypes
 import "ballerina-lang-go/common"
 
 type ListDefinition struct {
-	rec     *RecAtom
+	rec     *recAtom
 	semType SemType
 }
 
@@ -60,7 +60,7 @@ func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fi
 	common.Assert(rest != nil)
 	var initialCells []*ComplexSemType
 	for _, member := range initial {
-		initialCells = append(initialCells, CellContainingWithEnvSemTypeCellMutability(env, member, mut))
+		initialCells = append(initialCells, cellContainingWithEnvSemTypeCellMutability(env, member, mut))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -68,7 +68,7 @@ func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fi
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
+	restCell := cellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.define(env, initialCells, fixedLength, restCell)
 }
 
@@ -99,8 +99,8 @@ func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env,
 
 func (this *ListDefinition) define(env Env, initial []*ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
 	// migrated from ListDefinition.java:105:5
-	members := this.fixedLengthNormalize(FixedLengthArrayFrom(initial, fixedLength))
-	atomicType := ListAtomicTypeFrom(members, rest)
+	members := this.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
+	atomicType := listAtomicTypeFrom(members, rest)
 	var atom Atom
 	rec := this.rec
 	if rec != nil {
@@ -112,7 +112,7 @@ func (this *ListDefinition) define(env Env, initial []*ComplexSemType, fixedLeng
 	return this.createSemType(env, atom)
 }
 
-func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLengthArray {
+func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengthArray {
 	// migrated from ListDefinition.java:120:5
 	initial := array.Initial
 	i := (len(initial) - 1)
@@ -127,13 +127,13 @@ func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLe
 		}
 		i = (i - 1)
 	}
-	return FixedLengthArrayFrom(initial[:i+2], array.FixedLength)
+	return fixedLengthArrayFrom(initial[:i+2], array.FixedLength)
 }
 
 func (this *ListDefinition) createSemType(env Env, atom Atom) *ComplexSemType {
 	// migrated from ListDefinition.java:137:5
-	bdd := BddAtom(atom)
-	complexSemType := basicSubtype(BTList, bdd)
+	bdd := bddAtom(atom)
+	complexSemType := getBasicSubtype(BTList, bdd)
 	this.semType = complexSemType
 	return complexSemType
 }

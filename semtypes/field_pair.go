@@ -21,7 +21,7 @@ import (
 	"iter"
 )
 
-type FieldPair struct {
+type fieldPair struct {
 	Name   string
 	Type1  *ComplexSemType
 	Type2  *ComplexSemType
@@ -29,10 +29,10 @@ type FieldPair struct {
 	Index2 *int
 }
 
-func CreateFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 *int, index2 *int) FieldPair {
-	// migrated from FieldPair.java:34:5
+func createFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 *int, index2 *int) fieldPair {
+	// migrated from fieldPair.java:34:5
 
-	return FieldPair{
+	return fieldPair{
 		Name:   name,
 		Type1:  type1,
 		Type2:  type2,
@@ -54,7 +54,7 @@ type mappingPairIterator struct {
 	rest2           *ComplexSemType
 	doneIteration   bool
 	shouldCalculate bool
-	cache           *FieldPair
+	cache           *fieldPair
 }
 
 func (i *mappingPairIterator) hasNext() bool {
@@ -72,7 +72,7 @@ func (i *mappingPairIterator) hasNext() bool {
 	return !i.doneIteration
 }
 
-func (i *mappingPairIterator) next() FieldPair {
+func (i *mappingPairIterator) next() fieldPair {
 	if i.doneIteration {
 		panic("Exhausted iterator")
 	}
@@ -87,34 +87,34 @@ func (i *mappingPairIterator) next() FieldPair {
 	return *i.cache
 }
 
-func (i *mappingPairIterator) internalNext() *FieldPair {
-	var p *FieldPair
+func (i *mappingPairIterator) internalNext() *fieldPair {
+	var p *fieldPair
 	if i.i1 >= i.len1 {
 		if i.i2 >= i.len2 {
 			return nil
 		}
 		idx2 := i.i2
-		p = new(CreateFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &idx2))
+		p = new(createFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &idx2))
 		i.i2++
 	} else if i.i2 >= i.len2 {
 		idx1 := i.i1
-		p = new(CreateFieldPair(i.curName1(), i.curType1(), i.rest2, &idx1, nil))
+		p = new(createFieldPair(i.curName1(), i.curType1(), i.rest2, &idx1, nil))
 		i.i1++
 	} else {
 		name1 := i.curName1()
 		name2 := i.curName2()
 		if codePointCompare(name1, name2) {
 			idx1 := i.i1
-			p = new(CreateFieldPair(name1, i.curType1(), i.rest2, &idx1, nil))
+			p = new(createFieldPair(name1, i.curType1(), i.rest2, &idx1, nil))
 			i.i1++
 		} else if codePointCompare(name2, name1) {
 			idx2 := i.i2
-			p = new(CreateFieldPair(name2, i.rest1, i.curType2(), nil, &idx2))
+			p = new(createFieldPair(name2, i.rest1, i.curType2(), nil, &idx2))
 			i.i2++
 		} else {
 			idx1 := i.i1
 			idx2 := i.i2
-			p = new(CreateFieldPair(name1, i.curType1(), i.curType2(), &idx1, &idx2))
+			p = new(createFieldPair(name1, i.curType1(), i.curType2(), &idx1, &idx2))
 			i.i1++
 			i.i2++
 		}
@@ -151,8 +151,8 @@ func (i *mappingPairIterator) index1(name string) common.Optional[int] {
 	return common.OptionalEmpty[int]()
 }
 
-func (i *mappingPairIterator) toIterator() iter.Seq[FieldPair] {
-	return func(yield func(FieldPair) bool) {
+func (i *mappingPairIterator) toIterator() iter.Seq[fieldPair] {
+	return func(yield func(fieldPair) bool) {
 		for i.hasNext() {
 			if !yield(i.next()) {
 				break
@@ -161,7 +161,7 @@ func (i *mappingPairIterator) toIterator() iter.Seq[FieldPair] {
 	}
 }
 
-func NewFieldPairs(m1 *MappingAtomicType, m2 *MappingAtomicType) iter.Seq[FieldPair] {
+func newFieldPairs(m1 *MappingAtomicType, m2 *MappingAtomicType) iter.Seq[fieldPair] {
 	i := &mappingPairIterator{
 		names1:          m1.Names,
 		names2:          m2.Names,

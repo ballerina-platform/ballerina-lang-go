@@ -16,36 +16,36 @@
 
 package semtypes
 
-type EnumerableCharString struct {
+type enumerableCharString struct {
 	value string
 }
 
-var _ EnumerableType[string] = &EnumerableCharString{}
+var _ enumerableType[string] = &enumerableCharString{}
 
-func (this *EnumerableCharString) Value() string {
+func (this *enumerableCharString) Value() string {
 	return this.value
 }
 
-func (t1 *EnumerableCharString) Compare(t2 EnumerableType[string]) int {
+func (t1 *enumerableCharString) Compare(t2 enumerableType[string]) int {
 	s1 := t1.Value()
 	s2 := t2.Value()
 	if s1 == s2 {
-		return EQ
+		return eq
 	}
 	if s1 < s2 {
-		return LT
+		return lt
 	}
-	return GT
+	return gt
 
 }
 
-func newEnumerableCharStringFromString(value string) EnumerableCharString {
-	this := EnumerableCharString{}
+func newEnumerableCharStringFromString(value string) enumerableCharString {
+	this := enumerableCharString{}
 	this.value = value
 	return this
 }
 
-func EnumerableCharStringFrom(v string) EnumerableType[string] {
-	// migrated from EnumerableCharString.java:33:5
+func enumerableCharStringFrom(v string) enumerableType[string] {
+	// migrated from enumerableCharString.java:33:5
 	return new(newEnumerableCharStringFromString(v))
 }

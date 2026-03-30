@@ -16,37 +16,37 @@
 
 package semtypes
 
-type BasicTypeOpsPanicImpl struct {
+type basicTypeOpsPanicImpl struct {
 }
 
-var _ BasicTypeOps = &BasicTypeOpsPanicImpl{}
+var _ BasicTypeOps = &basicTypeOpsPanicImpl{}
 
-func NewBasicTypeOpsPanicImpl() BasicTypeOpsPanicImpl {
-	this := BasicTypeOpsPanicImpl{}
+func newBasicTypeOpsPanicImpl() basicTypeOpsPanicImpl {
+	this := basicTypeOpsPanicImpl{}
 	return this
 }
 
-func (this *BasicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from BasicTypeOpsPanicImpl.java:30:5
+func (this *basicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from basicTypeOpsPanicImpl.java:30:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from BasicTypeOpsPanicImpl.java:35:5
+func (this *basicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from basicTypeOpsPanicImpl.java:35:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from BasicTypeOpsPanicImpl.java:40:5
+func (this *basicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from basicTypeOpsPanicImpl.java:40:5
 	panic("Binary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) Complement(t SubtypeData) SubtypeData {
-	// migrated from BasicTypeOpsPanicImpl.java:45:5
+func (this *basicTypeOpsPanicImpl) complement(t SubtypeData) SubtypeData {
+	// migrated from basicTypeOpsPanicImpl.java:45:5
 	panic("Unary operation should not be called")
 }
 
-func (this *BasicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from BasicTypeOpsPanicImpl.java:50:5
+func (this *basicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from basicTypeOpsPanicImpl.java:50:5
 	panic("Unary boolean operation should not be called")
 }

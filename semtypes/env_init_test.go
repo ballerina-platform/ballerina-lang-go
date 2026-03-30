@@ -29,34 +29,34 @@ func TestEnvInitAtomTable(t *testing.T) {
 	env.atomTableMutex.Unlock()
 
 	// Ensure atoms are in the table by calling Env methods
-	cellAtomicVal := CellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicVal := cellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
 	typeAtom0 := env.cellAtom(&cellAtomicVal)
 
-	cellAtomicNever := CellAtomicTypeFrom(NEVER, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicNever := cellAtomicTypeFrom(NEVER, CellMutability_CELL_MUT_LIMITED)
 	typeAtom1 := env.cellAtom(&cellAtomicNever)
 
-	cellAtomicInner := CellAtomicTypeFrom(INNER, CellMutability_CELL_MUT_LIMITED)
+	cellAtomicInner := cellAtomicTypeFrom(INNER, CellMutability_CELL_MUT_LIMITED)
 	typeAtom2 := env.cellAtom(&cellAtomicInner)
 
-	cellAtomicInnerMapping := CellAtomicTypeFrom(Union(MAPPING, UNDEF), CellMutability_CELL_MUT_LIMITED)
+	cellAtomicInnerMapping := cellAtomicTypeFrom(Union(MAPPING, UNDEF), CellMutability_CELL_MUT_LIMITED)
 	typeAtom3 := env.cellAtom(&cellAtomicInnerMapping)
 
-	listAtomicMapping := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING)
+	listAtomicMapping := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING)
 	typeAtom4 := env.listAtom(&listAtomicMapping)
 
 	typeAtom5 := env.cellAtom(CELL_ATOMIC_INNER_MAPPING_RO)
 
-	listAtomicMappingRo := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING_RO)
+	listAtomicMappingRo := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING_RO)
 	typeAtom6 := env.listAtom(&listAtomicMappingRo)
 
-	cellAtomicInnerRo := CellAtomicTypeFrom(INNER_READONLY, CellMutability_CELL_MUT_NONE)
+	cellAtomicInnerRo := cellAtomicTypeFrom(INNER_READONLY, CellMutability_CELL_MUT_NONE)
 	typeAtom7 := env.cellAtom(&cellAtomicInnerRo)
 
-	cellAtomicUndef := CellAtomicTypeFrom(UNDEF, CellMutability_CELL_MUT_NONE)
+	cellAtomicUndef := cellAtomicTypeFrom(UNDEF, CellMutability_CELL_MUT_NONE)
 	typeAtom8 := env.cellAtom(&cellAtomicUndef)
 
-	listAtomicTwoElement := ListAtomicTypeFrom(
-		FixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_VAL}, 2),
+	listAtomicTwoElement := listAtomicTypeFrom(
+		fixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_VAL}, 2),
 		CELL_SEMTYPE_UNDEF,
 	)
 	typeAtom9 := env.listAtom(&listAtomicTwoElement)
@@ -152,7 +152,7 @@ func TestEnvInitRecAtoms(t *testing.T) {
 	env.recListAtomsMutex.Unlock()
 
 	assertEqual(t, len(recListAtoms), 2)
-	listAtomicRo := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
+	listAtomicRo := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
 	if recListAtoms[0] == nil {
 		t.Error("recListAtoms[0] should not be nil")
 	} else if !recListAtoms[0].equals(&listAtomicRo) {

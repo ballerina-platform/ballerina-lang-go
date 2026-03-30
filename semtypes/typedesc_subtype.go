@@ -18,15 +18,15 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type TypedescSubtype struct{}
+type typedescSubtype struct{}
 
-func newTypedescSubtype() TypedescSubtype {
-	this := TypedescSubtype{}
+func newTypedescSubtype() typedescSubtype {
+	this := typedescSubtype{}
 	return this
 }
 
-func TypedescContaining(env Env, constraint SemType) SemType {
-	// migrated from TypedescSubtype.java:44:5
+func typedescContaining(env Env, constraint SemType) SemType {
+	// migrated from typedescSubtype.java:44:5
 	if common.PointerEqualToValue(VAL, constraint) {
 		return TYPEDESC
 	}
@@ -34,5 +34,5 @@ func TypedescContaining(env Env, constraint SemType) SemType {
 	mappingDef := NewMappingDefinition()
 	mappingType := mappingDef.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, nil, constraint, CellMutability_CELL_MUT_NONE)
 	bdd := subtypeData(mappingType, BTMapping).(Bdd)
-	return CreateBasicSemType(BTTypeDesc, bdd)
+	return createBasicSemType(BTTypeDesc, bdd)
 }

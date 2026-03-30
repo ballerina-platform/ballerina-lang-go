@@ -17,13 +17,13 @@
 package semtypes
 
 type ListMemberTypes struct {
-	Ranges   []Range
+	Ranges   []intRange
 	SemTypes []SemType
 }
 
-func NewListMemberTypesFromRangesSemTypes(ranges []Range, semTypes []SemType) ListMemberTypes {
+func newListMemberTypesFromRangesSemTypes(ranges []intRange, semTypes []SemType) ListMemberTypes {
 	this := ListMemberTypes{}
-	rangesCopy := make([]Range, len(ranges))
+	rangesCopy := make([]intRange, len(ranges))
 	copy(rangesCopy, ranges)
 	semTypesCopy := make([]SemType, len(semTypes))
 	copy(semTypesCopy, semTypes)
@@ -32,6 +32,6 @@ func NewListMemberTypesFromRangesSemTypes(ranges []Range, semTypes []SemType) Li
 	return this
 }
 
-func ListMemberTypesFrom(ranges []Range, semTypes []SemType) ListMemberTypes {
-	return NewListMemberTypesFromRangesSemTypes(ranges, semTypes)
+func listMemberTypesFrom(ranges []intRange, semTypes []SemType) ListMemberTypes {
+	return newListMemberTypesFromRangesSemTypes(ranges, semTypes)
 }

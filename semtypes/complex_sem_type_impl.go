@@ -19,9 +19,9 @@ package semtypes
 import "slices"
 
 type ComplexSemType struct {
-	all             int
-	some            int
-	subtypeDataList []ProperSubtypeData
+	all      int
+	some     int
+	dataList []ProperSubtypeData
 }
 
 var _ SemType = &ComplexSemType{}
@@ -34,11 +34,11 @@ func (this *ComplexSemType) Some() int {
 	return this.some
 }
 
-func (this *ComplexSemType) SubtypeDataList() []ProperSubtypeData {
-	return this.subtypeDataList
+func (this *ComplexSemType) subtypeDataList() []ProperSubtypeData {
+	return this.dataList
 }
 
 func (this *ComplexSemType) equals(other *ComplexSemType) bool {
 	return this == other || (this.all == other.all && this.some == other.some &&
-		slices.Equal(this.subtypeDataList, other.subtypeDataList))
+		slices.Equal(this.dataList, other.dataList))
 }

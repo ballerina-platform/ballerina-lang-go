@@ -16,16 +16,16 @@
 
 package semtypes
 
-type CombinedRange struct {
-	Range Range
+type combinedRange struct {
+	Range intRange
 	I1    int64
 	I2    int64
 }
 
-func CombinedRangeFrom(r Range, i1 int64, i2 int64) CombinedRange {
-	// migrated from CombinedRange.java:32:5
+func combinedRangeFrom(r intRange, i1 int64, i2 int64) combinedRange {
+	// migrated from combinedRange.java:32:5
 
-	return CombinedRange{
+	return combinedRange{
 		Range: r,
 		I1:    i1,
 		I2:    i2,

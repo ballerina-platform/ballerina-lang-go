@@ -20,10 +20,10 @@ type Context = *context
 
 type context struct {
 	_env          Env
-	_memoStack    []*BddMemo
-	_listMemo     map[string]*BddMemo
-	_mappingMemo  map[string]*BddMemo
-	_functionMemo map[string]*BddMemo
+	_memoStack    []*bddMemo
+	_listMemo     map[string]*bddMemo
+	_mappingMemo  map[string]*bddMemo
+	_functionMemo map[string]*bddMemo
 
 	_jsonMemo           SemType
 	_anydataMemo        SemType
@@ -44,7 +44,7 @@ type comparableMemoKey struct {
 	semType2 SemType
 }
 
-func (this *context) pushToMemoStack(m *BddMemo) {
+func (this *context) pushToMemoStack(m *bddMemo) {
 	this._memoStack = append(this._memoStack, m)
 }
 
@@ -52,11 +52,11 @@ func (this *context) getMemoStackDepth() int {
 	return len(this._memoStack)
 }
 
-func (this *context) getMemoStack(i int) *BddMemo {
+func (this *context) getMemoStack(i int) *bddMemo {
 	return this._memoStack[i]
 }
 
-func (this *context) popFromMemoStack() *BddMemo {
+func (this *context) popFromMemoStack() *bddMemo {
 	lastIndex := len(this._memoStack) - 1
 	memo := this._memoStack[lastIndex]
 	this._memoStack = this._memoStack[:lastIndex]
@@ -107,19 +107,19 @@ func (this *context) setServiceObjectMemo(t SemType) {
 	this._serviceObjectMemo = t
 }
 
-func (this *context) mappingMemo() map[string]*BddMemo {
+func (this *context) mappingMemo() map[string]*bddMemo {
 	return this._mappingMemo
 }
 
-func (this *context) functionMemo() map[string]*BddMemo {
+func (this *context) functionMemo() map[string]*bddMemo {
 	return this._functionMemo
 }
 
-func (this *context) listMemo() map[string]*BddMemo {
+func (this *context) listMemo() map[string]*bddMemo {
 	return this._listMemo
 }
 
-func (this *context) FunctionAtomType(atom Atom) *FunctionAtomicType {
+func (this *context) FunctionAtomType(atom Atom) *functionAtomicType {
 	return this._env.functionAtomType(atom)
 }
 
@@ -134,9 +134,9 @@ func (this *context) MappingAtomType(atom Atom) *MappingAtomicType {
 func ContextFrom(env Env) Context {
 	return &context{
 		_env:            env,
-		_listMemo:       make(map[string]*BddMemo),
-		_mappingMemo:    make(map[string]*BddMemo),
-		_functionMemo:   make(map[string]*BddMemo),
+		_listMemo:       make(map[string]*bddMemo),
+		_mappingMemo:    make(map[string]*bddMemo),
+		_functionMemo:   make(map[string]*bddMemo),
 		_comparableMemo: make(map[comparableMemoKey]*comparableMemo),
 	}
 }

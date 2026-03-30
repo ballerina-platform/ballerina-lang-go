@@ -16,37 +16,37 @@
 
 package semtypes
 
-type TypedescOps struct {
+type typedescOps struct {
 	CommonOps
 }
 
-var _ BasicTypeOps = &TypedescOps{}
+var _ BasicTypeOps = &typedescOps{}
 
 func typedescSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from TypedescOps.java:38:5
+	// migrated from typedescOps.java:38:5
 	return bddComplement(t.(Bdd))
 }
 
 func typedescSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from TypedescOps.java:42:5
+	// migrated from typedescOps.java:42:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
-		b = BddIntersect(b, BDD_SUBTYPE_RO)
+		b = bddIntersect(b, BDD_SUBTYPE_RO)
 	}
 	return mappingSubtypeIsEmpty(cx, b)
 }
 
-func NewTypedescOps() TypedescOps {
-	this := TypedescOps{}
+func newTypedescOps() typedescOps {
+	this := typedescOps{}
 	return this
 }
 
-func (this *TypedescOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from TypedescOps.java:51:5
+func (this *typedescOps) complement(d SubtypeData) SubtypeData {
+	// migrated from typedescOps.java:51:5
 	return typedescSubtypeComplement(d)
 }
 
-func (this *TypedescOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from TypedescOps.java:56:5
+func (this *typedescOps) IsEmpty(cx Context, d SubtypeData) bool {
+	// migrated from typedescOps.java:56:5
 	return typedescSubtypeIsEmpty(cx, d)
 }

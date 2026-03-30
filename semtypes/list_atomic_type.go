@@ -21,7 +21,7 @@ import (
 )
 
 type ListAtomicType struct {
-	Members FixedLengthArray
+	Members fixedLengthArray
 	Rest    *ComplexSemType
 }
 
@@ -38,17 +38,17 @@ func (this *ListAtomicType) equals(other AtomicType) bool {
 	return false
 }
 
-func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest *ComplexSemType) ListAtomicType {
+func newListAtomicTypeFromMembersRest(members fixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	this := ListAtomicType{}
 	this.Members = members
 	this.Rest = rest
 	return this
 }
 
-func ListAtomicTypeFrom(members FixedLengthArray, rest *ComplexSemType) ListAtomicType {
+func listAtomicTypeFrom(members fixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	// migrated from ListAtomicType.java:34:5
 
-	return NewListAtomicTypeFromMembersRest(members, rest)
+	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
 func (this *ListAtomicType) AtomKind() Kind {

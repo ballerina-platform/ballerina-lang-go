@@ -21,7 +21,7 @@ import (
 	"sync"
 )
 
-type BddNodeImpl struct {
+type bddNodeImpl struct {
 	atom             Atom
 	left             Bdd
 	middle           Bdd
@@ -29,32 +29,32 @@ type BddNodeImpl struct {
 	canonicalKeyFunc func() string
 }
 
-var _ BddNode = &BddNodeImpl{}
+var _ BddNode = &bddNodeImpl{}
 
-func (this *BddNodeImpl) Atom() Atom {
+func (this *bddNodeImpl) Atom() Atom {
 	return this.atom
 }
 
-func (this *BddNodeImpl) Left() Bdd {
+func (this *bddNodeImpl) Left() Bdd {
 	return this.left
 }
 
-func (this *BddNodeImpl) Middle() Bdd {
+func (this *bddNodeImpl) Middle() Bdd {
 	return this.middle
 }
 
-func (this *BddNodeImpl) Right() Bdd {
+func (this *bddNodeImpl) Right() Bdd {
 	return this.right
 }
 
-func newBddNodeImpl(atom Atom, left, middle, right Bdd) *BddNodeImpl {
-	node := &BddNodeImpl{atom: atom, left: left, middle: middle, right: right}
+func newBddNodeImpl(atom Atom, left, middle, right Bdd) *bddNodeImpl {
+	node := &bddNodeImpl{atom: atom, left: left, middle: middle, right: right}
 	node.canonicalKeyFunc = sync.OnceValue(func() string {
 		return fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey())
 	})
 	return node
 }
 
-func (this *BddNodeImpl) canonicalKey() string {
+func (this *bddNodeImpl) canonicalKey() string {
 	return this.canonicalKeyFunc()
 }

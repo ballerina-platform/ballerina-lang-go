@@ -24,7 +24,7 @@ type Member struct {
 	Immutable  bool
 }
 
-func NewMember(name string, valueTy SemType, kind MemberKind, visibility Visibility, immutable bool) *Member {
+func newMember(name string, valueTy SemType, kind MemberKind, visibility Visibility, immutable bool) *Member {
 	return &Member{Name: name, ValueTy: valueTy, Kind: kind, Visibility: visibility, Immutable: immutable}
 }
 
@@ -94,8 +94,8 @@ func (v *Visibility) field() Field {
 	}
 }
 
-// ObjectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
-func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
+// objectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
+func objectMemberKind(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
 	if objectTy == nil {
 		return nil
@@ -104,8 +104,8 @@ func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 	return mappingMemberTypeInner(ctx, memberMap, StringConst("kind"))
 }
 
-// ObjectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
-func ObjectMemberVisibility(ctx Context, name, ty SemType) SemType {
+// objectMemberVisibility returns the visibility of the member as a subtype of "public"|"private"
+func objectMemberVisibility(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
 	if objectTy == nil {
 		return nil
@@ -130,7 +130,7 @@ func convertObjectToMappingTy(ctx Context, ty SemType) SemType {
 		return nil
 	}
 	bdd := subtypeData(objectTy, BTObject)
-	return CreateBasicSemType(BTMapping, bdd)
+	return createBasicSemType(BTMapping, bdd)
 }
 
 func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
@@ -139,5 +139,5 @@ func convertMappingToObjectTy(ctx Context, ty SemType) SemType {
 		return nil
 	}
 	bdd := subtypeData(mappingTy, BTMapping)
-	return CreateBasicSemType(BTObject, bdd)
+	return createBasicSemType(BTObject, bdd)
 }

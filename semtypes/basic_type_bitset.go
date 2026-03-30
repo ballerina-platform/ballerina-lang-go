@@ -26,10 +26,10 @@ func (bitset BasicTypeBitSet) Some() int {
 	return 0
 }
 
-func (bitset BasicTypeBitSet) SubtypeDataList() []ProperSubtypeData {
+func (bitset BasicTypeBitSet) subtypeDataList() []ProperSubtypeData {
 	return nil
 }
 
-func BasicTypeBitSetFrom(bitset int) BasicTypeBitSet {
+func basicTypeBitSetFrom(bitset int) BasicTypeBitSet {
 	return BasicTypeBitSet(bitset)
 }

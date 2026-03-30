@@ -16,19 +16,19 @@
 
 package semtypes
 
-type Range struct {
+type intRange struct {
 	Min int64
 	Max int64
 }
 
-func NewRangeFromIntInt(min, max int64) Range {
-	this := Range{}
+func newRangeFromIntInt(min, max int64) intRange {
+	this := intRange{}
 	this.Min = min
 	this.Max = max
 	return this
 }
 
-func RangeFrom(min, max int64) Range {
+func rangeFrom(min, max int64) intRange {
 	// migrated from Range.java:34:5
-	return NewRangeFromIntInt(min, max)
+	return newRangeFromIntInt(min, max)
 }

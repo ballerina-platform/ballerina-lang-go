@@ -20,7 +20,7 @@ import (
 	"sort"
 )
 
-func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
+func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
 	// migrated from ListProj.java:73:5
 	if b, ok := t.(BasicTypeBitSet); ok {
 		if (b.All() & LIST.All()) != 0 {
@@ -29,7 +29,7 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 			return NEVER
 		}
 	} else {
-		keyData := intSubtype(k)
+		keyData := getIntSubtype(k)
 		if isNothingSubtype(keyData) {
 			return NEVER
 		}
@@ -37,9 +37,9 @@ func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
 	}
 }
 
-func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg *Conjunction) SemType {
+func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *conjunction, neg *conjunction) SemType {
 	// migrated from ListProj.java:87:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
 		} else {
@@ -47,19 +47,19 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg
 		}
 	} else {
 		bddNode := b.(BddNode)
-		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), new(And(bddNode.Atom(), pos)), neg),
-			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, new(And(bddNode.Atom(), neg))),
-				listProjBddInnerVal(cx, k, bddNode.Right(), pos, new(And(bddNode.Atom(), neg)))))
+		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), new(and(bddNode.Atom(), pos)), neg),
+			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, new(and(bddNode.Atom(), neg))),
+				listProjBddInnerVal(cx, k, bddNode.Right(), pos, new(and(bddNode.Atom(), neg)))))
 	}
 }
 
-func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conjunction) SemType {
+func listProjPathInnerVal(cx Context, k SubtypeData, pos *conjunction, neg *conjunction) SemType {
 	// migrated from ListProj.java:99:5
-	var members FixedLengthArray
+	var members fixedLengthArray
 	var rest *ComplexSemType
 	if pos == nil {
-		members = FixedLengthArrayEmpty()
-		rest = CellContaining(cx.Env(), Union(VAL, UNDEF))
+		members = fixedLengthArrayEmpty()
+		rest = cellContaining(cx.Env(), Union(VAL, UNDEF))
 	} else {
 		// combine all the positive tuples using intersection
 		lt := cx.ListAtomType(pos.Atom)
@@ -91,7 +91,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 		}
 		// Ensure that we can use isNever on rest in listInhabited
 		if !IsNever(CellInnerVal(rest)) && IsEmpty(cx, rest) {
-			rest = RoCellContaining(cx.Env(), NEVER)
+			rest = roCellContaining(cx.Env(), NEVER)
 		}
 	}
 	// return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
@@ -109,9 +109,9 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 	}
 	var v []indexBoolPair
 	for _, i := range indices {
-		v = append(v, indexBoolPair{i, IntSubtypeContains(k, int64(i))})
+		v = append(v, indexBoolPair{i, intSubtypeContains(k, int64(i))})
 	}
-	if intSubtype, ok := k.(*IntSubtype); ok {
+	if intSubtype, ok := k.(*intSubtype); ok {
 		for _, rng := range intSubtype.Ranges {
 			max := rng.Max
 			if rng.Max >= 0 {
@@ -144,7 +144,7 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 	return indices1, keyIndices
 }
 
-func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg *Conjunction) SemType {
+func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg *conjunction) SemType {
 	// migrated from ListProj.java:192:5
 	var p SemType = NEVER
 	if neg == nil {
@@ -177,7 +177,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				t := append([]*ComplexSemType(nil), memberTypes...)
-				t[i] = CellContaining(cx.Env(), d)
+				t[i] = cellContaining(cx.Env(), d)
 				var maxVal int
 				if nRequired > (i + 1) {
 					maxVal = nRequired
