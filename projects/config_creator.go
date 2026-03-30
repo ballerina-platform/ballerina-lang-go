@@ -38,6 +38,19 @@ type balaPackageJSON struct {
 	Export           []string `json:"export"`
 }
 
+// balaDependencyGraph represents the dependency-graph.json structure in a .bala package.
+type balaDependencyGraph struct {
+	Packages []balaDependencyPackage `json:"packages"`
+}
+
+// balaDependencyPackage represents a package entry in dependency-graph.json.
+type balaDependencyPackage struct {
+	Org          string                  `json:"org"`
+	Name         string                  `json:"name"`
+	Version      string                  `json:"version"`
+	Dependencies []balaDependencyPackage `json:"dependencies"`
+}
+
 // balaProjectConfigResult contains the result of creating a bala project config.
 type balaProjectConfigResult struct {
 	PackageConfig PackageConfig
@@ -79,10 +92,20 @@ func createBalaProjectConfig(fsys fs.FS, balaPath string) (balaProjectConfigResu
 		pkgVersion,
 	)
 
-	// Create manifest from package.json
+	// Read dependency-graph.json if it exists
+	depGraph, err := readBalaDependencyGraph(fsys, balaPath)
+	if err != nil {
+		return balaProjectConfigResult{}, err
+	}
+
+	// Extract dependencies for this package
+	dependencies := extractDependencies(depGraph, pkgJSON.Organization, pkgJSON.Name, pkgJSON.Version)
+
+	// Create manifest from package.json and dependency-graph.json
 	manifest := NewPackageManifestFromParams(PackageManifestParams{
 		PackageDesc:     packageDesc,
 		ExportedModules: pkgJSON.Export,
+		Dependencies:    dependencies,
 	})
 
 	// Create package ID
@@ -129,6 +152,59 @@ func readBalaPackageJSON(fsys fs.FS, path string) (*balaPackageJSON, error) {
 	}
 
 	return &pkg, nil
+}
+
+// readBalaDependencyGraph reads and parses the dependency-graph.json file.
+// Returns nil if the file doesn't exist (optional file).
+func readBalaDependencyGraph(fsys fs.FS, balaPath string) (*balaDependencyGraph, error) {
+	depGraphPath := path.Join(balaPath, "dependency-graph.json")
+	data, err := fs.ReadFile(fsys, depGraphPath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil // File is optional
+		}
+		return nil, &ProjectError{
+			Message: "failed to read dependency-graph.json: " + err.Error(),
+		}
+	}
+
+	var graph balaDependencyGraph
+	if err := json.Unmarshal(data, &graph); err != nil {
+		return nil, &ProjectError{
+			Message: "failed to parse dependency-graph.json: " + err.Error(),
+		}
+	}
+
+	return &graph, nil
+}
+
+// extractDependencies extracts direct dependencies for the given package from dependency-graph.json.
+func extractDependencies(graph *balaDependencyGraph, org, name, version string) []Dependency {
+	if graph == nil {
+		return nil
+	}
+
+	// Find the package entry matching org/name/version
+	for _, pkg := range graph.Packages {
+		if pkg.Org == org && pkg.Name == name && pkg.Version == version {
+			// Convert direct dependencies to Dependency objects
+			var deps []Dependency
+			for _, dep := range pkg.Dependencies {
+				depVersion, err := NewPackageVersionFromString(dep.Version)
+				if err != nil {
+					continue // Skip invalid versions
+				}
+				deps = append(deps, NewDependency(
+					NewPackageOrg(dep.Org),
+					NewPackageName(dep.Name),
+					depVersion,
+				))
+			}
+			return deps
+		}
+	}
+
+	return nil
 }
 
 // scanBalaModules scans the modules directory in a bala package.

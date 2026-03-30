@@ -186,7 +186,7 @@ func TestExternHandle(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+	result, err := projects.Load(fsys, nil, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
