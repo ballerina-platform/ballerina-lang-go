@@ -23,14 +23,10 @@ import (
 // Ported from EnvInitTest.java:testEnvInitAtomTable()
 func TestEnvInitAtomTable(t *testing.T) {
 	env := CreateTypeEnv()
-	envImpl, ok := env.(*envImpl)
-	if !ok {
-		t.Fatal("expected *envImpl")
-	}
 
-	envImpl.atomTableMutex.Lock()
-	atomTable := envImpl.atomTable //nolint:staticcheck,ineffassign // atomTable will be used for direct atom table assertions
-	envImpl.atomTableMutex.Unlock()
+	env.atomTableMutex.Lock()
+	atomTable := env.atomTable //nolint:staticcheck,ineffassign // atomTable will be used for direct atom table assertions
+	env.atomTableMutex.Unlock()
 
 	// Ensure atoms are in the table by calling Env methods
 	cellAtomicVal := CellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
@@ -66,9 +62,9 @@ func TestEnvInitAtomTable(t *testing.T) {
 	typeAtom9 := env.listAtom(&listAtomicTwoElement)
 
 	// Now check the atomTable
-	envImpl.atomTableMutex.Lock()
-	atomTable = envImpl.atomTable
-	envImpl.atomTableMutex.Unlock()
+	env.atomTableMutex.Lock()
+	atomTable = env.atomTable
+	env.atomTableMutex.Unlock()
 
 	// Check that the atomTable contains at least the expected entries
 	// Note: The Go implementation may have more atoms than the Java version
@@ -130,14 +126,10 @@ func TestEnvInitAtomTable(t *testing.T) {
 // Ported from EnvInitTest.java:testTypeAtomIndices()
 func TestTypeAtomIndices(t *testing.T) {
 	env := CreateTypeEnv()
-	envImpl, ok := env.(*envImpl)
-	if !ok {
-		t.Fatal("expected *envImpl")
-	}
 
-	envImpl.atomTableMutex.Lock()
-	atomTable := envImpl.atomTable
-	envImpl.atomTableMutex.Unlock()
+	env.atomTableMutex.Lock()
+	atomTable := env.atomTable
+	env.atomTableMutex.Unlock()
 
 	indices := make(map[int]bool)
 	for _, typeAtom := range atomTable {
@@ -153,15 +145,11 @@ func TestTypeAtomIndices(t *testing.T) {
 // Ported from EnvInitTest.java:testEnvInitRecAtoms()
 func TestEnvInitRecAtoms(t *testing.T) {
 	env := CreateTypeEnv()
-	envImpl, ok := env.(*envImpl)
-	if !ok {
-		t.Fatal("expected *envImpl")
-	}
 
 	// Test recListAtoms
-	envImpl.recListAtomsMutex.Lock()
-	recListAtoms := envImpl.recListAtoms
-	envImpl.recListAtomsMutex.Unlock()
+	env.recListAtomsMutex.Lock()
+	recListAtoms := env.recListAtoms
+	env.recListAtomsMutex.Unlock()
 
 	assertEqual(t, len(recListAtoms), 2)
 	listAtomicRo := ListAtomicTypeFrom(FixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
@@ -175,9 +163,9 @@ func TestEnvInitRecAtoms(t *testing.T) {
 	}
 
 	// Test recMappingAtoms
-	envImpl.recMappingAtomsMutex.Lock()
-	recMappingAtoms := envImpl.recMappingAtoms
-	envImpl.recMappingAtomsMutex.Unlock()
+	env.recMappingAtomsMutex.Lock()
+	recMappingAtoms := env.recMappingAtoms
+	env.recMappingAtomsMutex.Unlock()
 
 	assertEqual(t, len(recMappingAtoms), 2)
 	if recMappingAtoms[0] == nil {
@@ -192,9 +180,9 @@ func TestEnvInitRecAtoms(t *testing.T) {
 	}
 
 	// Test recFunctionAtoms
-	envImpl.recFunctionAtomsMutex.Lock()
-	recFunctionAtoms := envImpl.recFunctionAtoms
-	envImpl.recFunctionAtomsMutex.Unlock()
+	env.recFunctionAtomsMutex.Lock()
+	recFunctionAtoms := env.recFunctionAtoms
+	env.recFunctionAtomsMutex.Unlock()
 
 	assertEqual(t, len(recFunctionAtoms), 0)
 }
