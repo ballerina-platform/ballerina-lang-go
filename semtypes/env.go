@@ -17,25 +17,10 @@ package semtypes
 
 import "sync"
 
-// migration-note: we can turning this to an interface to avoid accidentally copying the env
-type Env interface {
-	cellAtom(atomicType *CellAtomicType) TypeAtom
-	recFunctionAtom() RecAtom
-	recMappingAtom() RecAtom
-	recListAtom() RecAtom
-	setRecFunctionAtomType(rec RecAtom, atomicType *FunctionAtomicType)
-	setRecMappingAtomType(rec RecAtom, atomicType *MappingAtomicType)
-	setRecListAtomType(rec RecAtom, atomicType *ListAtomicType)
-	functionAtom(atomicType *FunctionAtomicType) TypeAtom
-	mappingAtom(atomicType *MappingAtomicType) TypeAtom
-	listAtom(atomicType *ListAtomicType) TypeAtom
-	mappingAtomType(atom Atom) *MappingAtomicType
-	functionAtomType(atom Atom) *FunctionAtomicType
-	listAtomType(atom Atom) *ListAtomicType
-}
+type Env = *env
 
 func CreateTypeEnv() Env {
-	env := &envImpl{
+	env := &env{
 		atomTable: make(map[AtomicType]TypeAtom),
 		types:     make(map[string]SemType),
 	}
@@ -50,7 +35,7 @@ func CreateTypeEnv() Env {
 	return env
 }
 
-type envImpl struct {
+type env struct {
 	recListAtoms      []*ListAtomicType
 	recListAtomsMutex sync.Mutex
 
@@ -69,34 +54,32 @@ type envImpl struct {
 	types map[string]SemType
 }
 
-var _ Env = &envImpl{}
-
-func (this *envImpl) recListAtomCount() int {
+func (this *env) recListAtomCount() int {
 	return len(this.recListAtoms)
 }
 
-func (this *envImpl) recMappingAtomCount() int {
+func (this *env) recMappingAtomCount() int {
 	return len(this.recMappingAtoms)
 }
 
-func (this *envImpl) recFunctionAtomCount() int {
+func (this *env) recFunctionAtomCount() int {
 	return len(this.recFunctionAtoms)
 }
 
-func (this *envImpl) distinctAtomCount() int {
+func (this *env) distinctAtomCount() int {
 	this.distinctAtomMutex.Lock()
 	defer this.distinctAtomMutex.Unlock()
 	return this.distinctAtoms
 }
 
-func (this *envImpl) distinctAtomCountGetAndIncrement() int {
+func (this *env) distinctAtomCountGetAndIncrement() int {
 	this.distinctAtomMutex.Lock()
 	defer this.distinctAtomMutex.Unlock()
 	this.distinctAtoms++
 	return this.distinctAtoms
 }
 
-func (this *envImpl) recFunctionAtom() RecAtom {
+func (this *env) recFunctionAtom() RecAtom {
 	this.recFunctionAtomsMutex.Lock()
 	defer this.recFunctionAtomsMutex.Unlock()
 	result := len(this.recFunctionAtoms)
@@ -104,36 +87,36 @@ func (this *envImpl) recFunctionAtom() RecAtom {
 	return CreateRecAtom(result)
 }
 
-func (this *envImpl) setRecFunctionAtomType(rec RecAtom, atomicType *FunctionAtomicType) {
+func (this *env) setRecFunctionAtomType(rec RecAtom, atomicType *FunctionAtomicType) {
 	this.recFunctionAtomsMutex.Lock()
 	defer this.recFunctionAtomsMutex.Unlock()
 	rec.SetKind(Kind_FUNCTION_ATOM)
 	this.recFunctionAtoms[rec.Index()] = atomicType
 }
 
-func (this *envImpl) getRecFunctionAtomType(rec RecAtom) *FunctionAtomicType {
+func (this *env) getRecFunctionAtomType(rec RecAtom) *FunctionAtomicType {
 	this.recFunctionAtomsMutex.Lock()
 	defer this.recFunctionAtomsMutex.Unlock()
 	return this.recFunctionAtoms[rec.Index()]
 }
 
-func (this *envImpl) listAtom(atomicType *ListAtomicType) TypeAtom {
+func (this *env) listAtom(atomicType *ListAtomicType) TypeAtom {
 	return this.typeAtom(atomicType)
 }
 
-func (this *envImpl) mappingAtom(atomicType *MappingAtomicType) TypeAtom {
+func (this *env) mappingAtom(atomicType *MappingAtomicType) TypeAtom {
 	return this.typeAtom(atomicType)
 }
 
-func (this *envImpl) functionAtom(atomicType *FunctionAtomicType) TypeAtom {
+func (this *env) functionAtom(atomicType *FunctionAtomicType) TypeAtom {
 	return this.typeAtom(atomicType)
 }
 
-func (this *envImpl) cellAtom(atomicType *CellAtomicType) TypeAtom {
+func (this *env) cellAtom(atomicType *CellAtomicType) TypeAtom {
 	return this.typeAtom(atomicType)
 }
 
-func (this *envImpl) typeAtom(atomicType AtomicType) TypeAtom {
+func (this *env) typeAtom(atomicType AtomicType) TypeAtom {
 	this.atomTableMutex.Lock()
 	defer this.atomTableMutex.Unlock()
 	ta, ok := this.atomTable[atomicType]
@@ -145,28 +128,28 @@ func (this *envImpl) typeAtom(atomicType AtomicType) TypeAtom {
 	return ta
 }
 
-func (this *envImpl) listAtomType(atom Atom) *ListAtomicType {
+func (this *env) listAtomType(atom Atom) *ListAtomicType {
 	if recAtom, ok := atom.(*RecAtom); ok {
 		return this.getRecListAtomType(*recAtom)
 	}
 	return atom.(*TypeAtom).AtomicType.(*ListAtomicType)
 }
 
-func (this *envImpl) functionAtomType(atom Atom) *FunctionAtomicType {
+func (this *env) functionAtomType(atom Atom) *FunctionAtomicType {
 	if recAtom, ok := atom.(*RecAtom); ok {
 		return this.getRecFunctionAtomType(*recAtom)
 	}
 	return atom.(*TypeAtom).AtomicType.(*FunctionAtomicType)
 }
 
-func (this *envImpl) mappingAtomType(atom Atom) *MappingAtomicType {
+func (this *env) mappingAtomType(atom Atom) *MappingAtomicType {
 	if recAtom, ok := atom.(*RecAtom); ok {
 		return this.getRecMappingAtomType(*recAtom)
 	}
 	return atom.(*TypeAtom).AtomicType.(*MappingAtomicType)
 }
 
-func (this *envImpl) recListAtom() RecAtom {
+func (this *env) recListAtom() RecAtom {
 	this.recListAtomsMutex.Lock()
 	defer this.recListAtomsMutex.Unlock()
 	result := len(this.recListAtoms)
@@ -174,7 +157,7 @@ func (this *envImpl) recListAtom() RecAtom {
 	return CreateRecAtom(result)
 }
 
-func (this *envImpl) recMappingAtom() RecAtom {
+func (this *env) recMappingAtom() RecAtom {
 	this.recMappingAtomsMutex.Lock()
 	defer this.recMappingAtomsMutex.Unlock()
 	result := len(this.recMappingAtoms)
@@ -182,33 +165,33 @@ func (this *envImpl) recMappingAtom() RecAtom {
 	return CreateRecAtom(result)
 }
 
-func (this *envImpl) setRecListAtomType(rec RecAtom, atomicType *ListAtomicType) {
+func (this *env) setRecListAtomType(rec RecAtom, atomicType *ListAtomicType) {
 	this.recListAtomsMutex.Lock()
 	defer this.recListAtomsMutex.Unlock()
 	rec.SetKind(Kind_LIST_ATOM)
 	this.recListAtoms[rec.Index()] = atomicType
 }
 
-func (this *envImpl) setRecMappingAtomType(rec RecAtom, atomicType *MappingAtomicType) {
+func (this *env) setRecMappingAtomType(rec RecAtom, atomicType *MappingAtomicType) {
 	this.recMappingAtomsMutex.Lock()
 	defer this.recMappingAtomsMutex.Unlock()
 	rec.SetKind(Kind_MAPPING_ATOM)
 	this.recMappingAtoms[rec.Index()] = atomicType
 }
 
-func (this *envImpl) getRecListAtomType(rec RecAtom) *ListAtomicType {
+func (this *env) getRecListAtomType(rec RecAtom) *ListAtomicType {
 	this.recListAtomsMutex.Lock()
 	defer this.recListAtomsMutex.Unlock()
 	return this.recListAtoms[rec.Index()]
 }
 
-func (this *envImpl) getRecMappingAtomType(rec RecAtom) *MappingAtomicType {
+func (this *env) getRecMappingAtomType(rec RecAtom) *MappingAtomicType {
 	this.recMappingAtomsMutex.Lock()
 	defer this.recMappingAtomsMutex.Unlock()
 	return this.recMappingAtoms[rec.Index()]
 }
 
-func (this *envImpl) cellAtomType(atom Atom) *CellAtomicType {
+func (this *env) cellAtomType(atom Atom) *CellAtomicType {
 	return atom.(*TypeAtom).AtomicType.(*CellAtomicType)
 }
 
