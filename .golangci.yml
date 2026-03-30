@@ -2,7 +2,20 @@ version: "2"
 
 linters:
   default: standard
+  enable:
+    - depguard
   settings:
+    depguard:
+      rules:
+        no-test-util-in-production:
+          files:
+            - "$all"
+            - "!$test"
+          deny:
+            - pkg: "ballerina-lang-go/test_util"
+              desc: "test_util is test-only; import only from *_test.go"
+            - pkg: "ballerina-lang-go/test_util/testphases"
+              desc: "test_util/testphases is test-only; import only from *_test.go"
     staticcheck:
       checks:
         # Default

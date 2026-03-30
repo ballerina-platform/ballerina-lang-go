@@ -1,0 +1,93 @@
+-- stdout --
+F(0) = 0
+F(1) = 1
+F(2) = 1
+F(3) = 2
+F(4) = 3
+F(5) = 5
+F(6) = 8
+F(7) = 13
+F(8) = 21
+F(9) = 34
+-- stderr --
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable n (type
+          (value-type int)) (expr
+          (literal 10))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (while
+        (group-expr
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref n)))
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (literal F()
+              (simple-var-ref i)
+              (literal ) = )
+              (invocation fibonacci (
+                (simple-var-ref i))))))
+          (compound-assignment +
+            (simple-var-ref i)
+            (literal 1))))))
+  (function fibonacci (
+    (variable n (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (group-expr
+          (binary-expr <=
+            (simple-var-ref n)
+            (literal 1)))
+        (block-stmt
+          (return
+            (simple-var-ref n))) ())
+      (block-stmt
+        (var-def
+          (variable prev (type
+            (value-type int)) (expr
+            (literal 0))))
+        (var-def
+          (variable curr (type
+            (value-type int)) (expr
+            (literal 1))))
+        (var-def
+          (variable i (type
+            (value-type int)) (expr
+            (literal 2))))
+        (while
+          (group-expr
+            (binary-expr <=
+              (simple-var-ref i)
+              (simple-var-ref n)))
+          (block-stmt
+            (var-def
+              (variable next (type
+                (value-type int)) (expr
+                (binary-expr +
+                  (simple-var-ref prev)
+                  (simple-var-ref curr)))))
+            (assignment
+              (simple-var-ref prev)
+              (simple-var-ref curr))
+            (assignment
+              (simple-var-ref curr)
+              (simple-var-ref next))
+            (compound-assignment +
+              (simple-var-ref i)
+              (literal 1))))
+        (return
+          (simple-var-ref curr))))))
+-- exitcode --
+0
