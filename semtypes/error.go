@@ -25,7 +25,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 	}
 
 	if IsSameType(ctx, errorType, ERROR) {
-		return MappingAtomicTypeFrom(nil, nil, CellContaining(ctx.Env(), CreateCloneable(ctx))), true
+		return mappingAtomicTypeFrom(nil, nil, cellContaining(ctx.Env(), CreateCloneable(ctx))), true
 	}
 	mappingSd := subtypeData(errorType, BTError)
 	if bddNode, ok := mappingSd.(BddNode); ok {
@@ -38,7 +38,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 			return MappingAtomicType{}, false
 		}
 		if leftNode, ok := bddNode.Left().(BddNode); ok {
-			if !IsSimpleNode(leftNode.Left(), leftNode.Middle(), leftNode.Right()) {
+			if !isSimpleNode(leftNode.Left(), leftNode.Middle(), leftNode.Right()) {
 				// Also not atomic
 				return MappingAtomicType{}, false
 			}
@@ -53,23 +53,23 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 func ErrorWithDetail(detail SemType) SemType {
 	// migrated from Error.java:39:5
 	mappingSd := subtypeData(detail, BTMapping)
-	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
+	if allOrNothingSubtype, ok := mappingSd.(allOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
 			return ERROR
 		} else {
 			return NEVER
 		}
 	}
-	sd := BddIntersect(mappingSd.(Bdd), BDD_SUBTYPE_RO)
+	sd := bddIntersect(mappingSd.(Bdd), BDD_SUBTYPE_RO)
 	if sd == BDD_SUBTYPE_RO {
 		return ERROR
 	}
-	return basicSubtype(BTError, sd.(ProperSubtypeData))
+	return getBasicSubtype(BTError, sd.(ProperSubtypeData))
 }
 
-func ErrorDistinct(distinctId int) SemType {
+func errorDistinct(distinctId int) SemType {
 	// migrated from Error.java:57:5
 	common.Assert(distinctId >= 0)
-	bdd := BddAtom(new(CreateDistinctRecAtom(((-distinctId) - 1))))
-	return basicSubtype(BTError, bdd)
+	bdd := bddAtom(new(createDistinctRecAtom(((-distinctId) - 1))))
+	return getBasicSubtype(BTError, bdd)
 }

@@ -22,7 +22,7 @@ import (
 
 type CellMutability uint
 
-type CellAtomicType struct {
+type cellAtomicType struct {
 	Ty  SemType
 	Mut CellMutability
 }
@@ -33,30 +33,30 @@ const (
 	CellMutability_CELL_MUT_UNLIMITED
 )
 
-func (this *CellAtomicType) equals(other AtomicType) bool {
-	if other, ok := other.(*CellAtomicType); ok {
+func (this *cellAtomicType) equals(other AtomicType) bool {
+	if other, ok := other.(*cellAtomicType); ok {
 		return other.Ty == this.Ty && other.Mut == this.Mut
 	}
 	return false
 }
 
-var _ AtomicType = &CellAtomicType{}
+var _ AtomicType = &cellAtomicType{}
 
-func NewCellAtomicTypeFromTyMut(ty SemType, mut CellMutability) CellAtomicType {
-	this := CellAtomicType{}
+func newCellAtomicTypeFromTyMut(ty SemType, mut CellMutability) cellAtomicType {
+	this := cellAtomicType{}
 	common.Assert(ty != nil)
 	this.Ty = ty
 	this.Mut = mut
 	return this
 }
 
-func CellAtomicTypeFrom(ty SemType, mut CellMutability) CellAtomicType {
-	// migrated from CellAtomicType.java:33:5
+func cellAtomicTypeFrom(ty SemType, mut CellMutability) cellAtomicType {
+	// migrated from cellAtomicType.java:33:5
 	common.Assert(ty != nil)
-	return NewCellAtomicTypeFromTyMut(ty, mut)
+	return newCellAtomicTypeFromTyMut(ty, mut)
 }
 
-func (this *CellAtomicType) AtomKind() Kind {
-	// migrated from CellAtomicType.java:39:5
+func (this *cellAtomicType) AtomKind() Kind {
+	// migrated from cellAtomicType.java:39:5
 	return Kind_CELL_ATOM
 }

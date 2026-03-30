@@ -16,19 +16,19 @@
 
 package semtypes
 
-type Conjunction struct {
+type conjunction struct {
 	Atom Atom
-	Next *Conjunction
+	Next *conjunction
 }
 
-func newConjunctionFromAtomConjunction(atom Atom, next *Conjunction) Conjunction {
-	this := Conjunction{}
+func newConjunctionFromAtomConjunction(atom Atom, next *conjunction) conjunction {
+	this := conjunction{}
 	this.Atom = atom
 	this.Next = next
 	return this
 }
 
-func And(atom Atom, next *Conjunction) Conjunction {
+func and(atom Atom, next *conjunction) conjunction {
 	// migrated from Conjunction.java:34:5
 	return newConjunctionFromAtomConjunction(atom, next)
 }

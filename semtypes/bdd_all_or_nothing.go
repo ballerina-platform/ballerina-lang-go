@@ -16,51 +16,51 @@
 
 package semtypes
 
-type BddAllOrNothing struct {
+type bddAllOrNothing struct {
 	isAll bool
 }
 
 var (
 	all         = newBddAllOrNothingFromBool(true)
 	nothing     = newBddAllOrNothingFromBool(false)
-	_       Bdd = &BddAllOrNothing{}
+	_       Bdd = &bddAllOrNothing{}
 )
 
-func newBddAllOrNothingFromBool(isAll bool) BddAllOrNothing {
-	this := BddAllOrNothing{}
+func newBddAllOrNothingFromBool(isAll bool) bddAllOrNothing {
+	this := bddAllOrNothing{}
 	this.isAll = isAll
 	return this
 }
 
-func BddAll() *BddAllOrNothing {
-	// migrated from BddAllOrNothing.java:37:5
+func bddAll() *bddAllOrNothing {
+	// migrated from bddAllOrNothing.java:37:5
 	return &all
 }
 
-func BddNothing() *BddAllOrNothing {
-	// migrated from BddAllOrNothing.java:41:5
+func bddNothing() *bddAllOrNothing {
+	// migrated from bddAllOrNothing.java:41:5
 	return &nothing
 }
 
-func (this *BddAllOrNothing) IsAll() bool {
-	// migrated from BddAllOrNothing.java:45:5
+func (this *bddAllOrNothing) IsAll() bool {
+	// migrated from bddAllOrNothing.java:45:5
 	return this.isAll
 }
 
-func (this *BddAllOrNothing) IsNothing() bool {
-	// migrated from BddAllOrNothing.java:49:5
+func (this *bddAllOrNothing) IsNothing() bool {
+	// migrated from bddAllOrNothing.java:49:5
 	return (!this.isAll)
 }
 
-func (this *BddAllOrNothing) Complement() *BddAllOrNothing {
-	// migrated from BddAllOrNothing.java:53:5
+func (this *bddAllOrNothing) complement() *bddAllOrNothing {
+	// migrated from bddAllOrNothing.java:53:5
 	if this.isAll {
 		return &nothing
 	}
 	return &all
 }
 
-func (this *BddAllOrNothing) canonicalKey() string {
+func (this *bddAllOrNothing) canonicalKey() string {
 	if this.isAll {
 		return "true"
 	} else {
@@ -68,7 +68,7 @@ func (this *BddAllOrNothing) canonicalKey() string {
 	}
 }
 
-func (this *BddAllOrNothing) String() string {
+func (this *bddAllOrNothing) String() string {
 	if this.isAll {
 		return "all"
 	} else {

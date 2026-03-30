@@ -24,15 +24,15 @@ type BddNode interface {
 	Right() Bdd
 }
 
-func BddNodeCreate(atom Atom, left Bdd, middle Bdd, right Bdd) BddNode {
+func bddNodeCreate(atom Atom, left Bdd, middle Bdd, right Bdd) BddNode {
 	// migrated from BddNode.java:31:5
-	if IsSimpleNode(left, middle, right) {
+	if isSimpleNode(left, middle, right) {
 		return newBddNodeSimple(atom)
 	}
 	return newBddNodeImpl(atom, left, middle, right)
 }
 
-func IsSimpleNode(left Bdd, middle Bdd, right Bdd) bool {
+func isSimpleNode(left Bdd, middle Bdd, right Bdd) bool {
 	leftIsAll := isAll(left)
 	middleIsNothing := isNothing(middle)
 	rightIsNothing := isNothing(right)
@@ -40,14 +40,14 @@ func IsSimpleNode(left Bdd, middle Bdd, right Bdd) bool {
 }
 
 func isAll(bdd Bdd) bool {
-	if allOrNothig, ok := bdd.(*BddAllOrNothing); ok {
+	if allOrNothig, ok := bdd.(*bddAllOrNothing); ok {
 		return allOrNothig.isAll
 	}
 	return false
 }
 
 func isNothing(bdd Bdd) bool {
-	if allOrNothig, ok := bdd.(*BddAllOrNothing); ok {
+	if allOrNothig, ok := bdd.(*bddAllOrNothing); ok {
 		return !allOrNothig.isAll
 	}
 	return false

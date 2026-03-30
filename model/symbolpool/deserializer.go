@@ -23,13 +23,12 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/semtypes/typepool"
 )
 
 type symbolReader struct {
 	r   *bytes.Reader
 	cp  []string
-	tp  *typepool.TypePool
+	tp  *semtypes.TypePool
 	env *context.CompilerEnvironment
 }
 
@@ -71,7 +70,7 @@ func (sr *symbolReader) deserialize() (result model.ExportedSymbolSpace, err err
 	if err != nil {
 		panic(fmt.Sprintf("reading type pool: %v", err))
 	}
-	sr.tp = typepool.UnmarshalTypePool(tpBytes, sr.env.GetTypeEnv())
+	sr.tp = semtypes.UnmarshalTypePool(tpBytes, sr.env.GetTypeEnv())
 
 	sr.cp = deserializeConstantPool(sr.r)
 
@@ -197,5 +196,5 @@ func (sr *symbolReader) readType() semtypes.SemType {
 	if idx == -1 {
 		return nil
 	}
-	return sr.tp.Get(typepool.Index(idx))
+	return sr.tp.Get(semtypes.TypePoolIndex(idx))
 }

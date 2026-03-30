@@ -21,40 +21,40 @@ import (
 	"sync"
 )
 
-type BddNodeSimple struct {
+type bddNodeSimple struct {
 	atom             Atom
 	canonicalKeyFunc func() string
 }
 
-var _ BddNode = &BddNodeSimple{}
+var _ BddNode = &bddNodeSimple{}
 
-func (this *BddNodeSimple) Left() Bdd {
-	// migrated from BddNodeSimple.java:32:5
-	return BddAll()
+func (this *bddNodeSimple) Left() Bdd {
+	// migrated from bddNodeSimple.java:32:5
+	return bddAll()
 }
 
-func (this *BddNodeSimple) Middle() Bdd {
-	// migrated from BddNodeSimple.java:37:5
-	return BddNothing()
+func (this *bddNodeSimple) Middle() Bdd {
+	// migrated from bddNodeSimple.java:37:5
+	return bddNothing()
 }
 
-func (this *BddNodeSimple) Right() Bdd {
-	// migrated from BddNodeSimple.java:42:5
-	return BddNothing()
+func (this *bddNodeSimple) Right() Bdd {
+	// migrated from bddNodeSimple.java:42:5
+	return bddNothing()
 }
 
-func (this *BddNodeSimple) Atom() Atom {
+func (this *bddNodeSimple) Atom() Atom {
 	return this.atom
 }
 
-func newBddNodeSimple(atom Atom) *BddNodeSimple {
-	node := &BddNodeSimple{atom: atom}
+func newBddNodeSimple(atom Atom) *bddNodeSimple {
+	node := &bddNodeSimple{atom: atom}
 	node.canonicalKeyFunc = sync.OnceValue(func() string {
 		return fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey())
 	})
 	return node
 }
 
-func (this *BddNodeSimple) canonicalKey() string {
+func (this *bddNodeSimple) canonicalKey() string {
 	return this.canonicalKeyFunc()
 }

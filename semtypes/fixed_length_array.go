@@ -18,14 +18,14 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-type FixedLengthArray struct {
+type fixedLengthArray struct {
 	// PR-TODO: remove pointer
 	Initial     []*ComplexSemType
 	FixedLength int
 }
 
-func NewFixedLengthArrayFromInitialFixedLength(initial []*ComplexSemType, fixedLength int) FixedLengthArray {
-	this := FixedLengthArray{}
+func newFixedLengthArrayFromInitialFixedLength(initial []*ComplexSemType, fixedLength int) fixedLengthArray {
+	this := fixedLengthArray{}
 	copiedInitial := make([]*ComplexSemType, len(initial))
 	copy(copiedInitial, initial)
 	common.Assert(fixedLength >= 0)
@@ -34,12 +34,12 @@ func NewFixedLengthArrayFromInitialFixedLength(initial []*ComplexSemType, fixedL
 	return this
 }
 
-func FixedLengthArrayFrom(initial []*ComplexSemType, fixedLength int) FixedLengthArray {
-	// migrated from FixedLengthArray.java:45:5
-	return NewFixedLengthArrayFromInitialFixedLength(initial, fixedLength)
+func fixedLengthArrayFrom(initial []*ComplexSemType, fixedLength int) fixedLengthArray {
+	// migrated from fixedLengthArray.java:45:5
+	return newFixedLengthArrayFromInitialFixedLength(initial, fixedLength)
 }
 
-func FixedLengthArrayEmpty() FixedLengthArray {
-	// migrated from FixedLengthArray.java:53:5
-	return FixedLengthArrayFrom(nil, 0)
+func fixedLengthArrayEmpty() fixedLengthArray {
+	// migrated from fixedLengthArray.java:53:5
+	return fixedLengthArrayFrom(nil, 0)
 }

@@ -16,14 +16,14 @@
 
 package semtypes
 
-type SplitField struct {
+type splitField struct {
 	Names []string
 	// PR-TODO: why array
 	Types []*ComplexSemType
 }
 
-func SplitFieldFrom(strings []string, semTypes []*ComplexSemType) SplitField {
-	return SplitField{
+func splitFieldFrom(strings []string, semTypes []*ComplexSemType) splitField {
+	return splitField{
 		Names: strings,
 		Types: semTypes,
 	}

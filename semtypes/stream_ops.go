@@ -16,37 +16,37 @@
 
 package semtypes
 
-type StreamOps struct {
+type streamOps struct {
 	CommonOps
 }
 
-var _ BasicTypeOps = &StreamOps{}
+var _ BasicTypeOps = &streamOps{}
 
 func streamSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from StreamOps.java:38:5
+	// migrated from streamOps.java:38:5
 	return bddSubtypeDiff(LIST_SUBTYPE_TWO_ELEMENT, t)
 }
 
 func streamSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from StreamOps.java:42:5
+	// migrated from streamOps.java:42:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
-		b = BddIntersect(b, LIST_SUBTYPE_TWO_ELEMENT)
+		b = bddIntersect(b, LIST_SUBTYPE_TWO_ELEMENT)
 	}
 	return listSubtypeIsEmpty(cx, b)
 }
 
-func NewStreamOps() StreamOps {
-	this := StreamOps{}
+func newStreamOps() streamOps {
+	this := streamOps{}
 	return this
 }
 
-func (this *StreamOps) Complement(t SubtypeData) SubtypeData {
-	// migrated from StreamOps.java:51:5
+func (this *streamOps) complement(t SubtypeData) SubtypeData {
+	// migrated from streamOps.java:51:5
 	return streamSubtypeComplement(t)
 }
 
-func (this *StreamOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from StreamOps.java:56:5
+func (this *streamOps) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from streamOps.java:56:5
 	return streamSubtypeIsEmpty(cx, t)
 }

@@ -20,44 +20,44 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type BooleanSubtype struct {
+type booleanSubtype struct {
 	Value bool
 }
 
-var _ ProperSubtypeData = &BooleanSubtype{}
+var _ ProperSubtypeData = &booleanSubtype{}
 
-func newBooleanSubtypeFromBool(value bool) BooleanSubtype {
-	this := BooleanSubtype{}
+func newBooleanSubtypeFromBool(value bool) booleanSubtype {
+	this := booleanSubtype{}
 	this.Value = value
 	return this
 }
 
-func BooleanSubtypeFrom(value bool) BooleanSubtype {
-	// migrated from BooleanSubtype.java:40:5
+func booleanSubtypeFrom(value bool) booleanSubtype {
+	// migrated from booleanSubtype.java:40:5
 	return newBooleanSubtypeFromBool(value)
 }
 
-func BooleanSubtypeContains(d SubtypeData, b bool) bool {
-	// migrated from BooleanSubtype.java:44:5
-	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
+func booleanSubtypeContains(d SubtypeData, b bool) bool {
+	// migrated from booleanSubtype.java:44:5
+	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
-	r := d.(BooleanSubtype)
+	r := d.(booleanSubtype)
 	return r.Value == b
 }
 
 func BooleanConst(value bool) SemType {
-	// migrated from BooleanSubtype.java:52:5
-	t := BooleanSubtypeFrom(value)
-	return basicSubtype(BTBoolean, t)
+	// migrated from booleanSubtype.java:52:5
+	t := booleanSubtypeFrom(value)
+	return getBasicSubtype(BTBoolean, t)
 }
 
-func BooleanSubtypeSingleValue(d SubtypeData) common.Optional[bool] {
-	// migrated from BooleanSubtype.java:57:5
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func booleanSubtypeSingleValue(d SubtypeData) common.Optional[bool] {
+	// migrated from booleanSubtype.java:57:5
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[bool]()
 	}
-	b := d.(BooleanSubtype)
+	b := d.(booleanSubtype)
 	value := b.Value
 	return common.OptionalOf(value)
 }

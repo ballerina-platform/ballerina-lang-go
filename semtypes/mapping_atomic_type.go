@@ -39,7 +39,7 @@ func (this *MappingAtomicType) equals(other AtomicType) bool {
 	return false
 }
 
-func MappingAtomicTypeFrom(names []string, types []*ComplexSemType, rest *ComplexSemType) MappingAtomicType {
+func mappingAtomicTypeFrom(names []string, types []*ComplexSemType, rest *ComplexSemType) MappingAtomicType {
 	// migrated from MappingAtomicType.java:52:5
 	return MappingAtomicType{
 		Names: names,

@@ -62,7 +62,7 @@ func basicTypeBitSetToString(bits int) string {
 	var parts []string
 	for i := 0; i < int(ValueTypeCount); i++ {
 		if bits&(1<<i) != 0 {
-			code := BasicTypeCodeFrom(i)
+			code := basicTypeCodeFrom(i)
 			name := strings.TrimPrefix(code.String(), "BT_")
 			parts = append(parts, strings.ToLower(name))
 		}
@@ -76,23 +76,23 @@ func (s *toStringState) complexSemtypeToString(ty *ComplexSemType) string {
 	if allStr != "" {
 		parts = append(parts, allStr)
 	}
-	for _, sub := range Unpack(ty) {
+	for _, sub := range unpack(ty) {
 		parts = append(parts, s.subtypeToString(sub))
 	}
 	return strings.Join(parts, "|")
 }
 
-func (s *toStringState) subtypeToString(sub BasicSubtype) string {
+func (s *toStringState) subtypeToString(sub basicSubtype) string {
 	switch st := sub.SubtypeData.(type) {
-	case IntSubtype:
+	case intSubtype:
 		return intSubtypeToString(st)
-	case BooleanSubtype:
+	case booleanSubtype:
 		return booleanSubtypeToString(st)
-	case FloatSubtype:
+	case floatSubtype:
 		return floatSubtypeToString(st)
-	case DecimalSubtype:
+	case decimalSubtype:
 		return decimalSubtypeToString(st)
-	case StringSubtype:
+	case stringSubtype:
 		return stringSubtypeToString(st)
 	case Bdd:
 		switch sub.BasicTypeCode {
@@ -108,7 +108,7 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
 		}
-	case XmlSubtype:
+	case xmlSubtype:
 		name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 		return strings.ToLower(name)
 	default:
@@ -118,7 +118,7 @@ func (s *toStringState) subtypeToString(sub BasicSubtype) string {
 
 func (s *toStringState) bddListToString(bdd Bdd) string {
 	var formulas []string
-	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *conjunction, neg *conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.listAtomToString(c.Atom))
@@ -143,7 +143,7 @@ func (s *toStringState) bddListToString(bdd Bdd) string {
 }
 
 func (s *toStringState) listAtomToString(atom Atom) string {
-	if recAtom, ok := atom.(*RecAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
 		return "readonly"
 	}
 	key := atomKey{kind: atom.Kind(), index: atom.Index()}
@@ -175,7 +175,7 @@ func (s *toStringState) bddErrorToString(bdd Bdd) string {
 
 func (s *toStringState) bddFunctionToString(bdd Bdd) string {
 	var formulas []string
-	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *conjunction, neg *conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.functionAtomToString(c.Atom))
@@ -221,7 +221,7 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 	if !ok {
 		return s.semTypeToString(paramType)
 	}
-	for _, sub := range Unpack(cst) {
+	for _, sub := range unpack(cst) {
 		if sub.BasicTypeCode != BTList {
 			continue
 		}
@@ -250,7 +250,7 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 
 func (s *toStringState) bddMappingToString(bdd Bdd) string {
 	var formulas []string
-	BddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *Conjunction, neg *Conjunction) bool {
+	bddEvery(s.cx, bdd, nil, nil, func(cx Context, pos *conjunction, neg *conjunction) bool {
 		var posParts []string
 		for c := pos; c != nil; c = c.Next {
 			posParts = append(posParts, s.mappingAtomToString(c.Atom))
@@ -273,7 +273,7 @@ func (s *toStringState) bddMappingToString(bdd Bdd) string {
 }
 
 func (s *toStringState) mappingAtomToString(atom Atom) string {
-	if recAtom, ok := atom.(*RecAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
 		return "readonly"
 	}
 	key := atomKey{kind: atom.Kind(), index: atom.Index()}
@@ -296,7 +296,7 @@ func (s *toStringState) mappingAtomicTypeToString(atom Atom) string {
 	return "{| " + strings.Join(parts, ", ") + " |}"
 }
 
-func intSubtypeToString(st IntSubtype) string {
+func intSubtypeToString(st intSubtype) string {
 	// Check special width types
 	type namedWidth struct {
 		min, max int64
@@ -328,14 +328,14 @@ func intSubtypeToString(st IntSubtype) string {
 	return strings.Join(parts, "|")
 }
 
-func booleanSubtypeToString(st BooleanSubtype) string {
+func booleanSubtypeToString(st booleanSubtype) string {
 	if st.Value {
 		return "true"
 	}
 	return "false"
 }
 
-func floatSubtypeToString(st FloatSubtype) string {
+func floatSubtypeToString(st floatSubtype) string {
 	var parts []string
 	for _, v := range st.values {
 		parts = append(parts, fmt.Sprintf("%g", v.value))
@@ -343,7 +343,7 @@ func floatSubtypeToString(st FloatSubtype) string {
 	return strings.Join(parts, "|")
 }
 
-func decimalSubtypeToString(st DecimalSubtype) string {
+func decimalSubtypeToString(st decimalSubtype) string {
 	var parts []string
 	for _, v := range st.values {
 		parts = append(parts, v.value.FloatString(1))
@@ -351,7 +351,7 @@ func decimalSubtypeToString(st DecimalSubtype) string {
 	return strings.Join(parts, "|")
 }
 
-func stringSubtypeToString(st StringSubtype) string {
+func stringSubtypeToString(st stringSubtype) string {
 	// Check for Char type: charData.allowed=false, no char values, nonCharData.allowed=true, no nonChar values
 	if !st.charData.allowed && len(st.charData.values) == 0 &&
 		st.nonCharData.allowed && len(st.nonCharData.values) == 0 {

@@ -18,7 +18,7 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-func FutureContaining(env Env, constraint SemType) SemType {
+func futureContaining(env Env, constraint SemType) SemType {
 	// migrated from FutureSubtype.java:43:5
 	if common.PointerEqualToValue(VAL, constraint) {
 		return FUTURE
@@ -27,5 +27,5 @@ func FutureContaining(env Env, constraint SemType) SemType {
 	mappingDef := NewMappingDefinition()
 	mappingType := mappingDef.DefineMappingTypeWrapped(env, nil, constraint)
 	bdd := subtypeData(mappingType, BTMapping).(Bdd)
-	return CreateBasicSemType(BTFuture, bdd)
+	return createBasicSemType(BTFuture, bdd)
 }

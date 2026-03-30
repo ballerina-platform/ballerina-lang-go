@@ -20,5 +20,5 @@ type CommonBasicTypeOps interface {
 	Union(t1 SubtypeData, t2 SubtypeData) SubtypeData
 	Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData
 	Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData
-	Complement(t SubtypeData) SubtypeData
+	complement(t SubtypeData) SubtypeData
 }
