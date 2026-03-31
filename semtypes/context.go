@@ -16,6 +16,9 @@
 
 package semtypes
 
+// Context is an opaque pointer to the thread local context for type system. As such it should never be used
+// concurrently in multiple type check operations at the same time. That being said it is highly advised to
+// reuse the Context given it acts as a cache for many type operations.
 type Context = *context
 
 type context struct {

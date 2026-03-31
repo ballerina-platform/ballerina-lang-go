@@ -52,13 +52,13 @@ func (s *toStringState) semTypeToString(ty SemType) string {
 }
 
 func basicTypeToString(ty BasicTypeBitSet) string {
-	if ty.All() == 0 {
+	if ty.all() == 0 {
 		return "never"
 	}
-	return basicTypeBitSetToString(ty.All())
+	return basicTypeBitSetToString(ty.all())
 }
 
-func basicTypeBitSetToString(bits int) string {
+func basicTypeBitSetToString(bits BasicTypeBitSet) string {
 	var parts []string
 	for i := 0; i < int(ValueTypeCount); i++ {
 		if bits&(1<<i) != 0 {
@@ -72,7 +72,7 @@ func basicTypeBitSetToString(bits int) string {
 
 func (s *toStringState) complexSemtypeToString(ty *ComplexSemType) string {
 	var parts []string
-	allStr := basicTypeBitSetToString(ty.All())
+	allStr := basicTypeBitSetToString(ty.all())
 	if allStr != "" {
 		parts = append(parts, allStr)
 	}

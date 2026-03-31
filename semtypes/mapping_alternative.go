@@ -29,7 +29,7 @@ type MappingAlternative struct {
 
 func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & MAPPING.All()) == 0 {
+		if (b.all() & MAPPING.all()) == 0 {
 			return nil
 		}
 		return []MappingAlternative{{SemType: MAPPING, Pos: nil, neg: nil}}

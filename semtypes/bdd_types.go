@@ -348,7 +348,7 @@ func (dc *bddDeserializationContext) deserializeType(poolIndex int) SemType {
 		subtypeDataList = append(subtypeDataList, data)
 	}
 	ty := createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(
-		int(te.all), int(te.some), subtypeDataList,
+		BasicTypeBitSet(te.all), BasicTypeBitSet(te.some), subtypeDataList,
 	)
 	dc.pool.tys[poolIndex] = ty
 	return ty

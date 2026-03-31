@@ -67,7 +67,7 @@ func isSubtypeSimpleNotNever(t1 SemType, t2 BasicTypeBitSet) bool {
 
 func ContainsBasicType(t1 SemType, t2 BasicTypeBitSet) bool {
 	// migrated from SemTypes.java:112:5
-	return ((WidenToBasicTypes(t1).All() & t2.All()) != 0)
+	return ((WidenToBasicTypes(t1).all() & t2.all()) != 0)
 }
 
 func containsType(context Context, ty SemType, typeToBeContained SemType) bool {

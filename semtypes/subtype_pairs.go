@@ -39,7 +39,7 @@ type subtypePairIterator struct {
 }
 
 func (i *subtypePairIterator) include(code BasicTypeCode) bool {
-	return (i.bits.All() & (1 << code.Code())) != 0
+	return (i.bits.all() & (1 << code.Code())) != 0
 }
 
 func (i *subtypePairIterator) get1() basicSubtype {

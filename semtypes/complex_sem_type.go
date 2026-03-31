@@ -16,23 +16,23 @@
 
 package semtypes
 
-func createComplexSemType(allBitset int, subtypeList ...basicSubtype) SemType {
+func createComplexSemType(allBitset BasicTypeBitSet, subtypeList ...basicSubtype) SemType {
 	// migrated from ComplexSemType.java:33:5
 	return createComplexSemTypeWithAllBitSetSubtypeList(allBitset, subtypeList)
 }
 
-func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset int, someBitset int, subtypeDataList []ProperSubtypeData) *ComplexSemType {
+func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someBitset BasicTypeBitSet, subtypeDataList []ProperSubtypeData) *ComplexSemType {
 	// migrated from ComplexSemType.java:37:5
 	return &ComplexSemType{
-		all:      allBitset,
-		some:     someBitset,
-		dataList: subtypeDataList,
+		allBitSet:  allBitset,
+		someBitSet: someBitset,
+		dataList:   subtypeDataList,
 	}
 }
 
-func createComplexSemTypeWithAllBitSetSubtypeList(allBitset int, subtypeList []basicSubtype) SemType {
+func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, subtypeList []basicSubtype) SemType {
 	// migrated from ComplexSemType.java:44:5
-	some := 0
+	var some BasicTypeBitSet = 0
 	var dataList []ProperSubtypeData
 	for _, basicSubtype := range subtypeList {
 		dataList = append(dataList, basicSubtype.SubtypeData)

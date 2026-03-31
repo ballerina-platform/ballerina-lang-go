@@ -125,9 +125,8 @@ var (
 	LIST_ATOMIC_RO                        = predefTypeEnv.listAtomicRO()
 )
 
-func basicTypeUnion(bitset int) BasicTypeBitSet {
-	// migrated from PredefinedType.java:250:5
-	return basicTypeBitSetFrom(bitset)
+func basicTypeUnion(bitset BasicTypeBitSet) BasicTypeBitSet {
+	return bitset
 }
 
 func basicType(code BasicTypeCode) BasicTypeBitSet {
@@ -138,7 +137,7 @@ func basicType(code BasicTypeCode) BasicTypeBitSet {
 func getBasicSubtype(code BasicTypeCode, data ProperSubtypeData) *ComplexSemType {
 	// migrated from PredefinedType.java:258:5
 	if code == BTCell {
-		return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(0, CELL.All(), []ProperSubtypeData{data})
+		return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(0, CELL.all(), []ProperSubtypeData{data})
 	}
 	return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(0, 1<<code.Code(), []ProperSubtypeData{data})
 }

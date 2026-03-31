@@ -33,7 +33,7 @@ type ListAlternative struct {
 
 func ListAlternatives(cx Context, t SemType) []ListAlternative {
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & LIST.All()) == 0 {
+		if (b.all() & LIST.all()) == 0 {
 			return nil
 		}
 		return []ListAlternative{{
