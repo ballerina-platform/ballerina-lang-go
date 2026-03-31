@@ -20,26 +20,24 @@
 //
 // This package provides:
 //   - FileSystemRepository: Uses fs.FS for flexibility and testability (filesystem_repository.go)
-//   - Repository: Uses os package directly for CLI tools (repository.go)
+//   - Repository: Wraps FileSystemRepository with path-based construction for CLI tools (repository.go)
 //   - RemoteRepository: Extends Repository with remote registry access (repository.go)
 //   - Client: Coordinates resolution across multiple repositories (repository.go)
-//   - DefaultCachePath: Utility to find the bala cache location (defaults.go)
 //   - DefaultFactories: Creates default repository factories for project loading (defaults.go)
 package repository
 
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"slices"
 
 	"ballerina-lang-go/projects"
 )
 
 // Repository provides access to packages from a local filesystem location.
-// This implementation uses os package directly, suitable for CLI tools.
+// It wraps FileSystemRepository and adds path-based construction for CLI convenience.
 //
 // The cache structure is:
 //
@@ -49,27 +47,29 @@ import (
 //
 //	~/.ballerina/repositories/central.ballerina.io/bala/ballerina/http/2.10.0/any/
 type Repository struct {
-	root string
+	fsRepo   *FileSystemRepository
+	rootPath string // kept for write operations (PushPackage)
 }
 
-// NewRepository creates a repository for the given filesystem path.
+// NewRepository creates a repository from an fs.FS and root path.
 //
-// If root is empty, DefaultCachePath() is used.
-func NewRepository(root string) *Repository {
-	if root == "" {
-		root = DefaultCachePath()
+// The fsys should be rooted at the repository root (e.g., os.DirFS(rootPath)).
+// The rootPath is used for write operations like PushPackage.
+func NewRepository(fsys fs.FS, rootPath string, env *projects.Environment) *Repository {
+	return &Repository{
+		fsRepo:   NewFileSystemRepository("filesystem", fsys, ".", env, projects.LoadBalaProject),
+		rootPath: rootPath,
 	}
-	return &Repository{root: root}
 }
 
 // Root returns the root directory path of this repository.
 func (r *Repository) Root() string {
-	return r.root
+	return r.rootPath
 }
 
 // Name returns "filesystem" for logging and debugging.
 func (r *Repository) Name() string {
-	return "filesystem"
+	return r.fsRepo.Name()
 }
 
 // GetPackage loads and returns a package from this repository.
@@ -77,32 +77,7 @@ func (r *Repository) Name() string {
 // Returns nil if the package is not found (not an error).
 // Returns an error only for actual failures (I/O error, context cancelled).
 func (r *Repository) GetPackage(ctx context.Context, org, name, version string) (*projects.Package, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	balaPath, err := r.getPackagePath(org, name, version)
-	if err != nil {
-		return nil, err
-	}
-	if balaPath == "" {
-		return nil, nil
-	}
-
-	ballerinaHome, err := projects.NewBallerinaHome()
-	if err != nil {
-		return nil, err
-	}
-	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
-
-	result, err := projects.Load(os.DirFS(balaPath), ballerinaHomeFs, ".")
-	if err != nil {
-		return nil, err
-	}
-
-	return result.Project().CurrentPackage(), nil
+	return r.fsRepo.GetPackage(ctx, org, name, version)
 }
 
 // GetPackageVersions returns all available versions for a package.
@@ -111,39 +86,7 @@ func (r *Repository) GetPackage(ctx context.Context, org, name, version string) 
 // Returns nil if the package is not found in this repository.
 // Returns an error only for actual failures (I/O error, context cancelled).
 func (r *Repository) GetPackageVersions(ctx context.Context, org, name string) ([]projects.PackageVersion, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	pkgPath := filepath.Join(r.root, org, name)
-
-	entries, err := os.ReadDir(pkgPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	var versions []projects.PackageVersion
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		version, err := projects.NewPackageVersionFromString(entry.Name())
-		if err != nil {
-			continue
-		}
-		versions = append(versions, version)
-	}
-
-	slices.SortFunc(versions, func(a, b projects.PackageVersion) int {
-		return a.Compare(b)
-	})
-
-	return versions, nil
+	return r.fsRepo.GetPackageVersions(ctx, org, name)
 }
 
 // GetLatestVersion returns the latest (highest semver) version for a package.
@@ -167,17 +110,7 @@ func (r *Repository) GetLatestVersion(ctx context.Context, org, name string) (pr
 // doesn't contain a valid bala structure (platform dir with package.json).
 // Returns an error only for actual failures (I/O error, context cancelled).
 func (r *Repository) Exists(ctx context.Context, org, name, version string) (bool, error) {
-	select {
-	case <-ctx.Done():
-		return false, ctx.Err()
-	default:
-	}
-
-	balaPath, err := r.getPackagePath(org, name, version)
-	if err != nil {
-		return false, err
-	}
-	return balaPath != "", nil
+	return r.fsRepo.Exists(ctx, org, name, version)
 }
 
 // PushPackage copies a bala package to this repository.
@@ -192,46 +125,6 @@ func (r *Repository) PushPackage(ctx context.Context, balaPath, org, name, versi
 
 	// TODO: Implement package push (copy bala to repository)
 	return errors.New("PushPackage not implemented")
-}
-
-// getPackagePath returns the filesystem path to a package's bala directory.
-func (r *Repository) getPackagePath(org, name, version string) (string, error) {
-	versionPath := filepath.Join(r.root, org, name, version)
-
-	info, err := os.Stat(versionPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", nil
-		}
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", nil
-	}
-
-	entries, err := os.ReadDir(versionPath)
-	if err != nil {
-		return "", err
-	}
-
-	var firstPlatform string
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		platformPath := filepath.Join(versionPath, entry.Name())
-		packageJSONPath := filepath.Join(platformPath, "package.json")
-		if _, err := os.Stat(packageJSONPath); err == nil {
-			if entry.Name() == platformAny {
-				return platformPath, nil
-			}
-			if firstPlatform == "" {
-				firstPlatform = platformPath
-			}
-		}
-	}
-
-	return firstPlatform, nil
 }
 
 // WritableRepository is an interface for repositories that support push operations.
@@ -261,12 +154,8 @@ type RemoteRepository struct {
 
 // NewRemoteRepository creates a remote repository with the given cache and remote URL.
 //
-// If cache is nil, a repository with DefaultCachePath() is used.
 // If client is nil, http.DefaultClient is used.
 func NewRemoteRepository(cache *Repository, baseURL string, client *http.Client) *RemoteRepository {
-	if cache == nil {
-		cache = NewRepository("")
-	}
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -300,7 +189,7 @@ func (r *RemoteRepository) GetPackageVersions(ctx context.Context, org, name str
 // Returns an error if download or caching fails.
 func (r *RemoteRepository) PullPackage(ctx context.Context, org, name, version string) (string, error) {
 	// TODO: Implement remote download
-	return r.getPackagePath(org, name, version)
+	return "", errors.New("PullPackage not implemented")
 }
 
 // SearchPackage searches for packages matching the query in the remote registry.
@@ -327,7 +216,7 @@ type Client struct {
 	offline bool
 }
 
-// NewClient creates a new client with the given repositories.
+// NewClient creates a client with the given repositories.
 func NewClient(repos []*Repository, remotes []*RemoteRepository, offline bool) *Client {
 	return &Client{
 		repos:   repos,
@@ -338,11 +227,7 @@ func NewClient(repos []*Repository, remotes []*RemoteRepository, offline bool) *
 
 // GetPackage resolves a package from the configured repositories.
 //
-// Resolution order:
-//  1. Check local repositories
-//  2. If not found and not offline, check remote repositories
-//
-// Returns nil if the package is not found in any repository.
+// Checks local repositories first, then remote repositories if online.
 func (c *Client) GetPackage(ctx context.Context, org, name, version string) (*projects.Package, error) {
 	for _, repo := range c.repos {
 		pkg, err := repo.GetPackage(ctx, org, name, version)

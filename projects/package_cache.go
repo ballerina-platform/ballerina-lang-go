@@ -21,7 +21,6 @@ import (
 )
 
 // PackageCache provides thread-safe in-memory caching of loaded packages.
-// Java source: io.ballerina.projects.internal.environment.EnvironmentPackageCache
 //
 // It stores all packages (internal and external) for an environment.
 // Uses dual indexing: by PackageID and by org/name/version.
@@ -56,7 +55,6 @@ func (c *PackageCache) initMaps() {
 }
 
 // Cache adds a package to the cache.
-// Java source: io.ballerina.projects.internal.environment.WritablePackageCache.cache
 func (c *PackageCache) Cache(pkg *Package) {
 	if pkg == nil {
 		return
@@ -75,7 +73,6 @@ func (c *PackageCache) Cache(pkg *Package) {
 }
 
 // Get retrieves a package from the cache by org/name/version.
-// Java source: io.ballerina.projects.environment.PackageCache.getPackage(org, name, version)
 func (c *PackageCache) Get(org, name, version string) *Package {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -89,7 +86,6 @@ func (c *PackageCache) Get(org, name, version string) *Package {
 }
 
 // GetByID retrieves a package from the cache by PackageID.
-// Java source: io.ballerina.projects.environment.PackageCache.getPackage(PackageId)
 func (c *PackageCache) GetByID(id PackageID) *Package {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -102,7 +98,6 @@ func (c *PackageCache) GetByID(id PackageID) *Package {
 }
 
 // GetPackages returns all cached packages matching org and name (any version).
-// Java source: io.ballerina.projects.environment.PackageCache.getPackages(org, name)
 func (c *PackageCache) GetPackages(org, name string) []*Package {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

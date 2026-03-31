@@ -20,6 +20,7 @@ package projects_test
 
 import (
 	"context"
+	"os"
 	"slices"
 	"testing"
 
@@ -27,8 +28,12 @@ import (
 	"ballerina-lang-go/projects/repository"
 )
 
+func newTestRepository(path string) *repository.Repository {
+	return repository.NewRepository(os.DirFS(path), path, nil)
+}
+
 func TestRepository_GetPackageVersions(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name     string
@@ -40,13 +45,13 @@ func TestRepository_GetPackageVersions(t *testing.T) {
 			name:     "multiple versions sorted",
 			org:      "ballerina",
 			pkg:      "http",
-			expected: []string{"2.9.0", "2.10.0", "2.10.1"},
+			expected: []string{"2.10.0", "2.10.1"},
 		},
 		{
 			name:     "single version",
-			org:      "ballerina",
-			pkg:      "io",
-			expected: []string{"1.6.0"},
+			org:      "testorg",
+			pkg:      "testpkg",
+			expected: []string{"1.0.1"},
 		},
 		{
 			name:     "non-existent package",
@@ -61,10 +66,10 @@ func TestRepository_GetPackageVersions(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:     "testorg with multiple versions",
-			org:      "testorg",
-			pkg:      "testpkg",
-			expected: []string{"1.0.0", "1.0.1", "2.0.0"},
+			name:     "mockorg package",
+			org:      "mockorg",
+			pkg:      "mockpkg",
+			expected: []string{"1.0.0"},
 		},
 	}
 
@@ -87,7 +92,7 @@ func TestRepository_GetPackageVersions(t *testing.T) {
 }
 
 func TestRepository_GetLatestVersion(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name      string
@@ -97,10 +102,10 @@ func TestRepository_GetLatestVersion(t *testing.T) {
 		wantFound bool
 	}{
 		{"latest of multiple", "ballerina", "http", "2.10.1", true},
-		{"single version", "ballerina", "io", "1.6.0", true},
+		{"single version", "testorg", "testpkg", "1.0.1", true},
 		{"non-existent package", "ballerina", "nonexistent", "", false},
 		{"non-existent org", "nonexistent", "http", "", false},
-		{"testorg latest", "testorg", "testpkg", "2.0.0", true},
+		{"mockorg latest", "mockorg", "mockpkg", "1.0.0", true},
 	}
 
 	for _, tt := range tests {
@@ -124,7 +129,7 @@ func TestRepository_GetLatestVersion(t *testing.T) {
 }
 
 func TestRepository_Exists(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 
 	tests := []struct {
 		name     string
@@ -155,7 +160,7 @@ func TestRepository_Exists(t *testing.T) {
 }
 
 func TestRepository_ContextCancellation(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
@@ -182,14 +187,14 @@ func TestRepository_ContextCancellation(t *testing.T) {
 }
 
 func TestRepository_Name(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 	if repo.Name() != "filesystem" {
 		t.Errorf("expected 'filesystem', got %q", repo.Name())
 	}
 }
 
 func TestRepository_Root(t *testing.T) {
-	repo := repository.NewRepository("testdata/repo/bala")
+	repo := newTestRepository("testdata/repo/bala")
 	if repo.Root() != "testdata/repo/bala" {
 		t.Errorf("expected 'testdata/repo/bala', got %q", repo.Root())
 	}

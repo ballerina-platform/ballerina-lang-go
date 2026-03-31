@@ -17,6 +17,7 @@
 package projects
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"sync"
@@ -35,12 +36,12 @@ type packageContext struct {
 	ballerinaTomlContext *tomlDocumentContext // Ballerina.toml context (nil if not present)
 
 	// Lazy-initialized fields (thread-safe via sync.Once, matching documentContext pattern).
-	packageCompilation      *PackageCompilation
-	compilationOnce         sync.Once
-	packageResolution       *PackageResolution
-	resolutionOnce          sync.Once
-	modDependencyGraph      *DependencyGraph[ModuleDescriptor]
-	modDependencyGraphOnce  sync.Once
+	packageCompilation     *PackageCompilation
+	compilationOnce        sync.Once
+	packageResolution      *PackageResolution
+	resolutionOnce         sync.Once
+	modDependencyGraph     *DependencyGraph[ModuleDescriptor]
+	modDependencyGraphOnce sync.Once
 }
 
 // newPackageContext creates a packageContext from PackageConfig.
@@ -267,7 +268,7 @@ func (p *packageContext) buildModuleDependencyGraph() *DependencyGraph[ModuleDes
 			requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
 
 			// Resolve requests and add edges for same-package dependencies
-			responses := moduleResolver.resolveModuleLoadRequests(nil, requests)
+			responses := moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
 			for _, resp := range responses {
 				if resp.resolutionStatus == resolutionStatusResolved {
 					toDesc := resp.moduleDesc

@@ -21,15 +21,12 @@ import (
 )
 
 // PackageResolver resolves packages from available repositories.
-// Java source: io.ballerina.projects.environment.PackageResolver
 type PackageResolver interface {
 	// ResolvePackages loads the packages specified in the requests.
-	// Java source: io.ballerina.projects.environment.PackageResolver.resolvePackages
 	ResolvePackages(ctx context.Context, requests []ResolutionRequest, options ResolutionOptions) []ResolutionResponse
 
 	// ResolveByName resolves packages by org and name, without requiring a specific version.
 	// Returns all matching packages from cache or repositories.
-	// Java source: io.ballerina.projects.environment.PackageResolver.resolvePackageNames
 	ResolveByName(ctx context.Context, org, name string, options ResolutionOptions) []*Package
 
 	// AddRepository adds a repository to the resolver.
@@ -41,7 +38,6 @@ type PackageResolver interface {
 }
 
 // defaultPackageResolver is the default implementation of PackageResolver.
-// Java source: io.ballerina.projects.internal.environment.DefaultPackageResolver
 type defaultPackageResolver struct {
 	cache        *PackageCache
 	repositories []Repository // Uses the Repository interface from repository.go

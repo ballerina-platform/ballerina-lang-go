@@ -17,7 +17,6 @@
 package projects
 
 import (
-	"os"
 	"path/filepath"
 )
 
@@ -33,22 +32,8 @@ type BallerinaHome struct {
 	homePath string
 }
 
-// NewBallerinaHome creates a BallerinaHome from BAL_HOME env var or ~/.ballerina.
-func NewBallerinaHome() (*BallerinaHome, error) {
-	if balHome := os.Getenv(BallerinaHomeEnvVar); balHome != "" {
-		return &BallerinaHome{homePath: balHome}, nil
-	}
-
-	userHome, err := os.UserHomeDir()
-	if err != nil {
-		return nil, &ProjectError{Message: "failed to determine user home directory: " + err.Error()}
-	}
-
-	return &BallerinaHome{homePath: filepath.Join(userHome, UserHomeDirName)}, nil
-}
-
-// NewBallerinaHomeFromPath creates a BallerinaHome with an explicit path.
-func NewBallerinaHomeFromPath(homePath string) *BallerinaHome {
+// NewBallerinaHome creates a BallerinaHome with an explicit path.
+func NewBallerinaHome(homePath string) *BallerinaHome {
 	return &BallerinaHome{homePath: homePath}
 }
 

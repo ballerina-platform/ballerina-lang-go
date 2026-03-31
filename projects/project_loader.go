@@ -134,11 +134,18 @@ func LoadBalaProject(fsys fs.FS, platformDir string, sharedEnv *Environment) (*B
 // createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
 // This ensures the Environment is immutable after creation.
 //
-// Repository factories should be provided via ProjectLoadConfig.RepositoryFactories.
-// Use repository.DefaultFactories(ballerinaHomeFs) to get the standard central and local repositories.
+// If no RepositoryFactories are provided in the config and ballerinaHomeFs is available,
+// default repositories (central and local) will be created automatically.
 func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig) *Environment {
+	factories := cfg.RepositoryFactories
+
+	// If no factories provided and we have a ballerinaHomeFs, use the default repositories
+	if len(factories) == 0 && l.ballerinaHomeFs != nil {
+		factories = defaultRepositoryFactories(l.ballerinaHomeFs)
+	}
+
 	return NewProjectEnvironmentBuilder(l.projectFs).
-		WithRepositoryFactories(cfg.RepositoryFactories).
+		WithRepositoryFactories(factories).
 		WithResolutionOptions(cfg.ResolutionOptions).
 		Build()
 }
