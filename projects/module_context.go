@@ -48,8 +48,9 @@ type moduleContext struct {
 	moduleDescDependencies []ModuleDescriptor
 
 	// Compilation state tracking.
-	compilationState  moduleCompilationState
-	moduleDiagnostics []diagnostics.Diagnostic
+	compilationState    moduleCompilationState
+	stateInitialized    bool
+	moduleDiagnostics   []diagnostics.Diagnostic
 
 	// Compilation artifacts.
 	bLangPkg        *ast.BLangPackage
@@ -464,7 +465,18 @@ func (m *moduleContext) getBIRPackage() *bir.BIRPackage {
 
 // getCompilationState returns the current compilation state of the module.
 func (m *moduleContext) getCompilationState() moduleCompilationState {
+	if !m.stateInitialized {
+		// TODO: Check compilationCache.getBir() for pre-compiled BIR
+		m.compilationState = moduleCompilationStateLoadedFromSources
+		m.stateInitialized = true
+	}
 	return m.compilationState
+}
+
+// setCompilationState sets the compilation state of the module.
+func (m *moduleContext) setCompilationState(state moduleCompilationState) {
+	m.compilationState = state
+	m.stateInitialized = true
 }
 
 // getDiagnostics returns the diagnostics produced during module compilation.

@@ -77,15 +77,15 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
-		// Phase 0: Compile external package dependencies first.
-		// This ensures their symbols are available for import resolution.
-		// Java equivalent: Dependencies are topologically sorted and compiled before the importing package.
-		c.compileExternalDependencies()
-
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
+		// The topologically sorted module list includes modules from ALL packages (external + root)
+		// in dependency order, so external package modules are compiled before modules that import them.
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
-			resolveTypesAndSymbols(moduleCtx)
+			if moduleCtx.getCompilationState() == moduleCompilationStateLoadedFromSources {
+				resolveTypesAndSymbols(moduleCtx)
+			}
+			// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
 		}
 
 		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
@@ -94,6 +94,9 @@ func (c *PackageCompilation) compileModulesInternal() {
 		var panicsMu sync.Mutex
 		var panics []any
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			if moduleCtx.getCompilationState() != moduleCompilationStateLoadedFromSources {
+				continue
+			}
 			wg.Add(1)
 			go func(m *moduleContext) {
 				defer wg.Done()
@@ -243,36 +246,3 @@ func (c *PackageCompilation) getCompilerBackend(platform TargetPlatform, creator
 	return backend
 }
 
-// compileExternalDependencies compiles all external package dependencies before
-// compiling the root package modules. This ensures external symbols are available
-// for import resolution.
-//
-// Dependencies are already resolved and cached during package resolution (buildPackageDependencyGraph).
-// This method retrieves them from the cache and triggers their compilation.
-func (c *PackageCompilation) compileExternalDependencies() {
-	env := c.getPackageContext().getProject().Environment()
-	packageCache := env.PackageCache()
-
-	// Iterate over resolved external dependencies (already loaded during resolution)
-	for _, pkgDesc := range c.packageResolution.ResolvedDependencies() {
-		if pkgDesc == nil {
-			continue
-		}
-
-		// Look up the package in the cache (should be there from resolution)
-		cachedPkg := packageCache.Get(pkgDesc.Org().Value(), pkgDesc.Name().Value(), pkgDesc.Version().String())
-		if cachedPkg == nil {
-			continue
-		}
-
-		// Trigger compilation of the external package.
-		// With shared environment, symbols are added directly to the shared publicSymbols map.
-		_ = cachedPkg.Compilation()
-
-		// Copy symbols from the external package's environment if different.
-		externalProject := cachedPkg.Project()
-		if externalProject != nil && externalProject.Environment() != env {
-			env.addPublicSymbolsFrom(externalProject.Environment())
-		}
-	}
-}

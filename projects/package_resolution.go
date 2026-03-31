@@ -228,34 +228,50 @@ func (r *PackageResolution) ModuleDependencyGraph() *DependencyGraph[ModuleDescr
 }
 
 func (r *PackageResolution) resolveDependencies() {
-	pkgCtx := r.rootPackageContext
+	var sortedModuleList []*moduleContext
 
-	// Use the module dependency graph for topological sort
-	sortedDescs := r.moduleDependencyGraph.ToTopologicallySortedList()
+	// Sort packages topologically (dependencies before dependents)
+	sortedPackages := r.packageDependencyGraph.ToTopologicallySortedList()
 
-	// Map descriptors to contexts for lookup
-	descToCtx := make(map[ModuleDescriptor]*moduleContext, len(pkgCtx.moduleIDs))
-	for _, modID := range pkgCtx.moduleIDs {
-		modCtx := pkgCtx.moduleContextMap[modID]
-		if modCtx != nil {
-			descToCtx[modCtx.getDescriptor()] = modCtx
+	packageCache := r.environment.PackageCache()
+
+	// For each package in topological order, add its modules (sorted within the package)
+	for _, pkgDesc := range sortedPackages {
+		var pkgCtx *packageContext
+
+		// Check if this is the root package
+		if pkgDesc.Equals(r.rootPackageContext.getDescriptor()) {
+			pkgCtx = r.rootPackageContext
+		} else {
+			// Get external package from cache
+			cachedPkg := packageCache.Get(pkgDesc.Org().Value(), pkgDesc.Name().Value(), pkgDesc.Version().String())
+			if cachedPkg == nil {
+				continue
+			}
+			pkgCtx = cachedPkg.packageCtx
+		}
+
+		// Get module dependency graph for this package
+		moduleDependencyGraph := pkgCtx.moduleDependencyGraph()
+
+		// Topologically sort modules within this package
+		sortedModuleDescs := moduleDependencyGraph.ToTopologicallySortedList()
+
+		// Add module contexts in sorted order
+		for _, modDesc := range sortedModuleDescs {
+			modCtx := pkgCtx.getModuleContextByName(modDesc.Name())
+			if modCtx != nil {
+				sortedModuleList = append(sortedModuleList, modCtx)
+			}
 		}
 	}
 
-	// Build sorted module list from sorted descriptors
-	sorted := make([]*moduleContext, 0, len(sortedDescs))
-	for _, desc := range sortedDescs {
-		if modCtx, ok := descToCtx[desc]; ok {
-			sorted = append(sorted, modCtx)
-		}
-	}
-
-	// Check for cycles
+	// Check for cycles in root package's module graph
 	cycles := r.moduleDependencyGraph.FindCycles()
 	// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
 	_ = cycles
 
-	r.topologicallySortedModuleList = sorted
+	r.topologicallySortedModuleList = sortedModuleList
 	r.diagnosticResult = NewDiagnosticResult(nil)
 }
 
