@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "cli_panic_project"
+version = "0.1.0"
