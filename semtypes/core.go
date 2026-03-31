@@ -524,8 +524,8 @@ func listAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 	initialLength := int64(len(cellInitial))
 
 	initial := make([]SemType, 0, initialLength)
-	for _, c := range cellInitial {
-		initial = append(initial, CellInnerVal(c))
+	for i := range cellInitial {
+		initial = append(initial, CellInnerVal(&cellInitial[i]))
 	}
 
 	fixedLength := int64(atomicType.Members.FixedLength)

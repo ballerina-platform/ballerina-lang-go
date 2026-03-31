@@ -95,7 +95,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 		} else {
 			ro = mut
 		}
-		cellFields = append(cellFields, cellFieldFrom(field.Name, cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
+		cellFields = append(cellFields, cellFieldFrom(field.Name, *cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -124,7 +124,7 @@ func (this *MappingDefinition) splitFields(fields []CellField) splitField {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
 	var names []string
-	var types []*ComplexSemType
+	var types []ComplexSemType
 	for _, field := range sortedFields {
 		names = append(names, field.Name)
 		types = append(types, field.Type)

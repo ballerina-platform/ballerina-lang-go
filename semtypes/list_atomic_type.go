@@ -33,7 +33,7 @@ func (this *ListAtomicType) equals(other AtomicType) bool {
 			return false
 		}
 		return other.Members.FixedLength == this.Members.FixedLength &&
-			slices.EqualFunc(other.Members.Initial, this.Members.Initial, (*ComplexSemType).equals)
+			slices.EqualFunc(other.Members.Initial, this.Members.Initial, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }

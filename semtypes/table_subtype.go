@@ -33,7 +33,7 @@ func tableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 		case 0:
 			normalizedKc = VAL
 		case 1:
-			normalizedKc = getCellAtomicType(members.Initial[0]).Ty
+			normalizedKc = getCellAtomicType(&members.Initial[0]).Ty
 		default:
 			normalizedKc = keyConstraint
 		}

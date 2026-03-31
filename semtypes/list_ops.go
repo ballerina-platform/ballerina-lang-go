@@ -218,11 +218,11 @@ func listIntersectWith(env Env, members1 fixedLengthArray, rest1 *ComplexSemType
 	max1 := members1.FixedLength
 	max2 := members2.FixedLength
 	maxLen := max(max2, max1)
-	var initial []*ComplexSemType
+	var initial []ComplexSemType
 	for i := range maxLen {
 		intersected := intersectMemberSemTypes(env, listMemberAt(members1, rest1, i),
 			listMemberAt(members2, rest2, i))
-		initial = append(initial, intersected)
+		initial = append(initial, *intersected)
 	}
 	fixedLen := max(members2.FixedLength, members1.FixedLength)
 	return new(fixedLengthArrayFrom(initial, fixedLen)), new(intersectMemberSemTypes(env, rest1, rest2)), true
@@ -315,8 +315,8 @@ func listMemberAt(fixedArray fixedLengthArray, rest *ComplexSemType, index int) 
 
 func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
 	// migrated from listOps.java:415:5
-	for _, t := range array.Initial {
-		if IsEmpty(cx, t) {
+	for i := range array.Initial {
+		if IsEmpty(cx, &array.Initial[i]) {
 			return true
 		}
 	}
@@ -327,7 +327,7 @@ func fixedArrayGet(members fixedLengthArray, index int) *ComplexSemType {
 	// migrated from listOps.java:424:5
 	memberLen := len(members.Initial)
 	i := min(memberLen-1, index)
-	return members.Initial[i]
+	return &members.Initial[i]
 }
 
 func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemType {
@@ -364,8 +364,8 @@ func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest *ComplexSemTy
 	}
 	m := cellInner(rest)
 	if fixedArray.FixedLength > 0 {
-		for _, ty := range fixedArray.Initial {
-			m = Union(m, cellInner(ty))
+		for i := range fixedArray.Initial {
+			m = Union(m, cellInner(&fixedArray.Initial[i]))
 		}
 	}
 	return m

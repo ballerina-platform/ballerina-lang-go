@@ -289,7 +289,7 @@ func (s *toStringState) mappingAtomicTypeToString(atom Atom) string {
 	atomic := s.cx.MappingAtomType(atom)
 	var parts []string
 	for i, name := range atomic.Names {
-		parts = append(parts, name+": "+s.semTypeToString(CellInnerVal(atomic.Types[i])))
+		parts = append(parts, name+": "+s.semTypeToString(CellInnerVal(&atomic.Types[i])))
 	}
 	restStr := s.semTypeToString(CellInnerVal(atomic.Rest))
 	parts = append(parts, restStr+"...")

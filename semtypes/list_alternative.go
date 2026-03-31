@@ -78,8 +78,8 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 		if !ok {
 			return nil, ListAtomicType{}, false
 		}
-		for _, member := range members.Initial {
-			if IsNever(cellInner(member)) {
+		for i := range members.Initial {
+			if IsNever(cellInner(&members.Initial[i])) {
 				return nil, ListAtomicType{}, false
 			}
 		}
