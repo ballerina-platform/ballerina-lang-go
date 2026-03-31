@@ -18,11 +18,11 @@ package semtypes
 
 type BasicTypeBitSet int
 
-func (bitset BasicTypeBitSet) All() int {
-	return int(bitset)
+func (bitset BasicTypeBitSet) all() BasicTypeBitSet {
+	return bitset
 }
 
-func (bitset BasicTypeBitSet) Some() int {
+func (bitset BasicTypeBitSet) some() BasicTypeBitSet {
 	return 0
 }
 

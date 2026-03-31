@@ -52,7 +52,7 @@ func (pool *TypePool) Get(i TypePoolIndex) SemType {
 func (pool *TypePool) Put(ty SemType) TypePoolIndex {
 	switch ty := ty.(type) {
 	case BasicTypeBitSet:
-		return TypePoolIndex(ty.All() | 1<<31)
+		return TypePoolIndex(ty.all() | 1<<31)
 	case *ComplexSemType:
 		if cached, ok := pool.memo[ty]; ok {
 			return cached
@@ -125,8 +125,8 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 		}
 		end := uint32(len(bp.subtypeData))
 		bp.types = append(bp.types, typeEntry{
-			all:              uint32(cst.All()),
-			some:             uint32(cst.Some()),
+			all:              uint32(cst.all()),
+			some:             uint32(cst.some()),
 			subtypeDataStart: start,
 			subtypeDataEnd:   end,
 		})

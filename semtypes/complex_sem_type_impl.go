@@ -19,19 +19,19 @@ package semtypes
 import "slices"
 
 type ComplexSemType struct {
-	all      int
-	some     int
-	dataList []ProperSubtypeData
+	allBitSet  BasicTypeBitSet
+	someBitSet BasicTypeBitSet
+	dataList   []ProperSubtypeData
 }
 
 var _ SemType = &ComplexSemType{}
 
-func (this *ComplexSemType) All() int {
-	return this.all
+func (this *ComplexSemType) all() BasicTypeBitSet {
+	return this.allBitSet
 }
 
-func (this *ComplexSemType) Some() int {
-	return this.some
+func (this *ComplexSemType) some() BasicTypeBitSet {
+	return this.someBitSet
 }
 
 func (this *ComplexSemType) subtypeDataList() []ProperSubtypeData {
@@ -39,6 +39,6 @@ func (this *ComplexSemType) subtypeDataList() []ProperSubtypeData {
 }
 
 func (this *ComplexSemType) equals(other *ComplexSemType) bool {
-	return this == other || (this.all == other.all && this.some == other.some &&
+	return this == other || (this.allBitSet == other.allBitSet && this.someBitSet == other.someBitSet &&
 		slices.Equal(this.dataList, other.dataList))
 }

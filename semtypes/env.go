@@ -17,6 +17,9 @@ package semtypes
 
 import "sync"
 
+// Env is an opaque pointer to the type environment. All (potentially recursive) types are defined in a type environemnt.
+// Performing type operations involving types defined in different type environements is a undefined behaviour. There for it
+// is advicible to use the same type environment during the full executiong of an interpreter process.
 type Env = *env
 
 func CreateTypeEnv() Env {

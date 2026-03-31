@@ -27,7 +27,7 @@ func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 	// migrated from BMappingProj.java:55:5
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & MAPPING.All()) != 0 {
+		if (b.all() & MAPPING.all()) != 0 {
 			return VAL
 		} else {
 			return UNDEF

@@ -23,7 +23,7 @@ import (
 func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
 	// migrated from ListProj.java:73:5
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & LIST.All()) != 0 {
+		if (b.all() & LIST.all()) != 0 {
 			return VAL
 		} else {
 			return NEVER
