@@ -136,7 +136,7 @@ func (p *PrettyPrinter) PrintFunction(function BIRFunction) {
 		p.writeLine("error-table {")
 		p.increaseIndent()
 		for _, entry := range function.ErrorTable {
-			p.writeLine(fmt.Sprintf("[%s, %s] -> %s, %s", entry.Start.Id.Value(), entry.End.Id.Value(), entry.Target.Id.Value(), p.PrintOperand(*entry.ErrorOp)))
+			p.writeLine(fmt.Sprintf("[bb%d, bb%d] -> bb%d, %s", entry.Start, entry.End, entry.Target, p.PrintOperand(*entry.ErrorOp)))
 		}
 		p.decreaseIndent()
 		p.writeLine("}")

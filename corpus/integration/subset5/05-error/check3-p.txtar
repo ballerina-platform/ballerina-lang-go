@@ -1,0 +1,5 @@
+-- stdout --
+-- stderr --
+error: zero
+        at div(check3-p.bal:8)
+           main(check3-p.bal:4)

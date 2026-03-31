@@ -191,9 +191,9 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 
 	bw.writeLength(birbuf, len(fn.ErrorTable))
 	for _, entry := range fn.ErrorTable {
-		bw.writeStringCPEntry(birbuf, entry.Start.Id.Value())
-		bw.writeStringCPEntry(birbuf, entry.End.Id.Value())
-		bw.writeStringCPEntry(birbuf, entry.Target.Id.Value())
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.Start))
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.End))
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.Target))
 		bw.writeOperand(birbuf, entry.ErrorOp)
 	}
 
