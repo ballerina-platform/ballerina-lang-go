@@ -57,11 +57,13 @@
 //	fsys := os.DirFS("/path/to/project/parent")
 //
 //	// Set up Ballerina home filesystem (for langlib and cached packages)
-//	ballerinaHome, err := projects.NewBallerinaHome()
-//	if err != nil {
-//	    log.Fatal(err)
+//	// Determine home path from BAL_HOME env var or ~/.ballerina
+//	ballerinaHomePath := os.Getenv(projects.BallerinaHomeEnvVar)
+//	if ballerinaHomePath == "" {
+//	    userHome, _ := os.UserHomeDir()
+//	    ballerinaHomePath = filepath.Join(userHome, projects.UserHomeDirName)
 //	}
-//	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+//	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 //
 //	// Load with default options
 //	result, err := projects.Load(fsys, ballerinaHomeFs, "myproject")

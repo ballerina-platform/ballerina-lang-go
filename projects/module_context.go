@@ -48,9 +48,9 @@ type moduleContext struct {
 	moduleDescDependencies []ModuleDescriptor
 
 	// Compilation state tracking.
-	compilationState    moduleCompilationState
-	stateInitialized    bool
-	moduleDiagnostics   []diagnostics.Diagnostic
+	compilationState  moduleCompilationState
+	stateInitialized  bool
+	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
 	bLangPkg        *ast.BLangPackage

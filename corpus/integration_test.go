@@ -225,12 +225,12 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 
 	fsys := os.DirFS(filepath.Dir(balFile))
 
-	ballerinaHome, err := projects.NewBallerinaHome()
+	ballerinaHomePath, err := getBallerinaHomePath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
 	}
-	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
 	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(balFile))
 	if err != nil {
@@ -366,12 +366,12 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 
 	fsys := os.DirFS(projectDir)
 
-	ballerinaHome, err := projects.NewBallerinaHome()
+	ballerinaHomePath, err := getBallerinaHomePath()
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
 	}
-	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
 	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
 	if err != nil {
@@ -677,4 +677,17 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 
 	return bir.GenBir(cx, pkg), nil
+}
+
+func getBallerinaHomePath() (string, error) {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }

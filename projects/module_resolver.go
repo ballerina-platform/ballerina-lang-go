@@ -38,7 +38,6 @@ func newModuleLoadRequestKey(request *moduleLoadRequest) moduleLoadRequestKey {
 }
 
 // resolutionStatus indicates whether a module/package was resolved.
-// Java source: io.ballerina.projects.environment.ResolutionResponse.ResolutionStatus
 type resolutionStatus int
 
 const (
@@ -49,7 +48,6 @@ const (
 )
 
 // importModuleResponse represents the result of resolving a moduleLoadRequest.
-// Java source: io.ballerina.projects.internal.importModuleResponse
 type importModuleResponse struct {
 	packageDescriptor *PackageDescriptor // Package containing the module (nil for same package)
 	moduleDesc        ModuleDescriptor   // Module descriptor
@@ -57,7 +55,6 @@ type importModuleResponse struct {
 }
 
 // moduleResolver resolves module dependencies using PackageResolver.
-// Java source: io.ballerina.projects.internal.ModuleResolver
 type moduleResolver struct {
 	rootPkgDesc       PackageDescriptor
 	responseMap       map[moduleLoadRequestKey]*importModuleResponse

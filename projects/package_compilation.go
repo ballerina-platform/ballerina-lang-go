@@ -62,7 +62,6 @@ func (c *PackageCompilation) compile() {
 }
 
 // compileModulesInternal performs the actual compilation of all modules.
-// Java source: PackageCompilation.compileModulesInternal()
 func (c *PackageCompilation) compileModulesInternal() {
 	var allDiagnostics []diagnostics.Diagnostic
 
@@ -78,8 +77,6 @@ func (c *PackageCompilation) compileModulesInternal() {
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
-		// The topologically sorted module list includes modules from ALL packages (external + root)
-		// in dependency order, so external package modules are compiled before modules that import them.
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
 			if moduleCtx.getCompilationState() == moduleCompilationStateLoadedFromSources {
@@ -247,4 +244,3 @@ func (c *PackageCompilation) getCompilerBackend(platform TargetPlatform, creator
 	c.compilerBackends[platform] = backend
 	return backend
 }
-

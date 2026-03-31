@@ -156,7 +156,6 @@ func (m PackageManifest) Keywords() []string {
 }
 
 // ExportedModules returns a copy of the exported module names.
-// Java source: io.ballerina.projects.PackageManifest.exportedModules()
 func (m PackageManifest) ExportedModules() []string {
 	return slices.Clone(m.exportedModules)
 }
@@ -217,7 +216,6 @@ type PackageManifestParams struct {
 // PackageManifest instances with full control over all fields.
 func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest {
 	// Default exported modules to package name if not specified.
-	// Java source: PackageManifest.getExport()
 	exportedModules := slices.Clone(params.ExportedModules)
 	if len(exportedModules) == 0 {
 		exportedModules = []string{params.PackageDesc.Name().Value()}

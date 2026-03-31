@@ -34,11 +34,24 @@ func loadProject(path string, config ...projects.ProjectLoadConfig) (projects.Pr
 
 	fsys := os.DirFS(baseDir)
 
-	ballerinaHome, err := projects.NewBallerinaHome()
+	ballerinaHomePath, err := getBallerinaHomePath()
 	if err != nil {
 		return projects.ProjectLoadResult{}, err
 	}
-	ballerinaHomeFs := os.DirFS(ballerinaHome.HomePath())
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
 	return projects.Load(fsys, ballerinaHomeFs, path, config...)
+}
+
+func getBallerinaHomePath() (string, error) {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }

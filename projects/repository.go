@@ -23,7 +23,6 @@ import (
 // Repository provides access to Ballerina packages from a specific source.
 // Implementations include FileSystemRepository (local bala cache),
 // CentralRepository (Ballerina Central API), MavenRepository, etc.
-// Java source: io.ballerina.projects.repos.PackageRepository
 type Repository interface {
 	// Name returns the repository identifier (e.g., "local", "central", "distribution").
 	Name() string
@@ -31,16 +30,13 @@ type Repository interface {
 	// GetPackage loads a specific version of a package.
 	// Returns (nil, nil) if not found (not an error).
 	// Returns (nil, error) on actual errors (IO, parse, etc.)
-	// Java source: io.ballerina.projects.repos.PackageRepository.getPackage
 	GetPackage(ctx context.Context, org, name, version string) (*Package, error)
 
 	// GetPackageVersions returns all available versions for a package.
 	// Returns empty slice if package not found.
-	// Java source: io.ballerina.projects.repos.PackageRepository.getPackageVersions
 	GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error)
 
 	// GetLatestVersion returns the latest available version for a package.
 	// Returns (zero, false, nil) if not found.
-	// Java source: io.ballerina.projects.repos.PackageRepository.getLatestVersion
 	GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error)
 }

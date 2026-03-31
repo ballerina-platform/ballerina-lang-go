@@ -17,7 +17,6 @@
 package projects
 
 // ResolutionOptions controls package resolution behavior.
-// Java source: io.ballerina.projects.environment.ResolutionOptions
 type ResolutionOptions struct {
 	offline      bool // Skip remote repositories
 	sticky       bool // Use Dependencies.toml versions strictly
@@ -61,7 +60,6 @@ func (o ResolutionOptions) WithDisableCache(disableCache bool) ResolutionOptions
 }
 
 // ResolutionRequest represents a request to resolve a package.
-// Java source: io.ballerina.projects.environment.ResolutionRequest
 type ResolutionRequest struct {
 	descriptor PackageDescriptor
 	scope      PackageDependencyScope
@@ -99,7 +97,6 @@ func (r ResolutionRequest) Name() PackageName { return r.descriptor.Name() }
 func (r ResolutionRequest) Version() PackageVersion { return r.descriptor.Version() }
 
 // PackageDependencyScope indicates the scope of a dependency.
-// Java source: io.ballerina.projects.PackageDependencyScope
 type PackageDependencyScope int
 
 const (
@@ -110,7 +107,6 @@ const (
 )
 
 // ResolutionResponse represents the result of resolving a package.
-// Java source: io.ballerina.projects.environment.ResolutionResponse
 type ResolutionResponse struct {
 	resolvedPackage *Package
 	request         ResolutionRequest

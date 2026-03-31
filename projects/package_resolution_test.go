@@ -59,7 +59,7 @@ func TestPackageResolution_WithCache(t *testing.T) {
 	cachePath, err := filepath.Abs("testdata/repo/bala")
 	require.NoError(err)
 
-	repo := repository.NewRepository(cachePath)
+	repo := repository.NewRepository(os.DirFS(cachePath), cachePath, nil)
 
 	// Load mock package from repository (auto-caches via InitPackage)
 	pkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
@@ -144,7 +144,7 @@ func TestRepository_Integration(t *testing.T) {
 	cachePath, err := filepath.Abs("testdata/repo/bala")
 	require.NoError(err)
 
-	repo := repository.NewRepository(cachePath)
+	repo := repository.NewRepository(os.DirFS(cachePath), cachePath, nil)
 
 	// Test GetPackageVersions
 	versions, err := repo.GetPackageVersions(context.Background(), "mockorg", "mockpkg")

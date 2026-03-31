@@ -25,7 +25,7 @@ import (
 // This is used for loading dependency packages.
 type BalaProject struct {
 	BaseProject
-	platform string // e.g., "any", "java11", "java21"
+	platform string // e.g., "any"
 }
 
 // Compile-time check to verify BalaProject implements Project interface
@@ -57,7 +57,7 @@ func (b *BalaProject) Kind() ProjectKind {
 	return ProjectKindBala
 }
 
-// Platform returns the platform identifier (e.g., "any", "java11", "java21").
+// Platform returns the platform identifier (e.g., "any").
 func (b *BalaProject) Platform() string {
 	return b.platform
 }

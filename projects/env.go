@@ -25,8 +25,6 @@ import (
 )
 
 // Environment represents an environment shared by a set of projects.
-// Java source: io.ballerina.projects.environment.Environment
-//
 // It maintains a global package cache for all loaded packages (internal and external).
 type Environment struct {
 	fsys              fs.FS
@@ -94,8 +92,7 @@ func (e *Environment) addRepository(repo Repository) {
 }
 
 // Duplicate creates a new Environment with fresh caches but the same repository
-// configuration and resolution options. This matches Java's behavior where
-// duplicate() creates a new Environment but preserves workspace context.
+// configuration and resolution options.
 func (e *Environment) Duplicate() *Environment {
 	newEnv := NewEnvironment(e.fsys, e.compilerEnv)
 	newEnv.resolutionOptions = e.resolutionOptions
