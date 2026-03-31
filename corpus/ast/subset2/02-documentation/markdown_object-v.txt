@@ -1,0 +1,62 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (class-definition TestConnector
+    (variable url (type
+      (value-type string)) (expr
+      (literal )))
+    (variable path (type
+      (value-type string)) (expr
+      (literal )))
+    (variable abc (type
+      (value-type string)) (expr
+      (literal )))
+    (function testAction () (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))
+    (function testSend (
+      (variable ep (type
+        (value-type string)))) (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value)))))
+  (class-definition TestConnector2
+    (variable url (type
+      (value-type string)) (expr
+      (literal )))
+    (variable path (type
+      (value-type string)) (expr
+      (literal )))
+    (variable abc (type
+      (value-type string)) (expr
+      (literal )))
+    (function testAction () (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))
+    (function testSend (
+      (variable ep (type
+        (value-type string)))) (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))))
