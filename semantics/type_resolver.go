@@ -81,6 +81,8 @@ type typeResolver interface {
 	currentScope() model.Scope
 	setCurrentScope(scope model.Scope)
 	nextDefaultFnName() string
+
+	lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool)
 }
 
 type packageTypeResolver struct {
@@ -103,6 +105,7 @@ type packageTypeResolver struct {
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
+	classSymbolByType    map[semtypes.SemType]model.SymbolRef
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -192,6 +195,18 @@ func (t *packageTypeResolver) nextDefaultFnName() string {
 	name := fmt.Sprintf("$desugar$%d", t.defaultFnSymbolCount)
 	t.defaultFnSymbolCount++
 	return name
+}
+
+func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
+	classRef, ok := t.classSymbolByType[receiverTy]
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	classSym, ok := t.getSymbol(classRef).(*model.ClassSymbol)
+	if !ok {
+		return model.SymbolRef{}, false
+	}
+	return classSym.MethodSymbol(methodName)
 }
 
 func (t *packageTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
@@ -287,6 +302,10 @@ func (f *functionTypeResolver) compilerContext() *context.CompilerContext {
 	return f.parentResolver.compilerContext()
 }
 
+func (f *functionTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
+	return f.parentResolver.lookupClassMethodSymbol(receiverTy, methodName)
+}
+
 func (f *functionTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
 	return f.parentResolver.lookupImportedSymbols(name)
 }
@@ -370,7 +389,27 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		typeDefnNodes:       make(map[model.SymbolRef]model.TypeDefinition),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+		classSymbolByType:   make(map[semtypes.SemType]model.SymbolRef),
 		scope:               moduleScope,
+	}
+}
+
+func populateClassSymbolByType(t *packageTypeResolver, pkg *ast.BLangPackage) {
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		if ty := t.symbolType(classDef.Symbol()); ty != nil {
+			t.classSymbolByType[ty] = classDef.Symbol()
+		}
+	}
+	for _, importedSpace := range t.importedSymbols {
+		for i, sym := range importedSpace.Main.Symbols() {
+			if _, ok := sym.(*model.ClassSymbol); ok {
+				ref := importedSpace.Main.RefAt(i)
+				if ty := sym.Type(); ty != nil {
+					t.classSymbolByType[ty] = ref
+				}
+			}
+		}
 	}
 }
 
@@ -448,6 +487,7 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
 	p := newPackageTypeResolver(ctx, pkg, importedSymbols, pkg.Scope)
+	populateClassSymbolByType(p, pkg)
 	populateMappingAtomMaps(p, pkg, importedSymbols)
 	var fns []*ast.BLangFunction
 	for i := range pkg.Functions {
@@ -563,6 +603,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 			return
 		}
 	}
+	populateClassSymbolByType(t, pkg)
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		if _, ok := resolveFunctionSignature(t, fn); !ok {
@@ -819,6 +860,20 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	sig.ReturnType = returnTy
 	sig.RestParamType = restTy
 	fnSymbol.SetSignature(sig)
+
+	defaultableParams := fnSymbol.DefaultableParams()
+	for i := range fn.RequiredParams {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			continue
+		}
+		defaultFnSym := t.getSymbol(dp.Symbol).(model.FunctionSymbol)
+		defaultSig := model.FunctionSignature{
+			ParamTypes: paramTypes[:i],
+			ReturnType: paramTypes[i],
+		}
+		defaultFnSym.SetSignature(defaultSig)
+	}
 
 	return fnType, true
 }
@@ -1249,7 +1304,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		})
 	}
 
-	// PR-TODO: clean this up
+	// TODO: clean this up
 	if classDef.InitFunction != nil {
 		initFnSymbol := t.getSymbol(classDef.InitFunction.Symbol()).(model.FunctionSymbol)
 		sig := initFnSymbol.Signature()
@@ -3164,6 +3219,10 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 
 func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy := expr.Expr.GetDeterminedType()
+	if methodRef, ok := t.lookupClassMethodSymbol(recieverTy, methodSymbol.name); ok {
+		expr.SetSymbol(methodRef)
+		return resolveFunctionCall(t, chain, expr, methodRef)
+	}
 	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodSymbol.name), recieverTy)
 	if fnTy == nil {
 		t.semanticError("method not found: "+methodSymbol.name, expr.GetPosition())
@@ -3225,6 +3284,7 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	currentChain := chain
+	// PR-FIXME: avoid double resolution
 	for i, arg := range expr.ArgExprs {
 		argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
 		if !ok {
@@ -3268,6 +3328,8 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 			argTys[i] = argTy
 		}
 	}
+
+	argTys = padArgTypesForDefaults(t, symbolRef, argTys, expr.GetPosition())
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
