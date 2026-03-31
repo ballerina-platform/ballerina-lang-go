@@ -1,0 +1,14 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: expression is not a constant expression
+ --> check7-e.bal:3:15
+  |
+3 | const int X = check 1; // @error
+  |               ^^^^^^^
+
+error[SEMANTIC_ERROR]: expression is not a constant expression
+ --> check7-e.bal:3:7
+  |
+3 | const int X = check 1; // @error
+  |       ^^^
+

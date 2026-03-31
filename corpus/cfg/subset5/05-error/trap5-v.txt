@@ -1,0 +1,32 @@
+(bar
+  (bb0 () ()
+    (return
+      (trap-expr
+        (invocation foo ())))
+  )
+)
+(baz
+  (bb0 () ()
+    (return
+      (trap-expr
+        (invocation bar ())))
+  )
+)
+(foo
+  (bb0 () ()
+    (panic
+      (error-constructor-expr (
+        (literal boom!))))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable res (expr
+        (trap-expr
+          (invocation baz ())))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

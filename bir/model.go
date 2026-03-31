@@ -131,11 +131,9 @@ type (
 	}
 
 	BIRErrorEntry struct {
-		// Range
-		Start *BIRBasicBlock
-		End   *BIRBasicBlock
-
-		Target  *BIRBasicBlock
+		Start   int
+		End     int
+		Target  int
 		ErrorOp *BIROperand
 	}
 

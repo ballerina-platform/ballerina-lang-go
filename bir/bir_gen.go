@@ -1252,9 +1252,9 @@ func trapExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTrapE
 	trapEndBB.Terminator = NewGoto(afterTrapBB, expr.GetPosition())
 
 	ctx.errorEntries = append(ctx.errorEntries, BIRErrorEntry{
-		Start:   trapStartBB,
-		End:     trapEndBB,
-		Target:  afterTrapBB,
+		Start:   trapStartBB.Number,
+		End:     trapEndBB.Number,
+		Target:  afterTrapBB.Number,
 		ErrorOp: resultOperand,
 	})
 
