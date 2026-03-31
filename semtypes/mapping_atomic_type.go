@@ -22,8 +22,7 @@ import (
 
 type MappingAtomicType struct {
 	Names []string
-	// PR-TODO: why pointer?
-	Types []*ComplexSemType
+	Types []ComplexSemType
 	Rest  *ComplexSemType
 }
 
@@ -34,12 +33,12 @@ func (this *MappingAtomicType) equals(other AtomicType) bool {
 		if !this.Rest.equals(other.Rest) {
 			return false
 		}
-		return slices.Equal(other.Names, this.Names) && slices.EqualFunc(other.Types, this.Types, (*ComplexSemType).equals)
+		return slices.Equal(other.Names, this.Names) && slices.EqualFunc(other.Types, this.Types, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }
 
-func mappingAtomicTypeFrom(names []string, types []*ComplexSemType, rest *ComplexSemType) MappingAtomicType {
+func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *ComplexSemType) MappingAtomicType {
 	// migrated from MappingAtomicType.java:52:5
 	return MappingAtomicType{
 		Names: names,
@@ -56,7 +55,7 @@ func (this *MappingAtomicType) AtomKind() Kind {
 func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
 	for i, n := range this.Names {
 		if n == name {
-			return CellInnerVal(this.Types[i])
+			return CellInnerVal(&this.Types[i])
 		}
 	}
 	return CellInnerVal(this.Rest)

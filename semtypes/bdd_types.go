@@ -194,7 +194,8 @@ func (sc *bddSerializationContext) serializeListAtom(atom Atom) int32 {
 	at := sc.cx.ListAtomType(atom)
 	initial := make([]TypePoolIndex, len(at.Members.Initial))
 	var mut uint8
-	for i, cell := range at.Members.Initial {
+	for i := range at.Members.Initial {
+		cell := &at.Members.Initial[i]
 		initial[i] = sc.pool.Put(CellInnerVal(cell))
 		mut = uint8(cellMut(cell))
 	}
@@ -225,8 +226,9 @@ func (sc *bddSerializationContext) serializeMappingAtom(atom Atom) int32 {
 	for i, name := range at.Names {
 		b := []byte(name)
 		names[i] = enumerableStringDataEntry{len: int32(len(b)), values: b}
-		types[i] = sc.pool.Put(CellInnerVal(at.Types[i]))
-		mut = uint8(cellMut(at.Types[i]))
+		atomTy := &at.Types[i]
+		types[i] = sc.pool.Put(CellInnerVal(atomTy))
+		mut = uint8(cellMut(atomTy))
 	}
 	rest := sc.pool.Put(CellInnerVal(at.Rest))
 	if len(at.Types) == 0 {

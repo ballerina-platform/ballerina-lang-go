@@ -167,7 +167,7 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 			(&member.Visibility).field(),
 		},
 		NEVER)
-	return cellFieldFrom(member.Name, cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
+	return cellFieldFrom(member.Name, *cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 
 // migrated from ObjectDefinition.java:143:5

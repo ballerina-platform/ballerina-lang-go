@@ -97,5 +97,5 @@ func (oq *ObjectQualifiers) Field(env Env) CellField {
 		NEVER,
 		CellMutability_CELL_MUT_NONE,
 	)
-	return cellFieldFrom("$qualifiers", cellContaining(env, ty))
+	return cellFieldFrom("$qualifiers", *cellContaining(env, ty))
 }

@@ -58,9 +58,9 @@ func (this *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemT
 func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
 	// migrated from ListDefinition.java:76:5
 	common.Assert(rest != nil)
-	var initialCells []*ComplexSemType
+	var initialCells []ComplexSemType
 	for _, member := range initial {
-		initialCells = append(initialCells, cellContainingWithEnvSemTypeCellMutability(env, member, mut))
+		initialCells = append(initialCells, *cellContainingWithEnvSemTypeCellMutability(env, member, mut))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -97,7 +97,7 @@ func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env,
 	return this.DefineListTypeWrapped(env, initial, len(initial), rest, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) define(env Env, initial []*ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
+func (this *ListDefinition) define(env Env, initial []ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
 	// migrated from ListDefinition.java:105:5
 	members := this.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
 	atomicType := listAtomicTypeFrom(members, rest)
@@ -122,7 +122,7 @@ func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLe
 	last := initial[i]
 	i = (i - 1)
 	for i >= 0 {
-		if !last.equals(initial[i]) {
+		if !last.equals(&initial[i]) {
 			break
 		}
 		i = (i - 1)

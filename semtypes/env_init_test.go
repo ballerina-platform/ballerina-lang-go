@@ -56,7 +56,7 @@ func TestEnvInitAtomTable(t *testing.T) {
 	typeAtom8 := env.cellAtom(&cellAtomicUndef)
 
 	listAtomicTwoElement := listAtomicTypeFrom(
-		fixedLengthArrayFrom([]*ComplexSemType{CELL_SEMTYPE_VAL}, 2),
+		fixedLengthArrayFrom([]ComplexSemType{*CELL_SEMTYPE_VAL}, 2),
 		CELL_SEMTYPE_UNDEF,
 	)
 	typeAtom9 := env.listAtom(&listAtomicTwoElement)

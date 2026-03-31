@@ -79,8 +79,8 @@ func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData
 func mappingAtomicApplicableMemberTypesInnerProj(atomic *MappingAtomicType, key SubtypeData) []SemType {
 	// migrated from BMappingProj.java:94:5
 	types := make([]SemType, len(atomic.Types))
-	for i, t := range atomic.Types {
-		types[i] = cellInner(t)
+	for i := range atomic.Types {
+		types[i] = cellInner(&atomic.Types[i])
 	}
 
 	var memberTypes []SemType

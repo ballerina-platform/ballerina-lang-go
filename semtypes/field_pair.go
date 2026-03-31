@@ -17,19 +17,20 @@
 package semtypes
 
 import (
-	"ballerina-lang-go/common"
 	"iter"
+
+	"ballerina-lang-go/common"
 )
 
 type fieldPair struct {
 	Name   string
 	Type1  *ComplexSemType
 	Type2  *ComplexSemType
-	Index1 *int
-	Index2 *int
+	Index1 int
+	Index2 int
 }
 
-func createFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 *int, index2 *int) fieldPair {
+func createFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 int, index2 int) fieldPair {
 	// migrated from fieldPair.java:34:5
 
 	return fieldPair{
@@ -44,8 +45,8 @@ func createFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, 
 type mappingPairIterator struct {
 	names1          []string
 	names2          []string
-	types1          []*ComplexSemType
-	types2          []*ComplexSemType
+	types1          []ComplexSemType
+	types2          []ComplexSemType
 	len1            int
 	len2            int
 	i1              int
@@ -93,28 +94,22 @@ func (i *mappingPairIterator) internalNext() *fieldPair {
 		if i.i2 >= i.len2 {
 			return nil
 		}
-		idx2 := i.i2
-		p = new(createFieldPair(i.curName2(), i.rest1, i.curType2(), nil, &idx2))
+		p = new(createFieldPair(i.curName2(), i.rest1, i.curType2(), -1, i.i2))
 		i.i2++
 	} else if i.i2 >= i.len2 {
-		idx1 := i.i1
-		p = new(createFieldPair(i.curName1(), i.curType1(), i.rest2, &idx1, nil))
+		p = new(createFieldPair(i.curName1(), i.curType1(), i.rest2, i.i1, -1))
 		i.i1++
 	} else {
 		name1 := i.curName1()
 		name2 := i.curName2()
 		if codePointCompare(name1, name2) {
-			idx1 := i.i1
-			p = new(createFieldPair(name1, i.curType1(), i.rest2, &idx1, nil))
+			p = new(createFieldPair(name1, i.curType1(), i.rest2, i.i1, -1))
 			i.i1++
 		} else if codePointCompare(name2, name1) {
-			idx2 := i.i2
-			p = new(createFieldPair(name2, i.rest1, i.curType2(), nil, &idx2))
+			p = new(createFieldPair(name2, i.rest1, i.curType2(), -1, i.i2))
 			i.i2++
 		} else {
-			idx1 := i.i1
-			idx2 := i.i2
-			p = new(createFieldPair(name1, i.curType1(), i.curType2(), &idx1, &idx2))
+			p = new(createFieldPair(name1, i.curType1(), i.curType2(), i.i1, i.i2))
 			i.i1++
 			i.i2++
 		}
@@ -123,7 +118,7 @@ func (i *mappingPairIterator) internalNext() *fieldPair {
 }
 
 func (i *mappingPairIterator) curType1() *ComplexSemType {
-	return i.types1[i.i1]
+	return &i.types1[i.i1]
 }
 
 func (i *mappingPairIterator) curName1() string {
@@ -131,7 +126,7 @@ func (i *mappingPairIterator) curName1() string {
 }
 
 func (i *mappingPairIterator) curType2() *ComplexSemType {
-	return i.types2[i.i2]
+	return &i.types2[i.i2]
 }
 
 func (i *mappingPairIterator) curName2() string {
