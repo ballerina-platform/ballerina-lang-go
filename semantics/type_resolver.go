@@ -756,6 +756,20 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	sig.RestParamType = restTy
 	fnSymbol.SetSignature(sig)
 
+	defaultableParams := fnSymbol.DefaultableParams()
+	for i := range fn.RequiredParams {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			continue
+		}
+		defaultFnSym := t.getSymbol(dp.Symbol).(model.FunctionSymbol)
+		defaultSig := model.FunctionSignature{
+			ParamTypes: paramTypes[:i],
+			ReturnType: paramTypes[i],
+		}
+		defaultFnSym.SetSignature(defaultSig)
+	}
+
 	return fnType, true
 }
 
@@ -980,7 +994,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		})
 	}
 
-	// PR-TODO: clean this up
+	// TODO: clean this up
 	if classDef.InitFunction != nil {
 		initFnSymbol := t.getSymbol(classDef.InitFunction.Symbol()).(model.FunctionSymbol)
 		sig := initFnSymbol.Signature()
@@ -2786,6 +2800,7 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	currentChain := chain
+	// PR-FIXME: avoid double resolution
 	for i, arg := range expr.ArgExprs {
 		argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
 		if !ok {
@@ -2829,6 +2844,8 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 			argTys[i] = argTy
 		}
 	}
+
+	argTys = padArgTypesForDefaults(t, symbolRef, argTys, expr.GetPosition())
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)

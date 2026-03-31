@@ -1044,6 +1044,9 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		curBB = argEffect.block
 		args = append(args, *argEffect.result)
 	}
+
+	curBB, args = fillDefaultArgs(ctx, curBB, expr, args)
+
 	thenBB := ctx.addBB()
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
@@ -1077,6 +1080,61 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		result: resultOperand,
 		block:  thenBB,
 	}
+}
+
+func fillDefaultArgs(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangInvocation, args []BIROperand) (*BIRBasicBlock, []BIROperand) {
+	symRef := expr.Symbol()
+	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
+	// FIXME:
+	// Generic function symbols created by desugar (e.g. query expressions calling array:push)
+	// are monomorphized during BIR gen, not during type resolution.
+	if _, ok := sym.(model.GenericFunctionSymbol); ok {
+		return curBB, args
+	}
+	switch fnSym := sym.(type) {
+	case model.FunctionSymbol:
+		return fillFunctionDefaultArgs(ctx, curBB, expr, args, fnSym)
+	case *model.ValueSymbol:
+		return curBB, args
+	default:
+		ctx.birCx.CompilerContext.InternalError(fmt.Sprintf("unexpected symbol type %T in fillDefaultArgs", sym), expr.GetPosition())
+		return curBB, args
+	}
+}
+
+func fillFunctionDefaultArgs(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangInvocation, args []BIROperand, fnSym model.FunctionSymbol) (*BIRBasicBlock, []BIROperand) {
+	totalParams := len(fnSym.Signature().ParamTypes)
+	providedArgs := len(expr.ArgExprs)
+	if providedArgs >= totalParams {
+		return curBB, args
+	}
+	receiverOffset := 0
+	if expr.Expr != nil {
+		receiverOffset = 1
+	}
+	defaultableParams := fnSym.DefaultableParams()
+	for i := providedArgs; i < totalParams; i++ {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			// Semantic analysis should have cought this
+			ctx.birCx.CompilerContext.InternalError("missing argument for non-defaultable parameter", expr.GetPosition())
+			return curBB, args
+		}
+		defaultFnKey := buildFunctionLookupKeyFromSymbol(ctx.birCx, dp.Symbol)
+
+		thenBB := ctx.addBB()
+		resultOperand := ctx.addTempVar(fnSym.Signature().ParamTypes[i])
+		defaultCall := NewCall(INSTRUCTION_KIND_CALL, args[receiverOffset:receiverOffset+i],
+			model.Name(ctx.birCx.CompilerContext.GetSymbol(dp.Symbol).Name()), thenBB, resultOperand, expr.GetPosition())
+		defaultCall.FunctionLookupKey = defaultFnKey
+		if ctx.birCx.packageID != nil {
+			defaultCall.CalleePkg = ctx.birCx.packageID
+		}
+		curBB.Terminator = defaultCall
+		curBB = thenBB
+		args = append(args, *resultOperand)
+	}
+	return curBB, args
 }
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {

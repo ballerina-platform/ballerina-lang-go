@@ -2253,7 +2253,26 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 }
 
 func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tree.DefaultableParameterNode) BLangNode {
-	panic("TransformDefaultableParameter unimplemented")
+	paramName := defaultableParameterNode.ParamName()
+
+	if paramName != nil {
+		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
+	}
+
+	simpleVar := n.createSimpleVarInner(paramName, defaultableParameterNode.TypeName(), defaultableParameterNode.Expression(), nil, defaultableParameterNode.Annotations())
+
+	simpleVar.pos = getPosition(defaultableParameterNode)
+
+	if paramName != nil {
+		simpleVar.Name.pos = getPosition(paramName)
+		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	} else if simpleVar.Name.pos == nil {
+		simpleVar.Name.pos = builtinPos
+	}
+
+	simpleVar.FlagSet.Add(model.Flag_DEFAULTABLE_PARAM)
+
+	return simpleVar
 }
 
 func (n *NodeBuilder) createSimpleVarWithTokenNodeNodeList(name tree.Token, typeName tree.Node, annotations tree.NodeList[*tree.AnnotationNode]) *BLangSimpleVariable {
