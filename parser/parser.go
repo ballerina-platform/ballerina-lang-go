@@ -11446,15 +11446,15 @@ func (this *BallerinaParser) parseMarkdownDocumentation() tree.STNode {
 }
 
 func (this *BallerinaParser) parseDocumentationString(documentationStringToken tree.STToken) tree.STNode {
-	// leadingTriviaList := this.getLeadingTriviaList(documentationStringToken.LeadingMinutiae())
-	// diagnostics := make([]tree.STNodeDiagnostic, len(documentationStringToken.Diagnostics()))
-	// copy(diagnostics, documentationStringToken.Diagnostics())
-	// charReader := commonCharReader.from(documentationStringToken.Text())
-	// documentationLexer := nil
-	// tokenReader := nil
-	// documentationParser := nil
-	// return this.documentationParser.parse()
-	panic("documentation parser not implemented")
+	leadingTriviaList := this.getLeadingTriviaList(documentationStringToken.LeadingMinutiae())
+	diagnostics := documentationStringToken.Diagnostics()
+
+	charReader := text.CharReaderFromText(documentationStringToken.Text())
+	documentationLexer := newDocumentationLexer(charReader, leadingTriviaList, diagnostics)
+	tokenReader := CreateTokenReader(documentationLexer)
+	documentationParser := NewDocumentationParser(tokenReader)
+
+	return documentationParser.Parse()
 }
 
 func (this *BallerinaParser) getLeadingTriviaList(leadingMinutiaeNode tree.STNode) []tree.STNode {
@@ -14688,7 +14688,7 @@ func GetSyntaxTree(ctx *context.CompilerContext, fileName string) (*tree.SyntaxT
 	lexer := NewLexer(reader)
 
 	// Create TokenReader from Lexer
-	tokenReader := CreateTokenReader(*lexer)
+	tokenReader := CreateTokenReader(lexer)
 
 	// Create Parser from TokenReader
 	ballerinaParser := NewBallerinaParserFromTokenReader(tokenReader)

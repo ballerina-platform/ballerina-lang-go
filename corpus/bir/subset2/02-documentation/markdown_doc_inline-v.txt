@@ -1,0 +1,25 @@
+module $anon.. v 0.0.0;
+class DummyObject {
+  testConst string
+
+  func1() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  func2() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad TestConstantDocumentation
+      %3 = ConstantLoad testConst
+      self[%3] = %2;
+      return;
+    }
+  }
+}
