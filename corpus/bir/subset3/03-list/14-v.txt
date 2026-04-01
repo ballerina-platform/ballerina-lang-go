@@ -21,7 +21,7 @@ main() -> nil{
     %14 = ConstantLoad 0
     %13 = v[%14];
     %15 = ConstantLoad 1
-    %16 = newArray [nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%15]{%13}
+    %16 = newArray list[%15]{%13}
     %17 = println(%16) -> bb3;
   }
   bb3 {

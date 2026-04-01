@@ -18,13 +18,16 @@ package semantics
 
 import (
 	"fmt"
+	"maps"
 	"math/big"
 	"math/bits"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
 	"ballerina-lang-go/ast"
+	balCommon "ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -35,7 +38,42 @@ import (
 	bMap "ballerina-lang-go/lib/map/compile"
 )
 
-type TypeResolver struct {
+type typeResolver interface {
+	typeContext() semtypes.Context
+	expectedReturnType() semtypes.SemType
+	parent() typeResolver
+	typeEnv() semtypes.Env
+
+	// Error reporting (proxied from CompilerContext)
+	semanticError(message string, loc diagnostics.Location)
+	internalError(message string, loc diagnostics.Location)
+	unimplemented(message string, loc diagnostics.Location)
+	syntaxError(message string, loc diagnostics.Location)
+
+	// Symbol management (proxied from CompilerContext)
+	symbolType(ref model.SymbolRef) semtypes.SemType
+	setSymbolType(ref model.SymbolRef, ty semtypes.SemType)
+	getSymbol(ref model.SymbolRef) model.Symbol
+	unnarrowedSymbol(ref model.SymbolRef) model.SymbolRef
+	symbolName(ref model.SymbolRef) string
+	setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition)
+	getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool)
+	createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef
+	createFunctionSymbol(space *model.SymbolSpace, name string, sig model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef
+	compilerContext() *context.CompilerContext
+
+	// Import management
+	lookupImportedSymbols(pkgName string) (model.ExportedSymbolSpace, bool)
+	addImplicitImport(pkgName string, imp ast.BLangImportPackage)
+	hasImplicitImport(pkgName string) bool
+
+	// Closure capture tracking
+	trackCapturedVar(ref model.SymbolRef)
+	getCapturedVars() map[model.SymbolRef]bool
+	setCapturedVars(vars map[model.SymbolRef]bool)
+}
+
+type packageTypeResolver struct {
 	ctx             *context.CompilerContext
 	tyCtx           semtypes.Context
 	importedSymbols map[string]model.ExportedSymbolSpace
@@ -46,10 +84,193 @@ type TypeResolver struct {
 	capturedNarrowedVars map[model.SymbolRef]bool
 }
 
-var _ ast.Visitor = &TypeResolver{}
+func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
+func (t *packageTypeResolver) expectedReturnType() semtypes.SemType { return nil }
+func (t *packageTypeResolver) parent() typeResolver                 { return nil }
+func (t *packageTypeResolver) typeEnv() semtypes.Env                { return t.ctx.GetTypeEnv() }
 
-func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
-	return &TypeResolver{
+func (t *packageTypeResolver) semanticError(msg string, loc diagnostics.Location) {
+	t.ctx.SemanticError(msg, loc)
+}
+
+func (t *packageTypeResolver) internalError(msg string, loc diagnostics.Location) {
+	t.ctx.InternalError(msg, loc)
+}
+
+func (t *packageTypeResolver) unimplemented(msg string, loc diagnostics.Location) {
+	t.ctx.Unimplemented(msg, loc)
+}
+
+func (t *packageTypeResolver) syntaxError(msg string, loc diagnostics.Location) {
+	t.ctx.SyntaxError(msg, loc)
+}
+
+func (t *packageTypeResolver) symbolType(ref model.SymbolRef) semtypes.SemType {
+	return t.ctx.SymbolType(ref)
+}
+
+func (t *packageTypeResolver) setSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	t.ctx.SetSymbolType(ref, ty)
+}
+
+func (t *packageTypeResolver) getSymbol(ref model.SymbolRef) model.Symbol {
+	return t.ctx.GetSymbol(ref)
+}
+
+func (t *packageTypeResolver) unnarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
+	return t.ctx.UnnarrowedSymbol(ref)
+}
+
+func (t *packageTypeResolver) symbolName(ref model.SymbolRef) string {
+	return t.ctx.SymbolName(ref)
+}
+
+func (t *packageTypeResolver) setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition) {
+	t.ctx.SetTypeDefinition(ref, defn)
+}
+
+func (t *packageTypeResolver) getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool) {
+	return t.ctx.GetTypeDefinition(ref)
+}
+
+func (t *packageTypeResolver) createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
+	return t.ctx.CreateNarrowedSymbol(ref)
+}
+
+func (t *packageTypeResolver) createFunctionSymbol(space *model.SymbolSpace, name string, sig model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	return t.ctx.CreateFunctionSymbol(space, name, sig, fnTy)
+}
+
+func (t *packageTypeResolver) compilerContext() *context.CompilerContext {
+	return t.ctx
+}
+
+func (t *packageTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
+	s, ok := t.importedSymbols[name]
+	return s, ok
+}
+
+func (t *packageTypeResolver) addImplicitImport(name string, imp ast.BLangImportPackage) {
+	t.implicitImports[name] = imp
+}
+
+func (t *packageTypeResolver) hasImplicitImport(name string) bool {
+	_, ok := t.implicitImports[name]
+	return ok
+}
+
+func (t *packageTypeResolver) trackCapturedVar(ref model.SymbolRef) {
+	if t.capturedNarrowedVars != nil {
+		t.capturedNarrowedVars[ref] = true
+	}
+}
+
+func (t *packageTypeResolver) getCapturedVars() map[model.SymbolRef]bool {
+	return t.capturedNarrowedVars
+}
+
+func (t *packageTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
+	t.capturedNarrowedVars = vars
+}
+
+type functionTypeResolver struct {
+	parentResolver       typeResolver
+	tyCtx                semtypes.Context
+	retTy                semtypes.SemType
+	implicitImports      map[string]ast.BLangImportPackage
+	capturedNarrowedVars map[model.SymbolRef]bool
+}
+
+func (f *functionTypeResolver) typeContext() semtypes.Context        { return f.tyCtx }
+func (f *functionTypeResolver) expectedReturnType() semtypes.SemType { return f.retTy }
+func (f *functionTypeResolver) parent() typeResolver                 { return f.parentResolver }
+func (f *functionTypeResolver) typeEnv() semtypes.Env                { return f.parentResolver.typeEnv() }
+
+func (f *functionTypeResolver) semanticError(msg string, loc diagnostics.Location) {
+	f.parentResolver.semanticError(msg, loc)
+}
+
+func (f *functionTypeResolver) internalError(msg string, loc diagnostics.Location) {
+	f.parentResolver.internalError(msg, loc)
+}
+
+func (f *functionTypeResolver) unimplemented(msg string, loc diagnostics.Location) {
+	f.parentResolver.unimplemented(msg, loc)
+}
+
+func (f *functionTypeResolver) syntaxError(msg string, loc diagnostics.Location) {
+	f.parentResolver.syntaxError(msg, loc)
+}
+
+func (f *functionTypeResolver) symbolType(ref model.SymbolRef) semtypes.SemType {
+	return f.parentResolver.symbolType(ref)
+}
+
+func (f *functionTypeResolver) setSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	f.parentResolver.setSymbolType(ref, ty)
+}
+
+func (f *functionTypeResolver) getSymbol(ref model.SymbolRef) model.Symbol {
+	return f.parentResolver.getSymbol(ref)
+}
+
+func (f *functionTypeResolver) unnarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
+	return f.parentResolver.unnarrowedSymbol(ref)
+}
+
+func (f *functionTypeResolver) symbolName(ref model.SymbolRef) string {
+	return f.parentResolver.symbolName(ref)
+}
+
+func (f *functionTypeResolver) setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition) {
+	f.parentResolver.setTypeDefinition(ref, defn)
+}
+
+func (f *functionTypeResolver) getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool) {
+	return f.parentResolver.getTypeDefinition(ref)
+}
+
+func (f *functionTypeResolver) createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
+	return f.parentResolver.createNarrowedSymbol(ref)
+}
+
+func (f *functionTypeResolver) createFunctionSymbol(space *model.SymbolSpace, name string, sig model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef {
+	return f.parentResolver.createFunctionSymbol(space, name, sig, fnTy)
+}
+
+func (f *functionTypeResolver) compilerContext() *context.CompilerContext {
+	return f.parentResolver.compilerContext()
+}
+
+func (f *functionTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
+	return f.parentResolver.lookupImportedSymbols(name)
+}
+
+func (f *functionTypeResolver) addImplicitImport(name string, imp ast.BLangImportPackage) {
+	f.implicitImports[name] = imp
+}
+
+func (f *functionTypeResolver) hasImplicitImport(name string) bool {
+	_, ok := f.implicitImports[name]
+	return ok
+}
+
+func (f *functionTypeResolver) trackCapturedVar(ref model.SymbolRef) {
+	if f.capturedNarrowedVars != nil {
+		f.capturedNarrowedVars[ref] = true
+	}
+}
+
+func (f *functionTypeResolver) getCapturedVars() map[model.SymbolRef]bool {
+	return f.capturedNarrowedVars
+}
+
+func (f *functionTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
+	f.capturedNarrowedVars = vars
+}
+
+func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageTypeResolver {
+	return &packageTypeResolver{
 		ctx:             ctx,
 		tyCtx:           semtypes.ContextFrom(ctx.GetTypeEnv()),
 		importedSymbols: importedSymbols,
@@ -62,12 +283,13 @@ func newTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, import
 // After this (for the given package) all the semtypes are known. This means after resolving types of all the packages
 // it is safe to use the closed world assumption to optimize type checks.
 func ResolveTopLevelNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
-	t := newTypeResolver(ctx, pkg, importedSymbols)
+	t := newPackageTypeResolver(ctx, pkg, importedSymbols)
 	t.resolveTopLevelTypes(ctx, pkg)
 }
 
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+	p := newPackageTypeResolver(ctx, pkg, importedSymbols)
 	var fns []*ast.BLangFunction
 	for i := range pkg.Functions {
 		fns = append(fns, &pkg.Functions[i])
@@ -82,88 +304,98 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 		}
 	}
 
-	var fieldResolvers []*TypeResolver
+	allImports := make(map[string]ast.BLangImportPackage)
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		resolver := newTypeResolver(ctx, pkg, importedSymbols)
+		ft := &functionTypeResolver{
+			parentResolver:  p,
+			tyCtx:           semtypes.ContextFrom(p.typeEnv()),
+			implicitImports: make(map[string]ast.BLangImportPackage),
+		}
 		for _, f := range classDef.Fields {
 			field := f.(*ast.BLangSimpleVariable)
 			if field.Expr != nil {
-				resolver.resolveExpression(nil, field.Expr.(ast.BLangExpression))
+				resolveExpression(ft, nil, field.Expr.(ast.BLangExpression), nil)
 			}
 		}
-		fieldResolvers = append(fieldResolvers, resolver)
+		maps.Copy(allImports, ft.implicitImports)
 	}
 
-	resolvers := make([]*TypeResolver, len(fns))
+	resolvers := make([]*functionTypeResolver, len(fns))
 	var wg sync.WaitGroup
 	for i, fn := range fns {
 		wg.Add(1)
 		go func(idx int, f *ast.BLangFunction) {
 			defer wg.Done()
-			resolvers[idx] = resolveFunctionBody(ctx, pkg, f, importedSymbols)
+			resolvers[idx] = resolveFunctionBody(p, f)
 		}(i, fn)
 	}
 	wg.Wait()
 
-	seen := make(map[string]bool, len(resolvers)+len(fieldResolvers))
-	for _, t := range fieldResolvers {
-		for name, importNode := range t.implicitImports {
-			if !seen[name] {
-				seen[name] = true
-				pkg.Imports = append(pkg.Imports, importNode)
-			}
-		}
-	}
 	for _, t := range resolvers {
-		for name, importNode := range t.implicitImports {
-			if !seen[name] {
-				seen[name] = true
-				pkg.Imports = append(pkg.Imports, importNode)
-			}
-		}
+		maps.Copy(allImports, t.implicitImports)
+	}
+	for _, importNode := range allImports {
+		pkg.Imports = append(pkg.Imports, importNode)
 	}
 }
 
-func resolveFunctionBody(ctx *context.CompilerContext, pkg *ast.BLangPackage, fn *ast.BLangFunction, importedSymbols map[string]model.ExportedSymbolSpace) *TypeResolver {
-	t := newTypeResolver(ctx, pkg, importedSymbols)
+func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functionTypeResolver {
+	fnSymbol := p.getSymbol(fn.Symbol())
+	fnSym, ok := fnSymbol.(model.FunctionSymbol)
+	if !ok {
+		p.internalError("expected function symbol", fn.GetPosition())
+		return nil
+	}
+	ft := &functionTypeResolver{
+		parentResolver:  p,
+		tyCtx:           semtypes.ContextFrom(p.typeEnv()),
+		retTy:           fnSym.Signature().ReturnType,
+		implicitImports: make(map[string]ast.BLangImportPackage),
+	}
 	switch body := fn.Body.(type) {
 	case *ast.BLangExternFunctionBody:
-		// No body to resolve
 		_ = body
 	case *ast.BLangBlockFunctionBody:
-		t.resolveBlockStatements(nil, body.Stmts)
+		resolveBlockStatements(ft, nil, body.Stmts)
 		body.SetDeterminedType(semtypes.NEVER)
+	case *ast.BLangExprFunctionBody:
+		resolveExpression(ft, nil, body.Expr.(ast.BLangExpression), ft.retTy)
 	default:
-		ctx.Unimplemented("unsupported function body kind", fn.Body.GetPosition())
+		p.internalError("unexpected function body kind", fn.Body.GetPosition())
 	}
-	return t
+	return ft
 }
 
-func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		if _, ok := t.resolveTypeDefinition(defn, 0); !ok {
+		symbol := defn.Symbol()
+		ctx.SetTypeDefinition(symbol, defn)
+	}
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		if _, ok := resolveTypeDefinition(t, defn, 0); !ok {
 			return
 		}
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		if _, ok := t.resolveClassDefinition(classDef, 0); !ok {
+		if _, ok := resolveClassDefinitionType(t, classDef, 0); !ok {
 			return
 		}
 	}
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
-		if _, ok := t.resolveFunction(ctx, fn); !ok {
+		if _, ok := resolveFunctionSignature(t, fn); !ok {
 			return
 		}
 	}
 	for i := range pkg.Constants {
-		t.resolveConstant(&pkg.Constants[i])
+		resolveConstant(t, &pkg.Constants[i])
 	}
 	for i := range pkg.Imports {
-		ast.Walk(t, &pkg.Imports[i])
+		setOtherNodesAsNever(&pkg.Imports[i])
 	}
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
@@ -180,21 +412,22 @@ func (t *TypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *a
 		pkg.CompUnits[i].SetDeterminedType(semtypes.NEVER)
 	}
 	for i := range pkg.GlobalVars {
-		ast.Walk(t, &pkg.GlobalVars[i])
+		resolveSimpleVariable(t, nil, &pkg.GlobalVars[i])
+		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 
 	tctx := t.tyCtx
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
-			t.ctx.SemanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
+			t.semanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
 		}
 	}
 }
 
-func (t *TypeResolver) resolveBlockStatements(chain *binding, stmts []ast.BLangStatement) (statementEffect, bool) {
+func resolveBlockStatements(t typeResolver, chain *binding, stmts []ast.BLangStatement) (statementEffect, bool) {
 	result := chain
 	for i, each := range stmts {
-		eachResult, ok := t.resolveStatement(result, each)
+		eachResult, ok := resolveStatement(t, result, each)
 		if !ok {
 			continue
 		}
@@ -205,7 +438,7 @@ func (t *TypeResolver) resolveBlockStatements(chain *binding, stmts []ast.BLangS
 			if len(rest) > 0 {
 				// These are unreachable nodes will be caught later by reachability analysis
 				// we are doing type resolution here anyway to give error message to these statements
-				t.resolveBlockStatements(chain, rest)
+				resolveBlockStatements(t, chain, rest)
 			}
 			return statementEffect{result, true}, true
 		}
@@ -213,176 +446,175 @@ func (t *TypeResolver) resolveBlockStatements(chain *binding, stmts []ast.BLangS
 	return statementEffect{result, false}, true
 }
 
-func (t *TypeResolver) resolveStatement(chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
-	effect, ok := t.resolveStatementInner(chain, stmt)
+func resolveStatement(t typeResolver, chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
+	effect, ok := resolveStatementInner(t, chain, stmt)
 	stmt.(ast.BLangNode).SetDeterminedType(semtypes.NEVER)
 	return effect, ok
 }
 
-func (t *TypeResolver) resolveStatementInner(chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
+func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statementEffect, bool) {
+	lhsTy, _, ok := resolveExpression(t, nil, s.GetVariable().(ast.BLangExpression), nil)
+	if !ok {
+		return statementEffect{}, false
+	}
+	if _, _, ok := resolveExpression(t, chain, s.GetExpression().(ast.BLangExpression), lhsTy); !ok {
+		return statementEffect{}, false
+	}
+	if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
+		return unnarrowSymbol(t, chain, expr.Symbol()), true
+	}
+	return defaultStmtEffect(chain), true
+}
+
+func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
 	switch s := stmt.(type) {
 	case *ast.BLangSimpleVariableDef:
-		return t.resolveVariableDefStmt(chain, s)
+		return resolveVariableDefStmt(t, chain, s)
 	case *ast.BLangAssignment:
-		if _, _, ok := t.resolveExpression(nil, s.GetVariable().(ast.BLangExpression)); !ok {
-			return defaultStmtEffect(chain), false
-		}
-		if _, _, ok := t.resolveExpression(chain, s.GetExpression().(ast.BLangExpression)); !ok {
-			return defaultStmtEffect(chain), false
-		}
-		if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
-			return t.unnarrowSymbol(chain, expr.Symbol()), true
-		}
-		return defaultStmtEffect(chain), true
+		return resolveAssignment(t, chain, s)
 	case *ast.BLangCompoundAssignment:
-		if _, _, ok := t.resolveExpression(nil, s.GetVariable().(ast.BLangExpression)); !ok {
-			return defaultStmtEffect(chain), false
-		}
-		if _, _, ok := t.resolveExpression(chain, s.GetExpression().(ast.BLangExpression)); !ok {
-			return defaultStmtEffect(chain), false
-		}
-		if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
-			return t.unnarrowSymbol(chain, expr.Symbol()), true
-		}
-		return defaultStmtEffect(chain), true
+		return resolveAssignment(t, chain, s)
 	case *ast.BLangExpressionStmt:
-		if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+		if _, _, ok := resolveExpression(t, chain, s.Expr, nil); !ok {
 			return defaultStmtEffect(chain), false
 		}
 		return defaultStmtEffect(chain), true
+	// PT-TODO: extract if while out
 	case *ast.BLangIf:
-		_, exprEffect, ok := t.resolveExpression(chain, s.Expr)
+		_, exprEffect, ok := resolveExpression(t, chain, s.Expr, semtypes.BOOLEAN)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
-		ifTrueEffect, ok := t.resolveBlockStatements(exprEffect.ifTrue, s.Body.Stmts)
+		ifTrueEffect, ok := resolveBlockStatements(t, exprEffect.ifTrue, s.Body.Stmts)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
 		s.Body.SetDeterminedType(semtypes.NEVER)
 		var ifFalseEffect statementEffect
 		if s.ElseStmt != nil {
-			ifFalseEffect, ok = t.resolveStatement(exprEffect.ifFalse, s.ElseStmt)
+			ifFalseEffect, ok = resolveStatement(t, exprEffect.ifFalse, s.ElseStmt)
 			if !ok {
 				return defaultStmtEffect(chain), false
 			}
 		} else {
 			ifFalseEffect = statementEffect{exprEffect.ifFalse, false}
 		}
-		return mergeStatementEffects(t.ctx, ifTrueEffect, ifFalseEffect), true
+		return mergeStatementEffects(t, ifTrueEffect, ifFalseEffect), true
 	case *ast.BLangWhile:
-		_, exprEffect, ok := t.resolveExpression(chain, s.Expr)
+		_, exprEffect, ok := resolveExpression(t, chain, s.Expr, semtypes.BOOLEAN)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
-		bodyEffect, ok := t.resolveBlockStatements(exprEffect.ifTrue, s.Body.Stmts)
+		bodyEffect, ok := resolveBlockStatements(t, exprEffect.ifTrue, s.Body.Stmts)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
 		s.Body.SetDeterminedType(semtypes.NEVER)
-		t.resolveOnFailClause(chain, &s.OnFailClause)
+		resolveOnFailClause(t, chain, &s.OnFailClause)
 		result := exprEffect.ifFalse
 		if !bodyEffect.nonCompletion {
-			result = mergeChains(t.ctx, result, bodyEffect.binding, semtypes.Union)
+			result = mergeChains(t, result, bodyEffect.binding, semtypes.Union)
 		}
 		return statementEffect{result, false}, true
 	case *ast.BLangReturn:
 		if s.Expr != nil {
-			if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+			if _, _, ok := resolveExpression(t, chain, s.Expr, t.expectedReturnType()); !ok {
 				return defaultStmtEffect(chain), false
 			}
 		}
 		return statementEffect{nil, true}, true
 	case *ast.BLangBlockStmt:
-		return t.resolveBlockStatements(chain, s.Stmts)
+		return resolveBlockStatements(t, chain, s.Stmts)
 	case *ast.BLangForeach:
 		if s.VariableDef != nil {
 			variable := s.VariableDef.GetVariable().(*ast.BLangSimpleVariable)
-			if !t.resolveSimpleVariable(chain, variable) {
+			if !resolveSimpleVariable(t, chain, variable) {
 				return defaultStmtEffect(chain), false
 			}
 			s.VariableDef.SetDeterminedType(semtypes.NEVER)
 		}
 		if s.Collection != nil {
-			if _, _, ok := t.resolveExpression(chain, s.Collection); !ok {
+			if _, _, ok := resolveExpression(t, chain, s.Collection, nil); !ok {
 				return defaultStmtEffect(chain), false
 			}
 		}
 		// Foreach loop can't create a conditional narrowing at the begining so at the end there shouldn't be
 		// any narrowing.
-		_, ok := t.resolveBlockStatements(chain, s.Body.Stmts)
+		_, ok := resolveBlockStatements(t, chain, s.Body.Stmts)
 		s.Body.SetDeterminedType(semtypes.NEVER)
 		if s.OnFailClause != nil {
-			t.resolveOnFailClause(chain, s.OnFailClause)
+			resolveOnFailClause(t, chain, s.OnFailClause)
 		}
 		return defaultStmtEffect(chain), ok
 	case *ast.BLangPanic:
-		if _, _, ok := t.resolveExpression(chain, s.Expr); !ok {
+		if _, _, ok := resolveExpression(t, chain, s.Expr, semtypes.ERROR); !ok {
 			return defaultStmtEffect(chain), false
 		}
 		return statementEffect{nil, true}, true
 	case *ast.BLangMatchStatement:
-		return t.resolveMatchStatement(chain, s)
+		return resolveMatchStatement(t, chain, s)
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return statementEffect{binding: nil, nonCompletion: true}, true
 	default:
-		t.ctx.InternalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
+		t.internalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
 		return defaultStmtEffect(chain), false
 	}
 }
 
-func (t *TypeResolver) resolveOnFailClause(chain *binding, clause *ast.BLangOnFailClause) {
+func resolveOnFailClause(t typeResolver, chain *binding, clause *ast.BLangOnFailClause) {
 	clause.SetDeterminedType(semtypes.NEVER)
 	if clause.VariableDefinitionNode != nil {
 		varDef := clause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
 		variable := varDef.GetVariable().(*ast.BLangSimpleVariable)
-		t.resolveSimpleVariable(chain, variable)
+		resolveSimpleVariable(t, chain, variable)
 		varDef.SetDeterminedType(semtypes.NEVER)
 	}
 	if clause.Body != nil {
-		t.resolveBlockStatements(chain, clause.Body.Stmts)
+		resolveBlockStatements(t, chain, clause.Body.Stmts)
 		clause.Body.SetDeterminedType(semtypes.NEVER)
 	}
 }
 
-func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLangFunction) (semtypes.SemType, bool) {
+func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.SemType, bool) {
 	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
-		ast.Walk(t, &fn.RequiredParams[i])
+		resolveSimpleVariable(t, nil, &fn.RequiredParams[i])
+		setOtherNodesAsNever(&fn.RequiredParams[i])
 		paramTypes[i] = fn.RequiredParams[i].GetDeterminedType()
 	}
 	var restTy semtypes.SemType = semtypes.NEVER
 	if fn.RestParam != nil {
 		restParam := fn.RestParam.(*ast.BLangSimpleVariable)
-		ast.Walk(t, restParam)
+		resolveSimpleVariable(t, nil, restParam)
+		setOtherNodesAsNever(restParam)
 		elementType := restParam.GetDeterminedType()
 		restTy = elementType
 		// Set the rest param's type to readonly T[]
 		listDefn := semtypes.NewListDefinition()
-		restParamListTy := listDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
+		restParamListTy := listDefn.DefineListTypeWrapped(t.typeEnv(), []semtypes.SemType{}, 0, elementType, semtypes.CellMutability_CELL_MUT_NONE)
 		restParam.SetDeterminedType(restParamListTy)
-		updateSymbolType(t.ctx, restParam, restParamListTy)
+		updateSymbolType(t, restParam, restParamListTy)
 	}
 	paramListDefn := semtypes.NewListDefinition()
-	paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 	var returnTy semtypes.SemType
 	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
 		var ok bool
-		returnTy, ok = t.resolveBType(retTd.(ast.BType), 0)
+		returnTy, ok = resolveBType(t, retTd.(ast.BType), 0)
 		if !ok {
 			return nil, false
 		}
-		ast.Walk(t, retTd.(ast.BLangNode))
+		setOtherNodesAsNever(retTd.(ast.BLangNode))
 	} else {
 		returnTy = semtypes.NIL
 	}
 	functionDefn := semtypes.NewFunctionDefinition()
-	fnType := functionDefn.Define(t.ctx.GetTypeEnv(), paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.ctx.GetTypeEnv(), false, false))
+	fnType := functionDefn.Define(t.typeEnv(), paramListTy, returnTy,
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
 
 	// Update symbol type for the function
-	updateSymbolType(t.ctx, fn, fnType)
-	fnSymbol := ctx.GetSymbol(fn.Symbol()).(model.FunctionSymbol)
+	updateSymbolType(t, fn, fnType)
+	fnSymbol := t.getSymbol(fn.Symbol()).(model.FunctionSymbol)
 	sig := fnSymbol.Signature()
 	sig.ParamTypes = paramTypes
 	sig.ReturnType = returnTy
@@ -392,26 +624,35 @@ func (t *TypeResolver) resolveFunction(ctx *context.CompilerContext, fn *ast.BLa
 	return fnType, true
 }
 
-func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
-	fnType, ok := t.resolveFunction(t.ctx, e.Function)
+func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
+	fnType, ok := resolveFunctionSignature(t, e.Function)
 	if !ok {
 		return nil, expressionEffect{}, false
+	}
+
+	// Create a function type resolver for the lambda so expectedReturnType() is correct
+	fnSym := t.getSymbol(e.Function.Symbol()).(model.FunctionSymbol)
+	ft := &functionTypeResolver{
+		parentResolver:  t,
+		tyCtx:           semtypes.ContextFrom(t.typeEnv()),
+		retTy:           fnSym.Signature().ReturnType,
+		implicitImports: make(map[string]ast.BLangImportPackage),
 	}
 
 	// Push function boundary marker onto the chain
 	boundaryChain := &binding{functionBoundary: true, prev: chain}
 
 	// Save and reset capture tracker (supports nested lambdas)
-	prevCaptured := t.capturedNarrowedVars
-	t.capturedNarrowedVars = make(map[model.SymbolRef]bool)
+	prevCaptured := t.getCapturedVars()
+	ft.setCapturedVars(make(map[model.SymbolRef]bool))
 
 	switch body := e.Function.Body.(type) {
 	case *ast.BLangBlockFunctionBody:
-		t.resolveBlockStatements(boundaryChain, body.Stmts)
+		resolveBlockStatements(ft, boundaryChain, body.Stmts)
 		body.SetDeterminedType(semtypes.NEVER)
 	case *ast.BLangExprFunctionBody:
-		if _, _, ok := t.resolveExpression(boundaryChain, body.Expr.(ast.BLangExpression)); !ok {
-			t.capturedNarrowedVars = prevCaptured
+		if _, _, ok := resolveExpression(ft, boundaryChain, body.Expr.(ast.BLangExpression), ft.retTy); !ok {
+			t.setCapturedVars(prevCaptured)
 			return nil, expressionEffect{}, false
 		}
 		body.SetDeterminedType(semtypes.NEVER)
@@ -419,18 +660,18 @@ func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaF
 
 	// Unnarrow all captured variables
 	outerChain := chain
-	for ref := range t.capturedNarrowedVars {
-		outerChain = t.unnarrowSymbol(outerChain, ref).binding
+	for ref := range ft.getCapturedVars() {
+		outerChain = unnarrowSymbol(t, outerChain, ref).binding
 	}
 
 	// propagate captured variables to parent
 	if prevCaptured != nil {
-		for ref := range t.capturedNarrowedVars {
+		for ref := range ft.getCapturedVars() {
 			prevCaptured[ref] = true
 		}
 	}
 
-	t.capturedNarrowedVars = prevCaptured
+	t.setCapturedVars(prevCaptured)
 
 	e.Function.SetDeterminedType(semtypes.NEVER)
 	e.Function.Name.SetDeterminedType(semtypes.NEVER)
@@ -438,81 +679,61 @@ func (t *TypeResolver) resolveLambdaFunction(chain *binding, e *ast.BLangLambdaF
 	return fnType, defaultExpressionEffect(outerChain), true
 }
 
-func (t *TypeResolver) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func resolveTypeData(t typeResolver, typeData *model.TypeData) bool {
 	if typeData.TypeDescriptor == nil {
-		return t
+		return true
 	}
-	ty, ok := t.resolveBType(typeData.TypeDescriptor.(ast.BType), 0)
+	ty, ok := resolveBType(t, typeData.TypeDescriptor.(ast.BType), 0)
 	if !ok {
-		return nil
+		return false
 	}
 	typeData.Type = ty
-	return t
+	return true
 }
 
-func (t *TypeResolver) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		// Done
-		return nil
-	}
+type neverVisitor struct{}
 
-	switch n := node.(type) {
-	case *ast.BLangConstant:
-		t.resolveConstant(n)
+func (neverVisitor) Visit(node ast.BLangNode) ast.Visitor {
+	if node == nil {
 		return nil
-	case *ast.BLangSimpleVariable:
-		t.resolveSimpleVariable(nil, node.(*ast.BLangSimpleVariable))
-	case ast.BType:
-		t.resolveBType(node.(ast.BType), 0)
-	case *ast.BLangLiteral:
-		t.resolveLiteral(n)
-		return nil
-	case *ast.BLangNumericLiteral:
-		t.resolveNumericLiteral(n)
-		return nil
-	case *ast.BLangTypeDefinition:
-		t.resolveTypeDefinition(n, 0)
-		return nil
-	case *ast.BLangMatchStatement:
-		t.resolveMatchStatement(nil, n)
-		return nil
-	case ast.BLangExpression:
-		if _, _, ok := t.resolveExpression(nil, n); !ok {
-			return nil
-		}
-	default:
-		// Non-expression nodes with no specific handling: mark as NEVER and continue traversal
 	}
-	// Set DeterminedType to NEVER as fallback for nodes that didn't get a type assigned.
 	if node.GetDeterminedType() == nil {
 		node.SetDeterminedType(semtypes.NEVER)
 	}
-	return t
+	return neverVisitor{}
 }
 
-func (t *TypeResolver) resolveTypeDefinition(defn model.TypeDefinition, depth int) (semtypes.SemType, bool) {
-	if ty := t.ctx.SymbolType(defn.Symbol()); ty != nil {
+func (neverVisitor) VisitTypeData(_ *model.TypeData) ast.Visitor {
+	return neverVisitor{}
+}
+
+// setOtherNodesAsNever set type of every ast node who's determined type is not set as NEVER
+func setOtherNodesAsNever(node ast.BLangNode) {
+	ast.Walk(neverVisitor{}, node)
+}
+
+func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int) (semtypes.SemType, bool) {
+	if ty := t.symbolType(defn.Symbol()); ty != nil {
 		return ty, true
 	}
 	if classDef, ok := defn.(*ast.BLangClassDefinition); ok {
-		return t.resolveClassDefinition(classDef, depth)
+		return resolveClassDefinitionType(t, classDef, depth)
 	}
-	// Walk Name identifier to ensure it gets DeterminedType set
 	if defn.GetName() != nil {
-		ast.Walk(t, defn.GetName().(ast.BLangNode))
+		setOtherNodesAsNever(defn.GetName().(ast.BLangNode))
 	}
 	if depth == defn.GetCycleDepth() {
-		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.GetName().GetValue()), defn.GetPosition())
+		t.semanticError(fmt.Sprintf("invalid cycle detected for type definition %s", defn.GetName().GetValue()), defn.GetPosition())
 		return nil, false
 	}
 	defn.SetCycleDepth(depth)
-	semType, ok := t.resolveBType(defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	semType, ok := resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
 	if !ok {
 		return nil, false
 	}
 	if defn.GetDeterminedType() == nil {
 		defn.SetDeterminedType(semType)
-		t.ctx.SetSymbolType(defn.Symbol(), semType)
+		t.setSymbolType(defn.Symbol(), semType)
 		defn.SetCycleDepth(-1)
 		typeData := defn.GetTypeData()
 		typeData.Type = semType
@@ -526,13 +747,13 @@ func (t *TypeResolver) resolveTypeDefinition(defn model.TypeDefinition, depth in
 	}
 }
 
-func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
+func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
 	if classDef.GetDeterminedType() != nil {
 		return classDef.GetDeterminedType(), true
 	}
-	ast.Walk(t, classDef.Name)
+	setOtherNodesAsNever(classDef.Name)
 	if depth == classDef.GetCycleDepth() {
-		t.ctx.SemanticError(fmt.Sprintf("invalid cycle detected for class definition %s", classDef.Name.GetValue()), classDef.GetPosition())
+		t.semanticError(fmt.Sprintf("invalid cycle detected for class definition %s", classDef.Name.GetValue()), classDef.GetPosition())
 		return nil, false
 	}
 	classDef.SetCycleDepth(depth)
@@ -543,18 +764,18 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	// Resolve field types
 	for _, f := range classDef.Fields {
 		field := f.(*ast.BLangSimpleVariable)
-		fieldTy, ok := t.resolveBType(field.TypeNode(), depth+1)
+		fieldTy, ok := resolveBType(t, field.TypeNode(), depth+1)
 		if !ok {
 			return nil, false
 		}
 		setExpectedType(field, fieldTy)
-		updateSymbolType(t.ctx, field, fieldTy)
+		updateSymbolType(t, field, fieldTy)
 		field.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
 	// Resolve init function signature
 	if classDef.InitFunction != nil {
-		if _, ok := t.resolveFunction(t.ctx, classDef.InitFunction); !ok {
+		if _, ok := resolveFunctionSignature(t, classDef.InitFunction); !ok {
 			return nil, false
 		}
 		classDef.InitFunction.SetDeterminedType(semtypes.NEVER)
@@ -564,7 +785,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	// Resolve method signatures
 	for name := range classDef.Methods {
 		method := classDef.Methods[name]
-		if _, ok := t.resolveFunction(t.ctx, method); !ok {
+		if _, ok := resolveFunctionSignature(t, method); !ok {
 			return nil, false
 		}
 		method.SetDeterminedType(semtypes.NEVER)
@@ -573,12 +794,12 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 
 	// Collect included members
 	includedMembers := make(map[string][]semtypes.Member)
-	inc := collectTransitiveInclusions(t.ctx, classDef.Inclusions)
-	if !t.resolveIncludedDefns(inc.defns, depth) {
+	inc := collectTransitiveInclusions(t.compilerContext(), classDef.Inclusions)
+	if !resolveIncludedDefns(t, inc.defns, depth) {
 		return nil, false
 	}
 	for _, m := range inc.members {
-		member, ok := t.resolveIncludedMember(m, depth)
+		member, ok := resolveIncludedMember(t, m, depth)
 		if !ok {
 			return nil, false
 		}
@@ -598,14 +819,14 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if incMembers, exists := includedMembers[name]; exists {
 			for _, incMember := range incMembers {
 				if incMember.Kind != semtypes.MemberKindField {
-					t.ctx.SemanticError(
+					t.semanticError(
 						fmt.Sprintf("field '%s' conflicts with included member of different kind", name),
 						field.GetPosition(),
 					)
 					return nil, false
 				}
-				if !semtypes.IsSubtype(t.tyCtx, fieldTy, incMember.ValueTy) {
-					t.ctx.SemanticError(
+				if !semtypes.IsSubtype(t.typeContext(), fieldTy, incMember.ValueTy) {
+					t.semanticError(
 						fmt.Sprintf("field '%s' that overrides included field is not a subtype of the included field type", name),
 						field.GetPosition(),
 					)
@@ -625,15 +846,15 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 
 	// PR-TODO: clean this up
 	if classDef.InitFunction != nil {
-		initFnSymbol := t.ctx.GetSymbol(classDef.InitFunction.Symbol()).(model.FunctionSymbol)
+		initFnSymbol := t.getSymbol(classDef.InitFunction.Symbol()).(model.FunctionSymbol)
 		sig := initFnSymbol.Signature()
-		tyCtx := t.tyCtx
+		tyCtx := t.typeContext()
 		if !semtypes.IsSubtype(tyCtx, sig.ReturnType, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
-			t.ctx.SemanticError("invalid return type for init function", classDef.InitFunction.GetPosition())
+			t.semanticError("invalid return type for init function", classDef.InitFunction.GetPosition())
 		}
 		members = append(members, semtypes.Member{
 			Name:       "init",
-			ValueTy:    t.ctx.SymbolType(classDef.InitFunction.Symbol()),
+			ValueTy:    t.symbolType(classDef.InitFunction.Symbol()),
 			Kind:       semtypes.MemberKindMethod,
 			Visibility: semtypes.VisibilityPublic,
 			Immutable:  true,
@@ -641,10 +862,10 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	} else {
 		// Add implicit init member with no parameters and return type ()
 		paramListDefn := semtypes.NewListDefinition()
-		paramListTy := paramListDefn.DefineListTypeWrapped(t.ctx.GetTypeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+		paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 		functionDefn := semtypes.NewFunctionDefinition()
-		initFnType := functionDefn.Define(t.ctx.GetTypeEnv(), paramListTy, semtypes.NIL,
-			semtypes.FunctionQualifiersFrom(t.ctx.GetTypeEnv(), false, false))
+		initFnType := functionDefn.Define(t.typeEnv(), paramListTy, semtypes.NIL,
+			semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
 		members = append(members, semtypes.Member{
 			Name:       "init",
 			ValueTy:    initFnType,
@@ -655,7 +876,7 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	}
 	for name := range classDef.Methods {
 		method := classDef.Methods[name]
-		methodTy := t.ctx.SymbolType(method.Symbol())
+		methodTy := t.symbolType(method.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if method.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
@@ -669,14 +890,14 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		if incMembers, exists := includedMembers[name]; exists {
 			for _, incMember := range incMembers {
 				if incMember.Kind != memberKind {
-					t.ctx.SemanticError(
+					t.semanticError(
 						fmt.Sprintf("method '%s' conflicts with included member of different kind", name),
 						method.GetPosition(),
 					)
 					return nil, false
 				}
-				if !semtypes.IsSubtype(t.tyCtx, methodTy, incMember.ValueTy) {
-					t.ctx.SemanticError(
+				if !semtypes.IsSubtype(t.typeContext(), methodTy, incMember.ValueTy) {
+					t.semanticError(
 						fmt.Sprintf("method '%s' that overrides included method is not a subtype of the included method type", name),
 						method.GetPosition(),
 					)
@@ -710,13 +931,13 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 			}
 		}
 		if allFields {
-			t.ctx.SemanticError(
+			t.semanticError(
 				fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name),
 				classDef.GetPosition(),
 			)
 			return nil, false
 		}
-		t.ctx.SemanticError(
+		t.semanticError(
 			fmt.Sprintf("included method '%s' must be overridden in class definition", name),
 			classDef.GetPosition(),
 		)
@@ -732,9 +953,9 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 		networkQual = semtypes.NetworkQualifierService
 	}
 	qualifiers := semtypes.ObjectQualifiersFrom(isolated, false, networkQual)
-	semType := od.Define(t.ctx.GetTypeEnv(), qualifiers, members)
+	semType := od.Define(t.typeEnv(), qualifiers, members)
 
-	t.ctx.SetSymbolType(classDef.Symbol(), semType)
+	t.setSymbolType(classDef.Symbol(), semType)
 	classDef.SetCycleDepth(-1)
 	typeData := classDef.GetTypeData()
 	typeData.Type = semType
@@ -743,30 +964,23 @@ func (t *TypeResolver) resolveClassDefinition(classDef *ast.BLangClassDefinition
 	// Set self symbol type
 	selfRef, ok := classDef.Scope().GetSymbol("self")
 	if ok {
-		t.ctx.SetSymbolType(selfRef, semType)
+		t.setSymbolType(selfRef, semType)
 	}
 
 	return semType, true
 }
 
-func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) bool {
+func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) bool {
 	bType := n.GetValueType()
 	var ty semtypes.SemType
 
 	switch bType.BTypeGetTag() {
-	case model.TypeTags_INT:
-		switch v := n.GetValue().(type) {
-		case int64:
-			ty = semtypes.IntConst(v)
-		case float64:
-			ty = semtypes.FloatConst(v)
-		default:
-			t.ctx.InternalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+	case model.TypeTags_INT, model.TypeTags_BYTE, model.TypeTags_FLOAT, model.TypeTags_DECIMAL:
+		var ok bool
+		ty, ok = resolveNumericLiteralValue(t, n, expectedType)
+		if !ok {
 			return false
 		}
-	case model.TypeTags_BYTE:
-		value := n.GetValue().(int64)
-		ty = semtypes.IntConst(value)
 	case model.TypeTags_BOOLEAN:
 		value := n.GetValue().(bool)
 		ty = semtypes.BooleanConst(value)
@@ -775,54 +989,161 @@ func (t *TypeResolver) resolveLiteral(n *ast.BLangLiteral) bool {
 		ty = semtypes.StringConst(value)
 	case model.TypeTags_NIL:
 		ty = semtypes.NIL
-	case model.TypeTags_DECIMAL:
-		switch v := n.GetValue().(type) {
-		case string:
-			parsed, ok := t.parseDecimalValue(stripFloatingPointTypeSuffix(v), n.GetPosition())
-			if !ok {
-				return false
-			}
-			n.SetValue(parsed)
-			ty = semtypes.DecimalConst(*parsed)
-		case *big.Rat:
-			ty = semtypes.DecimalConst(*v)
-		case int64:
-			r := new(big.Rat).SetInt64(v)
-			n.SetValue(r)
-			ty = semtypes.DecimalConst(*r)
-		default:
-			t.ctx.InternalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
-			return false
-		}
-	case model.TypeTags_FLOAT:
-		switch v := n.GetValue().(type) {
-		case string:
-			parsed, ok := t.parseFloatValue(v, n.GetPosition())
-			if !ok {
-				return false
-			}
-			n.SetValue(parsed)
-			ty = semtypes.FloatConst(parsed)
-		case float64:
-			ty = semtypes.FloatConst(v)
-		case int64:
-			floatVal := float64(v)
-			n.SetValue(floatVal)
-			ty = semtypes.FloatConst(floatVal)
-		default:
-			t.ctx.InternalError(fmt.Sprintf("unexpected float literal value type: %T", v), n.GetPosition())
-			return false
-		}
 	default:
-		t.ctx.Unimplemented("unsupported literal type", n.GetPosition())
+		t.unimplemented("unsupported literal type", n.GetPosition())
 		return false
 	}
 
 	setExpectedType(n, ty)
 
 	// Update symbol type if this literal has a symbol
-	updateSymbolType(t.ctx, n, ty)
+	updateSymbolType(t, n, ty)
 	return true
+}
+
+func hasFloatTypeSuffix(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	last := s[len(s)-1]
+	return last == 'f' || last == 'F'
+}
+
+func determineCandidatesFromLiteral(t typeResolver, n *ast.BLangLiteral) semtypes.SemType {
+	switch n.GetValueType().BTypeGetTag() {
+	case model.TypeTags_INT, model.TypeTags_BYTE:
+		return semtypes.NUMBER
+	case model.TypeTags_FLOAT:
+		if hasFloatTypeSuffix(n.OriginalValue) {
+			return semtypes.FLOAT
+		}
+		if balCommon.HasHexIndicator(n.OriginalValue) {
+			return semtypes.FLOAT
+		}
+		return semtypes.Union(semtypes.FLOAT, semtypes.DECIMAL)
+	case model.TypeTags_DECIMAL:
+		return semtypes.DECIMAL
+	default:
+		t.internalError(fmt.Sprintf("unexpected type tag %v for numeric literal", n.GetValueType().BTypeGetTag()), n.GetPosition())
+		return semtypes.NEVER
+	}
+}
+
+func determineCandidatesFromNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral) semtypes.SemType {
+	switch n.Kind {
+	case model.NodeKind_INTEGER_LITERAL:
+		return semtypes.NUMBER
+	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
+		if hasFloatTypeSuffix(n.OriginalValue) {
+			return semtypes.FLOAT
+		}
+		if balCommon.IsDecimalDiscriminated(n.OriginalValue) {
+			return semtypes.DECIMAL
+		}
+		return semtypes.Union(semtypes.FLOAT, semtypes.DECIMAL)
+	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
+		return semtypes.FLOAT
+	default:
+		t.internalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
+		return semtypes.NEVER
+	}
+}
+
+func narrowCandidates(candidates, expectedType semtypes.SemType) semtypes.SemType {
+	if expectedType == nil {
+		return candidates
+	}
+	narrowed := semtypes.Intersect(candidates, expectedType)
+	if !semtypes.IsNever(narrowed) {
+		return narrowed
+	}
+	return candidates
+}
+
+func pickNumericType(t typeResolver, n *ast.BLangLiteral, candidates semtypes.SemType) (semtypes.SemType, bool) {
+	switch {
+	case semtypes.ContainsBasicType(candidates, semtypes.INT):
+		return resolveAsInt(t, n)
+	case semtypes.ContainsBasicType(candidates, semtypes.FLOAT):
+		return resolveAsFloat(t, n)
+	case semtypes.ContainsBasicType(candidates, semtypes.DECIMAL):
+		return resolveAsDecimal(t, n)
+	default:
+		t.semanticError("no valid candidate to resolve numeric literal", n.GetPosition())
+		return nil, false
+	}
+}
+
+func resolveAsInt(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var intVal int64
+	switch v := n.GetValue().(type) {
+	case int64:
+		intVal = v
+	case float64:
+		intVal = int64(v)
+	case string:
+		parsed, err := strconv.ParseInt(v, 0, 64)
+		if err != nil {
+			t.syntaxError(fmt.Sprintf("invalid int literal: %s", v), n.GetPosition())
+			return nil, false
+		}
+		intVal = parsed
+	default:
+		t.internalError(fmt.Sprintf("unexpected int literal value type: %T", n.GetValue()), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(intVal)
+	return semtypes.IntConst(intVal), true
+}
+
+func resolveAsFloat(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var floatVal float64
+	switch v := n.GetValue().(type) {
+	case string:
+		parsed, ok := parseFloatValue(t, v, n.GetPosition())
+		if !ok {
+			return nil, false
+		}
+		floatVal = parsed
+	case float64:
+		floatVal = v
+	case int64:
+		floatVal = float64(v)
+	default:
+		t.internalError(fmt.Sprintf("unexpected float literal value type: %T", v), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(floatVal)
+	return semtypes.FloatConst(floatVal), true
+}
+
+func resolveAsDecimal(t typeResolver, n *ast.BLangLiteral) (semtypes.SemType, bool) {
+	var ratVal *big.Rat
+	switch v := n.GetValue().(type) {
+	case string:
+		parsed, ok := parseDecimalValue(t, stripFloatingPointTypeSuffix(v), n.GetPosition())
+		if !ok {
+			return nil, false
+		}
+		ratVal = parsed
+	case *big.Rat:
+		ratVal = v
+	case int64:
+		ratVal = new(big.Rat).SetInt64(v)
+	case float64:
+		ratVal = new(big.Rat).SetFloat64(v)
+	default:
+		t.internalError(fmt.Sprintf("unexpected decimal literal value type: %T", v), n.GetPosition())
+		return nil, false
+	}
+	n.SetValue(ratVal)
+	return semtypes.DecimalConst(*ratVal), true
+}
+
+func resolveNumericLiteralValue(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.SemType) (semtypes.SemType, bool) {
+	candidates := determineCandidatesFromLiteral(t, n)
+	candidates = narrowCandidates(candidates, expectedType)
+	return pickNumericType(t, n, candidates)
 }
 
 // stripFloatingPointTypeSuffix removes the f/F/d/D type suffix from a floating point literal string
@@ -834,143 +1155,45 @@ func stripFloatingPointTypeSuffix(s string) string {
 	return s
 }
 
-// parseFloatValue parses a string as float64 with error handling
-func (t *TypeResolver) parseFloatValue(strValue string, pos diagnostics.Location) (float64, bool) {
+func parseFloatValue(t typeResolver, strValue string, pos diagnostics.Location) (float64, bool) {
 	strValue = strings.TrimRight(strValue, "fF")
 	f, err := strconv.ParseFloat(strValue, 64)
 	if err != nil {
-		t.ctx.SyntaxError(fmt.Sprintf("invalid float literal: %s", strValue), pos)
+		t.syntaxError(fmt.Sprintf("invalid float literal: %s", strValue), pos)
 		return 0, false
 	}
 	return f, true
 }
 
-// parseDecimalValue parses a string as big.Rat with error handling
-func (t *TypeResolver) parseDecimalValue(strValue string, pos diagnostics.Location) (*big.Rat, bool) {
+func parseDecimalValue(t typeResolver, strValue string, pos diagnostics.Location) (*big.Rat, bool) {
 	r := new(big.Rat)
 	if _, ok := r.SetString(strValue); !ok {
-		t.ctx.SyntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), pos)
+		t.syntaxError(fmt.Sprintf("invalid decimal literal: %s", strValue), pos)
 		return big.NewRat(0, 1), false
 	}
 	return r, true
 }
 
-func (t *TypeResolver) resolveNumericLiteral(n *ast.BLangNumericLiteral) bool {
-	bType := n.GetValueType()
-	typeTag := bType.BTypeGetTag()
+func resolveNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral, expectedType semtypes.SemType) bool {
+	candidates := determineCandidatesFromNumericLiteral(t, n)
+	candidates = narrowCandidates(candidates, expectedType)
 
-	var (
-		ty semtypes.SemType
-		ok bool
-	)
-
-	switch n.Kind {
-	case model.NodeKind_INTEGER_LITERAL:
-		ty, ok = t.resolveIntegerLiteral(n, typeTag)
-	case model.NodeKind_DECIMAL_FLOATING_POINT_LITERAL:
-		ty, ok = t.resolveDecimalFloatingPointLiteral(n, typeTag)
-	case model.NodeKind_HEX_FLOATING_POINT_LITERAL:
-		ty, ok = t.resolveHexFloatingPointLiteral(n, typeTag)
-	default:
-		t.ctx.InternalError(fmt.Sprintf("unexpected numeric literal kind: %v", n.Kind), n.GetPosition())
-		return false
-	}
-
-	if !ok || ty == nil {
+	ty, ok := pickNumericType(t, &n.BLangLiteral, candidates)
+	if !ok {
 		return false
 	}
 
 	setExpectedType(n, ty)
-
-	// Update symbol type if this numeric literal has a symbol
-	updateSymbolType(t.ctx, n, ty)
+	updateSymbolType(t, n, ty)
 	return true
 }
 
-func (t *TypeResolver) resolveIntegerLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	value := n.GetValue().(int64)
-
-	switch typeTag {
-	case model.TypeTags_INT, model.TypeTags_BYTE:
-		return semtypes.IntConst(value), true
-	default:
-		t.ctx.InternalError(fmt.Sprintf("unexpected type tag %v for integer literal", typeTag), n.GetPosition())
-		return nil, false
-	}
-}
-
-func (t *TypeResolver) resolveDecimalFloatingPointLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	strValue := stripFloatingPointTypeSuffix(n.GetValue().(string))
-
-	switch typeTag {
-	case model.TypeTags_FLOAT:
-		f, ok := t.parseFloatValue(strValue, n.GetPosition())
-		if !ok {
-			return nil, false
-		}
-		n.SetValue(f)
-		return semtypes.FloatConst(f), true
-	case model.TypeTags_DECIMAL:
-		r, ok := t.parseDecimalValue(strValue, n.GetPosition())
-		if !ok {
-			return nil, false
-		}
-		n.SetValue(r)
-		return semtypes.DecimalConst(*r), true
-	default:
-		t.ctx.InternalError(fmt.Sprintf("unexpected type tag %v for decimal floating point literal", typeTag), n.GetPosition())
-		return nil, false
-	}
-}
-
-func (t *TypeResolver) resolveHexFloatingPointLiteral(n *ast.BLangNumericLiteral, typeTag model.TypeTags) (semtypes.SemType, bool) {
-	t.ctx.Unimplemented("hex floating point literals not supported", n.GetPosition())
-	return nil, false
-}
-
 // updateSymbolType updates the symbol's type if the node has an associated symbol.
-// This synchronizes the symbol's type with the node's resolved type.
-func updateSymbolType(ctx *context.CompilerContext, node ast.BLangNode, ty semtypes.SemType) {
+func updateSymbolType(t typeResolver, node ast.BLangNode, ty semtypes.SemType) {
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
-		// symbol resolver should initialize the symbol
-		ctx.SetSymbolType(symbol, ty)
+		t.setSymbolType(symbol, ty)
 	}
-}
-
-func (t *TypeResolver) resolveVariableDefStmt(chain *binding, s *ast.BLangSimpleVariableDef) (statementEffect, bool) {
-	variable := s.GetVariable().(*ast.BLangSimpleVariable)
-	variable.Name.SetDeterminedType(semtypes.NEVER)
-
-	// Resolve type node if present
-	typeNode := variable.TypeNode()
-	if typeNode != nil {
-		semType, ok := t.resolveBType(typeNode, 0)
-		if !ok {
-			setExpectedType(variable, semtypes.NEVER)
-			updateSymbolType(t.ctx, variable, semtypes.NEVER)
-			return defaultStmtEffect(chain), false
-		}
-		setExpectedType(variable, semType)
-		updateSymbolType(t.ctx, variable, semType)
-	}
-
-	// Resolve initializer expression and capture its effect (e.g., lambda unnarrowing)
-	effectChain := chain
-	if variable.Expr != nil {
-		exprTy, effect, ok := t.resolveExpression(chain, variable.Expr.(ast.BLangExpression))
-		if !ok {
-			return defaultStmtEffect(chain), false
-		}
-		effectChain = effect.ifTrue
-		// For type-inferred variables, set the type from the expression
-		if typeNode == nil {
-			setExpectedType(variable, exprTy)
-			updateSymbolType(t.ctx, variable, exprTy)
-		}
-	}
-
-	return defaultStmtEffect(effectChain), true
 }
 
 func lookupSymbol(chain *binding, ref model.SymbolRef) model.SymbolRef {
@@ -984,33 +1207,65 @@ func lookupSymbol(chain *binding, ref model.SymbolRef) model.SymbolRef {
 	return ref
 }
 
-func (t *TypeResolver) resolveSimpleVariable(chain *binding, node *ast.BLangSimpleVariable) bool {
+func resolveVariableDefStmt(t typeResolver, chain *binding, s *ast.BLangSimpleVariableDef) (statementEffect, bool) {
+	variable := s.GetVariable().(*ast.BLangSimpleVariable)
+	variable.Name.SetDeterminedType(semtypes.NEVER)
+	typeNode := variable.TypeNode()
+	if typeNode != nil {
+		semType, ok := resolveBType(t, typeNode, 0)
+		if !ok {
+			setExpectedType(variable, semtypes.NEVER)
+			updateSymbolType(t, variable, semtypes.NEVER)
+			return defaultStmtEffect(chain), false
+		}
+		setExpectedType(variable, semType)
+		updateSymbolType(t, variable, semType)
+	}
+
+	effectChain := chain
+	if variable.Expr != nil {
+		expectedType := variable.GetDeterminedType()
+		exprTy, effect, ok := resolveExpression(t, chain, variable.Expr.(ast.BLangExpression), expectedType)
+		if !ok {
+			return defaultStmtEffect(chain), false
+		}
+		effectChain = effect.ifTrue
+		if typeNode == nil {
+			setExpectedType(variable, exprTy)
+			updateSymbolType(t, variable, exprTy)
+		}
+	}
+
+	return defaultStmtEffect(effectChain), true
+}
+
+func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimpleVariable) bool {
 	node.Name.SetDeterminedType(semtypes.NEVER)
 	typeNode := node.TypeNode()
 	if typeNode == nil {
 		if node.Expr != nil {
-			exprTy, _, ok := t.resolveExpression(chain, node.Expr.(ast.BLangExpression))
+			exprTy, _, ok := resolveExpression(t, chain, node.Expr.(ast.BLangExpression), nil)
 			if !ok {
 				return false
 			}
 			setExpectedType(node, exprTy)
-			updateSymbolType(t.ctx, node, exprTy)
+			updateSymbolType(t, node, exprTy)
 		}
 		return true
 	}
 
-	semType, ok := t.resolveBType(typeNode, 0)
+	semType, ok := resolveBType(t, typeNode, 0)
 	if !ok {
 		setExpectedType(node, semtypes.NEVER)
-		updateSymbolType(t.ctx, node, semtypes.NEVER)
+		updateSymbolType(t, node, semtypes.NEVER)
 		return false
 	}
 
 	setExpectedType(node, semType)
-	updateSymbolType(t.ctx, node, semType)
+	updateSymbolType(t, node, semType)
 
 	if node.Expr != nil {
-		if _, _, ok := t.resolveExpression(chain, node.Expr.(ast.BLangExpression)); !ok {
+		if _, _, ok := resolveExpression(t, chain, node.Expr.(ast.BLangExpression), semType); !ok {
 			return false
 		}
 	}
@@ -1018,13 +1273,13 @@ func (t *TypeResolver) resolveSimpleVariable(chain *binding, node *ast.BLangSimp
 	return true
 }
 
-func (t *TypeResolver) resolveExpression(chain *binding, expr ast.BLangExpression) (semtypes.SemType, expressionEffect, bool) {
+func resolveExpression(t typeResolver, chain *binding, expr ast.BLangExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	// Check if already resolved
 	if ty := expr.GetDeterminedType(); ty != nil {
 		return ty, defaultExpressionEffect(chain), true
 	}
 
-	ty, effect, ok := t.resolveExpressionInner(chain, expr)
+	ty, effect, ok := resolveExpressionInner(t, chain, expr, expectedType)
 	if !ok {
 		// Mark failed expressions so ast.Walk won't re-process them
 		setExpectedType(expr, semtypes.NEVER)
@@ -1036,60 +1291,60 @@ func (t *TypeResolver) resolveExpression(chain *binding, expr ast.BLangExpressio
 	return ty, effect, ok
 }
 
-func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpression) (semtypes.SemType, expressionEffect, bool) {
+func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	switch e := expr.(type) {
 	case *ast.BLangLiteral:
-		if ok := t.resolveLiteral(e); !ok {
+		if ok := resolveLiteral(t, e, expectedType); !ok {
 			return nil, expressionEffect{}, false
 		}
 		return e.GetDeterminedType(), defaultExpressionEffect(chain), true
 	case *ast.BLangNumericLiteral:
-		if ok := t.resolveNumericLiteral(e); !ok {
+		if ok := resolveNumericLiteral(t, e, expectedType); !ok {
 			return nil, expressionEffect{}, false
 		}
 		return e.GetDeterminedType(), defaultExpressionEffect(chain), true
 	case *ast.BLangSimpleVarRef:
-		return t.resolveSimpleVarRef(chain, e)
+		return resolveSimpleVarRef(t, chain, e)
 	case *ast.BLangLocalVarRef:
-		return t.resolveLocalVarRef(chain, e)
+		return resolveLocalVarRef(t, chain, e)
 	case *ast.BLangConstRef:
-		return t.resolveConstRef(chain, e)
+		return resolveConstRef(t, chain, e)
 	case *ast.BLangBinaryExpr:
-		return t.resolveBinaryExpr(chain, e)
+		return resolveBinaryExpr(t, chain, e, expectedType)
 	case *ast.BLangUnaryExpr:
-		return t.resolveUnaryExpr(chain, e)
+		return resolveUnaryExpr(t, chain, e, expectedType)
 	case *ast.BLangInvocation:
-		return t.resolveInvocation(chain, e)
+		return resolveInvocation(t, chain, e)
 	case *ast.BLangIndexBasedAccess:
-		return t.resolveIndexBasedAccess(chain, e)
+		return resolveIndexBasedAccess(t, chain, e)
 	case *ast.BLangFieldBaseAccess:
-		return t.resolveFieldBaseAccess(chain, e)
+		return resolveFieldBaseAccess(t, chain, e)
 	case *ast.BLangListConstructorExpr:
-		return t.resolveListConstructorExpr(chain, e)
+		return resolveListConstructorExpr(t, chain, e, expectedType)
 	case *ast.BLangMappingConstructorExpr:
-		return t.resolveMappingConstructorExpr(chain, e)
+		return resolveMappingConstructorExpr(t, chain, e, expectedType)
 	case *ast.BLangErrorConstructorExpr:
-		return t.resolveErrorConstructorExpr(chain, e)
+		return resolveErrorConstructorExpr(t, chain, e, expectedType)
 	case *ast.BLangGroupExpr:
-		return t.resolveGroupExpr(chain, e)
+		return resolveGroupExpr(t, chain, e, expectedType)
 	case *ast.BLangQueryExpr:
-		return t.resolveQueryExpr(chain, e)
+		return resolveQueryExpr(t, chain, e)
 	case *ast.BLangWildCardBindingPattern:
 		ty := semtypes.ANY
 		setExpectedType(e, ty)
 		return ty, defaultExpressionEffect(chain), true
 	case *ast.BLangTypeConversionExpr:
-		return t.resolveTypeConversionExpr(chain, e)
+		return resolveTypeConversionExpr(t, chain, e)
 	case *ast.BLangTypeTestExpr:
-		return t.resolveTypeTestExpr(chain, e)
+		return resolveTypeTestExpr(t, chain, e)
 	case *ast.BLangCheckedExpr:
-		return t.resolveCheckedExpr(chain, e)
+		return resolveCheckedExpr(t, chain, e)
 	case *ast.BLangCheckPanickedExpr:
-		return t.resolveCheckedExpr(chain, &e.BLangCheckedExpr)
+		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr)
 	case *ast.BLangTrapExpr:
-		return t.resolveTrapExpr(chain, e)
+		return resolveTrapExpr(t, chain, e)
 	case *ast.BLangNamedArgsExpression:
-		ty, effect, ok := t.resolveExpression(chain, e.Expr)
+		ty, effect, ok := resolveExpression(t, chain, e.Expr, expectedType)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -1097,25 +1352,25 @@ func (t *TypeResolver) resolveExpressionInner(chain *binding, expr ast.BLangExpr
 		e.Name.SetDeterminedType(semtypes.NEVER)
 		return ty, effect, true
 	case *ast.BLangNewExpression:
-		return t.resolveNewExpr(chain, e)
+		return resolveNewExpr(t, chain, e)
 	case *ast.BLangLambdaFunction:
-		return t.resolveLambdaFunction(chain, e)
+		return resolveLambdaFunctionExpr(t, chain, e)
 	default:
-		t.ctx.InternalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
+		t.internalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 }
 
-func (t *TypeResolver) resolveNewExpr(chain *binding, e *ast.BLangNewExpression) (semtypes.SemType, expressionEffect, bool) {
+func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression) (semtypes.SemType, expressionEffect, bool) {
 	for _, arg := range e.ArgsExprs {
-		if _, _, ok := t.resolveExpression(chain, arg); !ok {
+		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
 
 	var ty semtypes.SemType
 	if e.UserDefinedType != nil {
-		resolvedTy, ok := t.resolveBType(e.UserDefinedType, 0)
+		resolvedTy, ok := resolveBType(t, e.UserDefinedType, 0)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -1127,18 +1382,23 @@ func (t *TypeResolver) resolveNewExpr(chain *binding, e *ast.BLangNewExpression)
 	return ty, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	ast.WalkTypeData(t, &e.Type)
+	resolveTypeData(t, &e.Type)
+	if e.Type.TypeDescriptor != nil {
+		if tdNode, ok := e.Type.TypeDescriptor.(ast.BLangNode); ok {
+			setOtherNodesAsNever(tdNode)
+		}
+	}
 	testedTy := e.Type.Type
 
 	var resultTy semtypes.SemType
-	if semtypes.IsSubtype(t.tyCtx, exprTy, testedTy) {
+	if semtypes.IsSubtype(t.typeContext(), exprTy, testedTy) {
 		resultTy = semtypes.BooleanConst(!e.IsNegation())
-	} else if semtypes.IsEmpty(t.tyCtx, semtypes.Intersect(exprTy, testedTy)) {
+	} else if semtypes.IsEmpty(t.typeContext(), semtypes.Intersect(exprTy, testedTy)) {
 		resultTy = semtypes.BooleanConst(e.IsNegation())
 	} else {
 		resultTy = semtypes.BOOLEAN
@@ -1150,14 +1410,14 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 	if !isVarRef {
 		return resultTy, defaultExpressionEffect(chain), true
 	}
-	tx := t.ctx.SymbolType(ref)
-	ref = t.ctx.UnnarrowedSymbol(ref)
+	tx := t.symbolType(ref)
+	ref = t.unnarrowedSymbol(ref)
 	testTy := e.Type.Type
 	trueTy := semtypes.Intersect(tx, testTy)
-	trueSym := narrowSymbol(t.ctx, ref, trueTy)
+	trueSym := narrowSymbol(t, ref, trueTy)
 	trueChain := &binding{ref: ref, narrowedSymbol: trueSym, prev: chain}
 	falseTy := semtypes.Diff(tx, testTy)
-	falseSym := narrowSymbol(t.ctx, ref, falseTy)
+	falseSym := narrowSymbol(t, ref, falseTy)
 	falseChain := &binding{ref: ref, narrowedSymbol: falseSym, prev: chain}
 	if e.IsNegation() {
 		return resultTy, expressionEffect{ifTrue: falseChain, ifFalse: trueChain}, true
@@ -1165,8 +1425,8 @@ func (t *TypeResolver) resolveTypeTestExpr(chain *binding, e *ast.BLangTypeTestE
 	return resultTy, expressionEffect{ifTrue: trueChain, ifFalse: falseChain}, true
 }
 
-func (t *TypeResolver) resolveTrapExpr(chain *binding, e *ast.BLangTrapExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1175,13 +1435,13 @@ func (t *TypeResolver) resolveTrapExpr(chain *binding, e *ast.BLangTrapExpr) (se
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := t.resolveExpression(chain, e.Expr)
+func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	errorIntersection := semtypes.Intersect(exprTy, semtypes.ERROR)
-	if semtypes.IsEmpty(t.tyCtx, errorIntersection) {
+	if semtypes.IsEmpty(t.typeContext(), errorIntersection) {
 		e.IsRedundantChecking = true
 	}
 	resultTy := semtypes.Diff(exprTy, semtypes.ERROR)
@@ -1189,11 +1449,18 @@ func (t *TypeResolver) resolveCheckedExpr(chain *binding, e *ast.BLangCheckedExp
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLangMappingConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveMappingConstructorExpr(t typeResolver, chain *binding, e *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if expectedType != nil {
+		return resolveMappingConstructorWithExpectedType(t, chain, e, expectedType)
+	}
+	return resolveMappingConstructorBottomUp(t, chain, e)
+}
+
+func resolveMappingConstructorBottomUp(t typeResolver, chain *binding, e *ast.BLangMappingConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
 	fields := make([]semtypes.Field, len(e.Fields))
 	for i, f := range e.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		valueTy, _, ok := t.resolveExpression(chain, kv.ValueExpr)
+		valueTy, _, ok := resolveExpression(t, chain, kv.ValueExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -1201,17 +1468,16 @@ func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLan
 		if semtypes.SingleShape(valueTy).IsEmpty() {
 			broadTy = valueTy
 		} else {
-			basicTy := semtypes.WidenToBasicTypes(valueTy)
-			broadTy = basicTy
+			broadTy = semtypes.WidenToBasicTypes(valueTy)
 		}
 		var keyName string
 		switch keyExpr := kv.Key.Expr.(type) {
 		case *ast.BLangLiteral:
 			keyName = keyExpr.GetOriginalValue()
-			t.resolveLiteral(keyExpr)
+			resolveLiteral(t, keyExpr, nil)
 		case ast.BNodeWithSymbol:
-			t.ctx.SetSymbolType(keyExpr.Symbol(), valueTy)
-			keyName = t.ctx.SymbolName(keyExpr.Symbol())
+			t.setSymbolType(keyExpr.Symbol(), valueTy)
+			keyName = t.symbolName(keyExpr.Symbol())
 			if e, ok := keyExpr.(ast.BLangExpression); ok {
 				setExpectedType(e, valueTy)
 			}
@@ -1224,19 +1490,111 @@ func (t *TypeResolver) resolveMappingConstructorExpr(chain *binding, e *ast.BLan
 		fields[i] = semtypes.FieldFrom(keyName, broadTy, false, false)
 	}
 	md := semtypes.NewMappingDefinition()
-	mapTy := md.DefineMappingTypeWrapped(t.ctx.GetTypeEnv(), fields, semtypes.NEVER)
+	mapTy := md.DefineMappingTypeWrapped(t.typeEnv(), fields, semtypes.NEVER)
 	setExpectedType(e, mapTy)
-	mat := semtypes.ToMappingAtomicType(t.tyCtx, mapTy)
+	mat := semtypes.ToMappingAtomicType(t.typeContext(), mapTy)
 	e.AtomicType = *mat
 	return mapTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveTypeConversionExpr(chain *binding, e *ast.BLangTypeConversionExpr) (semtypes.SemType, expressionEffect, bool) {
-	expectedType, ok := t.resolveBType(e.TypeDescriptor.(ast.BType), 0)
+func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	for _, f := range e.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		if _, _, ok := resolveExpression(t, chain, kv.ValueExpr, nil); !ok {
+			return nil, expressionEffect{}, false
+		}
+		resolveMappingKey(t, kv)
+	}
+
+	resultType, mat, ok := selectMappingInherentType(t, e, expectedType)
+	if !ok {
+		return resolveMappingConstructorBottomUp(t, chain, e)
+	}
+
+	for _, f := range e.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		keyName := recordKeyName(kv.Key)
+		requiredType := mat.FieldInnerVal(keyName)
+		kv.ValueExpr.SetDeterminedType(nil)
+		if _, _, ok := resolveExpression(t, chain, kv.ValueExpr, requiredType); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+
+	e.AtomicType = mat
+	setExpectedType(e, resultType)
+	return resultType, defaultExpressionEffect(chain), true
+}
+
+func resolveMappingKey(t typeResolver, kv *ast.BLangMappingKeyValueField) {
+	switch keyExpr := kv.Key.Expr.(type) {
+	case *ast.BLangLiteral:
+		resolveLiteral(t, keyExpr, nil)
+	case ast.BNodeWithSymbol:
+		valueTy := kv.ValueExpr.GetDeterminedType()
+		t.setSymbolType(keyExpr.Symbol(), valueTy)
+		if e, ok := keyExpr.(ast.BLangExpression); ok {
+			setExpectedType(e, valueTy)
+		}
+		if ref, ok := keyExpr.(*ast.BLangSimpleVarRef); ok {
+			setVarRefIdentifierTypes(ref)
+		}
+	}
+	kv.Key.SetDeterminedType(semtypes.NEVER)
+	kv.SetDeterminedType(semtypes.NEVER)
+}
+
+func selectMappingInherentType(t typeResolver, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.MappingAtomicType, bool) {
+	expectedMappingType := semtypes.Intersect(expectedType, semtypes.MAPPING)
+	tc := t.typeContext()
+	if semtypes.IsEmpty(tc, expectedMappingType) {
+		t.semanticError("mapping type not found in expected type", expr.GetPosition())
+		return nil, semtypes.MappingAtomicType{}, false
+	}
+	mat := semtypes.ToMappingAtomicType(tc, expectedMappingType)
+	if mat != nil {
+		return expectedMappingType, *mat, true
+	}
+	alts := semtypes.MappingAlternatives(tc, expectedType)
+	var validAlts []semtypes.MappingAlternative
+
+	fields := make([]semtypes.MappingFieldInfo, len(expr.Fields))
+	for i, f := range expr.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		fields[i] = semtypes.MappingFieldInfo{Name: recordKeyName(kv.Key), Ty: kv.ValueExpr.GetDeterminedType()}
+	}
+	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
+
+	for _, alt := range alts {
+		if semtypes.MappingAlternativeAllowsFields(tc, alt, fields) {
+			validAlts = append(validAlts, alt)
+		}
+	}
+	if len(validAlts) == 0 {
+		t.semanticError("no applicable inherent type for mapping constructor", expr.GetPosition())
+		return nil, semtypes.MappingAtomicType{}, false
+	}
+	if len(validAlts) > 1 {
+		t.semanticError("ambiguous inherent type for mapping constructor", expr.GetPosition())
+		return nil, semtypes.MappingAtomicType{}, false
+	}
+
+	selectedSemType := validAlts[0].SemType
+	mat = semtypes.ToMappingAtomicType(tc, selectedSemType)
+	if mat == nil {
+		t.semanticError("applicable type for mapping constructor is not atomic", expr.GetPosition())
+		return nil, semtypes.MappingAtomicType{}, false
+	}
+
+	return selectedSemType, *mat, true
+}
+
+func resolveTypeConversionExpr(t typeResolver, chain *binding, e *ast.BLangTypeConversionExpr) (semtypes.SemType, expressionEffect, bool) {
+	expectedType, ok := resolveBType(t, e.TypeDescriptor.(ast.BType), 0)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	_, _, ok = t.resolveExpression(chain, e.Expression)
+	_, _, ok = resolveExpression(t, chain, e.Expression, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1338,73 +1696,69 @@ func isNumericType(ty semtypes.SemType) bool {
 	return semtypes.IsSubtypeSimple(ty, semtypes.NUMBER)
 }
 
-// Expression resolution methods
-
-func (t *TypeResolver) resolveGroupExpr(chain *binding, expr *ast.BLangGroupExpr) (semtypes.SemType, expressionEffect, bool) {
-	innerTy, effect, ok := t.resolveExpression(chain, expr.Expression)
+func resolveGroupExpr(t typeResolver, chain *binding, expr *ast.BLangGroupExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	innerTy, effect, ok := resolveExpression(t, chain, expr.Expression, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-
 	setExpectedType(expr, innerTy)
-
 	return innerTy, effect, true
 }
 
-func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) (semtypes.SemType, expressionEffect, bool) {
 	if len(expr.QueryClauseList) < 2 {
-		t.ctx.SemanticError("query expression requires from and select clauses", expr.GetPosition())
+		t.semanticError("query expression requires from and select clauses", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
 	if !ok {
-		t.ctx.SemanticError("query expression must start with a from clause", expr.GetPosition())
+		t.semanticError("query expression must start with a from clause", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	fromClause.SetDeterminedType(semtypes.NEVER)
 
 	selectClause, ok := expr.QueryClauseList[len(expr.QueryClauseList)-1].(*ast.BLangSelectClause)
 	if !ok {
-		t.ctx.SemanticError("query expression requires a select clause", expr.GetPosition())
+		t.semanticError("query expression requires a select clause", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	selectClause.SetDeterminedType(semtypes.NEVER)
 
-	collectionTy, _, ok := t.resolveExpression(chain, fromClause.Collection)
+	collectionTy, _, ok := resolveExpression(t, chain, fromClause.Collection, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	var elementTy semtypes.SemType
 	switch {
 	case semtypes.IsSubtypeSimple(collectionTy, semtypes.LIST):
-		memberTypes := semtypes.ListAllMemberTypesInner(t.tyCtx, collectionTy)
+		memberTypes := semtypes.ListAllMemberTypesInner(t.typeContext(), collectionTy)
 		var result semtypes.SemType = semtypes.NEVER
 		for _, each := range memberTypes.SemTypes {
 			result = semtypes.Union(result, each)
 		}
 		elementTy = result
 	default:
-		t.ctx.Unimplemented("query from-clause currently supports only list collections", fromClause.GetPosition())
+		t.unimplemented("query from-clause currently supports only list collections", fromClause.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	if fromClause.VariableDefinitionNode != nil {
 		varDef, ok := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
 		if !ok || varDef.Var == nil {
-			t.ctx.Unimplemented("only simple variable bindings are supported in from clause", fromClause.GetPosition())
+			t.unimplemented("only simple variable bindings are supported in from clause", fromClause.GetPosition())
 			return nil, expressionEffect{}, false
 		}
 		varDef.SetDeterminedType(semtypes.NEVER)
 
-		var variableTy = elementTy
+		variableTy := elementTy
 		if !fromClause.IsDeclaredWithVarFlag && varDef.Var.TypeNode() != nil {
-			variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
+			variableTy, ok = resolveBType(t, varDef.Var.TypeNode(), 0)
 			if !ok {
 				return nil, expressionEffect{}, false
 			}
-			if !semtypes.IsSubtype(t.tyCtx, elementTy, variableTy) {
-				t.ctx.SemanticError("from-clause variable type is incompatible with collection member type",
+			if !semtypes.IsSubtype(t.typeContext(), elementTy, variableTy) {
+				t.semanticError("from-clause variable type is incompatible with collection member type",
 					varDef.GetPosition())
 				return nil, expressionEffect{}, false
 			}
@@ -1414,25 +1768,25 @@ func (t *TypeResolver) resolveQueryExpr(chain *binding, expr *ast.BLangQueryExpr
 			varDef.Var.Name.SetDeterminedType(semtypes.NEVER)
 		}
 		varDef.Var.SetDeterminedType(semtypes.NEVER)
-		updateSymbolType(t.ctx, varDef.Var, variableTy)
+		updateSymbolType(t, varDef.Var, variableTy)
 	}
 
-	queryChain, ok := t.resolveQueryIntermediateClauses(chain, expr)
+	queryChain, ok := resolveQueryIntermediateClauses(t, chain, expr)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
-	selectTy, _, ok := t.resolveExpression(queryChain, selectClause.Expression)
+	selectTy, _, ok := resolveExpression(t, queryChain, selectClause.Expression, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	ld := semtypes.NewListDefinition()
-	queryTy := ld.DefineListTypeWrappedWithEnvSemType(t.ctx.GetTypeEnv(), selectTy)
+	queryTy := ld.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), selectTy)
 	setExpectedType(expr, queryTy)
 	return queryTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
+func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
 	currentChain := chain
 	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
@@ -1441,28 +1795,28 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 			for _, variableDef := range clause.LetVarDeclarations {
 				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
 				if !ok || varDef.Var == nil {
-					t.ctx.Unimplemented("only simple variable declarations are supported in let clause",
+					t.unimplemented("only simple variable declarations are supported in let clause",
 						clause.GetPosition())
 					return nil, false
 				}
 				varDef.SetDeterminedType(semtypes.NEVER)
 				if varDef.Var.Expr == nil {
-					t.ctx.SemanticError("let-clause variable declaration requires an initializer",
+					t.semanticError("let-clause variable declaration requires an initializer",
 						varDef.GetPosition())
 					return nil, false
 				}
-				initTy, _, ok := t.resolveExpression(currentChain, varDef.Var.Expr.(ast.BLangExpression))
+				initTy, _, ok := resolveExpression(t, currentChain, varDef.Var.Expr.(ast.BLangExpression), nil)
 				if !ok {
 					return nil, false
 				}
-				var variableTy = initTy
+				variableTy := initTy
 				if !varDef.Var.GetIsDeclaredWithVar() && varDef.Var.TypeNode() != nil {
-					variableTy, ok = t.resolveBType(varDef.Var.TypeNode(), 0)
+					variableTy, ok = resolveBType(t, varDef.Var.TypeNode(), 0)
 					if !ok {
 						return nil, false
 					}
-					if !semtypes.IsSubtype(t.tyCtx, initTy, variableTy) {
-						t.ctx.SemanticError("let-clause variable type is incompatible with initializer expression",
+					if !semtypes.IsSubtype(t.typeContext(), initTy, variableTy) {
+						t.semanticError("let-clause variable type is incompatible with initializer expression",
 							varDef.GetPosition())
 						return nil, false
 					}
@@ -1471,61 +1825,68 @@ func (t *TypeResolver) resolveQueryIntermediateClauses(chain *binding, queryExpr
 					varDef.Var.Name.SetDeterminedType(semtypes.NEVER)
 				}
 				varDef.Var.SetDeterminedType(semtypes.NEVER)
-				updateSymbolType(t.ctx, varDef.Var, variableTy)
+				updateSymbolType(t, varDef.Var, variableTy)
 			}
 		case *ast.BLangWhereClause:
 			clause.SetDeterminedType(semtypes.NEVER)
-			whereTy, effect, ok := t.resolveExpression(currentChain, clause.Expression)
+			whereTy, effect, ok := resolveExpression(t, currentChain, clause.Expression, semtypes.BOOLEAN)
 			if !ok {
 				return nil, false
 			}
 			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
-				t.ctx.SemanticError("where-clause expression must be boolean", clause.GetPosition())
+				t.semanticError("where-clause expression must be boolean", clause.GetPosition())
 				return nil, false
 			}
 			currentChain = effect.ifTrue
 		default:
-			t.ctx.Unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			t.unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
 			return nil, false
 		}
 	}
 	return currentChain, true
 }
 
-func (t *TypeResolver) resolveSimpleVarRef(chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {
+func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {
 	baseSymbol := expr.Symbol()
 	sym, isNarrowed, isCaptured := lookupBinding(chain, baseSymbol)
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
-	if isCaptured && t.capturedNarrowedVars != nil {
-		t.capturedNarrowedVars[baseSymbol] = true
+	if isCaptured {
+		t.trackCapturedVar(baseSymbol)
 	}
-	ty := t.ctx.SymbolType(sym)
+	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(expr)
 	return ty, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveLocalVarRef(chain *binding, expr *ast.BLangLocalVarRef) (semtypes.SemType, expressionEffect, bool) {
-	return t.resolveSimpleVarRef(chain, &expr.BLangSimpleVarRef)
+func resolveLocalVarRef(t typeResolver, chain *binding, expr *ast.BLangLocalVarRef) (semtypes.SemType, expressionEffect, bool) {
+	return resolveSimpleVarRef(t, chain, &expr.BLangSimpleVarRef)
 }
 
-func (t *TypeResolver) resolveConstRef(chain *binding, expr *ast.BLangConstRef) (semtypes.SemType, expressionEffect, bool) {
+func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (semtypes.SemType, expressionEffect, bool) {
 	sym, isNarrowed, _ := lookupBinding(chain, expr.Symbol())
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
-	ty := t.ctx.SymbolType(sym)
+	ty := t.symbolType(sym)
 	setExpectedType(expr, ty)
 	setVarRefIdentifierTypes(&expr.BLangSimpleVarRef)
 	return ty, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveListConstructorExpr(chain *binding, expr *ast.BLangListConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if expectedType != nil {
+		return resolveListConstructorWithExpectedType(t, chain, expr, expectedType)
+	}
+	return resolveListConstructorInner(t, chain, expr)
+}
+
+func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
 	for i, memberExpr := range expr.Exprs {
-		memberTy, _, ok := t.resolveExpression(chain, memberExpr)
+		memberTy, _, ok := resolveExpression(t, chain, memberExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -1533,36 +1894,105 @@ func (t *TypeResolver) resolveListConstructorExpr(chain *binding, expr *ast.BLan
 		if semtypes.SingleShape(memberTy).IsEmpty() {
 			broadTy = memberTy
 		} else {
-			basicTy := semtypes.WidenToBasicTypes(memberTy)
-			broadTy = basicTy
+			broadTy = semtypes.WidenToBasicTypes(memberTy)
 		}
 		memberTypes[i] = broadTy
 	}
 
 	ld := semtypes.NewListDefinition()
-	listTy := ld.DefineListTypeWrapped(t.ctx.GetTypeEnv(), memberTypes, len(memberTypes), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
+	listTy := ld.DefineListTypeWrapped(t.typeEnv(), memberTypes, len(memberTypes), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 
 	setExpectedType(expr, listTy)
-	lat := semtypes.ToListAtomicType(t.tyCtx, listTy)
+	lat := semtypes.ToListAtomicType(t.typeContext(), listTy)
 	expr.AtomicType = *lat
 
 	return listTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveErrorConstructorExpr(chain *binding, expr *ast.BLangErrorConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	for _, memberExpr := range expr.Exprs {
+		if _, _, ok := resolveExpression(t, chain, memberExpr, nil); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+
+	resultType, lat, ok := selectListInherentType(t, expr, expectedType)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	for i, memberExpr := range expr.Exprs {
+		requiredType := lat.MemberAtInnerVal(i)
+		if semtypes.IsNever(requiredType) {
+			t.semanticError("too many members in list constructor", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		memberExpr.SetDeterminedType(nil)
+		if _, _, ok := resolveExpression(t, chain, memberExpr, requiredType); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+
+	expr.AtomicType = lat
+	setExpectedType(expr, resultType)
+	return resultType, defaultExpressionEffect(chain), true
+}
+
+func selectListInherentType(t typeResolver, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType, bool) {
+	expectedListType := semtypes.Intersect(expectedType, semtypes.LIST)
+	tc := t.typeContext()
+	if semtypes.IsEmpty(tc, expectedListType) {
+		t.semanticError("list type not found in expected type", expr.GetPosition())
+		return nil, semtypes.ListAtomicType{}, false
+	}
+	lat := semtypes.ToListAtomicType(tc, expectedListType)
+	if lat != nil {
+		return expectedListType, *lat, true
+	}
+
+	alts := semtypes.ListAlternatives(tc, expectedListType)
+
+	members := make([]semtypes.ListMemberInfo, len(expr.Exprs))
+	for i, expr := range expr.Exprs {
+		members[i] = semtypes.ListMemberInfo{Index: i, ValType: expr.GetDeterminedType()}
+	}
+
+	var validAlts []semtypes.ListAlternative
+	for _, alt := range alts {
+		if semtypes.ListAlternativeAllowsMembers(tc, alt, members) {
+			validAlts = append(validAlts, alt)
+		}
+	}
+
+	if len(validAlts) == 0 {
+		t.semanticError("no applicable inherent type for list constructor", expr.GetPosition())
+		return nil, semtypes.ListAtomicType{}, false
+	}
+	if len(validAlts) > 1 {
+		t.semanticError("ambiguous inherent type for list constructor", expr.GetPosition())
+		return nil, semtypes.ListAtomicType{}, false
+	}
+
+	selectedSemType := validAlts[0].SemType
+	lat = semtypes.ToListAtomicType(tc, selectedSemType)
+	if lat == nil {
+		t.semanticError("applicable type for list constructor is not atomic", expr.GetPosition())
+		return nil, semtypes.ListAtomicType{}, false
+	}
+
+	return selectedSemType, *lat, true
+}
+
+func resolveErrorConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	var errorTy semtypes.SemType
 
 	if expr.ErrorTypeRef != nil {
-		refTy, ok := t.resolveBType(expr.ErrorTypeRef, 0)
+		refTy, ok := resolveBType(t, expr.ErrorTypeRef, 0)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
-
 		if !semtypes.IsSubtypeSimple(refTy, semtypes.ERROR) {
-			t.ctx.SemanticError(
-				"error type parameter must be a subtype of error",
-				expr.ErrorTypeRef.GetPosition(),
-			)
+			t.semanticError("error type parameter must be a subtype of error", expr.ErrorTypeRef.GetPosition())
 			return nil, expressionEffect{}, false
 		} else {
 			errorTy = refTy
@@ -1571,23 +2001,30 @@ func (t *TypeResolver) resolveErrorConstructorExpr(chain *binding, expr *ast.BLa
 		errorTy = semtypes.ERROR
 	}
 
+	if expectedType != nil && semtypes.IsSameType(t.typeContext(), errorTy, semtypes.ERROR) {
+		errorPart := semtypes.Intersect(expectedType, semtypes.ERROR)
+		if !semtypes.IsEmpty(t.typeContext(), errorPart) {
+			errorTy = errorPart
+		}
+	}
+
 	setExpectedType(expr, errorTy)
 
 	for _, arg := range expr.PositionalArgs {
-		if _, _, ok := t.resolveExpression(chain, arg); !ok {
+		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
 	for _, arg := range expr.NamedArgs {
-		if _, _, ok := t.resolveExpression(chain, arg); !ok {
+		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
 	return errorTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveUnaryExpr(chain *binding, expr *ast.BLangUnaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, innerEffect, ok := t.resolveExpression(chain, expr.Expr)
+func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	exprTy, innerEffect, ok := resolveExpression(t, chain, expr.Expr, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1595,24 +2032,16 @@ func (t *TypeResolver) resolveUnaryExpr(chain *binding, expr *ast.BLangUnaryExpr
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
 	case model.OperatorKind_SUB:
-		if numLit, ok := expr.Expr.(*ast.BLangNumericLiteral); ok {
-			resultValue := numLit.Value.(int64) * -1
-			resultTy = semtypes.IntConst(resultValue)
-		} else if lit, ok := expr.Expr.(*ast.BLangLiteral); semtypes.IsSubtypeSimple(exprTy, semtypes.INT) && ok {
-			resultValue := lit.Value.(int64) * -1
-			resultTy = semtypes.IntConst(resultValue)
-		} else {
-			resultTy = exprTy
-		}
+		resultTy = negateNumericType(t, expr, exprTy)
 	case model.OperatorKind_ADD:
 		resultTy = exprTy
 
 	case model.OperatorKind_BITWISE_COMPLEMENT:
 		if !semtypes.IsSubtypeSimple(exprTy, semtypes.INT) {
-			t.ctx.SemanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.semanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		if semtypes.IsSameType(t.tyCtx, exprTy, semtypes.INT) {
+		if semtypes.IsSameType(t.typeContext(), exprTy, semtypes.INT) {
 			resultTy = exprTy
 			break
 		}
@@ -1620,7 +2049,7 @@ func (t *TypeResolver) resolveUnaryExpr(chain *binding, expr *ast.BLangUnaryExpr
 		if !shape.IsEmpty() {
 			value, ok := shape.Get().Value.(int64)
 			if !ok {
-				t.ctx.InternalError(fmt.Sprintf("unexpected singleton type for %s: %T", string(expr.GetOperatorKind()), shape.Get().Value), expr.GetPosition())
+				t.internalError(fmt.Sprintf("unexpected singleton type for %s: %T", string(expr.GetOperatorKind()), shape.Get().Value), expr.GetPosition())
 				return nil, expressionEffect{}, false
 			}
 			resultTy = semtypes.IntConst(^value)
@@ -1630,36 +2059,54 @@ func (t *TypeResolver) resolveUnaryExpr(chain *binding, expr *ast.BLangUnaryExpr
 
 	case model.OperatorKind_NOT:
 		if semtypes.IsSubtypeSimple(exprTy, semtypes.BOOLEAN) {
-			if semtypes.IsSameType(t.tyCtx, exprTy, semtypes.BOOLEAN) {
+			if semtypes.IsSameType(t.typeContext(), exprTy, semtypes.BOOLEAN) {
 				resultTy = semtypes.BOOLEAN
 			} else {
 				resultTy = semtypes.Diff(semtypes.BOOLEAN, exprTy)
 			}
 		} else {
-			t.ctx.SemanticError(fmt.Sprintf("expect boolean type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.semanticError(fmt.Sprintf("expect boolean type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
 		setExpectedType(expr, resultTy)
 		return resultTy, expressionEffect{ifTrue: innerEffect.ifFalse, ifFalse: innerEffect.ifTrue}, true
 	default:
-		t.ctx.InternalError(fmt.Sprintf("unsupported unary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.internalError(fmt.Sprintf("unsupported unary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	setExpectedType(expr, resultTy)
-
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	if isLogicalExpression(expr) {
-		return t.resolveLogicalExpr(chain, expr)
+func negateNumericType(t typeResolver, expr *ast.BLangUnaryExpr, exprTy semtypes.SemType) semtypes.SemType {
+	shape := semtypes.SingleShape(exprTy)
+	if shape.IsEmpty() {
+		return exprTy
 	}
-	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+	switch v := shape.Get().Value.(type) {
+	case int64:
+		return semtypes.IntConst(v * -1)
+	case float64:
+		return semtypes.FloatConst(v * -1)
+	case big.Rat:
+		negOne := new(big.Rat).SetInt64(-1)
+		result := new(big.Rat).Mul(&v, negOne)
+		return semtypes.DecimalConst(*result)
+	default:
+		return exprTy
+	}
+}
+
+func resolveBinaryExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	if isLogicalExpression(expr) {
+		return resolveLogicalExpr(t, chain, expr)
+	}
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1667,12 +2114,12 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	var resultTy semtypes.SemType
 
 	if isEqualityExpr(expr) {
-		return t.resolveEqualityExpr(lhsEffect.ifTrue, expr)
+		return resolveEqualityExpr(t, lhsEffect.ifTrue, expr)
 	} else if isRangeExpr(expr) {
-		resultTy = createIteratorType(t.ctx.GetTypeEnv(), semtypes.INT, semtypes.NIL)
+		resultTy = createIteratorType(t.typeEnv(), semtypes.INT, semtypes.NIL)
 	} else {
 		var nilLifted bool
-		resultTy, nilLifted = t.NilLiftingExprResultTy(lhsTy, rhsTy, expr)
+		resultTy, nilLifted = nilLiftingExprResultTy(t, lhsTy, rhsTy, expr)
 		if resultTy == nil {
 			return nil, expressionEffect{}, false
 		}
@@ -1682,7 +2129,6 @@ func (t *TypeResolver) resolveBinaryExpr(chain *binding, expr *ast.BLangBinaryEx
 	}
 
 	setExpectedType(expr, resultTy)
-
 	effect := defaultExpressionEffect(lhsEffect.ifTrue)
 	return resultTy, effect, true
 }
@@ -1696,10 +2142,10 @@ func isSingletonBool(ty semtypes.SemType, value bool) bool {
 	}
 }
 
-func (t *TypeResolver) resolveEqualityExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveEqualityExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
 	var effect expressionEffect
 	if expr.OpKind == model.OperatorKind_EQUAL || expr.OpKind == model.OperatorKind_NOT_EQUAL {
-		effect = t.equalityNarrowingEffect(chain, expr)
+		effect = equalityNarrowingEffect(t, chain, expr)
 	} else {
 		effect = defaultExpressionEffect(chain)
 	}
@@ -1708,24 +2154,24 @@ func (t *TypeResolver) resolveEqualityExpr(chain *binding, expr *ast.BLangBinary
 	return resultTy, effect, true
 }
 
-func (t *TypeResolver) resolveLogicalExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+func resolveLogicalExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
 	switch expr.OpKind {
 	case model.OperatorKind_AND:
-		return t.resolveAndExpr(chain, expr)
+		return resolveAndExpr(t, chain, expr)
 	case model.OperatorKind_OR:
-		return t.resolveOrExpr(chain, expr)
+		return resolveOrExpr(t, chain, expr)
 	default:
-		t.ctx.InternalError(fmt.Sprintf("Unexpected logical expression op %s", string(expr.OpKind)), expr.GetPosition())
+		t.internalError(fmt.Sprintf("Unexpected logical expression op %s", string(expr.OpKind)), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 }
 
-func (t *TypeResolver) resolveAndExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+func resolveAndExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifTrue, expr.RhsExpr)
+	rhsTy, rhsEffect, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1746,17 +2192,17 @@ func (t *TypeResolver) resolveAndExpr(chain *binding, expr *ast.BLangBinaryExpr)
 
 	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifTrue)
 	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifTrue)
-	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffTrue, semtypes.Intersect)
-	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, mergeChains(t.ctx, lhsEffect.ifTrue, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
+	ifTrue := mergeChains(t, lhsEffect.ifTrue, rhsDiffTrue, semtypes.Intersect)
+	ifFalse := mergeChains(t, lhsEffect.ifFalse, mergeChains(t, lhsEffect.ifTrue, rhsDiffFalse, semtypes.Intersect), semtypes.Union)
 	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
 }
 
-func (t *TypeResolver) resolveOrExpr(chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := t.resolveExpression(chain, expr.LhsExpr)
+func resolveOrExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := t.resolveExpression(lhsEffect.ifFalse, expr.RhsExpr)
+	rhsTy, rhsEffect, ok := resolveExpression(t, lhsEffect.ifFalse, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1777,17 +2223,17 @@ func (t *TypeResolver) resolveOrExpr(chain *binding, expr *ast.BLangBinaryExpr) 
 
 	rhsDiffTrue := diff(rhsEffect.ifTrue, lhsEffect.ifFalse)
 	rhsDiffFalse := diff(rhsEffect.ifFalse, lhsEffect.ifFalse)
-	ifTrue := mergeChains(t.ctx, lhsEffect.ifTrue, mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffTrue, semtypes.Intersect), semtypes.Union)
-	ifFalse := mergeChains(t.ctx, lhsEffect.ifFalse, rhsDiffFalse, semtypes.Intersect)
+	ifTrue := mergeChains(t, lhsEffect.ifTrue, mergeChains(t, lhsEffect.ifFalse, rhsDiffTrue, semtypes.Intersect), semtypes.Union)
+	ifFalse := mergeChains(t, lhsEffect.ifFalse, rhsDiffFalse, semtypes.Intersect)
 	return resultTy, expressionEffect{ifTrue: ifTrue, ifFalse: ifFalse}, true
 }
 
-func (t *TypeResolver) equalityNarrowingEffect(chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
+func equalityNarrowingEffect(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
 	lhsRef, lhsIsVarRef := varRefExp(chain, &expr.LhsExpr)
 	rhsTy := expr.RhsExpr.GetDeterminedType()
 	rhsIsSingleton := semtypes.SingleShape(rhsTy).IsPresent()
 	if lhsIsVarRef && rhsIsSingleton {
-		effect := t.buildEqualityNarrowing(chain, lhsRef, rhsTy)
+		effect := buildEqualityNarrowing(t, chain, lhsRef, rhsTy)
 		if expr.OpKind == model.OperatorKind_NOT_EQUAL {
 			return expressionEffect{ifTrue: effect.ifFalse, ifFalse: effect.ifTrue}
 		}
@@ -1797,7 +2243,7 @@ func (t *TypeResolver) equalityNarrowingEffect(chain *binding, expr *ast.BLangBi
 	lhsTy := expr.LhsExpr.GetDeterminedType()
 	lhsIsSingleton := semtypes.SingleShape(lhsTy).IsPresent()
 	if rhsIsVarRef && lhsIsSingleton {
-		effect := t.buildEqualityNarrowing(chain, rhsRef, lhsTy)
+		effect := buildEqualityNarrowing(t, chain, rhsRef, lhsTy)
 		if expr.OpKind == model.OperatorKind_NOT_EQUAL {
 			return expressionEffect{ifTrue: effect.ifFalse, ifFalse: effect.ifTrue}
 		}
@@ -1806,14 +2252,13 @@ func (t *TypeResolver) equalityNarrowingEffect(chain *binding, expr *ast.BLangBi
 	return defaultExpressionEffect(chain)
 }
 
-func (t *TypeResolver) buildEqualityNarrowing(chain *binding, ref model.SymbolRef, singletonTy semtypes.SemType) expressionEffect {
-	ctx := t.ctx
-	symbolTy := ctx.SymbolType(ref)
+func buildEqualityNarrowing(t typeResolver, chain *binding, ref model.SymbolRef, singletonTy semtypes.SemType) expressionEffect {
+	symbolTy := t.symbolType(ref)
 	trueTy := semtypes.Intersect(symbolTy, singletonTy)
-	trueSym := narrowSymbol(ctx, ref, trueTy)
+	trueSym := narrowSymbol(t, ref, trueTy)
 	trueChain := &binding{ref: ref, narrowedSymbol: trueSym, prev: chain}
 	falseTy := semtypes.Diff(symbolTy, singletonTy)
-	falseSym := narrowSymbol(ctx, ref, falseTy)
+	falseSym := narrowSymbol(t, ref, falseTy)
 	falseChain := &binding{ref: ref, narrowedSymbol: falseSym, prev: chain}
 	return expressionEffect{ifTrue: trueChain, ifFalse: falseChain}
 }
@@ -1822,10 +2267,7 @@ var additiveSupportedTypes = semtypes.Union(semtypes.NUMBER, semtypes.STRING)
 
 var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
 
-// NilLiftingExprResultTy calculates the result type for binary operators with nil-lifting support.
-// It returns the result type and a boolean indicating whether nil-lifting was applied.
-// The caller is responsible for applying the nil union if needed.
-func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
+func nilLiftingExprResultTy(t typeResolver, lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
 	nilLifted := false
 
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
@@ -1841,54 +2283,53 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 	numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
 
 	if numLhsBits > 1 || numRhsBits > 1 {
-		t.ctx.SemanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, false
 	}
 
 	if isRelationalExpr(expr) {
-		if semtypes.Comparable(t.tyCtx, lhsBasicTy, rhsBasicTy) {
+		if semtypes.Comparable(t.typeContext(), lhsBasicTy, rhsBasicTy) {
 			return semtypes.BOOLEAN, false
 		}
-		t.ctx.SemanticError("values are not comparable", expr.GetPosition())
+		t.semanticError("values are not comparable", expr.GetPosition())
 		return nil, false
 	}
 
 	if isMultiplicativeExpr(expr) {
 		if !isNumericType(lhsBasicTy) || !isNumericType(rhsBasicTy) {
-			t.ctx.SemanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.semanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
 		if lhsBasicTy == rhsBasicTy {
 			return lhsBasicTy, nilLifted
 		}
-		ctx := t.tyCtx
+		ctx := t.typeContext()
 		if semtypes.IsSubtype(ctx, rhsBasicTy, semtypes.INT) ||
 			(expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, lhsBasicTy, semtypes.INT)) {
-			t.ctx.Unimplemented("type coercion not supported", expr.GetPosition())
+			t.unimplemented("type coercion not supported", expr.GetPosition())
 			return nil, false
 		}
-		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
+		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
 	if isAdditiveExpr(expr) {
-		ctx := t.tyCtx
+		ctx := t.typeContext()
 		if !semtypes.IsSubtype(ctx, lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, additiveSupportedTypes) {
-			t.ctx.SemanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.semanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
 		if lhsBasicTy == rhsBasicTy {
 			return lhsBasicTy, nilLifted
 		}
-		// TODO: special case xml + string case when we support xml
-		t.ctx.SemanticError("both operands must belong to same basic type", expr.GetPosition())
+		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
 		return nil, false
 	}
 
 	if isShiftExpr(expr) {
-		ctx := t.tyCtx
+		ctx := t.typeContext()
 		if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-			t.ctx.SemanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.semanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
 		var resultTy semtypes.SemType = semtypes.INT
@@ -1901,14 +2342,13 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 				}
 			}
 		}
-
 		return resultTy, nilLifted
 	}
 
 	if isBitWiseExpr(expr) {
-		ctx := t.tyCtx
+		ctx := t.typeContext()
 		if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-			t.ctx.SemanticError("expect integer types for bitwise operators", expr.GetPosition())
+			t.semanticError("expect integer types for bitwise operators", expr.GetPosition())
 			return nil, false
 		}
 
@@ -1929,21 +2369,20 @@ func (t *TypeResolver) NilLiftingExprResultTy(lhsTy, rhsTy semtypes.SemType, exp
 				}
 			}
 		default:
-			t.ctx.InternalError(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+			t.internalError(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, false
 		}
 
 		return resultTy, nilLifted
 	}
 
-	t.ctx.InternalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+	t.internalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
 	return nil, false
 }
 
 func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemType {
 	od := semtypes.NewObjectDefinition()
 
-	// record{| T value;|}
 	fields := []semtypes.Field{
 		semtypes.FieldFrom("value", t, false, false),
 	}
@@ -1952,7 +2391,6 @@ func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemTyp
 
 	resultTy := semtypes.Union(recordTy, c)
 
-	// function next() returns record {| T value; |}|C;
 	ld := semtypes.NewListDefinition()
 	listTy := ld.DefineListTypeWrapped(env, []semtypes.SemType{}, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	fd := semtypes.NewFunctionDefinition()
@@ -1975,15 +2413,15 @@ func createClosedRecordType(env semtypes.Env, fields []semtypes.Field, rest semt
 	return md.DefineMappingTypeWrapped(env, fields, rest)
 }
 
-func (t *TypeResolver) resolveIndexBasedAccess(chain *binding, expr *ast.BLangIndexBasedAccess) (semtypes.SemType, expressionEffect, bool) {
+func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangIndexBasedAccess) (semtypes.SemType, expressionEffect, bool) {
 	containerExpr := expr.Expr
-	containerExprTy, _, ok := t.resolveExpression(chain, containerExpr)
+	containerExprTy, _, ok := resolveExpression(t, chain, containerExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
 	keyExpr := expr.IndexExpr
-	keyExprTy, _, ok := t.resolveExpression(chain, keyExpr)
+	keyExprTy, _, ok := resolveExpression(t, chain, keyExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1991,9 +2429,9 @@ func (t *TypeResolver) resolveIndexBasedAccess(chain *binding, expr *ast.BLangIn
 	var resultTy semtypes.SemType
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.LIST) {
-		resultTy = semtypes.ListMemberTypeInnerVal(t.tyCtx, containerExprTy, keyExprTy)
+		resultTy = semtypes.ListMemberTypeInnerVal(t.typeContext(), containerExprTy, keyExprTy)
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
-		memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyExprTy)
+		memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), containerExprTy, keyExprTy)
 		maybeMissing := semtypes.ContainsUndef(memberTy)
 		if maybeMissing {
 			memberTy = semtypes.Union(semtypes.Diff(memberTy, semtypes.UNDEF), semtypes.NIL)
@@ -2002,26 +2440,25 @@ func (t *TypeResolver) resolveIndexBasedAccess(chain *binding, expr *ast.BLangIn
 	} else if semtypes.IsSubtypeSimple(containerExprTy, semtypes.STRING) {
 		resultTy = semtypes.STRING
 	} else {
-		t.ctx.SemanticError("unsupported container type for index based access", expr.GetPosition())
+		t.semanticError("unsupported container type for index based access", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	setExpectedType(expr, resultTy)
-
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveFieldBaseAccess(chain *binding, expr *ast.BLangFieldBaseAccess) (semtypes.SemType, expressionEffect, bool) {
-	containerExprTy, _, ok := t.resolveExpression(chain, expr.Expr)
+func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangFieldBaseAccess) (semtypes.SemType, expressionEffect, bool) {
+	containerExprTy, _, ok := resolveExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	keyTy := semtypes.StringConst(expr.Field.Value)
 
 	if semtypes.IsSubtypeSimple(containerExprTy, semtypes.OBJECT) {
-		memberTy := semtypes.ObjectMemberType(t.tyCtx, keyTy, containerExprTy)
+		memberTy := semtypes.ObjectMemberType(t.typeContext(), keyTy, containerExprTy)
 		if memberTy == nil {
-			t.ctx.SemanticError("field not found in object type", expr.GetPosition())
+			t.semanticError("field not found in object type", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
 		setExpectedType(expr, memberTy)
@@ -2030,14 +2467,14 @@ func (t *TypeResolver) resolveFieldBaseAccess(chain *binding, expr *ast.BLangFie
 	}
 
 	if !semtypes.IsSubtypeSimple(containerExprTy, semtypes.MAPPING) {
-		t.ctx.SemanticError("unsupported container type for field access", expr.GetPosition())
+		t.semanticError("unsupported container type for field access", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
-	memberTy := semtypes.MappingMemberTypeInner(t.tyCtx, containerExprTy, keyTy)
+	memberTy := semtypes.MappingMemberTypeInner(t.typeContext(), containerExprTy, keyTy)
 	maybeMissing := semtypes.ContainsUndef(memberTy)
 	if maybeMissing {
-		t.ctx.SemanticError("field base access is only possible for required fields", expr.GetPosition())
+		t.semanticError("field base access is only possible for required fields", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
@@ -2046,10 +2483,10 @@ func (t *TypeResolver) resolveFieldBaseAccess(chain *binding, expr *ast.BLangFie
 	return memberTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveInvocation(chain *binding, expr *ast.BLangInvocation) (semtypes.SemType, expressionEffect, bool) {
+func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation) (semtypes.SemType, expressionEffect, bool) {
 	symbol := expr.RawSymbol
 	if symbol == nil {
-		t.ctx.InternalError("invocation has no symbol", expr.GetPosition())
+		t.internalError("invocation has no symbol", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	var (
@@ -2059,11 +2496,11 @@ func (t *TypeResolver) resolveInvocation(chain *binding, expr *ast.BLangInvocati
 	)
 	switch s := symbol.(type) {
 	case *deferredMethodSymbol:
-		ty, effect, resolved = t.resolveMethodCall(chain, expr, s)
+		ty, effect, resolved = resolveMethodCall(t, chain, expr, s)
 	case *model.SymbolRef:
-		ty, effect, resolved = t.resolveFunctionCall(chain, expr, *s)
+		ty, effect, resolved = resolveFunctionCall(t, chain, expr, *s)
 	default:
-		t.ctx.InternalError(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol), expr.GetPosition())
+		t.internalError(fmt.Sprintf("expected *model.SymbolRef, got %T", symbol), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	if !resolved {
@@ -2078,67 +2515,53 @@ func (t *TypeResolver) resolveInvocation(chain *binding, expr *ast.BLangInvocati
 	return ty, effect, true
 }
 
-func (t *TypeResolver) resolveMethodCall(chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
-	recieverTy, _, ok := t.resolveExpression(chain, expr.Expr)
+func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
+	recieverTy, _, ok := resolveExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 	if semtypes.IsSubtypeSimple(recieverTy, semtypes.OBJECT) {
-		return t.resolveObjectMethodCall(chain, expr, methodSymbol)
+		return resolveObjectMethodCall(t, chain, expr, methodSymbol)
 	}
 	var symbolRef model.SymbolRef
 	var pkgAlias ast.BLangIdentifier
 	switch {
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.LIST):
-		symbolRef, pkgAlias, ok = t.resolveLangLibImport(array.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, array.PackageName, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.INT):
-		symbolRef, pkgAlias, ok = t.resolveLangLibImport(bInt.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bInt.PackageName, methodSymbol.name, expr)
 	case semtypes.IsSubtypeSimple(recieverTy, semtypes.MAPPING):
-		symbolRef, pkgAlias, ok = t.resolveLangLibImport(bMap.PackageName, methodSymbol.name, expr)
+		symbolRef, pkgAlias, ok = resolveLangLibImport(t, bMap.PackageName, methodSymbol.name, expr)
 	default:
-		t.ctx.Unimplemented("lang.value not implemented", expr.GetPosition())
+		t.unimplemented("lang.value not implemented", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	argTys := make([]semtypes.SemType, len(expr.ArgExprs)+1)
 	argExprs := make([]ast.BLangExpression, len(expr.ArgExprs)+1)
 	argExprs[0] = expr.Expr
-	argTys[0] = recieverTy
 	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := t.resolveExpression(chain, arg)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		argTys[i+1] = argTy
 		argExprs[i+1] = arg
-	}
-	baseSymbol := t.ctx.GetSymbol(symbolRef)
-	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
-		symbolRef = genericFn.Monomorphize(argTys)
-	} else if _, ok := baseSymbol.(model.FunctionSymbol); !ok {
-		t.ctx.InternalError("symbol is not a function symbol", expr.GetPosition())
-		return nil, expressionEffect{}, false
 	}
 	expr.SetSymbol(symbolRef)
 	expr.ArgExprs = argExprs
 	expr.Expr = nil
 	expr.PkgAlias = &pkgAlias
-	return t.resolveFunctionCall(chain, expr, symbolRef)
+	return resolveFunctionCall(t, chain, expr, symbolRef)
 }
 
-func (t *TypeResolver) resolveObjectMethodCall(chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
+func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy := expr.Expr.GetDeterminedType()
-	fnTy := semtypes.ObjectMemberType(t.tyCtx, semtypes.StringConst(methodSymbol.name), recieverTy)
+	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodSymbol.name), recieverTy)
 	if fnTy == nil {
-		t.ctx.SemanticError("method not found: "+methodSymbol.name, expr.GetPosition())
+		t.semanticError("method not found: "+methodSymbol.name, expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := t.resolveExpression(chain, arg)
+		argTy, _, ok := resolveExpression(t, chain, arg, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -2146,27 +2569,27 @@ func (t *TypeResolver) resolveObjectMethodCall(chain *binding, expr *ast.BLangIn
 	}
 
 	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	retTy := semtypes.FunctionReturnType(t.tyCtx, fnTy, argListTy)
+	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	retTy := semtypes.FunctionReturnType(t.typeContext(), fnTy, argListTy)
 
 	sig := model.FunctionSignature{ParamTypes: argTys, ReturnType: retTy}
-	symbolRef := t.ctx.CreateFunctionSymbol(methodSymbol.space, methodSymbol.name, sig, fnTy)
+	symbolRef := t.createFunctionSymbol(methodSymbol.space, methodSymbol.name, sig, fnTy)
 	expr.SetSymbol(symbolRef)
 
 	setExpectedType(expr, retTy)
 	return retTy, defaultExpressionEffect(chain), true
 }
 
-func (t *TypeResolver) resolveLangLibImport(pkgName string, methodName string, expr *ast.BLangInvocation) (model.SymbolRef, ast.BLangIdentifier, bool) {
-	symbolSpace, ok := t.importedSymbols[pkgName]
+func resolveLangLibImport(t typeResolver, pkgName string, methodName string, expr *ast.BLangInvocation) (model.SymbolRef, ast.BLangIdentifier, bool) {
+	symbolSpace, ok := t.lookupImportedSymbols(pkgName)
 	if !ok {
-		t.ctx.InternalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
+		t.internalError(fmt.Sprintf("%s symbol space not found", pkgName), expr.GetPosition())
 		return model.SymbolRef{}, ast.BLangIdentifier{}, false
 	}
 	basePos := expr.GetPosition()
 	pkgAlias := ast.BLangIdentifier{Value: pkgName}
 	pkgAlias.SetPosition(basePos)
-	if _, exists := t.implicitImports[pkgName]; !exists {
+	if !t.hasImplicitImport(pkgName) {
 		moduleName := strings.TrimPrefix(pkgName, "lang.")
 		orgIdent := &ast.BLangIdentifier{Value: "ballerina"}
 		langIdent := ast.BLangIdentifier{Value: "lang"}
@@ -2177,22 +2600,22 @@ func (t *TypeResolver) resolveLangLibImport(pkgName string, methodName string, e
 			PkgNameComps: []ast.BLangIdentifier{langIdent, moduleIdent},
 			Alias:        &pkgAlias,
 		}
-		ast.Walk(t, &importNode)
-		t.implicitImports[pkgName] = importNode
+		setOtherNodesAsNever(&importNode)
+		t.addImplicitImport(pkgName, importNode)
 	}
 	symbolRef, ok := symbolSpace.GetSymbol(methodName)
 	if !ok {
-		t.ctx.SemanticError("method not found: "+methodName, expr.GetPosition())
+		t.semanticError("method not found: "+methodName, expr.GetPosition())
 		return model.SymbolRef{}, ast.BLangIdentifier{}, false
 	}
 	return symbolRef, pkgAlias, true
 }
 
-func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
+func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	currentChain := chain
 	for i, arg := range expr.ArgExprs {
-		argTy, argEffect, ok := t.resolveExpression(currentChain, arg)
+		argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -2200,7 +2623,7 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 		argTys[i] = argTy
 	}
 
-	baseSymbol := t.ctx.GetSymbol(symbolRef)
+	baseSymbol := t.getSymbol(symbolRef)
 	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
 		symbolRef = genericFn.Monomorphize(argTys)
 		expr.SetSymbol(symbolRef)
@@ -2208,42 +2631,52 @@ func (t *TypeResolver) resolveFunctionCall(chain *binding, expr *ast.BLangInvoca
 
 	symbolRef = lookupSymbol(currentChain, symbolRef)
 	expr.SetSymbol(symbolRef)
-	fnTy := t.ctx.SymbolType(symbolRef)
+	fnTy := t.symbolType(symbolRef)
 	if fnTy == nil {
-		t.ctx.InternalError("function symbol has no type", expr.GetPosition())
+		t.internalError("function symbol has no type", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	fnTy = semtypes.Intersect(fnTy, semtypes.FUNCTION)
-	tyCtx := t.tyCtx
-	if semtypes.IsEmpty(tyCtx, fnTy) {
+	if semtypes.IsEmpty(t.typeContext(), fnTy) {
 		// This can only happen when function call is not well-typed and since we
 		// ensure funcTy is a function subtype, this can only be caused by invalid args
-		t.ctx.SemanticError("not a function value", expr.GetPosition())
+		t.semanticError("not a function value", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(t.ctx.GetTypeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
+	if paramListTy != nil {
+		for i, arg := range expr.ArgExprs {
+			key := semtypes.IntConst(int64(i))
+			paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
+			arg.SetDeterminedType(nil)
+			argTy, _, ok := resolveExpression(t, chain, arg, paramTy)
+			if !ok {
+				return nil, expressionEffect{}, false
+			}
+			argTys[i] = argTy
+		}
+	}
 
-	retTy := semtypes.FunctionReturnType(tyCtx, fnTy, argListTy)
+	argLd := semtypes.NewListDefinition()
+	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+
+	retTy := semtypes.FunctionReturnType(t.typeContext(), fnTy, argListTy)
 	if retTy == nil {
-		// This can only happen when function call is not well-typed and since we
-		// ensure funcTy is a function subtype, this can only be caused by invalid args
-		t.ctx.SemanticError("incompatible arguments for function call", expr.GetPosition())
+		t.semanticError("incompatible arguments for function call", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
 	setExpectedType(expr, retTy)
-
 	return retTy, defaultExpressionEffect(currentChain), true
 }
 
-func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) (semtypes.SemType, bool) {
+func resolveBType(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {
 	bLangNode := btype.(ast.BLangNode)
 	if bLangNode.GetDeterminedType() != nil {
 		return bLangNode.GetDeterminedType(), true
 	}
-	res, ok := tr.resolveBTypeInner(btype, depth)
+	res, ok := resolveBTypeInner(t, btype, depth)
 	if !ok {
 		return nil, false
 	}
@@ -2254,8 +2687,8 @@ func (tr *TypeResolver) resolveBType(btype ast.BType, depth int) (semtypes.SemTy
 	return res, true
 }
 
-func (tr *TypeResolver) resolveTypeDataPair(typeData *model.TypeData, depth int) (semtypes.SemType, bool) {
-	ty, ok := tr.resolveBType(typeData.TypeDescriptor.(ast.BType), depth)
+func resolveTypeDataPair(t typeResolver, typeData *model.TypeData, depth int) (semtypes.SemType, bool) {
+	ty, ok := resolveBType(t, typeData.TypeDescriptor.(ast.BType), depth)
 	if !ok {
 		return nil, false
 	}
@@ -2263,7 +2696,7 @@ func (tr *TypeResolver) resolveTypeDataPair(typeData *model.TypeData, depth int)
 	return ty, true
 }
 
-func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.SemType, bool) {
+func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {
 	switch ty := btype.(type) {
 	case *ast.BLangValueType:
 		switch ty.TypeKind {
@@ -2284,11 +2717,11 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		case model.TypeKind_BYTE:
 			return semtypes.BYTE, true
 		case model.TypeKind_ANYDATA:
-			return semtypes.CreateAnydata(tr.tyCtx), true
+			return semtypes.CreateAnydata(t.typeContext()), true
 		case model.TypeKind_HANDLE:
 			return semtypes.HANDLE, true
 		default:
-			tr.ctx.InternalError("unexpected type kind", nil)
+			t.internalError("unexpected type kind", nil)
 			return nil, false
 		}
 	case *ast.BLangArrayType:
@@ -2297,46 +2730,46 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		if defn == nil {
 			d := semtypes.NewListDefinition()
 			ty.Definition = &d
-			t, ok := tr.resolveTypeDataPair(&ty.Elemtype, depth+1)
+			elemTy, ok := resolveTypeDataPair(t, &ty.Elemtype, depth+1)
 			if !ok {
 				return nil, false
 			}
 			for i := len(ty.Sizes); i > 0; i-- {
 				lenExp := ty.Sizes[i-1]
 				if lenExp == nil {
-					t = d.DefineListTypeWrappedWithEnvSemType(tr.ctx.GetTypeEnv(), t)
+					elemTy = d.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), elemTy)
 				} else {
 					length := int(lenExp.(*ast.BLangLiteral).Value.(int64))
-					t = d.DefineListTypeWrappedWithEnvSemTypesInt(tr.ctx.GetTypeEnv(), []semtypes.SemType{t}, length)
+					elemTy = d.DefineListTypeWrappedWithEnvSemTypesInt(t.typeEnv(), []semtypes.SemType{elemTy}, length)
 				}
 			}
-			semTy = t
+			semTy = elemTy
 		} else {
-			semTy = defn.GetSemType(tr.ctx.GetTypeEnv())
+			semTy = defn.GetSemType(t.typeEnv())
 		}
 		return semTy, true
 	case *ast.BLangUnionTypeNode:
-		lhs, ok := tr.resolveTypeDataPair(ty.Lhs(), depth+1)
+		lhs, ok := resolveTypeDataPair(t, ty.Lhs(), depth+1)
 		if !ok {
 			return nil, false
 		}
-		rhs, ok := tr.resolveTypeDataPair(ty.Rhs(), depth+1)
+		rhs, ok := resolveTypeDataPair(t, ty.Rhs(), depth+1)
 		if !ok {
 			return nil, false
 		}
 		return semtypes.Union(lhs, rhs), true
 	case *ast.BLangIntersectionTypeNode:
-		lhs, ok := tr.resolveTypeDataPair(ty.Lhs(), depth+1)
+		lhs, ok := resolveTypeDataPair(t, ty.Lhs(), depth+1)
 		if !ok {
 			return nil, false
 		}
-		rhs, ok := tr.resolveTypeDataPair(ty.Rhs(), depth+1)
+		rhs, ok := resolveTypeDataPair(t, ty.Rhs(), depth+1)
 		if !ok {
 			return nil, false
 		}
 		result := semtypes.Intersect(lhs, rhs)
-		if semtypes.IsEmpty(tr.tyCtx, result) {
-			tr.ctx.SemanticError("intersection type is empty (equivalent to never)", ty.GetPosition())
+		if semtypes.IsEmpty(t.typeContext(), result) {
+			t.semanticError("intersection type is empty (equivalent to never)", ty.GetPosition())
 			return nil, false
 		}
 		return result, true
@@ -2347,7 +2780,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		if ty.IsTop() {
 			return semtypes.ERROR, true
 		} else {
-			detailTy, ok := tr.resolveBType(ty.DetailType.TypeDescriptor.(ast.BType), depth+1)
+			detailTy, ok := resolveBType(t, ty.DetailType.TypeDescriptor.(ast.BType), depth+1)
 			if !ok {
 				return nil, false
 			}
@@ -2355,32 +2788,30 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			return semtypes.ErrorWithDetail(detailTy), true
 		}
 	case *ast.BLangUserDefinedType:
-		ast.Walk(tr, &ty.TypeName)
-		ast.Walk(tr, &ty.PkgAlias)
+		setOtherNodesAsNever(&ty.TypeName)
+		setOtherNodesAsNever(&ty.PkgAlias)
 		symbol := ty.Symbol()
 		if ty.PkgAlias.Value != "" {
-			// imported symbol should have been already resolved
-			return tr.ctx.SymbolType(symbol), true
+			return t.symbolType(symbol), true
 		}
-		defn, ok := tr.ctx.GetTypeDefinition(symbol)
+		defn, ok := t.getTypeDefinition(symbol)
 		if !ok {
-			// This should have been detected by the symbol resolver
-			tr.ctx.InternalError("type definition not found", nil)
+			t.internalError("type definition not found", nil)
 			return nil, false
 		}
-		return tr.resolveTypeDefinition(defn, depth)
+		return resolveTypeDefinition(t, defn, depth)
 	case *ast.BLangFiniteTypeNode:
 		var result semtypes.SemType = semtypes.NEVER
 		for _, value := range ty.ValueSpace {
-			ty, _, ok := tr.resolveExpression(nil, value)
+			valueTy, _, ok := resolveExpression(t, nil, value, nil)
 			if !ok {
 				return nil, false
 			}
-			result = semtypes.Union(result, ty)
+			result = semtypes.Union(result, valueTy)
 		}
 		return result, true
 	case *ast.BLangConstrainedType:
-		if _, ok := tr.resolveTypeDataPair(&ty.Type, depth+1); !ok {
+		if _, ok := resolveTypeDataPair(t, &ty.Type, depth+1); !ok {
 			return nil, false
 		}
 		defn := ty.Definition
@@ -2389,24 +2820,24 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			case model.TypeKind_MAP:
 				d := semtypes.NewMappingDefinition()
 				ty.Definition = &d
-				rest, ok := tr.resolveTypeDataPair(&ty.Constraint, depth+1)
+				rest, ok := resolveTypeDataPair(t, &ty.Constraint, depth+1)
 				if !ok {
 					return nil, false
 				}
-				return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), nil, rest), true
+				return d.DefineMappingTypeWrapped(t.typeEnv(), nil, rest), true
 			default:
-				tr.ctx.Unimplemented("unsupported base type kind", nil)
+				t.unimplemented("unsupported base type kind", nil)
 				return nil, false
 			}
 		} else {
-			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+			return defn.GetSemType(t.typeEnv()), true
 		}
 	case *ast.BLangBuiltInRefTypeNode:
 		switch ty.TypeKind {
 		case model.TypeKind_MAP:
 			return semtypes.MAPPING, true
 		default:
-			tr.ctx.InternalError("Unexpected builtin type kind", ty.GetPosition())
+			t.internalError("Unexpected builtin type kind", ty.GetPosition())
 		}
 		return nil, false
 	case *ast.BLangTupleTypeNode:
@@ -2416,7 +2847,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			ty.Definition = &d
 			members := make([]semtypes.SemType, len(ty.Members))
 			for i, member := range ty.Members {
-				memberTy, ok := tr.resolveBType(member.TypeDesc.(ast.BType), depth+1)
+				memberTy, ok := resolveBType(t, member.TypeDesc.(ast.BType), depth+1)
 				if !ok {
 					return nil, false
 				}
@@ -2424,50 +2855,47 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			}
 			rest, ok := semtypes.SemType(semtypes.NEVER), true //nolint:ineffassign // ok default overwritten when ty.Rest is non-nil
 			if ty.Rest != nil {
-				rest, ok = tr.resolveBType(ty.Rest.(ast.BType), depth+1)
+				rest, ok = resolveBType(t, ty.Rest.(ast.BType), depth+1)
 				if !ok {
 					return nil, false
 				}
 			}
-			return d.DefineListTypeWrappedWithEnvSemTypesSemType(tr.ctx.GetTypeEnv(), members, rest), true
+			return d.DefineListTypeWrappedWithEnvSemTypesSemType(t.typeEnv(), members, rest), true
 		}
-		return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+		return defn.GetSemType(t.typeEnv()), true
 	case *ast.BLangRecordType:
 		defn := ty.Definition
 		if defn != nil {
-			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+			return defn.GetSemType(t.typeEnv()), true
 		}
 		d := semtypes.NewMappingDefinition()
 		ty.Definition = &d
 
-		// Collect fields from type inclusions
 		includedFields := make(map[string][]ast.BField)
-		needsRestOverride, includedRest, ok := tr.accumIncludedFields(ty, includedFields, false, nil)
+		needsRestOverride, includedRest, ok := accumIncludedFields(t, ty, includedFields, false, nil)
 		if !ok {
 			return nil, false
 		}
-		// Collect direct fields
 		seen := make(map[string]bool)
 		var fields []semtypes.Field
 		for name, field := range ty.Fields() {
 			if seen[name] {
-				tr.ctx.SemanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
+				t.semanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
 				return nil, false
 			}
 			seen[name] = true
-			fieldTy, ok := tr.resolveBType(field.Type, depth+1)
+			fieldTy, ok := resolveBType(t, field.Type, depth+1)
 			if !ok {
 				return nil, false
 			}
-			// Subtype check against all included fields with this name
 			if overridden, exists := includedFields[name]; exists {
 				for _, incField := range overridden {
-					incFieldTy, ok := tr.resolveBType(incField.Type, depth+1)
+					incFieldTy, ok := resolveBType(t, incField.Type, depth+1)
 					if !ok {
 						return nil, false
 					}
-					if !semtypes.IsSubtype(tr.tyCtx, fieldTy, incFieldTy) {
-						tr.ctx.SemanticError(
+					if !semtypes.IsSubtype(t.typeContext(), fieldTy, incFieldTy) {
+						t.semanticError(
 							fmt.Sprintf("field '%s' of type that overrides included field is not a subtype of the included field type", name),
 							field.GetPosition(),
 						)
@@ -2480,20 +2908,18 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
 		}
 
-		// Check that fields appearing in multiple inclusions are overridden
 		for name, incFields := range includedFields {
 			if len(incFields) > 1 {
-				tr.ctx.SemanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
+				t.semanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
 			}
 		}
 
-		// Add included fields that are not overridden by direct fields
 		for name, incFields := range includedFields {
 			if len(incFields) > 1 {
-				continue // already reported as error
+				continue
 			}
 			field := incFields[0]
-			fieldTy, ok := tr.resolveBType(field.Type, depth+1)
+			fieldTy, ok := resolveBType(t, field.Type, depth+1)
 			if !ok {
 				return nil, false
 			}
@@ -2502,43 +2928,40 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
 		}
 
-		// Determine rest type
 		var rest semtypes.SemType
 		if ty.RestType != nil {
 			var ok bool
-			rest, ok = tr.resolveBType(ty.RestType, depth+1)
+			rest, ok = resolveBType(t, ty.RestType, depth+1)
 			if !ok {
 				return nil, false
 			}
 		} else if ty.IsOpen {
-			rest = semtypes.CreateAnydata(tr.tyCtx)
+			rest = semtypes.CreateAnydata(t.typeContext())
 		} else if needsRestOverride {
-			tr.ctx.SemanticError("included rest type declared in multiple type inclusions must be overridden", ty.GetPosition())
+			t.semanticError("included rest type declared in multiple type inclusions must be overridden", ty.GetPosition())
 			rest = semtypes.NEVER
 		} else if includedRest != nil {
 			var ok bool
-			rest, ok = tr.resolveBType(includedRest, depth+1)
+			rest, ok = resolveBType(t, includedRest, depth+1)
 			if !ok {
 				return nil, false
 			}
 		} else {
 			rest = semtypes.NEVER
 		}
-		return d.DefineMappingTypeWrapped(tr.ctx.GetTypeEnv(), fields, rest), true
+		return d.DefineMappingTypeWrapped(t.typeEnv(), fields, rest), true
 	case *ast.BLangFunctionType:
 		if ty.FlagSet.Contains(model.Flag_ANY_FUNCTION) {
 			return semtypes.FUNCTION, true
 		}
-		defn := ty.Definition
-		if defn != nil {
-			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+		if ty.Definition != nil {
+			return ty.Definition.GetSemType(t.typeEnv()), true
 		}
-		functionDefn := semtypes.NewFunctionDefinition()
-		ty.Definition = &functionDefn
-		// Resolve parameter types
+		fd := semtypes.NewFunctionDefinition()
+		ty.Definition = &fd
 		paramTypes := make([]semtypes.SemType, len(ty.RequiredParams))
 		for i := range ty.RequiredParams {
-			paramTy, ok := tr.resolveBType(ty.RequiredParams[i].TypeDesc, depth+1)
+			paramTy, ok := resolveBType(t, ty.RequiredParams[i].TypeDesc, depth+1)
 			if !ok {
 				return nil, false
 			}
@@ -2550,46 +2973,46 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		}
 		var restTy semtypes.SemType = semtypes.NEVER
 		if ty.RestParam != nil {
-			restParamTy, ok := tr.resolveBType(ty.RestParam.TypeDesc, depth+1)
+			restParamTy, ok := resolveBType(t, ty.RestParam.TypeDesc, depth+1)
 			if !ok {
 				return nil, false
 			}
 			restTy = restParamTy
 			ty.RestParam.SetDeterminedType(restParamTy)
 		}
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 		var returnTy semtypes.SemType
 		if ty.ReturnTypeDescriptor != nil {
 			var ok bool
-			returnTy, ok = tr.resolveBType(ty.ReturnTypeDescriptor.(ast.BType), depth+1)
+			returnTy, ok = resolveBType(t, ty.ReturnTypeDescriptor.(ast.BType), depth+1)
 			if !ok {
 				return nil, false
 			}
 		} else {
 			returnTy = semtypes.NIL
 		}
-		paramListDefn := semtypes.NewListDefinition()
-		paramListTy := paramListDefn.DefineListTypeWrapped(tr.ctx.GetTypeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
 		isolated := ty.FlagSet.Contains(model.Flag_ISOLATED)
 		transactional := ty.FlagSet.Contains(model.Flag_TRANSACTIONAL)
-		fnType := functionDefn.Define(tr.ctx.GetTypeEnv(), paramListTy, returnTy,
-			semtypes.FunctionQualifiersFrom(tr.ctx.GetTypeEnv(), isolated, transactional))
+		fnType := fd.Define(t.typeEnv(), paramListTy, returnTy,
+			semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
 		return fnType, true
 	case *ast.BLangObjectType:
 		defn := ty.Definition
 		if defn != nil {
-			return defn.GetSemType(tr.ctx.GetTypeEnv()), true
+			return defn.GetSemType(t.typeEnv()), true
 		}
 		od := semtypes.NewObjectDefinition()
 		ty.Definition = &od
 
 		// Step 1: Accumulate included members
 		includedMembers := make(map[string][]semtypes.Member)
-		inc := collectTransitiveInclusions(tr.ctx, ty.Inclusions)
-		if !tr.resolveIncludedDefns(inc.defns, depth) {
+		inc := collectTransitiveInclusions(t.compilerContext(), ty.Inclusions)
+		if !resolveIncludedDefns(t, inc.defns, depth) {
 			return nil, false
 		}
 		for _, m := range inc.members {
-			member, ok := tr.resolveIncludedMember(m, depth)
+			member, ok := resolveIncludedMember(t, m, depth)
 			if !ok {
 				return nil, false
 			}
@@ -2599,7 +3022,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		// Step 2: Build members from direct members
 		var members []semtypes.Member
 		for m := range ty.Members() {
-			valueTy, ok := tr.resolveObjectMemberType(m, depth)
+			valueTy, ok := resolveObjectMemberType(t, m, depth)
 			if !ok {
 				return nil, false
 			}
@@ -2608,8 +3031,8 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 			// Check overrides against included members
 			if incMembers, exists := includedMembers[name]; exists {
 				for _, incMember := range incMembers {
-					if !semtypes.IsSubtype(tr.tyCtx, valueTy, incMember.ValueTy) {
-						tr.ctx.SemanticError(
+					if !semtypes.IsSubtype(t.typeContext(), valueTy, incMember.ValueTy) {
+						t.semanticError(
 							fmt.Sprintf("member '%s' that overrides included member is not a subtype of the included member type", name),
 							ty.GetPosition(),
 						)
@@ -2631,7 +3054,7 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		// Inherit unoverridden included members
 		for name, incMembers := range includedMembers {
 			if len(incMembers) > 1 {
-				tr.ctx.SemanticError(fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
+				t.semanticError(fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
 				return nil, false
 			}
 			members = append(members, incMembers[0])
@@ -2640,51 +3063,47 @@ func (tr *TypeResolver) resolveBTypeInner(btype ast.BType, depth int) (semtypes.
 		// Step 3: Create semtype
 		networkQual := semtypeNetworkQualifier(ty.NetworkQuals)
 		qualifiers := semtypes.ObjectQualifiersFrom(ty.Isolated, false, networkQual)
-		return od.Define(tr.ctx.GetTypeEnv(), qualifiers, members), true
+		return od.Define(t.typeEnv(), qualifiers, members), true
 	default:
-		// TODO: here we need to implement type resolution logic for each type
-		tr.ctx.Unimplemented("unsupported type", nil)
+		t.unimplemented("unsupported type", nil)
 		return nil, false
 	}
 }
 
-func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, includedFields map[string][]ast.BField, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType, bool) {
+func accumIncludedFields(t typeResolver, recordTy *ast.BLangRecordType, includedFields map[string][]ast.BField, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType, bool) {
 	for _, inc := range recordTy.TypeInclusions {
 		udt, ok := inc.(*ast.BLangUserDefinedType)
 		if !ok {
-			tr.ctx.SemanticError("type inclusion must be a user-defined type", inc.(ast.BLangNode).GetPosition())
+			t.semanticError("type inclusion must be a user-defined type", inc.(ast.BLangNode).GetPosition())
 			continue
 		}
 
-		// This is needed to update the type of the ref node
-		_, ok = tr.resolveBType(inc, 0)
+		_, ok = resolveBType(t, inc, 0)
 		if !ok {
 			return false, nil, false
 		}
 
 		symbol := udt.Symbol()
-		tDefn, ok := tr.ctx.GetTypeDefinition(symbol)
+		tDefn, ok := t.getTypeDefinition(symbol)
 		if !ok {
-			tr.ctx.InternalError("type definition not found for inclusion", udt.GetPosition())
+			t.internalError("type definition not found for inclusion", udt.GetPosition())
 			continue
 		}
 		recTy, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType)
 		if !ok {
-			tr.ctx.SemanticError("included type is not a record type", udt.GetPosition())
+			t.semanticError("included type is not a record type", udt.GetPosition())
 			continue
 		}
 
-		needsRestOverride, includedRest, ok = tr.accumIncludedFields(recTy, includedFields, needsRestOverride, includedRest)
+		needsRestOverride, includedRest, ok = accumIncludedFields(t, recTy, includedFields, needsRestOverride, includedRest)
 		if !ok {
 			return false, nil, false
 		}
 
-		// Collect fields from this inclusion
 		for name, field := range recTy.Fields() {
 			includedFields[name] = append(includedFields[name], field)
 		}
 
-		// Track rest type conflicts
 		if recTy.RestType != nil {
 			if includedRest != nil {
 				needsRestOverride = true
@@ -2695,41 +3114,48 @@ func (tr *TypeResolver) accumIncludedFields(recordTy *ast.BLangRecordType, inclu
 	return needsRestOverride, includedRest, true
 }
 
-func (t *TypeResolver) resolveConstant(constant *ast.BLangConstant) bool {
+func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 	if constant.Expr == nil {
-		// This should have been caught before type resolver as a syntax error
-		t.ctx.InternalError("constant expression is nil", constant.GetPosition())
+		t.internalError("constant expression is nil", constant.GetPosition())
 		return false
 	}
-	// Walk Name identifier to ensure it gets DeterminedType set
 	if constant.Name != nil {
-		ast.Walk(t, constant.Name)
+		setOtherNodesAsNever(constant.Name)
 	}
-	ast.Walk(t, constant.Expr.(ast.BLangNode))
-	exprType := constant.Expr.(ast.BLangExpression).GetDeterminedType()
-	var expectedType semtypes.SemType
+
+	var annotationType semtypes.SemType
 	if typeNode := constant.TypeNode(); typeNode != nil {
 		var ok bool
-		expectedType, ok = t.resolveBType(typeNode, 0)
+		annotationType, ok = resolveBType(t, typeNode, 0)
 		if !ok {
 			return false
 		}
+	}
+
+	exprTy, _, ok := resolveExpression(t, nil, constant.Expr.(ast.BLangExpression), annotationType)
+	if !ok {
+		return false
+	}
+
+	var expectedType semtypes.SemType
+	if annotationType != nil {
+		expectedType = annotationType
 	} else {
-		expectedType = exprType
+		expectedType = exprTy
 	}
 	setExpectedType(constant, expectedType)
 	symbol := constant.Symbol()
-	t.ctx.SetSymbolType(symbol, expectedType)
+	t.setSymbolType(symbol, expectedType)
 
 	return true
 }
 
 // TODO: most of this is repeated code need to think about how to refactor this
-func (tr *TypeResolver) resolveIncludedMember(m includedMember, depth int) (semtypes.Member, bool) {
+func resolveIncludedMember(t typeResolver, m includedMember, depth int) (semtypes.Member, bool) {
 	switch {
 	case m.objectMember != nil:
 		kind := m.objectMember.MemberKind()
-		valueTy, ok := tr.resolveObjectMemberType(m.objectMember, depth)
+		valueTy, ok := resolveObjectMemberType(t, m.objectMember, depth)
 		if !ok {
 			return semtypes.Member{}, false
 		}
@@ -2741,7 +3167,7 @@ func (tr *TypeResolver) resolveIncludedMember(m includedMember, depth int) (semt
 			Immutable:  kind != model.ObjectMemberKindField,
 		}, true
 	case m.classField != nil:
-		fieldTy := tr.ctx.SymbolType(m.classField.Symbol())
+		fieldTy := t.symbolType(m.classField.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if m.classField.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
@@ -2754,7 +3180,7 @@ func (tr *TypeResolver) resolveIncludedMember(m includedMember, depth int) (semt
 			Immutable:  false,
 		}, true
 	case m.classMethod != nil:
-		methodTy := tr.ctx.SymbolType(m.classMethod.Symbol())
+		methodTy := t.symbolType(m.classMethod.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if m.classMethod.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
@@ -2767,13 +3193,13 @@ func (tr *TypeResolver) resolveIncludedMember(m includedMember, depth int) (semt
 			Immutable:  true,
 		}, true
 	default:
-		tr.ctx.InternalError("unexpected included member kind", nil)
+		t.internalError("unexpected included member kind", nil)
 		return semtypes.Member{}, false
 	}
 }
 
-func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatchStatement) (statementEffect, bool) {
-	_, exprEffect, ok := t.resolveExpression(chain, stmt.Expr)
+func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchStatement) (statementEffect, bool) {
+	_, exprEffect, ok := resolveExpression(t, chain, stmt.Expr, nil)
 	if !ok {
 		return defaultStmtEffect(chain), false
 	}
@@ -2782,25 +3208,25 @@ func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatc
 	exprRef, isVarRef := varRefExp(chain, &stmt.Expr)
 	var remainingType semtypes.SemType
 	if isVarRef {
-		remainingType = t.ctx.SymbolType(exprRef)
+		remainingType = t.symbolType(exprRef)
 	} else {
 		remainingType = stmt.Expr.GetDeterminedType()
 	}
 	allNonCompletion := true
 	var bodyEffects []statementEffect
 
-	tyCtx := semtypes.ContextFrom(t.ctx.GetTypeEnv())
+	tyCtx := semtypes.ContextFrom(t.typeEnv())
 
 	for i := range stmt.MatchClauses {
 		clause := &stmt.MatchClauses[i]
 
 		if semtypes.IsEmpty(tyCtx, remainingType) {
-			t.ctx.SemanticError("unreachable match clause", clause.GetPosition())
+			t.semanticError("unreachable match clause", clause.GetPosition())
 		}
 
 		var bodyChain *binding
 		var ok bool
-		clause.AcceptedType, bodyChain, ok = t.matchClauseAcceptedType(chain, clause)
+		clause.AcceptedType, bodyChain, ok = matchClauseAcceptedType(t, chain, clause)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -2808,13 +3234,13 @@ func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatc
 
 		clauseIsEmpty := semtypes.IsEmpty(tyCtx, clauseAcceptedType)
 		if clauseIsEmpty {
-			t.ctx.SemanticError("unmatchable match clause", clause.GetPosition())
+			t.semanticError("unmatchable match clause", clause.GetPosition())
 		}
 
 		clause.AcceptedType = clauseAcceptedType
 
 		if clauseIsEmpty {
-			_, ok := t.resolveMatchClause(bodyChain, clause)
+			_, ok := resolveMatchClause(t, bodyChain, clause)
 			if !ok {
 				return defaultStmtEffect(chain), false
 			}
@@ -2822,8 +3248,8 @@ func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatc
 		}
 
 		if isVarRef {
-			baseRef := t.ctx.UnnarrowedSymbol(exprRef)
-			narrowedSym := narrowSymbol(t.ctx, baseRef, clauseAcceptedType)
+			baseRef := t.unnarrowedSymbol(exprRef)
+			narrowedSym := narrowSymbol(t, baseRef, clauseAcceptedType)
 			bodyChain = &binding{
 				ref:            baseRef,
 				narrowedSymbol: narrowedSym,
@@ -2831,7 +3257,7 @@ func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatc
 			}
 		}
 
-		bodyEffect, ok := t.resolveMatchClause(bodyChain, clause)
+		bodyEffect, ok := resolveMatchClause(t, bodyChain, clause)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -2859,38 +3285,38 @@ func (t *TypeResolver) resolveMatchStatement(chain *binding, stmt *ast.BLangMatc
 			result = effect.binding
 			first = false
 		} else {
-			result = mergeChains(t.ctx, result, effect.binding, semtypes.Union)
+			result = mergeChains(t, result, effect.binding, semtypes.Union)
 		}
 	}
 	return statementEffect{result, false}, true
 }
 
-func (t *TypeResolver) matchClauseAcceptedType(chain *binding, clause *ast.BLangMatchClause) (semtypes.SemType, *binding, bool) {
+func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMatchClause) (semtypes.SemType, *binding, bool) {
 	var acceptedTy semtypes.SemType = semtypes.NEVER
 	for _, pattern := range clause.Patterns {
-		patternTy, ok := t.resolveMatchPattern(chain, pattern)
+		patternTy, ok := resolveMatchPattern(t, chain, pattern)
 		if !ok {
 			return nil, nil, false
 		}
 		acceptedTy = semtypes.Union(acceptedTy, patternTy)
 	}
 	if clause.Guard != nil {
-		_, guardEffect, _ := t.resolveExpression(chain, clause.Guard)
+		_, guardEffect, _ := resolveExpression(t, chain, clause.Guard, nil)
 		return acceptedTy, guardEffect.ifTrue, true
 	}
 	return acceptedTy, chain, true
 }
 
-func (tr *TypeResolver) resolveIncludedDefns(defns []model.TypeDefinition, depth int) bool {
+func resolveIncludedDefns(t typeResolver, defns []model.TypeDefinition, depth int) bool {
 	for _, d := range defns {
 		switch defn := d.(type) {
 		case *ast.BLangTypeDefinition:
 			objTy := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			if _, ok := tr.resolveBType(objTy, depth+1); !ok {
+			if _, ok := resolveBType(t, objTy, depth+1); !ok {
 				return false
 			}
 		case *ast.BLangClassDefinition:
-			if _, ok := tr.resolveClassDefinition(defn, depth+1); !ok {
+			if _, ok := resolveClassDefinitionType(t, defn, depth+1); !ok {
 				return false
 			}
 		}
@@ -2898,16 +3324,16 @@ func (tr *TypeResolver) resolveIncludedDefns(defns []model.TypeDefinition, depth
 	return true
 }
 
-func (tr *TypeResolver) resolveObjectMemberType(m model.ObjectMember, depth int) (semtypes.SemType, bool) {
+func resolveObjectMemberType(t typeResolver, m model.ObjectMember, depth int) (semtypes.SemType, bool) {
 	switch m := m.(type) {
 	case *ast.BObjectField:
-		valueTy, ok := tr.resolveBType(m.Ty, depth+1)
+		valueTy, ok := resolveBType(t, m.Ty, depth+1)
 		if ok {
 			m.SetDeterminedType(valueTy)
 		}
 		return valueTy, ok
 	case *ast.BMethodDecl:
-		valueTy, ok := tr.resolveBType(&m.BLangFunctionType, depth+1)
+		valueTy, ok := resolveBType(t, &m.BLangFunctionType, depth+1)
 		if ok {
 			m.SetDeterminedType(valueTy)
 		}
@@ -2917,8 +3343,8 @@ func (tr *TypeResolver) resolveObjectMemberType(m model.ObjectMember, depth int)
 	}
 }
 
-func (t *TypeResolver) resolveMatchClause(chain *binding, clause *ast.BLangMatchClause) (statementEffect, bool) {
-	bodyEffect, ok := t.resolveBlockStatements(chain, clause.Body.Stmts)
+func resolveMatchClause(t typeResolver, chain *binding, clause *ast.BLangMatchClause) (statementEffect, bool) {
+	bodyEffect, ok := resolveBlockStatements(t, chain, clause.Body.Stmts)
 	if !ok {
 		return defaultStmtEffect(chain), false
 	}
@@ -2927,10 +3353,10 @@ func (t *TypeResolver) resolveMatchClause(chain *binding, clause *ast.BLangMatch
 	return bodyEffect, true
 }
 
-func (t *TypeResolver) resolveMatchPattern(chain *binding, pattern ast.BLangMatchPattern) (semtypes.SemType, bool) {
+func resolveMatchPattern(t typeResolver, chain *binding, pattern ast.BLangMatchPattern) (semtypes.SemType, bool) {
 	switch p := pattern.(type) {
 	case *ast.BLangConstPattern:
-		ty, _, ok := t.resolveExpression(chain, p.Expr)
+		ty, _, ok := resolveExpression(t, chain, p.Expr, nil)
 		if !ok {
 			return nil, false
 		}
@@ -2943,7 +3369,7 @@ func (t *TypeResolver) resolveMatchPattern(chain *binding, pattern ast.BLangMatc
 		p.SetDeterminedType(semtypes.NEVER)
 		return ty, true
 	default:
-		t.ctx.InternalError(fmt.Sprintf("unexpected match pattern type: %T", pattern), pattern.GetPosition())
+		t.internalError(fmt.Sprintf("unexpected match pattern type: %T", pattern), pattern.GetPosition())
 		return semtypes.NEVER, false
 	}
 }

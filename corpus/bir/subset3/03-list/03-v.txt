@@ -6,7 +6,7 @@ main() -> nil{
     %2 = ConstantLoad 2
     %3 = ConstantLoad 3
     %4 = ConstantLoad 3
-    %5 = newArray [int, int, int, never...][%4]{%1, %2, %3}
+    %5 = newArray list[%4]{%1, %2, %3}
     %6 = println(%5) -> bb1;
   }
   bb1 {

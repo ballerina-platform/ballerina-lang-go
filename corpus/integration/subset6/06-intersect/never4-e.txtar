@@ -6,9 +6,3 @@ error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
 25 | function foo(X & Y xy) { // @error
    |              ^^^^^
 
-error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
-  --> never4-e.bal:25:14
-   |
-25 | function foo(X & Y xy) { // @error
-   |              ^^^^^
-
