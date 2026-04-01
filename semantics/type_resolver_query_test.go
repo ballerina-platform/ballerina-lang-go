@@ -203,7 +203,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 }
 
 func newTestQueryResolver() (*TypeResolver, *context.CompilerContext) {
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
 	return newTypeResolver(cx, &ast.BLangPackage{}, nil), cx
 }
