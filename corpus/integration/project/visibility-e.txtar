@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: Unknown symbol: greet
    |
 23 |     io:println(utils:greet("Ballerina")); // @error
    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-

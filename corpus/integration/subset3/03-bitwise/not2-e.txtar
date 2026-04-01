@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expect int type for ~
   |
 5 |     io:println(~b); // @error
   |                ^^
-

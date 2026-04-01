@@ -5,4 +5,3 @@ error[SYNTAX_ERROR]: invalid integer literal: leading zero
    |
 20 |     int x = 01; // @error
    |             ^^
-

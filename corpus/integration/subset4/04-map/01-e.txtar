@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected string, got int
    |
 21 |     ignore(m[i]); // @error
    |              ^
-

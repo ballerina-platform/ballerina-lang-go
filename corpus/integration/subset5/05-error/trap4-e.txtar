@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got int|error
    |
 20 |     int res = trap 1 / 0; // @error
    |               ^^^^^^^^^^
-

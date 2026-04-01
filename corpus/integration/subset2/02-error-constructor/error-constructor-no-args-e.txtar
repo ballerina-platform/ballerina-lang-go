@@ -5,4 +5,3 @@ error[SYNTAX_ERROR]: invalid error constructor
    |
 18 |     error err = error();  // @error
    |                 ^^^^^^^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expect anydata types for !=
    |
 23 |     if x != y { // @error
    |        ^^^^^^
-

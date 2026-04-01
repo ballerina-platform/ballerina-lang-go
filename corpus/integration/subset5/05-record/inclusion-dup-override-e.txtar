@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: field 'x' of type that overrides included field is not a 
    |
 31 |     string x; // @error
    |     ^^^^^^^^^
-

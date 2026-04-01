@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got int|string
    |
 23 |     int unused2 = x; // @error
    |                   ^
-

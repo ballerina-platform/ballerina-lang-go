@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expect int types for ..<
    |
 24 |     foreach int i in false ..< 10 { // @error
    |                      ^^^^^^^^^^^^
-

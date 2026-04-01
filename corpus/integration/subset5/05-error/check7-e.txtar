@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: expression is not a constant expression
   |
 3 | const int X = check 1; // @error
   |       ^^^
-

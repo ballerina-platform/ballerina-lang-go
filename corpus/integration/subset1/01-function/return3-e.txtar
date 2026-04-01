@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected boolean, got 17
    |
 25 |     return 17; // @error
    |            ^^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected function(1|2) returns 3|4|fun
    |
 24 |     F f = foo; // @error
    |           ^^^
-

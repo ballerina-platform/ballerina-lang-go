@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Variable already defined: x
    |
 22 |     int x = 2; // @error
    |     ^^^^^^^^^^
-

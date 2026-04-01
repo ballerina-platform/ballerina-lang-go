@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unreachable code
    |
 23 |     int y = 2; // @error
    |     ^^^^^^^^^^
-

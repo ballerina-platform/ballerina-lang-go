@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: invalid type for variable
    |
 21 |     foreach boolean val in m { // @error
    |             ^^^^^^^^^^^
-

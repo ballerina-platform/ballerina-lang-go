@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: continue statement not allowed outside loop
    |
 20 |     continue; // @error
    |     ^^^^^^^^^
-

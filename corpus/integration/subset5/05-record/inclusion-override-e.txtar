@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: field 'x' of type that overrides included field is not a 
    |
 25 |     string x; // @error
    |     ^^^^^^^^^
-

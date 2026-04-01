@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
    |
 20 | function foo(int&string arg) // @error
    |              ^^^^^^^^^^
-

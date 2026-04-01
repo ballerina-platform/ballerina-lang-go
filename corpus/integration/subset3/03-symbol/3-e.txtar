@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Variable already defined: a
    |
 19 |     float a = 4; // @error
    |     ^^^^^^^^^^^^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got boolean
    |
 19 |     return x[i]; // @error
    |              ^
-

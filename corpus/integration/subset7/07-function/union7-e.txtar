@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible arguments for function call
    |
 25 |     3|4|5 res = f(4); // @error
    |                 ^^^^
-
