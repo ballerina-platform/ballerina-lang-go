@@ -1,4 +1,4 @@
 -- stdout --
 -- stderr --
-error: bad type cast: cannot cast 1e+20 to int
+error: bad type cast: cannot cast out-of-range value 1e+20 to int
         at main(13-p.bal:23)

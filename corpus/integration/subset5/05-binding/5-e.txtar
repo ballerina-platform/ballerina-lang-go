@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: wildcard binding pattern type must be a subtype of 'any'
    |
 18 |     error _ = error("Error"); // @error
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
-

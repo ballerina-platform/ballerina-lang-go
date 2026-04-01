@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible arguments for function call
    |
 36 |     T1|T2 v1 = f(a, a); // @error
    |                ^^^^^^^
-

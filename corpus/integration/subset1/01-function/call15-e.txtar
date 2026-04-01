@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unknown symbol: println
    |
 19 |     io:println(0); // @error
    |     ^^^^^^^^^^^^^
-

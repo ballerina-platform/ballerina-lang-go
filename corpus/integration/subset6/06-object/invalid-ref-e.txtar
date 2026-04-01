@@ -17,4 +17,3 @@ error[SEMANTIC_ERROR]: undefined member 'gg'
    |
 26 |         return self.gg; // @error
    |                     ^^
-

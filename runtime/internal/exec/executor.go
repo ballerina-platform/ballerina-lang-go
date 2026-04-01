@@ -28,6 +28,28 @@ import (
 const maxRecursionDepth = 1000
 
 func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack, parentFrame *Frame) values.BalValue {
+	frame := createFunctionFrame(&birFunc, args, callStack, parentFrame)
+	bb := &birFunc.BasicBlocks[0]
+	if len(birFunc.ErrorTable) > 0 {
+		executeFunctionWithTrap(&birFunc, bb, frame, reg, callStack)
+	} else {
+		executeFunctionNoTrap(bb, frame, reg, callStack)
+	}
+	callStack.Pop()
+	return frame.locals[0]
+}
+
+func createFunctionFrame(birFunc *bir.BIRFunction, args []values.BalValue, callStack *callStack, parentFrame *Frame) *Frame {
+	locals := initLocalsForFunction(birFunc, args)
+	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
+	callStack.Push(frame)
+	if len(callStack.elements) > maxRecursionDepth {
+		panic(values.NewErrorWithMessage("stack overflow"))
+	}
+	return frame
+}
+
+func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []values.BalValue {
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
@@ -37,13 +59,12 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 		argOffset = 1
 	}
 	requiredCount := len(birFunc.RequiredParams)
-	// Map required args to locals
 	for i := range requiredCount {
 		locals[i+1+argOffset] = args[i+argOffset]
 	}
+
 	var offset int
 	if birFunc.RestParams != nil {
-		// Collect remaining args into a list for the rest param
 		restArgs := args[requiredCount+argOffset:]
 		restParamIdx := requiredCount + 1 + argOffset
 		restParamType := (*localVars)[restParamIdx].GetType()
@@ -55,35 +76,78 @@ func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modul
 		offset = restParamIdx + 1
 	} else {
 		if len(args) > requiredCount+argOffset {
-			panic("too many arguments")
+			panic(values.NewErrorWithMessage("too many arguments"))
 		}
 		offset = requiredCount + 1 + argOffset
 	}
+
 	for i := offset; i < len(*localVars); i++ {
 		locals[i] = values.DefaultValueForType((*localVars)[i].GetType())
 	}
-	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
-	callStack.Push(frame)
-	if len(callStack.elements) > maxRecursionDepth {
-		panic(values.NewErrorWithMessage("stack overflow"))
-	}
+	return locals
+}
+
+func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
 	currentFrame := frame
-	bb := &birFunc.BasicBlocks[0]
 	for {
-		for _, inst := range bb.Instructions {
-			posProvider := inst.(interface{ GetPos() diagnostics.Location })
-			frame.location = posProvider.GetPos()
-			currentFrame = execInstruction(inst, currentFrame, reg)
+		curBBNumber := bb.Number
+		nextBB, nextFrame, recovered := executeBasicBlockWithTrap(bb, frame, currentFrame, reg, callStack)
+
+		if recovered != nil {
+			// Resolve the innermost error-table entry covering the current block and
+			// continue execution at its target with the recovered error value.
+			handler := findTrapErrorEntry(birFunc, curBBNumber)
+			if handler == nil {
+				panic(recovered)
+			}
+			unwindCallStackToFrame(callStack, frame)
+			errVal := panicValueToErrorValue(recovered)
+			// After unwinding, the active frame is the function frame.
+			currentFrame = frame
+			setOperandValue(handler.ErrorOp, currentFrame, reg, errVal)
+			bb = &birFunc.BasicBlocks[handler.Target]
+			continue
 		}
-		posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
-		frame.location = posProvider.GetPos()
-		bb = execTerminator(bb.Terminator, currentFrame, reg, callStack)
+
+		bb = nextBB
+		currentFrame = nextFrame
 		if bb == nil {
 			break
 		}
 	}
-	callStack.Pop()
-	return frame.locals[0]
+}
+
+func executeFunctionNoTrap(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
+	currentFrame := frame
+	for {
+		var nextBB *bir.BIRBasicBlock
+		nextBB, currentFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+		bb = nextBB
+		if bb == nil {
+			break
+		}
+	}
+}
+
+func executeBasicBlockWithTrap(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
+	defer func() {
+		if r := recover(); r != nil {
+			recovered = r
+		}
+	}()
+	nextBB, nextFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+	return nextBB, nextFrame, nil
+}
+
+func executeBasicBlock(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (*bir.BIRBasicBlock, *Frame) {
+	for _, inst := range bb.Instructions {
+		posProvider := inst.(interface{ GetPos() diagnostics.Location })
+		frame.location = posProvider.GetPos()
+		currentFrame = execInstruction(inst, currentFrame, reg)
+	}
+	posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
+	frame.location = posProvider.GetPos()
+	return execTerminator(bb.Terminator, currentFrame, reg, callStack), currentFrame
 }
 
 func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) *Frame {
@@ -248,4 +312,41 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 
 func hasFunctionFlag(flags int64, flag model.Flag) bool {
 	return flags&(1<<int64(flag)) != 0
+}
+
+func panicValueToErrorValue(r any) values.BalValue {
+	// `trap` expects runtime failures to be raised as `*values.Error`.
+	// If this isn't the case, treat it as an unrecoverable interpreter issue.
+	if err, ok := r.(*values.Error); ok {
+		return err
+	}
+	panic(r)
+}
+
+func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEntry {
+	var best *bir.BIRErrorEntry
+	var bestSpan int
+	found := false
+	for i := range birFunc.ErrorTable {
+		entry := &birFunc.ErrorTable[i]
+		start := entry.Start
+		end := entry.End
+		if bbNumber < start || bbNumber > end {
+			continue
+		}
+		span := end - start
+		// Prefer the narrowest enclosing range, i.e. nearest (innermost) trap.
+		if !found || span < bestSpan {
+			best = entry
+			bestSpan = span
+			found = true
+		}
+	}
+	return best
+}
+
+func unwindCallStackToFrame(callStack *callStack, frame *Frame) {
+	for len(callStack.elements) > 0 && callStack.elements[len(callStack.elements)-1] != frame {
+		callStack.Pop()
+	}
 }

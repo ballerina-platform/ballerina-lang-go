@@ -23,10 +23,10 @@ import (
 	"math/big"
 
 	"ballerina-lang-go/bir"
-	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/semtypes/typepool"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -76,8 +76,23 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 
 	pkgID := br.getPackageFromCP(int(pkgIdx))
 	imports := br.readImports()
-	globalVars := br.readGlobalVars()
+	globalVars := br.readGlobalVars(pkgID)
 	classDefs := br.readClassDefs()
+
+	var initFunction *bir.BIRFunction
+	var hasInit bool
+	br.read(&hasInit)
+	if hasInit {
+		initFunction = br.readFunction()
+	}
+
+	var mainFunction *bir.BIRFunction
+	var hasMain bool
+	br.read(&hasMain)
+	if hasMain {
+		mainFunction = br.readFunction()
+	}
+
 	functions := br.readFunctions()
 
 	return &bir.BIRPackage{
@@ -86,6 +101,8 @@ func (br *birReader) readPackage() (pkg *bir.BIRPackage, err error) {
 		GlobalVars:    globalVars,
 		ClassDefs:     classDefs,
 		Functions:     functions,
+		InitFunction:  initFunction,
+		MainFunction:  mainFunction,
 		TypeEnv:       br.ctx.GetTypeEnv(),
 	}, nil
 }
@@ -199,9 +216,9 @@ func (br *birReader) readImports() []bir.BIRImportModule {
 	return imports
 }
 
-func (br *birReader) readGlobalVars() map[model.SymbolRef]bir.BIRGlobalVariableDcl {
+func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGlobalVariableDcl {
 	count := br.readLength()
-	variables := make(map[model.SymbolRef]bir.BIRGlobalVariableDcl, count)
+	variables := make(map[string]bir.BIRGlobalVariableDcl, count)
 	for i := 0; i < int(count); i++ {
 		pos := br.readPosition()
 		_ = br.readKind() // kind (ignored, concrete type determines it)
@@ -211,16 +228,18 @@ func (br *birReader) readGlobalVars() map[model.SymbolRef]bir.BIRGlobalVariableD
 
 		ty := br.readType()
 
+		lookupKey := pkgID.OrgName.Value() + "/" + pkgID.PkgName.Value() + ":" + name.Value()
 		gv := bir.BIRGlobalVariableDcl{
-			Flags:  flags,
-			Origin: origin,
+			Flags:              flags,
+			Origin:             origin,
+			GlobalVarLookupKey: lookupKey,
 		}
 		gv.Pos = pos
 		gv.Name = name
 		gv.Type = ty
+		gv.PkgId = pkgID
 
-		symRef := model.SymbolRef{Index: i}
-		variables[symRef] = gv
+		variables[lookupKey] = gv
 	}
 	return variables
 }
@@ -278,6 +297,7 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	originalName := br.readStringCPEntry()
 	flag := br.readFlags()
 	origin := br.readOrigin()
+	functionLookupKey := br.readStringCPEntry()
 	requiredParamsCount := br.readLength()
 
 	requiredParams := make([]bir.BIRParameter, requiredParamsCount)
@@ -327,6 +347,7 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	basicBlocks := make([]bir.BIRBasicBlock, basicBlockCount)
 	for j := 0; j < int(basicBlockCount); j++ {
 		block := br.readBasicBlock(varMap)
+		block.Number = j
 		basicBlocks[j] = *block
 		bbMap[block.Id.Value()] = &basicBlocks[j]
 	}
@@ -364,9 +385,9 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 		targetId := br.readStringCPEntry()
 		errorOp := br.readOperand(varMap)
 		errorTable[j] = bir.BIRErrorEntry{
-			Start:   bbMap[startId.Value()],
-			End:     bbMap[endId.Value()],
-			Target:  bbMap[targetId.Value()],
+			Start:   bbMap[startId.Value()].Number,
+			End:     bbMap[endId.Value()].Number,
+			Target:  bbMap[targetId.Value()].Number,
 			ErrorOp: errorOp,
 		}
 	}
@@ -387,17 +408,18 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 				Pos: pos,
 			},
 		},
-		Name:           name,
-		OriginalName:   originalName,
-		Flags:          flag,
-		Origin:         origin,
-		RequiredParams: requiredParams,
-		RestParams:     restParams,
-		ArgsCount:      int(argsCount),
-		ReturnVariable: returnVar,
-		LocalVars:      localVars,
-		BasicBlocks:    basicBlocks,
-		ErrorTable:     errorTable,
+		Name:              name,
+		OriginalName:      originalName,
+		Flags:             flag,
+		Origin:            origin,
+		FunctionLookupKey: string(functionLookupKey),
+		RequiredParams:    requiredParams,
+		RestParams:        restParams,
+		ArgsCount:         int(argsCount),
+		ReturnVariable:    returnVar,
+		LocalVars:         localVars,
+		BasicBlocks:       basicBlocks,
+		ErrorTable:        errorTable,
 	}
 }
 
@@ -689,6 +711,7 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 
 		pkg := br.readPackageCPEntry()
 		name := br.readStringCPEntry()
+		functionLookupKey := br.readStringCPEntry()
 		argsCount := br.readLength()
 
 		args := make([]bir.BIROperand, argsCount)
@@ -713,12 +736,13 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 		}
 
 		return &bir.Call{
-			Kind:         termInstructionKind,
-			IsMethodCall: isMethodCall,
-			CalleePkg:    pkg,
-			Name:         name,
-			Args:         args,
-			FpOperand:    fpOperand,
+			Kind:              termInstructionKind,
+			IsMethodCall:      isMethodCall,
+			CalleePkg:         pkg,
+			Name:              name,
+			FunctionLookupKey: string(functionLookupKey),
+			Args:              args,
+			FpOperand:         fpOperand,
 			BIRTerminatorBase: bir.BIRTerminatorBase{
 				ThenBB: &bir.BIRBasicBlock{
 					Id: thenBBId,
@@ -751,9 +775,20 @@ func (br *birReader) readOperand(varMap map[string]bir.BIRVariableDcl) *bir.BIRO
 		}
 	}
 
-	_ = br.readKind()  // varKind (ignored)
+	kind := br.readKind()
 	_ = br.readScope() // scope (ignored)
 	name := br.readStringCPEntry()
+
+	if kind == bir.VAR_KIND_GLOBAL {
+		lookupKey := br.readStringCPEntry()
+		pkgId := br.readPackageCPEntry()
+		gv := &bir.BIRGlobalVariableDcl{
+			GlobalVarLookupKey: string(lookupKey),
+		}
+		gv.Name = name
+		gv.PkgId = pkgId
+		return &bir.BIROperand{VariableDcl: gv}
+	}
 
 	varDcl, ok := varMap[name.Value()]
 	if !ok {

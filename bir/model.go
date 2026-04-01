@@ -70,7 +70,7 @@ type (
 		PackageID *model.PackageID
 		// TODO: avoid duplicates here
 		ImportModules []BIRImportModule
-		GlobalVars    map[model.SymbolRef]BIRGlobalVariableDcl
+		GlobalVars    map[string]BIRGlobalVariableDcl
 		Functions     []BIRFunction
 		InitFunction  *BIRFunction
 		ClassDefs     []BIRClassDef
@@ -106,9 +106,10 @@ type (
 
 	BIRGlobalVariableDcl struct {
 		birVariableDclBase
-		Flags  int64
-		PkgId  *model.PackageID
-		Origin model.SymbolOrigin
+		Flags              int64
+		PkgId              *model.PackageID
+		Origin             model.SymbolOrigin
+		GlobalVarLookupKey string
 	}
 
 	BIRFunction struct {
@@ -131,11 +132,9 @@ type (
 	}
 
 	BIRErrorEntry struct {
-		// Range
-		Start *BIRBasicBlock
-		End   *BIRBasicBlock
-
-		Target  *BIRBasicBlock
+		Start   int
+		End     int
+		Target  int
 		ErrorOp *BIROperand
 	}
 
@@ -163,7 +162,6 @@ type (
 		BIRNodeBase
 		VariableDcl BIRVariableDcl
 		Address     Address
-		SymRef      *model.SymbolRef
 	}
 )
 
@@ -180,7 +178,7 @@ const (
 	AddressingModeAbsolute
 )
 
-func relativeAddress(frameIndex int) Address {
+func RelativeAddress(frameIndex int) Address {
 	return Address{Mode: AddressingModeRelative, FrameIndex: frameIndex}
 }
 

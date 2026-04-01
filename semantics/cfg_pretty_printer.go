@@ -55,18 +55,14 @@ func (p *CFGPrettyPrinter) Print(cfg *PackageCFG) string {
 
 	var classes []classEntry
 	for classRef, classMethods := range cfg.methodCfgs {
-		cs := p.ctx.GetSymbol(classRef).(*model.ClassSymbol)
-		ce := classEntry{name: cs.Name()}
-		if cs.HasInit {
-			if fcfg, ok := classMethods[cs.InitFunction]; ok {
-				ce.initCfg = &fcfg
-			}
-		}
+		ce := classEntry{name: p.ctx.SymbolName(classRef)}
 		for methodRef, fcfg := range classMethods {
-			if cs.HasInit && methodRef == cs.InitFunction {
+			name := p.ctx.SymbolName(methodRef)
+			if name == "init" {
+				ce.initCfg = &fcfg
 				continue
 			}
-			ce.methods = append(ce.methods, fnEntry{name: p.ctx.SymbolName(methodRef), cfg: fcfg})
+			ce.methods = append(ce.methods, fnEntry{name: name, cfg: fcfg})
 		}
 		sort.Slice(ce.methods, func(i, j int) bool {
 			return ce.methods[i].name < ce.methods[j].name

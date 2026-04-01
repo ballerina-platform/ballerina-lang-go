@@ -1,0 +1,34 @@
+(package
+  (import-package ballerina io (as io))
+  (function foo () (
+    (value-type int))
+    (block-function-body
+      (panic
+        (error-constructor-expr (
+          (literal boom!))))))
+  (function bar () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (return
+        (trap-expr
+          (invocation foo ())))))
+  (function baz () (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (return
+        (trap-expr
+          (invocation bar ())))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable res (expr
+          (trap-expr
+            (invocation baz ())))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res)))))))

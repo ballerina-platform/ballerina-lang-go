@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got "abc"
    |
 21 |     a += "abc"; // @error
    |          ^^^^^
-

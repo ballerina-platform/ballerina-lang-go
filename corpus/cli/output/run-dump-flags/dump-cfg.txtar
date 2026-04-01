@@ -1,0 +1,101 @@
+-- stdout --
+F(0) = 0
+F(1) = 1
+F(2) = 1
+F(3) = 2
+F(4) = 3
+F(5) = 5
+F(6) = 8
+F(7) = 13
+F(8) = 21
+F(9) = 34
+-- stderr --
+
+==================BEGIN CFG==================
+(fibonacci
+  (bb0 () (bb1 bb2)
+    (group-expr
+      (binary-expr <=
+        (simple-var-ref n)
+        (literal 1)))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref n))
+  )
+  (bb2 (bb0) (bb3)
+    (var-def
+      (variable prev (type
+        (value-type int)) (expr
+        (literal 0))))
+    (var-def
+      (variable curr (type
+        (value-type int)) (expr
+        (literal 1))))
+    (var-def
+      (variable i (type
+        (value-type int)) (expr
+        (literal 2))))
+  )
+  (bb3 (bb2 bb4) (bb4 bb5)
+    (group-expr
+      (binary-expr <=
+        (simple-var-ref i)
+        (simple-var-ref n)))
+  )
+  (bb4 (bb3) (bb3)
+    (var-def
+      (variable next (type
+        (value-type int)) (expr
+        (binary-expr +
+          (simple-var-ref prev)
+          (simple-var-ref curr)))))
+    (assignment
+      (simple-var-ref prev)
+      (simple-var-ref curr))
+    (assignment
+      (simple-var-ref curr)
+      (simple-var-ref next))
+    (compound-assignment +
+      (simple-var-ref i)
+      (literal 1))
+  )
+  (bb5 (bb3) ()
+    (return
+      (simple-var-ref curr))
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable n (type
+        (value-type int)) (expr
+        (literal 10))))
+    (var-def
+      (variable i (type
+        (value-type int)) (expr
+        (literal 0))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (group-expr
+      (binary-expr <
+        (simple-var-ref i)
+        (simple-var-ref n)))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (literal F()
+        (simple-var-ref i)
+        (literal ) = )
+        (invocation fibonacci (
+          (simple-var-ref i))))))
+    (compound-assignment +
+      (simple-var-ref i)
+      (literal 1))
+  )
+  (bb3 (bb1) ())
+)
+===================END CFG===================
+-- exitcode --
+0

@@ -27,15 +27,18 @@ import (
 	"testing"
 
 	"ballerina-lang-go/bir"
+	bircodec "ballerina-lang-go/bir/codec"
+	"ballerina-lang-go/context"
+	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/semantics"
+	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
-
-	"golang.org/x/tools/txtar"
 )
 
 const (
@@ -54,21 +57,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		"subset5/05-error/check-v.bal",
-		"subset5/05-error/check1-v.bal",
-		"subset5/05-error/check2-v.bal",
-		"subset5/05-error/check3-p.bal",
-		"subset5/05-error/check4-p.bal",
-		"subset5/05-error/check5-v.bal",
-		"subset5/05-error/check6-e.bal",
-		"subset5/05-error/check7-e.bal",
-		"subset5/05-error/trap1-v.bal",
-		"subset5/05-error/trap2-v.bal",
-		"subset5/05-error/trap3-v.bal",
-		"subset6/06-object/self-field-shadow-e.bal",
-		// cast #139
-		"subset6/06-map/length2-v.bal",
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/260
 		"subset7/07-function/assign12-v.bal",
 		"subset7/07-function/assign17-v.bal",
 		"subset7/07-function/record3-v.bal",
@@ -77,11 +65,15 @@ var (
 		"subset7/07-function/typeCast2-v.bal",
 		"subset7/07-function/typeCast3-p.bal",
 		"subset7/07-closure/equality4-v.bal",
-		"subset7/07-closure/equality4-v.bal",
 		"subset7/07-closure/typeCast1-v.bal",
 		"subset7/07-closure/typeCast2-p.bal",
 	}
 )
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
 
 type testResult struct {
 	success        bool
@@ -92,8 +84,6 @@ type testResult struct {
 }
 
 func TestIntegration(t *testing.T) {
-	flag.Parse()
-
 	testPairs := test_util.GetTests(t, test_util.Integration, func(path string) bool {
 		return true
 	})
@@ -102,6 +92,24 @@ func TestIntegration(t *testing.T) {
 		t.Run(testPair.Name, func(t *testing.T) {
 			t.Parallel()
 			testIntegration(t, testPair)
+		})
+	}
+}
+
+func TestProjectIntegration(t *testing.T) {
+	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
+		return
+	}
+
+	projectDirs := findProjectDirs(corpusProjectBaseDir)
+
+	for _, projDir := range projectDirs {
+		dirName := filepath.Base(projDir)
+		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
+
+		t.Run(dirName, func(t *testing.T) {
+			t.Parallel()
+			testProjectIntegration(t, dirName, projDir, txtarPath)
 		})
 	}
 }
@@ -119,13 +127,13 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 
 	if *update {
 		stdout, stderr := runIntegrationCase(testPair.InputPath)
-		if updateIfNeeded(t, testPair.ExpectedPath, stdout, stderr) {
+		if test_util.UpdateTxtarArchiveIfNeeded(t, testPair.ExpectedPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
 			t.Fatalf("Updated expected file: %s", testPair.ExpectedPath)
 		}
 		return
 	}
 
-	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(testPair.ExpectedPath)
+	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(testPair.ExpectedPath)
 	if err != nil {
 		t.Fatalf("failed to load expected from %s: %v", testPair.ExpectedPath, err)
 	}
@@ -136,67 +144,49 @@ func testIntegration(t *testing.T, testPair test_util.TestCase) {
 	}
 
 	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := result.expectedStderr != result.actualStderr
+	stderrMismatch := result.expectedStderr != normalizeIntegrationStderr(result.actualStderr)
 
 	var msg strings.Builder
 	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
 	}
 	if stderrMismatch {
 		if msg.Len() > 0 {
 			msg.WriteString("\n\n")
 		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(
+			normalizeIntegrationStderr(result.expectedStderr),
+			normalizeIntegrationStderr(result.actualStderr),
+		))
 	}
 	t.Errorf("%s", msg.String())
 }
 
-func formatExpectedGot(expected, got string) string {
-	const indent = "\t"
-	format := func(s string) string {
-		if s == "" {
-			return indent + "(empty)"
+func splitStderrDiagnostics(stderr string) []string {
+	var diagnostics []string
+	for part := range strings.SplitSeq(stderr, "\n\n") {
+		diagnostic := strings.TrimSpace(part)
+		if diagnostic != "" {
+			diagnostics = append(diagnostics, diagnostic)
 		}
-		var b strings.Builder
-		for line := range strings.SplitSeq(s, "\n") {
-			b.WriteString(indent)
-			b.WriteString(line)
-			b.WriteString("\n")
-		}
-		return strings.TrimSuffix(b.String(), "\n")
 	}
-	return "expected:\n" + format(expected) + "\n\ngot:\n" + format(got)
+	return diagnostics
+}
+
+func normalizeIntegrationStderr(stderr string) string {
+	stderr = strings.TrimSpace(stderr)
+	if stderr == "" {
+		return ""
+	}
+
+	diagnostics := splitStderrDiagnostics(stderr)
+
+	slices.Sort(diagnostics)
+	return strings.Join(diagnostics, "\n\n") + "\n"
 }
 
 func isTestSkipped(tc test_util.TestCase) bool {
 	return slices.Contains(skipIntegrationTests, filepath.ToSlash(tc.Name))
-}
-
-func loadExpectedFromTxtar(txtarPath string) (expectedStdout, expectedStderr string, err error) {
-	archive, err := txtar.ParseFile(txtarPath)
-	if err != nil {
-		return "", "", err
-	}
-
-	var stdoutFound, stderrFound bool
-	for _, f := range archive.Files {
-		switch f.Name {
-		case "stdout":
-			expectedStdout = string(f.Data)
-			stdoutFound = true
-		case "stderr":
-			expectedStderr = string(f.Data)
-			stderrFound = true
-		default:
-			return "", "", fmt.Errorf("unexpected file %q (only stdout/stderr are allowed)", f.Name)
-		}
-	}
-
-	if !stdoutFound || !stderrFound {
-		return "", "", fmt.Errorf("missing required files (need stdout and stderr)")
-	}
-
-	return expectedStdout, expectedStderr, nil
 }
 
 func runTest(balFile string, expectedStdout, expectedStderr string) testResult {
@@ -217,8 +207,9 @@ func runIntegrationCase(balFile string) (stdout, stderr string) {
 }
 
 func evaluateTestResult(expectedStdout, expectedStderr, actualStdout, actualStderr string) testResult {
+	stderrMatch := expectedStderr == normalizeIntegrationStderr(actualStderr)
 	return testResult{
-		success:        actualStdout == expectedStdout && actualStderr == expectedStderr,
+		success:        actualStdout == expectedStdout && stderrMatch,
 		expectedStdout: expectedStdout,
 		actualStdout:   actualStdout,
 		expectedStderr: expectedStderr,
@@ -281,94 +272,6 @@ func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) 
 	}
 }
 
-func updateIfNeeded(t *testing.T, expectedPath, stdout, stderr string) bool {
-	archive := &txtar.Archive{
-		Files: []txtar.File{
-			{Name: "stdout", Data: []byte(stdout)},
-			{Name: "stderr", Data: []byte(stderr)},
-		},
-	}
-
-	actual := txtar.Format(archive)
-
-	existing, err := os.ReadFile(expectedPath)
-	fileExists := err == nil
-
-	if fileExists && bytes.Equal(existing, actual) {
-		return false
-	}
-	dir := filepath.Dir(expectedPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("Failed to create directory %s: %v", dir, err)
-	}
-	if err := os.WriteFile(expectedPath, actual, 0o644); err != nil {
-		t.Fatalf("Failed to write expected file %s: %v", expectedPath, err)
-	}
-	return true
-}
-
-func TestProjectIntegration(t *testing.T) {
-	flag.Parse()
-
-	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
-		return
-	}
-
-	projectDirs := findProjectDirs(corpusProjectBaseDir)
-
-	for _, projDir := range projectDirs {
-		dirName := filepath.Base(projDir)
-		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
-
-		t.Run(dirName, func(t *testing.T) {
-			t.Parallel()
-			testProjectIntegration(t, dirName, projDir, txtarPath)
-		})
-	}
-}
-
-func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("panic while running %s: %v", dirName, r)
-		}
-	}()
-
-	if *update {
-		stdout, stderr := runProjectIntegrationCase(projDir)
-		if updateIfNeeded(t, txtarPath, stdout, stderr) {
-			t.Fatalf("Updated expected file: %s", txtarPath)
-		}
-		return
-	}
-
-	expectedStdout, expectedStderr, err := loadExpectedFromTxtar(txtarPath)
-	if err != nil {
-		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
-	}
-
-	stdout, stderr := runProjectIntegrationCase(projDir)
-	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
-	if result.success {
-		return
-	}
-
-	stdoutMismatch := result.expectedStdout != result.actualStdout
-	stderrMismatch := result.expectedStderr != result.actualStderr
-
-	var msg strings.Builder
-	if stdoutMismatch {
-		fmt.Fprintf(&msg, "stdout mismatch\n%s", formatExpectedGot(result.expectedStdout, result.actualStdout))
-	}
-	if stderrMismatch {
-		if msg.Len() > 0 {
-			msg.WriteString("\n\n")
-		}
-		fmt.Fprintf(&msg, "stderr mismatch\n%s", formatExpectedGot(result.expectedStderr, result.actualStderr))
-	}
-	t.Errorf("%s", msg.String())
-}
-
 func findProjectDirs(dir string) []string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -385,6 +288,54 @@ func findProjectDirs(dir string) []string {
 		}
 	}
 	return dirs
+}
+
+func testProjectIntegration(t *testing.T, dirName, projDir, txtarPath string) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while running %s: %v", dirName, r)
+		}
+	}()
+
+	if *update {
+		stdout, stderr := runProjectIntegrationCase(projDir)
+		if test_util.UpdateTxtarArchiveIfNeeded(t, txtarPath, test_util.TxtarFilesStdoutStderr(stdout, normalizeIntegrationStderr(stderr))) {
+			t.Fatalf("Updated expected file: %s", txtarPath)
+		}
+		return
+	}
+
+	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(txtarPath)
+	if err != nil {
+		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
+	}
+
+	stdout, stderr := runProjectIntegrationCase(projDir)
+	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+	if result.success {
+		return
+	}
+
+	stdoutMismatch := result.expectedStdout != result.actualStdout
+	stderrMismatch := result.expectedStderr != result.actualStderr
+
+	var msg strings.Builder
+	if stdoutMismatch {
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(
+			result.expectedStdout,
+			result.actualStdout,
+		))
+	}
+	if stderrMismatch {
+		if msg.Len() > 0 {
+			msg.WriteString("\n\n")
+		}
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(
+			result.expectedStderr,
+			normalizeIntegrationStderr(result.actualStderr),
+		))
+	}
+	t.Errorf("%s", msg.String())
 }
 
 func runProjectIntegrationCase(projectDir string) (stdout, stderr string) {
@@ -441,4 +392,151 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *b
 			return
 		}
 	}
+}
+
+func TestProjectSerializationRoundtrip(t *testing.T) {
+	flag.Parse()
+
+	if _, err := os.Stat(corpusProjectBaseDir); os.IsNotExist(err) {
+		return
+	}
+
+	projectDirs := findProjectDirs(corpusProjectBaseDir)
+
+	for _, projDir := range projectDirs {
+		dirName := filepath.Base(projDir)
+		if !strings.HasSuffix(dirName, "-v") {
+			continue
+		}
+		txtarPath := filepath.Join(corpusProjectIntegrationBaseDir, dirName+".txtar")
+
+		t.Run(dirName, func(t *testing.T) {
+			t.Parallel()
+			testProjectSerializationRoundtrip(t, dirName, projDir, txtarPath)
+		})
+	}
+}
+
+func testProjectSerializationRoundtrip(t *testing.T, dirName, projDir, txtarPath string) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("panic while running %s: %v", dirName, r)
+		}
+	}()
+
+	expectedStdout, expectedStderr, err := test_util.LoadTxtarStdoutStderr(txtarPath)
+	if err != nil {
+		t.Fatalf("failed to load expected from %s: %v", txtarPath, err)
+	}
+
+	stdout, stderr := runProjectSerializationRoundtrip(projDir)
+	result := evaluateTestResult(expectedStdout, expectedStderr, stdout, stderr)
+	if result.success {
+		return
+	}
+
+	stdoutMismatch := result.expectedStdout != result.actualStdout
+	stderrMismatch := result.expectedStderr != result.actualStderr
+
+	var msg strings.Builder
+	if stdoutMismatch {
+		fmt.Fprintf(&msg, "stdout mismatch\n%s", test_util.FormatExpectedGot(result.expectedStdout, result.actualStdout))
+	}
+	if stderrMismatch {
+		if msg.Len() > 0 {
+			msg.WriteString("\n\n")
+		}
+		fmt.Fprintf(&msg, "stderr mismatch\n%s", test_util.FormatExpectedGot(result.expectedStderr, result.actualStderr))
+	}
+	t.Errorf("%s", msg.String())
+}
+
+func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string) {
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
+
+	fsys := os.DirFS(projectDir)
+	result, err := directory.LoadProject(fsys, ".")
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+
+	printDiagnostics(fsys, &stderrBuf, compilation.DiagnosticResult())
+	if compilation.DiagnosticResult().HasErrors() {
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkgs := backend.BIRPackages()
+	exportedSymbols := backend.ExportedSymbols()
+
+	if len(birPkgs) == 0 {
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	deps := birPkgs[:len(birPkgs)-1]
+	mainPkg := birPkgs[len(birPkgs)-1]
+
+	freshEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
+	deserialized := make([]*bir.BIRPackage, 0, len(birPkgs))
+
+	for _, dep := range deps {
+		pkgIdent := semantics.PackageIdentifier{
+			OrgName:    dep.PackageID.OrgName.Value(),
+			ModuleName: dep.PackageID.PkgName.Value(),
+		}
+		exported, ok := exportedSymbols[pkgIdent]
+		if !ok {
+			fmt.Fprintf(&stdoutBuf, "exported symbols not found for %s/%s\n", pkgIdent.OrgName, pkgIdent.ModuleName)
+			return stdoutBuf.String(), stderrBuf.String()
+		}
+
+		symBytes, err := symbolpool.Marshal(exported, dep.TypeEnv)
+		if err != nil {
+			fmt.Fprintf(&stdoutBuf, "symbol serialization failed: %v\n", err)
+			return stdoutBuf.String(), stderrBuf.String()
+		}
+
+		_, err = symbolpool.Unmarshal(freshEnv, symBytes)
+		if err != nil {
+			fmt.Fprintf(&stdoutBuf, "symbol deserialization failed: %v\n", err)
+			return stdoutBuf.String(), stderrBuf.String()
+		}
+
+		birBytes, err := bircodec.Marshal(dep)
+		if err != nil {
+			fmt.Fprintf(&stdoutBuf, "BIR serialization failed: %v\n", err)
+			return stdoutBuf.String(), stderrBuf.String()
+		}
+
+		freshCtx := context.NewCompilerContext(freshEnv)
+		deserializedPkg, err := bircodec.Unmarshal(freshCtx, birBytes)
+		if err != nil {
+			fmt.Fprintf(&stdoutBuf, "BIR deserialization failed: %v\n", err)
+			return stdoutBuf.String(), stderrBuf.String()
+		}
+
+		deserialized = append(deserialized, deserializedPkg)
+	}
+
+	mainBirBytes, err := bircodec.Marshal(mainPkg)
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "BIR serialization failed: %v\n", err)
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	freshCtx := context.NewCompilerContext(freshEnv)
+	deserializedMain, err := bircodec.Unmarshal(freshCtx, mainBirBytes)
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "BIR deserialization failed: %v\n", err)
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+
+	deserialized = append(deserialized, deserializedMain)
+
+	runProjectInterpretPhase(deserialized, &stdoutBuf, &stderrBuf)
+	return stdoutBuf.String(), stderrBuf.String()
 }

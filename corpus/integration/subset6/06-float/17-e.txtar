@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: values are not comparable
    |
 24 |     io:println(i > f); // @error
    |                ^^^^^
-

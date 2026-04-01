@@ -108,7 +108,7 @@ func (cx *stmtContext) addLocalVarInner(name model.Name, ty semtypes.SemType) *B
 	varDcl.Type = ty
 	sc := cx.scopeCtx
 	sc.localVars = append(sc.localVars, varDcl)
-	return &BIROperand{VariableDcl: varDcl, Address: relativeAddress(len(sc.localVars) - 1)}
+	return &BIROperand{VariableDcl: varDcl, Address: RelativeAddress(len(sc.localVars) - 1)}
 }
 
 func (cx *stmtContext) addTempVar(ty semtypes.SemType) *BIROperand {
@@ -179,6 +179,10 @@ func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model
 	return buildLookupKey(symRef.Package, className+"."+ctx.CompilerContext.GetSymbol(symRef).Name())
 }
 
+func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
+	return pkgId.OrgName.Value() + "/" + pkgId.PkgName.Value() + ":" + name.Value()
+}
+
 func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 	birPkg := &BIRPackage{}
 	birPkg.PackageID = ast.PackageID
@@ -189,15 +193,13 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		classDefMap:     make(map[*semtypes.MappingAtomicType]*BIRClassDef),
 		birPkg:          birPkg,
 	}
-	birPkg.GlobalVars = make(map[model.SymbolRef]BIRGlobalVariableDcl)
+	birPkg.GlobalVars = make(map[string]BIRGlobalVariableDcl)
 	processImports(ctx, genCtx, ast.Imports, birPkg)
 	for _, globalVar := range ast.GlobalVars {
-		symRef := globalVar.Symbol()
-		addGlobalVar(birPkg, symRef, TransformGlobalVariableDcl(genCtx, &globalVar))
+		addGlobalVar(birPkg, TransformGlobalVariableDcl(genCtx, &globalVar))
 	}
 	for _, constant := range ast.Constants {
-		symRef := constant.Symbol()
-		addGlobalVar(birPkg, symRef, transformConstantAsGlobal(genCtx, &constant))
+		addGlobalVar(birPkg, transformConstantAsGlobal(genCtx, &constant))
 	}
 	if ast.InitFunction != nil {
 		birPkg.InitFunction = TransformFunction(genCtx, ast.InitFunction)
@@ -266,8 +268,8 @@ func TransformImportModule(ctx *Context, ast ast.BLangImportPackage) *BIRImportM
 	}
 }
 
-func addGlobalVar(birPkg *BIRPackage, symRef model.SymbolRef, dcl BIRGlobalVariableDcl) {
-	birPkg.GlobalVars[symRef] = dcl
+func addGlobalVar(birPkg *BIRPackage, dcl BIRGlobalVariableDcl) {
+	birPkg.GlobalVars[dcl.GlobalVarLookupKey] = dcl
 }
 
 func flagSetToInt64(flags common.Set[model.Flag]) int64 {
@@ -287,6 +289,7 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
 	dcl.Flags = flagSetToInt64(ast.GetFlags())
 	dcl.Origin = model.SymbolOrigin_SOURCE
+	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
 
@@ -299,6 +302,7 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
 	dcl.Flags = flagSetToInt64(c.GetFlags())
 	dcl.Origin = model.SymbolOrigin_SOURCE
+	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
 
@@ -1235,8 +1239,9 @@ func simpleVariableReference(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.B
 	gv := &BIRGlobalVariableDcl{}
 	gv.Name = model.Name(varName)
 	gv.PkgId = pkgId
+	gv.GlobalVarLookupKey = buildGlobalVarLookupKey(pkgId, gv.Name)
 	return expressionEffect{
-		result: &BIROperand{VariableDcl: gv, SymRef: &symRef},
+		result: &BIROperand{VariableDcl: gv},
 		block:  curBB,
 	}
 }
@@ -1257,9 +1262,9 @@ func trapExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTrapE
 	trapEndBB.Terminator = NewGoto(afterTrapBB, expr.GetPosition())
 
 	ctx.errorEntries = append(ctx.errorEntries, BIRErrorEntry{
-		Start:   trapStartBB,
-		End:     trapEndBB,
-		Target:  afterTrapBB,
+		Start:   trapStartBB.Number,
+		End:     trapEndBB.Number,
+		Target:  afterTrapBB.Number,
 		ErrorOp: resultOperand,
 	})
 

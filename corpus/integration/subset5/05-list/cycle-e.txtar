@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: type definition T is empty
    |
 17 | type T [T]; // @error
    | ^^^^^^^^^^^
-

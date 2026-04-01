@@ -16,7 +16,11 @@
 
 package projects
 
-import "ballerina-lang-go/bir"
+import (
+	"ballerina-lang-go/bir"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semantics"
+)
 
 // BallerinaBackendTarget is the target platform for the Go/BIR backend.
 const BallerinaBackendTarget TargetPlatform = "native"
@@ -60,6 +64,11 @@ func (b *BallerinaBackend) TargetPlatform() TargetPlatform {
 // BIR is generated during performCodeGen() which runs when the backend is created.
 func (b *BallerinaBackend) BIR() *bir.BIRPackage {
 	return b.packageContext.getDefaultModuleContext().getBIRPackage()
+}
+
+// ExportedSymbols returns the exported symbol spaces for all compiled modules.
+func (b *BallerinaBackend) ExportedSymbols() map[semantics.PackageIdentifier]model.ExportedSymbolSpace {
+	return b.packageCompilation.rootPackageContext.getProject().Environment().publicSymbols
 }
 
 // BIRPackages returns all BIR packages in topological order.

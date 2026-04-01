@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Variable already defined: offset
    |
 22 |         int offset = 10; // @error
    |         ^^^^^^^^^^^^^^^^
-

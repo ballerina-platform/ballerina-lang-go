@@ -118,7 +118,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			resolver, cx := newTestQueryResolver()
-			_, _, ok := resolver.resolveQueryExpr(nil, testCase.query)
+			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query)
 			if ok {
 				t.Fatalf("expected resolveQueryExpr to fail")
 			}
@@ -193,7 +193,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 				newSelectClause(newIntLiteral(1)),
 			)
 			resolver, cx := newTestQueryResolver()
-			_, ok := resolver.resolveQueryIntermediateClauses(nil, query)
+			_, ok := resolveQueryIntermediateClauses(resolver, nil, query)
 			if ok {
 				t.Fatalf("expected resolveQueryIntermediateClauses to fail")
 			}
@@ -202,10 +202,10 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 	}
 }
 
-func newTestQueryResolver() (*TypeResolver, *context.CompilerContext) {
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+func newTestQueryResolver() (*packageTypeResolver, *context.CompilerContext) {
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	return newTypeResolver(cx, &ast.BLangPackage{}, nil), cx
+	return newPackageTypeResolver(cx, &ast.BLangPackage{}, nil), cx
 }
 
 func assertDiagnosticContains(t *testing.T, cx *context.CompilerContext, substr string) {

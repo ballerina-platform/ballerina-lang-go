@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: missing return statement
    |
 21 |     function bar() returns int {
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-

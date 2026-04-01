@@ -24,9 +24,9 @@ import (
 	"sort"
 
 	"ballerina-lang-go/bir"
-	typepool "ballerina-lang-go/bir/codec/type-pool"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/semtypes/typepool"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -148,6 +148,14 @@ func (bw *birWriter) writeClassDef(buf *bytes.Buffer, classDef *bir.BIRClassDef)
 }
 
 func (bw *birWriter) writeFunctions(buf *bytes.Buffer, pkg *bir.BIRPackage) {
+	write(buf, pkg.InitFunction != nil)
+	if pkg.InitFunction != nil {
+		bw.writeFunction(buf, pkg.InitFunction)
+	}
+	write(buf, pkg.MainFunction != nil)
+	if pkg.MainFunction != nil {
+		bw.writeFunction(buf, pkg.MainFunction)
+	}
 	bw.writeLength(buf, len(pkg.Functions))
 	for _, fn := range pkg.Functions {
 		bw.writeFunction(buf, &fn)
@@ -160,6 +168,7 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writeStringCPEntry(buf, fn.OriginalName.Value())
 	bw.writeFlags(buf, fn.Flags)
 	bw.writeOrigin(buf, fn.Origin)
+	bw.writeStringCPEntry(buf, fn.FunctionLookupKey)
 
 	bw.writeLength(buf, len(fn.RequiredParams))
 	for _, requiredParam := range fn.RequiredParams {
@@ -191,9 +200,9 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 
 	bw.writeLength(birbuf, len(fn.ErrorTable))
 	for _, entry := range fn.ErrorTable {
-		bw.writeStringCPEntry(birbuf, entry.Start.Id.Value())
-		bw.writeStringCPEntry(birbuf, entry.End.Id.Value())
-		bw.writeStringCPEntry(birbuf, entry.Target.Id.Value())
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.Start))
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.End))
+		bw.writeStringCPEntry(birbuf, fmt.Sprintf("bb%d", entry.Target))
 		bw.writeOperand(birbuf, entry.ErrorOp)
 	}
 
@@ -336,6 +345,7 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		write(buf, term.IsMethodCall)
 		bw.writePackageCPEntry(buf, term.CalleePkg)
 		bw.writeStringCPEntry(buf, term.Name.Value())
+		bw.writeStringCPEntry(buf, term.FunctionLookupKey)
 
 		bw.writeLength(buf, len(term.Args))
 		for _, arg := range term.Args {
@@ -386,9 +396,14 @@ func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	bw.writeScope(buf, scope)
 	name := op.VariableDcl.GetName()
 	bw.writeStringCPEntry(buf, name.Value())
-	write(buf, uint8(op.Address.Mode))
-	write(buf, int32(op.Address.FrameIndex))
-	write(buf, int32(op.Address.BaseIndex))
+	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
+		bw.writeStringCPEntry(buf, gv.GlobalVarLookupKey)
+		bw.writePackageCPEntry(buf, gv.PkgId)
+	} else {
+		write(buf, uint8(op.Address.Mode))
+		write(buf, int32(op.Address.FrameIndex))
+		write(buf, int32(op.Address.BaseIndex))
+	}
 }
 
 func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {

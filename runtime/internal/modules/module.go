@@ -18,13 +18,12 @@ package modules
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/values"
 )
 
 type BIRModule struct {
 	Pkg     *bir.BIRPackage
-	Globals map[model.SymbolRef]values.BalValue
+	Globals map[string]values.BalValue
 }
 
 type ExternFunction struct {
@@ -33,9 +32,9 @@ type ExternFunction struct {
 }
 
 func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
-	globals := make(map[model.SymbolRef]values.BalValue, len(pkg.GlobalVars))
-	for symRef, gv := range pkg.GlobalVars {
-		globals[symRef] = values.DefaultValueForType(gv.GetType())
+	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
+	for key, gv := range pkg.GlobalVars {
+		globals[key] = values.DefaultValueForType(gv.GetType())
 	}
 	return &BIRModule{
 		Pkg:     pkg,

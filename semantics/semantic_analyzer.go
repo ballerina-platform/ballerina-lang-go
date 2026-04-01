@@ -18,9 +18,7 @@ package semantics
 
 import (
 	"fmt"
-	"math/big"
 	"reflect"
-	"sort"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -491,112 +489,12 @@ func formatIncompatibleTypeMessage(ctx semtypes.Context, expectedType semtypes.S
 	return fmt.Sprintf("incompatible type: expected %s, got %s", semtypes.ToString(ctx, expectedType), semtypes.ToString(ctx, actualType))
 }
 
-func widenNumericLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) {
-	if expectedType == nil {
-		return
-	}
-	resolvedTy := expr.GetDeterminedType()
-	// If already compatible, no widening needed
-	if semtypes.IsSubtype(a.tyCtx(), resolvedTy, expectedType) {
-		return
-	}
-	// Determine the single target numeric type
-	singleNumType := semtypes.SingleNumericType(expectedType)
-	if !singleNumType.IsPresent() {
-		return
-	}
-	targetNumType := singleNumType.Get()
-
-	// int → float
-	if targetNumType == semtypes.FLOAT {
-		if intVal, ok := expr.Value.(int64); ok {
-			floatVal := float64(intVal)
-			expr.Value = floatVal
-			expr.SetDeterminedType(semtypes.FloatConst(floatVal))
-		}
-		return
-	}
-	// int → decimal OR float → decimal
-	if targetNumType == semtypes.DECIMAL {
-		if intVal, ok := expr.Value.(int64); ok {
-			ratVal := new(big.Rat).SetInt64(intVal)
-			expr.Value = ratVal
-			expr.SetDeterminedType(semtypes.DecimalConst(*ratVal))
-		} else if floatVal, ok := expr.Value.(float64); ok {
-			ratVal := new(big.Rat).SetFloat64(floatVal)
-			expr.Value = ratVal
-			expr.SetDeterminedType(semtypes.DecimalConst(*ratVal))
-		}
-		return
-	}
-}
-
-func widenNumericExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) {
-	if expectedType == nil {
-		return
-	}
-	switch e := expr.(type) {
-	case *ast.BLangLiteral:
-		widenNumericLiteral(a, e, expectedType)
-	case *ast.BLangNumericLiteral:
-		widenNumericLiteral(a, &e.BLangLiteral, expectedType)
-	case *ast.BLangUnaryExpr:
-		widenUnaryExpr(a, e, expectedType)
-	case *ast.BLangBinaryExpr:
-		widenBinaryExpr(a, e, expectedType)
-	}
-}
-
-func widenUnaryExpr[A analyzer](a A, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) {
-	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
-		return
-	}
-	targetOpt := semtypes.SingleNumericType(expectedType)
-	if !targetOpt.IsPresent() {
-		return
-	}
-	target := targetOpt.Get()
-
-	switch expr.GetOperatorKind() {
-	case model.OperatorKind_ADD, model.OperatorKind_SUB:
-		widenNumericExpression(a, expr.Expr, expectedType)
-		if semtypes.IsSubtypeSimple(expr.Expr.GetDeterminedType(), target) {
-			expr.SetDeterminedType(target)
-		}
-	}
-}
-
-func widenBinaryExpr[A analyzer](a A, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) {
-	if semtypes.IsSubtype(a.tyCtx(), expr.GetDeterminedType(), expectedType) {
-		return
-	}
-	targetOpt := semtypes.SingleNumericType(expectedType)
-	if !targetOpt.IsPresent() {
-		return
-	}
-	target := targetOpt.Get()
-
-	if !isAdditiveExpr(expr) && !isMultiplicativeExpr(expr) {
-		return
-	}
-
-	widenNumericExpression(a, expr.LhsExpr, expectedType)
-	widenNumericExpression(a, expr.RhsExpr, expectedType)
-	lhsOK := semtypes.IsSubtypeSimple(expr.LhsExpr.GetDeterminedType(), target)
-	rhsOK := semtypes.IsSubtypeSimple(expr.RhsExpr.GetDeterminedType(), target)
-	if lhsOK && rhsOK {
-		expr.SetDeterminedType(target)
-	}
-}
-
 func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
 	switch expr := expr.(type) {
 	case *ast.BLangLiteral:
-		widenNumericLiteral(a, expr, expectedType)
-		return analyzeLiteral(a, expr, expectedType)
+		return validateResolvedType(a, expr, expectedType)
 
 	case *ast.BLangNumericLiteral:
-		widenNumericLiteral(a, &expr.BLangLiteral, expectedType)
 		return validateResolvedType(a, expr, expectedType)
 
 	case *ast.BLangSimpleVarRef:
@@ -606,11 +504,9 @@ func analyzeExpression[A analyzer](a A, expr ast.BLangExpression, expectedType s
 		panic("not implemented")
 
 	case *ast.BLangBinaryExpr:
-		widenNumericExpression(a, expr, expectedType)
 		return analyzeBinaryExpr(a, expr, expectedType)
 
 	case *ast.BLangUnaryExpr:
-		widenNumericExpression(a, expr, expectedType)
 		return analyzeUnaryExpr(a, expr, expectedType)
 
 	case *ast.BLangInvocation:
@@ -887,162 +783,31 @@ func analyzeIndexBasedAccess[A analyzer](a A, expr *ast.BLangIndexBasedAccess, e
 }
 
 func analyzeListConstructorExpr[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) bool {
-	for _, memberExpr := range expr.Exprs {
-		if !analyzeExpression(a, memberExpr, nil) {
+	// The type resolver has already selected the inherent type and re-resolved members
+	// with per-member expected types. We only need to validate members here.
+	lat := expr.AtomicType
+	for i, memberExpr := range expr.Exprs {
+		memberExpectedType := lat.MemberAtInnerVal(i)
+		if !analyzeExpression(a, memberExpr, memberExpectedType) {
 			return false
-		}
-	}
-
-	if expectedType != nil {
-		resultType, listAtomicType := selectListInherentType(a, expr, expectedType)
-		if resultType == nil {
-			return false
-		}
-		for i, memberExpr := range expr.Exprs {
-			requiredType := listAtomicType.MemberAtInnerVal(i)
-			if semtypes.IsNever(requiredType) {
-				a.semanticErr("too many members in list constructor", expr.GetPosition())
-				return false
-			}
-			if !analyzeExpression(a, memberExpr, requiredType) {
-				return false
-			}
-		}
-		expr.AtomicType = listAtomicType
-		setExpectedType(expr, resultType)
-	} else {
-		for _, memberExpr := range expr.Exprs {
-			if !analyzeExpression(a, memberExpr, nil) {
-				return false
-			}
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)
-}
-
-func selectListInherentType[A analyzer](a A, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.ListAtomicType) {
-	expectedListType := semtypes.Intersect(expectedType, semtypes.LIST)
-	tc := a.tyCtx()
-	if semtypes.IsEmpty(tc, expectedListType) {
-		a.semanticErr("list type not found in expected type", expr.GetPosition())
-		return nil, semtypes.ListAtomicType{}
-	}
-	lat := semtypes.ToListAtomicType(tc, expectedListType)
-	if lat != nil {
-		return expectedListType, *lat
-	}
-
-	alts := semtypes.ListAlternatives(tc, expectedListType)
-
-	// Filter alternatives by length compatibility
-	var validAlts []semtypes.ListAlternative
-
-	// FIXME: is this needed?
-	for _, expr := range expr.Exprs {
-		analyzeExpression(a, expr, nil)
-	}
-	members := make([]semtypes.ListMemberInfo, len(expr.Exprs))
-	for i, expr := range expr.Exprs {
-		members[i] = semtypes.ListMemberInfo{Index: i, ValType: expr.GetDeterminedType()}
-	}
-	for _, alt := range alts {
-		if semtypes.ListAlternativeAllowsMembers(tc, alt, members) {
-			validAlts = append(validAlts, alt)
-		}
-	}
-
-	// Validate uniqueness
-	if len(validAlts) == 0 {
-		a.semanticErr("no applicable inherent type for list constructor", expr.GetPosition())
-		return nil, semtypes.ListAtomicType{}
-	}
-	if len(validAlts) > 1 {
-		a.semanticErr("ambiguous inherent type for list constructor", expr.GetPosition())
-		return nil, semtypes.ListAtomicType{}
-	}
-
-	// Extract atomic type from selected alternative
-	selectedSemType := validAlts[0].SemType
-	lat = semtypes.ToListAtomicType(tc, selectedSemType)
-	if lat == nil {
-		a.semanticErr("applicable type for list constructor is not atomic", expr.GetPosition())
-		return nil, semtypes.ListAtomicType{}
-	}
-
-	return selectedSemType, *lat
 }
 
 func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) bool {
-	if expectedType != nil {
-		resultType, mappingAtomicType := selectMappingInherentType(a, expr, expectedType)
-		if resultType == nil {
+	// The type resolver has already selected the inherent type and re-resolved field values
+	// with per-field expected types. We only need to validate fields here.
+	mat := expr.AtomicType
+	for _, f := range expr.Fields {
+		kv := f.(*ast.BLangMappingKeyValueField)
+		keyName := recordKeyName(kv.Key)
+		fieldExpectedType := mat.FieldInnerVal(keyName)
+		if !analyzeExpression(a, kv.ValueExpr, fieldExpectedType) {
 			return false
-		}
-		for _, f := range expr.Fields {
-			kv := f.(*ast.BLangMappingKeyValueField)
-			keyName := recordKeyName(kv.Key)
-			requiredType := mappingAtomicType.FieldInnerVal(keyName)
-			if !analyzeExpression(a, kv.ValueExpr, requiredType) {
-				return false
-			}
-		}
-		expr.AtomicType = mappingAtomicType
-		setExpectedType(expr, resultType)
-	} else {
-		for _, f := range expr.Fields {
-			kv := f.(*ast.BLangMappingKeyValueField)
-			if !analyzeExpression(a, kv.ValueExpr, nil) {
-				return false
-			}
 		}
 	}
 	return validateResolvedType(a, expr, expectedType)
-}
-
-func selectMappingInherentType[A analyzer](a A, expr *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, semtypes.MappingAtomicType) {
-	expectedMappingType := semtypes.Intersect(expectedType, semtypes.MAPPING)
-	tc := a.tyCtx()
-	if semtypes.IsEmpty(tc, expectedMappingType) {
-		a.semanticErr("mapping type not found in expected type", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}
-	}
-	mat := semtypes.ToMappingAtomicType(tc, expectedMappingType)
-	if mat != nil {
-		return expectedMappingType, *mat
-	}
-	alts := semtypes.MappingAlternatives(tc, expectedType)
-	var validAlts []semtypes.MappingAlternative
-
-	fields := make([]semtypes.MappingFieldInfo, len(expr.Fields))
-	for i, f := range expr.Fields {
-		kv := f.(*ast.BLangMappingKeyValueField)
-		fields[i] = semtypes.MappingFieldInfo{Name: recordKeyName(kv.Key), Ty: kv.ValueExpr.GetDeterminedType()}
-	}
-	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
-
-	for _, alt := range alts {
-		if semtypes.MappingAlternativeAllowsFields(tc, alt, fields) {
-			validAlts = append(validAlts, alt)
-		}
-	}
-	if len(validAlts) == 0 {
-		a.semanticErr("no applicable inherent type for mapping constructor", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}
-	}
-	if len(validAlts) > 1 {
-		a.semanticErr("ambiguous inherent type for mapping constructor", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}
-	}
-
-	// Extract atomic type from selected alternative
-	selectedSemType := validAlts[0].SemType
-	mat = semtypes.ToMappingAtomicType(tc, selectedSemType)
-	if mat == nil {
-		a.semanticErr("applicable type for mapping constructor is not atomic", expr.GetPosition())
-		return nil, semtypes.MappingAtomicType{}
-	}
-
-	return selectedSemType, *mat
 }
 
 func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructorExpr, expectedType semtypes.SemType) bool {
@@ -1052,14 +817,6 @@ func analyzeErrorConstructorExpr[A analyzer](a A, expr *ast.BLangErrorConstructo
 		return false
 	}
 	tyCtx := a.tyCtx()
-	if expectedType != nil && semtypes.IsSameType(tyCtx, expr.DeterminedType, semtypes.ERROR) {
-		// need to set the expected type based on the contextually expected type
-		errorPart := semtypes.Intersect(expectedType, semtypes.ERROR)
-		if !semtypes.IsEmpty(tyCtx, errorPart) {
-			// Otherwise we will get an error at the end
-			setExpectedType(expr, errorPart)
-		}
-	}
 
 	msgArg := expr.PositionalArgs[0]
 	if !analyzeExpression(a, msgArg, semtypes.STRING) {
@@ -1164,7 +921,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			}
 		}
 	} else if isBitWiseExpr(binaryExpr) {
-		if !analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy, expectedType) {
+		if !analyzeBitWiseExpr(a, binaryExpr, lhsTy, rhsTy) {
 			return false
 		}
 	} else if isRangeExpr(binaryExpr) {
@@ -1173,7 +930,7 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 			return false
 		}
 	} else if isShiftExpr(binaryExpr) {
-		if !analyzeShiftExpr(a, binaryExpr, lhsTy, rhsTy, expectedType) {
+		if !analyzeShiftExpr(a, lhsTy, rhsTy) {
 			return false
 		}
 	} else if isLogicalExpression(binaryExpr) {
@@ -1187,11 +944,9 @@ func analyzeBinaryExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, expecte
 	return validateResolvedType(a, binaryExpr, expectedType)
 }
 
-func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) bool {
+func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType) bool {
 	ctx := a.tyCtx()
-	nilLifted := false
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
-		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
 		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL)
 	}
@@ -1199,65 +954,18 @@ func analyzeBitWiseExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy,
 		a.semanticErr("expect integer types for bitwise operators", binaryExpr.GetPosition())
 		return false
 	}
-	var resultTy semtypes.SemType
-	switch binaryExpr.GetOperatorKind() {
-	case model.OperatorKind_BITWISE_AND:
-		resultTy = semtypes.INT
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
-		resultTy = semtypes.INT
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	default:
-		a.internalErr(fmt.Sprintf("unsupported bitwise operator: %s", string(binaryExpr.GetOperatorKind())), binaryExpr.GetPosition())
-		return false
-	}
-	if nilLifted {
-		resultTy = semtypes.Union(semtypes.NIL, resultTy)
-	}
-	setExpectedType(binaryExpr, resultTy)
 	return true
 }
 
-func analyzeShiftExpr[A analyzer](a A, binaryExpr *ast.BLangBinaryExpr, lhsTy, rhsTy semtypes.SemType, expectedType semtypes.SemType) bool {
+func analyzeShiftExpr[A analyzer](a A, lhsTy, rhsTy semtypes.SemType) bool {
 	ctx := a.tyCtx()
-	nilLifted := false
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
-		nilLifted = true
 		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
 		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL) //nolint:staticcheck,ineffassign // rhsTy will be used when nil-lifted binary ops are fully implemented
 	}
-	op := binaryExpr.GetOperatorKind()
-	var resultTy semtypes.SemType = semtypes.INT
-
-	switch op {
-	case model.OperatorKind_BITWISE_RIGHT_SHIFT,
-		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
-
-		for _, ty := range bitWiseOpLookOrder {
-			if semtypes.IsSubtype(ctx, lhsTy, ty) {
-				resultTy = ty
-				break
-			}
-		}
-	default:
-		resultTy = semtypes.INT
+	if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
+		return false
 	}
-
-	if nilLifted {
-		resultTy = semtypes.Union(semtypes.NIL, resultTy)
-	}
-
-	setExpectedType(binaryExpr, resultTy)
 	return true
 }
 
@@ -1269,21 +977,22 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 		a.semanticErr("function not found: "+invocation.Name.GetValue(), invocation.GetPosition())
 		return false
 	}
-
+	tyCtx := a.tyCtx()
+	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	// Validate each argument expression
 	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
-		if !analyzeExpression(a, arg, nil) {
+		key := semtypes.IntConst(int64(i))
+		if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
 			return false
 		}
 		argTys[i] = arg.GetDeterminedType()
 	}
 
 	// Validate argument types against function parameter types
-	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if !semtypes.IsSubtype(a.tyCtx(), argListTy, paramListTy) {
+	if !semtypes.IsSubtype(tyCtx, argListTy, paramListTy) {
 		a.semanticErr("incompatible arguments for function call", invocation.GetPosition())
 		return false
 	}
@@ -1489,18 +1198,6 @@ func recordKeyName(key *ast.BLangMappingKey) string {
 	default:
 		panic(fmt.Sprintf("unexpected record key expression type: %T", key.Expr))
 	}
-}
-
-func analyzeLiteral[A analyzer](a A, expr *ast.BLangLiteral, expectedType semtypes.SemType) bool {
-	if expectedType != nil && semtypes.IsSubtypeSimple(expectedType, semtypes.FLOAT) {
-		if intVal, ok := expr.GetValue().(int64); ok {
-			floatVal := float64(intVal)
-			setExpectedType(expr, semtypes.FloatConst(floatVal))
-			expr.SetValue(floatVal)
-			expr.GetValueType().BTypeSetTag(model.TypeTags_FLOAT)
-		}
-	}
-	return validateResolvedType(a, expr, expectedType)
 }
 
 func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {

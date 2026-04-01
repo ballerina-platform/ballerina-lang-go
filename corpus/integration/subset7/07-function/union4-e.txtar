@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int, got int|string
    |
 25 |     int ret = f(1, 2); // @error
    |               ^^^^^^^
-

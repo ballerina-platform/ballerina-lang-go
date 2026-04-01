@@ -793,14 +793,6 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		resolveFunction(methodResolver, method)
 	}
 
-	classSym := ms.ctx.GetSymbol(classDef.Symbol()).(*model.ClassSymbol)
-	if classDef.InitFunction != nil {
-		classSym.InitFunction = classDef.InitFunction.Symbol()
-		classSym.HasInit = true
-	}
-	for methodName, method := range classDef.Methods {
-		classSym.Methods[methodName] = method.Symbol()
-	}
 }
 
 func getEnclosingClassDef(resolver symbolResolver) *ast.BLangClassDefinition {

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: from-clause variable type is incompatible with collection
    |
 19 |     int[] out = from string x in xs select x; // @error
    |                      ^^^^^^^^
-

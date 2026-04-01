@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: impossible type conversion, intersection is empty
    |
 19 |     int n = <int>true; // @error
    |             ^^^^^^^^^
-

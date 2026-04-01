@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Variable already defined: b
    |
 21 |     F f = function(int b) returns int { // @error
    |                    ^^^^^
-

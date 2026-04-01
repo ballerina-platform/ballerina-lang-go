@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: missing required field 'message' in error constructor
    |
 25 |     return error ErrorWithDetail("bar", id = 1) // @error
    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-

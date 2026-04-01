@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: not a function value
    |
 21 |     foo(x); // @error
    |     ^^^^^^
-

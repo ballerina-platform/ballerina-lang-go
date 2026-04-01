@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "cli_syntax_error_project"
+version = "0.1.0"

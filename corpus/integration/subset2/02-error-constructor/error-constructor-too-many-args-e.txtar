@@ -11,4 +11,3 @@ error[SYNTAX_ERROR]: invalid error constructor
    |
 18 |     error err = error("msg", error("cause"), "extra");  // @error
    |                              ^^^^^^^^^^^^^^
-

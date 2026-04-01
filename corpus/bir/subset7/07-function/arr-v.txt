@@ -10,7 +10,7 @@ main() -> nil{
     %5 = ConstantLoad 4
     %6 = ConstantLoad 5
     %7 = ConstantLoad 5
-    %8 = newArray [int, int, int, int, int, never...][%7]{%2, %3, %4, %5, %6}
+    %8 = newArray [int...][%7]{%2, %3, %4, %5, %6}
     %9 = ConstantLoad 0
     %10 = %9;
     %11 = fold(%1,%8,%10) -> bb1;
@@ -27,7 +27,7 @@ main() -> nil{
     %18 = ConstantLoad 4
     %19 = ConstantLoad 5
     %20 = ConstantLoad 5
-    %21 = newArray [int, int, int, int, int, never...][%20]{%15, %16, %17, %18, %19}
+    %21 = newArray [int...][%20]{%15, %16, %17, %18, %19}
     %22 = ConstantLoad 1
     %23 = %22;
     %24 = fold(%14,%21,%23) -> bb3;

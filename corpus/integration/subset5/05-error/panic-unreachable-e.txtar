@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unreachable code
    |
 22 |     io:println("foo"); // @error
    |     ^^^^^^^^^^^^^^^^^^
-

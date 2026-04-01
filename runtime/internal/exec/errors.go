@@ -67,9 +67,11 @@ func formatCallStack(cs *callStack) []string {
 func formatRuntimePanic(message string, stack []string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "error: %s\n", message)
-	fmt.Fprintf(&b, "        at %s\n", stack[0])
-	for _, line := range stack[1:] {
-		fmt.Fprintf(&b, "           %s\n", line)
+	if len(stack) > 0 {
+		fmt.Fprintf(&b, "        at %s\n", stack[0])
+		for _, line := range stack[1:] {
+			fmt.Fprintf(&b, "           %s\n", line)
+		}
 	}
 	return strings.TrimSuffix(b.String(), "\n")
 }

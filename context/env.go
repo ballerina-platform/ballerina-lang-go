@@ -32,6 +32,7 @@ type CompilerEnvironment struct {
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
 	typeDefns        map[model.SymbolRef]model.TypeDefinition
+	statsEnabled     bool
 }
 
 func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
@@ -135,13 +136,14 @@ func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (mode
 	return defn, ok
 }
 
-func NewCompilerEnvironment(typeEnv semtypes.Env) *CompilerEnvironment {
+func NewCompilerEnvironment(typeEnv semtypes.Env, statsEnabled bool) *CompilerEnvironment {
 	return &CompilerEnvironment{
 		anonTypeCount:   make(map[*model.PackageID]int),
 		anonFuncCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
 		typeEnv:         typeEnv,
 		typeDefns:       make(map[model.SymbolRef]model.TypeDefinition),
+		statsEnabled:    statsEnabled,
 	}
 }
 

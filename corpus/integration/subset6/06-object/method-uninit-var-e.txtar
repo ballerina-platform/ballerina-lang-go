@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: variable may not be initialized
    |
 25 |         io:println(x); // @error
    |                    ^
-

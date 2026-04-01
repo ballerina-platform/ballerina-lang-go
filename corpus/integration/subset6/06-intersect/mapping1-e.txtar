@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
    |
 21 | type T1 int&R1; // @error
    |         ^^^^^^
-

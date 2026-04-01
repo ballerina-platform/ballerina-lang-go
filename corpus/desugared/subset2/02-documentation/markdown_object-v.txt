@@ -1,0 +1,89 @@
+(package
+  (class-definition TestConnector
+    (variable url (type
+      (value-type string)))
+    (variable path (type
+      (value-type string)))
+    (variable abc (type
+      (value-type string)))
+    (function init () ()
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal url))
+          (literal ))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal path))
+          (literal ))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal abc))
+          (literal ))))
+    (function testAction () (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))
+    (function testSend (
+      (variable ep (type
+        (value-type string)))) (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value)))))
+  (class-definition TestConnector2
+    (variable url (type
+      (value-type string)))
+    (variable path (type
+      (value-type string)))
+    (variable abc (type
+      (value-type string)))
+    (function init () ()
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal url))
+          (literal ))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal path))
+          (literal ))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal abc))
+          (literal ))))
+    (function testAction () (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))
+    (function testSend (
+      (variable ep (type
+        (value-type string)))) (
+      (value-type boolean))
+      (block-function-body
+        (var-def
+          (variable value (type
+            (value-type boolean)) (expr
+            (literal false))))
+        (return
+          (simple-var-ref value))))))

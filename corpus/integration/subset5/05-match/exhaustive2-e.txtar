@@ -1,14 +1,13 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: unreachable match clause
-  --> exhaustive2-e.bal:27:9
-   |
-27 |         2 => { // @error
-   |         ^^^^^^^^^^^^^^^^
-
 error[SEMANTIC_ERROR]: unmatchable match clause
   --> exhaustive2-e.bal:27:9
    |
 27 |         2 => { // @error
    |         ^^^^^^^^^^^^^^^^
 
+error[SEMANTIC_ERROR]: unreachable match clause
+  --> exhaustive2-e.bal:27:9
+   |
+27 |         2 => { // @error
+   |         ^^^^^^^^^^^^^^^^

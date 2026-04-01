@@ -31,7 +31,7 @@ func CreateComplexSemType(allBitset int, subtypeList ...BasicSubtype) ComplexSem
 func CreateComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset int, someBitset int, subtypeDataList []ProperSubtypeData) ComplexSemType {
 	// migrated from ComplexSemType.java:37:5
 	if (allBitset == 0) && (someBitset == (1 << BTCell.Code())) {
-		return new(CellSemTypeFrom(subtypeDataList))
+		return CellSemTypeFrom(subtypeDataList)
 	}
 	return &complexSemTypeImpl{
 		all:             allBitset,
