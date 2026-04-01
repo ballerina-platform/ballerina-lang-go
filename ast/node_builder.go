@@ -870,9 +870,9 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 		return n.createBuiltInTypeNode(typeNode)
 	case common.QUALIFIED_NAME_REFERENCE, common.IDENTIFIER_TOKEN:
 		bLUserDefinedType := BLangUserDefinedType{}
-		nameRefence := n.createBLangNameReference(typeNode)
-		bLUserDefinedType.PkgAlias = nameRefence[0]
-		bLUserDefinedType.TypeName = nameRefence[1]
+		pkgAlias, typeName := n.createBLangNameReference(typeNode)
+		bLUserDefinedType.PkgAlias = *pkgAlias
+		bLUserDefinedType.TypeName = *typeName
 		bLUserDefinedType.pos = getPosition(typeNode)
 		return &bLUserDefinedType
 	case common.SIMPLE_NAME_REFERENCE:
@@ -985,7 +985,7 @@ func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeDescri
 	}
 }
 
-func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier {
+func (n *NodeBuilder) createBLangNameReference(node tree.Node) (*BLangIdentifier, *BLangIdentifier) {
 	switch node.Kind() {
 	case common.QUALIFIED_NAME_REFERENCE:
 		iNode := node.(*tree.QualifiedNameReferenceNode)
@@ -994,7 +994,9 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 		pkgAlias := createIdentifierFromToken(getPosition(modulePrefix), modulePrefix)
 		namePos := getPosition(identifier)
 		name := createIdentifierFromToken(namePos, identifier)
-		return []BLangIdentifier{pkgAlias, name}
+		pkgAliasRef := pkgAlias
+		nameRef := name
+		return &pkgAliasRef, &nameRef
 	case common.ERROR_TYPE_DESC:
 		builtinNode := node.(*tree.BuiltinSimpleNameReferenceNode)
 		node = builtinNode.Name()
@@ -1014,7 +1016,9 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	emptyStr := ""
 	pkgAlias := createIdentifier(builtinPos, &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(iToken), iToken)
-	return []BLangIdentifier{pkgAlias, name}
+	pkgAliasRef := pkgAlias
+	nameRef := name
+	return &pkgAliasRef, &nameRef
 }
 
 // isFunctionCallAsync checks if a function call expression is async
@@ -1037,9 +1041,9 @@ func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.N
 		bLInvocation = BLangInvocation{}
 	}
 
-	nameReference := n.createBLangNameReference(nameNode)
-	bLInvocation.PkgAlias = &nameReference[0]
-	bLInvocation.Name = &nameReference[1]
+	pkgAlias, name := n.createBLangNameReference(nameNode)
+	bLInvocation.PkgAlias = pkgAlias
+	bLInvocation.Name = name
 
 	var args []BLangExpression
 	for arg := range arguments.Iterator() {
@@ -1809,11 +1813,11 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 	} else if actionOrExpression.Kind() == common.SIMPLE_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.QUALIFIED_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.IDENTIFIER_TOKEN {
-		nameReference := n.createBLangNameReference(actionOrExpression)
+		pkgAlias, variableName := n.createBLangNameReference(actionOrExpression)
 		bLVarRef := BLangSimpleVarRef{}
 		bLVarRef.pos = getPosition(actionOrExpression)
-		bLVarRef.PkgAlias = new(createIdentifier(nameReference[0].GetPosition(), new(nameReference[0].GetValue()), new(nameReference[0].GetValue())))
-		bLVarRef.VariableName = new(createIdentifier(nameReference[1].GetPosition(), new(nameReference[1].GetValue()), new(nameReference[1].GetValue())))
+		bLVarRef.PkgAlias = pkgAlias
+		bLVarRef.VariableName = variableName
 		return &bLVarRef
 
 	} else if actionOrExpression.Kind() == common.BRACED_EXPRESSION {

@@ -445,12 +445,14 @@ func CreateNodeList(nodes ...STNode) STNode {
 	if len(nodes) == 0 {
 		return emptyNodeList
 	}
+	ownedNodes := make([]STNode, len(nodes))
+	copy(ownedNodes, nodes)
 	return createNodeAndAddChildren(&STNodeList{
 		STNodeBase: STNodeBase{
 			kind: common.LIST,
 		},
-		children: nodes,
-	}, nodes...)
+		children: ownedNodes,
+	}, ownedNodes...)
 }
 
 func CreateEmptyNodeList() STNode {
@@ -1404,9 +1406,11 @@ func CreateMetadataNode(documentationString STNode, annotations STNode) STNode {
 }
 
 func CreateAmbiguousCollectionNode(kind common.SyntaxKind, collectionStartToken STNode, members []STNode, collectionEndToken STNode) *STAmbiguousCollectionNode {
-	children := make([]STNode, 0, len(members)+2)
+	ownedMembers := make([]STNode, len(members))
+	copy(ownedMembers, members)
+	children := make([]STNode, 0, len(ownedMembers)+2)
 	children = append(children, collectionStartToken)
-	children = append(children, members...)
+	children = append(children, ownedMembers...)
 	children = append(children, collectionEndToken)
 	return createNodeAndAddChildren(&STAmbiguousCollectionNode{
 		STNodeBase: STNodeBase{
@@ -1414,7 +1418,7 @@ func CreateAmbiguousCollectionNode(kind common.SyntaxKind, collectionStartToken 
 		},
 		CollectionStartToken: collectionStartToken,
 		CollectionEndToken:   collectionEndToken,
-		Members:              members,
+		Members:              ownedMembers,
 	}, children...).(*STAmbiguousCollectionNode)
 }
 
