@@ -469,7 +469,13 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 	var stderrBuf bytes.Buffer
 
 	fsys := os.DirFS(projectDir)
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
 	if err != nil {
 		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
 		return stdoutBuf.String(), stderrBuf.String()

@@ -43,7 +43,6 @@ func DefaultFactories(ballerinaHomeFs fs.FS) []projects.RepositoryFactory {
 				ballerinaHomeFs,
 				defaultCacheSubpath,
 				env,
-				projects.LoadBalaProject,
 			)
 		},
 	}

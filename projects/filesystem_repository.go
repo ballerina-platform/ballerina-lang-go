@@ -32,27 +32,22 @@ const (
 	platformAny = "any"
 )
 
-// BalaProjectLoader loads a bala project from a platform directory.
-type BalaProjectLoader func(fsys fs.FS, platformDir string, sharedEnv *Environment) (*BalaProject, error)
-
 // FileSystemRepository loads packages from a local bala directory structure using fs.FS.
 // Directory structure: basePath/{org}/{name}/{version}/any/package.json
 type FileSystemRepository struct {
-	name          string
-	basePath      string
-	fsys          fs.FS
-	env           *Environment
-	projectLoader BalaProjectLoader
+	name     string
+	basePath string
+	fsys     fs.FS
+	env      *Environment
 }
 
 // NewFileSystemRepository creates a repository that uses fs.FS for file access.
-func NewFileSystemRepository(name string, fsys fs.FS, basePath string, env *Environment, projectLoader BalaProjectLoader) *FileSystemRepository {
+func NewFileSystemRepository(name string, fsys fs.FS, basePath string, env *Environment) *FileSystemRepository {
 	return &FileSystemRepository{
-		name:          name,
-		basePath:      basePath,
-		fsys:          fsys,
-		env:           env,
-		projectLoader: projectLoader,
+		name:     name,
+		basePath: basePath,
+		fsys:     fsys,
+		env:      env,
 	}
 }
 
@@ -82,7 +77,7 @@ func (r *FileSystemRepository) GetPackage(ctx context.Context, org, name, versio
 		return nil, nil
 	}
 
-	project, err := r.projectLoader(r.fsys, platformDir, r.env)
+	project, err := loadBalaProjectInEnvironment(r.fsys, platformDir, r.env)
 	if err != nil {
 		return nil, fmt.Errorf("repository %s: failed to load package %s/%s:%s: %w", r.name, org, name, version, err)
 	}
@@ -207,7 +202,6 @@ func defaultRepositoryFactories(ballerinaHomeFs fs.FS) []RepositoryFactory {
 				ballerinaHomeFs,
 				centralCacheSubpath,
 				env,
-				LoadBalaProject,
 			)
 		},
 	}
