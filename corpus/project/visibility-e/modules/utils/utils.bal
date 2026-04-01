@@ -14,30 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package modules
+const APP_NAME = "MyApp";
 
-import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/values"
-)
-
-type BIRModule struct {
-	Pkg     *bir.BIRPackage
-	Globals map[string]values.BalValue
-}
-
-type ExternFunction struct {
-	Name string
-	Impl func(args []values.BalValue) (values.BalValue, error)
-}
-
-func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
-	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
-	for key, gv := range pkg.GlobalVars {
-		globals[key] = values.DefaultValueForType(gv.GetType())
-	}
-	return &BIRModule{
-		Pkg:     pkg,
-		Globals: globals,
-	}
+function greet(string name) returns string {
+    return APP_NAME + ": Hello, " + name + "!";
 }

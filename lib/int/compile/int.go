@@ -61,7 +61,5 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	toHexStringRef, _ := space.GetSymbol("toHexString")
 	ctx.SetSymbolType(toHexStringRef, libcommon.FunctionSignatureToSemType(ctx.GetTypeEnv(), &toHexStringSignature))
 
-	return model.ExportedSymbolSpace{
-		Main: space,
-	}
+	return model.NewExportedSymbolSpace(space, nil)
 }

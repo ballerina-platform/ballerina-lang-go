@@ -54,7 +54,7 @@ func Store(frame *Frame, address bir.Address, value values.BalValue) {
 func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
 		module := reg.GetModule(gv.PkgId)
-		return module.Globals[*op.SymRef]
+		return module.Globals[gv.GlobalVarLookupKey]
 	}
 	return Load(currentFrame, op.Address)
 }
@@ -62,7 +62,7 @@ func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Regis
 func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry, value values.BalValue) {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
 		module := reg.GetModule(gv.PkgId)
-		module.Globals[*op.SymRef] = value
+		module.Globals[gv.GlobalVarLookupKey] = value
 	} else {
 		Store(currentFrame, op.Address, value)
 	}

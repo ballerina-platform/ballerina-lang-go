@@ -1,0 +1,14 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: APP_NAME
+  --> main.bal:22:16
+   |
+22 |     io:println(utils:APP_NAME); // @error
+   |                ^^^^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: Unknown symbol: greet
+  --> main.bal:23:16
+   |
+23 |     io:println(utils:greet("Ballerina")); // @error
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^
+

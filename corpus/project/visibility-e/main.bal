@@ -14,30 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package modules
+import ballerina/io;
 
-import (
-	"ballerina-lang-go/bir"
-	"ballerina-lang-go/values"
-)
+import testorg/visibility.utils;
 
-type BIRModule struct {
-	Pkg     *bir.BIRPackage
-	Globals map[string]values.BalValue
-}
-
-type ExternFunction struct {
-	Name string
-	Impl func(args []values.BalValue) (values.BalValue, error)
-}
-
-func NewBIRModule(pkg *bir.BIRPackage) *BIRModule {
-	globals := make(map[string]values.BalValue, len(pkg.GlobalVars))
-	for key, gv := range pkg.GlobalVars {
-		globals[key] = values.DefaultValueForType(gv.GetType())
-	}
-	return &BIRModule{
-		Pkg:     pkg,
-		Globals: globals,
-	}
+public function main() {
+    io:println(utils:APP_NAME); // @error
+    io:println(utils:greet("Ballerina")); // @error
 }
