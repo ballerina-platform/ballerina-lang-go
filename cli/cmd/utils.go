@@ -171,7 +171,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 	}
 
 	for line := loc.startLine; line <= loc.endLine && line < len(lines); line++ {
-		lineContent := lines[line]
+		lineContent := strings.TrimSuffix(lines[line], "\r")
 		lineNumStr := fmt.Sprintf("%d", line+1)
 
 		startCol := 0
@@ -192,20 +192,16 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 			endCol = len(lineContent)
 		}
 
-		var ok bool
 		var highlightLen int
-		startCol, _, highlightLen, ok = computeTrimmedCaretSpan(lineContent, startCol, endCol)
-		if !ok {
-			continue
-		}
+		startCol, _, highlightLen = computeTrimmedCaretSpan(lineContent, startCol, endCol)
 
-		_, _ = fmt.Fprintf(w, "%s%s |%s %s\n", s.cyan, lineNumStr, s.reset, lineContent)
+		_, _ = fmt.Fprintf(w, "%s%*s%s | %s\n", s.cyan, loc.numWidth, lineNumStr, s.reset, lineContent)
 		pointer := buildPointer(lineContent, startCol, highlightLen)
 		_, _ = fmt.Fprintf(w, "%*s %s| %s%s%s\n", loc.numWidth, "", s.cyan, severityColor, pointer, s.reset)
 	}
 }
 
-func computeTrimmedCaretSpan(lineContent string, startCol, endCol int) (trimStartCol, trimEndCol, highlightLen int, ok bool) {
+func computeTrimmedCaretSpan(lineContent string, startCol, endCol int) (trimStartCol, trimEndCol, highlightLen int) {
 	firstNonWS := -1
 	for i := 0; i < len(lineContent); i++ {
 		if lineContent[i] != ' ' && lineContent[i] != '\t' {
@@ -235,47 +231,30 @@ func computeTrimmedCaretSpan(lineContent string, startCol, endCol int) (trimStar
 	}
 
 	if !hasNonWS {
-		return startCol, startCol, 0, true
+		return startCol, startCol, 0
 	}
 
-	if hasNonWS {
-		if startCol < firstNonWS {
-			startCol = firstNonWS
-		}
-		if endCol > lastNonWS {
-			endCol = lastNonWS
-		}
-		if endCol < startCol {
-			endCol = startCol
-		}
+	if startCol < firstNonWS {
+		startCol = firstNonWS
+	}
+	if endCol > lastNonWS {
+		endCol = lastNonWS
+	}
+	if endCol < startCol {
+		endCol = startCol
 	}
 
 	highlightLen = endCol - startCol
 	maxHighlightLen := len(lineContent) - startCol
-	if maxHighlightLen < 1 {
-		if hasNonWS {
-			startCol = firstNonWS
-			endCol = firstNonWS + 1
-			highlightLen = 1
-			return startCol, endCol, highlightLen, true
-		}
-		return 0, 0, 0, false
-	}
-
-	if highlightLen < 1 {
-		if hasNonWS {
-			startCol = firstNonWS
-			endCol = firstNonWS + 1
-			highlightLen = 1
-			return startCol, endCol, highlightLen, true
-		}
-		return 0, 0, 0, false
+	if highlightLen < 1 || maxHighlightLen < 1 {
+		caretCol := startCol
+		return caretCol, caretCol + 1, 1
 	}
 
 	if highlightLen > maxHighlightLen {
 		highlightLen = maxHighlightLen
 	}
-	return startCol, endCol, highlightLen, true
+	return startCol, endCol, highlightLen
 }
 
 func buildPointer(lineContent string, startCol, highlightLen int) string {
