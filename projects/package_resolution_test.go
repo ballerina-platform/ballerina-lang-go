@@ -199,12 +199,11 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		RepositoryFactories: []projects.RepositoryFactory{
 			func(env *projects.Environment) projects.Repository {
-				return repository.NewFileSystemRepository(
+				return projects.NewFileSystemRepository(
 					"test-repo",
 					os.DirFS(testRepoPath),
 					".",
 					env,
-					projects.LoadBalaProject,
 				)
 			},
 		},
@@ -274,12 +273,11 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		RepositoryFactories: []projects.RepositoryFactory{
 			func(env *projects.Environment) projects.Repository {
-				return repository.NewFileSystemRepository(
+				return projects.NewFileSystemRepository(
 					"test-repo",
 					os.DirFS(testRepoPath),
-					".", // basePath relative to fsys root
+					".",
 					env,
-					projects.LoadBalaProject,
 				)
 			},
 		},
@@ -373,12 +371,11 @@ func TestPackageResolution_MultiModuleDependencies(t *testing.T) {
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
 		RepositoryFactories: []projects.RepositoryFactory{
 			func(env *projects.Environment) projects.Repository {
-				return repository.NewFileSystemRepository(
+				return projects.NewFileSystemRepository(
 					"test-repo",
 					os.DirFS(testRepoPath),
 					".",
 					env,
-					projects.LoadBalaProject,
 				)
 			},
 		},

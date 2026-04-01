@@ -30,6 +30,6 @@ type FileSystemRepository = projects.FileSystemRepository
 
 // NewFileSystemRepository creates a repository that uses fs.FS for file access.
 // Deprecated: Use projects.NewFileSystemRepository directly.
-func NewFileSystemRepository(name string, fsys fs.FS, basePath string, env *projects.Environment, projectLoader projects.BalaProjectLoader) *FileSystemRepository {
-	return projects.NewFileSystemRepository(name, fsys, basePath, env, projectLoader)
+func NewFileSystemRepository(name string, fsys fs.FS, basePath string, env *projects.Environment) *FileSystemRepository {
+	return projects.NewFileSystemRepository(name, fsys, basePath, env)
 }

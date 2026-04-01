@@ -26,7 +26,7 @@ import (
 type ProjectEnvironmentBuilder struct {
 	fsys                fs.FS
 	repositoryFactories []RepositoryFactory
-	resolutionOptions   ResolutionOptions
+	buildOptions        BuildOptions
 }
 
 func NewProjectEnvironmentBuilder(fsys fs.FS) *ProjectEnvironmentBuilder {
@@ -41,16 +41,15 @@ func (b *ProjectEnvironmentBuilder) WithRepositoryFactories(factories []Reposito
 	return b
 }
 
-// WithResolutionOptions sets the resolution options to be used during package resolution.
-func (b *ProjectEnvironmentBuilder) WithResolutionOptions(options ResolutionOptions) *ProjectEnvironmentBuilder {
-	b.resolutionOptions = options
+// WithBuildOptions sets the build options to be used during package resolution.
+func (b *ProjectEnvironmentBuilder) WithBuildOptions(options BuildOptions) *ProjectEnvironmentBuilder {
+	b.buildOptions = options
 	return b
 }
 
 func (b *ProjectEnvironmentBuilder) Build() *Environment {
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), b.buildOptions.Stats())
 	projEnv := NewEnvironment(b.fsys, env)
-	projEnv.resolutionOptions = b.resolutionOptions
 
 	// Create and add repositories from factories
 	for _, factory := range b.repositoryFactories {

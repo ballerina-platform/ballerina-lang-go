@@ -57,7 +57,7 @@ type Repository struct {
 // The rootPath is used for write operations like PushPackage.
 func NewRepository(fsys fs.FS, rootPath string, env *projects.Environment) *Repository {
 	return &Repository{
-		fsRepo:   NewFileSystemRepository("filesystem", fsys, ".", env, projects.LoadBalaProject),
+		fsRepo:   NewFileSystemRepository("filesystem", fsys, ".", env),
 		rootPath: rootPath,
 	}
 }

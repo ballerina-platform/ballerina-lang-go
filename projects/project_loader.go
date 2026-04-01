@@ -33,7 +33,6 @@ type RepositoryFactory func(env *Environment) Repository
 type ProjectLoadConfig struct {
 	BuildOptions        *BuildOptions
 	RepositoryFactories []RepositoryFactory
-	ResolutionOptions   ResolutionOptions
 }
 
 // ProjectLoader loads Ballerina projects from the filesystem.
@@ -81,14 +80,14 @@ func (l *ProjectLoader) loadBuildProject(projectPath string, cfg ProjectLoadConf
 }
 
 func (l *ProjectLoader) loadBalaProject(projectPath string, cfg ProjectLoadConfig) (ProjectLoadResult, error) {
-	project, err := l.loadBalaProjectInternal(projectPath, cfg, nil)
+	project, err := l.loadBalaProjectWithEnv(projectPath, cfg, nil)
 	if err != nil {
 		return ProjectLoadResult{}, err
 	}
 	return NewProjectLoadResult(project, NewDiagnosticResult(nil)), nil
 }
 
-func (l *ProjectLoader) loadBalaProjectInternal(projectPath string, cfg ProjectLoadConfig, sharedEnv *Environment) (*BalaProject, error) {
+func (l *ProjectLoader) loadBalaProjectWithEnv(projectPath string, cfg ProjectLoadConfig, sharedEnv *Environment) (*BalaProject, error) {
 	result, err := createBalaProjectConfig(l.projectFs, projectPath)
 	if err != nil {
 		return nil, err
@@ -119,16 +118,10 @@ func (l *ProjectLoader) loadBalaProjectInternal(projectPath string, cfg ProjectL
 }
 
 // loadBalaProjectInEnvironment loads a bala project with a shared environment.
-// This is used by repositories when loading dependency packages.
-func (l *ProjectLoader) loadBalaProjectInEnvironment(platformDir string, sharedEnv *Environment) (*BalaProject, error) {
-	return l.loadBalaProjectInternal(platformDir, ProjectLoadConfig{}, sharedEnv)
-}
-
-// LoadBalaProject loads a bala project with a shared environment.
-// This matches the BalaProjectLoader signature and is used by FileSystemRepository.
-func LoadBalaProject(fsys fs.FS, platformDir string, sharedEnv *Environment) (*BalaProject, error) {
+// This is used internally by FileSystemRepository to load packages from the cache.
+func loadBalaProjectInEnvironment(fsys fs.FS, platformDir string, sharedEnv *Environment) (*BalaProject, error) {
 	loader := newProjectLoader(fsys, nil)
-	return loader.loadBalaProjectInEnvironment(platformDir, sharedEnv)
+	return loader.loadBalaProjectWithEnv(platformDir, ProjectLoadConfig{}, sharedEnv)
 }
 
 // createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
@@ -144,9 +137,14 @@ func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig)
 		factories = defaultRepositoryFactories(l.ballerinaHomeFs)
 	}
 
+	buildOpts := NewBuildOptions()
+	if cfg.BuildOptions != nil {
+		buildOpts = *cfg.BuildOptions
+	}
+
 	return NewProjectEnvironmentBuilder(l.projectFs).
 		WithRepositoryFactories(factories).
-		WithResolutionOptions(cfg.ResolutionOptions).
+		WithBuildOptions(buildOpts).
 		Build()
 }
 
