@@ -38,15 +38,18 @@ type (
 	Call struct {
 		BIRTerminatorBase
 		Kind              InstructionKind
-		IsVirtual         bool
+		IsMethodCall      bool
 		Args              []BIROperand
 		Name              model.Name
 		CalleePkg         *model.PackageID
 		CalleeFlags       common.Set[model.Flag]
 		FunctionLookupKey string
 		CachedBIRFunc     *BIRFunction
-		CachedNativeFunc  func(args []values.BalValue) (values.BalValue, error)
-		FpOperand         *BIROperand // For FP_CALL: the operand holding the function value
+		// CachedMethodLookupKey is used only for method calls. It ensures CachedBIRFunc
+		// matches the receiver object's resolved method lookup key for this call site.
+		CachedMethodLookupKey string
+		CachedNativeFunc      func(args []values.BalValue) (values.BalValue, error)
+		FpOperand             *BIROperand // For FP_CALL: the operand holding the function value
 	}
 
 	Return struct {

@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 class Foo {
     int x;
 
@@ -37,4 +39,10 @@ class Bar {
     function getX() returns int {
         return self.x;
     }
+}
+
+public function main() {
+    Bar b = new Bar(55);
+    io:println(b.getX()); // @output 55
+    io:println(b.x); // @output 55
 }

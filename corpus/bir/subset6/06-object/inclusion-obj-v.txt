@@ -1,1 +1,59 @@
 module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Baz {
+
+  getX() -> int{
+    bb0 {
+      %3 = ConstantLoad x
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 10
+      %3 = ConstantLoad x
+      self[%3] = %2;
+      %4 = ConstantLoad hello
+      %5 = ConstantLoad y
+      self[%5] = %4;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject Baz
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    b = %3;
+    %6 = getX(b) -> bb5;
+  }
+  bb5 {
+    %7 = %6;
+    %8 = println(%7) -> bb6;
+  }
+  bb6 {
+    %10 = ConstantLoad y
+    %9 = b[%10];
+    %11 = println(%9) -> bb7;
+  }
+  bb7 {
+    return;
+  }
+}

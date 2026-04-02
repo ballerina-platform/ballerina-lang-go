@@ -18,6 +18,7 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
@@ -52,16 +53,20 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	locals[0] = values.DefaultValueForType((*localVars)[0].GetType())
-
+	argOffset := 0
+	if hasFunctionFlag(birFunc.Flags, model.Flag_ATTACHED) {
+		locals[1] = args[0]
+		argOffset = 1
+	}
 	requiredCount := len(birFunc.RequiredParams)
 	for i := range requiredCount {
-		locals[i+1] = args[i]
+		locals[i+1+argOffset] = args[i+argOffset]
 	}
 
 	var offset int
 	if birFunc.RestParams != nil {
-		restArgs := args[requiredCount:]
-		restParamIdx := requiredCount + 1
+		restArgs := args[requiredCount+argOffset:]
+		restParamIdx := requiredCount + 1 + argOffset
 		restParamType := (*localVars)[restParamIdx].GetType()
 		list := values.NewList(len(restArgs), restParamType, nil)
 		for j, arg := range restArgs {
@@ -70,10 +75,10 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 		locals[restParamIdx] = list
 		offset = restParamIdx + 1
 	} else {
-		if len(args) > requiredCount {
+		if len(args) > requiredCount+argOffset {
 			panic(values.NewErrorWithMessage("too many arguments"))
 		}
-		offset = requiredCount + 1
+		offset = requiredCount + 1 + argOffset
 	}
 
 	for i := offset; i < len(*localVars); i++ {
@@ -161,6 +166,8 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		execNewMap(v, frame, reg)
 	case *bir.NewError:
 		execNewError(v, frame, reg)
+	case *bir.NewObject:
+		execNewObject(v, frame, reg)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:
@@ -171,6 +178,10 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 			execMapStore(v, frame, reg)
 		case bir.INSTRUCTION_KIND_MAP_LOAD:
 			execMapLoad(v, frame, reg)
+		case bir.INSTRUCTION_KIND_OBJECT_STORE:
+			execObjectStore(v, frame, reg)
+		case bir.INSTRUCTION_KIND_OBJECT_LOAD:
+			execObjectLoad(v, frame, reg)
 		default:
 			fmt.Printf("UNKNOWN_FIELD_ACCESS_KIND(%d)\n", v.GetKind())
 		}
@@ -297,6 +308,10 @@ func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry,
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return nil
+}
+
+func hasFunctionFlag(flags int64, flag model.Flag) bool {
+	return flags&(1<<int64(flag)) != 0
 }
 
 func panicValueToErrorValue(r any) values.BalValue {

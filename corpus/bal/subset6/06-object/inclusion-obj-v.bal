@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 type Foo object {
     int x;
     function getX() returns int;
@@ -23,3 +25,22 @@ type Bar object {
     *Foo;
     string y;
 };
+
+class Baz {
+    *Bar;
+
+    function init() {
+        self.x = 10;
+        self.y = "hello";
+    }
+
+    function getX() returns int {
+        return self.x;
+    }
+}
+
+public function main() {
+    Baz b = new;
+    io:println(b.getX()); // @output 10
+    io:println(b.y); // @output hello
+}

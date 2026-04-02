@@ -1,0 +1,3 @@
+-- stdout --
+error("value must be non-negative")
+-- stderr --

@@ -39,6 +39,10 @@ func execCall(callInfo *bir.Call, frame *Frame, reg *modules.Registry, callStack
 }
 
 func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
+	if callInfo.IsMethodCall {
+		fn := resolveObjectMethod(callInfo, args, reg)
+		return executeFunction(*fn, args, reg, callStack, nil)
+	}
 	if callInfo.CachedBIRFunc != nil {
 		return executeFunction(*callInfo.CachedBIRFunc, args, reg, callStack, nil)
 	}
@@ -50,6 +54,27 @@ func executeCall(callInfo *bir.Call, args []values.BalValue, reg *modules.Regist
 		return result
 	}
 	return lookupAndExecute(callInfo, args, reg, callStack)
+}
+
+func resolveObjectMethod(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry) *bir.BIRFunction {
+	receiverObj := args[0].(*values.Object)
+	lookupKey, found := receiverObj.MethodLookupKey(string(callInfo.Name))
+	if !found {
+		panic("function not found: " + callInfo.Name.Value())
+	}
+
+	// The same call site can be polymorphic across executions (e.g., iterating over a list
+	// of objects with different concrete types). Cache only when it matches the receiver.
+	if callInfo.CachedBIRFunc != nil {
+		if callInfo.CachedMethodLookupKey == lookupKey {
+			return callInfo.CachedBIRFunc
+		}
+	}
+
+	fn := reg.GetBIRFunction(lookupKey)
+	callInfo.CachedBIRFunc = fn
+	callInfo.CachedMethodLookupKey = lookupKey
+	return fn
 }
 
 func lookupAndExecute(callInfo *bir.Call, args []values.BalValue, reg *modules.Registry, callStack *callStack) values.BalValue {
