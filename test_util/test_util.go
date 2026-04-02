@@ -20,6 +20,7 @@ package test_util
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -160,4 +161,13 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	relPath, _ := filepath.Rel(inputBaseDir, inputPath)
 	relPath = strings.TrimSuffix(relPath, ".bal") + outputExt
 	return filepath.Join(outputBaseDir, relPath)
+}
+
+// ParallelIfNative runs the test in parallel for non-wasm targets.
+// js/wasm currently hits intermittent runtime GC crashes under heavy parallel corpus loads.
+func ParallelIfNative(t *testing.T) {
+	if runtime.GOOS == "js" && runtime.GOARCH == "wasm" {
+		return
+	}
+	t.Parallel()
 }

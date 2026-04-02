@@ -35,7 +35,7 @@ func TestSemanticAnalysis(t *testing.T) {
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
-			t.Parallel()
+			test_util.ParallelIfNative(t)
 			testSemanticAnalysis(t, testPair)
 		})
 	}
@@ -131,7 +131,7 @@ func TestSemanticAnalysisErrors(t *testing.T) {
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
-			t.Parallel()
+			test_util.ParallelIfNative(t)
 			testSemanticAnalysisError(t, testPair)
 		})
 	}

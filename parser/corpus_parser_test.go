@@ -221,7 +221,7 @@ func TestParseCorpusFiles(t *testing.T) {
 	// Running in parallel for faster test execution
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
-			t.Parallel() // Run in parallel for faster execution (native only)
+			test_util.ParallelIfNative(t) // Run in parallel for faster execution (native only)
 			parseFile(t, testPair)
 		})
 	}
@@ -249,7 +249,7 @@ func TestJBalUnitTests(t *testing.T) {
 		testCase := createTestCase(t, balFile, corpusDir)
 
 		t.Run(balFile, func(t *testing.T) {
-			t.Parallel() // Run in parallel for faster execution (native only)
+			test_util.ParallelIfNative(t) // Run in parallel for faster execution (native only)
 			parseFile(t, testCase)
 		})
 	}

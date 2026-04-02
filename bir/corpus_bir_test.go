@@ -59,7 +59,7 @@ func TestBIRGeneration(t *testing.T) {
 
 	for _, testPair := range testPairs {
 		t.Run(testPair.Name, func(t *testing.T) {
-			t.Parallel()
+			test_util.ParallelIfNative(t)
 			testBIRGeneration(t, testPair)
 		})
 	}
