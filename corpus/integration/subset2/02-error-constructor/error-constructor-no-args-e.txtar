@@ -4,4 +4,4 @@ error[SYNTAX_ERROR]: missing arg within parenthesis
   --> error-constructor-no-args-e.bal:18:22
    |
 18 |     error err = error();  // @error
-   |                 ^^^^^^^
+   |                      ^

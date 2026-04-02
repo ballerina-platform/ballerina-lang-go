@@ -597,14 +597,19 @@ func innermostDiagnosticNodes(node tree.Node) []tree.Node {
 }
 
 func diagnosticMessage(node tree.Node) string {
-	key := ""
+	if deep := tree.FindDeepestDiagnosticSTNode(node.InternalNode()); deep != nil && len(deep.Diagnostics()) > 0 {
+		key := deep.Diagnostics()[0].DiagnosticCode().MessageKey()
+		if key != "" {
+			return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
+		}
+	}
 	if diags := node.InternalNode().Diagnostics(); len(diags) > 0 {
-		key = diags[0].DiagnosticCode().MessageKey()
+		key := diags[0].DiagnosticCode().MessageKey()
+		if key != "" {
+			return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
+		}
 	}
-	if key == "" {
-		return "syntax error"
-	}
-	return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
+	return "syntax error"
 }
 
 func getPosition(node tree.Node) Location {
@@ -3812,9 +3817,6 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
-	if errorConstructorExpressionNode.HasDiagnostics() {
-		n.cx.SyntaxError("invalid error constructor", getPosition(errorConstructorExpressionNode))
-	}
 	result := &BLangErrorConstructorExpr{}
 	result.pos = getPosition(errorConstructorExpressionNode)
 
