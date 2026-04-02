@@ -3137,12 +3137,8 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 		return false
 	}
 
-	var expectedType semtypes.SemType
-	if annotationType != nil {
-		expectedType = annotationType
-	} else {
-		expectedType = exprTy
-	}
+	// TODO: I am not sure if this is strictly correct given expression type would have changed based on the contextually expected type in things like structure constructor expressions.
+	expectedType := exprTy
 	setExpectedType(constant, expectedType)
 	symbol := constant.Symbol()
 	t.setSymbolType(symbol, expectedType)
