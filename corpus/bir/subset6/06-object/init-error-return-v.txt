@@ -43,38 +43,62 @@ main() -> nil{
     %3 = init(%1,%2) -> bb1;
   }
   bb1 {
-    r1 = %3;
-    %5 = r1 is object
-    %5 ? bb2 : bb5;
+    %5 = %3 is nil
+    %5 ? bb2 : bb3;
   }
   bb2 {
-    %6 = getVal(r1) -> bb3;
+    %4 = %1;
+    GOTO bb4;
   }
   bb3 {
-    %7 = %6;
-    %8 = println(%7) -> bb4;
+    %4 = %3;
+    GOTO bb4;
   }
   bb4 {
-    GOTO bb5;
+    r1 = %4;
+    %7 = r1 is object
+    %7 ? bb5 : bb8;
   }
   bb5 {
-    %9 = newObject Bar
-    %10 = ConstantLoad 1
-    %11 = unknown %10;
-    %12 = init(%9,%11) -> bb6;
+    %8 = getVal(r1) -> bb6;
   }
   bb6 {
-    r2 = %12;
-    %14 = r2 is error
-    %14 ? bb7 : bb9;
+    %9 = %8;
+    %10 = println(%9) -> bb7;
   }
   bb7 {
-    %15 = println(r2) -> bb8;
+    GOTO bb8;
   }
   bb8 {
-    GOTO bb9;
+    %11 = newObject Bar
+    %12 = ConstantLoad 1
+    %13 = unknown %12;
+    %14 = init(%11,%13) -> bb9;
   }
   bb9 {
+    %16 = %14 is nil
+    %16 ? bb10 : bb11;
+  }
+  bb10 {
+    %15 = %11;
+    GOTO bb12;
+  }
+  bb11 {
+    %15 = %14;
+    GOTO bb12;
+  }
+  bb12 {
+    r2 = %15;
+    %18 = r2 is error
+    %18 ? bb13 : bb15;
+  }
+  bb13 {
+    %19 = println(r2) -> bb14;
+  }
+  bb14 {
+    GOTO bb15;
+  }
+  bb15 {
     return;
   }
 }

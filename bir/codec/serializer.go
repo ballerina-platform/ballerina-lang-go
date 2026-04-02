@@ -342,7 +342,7 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 		bw.writeStringCPEntry(buf, term.TrueBB.Id.Value())
 		bw.writeStringCPEntry(buf, term.FalseBB.Id.Value())
 	case *bir.Call:
-		write(buf, term.IsVirtual)
+		write(buf, term.IsMethodCall)
 		bw.writePackageCPEntry(buf, term.CalleePkg)
 		bw.writeStringCPEntry(buf, term.Name.Value())
 		bw.writeStringCPEntry(buf, term.FunctionLookupKey)

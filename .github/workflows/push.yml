@@ -18,12 +18,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
@@ -71,31 +71,31 @@ jobs:
           done
 
       - name: Upload linux-amd64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bal-linux-amd64
           path: artifacts/bal-linux-amd64
 
       - name: Upload linux-arm64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bal-linux-arm64
           path: artifacts/bal-linux-arm64
 
       - name: Upload darwin-amd64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bal-darwin-amd64
           path: artifacts/bal-darwin-amd64
 
       - name: Upload darwin-arm64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bal-darwin-arm64
           path: artifacts/bal-darwin-arm64
 
       - name: Upload windows-amd64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bal-windows-amd64
           path: artifacts/bal-windows-amd64
