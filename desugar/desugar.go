@@ -297,6 +297,7 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 		fn := ast.BLangFunction{
 			ObjInitFunction: true,
 		}
+		fn.FlagSet.Add(model.Flag_ATTACHED)
 		fn.Name = &ast.BLangIdentifier{Value: "init"}
 		fn.Body = &ast.BLangBlockFunctionBody{}
 		fn.SetDeterminedType(semtypes.NEVER)

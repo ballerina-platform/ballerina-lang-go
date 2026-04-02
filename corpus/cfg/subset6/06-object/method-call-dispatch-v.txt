@@ -1,0 +1,66 @@
+(F1
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (literal 1))
+    )
+  )
+  (foo
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal f1))))
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
+  )
+)
+(F2
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (literal 2))
+    )
+  )
+  (foo
+    (bb0 () ()
+      (expression-stmt
+        (invocation io println (
+          (literal f2))))
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable fs (type
+        (array-type
+          (user-defined-type Foo) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (new
+            (user-defined-type F1) ())
+          (new
+            (user-defined-type F2) ())))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref fs)
+    (var-def
+      (variable f (type
+        (user-defined-type Foo))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (invocation foo expr:
+          (simple-var-ref f) ()))))
+  )
+  (bb3 (bb1) ())
+)

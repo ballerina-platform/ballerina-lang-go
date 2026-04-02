@@ -32,3 +32,21 @@
     )
   )
 )
+(main
+  (bb0 () ()
+    (var-def
+      (variable b (type
+        (user-defined-type Bar)) (expr
+        (new
+          (user-defined-type Bar) (
+          (literal 55))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation getX expr:
+          (simple-var-ref b) ()))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access x
+          (simple-var-ref b)))))
+  )
+)

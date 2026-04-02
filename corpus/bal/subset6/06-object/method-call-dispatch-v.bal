@@ -17,30 +17,39 @@
 import ballerina/io;
 
 type Foo object {
-    int|string x;
-};
-
-type Baz object {
-    int|boolean x;
-};
-
-type Bar object {
-    *Foo;
-    *Baz;
     int x;
+    function foo() returns int;
 };
 
-class Qux {
+class F1 {
     *Foo;
-    *Baz;
-    int x;
 
-    function init(int x) {
-        self.x = x;
+    function init() {
+        self.x = 1;
+    }
+
+    function foo() returns int {
+        io:println("f1"); // @output f1
+        return self.x;
+    }
+}
+
+class F2 {
+    *Foo;
+
+    function init() {
+        self.x = 2;
+    }
+
+    function foo() returns int {
+        io:println("f2"); // @output f2
+        return self.x;
     }
 }
 
 public function main() {
-    Qux q = new Qux(7);
-    io:println(q.x); // @output 7
+    Foo[] fs = [new F1(), new F2()];
+    foreach Foo f in fs {
+        io:println(f.foo());
+    }
 }

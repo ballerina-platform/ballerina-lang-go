@@ -57,24 +57,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		"subset6/06-object/simple-v.bal",
-		"subset6/06-object/simple-2-v.bal",
-		"subset6/06-object/no-init-v.bal",
-		"subset6/06-object/union-init-1-v.bal",
-		"subset6/06-object/init-ref-v.bal",
-		"subset6/06-object/inclusion-obj-v.bal",
-		"subset6/06-object/inclusion-class-v.bal",
-		"subset6/06-object/inclusion-class-2-v.bal",
-		"subset6/06-object/inclusion-dup-override-v.bal",
-		"subset6/06-object/inclusion-inherited-field-v.bal",
-		"subset6/06-object/inclusion-transitive-v.bal",
-		"subset6/06-object/inclusion-transitive-2-v.bal",
-		"subset6/06-object/init-error-return-v.bal",
-		"subset6/06-object/init-error-check-v.bal",
-		"subset6/06-object/fn-shadowing-v.bal",
-		// cast #139
-		"subset6/06-map/length2-v.bal",
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/260
 		"subset7/07-function/assign12-v.bal",
 		"subset7/07-function/assign17-v.bal",
 		"subset7/07-function/record3-v.bal",

@@ -15,3 +15,17 @@
     )
   )
 )
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type Foo)) (expr
+        (new
+          (user-defined-type Bar) (
+          (literal 42))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation getX expr:
+          (simple-var-ref f) ()))))
+  )
+)

@@ -167,8 +167,16 @@ func (cx *stmtContext) addBB() *BIRBasicBlock {
 	return &bb
 }
 
+func buildLookupKey(pkg model.PackageIdentifier, qualifiedName string) string {
+	return pkg.Organization + "/" + pkg.Package + ":" + qualifiedName
+}
+
 func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
-	return symRef.Package.Organization + "/" + symRef.Package.Package + ":" + ctx.CompilerContext.GetSymbol(symRef).Name()
+	return buildLookupKey(symRef.Package, ctx.CompilerContext.GetSymbol(symRef).Name())
+}
+
+func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {
+	return buildLookupKey(symRef.Package, className+"."+ctx.CompilerContext.GetSymbol(symRef).Name())
 }
 
 func buildGlobalVarLookupKey(pkgId *model.PackageID, name model.Name) string {
@@ -310,6 +318,7 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
+	birFunc.Flags = flagSetToInt64(astFunc.GetFlags())
 	ctx := stmtCx.birCx
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
 	common.Assert(astFunc.Receiver == nil)
@@ -893,11 +902,7 @@ func typeConversionExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.
 	exprEffect := handleExpression(ctx, curBB, expr.Expression)
 	curBB = exprEffect.block
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	typeCast := &TypeCast{}
-	typeCast.Pos = expr.GetPosition()
-	typeCast.RhsOp = exprEffect.result
-	typeCast.LhsOp = resultOperand
-	typeCast.Type = expr.TypeDescriptor.GetDeterminedType()
+	typeCast := NewTypeCast(expr.TypeDescriptor.GetDeterminedType(), resultOperand, exprEffect.result, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, typeCast)
 	return expressionEffect{
 		result: resultOperand,
@@ -1033,7 +1038,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
 
 	if expr.Expr != nil {
-		call.IsVirtual = true
+		call.IsMethodCall = true
 	}
 
 	symRef := expr.Symbol()
@@ -1290,10 +1295,13 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 	}
 
 	initFunc := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, class.InitFunction, &selfRef)
+	initFunc.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), class.InitFunction.Symbol())
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		birClassDef.VTable[methodName] = transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+		fn := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+		fn.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		birClassDef.VTable[methodName] = fn
 	}
 
 	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())
@@ -1327,13 +1335,30 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 		args = append(args, *argEffect.result)
 	}
 
-	thenBB := ctx.addBB()
 	initFunc := classDef.VTable["init"]
-	result := ctx.addTempVar(expr.DeterminedType)
-	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, thenBB, result, expr.GetPosition())
-	call.IsVirtual = true
+	initResult := ctx.addTempVar(initFunc.ReturnVariable.Type)
+	initDoneBB := ctx.addBB()
+	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, initDoneBB, initResult, expr.GetPosition())
+	call.IsMethodCall = true
 	call.CachedBIRFunc = initFunc
+	call.CachedMethodLookupKey = initFunc.FunctionLookupKey
 	curBB.Terminator = call
+
+	result := ctx.addTempVar(expr.DeterminedType)
+	isInitResultNil := ctx.addTempVar(semtypes.BOOLEAN)
+	nilCheck := NewTypeTest(semtypes.NIL, isInitResultNil, initResult, expr.GetPosition())
+	initDoneBB.Instructions = append(initDoneBB.Instructions, nilCheck)
+
+	assignObjectBB := ctx.addBB()
+	assignErrorBB := ctx.addBB()
+	thenBB := ctx.addBB()
+	initDoneBB.Terminator = NewBranch(isInitResultNil, assignObjectBB, assignErrorBB, expr.GetPosition())
+
+	assignObjectBB.Instructions = append(assignObjectBB.Instructions, NewMove(object, result, expr.GetPosition()))
+	assignObjectBB.Terminator = NewGoto(thenBB, expr.GetPosition())
+
+	assignErrorBB.Instructions = append(assignErrorBB.Instructions, NewMove(initResult, result, expr.GetPosition()))
+	assignErrorBB.Terminator = NewGoto(thenBB, expr.GetPosition())
 
 	return expressionEffect{
 		result: result,
