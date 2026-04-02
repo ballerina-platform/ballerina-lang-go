@@ -48,7 +48,7 @@ main() -> nil{
     %9 = %8;
     %4 = * %7 %9;
     %10 = ConstantLoad 2
-    %11 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%10]{%2, %4}
+    %11 = newArray [string, int, never...][%10]{%2, %4}
     $desugar$4 = %11;
     %14 = ConstantLoad 1
     %13 = $desugar$4[%14];

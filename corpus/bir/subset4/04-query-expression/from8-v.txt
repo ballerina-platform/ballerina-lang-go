@@ -62,7 +62,7 @@ main() -> nil{
   }
   bb5 {
     %4 = ConstantLoad 2
-    %5 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%4]{%3, x}
+    %5 = newArray [string, int, never...][%4]{%3, x}
     $desugar$4 = %5;
     %8 = ConstantLoad 1
     %7 = $desugar$4[%8];

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected {| int... |}, got [[string, i
    |
 19 |     map<int> out = from var x in xs select ["k", x]; // @error
    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-

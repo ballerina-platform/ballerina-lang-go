@@ -32,7 +32,7 @@ main() -> nil{
     x = %0;
     %2 = ConstantLoad a
     %3 = ConstantLoad 2
-    %4 = newArray [string, nil|boolean|int|float|decimal|string|error|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object, never...][%3]{%2, x}
+    %4 = newArray [string, int, never...][%3]{%2, x}
     $desugar$4 = %4;
     %7 = ConstantLoad 1
     %6 = $desugar$4[%7];
