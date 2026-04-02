@@ -118,7 +118,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			resolver, cx := newTestQueryResolver()
-			_, _, ok := resolver.resolveQueryExpr(nil, testCase.query)
+			_, _, ok := resolveQueryExpr(resolver, nil, testCase.query)
 			if ok {
 				t.Fatalf("expected resolveQueryExpr to fail")
 			}
@@ -193,7 +193,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 				newSelectClause(newIntLiteral(1)),
 			)
 			resolver, cx := newTestQueryResolver()
-			_, ok := resolver.resolveQueryIntermediateClauses(nil, query)
+			_, ok := resolveQueryIntermediateClauses(resolver, nil, query)
 			if ok {
 				t.Fatalf("expected resolveQueryIntermediateClauses to fail")
 			}
@@ -223,7 +223,7 @@ func TestResolveQueryExprMapCollection(t *testing.T) {
 		newFromClause(mapRef, nil, true),
 		newSelectClause(newIntLiteral(1)),
 	)
-	queryTy, _, ok := resolver.resolveQueryExpr(nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map collection")
 	}
@@ -241,7 +241,7 @@ func TestResolveQueryExprMapConstructType(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	queryTy, _, ok := resolver.resolveQueryExpr(nil, query)
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for map construct type")
 	}
@@ -262,17 +262,17 @@ func TestResolveQueryExprMapConstructTypeInvalidSelect(t *testing.T) {
 	)
 	query.QueryConstructType = model.TypeKind_MAP
 
-	_, _, ok := resolver.resolveQueryExpr(nil, query)
+	_, _, ok := resolveQueryExpr(resolver, nil, query)
 	if ok {
 		t.Fatalf("expected resolveQueryExpr to fail for invalid map select expression")
 	}
 	assertDiagnosticContains(t, cx, "incompatible type")
 }
 
-func newTestQueryResolver() (*TypeResolver, *context.CompilerContext) {
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+func newTestQueryResolver() (*packageTypeResolver, *context.CompilerContext) {
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	cx := context.NewCompilerContext(env)
-	return newTypeResolver(cx, &ast.BLangPackage{}, nil), cx
+	return newPackageTypeResolver(cx, &ast.BLangPackage{}, nil), cx
 }
 
 func assertDiagnosticContains(t *testing.T, cx *context.CompilerContext, substr string) {

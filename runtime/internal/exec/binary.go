@@ -145,9 +145,11 @@ func execBinaryOpMod(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry
 
 func execBinaryOpEqual(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
 	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	if op1 == nil || op2 == nil {
+		setOperandValue(binaryOp.LhsOp, frame, reg, op1 == nil && op2 == nil)
+		return
+	}
 	switch v1 := op1.(type) {
-	case nil:
-		setOperandValue(binaryOp.LhsOp, frame, reg, op2 == nil)
 	case int64:
 		v2 := op2.(int64)
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1 == v2)
@@ -167,9 +169,11 @@ func execBinaryOpEqual(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Regist
 
 func execBinaryOpNotEqual(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
 	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	if op1 == nil || op2 == nil {
+		setOperandValue(binaryOp.LhsOp, frame, reg, (op1 == nil) != (op2 == nil))
+		return
+	}
 	switch v1 := op1.(type) {
-	case nil:
-		setOperandValue(binaryOp.LhsOp, frame, reg, op2 != nil)
 	case int64:
 		v2 := op2.(int64)
 		setOperandValue(binaryOp.LhsOp, frame, reg, v1 != v2)

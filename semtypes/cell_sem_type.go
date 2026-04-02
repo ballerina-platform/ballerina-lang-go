@@ -26,18 +26,18 @@ type CellSemType struct {
 
 var _ ComplexSemType = &CellSemType{}
 
-func NewCellSemType(subtypeDataList []ProperSubtypeData) CellSemType {
+func NewCellSemType(subtypeDataList []ProperSubtypeData) *CellSemType {
 	// migrated from CellSemType.java:31
 	// assert subtypeDataList.length == 1;
 	if len(subtypeDataList) != 1 {
 		panic("subtypeDataList length must be 1")
 	}
-	return CellSemType{
+	return &CellSemType{
 		subtypeData: subtypeDataList[0],
 	}
 }
 
-func CellSemTypeFrom(subtypeDataList []ProperSubtypeData) CellSemType {
+func CellSemTypeFrom(subtypeDataList []ProperSubtypeData) *CellSemType {
 	// migrated from CellSemType.java:36
 	return NewCellSemType(subtypeDataList)
 }

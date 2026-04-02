@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: unsupported container type for index based access
    |
 21 |     x[0] = 5; // @error
    |     ^^^^
-

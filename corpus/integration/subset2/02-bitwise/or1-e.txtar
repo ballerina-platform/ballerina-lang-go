@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expect integer types for bitwise operators
    |
 22 |     io:println(i | j); // @error
    |                ^^^^^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int:Unsigned8, got int
    |
 19 |     int:Unsigned8 y = x << 2; // @error
    |                       ^^^^^^
-

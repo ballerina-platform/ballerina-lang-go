@@ -53,4 +53,3 @@ error[SEMANTIC_ERROR]: cannot assign to constant
    |
 24 |             a = 10; // @error
    |             ^
-

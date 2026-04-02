@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: Unknown symbol: unused1
    |
 22 |     unused1 = x;
    |     ^^^^^^^
-

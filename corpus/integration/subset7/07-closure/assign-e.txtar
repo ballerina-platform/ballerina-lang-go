@@ -17,4 +17,3 @@ error[SEMANTIC_ERROR]: cannot assign to parameter
    |
 22 |         offset *= 10; // @error
    |         ^^^^^^
-

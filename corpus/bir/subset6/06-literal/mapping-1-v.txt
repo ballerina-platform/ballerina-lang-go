@@ -1,0 +1,63 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad x
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad y
+    %4 = ConstantLoad 2
+    %5 = newMap {| x: float, y: float, never... |}{%1=%2, %3=%4}
+    fr = %5;
+    %7 = println(fr) -> bb1;
+  }
+  bb1 {
+    %8 = ConstantLoad amount
+    %9 = ConstantLoad 100/1
+    %10 = ConstantLoad tax
+    %11 = ConstantLoad 15/1
+    %12 = newMap {| amount: decimal, tax: decimal, never... |}{%8=%9, %10=%11}
+    dr = %12;
+    %14 = println(dr) -> bb2;
+  }
+  bb2 {
+    %15 = ConstantLoad count
+    %16 = ConstantLoad 10
+    %17 = ConstantLoad ratio
+    %18 = ConstantLoad 2
+    %19 = ConstantLoad price
+    %20 = ConstantLoad 50/1
+    %21 = newMap {| count: int, price: decimal, ratio: float, never... |}{%15=%16, %17=%18, %19=%20}
+    mr = %21;
+    %23 = println(mr) -> bb3;
+  }
+  bb3 {
+    %24 = ConstantLoad amount
+    %25 = ConstantLoad 3/2
+    %26 = ConstantLoad tax
+    %27 = ConstantLoad 1/2
+    %28 = newMap {| amount: decimal, tax: decimal, never... |}{%24=%25, %26=%27}
+    dr2 = %28;
+    %30 = println(dr2) -> bb4;
+  }
+  bb4 {
+    %31 = ConstantLoad a
+    %32 = ConstantLoad 1
+    %33 = ConstantLoad b
+    %34 = ConstantLoad 2
+    %35 = newMap {| float... |}{%31=%32, %33=%34}
+    mf = %35;
+    %37 = println(mf) -> bb5;
+  }
+  bb5 {
+    %38 = ConstantLoad a
+    %39 = ConstantLoad 1/1
+    %40 = ConstantLoad b
+    %41 = ConstantLoad 2/1
+    %42 = newMap {| decimal... |}{%38=%39, %40=%41}
+    md = %42;
+    %44 = println(md) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

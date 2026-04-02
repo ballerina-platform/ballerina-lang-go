@@ -1,0 +1,68 @@
+(bar
+  (bb0 () (bb1 bb2)
+    (type-test-expr is
+      (simple-var-ref x)
+      (error-type))
+  )
+  (bb1 (bb0) ()
+    (return
+      (simple-var-ref x))
+  )
+  (bb2 (bb0) (bb3 bb4)
+    (type-test-expr is
+      (simple-var-ref y)
+      (error-type))
+  )
+  (bb3 (bb2) ()
+    (return
+      (simple-var-ref y))
+  )
+  (bb4 (bb2) ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(boom
+  (bb0 () ()
+    (panic
+      (error-constructor-expr (
+        (literal deep))))
+  )
+)
+(foo
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (simple-var-ref x)
+      (literal 0))
+  )
+  (bb1 (bb0) ()
+    (panic
+      (error-constructor-expr (
+        (literal zero!))))
+  )
+  (bb2 (bb0) ()
+    (return
+      (binary-expr *
+        (simple-var-ref x)
+        (literal 2)))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable result (expr
+        (trap-expr
+          (invocation bar (
+            (trap-expr
+              (invocation foo (
+                (literal 0))))
+            (trap-expr
+              (trap-expr
+                (invocation boom ())))))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref result))))
+  )
+)

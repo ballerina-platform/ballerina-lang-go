@@ -1,8 +1,14 @@
 ## Native Ballerina Interpreter
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![X](https://img.shields.io/twitter/follow/ballerinalang?style=social&label=Follow%20Us)
+[![stackoverflow](https://img.shields.io/badge/Get%20Support%20on%20Stack%20Overflow-ballerina-52C3C2)](https://stackoverflow.com/questions/tagged/ballerina)
+[![Join the community on Discord](https://img.shields.io/badge/Join%20us%20on%20Discord-Ballerina-52C3C2)](https://discord.gg/ballerinalang)
 [![codecov](https://codecov.io/gh/ballerina-platform/ballerina-lang-go/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/ballerina-lang-go)
 
 [Ballerina](https://ballerina.io) is an open-source, cloud-native programming language optimized for integration. It has built-in support for JSON and XML, first-class constructs for services and concurrency, and structural typing. It is developed and supported by WSO2.
+
+**Try Ballerina in your browser:** [Ballerina Playground](https://play.ballerina.io/) — run and share snippets without installing anything.
 
 ## Goals
 
@@ -82,6 +88,7 @@ go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
 #### Running a bal source
 
 Currently, the following are supported:
+
 - Single .bal file
 - Ballerina package with only the default module
 
@@ -122,6 +129,6 @@ Ballerina code is distributed under [Apache License 2.0](./LICENSE).
 
 ## Join the community
 
-* Get help on [Stack Overflow](https://stackoverflow.com/questions/tagged/ballerina) 
-* Join the conversations in [Discord community](https://discord.gg/ballerinalang).
-* For more details on how to engage with the community, see [Community](https://ballerina.io/community/).
+- Get help on [Stack Overflow](https://stackoverflow.com/questions/tagged/ballerina)
+- Join the conversations in [Discord community](https://discord.gg/ballerinalang).
+- For more details on how to engage with the community, see [Community](https://ballerina.io/community/).

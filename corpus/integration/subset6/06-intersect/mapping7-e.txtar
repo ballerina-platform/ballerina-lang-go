@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: no applicable inherent type for mapping constructor
    |
 28 |     R1&R2 r = { l1: 1, "l2": 5 }; // @error
    |               ^^^^^^^^^^^^^^^^^^
-

@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected nil, got 17
    |
 20 |     return 17; // @error
    |            ^^
-

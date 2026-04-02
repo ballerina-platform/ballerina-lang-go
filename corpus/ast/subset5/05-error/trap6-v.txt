@@ -1,0 +1,76 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function foo (
+    (variable x (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (simple-var-ref x)
+          (literal 0))
+        (block-stmt
+          (panic
+            (error-constructor-expr (
+              (literal zero!))))) ())
+      (block-stmt
+        (return
+          (binary-expr *
+            (simple-var-ref x)
+            (literal 2))))))
+  (function boom () (
+    (value-type int))
+    (block-function-body
+      (panic
+        (error-constructor-expr (
+          (literal deep))))))
+  (function bar (
+    (variable x (type
+      (union-type
+        (value-type int)
+        (error-type))))
+    (variable y (type
+      (union-type
+        (value-type int)
+        (error-type))))) (
+    (union-type
+      (value-type int)
+      (error-type)))
+    (block-function-body
+      (if
+        (type-test-expr is
+          (simple-var-ref x)
+          (error-type))
+        (block-stmt
+          (return
+            (simple-var-ref x))) ())
+      (block-stmt
+        (if
+          (type-test-expr is
+            (simple-var-ref y)
+            (error-type))
+          (block-stmt
+            (return
+              (simple-var-ref y))) ())
+        (block-stmt
+          (return
+            (binary-expr +
+              (simple-var-ref x)
+              (simple-var-ref y)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable result (expr
+          (trap-expr
+            (invocation bar (
+              (trap-expr
+                (invocation foo (
+                  (literal 0))))
+              (trap-expr
+                (trap-expr
+                  (invocation boom ())))))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref result)))))))

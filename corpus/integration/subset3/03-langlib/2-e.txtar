@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: expression value must be assigned
    |
 20 |     x.length(); // @error
    |     ^^^^^^^^^^
-

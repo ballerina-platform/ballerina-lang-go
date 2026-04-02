@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: 'main' function must be public
    |
 19 | function main() { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-

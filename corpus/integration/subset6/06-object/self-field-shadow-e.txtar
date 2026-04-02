@@ -17,4 +17,3 @@ error[SEMANTIC_ERROR]: undefined member 'z'
    |
 30 |         return self.z; // @error
    |                     ^
-

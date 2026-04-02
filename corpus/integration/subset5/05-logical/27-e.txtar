@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: expect boolean types for ||
    |
 19 |     boolean c = false || a; // @error
    |                 ^^^^^^^^^^
-

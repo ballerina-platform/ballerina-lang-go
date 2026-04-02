@@ -1,0 +1,158 @@
+(package
+  (class-definition public File
+    (variable path (type
+      (value-type string)))
+    (function init () ()
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal path))
+          (literal ))))
+    (function open (
+      (variable accessMode (type
+        (value-type string)))) (
+      (value-type boolean))
+      (block-function-body
+        (return
+          (literal true)))))
+  (function insert
+    (md-doc
+      (doc-lines
+        (md-doc-line ""))
+      (params
+        (md-param-doc (param-name anUnion)
+          (doc-lines
+            "value of param1"))
+        (md-param-doc (param-name anInt)
+          (doc-lines
+            "value of param2"))
+        (md-param-doc (param-name rest)
+          (doc-lines
+            "value of rest param")))) (
+    (variable anUnion (type
+      (union-type
+        (union-type
+          (value-type string)
+          (value-type int))
+        (value-type float))))
+    (variable anInt (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body))
+  (function getX
+    (md-doc
+      (doc-lines
+        (md-doc-line ""))
+      (return-param
+        (md-return-param-doc
+          (doc-lines
+            "`string` value of the X will be returned if found, else an `error` will be returned"))
+      )) () (
+    (union-type
+      (value-type string)
+      (error-type)))
+    (block-function-body
+      (return
+        (literal ))))
+  (function updatePeople
+    (md-doc
+      (doc-lines
+        (md-doc-line ""))
+      (params
+        (md-param-doc (param-name aTuple)
+          (doc-lines
+            "a `Tuple` where the values should represent name, age and weight of a person, in order"))
+        (md-param-doc (param-name anInt)
+          (doc-lines
+            "index")))) (
+    (variable aTuple (type
+      (tuple-type
+        (value-type string)
+        (value-type int)
+        (value-type float))))
+    (variable anInt (type
+      (value-type int)))) (
+    (value-type null))
+    (block-function-body))
+  (function searchPeople
+    (md-doc
+      (doc-lines
+        (md-doc-line ""))
+      (return-param
+        (md-return-param-doc
+          (doc-lines
+            "a `Tuple` will be returned and would represent name, age and weight of a person, in order"))
+      )) () (
+    (tuple-type
+      (value-type string)
+      (value-type int)
+      (value-type float)))
+    (block-function-body
+      (return
+        (list-constructor-expr
+          (literal )
+          (literal 1)
+          (literal 1)))))
+  (function add
+    (md-doc
+      (doc-lines
+        (md-doc-line "Test type`typeDef`")
+        (md-doc-line "Test service`helloWorld`")
+        (md-doc-line "Test variable`testVar`")
+        (md-doc-line "Test var`testVar`")
+        (md-doc-line "Test function`add`")
+        (md-doc-line "Test parameter`x`")
+        (md-doc-line "Test const`constant`")
+        (md-doc-line "Test annotation`annot`"))
+      (params
+        (md-param-doc (param-name x)
+          (doc-lines
+            "one thing to be added"))
+        (md-param-doc (param-name y)
+          (doc-lines
+            "another thing to be added")))
+      (return-param
+        (md-return-param-doc
+          (doc-lines
+            "the sum of them"))
+      )
+      (references
+        (md-ref-doc (type TYPE) (identifier "typeDef") (reference-name "typeDef"))
+        (md-ref-doc (type SERVICE) (identifier "helloWorld") (reference-name "helloWorld"))
+        (md-ref-doc (type VARIABLE) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type VAR) (identifier "testVar") (reference-name "testVar"))
+        (md-ref-doc (type FUNCTION) (identifier "add") (reference-name "add"))
+        (md-ref-doc (type PARAMETER) (identifier "x") (reference-name "x"))
+        (md-ref-doc (type CONST) (identifier "constant") (reference-name "constant"))
+        (md-ref-doc (type ANNOTATION) (identifier "annot") (reference-name "annot")))) (
+    (variable x (type
+      (value-type int)))
+    (variable y (type
+      (value-type int)))) (
+    (value-type int))
+    (block-function-body
+      (return
+        (binary-expr +
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+  (function foo
+    (md-doc
+      (params
+        (md-param-doc (param-name example)
+          (doc-lines
+            "The error struct to be logged")))) (
+    (variable example (type
+      (error-type)))) (
+    (value-type null))
+    (block-function-body))
+  (function foo_unicode
+    (md-doc
+      (params
+        (md-param-doc (param-name foo_⍅Ͷ)
+          (doc-lines
+            "The error struct to be logged with unicode name")))) (
+    (variable foo_\u{2345}\u{0376} (type
+      (error-type)))) (
+    (value-type null))
+    (block-function-body)))

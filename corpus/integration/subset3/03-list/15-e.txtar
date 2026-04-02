@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected [nil|boolean|int|float|decima
    |
 19 |     return x; // @error
    |            ^
-

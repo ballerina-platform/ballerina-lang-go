@@ -1,0 +1,43 @@
+(File
+  (open
+    (bb0 () ()
+      (return
+        (literal true))
+    )
+  )
+)
+(add
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(foo
+  (bb0 () ())
+)
+(foo_unicode
+  (bb0 () ())
+)
+(getX
+  (bb0 () ()
+    (return
+      (literal ))
+  )
+)
+(insert
+  (bb0 () ())
+)
+(searchPeople
+  (bb0 () ()
+    (return
+      (list-constructor-expr
+        (literal )
+        (literal 1)
+        (literal 1)))
+  )
+)
+(updatePeople
+  (bb0 () ())
+)

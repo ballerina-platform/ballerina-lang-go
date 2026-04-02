@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: no applicable inherent type for list constructor
    |
 22 |     L1&L2 l = [5, 6]; // @error
    |               ^^^^^^
-

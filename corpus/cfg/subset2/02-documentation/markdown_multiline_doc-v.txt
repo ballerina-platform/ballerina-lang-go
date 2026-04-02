@@ -1,0 +1,6 @@
+(test
+  (bb0 () ()
+    (return
+      (literal ))
+  )
+)

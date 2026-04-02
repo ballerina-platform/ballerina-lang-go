@@ -54,7 +54,7 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 		}
 	}()
 
-	initialEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	initialEnv := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	initialContext := context.NewCompilerContext(initialEnv)
 	result, err := testphases.RunPipeline(initialContext, testphases.PhaseBIR, testPair.InputPath)
 	if err != nil {
@@ -77,7 +77,7 @@ func testBIRSerialization(t *testing.T, testPair test_util.TestCase) {
 	}
 	// Make sure we are using a different type env.
 
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv())
+	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
 	tyCtx := context.NewCompilerContext(env)
 	deserializedBIRPkg, err := Unmarshal(tyCtx, serializedBIR)
 	if err != nil {

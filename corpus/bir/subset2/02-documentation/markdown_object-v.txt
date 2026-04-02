@@ -1,0 +1,77 @@
+module $anon.. v 0.0.0;
+class TestConnector {
+  url string
+  path string
+  abc string
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 
+      %3 = ConstantLoad url
+      self[%3] = %2;
+      %4 = ConstantLoad 
+      %5 = ConstantLoad path
+      self[%5] = %4;
+      %6 = ConstantLoad 
+      %7 = ConstantLoad abc
+      self[%7] = %6;
+      return;
+    }
+  }
+
+  testAction() -> boolean{
+    bb0 {
+      %2 = ConstantLoad false
+      value = %2;
+      %0 = value;
+      return;
+    }
+  }
+
+  testSend(string) -> boolean{
+    bb0 {
+      %3 = ConstantLoad false
+      value = %3;
+      %0 = value;
+      return;
+    }
+  }
+}
+class TestConnector2 {
+  url string
+  path string
+  abc string
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 
+      %3 = ConstantLoad url
+      self[%3] = %2;
+      %4 = ConstantLoad 
+      %5 = ConstantLoad path
+      self[%5] = %4;
+      %6 = ConstantLoad 
+      %7 = ConstantLoad abc
+      self[%7] = %6;
+      return;
+    }
+  }
+
+  testAction() -> boolean{
+    bb0 {
+      %2 = ConstantLoad false
+      value = %2;
+      %0 = value;
+      return;
+    }
+  }
+
+  testSend(string) -> boolean{
+    bb0 {
+      %3 = ConstantLoad false
+      value = %3;
+      %0 = value;
+      return;
+    }
+  }
+}

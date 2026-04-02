@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: incompatible type: expected int:Unsigned8|"a"|"b"|"c", go
    |
 24 |     a[2] = "x"; // @error
    |            ^^^
-

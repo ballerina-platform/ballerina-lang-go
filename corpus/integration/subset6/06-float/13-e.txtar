@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: both operands must belong to same basic type
    |
 24 |     io:println(i - f); // @error
    |                ^^^^^
-

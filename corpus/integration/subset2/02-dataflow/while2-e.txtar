@@ -11,4 +11,3 @@ error[SEMANTIC_ERROR]: variable may not be initialized
    |
 28 |     io:println(a);
    |                ^
-

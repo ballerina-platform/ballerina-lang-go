@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: unmatchable match clause
    |
 27 |         "any" => { // @error
    |         ^^^^^^^^^^^^^^^^^^^^
-

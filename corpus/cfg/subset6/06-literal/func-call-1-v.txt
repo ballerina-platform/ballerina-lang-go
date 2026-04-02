@@ -1,0 +1,50 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation takeInt (
+          (literal 42))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeFloat (
+          (literal 42))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeDecimal (
+          (literal 42/1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeFloat (
+          (literal 1.5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeDecimal (
+          (literal 3/2))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeFloat (
+          (literal 1.5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation takeDecimal (
+          (literal 100/1))))))
+  )
+)
+(takeDecimal
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(takeFloat
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)
+(takeInt
+  (bb0 () ()
+    (return
+      (simple-var-ref x))
+  )
+)

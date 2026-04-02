@@ -5,4 +5,3 @@ error[SEMANTIC_ERROR]: intersection type is empty (equivalent to never)
    |
 19 |     [int, int] & [int, int|string, decimal] l = [5, 6]; // @error
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
