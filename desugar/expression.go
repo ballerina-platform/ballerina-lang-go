@@ -748,9 +748,6 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		valueAccess.SetDeterminedType(semtypes.ANY)
 
 		mapPutStmt := createMapPutAssignment(resultRef, keyAccess, valueAccess)
-		if mapPutStmt == nil {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
 		bodyStmts = append(bodyStmts, mapPutStmt)
 	default:
 		pushInvocation := createPushInvocation(cx, resultRef, selectExpr)
