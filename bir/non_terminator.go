@@ -287,12 +287,38 @@ func (t *TypeCast) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_CAST
 }
 
+func NewTypeCast(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *TypeCast {
+	return &TypeCast{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Type:  typ,
+		RhsOp: rhsOp,
+	}
+}
+
 func (t *TypeTest) GetLhsOperand() *BIROperand {
 	return t.LhsOp
 }
 
 func (t *TypeTest) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_TEST
+}
+
+func NewTypeTest(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *TypeTest {
+	return &TypeTest{
+		BIRInstructionBase: BIRInstructionBase{
+			BIRNodeBase: BIRNodeBase{
+				Pos: pos,
+			},
+			LhsOp: lhsOp,
+		},
+		Type:  typ,
+		RhsOp: rhsOp,
+	}
 }
 
 func (f *FPLoad) GetLhsOperand() *BIROperand {

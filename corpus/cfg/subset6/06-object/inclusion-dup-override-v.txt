@@ -8,3 +8,17 @@
     )
   )
 )
+(main
+  (bb0 () ()
+    (var-def
+      (variable q (type
+        (user-defined-type Qux)) (expr
+        (new
+          (user-defined-type Qux) (
+          (literal 7))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access x
+          (simple-var-ref q)))))
+  )
+)

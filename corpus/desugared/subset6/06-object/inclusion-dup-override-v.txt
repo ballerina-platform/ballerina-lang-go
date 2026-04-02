@@ -1,4 +1,5 @@
 (package
+  (import-package ballerina io (as io))
   (type-definition Foo
     (object-type
       (field x
@@ -27,4 +28,18 @@
           (index-based-access
             (simple-var-ref self)
             (literal x))
-          (simple-var-ref x))))))
+          (simple-var-ref x)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable q (type
+          (user-defined-type Qux)) (expr
+          (new
+            (user-defined-type Qux) (
+            (literal 7))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref q)
+            (literal x))))))))

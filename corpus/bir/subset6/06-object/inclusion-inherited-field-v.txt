@@ -36,25 +36,37 @@ main() -> nil{
     %2 = init(%1) -> bb1;
   }
   bb1 {
-    b = %2;
-    %4 = getX(b) -> bb2;
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
   }
   bb2 {
-    %5 = %4;
-    %6 = println(%5) -> bb3;
+    %3 = %1;
+    GOTO bb4;
   }
   bb3 {
-    %8 = ConstantLoad y
-    %7 = b[%8];
-    %9 = println(%7) -> bb4;
+    %3 = %2;
+    GOTO bb4;
   }
   bb4 {
-    %11 = ConstantLoad z
-    %10 = b[%11];
-    %12 = %10;
-    %13 = println(%12) -> bb5;
+    b = %3;
+    %6 = getX(b) -> bb5;
   }
   bb5 {
+    %7 = %6;
+    %8 = println(%7) -> bb6;
+  }
+  bb6 {
+    %10 = ConstantLoad y
+    %9 = b[%10];
+    %11 = println(%9) -> bb7;
+  }
+  bb7 {
+    %13 = ConstantLoad z
+    %12 = b[%13];
+    %14 = %12;
+    %15 = println(%14) -> bb8;
+  }
+  bb8 {
     return;
   }
 }
