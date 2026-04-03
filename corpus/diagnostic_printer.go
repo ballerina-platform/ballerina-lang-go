@@ -152,44 +152,13 @@ func computeTrimmedCaretSpan(lineContent string, startCol, endCol int) (trimStar
 			lastNonWS--
 		}
 	}
-
-	if startCol < 0 {
-		startCol = 0
-	}
-	if endCol < 0 {
-		endCol = 0
-	}
-	if startCol > len(lineContent) {
-		startCol = len(lineContent)
-	}
-	if endCol > len(lineContent) {
-		endCol = len(lineContent)
-	}
-
 	if !hasNonWS {
 		return startCol, startCol, 0
 	}
-
 	if startCol < firstNonWS {
 		startCol = firstNonWS
 	}
-	if endCol > lastNonWS {
-		endCol = lastNonWS
-	}
-	if endCol < startCol {
-		endCol = startCol
-	}
-
 	highlightLen = endCol - startCol
-	maxHighlightLen := len(lineContent) - startCol
-	if highlightLen < 1 || maxHighlightLen < 1 {
-		caretCol := startCol
-		return caretCol, caretCol + 1, 1
-	}
-
-	if highlightLen > maxHighlightLen {
-		highlightLen = maxHighlightLen
-	}
 	return startCol, endCol, highlightLen
 }
 

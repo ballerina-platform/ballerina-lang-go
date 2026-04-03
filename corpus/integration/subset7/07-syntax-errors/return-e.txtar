@@ -4,4 +4,4 @@ error[SYNTAX_ERROR]: missing semicolon token
   --> return-e.bal:19:39
    |
 19 | function add(int a, int b) return int {
-   |                                       ^
+   |
