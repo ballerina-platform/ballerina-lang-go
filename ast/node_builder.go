@@ -577,6 +577,33 @@ func getFileName(node tree.Node) string {
 	return st.FilePath()
 }
 
+func innermostDiagnosticNodes(node tree.Node) []tree.Node {
+	if !node.HasDiagnostics() {
+		return nil
+	}
+
+	var nodes []tree.Node
+	if nt, ok := node.(tree.NonTerminalNode); ok {
+		for child := range nt.ChildNodes() {
+			if child != nil && child.HasDiagnostics() {
+				nodes = append(nodes, innermostDiagnosticNodes(child)...)
+			}
+		}
+	}
+	if len(nodes) > 0 {
+		return nodes
+	}
+	return []tree.Node{node}
+}
+
+func diagnosticMessage(node tree.Node) string {
+	deep := tree.FindDeepestDiagnosticSTNode(node.InternalNode())
+	if deep == nil || len(deep.Diagnostics()) == 0 {
+		return "syntax error"
+	}
+	return strings.ReplaceAll(strings.TrimPrefix(deep.Diagnostics()[0].DiagnosticCode().MessageKey(), "error."), ".", " ")
+}
+
 func getPosition(node tree.Node) Location {
 	lineRange := node.LineRange()
 	textRange := node.TextRange()
@@ -876,9 +903,6 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 		bLUserDefinedType.pos = getPosition(typeNode)
 		return &bLUserDefinedType
 	case common.SIMPLE_NAME_REFERENCE:
-		if typeNode.HasDiagnostics() {
-			panic("unimplemented")
-		}
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
 	default:
@@ -1744,6 +1768,10 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 		currentStatement := statementNodes.Get(j)
 		// TODO: Remove this check once statements are non null guaranteed
 		if currentStatement == nil {
+			continue
+		}
+		if currentStatement.HasDiagnostics() {
+			n.reportSyntaxDiagnostics(currentStatement)
 			continue
 		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
@@ -3781,9 +3809,6 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
-	if errorConstructorExpressionNode.HasDiagnostics() {
-		n.cx.SyntaxError("invalid error constructor", getPosition(errorConstructorExpressionNode))
-	}
 	result := &BLangErrorConstructorExpr{}
 	result.pos = getPosition(errorConstructorExpressionNode)
 
@@ -4070,4 +4095,14 @@ func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNod
 	}
 
 	return createSimpleVariableNodeWithLocationTokenLocation(varPos, varName, getPosition(varName))
+}
+
+func (n *NodeBuilder) reportSyntaxDiagnostics(node tree.Node) {
+	diagnostics := innermostDiagnosticNodes(node)
+	if len(diagnostics) == 0 {
+		return
+	}
+	for _, diagnostic := range diagnostics {
+		n.cx.SyntaxError(diagnosticMessage(diagnostic), getPosition(diagnostic))
+	}
 }

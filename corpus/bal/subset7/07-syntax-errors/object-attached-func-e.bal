@@ -14,13 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Detail record {|
-    string message;
-    int id;
-|};
+class TestObj {
+    function foo(int a) returns string;
+    function bar(string a) returns int;
+}
 
-type ErrorWithDetail error<Detail>;
-
-function bar() returns int|error {
-    return error ErrorWithDetail("bar", id = 1); // @error
+function TestObj.foo(int a) returns string {
+    return <string>a;
 }

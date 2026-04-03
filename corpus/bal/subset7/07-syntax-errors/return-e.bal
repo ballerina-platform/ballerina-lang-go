@@ -14,13 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Detail record {|
-    string message;
-    int id;
-|};
+import ballerina/io;
 
-type ErrorWithDetail error<Detail>;
+function add(int a, int b) return int {
+    return a + b;
+}
 
-function bar() returns int|error {
-    return error ErrorWithDetail("bar", id = 1); // @error
+public function main() {
+    int result = add(5, 10);
+    io:println(result);
 }
