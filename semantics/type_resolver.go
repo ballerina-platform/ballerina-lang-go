@@ -55,8 +55,6 @@ type typeResolver interface {
 	getSymbol(ref model.SymbolRef) model.Symbol
 	unnarrowedSymbol(ref model.SymbolRef) model.SymbolRef
 	symbolName(ref model.SymbolRef) string
-	setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition)
-	getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool)
 	createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef
 	createFunctionSymbol(space *model.SymbolSpace, name string, sig model.FunctionSignature, fnTy semtypes.SemType) model.SymbolRef
 	compilerContext() *context.CompilerContext
@@ -71,10 +69,16 @@ type typeResolver interface {
 	getCapturedVars() map[model.SymbolRef]bool
 	setCapturedVars(vars map[model.SymbolRef]bool)
 
-	ensureResolved(ref model.SymbolRef) bool
+	ensureResolved(ref model.SymbolRef, depth int) bool
 
 	setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType)
 	getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool)
+
+	setMappingAtomSymRef(mat *semtypes.MappingAtomicType, ref model.SymbolRef)
+	getMappingAtomSymRef(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool)
+	currentScope() model.Scope
+	setCurrentScope(scope model.Scope)
+	nextDefaultFnName() string
 }
 
 type packageTypeResolver struct {
@@ -89,9 +93,13 @@ type packageTypeResolver struct {
 
 	// packageVarNodes maps a constant's symbol ref to its AST node.
 	// While a constant is being resolved, its entry is set to nil (cycle detection).
-	packageVarNodes    map[model.SymbolRef]*ast.BLangConstant
-	functionNodes      map[model.SymbolRef]*ast.BLangFunction
-	mappingAtomToBType map[*semtypes.MappingAtomicType]ast.BType
+	packageVarNodes      map[model.SymbolRef]*ast.BLangConstant
+	functionNodes        map[model.SymbolRef]*ast.BLangFunction
+	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
+	typeDefnNodes        map[model.SymbolRef]model.TypeDefinition
+	defaultFnSymbolCount int
+	scope                model.Scope
+	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -135,14 +143,6 @@ func (t *packageTypeResolver) symbolName(ref model.SymbolRef) string {
 	return t.ctx.SymbolName(ref)
 }
 
-func (t *packageTypeResolver) setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition) {
-	t.ctx.SetTypeDefinition(ref, defn)
-}
-
-func (t *packageTypeResolver) getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool) {
-	return t.ctx.GetTypeDefinition(ref)
-}
-
 func (t *packageTypeResolver) createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
 	return t.ctx.CreateNarrowedSymbol(ref)
 }
@@ -162,6 +162,24 @@ func (t *packageTypeResolver) setMappingAtomBType(mat *semtypes.MappingAtomicTyp
 func (t *packageTypeResolver) getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool) {
 	bType, ok := t.mappingAtomToBType[mat]
 	return bType, ok
+}
+
+func (t *packageTypeResolver) setMappingAtomSymRef(mat *semtypes.MappingAtomicType, ref model.SymbolRef) {
+	t.mappingAtomToSymRef[mat] = ref
+}
+
+func (t *packageTypeResolver) getMappingAtomSymRef(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool) {
+	ref, ok := t.mappingAtomToSymRef[mat]
+	return ref, ok
+}
+
+func (t *packageTypeResolver) currentScope() model.Scope     { return t.scope }
+func (t *packageTypeResolver) setCurrentScope(s model.Scope) { t.scope = s }
+
+func (t *packageTypeResolver) nextDefaultFnName() string {
+	name := fmt.Sprintf("$desugar$%d", t.defaultFnSymbolCount)
+	t.defaultFnSymbolCount++
+	return name
 }
 
 func (t *packageTypeResolver) lookupImportedSymbols(name string) (model.ExportedSymbolSpace, bool) {
@@ -199,6 +217,9 @@ type functionTypeResolver struct {
 	implicitImports      map[string]ast.BLangImportPackage
 	capturedNarrowedVars map[model.SymbolRef]bool
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
+	defaultFnSymbolCount int
+	scope                model.Scope
+	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 }
 
 func (f *functionTypeResolver) typeContext() semtypes.Context        { return f.tyCtx }
@@ -242,14 +263,6 @@ func (f *functionTypeResolver) symbolName(ref model.SymbolRef) string {
 	return f.parentResolver.symbolName(ref)
 }
 
-func (f *functionTypeResolver) setTypeDefinition(ref model.SymbolRef, defn model.TypeDefinition) {
-	f.parentResolver.setTypeDefinition(ref, defn)
-}
-
-func (f *functionTypeResolver) getTypeDefinition(ref model.SymbolRef) (model.TypeDefinition, bool) {
-	return f.parentResolver.getTypeDefinition(ref)
-}
-
 func (f *functionTypeResolver) createNarrowedSymbol(ref model.SymbolRef) model.SymbolRef {
 	return f.parentResolver.createNarrowedSymbol(ref)
 }
@@ -289,8 +302,8 @@ func (f *functionTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
 	f.capturedNarrowedVars = vars
 }
 
-func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef) bool {
-	return f.parentResolver.ensureResolved(ref)
+func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
+	return f.parentResolver.ensureResolved(ref, depth)
 }
 
 func (f *functionTypeResolver) setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType) {
@@ -304,26 +317,48 @@ func (f *functionTypeResolver) getMappingAtomBType(mat *semtypes.MappingAtomicTy
 	return f.parentResolver.getMappingAtomBType(mat)
 }
 
-func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageTypeResolver {
+func (f *functionTypeResolver) setMappingAtomSymRef(mat *semtypes.MappingAtomicType, ref model.SymbolRef) {
+	f.mappingAtomToSymRef[mat] = ref
+}
+
+func (f *functionTypeResolver) getMappingAtomSymRef(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool) {
+	if ref, ok := f.mappingAtomToSymRef[mat]; ok {
+		return ref, ok
+	}
+	return f.parentResolver.getMappingAtomSymRef(mat)
+}
+
+func (f *functionTypeResolver) currentScope() model.Scope     { return f.scope }
+func (f *functionTypeResolver) setCurrentScope(s model.Scope) { f.scope = s }
+
+func (f *functionTypeResolver) nextDefaultFnName() string {
+	name := fmt.Sprintf("$desugar$%d", f.defaultFnSymbolCount)
+	f.defaultFnSymbolCount++
+	return name
+}
+
+func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
-		ctx:                ctx,
-		tyCtx:              semtypes.ContextFrom(ctx.GetTypeEnv()),
-		importedSymbols:    importedSymbols,
-		pkg:                pkg,
-		implicitImports:    make(map[string]ast.BLangImportPackage),
-		packageVarNodes:    make(map[model.SymbolRef]*ast.BLangConstant),
-		functionNodes:      make(map[model.SymbolRef]*ast.BLangFunction),
-		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
+		ctx:                 ctx,
+		tyCtx:               semtypes.ContextFrom(ctx.GetTypeEnv()),
+		importedSymbols:     importedSymbols,
+		pkg:                 pkg,
+		implicitImports:     make(map[string]ast.BLangImportPackage),
+		packageVarNodes:     make(map[model.SymbolRef]*ast.BLangConstant),
+		functionNodes:       make(map[model.SymbolRef]*ast.BLangFunction),
+		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		typeDefnNodes:       make(map[model.SymbolRef]model.TypeDefinition),
+		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+		scope:               moduleScope,
 	}
 }
 
-func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef) bool {
+func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
 	if t.symbolType(ref) != nil {
 		return true
 	}
-	// Type definitions manage their own cycle detection via CycleDepth
-	if defn, ok := t.getTypeDefinition(ref); ok {
-		_, ok := resolveTypeDefinition(t, defn, 0)
+	if defn, ok := t.typeDefnNodes[ref]; ok {
+		_, ok := resolveTypeDefinition(t, defn, depth)
 		return ok
 	}
 	if c, inMap := t.packageVarNodes[ref]; inMap {
@@ -347,62 +382,34 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef) bool {
 // After this (for the given package) all the semtypes are known. This means after resolving types of all the packages
 // it is safe to use the closed world assumption to optimize type checks.
 func ResolveTopLevelNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
-	t := newPackageTypeResolver(ctx, pkg, importedSymbols)
-	t.resolveTopLevelTypes(ctx, pkg)
+	t := newPackageTypeResolver(ctx, pkg, importedSymbols, pkg.Scope)
+	t.resolveTopLevelTypes(pkg)
 }
 
-func populateMappingAtomBTypes(t typeResolver, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
+func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
 		semType := t.symbolType(defn.Symbol())
-		if semType == nil {
-			continue
-		}
-		switch bType := defn.GetTypeData().TypeDescriptor.(type) {
-		case *ast.BLangRecordType:
+		if _, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType); ok {
 			mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
 			if mat == nil {
 				t.internalError("failed to extract mapping atomic type for record type", defn.GetPosition())
 			}
-			t.setMappingAtomBType(mat, bType)
-		case *ast.BLangConstrainedType:
-			if bType.GetTypeKind() == model.TypeKind_MAP {
-				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
-				if mat == nil {
-					t.internalError("failed to extract mapping atomic type for map type", defn.GetPosition())
-				}
-				t.setMappingAtomBType(mat, bType)
-			}
+			t.setMappingAtomSymRef(mat, defn.Symbol())
 		}
 	}
 	for _, symbolSpace := range importedSymbols {
-		main := symbolSpace.Main
-		for i, sym := range main.Symbols() {
-			if sym.Kind() != model.SymbolKindType || !sym.IsPublic() {
-				continue
-			}
-			ref := main.RefAt(i)
-			defn, ok := t.getTypeDefinition(ref)
-			if !ok {
+		for ref, sym := range symbolSpace.PublicMainSymbols() {
+			if sym.Kind() != model.SymbolKindType {
 				continue
 			}
 			semType := t.symbolType(ref)
 			if semType == nil {
 				continue
 			}
-			switch bType := defn.GetTypeData().TypeDescriptor.(type) {
-			case *ast.BLangRecordType:
-				mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
-				if mat != nil {
-					t.setMappingAtomBType(mat, bType)
-				}
-			case *ast.BLangConstrainedType:
-				if bType.GetTypeKind() == model.TypeKind_MAP {
-					mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
-					if mat != nil {
-						t.setMappingAtomBType(mat, bType)
-					}
-				}
+			mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
+			if mat != nil {
+				t.setMappingAtomSymRef(mat, ref)
 			}
 		}
 	}
@@ -410,8 +417,8 @@ func populateMappingAtomBTypes(t typeResolver, pkg *ast.BLangPackage, importedSy
 
 // ResolveLocalNodes resolves the types of function bodies and remaining inner nodes.
 func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) {
-	p := newPackageTypeResolver(ctx, pkg, importedSymbols)
-	populateMappingAtomBTypes(p, pkg, importedSymbols)
+	p := newPackageTypeResolver(ctx, pkg, importedSymbols, pkg.Scope)
+	populateMappingAtomMaps(p, pkg, importedSymbols)
 	var fns []*ast.BLangFunction
 	for i := range pkg.Functions {
 		fns = append(fns, &pkg.Functions[i])
@@ -433,10 +440,12 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		ft := &functionTypeResolver{
-			parentResolver:     p,
-			tyCtx:              semtypes.ContextFrom(p.typeEnv()),
-			implicitImports:    make(map[string]ast.BLangImportPackage),
-			mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
+			parentResolver:      p,
+			tyCtx:               semtypes.ContextFrom(p.typeEnv()),
+			implicitImports:     make(map[string]ast.BLangImportPackage),
+			mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+			scope:               classDef.Scope(),
+			mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		}
 		for _, f := range classDef.Fields {
 			field := f.(*ast.BLangSimpleVariable)
@@ -474,11 +483,13 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 		return nil
 	}
 	ft := &functionTypeResolver{
-		parentResolver:     p,
-		tyCtx:              semtypes.ContextFrom(p.typeEnv()),
-		retTy:              fnSym.Signature().ReturnType,
-		implicitImports:    make(map[string]ast.BLangImportPackage),
-		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
+		parentResolver:      p,
+		tyCtx:               semtypes.ContextFrom(p.typeEnv()),
+		retTy:               fnSym.Signature().ReturnType,
+		implicitImports:     make(map[string]ast.BLangImportPackage),
+		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		scope:               fn.Scope(),
+		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 	}
 	switch body := fn.Body.(type) {
 	case *ast.BLangExternFunctionBody:
@@ -494,10 +505,14 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 	return ft
 }
 
-func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext, pkg *ast.BLangPackage) {
+func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	for i := range pkg.TypeDefinitions {
 		defn := &pkg.TypeDefinitions[i]
-		ctx.SetTypeDefinition(defn.Symbol(), defn)
+		t.typeDefnNodes[defn.Symbol()] = defn
+	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		t.typeDefnNodes[classDef.Symbol()] = classDef
 	}
 	for i := range pkg.Constants {
 		t.packageVarNodes[pkg.Constants[i].Symbol()] = &pkg.Constants[i]
@@ -611,6 +626,13 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 }
 
 func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStatement) (statementEffect, bool) {
+	if scoped, ok := stmt.(ast.NodeWithScope); ok {
+		if scope := scoped.Scope(); scope != nil {
+			prev := t.currentScope()
+			t.setCurrentScope(scope)
+			defer t.setCurrentScope(prev)
+		}
+	}
 	switch s := stmt.(type) {
 	case *ast.BLangSimpleVariableDef:
 		return resolveVariableDefStmt(t, chain, s)
@@ -780,11 +802,13 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 	// Create a function type resolver for the lambda so expectedReturnType() is correct
 	fnSym := t.getSymbol(e.Function.Symbol()).(model.FunctionSymbol)
 	ft := &functionTypeResolver{
-		parentResolver:     t,
-		tyCtx:              semtypes.ContextFrom(t.typeEnv()),
-		retTy:              fnSym.Signature().ReturnType,
-		implicitImports:    make(map[string]ast.BLangImportPackage),
-		mappingAtomToBType: make(map[*semtypes.MappingAtomicType]ast.BType),
+		parentResolver:      t,
+		tyCtx:               semtypes.ContextFrom(t.typeEnv()),
+		retTy:               fnSym.Signature().ReturnType,
+		implicitImports:     make(map[string]ast.BLangImportPackage),
+		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		scope:               e.Function.Scope(),
+		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 	}
 
 	// Push function boundary marker onto the chain
@@ -860,6 +884,16 @@ func setOtherNodesAsNever(node ast.BLangNode) {
 	ast.Walk(neverVisitor{}, node)
 }
 
+func allocateDefaultFnSymbol(t typeResolver, fieldTy semtypes.SemType) model.SymbolRef {
+	fnName := t.nextDefaultFnName()
+	sig := model.FunctionSignature{ReturnType: fieldTy}
+	fnSymbol := model.NewFunctionSymbol(fnName, sig, false)
+	scope := t.currentScope()
+	scope.AddSymbol(fnName, fnSymbol)
+	ref, _ := scope.GetSymbol(fnName)
+	return ref
+}
+
 func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int) (semtypes.SemType, bool) {
 	if ty := t.symbolType(defn.Symbol()); ty != nil {
 		return ty, true
@@ -886,6 +920,7 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 		typeData := defn.GetTypeData()
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
+		addInclusionsToTypeSymbol(t, defn)
 		return semType, true
 	} else {
 		// This can happen with recursion
@@ -893,6 +928,216 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 		// and throw away the others
 		return defn.GetDeterminedType(), true
 	}
+}
+
+// addInclusionsToTypeSymbol addes all the inclusions (both transitive and direct) to the type symbol
+// This should be called only after resolving the underlying type
+func addInclusionsToTypeSymbol(t typeResolver, defn model.TypeDefinition) {
+	typeSym := getTypeSymFromDefn(t, defn)
+	var members []model.InclusionMember
+	switch d := defn.(type) {
+	case *ast.BLangTypeDefinition:
+		typeDesc := d.GetTypeData().TypeDescriptor
+		switch td := typeDesc.(type) {
+		case *ast.BLangRecordType:
+			members = recordTypeMembers(t, td)
+		case *ast.BLangObjectType:
+			members = objectTypeMembers(t, td)
+		}
+	case *ast.BLangClassDefinition:
+		members = classMembers(t, d)
+	}
+	for _, m := range members {
+		typeSym.AddInclusionMember(m)
+	}
+}
+
+func getTypeSymFromDefn(t typeResolver, defn model.TypeDefinition) *model.TypeSymbol {
+	sym := t.getSymbol(defn.Symbol())
+	switch s := sym.(type) {
+	case *model.TypeSymbol:
+		return s
+	case *model.ClassSymbol:
+		return &s.TypeSymbol
+	default:
+		t.internalError("Unexpected type defintion", defn.GetPosition())
+		return nil
+	}
+}
+
+func getTypeSymbol(t typeResolver, ref model.SymbolRef) *model.TypeSymbol {
+	sym := t.getSymbol(ref)
+	switch s := sym.(type) {
+	case *model.TypeSymbol:
+		return s
+	case *model.ClassSymbol:
+		return &s.TypeSymbol
+	default:
+		return nil
+	}
+}
+
+// recordTypeMembers accumulates members both added by type inclusion and defined in the record type itself
+func recordTypeMembers(t typeResolver, td *ast.BLangRecordType) []model.InclusionMember {
+	var members []model.InclusionMember
+	directFields := make(map[string]bool)
+	for name := range td.Fields() {
+		directFields[name] = true
+	}
+
+	// Add direct fields
+	for name, field := range td.FieldPtrs() {
+		fd := createFieldDescriptor(name, *field)
+		members = append(members, &fd)
+	}
+
+	// Collect transitive members from included types
+	for _, symRef := range td.Inclusions {
+		incSym := getTypeSymbol(t, symRef)
+		if incSym == nil {
+			t.internalError("failed to find included symbol", td.GetPosition())
+			continue
+		}
+		for _, m := range incSym.InclusionMembers() {
+			switch member := m.(type) {
+			case *model.FieldDescriptor:
+				if directFields[member.MemberName()] {
+					continue
+				}
+				members = append(members, member)
+			case *model.RestTypeDescriptor:
+				members = append(members, member)
+			default:
+				t.internalError("unexpected member kind", td.GetPosition())
+			}
+		}
+	}
+
+	// Add rest type from this record's own rest type
+	if td.RestType != nil {
+		rd := model.NewRestTypeDescriptor()
+		rd.SetMemberType(td.RestType.(ast.BLangNode).GetDeterminedType())
+		members = append(members, &rd)
+	}
+	return members
+}
+
+// objectTypeMembers accumulate members both added by type inclusion and defined in the type desc itself
+func objectTypeMembers(t typeResolver, td *ast.BLangObjectType) []model.InclusionMember {
+	var members []model.InclusionMember
+	// Collect transitive members from included types
+	for _, symRef := range td.Inclusions {
+		incSym := getTypeSymbol(t, symRef)
+		if incSym == nil {
+			t.internalError("failed to find included symbol", td.GetPosition())
+			return nil
+		}
+		members = append(members, incSym.InclusionMembers()...)
+	}
+	// Add direct members
+	for m := range td.Members() {
+		switch member := m.(type) {
+		case *ast.BObjectField:
+			fd := objectFieldDescriptor(member)
+			members = append(members, &fd)
+		case *ast.BMethodDecl:
+			md := methodDescriptor(member, model.SymbolRef{})
+			members = append(members, &md)
+		}
+	}
+	return members
+}
+
+// classMembers accumulate members both added by type inclusion and defined in the class decl itself
+func classMembers(t typeResolver, classDef *ast.BLangClassDefinition) []model.InclusionMember {
+	var members []model.InclusionMember
+	// Collect transitive members from included types
+	for _, symRef := range classDef.Inclusions {
+		incSym := getTypeSymbol(t, symRef)
+		if incSym == nil {
+			t.internalError("failed to find included symbol", classDef.GetPosition())
+			return nil
+		}
+		members = append(members, incSym.InclusionMembers()...)
+	}
+	// Add direct members
+	for _, f := range classDef.Fields {
+		field := f.(*ast.BLangSimpleVariable)
+		fd := classFieldDescriptor(t, field)
+		members = append(members, &fd)
+	}
+	for name := range classDef.Methods {
+		method := classDef.Methods[name]
+		md := classMethodDescriptor(t, name, method)
+		members = append(members, &md)
+	}
+	return members
+}
+
+func objectFieldDescriptor(field *ast.BObjectField) model.FieldDescriptor {
+	fd := model.NewFieldDescriptor(field.Name(), 0, field.Visibility())
+	fd.SetMemberType(field.GetDeterminedType())
+	return fd
+}
+
+func methodDescriptor(method *ast.BMethodDecl, fnRef model.SymbolRef) model.MethodDescriptor {
+	kind := model.InclusionMemberKindMethod
+	switch method.MemberKind() {
+	case model.ObjectMemberKindRemoteMethod:
+		kind = model.InclusionMemberKindRemoteMethod
+	case model.ObjectMemberKindResourceMethod:
+		kind = model.InclusionMemberKindResourceMethod
+	}
+	md := model.NewMethodDescriptor(method.Name(), kind, method.Visibility(), fnRef)
+	md.SetMemberType(method.GetDeterminedType())
+	return md
+}
+
+func classFieldDescriptor(t typeResolver, field *ast.BLangSimpleVariable) model.FieldDescriptor {
+	vis := model.VisibilityPrivate
+	if field.FlagSet.Contains(model.Flag_PUBLIC) {
+		vis = model.VisibilityPublic
+	}
+	var flags model.FieldDescriptorFlag
+	if field.FlagSet.Contains(model.Flag_READONLY) {
+		flags |= model.FieldDescriptorReadonly
+	}
+	fd := model.NewFieldDescriptor(field.Name.Value, flags, vis)
+	fd.SetMemberType(t.symbolType(field.Symbol()))
+	return fd
+}
+
+func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunction) model.MethodDescriptor {
+	vis := model.VisibilityPrivate
+	if method.FlagSet.Contains(model.Flag_PUBLIC) {
+		vis = model.VisibilityPublic
+	}
+	kind := model.InclusionMemberKindMethod
+	if method.FlagSet.Contains(model.Flag_REMOTE) {
+		kind = model.InclusionMemberKindRemoteMethod
+	} else if method.FlagSet.Contains(model.Flag_RESOURCE) {
+		kind = model.InclusionMemberKindResourceMethod
+	}
+	md := model.NewMethodDescriptor(name, kind, vis, method.Symbol())
+	md.SetMemberType(t.symbolType(method.Symbol()))
+	return md
+}
+
+func createFieldDescriptor(name string, field ast.BField) model.FieldDescriptor {
+	var flags model.FieldDescriptorFlag
+	if field.FlagSet.Contains(model.Flag_READONLY) {
+		flags |= model.FieldDescriptorReadonly
+	}
+	if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+		flags |= model.FieldDescriptorOptional
+	}
+	if field.DefaultExpr != nil {
+		flags |= model.FieldDescriptorHasDefault
+	}
+	fd := model.NewFieldDescriptor(name, flags, model.VisibilityPublic)
+	fd.SetMemberType(field.Type.(ast.BLangNode).GetDeterminedType())
+	fd.DefaultFnRef = field.DefaultFnRef
+	return fd
 }
 
 func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
@@ -940,22 +1185,23 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		method.Name.SetDeterminedType(semtypes.NEVER)
 	}
 
-	// Collect included members
+	// Collect included members from symbols
 	includedMembers := make(map[string][]semtypes.Member)
-	inc := collectTransitiveInclusions(t.compilerContext(), classDef.Inclusions)
-	if !resolveIncludedDefns(t, inc.defns, depth) {
+	incMembers, err := collectIncludedMembers(t, classDef.Inclusions, depth)
+	if err {
+		t.semanticError("error resolving type inclusion", classDef.GetPosition())
 		return nil, false
 	}
-	for _, m := range inc.members {
-		member, ok := resolveIncludedMember(t, m, depth)
-		if !ok {
-			return nil, false
+	for _, m := range incMembers {
+		if m.MemberKind() == model.InclusionMemberKindRestType {
+			t.internalError("unexpected rest inclusion", classDef.GetPosition())
 		}
+		member := inclusionMemberToSemtypeMember(m)
 		includedMembers[member.Name] = append(includedMembers[member.Name], member)
 	}
 
-	// Build direct field members
-	var members []semtypes.Member
+	// Build direct members
+	var directMembers []directMember
 	for _, f := range classDef.Fields {
 		field := f.(*ast.BLangSimpleVariable)
 		fieldTy := field.GetDeterminedType()
@@ -963,32 +1209,13 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		if field.FlagSet.Contains(model.Flag_PUBLIC) {
 			vis = semtypes.VisibilityPublic
 		}
-		name := field.Name.Value
-		if incMembers, exists := includedMembers[name]; exists {
-			for _, incMember := range incMembers {
-				if incMember.Kind != semtypes.MemberKindField {
-					t.semanticError(
-						fmt.Sprintf("field '%s' conflicts with included member of different kind", name),
-						field.GetPosition(),
-					)
-					return nil, false
-				}
-				if !semtypes.IsSubtype(t.typeContext(), fieldTy, incMember.ValueTy) {
-					t.semanticError(
-						fmt.Sprintf("field '%s' that overrides included field is not a subtype of the included field type", name),
-						field.GetPosition(),
-					)
-					return nil, false
-				}
-			}
-			delete(includedMembers, name)
-		}
-		members = append(members, semtypes.Member{
-			Name:       name,
-			ValueTy:    fieldTy,
-			Kind:       semtypes.MemberKindField,
-			Visibility: vis,
-			Immutable:  false,
+		directMembers = append(directMembers, directMember{
+			name:       field.Name.Value,
+			valueTy:    fieldTy,
+			kind:       semtypes.MemberKindField,
+			visibility: vis,
+			immutable:  false,
+			pos:        field.GetPosition(),
 		})
 	}
 
@@ -1000,12 +1227,13 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		if !semtypes.IsSubtype(tyCtx, sig.ReturnType, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
 			t.semanticError("invalid return type for init function", classDef.InitFunction.GetPosition())
 		}
-		members = append(members, semtypes.Member{
-			Name:       "init",
-			ValueTy:    t.symbolType(classDef.InitFunction.Symbol()),
-			Kind:       semtypes.MemberKindMethod,
-			Visibility: semtypes.VisibilityPublic,
-			Immutable:  true,
+		directMembers = append(directMembers, directMember{
+			name:       "init",
+			valueTy:    t.symbolType(classDef.InitFunction.Symbol()),
+			kind:       semtypes.MemberKindMethod,
+			visibility: semtypes.VisibilityPublic,
+			immutable:  true,
+			pos:        classDef.InitFunction.GetPosition(),
 		})
 	} else {
 		// Add implicit init member with no parameters and return type ()
@@ -1014,12 +1242,12 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		functionDefn := semtypes.NewFunctionDefinition()
 		initFnType := functionDefn.Define(t.typeEnv(), paramListTy, semtypes.NIL,
 			semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
-		members = append(members, semtypes.Member{
-			Name:       "init",
-			ValueTy:    initFnType,
-			Kind:       semtypes.MemberKindMethod,
-			Visibility: semtypes.VisibilityPublic,
-			Immutable:  true,
+		directMembers = append(directMembers, directMember{
+			name:       "init",
+			valueTy:    initFnType,
+			kind:       semtypes.MemberKindMethod,
+			visibility: semtypes.VisibilityPublic,
+			immutable:  true,
 		})
 	}
 	for name := range classDef.Methods {
@@ -1035,60 +1263,18 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		} else if method.FlagSet.Contains(model.Flag_RESOURCE) {
 			memberKind = semtypes.MemberKindResourceMethod
 		}
-		if incMembers, exists := includedMembers[name]; exists {
-			for _, incMember := range incMembers {
-				if incMember.Kind != memberKind {
-					t.semanticError(
-						fmt.Sprintf("method '%s' conflicts with included member of different kind", name),
-						method.GetPosition(),
-					)
-					return nil, false
-				}
-				if !semtypes.IsSubtype(t.typeContext(), methodTy, incMember.ValueTy) {
-					t.semanticError(
-						fmt.Sprintf("method '%s' that overrides included method is not a subtype of the included method type", name),
-						method.GetPosition(),
-					)
-					return nil, false
-				}
-			}
-			delete(includedMembers, name)
-		}
-		members = append(members, semtypes.Member{
-			Name:       name,
-			ValueTy:    methodTy,
-			Kind:       memberKind,
-			Visibility: vis,
-			Immutable:  true,
+		directMembers = append(directMembers, directMember{
+			name:       name,
+			valueTy:    methodTy,
+			kind:       memberKind,
+			visibility: vis,
+			immutable:  true,
+			pos:        method.GetPosition(),
 		})
 	}
 
-	// Verify all included members are overridden
-	for name, incMembers := range includedMembers {
-		// Included fields without override are inherited
-		if len(incMembers) == 1 && incMembers[0].Kind == semtypes.MemberKindField {
-			members = append(members, incMembers[0])
-			continue
-		}
-		// Multiple included fields with same name must be overridden
-		allFields := true
-		for _, m := range incMembers {
-			if m.Kind != semtypes.MemberKindField {
-				allFields = false
-				break
-			}
-		}
-		if allFields {
-			t.semanticError(
-				fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name),
-				classDef.GetPosition(),
-			)
-			return nil, false
-		}
-		t.semanticError(
-			fmt.Sprintf("included method '%s' must be overridden in class definition", name),
-			classDef.GetPosition(),
-		)
+	members, ok := validateOverridesAndMerge(t, directMembers, includedMembers, classDef.GetPosition(), false)
+	if !ok {
 		return nil, false
 	}
 
@@ -1108,6 +1294,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	typeData := classDef.GetTypeData()
 	typeData.Type = semType
 	classDef.SetTypeData(typeData)
+	addInclusionsToTypeSymbol(t, classDef)
 
 	// Set self symbol type
 	selfRef, ok := classDef.Scope().GetSymbol("self")
@@ -1656,7 +1843,7 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 
 	resultType, mat, ok := selectMappingInherentType(t, e, expectedType)
 	if !ok {
-		return resolveMappingConstructorBottomUp(t, chain, e)
+		return nil, expressionEffect{}, false
 	}
 
 	for _, f := range e.Fields {
@@ -1670,9 +1857,19 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 	}
 
 	e.AtomicType = *mat
-	// We can have cases where this is no the case like any a = {foo:"bar"}
-	if bType, ok := t.getMappingAtomBType(mat); ok {
-		e.ContextuallyExpectedType = bType
+	if ref, ok := t.getMappingAtomSymRef(mat); ok {
+		typeSym := t.getSymbol(ref).(*model.TypeSymbol)
+		e.FieldDefaults = typeSym.FieldDefaults()
+	} else if bType, ok := t.getMappingAtomBType(mat); ok {
+		// This happens for inline record type definitions given they don't have type symbol. Need to think of a way
+		// to properly handle this
+		if recTy, ok := bType.(*ast.BLangRecordType); ok {
+			for name, field := range recTy.Fields() {
+				if field.DefaultExpr != nil {
+					e.FieldDefaults = append(e.FieldDefaults, model.FieldDefault{FieldName: name, FnRef: field.DefaultFnRef})
+				}
+			}
+		}
 	}
 	setExpectedType(e, resultType)
 	return resultType, defaultExpressionEffect(chain), true
@@ -1964,6 +2161,7 @@ func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
 	valueTy := semtypes.Union(semtypes.ANY, semtypes.ERROR)
 	return ld.DefineListTypeWrapped(env, []semtypes.SemType{semtypes.STRING, valueTy}, 2, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 }
+
 func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
 	currentChain := chain
 	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
@@ -2033,7 +2231,7 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 	if isCaptured {
 		t.trackCapturedVar(baseSymbol)
 	}
-	if !t.ensureResolved(sym) {
+	if !t.ensureResolved(sym, 0) {
 		return nil, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
@@ -2051,7 +2249,7 @@ func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (s
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
-	if !t.ensureResolved(sym) {
+	if !t.ensureResolved(sym, 0) {
 		return nil, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
@@ -2978,12 +3176,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		if ty.PkgAlias.Value != "" {
 			return t.symbolType(symbol), true
 		}
-		defn, ok := t.getTypeDefinition(symbol)
-		if !ok {
-			t.internalError("type definition not found", nil)
+		if !t.ensureResolved(symbol, depth) {
 			return nil, false
 		}
-		return resolveTypeDefinition(t, defn, depth)
+		return t.symbolType(symbol), true
 	case *ast.BLangFiniteTypeNode:
 		var result semtypes.SemType = semtypes.NEVER
 		for _, value := range ty.ValueSpace {
@@ -3058,14 +3254,16 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		d := semtypes.NewMappingDefinition()
 		ty.Definition = &d
 
-		includedFields := make(map[string][]ast.BField)
-		needsRestOverride, includedRest, ok := accumIncludedFields(t, ty, includedFields, false, nil)
+		// Resolve and collect included members from symbols
+		result, ok := resolveRecordInclusions(t, ty, depth)
 		if !ok {
 			return nil, false
 		}
+
 		seen := make(map[string]bool)
 		var fields []semtypes.Field
-		for name, field := range ty.Fields() {
+		// TODO: need to think of a way to unify this with objects
+		for name, field := range ty.FieldPtrs() {
 			if seen[name] {
 				t.semanticError(fmt.Sprintf("duplicate field name '%s'", name), field.GetPosition())
 				return nil, false
@@ -3075,49 +3273,40 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			if !ok {
 				return nil, false
 			}
-			if overridden, exists := includedFields[name]; exists {
-				for _, incField := range overridden {
-					incFieldTy, ok := resolveBType(t, incField.Type, depth+1)
-					if !ok {
-						return nil, false
-					}
-					if !semtypes.IsSubtype(t.typeContext(), fieldTy, incFieldTy) {
+			if incMembers, exists := result.includedFields[name]; exists {
+				for _, incMember := range incMembers {
+					if !semtypes.IsSubtype(t.typeContext(), fieldTy, incMember.MemberType()) {
 						t.semanticError(
 							fmt.Sprintf("field '%s' of type that overrides included field is not a subtype of the included field type", name),
 							field.GetPosition(),
 						)
 					}
 				}
-				delete(includedFields, name)
+				delete(result.includedFields, name)
 			}
 			if field.DefaultExpr != nil {
 				if _, _, ok := resolveExpression(t, nil, field.DefaultExpr, fieldTy); !ok {
 					return nil, false
 				}
+				field.DefaultFnRef = allocateDefaultFnSymbol(t, fieldTy)
 			}
 			ro := field.FlagSet.Contains(model.Flag_READONLY)
 			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
 			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
 		}
 
-		for name, incFields := range includedFields {
-			if len(incFields) > 1 {
+		for name, incMembers := range result.includedFields {
+			if len(incMembers) > 1 {
 				t.semanticError(fmt.Sprintf("included field '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
 			}
 		}
 
-		for name, incFields := range includedFields {
-			if len(incFields) > 1 {
+		for name, incMembers := range result.includedFields {
+			if len(incMembers) > 1 {
 				continue
 			}
-			field := incFields[0]
-			fieldTy, ok := resolveBType(t, field.Type, depth+1)
-			if !ok {
-				return nil, false
-			}
-			ro := field.FlagSet.Contains(model.Flag_READONLY)
-			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
-			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
+			fd := incMembers[0]
+			fields = append(fields, semtypes.FieldFrom(name, fd.MemberType(), fd.IsReadonly(), fd.IsOptional()))
 		}
 
 		var rest semtypes.SemType
@@ -3129,15 +3318,11 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			}
 		} else if ty.IsOpen {
 			rest = semtypes.CreateAnydata(t.typeContext())
-		} else if needsRestOverride {
+		} else if result.multpleRestTy {
 			t.semanticError("included rest type declared in multiple type inclusions must be overridden", ty.GetPosition())
 			rest = semtypes.NEVER
-		} else if includedRest != nil {
-			var ok bool
-			rest, ok = resolveBType(t, includedRest, depth+1)
-			if !ok {
-				return nil, false
-			}
+		} else if result.includedRestTy != nil {
+			rest = result.includedRestTy
 		} else {
 			rest = semtypes.NEVER
 		}
@@ -3193,120 +3378,161 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 			semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
 		return fnType, true
 	case *ast.BLangObjectType:
-		defn := ty.Definition
-		if defn != nil {
-			return defn.GetSemType(t.typeEnv()), true
-		}
-		od := semtypes.NewObjectDefinition()
-		ty.Definition = &od
-
-		// Step 1: Accumulate included members
-		includedMembers := make(map[string][]semtypes.Member)
-		inc := collectTransitiveInclusions(t.compilerContext(), ty.Inclusions)
-		if !resolveIncludedDefns(t, inc.defns, depth) {
-			return nil, false
-		}
-		for _, m := range inc.members {
-			member, ok := resolveIncludedMember(t, m, depth)
-			if !ok {
-				return nil, false
-			}
-			includedMembers[member.Name] = append(includedMembers[member.Name], member)
-		}
-
-		// Step 2: Build members from direct members
-		var members []semtypes.Member
-		for m := range ty.Members() {
-			valueTy, ok := resolveObjectMemberType(t, m, depth)
-			if !ok {
-				return nil, false
-			}
-
-			name := m.Name()
-			// Check overrides against included members
-			if incMembers, exists := includedMembers[name]; exists {
-				for _, incMember := range incMembers {
-					if !semtypes.IsSubtype(t.typeContext(), valueTy, incMember.ValueTy) {
-						t.semanticError(
-							fmt.Sprintf("member '%s' that overrides included member is not a subtype of the included member type", name),
-							ty.GetPosition(),
-						)
-						return nil, false
-					}
-				}
-				delete(includedMembers, name)
-			}
-
-			members = append(members, semtypes.Member{
-				Name:       name,
-				ValueTy:    valueTy,
-				Kind:       semtypeMemberKind(m.MemberKind()),
-				Visibility: semtypeVisibility(m.Visibility()),
-				Immutable:  m.MemberKind() != model.ObjectMemberKindField,
-			})
-		}
-
-		// Inherit unoverridden included members
-		for name, incMembers := range includedMembers {
-			if len(incMembers) > 1 {
-				t.semanticError(fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name), ty.GetPosition())
-				return nil, false
-			}
-			members = append(members, incMembers[0])
-		}
-
-		// Step 3: Create semtype
-		networkQual := semtypeNetworkQualifier(ty.NetworkQuals)
-		qualifiers := semtypes.ObjectQualifiersFrom(ty.Isolated, false, networkQual)
-		return od.Define(t.typeEnv(), qualifiers, members), true
+		return resolveObjectType(t, ty, depth)
 	default:
 		t.unimplemented("unsupported type", nil)
 		return nil, false
 	}
 }
 
-func accumIncludedFields(t typeResolver, recordTy *ast.BLangRecordType, includedFields map[string][]ast.BField, needsRestOverride bool, includedRest ast.BType) (bool, ast.BType, bool) {
+func resolveObjectType(t typeResolver, ty *ast.BLangObjectType, depth int) (semtypes.SemType, bool) {
+	defn := ty.Definition
+	if defn != nil {
+		return defn.GetSemType(t.typeEnv()), true
+	}
+	od := semtypes.NewObjectDefinition()
+	ty.Definition = &od
+	// Step 1: Accumulate included members from symbols
+	includedMembers := make(map[string][]semtypes.Member)
+	incMembers, err := collectIncludedMembers(t, ty.Inclusions, depth)
+	if err {
+		t.semanticError("error resolving type inclusion", ty.GetPosition())
+		return nil, false
+	}
+	for _, m := range incMembers {
+		if m.MemberKind() == model.InclusionMemberKindRestType {
+			t.internalError("unexpected rest inclusion", ty.GetPosition())
+		}
+		member := inclusionMemberToSemtypeMember(m)
+		includedMembers[member.Name] = append(includedMembers[member.Name], member)
+	}
+
+	// Step 2: Build direct members and validate overrides
+	var directMembers []directMember
+	for m := range ty.Members() {
+		valueTy, ok := resolveObjectMemberType(t, m, depth)
+		if !ok {
+			return nil, false
+		}
+		directMembers = append(directMembers, directMember{
+			name:       m.Name(),
+			valueTy:    valueTy,
+			kind:       semtypeMemberKind(m.MemberKind()),
+			visibility: semtypeVisibility(m.Visibility()),
+			immutable:  m.MemberKind() != model.ObjectMemberKindField,
+			pos:        ty.GetPosition(),
+		})
+	}
+
+	members, ok := validateOverridesAndMerge(t, directMembers, includedMembers, ty.GetPosition(), true)
+	if !ok {
+		return nil, false
+	}
+
+	// Step 3: Create semtype
+	networkQual := semtypeNetworkQualifier(ty.NetworkQuals)
+	qualifiers := semtypes.ObjectQualifiersFrom(ty.Isolated, false, networkQual)
+	return od.Define(t.typeEnv(), qualifiers, members), true
+}
+
+// directMember represents a member declared directly on a type (not inherited via inclusion).
+type directMember struct {
+	name       string
+	valueTy    semtypes.SemType
+	kind       semtypes.MemberKind
+	visibility semtypes.Visibility
+	immutable  bool
+	pos        diagnostics.Location
+}
+
+func validateOverridesAndMerge(t typeResolver, directMembers []directMember, includedMembers map[string][]semtypes.Member, pos diagnostics.Location, isObject bool) ([]semtypes.Member, bool) {
+	var members []semtypes.Member
+	for _, dm := range directMembers {
+		if incMembers, exists := includedMembers[dm.name]; exists {
+			for _, incMember := range incMembers {
+				if incMember.Kind != dm.kind {
+					t.semanticError(
+						fmt.Sprintf("member '%s' conflicts with included member of different kind", dm.name),
+						dm.pos,
+					)
+					return nil, false
+				}
+				if !semtypes.IsSubtype(t.typeContext(), dm.valueTy, incMember.ValueTy) {
+					t.semanticError(
+						fmt.Sprintf("member '%s' that overrides included member is not a subtype of the included member type", dm.name),
+						dm.pos,
+					)
+					return nil, false
+				}
+			}
+			delete(includedMembers, dm.name)
+		}
+		members = append(members, semtypes.Member{
+			Name:       dm.name,
+			ValueTy:    dm.valueTy,
+			Kind:       dm.kind,
+			Visibility: dm.visibility,
+			Immutable:  dm.immutable,
+		})
+	}
+
+	for name, incMembers := range includedMembers {
+		if len(incMembers) == 1 {
+			if isObject || incMembers[0].Kind == semtypes.MemberKindField {
+				members = append(members, incMembers[0])
+				continue
+			}
+			t.semanticError(
+				fmt.Sprintf("included method '%s' must be overridden in class definition", name),
+				pos,
+			)
+			return nil, false
+		}
+		t.semanticError(
+			fmt.Sprintf("included member '%s' declared in multiple type inclusions must be overridden", name),
+			pos,
+		)
+		return nil, false
+	}
+
+	return members, true
+}
+
+type recordInclusionResolutionResult struct {
+	includedFields map[string][]model.FieldDescriptor
+	includedRestTy semtypes.SemType
+	multpleRestTy  bool
+}
+
+func resolveRecordInclusions(t typeResolver, recordTy *ast.BLangRecordType, depth int) (recordInclusionResolutionResult, bool) {
+	// Resolve UDT nodes to set their DeterminedType
 	for _, inc := range recordTy.TypeInclusions {
-		udt, ok := inc.(*ast.BLangUserDefinedType)
-		if !ok {
-			t.semanticError("type inclusion must be a user-defined type", inc.(ast.BLangNode).GetPosition())
-			continue
+		if _, ok := resolveBType(t, inc, 0); !ok {
+			return recordInclusionResolutionResult{}, false
 		}
+	}
 
-		_, ok = resolveBType(t, inc, 0)
-		if !ok {
-			return false, nil, false
-		}
+	incMembers, err := collectIncludedMembers(t, recordTy.Inclusions, depth)
+	if err {
+		return recordInclusionResolutionResult{}, false
+	}
 
-		symbol := udt.Symbol()
-		tDefn, ok := t.getTypeDefinition(symbol)
-		if !ok {
-			t.internalError("type definition not found for inclusion", udt.GetPosition())
-			continue
-		}
-		recTy, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType)
-		if !ok {
-			t.semanticError("included type is not a record type", udt.GetPosition())
-			continue
-		}
-
-		needsRestOverride, includedRest, ok = accumIncludedFields(t, recTy, includedFields, needsRestOverride, includedRest)
-		if !ok {
-			return false, nil, false
-		}
-
-		for name, field := range recTy.Fields() {
-			includedFields[name] = append(includedFields[name], field)
-		}
-
-		if recTy.RestType != nil {
+	includedFields := make(map[string][]model.FieldDescriptor)
+	var includedRest semtypes.SemType
+	needsRestOverride := false
+	for _, m := range incMembers {
+		switch member := m.(type) {
+		case *model.FieldDescriptor:
+			includedFields[member.MemberName()] = append(includedFields[member.MemberName()], *member)
+		case *model.RestTypeDescriptor:
+			restTy := member.MemberType()
 			if includedRest != nil {
 				needsRestOverride = true
 			}
-			includedRest = recTy.RestType
+			includedRest = restTy
 		}
 	}
-	return needsRestOverride, includedRest, true
+	return recordInclusionResolutionResult{includedFields, includedRest, needsRestOverride}, true
 }
 
 func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
@@ -3342,54 +3568,6 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 	t.setSymbolType(symbol, expectedType)
 
 	return true
-}
-
-// TODO: most of this is repeated code need to think about how to refactor this
-func resolveIncludedMember(t typeResolver, m includedMember, depth int) (semtypes.Member, bool) {
-	switch {
-	case m.objectMember != nil:
-		kind := m.objectMember.MemberKind()
-		valueTy, ok := resolveObjectMemberType(t, m.objectMember, depth)
-		if !ok {
-			return semtypes.Member{}, false
-		}
-		return semtypes.Member{
-			Name:       m.objectMember.Name(),
-			ValueTy:    valueTy,
-			Kind:       semtypeMemberKind(kind),
-			Visibility: semtypeVisibility(m.objectMember.Visibility()),
-			Immutable:  kind != model.ObjectMemberKindField,
-		}, true
-	case m.classField != nil:
-		fieldTy := t.symbolType(m.classField.Symbol())
-		vis := semtypes.VisibilityPrivate
-		if m.classField.FlagSet.Contains(model.Flag_PUBLIC) {
-			vis = semtypes.VisibilityPublic
-		}
-		return semtypes.Member{
-			Name:       m.classField.Name.Value,
-			ValueTy:    fieldTy,
-			Kind:       semtypes.MemberKindField,
-			Visibility: vis,
-			Immutable:  false,
-		}, true
-	case m.classMethod != nil:
-		methodTy := t.symbolType(m.classMethod.Symbol())
-		vis := semtypes.VisibilityPrivate
-		if m.classMethod.FlagSet.Contains(model.Flag_PUBLIC) {
-			vis = semtypes.VisibilityPublic
-		}
-		return semtypes.Member{
-			Name:       m.classMethod.Name.Value,
-			ValueTy:    methodTy,
-			Kind:       semtypes.MemberKindMethod,
-			Visibility: vis,
-			Immutable:  true,
-		}, true
-	default:
-		t.internalError("unexpected included member kind", nil)
-		return semtypes.Member{}, false
-	}
 }
 
 func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchStatement) (statementEffect, bool) {
@@ -3501,23 +3679,6 @@ func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMa
 	return acceptedTy, chain, true
 }
 
-func resolveIncludedDefns(t typeResolver, defns []model.TypeDefinition, depth int) bool {
-	for _, d := range defns {
-		switch defn := d.(type) {
-		case *ast.BLangTypeDefinition:
-			objTy := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			if _, ok := resolveBType(t, objTy, depth+1); !ok {
-				return false
-			}
-		case *ast.BLangClassDefinition:
-			if _, ok := resolveClassDefinitionType(t, defn, depth+1); !ok {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func resolveObjectMemberType(t typeResolver, m model.ObjectMember, depth int) (semtypes.SemType, bool) {
 	switch m := m.(type) {
 	case *ast.BObjectField:
@@ -3580,6 +3741,38 @@ func semtypeMemberKind(kind model.ObjectMemberKind) semtypes.MemberKind {
 		return semtypes.MemberKindResourceMethod
 	default:
 		panic("invalid member kind")
+	}
+}
+
+func inclusionMemberKindToSemtype(kind model.InclusionMemberKind) semtypes.MemberKind {
+	switch kind {
+	case model.InclusionMemberKindField:
+		return semtypes.MemberKindField
+	case model.InclusionMemberKindMethod:
+		return semtypes.MemberKindMethod
+	case model.InclusionMemberKindRemoteMethod:
+		return semtypes.MemberKindRemoteMethod
+	case model.InclusionMemberKindResourceMethod:
+		return semtypes.MemberKindResourceMethod
+	default:
+		panic("invalid inclusion member kind")
+	}
+}
+
+func inclusionMemberToSemtypeMember(m model.InclusionMember) semtypes.Member {
+	kind := m.MemberKind()
+	vis := semtypes.VisibilityPrivate
+	if fd, ok := m.(*model.FieldDescriptor); ok {
+		vis = semtypeVisibility(fd.Visibility())
+	} else if md, ok := m.(*model.MethodDescriptor); ok {
+		vis = semtypeVisibility(md.Visibility())
+	}
+	return semtypes.Member{
+		Name:       m.MemberName(),
+		ValueTy:    m.MemberType(),
+		Kind:       inclusionMemberKindToSemtype(kind),
+		Visibility: vis,
+		Immutable:  kind != model.InclusionMemberKindField,
 	}
 }
 

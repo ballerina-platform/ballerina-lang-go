@@ -6,15 +6,33 @@ $desugar$0() -> int{
     return;
   }
 }
-$desugar$2() -> int{
+$desugar$1() -> int{
   bb0 {
     %0 = (1, c);
     return;
   }
 }
-$desugar$3() -> string{
+$desugar$2() -> string{
   bb0 {
     %0 = (1, s);
+    return;
+  }
+}
+$desugar$3() -> int{
+  bb0 {
+    %0 = (1, c);
+    return;
+  }
+}
+$desugar$4() -> string{
+  bb0 {
+    %0 = (1, s);
+    return;
+  }
+}
+$desugar$5() -> int{
+  bb0 {
+    %0 = (1, c);
     return;
   }
 }
@@ -30,31 +48,13 @@ $desugar$7() -> string{
     return;
   }
 }
-$desugar$10() -> int{
+$desugar$8() -> int{
   bb0 {
     %0 = (1, c);
     return;
   }
 }
-$desugar$12() -> int{
-  bb0 {
-    %0 = (1, c);
-    return;
-  }
-}
-$desugar$13() -> string{
-  bb0 {
-    %0 = (1, s);
-    return;
-  }
-}
-$desugar$16() -> int{
-  bb0 {
-    %0 = (1, c);
-    return;
-  }
-}
-$desugar$17() -> string{
+$desugar$9() -> string{
   bb0 {
     %0 = (1, s);
     return;
@@ -65,7 +65,7 @@ main() -> nil{
     %1 = ConstantLoad 10
     c = %1;
     %3 = closure_fp $anon/.:$desugar$0
-    $desugar$1 = %3;
+    $desugar$0 = %3;
     %5 = newMap {| value: int, never... |}{} defaults{value=$anon/.:$desugar$0}
     f = %5;
     %8 = ConstantLoad value
@@ -76,11 +76,11 @@ main() -> nil{
   bb1 {
     %11 = ConstantLoad hello
     s = %11;
-    %13 = closure_fp $anon/.:$desugar$2
-    $desugar$4 = %13;
-    %15 = closure_fp $anon/.:$desugar$3
-    $desugar$5 = %15;
-    %17 = newMap {| name: string, value: int, never... |}{} defaults{value=$anon/.:$desugar$2, name=$anon/.:$desugar$3}
+    %13 = closure_fp $anon/.:$desugar$1
+    $desugar$1 = %13;
+    %15 = closure_fp $anon/.:$desugar$2
+    $desugar$2 = %15;
+    %17 = newMap {| name: string, value: int, never... |}{} defaults{value=$anon/.:$desugar$1, name=$anon/.:$desugar$2}
     f2 = %17;
     %20 = ConstantLoad value
     %19 = f2[%20];
@@ -93,13 +93,13 @@ main() -> nil{
     %25 = println(%23) -> bb3;
   }
   bb3 {
-    %26 = closure_fp $anon/.:$desugar$6
-    $desugar$8 = %26;
-    %28 = closure_fp $anon/.:$desugar$7
-    $desugar$9 = %28;
+    %26 = closure_fp $anon/.:$desugar$3
+    $desugar$3 = %26;
+    %28 = closure_fp $anon/.:$desugar$4
+    $desugar$4 = %28;
     %30 = ConstantLoad value
     %31 = ConstantLoad 20
-    %32 = newMap {| name: string, value: int, never... |}{%30=%31} defaults{value=$anon/.:$desugar$6, name=$anon/.:$desugar$7}
+    %32 = newMap {| name: string, value: int, never... |}{%30=%31} defaults{value=$anon/.:$desugar$3, name=$anon/.:$desugar$4}
     f3 = %32;
     %35 = ConstantLoad value
     %34 = f3[%35];
@@ -112,11 +112,11 @@ main() -> nil{
     %40 = println(%38) -> bb5;
   }
   bb5 {
-    %41 = closure_fp $anon/.:$desugar$10
-    $desugar$11 = %41;
+    %41 = closure_fp $anon/.:$desugar$5
+    $desugar$5 = %41;
     %43 = ConstantLoad x
     %44 = ConstantLoad 1
-    %45 = newMap {| x: int, y: int, never... |}{%43=%44} defaults{y=$anon/.:$desugar$10}
+    %45 = newMap {| x: int, y: int, never... |}{%43=%44} defaults{y=$anon/.:$desugar$5}
     f4 = %45;
     %48 = ConstantLoad x
     %47 = f4[%48];
@@ -130,13 +130,13 @@ main() -> nil{
     %54 = println(%53) -> bb7;
   }
   bb7 {
-    %55 = closure_fp $anon/.:$desugar$12
-    $desugar$14 = %55;
-    %57 = closure_fp $anon/.:$desugar$13
-    $desugar$15 = %57;
+    %55 = closure_fp $anon/.:$desugar$6
+    $desugar$6 = %55;
+    %57 = closure_fp $anon/.:$desugar$7
+    $desugar$7 = %57;
     %59 = ConstantLoad x
     %60 = ConstantLoad 5
-    %61 = newMap {| name: string, x: int, y: int, never... |}{%59=%60} defaults{y=$anon/.:$desugar$12, name=$anon/.:$desugar$13}
+    %61 = newMap {| name: string, x: int, y: int, never... |}{%59=%60} defaults{y=$anon/.:$desugar$6, name=$anon/.:$desugar$7}
     f5 = %61;
     %64 = ConstantLoad x
     %63 = f5[%64];
@@ -155,17 +155,17 @@ main() -> nil{
     %73 = println(%71) -> bb10;
   }
   bb10 {
-    %74 = closure_fp $anon/.:$desugar$16
-    $desugar$18 = %74;
-    %76 = closure_fp $anon/.:$desugar$17
-    $desugar$19 = %76;
+    %74 = closure_fp $anon/.:$desugar$8
+    $desugar$8 = %74;
+    %76 = closure_fp $anon/.:$desugar$9
+    $desugar$9 = %76;
     %78 = ConstantLoad x
     %79 = ConstantLoad 5
     %80 = ConstantLoad y
     %81 = ConstantLoad 20
     %82 = ConstantLoad name
     %83 = ConstantLoad world
-    %84 = newMap {| name: string, x: int, y: int, never... |}{%78=%79, %80=%81, %82=%83} defaults{y=$anon/.:$desugar$16, name=$anon/.:$desugar$17}
+    %84 = newMap {| name: string, x: int, y: int, never... |}{%78=%79, %80=%81, %82=%83} defaults{y=$anon/.:$desugar$8, name=$anon/.:$desugar$9}
     f6 = %84;
     %87 = ConstantLoad x
     %86 = f6[%87];

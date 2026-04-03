@@ -1,0 +1,130 @@
+(package
+  (import-package ballerina io (as io))
+  (type-definition Base
+    (record-type
+      (field x
+        (value-type int)
+        (literal 10))
+      (field y
+        (value-type string)
+        (literal hello))))
+  (type-definition Inherited
+    (record-type
+      (field z
+        (value-type string))))
+  (type-definition OverriddenWithNewDefault
+    (record-type
+      (field x
+        (value-type int)
+        (literal 42))
+      (field z
+        (value-type string))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable r1 (type
+          (user-defined-type Inherited)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal z)
+              (literal world))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r1)
+            (literal x)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r1)
+            (literal y)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r1)
+            (literal z)))))
+      (var-def
+        (variable r2 (type
+          (user-defined-type Inherited)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 5))
+            (key-value
+              (literal z)
+              (literal world))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r2)
+            (literal x)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r2)
+            (literal y)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r2)
+            (literal z)))))
+      (var-def
+        (variable r3 (type
+          (user-defined-type OverriddenWithNewDefault)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal z)
+              (literal test))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r3)
+            (literal x)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r3)
+            (literal y)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r3)
+            (literal z)))))
+      (var-def
+        (variable r4 (type
+          (user-defined-type OverriddenWithNewDefault)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal x)
+              (literal 99))
+            (key-value
+              (literal z)
+              (literal test))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r4)
+            (literal x)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r4)
+            (literal y)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref r4)
+            (literal z)))))))
+  (function $desugar$0 () ()
+    (block-function-body
+      (return
+        (literal 10))))
+  (function $desugar$1 () ()
+    (block-function-body
+      (return
+        (literal hello))))
+  (function $desugar$2 () ()
+    (block-function-body
+      (return
+        (literal 42)))))

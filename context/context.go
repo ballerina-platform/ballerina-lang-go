@@ -118,14 +118,6 @@ func (this *CompilerContext) SetSymbolType(symbol model.SymbolRef, ty semtypes.S
 	this.GetSymbol(symbol).SetType(ty)
 }
 
-func (this *CompilerContext) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
-	this.env.SetTypeDefinition(symbol, defn)
-}
-
-func (this *CompilerContext) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
-	return this.env.GetTypeDefinition(symbol)
-}
-
 func (this *CompilerContext) GetDefaultPackage() *model.PackageID {
 	return this.env.GetDefaultPackage()
 }

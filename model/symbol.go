@@ -136,10 +136,16 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
+		inclusionMembers []InclusionMember
 	}
 
 	ClassSymbol struct {
 		TypeSymbol
+	}
+
+	FieldDefault struct {
+		FieldName string
+		FnRef     SymbolRef
 	}
 
 	ValueSymbol struct {
@@ -165,6 +171,89 @@ type (
 		// RestParamType is nil if there is no rest param
 		RestParamType semtypes.SemType
 	}
+)
+
+type InclusionMemberKind uint8
+
+const (
+	InclusionMemberKindField InclusionMemberKind = iota
+	InclusionMemberKindMethod
+	InclusionMemberKindRemoteMethod
+	InclusionMemberKindResourceMethod
+	InclusionMemberKindRestType
+)
+
+type InclusionMember interface {
+	MemberName() string
+	MemberKind() InclusionMemberKind
+	MemberType() semtypes.SemType
+	SetMemberType(semtypes.SemType)
+}
+
+type FieldDescriptorFlag uint8
+
+const (
+	FieldDescriptorReadonly FieldDescriptorFlag = 1 << iota
+	FieldDescriptorOptional
+	FieldDescriptorHasDefault
+)
+
+type FieldDescriptor struct {
+	name         string
+	ty           semtypes.SemType
+	flags        FieldDescriptorFlag
+	DefaultFnRef SymbolRef
+	visibility   Visibility
+}
+
+func NewFieldDescriptor(name string, flags FieldDescriptorFlag, visibility Visibility) FieldDescriptor {
+	return FieldDescriptor{name: name, flags: flags, visibility: visibility}
+}
+
+func (f *FieldDescriptor) MemberName() string                { return f.name }
+func (f *FieldDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindField }
+func (f *FieldDescriptor) MemberType() semtypes.SemType      { return f.ty }
+func (f *FieldDescriptor) SetMemberType(ty semtypes.SemType) { f.ty = ty }
+func (f *FieldDescriptor) Visibility() Visibility            { return f.visibility }
+func (f *FieldDescriptor) IsReadonly() bool                  { return f.flags&FieldDescriptorReadonly != 0 }
+func (f *FieldDescriptor) IsOptional() bool                  { return f.flags&FieldDescriptorOptional != 0 }
+func (f *FieldDescriptor) HasDefault() bool                  { return f.flags&FieldDescriptorHasDefault != 0 }
+
+type MethodDescriptor struct {
+	name       string
+	kind       InclusionMemberKind
+	ty         semtypes.SemType
+	MethodRef  SymbolRef
+	visibility Visibility
+}
+
+func NewMethodDescriptor(name string, kind InclusionMemberKind, visibility Visibility, methodRef SymbolRef) MethodDescriptor {
+	return MethodDescriptor{name: name, kind: kind, visibility: visibility, MethodRef: methodRef}
+}
+
+func (m *MethodDescriptor) MemberName() string                { return m.name }
+func (m *MethodDescriptor) MemberKind() InclusionMemberKind   { return m.kind }
+func (m *MethodDescriptor) MemberType() semtypes.SemType      { return m.ty }
+func (m *MethodDescriptor) SetMemberType(ty semtypes.SemType) { m.ty = ty }
+func (m *MethodDescriptor) Visibility() Visibility            { return m.visibility }
+
+type RestTypeDescriptor struct {
+	ty semtypes.SemType
+}
+
+func NewRestTypeDescriptor() RestTypeDescriptor {
+	return RestTypeDescriptor{}
+}
+
+func (r *RestTypeDescriptor) MemberName() string                { panic("RestTypeDescriptor has no name") }
+func (r *RestTypeDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindRestType }
+func (r *RestTypeDescriptor) MemberType() semtypes.SemType      { return r.ty }
+func (r *RestTypeDescriptor) SetMemberType(ty semtypes.SemType) { r.ty = ty }
+
+var (
+	_ InclusionMember = &FieldDescriptor{}
+	_ InclusionMember = &MethodDescriptor{}
+	_ InclusionMember = &RestTypeDescriptor{}
 )
 
 var (
@@ -306,6 +395,19 @@ func NewExportedSymbolSpace(main, annotation *SymbolSpace) ExportedSymbolSpace {
 	return ExportedSymbolSpace{Main: main, Annotation: annotation}
 }
 
+func (space *ExportedSymbolSpace) PublicMainSymbols() iter.Seq2[SymbolRef, Symbol] {
+	return func(yield func(SymbolRef, Symbol) bool) {
+		for i, sym := range space.Main.Symbols() {
+			if !sym.IsPublic() {
+				continue
+			}
+			if !yield(space.Main.RefAt(i), sym) {
+				return
+			}
+		}
+	}
+}
+
 func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
 	ref, ok := space.Main.GetSymbol(name)
 	if !ok {
@@ -384,6 +486,21 @@ func (ts *TypeSymbol) Kind() SymbolKind {
 
 func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
+}
+
+func (ts *TypeSymbol) InclusionMembers() []InclusionMember { return ts.inclusionMembers }
+func (ts *TypeSymbol) AddInclusionMember(m InclusionMember) {
+	ts.inclusionMembers = append(ts.inclusionMembers, m)
+}
+
+func (ts *TypeSymbol) FieldDefaults() []FieldDefault {
+	var defaults []FieldDefault
+	for _, m := range ts.inclusionMembers {
+		if fd, ok := m.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
+			defaults = append(defaults, FieldDefault{FieldName: fd.name, FnRef: fd.DefaultFnRef})
+		}
+	}
+	return defaults
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
