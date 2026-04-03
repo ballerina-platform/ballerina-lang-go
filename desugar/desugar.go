@@ -300,24 +300,12 @@ func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, own
 		if field.DefaultExpr == nil {
 			continue
 		}
-		fieldSemType := field.Type.(ast.BLangNode).GetDeterminedType()
-		fnName := ctx.nextDesugarSymbolName()
-		signature := model.FunctionSignature{ReturnType: fieldSemType}
-		fnSymbol := model.NewFunctionSymbol(fnName, signature, false)
-		env := ctx.typeEnv()
-		paramListDefn := semtypes.NewListDefinition()
-		paramListTy := paramListDefn.TupleTypeWrapped(env)
-		fnDefn := semtypes.NewFunctionDefinition()
-		fnType := fnDefn.Define(env, paramListTy, fieldSemType, semtypes.FunctionQualifiersFrom(env, false, false))
-		fnSymbol.SetType(fnType)
-		symRef := ctx.addSymbolToSameSpace(ownerSymRef, fnName, fnSymbol)
+		symRef := field.DefaultFnRef
+		fn := createDefaultValueFunction(ctx.getSymbol(symRef).Name(), field.DefaultExpr)
 		fnScope := ctx.newFunctionScope(parentScope)
-
-		fn := createDefaultValueFunction(fnName, field.DefaultExpr)
 		fn.SetSymbol(symRef)
 		fn.SetScope(fnScope)
 
-		field.DefaultFnRef = symRef
 		fields = append(fields, desugaredRecordFieldResult{fn: fn, symRef: symRef})
 	}
 	return desugaredTypeDescResult{recordFields: fields}

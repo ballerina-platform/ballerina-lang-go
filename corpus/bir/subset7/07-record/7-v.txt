@@ -10,7 +10,7 @@ $desugar$0() -> int{
 main() -> nil{
   bb0 {
     %1 = fp $anon/.:$desugar$0
-    $desugar$1 = %1;
+    $desugar$0 = %1;
     %3 = newMap {| value: int, never... |}{} defaults{value=$anon/.:$desugar$0}
     f = %3;
     %6 = ConstantLoad value
