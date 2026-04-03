@@ -597,19 +597,11 @@ func innermostDiagnosticNodes(node tree.Node) []tree.Node {
 }
 
 func diagnosticMessage(node tree.Node) string {
-	if deep := tree.FindDeepestDiagnosticSTNode(node.InternalNode()); deep != nil && len(deep.Diagnostics()) > 0 {
-		key := deep.Diagnostics()[0].DiagnosticCode().MessageKey()
-		if key != "" {
-			return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
-		}
+	deep := tree.FindDeepestDiagnosticSTNode(node.InternalNode())
+	if deep == nil || len(deep.Diagnostics()) == 0 {
+		return "syntax error"
 	}
-	if diags := node.InternalNode().Diagnostics(); len(diags) > 0 {
-		key := diags[0].DiagnosticCode().MessageKey()
-		if key != "" {
-			return strings.ReplaceAll(strings.TrimPrefix(key, "error."), ".", " ")
-		}
-	}
-	return "syntax error"
+	return strings.ReplaceAll(strings.TrimPrefix(deep.Diagnostics()[0].DiagnosticCode().MessageKey(), "error."), ".", " ")
 }
 
 func getPosition(node tree.Node) Location {

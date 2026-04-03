@@ -385,9 +385,6 @@ func (n *NonTerminalNodeBase) ChildNodes() iter.Seq[Node] {
 }
 
 func (n *NonTerminalNodeBase) loadNode(childIndex int) Node {
-	if childIndex < 0 || childIndex >= n.internalNode.BucketCount() {
-		return nil
-	}
 	return n.ChildInBucket(childIndex)
 }
 
