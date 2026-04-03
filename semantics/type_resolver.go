@@ -72,7 +72,7 @@ type typeResolver interface {
 	getCapturedVars() map[model.SymbolRef]bool
 	setCapturedVars(vars map[model.SymbolRef]bool)
 
-	ensureResolved(ref model.SymbolRef) bool
+	ensureResolved(ref model.SymbolRef, depth int) bool
 
 	setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType)
 	getMappingAtomBType(mat *semtypes.MappingAtomicType) (ast.BType, bool)
@@ -290,8 +290,8 @@ func (f *functionTypeResolver) setCapturedVars(vars map[model.SymbolRef]bool) {
 	f.capturedNarrowedVars = vars
 }
 
-func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef) bool {
-	return f.parentResolver.ensureResolved(ref)
+func (f *functionTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
+	return f.parentResolver.ensureResolved(ref, depth)
 }
 
 func (f *functionTypeResolver) setMappingAtomBType(mat *semtypes.MappingAtomicType, bType ast.BType) {
@@ -318,13 +318,13 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 	}
 }
 
-func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef) bool {
+func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) bool {
 	if t.symbolType(ref) != nil {
 		return true
 	}
 	// Type definitions manage their own cycle detection via CycleDepth
 	if defn, ok := t.getTypeDefinition(ref); ok {
-		_, ok := resolveTypeDefinition(t, defn, 0)
+		_, ok := resolveTypeDefinition(t, defn, depth)
 		return ok
 	}
 	if c, inMap := t.packageVarNodes[ref]; inMap {
@@ -1996,7 +1996,7 @@ func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVa
 	if isCaptured {
 		t.trackCapturedVar(baseSymbol)
 	}
-	if !t.ensureResolved(sym) {
+	if !t.ensureResolved(sym, 0) {
 		return nil, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
@@ -2014,7 +2014,7 @@ func resolveConstRef(t typeResolver, chain *binding, expr *ast.BLangConstRef) (s
 	if isNarrowed {
 		expr.SetSymbol(sym)
 	}
-	if !t.ensureResolved(sym) {
+	if !t.ensureResolved(sym, 0) {
 		return nil, defaultExpressionEffect(chain), false
 	}
 	ty := t.symbolType(sym)
@@ -2941,12 +2941,10 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		if ty.PkgAlias.Value != "" {
 			return t.symbolType(symbol), true
 		}
-		defn, ok := t.getTypeDefinition(symbol)
-		if !ok {
-			t.internalError("type definition not found", nil)
+		if !t.ensureResolved(symbol, depth) {
 			return nil, false
 		}
-		return resolveTypeDefinition(t, defn, depth)
+		return t.symbolType(symbol), true
 	case *ast.BLangFiniteTypeNode:
 		var result semtypes.SemType = semtypes.NEVER
 		for _, value := range ty.ValueSpace {
