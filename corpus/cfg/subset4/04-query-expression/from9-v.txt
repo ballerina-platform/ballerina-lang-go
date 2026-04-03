@@ -1,0 +1,75 @@
+(keyFor
+  (bb0 () (bb1 bb2)
+    (binary-expr ==
+      (simple-var-ref x)
+      (literal 1))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal a))
+  )
+  (bb2 (bb0) (bb3 bb4)
+    (binary-expr ==
+      (simple-var-ref x)
+      (literal 2))
+  )
+  (bb3 (bb2) ()
+    (return
+      (literal b))
+  )
+  (bb4 (bb2) ()
+    (return
+      (literal c))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable xs (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type int))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (literal k1)
+            (literal 1))
+          (key-value
+            (literal k2)
+            (literal 2))
+          (key-value
+            (literal k3)
+            (literal 3))))))
+    (var-def
+      (variable out (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type int))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (list-constructor-expr
+              (invocation keyFor (
+                (simple-var-ref x)))
+              (binary-expr *
+                (simple-var-ref x)
+                (literal 10))))))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref out)
+          (literal a)))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref out)
+          (literal b)))))
+    (expression-stmt
+      (invocation io println (
+        (index-based-access
+          (simple-var-ref out)
+          (literal c)))))
+  )
+)

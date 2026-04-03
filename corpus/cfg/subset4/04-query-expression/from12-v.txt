@@ -1,0 +1,50 @@
+(keyFor
+  (bb0 () (bb1 bb2)
+    (binary-expr <=
+      (simple-var-ref x)
+      (literal 2))
+  )
+  (bb1 (bb0) ()
+    (return
+      (literal a))
+  )
+  (bb2 (bb0) ()
+    (return
+      (literal b))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable xs (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type int))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (literal k1)
+            (literal 1))
+          (key-value
+            (literal k2)
+            (literal 2))
+          (key-value
+            (literal k3)
+            (literal 3))))))
+    (var-def
+      (variable out (type
+        (record-type)) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (list-constructor-expr
+              (invocation keyFor (
+                (simple-var-ref x)))
+              (simple-var-ref x)))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref out))))
+  )
+)

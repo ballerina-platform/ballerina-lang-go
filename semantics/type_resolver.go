@@ -1738,8 +1738,10 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 			result = semtypes.Union(result, each)
 		}
 		elementTy = result
+	case semtypes.IsSubtypeSimple(collectionTy, semtypes.MAPPING):
+		elementTy = semtypes.MappingMemberTypeInnerValProj(t.typeContext(), collectionTy, semtypes.STRING)
 	default:
-		t.unimplemented("query from-clause currently supports only list collections", fromClause.GetPosition())
+		t.unimplemented("query from-clause currently supports only list or map collections", fromClause.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
@@ -1780,12 +1782,36 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	ld := semtypes.NewListDefinition()
-	queryTy := ld.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), selectTy)
+	var queryTy semtypes.SemType
+	switch expr.QueryConstructType {
+	case model.TypeKind_NONE:
+		ld := semtypes.NewListDefinition()
+		queryTy = ld.DefineListTypeWrappedWithEnvSemType(t.typeEnv(), selectTy)
+	case model.TypeKind_MAP:
+		expectedSelectTy := mapQuerySelectExpectedType(t.typeEnv())
+		if !semtypes.IsSubtype(t.typeContext(), selectTy, expectedSelectTy) {
+			t.semanticError(
+				formatIncompatibleTypeMessage(t.typeContext(), expectedSelectTy, selectTy),
+				selectClause.GetPosition(),
+			)
+			return nil, expressionEffect{}, false
+		}
+		valueTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), selectTy, semtypes.IntConst(1))
+		md := semtypes.NewMappingDefinition()
+		queryTy = md.DefineMappingTypeWrapped(t.typeEnv(), nil, valueTy)
+	default:
+		t.unimplemented("query construct type is not supported yet", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 	setExpectedType(expr, queryTy)
 	return queryTy, defaultExpressionEffect(chain), true
 }
 
+func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
+	ld := semtypes.NewListDefinition()
+	valueTy := semtypes.Union(semtypes.ANY, semtypes.ERROR)
+	return ld.DefineListTypeWrapped(env, []semtypes.SemType{semtypes.STRING, valueTy}, 2, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
+}
 func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
 	currentChain := chain
 	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {

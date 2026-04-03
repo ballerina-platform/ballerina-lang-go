@@ -1,0 +1,87 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+keyFor(int) -> string{
+  bb0 {
+    %3 = x;
+    %4 = ConstantLoad 2
+    %5 = %4;
+    %2 = <= %3 %5;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %6 = ConstantLoad a
+    %0 = %6;
+    return;
+  }
+  bb2 {
+    %7 = ConstantLoad b
+    %0 = %7;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad k1
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad k2
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad k3
+    %6 = ConstantLoad 3
+    %7 = newMap {| int... |}{%1=%2, %3=%4, %5=%6}
+    xs = %7;
+    $desugar$0 = xs;
+    %10 = newMap {| int... |}{}
+    $desugar$1 = %10;
+    %12 = ConstantLoad 0
+    $desugar$2 = %12;
+    %14 = keys($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %14;
+    %16 = length($desugar$3) -> bb2;
+  }
+  bb2 {
+    $desugar$4 = %16;
+    GOTO bb3;
+  }
+  bb3 {
+    %19 = $desugar$2;
+    %20 = $desugar$4;
+    %18 = < %19 %20;
+    %18 ? bb4 : bb5;
+  }
+  bb4 {
+    PushScopeFrame 16
+    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    x = %0;
+    %3 = x;
+    %4 = keyFor(%3) -> bb6;
+  }
+  bb5 {
+    out = $desugar$1;
+    %22 = println(out) -> bb7;
+  }
+  bb6 {
+    %5 = ConstantLoad 2
+    %6 = newArray [string, int, never...][%5]{%4, x}
+    $desugar$5 = %6;
+    %9 = ConstantLoad 1
+    %8 = $desugar$5[%9];
+    %11 = ConstantLoad 0
+    %10 = $desugar$5[%11];
+    (1, $desugar$1)[%10] = %8;
+    %13 = (1, $desugar$2);
+    %14 = ConstantLoad 1
+    %15 = %14;
+    %12 = + %13 %15;
+    (1, $desugar$2) = %12;
+    PopScopeFrame
+    GOTO bb3;
+  }
+  bb7 {
+    return;
+  }
+}

@@ -1,0 +1,80 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function keyFor (
+    (variable x (type
+      (value-type int)))) (
+    (value-type string))
+    (block-function-body
+      (if
+        (binary-expr ==
+          (simple-var-ref x)
+          (literal 1))
+        (block-stmt
+          (return
+            (literal a))) ())
+      (block-stmt
+        (if
+          (binary-expr ==
+            (simple-var-ref x)
+            (literal 2))
+          (block-stmt
+            (return
+              (literal b))) ())
+        (block-stmt
+          (return
+            (literal c))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable xs (type
+          (record-type
+            (field k1
+              (value-type int))
+            (field k2
+              (value-type int))
+            (field k3
+              (value-type int)))) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref k1)
+              (literal 1))
+            (key-value
+              (simple-var-ref k2)
+              (literal 2))
+            (key-value
+              (simple-var-ref k3)
+              (literal 3))))))
+      (var-def
+        (variable out (type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type int))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable x))
+              (simple-var-ref xs))
+            (select-clause
+              (list-constructor-expr
+                (invocation keyFor (
+                  (simple-var-ref x)))
+                (binary-expr *
+                  (simple-var-ref x)
+                  (literal 10))))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref out)
+            (literal a)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref out)
+            (literal b)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref out)
+            (literal c))))))))

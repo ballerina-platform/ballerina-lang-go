@@ -566,12 +566,21 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		Name: &ast.BLangIdentifier{Value: resultName},
 	}
 	resultVar.SetDeterminedType(queryTy)
-	emptyList := &ast.BLangListConstructorExpr{
-		Exprs: []ast.BLangExpression{},
+	switch expr.QueryConstructType {
+	case model.TypeKind_MAP:
+		emptyMap := &ast.BLangMappingConstructorExpr{
+			Fields: []model.MappingField{},
+		}
+		emptyMap.SetDeterminedType(queryTy)
+		resultVar.SetInitialExpression(emptyMap)
+	default:
+		emptyList := &ast.BLangListConstructorExpr{
+			Exprs: []ast.BLangExpression{},
+		}
+		emptyList.SetDeterminedType(semtypes.LIST)
+		emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
+		resultVar.SetInitialExpression(emptyList)
 	}
-	emptyList.SetDeterminedType(semtypes.LIST)
-	emptyList.AtomicType = semtypes.LIST_ATOMIC_INNER
-	resultVar.SetInitialExpression(emptyList)
 	resultVar.SetSymbol(resultSymbol)
 	resultVarDef := &ast.BLangSimpleVariableDef{Var: resultVar}
 	setPositionIfMissing(resultVarDef, basePos)
@@ -609,7 +618,66 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	idxRef.SetSymbol(idxSymbol)
 	idxRef.SetDeterminedType(semtypes.INT)
 
-	lengthInvocation := createLengthInvocation(cx, collRef)
+	loopVarSymbol := cloneLoopVarDef.Var.Symbol()
+	loopVarTy := cx.symbolType(loopVarSymbol)
+	if loopVarTy == nil {
+		cx.internalError("query from-clause variable symbol type not found")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+
+	lengthSource := collRef
+	var elementAccess ast.BLangExpression
+
+	switch {
+	case semtypes.IsSubtypeSimple(collTy, semtypes.LIST):
+		listAccess := &ast.BLangIndexBasedAccess{
+			IndexExpr: idxRef,
+		}
+		listAccess.Expr = collRef
+		listAccess.SetDeterminedType(loopVarTy)
+		elementAccess = listAccess
+	case semtypes.IsSubtypeSimple(collTy, semtypes.MAPPING):
+		keysInvocation := createKeysInvocation(cx, collRef)
+		if keysInvocation == nil {
+			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		}
+		keysTy := keysInvocation.GetDeterminedType()
+		keysName, keysSymbol := cx.addDesugardSymbol(keysTy, model.SymbolKindVariable, false)
+		keysVar := &ast.BLangSimpleVariable{
+			Name: &ast.BLangIdentifier{Value: keysName},
+		}
+		keysVar.SetDeterminedType(keysTy)
+		keysVar.SetInitialExpression(keysInvocation)
+		keysVar.SetSymbol(keysSymbol)
+		keysVarDef := &ast.BLangSimpleVariableDef{Var: keysVar}
+		setPositionIfMissing(keysVarDef, basePos)
+		initStmts = append(initStmts, keysVarDef)
+
+		keysRef := &ast.BLangSimpleVarRef{
+			VariableName: keysVar.Name,
+		}
+		keysRef.SetSymbol(keysSymbol)
+		keysRef.SetDeterminedType(keysTy)
+		lengthSource = keysRef
+
+		keyAccess := &ast.BLangIndexBasedAccess{
+			IndexExpr: idxRef,
+		}
+		keyAccess.Expr = keysRef
+		keyAccess.SetDeterminedType(semtypes.STRING)
+
+		mapAccess := &ast.BLangIndexBasedAccess{
+			IndexExpr: keyAccess,
+		}
+		mapAccess.Expr = collRef
+		mapAccess.SetDeterminedType(loopVarTy)
+		elementAccess = mapAccess
+	default:
+		cx.unimplemented("query from clause currently supports only list or map collections")
+		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+	}
+
+	lengthInvocation := createLengthInvocation(cx, lengthSource)
 	lenName, lenSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	lenVar := &ast.BLangSimpleVariable{
 		Name: &ast.BLangIdentifier{Value: lenName},
@@ -633,18 +701,6 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		OpKind:  model.OperatorKind_LESS_THAN,
 	}
 	condition.SetDeterminedType(semtypes.BOOLEAN)
-
-	elementAccess := &ast.BLangIndexBasedAccess{
-		IndexExpr: idxRef,
-	}
-	elementAccess.Expr = collRef
-	loopVarSymbol := cloneLoopVarDef.Var.Symbol()
-	loopVarTy := cx.symbolType(loopVarSymbol)
-	if loopVarTy == nil {
-		cx.internalError("query from-clause variable symbol type not found")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	elementAccess.SetDeterminedType(loopVarTy)
 	cloneLoopVarDef.Var.SetInitialExpression(elementAccess)
 
 	var bodyStmts []ast.BLangStatement
@@ -657,11 +713,49 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 
 	selectResult := walkExpression(cx, selectClause.Expression)
 	bodyStmts = append(bodyStmts, selectResult.initStmts...)
-	pushInvocation := createPushInvocation(cx, resultRef, selectResult.replacementNode.(ast.BLangExpression))
-	if pushInvocation == nil {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+
+	selectExpr := selectResult.replacementNode.(ast.BLangExpression)
+	switch expr.QueryConstructType {
+	case model.TypeKind_MAP:
+		selectTy := selectExpr.GetDeterminedType()
+		pairName, pairSymbol := cx.addDesugardSymbol(selectTy, model.SymbolKindVariable, false)
+		pairVar := &ast.BLangSimpleVariable{
+			Name: &ast.BLangIdentifier{Value: pairName},
+		}
+		pairVar.SetDeterminedType(selectTy)
+		pairVar.SetInitialExpression(selectExpr)
+		pairVar.SetSymbol(pairSymbol)
+		pairVarDef := &ast.BLangSimpleVariableDef{Var: pairVar}
+		setPositionIfMissing(pairVarDef, basePos)
+		bodyStmts = append(bodyStmts, pairVarDef)
+
+		pairRef := &ast.BLangSimpleVarRef{
+			VariableName: pairVar.Name,
+		}
+		pairRef.SetSymbol(pairSymbol)
+		pairRef.SetDeterminedType(selectTy)
+
+		keyAccess := &ast.BLangIndexBasedAccess{
+			IndexExpr: createIntLiteral(0),
+		}
+		keyAccess.Expr = pairRef
+		keyAccess.SetDeterminedType(semtypes.STRING)
+
+		valueAccess := &ast.BLangIndexBasedAccess{
+			IndexExpr: createIntLiteral(1),
+		}
+		valueAccess.Expr = pairRef
+		valueAccess.SetDeterminedType(semtypes.ANY)
+
+		mapPutStmt := createMapPutAssignment(resultRef, keyAccess, valueAccess)
+		bodyStmts = append(bodyStmts, mapPutStmt)
+	default:
+		pushInvocation := createPushInvocation(cx, resultRef, selectExpr)
+		if pushInvocation == nil {
+			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		}
+		bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
 	}
-	bodyStmts = append(bodyStmts, &ast.BLangExpressionStmt{Expr: pushInvocation})
 	bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
 
 	whileStmt := &ast.BLangWhile{
@@ -754,6 +848,32 @@ func appendQueryIntermediateClauseStmts(
 		}
 	}
 	return bodyStmts, true
+}
+
+func createIntLiteral(value int64) *ast.BLangNumericLiteral {
+	lit := &ast.BLangNumericLiteral{
+		BLangLiteral: ast.BLangLiteral{
+			Value:         value,
+			OriginalValue: fmt.Sprintf("%d", value),
+		},
+		Kind: model.NodeKind_NUMERIC_LITERAL,
+	}
+	lit.SetDeterminedType(semtypes.INT)
+	return lit
+}
+
+func createMapPutAssignment(mapExpr ast.BLangExpression, keyExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangAssignment {
+	mapAccess := &ast.BLangIndexBasedAccess{
+		IndexExpr: keyExpr,
+	}
+	mapAccess.Expr = mapExpr
+	mapAccess.SetDeterminedType(semtypes.ANY)
+	assign := &ast.BLangAssignment{
+		VarRef: mapAccess,
+		Expr:   valueExpr,
+	}
+	assign.SetDeterminedType(semtypes.NEVER)
+	return assign
 }
 
 func createPushInvocation(cx *FunctionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {

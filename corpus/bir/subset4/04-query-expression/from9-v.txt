@@ -1,0 +1,118 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+keyFor(int) -> string{
+  bb0 {
+    %3 = x;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = == %3 %5;
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %6 = ConstantLoad a
+    %0 = %6;
+    return;
+  }
+  bb2 {
+    %8 = x;
+    %9 = ConstantLoad 2
+    %10 = %9;
+    %7 = == %8 %10;
+    %7 ? bb3 : bb4;
+  }
+  bb3 {
+    %11 = ConstantLoad b
+    %0 = %11;
+    return;
+  }
+  bb4 {
+    %12 = ConstantLoad c
+    %0 = %12;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad k1
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad k2
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad k3
+    %6 = ConstantLoad 3
+    %7 = newMap {| int... |}{%1=%2, %3=%4, %5=%6}
+    xs = %7;
+    $desugar$0 = xs;
+    %10 = newMap {| int... |}{}
+    $desugar$1 = %10;
+    %12 = ConstantLoad 0
+    $desugar$2 = %12;
+    %14 = keys($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %14;
+    %16 = length($desugar$3) -> bb2;
+  }
+  bb2 {
+    $desugar$4 = %16;
+    GOTO bb3;
+  }
+  bb3 {
+    %19 = $desugar$2;
+    %20 = $desugar$4;
+    %18 = < %19 %20;
+    %18 ? bb4 : bb5;
+  }
+  bb4 {
+    PushScopeFrame 20
+    %1 = (1, $desugar$3)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[%1];
+    x = %0;
+    %3 = x;
+    %4 = keyFor(%3) -> bb6;
+  }
+  bb5 {
+    out = $desugar$1;
+    %23 = ConstantLoad a
+    %22 = out[%23];
+    %24 = %22;
+    %25 = println(%24) -> bb7;
+  }
+  bb6 {
+    %6 = x;
+    %7 = ConstantLoad 10
+    %8 = %7;
+    %5 = * %6 %8;
+    %9 = ConstantLoad 2
+    %10 = newArray [string, int, never...][%9]{%4, %5}
+    $desugar$5 = %10;
+    %13 = ConstantLoad 1
+    %12 = $desugar$5[%13];
+    %15 = ConstantLoad 0
+    %14 = $desugar$5[%15];
+    (1, $desugar$1)[%14] = %12;
+    %17 = (1, $desugar$2);
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %16 = + %17 %19;
+    (1, $desugar$2) = %16;
+    PopScopeFrame
+    GOTO bb3;
+  }
+  bb7 {
+    %27 = ConstantLoad b
+    %26 = out[%27];
+    %28 = %26;
+    %29 = println(%28) -> bb8;
+  }
+  bb8 {
+    %31 = ConstantLoad c
+    %30 = out[%31];
+    %32 = %30;
+    %33 = println(%32) -> bb9;
+  }
+  bb9 {
+    return;
+  }
+}

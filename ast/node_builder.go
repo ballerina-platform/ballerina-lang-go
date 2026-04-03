@@ -2949,7 +2949,13 @@ func (n *NodeBuilder) TransformParenthesizedArgList(parenthesizedArgList *tree.P
 }
 
 func (n *NodeBuilder) TransformQueryConstructType(queryConstructTypeNode *tree.QueryConstructTypeNode) BLangNode {
-	panic("TransformQueryConstructType unimplemented")
+	keyword := queryConstructTypeNode.Keyword()
+	return &BLangIdentifier{
+		Value: keyword.Text(),
+		bLangNodeBase: bLangNodeBase{
+			pos: getPosition(queryConstructTypeNode),
+		},
+	}
 }
 
 func (n *NodeBuilder) TransformFromClause(fromClauseNode *tree.FromClauseNode) BLangNode {
@@ -3017,8 +3023,13 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	queryExpr := &BLangQueryExpr{}
 	queryExpr.pos = getPosition(queryExpressionNode)
 
-	if queryExpressionNode.QueryConstructType() != nil {
-		n.cx.Unimplemented("query construct types are not supported yet", getPosition(queryExpressionNode.QueryConstructType()))
+	if constructType := queryExpressionNode.QueryConstructType(); constructType != nil {
+		switch constructType.Keyword().Text() {
+		case string(model.TypeKind_MAP):
+			queryExpr.QueryConstructType = model.TypeKind_MAP
+		default:
+			n.cx.Unimplemented("only map query construct type is supported for now", getPosition(constructType))
+		}
 	}
 
 	queryPipeline := queryExpressionNode.QueryPipeline()

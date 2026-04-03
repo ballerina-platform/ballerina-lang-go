@@ -151,7 +151,8 @@ type (
 	}
 	BLangQueryExpr struct {
 		bLangExpressionBase
-		QueryClauseList []BLangNode
+		QueryClauseList    []BLangNode
+		QueryConstructType model.TypeKind
 	}
 
 	BLangCheckedExpr struct {
