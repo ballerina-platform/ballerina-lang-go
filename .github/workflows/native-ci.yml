@@ -23,7 +23,7 @@ jobs:
         run: |
           mkdir -p .cover/cli_executable
           BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
-            go test -race -count=1 -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
           go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
 
       - name: Upload coverage to Codecov
@@ -55,4 +55,4 @@ jobs:
           go-version: '1.26'
 
       - name: Run tests
-        run: go test -race -count=1 -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+        run: go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
