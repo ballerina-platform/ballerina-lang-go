@@ -1966,8 +1966,14 @@ func ToPackage(compilationUnit *BLangCompilationUnit) *BLangPackage {
 			p.Constants = append(p.Constants, *node)
 		case *BLangService:
 			p.Services = append(p.Services, *node)
+		case *BLangSimpleVariable:
+			p.GlobalVars = append(p.GlobalVars, *node)
 		case *BLangFunction:
-			p.Functions = append(p.Functions, *node)
+			if node.Name.Value == "init" {
+				p.InitFunction = node
+			} else {
+				p.Functions = append(p.Functions, *node)
+			}
 		case *BLangTypeDefinition:
 			p.TypeDefinitions = append(p.TypeDefinitions, *node)
 		case *BLangAnnotation:

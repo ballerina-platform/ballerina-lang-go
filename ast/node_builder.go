@@ -2512,7 +2512,47 @@ func (n *NodeBuilder) TransformMetadata(metadataNode *tree.MetadataNode) BLangNo
 }
 
 func (n *NodeBuilder) TransformModuleVariableDeclaration(moduleVariableDeclarationNode *tree.ModuleVariableDeclarationNode) BLangNode {
-	panic("TransformModuleVariableDeclaration unimplemented")
+	typedBindingPattern := moduleVariableDeclarationNode.TypedBindingPattern()
+	bindingPattern := typedBindingPattern.BindingPattern()
+	pos := getPositionWithoutMetadata(moduleVariableDeclarationNode)
+
+	variable := n.getBLangVariableNode(bindingPattern, pos)
+	simpleVar := variable.(*BLangSimpleVariable)
+
+	// Set type descriptor
+	typeDesc := typedBindingPattern.TypeDescriptor()
+	if typeDesc != nil && !isDeclaredWithVar(typeDesc) {
+		simpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+	}
+
+	// Set initializer expression (may be nil for no-init declarations)
+	initializer := moduleVariableDeclarationNode.Initializer()
+	if initializer != nil {
+		simpleVar.SetInitialExpression(n.createExpression(initializer))
+	}
+
+	// Handle visibility qualifier
+	visibilityQualifier := moduleVariableDeclarationNode.VisibilityQualifier()
+	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
+		simpleVar.FlagSet.Add(model.Flag_PUBLIC)
+	}
+
+	// Handle qualifiers (final, isolated, configurable)
+	qualifiers := moduleVariableDeclarationNode.Qualifiers()
+	for i := 0; i < qualifiers.Size(); i++ {
+		qualifier := qualifiers.Get(i)
+		switch qualifier.Kind() {
+		case common.FINAL_KEYWORD:
+			simpleVar.FlagSet.Add(model.Flag_FINAL)
+		case common.ISOLATED_KEYWORD:
+			simpleVar.FlagSet.Add(model.Flag_ISOLATED)
+		case common.CONFIGURABLE_KEYWORD:
+			simpleVar.FlagSet.Add(model.Flag_CONFIGURABLE)
+		}
+	}
+
+	simpleVar.pos = pos
+	return simpleVar
 }
 
 func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.TypeTestExpressionNode) BLangNode {
