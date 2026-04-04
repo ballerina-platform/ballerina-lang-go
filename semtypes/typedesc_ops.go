@@ -41,12 +41,12 @@ func NewTypedescOps() TypedescOps {
 	return this
 }
 
-func (this *TypedescOps) Complement(d SubtypeData) SubtypeData {
+func (t *TypedescOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from TypedescOps.java:51:5
 	return typedescSubtypeComplement(d)
 }
 
-func (this *TypedescOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (t *TypedescOps) IsEmpty(cx Context, d SubtypeData) bool {
 	// migrated from TypedescOps.java:56:5
 	return typedescSubtypeIsEmpty(cx, d)
 }

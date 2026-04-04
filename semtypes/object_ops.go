@@ -21,17 +21,17 @@ type ObjectOps struct {
 
 var _ BasicTypeOps = &ObjectOps{}
 
-func (this *ObjectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *ObjectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
 	return bddSubtypeDiff(t1, t2)
 }
 
-func (this *ObjectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *ObjectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
 	return bddSubtypeIntersect(t1, t2)
 }
 
-func (this *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
 	return bddSubtypeUnion(t1, t2)
 }
@@ -51,17 +51,17 @@ func NewObjectOps() ObjectOps {
 	return this
 }
 
-func (this *ObjectOps) Complement(t SubtypeData) SubtypeData {
+func (o *ObjectOps) Complement(t SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:33:5
-	return this.objectSubTypeComplement(t)
+	return o.objectSubTypeComplement(t)
 }
 
-func (this *ObjectOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (o *ObjectOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from ObjectOps.java:38:5
 	return objectSubTypeIsEmpty(cx, t)
 }
 
-func (this *ObjectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
+func (o *ObjectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
 	// migrated from ObjectOps.java:51:5
 	return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t)
 }

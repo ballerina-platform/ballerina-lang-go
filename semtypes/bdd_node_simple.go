@@ -28,23 +28,23 @@ type BddNodeSimple struct {
 
 var _ BddNode = &BddNodeSimple{}
 
-func (this *BddNodeSimple) Left() Bdd {
+func (b *BddNodeSimple) Left() Bdd {
 	// migrated from BddNodeSimple.java:32:5
 	return BddAll()
 }
 
-func (this *BddNodeSimple) Middle() Bdd {
+func (b *BddNodeSimple) Middle() Bdd {
 	// migrated from BddNodeSimple.java:37:5
 	return BddNothing()
 }
 
-func (this *BddNodeSimple) Right() Bdd {
+func (b *BddNodeSimple) Right() Bdd {
 	// migrated from BddNodeSimple.java:42:5
 	return BddNothing()
 }
 
-func (this *BddNodeSimple) Atom() Atom {
-	return this.atom
+func (b *BddNodeSimple) Atom() Atom {
+	return b.atom
 }
 
 func newBddNodeSimple(atom Atom) *BddNodeSimple {
@@ -55,6 +55,6 @@ func newBddNodeSimple(atom Atom) *BddNodeSimple {
 	return node
 }
 
-func (this *BddNodeSimple) canonicalKey() string {
-	return this.canonicalKeyFunc()
+func (b *BddNodeSimple) canonicalKey() string {
+	return b.canonicalKeyFunc()
 }

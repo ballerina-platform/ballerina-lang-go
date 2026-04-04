@@ -59,28 +59,28 @@ func CreateDistinctRecAtom(index int) RecAtom {
 	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
 }
 
-func (this *RecAtom) SetKind(targetKind Kind) {
+func (r *RecAtom) SetKind(targetKind Kind) {
 	// migrated from RecAtom.java:56:5
-	this.targetKind = targetKind
+	r.targetKind = targetKind
 }
 
-func (this *RecAtom) Index() int {
+func (r *RecAtom) Index() int {
 	// migrated from RecAtom.java:60:5
-	return this.index
+	return r.index
 }
 
-func (this *RecAtom) Kind() Kind {
+func (r *RecAtom) Kind() Kind {
 	// migrated from RecAtom.java:65:5
 	// if this.targetKind == 0 {
 	// 	panic("Target kind is not set for the recursive type atom")
 	// }
-	return this.targetKind
+	return r.targetKind
 }
 
-func (this *RecAtom) canonicalKey() string {
-	return fmt.Sprintf("r%d", this.index)
+func (r *RecAtom) canonicalKey() string {
+	return fmt.Sprintf("r%d", r.index)
 }
 
-func (this *RecAtom) String() string {
-	return fmt.Sprintf("r%d", this.index)
+func (r *RecAtom) String() string {
+	return fmt.Sprintf("r%d", r.index)
 }

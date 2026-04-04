@@ -43,26 +43,26 @@ func CreateNothing() AllOrNothingSubtype {
 	return AllOrNothingSubtypeNothing
 }
 
-func (this *AllOrNothingSubtype) IsAllSubtype() bool {
+func (a *AllOrNothingSubtype) IsAllSubtype() bool {
 	// migrated from AllOrNothingSubtype.java:46:5
-	return this.isAll
+	return a.isAll
 }
 
-func (this *AllOrNothingSubtype) IsNothingSubtype() bool {
+func (a *AllOrNothingSubtype) IsNothingSubtype() bool {
 	// migrated from AllOrNothingSubtype.java:50:5
-	return (!this.isAll)
+	return (!a.isAll)
 }
 
-func (this *AllOrNothingSubtype) canonicalKey() string {
-	if this.isAll {
+func (a *AllOrNothingSubtype) canonicalKey() string {
+	if a.isAll {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (this *AllOrNothingSubtype) String() string {
-	if this.isAll {
+func (a *AllOrNothingSubtype) String() string {
+	if a.isAll {
 		return "all"
 	} else {
 		return "nothing"

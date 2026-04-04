@@ -28,7 +28,7 @@ func NewIntOps() IntOps {
 
 var intOpsInstance = NewIntOps()
 
-func (this *IntOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *IntOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from IntOps.java:45:5
 	v1 := d1.(IntSubtype)
 	v2 := d2.(IntSubtype)
@@ -39,7 +39,7 @@ func (this *IntOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateIntSubtype(v...)
 }
 
-func (this *IntOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *IntOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from IntOps.java:56:5
 	v1 := d1.(IntSubtype)
 	v2 := d2.(IntSubtype)
@@ -50,7 +50,7 @@ func (this *IntOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateIntSubtype(v...)
 }
 
-func (this *IntOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *IntOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from IntOps.java:67:5
 	v1 := d1.(IntSubtype)
 	v2 := d2.(IntSubtype)
@@ -61,7 +61,7 @@ func (this *IntOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return CreateIntSubtype(v...)
 }
 
-func (this *IntOps) Complement(d SubtypeData) SubtypeData {
+func (i *IntOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from IntOps.java:78:5
 	v := d.(IntSubtype)
 	return CreateIntSubtype(rangeListComplement(v.Ranges)...)
@@ -86,7 +86,7 @@ func intSubtypeMin(subtype IntSubtype) int64 {
 	return subtype.Ranges[0].Min
 }
 
-func (this *IntOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (i *IntOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from IntOps.java:98:5
 	return notIsEmpty(cx, t)
 }

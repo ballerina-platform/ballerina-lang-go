@@ -24,8 +24,8 @@ type EnumerableFloat struct {
 
 var _ EnumerableType[float64] = &EnumerableFloat{}
 
-func (this *EnumerableFloat) Value() float64 {
-	return this.value
+func (e *EnumerableFloat) Value() float64 {
+	return e.value
 }
 
 func (t1 *EnumerableFloat) Compare(t2 EnumerableType[float64]) int {

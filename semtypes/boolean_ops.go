@@ -20,7 +20,7 @@ type BooleanOps struct{}
 
 var _ BasicTypeOps = &BooleanOps{}
 
-func (this *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (b *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:33:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
@@ -31,7 +31,7 @@ func (this *BooleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	}
 }
 
-func (this *BooleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (b *BooleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:40:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
@@ -42,7 +42,7 @@ func (this *BooleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	}
 }
 
-func (this *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (b *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:47:5
 	v1 := d1.(BooleanSubtype)
 	v2 := d2.(BooleanSubtype)
@@ -53,14 +53,14 @@ func (this *BooleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	}
 }
 
-func (this *BooleanOps) Complement(d SubtypeData) SubtypeData {
+func (b *BooleanOps) Complement(d SubtypeData) SubtypeData {
 	// migrated from BooleanOps.java:54:5
 	v := d.(BooleanSubtype)
 	t := BooleanSubtypeFrom(!v.Value)
 	return t
 }
 
-func (this *BooleanOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (b *BooleanOps) IsEmpty(cx Context, t SubtypeData) bool {
 	// migrated from BooleanOps.java:61:5
 	return notIsEmpty(cx, t)
 }
