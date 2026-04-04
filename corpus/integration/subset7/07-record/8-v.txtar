@@ -1,0 +1,14 @@
+-- stdout --
+1
+10
+default
+2
+20
+default
+3
+10
+custom
+4
+30
+both
+-- stderr --

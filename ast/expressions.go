@@ -17,12 +17,13 @@
 package ast
 
 import (
-	"ballerina-lang-go/common"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/semtypes"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"ballerina-lang-go/common"
+	"ballerina-lang-go/model"
+	"ballerina-lang-go/semtypes"
 )
 
 type BLangExpression interface {
@@ -322,8 +323,9 @@ type (
 
 	BLangMappingConstructorExpr struct {
 		bLangExpressionBase
-		Fields     []model.MappingField
-		AtomicType semtypes.MappingAtomicType
+		Fields                   []model.MappingField
+		AtomicType               semtypes.MappingAtomicType
+		ContextuallyExpectedType BType
 	}
 
 	BLangNamedArgsExpression struct {
@@ -1207,4 +1209,8 @@ func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr B
 	exprNode.Expr = expr
 	exprNode.Operator = operator
 	return exprNode
+}
+
+func (this *BLangElvisExpr) SetTypeCheckedType(ty BType) {
+	panic("not implemented")
 }

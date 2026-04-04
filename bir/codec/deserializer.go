@@ -601,12 +601,21 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			valueOp := br.readOperand(varMap)
 			values[k] = bir.NewMappingConstructorKeyValueEntry(keyOp, valueOp)
 		}
+		defaultsCount := br.readLength()
+		defaults := make([]bir.MappingConstructorDefaultEntry, defaultsCount)
+		for k := 0; k < int(defaultsCount); k++ {
+			defaults[k] = bir.MappingConstructorDefaultEntry{
+				FieldName:         string(br.readStringCPEntry()),
+				FunctionLookupKey: string(br.readStringCPEntry()),
+			}
+		}
 		return &bir.NewMap{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			Type:   ty,
-			Values: values,
+			Type:     ty,
+			Values:   values,
+			Defaults: defaults,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ERROR:
 		ty := br.readType()
