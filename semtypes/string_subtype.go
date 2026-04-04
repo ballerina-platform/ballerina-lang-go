@@ -22,85 +22,85 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type StringSubtypeListCoverage struct {
+type stringSubtypeListCoverage struct {
 	IsSubtype bool
 	Indices   []int
 }
 
-type StringSubtype struct {
-	charData    CharStringSubtype
-	nonCharData NonCharStringSubtype
+type stringSubtype struct {
+	charData    charStringSubtype
+	nonCharData nonCharStringSubtype
 }
 
 var (
-	EMPTY_STRING_ARR                   = []EnumerableType[string]{}
-	EMPTY_CHAR_ARR                     = []EnumerableType[string]{}
-	_                ProperSubtypeData = &StringSubtype{}
+	EMPTY_STRING_ARR                   = []enumerableType[string]{}
+	EMPTY_CHAR_ARR                     = []enumerableType[string]{}
+	_                ProperSubtypeData = &stringSubtype{}
 )
 
-func NewStringSubtypeListCoverageFromBoolInts(isSubtype bool, indices []int) StringSubtypeListCoverage {
-	this := StringSubtypeListCoverage{}
+func newStringSubtypeListCoverageFromBoolInts(isSubtype bool, indices []int) stringSubtypeListCoverage {
+	this := stringSubtypeListCoverage{}
 	this.IsSubtype = isSubtype
 	this.Indices = indices
 	return this
 }
 
-func StringSubtypeListCoverageFrom(isSubtype bool, indices []int) StringSubtypeListCoverage {
-	// migrated from StringSubtype.java:140:9
-	return NewStringSubtypeListCoverageFromBoolInts(isSubtype, indices)
+func stringSubtypeListCoverageFrom(isSubtype bool, indices []int) stringSubtypeListCoverage {
+	// migrated from stringSubtype.java:140:9
+	return newStringSubtypeListCoverageFromBoolInts(isSubtype, indices)
 }
 
-func newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(charData CharStringSubtype, nonCharData NonCharStringSubtype) StringSubtype {
-	this := StringSubtype{}
+func newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(charData charStringSubtype, nonCharData nonCharStringSubtype) stringSubtype {
+	this := stringSubtype{}
 	this.charData = charData
 	this.nonCharData = nonCharData
 	return this
 }
 
-func StringSubtypeFrom(chara CharStringSubtype, nonChar NonCharStringSubtype) StringSubtype {
-	// migrated from StringSubtype.java:56:5
+func stringSubtypeFrom(chara charStringSubtype, nonChar nonCharStringSubtype) stringSubtype {
+	// migrated from stringSubtype.java:56:5
 	return newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar)
 }
 
-func StringSubtypeContains(d SubtypeData, s string) bool {
-	// migrated from StringSubtype.java:60:5
-	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
+func stringSubtypeContains(d SubtypeData, s string) bool {
+	// migrated from stringSubtype.java:60:5
+	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
-	st := d.(StringSubtype)
+	st := d.(stringSubtype)
 	chara := st.charData
 	nonChar := st.nonCharData
 	if len(s) == 1 {
-		charString := EnumerableCharStringFrom(s)
+		charString := enumerableCharStringFrom(s)
 		if slices.Contains(chara.Values(), charString) {
 			return chara.Allowed()
 		}
 		return !nonChar.Allowed()
 	}
-	stringString := EnumerableStringFrom(s)
+	stringString := enumerableStringFrom(s)
 	if slices.Contains(nonChar.Values(), stringString) {
 		return nonChar.Allowed()
 	}
 	return !nonChar.Allowed()
 }
 
-func CreateStringSubtype(chara CharStringSubtype, nonChar NonCharStringSubtype) SubtypeData {
-	// migrated from StringSubtype.java:73:5
+func createStringSubtype(chara charStringSubtype, nonChar nonCharStringSubtype) SubtypeData {
+	// migrated from stringSubtype.java:73:5
 	if len(chara.Values()) == 0 && len(nonChar.Values()) == 0 {
 		if (!chara.allowed) && (!nonChar.allowed) {
-			return CreateAll()
+			return createAll()
 		} else if chara.allowed && nonChar.allowed {
-			return CreateNothing()
+			return createNothing()
 		}
 	}
-	return StringSubtypeFrom(chara, nonChar)
+	return stringSubtypeFrom(chara, nonChar)
 }
 
-func StringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func stringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[string]()
 	}
-	st := d.(StringSubtype)
+	st := d.(stringSubtype)
 	chara := st.charData
 	nonChar := st.nonCharData
 	var charCount int
@@ -125,37 +125,37 @@ func StringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
 }
 
 func StringConst(value string) SemType {
-	// migrated from StringSubtype.java:100:5
-	var chara CharStringSubtype
-	var nonChar NonCharStringSubtype
+	// migrated from stringSubtype.java:100:5
+	var chara charStringSubtype
+	var nonChar nonCharStringSubtype
 	if codePointCount(value, 0, len(value)) == 1 {
-		chara = CharStringSubtypeFrom(true, []EnumerableType[string]{EnumerableCharStringFrom(value)})
-		nonChar = NonCharStringSubtypeFrom(true, EMPTY_STRING_ARR)
+		chara = charStringSubtypeFrom(true, []enumerableType[string]{enumerableCharStringFrom(value)})
+		nonChar = nonCharStringSubtypeFrom(true, EMPTY_STRING_ARR)
 	} else {
-		chara = CharStringSubtypeFrom(true, EMPTY_CHAR_ARR)
-		nonChar = NonCharStringSubtypeFrom(true, []EnumerableType[string]{EnumerableStringFrom(value)})
+		chara = charStringSubtypeFrom(true, EMPTY_CHAR_ARR)
+		nonChar = nonCharStringSubtypeFrom(true, []enumerableType[string]{enumerableStringFrom(value)})
 	}
-	return basicSubtype(BTString, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
+	return getBasicSubtype(BTString, newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar))
 }
 
 func codePointCount(s string, start, end int) int {
 	return len([]rune(s[start:end]))
 }
 
-func (this *StringSubtype) GetChar() EnumerableSubtype[string] {
-	// migrated from StringSubtype.java:43:5
+func (this *stringSubtype) GetChar() enumerableSubtype[string] {
+	// migrated from stringSubtype.java:43:5
 	return &this.charData
 }
 
-func (this *StringSubtype) GetNonChar() EnumerableSubtype[string] {
-	// migrated from StringSubtype.java:47:5
+func (this *stringSubtype) GetNonChar() enumerableSubtype[string] {
+	// migrated from stringSubtype.java:47:5
 	return &this.nonCharData
 }
 
-func StringChar() SemType {
+func stringChar() SemType {
 	st := newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(
-		CharStringSubtypeFrom(false, EMPTY_CHAR_ARR),
-		NonCharStringSubtypeFrom(true, EMPTY_STRING_ARR),
+		charStringSubtypeFrom(false, EMPTY_CHAR_ARR),
+		nonCharStringSubtypeFrom(true, EMPTY_STRING_ARR),
 	)
-	return basicSubtype(BTString, st)
+	return getBasicSubtype(BTString, st)
 }

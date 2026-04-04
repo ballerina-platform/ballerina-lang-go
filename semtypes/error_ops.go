@@ -16,47 +16,47 @@
 
 package semtypes
 
-type ErrorOps struct{}
+type errorOps struct{}
 
-var _ BasicTypeOps = &ErrorOps{}
+var _ BasicTypeOps = &errorOps{}
 
 func errorSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from ErrorOps.java:39:5
+	// migrated from errorOps.java:39:5
 	return bddSubtypeDiff(BDD_SUBTYPE_RO, t)
 }
 
 func errorSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from ErrorOps.java:43:5
+	// migrated from errorOps.java:43:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
-		b = BddIntersect(b, BDD_SUBTYPE_RO)
+		b = bddIntersect(b, BDD_SUBTYPE_RO)
 	}
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), errorBddIsEmpty, b)
 }
 
 func errorBddIsEmpty(cx Context, b Bdd) bool {
-	// migrated from ErrorOps.java:52:5
-	return bddEveryPositive(cx, b, nil, nil, mappingFormulaIsEmpty)
+	// migrated from errorOps.java:52:5
+	return bddEveryPositive(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 }
 
-func (this *ErrorOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from ErrorOps.java:56:5
+func (this *errorOps) complement(d SubtypeData) SubtypeData {
+	// migrated from errorOps.java:56:5
 	return errorSubtypeComplement(d)
 }
 
-func (this *ErrorOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from ErrorOps.java:61:5
+func (this *errorOps) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from errorOps.java:61:5
 	return errorSubtypeIsEmpty(cx, t)
 }
 
-func (this *ErrorOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *errorOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *ErrorOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *errorOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *ErrorOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *errorOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }

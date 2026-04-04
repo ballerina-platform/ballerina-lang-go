@@ -65,9 +65,9 @@ type ObjectQualifiers struct {
 // Migrated from ObjectQualifiers.java:45
 var ObjectQualifiersDEFAULT = ObjectQualifiers{isolated: false, readonly: false, networkQualifier: NetworkQualifierNone}
 
-// DefaultQualifiers returns the default ObjectQualifiers instance
+// defaultQualifiers returns the default ObjectQualifiers instance
 // Migrated from ObjectQualifiers.java:47
-func DefaultQualifiers() ObjectQualifiers {
+func defaultQualifiers() ObjectQualifiers {
 	return ObjectQualifiersDEFAULT
 }
 
@@ -75,7 +75,7 @@ func DefaultQualifiers() ObjectQualifiers {
 // Migrated from ObjectQualifiers.java:51
 func ObjectQualifiersFrom(isolated bool, readonly bool, networkQualifier NetworkQualifier) ObjectQualifiers {
 	if networkQualifier == NetworkQualifierNone && !isolated {
-		return DefaultQualifiers()
+		return defaultQualifiers()
 	}
 	return ObjectQualifiers{isolated: isolated, readonly: readonly, networkQualifier: networkQualifier}
 }
@@ -97,5 +97,5 @@ func (oq *ObjectQualifiers) Field(env Env) CellField {
 		NEVER,
 		CellMutability_CELL_MUT_NONE,
 	)
-	return CellFieldFrom("$qualifiers", CellContaining(env, ty))
+	return cellFieldFrom("$qualifiers", *cellContaining(env, ty))
 }

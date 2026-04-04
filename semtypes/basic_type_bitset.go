@@ -18,10 +18,18 @@ package semtypes
 
 type BasicTypeBitSet int
 
-func (bitset BasicTypeBitSet) All() int {
-	return int(bitset)
+func (bitset BasicTypeBitSet) all() BasicTypeBitSet {
+	return bitset
 }
 
-func BasicTypeBitSetFrom(bitset int) BasicTypeBitSet {
+func (bitset BasicTypeBitSet) some() BasicTypeBitSet {
+	return 0
+}
+
+func (bitset BasicTypeBitSet) subtypeDataList() []ProperSubtypeData {
+	return nil
+}
+
+func basicTypeBitSetFrom(bitset int) BasicTypeBitSet {
 	return BasicTypeBitSet(bitset)
 }

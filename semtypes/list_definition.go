@@ -19,8 +19,8 @@ package semtypes
 import "ballerina-lang-go/common"
 
 type ListDefinition struct {
-	rec     *RecAtom
-	semType ComplexSemType
+	rec     *recAtom
+	semType SemType
 }
 
 var _ Definition = &ListDefinition{}
@@ -58,9 +58,9 @@ func (this *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemT
 func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
 	// migrated from ListDefinition.java:76:5
 	common.Assert(rest != nil)
-	var initialCells []CellSemType
+	var initialCells []ComplexSemType
 	for _, member := range initial {
-		initialCells = append(initialCells, CellContainingWithEnvSemTypeCellMutability(env, member, mut))
+		initialCells = append(initialCells, *cellContainingWithEnvSemTypeCellMutability(env, member, mut))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -68,7 +68,7 @@ func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fi
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
+	restCell := cellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.define(env, initialCells, fixedLength, restCell)
 }
 
@@ -97,10 +97,10 @@ func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env,
 	return this.DefineListTypeWrapped(env, initial, len(initial), rest, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) define(env Env, initial []CellSemType, fixedLength int, rest CellSemType) ComplexSemType {
+func (this *ListDefinition) define(env Env, initial []ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
 	// migrated from ListDefinition.java:105:5
-	members := this.fixedLengthNormalize(FixedLengthArrayFrom(initial, fixedLength))
-	atomicType := ListAtomicTypeFrom(members, rest)
+	members := this.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
+	atomicType := listAtomicTypeFrom(members, rest)
 	var atom Atom
 	rec := this.rec
 	if rec != nil {
@@ -112,7 +112,7 @@ func (this *ListDefinition) define(env Env, initial []CellSemType, fixedLength i
 	return this.createSemType(env, atom)
 }
 
-func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLengthArray {
+func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengthArray {
 	// migrated from ListDefinition.java:120:5
 	initial := array.Initial
 	i := (len(initial) - 1)
@@ -122,18 +122,18 @@ func (this *ListDefinition) fixedLengthNormalize(array FixedLengthArray) FixedLe
 	last := initial[i]
 	i = (i - 1)
 	for i >= 0 {
-		if last != initial[i] {
+		if !last.equals(&initial[i]) {
 			break
 		}
 		i = (i - 1)
 	}
-	return FixedLengthArrayFrom(initial[:i+2], array.FixedLength)
+	return fixedLengthArrayFrom(initial[:i+2], array.FixedLength)
 }
 
-func (this *ListDefinition) createSemType(env Env, atom Atom) ComplexSemType {
+func (this *ListDefinition) createSemType(env Env, atom Atom) *ComplexSemType {
 	// migrated from ListDefinition.java:137:5
-	bdd := BddAtom(atom)
-	complexSemType := basicSubtype(BTList, bdd)
+	bdd := bddAtom(atom)
+	complexSemType := getBasicSubtype(BTList, bdd)
 	this.semType = complexSemType
 	return complexSemType
 }

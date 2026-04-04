@@ -1,0 +1,125 @@
+(package
+  (import-package ballerina io (as io))
+  (const c () (
+    (literal 10)))
+  (type-definition R
+    (record-type
+      (field id
+        (value-type int))
+      (field value
+        (value-type int)
+        (simple-var-ref c))
+      (field name
+        (value-type string)
+        (literal default))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type R)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal id)
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f)
+            (literal id)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f)
+            (literal value)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f)
+            (literal name)))))
+      (var-def
+        (variable f2 (type
+          (user-defined-type R)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal id)
+              (literal 2))
+            (key-value
+              (literal value)
+              (literal 20))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f2)
+            (literal id)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f2)
+            (literal value)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f2)
+            (literal name)))))
+      (var-def
+        (variable f3 (type
+          (user-defined-type R)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal id)
+              (literal 3))
+            (key-value
+              (literal name)
+              (literal custom))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f3)
+            (literal id)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f3)
+            (literal value)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f3)
+            (literal name)))))
+      (var-def
+        (variable f4 (type
+          (user-defined-type R)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (literal id)
+              (literal 4))
+            (key-value
+              (literal value)
+              (literal 30))
+            (key-value
+              (literal name)
+              (literal both))))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f4)
+            (literal id)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f4)
+            (literal value)))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f4)
+            (literal name)))))))
+  (function $desugar$0 () ()
+    (block-function-body
+      (return
+        (simple-var-ref c))))
+  (function $desugar$1 () ()
+    (block-function-body
+      (return
+        (literal default)))))

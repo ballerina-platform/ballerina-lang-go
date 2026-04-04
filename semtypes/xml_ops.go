@@ -16,94 +16,90 @@
 
 package semtypes
 
-type XmlOps struct {
-}
+type xmlOps struct{}
 
-var XML_SUBTYPE_RO = XmlSubtypeFrom(XML_PRIMITIVE_RO_MASK, BddAtom(new(CreateXMLRecAtom(XML_PRIMITIVE_RO_SINGLETON))))
-var XML_SUBTYPE_TOP = XmlSubtypeFrom(XML_PRIMITIVE_ALL_MASK, BddAll())
-var _ BasicTypeOps = &XmlOps{}
+var (
+	XML_SUBTYPE_RO               = xmlSubtypeFrom(XML_PRIMITIVE_RO_MASK, bddAtom(new(createXMLRecAtom(XML_PRIMITIVE_RO_SINGLETON))))
+	XML_SUBTYPE_TOP              = xmlSubtypeFrom(XML_PRIMITIVE_ALL_MASK, bddAll())
+	_               BasicTypeOps = &xmlOps{}
+)
 
-func NewXmlOps() XmlOps {
-	this := XmlOps{}
+func newXmlOps() xmlOps {
+	this := xmlOps{}
 	return this
 }
 
-func (this *XmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from XmlOps.java:45:5
-	v1 := d1.(*XmlSubtype)
-	v2 := d2.(*XmlSubtype)
+func (this *xmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from xmlOps.java:45:5
+	v1 := d1.(*xmlSubtype)
+	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives | v2.Primitives)
-	return CreateXmlSubtype(primitives, BddUnion(v1.Sequence, v2.Sequence))
+	return createXmlSubtype(primitives, bddUnion(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from XmlOps.java:53:5
-	v1 := d1.(*XmlSubtype)
-	v2 := d2.(*XmlSubtype)
+func (this *xmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from xmlOps.java:53:5
+	v1 := d1.(*xmlSubtype)
+	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & v2.Primitives)
-	return CreateXmlSubtypeOrEmpty(primitives, BddIntersect(v1.Sequence, v2.Sequence))
+	return createXmlSubtypeOrEmpty(primitives, bddIntersect(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from XmlOps.java:61:5
-	v1 := d1.(*XmlSubtype)
-	v2 := d2.(*XmlSubtype)
+func (this *xmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	// migrated from xmlOps.java:61:5
+	v1 := d1.(*xmlSubtype)
+	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & (^v2.Primitives))
-	return CreateXmlSubtypeOrEmpty(primitives, BddDiff(v1.Sequence, v2.Sequence))
+	return createXmlSubtypeOrEmpty(primitives, bddDiff(v1.Sequence, v2.Sequence))
 }
 
-func (this *XmlOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from XmlOps.java:69:5
+func (this *xmlOps) complement(d SubtypeData) SubtypeData {
+	// migrated from xmlOps.java:69:5
 	return this.Diff(XML_SUBTYPE_TOP, d)
 }
 
-func (this *XmlOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from XmlOps.java:74:5
-	sd := t.(*XmlSubtype)
+func (this *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from xmlOps.java:74:5
+	sd := t.(*xmlSubtype)
 	if sd.Primitives != 0 {
 		return false
 	}
 	return this.xmlBddEmpty(cx, sd.Sequence)
 }
 
-func (this *XmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
-	// migrated from XmlOps.java:83:5
-	return BddEvery(cx, bdd, nil, nil, xmlFormulaIsEmpty)
+func (this *xmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
+	// migrated from xmlOps.java:83:5
+	return bddEvery(cx, bdd, conjunctionNil, conjunctionNil, xmlFormulaIsEmpty)
 }
 
-func xmlFormulaIsEmpty(cx Context, pos *Conjunction, neg *Conjunction) bool {
-	// migrated from XmlOps.java:87:5
-	allPosBits := collectAllPrimitives(pos) & XML_PRIMITIVE_ALL_MASK
-	return xmlHasTotalNegative(allPosBits, neg)
+func xmlFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
+	// migrated from xmlOps.java:87:5
+	allPosBits := collectAllPrimitives(cx, pos) & XML_PRIMITIVE_ALL_MASK
+	return xmlHasTotalNegative(cx, allPosBits, neg)
 }
 
-func collectAllPrimitives(con *Conjunction) int {
-	// migrated from XmlOps.java:92:5
+func collectAllPrimitives(cx Context, con conjunctionHandle) int {
+	// migrated from xmlOps.java:92:5
 	bits := 0
 	current := con
-	for current != nil {
-		bits &= getIndex(current)
-		current = current.Next
+	for current != conjunctionNil {
+		bits &= cx.conjunctionAtom(current).(*recAtom).Index()
+		current = cx.conjunctionNext(current)
 	}
 	return bits
 }
 
-func xmlHasTotalNegative(allBits int, con *Conjunction) bool {
-	// migrated from XmlOps.java:102:5
+func xmlHasTotalNegative(cx Context, allBits int, con conjunctionHandle) bool {
+	// migrated from xmlOps.java:102:5
 	if allBits == 0 {
 		return true
 	}
 	n := con
-	for n != nil {
-		if (allBits & (^getIndex(con))) == 0 {
+	for n != conjunctionNil {
+		if (allBits & (^cx.conjunctionAtom(n).(*recAtom).Index())) == 0 {
 			return true
 		}
-		n = n.Next
+		n = cx.conjunctionNext(n)
 	}
 	return false
-}
-
-func getIndex(con *Conjunction) int {
-	// migrated from XmlOps.java:117:5
-	return con.Atom.(*RecAtom).Index()
 }

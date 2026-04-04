@@ -20,31 +20,31 @@ import (
 	"slices"
 )
 
-type BddPath struct {
+type bddPath struct {
 	bdd Bdd
 	pos []Atom
 	neg []Atom
 }
 
-func newBddPathFromBddPath(bddPath BddPath) BddPath {
-	this := BddPath{}
-	this.bdd = bddPath.bdd
-	this.pos = slices.Clone(bddPath.pos)
-	this.neg = slices.Clone(bddPath.neg)
+func newBddPathFromBddPath(src bddPath) bddPath {
+	this := bddPath{}
+	this.bdd = src.bdd
+	this.pos = slices.Clone(src.pos)
+	this.neg = slices.Clone(src.neg)
 	return this
 }
 
-func NewBddPath() BddPath {
-	this := BddPath{}
-	this.bdd = BddAll()
+func newBddPath() bddPath {
+	this := bddPath{}
+	this.bdd = bddAll()
 	this.pos = nil
 	this.neg = nil
 	return this
 }
 
-func BddPaths(b Bdd, paths *[]BddPath, accum BddPath) {
-	// migrated from BddPath.java:50:5
-	allOrNothing, ok := b.(*BddAllOrNothing)
+func bddPaths(b Bdd, paths *[]bddPath, accum bddPath) {
+	// migrated from bddPath.java:50:5
+	allOrNothing, ok := b.(*bddAllOrNothing)
 	if ok {
 		if allOrNothing.IsAll() {
 			*paths = append(*paths, accum)
@@ -57,22 +57,22 @@ func BddPaths(b Bdd, paths *[]BddPath, accum BddPath) {
 			panic("b is not a BddNode")
 		}
 		left.pos = append(left.pos, bn.Atom())
-		left.bdd = BddIntersect(left.bdd, BddAtom(bn.Atom()))
-		BddPaths(bn.Left(), paths, left)
-		BddPaths(bn.Middle(), paths, accum)
+		left.bdd = bddIntersect(left.bdd, bddAtom(bn.Atom()))
+		bddPaths(bn.Left(), paths, left)
+		bddPaths(bn.Middle(), paths, accum)
 		right.neg = append(right.neg, bn.Atom())
-		right.bdd = BddDiff(right.bdd, BddAtom(bn.Atom()))
-		BddPaths(bn.Right(), paths, right)
+		right.bdd = bddDiff(right.bdd, bddAtom(bn.Atom()))
+		bddPaths(bn.Right(), paths, right)
 	}
 }
 
-func bddPathClone(path BddPath) BddPath {
-	// migrated from BddPath.java:69:5
+func bddPathClone(path bddPath) bddPath {
+	// migrated from bddPath.java:69:5
 
 	return newBddPathFromBddPath(path)
 }
 
-func BddPathFrom() BddPath {
-	// migrated from BddPath.java:73:5
-	return NewBddPath()
+func bddPathFrom() bddPath {
+	// migrated from bddPath.java:73:5
+	return newBddPath()
 }

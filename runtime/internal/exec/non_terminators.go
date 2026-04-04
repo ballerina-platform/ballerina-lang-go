@@ -48,7 +48,7 @@ func execNewArray(newArray *bir.NewArray, frame *Frame, reg *modules.Registry) {
 	setOperandValue(newArray.LhsOp, frame, reg, list)
 }
 
-func execNewMap(newMap *bir.NewMap, frame *Frame, reg *modules.Registry) {
+func execNewMap(newMap *bir.NewMap, frame *Frame, reg *modules.Registry, callStack *callStack) {
 	m := values.NewMap(newMap.Type)
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
@@ -56,6 +56,13 @@ func execNewMap(newMap *bir.NewMap, frame *Frame, reg *modules.Registry) {
 		keyStr := keyVal.(string)
 		valueVal := getOperandValue(kv.ValueOp(), frame, reg)
 		m.Put(keyStr, valueVal)
+	}
+	for _, def := range newMap.Defaults {
+		if _, exists := m.Get(def.FieldName); !exists {
+			fn := reg.GetBIRFunction(def.FunctionLookupKey)
+			val := executeFunction(*fn, nil, reg, callStack, frame)
+			m.Put(def.FieldName, val)
+		}
 	}
 	setOperandValue(newMap.GetLhsOperand(), frame, reg, m)
 }

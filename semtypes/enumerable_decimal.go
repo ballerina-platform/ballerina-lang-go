@@ -20,29 +20,29 @@ import (
 	"math/big"
 )
 
-type EnumerableDecimal struct {
+type enumerableDecimal struct {
 	value big.Rat
 }
 
-var _ EnumerableType[big.Rat] = &EnumerableDecimal{}
+var _ enumerableType[big.Rat] = &enumerableDecimal{}
 
-func (this *EnumerableDecimal) Value() big.Rat {
+func (this *enumerableDecimal) Value() big.Rat {
 	return this.value
 }
 
-func (t1 *EnumerableDecimal) Compare(t2 EnumerableType[big.Rat]) int {
+func (t1 *enumerableDecimal) Compare(t2 enumerableType[big.Rat]) int {
 	f1 := t1.Value()
 	f2 := t2.Value()
 	return f1.Cmp(&f2)
 }
 
-func newEnumerableDecimalFromBigDecimal(value big.Rat) EnumerableDecimal {
-	this := EnumerableDecimal{}
+func newEnumerableDecimalFromBigDecimal(value big.Rat) enumerableDecimal {
+	this := enumerableDecimal{}
 	this.value = value
 	return this
 }
 
-func EnumerableDecimalFrom(d big.Rat) EnumerableDecimal {
-	// migrated from EnumerableDecimal.java:34:5
+func enumerableDecimalFrom(d big.Rat) enumerableDecimal {
+	// migrated from enumerableDecimal.java:34:5
 	return newEnumerableDecimalFromBigDecimal(d)
 }

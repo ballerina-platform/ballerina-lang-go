@@ -22,40 +22,40 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type DecimalSubtype struct {
+type decimalSubtype struct {
 	allowed bool
-	values  []EnumerableDecimal
+	values  []enumerableDecimal
 }
 
-var _ ProperSubtypeData = &DecimalSubtype{}
+var _ ProperSubtypeData = &decimalSubtype{}
 
-func newDecimalSubtypeFromBoolEnumerableDecimal(allowed bool, value EnumerableDecimal) DecimalSubtype {
-	this := DecimalSubtype{}
+func newDecimalSubtypeFromBoolEnumerableDecimal(allowed bool, value enumerableDecimal) decimalSubtype {
+	this := decimalSubtype{}
 	this.allowed = allowed
-	this.values = []EnumerableDecimal{value}
+	this.values = []enumerableDecimal{value}
 	return this
 }
 
-func newDecimalSubtypeFromBoolEnumerableDecimals(allowed bool, values []EnumerableType[big.Rat]) DecimalSubtype {
-	this := DecimalSubtype{}
+func newDecimalSubtypeFromBoolEnumerableDecimals(allowed bool, values []enumerableType[big.Rat]) decimalSubtype {
+	this := decimalSubtype{}
 	this.allowed = allowed
-	var decimals []EnumerableDecimal
+	var decimals []enumerableDecimal
 	for _, value := range values {
-		decimals = append(decimals, EnumerableDecimalFrom(value.Value()))
+		decimals = append(decimals, enumerableDecimalFrom(value.Value()))
 	}
 	this.values = decimals
 	return this
 }
 
 func DecimalConst(value big.Rat) SemType {
-	return basicSubtype(BTDecimal, newDecimalSubtypeFromBoolEnumerableDecimal(true, EnumerableDecimalFrom(value)))
+	return getBasicSubtype(BTDecimal, newDecimalSubtypeFromBoolEnumerableDecimal(true, enumerableDecimalFrom(value)))
 }
 
-func DecimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func decimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[big.Rat]()
 	}
-	v := d.(DecimalSubtype)
+	v := d.(decimalSubtype)
 	if !v.allowed {
 		return common.OptionalEmpty[big.Rat]()
 	}
@@ -65,12 +65,12 @@ func DecimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
 	return common.OptionalOf(v.values[0].value)
 }
 
-func DecimalSubtypeContains(d SubtypeData, f EnumerableDecimal) bool {
-	// migrated from DecimalSubtype.java:73:5
-	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
+func decimalSubtypeContains(d SubtypeData, f enumerableDecimal) bool {
+	// migrated from decimalSubtype.java:73:5
+	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
-	v := d.(DecimalSubtype)
+	v := d.(decimalSubtype)
 	for _, val := range v.values {
 		if val.Compare(&f) == 0 {
 			return v.allowed
@@ -79,26 +79,26 @@ func DecimalSubtypeContains(d SubtypeData, f EnumerableDecimal) bool {
 	return (!v.allowed)
 }
 
-func CreateDecimalSubtype(allowed bool, values []EnumerableType[big.Rat]) ProperSubtypeData {
-	// migrated from DecimalSubtype.java:87:5
+func createDecimalSubtype(allowed bool, values []enumerableType[big.Rat]) ProperSubtypeData {
+	// migrated from decimalSubtype.java:87:5
 	if len(values) == 0 {
 		if allowed {
-			return CreateNothing()
+			return createNothing()
 		} else {
-			return CreateAll()
+			return createAll()
 		}
 	}
 	return newDecimalSubtypeFromBoolEnumerableDecimals(allowed, values)
 }
 
-func (this *DecimalSubtype) Allowed() bool {
-	// migrated from DecimalSubtype.java:94:5
+func (this *decimalSubtype) Allowed() bool {
+	// migrated from decimalSubtype.java:94:5
 	return this.allowed
 }
 
-func (this *DecimalSubtype) Values() []EnumerableType[big.Rat] {
-	// migrated from DecimalSubtype.java:99:5
-	var values []EnumerableType[big.Rat]
+func (this *decimalSubtype) Values() []enumerableType[big.Rat] {
+	// migrated from decimalSubtype.java:99:5
+	var values []enumerableType[big.Rat]
 	for _, value := range this.values {
 		values = append(values, &value)
 	}

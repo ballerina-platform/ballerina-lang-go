@@ -823,7 +823,18 @@ func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *
 			ctx.birCx.CompilerContext.Unimplemented("non-key-value record field not implemented", expr.GetPosition())
 		}
 	}
-	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, expr.GetPosition())
+	var defaults []MappingConstructorDefaultEntry
+	if recType, ok := expr.ContextuallyExpectedType.(*ast.BLangRecordType); ok {
+		for fieldName, field := range recType.FieldPtrs() {
+			if field.DefaultExpr != nil {
+				defaults = append(defaults, MappingConstructorDefaultEntry{
+					FieldName:         fieldName,
+					FunctionLookupKey: buildFunctionLookupKeyFromSymbol(ctx.birCx, field.DefaultFnRef),
+				})
+			}
+		}
+	}
+	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, defaults, expr.GetPosition())
 }
 
 func mappingKeyName(key *ast.BLangMappingKey) string {
@@ -837,7 +848,7 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 	}
 }
 
-func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, pos ast.Location) expressionEffect {
+func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, defaults []MappingConstructorDefaultEntry, pos ast.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
 		keyOperand := ctx.addTempVar(semtypes.STRING)
@@ -852,7 +863,7 @@ func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, m
 		})
 	}
 	resultOperand := ctx.addTempVar(mapType)
-	newMap := NewMapConstructor(mapType, resultOperand, entries, pos)
+	newMap := NewMapConstructor(mapType, resultOperand, entries, defaults, pos)
 	curBB.Instructions = append(curBB.Instructions, newMap)
 	return expressionEffect{
 		result: resultOperand,
@@ -880,7 +891,7 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 		for _, namedArg := range expr.NamedArgs {
 			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
 		}
-		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, expr.GetPosition())
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, nil, expr.GetPosition())
 		curBB = detailEffect.block
 		detailOp = detailEffect.result
 	}
@@ -1033,6 +1044,9 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		curBB = argEffect.block
 		args = append(args, *argEffect.result)
 	}
+
+	curBB, args = fillDefaultArgs(ctx, curBB, expr, args)
+
 	thenBB := ctx.addBB()
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())
@@ -1066,6 +1080,61 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		result: resultOperand,
 		block:  thenBB,
 	}
+}
+
+func fillDefaultArgs(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangInvocation, args []BIROperand) (*BIRBasicBlock, []BIROperand) {
+	symRef := expr.Symbol()
+	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
+	// FIXME:
+	// Generic function symbols created by desugar (e.g. query expressions calling array:push)
+	// are monomorphized during BIR gen, not during type resolution.
+	if _, ok := sym.(model.GenericFunctionSymbol); ok {
+		return curBB, args
+	}
+	switch fnSym := sym.(type) {
+	case model.FunctionSymbol:
+		return fillFunctionDefaultArgs(ctx, curBB, expr, args, fnSym)
+	case *model.ValueSymbol:
+		return curBB, args
+	default:
+		ctx.birCx.CompilerContext.InternalError(fmt.Sprintf("unexpected symbol type %T in fillDefaultArgs", sym), expr.GetPosition())
+		return curBB, args
+	}
+}
+
+func fillFunctionDefaultArgs(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangInvocation, args []BIROperand, fnSym model.FunctionSymbol) (*BIRBasicBlock, []BIROperand) {
+	totalParams := len(fnSym.Signature().ParamTypes)
+	providedArgs := len(expr.ArgExprs)
+	if providedArgs >= totalParams {
+		return curBB, args
+	}
+	receiverOffset := 0
+	if expr.Expr != nil {
+		receiverOffset = 1
+	}
+	defaultableParams := fnSym.DefaultableParams()
+	for i := providedArgs; i < totalParams; i++ {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			// Semantic analysis should have cought this
+			ctx.birCx.CompilerContext.InternalError("missing argument for non-defaultable parameter", expr.GetPosition())
+			return curBB, args
+		}
+		defaultFnKey := buildFunctionLookupKeyFromSymbol(ctx.birCx, dp.Symbol)
+
+		thenBB := ctx.addBB()
+		resultOperand := ctx.addTempVar(fnSym.Signature().ParamTypes[i])
+		defaultCall := NewCall(INSTRUCTION_KIND_CALL, args[receiverOffset:receiverOffset+i],
+			model.Name(ctx.birCx.CompilerContext.GetSymbol(dp.Symbol).Name()), thenBB, resultOperand, expr.GetPosition())
+		defaultCall.FunctionLookupKey = defaultFnKey
+		if ctx.birCx.packageID != nil {
+			defaultCall.CalleePkg = ctx.birCx.packageID
+		}
+		curBB.Terminator = defaultCall
+		curBB = thenBB
+		args = append(args, *resultOperand)
+	}
+	return curBB, args
 }
 
 func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) expressionEffect {

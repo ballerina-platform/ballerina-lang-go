@@ -17,6 +17,7 @@
 package model
 
 import (
+	"iter"
 	"sync"
 
 	"ballerina-lang-go/semtypes"
@@ -59,6 +60,8 @@ type FunctionSymbol interface {
 	Symbol
 	Signature() FunctionSignature
 	SetSignature(FunctionSignature)
+	DefaultableParams() *DefaultableParamInfo
+	SetDefaultableParams(DefaultableParamInfo)
 }
 
 // GenericFunctionSymbol represents functions with [@typeParam] types
@@ -123,7 +126,7 @@ type (
 		mu          sync.RWMutex
 		Pkg         PackageIdentifier
 		lookupTable map[string]int
-		Symbols     []Symbol
+		symbols     []Symbol
 		index       int
 	}
 
@@ -149,7 +152,8 @@ type (
 
 	functionSymbol struct {
 		symbolBase
-		signature FunctionSignature
+		signature         FunctionSignature
+		defaultableParams DefaultableParamInfo
 	}
 
 	genericFunctionSymbol struct {
@@ -163,6 +167,15 @@ type (
 		ReturnType semtypes.SemType
 		// RestParamType is nil if there is no rest param
 		RestParamType semtypes.SemType
+	}
+
+	DefaultableParam struct {
+		Symbol SymbolRef // symbol to the lambda that would provide the default value if needed
+	}
+
+	DefaultableParamInfo struct {
+		params      []DefaultableParam
+		defaultable []bool
 	}
 )
 
@@ -185,8 +198,8 @@ func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
 		panic("SymbolRef cannot be added to a SymbolSpace")
 	}
 	space.mu.Lock()
-	space.lookupTable[name] = len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	space.lookupTable[name] = len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	space.mu.Unlock()
 }
 
@@ -205,8 +218,8 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 	// We really need this lock only for module level symbols but we don't distinguish between module level space and other spaces
 	space.mu.Lock()
 	defer space.mu.Unlock()
-	index := len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	index := len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	return index
 }
 
@@ -216,10 +229,35 @@ func (space *SymbolSpace) RefAt(index int) SymbolRef {
 }
 
 // SymbolAt returns the symbol at the given index. Thread-safe.
+func (space *SymbolSpace) SpaceIndex() int {
+	return space.index
+}
+
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	space.mu.RLock()
 	defer space.mu.RUnlock()
-	return space.Symbols[index]
+	return space.symbols[index]
+}
+
+func (space *SymbolSpace) Len() int {
+	space.mu.RLock()
+	defer space.mu.RUnlock()
+	return len(space.symbols)
+}
+
+// Symbols returns an iterator over the symbols in the space. This is for
+// reading only — callers must not modify the yielded symbols or add new symbols
+// to the space during iteration.
+func (space *SymbolSpace) Symbols() iter.Seq2[int, Symbol] {
+	return func(yield func(int, Symbol) bool) {
+		space.mu.RLock()
+		defer space.mu.RUnlock()
+		for i, sym := range space.symbols {
+			if !yield(i, sym) {
+				return
+			}
+		}
+	}
 }
 
 func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
@@ -228,7 +266,7 @@ func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 		Package:      packageID.PkgName.Value(),
 		Version:      packageID.Version.Value(),
 	}
-	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
+	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -370,6 +408,10 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 	return SymbolKindVariable
 }
 
+func (vs *ValueSymbol) IsConst() bool {
+	return vs.isConst || vs.isParameter
+}
+
 func (vs *ValueSymbol) Copy() Symbol {
 	cp := *vs
 	return &cp
@@ -392,11 +434,38 @@ func (fs *functionSymbol) SetSignature(sig FunctionSignature) {
 	fs.signature = sig
 }
 
+func (fs *functionSymbol) DefaultableParams() *DefaultableParamInfo {
+	return &fs.defaultableParams
+}
+
+func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
+	fs.defaultableParams = info
+}
+
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return &functionSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		signature:  signature,
 	}
+}
+
+func NewDefaultableParamInfo(paramCount int) DefaultableParamInfo {
+	return DefaultableParamInfo{
+		params:      make([]DefaultableParam, paramCount),
+		defaultable: make([]bool, paramCount),
+	}
+}
+
+func (d *DefaultableParamInfo) Get(index int) (DefaultableParam, bool) {
+	if index >= len(d.defaultable) || !d.defaultable[index] {
+		return DefaultableParam{}, false
+	}
+	return d.params[index], true
+}
+
+func (d *DefaultableParamInfo) SetDefaultable(index int, symbol SymbolRef) {
+	d.defaultable[index] = true
+	d.params[index].Symbol = symbol
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
@@ -450,6 +519,14 @@ func (s *genericFunctionSymbol) Signature() FunctionSignature {
 }
 
 func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
+	return &DefaultableParamInfo{}
+}
+
+func (s *genericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 

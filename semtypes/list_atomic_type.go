@@ -21,34 +21,34 @@ import (
 )
 
 type ListAtomicType struct {
-	Members FixedLengthArray
-	Rest    CellSemType
+	Members fixedLengthArray
+	Rest    *ComplexSemType
 }
 
 var _ AtomicType = &ListAtomicType{}
 
 func (this *ListAtomicType) equals(other AtomicType) bool {
 	if other, ok := other.(*ListAtomicType); ok {
-		if other.Rest != this.Rest {
+		if !this.Rest.equals(other.Rest) {
 			return false
 		}
 		return other.Members.FixedLength == this.Members.FixedLength &&
-			slices.Equal(other.Members.Initial, this.Members.Initial)
+			slices.EqualFunc(other.Members.Initial, this.Members.Initial, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }
 
-func NewListAtomicTypeFromMembersRest(members FixedLengthArray, rest CellSemType) ListAtomicType {
+func newListAtomicTypeFromMembersRest(members fixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	this := ListAtomicType{}
 	this.Members = members
 	this.Rest = rest
 	return this
 }
 
-func ListAtomicTypeFrom(members FixedLengthArray, rest CellSemType) ListAtomicType {
+func listAtomicTypeFrom(members fixedLengthArray, rest *ComplexSemType) ListAtomicType {
 	// migrated from ListAtomicType.java:34:5
 
-	return NewListAtomicTypeFromMembersRest(members, rest)
+	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
 func (this *ListAtomicType) AtomKind() Kind {
@@ -60,6 +60,6 @@ func (atomic *ListAtomicType) MemberAtInnerVal(index int) SemType {
 	return CellInnerVal(atomic.MemberAt(index))
 }
 
-func (atomic *ListAtomicType) MemberAt(index int) CellSemType {
+func (atomic *ListAtomicType) MemberAt(index int) *ComplexSemType {
 	return listMemberAt(atomic.Members, atomic.Rest, index)
 }

@@ -17,14 +17,15 @@
 package semantics
 
 import (
+	"fmt"
 	"maps"
+	"strings"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"strings"
 
 	array "ballerina-lang-go/lib/array/compile"
 	bInt "ballerina-lang-go/lib/int/compile"
@@ -229,7 +230,31 @@ func resolveFunction(functionResolver *blockSymbolResolver, function *ast.BLangF
 		}
 	}
 
+	allocateDefaultParamSymbols(functionResolver, function)
+
 	ast.Walk(functionResolver, function)
+}
+
+func allocateDefaultParamSymbols(resolver *blockSymbolResolver, function *ast.BLangFunction) {
+	if len(function.RequiredParams) == 0 {
+		return
+	}
+	cx := resolver.GetCtx()
+	fnSymRef := function.Symbol()
+	fnSym := cx.GetSymbol(fnSymRef).(model.FunctionSymbol)
+	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+			continue
+		}
+		name := fmt.Sprintf("$default$%d", i)
+		// Until type resolution we don't know the type of the parametes to create this function signature
+		defaultFnSym := model.NewFunctionSymbol(name, model.FunctionSignature{}, false)
+		symRef := cx.AddSymbolToSameSpace(fnSymRef, name, defaultFnSym)
+		info.SetDefaultable(i, symRef)
+	}
+	fnSym.SetDefaultableParams(info)
 }
 
 func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockSymbolResolver, function *ast.BLangFunction) {

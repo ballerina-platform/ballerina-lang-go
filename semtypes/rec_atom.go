@@ -18,69 +18,69 @@ package semtypes
 
 import "fmt"
 
-type RecAtom struct {
+type recAtom struct {
 	index      int
 	targetKind Kind
 }
 
 var ZERO = newRecAtomFromInt(BDD_REC_ATOM_READONLY)
-var _ Atom = &RecAtom{}
+var _ Atom = &recAtom{}
 
-func newRecAtomFromInt(index int) RecAtom {
-	this := RecAtom{}
+func newRecAtomFromInt(index int) recAtom {
+	this := recAtom{}
 
 	this.index = index
 	return this
 }
 
-func newRecAtomFromIntKind(index int, targetKind Kind) RecAtom {
-	this := RecAtom{}
+func newRecAtomFromIntKind(index int, targetKind Kind) recAtom {
+	this := recAtom{}
 
 	this.index = index
 	this.targetKind = targetKind
 	return this
 }
 
-func CreateRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:41:5
+func createRecAtom(index int) recAtom {
+	// migrated from recAtom.java:41:5
 	if index == BDD_REC_ATOM_READONLY {
 		return ZERO
 	}
 	return newRecAtomFromInt(index)
 }
 
-func CreateXMLRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:48:5
+func createXMLRecAtom(index int) recAtom {
+	// migrated from recAtom.java:48:5
 	return newRecAtomFromIntKind(index, Kind_XML_ATOM)
 }
 
-func CreateDistinctRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:52:5
+func createDistinctRecAtom(index int) recAtom {
+	// migrated from recAtom.java:52:5
 	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
 }
 
-func (this *RecAtom) SetKind(targetKind Kind) {
-	// migrated from RecAtom.java:56:5
+func (this *recAtom) SetKind(targetKind Kind) {
+	// migrated from recAtom.java:56:5
 	this.targetKind = targetKind
 }
 
-func (this *RecAtom) Index() int {
-	// migrated from RecAtom.java:60:5
+func (this *recAtom) Index() int {
+	// migrated from recAtom.java:60:5
 	return this.index
 }
 
-func (this *RecAtom) Kind() Kind {
-	// migrated from RecAtom.java:65:5
+func (this *recAtom) Kind() Kind {
+	// migrated from recAtom.java:65:5
 	// if this.targetKind == 0 {
 	// 	panic("Target kind is not set for the recursive type atom")
 	// }
 	return this.targetKind
 }
 
-func (this *RecAtom) canonicalKey() string {
+func (this *recAtom) canonicalKey() string {
 	return fmt.Sprintf("r%d", this.index)
 }
 
-func (this *RecAtom) String() string {
+func (this *recAtom) String() string {
 	return fmt.Sprintf("r%d", this.index)
 }

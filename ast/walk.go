@@ -626,6 +626,9 @@ func Walk(v Visitor, node BLangNode) {
 		}
 		for _, field := range node.fields {
 			Walk(v, field.Type.(BLangNode))
+			if field.DefaultExpr != nil {
+				Walk(v, field.DefaultExpr.(BLangNode))
+			}
 		}
 		if node.RestType != nil {
 			Walk(v, node.RestType.(BLangNode))

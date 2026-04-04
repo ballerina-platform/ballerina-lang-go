@@ -21,7 +21,7 @@ import (
 )
 
 type MappingDefinition struct {
-	rec     *RecAtom
+	rec     *recAtom
 	semType SemType
 }
 
@@ -58,10 +58,10 @@ func (this *MappingDefinition) SetSemTypeToNever() {
 	this.semType = NEVER
 }
 
-func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemType) SemType {
+func (this *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
 	// migrated from MappingDefinition.java:76:5
 	sfh := this.splitFields(fields)
-	atomicType := MappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
+	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
 	var atom Atom
 	rec := this.rec
 	if rec != nil {
@@ -95,7 +95,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 		} else {
 			ro = mut
 		}
-		cellFields = append(cellFields, CellFieldFrom(field.Name, CellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
+		cellFields = append(cellFields, cellFieldFrom(field.Name, *cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -103,19 +103,19 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
+	restCell := cellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.Define(env, cellFields, restCell)
 }
 
 func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
 	// migrated from MappingDefinition.java:116:5
-	bdd := BddAtom(atom)
-	s := basicSubtype(BTMapping, bdd)
+	bdd := bddAtom(atom)
+	s := getBasicSubtype(BTMapping, bdd)
 	this.semType = s
 	return s
 }
 
-func (this *MappingDefinition) splitFields(fields []CellField) SplitField {
+func (this *MappingDefinition) splitFields(fields []CellField) splitField {
 	// migrated from MappingDefinition.java:123:5
 	sortedFields := make([]CellField, len(fields))
 	copy(sortedFields, fields)
@@ -124,10 +124,10 @@ func (this *MappingDefinition) splitFields(fields []CellField) SplitField {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
 	var names []string
-	var types []CellSemType
+	var types []ComplexSemType
 	for _, field := range sortedFields {
 		names = append(names, field.Name)
 		types = append(types, field.Type)
 	}
-	return SplitFieldFrom(names, types)
+	return splitFieldFrom(names, types)
 }

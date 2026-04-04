@@ -16,24 +16,24 @@
 
 package semtypes
 
-type RangeUnion struct {
+type rangeUnion struct {
 	Status int
-	Range  *Range
+	Range  *intRange
 }
 
-func newRangeUnionFromIntRange(status int, r *Range) RangeUnion {
-	this := RangeUnion{}
+func newRangeUnionFromIntRange(status int, r *intRange) rangeUnion {
+	this := rangeUnion{}
 	this.Status = status
 	this.Range = r
 	return this
 }
 
-func RangeUnionFrom(status int) RangeUnion {
-	// migrated from RangeUnion.java:37:5
+func rangeUnionFrom(status int) rangeUnion {
+	// migrated from rangeUnion.java:37:5
 	return newRangeUnionFromIntRange(status, nil)
 }
 
-func FromWithRange(r Range) RangeUnion {
-	// migrated from RangeUnion.java:41:5
+func fromWithRange(r intRange) rangeUnion {
+	// migrated from rangeUnion.java:41:5
 	return newRangeUnionFromIntRange(0, &r)
 }

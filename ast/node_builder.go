@@ -2253,7 +2253,26 @@ func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode 
 }
 
 func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tree.DefaultableParameterNode) BLangNode {
-	panic("TransformDefaultableParameter unimplemented")
+	paramName := defaultableParameterNode.ParamName()
+
+	if paramName != nil {
+		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
+	}
+
+	simpleVar := n.createSimpleVarInner(paramName, defaultableParameterNode.TypeName(), defaultableParameterNode.Expression(), nil, defaultableParameterNode.Annotations())
+
+	simpleVar.pos = getPosition(defaultableParameterNode)
+
+	if paramName != nil {
+		simpleVar.Name.pos = getPosition(paramName)
+		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	} else if simpleVar.Name.pos == nil {
+		simpleVar.Name.pos = builtinPos
+	}
+
+	simpleVar.FlagSet.Add(model.Flag_DEFAULTABLE_PARAM)
+
+	return simpleVar
 }
 
 func (n *NodeBuilder) createSimpleVarWithTokenNodeNodeList(name tree.Token, typeName tree.Node, annotations tree.NodeList[*tree.AnnotationNode]) *BLangSimpleVariable {
@@ -2471,7 +2490,18 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			}
 			recordType.AddField(fieldName, bField)
 		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
-			panic("default values are not supported")
+			recordFieldDV := field.(*tree.RecordFieldWithDefaultValueNode)
+			fieldName := recordFieldDV.FieldName().Text()
+			bField := BField{
+				Name:        model.Name(fieldName),
+				Type:        n.createTypeNode(recordFieldDV.TypeName()).(BType),
+				DefaultExpr: n.createExpression(recordFieldDV.Expression()),
+			}
+			bField.pos = getPosition(recordFieldDV)
+			if recordFieldDV.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			recordType.AddField(fieldName, bField)
 		case common.TYPE_REFERENCE:
 			typeRef := field.(*tree.TypeReferenceNode)
 			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))

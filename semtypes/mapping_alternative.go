@@ -29,14 +29,14 @@ type MappingAlternative struct {
 
 func MappingAlternatives(cx Context, t SemType) []MappingAlternative {
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & MAPPING.All()) == 0 {
+		if (b.all() & MAPPING.all()) == 0 {
 			return nil
 		}
 		return []MappingAlternative{{SemType: MAPPING, Pos: nil, neg: nil}}
 	}
 
-	paths := []BddPath{}
-	BddPaths(getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), &paths, BddPathFrom())
+	paths := []bddPath{}
+	bddPaths(getComplexSubtypeData(t.(*ComplexSemType), BTMapping).(Bdd), &paths, bddPathFrom())
 	alts := []MappingAlternative{}
 	for _, bddPath := range paths {
 		posAtoms := make([]*MappingAtomicType, len(bddPath.pos))
@@ -68,7 +68,7 @@ func intersectMappingAtoms(env Env, atoms []*MappingAtomicType) (SemType, *Mappi
 		atom = result
 	}
 	typeAtom := env.mappingAtom(atom)
-	ty := CreateBasicSemType(BTMapping, BddAtom(&typeAtom))
+	ty := createBasicSemType(BTMapping, bddAtom(&typeAtom))
 	return ty, atom, true
 }
 

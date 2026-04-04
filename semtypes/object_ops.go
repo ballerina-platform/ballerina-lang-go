@@ -16,52 +16,52 @@
 
 package semtypes
 
-type ObjectOps struct {
+type objectOps struct {
 }
 
-var _ BasicTypeOps = &ObjectOps{}
+var _ BasicTypeOps = &objectOps{}
 
-func (this *ObjectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from ObjectOps.java:51:5
+func (this *objectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from objectOps.java:51:5
 	return bddSubtypeDiff(t1, t2)
 }
 
-func (this *ObjectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from ObjectOps.java:51:5
+func (this *objectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from objectOps.java:51:5
 	return bddSubtypeIntersect(t1, t2)
 }
 
-func (this *ObjectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from ObjectOps.java:51:5
+func (this *objectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	// migrated from objectOps.java:51:5
 	return bddSubtypeUnion(t1, t2)
 }
 
 func objectSubTypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from ObjectOps.java:43:5
+	// migrated from objectOps.java:43:5
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), objectBddIsEmpty, t.(Bdd))
 }
 
 func objectBddIsEmpty(cx Context, b Bdd) bool {
-	// migrated from ObjectOps.java:47:5
-	return bddEveryPositive(cx, b, nil, nil, mappingFormulaIsEmpty)
+	// migrated from objectOps.java:47:5
+	return bddEveryPositive(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 }
 
-func NewObjectOps() ObjectOps {
-	this := ObjectOps{}
+func newObjectOps() objectOps {
+	this := objectOps{}
 	return this
 }
 
-func (this *ObjectOps) Complement(t SubtypeData) SubtypeData {
-	// migrated from ObjectOps.java:33:5
+func (this *objectOps) complement(t SubtypeData) SubtypeData {
+	// migrated from objectOps.java:33:5
 	return this.objectSubTypeComplement(t)
 }
 
-func (this *ObjectOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from ObjectOps.java:38:5
+func (this *objectOps) IsEmpty(cx Context, t SubtypeData) bool {
+	// migrated from objectOps.java:38:5
 	return objectSubTypeIsEmpty(cx, t)
 }
 
-func (this *ObjectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
-	// migrated from ObjectOps.java:51:5
+func (this *objectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
+	// migrated from objectOps.java:51:5
 	return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t)
 }

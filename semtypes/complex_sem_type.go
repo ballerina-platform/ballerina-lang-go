@@ -16,38 +16,28 @@
 
 package semtypes
 
-type ComplexSemType interface {
-	SemType
-	All() int
-	Some() int
-	SubtypeDataList() []ProperSubtypeData
-}
-
-func CreateComplexSemType(allBitset int, subtypeList ...BasicSubtype) ComplexSemType {
+func createComplexSemType(allBitset BasicTypeBitSet, subtypeList ...basicSubtype) SemType {
 	// migrated from ComplexSemType.java:33:5
-	return CreateComplexSemTypeWithAllBitSetSubtypeList(allBitset, subtypeList)
+	return createComplexSemTypeWithAllBitSetSubtypeList(allBitset, subtypeList)
 }
 
-func CreateComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset int, someBitset int, subtypeDataList []ProperSubtypeData) ComplexSemType {
+func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someBitset BasicTypeBitSet, subtypeDataList []ProperSubtypeData) *ComplexSemType {
 	// migrated from ComplexSemType.java:37:5
-	if (allBitset == 0) && (someBitset == (1 << BTCell.Code())) {
-		return CellSemTypeFrom(subtypeDataList)
-	}
-	return &complexSemTypeImpl{
-		all:             allBitset,
-		some:            someBitset,
-		subtypeDataList: subtypeDataList,
+	return &ComplexSemType{
+		allBitSet:  allBitset,
+		someBitSet: someBitset,
+		dataList:   subtypeDataList,
 	}
 }
 
-func CreateComplexSemTypeWithAllBitSetSubtypeList(allBitset int, subtypeList []BasicSubtype) ComplexSemType {
+func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, subtypeList []basicSubtype) SemType {
 	// migrated from ComplexSemType.java:44:5
-	some := 0
+	var some BasicTypeBitSet = 0
 	var dataList []ProperSubtypeData
 	for _, basicSubtype := range subtypeList {
 		dataList = append(dataList, basicSubtype.SubtypeData)
 		c := basicSubtype.BasicTypeCode.Code()
 		some = (some | (1 << c))
 	}
-	return CreateComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, some, dataList)
+	return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, some, dataList)
 }

@@ -38,7 +38,7 @@ const (
 	Kind_DISTINCT_ATOM
 )
 
-func GetIdentifier(this Atom) atomIdentifier {
+func getIdentifier(this Atom) atomIdentifier {
 	// migrated from Atom.java:43:5
 
 	return atomIdentifier{

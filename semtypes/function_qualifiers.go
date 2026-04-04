@@ -22,7 +22,7 @@ type FunctionQualifiers struct {
 	semType SemType
 }
 
-func NewFunctionQualifiersFromSemType(semType SemType) FunctionQualifiers {
+func newFunctionQualifiersFromSemType(semType SemType) FunctionQualifiers {
 	this := FunctionQualifiers{}
 	common.Assert(semType != nil)
 	common.Assert(IsSubtypeSimple(semType, LIST))
@@ -32,7 +32,7 @@ func NewFunctionQualifiersFromSemType(semType SemType) FunctionQualifiers {
 
 func FunctionQualifiersFrom(env Env, isolated bool, transactional bool) FunctionQualifiers {
 	// migrated from FunctionQualifiers.java:42:5
-	return NewFunctionQualifiersFromSemType(createSemType(env, isolated, transactional))
+	return newFunctionQualifiersFromSemType(createSemType(env, isolated, transactional))
 }
 
 func createSemType(env Env, isolated bool, transactional bool) SemType {
@@ -54,7 +54,7 @@ func createSemType(env Env, isolated bool, transactional bool) SemType {
 	return ld.DefineListTypeWrappedWithEnvSemTypesInt(env, []SemType{isolatedType, transactionalType}, 2)
 }
 
-func NewFunctionQualifiers() FunctionQualifiers {
+func newFunctionQualifiers() FunctionQualifiers {
 	this := FunctionQualifiers{}
 	return this
 }
