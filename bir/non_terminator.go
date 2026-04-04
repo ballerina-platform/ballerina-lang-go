@@ -75,9 +75,14 @@ type (
 	// JBallerina call this NewStruct but prints as NewMap
 	NewMap struct {
 		BIRInstructionBase
-		// Do we need the mapping atomic type as well?
-		Type   semtypes.SemType
-		Values []MappingConstructorEntry
+		Type     semtypes.SemType
+		Values   []MappingConstructorEntry
+		Defaults []MappingConstructorDefaultEntry
+	}
+
+	MappingConstructorDefaultEntry struct {
+		FieldName         string
+		FunctionLookupKey string
 	}
 
 	NewError struct {
@@ -333,7 +338,7 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
-func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, pos diagnostics.Location) *NewMap {
+func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, pos diagnostics.Location) *NewMap {
 	return &NewMap{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -341,8 +346,9 @@ func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []Mapping
 			},
 			LhsOp: lhsOp,
 		},
-		Type:   typ,
-		Values: values,
+		Type:     typ,
+		Values:   values,
+		Defaults: defaults,
 	}
 }
 

@@ -18,69 +18,61 @@ package semtypes
 
 import "math"
 
-type EnumerableSubtypeData any
-
-type EnumerableSubtype[T any] interface {
-	EnumerableSubtypeData
+type enumerableSubtype[T any] interface {
 	Allowed() bool
-	Values() []EnumerableType[T]
+	Values() []enumerableType[T]
 }
 
-type EnumerableSubtypeBase struct {
-}
+var (
+	lt = (-1)
+	eq = 0
+	gt = 1
+)
 
-type EnumerableSubtypeMethods[T any] struct {
-	Self EnumerableSubtype[T]
-}
-
-var LT = (-1)
-var EQ = 0
-var GT = 1
-
-func EnumerableSubtypeUnion[T any](t1 EnumerableSubtype[T], t2 EnumerableSubtype[T], result *[]EnumerableType[T]) bool {
-	// migrated from EnumerableSubtype.java:37:5
+func enumerableSubtypeUnion[T any](t1 enumerableSubtype[T], t2 enumerableSubtype[T], result *[]enumerableType[T]) bool {
+	// migrated from enumerableSubtype.java:37:5
 	b1 := t1.Allowed()
 	b2 := t2.Allowed()
 	var allowed bool
 	if b1 && b2 {
-		EnumerableListUnion(t1.Values(), t2.Values(), result)
+		enumerableListUnion(t1.Values(), t2.Values(), result)
 		allowed = true
 	} else if (!b1) && (!b2) {
-		EnumerableListIntersect(t1.Values(), t2.Values(), result)
+		enumerableListIntersect(t1.Values(), t2.Values(), result)
 		allowed = false
 	} else if b1 && (!b2) {
-		EnumerableListDiff(t2.Values(), t1.Values(), result)
+		enumerableListDiff(t2.Values(), t1.Values(), result)
 		allowed = false
 	} else {
-		EnumerableListDiff(t1.Values(), t2.Values(), result)
+		enumerableListDiff(t1.Values(), t2.Values(), result)
 		allowed = false
 	}
 	return allowed
 }
 
-func EnumerableSubtypeIntersect[T any](t1 EnumerableSubtype[T], t2 EnumerableSubtype[T], result *[]EnumerableType[T]) bool {
-	// migrated from EnumerableSubtype.java:59:5
+func enumerableSubtypeIntersect[T any](t1 enumerableSubtype[T], t2 enumerableSubtype[T], result *[]enumerableType[T]) bool {
+	// migrated from enumerableSubtype.java:59:5
 	b1 := t1.Allowed()
 	b2 := t2.Allowed()
 	var allowed bool
 	if b1 && b2 {
-		EnumerableListIntersect(t1.Values(), t2.Values(), result)
+		enumerableListIntersect(t1.Values(), t2.Values(), result)
 		allowed = true
 	} else if (!b1) && (!b2) {
-		EnumerableListUnion(t1.Values(), t2.Values(), result)
+		enumerableListUnion(t1.Values(), t2.Values(), result)
 		allowed = false
 	} else if b1 && (!b2) {
-		EnumerableListDiff(t1.Values(), t2.Values(), result)
+		enumerableListDiff(t1.Values(), t2.Values(), result)
 		allowed = true
 	} else {
-		EnumerableListDiff(t2.Values(), t1.Values(), result)
+		enumerableListDiff(t2.Values(), t1.Values(), result)
 		allowed = true
 	}
 	return allowed
 }
 
-func EnumerableListUnion[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], result *[]EnumerableType[T]) {
-	// migrated from EnumerableSubtype.java:81:5
+func enumerableListUnion[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
+	// migrated from enumerableSubtype.java:81:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -98,15 +90,15 @@ func EnumerableListUnion[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], 
 		} else {
 			s1 := v1[i1]
 			s2 := v2[i2]
-			switch CompareEnumerable(s1, s2) {
-			case EQ:
+			switch compareEnumerable(s1, s2) {
+			case eq:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-			case LT:
+			case lt:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
-			case GT:
+			case gt:
 				*result = append(*result, s2)
 				i2 = (i2 + 1)
 			}
@@ -114,8 +106,8 @@ func EnumerableListUnion[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], 
 	}
 }
 
-func EnumerableListIntersect[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], result *[]EnumerableType[T]) {
-	// migrated from EnumerableSubtype.java:121:5
+func enumerableListIntersect[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
+	// migrated from enumerableSubtype.java:121:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -126,55 +118,54 @@ func EnumerableListIntersect[T any](v1 []EnumerableType[T], v2 []EnumerableType[
 		} else {
 			s1 := v1[i1]
 			s2 := v2[i2]
-			switch CompareEnumerable(s1, s2) {
-			case EQ:
+			switch compareEnumerable(s1, s2) {
+			case eq:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-			case LT:
+			case lt:
 				i1 = (i1 + 1)
-			case GT:
+			case gt:
 				i2 = (i2 + 1)
 			}
 		}
 	}
 }
 
-func EnumerableListDiff[T any](v1 []EnumerableType[T], v2 []EnumerableType[T], result *[]EnumerableType[T]) {
-	// migrated from EnumerableSubtype.java:152:5
+func enumerableListDiff[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
+	// migrated from enumerableSubtype.java:152:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
 	len2 := len(v2)
 	for i1 < len1 {
-
 		if i2 >= len2 {
 			*result = append(*result, v1[i1])
 			i1 = (i1 + 1)
 		} else {
 			s1 := v1[i1]
 			s2 := v2[i2]
-			switch CompareEnumerable(s1, s2) {
-			case EQ:
+			switch compareEnumerable(s1, s2) {
+			case eq:
 				i1 = (i1 + 1)
 				i2 = (i2 + 1)
-			case LT:
+			case lt:
 				*result = append(*result, s1)
 				i1 = (i1 + 1)
-			case GT:
+			case gt:
 				i2 = (i2 + 1)
 			}
 		}
 	}
 }
 
-func CompareEnumerable[T any](v1 EnumerableType[T], v2 EnumerableType[T]) int {
-	// migrated from EnumerableSubtype.java:187:5
+func compareEnumerable[T any](v1 enumerableType[T], v2 enumerableType[T]) int {
+	// migrated from enumerableSubtype.java:187:5
 	return v1.Compare(v2)
 }
 
 func bFloatEq(f1 float64, f2 float64) bool {
-	// migrated from EnumerableSubtype.java:216:5
+	// migrated from enumerableSubtype.java:216:5
 	if math.IsNaN(f1) {
 		return math.IsNaN(f2)
 	}

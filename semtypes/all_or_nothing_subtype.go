@@ -16,44 +16,44 @@
 
 package semtypes
 
-type AllOrNothingSubtype struct {
+type allOrNothingSubtype struct {
 	isAll bool
 }
 
 var (
 	AllOrNothingSubtypeAll                 = newAllOrNothingSubtypeFromBool(true)
 	AllOrNothingSubtypeNothing             = newAllOrNothingSubtypeFromBool(false)
-	_                          SubtypeData = &AllOrNothingSubtype{}
-	_                          Bdd         = &AllOrNothingSubtype{}
+	_                          SubtypeData = &allOrNothingSubtype{}
+	_                          Bdd         = &allOrNothingSubtype{}
 )
 
-func newAllOrNothingSubtypeFromBool(isAll bool) AllOrNothingSubtype {
-	this := AllOrNothingSubtype{}
+func newAllOrNothingSubtypeFromBool(isAll bool) allOrNothingSubtype {
+	this := allOrNothingSubtype{}
 	this.isAll = isAll
 	return this
 }
 
-func CreateAll() AllOrNothingSubtype {
-	// migrated from AllOrNothingSubtype.java:38:5
+func createAll() allOrNothingSubtype {
+	// migrated from allOrNothingSubtype.java:38:5
 	return AllOrNothingSubtypeAll
 }
 
-func CreateNothing() AllOrNothingSubtype {
-	// migrated from AllOrNothingSubtype.java:42:5
+func createNothing() allOrNothingSubtype {
+	// migrated from allOrNothingSubtype.java:42:5
 	return AllOrNothingSubtypeNothing
 }
 
-func (this *AllOrNothingSubtype) IsAllSubtype() bool {
-	// migrated from AllOrNothingSubtype.java:46:5
+func (this *allOrNothingSubtype) IsAllSubtype() bool {
+	// migrated from allOrNothingSubtype.java:46:5
 	return this.isAll
 }
 
-func (this *AllOrNothingSubtype) IsNothingSubtype() bool {
-	// migrated from AllOrNothingSubtype.java:50:5
+func (this *allOrNothingSubtype) IsNothingSubtype() bool {
+	// migrated from allOrNothingSubtype.java:50:5
 	return (!this.isAll)
 }
 
-func (this *AllOrNothingSubtype) canonicalKey() string {
+func (this *allOrNothingSubtype) canonicalKey() string {
 	if this.isAll {
 		return "true"
 	} else {
@@ -61,7 +61,7 @@ func (this *AllOrNothingSubtype) canonicalKey() string {
 	}
 }
 
-func (this *AllOrNothingSubtype) String() string {
+func (this *allOrNothingSubtype) String() string {
 	if this.isAll {
 		return "all"
 	} else {

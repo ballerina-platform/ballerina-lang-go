@@ -17,7 +17,7 @@
 package semtypes
 
 type FunctionDefinition struct {
-	rec     *RecAtom
+	rec     *recAtom
 	semType SemType
 }
 
@@ -40,25 +40,25 @@ func (this *FunctionDefinition) GetSemType(env Env) SemType {
 
 func (this *FunctionDefinition) createSemType(rec Atom) SemType {
 	// migrated from FunctionDefinition.java:53:5
-	bdd := BddAtom(rec)
-	s := basicSubtype(BTFunction, bdd)
+	bdd := bddAtom(rec)
+	s := getBasicSubtype(BTFunction, bdd)
 	this.semType = s
 	return s
 }
 
 func (this *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	// migrated from FunctionDefinition.java:60:5
-	atomicType := FunctionAtomicTypeFrom(args, ret, qualifiers.semType)
+	atomicType := functionAtomicTypeFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
 func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	// migrated from FunctionDefinition.java:65:5
-	atomicType := FunctionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
+	atomicType := functionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) defineInternal(env Env, atomicType FunctionAtomicType) SemType {
+func (this *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
 	// migrated from FunctionDefinition.java:70:5
 	var atom Atom
 	rec := this.rec

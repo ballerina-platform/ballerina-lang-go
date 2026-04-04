@@ -27,23 +27,23 @@ func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 	// migrated from BMappingProj.java:55:5
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & MAPPING.All()) != 0 {
+		if (b.all() & MAPPING.all()) != 0 {
 			return VAL
 		} else {
 			return UNDEF
 		}
 	} else {
-		keyData := stringSubtype(k)
+		keyData := getStringSubtype(k)
 		if isNothingSubtype(keyData) {
 			return UNDEF
 		}
-		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(ComplexSemType), BTMapping).(Bdd), keyData, INNER)
+		return bddMappingMemberTypeInner(cx, getComplexSubtypeData(t.(*ComplexSemType), BTMapping).(Bdd), keyData, INNER)
 	}
 }
 
 func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
 	// migrated from BMappingProj.java:68:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		} else {
@@ -79,17 +79,17 @@ func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData
 func mappingAtomicApplicableMemberTypesInnerProj(atomic *MappingAtomicType, key SubtypeData) []SemType {
 	// migrated from BMappingProj.java:94:5
 	types := make([]SemType, len(atomic.Types))
-	for i, t := range atomic.Types {
-		types[i] = CellInner(t)
+	for i := range atomic.Types {
+		types[i] = cellInner(&atomic.Types[i])
 	}
 
 	var memberTypes []SemType
-	rest := CellInner(atomic.Rest)
+	rest := cellInner(atomic.Rest)
 	if isAllSubtype(key) {
 		memberTypes = append(memberTypes, types...)
 		memberTypes = append(memberTypes, rest)
 	} else {
-		coverage := stringSubtypeListCoverage(key.(StringSubtype), atomic.Names)
+		coverage := getStringSubtypeListCoverage(key.(stringSubtype), atomic.Names)
 		for _, index := range coverage.Indices {
 			memberTypes = append(memberTypes, types[index])
 		}

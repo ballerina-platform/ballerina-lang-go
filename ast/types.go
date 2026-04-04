@@ -17,10 +17,11 @@
 package ast
 
 import (
+	"iter"
+
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"iter"
 )
 
 type ProjectKind uint8
@@ -99,6 +100,8 @@ type (
 		Name           model.Name
 		Type           BType
 		FlagSet        common.UnorderedSet[model.Flag]
+		DefaultExpr    BLangExpression
+		DefaultFnRef   model.SymbolRef
 		AnnAttachments []model.AnnotationAttachmentNode
 	}
 
@@ -231,6 +234,7 @@ var (
 	_ BType     = &BLangUserDefinedType{}
 	_ BType     = &BTypeBasic{}
 	_ BType     = &BLangFunctionType{}
+	_ BType     = &BLangRecordType{}
 	_ BLangNode = &BLangFunctionType{}
 )
 
@@ -390,6 +394,16 @@ func (this *bStructureTypeBase) Fields() iter.Seq2[string, BField] {
 	return func(yield func(string, BField) bool) {
 		for i, name := range this.names {
 			if !yield(name, this.fields[i]) {
+				break
+			}
+		}
+	}
+}
+
+func (this *bStructureTypeBase) FieldPtrs() iter.Seq2[string, *BField] {
+	return func(yield func(string, *BField) bool) {
+		for i, name := range this.names {
+			if !yield(name, &this.fields[i]) {
 				break
 			}
 		}

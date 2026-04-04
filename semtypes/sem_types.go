@@ -21,15 +21,15 @@ import (
 	"strings"
 )
 
-var SINT8 = IntWidthSigned(8)
-var SINT16 = IntWidthSigned(16)
-var SINT32 = IntWidthSigned(32)
+var SINT8 = intWidthSigned(8)
+var SINT16 = intWidthSigned(16)
+var SINT32 = intWidthSigned(32)
 var UINT8 = BYTE
-var UINT16 = IntWidthUnsigned(16)
-var UINT32 = IntWidthUnsigned(32)
+var UINT16 = intWidthUnsigned(16)
+var UINT32 = intWidthUnsigned(32)
 var CHAR = STRING_CHAR
 
-func DecimalConstFromStringValue(value string) SemType {
+func decimalConstFromStringValue(value string) SemType {
 	// migrated from SemTypes.java:68:5
 	if strings.Contains(value, "d") || strings.Contains(value, "D") {
 		value = value[:len(value)-1]
@@ -42,7 +42,7 @@ func DecimalConstFromStringValue(value string) SemType {
 	return DecimalConst(*d)
 }
 
-func UnionWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
+func unionWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
 	// migrated from SemTypes.java:80:5
 	u := Union(first, second)
 	for _, s := range rest {
@@ -51,7 +51,7 @@ func UnionWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemT
 	return u
 }
 
-func IntersectWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
+func intersectWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
 	// migrated from SemTypes.java:92:5
 	i := Intersect(first, second)
 	for _, s := range rest {
@@ -60,27 +60,27 @@ func IntersectWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...
 	return i
 }
 
-func IsSubtypeSimpleNotNever(t1 SemType, t2 BasicTypeBitSet) bool {
+func isSubtypeSimpleNotNever(t1 SemType, t2 BasicTypeBitSet) bool {
 	// migrated from SemTypes.java:108:5
 	return ((!IsNever(t1)) && IsSubtypeSimple(t1, t2))
 }
 
 func ContainsBasicType(t1 SemType, t2 BasicTypeBitSet) bool {
 	// migrated from SemTypes.java:112:5
-	return ((WidenToBasicTypes(t1).All() & t2.All()) != 0)
+	return ((WidenToBasicTypes(t1).all() & t2.all()) != 0)
 }
 
-func ContainsType(context Context, ty SemType, typeToBeContained SemType) bool {
+func containsType(context Context, ty SemType, typeToBeContained SemType) bool {
 	// migrated from SemTypes.java:116:5
 	return IsSameType(context, Intersect(ty, typeToBeContained), typeToBeContained)
 }
 
 func ListProj(context Context, t SemType, key SemType) SemType {
 	// migrated from SemTypes.java:160:5
-	return ListProjInnerVal(context, t, key)
+	return listProjInnerVal(context, t, key)
 }
 
-func ListMemberType(context Context, t SemType, key SemType) SemType {
+func listMemberType(context Context, t SemType, key SemType) SemType {
 	// migrated from SemTypes.java:164:5
 	return ListMemberTypeInnerVal(context, t, key)
 }

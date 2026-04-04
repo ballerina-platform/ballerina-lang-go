@@ -16,24 +16,24 @@
 
 package semtypes
 
-type TableSubtype struct{}
+type tableSubtype struct{}
 
-func newTableSubtype() TableSubtype {
-	this := TableSubtype{}
+func newTableSubtype() tableSubtype {
+	this := tableSubtype{}
 	return this
 }
 
-func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstraint SemType) SemType {
-	// migrated from TableSubtype.java:48:5
+func tableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstraint SemType) SemType {
+	// migrated from tableSubtype.java:48:5
 	var normalizedKc SemType
 	lat := ToListAtomicType(cx, keyConstraint)
-	if (lat != nil) && (CELL_ATOMIC_UNDEF == cellAtomicType(lat.Rest)) {
+	if (lat != nil) && (CELL_ATOMIC_UNDEF == getCellAtomicType(lat.Rest)) {
 		members := lat.Members
 		switch members.FixedLength {
 		case 0:
 			normalizedKc = VAL
 		case 1:
-			normalizedKc = cellAtomicType(members.Initial[0]).Ty
+			normalizedKc = getCellAtomicType(&members.Initial[0]).Ty
 		default:
 			normalizedKc = keyConstraint
 		}
@@ -43,8 +43,8 @@ func TableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, VAL)
 }
 
-func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
-	// migrated from TableSubtype.java:64:5
+func tableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
+	// migrated from tableSubtype.java:64:5
 	fieldNameSingletons := make([]SemType, len(fieldNames))
 	fieldTypes := make([]SemType, len(fieldNames))
 	for i := range fieldNames {
@@ -64,20 +64,20 @@ func TableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames
 	return tableContainingWithEnvSemTypeSemTypeSemType(cx.Env(), tableConstraint, normalizedKc, normalizedKs)
 }
 
-func TableContaining(env Env, tableConstraint SemType) SemType {
-	// migrated from TableSubtype.java:85:5
-	return TableContainingWithEnvSemTypeCellMutability(env, tableConstraint, CellMutability_CELL_MUT_LIMITED)
+func tableContainingDefault(env Env, tableConstraint SemType) SemType {
+	// migrated from tableSubtype.java:85:5
+	return tableContainingWithEnvSemTypeCellMutability(env, tableConstraint, CellMutability_CELL_MUT_LIMITED)
 }
 
-func TableContainingWithEnvSemTypeCellMutability(env Env, tableConstraint SemType, mut CellMutability) SemType {
-	// migrated from TableSubtype.java:89:5
+func tableContainingWithEnvSemTypeCellMutability(env Env, tableConstraint SemType, mut CellMutability) SemType {
+	// migrated from tableSubtype.java:89:5
 	var normalizedKc SemType = VAL
 	var normalizedKs SemType = VAL
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, mut)
 }
 
 func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType, mut CellMutability) SemType {
-	// migrated from TableSubtype.java:95:5
+	// migrated from tableSubtype.java:95:5
 	if !IsSubtypeSimple(tableConstraint, MAPPING) {
 		panic("assertion failed")
 	}
@@ -86,10 +86,10 @@ func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, nor
 	listDef := NewListDefinition()
 	tupleType := listDef.TupleTypeWrapped(env, typeParamArray, normalizedKc, normalizedKs)
 	bdd := subtypeData(tupleType, BTList).(Bdd)
-	return CreateBasicSemType(BTTable, bdd)
+	return createBasicSemType(BTTable, bdd)
 }
 
 func tableContainingWithEnvSemTypeSemTypeSemType(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType) SemType {
-	// migrated from TableSubtype.java:109:5
+	// migrated from tableSubtype.java:109:5
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, CellMutability_CELL_MUT_LIMITED)
 }

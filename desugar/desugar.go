@@ -23,7 +23,6 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/desugar/internal/dcontext"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -33,73 +32,182 @@ type desugaredNode[E model.Node] struct {
 	replacementNode E
 }
 
-type FunctionContext struct {
-	pkgCtx               *dcontext.PackageContext
+// packageContext holds shared state for desugaring a single package.
+type packageContext struct {
+	compilerCtx          *context.CompilerContext
+	pkg                  *ast.BLangPackage
+	importedSymbols      map[string]model.ExportedSymbolSpace
+	importMu             sync.Mutex
+	addedImplicitImports map[string]bool
+	desugarSymbolCounter int
+}
+
+var _ desugarContext = &packageContext{}
+
+func newPackageContext(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *packageContext {
+	return &packageContext{
+		compilerCtx:          compilerCtx,
+		pkg:                  pkg,
+		importedSymbols:      importedSymbols,
+		addedImplicitImports: make(map[string]bool),
+	}
+}
+
+func (ctx *packageContext) addImplicitImport(pkgName string, imp ast.BLangImportPackage) {
+	ctx.importMu.Lock()
+	defer ctx.importMu.Unlock()
+	if !ctx.addedImplicitImports[pkgName] {
+		ctx.addedImplicitImports[pkgName] = true
+		ctx.pkg.Imports = append(ctx.pkg.Imports, imp)
+	}
+}
+
+func (ctx *packageContext) getImportedSymbolSpace(pkgName string) (model.ExportedSymbolSpace, bool) {
+	space, ok := ctx.importedSymbols[pkgName]
+	return space, ok
+}
+
+func (ctx *packageContext) symbolType(symbol model.SymbolRef) semtypes.SemType {
+	return ctx.compilerCtx.SymbolType(symbol)
+}
+
+func (ctx *packageContext) newFunctionScope(parent model.Scope) *model.FunctionScope {
+	return ctx.compilerCtx.NewFunctionScope(parent, *ctx.pkg.PackageID)
+}
+
+func (ctx *packageContext) getSymbol(ref model.SymbolRef) model.Symbol {
+	return ctx.compilerCtx.GetSymbol(ref)
+}
+
+func (ctx *packageContext) getSymbolType(ref model.SymbolRef) semtypes.SemType {
+	return ctx.compilerCtx.SymbolType(ref)
+}
+
+func (ctx *packageContext) setSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	ctx.compilerCtx.SetSymbolType(ref, ty)
+}
+
+func (ctx *packageContext) typeEnv() semtypes.Env {
+	return ctx.compilerCtx.GetTypeEnv()
+}
+
+func (ctx *packageContext) nextDesugarSymbolName() string {
+	name := fmt.Sprintf("$desugar$%d", ctx.desugarSymbolCounter)
+	ctx.desugarSymbolCounter++
+	return name
+}
+
+func (ctx *packageContext) addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	return ctx.compilerCtx.AddSymbolToSameSpace(ref, name, symbol)
+}
+
+func (ctx *packageContext) internalError(msg string) {
+	ctx.compilerCtx.InternalError(msg, nil)
+}
+
+func (ctx *packageContext) unimplemented(msg string) {
+	ctx.compilerCtx.Unimplemented(msg, nil)
+}
+
+type functionContext struct {
+	pkgCtx               *packageContext
 	scopeStack           []model.Scope
 	desugarSymbolCounter int
 	loopVarStack         []ast.BLangExpression // Stack to track loop variables (nil for while, varRef for desugared foreach)
 }
 
-func (ctx *FunctionContext) internalError(msg string) {
-	ctx.pkgCtx.InternalError(msg)
+var _ desugarContext = &functionContext{}
+
+func (ctx *functionContext) internalError(msg string) {
+	ctx.pkgCtx.internalError(msg)
 }
 
-func (ctx *FunctionContext) unimplemented(msg string) {
-	ctx.pkgCtx.Unimplemented(msg)
+func (ctx *functionContext) unimplemented(msg string) {
+	ctx.pkgCtx.unimplemented(msg)
 }
 
-func (ctx *FunctionContext) getImportedSymbolSpace(pkgName string) (model.ExportedSymbolSpace, bool) {
-	return ctx.pkgCtx.GetImportedSymbolSpace(pkgName)
+func (ctx *functionContext) getImportedSymbolSpace(pkgName string) (model.ExportedSymbolSpace, bool) {
+	return ctx.pkgCtx.getImportedSymbolSpace(pkgName)
 }
 
-func (ctx *FunctionContext) addImplicitImport(pkgName string, imp ast.BLangImportPackage) {
-	ctx.pkgCtx.AddImplicitImport(pkgName, imp)
+func (ctx *functionContext) addImplicitImport(pkgName string, imp ast.BLangImportPackage) {
+	ctx.pkgCtx.addImplicitImport(pkgName, imp)
 }
 
-func (ctx *FunctionContext) symbolType(symbol model.SymbolRef) semtypes.SemType {
-	return ctx.pkgCtx.SymbolType(symbol)
+func (ctx *functionContext) symbolType(symbol model.SymbolRef) semtypes.SemType {
+	return ctx.pkgCtx.symbolType(symbol)
 }
 
-func (ctx *FunctionContext) pushScope(scope model.Scope) {
+func (ctx *functionContext) pushScope(scope model.Scope) {
 	ctx.scopeStack = append(ctx.scopeStack, scope)
 }
 
-func (ctx *FunctionContext) popScope() {
+func (ctx *functionContext) popScope() {
 	if len(ctx.scopeStack) == 0 {
 		ctx.internalError("cannot pop from empty scope stack")
 	}
 	ctx.scopeStack = ctx.scopeStack[:len(ctx.scopeStack)-1]
 }
 
-func (ctx *FunctionContext) currentScope() model.Scope {
+func (ctx *functionContext) currentScope() model.Scope {
 	if len(ctx.scopeStack) == 0 {
 		ctx.internalError("scope stack is empty")
 	}
 	return ctx.scopeStack[len(ctx.scopeStack)-1]
 }
 
-func (ctx *FunctionContext) pushLoopVar(varRef ast.BLangExpression) {
+func (ctx *functionContext) pushLoopVar(varRef ast.BLangExpression) {
 	ctx.loopVarStack = append(ctx.loopVarStack, varRef)
 }
 
-func (ctx *FunctionContext) popLoopVar() {
+func (ctx *functionContext) popLoopVar() {
 	if len(ctx.loopVarStack) == 0 {
 		ctx.internalError("cannot pop from empty loopVar stack")
 	}
 	ctx.loopVarStack = ctx.loopVarStack[:len(ctx.loopVarStack)-1]
 }
 
-func (ctx *FunctionContext) currentLoopVar() ast.BLangExpression {
+func (ctx *functionContext) currentLoopVar() ast.BLangExpression {
 	if len(ctx.loopVarStack) == 0 {
 		return nil
 	}
 	return ctx.loopVarStack[len(ctx.loopVarStack)-1]
 }
 
-func (ctx *FunctionContext) nextDesugarSymbolName() string {
+func (ctx *functionContext) nextDesugarSymbolName() string {
 	name := fmt.Sprintf("$desugar$%d", ctx.desugarSymbolCounter)
 	ctx.desugarSymbolCounter++
 	return name
+}
+
+func (ctx *functionContext) addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	return ctx.pkgCtx.addSymbolToSameSpace(ref, name, symbol)
+}
+
+func (ctx *functionContext) newFunctionScope(parent model.Scope) *model.FunctionScope {
+	return ctx.pkgCtx.newFunctionScope(parent)
+}
+
+func (ctx *functionContext) setSymbolType(ref model.SymbolRef, ty semtypes.SemType) {
+	ctx.pkgCtx.setSymbolType(ref, ty)
+}
+
+func (ctx *functionContext) getSymbol(ref model.SymbolRef) model.Symbol {
+	return ctx.pkgCtx.getSymbol(ref)
+}
+
+func (ctx *functionContext) typeEnv() semtypes.Env {
+	return ctx.pkgCtx.typeEnv()
+}
+
+type desugarContext interface {
+	nextDesugarSymbolName() string
+	addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef
+	newFunctionScope(parent model.Scope) *model.FunctionScope
+	setSymbolType(ref model.SymbolRef, ty semtypes.SemType)
+	getSymbol(ref model.SymbolRef) model.Symbol
+	typeEnv() semtypes.Env
+	internalError(msg string)
 }
 
 type desugaredSymbol struct {
@@ -136,7 +244,7 @@ func (s *desugaredSymbol) Copy() model.Symbol {
 	return &cp
 }
 
-func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
+func (ctx *functionContext) addDesugardSymbol(ty semtypes.SemType, kind model.SymbolKind, isPublic bool) (string, model.SymbolRef) {
 	if len(ctx.scopeStack) == 0 {
 		ctx.internalError("cannot add desugared symbol when scope stack is empty")
 	}
@@ -152,7 +260,7 @@ func (ctx *FunctionContext) addDesugardSymbol(ty semtypes.SemType, kind model.Sy
 	return name, ref
 }
 
-func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
+func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext, pkg *ast.BLangPackage) {
 	var initStmts []ast.BLangStatement
 
 	for i := range pkg.GlobalVars {
@@ -232,12 +340,88 @@ func desugarInitFn(pkgCtx *dcontext.PackageContext, compilerCtx *context.Compile
 	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
 }
 
+func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *ast.BLangFunction {
+	retStmt := &ast.BLangReturn{Expr: defaultExpr}
+	retStmt.SetDeterminedType(semtypes.NEVER)
+	body := &ast.BLangBlockFunctionBody{Stmts: []ast.BLangStatement{retStmt}}
+	body.SetDeterminedType(semtypes.NEVER)
+
+	fn := &ast.BLangFunction{}
+	fn.Name = &ast.BLangIdentifier{Value: name}
+	fn.Name.SetDeterminedType(semtypes.NEVER)
+	fn.Body = body
+	fn.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(fn, defaultExpr.GetPosition())
+	return fn
+}
+
+type desugaredRecordFieldResult struct {
+	fn     *ast.BLangFunction
+	symRef model.SymbolRef
+}
+
+type desugaredTypeDescResult struct {
+	recordFields []desugaredRecordFieldResult
+}
+
+func desugarTypeDesc(ctx desugarContext, typeDesc ast.BType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+	switch td := typeDesc.(type) {
+	case *ast.BLangRecordType:
+		return desugarRecordTypeDesc(ctx, td, ownerSymRef, parentScope)
+	}
+	return desugaredTypeDescResult{}
+}
+
+func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, ownerSymRef model.SymbolRef, parentScope model.Scope) desugaredTypeDescResult {
+	var fields []desugaredRecordFieldResult
+	for _, field := range recType.FieldPtrs() {
+		if field.DefaultExpr == nil {
+			continue
+		}
+		fieldSemType := field.Type.(ast.BLangNode).GetDeterminedType()
+		fnName := ctx.nextDesugarSymbolName()
+		signature := model.FunctionSignature{ReturnType: fieldSemType}
+		fnSymbol := model.NewFunctionSymbol(fnName, signature, false)
+		env := ctx.typeEnv()
+		paramListDefn := semtypes.NewListDefinition()
+		paramListTy := paramListDefn.TupleTypeWrapped(env)
+		fnDefn := semtypes.NewFunctionDefinition()
+		fnType := fnDefn.Define(env, paramListTy, fieldSemType, semtypes.FunctionQualifiersFrom(env, false, false))
+		fnSymbol.SetType(fnType)
+		symRef := ctx.addSymbolToSameSpace(ownerSymRef, fnName, fnSymbol)
+		fnScope := ctx.newFunctionScope(parentScope)
+
+		fn := createDefaultValueFunction(fnName, field.DefaultExpr)
+		fn.SetSymbol(symRef)
+		fn.SetScope(fnScope)
+
+		field.DefaultFnRef = symRef
+		fields = append(fields, desugaredRecordFieldResult{fn: fn, symRef: symRef})
+	}
+	return desugaredTypeDescResult{recordFields: fields}
+}
+
+func desugarTopLevelTypeDescs(cx *packageContext, pkg *ast.BLangPackage) {
+	for i := range pkg.TypeDefinitions {
+		defn := &pkg.TypeDefinitions[i]
+		typeDesc, ok := defn.GetTypeData().TypeDescriptor.(ast.BType)
+		if !ok {
+			cx.internalError("type definition has no BType type descriptor")
+			return
+		}
+		result := desugarTypeDesc(cx, typeDesc, defn.Symbol(), nil)
+		for _, rf := range result.recordFields {
+			pkg.Functions = append(pkg.Functions, *rf.fn)
+		}
+	}
+}
+
 // DesugarPackage returns a desugared package (may be new or same instance)
 func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) *ast.BLangPackage {
 	if importedSymbols == nil {
 		importedSymbols = make(map[string]model.ExportedSymbolSpace)
 	}
-	pkgCtx := dcontext.NewPackageContext(compilerCtx, pkg, importedSymbols)
+	pkgCtx := newPackageContext(compilerCtx, pkg, importedSymbols)
 
 	var wg sync.WaitGroup
 	var panicErr any
@@ -252,6 +436,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 			*fn = *desugarFunction(pkgCtx, fn)
 		})
 	}
+
+	// Desugar type definition default expressions into standalone functions
+	desugarTopLevelTypeDescs(pkgCtx, pkg)
 
 	// Desugar all functions
 	for i := range pkg.Functions {
@@ -292,7 +479,7 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 	return pkg
 }
 
-func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangClassDefinition) {
+func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinition) {
 	if class.InitFunction == nil {
 		fn := ast.BLangFunction{
 			ObjInitFunction: true,
@@ -301,7 +488,7 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 		fn.Name = &ast.BLangIdentifier{Value: "init"}
 		fn.Body = &ast.BLangBlockFunctionBody{}
 		fn.SetDeterminedType(semtypes.NEVER)
-		fn.SetScope(pkgCtx.NewFunctionScope(class.Scope()))
+		fn.SetScope(pkgCtx.newFunctionScope(class.Scope()))
 		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
 		classScope := class.Scope()
 		classScope.AddSymbol("init", initSymbol)
@@ -314,9 +501,9 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 	classScope := class.Scope()
 	selfRef, ok := classScope.GetSymbol("self")
 	if !ok {
-		pkgCtx.InternalError("self symbol not found in class scope")
+		pkgCtx.internalError("self symbol not found in class scope")
 	}
-	classType := pkgCtx.GetSymbol(selfRef).Type()
+	classType := pkgCtx.getSymbol(selfRef).Type()
 
 	for _, field := range class.Fields {
 		initExpr := field.GetInitialExpression()
@@ -337,7 +524,7 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 		}
 		fieldAccess.Field.SetDeterminedType(semtypes.NEVER)
 		fieldAccess.Expr = selfVarRef
-		fieldAccess.SetDeterminedType(pkgCtx.GetSymbolType(field.Symbol()))
+		fieldAccess.SetDeterminedType(pkgCtx.getSymbolType(field.Symbol()))
 
 		assignment := &ast.BLangAssignment{
 			VarRef: fieldAccess,
@@ -357,12 +544,12 @@ func desugarClassDefinition(pkgCtx *dcontext.PackageContext, class *ast.BLangCla
 }
 
 // desugarFunction returns a desugared function (may be same or new instance)
-func desugarFunction(pkgCtx *dcontext.PackageContext, fn *ast.BLangFunction) *ast.BLangFunction {
+func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFunction {
 	if fn.Body == nil {
 		return fn
 	}
 
-	cx := &FunctionContext{
+	cx := &functionContext{
 		pkgCtx: pkgCtx,
 	}
 

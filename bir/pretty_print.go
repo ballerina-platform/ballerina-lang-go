@@ -254,6 +254,18 @@ func (p *PrettyPrinter) PrintNewMap(m *NewMap) string {
 			values.WriteString(p.PrintOperand(*entry.ValueOp()))
 		}
 	}
+	defaults := strings.Builder{}
+	for i, def := range m.Defaults {
+		if i > 0 {
+			defaults.WriteString(", ")
+		}
+		defaults.WriteString(def.FieldName)
+		defaults.WriteString("=")
+		defaults.WriteString(def.FunctionLookupKey)
+	}
+	if defaults.Len() > 0 {
+		return fmt.Sprintf("%s = newMap %s{%s} defaults{%s}", p.PrintOperand(*m.LhsOp), p.PrintSemType(m.Type), values.String(), defaults.String())
+	}
 	return fmt.Sprintf("%s = newMap %s{%s}", p.PrintOperand(*m.LhsOp), p.PrintSemType(m.Type), values.String())
 }
 

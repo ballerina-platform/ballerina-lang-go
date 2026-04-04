@@ -36,11 +36,11 @@ func NewObjectDefinition() ObjectDefinition {
 }
 
 // migrated from ObjectDefinition.java:54:5
-func ObjectDefinitionDistinct(distinctId int) SemType {
+func objectDefinitionDistinct(distinctId int) SemType {
 	// migrated from ObjectDefinition.java:55:9
 	common.Assert(distinctId >= 0)
-	bdd := BddAtom(new(CreateDistinctRecAtom(-distinctId - 1)))
-	return basicSubtype(BTObject, bdd)
+	bdd := bddAtom(new(createDistinctRecAtom(-distinctId - 1)))
+	return getBasicSubtype(BTObject, bdd)
 }
 
 // Each object type is represented as mapping type (with its basic type set to object) as fallows
@@ -110,11 +110,11 @@ func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	// migrated from ObjectDefinition.java:99:9
 	bdd := subtypeData(mappingType, BTMapping)
 	// migrated from ObjectDefinition.java:100:9
-	return CreateBasicSemType(BTObject, bdd)
+	return createBasicSemType(BTObject, bdd)
 }
 
 // migrated from ObjectDefinition.java:104:5
-func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) CellSemType {
+func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
 	// migrated from ObjectDefinition.java:105:9
 	fieldDefn := NewMappingDefinition()
 	// migrated from ObjectDefinition.java:106:9
@@ -144,7 +144,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 			visibilityAll,
 		},
 		NEVER)
-	return CellContainingWithEnvSemTypeCellMutability(env, Union(fieldMemberType, methodMemberType), mut)
+	return cellContainingWithEnvSemTypeCellMutability(env, Union(fieldMemberType, methodMemberType), mut)
 }
 
 // migrated from ObjectDefinition.java:128:5
@@ -167,7 +167,7 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 			(&member.Visibility).field(),
 		},
 		NEVER)
-	return CellFieldFrom(member.Name, CellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
+	return cellFieldFrom(member.Name, *cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 
 // migrated from ObjectDefinition.java:143:5

@@ -17,42 +17,47 @@
 package semtypes
 
 type (
-	BddPredicate        func(cx Context, posList *Conjunction, negList *Conjunction) bool
+	BddPredicate        func(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool
 	bddIsEmptyPredicate func(cx Context, b Bdd) bool
 )
 
-func BddEvery(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate BddPredicate) bool {
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+func bddEvery(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
+	saved := cx.conjunctionStackDepth()
+	defer cx.resetConjunctionStack(saved)
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return BddEvery(cx, bn.Left(), new(And(bn.Atom(), pos)), neg, predicate) &&
-			BddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			BddEvery(cx, bn.Right(), pos, new(And(bn.Atom(), neg)), predicate)
+		result := bddEvery(cx, bn.Left(), cx.pushConjunction(bn.Atom(), pos), neg, predicate) &&
+			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
+			bddEvery(cx, bn.Right(), pos, cx.pushConjunction(bn.Atom(), neg), predicate)
+		return result
 	}
 }
 
-func bddEveryPositive(cx Context, b Bdd, pos *Conjunction, neg *Conjunction, predicate BddPredicate) bool {
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
 		bn := b.(BddNode)
-		return bddEveryPositive(cx, bn.Left(), andIfPositive(bn.Atom(), pos), neg, predicate) &&
+		saved := cx.conjunctionStackDepth()
+		result := bddEveryPositive(cx, bn.Left(), andIfPositive(cx, bn.Atom(), pos), neg, predicate) &&
 			bddEveryPositive(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEveryPositive(cx, bn.Right(), pos, andIfPositive(bn.Atom(), neg), predicate)
+			bddEveryPositive(cx, bn.Right(), pos, andIfPositive(cx, bn.Atom(), neg), predicate)
+		cx.resetConjunctionStack(saved)
+		return result
 	}
 }
 
-func andIfPositive(atom Atom, next *Conjunction) *Conjunction {
-	if recAtom, ok := atom.(*RecAtom); ok && recAtom.Index() < 0 {
+func andIfPositive(cx Context, atom Atom, next conjunctionHandle) conjunctionHandle {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() < 0 {
 		return next
 	}
-	tmp := And(atom, next)
-	return &tmp
+	return cx.pushConjunction(atom, next)
 }
 
 func bddPosMaybeEmpty(b Bdd) bool {
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return allOrNothing.IsAll()
 	} else {
 		bn := b.(BddNode)
@@ -61,35 +66,19 @@ func bddPosMaybeEmpty(b Bdd) bool {
 }
 
 func bddSubtypeUnion(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	return BddUnion(t1.(Bdd), t2.(Bdd))
+	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
 func bddSubtypeIntersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	return BddIntersect(t1.(Bdd), t2.(Bdd))
+	return bddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
 func bddSubtypeDiff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	return BddDiff(t1.(Bdd), t2.(Bdd))
+	return bddDiff(t1.(Bdd), t2.(Bdd))
 }
 
 func bddSubtypeComplement(t SubtypeData) SubtypeData {
 	return bddComplement(t.(Bdd))
-}
-
-func shallowCopyTypes(v []SemType) []SemType {
-	return append([]SemType{}, v...)
-}
-
-func shallowCopyStrings(v []string, newLength int) []string {
-	result := make([]string, newLength)
-	copy(result, v)
-	return result
-}
-
-func shallowCopyCellTypes(v []CellSemType, newLength int) []CellSemType {
-	result := make([]CellSemType, newLength)
-	copy(result, v)
-	return result
 }
 
 func notIsEmpty(cx Context, t SubtypeData) bool {
@@ -118,15 +107,15 @@ func codePointCompare(s1 string, s2 string) bool {
 }
 
 func isNothingSubtype(t SubtypeData) bool {
-	if allOrNothing, ok := t.(AllOrNothingSubtype); ok {
+	if allOrNothing, ok := t.(allOrNothingSubtype); ok {
 		return allOrNothing.IsNothingSubtype()
 	}
 	return false
 }
 
-func memoSubtypeIsEmpty(cx Context, memoTable map[string]*BddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
+func memoSubtypeIsEmpty(cx Context, memoTable map[string]*bddMemo, isEmptyPredicate bddIsEmptyPredicate, b Bdd) bool {
 	mm := memoTable[b.canonicalKey()]
-	var m *BddMemo
+	var m *bddMemo
 	if mm != nil {
 		res := mm.isEmpty
 		switch res {
@@ -143,7 +132,7 @@ func memoSubtypeIsEmpty(cx Context, memoTable map[string]*BddMemo, isEmptyPredic
 			panic("Unexpected memo status")
 		}
 	} else {
-		tmp := NewBddMemo()
+		tmp := newBddMemo()
 		m = &tmp
 		memoTable[b.canonicalKey()] = m
 	}
@@ -180,7 +169,7 @@ func memoSubtypeIsEmpty(cx Context, memoTable map[string]*BddMemo, isEmptyPredic
 }
 
 func isAllSubtype(t SubtypeData) bool {
-	if allOrNothing, ok := t.(AllOrNothingSubtype); ok {
+	if allOrNothing, ok := t.(allOrNothingSubtype); ok {
 		return allOrNothing.IsAllSubtype()
 	}
 	return false
