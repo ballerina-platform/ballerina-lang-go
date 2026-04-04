@@ -62,7 +62,6 @@ func (c *PackageCompilation) compile() {
 }
 
 // compileModulesInternal performs the actual compilation of all modules.
-// Java source: PackageCompilation.compileModulesInternal()
 func (c *PackageCompilation) compileModulesInternal() {
 	var allDiagnostics []diagnostics.Diagnostic
 
@@ -80,7 +79,10 @@ func (c *PackageCompilation) compileModulesInternal() {
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
-			resolveTypesAndSymbols(moduleCtx)
+			if moduleCtx.getCompilationState() == moduleCompilationStateLoadedFromSources {
+				resolveTypesAndSymbols(moduleCtx)
+			}
+			// TODO: Handle LOADED_FROM_CACHE state - load symbols from BIR
 		}
 
 		// Phase 2: CFG, semantic analysis, BIR (parallel - no cross-module dependencies)
@@ -89,6 +91,9 @@ func (c *PackageCompilation) compileModulesInternal() {
 		var panicsMu sync.Mutex
 		var panics []any
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			if moduleCtx.getCompilationState() != moduleCompilationStateLoadedFromSources {
+				continue
+			}
 			wg.Add(1)
 			go func(m *moduleContext) {
 				defer wg.Done()

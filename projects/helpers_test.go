@@ -21,10 +21,9 @@ import (
 	"path/filepath"
 
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 )
 
-func loadProject(path string, config ...directory.ProjectLoadConfig) (projects.ProjectLoadResult, error) {
+func loadProject(path string, config ...projects.ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	baseDir := path
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		baseDir = filepath.Dir(path)
@@ -34,5 +33,25 @@ func loadProject(path string, config ...directory.ProjectLoadConfig) (projects.P
 	}
 
 	fsys := os.DirFS(baseDir)
-	return directory.LoadProject(fsys, path, config...)
+
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		return projects.ProjectLoadResult{}, err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	return projects.Load(fsys, ballerinaHomeFs, path, config...)
+}
+
+func getBallerinaHomePath() (string, error) {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }

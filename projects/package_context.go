@@ -17,6 +17,7 @@
 package projects
 
 import (
+	"context"
 	"maps"
 	"slices"
 	"sync"
@@ -35,10 +36,12 @@ type packageContext struct {
 	ballerinaTomlContext *tomlDocumentContext // Ballerina.toml context (nil if not present)
 
 	// Lazy-initialized fields (thread-safe via sync.Once, matching documentContext pattern).
-	packageCompilation *PackageCompilation
-	compilationOnce    sync.Once
-	packageResolution  *PackageResolution
-	resolutionOnce     sync.Once
+	packageCompilation     *PackageCompilation
+	compilationOnce        sync.Once
+	packageResolution      *PackageResolution
+	resolutionOnce         sync.Once
+	modDependencyGraph     *DependencyGraph[ModuleDescriptor]
+	modDependencyGraphOnce sync.Once
 }
 
 // newPackageContext creates a packageContext from PackageConfig.
@@ -207,7 +210,8 @@ func (p *packageContext) getPackageCompilation() *PackageCompilation {
 // Uses sync.Once for thread-safe lazy initialization.
 func (p *packageContext) getResolution() *PackageResolution {
 	p.resolutionOnce.Do(func() {
-		p.packageResolution = newPackageResolution(p)
+		env := p.project.Environment()
+		p.packageResolution = newPackageResolution(p, env)
 	})
 	return p.packageResolution
 }
@@ -221,6 +225,64 @@ func (p *packageContext) containsModule(moduleID ModuleID) bool {
 // getBallerinaTomlContext returns the Ballerina.toml context, or nil if not present.
 func (p *packageContext) getBallerinaTomlContext() *tomlDocumentContext {
 	return p.ballerinaTomlContext
+}
+
+// moduleDependencyGraph returns the module dependency graph for this package.
+// The graph contains only modules within this package (not external dependencies).
+// For source packages, it analyzes imports. For bala packages, it returns a simple
+// graph with just nodes (no import analysis needed since they're pre-compiled).
+func (p *packageContext) moduleDependencyGraph() *DependencyGraph[ModuleDescriptor] {
+	p.modDependencyGraphOnce.Do(func() {
+		p.modDependencyGraph = p.buildModuleDependencyGraph()
+	})
+	return p.modDependencyGraph
+}
+
+// buildModuleDependencyGraph constructs a dependency graph for modules within this package.
+func (p *packageContext) buildModuleDependencyGraph() *DependencyGraph[ModuleDescriptor] {
+	builder := newDependencyGraphBuilder[ModuleDescriptor]()
+
+	// Add all modules as nodes
+	for _, modID := range p.moduleIDs {
+		modCtx := p.moduleContextMap[modID]
+		if modCtx != nil {
+			builder.addNode(modCtx.getDescriptor())
+		}
+	}
+
+	// For source packages, analyze imports to find intra-package dependencies
+	if p.project.Kind() != ProjectKindBala {
+		env := p.project.Environment()
+		moduleResolver := newModuleResolver(p.getDescriptor(), env)
+
+		for _, modID := range p.moduleIDs {
+			modCtx := p.moduleContextMap[modID]
+			if modCtx == nil {
+				continue
+			}
+
+			fromDesc := modCtx.getDescriptor()
+
+			// Get all module load requests for this module
+			requests := modCtx.populateModuleLoadRequests()
+			requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
+
+			// Resolve requests and add edges for same-package dependencies
+			responses := moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
+			for _, resp := range responses {
+				if resp.resolutionStatus == resolutionStatusResolved {
+					toDesc := resp.moduleDesc
+					// Only add edge if it's a different module within the same package
+					// (packageDescriptor is nil for same-package modules)
+					if !fromDesc.Equals(toDesc) && resp.packageDescriptor == nil {
+						builder.addDependency(fromDesc, toDesc)
+					}
+				}
+			}
+		}
+	}
+
+	return builder.build()
 }
 
 // duplicate creates a copy of the context.

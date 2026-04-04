@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "org": "ballerina",
+      "name": "http",
+      "version": "2.10.0",
+      "transitive": false,
+      "dependencies": [],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

@@ -16,6 +16,8 @@
 
 package projects
 
+import "context"
+
 // PackageResolution holds the result of package dependency resolution.
 // It builds a topologically sorted list of modules within the root package,
 // respecting inter-module dependencies discovered from import statements.
@@ -23,21 +25,28 @@ type PackageResolution struct {
 	rootPackageContext            *packageContext
 	moduleResolver                *moduleResolver
 	moduleDependencyGraph         *DependencyGraph[ModuleDescriptor]
+	packageDependencyGraph        *DependencyGraph[PackageDescriptor]
 	topologicallySortedModuleList []*moduleContext
+	resolvedDependencies          map[string]*PackageDescriptor // org/name -> PackageDescriptor
 	diagnosticResult              DiagnosticResult
+	environment                   *Environment
 }
 
-func newPackageResolution(pkgCtx *packageContext) *PackageResolution {
+func newPackageResolution(pkgCtx *packageContext, env *Environment) *PackageResolution {
 	r := &PackageResolution{
-		rootPackageContext: pkgCtx,
+		rootPackageContext:   pkgCtx,
+		resolvedDependencies: make(map[string]*PackageDescriptor),
+		environment:          env,
 	}
 
-	// Create module resolver with all module descriptors
-	moduleDescs := r.collectModuleDescriptors()
-	r.moduleResolver = newModuleResolver(pkgCtx.getDescriptor(), moduleDescs)
+	// Create module resolver using the environment's PackageResolver
+	r.moduleResolver = newModuleResolver(pkgCtx.getDescriptor(), env)
 
 	// Build dependency graph from imports
 	r.buildModuleDependencyGraph()
+
+	// Build package dependency graph
+	r.buildPackageDependencyGraph()
 
 	// Resolve dependencies (topological sort)
 	r.resolveDependencies()
@@ -82,9 +91,9 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
 
 		// Resolve requests and add edges
-		responses := r.moduleResolver.resolveModuleLoadRequests(requests)
+		responses := r.moduleResolver.resolveModuleLoadRequests(context.Background(), requests)
 		for _, resp := range responses {
-			if resp.resolved {
+			if resp.resolutionStatus == resolutionStatusResolved {
 				toDesc := resp.moduleDesc
 				// Only add edge if the dependency is a different module
 				if !fromDesc.Equals(toDesc) {
@@ -97,35 +106,172 @@ func (r *PackageResolution) buildModuleDependencyGraph() {
 	r.moduleDependencyGraph = builder.build()
 }
 
+func (r *PackageResolution) buildPackageDependencyGraph() {
+	builder := newDependencyGraphBuilder[PackageDescriptor]()
+	ctx := context.Background()
+
+	// Add root package as a node
+	rootDesc := r.rootPackageContext.getDescriptor()
+	builder.addNode(rootDesc)
+
+	// Visited set keyed by org/name (first-seen wins for version conflicts)
+	visited := make(map[string]bool)
+	rootKey := rootDesc.Org().Value() + "/" + rootDesc.Name().Value()
+	visited[rootKey] = true
+
+	// Collect direct dependencies from root package's module imports
+	var directDeps []*PackageDescriptor
+	for _, modID := range r.rootPackageContext.moduleIDs {
+		modCtx := r.rootPackageContext.moduleContextMap[modID]
+		if modCtx == nil {
+			continue
+		}
+
+		requests := modCtx.populateModuleLoadRequests()
+		requests = append(requests, modCtx.populateTestModuleLoadRequests()...)
+
+		responses := r.moduleResolver.resolveModuleLoadRequests(ctx, requests)
+		for _, resp := range responses {
+			if resp.resolutionStatus == resolutionStatusResolved && resp.packageDescriptor != nil {
+				pkgDesc := resp.packageDescriptor
+				key := pkgDesc.Org().Value() + "/" + pkgDesc.Name().Value()
+
+				if !visited[key] {
+					visited[key] = true
+					r.resolvedDependencies[key] = pkgDesc
+					builder.addNode(*pkgDesc)
+					builder.addDependency(rootDesc, *pkgDesc)
+					directDeps = append(directDeps, pkgDesc)
+				}
+			}
+		}
+	}
+
+	// BFS for transitive dependencies
+	r.resolveTransitiveDependencies(ctx, builder, directDeps, visited)
+
+	r.packageDependencyGraph = builder.build()
+}
+
+// resolveTransitiveDependencies uses BFS to resolve transitive dependencies.
+// Uses first-seen wins for version conflict resolution.
+func (r *PackageResolution) resolveTransitiveDependencies(
+	ctx context.Context,
+	builder *dependencyGraphBuilder[PackageDescriptor],
+	directDeps []*PackageDescriptor,
+	visited map[string]bool,
+) {
+	// BFS queue of package descriptors to process
+	queue := make([]PackageDescriptor, 0, len(directDeps))
+	for _, dep := range directDeps {
+		queue = append(queue, *dep)
+	}
+
+	resolver := r.environment.PackageResolver()
+	options := r.environment.ResolutionOptions()
+
+	for len(queue) > 0 {
+		// Dequeue
+		current := queue[0]
+		queue = queue[1:]
+
+		// Load the package to get its manifest dependencies
+		request := NewResolutionRequest(current)
+		responses := resolver.ResolvePackages(ctx, []ResolutionRequest{request}, options)
+		if len(responses) == 0 || !responses[0].IsResolved() {
+			continue
+		}
+
+		pkg := responses[0].Package()
+		if pkg == nil {
+			continue
+		}
+
+		// Get transitive dependencies from the package's manifest
+		for _, dep := range pkg.Manifest().Dependencies() {
+			key := dep.Org().Value() + "/" + dep.Name().Value()
+
+			// Skip if already visited (first-seen wins)
+			if visited[key] {
+				continue
+			}
+			visited[key] = true
+
+			depDesc := NewPackageDescriptor(dep.Org(), dep.Name(), dep.Version())
+
+			// Track resolved dependency
+			r.resolvedDependencies[key] = &depDesc
+
+			// Add to graph
+			builder.addNode(depDesc)
+			builder.addDependency(current, depDesc)
+
+			// Enqueue for further traversal
+			queue = append(queue, depDesc)
+		}
+	}
+}
+
+// ResolvedDependencies returns the map of resolved external package dependencies.
+func (r *PackageResolution) ResolvedDependencies() map[string]*PackageDescriptor {
+	return r.resolvedDependencies
+}
+
+// DependencyGraph returns the package-level dependency graph.
+func (r *PackageResolution) DependencyGraph() *DependencyGraph[PackageDescriptor] {
+	return r.packageDependencyGraph
+}
+
+// ModuleDependencyGraph returns the module-level dependency graph.
+func (r *PackageResolution) ModuleDependencyGraph() *DependencyGraph[ModuleDescriptor] {
+	return r.moduleDependencyGraph
+}
+
 func (r *PackageResolution) resolveDependencies() {
-	pkgCtx := r.rootPackageContext
+	var sortedModuleList []*moduleContext
 
-	// Use the module dependency graph for topological sort
-	sortedDescs := r.moduleDependencyGraph.ToTopologicallySortedList()
+	// Sort packages topologically (dependencies before dependents)
+	sortedPackages := r.packageDependencyGraph.ToTopologicallySortedList()
 
-	// Map descriptors to contexts for lookup
-	descToCtx := make(map[ModuleDescriptor]*moduleContext, len(pkgCtx.moduleIDs))
-	for _, modID := range pkgCtx.moduleIDs {
-		modCtx := pkgCtx.moduleContextMap[modID]
-		if modCtx != nil {
-			descToCtx[modCtx.getDescriptor()] = modCtx
+	packageCache := r.environment.PackageCache()
+
+	// For each package in topological order, add its modules (sorted within the package)
+	for _, pkgDesc := range sortedPackages {
+		var pkgCtx *packageContext
+
+		// Check if this is the root package
+		if pkgDesc.Equals(r.rootPackageContext.getDescriptor()) {
+			pkgCtx = r.rootPackageContext
+		} else {
+			// Get external package from cache
+			cachedPkg := packageCache.Get(pkgDesc.Org().Value(), pkgDesc.Name().Value(), pkgDesc.Version().String())
+			if cachedPkg == nil {
+				continue
+			}
+			pkgCtx = cachedPkg.packageCtx
+		}
+
+		// Get module dependency graph for this package
+		moduleDependencyGraph := pkgCtx.moduleDependencyGraph()
+
+		// Topologically sort modules within this package
+		sortedModuleDescs := moduleDependencyGraph.ToTopologicallySortedList()
+
+		// Add module contexts in sorted order
+		for _, modDesc := range sortedModuleDescs {
+			modCtx := pkgCtx.getModuleContextByName(modDesc.Name())
+			if modCtx != nil {
+				sortedModuleList = append(sortedModuleList, modCtx)
+			}
 		}
 	}
 
-	// Build sorted module list from sorted descriptors
-	sorted := make([]*moduleContext, 0, len(sortedDescs))
-	for _, desc := range sortedDescs {
-		if modCtx, ok := descToCtx[desc]; ok {
-			sorted = append(sorted, modCtx)
-		}
-	}
-
-	// Check for cycles
+	// Check for cycles in root package's module graph
 	cycles := r.moduleDependencyGraph.FindCycles()
 	// TODO(P7): Create proper cycle diagnostics with DiagnosticCode
 	_ = cycles
 
-	r.topologicallySortedModuleList = sorted
+	r.topologicallySortedModuleList = sortedModuleList
 	r.diagnosticResult = NewDiagnosticResult(nil)
 }
 
