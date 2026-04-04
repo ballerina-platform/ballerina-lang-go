@@ -1,8 +1,14 @@
 (package
-  (const c1 () (
-    (literal 43)))
-  (const c2 () (
-    (literal 44)))
+  (const c1 () ())
+  (const c2 () ())
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref c1)
+        (literal 43))
+      (assignment
+        (simple-var-ref c2)
+        (literal 44))))
   (function main () (
     (value-type null))
     (block-function-body

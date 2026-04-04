@@ -302,6 +302,10 @@ func (sa *SemanticAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case *ast.BLangConstant:
 		return createConstantAnalyzer(sa, n)
+	case *ast.BLangSimpleVariable:
+		// Module-level variables don't need constant-expression validation.
+		// Type checking is handled by the type resolver.
+		return nil
 	case *ast.BLangReturn:
 		// Error: return only valid in functions
 		sa.semanticErr("return statement outside function", n.GetPosition())
@@ -343,6 +347,22 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 	return len(importNode.PkgNameComps) == 2 && importNode.PkgNameComps[0].GetValue() == "lang" && importNode.PkgNameComps[1].GetValue() == name
 }
 
+func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
+	if function.FlagSet.Contains(model.Flag_PUBLIC) {
+		parent.semanticErr("'init' function cannot be declared as public", pos)
+	}
+
+	expectedReturnType := semtypes.Union(semtypes.ERROR, semtypes.NIL)
+	actualReturnType := fnSymbol.Signature().ReturnType
+	if actualReturnType != nil && !semtypes.IsSubtype(parent.tyCtx(), actualReturnType, expectedReturnType) {
+		parent.semanticErr("'init' function must have return type 'error?'", pos)
+	}
+
+	if len(function.RequiredParams) > 0 || function.RestParam != nil {
+		parent.semanticErr("'init' function cannot have parameters", pos)
+	}
+}
+
 func validateMainFunction(parent analyzer, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
 	// Check 1: Must be public
 	if !fnSymbol.IsPublic() {
@@ -364,6 +384,13 @@ func initializeFunctionAnalyzer(parent analyzer, function *ast.BLangFunction) *f
 	if function.Name.Value == "main" {
 		fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 		validateMainFunction(parent, fnSymbol, function.GetPosition())
+	}
+	if function.Name.Value == "init" {
+		// this is to seperate class init from module init
+		if _, isTopLevel := parent.(*SemanticAnalyzer); isTopLevel {
+			fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
+			validateInitFunction(parent, function, fnSymbol, function.GetPosition())
+		}
 	}
 
 	return fa

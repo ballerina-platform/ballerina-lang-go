@@ -190,6 +190,18 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition())
 	}
+	for _, globalVar := range pkg.GlobalVars {
+		name := globalVar.Name.Value
+		isPublic := globalVar.FlagSet.Contains(model.Flag_PUBLIC)
+		isFinal := globalVar.FlagSet.Contains(model.Flag_FINAL)
+		symbol := model.NewValueSymbol(name, isPublic, isFinal, false)
+		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
+	}
+	if pkg.InitFunction != nil {
+		signature := model.FunctionSignature{}
+		symbol := model.NewFunctionSymbol("init", signature, false)
+		addTopLevelSymbol(moduleResolver, "init", symbol, pkg.InitFunction.Name.GetPosition())
+	}
 	for i := range pkg.TypeDefinitions {
 		typeDef := &pkg.TypeDefinitions[i]
 		name := typeDef.Name.Value
@@ -657,6 +669,14 @@ func (ms *moduleSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 		}
 		n.SetSymbol(symRef)
 		// TODO: create a local scope and resolve the body?
+		return ms
+	case *ast.BLangSimpleVariable:
+		name := n.Name.Value
+		symRef, _, ok := ms.GetSymbol(name)
+		if !ok {
+			internalError(ms, "Module level variable symbol not found: "+name, n.Name.GetPosition())
+		}
+		n.SetSymbol(symRef)
 		return ms
 	case *ast.BLangTypeDefinition:
 		name := n.Name.Value

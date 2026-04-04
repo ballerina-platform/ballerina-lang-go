@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: redeclared symbol 'init'
+  --> main.bal:21:10
+   |
+21 | function init() {
+   |          ^^^^
+
+error[SEMANTIC_ERROR]: redeclared symbol 'init'
+  --> other.bal:19:10
+   |
+19 | function init() {
+   |          ^^^^

@@ -31,6 +31,7 @@ func AnalyzeCFG(ctx *context.CompilerContext, pkg *ast.BLangPackage, cfg *Packag
 	wg.Go(func() { analyzeExplicitReturn(ctx, pkg, cfg) })
 	wg.Go(func() { analyzeUninitializedVars(ctx, pkg, cfg) })
 	wg.Go(func() { analyzeUninitializedFields(ctx, pkg, cfg) })
+	wg.Go(func() { analyzeUninitializedGlobalVars(ctx, pkg, cfg) })
 	wg.Wait()
 }
 
