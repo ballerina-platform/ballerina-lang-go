@@ -138,7 +138,42 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewTypeSymbol(name, isPublic)
 	sym.SetType(ty)
+	for _, fd := range sr.readFieldDefaults(space) {
+		sym.AddFieldDefault(fd)
+	}
 	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) readFieldDefaults(space *model.SymbolSpace) []model.FieldDefault {
+	var count int64
+	read(sr.r, &count)
+	defaults := make([]model.FieldDefault, count)
+	for i := int64(0); i < count; i++ {
+		defaults[i] = model.FieldDefault{
+			FieldName: sr.readStringCP(),
+			FnRef:     sr.readSymbolRef(space),
+		}
+	}
+	return defaults
+}
+
+func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
+	org := sr.readStringCP()
+	pkg := sr.readStringCP()
+	version := sr.readStringCP()
+	var index, spaceIndex int32
+	read(sr.r, &index)
+	read(sr.r, &spaceIndex)
+	_ = spaceIndex // use the current space's index instead of the serialized one
+	return model.SymbolRef{
+		Package: model.PackageIdentifier{
+			Organization: org,
+			Package:      pkg,
+			Version:      version,
+		},
+		Index:      int(index),
+		SpaceIndex: space.SpaceIndex(),
+	}
 }
 
 func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
