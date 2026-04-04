@@ -5,3 +5,7 @@ error[SEMANTIC_ERROR]: unmatchable match clause
    |
 27 |         "any" => { // @error
    |         ^^^^^^^^^^^^^^^^^^^^
+28 |             io:println("any");
+   |             ^^^^^^^^^^^^^^^^^^
+29 |         }
+   |         ^

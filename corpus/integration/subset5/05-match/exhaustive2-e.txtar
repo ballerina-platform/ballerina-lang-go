@@ -5,9 +5,17 @@ error[SEMANTIC_ERROR]: unmatchable match clause
    |
 27 |         2 => { // @error
    |         ^^^^^^^^^^^^^^^^
+28 |             io:println("2");
+   |             ^^^^^^^^^^^^^^^^
+29 |         }
+   |         ^
 
 error[SEMANTIC_ERROR]: unreachable match clause
   --> exhaustive2-e.bal:27:9
    |
 27 |         2 => { // @error
    |         ^^^^^^^^^^^^^^^^
+28 |             io:println("2");
+   |             ^^^^^^^^^^^^^^^^
+29 |         }
+   |         ^

@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: included method 'getX' must be overridden in class defini
    |
 22 | class Bar { // @error
    | ^^^^^^^^^^^^^^^^^^^^^
+23 |     *Foo;
+   |     ^^^^^
+24 |     function init() {}
+   |     ^^^^^^^^^^^^^^^^^^
+25 | }
+   | ^
