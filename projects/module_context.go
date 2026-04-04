@@ -411,8 +411,18 @@ func buildBLangPackage(cx *context.CompilerContext, syntaxTrees []*tree.SyntaxTr
 				pkg.Constants = append(pkg.Constants, *n)
 			case *ast.BLangService:
 				pkg.Services = append(pkg.Services, *n)
+			case *ast.BLangSimpleVariable:
+				pkg.GlobalVars = append(pkg.GlobalVars, *n)
 			case *ast.BLangFunction:
-				pkg.Functions = append(pkg.Functions, *n)
+				if n.Name.Value == "init" {
+					if pkg.InitFunction != nil {
+						cx.SemanticError("redeclared symbol 'init'", n.Name.GetPosition())
+					} else {
+						pkg.InitFunction = n
+					}
+				} else {
+					pkg.Functions = append(pkg.Functions, *n)
+				}
 			case *ast.BLangTypeDefinition:
 				pkg.TypeDefinitions = append(pkg.TypeDefinitions, *n)
 			case *ast.BLangAnnotation:

@@ -1,0 +1,19 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: variable 'b' is not initialized
+  --> simple-no-init-e.bal:21:9
+   |
+21 | boolean b; // @error
+   |         ^
+
+error[SEMANTIC_ERROR]: variable 's' is not initialized
+  --> simple-no-init-e.bal:20:8
+   |
+20 | string s; // @error
+   |        ^
+
+error[SEMANTIC_ERROR]: variable 'x' is not initialized
+  --> simple-no-init-e.bal:19:5
+   |
+19 | int x; // @error
+   |     ^

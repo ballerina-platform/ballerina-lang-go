@@ -251,11 +251,17 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	for i := range node.Constants {
 		p.printConstant(&node.Constants[i])
 	}
+	for i := range node.GlobalVars {
+		p.printSimpleVariable(&node.GlobalVars[i])
+	}
 	for i := range node.TypeDefinitions {
 		p.printTypeDefinition(&node.TypeDefinitions[i])
 	}
 	for i := range node.ClassDefinitions {
 		p.printClassDefinition(&node.ClassDefinitions[i])
+	}
+	if node.InitFunction != nil {
+		p.printFunction(node.InitFunction)
 	}
 	for i := range node.Functions {
 		p.printFunction(&node.Functions[i])

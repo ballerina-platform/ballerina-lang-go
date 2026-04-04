@@ -1,0 +1,11 @@
+-- stdout --
+10
+initialized
+3
+hello
+true
+[2,3,5,7,11]
+{"min":0,"max":100}
+[1,3,5]
+[3,6,9,12,15,18]
+-- stderr --
