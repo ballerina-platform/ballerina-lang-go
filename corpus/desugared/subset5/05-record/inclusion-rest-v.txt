@@ -9,7 +9,9 @@
   (type-definition Derived
     (record-type
       (field y
-        (value-type string))))
+        (value-type string))
+      (field x
+        (value-type int))))
   (function main () (
     (value-type null))
     (block-function-body

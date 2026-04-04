@@ -17,6 +17,7 @@
 package model
 
 import (
+	"iter"
 	"sync"
 
 	"ballerina-lang-go/semtypes"
@@ -123,7 +124,7 @@ type (
 		mu          sync.RWMutex
 		Pkg         PackageIdentifier
 		lookupTable map[string]int
-		Symbols     []Symbol
+		symbols     []Symbol
 		index       int
 	}
 
@@ -135,10 +136,18 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
+		// PR-TODO: Field member inclusion should have the fieldDefault
+		inclusionMembers []InclusionMember
+		fieldDefaults    []FieldDefault
 	}
 
 	ClassSymbol struct {
 		TypeSymbol
+	}
+
+	FieldDefault struct {
+		FieldName string
+		FnRef     SymbolRef
 	}
 
 	ValueSymbol struct {
@@ -166,6 +175,89 @@ type (
 	}
 )
 
+type InclusionMemberKind uint8
+
+const (
+	InclusionMemberKindField InclusionMemberKind = iota
+	InclusionMemberKindMethod
+	InclusionMemberKindRemoteMethod
+	InclusionMemberKindResourceMethod
+	InclusionMemberKindRestType
+)
+
+type InclusionMember interface {
+	MemberName() string
+	MemberKind() InclusionMemberKind
+	MemberType() semtypes.SemType
+	SetMemberType(semtypes.SemType)
+}
+
+type FieldDescriptorFlag uint8
+
+const (
+	FieldDescriptorReadonly FieldDescriptorFlag = 1 << iota
+	FieldDescriptorOptional
+	FieldDescriptorHasDefault
+)
+
+type FieldDescriptor struct {
+	name         string
+	ty           semtypes.SemType
+	flags        FieldDescriptorFlag
+	DefaultFnRef SymbolRef
+	visibility   Visibility
+}
+
+func NewFieldDescriptor(name string, flags FieldDescriptorFlag, visibility Visibility) FieldDescriptor {
+	return FieldDescriptor{name: name, flags: flags, visibility: visibility}
+}
+
+func (f *FieldDescriptor) MemberName() string                { return f.name }
+func (f *FieldDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindField }
+func (f *FieldDescriptor) MemberType() semtypes.SemType      { return f.ty }
+func (f *FieldDescriptor) SetMemberType(ty semtypes.SemType) { f.ty = ty }
+func (f *FieldDescriptor) Visibility() Visibility            { return f.visibility }
+func (f *FieldDescriptor) IsReadonly() bool                  { return f.flags&FieldDescriptorReadonly != 0 }
+func (f *FieldDescriptor) IsOptional() bool                  { return f.flags&FieldDescriptorOptional != 0 }
+func (f *FieldDescriptor) HasDefault() bool                  { return f.flags&FieldDescriptorHasDefault != 0 }
+
+type MethodDescriptor struct {
+	name       string
+	kind       InclusionMemberKind
+	ty         semtypes.SemType
+	MethodRef  SymbolRef
+	visibility Visibility
+}
+
+func NewMethodDescriptor(name string, kind InclusionMemberKind, visibility Visibility, methodRef SymbolRef) MethodDescriptor {
+	return MethodDescriptor{name: name, kind: kind, visibility: visibility, MethodRef: methodRef}
+}
+
+func (m *MethodDescriptor) MemberName() string                { return m.name }
+func (m *MethodDescriptor) MemberKind() InclusionMemberKind   { return m.kind }
+func (m *MethodDescriptor) MemberType() semtypes.SemType      { return m.ty }
+func (m *MethodDescriptor) SetMemberType(ty semtypes.SemType) { m.ty = ty }
+func (m *MethodDescriptor) Visibility() Visibility            { return m.visibility }
+
+type RestTypeDescriptor struct {
+	ty semtypes.SemType
+}
+
+func NewRestTypeDescriptor() RestTypeDescriptor {
+	return RestTypeDescriptor{}
+}
+
+func (r *RestTypeDescriptor) MemberName() string                { panic("RestTypeDescriptor has no name") }
+func (r *RestTypeDescriptor) MemberKind() InclusionMemberKind   { return InclusionMemberKindRestType }
+func (r *RestTypeDescriptor) MemberType() semtypes.SemType      { return r.ty }
+func (r *RestTypeDescriptor) SetMemberType(ty semtypes.SemType) { r.ty = ty }
+
+var (
+	_ InclusionMember = &FieldDescriptor{}
+	_ InclusionMember = &MethodDescriptor{}
+	_ InclusionMember = &RestTypeDescriptor{}
+)
+
 var (
 	_ Scope                 = &ModuleScope{}
 	_ Scope                 = &FunctionScope{}
@@ -185,8 +277,8 @@ func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
 		panic("SymbolRef cannot be added to a SymbolSpace")
 	}
 	space.mu.Lock()
-	space.lookupTable[name] = len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	space.lookupTable[name] = len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	space.mu.Unlock()
 }
 
@@ -205,8 +297,8 @@ func (space *SymbolSpace) AppendSymbol(symbol Symbol) int {
 	// We really need this lock only for module level symbols but we don't distinguish between module level space and other spaces
 	space.mu.Lock()
 	defer space.mu.Unlock()
-	index := len(space.Symbols)
-	space.Symbols = append(space.Symbols, symbol)
+	index := len(space.symbols)
+	space.symbols = append(space.symbols, symbol)
 	return index
 }
 
@@ -216,10 +308,35 @@ func (space *SymbolSpace) RefAt(index int) SymbolRef {
 }
 
 // SymbolAt returns the symbol at the given index. Thread-safe.
+func (space *SymbolSpace) SpaceIndex() int {
+	return space.index
+}
+
 func (space *SymbolSpace) SymbolAt(index int) Symbol {
 	space.mu.RLock()
 	defer space.mu.RUnlock()
-	return space.Symbols[index]
+	return space.symbols[index]
+}
+
+func (space *SymbolSpace) Len() int {
+	space.mu.RLock()
+	defer space.mu.RUnlock()
+	return len(space.symbols)
+}
+
+// Symbols returns an iterator over the symbols in the space. This is for
+// reading only — callers must not modify the yielded symbols or add new symbols
+// to the space during iteration.
+func (space *SymbolSpace) Symbols() iter.Seq2[int, Symbol] {
+	return func(yield func(int, Symbol) bool) {
+		space.mu.RLock()
+		defer space.mu.RUnlock()
+		for i, sym := range space.symbols {
+			if !yield(i, sym) {
+				return
+			}
+		}
+	}
 }
 
 func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
@@ -228,7 +345,7 @@ func NewSymbolSpaceInner(packageID PackageID, index int) *SymbolSpace {
 		Package:      packageID.PkgName.Value(),
 		Version:      packageID.Version.Value(),
 	}
-	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), Symbols: make([]Symbol, 0)}
+	return &SymbolSpace{index: index, Pkg: pkg, lookupTable: make(map[string]int), symbols: make([]Symbol, 0)}
 }
 
 func (ms *ModuleScope) Exports() ExportedSymbolSpace {
@@ -278,6 +395,19 @@ func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
 
 func NewExportedSymbolSpace(main, annotation *SymbolSpace) ExportedSymbolSpace {
 	return ExportedSymbolSpace{Main: main, Annotation: annotation}
+}
+
+func (space *ExportedSymbolSpace) PublicMainSymbols() iter.Seq2[SymbolRef, Symbol] {
+	return func(yield func(SymbolRef, Symbol) bool) {
+		for i, sym := range space.Main.Symbols() {
+			if !sym.IsPublic() {
+				continue
+			}
+			if !yield(space.Main.RefAt(i), sym) {
+				return
+			}
+		}
+	}
 }
 
 func (space *ExportedSymbolSpace) GetSymbol(name string) (SymbolRef, bool) {
@@ -360,6 +490,16 @@ func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
 }
 
+func (ts *TypeSymbol) InclusionMembers() []InclusionMember { return ts.inclusionMembers }
+func (ts *TypeSymbol) AddInclusionMember(m InclusionMember) {
+	ts.inclusionMembers = append(ts.inclusionMembers, m)
+}
+
+func (ts *TypeSymbol) FieldDefaults() []FieldDefault { return ts.fieldDefaults }
+func (ts *TypeSymbol) AddFieldDefault(fd FieldDefault) {
+	ts.fieldDefaults = append(ts.fieldDefaults, fd)
+}
+
 func (vs *ValueSymbol) Kind() SymbolKind {
 	if vs.isConst {
 		return SymbolKindConstant
@@ -368,6 +508,10 @@ func (vs *ValueSymbol) Kind() SymbolKind {
 		return SymbolKindParemeter
 	}
 	return SymbolKindVariable
+}
+
+func (vs *ValueSymbol) IsConst() bool {
+	return vs.isConst || vs.isParameter
 }
 
 func (vs *ValueSymbol) Copy() Symbol {

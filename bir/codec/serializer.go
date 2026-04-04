@@ -303,6 +303,11 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 				bw.writeOperand(buf, kvEntry.ValueOp())
 			}
 		}
+		bw.writeLength(buf, len(instr.Defaults))
+		for _, def := range instr.Defaults {
+			bw.writeStringCPEntry(buf, def.FieldName)
+			bw.writeStringCPEntry(buf, def.FunctionLookupKey)
+		}
 	case *bir.NewError:
 		bw.writeType(buf, instr.Type)
 		bw.writeOperand(buf, instr.LhsOp)

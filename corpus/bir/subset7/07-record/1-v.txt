@@ -1,0 +1,32 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = newMap {| value: int, never... |}{} defaults{value=$anon/.:$desugar$0}
+    f = %1;
+    %4 = ConstantLoad value
+    %3 = f[%4];
+    %5 = %3;
+    %6 = println(%5) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad value
+    %8 = ConstantLoad 10
+    %9 = newMap {| value: int, never... |}{%7=%8} defaults{value=$anon/.:$desugar$0}
+    f2 = %9;
+    %12 = ConstantLoad value
+    %11 = f2[%12];
+    %13 = %11;
+    %14 = println(%13) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+$desugar$0() -> int{
+  bb0 {
+    %1 = ConstantLoad 5
+    %0 = %1;
+    return;
+  }
+}

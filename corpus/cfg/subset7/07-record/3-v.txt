@@ -1,0 +1,15 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (record-type
+          (field value
+            (value-type int)
+            (literal 5)))) (expr
+        (mapping-constructor-expr))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access value
+          (simple-var-ref f)))))
+  )
+)

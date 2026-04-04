@@ -234,10 +234,33 @@ func walkOnFailClause(cx *FunctionContext, clause *ast.BLangOnFailClause) desuga
 func walkSimpleVariableDef(cx *FunctionContext, stmt *ast.BLangSimpleVariableDef) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
-	if stmt.Var != nil && stmt.Var.Expr != nil {
-		result := walkExpression(cx, stmt.Var.Expr.(ast.BLangExpression))
-		initStmts = append(initStmts, result.initStmts...)
-		stmt.Var.Expr = result.replacementNode.(ast.BLangExpression)
+	if stmt.Var != nil {
+		if typeNode := stmt.Var.TypeNode(); typeNode != nil {
+			result := desugarTypeDesc(cx, typeNode, stmt.Var.Symbol(), cx.currentScope())
+			for _, rf := range result.recordFields {
+				rf.fn = desugarFunction(cx.pkgCtx, rf.fn)
+				fnType := cx.symbolType(rf.symRef)
+				lambda := &ast.BLangLambdaFunction{Function: rf.fn}
+				lambda.SetDeterminedType(fnType)
+				setPositionIfMissing(lambda, rf.fn.GetPosition())
+
+				varName, varSymRef := cx.addDesugardSymbol(fnType, model.SymbolKindVariable, false)
+				varIdent := &ast.BLangIdentifier{Value: varName}
+				varIdent.SetDeterminedType(semtypes.NEVER)
+				simpleVar := &ast.BLangSimpleVariable{Name: varIdent}
+				simpleVar.Expr = lambda
+				simpleVar.SetDeterminedType(fnType)
+				simpleVar.SetSymbol(varSymRef)
+				varDef := &ast.BLangSimpleVariableDef{Var: simpleVar}
+				setPositionIfMissing(varDef, rf.fn.GetPosition())
+				initStmts = append(initStmts, varDef)
+			}
+		}
+		if stmt.Var.Expr != nil {
+			result := walkExpression(cx, stmt.Var.Expr.(ast.BLangExpression))
+			initStmts = append(initStmts, result.initStmts...)
+			stmt.Var.Expr = result.replacementNode.(ast.BLangExpression)
+		}
 	}
 
 	return desugaredNode[model.StatementNode]{

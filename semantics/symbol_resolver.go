@@ -209,6 +209,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		cx.SetTypeDefinition(symRef, classDef)
 	}
 	ast.Walk(moduleResolver, pkg)
+	pkg.Scope = moduleResolver.scope
 	return moduleResolver.scope.Exports()
 }
 

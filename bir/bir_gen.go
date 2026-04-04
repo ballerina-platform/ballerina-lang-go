@@ -823,7 +823,14 @@ func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *
 			ctx.birCx.CompilerContext.Unimplemented("non-key-value record field not implemented", expr.GetPosition())
 		}
 	}
-	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, expr.GetPosition())
+	var defaults []MappingConstructorDefaultEntry
+	for _, fd := range expr.FieldDefaults {
+		defaults = append(defaults, MappingConstructorDefaultEntry{
+			FieldName:         fd.FieldName,
+			FunctionLookupKey: buildFunctionLookupKeyFromSymbol(ctx.birCx, fd.FnRef),
+		})
+	}
+	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, defaults, expr.GetPosition())
 }
 
 func mappingKeyName(key *ast.BLangMappingKey) string {
@@ -837,7 +844,7 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 	}
 }
 
-func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, pos ast.Location) expressionEffect {
+func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, defaults []MappingConstructorDefaultEntry, pos ast.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
 		keyOperand := ctx.addTempVar(semtypes.STRING)
@@ -852,7 +859,7 @@ func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, m
 		})
 	}
 	resultOperand := ctx.addTempVar(mapType)
-	newMap := NewMapConstructor(mapType, resultOperand, entries, pos)
+	newMap := NewMapConstructor(mapType, resultOperand, entries, defaults, pos)
 	curBB.Instructions = append(curBB.Instructions, newMap)
 	return expressionEffect{
 		result: resultOperand,
@@ -880,7 +887,7 @@ func errorConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *as
 		for _, namedArg := range expr.NamedArgs {
 			fields = append(fields, mappingField{key: namedArg.Name.Value, value: namedArg.Expr})
 		}
-		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, expr.GetPosition())
+		detailEffect := mappingConstructorExpressionInner(ctx, curBB, semtypes.MAPPING, fields, nil, expr.GetPosition())
 		curBB = detailEffect.block
 		detailOp = detailEffect.result
 	}

@@ -108,14 +108,14 @@ func (sw *symbolWriter) writeSymbolSpace(buf *bytes.Buffer, space *model.SymbolS
 		return write(buf, int64(0))
 	}
 
-	if err := write(buf, int64(len(space.Symbols))); err != nil {
+	if err := write(buf, int64(space.Len())); err != nil {
 		return err
 	}
 	if err := sw.writePackageIdentifier(buf, space.Pkg); err != nil {
 		return err
 	}
 
-	for _, sym := range space.Symbols {
+	for _, sym := range space.Symbols() {
 		if err := sw.writeSymbol(buf, sym); err != nil {
 			return err
 		}
@@ -152,7 +152,41 @@ func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol
 	if err := write(buf, symTagType); err != nil {
 		return err
 	}
-	return sw.writeSymbolBase(buf, sym)
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	return sw.writeFieldDefaults(buf, sym.FieldDefaults())
+}
+
+func (sw *symbolWriter) writeFieldDefaults(buf *bytes.Buffer, defaults []model.FieldDefault) error {
+	if err := write(buf, int64(len(defaults))); err != nil {
+		return err
+	}
+	for _, fd := range defaults {
+		if err := sw.writeStringCP(buf, fd.FieldName); err != nil {
+			return err
+		}
+		if err := sw.writeSymbolRef(buf, fd.FnRef); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
+	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
+		return err
+	}
+	if err := write(buf, int32(ref.Index)); err != nil {
+		return err
+	}
+	return write(buf, int32(ref.SpaceIndex))
 }
 
 func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymbol) error {

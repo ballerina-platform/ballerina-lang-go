@@ -1,0 +1,19 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (const c () (
+    (literal 10)))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (record-type
+            (field value
+              (value-type int)
+              (simple-var-ref c)))) (expr
+          (mapping-constructor-expr))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access value
+            (simple-var-ref f))))))))
