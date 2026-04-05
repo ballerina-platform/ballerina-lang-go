@@ -19,7 +19,7 @@ package semtypes
 import "fmt"
 
 type bddNodeSimple struct {
-	atom      Atom
+	atom      atom
 	canonical string
 }
 
@@ -37,11 +37,11 @@ func (this *bddNodeSimple) Right() Bdd {
 	return bddNothing()
 }
 
-func (this *bddNodeSimple) Atom() Atom {
+func (this *bddNodeSimple) Atom() atom {
 	return this.atom
 }
 
-func newBddNodeSimple(atom Atom) *bddNodeSimple {
+func newBddNodeSimple(atom atom) *bddNodeSimple {
 	return &bddNodeSimple{
 		atom:      atom,
 		canonical: fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey()),

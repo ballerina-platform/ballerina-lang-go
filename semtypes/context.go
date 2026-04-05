@@ -124,26 +124,26 @@ func (this *context) listMemo() map[string]*bddMemo {
 	return this._listMemo
 }
 
-func (this *context) FunctionAtomType(atom Atom) *functionAtomicType {
+func (this *context) FunctionAtomType(atom atom) *functionAtomicType {
 	return this._env.functionAtomType(atom)
 }
 
-func (this *context) ListAtomType(atom Atom) *ListAtomicType {
+func (this *context) ListAtomType(atom atom) *ListAtomicType {
 	return this._env.listAtomType(atom)
 }
 
-func (this *context) MappingAtomType(atom Atom) *MappingAtomicType {
+func (this *context) MappingAtomType(atom atom) *MappingAtomicType {
 	return this._env.mappingAtomType(atom)
 }
 
-func (this *context) pushConjunction(atom Atom, next conjunctionHandle) conjunctionHandle {
+func (this *context) pushConjunction(atom atom, next conjunctionHandle) conjunctionHandle {
 	idx := conjunctionHandle(len(this._conjunctions) + 1)
-	this._conjunctions = append(this._conjunctions, conjunction{Atom: atom, Next: next})
+	this._conjunctions = append(this._conjunctions, conjunction{atom: atom, Next: next})
 	return idx
 }
 
-func (this *context) conjunctionAtom(h conjunctionHandle) Atom {
-	return this._conjunctions[h-1].Atom
+func (this *context) conjunctionAtom(h conjunctionHandle) atom {
+	return this._conjunctions[h-1].atom
 }
 
 func (this *context) conjunctionNext(h conjunctionHandle) conjunctionHandle {

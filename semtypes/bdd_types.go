@@ -84,10 +84,10 @@ type bddSerializationContext struct {
 	pool *TypePool
 	cx   Context
 
-	listAtomMap     map[Atom]int32
-	mappingAtomMap  map[Atom]int32
-	functionAtomMap map[Atom]int32
-	xmlAtomMap      map[Atom]int32
+	listAtomMap     map[atom]int32
+	mappingAtomMap  map[atom]int32
+	functionAtomMap map[atom]int32
+	xmlAtomMap      map[atom]int32
 
 	bp *binaryPool
 }
@@ -96,10 +96,10 @@ func newBddSerializationContext(pool *TypePool, cx Context, bp *binaryPool) *bdd
 	sc := &bddSerializationContext{
 		pool:            pool,
 		cx:              cx,
-		listAtomMap:     make(map[Atom]int32),
-		mappingAtomMap:  make(map[Atom]int32),
-		functionAtomMap: make(map[Atom]int32),
-		xmlAtomMap:      make(map[Atom]int32),
+		listAtomMap:     make(map[atom]int32),
+		mappingAtomMap:  make(map[atom]int32),
+		functionAtomMap: make(map[atom]int32),
+		xmlAtomMap:      make(map[atom]int32),
 		bp:              bp,
 	}
 	// Reserve index 0 in list and mapping atom tables for BDD_REC_ATOM_READONLY
@@ -109,19 +109,19 @@ func newBddSerializationContext(pool *TypePool, cx Context, bp *binaryPool) *bdd
 }
 
 func (sc *bddSerializationContext) serializeListBdd(bdd Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.listAtomMap, sc.serializeListAtom, Kind_LIST_ATOM)
+	return sc.serializeBdd(bdd, sc.listAtomMap, sc.serializeListAtom, kind_LIST_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeMappingBdd(bdd Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.mappingAtomMap, sc.serializeMappingAtom, Kind_MAPPING_ATOM)
+	return sc.serializeBdd(bdd, sc.mappingAtomMap, sc.serializeMappingAtom, kind_MAPPING_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeFunctionBdd(bdd Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.functionAtomMap, sc.serializeFunctionAtom, Kind_FUNCTION_ATOM)
+	return sc.serializeBdd(bdd, sc.functionAtomMap, sc.serializeFunctionAtom, kind_FUNCTION_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeXmlBdd(bdd Bdd) unionOfIntersections {
-	return sc.serializeBdd(bdd, sc.xmlAtomMap, sc.serializeXMLAtom, Kind_XML_ATOM)
+	return sc.serializeBdd(bdd, sc.xmlAtomMap, sc.serializeXMLAtom, kind_XML_ATOM)
 }
 
 func (sc *bddSerializationContext) serializeXmlSubtype(xs xmlSubtype) xmlSubtypeEntry {
@@ -133,9 +133,9 @@ func (sc *bddSerializationContext) serializeXmlSubtype(xs xmlSubtype) xmlSubtype
 
 func (sc *bddSerializationContext) serializeBdd(
 	bdd Bdd,
-	atomMap map[Atom]int32,
-	serializeAtom func(Atom) int32,
-	atomKind Kind,
+	atomMap map[atom]int32,
+	serializeAtom func(atom) int32,
+	atomKind kind,
 ) unionOfIntersections {
 	var conjs []atomConjunction
 	bddEvery(sc.cx, bdd, conjunctionNil, conjunctionNil, func(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
@@ -169,13 +169,13 @@ func (sc *bddSerializationContext) serializeBdd(
 }
 
 func (sc *bddSerializationContext) resolveAtom(
-	atom Atom,
-	atomMap map[Atom]int32,
-	serializeAtom func(Atom) int32,
-	atomKind Kind,
+	atom atom,
+	atomMap map[atom]int32,
+	serializeAtom func(atom) int32,
+	atomKind kind,
 ) atomEntry {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
-		if atomKind == Kind_LIST_ATOM || atomKind == Kind_MAPPING_ATOM {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_READONLY {
+		if atomKind == kind_LIST_ATOM || atomKind == kind_MAPPING_ATOM {
 			return atomEntry{isRec: false, index: 0}
 		}
 	}
@@ -186,7 +186,7 @@ func (sc *bddSerializationContext) resolveAtom(
 	return atomEntry{isRec: false, index: idx}
 }
 
-func (sc *bddSerializationContext) serializeListAtom(atom Atom) int32 {
+func (sc *bddSerializationContext) serializeListAtom(atom atom) int32 {
 	idx := int32(len(sc.bp.listAtomicTypes))
 	sc.listAtomMap[atom] = idx
 	sc.bp.listAtomicTypes = append(sc.bp.listAtomicTypes, listAtomicTypeEntry{})
@@ -214,7 +214,7 @@ func (sc *bddSerializationContext) serializeListAtom(atom Atom) int32 {
 	return idx
 }
 
-func (sc *bddSerializationContext) serializeMappingAtom(atom Atom) int32 {
+func (sc *bddSerializationContext) serializeMappingAtom(atom atom) int32 {
 	idx := int32(len(sc.bp.mappingAtomicTypes))
 	sc.mappingAtomMap[atom] = idx
 	sc.bp.mappingAtomicTypes = append(sc.bp.mappingAtomicTypes, mappingAtomicTypeEntry{})
@@ -245,7 +245,7 @@ func (sc *bddSerializationContext) serializeMappingAtom(atom Atom) int32 {
 	return idx
 }
 
-func (sc *bddSerializationContext) serializeFunctionAtom(atom Atom) int32 {
+func (sc *bddSerializationContext) serializeFunctionAtom(atom atom) int32 {
 	idx := int32(len(sc.bp.functionAtomicTypes))
 	sc.functionAtomMap[atom] = idx
 	sc.bp.functionAtomicTypes = append(sc.bp.functionAtomicTypes, functionAtomicTypeEntry{})
@@ -262,11 +262,11 @@ func (sc *bddSerializationContext) serializeFunctionAtom(atom Atom) int32 {
 	return idx
 }
 
-func (sc *bddSerializationContext) serializeXMLAtom(atom Atom) int32 {
+func (sc *bddSerializationContext) serializeXMLAtom(atom atom) int32 {
 	idx := int32(len(sc.bp.xmlAtomicTypes))
 	sc.xmlAtomMap[atom] = idx
 	sc.bp.xmlAtomicTypes = append(sc.bp.xmlAtomicTypes, xmlAtomicTypeEntry{
-		index: int32(atom.Index()),
+		index: int32(atom.index()),
 	})
 	return idx
 }
@@ -285,15 +285,15 @@ type bddDeserializationContext struct {
 	bp   *binaryPool
 
 	listAtomDefs []*ListDefinition
-	listAtoms    []Atom
+	listAtoms    []atom
 
 	mappingAtomDefs []*MappingDefinition
-	mappingAtoms    []Atom
+	mappingAtoms    []atom
 
 	functionAtomDefs []*FunctionDefinition
-	functionAtoms    []Atom
+	functionAtoms    []atom
 
-	xmlAtoms []Atom
+	xmlAtoms []atom
 }
 
 func newBddDeserializationContext(pool *TypePool, env Env, bp *binaryPool) *bddDeserializationContext {
@@ -302,12 +302,12 @@ func newBddDeserializationContext(pool *TypePool, env Env, bp *binaryPool) *bddD
 		env:              env,
 		bp:               bp,
 		listAtomDefs:     make([]*ListDefinition, len(bp.listAtomicTypes)),
-		listAtoms:        make([]Atom, len(bp.listAtomicTypes)),
+		listAtoms:        make([]atom, len(bp.listAtomicTypes)),
 		mappingAtomDefs:  make([]*MappingDefinition, len(bp.mappingAtomicTypes)),
-		mappingAtoms:     make([]Atom, len(bp.mappingAtomicTypes)),
+		mappingAtoms:     make([]atom, len(bp.mappingAtomicTypes)),
 		functionAtomDefs: make([]*FunctionDefinition, len(bp.functionAtomicTypes)),
-		functionAtoms:    make([]Atom, len(bp.functionAtomicTypes)),
-		xmlAtoms:         make([]Atom, len(bp.xmlAtomicTypes)),
+		functionAtoms:    make([]atom, len(bp.functionAtomicTypes)),
+		xmlAtoms:         make([]atom, len(bp.xmlAtomicTypes)),
 	}
 }
 
@@ -358,9 +358,9 @@ func (dc *bddDeserializationContext) deserializeType(poolIndex int) SemType {
 
 func (dc *bddDeserializationContext) deserializeBddFromDnf(
 	dnf unionOfIntersections,
-	deserializeAtom func(int32) Atom,
+	deserializeAtom func(int32) atom,
 ) Bdd {
-	atoms := make(map[int32]Atom)
+	atoms := make(map[int32]atom)
 	for _, conj := range dnf.conjunctions {
 		for _, a := range conj.posAtoms {
 			if _, ok := atoms[a.index]; !ok {
@@ -376,7 +376,7 @@ func (dc *bddDeserializationContext) deserializeBddFromDnf(
 	return buildBddFromDnf(dnf, atoms)
 }
 
-func (dc *bddDeserializationContext) deserializeListAtom(atomIndex int32) Atom {
+func (dc *bddDeserializationContext) deserializeListAtom(atomIndex int32) atom {
 	if atomIndex == 0 {
 		ro := createRecAtom(BDD_REC_ATOM_READONLY)
 		return &ro
@@ -408,7 +408,7 @@ func (dc *bddDeserializationContext) deserializeListAtom(atomIndex int32) Atom {
 	return atom
 }
 
-func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) Atom {
+func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) atom {
 	if atomIndex == 0 {
 		ro := createRecAtom(BDD_REC_ATOM_READONLY)
 		return &ro
@@ -443,7 +443,7 @@ func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) Ato
 	return atom
 }
 
-func (dc *bddDeserializationContext) deserializeFunctionAtom(atomIndex int32) Atom {
+func (dc *bddDeserializationContext) deserializeFunctionAtom(atomIndex int32) atom {
 	if dc.functionAtoms[atomIndex] != nil {
 		return dc.functionAtoms[atomIndex]
 	}
@@ -472,7 +472,7 @@ func (dc *bddDeserializationContext) deserializeFunctionAtom(atomIndex int32) At
 	return atom
 }
 
-func (dc *bddDeserializationContext) deserializeXmlAtom(atomIndex int32) Atom {
+func (dc *bddDeserializationContext) deserializeXmlAtom(atomIndex int32) atom {
 	if dc.xmlAtoms[atomIndex] != nil {
 		return dc.xmlAtoms[atomIndex]
 	}
@@ -490,12 +490,12 @@ func (dc *bddDeserializationContext) resolvePoolType(idx TypePoolIndex) SemType 
 	return dc.deserializeType(int(idx - 1))
 }
 
-func extractAtom(ty SemType) Atom {
+func extractAtom(ty SemType) atom {
 	cst := ty.(*ComplexSemType)
 	return cst.subtypeDataList()[0].(BddNode).Atom()
 }
 
-func buildBddFromDnf(dnf unionOfIntersections, atoms map[int32]Atom) Bdd {
+func buildBddFromDnf(dnf unionOfIntersections, atoms map[int32]atom) Bdd {
 	var bdd Bdd = bddNothing()
 	for _, conj := range dnf.conjunctions {
 		var term Bdd = bddAll()

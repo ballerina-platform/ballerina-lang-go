@@ -29,7 +29,7 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 	}
 	mappingSd := subtypeData(errorType, BTError)
 	if bddNode, ok := mappingSd.(BddNode); ok {
-		if bddNode.Atom().Index() != 0 {
+		if bddNode.Atom().index() != 0 {
 			// Not readonly. Not sure if this can happen (due to ErroWithDetail) but just in case
 			return MappingAtomicType{}, false
 		}

@@ -33,7 +33,7 @@ func bitCount(b BasicTypeBitSet) int {
 	return bits.OnesCount(uint(b.all()))
 }
 
-func cellAtomType(atom Atom) cellAtomicType {
+func cellAtomType(atom atom) cellAtomicType {
 	ta := atom.(*typeAtom)
 	atomicType := ta.AtomicType
 	if cellAtomicType, ok := atomicType.(*cellAtomicType); ok {

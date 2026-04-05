@@ -19,25 +19,16 @@ package semtypes
 import "fmt"
 
 type recAtom struct {
-	index      int
-	targetKind Kind
+	idx int
 }
 
 var ZERO = newRecAtomFromInt(BDD_REC_ATOM_READONLY)
-var _ Atom = &recAtom{}
+var _ atom = &recAtom{}
 
 func newRecAtomFromInt(index int) recAtom {
 	this := recAtom{}
 
-	this.index = index
-	return this
-}
-
-func newRecAtomFromIntKind(index int, targetKind Kind) recAtom {
-	this := recAtom{}
-
-	this.index = index
-	this.targetKind = targetKind
+	this.idx = index
 	return this
 }
 
@@ -49,32 +40,21 @@ func createRecAtom(index int) recAtom {
 }
 
 func createXMLRecAtom(index int) recAtom {
-	return newRecAtomFromIntKind(index, Kind_XML_ATOM)
+	return newRecAtomFromInt(index)
 }
 
 func createDistinctRecAtom(index int) recAtom {
-	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
+	return newRecAtomFromInt(index)
 }
 
-func (this *recAtom) setKind(targetKind Kind) {
-	this.targetKind = targetKind
-}
-
-func (this *recAtom) Index() int {
-	return this.index
-}
-
-func (this *recAtom) Kind() Kind {
-	// if this.targetKind == 0 {
-	// 	panic("Target kind is not set for the recursive type atom")
-	// }
-	return this.targetKind
+func (this *recAtom) index() int {
+	return this.idx
 }
 
 func (this *recAtom) canonicalKey() string {
-	return fmt.Sprintf("r%d", this.index)
+	return fmt.Sprintf("r%d", this.idx)
 }
 
 func (this *recAtom) String() string {
-	return fmt.Sprintf("r%d", this.index)
+	return fmt.Sprintf("r%d", this.idx)
 }

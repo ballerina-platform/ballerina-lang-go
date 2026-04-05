@@ -23,29 +23,25 @@ import (
 )
 
 type typeAtom struct {
-	index      int
-	AtomicType AtomicType
+	idx        int
+	AtomicType atomicType
 }
 
-var _ Atom = &typeAtom{}
+var _ atom = &typeAtom{}
 
-func createTypeAtom(index int, atomicType AtomicType) typeAtom {
+func createTypeAtom(index int, atomicType atomicType) typeAtom {
 	common.Assert(index >= 0)
 
 	return typeAtom{
-		index:      index,
+		idx:        index,
 		AtomicType: atomicType,
 	}
 }
 
-func (this *typeAtom) Index() int {
-	return this.index
-}
-
-func (this *typeAtom) Kind() Kind {
-	return this.AtomicType.AtomKind()
+func (this *typeAtom) index() int {
+	return this.idx
 }
 
 func (this *typeAtom) canonicalKey() string {
-	return fmt.Sprintf("t%d", this.index)
+	return fmt.Sprintf("t%d", this.idx)
 }

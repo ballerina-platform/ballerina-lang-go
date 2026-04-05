@@ -21,6 +21,6 @@ type conjunctionHandle int32
 const conjunctionNil conjunctionHandle = 0
 
 type conjunction struct {
-	Atom Atom
+	atom atom
 	Next conjunctionHandle
 }

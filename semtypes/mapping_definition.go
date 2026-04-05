@@ -58,15 +58,15 @@ func (this *MappingDefinition) SetSemTypeToNever() {
 func (this *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
 	sfh := this.splitFields(fields)
 	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
-	var atom Atom
+	var a atom
 	rec := this.rec
 	if rec != nil {
-		atom = rec
+		a = rec
 		env.setRecMappingAtomType(*rec, &atomicType)
 	} else {
-		atom = new(env.mappingAtom(&atomicType))
+		a = new(env.mappingAtom(&atomicType))
 	}
-	return this.createSemType(env, atom)
+	return this.createSemType(env, a)
 }
 
 func (this *MappingDefinition) DefineMappingTypeWrapped(env Env, fields []Field, rest SemType) SemType {
@@ -101,7 +101,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 	return this.Define(env, cellFields, restCell)
 }
 
-func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
+func (this *MappingDefinition) createSemType(env Env, atom atom) SemType {
 	bdd := bddAtom(atom)
 	s := getBasicSubtype(BTMapping, bdd)
 	this.semType = s

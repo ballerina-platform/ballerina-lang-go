@@ -37,7 +37,7 @@ func (this *FunctionDefinition) GetSemType(env Env) SemType {
 	return this.createSemType(&rec)
 }
 
-func (this *FunctionDefinition) createSemType(rec Atom) SemType {
+func (this *FunctionDefinition) createSemType(rec atom) SemType {
 	bdd := bddAtom(rec)
 	s := getBasicSubtype(BTFunction, bdd)
 	this.semType = s
@@ -55,13 +55,13 @@ func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType
 }
 
 func (this *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
-	var atom Atom
+	var a atom
 	rec := this.rec
 	if rec != nil {
-		atom = rec
+		a = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
-		atom = new(env.functionAtom(&atomicType))
+		a = new(env.functionAtom(&atomicType))
 	}
-	return this.createSemType(atom)
+	return this.createSemType(a)
 }

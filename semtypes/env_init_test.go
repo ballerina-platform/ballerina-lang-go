@@ -133,7 +133,7 @@ func TestTypeAtomIndices(t *testing.T) {
 
 	indices := make(map[int]bool)
 	for _, typeAtom := range atomTable {
-		index := typeAtom.Index()
+		index := typeAtom.index()
 		if indices[index] {
 			t.Errorf("Duplicate index found: %d", index)
 		}

@@ -19,7 +19,7 @@ package semtypes
 import "fmt"
 
 type bddNodeImpl struct {
-	atom      Atom
+	atom      atom
 	left      Bdd
 	middle    Bdd
 	right     Bdd
@@ -28,7 +28,7 @@ type bddNodeImpl struct {
 
 var _ BddNode = &bddNodeImpl{}
 
-func (this *bddNodeImpl) Atom() Atom {
+func (this *bddNodeImpl) Atom() atom {
 	return this.atom
 }
 
@@ -44,7 +44,7 @@ func (this *bddNodeImpl) Right() Bdd {
 	return this.right
 }
 
-func newBddNodeImpl(atom Atom, left, middle, right Bdd) *bddNodeImpl {
+func newBddNodeImpl(atom atom, left, middle, right Bdd) *bddNodeImpl {
 	return &bddNodeImpl{
 		atom:      atom,
 		left:      left,

@@ -21,18 +21,13 @@ import (
 	"strings"
 )
 
-type atomKey struct {
-	kind  Kind
-	index int
-}
-
 type toStringState struct {
 	cx      Context
-	visited map[atomKey]bool
+	visited map[string]bool
 }
 
 func newToStringState(cx Context) *toStringState {
-	return &toStringState{cx: cx, visited: make(map[atomKey]bool)}
+	return &toStringState{cx: cx, visited: make(map[string]bool)}
 }
 
 func ToString(cx Context, ty SemType) string {
@@ -142,11 +137,11 @@ func (s *toStringState) bddListToString(bdd Bdd) string {
 	return strings.Join(formulas, "|")
 }
 
-func (s *toStringState) listAtomToString(atom Atom) string {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
+func (s *toStringState) listAtomToString(atom atom) string {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_READONLY {
 		return "readonly"
 	}
-	key := atomKey{kind: atom.Kind(), index: atom.Index()}
+	key := atom.canonicalKey()
 	if s.visited[key] {
 		return "..."
 	}
@@ -155,7 +150,7 @@ func (s *toStringState) listAtomToString(atom Atom) string {
 	return s.listAtomicTypeToString(atom)
 }
 
-func (s *toStringState) listAtomicTypeToString(atom Atom) string {
+func (s *toStringState) listAtomicTypeToString(atom atom) string {
 	atomic := s.cx.ListAtomType(atom)
 	var parts []string
 	for i := 0; i < atomic.Members.FixedLength; i++ {
@@ -197,8 +192,8 @@ func (s *toStringState) bddFunctionToString(bdd Bdd) string {
 	return strings.Join(formulas, "|")
 }
 
-func (s *toStringState) functionAtomToString(atom Atom) string {
-	key := atomKey{kind: atom.Kind(), index: atom.Index()}
+func (s *toStringState) functionAtomToString(atom atom) string {
+	key := atom.canonicalKey()
 	if s.visited[key] {
 		return "..."
 	}
@@ -207,7 +202,7 @@ func (s *toStringState) functionAtomToString(atom Atom) string {
 	return s.functionAtomicTypeToString(atom)
 }
 
-func (s *toStringState) functionAtomicTypeToString(atom Atom) string {
+func (s *toStringState) functionAtomicTypeToString(atom atom) string {
 	atomic := s.cx.FunctionAtomType(atom)
 	paramsStr := s.functionParamsToString(atomic.ParamType)
 	retStr := s.semTypeToString(atomic.RetType)
@@ -272,11 +267,11 @@ func (s *toStringState) bddMappingToString(bdd Bdd) string {
 	return strings.Join(formulas, "|")
 }
 
-func (s *toStringState) mappingAtomToString(atom Atom) string {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() == BDD_REC_ATOM_READONLY {
+func (s *toStringState) mappingAtomToString(atom atom) string {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_READONLY {
 		return "readonly"
 	}
-	key := atomKey{kind: atom.Kind(), index: atom.Index()}
+	key := atom.canonicalKey()
 	if s.visited[key] {
 		return "..."
 	}
@@ -285,7 +280,7 @@ func (s *toStringState) mappingAtomToString(atom Atom) string {
 	return s.mappingAtomicTypeToString(atom)
 }
 
-func (s *toStringState) mappingAtomicTypeToString(atom Atom) string {
+func (s *toStringState) mappingAtomicTypeToString(atom atom) string {
 	atomic := s.cx.MappingAtomType(atom)
 	var parts []string
 	for i, name := range atomic.Names {

@@ -39,7 +39,7 @@ type bddCommonOpsMethods struct {
 	Self BddCommonOps
 }
 
-func bddAtom(atom Atom) BddNode {
+func bddAtom(atom atom) BddNode {
 	return bddNodeCreate(atom, bddAll(), bddNothing(), bddNothing())
 }
 
@@ -201,7 +201,7 @@ func bddNodeComplement(b BddNode) Bdd {
 	}
 }
 
-func bddCreate(atom Atom, left Bdd, middle Bdd, right Bdd) Bdd {
+func bddCreate(atom atom, left Bdd, middle Bdd, right Bdd) Bdd {
 	if allOrNothing, ok := middle.(*bddAllOrNothing); ok && allOrNothing.IsAll() {
 		return middle
 	}
@@ -211,19 +211,19 @@ func bddCreate(atom Atom, left Bdd, middle Bdd, right Bdd) Bdd {
 	return bddNodeCreate(atom, left, middle, right)
 }
 
-func atomCmp(a1 Atom, a2 Atom) int {
+func atomCmp(a1 atom, a2 atom) int {
 	r1, ok1 := a1.(*recAtom)
 	r2, ok2 := a2.(*recAtom)
 
 	if ok1 {
 		if ok2 {
-			return r1.Index() - r2.Index()
+			return r1.index() - r2.index()
 		}
 		return -1
 	} else if ok2 {
 		return 1
 	}
-	return a1.Index() - a2.Index()
+	return a1.index() - a2.index()
 }
 
 func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
@@ -238,9 +238,9 @@ func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	bdd := b.(BddNode)
 	a := bdd.Atom()
 	if recAtom, ok := a.(*recAtom); ok {
-		str = "r" + string(rune(recAtom.Index()))
+		str = "r" + string(rune(recAtom.index()))
 	} else {
-		str = "a" + string(rune(a.Index()))
+		str = "a" + string(rune(a.index()))
 	}
 	str = str + "?" + this.BddToString(bdd.Left(), true) + ":" + this.BddToString(bdd.Middle(), true) + ":" + this.BddToString(bdd.Right(), true)
 	if inner {

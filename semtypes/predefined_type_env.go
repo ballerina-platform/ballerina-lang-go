@@ -22,7 +22,7 @@ import (
 )
 
 // initializedTypeAtom is a generic record holding an atomic type and its index
-type initializedTypeAtom[E AtomicType] struct {
+type initializedTypeAtom[E atomicType] struct {
 	atomicType E
 	index      int
 }
@@ -131,7 +131,7 @@ func (this *predefinedTypeEnv) addInitializedMapAtom(atom *MappingAtomicType) {
 }
 
 // addInitializedAtom is a generic function to add an atom to the atoms list with an index
-func addInitializedAtom[E AtomicType](env *predefinedTypeEnv, atoms *[]initializedTypeAtom[E], atom E) {
+func addInitializedAtom[E atomicType](env *predefinedTypeEnv, atoms *[]initializedTypeAtom[E], atom E) {
 	*atoms = append(*atoms, initializedTypeAtom[E]{atomicType: atom, index: env.nextAtomIndex})
 	env.nextAtomIndex++
 }
@@ -153,7 +153,7 @@ func (this *predefinedTypeEnv) mappingAtomIndex(atom *MappingAtomicType) int {
 
 // atomIndex is a generic function to find the index of an atom in the atoms list
 // migration note: this does pointer equality not value equality
-func atomIndex[E AtomicType](initializedAtoms []initializedTypeAtom[E], atom E) int {
+func atomIndex[E atomicType](initializedAtoms []initializedTypeAtom[E], atom E) int {
 	for _, initializedAtom := range initializedAtoms {
 		if initializedAtom.atomicType.equals(atom) {
 			return initializedAtom.index

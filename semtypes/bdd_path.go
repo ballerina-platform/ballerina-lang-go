@@ -22,8 +22,8 @@ import (
 
 type bddPath struct {
 	bdd Bdd
-	pos []Atom
-	neg []Atom
+	pos []atom
+	neg []atom
 }
 
 func newBddPathFromBddPath(src bddPath) bddPath {

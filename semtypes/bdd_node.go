@@ -18,13 +18,13 @@ package semtypes
 
 type BddNode interface {
 	Bdd
-	Atom() Atom
+	Atom() atom
 	Left() Bdd
 	Middle() Bdd
 	Right() Bdd
 }
 
-func bddNodeCreate(atom Atom, left Bdd, middle Bdd, right Bdd) BddNode {
+func bddNodeCreate(atom atom, left Bdd, middle Bdd, right Bdd) BddNode {
 	if isSimpleNode(left, middle, right) {
 		return newBddNodeSimple(atom)
 	}

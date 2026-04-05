@@ -134,13 +134,13 @@ func cellSubtypeComplement(t SubtypeData) ProperSubtypeData {
 
 func cellSubtypeDataEnsureProper(subtypeData SubtypeData) ProperSubtypeData {
 	if allOrNothingSubtype, ok := subtypeData.(allOrNothingSubtype); ok {
-		var atom Atom
+		var a atom
 		if allOrNothingSubtype.IsAllSubtype() {
-			atom = ATOM_CELL_VAL
+			a = ATOM_CELL_VAL
 		} else {
-			atom = ATOM_CELL_NEVER
+			a = ATOM_CELL_NEVER
 		}
-		return bddAtom(atom)
+		return bddAtom(a)
 	} else {
 		return subtypeData.(ProperSubtypeData)
 	}

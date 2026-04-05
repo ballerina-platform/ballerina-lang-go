@@ -75,7 +75,7 @@ func collectAllPrimitives(cx Context, con conjunctionHandle) int {
 	bits := 0
 	current := con
 	for current != conjunctionNil {
-		bits &= cx.conjunctionAtom(current).(*recAtom).Index()
+		bits &= cx.conjunctionAtom(current).(*recAtom).index()
 		current = cx.conjunctionNext(current)
 	}
 	return bits
@@ -87,7 +87,7 @@ func xmlHasTotalNegative(cx Context, allBits int, con conjunctionHandle) bool {
 	}
 	n := con
 	for n != conjunctionNil {
-		if (allBits & (^cx.conjunctionAtom(n).(*recAtom).Index())) == 0 {
+		if (allBits & (^cx.conjunctionAtom(n).(*recAtom).index())) == 0 {
 			return true
 		}
 		n = cx.conjunctionNext(n)

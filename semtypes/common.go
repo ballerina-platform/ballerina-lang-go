@@ -49,8 +49,8 @@ func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionH
 	}
 }
 
-func andIfPositive(cx Context, atom Atom, next conjunctionHandle) conjunctionHandle {
-	if recAtom, ok := atom.(*recAtom); ok && recAtom.Index() < 0 {
+func andIfPositive(cx Context, atom atom, next conjunctionHandle) conjunctionHandle {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() < 0 {
 		return next
 	}
 	return cx.pushConjunction(atom, next)

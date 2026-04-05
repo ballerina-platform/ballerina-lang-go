@@ -33,14 +33,14 @@ const (
 	CellMutability_CELL_MUT_UNLIMITED
 )
 
-func (this *cellAtomicType) equals(other AtomicType) bool {
+func (this *cellAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*cellAtomicType); ok {
 		return other.Ty == this.Ty && other.Mut == this.Mut
 	}
 	return false
 }
 
-var _ AtomicType = &cellAtomicType{}
+var _ atomicType = &cellAtomicType{}
 
 func newCellAtomicTypeFromTyMut(ty SemType, mut CellMutability) cellAtomicType {
 	this := cellAtomicType{}
@@ -55,6 +55,6 @@ func cellAtomicTypeFrom(ty SemType, mut CellMutability) cellAtomicType {
 	return newCellAtomicTypeFromTyMut(ty, mut)
 }
 
-func (this *cellAtomicType) AtomKind() Kind {
-	return Kind_CELL_ATOM
+func (this *cellAtomicType) atomKind() kind {
+	return kind_CELL_ATOM
 }

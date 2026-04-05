@@ -26,9 +26,9 @@ type MappingAtomicType struct {
 	Rest  *ComplexSemType
 }
 
-var _ AtomicType = &MappingAtomicType{}
+var _ atomicType = &MappingAtomicType{}
 
-func (this *MappingAtomicType) equals(other AtomicType) bool {
+func (this *MappingAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*MappingAtomicType); ok {
 		if !this.Rest.equals(other.Rest) {
 			return false
@@ -46,8 +46,8 @@ func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *Complex
 	}
 }
 
-func (this *MappingAtomicType) AtomKind() Kind {
-	return Kind_MAPPING_ATOM
+func (this *MappingAtomicType) atomKind() kind {
+	return kind_MAPPING_ATOM
 }
 
 func (this *MappingAtomicType) FieldInnerVal(name string) SemType {

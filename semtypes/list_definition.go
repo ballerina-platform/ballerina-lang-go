@@ -92,7 +92,7 @@ func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env,
 func (this *ListDefinition) define(env Env, initial []ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
 	members := this.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
 	atomicType := listAtomicTypeFrom(members, rest)
-	var atom Atom
+	var atom atom
 	rec := this.rec
 	if rec != nil {
 		atom = rec
@@ -120,7 +120,7 @@ func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLe
 	return fixedLengthArrayFrom(initial[:i+2], array.FixedLength)
 }
 
-func (this *ListDefinition) createSemType(env Env, atom Atom) *ComplexSemType {
+func (this *ListDefinition) createSemType(env Env, atom atom) *ComplexSemType {
 	bdd := bddAtom(atom)
 	complexSemType := getBasicSubtype(BTList, bdd)
 	this.semType = complexSemType

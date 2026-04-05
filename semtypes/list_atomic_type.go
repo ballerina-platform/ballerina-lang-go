@@ -25,9 +25,9 @@ type ListAtomicType struct {
 	Rest    *ComplexSemType
 }
 
-var _ AtomicType = &ListAtomicType{}
+var _ atomicType = &ListAtomicType{}
 
-func (this *ListAtomicType) equals(other AtomicType) bool {
+func (this *ListAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*ListAtomicType); ok {
 		if !this.Rest.equals(other.Rest) {
 			return false
@@ -50,8 +50,8 @@ func listAtomicTypeFrom(members fixedLengthArray, rest *ComplexSemType) ListAtom
 	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
-func (this *ListAtomicType) AtomKind() Kind {
-	return Kind_LIST_ATOM
+func (this *ListAtomicType) atomKind() kind {
+	return kind_LIST_ATOM
 }
 
 func (atomic *ListAtomicType) MemberAtInnerVal(index int) SemType {
