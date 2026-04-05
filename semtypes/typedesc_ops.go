@@ -17,7 +17,7 @@
 package semtypes
 
 type typedescOps struct {
-	CommonOps
+	commonOpsBase
 }
 
 var _ BasicTypeOps = &typedescOps{}
