@@ -51,8 +51,3 @@ func createSemType(env Env, isolated bool, transactional bool) SemType {
 	}
 	return ld.DefineListTypeWrappedWithEnvSemTypesInt(env, []SemType{isolatedType, transactionalType}, 2)
 }
-
-func newFunctionQualifiers() FunctionQualifiers {
-	this := FunctionQualifiers{}
-	return this
-}

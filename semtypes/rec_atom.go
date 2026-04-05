@@ -56,7 +56,7 @@ func createDistinctRecAtom(index int) recAtom {
 	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
 }
 
-func (this *recAtom) SetKind(targetKind Kind) {
+func (this *recAtom) setKind(targetKind Kind) {
 	this.targetKind = targetKind
 }
 

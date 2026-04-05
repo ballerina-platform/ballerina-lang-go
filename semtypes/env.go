@@ -93,7 +93,7 @@ func (this *env) recFunctionAtom() recAtom {
 func (this *env) setRecFunctionAtomType(rec recAtom, atomicType *functionAtomicType) {
 	this.recFunctionAtomsMutex.Lock()
 	defer this.recFunctionAtomsMutex.Unlock()
-	rec.SetKind(Kind_FUNCTION_ATOM)
+	rec.setKind(Kind_FUNCTION_ATOM)
 	this.recFunctionAtoms[rec.Index()] = atomicType
 }
 
@@ -171,14 +171,14 @@ func (this *env) recMappingAtom() recAtom {
 func (this *env) setRecListAtomType(rec recAtom, atomicType *ListAtomicType) {
 	this.recListAtomsMutex.Lock()
 	defer this.recListAtomsMutex.Unlock()
-	rec.SetKind(Kind_LIST_ATOM)
+	rec.setKind(Kind_LIST_ATOM)
 	this.recListAtoms[rec.Index()] = atomicType
 }
 
 func (this *env) setRecMappingAtomType(rec recAtom, atomicType *MappingAtomicType) {
 	this.recMappingAtomsMutex.Lock()
 	defer this.recMappingAtomsMutex.Unlock()
-	rec.SetKind(Kind_MAPPING_ATOM)
+	rec.setKind(Kind_MAPPING_ATOM)
 	this.recMappingAtoms[rec.Index()] = atomicType
 }
 
