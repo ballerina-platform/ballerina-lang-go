@@ -22,7 +22,6 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/semtypes/typepool"
 )
 
 const (
@@ -40,14 +39,14 @@ const (
 
 type symbolWriter struct {
 	cp  *constantPool
-	tp  *typepool.TypePool
+	tp  *semtypes.TypePool
 	env semtypes.Env
 }
 
 func Marshal(exported model.ExportedSymbolSpace, env semtypes.Env) ([]byte, error) {
 	sw := &symbolWriter{
 		cp:  newConstantPool(),
-		tp:  typepool.NewTypePool(),
+		tp:  semtypes.NewTypePool(),
 		env: env,
 	}
 	return sw.serialize(exported)
@@ -70,7 +69,7 @@ func (sw *symbolWriter) serialize(exported model.ExportedSymbolSpace) ([]byte, e
 		return nil, err
 	}
 
-	tpBytes := typepool.MarshalTypePool(sw.tp, sw.env)
+	tpBytes := semtypes.MarshalTypePool(sw.tp, sw.env)
 	if err := write(buf, int64(len(tpBytes))); err != nil {
 		return nil, err
 	}

@@ -16,27 +16,24 @@
 
 package semtypes
 
-type CharStringSubtype struct {
+type charStringSubtype struct {
 	allowed bool
-	values  []EnumerableType[string]
+	values  []enumerableType[string]
 }
 
-var _ EnumerableSubtype[string] = &CharStringSubtype{}
+var _ enumerableSubtype[string] = &charStringSubtype{}
 
-func CharStringSubtypeFrom(allowed bool, values []EnumerableType[string]) CharStringSubtype {
-	// migrated from CharStringSubtype.java:39:5
-	return CharStringSubtype{
+func charStringSubtypeFrom(allowed bool, values []enumerableType[string]) charStringSubtype {
+	return charStringSubtype{
 		allowed: allowed,
 		values:  values,
 	}
 }
 
-func (this *CharStringSubtype) Allowed() bool {
-	// migrated from CharStringSubtype.java:43:5
+func (this *charStringSubtype) Allowed() bool {
 	return this.allowed
 }
 
-func (this *CharStringSubtype) Values() []EnumerableType[string] {
-	// migrated from CharStringSubtype.java:48:5
+func (this *charStringSubtype) Values() []enumerableType[string] {
 	return this.values
 }

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"maps"
 	"math/big"
-	"math/bits"
 	"sort"
 	"strconv"
 	"strings"
@@ -2452,8 +2451,8 @@ func nilLiftingExprResultTy(t typeResolver, lhsTy, rhsTy semtypes.SemType, expr 
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 
-	numLhsBits := bits.OnesCount(uint(lhsBasicTy.All()))
-	numRhsBits := bits.OnesCount(uint(rhsBasicTy.All()))
+	numLhsBits := semtypes.NBasicTypes(lhsTy)
+	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
 	if numLhsBits > 1 || numRhsBits > 1 {
 		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())

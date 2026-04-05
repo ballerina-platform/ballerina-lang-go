@@ -16,14 +16,14 @@
 
 package semtypes
 
-type IntSubtypeConstraints struct {
+type intSubtypeConstraints struct {
 	min int
 	max int
 	all bool
 }
 
-func newIntSubtypeConstraintsFromIntIntBool(min int, max int, all bool) IntSubtypeConstraints {
-	this := IntSubtypeConstraints{}
+func newIntSubtypeConstraintsFromIntIntBool(min int, max int, all bool) intSubtypeConstraints {
+	this := intSubtypeConstraints{}
 	this.min = min
 	this.max = max
 	this.all = all

@@ -25,24 +25,24 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 	}
 
 	if IsSameType(ctx, errorType, ERROR) {
-		return MappingAtomicTypeFrom(nil, nil, CellContaining(ctx.Env(), CreateCloneable(ctx))), true
+		return mappingAtomicTypeFrom(nil, nil, cellContaining(ctx.Env(), CreateCloneable(ctx))), true
 	}
 	mappingSd := subtypeData(errorType, BTError)
-	if bddNode, ok := mappingSd.(BddNode); ok {
-		if bddNode.Atom().Index() != 0 {
+	if bn, ok := mappingSd.(bddNode); ok {
+		if bn.atom().index() != 0 {
 			// Not readonly. Not sure if this can happen (due to ErroWithDetail) but just in case
 			return MappingAtomicType{}, false
 		}
-		if !isNothing(bddNode.Middle()) || !isNothing(bddNode.Right()) {
+		if !isNothing(bn.middle()) || !isNothing(bn.right()) {
 			// Not atomic
 			return MappingAtomicType{}, false
 		}
-		if leftNode, ok := bddNode.Left().(BddNode); ok {
-			if !IsSimpleNode(leftNode.Left(), leftNode.Middle(), leftNode.Right()) {
+		if leftNode, ok := bn.left().(bddNode); ok {
+			if !isSimpleNode(leftNode.left(), leftNode.middle(), leftNode.right()) {
 				// Also not atomic
 				return MappingAtomicType{}, false
 			}
-			return *ctx.MappingAtomType(leftNode.Atom()), true
+			return *ctx.MappingAtomType(leftNode.atom()), true
 		} else {
 			return MappingAtomicType{}, false
 		}
@@ -51,25 +51,23 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 }
 
 func ErrorWithDetail(detail SemType) SemType {
-	// migrated from Error.java:39:5
 	mappingSd := subtypeData(detail, BTMapping)
-	if allOrNothingSubtype, ok := mappingSd.(AllOrNothingSubtype); ok {
+	if allOrNothingSubtype, ok := mappingSd.(allOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
 			return ERROR
 		} else {
 			return NEVER
 		}
 	}
-	sd := BddIntersect(mappingSd.(Bdd), BDD_SUBTYPE_RO)
+	sd := bddIntersect(mappingSd.(Bdd), BDD_SUBTYPE_RO)
 	if sd == BDD_SUBTYPE_RO {
 		return ERROR
 	}
-	return basicSubtype(BTError, sd.(ProperSubtypeData))
+	return getBasicSubtype(BTError, sd.(ProperSubtypeData))
 }
 
-func ErrorDistinct(distinctId int) SemType {
-	// migrated from Error.java:57:5
+func errorDistinct(distinctId int) SemType {
 	common.Assert(distinctId >= 0)
-	bdd := BddAtom(new(CreateDistinctRecAtom(((-distinctId) - 1))))
-	return basicSubtype(BTError, bdd)
+	bdd := bddAtom(new(createDistinctRecAtom(((-distinctId) - 1))))
+	return getBasicSubtype(BTError, bdd)
 }

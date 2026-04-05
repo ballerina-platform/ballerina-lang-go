@@ -16,37 +16,35 @@
 
 package semtypes
 
-type FunctionAtomicType struct {
+type functionAtomicType struct {
 	ParamType  SemType
 	RetType    SemType
 	Qualifiers SemType
 	IsGeneric  bool
 }
 
-var _ AtomicType = &FunctionAtomicType{}
+var _ atomicType = &functionAtomicType{}
 
-func (this *FunctionAtomicType) equals(other AtomicType) bool {
-	if other, ok := other.(*FunctionAtomicType); ok {
+func (this *functionAtomicType) equals(other atomicType) bool {
+	if other, ok := other.(*functionAtomicType); ok {
 		return other.ParamType == this.ParamType && other.RetType == this.RetType &&
 			other.Qualifiers == this.Qualifiers && other.IsGeneric == this.IsGeneric
 	}
 	return false
 }
 
-func FunctionAtomicTypeFrom(paramType SemType, rest SemType, qualifiers SemType) FunctionAtomicType {
-	// migrated from FunctionAtomicType.java:32:5
+func functionAtomicTypeFrom(paramType SemType, rest SemType, qualifiers SemType) functionAtomicType {
 
-	return NewFunctionAtomicType(paramType, rest, qualifiers, false)
+	return newFunctionAtomicType(paramType, rest, qualifiers, false)
 }
 
-func FunctionAtomicTypeGenericFrom(paramType SemType, rest SemType, qualifiers SemType) FunctionAtomicType {
-	// migrated from FunctionAtomicType.java:36:5
+func functionAtomicTypeGenericFrom(paramType SemType, rest SemType, qualifiers SemType) functionAtomicType {
 
-	return NewFunctionAtomicType(paramType, rest, qualifiers, true)
+	return newFunctionAtomicType(paramType, rest, qualifiers, true)
 }
 
-func NewFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemType, isGeneric bool) FunctionAtomicType {
-	this := FunctionAtomicType{}
+func newFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemType, isGeneric bool) functionAtomicType {
+	this := functionAtomicType{}
 	this.ParamType = paramType
 	this.RetType = retType
 	this.Qualifiers = qualifiers
@@ -54,7 +52,6 @@ func NewFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemTyp
 	return this
 }
 
-func (this *FunctionAtomicType) AtomKind() Kind {
-	// migrated from FunctionAtomicType.java:40:5
-	return Kind_FUNCTION_ATOM
+func (this *functionAtomicType) atomKind() kind {
+	return kind_FUNCTION_ATOM
 }

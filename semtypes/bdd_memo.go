@@ -18,7 +18,7 @@ package semtypes
 
 type MemoStatus uint
 
-type BddMemo struct {
+type bddMemo struct {
 	isEmpty MemoStatus
 }
 
@@ -31,14 +31,13 @@ const (
 	MemoStatus_NULL
 )
 
-func NewBddMemo() BddMemo {
-	this := BddMemo{}
+func newBddMemo() bddMemo {
+	this := bddMemo{}
 	this.isEmpty = MemoStatus_NULL
 	return this
 }
 
-func (this *BddMemo) SetIsEmpty(isEmpty bool) {
-	// migrated from BddMemo.java:33:5
+func (this *bddMemo) SetIsEmpty(isEmpty bool) {
 	if isEmpty {
 		this.isEmpty = MemoStatus_TRUE
 	} else {
@@ -46,7 +45,6 @@ func (this *BddMemo) SetIsEmpty(isEmpty bool) {
 	}
 }
 
-func (this *BddMemo) IsEmpty() bool {
-	// migrated from BddMemo.java:37:5
+func (this *bddMemo) IsEmpty() bool {
 	return (this.isEmpty == MemoStatus_TRUE)
 }

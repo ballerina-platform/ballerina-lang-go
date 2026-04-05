@@ -14,110 +14,105 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Package typepool provide the internal implementation on how to serialize and deserialize semtypes
-package typepool
+package semtypes
 
-// TODO: I think we will eventually need to serialize symbol table as well and then move this package to either
-// semtypes or to top level
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/big"
-
-	"ballerina-lang-go/semtypes"
 )
 
 type TypePool struct {
-	tys  []semtypes.SemType
-	memo map[semtypes.SemType]Index
+	tys  []SemType
+	memo map[SemType]TypePoolIndex
 }
 
 func NewTypePool() *TypePool {
 	return &TypePool{
-		memo: make(map[semtypes.SemType]Index),
+		memo: make(map[SemType]TypePoolIndex),
 	}
 }
 
-// Index represent handle to the [TypePool]
+// TypePoolIndex represent handle to the [TypePool]
 // If first bit is set or value is 0 it is a inline type (used to represent simple basic types)
-// else it is an Index + 1 to the typePool
-type Index int32
+// else it is an TypePoolIndex + 1 to the typePool
+type TypePoolIndex int32
 
 const indexMask = (1 << 31) - 1
 
-func (pool *TypePool) Get(i Index) semtypes.SemType {
+func (pool *TypePool) Get(i TypePoolIndex) SemType {
 	if i <= 0 {
 		bits := i & indexMask
-		return semtypes.BasicTypeBitSetFrom(int(bits))
+		return basicTypeBitSetFrom(int(bits))
 	}
 	return pool.tys[i-1]
 }
 
-func (pool *TypePool) Put(ty semtypes.SemType) Index {
+func (pool *TypePool) Put(ty SemType) TypePoolIndex {
 	switch ty := ty.(type) {
-	case semtypes.BasicTypeBitSet:
-		return Index(ty.All() | 1<<31)
-	case semtypes.ComplexSemType:
+	case BasicTypeBitSet:
+		return TypePoolIndex(ty.all() | 1<<31)
+	case *ComplexSemType:
 		if cached, ok := pool.memo[ty]; ok {
 			return cached
 		}
 		id := len(pool.tys) + 1
 		pool.tys = append(pool.tys, ty)
-		pool.memo[ty] = Index(id)
-		return Index(id)
+		pool.memo[ty] = TypePoolIndex(id)
+		return TypePoolIndex(id)
 	}
 	panic("unreachable")
 }
 
-func fromTypePool(pool *TypePool, env semtypes.Env) binaryPool {
+func fromTypePool(pool *TypePool, env Env) binaryPool {
 	bp := binaryPool{}
-	cx := semtypes.ContextFrom(env)
+	cx := ContextFrom(env)
 	sc := newBddSerializationContext(pool, cx, &bp)
 	for i := 0; i < len(pool.tys); i++ {
 		ty := pool.tys[i]
-		cst := ty.(semtypes.ComplexSemType)
-		subtypes := semtypes.Unpack(cst)
+		cst := ty.(*ComplexSemType)
+		subtypes := unpack(cst)
 		start := uint32(len(bp.subtypeData))
 		for _, bs := range subtypes {
 			var entry subtypeDataEntry
 			switch data := bs.SubtypeData.(type) {
-			case semtypes.IntSubtype:
+			case intSubtype:
 				entry = subtypeDataEntry{kind: intSubtypeData, index: uint32(len(bp.intSubtypes))}
 				bp.intSubtypes = append(bp.intSubtypes, fromIntSubtype(&data))
-			case semtypes.BooleanSubtype:
+			case booleanSubtype:
 				entry = subtypeDataEntry{kind: booleanSubtypeData, index: uint32(len(bp.booleanSubtype))}
 				bp.booleanSubtype = append(bp.booleanSubtype, fromBooleanSubtype(&data))
-			case semtypes.FloatSubtype:
+			case floatSubtype:
 				entry = subtypeDataEntry{kind: floatSubtypeData, index: uint32(len(bp.floatSubtype))}
 				bp.floatSubtype = append(bp.floatSubtype, fromFloatSubtype(&data))
-			case semtypes.DecimalSubtype:
+			case decimalSubtype:
 				entry = subtypeDataEntry{kind: decimalSubtypeData, index: uint32(len(bp.decimalSubtype))}
 				bp.decimalSubtype = append(bp.decimalSubtype, fromDecimalSubtype(&data))
-			case semtypes.StringSubtype:
+			case stringSubtype:
 				entry = subtypeDataEntry{kind: stringSubtypeData, index: uint32(len(bp.stringSubtype))}
 				bp.stringSubtype = append(bp.stringSubtype, fromStringSubtype(&data))
-			case semtypes.XmlSubtype:
+			case xmlSubtype:
 				entry = subtypeDataEntry{kind: xmlSubtypeData, index: uint32(len(bp.xmlSubtypes))}
 				bp.xmlSubtypes = append(bp.xmlSubtypes, sc.serializeXmlSubtype(data))
-			case semtypes.Bdd:
+			case Bdd:
 				switch bs.BasicTypeCode {
-				case semtypes.BTList:
+				case BTList:
 					entry = subtypeDataEntry{kind: listBddSubtypeData, index: uint32(len(bp.listBdds))}
 					bp.listBdds = append(bp.listBdds, sc.serializeListBdd(data))
-				case semtypes.BTMapping:
+				case BTMapping:
 					entry = subtypeDataEntry{kind: mappingBddSubtypeData, index: uint32(len(bp.mappingBdds))}
 					bp.mappingBdds = append(bp.mappingBdds, sc.serializeMappingBdd(data))
-				case semtypes.BTFunction:
+				case BTFunction:
 					entry = subtypeDataEntry{kind: functionBddSubtypeData, index: uint32(len(bp.functionBdds))}
 					bp.functionBdds = append(bp.functionBdds, sc.serializeFunctionBdd(data))
-				case semtypes.BTError:
+				case BTError:
 					entry = subtypeDataEntry{kind: errorBddSubtypeData, index: uint32(len(bp.errorBdds))}
 					bp.errorBdds = append(bp.errorBdds, sc.serializeMappingBdd(data))
-				case semtypes.BTTable:
+				case BTTable:
 					entry = subtypeDataEntry{kind: tableBddSubtypeData, index: uint32(len(bp.tableBdds))}
 					bp.tableBdds = append(bp.tableBdds, sc.serializeListBdd(data))
-				case semtypes.BTObject:
+				case BTObject:
 					entry = subtypeDataEntry{kind: objectBddSubtypeData, index: uint32(len(bp.objectBdds))}
 					bp.objectBdds = append(bp.objectBdds, sc.serializeMappingBdd(data))
 				default:
@@ -130,8 +125,8 @@ func fromTypePool(pool *TypePool, env semtypes.Env) binaryPool {
 		}
 		end := uint32(len(bp.subtypeData))
 		bp.types = append(bp.types, typeEntry{
-			all:              uint32(cst.All()),
-			some:             uint32(cst.Some()),
+			all:              uint32(cst.all()),
+			some:             uint32(cst.some()),
 			subtypeDataStart: start,
 			subtypeDataEnd:   end,
 		})
@@ -155,10 +150,10 @@ func fromTypePool(pool *TypePool, env semtypes.Env) binaryPool {
 	return bp
 }
 
-func toTypePool(bp binaryPool, env semtypes.Env) *TypePool {
+func toTypePool(bp binaryPool, env Env) *TypePool {
 	pool := &TypePool{
-		memo: make(map[semtypes.SemType]Index),
-		tys:  make([]semtypes.SemType, len(bp.types)),
+		memo: make(map[SemType]TypePoolIndex),
+		tys:  make([]SemType, len(bp.types)),
 	}
 	dc := newBddDeserializationContext(pool, env, &bp)
 	for i := range bp.types {
@@ -167,7 +162,7 @@ func toTypePool(bp binaryPool, env semtypes.Env) *TypePool {
 	return pool
 }
 
-func MarshalTypePool(pool *TypePool, env semtypes.Env) []byte {
+func MarshalTypePool(pool *TypePool, env Env) []byte {
 	bp := fromTypePool(pool, env)
 	buf := &bytes.Buffer{}
 
@@ -247,7 +242,7 @@ func MarshalTypePool(pool *TypePool, env semtypes.Env) []byte {
 	return buf.Bytes()
 }
 
-func UnmarshalTypePool(data []byte, env semtypes.Env) *TypePool {
+func UnmarshalTypePool(data []byte, env Env) *TypePool {
 	r := bytes.NewReader(data)
 	bp := binaryPool{}
 
@@ -464,11 +459,7 @@ type intSubTypeEntry struct {
 	ranges  []intRange
 }
 
-// currently this is fixed size but I don't want semtypes to have such a constraint so in the future
-// if needed this should define it's own
-type intRange semtypes.Range
-
-func fromIntSubtype(st *semtypes.IntSubtype) intSubTypeEntry {
+func fromIntSubtype(st *intSubtype) intSubTypeEntry {
 	ranges := make([]intRange, len(st.Ranges))
 	for i, r := range st.Ranges {
 		ranges[i] = intRange(r)
@@ -476,12 +467,12 @@ func fromIntSubtype(st *semtypes.IntSubtype) intSubTypeEntry {
 	return intSubTypeEntry{nRanges: uint32(len(ranges)), ranges: ranges}
 }
 
-func toIntSubtype(entry intSubTypeEntry) semtypes.IntSubtype {
-	ranges := make([]semtypes.Range, len(entry.ranges))
+func toIntSubtype(entry intSubTypeEntry) intSubtype {
+	ranges := make([]intRange, len(entry.ranges))
 	for i, r := range entry.ranges {
-		ranges[i] = semtypes.Range(r)
+		ranges[i] = intRange(r)
 	}
-	return semtypes.NewIntSubtypeFromRanges(ranges)
+	return newIntSubtypeFromRanges(ranges)
 }
 
 func marshalIntSubtype(buf *bytes.Buffer, entry intSubTypeEntry) {
@@ -507,12 +498,12 @@ func unmarshalIntSubtype(r *bytes.Reader) intSubTypeEntry {
 
 type booleanSubtypeEntry bool
 
-func fromBooleanSubtype(st *semtypes.BooleanSubtype) booleanSubtypeEntry {
+func fromBooleanSubtype(st *booleanSubtype) booleanSubtypeEntry {
 	return booleanSubtypeEntry(st.Value)
 }
 
-func toBooleanSubtype(entry booleanSubtypeEntry) semtypes.BooleanSubtype {
-	return semtypes.BooleanSubtypeFrom(bool(entry))
+func toBooleanSubtype(entry booleanSubtypeEntry) booleanSubtype {
+	return booleanSubtypeFrom(bool(entry))
 }
 
 func marshalBooleanSubtype(buf *bytes.Buffer, entry booleanSubtypeEntry) {
@@ -541,7 +532,7 @@ type enumerableSubtypeEntry[T sized] struct {
 
 type floatSubtypeEntry enumerableSubtypeEntry[float64]
 
-func fromFloatSubtype(st *semtypes.FloatSubtype) floatSubtypeEntry {
+func fromFloatSubtype(st *floatSubtype) floatSubtypeEntry {
 	nValues := len(st.Values())
 	values := make([]float64, nValues)
 	for i, v := range st.Values() {
@@ -550,13 +541,13 @@ func fromFloatSubtype(st *semtypes.FloatSubtype) floatSubtypeEntry {
 	return floatSubtypeEntry{allowed: st.Allowed(), nValues: int32(nValues), values: values}
 }
 
-func toFloatSubtype(entry floatSubtypeEntry) semtypes.ProperSubtypeData {
-	values := make([]semtypes.EnumerableType[float64], entry.nValues)
+func toFloatSubtype(entry floatSubtypeEntry) ProperSubtypeData {
+	values := make([]enumerableType[float64], entry.nValues)
 	for i, v := range entry.values {
-		f := semtypes.EnumerableFloatFrom(v)
+		f := enumerableFloatFrom(v)
 		values[i] = &f
 	}
-	return semtypes.CreateFloatSubtype(entry.allowed, values)
+	return createFloatSubtype(entry.allowed, values)
 }
 
 func marshalFloatSubtype(buf *bytes.Buffer, entry floatSubtypeEntry) {
@@ -588,7 +579,7 @@ type decimal struct {
 	denom int64
 }
 
-func fromDecimalSubtype(st *semtypes.DecimalSubtype) decimalSubtypeEntry {
+func fromDecimalSubtype(st *decimalSubtype) decimalSubtypeEntry {
 	values := make([]decimal, len(st.Values()))
 	for i, v := range st.Values() {
 		r := v.Value()
@@ -597,14 +588,14 @@ func fromDecimalSubtype(st *semtypes.DecimalSubtype) decimalSubtypeEntry {
 	return decimalSubtypeEntry{allowed: st.Allowed(), nValues: int32(len(values)), values: values}
 }
 
-func toDecimalSubtype(entry decimalSubtypeEntry) semtypes.ProperSubtypeData {
-	values := make([]semtypes.EnumerableType[big.Rat], len(entry.values))
+func toDecimalSubtype(entry decimalSubtypeEntry) ProperSubtypeData {
+	values := make([]enumerableType[big.Rat], len(entry.values))
 	for i, v := range entry.values {
 		r := new(big.Rat).SetFrac64(v.num, v.denom)
-		d := semtypes.EnumerableDecimalFrom(*r)
+		d := enumerableDecimalFrom(*r)
 		values[i] = &d
 	}
-	return semtypes.CreateDecimalSubtype(entry.allowed, values)
+	return createDecimalSubtype(entry.allowed, values)
 }
 
 func marshalDecimalSubtype(buf *bytes.Buffer, entry decimalSubtypeEntry) {
@@ -646,7 +637,7 @@ type enumerableStringDataEntry struct {
 	values []byte
 }
 
-func fromEnumerableStringSubtype(es semtypes.EnumerableSubtype[string]) enumerableStringData {
+func fromEnumerableStringSubtype(es enumerableSubtype[string]) enumerableStringData {
 	entries := make([]enumerableStringDataEntry, len(es.Values()))
 	for i, v := range es.Values() {
 		b := []byte(v.Value())
@@ -655,27 +646,27 @@ func fromEnumerableStringSubtype(es semtypes.EnumerableSubtype[string]) enumerab
 	return enumerableStringData{allowed: es.Allowed(), num: int64(len(entries)), values: entries}
 }
 
-func toEnumerableStrings(data enumerableStringData) (bool, []semtypes.EnumerableType[string]) {
-	values := make([]semtypes.EnumerableType[string], len(data.values))
+func toEnumerableStrings(data enumerableStringData) (bool, []enumerableType[string]) {
+	values := make([]enumerableType[string], len(data.values))
 	for i, v := range data.values {
-		values[i] = semtypes.EnumerableCharStringFrom(string(v.values))
+		values[i] = enumerableCharStringFrom(string(v.values))
 	}
 	return data.allowed, values
 }
 
-func fromStringSubtype(st *semtypes.StringSubtype) stringSubtypeEntry {
+func fromStringSubtype(st *stringSubtype) stringSubtypeEntry {
 	return stringSubtypeEntry{
 		charData:    fromEnumerableStringSubtype(st.GetChar()),
 		nonCharData: fromEnumerableStringSubtype(st.GetNonChar()),
 	}
 }
 
-func toStringSubtype(entry stringSubtypeEntry) semtypes.StringSubtype {
+func toStringSubtype(entry stringSubtypeEntry) stringSubtype {
 	charAllowed, charValues := toEnumerableStrings(entry.charData)
 	nonCharAllowed, nonCharValues := toEnumerableStrings(entry.nonCharData)
-	return semtypes.StringSubtypeFrom(
-		semtypes.CharStringSubtypeFrom(charAllowed, charValues),
-		semtypes.NonCharStringSubtypeFrom(nonCharAllowed, nonCharValues),
+	return stringSubtypeFrom(
+		charStringSubtypeFrom(charAllowed, charValues),
+		nonCharStringSubtypeFrom(nonCharAllowed, nonCharValues),
 	)
 }
 

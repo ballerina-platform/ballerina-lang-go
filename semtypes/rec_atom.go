@@ -18,69 +18,43 @@ package semtypes
 
 import "fmt"
 
-type RecAtom struct {
-	index      int
-	targetKind Kind
+type recAtom struct {
+	idx int
 }
 
 var ZERO = newRecAtomFromInt(BDD_REC_ATOM_READONLY)
-var _ Atom = &RecAtom{}
+var _ atom = &recAtom{}
 
-func newRecAtomFromInt(index int) RecAtom {
-	this := RecAtom{}
+func newRecAtomFromInt(index int) recAtom {
+	this := recAtom{}
 
-	this.index = index
+	this.idx = index
 	return this
 }
 
-func newRecAtomFromIntKind(index int, targetKind Kind) RecAtom {
-	this := RecAtom{}
-
-	this.index = index
-	this.targetKind = targetKind
-	return this
-}
-
-func CreateRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:41:5
+func createRecAtom(index int) recAtom {
 	if index == BDD_REC_ATOM_READONLY {
 		return ZERO
 	}
 	return newRecAtomFromInt(index)
 }
 
-func CreateXMLRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:48:5
-	return newRecAtomFromIntKind(index, Kind_XML_ATOM)
+func createXMLRecAtom(index int) recAtom {
+	return newRecAtomFromInt(index)
 }
 
-func CreateDistinctRecAtom(index int) RecAtom {
-	// migrated from RecAtom.java:52:5
-	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
+func createDistinctRecAtom(index int) recAtom {
+	return newRecAtomFromInt(index)
 }
 
-func (this *RecAtom) SetKind(targetKind Kind) {
-	// migrated from RecAtom.java:56:5
-	this.targetKind = targetKind
+func (this *recAtom) index() int {
+	return this.idx
 }
 
-func (this *RecAtom) Index() int {
-	// migrated from RecAtom.java:60:5
-	return this.index
+func (this *recAtom) canonicalKey() string {
+	return fmt.Sprintf("r%d", this.idx)
 }
 
-func (this *RecAtom) Kind() Kind {
-	// migrated from RecAtom.java:65:5
-	// if this.targetKind == 0 {
-	// 	panic("Target kind is not set for the recursive type atom")
-	// }
-	return this.targetKind
-}
-
-func (this *RecAtom) canonicalKey() string {
-	return fmt.Sprintf("r%d", this.index)
-}
-
-func (this *RecAtom) String() string {
-	return fmt.Sprintf("r%d", this.index)
+func (this *recAtom) String() string {
+	return fmt.Sprintf("r%d", this.idx)
 }

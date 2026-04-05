@@ -16,22 +16,29 @@
 
 package semtypes
 
-type complexSemTypeImpl struct {
-	all             int
-	some            int
-	subtypeDataList []ProperSubtypeData
+import "slices"
+
+type ComplexSemType struct {
+	allBitSet  BasicTypeBitSet
+	someBitSet BasicTypeBitSet
+	dataList   []ProperSubtypeData
 }
 
-var _ ComplexSemType = &complexSemTypeImpl{}
+var _ SemType = &ComplexSemType{}
 
-func (this *complexSemTypeImpl) All() int {
-	return this.all
+func (this *ComplexSemType) all() BasicTypeBitSet {
+	return this.allBitSet
 }
 
-func (this *complexSemTypeImpl) Some() int {
-	return this.some
+func (this *ComplexSemType) some() BasicTypeBitSet {
+	return this.someBitSet
 }
 
-func (this *complexSemTypeImpl) SubtypeDataList() []ProperSubtypeData {
-	return this.subtypeDataList
+func (this *ComplexSemType) subtypeDataList() []ProperSubtypeData {
+	return this.dataList
+}
+
+func (this *ComplexSemType) equals(other *ComplexSemType) bool {
+	return this == other || (this.allBitSet == other.allBitSet && this.someBitSet == other.someBitSet &&
+		slices.Equal(this.dataList, other.dataList))
 }

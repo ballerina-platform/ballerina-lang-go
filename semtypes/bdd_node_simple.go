@@ -16,45 +16,38 @@
 
 package semtypes
 
-import (
-	"fmt"
-	"sync"
-)
+import "fmt"
 
-type BddNodeSimple struct {
-	atom             Atom
-	canonicalKeyFunc func() string
+type bddNodeSimple struct {
+	_atom     atom
+	canonical string
 }
 
-var _ BddNode = &BddNodeSimple{}
+var _ bddNode = &bddNodeSimple{}
 
-func (this *BddNodeSimple) Left() Bdd {
-	// migrated from BddNodeSimple.java:32:5
-	return BddAll()
+func (this *bddNodeSimple) left() Bdd {
+	return bddAll()
 }
 
-func (this *BddNodeSimple) Middle() Bdd {
-	// migrated from BddNodeSimple.java:37:5
-	return BddNothing()
+func (this *bddNodeSimple) middle() Bdd {
+	return bddNothing()
 }
 
-func (this *BddNodeSimple) Right() Bdd {
-	// migrated from BddNodeSimple.java:42:5
-	return BddNothing()
+func (this *bddNodeSimple) right() Bdd {
+	return bddNothing()
 }
 
-func (this *BddNodeSimple) Atom() Atom {
-	return this.atom
+func (this *bddNodeSimple) atom() atom {
+	return this._atom
 }
 
-func newBddNodeSimple(atom Atom) *BddNodeSimple {
-	node := &BddNodeSimple{atom: atom}
-	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey())
-	})
-	return node
+func newBddNodeSimple(atom atom) *bddNodeSimple {
+	return &bddNodeSimple{
+		_atom:     atom,
+		canonical: fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey()),
+	}
 }
 
-func (this *BddNodeSimple) canonicalKey() string {
-	return this.canonicalKeyFunc()
+func (this *bddNodeSimple) canonicalKey() string {
+	return this.canonical
 }

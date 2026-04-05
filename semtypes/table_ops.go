@@ -16,43 +16,39 @@
 
 package semtypes
 
-type TableOps struct {
+type tableOps struct {
 }
 
-var _ BasicTypeOps = &TableOps{}
+var _ BasicTypeOps = &tableOps{}
 
 func tableSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from TableOps.java:38:5
 	return bddSubtypeDiff(LIST_SUBTYPE_THREE_ELEMENT, t)
 }
 
 func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from TableOps.java:42:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
-		b = BddIntersect(b, LIST_SUBTYPE_THREE_ELEMENT)
+		b = bddIntersect(b, LIST_SUBTYPE_THREE_ELEMENT)
 	}
 	return listSubtypeIsEmpty(cx, b)
 }
 
-func (this *TableOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from TableOps.java:51:5
+func (this *tableOps) complement(d SubtypeData) SubtypeData {
 	return tableSubtypeComplement(d)
 }
 
-func (this *TableOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from TableOps.java:56:5
+func (this *tableOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return tableSubtypeIsEmpty(cx, d)
 }
 
-func (this *TableOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *tableOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *TableOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *tableOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *TableOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (this *tableOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }

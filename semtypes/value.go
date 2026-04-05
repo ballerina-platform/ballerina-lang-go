@@ -26,6 +26,6 @@ func newValue(value any) Value {
 	}
 }
 
-func ValueFrom(value any) Value {
+func valueFrom(value any) Value {
 	return newValue(value)
 }

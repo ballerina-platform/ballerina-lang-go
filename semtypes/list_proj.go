@@ -20,63 +20,63 @@ import (
 	"sort"
 )
 
-func ListProjInnerVal(cx Context, t SemType, k SemType) SemType {
-	// migrated from ListProj.java:73:5
+func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
 	if b, ok := t.(BasicTypeBitSet); ok {
-		if (b.All() & LIST.All()) != 0 {
+		if (b.all() & LIST.all()) != 0 {
 			return VAL
 		} else {
 			return NEVER
 		}
 	} else {
-		keyData := intSubtype(k)
+		keyData := getIntSubtype(k)
 		if isNothingSubtype(keyData) {
 			return NEVER
 		}
-		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(ComplexSemType), BTList).(Bdd), nil, nil)
+		return listProjBddInnerVal(cx, keyData, getComplexSubtypeData(t.(*ComplexSemType), BTList).(Bdd), conjunctionNil, conjunctionNil)
 	}
 }
 
-func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos *Conjunction, neg *Conjunction) SemType {
-	// migrated from ListProj.java:87:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle, neg conjunctionHandle) SemType {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
 		} else {
 			return NEVER
 		}
 	} else {
-		bddNode := b.(BddNode)
-		return Union(listProjBddInnerVal(cx, k, bddNode.Left(), new(And(bddNode.Atom(), pos)), neg),
-			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, new(And(bddNode.Atom(), neg))),
-				listProjBddInnerVal(cx, k, bddNode.Right(), pos, new(And(bddNode.Atom(), neg)))))
+		bn := b.(bddNode)
+		saved := cx.conjunctionStackDepth()
+		result := Union(listProjBddInnerVal(cx, k, bn.left(), cx.pushConjunction(bn.atom(), pos), neg),
+			Union(listProjBddInnerVal(cx, k, bn.middle(), pos, cx.pushConjunction(bn.atom(), neg)),
+				listProjBddInnerVal(cx, k, bn.right(), pos, cx.pushConjunction(bn.atom(), neg))))
+		cx.resetConjunctionStack(saved)
+		return result
 	}
 }
 
-func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conjunction) SemType {
-	// migrated from ListProj.java:99:5
-	var members FixedLengthArray
-	var rest CellSemType
-	if pos == nil {
-		members = FixedLengthArrayEmpty()
-		rest = CellContaining(cx.Env(), Union(VAL, UNDEF))
+func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg conjunctionHandle) SemType {
+	var members fixedLengthArray
+	var rest *ComplexSemType
+	if pos == conjunctionNil {
+		members = fixedLengthArrayEmpty()
+		rest = cellContaining(cx.Env(), Union(VAL, UNDEF))
 	} else {
 		// combine all the positive tuples using intersection
-		lt := cx.ListAtomType(pos.Atom)
+		lt := cx.ListAtomType(cx.conjunctionAtom(pos))
 		members = lt.Members
 		rest = lt.Rest
-		p := pos.Next
+		p := cx.conjunctionNext(pos)
 		// the neg case is in case we grow the array in listInhabited
-		if p != nil || neg != nil {
+		if p != conjunctionNil || neg != conjunctionNil {
 			members = fixedArrayShallowCopy(members)
 		}
 
 		for {
-			if p == nil {
+			if p == conjunctionNil {
 				break
 			} else {
-				d := p.Atom
-				p = p.Next
+				d := cx.conjunctionAtom(p)
+				p = cx.conjunctionNext(p)
 				lt = cx.ListAtomType(d)
 				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
 				if !ok {
@@ -91,7 +91,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 		}
 		// Ensure that we can use isNever on rest in listInhabited
 		if !IsNever(CellInnerVal(rest)) && IsEmpty(cx, rest) {
-			rest = RoCellContaining(cx.Env(), NEVER)
+			rest = roCellContaining(cx.Env(), NEVER)
 		}
 	}
 	// return listProjExclude(cx, k, members, rest, listConjunction(cx, neg));
@@ -102,16 +102,15 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos *Conjunction, neg *Conj
 }
 
 func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
-	// migrated from ListProj.java:158:5
 	type indexBoolPair struct {
 		index   int
 		isInKey bool
 	}
 	var v []indexBoolPair
 	for _, i := range indices {
-		v = append(v, indexBoolPair{i, IntSubtypeContains(k, int64(i))})
+		v = append(v, indexBoolPair{i, intSubtypeContains(k, int64(i))})
 	}
-	if intSubtype, ok := k.(*IntSubtype); ok {
+	if intSubtype, ok := k.(*intSubtype); ok {
 		for _, rng := range intSubtype.Ranges {
 			max := rng.Max
 			if rng.Max >= 0 {
@@ -144,10 +143,9 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 	return indices1, keyIndices
 }
 
-func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []CellSemType, nRequired int, neg *Conjunction) SemType {
-	// migrated from ListProj.java:192:5
+func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg conjunctionHandle) SemType {
 	var p SemType = NEVER
-	if neg == nil {
+	if neg == conjunctionNil {
 		length := len(memberTypes)
 		for _, k := range keyIndices {
 			if k < length {
@@ -155,36 +153,37 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			}
 		}
 	} else {
-		nt := cx.ListAtomType(neg.Atom)
+		nt := cx.ListAtomType(cx.conjunctionAtom(neg))
+		negNext := cx.conjunctionNext(neg)
 		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
-			return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.Next)
+			return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, negNext)
 		}
 		negLen := nt.Members.FixedLength
 		if negLen > 0 {
 			length := len(memberTypes)
 			if length < len(indices) && indices[length] < negLen {
-				return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, neg.Next)
+				return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, negNext)
 			}
 			for i := nRequired; i < len(memberTypes); i++ {
 				if indices[i] >= negLen {
 					break
 				}
-				t := append([]CellSemType(nil), memberTypes[0:i]...)
-				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, neg.Next))
+				t := append([]*ComplexSemType(nil), memberTypes[0:i]...)
+				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, nRequired, negNext))
 			}
 		}
 		for i := range memberTypes {
 			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
 			if !IsEmpty(cx, d) {
-				t := append([]CellSemType(nil), memberTypes...)
-				t[i] = CellContaining(cx.Env(), d)
+				t := append([]*ComplexSemType(nil), memberTypes...)
+				t[i] = cellContaining(cx.Env(), d)
 				var maxVal int
 				if nRequired > (i + 1) {
 					maxVal = nRequired
 				} else {
 					maxVal = i + 1
 				}
-				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, maxVal, neg.Next))
+				p = Union(p, listProjExcludeInnerVal(cx, indices, keyIndices, t, maxVal, negNext))
 			}
 		}
 	}

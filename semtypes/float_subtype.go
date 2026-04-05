@@ -22,40 +22,40 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type FloatSubtype struct {
+type floatSubtype struct {
 	allowed bool
-	values  []EnumerableFloat
+	values  []enumerableFloat
 }
 
-var _ ProperSubtypeData = &FloatSubtype{}
+var _ ProperSubtypeData = &floatSubtype{}
 
-func newFloatSubtypeFromBoolEnumerableFloat(allowed bool, value EnumerableFloat) FloatSubtype {
-	this := FloatSubtype{}
+func newFloatSubtypeFromBoolEnumerableFloat(allowed bool, value enumerableFloat) floatSubtype {
+	this := floatSubtype{}
 	this.allowed = allowed
-	this.values = []EnumerableFloat{value}
+	this.values = []enumerableFloat{value}
 	return this
 }
 
-func newFloatSubtypeFromBoolEnumerableFloats(allowed bool, values []EnumerableType[float64]) FloatSubtype {
-	this := FloatSubtype{}
+func newFloatSubtypeFromBoolEnumerableFloats(allowed bool, values []enumerableType[float64]) floatSubtype {
+	this := floatSubtype{}
 	this.allowed = allowed
-	var floats []EnumerableFloat
+	var floats []enumerableFloat
 	for _, value := range values {
-		floats = append(floats, EnumerableFloatFrom(value.Value()))
+		floats = append(floats, enumerableFloatFrom(value.Value()))
 	}
 	this.values = floats
 	return this
 }
 
 func FloatConst(value float64) SemType {
-	return basicSubtype(BTFloat, newFloatSubtypeFromBoolEnumerableFloat(true, EnumerableFloatFrom(value)))
+	return getBasicSubtype(BTFloat, newFloatSubtypeFromBoolEnumerableFloat(true, enumerableFloatFrom(value)))
 }
 
-func FloatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
-	if _, ok := d.(AllOrNothingSubtype); ok {
+func floatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
+	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[float64]()
 	}
-	v := d.(FloatSubtype)
+	v := d.(floatSubtype)
 	if !v.allowed {
 		return common.OptionalEmpty[float64]()
 	}
@@ -65,38 +65,34 @@ func FloatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
 	return common.OptionalOf(v.values[0].value)
 }
 
-func FloatSubtypeContains(d SubtypeData, f EnumerableFloat) bool {
-	// migrated from FloatSubtype.java:72:5
-	if allOrNothingSubtype, ok := d.(AllOrNothingSubtype); ok {
+func floatSubtypeContains(d SubtypeData, f enumerableFloat) bool {
+	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
-	v := d.(FloatSubtype)
+	v := d.(floatSubtype)
 	if slices.Contains(v.values, f) {
 		return v.allowed
 	}
 	return (!v.allowed)
 }
 
-func CreateFloatSubtype(allowed bool, values []EnumerableType[float64]) ProperSubtypeData {
-	// migrated from FloatSubtype.java:86:5
+func createFloatSubtype(allowed bool, values []enumerableType[float64]) ProperSubtypeData {
 	if len(values) == 0 {
 		if allowed {
-			return CreateNothing()
+			return createNothing()
 		} else {
-			return CreateAll()
+			return createAll()
 		}
 	}
 	return newFloatSubtypeFromBoolEnumerableFloats(allowed, values)
 }
 
-func (this *FloatSubtype) Allowed() bool {
-	// migrated from FloatSubtype.java:93:5
+func (this *floatSubtype) Allowed() bool {
 	return this.allowed
 }
 
-func (this *FloatSubtype) Values() []EnumerableType[float64] {
-	// migrated from FloatSubtype.java:98:5
-	var values []EnumerableType[float64]
+func (this *floatSubtype) Values() []enumerableType[float64] {
+	var values []enumerableType[float64]
 	for _, value := range this.values {
 		values = append(values, &value)
 	}

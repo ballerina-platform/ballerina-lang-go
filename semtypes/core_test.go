@@ -70,7 +70,7 @@ func TestSingleNumericType(t *testing.T) {
 	result = SingleNumericType(BOOLEAN)
 	assertFalse(t, result.IsPresent(), "BOOLEAN should not return a single numeric type")
 
-	result = SingleNumericType(Singleton(int64(1)))
+	result = SingleNumericType(singleton(int64(1)))
 	assertTrue(t, result.IsPresent(), "singleton int should return INT")
 	assertEqual(t, result.Get(), INT)
 
@@ -310,18 +310,18 @@ func TestFunc4(t *testing.T) {
 // TestString tests enumerable string union, intersect, and diff operations
 // Ported from SemTypeCoreTest.java:stringTest()
 func TestString(t *testing.T) {
-	var result []EnumerableType[string]
+	var result []enumerableType[string]
 
 	// Test union: ["a", "b", "d"] ∪ ["c"] = ["a", "b", "c", "d"]
-	result = []EnumerableType[string]{}
-	EnumerableListUnion(
-		[]EnumerableType[string]{
-			EnumerableStringFrom("a"),
-			EnumerableStringFrom("b"),
-			EnumerableStringFrom("d"),
+	result = []enumerableType[string]{}
+	enumerableListUnion(
+		[]enumerableType[string]{
+			enumerableStringFrom("a"),
+			enumerableStringFrom("b"),
+			enumerableStringFrom("d"),
 		},
-		[]EnumerableType[string]{
-			EnumerableStringFrom("c"),
+		[]enumerableType[string]{
+			enumerableStringFrom("c"),
 		},
 		&result,
 	)
@@ -332,15 +332,15 @@ func TestString(t *testing.T) {
 	assertEqual(t, result[3].Value(), "d")
 
 	// Test intersect: ["a", "b", "d"] ∩ ["d"] = ["d"]
-	result = []EnumerableType[string]{}
-	EnumerableListIntersect(
-		[]EnumerableType[string]{
-			EnumerableStringFrom("a"),
-			EnumerableStringFrom("b"),
-			EnumerableStringFrom("d"),
+	result = []enumerableType[string]{}
+	enumerableListIntersect(
+		[]enumerableType[string]{
+			enumerableStringFrom("a"),
+			enumerableStringFrom("b"),
+			enumerableStringFrom("d"),
 		},
-		[]EnumerableType[string]{
-			EnumerableStringFrom("d"),
+		[]enumerableType[string]{
+			enumerableStringFrom("d"),
 		},
 		&result,
 	)
@@ -348,17 +348,17 @@ func TestString(t *testing.T) {
 	assertEqual(t, result[0].Value(), "d")
 
 	// Test diff: ["a", "b", "c", "d"] - ["a", "c"] = ["b", "d"]
-	result = []EnumerableType[string]{}
-	EnumerableListDiff(
-		[]EnumerableType[string]{
-			EnumerableStringFrom("a"),
-			EnumerableStringFrom("b"),
-			EnumerableStringFrom("c"),
-			EnumerableStringFrom("d"),
+	result = []enumerableType[string]{}
+	enumerableListDiff(
+		[]enumerableType[string]{
+			enumerableStringFrom("a"),
+			enumerableStringFrom("b"),
+			enumerableStringFrom("c"),
+			enumerableStringFrom("d"),
 		},
-		[]EnumerableType[string]{
-			EnumerableStringFrom("a"),
-			EnumerableStringFrom("c"),
+		[]enumerableType[string]{
+			enumerableStringFrom("a"),
+			enumerableStringFrom("c"),
 		},
 		&result,
 	)
@@ -384,31 +384,31 @@ func TestRoList(t *testing.T) {
 // TestIntSubtypeWidenUnsigned tests int subtype widening to unsigned ranges
 // Ported from SemTypeCoreTest.java:testIntSubtypeWidenUnsigned()
 func TestIntSubtypeWidenUnsigned(t *testing.T) {
-	// Test with AllOrNothingSubtype (all)
-	allSubtype := IntSubtypeWidenUnsigned(CreateAll())
-	allOrNothing, ok := allSubtype.(AllOrNothingSubtype)
-	assertTrue(t, ok, "expected AllOrNothingSubtype")
+	// Test with allOrNothingSubtype (all)
+	allSubtype := intSubtypeWidenUnsigned(createAll())
+	allOrNothing, ok := allSubtype.(allOrNothingSubtype)
+	assertTrue(t, ok, "expected allOrNothingSubtype")
 	assertTrue(t, allOrNothing.IsAllSubtype())
 
 	// Test with range that includes negative values (should widen to all)
-	rangeSubtype := CreateIntSubtype(RangeFrom(-1, 10))
-	allSubtype2 := IntSubtypeWidenUnsigned(rangeSubtype)
-	allOrNothing2, ok2 := allSubtype2.(AllOrNothingSubtype)
-	assertTrue(t, ok2, "expected AllOrNothingSubtype")
+	rangeSubtype := createIntSubtype(rangeFrom(-1, 10))
+	allSubtype2 := intSubtypeWidenUnsigned(rangeSubtype)
+	allOrNothing2, ok2 := allSubtype2.(allOrNothingSubtype)
+	assertTrue(t, ok2, "expected allOrNothingSubtype")
 	assertTrue(t, allOrNothing2.IsAllSubtype())
 
 	// Test with range [0, 0] (should widen to [0, 255])
-	intType1 := IntSubtypeWidenUnsigned(CreateIntSubtype(RangeFrom(0, 0)))
-	intSubtype1, ok3 := intType1.(IntSubtype)
-	assertTrue(t, ok3, "expected IntSubtype")
+	intType1 := intSubtypeWidenUnsigned(createIntSubtype(rangeFrom(0, 0)))
+	intSubtype1, ok3 := intType1.(intSubtype)
+	assertTrue(t, ok3, "expected intSubtype")
 	assertEqual(t, len(intSubtype1.Ranges), 1)
 	assertEqual(t, intSubtype1.Ranges[0].Min, int64(0))
 	assertEqual(t, intSubtype1.Ranges[0].Max, int64(255))
 
 	// Test with range [0, 257] (should widen to [0, 65535])
-	intType2 := IntSubtypeWidenUnsigned(CreateIntSubtype(RangeFrom(0, 257)))
-	intSubtype2, ok4 := intType2.(IntSubtype)
-	assertTrue(t, ok4, "expected IntSubtype")
+	intType2 := intSubtypeWidenUnsigned(createIntSubtype(rangeFrom(0, 257)))
+	intSubtype2, ok4 := intType2.(intSubtype)
+	assertTrue(t, ok4, "expected intSubtype")
 	assertEqual(t, len(intSubtype2.Ranges), 1)
 	assertEqual(t, intSubtype2.Ranges[0].Min, int64(0))
 	assertEqual(t, intSubtype2.Ranges[0].Max, int64(65535))
@@ -486,12 +486,12 @@ func TestRec3(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringCharSubtype()
 func TestStringCharSubtype(t *testing.T) {
 	st := StringConst("a")
-	complexSt, ok := st.(ComplexSemType)
+	complexSt, ok := st.(*ComplexSemType)
 	assertTrue(t, ok, "expected ComplexSemType")
-	assertEqual(t, len(complexSt.SubtypeDataList()), 1)
+	assertEqual(t, len(complexSt.subtypeDataList()), 1)
 
-	subType, ok2 := complexSt.SubtypeDataList()[0].(StringSubtype)
-	assertTrue(t, ok2, "expected StringSubtype")
+	subType, ok2 := complexSt.subtypeDataList()[0].(stringSubtype)
+	assertTrue(t, ok2, "expected stringSubtype")
 	assertEqual(t, len(subType.GetChar().Values()), 1)
 	assertEqual(t, subType.GetChar().Values()[0].Value(), "a")
 	assertTrue(t, subType.GetChar().Allowed())
@@ -503,12 +503,12 @@ func TestStringCharSubtype(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringNonCharSubtype()
 func TestStringNonCharSubtype(t *testing.T) {
 	st := StringConst("abc")
-	complexSt, ok := st.(ComplexSemType)
+	complexSt, ok := st.(*ComplexSemType)
 	assertTrue(t, ok, "expected ComplexSemType")
-	assertEqual(t, len(complexSt.SubtypeDataList()), 1)
+	assertEqual(t, len(complexSt.subtypeDataList()), 1)
 
-	subType, ok2 := complexSt.SubtypeDataList()[0].(StringSubtype)
-	assertTrue(t, ok2, "expected StringSubtype")
+	subType, ok2 := complexSt.subtypeDataList()[0].(stringSubtype)
+	assertTrue(t, ok2, "expected stringSubtype")
 	assertEqual(t, len(subType.GetChar().Values()), 0)
 	assertTrue(t, subType.GetChar().Allowed())
 	assertEqual(t, len(subType.GetNonChar().Values()), 1)
@@ -520,38 +520,38 @@ func TestStringNonCharSubtype(t *testing.T) {
 // Ported from SemTypeCoreTest.java:testStringSubtypeSingleValue()
 func TestStringSubtypeSingleValue(t *testing.T) {
 	abc := StringConst("abc")
-	abcComplex, ok := abc.(ComplexSemType)
+	abcComplex, ok := abc.(*ComplexSemType)
 	assertTrue(t, ok, "expected ComplexSemType")
-	abcSD := abcComplex.SubtypeDataList()[0]
-	assertEqual(t, StringSubtypeSingleValue(abcSD).Get(), "abc")
+	abcSD := abcComplex.subtypeDataList()[0]
+	assertEqual(t, stringSubtypeSingleValue(abcSD).Get(), "abc")
 
 	a := StringConst("a")
-	aComplex, ok2 := a.(ComplexSemType)
+	aComplex, ok2 := a.(*ComplexSemType)
 	assertTrue(t, ok2, "expected ComplexSemType")
-	aSD := aComplex.SubtypeDataList()[0]
-	assertEqual(t, StringSubtypeSingleValue(aSD).Get(), "a")
+	aSD := aComplex.subtypeDataList()[0]
+	assertEqual(t, stringSubtypeSingleValue(aSD).Get(), "a")
 
 	aAndAbc := Union(a, abc)
-	aAndAbcComplex, ok3 := aAndAbc.(ComplexSemType)
+	aAndAbcComplex, ok3 := aAndAbc.(*ComplexSemType)
 	assertTrue(t, ok3, "expected ComplexSemType")
-	assertFalse(t, StringSubtypeSingleValue(aAndAbcComplex.SubtypeDataList()[0]).IsPresent())
+	assertFalse(t, stringSubtypeSingleValue(aAndAbcComplex.subtypeDataList()[0]).IsPresent())
 
 	intersect1 := Intersect(aAndAbc, a)
-	if intersect1Complex, ok4 := intersect1.(ComplexSemType); ok4 {
-		assertEqual(t, StringSubtypeSingleValue(intersect1Complex.SubtypeDataList()[0]).Get(), "a")
+	if intersect1Complex, ok4 := intersect1.(*ComplexSemType); ok4 {
+		assertEqual(t, stringSubtypeSingleValue(intersect1Complex.subtypeDataList()[0]).Get(), "a")
 	} else {
 		// If intersection results in a basic type, check if it equals "a"
-		sd := stringSubtype(intersect1)
-		assertEqual(t, StringSubtypeSingleValue(sd).Get(), "a")
+		sd := getStringSubtype(intersect1)
+		assertEqual(t, stringSubtypeSingleValue(sd).Get(), "a")
 	}
 
 	intersect2 := Intersect(aAndAbc, abc)
-	if intersect2Complex, ok5 := intersect2.(ComplexSemType); ok5 {
-		assertEqual(t, StringSubtypeSingleValue(intersect2Complex.SubtypeDataList()[0]).Get(), "abc")
+	if intersect2Complex, ok5 := intersect2.(*ComplexSemType); ok5 {
+		assertEqual(t, stringSubtypeSingleValue(intersect2Complex.subtypeDataList()[0]).Get(), "abc")
 	} else {
 		// If intersection results in a basic type, check if it equals "abc"
-		sd := stringSubtype(intersect2)
-		assertEqual(t, StringSubtypeSingleValue(sd).Get(), "abc")
+		sd := getStringSubtype(intersect2)
+		assertEqual(t, stringSubtypeSingleValue(sd).Get(), "abc")
 	}
 
 	intersect3 := Intersect(a, abc)

@@ -16,7 +16,7 @@
 
 package semtypes
 
-type EnumerableType[T any] interface {
+type enumerableType[T any] interface {
 	Value() T
-	Compare(other EnumerableType[T]) int
+	Compare(other enumerableType[T]) int
 }

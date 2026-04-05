@@ -17,7 +17,7 @@
 package semtypes
 
 type FunctionDefinition struct {
-	rec     *RecAtom
+	rec     *recAtom
 	semType SemType
 }
 
@@ -29,7 +29,6 @@ func NewFunctionDefinition() FunctionDefinition {
 }
 
 func (this *FunctionDefinition) GetSemType(env Env) SemType {
-	// migrated from FunctionDefinition.java:43:5
 	if this.semType != nil {
 		return this.semType
 	}
@@ -38,35 +37,31 @@ func (this *FunctionDefinition) GetSemType(env Env) SemType {
 	return this.createSemType(&rec)
 }
 
-func (this *FunctionDefinition) createSemType(rec Atom) SemType {
-	// migrated from FunctionDefinition.java:53:5
-	bdd := BddAtom(rec)
-	s := basicSubtype(BTFunction, bdd)
+func (this *FunctionDefinition) createSemType(rec atom) SemType {
+	bdd := bddAtom(rec)
+	s := getBasicSubtype(BTFunction, bdd)
 	this.semType = s
 	return s
 }
 
 func (this *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
-	// migrated from FunctionDefinition.java:60:5
-	atomicType := FunctionAtomicTypeFrom(args, ret, qualifiers.semType)
+	atomicType := functionAtomicTypeFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
 func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
-	// migrated from FunctionDefinition.java:65:5
-	atomicType := FunctionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
+	atomicType := functionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) defineInternal(env Env, atomicType FunctionAtomicType) SemType {
-	// migrated from FunctionDefinition.java:70:5
-	var atom Atom
+func (this *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
+	var a atom
 	rec := this.rec
 	if rec != nil {
-		atom = rec
+		a = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
-		atom = new(env.functionAtom(&atomicType))
+		a = new(env.functionAtom(&atomicType))
 	}
-	return this.createSemType(atom)
+	return this.createSemType(a)
 }

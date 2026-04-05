@@ -22,24 +22,23 @@ import (
 
 type MappingAtomicType struct {
 	Names []string
-	Types []CellSemType
-	Rest  CellSemType
+	Types []ComplexSemType
+	Rest  *ComplexSemType
 }
 
-var _ AtomicType = &MappingAtomicType{}
+var _ atomicType = &MappingAtomicType{}
 
-func (this *MappingAtomicType) equals(other AtomicType) bool {
+func (this *MappingAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*MappingAtomicType); ok {
-		if other.Rest != this.Rest {
+		if !this.Rest.equals(other.Rest) {
 			return false
 		}
-		return slices.Equal(other.Names, this.Names) && slices.Equal(other.Types, this.Types)
+		return slices.Equal(other.Names, this.Names) && slices.EqualFunc(other.Types, this.Types, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }
 
-func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType) MappingAtomicType {
-	// migrated from MappingAtomicType.java:52:5
+func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *ComplexSemType) MappingAtomicType {
 	return MappingAtomicType{
 		Names: names,
 		Types: types,
@@ -47,15 +46,14 @@ func MappingAtomicTypeFrom(names []string, types []CellSemType, rest CellSemType
 	}
 }
 
-func (this *MappingAtomicType) AtomKind() Kind {
-	// migrated from MappingAtomicType.java:74:5
-	return Kind_MAPPING_ATOM
+func (this *MappingAtomicType) atomKind() kind {
+	return kind_MAPPING_ATOM
 }
 
 func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
 	for i, n := range this.Names {
 		if n == name {
-			return CellInnerVal(this.Types[i])
+			return CellInnerVal(&this.Types[i])
 		}
 	}
 	return CellInnerVal(this.Rest)

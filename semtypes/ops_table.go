@@ -15,26 +15,26 @@
 // under the License.
 package semtypes
 
-var PANIC_IMPL = &BasicTypeOpsPanicImpl{}
+var PANIC_IMPL = &basicTypeOpsPanicImpl{}
 
 var ops = []BasicTypeOps{
 	PANIC_IMPL,     // nil
-	&BooleanOps{},  // boolean
-	&IntOps{},      // int
-	&FloatOps{},    // float
-	&DecimalOps{},  // decimal
-	&StringOps{},   // string
-	&ErrorOps{},    // error
-	&TypedescOps{}, // typedesc
+	&booleanOps{},  // boolean
+	&intOps{},      // int
+	&floatOps{},    // float
+	&decimalOps{},  // decimal
+	&stringOps{},   // string
+	&errorOps{},    // error
+	&typedescOps{}, // typedesc
 	PANIC_IMPL,     // handle
-	&FunctionOps{}, // function
+	&functionOps{}, // function
 	PANIC_IMPL,     // regexp
-	&FutureOps{},   // future
-	&StreamOps{},   // stream
-	&ListOps{},     // list
-	&MappingOps{},  // mapping
-	&TableOps{},    // table
-	&XmlOps{},      // xml
-	&ObjectOps{},   // object
-	&CellOps{},     // cell
+	&futureOps{},   // future
+	&streamOps{},   // stream
+	&listOps{},     // list
+	&mappingOps{},  // mapping
+	&tableOps{},    // table
+	&xmlOps{},      // xml
+	&objectOps{},   // object
+	&cellOps{},     // cell
 }

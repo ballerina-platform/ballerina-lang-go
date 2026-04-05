@@ -20,7 +20,7 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type XmlSubtype struct {
+type xmlSubtype struct {
 	Primitives int
 	Sequence   Bdd
 }
@@ -41,79 +41,72 @@ const (
 	XML_PRIMITIVE_ALL_MASK     = (XML_PRIMITIVE_RO_MASK | XML_PRIMITIVE_RW_MASK)
 )
 
-var _ ProperSubtypeData = &XmlSubtype{}
+var _ ProperSubtypeData = &xmlSubtype{}
 
-func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) XmlSubtype {
-	this := XmlSubtype{}
+func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) xmlSubtype {
+	this := xmlSubtype{}
 	this.Primitives = primitives
 	this.Sequence = sequence
 	return this
 }
 
-func XmlSubtypeFrom(primitives int, sequence Bdd) XmlSubtype {
-	// migrated from XmlSubtype.java:71:5
+func xmlSubtypeFrom(primitives int, sequence Bdd) xmlSubtype {
 	return newXmlSubtypeFromIntBdd(primitives, sequence)
 }
 
-func XmlSingleton(primitives int) SemType {
-	// migrated from XmlSubtype.java:75:5
-	return CreateXmlSemtype(CreateXmlSubtype(primitives, BddNothing()))
+func xmlSingleton(primitives int) SemType {
+	return createXmlSemtype(createXmlSubtype(primitives, bddNothing()))
 }
 
-func XmlSequence(constituentType SemType) SemType {
-	// migrated from XmlSubtype.java:79:5
+func xmlSequence(constituentType SemType) SemType {
 	common.Assert(IsSubtypeSimple(constituentType, XML))
 	if IsNever(constituentType) {
-		return XmlSequence(XmlSingleton(XML_PRIMITIVE_NEVER))
+		return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER))
 	}
 	if _, ok := constituentType.(BasicTypeBitSet); ok {
 		return constituentType
 	} else {
-		cct := constituentType.(ComplexSemType)
-		xmlSubtype := getComplexSubtypeData(cct, BTXML)
-		if _, ok := xmlSubtype.(AllOrNothingSubtype); ok {
-			// xmlSubtype stays as is
+		cct := constituentType.(*ComplexSemType)
+		xmlSt := getComplexSubtypeData(cct, BTXML)
+		if _, ok := xmlSt.(allOrNothingSubtype); ok {
+			// xmlSt stays as is
 		} else {
-			xmlSubtype = makeXmlSequence(xmlSubtype.(XmlSubtype))
+			xmlSt = makeXmlSequence(xmlSt.(xmlSubtype))
 		}
-		return CreateXmlSemtype(xmlSubtype)
+		return createXmlSemtype(xmlSt)
 	}
 }
 
-func makeXmlSequence(d XmlSubtype) SubtypeData {
-	// migrated from XmlSubtype.java:97:5
+func makeXmlSequence(d xmlSubtype) SubtypeData {
 	primitives := (XML_PRIMITIVE_NEVER | d.Primitives)
 	atom := (d.Primitives & XML_PRIMITIVE_SINGLETON)
-	sequence := BddUnion(BddAtom(new(CreateXMLRecAtom(atom))), d.Sequence)
-	return CreateXmlSubtype(primitives, sequence)
+	sequence := bddUnion(bddAtom(new(createXMLRecAtom(atom))), d.Sequence)
+	return createXmlSubtype(primitives, sequence)
 }
 
-func CreateXmlSemtype(xmlSubtype SubtypeData) SemType {
-	// migrated from XmlSubtype.java:104:5
-	if allOrNothingSubtype, ok := xmlSubtype.(AllOrNothingSubtype); ok {
+func createXmlSemtype(xmlSubtype SubtypeData) SemType {
+	if allOrNothingSubtype, ok := xmlSubtype.(allOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
 			return XML
 		} else {
 			return NEVER
 		}
 	} else {
-		return basicSubtype(BTXML, xmlSubtype.(ProperSubtypeData))
+		return getBasicSubtype(BTXML, xmlSubtype.(ProperSubtypeData))
 	}
 }
 
-func CreateXmlSubtype(primitives int, sequence Bdd) SubtypeData {
-	// migrated from XmlSubtype.java:112:5
+func createXmlSubtype(primitives int, sequence Bdd) SubtypeData {
 	p := (primitives & XML_PRIMITIVE_ALL_MASK)
-	if allOrNothing, ok := sequence.(*BddAllOrNothing); ok && allOrNothing.IsAll() && (p == XML_PRIMITIVE_ALL_MASK) {
-		return CreateAll()
+	if allOrNothing, ok := sequence.(*bddAllOrNothing); ok && allOrNothing.IsAll() && (p == XML_PRIMITIVE_ALL_MASK) {
+		return createAll()
 	}
-	return CreateXmlSubtypeOrEmpty(p, sequence)
+	return createXmlSubtypeOrEmpty(p, sequence)
 }
 
-func CreateXmlSubtypeOrEmpty(primitives int, sequence Bdd) SubtypeData {
-	// migrated from XmlSubtype.java:121:5
-	if allOrNothing, ok := sequence.(*BddAllOrNothing); ok && allOrNothing.IsNothing() && (primitives == 0) {
-		return CreateNothing()
+func createXmlSubtypeOrEmpty(primitives int, sequence Bdd) SubtypeData {
+	if allOrNothing, ok := sequence.(*bddAllOrNothing); ok && allOrNothing.IsNothing() && (primitives == 0) {
+		return createNothing()
 	}
-	return XmlSubtypeFrom(primitives, sequence)
+	return xmlSubtypeFrom(primitives, sequence)
 }
