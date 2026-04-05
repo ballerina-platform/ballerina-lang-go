@@ -142,11 +142,11 @@ func functionParamListTypeInner(cx Context, accumTy SemType, bdd Bdd) SemType {
 		}
 		return ANY
 	}
-	bddNode := bdd.(BddNode)
-	atomArgListTy := cx.FunctionAtomType(bddNode.Atom()).ParamType
-	return Intersect(functionParamListTypeInner(cx, Union(accumTy, atomArgListTy), bddNode.Left()),
-		Intersect(functionParamListTypeInner(cx, accumTy, bddNode.Middle()),
-			functionParamListTypeInner(cx, accumTy, bddNode.Right())))
+	bn := bdd.(bddNode)
+	atomArgListTy := cx.FunctionAtomType(bn.atom()).ParamType
+	return Intersect(functionParamListTypeInner(cx, Union(accumTy, atomArgListTy), bn.left()),
+		Intersect(functionParamListTypeInner(cx, accumTy, bn.middle()),
+			functionParamListTypeInner(cx, accumTy, bn.right())))
 }
 
 // Corresponds to apply^? in AMK tutorial.
@@ -176,14 +176,14 @@ func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemTy
 			return accumReturn
 		}
 		return NEVER
-	case BddNode:
-		fnAtom := cx.FunctionAtomType(b.Atom())
+	case bddNode:
+		fnAtom := cx.FunctionAtomType(b.atom())
 		atomArgListTy := fnAtom.ParamType
 		atomReturnTy := fnAtom.RetType
-		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.Left()),
-			Union(functionReturnTypeInner(cx, Diff(accumArgList, atomArgListTy), accumReturn, b.Left()),
-				Union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.Middle()),
-					functionReturnTypeInner(cx, accumArgList, accumReturn, b.Right()))))
+		return Union(functionReturnTypeInner(cx, accumArgList, Intersect(accumReturn, atomReturnTy), b.left()),
+			Union(functionReturnTypeInner(cx, Diff(accumArgList, atomArgListTy), accumReturn, b.left()),
+				Union(functionReturnTypeInner(cx, accumArgList, accumReturn, b.middle()),
+					functionReturnTypeInner(cx, accumArgList, accumReturn, b.right()))))
 
 	default:
 		panic("impossible")

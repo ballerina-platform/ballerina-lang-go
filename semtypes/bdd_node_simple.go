@@ -19,31 +19,31 @@ package semtypes
 import "fmt"
 
 type bddNodeSimple struct {
-	atom      atom
+	_atom     atom
 	canonical string
 }
 
-var _ BddNode = &bddNodeSimple{}
+var _ bddNode = &bddNodeSimple{}
 
-func (this *bddNodeSimple) Left() Bdd {
+func (this *bddNodeSimple) left() Bdd {
 	return bddAll()
 }
 
-func (this *bddNodeSimple) Middle() Bdd {
+func (this *bddNodeSimple) middle() Bdd {
 	return bddNothing()
 }
 
-func (this *bddNodeSimple) Right() Bdd {
+func (this *bddNodeSimple) right() Bdd {
 	return bddNothing()
 }
 
-func (this *bddNodeSimple) Atom() atom {
-	return this.atom
+func (this *bddNodeSimple) atom() atom {
+	return this._atom
 }
 
 func newBddNodeSimple(atom atom) *bddNodeSimple {
 	return &bddNodeSimple{
-		atom:      atom,
+		_atom:     atom,
 		canonical: fmt.Sprintf("(%s (true) (false) (false))", atom.canonicalKey()),
 	}
 }

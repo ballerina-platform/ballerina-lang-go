@@ -44,11 +44,11 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle
 			return NEVER
 		}
 	} else {
-		bddNode := b.(BddNode)
+		bn := b.(bddNode)
 		saved := cx.conjunctionStackDepth()
-		result := Union(listProjBddInnerVal(cx, k, bddNode.Left(), cx.pushConjunction(bddNode.Atom(), pos), neg),
-			Union(listProjBddInnerVal(cx, k, bddNode.Middle(), pos, cx.pushConjunction(bddNode.Atom(), neg)),
-				listProjBddInnerVal(cx, k, bddNode.Right(), pos, cx.pushConjunction(bddNode.Atom(), neg))))
+		result := Union(listProjBddInnerVal(cx, k, bn.left(), cx.pushConjunction(bn.atom(), pos), neg),
+			Union(listProjBddInnerVal(cx, k, bn.middle(), pos, cx.pushConjunction(bn.atom(), neg)),
+				listProjBddInnerVal(cx, k, bn.right(), pos, cx.pushConjunction(bn.atom(), neg))))
 		cx.resetConjunctionStack(saved)
 		return result
 	}

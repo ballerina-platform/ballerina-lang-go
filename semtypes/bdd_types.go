@@ -272,8 +272,8 @@ func (sc *bddSerializationContext) serializeXMLAtom(atom atom) int32 {
 }
 
 func cellMut(cell *ComplexSemType) CellMutability {
-	bdd := cell.subtypeDataList()[0].(BddNode)
-	cat := bdd.Atom().(*typeAtom).AtomicType.(*cellAtomicType)
+	bdd := cell.subtypeDataList()[0].(bddNode)
+	cat := bdd.atom().(*typeAtom).AtomicType.(*cellAtomicType)
 	return cat.Mut
 }
 
@@ -492,7 +492,7 @@ func (dc *bddDeserializationContext) resolvePoolType(idx TypePoolIndex) SemType 
 
 func extractAtom(ty SemType) atom {
 	cst := ty.(*ComplexSemType)
-	return cst.subtypeDataList()[0].(BddNode).Atom()
+	return cst.subtypeDataList()[0].(bddNode).atom()
 }
 
 func buildBddFromDnf(dnf unionOfIntersections, atoms map[int32]atom) Bdd {

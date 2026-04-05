@@ -16,15 +16,15 @@
 
 package semtypes
 
-type BddNode interface {
+type bddNode interface {
 	Bdd
-	Atom() atom
-	Left() Bdd
-	Middle() Bdd
-	Right() Bdd
+	atom() atom
+	left() Bdd
+	middle() Bdd
+	right() Bdd
 }
 
-func bddNodeCreate(atom atom, left Bdd, middle Bdd, right Bdd) BddNode {
+func bddNodeCreate(atom atom, left Bdd, middle Bdd, right Bdd) bddNode {
 	if isSimpleNode(left, middle, right) {
 		return newBddNodeSimple(atom)
 	}

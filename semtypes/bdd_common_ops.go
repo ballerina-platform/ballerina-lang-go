@@ -39,7 +39,7 @@ type bddCommonOpsMethods struct {
 	Self BddCommonOps
 }
 
-func bddAtom(atom atom) BddNode {
+func bddAtom(atom atom) bddNode {
 	return bddNodeCreate(atom, bddAll(), bddNothing(), bddNothing())
 }
 
@@ -77,15 +77,15 @@ func bddUnionInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return b1
 	}
 
-	b1Bdd := b1.(BddNode)
-	b2Bdd := b2.(BddNode)
-	cmp := atomCmp(b1Bdd.Atom(), b2Bdd.Atom())
+	b1Bdd := b1.(bddNode)
+	b2Bdd := b2.(bddNode)
+	cmp := atomCmp(b1Bdd.atom(), b2Bdd.atom())
 	if cmp < 0 {
-		return bddCreate(b1Bdd.Atom(), b1Bdd.Left(), bddUnionWithMemo(memo, b1Bdd.Middle(), b2), b1Bdd.Right())
+		return bddCreate(b1Bdd.atom(), b1Bdd.left(), bddUnionWithMemo(memo, b1Bdd.middle(), b2), b1Bdd.right())
 	} else if cmp > 0 {
-		return bddCreate(b2Bdd.Atom(), b2Bdd.Left(), bddUnionWithMemo(memo, b1, b2Bdd.Middle()), b2Bdd.Right())
+		return bddCreate(b2Bdd.atom(), b2Bdd.left(), bddUnionWithMemo(memo, b1, b2Bdd.middle()), b2Bdd.right())
 	} else {
-		return bddCreate(b1Bdd.Atom(), bddUnionWithMemo(memo, b1Bdd.Left(), b2Bdd.Left()), bddUnionWithMemo(memo, b1Bdd.Middle(), b2Bdd.Middle()), bddUnionWithMemo(memo, b1Bdd.Right(), b2Bdd.Right()))
+		return bddCreate(b1Bdd.atom(), bddUnionWithMemo(memo, b1Bdd.left(), b2Bdd.left()), bddUnionWithMemo(memo, b1Bdd.middle(), b2Bdd.middle()), bddUnionWithMemo(memo, b1Bdd.right(), b2Bdd.right()))
 	}
 }
 
@@ -123,15 +123,15 @@ func bddIntersectInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return bddNothing()
 	}
 
-	b1Bdd := b1.(BddNode)
-	b2Bdd := b2.(BddNode)
-	cmp := atomCmp(b1Bdd.Atom(), b2Bdd.Atom())
+	b1Bdd := b1.(bddNode)
+	b2Bdd := b2.(bddNode)
+	cmp := atomCmp(b1Bdd.atom(), b2Bdd.atom())
 	if cmp < 0 {
-		return bddCreate(b1Bdd.Atom(), bddIntersectWithMemo(memo, b1Bdd.Left(), b2), bddIntersectWithMemo(memo, b1Bdd.Middle(), b2), bddIntersectWithMemo(memo, b1Bdd.Right(), b2))
+		return bddCreate(b1Bdd.atom(), bddIntersectWithMemo(memo, b1Bdd.left(), b2), bddIntersectWithMemo(memo, b1Bdd.middle(), b2), bddIntersectWithMemo(memo, b1Bdd.right(), b2))
 	} else if cmp > 0 {
-		return bddCreate(b2Bdd.Atom(), bddIntersectWithMemo(memo, b1, b2Bdd.Left()), bddIntersectWithMemo(memo, b1, b2Bdd.Middle()), bddIntersectWithMemo(memo, b1, b2Bdd.Right()))
+		return bddCreate(b2Bdd.atom(), bddIntersectWithMemo(memo, b1, b2Bdd.left()), bddIntersectWithMemo(memo, b1, b2Bdd.middle()), bddIntersectWithMemo(memo, b1, b2Bdd.right()))
 	} else {
-		return bddCreate(b1Bdd.Atom(), bddIntersectWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Left(), b1Bdd.Middle()), bddUnionWithMemo(memo, b2Bdd.Left(), b2Bdd.Middle())), bddNothing(), bddIntersectWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Right(), b1Bdd.Middle()), bddUnionWithMemo(memo, b2Bdd.Right(), b2Bdd.Middle())))
+		return bddCreate(b1Bdd.atom(), bddIntersectWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.left(), b1Bdd.middle()), bddUnionWithMemo(memo, b2Bdd.left(), b2Bdd.middle())), bddNothing(), bddIntersectWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.right(), b1Bdd.middle()), bddUnionWithMemo(memo, b2Bdd.right(), b2Bdd.middle())))
 	}
 }
 
@@ -169,15 +169,15 @@ func bddDiffInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 		return bddNothing()
 	}
 
-	b1Bdd := b1.(BddNode)
-	b2Bdd := b2.(BddNode)
-	cmp := atomCmp(b1Bdd.Atom(), b2Bdd.Atom())
+	b1Bdd := b1.(bddNode)
+	b2Bdd := b2.(bddNode)
+	cmp := atomCmp(b1Bdd.atom(), b2Bdd.atom())
 	if cmp < 0 {
-		return bddCreate(b1Bdd.Atom(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Left(), b1Bdd.Middle()), b2), bddNothing(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Right(), b1Bdd.Middle()), b2))
+		return bddCreate(b1Bdd.atom(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.left(), b1Bdd.middle()), b2), bddNothing(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.right(), b1Bdd.middle()), b2))
 	} else if cmp > 0 {
-		return bddCreate(b2Bdd.Atom(), bddDiffWithMemo(memo, b1, bddUnionWithMemo(memo, b2Bdd.Left(), b2Bdd.Middle())), bddNothing(), bddDiffWithMemo(memo, b1, bddUnionWithMemo(memo, b2Bdd.Right(), b2Bdd.Middle())))
+		return bddCreate(b2Bdd.atom(), bddDiffWithMemo(memo, b1, bddUnionWithMemo(memo, b2Bdd.left(), b2Bdd.middle())), bddNothing(), bddDiffWithMemo(memo, b1, bddUnionWithMemo(memo, b2Bdd.right(), b2Bdd.middle())))
 	} else {
-		return bddCreate(b1Bdd.Atom(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Left(), b1Bdd.Middle()), bddUnionWithMemo(memo, b2Bdd.Left(), b2Bdd.Middle())), bddNothing(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.Right(), b1Bdd.Middle()), bddUnionWithMemo(memo, b2Bdd.Right(), b2Bdd.Middle())))
+		return bddCreate(b1Bdd.atom(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.left(), b1Bdd.middle()), bddUnionWithMemo(memo, b2Bdd.left(), b2Bdd.middle())), bddNothing(), bddDiffWithMemo(memo, bddUnionWithMemo(memo, b1Bdd.right(), b1Bdd.middle()), bddUnionWithMemo(memo, b2Bdd.right(), b2Bdd.middle())))
 	}
 }
 
@@ -185,19 +185,19 @@ func bddComplement(b Bdd) Bdd {
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return allOrNothing.complement()
 	}
-	return bddNodeComplement(b.(BddNode))
+	return bddNodeComplement(b.(bddNode))
 }
 
-func bddNodeComplement(b BddNode) Bdd {
+func bddNodeComplement(b bddNode) Bdd {
 	bddNothing := bddNothing()
-	if b.Right() == bddNothing {
-		return bddCreate(b.Atom(), bddNothing, bddComplement(bddUnion(b.Left(), b.Middle())), bddComplement(b.Middle()))
-	} else if b.Left() == bddNothing {
-		return bddCreate(b.Atom(), bddComplement(b.Middle()), bddComplement(bddUnion(b.Right(), b.Middle())), bddNothing)
-	} else if b.Middle() == bddNothing {
-		return bddCreate(b.Atom(), bddComplement(b.Left()), bddComplement(bddUnion(b.Left(), b.Right())), bddComplement(b.Right()))
+	if b.right() == bddNothing {
+		return bddCreate(b.atom(), bddNothing, bddComplement(bddUnion(b.left(), b.middle())), bddComplement(b.middle()))
+	} else if b.left() == bddNothing {
+		return bddCreate(b.atom(), bddComplement(b.middle()), bddComplement(bddUnion(b.right(), b.middle())), bddNothing)
+	} else if b.middle() == bddNothing {
+		return bddCreate(b.atom(), bddComplement(b.left()), bddComplement(bddUnion(b.left(), b.right())), bddComplement(b.right()))
 	} else {
-		return bddCreate(b.Atom(), bddComplement(bddUnion(b.Left(), b.Middle())), bddNothing, bddComplement(bddUnion(b.Right(), b.Middle())))
+		return bddCreate(b.atom(), bddComplement(bddUnion(b.left(), b.middle())), bddNothing, bddComplement(bddUnion(b.right(), b.middle())))
 	}
 }
 
@@ -235,14 +235,14 @@ func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	}
 
 	var str string
-	bdd := b.(BddNode)
-	a := bdd.Atom()
+	bdd := b.(bddNode)
+	a := bdd.atom()
 	if recAtom, ok := a.(*recAtom); ok {
 		str = "r" + string(rune(recAtom.index()))
 	} else {
 		str = "a" + string(rune(a.index()))
 	}
-	str = str + "?" + this.BddToString(bdd.Left(), true) + ":" + this.BddToString(bdd.Middle(), true) + ":" + this.BddToString(bdd.Right(), true)
+	str = str + "?" + this.BddToString(bdd.left(), true) + ":" + this.BddToString(bdd.middle(), true) + ":" + this.BddToString(bdd.right(), true)
 	if inner {
 		str = "(" + str + ")"
 	}

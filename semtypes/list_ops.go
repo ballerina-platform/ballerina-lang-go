@@ -362,8 +362,8 @@ func bddListMemberTypeInnerVal(cx Context, b Bdd, key SubtypeData, accum SemType
 		}
 		return NEVER
 	} else {
-		bddNode := b.(BddNode)
-		return Union(bddListMemberTypeInnerVal(cx, bddNode.Left(), key, Intersect(listAtomicMemberTypeInnerVal(*cx.ListAtomType(bddNode.Atom()), key), accum)), Union(bddListMemberTypeInnerVal(cx, bddNode.Middle(), key, accum), bddListMemberTypeInnerVal(cx, bddNode.Right(), key, accum)))
+		bn := b.(bddNode)
+		return Union(bddListMemberTypeInnerVal(cx, bn.left(), key, Intersect(listAtomicMemberTypeInnerVal(*cx.ListAtomType(bn.atom()), key), accum)), Union(bddListMemberTypeInnerVal(cx, bn.middle(), key, accum), bddListMemberTypeInnerVal(cx, bn.right(), key, accum)))
 	}
 }
 

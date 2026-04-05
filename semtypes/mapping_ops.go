@@ -158,8 +158,8 @@ func bddMappingMemberTypeInnerCore(cx Context, b Bdd, key SubtypeData, accum Sem
 		}
 		return NEVER
 	} else {
-		bdd := b.(BddNode)
-		return Union(bddMappingMemberTypeInnerCore(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.MappingAtomType(bdd.Atom()), key), accum)), Union(bddMappingMemberTypeInnerCore(cx, bdd.Middle(), key, accum), bddMappingMemberTypeInnerCore(cx, bdd.Right(), key, accum)))
+		bn := b.(bddNode)
+		return Union(bddMappingMemberTypeInnerCore(cx, bn.left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.MappingAtomType(bn.atom()), key), accum)), Union(bddMappingMemberTypeInnerCore(cx, bn.middle(), key, accum), bddMappingMemberTypeInnerCore(cx, bn.right(), key, accum)))
 	}
 }
 

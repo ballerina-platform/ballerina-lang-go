@@ -28,21 +28,21 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 		return mappingAtomicTypeFrom(nil, nil, cellContaining(ctx.Env(), CreateCloneable(ctx))), true
 	}
 	mappingSd := subtypeData(errorType, BTError)
-	if bddNode, ok := mappingSd.(BddNode); ok {
-		if bddNode.Atom().index() != 0 {
+	if bn, ok := mappingSd.(bddNode); ok {
+		if bn.atom().index() != 0 {
 			// Not readonly. Not sure if this can happen (due to ErroWithDetail) but just in case
 			return MappingAtomicType{}, false
 		}
-		if !isNothing(bddNode.Middle()) || !isNothing(bddNode.Right()) {
+		if !isNothing(bn.middle()) || !isNothing(bn.right()) {
 			// Not atomic
 			return MappingAtomicType{}, false
 		}
-		if leftNode, ok := bddNode.Left().(BddNode); ok {
-			if !isSimpleNode(leftNode.Left(), leftNode.Middle(), leftNode.Right()) {
+		if leftNode, ok := bn.left().(bddNode); ok {
+			if !isSimpleNode(leftNode.left(), leftNode.middle(), leftNode.right()) {
 				// Also not atomic
 				return MappingAtomicType{}, false
 			}
-			return *ctx.MappingAtomType(leftNode.Atom()), true
+			return *ctx.MappingAtomType(leftNode.atom()), true
 		} else {
 			return MappingAtomicType{}, false
 		}

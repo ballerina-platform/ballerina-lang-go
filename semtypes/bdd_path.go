@@ -51,17 +51,17 @@ func bddPaths(b Bdd, paths *[]bddPath, accum bddPath) {
 	} else {
 		left := bddPathClone(accum)
 		right := bddPathClone(accum)
-		bn, ok := b.(BddNode)
+		bn, ok := b.(bddNode)
 		if !ok {
-			panic("b is not a BddNode")
+			panic("b is not a bddNode")
 		}
-		left.pos = append(left.pos, bn.Atom())
-		left.bdd = bddIntersect(left.bdd, bddAtom(bn.Atom()))
-		bddPaths(bn.Left(), paths, left)
-		bddPaths(bn.Middle(), paths, accum)
-		right.neg = append(right.neg, bn.Atom())
-		right.bdd = bddDiff(right.bdd, bddAtom(bn.Atom()))
-		bddPaths(bn.Right(), paths, right)
+		left.pos = append(left.pos, bn.atom())
+		left.bdd = bddIntersect(left.bdd, bddAtom(bn.atom()))
+		bddPaths(bn.left(), paths, left)
+		bddPaths(bn.middle(), paths, accum)
+		right.neg = append(right.neg, bn.atom())
+		right.bdd = bddDiff(right.bdd, bddAtom(bn.atom()))
+		bddPaths(bn.right(), paths, right)
 	}
 }
 

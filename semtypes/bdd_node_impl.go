@@ -19,37 +19,37 @@ package semtypes
 import "fmt"
 
 type bddNodeImpl struct {
-	atom      atom
-	left      Bdd
-	middle    Bdd
-	right     Bdd
+	_atom     atom
+	_left     Bdd
+	_middle   Bdd
+	_right    Bdd
 	canonical string
 }
 
-var _ BddNode = &bddNodeImpl{}
+var _ bddNode = &bddNodeImpl{}
 
-func (this *bddNodeImpl) Atom() atom {
-	return this.atom
+func (this *bddNodeImpl) atom() atom {
+	return this._atom
 }
 
-func (this *bddNodeImpl) Left() Bdd {
-	return this.left
+func (this *bddNodeImpl) left() Bdd {
+	return this._left
 }
 
-func (this *bddNodeImpl) Middle() Bdd {
-	return this.middle
+func (this *bddNodeImpl) middle() Bdd {
+	return this._middle
 }
 
-func (this *bddNodeImpl) Right() Bdd {
-	return this.right
+func (this *bddNodeImpl) right() Bdd {
+	return this._right
 }
 
 func newBddNodeImpl(atom atom, left, middle, right Bdd) *bddNodeImpl {
 	return &bddNodeImpl{
-		atom:      atom,
-		left:      left,
-		middle:    middle,
-		right:     right,
+		_atom:     atom,
+		_left:     left,
+		_middle:   middle,
+		_right:    right,
 		canonical: fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey()),
 	}
 }

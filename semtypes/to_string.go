@@ -224,11 +224,11 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 		if !ok {
 			continue
 		}
-		node, ok := bdd.(BddNode)
+		node, ok := bdd.(bddNode)
 		if !ok {
 			continue
 		}
-		listAtomic := s.cx.ListAtomType(node.Atom())
+		listAtomic := s.cx.ListAtomType(node.atom())
 		var parts []string
 		for i := 0; i < listAtomic.Members.FixedLength; i++ {
 			member := listMemberAt(listAtomic.Members, listAtomic.Rest, i)

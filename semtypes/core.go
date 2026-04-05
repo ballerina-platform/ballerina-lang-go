@@ -424,12 +424,12 @@ func bddListAllRanges(cx Context, b Bdd, accum []intRange) []intRange {
 			return []intRange{}
 		}
 	} else {
-		bddNode := b.(BddNode)
-		listMemberTypes := listAtomicTypeAllMemberTypesInnerVal(cx.ListAtomType(bddNode.Atom()))
-		return distinctRanges(bddListAllRanges(cx, bddNode.Left(),
+		bn := b.(bddNode)
+		listMemberTypes := listAtomicTypeAllMemberTypesInnerVal(cx.ListAtomType(bn.atom()))
+		return distinctRanges(bddListAllRanges(cx, bn.left(),
 			distinctRanges(listMemberTypes.Ranges, accum)),
-			distinctRanges(bddListAllRanges(cx, bddNode.Middle(), accum),
-				bddListAllRanges(cx, bddNode.Right(), accum)))
+			distinctRanges(bddListAllRanges(cx, bn.middle(), accum),
+				bddListAllRanges(cx, bn.right(), accum)))
 	}
 }
 
@@ -582,9 +582,9 @@ func bddMappingAtomicType(env Env, bdd Bdd, top MappingAtomicType) *MappingAtomi
 		}
 		return nil
 	}
-	bddNode := bdd.(BddNode)
-	if bddNodeSimple, ok := bddNode.(*bddNodeSimple); ok {
-		result := env.mappingAtomType(bddNodeSimple.Atom())
+	bn := bdd.(bddNode)
+	if bddNodeSimple, ok := bn.(*bddNodeSimple); ok {
+		result := env.mappingAtomType(bddNodeSimple.atom())
 		return result
 	}
 	return nil
@@ -637,9 +637,9 @@ func bddListAtomicType(env Env, bdd Bdd, top ListAtomicType) *ListAtomicType {
 		}
 		return nil
 	}
-	bddNode := bdd.(BddNode)
-	if bddNodeSimple, ok := bddNode.(*bddNodeSimple); ok {
-		result := env.listAtomType(bddNodeSimple.Atom())
+	bn := bdd.(bddNode)
+	if bddNodeSimple, ok := bn.(*bddNodeSimple); ok {
+		result := env.listAtomType(bddNodeSimple.atom())
 		return result
 	}
 	return nil
@@ -683,15 +683,15 @@ func bddCellAtomicType(bdd Bdd, top cellAtomicType) *cellAtomicType {
 		}
 		return nil
 	}
-	bddNode := bdd.(BddNode)
-	leftBdd := bddNode.Left()
-	middleBdd := bddNode.Middle()
-	rightBdd := bddNode.Right()
+	bn := bdd.(bddNode)
+	leftBdd := bn.left()
+	middleBdd := bn.middle()
+	rightBdd := bn.right()
 
 	if leftAll, ok := leftBdd.(*bddAllOrNothing); ok && leftAll.IsAll() {
 		if middleNothing, ok := middleBdd.(*bddAllOrNothing); ok && middleNothing.IsNothing() {
 			if rightNothing, ok := rightBdd.(*bddAllOrNothing); ok && rightNothing.IsNothing() {
-				result := cellAtomType(bddNode.Atom())
+				result := cellAtomType(bn.atom())
 				return &result
 			}
 		}
@@ -995,20 +995,20 @@ func collectBddMappingAtomicTypesInUnion(env Env, bdd Bdd, top MappingAtomicType
 		}
 		return false
 	}
-	bddNode := bdd.(BddNode)
-	if bddNodeSimple, ok := bddNode.(*bddNodeSimple); ok {
-		*matList = append(*matList, *env.mappingAtomType(bddNodeSimple.Atom()))
+	bn := bdd.(bddNode)
+	if bddNodeSimple, ok := bn.(*bddNodeSimple); ok {
+		*matList = append(*matList, *env.mappingAtomType(bddNodeSimple.atom()))
 		return true
 	}
 
 	bddNodeImpl := bdd.(*bddNodeImpl)
-	leftBdd := bddNodeImpl.Left()
-	rightBdd := bddNodeImpl.Right()
+	leftBdd := bddNodeImpl.left()
+	rightBdd := bddNodeImpl.right()
 
 	if leftNode, ok := leftBdd.(*bddAllOrNothing); ok && leftNode.IsAll() {
 		if rightNode, ok := rightBdd.(*bddAllOrNothing); ok && rightNode.IsNothing() {
-			*matList = append(*matList, *env.mappingAtomType(bddNodeImpl.Atom()))
-			return collectBddMappingAtomicTypesInUnion(env, bddNodeImpl.Middle(), top, matList)
+			*matList = append(*matList, *env.mappingAtomType(bddNodeImpl.atom()))
+			return collectBddMappingAtomicTypesInUnion(env, bddNodeImpl.middle(), top, matList)
 		}
 	}
 

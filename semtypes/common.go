@@ -17,33 +17,33 @@
 package semtypes
 
 type (
-	BddPredicate        func(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool
+	bddPredicate        func(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool
 	bddIsEmptyPredicate func(cx Context, b Bdd) bool
 )
 
-func bddEvery(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
+func bddEvery(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate bddPredicate) bool {
 	saved := cx.conjunctionStackDepth()
 	defer cx.resetConjunctionStack(saved)
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
-		bn := b.(BddNode)
-		result := bddEvery(cx, bn.Left(), cx.pushConjunction(bn.Atom(), pos), neg, predicate) &&
-			bddEvery(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEvery(cx, bn.Right(), pos, cx.pushConjunction(bn.Atom(), neg), predicate)
+		bn := b.(bddNode)
+		result := bddEvery(cx, bn.left(), cx.pushConjunction(bn.atom(), pos), neg, predicate) &&
+			bddEvery(cx, bn.middle(), pos, neg, predicate) &&
+			bddEvery(cx, bn.right(), pos, cx.pushConjunction(bn.atom(), neg), predicate)
 		return result
 	}
 }
 
-func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate BddPredicate) bool {
+func bddEveryPositive(cx Context, b Bdd, pos conjunctionHandle, neg conjunctionHandle, predicate bddPredicate) bool {
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return !allOrNothing.IsAll() || predicate(cx, pos, neg)
 	} else {
-		bn := b.(BddNode)
+		bn := b.(bddNode)
 		saved := cx.conjunctionStackDepth()
-		result := bddEveryPositive(cx, bn.Left(), andIfPositive(cx, bn.Atom(), pos), neg, predicate) &&
-			bddEveryPositive(cx, bn.Middle(), pos, neg, predicate) &&
-			bddEveryPositive(cx, bn.Right(), pos, andIfPositive(cx, bn.Atom(), neg), predicate)
+		result := bddEveryPositive(cx, bn.left(), andIfPositive(cx, bn.atom(), pos), neg, predicate) &&
+			bddEveryPositive(cx, bn.middle(), pos, neg, predicate) &&
+			bddEveryPositive(cx, bn.right(), pos, andIfPositive(cx, bn.atom(), neg), predicate)
 		cx.resetConjunctionStack(saved)
 		return result
 	}
@@ -60,8 +60,8 @@ func bddPosMaybeEmpty(b Bdd) bool {
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return allOrNothing.IsAll()
 	} else {
-		bn := b.(BddNode)
-		return bddPosMaybeEmpty(bn.Middle()) || bddPosMaybeEmpty(bn.Right())
+		bn := b.(bddNode)
+		return bddPosMaybeEmpty(bn.middle()) || bddPosMaybeEmpty(bn.right())
 	}
 }
 
