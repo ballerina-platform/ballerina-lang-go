@@ -17,7 +17,6 @@
 package semtypes
 
 func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
-	// migrated from BMappingProj.java:48:5
 	return Diff(mappingMemberTypeInner(cx, t, k), UNDEF)
 }
 
@@ -25,7 +24,6 @@ func MappingMemberTypeInnerValProj(cx Context, t SemType, k SemType) SemType {
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
 func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
-	// migrated from BMappingProj.java:55:5
 	if b, ok := t.(BasicTypeBitSet); ok {
 		if (b.all() & MAPPING.all()) != 0 {
 			return VAL
@@ -42,7 +40,6 @@ func mappingMemberTypeInner(cx Context, t SemType, k SemType) SemType {
 }
 
 func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
-	// migrated from BMappingProj.java:68:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
@@ -60,7 +57,6 @@ func bddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType
 }
 
 func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData) SemType {
-	// migrated from BMappingProj.java:82:5
 	var memberType SemType = nil
 	for _, ty := range mappingAtomicApplicableMemberTypesInnerProj(atomic, key) {
 		if memberType == nil {
@@ -77,7 +73,6 @@ func mappingAtomicMemberTypeInnerProj(atomic *MappingAtomicType, key SubtypeData
 }
 
 func mappingAtomicApplicableMemberTypesInnerProj(atomic *MappingAtomicType, key SubtypeData) []SemType {
-	// migrated from BMappingProj.java:94:5
 	types := make([]SemType, len(atomic.Types))
 	for i := range atomic.Types {
 		types[i] = cellInner(&atomic.Types[i])

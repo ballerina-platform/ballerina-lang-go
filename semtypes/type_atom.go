@@ -30,7 +30,6 @@ type typeAtom struct {
 var _ Atom = &typeAtom{}
 
 func createTypeAtom(index int, atomicType AtomicType) typeAtom {
-	// migrated from typeAtom.java:31:5
 	common.Assert(index >= 0)
 
 	return typeAtom{

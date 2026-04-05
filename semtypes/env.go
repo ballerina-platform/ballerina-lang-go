@@ -198,10 +198,9 @@ func (this *env) cellAtomType(atom Atom) *cellAtomicType {
 	return atom.(*typeAtom).AtomicType.(*cellAtomicType)
 }
 
-// Public/package methods - migrated from predefinedTypeEnv.java:606-644
+// Public/package methods
 
 // initializeEnv populates the environment with predefined atoms
-// migrated from predefinedTypeEnv.java:606-611
 // func (this *predefinedTypeEnv) initializeEnv(env Env) {
 // 	fillRecAtoms(this, &env.recListAtoms, this.initializedRecListAtoms)
 // 	fillRecAtoms(this, &env.recMappingAtoms, this.initializedRecMappingAtoms)
@@ -214,7 +213,6 @@ func (this *env) cellAtomType(atom Atom) *cellAtomicType {
 // }
 
 // fillRecAtoms fills the environment rec atom list with initialized rec atoms
-// migrated from predefinedTypeEnv.java:613-624
 func fillRecAtoms[E AtomicType](env *predefinedTypeEnv, envRecAtomList *[]E, initializedRecAtoms []E) {
 	count := env.ReservedRecAtomCount()
 	for i := range count {

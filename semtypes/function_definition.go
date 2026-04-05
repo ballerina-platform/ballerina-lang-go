@@ -29,7 +29,6 @@ func NewFunctionDefinition() FunctionDefinition {
 }
 
 func (this *FunctionDefinition) GetSemType(env Env) SemType {
-	// migrated from FunctionDefinition.java:43:5
 	if this.semType != nil {
 		return this.semType
 	}
@@ -39,7 +38,6 @@ func (this *FunctionDefinition) GetSemType(env Env) SemType {
 }
 
 func (this *FunctionDefinition) createSemType(rec Atom) SemType {
-	// migrated from FunctionDefinition.java:53:5
 	bdd := bddAtom(rec)
 	s := getBasicSubtype(BTFunction, bdd)
 	this.semType = s
@@ -47,19 +45,16 @@ func (this *FunctionDefinition) createSemType(rec Atom) SemType {
 }
 
 func (this *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
-	// migrated from FunctionDefinition.java:60:5
 	atomicType := functionAtomicTypeFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
 func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
-	// migrated from FunctionDefinition.java:65:5
 	atomicType := functionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
 	return this.defineInternal(env, atomicType)
 }
 
 func (this *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
-	// migrated from FunctionDefinition.java:70:5
 	var atom Atom
 	rec := this.rec
 	if rec != nil {

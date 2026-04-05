@@ -31,7 +31,6 @@ type fieldPair struct {
 }
 
 func createFieldPair(name string, type1 *ComplexSemType, type2 *ComplexSemType, index1 int, index2 int) fieldPair {
-	// migrated from fieldPair.java:34:5
 
 	return fieldPair{
 		Name:   name,

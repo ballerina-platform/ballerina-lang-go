@@ -26,7 +26,6 @@ func newUnpackComplexSemType() unpackComplexSemType {
 }
 
 func unpack(t *ComplexSemType) []basicSubtype {
-	// migrated from unpackComplexSemType.java:37:5
 	some := t.some()
 	var subtypeList []basicSubtype
 	for _, data := range t.subtypeDataList() {

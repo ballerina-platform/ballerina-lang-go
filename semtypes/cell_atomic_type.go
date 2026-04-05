@@ -51,12 +51,10 @@ func newCellAtomicTypeFromTyMut(ty SemType, mut CellMutability) cellAtomicType {
 }
 
 func cellAtomicTypeFrom(ty SemType, mut CellMutability) cellAtomicType {
-	// migrated from cellAtomicType.java:33:5
 	common.Assert(ty != nil)
 	return newCellAtomicTypeFromTyMut(ty, mut)
 }
 
 func (this *cellAtomicType) AtomKind() Kind {
-	// migrated from cellAtomicType.java:39:5
 	return Kind_CELL_ATOM
 }

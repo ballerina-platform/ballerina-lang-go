@@ -32,7 +32,6 @@ func newDecimalOps() decimalOps {
 }
 
 func (this *decimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from decimalOps.java:36:5
 	var values []enumerableType[big.Rat]
 	var v1 enumerableSubtype[big.Rat] = new(t1.(decimalSubtype))
 	var v2 enumerableSubtype[big.Rat] = new(t2.(decimalSubtype))
@@ -41,7 +40,6 @@ func (this *decimalOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 }
 
 func (this *decimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from decimalOps.java:44:5
 	var values []enumerableType[big.Rat]
 	var v1 enumerableSubtype[big.Rat] = new(t1.(decimalSubtype))
 	var v2 enumerableSubtype[big.Rat] = new(t2.(decimalSubtype))
@@ -50,17 +48,14 @@ func (this *decimalOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 }
 
 func (this *decimalOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from decimalOps.java:52:5
 	return this.Intersect(t1, this.complement(t2))
 }
 
 func (this *decimalOps) complement(t SubtypeData) SubtypeData {
-	// migrated from decimalOps.java:57:5
 	s := t.(decimalSubtype)
 	return createDecimalSubtype((!s.allowed), s.Values())
 }
 
 func (this *decimalOps) IsEmpty(tc Context, t SubtypeData) bool {
-	// migrated from decimalOps.java:63:5
 	return notIsEmpty(tc, t)
 }

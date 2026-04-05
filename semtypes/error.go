@@ -51,7 +51,6 @@ func ErrorDetailAtomicType(ctx Context, errorType SemType) (MappingAtomicType, b
 }
 
 func ErrorWithDetail(detail SemType) SemType {
-	// migrated from Error.java:39:5
 	mappingSd := subtypeData(detail, BTMapping)
 	if allOrNothingSubtype, ok := mappingSd.(allOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
@@ -68,7 +67,6 @@ func ErrorWithDetail(detail SemType) SemType {
 }
 
 func errorDistinct(distinctId int) SemType {
-	// migrated from Error.java:57:5
 	common.Assert(distinctId >= 0)
 	bdd := bddAtom(new(createDistinctRecAtom(((-distinctId) - 1))))
 	return getBasicSubtype(BTError, bdd)

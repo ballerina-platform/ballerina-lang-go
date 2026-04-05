@@ -42,7 +42,6 @@ func newRecAtomFromIntKind(index int, targetKind Kind) recAtom {
 }
 
 func createRecAtom(index int) recAtom {
-	// migrated from recAtom.java:41:5
 	if index == BDD_REC_ATOM_READONLY {
 		return ZERO
 	}
@@ -50,27 +49,22 @@ func createRecAtom(index int) recAtom {
 }
 
 func createXMLRecAtom(index int) recAtom {
-	// migrated from recAtom.java:48:5
 	return newRecAtomFromIntKind(index, Kind_XML_ATOM)
 }
 
 func createDistinctRecAtom(index int) recAtom {
-	// migrated from recAtom.java:52:5
 	return newRecAtomFromIntKind(index, Kind_DISTINCT_ATOM)
 }
 
 func (this *recAtom) SetKind(targetKind Kind) {
-	// migrated from recAtom.java:56:5
 	this.targetKind = targetKind
 }
 
 func (this *recAtom) Index() int {
-	// migrated from recAtom.java:60:5
 	return this.index
 }
 
 func (this *recAtom) Kind() Kind {
-	// migrated from recAtom.java:65:5
 	// if this.targetKind == 0 {
 	// 	panic("Target kind is not set for the recursive type atom")
 	// }

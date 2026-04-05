@@ -46,7 +46,6 @@ func newStringSubtypeListCoverageFromBoolInts(isSubtype bool, indices []int) str
 }
 
 func stringSubtypeListCoverageFrom(isSubtype bool, indices []int) stringSubtypeListCoverage {
-	// migrated from stringSubtype.java:140:9
 	return newStringSubtypeListCoverageFromBoolInts(isSubtype, indices)
 }
 
@@ -58,12 +57,10 @@ func newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(charData charStri
 }
 
 func stringSubtypeFrom(chara charStringSubtype, nonChar nonCharStringSubtype) stringSubtype {
-	// migrated from stringSubtype.java:56:5
 	return newStringSubtypeFromCharStringSubtypeNonCharStringSubtype(chara, nonChar)
 }
 
 func stringSubtypeContains(d SubtypeData, s string) bool {
-	// migrated from stringSubtype.java:60:5
 	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
@@ -85,7 +82,6 @@ func stringSubtypeContains(d SubtypeData, s string) bool {
 }
 
 func createStringSubtype(chara charStringSubtype, nonChar nonCharStringSubtype) SubtypeData {
-	// migrated from stringSubtype.java:73:5
 	if len(chara.Values()) == 0 && len(nonChar.Values()) == 0 {
 		if (!chara.allowed) && (!nonChar.allowed) {
 			return createAll()
@@ -125,7 +121,6 @@ func stringSubtypeSingleValue(d SubtypeData) common.Optional[string] {
 }
 
 func StringConst(value string) SemType {
-	// migrated from stringSubtype.java:100:5
 	var chara charStringSubtype
 	var nonChar nonCharStringSubtype
 	if codePointCount(value, 0, len(value)) == 1 {
@@ -143,12 +138,10 @@ func codePointCount(s string, start, end int) int {
 }
 
 func (this *stringSubtype) GetChar() enumerableSubtype[string] {
-	// migrated from stringSubtype.java:43:5
 	return &this.charData
 }
 
 func (this *stringSubtype) GetNonChar() enumerableSubtype[string] {
-	// migrated from stringSubtype.java:47:5
 	return &this.nonCharData
 }
 

@@ -28,6 +28,5 @@ func newFutureOps() futureOps {
 }
 
 func (this *futureOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from futureOps.java:33:5
 	return mappingSubtypeIsEmpty(cx, t)
 }

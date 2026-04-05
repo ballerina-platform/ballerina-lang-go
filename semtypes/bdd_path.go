@@ -43,7 +43,6 @@ func newBddPath() bddPath {
 }
 
 func bddPaths(b Bdd, paths *[]bddPath, accum bddPath) {
-	// migrated from bddPath.java:50:5
 	allOrNothing, ok := b.(*bddAllOrNothing)
 	if ok {
 		if allOrNothing.IsAll() {
@@ -67,12 +66,10 @@ func bddPaths(b Bdd, paths *[]bddPath, accum bddPath) {
 }
 
 func bddPathClone(path bddPath) bddPath {
-	// migrated from bddPath.java:69:5
 
 	return newBddPathFromBddPath(path)
 }
 
 func bddPathFrom() bddPath {
-	// migrated from bddPath.java:73:5
 	return newBddPath()
 }

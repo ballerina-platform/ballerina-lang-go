@@ -22,7 +22,6 @@ type CellField struct {
 }
 
 func cellFieldFrom(name string, ty ComplexSemType) CellField {
-	// migrated from CellField.java:31:5
 	return CellField{
 		Name: name,
 		Type: ty,

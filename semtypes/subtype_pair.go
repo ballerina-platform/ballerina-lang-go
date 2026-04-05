@@ -31,6 +31,5 @@ func newSubtypePairFromBasicTypeCodeProperSubtypeDataProperSubtypeData(basicType
 }
 
 func createSubTypePair(basicTypeCode BasicTypeCode, subtypeData1 ProperSubtypeData, subtypeData2 ProperSubtypeData) subtypePair {
-	// migrated from subtypePair.java:40:5
 	return newSubtypePairFromBasicTypeCodeProperSubtypeDataProperSubtypeData(basicTypeCode, subtypeData1, subtypeData2)
 }

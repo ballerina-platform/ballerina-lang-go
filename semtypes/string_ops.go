@@ -27,7 +27,6 @@ func newStringOps() stringOps {
 }
 
 func (this *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from stringOps.java:45:5
 	sd1 := d1.(stringSubtype)
 	sd2 := d2.(stringSubtype)
 	var chars []enumerableType[string]
@@ -38,7 +37,6 @@ func (this *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from stringOps.java:64:5
 	if allOrNothing1, ok := d1.(*allOrNothingSubtype); ok {
 		if allOrNothing1.IsAllSubtype() {
 			return d2
@@ -63,12 +61,10 @@ func (this *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *stringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from stringOps.java:86:5
 	return this.Intersect(d1, this.complement(d2))
 }
 
 func (this *stringOps) complement(d SubtypeData) SubtypeData {
-	// migrated from stringOps.java:91:5
 	st := d.(stringSubtype)
 	if len(st.GetChar().Values()) == 0 && len(st.GetNonChar().Values()) == 0 {
 		if st.GetChar().Allowed() && st.GetNonChar().Allowed() {
@@ -81,12 +77,10 @@ func (this *stringOps) complement(d SubtypeData) SubtypeData {
 }
 
 func (this *stringOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from stringOps.java:106:5
 	return notIsEmpty(cx, t)
 }
 
 func getStringSubtypeListCoverage(subtype stringSubtype, values []string) stringSubtypeListCoverage {
-	// migrated from stringOps.java:113:5
 	var indices []int
 	ch := subtype.GetChar()
 	nonChar := subtype.GetNonChar()
@@ -123,7 +117,6 @@ func toStringArray(ar []enumerableType[string]) []string {
 }
 
 func stringListIntersect(values []string, target []string, indices *[]int) {
-	// migrated from stringOps.java:158:5
 	i1 := 0
 	i2 := 0
 	len1 := len(values)

@@ -23,12 +23,10 @@ type streamOps struct {
 var _ BasicTypeOps = &streamOps{}
 
 func streamSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from streamOps.java:38:5
 	return bddSubtypeDiff(LIST_SUBTYPE_TWO_ELEMENT, t)
 }
 
 func streamSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from streamOps.java:42:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
 		b = bddIntersect(b, LIST_SUBTYPE_TWO_ELEMENT)
@@ -42,11 +40,9 @@ func newStreamOps() streamOps {
 }
 
 func (this *streamOps) complement(t SubtypeData) SubtypeData {
-	// migrated from streamOps.java:51:5
 	return streamSubtypeComplement(t)
 }
 
 func (this *streamOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from streamOps.java:56:5
 	return streamSubtypeIsEmpty(cx, t)
 }

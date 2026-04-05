@@ -28,7 +28,6 @@ func newIntOps() intOps {
 var intOpsInstance = newIntOps()
 
 func (this *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from intOps.java:45:5
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListUnion(v1.Ranges, v2.Ranges)
@@ -39,7 +38,6 @@ func (this *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from intOps.java:56:5
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, v2.Ranges)
@@ -50,7 +48,6 @@ func (this *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from intOps.java:67:5
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, rangeListComplement(v2.Ranges))
@@ -61,13 +58,11 @@ func (this *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *intOps) complement(d SubtypeData) SubtypeData {
-	// migrated from intOps.java:78:5
 	v := d.(intSubtype)
 	return createIntSubtype(rangeListComplement(v.Ranges)...)
 }
 
 func intSubtypeOverlapRange(subtype intSubtype, r intRange) bool {
-	// migrated from intOps.java:83:5
 	subtypeData := intOpsInstance.Intersect(subtype, createIntSubtype(r))
 	if allOrNothingSubtype, ok := subtypeData.(allOrNothingSubtype); ok {
 		return !allOrNothingSubtype.IsNothingSubtype()
@@ -76,22 +71,18 @@ func intSubtypeOverlapRange(subtype intSubtype, r intRange) bool {
 }
 
 func intSubtypeMax(subtype intSubtype) int64 {
-	// migrated from intOps.java:89:5
 	return subtype.Ranges[len(subtype.Ranges)-1].Max
 }
 
 func intSubtypeMin(subtype intSubtype) int64 {
-	// migrated from intOps.java:93:5
 	return subtype.Ranges[0].Min
 }
 
 func (this *intOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from intOps.java:98:5
 	return notIsEmpty(cx, t)
 }
 
 func rangeListUnion(v1 []intRange, v2 []intRange) []intRange {
-	// migrated from intOps.java:102:5
 	var result []intRange
 	i1 := 0
 	i2 := 0
@@ -129,7 +120,6 @@ func rangeListUnion(v1 []intRange, v2 []intRange) []intRange {
 }
 
 func rangeUnionPush(ranges []intRange, next intRange) []intRange {
-	// migrated from intOps.java:140:5
 	lastIndex := len(ranges) - 1
 	if lastIndex < 0 {
 		return append(ranges, next)
@@ -143,7 +133,6 @@ func rangeUnionPush(ranges []intRange, next intRange) []intRange {
 }
 
 func getRangeUnion(r1 intRange, r2 intRange) rangeUnion {
-	// migrated from intOps.java:157:5
 	if r1.Max < r2.Min {
 		if r1.Max+1 != r2.Min {
 			return rangeUnionFrom(-1)
@@ -158,7 +147,6 @@ func getRangeUnion(r1 intRange, r2 intRange) rangeUnion {
 }
 
 func rangeListIntersect(v1 []intRange, v2 []intRange) []intRange {
-	// migrated from intOps.java:171:5
 	var result []intRange
 	i1 := 0
 	i2 := 0
@@ -186,7 +174,6 @@ func rangeListIntersect(v1 []intRange, v2 []intRange) []intRange {
 }
 
 func rangeIntersect(r1 intRange, r2 intRange) rangeUnion {
-	// migrated from intOps.java:202:5
 	if r1.Max < r2.Min {
 		return rangeUnionFrom(-1)
 	}
@@ -197,7 +184,6 @@ func rangeIntersect(r1 intRange, r2 intRange) rangeUnion {
 }
 
 func rangeListComplement(v []intRange) []intRange {
-	// migrated from intOps.java:212:5
 	var result []intRange
 	length := len(v)
 	minVal := v[0].Min

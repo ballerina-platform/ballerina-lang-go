@@ -25,7 +25,6 @@ type BddNode interface {
 }
 
 func bddNodeCreate(atom Atom, left Bdd, middle Bdd, right Bdd) BddNode {
-	// migrated from BddNode.java:31:5
 	if isSimpleNode(left, middle, right) {
 		return newBddNodeSimple(atom)
 	}

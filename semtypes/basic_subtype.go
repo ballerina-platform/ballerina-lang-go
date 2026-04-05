@@ -29,6 +29,5 @@ func newBasicSubtypeFromBasicTypeCodeProperSubtypeData(basicTypeCode BasicTypeCo
 }
 
 func basicSubtypeFrom(typeCode BasicTypeCode, data ProperSubtypeData) basicSubtype {
-	// migrated from basicSubtype.java:34:5
 	return newBasicSubtypeFromBasicTypeCodeProperSubtypeData(typeCode, data)
 }

@@ -22,12 +22,10 @@ type tableOps struct {
 var _ BasicTypeOps = &tableOps{}
 
 func tableSubtypeComplement(t SubtypeData) SubtypeData {
-	// migrated from tableOps.java:38:5
 	return bddSubtypeDiff(LIST_SUBTYPE_THREE_ELEMENT, t)
 }
 
 func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from tableOps.java:42:5
 	b := t.(Bdd)
 	if bddPosMaybeEmpty(b) {
 		b = bddIntersect(b, LIST_SUBTYPE_THREE_ELEMENT)
@@ -36,12 +34,10 @@ func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 }
 
 func (this *tableOps) complement(d SubtypeData) SubtypeData {
-	// migrated from tableOps.java:51:5
 	return tableSubtypeComplement(d)
 }
 
 func (this *tableOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from tableOps.java:56:5
 	return tableSubtypeIsEmpty(cx, d)
 }
 

@@ -38,7 +38,6 @@ func newBddMemo() bddMemo {
 }
 
 func (this *bddMemo) SetIsEmpty(isEmpty bool) {
-	// migrated from bddMemo.java:33:5
 	if isEmpty {
 		this.isEmpty = MemoStatus_TRUE
 	} else {
@@ -47,6 +46,5 @@ func (this *bddMemo) SetIsEmpty(isEmpty bool) {
 }
 
 func (this *bddMemo) IsEmpty() bool {
-	// migrated from bddMemo.java:37:5
 	return (this.isEmpty == MemoStatus_TRUE)
 }

@@ -31,12 +31,10 @@ func newFunctionQualifiersFromSemType(semType SemType) FunctionQualifiers {
 }
 
 func FunctionQualifiersFrom(env Env, isolated bool, transactional bool) FunctionQualifiers {
-	// migrated from FunctionQualifiers.java:42:5
 	return newFunctionQualifiersFromSemType(createSemType(env, isolated, transactional))
 }
 
 func createSemType(env Env, isolated bool, transactional bool) SemType {
-	// migrated from FunctionQualifiers.java:46:5
 
 	ld := NewListDefinition()
 	var isolatedType SemType

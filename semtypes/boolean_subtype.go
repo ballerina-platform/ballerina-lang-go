@@ -33,12 +33,10 @@ func newBooleanSubtypeFromBool(value bool) booleanSubtype {
 }
 
 func booleanSubtypeFrom(value bool) booleanSubtype {
-	// migrated from booleanSubtype.java:40:5
 	return newBooleanSubtypeFromBool(value)
 }
 
 func booleanSubtypeContains(d SubtypeData, b bool) bool {
-	// migrated from booleanSubtype.java:44:5
 	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
@@ -47,13 +45,11 @@ func booleanSubtypeContains(d SubtypeData, b bool) bool {
 }
 
 func BooleanConst(value bool) SemType {
-	// migrated from booleanSubtype.java:52:5
 	t := booleanSubtypeFrom(value)
 	return getBasicSubtype(BTBoolean, t)
 }
 
 func booleanSubtypeSingleValue(d SubtypeData) common.Optional[bool] {
-	// migrated from booleanSubtype.java:57:5
 	if _, ok := d.(allOrNothingSubtype); ok {
 		return common.OptionalEmpty[bool]()
 	}

@@ -19,14 +19,10 @@ package semtypes
 import "ballerina-lang-go/common"
 
 // Represent object type desc.
-//
-// migrated from ObjectDefinition.java:50:1
 type ObjectDefinition struct {
-	// migrated from ObjectDefinition.java:52:5
 	mappingDefinition MappingDefinition
 }
 
-// migrated from ObjectDefinition.java:50:1
 var _ Definition = &ObjectDefinition{}
 
 func NewObjectDefinition() ObjectDefinition {
@@ -35,9 +31,7 @@ func NewObjectDefinition() ObjectDefinition {
 	return this
 }
 
-// migrated from ObjectDefinition.java:54:5
 func objectDefinitionDistinct(distinctId int) SemType {
-	// migrated from ObjectDefinition.java:55:9
 	common.Assert(distinctId >= 0)
 	bdd := bddAtom(new(createDistinctRecAtom(-distinctId - 1)))
 	return getBasicSubtype(BTObject, bdd)
@@ -65,25 +59,19 @@ func objectDefinitionDistinct(distinctId int) SemType {
 //	      FUNCTION value;
 //	   }
 //	}
-//
-// migrated from ObjectDefinition.java:81:5
 func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, members []Member) SemType {
 	common.Assert(objectDefinitionValidateMembers(members))
-	// migrated from ObjectDefinition.java:82:9
 	var mut CellMutability
 	if qualifiers.readonly {
 		mut = CellMutability_CELL_MUT_NONE
 	} else {
 		mut = CellMutability_CELL_MUT_LIMITED
 	}
-	// migrated from ObjectDefinition.java:85:9
 	var memberStream []CellField
 	for _, member := range members {
 		memberStream = append(memberStream, memberField(env, &member, mut))
 	}
-	// migrated from ObjectDefinition.java:87:9
 	qualifierStream := []CellField{qualifiers.Field(env)}
-	// migrated from ObjectDefinition.java:88:9
 	var cellFields []CellField
 	cellFields = append(cellFields, memberStream...)
 	cellFields = append(cellFields, qualifierStream...)
@@ -91,10 +79,8 @@ func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, membe
 	return this.objectContaining(mappingType)
 }
 
-// migrated from ObjectDefinition.java:93:5
 func objectDefinitionValidateMembers(members []Member) bool {
 	// Check if there are two members with same name
-	// migrated from ObjectDefinition.java:95:9
 	nameMap := make(map[string]bool)
 	for _, member := range members {
 		if nameMap[member.Name] {
@@ -105,19 +91,13 @@ func objectDefinitionValidateMembers(members []Member) bool {
 	return len(nameMap) == len(members)
 }
 
-// migrated from ObjectDefinition.java:98:5
 func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
-	// migrated from ObjectDefinition.java:99:9
 	bdd := subtypeData(mappingType, BTMapping)
-	// migrated from ObjectDefinition.java:100:9
 	return createBasicSemType(BTObject, bdd)
 }
 
-// migrated from ObjectDefinition.java:104:5
 func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
-	// migrated from ObjectDefinition.java:105:9
 	fieldDefn := NewMappingDefinition()
-	// migrated from ObjectDefinition.java:106:9
 	var fieldValueTy SemType
 	if immutable {
 		fieldValueTy = VAL_READONLY
@@ -133,9 +113,7 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 		},
 		NEVER)
 
-	// migrated from ObjectDefinition.java:116:9
 	methodDefn := NewMappingDefinition()
-	// migrated from ObjectDefinition.java:117:9
 	methodMemberType := methodDefn.DefineMappingTypeWrapped(
 		env,
 		[]Field{
@@ -147,18 +125,14 @@ func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immuta
 	return cellContainingWithEnvSemTypeCellMutability(env, Union(fieldMemberType, methodMemberType), mut)
 }
 
-// migrated from ObjectDefinition.java:128:5
 func memberField(env Env, member *Member, mut CellMutability) CellField {
-	// migrated from ObjectDefinition.java:129:9
 	md := NewMappingDefinition()
-	// migrated from ObjectDefinition.java:130:9
 	var fieldMut CellMutability
 	if member.Immutable {
 		fieldMut = CellMutability_CELL_MUT_NONE
 	} else {
 		fieldMut = mut
 	}
-	// migrated from ObjectDefinition.java:131:9
 	semtype := md.DefineMappingTypeWrapped(
 		env,
 		[]Field{
@@ -170,8 +144,6 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 	return cellFieldFrom(member.Name, *cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 
-// migrated from ObjectDefinition.java:143:5
 func (this *ObjectDefinition) GetSemType(env Env) SemType {
-	// migrated from ObjectDefinition.java:144:9
 	return this.objectContaining(this.mappingDefinition.GetSemType(env))
 }

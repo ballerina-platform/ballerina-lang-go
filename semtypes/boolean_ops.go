@@ -21,7 +21,6 @@ type booleanOps struct{}
 var _ BasicTypeOps = &booleanOps{}
 
 func (this *booleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from booleanOps.java:33:5
 	v1 := d1.(booleanSubtype)
 	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
@@ -32,7 +31,6 @@ func (this *booleanOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *booleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from booleanOps.java:40:5
 	v1 := d1.(booleanSubtype)
 	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
@@ -43,7 +41,6 @@ func (this *booleanOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *booleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from booleanOps.java:47:5
 	v1 := d1.(booleanSubtype)
 	v2 := d2.(booleanSubtype)
 	if v1.Value == v2.Value {
@@ -54,13 +51,11 @@ func (this *booleanOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *booleanOps) complement(d SubtypeData) SubtypeData {
-	// migrated from booleanOps.java:54:5
 	v := d.(booleanSubtype)
 	t := booleanSubtypeFrom(!v.Value)
 	return t
 }
 
 func (this *booleanOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from booleanOps.java:61:5
 	return notIsEmpty(cx, t)
 }

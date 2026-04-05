@@ -23,7 +23,6 @@ type combinedRange struct {
 }
 
 func combinedRangeFrom(r intRange, i1 int64, i2 int64) combinedRange {
-	// migrated from combinedRange.java:32:5
 
 	return combinedRange{
 		Range: r,

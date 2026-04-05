@@ -46,13 +46,11 @@ func newListAtomicTypeFromMembersRest(members fixedLengthArray, rest *ComplexSem
 }
 
 func listAtomicTypeFrom(members fixedLengthArray, rest *ComplexSemType) ListAtomicType {
-	// migrated from ListAtomicType.java:34:5
 
 	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
 func (this *ListAtomicType) AtomKind() Kind {
-	// migrated from ListAtomicType.java:38:5
 	return Kind_LIST_ATOM
 }
 

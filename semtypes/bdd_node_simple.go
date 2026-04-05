@@ -26,17 +26,14 @@ type bddNodeSimple struct {
 var _ BddNode = &bddNodeSimple{}
 
 func (this *bddNodeSimple) Left() Bdd {
-	// migrated from bddNodeSimple.java:32:5
 	return bddAll()
 }
 
 func (this *bddNodeSimple) Middle() Bdd {
-	// migrated from bddNodeSimple.java:37:5
 	return bddNothing()
 }
 
 func (this *bddNodeSimple) Right() Bdd {
-	// migrated from bddNodeSimple.java:42:5
 	return bddNothing()
 }
 

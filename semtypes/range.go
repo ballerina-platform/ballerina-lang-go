@@ -29,6 +29,5 @@ func newRangeFromIntInt(min, max int64) intRange {
 }
 
 func rangeFrom(min, max int64) intRange {
-	// migrated from Range.java:34:5
 	return newRangeFromIntInt(min, max)
 }

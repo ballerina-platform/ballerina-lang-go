@@ -26,7 +26,6 @@ func newTypedescSubtype() typedescSubtype {
 }
 
 func typedescContaining(env Env, constraint SemType) SemType {
-	// migrated from typedescSubtype.java:44:5
 	if common.PointerEqualToValue(VAL, constraint) {
 		return TYPEDESC
 	}

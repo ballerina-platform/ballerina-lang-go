@@ -24,7 +24,6 @@ func newTableSubtype() tableSubtype {
 }
 
 func tableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstraint SemType) SemType {
-	// migrated from tableSubtype.java:48:5
 	var normalizedKc SemType
 	lat := ToListAtomicType(cx, keyConstraint)
 	if (lat != nil) && (CELL_ATOMIC_UNDEF == getCellAtomicType(lat.Rest)) {
@@ -44,7 +43,6 @@ func tableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstr
 }
 
 func tableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames []string) SemType {
-	// migrated from tableSubtype.java:64:5
 	fieldNameSingletons := make([]SemType, len(fieldNames))
 	fieldTypes := make([]SemType, len(fieldNames))
 	for i := range fieldNames {
@@ -65,19 +63,16 @@ func tableContainingKeySpecifier(cx Context, tableConstraint SemType, fieldNames
 }
 
 func tableContainingDefault(env Env, tableConstraint SemType) SemType {
-	// migrated from tableSubtype.java:85:5
 	return tableContainingWithEnvSemTypeCellMutability(env, tableConstraint, CellMutability_CELL_MUT_LIMITED)
 }
 
 func tableContainingWithEnvSemTypeCellMutability(env Env, tableConstraint SemType, mut CellMutability) SemType {
-	// migrated from tableSubtype.java:89:5
 	var normalizedKc SemType = VAL
 	var normalizedKs SemType = VAL
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, mut)
 }
 
 func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType, mut CellMutability) SemType {
-	// migrated from tableSubtype.java:95:5
 	if !IsSubtypeSimple(tableConstraint, MAPPING) {
 		panic("assertion failed")
 	}
@@ -90,6 +85,5 @@ func tableContaining(env Env, tableConstraint SemType, normalizedKc SemType, nor
 }
 
 func tableContainingWithEnvSemTypeSemTypeSemType(env Env, tableConstraint SemType, normalizedKc SemType, normalizedKs SemType) SemType {
-	// migrated from tableSubtype.java:109:5
 	return tableContaining(env, tableConstraint, normalizedKc, normalizedKs, CellMutability_CELL_MUT_LIMITED)
 }

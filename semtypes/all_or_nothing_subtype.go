@@ -34,22 +34,18 @@ func newAllOrNothingSubtypeFromBool(isAll bool) allOrNothingSubtype {
 }
 
 func createAll() allOrNothingSubtype {
-	// migrated from allOrNothingSubtype.java:38:5
 	return AllOrNothingSubtypeAll
 }
 
 func createNothing() allOrNothingSubtype {
-	// migrated from allOrNothingSubtype.java:42:5
 	return AllOrNothingSubtypeNothing
 }
 
 func (this *allOrNothingSubtype) IsAllSubtype() bool {
-	// migrated from allOrNothingSubtype.java:46:5
 	return this.isAll
 }
 
 func (this *allOrNothingSubtype) IsNothingSubtype() bool {
-	// migrated from allOrNothingSubtype.java:50:5
 	return (!this.isAll)
 }
 

@@ -24,7 +24,6 @@ type charStringSubtype struct {
 var _ enumerableSubtype[string] = &charStringSubtype{}
 
 func charStringSubtypeFrom(allowed bool, values []enumerableType[string]) charStringSubtype {
-	// migrated from charStringSubtype.java:39:5
 	return charStringSubtype{
 		allowed: allowed,
 		values:  values,
@@ -32,11 +31,9 @@ func charStringSubtypeFrom(allowed bool, values []enumerableType[string]) charSt
 }
 
 func (this *charStringSubtype) Allowed() bool {
-	// migrated from charStringSubtype.java:43:5
 	return this.allowed
 }
 
 func (this *charStringSubtype) Values() []enumerableType[string] {
-	// migrated from charStringSubtype.java:48:5
 	return this.values
 }

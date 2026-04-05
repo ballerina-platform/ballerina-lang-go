@@ -29,11 +29,9 @@ func newRangeUnionFromIntRange(status int, r *intRange) rangeUnion {
 }
 
 func rangeUnionFrom(status int) rangeUnion {
-	// migrated from rangeUnion.java:37:5
 	return newRangeUnionFromIntRange(status, nil)
 }
 
 func fromWithRange(r intRange) rangeUnion {
-	// migrated from rangeUnion.java:41:5
 	return newRangeUnionFromIntRange(0, &r)
 }

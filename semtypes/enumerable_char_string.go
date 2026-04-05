@@ -46,6 +46,5 @@ func newEnumerableCharStringFromString(value string) enumerableCharString {
 }
 
 func enumerableCharStringFrom(v string) enumerableType[string] {
-	// migrated from enumerableCharString.java:33:5
 	return new(newEnumerableCharStringFromString(v))
 }

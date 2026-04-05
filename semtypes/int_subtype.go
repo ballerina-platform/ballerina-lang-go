@@ -36,7 +36,6 @@ func newIntSubtypeFromRanges(ranges []intRange) intSubtype {
 }
 
 func createIntSubtype(ranges ...intRange) intSubtype {
-	// migrated from intSubtype.java:43:5
 	return newIntSubtypeFromRanges(ranges)
 }
 
@@ -45,7 +44,6 @@ func createSingleRangeSubtype(min, max int64) intSubtype {
 }
 
 func IntConst(value int64) SemType {
-	// migrated from intSubtype.java:51:5
 	return getBasicSubtype(BTInt, createSingleRangeSubtype(value, value))
 }
 
@@ -72,17 +70,14 @@ func validIntWidth(signed bool, bits int64) {
 }
 
 func validIntWidthSigned(bits int) {
-	// migrated from intSubtype.java:74:5
 	validIntWidth(true, int64(bits))
 }
 
 func validIntWidthUnsigned(bits int) {
-	// migrated from intSubtype.java:78:5
 	validIntWidth(false, int64(bits))
 }
 
 func intWidthSigned(bits int64) SemType {
-	// migrated from intSubtype.java:82:5
 	validIntWidth(true, bits)
 	if bits == 64 {
 		return INT
@@ -92,14 +87,12 @@ func intWidthSigned(bits int64) SemType {
 }
 
 func intWidthUnsigned(bits int) SemType {
-	// migrated from intSubtype.java:91:5
 	validIntWidth(false, int64(bits))
 	t := createSingleRangeSubtype(int64(0), ((int64(1) << bits) - int64(1)))
 	return getBasicSubtype(BTInt, t)
 }
 
 func intSubtypeWidenUnsigned(d SubtypeData) SubtypeData {
-	// migrated from intSubtype.java:98:5
 	if _, ok := d.(allOrNothingSubtype); ok {
 		return d
 	}
@@ -150,7 +143,6 @@ func (this intSubtype) String() string {
 }
 
 func intSubtypeContains(d SubtypeData, n int64) bool {
-	// migrated from intSubtype.java:137:5
 	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}

@@ -27,26 +27,21 @@ func newBasicTypeOpsPanicImpl() basicTypeOpsPanicImpl {
 }
 
 func (this *basicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from basicTypeOpsPanicImpl.java:30:5
 	panic("Binary operation should not be called")
 }
 
 func (this *basicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from basicTypeOpsPanicImpl.java:35:5
 	panic("Binary operation should not be called")
 }
 
 func (this *basicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from basicTypeOpsPanicImpl.java:40:5
 	panic("Binary operation should not be called")
 }
 
 func (this *basicTypeOpsPanicImpl) complement(t SubtypeData) SubtypeData {
-	// migrated from basicTypeOpsPanicImpl.java:45:5
 	panic("Unary operation should not be called")
 }
 
 func (this *basicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from basicTypeOpsPanicImpl.java:50:5
 	panic("Unary boolean operation should not be called")
 }

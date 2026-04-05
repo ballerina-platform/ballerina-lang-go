@@ -33,21 +33,17 @@ type commonOpsMethods struct {
 }
 
 func (m *commonOpsMethods) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:30:5
 	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
 func (m *commonOpsMethods) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:35:5
 	return bddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
 func (m *commonOpsMethods) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:40:5
 	return bddDiff(t1.(Bdd), t2.(Bdd))
 }
 
 func (m *commonOpsMethods) complement(t SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:45:5
 	return bddComplement(t.(Bdd))
 }

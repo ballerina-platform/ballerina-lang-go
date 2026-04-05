@@ -26,14 +26,12 @@ type listOps struct{}
 var _ BasicTypeOps = &listOps{}
 
 func listSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from listOps.java:67:5
 	return memoSubtypeIsEmpty(cx, cx.listMemo(), func(cx Context, b Bdd) bool {
 		return bddEvery(cx, b, conjunctionNil, conjunctionNil, listFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
 func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
-	// migrated from listOps.java:73:5
 	var members fixedLengthArray
 	var rest *ComplexSemType
 	if pos == conjunctionNil {
@@ -85,7 +83,6 @@ func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle
 }
 
 func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequired int, neg conjunctionHandle) bool {
-	// migrated from listOps.java:130:5
 	if neg == conjunctionNil {
 		return true
 	}
@@ -132,7 +129,6 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 }
 
 func listSampleTypes(cx Context, members fixedLengthArray, rest *ComplexSemType, indices []int) ([]*ComplexSemType, int) {
-	// migrated from listOps.java:181:5
 	var memberTypes []*ComplexSemType
 	nRequired := 0
 	for i := range indices {
@@ -150,7 +146,6 @@ func listSampleTypes(cx Context, members fixedLengthArray, rest *ComplexSemType,
 }
 
 func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunctionHandle) []int {
-	// migrated from listOps.java:209:5
 	maxInitialLength := len(members.Initial)
 	var fixedLengths []int
 	fixedLengths = append(fixedLengths, members.FixedLength)
@@ -207,7 +202,6 @@ func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunc
 func listIntersectWith(env Env, members1 fixedLengthArray, rest1 *ComplexSemType,
 	members2 fixedLengthArray, rest2 *ComplexSemType,
 ) (*fixedLengthArray, **ComplexSemType, bool) {
-	// migrated from listOps.java:270:5
 	if listLengthsDisjoint(members1, rest1, members2, rest2) {
 		return nil, nil, false
 	}
@@ -229,12 +223,10 @@ func listIntersectWith(env Env, members1 fixedLengthArray, rest1 *ComplexSemType
 }
 
 func fixedArrayShallowCopy(array fixedLengthArray) fixedLengthArray {
-	// migrated from listOps.java:291:5
 	return fixedLengthArrayFrom(array.Initial, array.FixedLength)
 }
 
 func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired int, neg conjunctionHandle) bool {
-	// migrated from listOps.java:306:5
 	if neg == conjunctionNil {
 		return true
 	} else {
@@ -288,12 +280,10 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 }
 
 func listMemberAtInnerVal(fixedArray fixedLengthArray, rest *ComplexSemType, index int) SemType {
-	// migrated from listOps.java:391:5
 	return CellInnerVal(listMemberAt(fixedArray, rest, index))
 }
 
 func listLengthsDisjoint(members1 fixedLengthArray, rest1 *ComplexSemType, members2 fixedLengthArray, rest2 *ComplexSemType) bool {
-	// migrated from listOps.java:395:5
 	len1 := members1.FixedLength
 	len2 := members2.FixedLength
 	if len1 < len2 {
@@ -306,7 +296,6 @@ func listLengthsDisjoint(members1 fixedLengthArray, rest1 *ComplexSemType, membe
 }
 
 func listMemberAt(fixedArray fixedLengthArray, rest *ComplexSemType, index int) *ComplexSemType {
-	// migrated from listOps.java:408:5
 	if index < fixedArray.FixedLength {
 		return fixedArrayGet(fixedArray, index)
 	}
@@ -314,7 +303,6 @@ func listMemberAt(fixedArray fixedLengthArray, rest *ComplexSemType, index int) 
 }
 
 func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
-	// migrated from listOps.java:415:5
 	for i := range array.Initial {
 		if IsEmpty(cx, &array.Initial[i]) {
 			return true
@@ -324,24 +312,20 @@ func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
 }
 
 func fixedArrayGet(members fixedLengthArray, index int) *ComplexSemType {
-	// migrated from listOps.java:424:5
 	memberLen := len(members.Initial)
 	i := min(memberLen-1, index)
 	return &members.Initial[i]
 }
 
 func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemType {
-	// migrated from listOps.java:430:5
 	return Diff(listAtomicMemberTypeInner(atomic, key), UNDEF)
 }
 
 func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
-	// migrated from listOps.java:434:5
 	return listAtomicMemberTypeAtInner(atomic.Members, atomic.Rest, key)
 }
 
 func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest *ComplexSemType, key SubtypeData) SemType {
-	// migrated from listOps.java:438:5
 	if intSubtype, ok := key.(intSubtype); ok {
 		var m SemType
 		m = NEVER
@@ -372,7 +356,6 @@ func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest *ComplexSemTy
 }
 
 func bddListMemberTypeInnerVal(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
-	// migrated from listOps.java:467:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
@@ -390,26 +373,21 @@ func newListOps() listOps {
 }
 
 func (this *listOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from listOps.java:479:5
 	return bddSubtypeUnion(d1, d2)
 }
 
 func (this *listOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from listOps.java:484:5
 	return bddSubtypeIntersect(d1, d2)
 }
 
 func (this *listOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from listOps.java:489:5
 	return bddSubtypeDiff(d1, d2)
 }
 
 func (this *listOps) complement(d SubtypeData) SubtypeData {
-	// migrated from listOps.java:494:5
 	return bddSubtypeComplement(d)
 }
 
 func (this *listOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from listOps.java:499:5
 	return listSubtypeIsEmpty(cx, d)
 }

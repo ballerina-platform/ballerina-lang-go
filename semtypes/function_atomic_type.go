@@ -34,13 +34,11 @@ func (this *functionAtomicType) equals(other AtomicType) bool {
 }
 
 func functionAtomicTypeFrom(paramType SemType, rest SemType, qualifiers SemType) functionAtomicType {
-	// migrated from functionAtomicType.java:32:5
 
 	return newFunctionAtomicType(paramType, rest, qualifiers, false)
 }
 
 func functionAtomicTypeGenericFrom(paramType SemType, rest SemType, qualifiers SemType) functionAtomicType {
-	// migrated from functionAtomicType.java:36:5
 
 	return newFunctionAtomicType(paramType, rest, qualifiers, true)
 }
@@ -55,6 +53,5 @@ func newFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemTyp
 }
 
 func (this *functionAtomicType) AtomKind() Kind {
-	// migrated from functionAtomicType.java:40:5
 	return Kind_FUNCTION_ATOM
 }

@@ -30,7 +30,6 @@ var UINT32 = intWidthUnsigned(32)
 var CHAR = STRING_CHAR
 
 func decimalConstFromStringValue(value string) SemType {
-	// migrated from SemTypes.java:68:5
 	if strings.Contains(value, "d") || strings.Contains(value, "D") {
 		value = value[:len(value)-1]
 	}
@@ -43,7 +42,6 @@ func decimalConstFromStringValue(value string) SemType {
 }
 
 func unionWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
-	// migrated from SemTypes.java:80:5
 	u := Union(first, second)
 	for _, s := range rest {
 		u = Union(u, s)
@@ -52,7 +50,6 @@ func unionWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemT
 }
 
 func intersectWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...SemType) SemType {
-	// migrated from SemTypes.java:92:5
 	i := Intersect(first, second)
 	for _, s := range rest {
 		i = Intersect(i, s)
@@ -61,26 +58,21 @@ func intersectWithSemTypeSemTypesSemType(first SemType, second SemType, rest ...
 }
 
 func isSubtypeSimpleNotNever(t1 SemType, t2 BasicTypeBitSet) bool {
-	// migrated from SemTypes.java:108:5
 	return ((!IsNever(t1)) && IsSubtypeSimple(t1, t2))
 }
 
 func ContainsBasicType(t1 SemType, t2 BasicTypeBitSet) bool {
-	// migrated from SemTypes.java:112:5
 	return ((WidenToBasicTypes(t1).all() & t2.all()) != 0)
 }
 
 func containsType(context Context, ty SemType, typeToBeContained SemType) bool {
-	// migrated from SemTypes.java:116:5
 	return IsSameType(context, Intersect(ty, typeToBeContained), typeToBeContained)
 }
 
 func ListProj(context Context, t SemType, key SemType) SemType {
-	// migrated from SemTypes.java:160:5
 	return listProjInnerVal(context, t, key)
 }
 
 func listMemberType(context Context, t SemType, key SemType) SemType {
-	// migrated from SemTypes.java:164:5
 	return ListMemberTypeInnerVal(context, t, key)
 }

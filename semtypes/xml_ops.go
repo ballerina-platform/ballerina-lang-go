@@ -30,7 +30,6 @@ func newXmlOps() xmlOps {
 }
 
 func (this *xmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from xmlOps.java:45:5
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives | v2.Primitives)
@@ -38,7 +37,6 @@ func (this *xmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *xmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from xmlOps.java:53:5
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & v2.Primitives)
@@ -46,7 +44,6 @@ func (this *xmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *xmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from xmlOps.java:61:5
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & (^v2.Primitives))
@@ -54,12 +51,10 @@ func (this *xmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 }
 
 func (this *xmlOps) complement(d SubtypeData) SubtypeData {
-	// migrated from xmlOps.java:69:5
 	return this.Diff(XML_SUBTYPE_TOP, d)
 }
 
 func (this *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from xmlOps.java:74:5
 	sd := t.(*xmlSubtype)
 	if sd.Primitives != 0 {
 		return false
@@ -68,18 +63,15 @@ func (this *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
 }
 
 func (this *xmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
-	// migrated from xmlOps.java:83:5
 	return bddEvery(cx, bdd, conjunctionNil, conjunctionNil, xmlFormulaIsEmpty)
 }
 
 func xmlFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
-	// migrated from xmlOps.java:87:5
 	allPosBits := collectAllPrimitives(cx, pos) & XML_PRIMITIVE_ALL_MASK
 	return xmlHasTotalNegative(cx, allPosBits, neg)
 }
 
 func collectAllPrimitives(cx Context, con conjunctionHandle) int {
-	// migrated from xmlOps.java:92:5
 	bits := 0
 	current := con
 	for current != conjunctionNil {
@@ -90,7 +82,6 @@ func collectAllPrimitives(cx Context, con conjunctionHandle) int {
 }
 
 func xmlHasTotalNegative(cx Context, allBits int, con conjunctionHandle) bool {
-	// migrated from xmlOps.java:102:5
 	if allBits == 0 {
 		return true
 	}

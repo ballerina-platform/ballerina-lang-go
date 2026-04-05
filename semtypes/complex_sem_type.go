@@ -17,12 +17,10 @@
 package semtypes
 
 func createComplexSemType(allBitset BasicTypeBitSet, subtypeList ...basicSubtype) SemType {
-	// migrated from ComplexSemType.java:33:5
 	return createComplexSemTypeWithAllBitSetSubtypeList(allBitset, subtypeList)
 }
 
 func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someBitset BasicTypeBitSet, subtypeDataList []ProperSubtypeData) *ComplexSemType {
-	// migrated from ComplexSemType.java:37:5
 	return &ComplexSemType{
 		allBitSet:  allBitset,
 		someBitSet: someBitset,
@@ -31,7 +29,6 @@ func createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(allBitset, someB
 }
 
 func createComplexSemTypeWithAllBitSetSubtypeList(allBitset BasicTypeBitSet, subtypeList []basicSubtype) SemType {
-	// migrated from ComplexSemType.java:44:5
 	var some BasicTypeBitSet = 0
 	var dataList []ProperSubtypeData
 	for _, basicSubtype := range subtypeList {

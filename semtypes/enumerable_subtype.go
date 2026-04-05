@@ -30,7 +30,6 @@ var (
 )
 
 func enumerableSubtypeUnion[T any](t1 enumerableSubtype[T], t2 enumerableSubtype[T], result *[]enumerableType[T]) bool {
-	// migrated from enumerableSubtype.java:37:5
 	b1 := t1.Allowed()
 	b2 := t2.Allowed()
 	var allowed bool
@@ -51,7 +50,6 @@ func enumerableSubtypeUnion[T any](t1 enumerableSubtype[T], t2 enumerableSubtype
 }
 
 func enumerableSubtypeIntersect[T any](t1 enumerableSubtype[T], t2 enumerableSubtype[T], result *[]enumerableType[T]) bool {
-	// migrated from enumerableSubtype.java:59:5
 	b1 := t1.Allowed()
 	b2 := t2.Allowed()
 	var allowed bool
@@ -72,7 +70,6 @@ func enumerableSubtypeIntersect[T any](t1 enumerableSubtype[T], t2 enumerableSub
 }
 
 func enumerableListUnion[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
-	// migrated from enumerableSubtype.java:81:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -107,7 +104,6 @@ func enumerableListUnion[T any](v1 []enumerableType[T], v2 []enumerableType[T], 
 }
 
 func enumerableListIntersect[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
-	// migrated from enumerableSubtype.java:121:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -133,7 +129,6 @@ func enumerableListIntersect[T any](v1 []enumerableType[T], v2 []enumerableType[
 }
 
 func enumerableListDiff[T any](v1 []enumerableType[T], v2 []enumerableType[T], result *[]enumerableType[T]) {
-	// migrated from enumerableSubtype.java:152:5
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -160,12 +155,10 @@ func enumerableListDiff[T any](v1 []enumerableType[T], v2 []enumerableType[T], r
 }
 
 func compareEnumerable[T any](v1 enumerableType[T], v2 enumerableType[T]) int {
-	// migrated from enumerableSubtype.java:187:5
 	return v1.Compare(v2)
 }
 
 func bFloatEq(f1 float64, f2 float64) bool {
-	// migrated from enumerableSubtype.java:216:5
 	if math.IsNaN(f1) {
 		return math.IsNaN(f2)
 	}

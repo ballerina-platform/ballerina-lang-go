@@ -66,7 +66,6 @@ func floatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
 }
 
 func floatSubtypeContains(d SubtypeData, f enumerableFloat) bool {
-	// migrated from floatSubtype.java:72:5
 	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
@@ -78,7 +77,6 @@ func floatSubtypeContains(d SubtypeData, f enumerableFloat) bool {
 }
 
 func createFloatSubtype(allowed bool, values []enumerableType[float64]) ProperSubtypeData {
-	// migrated from floatSubtype.java:86:5
 	if len(values) == 0 {
 		if allowed {
 			return createNothing()
@@ -90,12 +88,10 @@ func createFloatSubtype(allowed bool, values []enumerableType[float64]) ProperSu
 }
 
 func (this *floatSubtype) Allowed() bool {
-	// migrated from floatSubtype.java:93:5
 	return this.allowed
 }
 
 func (this *floatSubtype) Values() []enumerableType[float64] {
-	// migrated from floatSubtype.java:98:5
 	var values []enumerableType[float64]
 	for _, value := range this.values {
 		values = append(values, &value)

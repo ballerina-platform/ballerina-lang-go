@@ -34,11 +34,9 @@ func newFixedLengthArrayFromInitialFixedLength(initial []ComplexSemType, fixedLe
 }
 
 func fixedLengthArrayFrom(initial []ComplexSemType, fixedLength int) fixedLengthArray {
-	// migrated from fixedLengthArray.java:45:5
 	return newFixedLengthArrayFromInitialFixedLength(initial, fixedLength)
 }
 
 func fixedLengthArrayEmpty() fixedLengthArray {
-	// migrated from fixedLengthArray.java:53:5
 	return fixedLengthArrayFrom(nil, 0)
 }

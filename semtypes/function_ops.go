@@ -21,39 +21,32 @@ type functionOps struct{}
 var _ BasicTypeOps = &functionOps{}
 
 func (this *functionOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from functionOps.java:45:5
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
 		return bddEvery(cx, b, conjunctionNil, conjunctionNil, functionFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
 func (this *functionOps) complement(t SubtypeData) SubtypeData {
-	// migrated from functionOps.java:49:5
 	return bddComplement(t.(Bdd))
 }
 
 func (this *functionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from functionOps.java:51:5
 	return bddDiff(t1.(Bdd), t2.(Bdd))
 }
 
 func (this *functionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from functionOps.java:53:5
 	return bddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
 func (this *functionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from functionOps.java:55:5
 	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
 func functionFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
-	// migrated from functionOps.java:51:5
 	return functionPathIsEmpty(cx, functionIntersectRet(cx, pos), functionUnionParams(cx, pos), functionUnionQualifiers(cx, pos), pos, neg)
 }
 
 func functionPathIsEmpty(cx Context, rets SemType, params SemType, qualifiers SemType, pos conjunctionHandle, neg conjunctionHandle) bool {
-	// migrated from functionOps.java:56:5
 	if neg == conjunctionNil {
 		return false
 	} else {
@@ -70,7 +63,6 @@ func functionPathIsEmpty(cx Context, rets SemType, params SemType, qualifiers Se
 }
 
 func functionPhi(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
-	// migrated from functionOps.java:81:5
 	if pos == conjunctionNil {
 		return ((!IsNever(t0)) && (IsEmpty(cx, t0) || IsEmpty(cx, t1)))
 	}
@@ -78,7 +70,6 @@ func functionPhi(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool
 }
 
 func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
-	// migrated from functionOps.java:89:5
 	if pos == conjunctionNil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
@@ -91,7 +82,6 @@ func functionPhiInner(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle)
 }
 
 func functionUnionParams(cx Context, pos conjunctionHandle) SemType {
-	// migrated from functionOps.java:104:5
 	if pos == conjunctionNil {
 		return NEVER
 	}
@@ -99,7 +89,6 @@ func functionUnionParams(cx Context, pos conjunctionHandle) SemType {
 }
 
 func functionUnionQualifiers(cx Context, pos conjunctionHandle) SemType {
-	// migrated from functionOps.java:111:5
 	if pos == conjunctionNil {
 		return NEVER
 	}
@@ -107,7 +96,6 @@ func functionUnionQualifiers(cx Context, pos conjunctionHandle) SemType {
 }
 
 func functionIntersectRet(cx Context, pos conjunctionHandle) SemType {
-	// migrated from functionOps.java:119:5
 	if pos == conjunctionNil {
 		return VAL
 	}
@@ -120,7 +108,6 @@ func NewFunctionOps() functionOps {
 }
 
 func (this *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
-	// migrated from functionOps.java:126:5
 	if pos == conjunctionNil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {

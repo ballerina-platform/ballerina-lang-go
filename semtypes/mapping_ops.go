@@ -21,14 +21,12 @@ type mappingOps struct{}
 var _ BasicTypeOps = &mappingOps{}
 
 func mappingSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from mappingOps.java:202:5
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), func(cx Context, b Bdd) bool {
 		return bddEvery(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
 func mappingFormulaIsEmpty(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool {
-	// migrated from mappingOps.java:57:5
 	var combined *MappingAtomicType
 	if posList == conjunctionNil {
 		combined = &MAPPING_ATOMIC_INNER
@@ -61,7 +59,6 @@ func mappingFormulaIsEmpty(cx Context, posList conjunctionHandle, negList conjun
 }
 
 func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
-	// migrated from mappingOps.java:98:5
 	if negList == conjunctionNil {
 		return true
 	} else {
@@ -86,7 +83,6 @@ func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList conjunctio
 }
 
 func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
-	// migrated from mappingOps.java:127:5
 	if negList == conjunctionNil {
 		return true
 	} else {
@@ -121,7 +117,6 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHan
 }
 
 func insertField(m MappingAtomicType, name string, t *ComplexSemType) MappingAtomicType {
-	// migrated from mappingOps.java:167:5
 	names := append([]string(nil), m.Names...)
 	names = append(names, "")
 	types := append([]ComplexSemType(nil), m.Types...)
@@ -141,7 +136,6 @@ func insertField(m MappingAtomicType, name string, t *ComplexSemType) MappingAto
 }
 
 func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *MappingAtomicType {
-	// migrated from mappingOps.java:186:5
 	var names []string
 	var types []ComplexSemType
 	pairing := newFieldPairs(m1, m2)
@@ -158,7 +152,6 @@ func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *Ma
 }
 
 func bddMappingMemberTypeInnerCore(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
-	// migrated from mappingOps.java:208:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
@@ -171,7 +164,6 @@ func bddMappingMemberTypeInnerCore(cx Context, b Bdd, key SubtypeData, accum Sem
 }
 
 func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) SemType {
-	// migrated from mappingOps.java:222:5
 	var memberType SemType
 	memberType = nil
 	for _, ty := range mappingAtomicApplicableMemberTypesInner(atomic, key) {
@@ -188,7 +180,6 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 }
 
 func mappingAtomicApplicableMemberTypesInner(atomic MappingAtomicType, key SubtypeData) []SemType {
-	// migrated from mappingOps.java:234:5
 	var types []SemType
 	for i := range atomic.Types {
 		types = append(types, cellInner(&atomic.Types[i]))
@@ -215,26 +206,21 @@ func newMappingOps() mappingOps {
 }
 
 func (this *mappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from mappingOps.java:258:5
 	return bddSubtypeUnion(d1, d2)
 }
 
 func (this *mappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from mappingOps.java:263:5
 	return bddSubtypeIntersect(d1, d2)
 }
 
 func (this *mappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from mappingOps.java:268:5
 	return bddSubtypeDiff(d1, d2)
 }
 
 func (this *mappingOps) complement(d SubtypeData) SubtypeData {
-	// migrated from mappingOps.java:273:5
 	return bddSubtypeComplement(d)
 }
 
 func (this *mappingOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from mappingOps.java:278:5
 	return mappingSubtypeIsEmpty(cx, d)
 }

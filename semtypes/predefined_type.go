@@ -130,12 +130,10 @@ func basicTypeUnion(bitset BasicTypeBitSet) BasicTypeBitSet {
 }
 
 func basicType(code BasicTypeCode) BasicTypeBitSet {
-	// migrated from PredefinedType.java:254:5
 	return basicTypeBitSetFrom((1 << code.Code()))
 }
 
 func getBasicSubtype(code BasicTypeCode, data ProperSubtypeData) *ComplexSemType {
-	// migrated from PredefinedType.java:258:5
 	if code == BTCell {
 		return createComplexSemTypeWithAllBitSetSomeBitSetSubtypeDataList(0, CELL.all(), []ProperSubtypeData{data})
 	}

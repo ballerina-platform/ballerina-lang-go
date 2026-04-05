@@ -51,17 +51,14 @@ func newXmlSubtypeFromIntBdd(primitives int, sequence Bdd) xmlSubtype {
 }
 
 func xmlSubtypeFrom(primitives int, sequence Bdd) xmlSubtype {
-	// migrated from xmlSubtype.java:71:5
 	return newXmlSubtypeFromIntBdd(primitives, sequence)
 }
 
 func xmlSingleton(primitives int) SemType {
-	// migrated from xmlSubtype.java:75:5
 	return createXmlSemtype(createXmlSubtype(primitives, bddNothing()))
 }
 
 func xmlSequence(constituentType SemType) SemType {
-	// migrated from xmlSubtype.java:79:5
 	common.Assert(IsSubtypeSimple(constituentType, XML))
 	if IsNever(constituentType) {
 		return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER))
@@ -81,7 +78,6 @@ func xmlSequence(constituentType SemType) SemType {
 }
 
 func makeXmlSequence(d xmlSubtype) SubtypeData {
-	// migrated from xmlSubtype.java:97:5
 	primitives := (XML_PRIMITIVE_NEVER | d.Primitives)
 	atom := (d.Primitives & XML_PRIMITIVE_SINGLETON)
 	sequence := bddUnion(bddAtom(new(createXMLRecAtom(atom))), d.Sequence)
@@ -89,7 +85,6 @@ func makeXmlSequence(d xmlSubtype) SubtypeData {
 }
 
 func createXmlSemtype(xmlSubtype SubtypeData) SemType {
-	// migrated from xmlSubtype.java:104:5
 	if allOrNothingSubtype, ok := xmlSubtype.(allOrNothingSubtype); ok {
 		if allOrNothingSubtype.IsAllSubtype() {
 			return XML
@@ -102,7 +97,6 @@ func createXmlSemtype(xmlSubtype SubtypeData) SemType {
 }
 
 func createXmlSubtype(primitives int, sequence Bdd) SubtypeData {
-	// migrated from xmlSubtype.java:112:5
 	p := (primitives & XML_PRIMITIVE_ALL_MASK)
 	if allOrNothing, ok := sequence.(*bddAllOrNothing); ok && allOrNothing.IsAll() && (p == XML_PRIMITIVE_ALL_MASK) {
 		return createAll()
@@ -111,7 +105,6 @@ func createXmlSubtype(primitives int, sequence Bdd) SubtypeData {
 }
 
 func createXmlSubtypeOrEmpty(primitives int, sequence Bdd) SubtypeData {
-	// migrated from xmlSubtype.java:121:5
 	if allOrNothing, ok := sequence.(*bddAllOrNothing); ok && allOrNothing.IsNothing() && (primitives == 0) {
 		return createNothing()
 	}

@@ -28,7 +28,6 @@ type MappingDefinition struct {
 var _ Definition = &MappingDefinition{}
 
 func fieldName(f CellField) string {
-	// migrated from MappingDefinition.java:135:5
 	return f.Name
 }
 
@@ -42,7 +41,6 @@ func NewMappingDefinition() MappingDefinition {
 }
 
 func (this *MappingDefinition) GetSemType(env Env) SemType {
-	// migrated from MappingDefinition.java:56:5
 	s := this.semType
 	if s == nil {
 		rec := env.recMappingAtom()
@@ -54,12 +52,10 @@ func (this *MappingDefinition) GetSemType(env Env) SemType {
 }
 
 func (this *MappingDefinition) SetSemTypeToNever() {
-	// migrated from MappingDefinition.java:72:5
 	this.semType = NEVER
 }
 
 func (this *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
-	// migrated from MappingDefinition.java:76:5
 	sfh := this.splitFields(fields)
 	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
 	var atom Atom
@@ -74,12 +70,10 @@ func (this *MappingDefinition) Define(env Env, fields []CellField, rest *Complex
 }
 
 func (this *MappingDefinition) DefineMappingTypeWrapped(env Env, fields []Field, rest SemType) SemType {
-	// migrated from MappingDefinition.java:91:5
 	return this.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, fields, rest, CellMutability_CELL_MUT_LIMITED)
 }
 
 func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env Env, fields []Field, rest SemType, mut CellMutability) SemType {
-	// migrated from MappingDefinition.java:95:5
 	var cellFields []CellField
 	for _, field := range fields {
 		ty := field.Ty
@@ -108,7 +102,6 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 }
 
 func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
-	// migrated from MappingDefinition.java:116:5
 	bdd := bddAtom(atom)
 	s := getBasicSubtype(BTMapping, bdd)
 	this.semType = s
@@ -116,7 +109,6 @@ func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
 }
 
 func (this *MappingDefinition) splitFields(fields []CellField) splitField {
-	// migrated from MappingDefinition.java:123:5
 	sortedFields := make([]CellField, len(fields))
 	copy(sortedFields, fields)
 	// Arrays.sort(sortedFields, Comparator.comparing(MappingDefinition::fieldName))

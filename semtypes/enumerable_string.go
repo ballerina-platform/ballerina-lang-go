@@ -45,6 +45,5 @@ func newEnumerableStringFromString(value string) enumerableString {
 }
 
 func enumerableStringFrom(v string) enumerableType[string] {
-	// migrated from enumerableString.java:32:5
 	return new(newEnumerableStringFromString(v))
 }

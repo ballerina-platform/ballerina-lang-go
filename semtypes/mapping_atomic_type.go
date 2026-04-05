@@ -39,7 +39,6 @@ func (this *MappingAtomicType) equals(other AtomicType) bool {
 }
 
 func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *ComplexSemType) MappingAtomicType {
-	// migrated from MappingAtomicType.java:52:5
 	return MappingAtomicType{
 		Names: names,
 		Types: types,
@@ -48,7 +47,6 @@ func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *Complex
 }
 
 func (this *MappingAtomicType) AtomKind() Kind {
-	// migrated from MappingAtomicType.java:74:5
 	return Kind_MAPPING_ATOM
 }
 

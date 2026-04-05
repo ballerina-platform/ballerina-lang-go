@@ -50,6 +50,5 @@ func newEnumerableFloatFromFloat64(value float64) enumerableFloat {
 }
 
 func enumerableFloatFrom(d float64) enumerableFloat {
-	// migrated from enumerableFloat.java:32:5
 	return newEnumerableFloatFromFloat64(d)
 }

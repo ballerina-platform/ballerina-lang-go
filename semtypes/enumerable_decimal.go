@@ -43,6 +43,5 @@ func newEnumerableDecimalFromBigDecimal(value big.Rat) enumerableDecimal {
 }
 
 func enumerableDecimalFrom(d big.Rat) enumerableDecimal {
-	// migrated from enumerableDecimal.java:34:5
 	return newEnumerableDecimalFromBigDecimal(d)
 }

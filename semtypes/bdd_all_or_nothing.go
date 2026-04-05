@@ -33,27 +33,22 @@ func newBddAllOrNothingFromBool(isAll bool) bddAllOrNothing {
 }
 
 func bddAll() *bddAllOrNothing {
-	// migrated from bddAllOrNothing.java:37:5
 	return &all
 }
 
 func bddNothing() *bddAllOrNothing {
-	// migrated from bddAllOrNothing.java:41:5
 	return &nothing
 }
 
 func (this *bddAllOrNothing) IsAll() bool {
-	// migrated from bddAllOrNothing.java:45:5
 	return this.isAll
 }
 
 func (this *bddAllOrNothing) IsNothing() bool {
-	// migrated from bddAllOrNothing.java:49:5
 	return (!this.isAll)
 }
 
 func (this *bddAllOrNothing) complement() *bddAllOrNothing {
-	// migrated from bddAllOrNothing.java:53:5
 	if this.isAll {
 		return &nothing
 	}

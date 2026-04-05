@@ -39,7 +39,6 @@ const (
 )
 
 func getIdentifier(this Atom) atomIdentifier {
-	// migrated from Atom.java:43:5
 
 	return atomIdentifier{
 		Index: this.Index(),

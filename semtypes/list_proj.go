@@ -21,7 +21,6 @@ import (
 )
 
 func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
-	// migrated from ListProj.java:73:5
 	if b, ok := t.(BasicTypeBitSet); ok {
 		if (b.all() & LIST.all()) != 0 {
 			return VAL
@@ -38,7 +37,6 @@ func listProjInnerVal(cx Context, t SemType, k SemType) SemType {
 }
 
 func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle, neg conjunctionHandle) SemType {
-	// migrated from ListProj.java:87:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return listProjPathInnerVal(cx, k, pos, neg)
@@ -57,7 +55,6 @@ func listProjBddInnerVal(cx Context, k SubtypeData, b Bdd, pos conjunctionHandle
 }
 
 func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg conjunctionHandle) SemType {
-	// migrated from ListProj.java:99:5
 	var members fixedLengthArray
 	var rest *ComplexSemType
 	if pos == conjunctionNil {
@@ -105,7 +102,6 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg 
 }
 
 func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
-	// migrated from ListProj.java:158:5
 	type indexBoolPair struct {
 		index   int
 		isInKey bool
@@ -148,7 +144,6 @@ func listProjSamples(indices []int, k SubtypeData) ([]int, []int) {
 }
 
 func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, memberTypes []*ComplexSemType, nRequired int, neg conjunctionHandle) SemType {
-	// migrated from ListProj.java:192:5
 	var p SemType = NEVER
 	if neg == conjunctionNil {
 		length := len(memberTypes)

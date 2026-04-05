@@ -66,7 +66,6 @@ func decimalSubtypeSingleValue(d SubtypeData) common.Optional[big.Rat] {
 }
 
 func decimalSubtypeContains(d SubtypeData, f enumerableDecimal) bool {
-	// migrated from decimalSubtype.java:73:5
 	if allOrNothingSubtype, ok := d.(allOrNothingSubtype); ok {
 		return allOrNothingSubtype.IsAllSubtype()
 	}
@@ -80,7 +79,6 @@ func decimalSubtypeContains(d SubtypeData, f enumerableDecimal) bool {
 }
 
 func createDecimalSubtype(allowed bool, values []enumerableType[big.Rat]) ProperSubtypeData {
-	// migrated from decimalSubtype.java:87:5
 	if len(values) == 0 {
 		if allowed {
 			return createNothing()
@@ -92,12 +90,10 @@ func createDecimalSubtype(allowed bool, values []enumerableType[big.Rat]) Proper
 }
 
 func (this *decimalSubtype) Allowed() bool {
-	// migrated from decimalSubtype.java:94:5
 	return this.allowed
 }
 
 func (this *decimalSubtype) Values() []enumerableType[big.Rat] {
-	// migrated from decimalSubtype.java:99:5
 	var values []enumerableType[big.Rat]
 	for _, value := range this.values {
 		values = append(values, &value)

@@ -40,17 +40,14 @@ type bddCommonOpsMethods struct {
 }
 
 func bddAtom(atom Atom) BddNode {
-	// migrated from BddCommonOps.java:36:5
 	return bddNodeCreate(atom, bddAll(), bddNothing(), bddNothing())
 }
 
 func bddUnion(b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:43:5
 	return bddUnionWithMemo(createBddOpMemo(), b1, b2)
 }
 
 func bddUnionWithMemo(memoTable *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:47:5
 	key := bddOpMemoKey{B1: b1, B2: b2}
 	memoized, ok := memoTable.UnionMemo[key]
 	if ok {
@@ -62,7 +59,6 @@ func bddUnionWithMemo(memoTable *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddUnionInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:58:5
 	if b1 == b2 {
 		return b1
 	}
@@ -94,12 +90,10 @@ func bddUnionInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddIntersect(b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:88:5
 	return bddIntersectWithMemo(createBddOpMemo(), b1, b2)
 }
 
 func bddIntersectWithMemo(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:92:5
 	key := bddOpMemoKey{B1: b1, B2: b2}
 	memoized, ok := memo.IntersectionMemo[key]
 	if ok {
@@ -111,7 +105,6 @@ func bddIntersectWithMemo(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddIntersectInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:103:5
 	if b1 == b2 {
 		return b1
 	}
@@ -143,12 +136,10 @@ func bddIntersectInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddDiff(b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:137:5
 	return bddDiffWithMemo(createBddOpMemo(), b1, b2)
 }
 
 func bddDiffWithMemo(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:141:5
 	key := bddOpMemoKey{B1: b1, B2: b2}
 	memoized, ok := memo.DiffMemo[key]
 	if ok {
@@ -160,7 +151,6 @@ func bddDiffWithMemo(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddDiffInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
-	// migrated from BddCommonOps.java:152:5
 	if b1 == b2 {
 		return bddNothing()
 	}
@@ -192,7 +182,6 @@ func bddDiffInner(memo *bddOpMemo, b1 Bdd, b2 Bdd) Bdd {
 }
 
 func bddComplement(b Bdd) Bdd {
-	// migrated from BddCommonOps.java:190:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		return allOrNothing.complement()
 	}
@@ -200,7 +189,6 @@ func bddComplement(b Bdd) Bdd {
 }
 
 func bddNodeComplement(b BddNode) Bdd {
-	// migrated from BddCommonOps.java:198:5
 	bddNothing := bddNothing()
 	if b.Right() == bddNothing {
 		return bddCreate(b.Atom(), bddNothing, bddComplement(bddUnion(b.Left(), b.Middle())), bddComplement(b.Middle()))
@@ -214,7 +202,6 @@ func bddNodeComplement(b BddNode) Bdd {
 }
 
 func bddCreate(atom Atom, left Bdd, middle Bdd, right Bdd) Bdd {
-	// migrated from BddCommonOps.java:226:5
 	if allOrNothing, ok := middle.(*bddAllOrNothing); ok && allOrNothing.IsAll() {
 		return middle
 	}
@@ -225,7 +212,6 @@ func bddCreate(atom Atom, left Bdd, middle Bdd, right Bdd) Bdd {
 }
 
 func atomCmp(a1 Atom, a2 Atom) int {
-	// migrated from BddCommonOps.java:238:5
 	r1, ok1 := a1.(*recAtom)
 	r2, ok2 := a2.(*recAtom)
 
@@ -241,7 +227,6 @@ func atomCmp(a1 Atom, a2 Atom) int {
 }
 
 func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
-	// migrated from BddCommonOps.java:254:5
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return "1"
@@ -265,7 +250,6 @@ func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 }
 
 func createBddOpMemo() *bddOpMemo {
-	// migrated from BddCommonOps.java:283:9
 	return &bddOpMemo{
 		UnionMemo:        make(map[bddOpMemoKey]Bdd),
 		IntersectionMemo: make(map[bddOpMemoKey]Bdd),
