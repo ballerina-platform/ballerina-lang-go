@@ -3292,49 +3292,48 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 }
 
 func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
+	baseSymbol := t.getSymbol(symbolRef)
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	currentChain := chain
-	// PR-FIXME: avoid double resolution
-	for i, arg := range expr.ArgExprs {
-		argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
-		if !ok {
-			return nil, expressionEffect{}, false
-		}
-		currentChain = argEffect.ifTrue
-		argTys[i] = argTy
-	}
-
-	baseSymbol := t.getSymbol(symbolRef)
 	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
-		symbolRef = genericFn.Monomorphize(argTys)
-		expr.SetSymbol(symbolRef)
-	}
-
-	symbolRef = lookupSymbol(currentChain, symbolRef)
-	expr.SetSymbol(symbolRef)
-	fnTy := t.symbolType(symbolRef)
-	if fnTy == nil {
-		t.internalError("function symbol has no type", expr.GetPosition())
-		return nil, expressionEffect{}, false
-	}
-	fnTy = semtypes.Intersect(fnTy, semtypes.FUNCTION)
-	if semtypes.IsEmpty(t.typeContext(), fnTy) {
-		// This can only happen when function call is not well-typed and since we
-		// ensure funcTy is a function subtype, this can only be caused by invalid args
-		t.semanticError("not a function value", expr.GetPosition())
-		return nil, expressionEffect{}, false
-	}
-
-	paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
-	if paramListTy != nil {
 		for i, arg := range expr.ArgExprs {
-			key := semtypes.IntConst(int64(i))
-			paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
-			arg.SetDeterminedType(nil)
-			argTy, _, ok := resolveExpression(t, chain, arg, paramTy)
+			argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
 			if !ok {
 				return nil, expressionEffect{}, false
 			}
+			currentChain = argEffect.ifTrue
+			argTys[i] = argTy
+		}
+		symbolRef = genericFn.Monomorphize(argTys)
+		expr.SetSymbol(symbolRef)
+	} else {
+		// conditionally narrow the symbol in case of lambda
+		symbolRef = lookupSymbol(currentChain, symbolRef)
+		expr.SetSymbol(symbolRef)
+
+		fnTy := t.symbolType(symbolRef)
+		if fnTy == nil {
+			t.internalError("function symbol has no type", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		if !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+			t.semanticError("not a function value", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
+		if paramListTy == nil {
+			// I don't think this can happen given we have already checked fnTy to be subtype of function
+			t.internalError("empty function param list ty", expr.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		for i, arg := range expr.ArgExprs {
+			key := semtypes.IntConst(int64(i))
+			paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
+			argTy, argEffect, ok := resolveExpression(t, currentChain, arg, paramTy)
+			if !ok {
+				return nil, expressionEffect{}, false
+			}
+			currentChain = argEffect.ifTrue
 			argTys[i] = argTy
 		}
 	}
@@ -3344,7 +3343,7 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 
-	retTy := semtypes.FunctionReturnType(t.typeContext(), fnTy, argListTy)
+	retTy := semtypes.FunctionReturnType(t.typeContext(), t.symbolType(symbolRef), argListTy)
 	if retTy == nil {
 		t.semanticError("incompatible arguments for function call", expr.GetPosition())
 		return nil, expressionEffect{}, false

@@ -985,31 +985,14 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	// Get the function type from the symbol
 	symbol := invocation.Symbol()
 	fnTy := a.ctx().SymbolType(symbol)
-	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-		a.semanticErr("function not found: "+invocation.Name.GetValue(), invocation.GetPosition())
-		return false
-	}
 	tyCtx := a.tyCtx()
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 	// Validate each argument expression
-	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
 		key := semtypes.IntConst(int64(i))
 		if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
 			return false
 		}
-		argTys[i] = arg.GetDeterminedType()
-	}
-
-	// Pad arg types for defaultable params
-	argTys = padArgTypesForDefaults(a, symbol, argTys, invocation.GetPosition())
-
-	// Validate argument types against function parameter types
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if !semtypes.IsSubtype(tyCtx, argListTy, paramListTy) {
-		a.semanticErr("incompatible arguments for function call", invocation.GetPosition())
-		return false
 	}
 
 	// Validate the resolved return type against expected type
