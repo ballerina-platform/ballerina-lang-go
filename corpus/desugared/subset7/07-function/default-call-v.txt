@@ -50,10 +50,15 @@
             (literal 2)
             (literal 3)
             (literal 4)))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation $default$0 (
+            (simple-var-ref values))))))
       (expression-stmt
         (invocation io println (
           (invocation foo (
-            (simple-var-ref values))))))))
+            (simple-var-ref values)
+            (simple-var-ref $desugar$0))))))))
   (function $default$0 (
     (variable vals)) ()
     (block-function-body

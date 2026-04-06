@@ -990,8 +990,53 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	// Get the function type from the symbol
 	symbol := invocation.Symbol()
 	fnTy := a.ctx().SymbolType(symbol)
-	tyCtx := a.tyCtx()
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
+
+	fnSymbol, isDirectCall := a.ctx().GetSymbol(symbol).(model.FunctionSymbol)
+	// TODO: ideally we need to unify these when we no longer has restrictions on lambdas
+	if !isDirectCall {
+		return analyzeLambdaInvocation(a, invocation, paramListTy, expectedType)
+	}
+	return analyzeDirectInvocation(a, invocation, fnSymbol, paramListTy, expectedType)
+}
+
+func analyzeDirectInvocation[A analyzer](a A, invocation *ast.BLangInvocation, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
+	signature := fnSymbol.Signature()
+	tyCtx := a.tyCtx()
+	for i, arg := range invocation.ArgExprs {
+		switch arg := arg.(type) {
+		case *ast.BLangNamedArgsExpression:
+			name := arg.Name.Value
+			targetIndex := -1
+			for j, each := range signature.ParamNames {
+				if each == name {
+					targetIndex = j
+					break
+				}
+			}
+			if targetIndex == -1 {
+				a.semanticErr(fmt.Sprintf("no such parameter %s", name), arg.GetPosition())
+				return false
+			}
+			key := semtypes.IntConst(int64(targetIndex))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		default:
+			key := semtypes.IntConst(int64(i))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		}
+	}
+
+	// Validate the resolved return type against expected type
+	return validateResolvedType(a, invocation, expectedType)
+}
+
+func analyzeLambdaInvocation[A analyzer](a A, invocation *ast.BLangInvocation, paramListTy, expectedType semtypes.SemType) bool {
+	tyCtx := a.tyCtx()
+
 	// Validate each argument expression
 	for i, arg := range invocation.ArgExprs {
 		key := semtypes.IntConst(int64(i))
