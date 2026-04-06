@@ -756,6 +756,11 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expression.(BLangNode))
 		}
 
+	case *BLangLimitClause:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
 	case *BLangOnFailClause:
 		if node.Body != nil {
 			Walk(v, node.Body)

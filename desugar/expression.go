@@ -706,7 +706,7 @@ func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	var bodyStmts []ast.BLangStatement
 	bodyStmts = append(bodyStmts, cloneLoopVarDef)
 
-	bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, bodyStmts)
+	bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, &initStmts, bodyStmts)
 	if !ok {
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
@@ -798,6 +798,7 @@ func appendQueryIntermediateClauseStmts(
 	cx *FunctionContext,
 	queryExpr *ast.BLangQueryExpr,
 	idxRef ast.BLangExpression,
+	initStmts *[]model.StatementNode,
 	bodyStmts []ast.BLangStatement,
 ) ([]ast.BLangStatement, bool) {
 	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
@@ -842,8 +843,59 @@ func appendQueryIntermediateClauseStmts(
 			filterIf.SetScope(cx.currentScope())
 			filterIf.SetDeterminedType(semtypes.NEVER)
 			bodyStmts = append(bodyStmts, filterIf)
+		case *ast.BLangLimitClause:
+			if clause.Expression == nil {
+				cx.unimplemented("query limit clause requires a limit expression")
+				return nil, false
+			}
+
+			limitCounterName, limitCounterSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+			limitCounterVar := &ast.BLangSimpleVariable{
+				Name: &ast.BLangIdentifier{Value: limitCounterName},
+			}
+			limitCounterVar.SetDeterminedType(semtypes.INT)
+			limitCounterVar.SetInitialExpression(createIntLiteral(0))
+			limitCounterVar.SetSymbol(limitCounterSymbol)
+			limitCounterVarDef := &ast.BLangSimpleVariableDef{Var: limitCounterVar}
+			setPositionIfMissing(limitCounterVarDef, queryExpr.GetPosition())
+			*initStmts = append(*initStmts, limitCounterVarDef)
+
+			limitCounterRef := &ast.BLangSimpleVarRef{
+				VariableName: limitCounterVar.Name,
+			}
+			limitCounterRef.SetSymbol(limitCounterSymbol)
+			limitCounterRef.SetDeterminedType(semtypes.INT)
+
+			limitResult := walkExpression(cx, clause.Expression)
+			bodyStmts = append(bodyStmts, limitResult.initStmts...)
+			limitExpr := limitResult.replacementNode.(ast.BLangExpression)
+
+			reachedLimitCond := &ast.BLangBinaryExpr{
+				LhsExpr: limitCounterRef,
+				RhsExpr: limitExpr,
+				OpKind:  model.OperatorKind_GREATER_EQUAL,
+			}
+			reachedLimitCond.SetDeterminedType(semtypes.BOOLEAN)
+
+			continueStmt := &ast.BLangContinue{}
+			continueStmt.SetDeterminedType(semtypes.NEVER)
+			skipBody := ast.BLangBlockStmt{
+				Stmts: []ast.BLangStatement{
+					createIncrementStmt(idxRef),
+					continueStmt,
+				},
+			}
+			limitIf := &ast.BLangIf{
+				Expr: reachedLimitCond,
+				Body: skipBody,
+			}
+			limitIf.SetScope(cx.currentScope())
+			limitIf.SetDeterminedType(semtypes.NEVER)
+			bodyStmts = append(bodyStmts, limitIf)
+
+			bodyStmts = append(bodyStmts, createIncrementStmt(limitCounterRef))
 		default:
-			cx.unimplemented("query expression currently supports only let + where clauses as intermediate clauses")
+			cx.unimplemented("query expression currently supports only let + where + limit clauses as intermediate clauses")
 			return nil, false
 		}
 	}

@@ -1864,8 +1864,18 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				return nil, false
 			}
 			currentChain = effect.ifTrue
+		case *ast.BLangLimitClause:
+			clause.SetDeterminedType(semtypes.NEVER)
+			limitTy, _, ok := resolveExpression(t, currentChain, clause.Expression, semtypes.INT)
+			if !ok {
+				return nil, false
+			}
+			if !semtypes.IsSubtypeSimple(limitTy, semtypes.INT) {
+				t.semanticError("limit-clause expression must be int", clause.GetPosition())
+				return nil, false
+			}
 		default:
-			t.unimplemented("only let + where clauses are supported as intermediate query clauses", clause.GetPosition())
+			t.unimplemented("only let + where + limit clauses are supported as intermediate query clauses", clause.GetPosition())
 			return nil, false
 		}
 	}
