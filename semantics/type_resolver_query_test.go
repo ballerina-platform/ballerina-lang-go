@@ -179,9 +179,19 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			diagSub: "where-clause expression must be boolean",
 		},
 		{
+			name:    "limit expression resolution fails",
+			clause:  newLimitClause(newUnsupportedExprNode()),
+			diagSub: "unsupported expression type",
+		},
+		{
+			name:    "limit expression non-int",
+			clause:  newLimitClause(newStringLiteral("x")),
+			diagSub: "limit-clause expression must be int",
+		},
+		{
 			name:    "unsupported intermediate clause",
 			clause:  newCollectClause(),
-			diagSub: "only let + where clauses are supported as intermediate query clauses",
+			diagSub: "only let + where + limit clauses are supported as intermediate query clauses",
 		},
 	}
 
@@ -335,6 +345,14 @@ func newWhereClause(expr ast.BLangExpression) *ast.BLangWhereClause {
 	}
 	whereClause.SetPosition(queryTestPos)
 	return whereClause
+}
+
+func newLimitClause(expr ast.BLangExpression) *ast.BLangLimitClause {
+	limitClause := &ast.BLangLimitClause{
+		Expression: expr,
+	}
+	limitClause.SetPosition(queryTestPos)
+	return limitClause
 }
 
 func newCollectClause() *ast.BLangCollectClause {
