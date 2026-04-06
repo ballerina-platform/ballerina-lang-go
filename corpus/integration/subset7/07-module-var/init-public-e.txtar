@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: 'init' function cannot be declared as public
+  --> init-public-e.bal:17:1
+   |
+17 | public function init() { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 | }
+   | ^

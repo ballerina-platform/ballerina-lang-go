@@ -1,7 +1,6 @@
 (package
   (import-package ballerina io (as io))
-  (const c () (
-    (literal 10)))
+  (const c () ())
   (type-definition R
     (record-type
       (field id
@@ -12,6 +11,11 @@
       (field name
         (value-type string)
         (literal default))))
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref c)
+        (literal 10))))
   (function main () (
     (value-type null))
     (block-function-body
