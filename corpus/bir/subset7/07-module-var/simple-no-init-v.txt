@@ -1,0 +1,19 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+b  boolean;
+s  string;
+x  int;
+main() -> nil{
+  bb0 {
+    %1 = println(x) -> bb1;
+  }
+  bb1 {
+    %2 = println(s) -> bb2;
+  }
+  bb2 {
+    %3 = println(b) -> bb3;
+  }
+  bb3 {
+    return;
+  }
+}
