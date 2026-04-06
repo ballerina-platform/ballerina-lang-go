@@ -577,6 +577,33 @@ func getFileName(node tree.Node) string {
 	return st.FilePath()
 }
 
+func innermostDiagnosticNodes(node tree.Node) []tree.Node {
+	if !node.HasDiagnostics() {
+		return nil
+	}
+
+	var nodes []tree.Node
+	if nt, ok := node.(tree.NonTerminalNode); ok {
+		for child := range nt.ChildNodes() {
+			if child != nil && child.HasDiagnostics() {
+				nodes = append(nodes, innermostDiagnosticNodes(child)...)
+			}
+		}
+	}
+	if len(nodes) > 0 {
+		return nodes
+	}
+	return []tree.Node{node}
+}
+
+func diagnosticMessage(node tree.Node) string {
+	deep := tree.FindDeepestDiagnosticSTNode(node.InternalNode())
+	if deep == nil || len(deep.Diagnostics()) == 0 {
+		return "syntax error"
+	}
+	return strings.ReplaceAll(strings.TrimPrefix(deep.Diagnostics()[0].DiagnosticCode().MessageKey(), "error."), ".", " ")
+}
+
 func getPosition(node tree.Node) Location {
 	lineRange := node.LineRange()
 	textRange := node.TextRange()
@@ -876,9 +903,6 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 		bLUserDefinedType.pos = getPosition(typeNode)
 		return &bLUserDefinedType
 	case common.SIMPLE_NAME_REFERENCE:
-		if typeNode.HasDiagnostics() {
-			panic("unimplemented")
-		}
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
 	default:
@@ -1746,6 +1770,10 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 		if currentStatement == nil {
 			continue
 		}
+		if currentStatement.HasDiagnostics() {
+			n.reportSyntaxDiagnostics(currentStatement)
+			continue
+		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
 			forkStmt := currentStatement.(*tree.ForkStatementNode)
 			n.generateForkStatements(statements, forkStmt)
@@ -2443,7 +2471,18 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			}
 			recordType.AddField(fieldName, bField)
 		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
-			panic("default values are not supported")
+			recordFieldDV := field.(*tree.RecordFieldWithDefaultValueNode)
+			fieldName := recordFieldDV.FieldName().Text()
+			bField := BField{
+				Name:        model.Name(fieldName),
+				Type:        n.createTypeNode(recordFieldDV.TypeName()).(BType),
+				DefaultExpr: n.createExpression(recordFieldDV.Expression()),
+			}
+			bField.pos = getPosition(recordFieldDV)
+			if recordFieldDV.ReadonlyKeyword() != nil {
+				bField.FlagSet.Add(model.Flag_READONLY)
+			}
+			recordType.AddField(fieldName, bField)
 		case common.TYPE_REFERENCE:
 			typeRef := field.(*tree.TypeReferenceNode)
 			recordType.TypeInclusions = append(recordType.TypeInclusions, n.createTypeNode(typeRef.TypeName()).(BType))
@@ -3784,9 +3823,6 @@ func (n *NodeBuilder) TransformRequiredExpression(requiredExpressionNode *tree.R
 }
 
 func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpressionNode *tree.ErrorConstructorExpressionNode) BLangNode {
-	if errorConstructorExpressionNode.HasDiagnostics() {
-		n.cx.SyntaxError("invalid error constructor", getPosition(errorConstructorExpressionNode))
-	}
 	result := &BLangErrorConstructorExpr{}
 	result.pos = getPosition(errorConstructorExpressionNode)
 
@@ -4073,4 +4109,14 @@ func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNod
 	}
 
 	return createSimpleVariableNodeWithLocationTokenLocation(varPos, varName, getPosition(varName))
+}
+
+func (n *NodeBuilder) reportSyntaxDiagnostics(node tree.Node) {
+	diagnostics := innermostDiagnosticNodes(node)
+	if len(diagnostics) == 0 {
+		return
+	}
+	for _, diagnostic := range diagnostics {
+		n.cx.SyntaxError(diagnosticMessage(diagnostic), getPosition(diagnostic))
+	}
 }

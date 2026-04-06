@@ -21,14 +21,13 @@ import (
 )
 
 type MappingDefinition struct {
-	rec     *RecAtom
+	rec     *recAtom
 	semType SemType
 }
 
 var _ Definition = &MappingDefinition{}
 
 func fieldName(f CellField) string {
-	// migrated from MappingDefinition.java:135:5
 	return f.Name
 }
 
@@ -42,7 +41,6 @@ func NewMappingDefinition() MappingDefinition {
 }
 
 func (this *MappingDefinition) GetSemType(env Env) SemType {
-	// migrated from MappingDefinition.java:56:5
 	s := this.semType
 	if s == nil {
 		rec := env.recMappingAtom()
@@ -54,32 +52,28 @@ func (this *MappingDefinition) GetSemType(env Env) SemType {
 }
 
 func (this *MappingDefinition) SetSemTypeToNever() {
-	// migrated from MappingDefinition.java:72:5
 	this.semType = NEVER
 }
 
-func (this *MappingDefinition) Define(env Env, fields []CellField, rest CellSemType) SemType {
-	// migrated from MappingDefinition.java:76:5
+func (this *MappingDefinition) Define(env Env, fields []CellField, rest *ComplexSemType) SemType {
 	sfh := this.splitFields(fields)
-	atomicType := MappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
-	var atom Atom
+	atomicType := mappingAtomicTypeFrom(sfh.Names, sfh.Types, rest)
+	var a atom
 	rec := this.rec
 	if rec != nil {
-		atom = rec
+		a = rec
 		env.setRecMappingAtomType(*rec, &atomicType)
 	} else {
-		atom = new(env.mappingAtom(&atomicType))
+		a = new(env.mappingAtom(&atomicType))
 	}
-	return this.createSemType(env, atom)
+	return this.createSemType(env, a)
 }
 
 func (this *MappingDefinition) DefineMappingTypeWrapped(env Env, fields []Field, rest SemType) SemType {
-	// migrated from MappingDefinition.java:91:5
 	return this.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, fields, rest, CellMutability_CELL_MUT_LIMITED)
 }
 
 func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env Env, fields []Field, rest SemType, mut CellMutability) SemType {
-	// migrated from MappingDefinition.java:95:5
 	var cellFields []CellField
 	for _, field := range fields {
 		ty := field.Ty
@@ -95,7 +89,7 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 		} else {
 			ro = mut
 		}
-		cellFields = append(cellFields, CellFieldFrom(field.Name, CellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
+		cellFields = append(cellFields, cellFieldFrom(field.Name, *cellContainingWithEnvSemTypeCellMutability(env, optTy, ro)))
 	}
 	var restMut CellMutability
 	if IsNever(rest) {
@@ -103,20 +97,18 @@ func (this *MappingDefinition) DefineMappingTypeWrappedWithEnvFieldsSemTypeCellM
 	} else {
 		restMut = mut
 	}
-	restCell := CellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
+	restCell := cellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
 	return this.Define(env, cellFields, restCell)
 }
 
-func (this *MappingDefinition) createSemType(env Env, atom Atom) SemType {
-	// migrated from MappingDefinition.java:116:5
-	bdd := BddAtom(atom)
-	s := basicSubtype(BTMapping, bdd)
+func (this *MappingDefinition) createSemType(env Env, atom atom) SemType {
+	bdd := bddAtom(atom)
+	s := getBasicSubtype(BTMapping, bdd)
 	this.semType = s
 	return s
 }
 
-func (this *MappingDefinition) splitFields(fields []CellField) SplitField {
-	// migrated from MappingDefinition.java:123:5
+func (this *MappingDefinition) splitFields(fields []CellField) splitField {
 	sortedFields := make([]CellField, len(fields))
 	copy(sortedFields, fields)
 	// Arrays.sort(sortedFields, Comparator.comparing(MappingDefinition::fieldName))
@@ -124,10 +116,10 @@ func (this *MappingDefinition) splitFields(fields []CellField) SplitField {
 		return fieldName(sortedFields[i]) < fieldName(sortedFields[j])
 	})
 	var names []string
-	var types []CellSemType
+	var types []ComplexSemType
 	for _, field := range sortedFields {
 		names = append(names, field.Name)
 		types = append(types, field.Type)
 	}
-	return SplitFieldFrom(names, types)
+	return splitFieldFrom(names, types)
 }

@@ -5,3 +5,11 @@ error[SEMANTIC_ERROR]: included field 'x' declared in multiple type inclusions m
    |
 25 | class Bar { // @error
    | ^^^^^^^^^^^^^^^^^^^^^
+26 |     *Foo;
+   |     ^^^^^
+27 |     *Baz;
+   |     ^^^^^
+28 |     function init() {}
+   |     ^^^^^^^^^^^^^^^^^^
+29 | }
+   | ^

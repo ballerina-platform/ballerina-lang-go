@@ -21,33 +21,29 @@ type CommonOps interface {
 	Union(t1 SubtypeData, t2 SubtypeData) SubtypeData
 	Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData
 	Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData
-	Complement(t SubtypeData) SubtypeData
+	complement(t SubtypeData) SubtypeData
 }
 
-type CommonOpsBase struct {
-	CommonOpsMethods
+type commonOpsBase struct {
+	commonOpsMethods
 }
 
-type CommonOpsMethods struct {
+type commonOpsMethods struct {
 	Self CommonOps
 }
 
-func (m *CommonOpsMethods) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:30:5
-	return BddUnion(t1.(Bdd), t2.(Bdd))
+func (m *commonOpsMethods) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
-func (m *CommonOpsMethods) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:35:5
-	return BddIntersect(t1.(Bdd), t2.(Bdd))
+func (m *commonOpsMethods) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	return bddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
-func (m *CommonOpsMethods) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:40:5
-	return BddDiff(t1.(Bdd), t2.(Bdd))
+func (m *commonOpsMethods) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+	return bddDiff(t1.(Bdd), t2.(Bdd))
 }
 
-func (m *CommonOpsMethods) Complement(t SubtypeData) SubtypeData {
-	// migrated from CommonOps.java:45:5
-	return BddComplement(t.(Bdd))
+func (m *commonOpsMethods) complement(t SubtypeData) SubtypeData {
+	return bddComplement(t.(Bdd))
 }

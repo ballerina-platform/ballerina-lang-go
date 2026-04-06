@@ -16,41 +16,38 @@
 
 package semtypes
 
-type MappingOps struct {
-}
+type mappingOps struct{}
 
-var _ BasicTypeOps = &MappingOps{}
+var _ BasicTypeOps = &mappingOps{}
 
 func mappingSubtypeIsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from MappingOps.java:202:5
 	return memoSubtypeIsEmpty(cx, cx.mappingMemo(), func(cx Context, b Bdd) bool {
-		return BddEvery(cx, b, nil, nil, mappingFormulaIsEmpty)
+		return bddEvery(cx, b, conjunctionNil, conjunctionNil, mappingFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
-func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunction) bool {
-	// migrated from MappingOps.java:57:5
+func mappingFormulaIsEmpty(cx Context, posList conjunctionHandle, negList conjunctionHandle) bool {
 	var combined *MappingAtomicType
-	if posList == nil {
+	if posList == conjunctionNil {
 		combined = &MAPPING_ATOMIC_INNER
 	} else {
-		combined = cx.MappingAtomType(posList.Atom)
-		p := posList.Next
+		combined = cx.MappingAtomType(cx.conjunctionAtom(posList))
+		p := cx.conjunctionNext(posList)
 		for {
-			if p == nil {
+			if p == conjunctionNil {
 				break
 			} else {
-				m := intersectMapping(cx.Env(), combined, cx.MappingAtomType(p.Atom))
+				m := intersectMapping(cx.Env(), combined, cx.MappingAtomType(cx.conjunctionAtom(p)))
 				if m == nil {
 					return true
 				} else {
 					combined = m
 				}
-				p = p.Next
+				p = cx.conjunctionNext(p)
 			}
 		}
-		for _, t := range combined.Types {
-			if IsEmpty(cx, t) {
+		for i := range combined.Types {
+			if IsEmpty(cx, &combined.Types[i]) {
 				return true
 			}
 		}
@@ -61,56 +58,56 @@ func mappingFormulaIsEmpty(cx Context, posList *Conjunction, negList *Conjunctio
 	return (!mappingInhabited(cx, combined, negList))
 }
 
-func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList *Conjunction) bool {
-	// migrated from MappingOps.java:98:5
-	if negList == nil {
+func mappingInhabitedFast(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
+	if negList == conjunctionNil {
 		return true
 	} else {
-		neg := cx.MappingAtomType(negList.Atom)
-		pairing := NewFieldPairs(pos, neg)
+		neg := cx.MappingAtomType(cx.conjunctionAtom(negList))
+		negNext := cx.conjunctionNext(negList)
+		pairing := newFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
-			return mappingInhabitedFast(cx, pos, negList.Next)
+			return mappingInhabitedFast(cx, pos, negNext)
 		}
 		for fieldPair := range pairing {
 			intersect := Intersect(fieldPair.Type1, fieldPair.Type2)
 			if IsEmpty(cx, intersect) {
-				return mappingInhabitedFast(cx, pos, negList.Next)
+				return mappingInhabitedFast(cx, pos, negNext)
 			}
 			d := Diff(fieldPair.Type1, fieldPair.Type2)
 			if !IsEmpty(cx, d) {
-				return mappingInhabitedFast(cx, pos, negList.Next)
+				return mappingInhabitedFast(cx, pos, negNext)
 			}
 		}
 		return false
 	}
 }
 
-func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) bool {
-	// migrated from MappingOps.java:127:5
-	if negList == nil {
+func mappingInhabited(cx Context, pos *MappingAtomicType, negList conjunctionHandle) bool {
+	if negList == conjunctionNil {
 		return true
 	} else {
-		neg := cx.MappingAtomType(negList.Atom)
-		pairing := NewFieldPairs(pos, neg)
+		neg := cx.MappingAtomType(cx.conjunctionAtom(negList))
+		negNext := cx.conjunctionNext(negList)
+		pairing := newFieldPairs(pos, neg)
 		if !IsEmpty(cx, Diff(pos.Rest, neg.Rest)) {
-			return mappingInhabited(cx, pos, negList.Next)
+			return mappingInhabited(cx, pos, negNext)
 		}
 		for fieldPair := range pairing {
 			intersect := Intersect(fieldPair.Type1, fieldPair.Type2)
 			if IsEmpty(cx, intersect) {
-				return mappingInhabited(cx, pos, negList.Next)
+				return mappingInhabited(cx, pos, negNext)
 			}
-			d := Diff(fieldPair.Type1, fieldPair.Type2).(*CellSemType)
+			d := Diff(fieldPair.Type1, fieldPair.Type2).(*ComplexSemType)
 			if !IsEmpty(cx, d) {
 				var mt MappingAtomicType
-				if fieldPair.Index1 == nil {
-					mt = insertField(*pos, fieldPair.Name, *d)
+				if fieldPair.Index1 < 0 {
+					mt = insertField(*pos, fieldPair.Name, d)
 				} else {
 					posTypes := pos.Types
-					posTypes[*fieldPair.Index1] = *d
-					mt = MappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
+					posTypes[fieldPair.Index1] = *d
+					mt = mappingAtomicTypeFrom(pos.Names, posTypes, pos.Rest)
 				}
-				if mappingInhabited(cx, &mt, negList.Next) {
+				if mappingInhabited(cx, &mt, negNext) {
 					return true
 				}
 			}
@@ -119,58 +116,54 @@ func mappingInhabited(cx Context, pos *MappingAtomicType, negList *Conjunction) 
 	}
 }
 
-func insertField(m MappingAtomicType, name string, t CellSemType) MappingAtomicType {
-	// migrated from MappingOps.java:167:5
-	orgNames := m.Names
-	names := shallowCopyStrings(orgNames, (len(orgNames) + 1))
-	orgTypes := m.Types
-	types := shallowCopyCellTypes(orgTypes, (len(orgTypes) + 1))
-	i := len(orgNames)
+func insertField(m MappingAtomicType, name string, t *ComplexSemType) MappingAtomicType {
+	names := append([]string(nil), m.Names...)
+	names = append(names, "")
+	types := append([]ComplexSemType(nil), m.Types...)
+	types = append(types, ComplexSemType{})
+	i := len(names) - 1
 	for {
 		if (i == 0) || codePointCompare(names[i-1], name) {
 			names[i] = name
-			types[i] = t
+			types[i] = *t
 			break
 		}
 		names[i] = names[i-1]
 		types[i] = types[i-1]
 		i = (i - 1)
 	}
-	return MappingAtomicTypeFrom(names, types, m.Rest)
+	return mappingAtomicTypeFrom(names, types, m.Rest)
 }
 
 func intersectMapping(env Env, m1 *MappingAtomicType, m2 *MappingAtomicType) *MappingAtomicType {
-	// migrated from MappingOps.java:186:5
 	var names []string
-	var types []CellSemType
-	pairing := NewFieldPairs(m1, m2)
+	var types []ComplexSemType
+	pairing := newFieldPairs(m1, m2)
 	for fieldPair := range pairing {
 		names = append(names, fieldPair.Name)
 		t := intersectMemberSemTypes(env, fieldPair.Type1, fieldPair.Type2)
-		if IsNever(CellInner(fieldPair.Type1)) {
+		if IsNever(cellInner(fieldPair.Type1)) {
 			return nil
 		}
-		types = append(types, t)
+		types = append(types, *t)
 	}
 	rest := intersectMemberSemTypes(env, m1.Rest, m2.Rest)
-	return new(MappingAtomicTypeFrom(names, types, rest))
+	return new(mappingAtomicTypeFrom(names, types, rest))
 }
 
-func BddMappingMemberTypeInner(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
-	// migrated from MappingOps.java:208:5
-	if allOrNothing, ok := b.(*BddAllOrNothing); ok {
+func bddMappingMemberTypeInnerCore(cx Context, b Bdd, key SubtypeData, accum SemType) SemType {
+	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return accum
 		}
 		return NEVER
 	} else {
-		bdd := b.(BddNode)
-		return Union(BddMappingMemberTypeInner(cx, bdd.Left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.MappingAtomType(bdd.Atom()), key), accum)), Union(BddMappingMemberTypeInner(cx, bdd.Middle(), key, accum), BddMappingMemberTypeInner(cx, bdd.Right(), key, accum)))
+		bn := b.(bddNode)
+		return Union(bddMappingMemberTypeInnerCore(cx, bn.left(), key, Intersect(mappingAtomicMemberTypeInner(*cx.MappingAtomType(bn.atom()), key), accum)), Union(bddMappingMemberTypeInnerCore(cx, bn.middle(), key, accum), bddMappingMemberTypeInnerCore(cx, bn.right(), key, accum)))
 	}
 }
 
 func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) SemType {
-	// migrated from MappingOps.java:222:5
 	var memberType SemType
 	memberType = nil
 	for _, ty := range mappingAtomicApplicableMemberTypesInner(atomic, key) {
@@ -187,18 +180,17 @@ func mappingAtomicMemberTypeInner(atomic MappingAtomicType, key SubtypeData) Sem
 }
 
 func mappingAtomicApplicableMemberTypesInner(atomic MappingAtomicType, key SubtypeData) []SemType {
-	// migrated from MappingOps.java:234:5
 	var types []SemType
-	for _, t := range atomic.Types {
-		types = append(types, CellInner(t))
+	for i := range atomic.Types {
+		types = append(types, cellInner(&atomic.Types[i]))
 	}
 	var memberTypes []SemType
-	rest := CellInner(atomic.Rest)
+	rest := cellInner(atomic.Rest)
 	if isAllSubtype(key) {
 		memberTypes = append(memberTypes, types...)
 		memberTypes = append(memberTypes, rest)
 	} else {
-		coverage := stringSubtypeListCoverage(key.(StringSubtype), atomic.Names)
+		coverage := getStringSubtypeListCoverage(key.(stringSubtype), atomic.Names)
 		for _, index := range coverage.Indices {
 			memberTypes = append(memberTypes, types[index])
 		}
@@ -209,31 +201,26 @@ func mappingAtomicApplicableMemberTypesInner(atomic MappingAtomicType, key Subty
 	return memberTypes
 }
 
-func NewMappingOps() MappingOps {
-	return MappingOps{}
+func newMappingOps() mappingOps {
+	return mappingOps{}
 }
 
-func (this *MappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from MappingOps.java:258:5
+func (this *mappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *MappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from MappingOps.java:263:5
+func (this *mappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *MappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from MappingOps.java:268:5
+func (this *mappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }
 
-func (this *MappingOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from MappingOps.java:273:5
+func (this *mappingOps) complement(d SubtypeData) SubtypeData {
 	return bddSubtypeComplement(d)
 }
 
-func (this *MappingOps) IsEmpty(cx Context, d SubtypeData) bool {
-	// migrated from MappingOps.java:278:5
+func (this *mappingOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return mappingSubtypeIsEmpty(cx, d)
 }

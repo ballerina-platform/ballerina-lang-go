@@ -16,35 +16,34 @@
 
 package semtypes
 
-type EnumerableString struct {
+type enumerableString struct {
 	value string
 }
 
-var _ EnumerableType[string] = &EnumerableString{}
+var _ enumerableType[string] = &enumerableString{}
 
-func (this *EnumerableString) Value() string {
+func (this *enumerableString) Value() string {
 	return this.value
 }
 
-func (t1 *EnumerableString) Compare(t2 EnumerableType[string]) int {
+func (t1 *enumerableString) Compare(t2 enumerableType[string]) int {
 	s1 := t1.Value()
 	s2 := t2.Value()
 	if s1 == s2 {
-		return EQ
+		return eq
 	}
 	if s1 < s2 {
-		return LT
+		return lt
 	}
-	return GT
+	return gt
 }
 
-func newEnumerableStringFromString(value string) EnumerableString {
-	this := EnumerableString{}
+func newEnumerableStringFromString(value string) enumerableString {
+	this := enumerableString{}
 	this.value = value
 	return this
 }
 
-func EnumerableStringFrom(v string) EnumerableType[string] {
-	// migrated from EnumerableString.java:32:5
+func enumerableStringFrom(v string) enumerableType[string] {
 	return new(newEnumerableStringFromString(v))
 }

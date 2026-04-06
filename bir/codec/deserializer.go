@@ -26,14 +26,13 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/semtypes/typepool"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
 type birReader struct {
 	r           *bytes.Reader
 	cp          []any
-	tp          *typepool.TypePool
+	tp          *semtypes.TypePool
 	ctx         *context.CompilerContext
 	classDefMap map[string]*bir.BIRClassDef
 }
@@ -115,7 +114,7 @@ func (br *birReader) readTypePool() {
 	if err != nil {
 		panic(fmt.Sprintf("reading type pool bytes: %v", err))
 	}
-	br.tp = typepool.UnmarshalTypePool(tpBytes, br.ctx.GetTypeEnv())
+	br.tp = semtypes.UnmarshalTypePool(tpBytes, br.ctx.GetTypeEnv())
 }
 
 func (br *birReader) readType() semtypes.SemType {
@@ -124,7 +123,7 @@ func (br *birReader) readType() semtypes.SemType {
 	if idx == -1 {
 		return nil
 	}
-	return br.tp.Get(typepool.Index(idx))
+	return br.tp.Get(semtypes.TypePoolIndex(idx))
 }
 
 func (br *birReader) readConstantPool() {
@@ -601,12 +600,21 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			valueOp := br.readOperand(varMap)
 			values[k] = bir.NewMappingConstructorKeyValueEntry(keyOp, valueOp)
 		}
+		defaultsCount := br.readLength()
+		defaults := make([]bir.MappingConstructorDefaultEntry, defaultsCount)
+		for k := 0; k < int(defaultsCount); k++ {
+			defaults[k] = bir.MappingConstructorDefaultEntry{
+				FieldName:         string(br.readStringCPEntry()),
+				FunctionLookupKey: string(br.readStringCPEntry()),
+			}
+		}
 		return &bir.NewMap{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			Type:   ty,
-			Values: values,
+			Type:     ty,
+			Values:   values,
+			Defaults: defaults,
 		}
 	case bir.INSTRUCTION_KIND_NEW_ERROR:
 		ty := br.readType()

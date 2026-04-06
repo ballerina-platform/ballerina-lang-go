@@ -16,21 +16,20 @@
 
 package semtypes
 
-type SubtypePair struct {
+type subtypePair struct {
 	BasicTypeCode BasicTypeCode
 	SubtypeData1  ProperSubtypeData
 	SubtypeData2  ProperSubtypeData
 }
 
-func newSubtypePairFromBasicTypeCodeProperSubtypeDataProperSubtypeData(basicTypeCode BasicTypeCode, subtypeData1 ProperSubtypeData, subtypeData2 ProperSubtypeData) SubtypePair {
-	this := SubtypePair{}
+func newSubtypePairFromBasicTypeCodeProperSubtypeDataProperSubtypeData(basicTypeCode BasicTypeCode, subtypeData1 ProperSubtypeData, subtypeData2 ProperSubtypeData) subtypePair {
+	this := subtypePair{}
 	this.BasicTypeCode = basicTypeCode
 	this.SubtypeData1 = subtypeData1
 	this.SubtypeData2 = subtypeData2
 	return this
 }
 
-func CreateSubTypePair(basicTypeCode BasicTypeCode, subtypeData1 ProperSubtypeData, subtypeData2 ProperSubtypeData) SubtypePair {
-	// migrated from SubtypePair.java:40:5
+func createSubTypePair(basicTypeCode BasicTypeCode, subtypeData1 ProperSubtypeData, subtypeData2 ProperSubtypeData) subtypePair {
 	return newSubtypePairFromBasicTypeCodeProperSubtypeDataProperSubtypeData(basicTypeCode, subtypeData1, subtypeData2)
 }

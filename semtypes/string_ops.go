@@ -16,83 +16,77 @@
 
 package semtypes
 
-type StringOps struct {
+type stringOps struct {
 }
 
-var _ BasicTypeOps = &StringOps{}
+var _ BasicTypeOps = &stringOps{}
 
-func NewStringOps() StringOps {
-	this := StringOps{}
+func newStringOps() stringOps {
+	this := stringOps{}
 	return this
 }
 
-func (this *StringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from StringOps.java:45:5
-	sd1 := d1.(StringSubtype)
-	sd2 := d2.(StringSubtype)
-	var chars []EnumerableType[string]
-	var nonChars []EnumerableType[string]
-	charsAllowed := EnumerableSubtypeUnion(sd1.GetChar(), sd2.GetChar(), &chars)
-	nonCharsAllowed := EnumerableSubtypeUnion(sd1.GetNonChar(), sd2.GetNonChar(), &nonChars)
-	return CreateStringSubtype(CharStringSubtypeFrom(charsAllowed, chars), NonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
+func (this *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	sd1 := d1.(stringSubtype)
+	sd2 := d2.(stringSubtype)
+	var chars []enumerableType[string]
+	var nonChars []enumerableType[string]
+	charsAllowed := enumerableSubtypeUnion(sd1.GetChar(), sd2.GetChar(), &chars)
+	nonCharsAllowed := enumerableSubtypeUnion(sd1.GetNonChar(), sd2.GetNonChar(), &nonChars)
+	return createStringSubtype(charStringSubtypeFrom(charsAllowed, chars), nonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *StringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from StringOps.java:64:5
-	if allOrNothing1, ok := d1.(*AllOrNothingSubtype); ok {
+func (this *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	if allOrNothing1, ok := d1.(*allOrNothingSubtype); ok {
 		if allOrNothing1.IsAllSubtype() {
 			return d2
 		} else {
-			return CreateNothing()
+			return createNothing()
 		}
 	}
-	if allOrNothing2, ok := d2.(*AllOrNothingSubtype); ok {
+	if allOrNothing2, ok := d2.(*allOrNothingSubtype); ok {
 		if allOrNothing2.IsAllSubtype() {
 			return d1
 		} else {
-			return CreateNothing()
+			return createNothing()
 		}
 	}
-	sd1 := d1.(StringSubtype)
-	sd2 := d2.(StringSubtype)
-	var chars []EnumerableType[string]
-	var nonChars []EnumerableType[string]
-	charsAllowed := EnumerableSubtypeIntersect(sd1.GetChar(), sd2.GetChar(), &chars)
-	nonCharsAllowed := EnumerableSubtypeIntersect(sd1.GetNonChar(), sd2.GetNonChar(), &nonChars)
-	return CreateStringSubtype(CharStringSubtypeFrom(charsAllowed, chars), NonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
+	sd1 := d1.(stringSubtype)
+	sd2 := d2.(stringSubtype)
+	var chars []enumerableType[string]
+	var nonChars []enumerableType[string]
+	charsAllowed := enumerableSubtypeIntersect(sd1.GetChar(), sd2.GetChar(), &chars)
+	nonCharsAllowed := enumerableSubtypeIntersect(sd1.GetNonChar(), sd2.GetNonChar(), &nonChars)
+	return createStringSubtype(charStringSubtypeFrom(charsAllowed, chars), nonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *StringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from StringOps.java:86:5
-	return this.Intersect(d1, this.Complement(d2))
+func (this *stringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return this.Intersect(d1, this.complement(d2))
 }
 
-func (this *StringOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from StringOps.java:91:5
-	st := d.(StringSubtype)
+func (this *stringOps) complement(d SubtypeData) SubtypeData {
+	st := d.(stringSubtype)
 	if len(st.GetChar().Values()) == 0 && len(st.GetNonChar().Values()) == 0 {
 		if st.GetChar().Allowed() && st.GetNonChar().Allowed() {
-			return CreateAll()
+			return createAll()
 		} else if !st.GetChar().Allowed() && !st.GetNonChar().Allowed() {
-			return CreateNothing()
+			return createNothing()
 		}
 	}
-	return CreateStringSubtype(CharStringSubtypeFrom(!st.GetChar().Allowed(), st.GetChar().Values()), NonCharStringSubtypeFrom(!st.GetNonChar().Allowed(), st.GetNonChar().Values()))
+	return createStringSubtype(charStringSubtypeFrom(!st.GetChar().Allowed(), st.GetChar().Values()), nonCharStringSubtypeFrom(!st.GetNonChar().Allowed(), st.GetNonChar().Values()))
 }
 
-func (this *StringOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from StringOps.java:106:5
+func (this *stringOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return notIsEmpty(cx, t)
 }
 
-func stringSubtypeListCoverage(subtype StringSubtype, values []string) StringSubtypeListCoverage {
-	// migrated from StringOps.java:113:5
+func getStringSubtypeListCoverage(subtype stringSubtype, values []string) stringSubtypeListCoverage {
 	var indices []int
 	ch := subtype.GetChar()
 	nonChar := subtype.GetNonChar()
 	stringConsts := 0
 	if ch.Allowed() {
-		StringListIntersect(values, toStringArray(ch.Values()), &indices)
+		stringListIntersect(values, toStringArray(ch.Values()), &indices)
 		stringConsts = len(ch.Values())
 	} else if len(ch.Values()) == 0 {
 		for i := range values {
@@ -102,7 +96,7 @@ func stringSubtypeListCoverage(subtype StringSubtype, values []string) StringSub
 		}
 	}
 	if nonChar.Allowed() {
-		StringListIntersect(values, toStringArray(nonChar.Values()), &indices)
+		stringListIntersect(values, toStringArray(nonChar.Values()), &indices)
 		stringConsts += len(nonChar.Values())
 	} else if len(nonChar.Values()) == 0 {
 		for i := range values {
@@ -111,10 +105,10 @@ func stringSubtypeListCoverage(subtype StringSubtype, values []string) StringSub
 			}
 		}
 	}
-	return StringSubtypeListCoverageFrom(stringConsts == len(indices), indices)
+	return stringSubtypeListCoverageFrom(stringConsts == len(indices), indices)
 }
 
-func toStringArray(ar []EnumerableType[string]) []string {
+func toStringArray(ar []enumerableType[string]) []string {
 	strings := make([]string, len(ar))
 	for i, value := range ar {
 		strings[i] = value.Value()
@@ -122,8 +116,7 @@ func toStringArray(ar []EnumerableType[string]) []string {
 	return strings
 }
 
-func StringListIntersect(values []string, target []string, indices *[]int) {
-	// migrated from StringOps.java:158:5
+func stringListIntersect(values []string, target []string, indices *[]int) {
 	i1 := 0
 	i2 := 0
 	len1 := len(values)
@@ -132,15 +125,15 @@ func StringListIntersect(values []string, target []string, indices *[]int) {
 		if i1 >= len1 || i2 >= len2 {
 			break
 		} else {
-			comp := CompareEnumerable(EnumerableStringFrom(values[i1]), EnumerableStringFrom(target[i2]))
+			comp := compareEnumerable(enumerableStringFrom(values[i1]), enumerableStringFrom(target[i2]))
 			switch comp {
-			case EQ:
+			case eq:
 				*indices = append(*indices, i1)
 				i1 = i1 + 1
 				i2 = i2 + 1
-			case LT:
+			case lt:
 				i1 = i1 + 1
-			case GT:
+			case gt:
 				i2 = i2 + 1
 			default:
 				panic("Invalid comparison value!")

@@ -1,24 +1,24 @@
 -- stdout --
 -- stderr --
-error[SYNTAX_ERROR]: invalid integer literal: leading zero
+error[SYNTAX_ERROR]: leading zeros in numeric literals
   --> main.bal:20:13
    |
 20 |     int a = 01; int b = 02;
    |             ^^
 
-error[SYNTAX_ERROR]: invalid integer literal: leading zero
+error[SYNTAX_ERROR]: leading zeros in numeric literals
   --> main.bal:20:25
    |
 20 |     int a = 01; int b = 02;
    |                         ^^
 
-error[SYNTAX_ERROR]: invalid integer literal: leading zero
+error[SYNTAX_ERROR]: leading zeros in numeric literals
   --> main.bal:21:13
    |
 21 |     int c = 03;
    |             ^^
 
-error[SYNTAX_ERROR]: invalid integer literal: leading zero
+error[SYNTAX_ERROR]: leading zeros in numeric literals
   --> main.bal:22:13
    |
 22 |     int d = 04;

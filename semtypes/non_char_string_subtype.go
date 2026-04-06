@@ -16,31 +16,28 @@
 
 package semtypes
 
-type NonCharStringSubtype struct {
+type nonCharStringSubtype struct {
 	allowed bool
-	values  []EnumerableType[string]
+	values  []enumerableType[string]
 }
 
-var _ EnumerableSubtype[string] = &NonCharStringSubtype{}
+var _ enumerableSubtype[string] = &nonCharStringSubtype{}
 
-func newNonCharStringSubtypeFromBoolEnumerableStrings(allowed bool, values []EnumerableType[string]) NonCharStringSubtype {
-	this := NonCharStringSubtype{}
+func newNonCharStringSubtypeFromBoolEnumerableStrings(allowed bool, values []enumerableType[string]) nonCharStringSubtype {
+	this := nonCharStringSubtype{}
 	this.allowed = allowed
 	this.values = values
 	return this
 }
 
-func NonCharStringSubtypeFrom(allowed bool, values []EnumerableType[string]) NonCharStringSubtype {
-	// migrated from NonCharStringSubtype.java:39:5
+func nonCharStringSubtypeFrom(allowed bool, values []enumerableType[string]) nonCharStringSubtype {
 	return newNonCharStringSubtypeFromBoolEnumerableStrings(allowed, values)
 }
 
-func (this *NonCharStringSubtype) Allowed() bool {
-	// migrated from NonCharStringSubtype.java:43:5
+func (this *nonCharStringSubtype) Allowed() bool {
 	return this.allowed
 }
 
-func (this *NonCharStringSubtype) Values() []EnumerableType[string] {
-	// migrated from NonCharStringSubtype.java:48:5
+func (this *nonCharStringSubtype) Values() []enumerableType[string] {
 	return this.values
 }

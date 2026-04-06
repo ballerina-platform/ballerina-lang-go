@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: included rest type declared in multiple type inclusions m
    |
 28 | type R3 record {|
    |         ^^^^^^^^^
+29 |     *R1;
+   |     ^^^^
+30 |     *R2; // @error
+   |     ^^^^^^^^^^^^^^
+31 | |};
+   | ^^

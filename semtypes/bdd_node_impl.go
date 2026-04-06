@@ -16,45 +16,44 @@
 
 package semtypes
 
-import (
-	"fmt"
-	"sync"
-)
+import "fmt"
 
-type BddNodeImpl struct {
-	atom             Atom
-	left             Bdd
-	middle           Bdd
-	right            Bdd
-	canonicalKeyFunc func() string
+type bddNodeImpl struct {
+	_atom     atom
+	_left     Bdd
+	_middle   Bdd
+	_right    Bdd
+	canonical string
 }
 
-var _ BddNode = &BddNodeImpl{}
+var _ bddNode = &bddNodeImpl{}
 
-func (this *BddNodeImpl) Atom() Atom {
-	return this.atom
+func (this *bddNodeImpl) atom() atom {
+	return this._atom
 }
 
-func (this *BddNodeImpl) Left() Bdd {
-	return this.left
+func (this *bddNodeImpl) left() Bdd {
+	return this._left
 }
 
-func (this *BddNodeImpl) Middle() Bdd {
-	return this.middle
+func (this *bddNodeImpl) middle() Bdd {
+	return this._middle
 }
 
-func (this *BddNodeImpl) Right() Bdd {
-	return this.right
+func (this *bddNodeImpl) right() Bdd {
+	return this._right
 }
 
-func newBddNodeImpl(atom Atom, left, middle, right Bdd) *BddNodeImpl {
-	node := &BddNodeImpl{atom: atom, left: left, middle: middle, right: right}
-	node.canonicalKeyFunc = sync.OnceValue(func() string {
-		return fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey())
-	})
-	return node
+func newBddNodeImpl(atom atom, left, middle, right Bdd) *bddNodeImpl {
+	return &bddNodeImpl{
+		_atom:     atom,
+		_left:     left,
+		_middle:   middle,
+		_right:    right,
+		canonical: fmt.Sprintf("(%s (%s) (%s) (%s))", atom.canonicalKey(), left.canonicalKey(), middle.canonicalKey(), right.canonicalKey()),
+	}
 }
 
-func (this *BddNodeImpl) canonicalKey() string {
-	return this.canonicalKeyFunc()
+func (this *bddNodeImpl) canonicalKey() string {
+	return this.canonical
 }

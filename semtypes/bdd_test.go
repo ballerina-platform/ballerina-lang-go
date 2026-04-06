@@ -24,19 +24,19 @@ import (
 // Ported from SemTypeBddTest.java:bddTest()
 func TestBddDiff(t *testing.T) {
 	// Create two BDD atoms from different rec atoms
-	b1 := BddAtom(new(CreateRecAtom(1)))
-	b2 := BddAtom(new(CreateRecAtom(2)))
+	b1 := bddAtom(new(createRecAtom(1)))
+	b2 := bddAtom(new(createRecAtom(2)))
 
 	// Intersect them
-	b1and2 := BddIntersect(b1, b2)
+	b1and2 := bddIntersect(b1, b2)
 
 	// Calculate difference: (b1 ∩ b2) - b1
-	r := BddDiff(b1and2, b1)
+	r := bddDiff(b1and2, b1)
 
-	// Type assert to *BddAllOrNothing
-	allOrNothing, ok := r.(*BddAllOrNothing)
+	// Type assert to *bddAllOrNothing
+	allOrNothing, ok := r.(*bddAllOrNothing)
 	if !ok {
-		t.Fatalf("expected *BddAllOrNothing, got %T", r)
+		t.Fatalf("expected *bddAllOrNothing, got %T", r)
 	}
 
 	// Assert that the result is not "all" (should be "nothing")

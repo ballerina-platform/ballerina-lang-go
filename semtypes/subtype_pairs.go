@@ -20,60 +20,58 @@ import (
 	"iter"
 )
 
+type iterState byte
+
+const (
+	iterNeedsCalc iterState = iota
+	iterHasCache
+	iterDone
+)
+
 type subtypePairIterator struct {
-	i1              int
-	i2              int
-	t1              []BasicSubtype
-	t2              []BasicSubtype
-	bits            BasicTypeBitSet
-	doneIteration   bool
-	shouldCalculate bool
-	cache           *SubtypePair
+	cache subtypePair
+	t1    []basicSubtype
+	t2    []basicSubtype
+	bits  BasicTypeBitSet
+	i1    int
+	i2    int
+	state iterState
 }
 
 func (i *subtypePairIterator) include(code BasicTypeCode) bool {
-	return (i.bits.All() & (1 << code.Code())) != 0
+	return (i.bits.all() & (1 << code.Code())) != 0
 }
 
-func (i *subtypePairIterator) get1() BasicSubtype {
+func (i *subtypePairIterator) get1() basicSubtype {
 	return i.t1[i.i1]
 }
 
-func (i *subtypePairIterator) get2() BasicSubtype {
+func (i *subtypePairIterator) get2() basicSubtype {
 	return i.t2[i.i2]
 }
 
 func (i *subtypePairIterator) hasNext() bool {
-	if i.doneIteration {
-		return false
-	}
-	if i.shouldCalculate {
-		cache := i.internalNext()
-		if cache == nil {
-			i.doneIteration = true
+	if i.state == iterNeedsCalc {
+		cache, ok := i.internalNext()
+		if ok {
+			i.cache = cache
+			i.state = iterHasCache
+		} else {
+			i.state = iterDone
 		}
-		i.cache = cache
-		i.shouldCalculate = false
 	}
-	return !i.doneIteration
+	return i.state != iterDone
 }
 
-func (i *subtypePairIterator) next() SubtypePair {
-	if i.doneIteration {
-		panic("Exhausted iterator")
+func (i *subtypePairIterator) next() subtypePair {
+	if i.state == iterNeedsCalc {
+		i.cache, _ = i.internalNext()
 	}
-	if i.shouldCalculate {
-		cache := i.internalNext()
-		if cache == nil {
-			panic("unexpected nil cache")
-		}
-		i.cache = cache
-	}
-	i.shouldCalculate = true
-	return *i.cache
+	i.state = iterNeedsCalc
+	return i.cache
 }
 
-func (i *subtypePairIterator) internalNext() *SubtypePair {
+func (i *subtypePairIterator) internalNext() (subtypePair, bool) {
 	for {
 		if i.i1 >= len(i.t1) {
 			if i.i2 >= len(i.t2) {
@@ -84,7 +82,7 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 			data2 := t.SubtypeData
 			i.i2++
 			if i.include(code) {
-				return new(CreateSubTypePair(code, nil, data2))
+				return createSubTypePair(code, nil, data2), true
 			}
 		} else if i.i2 >= len(i.t2) {
 			t := i.get1()
@@ -92,7 +90,7 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 			data1 := t.SubtypeData
 			i.i1++
 			if i.include(code) {
-				return new(CreateSubTypePair(code, data1, nil))
+				return createSubTypePair(code, data1, nil), true
 			}
 		} else {
 			t1 := i.get1()
@@ -106,26 +104,26 @@ func (i *subtypePairIterator) internalNext() *SubtypePair {
 				i.i1++
 				i.i2++
 				if i.include(code1) {
-					return new(CreateSubTypePair(code1, data1, data2))
+					return createSubTypePair(code1, data1, data2), true
 				}
 			} else if code1.Code() < code2.Code() {
 				i.i1++
 				if i.include(code1) {
-					return new(CreateSubTypePair(code1, data1, nil))
+					return createSubTypePair(code1, data1, nil), true
 				}
 			} else {
 				i.i2++
 				if i.include(code2) {
-					return new(CreateSubTypePair(code2, nil, data2))
+					return createSubTypePair(code2, nil, data2), true
 				}
 			}
 		}
 	}
-	return nil
+	return subtypePair{}, false
 }
 
-func (i *subtypePairIterator) toIterator() iter.Seq[SubtypePair] {
-	return func(yield func(SubtypePair) bool) {
+func (i *subtypePairIterator) toIterator() iter.Seq[subtypePair] {
+	return func(yield func(subtypePair) bool) {
 		for i.hasNext() {
 			if !yield(i.next()) {
 				break
@@ -134,23 +132,19 @@ func (i *subtypePairIterator) toIterator() iter.Seq[SubtypePair] {
 	}
 }
 
-func newSubtypePairs(s1, s2 SemType, bits BasicTypeBitSet) iter.Seq[SubtypePair] {
-	i := &subtypePairIterator{
-		i1:              0,
-		i2:              0,
-		t1:              unpackToBasicSubtypes(s1),
-		t2:              unpackToBasicSubtypes(s2),
-		bits:            bits,
-		doneIteration:   false,
-		shouldCalculate: true,
-		cache:           nil,
+func newSubtypePairs(s1, s2 SemType, bits BasicTypeBitSet) iter.Seq[subtypePair] {
+	i := subtypePairIterator{
+		t1:    unpackToBasicSubtypes(s1),
+		t2:    unpackToBasicSubtypes(s2),
+		bits:  bits,
+		state: iterNeedsCalc,
 	}
 	return i.toIterator()
 }
 
-func unpackToBasicSubtypes(t SemType) []BasicSubtype {
+func unpackToBasicSubtypes(t SemType) []basicSubtype {
 	if _, ok := t.(BasicTypeBitSet); ok {
 		return nil
 	}
-	return unpackComplexSemType(t.(ComplexSemType))
+	return getUnpackComplexSemType(t.(*ComplexSemType))
 }

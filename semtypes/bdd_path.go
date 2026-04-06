@@ -20,31 +20,30 @@ import (
 	"slices"
 )
 
-type BddPath struct {
+type bddPath struct {
 	bdd Bdd
-	pos []Atom
-	neg []Atom
+	pos []atom
+	neg []atom
 }
 
-func newBddPathFromBddPath(bddPath BddPath) BddPath {
-	this := BddPath{}
-	this.bdd = bddPath.bdd
-	this.pos = slices.Clone(bddPath.pos)
-	this.neg = slices.Clone(bddPath.neg)
+func newBddPathFromBddPath(src bddPath) bddPath {
+	this := bddPath{}
+	this.bdd = src.bdd
+	this.pos = slices.Clone(src.pos)
+	this.neg = slices.Clone(src.neg)
 	return this
 }
 
-func NewBddPath() BddPath {
-	this := BddPath{}
-	this.bdd = BddAll()
+func newBddPath() bddPath {
+	this := bddPath{}
+	this.bdd = bddAll()
 	this.pos = nil
 	this.neg = nil
 	return this
 }
 
-func BddPaths(b Bdd, paths *[]BddPath, accum BddPath) {
-	// migrated from BddPath.java:50:5
-	allOrNothing, ok := b.(*BddAllOrNothing)
+func bddPaths(b Bdd, paths *[]bddPath, accum bddPath) {
+	allOrNothing, ok := b.(*bddAllOrNothing)
 	if ok {
 		if allOrNothing.IsAll() {
 			*paths = append(*paths, accum)
@@ -52,27 +51,25 @@ func BddPaths(b Bdd, paths *[]BddPath, accum BddPath) {
 	} else {
 		left := bddPathClone(accum)
 		right := bddPathClone(accum)
-		bn, ok := b.(BddNode)
+		bn, ok := b.(bddNode)
 		if !ok {
-			panic("b is not a BddNode")
+			panic("b is not a bddNode")
 		}
-		left.pos = append(left.pos, bn.Atom())
-		left.bdd = BddIntersect(left.bdd, BddAtom(bn.Atom()))
-		BddPaths(bn.Left(), paths, left)
-		BddPaths(bn.Middle(), paths, accum)
-		right.neg = append(right.neg, bn.Atom())
-		right.bdd = BddDiff(right.bdd, BddAtom(bn.Atom()))
-		BddPaths(bn.Right(), paths, right)
+		left.pos = append(left.pos, bn.atom())
+		left.bdd = bddIntersect(left.bdd, bddAtom(bn.atom()))
+		bddPaths(bn.left(), paths, left)
+		bddPaths(bn.middle(), paths, accum)
+		right.neg = append(right.neg, bn.atom())
+		right.bdd = bddDiff(right.bdd, bddAtom(bn.atom()))
+		bddPaths(bn.right(), paths, right)
 	}
 }
 
-func bddPathClone(path BddPath) BddPath {
-	// migrated from BddPath.java:69:5
+func bddPathClone(path bddPath) bddPath {
 
 	return newBddPathFromBddPath(path)
 }
 
-func BddPathFrom() BddPath {
-	// migrated from BddPath.java:73:5
-	return NewBddPath()
+func bddPathFrom() bddPath {
+	return newBddPath()
 }

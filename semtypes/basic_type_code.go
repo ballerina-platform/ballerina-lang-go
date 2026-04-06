@@ -93,7 +93,7 @@ const (
 	ValueTypeInherentlyImmutable      = (1 << ValueTypeCountInherentlyImmutable) - 1
 )
 
-func BasicTypeCodeFrom(code int) BasicTypeCode {
+func basicTypeCodeFrom(code int) BasicTypeCode {
 	return BasicTypeCode(code)
 }
 

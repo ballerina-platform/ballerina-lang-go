@@ -18,38 +18,37 @@ package semtypes
 
 import "math"
 
-type EnumerableFloat struct {
+type enumerableFloat struct {
 	value float64
 }
 
-var _ EnumerableType[float64] = &EnumerableFloat{}
+var _ enumerableType[float64] = &enumerableFloat{}
 
-func (this *EnumerableFloat) Value() float64 {
+func (this *enumerableFloat) Value() float64 {
 	return this.value
 }
 
-func (t1 *EnumerableFloat) Compare(t2 EnumerableType[float64]) int {
+func (t1 *enumerableFloat) Compare(t2 enumerableType[float64]) int {
 	f1 := t1.Value()
 	f2 := t2.Value()
 	if bFloatEq(f1, f2) {
-		return EQ
+		return eq
 	} else if math.IsNaN(f1) {
-		return LT
+		return lt
 	} else if math.IsNaN(f2) {
-		return GT
+		return gt
 	} else if f1 < f2 {
-		return LT
+		return lt
 	}
-	return GT
+	return gt
 }
 
-func newEnumerableFloatFromFloat64(value float64) EnumerableFloat {
-	this := EnumerableFloat{}
+func newEnumerableFloatFromFloat64(value float64) enumerableFloat {
+	this := enumerableFloat{}
 	this.value = value
 	return this
 }
 
-func EnumerableFloatFrom(d float64) EnumerableFloat {
-	// migrated from EnumerableFloat.java:32:5
+func enumerableFloatFrom(d float64) enumerableFloat {
 	return newEnumerableFloatFromFloat64(d)
 }

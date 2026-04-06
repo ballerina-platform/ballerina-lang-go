@@ -22,31 +22,26 @@ import (
 	"ballerina-lang-go/common"
 )
 
-type TypeAtom struct {
-	index      int
-	AtomicType AtomicType
+type typeAtom struct {
+	idx        int
+	AtomicType atomicType
 }
 
-var _ Atom = &TypeAtom{}
+var _ atom = &typeAtom{}
 
-func CreateTypeAtom(index int, atomicType AtomicType) TypeAtom {
-	// migrated from TypeAtom.java:31:5
+func createTypeAtom(index int, atomicType atomicType) typeAtom {
 	common.Assert(index >= 0)
 
-	return TypeAtom{
-		index:      index,
+	return typeAtom{
+		idx:        index,
 		AtomicType: atomicType,
 	}
 }
 
-func (this *TypeAtom) Index() int {
-	return this.index
+func (this *typeAtom) index() int {
+	return this.idx
 }
 
-func (this *TypeAtom) Kind() Kind {
-	return this.AtomicType.AtomKind()
-}
-
-func (this *TypeAtom) canonicalKey() string {
-	return fmt.Sprintf("t%d", this.index)
+func (this *typeAtom) canonicalKey() string {
+	return fmt.Sprintf("t%d", this.idx)
 }

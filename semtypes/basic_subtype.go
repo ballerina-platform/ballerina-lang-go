@@ -16,19 +16,18 @@
 
 package semtypes
 
-type BasicSubtype struct {
+type basicSubtype struct {
 	BasicTypeCode BasicTypeCode
 	SubtypeData   ProperSubtypeData
 }
 
-func newBasicSubtypeFromBasicTypeCodeProperSubtypeData(basicTypeCode BasicTypeCode, properSubtypeData ProperSubtypeData) BasicSubtype {
-	this := BasicSubtype{}
+func newBasicSubtypeFromBasicTypeCodeProperSubtypeData(basicTypeCode BasicTypeCode, properSubtypeData ProperSubtypeData) basicSubtype {
+	this := basicSubtype{}
 	this.BasicTypeCode = basicTypeCode
 	this.SubtypeData = properSubtypeData
 	return this
 }
 
-func BasicSubtypeFrom(typeCode BasicTypeCode, data ProperSubtypeData) BasicSubtype {
-	// migrated from BasicSubtype.java:34:5
+func basicSubtypeFrom(typeCode BasicTypeCode, data ProperSubtypeData) basicSubtype {
 	return newBasicSubtypeFromBasicTypeCodeProperSubtypeData(typeCode, data)
 }

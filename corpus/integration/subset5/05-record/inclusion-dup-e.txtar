@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: included field 'x' declared in multiple type inclusions m
    |
 26 | type R3 record {|
    |         ^^^^^^^^^
+27 |     *R1;
+   |     ^^^^
+28 |     *R2; // @error
+   |     ^^^^^^^^^^^^^^
+29 | |};
+   | ^^

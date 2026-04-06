@@ -76,6 +76,10 @@ func (this *CompilerContext) NewBlockScope(parent model.Scope, pkg model.Package
 	return this.env.NewBlockScope(parent, pkg)
 }
 
+func (this *CompilerContext) AddSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef {
+	return this.env.AddSymbolToSameSpace(ref, name, symbol)
+}
+
 func (this *CompilerContext) GetSymbol(symbol model.SymbolRef) model.Symbol {
 	return this.env.GetSymbol(symbol)
 }

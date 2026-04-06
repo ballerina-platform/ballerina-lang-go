@@ -384,28 +384,8 @@ func (n *NonTerminalNodeBase) ChildNodes() iter.Seq[Node] {
 	}
 }
 
-// FIXME: this don't fully implement ChildNodeList.loadNode but do we need to?
 func (n *NonTerminalNodeBase) loadNode(childIndex int) Node {
-	index := 0
-	for i := range n.internalNode.BucketCount() {
-		child := n.internalNode.ChildInBucket(i)
-		if !IsSTNodePresent(child) {
-			continue
-		}
-		if child.Kind() == common.LIST {
-			if childIndex < index+child.BucketCount() {
-				listChildIndex := childIndex - index
-				return n.ChildInBucket(listChildIndex)
-			}
-			index += child.BucketCount()
-		} else {
-			if childIndex == index {
-				return n.ChildInBucket(i)
-			}
-			index++
-		}
-	}
-	panic("failed to load node")
+	return n.ChildInBucket(childIndex)
 }
 
 func into[T Node](node Node) T {

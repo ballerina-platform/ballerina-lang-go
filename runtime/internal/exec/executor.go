@@ -143,14 +143,14 @@ func executeBasicBlock(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame,
 	for _, inst := range bb.Instructions {
 		posProvider := inst.(interface{ GetPos() diagnostics.Location })
 		frame.location = posProvider.GetPos()
-		currentFrame = execInstruction(inst, currentFrame, reg)
+		currentFrame = execInstruction(inst, currentFrame, reg, callStack)
 	}
 	posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
 	frame.location = posProvider.GetPos()
 	return execTerminator(bb.Terminator, currentFrame, reg, callStack), currentFrame
 }
 
-func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry) *Frame {
+func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *Frame {
 	switch v := inst.(type) {
 	case *bir.PushScopeFrame:
 		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
@@ -163,7 +163,7 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 	case *bir.NewArray:
 		execNewArray(v, frame, reg)
 	case *bir.NewMap:
-		execNewMap(v, frame, reg)
+		execNewMap(v, frame, reg, callStack)
 	case *bir.NewError:
 		execNewError(v, frame, reg)
 	case *bir.NewObject:

@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: 'main' function must have return type 'error?'
    |
 20 | public function main() returns int { // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 |     io:println(1);
+   |     ^^^^^^^^^^^^^^
+22 |     return 0;
+   |     ^^^^^^^^^
+23 | }
+   | ^

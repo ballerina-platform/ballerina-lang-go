@@ -5,3 +5,11 @@ error[SEMANTIC_ERROR]: member 'x' that overrides included member is not a subtyp
    |
 25 | type Bar object { // @error
    |          ^^^^^^^^^^^^^^^^^^
+26 |     *Foo;
+   |     ^^^^^
+27 |     *Baz;
+   |     ^^^^^
+28 |     string x;
+   |     ^^^^^^^^^
+29 | };
+   | ^

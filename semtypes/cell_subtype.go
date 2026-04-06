@@ -18,22 +18,18 @@ package semtypes
 
 import "ballerina-lang-go/common"
 
-func CellContaining(env Env, ty SemType) CellSemType {
-	// migrated from CellSubtype.java:42:5
-	return CellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_LIMITED)
+func cellContaining(env Env, ty SemType) *ComplexSemType {
+	return cellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_LIMITED)
 }
 
-func RoCellContaining(env Env, ty SemType) CellSemType {
-	// migrated from CellSubtype.java:46:5
-	return CellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_NONE)
+func roCellContaining(env Env, ty SemType) *ComplexSemType {
+	return cellContainingWithEnvSemTypeCellMutability(env, ty, CellMutability_CELL_MUT_NONE)
 }
 
-func CellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMutability) CellSemType {
-	// migrated from CellSubtype.java:50:5
+func cellContainingWithEnvSemTypeCellMutability(env Env, ty SemType, mut CellMutability) *ComplexSemType {
 	common.Assert(IsNever(ty) || !IsSubtypeSimple(ty, CELL))
-	atomicCell := CellAtomicTypeFrom(ty, mut)
+	atomicCell := cellAtomicTypeFrom(ty, mut)
 	atom := env.cellAtom(&atomicCell)
-	bdd := BddAtom(&atom)
-	complexSemType := basicSubtype(BTCell, bdd)
-	return *CellSemTypeFrom(complexSemType.SubtypeDataList())
+	bdd := bddAtom(&atom)
+	return getBasicSubtype(BTCell, bdd)
 }

@@ -16,18 +16,17 @@
 
 package semtypes
 
-type FutureOps struct {
+type futureOps struct {
 	CommonOps
 }
 
-var _ BasicTypeOps = &FutureOps{}
+var _ BasicTypeOps = &futureOps{}
 
-func NewFutureOps() FutureOps {
-	this := FutureOps{}
+func newFutureOps() futureOps {
+	this := futureOps{}
 	return this
 }
 
-func (this *FutureOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from FutureOps.java:33:5
+func (this *futureOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return mappingSubtypeIsEmpty(cx, t)
 }

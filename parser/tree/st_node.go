@@ -562,6 +562,53 @@ func LastToken(n STNode) STToken {
 	return findToken(n, backward)
 }
 
+// childSTNodesForDiagnosticSearch returns child ST nodes to traverse when looking for
+// syntax diagnostics. It includes token minutiae and invalid-node minutiae, which are
+// not reachable via ChildBuckets() alone.
+func childSTNodesForDiagnosticSearch(st STNode) []STNode {
+	if st == nil || !IsSTNodePresent(st) {
+		return nil
+	}
+	switch n := st.(type) {
+	case *STNodeList:
+		out := make([]STNode, 0, n.Size())
+		for i := 0; i < n.Size(); i++ {
+			out = append(out, n.Get(i))
+		}
+		return out
+	case *STInvalidNodeMinutiae:
+		return []STNode{n.invalidNode}
+	case STToken:
+		var out []STNode
+		if lm := n.LeadingMinutiae(); IsSTNodePresent(lm) {
+			out = append(out, lm)
+		}
+		if tm := n.TrailingMinutiae(); IsSTNodePresent(tm) {
+			out = append(out, tm)
+		}
+		return out
+	case *STMinutiae:
+		return nil
+	default:
+		return n.ChildBuckets()
+	}
+}
+
+func FindDeepestDiagnosticSTNode(st STNode) STNode {
+	if st == nil || !IsSTNodePresent(st) {
+		return nil
+	}
+	for _, ch := range childSTNodesForDiagnosticSearch(st) {
+		if d := FindDeepestDiagnosticSTNode(ch); d != nil {
+			return d
+		}
+	}
+	if len(st.Diagnostics()) > 0 {
+		return st
+	}
+	return nil
+}
+
 func ToSourceCode(n STNode) string {
 	builder := strings.Builder{}
 	writeTo(n, &builder)

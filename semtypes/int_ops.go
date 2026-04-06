@@ -16,84 +16,74 @@
 
 package semtypes
 
-type IntOps struct {
-}
+type intOps struct{}
 
-var _ BasicTypeOps = &IntOps{}
+var _ BasicTypeOps = &intOps{}
 
-func NewIntOps() IntOps {
-	this := IntOps{}
+func newIntOps() intOps {
+	this := intOps{}
 	return this
 }
 
-var intOpsInstance = NewIntOps()
+var intOpsInstance = newIntOps()
 
-func (this *IntOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from IntOps.java:45:5
-	v1 := d1.(IntSubtype)
-	v2 := d2.(IntSubtype)
+func (this *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	v1 := d1.(intSubtype)
+	v2 := d2.(intSubtype)
 	v := rangeListUnion(v1.Ranges, v2.Ranges)
 	if len(v) == 1 && v[0].Min == MIN_VALUE && v[0].Max == MAX_VALUE {
-		return CreateAll()
+		return createAll()
 	}
-	return CreateIntSubtype(v...)
+	return createIntSubtype(v...)
 }
 
-func (this *IntOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from IntOps.java:56:5
-	v1 := d1.(IntSubtype)
-	v2 := d2.(IntSubtype)
+func (this *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	v1 := d1.(intSubtype)
+	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, v2.Ranges)
 	if len(v) == 0 {
-		return CreateNothing()
+		return createNothing()
 	}
-	return CreateIntSubtype(v...)
+	return createIntSubtype(v...)
 }
 
-func (this *IntOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	// migrated from IntOps.java:67:5
-	v1 := d1.(IntSubtype)
-	v2 := d2.(IntSubtype)
+func (this *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	v1 := d1.(intSubtype)
+	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, rangeListComplement(v2.Ranges))
 	if len(v) == 0 {
-		return CreateNothing()
+		return createNothing()
 	}
-	return CreateIntSubtype(v...)
+	return createIntSubtype(v...)
 }
 
-func (this *IntOps) Complement(d SubtypeData) SubtypeData {
-	// migrated from IntOps.java:78:5
-	v := d.(IntSubtype)
-	return CreateIntSubtype(rangeListComplement(v.Ranges)...)
+func (this *intOps) complement(d SubtypeData) SubtypeData {
+	v := d.(intSubtype)
+	return createIntSubtype(rangeListComplement(v.Ranges)...)
 }
 
-func intSubtypeOverlapRange(subtype IntSubtype, r Range) bool {
-	// migrated from IntOps.java:83:5
-	subtypeData := intOpsInstance.Intersect(subtype, CreateIntSubtype(r))
-	if allOrNothingSubtype, ok := subtypeData.(AllOrNothingSubtype); ok {
+func intSubtypeOverlapRange(subtype intSubtype, r intRange) bool {
+	subtypeData := intOpsInstance.Intersect(subtype, createIntSubtype(r))
+	if allOrNothingSubtype, ok := subtypeData.(allOrNothingSubtype); ok {
 		return !allOrNothingSubtype.IsNothingSubtype()
 	}
 	return true
 }
 
-func intSubtypeMax(subtype IntSubtype) int64 {
-	// migrated from IntOps.java:89:5
+func intSubtypeMax(subtype intSubtype) int64 {
 	return subtype.Ranges[len(subtype.Ranges)-1].Max
 }
 
-func intSubtypeMin(subtype IntSubtype) int64 {
-	// migrated from IntOps.java:93:5
+func intSubtypeMin(subtype intSubtype) int64 {
 	return subtype.Ranges[0].Min
 }
 
-func (this *IntOps) IsEmpty(cx Context, t SubtypeData) bool {
-	// migrated from IntOps.java:98:5
+func (this *intOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return notIsEmpty(cx, t)
 }
 
-func rangeListUnion(v1 []Range, v2 []Range) []Range {
-	// migrated from IntOps.java:102:5
-	var result []Range
+func rangeListUnion(v1 []intRange, v2 []intRange) []intRange {
+	var result []intRange
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -112,7 +102,7 @@ func rangeListUnion(v1 []Range, v2 []Range) []Range {
 		} else {
 			r1 := v1[i1]
 			r2 := v2[i2]
-			combined := rangeUnion(r1, r2)
+			combined := getRangeUnion(r1, r2)
 			if combined.Status == 0 {
 				result = rangeUnionPush(result, *combined.Range)
 				i1 += 1
@@ -129,13 +119,12 @@ func rangeListUnion(v1 []Range, v2 []Range) []Range {
 	return result
 }
 
-func rangeUnionPush(ranges []Range, next Range) []Range {
-	// migrated from IntOps.java:140:5
+func rangeUnionPush(ranges []intRange, next intRange) []intRange {
 	lastIndex := len(ranges) - 1
 	if lastIndex < 0 {
 		return append(ranges, next)
 	}
-	combined := rangeUnion(ranges[lastIndex], next)
+	combined := getRangeUnion(ranges[lastIndex], next)
 	if combined.Status == 0 {
 		ranges[lastIndex] = *combined.Range
 		return ranges
@@ -143,24 +132,22 @@ func rangeUnionPush(ranges []Range, next Range) []Range {
 	return append(ranges, next)
 }
 
-func rangeUnion(r1 Range, r2 Range) RangeUnion {
-	// migrated from IntOps.java:157:5
+func getRangeUnion(r1 intRange, r2 intRange) rangeUnion {
 	if r1.Max < r2.Min {
 		if r1.Max+1 != r2.Min {
-			return RangeUnionFrom(-1)
+			return rangeUnionFrom(-1)
 		}
 	}
 	if r2.Max < r1.Min {
 		if r2.Max+1 != r1.Min {
-			return RangeUnionFrom(1)
+			return rangeUnionFrom(1)
 		}
 	}
-	return FromWithRange(RangeFrom(min(r1.Min, r2.Min), max(r1.Max, r2.Max)))
+	return fromWithRange(rangeFrom(min(r1.Min, r2.Min), max(r1.Max, r2.Max)))
 }
 
-func rangeListIntersect(v1 []Range, v2 []Range) []Range {
-	// migrated from IntOps.java:171:5
-	var result []Range
+func rangeListIntersect(v1 []intRange, v2 []intRange) []intRange {
+	var result []intRange
 	i1 := 0
 	i2 := 0
 	len1 := len(v1)
@@ -186,31 +173,29 @@ func rangeListIntersect(v1 []Range, v2 []Range) []Range {
 	return result
 }
 
-func rangeIntersect(r1 Range, r2 Range) RangeUnion {
-	// migrated from IntOps.java:202:5
+func rangeIntersect(r1 intRange, r2 intRange) rangeUnion {
 	if r1.Max < r2.Min {
-		return RangeUnionFrom(-1)
+		return rangeUnionFrom(-1)
 	}
 	if r2.Max < r1.Min {
-		return RangeUnionFrom(1)
+		return rangeUnionFrom(1)
 	}
-	return FromWithRange(RangeFrom(max(r1.Min, r2.Min), min(r1.Max, r2.Max)))
+	return fromWithRange(rangeFrom(max(r1.Min, r2.Min), min(r1.Max, r2.Max)))
 }
 
-func rangeListComplement(v []Range) []Range {
-	// migrated from IntOps.java:212:5
-	var result []Range
+func rangeListComplement(v []intRange) []intRange {
+	var result []intRange
 	length := len(v)
 	minVal := v[0].Min
 	if minVal > MIN_VALUE {
-		result = append(result, RangeFrom(MIN_VALUE, minVal-1))
+		result = append(result, rangeFrom(MIN_VALUE, minVal-1))
 	}
 	for i := 1; i < length; i++ {
-		result = append(result, RangeFrom(v[i-1].Max+1, v[i].Min-1))
+		result = append(result, rangeFrom(v[i-1].Max+1, v[i].Min-1))
 	}
 	maxVal := v[len(v)-1].Max
 	if maxVal < MAX_VALUE {
-		result = append(result, RangeFrom(maxVal+1, MAX_VALUE))
+		result = append(result, rangeFrom(maxVal+1, MAX_VALUE))
 	}
 	return result
 }

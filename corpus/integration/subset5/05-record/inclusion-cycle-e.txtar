@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: invalid cycle detected for type definition A
    |
 18 | type A record {| // @error
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 |     *B;
+   |     ^^^
+20 |     int x;
+   |     ^^^^^^
+21 | |};
+   | ^^^

@@ -16,33 +16,18 @@
 
 package semtypes
 
-type Atom interface {
-	Index() int
-	Kind() Kind
+type atom interface {
+	index() int
 	canonicalKey() string
 }
 
-type atomIdentifier struct {
-	Index int
-	Kind  Kind
-}
-
-type Kind uint
+type kind uint
 
 const (
-	Kind_LIST_ATOM Kind = iota
-	Kind_FUNCTION_ATOM
-	Kind_MAPPING_ATOM
-	Kind_CELL_ATOM
-	Kind_XML_ATOM
-	Kind_DISTINCT_ATOM
+	kind_LIST_ATOM kind = iota
+	kind_FUNCTION_ATOM
+	kind_MAPPING_ATOM
+	kind_CELL_ATOM
+	kind_XML_ATOM
+	kind_DISTINCT_ATOM
 )
-
-func GetIdentifier(this Atom) atomIdentifier {
-	// migrated from Atom.java:43:5
-
-	return atomIdentifier{
-		Index: this.Index(),
-		Kind:  this.Kind(),
-	}
-}

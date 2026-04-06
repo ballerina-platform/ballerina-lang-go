@@ -26,7 +26,7 @@ import (
 	"ballerina-lang-go/semtypes"
 )
 
-func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
+func walkExpression(cx *functionContext, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
 	switch expr := node.(type) {
 	case *ast.BLangBinaryExpr:
 		return walkBinaryExpr(cx, expr)
@@ -90,7 +90,7 @@ func walkExpression(cx *FunctionContext, node model.ExpressionNode) desugaredNod
 	}
 }
 
-func walkBinaryExpr(cx *FunctionContext, expr *ast.BLangBinaryExpr) desugaredNode[model.ExpressionNode] {
+func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.LhsExpr != nil {
@@ -111,7 +111,7 @@ func walkBinaryExpr(cx *FunctionContext, expr *ast.BLangBinaryExpr) desugaredNod
 	}
 }
 
-func walkUnaryExpr(cx *FunctionContext, expr *ast.BLangUnaryExpr) desugaredNode[model.ExpressionNode] {
+func walkUnaryExpr(cx *functionContext, expr *ast.BLangUnaryExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -126,7 +126,7 @@ func walkUnaryExpr(cx *FunctionContext, expr *ast.BLangUnaryExpr) desugaredNode[
 	}
 }
 
-func walkElvisExpr(cx *FunctionContext, expr *ast.BLangElvisExpr) desugaredNode[model.ExpressionNode] {
+func walkElvisExpr(cx *functionContext, expr *ast.BLangElvisExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.LhsExpr != nil {
@@ -147,7 +147,7 @@ func walkElvisExpr(cx *FunctionContext, expr *ast.BLangElvisExpr) desugaredNode[
 	}
 }
 
-func walkGroupExpr(cx *FunctionContext, expr *ast.BLangGroupExpr) desugaredNode[model.ExpressionNode] {
+func walkGroupExpr(cx *functionContext, expr *ast.BLangGroupExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expression != nil {
@@ -162,7 +162,7 @@ func walkGroupExpr(cx *FunctionContext, expr *ast.BLangGroupExpr) desugaredNode[
 	}
 }
 
-func walkIndexBasedAccess(cx *FunctionContext, expr *ast.BLangIndexBasedAccess) desugaredNode[model.ExpressionNode] {
+func walkIndexBasedAccess(cx *functionContext, expr *ast.BLangIndexBasedAccess) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -183,7 +183,7 @@ func walkIndexBasedAccess(cx *FunctionContext, expr *ast.BLangIndexBasedAccess) 
 	}
 }
 
-func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) desugaredNode[model.ExpressionNode] {
+func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -213,7 +213,7 @@ func walkFieldBaseAccess(cx *FunctionContext, expr *ast.BLangFieldBaseAccess) de
 	}
 }
 
-func walkInvocation(cx *FunctionContext, expr *ast.BLangInvocation) desugaredNode[model.ExpressionNode] {
+func walkInvocation(cx *functionContext, expr *ast.BLangInvocation) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -234,7 +234,7 @@ func walkInvocation(cx *FunctionContext, expr *ast.BLangInvocation) desugaredNod
 	}
 }
 
-func walkListConstructorExpr(cx *FunctionContext, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {
+func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	for i := range expr.Exprs {
@@ -249,7 +249,7 @@ func walkListConstructorExpr(cx *FunctionContext, expr *ast.BLangListConstructor
 	}
 }
 
-func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
+func walkErrorConstructorExpr(cx *functionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	//nolint:staticcheck // TODO
@@ -275,15 +275,15 @@ func walkErrorConstructorExpr(cx *FunctionContext, expr *ast.BLangErrorConstruct
 	}
 }
 
-func walkCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr) desugaredNode[model.ExpressionNode] {
+func walkCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr) desugaredNode[model.ExpressionNode] {
 	return desugarCheckedExpr(cx, expr, false)
 }
 
-func walkCheckPanickedExpr(cx *FunctionContext, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
+func walkCheckPanickedExpr(cx *functionContext, expr *ast.BLangCheckPanickedExpr) desugaredNode[model.ExpressionNode] {
 	return desugarCheckedExpr(cx, &expr.BLangCheckedExpr, true)
 }
 
-func walkTrapExpr(cx *FunctionContext, expr *ast.BLangTrapExpr) desugaredNode[model.ExpressionNode] {
+func walkTrapExpr(cx *functionContext, expr *ast.BLangTrapExpr) desugaredNode[model.ExpressionNode] {
 	result := walkExpression(cx, expr.Expr)
 	if len(result.initStmts) > 0 {
 		// I don't think this can ever happen but if it does we need to think about how to add these statements in to the
@@ -294,7 +294,7 @@ func walkTrapExpr(cx *FunctionContext, expr *ast.BLangTrapExpr) desugaredNode[mo
 	return desugaredNode[model.ExpressionNode]{initStmts: nil, replacementNode: expr}
 }
 
-func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic bool) desugaredNode[model.ExpressionNode] {
+func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic bool) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	// Walk the inner expression first
@@ -366,7 +366,7 @@ func desugarCheckedExpr(cx *FunctionContext, expr *ast.BLangCheckedExpr, isPanic
 	}
 }
 
-func walkDynamicArgExpr(cx *FunctionContext, expr *ast.BLangDynamicArgExpr) desugaredNode[model.ExpressionNode] {
+func walkDynamicArgExpr(cx *functionContext, expr *ast.BLangDynamicArgExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Condition != nil {
@@ -387,7 +387,7 @@ func walkDynamicArgExpr(cx *FunctionContext, expr *ast.BLangDynamicArgExpr) desu
 	}
 }
 
-func walkLambdaFunction(cx *FunctionContext, expr *ast.BLangLambdaFunction) desugaredNode[model.ExpressionNode] {
+func walkLambdaFunction(cx *functionContext, expr *ast.BLangLambdaFunction) desugaredNode[model.ExpressionNode] {
 	// Desugar the function body
 	if expr.Function != nil {
 		expr.Function = desugarFunction(cx.pkgCtx, expr.Function)
@@ -398,7 +398,7 @@ func walkLambdaFunction(cx *FunctionContext, expr *ast.BLangLambdaFunction) desu
 	}
 }
 
-func walkTypeConversionExpr(cx *FunctionContext, expr *ast.BLangTypeConversionExpr) desugaredNode[model.ExpressionNode] {
+func walkTypeConversionExpr(cx *functionContext, expr *ast.BLangTypeConversionExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expression != nil {
@@ -413,7 +413,7 @@ func walkTypeConversionExpr(cx *FunctionContext, expr *ast.BLangTypeConversionEx
 	}
 }
 
-func walkTypeTestExpr(cx *FunctionContext, expr *ast.BLangTypeTestExpr) desugaredNode[model.ExpressionNode] {
+func walkTypeTestExpr(cx *functionContext, expr *ast.BLangTypeTestExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -428,7 +428,7 @@ func walkTypeTestExpr(cx *FunctionContext, expr *ast.BLangTypeTestExpr) desugare
 	}
 }
 
-func walkAnnotAccessExpr(cx *FunctionContext, expr *ast.BLangAnnotAccessExpr) desugaredNode[model.ExpressionNode] {
+func walkAnnotAccessExpr(cx *functionContext, expr *ast.BLangAnnotAccessExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	if expr.Expr != nil {
@@ -443,7 +443,7 @@ func walkAnnotAccessExpr(cx *FunctionContext, expr *ast.BLangAnnotAccessExpr) de
 	}
 }
 
-func walkCollectContextInvocation(cx *FunctionContext, expr *ast.BLangCollectContextInvocation) desugaredNode[model.ExpressionNode] {
+func walkCollectContextInvocation(cx *functionContext, expr *ast.BLangCollectContextInvocation) desugaredNode[model.ExpressionNode] {
 	// Walk the underlying invocation
 	result := walkInvocation(cx, &expr.Invocation)
 	expr.Invocation = *result.replacementNode.(*ast.BLangInvocation)
@@ -454,7 +454,7 @@ func walkCollectContextInvocation(cx *FunctionContext, expr *ast.BLangCollectCon
 	}
 }
 
-func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desugaredNode[model.ExpressionNode] {
+func walkArrowFunction(cx *functionContext, expr *ast.BLangArrowFunction) desugaredNode[model.ExpressionNode] {
 	// Arrow functions have a body that may need desugaring
 	if expr.Body != nil {
 		result := walkExpression(cx, expr.Body.Expr)
@@ -467,7 +467,7 @@ func walkArrowFunction(cx *FunctionContext, expr *ast.BLangArrowFunction) desuga
 	}
 }
 
-func walkNewExpression(cx *FunctionContext, expr *ast.BLangNewExpression) desugaredNode[model.ExpressionNode] {
+func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	for i := range expr.ArgsExprs {
@@ -482,7 +482,7 @@ func walkNewExpression(cx *FunctionContext, expr *ast.BLangNewExpression) desuga
 	}
 }
 
-func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConstructorExpr) desugaredNode[model.ExpressionNode] {
+func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConstructorExpr) desugaredNode[model.ExpressionNode] {
 	var initStmts []model.StatementNode
 
 	for _, field := range expr.Fields {
@@ -512,7 +512,7 @@ func walkMappingConstructorExpr(cx *FunctionContext, expr *ast.BLangMappingConst
 	}
 }
 
-func walkQueryExpr(cx *FunctionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
+func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
 	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
 	if !ok {
 		cx.internalError("query expression must start with from clause")
@@ -795,7 +795,7 @@ func cloneSimpleVariableDef(varDef *ast.BLangSimpleVariableDef) *ast.BLangSimple
 }
 
 func appendQueryIntermediateClauseStmts(
-	cx *FunctionContext,
+	cx *functionContext,
 	queryExpr *ast.BLangQueryExpr,
 	idxRef ast.BLangExpression,
 	initStmts *[]model.StatementNode,
@@ -928,7 +928,7 @@ func createMapPutAssignment(mapExpr ast.BLangExpression, keyExpr ast.BLangExpres
 	return assign
 }
 
-func createPushInvocation(cx *FunctionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
+func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangInvocation {
 	pkgName := array.PackageName
 	space, ok := cx.getImportedSymbolSpace(pkgName)
 	if !ok {
