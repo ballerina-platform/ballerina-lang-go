@@ -20,7 +20,7 @@ main() -> nil{
     return;
   }
 }
-ifElse(boolean,boolean,int) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+ifElse(boolean,boolean,int) -> any{
   bb0 {
     t ? bb1 : bb2;
   }

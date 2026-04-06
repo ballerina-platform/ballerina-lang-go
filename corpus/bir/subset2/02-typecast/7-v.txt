@@ -87,7 +87,7 @@ main() -> nil{
     return;
   }
 }
-ifElse(boolean,int,boolean) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+ifElse(boolean,int,boolean) -> any{
   bb0 {
     t ? bb1 : bb2;
   }

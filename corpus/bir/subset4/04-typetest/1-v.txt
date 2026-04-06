@@ -99,7 +99,7 @@ main() -> nil{
   }
   bb24 {
     %33 = ConstantLoad <nil>
-    %34 = <nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object>(%33)
+    %34 = <any>(%33)
     n = %34;
     %36 = n is nil
     %36 ? bb25 : bb27;
@@ -112,7 +112,7 @@ main() -> nil{
     GOTO bb27;
   }
   bb27 {
-    %39 = n is nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object
+    %39 = n is any
     %39 ? bb28 : bb30;
   }
   bb28 {

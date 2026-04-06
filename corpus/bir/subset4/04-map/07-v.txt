@@ -24,7 +24,7 @@ main() -> nil{
     return;
   }
 }
-wrap(nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> {| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |}{
+wrap(any) -> {| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |}{
   bb0 {
     %2 = ConstantLoad value
     %3 = newMap {| nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object... |}{%2=x}
