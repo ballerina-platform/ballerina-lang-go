@@ -31,8 +31,24 @@ func newToStringState(cx Context) *toStringState {
 }
 
 func ToString(cx Context, ty SemType) string {
+	if res, ok := builtinUnion(cx, ty); ok {
+		return res
+	}
 	s := newToStringState(cx)
 	return s.semTypeToString(ty)
+}
+
+func builtinUnion(cx Context, ty SemType) (string, bool) {
+	if IsSameType(cx, ty, ANY) {
+		return "any", true
+	}
+	if IsSameType(cx, ty, CreateAnydata(cx)) {
+		return "anydata", true
+	}
+	if IsSameType(cx, ty, createJson(cx)) {
+		return "json", true
+	}
+	return "", false
 }
 
 func (s *toStringState) semTypeToString(ty SemType) string {
