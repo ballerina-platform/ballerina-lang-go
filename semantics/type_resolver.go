@@ -857,6 +857,11 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	fnSymbol := t.getSymbol(fn.Symbol()).(model.FunctionSymbol)
 	sig := fnSymbol.Signature()
 	sig.ParamTypes = paramTypes
+	paramNames := make([]string, len(fn.RequiredParams))
+	for i := range fn.RequiredParams {
+		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
+	}
+	sig.ParamNames = paramNames
 	sig.ReturnType = returnTy
 	sig.RestParamType = restTy
 	fnSymbol.SetSignature(sig)
@@ -3291,54 +3296,143 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 	return symbolRef, pkgAlias, true
 }
 
-func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
-	baseSymbol := t.getSymbol(symbolRef)
-	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
-	currentChain := chain
-	if genericFn, ok := baseSymbol.(model.GenericFunctionSymbol); ok {
-		for i, arg := range expr.ArgExprs {
-			argTy, argEffect, ok := resolveExpression(t, currentChain, arg, nil)
-			if !ok {
-				return nil, expressionEffect{}, false
-			}
-			currentChain = argEffect.ifTrue
-			argTys[i] = argTy
+func resolveFunctionCallArgs(t typeResolver, chain *binding, expr *ast.BLangInvocation, fnSymbol model.SymbolRef) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
+	baseSymbol := t.getSymbol(fnSymbol)
+	switch sym := baseSymbol.(type) {
+	case model.GenericFunctionSymbol:
+		paramTyes := make([]semtypes.SemType, len(sym.ParamNames()))
+		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, expr.ArgExprs, expr.GetPosition())
+		if !ok {
+			return nil, fnSymbol, chain, false
 		}
-		symbolRef = genericFn.Monomorphize(argTys)
+		symbolRef := sym.Monomorphize(argTys)
 		expr.SetSymbol(symbolRef)
-	} else {
-		// conditionally narrow the symbol in case of lambda
-		symbolRef = lookupSymbol(currentChain, symbolRef)
-		expr.SetSymbol(symbolRef)
-
-		fnTy := t.symbolType(symbolRef)
+		return argTys, symbolRef, chain, true
+	case model.FunctionSymbol:
+		sig := sym.Signature()
+		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, expr.ArgExprs, expr.GetPosition())
+		return argTys, fnSymbol, chain, ok
+	case *model.ValueSymbol:
+		narrowedSymbol := lookupSymbol(chain, fnSymbol)
+		expr.SetSymbol(narrowedSymbol)
+		fnTy := t.symbolType(narrowedSymbol)
 		if fnTy == nil {
 			t.internalError("function symbol has no type", expr.GetPosition())
-			return nil, expressionEffect{}, false
+			return nil, narrowedSymbol, chain, false
 		}
 		if !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
 			t.semanticError("not a function value", expr.GetPosition())
-			return nil, expressionEffect{}, false
+			return nil, narrowedSymbol, chain, false
 		}
+
 		paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
 		if paramListTy == nil {
 			// I don't think this can happen given we have already checked fnTy to be subtype of function
 			t.internalError("empty function param list ty", expr.GetPosition())
-			return nil, expressionEffect{}, false
+			return nil, narrowedSymbol, chain, false
 		}
+		var argTys []semtypes.SemType
 		for i, arg := range expr.ArgExprs {
+			if _, namedParam := arg.(*ast.BLangNamedArgsExpression); namedParam {
+				t.unimplemented("named parameters not supported for lambdas", arg.GetPosition())
+				return nil, narrowedSymbol, chain, false
+			}
 			key := semtypes.IntConst(int64(i))
 			paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
-			argTy, argEffect, ok := resolveExpression(t, currentChain, arg, paramTy)
+			argTy, argEffect, ok := resolveExpression(t, chain, arg, paramTy)
 			if !ok {
-				return nil, expressionEffect{}, false
+				return nil, narrowedSymbol, chain, false
 			}
-			currentChain = argEffect.ifTrue
-			argTys[i] = argTy
+			chain = argEffect.ifTrue
+			argTys = append(argTys, argTy)
+		}
+		return argTys, narrowedSymbol, chain, true
+	default:
+		t.semanticError("not a function value", expr.GetPosition())
+		return nil, fnSymbol, chain, false
+	}
+}
+
+func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.SemType, restParamTy semtypes.SemType, chain *binding, args []ast.BLangExpression, loc diagnostics.Location) ([]ast.BLangExpression, []semtypes.SemType, *binding, bool) {
+	paramNames := sym.ParamNames()
+	nRequired := len(paramNames)
+	reorderdArgs := make([]ast.BLangExpression, nRequired)
+	namedArgsByIndex := make(map[int]*ast.BLangNamedArgsExpression)
+	tys := make([]semtypes.SemType, 0, nRequired)
+	seen := make(map[string]bool, 0)
+	for i, arg := range args {
+		switch arg := arg.(type) {
+		case *ast.BLangNamedArgsExpression:
+			name := arg.Name.Value
+			if seen[name] {
+				t.semanticError(fmt.Sprintf("duplicate arguments for %s", name), arg.GetPosition())
+				return nil, nil, chain, false
+			}
+			seen[name] = true
+			targetIndex := -1
+			for j, each := range paramNames {
+				if each == name {
+					targetIndex = j
+					break
+				}
+			}
+			if targetIndex == -1 {
+				t.semanticError(fmt.Sprintf("no such parameter %s", name), arg.GetPosition())
+				return nil, nil, chain, false
+			}
+			if reorderdArgs[targetIndex] != nil {
+				t.semanticError(fmt.Sprintf("repeated values for parameter %s", name), arg.GetPosition())
+				return nil, nil, chain, false
+			}
+			reorderdArgs[targetIndex] = arg.Expr
+			namedArgsByIndex[targetIndex] = arg
+			arg.Name.DeterminedType = semtypes.NEVER
+		default:
+			if i < nRequired {
+				if reorderdArgs[i] != nil {
+					// Not sure if there is a way to do this, in the language
+					t.semanticError(fmt.Sprintf("repeated values for parameter %s", paramNames[i]), arg.GetPosition())
+					return nil, nil, chain, false
+				}
+				reorderdArgs[i] = arg
+			} else {
+				reorderdArgs = append(reorderdArgs, arg)
+			}
 		}
 	}
+	for i, each := range reorderdArgs {
+		if each == nil {
+			if _, isDefaultable := sym.DefaultableParams().Get(i); !isDefaultable {
+				t.semanticError(fmt.Sprintf("missing required parameter '%s'", paramNames[i]), loc)
+				return nil, nil, chain, false
+			}
+			tys = append(tys, paramTypes[i])
+			continue
+		}
+		var expectedType semtypes.SemType
+		if i < nRequired {
+			expectedType = paramTypes[i]
+		} else {
+			expectedType = restParamTy
+		}
+		ty, effect, ok := resolveExpression(t, chain, each, expectedType)
+		if !ok {
+			return nil, nil, chain, false
+		}
+		if namedArg, ok := namedArgsByIndex[i]; ok {
+			namedArg.DeterminedType = ty
+		}
+		tys = append(tys, ty)
+		chain = effect.ifTrue
+	}
+	return reorderdArgs, tys, chain, true
+}
 
-	argTys = padArgTypesForDefaults(t, symbolRef, argTys, expr.GetPosition())
+func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
+	argTys, symbolRef, chain, ok := resolveFunctionCallArgs(t, chain, expr, symbolRef)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
 
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
@@ -3350,7 +3444,7 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 	}
 
 	setExpectedType(expr, retTy)
-	return retTy, defaultExpressionEffect(currentChain), true
+	return retTy, defaultExpressionEffect(chain), true
 }
 
 func resolveBType(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {

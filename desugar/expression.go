@@ -82,6 +82,13 @@ func walkExpression(cx *functionContext, node model.ExpressionNode) desugaredNod
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	case *ast.BLangNewExpression:
 		return walkNewExpression(cx, expr)
+	case *ast.BLangNamedArgsExpression:
+		result := walkExpression(cx, expr.Expr)
+		expr.Expr = result.replacementNode.(ast.BLangExpression)
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       result.initStmts,
+			replacementNode: expr,
+		}
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard binding pattern can appear in variable references (e.g., _ = expr)
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
@@ -228,10 +235,86 @@ func walkInvocation(cx *functionContext, expr *ast.BLangInvocation) desugaredNod
 		expr.ArgExprs[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
+	fnSym, isDirectCall := cx.getSymbol(expr.Symbol()).(model.FunctionSymbol)
+	if !isDirectCall {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+
+	directStmts := walkDirectCallArgs(cx, expr, fnSym)
+	initStmts = append(initStmts, directStmts...)
+
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
 		replacementNode: expr,
 	}
+}
+
+func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym model.FunctionSymbol) []model.StatementNode {
+	sig := fnSym.Signature()
+	totalParams := len(sig.ParamTypes)
+	if totalParams == 0 {
+		return nil
+	}
+
+	reordered := make([]ast.BLangExpression, totalParams)
+	for i, arg := range expr.ArgExprs {
+		switch arg := arg.(type) {
+		case *ast.BLangNamedArgsExpression:
+			for j, name := range sig.ParamNames {
+				if name == arg.Name.Value {
+					reordered[j] = arg.Expr
+					break
+				}
+			}
+		default:
+			if i < totalParams {
+				reordered[i] = arg
+			} else {
+				reordered = append(reordered, arg)
+			}
+		}
+	}
+
+	pos := expr.GetPosition()
+	defaultableParams := fnSym.DefaultableParams()
+	var initStmts []model.StatementNode
+
+	for i := range totalParams {
+		if reordered[i] != nil {
+			continue
+		}
+		dp, _ := defaultableParams.Get(i)
+		defaultInv := &ast.BLangInvocation{
+			Name:     &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()},
+			ArgExprs: reordered[:i],
+		}
+		defaultInv.SetSymbol(dp.Symbol)
+		defaultInv.SetDeterminedType(sig.ParamTypes[i])
+		setPositionIfMissing(defaultInv, pos)
+
+		tempName, tempSymRef := cx.addDesugardSymbol(sig.ParamTypes[i], model.SymbolKindVariable, false)
+		tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}
+		tempVar.SetDeterminedType(sig.ParamTypes[i])
+		tempVar.SetInitialExpression(defaultInv)
+		tempVar.SetSymbol(tempSymRef)
+		varDef := &ast.BLangSimpleVariableDef{}
+		varDef.SetVariable(tempVar)
+		varDef.SetDeterminedType(semtypes.NEVER)
+		setPositionIfMissing(varDef, pos)
+		initStmts = append(initStmts, varDef)
+
+		varRef := &ast.BLangSimpleVarRef{VariableName: tempVar.Name}
+		varRef.SetSymbol(tempSymRef)
+		varRef.SetDeterminedType(sig.ParamTypes[i])
+		setPositionIfMissing(varRef, pos)
+		reordered[i] = varRef
+	}
+
+	expr.ArgExprs = reordered
+	return initStmts
 }
 
 func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {

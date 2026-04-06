@@ -73,6 +73,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printBinaryExpr(t)
 	case *BLangInvocation:
 		p.printInvocation(t)
+	case *BLangNamedArgsExpression:
+		p.printNamedArgsExpression(t)
 	case *BLangValueType:
 		p.printValueType(t)
 	case *BLangBuiltInRefTypeNode:
@@ -423,6 +425,16 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 	p.printSticky(")")
 
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printNamedArgsExpression(node *BLangNamedArgsExpression) {
+	p.startNode()
+	p.printString("named-arg")
+	p.printString(node.Name.Value)
+	p.indentLevel++
+	p.PrintInner(node.Expr.(BLangNode))
+	p.indentLevel--
 	p.endNode()
 }
 

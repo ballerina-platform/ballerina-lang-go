@@ -36,15 +36,29 @@
         (variable f (type
           (user-defined-type foo)) (expr
           (new ()))))
-      (expression-stmt
-        (invocation io println (
-          (invocation bar expr:
-            (simple-var-ref f) ()))))
+      (var-def
+        (variable $desugar$0 (expr
+          (invocation $default$0 ()))))
+      (var-def
+        (variable $desugar$1 (expr
+          (invocation $default$1 (
+            (simple-var-ref $desugar$0))))))
       (expression-stmt
         (invocation io println (
           (invocation bar expr:
             (simple-var-ref f) (
+            (simple-var-ref $desugar$0)
+            (simple-var-ref $desugar$1))))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation $default$1 (
             (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation bar expr:
+            (simple-var-ref f) (
+            (literal 5)
+            (simple-var-ref $desugar$2))))))
       (expression-stmt
         (invocation io println (
           (invocation bar expr:
