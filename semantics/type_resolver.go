@@ -416,6 +416,9 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	for i := range pkg.Functions {
 		fns = append(fns, &pkg.Functions[i])
 	}
+	if pkg.InitFunction != nil {
+		fns = append(fns, pkg.InitFunction)
+	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		if classDef.InitFunction != nil {
@@ -521,6 +524,11 @@ func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext,
 			return
 		}
 	}
+	if pkg.InitFunction != nil {
+		if _, ok := resolveFunctionSignature(t, pkg.InitFunction); !ok {
+			return
+		}
+	}
 	for i := range pkg.Constants {
 		if !resolveConstant(t, &pkg.Constants[i]) {
 			return
@@ -533,6 +541,10 @@ func (t *packageTypeResolver) resolveTopLevelTypes(ctx *context.CompilerContext,
 		fn := &pkg.Functions[i]
 		fn.SetDeterminedType(semtypes.NEVER)
 		fn.Name.SetDeterminedType(semtypes.NEVER)
+	}
+	if pkg.InitFunction != nil {
+		pkg.InitFunction.SetDeterminedType(semtypes.NEVER)
+		pkg.InitFunction.Name.SetDeterminedType(semtypes.NEVER)
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
