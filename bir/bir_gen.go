@@ -948,7 +948,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
-	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
+	fillerVal := values.DefaultValueForType(lat.Rest())
 
 	sizeOperand := ctx.addTempVar(semtypes.INT)
 	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)

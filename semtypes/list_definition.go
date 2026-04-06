@@ -104,7 +104,7 @@ func (this *ListDefinition) define(env Env, initial []ComplexSemType, fixedLengt
 }
 
 func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengthArray {
-	initial := array.Initial
+	initial := array.initial
 	i := (len(initial) - 1)
 	if i <= 0 {
 		return array
