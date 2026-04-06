@@ -286,6 +286,14 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 			return err
 		}
 	}
+	if err := write(buf, int64(len(sig.ParamNames))); err != nil {
+		return err
+	}
+	for _, name := range sig.ParamNames {
+		if err := sw.writeStringCP(buf, name); err != nil {
+			return err
+		}
+	}
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}

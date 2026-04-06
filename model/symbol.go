@@ -62,6 +62,7 @@ type FunctionSymbol interface {
 	SetSignature(FunctionSignature)
 	DefaultableParams() *DefaultableParamInfo
 	SetDefaultableParams(DefaultableParamInfo)
+	ParamNames() []string
 }
 
 // GenericFunctionSymbol represents functions with [@typeParam] types
@@ -167,12 +168,13 @@ type (
 		name          string
 		space         *SymbolSpace
 		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
+		paramNames    []string
 	}
 
 	FunctionSignature struct {
-		ParamTypes []semtypes.SemType
-		ReturnType semtypes.SemType
-		// RestParamType is nil if there is no rest param
+		ParamTypes    []semtypes.SemType
+		ParamNames    []string
+		ReturnType    semtypes.SemType
 		RestParamType semtypes.SemType
 	}
 
@@ -560,6 +562,10 @@ func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
 	fs.defaultableParams = info
 }
 
+func (fs *functionSymbol) ParamNames() []string {
+	return fs.Signature().ParamNames
+}
+
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return &functionSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
@@ -617,12 +623,16 @@ func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
 	return ref, ok
 }
 
-func NewGenericFunctionSymbol(name string, space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
-	return &genericFunctionSymbol{name: name, space: space, monomorphizer: monomorphizer}
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
+	return &genericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
 }
 
 func (s *genericFunctionSymbol) Name() string {
 	return s.name
+}
+
+func (s *genericFunctionSymbol) ParamNames() []string {
+	return s.paramNames
 }
 
 func (s *genericFunctionSymbol) Type() semtypes.SemType {

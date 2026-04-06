@@ -62,7 +62,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	ctx.SetSymbolType(keysRef, libcommon.FunctionSignatureToSemType(env, &keysSignature))
 
 	// remove: generic (mapType, STRING) -> memberType
-	removeSymbol := model.NewGenericFunctionSymbol("remove", space, createRemoveMonomorphizer(ctx))
+	removeSymbol := model.NewGenericFunctionSymbol("remove", space, []string{"m", "k"}, createRemoveMonomorphizer(ctx))
 	space.AddSymbol("remove", removeSymbol)
 
 	return model.NewExportedSymbolSpace(space, nil)
