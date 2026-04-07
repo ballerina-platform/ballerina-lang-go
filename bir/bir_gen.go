@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"ballerina-lang-go/ast"
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -204,7 +203,7 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		transformClassDefinition(genCtx, &ast.ClassDefinitions[i], birPkg)
 	}
 	for _, function := range ast.Functions {
-		if function.FlagSet.Contains(model.Flag_NATIVE) {
+		if function.IsNative() {
 			continue
 		}
 		birFunc := TransformFunction(genCtx, &function)
@@ -268,14 +267,6 @@ func addGlobalVar(birPkg *BIRPackage, dcl BIRGlobalVariableDcl) {
 	birPkg.GlobalVars[dcl.GlobalVarLookupKey] = dcl
 }
 
-func flagSetToInt64(flags common.Set[model.Flag]) int64 {
-	var result int64
-	for f := range flags.Values() {
-		result |= 1 << int64(f)
-	}
-	return result
-}
-
 func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRGlobalVariableDcl {
 	name := model.Name(ast.GetName().GetValue())
 	dcl := BIRGlobalVariableDcl{}
@@ -283,7 +274,7 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
-	dcl.Flags = flagSetToInt64(ast.GetFlags())
+	dcl.Flags = ast.FlagsAsInt64()
 	dcl.Origin = model.SymbolOrigin_SOURCE
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
@@ -296,7 +287,7 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.Name = name
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
-	dcl.Flags = flagSetToInt64(c.GetFlags())
+	dcl.Flags = c.FlagsAsInt64()
 	dcl.Origin = model.SymbolOrigin_SOURCE
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
@@ -314,10 +305,9 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 	birFunc.Pos = astFunc.GetPosition()
 	birFunc.Name = funcName
 	birFunc.OriginalName = funcName
-	birFunc.Flags = flagSetToInt64(astFunc.GetFlags())
+	birFunc.Flags = astFunc.FlagsAsInt64()
 	ctx := stmtCx.birCx
 	birFunc.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx, symRef)
-	common.Assert(astFunc.Receiver == nil)
 	funcSym := ctx.CompilerContext.GetSymbol(astFunc.Symbol()).(model.FunctionSymbol)
 	stmtCx.scopeCtx.retVar = stmtCx.addLocalVarInner(model.Name("%0"), funcSym.Signature().ReturnType)
 	if selfSymbolRef != nil {
@@ -328,7 +318,7 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 		stmtCx.addLocalVar(model.Name(param.GetName().GetValue()), ctx.CompilerContext.SymbolType(param.Symbol()), param.Symbol())
 		requiredParams[i] = BIRParameter{
 			Name:  model.Name(param.GetName().GetValue()),
-			Flags: flagSetToInt64(param.GetFlags()),
+			Flags: param.FlagsAsInt64(),
 		}
 	}
 	if astFunc.RestParam != nil {
