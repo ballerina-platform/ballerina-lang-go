@@ -362,7 +362,7 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 }
 
 func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
-	if function.FlagSet.Contains(model.Flag_PUBLIC) {
+	if function.IsPublic() {
 		parent.semanticErr("'init' function cannot be declared as public", pos)
 	}
 
@@ -421,7 +421,7 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
-		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+		if !param.IsDefaultableParam() {
 			continue
 		}
 		paramTy := param.GetDeterminedType()
