@@ -1,0 +1,101 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (user-defined-type T1)) (expr
+        (list-constructor-expr
+          (literal 0)
+          (literal 5)))))
+    (var-def
+      (variable b (type
+        (user-defined-type T2)) (expr
+        (list-constructor-expr
+          (literal 2)))))
+    (var-def
+      (variable c (type
+        (user-defined-type T2)) (expr
+        (list-constructor-expr
+          (unary-expr -
+            (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref a)
+          (simple-var-ref c)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref a)
+          (simple-var-ref c)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref a)
+          (simple-var-ref c)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref a)
+          (simple-var-ref c)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref c)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref c)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref c)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref c)
+          (simple-var-ref a)))))
+  )
+)

@@ -1,0 +1,108 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 0
+    %2 = ConstantLoad 5
+    %3 = ConstantLoad 1
+    %4 = ConstantLoad 3
+    %5 = newArray [int, float, int, never...][%4]{%1, %2, %3}
+    a = %5;
+    %7 = ConstantLoad 0
+    %8 = ConstantLoad 5
+    %9 = ConstantLoad 1
+    %10 = ConstantLoad 2
+    %11 = ConstantLoad 4
+    %12 = newArray [int, float, int, int, never...][%11]{%7, %8, %9, %10}
+    b = %12;
+    %14 = ConstantLoad 0
+    %15 = ConstantLoad 5
+    %16 = ConstantLoad 1
+    %17 = ConstantLoad 1
+    %18 = unknown %17;
+    %19 = ConstantLoad 4
+    %20 = newArray [int, float, int, int, never...][%19]{%14, %15, %16, %18}
+    c = %20;
+    %22 = < a b;
+    %23 = %22;
+    %24 = println(%23) -> bb1;
+  }
+  bb1 {
+    %25 = <= a b;
+    %26 = %25;
+    %27 = println(%26) -> bb2;
+  }
+  bb2 {
+    %28 = > a b;
+    %29 = %28;
+    %30 = println(%29) -> bb3;
+  }
+  bb3 {
+    %31 = >= a b;
+    %32 = %31;
+    %33 = println(%32) -> bb4;
+  }
+  bb4 {
+    %34 = < b a;
+    %35 = %34;
+    %36 = println(%35) -> bb5;
+  }
+  bb5 {
+    %37 = <= b a;
+    %38 = %37;
+    %39 = println(%38) -> bb6;
+  }
+  bb6 {
+    %40 = > b a;
+    %41 = %40;
+    %42 = println(%41) -> bb7;
+  }
+  bb7 {
+    %43 = >= b a;
+    %44 = %43;
+    %45 = println(%44) -> bb8;
+  }
+  bb8 {
+    %46 = < a c;
+    %47 = %46;
+    %48 = println(%47) -> bb9;
+  }
+  bb9 {
+    %49 = <= a c;
+    %50 = %49;
+    %51 = println(%50) -> bb10;
+  }
+  bb10 {
+    %52 = > a c;
+    %53 = %52;
+    %54 = println(%53) -> bb11;
+  }
+  bb11 {
+    %55 = >= a c;
+    %56 = %55;
+    %57 = println(%56) -> bb12;
+  }
+  bb12 {
+    %58 = < c a;
+    %59 = %58;
+    %60 = println(%59) -> bb13;
+  }
+  bb13 {
+    %61 = <= c a;
+    %62 = %61;
+    %63 = println(%62) -> bb14;
+  }
+  bb14 {
+    %64 = > c a;
+    %65 = %64;
+    %66 = println(%65) -> bb15;
+  }
+  bb15 {
+    %67 = >= c a;
+    %68 = %67;
+    %69 = println(%68) -> bb16;
+  }
+  bb16 {
+    return;
+  }
+}

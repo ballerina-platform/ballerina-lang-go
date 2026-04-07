@@ -71,6 +71,30 @@ var (
 		"subset7/07-closure/equality4-v.bal",
 		"subset7/07-closure/typeCast1-v.bal",
 		"subset7/07-closure/typeCast2-p.bal",
+
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/358
+		"08-comparable/5-v.bal",
+		"08-comparable/arr1-v.bal",
+		"08-comparable/arr2-v.bal",
+		"08-comparable/arr3-v.bal",
+		"08-comparable/arr4-v.bal",
+		"08-comparable/booleansubtypecompare-v.bal",
+		"08-comparable/comp1-v.bal",
+		"08-comparable/comp2-v.bal",
+		"08-comparable/comp3-v.bal",
+		"08-comparable/comp5-v.bal",
+		"08-comparable/comp7-v.bal",
+		"08-comparable/comp10-v.bal",
+		"08-comparable/comp11-v.bal",
+		"08-comparable/floatsubtypecompare-v.bal",
+		"08-comparable/intsubtypecompare-v.bal",
+		"08-comparable/order1-v.bal",
+		"08-comparable/order2-v.bal",
+		"08-comparable/order4-v.bal",
+		"08-comparable/order5-v.bal",
+		"08-comparable/relational4-v.bal",
+		"08-comparable/relational5-v.bal",
+		"08-comparable/stringsubtypecompare-v.bal",
 	}
 )
 

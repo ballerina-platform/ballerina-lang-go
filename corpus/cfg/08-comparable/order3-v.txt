@@ -1,0 +1,36 @@
+(main
+  (bb0 () (bb1 bb3)
+    (var-def
+      (variable v1 (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+    (type-test-expr is
+      (simple-var-ref v1)
+      (array-type
+        (value-type string) dimensions: 1 ([])))
+  )
+  (bb1 (bb0) (bb2)
+    (var-def
+      (variable j (type
+        (array-type
+          (value-type string) dimensions: 1 ([]))) (expr
+        (list-constructor-expr))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref v1)
+          (simple-var-ref j)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref v1)
+          (simple-var-ref j)))))
+  )
+  (bb2 (bb1 bb3) ())
+  (bb3 (bb0) (bb2)
+    (expression-stmt
+      (invocation io println (
+        (literal else))))
+  )
+)

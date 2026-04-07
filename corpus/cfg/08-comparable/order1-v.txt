@@ -1,0 +1,100 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (array-type
+          (value-type int) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 1))
+          (list-constructor-expr
+            (literal 2))))))
+    (var-def
+      (variable b (type
+        (array-type
+          (value-type int) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 1))
+          (list-constructor-expr
+            (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (var-def
+      (variable c (type
+        (array-type
+          (union-type
+            (array-type
+              (value-type int) dimensions: 1 ([]))
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 0))
+          (list-constructor-expr
+            (unary-expr -
+              (literal 1)))))))
+    (var-def
+      (variable d (type
+        (array-type
+          (value-type int) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 0))
+          (list-constructor-expr
+            (unary-expr -
+              (literal 2)))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref c)
+          (simple-var-ref d)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref c)
+          (simple-var-ref d)))))
+    (var-def
+      (variable e (type
+        (array-type
+          (union-type
+            (array-type
+              (value-type int) dimensions: 1 ([]))
+            (value-type null)) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal <nil>)
+          (list-constructor-expr
+            (literal 1))))))
+    (var-def
+      (variable f (type
+        (array-type
+          (value-type int) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 0))
+          (list-constructor-expr
+            (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr ==
+          (simple-var-ref e)
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref e)
+          (simple-var-ref f)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref e)
+          (simple-var-ref f)))))
+  )
+)
