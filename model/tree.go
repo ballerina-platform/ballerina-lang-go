@@ -17,7 +17,6 @@
 package model
 
 import (
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 	"iter"
@@ -641,8 +640,6 @@ type InvokableNode interface {
 	AddParameter(param SimpleVariableNode)
 	GetReturnTypeDescriptor() TypeDescriptor
 	SetReturnTypeDescriptor(typeDescriptor TypeDescriptor)
-	GetReturnTypeAnnotationAttachments() []AnnotationAttachmentNode
-	AddReturnTypeAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 	GetBody() FunctionBodyNode
 	SetBody(body FunctionBodyNode)
 	HasBody() bool
@@ -654,8 +651,6 @@ type FunctionNode interface {
 	InvokableNode
 	AnnotatableNode
 	TopLevelNode
-	GetReceiver() SimpleVariableNode
-	SetReceiver(receiver SimpleVariableNode)
 }
 
 // Class/Service Interfaces
@@ -831,7 +826,6 @@ type UserDefinedTypeNode interface {
 	ReferenceTypeNode
 	GetPackageAlias() IdentifierNode
 	GetTypeName() IdentifierNode
-	GetFlags() common.Set[Flag]
 }
 
 // Expression Interfaces
@@ -1332,8 +1326,7 @@ type AnnotationAttachmentNode interface {
 
 type AnnotatableNode interface {
 	Node
-	GetFlags() common.Set[Flag]
-	AddFlag(flag Flag)
+	IsPublic() bool
 	GetAnnotationAttachments() []AnnotationAttachmentNode
 	AddAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 }
