@@ -31,7 +31,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -229,7 +228,14 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 
 	fsys := os.DirFS(filepath.Dir(balFile))
 
-	result, err := directory.LoadProject(fsys, filepath.Base(balFile))
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(balFile))
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -363,7 +369,14 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 
 	fsys := os.DirFS(projectDir)
 
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -456,7 +469,13 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 	var stderrBuf bytes.Buffer
 
 	fsys := os.DirFS(projectDir)
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
 	if err != nil {
 		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
 		return stdoutBuf.String(), stderrBuf.String()
@@ -539,4 +558,17 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 
 	runProjectInterpretPhase(deserialized, &stdoutBuf, &stderrBuf)
 	return stdoutBuf.String(), stderrBuf.String()
+}
+
+func getBallerinaHomePath() (string, error) {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }

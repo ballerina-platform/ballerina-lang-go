@@ -18,9 +18,6 @@ package projects
 
 import (
 	"io/fs"
-
-	"ballerina-lang-go/context"
-	"ballerina-lang-go/semtypes"
 )
 
 // BaseProject provides common functionality for all project types.
@@ -49,18 +46,25 @@ func (b *BaseProject) BuildOptions() BuildOptions {
 
 // InitPackage sets the initial package during project construction.
 // This should only be called once when creating a new project.
+// The package is also cached in the environment for dependency resolution.
 func (b *BaseProject) InitPackage(pkg *Package) {
 	b.currentPackage = pkg
+	// Cache the package in the environment for dependency resolution
+	if b.environment != nil && pkg != nil {
+		b.environment.PackageCache().Cache(pkg)
+	}
 }
 
-// initBase initializes the base project fields.
-// This should only be called once when creating a new project.
 func (b *BaseProject) initBase(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) {
 	b.sourceRoot = sourceRoot
 	b.buildOptions = buildOptions
+	b.environment = NewProjectEnvironmentBuilder(fsys).Build()
+}
 
-	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), buildOptions.Stats())
-	b.environment = newEnvironment(fsys, env)
+func (b *BaseProject) initBaseWithEnv(sourceRoot string, buildOptions BuildOptions, sharedEnv *Environment) {
+	b.sourceRoot = sourceRoot
+	b.buildOptions = buildOptions
+	b.environment = sharedEnv
 }
 
 // setCurrentPackage updates the project's current package.

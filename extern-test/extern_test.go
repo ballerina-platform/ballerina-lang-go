@@ -17,16 +17,16 @@
 package extern_test
 
 import (
-	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
-	"ballerina-lang-go/runtime"
-	"ballerina-lang-go/values"
 	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/projects"
+	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 )
@@ -41,7 +41,11 @@ func TestExternValid(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHomePath := getBallerinaHomePath(t)
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -103,7 +107,11 @@ func TestExternTypeMismatchArg(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHomePath := getBallerinaHomePath(t)
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -134,7 +142,11 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+
+	ballerinaHomePath := getBallerinaHomePath(t)
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -165,7 +177,7 @@ func TestExternHandle(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+	result, err := projects.Load(fsys, nil, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -217,4 +229,17 @@ func TestExternHandle(t *testing.T) {
 	if stdoutBuf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
 	}
+}
+
+func getBallerinaHomePath(t *testing.T) string {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("failed to get user home: %v", err)
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName)
 }

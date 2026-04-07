@@ -26,7 +26,6 @@ import (
 	debugcommon "ballerina-lang-go/common"
 	_ "ballerina-lang-go/lib/rt"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 
 	"github.com/spf13/cobra"
@@ -162,8 +161,14 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 	fsys := os.DirFS(baseDir)
 
-	// Load project using ProjectLoader (auto-detects type)
-	result, err := directory.LoadProject(fsys, path, directory.ProjectLoadConfig{
+	ballerinaHomePath, err := getBallerinaHomePath()
+	if err != nil {
+		printRunError(err)
+		return err
+	}
+	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
+
+	result, err := projects.Load(fsys, ballerinaHomeFs, path, projects.ProjectLoadConfig{
 		BuildOptions: &buildOpts,
 	})
 	if err != nil {
@@ -228,4 +233,17 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 
 func printRunError(err error) {
 	printError(err, "run [<source-file.bal> | <package-dir> | .]", false)
+}
+
+func getBallerinaHomePath() (string, error) {
+	if balHome := os.Getenv(projects.BallerinaHomeEnvVar); balHome != "" {
+		return balHome, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }
