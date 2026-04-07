@@ -1185,11 +1185,11 @@ func methodDescriptor(method *ast.BMethodDecl, fnRef model.SymbolRef) model.Meth
 
 func classFieldDescriptor(t typeResolver, field *ast.BLangSimpleVariable) model.FieldDescriptor {
 	vis := model.VisibilityPrivate
-	if field.FlagSet.Contains(model.Flag_PUBLIC) {
+	if field.IsPublic() {
 		vis = model.VisibilityPublic
 	}
 	var flags model.FieldDescriptorFlag
-	if field.FlagSet.Contains(model.Flag_READONLY) {
+	if field.IsReadonly() {
 		flags |= model.FieldDescriptorReadonly
 	}
 	fd := model.NewFieldDescriptor(field.Name.Value, flags, vis)
@@ -1199,13 +1199,13 @@ func classFieldDescriptor(t typeResolver, field *ast.BLangSimpleVariable) model.
 
 func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunction) model.MethodDescriptor {
 	vis := model.VisibilityPrivate
-	if method.FlagSet.Contains(model.Flag_PUBLIC) {
+	if method.IsPublic() {
 		vis = model.VisibilityPublic
 	}
 	kind := model.InclusionMemberKindMethod
-	if method.FlagSet.Contains(model.Flag_REMOTE) {
+	if method.IsRemote() {
 		kind = model.InclusionMemberKindRemoteMethod
-	} else if method.FlagSet.Contains(model.Flag_RESOURCE) {
+	} else if method.IsResource() {
 		kind = model.InclusionMemberKindResourceMethod
 	}
 	md := model.NewMethodDescriptor(name, kind, vis, method.Symbol())
@@ -1215,10 +1215,10 @@ func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunctio
 
 func createFieldDescriptor(name string, field ast.BField) model.FieldDescriptor {
 	var flags model.FieldDescriptorFlag
-	if field.FlagSet.Contains(model.Flag_READONLY) {
+	if field.IsReadonly() {
 		flags |= model.FieldDescriptorReadonly
 	}
-	if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+	if field.IsOptional() {
 		flags |= model.FieldDescriptorOptional
 	}
 	if field.DefaultExpr != nil {
@@ -1296,7 +1296,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		field := f.(*ast.BLangSimpleVariable)
 		fieldTy := field.GetDeterminedType()
 		vis := semtypes.VisibilityPrivate
-		if field.FlagSet.Contains(model.Flag_PUBLIC) {
+		if field.IsPublic() {
 			vis = semtypes.VisibilityPublic
 		}
 		directMembers = append(directMembers, directMember{
@@ -1344,13 +1344,13 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		method := classDef.Methods[name]
 		methodTy := t.symbolType(method.Symbol())
 		vis := semtypes.VisibilityPrivate
-		if method.FlagSet.Contains(model.Flag_PUBLIC) {
+		if method.IsPublic() {
 			vis = semtypes.VisibilityPublic
 		}
 		memberKind := semtypes.MemberKindMethod
-		if method.FlagSet.Contains(model.Flag_REMOTE) {
+		if method.IsRemote() {
 			memberKind = semtypes.MemberKindRemoteMethod
-		} else if method.FlagSet.Contains(model.Flag_RESOURCE) {
+		} else if method.IsResource() {
 			memberKind = semtypes.MemberKindResourceMethod
 		}
 		directMembers = append(directMembers, directMember{
@@ -1369,11 +1369,11 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	}
 
 	// Define the object type
-	isolated := classDef.FlagSet.Contains(model.Flag_ISOLATED)
+	isolated := classDef.IsIsolated()
 	networkQual := semtypes.NetworkQualifierNone
-	if classDef.FlagSet.Contains(model.Flag_CLIENT) {
+	if classDef.IsClient() {
 		networkQual = semtypes.NetworkQualifierClient
-	} else if classDef.FlagSet.Contains(model.Flag_SERVICE) {
+	} else if classDef.IsService() {
 		networkQual = semtypes.NetworkQualifierService
 	}
 	qualifiers := semtypes.ObjectQualifiersFrom(isolated, false, networkQual)
@@ -3703,8 +3703,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				}
 				field.DefaultFnRef = allocateDefaultFnSymbol(t, fieldTy)
 			}
-			ro := field.FlagSet.Contains(model.Flag_READONLY)
-			opt := field.FlagSet.Contains(model.Flag_OPTIONAL)
+			ro := field.IsReadonly()
+			opt := field.IsOptional()
 			fields = append(fields, semtypes.FieldFrom(name, fieldTy, ro, opt))
 		}
 
@@ -3744,7 +3744,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		t.setMappingAtomBType(mat, ty)
 		return semType, true
 	case *ast.BLangFunctionType:
-		if ty.FlagSet.Contains(model.Flag_ANY_FUNCTION) {
+		if ty.IsAnyFunction() {
 			return semtypes.FUNCTION, true
 		}
 		if ty.Definition != nil {
@@ -3785,8 +3785,8 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		} else {
 			returnTy = semtypes.NIL
 		}
-		isolated := ty.FlagSet.Contains(model.Flag_ISOLATED)
-		transactional := ty.FlagSet.Contains(model.Flag_TRANSACTIONAL)
+		isolated := ty.IsIsolated()
+		transactional := ty.IsTransactional()
 		fnType := fd.Define(t.typeEnv(), paramListTy, returnTy,
 			semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
 		return fnType, true

@@ -203,7 +203,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	// First add all the top level symbols they can be referred from anywhere
 	for _, fn := range pkg.Functions {
 		name := fn.Name.Value
-		isPublic := fn.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := fn.IsPublic()
 		// We are going to fill this in type resolver
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(name, signature, isPublic)
@@ -213,7 +213,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	}
 	for _, constDef := range pkg.Constants {
 		name := constDef.Name.Value
-		isPublic := constDef.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := constDef.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
@@ -221,8 +221,8 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	}
 	for _, globalVar := range pkg.GlobalVars {
 		name := globalVar.Name.Value
-		isPublic := globalVar.FlagSet.Contains(model.Flag_PUBLIC)
-		isFinal := globalVar.FlagSet.Contains(model.Flag_FINAL)
+		isPublic := globalVar.IsPublic()
+		isFinal := globalVar.IsFinal()
 		symbol := model.NewValueSymbol(name, isPublic, isFinal, false)
 		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
 	}
@@ -234,7 +234,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for i := range pkg.TypeDefinitions {
 		typeDef := &pkg.TypeDefinitions[i]
 		name := typeDef.Name.Value
-		isPublic := typeDef.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := typeDef.IsPublic()
 		symbol := model.NewTypeSymbol(name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
@@ -245,7 +245,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		name := classDef.Name.Value
-		isPublic := classDef.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := classDef.IsPublic()
 		symbol := model.NewClassSymbol(name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
@@ -288,7 +288,7 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
-		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+		if !param.IsDefaultableParam() {
 			continue
 		}
 		name := alloc.nextDefaultSymbolName()
@@ -433,7 +433,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
-		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
+		defineVariable(bs, n.GetVariable(), n.GetVariable().(*ast.BLangSimpleVariable).IsFinal())
 	case *ast.BLangLambdaFunction:
 		fn := n.Function
 		name := fn.Name.Value
@@ -911,7 +911,7 @@ func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn model.T
 			field := f.(*ast.BLangSimpleVariable)
 			directFields = append(directFields, inclusionMemberForSymbolResolution{
 				name:     field.Name.Value,
-				isPublic: field.FlagSet.Contains(model.Flag_PUBLIC),
+				isPublic: field.IsPublic(),
 			})
 		}
 		return collectTransitiveFields(ctx, defn.Inclusions, directFields, localDefns)
@@ -933,12 +933,12 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
 			continue
 		}
-		isPublic := field.GetFlags().Contains(model.Flag_PUBLIC)
+		isPublic := field.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, false, false)
 		classResolver.AddSymbol(name, &symbol)
 	}
 
-	isPublicClass := classDef.FlagSet.Contains(model.Flag_PUBLIC)
+	isPublicClass := classDef.IsPublic()
 	className := classDef.Name.Value
 	for methodName := range classDef.Methods {
 		method := classDef.Methods[methodName]
@@ -946,7 +946,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			semanticError(classResolver, "redeclared symbol '"+methodName+"'", method.Name.GetPosition())
 			continue
 		}
-		isPublic := method.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := method.IsPublic()
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
 		if isPublicClass && isPublic {
