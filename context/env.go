@@ -32,7 +32,6 @@ type CompilerEnvironment struct {
 	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
 	typeEnv          semtypes.Env
 	underlyingSymbol sync.Map
-	typeDefns        map[model.SymbolRef]model.TypeDefinition
 	statsEnabled     bool
 }
 
@@ -137,22 +136,12 @@ func (this *CompilerEnvironment) NewPackageID(orgName model.Name, nameComps []mo
 	return model.NewPackageID(this.packageInterner, orgName, nameComps, version)
 }
 
-func (this *CompilerEnvironment) SetTypeDefinition(symbol model.SymbolRef, defn model.TypeDefinition) {
-	this.typeDefns[symbol] = defn
-}
-
-func (this *CompilerEnvironment) GetTypeDefinition(symbol model.SymbolRef) (model.TypeDefinition, bool) {
-	defn, ok := this.typeDefns[symbol]
-	return defn, ok
-}
-
 func NewCompilerEnvironment(typeEnv semtypes.Env, statsEnabled bool) *CompilerEnvironment {
 	return &CompilerEnvironment{
 		anonTypeCount:   make(map[*model.PackageID]int),
 		anonFuncCount:   make(map[*model.PackageID]int),
 		packageInterner: model.DefaultPackageIDInterner,
 		typeEnv:         typeEnv,
-		typeDefns:       make(map[model.SymbolRef]model.TypeDefinition),
 		statsEnabled:    statsEnabled,
 	}
 }

@@ -137,13 +137,88 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewTypeSymbol(name, isPublic)
 	sym.SetType(ty)
+	for _, m := range sr.readInclusionMembers(space) {
+		sym.AddInclusionMember(m)
+	}
 	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) readInclusionMembers(space *model.SymbolSpace) []model.InclusionMember {
+	var count int64
+	read(sr.r, &count)
+	members := make([]model.InclusionMember, 0, count)
+	for i := int64(0); i < count; i++ {
+		var tag uint8
+		read(sr.r, &tag)
+		switch tag {
+		case inclusionMemberTagField:
+			name := sr.readStringCP()
+			ty := sr.readType()
+			var vis uint8
+			read(sr.r, &vis)
+			var flags uint8
+			read(sr.r, &flags)
+			var fdFlags model.FieldDescriptorFlag
+			if flags&1 != 0 {
+				fdFlags |= model.FieldDescriptorReadonly
+			}
+			if flags&2 != 0 {
+				fdFlags |= model.FieldDescriptorOptional
+			}
+			if flags&4 != 0 {
+				fdFlags |= model.FieldDescriptorHasDefault
+			}
+			fd := model.NewFieldDescriptor(name, fdFlags, model.Visibility(vis))
+			fd.SetMemberType(ty)
+			fd.DefaultFnRef = sr.readSymbolRef(space)
+			members = append(members, &fd)
+		case inclusionMemberTagMethod:
+			name := sr.readStringCP()
+			ty := sr.readType()
+			var kind uint8
+			read(sr.r, &kind)
+			var vis uint8
+			read(sr.r, &vis)
+			methodRef := sr.readSymbolRef(space)
+			md := model.NewMethodDescriptor(name, model.InclusionMemberKind(kind), model.Visibility(vis), methodRef)
+			md.SetMemberType(ty)
+			members = append(members, &md)
+		case inclusionMemberTagRestType:
+			ty := sr.readType()
+			rd := model.NewRestTypeDescriptor()
+			rd.SetMemberType(ty)
+			members = append(members, &rd)
+		}
+	}
+	return members
+}
+
+func (sr *symbolReader) readSymbolRef(space *model.SymbolSpace) model.SymbolRef {
+	org := sr.readStringCP()
+	pkg := sr.readStringCP()
+	version := sr.readStringCP()
+	var index, spaceIndex int32
+	read(sr.r, &index)
+	read(sr.r, &spaceIndex)
+	_ = spaceIndex // use the current space's index instead of the serialized one
+	return model.SymbolRef{
+		Package: model.PackageIdentifier{
+			Organization: org,
+			Package:      pkg,
+			Version:      version,
+		},
+		Index:      int(index),
+		SpaceIndex: space.SpaceIndex(),
+	}
 }
 
 func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewClassSymbol(name, isPublic)
 	sym.SetType(ty)
+	for _, m := range sr.readInclusionMembers(space) {
+		sym.AddInclusionMember(m)
+	}
 	space.AddSymbol(name, &sym)
 }
 

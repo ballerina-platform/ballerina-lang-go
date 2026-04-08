@@ -90,7 +90,7 @@ type (
 
 	bStructureTypeBase struct {
 		names          []string
-		fields         []BField
+		fields         []BField // This is only directly included fields, not those included via type inclusions
 		TypeInclusions []BType
 	}
 
@@ -181,6 +181,7 @@ type (
 	BLangRecordType struct {
 		bLangTypeBase
 		bStructureTypeBase
+		Inclusions []model.SymbolRef
 		Definition semtypes.Definition
 		RestType   BType
 		IsOpen     bool
