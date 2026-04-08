@@ -2023,7 +2023,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				return nil, false
 			}
 			if !semtypes.IsSubtypeSimple(limitTy, semtypes.INT) {
-				t.semanticError("limit-clause expression must be int", clause.GetPosition())
+				t.semanticError("limit clause expression must be int", clause.GetPosition())
 				return nil, false
 			}
 		default:
