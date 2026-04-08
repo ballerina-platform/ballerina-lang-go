@@ -453,36 +453,62 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 			return nil
 		}
 	case model.ExpressionNode:
-		switch n.GetKind() {
-		case model.NodeKind_LITERAL,
-			model.NodeKind_NUMERIC_LITERAL,
-			model.NodeKind_STRING_TEMPLATE_LITERAL,
-			model.NodeKind_RECORD_LITERAL_EXPR,
-			model.NodeKind_LIST_CONSTRUCTOR_EXPR,
-			model.NodeKind_LIST_CONSTRUCTOR_SPREAD_OP,
-			model.NodeKind_SIMPLE_VARIABLE_REF,
-			model.NodeKind_BINARY_EXPR,
-			model.NodeKind_GROUP_EXPR,
-			model.NodeKind_UNARY_EXPR:
-			bLangExpr := n.(ast.BLangExpression)
-			if !analyzeExpression(ca, bLangExpr, ca.expectedType) {
-				return nil
-			}
-			exprTy := bLangExpr.GetDeterminedType()
-			if ca.expectedType != nil {
-				if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
-					ca.semanticErr("incompatible type for constant expression", bLangExpr.GetPosition())
-					return nil
-				}
-			} else {
-				ca.expectedType = exprTy
-			}
-		default:
-			ca.semanticErr("expression is not a constant expression", n.GetPosition())
+		bLangExpr := n.(ast.BLangExpression)
+		hasErrors := false
+		validateConstantExpr(ca.ctx(), bLangExpr, func(e ast.BLangExpression) {
+			ca.semanticErr("expression is not a constant expression", e.GetPosition())
+			hasErrors = true
+		})
+		if hasErrors {
 			return nil
 		}
+		if !analyzeExpression(ca, bLangExpr, ca.expectedType) {
+			return nil
+		}
+		exprTy := bLangExpr.GetDeterminedType()
+		if ca.expectedType != nil {
+			if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
+				ca.semanticErr("incompatible type for constant expression", bLangExpr.GetPosition())
+				return nil
+			}
+		} else {
+			ca.expectedType = exprTy
+		}
+		return nil
 	}
 	return ca
+}
+
+func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression, onNonConst func(ast.BLangExpression)) {
+	switch e := expr.(type) {
+	case *ast.BLangLiteral, *ast.BLangNumericLiteral:
+		// always valid
+	case *ast.BLangSimpleVarRef:
+		sym := ctx.GetSymbol(e.Symbol())
+		if vs, ok := sym.(*model.ValueSymbol); ok && vs.IsConst() {
+			return
+		}
+		onNonConst(expr)
+	case *ast.BLangUnaryExpr:
+		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangGroupExpr:
+		validateConstantExpr(ctx, e.Expression, onNonConst)
+	case *ast.BLangBinaryExpr:
+		validateConstantExpr(ctx, e.LhsExpr, onNonConst)
+		validateConstantExpr(ctx, e.RhsExpr, onNonConst)
+	case *ast.BLangListConstructorExpr:
+		for _, member := range e.Exprs {
+			validateConstantExpr(ctx, member, onNonConst)
+		}
+	case *ast.BLangMappingConstructorExpr:
+		for _, field := range e.Fields {
+			if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
+				validateConstantExpr(ctx, kv.ValueExpr, onNonConst)
+			}
+		}
+	default:
+		onNonConst(expr)
+	}
 }
 
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
