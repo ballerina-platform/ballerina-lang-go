@@ -37,6 +37,12 @@ const (
 	symTagFunction uint8 = 3
 )
 
+const (
+	inclusionMemberTagField    uint8 = 0
+	inclusionMemberTagMethod   uint8 = 1
+	inclusionMemberTagRestType uint8 = 2
+)
+
 type symbolWriter struct {
 	cp  *constantPool
 	tp  *semtypes.TypePool
@@ -151,14 +157,104 @@ func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol
 	if err := write(buf, symTagType); err != nil {
 		return err
 	}
-	return sw.writeSymbolBase(buf, sym)
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	return sw.writeInclusionMembers(buf, sym.InclusionMembers())
+}
+
+func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model.InclusionMember) error {
+	if err := write(buf, int64(len(members))); err != nil {
+		return err
+	}
+	for _, m := range members {
+		switch member := m.(type) {
+		case *model.FieldDescriptor:
+			if err := write(buf, inclusionMemberTagField); err != nil {
+				return err
+			}
+			if err := sw.writeStringCP(buf, member.MemberName()); err != nil {
+				return err
+			}
+			if err := sw.writeType(buf, member.MemberType()); err != nil {
+				return err
+			}
+			if err := write(buf, uint8(member.Visibility())); err != nil {
+				return err
+			}
+			var flags uint8
+			if member.IsReadonly() {
+				flags |= 1
+			}
+			if member.IsOptional() {
+				flags |= 2
+			}
+			if member.HasDefault() {
+				flags |= 4
+			}
+			if err := write(buf, flags); err != nil {
+				return err
+			}
+			if err := sw.writeSymbolRef(buf, member.DefaultFnRef); err != nil {
+				return err
+			}
+		case *model.MethodDescriptor:
+			if err := write(buf, inclusionMemberTagMethod); err != nil {
+				return err
+			}
+			if err := sw.writeStringCP(buf, member.MemberName()); err != nil {
+				return err
+			}
+			if err := sw.writeType(buf, member.MemberType()); err != nil {
+				return err
+			}
+			if err := write(buf, uint8(member.MemberKind())); err != nil {
+				return err
+			}
+			if err := write(buf, uint8(member.Visibility())); err != nil {
+				return err
+			}
+			if err := sw.writeSymbolRef(buf, member.MethodRef); err != nil {
+				return err
+			}
+		case *model.RestTypeDescriptor:
+			if err := write(buf, inclusionMemberTagRestType); err != nil {
+				return err
+			}
+			if err := sw.writeType(buf, member.MemberType()); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown inclusion member type: %T", m)
+		}
+	}
+	return nil
+}
+
+func (sw *symbolWriter) writeSymbolRef(buf *bytes.Buffer, ref model.SymbolRef) error {
+	if err := sw.writeStringCP(buf, ref.Package.Organization); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, ref.Package.Package); err != nil {
+		return err
+	}
+	if err := sw.writeStringCP(buf, ref.Package.Version); err != nil {
+		return err
+	}
+	if err := write(buf, int32(ref.Index)); err != nil {
+		return err
+	}
+	return write(buf, int32(ref.SpaceIndex))
 }
 
 func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymbol) error {
 	if err := write(buf, symTagClass); err != nil {
 		return err
 	}
-	return sw.writeSymbolBase(buf, sym)
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	return sw.writeInclusionMembers(buf, sym.InclusionMembers())
 }
 
 func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {

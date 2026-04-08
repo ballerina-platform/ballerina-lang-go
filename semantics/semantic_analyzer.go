@@ -835,13 +835,28 @@ func analyzeMappingConstructorExpr[A analyzer](a A, expr *ast.BLangMappingConstr
 	// The type resolver has already selected the inherent type and re-resolved field values
 	// with per-field expected types. We only need to validate fields here.
 	mat := expr.AtomicType
+	hasValue := make(map[string]bool, len(expr.Fields)+len(expr.FieldDefaults))
+	for _, fd := range expr.FieldDefaults {
+		hasValue[fd.FieldName] = true
+	}
 	for _, f := range expr.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
 		keyName := recordKeyName(kv.Key)
+		hasValue[keyName] = true
 		fieldExpectedType := mat.FieldInnerVal(keyName)
 		if !analyzeExpression(a, kv.ValueExpr, fieldExpectedType) {
 			return false
 		}
+	}
+	for _, name := range mat.Names {
+		if hasValue[name] {
+			continue
+		}
+		if mat.IsOptional(a.tyCtx(), name) {
+			continue
+		}
+		a.semanticErr(fmt.Sprintf("missing non-defaultable required record field '%s'", name), expr.GetPosition())
+		return false
 	}
 	return validateResolvedType(a, expr, expectedType)
 }

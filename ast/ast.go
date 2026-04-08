@@ -360,6 +360,7 @@ type (
 		CompletedPhases         common.UnorderedSet[CompilerPhase]
 		LambdaFunctions         []BLangLambdaFunction
 		PackageID               *model.PackageID
+		Scope                   model.Scope
 		diagnostics             []diagnostics.Diagnostic
 		ModuleContextDataHolder *ModuleContextDataHolder
 		errorCount              int

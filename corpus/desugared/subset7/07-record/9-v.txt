@@ -27,9 +27,9 @@
           (simple-var-ref $desugar$0))
         (block-stmt
           (var-def
-            (variable $desugar$2 (expr
+            (variable $desugar$1 (expr
               (lambda
-                (function $desugar$1 () ()
+                (function $desugar$0 () ()
                   (block-function-body
                     (return
                       (simple-var-ref i))))))))
@@ -50,33 +50,33 @@
               (simple-var-ref i)
               (numeric-literal 1)))))
       (var-def
-        (variable $desugar$3 (expr
+        (variable $desugar$2 (expr
           (simple-var-ref rs))))
       (var-def
-        (variable $desugar$4 (expr
+        (variable $desugar$3 (expr
           (numeric-literal 0))))
       (var-def
-        (variable $desugar$5 (expr
+        (variable $desugar$4 (expr
           (invocation lang.array length (
-            (simple-var-ref $desugar$3))))))
+            (simple-var-ref $desugar$2))))))
       (while
         (binary-expr <
-          (simple-var-ref $desugar$4)
-          (simple-var-ref $desugar$5))
+          (simple-var-ref $desugar$3)
+          (simple-var-ref $desugar$4))
         (block-stmt
           (var-def
             (variable r (type
               (user-defined-type R)) (expr
               (index-based-access
-                (simple-var-ref $desugar$3)
-                (simple-var-ref $desugar$4)))))
+                (simple-var-ref $desugar$2)
+                (simple-var-ref $desugar$3)))))
           (expression-stmt
             (invocation io println (
               (index-based-access
                 (simple-var-ref r)
                 (literal value)))))
           (assignment
-            (simple-var-ref $desugar$4)
+            (simple-var-ref $desugar$3)
             (binary-expr +
-              (simple-var-ref $desugar$4)
+              (simple-var-ref $desugar$3)
               (numeric-literal 1))))))))

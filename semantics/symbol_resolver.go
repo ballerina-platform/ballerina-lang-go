@@ -47,13 +47,15 @@ type symbolResolver interface {
 	GetPkgID() model.PackageID
 	GetScope() model.Scope
 	GetCtx() *context.CompilerContext
+	GetTypeDefns() map[model.SymbolRef]model.TypeDefinition
 }
 
 type (
 	moduleSymbolResolver struct {
-		ctx   *context.CompilerContext
-		scope *model.ModuleScope
-		pkgID model.PackageID
+		ctx       *context.CompilerContext
+		scope     *model.ModuleScope
+		pkgID     model.PackageID
+		typeDefns map[model.SymbolRef]model.TypeDefinition
 	}
 
 	blockSymbolResolver struct {
@@ -78,9 +80,10 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		Annotation: ctx.NewSymbolSpace(pkgID),
 	}
 	return &moduleSymbolResolver{
-		ctx:   ctx,
-		scope: scope,
-		pkgID: pkgID,
+		ctx:       ctx,
+		scope:     scope,
+		pkgID:     pkgID,
+		typeDefns: make(map[model.SymbolRef]model.TypeDefinition),
 	}
 }
 
@@ -131,6 +134,10 @@ func (ms *moduleSymbolResolver) GetCtx() *context.CompilerContext {
 	return ms.ctx
 }
 
+func (ms *moduleSymbolResolver) GetTypeDefns() map[model.SymbolRef]model.TypeDefinition {
+	return ms.typeDefns
+}
+
 func (bs *blockSymbolResolver) GetSymbol(name string) (model.SymbolRef, scopeKind, bool) {
 	ref, ok := bs.scope.MainSpace().GetSymbol(name)
 	if ok {
@@ -157,6 +164,10 @@ func (bs *blockSymbolResolver) GetScope() model.Scope {
 
 func (bs *blockSymbolResolver) GetCtx() *context.CompilerContext {
 	return bs.parent.GetCtx()
+}
+
+func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]model.TypeDefinition {
+	return bs.parent.GetTypeDefns()
 }
 
 func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model.Symbol, pos diagnostics.Location) {
@@ -209,7 +220,7 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewTypeSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition())
 		symRef, _, _ := moduleResolver.GetSymbol(name)
-		cx.SetTypeDefinition(symRef, typeDef)
+		moduleResolver.typeDefns[symRef] = typeDef
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
@@ -218,9 +229,10 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewClassSymbol(name, isPublic)
 		addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition())
 		symRef, _, _ := moduleResolver.GetSymbol(name)
-		cx.SetTypeDefinition(symRef, classDef)
+		moduleResolver.typeDefns[symRef] = classDef
 	}
 	ast.Walk(moduleResolver, pkg)
+	pkg.Scope = moduleResolver.scope
 	return moduleResolver.scope.Exports()
 }
 
@@ -417,7 +429,9 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
 	case *ast.BLangObjectType:
-		n.Inclusions = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
+		n.Inclusions, _ = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
+	case *ast.BLangRecordType:
+		n.Inclusions = resolveRecordTypeInclusions(resolver, n.TypeInclusions)
 	}
 	return resolver
 }
@@ -704,41 +718,168 @@ func (ms *moduleSymbolResolver) VisitTypeData(typeData *model.TypeData) ast.Visi
 	return ms
 }
 
+type inclusionMemberForSymbolResolution struct {
+	name     string
+	isPublic bool
+}
+
 // resolveObjectInclusions update the AST node references with correct symbol references. Will add semantic errors if the type
 // reference is for something that can't be included. This means after this stage we have the gurantee symbol ref always refer
 // to a valid AST node.
-func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) []model.SymbolRef {
+func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []inclusionMemberForSymbolResolution) {
 	ctx := resolver.GetCtx()
+	localDefns := resolver.GetTypeDefns()
 	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
+	var includedFields []inclusionMemberForSymbolResolution
 	for _, inc := range unresolvedInclusions {
 		ast.Walk(resolver, inc)
 		symRef := inc.Symbol()
-		tDefn, ok := ctx.GetTypeDefinition(symRef)
-		if !ok {
-			ctx.InternalError("type definition not found for inclusion", inc.GetPosition())
-			continue
-		}
-		switch defn := tDefn.(type) {
-		case *ast.BLangTypeDefinition:
-			if _, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
+		if tDefn, ok := localDefns[symRef]; ok {
+			switch tDefn.(type) {
+			case *ast.BLangTypeDefinition:
+				if _, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType); !ok {
+					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
+					continue
+				}
+			case *ast.BLangClassDefinition:
+			default:
+				ctx.InternalError("unexpected type definition kind for inclusion", inc.GetPosition())
+				continue
+			}
+			includedFields = append(includedFields, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
+		} else {
+			sym := ctx.GetSymbol(symRef)
+			var typeSym *model.TypeSymbol
+			switch s := sym.(type) {
+			case *model.ClassSymbol:
+				typeSym = &s.TypeSymbol
+			case *model.TypeSymbol:
+				if s.Type() == nil || !semtypes.IsSubtypeSimple(s.Type(), semtypes.OBJECT) {
+					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
+					continue
+				}
+				typeSym = s
+			default:
 				ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 				continue
 			}
-		case *ast.BLangClassDefinition:
-		default:
-			ctx.InternalError("unexpected type definition kind for inclusion", inc.GetPosition())
+			for _, m := range typeSym.InclusionMembers() {
+				if m.MemberKind() != model.InclusionMemberKindField {
+					continue
+				}
+				fd := m.(*model.FieldDescriptor)
+				includedFields = append(includedFields, inclusionMemberForSymbolResolution{
+					name:     fd.MemberName(),
+					isPublic: fd.Visibility() == model.VisibilityPublic,
+				})
+			}
+		}
+		inclusions = append(inclusions, symRef)
+	}
+	return inclusions, includedFields
+}
+
+func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []ast.BType) []model.SymbolRef {
+	ctx := resolver.GetCtx()
+	localDefns := resolver.GetTypeDefns()
+	var inclusions []model.SymbolRef
+	for _, inc := range typeInclusions {
+		udt, ok := inc.(*ast.BLangUserDefinedType)
+		if !ok {
+			ctx.SemanticError("type inclusion must be a user-defined type", inc.(ast.BLangNode).GetPosition())
 			continue
+		}
+		ast.Walk(resolver, udt)
+		symRef := udt.Symbol()
+		if tDefn, ok := localDefns[symRef]; ok {
+			if _, ok := tDefn.GetTypeData().TypeDescriptor.(*ast.BLangRecordType); !ok {
+				ctx.SemanticError("included type is not a record type", udt.GetPosition())
+				continue
+			}
+		} else {
+			sym := ctx.GetSymbol(symRef)
+			typeSym, ok := sym.(*model.TypeSymbol)
+			if !ok || typeSym.Type() == nil || !semtypes.IsSubtypeSimple(typeSym.Type(), semtypes.MAPPING) {
+				ctx.SemanticError("included type is not a record type", udt.GetPosition())
+				continue
+			}
 		}
 		inclusions = append(inclusions, symRef)
 	}
 	return inclusions
 }
 
+func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.SymbolRef, directFields []inclusionMemberForSymbolResolution, localDefns map[model.SymbolRef]model.TypeDefinition) []inclusionMemberForSymbolResolution {
+	var result []inclusionMemberForSymbolResolution
+	for _, symRef := range inclusions {
+		if tDefn, ok := localDefns[symRef]; ok {
+			result = append(result, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
+		} else {
+			sym := ctx.GetSymbol(symRef)
+			var typeSym *model.TypeSymbol
+			switch s := sym.(type) {
+			case *model.TypeSymbol:
+				typeSym = s
+			case *model.ClassSymbol:
+				typeSym = &s.TypeSymbol
+			default:
+				continue
+			}
+			for _, m := range typeSym.InclusionMembers() {
+				if m.MemberKind() != model.InclusionMemberKindField {
+					continue
+				}
+				fd := m.(*model.FieldDescriptor)
+				result = append(result, inclusionMemberForSymbolResolution{
+					name:     fd.MemberName(),
+					isPublic: fd.Visibility() == model.VisibilityPublic,
+				})
+			}
+		}
+	}
+	result = append(result, directFields...)
+	return result
+}
+
+func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn model.TypeDefinition, localDefns map[model.SymbolRef]model.TypeDefinition) []inclusionMemberForSymbolResolution {
+	switch defn := tDefn.(type) {
+	case *ast.BLangTypeDefinition:
+		objTy, ok := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
+		if !ok {
+			return nil
+		}
+		var directFields []inclusionMemberForSymbolResolution
+		for m := range objTy.Members() {
+			if m.MemberKind() != model.ObjectMemberKindField {
+				continue
+			}
+			directFields = append(directFields, inclusionMemberForSymbolResolution{
+				name:     m.Name(),
+				isPublic: m.Visibility() == model.VisibilityPublic,
+			})
+		}
+		return collectTransitiveFields(ctx, objTy.Inclusions, directFields, localDefns)
+	case *ast.BLangClassDefinition:
+		var directFields []inclusionMemberForSymbolResolution
+		for _, f := range defn.Fields {
+			field := f.(*ast.BLangSimpleVariable)
+			directFields = append(directFields, inclusionMemberForSymbolResolution{
+				name:     field.Name.Value,
+				isPublic: field.FlagSet.Contains(model.Flag_PUBLIC),
+			})
+		}
+		return collectTransitiveFields(ctx, defn.Inclusions, directFields, localDefns)
+	default:
+		return nil
+	}
+}
+
 func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDefinition) {
 	classResolver := newBlockSymbolResolverWithBlockScope(ms, classDef)
 	classDef.SetScope(classResolver.scope)
 
-	classDef.Inclusions = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
+	var includedFields []inclusionMemberForSymbolResolution
+	classDef.Inclusions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()
@@ -763,29 +904,12 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 		addSymbolAndSetOnNode(classResolver, methodName, symbol, method)
 	}
 
-	inc := collectTransitiveInclusions(ms.ctx, classDef.Inclusions)
-	for _, m := range inc.members {
-		switch {
-		case m.objectMember != nil:
-			if m.objectMember.MemberKind() != model.ObjectMemberKindField {
-				continue
-			}
-			name := m.objectMember.Name()
-			if _, _, exists := classResolver.GetSymbol(name); exists {
-				continue
-			}
-			isPublic := m.objectMember.Visibility() == model.VisibilityPublic
-			symbol := model.NewValueSymbol(name, isPublic, false, false)
-			classResolver.AddSymbol(name, &symbol)
-		case m.classField != nil:
-			name := m.classField.Name.Value
-			if _, _, exists := classResolver.GetSymbol(name); exists {
-				continue
-			}
-			isPublic := m.classField.FlagSet.Contains(model.Flag_PUBLIC)
-			symbol := model.NewValueSymbol(name, isPublic, false, false)
-			classResolver.AddSymbol(name, &symbol)
+	for _, m := range includedFields {
+		if _, _, exists := classResolver.GetSymbol(m.name); exists {
+			continue
 		}
+		symbol := model.NewValueSymbol(m.name, m.isPublic, false, false)
+		classResolver.AddSymbol(m.name, &symbol)
 	}
 
 	if classDef.InitFunction != nil {

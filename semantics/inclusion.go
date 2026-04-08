@@ -17,68 +17,24 @@
 package semantics
 
 import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 )
 
-type transitiveInclusionResult struct {
-	defns   []model.TypeDefinition
-	members []includedMember
-}
-
-type includedMember struct {
-	objectMember model.ObjectMember
-	classField   *ast.BLangSimpleVariable
-	classMethod  *ast.BLangFunction
-}
-
-func collectTransitiveInclusions(ctx *context.CompilerContext, inclusions []model.SymbolRef) transitiveInclusionResult {
-	visited := make(map[model.SymbolRef]bool)
-	return collectTransitiveInclusionsInner(ctx, inclusions, visited)
-}
-
-func collectTransitiveInclusionsInner(ctx *context.CompilerContext, inclusions []model.SymbolRef, visited map[model.SymbolRef]bool) transitiveInclusionResult {
-	var result transitiveInclusionResult
+// collectIncludedMembers resolves each included type, validates it is a subtype of expectedBasicType,
+// and returns all their flattened InclusionMembers.
+func collectIncludedMembers(t typeResolver, inclusions []model.SymbolRef, depth int) ([]model.InclusionMember, bool) {
+	var result []model.InclusionMember
 	for _, symRef := range inclusions {
-		if visited[symRef] {
-			tDefn, ok := ctx.GetTypeDefinition(symRef)
-			if ok {
-				ctx.SemanticError("cyclic type inclusion", tDefn.(model.Node).GetPosition())
-			}
-			continue
+		t.ensureResolved(symRef, depth)
+		incSym := getTypeSymbol(t, symRef)
+		if incSym == nil {
+			t.internalError("inclusion symbol is not a type symbol", nil)
+			return nil, true
 		}
-		visited[symRef] = true
-		tDefn, ok := ctx.GetTypeDefinition(symRef)
-		if !ok {
-			ctx.InternalError("type definition not found for inclusion", nil)
-			continue
+		if incSym.Type() == nil {
+			return nil, true
 		}
-		switch defn := tDefn.(type) {
-		case *ast.BLangTypeDefinition:
-			objTy := defn.GetTypeData().TypeDescriptor.(*ast.BLangObjectType)
-			sub := collectTransitiveInclusionsInner(ctx, objTy.Inclusions, visited)
-			result.defns = append(result.defns, sub.defns...)
-			result.members = append(result.members, sub.members...)
-			result.defns = append(result.defns, defn)
-			for m := range objTy.Members() {
-				result.members = append(result.members, includedMember{objectMember: m})
-			}
-		case *ast.BLangClassDefinition:
-			sub := collectTransitiveInclusionsInner(ctx, defn.Inclusions, visited)
-			result.defns = append(result.defns, sub.defns...)
-			result.members = append(result.members, sub.members...)
-			result.defns = append(result.defns, defn)
-			for _, f := range defn.Fields {
-				field := f.(*ast.BLangSimpleVariable)
-				result.members = append(result.members, includedMember{classField: field})
-			}
-			for _, method := range defn.Methods {
-				result.members = append(result.members, includedMember{classMethod: method})
-			}
-		default:
-			ctx.InternalError("unexpected type definition kind for inclusion", tDefn.(model.Node).GetPosition())
-		}
+		result = append(result, incSym.InclusionMembers()...)
 	}
-	return result
+	return result, false
 }

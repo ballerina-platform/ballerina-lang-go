@@ -824,15 +824,11 @@ func mappingConstructorExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *
 		}
 	}
 	var defaults []MappingConstructorDefaultEntry
-	if recType, ok := expr.ContextuallyExpectedType.(*ast.BLangRecordType); ok {
-		for fieldName, field := range recType.FieldPtrs() {
-			if field.DefaultExpr != nil {
-				defaults = append(defaults, MappingConstructorDefaultEntry{
-					FieldName:         fieldName,
-					FunctionLookupKey: buildFunctionLookupKeyFromSymbol(ctx.birCx, field.DefaultFnRef),
-				})
-			}
-		}
+	for _, fd := range expr.FieldDefaults {
+		defaults = append(defaults, MappingConstructorDefaultEntry{
+			FieldName:         fd.FieldName,
+			FunctionLookupKey: buildFunctionLookupKeyFromSymbol(ctx.birCx, fd.FnRef),
+		})
 	}
 	return mappingConstructorExpressionInner(ctx, curBB, expr.GetDeterminedType(), fields, defaults, expr.GetPosition())
 }
