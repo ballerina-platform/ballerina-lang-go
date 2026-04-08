@@ -1301,11 +1301,14 @@ func ancestorSpaceIndices(funcScope *model.FunctionScope) map[int]struct{} {
 // TODO: Make this generic over Expressions and statements
 func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) bool {
 	ancestors := ancestorSpaceIndices(funcScope)
+	tyCtx := a.tyCtx()
+	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
 	return everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangInvocation:
-			analyzer.unimplementedErr("isolated functions not implemented", inner.GetPosition())
-			return false
+			symbol := inner.Symbol()
+			fnTy := a.ctx().SymbolType(symbol)
+			return semtypes.IsSubtype(tyCtx, fnTy, isolatedTop)
 		case *ast.BLangSimpleVarRef:
 			sym := a.ctx().GetSymbol(inner.Symbol())
 			if varSym, ok := sym.(*model.ValueSymbol); ok {
