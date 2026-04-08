@@ -186,7 +186,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 		{
 			name:    "limit expression non-int",
 			clause:  newLimitClause(newStringLiteral("x")),
-			diagSub: "limit-clause expression must be int",
+			diagSub: "limit clause expression must be int",
 		},
 		{
 			name:    "unsupported intermediate clause",
