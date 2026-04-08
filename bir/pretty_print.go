@@ -292,7 +292,7 @@ func (p *PrettyPrinter) PrintFieldAccess(access *FieldAccess) string {
 }
 
 func (p *PrettyPrinter) PrintNewObject(n *NewObject) string {
-	return fmt.Sprintf("%s = newObject %s", p.PrintOperand(*n.LhsOp), n.ClassDef.Name.Value())
+	return fmt.Sprintf("%s = newObject %s", p.PrintOperand(*n.LhsOp), n.ClassDefRef)
 }
 
 func (p *PrettyPrinter) PrintClassDef(classDef BIRClassDef) {

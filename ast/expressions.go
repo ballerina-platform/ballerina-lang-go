@@ -338,6 +338,7 @@ type (
 	BLangNewExpression struct {
 		bLangExpressionBase
 		AtomicType      *semtypes.MappingAtomicType
+		ClassSymbol     model.SymbolRef
 		UserDefinedType *BLangUserDefinedType
 		ArgsExprs       []BLangExpression
 	}

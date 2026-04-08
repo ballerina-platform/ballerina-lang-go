@@ -30,18 +30,16 @@ import (
 )
 
 type birReader struct {
-	r           *bytes.Reader
-	cp          []any
-	tp          *semtypes.TypePool
-	ctx         *context.CompilerContext
-	classDefMap map[string]*bir.BIRClassDef
+	r   *bytes.Reader
+	cp  []any
+	tp  *semtypes.TypePool
+	ctx *context.CompilerContext
 }
 
 func Unmarshal(ctx *context.CompilerContext, data []byte) (*bir.BIRPackage, error) {
 	reader := &birReader{
-		r:           bytes.NewReader(data),
-		ctx:         ctx,
-		classDefMap: make(map[string]*bir.BIRClassDef),
+		r:   bytes.NewReader(data),
+		ctx: ctx,
 	}
 	return reader.readPackage()
 }
@@ -248,7 +246,6 @@ func (br *birReader) readClassDefs() []bir.BIRClassDef {
 	classDefs := make([]bir.BIRClassDef, count)
 	for i := 0; i < int(count); i++ {
 		br.readClassDef(&classDefs[i])
-		br.classDefMap[classDefs[i].Name.Value()] = &classDefs[i]
 	}
 	return classDefs
 }
@@ -256,7 +253,8 @@ func (br *birReader) readClassDefs() []bir.BIRClassDef {
 func (br *birReader) readClassDef(classDef *bir.BIRClassDef) {
 	name := br.readStringCPEntry()
 	classDef.Name = name
-	br.classDefMap[name.Value()] = classDef
+	lookupKey := br.readStringCPEntry()
+	classDef.LookupKey = lookupKey.Value()
 
 	fieldCount := br.readLength()
 	fields := make([]bir.ObjectField, fieldCount)
@@ -644,17 +642,13 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 			DetailOp:  detailOp,
 		}
 	case bir.INSTRUCTION_KIND_NEW_INSTANCE:
-		className := br.readStringCPEntry()
+		classDefRef := br.readStringCPEntry()
 		lhsOp := br.readOperand(varMap)
-		classDef, ok := br.classDefMap[className.Value()]
-		if !ok {
-			panic(fmt.Sprintf("class def not found: %s", className.Value()))
-		}
 		return &bir.NewObject{
 			BIRInstructionBase: bir.BIRInstructionBase{
 				LhsOp: lhsOp,
 			},
-			ClassDef: classDef,
+			ClassDefRef: classDefRef.Value(),
 		}
 	case bir.INSTRUCTION_KIND_FP_LOAD:
 		functionLookupKey := br.readStringCPEntry()

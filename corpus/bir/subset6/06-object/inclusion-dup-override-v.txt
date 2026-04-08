@@ -13,7 +13,7 @@ class Qux {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject Qux
+    %1 = newObject $anon/.:Qux
     %2 = ConstantLoad 7
     %3 = init(%1,%2) -> bb1;
   }

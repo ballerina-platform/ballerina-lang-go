@@ -129,6 +129,7 @@ func (bw *birWriter) writeClassDefs(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 
 func (bw *birWriter) writeClassDef(buf *bytes.Buffer, classDef *bir.BIRClassDef) {
 	bw.writeStringCPEntry(buf, classDef.Name.Value())
+	bw.writeStringCPEntry(buf, classDef.LookupKey)
 	bw.writeLength(buf, len(classDef.Fields))
 	for _, field := range classDef.Fields {
 		bw.writeStringCPEntry(buf, field.Name)
@@ -321,7 +322,7 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 			bw.writeOperand(buf, instr.DetailOp)
 		}
 	case *bir.NewObject:
-		bw.writeStringCPEntry(buf, instr.ClassDef.Name.Value())
+		bw.writeStringCPEntry(buf, instr.ClassDefRef)
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.FPLoad:
 		bw.writeStringCPEntry(buf, instr.FunctionLookupKey)

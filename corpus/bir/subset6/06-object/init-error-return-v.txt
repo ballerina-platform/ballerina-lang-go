@@ -38,7 +38,7 @@ class Bar {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject Bar
+    %1 = newObject $anon/.:Bar
     %2 = ConstantLoad 5
     %3 = init(%1,%2) -> bb1;
   }
@@ -70,7 +70,7 @@ main() -> nil{
     GOTO bb8;
   }
   bb8 {
-    %11 = newObject Bar
+    %11 = newObject $anon/.:Bar
     %12 = ConstantLoad 1
     %13 = unknown %12;
     %14 = init(%11,%13) -> bb9;
