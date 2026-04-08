@@ -2551,7 +2551,56 @@ func (n *NodeBuilder) TransformMetadata(metadataNode *tree.MetadataNode) BLangNo
 }
 
 func (n *NodeBuilder) TransformModuleVariableDeclaration(moduleVariableDeclarationNode *tree.ModuleVariableDeclarationNode) BLangNode {
-	panic("TransformModuleVariableDeclaration unimplemented")
+	typedBindingPattern := moduleVariableDeclarationNode.TypedBindingPattern()
+	bindingPattern := typedBindingPattern.BindingPattern()
+	pos := getPositionWithoutMetadata(moduleVariableDeclarationNode)
+
+	variable := n.getBLangVariableNode(bindingPattern, pos)
+	simpleVar := variable.(*BLangSimpleVariable)
+
+	typeDesc := typedBindingPattern.TypeDescriptor()
+	if typeDesc != nil {
+		if isDeclaredWithVar(typeDesc) {
+			simpleVar.SetIsDeclaredWithVar(true)
+		} else {
+			simpleVar.SetTypeNode(n.createTypeNode(typeDesc).(BType))
+		}
+	}
+
+	initializer := moduleVariableDeclarationNode.Initializer()
+	if initializer != nil {
+		simpleVar.SetInitialExpression(n.createExpression(initializer))
+	}
+
+	if simpleVar.IsDeclaredWithVar && simpleVar.TypeNode() == nil && simpleVar.Expr == nil {
+		n.cx.SyntaxError("var-declared module variable must have an initializer expression for type inference", pos)
+		return simpleVar
+	}
+
+	n.populateModuleVariableVisibilityAndQualifiers(moduleVariableDeclarationNode, simpleVar)
+
+	simpleVar.pos = pos
+	return simpleVar
+}
+
+func (n *NodeBuilder) populateModuleVariableVisibilityAndQualifiers(node *tree.ModuleVariableDeclarationNode, simpleVar *BLangSimpleVariable) {
+	visibilityQualifier := node.VisibilityQualifier()
+	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
+		simpleVar.FlagSet.Add(model.Flag_PUBLIC)
+	}
+
+	qualifiers := node.Qualifiers()
+	for i := 0; i < qualifiers.Size(); i++ {
+		qualifier := qualifiers.Get(i)
+		switch qualifier.Kind() {
+		case common.FINAL_KEYWORD:
+			simpleVar.FlagSet.Add(model.Flag_FINAL)
+		case common.ISOLATED_KEYWORD:
+			simpleVar.FlagSet.Add(model.Flag_ISOLATED)
+		case common.CONFIGURABLE_KEYWORD:
+			n.cx.Unimplemented("configurable module variables are not supported yet", simpleVar.pos)
+		}
+	}
 }
 
 func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.TypeTestExpressionNode) BLangNode {

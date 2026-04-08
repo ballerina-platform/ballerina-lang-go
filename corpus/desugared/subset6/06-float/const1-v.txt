@@ -1,8 +1,12 @@
 (package
   (import-package ballerina io (as io))
   (const F (
-    (value-type float)) (
-    (literal 1)))
+    (value-type float)) ())
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref F)
+        (literal 1))))
   (function main () (
     (value-type null))
     (block-function-body

@@ -283,6 +283,7 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
+		globalVar.Expr = nil
 	}
 
 	for i := range pkg.Constants {
@@ -305,6 +306,7 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
+		constant.Expr = nil
 	}
 
 	if len(initStmts) == 0 && pkg.InitFunction == nil {

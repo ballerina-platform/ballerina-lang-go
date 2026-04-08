@@ -1,0 +1,11 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: 'init' function must have return type 'error?'
+  --> init-return-type-e.bal:17:1
+   |
+17 | function init() returns int { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     return 1;
+   |     ^^^^^^^^^
+19 | }
+   | ^

@@ -1,0 +1,9 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: 'init' function cannot have parameters
+  --> init-params-e.bal:17:1
+   |
+17 | function init(int x) { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18 | }
+   | ^
