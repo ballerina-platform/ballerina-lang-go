@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: limit-clause expression must be int
+error[SEMANTIC_ERROR]: limit clause expression must be int
   --> limit-clause-e.bal:20:9
    |
 20 |         limit "2"
