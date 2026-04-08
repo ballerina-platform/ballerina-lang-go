@@ -415,6 +415,10 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature().ReturnType
 	validateDefaultParamTypes(parent, function)
+	if function.IsIsolated() && !function.IsNative() {
+		funcScope := function.Scope().(*model.FunctionScope)
+		isIsolatedFuncInner(fa, funcScope, function.GetBody().(ast.BLangNode))
+	}
 	return fa
 }
 
@@ -1262,9 +1266,7 @@ func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
 func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 	for _, field := range node.Fields() {
 		if field.DefaultExpr != nil {
-			if !isIsolatedFuncInner(a, nil, field.DefaultExpr.(ast.BLangNode)) {
-				a.semanticErr("not an isolated expression", field.DefaultExpr.(ast.BLangNode).GetPosition())
-			}
+			isIsolatedFuncInner(a, nil, field.DefaultExpr.(ast.BLangNode))
 		}
 	}
 }
@@ -1299,33 +1301,30 @@ func ancestorSpaceIndices(funcScope *model.FunctionScope) map[int]struct{} {
 }
 
 // TODO: Make this generic over Expressions and statements
-func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) bool {
+func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) {
 	ancestors := ancestorSpaceIndices(funcScope)
 	tyCtx := a.tyCtx()
 	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
-	return everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
+	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangInvocation:
 			symbol := inner.Symbol()
 			fnTy := a.ctx().SymbolType(symbol)
-			return semtypes.IsSubtype(tyCtx, fnTy, isolatedTop)
+			if !semtypes.IsSubtype(tyCtx, fnTy, isolatedTop) {
+				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
+			}
 		case *ast.BLangSimpleVarRef:
 			sym := a.ctx().GetSymbol(inner.Symbol())
 			if varSym, ok := sym.(*model.ValueSymbol); ok {
-				if ancestors == nil {
-					return varSym.IsConst()
+				_, isAncestor := ancestors[inner.Symbol().SpaceIndex]
+				if (ancestors == nil || isAncestor) && !varSym.IsConst() {
+					a.semanticErr("access of mutable variable", inner.GetPosition())
 				}
-				if _, isAncestor := ancestors[inner.Symbol().SpaceIndex]; isAncestor {
-					return varSym.IsConst()
-				}
-				return true
 			} else {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
-				return false
 			}
-		default:
-			return true
 		}
+		return true
 	})
 }
 
