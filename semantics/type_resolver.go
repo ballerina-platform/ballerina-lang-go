@@ -848,14 +848,22 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	} else {
 		returnTy = semtypes.NIL
 	}
+	isolated := fn.IsIsolated()
+	transactional := fn.IsTransactional()
 	functionDefn := semtypes.NewFunctionDefinition()
 	fnType := functionDefn.Define(t.typeEnv(), paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.typeEnv(), false, false))
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
 
 	// Update symbol type for the function
 	updateSymbolType(t, fn, fnType)
 	fnSymbol := t.getSymbol(fn.Symbol()).(model.FunctionSymbol)
 	sig := fnSymbol.Signature()
+	if isolated {
+		sig.Flags |= model.FuncSymbolFlagIsolated
+	}
+	if transactional {
+		sig.Flags |= model.FuncSymbolFlagTransactional
+	}
 	sig.ParamTypes = paramTypes
 	paramNames := make([]string, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
