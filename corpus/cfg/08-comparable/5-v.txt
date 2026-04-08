@@ -1,0 +1,49 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (value-type any)) (expr
+        (binary-expr <
+          (list-constructor-expr
+            (literal 1)
+            (literal 2))
+          (list-constructor-expr
+            (literal 3)
+            (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (list-constructor-expr
+            (literal 1)
+            (literal 2))
+          (list-constructor-expr
+            (literal 1)
+            (literal 2))))))
+    (var-def
+      (variable b (type
+        (value-type boolean)) (expr
+        (binary-expr >
+          (list-constructor-expr
+            (literal 1)
+            (literal 2))
+          (list-constructor-expr
+            (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (list-constructor-expr
+            (literal 10)
+            (unary-expr -
+              (literal 1))
+            (unary-expr -
+              (literal 1)))
+          (list-constructor-expr
+            (literal 0))))))
+  )
+)

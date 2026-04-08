@@ -1,0 +1,200 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (literal 1)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (literal <nil>)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <=
+            (literal <nil>)
+            (literal <nil>)))))
+      (var-def
+        (variable a (type
+          (union-type
+            (array-type
+              (value-type int) dimensions: 1 ([]))
+            (value-type null))) (expr
+          (list-constructor-expr
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref a)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (literal <nil>)
+            (simple-var-ref a)))))
+      (var-def
+        (variable b (type
+          (array-type
+            (union-type
+              (array-type
+                (value-type int) dimensions: 1 ([]))
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal 1))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref b)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (literal <nil>)
+            (simple-var-ref b)))))
+      (var-def
+        (variable c (type
+          (array-type
+            (union-type
+              (array-type
+                (value-type int) dimensions: 1 ([]))
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref b)
+            (simple-var-ref c)))))
+      (var-def
+        (variable d (type
+          (array-type
+            (union-type
+              (value-type int)
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref d)
+            (literal <nil>)))))
+      (var-def
+        (variable e (type
+          (array-type
+            (union-type
+              (value-type int)
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref d)
+            (simple-var-ref e)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref e)
+            (simple-var-ref d)))))
+      (var-def
+        (variable f (type
+          (array-type
+            (value-type int) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)))))
+      (var-def
+        (variable g (type
+          (array-type
+            (value-type null) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal <nil>)
+            (literal <nil>)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref f)
+            (simple-var-ref g)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref g)
+            (simple-var-ref f)))))
+      (var-def
+        (variable h (type
+          (array-type
+            (union-type
+              (value-type int)
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)))))
+      (var-def
+        (variable i (type
+          (array-type
+            (value-type null) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal <nil>)
+            (literal <nil>)
+            (literal <nil>)
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref h)
+            (simple-var-ref i)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref i)
+            (simple-var-ref h)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref g)
+            (simple-var-ref i)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref i)
+            (simple-var-ref g)))))
+      (var-def
+        (variable j (type
+          (array-type
+            (value-type null) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal <nil>))
+            (list-constructor-expr
+              (literal <nil>)
+              (literal <nil>))))))
+      (var-def
+        (variable k (type
+          (array-type
+            (value-type null) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal <nil>))
+            (list-constructor-expr
+              (literal <nil>)
+              (literal <nil>)
+              (literal <nil>))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref j)
+            (simple-var-ref k)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref k)
+            (simple-var-ref j))))))))

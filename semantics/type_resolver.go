@@ -2480,39 +2480,265 @@ func negateNumericType(t typeResolver, expr *ast.BLangUnaryExpr, exprTy semtypes
 	}
 }
 
-func resolveBinaryExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	if isLogicalExpression(expr) {
-		return resolveLogicalExpr(t, chain, expr)
+func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	operandExpectedType := semtypes.Union(semtypes.Union(semtypes.NUMBER, semtypes.STRING), semtypes.XML)
+	if expectedType != nil {
+		operandExpectedType = semtypes.Intersect(operandExpectedType, expectedType)
 	}
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, expectedType)
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, expectedType)
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	// TODO: handle singleton
+
+	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
+
+	numLhsBits := semtypes.NBasicTypes(lhsTy)
+	numRhsBits := semtypes.NBasicTypes(rhsTy)
+
+	if numLhsBits > 1 || numRhsBits > 1 {
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	ctx := t.typeContext()
+
+	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
+	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
+	if !semtypes.IsSubtype(ctx, lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, additiveSupportedTypes) {
+		t.semanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	} else if lhsBasicTy != rhsBasicTy {
+		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	var resultTy semtypes.SemType = lhsBasicTy
+	if nilLifted {
+		resultTy = semtypes.Union(semtypes.NIL, resultTy)
+	}
+	setExpectedType(expr, resultTy)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
+	return resultTy, effect, true
+}
+
+func resolveRangeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	_, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	_, _, ok = resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	resultTy := createIteratorType(t.typeEnv(), semtypes.INT, semtypes.NIL)
+	setExpectedType(expr, resultTy)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
+	return resultTy, effect, true
+}
+
+func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
+	ctx := t.typeContext()
+	// TODO: handle singleton typing here
+
+	if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
+		t.semanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	var resultTy semtypes.SemType = semtypes.INT
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+	}
+	if nilLifted {
+		resultTy = semtypes.Union(resultTy, semtypes.NIL)
+	}
+	setExpectedType(expr, resultTy)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
+	return resultTy, effect, true
+}
+
+func nilLiftedUnderlyingType(lhsTy, rhsTy semtypes.SemType) (semtypes.SemType, semtypes.SemType, bool) {
+	nilLifted := false
+	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) {
+		nilLifted = true
+		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
+	}
+	if semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
+		nilLifted = true
+		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL)
+	}
+	return lhsTy, rhsTy, nilLifted
+}
+
+func resolveRelationalExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
+	if !semtypes.Comparable(t.typeContext(), lhsTy, rhsTy) {
+		t.semanticError("values are not comparable", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	resultTy := semtypes.BOOLEAN
+	setExpectedType(expr, resultTy)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
+	return resultTy, effect, true
+}
+
+func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	var operandExpectedType semtypes.SemType = semtypes.NUMBER
+	if expectedType != nil {
+		operandExpectedType = semtypes.Intersect(expectedType, operandExpectedType)
+	}
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, operandExpectedType)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	// TODO: handle singleton
+
+	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
+
+	numLhsBits := semtypes.NBasicTypes(lhsTy)
+	numRhsBits := semtypes.NBasicTypes(rhsTy)
+
+	if numLhsBits > 1 || numRhsBits > 1 {
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
+	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
+	if !isNumericType(lhsBasicTy) || !isNumericType(rhsBasicTy) {
+		t.semanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 	var resultTy semtypes.SemType
-
-	if isEqualityExpr(expr) {
-		return resolveEqualityExpr(t, lhsEffect.ifTrue, expr)
-	} else if isRangeExpr(expr) {
-		resultTy = createIteratorType(t.typeEnv(), semtypes.INT, semtypes.NIL)
-	} else {
-		var nilLifted bool
-		resultTy, nilLifted = nilLiftingExprResultTy(t, lhsTy, rhsTy, expr)
-		if resultTy == nil {
+	if lhsBasicTy != rhsBasicTy {
+		ctx := t.typeContext()
+		if semtypes.IsSubtype(ctx, rhsBasicTy, semtypes.INT) {
+			resultTy = lhsBasicTy
+		} else if expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, lhsBasicTy, semtypes.INT) {
+			resultTy = rhsBasicTy
+		} else {
+			t.semanticError("both operands must belong to same basic type", expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		if nilLifted {
-			resultTy = semtypes.Union(semtypes.NIL, resultTy)
+	} else {
+		resultTy = lhsBasicTy
+	}
+	if nilLifted {
+		resultTy = semtypes.Union(semtypes.NIL, resultTy)
+	}
+	setExpectedType(expr, resultTy)
+	effect := defaultExpressionEffect(lhsEffect.ifTrue)
+	return resultTy, effect, true
+}
+
+func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	// TODO: handle singleton
+
+	lhsTy, rhsTy, nilLifted := nilLiftedUnderlyingType(lhsTy, rhsTy)
+
+	numLhsBits := semtypes.NBasicTypes(lhsTy)
+	numRhsBits := semtypes.NBasicTypes(rhsTy)
+
+	if numLhsBits > 1 || numRhsBits > 1 {
+		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	ctx := t.typeContext()
+	if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
+		t.semanticError("expect integer types for bitwise operators", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	var resultTy semtypes.SemType = semtypes.INT
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_BITWISE_AND:
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
 		}
+	case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		for _, ty := range bitWiseOpLookOrder {
+			if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
+				resultTy = ty
+				break
+			}
+		}
+	default:
+		t.unimplemented(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	if nilLifted {
+		resultTy = semtypes.Union(resultTy, semtypes.NIL)
 	}
 
 	setExpectedType(expr, resultTy)
 	effect := defaultExpressionEffect(lhsEffect.ifTrue)
 	return resultTy, effect, true
+}
+
+func resolveBinaryExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	switch expr.GetOperatorKind() {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB:
+		return resolveAdditiveExpr(t, chain, expr, expectedType)
+	case model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD:
+		return resolveMultiplicativeExpr(t, chain, expr, expectedType)
+	case model.OperatorKind_AND, model.OperatorKind_OR:
+		return resolveLogicalExpr(t, chain, expr)
+	case model.OperatorKind_EQUAL, model.OperatorKind_EQUALS, model.OperatorKind_NOT_EQUAL, model.OperatorKind_REF_EQUAL, model.OperatorKind_REF_NOT_EQUAL:
+		return resolveEqualityExpr(t, chain, expr)
+	case model.OperatorKind_CLOSED_RANGE, model.OperatorKind_HALF_OPEN_RANGE:
+		return resolveRangeExpr(t, chain, expr)
+	case model.OperatorKind_BITWISE_LEFT_SHIFT, model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
+		return resolveShiftExpr(t, chain, expr)
+	case model.OperatorKind_LESS_THAN, model.OperatorKind_LESS_EQUAL, model.OperatorKind_GREATER_THAN, model.OperatorKind_GREATER_EQUAL:
+		return resolveRelationalExpr(t, chain, expr)
+	case model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		return resolveBitWiseExpr(t, chain, expr)
+	default:
+		t.internalError(fmt.Sprintf("Unexpected binary expr %s", expr.OpKind), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 }
 
 func isSingletonBool(ty semtypes.SemType, value bool) bool {
@@ -2525,7 +2751,16 @@ func isSingletonBool(ty semtypes.SemType, value bool) bool {
 }
 
 func resolveEqualityExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
+	_, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	_, _, ok = resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
 	var effect expressionEffect
+	// PR-TODO: pass in lhs and rhs types instead
 	if expr.OpKind == model.OperatorKind_EQUAL || expr.OpKind == model.OperatorKind_NOT_EQUAL {
 		effect = equalityNarrowingEffect(t, chain, expr)
 	} else {
@@ -2648,119 +2883,6 @@ func buildEqualityNarrowing(t typeResolver, chain *binding, ref model.SymbolRef,
 var additiveSupportedTypes = semtypes.Union(semtypes.NUMBER, semtypes.STRING)
 
 var bitWiseOpLookOrder = []semtypes.SemType{semtypes.UINT8, semtypes.UINT16, semtypes.UINT32}
-
-func nilLiftingExprResultTy(t typeResolver, lhsTy, rhsTy semtypes.SemType, expr *ast.BLangBinaryExpr) (semtypes.SemType, bool) {
-	nilLifted := false
-
-	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
-		nilLifted = true
-		lhsTy = semtypes.Diff(lhsTy, semtypes.NIL)
-		rhsTy = semtypes.Diff(rhsTy, semtypes.NIL)
-	}
-
-	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
-	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
-
-	numLhsBits := semtypes.NBasicTypes(lhsTy)
-	numRhsBits := semtypes.NBasicTypes(rhsTy)
-
-	if numLhsBits > 1 || numRhsBits > 1 {
-		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-		return nil, false
-	}
-
-	if isRelationalExpr(expr) {
-		if semtypes.Comparable(t.typeContext(), lhsBasicTy, rhsBasicTy) {
-			return semtypes.BOOLEAN, false
-		}
-		t.semanticError("values are not comparable", expr.GetPosition())
-		return nil, false
-	}
-
-	if isMultiplicativeExpr(expr) {
-		if !isNumericType(lhsBasicTy) || !isNumericType(rhsBasicTy) {
-			t.semanticError(fmt.Sprintf("expect numeric types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
-		}
-		if lhsBasicTy == rhsBasicTy {
-			return lhsBasicTy, nilLifted
-		}
-		ctx := t.typeContext()
-		if semtypes.IsSubtype(ctx, rhsBasicTy, semtypes.INT) ||
-			(expr.GetOperatorKind() == model.OperatorKind_MUL && semtypes.IsSubtype(ctx, lhsBasicTy, semtypes.INT)) {
-			t.unimplemented("type coercion not supported", expr.GetPosition())
-			return nil, false
-		}
-		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
-		return nil, false
-	}
-
-	if isAdditiveExpr(expr) {
-		ctx := t.typeContext()
-		if !semtypes.IsSubtype(ctx, lhsBasicTy, additiveSupportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, additiveSupportedTypes) {
-			t.semanticError(fmt.Sprintf("expect numeric or string types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
-		}
-		if lhsBasicTy == rhsBasicTy {
-			return lhsBasicTy, nilLifted
-		}
-		t.semanticError("both operands must belong to same basic type", expr.GetPosition())
-		return nil, false
-	}
-
-	if isShiftExpr(expr) {
-		ctx := t.typeContext()
-		if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-			t.semanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
-		}
-		var resultTy semtypes.SemType = semtypes.INT
-		switch expr.GetOperatorKind() {
-		case model.OperatorKind_BITWISE_RIGHT_SHIFT, model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT:
-			for _, ty := range bitWiseOpLookOrder {
-				if semtypes.IsSubtype(ctx, lhsTy, ty) {
-					resultTy = ty
-					break
-				}
-			}
-		}
-		return resultTy, nilLifted
-	}
-
-	if isBitWiseExpr(expr) {
-		ctx := t.typeContext()
-		if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
-			t.semanticError("expect integer types for bitwise operators", expr.GetPosition())
-			return nil, false
-		}
-
-		var resultTy semtypes.SemType = semtypes.INT
-		switch expr.GetOperatorKind() {
-		case model.OperatorKind_BITWISE_AND:
-			for _, ty := range bitWiseOpLookOrder {
-				if semtypes.IsSubtype(ctx, lhsTy, ty) || semtypes.IsSubtype(ctx, rhsTy, ty) {
-					resultTy = ty
-					break
-				}
-			}
-		case model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
-			for _, ty := range bitWiseOpLookOrder {
-				if semtypes.IsSubtype(ctx, lhsTy, ty) && semtypes.IsSubtype(ctx, rhsTy, ty) {
-					resultTy = ty
-					break
-				}
-			}
-		default:
-			t.internalError(fmt.Sprintf("unsupported bitwise operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
-			return nil, false
-		}
-
-		return resultTy, nilLifted
-	}
-
-	t.internalError(fmt.Sprintf("unsupported binary operator: %s", string(expr.GetOperatorKind())), expr.GetPosition())
-	return nil, false
-}
 
 func createIteratorType(env semtypes.Env, t, c semtypes.SemType) semtypes.SemType {
 	od := semtypes.NewObjectDefinition()

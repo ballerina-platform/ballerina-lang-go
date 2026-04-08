@@ -17,11 +17,12 @@
 package exec
 
 import (
+	"fmt"
+	"math"
+
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/values"
-	"fmt"
-	"math"
 )
 
 func execBinaryOpAdd(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
@@ -192,39 +193,27 @@ func execBinaryOpNotEqual(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Reg
 }
 
 func execBinaryOpGT(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
-	execBinaryOpCompare(binaryOp, frame, reg,
-		func(a, b int64) bool { return a > b },
-		func(a, b float64) bool { return a > b },
-		func(a, b bool) bool { return a && !b },
-		false,
-	)
+	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	r := values.Compare(op1, op2)
+	setOperandValue(binaryOp.LhsOp, frame, reg, r == values.CmpGT)
 }
 
 func execBinaryOpGTE(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
-	execBinaryOpCompare(binaryOp, frame, reg,
-		func(a, b int64) bool { return a >= b },
-		func(a, b float64) bool { return a >= b },
-		func(a, b bool) bool { return a || !b },
-		true,
-	)
+	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	r := values.Compare(op1, op2)
+	setOperandValue(binaryOp.LhsOp, frame, reg, r == values.CmpGT || r == values.CmpEQ)
 }
 
 func execBinaryOpLT(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
-	execBinaryOpCompare(binaryOp, frame, reg,
-		func(a, b int64) bool { return a < b },
-		func(a, b float64) bool { return a < b },
-		func(a, b bool) bool { return !a && b },
-		false,
-	)
+	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	r := values.Compare(op1, op2)
+	setOperandValue(binaryOp.LhsOp, frame, reg, r == values.CmpLT)
 }
 
 func execBinaryOpLTE(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
-	execBinaryOpCompare(binaryOp, frame, reg,
-		func(a, b int64) bool { return a <= b },
-		func(a, b float64) bool { return a <= b },
-		func(a, b bool) bool { return !a || b },
-		true,
-	)
+	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
+	r := values.Compare(op1, op2)
+	setOperandValue(binaryOp.LhsOp, frame, reg, r == values.CmpLT || r == values.CmpEQ)
 }
 
 func execBinaryOpAnd(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) {
@@ -330,32 +319,6 @@ func execBinaryOpBitwise(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Regi
 		validateShiftAmount(v2)
 	}
 	setOperandValue(binaryOp.LhsOp, frame, reg, bitOp(v1, v2))
-}
-
-func execBinaryOpCompare(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry,
-	intCmp func(a, b int64) bool, floatCmp func(a, b float64) bool,
-	boolCmp func(a, b bool) bool, nilEqualsNil bool,
-) {
-	op1, op2 := getBinaryRhsValues(binaryOp, frame, reg)
-	if op1 == nil || op2 == nil {
-		bothNil := op1 == nil && op2 == nil
-		setOperandValue(binaryOp.LhsOp, frame, reg, bothNil && nilEqualsNil)
-		return
-	}
-
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(binaryOp.LhsOp, frame, reg, intCmp(v1, v2))
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(binaryOp.LhsOp, frame, reg, floatCmp(v1, v2))
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(binaryOp.LhsOp, frame, reg, boolCmp(v1, v2))
-	default:
-		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type: %T", op1)))
-	}
 }
 
 func getBinaryRhsValues(binaryOp *bir.BinaryOp, frame *Frame, reg *modules.Registry) (op1, op2 values.BalValue) {

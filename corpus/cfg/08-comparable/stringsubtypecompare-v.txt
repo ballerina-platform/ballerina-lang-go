@@ -1,0 +1,58 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (array-type
+          (user-defined-type A) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal a)
+          (literal aa)))))
+    (var-def
+      (variable b (type
+        (array-type
+          (value-type string) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal b)
+          (literal bb)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref a)
+          (simple-var-ref b)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr <=
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+    (expression-stmt
+      (invocation io println (
+        (binary-expr >=
+          (simple-var-ref b)
+          (simple-var-ref a)))))
+  )
+)

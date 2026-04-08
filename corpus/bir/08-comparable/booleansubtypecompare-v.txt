@@ -1,0 +1,57 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad false
+    %2 = ConstantLoad false
+    %3 = ConstantLoad 2
+    %4 = newArray [false...][%3]{%1, %2}
+    a = %4;
+    %6 = ConstantLoad true
+    %7 = ConstantLoad true
+    %8 = ConstantLoad 2
+    %9 = newArray [boolean...][%8]{%6, %7}
+    b = %9;
+    %11 = < a b;
+    %12 = %11;
+    %13 = println(%12) -> bb1;
+  }
+  bb1 {
+    %14 = <= a b;
+    %15 = %14;
+    %16 = println(%15) -> bb2;
+  }
+  bb2 {
+    %17 = > a b;
+    %18 = %17;
+    %19 = println(%18) -> bb3;
+  }
+  bb3 {
+    %20 = >= a b;
+    %21 = %20;
+    %22 = println(%21) -> bb4;
+  }
+  bb4 {
+    %23 = < b a;
+    %24 = %23;
+    %25 = println(%24) -> bb5;
+  }
+  bb5 {
+    %26 = <= b a;
+    %27 = %26;
+    %28 = println(%27) -> bb6;
+  }
+  bb6 {
+    %29 = > b a;
+    %30 = %29;
+    %31 = println(%30) -> bb7;
+  }
+  bb7 {
+    %32 = >= b a;
+    %33 = %32;
+    %34 = println(%33) -> bb8;
+  }
+  bb8 {
+    return;
+  }
+}
