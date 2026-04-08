@@ -3307,6 +3307,9 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, expr *ast.BLangInvo
 		expr.SetSymbol(symbolRef)
 		return argTys, symbolRef, chain, true
 	case model.FunctionSymbol:
+		if !t.ensureResolved(fnSymbol, 0) {
+			return nil, fnSymbol, chain, false
+		}
 		sig := sym.Signature()
 		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, expr.ArgExprs, expr.GetPosition())
 		return argTys, fnSymbol, chain, ok
