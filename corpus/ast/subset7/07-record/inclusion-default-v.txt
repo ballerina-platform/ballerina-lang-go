@@ -1,0 +1,107 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Base
+    (record-type
+      (field x
+        (value-type int)
+        (literal 10))
+      (field y
+        (value-type string)
+        (literal hello))))
+  (type-definition Inherited
+    (record-type
+      (field z
+        (value-type string))))
+  (type-definition OverriddenWithNewDefault
+    (record-type
+      (field x
+        (value-type int)
+        (literal 42))
+      (field z
+        (value-type string))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable r1 (type
+          (user-defined-type Inherited)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref z)
+              (literal world))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access x
+            (simple-var-ref r1)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access y
+            (simple-var-ref r1)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access z
+            (simple-var-ref r1)))))
+      (var-def
+        (variable r2 (type
+          (user-defined-type Inherited)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 5))
+            (key-value
+              (simple-var-ref z)
+              (literal world))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access x
+            (simple-var-ref r2)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access y
+            (simple-var-ref r2)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access z
+            (simple-var-ref r2)))))
+      (var-def
+        (variable r3 (type
+          (user-defined-type OverriddenWithNewDefault)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref z)
+              (literal test))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access x
+            (simple-var-ref r3)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access y
+            (simple-var-ref r3)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access z
+            (simple-var-ref r3)))))
+      (var-def
+        (variable r4 (type
+          (user-defined-type OverriddenWithNewDefault)) (expr
+          (mapping-constructor-expr
+            (key-value
+              (simple-var-ref x)
+              (literal 99))
+            (key-value
+              (simple-var-ref z)
+              (literal test))))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access x
+            (simple-var-ref r4)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access y
+            (simple-var-ref r4)))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access z
+            (simple-var-ref r4))))))))

@@ -8,7 +8,7 @@
           (value-type int)) (expr
           (literal 10))))
       (var-def
-        (variable $desugar$1 (expr
+        (variable $desugar$0 (expr
           (lambda
             (function $desugar$0 () ()
               (block-function-body
@@ -31,16 +31,16 @@
           (value-type string)) (expr
           (literal hello))))
       (var-def
-        (variable $desugar$4 (expr
+        (variable $desugar$1 (expr
           (lambda
-            (function $desugar$2 () ()
+            (function $desugar$1 () ()
               (block-function-body
                 (return
                   (simple-var-ref c))))))))
       (var-def
-        (variable $desugar$5 (expr
+        (variable $desugar$2 (expr
           (lambda
-            (function $desugar$3 () ()
+            (function $desugar$2 () ()
               (block-function-body
                 (return
                   (simple-var-ref s))))))))
@@ -65,16 +65,16 @@
             (simple-var-ref f2)
             (literal name)))))
       (var-def
-        (variable $desugar$8 (expr
+        (variable $desugar$3 (expr
           (lambda
-            (function $desugar$6 () ()
+            (function $desugar$3 () ()
               (block-function-body
                 (return
                   (simple-var-ref c))))))))
       (var-def
-        (variable $desugar$9 (expr
+        (variable $desugar$4 (expr
           (lambda
-            (function $desugar$7 () ()
+            (function $desugar$4 () ()
               (block-function-body
                 (return
                   (simple-var-ref s))))))))
@@ -102,9 +102,9 @@
             (simple-var-ref f3)
             (literal name)))))
       (var-def
-        (variable $desugar$11 (expr
+        (variable $desugar$5 (expr
           (lambda
-            (function $desugar$10 () ()
+            (function $desugar$5 () ()
               (block-function-body
                 (return
                   (simple-var-ref c))))))))
@@ -131,16 +131,16 @@
             (simple-var-ref f4)
             (literal y)))))
       (var-def
-        (variable $desugar$14 (expr
+        (variable $desugar$6 (expr
           (lambda
-            (function $desugar$12 () ()
+            (function $desugar$6 () ()
               (block-function-body
                 (return
                   (simple-var-ref c))))))))
       (var-def
-        (variable $desugar$15 (expr
+        (variable $desugar$7 (expr
           (lambda
-            (function $desugar$13 () ()
+            (function $desugar$7 () ()
               (block-function-body
                 (return
                   (simple-var-ref s))))))))
@@ -175,16 +175,16 @@
             (simple-var-ref f5)
             (literal name)))))
       (var-def
-        (variable $desugar$18 (expr
+        (variable $desugar$8 (expr
           (lambda
-            (function $desugar$16 () ()
+            (function $desugar$8 () ()
               (block-function-body
                 (return
                   (simple-var-ref c))))))))
       (var-def
-        (variable $desugar$19 (expr
+        (variable $desugar$9 (expr
           (lambda
-            (function $desugar$17 () ()
+            (function $desugar$9 () ()
               (block-function-body
                 (return
                   (simple-var-ref s))))))))

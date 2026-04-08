@@ -10,7 +10,7 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable $desugar$1 (expr
+        (variable $desugar$0 (expr
           (lambda
             (function $desugar$0 () ()
               (block-function-body

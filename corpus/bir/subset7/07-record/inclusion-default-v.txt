@@ -1,0 +1,112 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad z
+    %2 = ConstantLoad world
+    %3 = newMap {| x: int, y: string, z: string, never... |}{%1=%2} defaults{x=$anon/.:$desugar$0, y=$anon/.:$desugar$1}
+    r1 = %3;
+    %6 = ConstantLoad x
+    %5 = r1[%6];
+    %7 = %5;
+    %8 = println(%7) -> bb1;
+  }
+  bb1 {
+    %10 = ConstantLoad y
+    %9 = r1[%10];
+    %11 = println(%9) -> bb2;
+  }
+  bb2 {
+    %13 = ConstantLoad z
+    %12 = r1[%13];
+    %14 = println(%12) -> bb3;
+  }
+  bb3 {
+    %15 = ConstantLoad x
+    %16 = ConstantLoad 5
+    %17 = ConstantLoad z
+    %18 = ConstantLoad world
+    %19 = newMap {| x: int, y: string, z: string, never... |}{%15=%16, %17=%18} defaults{x=$anon/.:$desugar$0, y=$anon/.:$desugar$1}
+    r2 = %19;
+    %22 = ConstantLoad x
+    %21 = r2[%22];
+    %23 = %21;
+    %24 = println(%23) -> bb4;
+  }
+  bb4 {
+    %26 = ConstantLoad y
+    %25 = r2[%26];
+    %27 = println(%25) -> bb5;
+  }
+  bb5 {
+    %29 = ConstantLoad z
+    %28 = r2[%29];
+    %30 = println(%28) -> bb6;
+  }
+  bb6 {
+    %31 = ConstantLoad z
+    %32 = ConstantLoad test
+    %33 = newMap {| x: int, y: string, z: string, never... |}{%31=%32} defaults{x=$anon/.:$desugar$2, y=$anon/.:$desugar$1}
+    r3 = %33;
+    %36 = ConstantLoad x
+    %35 = r3[%36];
+    %37 = %35;
+    %38 = println(%37) -> bb7;
+  }
+  bb7 {
+    %40 = ConstantLoad y
+    %39 = r3[%40];
+    %41 = println(%39) -> bb8;
+  }
+  bb8 {
+    %43 = ConstantLoad z
+    %42 = r3[%43];
+    %44 = println(%42) -> bb9;
+  }
+  bb9 {
+    %45 = ConstantLoad x
+    %46 = ConstantLoad 99
+    %47 = ConstantLoad z
+    %48 = ConstantLoad test
+    %49 = newMap {| x: int, y: string, z: string, never... |}{%45=%46, %47=%48} defaults{x=$anon/.:$desugar$2, y=$anon/.:$desugar$1}
+    r4 = %49;
+    %52 = ConstantLoad x
+    %51 = r4[%52];
+    %53 = %51;
+    %54 = println(%53) -> bb10;
+  }
+  bb10 {
+    %56 = ConstantLoad y
+    %55 = r4[%56];
+    %57 = println(%55) -> bb11;
+  }
+  bb11 {
+    %59 = ConstantLoad z
+    %58 = r4[%59];
+    %60 = println(%58) -> bb12;
+  }
+  bb12 {
+    return;
+  }
+}
+$desugar$0() -> int{
+  bb0 {
+    %1 = ConstantLoad 10
+    %0 = %1;
+    return;
+  }
+}
+$desugar$1() -> string{
+  bb0 {
+    %1 = ConstantLoad hello
+    %0 = %1;
+    return;
+  }
+}
+$desugar$2() -> int{
+  bb0 {
+    %1 = ConstantLoad 42
+    %0 = %1;
+    return;
+  }
+}

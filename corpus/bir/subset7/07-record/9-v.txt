@@ -2,7 +2,7 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
 import ballerina.io v 0.0.0;
-$desugar$1() -> int{
+$desugar$0() -> int{
   bb0 {
     %0 = (2, i);
     return;
@@ -27,17 +27,17 @@ main() -> nil{
   }
   bb2 {
     PushScopeFrame 9
-    %0 = closure_fp $anon/.:$desugar$1
-    $desugar$2 = %0;
-    %2 = newMap {| value: int, never... |}{} defaults{value=$anon/.:$desugar$1}
+    %0 = closure_fp $anon/.:$desugar$0
+    $desugar$1 = %0;
+    %2 = newMap {| value: int, never... |}{} defaults{value=$anon/.:$desugar$0}
     f = %2;
     %4 = push((1, rs),f) -> bb4;
   }
   bb3 {
-    $desugar$3 = rs;
+    $desugar$2 = rs;
     %12 = ConstantLoad 0
-    $desugar$4 = %12;
-    %14 = length($desugar$3) -> bb5;
+    $desugar$3 = %12;
+    %14 = length($desugar$2) -> bb5;
   }
   bb4 {
     %6 = (1, i);
@@ -49,18 +49,18 @@ main() -> nil{
     GOTO bb1;
   }
   bb5 {
-    $desugar$5 = %14;
+    $desugar$4 = %14;
     GOTO bb6;
   }
   bb6 {
-    %17 = $desugar$4;
-    %18 = $desugar$5;
+    %17 = $desugar$3;
+    %18 = $desugar$4;
     %16 = < %17 %18;
     %16 ? bb7 : bb8;
   }
   bb7 {
     PushScopeFrame 10
-    %0 = (1, $desugar$3)[(1, $desugar$4)];
+    %0 = (1, $desugar$2)[(1, $desugar$3)];
     r = %0;
     %3 = ConstantLoad value
     %2 = r[%3];
@@ -71,11 +71,11 @@ main() -> nil{
     return;
   }
   bb9 {
-    %7 = (1, $desugar$4);
+    %7 = (1, $desugar$3);
     %8 = ConstantLoad 1
     %9 = %8;
     %6 = + %7 %9;
-    (1, $desugar$4) = %6;
+    (1, $desugar$3) = %6;
     PopScopeFrame
     GOTO bb6;
   }

@@ -58,3 +58,12 @@ func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
 	}
 	return CellInnerVal(this.Rest)
 }
+
+func (this *MappingAtomicType) IsOptional(cx Context, name string) bool {
+	for i, n := range this.Names {
+		if n == name {
+			return IsSubtype(cx, UNDEF, CellInnerVal(&this.Types[i]))
+		}
+	}
+	return true
+}
