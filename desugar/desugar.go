@@ -630,7 +630,7 @@ func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinit
 		setPositionIfMissing(assignment, basePos)
 
 		initStmts = append(initStmts, assignment)
-		field.SetInitialExpression(nil)
+		field.(*ast.BLangSimpleVariable).SetInitialExpression(nil)
 	}
 
 	if len(initStmts) > 0 {
@@ -661,13 +661,13 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 		}
 	case *ast.BLangExprFunctionBody:
 		if body.Expr != nil {
-			result := walkExpression(cx, body.Expr)
+			result := walkExpression(cx, body.Expr.(ast.BLangActionOrExpression))
 			// For expression bodies, init statements need special handling
 			// They should be converted to a block body with statements
 			if len(result.initStmts) > 0 {
 				fn.Body = convertExprBodyToBlockBody(body, result)
 			} else {
-				body.Expr = result.replacementNode.(ast.BLangExpression)
+				body.Expr = result.replacementNode
 			}
 		}
 	case *ast.BLangExternFunctionBody:
@@ -681,11 +681,11 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 // when there are init statements from desugaring
 func convertExprBodyToBlockBody(
 	exprBody *ast.BLangExprFunctionBody,
-	result desugaredNode[model.ExpressionNode],
+	result desugaredNode[ast.BLangActionOrExpression],
 ) *ast.BLangBlockFunctionBody {
 	// Create return statement with the desugared expression
 	returnStmt := &ast.BLangReturn{
-		Expr: result.replacementNode.(ast.BLangExpression),
+		Expr: result.replacementNode,
 	}
 
 	// Build block with init statements + return
