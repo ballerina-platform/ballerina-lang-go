@@ -19,9 +19,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"math"
 	"os"
-	"text/template"
 	"time"
 )
 
