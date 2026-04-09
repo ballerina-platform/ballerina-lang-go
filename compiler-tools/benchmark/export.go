@@ -158,14 +158,12 @@ const htmlTemplate = `<!doctype html>
 		margin: 0;
 		padding: 0;
 	}
- 
 	:root {
 		--black: #000000;
 		--white: #ffffff;
 		--border: #e7e3e4;
 		--dim: #999999;
 	}
- 
 	html, body {
 		background: var(--white);
 		color: var(--black);
@@ -174,18 +172,15 @@ const htmlTemplate = `<!doctype html>
 		line-height: 1.6;
 		-webkit-font-smoothing: antialiased;
 	}
- 
 	body {
 		padding: 48px 40px;
 		max-width: 1080px;
 		margin: 0 auto;
 	}
- 
 	header {
 		padding-bottom: 24px;
 		margin-bottom: 40px;
 	}
- 
 	.header-eyebrow {
 		font-size: 10px;
 		font-weight: 500;
@@ -194,19 +189,16 @@ const htmlTemplate = `<!doctype html>
 		text-transform: uppercase;
 		margin-bottom: 8px;
 	}
- 
 	.header-refs {
 		font-size: 20px;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 	}
- 
 	.header-refs .sep {
 		font-weight: 300;
 		color: var(--dim);
 		margin: 0 10px;
 	}
- 
 	.header-meta {
 		margin-top: 8px;
 		font-size: 11px;
@@ -215,7 +207,6 @@ const htmlTemplate = `<!doctype html>
 		gap: 20px;
 		flex-wrap: wrap;
 	}
- 
 	.section-label {
 		font-size: 10px;
 		font-weight: 600;
@@ -224,56 +215,42 @@ const htmlTemplate = `<!doctype html>
 		color: var(--dim);
 		margin-bottom: 16px;
 	}
- 
 	.table-wrap {
 		border: 1px solid var(--border);
 		overflow-x: auto;
 	}
- 
 	table {
 		width: 100%;
 		border-collapse: collapse;
 		min-width: 860px;
 	}
- 
-	thead tr.row-groups th {
-		padding: 8px 16px 8px;
+	.col-sep {
+		border-left: 1px solid var(--border);
+	}
+	thead tr.row-groups th,
+	thead tr.row-subs th {
+		padding: 8px 16px;
 		font-size: 10px;
 		font-weight: 600;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--dim);
-		text-align: center;
-		border-bottom: 1px solid var(--border);
-	}
- 
-	thead tr.row-groups th.left  { text-align: left; }
-	thead tr.row-groups th.right { text-align: right; }
-	thead tr.row-groups th.sep   { border-left: 1px solid var(--border); }
- 
-	thead tr.row-subs th {
-		padding: 8px 16px 8px;
-		font-size: 10px;
-		font-weight: 500;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--dim);
-		text-align: right;
 		border-bottom: 1px solid var(--border);
 		white-space: nowrap;
 	}
- 
-	thead tr.row-subs th.left { text-align: left; }
-	thead tr.row-subs th.sep  { border-left: 1px solid var(--border); }
- 
+	thead tr.row-subs th {
+		font-weight: 500;
+		letter-spacing: 0.08em;
+		text-align: right;
+	}
+	thead th.align-left  { text-align: left; }
+	thead th.align-right { text-align: right; }
 	tbody tr {
 		border-bottom: 1px solid var(--border);
 	}
- 
 	tbody tr:last-child {
 		border-bottom: none;
 	}
- 
 	tbody td {
 		padding: 13px 16px;
 		font-size: 12px;
@@ -281,28 +258,22 @@ const htmlTemplate = `<!doctype html>
 		font-variant-numeric: tabular-nums;
 		vertical-align: middle;
 	}
- 
-	tbody td.left { text-align: left; }
-	tbody td.sep  { border-left: 1px solid var(--border); }
- 
-	.val-strong {
+	tbody td.align-left { text-align: left; }
+	.metric {
 		font-size: 16px;
 		font-weight: 700;
 		color: var(--black);
 	}
- 
-	.delta {
+	.delta-ratio {
 		font-size: 16px;
 		font-weight: 700;
 		color: var(--black);
 	}
- 
-	.delta-err {
+	.delta-margin {
 		font-size: 14px;
 		font-weight: 400;
 		color: var(--black);
 	}
- 
 	.delta-winner {
 		display: block;
 		font-size: 12px;
@@ -310,7 +281,6 @@ const htmlTemplate = `<!doctype html>
 		letter-spacing: 0.04em;
 		margin-top: 4px;
 	}
- 
 	.not-available {
 		color: var(--dim);
 		font-style: italic;
@@ -330,37 +300,35 @@ const htmlTemplate = `<!doctype html>
 			<span>generated {{ .Report.Generated.Format "2006-01-02 15:04:05" }}</span>
 		</div>
 	</header>
- 
 	<div class="section-label">Results</div>
- 
 	<div class="table-wrap">
 		<table>
 			<thead>
 				<tr class="row-groups">
-					<th class="left" rowspan="2">case</th>
-					<th class="sep" colspan="2">{{ .Report.BaseRef }}</th>
-					<th class="sep" colspan="2">{{ .Report.HeadRef }}</th>
-					<th class="sep right" rowspan="2">delta</th>
+					<th class="align-left" rowspan="2">case</th>
+					<th class="col-sep" colspan="2">{{ .Report.BaseRef }}</th>
+					<th class="col-sep" colspan="2">{{ .Report.HeadRef }}</th>
+					<th class="col-sep align-right" rowspan="2">delta</th>
 				</tr>
 				<tr class="row-subs">
-					<th class="sep">mean (ms)</th>
-					<th class="sep">stddev (ms)</th>
-					<th class="sep">mean (ms)</th>
-					<th class="sep">stddev (ms)</th>
+					<th class="col-sep">mean (ms)</th>
+					<th class="col-sep">stddev (ms)</th>
+					<th class="col-sep">mean (ms)</th>
+					<th class="col-sep">stddev (ms)</th>
 				</tr>
 			</thead>
 			<tbody>
 				{{ range .Rows }}
 				<tr>
-					<td class="left">{{ .Label }}</td>
-					<td class="sep">{{ if .Base }}<span class="val-strong">{{ .BaseMean }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
-					<td class="sep">{{ if .Base }}<span class="val-strong">{{ .BaseStddev }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
-					<td class="sep">{{ if .Head }}<span class="val-strong">{{ .HeadMean }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
-					<td class="sep">{{ if .Head }}<span class="val-strong">{{ .HeadStddev }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
-					<td class="sep">
+					<td class="align-left">{{ .Label }}</td>
+					<td class="col-sep">{{ if .Base }}<span class="metric">{{ .BaseMean }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
+					<td class="col-sep">{{ if .Base }}<span class="metric">{{ .BaseStddev }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
+					<td class="col-sep">{{ if .Head }}<span class="metric">{{ .HeadMean }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
+					<td class="col-sep">{{ if .Head }}<span class="metric">{{ .HeadStddev }}</span>{{ else }}<span class="not-available">n/a</span>{{ end }}</td>
+					<td class="col-sep">
 						{{ if .DeltaAvailable }}
-						<span class="delta">{{ .DeltaRatio }}×</span>
-						<span class="delta-err"> ± {{ .DeltaErr }}</span>
+						<span class="delta-ratio">{{ .DeltaRatio }}×</span>
+						<span class="delta-margin"> ± {{ .DeltaErr }}</span>
 						<span class="delta-winner">{{ .DeltaWinnerRef }}</span>
 						{{ else }}
 						<span class="not-available">n/a</span>
