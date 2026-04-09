@@ -84,7 +84,7 @@ main() -> nil{
   }
   bb8 {
     %9 = ConstantLoad 2
-    %10 = newArray [object...][%9]{%3, %7}
+    %10 = newArray [object { function foo() returns int; int x }...][%9]{%3, %7}
     fs = %10;
     $desugar$0 = fs;
     %13 = ConstantLoad 0

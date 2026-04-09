@@ -99,6 +99,8 @@ func (s *toStringState) subtypeToString(sub basicSubtype) string {
 			return s.bddErrorToString(st)
 		case BTFunction:
 			return s.bddFunctionToString(st)
+		case BTObject:
+			return s.bddObjectToString(st)
 		default:
 			name := strings.TrimPrefix(sub.BasicTypeCode.String(), "BT_")
 			return strings.ToLower(name)
@@ -289,6 +291,119 @@ func (s *toStringState) mappingAtomicTypeToString(atom atom) string {
 	restStr := s.semTypeToString(CellInnerVal(atomic.Rest))
 	parts = append(parts, restStr+"...")
 	return "{| " + strings.Join(parts, ", ") + " |}"
+}
+
+func (s *toStringState) bddObjectToString(bdd Bdd) string {
+	var formulas []string
+	bddEvery(s.cx, bdd, conjunctionNil, conjunctionNil, func(cx Context, pos conjunctionHandle, neg conjunctionHandle) bool {
+		var posParts []string
+		for c := pos; c != conjunctionNil; c = cx.conjunctionNext(c) {
+			posParts = append(posParts, s.objectAtomToString(cx.conjunctionAtom(c)))
+		}
+		for i, j := 0, len(posParts)-1; i < j; i, j = i+1, j-1 {
+			posParts[i], posParts[j] = posParts[j], posParts[i]
+		}
+		var negParts []string
+		for c := neg; c != conjunctionNil; c = cx.conjunctionNext(c) {
+			negParts = append(negParts, "¬"+s.objectAtomToString(cx.conjunctionAtom(c)))
+		}
+		for i, j := 0, len(negParts)-1; i < j; i, j = i+1, j-1 {
+			negParts[i], negParts[j] = negParts[j], negParts[i]
+		}
+		parts := append(posParts, negParts...)
+		formulas = append(formulas, strings.Join(parts, "&"))
+		return true
+	})
+	return strings.Join(formulas, "|")
+}
+
+func (s *toStringState) objectAtomToString(atom atom) string {
+	if recAtom, ok := atom.(*recAtom); ok && recAtom.index() == BDD_REC_ATOM_READONLY {
+		return "readonly"
+	}
+	key := atom.canonicalKey()
+	if s.visited[key] {
+		return "..."
+	}
+	s.visited[key] = true
+	defer delete(s.visited, key)
+	return s.objectAtomicTypeToString(atom)
+}
+
+func (s *toStringState) objectAtomicTypeToString(atom atom) string {
+	atomic := s.cx.MappingAtomType(atom)
+	var prefix []string
+	var members []string
+	for i, name := range atomic.Names {
+		if name == "$qualifiers" {
+			qualTy := CellInnerVal(&atomic.Types[i])
+			qualAtomic := ToMappingAtomicType(s.cx, qualTy)
+			if qualAtomic != nil {
+				isolatedTy := qualAtomic.FieldInnerVal("isolated")
+				if IsSameType(s.cx, isolatedTy, BooleanConst(true)) {
+					prefix = append(prefix, "isolated")
+				}
+				networkTy := qualAtomic.FieldInnerVal("network")
+				if IsSameType(s.cx, networkTy, StringConst("client")) {
+					prefix = append(prefix, "client")
+				} else if IsSameType(s.cx, networkTy, StringConst("service")) {
+					prefix = append(prefix, "service")
+				}
+			}
+			continue
+		}
+		memberTy := CellInnerVal(&atomic.Types[i])
+		memberAtomic := ToMappingAtomicType(s.cx, memberTy)
+		if memberAtomic == nil {
+			members = append(members, name+": "+s.semTypeToString(memberTy))
+			continue
+		}
+		kindTy := memberAtomic.FieldInnerVal("kind")
+		valueTy := memberAtomic.FieldInnerVal("value")
+		if IsSameType(s.cx, kindTy, StringConst("field")) {
+			members = append(members, s.semTypeToString(valueTy)+" "+name)
+		} else {
+			members = append(members, s.objectMethodToString(name, kindTy, valueTy))
+		}
+	}
+	prefix = append(prefix, "object")
+	result := strings.Join(prefix, " ")
+	if len(members) > 0 {
+		result += " { " + strings.Join(members, "; ") + " }"
+	}
+	return result
+}
+
+func (s *toStringState) objectMethodToString(name string, kindTy SemType, fnTy SemType) string {
+	var methodPrefix string
+	if IsSameType(s.cx, kindTy, StringConst("remote-method")) {
+		methodPrefix = "remote function "
+	} else if IsSameType(s.cx, kindTy, StringConst("resource-method")) {
+		methodPrefix = "resource function "
+	} else {
+		methodPrefix = "function "
+	}
+	cst, ok := fnTy.(*ComplexSemType)
+	if !ok {
+		return methodPrefix + name + "()"
+	}
+	for _, sub := range unpack(cst) {
+		if sub.BasicTypeCode == BTFunction {
+			bdd, ok := sub.SubtypeData.(Bdd)
+			if !ok {
+				continue
+			}
+			node, ok := bdd.(bddNode)
+			if !ok {
+				continue
+			}
+			atomic := s.cx.FunctionAtomType(node.atom())
+			paramsStr := s.functionParamsToString(atomic.ParamType)
+			retStr := s.semTypeToString(atomic.RetType)
+			return methodPrefix + name + "(" + paramsStr + ") returns " + retStr
+		}
+	}
+	return methodPrefix + name + "()"
 }
 
 func intSubtypeToString(st intSubtype) string {
