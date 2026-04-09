@@ -77,7 +77,7 @@ func (b *benchmark) run() error {
 
 	if !b.config.export {
 		for _, path := range target.paths {
-			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, path, target.mode)
+			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
 			if _, err := b.runHyperfine(cmds, ""); err != nil {
 				return err
 			}
@@ -94,7 +94,7 @@ func (b *benchmark) run() error {
 	var results []runResult
 
 	for _, path := range target.paths {
-		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, path, target.mode)
+		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
 		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
 		export, err := b.runHyperfine(cmds, exportPath)
 		if err != nil {
@@ -103,7 +103,7 @@ func (b *benchmark) run() error {
 		if export != nil {
 			label := target.label
 			if target.mode == multipleFilesMode {
-				label = filepath.Base(path)
+				label = getRelativeLabel(target.root, path)
 			}
 			results = append(results, runResult{
 				label:  label,
@@ -172,18 +172,27 @@ func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchEx
 	return nil, nil
 }
 
-func (b *benchmark) benchmarkCmdArgs(ref, interpreter, target string, mode targetMode) []string {
+func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode targetMode) []string {
 	command := fmt.Sprintf("%s run %s", shellQuote(interpreter), shellQuote(target))
 	if mode == multipleFilesMode {
-		ref = fmt.Sprintf("%s (%s)", ref, filepath.Base(target))
+		ref = fmt.Sprintf("%s (%s)", ref, getRelativeLabel(root, target))
 	}
 	return []string{"--command-name", ref, command}
 }
 
-func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, target string, mode targetMode) []string {
-	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, baseInterpreter), target, mode)
-	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, headInterpreter), target, mode)
+func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode) []string {
+	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, baseInterpreter), root, target, mode)
+	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, headInterpreter), root, target, mode)
 	return append(baseCmd, headCmd...)
+}
+
+func getRelativeLabel(root, path string) string {
+	if root != "" {
+		if rel, err := filepath.Rel(root, path); err == nil {
+			return rel
+		}
+	}
+	return filepath.Base(path)
 }
 
 func sanitize(ref string) string {
