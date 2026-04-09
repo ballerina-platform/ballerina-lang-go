@@ -114,9 +114,11 @@ func (c *PackageCompilation) compileModulesInternal() {
 		// Collect diagnostics from all modules
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			for _, diag := range moduleCtx.getDiagnostics() {
-				if c.getPackageContext().getProject().Kind() == ProjectKindBala &&
-					diag.DiagnosticInfo().Severity() != diagnostics.Error {
-					continue
+				severity := diag.DiagnosticInfo().Severity()
+				if c.getPackageContext().getProject().Kind() == ProjectKindBala {
+					if severity != diagnostics.Error && severity != diagnostics.Fatal {
+						continue
+					}
 				}
 				// TODO(P6): Determine isWorkspaceDep from dependency graph root comparison
 				isWorkspaceDep := false

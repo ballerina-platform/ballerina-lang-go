@@ -40,6 +40,8 @@ func (ds DiagnosticSeverity) String() string {
 		return "WARNING"
 	case Error:
 		return "ERROR"
+	case Fatal:
+		return "FATAL"
 	default:
 		return "UNKNOWN"
 	}
