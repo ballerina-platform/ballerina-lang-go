@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -33,6 +34,11 @@ const (
 type benchmark struct {
 	config
 	workRoot string
+}
+
+type runResult struct {
+	export benchExport
+	label  string
 }
 
 func (b *benchmark) run() error {
@@ -55,11 +61,11 @@ func (b *benchmark) run() error {
 	}
 	defer b.removeWorktree(headWorktree)
 
-	fmt.Printf("Building interpreter for base ref %q...\n", b.baseRef)
+	fmt.Printf("Building interpreter for %s...\n", b.baseRef)
 	if err := b.buildInterpreter(baseWorktree, b.baseRef, baseInterpreter); err != nil {
 		return err
 	}
-	fmt.Printf("Building interpreter for head ref %q...\n", b.headRef)
+	fmt.Printf("Building interpreter for %s...\n", b.headRef)
 	if err := b.buildInterpreter(headWorktree, b.headRef, headInterpreter); err != nil {
 		return err
 	}
@@ -69,18 +75,58 @@ func (b *benchmark) run() error {
 		return fmt.Errorf("failed to resolve benchmark target: %w", err)
 	}
 
+	if !b.config.export {
+		for _, path := range target.paths {
+			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, path, target.mode)
+			if _, err := b.runHyperfine(cmds, ""); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	exportDir, err := os.MkdirTemp("", "bal-bench-exports-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory for exports: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(exportDir) }()
+
+	var results []runResult
+
 	for _, path := range target.paths {
 		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, path, target.mode)
-		if err := b.runHyperfine(cmds); err != nil {
+		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
+		export, err := b.runHyperfine(cmds, exportPath)
+		if err != nil {
 			return err
+		}
+		if export != nil {
+			label := target.label
+			if target.mode == multipleFilesMode {
+				label = filepath.Base(path)
+			}
+			results = append(results, runResult{
+				label:  label,
+				export: *export,
+			})
 		}
 	}
 
+	report := report{
+		BaseRef:   b.baseRef,
+		HeadRef:   b.headRef,
+		Generated: time.Now(),
+		results:   results,
+	}
+	if err := report.export(b.config.exportPath); err != nil {
+		return fmt.Errorf("failed to export report: %w", err)
+	}
+	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	return nil
 }
 
 func (b *benchmark) checkoutWorktree(ref string) (string, error) {
-	path := filepath.Join(b.workRoot, "worktree"+sanitizeRef(ref))
+	path := filepath.Join(b.workRoot, "worktree"+sanitize(ref))
 	b.removeWorktree(path)
 
 	if err := runCmd(".", "git", "worktree", "add", "--detach", path, ref); err != nil {
@@ -111,10 +157,19 @@ func (b *benchmark) hyperfineFlags() []string {
 	return args
 }
 
-func (b *benchmark) runHyperfine(cmds []string) error {
+func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchExport, error) {
 	args := b.hyperfineFlags()
+	if b.config.export {
+		args = append(args, "--export-json", jsonExportPath)
+	}
 	args = append(args, cmds...)
-	return runCmd(".", "hyperfine", args...)
+	if err := runCmd(".", "hyperfine", args...); err != nil {
+		return nil, fmt.Errorf("failed to run hyperfine: %w", err)
+	}
+	if b.config.export {
+		return parseHyperfineExport(jsonExportPath)
+	}
+	return nil, nil
 }
 
 func (b *benchmark) benchmarkCmdArgs(ref, interpreter, target string, mode targetMode) []string {
@@ -131,7 +186,7 @@ func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, target string, 
 	return append(baseCmd, headCmd...)
 }
 
-func sanitizeRef(ref string) string {
+func sanitize(ref string) string {
 	return strings.Map(func(r rune) rune {
 		switch r {
 		case '/', '\\', ':':
