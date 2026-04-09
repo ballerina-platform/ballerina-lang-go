@@ -27,11 +27,19 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type BLangExpression interface {
-	model.ExpressionNode
+type BLangActionOrExpression interface {
 	BLangNode
-	// TODO: get rid of this method but we need a way to distinguish Expressions from other BLangNodes in a type switch
-	SetTypeCheckedType(ty BType)
+	actionOrExpression()
+}
+
+type BLangExpression interface {
+	BLangActionOrExpression
+	expressionNode()
+}
+
+type BLangAction interface {
+	BLangActionOrExpression
+	actionNode()
 }
 type Channel struct {
 	Sender     string
@@ -81,10 +89,14 @@ type (
 	}
 	bLangExpressionBase struct {
 		bLangNodeBase
-		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType BType
 	}
+)
 
+func (*bLangExpressionBase) actionOrExpression() {}
+func (*bLangExpressionBase) expressionNode()     {}
+
+type (
 	NarrowedTypes struct {
 		TrueType  BType
 		FalseType BType
@@ -159,7 +171,7 @@ type (
 
 	BLangCheckedExpr struct {
 		bLangExpressionBase
-		Expr                BLangExpression
+		Expr                BLangActionOrExpression
 		IsRedundantChecking bool
 	}
 
@@ -527,9 +539,6 @@ func (b *BLangLambdaFunction) GetKind() model.NodeKind {
 	return model.NodeKind_LAMBDA
 }
 
-func (b *BLangLambdaFunction) SetTypeCheckedType(ty BType) {
-}
-
 func (b *BLangAlternateWorkerReceive) ToActionString() string {
 	// migrated from BLangAlternateWorkerReceive.java:70:5
 	panic("Not implemented")
@@ -615,10 +624,6 @@ func (b *BLangCheckedExpr) GetOperatorKind() model.OperatorKind {
 func (b *BLangCheckedExpr) GetKind() model.NodeKind {
 	// migrated from BLangCheckedExpr.java:78:5
 	return model.NodeKind_CHECK_EXPR
-}
-
-func (b *BLangCheckedExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (b *BLangCheckPanickedExpr) GetOperatorKind() model.OperatorKind {
@@ -961,48 +966,8 @@ func (b *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment model.An
 	panic("not implemented")
 }
 
-func (b *BLangTypeConversionExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (b *BLangNumericLiteral) GetKind() model.NodeKind {
 	return model.NodeKind_NUMERIC_LITERAL
-}
-
-func (b *BLangLiteral) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangInvocation) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangQueryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangUnaryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangIndexBasedAccess) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangListConstructorExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (b *BLangGroupExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (b *BLangUnaryExpr) GetExpression() model.ExpressionNode {
@@ -1045,10 +1010,6 @@ func (b *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
 	return b.OptionalFieldAccess
 }
 
-func (b *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (b *BLangListConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_LIST_CONSTRUCTOR_EXPR
 }
@@ -1081,10 +1042,6 @@ func (b *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
 	return result
 }
 
-func (b *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (b *BLangTypeTestExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_TEST_EXPR
 }
@@ -1099,10 +1056,6 @@ func (b *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
 
 func (b *BLangTypeTestExpr) GetType() model.TypeData {
 	return b.Type
-}
-
-func (b *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (b *BLangMappingKey) GetKind() model.NodeKind {
@@ -1136,16 +1089,8 @@ func (b *BLangMappingConstructorExpr) GetFields() []model.MappingField {
 	return b.Fields
 }
 
-func (b *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
-	b.ExpectedType = ty
-}
-
 func (b *BLangNamedArgsExpression) GetKind() model.NodeKind {
 	return model.NodeKind_NAMED_ARGS_EXPR
-}
-
-func (b *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (b *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
@@ -1180,16 +1125,8 @@ func (b *BLangTrapExpr) GetExpression() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangTrapExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (b *BLangNewExpression) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_INIT_EXPR
-}
-
-func (b *BLangNewExpression) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func createBLangUnaryExpr(location diagnostics.Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
@@ -1198,8 +1135,4 @@ func createBLangUnaryExpr(location diagnostics.Location, operator model.Operator
 	exprNode.Expr = expr
 	exprNode.Operator = operator
 	return exprNode
-}
-
-func (b *BLangElvisExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }

@@ -1614,7 +1614,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 	bLAssignment := &BLangAssignment{}
 	lhsExpr := n.createExpression(assignmentStatementNode.VarRef())
 	// TODO: validate lhsExpr
-	bLAssignment.SetExpression(n.createExpression(assignmentStatementNode.Expression()))
+	bLAssignment.SetActionOrExpression(n.createExpression(assignmentStatementNode.Expression()))
 	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr
 	return bLAssignment
@@ -1622,7 +1622,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 
 func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStmtNode *tree.CompoundAssignmentStatementNode) BLangNode {
 	bLCompAssignment := &BLangCompoundAssignment{}
-	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
+	bLCompAssignment.SetActionOrExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
 	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
 	BLangNode(bLCompAssignment).SetPosition(getPosition(n.de(), compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
@@ -1668,7 +1668,7 @@ func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBind
 		} else {
 			expr = nil
 		}
-		variable.SetInitialExpression(expr)
+		variable.(*BLangSimpleVariable).SetInitialExpression(expr)
 
 		bLVarDef.SetVariable(variable)
 
@@ -1773,20 +1773,20 @@ func (n *NodeBuilder) TransformFailStatement(failStatementNode *tree.FailStateme
 
 func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.ExpressionStatementNode) BLangNode {
 	bLExpressionStmt := BLangExpressionStmt{}
-	bLExpressionStmt.Expr = n.createExpression(expressionStatement.Expression())
+	bLExpressionStmt.Expr = n.createActionOrExpression(expressionStatement.Expression())
 	bLExpressionStmt.pos = getPosition(n.de(), expressionStatement)
 	return &bLExpressionStmt
 }
 
 func (n *NodeBuilder) createExpression(expressionNode tree.Node) BLangExpression {
-	return n.createActionOrExpression(expressionNode).(BLangExpression)
+	return n.createActionOrExpression(expressionNode).(BLangExpression) //nolint:forcetypeassert // only called where expressions are expected, not actions
 }
 
 // createActionOrExpression creates an action or expression node from a syntax tree node
 // migrated from BLangNodeBuilder.java:5490:5
-func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangNode {
+func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangActionOrExpression {
 	if isSimpleLiteral(actionOrExpression.Kind()) {
-		return n.createSimpleLiteral(actionOrExpression).(BLangNode)
+		return n.createSimpleLiteral(actionOrExpression).(BLangActionOrExpression)
 	} else if actionOrExpression.Kind() == common.SIMPLE_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.QUALIFIED_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.IDENTIFIER_TOKEN {
@@ -1808,7 +1808,7 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 		typeAccessExpr.typeDescriptor = n.createTypeNode(actionOrExpression)
 		return &typeAccessExpr
 	} else {
-		return n.TransformSyntaxNode(actionOrExpression)
+		return n.TransformSyntaxNode(actionOrExpression).(BLangActionOrExpression)
 	}
 }
 
@@ -1869,13 +1869,13 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 	bLReturn := &BLangReturn{}
 	bLReturn.pos = getPosition(n.de(), returnStatementNode)
 	if returnStatementNode.Expression() != nil {
-		bLReturn.SetExpression(n.createExpression(returnStatementNode.Expression()))
+		bLReturn.SetActionOrExpression(n.createExpression(returnStatementNode.Expression()))
 	} else {
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(n.de(), returnStatementNode)
 		nilLiteral.Value = nil
 		nilLiteral.SetValueType(n.types.getTypeFromTag(model.TypeTags_NIL).(BType))
-		bLReturn.SetExpression(nilLiteral)
+		bLReturn.SetActionOrExpression(nilLiteral)
 	}
 
 	return bLReturn

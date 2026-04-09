@@ -611,7 +611,6 @@ type VariableNode interface {
 	DocumentableNode
 	TopLevelNode
 	GetInitialExpression() ExpressionNode
-	SetInitialExpression(expr ExpressionNode)
 	GetIsDeclaredWithVar() bool
 	SetIsDeclaredWithVar(isDeclaredWithVar bool)
 }
@@ -1046,7 +1045,6 @@ type AssignmentNode interface {
 	GetVariable() ExpressionNode
 	GetExpression() ExpressionNode
 	IsDeclaredWithVar() bool
-	SetExpression(expression Node)
 	SetDeclaredWithVar(IsDeclaredWithVar bool)
 	SetVariable(variableReferenceNode VariableReferenceNode)
 }
@@ -1092,7 +1090,6 @@ type VariableDefinitionNode interface {
 type ReturnNode interface {
 	StatementNode
 	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
 }
 
 type PanicNode interface {
@@ -1128,7 +1125,6 @@ type ForeachNode interface {
 	GetVariableDefinitionNode() VariableDefinitionNode
 	SetVariableDefinitionNode(node VariableDefinitionNode)
 	GetCollection() ExpressionNode
-	SetCollection(collection ExpressionNode)
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetIsDeclaredWithVar() bool

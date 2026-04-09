@@ -259,7 +259,7 @@ func (a *uninitVarAnalyzer) markAssignmentTarget(expr ast.BLangExpression, state
 }
 
 // checkExpression walks an expression and checks all variable references
-func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangExpression, state *varInitState) {
+func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangActionOrExpression, state *varInitState) {
 	checker := &varRefChecker{analyzer: a, state: state}
 	ast.Walk(checker, expr)
 }
