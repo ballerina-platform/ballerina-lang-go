@@ -23,11 +23,13 @@ import (
 )
 
 type config struct {
-	baseRef string
-	headRef string
-	target  string
-	warmup  int
-	runs    int
+	baseRef    string
+	headRef    string
+	target     string
+	warmup     int
+	runs       int
+	export     bool
+	exportPath string
 }
 
 func parseConfig() (*config, error) {
@@ -39,6 +41,7 @@ func parseConfig() (*config, error) {
 
 	warmup := fs.Int("warmup", 0, "Number of warmup iterations")
 	runs := fs.Int("runs", 10, "Number of benchmark runs")
+	exportPath := fs.String("export-html", "", "Path to export HTML report")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -50,13 +53,18 @@ func parseConfig() (*config, error) {
 		return nil, fmt.Errorf("missing required arguments")
 	}
 
-	return &config{
-		baseRef: args[0],
-		headRef: args[1],
-		target:  args[2],
-		warmup:  *warmup,
-		runs:    *runs,
-	}, nil
+	cfg := &config{
+		baseRef:    args[0],
+		headRef:    args[1],
+		target:     args[2],
+		warmup:     *warmup,
+		runs:       *runs,
+		exportPath: *exportPath,
+	}
+	if cfg.exportPath != "" {
+		cfg.export = true
+	}
+	return cfg, nil
 }
 
 func (c *config) validate() error {
@@ -80,6 +88,9 @@ func (c *config) validate() error {
 	}
 	if c.runs <= 0 {
 		return fmt.Errorf("runs must be greater than zero")
+	}
+	if c.export && c.exportPath == "" {
+		return fmt.Errorf("export path is required")
 	}
 	return nil
 }
