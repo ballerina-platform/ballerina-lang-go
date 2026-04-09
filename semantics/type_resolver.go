@@ -520,7 +520,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 		for _, f := range classDef.Fields {
 			field := f.(*ast.BLangSimpleVariable)
 			if field.Expr != nil {
-				resolveExpression(ft, nil, field.Expr.(ast.BLangExpression), nil)
+				resolveActionOrExpression(ft, nil, field.Expr.(ast.BLangExpression), nil)
 			}
 		}
 		maps.Copy(allImports, ft.implicitImports)
@@ -568,7 +568,7 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 		resolveBlockStatements(ft, nil, body.Stmts)
 		body.SetDeterminedType(semtypes.NEVER)
 	case *ast.BLangExprFunctionBody:
-		resolveExpression(ft, nil, body.Expr.(ast.BLangExpression), ft.retTy)
+		resolveActionOrExpression(ft, nil, body.Expr.(ast.BLangExpression), ft.retTy)
 	default:
 		p.internalError("unexpected function body kind", fn.Body.GetPosition())
 	}
@@ -683,11 +683,11 @@ func resolveStatement(t typeResolver, chain *binding, stmt ast.BLangStatement) (
 }
 
 func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statementEffect, bool) {
-	lhsTy, _, ok := resolveExpression(t, nil, s.GetVariable().(ast.BLangExpression), nil)
+	lhsTy, _, ok := resolveActionOrExpression(t, nil, s.GetVariable().(ast.BLangExpression), nil)
 	if !ok {
 		return statementEffect{}, false
 	}
-	if _, _, ok := resolveExpression(t, chain, s.GetExpression().(ast.BLangExpression), lhsTy); !ok {
+	if _, _, ok := resolveActionOrExpression(t, chain, s.GetExpression().(ast.BLangExpression), lhsTy); !ok {
 		return statementEffect{}, false
 	}
 	if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
@@ -712,13 +712,13 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 	case *ast.BLangCompoundAssignment:
 		return resolveAssignment(t, chain, s)
 	case *ast.BLangExpressionStmt:
-		if _, _, ok := resolveExpression(t, chain, s.Expr, nil); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, s.Expr, nil); !ok {
 			return defaultStmtEffect(chain), false
 		}
 		return defaultStmtEffect(chain), true
 	// PT-TODO: extract if while out
 	case *ast.BLangIf:
-		_, exprEffect, ok := resolveExpression(t, chain, s.Expr, semtypes.BOOLEAN)
+		_, exprEffect, ok := resolveActionOrExpression(t, chain, s.Expr, semtypes.BOOLEAN)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -738,7 +738,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 		}
 		return mergeStatementEffects(t, ifTrueEffect, ifFalseEffect), true
 	case *ast.BLangWhile:
-		_, exprEffect, ok := resolveExpression(t, chain, s.Expr, semtypes.BOOLEAN)
+		_, exprEffect, ok := resolveActionOrExpression(t, chain, s.Expr, semtypes.BOOLEAN)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -755,7 +755,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 		return statementEffect{result, false}, true
 	case *ast.BLangReturn:
 		if s.Expr != nil {
-			if _, _, ok := resolveExpression(t, chain, s.Expr, t.expectedReturnType()); !ok {
+			if _, _, ok := resolveActionOrExpression(t, chain, s.Expr, t.expectedReturnType()); !ok {
 				return defaultStmtEffect(chain), false
 			}
 		}
@@ -771,7 +771,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 			s.VariableDef.SetDeterminedType(semtypes.NEVER)
 		}
 		if s.Collection != nil {
-			if _, _, ok := resolveExpression(t, chain, s.Collection, nil); !ok {
+			if _, _, ok := resolveActionOrExpression(t, chain, s.Collection, nil); !ok {
 				return defaultStmtEffect(chain), false
 			}
 		}
@@ -784,7 +784,7 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 		}
 		return defaultStmtEffect(chain), ok
 	case *ast.BLangPanic:
-		if _, _, ok := resolveExpression(t, chain, s.Expr, semtypes.ERROR); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, s.Expr, semtypes.ERROR); !ok {
 			return defaultStmtEffect(chain), false
 		}
 		return statementEffect{nil, true}, true
@@ -921,7 +921,7 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 		resolveBlockStatements(ft, boundaryChain, body.Stmts)
 		body.SetDeterminedType(semtypes.NEVER)
 	case *ast.BLangExprFunctionBody:
-		if _, _, ok := resolveExpression(ft, boundaryChain, body.Expr.(ast.BLangExpression), ft.retTy); !ok {
+		if _, _, ok := resolveActionOrExpression(ft, boundaryChain, body.Expr.(ast.BLangExpression), ft.retTy); !ok {
 			t.setCapturedVars(prevCaptured)
 			return nil, expressionEffect{}, false
 		}
@@ -1658,7 +1658,7 @@ func resolveVariableDefStmt(t typeResolver, chain *binding, s *ast.BLangSimpleVa
 	effectChain := chain
 	if variable.Expr != nil {
 		expectedType := variable.GetDeterminedType()
-		exprTy, effect, ok := resolveExpression(t, chain, variable.Expr.(ast.BLangExpression), expectedType)
+		exprTy, effect, ok := resolveActionOrExpression(t, chain, variable.Expr.(ast.BLangExpression), expectedType)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -1677,7 +1677,7 @@ func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimple
 	typeNode := node.TypeNode()
 	if typeNode == nil {
 		if node.Expr != nil {
-			exprTy, _, ok := resolveExpression(t, chain, node.Expr.(ast.BLangExpression), nil)
+			exprTy, _, ok := resolveActionOrExpression(t, chain, node.Expr.(ast.BLangExpression), nil)
 			if !ok {
 				return false
 			}
@@ -1698,7 +1698,7 @@ func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimple
 	updateSymbolType(t, node, semType)
 
 	if node.Expr != nil {
-		if _, _, ok := resolveExpression(t, chain, node.Expr.(ast.BLangExpression), semType); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, node.Expr.(ast.BLangExpression), semType); !ok {
 			return false
 		}
 	}
@@ -1706,7 +1706,7 @@ func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimple
 	return true
 }
 
-func resolveExpression(t typeResolver, chain *binding, expr ast.BLangExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+func resolveActionOrExpression(t typeResolver, chain *binding, expr ast.BLangActionOrExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	// Check if already resolved
 	if ty := expr.GetDeterminedType(); ty != nil {
 		return ty, defaultExpressionEffect(chain), true
@@ -1724,7 +1724,7 @@ func resolveExpression(t typeResolver, chain *binding, expr ast.BLangExpression,
 	return ty, effect, ok
 }
 
-func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangActionOrExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	switch e := expr.(type) {
 	case *ast.BLangLiteral:
 		if ok := resolveLiteral(t, e, expectedType); !ok {
@@ -1777,7 +1777,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangExpres
 	case *ast.BLangTrapExpr:
 		return resolveTrapExpr(t, chain, e)
 	case *ast.BLangNamedArgsExpression:
-		ty, effect, ok := resolveExpression(t, chain, e.Expr, expectedType)
+		ty, effect, ok := resolveActionOrExpression(t, chain, e.Expr, expectedType)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -1831,7 +1831,7 @@ func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, e
 			key := semtypes.IntConst(int64(i))
 			paramTy = semtypes.ListMemberTypeInnerVal(cx, paramListTy, key)
 		}
-		if _, _, ok := resolveExpression(t, chain, arg, paramTy); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, arg, paramTy); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
@@ -1893,7 +1893,7 @@ func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, objectTy 
 }
 
 func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1916,7 +1916,7 @@ func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExp
 
 	setExpectedType(e, resultTy)
 
-	ref, isVarRef := varRefExp(chain, &e.Expr)
+	ref, isVarRef := varRefExp(chain, e.Expr)
 	if !isVarRef {
 		return resultTy, defaultExpressionEffect(chain), true
 	}
@@ -1936,7 +1936,7 @@ func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExp
 }
 
 func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1946,7 +1946,7 @@ func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semt
 }
 
 func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveExpression(t, chain, e.Expr, nil)
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -1970,7 +1970,7 @@ func resolveMappingConstructorBottomUp(t typeResolver, chain *binding, e *ast.BL
 	fields := make([]semtypes.Field, len(e.Fields))
 	for i, f := range e.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		valueTy, _, ok := resolveExpression(t, chain, kv.ValueExpr, nil)
+		valueTy, _, ok := resolveActionOrExpression(t, chain, kv.ValueExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -2010,7 +2010,7 @@ func resolveMappingConstructorBottomUp(t typeResolver, chain *binding, e *ast.BL
 func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e *ast.BLangMappingConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	for _, f := range e.Fields {
 		kv := f.(*ast.BLangMappingKeyValueField)
-		if _, _, ok := resolveExpression(t, chain, kv.ValueExpr, nil); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, kv.ValueExpr, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 		resolveMappingKey(t, kv)
@@ -2026,7 +2026,7 @@ func resolveMappingConstructorWithExpectedType(t typeResolver, chain *binding, e
 		keyName := recordKeyName(kv.Key)
 		requiredType := mat.FieldInnerVal(keyName)
 		kv.ValueExpr.SetDeterminedType(nil)
-		if _, _, ok := resolveExpression(t, chain, kv.ValueExpr, requiredType); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, kv.ValueExpr, requiredType); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
@@ -2118,7 +2118,7 @@ func resolveTypeConversionExpr(t typeResolver, chain *binding, e *ast.BLangTypeC
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	_, _, ok = resolveExpression(t, chain, e.Expression, nil)
+	_, _, ok = resolveActionOrExpression(t, chain, e.Expression, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2221,7 +2221,7 @@ func isNumericType(ty semtypes.SemType) bool {
 }
 
 func resolveGroupExpr(t typeResolver, chain *binding, expr *ast.BLangGroupExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	innerTy, effect, ok := resolveExpression(t, chain, expr.Expression, expectedType)
+	innerTy, effect, ok := resolveActionOrExpression(t, chain, expr.Expression, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2249,7 +2249,7 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	}
 	selectClause.SetDeterminedType(semtypes.NEVER)
 
-	collectionTy, _, ok := resolveExpression(t, chain, fromClause.Collection, nil)
+	collectionTy, _, ok := resolveActionOrExpression(t, chain, fromClause.Collection, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2302,7 +2302,7 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 		return nil, expressionEffect{}, false
 	}
 
-	selectTy, _, ok := resolveExpression(t, queryChain, selectClause.Expression, nil)
+	selectTy, _, ok := resolveActionOrExpression(t, queryChain, selectClause.Expression, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2356,7 +2356,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 						varDef.GetPosition())
 					return nil, false
 				}
-				initTy, _, ok := resolveExpression(t, currentChain, varDef.Var.Expr.(ast.BLangExpression), nil)
+				initTy, _, ok := resolveActionOrExpression(t, currentChain, varDef.Var.Expr.(ast.BLangExpression), nil)
 				if !ok {
 					return nil, false
 				}
@@ -2380,7 +2380,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 			}
 		case *ast.BLangWhereClause:
 			clause.SetDeterminedType(semtypes.NEVER)
-			whereTy, effect, ok := resolveExpression(t, currentChain, clause.Expression, semtypes.BOOLEAN)
+			whereTy, effect, ok := resolveActionOrExpression(t, currentChain, clause.Expression, semtypes.BOOLEAN)
 			if !ok {
 				return nil, false
 			}
@@ -2443,7 +2443,7 @@ func resolveListConstructorExpr(t typeResolver, chain *binding, expr *ast.BLangL
 func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr) (semtypes.SemType, expressionEffect, bool) {
 	memberTypes := make([]semtypes.SemType, len(expr.Exprs))
 	for i, memberExpr := range expr.Exprs {
-		memberTy, _, ok := resolveExpression(t, chain, memberExpr, nil)
+		memberTy, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -2468,7 +2468,7 @@ func resolveListConstructorInner(t typeResolver, chain *binding, expr *ast.BLang
 
 func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr *ast.BLangListConstructorExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	for _, memberExpr := range expr.Exprs {
-		if _, _, ok := resolveExpression(t, chain, memberExpr, nil); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
@@ -2485,7 +2485,7 @@ func resolveListConstructorWithExpectedType(t typeResolver, chain *binding, expr
 			return nil, expressionEffect{}, false
 		}
 		memberExpr.SetDeterminedType(nil)
-		if _, _, ok := resolveExpression(t, chain, memberExpr, requiredType); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, memberExpr, requiredType); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
@@ -2568,12 +2568,12 @@ func resolveErrorConstructorExpr(t typeResolver, chain *binding, expr *ast.BLang
 	setExpectedType(expr, errorTy)
 
 	for _, arg := range expr.PositionalArgs {
-		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, arg, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
 	for _, arg := range expr.NamedArgs {
-		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, arg, nil); !ok {
 			return nil, expressionEffect{}, false
 		}
 	}
@@ -2581,7 +2581,7 @@ func resolveErrorConstructorExpr(t typeResolver, chain *binding, expr *ast.BLang
 }
 
 func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, innerEffect, ok := resolveExpression(t, chain, expr.Expr, expectedType)
+	exprTy, innerEffect, ok := resolveActionOrExpression(t, chain, expr.Expr, expectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2660,11 +2660,11 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 	if expectedType != nil {
 		operandExpectedType = semtypes.Intersect(operandExpectedType, expectedType)
 	}
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, operandExpectedType)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2701,11 +2701,11 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 }
 
 func resolveRangeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	_, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	_, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	_, _, ok = resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	_, _, ok = resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2716,11 +2716,11 @@ func resolveRangeExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr)
 }
 
 func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2764,11 +2764,11 @@ func nilLiftedUnderlyingType(lhsTy, rhsTy semtypes.SemType) (semtypes.SemType, s
 }
 
 func resolveRelationalExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
+	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2788,11 +2788,11 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 	if expectedType != nil {
 		operandExpectedType = semtypes.Intersect(expectedType, operandExpectedType)
 	}
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, operandExpectedType)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
+	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, operandExpectedType)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2837,11 +2837,11 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 }
 
 func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, semtypes.INT)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, _, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
+	rhsTy, _, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, semtypes.INT)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2926,11 +2926,11 @@ func isSingletonBool(ty semtypes.SemType, value bool) bool {
 }
 
 func resolveEqualityExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	_, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	_, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	_, _, ok = resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
+	_, _, ok = resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2959,11 +2959,11 @@ func resolveLogicalExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExp
 }
 
 func resolveAndExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := resolveExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
+	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifTrue, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2990,11 +2990,11 @@ func resolveAndExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (
 }
 
 func resolveOrExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (semtypes.SemType, expressionEffect, bool) {
-	lhsTy, lhsEffect, ok := resolveExpression(t, chain, expr.LhsExpr, nil)
+	lhsTy, lhsEffect, ok := resolveActionOrExpression(t, chain, expr.LhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	rhsTy, rhsEffect, ok := resolveExpression(t, lhsEffect.ifFalse, expr.RhsExpr, nil)
+	rhsTy, rhsEffect, ok := resolveActionOrExpression(t, lhsEffect.ifFalse, expr.RhsExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3021,7 +3021,7 @@ func resolveOrExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) (s
 }
 
 func equalityNarrowingEffect(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr) expressionEffect {
-	lhsRef, lhsIsVarRef := varRefExp(chain, &expr.LhsExpr)
+	lhsRef, lhsIsVarRef := varRefExp(chain, expr.LhsExpr)
 	rhsTy := expr.RhsExpr.GetDeterminedType()
 	rhsIsSingleton := semtypes.SingleShape(rhsTy).IsPresent()
 	if lhsIsVarRef && rhsIsSingleton {
@@ -3031,7 +3031,7 @@ func equalityNarrowingEffect(t typeResolver, chain *binding, expr *ast.BLangBina
 		}
 		return effect
 	}
-	rhsRef, rhsIsVarRef := varRefExp(chain, &expr.RhsExpr)
+	rhsRef, rhsIsVarRef := varRefExp(chain, expr.RhsExpr)
 	lhsTy := expr.LhsExpr.GetDeterminedType()
 	lhsIsSingleton := semtypes.SingleShape(lhsTy).IsPresent()
 	if rhsIsVarRef && lhsIsSingleton {
@@ -3094,13 +3094,13 @@ func createClosedRecordType(env semtypes.Env, fields []semtypes.Field, rest semt
 
 func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangIndexBasedAccess) (semtypes.SemType, expressionEffect, bool) {
 	containerExpr := expr.Expr
-	containerExprTy, _, ok := resolveExpression(t, chain, containerExpr, nil)
+	containerExprTy, _, ok := resolveActionOrExpression(t, chain, containerExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
 	keyExpr := expr.IndexExpr
-	keyExprTy, _, ok := resolveExpression(t, chain, keyExpr, nil)
+	keyExprTy, _, ok := resolveActionOrExpression(t, chain, keyExpr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3128,7 +3128,7 @@ func resolveIndexBasedAccess(t typeResolver, chain *binding, expr *ast.BLangInde
 }
 
 func resolveFieldBaseAccess(t typeResolver, chain *binding, expr *ast.BLangFieldBaseAccess) (semtypes.SemType, expressionEffect, bool) {
-	containerExprTy, _, ok := resolveExpression(t, chain, expr.Expr, nil)
+	containerExprTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3195,7 +3195,7 @@ func resolveInvocation(t typeResolver, chain *binding, expr *ast.BLangInvocation
 }
 
 func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
-	recieverTy, _, ok := resolveExpression(t, chain, expr.Expr, nil)
+	recieverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3244,7 +3244,7 @@ func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvo
 
 	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
 	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := resolveExpression(t, chain, arg, nil)
+		argTy, _, ok := resolveActionOrExpression(t, chain, arg, nil)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
@@ -3340,7 +3340,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, expr *ast.BLangInvo
 			}
 			key := semtypes.IntConst(int64(i))
 			paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
-			argTy, argEffect, ok := resolveExpression(t, chain, arg, paramTy)
+			argTy, argEffect, ok := resolveActionOrExpression(t, chain, arg, paramTy)
 			if !ok {
 				return nil, narrowedSymbol, chain, false
 			}
@@ -3415,7 +3415,7 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 		} else {
 			expectedType = restParamTy
 		}
-		ty, effect, ok := resolveExpression(t, chain, each, expectedType)
+		ty, effect, ok := resolveActionOrExpression(t, chain, each, expectedType)
 		if !ok {
 			return nil, nil, chain, false
 		}
@@ -3577,7 +3577,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 	case *ast.BLangFiniteTypeNode:
 		var result semtypes.SemType = semtypes.NEVER
 		for _, value := range ty.ValueSpace {
-			valueTy, _, ok := resolveExpression(t, nil, value, nil)
+			valueTy, _, ok := resolveActionOrExpression(t, nil, value, nil)
 			if !ok {
 				return nil, false
 			}
@@ -3679,7 +3679,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				delete(result.includedFields, name)
 			}
 			if field.DefaultExpr != nil {
-				if _, _, ok := resolveExpression(t, nil, field.DefaultExpr, fieldTy); !ok {
+				if _, _, ok := resolveActionOrExpression(t, nil, field.DefaultExpr, fieldTy); !ok {
 					return nil, false
 				}
 				field.DefaultFnRef = allocateDefaultFnSymbol(t, fieldTy)
@@ -3950,7 +3950,7 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 		}
 	}
 
-	exprTy, _, ok := resolveExpression(t, nil, constant.Expr.(ast.BLangExpression), annotationType)
+	exprTy, _, ok := resolveActionOrExpression(t, nil, constant.Expr.(ast.BLangExpression), annotationType)
 	if !ok {
 		return false
 	}
@@ -3965,13 +3965,13 @@ func resolveConstant(t typeResolver, constant *ast.BLangConstant) bool {
 }
 
 func resolveMatchStatement(t typeResolver, chain *binding, stmt *ast.BLangMatchStatement) (statementEffect, bool) {
-	_, exprEffect, ok := resolveExpression(t, chain, stmt.Expr, nil)
+	_, exprEffect, ok := resolveActionOrExpression(t, chain, stmt.Expr, nil)
 	if !ok {
 		return defaultStmtEffect(chain), false
 	}
 	chain = exprEffect.ifTrue
 
-	exprRef, isVarRef := varRefExp(chain, &stmt.Expr)
+	exprRef, isVarRef := varRefExp(chain, stmt.Expr)
 	var remainingType semtypes.SemType
 	if isVarRef {
 		remainingType = t.symbolType(exprRef)
@@ -4067,7 +4067,7 @@ func matchClauseAcceptedType(t typeResolver, chain *binding, clause *ast.BLangMa
 		acceptedTy = semtypes.Union(acceptedTy, patternTy)
 	}
 	if clause.Guard != nil {
-		_, guardEffect, _ := resolveExpression(t, chain, clause.Guard, nil)
+		_, guardEffect, _ := resolveActionOrExpression(t, chain, clause.Guard, nil)
 		return acceptedTy, guardEffect.ifTrue, true
 	}
 	return acceptedTy, chain, true
@@ -4105,7 +4105,7 @@ func resolveMatchClause(t typeResolver, chain *binding, clause *ast.BLangMatchCl
 func resolveMatchPattern(t typeResolver, chain *binding, pattern ast.BLangMatchPattern) (semtypes.SemType, bool) {
 	switch p := pattern.(type) {
 	case *ast.BLangConstPattern:
-		ty, _, ok := resolveExpression(t, chain, p.Expr, nil)
+		ty, _, ok := resolveActionOrExpression(t, chain, p.Expr, nil)
 		if !ok {
 			return nil, false
 		}

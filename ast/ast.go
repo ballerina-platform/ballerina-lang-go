@@ -407,7 +407,7 @@ type (
 		typeNode                        BType
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
-		Expr                            model.ExpressionNode
+		Expr                            BLangActionOrExpression
 		flags                           nodeFlags
 		IsDeclaredWithVar               bool
 		symbol                          model.SymbolRef
@@ -1486,7 +1486,7 @@ func (b *BLangVariableBase) GetExpr() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangVariableBase) SetExpr(expr model.ExpressionNode) {
+func (b *BLangVariableBase) SetExpr(expr BLangActionOrExpression) {
 	b.Expr = expr
 }
 
@@ -1511,7 +1511,7 @@ func (m *BLangVariableBase) GetInitialExpression() model.ExpressionNode {
 	return m.Expr
 }
 
-func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
+func (m *BLangVariableBase) SetInitialExpression(expr BLangActionOrExpression) {
 	m.Expr = expr
 }
 
