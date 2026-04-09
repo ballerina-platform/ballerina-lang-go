@@ -287,7 +287,7 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 }
 
 func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *constantAnalyzer {
-	expectedType := constant.GetDeterminedType()
+	expectedType := constant.GetAssociatedType()
 	return &constantAnalyzer{analyzerBase: analyzerBase{parent: parent}, constant: constant, expectedType: expectedType}
 }
 
@@ -442,16 +442,8 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case model.TypeDescriptor:
 	case *ast.BLangTypeDefinition:
-		expectedType := node.GetDeterminedType()
-		if expectedType == nil {
-			ca.internalErr("type not resolved", n.GetPosition())
-			return nil
-		}
-		ctx := ca.tyCtx()
-		if semtypes.IsNever(expectedType) || !semtypes.IsSubtype(ctx, expectedType, semtypes.CreateAnydata(ctx)) {
-			ca.syntaxErr("invalid type for constant declaration", n.GetPosition())
-			return nil
-		}
+		// We have set the type at constructor
+		return nil
 	case model.ExpressionNode:
 		bLangExpr := n.(ast.BLangExpression)
 		hasErrors := false
@@ -462,18 +454,7 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		if hasErrors {
 			return nil
 		}
-		if !analyzeExpression(ca, bLangExpr, ca.expectedType) {
-			return nil
-		}
-		exprTy := bLangExpr.GetDeterminedType()
-		if ca.expectedType != nil {
-			if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
-				ca.semanticErr("incompatible type for constant expression", bLangExpr.GetPosition())
-				return nil
-			}
-		} else {
-			ca.expectedType = exprTy
-		}
+		analyzeExpression(ca, bLangExpr, ca.expectedType)
 		return nil
 	}
 	return ca

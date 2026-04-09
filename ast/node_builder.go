@@ -2176,15 +2176,6 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 		constantNode.FlagSet.Add(model.Flag_PUBLIC)
 	}
 
-	nodeKind := constantNode.Expr.GetKind()
-
-	typeNode := constantNode.TypeNode()
-	_, typeNodeIsArray := typeNode.(*BLangArrayType)
-	if (nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL || nodeKind == model.NodeKind_UNARY_EXPR) &&
-		(typeNode == nil || !typeNodeIsArray) {
-		n.createAnonymousTypeDefForConstantDeclaration(constantNode, pos, identifierPos)
-	}
-
 	constantName := constantNode.Name.GetValue()
 
 	if n.constantSet[constantName] {
@@ -2195,61 +2186,6 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 	}
 
 	return constantNode
-}
-
-// createAnonymousTypeDefForConstantDeclaration creates an anonymous type definition for constant declarations
-// migrated from BLangNodeBuilder.java:891:5
-func (n *NodeBuilder) createAnonymousTypeDefForConstantDeclaration(constantNode *BLangConstant, pos Location, identifierPos Location) {
-	finiteTypeNode := &BLangFiniteTypeNode{}
-
-	nodeKind := constantNode.Expr.GetKind()
-
-	var literal model.LiteralNode
-	if nodeKind == model.NodeKind_LITERAL {
-		literal = &BLangLiteral{}
-	} else {
-		literal = &BLangNumericLiteral{}
-	}
-
-	if nodeKind == model.NodeKind_LITERAL || nodeKind == model.NodeKind_NUMERIC_LITERAL {
-		constantExprLiteral := constantNode.Expr.(*BLangLiteral)
-		literal.SetValue(constantExprLiteral.GetValue())
-		literal.SetOriginalValue(constantExprLiteral.GetOriginalValue())
-		switch bl := literal.(type) {
-		case *BLangLiteral:
-			bl.SetValueType(constantExprLiteral.GetValueType())
-		case *BLangNumericLiteral:
-			bl.SetValueType(constantExprLiteral.GetValueType())
-		}
-		literal.SetIsConstant(true)
-		finiteTypeNode.AddValue(literal)
-	} else {
-		// Since we only allow unary expressions to come to this point we can straightaway cast to unary
-		unaryConstant := constantNode.Expr.(*BLangUnaryExpr)
-		unaryExpr := createBLangUnaryExpr(unaryConstant.GetPosition(), unaryConstant.Operator, unaryConstant.Expr)
-		// Type of the unary expression is resolved during type resolution
-		finiteTypeNode.ValueSpace = append(finiteTypeNode.ValueSpace, unaryExpr)
-	}
-
-	finiteTypeNode.pos = identifierPos
-
-	typeDef := NewBLangTypeDefinition()
-	constantNameValue := constantNode.Name.GetValue()
-	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, constantNameValue)
-	genName := n.getNextAnonymousTypeKey(n.PackageID, n.anonTypeNameSuffixes)
-	n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	anonTypeGenName := createIdentifier(builtinPos, &genName, &constantNameValue)
-	typeDef.SetName(&anonTypeGenName)
-	typeDef.AddFlag(model.Flag_PUBLIC)
-	typeDef.AddFlag(model.Flag_ANONYMOUS)
-	typeData := model.TypeData{
-		TypeDescriptor: finiteTypeNode,
-	}
-	typeDef.SetTypeData(typeData)
-	BLangNode(typeDef).SetPosition(pos)
-
-	// We add this type definition to the `associatedTypeDefinition` field of the constant node.
-	constantNode.AssociatedTypeDefinition = typeDef
 }
 
 func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tree.DefaultableParameterNode) BLangNode {
