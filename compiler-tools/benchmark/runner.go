@@ -31,15 +31,16 @@ const (
 	headInterpreter = "bal-base"
 )
 
-type benchmark struct {
-	config
-	workRoot string
-}
-
-type runResult struct {
-	export benchExport
-	label  string
-}
+type (
+	benchmark struct {
+		config
+		workRoot string
+	}
+	runResult struct {
+		export benchExport
+		label  string
+	}
+)
 
 func (b *benchmark) run() error {
 	workRoot, err := os.MkdirTemp("", "bal-bench-*")
@@ -75,7 +76,7 @@ func (b *benchmark) run() error {
 		return fmt.Errorf("failed to resolve benchmark target: %w", err)
 	}
 
-	if !b.config.export {
+	if b.config.exportPath == "" {
 		for _, path := range target.paths {
 			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
 			if _, err := b.runHyperfine(cmds, ""); err != nil {
@@ -92,7 +93,6 @@ func (b *benchmark) run() error {
 	defer func() { _ = os.RemoveAll(exportDir) }()
 
 	var results []runResult
-
 	for _, path := range target.paths {
 		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
 		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
@@ -119,7 +119,7 @@ func (b *benchmark) run() error {
 		results:   results,
 	}
 	if err := report.export(b.config.exportPath); err != nil {
-		return fmt.Errorf("failed to export report: %w", err)
+		return err
 	}
 	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	return nil
@@ -159,14 +159,14 @@ func (b *benchmark) hyperfineFlags() []string {
 
 func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchExport, error) {
 	args := b.hyperfineFlags()
-	if b.config.export {
+	if b.config.exportPath != "" {
 		args = append(args, "--export-json", jsonExportPath)
 	}
 	args = append(args, cmds...)
 	if err := runCmd(".", "hyperfine", args...); err != nil {
 		return nil, fmt.Errorf("failed to run hyperfine: %w", err)
 	}
-	if b.config.export {
+	if b.config.exportPath != "" {
 		return parseHyperfineExport(jsonExportPath)
 	}
 	return nil, nil
