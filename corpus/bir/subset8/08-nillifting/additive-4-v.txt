@@ -1,0 +1,17 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+a  nil|int;
+b  nil|int;
+x  nil|int;
+y  nil|int;
+main() -> nil{
+  bb0 {
+    %1 = println(a) -> bb1;
+  }
+  bb1 {
+    %2 = println(b) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
