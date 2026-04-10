@@ -1045,7 +1045,11 @@ func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expres
 
 	thenBB := ctx.addBB()
 	resultOperand := ctx.addTempVar(callable.GetDeterminedType())
-	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(callable.GetName().GetValue()), thenBB, resultOperand, callable.GetPosition())
+	callName := callable.GetName().GetValue()
+	if _, isRemote := callable.(*ast.BLangRemoteMethodCallAction); isRemote {
+		callName = model.RemoteMethodName(callName)
+	}
+	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(callName), thenBB, resultOperand, callable.GetPosition())
 	call.IsMethodCall = isMethodCall
 
 	symRef := callable.ResolvedSymbol()

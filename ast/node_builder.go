@@ -2358,6 +2358,10 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				}
 			}
 
+			if bMethod.memberKind == model.ObjectMemberKindRemoteMethod {
+				bMethod.name = model.RemoteMethodName(bMethod.name)
+			}
+
 			// Build function type from method signature
 			funcSig := methodDecl.MethodSignature()
 			if funcSig != nil {
@@ -2382,7 +2386,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			}
 
 			if objectType.AddMember(bMethod) {
-				n.cx.SyntaxError("redeclared symbol '"+methodName+"'", bMethod.pos)
+				n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(bMethod.name)+"'", bMethod.pos)
 			}
 		case common.TYPE_REFERENCE:
 			typeRef := member.(*tree.TypeReferenceNode)
@@ -3757,6 +3761,13 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
 				blangClass.InitFunction = bLFunction
 			} else {
+				if bLFunction.IsRemote() {
+					funcName = model.RemoteMethodName(funcName)
+					bLFunction.Name.Value = funcName
+				}
+				if blangClass.GetMethod(funcName) != nil {
+					n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
+				}
 				blangClass.AddMethod(funcName, bLFunction)
 			}
 		case common.TYPE_REFERENCE:

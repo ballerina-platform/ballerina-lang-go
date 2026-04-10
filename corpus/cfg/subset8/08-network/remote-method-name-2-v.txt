@@ -1,5 +1,13 @@
-(Client
+(MyClinet
   ($remote$get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref path)
+          (literal remote get)))
+    )
+  )
+  (get
     (bb0 () ()
       (return
         (binary-expr +
@@ -8,35 +16,13 @@
     )
   )
 )
-(Client1
-  (init
-    (bb0 () ()
-      (assignment
-        (field-based-access base
-          (simple-var-ref self))
-        (simple-var-ref base))
-    )
-  )
-  ($remote$get
-    (bb0 () ()
-      (return
-        (binary-expr +
-          (binary-expr +
-            (field-based-access base
-              (simple-var-ref self))
-            (simple-var-ref path))
-          (literal get)))
-    )
-  )
-)
 (main
   (bb0 () ()
     (var-def
       (variable c (type
-        (union-type
-          (user-defined-type Client)
-          (user-defined-type Client1))) (expr
-        (new ()))))
+        (user-defined-type Client)) (expr
+        (new
+          (user-defined-type MyClinet) ()))))
     (var-def
       (variable res (type
         (value-type string)) (expr
@@ -46,5 +32,14 @@
     (expression-stmt
       (invocation io println (
         (simple-var-ref res))))
+    (var-def
+      (variable res2 (type
+        (value-type string)) (expr
+        (invocation get expr:
+          (simple-var-ref c) (
+          (literal foo))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res2))))
   )
 )

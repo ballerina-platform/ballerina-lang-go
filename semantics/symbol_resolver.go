@@ -945,7 +945,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	for methodName := range classDef.Methods {
 		method := classDef.Methods[methodName]
 		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+methodName+"'", method.Name.GetPosition())
+			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(methodName)+"'", method.Name.GetPosition())
 			continue
 		}
 		isPublic := method.IsPublic()
