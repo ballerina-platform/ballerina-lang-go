@@ -1,0 +1,47 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition MyClinet
+    (function $remote$get (
+      (variable path (type
+        (value-type string)))) (
+      (value-type string))
+      (block-function-body
+        (return
+          (binary-expr +
+            (simple-var-ref path)
+            (literal remote get)))))
+    (function get (
+      (variable path (type
+        (value-type string)))) (
+      (value-type string))
+      (block-function-body
+        (return
+          (binary-expr +
+            (simple-var-ref path)
+            (literal get))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable c (type
+          (user-defined-type MyClinet)) (expr
+          (new ()))))
+      (var-def
+        (variable res (type
+          (value-type string)) (expr
+          (remote-method-call get expr:
+            (simple-var-ref c) (
+            (literal foo))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res))))
+      (var-def
+        (variable res2 (type
+          (value-type string)) (expr
+          (invocation get expr:
+            (simple-var-ref c) (
+            (literal foo))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res2)))))))

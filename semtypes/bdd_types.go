@@ -192,16 +192,16 @@ func (sc *bddSerializationContext) serializeListAtom(atom atom) int32 {
 	sc.bp.listAtomicTypes = append(sc.bp.listAtomicTypes, listAtomicTypeEntry{})
 
 	at := sc.cx.ListAtomType(atom)
-	initial := make([]TypePoolIndex, len(at.Members.Initial))
+	initial := make([]TypePoolIndex, len(at.Members.initial))
 	var mut uint8
-	for i := range at.Members.Initial {
-		cell := &at.Members.Initial[i]
-		initial[i] = sc.pool.Put(CellInnerVal(cell))
+	for i := range at.Members.initial {
+		cell := &at.Members.initial[i]
+		initial[i] = sc.pool.Put(cellInnerVal(cell))
 		mut = uint8(cellMut(cell))
 	}
-	rest := sc.pool.Put(CellInnerVal(at.Rest))
-	if len(at.Members.Initial) == 0 {
-		mut = uint8(cellMut(at.Rest))
+	rest := sc.pool.Put(cellInnerVal(at.rest))
+	if len(at.Members.initial) == 0 {
+		mut = uint8(cellMut(at.rest))
 	}
 
 	sc.bp.listAtomicTypes[idx] = listAtomicTypeEntry{
@@ -227,10 +227,10 @@ func (sc *bddSerializationContext) serializeMappingAtom(atom atom) int32 {
 		b := []byte(name)
 		names[i] = enumerableStringDataEntry{len: int32(len(b)), values: b}
 		atomTy := &at.Types[i]
-		types[i] = sc.pool.Put(CellInnerVal(atomTy))
+		types[i] = sc.pool.Put(cellInnerVal(atomTy))
 		mut = uint8(cellMut(atomTy))
 	}
-	rest := sc.pool.Put(CellInnerVal(at.Rest))
+	rest := sc.pool.Put(cellInnerVal(at.Rest))
 	if len(at.Types) == 0 {
 		mut = uint8(cellMut(at.Rest))
 	}

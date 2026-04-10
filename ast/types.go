@@ -19,7 +19,6 @@ package ast
 import (
 	"iter"
 
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
@@ -49,7 +48,6 @@ type (
 	bLangTypeBase struct {
 		bLangNodeBase
 		ty      model.TypeData
-		FlagSet common.UnorderedSet[model.Flag]
 		Grouped bool
 		tags    model.TypeTags
 		name    model.Name
@@ -99,7 +97,7 @@ type (
 		bLangNodeBase
 		Name           model.Name
 		Type           BType
-		FlagSet        common.UnorderedSet[model.Flag]
+		flags          nodeFlags
 		DefaultExpr    BLangExpression
 		DefaultFnRef   model.SymbolRef
 		AnnAttachments []model.AnnotationAttachmentNode
@@ -153,6 +151,7 @@ type (
 	BLangErrorTypeNode struct {
 		bLangTypeBase
 		DetailType model.TypeData
+		flags      nodeFlags
 	}
 
 	BLangConstrainedType struct {
@@ -175,7 +174,6 @@ type (
 		TypeDesc                        model.TypeDescriptor
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
-		FlagSet                         common.UnorderedSet[model.Flag]
 	}
 
 	BLangRecordType struct {
@@ -189,6 +187,7 @@ type (
 
 	BLangFunctionType struct {
 		bLangTypeBase
+		flags                nodeFlags
 		Definition           semtypes.Definition
 		RequiredParams       []BLangFunctionTypeParam
 		RestParam            *BLangFunctionTypeParam
@@ -306,11 +305,6 @@ func (this *BLangUserDefinedType) GetTypeName() model.IdentifierNode {
 	return &this.TypeName
 }
 
-func (this *BLangUserDefinedType) GetFlags() common.Set[model.Flag] {
-	// migrated from BLangUserDefinedType.java:65:5
-	return &this.FlagSet
-}
-
 func (this *BLangUserDefinedType) GetKind() model.NodeKind {
 	// migrated from BLangUserDefinedType.java:70:5
 	return model.NodeKind_USER_DEFINED_TYPE
@@ -340,13 +334,12 @@ func (this *BField) GetKind() model.NodeKind {
 	panic("not implemented")
 }
 
-func (this *BField) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BField) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
-}
+func (this *BField) IsPublic() bool   { return this.flags.has(flagPublic) }
+func (this *BField) IsReadonly() bool { return this.flags.has(flagReadonly) }
+func (this *BField) IsOptional() bool { return this.flags.has(flagOptional) }
+func (this *BField) SetPublic()       { this.flags |= flagPublic }
+func (this *BField) SetReadonly()     { this.flags |= flagReadonly }
+func (this *BField) SetOptional()     { this.flags |= flagOptional }
 
 func (this *BField) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return this.AnnAttachments
@@ -632,9 +625,15 @@ func (this *BLangTupleTypeNode) GetKind() model.NodeKind {
 	return model.NodeKind_TUPLE_TYPE_NODE
 }
 
-func (this *BLangErrorTypeNode) IsDistinct() bool {
-	return this.FlagSet.Contains(model.Flag_DISTINCT)
-}
+func (this *BLangErrorTypeNode) IsDistinct() bool { return this.flags.has(flagDistinct) }
+func (this *BLangErrorTypeNode) SetDistinct()     { this.flags |= flagDistinct }
+
+func (this *BLangFunctionType) IsAnyFunction() bool   { return this.flags.has(flagAnyFunction) }
+func (this *BLangFunctionType) IsIsolated() bool      { return this.flags.has(flagIsolated) }
+func (this *BLangFunctionType) IsTransactional() bool { return this.flags.has(flagTransactional) }
+func (this *BLangFunctionType) SetAnyFunction()       { this.flags |= flagAnyFunction }
+func (this *BLangFunctionType) SetIsolated()          { this.flags |= flagIsolated }
+func (this *BLangFunctionType) SetTransactional()     { this.flags |= flagTransactional }
 
 func (this *BLangConstrainedType) GetKind() model.NodeKind {
 	return model.NodeKind_CONSTRAINED_TYPE
@@ -679,14 +678,6 @@ func (this *BLangMemberTypeDesc) GetKind() model.NodeKind {
 
 func (this *BLangMemberTypeDesc) GetTypeDesc() model.TypeDescriptor {
 	return this.TypeDesc
-}
-
-func (this *BLangMemberTypeDesc) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangMemberTypeDesc) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
 }
 
 func (this *BLangMemberTypeDesc) GetAnnotationAttachments() []model.AnnotationAttachmentNode {

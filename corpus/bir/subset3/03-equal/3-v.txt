@@ -46,7 +46,7 @@ main() -> nil{
     return;
   }
 }
-printEq(nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> nil{
+printEq(any,any) -> nil{
   bb0 {
     %3 = unknown x y;
     %4 = %3;

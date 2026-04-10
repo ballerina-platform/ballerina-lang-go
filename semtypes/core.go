@@ -520,12 +520,12 @@ func listAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 	ranges := []intRange{}
 	types := []SemType{}
 
-	cellInitial := atomicType.Members.Initial
+	cellInitial := atomicType.Members.initial
 	initialLength := int64(len(cellInitial))
 
 	initial := make([]SemType, 0, initialLength)
 	for i := range cellInitial {
-		initial = append(initial, CellInnerVal(&cellInitial[i]))
+		initial = append(initial, cellInnerVal(&cellInitial[i]))
 	}
 
 	fixedLength := int64(atomicType.Members.FixedLength)
@@ -539,7 +539,7 @@ func listAtomicTypeAllMemberTypesInnerVal(atomicType *ListAtomicType) ListMember
 		}
 	}
 
-	rest := CellInnerVal(atomicType.Rest)
+	rest := cellInnerVal(atomicType.rest)
 	if !IsNever(rest) {
 		types = append(types, rest)
 		ranges = append(ranges, rangeFrom(fixedLength, MAX_VALUE))
@@ -645,7 +645,7 @@ func bddListAtomicType(env Env, bdd Bdd, top ListAtomicType) *ListAtomicType {
 	return nil
 }
 
-func CellInnerVal(t *ComplexSemType) SemType {
+func cellInnerVal(t *ComplexSemType) SemType {
 	return Diff(cellInner(t), UNDEF)
 }
 

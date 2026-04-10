@@ -26,11 +26,19 @@ import (
 	"ballerina-lang-go/semtypes"
 )
 
-type BLangExpression interface {
-	model.ExpressionNode
+type BLangActionOrExpression interface {
 	BLangNode
-	// TODO: get rid of this method but we need a way to distinguish Expressions from other BLangNodes in a type switch
-	SetTypeCheckedType(ty BType)
+	actionOrExpression()
+}
+
+type BLangExpression interface {
+	BLangActionOrExpression
+	expressionNode()
+}
+
+type BLangAction interface {
+	BLangActionOrExpression
+	actionNode()
 }
 type Channel struct {
 	Sender     string
@@ -80,10 +88,17 @@ type (
 	}
 	bLangExpressionBase struct {
 		bLangNodeBase
-		// ImpConversionExpr *BLangTypeConversionExpr
 		ExpectedType BType
 	}
+)
 
+func (*bLangExpressionBase) actionOrExpression() {}
+func (*bLangExpressionBase) expressionNode()     {}
+
+func (*BLangRemoteMethodCallAction) actionNode()         {}
+func (*BLangRemoteMethodCallAction) actionOrExpression() {}
+
+type (
 	NarrowedTypes struct {
 		TrueType  BType
 		FalseType BType
@@ -158,7 +173,7 @@ type (
 
 	BLangCheckedExpr struct {
 		bLangExpressionBase
-		Expr                BLangExpression
+		Expr                BLangActionOrExpression
 		IsRedundantChecking bool
 	}
 
@@ -246,23 +261,27 @@ type (
 		NoMessagePossible        bool
 	}
 
-	BLangInvocation struct {
-		bLangExpressionBase
-		PkgAlias *BLangIdentifier
-		Name     *BLangIdentifier
+	bLangInvocationBase struct {
+		Name *BLangIdentifier
 		// RawSymbol holds either a *model.SymbolRef (resolved) or a *deferredMethodSymbol (unresolved).
 		// Access via Symbol() after type resolution, or directly for deferred-symbol checks.
-		RawSymbol                 model.Symbol
-		Expr                      BLangExpression
-		ArgExprs                  []BLangExpression
-		AnnAttachments            []BLangAnnotationAttachment
-		RequiredArgs              []BLangExpression
-		RestArgs                  []BLangExpression
-		ObjectInitMethod          bool
-		FlagSet                   common.UnorderedSet[model.Flag]
-		Async                     bool
-		FunctionPointerInvocation bool
-		LangLibInvocation         bool
+		RawSymbol    model.Symbol
+		Expr         BLangExpression // receiver (nil for standalone function calls)
+		ArgExprs     []BLangExpression
+		RequiredArgs []BLangExpression
+		RestArgs     []BLangExpression
+	}
+
+	BLangInvocation struct {
+		bLangExpressionBase
+		bLangInvocationBase
+		PkgAlias *BLangIdentifier
+		Async    bool
+	}
+
+	BLangRemoteMethodCallAction struct {
+		bLangNodeBase
+		bLangInvocationBase
 	}
 
 	BLangGroupExpr struct {
@@ -367,6 +386,7 @@ var (
 	_ model.LambdaFunctionNode                                     = &BLangLambdaFunction{}
 	_ model.InvocationNode                                         = &BLangInvocation{}
 	_ BLangExpression                                              = &BLangInvocation{}
+	_ BLangAction                                                  = &BLangRemoteMethodCallAction{}
 	_ BLangExpression                                              = &BLangQueryExpr{}
 	_ model.GroupExpressionNode                                    = &BLangGroupExpr{}
 	_ model.TypedescExpressionNode                                 = &BLangTypedescExpr{}
@@ -462,6 +482,14 @@ func (n *BLangInvocation) SetSymbol(symbolRef model.SymbolRef) {
 	n.RawSymbol = &symbolRef
 }
 
+func (n *BLangRemoteMethodCallAction) MethodSymbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
+}
+
+func (n *BLangRemoteMethodCallAction) SetMethodSymbol(symbolRef model.SymbolRef) {
+	n.RawSymbol = &symbolRef
+}
+
 func (this *BLangGroupExpr) GetKind() model.NodeKind {
 	// migrated from BLangGroupExpr.java:57:5
 	return model.NodeKind_GROUP_EXPR
@@ -525,9 +553,6 @@ func (this *BLangLambdaFunction) SetFunctionNode(functionNode model.FunctionNode
 func (this *BLangLambdaFunction) GetKind() model.NodeKind {
 	// migrated from BLangLambdaFunction.java:58:5
 	return model.NodeKind_LAMBDA
-}
-
-func (this *BLangLambdaFunction) SetTypeCheckedType(ty BType) {
 }
 
 func (this *BLangAlternateWorkerReceive) ToActionString() string {
@@ -615,10 +640,6 @@ func (this *BLangCheckedExpr) GetOperatorKind() model.OperatorKind {
 func (this *BLangCheckedExpr) GetKind() model.NodeKind {
 	// migrated from BLangCheckedExpr.java:78:5
 	return model.NodeKind_CHECK_EXPR
-}
-
-func (this *BLangCheckedExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (this *BLangCheckPanickedExpr) GetOperatorKind() model.OperatorKind {
@@ -869,15 +890,15 @@ func (this *BLangWorkerSendExprBase) SetWorkerName(identifierNode model.Identifi
 	}
 }
 
-func (this *BLangInvocation) GetPackageAlias() model.IdentifierNode {
-	return this.PkgAlias
+func (this *bLangInvocationBase) SetRawSymbol(symbol model.Symbol) {
+	this.RawSymbol = symbol
 }
 
-func (this *BLangInvocation) GetName() model.IdentifierNode {
+func (this *bLangInvocationBase) GetName() model.IdentifierNode {
 	return this.Name
 }
 
-func (this *BLangInvocation) GetArgumentExpressions() []model.ExpressionNode {
+func (this *bLangInvocationBase) GetArgumentExpressions() []model.ExpressionNode {
 	result := make([]model.ExpressionNode, len(this.ArgExprs))
 	for i := range this.ArgExprs {
 		result[i] = this.ArgExprs[i]
@@ -885,7 +906,7 @@ func (this *BLangInvocation) GetArgumentExpressions() []model.ExpressionNode {
 	return result
 }
 
-func (this *BLangInvocation) GetRequiredArgs() []model.ExpressionNode {
+func (this *bLangInvocationBase) GetRequiredArgs() []model.ExpressionNode {
 	result := make([]model.ExpressionNode, len(this.RequiredArgs))
 	for i := range this.RequiredArgs {
 		result[i] = this.RequiredArgs[i]
@@ -893,44 +914,25 @@ func (this *BLangInvocation) GetRequiredArgs() []model.ExpressionNode {
 	return result
 }
 
-func (this *BLangInvocation) GetExpression() model.ExpressionNode {
+func (this *bLangInvocationBase) GetExpression() model.ExpressionNode {
 	return this.Expr
 }
 
-func (this *BLangInvocation) IsIterableOperation() bool {
-	return false
-}
-
-func (this *BLangInvocation) IsAsync() bool {
-	return this.Async
-}
-
-func (this *BLangInvocation) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangInvocation) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
-}
-
-func (this *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
-	for i := range this.AnnAttachments {
-		result[i] = &this.AnnAttachments[i]
-	}
-	return result
-}
-
-func (this *BLangInvocation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
-	if att, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, *att)
-	} else {
-		panic("annAttachment is not a BLangAnnotationAttachment")
-	}
-}
-
-func (this *BLangInvocation) GetKind() model.NodeKind {
+func (this *bLangInvocationBase) GetKind() model.NodeKind {
 	return model.NodeKind_INVOCATION
+}
+
+func (n *bLangInvocationBase) ResolvedSymbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
+}
+func (n *bLangInvocationBase) SetResolvedSymbol(ref model.SymbolRef) { n.RawSymbol = &ref }
+func (n *bLangInvocationBase) Receiver() BLangExpression             { return n.Expr }
+func (n *bLangInvocationBase) SetReceiver(expr BLangExpression)      { n.Expr = expr }
+func (n *bLangInvocationBase) CallArgs() []BLangExpression           { return n.ArgExprs }
+func (n *bLangInvocationBase) SetCallArgs(args []BLangExpression)    { n.ArgExprs = args }
+
+func (this *BLangInvocation) GetPackageAlias() model.IdentifierNode {
+	return this.PkgAlias
 }
 
 func (this *BLangTypeConversionExpr) GetKind() model.NodeKind {
@@ -957,12 +959,8 @@ func (this *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.Type
 	this.TypeDescriptor = typeDescriptor
 }
 
-func (this *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
-	panic("not implemented")
-}
-
-func (this *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
-	panic("not implemented")
+func (this *BLangTypeConversionExpr) IsPublic() bool {
+	return false
 }
 
 func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -973,48 +971,8 @@ func (this *BLangTypeConversionExpr) AddAnnotationAttachment(annAttachment model
 	panic("not implemented")
 }
 
-func (this *BLangTypeConversionExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (this *BLangNumericLiteral) GetKind() model.NodeKind {
 	return model.NodeKind_NUMERIC_LITERAL
-}
-
-func (this *BLangLiteral) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangInvocation) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangSimpleVarRef) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangBinaryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangQueryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangUnaryExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangIndexBasedAccess) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangListConstructorExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
-func (this *BLangGroupExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (this *BLangUnaryExpr) GetExpression() model.ExpressionNode {
@@ -1057,10 +1015,6 @@ func (this *BLangFieldBaseAccess) IsOptionalFieldAccess() bool {
 	return this.OptionalFieldAccess
 }
 
-func (this *BLangFieldBaseAccess) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (this *BLangListConstructorExpr) GetKind() model.NodeKind {
 	return model.NodeKind_LIST_CONSTRUCTOR_EXPR
 }
@@ -1093,10 +1047,6 @@ func (this *BLangErrorConstructorExpr) GetNamedArgs() []model.NamedArgNode {
 	return result
 }
 
-func (this *BLangErrorConstructorExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (this *BLangTypeTestExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_TEST_EXPR
 }
@@ -1111,10 +1061,6 @@ func (this *BLangTypeTestExpr) GetExpression() model.ExpressionNode {
 
 func (this *BLangTypeTestExpr) GetType() model.TypeData {
 	return this.Type
-}
-
-func (this *BLangTypeTestExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (this *BLangMappingKey) GetKind() model.NodeKind {
@@ -1148,16 +1094,8 @@ func (this *BLangMappingConstructorExpr) GetFields() []model.MappingField {
 	return this.Fields
 }
 
-func (this *BLangMappingConstructorExpr) SetTypeCheckedType(ty BType) {
-	this.ExpectedType = ty
-}
-
 func (this *BLangNamedArgsExpression) GetKind() model.NodeKind {
 	return model.NodeKind_NAMED_ARGS_EXPR
-}
-
-func (this *BLangNamedArgsExpression) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func (this *BLangNamedArgsExpression) SetName(name model.IdentifierNode) {
@@ -1192,16 +1130,8 @@ func (this *BLangTrapExpr) GetExpression() model.ExpressionNode {
 	return this.Expr
 }
 
-func (this *BLangTrapExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
-
 func (this *BLangNewExpression) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_INIT_EXPR
-}
-
-func (this *BLangNewExpression) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
 
 func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
@@ -1210,8 +1140,4 @@ func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr B
 	exprNode.Expr = expr
 	exprNode.Operator = operator
 	return exprNode
-}
-
-func (this *BLangElvisExpr) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
 }
