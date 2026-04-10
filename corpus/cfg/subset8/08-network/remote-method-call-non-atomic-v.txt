@@ -1,0 +1,50 @@
+(Client
+  (get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref path)
+          (literal get)))
+    )
+  )
+)
+(Client1
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access base
+          (simple-var-ref self))
+        (simple-var-ref base))
+    )
+  )
+  (get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (binary-expr +
+            (field-based-access base
+              (simple-var-ref self))
+            (simple-var-ref path))
+          (literal get)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (union-type
+          (user-defined-type Client)
+          (user-defined-type Client1))) (expr
+        (new ()))))
+    (var-def
+      (variable res (type
+        (value-type string)) (expr
+        (remote-method-call get expr:
+          (simple-var-ref c) (
+          (literal foo))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

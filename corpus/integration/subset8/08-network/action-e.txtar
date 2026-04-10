@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SYNTAX_ERROR]: expression expected action found
+  --> action-e.bal:27:16
+   |
+27 |     io:println(c->get("foo")); // @error
+   |

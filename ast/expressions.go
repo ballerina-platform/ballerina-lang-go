@@ -96,6 +96,9 @@ type (
 func (*bLangExpressionBase) actionOrExpression() {}
 func (*bLangExpressionBase) expressionNode()     {}
 
+func (*BLangRemoteMethodCallAction) actionNode()         {}
+func (*BLangRemoteMethodCallAction) actionOrExpression() {}
+
 type (
 	NarrowedTypes struct {
 		TrueType  BType
@@ -259,22 +262,27 @@ type (
 		NoMessagePossible        bool
 	}
 
-	BLangInvocation struct {
-		bLangExpressionBase
-		PkgAlias *BLangIdentifier
-		Name     *BLangIdentifier
+	bLangInvocationBase struct {
+		Name *BLangIdentifier
 		// RawSymbol holds either a *model.SymbolRef (resolved) or a *deferredMethodSymbol (unresolved).
 		// Access via Symbol() after type resolution, or directly for deferred-symbol checks.
-		RawSymbol                 model.Symbol
-		Expr                      BLangExpression
-		ArgExprs                  []BLangExpression
-		AnnAttachments            []BLangAnnotationAttachment
-		RequiredArgs              []BLangExpression
-		RestArgs                  []BLangExpression
-		ObjectInitMethod          bool
-		Async                     bool
-		FunctionPointerInvocation bool
-		LangLibInvocation         bool
+		RawSymbol    model.Symbol
+		Expr         BLangExpression // receiver (nil for standalone function calls)
+		ArgExprs     []BLangExpression
+		RequiredArgs []BLangExpression
+		RestArgs     []BLangExpression
+	}
+
+	BLangInvocation struct {
+		bLangExpressionBase
+		bLangInvocationBase
+		PkgAlias *BLangIdentifier
+		Async    bool
+	}
+
+	BLangRemoteMethodCallAction struct {
+		bLangNodeBase
+		bLangInvocationBase
 	}
 
 	BLangGroupExpr struct {
@@ -379,6 +387,7 @@ var (
 	_ model.LambdaFunctionNode                                     = &BLangLambdaFunction{}
 	_ model.InvocationNode                                         = &BLangInvocation{}
 	_ BLangExpression                                              = &BLangInvocation{}
+	_ BLangAction                                                  = &BLangRemoteMethodCallAction{}
 	_ BLangExpression                                              = &BLangQueryExpr{}
 	_ model.GroupExpressionNode                                    = &BLangGroupExpr{}
 	_ model.TypedescExpressionNode                                 = &BLangTypedescExpr{}
@@ -472,6 +481,14 @@ func (b *BLangInvocation) Symbol() model.SymbolRef {
 
 func (b *BLangInvocation) SetSymbol(symbolRef model.SymbolRef) {
 	b.RawSymbol = &symbolRef
+}
+
+func (n *BLangRemoteMethodCallAction) MethodSymbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
+}
+
+func (n *BLangRemoteMethodCallAction) SetMethodSymbol(symbolRef model.SymbolRef) {
+	n.RawSymbol = &symbolRef
 }
 
 func (b *BLangGroupExpr) GetKind() model.NodeKind {
@@ -878,57 +895,46 @@ func (b *BLangInvocation) GetPackageAlias() model.IdentifierNode {
 	return b.PkgAlias
 }
 
-func (b *BLangInvocation) GetName() model.IdentifierNode {
-	return b.Name
+func (n *bLangInvocationBase) SetRawSymbol(symbol model.Symbol) {
+	n.RawSymbol = symbol
 }
 
-func (b *BLangInvocation) GetArgumentExpressions() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(b.ArgExprs))
-	for i := range b.ArgExprs {
-		result[i] = b.ArgExprs[i]
+func (n *bLangInvocationBase) GetName() model.IdentifierNode {
+	return n.Name
+}
+
+func (n *bLangInvocationBase) GetArgumentExpressions() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(n.ArgExprs))
+	for i := range n.ArgExprs {
+		result[i] = n.ArgExprs[i]
 	}
 	return result
 }
 
-func (b *BLangInvocation) GetRequiredArgs() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(b.RequiredArgs))
-	for i := range b.RequiredArgs {
-		result[i] = b.RequiredArgs[i]
+func (n *bLangInvocationBase) GetRequiredArgs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(n.RequiredArgs))
+	for i := range n.RequiredArgs {
+		result[i] = n.RequiredArgs[i]
 	}
 	return result
 }
 
-func (b *BLangInvocation) GetExpression() model.ExpressionNode {
-	return b.Expr
+func (n *bLangInvocationBase) GetExpression() model.ExpressionNode {
+	return n.Expr
 }
 
-func (b *BLangInvocation) IsIterableOperation() bool {
-	return false
-}
-
-func (b *BLangInvocation) IsAsync() bool {
-	return b.Async
-}
-
-func (b *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	result := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
-	for i := range b.AnnAttachments {
-		result[i] = &b.AnnAttachments[i]
-	}
-	return result
-}
-
-func (b *BLangInvocation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
-	if att, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		b.AnnAttachments = append(b.AnnAttachments, *att)
-	} else {
-		panic("annAttachment is not a BLangAnnotationAttachment")
-	}
-}
-
-func (b *BLangInvocation) GetKind() model.NodeKind {
+func (n *bLangInvocationBase) GetKind() model.NodeKind {
 	return model.NodeKind_INVOCATION
 }
+
+func (n *bLangInvocationBase) ResolvedSymbol() model.SymbolRef {
+	return *n.RawSymbol.(*model.SymbolRef)
+}
+func (n *bLangInvocationBase) SetResolvedSymbol(ref model.SymbolRef) { n.RawSymbol = &ref }
+func (n *bLangInvocationBase) Receiver() BLangExpression             { return n.Expr }
+func (n *bLangInvocationBase) SetReceiver(expr BLangExpression)      { n.Expr = expr }
+func (n *bLangInvocationBase) CallArgs() []BLangExpression           { return n.ArgExprs }
+func (n *bLangInvocationBase) SetCallArgs(args []BLangExpression)    { n.ArgExprs = args }
 
 func (b *BLangTypeConversionExpr) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_CONVERSION_EXPR

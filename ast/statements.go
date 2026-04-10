@@ -509,6 +509,7 @@ func (b *BLangPanic) GetExpression() model.ExpressionNode {
 func (b *BLangPanic) GetKind() model.NodeKind {
 	return model.NodeKind_PANIC
 }
+
 func (b *BLangMatchStatement) GetKind() model.NodeKind {
 	return model.NodeKind_MATCH_STATEMENT
 }
