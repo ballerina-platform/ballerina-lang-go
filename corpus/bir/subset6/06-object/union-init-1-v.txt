@@ -55,7 +55,7 @@ class Foo {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject Bar
+    %1 = newObject $anon/.:Bar
     %2 = ConstantLoad 5
     %3 = init(%1,%2) -> bb1;
   }

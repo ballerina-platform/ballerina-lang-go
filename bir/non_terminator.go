@@ -111,7 +111,7 @@ type (
 
 	NewObject struct {
 		BIRInstructionBase
-		ClassDef *BIRClassDef
+		ClassDefRef string
 	}
 
 	FPLoad struct {
@@ -388,7 +388,7 @@ func (n *NewObject) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
-func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnostics.Location) *NewObject {
+func NewObjectConstructor(classDefRef string, lhsOp *BIROperand, pos diagnostics.Location) *NewObject {
 	return &NewObject{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -396,7 +396,7 @@ func NewObjectConstructor(classDef *BIRClassDef, lhsOp *BIROperand, pos diagnost
 			},
 			LhsOp: lhsOp,
 		},
-		ClassDef: classDef,
+		ClassDefRef: classDefRef,
 	}
 }
 

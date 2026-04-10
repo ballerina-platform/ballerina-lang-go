@@ -23,7 +23,7 @@ class Foo {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject Foo
+    %1 = newObject $anon/.:Foo
     %2 = init(%1) -> bb1;
   }
   bb1 {

@@ -38,7 +38,7 @@ class Bar {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject Bar
+    %1 = newObject $anon/.:Bar
     %2 = init(%1) -> bb1;
   }
   bb1 {
