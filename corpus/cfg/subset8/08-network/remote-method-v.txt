@@ -1,5 +1,5 @@
 (Client
-  (get
+  ($remote$get
     (bb0 () ()
       (return
         (binary-expr +
@@ -7,7 +7,7 @@
           (literal get)))
     )
   )
-  (getT
+  ($remote$getT
     (bb0 () ()
       (return
         (binary-expr +

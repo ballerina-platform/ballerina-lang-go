@@ -3,7 +3,7 @@
   (class-definition Client
     (function init () ()
       (block-function-body))
-    (function get (
+    (function $remote$get (
       (variable path (type
         (value-type string)))) (
       (value-type string))
@@ -12,7 +12,7 @@
           (binary-expr +
             (simple-var-ref path)
             (literal get)))))
-    (function getT (
+    (function $remote$getT (
       (variable path (type
         (value-type string)) (expr
         (literal bar)))) (

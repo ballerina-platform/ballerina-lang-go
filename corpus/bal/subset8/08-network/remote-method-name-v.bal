@@ -16,18 +16,21 @@
 
 import ballerina/io;
 
-client class MyClinet {
+client class MyClient {
     remote function get(string path) returns string {
+        return path + "remote get";
+    }
+
+    function get(string path) returns string {
         return path + "get";
     }
 }
 
-type Client client object {
-    remote function get(string path) returns string;
-};
-
 public function main() {
-    Client c = new MyClinet();
+    MyClient c = new ();
     string res = c->get("foo");
-    io:println(res); // @output "fooget"
+    io:println(res); // @output "fooremote get"
+
+    string res2 = c.get("foo");
+    io:println(res2); // @output "fooget"
 }

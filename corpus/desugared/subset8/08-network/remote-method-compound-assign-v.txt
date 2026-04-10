@@ -3,7 +3,7 @@
   (class-definition Counter
     (function init () ()
       (block-function-body))
-    (function next () (
+    (function $remote$next () (
       (value-type int))
       (block-function-body
         (return

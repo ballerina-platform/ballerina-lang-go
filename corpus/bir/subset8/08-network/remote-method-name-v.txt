@@ -1,8 +1,17 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-class MyClinet {
+class MyClient {
 
   $remote$get(string) -> string{
+    bb0 {
+      %4 = ConstantLoad remote get
+      %3 = + path %4;
+      %0 = %3;
+      return;
+    }
+  }
+
+  get(string) -> string{
     bb0 {
       %4 = ConstantLoad get
       %3 = + path %4;
@@ -19,7 +28,7 @@ class MyClinet {
 }
 main() -> nil{
   bb0 {
-    %1 = newObject $anon/.:MyClinet
+    %1 = newObject $anon/.:MyClient
     %2 = init(%1) -> bb1;
   }
   bb1 {
@@ -44,6 +53,14 @@ main() -> nil{
     %9 = println(res) -> bb6;
   }
   bb6 {
+    %10 = ConstantLoad foo
+    %11 = get(c,%10) -> bb7;
+  }
+  bb7 {
+    res2 = %11;
+    %13 = println(res2) -> bb8;
+  }
+  bb8 {
     return;
   }
 }

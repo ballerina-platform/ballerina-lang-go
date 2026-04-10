@@ -13,7 +13,7 @@
           (field-based-access base
             (simple-var-ref self))
           (simple-var-ref base))))
-    (function get (
+    (function $remote$get (
       (variable path (type
         (value-type string)))) (
       (value-type string))
@@ -26,7 +26,7 @@
               (simple-var-ref path))
             (literal get))))))
   (class-definition Client
-    (function get (
+    (function $remote$get (
       (variable path (type
         (value-type string)))) (
       (value-type string))

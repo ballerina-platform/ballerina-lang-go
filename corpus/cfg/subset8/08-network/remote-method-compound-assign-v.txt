@@ -1,5 +1,5 @@
 (Counter
-  (next
+  ($remote$next
     (bb0 () ()
       (return
         (literal 5))

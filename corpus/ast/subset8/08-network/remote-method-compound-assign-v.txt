@@ -2,7 +2,7 @@
 (package-id $anon . 0.0.0)
   (import-package ballerina io (as io))
   (class-definition Counter
-    (function next () (
+    (function $remote$next () (
       (value-type int))
       (block-function-body
         (return

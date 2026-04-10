@@ -14,20 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
-client class MyClinet {
-    remote function get(string path) returns string {
+class Foo {
+    function get(string path) returns string {
         return path + "get";
     }
-}
 
-type Client client object {
-    remote function get(string path) returns string;
-};
-
-public function main() {
-    Client c = new MyClinet();
-    string res = c->get("foo");
-    io:println(res); // @output "fooget"
+    function get(string path) returns string { // @error
+        return path + "get2";
+    }
 }
