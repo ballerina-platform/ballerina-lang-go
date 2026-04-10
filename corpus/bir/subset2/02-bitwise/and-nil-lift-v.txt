@@ -4,14 +4,28 @@ main() -> nil{
   bb0 {
     %1 = ConstantLoad <nil>
     x = %1;
-    %4 = x;
-    %5 = ConstantLoad 1
-    %6 = %5;
-    %3 = unknown %4 %6;
-    %7 = %3;
-    %8 = println(%7) -> bb1;
+    $desugar$0 = x;
+    %4 = ConstantLoad <nil>
+    $desugar$1 = %4;
+    %6 = $desugar$0 is nil
+    %6 ? bb1 : bb2;
   }
   bb1 {
+    GOTO bb3;
+  }
+  bb2 {
+    %8 = $desugar$0;
+    %9 = ConstantLoad 1
+    %10 = %9;
+    %7 = unknown %8 %10;
+    $desugar$1 = %7;
+    GOTO bb3;
+  }
+  bb3 {
+    %11 = $desugar$1;
+    %12 = println(%11) -> bb4;
+  }
+  bb4 {
     return;
   }
 }

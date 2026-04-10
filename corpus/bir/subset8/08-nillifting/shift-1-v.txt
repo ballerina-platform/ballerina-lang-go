@@ -1,0 +1,207 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 5
+    x = %1;
+    %3 = ConstantLoad <nil>
+    y = %3;
+    $desugar$0 = x;
+    $desugar$1 = y;
+    %7 = ConstantLoad <nil>
+    $desugar$2 = %7;
+    %10 = $desugar$0 is nil
+    %9 = %10;
+    %10 ? bb2 : bb1;
+  }
+  bb1 {
+    %11 = $desugar$1 is nil
+    %9 = %11;
+    GOTO bb2;
+  }
+  bb2 {
+    %9 ? bb3 : bb4;
+  }
+  bb3 {
+    GOTO bb5;
+  }
+  bb4 {
+    %13 = $desugar$0;
+    %14 = $desugar$1;
+    %12 = unknown %13 %14;
+    $desugar$2 = %12;
+    GOTO bb5;
+  }
+  bb5 {
+    a = $desugar$2;
+    $desugar$3 = x;
+    $desugar$4 = y;
+    %18 = ConstantLoad <nil>
+    $desugar$5 = %18;
+    %21 = $desugar$3 is nil
+    %20 = %21;
+    %21 ? bb7 : bb6;
+  }
+  bb6 {
+    %22 = $desugar$4 is nil
+    %20 = %22;
+    GOTO bb7;
+  }
+  bb7 {
+    %20 ? bb8 : bb9;
+  }
+  bb8 {
+    GOTO bb10;
+  }
+  bb9 {
+    %24 = $desugar$3;
+    %25 = $desugar$4;
+    %23 = unknown %24 %25;
+    $desugar$5 = %23;
+    GOTO bb10;
+  }
+  bb10 {
+    b = $desugar$5;
+    $desugar$6 = x;
+    $desugar$7 = y;
+    %29 = ConstantLoad <nil>
+    $desugar$8 = %29;
+    %32 = $desugar$6 is nil
+    %31 = %32;
+    %32 ? bb12 : bb11;
+  }
+  bb11 {
+    %33 = $desugar$7 is nil
+    %31 = %33;
+    GOTO bb12;
+  }
+  bb12 {
+    %31 ? bb13 : bb14;
+  }
+  bb13 {
+    GOTO bb15;
+  }
+  bb14 {
+    %35 = $desugar$6;
+    %36 = $desugar$7;
+    %34 = unknown %35 %36;
+    $desugar$8 = %34;
+    GOTO bb15;
+  }
+  bb15 {
+    c = $desugar$8;
+    %38 = a;
+    %39 = println(%38) -> bb16;
+  }
+  bb16 {
+    %40 = b;
+    %41 = println(%40) -> bb17;
+  }
+  bb17 {
+    %42 = c;
+    %43 = println(%42) -> bb18;
+  }
+  bb18 {
+    %44 = ConstantLoad <nil>
+    i = %44;
+    %46 = ConstantLoad 10
+    j = %46;
+    $desugar$9 = i;
+    $desugar$10 = j;
+    %50 = ConstantLoad <nil>
+    $desugar$11 = %50;
+    %53 = $desugar$9 is nil
+    %52 = %53;
+    %53 ? bb20 : bb19;
+  }
+  bb19 {
+    %54 = $desugar$10 is nil
+    %52 = %54;
+    GOTO bb20;
+  }
+  bb20 {
+    %52 ? bb21 : bb22;
+  }
+  bb21 {
+    GOTO bb23;
+  }
+  bb22 {
+    %56 = $desugar$9;
+    %57 = $desugar$10;
+    %55 = unknown %56 %57;
+    $desugar$11 = %55;
+    GOTO bb23;
+  }
+  bb23 {
+    a1 = $desugar$11;
+    $desugar$12 = i;
+    $desugar$13 = y;
+    %61 = ConstantLoad <nil>
+    $desugar$14 = %61;
+    %64 = $desugar$12 is nil
+    %63 = %64;
+    %64 ? bb25 : bb24;
+  }
+  bb24 {
+    %65 = $desugar$13 is nil
+    %63 = %65;
+    GOTO bb25;
+  }
+  bb25 {
+    %63 ? bb26 : bb27;
+  }
+  bb26 {
+    GOTO bb28;
+  }
+  bb27 {
+    %67 = $desugar$12;
+    %68 = $desugar$13;
+    %66 = unknown %67 %68;
+    $desugar$14 = %66;
+    GOTO bb28;
+  }
+  bb28 {
+    b1 = $desugar$14;
+    $desugar$15 = i;
+    $desugar$16 = y;
+    %72 = ConstantLoad <nil>
+    $desugar$17 = %72;
+    %75 = $desugar$15 is nil
+    %74 = %75;
+    %75 ? bb30 : bb29;
+  }
+  bb29 {
+    %76 = $desugar$16 is nil
+    %74 = %76;
+    GOTO bb30;
+  }
+  bb30 {
+    %74 ? bb31 : bb32;
+  }
+  bb31 {
+    GOTO bb33;
+  }
+  bb32 {
+    %78 = $desugar$15;
+    %79 = $desugar$16;
+    %77 = unknown %78 %79;
+    $desugar$17 = %77;
+    GOTO bb33;
+  }
+  bb33 {
+    c1 = $desugar$17;
+    %81 = a1;
+    %82 = println(%81) -> bb34;
+  }
+  bb34 {
+    %83 = b1;
+    %84 = println(%83) -> bb35;
+  }
+  bb35 {
+    %85 = c1;
+    %86 = println(%85) -> bb36;
+  }
+  bb36 {
+    return;
+  }
+}

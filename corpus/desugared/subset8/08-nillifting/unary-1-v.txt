@@ -1,0 +1,128 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable base (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (literal 5))))
+      (var-def
+        (variable a (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$1 (expr
+          (literal <nil>))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$0))
+        (block-stmt) (
+        (block-stmt
+          (assignment
+            (simple-var-ref $desugar$1)
+            (unary-expr -
+              (simple-var-ref $desugar$0))))))
+      (var-def
+        (variable c (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref $desugar$1))))
+      (var-def
+        (variable $desugar$2 (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$3 (expr
+          (literal <nil>))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$2))
+        (block-stmt) (
+        (block-stmt
+          (assignment
+            (simple-var-ref $desugar$3)
+            (unary-expr ~
+              (simple-var-ref $desugar$2))))))
+      (var-def
+        (variable d (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref $desugar$3))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref a))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref c))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref d))))
+      (assignment
+        (simple-var-ref base)
+        (literal <nil>))
+      (var-def
+        (variable x (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$4 (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$5 (expr
+          (literal <nil>))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$4))
+        (block-stmt) (
+        (block-stmt
+          (assignment
+            (simple-var-ref $desugar$5)
+            (unary-expr -
+              (simple-var-ref $desugar$4))))))
+      (var-def
+        (variable y (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref $desugar$5))))
+      (var-def
+        (variable $desugar$6 (expr
+          (simple-var-ref base))))
+      (var-def
+        (variable $desugar$7 (expr
+          (literal <nil>))))
+      (if
+        (type-test-expr is
+          (simple-var-ref $desugar$6))
+        (block-stmt) (
+        (block-stmt
+          (assignment
+            (simple-var-ref $desugar$7)
+            (unary-expr ~
+              (simple-var-ref $desugar$6))))))
+      (var-def
+        (variable z (type
+          (union-type
+            (value-type int)
+            (value-type null))) (expr
+          (simple-var-ref $desugar$7))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref y))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref z)))))))
