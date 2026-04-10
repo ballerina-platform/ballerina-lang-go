@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible arguments for function call
+  --> default-missing-arg-e.bal:22:9
+   |
+22 |     _ = foo(); // @error
+   |         ^^^^^
