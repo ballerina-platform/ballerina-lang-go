@@ -1,0 +1,5 @@
+-- stdout --
+110
+Hello, Ballerina!
+Hi, World!
+-- stderr --
