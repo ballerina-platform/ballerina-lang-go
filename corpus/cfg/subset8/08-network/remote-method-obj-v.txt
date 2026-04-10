@@ -1,0 +1,28 @@
+(MyClinet
+  (get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref path)
+          (literal get)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (user-defined-type Client)) (expr
+        (new
+          (user-defined-type MyClinet) ()))))
+    (var-def
+      (variable res (type
+        (value-type string)) (expr
+        (remote-method-call get expr:
+          (simple-var-ref c) (
+          (literal foo))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+  )
+)

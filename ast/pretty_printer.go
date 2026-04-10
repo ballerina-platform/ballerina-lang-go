@@ -73,6 +73,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printBinaryExpr(t)
 	case *BLangInvocation:
 		p.printInvocation(t)
+	case *BLangRemoteMethodCallAction:
+		p.printRemoteMethodCallAction(t)
 	case *BLangNamedArgsExpression:
 		p.printNamedArgsExpression(t)
 	case *BLangValueType:
@@ -396,6 +398,31 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 
 	// Print arguments if present
+	p.printString("(")
+	if len(node.ArgExprs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.ArgExprs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallAction) {
+	p.startNode()
+	p.printString("remote-method-call")
+	p.printString(node.Name.Value)
+
+	if node.Expr != nil {
+		p.printString("expr:")
+		p.indentLevel++
+		p.PrintInner(node.Expr.(BLangNode))
+		p.indentLevel--
+	}
+
 	p.printString("(")
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++

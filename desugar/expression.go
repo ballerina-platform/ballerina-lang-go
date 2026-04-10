@@ -26,6 +26,15 @@ import (
 	"ballerina-lang-go/semtypes"
 )
 
+type invocable interface {
+	ast.BLangActionOrExpression
+	ResolvedSymbol() model.SymbolRef
+	Receiver() ast.BLangExpression
+	SetReceiver(ast.BLangExpression)
+	CallArgs() []ast.BLangExpression
+	SetCallArgs([]ast.BLangExpression)
+}
+
 func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desugaredNode[ast.BLangActionOrExpression] {
 	switch expr := node.(type) {
 	case *ast.BLangBinaryExpr:
@@ -89,6 +98,8 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 			initStmts:       result.initStmts,
 			replacementNode: expr,
 		}
+	case *ast.BLangRemoteMethodCallAction:
+		return walkInvocation(cx, expr)
 	case *ast.BLangWildCardBindingPattern:
 		// Wildcard binding pattern can appear in variable references (e.g., _ = expr)
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
@@ -220,22 +231,23 @@ func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) de
 	}
 }
 
-func walkInvocation(cx *functionContext, expr *ast.BLangInvocation) desugaredNode[ast.BLangActionOrExpression] {
+func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLangActionOrExpression] {
 	var initStmts []model.StatementNode
 
-	if expr.Expr != nil {
-		result := walkExpression(cx, expr.Expr)
+	if expr.Receiver() != nil {
+		result := walkExpression(cx, expr.Receiver())
 		initStmts = append(initStmts, result.initStmts...)
-		expr.Expr = result.replacementNode.(ast.BLangExpression)
+		expr.SetReceiver(result.replacementNode.(ast.BLangExpression))
 	}
 
-	for i := range expr.ArgExprs {
-		result := walkExpression(cx, expr.ArgExprs[i])
+	args := expr.CallArgs()
+	for i := range args {
+		result := walkExpression(cx, args[i])
 		initStmts = append(initStmts, result.initStmts...)
-		expr.ArgExprs[i] = result.replacementNode.(ast.BLangExpression)
+		args[i] = result.replacementNode.(ast.BLangExpression)
 	}
 
-	fnSym, isDirectCall := cx.getSymbol(expr.Symbol()).(model.FunctionSymbol)
+	fnSym, isDirectCall := cx.getSymbol(expr.ResolvedSymbol()).(model.FunctionSymbol)
 	if !isDirectCall {
 		return desugaredNode[ast.BLangActionOrExpression]{
 			initStmts:       initStmts,
@@ -252,7 +264,7 @@ func walkInvocation(cx *functionContext, expr *ast.BLangInvocation) desugaredNod
 	}
 }
 
-func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym model.FunctionSymbol) []model.StatementNode {
+func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.FunctionSymbol) []model.StatementNode {
 	sig := fnSym.Signature()
 	totalParams := len(sig.ParamTypes)
 	if totalParams == 0 {
@@ -260,7 +272,7 @@ func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym mo
 	}
 
 	reordered := make([]ast.BLangExpression, totalParams)
-	for i, arg := range expr.ArgExprs {
+	for i, arg := range expr.CallArgs() {
 		switch arg := arg.(type) {
 		case *ast.BLangNamedArgsExpression:
 			for j, name := range sig.ParamNames {
@@ -287,10 +299,9 @@ func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym mo
 			continue
 		}
 		dp, _ := defaultableParams.Get(i)
-		defaultInv := &ast.BLangInvocation{
-			Name:     &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()},
-			ArgExprs: reordered[:i],
-		}
+		defaultInv := &ast.BLangInvocation{}
+		defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
+		defaultInv.ArgExprs = reordered[:i]
 		defaultInv.SetSymbol(dp.Symbol)
 		defaultInv.SetDeterminedType(sig.ParamTypes[i])
 		setPositionIfMissing(defaultInv, pos)
@@ -313,7 +324,7 @@ func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym mo
 		reordered[i] = varRef
 	}
 
-	expr.ArgExprs = reordered
+	expr.SetCallArgs(reordered)
 	return initStmts
 }
 
@@ -976,11 +987,9 @@ func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, val
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "push"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{listExpr, valueExpr},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "push"}
+	inv.ArgExprs = []ast.BLangExpression{listExpr, valueExpr}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
 	return inv

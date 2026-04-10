@@ -560,7 +560,6 @@ func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= flagAnonymous }
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
 func (b *BLangService) IsPublic() bool        { return false }
-func (b *BLangInvocation) IsPublic() bool     { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
 func (this *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {

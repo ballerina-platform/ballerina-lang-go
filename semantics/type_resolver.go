@@ -687,7 +687,7 @@ func resolveAssignment(t typeResolver, chain *binding, s assignmentNode) (statem
 	if !ok {
 		return statementEffect{}, false
 	}
-	if _, _, ok := resolveActionOrExpression(t, chain, s.GetExpression().(ast.BLangExpression), lhsTy); !ok {
+	if _, _, ok := resolveActionOrExpression(t, chain, s.GetExpression().(ast.BLangActionOrExpression), lhsTy); !ok {
 		return statementEffect{}, false
 	}
 	if expr, ok := s.GetVariable().(model.NodeWithSymbol); ok {
@@ -1357,6 +1357,10 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 		}
 		memberKind := semtypes.MemberKindMethod
 		if method.IsRemote() {
+			if !classDef.IsClient() && !classDef.IsService() {
+				t.semanticError("remote methods are only allowed in client or service classes", method.GetPosition())
+				return nil, false
+			}
 			memberKind = semtypes.MemberKindRemoteMethod
 		} else if method.IsResource() {
 			memberKind = semtypes.MemberKindResourceMethod
@@ -1658,7 +1662,7 @@ func resolveVariableDefStmt(t typeResolver, chain *binding, s *ast.BLangSimpleVa
 	effectChain := chain
 	if variable.Expr != nil {
 		expectedType := variable.GetDeterminedType()
-		exprTy, effect, ok := resolveActionOrExpression(t, chain, variable.Expr.(ast.BLangExpression), expectedType)
+		exprTy, effect, ok := resolveActionOrExpression(t, chain, variable.Expr, expectedType)
 		if !ok {
 			return defaultStmtEffect(chain), false
 		}
@@ -1677,7 +1681,7 @@ func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimple
 	typeNode := node.TypeNode()
 	if typeNode == nil {
 		if node.Expr != nil {
-			exprTy, _, ok := resolveActionOrExpression(t, chain, node.Expr.(ast.BLangExpression), nil)
+			exprTy, _, ok := resolveActionOrExpression(t, chain, node.Expr, nil)
 			if !ok {
 				return false
 			}
@@ -1698,7 +1702,7 @@ func resolveSimpleVariable(t typeResolver, chain *binding, node *ast.BLangSimple
 	updateSymbolType(t, node, semType)
 
 	if node.Expr != nil {
-		if _, _, ok := resolveActionOrExpression(t, chain, node.Expr.(ast.BLangExpression), semType); !ok {
+		if _, _, ok := resolveActionOrExpression(t, chain, node.Expr, semType); !ok {
 			return false
 		}
 	}
@@ -1788,6 +1792,8 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 		return resolveNewExpr(t, chain, e, expectedType)
 	case *ast.BLangLambdaFunction:
 		return resolveLambdaFunctionExpr(t, chain, e)
+	case *ast.BLangRemoteMethodCallAction:
+		return resolveRemoteMethodCallAction(t, chain, e)
 	default:
 		t.internalError(fmt.Sprintf("unsupported expression type: %T", expr), expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -3230,37 +3236,89 @@ func resolveMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation
 	return resolveFunctionCall(t, chain, expr, symbolRef)
 }
 
+func isRemoteMethod(t typeResolver, objType semtypes.SemType, methodName string) bool {
+	ctx := t.typeContext()
+	kindTy := semtypes.ObjectMemberKind(ctx, semtypes.StringConst(methodName), objType)
+	return kindTy != nil && semtypes.IsSubtype(ctx, kindTy, semtypes.StringConst("remote-method"))
+}
+
 func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy := expr.Expr.GetDeterminedType()
+	if isRemoteMethod(t, recieverTy, methodSymbol.name) {
+		t.semanticError("remote methods must be invoked using '->' notation", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
 	if methodRef, ok := t.lookupClassMethodSymbol(recieverTy, methodSymbol.name); ok {
 		expr.SetSymbol(methodRef)
 		return resolveFunctionCall(t, chain, expr, methodRef)
 	}
-	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodSymbol.name), recieverTy)
-	if fnTy == nil {
-		t.semanticError("method not found: "+methodSymbol.name, expr.GetPosition())
-		return nil, expressionEffect{}, false
+	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, recieverTy, methodSymbol.name, methodSymbol, expr.ArgExprs, expr)
+	if ok {
+		expr.SetSymbol(symbolRef)
 	}
+	return retTy, effect, ok
+}
 
-	argTys := make([]semtypes.SemType, len(expr.ArgExprs))
-	for i, arg := range expr.ArgExprs {
-		argTy, _, ok := resolveActionOrExpression(t, chain, arg, nil)
+func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes.SemType, methodName string,
+	methodSymbol *deferredMethodSymbol, argExprs []ast.BLangExpression, node ast.BLangNode,
+) (model.SymbolRef, semtypes.SemType, expressionEffect, bool) {
+	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodName), receiverTy)
+	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
+		t.semanticError("method not found: "+methodName, node.GetPosition())
+		return model.SymbolRef{}, nil, expressionEffect{}, false
+	}
+	paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
+	if paramListTy == nil {
+		t.internalError("empty function param list ty", node.GetPosition())
+		return model.SymbolRef{}, nil, expressionEffect{}, false
+	}
+	argTys := make([]semtypes.SemType, len(argExprs))
+	for i, arg := range argExprs {
+		if _, namedParam := arg.(*ast.BLangNamedArgsExpression); namedParam {
+			t.unimplemented("named parameters not supported for non atomic method calls", arg.GetPosition())
+			return model.SymbolRef{}, nil, expressionEffect{}, false
+		}
+		key := semtypes.IntConst(int64(i))
+		paramTy := semtypes.ListMemberTypeInnerVal(t.typeContext(), paramListTy, key)
+		argTy, _, ok := resolveActionOrExpression(t, chain, arg, paramTy)
 		if !ok {
-			return nil, expressionEffect{}, false
+			return model.SymbolRef{}, nil, expressionEffect{}, false
 		}
 		argTys[i] = argTy
 	}
-
 	argLd := semtypes.NewListDefinition()
 	argListTy := argLd.DefineListTypeWrapped(t.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
 	retTy := semtypes.FunctionReturnType(t.typeContext(), fnTy, argListTy)
-
 	sig := model.FunctionSignature{ParamTypes: argTys, ReturnType: retTy}
-	symbolRef := t.createFunctionSymbol(methodSymbol.space, methodSymbol.name, sig, fnTy)
-	expr.SetSymbol(symbolRef)
+	symbolRef := t.createFunctionSymbol(methodSymbol.space, methodName, sig, fnTy)
+	setExpectedType(node, retTy)
+	return symbolRef, retTy, defaultExpressionEffect(chain), true
+}
 
-	setExpectedType(expr, retTy)
-	return retTy, defaultExpressionEffect(chain), true
+func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction) (semtypes.SemType, expressionEffect, bool) {
+	receiverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+	if !semtypes.IsClientObject(t.typeContext(), receiverTy) {
+		t.semanticError("remote method call is only allowed on client objects", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	methodName := expr.Name.GetValue()
+	if !isRemoteMethod(t, receiverTy, methodName) {
+		t.semanticError(fmt.Sprintf("%s is not a remote method", methodName), expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	expr.Name.SetDeterminedType(semtypes.NEVER)
+	if methodRef, ok := t.lookupClassMethodSymbol(receiverTy, methodName); ok {
+		expr.SetMethodSymbol(methodRef)
+		return resolveFunctionCall(t, chain, expr, methodRef)
+	}
+	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, receiverTy, methodName, expr.RawSymbol.(*deferredMethodSymbol), expr.ArgExprs, expr)
+	if ok {
+		expr.SetMethodSymbol(symbolRef)
+	}
+	return retTy, effect, ok
 }
 
 func resolveLangLibImport(t typeResolver, pkgName string, methodName string, expr *ast.BLangInvocation) (model.SymbolRef, ast.BLangIdentifier, bool) {
@@ -3294,46 +3352,46 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 	return symbolRef, pkgAlias, true
 }
 
-func resolveFunctionCallArgs(t typeResolver, chain *binding, expr *ast.BLangInvocation, fnSymbol model.SymbolRef) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
+func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSymbol model.SymbolRef) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
 	baseSymbol := t.getSymbol(fnSymbol)
 	switch sym := baseSymbol.(type) {
 	case model.GenericFunctionSymbol:
 		paramTyes := make([]semtypes.SemType, len(sym.ParamNames()))
-		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, expr.ArgExprs, expr.GetPosition())
+		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, inv.CallArgs(), inv.GetPosition())
 		if !ok {
 			return nil, fnSymbol, chain, false
 		}
 		symbolRef := sym.Monomorphize(argTys)
-		expr.SetSymbol(symbolRef)
+		inv.SetResolvedSymbol(symbolRef)
 		return argTys, symbolRef, chain, true
 	case model.FunctionSymbol:
 		if !t.ensureResolved(fnSymbol, 0) {
 			return nil, fnSymbol, chain, false
 		}
 		sig := sym.Signature()
-		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, expr.ArgExprs, expr.GetPosition())
+		_, argTys, chain, ok := argArray(t, sym, sig.ParamTypes, sig.RestParamType, chain, inv.CallArgs(), inv.GetPosition())
 		return argTys, fnSymbol, chain, ok
 	case *model.ValueSymbol:
 		narrowedSymbol := lookupSymbol(chain, fnSymbol)
-		expr.SetSymbol(narrowedSymbol)
+		inv.SetResolvedSymbol(narrowedSymbol)
 		fnTy := t.symbolType(narrowedSymbol)
 		if fnTy == nil {
-			t.internalError("function symbol has no type", expr.GetPosition())
+			t.internalError("function symbol has no type", inv.GetPosition())
 			return nil, narrowedSymbol, chain, false
 		}
 		if !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-			t.semanticError("not a function value", expr.GetPosition())
+			t.semanticError("not a function value", inv.GetPosition())
 			return nil, narrowedSymbol, chain, false
 		}
 
 		paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
 		if paramListTy == nil {
 			// I don't think this can happen given we have already checked fnTy to be subtype of function
-			t.internalError("empty function param list ty", expr.GetPosition())
+			t.internalError("empty function param list ty", inv.GetPosition())
 			return nil, narrowedSymbol, chain, false
 		}
 		var argTys []semtypes.SemType
-		for i, arg := range expr.ArgExprs {
+		for i, arg := range inv.CallArgs() {
 			if _, namedParam := arg.(*ast.BLangNamedArgsExpression); namedParam {
 				t.unimplemented("named parameters not supported for lambdas", arg.GetPosition())
 				return nil, narrowedSymbol, chain, false
@@ -3349,7 +3407,7 @@ func resolveFunctionCallArgs(t typeResolver, chain *binding, expr *ast.BLangInvo
 		}
 		return argTys, narrowedSymbol, chain, true
 	default:
-		t.semanticError("not a function value", expr.GetPosition())
+		t.semanticError("not a function value", inv.GetPosition())
 		return nil, fnSymbol, chain, false
 	}
 }
@@ -3428,8 +3486,8 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 	return reorderdArgs, tys, chain, true
 }
 
-func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
-	argTys, symbolRef, chain, ok := resolveFunctionCallArgs(t, chain, expr, symbolRef)
+func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRef model.SymbolRef) (semtypes.SemType, expressionEffect, bool) {
+	argTys, symbolRef, chain, ok := resolveFunctionCallArgs(t, chain, inv, symbolRef)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3439,11 +3497,11 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 
 	retTy := semtypes.FunctionReturnType(t.typeContext(), t.symbolType(symbolRef), argListTy)
 	if retTy == nil {
-		t.semanticError("incompatible arguments for function call", expr.GetPosition())
+		t.semanticError("incompatible arguments for function call", inv.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
-	setExpectedType(expr, retTy)
+	setExpectedType(inv, retTy)
 	return retTy, defaultExpressionEffect(chain), true
 }
 
@@ -3804,6 +3862,12 @@ func resolveObjectType(t typeResolver, ty *ast.BLangObjectType, depth int) (semt
 	// Step 2: Build direct members and validate overrides
 	var directMembers []directMember
 	for m := range ty.Members() {
+		if m.MemberKind() == model.ObjectMemberKindRemoteMethod {
+			if ty.NetworkQuals != model.ObjectNetworkQualsClient && ty.NetworkQuals != model.ObjectNetworkQualsService {
+				t.semanticError("remote methods are only allowed in client or service object types", ty.GetPosition())
+				return nil, false
+			}
+		}
 		valueTy, ok := resolveObjectMemberType(t, m, depth)
 		if !ok {
 			return nil, false

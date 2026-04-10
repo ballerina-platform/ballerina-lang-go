@@ -988,14 +988,11 @@ type LambdaFunctionNode interface {
 
 type InvocationNode interface {
 	VariableReferenceNode
-	AnnotatableNode
 	GetPackageAlias() IdentifierNode
 	GetName() IdentifierNode
 	GetArgumentExpressions() []ExpressionNode
 	GetRequiredArgs() []ExpressionNode
 	GetExpression() ExpressionNode
-	IsIterableOperation() bool
-	IsAsync() bool
 }
 
 type GroupExpressionNode interface {
