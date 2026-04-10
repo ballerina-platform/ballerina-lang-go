@@ -2,7 +2,7 @@ module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
 class Client {
 
-  get(string) -> string{
+  $remote$get(string) -> string{
     bb0 {
       %4 = ConstantLoad get
       %3 = + path %4;
@@ -11,7 +11,7 @@ class Client {
     }
   }
 
-  getT(string) -> string{
+  $remote$getT(string) -> string{
     bb0 {
       %4 = ConstantLoad get
       %3 = + path %4;
@@ -46,7 +46,7 @@ main() -> nil{
   bb4 {
     c = %3;
     %6 = ConstantLoad foo
-    %7 = get(c,%6) -> bb5;
+    %7 = $remote$get(c,%6) -> bb5;
   }
   bb5 {
     res = %7;
@@ -57,7 +57,7 @@ main() -> nil{
   }
   bb7 {
     $desugar$0 = %10;
-    %12 = getT(c,$desugar$0) -> bb8;
+    %12 = $remote$getT(c,$desugar$0) -> bb8;
   }
   bb8 {
     res = %12;

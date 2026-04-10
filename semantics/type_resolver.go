@@ -3271,10 +3271,6 @@ func isRemoteMethod(t typeResolver, objType semtypes.SemType, methodName string)
 
 func resolveObjectMethodCall(t typeResolver, chain *binding, expr *ast.BLangInvocation, methodSymbol *deferredMethodSymbol) (semtypes.SemType, expressionEffect, bool) {
 	recieverTy := expr.Expr.GetDeterminedType()
-	if isRemoteMethod(t, recieverTy, methodSymbol.name) {
-		t.semanticError("remote methods must be invoked using '->' notation", expr.GetPosition())
-		return nil, expressionEffect{}, false
-	}
 	if methodRef, ok := t.lookupClassMethodSymbol(recieverTy, methodSymbol.name); ok {
 		expr.SetSymbol(methodRef)
 		return resolveFunctionCall(t, chain, expr, methodRef)
@@ -3291,7 +3287,12 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 ) (model.SymbolRef, semtypes.SemType, expressionEffect, bool) {
 	fnTy := semtypes.ObjectMemberType(t.typeContext(), semtypes.StringConst(methodName), receiverTy)
 	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-		t.semanticError("method not found: "+methodName, node.GetPosition())
+		remoteMethodName := model.RemoteMethodName(methodName)
+		if methodName != remoteMethodName && isRemoteMethod(t, receiverTy, remoteMethodName) {
+			t.semanticError("remote methods must be invoked using '->' notation", node.GetPosition())
+		} else {
+			t.semanticError("method not found: "+model.StripRemotePrefix(methodName), node.GetPosition())
+		}
 		return model.SymbolRef{}, nil, expressionEffect{}, false
 	}
 	paramListTy := semtypes.FunctionParamListType(t.typeContext(), fnTy)
@@ -3332,16 +3333,17 @@ func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLa
 		return nil, expressionEffect{}, false
 	}
 	methodName := expr.Name.GetValue()
-	if !isRemoteMethod(t, receiverTy, methodName) {
+	remoteMethodName := model.RemoteMethodName(methodName)
+	if !isRemoteMethod(t, receiverTy, remoteMethodName) {
 		t.semanticError(fmt.Sprintf("%s is not a remote method", methodName), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 	expr.Name.SetDeterminedType(semtypes.NEVER)
-	if methodRef, ok := t.lookupClassMethodSymbol(receiverTy, methodName); ok {
+	if methodRef, ok := t.lookupClassMethodSymbol(receiverTy, remoteMethodName); ok {
 		expr.SetMethodSymbol(methodRef)
 		return resolveFunctionCall(t, chain, expr, methodRef)
 	}
-	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, receiverTy, methodName, expr.RawSymbol.(*deferredMethodSymbol), expr.ArgExprs, expr)
+	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, receiverTy, remoteMethodName, expr.RawSymbol.(*deferredMethodSymbol), expr.ArgExprs, expr)
 	if ok {
 		expr.SetMethodSymbol(symbolRef)
 	}
