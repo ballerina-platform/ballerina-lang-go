@@ -461,12 +461,15 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		return resolveMappingConstructor(resolver, n)
 	case *ast.BLangQueryExpr:
 		return newBlockSymbolResolverWithBlockScope(resolver, n)
-	case model.InvocationNode:
+	case *ast.BLangInvocation:
 		if n.GetExpression() != nil {
 			createDeferredMethodSymbol(resolver, n)
 		} else {
-			resolveFunctionRef(resolver, n.(functionRefNode))
+			resolveFunctionRef(resolver, n)
 		}
+	case *ast.BLangRemoteMethodCallAction:
+		// We are creating a deferred symbol here since without determining the type of the reciever we can't determine the actual function symbol
+		createDeferredMethodSymbol(resolver, n)
 	case model.VariableNode:
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
@@ -499,11 +502,10 @@ func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMapping
 
 // since we don't have type information we can't determine if this is an actual method call or need to be converted
 // to a function call.
-func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
-	invocation := n.(*ast.BLangInvocation)
-	name := invocation.Name.GetValue()
+func createDeferredMethodSymbol[T symbolResolver](resolver T, n invocable) {
+	name := n.GetName().GetValue()
 	scope := resolver.GetScope().(model.SymbolSpaceProvider)
-	invocation.RawSymbol = &deferredMethodSymbol{name: name, space: scope.MainSpace()}
+	n.SetRawSymbol(new(deferredMethodSymbol{name: name, space: scope.MainSpace()}))
 }
 
 type deferredMethodSymbol struct {
@@ -601,8 +603,8 @@ type functionRefNode interface {
 	SetSymbol(symbolRef model.SymbolRef)
 }
 
-func resolveFunctionRef[T symbolResolver](resolver T, functionRef functionRefNode) {
-	resolveSymbolRef(resolver, functionRef.GetName().GetValue(), functionRef.GetPackageAlias().GetValue(), functionRef.GetPosition(), functionRef)
+func resolveFunctionRef[T symbolResolver](resolver T, invocation *ast.BLangInvocation) {
+	resolveSymbolRef(resolver, invocation.GetName().GetValue(), invocation.GetPackageAlias().GetValue(), invocation.GetPosition(), invocation)
 }
 
 type variableNode interface {
@@ -1041,8 +1043,3 @@ func internalError[T symbolResolver](resolver T, message string, pos diagnostics
 func semanticError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
 	resolver.GetCtx().SemanticError(message, pos)
 }
-
-// We can't determine if a symbol is actually a method or not without resolivng the expression
-// Also we can't really resolve the actual method until we know the type of reciever
-// Thus we need to defer the resolution of the method until type resolution
-type defferedMethodSymbol struct{}

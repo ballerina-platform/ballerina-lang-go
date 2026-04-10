@@ -544,7 +544,7 @@ func simpleVariableDefinition(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLa
 			block: bb,
 		}
 	}
-	exprResult := handleActionOrExpression(ctx, bb, stmt.Var.Expr.(ast.BLangExpression))
+	exprResult := handleActionOrExpression(ctx, bb, stmt.Var.Expr)
 	curBB := exprResult.block
 	lhsOp := ctx.addLocalVar(varName, ty, stmt.Var.Symbol())
 	move := NewMove(exprResult.result, lhsOp, ctx.loc(stmt.GetPosition()))
@@ -771,7 +771,7 @@ func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos Location) e
 func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.BLangActionOrExpression) expressionEffect {
 	switch expr := expr.(type) {
 	case *ast.BLangInvocation:
-		return invocation(ctx, curBB, expr)
+		return generateCall(ctx, curBB, expr)
 	case *ast.BLangLiteral:
 		return literal(ctx, curBB, expr)
 	case *ast.BLangNumericLiteral:
@@ -804,6 +804,8 @@ func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.B
 		return newExpression(ctx, curBB, expr)
 	case *ast.BLangLambdaFunction:
 		return lambdaFunction(ctx, curBB, expr)
+	case *ast.BLangRemoteMethodCallAction:
+		return generateCall(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
 	}
@@ -1026,44 +1028,48 @@ func unaryExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangUnaryEx
 	}
 }
 
-func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) expressionEffect {
+type callable interface {
+	ast.BLangActionOrExpression
+	ResolvedSymbol() model.SymbolRef
+	Receiver() ast.BLangExpression
+	CallArgs() []ast.BLangExpression
+	GetName() model.IdentifierNode
+}
+
+func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expressionEffect {
 	curBB := bb
 	var args []BIROperand
+	isMethodCall := false
 
-	if expr.Expr != nil {
-		receiverEffect := handleActionOrExpression(ctx, curBB, expr.Expr)
-		curBB = receiverEffect.block
-		args = append(args, *receiverEffect.result)
+	if callable.Receiver() != nil {
+		effect := handleActionOrExpression(ctx, curBB, callable.Receiver())
+		curBB = effect.block
+		args = append(args, *effect.result)
+		isMethodCall = true
 	}
 
-	for _, arg := range expr.ArgExprs {
-		argEffect := handleActionOrExpression(ctx, curBB, arg)
-		argEffect = snapshotIfNeeded(ctx, argEffect, ctx.loc(expr.GetPosition()))
-		curBB = argEffect.block
-		args = append(args, *argEffect.result)
+	for _, arg := range callable.CallArgs() {
+		effect := handleActionOrExpression(ctx, curBB, arg)
+		effect = snapshotIfNeeded(ctx, effect, ctx.loc(callable.GetPosition()))
+		curBB = effect.block
+		args = append(args, *effect.result)
 	}
 
 	thenBB := ctx.addBB()
-	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
-	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, ctx.loc(expr.GetPosition()))
+	resultOperand := ctx.addTempVar(callable.GetDeterminedType())
+	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(callable.GetName().GetValue()), thenBB, resultOperand, ctx.loc(callable.GetPosition()))
+	call.IsMethodCall = isMethodCall
 
-	if expr.Expr != nil {
-		call.IsMethodCall = true
-	}
-
-	symRef := expr.Symbol()
+	symRef := callable.ResolvedSymbol()
 	sym := ctx.birCx.CompilerContext.GetSymbol(symRef)
 	if sym.Kind() == model.SymbolKindFunction {
-		// Regular function call
-		call.Kind = INSTRUCTION_KIND_CALL
 		call.FunctionLookupKey = buildFunctionLookupKeyFromSymbol(ctx.birCx, symRef)
-		if expr.PkgAlias != nil && expr.PkgAlias.Value != "" {
-			call.CalleePkg = ctx.birCx.importAliasMap[expr.PkgAlias.Value]
+		if inv, ok := callable.(*ast.BLangInvocation); ok && inv.PkgAlias != nil && inv.PkgAlias.Value != "" {
+			call.CalleePkg = ctx.birCx.importAliasMap[inv.PkgAlias.Value]
 		} else if ctx.birCx.packageID != nil {
 			call.CalleePkg = ctx.birCx.packageID
 		}
 	} else {
-		// Function pointer call through a variable
 		call.Kind = INSTRUCTION_KIND_FP_CALL
 		unnarrowedRef := ctx.birCx.CompilerContext.UnnarrowedSymbol(symRef)
 		if op, crossedFunction, ok := ctx.lookupVariable(unnarrowedRef); ok {

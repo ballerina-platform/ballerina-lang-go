@@ -1614,7 +1614,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 	bLAssignment := &BLangAssignment{}
 	lhsExpr := n.createExpression(assignmentStatementNode.VarRef())
 	// TODO: validate lhsExpr
-	bLAssignment.SetActionOrExpression(n.createExpression(assignmentStatementNode.Expression()))
+	bLAssignment.SetActionOrExpression(n.createActionOrExpression(assignmentStatementNode.Expression()))
 	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr
 	return bLAssignment
@@ -1657,32 +1657,29 @@ func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBind
 
 	switch bindingPattern.Kind() {
 	case common.CAPTURE_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
+		variable := variable.(*BLangSimpleVariable)
 		bLVarDef := &BLangSimpleVariableDef{}
 
 		bLVarDef.pos = location
-		variable.(BLangNode).SetPosition(location)
+		variable.SetPosition(location)
 
-		var expr BLangExpression
+		var expr BLangActionOrExpression
 		if initializer != nil {
-			expr = n.createExpression(initializer)
-		} else {
-			expr = nil
+			expr = n.createActionOrExpression(initializer)
 		}
-		variable.(*BLangSimpleVariable).SetInitialExpression(expr)
+		variable.SetInitialExpression(expr)
 
 		bLVarDef.SetVariable(variable)
 
 		if finalKeyword != nil {
-			if v, ok := variable.(*BLangSimpleVariable); ok {
-				v.SetFinal()
-			}
+			variable.SetFinal()
 		}
 
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
 		if !isDeclaredWithVar {
-			variable.(*BLangSimpleVariable).SetTypeNode(n.createTypeNode(typeDesc).(BType))
+			variable.SetTypeNode(n.createTypeNode(typeDesc).(BType))
 		}
 
 		return bLVarDef
@@ -1869,7 +1866,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 	bLReturn := &BLangReturn{}
 	bLReturn.pos = getPosition(n.de(), returnStatementNode)
 	if returnStatementNode.Expression() != nil {
-		bLReturn.SetActionOrExpression(n.createExpression(returnStatementNode.Expression()))
+		bLReturn.SetActionOrExpression(n.createActionOrExpression(returnStatementNode.Expression()))
 	} else {
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(n.de(), returnStatementNode)
@@ -2523,7 +2520,14 @@ func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.T
 }
 
 func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode *tree.RemoteMethodCallActionNode) BLangNode {
-	panic("TransformRemoteMethodCallAction unimplemented")
+	inv := n.createBLangInvocation(remoteMethodCallActionNode.MethodName(),
+		remoteMethodCallActionNode.Arguments(),
+		getPosition(n.de(), remoteMethodCallActionNode), false)
+	action := &BLangRemoteMethodCallAction{}
+	action.bLangInvocationBase = inv.bLangInvocationBase
+	action.Expr = n.createExpression(remoteMethodCallActionNode.Expression())
+	action.pos = getPosition(n.de(), remoteMethodCallActionNode)
+	return action
 }
 
 func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.MapTypeDescriptorNode) BLangNode {

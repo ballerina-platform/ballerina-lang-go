@@ -215,7 +215,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 	case *ast.BLangSimpleVariableDef:
 		symRef := n.Var.Symbol()
 		if n.Var.Expr != nil {
-			a.checkExpression(n.Var.Expr.(ast.BLangExpression), state)
+			a.checkExpression(n.Var.Expr, state)
 			state.markInitialized(symRef)
 		} else if !state.isInitialized(symRef) {
 			state.markUninitialized(symRef)

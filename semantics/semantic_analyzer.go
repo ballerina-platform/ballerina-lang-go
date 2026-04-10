@@ -540,7 +540,7 @@ func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression
 }
 
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
-func validateResolvedType[A analyzer](a A, expr ast.BLangExpression, expectedType semtypes.SemType) bool {
+func validateResolvedType[A analyzer](a A, expr ast.BLangActionOrExpression, expectedType semtypes.SemType) bool {
 	resolvedTy := expr.GetDeterminedType()
 	if resolvedTy == nil {
 		a.internalErr(fmt.Sprintf("expression type not resolved for %T", expr), expr.GetPosition())
@@ -591,7 +591,7 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return analyzeUnaryExpr(a, expr, expectedType)
 
 	case *ast.BLangInvocation:
-		return analyzeInvocation(a, expr, expectedType)
+		return analyzeInvocation[A](a, expr, expectedType)
 
 	case *ast.BLangIndexBasedAccess:
 		return analyzeIndexBasedAccess(a, expr, expectedType)
@@ -634,6 +634,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return analyzeNewExpression(a, expr, expectedType)
 	case *ast.BLangLambdaFunction:
 		return analyzeLambdaFunction(a, expr)
+	case *ast.BLangRemoteMethodCallAction:
+		return analyzeInvocation(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
@@ -1007,24 +1009,36 @@ func analyzeShiftExpr[A analyzer](a A, lhsTy, rhsTy semtypes.SemType) bool {
 	return true
 }
 
-func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) bool {
-	// Get the function type from the symbol
-	symbol := invocation.Symbol()
+type invocable interface {
+	ast.BLangActionOrExpression
+	ResolvedSymbol() model.SymbolRef
+	SetResolvedSymbol(model.SymbolRef)
+	CallArgs() []ast.BLangExpression
+	GetName() model.IdentifierNode
+	SetRawSymbol(model.Symbol)
+}
+
+func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.SemType) bool {
+	symbol := inv.ResolvedSymbol()
 	fnTy := a.ctx().SymbolType(symbol)
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
 
 	fnSymbol, isDirectCall := a.ctx().GetSymbol(symbol).(model.FunctionSymbol)
 	// TODO: ideally we need to unify these when we no longer has restrictions on lambdas
 	if !isDirectCall {
-		return analyzeLambdaInvocation(a, invocation, paramListTy, expectedType)
+		if invocation, ok := inv.(*ast.BLangInvocation); ok {
+			return analyzeLambdaInvocation(a, invocation, paramListTy, expectedType)
+		}
+		a.internalErr("expected function symbol", inv.GetPosition())
+		return false
 	}
-	return analyzeDirectInvocation(a, invocation, fnSymbol, paramListTy, expectedType)
+	return analyzeDirectInvocation(a, inv, fnSymbol, paramListTy, expectedType)
 }
 
-func analyzeDirectInvocation[A analyzer](a A, invocation *ast.BLangInvocation, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
+func analyzeDirectInvocation[A analyzer](a A, inv invocable, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
 	signature := fnSymbol.Signature()
 	tyCtx := a.tyCtx()
-	for i, arg := range invocation.ArgExprs {
+	for i, arg := range inv.CallArgs() {
 		switch arg := arg.(type) {
 		case *ast.BLangNamedArgsExpression:
 			name := arg.Name.Value
@@ -1047,14 +1061,12 @@ func analyzeDirectInvocation[A analyzer](a A, invocation *ast.BLangInvocation, f
 		}
 	}
 
-	// Validate the resolved return type against expected type
-	return validateResolvedType(a, invocation, expectedType)
+	return validateResolvedType(a, inv, expectedType)
 }
 
 func analyzeLambdaInvocation[A analyzer](a A, invocation *ast.BLangInvocation, paramListTy, expectedType semtypes.SemType) bool {
 	tyCtx := a.tyCtx()
 
-	// Validate each argument expression
 	for i, arg := range invocation.ArgExprs {
 		key := semtypes.IntConst(int64(i))
 		if !analyzeActionOrExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
@@ -1062,7 +1074,6 @@ func analyzeLambdaInvocation[A analyzer](a A, invocation *ast.BLangInvocation, p
 		}
 	}
 
-	// Validate the resolved return type against expected type
 	return validateResolvedType(a, invocation, expectedType)
 }
 
@@ -1081,7 +1092,7 @@ func analyzeSimpleVariableDef[A analyzer](a A, simpleVariableDef *ast.BLangSimpl
 			expectedType = symbolType
 		}
 	}
-	if variable.Expr != nil && !analyzeActionOrExpression(a, variable.Expr.(ast.BLangExpression), expectedType) {
+	if variable.Expr != nil && !analyzeActionOrExpression(a, variable.Expr, expectedType) {
 		return false
 	}
 	setExpectedType(simpleVariableDef, expectedType)
@@ -1208,7 +1219,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 		return false
 	}
 	expectedType := variable.GetDeterminedType()
-	expression := assignment.GetExpression().(ast.BLangExpression)
+	expression := assignment.GetExpression().(ast.BLangActionOrExpression)
 	return analyzeActionOrExpression(a, expression, expectedType)
 }
 
