@@ -2518,23 +2518,37 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 		return nil, expressionEffect{}, false
 	}
 
+	// Check for nil lifting on numeric/bitwise unary operators
+	nilLifted := false
+	underlyingTy := exprTy
+	if expr.GetOperatorKind() != model.OperatorKind_NOT {
+		if semtypes.ContainsBasicType(exprTy, semtypes.NIL) {
+			nilLifted = true
+			underlyingTy = semtypes.Diff(exprTy, semtypes.NIL)
+			if semtypes.IsEmpty(t.typeContext(), underlyingTy) {
+				t.semanticError(fmt.Sprintf("expect numeric type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
+				return nil, expressionEffect{}, false
+			}
+		}
+	}
+
 	var resultTy semtypes.SemType
 	switch expr.GetOperatorKind() {
 	case model.OperatorKind_SUB:
-		resultTy = negateNumericType(t, expr, exprTy)
+		resultTy = negateNumericType(t, expr, underlyingTy)
 	case model.OperatorKind_ADD:
-		resultTy = exprTy
+		resultTy = underlyingTy
 
 	case model.OperatorKind_BITWISE_COMPLEMENT:
-		if !semtypes.IsSubtypeSimple(exprTy, semtypes.INT) {
+		if !semtypes.IsSubtypeSimple(underlyingTy, semtypes.INT) {
 			t.semanticError(fmt.Sprintf("expect int type for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 			return nil, expressionEffect{}, false
 		}
-		if semtypes.IsSameType(t.typeContext(), exprTy, semtypes.INT) {
-			resultTy = exprTy
+		if semtypes.IsSameType(t.typeContext(), underlyingTy, semtypes.INT) {
+			resultTy = underlyingTy
 			break
 		}
-		shape := semtypes.SingleShape(exprTy)
+		shape := semtypes.SingleShape(underlyingTy)
 		if !shape.IsEmpty() {
 			value, ok := shape.Get().Value.(int64)
 			if !ok {
@@ -2543,7 +2557,7 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 			}
 			resultTy = semtypes.IntConst(^value)
 		} else {
-			resultTy = exprTy
+			resultTy = underlyingTy
 		}
 
 	case model.OperatorKind_NOT:
@@ -2564,6 +2578,9 @@ func resolveUnaryExpr(t typeResolver, chain *binding, expr *ast.BLangUnaryExpr, 
 		return nil, expressionEffect{}, false
 	}
 
+	if nilLifted {
+		resultTy = semtypes.Union(semtypes.NIL, resultTy)
+	}
 	setExpectedType(expr, resultTy)
 	return resultTy, defaultExpressionEffect(chain), true
 }
@@ -2607,7 +2624,7 @@ func resolveAdditiveExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryEx
 	numLhsBits := semtypes.NBasicTypes(lhsTy)
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
-	if numLhsBits > 1 || numRhsBits > 1 {
+	if numLhsBits == 0 || numRhsBits == 0 || numLhsBits > 1 || numRhsBits > 1 {
 		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
@@ -2660,7 +2677,7 @@ func resolveShiftExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExpr)
 	ctx := t.typeContext()
 	// TODO: handle singleton typing here
 
-	if !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
+	if semtypes.IsEmpty(ctx, lhsTy) || semtypes.IsEmpty(ctx, rhsTy) || !semtypes.IsSubtype(ctx, lhsTy, semtypes.INT) || !semtypes.IsSubtype(ctx, rhsTy, semtypes.INT) {
 		t.semanticError(fmt.Sprintf("expect integer types for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
@@ -2735,7 +2752,7 @@ func resolveMultiplicativeExpr(t typeResolver, chain *binding, expr *ast.BLangBi
 	numLhsBits := semtypes.NBasicTypes(lhsTy)
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
-	if numLhsBits > 1 || numRhsBits > 1 {
+	if numLhsBits == 0 || numRhsBits == 0 || numLhsBits > 1 || numRhsBits > 1 {
 		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
@@ -2784,7 +2801,7 @@ func resolveBitWiseExpr(t typeResolver, chain *binding, expr *ast.BLangBinaryExp
 	numLhsBits := semtypes.NBasicTypes(lhsTy)
 	numRhsBits := semtypes.NBasicTypes(rhsTy)
 
-	if numLhsBits > 1 || numRhsBits > 1 {
+	if numLhsBits == 0 || numRhsBits == 0 || numLhsBits > 1 || numRhsBits > 1 {
 		t.semanticError(fmt.Sprintf("union types not supported for %s", string(expr.GetOperatorKind())), expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}

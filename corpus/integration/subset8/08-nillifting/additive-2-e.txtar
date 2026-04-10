@@ -1,0 +1,25 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> additive-2-e.bal:23:13
+   |
+23 |     int a = x + y; // @error
+   |             ^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> additive-2-e.bal:24:13
+   |
+24 |     int b = x - y; // @error
+   |             ^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> additive-2-e.bal:29:14
+   |
+29 |     int a1 = i + j; // @error
+   |              ^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> additive-2-e.bal:30:14
+   |
+30 |     int b1 = i - y; // @error
+   |              ^^^^^
