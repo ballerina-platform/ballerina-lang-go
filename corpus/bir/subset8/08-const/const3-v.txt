@@ -1,0 +1,84 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+A  float;
+B  float;
+C  float;
+D  float;
+E  -0;
+F  0;
+G  float;
+H  boolean;
+I  boolean;
+J  float;
+main() -> nil{
+  bb0 {
+    %1 = eq(A,B) -> bb1;
+  }
+  bb1 {
+    %2 = println(%1) -> bb2;
+  }
+  bb2 {
+    %3 = eq(C,D) -> bb3;
+  }
+  bb3 {
+    %4 = println(%3) -> bb4;
+  }
+  bb4 {
+    %5 = eq(E,F) -> bb5;
+  }
+  bb5 {
+    %6 = println(%5) -> bb6;
+  }
+  bb6 {
+    %7 = eq(A,C) -> bb7;
+  }
+  bb7 {
+    %8 = println(%7) -> bb8;
+  }
+  bb8 {
+    %9 = eq(B,D) -> bb9;
+  }
+  bb9 {
+    %10 = println(%9) -> bb10;
+  }
+  bb10 {
+    %11 = println(G) -> bb11;
+  }
+  bb11 {
+    %12 = println(H) -> bb12;
+  }
+  bb12 {
+    %13 = println(I) -> bb13;
+  }
+  bb13 {
+    %14 = println(J) -> bb14;
+  }
+  bb14 {
+    return;
+  }
+}
+eq(float,float) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+  bb0 {
+    %4 = f1;
+    %5 = f2;
+    %3 = == %4 %5;
+    eq = %3;
+    %8 = f1;
+    %9 = f2;
+    %7 = != %8 %9;
+    neEq = %7;
+    %12 = eq;
+    %13 = neEq;
+    %11 = == %12 %13;
+    %11 ? bb1 : bb2;
+  }
+  bb1 {
+    %14 = ConstantLoad <nil>
+    %0 = %14;
+    return;
+  }
+  bb2 {
+    %0 = eq;
+    return;
+  }
+}

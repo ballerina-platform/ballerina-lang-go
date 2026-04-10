@@ -418,8 +418,7 @@ type (
 
 	BLangConstant struct {
 		BLangVariableBase
-		Name                     *BLangIdentifier
-		AssociatedTypeDefinition *BLangTypeDefinition
+		Name *BLangIdentifier
 	}
 
 	BLangSimpleVariable struct {
@@ -1054,9 +1053,11 @@ func (this *BLangConstant) GetKind() model.NodeKind {
 	return model.NodeKind_CONSTANT
 }
 
-func (this *BLangConstant) GetAssociatedTypeDefinition() model.TypeDefinition {
-	// migrated from BLangConstant.java:139:5
-	return this.AssociatedTypeDefinition
+func (this *BLangConstant) GetAssociatedType() semtypes.SemType {
+	if this.TypeNode() != nil {
+		return this.TypeNode().GetTypeData().Type
+	}
+	return nil
 }
 
 func (this *BLangConstant) GetPrecedence() int {

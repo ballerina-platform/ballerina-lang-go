@@ -73,7 +73,8 @@ var (
 		"subset7/07-closure/typeCast2-p.bal",
 
 		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
-		"08-comparable/order5-v.bal",
+		"subset8/08-comparable/order5-v.bal",
+		"subset8/08-const/const3-v.bal",
 	}
 )
 
