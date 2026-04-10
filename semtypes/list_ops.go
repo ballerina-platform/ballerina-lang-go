@@ -37,12 +37,12 @@ func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle
 	if pos == conjunctionNil {
 		atom := LIST_ATOMIC_INNER
 		members = atom.Members
-		rest = atom.Rest
+		rest = atom.rest
 	} else {
 		// combine all the positive tuples using intersection
 		lt := cx.ListAtomType(cx.conjunctionAtom(pos))
 		members = lt.Members
-		rest = lt.Rest
+		rest = lt.rest
 		p := cx.conjunctionNext(pos)
 		// the neg case is in case we grow the array in listInhabited
 		if p != conjunctionNil || neg != conjunctionNil {
@@ -57,7 +57,7 @@ func listFormulaIsEmpty(cx Context, pos conjunctionHandle, neg conjunctionHandle
 				d := cx.conjunctionAtom(p)
 				p = cx.conjunctionNext(p)
 				lt = cx.ListAtomType(d)
-				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
+				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.rest)
 				if !ok {
 					return true
 				}
@@ -88,7 +88,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 	}
 	nt := cx.ListAtomType(cx.conjunctionAtom(neg))
 	negNext := cx.conjunctionNext(neg)
-	if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
+	if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.rest, indices[nRequired-1])) {
 		return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 	}
 	negLen := nt.Members.FixedLength
@@ -98,7 +98,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 			if index >= negLen {
 				break
 			}
-			negMemberType := listMemberAt(nt.Members, nt.Rest, index)
+			negMemberType := listMemberAt(nt.Members, nt.rest, index)
 			common := Intersect(memberTypes[i], negMemberType)
 			if IsEmpty(cx, common) {
 				return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
@@ -120,7 +120,7 @@ func listInhabitedFast(cx Context, indices []int, memberTypes []SemType, nRequir
 		}
 	}
 	for i := range memberTypes {
-		d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.Rest, indices[i]))
+		d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.rest, indices[i]))
 		if !IsEmpty(cx, d) {
 			return listInhabitedFast(cx, indices, memberTypes, nRequired, negNext)
 		}
@@ -146,7 +146,7 @@ func listSampleTypes(cx Context, members fixedLengthArray, rest *ComplexSemType,
 }
 
 func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunctionHandle) []int {
-	maxInitialLength := len(members.Initial)
+	maxInitialLength := len(members.initial)
 	var fixedLengths []int
 	fixedLengths = append(fixedLengths, members.FixedLength)
 	tem := neg
@@ -155,8 +155,8 @@ func listSamples(cx Context, members fixedLengthArray, rest SemType, neg conjunc
 		if tem != conjunctionNil {
 			lt := cx.ListAtomType(cx.conjunctionAtom(tem))
 			m := lt.Members
-			if len(m.Initial) > maxInitialLength {
-				maxInitialLength = len(m.Initial)
+			if len(m.initial) > maxInitialLength {
+				maxInitialLength = len(m.initial)
 			}
 			if m.FixedLength > maxInitialLength {
 				fixedLengths = append(fixedLengths, m.FixedLength)
@@ -223,7 +223,7 @@ func listIntersectWith(env Env, members1 fixedLengthArray, rest1 *ComplexSemType
 }
 
 func fixedArrayShallowCopy(array fixedLengthArray) fixedLengthArray {
-	return fixedLengthArrayFrom(array.Initial, array.FixedLength)
+	return fixedLengthArrayFrom(array.initial, array.FixedLength)
 }
 
 func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired int, neg conjunctionHandle) bool {
@@ -232,7 +232,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 	} else {
 		nt := cx.ListAtomType(cx.conjunctionAtom(neg))
 		negNext := cx.conjunctionNext(neg)
-		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
+		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.rest, indices[nRequired-1])) {
 			return listInhabited(cx, indices, memberTypes, nRequired, negNext)
 		}
 		negLen := nt.Members.FixedLength
@@ -242,7 +242,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 				if index >= negLen {
 					break
 				}
-				negMemberType := listMemberAt(nt.Members, nt.Rest, index)
+				negMemberType := listMemberAt(nt.Members, nt.rest, index)
 				common := Intersect(memberTypes[i], negMemberType)
 				if IsEmpty(cx, common) {
 					return listInhabited(cx, indices, memberTypes, nRequired, negNext)
@@ -263,7 +263,7 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 			}
 		}
 		for i := range memberTypes {
-			d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.Rest, indices[i]))
+			d := Diff(memberTypes[i], listMemberAt(nt.Members, nt.rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				// Clone the slice
 				t := make([]SemType, len(memberTypes))
@@ -280,17 +280,17 @@ func listInhabited(cx Context, indices []int, memberTypes []SemType, nRequired i
 }
 
 func listMemberAtInnerVal(fixedArray fixedLengthArray, rest *ComplexSemType, index int) SemType {
-	return CellInnerVal(listMemberAt(fixedArray, rest, index))
+	return cellInnerVal(listMemberAt(fixedArray, rest, index))
 }
 
 func listLengthsDisjoint(members1 fixedLengthArray, rest1 *ComplexSemType, members2 fixedLengthArray, rest2 *ComplexSemType) bool {
 	len1 := members1.FixedLength
 	len2 := members2.FixedLength
 	if len1 < len2 {
-		return IsNever(CellInnerVal(rest1))
+		return IsNever(cellInnerVal(rest1))
 	}
 	if len2 < len1 {
-		return IsNever(CellInnerVal(rest2))
+		return IsNever(cellInnerVal(rest2))
 	}
 	return false
 }
@@ -303,8 +303,8 @@ func listMemberAt(fixedArray fixedLengthArray, rest *ComplexSemType, index int) 
 }
 
 func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
-	for i := range array.Initial {
-		if IsEmpty(cx, &array.Initial[i]) {
+	for i := range array.initial {
+		if IsEmpty(cx, &array.initial[i]) {
 			return true
 		}
 	}
@@ -312,9 +312,9 @@ func fixedArrayAnyEmpty(cx Context, array fixedLengthArray) bool {
 }
 
 func fixedArrayGet(members fixedLengthArray, index int) *ComplexSemType {
-	memberLen := len(members.Initial)
+	memberLen := len(members.initial)
 	i := min(memberLen-1, index)
-	return &members.Initial[i]
+	return &members.initial[i]
 }
 
 func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemType {
@@ -322,14 +322,14 @@ func listAtomicMemberTypeInnerVal(atomic ListAtomicType, key SubtypeData) SemTyp
 }
 
 func listAtomicMemberTypeInner(atomic ListAtomicType, key SubtypeData) SemType {
-	return listAtomicMemberTypeAtInner(atomic.Members, atomic.Rest, key)
+	return listAtomicMemberTypeAtInner(atomic.Members, atomic.rest, key)
 }
 
 func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest *ComplexSemType, key SubtypeData) SemType {
 	if intSubtype, ok := key.(intSubtype); ok {
 		var m SemType
 		m = NEVER
-		initLen := len(fixedArray.Initial)
+		initLen := len(fixedArray.initial)
 		fixedLen := fixedArray.FixedLength
 		if fixedLen != 0 {
 			for i := range initLen {
@@ -348,8 +348,8 @@ func listAtomicMemberTypeAtInner(fixedArray fixedLengthArray, rest *ComplexSemTy
 	}
 	m := cellInner(rest)
 	if fixedArray.FixedLength > 0 {
-		for i := range fixedArray.Initial {
-			m = Union(m, cellInner(&fixedArray.Initial[i]))
+		for i := range fixedArray.initial {
+			m = Union(m, cellInner(&fixedArray.initial[i]))
 		}
 	}
 	return m

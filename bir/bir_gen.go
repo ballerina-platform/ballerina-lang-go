@@ -948,7 +948,7 @@ func listConstructorExpression(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BL
 		bb.Instructions = append(bb.Instructions, fillerLoad)
 		initValues = append(initValues, fillerOperand)
 	}
-	fillerVal := values.DefaultValueForType(semtypes.CellInnerVal(lat.Rest))
+	fillerVal := values.DefaultValueForType(lat.Rest())
 
 	sizeOperand := ctx.addTempVar(semtypes.INT)
 	constantLoad := NewConstantLoad(sizeOperand, int64(len(initValues)), exprPos)
@@ -1036,6 +1036,7 @@ func invocation(ctx *stmtContext, bb *BIRBasicBlock, expr *ast.BLangInvocation) 
 		curBB = argEffect.block
 		args = append(args, *argEffect.result)
 	}
+
 	thenBB := ctx.addBB()
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name(expr.GetName().GetValue()), thenBB, resultOperand, expr.GetPosition())

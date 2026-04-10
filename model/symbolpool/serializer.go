@@ -286,6 +286,14 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 			return err
 		}
 	}
+	if err := write(buf, int64(len(sig.ParamNames))); err != nil {
+		return err
+	}
+	for _, name := range sig.ParamNames {
+		if err := sw.writeStringCP(buf, name); err != nil {
+			return err
+		}
+	}
 	if err := sw.writeType(buf, sig.ReturnType); err != nil {
 		return err
 	}
@@ -294,6 +302,28 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	}
 	if sig.RestParamType != nil {
 		if err := sw.writeType(buf, sig.RestParamType); err != nil {
+			return err
+		}
+	}
+	return sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes))
+}
+
+func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.DefaultableParamInfo, paramCount int) error {
+	var defaults []int
+	for i := 0; i < paramCount; i++ {
+		if _, ok := info.Get(i); ok {
+			defaults = append(defaults, i)
+		}
+	}
+	if err := write(buf, int64(len(defaults))); err != nil {
+		return err
+	}
+	for _, idx := range defaults {
+		if err := write(buf, int64(idx)); err != nil {
+			return err
+		}
+		param, _ := info.Get(idx)
+		if err := sw.writeSymbolRef(buf, param.Symbol); err != nil {
 			return err
 		}
 	}

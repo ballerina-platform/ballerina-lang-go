@@ -31,6 +31,8 @@ type analyzer interface {
 	ast.Visitor
 	ctx() *context.CompilerContext
 	tyCtx() semtypes.Context
+	getSymbol(ref model.SymbolRef) model.Symbol
+	internalError(message string, loc diagnostics.Location)
 	importedPackage(alias string) *ast.BLangImportPackage
 	unimplementedErr(message string, loc diagnostics.Location)
 	semanticErr(message string, loc diagnostics.Location)
@@ -117,6 +119,14 @@ func (ab *analyzerBase) importedPackage(alias string) *ast.BLangImportPackage {
 
 func (ab *analyzerBase) ctx() *context.CompilerContext {
 	return ab.parentAnalyzer().ctx()
+}
+
+func (ab *analyzerBase) getSymbol(ref model.SymbolRef) model.Symbol {
+	return ab.ctx().GetSymbol(ref)
+}
+
+func (ab *analyzerBase) internalError(message string, loc diagnostics.Location) {
+	ab.ctx().InternalError(message, loc)
 }
 
 func (ab *analyzerBase) tyCtx() semtypes.Context {
@@ -219,6 +229,10 @@ func (sa *SemanticAnalyzer) syntaxErr(message string, loc diagnostics.Location) 
 }
 
 func (sa *SemanticAnalyzer) internalErr(message string, loc diagnostics.Location) {
+	sa.compilerCtx.InternalError(message, loc)
+}
+
+func (sa *SemanticAnalyzer) internalError(message string, loc diagnostics.Location) {
 	sa.compilerCtx.InternalError(message, loc)
 }
 
@@ -400,7 +414,26 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fa := &functionAnalyzer{analyzerBase: analyzerBase{parent: parent}, function: function}
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature().ReturnType
+	validateDefaultParamTypes(parent, function)
 	return fa
+}
+
+func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+			continue
+		}
+		paramTy := param.GetDeterminedType()
+		exprTy := param.Expr.(ast.BLangExpression).GetDeterminedType()
+		if exprTy == nil {
+			a.internalErr("default expression has no determined type", param.Expr.(ast.BLangNode).GetPosition())
+			continue
+		}
+		if !semtypes.IsSubtype(a.tyCtx(), exprTy, paramTy) {
+			a.semanticErr("incompatible default value for parameter '"+param.Name.Value+"'", param.Expr.(ast.BLangNode).GetPosition())
+		}
+	}
 }
 
 func initializeMethodAnalyzer(parent analyzer, function *ast.BLangFunction) *functionAnalyzer {
@@ -957,28 +990,59 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	// Get the function type from the symbol
 	symbol := invocation.Symbol()
 	fnTy := a.ctx().SymbolType(symbol)
-	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-		a.semanticErr("function not found: "+invocation.Name.GetValue(), invocation.GetPosition())
-		return false
-	}
-	tyCtx := a.tyCtx()
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
+
+	fnSymbol, isDirectCall := a.ctx().GetSymbol(symbol).(model.FunctionSymbol)
+	// TODO: ideally we need to unify these when we no longer has restrictions on lambdas
+	if !isDirectCall {
+		return analyzeLambdaInvocation(a, invocation, paramListTy, expectedType)
+	}
+	return analyzeDirectInvocation(a, invocation, fnSymbol, paramListTy, expectedType)
+}
+
+func analyzeDirectInvocation[A analyzer](a A, invocation *ast.BLangInvocation, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
+	signature := fnSymbol.Signature()
+	tyCtx := a.tyCtx()
+	for i, arg := range invocation.ArgExprs {
+		switch arg := arg.(type) {
+		case *ast.BLangNamedArgsExpression:
+			name := arg.Name.Value
+			targetIndex := -1
+			for j, each := range signature.ParamNames {
+				if each == name {
+					targetIndex = j
+					break
+				}
+			}
+			if targetIndex == -1 {
+				a.semanticErr(fmt.Sprintf("no such parameter %s", name), arg.GetPosition())
+				return false
+			}
+			key := semtypes.IntConst(int64(targetIndex))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		default:
+			key := semtypes.IntConst(int64(i))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		}
+	}
+
+	// Validate the resolved return type against expected type
+	return validateResolvedType(a, invocation, expectedType)
+}
+
+func analyzeLambdaInvocation[A analyzer](a A, invocation *ast.BLangInvocation, paramListTy, expectedType semtypes.SemType) bool {
+	tyCtx := a.tyCtx()
+
 	// Validate each argument expression
-	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
 		key := semtypes.IntConst(int64(i))
 		if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
 			return false
 		}
-		argTys[i] = arg.GetDeterminedType()
-	}
-
-	// Validate argument types against function parameter types
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if !semtypes.IsSubtype(tyCtx, argListTy, paramListTy) {
-		a.semanticErr("incompatible arguments for function call", invocation.GetPosition())
-		return false
 	}
 
 	// Validate the resolved return type against expected type
@@ -1234,7 +1298,7 @@ func ancestorSpaceIndices(funcScope *model.FunctionScope) map[int]struct{} {
 	return ancestors
 }
 
-// PR-TODO: Make this generic over Expressions and statements
+// TODO: Make this generic over Expressions and statements
 func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) bool {
 	ancestors := ancestorSpaceIndices(funcScope)
 	return everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {

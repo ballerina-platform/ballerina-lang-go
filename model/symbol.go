@@ -60,6 +60,9 @@ type FunctionSymbol interface {
 	Symbol
 	Signature() FunctionSignature
 	SetSignature(FunctionSignature)
+	DefaultableParams() *DefaultableParamInfo
+	SetDefaultableParams(DefaultableParamInfo)
+	ParamNames() []string
 }
 
 // GenericFunctionSymbol represents functions with [@typeParam] types
@@ -141,6 +144,7 @@ type (
 
 	ClassSymbol struct {
 		TypeSymbol
+		methods map[string]SymbolRef
 	}
 
 	FieldDefault struct {
@@ -156,20 +160,31 @@ type (
 
 	functionSymbol struct {
 		symbolBase
-		signature FunctionSignature
+		signature         FunctionSignature
+		defaultableParams DefaultableParamInfo
 	}
 
 	genericFunctionSymbol struct {
 		name          string
 		space         *SymbolSpace
 		monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef
+		paramNames    []string
 	}
 
 	FunctionSignature struct {
-		ParamTypes []semtypes.SemType
-		ReturnType semtypes.SemType
-		// RestParamType is nil if there is no rest param
+		ParamTypes    []semtypes.SemType
+		ParamNames    []string
+		ReturnType    semtypes.SemType
 		RestParamType semtypes.SemType
+	}
+
+	DefaultableParam struct {
+		Symbol SymbolRef // symbol to the lambda that would provide the default value if needed
+	}
+
+	DefaultableParamInfo struct {
+		params      []DefaultableParam
+		defaultable []bool
 	}
 )
 
@@ -539,11 +554,42 @@ func (fs *functionSymbol) SetSignature(sig FunctionSignature) {
 	fs.signature = sig
 }
 
+func (fs *functionSymbol) DefaultableParams() *DefaultableParamInfo {
+	return &fs.defaultableParams
+}
+
+func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
+	fs.defaultableParams = info
+}
+
+func (fs *functionSymbol) ParamNames() []string {
+	return fs.Signature().ParamNames
+}
+
 func NewFunctionSymbol(name string, signature FunctionSignature, isPublic bool) FunctionSymbol {
 	return &functionSymbol{
 		symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		signature:  signature,
 	}
+}
+
+func NewDefaultableParamInfo(paramCount int) DefaultableParamInfo {
+	return DefaultableParamInfo{
+		params:      make([]DefaultableParam, paramCount),
+		defaultable: make([]bool, paramCount),
+	}
+}
+
+func (d *DefaultableParamInfo) Get(index int) (DefaultableParam, bool) {
+	if index >= len(d.defaultable) || !d.defaultable[index] {
+		return DefaultableParam{}, false
+	}
+	return d.params[index], true
+}
+
+func (d *DefaultableParamInfo) SetDefaultable(index int, symbol SymbolRef) {
+	d.defaultable[index] = true
+	d.params[index].Symbol = symbol
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
@@ -568,12 +614,25 @@ func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 	}
 }
 
-func NewGenericFunctionSymbol(name string, space *SymbolSpace, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
-	return &genericFunctionSymbol{name: name, space: space, monomorphizer: monomorphizer}
+func (c *ClassSymbol) SetMethods(methods map[string]SymbolRef) {
+	c.methods = methods
+}
+
+func (c *ClassSymbol) MethodSymbol(name string) (SymbolRef, bool) {
+	ref, ok := c.methods[name]
+	return ref, ok
+}
+
+func NewGenericFunctionSymbol(name string, space *SymbolSpace, paramNames []string, monomorphizer func(s GenericFunctionSymbol, args []semtypes.SemType) SymbolRef) GenericFunctionSymbol {
+	return &genericFunctionSymbol{name: name, space: space, paramNames: paramNames, monomorphizer: monomorphizer}
 }
 
 func (s *genericFunctionSymbol) Name() string {
 	return s.name
+}
+
+func (s *genericFunctionSymbol) ParamNames() []string {
+	return s.paramNames
 }
 
 func (s *genericFunctionSymbol) Type() semtypes.SemType {
@@ -597,6 +656,14 @@ func (s *genericFunctionSymbol) Signature() FunctionSignature {
 }
 
 func (s *genericFunctionSymbol) SetSignature(_ FunctionSignature) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
+	return &DefaultableParamInfo{}
+}
+
+func (s *genericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 

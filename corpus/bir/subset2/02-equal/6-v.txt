@@ -110,13 +110,13 @@ main() -> nil{
     return;
   }
 }
-mkInt(int) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+mkInt(int) -> any{
   bb0 {
     %0 = n;
     return;
   }
 }
-mkBoolean(boolean) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+mkBoolean(boolean) -> any{
   bb0 {
     %0 = b;
     return;

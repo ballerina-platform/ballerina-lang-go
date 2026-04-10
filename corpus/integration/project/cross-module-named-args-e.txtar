@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: no such parameter z
+  --> main.bal:22:27
+   |
+22 |     io:println(helper:add(z = 10, x = 100)); // @error undefined parameter
+   |                           ^^^^^^
