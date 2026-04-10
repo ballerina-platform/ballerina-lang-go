@@ -4,6 +4,15 @@ class MyClinet {
 
   $remote$get(string) -> string{
     bb0 {
+      %4 = ConstantLoad remote get
+      %3 = + path %4;
+      %0 = %3;
+      return;
+    }
+  }
+
+  get(string) -> string{
+    bb0 {
       %4 = ConstantLoad get
       %3 = + path %4;
       %0 = %3;
@@ -44,6 +53,14 @@ main() -> nil{
     %9 = println(res) -> bb6;
   }
   bb6 {
+    %10 = ConstantLoad foo
+    %11 = get(c,%10) -> bb7;
+  }
+  bb7 {
+    res2 = %11;
+    %13 = println(res2) -> bb8;
+  }
+  bb8 {
     return;
   }
 }

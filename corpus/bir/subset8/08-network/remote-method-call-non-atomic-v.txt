@@ -3,7 +3,7 @@ import ballerina.io v 0.0.0;
 class Client1 {
   base string
 
-  get(string) -> string{
+  $remote$get(string) -> string{
     bb0 {
       %6 = ConstantLoad base
       %5 = self[%6];
@@ -25,7 +25,7 @@ class Client1 {
 }
 class Client {
 
-  get(string) -> string{
+  $remote$get(string) -> string{
     bb0 {
       %4 = ConstantLoad get
       %3 = + path %4;
@@ -60,7 +60,7 @@ main() -> nil{
   bb4 {
     c = %3;
     %6 = ConstantLoad foo
-    %7 = get(c,%6) -> bb5;
+    %7 = $remote$get(c,%6) -> bb5;
   }
   bb5 {
     res = %7;
