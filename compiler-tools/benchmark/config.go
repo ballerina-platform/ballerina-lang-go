@@ -28,7 +28,6 @@ type config struct {
 	target     string
 	warmup     int
 	runs       int
-	export     bool
 	exportPath string
 }
 
@@ -61,9 +60,6 @@ func parseConfig() (*config, error) {
 		runs:       *runs,
 		exportPath: *exportPath,
 	}
-	if cfg.exportPath != "" {
-		cfg.export = true
-	}
 	return cfg, nil
 }
 
@@ -73,9 +69,6 @@ func (c *config) validate() error {
 	}
 	if c.headRef == "" {
 		return fmt.Errorf("headRef is required")
-	}
-	if c.baseRef == c.headRef {
-		return fmt.Errorf("baseRef and headRef cannot be the same")
 	}
 	if c.target == "" {
 		return fmt.Errorf("target is required")
@@ -89,7 +82,7 @@ func (c *config) validate() error {
 	if c.runs <= 0 {
 		return fmt.Errorf("runs must be greater than zero")
 	}
-	if c.export && c.exportPath == "" {
+	if c.exportPath == "" {
 		return fmt.Errorf("export path is required")
 	}
 	return nil
