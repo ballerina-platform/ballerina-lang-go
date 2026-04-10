@@ -512,11 +512,9 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 	nameIdent := &ast.BLangIdentifier{Value: "length"}
 	pkgAliasIdent := &ast.BLangIdentifier{Value: pkgName}
 
-	inv := &ast.BLangInvocation{
-		Name:     nameIdent,
-		PkgAlias: pkgAliasIdent,
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: pkgAliasIdent}
+	inv.Name = nameIdent
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
 	return inv
@@ -683,11 +681,9 @@ func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "keys"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "keys"}
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(returnType)
 	return inv

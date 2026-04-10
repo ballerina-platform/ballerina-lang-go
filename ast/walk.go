@@ -476,10 +476,6 @@ func Walk(v Visitor, node BLangNode) {
 		for _, arg := range node.ArgExprs {
 			Walk(v, arg.(BLangNode))
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-
 	case *BLangLambdaFunction:
 		if node.Function != nil {
 			Walk(v, node.Function)
@@ -837,6 +833,17 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.UserDefinedType)
 		}
 		for _, arg := range node.ArgsExprs {
+			Walk(v, arg.(BLangNode))
+		}
+
+	case *BLangRemoteMethodCallAction:
+		if node.Name != nil {
+			Walk(v, node.Name)
+		}
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+		for _, arg := range node.ArgExprs {
 			Walk(v, arg.(BLangNode))
 		}
 
