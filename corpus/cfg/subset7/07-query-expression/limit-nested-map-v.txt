@@ -1,0 +1,56 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable seed (type
+        (array-type
+          (tuple-type
+            (value-type string)
+            (value-type int)) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal a)
+            (literal 1))
+          (list-constructor-expr
+            (literal b)
+            (literal 2))
+          (list-constructor-expr
+            (literal c)
+            (literal 3))
+          (list-constructor-expr
+            (literal d)
+            (literal 4))))))
+    (var-def
+      (variable out (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (group-expr
+              (query-expr
+                (from-clause
+                  (var-def
+                    (variable p))
+                  (simple-var-ref seed))
+                (limit-clause
+                  (literal 3))
+                (select-clause
+                  (list-constructor-expr
+                    (index-based-access
+                      (simple-var-ref p)
+                      (literal 0))
+                    (binary-expr *
+                      (index-based-access
+                        (simple-var-ref p)
+                        (literal 1))
+                      (literal 10)))))))
+          (limit-clause
+            (literal 2))
+          (select-clause
+            (simple-var-ref x))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref out))))
+  )
+)

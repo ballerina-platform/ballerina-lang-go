@@ -151,6 +151,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printLetClause(t)
 	case *BLangWhereClause:
 		p.printWhereClause(t)
+	case *BLangLimitClause:
+		p.printLimitClause(t)
 	case *BLangSelectClause:
 		p.printSelectClause(t)
 	case *BLangCheckedExpr:
@@ -678,6 +680,17 @@ func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
 func (p *PrettyPrinter) printWhereClause(node *BLangWhereClause) {
 	p.startNode()
 	p.printString("where-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLimitClause(node *BLangLimitClause) {
+	p.startNode()
+	p.printString("limit-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)

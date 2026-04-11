@@ -44,6 +44,10 @@ type (
 		bLangNodeBase
 		Expression BLangExpression
 	}
+	BLangLimitClause struct {
+		bLangNodeBase
+		Expression BLangExpression
+	}
 	BLangSelectClause struct {
 		bLangNodeBase
 		Expression BLangExpression
@@ -72,6 +76,7 @@ var (
 	_ model.FromClauseNode    = &BLangFromClause{}
 	_ model.Node              = &BLangLetClause{}
 	_ model.Node              = &BLangWhereClause{}
+	_ model.Node              = &BLangLimitClause{}
 	_ model.SelectClauseNode  = &BLangSelectClause{}
 	_ model.CollectClauseNode = &BLangCollectClause{}
 	_ model.DoClauseNode      = &BLangDoClause{}
@@ -82,6 +87,7 @@ var (
 	_ BLangNode = &BLangFromClause{}
 	_ BLangNode = &BLangLetClause{}
 	_ BLangNode = &BLangWhereClause{}
+	_ BLangNode = &BLangLimitClause{}
 	_ BLangNode = &BLangSelectClause{}
 	_ BLangNode = &BLangCollectClause{}
 	_ BLangNode = &BLangDoClause{}
@@ -122,6 +128,22 @@ func (this *BLangLetClause) GetKind() model.NodeKind {
 
 func (this *BLangWhereClause) GetKind() model.NodeKind {
 	return model.NodeKind_WHERE
+}
+
+func (this *BLangLimitClause) GetKind() model.NodeKind {
+	return model.NodeKind_LIMIT
+}
+
+func (this *BLangLimitClause) GetExpression() model.ExpressionNode {
+	return this.Expression
+}
+
+func (this *BLangLimitClause) SetExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		this.Expression = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
 }
 
 func (this *BLangSelectClause) GetKind() model.NodeKind {
