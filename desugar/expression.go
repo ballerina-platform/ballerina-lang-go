@@ -530,7 +530,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 	cloneLoopVarDef := cloneSimpleVariableDef(loopVarDef)
 	if cloneLoopVarDef == nil || cloneLoopVarDef.Var == nil {
-		cx.internalError("failed to clone query from-clause variable definition")
+		cx.internalError("failed to clone query from clause variable definition")
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
 
@@ -621,7 +621,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	loopVarSymbol := cloneLoopVarDef.Var.Symbol()
 	loopVarTy := cx.symbolType(loopVarSymbol)
 	if loopVarTy == nil {
-		cx.internalError("query from-clause variable symbol type not found")
+		cx.internalError("query from clause variable symbol type not found")
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
 

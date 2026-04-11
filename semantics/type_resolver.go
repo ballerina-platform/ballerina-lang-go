@@ -2090,7 +2090,7 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	case semtypes.IsSubtypeSimple(collectionTy, semtypes.MAPPING):
 		elementTy = semtypes.MappingMemberTypeInnerValProj(t.typeContext(), collectionTy, semtypes.STRING)
 	default:
-		t.unimplemented("query from-clause currently supports only list or map collections", fromClause.GetPosition())
+		t.unimplemented("query from clause currently supports only list or map collections", fromClause.GetPosition())
 		return nil, expressionEffect{}, false
 	}
 
@@ -2109,7 +2109,7 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 				return nil, expressionEffect{}, false
 			}
 			if !semtypes.IsSubtype(t.typeContext(), elementTy, variableTy) {
-				t.semanticError("from-clause variable type is incompatible with collection member type",
+				t.semanticError("from clause variable type is incompatible with collection member type",
 					varDef.GetPosition())
 				return nil, expressionEffect{}, false
 			}
@@ -2177,7 +2177,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				}
 				varDef.SetDeterminedType(semtypes.NEVER)
 				if varDef.Var.Expr == nil {
-					t.semanticError("let-clause variable declaration requires an initializer",
+					t.semanticError("let clause variable declaration requires an initializer",
 						varDef.GetPosition())
 					return nil, false
 				}
@@ -2192,7 +2192,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 						return nil, false
 					}
 					if !semtypes.IsSubtype(t.typeContext(), initTy, variableTy) {
-						t.semanticError("let-clause variable type is incompatible with initializer expression",
+						t.semanticError("let clause variable type is incompatible with initializer expression",
 							varDef.GetPosition())
 						return nil, false
 					}
@@ -2210,7 +2210,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				return nil, false
 			}
 			if !semtypes.IsSubtypeSimple(whereTy, semtypes.BOOLEAN) {
-				t.semanticError("where-clause expression must be boolean", clause.GetPosition())
+				t.semanticError("where clause expression must be boolean", clause.GetPosition())
 				return nil, false
 			}
 			currentChain = effect.ifTrue

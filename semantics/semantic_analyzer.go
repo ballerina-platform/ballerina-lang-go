@@ -652,17 +652,8 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 					return false
 				}
 			}
-		case *ast.BLangWhereClause:
-			if !analyzeExpression(a, clause.Expression, semtypes.BOOLEAN) {
-				return false
-			}
-		case *ast.BLangLimitClause:
-			if !analyzeExpression(a, clause.Expression, semtypes.INT) {
-				return false
-			}
-		default:
-			a.unimplementedErr("only let + where + limit clauses are supported as intermediate query clauses", clause.GetPosition())
-			return false
+		case *ast.BLangWhereClause, *ast.BLangLimitClause:
+			// Query clause type and shape validation already happen in type resolution.
 		}
 	}
 

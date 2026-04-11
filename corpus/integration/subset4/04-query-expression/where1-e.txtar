@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: where-clause expression must be boolean
+error[SEMANTIC_ERROR]: where clause expression must be boolean
   --> where1-e.bal:20:9
    |
 20 |         where x + 1
