@@ -71,6 +71,9 @@ var (
 		"subset7/07-closure/equality4-v.bal",
 		"subset7/07-closure/typeCast1-v.bal",
 		"subset7/07-closure/typeCast2-p.bal",
+
+		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
+		"08-comparable/order5-v.bal",
 	}
 )
 

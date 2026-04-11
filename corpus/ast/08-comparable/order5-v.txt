@@ -1,0 +1,124 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable b1 (type
+          (array-type
+            (value-type boolean) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal true))))))
+      (var-def
+        (variable b2 (type
+          (array-type
+            (value-type boolean) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal true))
+            (list-constructor-expr)))))
+      (var-def
+        (variable b3 (type
+          (array-type
+            (union-type
+              (array-type
+                (value-type boolean) dimensions: 1 ([]))
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal true))
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref b1)
+            (simple-var-ref b2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref b2)
+            (simple-var-ref b3)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref b2)
+            (simple-var-ref b3)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref b3)
+            (simple-var-ref b1)))))
+      (var-def
+        (variable s1 (type
+          (array-type
+            (value-type string) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal a))))))
+      (var-def
+        (variable s2 (type
+          (array-type
+            (value-type string) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal a))
+            (list-constructor-expr)))))
+      (var-def
+        (variable s3 (type
+          (array-type
+            (union-type
+              (array-type
+                (value-type string) dimensions: 1 ([]))
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal a))
+            (literal <nil>)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref s2)
+            (simple-var-ref s1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref s2)
+            (simple-var-ref s3)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref s2)
+            (simple-var-ref s3)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref s1)
+            (simple-var-ref s3)))))
+      (var-def
+        (variable f1 (type
+          (array-type
+            (value-type float) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal 80.0))))))
+      (var-def
+        (variable f2 (type
+          (array-type
+            (value-type float) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (binary-expr /
+                (literal 0.0)
+                (literal 0.0)))))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref f1)
+            (simple-var-ref f2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref f2)
+            (simple-var-ref f2))))))))
