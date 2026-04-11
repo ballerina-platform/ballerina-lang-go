@@ -287,7 +287,7 @@ func (sa *SemanticAnalyzer) Analyze(pkg *ast.BLangPackage) {
 }
 
 func createConstantAnalyzer(parent analyzer, constant *ast.BLangConstant) *constantAnalyzer {
-	expectedType := constant.GetDeterminedType()
+	expectedType := constant.GetAssociatedType()
 	return &constantAnalyzer{analyzerBase: analyzerBase{parent: parent}, constant: constant, expectedType: expectedType}
 }
 
@@ -442,47 +442,54 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	case model.TypeDescriptor:
 	case *ast.BLangTypeDefinition:
-		expectedType := node.GetDeterminedType()
-		if expectedType == nil {
-			ca.internalErr("type not resolved", n.GetPosition())
-			return nil
-		}
-		ctx := ca.tyCtx()
-		if semtypes.IsNever(expectedType) || !semtypes.IsSubtype(ctx, expectedType, semtypes.CreateAnydata(ctx)) {
-			ca.syntaxErr("invalid type for constant declaration", n.GetPosition())
-			return nil
-		}
+		// We have set the type at constructor
+		return nil
 	case model.ExpressionNode:
-		switch n.GetKind() {
-		case model.NodeKind_LITERAL,
-			model.NodeKind_NUMERIC_LITERAL,
-			model.NodeKind_STRING_TEMPLATE_LITERAL,
-			model.NodeKind_RECORD_LITERAL_EXPR,
-			model.NodeKind_LIST_CONSTRUCTOR_EXPR,
-			model.NodeKind_LIST_CONSTRUCTOR_SPREAD_OP,
-			model.NodeKind_SIMPLE_VARIABLE_REF,
-			model.NodeKind_BINARY_EXPR,
-			model.NodeKind_GROUP_EXPR,
-			model.NodeKind_UNARY_EXPR:
-			bLangExpr := n.(ast.BLangExpression)
-			if !analyzeExpression(ca, bLangExpr, ca.expectedType) {
-				return nil
-			}
-			exprTy := bLangExpr.GetDeterminedType()
-			if ca.expectedType != nil {
-				if !semtypes.IsSubtype(ca.tyCtx(), exprTy, ca.expectedType) {
-					ca.semanticErr("incompatible type for constant expression", bLangExpr.GetPosition())
-					return nil
-				}
-			} else {
-				ca.expectedType = exprTy
-			}
-		default:
-			ca.semanticErr("expression is not a constant expression", n.GetPosition())
+		bLangExpr := n.(ast.BLangExpression)
+		hasErrors := false
+		validateConstantExpr(ca.ctx(), bLangExpr, func(e ast.BLangExpression) {
+			ca.semanticErr("expression is not a constant expression", e.GetPosition())
+			hasErrors = true
+		})
+		if hasErrors {
 			return nil
 		}
+		analyzeExpression(ca, bLangExpr, ca.expectedType)
+		return nil
 	}
 	return ca
+}
+
+func validateConstantExpr(ctx *context.CompilerContext, expr ast.BLangExpression, onNonConst func(ast.BLangExpression)) {
+	switch e := expr.(type) {
+	case *ast.BLangLiteral, *ast.BLangNumericLiteral:
+		// always valid
+	case *ast.BLangSimpleVarRef:
+		sym := ctx.GetSymbol(e.Symbol())
+		if vs, ok := sym.(*model.ValueSymbol); ok && vs.IsConst() {
+			return
+		}
+		onNonConst(expr)
+	case *ast.BLangUnaryExpr:
+		validateConstantExpr(ctx, e.Expr, onNonConst)
+	case *ast.BLangGroupExpr:
+		validateConstantExpr(ctx, e.Expression, onNonConst)
+	case *ast.BLangBinaryExpr:
+		validateConstantExpr(ctx, e.LhsExpr, onNonConst)
+		validateConstantExpr(ctx, e.RhsExpr, onNonConst)
+	case *ast.BLangListConstructorExpr:
+		for _, member := range e.Exprs {
+			validateConstantExpr(ctx, member, onNonConst)
+		}
+	case *ast.BLangMappingConstructorExpr:
+		for _, field := range e.Fields {
+			if kv, ok := field.(*ast.BLangMappingKeyValueField); ok {
+				validateConstantExpr(ctx, kv.ValueExpr, onNonConst)
+			}
+		}
+	default:
+		onNonConst(expr)
+	}
 }
 
 // validateResolvedType validates that a resolved expression type is compatible with the expected type
@@ -669,77 +676,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 }
 
 func analyzeNewExpression[A analyzer](a A, expr *ast.BLangNewExpression, expectedType semtypes.SemType) bool {
-	determinedTy := expr.GetDeterminedType()
-	if determinedTy == nil {
-		a.internalErr("type init type not resolved", expr.GetPosition())
-		return false
-	}
-	cx := a.tyCtx()
-	// Implicit new: determined type is the broad OBJECT type, refine from expected type
-	if determinedTy == semtypes.OBJECT {
-		if expectedType == nil {
-			a.semanticErr("cannot infer type for implicit new expression", expr.GetPosition())
-			return false
-		}
-		intersection := semtypes.Intersect(expectedType, semtypes.OBJECT)
-		if semtypes.IsEmpty(cx, intersection) {
-			a.semanticErr("expected type is not an object type", expr.GetPosition())
-			return false
-		}
-		determinedTy = intersection
-		expr.SetDeterminedType(intersection)
-	}
-
-	objTy, ok := determineObjectType(a, expr, determinedTy)
-	if !ok {
-		return false
-	}
-
-	atomicType := semtypes.ToObjectAtomicType(cx, objTy)
-	if atomicType == nil {
-		a.semanticErr("non atomic object types not supported", expr.GetPosition())
-		return false
-	}
-	expr.AtomicType = atomicType
-	// Validate against expected type
 	return validateResolvedType(a, expr, expectedType)
-}
-
-func determineObjectType[A analyzer](a A, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
-	cx := a.tyCtx()
-	alts := semtypes.ObjectAlternatives(cx, objectTy)
-
-	argTys := make([]semtypes.SemType, len(expr.ArgsExprs))
-	for i, arg := range expr.ArgsExprs {
-		if !analyzeExpression(a, arg, nil) {
-			return nil, false
-		}
-		argTys[i] = arg.GetDeterminedType()
-	}
-
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	type candidate struct {
-		objType        semtypes.SemType
-		initReturnType semtypes.SemType
-	}
-	var candidates []candidate
-	for _, alt := range alts {
-		paramListTy := semtypes.FunctionParamListType(cx, alt.InitFnType)
-		if semtypes.IsSubtype(cx, argListTy, paramListTy) {
-			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, argListTy)
-			candidates = append(candidates, candidate{objType: alt.ObjectType, initReturnType: retTy})
-		}
-	}
-	if len(candidates) == 0 {
-		a.semanticErr("failed to determine object type with fitting init function", expr.GetPosition())
-		return nil, false
-	} else if len(candidates) > 1 {
-		a.semanticErr("ambiguous object type", expr.GetPosition())
-		return nil, false
-	}
-	expr.SetDeterminedType(semtypes.Union(candidates[0].objType, semtypes.Diff(candidates[0].initReturnType, semtypes.NIL)))
-	return candidates[0].objType, true
 }
 
 func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {

@@ -34,10 +34,7 @@ type Context struct {
 	CompilerContext *context.CompilerContext
 	importAliasMap  map[string]*model.PackageID // Maps import alias to package ID
 	packageID       *model.PackageID            // Current package ID
-	// Ideally I would like to track this by SymbolRef, but in order to map NewExpr to class definition we will need
-	// some changes to sementic analysis. Basically we need a way to map the type to the class declaration
-	classDefMap map[*semtypes.MappingAtomicType]*BIRClassDef
-	birPkg      *BIRPackage
+	birPkg          *BIRPackage
 }
 
 type stmtContext struct {
@@ -190,7 +187,6 @@ func GenBir(ctx *context.CompilerContext, ast *ast.BLangPackage) *BIRPackage {
 		CompilerContext: ctx,
 		importAliasMap:  make(map[string]*model.PackageID),
 		packageID:       ast.PackageID,
-		classDefMap:     make(map[*semtypes.MappingAtomicType]*BIRClassDef),
 		birPkg:          birPkg,
 	}
 	birPkg.GlobalVars = make(map[string]BIRGlobalVariableDcl)
@@ -1289,9 +1285,11 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		ctx.CompilerContext.InternalError("self symbol not found in class scope", class.GetPosition())
 	}
 
+	classLookupKey := buildLookupKey(class.Symbol().Package, ctx.CompilerContext.SymbolName(class.Symbol()))
 	birClassDef := &BIRClassDef{
-		Name:   className,
-		VTable: make(map[string]*BIRFunction),
+		Name:      className,
+		LookupKey: classLookupKey,
+		VTable:    make(map[string]*BIRFunction),
 	}
 
 	for _, field := range class.Fields {
@@ -1311,27 +1309,16 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 		birClassDef.VTable[methodName] = fn
 	}
 
-	semCtx := semtypes.ContextFrom(ctx.CompilerContext.GetTypeEnv())
-	classType := class.Definition.GetSemType(ctx.CompilerContext.GetTypeEnv())
-	atomicType := semtypes.ToObjectAtomicType(semCtx, classType)
-	if atomicType != nil {
-		ctx.classDefMap[atomicType] = birClassDef
-	} else {
-		ctx.CompilerContext.InternalError("failed to determine object atomic type", class.GetPosition())
-	}
-
 	birPkg.ClassDefs = append(birPkg.ClassDefs, *birClassDef)
 }
 
 func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExpression) expressionEffect {
-	classDef := ctx.birCx.classDefMap[expr.AtomicType]
-	if classDef == nil {
-		ctx.birCx.CompilerContext.InternalError("failed to find the class definition", expr.GetPosition())
-		return expressionEffect{}
-	}
+	classSymbol := expr.ClassSymbol
+	className := ctx.birCx.CompilerContext.SymbolName(classSymbol)
+	classLookupKey := buildLookupKey(classSymbol.Package, className)
 
 	object := ctx.addTempVar(expr.GetDeterminedType())
-	newObj := NewObjectConstructor(classDef, object, expr.GetPosition())
+	newObj := NewObjectConstructor(classLookupKey, object, expr.GetPosition())
 	curBB.Instructions = append(curBB.Instructions, newObj)
 
 	var args []BIROperand
@@ -1342,13 +1329,12 @@ func newExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangNewExp
 		args = append(args, *argEffect.result)
 	}
 
-	initFunc := classDef.VTable["init"]
-	initResult := ctx.addTempVar(initFunc.ReturnVariable.Type)
+	initMethodLookupKey := classLookupKey + ".init"
+	initResult := ctx.addTempVar(semtypes.Union(semtypes.NIL, semtypes.ERROR))
 	initDoneBB := ctx.addBB()
-	call := NewCall(INSTRUCTION_KIND_CALL, args, initFunc.Name, initDoneBB, initResult, expr.GetPosition())
+	call := NewCall(INSTRUCTION_KIND_CALL, args, model.Name("init"), initDoneBB, initResult, expr.GetPosition())
 	call.IsMethodCall = true
-	call.CachedBIRFunc = initFunc
-	call.CachedMethodLookupKey = initFunc.FunctionLookupKey
+	call.CachedMethodLookupKey = initMethodLookupKey
 	curBB.Terminator = call
 
 	result := ctx.addTempVar(expr.DeterminedType)

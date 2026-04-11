@@ -38,7 +38,7 @@ class Foo {
 }
 createFoo(int) -> int|error{
   bb0 {
-    %2 = newObject Foo
+    %2 = newObject $anon/.:Foo
     %3 = init(%2,v) -> bb1;
   }
   bb1 {

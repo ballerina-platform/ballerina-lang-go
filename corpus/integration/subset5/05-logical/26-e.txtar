@@ -5,9 +5,3 @@ error[SEMANTIC_ERROR]: expression is not a constant expression
    |
 20 | const boolean obviouslyFalse = a != 2 && f(); // @error
    |                                          ^^^
-
-error[SEMANTIC_ERROR]: incompatible type: expected false, got boolean
-  --> 26-e.bal:20:32
-   |
-20 | const boolean obviouslyFalse = a != 2 && f(); // @error
-   |                                ^^^^^^

@@ -1,0 +1,67 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition Bar
+    (variable value (type
+      (value-type int)))
+    (function init (
+      (variable value (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal value))
+          (simple-var-ref value)))))
+  (class-definition Foo
+    (variable bar (type
+      (user-defined-type Bar)))
+    (function init (
+      (variable bar (type
+        (user-defined-type Bar)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal bar))
+          (simple-var-ref bar))))
+    (function foo (
+      (variable f (type
+        (value-type int)))) (
+      (value-type int))
+      (block-function-body
+        (return
+          (binary-expr +
+            (simple-var-ref f)
+            (index-based-access
+              (index-based-access
+                (simple-var-ref self)
+                (literal bar))
+              (literal value)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Foo)) (expr
+          (new (
+            (new (
+              (literal 5))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo expr:
+            (simple-var-ref f) (
+            (literal 10))))))
+      (var-def
+        (variable f2 (type
+          (user-defined-type Foo)) (expr
+          (new
+            (user-defined-type Foo) (
+            (new (
+              (literal 10))))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo expr:
+            (simple-var-ref f2) (
+            (literal 6)))))))))

@@ -76,6 +76,8 @@ type typeResolver interface {
 
 	setMappingAtomSymRef(mat *semtypes.MappingAtomicType, ref model.SymbolRef)
 	getMappingAtomSymRef(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool)
+	setClassAtomSymbol(mat *semtypes.MappingAtomicType, symbol model.SymbolRef)
+	getClassAtomSymbol(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool)
 	currentScope() model.Scope
 	setCurrentScope(scope model.Scope)
 	nextDefaultFnName() string
@@ -100,6 +102,7 @@ type packageTypeResolver struct {
 	defaultFnSymbolCount int
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
+	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
 }
 
 func (t *packageTypeResolver) typeContext() semtypes.Context        { return t.tyCtx }
@@ -171,6 +174,15 @@ func (t *packageTypeResolver) setMappingAtomSymRef(mat *semtypes.MappingAtomicTy
 func (t *packageTypeResolver) getMappingAtomSymRef(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool) {
 	ref, ok := t.mappingAtomToSymRef[mat]
 	return ref, ok
+}
+
+func (t *packageTypeResolver) setClassAtomSymbol(mat *semtypes.MappingAtomicType, symbol model.SymbolRef) {
+	t.classAtomSymbols[mat] = symbol
+}
+
+func (t *packageTypeResolver) getClassAtomSymbol(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool) {
+	sym, ok := t.classAtomSymbols[mat]
+	return sym, ok
 }
 
 func (t *packageTypeResolver) currentScope() model.Scope     { return t.scope }
@@ -328,6 +340,14 @@ func (f *functionTypeResolver) getMappingAtomSymRef(mat *semtypes.MappingAtomicT
 	return f.parentResolver.getMappingAtomSymRef(mat)
 }
 
+func (f *functionTypeResolver) setClassAtomSymbol(mat *semtypes.MappingAtomicType, symbol model.SymbolRef) {
+	f.parentResolver.setClassAtomSymbol(mat, symbol)
+}
+
+func (f *functionTypeResolver) getClassAtomSymbol(mat *semtypes.MappingAtomicType) (model.SymbolRef, bool) {
+	return f.parentResolver.getClassAtomSymbol(mat)
+}
+
 func (f *functionTypeResolver) currentScope() model.Scope     { return f.scope }
 func (f *functionTypeResolver) setCurrentScope(s model.Scope) { f.scope = s }
 
@@ -349,6 +369,7 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
 		typeDefnNodes:       make(map[model.SymbolRef]model.TypeDefinition),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+		classAtomSymbols:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		scope:               moduleScope,
 	}
 }
@@ -398,6 +419,12 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 			t.setMappingAtomSymRef(mat, defn.Symbol())
 		}
 	}
+	for i := range pkg.ClassDefinitions {
+		classDef := &pkg.ClassDefinitions[i]
+		semType := t.symbolType(classDef.Symbol())
+		mat := semtypes.ToObjectAtomicType(t.typeContext(), semType)
+		t.setClassAtomSymbol(mat, classDef.Symbol())
+	}
 	for _, symbolSpace := range importedSymbols {
 		for ref, sym := range symbolSpace.PublicMainSymbols() {
 			if sym.Kind() != model.SymbolKindType {
@@ -410,6 +437,9 @@ func populateMappingAtomMaps(t typeResolver, pkg *ast.BLangPackage, importedSymb
 			mat := semtypes.ToMappingAtomicType(t.typeContext(), semType)
 			if mat != nil {
 				t.setMappingAtomSymRef(mat, ref)
+			}
+			if oat := semtypes.ToObjectAtomicType(t.typeContext(), semType); oat != nil {
+				t.setClassAtomSymbol(oat, ref)
 			}
 		}
 	}
@@ -1687,7 +1717,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangExpres
 		e.Name.SetDeterminedType(semtypes.NEVER)
 		return ty, effect, true
 	case *ast.BLangNewExpression:
-		return resolveNewExpr(t, chain, e)
+		return resolveNewExpr(t, chain, e, expectedType)
 	case *ast.BLangLambdaFunction:
 		return resolveLambdaFunctionExpr(t, chain, e)
 	default:
@@ -1696,25 +1726,102 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangExpres
 	}
 }
 
-func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression) (semtypes.SemType, expressionEffect, bool) {
-	for _, arg := range e.ArgsExprs {
-		if _, _, ok := resolveExpression(t, chain, arg, nil); !ok {
-			return nil, expressionEffect{}, false
-		}
-	}
-
-	var ty semtypes.SemType
+func resolveNewExpr(t typeResolver, chain *binding, e *ast.BLangNewExpression, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	var determinedTy semtypes.SemType
 	if e.UserDefinedType != nil {
 		resolvedTy, ok := resolveBType(t, e.UserDefinedType, 0)
 		if !ok {
 			return nil, expressionEffect{}, false
 		}
-		ty = resolvedTy
+		determinedTy = resolvedTy
 	} else {
-		ty = semtypes.OBJECT
+		// Implicit new: refine from expected type
+		if expectedType == nil {
+			t.semanticError("cannot infer type for implicit new expression", e.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		cx := t.typeContext()
+		intersection := semtypes.Intersect(expectedType, semtypes.OBJECT)
+		if semtypes.IsEmpty(cx, intersection) {
+			t.semanticError("expected type is not an object type", e.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		determinedTy = intersection
 	}
-	setExpectedType(e, ty)
-	return ty, defaultExpressionEffect(chain), true
+	setExpectedType(e, determinedTy)
+
+	cx := t.typeContext()
+	initKey := semtypes.StringConst("init")
+	initFnTy := semtypes.ObjectMemberType(cx, initKey, determinedTy)
+	var paramListTy semtypes.SemType
+	if initFnTy != nil {
+		paramListTy = semtypes.FunctionParamListType(cx, initFnTy)
+	}
+	for i, arg := range e.ArgsExprs {
+		var paramTy semtypes.SemType
+		if paramListTy != nil {
+			key := semtypes.IntConst(int64(i))
+			paramTy = semtypes.ListMemberTypeInnerVal(cx, paramListTy, key)
+		}
+		if _, _, ok := resolveExpression(t, chain, arg, paramTy); !ok {
+			return nil, expressionEffect{}, false
+		}
+	}
+
+	objTy, ok := determineObjectType(t, e, determinedTy)
+	if !ok {
+		return nil, expressionEffect{}, false
+	}
+
+	atomicType := semtypes.ToObjectAtomicType(cx, objTy)
+	if atomicType == nil {
+		t.semanticError("non atomic object types not supported", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	e.AtomicType = atomicType
+
+	classSymbol, found := t.getClassAtomSymbol(atomicType)
+	if !found {
+		t.internalError("failed to find class definition for object type", e.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+	e.ClassSymbol = classSymbol
+
+	return e.GetDeterminedType(), defaultExpressionEffect(chain), true
+}
+
+func determineObjectType(t typeResolver, expr *ast.BLangNewExpression, objectTy semtypes.SemType) (semtypes.SemType, bool) {
+	cx := t.typeContext()
+	alts := semtypes.ObjectAlternatives(cx, objectTy)
+
+	argTys := make([]semtypes.SemType, len(expr.ArgsExprs))
+	for i, arg := range expr.ArgsExprs {
+		argTys[i] = arg.GetDeterminedType()
+	}
+
+	argLd := semtypes.NewListDefinition()
+	argListTy := argLd.DefineListTypeWrapped(cx.Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	type candidate struct {
+		objType        semtypes.SemType
+		initReturnType semtypes.SemType
+	}
+	var candidates []candidate
+	for _, alt := range alts {
+		paramListTy := semtypes.FunctionParamListType(cx, alt.InitFnType)
+		if semtypes.IsSubtype(cx, argListTy, paramListTy) {
+			retTy := semtypes.FunctionReturnType(cx, alt.InitFnType, argListTy)
+			candidates = append(candidates, candidate{objType: alt.ObjectType, initReturnType: retTy})
+		}
+	}
+	if len(candidates) == 0 {
+		t.semanticError("failed to determine object type with fitting init function", expr.GetPosition())
+		return nil, false
+	} else if len(candidates) > 1 {
+		t.semanticError("ambiguous object type", expr.GetPosition())
+		return nil, false
+	}
+	expr.SetDeterminedType(semtypes.Union(candidates[0].objType, semtypes.Diff(candidates[0].initReturnType, semtypes.NIL)))
+	return candidates[0].objType, true
 }
 
 func resolveTypeTestExpr(t typeResolver, chain *binding, e *ast.BLangTypeTestExpr) (semtypes.SemType, expressionEffect, bool) {

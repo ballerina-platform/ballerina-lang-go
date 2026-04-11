@@ -1,0 +1,23 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+A  -3;
+B  float;
+C  float;
+D  float;
+main() -> nil{
+  bb0 {
+    %1 = println(A) -> bb1;
+  }
+  bb1 {
+    %2 = println(B) -> bb2;
+  }
+  bb2 {
+    %3 = println(C) -> bb3;
+  }
+  bb3 {
+    %4 = println(D) -> bb4;
+  }
+  bb4 {
+    return;
+  }
+}

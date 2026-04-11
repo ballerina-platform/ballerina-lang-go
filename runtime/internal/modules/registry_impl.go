@@ -25,6 +25,7 @@ import (
 
 type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
+	birClassDefs    map[string]*bir.BIRClassDef
 	nativeFunctions map[string]*ExternFunction
 	modules         map[string]*BIRModule
 	typeEnv         semtypes.Env
@@ -33,6 +34,7 @@ type Registry struct {
 func NewRegistry() *Registry {
 	return &Registry{
 		birFunctions:    make(map[string]*bir.BIRFunction),
+		birClassDefs:    make(map[string]*bir.BIRClassDef),
 		nativeFunctions: make(map[string]*ExternFunction),
 		modules:         make(map[string]*BIRModule),
 	}
@@ -43,13 +45,14 @@ func moduleKey(pkgId *model.PackageID) string {
 }
 
 func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule {
-	if m.Pkg != nil && m.Pkg.Functions != nil {
+	if m.Pkg != nil {
 		for i := range m.Pkg.Functions {
 			fn := &m.Pkg.Functions[i]
 			r.birFunctions[fn.FunctionLookupKey] = fn
 		}
 		for i := range m.Pkg.ClassDefs {
 			classDef := &m.Pkg.ClassDefs[i]
+			r.birClassDefs[classDef.LookupKey] = classDef
 			for _, fn := range classDef.VTable {
 				r.birFunctions[fn.FunctionLookupKey] = fn
 			}
@@ -82,6 +85,10 @@ func (r *Registry) RegisterExternFunction(orgName string, moduleName string, fun
 	qualifiedName := moduleKey + ":" + funcName
 	r.nativeFunctions[qualifiedName] = externFn
 	r.nativeFunctions[funcName] = externFn
+}
+
+func (r *Registry) GetClassDef(lookupKey string) *bir.BIRClassDef {
+	return r.birClassDefs[lookupKey]
 }
 
 func (r *Registry) GetBIRFunction(funcName string) *bir.BIRFunction {

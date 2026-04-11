@@ -627,7 +627,7 @@ type SimpleVariableNode interface {
 }
 
 type ConstantNode interface {
-	GetAssociatedTypeDefinition() TypeDefinition
+	GetAssociatedType() semtypes.SemType
 }
 
 // Function/Invokable Interfaces

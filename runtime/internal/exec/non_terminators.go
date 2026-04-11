@@ -85,12 +85,13 @@ func execNewError(newError *bir.NewError, frame *Frame, reg *modules.Registry) {
 }
 
 func execNewObject(newObject *bir.NewObject, frame *Frame, reg *modules.Registry) {
-	fieldValues := make(map[string]values.BalValue, len(newObject.ClassDef.Fields))
-	for _, field := range newObject.ClassDef.Fields {
+	classDef := reg.GetClassDef(newObject.ClassDefRef)
+	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
+	for _, field := range classDef.Fields {
 		fieldValues[field.Name] = values.DefaultValueForType(field.Ty)
 	}
-	methodKeys := make(map[string]string, len(newObject.ClassDef.VTable))
-	for methodName, method := range newObject.ClassDef.VTable {
+	methodKeys := make(map[string]string, len(classDef.VTable))
+	for methodName, method := range classDef.VTable {
 		methodKeys[methodName] = method.FunctionLookupKey
 	}
 	objType := newObject.GetLhsOperand().VariableDcl.GetType()

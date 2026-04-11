@@ -84,9 +84,10 @@ type (
 	}
 
 	BIRClassDef struct {
-		Name   model.Name
-		Fields []ObjectField
-		VTable map[string]*BIRFunction
+		Name      model.Name
+		LookupKey string
+		Fields    []ObjectField
+		VTable    map[string]*BIRFunction
 	}
 
 	BIRImportModule struct {
