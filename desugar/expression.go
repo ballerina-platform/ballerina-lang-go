@@ -24,6 +24,7 @@ import (
 	array "ballerina-lang-go/lib/array/compile"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 func walkExpression(cx *functionContext, node model.ExpressionNode) desugaredNode[model.ExpressionNode] {
@@ -282,39 +283,53 @@ func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym mo
 	defaultableParams := fnSym.DefaultableParams()
 	var initStmts []model.StatementNode
 
+	var transformed []ast.BLangExpression
 	for i := range totalParams {
 		if reordered[i] != nil {
 			continue
 		}
+		for j := len(transformed); j < i; j++ {
+			varDef, varRef := assignToLocal(cx, reordered[j], pos)
+			initStmts = append(initStmts, varDef)
+			reordered[j] = varRef
+			transformed = append(transformed, varRef)
+		}
 		dp, _ := defaultableParams.Get(i)
 		defaultInv := &ast.BLangInvocation{
 			Name:     &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()},
-			ArgExprs: reordered[:i],
+			ArgExprs: transformed,
 		}
 		defaultInv.SetSymbol(dp.Symbol)
 		defaultInv.SetDeterminedType(sig.ParamTypes[i])
 		setPositionIfMissing(defaultInv, pos)
 
-		tempName, tempSymRef := cx.addDesugardSymbol(sig.ParamTypes[i], model.SymbolKindVariable, false)
-		tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}
-		tempVar.SetDeterminedType(sig.ParamTypes[i])
-		tempVar.SetInitialExpression(defaultInv)
-		tempVar.SetSymbol(tempSymRef)
-		varDef := &ast.BLangSimpleVariableDef{}
-		varDef.SetVariable(tempVar)
-		varDef.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(varDef, pos)
+		varDef, varRef := assignToLocal(cx, defaultInv, pos)
 		initStmts = append(initStmts, varDef)
-
-		varRef := &ast.BLangSimpleVarRef{VariableName: tempVar.Name}
-		varRef.SetSymbol(tempSymRef)
-		varRef.SetDeterminedType(sig.ParamTypes[i])
-		setPositionIfMissing(varRef, pos)
 		reordered[i] = varRef
+		transformed = append(transformed, varRef)
 	}
 
 	expr.ArgExprs = reordered
 	return initStmts
+}
+
+func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (model.StatementNode, *ast.BLangSimpleVarRef) {
+	ty := initExpr.GetDeterminedType()
+	tempName, tempSymRef := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
+	tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}
+	tempVar.SetDeterminedType(ty)
+	tempVar.SetInitialExpression(initExpr)
+	tempVar.SetSymbol(tempSymRef)
+	varDef := &ast.BLangSimpleVariableDef{}
+	varDef.SetVariable(tempVar)
+	varDef.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(varDef, pos)
+
+	varRef := &ast.BLangSimpleVarRef{VariableName: tempVar.Name}
+	varRef.SetSymbol(tempSymRef)
+	varRef.SetDeterminedType(ty)
+	setPositionIfMissing(varRef, pos)
+	return varDef, varRef
 }
 
 func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructorExpr) desugaredNode[model.ExpressionNode] {

@@ -44,16 +44,17 @@ main() -> nil{
     %5 = ConstantLoad 4
     %6 = newArray [int...][%5]{%1, %2, %3, %4}
     values = %6;
-    %8 = $default$0(values) -> bb1;
+    $desugar$0 = values;
+    %9 = $default$0($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$0 = %8;
-    %10 = $desugar$0;
-    %11 = foo(values,%10) -> bb2;
+    $desugar$1 = %9;
+    %11 = $desugar$1;
+    %12 = foo($desugar$0,%11) -> bb2;
   }
   bb2 {
-    %12 = %11;
-    %13 = println(%12) -> bb3;
+    %13 = %12;
+    %14 = println(%13) -> bb3;
   }
   bb3 {
     return;

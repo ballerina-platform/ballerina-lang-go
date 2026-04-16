@@ -65,14 +65,14 @@ main() -> nil{
   }
   bb8 {
     %16 = ConstantLoad 5
-    %17 = %16;
-    %18 = $default$1(%17) -> bb9;
+    $desugar$2 = %16;
+    %18 = $desugar$2;
+    %19 = $default$1(%18) -> bb9;
   }
   bb9 {
-    $desugar$2 = %18;
-    %20 = ConstantLoad 5
-    %21 = %20;
-    %22 = $desugar$2;
+    $desugar$3 = %19;
+    %21 = $desugar$2;
+    %22 = $desugar$3;
     %23 = bar(f,%21,%22) -> bb10;
   }
   bb10 {

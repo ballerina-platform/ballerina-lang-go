@@ -30,14 +30,14 @@ main() -> nil{
   }
   bb4 {
     %11 = ConstantLoad 1
-    %12 = %11;
-    %13 = $default$1(%12) -> bb5;
+    $desugar$2 = %11;
+    %13 = $desugar$2;
+    %14 = $default$1(%13) -> bb5;
   }
   bb5 {
-    $desugar$2 = %13;
-    %15 = ConstantLoad 1
-    %16 = %15;
-    %17 = $desugar$2;
+    $desugar$3 = %14;
+    %16 = $desugar$2;
+    %17 = $desugar$3;
     %18 = foo(%16,%17) -> bb6;
   }
   bb6 {

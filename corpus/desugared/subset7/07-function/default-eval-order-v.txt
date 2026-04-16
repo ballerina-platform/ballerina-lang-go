@@ -1,12 +1,30 @@
 (package
   (import-package ballerina io (as io))
+  (variable counter (type
+    (value-type int)))
+  (function init () ()
+    (block-function-body
+      (assignment
+        (simple-var-ref counter)
+        (literal 0))))
+  (function nextVal () (
+    (value-type int))
+    (block-function-body
+      (assignment
+        (simple-var-ref counter)
+        (binary-expr +
+          (simple-var-ref counter)
+          (literal 1)))
+      (return
+        (simple-var-ref counter))))
   (function foo (
     (variable x (type
-      (value-type int)) (expr
-      (literal 0)))
+      (value-type int)))
     (variable y (type
       (value-type int)) (expr
-      (literal 1)))) (
+      (binary-expr +
+        (simple-var-ref x)
+        (literal 1))))) (
     (value-type int))
     (block-function-body
       (return
@@ -18,39 +36,23 @@
     (block-function-body
       (var-def
         (variable $desugar$0 (expr
-          (invocation $default$0 ()))))
+          (invocation nextVal ()))))
       (var-def
         (variable $desugar$1 (expr
-          (invocation $default$1 (
+          (invocation $default$0 (
             (simple-var-ref $desugar$0))))))
       (expression-stmt
         (invocation io println (
           (invocation foo (
             (simple-var-ref $desugar$0)
             (simple-var-ref $desugar$1))))))
-      (var-def
-        (variable $desugar$2 (expr
-          (literal 1))))
-      (var-def
-        (variable $desugar$3 (expr
-          (invocation $default$1 (
-            (simple-var-ref $desugar$2))))))
       (expression-stmt
         (invocation io println (
-          (invocation foo (
-            (simple-var-ref $desugar$2)
-            (simple-var-ref $desugar$3))))))
-      (expression-stmt
-        (invocation io println (
-          (invocation foo (
-            (literal 1)
-            (literal 5))))))))
-  (function $default$0 () ()
-    (block-function-body
-      (return
-        (literal 0))))
-  (function $default$1 (
+          (simple-var-ref counter))))))
+  (function $default$0 (
     (variable x)) ()
     (block-function-body
       (return
-        (literal 1)))))
+        (binary-expr +
+          (simple-var-ref x)
+          (literal 1))))))
