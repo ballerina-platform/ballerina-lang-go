@@ -18,7 +18,6 @@ package exec
 
 import (
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
@@ -51,17 +50,17 @@ func Store(frame *Frame, address bir.Address, value values.BalValue) {
 	resolveFrame(frame, address).locals[address.FrameIndex] = value
 }
 
-func getOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry) values.BalValue {
+func getOperandValue(ctx *Context, op *bir.BIROperand, currentFrame *Frame) values.BalValue {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
-		module := reg.GetModule(gv.PkgId)
+		module := ctx.GetModule(gv.PkgId)
 		return module.Globals[gv.GlobalVarLookupKey]
 	}
 	return Load(currentFrame, op.Address)
 }
 
-func setOperandValue(op *bir.BIROperand, currentFrame *Frame, reg *modules.Registry, value values.BalValue) {
+func setOperandValue(ctx *Context, op *bir.BIROperand, currentFrame *Frame, value values.BalValue) {
 	if gv, ok := op.VariableDcl.(*bir.BIRGlobalVariableDcl); ok {
-		module := reg.GetModule(gv.PkgId)
+		module := ctx.GetModule(gv.PkgId)
 		module.Globals[gv.GlobalVarLookupKey] = value
 	} else {
 		Store(currentFrame, op.Address, value)
