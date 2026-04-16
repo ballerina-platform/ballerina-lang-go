@@ -60,16 +60,15 @@ func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic) {
 	printDiagnosticHeader(w, d)
 
 	location := d.Location()
-	if location == nil {
+	if diagnostics.IsLocationEmpty(location) {
 		_, _ = fmt.Fprintln(w)
 		return
 	}
 
-	lineRange := location.LineRange()
 	loc := buildDiagnosticLocation(
-		lineRange.FileName(),
-		lineRange.StartLine().Line(), lineRange.StartLine().Offset(),
-		lineRange.EndLine().Line(), lineRange.EndLine().Offset(),
+		location.FilePath(),
+		location.StartLine(), location.StartColumn(),
+		location.EndLine(), location.EndColumn(),
 	)
 	printDiagnosticLocation(w, loc)
 	printSourceSnippet(w, loc, fsys)

@@ -18,17 +18,19 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // FloatValueNode holds a floating-point value.
 type FloatValueNode struct {
 	value float64
-	loc   Location
+	loc   diagnostics.Location
 }
 
-func NewFloatValueNode(value float64, loc Location) *FloatValueNode {
+func NewFloatValueNode(value float64, loc diagnostics.Location) *FloatValueNode {
 	return &FloatValueNode{value: value, loc: loc}
 }
 
-func (n *FloatValueNode) Kind() TomlType   { return TypeFloat }
-func (n *FloatValueNode) Loc() Location    { return n.loc }
-func (n *FloatValueNode) Value() float64   { return n.value }
-func (n *FloatValueNode) NativeValue() any { return n.value }
+func (n *FloatValueNode) Kind() TomlType            { return TypeFloat }
+func (n *FloatValueNode) Loc() diagnostics.Location { return n.loc }
+func (n *FloatValueNode) Value() float64            { return n.value }
+func (n *FloatValueNode) NativeValue() any          { return n.value }

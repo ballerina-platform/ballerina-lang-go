@@ -16,49 +16,64 @@
 
 package diagnostics
 
-import "ballerina-lang-go/tools/text"
+import "fmt"
 
 // Location represents the location in TextDocument.
 // It is a combination of source file path, start and end line numbers, and start and end column numbers.
-type Location interface {
-	LineRange() text.LineRange
-	TextRange() text.TextRange
-}
-
-// BLangDiagnosticLocation is a minimal implementation of Location for AST nodes
-type BLangDiagnosticLocation struct {
+type Location struct {
 	filePath    string
 	startLine   int
 	endLine     int
 	startColumn int
 	endColumn   int
-	startOffset int
-	length      int
 }
 
-func NewBLangDiagnosticLocation(
+// NewLocation creates a new Location with the given file path, line numbers, and column numbers.
+func NewLocation(
 	filePath string,
-	startLine, endLine, startColumn, endColumn, startOffset, length int,
+	startLine, endLine, startColumn, endColumn int,
 ) Location {
-	return &BLangDiagnosticLocation{
+	return Location{
 		filePath:    filePath,
 		startLine:   startLine,
 		endLine:     endLine,
 		startColumn: startColumn,
 		endColumn:   endColumn,
-		startOffset: startOffset,
-		length:      length,
 	}
 }
 
-var _ Location = &BLangDiagnosticLocation{}
-
-func (loc *BLangDiagnosticLocation) LineRange() text.LineRange {
-	startLinePos := text.LinePositionFromLineAndOffset(loc.startLine, loc.startColumn)
-	endLinePos := text.LinePositionFromLineAndOffset(loc.endLine, loc.endColumn)
-	return text.LineRangeFromLinePositions(loc.filePath, startLinePos, endLinePos)
+// IsLocationEmpty returns true if all fields of the Location have zero values.
+func IsLocationEmpty(loc Location) bool {
+	return loc.filePath == "" && loc.startLine == 0 && loc.endLine == 0 &&
+		loc.startColumn == 0 && loc.endColumn == 0
 }
 
-func (loc *BLangDiagnosticLocation) TextRange() text.TextRange {
-	return text.TextRangeFromStartOffsetAndLength(loc.startOffset, loc.length)
+// FilePath returns the file path of the Location.
+func (loc *Location) FilePath() string {
+	return loc.filePath
+}
+
+// StartLine returns the start line of the Location.
+func (loc *Location) StartLine() int {
+	return loc.startLine
+}
+
+// StartColumn returns the start column of the Location.
+func (loc *Location) StartColumn() int {
+	return loc.startColumn
+}
+
+// EndLine returns the end line of the Location.
+func (loc *Location) EndLine() int {
+	return loc.endLine
+}
+
+// EndColumn returns the end column of the Location.
+func (loc *Location) EndColumn() int {
+	return loc.endColumn
+}
+
+// String returns a string representation of the Location in the format (startLine:startColumn,endLine:endColumn).
+func (loc Location) String() string {
+	return fmt.Sprintf("(%d:%d,%d:%d)", loc.startLine, loc.startColumn, loc.endLine, loc.endColumn)
 }

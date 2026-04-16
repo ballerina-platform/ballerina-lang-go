@@ -26,6 +26,7 @@ import (
 
 	"ballerina-lang-go/common/tomlparser/internal/ast"
 	"ballerina-lang-go/common/tomlparser/internal/lexer"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 // Parser is a recursive-descent LL(k) parser for TOML.
@@ -43,7 +44,8 @@ func NewParser(source string) *Parser {
 // Parse parses the full document and returns the root table.
 // All errors are collected; parse always returns a (possibly partial) result.
 func (p *Parser) Parse() (*ast.TableNode, []ParseError) {
-	root := ast.NewTableNode("", ast.Location{StartLine: 1, StartColumn: 1})
+	loc := diagnostics.NewLocation("", 1, 1, 1, 1)
+	root := ast.NewTableNode("", loc)
 
 	p.skipNewlines()
 
@@ -326,12 +328,8 @@ func (p *Parser) parseKeyValue() *ast.KeyValueNode {
 		return nil
 	}
 
-	loc := ast.Location{
-		StartLine:   startTok.Line,
-		StartColumn: startTok.Column,
-		EndLine:     val.Loc().EndLine,
-		EndColumn:   val.Loc().EndColumn,
-	}
+	valLoc := val.Loc()
+	loc := diagnostics.NewLocation("", startTok.Line, valLoc.EndLine(), startTok.Column, valLoc.EndColumn())
 
 	// Single key — simple case.
 	if len(keys) == 1 {
@@ -714,9 +712,10 @@ func (p *Parser) addChildKeyValueToTable(parent *ast.TableNode, kv *ast.KeyValue
 			if tbl, ok := existing.(*ast.TableNode); ok {
 				current = tbl
 			} else {
+				kvLoc := kv.Loc()
 				p.addErrorAt(
 					fmt.Sprintf("key %q already defined as a non-table", seg),
-					kv.Loc().StartLine, kv.Loc().StartColumn)
+					kvLoc.StartLine(), kvLoc.StartColumn())
 				return
 			}
 		} else {
@@ -749,9 +748,10 @@ func (p *Parser) addChildTableToParent(root *ast.TableNode, keys []string, table
 		parent.ReplaceGeneratedTable(tableNode)
 		return
 	}
+	tableLoc := tableNode.Loc()
 	p.addErrorAt(
 		fmt.Sprintf("table %q already defined", key),
-		tableNode.Loc().StartLine, tableNode.Loc().StartColumn)
+		tableLoc.StartLine(), tableLoc.StartColumn())
 }
 
 // addChildTableArrayToParent registers a [[table-array]] entry.
@@ -773,15 +773,16 @@ func (p *Parser) addChildTableArrayToParent(root *ast.TableNode, keys []string, 
 		arr.AddChild(anonTable)
 		return
 	}
+	anonLoc := anonTable.Loc()
 	p.addErrorAt(
-		fmt.Sprintf("key %q already defined as non-array", key),
-		anonTable.Loc().StartLine, anonTable.Loc().StartColumn)
+		fmt.Sprintf("key %q already defined as a non-array", key),
+		anonLoc.StartLine(), anonLoc.StartColumn())
 }
 
 // getOrCreateParentTable walks (or creates) intermediate tables for all
 // key segments except the last one.  Returns (node, false) and emits a
 // diagnostic (pointing at headerLoc) when an intermediate key is a scalar.
-func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, headerLoc ast.Location) (*ast.TableNode, bool) {
+func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, headerLoc diagnostics.Location) (*ast.TableNode, bool) {
 	current := root
 	for i := 0; i < len(keys)-1; i++ {
 		seg := keys[i]
@@ -798,7 +799,7 @@ func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, head
 			default:
 				p.addErrorAt(
 					fmt.Sprintf("key %q is not a table", seg),
-					headerLoc.StartLine, headerLoc.StartColumn)
+					headerLoc.StartLine(), headerLoc.StartColumn())
 				return nil, false
 			}
 		} else {
@@ -814,9 +815,10 @@ func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, head
 func (p *Parser) insertIntoTable(table *ast.TableNode, node ast.TopLevelNode) {
 	key := node.KeyName()
 	if _, exists := table.Entries()[key]; exists {
+		nodeLoc := node.Loc()
 		p.addErrorAt(
 			fmt.Sprintf("key %q already defined", key),
-			node.Loc().StartLine, node.Loc().StartColumn)
+			nodeLoc.StartLine(), nodeLoc.StartColumn())
 		return
 	}
 	table.AddEntry(key, node)
@@ -828,9 +830,10 @@ func (p *Parser) addChildKeyValueToInlineTable(table *ast.InlineTableValueNode, 
 	keys := kv.Keys()
 	if len(keys) <= 1 {
 		if _, exists := table.Entries()[kv.KeyName()]; exists {
+			kvLoc := kv.Loc()
 			p.addErrorAt(
 				fmt.Sprintf("duplicate key %q in inline table", kv.KeyName()),
-				kv.Loc().StartLine, kv.Loc().StartColumn)
+				kvLoc.StartLine(), kvLoc.StartColumn())
 			return
 		}
 		table.AddEntry(kv.KeyName(), kv)
@@ -843,20 +846,10 @@ func (p *Parser) addChildKeyValueToInlineTable(table *ast.InlineTableValueNode, 
 	table.AddEntry(leaf.KeyName(), leaf)
 }
 
-func singleLoc(tok lexer.Token) ast.Location {
-	return ast.Location{
-		StartLine:   tok.Line,
-		StartColumn: tok.Column,
-		EndLine:     tok.Line,
-		EndColumn:   tok.Column + len([]rune(tok.Value)),
-	}
+func singleLoc(tok lexer.Token) diagnostics.Location {
+	return diagnostics.NewLocation("", tok.Line, tok.Line, tok.Column, tok.Column+len([]rune(tok.Value)))
 }
 
-func locationOf(start, end lexer.Token) ast.Location {
-	return ast.Location{
-		StartLine:   start.Line,
-		StartColumn: start.Column,
-		EndLine:     end.Line,
-		EndColumn:   end.Column + len([]rune(end.Value)),
-	}
+func locationOf(start, end lexer.Token) diagnostics.Location {
+	return diagnostics.NewLocation("", start.Line, end.Line, start.Column, end.Column+len([]rune(end.Value)))
 }

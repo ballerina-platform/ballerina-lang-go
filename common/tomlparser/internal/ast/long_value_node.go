@@ -18,17 +18,19 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // IntValueNode holds an integer value (decimal, hex, octal, or binary).
 type IntValueNode struct {
 	value int64
-	loc   Location
+	loc   diagnostics.Location
 }
 
-func NewIntValueNode(value int64, loc Location) *IntValueNode {
+func NewIntValueNode(value int64, loc diagnostics.Location) *IntValueNode {
 	return &IntValueNode{value: value, loc: loc}
 }
 
-func (n *IntValueNode) Kind() TomlType   { return TypeInteger }
-func (n *IntValueNode) Loc() Location    { return n.loc }
-func (n *IntValueNode) Value() int64     { return n.value }
-func (n *IntValueNode) NativeValue() any { return n.value }
+func (n *IntValueNode) Kind() TomlType            { return TypeInteger }
+func (n *IntValueNode) Loc() diagnostics.Location { return n.loc }
+func (n *IntValueNode) Value() int64              { return n.value }
+func (n *IntValueNode) NativeValue() any          { return n.value }

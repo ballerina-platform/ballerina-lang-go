@@ -30,7 +30,7 @@ func (v *posUpdateVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	if node == nil {
 		return nil
 	}
-	if node.GetPosition() == nil {
+	if diagnostics.IsLocationEmpty(node.GetPosition()) {
 		node.SetPosition(v.pos)
 	}
 	return v

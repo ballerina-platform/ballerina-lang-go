@@ -25,8 +25,8 @@ import (
 // LineMap represents a collection of text lines in the TextDocument.
 type LineMap interface {
 	TextLine(line int) (TextLine, error)
-	LinePositionFromPosition(position int) (LinePosition, error)
-	TextPositionFromLinePosition(linePosition LinePosition) (int, error)
+	LinePositionFromPosition(position int) (line, offset int, err error)
+	TextPositionFromLinePosition(line, offset int) (int, error)
 	TextLines() []string
 }
 
@@ -49,24 +49,28 @@ func (lm lineMapImpl) TextLine(line int) (TextLine, error) {
 	return lm.textLines[line], nil
 }
 
-func (lm lineMapImpl) LinePositionFromPosition(position int) (LinePosition, error) {
+func (lm lineMapImpl) LinePositionFromPosition(position int) (line, offset int, err error) {
 	if err := lm.positionRangeCheck(position); err != nil {
-		return nil, err
+		return 0, 0, err
 	}
 	textLine := lm.findLineFrom(position)
-	return LinePositionFromLineAndOffset(textLine.LineNo(), position-textLine.StartOffset()), nil
+	offset = position - textLine.StartOffset()
+	if l := textLine.Length(); offset > l {
+		offset = l
+	}
+	return textLine.LineNo(), offset, nil
 }
 
-func (lm lineMapImpl) TextPositionFromLinePosition(linePosition LinePosition) (int, error) {
-	if err := lm.lineRangeCheck(linePosition.Line()); err != nil {
+func (lm lineMapImpl) TextPositionFromLinePosition(line, offset int) (int, error) {
+	if err := lm.lineRangeCheck(line); err != nil {
 		return -1, err
 	}
-	textLine := lm.textLines[linePosition.Line()]
-	if textLine.Length() < linePosition.Offset() {
-		return -1, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", linePosition.Offset()))
+	textLine := lm.textLines[line]
+	if offset < 0 || textLine.Length() < offset {
+		return -1, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", offset))
 	}
 	// TODO: Lazy initialize and cache
-	return textLine.StartOffset() + linePosition.Offset(), nil
+	return textLine.StartOffset() + offset, nil
 }
 
 func (lm lineMapImpl) TextLines() []string {

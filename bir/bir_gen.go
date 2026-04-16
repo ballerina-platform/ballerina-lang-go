@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
 
@@ -473,7 +474,7 @@ func assignmentStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangAss
 	return assignmentStatementInner(ctx, valueEffect.block, stmt.VarRef, valueEffect, stmt.GetPosition())
 }
 
-func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLangExpression, valueEffect expressionEffect, pos ast.Location) statementEffect {
+func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLangExpression, valueEffect expressionEffect, pos diagnostics.Location) statementEffect {
 	switch varRef := ref.(type) {
 	case *ast.BLangIndexBasedAccess:
 		return assignToMemberStatement(ctx, bb, varRef, valueEffect, pos)
@@ -486,7 +487,7 @@ func assignmentStatementInner(ctx *stmtContext, bb *BIRBasicBlock, ref ast.BLang
 	}
 }
 
-func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, valueEffect expressionEffect, pos ast.Location) statementEffect {
+func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangWildCardBindingPattern, valueEffect expressionEffect, pos diagnostics.Location) statementEffect {
 	refEffect := wildcardBindingPattern(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
 	mov := NewMove(valueEffect.result, refEffect.result, pos)
@@ -496,7 +497,7 @@ func assignToWildcardBindingPattern(ctx *stmtContext, bb *BIRBasicBlock, varRef 
 	}
 }
 
-func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, valueEffect expressionEffect, pos ast.Location) statementEffect {
+func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangSimpleVarRef, valueEffect expressionEffect, pos diagnostics.Location) statementEffect {
 	refEffect := simpleVariableReference(ctx, valueEffect.block, varRef)
 	currBB := refEffect.block
 	mov := NewMove(valueEffect.result, refEffect.result, pos)
@@ -506,7 +507,7 @@ func assignToSimpleVariable(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLa
 	}
 }
 
-func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect, pos ast.Location) statementEffect {
+func assignToMemberStatement(ctx *stmtContext, bb *BIRBasicBlock, varRef *ast.BLangIndexBasedAccess, valueEffect expressionEffect, pos diagnostics.Location) statementEffect {
 	currBB := valueEffect.block
 	containerRefEffect := handleExpression(ctx, currBB, varRef.Expr)
 	currBB = containerRefEffect.block
@@ -693,7 +694,7 @@ func isUnconditionalWildcard(clause *ast.BLangMatchClause) bool {
 	return ok
 }
 
-func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos ast.Location) *BIROperand {
+func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos diagnostics.Location) *BIROperand {
 	if existing == nil {
 		return new
 	}
@@ -703,7 +704,7 @@ func orOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *
 	return result
 }
 
-func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos ast.Location) *BIROperand {
+func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new *BIROperand, pos diagnostics.Location) *BIROperand {
 	result := ctx.addTempVar(semtypes.BOOLEAN)
 	binaryOp := NewBinaryOp(INSTRUCTION_KIND_AND, result, existing, new, pos)
 	bb.Instructions = append(bb.Instructions, binaryOp)
@@ -752,7 +753,7 @@ type expressionEffect struct {
 
 // snapshotIfNeeded stores values without storage identity in a temp var before referencing so that modification in one part
 // of an expression dont' affect the other.
-func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos ast.Location) expressionEffect {
+func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos diagnostics.Location) expressionEffect {
 	op := effect.result
 	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && hasNoStorageIdentity(op.VariableDcl.GetType()) {
 		tempOp := ctx.addTempVar(op.VariableDcl.GetType())
@@ -840,7 +841,7 @@ func mappingKeyName(key *ast.BLangMappingKey) string {
 	}
 }
 
-func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, defaults []MappingConstructorDefaultEntry, pos ast.Location) expressionEffect {
+func mappingConstructorExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, mapType semtypes.SemType, fields []mappingField, defaults []MappingConstructorDefaultEntry, pos diagnostics.Location) expressionEffect {
 	var entries []MappingConstructorEntry
 	for _, field := range fields {
 		keyOperand := ctx.addTempVar(semtypes.STRING)
@@ -1082,7 +1083,7 @@ func literal(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangLiteral) exp
 	}
 }
 
-func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression, resultType semtypes.SemType, pos ast.Location) expressionEffect {
+func binaryExpressionInner(ctx *stmtContext, curBB *BIRBasicBlock, opKind model.OperatorKind, lhsExpr, rhsExpr ast.BLangExpression, resultType semtypes.SemType, pos diagnostics.Location) expressionEffect {
 	var kind InstructionKind
 	switch opKind {
 	case model.OperatorKind_ADD:

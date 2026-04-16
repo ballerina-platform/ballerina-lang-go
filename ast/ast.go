@@ -227,19 +227,17 @@ const (
 	CompilerPhase_CODE_GEN
 )
 
-type Location = diagnostics.Location
-
 type BLangNode interface {
 	model.Node
 	SetDeterminedType(ty semtypes.SemType)
-	SetPosition(pos Location)
+	SetPosition(pos diagnostics.Location)
 }
 
 type (
 	bLangNodeBase struct {
 		DeterminedType semtypes.SemType
 		parent         BLangNode
-		pos            Location
+		pos            diagnostics.Location
 	}
 
 	BLangAnnotation struct {
@@ -427,7 +425,7 @@ type (
 	}
 
 	ClosureVarSymbol struct {
-		DiagnosticLocation Location
+		DiagnosticLocation diagnostics.Location
 	}
 
 	bLangInvokableNodeBase struct {
@@ -481,11 +479,11 @@ func (this *bLangNodeBase) GetDeterminedType() semtypes.SemType {
 	return this.DeterminedType
 }
 
-func (this *bLangNodeBase) GetPosition() Location {
+func (this *bLangNodeBase) GetPosition() diagnostics.Location {
 	return this.pos
 }
 
-func (this *bLangNodeBase) SetPosition(pos Location) {
+func (this *bLangNodeBase) SetPosition(pos diagnostics.Location) {
 	this.pos = pos
 }
 
@@ -1925,7 +1923,7 @@ func (this *BLangTestablePackage) AddIsLegacyMockingMap(id string, isLegacy bool
 	this.isLegacyMockingMap[id] = isLegacy
 }
 
-func createSimpleVariableNodeWithLocationTokenLocation(location Location, identifier tree.Token, identifierPos Location) *BLangSimpleVariable {
+func createSimpleVariableNodeWithLocationTokenLocation(location diagnostics.Location, identifier tree.Token, identifierPos diagnostics.Location) *BLangSimpleVariable {
 	memberVar := createSimpleVariableNode()
 	memberVar.pos = location
 	name := createIdentifierFromToken(identifierPos, identifier)

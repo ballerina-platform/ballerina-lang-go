@@ -990,5 +990,5 @@ func (br *birReader) readPosition() diagnostics.Location {
 	var eCol int32
 	br.read(&eCol)
 
-	return diagnostics.NewBLangDiagnosticLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol), 0, 0)
+	return diagnostics.NewLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol))
 }

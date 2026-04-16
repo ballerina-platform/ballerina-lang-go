@@ -99,9 +99,9 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	return nodeBuilder
 }
 
-var builtinPos = diagnostics.NewBLangDiagnosticLocation(
-	string(model.EMPTY),
-	-1, -1, -1, -1, -1, -1,
+var builtinPos = diagnostics.NewLocation(
+	"<built-in>",
+	-1, -1, -1, -1,
 )
 
 var _ tree.NodeTransformer[BLangNode] = &NodeBuilder{}
@@ -604,44 +604,36 @@ func diagnosticMessage(node tree.Node) string {
 	return strings.ReplaceAll(strings.TrimPrefix(deep.Diagnostics()[0].DiagnosticCode().MessageKey(), "error."), ".", " ")
 }
 
-func getPosition(node tree.Node) Location {
+func getPosition(node tree.Node) diagnostics.Location {
 	lineRange := node.LineRange()
-	textRange := node.TextRange()
 	fileName := getFileName(node)
-	return diagnostics.NewBLangDiagnosticLocation(
+	return diagnostics.NewLocation(
 		fileName,
 		lineRange.StartLine.Line,
 		lineRange.EndLine.Line,
 		lineRange.StartLine.Column,
 		lineRange.EndLine.Column,
-		textRange.StartOffset,
-		textRange.Length,
 	)
 }
 
-func getPositionRange(startNode tree.Node, endNode tree.Node) Location {
+func getPositionRange(startNode tree.Node, endNode tree.Node) diagnostics.Location {
 	startLineRange := startNode.LineRange()
 	endLineRange := endNode.LineRange()
-	startNodeTextRange := startNode.TextRange()
-	endNodeTextRange := endNode.TextRange()
-	length := startNodeTextRange.Length + endNodeTextRange.Length
 	fileName := getFileName(startNode)
-	return diagnostics.NewBLangDiagnosticLocation(
+	return diagnostics.NewLocation(
 		fileName,
 		startLineRange.StartLine.Line,
 		endLineRange.EndLine.Line,
 		startLineRange.StartLine.Column,
 		endLineRange.EndLine.Column,
-		startNodeTextRange.StartOffset,
-		length,
 	)
 }
 
-func getPositionWithoutMetadata(node tree.Node) Location {
+func getPositionWithoutMetadata(node tree.Node) diagnostics.Location {
 	nodeLineRange := node.LineRange()
 	nonTerminalNode := node.(tree.NonTerminalNode)
 
-	var startLine, endLine, startColumn, endColumn, startOffset, length int
+	var startLine, endLine, startColumn, endColumn int
 
 	var firstChild, secondChild tree.Node
 	childIndex := 0
@@ -659,31 +651,21 @@ func getPositionWithoutMetadata(node tree.Node) Location {
 		secondLineRange := secondChild.LineRange()
 		startLine = secondLineRange.StartLine.Line
 		startColumn = secondLineRange.StartLine.Column
-		secondTextRange := secondChild.TextRange()
-		startOffset = secondTextRange.StartOffset
-		firstTextRange := firstChild.TextRange()
-		nodeTextRange := node.TextRange()
-		length = nodeTextRange.Length - firstTextRange.Length
 	} else {
 		startLine = nodeLineRange.StartLine.Line
 		startColumn = nodeLineRange.StartLine.Column
-		nodeTextRange := node.TextRange()
-		startOffset = nodeTextRange.StartOffset
-		length = nodeTextRange.Length
 	}
 
 	endLine = nodeLineRange.EndLine.Line
 	endColumn = nodeLineRange.EndLine.Column
 
 	fileName := getFileName(node)
-	return diagnostics.NewBLangDiagnosticLocation(
+	return diagnostics.NewLocation(
 		fileName,
 		startLine,
 		endLine,
 		startColumn,
 		endColumn,
-		startOffset,
-		length,
 	)
 }
 
@@ -820,7 +802,7 @@ func (n *NodeBuilder) createMarkdownDocumentationAttachment(docStringNode tree.N
 	return doc
 }
 
-func createIdentifier(pos Location, value, originalValue *string) BLangIdentifier {
+func createIdentifier(pos diagnostics.Location, value, originalValue *string) BLangIdentifier {
 	bLIdentifer := BLangIdentifier{}
 	bLIdentifer.pos = pos
 	if value == nil {
@@ -845,12 +827,12 @@ func createIdentifier(pos Location, value, originalValue *string) BLangIdentifie
 }
 
 // createIdentifierFromToken creates an identifier from a token, handling missing tokens and validation
-func createIdentifierFromToken(pos Location, token tree.Token) BLangIdentifier {
+func createIdentifierFromToken(pos diagnostics.Location, token tree.Token) BLangIdentifier {
 	return createIdentifierFromTokenInternal(pos, token, false)
 }
 
 // createIdentifierFromTokenInternal creates an identifier from a token with XML handling option
-func createIdentifierFromTokenInternal(pos Location, token tree.Token, isXML bool) BLangIdentifier {
+func createIdentifierFromTokenInternal(pos diagnostics.Location, token tree.Token, isXML bool) BLangIdentifier {
 	if token == nil {
 		// Return empty identifier for nil token
 		return createIdentifier(pos, nil, nil)
@@ -922,7 +904,7 @@ func isDeclaredWithVar(typeNode tree.Node) bool {
 func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, initializer tree.Node, visibilityQualifier tree.Token, annotations tree.NodeList[*tree.AnnotationNode]) *BLangSimpleVariable {
 	bLSimpleVar := createSimpleVariableNode()
 
-	var namePos Location
+	var namePos diagnostics.Location
 	if name != nil {
 		namePos = getPosition(name)
 	}
@@ -1053,7 +1035,7 @@ func (n *NodeBuilder) isFunctionCallAsync(functionCallExpressionNode *tree.Funct
 
 // createBLangInvocation creates a BLangInvocation from a name node and arguments
 // migrated from BLangNodeBuilder.java:6343:5
-func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.NodeList[tree.FunctionArgumentNode], position Location, isAsync bool) *BLangInvocation {
+func (n *NodeBuilder) createBLangInvocation(nameNode tree.Node, arguments tree.NodeList[tree.FunctionArgumentNode], position diagnostics.Location, isAsync bool) *BLangInvocation {
 	var bLInvocation BLangInvocation
 	if isAsync {
 		panic("unimplemented")
@@ -1405,14 +1387,11 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 
 	// Create diagnostic location
 	fileName := ""
-	if pos != nil {
-		lineRange := pos.LineRange()
-		if lineRange != nil {
-			fileName = lineRange.FileName()
-		}
+	if !diagnostics.IsLocationEmpty(pos) {
+		fileName = pos.FilePath()
 	}
 
-	newLocation := diagnostics.NewBLangDiagnosticLocation(fileName, 0, 0, 0, 0, 0, 0)
+	newLocation := diagnostics.NewLocation(fileName, 0, 0, 0, 0)
 	compilationUnit.pos = newLocation
 	compilationUnit.packageID = n.PackageID
 
@@ -1569,7 +1548,7 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 	importDcl.PkgNameComps = pkgNameComps
 
 	// 6. Set org name (create identifier even if token is nil)
-	var orgNamePos Location
+	var orgNamePos diagnostics.Location
 	if orgNameNode != nil && !orgNameNode.IsMissing() {
 		orgNamePos = getPosition(orgNameNode)
 	}
@@ -1693,7 +1672,7 @@ func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree
 	return varNode.(BLangNode)
 }
 
-func (n *NodeBuilder) createBLangVarDef(location Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) model.VariableDefinitionNode {
+func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) model.VariableDefinitionNode {
 	bindingPattern := typedBindingPattern.BindingPattern()
 
 	variable := n.getBLangVariableNode(bindingPattern, location)
@@ -2202,7 +2181,7 @@ func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tr
 	if paramName != nil {
 		simpleVar.Name.pos = getPosition(paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	} else if simpleVar.Name.pos == nil {
+	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
 		simpleVar.Name.pos = builtinPos
 	}
 
@@ -2232,7 +2211,7 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 	if paramName != nil {
 		simpleVar.Name.pos = getPosition(paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	} else if simpleVar.Name.pos == nil {
+	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
 		// Param doesn't have a name and also is not a missing node
 		// Therefore, assigning the built-in location
 		simpleVar.Name.pos = builtinPos
@@ -2261,7 +2240,7 @@ func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParamet
 	if paramName != nil {
 		simpleVar.Name.pos = getPosition(paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
-	} else if simpleVar.Name.pos == nil {
+	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
 		simpleVar.Name.pos = builtinPos
 	}
 
@@ -4082,7 +4061,7 @@ func stringToTypeKind(typeText string) model.TypeKind {
 	}
 }
 
-func createUserDefinedType(pos Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeDescriptor {
+func createUserDefinedType(pos diagnostics.Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeDescriptor {
 	userDefinedType := BLangUserDefinedType{}
 	userDefinedType.pos = pos
 	userDefinedType.PkgAlias = pkgAlias
@@ -4094,7 +4073,7 @@ func getNextMissingNodeName(pkgID *model.PackageID) string {
 	panic("getNextMissingNodeName unimplemented")
 }
 
-func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos Location) model.VariableNode {
+func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos diagnostics.Location) model.VariableNode {
 	var varName tree.Token
 	switch bindingPattern.Kind() {
 	case common.WILDCARD_BINDING_PATTERN:

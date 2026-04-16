@@ -22,6 +22,7 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type ProjectKind uint8
@@ -523,11 +524,11 @@ func (this *BTypeBasic) GetKind() model.NodeKind {
 	panic("not implemented")
 }
 
-func (this *BTypeBasic) GetPosition() Location {
+func (this *BTypeBasic) GetPosition() diagnostics.Location {
 	panic("not implemented")
 }
 
-func (this *BTypeBasic) SetPosition(pos Location) {
+func (this *BTypeBasic) SetPosition(pos diagnostics.Location) {
 	panic("not implemented")
 }
 

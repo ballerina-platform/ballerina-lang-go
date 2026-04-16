@@ -16,8 +16,6 @@
 
 package text
 
-import "strings"
-
 const (
 	CR = 13 // Carriage Return
 	LF = 10 // Line Feed
@@ -41,21 +39,6 @@ func NewStringTextDocument(text string) StringTextDocument {
 	}
 }
 
-func (std *stringTextDocumentImpl) Apply(textDocumentChange TextDocumentChange) TextDocument {
-	startOffset := 0
-	var sb strings.Builder
-	textEditCount := textDocumentChange.GetTextEditCount()
-	for i := range textEditCount {
-		textEdit := textDocumentChange.GetTextEdit(i)
-		textRange := textEdit.Range()
-		sb.WriteString(std.text[startOffset:textRange.StartOffset()])
-		sb.WriteString(textEdit.Text())
-		startOffset = textRange.EndOffset()
-	}
-	sb.WriteString(std.text[startOffset:])
-	return NewStringTextDocument(sb.String())
-}
-
 func (std *stringTextDocumentImpl) PopulateTextLineMap() LineMap {
 	if std.textLineMap != nil {
 		return std.textLineMap
@@ -76,12 +59,12 @@ func (std *stringTextDocumentImpl) Line(line int) (TextLine, error) {
 	return std.Lines().TextLine(line)
 }
 
-func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (LinePosition, error) {
+func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (line, offset int, err error) {
 	return std.Lines().LinePositionFromPosition(textPosition)
 }
 
-func (std *stringTextDocumentImpl) TextPositionFromLinePosition(linePosition LinePosition) (int, error) {
-	return std.Lines().TextPositionFromLinePosition(linePosition)
+func (std *stringTextDocumentImpl) TextPositionFromLinePosition(line, offset int) (int, error) {
+	return std.Lines().TextPositionFromLinePosition(line, offset)
 }
 
 func (std stringTextDocumentImpl) TextLines() []string {

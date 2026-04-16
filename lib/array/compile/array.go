@@ -24,6 +24,7 @@ import (
 	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 var ArrayPackageID = model.NewPackageID(
@@ -58,7 +59,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 
 	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
 		if len(args) == 0 {
-			ctx.SemanticError("push() requires at least 1 argument", nil)
+			ctx.SemanticError("push() requires at least 1 argument", diagnostics.Location{})
 		}
 		ty := args[0]
 		mut.Lock()
@@ -69,7 +70,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 		topType := semtypes.LIST
 		tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
 		if !semtypes.IsSubtype(tyCtx, ty, topType) {
-			ctx.SemanticError("expect first argument to be a subtype of (any|error)[]", nil)
+			ctx.SemanticError("expect first argument to be a subtype of (any|error)[]", diagnostics.Location{})
 		}
 		// Is this is correct or do we need to take the list atomic type for this?
 		valType := semtypes.ListProj(tyCtx, ty, semtypes.IntConst(0))

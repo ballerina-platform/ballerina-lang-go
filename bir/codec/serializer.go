@@ -580,13 +580,13 @@ func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) 
 	var eCol int32 = math.MaxInt32
 	var sourceFileName = ""
 
-	if pos != nil {
-		sLine = int32(pos.LineRange().StartLine().Line())
-		eLine = int32(pos.LineRange().EndLine().Line())
-		sCol = int32(pos.LineRange().StartLine().Offset())
-		eCol = int32(pos.LineRange().EndLine().Offset())
-		if (pos.LineRange().FileName()) != "" {
-			sourceFileName = pos.LineRange().FileName()
+	if !diagnostics.IsLocationEmpty(pos) {
+		sLine = int32(pos.StartLine())
+		eLine = int32(pos.EndLine())
+		sCol = int32(pos.StartColumn())
+		eCol = int32(pos.EndColumn())
+		if pos.FilePath() != "" {
+			sourceFileName = pos.FilePath()
 		}
 	}
 

@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type desugaredNode[E model.Node] struct {
@@ -103,11 +104,11 @@ func (ctx *packageContext) addSymbolToSameSpace(ref model.SymbolRef, name string
 }
 
 func (ctx *packageContext) internalError(msg string) {
-	ctx.compilerCtx.InternalError(msg, nil)
+	ctx.compilerCtx.InternalError(msg, diagnostics.Location{})
 }
 
 func (ctx *packageContext) unimplemented(msg string) {
-	ctx.compilerCtx.Unimplemented(msg, nil)
+	ctx.compilerCtx.Unimplemented(msg, diagnostics.Location{})
 }
 
 type functionContext struct {
