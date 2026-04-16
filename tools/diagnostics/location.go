@@ -18,62 +18,54 @@ package diagnostics
 
 import "fmt"
 
-// Location represents the location in TextDocument.
-// It is a combination of source file path, start and end line numbers, and start and end column numbers.
+// Location represents a position in a source file using byte offsets.
+// File identity is stored as an integer index into a DiagnosticEnv.
+// To get the file name or line/column information, use a DiagnosticEnv.
 type Location struct {
-	filePath    string
-	startLine   int
-	endLine     int
-	startColumn int
-	endColumn   int
+	fileIndex   int
+	startOffset int
+	endOffset   int
 }
 
-// NewLocation creates a new Location with the given file path, line numbers, and column numbers.
-func NewLocation(
-	filePath string,
-	startLine, endLine, startColumn, endColumn int,
-) Location {
+// NewLocation creates a new Location. The DiagnosticEnv maps the fileName
+// to an integer index for compact storage.
+func NewLocation(de *DiagnosticEnv, fileName string, startOffset, endOffset int) Location {
 	return Location{
-		filePath:    filePath,
-		startLine:   startLine,
-		endLine:     endLine,
-		startColumn: startColumn,
-		endColumn:   endColumn,
+		fileIndex:   de.FileIndex(fileName),
+		startOffset: startOffset,
+		endOffset:   endOffset,
 	}
 }
 
-// IsLocationEmpty returns true if all fields of the Location have zero values.
+// IsLocationEmpty returns true if the Location has no valid file reference.
 func IsLocationEmpty(loc Location) bool {
-	return loc.filePath == "" && loc.startLine == 0 && loc.endLine == 0 &&
-		loc.startColumn == 0 && loc.endColumn == 0
+	return loc.fileIndex < 0
 }
 
-// FilePath returns the file path of the Location.
-func (loc *Location) FilePath() string {
-	return loc.filePath
+// LocationHasSource returns true if the Location refers to a registered
+// source document whose line/column positions can be resolved. Built-in
+// and Ballerina.toml sentinel locations return false even though they
+// carry a file name.
+func LocationHasSource(loc Location) bool {
+	return loc.fileIndex > 0
 }
 
-// StartLine returns the start line of the Location.
-func (loc *Location) StartLine() int {
-	return loc.startLine
+// FileIndex returns the file index of the Location.
+func (loc *Location) FileIndex() int {
+	return loc.fileIndex
 }
 
-// StartColumn returns the start column of the Location.
-func (loc *Location) StartColumn() int {
-	return loc.startColumn
+// StartOffset returns the start byte offset of the Location.
+func (loc *Location) StartOffset() int {
+	return loc.startOffset
 }
 
-// EndLine returns the end line of the Location.
-func (loc *Location) EndLine() int {
-	return loc.endLine
+// EndOffset returns the end byte offset of the Location.
+func (loc *Location) EndOffset() int {
+	return loc.endOffset
 }
 
-// EndColumn returns the end column of the Location.
-func (loc *Location) EndColumn() int {
-	return loc.endColumn
-}
-
-// String returns a string representation of the Location in the format (startLine:startColumn,endLine:endColumn).
+// String returns a string representation of the Location.
 func (loc Location) String() string {
-	return fmt.Sprintf("(%d:%d,%d:%d)", loc.startLine, loc.startColumn, loc.endLine, loc.endColumn)
+	return fmt.Sprintf("(%d:%d,%d)", loc.fileIndex, loc.startOffset, loc.endOffset)
 }

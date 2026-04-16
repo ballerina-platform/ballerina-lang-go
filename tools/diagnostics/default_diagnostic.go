@@ -66,12 +66,9 @@ func (dd *defaultDiagnosticImpl) String() string {
 			dd.Message())
 	}
 
-	// Convert 0-based to 1-based for display
-	return fmt.Sprintf("%s [%s:(%d:%d,%d:%d)] %s",
+	return fmt.Sprintf("%s [%s] %s",
 		dd.diagnosticInfo.Severity().String(),
-		loc.FilePath(),
-		loc.StartLine()+1, loc.StartColumn()+1,
-		loc.EndLine()+1, loc.EndColumn()+1,
+		loc.String(),
 		dd.Message())
 }
 

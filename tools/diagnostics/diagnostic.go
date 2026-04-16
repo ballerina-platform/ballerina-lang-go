@@ -38,9 +38,7 @@ func (db diagnosticBase) String(d Diagnostic) string {
 	if IsLocationEmpty(loc) {
 		location = ""
 	} else {
-		location = fmt.Sprintf(" [%s:%s]",
-			loc.FilePath(),
-			loc.String())
+		location = fmt.Sprintf(" [%s]", loc.String())
 	}
 	return fmt.Sprintf("%s%s %s",
 		d.DiagnosticInfo().Severity().String(),

@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
 )
 
@@ -53,7 +53,7 @@ func formatCallStack(ctx *Context) []string {
 		}
 		f := frames[i]
 		loc := f.location
-		if diagnostics.IsLocationEmpty(loc) {
+		if bir.IsLocationEmpty(loc) {
 			out = append(out, fmt.Sprintf("%s(unknown)", f.functionKey))
 			continue
 		}

@@ -612,7 +612,9 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 
 	var bodyStmt ast.BLangStatement
 	if isPanic {
-		bodyStmt = &ast.BLangPanic{Expr: tempVarRefForBody}
+		panicStmt := &ast.BLangPanic{Expr: tempVarRefForBody}
+		panicStmt.SetPosition(expr.GetPosition())
+		bodyStmt = panicStmt
 	} else {
 		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
 	}

@@ -26,7 +26,6 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 type birReader struct {
@@ -975,7 +974,7 @@ func (br *birReader) readPackageCPEntry() *model.PackageID {
 	return br.getPackageFromCP(int(idx))
 }
 
-func (br *birReader) readPosition() diagnostics.Location {
+func (br *birReader) readPosition() bir.Location {
 	var sourceFileIdx int32
 	br.read(&sourceFileIdx)
 
@@ -990,5 +989,5 @@ func (br *birReader) readPosition() diagnostics.Location {
 	var eCol int32
 	br.read(&eCol)
 
-	return diagnostics.NewLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol))
+	return bir.NewLocation(sourceFileName, int(sLine), int(eLine), int(sCol), int(eCol))
 }

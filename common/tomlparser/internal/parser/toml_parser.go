@@ -27,24 +27,28 @@ import (
 	"ballerina-lang-go/common/tomlparser/internal/ast"
 	"ballerina-lang-go/common/tomlparser/internal/lexer"
 	"ballerina-lang-go/tools/diagnostics"
+	"ballerina-lang-go/tools/text"
 )
 
 // Parser is a recursive-descent LL(k) parser for TOML.
 type Parser struct {
 	reader      *tokenReader
+	de          *diagnostics.DiagnosticEnv
 	diagnostics []ParseError
 }
 
 // NewParser creates a Parser for the given TOML source string.
 func NewParser(source string) *Parser {
 	lex := lexer.NewLexer(source)
-	return &Parser{reader: newTokenReader(lex)}
+	de := diagnostics.NewDiagnosticEnv()
+	de.RegisterFile("", text.NewStringTextDocument(source))
+	return &Parser{reader: newTokenReader(lex), de: de}
 }
 
 // Parse parses the full document and returns the root table.
 // All errors are collected; parse always returns a (possibly partial) result.
 func (p *Parser) Parse() (*ast.TableNode, []ParseError) {
-	loc := diagnostics.NewLocation("", 1, 1, 1, 1)
+	loc := diagnostics.NewLocation(p.de, "", 0, 0)
 	root := ast.NewTableNode("", loc)
 
 	p.skipNewlines()
@@ -186,7 +190,7 @@ func (p *Parser) parseTable(root *ast.TableNode) {
 		return
 	}
 	closeTok := p.reader.read()
-	loc := locationOf(startTok, closeTok)
+	loc := p.locationOf(startTok, closeTok)
 
 	// TOML spec: nothing may follow ']' on the same line except whitespace/comment.
 	next := p.reader.peek()
@@ -257,7 +261,7 @@ func (p *Parser) parseArrayOfTables(root *ast.TableNode) {
 		return
 	}
 	closeTok := p.reader.read()
-	loc := locationOf(startTok, closeTok)
+	loc := p.locationOf(startTok, closeTok)
 
 	// TOML spec: nothing may follow ']]' on the same line except whitespace/comment.
 	next := p.reader.peek()
@@ -329,7 +333,7 @@ func (p *Parser) parseKeyValue() *ast.KeyValueNode {
 	}
 
 	valLoc := val.Loc()
-	loc := diagnostics.NewLocation("", startTok.Line, valLoc.EndLine(), startTok.Column, valLoc.EndColumn())
+	loc := diagnostics.NewLocation(p.de, "", startTok.Offset, valLoc.EndOffset())
 
 	// Single key — simple case.
 	if len(keys) == 1 {
@@ -431,10 +435,10 @@ func (p *Parser) parseValue() ast.ValueNode {
 		return p.parseMultilineLiteralString()
 	case lexer.TokenTrue:
 		p.reader.read()
-		return ast.NewBoolValueNode(true, singleLoc(tok))
+		return ast.NewBoolValueNode(true, p.singleLoc(tok))
 	case lexer.TokenFalse:
 		p.reader.read()
-		return ast.NewBoolValueNode(false, singleLoc(tok))
+		return ast.NewBoolValueNode(false, p.singleLoc(tok))
 	case lexer.TokenDecimalInt, lexer.TokenDecimalFloat,
 		lexer.TokenHexInt, lexer.TokenOctInt, lexer.TokenBinaryInt,
 		lexer.TokenInf, lexer.TokenNan,
@@ -464,7 +468,7 @@ func (p *Parser) parseBasicString() ast.ValueNode {
 	} else {
 		p.addError("unterminated basic string", openTok)
 	}
-	loc := locationOf(openTok, closeTok)
+	loc := p.locationOf(openTok, closeTok)
 	return ast.NewStringValueNode(content, loc)
 }
 
@@ -486,7 +490,7 @@ func (p *Parser) parseMultilineBasicString() ast.ValueNode {
 	} else {
 		p.addError("unterminated multiline basic string", openTok)
 	}
-	loc := locationOf(openTok, closeTok)
+	loc := p.locationOf(openTok, closeTok)
 	return ast.NewStringValueNode(content, loc)
 }
 
@@ -504,7 +508,7 @@ func (p *Parser) parseLiteralString() ast.ValueNode {
 	} else {
 		p.addError("unterminated literal string", openTok)
 	}
-	loc := locationOf(openTok, closeTok)
+	loc := p.locationOf(openTok, closeTok)
 	return ast.NewStringValueNode(content, loc)
 }
 
@@ -525,7 +529,7 @@ func (p *Parser) parseMultilineLiteralString() ast.ValueNode {
 	} else {
 		p.addError("unterminated multiline literal string", openTok)
 	}
-	loc := locationOf(openTok, closeTok)
+	loc := p.locationOf(openTok, closeTok)
 	return ast.NewStringValueNode(content, loc)
 }
 
@@ -549,9 +553,9 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		val, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
 			p.addError(fmt.Sprintf("invalid integer %q: %v", raw, err), tok)
-			return ast.NewIntValueNode(0, singleLoc(tok))
+			return ast.NewIntValueNode(0, p.singleLoc(tok))
 		}
-		return ast.NewIntValueNode(val, locationOf(startTok, tok))
+		return ast.NewIntValueNode(val, p.locationOf(startTok, tok))
 
 	case lexer.TokenDecimalFloat:
 		p.reader.read()
@@ -559,9 +563,9 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		val, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
 			p.addError(fmt.Sprintf("invalid float %q: %v", raw, err), tok)
-			return ast.NewFloatValueNode(0, singleLoc(tok))
+			return ast.NewFloatValueNode(0, p.singleLoc(tok))
 		}
-		return ast.NewFloatValueNode(val, locationOf(startTok, tok))
+		return ast.NewFloatValueNode(val, p.locationOf(startTok, tok))
 
 	case lexer.TokenHexInt:
 		// TODO: TOML-P2 — hex integers (rare in Ballerina.toml)
@@ -571,9 +575,9 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		val, err := strconv.ParseInt(raw, 16, 64)
 		if err != nil {
 			p.addError(fmt.Sprintf("invalid hex integer %q: %v", raw, err), tok)
-			return ast.NewIntValueNode(0, singleLoc(tok))
+			return ast.NewIntValueNode(0, p.singleLoc(tok))
 		}
-		return ast.NewIntValueNode(val, locationOf(startTok, tok))
+		return ast.NewIntValueNode(val, p.locationOf(startTok, tok))
 
 	case lexer.TokenOctInt:
 		// TODO: TOML-P2 — octal integers
@@ -583,9 +587,9 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		val, err := strconv.ParseInt(raw, 8, 64)
 		if err != nil {
 			p.addError(fmt.Sprintf("invalid octal integer %q: %v", raw, err), tok)
-			return ast.NewIntValueNode(0, singleLoc(tok))
+			return ast.NewIntValueNode(0, p.singleLoc(tok))
 		}
-		return ast.NewIntValueNode(val, locationOf(startTok, tok))
+		return ast.NewIntValueNode(val, p.locationOf(startTok, tok))
 
 	case lexer.TokenBinaryInt:
 		// TODO: TOML-P2 — binary integers
@@ -595,22 +599,22 @@ func (p *Parser) parseNumericValue() ast.ValueNode {
 		val, err := strconv.ParseInt(raw, 2, 64)
 		if err != nil {
 			p.addError(fmt.Sprintf("invalid binary integer %q: %v", raw, err), tok)
-			return ast.NewIntValueNode(0, singleLoc(tok))
+			return ast.NewIntValueNode(0, p.singleLoc(tok))
 		}
-		return ast.NewIntValueNode(val, locationOf(startTok, tok))
+		return ast.NewIntValueNode(val, p.locationOf(startTok, tok))
 
 	case lexer.TokenInf:
 		// TODO: TOML-P2 — special floats
 		p.reader.read()
 		if sign == "-" {
-			return ast.NewFloatValueNode(negInf(), locationOf(startTok, tok))
+			return ast.NewFloatValueNode(negInf(), p.locationOf(startTok, tok))
 		}
-		return ast.NewFloatValueNode(posInf(), locationOf(startTok, tok))
+		return ast.NewFloatValueNode(posInf(), p.locationOf(startTok, tok))
 
 	case lexer.TokenNan:
 		// TODO: TOML-P2 — special floats
 		p.reader.read()
-		return ast.NewFloatValueNode(nanVal(), locationOf(startTok, tok))
+		return ast.NewFloatValueNode(nanVal(), p.locationOf(startTok, tok))
 
 	default:
 		p.addError(fmt.Sprintf("expected numeric token but got %q", tok.Value), tok)
@@ -656,13 +660,13 @@ func (p *Parser) parseArray() ast.ValueNode {
 	} else {
 		p.addError("expected ']' to close array", openTok)
 	}
-	loc := locationOf(openTok, closeTok)
+	loc := p.locationOf(openTok, closeTok)
 	return ast.NewArrayValueNode(elements, loc)
 }
 
 func (p *Parser) parseInlineTable() ast.ValueNode {
 	openTok := p.reader.read() // consume {
-	node := ast.NewInlineTableValueNode(singleLoc(openTok))
+	node := ast.NewInlineTableValueNode(p.singleLoc(openTok))
 
 	tok := p.reader.peek()
 	if tok.Kind != lexer.TokenCloseBrace {
@@ -690,7 +694,7 @@ func (p *Parser) parseInlineTable() ast.ValueNode {
 	} else {
 		p.addError("expected '}' to close inline table", openTok)
 	}
-	node.SetLoc(locationOf(openTok, closeTok))
+	node.SetLoc(p.locationOf(openTok, closeTok))
 	return node
 }
 
@@ -712,10 +716,9 @@ func (p *Parser) addChildKeyValueToTable(parent *ast.TableNode, kv *ast.KeyValue
 			if tbl, ok := existing.(*ast.TableNode); ok {
 				current = tbl
 			} else {
-				kvLoc := kv.Loc()
-				p.addErrorAt(
+				p.addErrorAtLoc(
 					fmt.Sprintf("key %q already defined as a non-table", seg),
-					kvLoc.StartLine(), kvLoc.StartColumn())
+					kv.Loc())
 				return
 			}
 		} else {
@@ -748,10 +751,9 @@ func (p *Parser) addChildTableToParent(root *ast.TableNode, keys []string, table
 		parent.ReplaceGeneratedTable(tableNode)
 		return
 	}
-	tableLoc := tableNode.Loc()
-	p.addErrorAt(
+	p.addErrorAtLoc(
 		fmt.Sprintf("table %q already defined", key),
-		tableLoc.StartLine(), tableLoc.StartColumn())
+		tableNode.Loc())
 }
 
 // addChildTableArrayToParent registers a [[table-array]] entry.
@@ -773,10 +775,9 @@ func (p *Parser) addChildTableArrayToParent(root *ast.TableNode, keys []string, 
 		arr.AddChild(anonTable)
 		return
 	}
-	anonLoc := anonTable.Loc()
-	p.addErrorAt(
+	p.addErrorAtLoc(
 		fmt.Sprintf("key %q already defined as a non-array", key),
-		anonLoc.StartLine(), anonLoc.StartColumn())
+		anonTable.Loc())
 }
 
 // getOrCreateParentTable walks (or creates) intermediate tables for all
@@ -797,9 +798,9 @@ func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, head
 					current = children[len(children)-1]
 				}
 			default:
-				p.addErrorAt(
+				p.addErrorAtLoc(
 					fmt.Sprintf("key %q is not a table", seg),
-					headerLoc.StartLine(), headerLoc.StartColumn())
+					headerLoc)
 				return nil, false
 			}
 		} else {
@@ -815,10 +816,9 @@ func (p *Parser) getOrCreateParentTable(root *ast.TableNode, keys []string, head
 func (p *Parser) insertIntoTable(table *ast.TableNode, node ast.TopLevelNode) {
 	key := node.KeyName()
 	if _, exists := table.Entries()[key]; exists {
-		nodeLoc := node.Loc()
-		p.addErrorAt(
+		p.addErrorAtLoc(
 			fmt.Sprintf("key %q already defined", key),
-			nodeLoc.StartLine(), nodeLoc.StartColumn())
+			node.Loc())
 		return
 	}
 	table.AddEntry(key, node)
@@ -830,10 +830,9 @@ func (p *Parser) addChildKeyValueToInlineTable(table *ast.InlineTableValueNode, 
 	keys := kv.Keys()
 	if len(keys) <= 1 {
 		if _, exists := table.Entries()[kv.KeyName()]; exists {
-			kvLoc := kv.Loc()
-			p.addErrorAt(
+			p.addErrorAtLoc(
 				fmt.Sprintf("duplicate key %q in inline table", kv.KeyName()),
-				kvLoc.StartLine(), kvLoc.StartColumn())
+				kv.Loc())
 			return
 		}
 		table.AddEntry(kv.KeyName(), kv)
@@ -846,10 +845,10 @@ func (p *Parser) addChildKeyValueToInlineTable(table *ast.InlineTableValueNode, 
 	table.AddEntry(leaf.KeyName(), leaf)
 }
 
-func singleLoc(tok lexer.Token) diagnostics.Location {
-	return diagnostics.NewLocation("", tok.Line, tok.Line, tok.Column, tok.Column+len([]rune(tok.Value)))
+func (p *Parser) singleLoc(tok lexer.Token) diagnostics.Location {
+	return diagnostics.NewLocation(p.de, "", tok.Offset, tok.Offset+len(tok.Value))
 }
 
-func locationOf(start, end lexer.Token) diagnostics.Location {
-	return diagnostics.NewLocation("", start.Line, end.Line, start.Column, end.Column+len([]rune(end.Value)))
+func (p *Parser) locationOf(start, end lexer.Token) diagnostics.Location {
+	return diagnostics.NewLocation(p.de, "", start.Offset, end.Offset+len(end.Value))
 }

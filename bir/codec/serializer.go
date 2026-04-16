@@ -26,7 +26,6 @@ import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 const (
@@ -573,14 +572,14 @@ func (bw *birWriter) writeType(buf *bytes.Buffer, ty semtypes.SemType) {
 	write(buf, int32(bw.tp.Put(ty)))
 }
 
-func (bw *birWriter) writePosition(buf *bytes.Buffer, pos diagnostics.Location) {
+func (bw *birWriter) writePosition(buf *bytes.Buffer, pos bir.Location) {
 	var sLine int32 = math.MaxInt32
 	var eLine int32 = math.MaxInt32
 	var sCol int32 = math.MaxInt32
 	var eCol int32 = math.MaxInt32
 	var sourceFileName = ""
 
-	if !diagnostics.IsLocationEmpty(pos) {
+	if !bir.IsLocationEmpty(pos) {
 		sLine = int32(pos.StartLine())
 		eLine = int32(pos.EndLine())
 		sCol = int32(pos.StartColumn())
