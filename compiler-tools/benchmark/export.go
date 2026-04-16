@@ -68,7 +68,7 @@ type (
 		HeadStddev     string
 		DeltaAvailable bool
 		DeltaRatio     string
-		DeltaErr       string
+		DeltaStddev    string
 		DeltaWinnerRef string
 	}
 )
@@ -94,7 +94,7 @@ func (r *report) export(outPath string) error {
 			row.HeadMean = fmt.Sprintf("%.3f", head.Mean*1000.0)
 			row.HeadStddev = fmt.Sprintf("%.3f", head.Stddev*1000.0)
 		}
-		row.DeltaAvailable, row.DeltaRatio, row.DeltaErr, row.DeltaWinnerRef = computeDelta(base, head, r.BaseRef, r.HeadRef)
+		row.DeltaAvailable, row.DeltaRatio, row.DeltaStddev, row.DeltaWinnerRef = computeDelta(base, head, r.BaseRef, r.HeadRef)
 		rows = append(rows, row)
 	}
 
@@ -127,19 +127,30 @@ func computeDelta(base, head *benchResult, baseRef, headRef string) (bool, strin
 		return false, "", "", ""
 	}
 
-	rawRatio := base.Mean / head.Mean
-	rawRatioErr := rawRatio * math.Sqrt(
-		math.Pow(base.Stddev/base.Mean, 2)+math.Pow(head.Stddev/head.Mean, 2),
+	winnerRef := headRef
+	result := base
+	reference := head
+
+	switch {
+	case base.Mean < head.Mean:
+		winnerRef = baseRef
+		result = head
+		reference = base
+	case base.Mean == head.Mean:
+		result = base
+		reference = head
+	}
+
+	ratio := result.Mean / reference.Mean
+	if base.Mean == head.Mean {
+		ratio = 1.0
+	}
+
+	// Uses the same uncertainty propagation formula as hyperfine:
+	// https://github.com/sharkdp/hyperfine/blob/327d5f4d9107141929f67f062bf9ef59f98b7399/src/benchmark/relative_speed.rs#L56-L64
+	ratioStddev := ratio * math.Sqrt(
+		math.Pow(result.Stddev/result.Mean, 2)+math.Pow(reference.Stddev/reference.Mean, 2),
 	)
 
-	winnerRef := headRef
-	ratio := rawRatio
-	ratioErr := rawRatioErr
-	if rawRatio < 1.0 {
-		winnerRef = baseRef
-		ratio = 1.0 / rawRatio
-		// If q = 1/r then dq = dr / r^2.
-		ratioErr = rawRatioErr / (rawRatio * rawRatio)
-	}
-	return true, fmt.Sprintf("%.2f", ratio), fmt.Sprintf("%.2f", math.Abs(ratioErr)), winnerRef
+	return true, fmt.Sprintf("%.2f", ratio), fmt.Sprintf("%.2f", math.Abs(ratioStddev)), winnerRef
 }

@@ -41,7 +41,7 @@ const htmlTemplate = `<!doctype html>
 		background: var(--white);
 		color: var(--black);
 		font-family: 'JetBrains Mono', monospace;
-		font-size: 13px;
+		font-size: 14px;
 		line-height: 1.6;
 		-webkit-font-smoothing: antialiased;
 	}
@@ -201,7 +201,7 @@ const htmlTemplate = `<!doctype html>
 					<td class="col-sep">
 						{{ if .DeltaAvailable }}
 						<span class="delta-ratio">{{ .DeltaRatio }}×</span>
-						<span class="delta-margin"> ± {{ .DeltaErr }}</span>
+						<span class="delta-margin"> ± {{ .DeltaStddev }}</span>
 						<span class="delta-winner">{{ .DeltaWinnerRef }}</span>
 						{{ else }}
 						<span class="not-available">n/a</span>
