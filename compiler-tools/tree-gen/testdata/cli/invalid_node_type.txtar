@@ -1,0 +1,11 @@
+-- args --
+-config
+x
+-type
+other
+-template
+y
+-output
+z
+-- wantError --
+type must be

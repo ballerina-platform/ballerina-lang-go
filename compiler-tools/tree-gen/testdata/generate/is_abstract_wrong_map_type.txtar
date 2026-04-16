@@ -1,0 +1,10 @@
+-- template --
+@template.tmpl
+-- template.tmpl --
+{{isAbstract "X"}}
+-- outputPath --
+out.txt
+-- data.json --
+{"NodeType":"node","AbstractTypes":"not-a-map"}
+-- wantOutput --
+false
