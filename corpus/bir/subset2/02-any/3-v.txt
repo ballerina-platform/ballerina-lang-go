@@ -17,14 +17,14 @@ main() -> nil{
     return;
   }
 }
-foo() -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+foo() -> any{
   bb0 {
     %1 = ConstantLoad 17
     %0 = %1;
     return;
   }
 }
-bar() -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+bar() -> any{
   bb0 {
     %1 = ConstantLoad false
     %0 = %1;

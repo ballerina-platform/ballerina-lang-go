@@ -1,0 +1,78 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo(int,int) -> int{
+  bb0 {
+    %4 = x;
+    %5 = y;
+    %3 = + %4 %5;
+    %0 = %3;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = $default$0() -> bb1;
+  }
+  bb1 {
+    $desugar$0 = %1;
+    %3 = $desugar$0;
+    %4 = $default$1(%3) -> bb2;
+  }
+  bb2 {
+    $desugar$1 = %4;
+    %6 = $desugar$0;
+    %7 = $desugar$1;
+    %8 = foo(%6,%7) -> bb3;
+  }
+  bb3 {
+    %9 = %8;
+    %10 = println(%9) -> bb4;
+  }
+  bb4 {
+    %11 = ConstantLoad 5
+    %12 = %11;
+    %13 = $default$1(%12) -> bb5;
+  }
+  bb5 {
+    $desugar$2 = %13;
+    %15 = ConstantLoad 5
+    %16 = %15;
+    %17 = $desugar$2;
+    %18 = foo(%16,%17) -> bb6;
+  }
+  bb6 {
+    %19 = %18;
+    %20 = println(%19) -> bb7;
+  }
+  bb7 {
+    %21 = ConstantLoad 1
+    %22 = %21;
+    %23 = ConstantLoad 5
+    %24 = %23;
+    %25 = foo(%22,%24) -> bb8;
+  }
+  bb8 {
+    %26 = %25;
+    %27 = println(%26) -> bb9;
+  }
+  bb9 {
+    return;
+  }
+}
+$default$0() -> int{
+  bb0 {
+    %1 = ConstantLoad 1
+    %0 = %1;
+    return;
+  }
+}
+$default$1(int) -> int{
+  bb0 {
+    %3 = x;
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
+    %0 = %2;
+    return;
+  }
+}

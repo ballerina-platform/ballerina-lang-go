@@ -74,18 +74,18 @@ func intersectListAtoms(env Env, atoms []*ListAtomicType) (SemType, ListAtomicTy
 	atom := atoms[0]
 	for i := 1; i < len(atoms); i++ {
 		next := atoms[i]
-		members, rest, ok := listIntersectWith(env, atom.Members, atom.Rest, next.Members, next.Rest)
+		members, rest, ok := listIntersectWith(env, atom.Members, atom.rest, next.Members, next.rest)
 		if !ok {
 			return nil, ListAtomicType{}, false
 		}
-		for i := range members.Initial {
-			if IsNever(cellInner(&members.Initial[i])) {
+		for i := range members.initial {
+			if IsNever(cellInner(&members.initial[i])) {
 				return nil, ListAtomicType{}, false
 			}
 		}
 		atom = &ListAtomicType{
 			Members: *members,
-			Rest:    *rest,
+			rest:    *rest,
 		}
 	}
 	typeAtom := env.listAtom(atom)
@@ -101,7 +101,7 @@ func ListAlternativeAllowsMembers(cx Context, alt ListAlternative, members []Lis
 
 	if pos != nil {
 		minLength := pos.Members.FixedLength
-		restInner := CellInnerVal(pos.Rest)
+		restInner := cellInnerVal(pos.rest)
 
 		if IsNever(restInner) {
 			// Fixed length - must match exactly

@@ -57,7 +57,7 @@ main() -> nil{
     return;
   }
 }
-eq(float,float) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+eq(float,float) -> any{
   bb0 {
     %4 = f1;
     %5 = f2;

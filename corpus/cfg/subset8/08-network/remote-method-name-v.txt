@@ -1,0 +1,44 @@
+(MyClinet
+  ($remote$get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref path)
+          (literal remote get)))
+    )
+  )
+  (get
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (simple-var-ref path)
+          (literal get)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (user-defined-type MyClinet)) (expr
+        (new ()))))
+    (var-def
+      (variable res (type
+        (value-type string)) (expr
+        (remote-method-call get expr:
+          (simple-var-ref c) (
+          (literal foo))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res))))
+    (var-def
+      (variable res2 (type
+        (value-type string)) (expr
+        (invocation get expr:
+          (simple-var-ref c) (
+          (literal foo))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref res2))))
+  )
+)

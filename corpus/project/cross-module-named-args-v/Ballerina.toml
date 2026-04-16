@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "crossmodulenamedargs"
+version = "0.1.0"

@@ -35,7 +35,7 @@ main() -> nil{
     return;
   }
 }
-foo(nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> nil{
+foo(any) -> nil{
   bb0 {
     %2 = println(x) -> bb1;
   }
