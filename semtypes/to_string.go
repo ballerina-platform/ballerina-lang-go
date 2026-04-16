@@ -154,10 +154,10 @@ func (s *toStringState) listAtomicTypeToString(atom atom) string {
 	atomic := s.cx.ListAtomType(atom)
 	var parts []string
 	for i := 0; i < atomic.Members.FixedLength; i++ {
-		member := listMemberAt(atomic.Members, atomic.Rest, i)
-		parts = append(parts, s.semTypeToString(CellInnerVal(member)))
+		member := listMemberAt(atomic.Members, atomic.rest, i)
+		parts = append(parts, s.semTypeToString(cellInnerVal(member)))
 	}
-	restStr := s.semTypeToString(CellInnerVal(atomic.Rest))
+	restStr := s.semTypeToString(cellInnerVal(atomic.rest))
 	parts = append(parts, restStr+"...")
 	return "[" + strings.Join(parts, ", ") + "]"
 }
@@ -231,10 +231,10 @@ func (s *toStringState) functionParamsToString(paramType SemType) string {
 		listAtomic := s.cx.ListAtomType(node.atom())
 		var parts []string
 		for i := 0; i < listAtomic.Members.FixedLength; i++ {
-			member := listMemberAt(listAtomic.Members, listAtomic.Rest, i)
-			parts = append(parts, s.semTypeToString(CellInnerVal(member)))
+			member := listMemberAt(listAtomic.Members, listAtomic.rest, i)
+			parts = append(parts, s.semTypeToString(cellInnerVal(member)))
 		}
-		restInner := CellInnerVal(listAtomic.Rest)
+		restInner := cellInnerVal(listAtomic.rest)
 		if !IsNever(restInner) {
 			parts = append(parts, s.semTypeToString(restInner)+"...")
 		}
@@ -284,9 +284,9 @@ func (s *toStringState) mappingAtomicTypeToString(atom atom) string {
 	atomic := s.cx.MappingAtomType(atom)
 	var parts []string
 	for i, name := range atomic.Names {
-		parts = append(parts, name+": "+s.semTypeToString(CellInnerVal(&atomic.Types[i])))
+		parts = append(parts, name+": "+s.semTypeToString(cellInnerVal(&atomic.Types[i])))
 	}
-	restStr := s.semTypeToString(CellInnerVal(atomic.Rest))
+	restStr := s.semTypeToString(cellInnerVal(atomic.Rest))
 	parts = append(parts, restStr+"...")
 	return "{| " + strings.Join(parts, ", ") + " |}"
 }

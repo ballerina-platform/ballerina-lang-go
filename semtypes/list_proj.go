@@ -64,7 +64,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg 
 		// combine all the positive tuples using intersection
 		lt := cx.ListAtomType(cx.conjunctionAtom(pos))
 		members = lt.Members
-		rest = lt.Rest
+		rest = lt.rest
 		p := cx.conjunctionNext(pos)
 		// the neg case is in case we grow the array in listInhabited
 		if p != conjunctionNil || neg != conjunctionNil {
@@ -78,7 +78,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg 
 				d := cx.conjunctionAtom(p)
 				p = cx.conjunctionNext(p)
 				lt = cx.ListAtomType(d)
-				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.Rest)
+				intersectedMembers, intersectedRest, ok := listIntersectWith(cx.Env(), members, rest, lt.Members, lt.rest)
 				if !ok {
 					return NEVER
 				}
@@ -90,7 +90,7 @@ func listProjPathInnerVal(cx Context, k SubtypeData, pos conjunctionHandle, neg 
 			return NEVER
 		}
 		// Ensure that we can use isNever on rest in listInhabited
-		if !IsNever(CellInnerVal(rest)) && IsEmpty(cx, rest) {
+		if !IsNever(cellInnerVal(rest)) && IsEmpty(cx, rest) {
 			rest = roCellContaining(cx.Env(), NEVER)
 		}
 	}
@@ -149,13 +149,13 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 		length := len(memberTypes)
 		for _, k := range keyIndices {
 			if k < length {
-				p = Union(p, CellInnerVal(memberTypes[k]))
+				p = Union(p, cellInnerVal(memberTypes[k]))
 			}
 		}
 	} else {
 		nt := cx.ListAtomType(cx.conjunctionAtom(neg))
 		negNext := cx.conjunctionNext(neg)
-		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.Rest, indices[nRequired-1])) {
+		if nRequired > 0 && IsNever(listMemberAtInnerVal(nt.Members, nt.rest, indices[nRequired-1])) {
 			return listProjExcludeInnerVal(cx, indices, keyIndices, memberTypes, nRequired, negNext)
 		}
 		negLen := nt.Members.FixedLength
@@ -173,7 +173,7 @@ func listProjExcludeInnerVal(cx Context, indices []int, keyIndices []int, member
 			}
 		}
 		for i := range memberTypes {
-			d := Diff(CellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.Rest, indices[i]))
+			d := Diff(cellInnerVal(memberTypes[i]), listMemberAtInnerVal(nt.Members, nt.rest, indices[i]))
 			if !IsEmpty(cx, d) {
 				t := append([]*ComplexSemType(nil), memberTypes...)
 				t[i] = cellContaining(cx.Env(), d)

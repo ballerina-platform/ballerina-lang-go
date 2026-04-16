@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"ballerina-lang-go/ast"
+	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -205,6 +206,7 @@ type desugarContext interface {
 	addSymbolToSameSpace(ref model.SymbolRef, name string, symbol model.Symbol) model.SymbolRef
 	newFunctionScope(parent model.Scope) *model.FunctionScope
 	setSymbolType(ref model.SymbolRef, ty semtypes.SemType)
+	symbolType(ref model.SymbolRef) semtypes.SemType
 	getSymbol(ref model.SymbolRef) model.Symbol
 	typeEnv() semtypes.Env
 	internalError(msg string)
@@ -342,6 +344,15 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	*pkg.InitFunction = *desugarFunction(pkgCtx, pkg.InitFunction)
 }
 
+func newSimpleVariable(name string, ty semtypes.SemType) *ast.BLangSimpleVariable {
+	v := &ast.BLangSimpleVariable{}
+	v.FlagSet = &common.UnorderedSet[model.Flag]{}
+	v.Name = &ast.BLangIdentifier{Value: name}
+	v.Name.SetDeterminedType(semtypes.NEVER)
+	v.SetDeterminedType(ty)
+	return v
+}
+
 func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *ast.BLangFunction {
 	retStmt := &ast.BLangReturn{Expr: defaultExpr}
 	retStmt.SetDeterminedType(semtypes.NEVER)
@@ -387,6 +398,7 @@ func desugarRecordTypeDesc(ctx desugarContext, recType *ast.BLangRecordType, own
 		fn.SetScope(fnScope)
 
 		fields = append(fields, desugaredRecordFieldResult{fn: fn, symRef: symRef})
+
 	}
 	return desugaredTypeDescResult{recordFields: fields}
 }
@@ -404,6 +416,94 @@ func desugarTopLevelTypeDescs(cx *packageContext, pkg *ast.BLangPackage) {
 			pkg.Functions = append(pkg.Functions, *rf.fn)
 		}
 	}
+}
+
+func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*ast.BLangFunction {
+	fnSym := ctx.getSymbol(fn.Symbol()).(model.FunctionSymbol)
+	defaultableParams := fnSym.DefaultableParams()
+	var results []*ast.BLangFunction
+	for j := range fn.RequiredParams {
+		param := &fn.RequiredParams[j]
+		dp, ok := defaultableParams.Get(j)
+		if !ok {
+			if param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+				ctx.internalError("defaultable param info missing for parameter marked as defaultable")
+			}
+			continue
+		}
+		symRef := dp.Symbol
+		fnName := ctx.getSymbol(symRef).Name()
+		fnScope := ctx.newFunctionScope(fn.Scope())
+
+		defaultFn := createDefaultValueFunction(fnName, param.Expr.(ast.BLangExpression))
+		defaultFn.SetSymbol(symRef)
+		defaultFn.SetScope(fnScope)
+
+		symbolMapping := make(map[model.SymbolRef]model.SymbolRef)
+		for k := range fn.RequiredParams[:j] {
+			precedingParam := fn.RequiredParams[k]
+			paramName := precedingParam.Name.Value
+			paramTy := ctx.symbolType(precedingParam.Symbol())
+			newParam := newSimpleVariable(paramName, paramTy)
+			newParam.FlagSet.Add(model.Flag_REQUIRED_PARAM)
+			fnScope.AddSymbol(paramName, new(model.NewValueSymbol(paramName, false, false, true)))
+			paramSymRef, _ := fnScope.GetSymbol(paramName)
+			ctx.setSymbolType(paramSymRef, paramTy)
+			newParam.SetSymbol(paramSymRef)
+			defaultFn.AddParameter(newParam)
+			symbolMapping[precedingParam.Symbol()] = paramSymRef
+		}
+		remapSymbolRefs(defaultFn.Body.(ast.BLangNode), symbolMapping)
+
+		results = append(results, defaultFn)
+	}
+	return results
+}
+
+func desugarTopLevelFunctionDefaults(pkgCtx *packageContext, pkg *ast.BLangPackage) {
+	fnCount := len(pkg.Functions)
+	for i := range fnCount {
+		for _, fn := range desugarFunctionParamDefaults(pkgCtx, &pkg.Functions[i]) {
+			pkg.Functions = append(pkg.Functions, *fn)
+		}
+	}
+}
+
+func desugarClassMethodDefaults(pkgCtx *packageContext, pkg *ast.BLangPackage) {
+	for i := range pkg.ClassDefinitions {
+		class := &pkg.ClassDefinitions[i]
+		for _, method := range class.Methods {
+			for _, fn := range desugarFunctionParamDefaults(pkgCtx, method) {
+				pkg.Functions = append(pkg.Functions, *fn)
+			}
+		}
+	}
+}
+
+type symbolRemapper struct {
+	mapping map[model.SymbolRef]model.SymbolRef
+}
+
+func (r symbolRemapper) Visit(node ast.BLangNode) ast.Visitor {
+	if ref, ok := node.(ast.BNodeWithSymbol); ok {
+		oldSym := ref.Symbol()
+		if newSym, found := r.mapping[oldSym]; found {
+			ref.SetSymbol(newSym)
+		}
+	}
+	return r
+}
+
+func (r symbolRemapper) VisitTypeData(_ *model.TypeData) ast.Visitor {
+	return r
+}
+
+// remapSymbolRefs updates symbols based on the mapping given
+func remapSymbolRefs(node ast.BLangNode, mapping map[model.SymbolRef]model.SymbolRef) {
+	if len(mapping) == 0 {
+		return
+	}
+	ast.Walk(symbolRemapper{mapping: mapping}, node)
 }
 
 // DesugarPackage returns a desugared package (may be new or same instance)
@@ -429,6 +529,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 
 	// Desugar type definition default expressions into standalone functions
 	desugarTopLevelTypeDescs(pkgCtx, pkg)
+
+	desugarTopLevelFunctionDefaults(pkgCtx, pkg)
+	desugarClassMethodDefaults(pkgCtx, pkg)
 
 	// Desugar all functions
 	for i := range pkg.Functions {

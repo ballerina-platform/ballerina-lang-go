@@ -1,0 +1,36 @@
+(foo
+  (bar
+    (bb0 () ()
+      (return
+        (binary-expr +
+          (binary-expr +
+            (simple-var-ref x)
+            (simple-var-ref y))
+          (field-based-access base
+            (simple-var-ref self))))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable f (type
+        (user-defined-type foo)) (expr
+        (new ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation bar expr:
+          (simple-var-ref f) ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation bar expr:
+          (simple-var-ref f) (
+          (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation bar expr:
+          (simple-var-ref f) (
+          (literal 1)
+          (literal 5))))))
+  )
+)

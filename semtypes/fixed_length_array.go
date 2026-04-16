@@ -19,7 +19,7 @@ package semtypes
 import "ballerina-lang-go/common"
 
 type fixedLengthArray struct {
-	Initial     []ComplexSemType
+	initial     []ComplexSemType
 	FixedLength int
 }
 
@@ -28,7 +28,7 @@ func newFixedLengthArrayFromInitialFixedLength(initial []ComplexSemType, fixedLe
 	copiedInitial := make([]ComplexSemType, len(initial))
 	copy(copiedInitial, initial)
 	common.Assert(fixedLength >= 0)
-	this.Initial = copiedInitial
+	this.initial = copiedInitial
 	this.FixedLength = fixedLength
 	return this
 }

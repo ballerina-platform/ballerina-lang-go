@@ -26,13 +26,13 @@ func newTableSubtype() tableSubtype {
 func tableContainingKeyConstraint(cx Context, tableConstraint SemType, keyConstraint SemType) SemType {
 	var normalizedKc SemType
 	lat := ToListAtomicType(cx, keyConstraint)
-	if (lat != nil) && (CELL_ATOMIC_UNDEF == getCellAtomicType(lat.Rest)) {
+	if (lat != nil) && (CELL_ATOMIC_UNDEF == getCellAtomicType(lat.rest)) {
 		members := lat.Members
 		switch members.FixedLength {
 		case 0:
 			normalizedKc = VAL
 		case 1:
-			normalizedKc = getCellAtomicType(&members.Initial[0]).Ty
+			normalizedKc = getCellAtomicType(&members.initial[0]).Ty
 		default:
 			normalizedKc = keyConstraint
 		}

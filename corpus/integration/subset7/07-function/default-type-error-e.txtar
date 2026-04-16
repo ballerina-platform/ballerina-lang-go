@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible default value for parameter 'x'
+  --> default-type-error-e.bal:17:22
+   |
+17 | function foo(int x = "hello") returns int { // @error
+   |                      ^^^^^^^
