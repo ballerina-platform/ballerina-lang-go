@@ -1,0 +1,10 @@
+-- template --
+@template.tmpl
+-- template.tmpl --
+ok
+-- outputPath --
+nested/deep/out.go
+-- data.json --
+{"NodeType":"node","AbstractTypes":{}}
+-- wantOutput --
+ok

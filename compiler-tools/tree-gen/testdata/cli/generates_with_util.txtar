@@ -1,0 +1,27 @@
+-- args --
+-config
+@nodes.json
+-type
+st-node
+-template
+@main.tmpl
+-output
+@main.go
+-util-template
+@util.tmpl
+-util-output
+@util.go
+-- nodes.json --
+[]
+-- main.tmpl --
+main
+-- util.tmpl --
+util
+-- main.go --
+main.go
+-- util.go --
+util.go
+-- wantFile:main.go --
+main
+-- wantFile:util.go --
+util

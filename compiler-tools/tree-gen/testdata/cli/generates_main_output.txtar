@@ -1,0 +1,19 @@
+-- args --
+-config
+@nodes.json
+-type
+node
+-template
+@template.tmpl
+-output
+@gen.go
+-- nodes.json --
+[{"name":"N","kind":"K","attributes":[]}]
+-- template.tmpl --
+{{range .Nodes}}{{.Name}}{{end}}
+-- gen.go --
+gen.go
+-- wantStdoutContains --
+Successfully generated
+-- wantFile:gen.go --
+N
