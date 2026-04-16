@@ -1,0 +1,129 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition WordIterator
+    (variable data (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))))
+    (variable idx (type
+      (value-type int)))
+    (variable len (type
+      (value-type int)))
+    (function init (
+      (variable data (type
+        (array-type
+          (value-type string) dimensions: 1 ([]))))
+      (variable len (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal idx))
+          (literal 0))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal data))
+          (simple-var-ref data))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal len))
+          (simple-var-ref len))))
+    (function next () (
+      (union-type
+        (record-type
+          (field value
+            (value-type string)))
+        (value-type null)))
+      (block-function-body
+        (if
+          (binary-expr >=
+            (index-based-access
+              (simple-var-ref self)
+              (literal idx))
+            (index-based-access
+              (simple-var-ref self)
+              (literal len)))
+          (block-stmt
+            (return
+              (literal <nil>))) ())
+        (block-stmt
+          (var-def
+            (variable val (type
+              (value-type string)) (expr
+              (index-based-access
+                (index-based-access
+                  (simple-var-ref self)
+                  (literal data))
+                (index-based-access
+                  (simple-var-ref self)
+                  (literal idx))))))
+          (compound-assignment +
+            (index-based-access
+              (simple-var-ref self)
+              (literal idx))
+            (literal 1))
+          (return
+            (mapping-constructor-expr
+              (key-value
+                (literal value)
+                (simple-var-ref val))))))))
+  (class-definition Words
+    (variable data (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))))
+    (function init () ()
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal data))
+          (list-constructor-expr
+            (literal hello)
+            (literal world)))))
+    (function iterator () (
+      (user-defined-type WordIterator))
+      (block-function-body
+        (return
+          (new (
+            (index-based-access
+              (simple-var-ref self)
+              (literal data))
+            (literal 2)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable w (type
+          (user-defined-type Words)) (expr
+          (new ()))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref w))))
+      (var-def
+        (variable $desugar$2 (expr
+          (invocation iterator expr:
+            (simple-var-ref $desugar$0) ()))))
+      (while
+        (literal true)
+        (block-stmt
+          (var-def
+            (variable $desugar$4 (expr
+              (invocation next expr:
+                (simple-var-ref $desugar$2) ()))))
+          (if
+            (type-test-expr is
+              (simple-var-ref $desugar$4))
+            (block-stmt
+              (break)) ())
+          (var-def
+            (variable word (type
+              (value-type string)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$4)
+                (literal value)))))
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref word)))))))))

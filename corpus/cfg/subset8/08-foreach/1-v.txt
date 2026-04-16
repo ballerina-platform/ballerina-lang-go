@@ -1,0 +1,61 @@
+(NumberGenerator
+  (iterator
+    (bb0 () ()
+      (return
+        (new ()))
+    )
+  )
+)
+(NumberIterator
+  (next
+    (bb0 () (bb1 bb2)
+      (binary-expr >=
+        (field-based-access idx
+          (simple-var-ref self))
+        (literal 3))
+    )
+    (bb1 (bb0) ()
+      (return
+        (literal <nil>))
+    )
+    (bb2 (bb0) ()
+      (var-def
+        (variable val (type
+          (value-type int)) (expr
+          (index-based-access
+            (field-based-access items
+              (simple-var-ref self))
+            (field-based-access idx
+              (simple-var-ref self))))))
+      (compound-assignment +
+        (field-based-access idx
+          (simple-var-ref self))
+        (literal 1))
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref value)
+            (simple-var-ref val))))
+    )
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable gen (type
+        (user-defined-type NumberGenerator)) (expr
+        (new ()))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref gen)
+    (var-def
+      (variable val (type
+        (value-type int))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref val))))
+  )
+  (bb3 (bb1) ())
+)

@@ -1,0 +1,156 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class WordIterator {
+  data [string...]
+  idx int
+  len int
+
+  init([string...],int) -> nil{
+    bb0 {
+      %4 = ConstantLoad 0
+      %5 = ConstantLoad idx
+      self[%5] = %4;
+      %6 = ConstantLoad data
+      self[%6] = data;
+      %7 = ConstantLoad len
+      self[%7] = len;
+      return;
+    }
+  }
+
+  next() -> nil|{| value: string, never... |}{
+    bb0 {
+      %4 = ConstantLoad idx
+      %3 = self[%4];
+      %5 = %3;
+      %7 = ConstantLoad len
+      %6 = self[%7];
+      %8 = %6;
+      %2 = >= %5 %8;
+      %2 ? bb1 : bb2;
+    }
+    bb1 {
+      %9 = ConstantLoad <nil>
+      %0 = %9;
+      return;
+    }
+    bb2 {
+      %12 = ConstantLoad idx
+      %11 = self[%12];
+      %14 = ConstantLoad data
+      %13 = self[%14];
+      %10 = %13[%11];
+      val = %10;
+      %18 = ConstantLoad idx
+      %17 = self[%18];
+      %19 = %17;
+      %20 = ConstantLoad 1
+      %21 = %20;
+      %16 = + %19 %21;
+      %22 = ConstantLoad idx
+      self[%22] = %16;
+      %23 = ConstantLoad value
+      %24 = newMap {| value: string, never... |}{%23=val}
+      %0 = %24;
+      return;
+    }
+  }
+}
+class Words {
+  data [string...]
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad hello
+      %3 = ConstantLoad world
+      %4 = ConstantLoad 2
+      %5 = newArray [string, string, never...][%4]{%2, %3}
+      %6 = ConstantLoad data
+      self[%6] = %5;
+      return;
+    }
+  }
+
+  iterator() -> object { [string...] data; int idx; function init([string...], int) returns nil; int len; function next() returns nil|{| value: string, never... |} }{
+    bb0 {
+      %2 = newObject $anon/.:WordIterator
+      %4 = ConstantLoad data
+      %3 = self[%4];
+      %5 = ConstantLoad 2
+      %6 = init(%2,%3,%5) -> bb1;
+    }
+    bb1 {
+      %8 = %6 is nil
+      %8 ? bb2 : bb3;
+    }
+    bb2 {
+      %7 = %2;
+      GOTO bb4;
+    }
+    bb3 {
+      %7 = %6;
+      GOTO bb4;
+    }
+    bb4 {
+      %0 = %7;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:Words
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    w = %3;
+    $desugar$0 = w;
+    %7 = iterator($desugar$0) -> bb5;
+  }
+  bb5 {
+    $desugar$2 = %7;
+    GOTO bb6;
+  }
+  bb6 {
+    %9 = ConstantLoad true
+    %9 ? bb7 : bb8;
+  }
+  bb7 {
+    PushScopeFrame 7
+    %0 = next((1, $desugar$2)) -> bb9;
+  }
+  bb8 {
+    return;
+  }
+  bb9 {
+    $desugar$4 = %0;
+    %2 = $desugar$4 is nil
+    %2 ? bb10 : bb11;
+  }
+  bb10 {
+    PopScopeFrame
+    GOTO bb8;
+  }
+  bb11 {
+    %4 = ConstantLoad value
+    %3 = $desugar$4[%4];
+    word = %3;
+    %6 = println(word) -> bb12;
+  }
+  bb12 {
+    PopScopeFrame
+    GOTO bb6;
+  }
+}
