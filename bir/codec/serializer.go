@@ -226,6 +226,7 @@ func (bw *birWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
 
 	for _, instr := range bb.Instructions {
 		bw.writeInstructionKind(buf, instr.GetKind())
+		bw.writePosition(buf, instr.GetPos())
 		bw.writeInstruction(buf, instr)
 	}
 
@@ -234,6 +235,7 @@ func (bw *birWriter) writeBasicBlock(buf *bytes.Buffer, bb *bir.BIRBasicBlock) {
 		return
 	}
 	bw.writeInstructionKind(buf, bb.Terminator.GetKind())
+	bw.writePosition(buf, bb.Terminator.GetPos())
 	bw.writeTerminator(buf, bb.Terminator)
 }
 
