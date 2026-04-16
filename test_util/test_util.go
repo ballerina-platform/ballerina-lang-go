@@ -43,14 +43,6 @@ type TestCase struct {
 	ExpectedPath string // Absolute path to expected output (.txt or .json)
 }
 
-// GetValidTests returns all valid test pairs for the given test kind
-// It only returns test cases where the input file ends with "-v.bal"
-func GetValidTests(t *testing.T, kind TestKind) []TestCase {
-	return GetTests(t, kind, func(path string) bool {
-		return strings.HasSuffix(path, "-v.bal")
-	})
-}
-
 // GetErrorTests returns all error test pairs for the given test kind
 // It only returns test cases where the input file ends with "-e.bal"
 func GetErrorTests(t *testing.T, kind TestKind) []TestCase {

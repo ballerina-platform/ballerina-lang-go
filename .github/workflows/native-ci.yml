@@ -30,14 +30,16 @@ jobs:
           go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
 
           COVERAGE_FILES=("coverage.out" "coverage-cli-executable.out")
-          mapfile -t MODULE_GOMODS < <(find . -type f -name go.mod ! -path './vendor/*' | LC_ALL=C sort)
+          mapfile -t MODULE_GOMODS < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)
           for gomod in "${MODULE_GOMODS[@]}"; do
             dir="$(dirname "$gomod")"
             if [ "$dir" = "." ]; then
               continue
             fi
             rel="${dir#./}"
-            safe="${rel//\//-}"
+            safe_base="${rel//\//-}"
+            safe_hash="$(printf '%s' "$rel" | sha256sum | cut -c1-8)"
+            safe="${safe_base}-${safe_hash}"
             out="$GITHUB_WORKSPACE/coverage-mod-$safe.out"
             integration_cov_dir="$GITHUB_WORKSPACE/.cover/${safe}_codecov"
             mkdir -p "$integration_cov_dir"
@@ -98,4 +100,4 @@ jobs:
             fi
             echo "go test in module $dir"
             (cd "$dir" && go test "${GO_TEST_COMMON_ARGS[@]}" ./...)
-          done < <(find . -type f -name go.mod ! -path './vendor/*' | LC_ALL=C sort)
+          done < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)

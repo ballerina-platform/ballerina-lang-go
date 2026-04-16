@@ -139,9 +139,12 @@ func TestGenerateFileFixtures(t *testing.T) {
 				template = txtarPath(t, files, strings.TrimPrefix(template, "@"))
 			}
 			data := parseFixtureJSON(t, txtarValue(t, files, "data.json"))
-			wantErr := txtarOptional(files, "wantError")
+			wantErr, err := txtarOptional(files, "wantError")
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			err := generateFile(template, outPath, data)
+			err = generateFile(template, outPath, data)
 			if wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), wantErr) {
 					t.Fatalf("error %v does not contain %q", err, wantErr)
@@ -173,7 +176,10 @@ func TestCLIFixtures(t *testing.T) {
 			_, files := extractTxtarCase(t, tc)
 			args := parseFixtureArgs(t, txtarValue(t, files, "args"), files)
 			out, err := goRunTreeGen(t, mod, args...)
-			wantErr := txtarOptional(files, "wantError")
+			wantErr, readErr := txtarOptional(files, "wantError")
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
 			if wantErr != "" {
 				if err == nil || !strings.Contains(string(out), wantErr) {
 					t.Fatalf("output %q does not contain %q", string(out), wantErr)
@@ -183,8 +189,12 @@ func TestCLIFixtures(t *testing.T) {
 			if err != nil {
 				t.Fatalf("go run: %v\n%s", err, out)
 			}
-			if want := txtarOptional(files, "wantStdoutContains"); want != "" && !strings.Contains(string(out), want) {
-				t.Fatalf("stdout %q does not contain %q", string(out), want)
+			wantStdout, readErr := txtarOptional(files, "wantStdoutContains")
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if wantStdout != "" && !strings.Contains(string(out), wantStdout) {
+				t.Fatalf("stdout %q does not contain %q", string(out), wantStdout)
 			}
 			for name := range files {
 				if !strings.HasPrefix(name, "wantFile:") {
@@ -230,7 +240,16 @@ func extractTxtarCase(t *testing.T, txtarPath string) (string, map[string]string
 	workDir := t.TempDir()
 	files := make(map[string]string, len(archive.Files))
 	for _, f := range archive.Files {
-		outPath := filepath.Join(workDir, filepath.FromSlash(f.Name))
+		cleaned := filepath.Clean(filepath.FromSlash(f.Name))
+		if filepath.IsAbs(cleaned) || cleaned == ".." ||
+			strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
+			t.Fatalf("invalid txtar path %q", f.Name)
+		}
+		outPath := filepath.Join(workDir, cleaned)
+		rel, err := filepath.Rel(workDir, outPath)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			t.Fatalf("txtar path escapes work dir %q", f.Name)
+		}
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -261,16 +280,16 @@ func txtarValue(t *testing.T, files map[string]string, name string) string {
 	return strings.TrimSuffix(string(b), "\n")
 }
 
-func txtarOptional(files map[string]string, name string) string {
+func txtarOptional(files map[string]string, name string) (string, error) {
 	path, ok := files[name]
 	if !ok {
-		return ""
+		return "", nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return strings.TrimSuffix(string(b), "\n")
+	return strings.TrimSuffix(string(b), "\n"), nil
 }
 
 func parseFixtureJSON(t *testing.T, raw string) map[string]interface{} {
