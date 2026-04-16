@@ -1,0 +1,62 @@
+(package
+  (import-package ballerina io (as io))
+  (function foo (
+    (variable vals (type
+      (array-type
+        (value-type int) dimensions: 1 ([]))))
+    (variable count (type
+      (value-type int)) (expr
+      (invocation lang.array length (
+        (simple-var-ref vals)))))) (
+    (value-type int))
+    (block-function-body
+      (var-def
+        (variable sum (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable i (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable $desugar$0 (expr
+          (simple-var-ref count))))
+      (while
+        (binary-expr <
+          (simple-var-ref i)
+          (simple-var-ref $desugar$0))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref sum)
+            (index-based-access
+              (simple-var-ref vals)
+              (simple-var-ref i)))
+          (assignment
+            (simple-var-ref i)
+            (binary-expr +
+              (simple-var-ref i)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref sum))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable values (type
+          (array-type
+            (value-type int) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)))))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo (
+            (simple-var-ref values))))))))
+  (function $default$0 (
+    (variable vals)) ()
+    (block-function-body
+      (return
+        (invocation lang.array length (
+          (simple-var-ref vals)))))))
