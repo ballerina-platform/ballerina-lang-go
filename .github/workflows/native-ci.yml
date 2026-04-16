@@ -21,16 +21,45 @@ jobs:
 
       - name: Run tests with coverage
         run: |
+          set -euo pipefail
+          TEST_SKIP='TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests'
+          GO_TEST_COMMON_ARGS=(-race -count=1 -timeout 30m -skip "$TEST_SKIP")
           mkdir -p .cover/cli_executable
           BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
-            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+            go test "${GO_TEST_COMMON_ARGS[@]}" -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
           go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
+
+          COVERAGE_FILES=("coverage.out" "coverage-cli-executable.out")
+          mapfile -t MODULE_GOMODS < <(find . -type f -name go.mod ! -path './vendor/*' | LC_ALL=C sort)
+          for gomod in "${MODULE_GOMODS[@]}"; do
+            dir="$(dirname "$gomod")"
+            if [ "$dir" = "." ]; then
+              continue
+            fi
+            rel="${dir#./}"
+            safe="${rel//\//-}"
+            out="$GITHUB_WORKSPACE/coverage-mod-$safe.out"
+            integration_cov_dir="$GITHUB_WORKSPACE/.cover/${safe}_codecov"
+            mkdir -p "$integration_cov_dir"
+            echo "go test (coverage) in module $dir (integration cover: .cover/${safe}_codecov)"
+            (cd "$dir" && CODECOV_INTEGRATION_COVERDIR="$integration_cov_dir" \
+              go test "${GO_TEST_COMMON_ARGS[@]}" -coverpkg=./... -coverprofile="$out" -covermode=atomic ./...)
+            COVERAGE_FILES+=("$out")
+            exec_out="$GITHUB_WORKSPACE/coverage-mod-${safe}-executable.out"
+            if [ -d "$integration_cov_dir" ] && [ -n "$(find "$integration_cov_dir" -type f 2>/dev/null | head -n 1)" ]; then
+              go tool covdata textfmt -i="$integration_cov_dir" -o="$exec_out"
+              COVERAGE_FILES+=("$exec_out")
+            fi
+          done
+
+          printf -v COVERAGE_FILES_CSV '%s,' "${COVERAGE_FILES[@]}"
+          echo "COVERAGE_FILES=${COVERAGE_FILES_CSV%,}" >> "$GITHUB_ENV"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,coverage-cli-executable.out
+          files: ${{ env.COVERAGE_FILES }}
           fail_ci_if_error: true
 
       - name: Check gofmt
@@ -55,4 +84,18 @@ jobs:
           go-version: '1.26'
 
       - name: Run tests
-        run: go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_SKIP='TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests'
+          GO_TEST_COMMON_ARGS=(-race -count=1 -timeout 30m -skip "$TEST_SKIP")
+          go test "${GO_TEST_COMMON_ARGS[@]}" ./...
+
+          while IFS= read -r gomod; do
+            dir="$(dirname "$gomod")"
+            if [ "$dir" = "." ]; then
+              continue
+            fi
+            echo "go test in module $dir"
+            (cd "$dir" && go test "${GO_TEST_COMMON_ARGS[@]}" ./...)
+          done < <(find . -type f -name go.mod ! -path './vendor/*' | LC_ALL=C sort)
