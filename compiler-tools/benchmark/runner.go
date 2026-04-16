@@ -43,6 +43,15 @@ type (
 )
 
 func (b *benchmark) run() error {
+	if _, err := exec.LookPath("hyperfine"); err != nil {
+		return fmt.Errorf("hyperfine is required but was not found in PATH; please install it and retry: %w", err)
+	}
+
+	target, err := resolveTarget(b.target)
+	if err != nil {
+		return fmt.Errorf("failed to resolve benchmark target: %w", err)
+	}
+
 	workRoot, err := os.MkdirTemp("", "bal-bench-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary directory: %w", err)
@@ -69,11 +78,6 @@ func (b *benchmark) run() error {
 	fmt.Printf("Building interpreter for %s...\n", b.headRef)
 	if err := b.buildInterpreter(headWorktree, b.headRef, headInterpreter); err != nil {
 		return err
-	}
-
-	target, err := resolveTarget(b.target)
-	if err != nil {
-		return fmt.Errorf("failed to resolve benchmark target: %w", err)
 	}
 
 	if b.config.exportPath == "" {
