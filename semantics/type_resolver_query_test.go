@@ -79,7 +79,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 				newFromClause(newIntLiteral(42), nil, true),
 				newSelectClause(newIntLiteral(1)),
 			),
-			diagSub: "query from-clause currently supports only list or map collections",
+			diagSub: "query from clause currently supports only list or map collections",
 		},
 		{
 			name: "from binding variable is nil",
@@ -103,7 +103,7 @@ func TestResolveQueryExprErrorCases(t *testing.T) {
 				newFromClause(newIntListLiteral(1), newSimpleVarDef("x", newValueType(model.TypeKind_STRING), nil), false),
 				newSelectClause(newIntLiteral(1)),
 			),
-			diagSub: "from-clause variable type is incompatible with collection member type",
+			diagSub: "from clause variable type is incompatible with collection member type",
 		},
 		{
 			name: "select expression resolution fails",
@@ -145,7 +145,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			clause: newLetClause(
 				newSimpleVarDef("y", nil, nil),
 			),
-			diagSub: "let-clause variable declaration requires an initializer",
+			diagSub: "let clause variable declaration requires an initializer",
 		},
 		{
 			name: "let initializer resolution fails",
@@ -166,7 +166,7 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			clause: newLetClause(
 				newSimpleVarDef("y", newValueType(model.TypeKind_STRING), newIntLiteral(1)),
 			),
-			diagSub: "let-clause variable type is incompatible with initializer expression",
+			diagSub: "let clause variable type is incompatible with initializer expression",
 		},
 		{
 			name:    "where expression resolution fails",
@@ -176,12 +176,32 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 		{
 			name:    "where expression non-boolean",
 			clause:  newWhereClause(newIntLiteral(1)),
-			diagSub: "where-clause expression must be boolean",
+			diagSub: "where clause expression must be boolean",
+		},
+		{
+			name:    "limit expression resolution fails",
+			clause:  newLimitClause(newUnsupportedExprNode()),
+			diagSub: "unsupported expression type",
+		},
+		{
+			name:    "limit expression non-int",
+			clause:  newLimitClause(newStringLiteral("x")),
+			diagSub: "limit clause expression must be int",
+		},
+		{
+			name:    "limit expression resolution fails",
+			clause:  newLimitClause(newUnsupportedExprNode()),
+			diagSub: "unsupported expression type",
+		},
+		{
+			name:    "limit expression non-int",
+			clause:  newLimitClause(newStringLiteral("x")),
+			diagSub: "limit clause expression must be int",
 		},
 		{
 			name:    "unsupported intermediate clause",
 			clause:  newCollectClause(),
-			diagSub: "only let + where clauses are supported as intermediate query clauses",
+			diagSub: "only let + where + limit clauses are supported as intermediate query clauses",
 		},
 	}
 
@@ -335,6 +355,14 @@ func newWhereClause(expr ast.BLangExpression) *ast.BLangWhereClause {
 	}
 	whereClause.SetPosition(queryTestPos)
 	return whereClause
+}
+
+func newLimitClause(expr ast.BLangExpression) *ast.BLangLimitClause {
+	limitClause := &ast.BLangLimitClause{
+		Expression: expr,
+	}
+	limitClause.SetPosition(queryTestPos)
+	return limitClause
 }
 
 func newCollectClause() *ast.BLangCollectClause {
