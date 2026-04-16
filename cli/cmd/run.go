@@ -196,7 +196,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	birPkgs := backend.BIRPackages()
 
 	if len(birPkgs) == 0 {
-		return fmt.Errorf("BIR generation failed: no BIR package produced")
+		err := fmt.Errorf("BIR generation failed: no BIR package produced")
+		printError(err, "", false)
+		return err
 	}
 
 	if runOpts.statsOneline {

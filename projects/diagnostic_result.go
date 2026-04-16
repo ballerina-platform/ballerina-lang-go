@@ -42,7 +42,7 @@ func NewDiagnosticResult(diags []diagnostics.Diagnostic) DiagnosticResult {
 	// Categorize by severity
 	for _, d := range diags {
 		switch d.DiagnosticInfo().Severity() {
-		case diagnostics.Error:
+		case diagnostics.Error, diagnostics.Fatal:
 			result.errors = append(result.errors, d)
 		case diagnostics.Warning:
 			result.warnings = append(result.warnings, d)

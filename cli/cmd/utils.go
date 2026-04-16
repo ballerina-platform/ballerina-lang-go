@@ -195,7 +195,7 @@ func printSourceSnippet(w io.Writer, s outputStyle, loc diagnosticLocation, fsys
 		var highlightLen int
 		startCol, _, highlightLen = computeTrimmedCaretSpan(lineContent, startCol, endCol)
 
-		_, _ = fmt.Fprintf(w, "%s%*s%s | %s\n", s.cyan, loc.numWidth, lineNumStr, s.reset, lineContent)
+		_, _ = fmt.Fprintf(w, "%s%*s | %s%s\n", s.cyan, loc.numWidth, lineNumStr, s.reset, lineContent)
 		pointer := buildPointer(lineContent, startCol, highlightLen)
 		_, _ = fmt.Fprintf(w, "%*s %s| %s%s%s\n", loc.numWidth, "", s.cyan, severityColor, pointer, s.reset)
 	}
