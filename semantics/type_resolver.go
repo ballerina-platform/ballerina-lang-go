@@ -3456,6 +3456,9 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 
 	retTy := semtypes.FunctionReturnType(t.typeContext(), t.symbolType(symbolRef), argListTy)
 	if retTy == nil {
+
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
 		t.semanticError("incompatible arguments for function call", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
