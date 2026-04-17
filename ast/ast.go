@@ -303,6 +303,7 @@ type (
 		Methods                         map[string]*BLangFunction
 		Fields                          []model.SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
+		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
 		flags                           nodeFlags
 		typeData                        model.TypeData

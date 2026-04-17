@@ -1,0 +1,56 @@
+(Bar
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (simple-var-ref x))
+    )
+  )
+  (getX
+    (bb0 () ()
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
+  )
+)
+(Baz
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access x
+          (simple-var-ref self))
+        (simple-var-ref x))
+    )
+  )
+  (getX
+    (bb0 () ()
+      (return
+        (field-based-access x
+          (simple-var-ref self)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable b (type
+        (user-defined-type Bar)) (expr
+        (new (
+          (literal 10))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation getX expr:
+          (simple-var-ref b) ()))))
+    (var-def
+      (variable z (type
+        (user-defined-type Baz)) (expr
+        (new (
+          (literal 20))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation getX expr:
+          (simple-var-ref z) ()))))
+  )
+)
