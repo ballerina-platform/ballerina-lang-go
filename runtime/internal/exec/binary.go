@@ -99,9 +99,6 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2)))
@@ -119,9 +116,6 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1%v2)
 	case float64:
 		v2 := op2.(float64)
-		if v2 == 0 {
-			panic(values.NewErrorWithMessage("divide by zero"))
-		}
 		setOperandValue(ctx, binaryOp.LhsOp, frame, math.Mod(v1, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2)))
