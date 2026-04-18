@@ -2,7 +2,8 @@
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License. You may obtain a copy of the License at
+// in compliance with the License.
+// You may obtain a copy of the License at
 //
 // http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -19,9 +20,9 @@ import ballerina/io;
 public function main() {
     float x = 1.0;
     float y = 0.0;
-    io:println(mod(x, y));
+    io:println(div(x, y)); // @output +Inf
 }
 
-function mod(float x, float y) returns float {
-    return x % y; // @panic divide by zero
+function div(float x, float y) returns float {
+    return x / y;
 }
