@@ -61,8 +61,6 @@ var (
 
 	// Skip tests that cause unrecoverable Go runtime errors
 	skipIntegrationTests = []string{
-		// https://github.com/ballerina-platform/ballerina-lang-go/issues/364
-		"subset8/08-comparable/order5-v.bal",
 		"subset8/08-const/const3-v.bal",
 	}
 )
