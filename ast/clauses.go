@@ -48,7 +48,20 @@ type (
 		bLangNodeBase
 		Expression BLangExpression
 	}
+	BLangOrderByClause struct {
+		bLangNodeBase
+		OrderByKeyList []BLangOrderKey
+	}
+	BLangOrderKey struct {
+		bLangNodeBase
+		Expression  BLangExpression
+		IsAscending bool
+	}
 	BLangSelectClause struct {
+		bLangNodeBase
+		Expression BLangExpression
+	}
+	BLangOnConflictClause struct {
 		bLangNodeBase
 		Expression BLangExpression
 	}
@@ -77,7 +90,10 @@ var (
 	_ model.Node              = &BLangLetClause{}
 	_ model.Node              = &BLangWhereClause{}
 	_ model.Node              = &BLangLimitClause{}
+	_ model.Node              = &BLangOrderByClause{}
+	_ model.Node              = &BLangOrderKey{}
 	_ model.SelectClauseNode  = &BLangSelectClause{}
+	_ model.Node              = &BLangOnConflictClause{}
 	_ model.CollectClauseNode = &BLangCollectClause{}
 	_ model.DoClauseNode      = &BLangDoClause{}
 	_ model.OnFailClauseNode  = &BLangOnFailClause{}
@@ -88,7 +104,10 @@ var (
 	_ BLangNode = &BLangLetClause{}
 	_ BLangNode = &BLangWhereClause{}
 	_ BLangNode = &BLangLimitClause{}
+	_ BLangNode = &BLangOrderByClause{}
+	_ BLangNode = &BLangOrderKey{}
 	_ BLangNode = &BLangSelectClause{}
+	_ BLangNode = &BLangOnConflictClause{}
 	_ BLangNode = &BLangCollectClause{}
 	_ BLangNode = &BLangDoClause{}
 	_ BLangNode = &BLangOnFailClause{}
@@ -150,11 +169,35 @@ func (this *BLangSelectClause) GetKind() model.NodeKind {
 	return model.NodeKind_SELECT
 }
 
+func (this *BLangOrderByClause) GetKind() model.NodeKind {
+	return model.NodeKind_ORDER_BY
+}
+
+func (this *BLangOrderKey) GetKind() model.NodeKind {
+	return model.NodeKind_ORDER_KEY
+}
+
 func (this *BLangSelectClause) GetExpression() model.ExpressionNode {
 	return this.Expression
 }
 
 func (this *BLangSelectClause) SetExpression(expression model.ExpressionNode) {
+	if exp, ok := expression.(BLangExpression); ok {
+		this.Expression = exp
+		return
+	}
+	panic("expression is not a BLangExpression")
+}
+
+func (this *BLangOnConflictClause) GetKind() model.NodeKind {
+	return model.NodeKind_ON_CONFLICT
+}
+
+func (this *BLangOnConflictClause) GetExpression() model.ExpressionNode {
+	return this.Expression
+}
+
+func (this *BLangOnConflictClause) SetExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
 		this.Expression = exp
 		return

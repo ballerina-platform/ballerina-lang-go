@@ -2234,7 +2234,19 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	}
 	fromClause.SetDeterminedType(semtypes.NEVER)
 
-	selectClause, ok := expr.QueryClauseList[len(expr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	lastClauseIndex := len(expr.QueryClauseList) - 1
+	var onConflictClause *ast.BLangOnConflictClause
+	if clause, isOnConflict := expr.QueryClauseList[lastClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
+		onConflictClause = clause
+		onConflictClause.SetDeterminedType(semtypes.NEVER)
+		lastClauseIndex--
+	}
+	if lastClauseIndex < 1 {
+		t.semanticError("query expression requires a select clause", expr.GetPosition())
+		return nil, expressionEffect{}, false
+	}
+
+	selectClause, ok := expr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
 	if !ok {
 		t.semanticError("query expression requires a select clause", expr.GetPosition())
 		return nil, expressionEffect{}, false
@@ -2289,7 +2301,7 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 		updateSymbolType(t, varDef.Var, variableTy)
 	}
 
-	queryChain, ok := resolveQueryIntermediateClauses(t, chain, expr)
+	queryChain, ok := resolveQueryIntermediateClauses(t, chain, expr, lastClauseIndex)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -2319,6 +2331,26 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 		t.unimplemented("query construct type is not supported yet", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
+
+	if onConflictClause != nil {
+		if expr.QueryConstructType != model.TypeKind_MAP {
+			t.semanticError("on conflict clause is supported only for map query construct type",
+				onConflictClause.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		conflictTy, _, ok := resolveExpression(t, queryChain, onConflictClause.Expression, semtypes.Union(semtypes.ERROR, semtypes.NIL))
+		if !ok {
+			return nil, expressionEffect{}, false
+		}
+		if !semtypes.IsSubtype(t.typeContext(), conflictTy, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+			t.semanticError("on conflict clause expression must be error?", onConflictClause.GetPosition())
+			return nil, expressionEffect{}, false
+		}
+		errorTy := semtypes.Intersect(conflictTy, semtypes.ERROR)
+		if !semtypes.IsEmpty(t.typeContext(), errorTy) {
+			queryTy = semtypes.Union(queryTy, errorTy)
+		}
+	}
 	setExpectedType(expr, queryTy)
 	return queryTy, defaultExpressionEffect(chain), true
 }
@@ -2329,9 +2361,9 @@ func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
 	return ld.DefineListTypeWrapped(env, []semtypes.SemType{semtypes.STRING, valueTy}, 2, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_LIMITED)
 }
 
-func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *ast.BLangQueryExpr) (*binding, bool) {
+func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *ast.BLangQueryExpr, selectClauseIndex int) (*binding, bool) {
 	currentChain := chain
-	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+	for i := 1; i < selectClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangLetClause:
 			clause.SetDeterminedType(semtypes.NEVER)
@@ -2391,12 +2423,67 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				t.semanticError("limit clause expression must be int", clause.GetPosition())
 				return nil, false
 			}
+		case *ast.BLangOrderByClause:
+			clause.SetDeterminedType(semtypes.NEVER)
+			for j := range clause.OrderByKeyList {
+				orderKey := &clause.OrderByKeyList[j]
+				orderKey.SetDeterminedType(semtypes.NEVER)
+				keyTy, _, ok := resolveExpression(t, currentChain, orderKey.Expression, nil)
+				if !ok {
+					return nil, false
+				}
+				if !isQueryOrderableType(t, keyTy, 0) {
+					t.semanticError("order by key expression must have an ordered type", orderKey.GetPosition())
+					return nil, false
+				}
+			}
 		default:
-			t.unimplemented("only let + where + limit clauses are supported as intermediate query clauses", clause.GetPosition())
+			t.unimplemented("only let + where + order by + limit clauses are supported as intermediate query clauses", clause.GetPosition())
 			return nil, false
 		}
 	}
 	return currentChain, true
+}
+
+var queryOrderablePrimitiveTypes = []semtypes.SemType{
+	semtypes.BOOLEAN,
+	semtypes.INT,
+	semtypes.FLOAT,
+	semtypes.DECIMAL,
+	semtypes.STRING,
+}
+
+func isQueryOrderableType(t typeResolver, ty semtypes.SemType, depth int) bool {
+	if depth > 8 {
+		return false
+	}
+
+	ctx := t.typeContext()
+	if semtypes.ContainsBasicType(ty, semtypes.NIL) {
+		nonNilTy := semtypes.Diff(ty, semtypes.NIL)
+		if semtypes.IsEmpty(ctx, nonNilTy) {
+			return true
+		}
+		return isQueryOrderableType(t, nonNilTy, depth+1)
+	}
+
+	for _, primitiveTy := range queryOrderablePrimitiveTypes {
+		if semtypes.IsSubtype(ctx, ty, primitiveTy) {
+			return true
+		}
+	}
+
+	if !semtypes.IsSubtypeSimple(ty, semtypes.LIST) {
+		return false
+	}
+
+	memberTypes := semtypes.ListAllMemberTypesInner(ctx, ty)
+	for _, memberTy := range memberTypes.SemTypes {
+		if !isQueryOrderableType(t, memberTy, depth+1) {
+			return false
+		}
+	}
+	return true
 }
 
 func resolveSimpleVarRef(t typeResolver, chain *binding, expr *ast.BLangSimpleVarRef) (semtypes.SemType, expressionEffect, bool) {

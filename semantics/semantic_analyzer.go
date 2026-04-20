@@ -669,13 +669,24 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		return false
 	}
 
-	selectClause, ok := queryExpr.QueryClauseList[len(queryExpr.QueryClauseList)-1].(*ast.BLangSelectClause)
+	lastClauseIndex := len(queryExpr.QueryClauseList) - 1
+	var onConflictClause *ast.BLangOnConflictClause
+	if clause, isOnConflict := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangOnConflictClause); isOnConflict {
+		onConflictClause = clause
+		lastClauseIndex--
+	}
+	if lastClauseIndex < 1 {
+		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
+		return false
+	}
+
+	selectClause, ok := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
 	if !ok {
 		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
 		return false
 	}
 
-	for i := 1; i < len(queryExpr.QueryClauseList)-1; i++ {
+	for i := 1; i < lastClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
 		case *ast.BLangLetClause:
 			for _, variableDef := range clause.LetVarDeclarations {
@@ -694,6 +705,13 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 			}
 		case *ast.BLangWhereClause, *ast.BLangLimitClause:
 			// Query clause type and shape validation already happen in type resolution.
+		case *ast.BLangOrderByClause:
+			for j := range clause.OrderByKeyList {
+				orderKey := &clause.OrderByKeyList[j]
+				if !analyzeExpression(a, orderKey.Expression, nil) {
+					return false
+				}
+			}
 		}
 	}
 
@@ -705,6 +723,17 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	if !analyzeExpression(a, selectClause.Expression, selectExpectedTy) {
 		return false
 	}
+
+	if onConflictClause != nil {
+		if queryExpr.QueryConstructType != model.TypeKind_MAP {
+			a.semanticErr("on conflict clause is supported only for map query construct type", onConflictClause.GetPosition())
+			return false
+		}
+		if !analyzeExpression(a, onConflictClause.Expression, semtypes.Union(semtypes.ERROR, semtypes.NIL)) {
+			return false
+		}
+	}
+
 	return validateResolvedType(a, queryExpr, expectedType)
 }
 

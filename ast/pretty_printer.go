@@ -155,8 +155,14 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printWhereClause(t)
 	case *BLangLimitClause:
 		p.printLimitClause(t)
+	case *BLangOrderByClause:
+		p.printOrderByClause(t)
+	case *BLangOrderKey:
+		p.printOrderKey(t)
 	case *BLangSelectClause:
 		p.printSelectClause(t)
+	case *BLangOnConflictClause:
+		p.printOnConflictClause(t)
 	case *BLangCheckedExpr:
 		p.printCheckedExpr(t)
 	case *BLangCheckPanickedExpr:
@@ -711,9 +717,47 @@ func (p *PrettyPrinter) printLimitClause(node *BLangLimitClause) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printOrderByClause(node *BLangOrderByClause) {
+	p.startNode()
+	p.printString("order-by-clause")
+	p.indentLevel++
+	for i := range node.OrderByKeyList {
+		p.PrintInner(&node.OrderByKeyList[i])
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printOrderKey(node *BLangOrderKey) {
+	p.startNode()
+	p.printString("order-key")
+	if node.IsAscending {
+		p.printString("ascending")
+	} else {
+		p.printString("descending")
+	}
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printSelectClause(node *BLangSelectClause) {
 	p.startNode()
 	p.printString("select-clause")
+	p.indentLevel++
+	if node.Expression != nil {
+		p.PrintInner(node.Expression)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printOnConflictClause(node *BLangOnConflictClause) {
+	p.startNode()
+	p.printString("on-conflict-clause")
 	p.indentLevel++
 	if node.Expression != nil {
 		p.PrintInner(node.Expression)
