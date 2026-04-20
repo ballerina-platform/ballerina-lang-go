@@ -19,6 +19,7 @@ package exec
 import (
 	"fmt"
 	"math"
+	"reflect"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
@@ -143,22 +144,11 @@ func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, op1 == nil && op2 == nil)
 		return
 	}
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 == v2)
-	default:
+	if reflect.TypeOf(op1) != reflect.TypeOf(op2) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, false)
+		return
 	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.Compare(op1, op2) == values.CmpEQ)
 }
 
 func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
@@ -167,22 +157,11 @@ func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, (op1 == nil) != (op2 == nil))
 		return
 	}
-	switch v1 := op1.(type) {
-	case int64:
-		v2 := op2.(int64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case float64:
-		v2 := op2.(float64)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case string:
-		v2 := op2.(string)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	case bool:
-		v2 := op2.(bool)
-		setOperandValue(ctx, binaryOp.LhsOp, frame, v1 != v2)
-	default:
+	if reflect.TypeOf(op1) != reflect.TypeOf(op2) {
 		setOperandValue(ctx, binaryOp.LhsOp, frame, true)
+		return
 	}
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.Compare(op1, op2) != values.CmpEQ)
 }
 
 func execBinaryOpGT(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
@@ -227,28 +206,12 @@ func execBinaryOpOr(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpRefEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	setOperandValue(ctx, binaryOp.LhsOp, frame, refEqual(op1, op2))
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.CompareRef(op1, op2) == values.CmpEQ)
 }
 
 func execBinaryOpRefNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	setOperandValue(ctx, binaryOp.LhsOp, frame, !refEqual(op1, op2))
-}
-
-func refEqual(op1, op2 values.BalValue) bool {
-	if op1 == nil && op2 == nil {
-		return true
-	}
-	if op1 == nil || op2 == nil {
-		return false
-	}
-	if f1, ok := op1.(*values.Function); ok {
-		if f2, ok := op2.(*values.Function); ok {
-			return f1.LookupKey == f2.LookupKey
-		}
-		return false
-	}
-	return op1 == op2
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.CompareRef(op1, op2) != values.CmpEQ)
 }
 
 func execBinaryOpBitwiseAnd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
