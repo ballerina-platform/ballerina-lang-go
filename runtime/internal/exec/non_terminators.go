@@ -187,7 +187,8 @@ func castValue(value values.BalValue, targetType semtypes.SemType, reg *modules.
 	case semtypes.IsSubtypeSimple(targetType, semtypes.DECIMAL):
 		return toDecimal(value)
 	}
-	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: unsupported target type %s", semtypes.ToString(typeCtx, targetType))))
+	panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast value of type %s to %s",
+		semtypes.ToString(typeCtx, valueType), semtypes.ToString(typeCtx, targetType))))
 }
 
 func toInt(value any) int64 {
