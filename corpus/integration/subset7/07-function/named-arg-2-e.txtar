@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: no such parameter y
+  --> named-arg-2-e.bal:24:20
+   |
+24 |     io:println(foo(y = 10, x = 100)); // @error
+   |                    ^^^^^^

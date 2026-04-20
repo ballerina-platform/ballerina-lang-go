@@ -16,7 +16,7 @@ main() -> nil{
     return;
   }
 }
-foo(int) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+foo(int) -> any{
   bb0 {
     %0 = n;
     return;

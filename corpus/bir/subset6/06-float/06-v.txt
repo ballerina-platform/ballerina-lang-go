@@ -79,7 +79,7 @@ main() -> nil{
     return;
   }
 }
-aa(boolean,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+aa(boolean,any,any) -> any{
   bb0 {
     b ? bb1 : bb2;
   }
@@ -95,7 +95,7 @@ aa(boolean,nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|
     return;
   }
 }
-fa(boolean,float,float) -> nil|boolean|int|float|decimal|string|typedesc|handle|function|regexp|future|stream|list|mapping|table|xml|object{
+fa(boolean,float,float) -> any{
   bb0 {
     b ? bb1 : bb2;
   }

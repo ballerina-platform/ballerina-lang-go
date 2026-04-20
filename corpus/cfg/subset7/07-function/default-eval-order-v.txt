@@ -1,0 +1,30 @@
+(foo
+  (bb0 () ()
+    (return
+      (binary-expr +
+        (simple-var-ref x)
+        (simple-var-ref y)))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (invocation foo (
+          (invocation nextVal ()))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref counter))))
+  )
+)
+(nextVal
+  (bb0 () ()
+    (assignment
+      (simple-var-ref counter)
+      (binary-expr +
+        (simple-var-ref counter)
+        (literal 1)))
+    (return
+      (simple-var-ref counter))
+  )
+)

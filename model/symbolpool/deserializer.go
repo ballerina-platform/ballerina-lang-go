@@ -246,6 +246,12 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	for i := int64(0); i < paramCount; i++ {
 		paramTypes[i] = sr.readType()
 	}
+	var nameCount int64
+	read(sr.r, &nameCount)
+	paramNames := make([]string, nameCount)
+	for i := int64(0); i < nameCount; i++ {
+		paramNames[i] = sr.readStringCP()
+	}
 	returnType := sr.readType()
 	var hasRestParam bool
 	read(sr.r, &hasRestParam)
@@ -256,6 +262,7 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 
 	sig := model.FunctionSignature{
 		ParamTypes:    paramTypes,
+		ParamNames:    paramNames,
 		ReturnType:    returnType,
 		RestParamType: restParamType,
 	}

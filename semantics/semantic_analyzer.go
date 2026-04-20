@@ -985,31 +985,55 @@ func analyzeInvocation[A analyzer](a A, invocation *ast.BLangInvocation, expecte
 	// Get the function type from the symbol
 	symbol := invocation.Symbol()
 	fnTy := a.ctx().SymbolType(symbol)
-	if fnTy == nil || !semtypes.IsSubtypeSimple(fnTy, semtypes.FUNCTION) {
-		a.semanticErr("function not found: "+invocation.Name.GetValue(), invocation.GetPosition())
-		return false
-	}
-	tyCtx := a.tyCtx()
 	paramListTy := semtypes.FunctionParamListType(a.tyCtx(), fnTy)
+
+	fnSymbol, isDirectCall := a.ctx().GetSymbol(symbol).(model.FunctionSymbol)
+	// TODO: ideally we need to unify these when we no longer has restrictions on lambdas
+	if !isDirectCall {
+		return analyzeLambdaInvocation(a, invocation, paramListTy, expectedType)
+	}
+	return analyzeDirectInvocation(a, invocation, fnSymbol, paramListTy, expectedType)
+}
+
+func analyzeDirectInvocation[A analyzer](a A, invocation *ast.BLangInvocation, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
+	signature := fnSymbol.Signature()
+	tyCtx := a.tyCtx()
+	for i, arg := range invocation.ArgExprs {
+		switch arg := arg.(type) {
+		case *ast.BLangNamedArgsExpression:
+			name := arg.Name.Value
+			targetIndex := -1
+			for j, each := range signature.ParamNames {
+				if each == name {
+					targetIndex = j
+					break
+				}
+			}
+			key := semtypes.IntConst(int64(targetIndex))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		default:
+			key := semtypes.IntConst(int64(i))
+			if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
+				return false
+			}
+		}
+	}
+
+	// Validate the resolved return type against expected type
+	return validateResolvedType(a, invocation, expectedType)
+}
+
+func analyzeLambdaInvocation[A analyzer](a A, invocation *ast.BLangInvocation, paramListTy, expectedType semtypes.SemType) bool {
+	tyCtx := a.tyCtx()
+
 	// Validate each argument expression
-	argTys := make([]semtypes.SemType, len(invocation.ArgExprs))
 	for i, arg := range invocation.ArgExprs {
 		key := semtypes.IntConst(int64(i))
 		if !analyzeExpression(a, arg, semtypes.ListMemberTypeInnerVal(tyCtx, paramListTy, key)) {
 			return false
 		}
-		argTys[i] = arg.GetDeterminedType()
-	}
-
-	// Pad arg types for defaultable params
-	argTys = padArgTypesForDefaults(a, symbol, argTys, invocation.GetPosition())
-
-	// Validate argument types against function parameter types
-	argLd := semtypes.NewListDefinition()
-	argListTy := argLd.DefineListTypeWrapped(a.tyCtx().Env(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
-	if !semtypes.IsSubtype(tyCtx, argListTy, paramListTy) {
-		a.semanticErr("incompatible arguments for function call", invocation.GetPosition())
-		return false
 	}
 
 	// Validate the resolved return type against expected type

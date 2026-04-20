@@ -17,12 +17,13 @@
 package compile
 
 import (
+	"fmt"
+	"sync"
+
 	"ballerina-lang-go/context"
 	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"fmt"
-	"sync"
 )
 
 var ArrayPackageID = model.NewPackageID(
@@ -36,7 +37,7 @@ const PackageName = "lang.array"
 
 func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*ArrayPackageID)
-	pushSymbol := model.NewGenericFunctionSymbol("push", space, createPushMonomorphizer(ctx))
+	pushSymbol := model.NewGenericFunctionSymbol("push", space, []string{"arr", "vals"}, createPushMonomorphizer(ctx))
 	space.AddSymbol("push", pushSymbol)
 	lenghtSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.LIST},
@@ -56,7 +57,6 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 	nextIndex := 0
 
 	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
-
 		if len(args) == 0 {
 			ctx.SemanticError("push() requires at least 1 argument", nil)
 		}

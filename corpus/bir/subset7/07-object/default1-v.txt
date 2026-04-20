@@ -49,37 +49,46 @@ main() -> nil{
     %6 = $default$0() -> bb5;
   }
   bb5 {
-    %7 = $default$1(%6) -> bb6;
+    $desugar$0 = %6;
+    %8 = $desugar$0;
+    %9 = $default$1(%8) -> bb6;
   }
   bb6 {
-    %8 = bar(f,%6,%7) -> bb7;
+    $desugar$1 = %9;
+    %11 = $desugar$0;
+    %12 = $desugar$1;
+    %13 = bar(f,%11,%12) -> bb7;
   }
   bb7 {
-    %9 = %8;
-    %10 = println(%9) -> bb8;
+    %14 = %13;
+    %15 = println(%14) -> bb8;
   }
   bb8 {
-    %11 = ConstantLoad 5
-    %12 = %11;
-    %13 = $default$1(%12) -> bb9;
+    %16 = ConstantLoad 5
+    $desugar$2 = %16;
+    %18 = $desugar$2;
+    %19 = $default$1(%18) -> bb9;
   }
   bb9 {
-    %14 = bar(f,%12,%13) -> bb10;
+    $desugar$3 = %19;
+    %21 = $desugar$2;
+    %22 = $desugar$3;
+    %23 = bar(f,%21,%22) -> bb10;
   }
   bb10 {
-    %15 = %14;
-    %16 = println(%15) -> bb11;
+    %24 = %23;
+    %25 = println(%24) -> bb11;
   }
   bb11 {
-    %17 = ConstantLoad 1
-    %18 = %17;
-    %19 = ConstantLoad 5
-    %20 = %19;
-    %21 = bar(f,%18,%20) -> bb12;
+    %26 = ConstantLoad 1
+    %27 = %26;
+    %28 = ConstantLoad 5
+    %29 = %28;
+    %30 = bar(f,%27,%29) -> bb12;
   }
   bb12 {
-    %22 = %21;
-    %23 = println(%22) -> bb13;
+    %31 = %30;
+    %32 = println(%31) -> bb13;
   }
   bb13 {
     return;
