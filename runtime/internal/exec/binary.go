@@ -19,7 +19,6 @@ package exec
 import (
 	"fmt"
 	"math"
-	"reflect"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
@@ -140,28 +139,12 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, op1 == nil && op2 == nil)
-		return
-	}
-	if reflect.TypeOf(op1) != reflect.TypeOf(op2) {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, false)
-		return
-	}
-	setOperandValue(ctx, binaryOp.LhsOp, frame, values.Compare(op1, op2) == values.CmpEQ)
+	setOperandValue(ctx, binaryOp.LhsOp, frame, values.Equal(op1, op2))
 }
 
 func execBinaryOpNotEqual(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, (op1 == nil) != (op2 == nil))
-		return
-	}
-	if reflect.TypeOf(op1) != reflect.TypeOf(op2) {
-		setOperandValue(ctx, binaryOp.LhsOp, frame, true)
-		return
-	}
-	setOperandValue(ctx, binaryOp.LhsOp, frame, values.Compare(op1, op2) != values.CmpEQ)
+	setOperandValue(ctx, binaryOp.LhsOp, frame, !values.Equal(op1, op2))
 }
 
 func execBinaryOpGT(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {

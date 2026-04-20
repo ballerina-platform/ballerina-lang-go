@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"reflect"
 )
 
 type CompareResult int8
@@ -88,10 +89,19 @@ func CompareRef(x, y BalValue) CompareResult {
 		return CmpEQ
 	case float64:
 		yf, ok := y.(float64)
-		if !ok || !floatCompareRef(xv, yf) {
+		if !ok || !compareFloatRef(xv, yf) {
 			return CmpUN
 		}
 		return CmpEQ
+	case *big.Rat:
+		yDec, ok := y.(*big.Rat)
+		if !ok {
+			return CmpUN
+		}
+		if xv.Cmp(yDec) == 0 {
+			return CmpEQ
+		}
+		return CmpUN
 	}
 	if x == y {
 		return CmpEQ
@@ -99,7 +109,23 @@ func CompareRef(x, y BalValue) CompareResult {
 	return CmpUN
 }
 
-func floatCompareRef(a, b float64) bool {
+func Equal(x, y BalValue) bool {
+	if x == nil || y == nil {
+		return x == nil && y == nil
+	}
+	if reflect.TypeOf(x) != reflect.TypeOf(y) {
+		return false
+	}
+	if xf, ok := x.(float64); ok {
+		yf := y.(float64)
+		if math.IsNaN(xf) && math.IsNaN(yf) {
+			return true
+		}
+	}
+	return Compare(x, y) == CmpEQ
+}
+
+func compareFloatRef(a, b float64) bool {
 	if math.IsNaN(a) && math.IsNaN(b) {
 		return true
 	}
@@ -107,11 +133,10 @@ func floatCompareRef(a, b float64) bool {
 }
 
 func compareFloat(a, b float64) CompareResult {
-	if math.IsNaN(a) {
-		if math.IsNaN(b) {
-			return CmpEQ
-		}
-	} else if a == b {
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return CmpUN
+	}
+	if a == b {
 		return CmpEQ
 	}
 	if a < b {
