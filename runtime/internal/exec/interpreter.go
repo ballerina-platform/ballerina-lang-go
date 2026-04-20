@@ -22,25 +22,24 @@ import (
 )
 
 func Interpret(pkg bir.BIRPackage, reg *modules.Registry) (err error) {
-	reg.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
+	ctx := NewContext(reg)
+	ctx.RegisterModule(pkg.PackageID, modules.NewBIRModule(&pkg))
 	// Execute init function to initialize globals
 	if pkg.InitFunction != nil {
-		callStack := &callStack{elements: make([]*Frame, 0, 32)}
 		defer func() {
 			if r := recover(); r != nil {
-				err = getFormattedError(r, callStack)
+				err = getFormattedError(ctx, r)
 			}
 		}()
-		executeFunction(*pkg.InitFunction, nil, reg, callStack, nil)
+		executeFunction(ctx, *pkg.InitFunction, nil, nil)
 	}
 	if pkg.MainFunction != nil {
-		callStack := &callStack{elements: make([]*Frame, 0, 32)}
 		defer func() {
 			if r := recover(); r != nil {
-				err = getFormattedError(r, callStack)
+				err = getFormattedError(ctx, r)
 			}
 		}()
-		executeFunction(*pkg.MainFunction, nil, reg, callStack, nil)
+		executeFunction(ctx, *pkg.MainFunction, nil, nil)
 	}
 	return err
 }
