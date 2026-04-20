@@ -1372,19 +1372,27 @@ func validateObjInclusions[A analyzer](a A, inclusions []model.SymbolRef, positi
 	}
 }
 
+func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.SymbolRef) bool {
+	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
+	fnTy := a.ctx().SymbolType(symbol)
+	return semtypes.IsSubtype(tyCtx, fnTy, isolatedTop)
+}
+
 // isIsolatedFuncInner validates an isolated function body: every variable reference
 // must resolve to a constant or to a variable declared within the body itself.
 func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 	locals := make(map[model.SymbolRef]struct{})
 	tyCtx := a.tyCtx()
-	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
 	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangSimpleVariableDef:
 			locals[inner.Var.Symbol()] = struct{}{}
 		case *ast.BLangInvocation:
-			fnTy := a.ctx().SymbolType(inner.Symbol())
-			if !semtypes.IsSubtype(tyCtx, fnTy, isolatedTop) {
+			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
+				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
+			}
+		case *ast.BLangRemoteMethodCallAction:
+			if !isIsolatedInvocation(a, tyCtx, inner.MethodSymbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
 			}
 		case *ast.BLangSimpleVarRef:
@@ -1392,6 +1400,9 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 			varSym, ok := sym.(*model.ValueSymbol)
 			if !ok {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
+				return true
+			}
+			if varSym.Name() == "self" {
 				return true
 			}
 			if varSym.IsConst() {
