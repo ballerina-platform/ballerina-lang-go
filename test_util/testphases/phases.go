@@ -21,7 +21,6 @@ package testphases
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
@@ -75,7 +74,7 @@ func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*P
 	// Register source file with DiagnosticEnv
 	content, err := os.ReadFile(inputPath)
 	if err == nil {
-		cx.DiagnosticEnv().RegisterFile(filepath.Base(inputPath), text.NewStringTextDocument(string(content)))
+		cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
 	}
 
 	// Phase 1: Parse

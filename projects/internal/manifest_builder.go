@@ -395,10 +395,7 @@ func (b *ManifestBuilder) parseStringArray(key string) []string {
 // addDiagnostic adds a diagnostic message to the builder.
 func (b *ManifestBuilder) addDiagnostic(severity diagnostics.DiagnosticSeverity, message string) {
 	info := diagnostics.NewDiagnosticInfo(nil, message, severity)
-	loc := diagnostics.NewLocation(nil,
-		filepath.Join(b.projectPath, projects.BallerinaTomlFile),
-		0, 0,
-	)
+	loc := diagnostics.NewBallerinaTomlLocation(0, 0)
 	diag := diagnostics.NewDefaultDiagnostic(info, loc, nil)
 	b.diagnostics = append(b.diagnostics, diag)
 }

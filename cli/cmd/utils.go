@@ -127,6 +127,10 @@ func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, noColors
 		_, _ = fmt.Fprintln(w)
 		return
 	}
+	if !diagnostics.LocationHasSource(location) {
+		_, _ = fmt.Fprintf(w, "  %s-->%s %s\n\n", s.cyan, s.reset, de.FileName(location))
+		return
+	}
 
 	loc := buildDiagnosticLocation(
 		de.FileName(location),

@@ -89,7 +89,7 @@ func (lm lineMapImpl) positionRangeCheck(position int) error {
 }
 
 func (lm lineMapImpl) lineRangeCheck(lineNo int) error {
-	if lineNo < 0 || lineNo > lm.length {
+	if lineNo < 0 || lineNo >= lm.length {
 		return errors.NewIndexOutOfBoundsError(lineNo, lm.length)
 	}
 	return nil

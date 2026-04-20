@@ -64,6 +64,10 @@ func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, de *diag
 		_, _ = fmt.Fprintln(w)
 		return
 	}
+	if !diagnostics.LocationHasSource(location) {
+		_, _ = fmt.Fprintf(w, "  --> %s\n\n", de.FileName(location))
+		return
+	}
 
 	loc := buildDiagnosticLocation(
 		de.FileName(location),

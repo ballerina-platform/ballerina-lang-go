@@ -103,10 +103,6 @@ func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	return nodeBuilder
 }
 
-func builtinPos(de *diagnostics.DiagnosticEnv) diagnostics.Location {
-	return diagnostics.NewLocation(de, "<built-in>", -1, -1)
-}
-
 var _ tree.NodeTransformer[BLangNode] = &NodeBuilder{}
 
 const (
@@ -995,7 +991,7 @@ func (n *NodeBuilder) createBLangNameReference(node tree.Node) []BLangIdentifier
 	iToken := node.(tree.Token)
 
 	emptyStr := ""
-	pkgAlias := createIdentifier(builtinPos(n.de()), &emptyStr, &emptyStr)
+	pkgAlias := createIdentifier(diagnostics.NewBuiltinLocation(), &emptyStr, &emptyStr)
 	name := createIdentifierFromToken(getPosition(n.de(), iToken), iToken)
 	return []BLangIdentifier{pkgAlias, name}
 }
@@ -1437,7 +1433,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 	} else {
 		// Default return type is nil when not specified
 		nilReturnType := &BLangValueType{TypeKind: model.TypeKind_NIL}
-		nilReturnType.pos = builtinPos(n.de())
+		nilReturnType.pos = diagnostics.NewBuiltinLocation()
 		bLFunction.SetReturnTypeDescriptor(nilReturnType)
 	}
 }
@@ -1538,7 +1534,7 @@ func (n *NodeBuilder) TransformImportDeclaration(importDeclarationNode *tree.Imp
 	importDcl.OrgName = &orgIdentifier
 
 	// 7. Set version (always empty for import declarations)
-	emptyVersion := createIdentifier(builtinPos(n.de()), nil, nil)
+	emptyVersion := createIdentifier(diagnostics.NewBuiltinLocation(), nil, nil)
 	importDcl.Version = &emptyVersion
 
 	// 8. Handle alias/prefix
@@ -1856,7 +1852,7 @@ func (n *NodeBuilder) TransformWhileStatement(whileStatementNode *tree.WhileStat
 		onFailClauseNode := whileStatementNode.OnFailClause()
 		bLWhile.SetOnFailClause(n.TransformOnFailClause(onFailClauseNode).(*BLangOnFailClause))
 	} else {
-		bLWhile.OnFailClause.pos = builtinPos(n.de())
+		bLWhile.OnFailClause.pos = diagnostics.NewBuiltinLocation()
 	}
 	return bLWhile
 }
@@ -2159,7 +2155,7 @@ func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tr
 		simpleVar.Name.pos = getPosition(n.de(), paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
-		simpleVar.Name.pos = builtinPos(n.de())
+		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
 	simpleVar.FlagSet.Add(model.Flag_DEFAULTABLE_PARAM)
@@ -2191,7 +2187,7 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
 		// Param doesn't have a name and also is not a missing node
 		// Therefore, assigning the built-in location
-		simpleVar.Name.pos = builtinPos(n.de())
+		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
 	simpleVar.FlagSet.Add(model.Flag_REQUIRED_PARAM)
@@ -2218,7 +2214,7 @@ func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParamet
 		simpleVar.Name.pos = getPosition(n.de(), paramName)
 		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
 	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
-		simpleVar.Name.pos = builtinPos(n.de())
+		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
 	simpleVar.FlagSet.Add(model.Flag_REST_PARAM)
@@ -2802,7 +2798,7 @@ func (n *NodeBuilder) TransformFunctionTypeDescriptor(functionTypeDescriptorNode
 			funcType.ReturnTypeDescriptor = n.createTypeNode(retNode.Type())
 		} else {
 			retType := &BLangValueType{TypeKind: model.TypeKind_NIL}
-			retType.pos = builtinPos(n.de())
+			retType.pos = diagnostics.NewBuiltinLocation()
 			funcType.ReturnTypeDescriptor = retType
 		}
 	} else {
@@ -2868,7 +2864,7 @@ func (n *NodeBuilder) TransformFunctionSignature(functionSignatureNode *tree.Fun
 func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprNode *tree.ExplicitAnonymousFunctionExpressionNode) BLangNode {
 	bLFunction := &BLangFunction{}
 	name := n.cx.GetNextAnonymousFunctionKey(n.PackageID)
-	ident := createIdentifier(builtinPos(n.de()), &name, &name)
+	ident := createIdentifier(diagnostics.NewBuiltinLocation(), &name, &name)
 	bLFunction.Name = &ident
 	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
 	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(model.FunctionBodyNode)

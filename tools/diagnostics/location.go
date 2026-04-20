@@ -28,7 +28,8 @@ type Location struct {
 }
 
 // NewLocation creates a new Location. The DiagnosticEnv maps the fileName
-// to an integer index for compact storage.
+// to an integer index for compact storage. The file must already be
+// registered via DiagnosticEnv.RegisterFile.
 func NewLocation(de *DiagnosticEnv, fileName string, startOffset, endOffset int) Location {
 	return Location{
 		fileIndex:   de.FileIndex(fileName),
@@ -37,9 +38,23 @@ func NewLocation(de *DiagnosticEnv, fileName string, startOffset, endOffset int)
 	}
 }
 
-// IsLocationEmpty returns true if the Location has no valid file reference.
+// NewBuiltinLocation returns a Location for a compiler-synthesized source
+// element that has no backing file.
+func NewBuiltinLocation() Location {
+	return Location{fileIndex: BuiltinFileIndex, startOffset: -1, endOffset: -1}
+}
+
+// NewBallerinaTomlLocation returns a Location in the project's Ballerina.toml.
+// Offsets are stored as given; line/column resolution is not supported.
+func NewBallerinaTomlLocation(startOffset, endOffset int) Location {
+	return Location{fileIndex: BallerinaTomlFileIndex, startOffset: startOffset, endOffset: endOffset}
+}
+
+// IsLocationEmpty returns true if the Location has no associated source.
+// Built-in and Ballerina.toml sentinel locations are not considered empty
+// because they still carry a meaningful file name for diagnostics.
 func IsLocationEmpty(loc Location) bool {
-	return loc.fileIndex < 0
+	return loc.fileIndex == UnknownFileIndex
 }
 
 // LocationHasSource returns true if the Location refers to a registered

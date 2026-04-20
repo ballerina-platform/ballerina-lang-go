@@ -575,7 +575,7 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 		absPath := filepath.Join(absProjectDir, relPath)
 		content, err := os.ReadFile(absPath)
 		if err == nil {
-			de.RegisterFile(filepath.Base(absPath), text.NewStringTextDocument(string(content)))
+			de.RegisterFile(absPath, text.NewStringTextDocument(string(content)))
 		}
 	}
 
