@@ -20,20 +20,60 @@ main() -> nil{
     %14 = println(%13) -> bb2;
   }
   bb2 {
-    %15 = ConstantLoad foo
-    s1 = %15;
-    %17 = ConstantLoad bar
-    s2 = %17;
-    %19 = == s1 s1;
-    %20 = %19;
-    %21 = println(%20) -> bb3;
+    %16 = f1;
+    %17 = f2;
+    %15 = < %16 %17;
+    %18 = %15;
+    %19 = println(%18) -> bb3;
   }
   bb3 {
-    %22 = != s1 s2;
-    %23 = %22;
+    %21 = f2;
+    %22 = f1;
+    %20 = > %21 %22;
+    %23 = %20;
     %24 = println(%23) -> bb4;
   }
   bb4 {
+    %26 = f1;
+    %27 = f2;
+    %25 = == %26 %27;
+    %28 = %25;
+    %29 = println(%28) -> bb5;
+  }
+  bb5 {
+    %30 = ConstantLoad 1/1
+    d1 = %30;
+    %32 = ConstantLoad 1/1
+    d2 = %32;
+    %35 = d1;
+    %36 = d2;
+    %34 = == %35 %36;
+    %37 = %34;
+    %38 = println(%37) -> bb6;
+  }
+  bb6 {
+    %40 = d1;
+    %41 = ConstantLoad 2/1
+    %42 = %41;
+    %39 = == %40 %42;
+    %43 = %39;
+    %44 = println(%43) -> bb7;
+  }
+  bb7 {
+    %45 = ConstantLoad foo
+    s1 = %45;
+    %47 = ConstantLoad bar
+    s2 = %47;
+    %49 = == s1 s1;
+    %50 = %49;
+    %51 = println(%50) -> bb8;
+  }
+  bb8 {
+    %52 = != s1 s2;
+    %53 = %52;
+    %54 = println(%53) -> bb9;
+  }
+  bb9 {
     return;
   }
 }

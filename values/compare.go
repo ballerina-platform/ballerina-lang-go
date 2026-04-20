@@ -72,55 +72,61 @@ func Compare(x, y BalValue) CompareResult {
 	}
 }
 
-func CompareRef(x, y BalValue) CompareResult {
+func Equal(x, y BalValue) bool {
+	if x == nil || y == nil {
+		return x == nil && y == nil
+	}
+	if x == y {
+		return true
+	}
+	return equalValue(x, y)
+}
+
+func RefEqual(x, y BalValue) bool {
 	if x == nil && y == nil {
-		return CmpEQ
+		return true
 	}
 	if x == nil || y == nil {
-		return CmpUN
+		return false
 	}
 	switch xv := x.(type) {
 	case *Function:
 		yFn, ok := y.(*Function)
-		if !ok || xv.LookupKey != yFn.LookupKey {
-			return CmpUN
-		}
-		return CmpEQ
+		return ok && xv.LookupKey == yFn.LookupKey
 	case float64:
 		yf, ok := y.(float64)
-		if !ok || !floatCompareRef(xv, yf) {
-			return CmpUN
-		}
-		return CmpEQ
+		return ok && compareFloatRef(xv, yf)
+	case *big.Rat:
+		yDec, ok := y.(*big.Rat)
+		return ok && xv.Cmp(yDec) == 0
+	default:
+		return x == y
 	}
-	if x == y {
-		return CmpEQ
-	}
-	return CmpUN
 }
 
-func floatCompareRef(a, b float64) bool {
-	if math.IsNaN(a) && math.IsNaN(b) {
-		return true
+func equalValue(x, y BalValue) bool {
+	switch v1 := x.(type) {
+	case int64:
+		v2, ok := y.(int64)
+		return ok && v1 == v2
+	case float64:
+		v2, ok := y.(float64)
+		return ok && (v1 == v2 || (math.IsNaN(v1) && math.IsNaN(v2)))
+	case bool:
+		v2, ok := y.(bool)
+		return ok && v1 == v2
+	case string:
+		v2, ok := y.(string)
+		return ok && v1 == v2
+	case *big.Rat:
+		v2, ok := y.(*big.Rat)
+		return ok && v1.Cmp(v2) == 0
+	case *List:
+		v2, ok := y.(*List)
+		return ok && compareListValues(v1, v2) == CmpEQ
+	default:
+		panic(NewErrorWithMessage(fmt.Sprintf("unsupported type for comparison: %T", x)))
 	}
-	return math.Float64bits(a) == math.Float64bits(b)
-}
-
-func compareFloat(a, b float64) CompareResult {
-	if math.IsNaN(a) {
-		if math.IsNaN(b) {
-			return CmpEQ
-		}
-	} else if a == b {
-		return CmpEQ
-	}
-	if a < b {
-		return CmpLT
-	}
-	if a > b {
-		return CmpGT
-	}
-	return CmpUN
 }
 
 func compareListValues(x, y *List) CompareResult {
@@ -140,4 +146,21 @@ func compareListValues(x, y *List) CompareResult {
 		return CmpGT
 	}
 	return CmpEQ
+}
+
+func compareFloat(a, b float64) CompareResult {
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return CmpUN
+	}
+	if a < b {
+		return CmpLT
+	}
+	return CmpGT
+}
+
+func compareFloatRef(a, b float64) bool {
+	if math.IsNaN(a) && math.IsNaN(b) {
+		return true
+	}
+	return math.Float64bits(a) == math.Float64bits(b)
 }

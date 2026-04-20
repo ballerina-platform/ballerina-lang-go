@@ -22,6 +22,39 @@
           (binary-expr !=
             (simple-var-ref f1)
             (simple-var-ref f2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref f1)
+            (simple-var-ref f2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref f2)
+            (simple-var-ref f1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref f1)
+            (simple-var-ref f2)))))
+      (var-def
+        (variable d1 (type
+          (value-type decimal)) (expr
+          (literal 1d))))
+      (var-def
+        (variable d2 (type
+          (value-type decimal)) (expr
+          (literal 1.00d))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref d1)
+            (simple-var-ref d2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref d1)
+            (literal 2d)))))
       (var-def
         (variable s1 (type
           (value-type string)) (expr

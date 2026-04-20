@@ -1,0 +1,70 @@
+(package
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable nan1 (type
+          (value-type float)) (expr
+          (binary-expr /
+            (literal 0)
+            (literal 0)))))
+      (var-def
+        (variable nan2 (type
+          (value-type float)) (expr
+          (binary-expr /
+            (unary-expr -
+              (literal 0))
+            (literal 0)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ==
+            (simple-var-ref nan1)
+            (simple-var-ref nan2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !=
+            (simple-var-ref nan1)
+            (simple-var-ref nan2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr <
+            (simple-var-ref nan1)
+            (literal 1)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr >
+            (simple-var-ref nan1)
+            (literal 1)))))
+      (var-def
+        (variable d1 (type
+          (value-type any)) (expr
+          (literal 1/1))))
+      (var-def
+        (variable d2 (type
+          (value-type any)) (expr
+          (literal 1/1))))
+      (var-def
+        (variable d3 (type
+          (value-type any)) (expr
+          (literal 2/1))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (simple-var-ref d1)
+            (simple-var-ref d2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (simple-var-ref d1)
+            (simple-var-ref d2)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr ===
+            (simple-var-ref d1)
+            (simple-var-ref d3)))))
+      (expression-stmt
+        (invocation io println (
+          (binary-expr !==
+            (simple-var-ref d1)
+            (simple-var-ref d3))))))))

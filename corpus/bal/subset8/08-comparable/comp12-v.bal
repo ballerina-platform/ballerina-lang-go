@@ -13,26 +13,22 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
-// @productions equality boolean equality-expr decimal float relational-expr string-literal return-stmt function-call-expr local-var-decl-stmt
+// @productions float decimal exact-equality equality-expr relational-expr local-var-decl-stmt
 import ballerina/io;
 
 public function main() {
-    float f1 = 1.5;
-    float f2 = 2.0;
-    io:println(f1 == f1); // @output true
-    io:println(f1 != f2); // @output true
-    io:println(f1 < f2); // @output true
-    io:println(f2 > f1); // @output true
-    io:println(f1 == f2); // @output false
+    float nan1 = 0.0 / 0.0;
+    float nan2 = -0.0 / 0.0;
+    io:println(nan1 == nan2); // @output true
+    io:println(nan1 != nan2); // @output false
+    io:println(nan1 < 1.0); // @output false
+    io:println(nan1 > 1.0); // @output false
 
-    decimal d1 = 1d;
-    decimal d2 = 1.00d;
-    io:println(d1 == d2); // @output true
-    io:println(d1 == 2d); // @output false
-
-    string s1 = "foo";
-    string s2 = "bar";
-    io:println(s1 == s1); // @output true
-    io:println(s1 != s2); // @output true
+    any d1 = 1d;
+    any d2 = 1.00d;
+    any d3 = 2d;
+    io:println(d1 === d2); // @output true
+    io:println(d1 !== d2); // @output false
+    io:println(d1 === d3); // @output false
+    io:println(d1 !== d3); // @output true
 }
