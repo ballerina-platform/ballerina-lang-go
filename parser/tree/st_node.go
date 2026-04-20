@@ -72,17 +72,12 @@ type STToken interface {
 //go:generate ../../tree-gen -config ../nodes.json -type st-node -template ../../compiler-tools/tree-gen/templates/st-node.go.tmpl -output st_node_gen.go -util-template ../../compiler-tools/tree-gen/templates/st-node-util.go.tmpl -util-output st_node_util_gen.go
 type (
 	STTokenBase struct {
-		kind                common.SyntaxKind
-		width               uint16
-		diagnostics         []STNodeDiagnostic
-		flags               uint8
-		leadingMinutiae     STNode
-		trailingMinutiae    STNode
-		lookbackTokenCount  int
-		lookaheadTokenCount int
-		// widthWithLeadingMinutiae  uint16
-		// widthWithTrailingMinutiae uint16
-		// widthWithMinutiae         uint16
+		diagnostics      []STNodeDiagnostic
+		leadingMinutiae  STNode
+		trailingMinutiae STNode
+		kind             common.SyntaxKind
+		width            uint16
+		flags            uint8
 	}
 
 	STMissingToken struct {
@@ -107,7 +102,7 @@ type (
 	}
 
 	STIdentifierToken struct {
-		STToken
+		STTokenBase
 		text string
 	}
 
@@ -235,28 +230,24 @@ func (t *STNodeBase) CreateFacade(position int, parent NonTerminalNode) Node {
 func (t *STTokenBase) ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken {
 	// FIXME: add lenghts
 	return createNodeAndAddChildren(&STTokenBase{
-		kind:                t.kind,
-		width:               t.width,
-		diagnostics:         t.diagnostics,
-		flags:               t.flags,
-		leadingMinutiae:     leadingMinutiae,
-		trailingMinutiae:    trailingMinutiae,
-		lookbackTokenCount:  t.lookbackTokenCount,
-		lookaheadTokenCount: t.lookaheadTokenCount,
+		kind:             t.kind,
+		width:            t.width,
+		diagnostics:      t.diagnostics,
+		flags:            t.flags,
+		leadingMinutiae:  leadingMinutiae,
+		trailingMinutiae: trailingMinutiae,
 	}, leadingMinutiae, trailingMinutiae).(*STTokenBase)
 }
 
 func (t *STMissingToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken {
 	return createNodeAndAddChildren(&STMissingToken{
 		STTokenBase: STTokenBase{
-			kind:                t.kind,
-			width:               t.width,
-			diagnostics:         t.diagnostics,
-			flags:               t.flags,
-			leadingMinutiae:     leadingMinutiae,
-			trailingMinutiae:    trailingMinutiae,
-			lookbackTokenCount:  t.lookbackTokenCount,
-			lookaheadTokenCount: t.lookaheadTokenCount,
+			kind:             t.kind,
+			width:            t.width,
+			diagnostics:      t.diagnostics,
+			flags:            t.flags,
+			leadingMinutiae:  leadingMinutiae,
+			trailingMinutiae: trailingMinutiae,
 		},
 	}, leadingMinutiae, trailingMinutiae).(*STMissingToken)
 }
@@ -286,14 +277,12 @@ func (t *STMissingToken) CreateFacade(position int, parent NonTerminalNode) Node
 func (t *STLiteralValueToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken {
 	return createNodeAndAddChildren(&STLiteralValueToken{
 		STTokenBase: STTokenBase{
-			kind:                t.kind,
-			width:               t.width,
-			diagnostics:         t.diagnostics,
-			flags:               t.flags,
-			leadingMinutiae:     leadingMinutiae,
-			trailingMinutiae:    trailingMinutiae,
-			lookbackTokenCount:  t.lookbackTokenCount,
-			lookaheadTokenCount: t.lookaheadTokenCount,
+			kind:             t.kind,
+			width:            t.width,
+			diagnostics:      t.diagnostics,
+			flags:            t.flags,
+			leadingMinutiae:  leadingMinutiae,
+			trailingMinutiae: trailingMinutiae,
 		},
 		text: t.text,
 	}, leadingMinutiae, trailingMinutiae).(*STLiteralValueToken)
@@ -302,14 +291,12 @@ func (t *STLiteralValueToken) ModifyWith(leadingMinutiae STNode, trailingMinutia
 func (t *STInvalidToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken {
 	return createNodeAndAddChildren(&STInvalidToken{
 		STTokenBase: STTokenBase{
-			kind:                t.kind,
-			width:               t.width,
-			diagnostics:         t.diagnostics,
-			flags:               t.flags,
-			leadingMinutiae:     leadingMinutiae,
-			trailingMinutiae:    trailingMinutiae,
-			lookbackTokenCount:  t.lookbackTokenCount,
-			lookaheadTokenCount: t.lookaheadTokenCount,
+			kind:             t.kind,
+			width:            t.width,
+			diagnostics:      t.diagnostics,
+			flags:            t.flags,
+			leadingMinutiae:  leadingMinutiae,
+			trailingMinutiae: trailingMinutiae,
 		},
 		tokenText: t.tokenText,
 	}, leadingMinutiae, trailingMinutiae).(*STInvalidToken)
@@ -327,17 +314,15 @@ func (t *STInvalidToken) CreateFacade(position int, parent NonTerminalNode) Node
 
 func (t *STIdentifierToken) ModifyWith(leadingMinutiae STNode, trailingMinutiae STNode) STToken {
 	// STIdentifierToken embeds STToken interface, need to extract the base
-	base := t.STToken.(*STTokenBase)
+	base := t.STTokenBase
 	return createNodeAndAddChildren(&STIdentifierToken{
-		STToken: &STTokenBase{
-			kind:                base.kind,
-			width:               base.width,
-			diagnostics:         base.diagnostics,
-			flags:               base.flags,
-			leadingMinutiae:     leadingMinutiae,
-			trailingMinutiae:    trailingMinutiae,
-			lookbackTokenCount:  base.lookbackTokenCount,
-			lookaheadTokenCount: base.lookaheadTokenCount,
+		STTokenBase: STTokenBase{
+			kind:             base.kind,
+			width:            base.width,
+			diagnostics:      base.diagnostics,
+			flags:            base.flags,
+			leadingMinutiae:  leadingMinutiae,
+			trailingMinutiae: trailingMinutiae,
 		},
 		text: t.text,
 	}, leadingMinutiae, trailingMinutiae).(*STIdentifierToken)
@@ -493,7 +478,7 @@ func CreateInvalidNodeMinutiae(invalidToken STToken) STNode {
 
 func CreateIdentifierToken(text string, leadingTrivia STNode, trailingTrivia STNode) STToken {
 	return createNodeAndAddChildren(&STIdentifierToken{
-		STToken: &STTokenBase{
+		STTokenBase: STTokenBase{
 			kind:             common.IDENTIFIER_TOKEN,
 			width:            uint16(len(text)),
 			leadingMinutiae:  leadingTrivia,
