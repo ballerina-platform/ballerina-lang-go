@@ -60,9 +60,7 @@ var (
 	update = flag.Bool("update", false, "update corpus integration test outputs")
 
 	// Skip tests that cause unrecoverable Go runtime errors
-	skipIntegrationTests = []string{
-		"subset8/08-const/const3-v.bal",
-	}
+	skipIntegrationTests []string
 )
 
 func TestMain(m *testing.M) {
