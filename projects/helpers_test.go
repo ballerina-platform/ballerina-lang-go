@@ -40,7 +40,16 @@ func loadProject(path string, config ...projects.ProjectLoadConfig) (projects.Pr
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	return projects.Load(fsys, ballerinaHomeFs, path, config...)
+	// Merge BallerinaHomeFs into config if not already set
+	var cfg projects.ProjectLoadConfig
+	if len(config) > 0 {
+		cfg = config[0]
+	}
+	if cfg.BallerinaHomeFs == nil {
+		cfg.BallerinaHomeFs = ballerinaHomeFs
+	}
+
+	return projects.Load(fsys, path, cfg)
 }
 
 func getBallerinaHomePath() (string, error) {

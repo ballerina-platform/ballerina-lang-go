@@ -66,24 +66,29 @@
 //	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 //
 //	// Load with default options
-//	result, err := projects.Load(fsys, ballerinaHomeFs, "myproject")
+//	result, err := projects.Load(fsys, "myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //
 //	// Load with custom build options
 //	buildOpts := projects.NewBuildOptionsBuilder().
 //	    WithOffline(true).
 //	    WithSkipTests(true).
 //	    Build()
-//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject", projects.ProjectLoadConfig{
+//	result, err := projects.Load(fsys, "./myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
 //	    BuildOptions: &buildOpts,
 //	})
 //
 //	// Load a single .bal file
-//	result, err := projects.Load(fsys, ballerinaHomeFs, "./main.bal")
+//	result, err := projects.Load(fsys, "./main.bal", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //
 // [ProjectLoadConfig] allows optional configuration:
 //   - BuildOptions: Compilation settings (offline mode, skip tests, etc.)
-//   - RepositoryFactories: Functions that create package repositories for dependency resolution
-//   - ResolutionOptions: Settings for package resolution (offline mode, sticky versions, etc.)
+//   - Repositories: Package repositories for dependency resolution
+//   - BallerinaHomeFs: Filesystem for Ballerina home (defaults to <projectFs>/.ballerina/)
 //
 // # Compilation Pipeline
 //
@@ -97,7 +102,9 @@
 // Complete example:
 //
 //	// Load project
-//	result, err := projects.Load(fsys, ballerinaHomeFs, "./myproject")
+//	result, err := projects.Load(fsys, "./myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -140,8 +147,4 @@
 // Lazy-initialized fields (compilation, resolution, compiler backends) are
 // protected by sync.Once or sync.Mutex for safe concurrent access. Document
 // content supports both eager and lazy loading via the DocumentConfig interface.
-//
-// # Subpackages
-//
-//   - projects/repository: Repository abstraction for accessing Ballerina packages
 package projects

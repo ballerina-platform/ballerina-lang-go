@@ -232,7 +232,9 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(balFile))
+	result, err := projects.Load(fsys, filepath.Base(balFile), projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -373,7 +375,9 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
+	result, err := projects.Load(fsys, ".", projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -478,7 +482,9 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 		return stdoutBuf.String(), stderrBuf.String()
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
-	result, err := projects.Load(fsys, ballerinaHomeFs, ".")
+	result, err := projects.Load(fsys, ".", projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
 		return stdoutBuf.String(), stderrBuf.String()

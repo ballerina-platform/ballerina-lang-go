@@ -24,20 +24,19 @@ import (
 )
 
 type ProjectEnvironmentBuilder struct {
-	fsys                fs.FS
-	repositoryFactories []RepositoryFactory
-	buildOptions        BuildOptions
+	fsys         fs.FS
+	repositories []Repository
+	buildOptions BuildOptions
 }
 
 func NewProjectEnvironmentBuilder(fsys fs.FS) *ProjectEnvironmentBuilder {
 	return &ProjectEnvironmentBuilder{fsys: fsys}
 }
 
-// WithRepositoryFactories sets the repository factories to be used when building the environment.
-// The factories will be invoked with the created Environment to allow repositories
-// to reference the shared Environment.
-func (b *ProjectEnvironmentBuilder) WithRepositoryFactories(factories []RepositoryFactory) *ProjectEnvironmentBuilder {
-	b.repositoryFactories = factories
+// WithRepositories sets the repositories to be used for package resolution.
+// Repositories will be bound to the Environment during Build().
+func (b *ProjectEnvironmentBuilder) WithRepositories(repos []Repository) *ProjectEnvironmentBuilder {
+	b.repositories = repos
 	return b
 }
 
@@ -51,10 +50,13 @@ func (b *ProjectEnvironmentBuilder) Build() *Environment {
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), b.buildOptions.Stats())
 	projEnv := NewEnvironment(b.fsys, env)
 
-	// Create and add repositories from factories
-	for _, factory := range b.repositoryFactories {
-		if factory != nil {
-			repo := factory(projEnv)
+	// Bind and add repositories
+	for _, repo := range b.repositories {
+		if repo != nil {
+			// Bind the repository to the environment if it supports late binding
+			if bindable, ok := repo.(bindableRepository); ok {
+				bindable.bind(projEnv)
+			}
 			projEnv.addRepository(repo)
 		}
 	}

@@ -45,7 +45,9 @@ func TestExternValid(t *testing.T) {
 	ballerinaHomePath := getBallerinaHomePath(t)
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -111,7 +113,9 @@ func TestExternTypeMismatchArg(t *testing.T) {
 	ballerinaHomePath := getBallerinaHomePath(t)
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -146,7 +150,9 @@ func TestExternTypeMismatchReturn(t *testing.T) {
 	ballerinaHomePath := getBallerinaHomePath(t)
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, filepath.Base(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath), projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+	})
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}
@@ -177,7 +183,7 @@ func TestExternHandle(t *testing.T) {
 	}
 
 	fsys := os.DirFS(filepath.Dir(absPath))
-	result, err := projects.Load(fsys, nil, filepath.Base(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath))
 	if err != nil {
 		t.Fatalf("failed to load project: %v", err)
 	}

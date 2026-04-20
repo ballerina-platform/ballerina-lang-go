@@ -25,11 +25,10 @@ import (
 	"testing"
 
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/repository"
 )
 
-func newTestRepository(path string) *repository.Repository {
-	return repository.NewRepository(os.DirFS(path), path, nil)
+func newTestRepository(path string) *projects.FileSystemRepository {
+	return projects.NewFileSystemRepository(os.DirFS(path), ".")
 }
 
 func TestRepository_GetPackageVersions(t *testing.T) {
@@ -186,26 +185,7 @@ func TestRepository_ContextCancellation(t *testing.T) {
 	})
 }
 
-func TestRepository_Name(t *testing.T) {
-	repo := newTestRepository("testdata/repo/bala")
-	if repo.Name() != "filesystem" {
-		t.Errorf("expected 'filesystem', got %q", repo.Name())
-	}
-}
-
-func TestRepository_Root(t *testing.T) {
-	repo := newTestRepository("testdata/repo/bala")
-	if repo.Root() != "testdata/repo/bala" {
-		t.Errorf("expected 'testdata/repo/bala', got %q", repo.Root())
-	}
-}
-
-func TestRepository_ImplementsWritableRepository(t *testing.T) {
-	// Compile-time check - if this compiles, the interface is satisfied
-	var _ repository.WritableRepository = (*repository.Repository)(nil)
-}
-
 func TestRepository_ImplementsProjectsRepository(t *testing.T) {
-	// Compile-time check - if this compiles, Repository implements projects.Repository
-	var _ projects.Repository = (*repository.Repository)(nil)
+	// Compile-time check - if this compiles, FileSystemRepository implements projects.Repository
+	var _ projects.Repository = (*projects.FileSystemRepository)(nil)
 }

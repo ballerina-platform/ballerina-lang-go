@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/repository"
 	"ballerina-lang-go/test_util"
 )
 
@@ -59,7 +58,7 @@ func TestPackageResolution_WithCache(t *testing.T) {
 	cachePath, err := filepath.Abs("testdata/repo/bala")
 	require.NoError(err)
 
-	repo := repository.NewRepository(os.DirFS(cachePath), cachePath, nil)
+	repo := projects.NewFileSystemRepository(os.DirFS(cachePath), ".")
 
 	// Load mock package from repository (auto-caches via InitPackage)
 	pkg, err := repo.GetPackage(context.Background(), "mockorg", "mockpkg", "1.0.0")
@@ -144,7 +143,7 @@ func TestRepository_Integration(t *testing.T) {
 	cachePath, err := filepath.Abs("testdata/repo/bala")
 	require.NoError(err)
 
-	repo := repository.NewRepository(os.DirFS(cachePath), cachePath, nil)
+	repo := projects.NewFileSystemRepository(os.DirFS(cachePath), ".")
 
 	// Test GetPackageVersions
 	versions, err := repo.GetPackageVersions(context.Background(), "mockorg", "mockpkg")
@@ -197,15 +196,8 @@ func TestPackageResolution_ExternalDependencyCompilation(t *testing.T) {
 	require.NoError(err)
 
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
-		RepositoryFactories: []projects.RepositoryFactory{
-			func(env *projects.Environment) projects.Repository {
-				return projects.NewFileSystemRepository(
-					"test-repo",
-					os.DirFS(testRepoPath),
-					".",
-					env,
-				)
-			},
+		Repositories: []projects.Repository{
+			projects.NewFileSystemRepository(os.DirFS(testRepoPath), "."),
 		},
 	})
 	require.NoError(err)
@@ -271,15 +263,8 @@ func TestPackageResolution_TransitiveDependency(t *testing.T) {
 	require.NoError(err)
 
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
-		RepositoryFactories: []projects.RepositoryFactory{
-			func(env *projects.Environment) projects.Repository {
-				return projects.NewFileSystemRepository(
-					"test-repo",
-					os.DirFS(testRepoPath),
-					".",
-					env,
-				)
-			},
+		Repositories: []projects.Repository{
+			projects.NewFileSystemRepository(os.DirFS(testRepoPath), "."),
 		},
 	})
 	require.NoError(err)
@@ -369,15 +354,8 @@ func TestPackageResolution_MultiModuleDependencies(t *testing.T) {
 	require.NoError(err)
 
 	result, err := loadProject(absPath, projects.ProjectLoadConfig{
-		RepositoryFactories: []projects.RepositoryFactory{
-			func(env *projects.Environment) projects.Repository {
-				return projects.NewFileSystemRepository(
-					"test-repo",
-					os.DirFS(testRepoPath),
-					".",
-					env,
-				)
-			},
+		Repositories: []projects.Repository{
+			projects.NewFileSystemRepository(os.DirFS(testRepoPath), "."),
 		},
 	})
 	require.NoError(err)
@@ -401,4 +379,90 @@ func TestPackageResolution_MultiModuleDependencies(t *testing.T) {
 		t.Logf("Diagnostic: %s", diag.Message())
 	}
 	assert.Equal(0, diagnosticResult.DiagnosticCount(), "expected no compilation errors")
+}
+
+// TestPackageResolution_ProjectLevelCache verifies the build-project default:
+// when BallerinaHomeFs is not set, the loader falls back to
+// fs.Sub(projectFs, ".ballerina"), which resolves to <project-path>/.ballerina/.
+// External packages staged there must be picked up without any caller config.
+func TestPackageResolution_ProjectLevelCache(t *testing.T) {
+	require := test_util.NewRequire(t)
+	assert := test_util.New(t)
+
+	projectPath := filepath.Join("testdata", "project-with-local-cache")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	fsys := os.DirFS(absPath)
+
+	// Intentionally do not pass BallerinaHomeFs — exercises the default fallback.
+	result, err := projects.Load(fsys, ".")
+	require.NoError(err)
+	require.NotNil(result)
+
+	mainProject := result.Project()
+	require.NotNil(mainProject)
+
+	// Get the package and trigger compilation
+	pkg := mainProject.CurrentPackage()
+	require.NotNil(pkg)
+
+	compilation := pkg.Compilation()
+	require.NotNil(compilation, "compilation should not be nil")
+
+	// Verify external package was resolved from local cache
+	env := mainProject.Environment()
+	cachedPkg := env.PackageCache().Get("mockorg", "mockpkg", "1.0.0")
+	require.NotNil(cachedPkg, "mockpkg should be resolved from .ballerina/ cache")
+
+	// Verify no compilation errors
+	diagnostics := compilation.DiagnosticResult()
+	for _, diag := range diagnostics.Diagnostics() {
+		t.Logf("Diagnostic: %s", diag.Message())
+	}
+	assert.Equal(0, diagnostics.DiagnosticCount(), "expected no compilation errors")
+}
+
+// TestPackageResolution_SingleFileProjectLevelCache verifies the single-file
+// default: when BallerinaHomeFs is not set, the loader falls back to
+// fs.Sub(projectFs, ".ballerina"), which resolves to <file-path-parent>/.ballerina/
+// for a single .bal file. External packages staged there must be picked up
+// without any caller config.
+func TestPackageResolution_SingleFileProjectLevelCache(t *testing.T) {
+	require := test_util.NewRequire(t)
+	assert := test_util.New(t)
+
+	balFile := filepath.Join("testdata", "single-file-with-local-cache", "main.bal")
+	absPath, err := filepath.Abs(balFile)
+	require.NoError(err)
+
+	baseDir := filepath.Dir(absPath)
+	fileName := filepath.Base(absPath)
+	fsys := os.DirFS(baseDir)
+
+	// Intentionally do not pass BallerinaHomeFs — exercises the default fallback.
+	result, err := projects.Load(fsys, fileName)
+	require.NoError(err)
+	require.NotNil(result)
+
+	mainProject := result.Project()
+	require.NotNil(mainProject)
+
+	pkg := mainProject.CurrentPackage()
+	require.NotNil(pkg)
+
+	compilation := pkg.Compilation()
+	require.NotNil(compilation, "compilation should not be nil")
+
+	// Verify external package was resolved from the parent-directory local cache.
+	env := mainProject.Environment()
+	cachedPkg := env.PackageCache().Get("mockorg", "mockpkg", "1.0.0")
+	require.NotNil(cachedPkg, "mockpkg should be resolved from <file-path-parent>/.ballerina/ cache")
+
+	// Verify no compilation errors
+	diagnostics := compilation.DiagnosticResult()
+	for _, diag := range diagnostics.Diagnostics() {
+		t.Logf("Diagnostic: %s", diag.Message())
+	}
+	assert.Equal(0, diagnostics.DiagnosticCount(), "expected no compilation errors")
 }

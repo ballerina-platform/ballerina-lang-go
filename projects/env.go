@@ -86,7 +86,7 @@ func (e *Environment) addPublicSymbolsFrom(other *Environment) {
 // addRepository adds a repository to the environment's package resolver.
 // Repositories are searched in the order they are added.
 // This is private to enforce Environment immutability - repositories should be
-// configured during Environment creation via RepositoryFactories.
+// configured during Environment creation via ProjectEnvironmentBuilder.
 func (e *Environment) addRepository(repo Repository) {
 	e.packageResolver.AddRepository(repo)
 }

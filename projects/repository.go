@@ -24,9 +24,6 @@ import (
 // Implementations include FileSystemRepository (local bala cache),
 // CentralRepository (Ballerina Central API), MavenRepository, etc.
 type Repository interface {
-	// Name returns the repository identifier (e.g., "local", "central", "distribution").
-	Name() string
-
 	// GetPackage loads a specific version of a package.
 	// Returns (nil, nil) if not found (not an error).
 	// Returns (nil, error) on actual errors (IO, parse, etc.)

@@ -168,8 +168,9 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	}
 	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 
-	result, err := projects.Load(fsys, ballerinaHomeFs, path, projects.ProjectLoadConfig{
-		BuildOptions: &buildOpts,
+	result, err := projects.Load(fsys, path, projects.ProjectLoadConfig{
+		BallerinaHomeFs: ballerinaHomeFs,
+		BuildOptions:    &buildOpts,
 	})
 	if err != nil {
 		printRunError(err)

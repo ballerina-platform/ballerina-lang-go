@@ -32,27 +32,34 @@ const (
 	platformAny = "any"
 )
 
+// bindableRepository is an internal interface for repositories that support late binding.
+// Late binding allows repositories to be created before the Environment exists,
+// then bound to the Environment during project loading.
+type bindableRepository interface {
+	Repository
+	bind(env *Environment)
+}
+
 // FileSystemRepository loads packages from a local bala directory structure using fs.FS.
 // Directory structure: basePath/{org}/{name}/{version}/any/package.json
 type FileSystemRepository struct {
-	name     string
 	basePath string
 	fsys     fs.FS
 	env      *Environment
 }
 
 // NewFileSystemRepository creates a repository that uses fs.FS for file access.
-func NewFileSystemRepository(name string, fsys fs.FS, basePath string, env *Environment) *FileSystemRepository {
+// The repository must be bound to an Environment before use via ProjectEnvironmentBuilder.
+func NewFileSystemRepository(fsys fs.FS, basePath string) *FileSystemRepository {
 	return &FileSystemRepository{
-		name:     name,
 		basePath: basePath,
 		fsys:     fsys,
-		env:      env,
 	}
 }
 
-func (r *FileSystemRepository) Name() string {
-	return r.name
+// bind sets the environment for this repository. Called internally during project loading.
+func (r *FileSystemRepository) bind(env *Environment) {
+	r.env = env
 }
 
 // GetPackage loads a specific version. Returns (nil, nil) if not found.
@@ -79,7 +86,7 @@ func (r *FileSystemRepository) GetPackage(ctx context.Context, org, name, versio
 
 	project, err := loadBalaProjectInEnvironment(r.fsys, platformDir, r.env)
 	if err != nil {
-		return nil, fmt.Errorf("repository %s: failed to load package %s/%s:%s: %w", r.name, org, name, version, err)
+		return nil, fmt.Errorf("failed to load package %s/%s:%s: %w", org, name, version, err)
 	}
 
 	return project.CurrentPackage(), nil
@@ -190,19 +197,13 @@ func statIfExists(fsys fs.FS, path string) (fs.FileInfo, bool, error) {
 }
 
 var _ Repository = (*FileSystemRepository)(nil)
+var _ bindableRepository = (*FileSystemRepository)(nil)
 
-// defaultRepositoryFactories returns repository factories for the standard repositories
+// defaultRepositories returns repositories for the standard repository locations
 // using the given ballerinaHomeFs.
 // Currently only queries the central cache.
-func defaultRepositoryFactories(ballerinaHomeFs fs.FS) []RepositoryFactory {
-	return []RepositoryFactory{
-		func(env *Environment) Repository {
-			return NewFileSystemRepository(
-				"central",
-				ballerinaHomeFs,
-				centralCacheSubpath,
-				env,
-			)
-		},
+func defaultRepositories(ballerinaHomeFs fs.FS) []Repository {
+	return []Repository{
+		NewFileSystemRepository(ballerinaHomeFs, centralCacheSubpath),
 	}
 }
