@@ -799,8 +799,20 @@ func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.B
 		return lambdaFunction(ctx, curBB, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return generateCall(ctx, curBB, expr)
+	case *ast.BLangTypedescExpr:
+		return typedescExpression(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
+	}
+}
+
+func typedescExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
+	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
+	td := &values.TypeDesc{Type: expr.Constraint}
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.loc(expr.GetPosition())))
+	return expressionEffect{
+		result: resultOperand,
+		block:  curBB,
 	}
 }
 

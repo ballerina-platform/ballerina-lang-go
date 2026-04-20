@@ -14,24 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semtypes
+import ballerina/io;
 
-import "ballerina-lang-go/common"
-
-type typedescSubtype struct{}
-
-func newTypedescSubtype() typedescSubtype {
-	this := typedescSubtype{}
-	return this
+public function main() {
+    baz(1); // @error
 }
 
-func TypedescContaining(env Env, constraint SemType) SemType {
-	if common.PointerEqualToValue(VAL, constraint) {
-		return TYPEDESC
-	}
+function foo(int val, typedesc retTy = <>) returns int = external; // @error
 
-	mappingDef := NewMappingDefinition()
-	mappingType := mappingDef.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, nil, constraint, CellMutability_CELL_MUT_NONE)
-	bdd := subtypeData(mappingType, BTMapping).(Bdd)
-	return createBasicSemType(BTTypeDesc, bdd)
+function baz(int val, typedesc retTy = <>) returns retTy = external;
+
+function bar(int val, typedesc retTy = <>) returns int { // @error
+    return 0;
 }

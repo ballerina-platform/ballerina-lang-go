@@ -305,6 +305,12 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 			return err
 		}
 	}
+	if err := write(buf, uint8(sig.Flags)); err != nil {
+		return err
+	}
+	if err := write(buf, int64(sig.DependentReturnParam)); err != nil {
+		return err
+	}
 	return sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes))
 }
 
@@ -323,6 +329,9 @@ func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.De
 			return err
 		}
 		param, _ := info.Get(idx)
+		if err := write(buf, uint8(param.Kind)); err != nil {
+			return err
+		}
 		if err := sw.writeSymbolRef(buf, param.Symbol); err != nil {
 			return err
 		}

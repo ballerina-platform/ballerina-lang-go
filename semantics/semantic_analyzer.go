@@ -415,6 +415,7 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature().ReturnType
 	validateDefaultParamTypes(parent, function)
+	validateDependentFunction(parent, function, fnSymbol)
 	if function.IsIsolated() && !function.IsNative() {
 		isIsolatedFuncInner(fa, function.GetBody().(ast.BLangNode))
 		validateIsolatedDefaultParams(fa, function)
@@ -429,6 +430,35 @@ func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction)
 			continue
 		}
 		isIsolatedFuncInner(a, param.Expr.(ast.BLangNode))
+	}
+}
+
+// validateDependentFunction enforces the rules around dependently-typed functions:
+//  1. If the return type depends on a typedesc parameter, the function body must be
+//     external. Otherwise: "dependently-typed function must be external".
+//  2. If a parameter has an inferred-typedesc default '<>', the return type must
+//     depend on that parameter. Otherwise: "inferred typedesc default requires
+//     return type to depend on this parameter".
+func validateDependentFunction(a analyzer, fn *ast.BLangFunction, fnSymbol model.FunctionSymbol) {
+	sig := fnSymbol.Signature()
+	if !sig.HasDependentReturn() {
+		return
+	}
+	if _, ok := fn.Body.(*ast.BLangExternFunctionBody); !ok {
+		a.semanticErr("dependently-typed function must be external", fn.GetPosition())
+	}
+	defaultableParams := fnSymbol.DefaultableParams()
+	for i := range fn.RequiredParams {
+		dp, ok := defaultableParams.Get(i)
+		if !ok {
+			continue
+		}
+		if dp.Kind != model.DefaultableParamKindInferredTypedesc {
+			continue
+		}
+		if sig.DependentReturnParam != i {
+			a.semanticErr("inferred typedesc default '<>' requires the return type to depend on this parameter", fn.RequiredParams[i].GetPosition())
+		}
 	}
 }
 
@@ -636,6 +666,10 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return analyzeLambdaFunction(a, expr)
 	case *ast.BLangRemoteMethodCallAction:
 		return analyzeInvocation(a, expr, expectedType)
+	case *ast.BLangInferredTypedescDefault:
+		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangTypedescExpr:
+		return validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
