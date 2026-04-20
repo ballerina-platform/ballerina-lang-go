@@ -432,6 +432,9 @@ func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*
 			}
 			continue
 		}
+		if dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			continue
+		}
 		symRef := dp.Symbol
 		fnName := ctx.getSymbol(symRef).Name()
 		fnScope := ctx.newFunctionScope(fn.Scope())

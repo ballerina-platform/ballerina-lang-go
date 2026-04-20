@@ -61,6 +61,9 @@ type FuncSymbolFlags uint8
 const (
 	FuncSymbolFlagIsolated FuncSymbolFlags = 1 << iota
 	FuncSymbolFlagTransactional
+	// FuncSymbolFlagDependentReturn marks the function's return type as
+	// dependent on a typedesc parameter (see FunctionSignature.DependentReturnParam).
+	FuncSymbolFlagDependentReturn
 )
 
 type FunctionSymbol interface {
@@ -184,16 +187,32 @@ type (
 		ReturnType    semtypes.SemType
 		RestParamType semtypes.SemType
 		Flags         FuncSymbolFlags
+		// DependentReturnParam is the index of a typedesc parameter the return
+		// type depends on, or -1. For a function
+		//   function foo(int v, typedesc t = <>) returns t = external;
+		// DependentReturnParam == 1 and the actual return type at each call
+		// site is the typedesc argument's constraint.
+		DependentReturnParam int
 	}
 
+	DefaultableParamKind uint8
+
 	DefaultableParam struct {
-		Symbol SymbolRef // symbol to the lambda that would provide the default value if needed
+		Kind DefaultableParamKind
+		// Symbol points to the synthesized default-value lambda; valid only when
+		// Kind == DefaultableParamKindLambda.
+		Symbol SymbolRef
 	}
 
 	DefaultableParamInfo struct {
 		params      []DefaultableParam
 		defaultable []bool
 	}
+)
+
+const (
+	DefaultableParamKindLambda DefaultableParamKind = iota
+	DefaultableParamKindInferredTypedesc
 )
 
 type InclusionMemberKind uint8
@@ -597,7 +616,12 @@ func (d *DefaultableParamInfo) Get(index int) (DefaultableParam, bool) {
 
 func (d *DefaultableParamInfo) SetDefaultable(index int, symbol SymbolRef) {
 	d.defaultable[index] = true
-	d.params[index].Symbol = symbol
+	d.params[index] = DefaultableParam{Kind: DefaultableParamKindLambda, Symbol: symbol}
+}
+
+func (d *DefaultableParamInfo) SetInferredTypedesc(index int) {
+	d.defaultable[index] = true
+	d.params[index] = DefaultableParam{Kind: DefaultableParamKindInferredTypedesc}
 }
 
 func (fs *FunctionSignature) IsIsolated() bool {
@@ -606,6 +630,15 @@ func (fs *FunctionSignature) IsIsolated() bool {
 
 func (fs *FunctionSignature) IsTransactional() bool {
 	return fs.Flags&FuncSymbolFlagTransactional != 0
+}
+
+func (fs *FunctionSignature) HasDependentReturn() bool {
+	return fs.Flags&FuncSymbolFlagDependentReturn != 0
+}
+
+func (fs *FunctionSignature) SetDependentReturn(paramIndex int) {
+	fs.Flags |= FuncSymbolFlagDependentReturn
+	fs.DependentReturnParam = paramIndex
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {

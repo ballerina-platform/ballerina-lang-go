@@ -260,11 +260,18 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 		restParamType = sr.readType()
 	}
 
+	var flags uint8
+	read(sr.r, &flags)
+	var depReturnParam int64
+	read(sr.r, &depReturnParam)
+
 	sig := model.FunctionSignature{
-		ParamTypes:    paramTypes,
-		ParamNames:    paramNames,
-		ReturnType:    returnType,
-		RestParamType: restParamType,
+		ParamTypes:           paramTypes,
+		ParamNames:           paramNames,
+		ReturnType:           returnType,
+		RestParamType:        restParamType,
+		Flags:                model.FuncSymbolFlags(flags),
+		DependentReturnParam: int(depReturnParam),
 	}
 	sym := model.NewFunctionSymbol(name, sig, isPublic)
 	sym.SetType(ty)
@@ -283,8 +290,15 @@ func (sr *symbolReader) readDefaultableParams(paramCount int, space *model.Symbo
 	for i := int64(0); i < count; i++ {
 		var idx int64
 		read(sr.r, &idx)
+		var kind uint8
+		read(sr.r, &kind)
 		ref := sr.readSymbolRef(space)
-		info.SetDefaultable(int(idx), ref)
+		switch model.DefaultableParamKind(kind) {
+		case model.DefaultableParamKindInferredTypedesc:
+			info.SetInferredTypedesc(int(idx))
+		default:
+			info.SetDefaultable(int(idx), ref)
+		}
 	}
 	return info
 }

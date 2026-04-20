@@ -34,6 +34,12 @@ type Function struct {
 	ParentFrame any // *exec.Frame at runtime, nil for non-closures
 }
 
+// TypeDesc is the runtime representation of a typedesc value — a thin wrapper
+// around a semtype.
+type TypeDesc struct {
+	Type semtypes.SemType
+}
+
 func DefaultValueForType(t semtypes.SemType) BalValue {
 	if t == nil {
 		// TODO: this should panic when our operands properly have types
@@ -91,6 +97,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Object:
 		return v.Type
+	case *TypeDesc:
+		return semtypes.TYPEDESC
 	default:
 		return semtypes.ANY
 	}
@@ -136,6 +144,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return "function " + t.LookupKey
 	case *Object:
 		return "object"
+	case *TypeDesc:
+		return "typedesc"
 	default:
 		return "<unsupported>"
 	}

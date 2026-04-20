@@ -291,6 +291,10 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 		if !param.IsDefaultableParam() {
 			continue
 		}
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); ok {
+			info.SetInferredTypedesc(i)
+			continue
+		}
 		name := alloc.nextDefaultSymbolName()
 		// Until type resolution we don't know the type of the parametes to create this function signature
 		defaultFnSym := model.NewFunctionSymbol(name, model.FunctionSignature{}, false)

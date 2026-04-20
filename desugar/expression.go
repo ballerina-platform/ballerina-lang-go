@@ -483,14 +483,20 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 			transformed = append(transformed, varRef)
 		}
 		dp, _ := defaultableParams.Get(i)
-		defaultInv := &ast.BLangInvocation{}
-		defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
-		defaultInv.ArgExprs = reordered[:i]
-		defaultInv.SetSymbol(dp.Symbol)
-		defaultInv.SetDeterminedType(sig.ParamTypes[i])
-		setPositionIfMissing(defaultInv, pos)
+		var defaultExpr ast.BLangExpression
+		if dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			defaultExpr = inferredTypedescDefault(expr, sig, i, pos)
+		} else {
+			defaultInv := &ast.BLangInvocation{}
+			defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
+			defaultInv.ArgExprs = reordered[:i]
+			defaultInv.SetSymbol(dp.Symbol)
+			defaultInv.SetDeterminedType(sig.ParamTypes[i])
+			setPositionIfMissing(defaultInv, pos)
+			defaultExpr = defaultInv
+		}
 
-		varDef, varRef := assignToLocal(cx, defaultInv, pos)
+		varDef, varRef := assignToLocal(cx, defaultExpr, pos)
 		initStmts = append(initStmts, varDef)
 		reordered[i] = varRef
 		transformed = append(transformed, varRef)
@@ -498,6 +504,19 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 
 	expr.SetCallArgs(reordered)
 	return initStmts
+}
+
+// inferredTypedescDefault synthesizes a typedesc literal for a dependently-typed
+// function call at the inferred-typedesc parameter slot. The invocation's
+// determined type (post type-resolution) is the narrowed return type T, so the
+// argument we pass is typedesc<T>; the runtime wrapper carries T directly.
+func inferredTypedescDefault(expr invocable, sig model.FunctionSignature, paramIdx int, pos diagnostics.Location) *ast.BLangTypedescExpr {
+	constraint := expr.GetDeterminedType()
+	tdExpr := &ast.BLangTypedescExpr{}
+	tdExpr.Constraint = constraint
+	tdExpr.SetPosition(pos)
+	tdExpr.SetDeterminedType(sig.ParamTypes[paramIdx])
+	return tdExpr
 }
 
 func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (model.StatementNode, *ast.BLangSimpleVarRef) {

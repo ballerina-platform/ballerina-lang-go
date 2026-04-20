@@ -14,24 +14,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package semtypes
+import ballerina/io;
 
-import "ballerina-lang-go/common"
+public function main() {
+    int a = inferred(0);
+    io:println(a); // @output 1
+    string b = inferred(1);
+    io:println(b); // @output "foo"
 
-type typedescSubtype struct{}
+    int x = inferredSubType(0);
+    io:println(x); // @output 1
 
-func newTypedescSubtype() typedescSubtype {
-	this := typedescSubtype{}
-	return this
+    1 y = inferredSubType(0);
+    io:println(y); // @output 1
 }
 
-func TypedescContaining(env Env, constraint SemType) SemType {
-	if common.PointerEqualToValue(VAL, constraint) {
-		return TYPEDESC
-	}
+function inferred(int val, typedesc retTy = <>) returns retTy = external;
 
-	mappingDef := NewMappingDefinition()
-	mappingType := mappingDef.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(env, nil, constraint, CellMutability_CELL_MUT_NONE)
-	bdd := subtypeData(mappingType, BTMapping).(Bdd)
-	return createBasicSemType(BTTypeDesc, bdd)
-}
+function inferredSubType(int val, typedesc<int> retTy = <>) returns retTy = external;

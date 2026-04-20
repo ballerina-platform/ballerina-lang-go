@@ -293,6 +293,14 @@ type (
 	BLangTypedescExpr struct {
 		bLangExpressionBase
 		typeDescriptor model.TypeDescriptor
+		// Constraint is the semtype of the type this typedesc denotes — the T in
+		// typedesc<T>. BIR lowers the expression to a TypeDesc{Type: Constraint}
+		// constant.
+		Constraint semtypes.SemType
+	}
+
+	BLangInferredTypedescDefault struct {
+		bLangExpressionBase
 	}
 
 	BLangUnaryExpr struct {
@@ -444,6 +452,8 @@ var (
 	_ BLangNode       = &BLangMarkDownDeprecatedParametersDocumentation{}
 	_ BLangNode       = &BLangGroupExpr{}
 	_ BLangNode       = &BLangTypedescExpr{}
+	_ BLangNode       = &BLangInferredTypedescDefault{}
+	_ BLangExpression = &BLangInferredTypedescDefault{}
 	_ BLangNode       = &BLangIndexBasedAccess{}
 	_ BLangNode       = &BLangListConstructorExpr{}
 	_ BLangNode       = &BLangTypeConversionExpr{}
@@ -504,6 +514,10 @@ func (this *BLangGroupExpr) GetExpression() model.ExpressionNode {
 func (this *BLangTypedescExpr) GetKind() model.NodeKind {
 	// migrated from BLangTypedescExpr.java:52:5
 	return model.NodeKind_TYPEDESC_EXPRESSION
+}
+
+func (this *BLangInferredTypedescDefault) GetKind() model.NodeKind {
+	return model.NodeKind_INFERRED_TYPEDESC_DEFAULT
 }
 
 func (this *BLangTypedescExpr) GetTypeDescriptor() model.TypeDescriptor {
