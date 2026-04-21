@@ -18,6 +18,8 @@ import ballerina/io;
 
 public function main() {
     foreach int _ in 0 ..< 3 {
-        io:println("hello");
+        io:println("hello"); // @output hello
+                             // @output hello
+                             // @output hello
     }
 }

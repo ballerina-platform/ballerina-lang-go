@@ -35,25 +35,26 @@ type MixedRecord record {|
 public function main() {
     // int literals widened to float in record context
     FloatRecord fr = {x: 1, y: 2};
-    io:println(fr);
+    io:println(fr); // @output {"x":1.0,"y":2.0}
 
     // int literals widened to decimal in record context
     DecimalRecord dr = {amount: 100, tax: 15};
-    io:println(dr);
+    io:println(dr); // @output {"amount":100,"tax":15}
 
     // int literals widened to matching field types
     MixedRecord mr = {count: 10, ratio: 2, price: 50};
-    io:println(mr);
+    io:println(mr); // @output {"count":10,"ratio":2.0,"price":50}
 
     // float literal widened to decimal in record context
     DecimalRecord dr2 = {amount: 1.5, tax: 0.5};
-    io:println(dr2);
+    io:println(dr2); // @output {"amount":1.5,"tax":0.5}
 
     // map with float values - int literals widened
     map<float> mf = {a: 1, b: 2};
-    io:println(mf);
+    io:println(mf); // @output {"a":1.0,"b":2.0}
 
     // map with decimal values - int literals widened
     map<decimal> md = {a: 1, b: 2};
-    io:println(md);
+    io:println(md); // @output {"a":1,"b":2}
 }
+

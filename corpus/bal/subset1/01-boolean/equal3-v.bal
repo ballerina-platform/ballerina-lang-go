@@ -19,13 +19,13 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(eq(1, 2));
-    printBoolean(ne(2, 1));
-    printBoolean(eq(2, -1));
-    printBoolean(ne(1, 2));
-    printBoolean(eq(0, 0));
-    printBoolean(ne(2, 1));
-    printBoolean(eq(-1, 17));
+    printBoolean(eq(1, 2)); // @output 0
+    printBoolean(ne(2, 1)); // @output 1
+    printBoolean(eq(2, -1)); // @output 0
+    printBoolean(ne(1, 2)); // @output 1
+    printBoolean(eq(0, 0)); // @output 1
+    printBoolean(ne(2, 1)); // @output 1
+    printBoolean(eq(-1, 17)); // @output 0
 }
 
 function printBoolean(boolean b) {

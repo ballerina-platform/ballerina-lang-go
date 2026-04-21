@@ -23,5 +23,6 @@ public function main() {
             break;
         }
     }
-    io:println("Done");
+    io:println("Done"); // @output Done
 }
+

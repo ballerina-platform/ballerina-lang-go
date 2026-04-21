@@ -17,8 +17,9 @@ import ballerina/io;
 
 public function main() {
     map<any> foo = {"a": 1, "b": "b"};
-    io:println(foo);
+    io:println(foo); // @output {"a":1,"b":"b"}
     any a = foo["a"];
-    io:println(a);
-    io:println(foo["b"]);
+    io:println(a); // @output 1
+    io:println(foo["b"]); // @output b
 }
+

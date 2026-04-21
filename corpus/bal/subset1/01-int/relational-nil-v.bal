@@ -23,20 +23,21 @@ public function main() {
     int? c = ();
 
     // comparisons between nil and non-nil operands are always false
-    io:println(a < b);
-    io:println(a <= b);
-    io:println(a > b);
-    io:println(a >= b);
+    io:println(a < b); // @output false
+    io:println(a <= b); // @output false
+    io:println(a > b); // @output false
+    io:println(a >= b); // @output false
 
-    io:println(b < a);
-    io:println(b <= a);
-    io:println(b > a);
-    io:println(b >= a);
+    io:println(b < a); // @output false
+    io:println(b <= a); // @output false
+    io:println(b > a); // @output false
+    io:println(b >= a); // @output false
 
     // comparisons between two nil operands behave like equality/inequality
-    io:println(a < c);
-    io:println(a <= c);
-    io:println(a > c);
-    io:println(a >= c);
+    io:println(a < c); // @output false
+    io:println(a <= c); // @output true
+    io:println(a > c); // @output false
+    io:println(a >= c); // @output true
 }
+
 

@@ -55,7 +55,7 @@ python3 cfgviz.py myfile.bal --no-open
 
 Visualize a test corpus file:
 ```bash
-python3 cfgviz.py corpus/cfg/subset1/01-loop/while02-v.bal
+python3 cfgviz.py corpus/bal/subset1/01-loop/while2-v.bal
 ```
 
 ## Command-Line Options

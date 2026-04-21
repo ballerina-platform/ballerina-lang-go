@@ -28,13 +28,14 @@ public function main() {
     }
     foreach R r in rs {
         io:println(r.value); // @output 0
-        // @output 1
-        // @output 2
-        // @output 3
-        // @output 4
-        // @output 5
-        // @output 6
-        // @output 7
-        // @output 8
+                             // @output 1
+                             // @output 2
+                             // @output 3
+                             // @output 4
+                             // @output 5
+                             // @output 6
+                             // @output 7
+                             // @output 8
+                             // @output 9
     }
 }

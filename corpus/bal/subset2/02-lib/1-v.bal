@@ -18,5 +18,6 @@
 import ballerina/io;
 
 public function main() {
-    io:println(true);
+    io:println(true); // @output true
 }
+

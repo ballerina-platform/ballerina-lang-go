@@ -3,5 +3,5 @@
 error[SEMANTIC_ERROR]: redeclared symbol 'TestObj'
   --> object-attached-func-e.bal:17:7
    |
-17 | class TestObj {
+17 | class TestObj { // @error
    |       ^^^^^^^

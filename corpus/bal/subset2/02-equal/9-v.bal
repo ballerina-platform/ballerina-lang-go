@@ -20,12 +20,13 @@ import ballerina/io;
 public function main() {
     float f1 = 1.5;
     float f2 = 2.0;
-    io:println(f1 == f1);
-    io:println(f1 != f2);
+    io:println(f1 == f1); // @output true
+    io:println(f1 != f2); // @output true
 
     string s1 = "foo";
     string s2 = "bar";
-    io:println(s1 == s1);
-    io:println(s1 != s2);
+    io:println(s1 == s1); // @output true
+    io:println(s1 != s2); // @output true
 }
+
 

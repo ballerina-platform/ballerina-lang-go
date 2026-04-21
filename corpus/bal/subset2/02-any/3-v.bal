@@ -18,8 +18,8 @@
 import ballerina/io;
 
 public function main() {
-    io:println(foo());
-    io:println(bar());
+    io:println(foo()); // @output 17
+    io:println(bar()); // @output false
 }
 
 function foo() returns any {
@@ -29,3 +29,4 @@ function foo() returns any {
 function bar() returns any {
     return false;
 }
+
