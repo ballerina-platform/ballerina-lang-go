@@ -17,17 +17,12 @@
 package text
 
 import (
-	"fmt"
-
 	"ballerina-lang-go/common/errors"
 )
 
 // LineMap represents a collection of text lines in the TextDocument.
 type LineMap interface {
-	TextLine(line int) (TextLine, error)
 	LinePositionFromPosition(position int) (line, offset int, err error)
-	TextPositionFromLinePosition(line, offset int) (int, error)
-	TextLines() []string
 }
 
 type lineMapImpl struct {
@@ -42,13 +37,6 @@ func NewLineMap(textLines []TextLine) LineMap {
 	}
 }
 
-func (lm lineMapImpl) TextLine(line int) (TextLine, error) {
-	if err := lm.lineRangeCheck(line); err != nil {
-		return nil, err
-	}
-	return lm.textLines[line], nil
-}
-
 func (lm lineMapImpl) LinePositionFromPosition(position int) (line, offset int, err error) {
 	if err := lm.positionRangeCheck(position); err != nil {
 		return 0, 0, err
@@ -61,36 +49,9 @@ func (lm lineMapImpl) LinePositionFromPosition(position int) (line, offset int, 
 	return textLine.LineNo(), offset, nil
 }
 
-func (lm lineMapImpl) TextPositionFromLinePosition(line, offset int) (int, error) {
-	if err := lm.lineRangeCheck(line); err != nil {
-		return -1, err
-	}
-	textLine := lm.textLines[line]
-	if offset < 0 || textLine.Length() < offset {
-		return -1, errors.NewIllegalArgumentError(fmt.Sprintf("Cannot find a line with the character offset '%d'", offset))
-	}
-	// TODO: Lazy initialize and cache
-	return textLine.StartOffset() + offset, nil
-}
-
-func (lm lineMapImpl) TextLines() []string {
-	lines := make([]string, len(lm.textLines))
-	for i, textLine := range lm.textLines {
-		lines[i] = textLine.Text()
-	}
-	return lines
-}
-
 func (lm lineMapImpl) positionRangeCheck(position int) error {
 	if position < 0 || position > lm.textLines[lm.length-1].EndOffset() {
 		return errors.NewIndexOutOfBoundsError(position, lm.textLines[lm.length-1].EndOffset())
-	}
-	return nil
-}
-
-func (lm lineMapImpl) lineRangeCheck(lineNo int) error {
-	if lineNo < 0 || lineNo >= lm.length {
-		return errors.NewIndexOutOfBoundsError(lineNo, lm.length)
 	}
 	return nil
 }

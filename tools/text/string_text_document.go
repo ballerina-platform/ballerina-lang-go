@@ -24,13 +24,11 @@ const (
 // StringTextDocument represents a TextDocument created with a string.
 type StringTextDocument interface {
 	TextDocument
-	String() string
 }
 
 type stringTextDocumentImpl struct {
-	textDocumentBase
-	text        string
-	textLineMap LineMap
+	text    string
+	lineMap LineMap
 }
 
 func NewStringTextDocument(text string) StringTextDocument {
@@ -39,43 +37,18 @@ func NewStringTextDocument(text string) StringTextDocument {
 	}
 }
 
-func (std *stringTextDocumentImpl) PopulateTextLineMap() LineMap {
-	if std.textLineMap != nil {
-		return std.textLineMap
-	}
-	std.textLineMap = NewLineMap(std.calculateTextLines())
-	return std.textLineMap
-}
-
-func (std *stringTextDocumentImpl) ToCharArray() []rune {
-	return []rune(std.text)
-}
-
 func (std *stringTextDocumentImpl) String() string {
 	return std.text
 }
 
-func (std *stringTextDocumentImpl) Line(line int) (TextLine, error) {
-	return std.Lines().TextLine(line)
-}
-
 func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (line, offset int, err error) {
-	return std.Lines().LinePositionFromPosition(textPosition)
+	return std.lines().LinePositionFromPosition(textPosition)
 }
 
-func (std *stringTextDocumentImpl) TextPositionFromLinePosition(line, offset int) (int, error) {
-	return std.Lines().TextPositionFromLinePosition(line, offset)
-}
-
-func (std stringTextDocumentImpl) TextLines() []string {
-	return std.Lines().TextLines()
-}
-
-func (std *stringTextDocumentImpl) Lines() LineMap {
-	if std.lineMap != nil {
-		return std.lineMap
+func (std *stringTextDocumentImpl) lines() LineMap {
+	if std.lineMap == nil {
+		std.lineMap = NewLineMap(std.calculateTextLines())
 	}
-	std.lineMap = std.PopulateTextLineMap()
 	return std.lineMap
 }
 

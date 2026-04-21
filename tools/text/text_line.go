@@ -24,7 +24,6 @@ type TextLine interface {
 	EndOffset() int
 	EndOffsetWithNewLines() int
 	Length() int
-	LengthWithNewLineChars() int
 }
 
 type textLineImpl struct {
@@ -67,8 +66,4 @@ func (tl textLineImpl) EndOffsetWithNewLines() int {
 
 func (tl textLineImpl) Length() int {
 	return tl.endOffset - tl.startOffset
-}
-
-func (tl textLineImpl) LengthWithNewLineChars() int {
-	return tl.endOffset - tl.startOffset + tl.lengthOfNewLineChars
 }
