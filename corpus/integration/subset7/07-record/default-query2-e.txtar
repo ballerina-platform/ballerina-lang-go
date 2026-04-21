@@ -1,7 +1,0 @@
--- stdout --
--- stderr --
-error[SEMANTIC_ERROR]: access of mutable variable
-  --> default-query2-e.bal:22:16
-   |
-22 |         select i; // @error 
-   |                ^
