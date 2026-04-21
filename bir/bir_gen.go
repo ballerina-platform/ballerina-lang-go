@@ -179,7 +179,14 @@ func buildLookupKey(pkg model.PackageIdentifier, qualifiedName string) string {
 }
 
 func buildFunctionLookupKeyFromSymbol(ctx *Context, symRef model.SymbolRef) string {
-	return buildLookupKey(symRef.Package, ctx.CompilerContext.GetSymbol(symRef).Name())
+	sym := ctx.CompilerContext.GetSymbol(symRef)
+	if mono, ok := sym.(model.MonomorphicFunctionSymbol); ok {
+		// For monomorphic functions (ex: dependently typed functions), in runtime we dispatch to a single
+		// polymorphic function
+		origRef := mono.PolymorphicSymbol()
+		return buildLookupKey(origRef.Package, ctx.CompilerContext.GetSymbol(origRef).Name())
+	}
+	return buildLookupKey(symRef.Package, sym.Name())
 }
 
 func buildMethodLookupKeyFromSymbol(ctx *Context, className string, symRef model.SymbolRef) string {

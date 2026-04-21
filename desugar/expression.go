@@ -80,6 +80,8 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		return walkArrowFunction(cx, expr)
 	case *ast.BLangQueryExpr:
 		return walkQueryExpr(cx, expr)
+	case *ast.BLangTypedescExpr:
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangLiteral:
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangNumericLiteral:
@@ -476,27 +478,25 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 		if reordered[i] != nil {
 			continue
 		}
+		dp, isDefaultable := defaultableParams.Get(i)
+		if isDefaultable && dp.Kind == model.DefaultableParamKindInferredTypedesc {
+			reordered[i] = synthesizeInferredTypedescArg(cx, sig.ParamTypes[i], pos)
+			continue
+		}
 		for j := len(transformed); j < i; j++ {
 			varDef, varRef := assignToLocal(cx, reordered[j], pos)
 			initStmts = append(initStmts, varDef)
 			reordered[j] = varRef
 			transformed = append(transformed, varRef)
 		}
-		dp, _ := defaultableParams.Get(i)
-		var defaultExpr ast.BLangExpression
-		if dp.Kind == model.DefaultableParamKindInferredTypedesc {
-			defaultExpr = inferredTypedescDefault(expr, sig, i, pos)
-		} else {
-			defaultInv := &ast.BLangInvocation{}
-			defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
-			defaultInv.ArgExprs = reordered[:i]
-			defaultInv.SetSymbol(dp.Symbol)
-			defaultInv.SetDeterminedType(sig.ParamTypes[i])
-			setPositionIfMissing(defaultInv, pos)
-			defaultExpr = defaultInv
-		}
+		defaultInv := &ast.BLangInvocation{}
+		defaultInv.Name = &ast.BLangIdentifier{Value: cx.pkgCtx.compilerCtx.GetSymbol(dp.Symbol).Name()}
+		defaultInv.ArgExprs = reordered[:i]
+		defaultInv.SetSymbol(dp.Symbol)
+		defaultInv.SetDeterminedType(sig.ParamTypes[i])
+		setPositionIfMissing(defaultInv, pos)
 
-		varDef, varRef := assignToLocal(cx, defaultExpr, pos)
+		varDef, varRef := assignToLocal(cx, defaultInv, pos)
 		initStmts = append(initStmts, varDef)
 		reordered[i] = varRef
 		transformed = append(transformed, varRef)
@@ -506,16 +506,14 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 	return initStmts
 }
 
-// inferredTypedescDefault synthesizes a typedesc literal for a dependently-typed
-// function call at the inferred-typedesc parameter slot. The invocation's
-// determined type (post type-resolution) is the narrowed return type T, so the
-// argument we pass is typedesc<T>; the runtime wrapper carries T directly.
-func inferredTypedescDefault(expr invocable, sig model.FunctionSignature, paramIdx int, pos diagnostics.Location) *ast.BLangTypedescExpr {
-	constraint := expr.GetDeterminedType()
-	tdExpr := &ast.BLangTypedescExpr{}
-	tdExpr.Constraint = constraint
+// synthesizeInferredTypedescArg builds the typedesc expression that fills a
+// `typedesc param = <>` slot. The monomorphized signature's param type is
+// typedesc<T>; we unwrap it to recover T as the constraint.
+func synthesizeInferredTypedescArg(cx *functionContext, tdTy semtypes.SemType, pos diagnostics.Location) *ast.BLangTypedescExpr {
+	tyCtx := semtypes.ContextFrom(cx.pkgCtx.typeEnv())
+	tdExpr := &ast.BLangTypedescExpr{Constraint: semtypes.TypedescConstraint(tyCtx, tdTy)}
 	tdExpr.SetPosition(pos)
-	tdExpr.SetDeterminedType(sig.ParamTypes[paramIdx])
+	tdExpr.SetDeterminedType(tdTy)
 	return tdExpr
 }
 

@@ -192,6 +192,93 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 	return true
 }
 
+// allocateFunctionSymbol creates the appropriate function symbol for a function declaration.
+// If the return type references a typedesc parameter (dependently-typed), it creates a
+// DependentlyTypedFunctionSymbol; otherwise a plain FunctionSymbol. The returned symbol has
+// no type information yet — it is filled during type resolution.
+func allocateFunctionSymbol(fn *ast.BLangFunction, name string, isPublic bool) model.Symbol {
+	paramNames := make([]string, len(fn.RequiredParams))
+	for i := range fn.RequiredParams {
+		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
+	}
+	if dependentReturnParamIndex(fn, fn.GetReturnTypeDescriptor()) >= 0 {
+		return model.NewDependentlyTypedFunctionSymbol(name, paramNames, len(fn.RequiredParams), fn.FuncSymbolFlags(), isPublic)
+	}
+	return model.NewFunctionSymbol(name, model.FunctionSignature{}, isPublic)
+}
+
+// dependentReturnParamIndex returns the index of a typedesc parameter that the return type
+// references, or -1 if none. A dependently-typed function is any function whose return type
+// contains a user-defined-type node whose name matches a typedesc parameter of the function.
+func dependentReturnParamIndex(fn *ast.BLangFunction, retTd model.TypeDescriptor) int {
+	if retTd == nil {
+		return -1
+	}
+	node, ok := retTd.(ast.BLangNode)
+	if !ok {
+		return -1
+	}
+	return findDependentParamRef(fn, node)
+}
+
+func findDependentParamRef(fn *ast.BLangFunction, node ast.BLangNode) int {
+	switch n := node.(type) {
+	case *ast.BLangUserDefinedType:
+		if n.PkgAlias.Value != "" {
+			return -1
+		}
+		return typedescParamIndex(fn, n.TypeName.Value)
+	case *ast.BLangUnionTypeNode:
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
+			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
+				return idx
+			}
+		}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
+			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
+				return idx
+			}
+		}
+	case *ast.BLangIntersectionTypeNode:
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
+			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
+				return idx
+			}
+		}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
+			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
+				return idx
+			}
+		}
+	}
+	return -1
+}
+
+func typedescParamIndex(fn *ast.BLangFunction, name string) int {
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if param.Name == nil || param.Name.Value != name {
+			continue
+		}
+		switch tn := param.TypeNode().(type) {
+		case *ast.BLangValueType:
+			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
+				return i
+			}
+		case *ast.BLangBuiltInRefTypeNode:
+			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
+				return i
+			}
+		case *ast.BLangConstrainedType:
+			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
+				return i
+			}
+		}
+		return -1
+	}
+	return -1
+}
+
 func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
 	resolver.AddSymbol(name, symbol)
 	symRef, _, _ := resolver.GetSymbol(name)
@@ -201,12 +288,11 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
 	// First add all the top level symbols they can be referred from anywhere
-	for _, fn := range pkg.Functions {
+	for i := range pkg.Functions {
+		fn := &pkg.Functions[i]
 		name := fn.Name.Value
 		isPublic := fn.IsPublic()
-		// We are going to fill this in type resolver
-		signature := model.FunctionSignature{}
-		symbol := model.NewFunctionSymbol(name, signature, isPublic)
+		symbol := allocateFunctionSymbol(fn, name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, symbol, fn.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
 		}
@@ -955,8 +1041,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			continue
 		}
 		isPublic := method.IsPublic()
-		signature := model.FunctionSignature{}
-		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
+		symbol := allocateFunctionSymbol(method, methodName, isPublic)
 		if isPublicClass && isPublic {
 			moduleName := className + "." + methodName
 			ms.scope.AddSymbol(moduleName, symbol)

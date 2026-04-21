@@ -232,11 +232,62 @@ func TestDependentlyTyped(t *testing.T) {
 		return int64(1), nil
 	})
 
+	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "inferredPartially", func(args []values.BalValue) (values.BalValue, error) {
+		td, ok := args[1].(*values.TypeDesc)
+		if !ok {
+			return nil, fmt.Errorf("expected typedesc argument, got %T", args[1])
+		}
+		switch {
+		case semtypes.IsSubtype(tyCtx, semtypes.INT, td.Type):
+			return int64(0), nil
+		case semtypes.IsSubtype(tyCtx, semtypes.STRING, td.Type):
+			return "bar", nil
+		}
+		panic(values.NewErrorWithMessage("unsupported inferredPartially typedesc constraint"))
+	})
+
+	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "shiftBy", func(args []values.BalValue) (values.BalValue, error) {
+		src, ok := args[0].(*values.Map)
+		if !ok {
+			return nil, fmt.Errorf("expected record argument, got %T", args[0])
+		}
+		dx := args[1].(int64)
+		dy := args[2].(int64)
+		td, ok := args[3].(*values.TypeDesc)
+		if !ok {
+			return nil, fmt.Errorf("expected typedesc argument, got %T", args[3])
+		}
+		xVal, _ := src.Get("x")
+		yVal, _ := src.Get("y")
+		out := values.NewMap(td.Type)
+		out.Put("x", xVal.(int64)+dx)
+		out.Put("y", yVal.(int64)+dy)
+		return out, nil
+	})
+
+	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-v", "inferredWithDefault", func(args []values.BalValue) (values.BalValue, error) {
+		val, ok := args[0].(int64)
+		if !ok {
+			return nil, fmt.Errorf("expected int argument, got %T", args[0])
+		}
+		td, ok := args[1].(*values.TypeDesc)
+		if !ok {
+			return nil, fmt.Errorf("expected typedesc argument, got %T", args[1])
+		}
+		switch {
+		case semtypes.IsSubtype(tyCtx, td.Type, semtypes.INT):
+			return val, nil
+		case semtypes.IsSubtype(tyCtx, td.Type, semtypes.STRING):
+			return fmt.Sprintf("%d", val), nil
+		}
+		panic(values.NewErrorWithMessage("unsupported inferredWithDefault typedesc constraint"))
+	})
+
 	if err := rt.Interpret(*birPkg); err != nil {
 		t.Fatalf("runtime error: %v", err)
 	}
 
-	expected := "1\nfoo\n1\n1\n"
+	expected := "1\nfoo\n1\n1\n0\nbar\n11\n22\n1\n6\n102\n42\n100\n7\n"
 	if stdoutBuf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
 	}

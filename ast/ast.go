@@ -514,6 +514,10 @@ func (b *bLangInvokableNodeBase) SetAnonymous()       { b.flags |= flagLambda | 
 func (b *bLangInvokableNodeBase) SetAttached()        { b.flags |= flagAttached }
 func (b *bLangInvokableNodeBase) FlagsAsInt64() int64 { return b.flags.asInt64() }
 
+func (b *bLangInvokableNodeBase) FuncSymbolFlags() model.FuncSymbolFlags {
+	return model.FuncSymbolFlags(b.flags)
+}
+
 // BLangVariableBase flag methods
 func (b *BLangVariableBase) IsPublic() bool           { return b.flags.has(flagPublic) }
 func (b *BLangVariableBase) IsFinal() bool            { return b.flags.has(flagFinal) }
