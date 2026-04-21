@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -29,6 +30,18 @@ const (
 )
 
 func TestBenchmarkRunExportsHTML(t *testing.T) {
+	if testing.Short() {
+		t.Fatalf("skipping benchmark integration test in short mode")
+	}
+	if _, err := exec.LookPath("hyperfine"); err != nil {
+		t.Fatalf("hyperfine is unavailable: %v", err)
+	}
+	if err := exec.Command("git", "rev-parse", "--verify", baseRef).Run(); err != nil {
+		t.Fatalf("base ref %q is unavailable: %v", baseRef, err)
+	}
+	if err := exec.Command("git", "rev-parse", "--verify", headRef).Run(); err != nil {
+		t.Fatalf("head ref %q is unavailable: %v", headRef, err)
+	}
 	if _, err := os.Stat(targetPath); err != nil {
 		t.Fatalf("benchmark target is unavailable: %v", err)
 	}

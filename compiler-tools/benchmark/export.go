@@ -137,6 +137,7 @@ func computeDelta(base, head *benchResult, baseRef, headRef string) (bool, strin
 		result = head
 		reference = base
 	case base.Mean == head.Mean:
+		winnerRef = "tie"
 		result = base
 		reference = head
 	}
