@@ -202,7 +202,11 @@ const htmlTemplate = `<!doctype html>
 						{{ if .DeltaAvailable }}
 						<span class="delta-ratio">{{ .DeltaRatio }}×</span>
 						<span class="delta-margin"> ± {{ .DeltaStddev }}</span>
-						<span class="delta-winner">{{ .DeltaWinnerRef }}</span>
+						{{ if eq .DeltaWinnerRef "tie" }}
+						<span class="delta-winner">tie</span>
+						{{ else }}
+						<span class="delta-winner">{{ .DeltaWinnerRef }} is faster</span>
+						{{ end }}
 						{{ else }}
 						<span class="not-available">n/a</span>
 						{{ end }}

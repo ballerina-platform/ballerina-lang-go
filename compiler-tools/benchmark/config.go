@@ -38,7 +38,7 @@ func parseConfig() (*config, error) {
 		fs.PrintDefaults()
 	}
 
-	warmup := fs.Int("warmup", 0, "Number of warmup iterations")
+	warmup := fs.Int("warmup", 4, "Number of warmup iterations")
 	runs := fs.Int("runs", 10, "Number of benchmark runs")
 	exportPath := fs.String("export-html", "", "Path to export HTML report")
 
