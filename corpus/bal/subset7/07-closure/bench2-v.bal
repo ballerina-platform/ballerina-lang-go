@@ -41,5 +41,5 @@ function bench(int base) returns int {
 }
 
 public function main() {
-    io:println(bench(10)); // @output 2666000
+    io:println(bench(10)); // @output 266000
 }

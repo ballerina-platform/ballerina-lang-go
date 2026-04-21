@@ -19,14 +19,14 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(gte(1, 2));
-    printBoolean(gte(2, 1));
-    printBoolean(gte(2, -1));
-    printBoolean(gte(42, 42));
-    printBoolean(lte(1, 2));
-    printBoolean(lte(0, 0));
-    printBoolean(lte(2, 1));
-    printBoolean(lte(-1, 17));
+    printBoolean(gte(1, 2)); // @output 0
+    printBoolean(gte(2, 1)); // @output 1
+    printBoolean(gte(2, -1)); // @output 1
+    printBoolean(gte(42, 42)); // @output 1
+    printBoolean(lte(1, 2)); // @output 1
+    printBoolean(lte(0, 0)); // @output 1
+    printBoolean(lte(2, 1)); // @output 0
+    printBoolean(lte(-1, 17)); // @output 1
 }
 
 function printBoolean(boolean b) {

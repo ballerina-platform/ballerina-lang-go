@@ -19,6 +19,6 @@ import ballerina/io;
 
 public function main() {
     decimal d = 1e19D;
-    int i = <int>d;
+    int i = <int>d; // @panic value out of range
     io:println(i);
 }

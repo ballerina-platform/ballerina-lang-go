@@ -28,5 +28,6 @@ type Derived record {|
 
 public function main() {
     Derived d = {x: 1, y: "hello"};
-    io:println(d);
+    io:println(d); // @output {"x":1,"y":"hello"}
 }
+

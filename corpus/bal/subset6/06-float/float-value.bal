@@ -19,13 +19,13 @@ import ballerina/io;
 function testFloatValue() {
     float b;
     b = 10.1;
-    io:println(b);
+    io:println(b); // @output 10.1
 }
 
 function testNegativeFloatValue() {
     float y;
     y = -10.1;
-    io:println(y);
+    io:println(y); // @output -10.1
 }
 
 function testFloatAddition() {
@@ -33,7 +33,7 @@ function testFloatAddition() {
     float a;
     a = 9.9;
     b = 10.1;
-    io:println(a + b);
+    io:println(a + b); // @output 20.0
 }
 
 function testFloatMultiplication() {
@@ -41,7 +41,7 @@ function testFloatMultiplication() {
     float a;
     a = 2.5;
     b = 5.5;
-    io:println(a * b);
+    io:println(a * b); // @output 13.75
 }
 
 function testFloatSubtraction() {
@@ -49,7 +49,7 @@ function testFloatSubtraction() {
     float a;
     a = 25.5;
     b = 15.5;
-    io:println(a - b);
+    io:println(a - b); // @output 10.0
 }
 
 function testFloatDivision() {
@@ -57,20 +57,20 @@ function testFloatDivision() {
     float a;
     a = 25.5;
     b = 5.1;
-    io:println(a / b);
+    io:println(a / b); // @output 5.0
 }
 
 function testFloatParameter(float a) {
     float b;
     b = a;
-    io:println(b);
+    io:println(b); // @output 5.3
 }
 
 function testFloatValues() {
     float a = 123.4;
     float b = 1.234e2;
-    io:println(a);
-    io:println(b);
+    io:println(a); // @output 123.4
+    io:println(b); // @output 123.4
 }
 
 function testHexFloatingPointLiterals() {
@@ -78,38 +78,38 @@ function testHexFloatingPointLiterals() {
     float b = 0x8.0;
     float c = 0xaP-1;
     float d = 0x3p2;
-    io:println(a);
-    io:println(b);
-    io:println(c);
-    io:println(d);
+    io:println(a); // @output 4779.0
+    io:println(b); // @output 8.0
+    io:println(c); // @output 5.0
+    io:println(d); // @output 12.0
 }
 
 function testIntLiteralAssignment() {
     float x = 12;
     float y = 15;
-    io:println(x);
-    io:println(y);
+    io:println(x); // @output 12.0
+    io:println(y); // @output 15.0
 }
 
 function testDiscriminatedFloatLiteral() {
     float a = 1.0f;
     var b = 1.0f;
     float d = 2.2e3f;
-    io:println(a);
-    io:println(b);
-    io:println(d);
+    io:println(a); // @output 1.0
+    io:println(b); // @output 1.0
+    io:println(d); // @output 2200.0
 }
 
 function testHexaDecimalLiteralsWithFloat() {
     float f1 = 0x5;
     float f2 = 0x555;
-    io:println(5.0 == f1);
-    io:println(1365.0 == f2);
+    io:println(5.0 == f1); // @output true
+    io:println(1365.0 == f2); // @output true
 }
 
 function testOutOfRangeIntWithFloat() {
     float f1 = 999999999999999999999999999999;
-    io:println(1.0E30 == f1);
+    io:println(1.0E30 == f1); // @output true
 }
 
 public function main() {
@@ -127,3 +127,4 @@ public function main() {
     testHexaDecimalLiteralsWithFloat();
     testOutOfRangeIntWithFloat();
 }
+

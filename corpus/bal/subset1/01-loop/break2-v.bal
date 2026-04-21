@@ -19,9 +19,9 @@
 import ballerina/io;
 
 public function main() {
-    printIfBetween(6, 5, 7);
+    printIfBetween(6, 5, 7); // @output 6
     printIfBetween(1, 2, 3);
-    printIfBetween(0, -1, 4);
+    printIfBetween(0, -1, 4); // @output 0
 }
 
 function printIfBetween(int n, int min, int max) {

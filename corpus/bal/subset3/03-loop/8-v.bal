@@ -19,7 +19,7 @@ import ballerina/io;
 
 public function main() {
     int i = loop();
-    io:println(i);
+    io:println(i); // @output 5
 }
 public function loop() returns int {
     foreach int i in 5 ..< 10 {
@@ -27,3 +27,4 @@ public function loop() returns int {
     }
     return -1;
 }
+

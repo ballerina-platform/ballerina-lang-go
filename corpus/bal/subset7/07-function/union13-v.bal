@@ -25,8 +25,8 @@ public function main() {
     int? res = f(1);
     io:println(res); // @output 2
     f = bar;
-    res = f(10); // @output 10
-    io:println(res); // @output  
+    res = f(10);
+    io:println(res);
 }
 
 function foo(int x) returns int {
@@ -34,5 +34,5 @@ function foo(int x) returns int {
 }
 
 function bar(int x) {
-    io:println(x);
+    io:println(x); // @output 10
 }

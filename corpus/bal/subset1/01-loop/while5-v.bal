@@ -20,11 +20,11 @@ import ballerina/io;
 
 public function main() {
     printInts(5);
-   
-   
-   
-   
-   
+    // @output 5
+    // @output 4
+    // @output 3
+    // @output 2
+    // @output 1
 }
 
 function printInts(int maxExclusive) {
@@ -38,3 +38,4 @@ function printInts(int maxExclusive) {
 function decrease(int x) returns int {
     return x - 1;
 }
+

@@ -16,10 +16,11 @@
 import ballerina/io;
 
 public function main() {
-    io:println(foo());
+    io:println(foo()); // @output 5
 }
 
 function foo() returns int {
     int foo = 5;
     return foo;
 }
+

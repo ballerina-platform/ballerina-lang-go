@@ -22,7 +22,7 @@ public function main() {
     io:println(map:length(foo)); //@output 2
     io:println(map:keys(foo)); // @output ["a","b"]
     string|int b = map:remove(foo, "b");
-    io:println(b); // @output "b"
+    io:println(b); // @output b
     io:println(map:length(foo)); //@output 1
     io:println(map:keys(foo)); // @output ["a"]
 }

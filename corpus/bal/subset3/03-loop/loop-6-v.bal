@@ -16,10 +16,10 @@
 import ballerina/io;
 
 public function main() {
-    foreach int i in foo() {
-        io:println(i);
-       
-       
+    foreach int i in foo() { // @output called foo
+        io:println(i); // @output 1
+        // @output 2
+        // @output 3
     }
 }
 
@@ -27,3 +27,4 @@ function foo() returns int[] {
     io:println("called foo");
     return [1, 2, 3];
 }
+

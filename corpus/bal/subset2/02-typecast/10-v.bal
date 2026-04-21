@@ -20,9 +20,10 @@ import ballerina/io;
 public function main() {
     decimal d = 10.25;
     decimal e = <decimal>d;
-    io:println(e);
+    io:println(e); // @output 10.25
 
     decimal d2 = 1.25;
     float f = <float>d2;
-    io:println(f);
+    io:println(f); // @output 1.25
 }
+

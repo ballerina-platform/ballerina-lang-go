@@ -19,21 +19,22 @@ import ballerina/io;
 public function main() {
     // int literal widened to float and decimal in tuple context
     [int, float, decimal] t1 = [1, 2, 3];
-    io:println(t1);
+    io:println(t1); // @output [1,2.0,3]
 
     // float literal widened to decimal in tuple context
     [float, decimal] t2 = [1.5, 1.5];
-    io:println(t2);
+    io:println(t2); // @output [1.5,1.5]
 
     // int array - literals stay as int
     int[] a1 = [1, 2, 3];
-    io:println(a1);
+    io:println(a1); // @output [1,2,3]
 
     // float array - int literals widened to float
     float[] a2 = [1, 2, 3];
-    io:println(a2);
+    io:println(a2); // @output [1.0,2.0,3.0]
 
     // decimal array - int literals widened to decimal
     decimal[] a3 = [1, 2, 3];
-    io:println(a3);
+    io:println(a3); // @output [1,2,3]
 }
+

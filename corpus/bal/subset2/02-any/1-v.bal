@@ -20,5 +20,6 @@ import ballerina/io;
 public function main() {
     int n = 1;
     any v = n;
-    io:println(v);
+    io:println(v); // @output 1
 }
+

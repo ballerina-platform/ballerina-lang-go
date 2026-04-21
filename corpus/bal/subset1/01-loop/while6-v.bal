@@ -28,14 +28,15 @@ public function main() {
         }
         i = i + 1;
     }
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
+    // @output 0
+    // @output 0
+    // @output 1
+    // @output 0
+    // @output 1
+    // @output 2
+    // @output 0
+    // @output 1
+    // @output 2
+    // @output 3
 }
+

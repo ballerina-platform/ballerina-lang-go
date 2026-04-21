@@ -21,3 +21,4 @@ public function main() {
     int? x = ();
     io:println(x * 2);
 }
+

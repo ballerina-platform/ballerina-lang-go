@@ -19,10 +19,10 @@
 import ballerina/io;
 
 public function main() {
-    printClosestSquareNum(1);
-    printClosestSquareNum(0);
-    printClosestSquareNum(5);
-    printClosestSquareNum(17);
+    printClosestSquareNum(1); // @output 1
+    printClosestSquareNum(0); // @output 0
+    printClosestSquareNum(5); // @output 4
+    printClosestSquareNum(17); // @output 16
 }
 
 function printClosestSquareNum(int x) {
@@ -49,3 +49,4 @@ function isSquareNumber(int x) returns boolean {
 
     return false;
 }
+

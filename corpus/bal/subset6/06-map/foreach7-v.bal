@@ -24,6 +24,7 @@ type Person record {|
 public function main() {
     Person p = {name: "John", age: 30};
     foreach string|int val in p {
-        io:println(val);
+        io:println(val); // @output John
+                          // @output 30
     }
 }

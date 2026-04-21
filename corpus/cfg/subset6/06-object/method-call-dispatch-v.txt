@@ -39,28 +39,23 @@
   )
 )
 (main
-  (bb0 () (bb1)
-    (var-def
-      (variable fs (type
-        (array-type
-          (user-defined-type Foo) dimensions: 1 ([]))) (expr
-        (list-constructor-expr
-          (new
-            (user-defined-type F1) ())
-          (new
-            (user-defined-type F2) ())))))
-  )
-  (bb1 (bb0 bb2) (bb2 bb3)
-    (simple-var-ref fs)
+  (bb0 () ()
     (var-def
       (variable f (type
-        (user-defined-type Foo))))
-  )
-  (bb2 (bb1) (bb1)
+        (user-defined-type Foo)) (expr
+        (new
+          (user-defined-type F1) ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation foo expr:
+          (simple-var-ref f) ()))))
+    (assignment
+      (simple-var-ref f)
+      (new
+        (user-defined-type F2) ()))
     (expression-stmt
       (invocation io println (
         (invocation foo expr:
           (simple-var-ref f) ()))))
   )
-  (bb3 (bb1) ())
 )

@@ -20,8 +20,8 @@ import ballerina/io;
 
 public function main() {
     printIfFalse(true);
-    printIfFalse(false);
-    printIfTrue(true);
+    printIfFalse(false); // @output 0
+    printIfTrue(true); // @output 1
     printIfTrue(false);
 }
 

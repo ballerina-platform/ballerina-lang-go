@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(foo());
+    printBoolean(foo()); // @output 0
 }
 
 function foo() returns boolean {
@@ -41,3 +41,4 @@ function printBoolean(boolean b) {
         io:println(0);
     }
 }
+
