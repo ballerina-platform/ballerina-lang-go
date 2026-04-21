@@ -1,0 +1,19 @@
+(bar
+  (bb0 () ()
+    (return
+      (literal 5))
+  )
+)
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+  )
+)
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation foo ()))
+  )
+)

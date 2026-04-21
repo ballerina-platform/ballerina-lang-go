@@ -417,8 +417,19 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	validateDefaultParamTypes(parent, function)
 	if function.IsIsolated() && !function.IsNative() {
 		isIsolatedFuncInner(fa, function.GetBody().(ast.BLangNode))
+		validateIsolatedDefaultParams(fa, function)
 	}
 	return fa
+}
+
+func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction) {
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		if !param.IsDefaultableParam() || param.Expr == nil {
+			continue
+		}
+		isIsolatedFuncInner(a, param.Expr.(ast.BLangNode))
+	}
 }
 
 func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
