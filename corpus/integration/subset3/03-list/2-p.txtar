@@ -1,4 +1,4 @@
 -- stdout --
 -- stderr --
 error: invalid array index: 3
-        at main(02-p.bal:22)
+        at main(2-p.bal:22)

@@ -52,6 +52,8 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
   3. panic tests (`*-p.bal`)
      These would trigger runtime panics in the interpreter
 
+- Name corpus `.bal` files without leading zeros in numeric parts (e.g. `1-e.bal`, `call2-v.bal`, `div1-p.bal`; not `01-e.bal` or `call02-v.bal`). When you add or rename a test, update the matching expected files under `./corpus/$stage` and any `corpus/integration` `.txtar` lines that cite the file name.
+
 - For valid tests for each stage we have expected output defined in `./corpus/$stage` directory. We have corpus tests that generate the actual output and compare against them
   - Each corpus test accepts `-update` flag that will update expected output to match actual output
   - Each corpus tests will run the interpreter up to that stage.
