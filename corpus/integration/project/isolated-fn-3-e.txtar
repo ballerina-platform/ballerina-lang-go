@@ -1,3 +1,7 @@
 -- stdout --
-5
 -- stderr --
+error[SEMANTIC_ERROR]: access of mutable variable
+  --> main.bal:22:13
+   |
+22 |     int a = utils:val; // @error
+   |             ^^^^^^^^^
