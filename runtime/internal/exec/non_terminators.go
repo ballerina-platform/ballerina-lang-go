@@ -23,69 +23,68 @@ import (
 	"strconv"
 
 	"ballerina-lang-go/bir"
-	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/values"
 )
 
-func execConstantLoad(constantLoad *bir.ConstantLoad, frame *Frame, reg *modules.Registry) {
-	setOperandValue(constantLoad.LhsOp, frame, reg, constantLoad.Value)
+func execConstantLoad(ctx *Context, constantLoad *bir.ConstantLoad, frame *Frame) {
+	setOperandValue(ctx, constantLoad.LhsOp, frame, constantLoad.Value)
 }
 
-func execMove(moveIns *bir.Move, frame *Frame, reg *modules.Registry) {
-	setOperandValue(moveIns.LhsOp, frame, reg, getOperandValue(moveIns.RhsOp, frame, reg))
+func execMove(ctx *Context, moveIns *bir.Move, frame *Frame) {
+	setOperandValue(ctx, moveIns.LhsOp, frame, getOperandValue(ctx, moveIns.RhsOp, frame))
 }
 
-func execNewArray(newArray *bir.NewArray, frame *Frame, reg *modules.Registry) {
+func execNewArray(ctx *Context, newArray *bir.NewArray, frame *Frame) {
 	size := 0
 	if newArray.SizeOp != nil {
-		size = int(getOperandValue(newArray.SizeOp, frame, reg).(int64))
+		size = int(getOperandValue(ctx, newArray.SizeOp, frame).(int64))
 	}
 	list := values.NewList(size, newArray.Type, newArray.Filler)
 	for i, value := range newArray.Values {
-		list.FillingSet(i, getOperandValue(value, frame, reg))
+		list.FillingSet(i, getOperandValue(ctx, value, frame))
 	}
-	setOperandValue(newArray.LhsOp, frame, reg, list)
+	setOperandValue(ctx, newArray.LhsOp, frame, list)
 }
 
-func execNewMap(newMap *bir.NewMap, frame *Frame, reg *modules.Registry, callStack *callStack) {
+func execNewMap(ctx *Context, newMap *bir.NewMap, frame *Frame) {
 	m := values.NewMap(newMap.Type)
 	for _, entry := range newMap.Values {
 		kv := entry.(*bir.MappingConstructorKeyValueEntry)
-		keyVal := getOperandValue(kv.KeyOp(), frame, reg)
+		keyVal := getOperandValue(ctx, kv.KeyOp(), frame)
 		keyStr := keyVal.(string)
-		valueVal := getOperandValue(kv.ValueOp(), frame, reg)
+		valueVal := getOperandValue(ctx, kv.ValueOp(), frame)
 		m.Put(keyStr, valueVal)
 	}
 	for _, def := range newMap.Defaults {
 		if _, exists := m.Get(def.FieldName); !exists {
-			fn := reg.GetBIRFunction(def.FunctionLookupKey)
-			val := executeFunction(*fn, nil, reg, callStack, frame)
+			fn := ctx.GetBIRFunction(def.FunctionLookupKey)
+			val := executeFunction(ctx, *fn, nil, frame)
 			m.Put(def.FieldName, val)
 		}
 	}
-	setOperandValue(newMap.GetLhsOperand(), frame, reg, m)
+	setOperandValue(ctx, newMap.GetLhsOperand(), frame, m)
 }
 
-func execNewError(newError *bir.NewError, frame *Frame, reg *modules.Registry) {
-	msgVal := getOperandValue(newError.MessageOp, frame, reg)
+func execNewError(ctx *Context, newError *bir.NewError, frame *Frame) {
+	msgVal := getOperandValue(ctx, newError.MessageOp, frame)
 	message := msgVal.(string)
 
 	var cause values.BalValue
 	if newError.CauseOp != nil {
-		cause = getOperandValue(newError.CauseOp, frame, reg)
+		cause = getOperandValue(ctx, newError.CauseOp, frame)
 	}
 
 	var detailMap *values.Map
 	if newError.DetailOp != nil {
-		detailMap = getOperandValue(newError.DetailOp, frame, reg).(*values.Map)
+		detailMap = getOperandValue(ctx, newError.DetailOp, frame).(*values.Map)
 	}
 	errVal := values.NewError(newError.Type, message, cause, newError.TypeName, detailMap)
-	setOperandValue(newError.GetLhsOperand(), frame, reg, errVal)
+	setOperandValue(ctx, newError.GetLhsOperand(), frame, errVal)
 }
 
-func execNewObject(newObject *bir.NewObject, frame *Frame, reg *modules.Registry) {
-	classDef := reg.GetClassDef(newObject.ClassDefRef)
+func execNewObject(ctx *Context, newObject *bir.NewObject, frame *Frame) {
+	classDef := ctx.GetClassDef(newObject.ClassDefRef)
 	fieldValues := make(map[string]values.BalValue, len(classDef.Fields))
 	for _, field := range classDef.Fields {
 		fieldValues[field.Name] = values.DefaultValueForType(field.Ty)
@@ -96,63 +95,63 @@ func execNewObject(newObject *bir.NewObject, frame *Frame, reg *modules.Registry
 	}
 	objType := newObject.GetLhsOperand().VariableDcl.GetType()
 	obj := values.NewObject(objType, fieldValues, methodKeys)
-	setOperandValue(newObject.GetLhsOperand(), frame, reg, obj)
+	setOperandValue(ctx, newObject.GetLhsOperand(), frame, obj)
 }
 
-func execArrayStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	list := getOperandValue(access.LhsOp, frame, reg).(*values.List)
-	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
+func execArrayStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	list := getOperandValue(ctx, access.LhsOp, frame).(*values.List)
+	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
 	if idx < 0 {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
-	list.FillingSet(idx, getOperandValue(access.RhsOp, frame, reg))
+	list.FillingSet(idx, getOperandValue(ctx, access.RhsOp, frame))
 }
 
-func execArrayLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	list := getOperandValue(access.RhsOp, frame, reg).(*values.List)
-	idx := int(getOperandValue(access.KeyOp, frame, reg).(int64))
+func execArrayLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	list := getOperandValue(ctx, access.RhsOp, frame).(*values.List)
+	idx := int(getOperandValue(ctx, access.KeyOp, frame).(int64))
 	if idx < 0 || idx >= list.Len() {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid array index: %d", idx)))
 	}
-	setOperandValue(access.LhsOp, frame, reg, list.Get(idx))
+	setOperandValue(ctx, access.LhsOp, frame, list.Get(idx))
 }
 
-func execMapStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	m := getOperandValue(access.LhsOp, frame, reg).(*values.Map)
-	keyVal := getOperandValue(access.KeyOp, frame, reg)
+func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	m := getOperandValue(ctx, access.LhsOp, frame).(*values.Map)
+	keyVal := getOperandValue(ctx, access.KeyOp, frame)
 	keyStr := keyVal.(string)
-	valueVal := getOperandValue(access.RhsOp, frame, reg)
+	valueVal := getOperandValue(ctx, access.RhsOp, frame)
 	m.Put(keyStr, valueVal)
 }
 
-func execMapLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	m := getOperandValue(access.RhsOp, frame, reg).(*values.Map)
-	key := getOperandValue(access.KeyOp, frame, reg).(string)
+func execMapLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	m := getOperandValue(ctx, access.RhsOp, frame).(*values.Map)
+	key := getOperandValue(ctx, access.KeyOp, frame).(string)
 	value, _ := m.Get(key)
-	setOperandValue(access.LhsOp, frame, reg, value)
+	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 
-func execObjectStore(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	obj := getOperandValue(access.LhsOp, frame, reg).(*values.Object)
-	field := getOperandValue(access.KeyOp, frame, reg).(string)
-	value := getOperandValue(access.RhsOp, frame, reg)
+func execObjectStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	obj := getOperandValue(ctx, access.LhsOp, frame).(*values.Object)
+	field := getOperandValue(ctx, access.KeyOp, frame).(string)
+	value := getOperandValue(ctx, access.RhsOp, frame)
 	obj.Put(field, value)
 }
 
-func execObjectLoad(access *bir.FieldAccess, frame *Frame, reg *modules.Registry) {
-	obj := getOperandValue(access.RhsOp, frame, reg).(*values.Object)
-	field := getOperandValue(access.KeyOp, frame, reg).(string)
+func execObjectLoad(ctx *Context, access *bir.FieldAccess, frame *Frame) {
+	obj := getOperandValue(ctx, access.RhsOp, frame).(*values.Object)
+	field := getOperandValue(ctx, access.KeyOp, frame).(string)
 	value, _ := obj.Get(field)
-	setOperandValue(access.LhsOp, frame, reg, value)
+	setOperandValue(ctx, access.LhsOp, frame, value)
 }
 
-func execTypeCast(typeCast *bir.TypeCast, frame *Frame, reg *modules.Registry) {
-	sourceValue := getOperandValue(typeCast.RhsOp, frame, reg)
-	result := castValue(sourceValue, typeCast.Type, reg)
-	setOperandValue(typeCast.LhsOp, frame, reg, result)
+func execTypeCast(ctx *Context, typeCast *bir.TypeCast, frame *Frame) {
+	sourceValue := getOperandValue(ctx, typeCast.RhsOp, frame)
+	result := castValue(ctx, sourceValue, typeCast.Type)
+	setOperandValue(ctx, typeCast.LhsOp, frame, result)
 }
 
-func execFPLoad(fpLoad *bir.FPLoad, frame *Frame, reg *modules.Registry) {
+func execFPLoad(ctx *Context, fpLoad *bir.FPLoad, frame *Frame) {
 	fn := &values.Function{
 		Type:      fpLoad.Type,
 		LookupKey: fpLoad.FunctionLookupKey,
@@ -160,21 +159,19 @@ func execFPLoad(fpLoad *bir.FPLoad, frame *Frame, reg *modules.Registry) {
 	if fpLoad.IsClosure {
 		fn.ParentFrame = frame
 	}
-	setOperandValue(fpLoad.LhsOp, frame, reg, fn)
+	setOperandValue(ctx, fpLoad.LhsOp, frame, fn)
 }
 
-func execTypeTest(typeTest *bir.TypeTest, frame *Frame, reg *modules.Registry) {
-	sourceValue := getOperandValue(typeTest.RhsOp, frame, reg)
+func execTypeTest(ctx *Context, typeTest *bir.TypeTest, frame *Frame) {
+	sourceValue := getOperandValue(ctx, typeTest.RhsOp, frame)
 	valueType := values.SemTypeForValue(sourceValue)
-	typeEnv := reg.GetTypeEnv()
-	typeCtx := semtypes.TypeCheckContext(typeEnv)
+	typeCtx := ctx.TypeCheckContext()
 	matches := semtypes.IsSubtype(typeCtx, valueType, typeTest.Type) != typeTest.IsNegation
-	setOperandValue(typeTest.LhsOp, frame, reg, matches)
+	setOperandValue(ctx, typeTest.LhsOp, frame, matches)
 }
 
-func castValue(value values.BalValue, targetType semtypes.SemType, reg *modules.Registry) values.BalValue {
-	typeEnv := reg.GetTypeEnv()
-	typeCtx := semtypes.TypeCheckContext(typeEnv)
+func castValue(ctx *Context, value values.BalValue, targetType semtypes.SemType) values.BalValue {
+	typeCtx := ctx.TypeCheckContext()
 	valueType := values.SemTypeForValue(value)
 	if semtypes.IsSubtype(typeCtx, valueType, targetType) {
 		return value
