@@ -1,0 +1,19 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> unary-2-e.bal:21:13
+   |
+21 |     int a = +base; // @error 
+   |             ^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> unary-2-e.bal:22:13
+   |
+22 |     int c = -base; // @error
+   |             ^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got nil|int
+  --> unary-2-e.bal:23:13
+   |
+23 |     int d = ~base; // @error
+   |             ^^^^^
