@@ -81,6 +81,7 @@ type typeResolver interface {
 	currentScope() model.Scope
 	setCurrentScope(scope model.Scope)
 	nextDefaultFnName() string
+	nextMonoFnName(origName string) string
 
 	lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool)
 }
@@ -102,6 +103,7 @@ type packageTypeResolver struct {
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
 	typeDefnNodes        map[model.SymbolRef]model.TypeDefinition
 	defaultFnSymbolCount int
+	monoCounters         map[string]int
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
 	classAtomSymbols     map[*semtypes.MappingAtomicType]model.SymbolRef
@@ -197,6 +199,12 @@ func (t *packageTypeResolver) nextDefaultFnName() string {
 	return name
 }
 
+func (t *packageTypeResolver) nextMonoFnName(origName string) string {
+	idx := t.monoCounters[origName]
+	t.monoCounters[origName] = idx + 1
+	return fmt.Sprintf("$mono$%s$%d", origName, idx)
+}
+
 func (t *packageTypeResolver) lookupClassMethodSymbol(receiverTy semtypes.SemType, methodName string) (model.SymbolRef, bool) {
 	classRef, ok := t.classSymbolByType[receiverTy]
 	if !ok {
@@ -244,6 +252,7 @@ type functionTypeResolver struct {
 	implicitImports      map[string]ast.BLangImportPackage
 	capturedNarrowedVars map[model.SymbolRef]bool
 	mappingAtomToBType   map[*semtypes.MappingAtomicType]ast.BType
+	monoCounters         map[string]int
 	defaultFnSymbolCount int
 	scope                model.Scope
 	mappingAtomToSymRef  map[*semtypes.MappingAtomicType]model.SymbolRef
@@ -376,6 +385,12 @@ func (f *functionTypeResolver) nextDefaultFnName() string {
 	return name
 }
 
+func (f *functionTypeResolver) nextMonoFnName(origName string) string {
+	idx := f.monoCounters[origName]
+	f.monoCounters[origName] = idx + 1
+	return fmt.Sprintf("$mono$%s$%d", origName, idx)
+}
+
 func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace, moduleScope model.Scope) *packageTypeResolver {
 	return &packageTypeResolver{
 		ctx:                 ctx,
@@ -390,6 +405,7 @@ func newPackageTypeResolver(ctx *context.CompilerContext, pkg *ast.BLangPackage,
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classAtomSymbols:    make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		classSymbolByType:   make(map[semtypes.SemType]model.SymbolRef),
+		monoCounters:        make(map[string]int),
 		scope:               moduleScope,
 	}
 }
@@ -514,6 +530,7 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 			tyCtx:               semtypes.ContextFrom(p.typeEnv()),
 			implicitImports:     make(map[string]ast.BLangImportPackage),
 			mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+			monoCounters:        make(map[string]int),
 			scope:               classDef.Scope(),
 			mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 		}
@@ -545,6 +562,15 @@ func ResolveLocalNodes(ctx *context.CompilerContext, pkg *ast.BLangPackage, impo
 	}
 }
 
+func isPolymorphicFnSymbol(sym model.FunctionSymbol) bool {
+	switch sym.(type) {
+	case model.DependentlyTypedFunctionSymbol, model.GenericFunctionSymbol:
+		return true
+	default:
+		return false
+	}
+}
+
 func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functionTypeResolver {
 	fnSymbol := p.getSymbol(fn.Symbol())
 	fnSym, ok := fnSymbol.(model.FunctionSymbol)
@@ -555,11 +581,14 @@ func resolveFunctionBody(p *packageTypeResolver, fn *ast.BLangFunction) *functio
 	ft := &functionTypeResolver{
 		parentResolver:      p,
 		tyCtx:               semtypes.ContextFrom(p.typeEnv()),
-		retTy:               fnSym.Signature().ReturnType,
 		implicitImports:     make(map[string]ast.BLangImportPackage),
 		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		monoCounters:        make(map[string]int),
 		scope:               fn.Scope(),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
+	}
+	if !isPolymorphicFnSymbol(fnSym) {
+		ft.retTy = fnSym.Signature().ReturnType
 	}
 	switch body := fn.Body.(type) {
 	case *ast.BLangExternFunctionBody:
@@ -812,107 +841,11 @@ func resolveOnFailClause(t typeResolver, chain *binding, clause *ast.BLangOnFail
 	}
 }
 
-// dependentReturnParamIndex detects a dependent-return signature where the
-// return type descriptor references a typedesc parameter of this function. The
-// reference can be bare (`returns retTy`) or nested inside a composite
-// descriptor like a union (`returns retTy|int`). Returns the index of the
-// referenced typedesc parameter, or -1 if none is found.
-func dependentReturnParamIndex(fn *ast.BLangFunction, retTd model.TypeDescriptor) int {
-	node, ok := retTd.(ast.BLangNode)
-	if !ok {
-		return -1
-	}
-	return findDependentParamRef(fn, node)
-}
-
-func findDependentParamRef(fn *ast.BLangFunction, node ast.BLangNode) int {
-	switch n := node.(type) {
-	case *ast.BLangUserDefinedType:
-		if n.PkgAlias.Value != "" {
-			return -1
-		}
-		return typedescParamIndex(fn, n.TypeName.Value)
-	case *ast.BLangUnionTypeNode:
-		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
-				return idx
-			}
-		}
-		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
-				return idx
-			}
-		}
-	case *ast.BLangIntersectionTypeNode:
-		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
-				return idx
-			}
-		}
-		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
-				return idx
-			}
-		}
-	}
-	return -1
-}
-
-func typedescParamIndex(fn *ast.BLangFunction, name string) int {
-	for i := range fn.RequiredParams {
-		param := &fn.RequiredParams[i]
-		if param.Name == nil || param.Name.Value != name {
-			continue
-		}
-		switch tn := param.TypeNode().(type) {
-		case *ast.BLangValueType:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		case *ast.BLangBuiltInRefTypeNode:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		case *ast.BLangConstrainedType:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		}
-		return -1
-	}
-	return -1
-}
-
-// paramTypedescConstraint returns the constraint of a typedesc parameter
-// (the T in typedesc<T>). Returns semtypes.VAL for a bare `typedesc` parameter.
-// Returns nil if the parameter is not a typedesc.
-func paramTypedescConstraint(t typeResolver, param *ast.BLangSimpleVariable) semtypes.SemType {
-	switch tn := param.TypeNode().(type) {
-	case *ast.BLangValueType:
-		if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-			return semtypes.VAL
-		}
-	case *ast.BLangBuiltInRefTypeNode:
-		if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-			return semtypes.VAL
-		}
-	case *ast.BLangConstrainedType:
-		if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-			constraintNode, ok := tn.Constraint.TypeDescriptor.(ast.BType)
-			if !ok {
-				return semtypes.VAL
-			}
-			c, ok := resolveBType(t, constraintNode, 0)
-			if !ok {
-				return semtypes.VAL
-			}
-			return c
-		}
-	}
-	return nil
-}
-
 func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.SemType, bool) {
+	fnSym := t.getSymbol(fn.Symbol())
+	if depSym, ok := fnSym.(model.DependentlyTypedFunctionSymbol); ok {
+		return resolveDependentlyTypedFunctionSignature(t, fn, depSym)
+	}
 	if ty := t.symbolType(fn.Symbol()); ty != nil {
 		return ty, true
 	}
@@ -937,48 +870,26 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	}
 	paramListDefn := semtypes.NewListDefinition()
 	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), paramTypes, len(paramTypes), restTy, semtypes.CellMutability_CELL_MUT_NONE)
-	// This is a hack that should be removed when we properly migrate dependently-typed function to use generic function symbols
-	// https://github.com/ballerina-platform/ballerina-lang-go/issues/389
-	dependentReturnParam := -1
-	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
-		dependentReturnParam = dependentReturnParamIndex(fn, retTd)
-	}
 	var returnTy semtypes.SemType
 	if retTd := fn.GetReturnTypeDescriptor(); retTd != nil {
-		if dependentReturnParam >= 0 {
-			returnTy = paramTypedescConstraint(t, &fn.RequiredParams[dependentReturnParam])
-			if returnTy == nil {
-				returnTy = semtypes.VAL
-			}
-			retTd.(ast.BLangNode).SetDeterminedType(returnTy)
-			setOtherNodesAsNever(retTd.(ast.BLangNode))
-		} else {
-			var ok bool
-			returnTy, ok = resolveBType(t, retTd.(ast.BType), 0)
-			if !ok {
-				return nil, false
-			}
-			setOtherNodesAsNever(retTd.(ast.BLangNode))
+		var ok bool
+		returnTy, ok = resolveBType(t, retTd.(ast.BType), 0)
+		if !ok {
+			return nil, false
 		}
+		setOtherNodesAsNever(retTd.(ast.BLangNode))
 	} else {
 		returnTy = semtypes.NIL
 	}
-	isolated := fn.IsIsolated()
-	transactional := fn.IsTransactional()
 	functionDefn := semtypes.NewFunctionDefinition()
 	fnType := functionDefn.Define(t.typeEnv(), paramListTy, returnTy,
-		semtypes.FunctionQualifiersFrom(t.typeEnv(), isolated, transactional))
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), fn.IsIsolated(), fn.IsTransactional()))
 
 	// Update symbol type for the function
 	updateSymbolType(t, fn, fnType)
-	fnSymbol := t.getSymbol(fn.Symbol()).(model.FunctionSymbol)
+	fnSymbol := fnSym.(model.FunctionSymbol)
 	sig := fnSymbol.Signature()
-	if isolated {
-		sig.Flags |= model.FuncSymbolFlagIsolated
-	}
-	if transactional {
-		sig.Flags |= model.FuncSymbolFlagTransactional
-	}
+	sig.Flags |= fn.FuncSymbolFlags()
 	sig.ParamTypes = paramTypes
 	paramNames := make([]string, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
@@ -987,14 +898,45 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 	sig.ParamNames = paramNames
 	sig.ReturnType = returnTy
 	sig.RestParamType = restTy
-	if dependentReturnParam >= 0 {
-		sig.SetDependentReturn(dependentReturnParam)
-	}
 	fnSymbol.SetSignature(sig)
 
-	defaultableParams := fnSymbol.DefaultableParams()
+	setDefaultableParamFnSignatures(t, fnSymbol.DefaultableParams(), paramTypes)
+
+	return fnType, true
+}
+
+func resolveDependentlyTypedFunctionSignature(t typeResolver, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) (semtypes.SemType, bool) {
+	paramTypes := make([]semtypes.SemType, len(fn.RequiredParams))
+	paramsByName := make(map[string]param, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
-		dp, ok := defaultableParams.Get(i)
+		p := fn.RequiredParams[i]
+		resolveSimpleVariable(t, nil, &p)
+		paramTypes[i] = p.GetDeterminedType()
+		paramsByName[p.GetName().GetValue()] = param{index: i, ty: paramTypes[i]}
+	}
+	retTd, ok := fn.GetReturnTypeDescriptor().(ast.BLangNode)
+	if !ok {
+		t.internalError("dependently-typed function has no return type descriptor", fn.GetPosition())
+		return nil, false
+	}
+	retOp, ok := buildReturnTypeOp(t, paramsByName, retTd)
+	if !ok {
+		t.internalError("failed to build return type op for dependently-typed function", fn.GetPosition())
+		return nil, false
+	}
+	setOtherNodesAsNever(retTd)
+	sym.SetParamTypes(paramTypes)
+	sym.SetReturnType(retOp)
+	setDefaultableParamFnSignatures(t, sym.DefaultableParams(), paramTypes)
+	setOtherNodesAsNever(fn)
+	return semtypes.NEVER, true
+}
+
+// setDefaultableParamFnSignatures populates the signature of each non-typedesc
+// default-provider function. The signature is (paramTypes[:i]) -> paramTypes[i].
+func setDefaultableParamFnSignatures(t typeResolver, defaultable *model.DefaultableParamInfo, paramTypes []semtypes.SemType) {
+	for i := range paramTypes {
+		dp, ok := defaultable.Get(i)
 		if !ok {
 			continue
 		}
@@ -1002,14 +944,63 @@ func resolveFunctionSignature(t typeResolver, fn *ast.BLangFunction) (semtypes.S
 			continue
 		}
 		defaultFnSym := t.getSymbol(dp.Symbol).(model.FunctionSymbol)
-		defaultSig := model.FunctionSignature{
+		sig := model.FunctionSignature{
 			ParamTypes: paramTypes[:i],
 			ReturnType: paramTypes[i],
 		}
-		defaultFnSym.SetSignature(defaultSig)
+		defaultFnSym.SetSignature(sig)
 	}
+}
 
-	return fnType, true
+type param struct {
+	index int
+	ty    semtypes.SemType
+}
+
+// buildReturnTypeOp translates a return-type-descriptor AST node into a TypeOp tree.
+// A user-defined-type node whose name matches a typedesc parameter becomes a RefTypeOp.
+// Union and intersection nodes recurse. Everything else is resolved to a concrete semtype
+// and wrapped in an IdentityTypeOp.
+func buildReturnTypeOp(t typeResolver, params map[string]param, node ast.BLangNode) (model.TypeOp, bool) {
+	switch n := node.(type) {
+	case *ast.BLangUnionTypeNode:
+		lhs, ok := buildReturnTypeOp(t, params, n.Lhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		rhs, ok := buildReturnTypeOp(t, params, n.Rhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		return &model.BinaryTypeOp{Kind: model.TypeOpUnion, Lhs: lhs, Rhs: rhs}, true
+	case *ast.BLangIntersectionTypeNode:
+		lhs, ok := buildReturnTypeOp(t, params, n.Lhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		rhs, ok := buildReturnTypeOp(t, params, n.Rhs().TypeDescriptor.(ast.BLangNode))
+		if !ok {
+			return nil, false
+		}
+		return &model.BinaryTypeOp{Kind: model.TypeOpIntersection, Lhs: lhs, Rhs: rhs}, true
+	case *ast.BLangUserDefinedType:
+		if n.PkgAlias.Value == "" {
+			if p, ok := params[n.TypeName.Value]; ok && semtypes.IsSubtypeSimple(p.ty, semtypes.TYPEDESC) {
+				return &model.RefTypeOp{Index: p.index}, true
+			}
+		}
+		ty, ok := resolveBType(t, n, 0)
+		if !ok {
+			return nil, false
+		}
+		return &model.IdentityTypeOp{Type: ty}, true
+	default:
+		ty, ok := resolveBType(t, node.(ast.BType), 0)
+		if !ok {
+			return nil, false
+		}
+		return &model.IdentityTypeOp{Type: ty}, true
+	}
 }
 
 func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambdaFunction) (semtypes.SemType, expressionEffect, bool) {
@@ -1026,6 +1017,7 @@ func resolveLambdaFunctionExpr(t typeResolver, chain *binding, e *ast.BLangLambd
 		retTy:               fnSym.Signature().ReturnType,
 		implicitImports:     make(map[string]ast.BLangImportPackage),
 		mappingAtomToBType:  make(map[*semtypes.MappingAtomicType]ast.BType),
+		monoCounters:        make(map[string]int),
 		scope:               e.Function.Scope(),
 		mappingAtomToSymRef: make(map[*semtypes.MappingAtomicType]model.SymbolRef),
 	}
@@ -3523,6 +3515,23 @@ func resolveLangLibImport(t typeResolver, pkgName string, methodName string, exp
 func resolveFunctionCallArgs(t typeResolver, chain *binding, inv invocable, fnSymbol model.SymbolRef, expectedType semtypes.SemType) ([]semtypes.SemType, model.SymbolRef, *binding, bool) {
 	baseSymbol := t.getSymbol(fnSymbol)
 	switch sym := baseSymbol.(type) {
+	case model.DependentlyTypedFunctionSymbol:
+		_, argTys, chain, ok := argArray(t, sym, sym.ParamTypes(), nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
+		if !ok {
+			return nil, fnSymbol, chain, false
+		}
+		monoName := t.nextMonoFnName(sym.Name())
+		monoSym := sym.Monomorphize(t.typeContext(), monoName, fnSymbol, argTys)
+		scope := t.currentScope()
+		scope.AddSymbol(monoName, monoSym)
+		monoRef, ok := scope.GetSymbol(monoName)
+		if !ok {
+			t.internalError("monomorphized symbol missing from scope", inv.GetPosition())
+			return nil, fnSymbol, chain, false
+		}
+		monoSym.SetType(typeFromFunctionSignature(t, monoSym.Signature()))
+		inv.SetResolvedSymbol(monoRef)
+		return argTys, monoRef, chain, true
 	case model.GenericFunctionSymbol:
 		paramTyes := make([]semtypes.SemType, len(sym.ParamNames()))
 		_, argTys, chain, ok := argArray(t, sym, paramTyes, nil, chain, inv.CallArgs(), inv.GetPosition(), expectedType)
@@ -3639,24 +3648,21 @@ func argArray(t typeResolver, sym model.FunctionSymbol, paramTypes []semtypes.Se
 					t.semanticError(fmt.Sprintf("cannot infer typedesc argument for parameter '%s': no contextually expected type", paramNames[i]), loc)
 					return nil, nil, chain, false
 				}
-				inferredTy := semtypes.TypedescContaining(t.typeEnv(), callExpectedType)
-				synth := &ast.BLangInferredTypedescDefault{}
-				synth.SetPosition(loc)
-				synth.SetDeterminedType(inferredTy)
-				reorderdArgs[i] = synth
-				tys = append(tys, inferredTy)
+				// The resolved typedesc<T> propagates via the monomorphized signature's
+				// ParamTypes[i]; desugar extracts T back when it synthesizes the arg.
+				tys = append(tys, semtypes.TypedescContaining(t.typeEnv(), callExpectedType))
 				continue
 			}
 			tys = append(tys, paramTypes[i])
 			continue
 		}
-		var expectedType semtypes.SemType
+		var paramExpectedTy semtypes.SemType
 		if i < nRequired {
-			expectedType = paramTypes[i]
+			paramExpectedTy = paramTypes[i]
 		} else {
-			expectedType = restParamTy
+			paramExpectedTy = restParamTy
 		}
-		ty, effect, ok := resolveActionOrExpression(t, chain, each, expectedType)
+		ty, effect, ok := resolveActionOrExpression(t, chain, each, paramExpectedTy)
 		if !ok {
 			return nil, nil, chain, false
 		}
@@ -3686,40 +3692,16 @@ func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRe
 		return nil, expressionEffect{}, false
 	}
 
-	if fnSym, ok := t.getSymbol(symbolRef).(model.FunctionSymbol); ok {
-		sig := fnSym.Signature()
-		if sig.HasDependentReturn() {
-			retTy = substituteDependentReturn(t, sig, argTys, expectedType, inv.GetPosition())
-			if retTy == nil {
-				return nil, expressionEffect{}, false
-			}
-		}
-	}
-
 	setExpectedType(inv, retTy)
 	return retTy, defaultExpressionEffect(chain), true
 }
 
-// substituteDependentReturn computes the narrowed return type at a call site of
-// a dependently-typed function. The typedesc argument at sig.DependentReturnParam
-// carries the constraint the return type should narrow to. For user-written
-// explicit typedesc arguments, the narrowed type is the constraint of the
-// supplied typedesc. When the argument was synthesized from the call's
-// contextually-expected type, the narrowed type equals expectedType.
-func substituteDependentReturn(t typeResolver, sig model.FunctionSignature, argTys []semtypes.SemType, expectedType semtypes.SemType, loc diagnostics.Location) semtypes.SemType {
-	idx := sig.DependentReturnParam
-	if idx < 0 || idx >= len(argTys) {
-		return sig.ReturnType
-	}
-	upperBound := sig.ReturnType
-	if expectedType != nil {
-		if !semtypes.IsSubtype(t.typeContext(), expectedType, upperBound) {
-			t.semanticError("contextually expected type is incompatible with function's declared return type", loc)
-			return nil
-		}
-		return expectedType
-	}
-	return upperBound
+func typeFromFunctionSignature(t typeResolver, sig model.FunctionSignature) semtypes.SemType {
+	paramListDefn := semtypes.NewListDefinition()
+	paramListTy := paramListDefn.DefineListTypeWrapped(t.typeEnv(), sig.ParamTypes, len(sig.ParamTypes), sig.RestParamType, semtypes.CellMutability_CELL_MUT_NONE)
+	fnDefn := semtypes.NewFunctionDefinition()
+	return fnDefn.Define(t.typeEnv(), paramListTy, sig.ReturnType,
+		semtypes.FunctionQualifiersFrom(t.typeEnv(), sig.IsIsolated(), sig.IsTransactional()))
 }
 
 func resolveBType(t typeResolver, btype ast.BType, depth int) (semtypes.SemType, bool) {

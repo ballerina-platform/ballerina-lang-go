@@ -31,16 +31,24 @@ const (
 )
 
 const (
-	symTagType     uint8 = 0
-	symTagClass    uint8 = 1
-	symTagValue    uint8 = 2
-	symTagFunction uint8 = 3
+	symTagType uint8 = iota
+	symTagClass
+	symTagValue
+	symTagFunction
+	symTagDependentlyTypedFunction
 )
 
 const (
-	inclusionMemberTagField    uint8 = 0
-	inclusionMemberTagMethod   uint8 = 1
-	inclusionMemberTagRestType uint8 = 2
+	typeOpTagIdentity uint8 = iota
+	typeOpTagRef
+	typeOpTagUnion
+	typeOpTagIntersect
+)
+
+const (
+	inclusionMemberTagField uint8 = iota
+	inclusionMemberTagMethod
+	inclusionMemberTagRestType
 )
 
 type symbolWriter struct {
@@ -136,6 +144,8 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 		return sw.writeTypeSymbol(buf, s)
 	case *model.ValueSymbol:
 		return sw.writeValueSymbol(buf, s)
+	case model.DependentlyTypedFunctionSymbol:
+		return sw.writeDependentlyTypedFunctionSymbol(buf, s)
 	case model.FunctionSymbol:
 		return sw.writeFunctionSymbol(buf, s)
 	default:
@@ -308,10 +318,78 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := write(buf, uint8(sig.Flags)); err != nil {
 		return err
 	}
-	if err := write(buf, int64(sig.DependentReturnParam)); err != nil {
+	return sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes))
+}
+
+func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, sym model.DependentlyTypedFunctionSymbol) error {
+	if err := write(buf, symTagDependentlyTypedFunction); err != nil {
 		return err
 	}
-	return sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes))
+	if err := sw.writeStringCP(buf, sym.Name()); err != nil {
+		return err
+	}
+	if err := write(buf, sym.IsPublic()); err != nil {
+		return err
+	}
+	paramTypes := sym.ParamTypes()
+	if err := write(buf, int64(len(paramTypes))); err != nil {
+		return err
+	}
+	for _, pt := range paramTypes {
+		if err := sw.writeType(buf, pt); err != nil {
+			return err
+		}
+	}
+	paramNames := sym.ParamNames()
+	if err := write(buf, int64(len(paramNames))); err != nil {
+		return err
+	}
+	for _, name := range paramNames {
+		if err := sw.writeStringCP(buf, name); err != nil {
+			return err
+		}
+	}
+	if err := write(buf, int64(sym.NRequiredArgs())); err != nil {
+		return err
+	}
+	if err := write(buf, uint8(sym.FuncFlags())); err != nil {
+		return err
+	}
+	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(paramNames)); err != nil {
+		return err
+	}
+	return sw.writeTypeOp(buf, sym.ReturnType())
+}
+
+func (sw *symbolWriter) writeTypeOp(buf *bytes.Buffer, op model.TypeOp) error {
+	switch o := op.(type) {
+	case *model.IdentityTypeOp:
+		if err := write(buf, typeOpTagIdentity); err != nil {
+			return err
+		}
+		return sw.writeType(buf, o.Type)
+	case *model.RefTypeOp:
+		if err := write(buf, typeOpTagRef); err != nil {
+			return err
+		}
+		return write(buf, int64(o.Index))
+	case *model.BinaryTypeOp:
+		var tag uint8
+		if o.Kind == model.TypeOpUnion {
+			tag = typeOpTagUnion
+		} else {
+			tag = typeOpTagIntersect
+		}
+		if err := write(buf, tag); err != nil {
+			return err
+		}
+		if err := sw.writeTypeOp(buf, o.Lhs); err != nil {
+			return err
+		}
+		return sw.writeTypeOp(buf, o.Rhs)
+	default:
+		return fmt.Errorf("unsupported TypeOp: %T", op)
+	}
 }
 
 func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.DefaultableParamInfo, paramCount int) error {
@@ -331,6 +409,9 @@ func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.De
 		param, _ := info.Get(idx)
 		if err := write(buf, uint8(param.Kind)); err != nil {
 			return err
+		}
+		if param.Kind == model.DefaultableParamKindInferredTypedesc {
+			continue
 		}
 		if err := sw.writeSymbolRef(buf, param.Symbol); err != nil {
 			return err
