@@ -178,16 +178,16 @@ const htmlTemplate = `<!doctype html>
 		<table>
 			<thead>
 				<tr class="row-groups">
-					<th class="align-left" rowspan="2">case</th>
+					<th class="align-left" rowspan="2">CASE</th>
 					<th class="col-sep" colspan="2">{{ .Report.BaseRef }}</th>
 					<th class="col-sep" colspan="2">{{ .Report.HeadRef }}</th>
-					<th class="col-sep align-right" rowspan="2">delta</th>
+					<th class="col-sep align-right" rowspan="2">DELTA</th>
 				</tr>
 				<tr class="row-subs">
-					<th class="col-sep">mean (ms)</th>
-					<th class="col-sep">stddev (ms)</th>
-					<th class="col-sep">mean (ms)</th>
-					<th class="col-sep">stddev (ms)</th>
+					<th class="col-sep">MEAN (ms)</th>
+					<th class="col-sep">STDDEV (ms)</th>
+					<th class="col-sep">MEAN (ms)</th>
+					<th class="col-sep">STDDEV (ms)</th>
 				</tr>
 			</thead>
 			<tbody>
