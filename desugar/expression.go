@@ -809,25 +809,11 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		cx.internalError("query expression must end with select clause")
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
-	orderByClauseIndex := -1
-	for i := 1; i < selectClauseIndex; i++ {
-		if _, isOrderBy := expr.QueryClauseList[i].(*ast.BLangOrderByClause); isOrderBy {
-			if orderByClauseIndex != -1 {
-				cx.unimplemented("query expression currently supports at most one order by clause")
-				return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-			}
-			orderByClauseIndex = i
-		}
-	}
+	orderByClauseIndices := queryOrderByClauseIndices(expr, 1, selectClauseIndex)
 
 	loopVarDef, ok := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
 	if !ok {
 		cx.unimplemented("query from clause currently supports only simple variable definition")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	cloneLoopVarDef := cloneSimpleVariableDef(loopVarDef)
-	if cloneLoopVarDef == nil || cloneLoopVarDef.Var == nil {
-		cx.internalError("failed to clone query from clause variable definition")
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
 
@@ -897,33 +883,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		}
 	}
 
-	zeroLiteral := &ast.BLangNumericLiteral{
-		BLangLiteral: ast.BLangLiteral{
-			Value:         int64(0),
-			OriginalValue: "0",
-		},
-		Kind: model.NodeKind_NUMERIC_LITERAL,
-	}
-	zeroLiteral.SetDeterminedType(semtypes.INT)
-
-	idxName, idxSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
-	idxVar := &ast.BLangSimpleVariable{
-		Name: &ast.BLangIdentifier{Value: idxName},
-	}
-	idxVar.SetDeterminedType(semtypes.INT)
-	idxVar.SetInitialExpression(zeroLiteral)
-	idxVar.SetSymbol(idxSymbol)
-	idxVarDef := &ast.BLangSimpleVariableDef{Var: idxVar}
-	setPositionIfMissing(idxVarDef, basePos)
-	initStmts = append(initStmts, idxVarDef)
-
-	idxRef := &ast.BLangSimpleVarRef{
-		VariableName: idxVar.Name,
-	}
-	idxRef.SetSymbol(idxSymbol)
-	idxRef.SetDeterminedType(semtypes.INT)
-
-	loopVarSymbol := cloneLoopVarDef.Var.Symbol()
+	loopVarSymbol := loopVarDef.Var.Symbol()
 	loopVarTy := cx.symbolType(loopVarSymbol)
 	if loopVarTy == nil {
 		cx.internalError("query from clause variable symbol type not found")
@@ -980,223 +940,49 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	}
 	lenRef.SetSymbol(lenSymbol)
 	lenRef.SetDeterminedType(semtypes.INT)
-	if orderByClauseIndex == -1 {
-		elementAccess := queryElementAccess(collRef, keysRef, idxRef, loopVarTy)
-		if elementAccess == nil {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
-		condition := &ast.BLangBinaryExpr{
-			LhsExpr: idxRef,
-			RhsExpr: lenRef,
-			OpKind:  model.OperatorKind_LESS_THAN,
-		}
-		condition.SetDeterminedType(semtypes.BOOLEAN)
-		cloneLoopVarDef.Var.SetInitialExpression(elementAccess)
-
-		var bodyStmts []ast.BLangStatement
-		bodyStmts = append(bodyStmts, cloneLoopVarDef)
-
-		bodyStmts, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, &initStmts, bodyStmts, 1, selectClauseIndex)
+	stageInput := queryOrderStageInput{
+		rowCountRef: lenRef,
+	}
+	stageStart := 1
+	for _, orderByClauseIndex := range orderByClauseIndices {
+		stageInput, ok = appendQueryOrderByStageStmts(
+			cx,
+			expr,
+			collRef,
+			keysRef,
+			loopVarDef,
+			loopVarTy,
+			stageStart,
+			orderByClauseIndex,
+			stageInput,
+			&initStmts,
+			basePos,
+		)
 		if !ok {
 			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 		}
-		bodyStmts, ok = appendQuerySelectResultStmts(cx, expr, resultRef, selectClause, onConflictClause, seenKeysRef, basePos, bodyStmts)
-		if !ok {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
-		bodyStmts = append(bodyStmts, createIncrementStmt(idxRef))
-
-		whileStmt := &ast.BLangWhile{
-			Expr: condition,
-			Body: ast.BLangBlockStmt{
-				Stmts: bodyStmts,
-			},
-		}
-		whileStmt.SetScope(cx.currentScope())
-		whileStmt.SetDeterminedType(semtypes.NEVER)
-		setPositionIfMissing(whileStmt, basePos)
-		initStmts = append(initStmts, whileStmt)
-
-		setPositionIfMissing(resultRef, basePos)
-		return desugaredNode[model.ExpressionNode]{
-			initStmts:       initStmts,
-			replacementNode: resultRef,
-		}
+		stageStart = orderByClauseIndex + 1
 	}
-
-	orderByClause, ok := expr.QueryClauseList[orderByClauseIndex].(*ast.BLangOrderByClause)
-	if !ok {
-		cx.internalError("expected order by clause in query expression")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-
-	orderKeyRowsRef, ok := createQueryListStore(cx, &initStmts, basePos)
+	ok = appendQueryFinalStageStmts(
+		cx,
+		expr,
+		collRef,
+		keysRef,
+		loopVarDef,
+		loopVarTy,
+		stageStart,
+		selectClauseIndex,
+		stageInput,
+		resultRef,
+		selectClause,
+		onConflictClause,
+		seenKeysRef,
+		&initStmts,
+		basePos,
+	)
 	if !ok {
 		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 	}
-	sortedIndexRowsRef, ok := createQueryListStore(cx, &initStmts, basePos)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	preOrderLetStores, ok := createPreOrderLetStores(cx, expr, 1, orderByClauseIndex, &initStmts, basePos)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	payloadRowsRef, ok := createQueryPayloadStore(cx, &initStmts, basePos, preOrderLetStores)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-
-	elementAccess := queryElementAccess(collRef, keysRef, idxRef, loopVarTy)
-	if elementAccess == nil {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	firstPassCondition := &ast.BLangBinaryExpr{
-		LhsExpr: idxRef,
-		RhsExpr: lenRef,
-		OpKind:  model.OperatorKind_LESS_THAN,
-	}
-	firstPassCondition.SetDeterminedType(semtypes.BOOLEAN)
-	firstPassLoopVarDef := cloneSimpleVariableDef(loopVarDef)
-	if firstPassLoopVarDef == nil || firstPassLoopVarDef.Var == nil {
-		cx.internalError("failed to clone query loop variable")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	firstPassLoopVarDef.Var.SetInitialExpression(elementAccess)
-
-	var firstPassBody []ast.BLangStatement
-	firstPassBody = append(firstPassBody, firstPassLoopVarDef)
-	firstPassBody, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, &initStmts, firstPassBody, 1, orderByClauseIndex)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	keyTuple, keyInitStmts, ok := buildOrderKeyTupleExpr(cx, orderByClause, basePos)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	firstPassBody = append(firstPassBody, keyInitStmts...)
-	if pushKeys := createPushInvocation(cx, orderKeyRowsRef, keyTuple); pushKeys != nil {
-		pushStmt := &ast.BLangExpressionStmt{Expr: pushKeys}
-		setPositionIfMissing(pushStmt, basePos)
-		firstPassBody = append(firstPassBody, pushStmt)
-	} else {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	if pushIndex := createPushInvocation(cx, sortedIndexRowsRef, idxRef); pushIndex != nil {
-		pushStmt := &ast.BLangExpressionStmt{Expr: pushIndex}
-		setPositionIfMissing(pushStmt, basePos)
-		firstPassBody = append(firstPassBody, pushStmt)
-	} else {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	for _, store := range preOrderLetStores {
-		valueRef := &ast.BLangSimpleVarRef{
-			VariableName: store.VarDef.Var.Name,
-		}
-		valueRef.SetSymbol(store.VarDef.Var.Symbol())
-		valueRef.SetDeterminedType(store.ValueTy)
-		pushStore := createPushInvocation(cx, store.StoreRef, valueRef)
-		if pushStore == nil {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
-		pushStmt := &ast.BLangExpressionStmt{Expr: pushStore}
-		setPositionIfMissing(pushStmt, basePos)
-		firstPassBody = append(firstPassBody, pushStmt)
-	}
-	firstPassBody = append(firstPassBody, createIncrementStmt(idxRef))
-
-	firstPassWhile := &ast.BLangWhile{
-		Expr: firstPassCondition,
-		Body: ast.BLangBlockStmt{Stmts: firstPassBody},
-	}
-	firstPassWhile.SetScope(cx.currentScope())
-	firstPassWhile.SetDeterminedType(semtypes.NEVER)
-	setPositionIfMissing(firstPassWhile, basePos)
-	initStmts = append(initStmts, firstPassWhile)
-
-	directionsExpr := buildOrderDirectionExpr(orderByClause, basePos)
-	sortInvocation := createQuerySortInvocation(cx, orderKeyRowsRef, directionsExpr, sortedIndexRowsRef, payloadRowsRef)
-	if sortInvocation == nil {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	sortStmt := &ast.BLangExpressionStmt{Expr: sortInvocation}
-	setPositionIfMissing(sortStmt, basePos)
-	initStmts = append(initStmts, sortStmt)
-
-	idxReset := &ast.BLangAssignment{
-		VarRef: idxRef,
-		Expr:   createIntLiteral(0),
-	}
-	idxReset.SetDeterminedType(semtypes.NEVER)
-	setPositionIfMissing(idxReset, basePos)
-	initStmts = append(initStmts, idxReset)
-
-	sortedLenInvocation := createLengthInvocation(cx, sortedIndexRowsRef)
-	sortedLenName, sortedLenSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
-	sortedLenVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: sortedLenName}}
-	sortedLenVar.SetDeterminedType(semtypes.INT)
-	sortedLenVar.SetInitialExpression(sortedLenInvocation)
-	sortedLenVar.SetSymbol(sortedLenSymbol)
-	sortedLenVarDef := &ast.BLangSimpleVariableDef{Var: sortedLenVar}
-	setPositionIfMissing(sortedLenVarDef, basePos)
-	initStmts = append(initStmts, sortedLenVarDef)
-	sortedLenRef := &ast.BLangSimpleVarRef{VariableName: sortedLenVar.Name}
-	sortedLenRef.SetSymbol(sortedLenSymbol)
-	sortedLenRef.SetDeterminedType(semtypes.INT)
-
-	sortedLoopIndexAccess := &ast.BLangIndexBasedAccess{IndexExpr: idxRef}
-	sortedLoopIndexAccess.Expr = sortedIndexRowsRef
-	sortedLoopIndexAccess.SetDeterminedType(semtypes.INT)
-
-	secondPassElementAccess := queryElementAccess(collRef, keysRef, sortedLoopIndexAccess, loopVarTy)
-	if secondPassElementAccess == nil {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	secondPassLoopVarDef := cloneSimpleVariableDef(loopVarDef)
-	if secondPassLoopVarDef == nil || secondPassLoopVarDef.Var == nil {
-		cx.internalError("failed to clone query loop variable for second pass")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	secondPassLoopVarDef.Var.SetInitialExpression(secondPassElementAccess)
-
-	var secondPassBody []ast.BLangStatement
-	secondPassBody = append(secondPassBody, secondPassLoopVarDef)
-	for _, store := range preOrderLetStores {
-		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
-		if restoredVarDef == nil || restoredVarDef.Var == nil {
-			cx.internalError("failed to clone pre-order let variable for second pass")
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
-		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: idxRef}
-		storeAccess.Expr = store.StoreRef
-		storeAccess.SetDeterminedType(store.ValueTy)
-		restoredVarDef.Var.SetInitialExpression(storeAccess)
-		secondPassBody = append(secondPassBody, restoredVarDef)
-	}
-	secondPassBody, ok = appendQueryIntermediateClauseStmts(cx, expr, idxRef, &initStmts, secondPassBody, orderByClauseIndex+1, selectClauseIndex)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	secondPassBody, ok = appendQuerySelectResultStmts(cx, expr, resultRef, selectClause, onConflictClause, seenKeysRef, basePos, secondPassBody)
-	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
-	secondPassBody = append(secondPassBody, createIncrementStmt(idxRef))
-
-	secondPassCondition := &ast.BLangBinaryExpr{
-		LhsExpr: idxRef,
-		RhsExpr: sortedLenRef,
-		OpKind:  model.OperatorKind_LESS_THAN,
-	}
-	secondPassCondition.SetDeterminedType(semtypes.BOOLEAN)
-	secondPassWhile := &ast.BLangWhile{
-		Expr: secondPassCondition,
-		Body: ast.BLangBlockStmt{Stmts: secondPassBody},
-	}
-	secondPassWhile.SetScope(cx.currentScope())
-	secondPassWhile.SetDeterminedType(semtypes.NEVER)
-	setPositionIfMissing(secondPassWhile, basePos)
-	initStmts = append(initStmts, secondPassWhile)
 
 	setPositionIfMissing(resultRef, basePos)
 	return desugaredNode[model.ExpressionNode]{
@@ -1222,10 +1008,330 @@ func cloneSimpleVariableDef(varDef *ast.BLangSimpleVariableDef) *ast.BLangSimple
 	return &clone
 }
 
+func queryOrderByClauseIndices(queryExpr *ast.BLangQueryExpr, startClauseIndex int, endClauseIndex int) []int {
+	indices := make([]int, 0)
+	for i := startClauseIndex; i < endClauseIndex; i++ {
+		if _, isOrderBy := queryExpr.QueryClauseList[i].(*ast.BLangOrderByClause); isOrderBy {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
 type queryLetStore struct {
 	VarDef   *ast.BLangSimpleVariableDef
 	StoreRef *ast.BLangSimpleVarRef
 	ValueTy  semtypes.SemType
+}
+
+type queryOrderStageInput struct {
+	indexRowsRef  *ast.BLangSimpleVarRef
+	rowCountRef   *ast.BLangSimpleVarRef
+	payloadStores []queryLetStore
+}
+
+func createQueryCounterRef(
+	cx *functionContext,
+	initStmts *[]model.StatementNode,
+	pos ast.Location,
+) *ast.BLangSimpleVarRef {
+	counterName, counterSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	counterVar := &ast.BLangSimpleVariable{
+		Name: &ast.BLangIdentifier{Value: counterName},
+	}
+	counterVar.SetDeterminedType(semtypes.INT)
+	counterVar.SetInitialExpression(createIntLiteral(0))
+	counterVar.SetSymbol(counterSymbol)
+	counterVarDef := &ast.BLangSimpleVariableDef{Var: counterVar}
+	setPositionIfMissing(counterVarDef, pos)
+	*initStmts = append(*initStmts, counterVarDef)
+
+	counterRef := &ast.BLangSimpleVarRef{VariableName: counterVar.Name}
+	counterRef.SetSymbol(counterSymbol)
+	counterRef.SetDeterminedType(semtypes.INT)
+	return counterRef
+}
+
+func createQueryLengthRef(
+	cx *functionContext,
+	initStmts *[]model.StatementNode,
+	source ast.BLangExpression,
+	pos ast.Location,
+) (*ast.BLangSimpleVarRef, bool) {
+	lengthInvocation := createLengthInvocation(cx, source)
+	if lengthInvocation == nil {
+		return nil, false
+	}
+	lengthName, lengthSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
+	lengthVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: lengthName}}
+	lengthVar.SetDeterminedType(semtypes.INT)
+	lengthVar.SetInitialExpression(lengthInvocation)
+	lengthVar.SetSymbol(lengthSymbol)
+	lengthVarDef := &ast.BLangSimpleVariableDef{Var: lengthVar}
+	setPositionIfMissing(lengthVarDef, pos)
+	*initStmts = append(*initStmts, lengthVarDef)
+	lengthRef := &ast.BLangSimpleVarRef{VariableName: lengthVar.Name}
+	lengthRef.SetSymbol(lengthSymbol)
+	lengthRef.SetDeterminedType(semtypes.INT)
+	return lengthRef, true
+}
+
+func queryStageBaseIndexExpr(loopCounterRef *ast.BLangSimpleVarRef, indexRowsRef *ast.BLangSimpleVarRef) ast.BLangExpression {
+	if indexRowsRef == nil {
+		return loopCounterRef
+	}
+	rowIndexAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
+	rowIndexAccess.Expr = indexRowsRef
+	rowIndexAccess.SetDeterminedType(semtypes.INT)
+	return rowIndexAccess
+}
+
+func appendQueryOrderByStageStmts(
+	cx *functionContext,
+	queryExpr *ast.BLangQueryExpr,
+	collRef ast.BLangExpression,
+	keysRef *ast.BLangSimpleVarRef,
+	loopVarDef *ast.BLangSimpleVariableDef,
+	loopVarTy semtypes.SemType,
+	startClauseIndex int,
+	orderByClauseIndex int,
+	stageInput queryOrderStageInput,
+	initStmts *[]model.StatementNode,
+	basePos ast.Location,
+) (queryOrderStageInput, bool) {
+	if stageInput.rowCountRef == nil {
+		cx.internalError("query order-by stage input length must be available")
+		return queryOrderStageInput{}, false
+	}
+
+	orderByClause, ok := queryExpr.QueryClauseList[orderByClauseIndex].(*ast.BLangOrderByClause)
+	if !ok {
+		cx.internalError("expected order by clause at query stage boundary")
+		return queryOrderStageInput{}, false
+	}
+
+	orderKeyRowsRef, ok := createQueryListStore(cx, initStmts, basePos)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+	sortedIndexRowsRef, ok := createQueryListStore(cx, initStmts, basePos)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+	newLetStores, ok := createPreOrderLetStores(cx, queryExpr, startClauseIndex, orderByClauseIndex, initStmts, basePos)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+	stageStores := make([]queryLetStore, 0, len(stageInput.payloadStores)+len(newLetStores))
+	stageStores = append(stageStores, stageInput.payloadStores...)
+	stageStores = append(stageStores, newLetStores...)
+	payloadRowsRef, ok := createQueryPayloadStore(cx, initStmts, basePos, stageStores)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+
+	loopCounterRef := createQueryCounterRef(cx, initStmts, basePos)
+	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
+	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopVarTy)
+	if elementAccess == nil {
+		return queryOrderStageInput{}, false
+	}
+	loopVarDefClone := cloneSimpleVariableDef(loopVarDef)
+	if loopVarDefClone == nil || loopVarDefClone.Var == nil {
+		cx.internalError("failed to clone query loop variable")
+		return queryOrderStageInput{}, false
+	}
+	loopVarDefClone.Var.SetInitialExpression(elementAccess)
+
+	var bodyStmts []ast.BLangStatement
+	bodyStmts = append(bodyStmts, loopVarDefClone)
+	for _, store := range stageInput.payloadStores {
+		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
+		if restoredVarDef == nil || restoredVarDef.Var == nil {
+			cx.internalError("failed to clone pre-order let variable for query stage")
+			return queryOrderStageInput{}, false
+		}
+		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
+		storeAccess.Expr = store.StoreRef
+		storeAccess.SetDeterminedType(store.ValueTy)
+		restoredVarDef.Var.SetInitialExpression(storeAccess)
+		bodyStmts = append(bodyStmts, restoredVarDef)
+	}
+	bodyStmts, ok = appendQueryIntermediateClauseStmts(
+		cx,
+		queryExpr,
+		loopCounterRef,
+		initStmts,
+		bodyStmts,
+		startClauseIndex,
+		orderByClauseIndex,
+	)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+
+	keyTuple, keyInitStmts, ok := buildOrderKeyTupleExpr(cx, orderByClause, basePos)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+	bodyStmts = append(bodyStmts, keyInitStmts...)
+	if pushKeys := createPushInvocation(cx, orderKeyRowsRef, keyTuple); pushKeys != nil {
+		pushStmt := &ast.BLangExpressionStmt{Expr: pushKeys}
+		setPositionIfMissing(pushStmt, basePos)
+		bodyStmts = append(bodyStmts, pushStmt)
+	} else {
+		return queryOrderStageInput{}, false
+	}
+	if pushIndex := createPushInvocation(cx, sortedIndexRowsRef, baseIndexExpr); pushIndex != nil {
+		pushStmt := &ast.BLangExpressionStmt{Expr: pushIndex}
+		setPositionIfMissing(pushStmt, basePos)
+		bodyStmts = append(bodyStmts, pushStmt)
+	} else {
+		return queryOrderStageInput{}, false
+	}
+	for _, store := range stageStores {
+		valueRef := &ast.BLangSimpleVarRef{
+			VariableName: store.VarDef.Var.Name,
+		}
+		valueRef.SetSymbol(store.VarDef.Var.Symbol())
+		valueRef.SetDeterminedType(store.ValueTy)
+		pushStore := createPushInvocation(cx, store.StoreRef, valueRef)
+		if pushStore == nil {
+			return queryOrderStageInput{}, false
+		}
+		pushStmt := &ast.BLangExpressionStmt{Expr: pushStore}
+		setPositionIfMissing(pushStmt, basePos)
+		bodyStmts = append(bodyStmts, pushStmt)
+	}
+	bodyStmts = append(bodyStmts, createIncrementStmt(loopCounterRef))
+
+	stageCondition := &ast.BLangBinaryExpr{
+		LhsExpr: loopCounterRef,
+		RhsExpr: stageInput.rowCountRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	stageCondition.SetDeterminedType(semtypes.BOOLEAN)
+	stageWhile := &ast.BLangWhile{
+		Expr: stageCondition,
+		Body: ast.BLangBlockStmt{Stmts: bodyStmts},
+	}
+	stageWhile.SetScope(cx.currentScope())
+	stageWhile.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(stageWhile, basePos)
+	*initStmts = append(*initStmts, stageWhile)
+
+	directionsExpr := buildOrderDirectionExpr(orderByClause, basePos)
+	sortInvocation := createQuerySortInvocation(cx, orderKeyRowsRef, directionsExpr, sortedIndexRowsRef, payloadRowsRef)
+	if sortInvocation == nil {
+		return queryOrderStageInput{}, false
+	}
+	sortStmt := &ast.BLangExpressionStmt{Expr: sortInvocation}
+	setPositionIfMissing(sortStmt, basePos)
+	*initStmts = append(*initStmts, sortStmt)
+
+	sortedLenRef, ok := createQueryLengthRef(cx, initStmts, sortedIndexRowsRef, basePos)
+	if !ok {
+		return queryOrderStageInput{}, false
+	}
+	return queryOrderStageInput{
+		indexRowsRef:  sortedIndexRowsRef,
+		rowCountRef:   sortedLenRef,
+		payloadStores: stageStores,
+	}, true
+}
+
+func appendQueryFinalStageStmts(
+	cx *functionContext,
+	queryExpr *ast.BLangQueryExpr,
+	collRef ast.BLangExpression,
+	keysRef *ast.BLangSimpleVarRef,
+	loopVarDef *ast.BLangSimpleVariableDef,
+	loopVarTy semtypes.SemType,
+	startClauseIndex int,
+	selectClauseIndex int,
+	stageInput queryOrderStageInput,
+	resultRef *ast.BLangSimpleVarRef,
+	selectClause *ast.BLangSelectClause,
+	onConflictClause *ast.BLangOnConflictClause,
+	seenKeysRef *ast.BLangSimpleVarRef,
+	initStmts *[]model.StatementNode,
+	basePos ast.Location,
+) bool {
+	if stageInput.rowCountRef == nil {
+		cx.internalError("query final stage input length must be available")
+		return false
+	}
+
+	loopCounterRef := createQueryCounterRef(cx, initStmts, basePos)
+	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
+	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopVarTy)
+	if elementAccess == nil {
+		return false
+	}
+	loopVarDefClone := cloneSimpleVariableDef(loopVarDef)
+	if loopVarDefClone == nil || loopVarDefClone.Var == nil {
+		cx.internalError("failed to clone query loop variable for final stage")
+		return false
+	}
+	loopVarDefClone.Var.SetInitialExpression(elementAccess)
+
+	var bodyStmts []ast.BLangStatement
+	bodyStmts = append(bodyStmts, loopVarDefClone)
+	for _, store := range stageInput.payloadStores {
+		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
+		if restoredVarDef == nil || restoredVarDef.Var == nil {
+			cx.internalError("failed to clone pre-order let variable for final query stage")
+			return false
+		}
+		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
+		storeAccess.Expr = store.StoreRef
+		storeAccess.SetDeterminedType(store.ValueTy)
+		restoredVarDef.Var.SetInitialExpression(storeAccess)
+		bodyStmts = append(bodyStmts, restoredVarDef)
+	}
+	var ok bool
+	bodyStmts, ok = appendQueryIntermediateClauseStmts(
+		cx,
+		queryExpr,
+		loopCounterRef,
+		initStmts,
+		bodyStmts,
+		startClauseIndex,
+		selectClauseIndex,
+	)
+	if !ok {
+		return false
+	}
+	bodyStmts, ok = appendQuerySelectResultStmts(
+		cx,
+		queryExpr,
+		resultRef,
+		selectClause,
+		onConflictClause,
+		seenKeysRef,
+		basePos,
+		bodyStmts,
+	)
+	if !ok {
+		return false
+	}
+	bodyStmts = append(bodyStmts, createIncrementStmt(loopCounterRef))
+
+	finalCondition := &ast.BLangBinaryExpr{
+		LhsExpr: loopCounterRef,
+		RhsExpr: stageInput.rowCountRef,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	finalCondition.SetDeterminedType(semtypes.BOOLEAN)
+	finalWhile := &ast.BLangWhile{
+		Expr: finalCondition,
+		Body: ast.BLangBlockStmt{Stmts: bodyStmts},
+	}
+	finalWhile.SetScope(cx.currentScope())
+	finalWhile.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(finalWhile, basePos)
+	*initStmts = append(*initStmts, finalWhile)
+	return true
 }
 
 func createQueryListStore(

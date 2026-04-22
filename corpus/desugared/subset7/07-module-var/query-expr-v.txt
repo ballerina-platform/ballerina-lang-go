@@ -28,21 +28,21 @@
           (list-constructor-expr))))
       (var-def
         (variable $desugar$2 (expr
-          (numeric-literal 0))))
-      (var-def
-        (variable $desugar$3 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$0))))))
+      (var-def
+        (variable $desugar$3 (expr
+          (numeric-literal 0))))
       (while
         (binary-expr <
-          (simple-var-ref $desugar$2)
-          (simple-var-ref $desugar$3))
+          (simple-var-ref $desugar$3)
+          (simple-var-ref $desugar$2))
         (block-stmt
           (var-def
             (variable x (expr
               (index-based-access
                 (simple-var-ref $desugar$0)
-                (simple-var-ref $desugar$2)))))
+                (simple-var-ref $desugar$3)))))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$1)
@@ -50,9 +50,9 @@
                 (simple-var-ref x)
                 (literal 2)))))
           (assignment
-            (simple-var-ref $desugar$2)
+            (simple-var-ref $desugar$3)
             (binary-expr +
-              (simple-var-ref $desugar$2)
+              (simple-var-ref $desugar$3)
               (numeric-literal 1)))))
       (assignment
         (simple-var-ref doubled)
@@ -65,21 +65,21 @@
           (list-constructor-expr))))
       (var-def
         (variable $desugar$6 (expr
-          (numeric-literal 0))))
-      (var-def
-        (variable $desugar$7 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$4))))))
+      (var-def
+        (variable $desugar$7 (expr
+          (numeric-literal 0))))
       (while
         (binary-expr <
-          (simple-var-ref $desugar$6)
-          (simple-var-ref $desugar$7))
+          (simple-var-ref $desugar$7)
+          (simple-var-ref $desugar$6))
         (block-stmt
           (var-def
             (variable x (expr
               (index-based-access
                 (simple-var-ref $desugar$4)
-                (simple-var-ref $desugar$6)))))
+                (simple-var-ref $desugar$7)))))
           (if
             (unary-expr !
               (binary-expr ==
@@ -89,9 +89,9 @@
                 (literal 0)))
             (block-stmt
               (assignment
-                (simple-var-ref $desugar$6)
+                (simple-var-ref $desugar$7)
                 (binary-expr +
-                  (simple-var-ref $desugar$6)
+                  (simple-var-ref $desugar$7)
                   (numeric-literal 1)))
               (continue)) ())
           (expression-stmt
@@ -99,9 +99,9 @@
               (simple-var-ref $desugar$5)
               (simple-var-ref x))))
           (assignment
-            (simple-var-ref $desugar$6)
+            (simple-var-ref $desugar$7)
             (binary-expr +
-              (simple-var-ref $desugar$6)
+              (simple-var-ref $desugar$7)
               (numeric-literal 1)))))
       (assignment
         (simple-var-ref evens)

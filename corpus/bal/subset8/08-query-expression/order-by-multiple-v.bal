@@ -14,10 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/io;
+
 public function main() {
-    int[] nums = [3, 1, 2];
+    int[] nums = [3, 1, 2, 1, 4];
     int[] result = from var n in nums
         order by n ascending
+        limit 3
         order by n descending
         select n;
+    io:println(result); // @output [2,1,1]
 }

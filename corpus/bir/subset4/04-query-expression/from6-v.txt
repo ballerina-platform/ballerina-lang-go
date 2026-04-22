@@ -21,23 +21,23 @@ main() -> nil{
     $desugar$0 = pairs;
     %17 = newMap {| int... |}{}
     $desugar$1 = %17;
-    %19 = ConstantLoad 0
-    $desugar$2 = %19;
-    %21 = length($desugar$0) -> bb1;
+    %19 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$2 = %19;
+    %21 = ConstantLoad 0
     $desugar$3 = %21;
     GOTO bb2;
   }
   bb2 {
-    %24 = $desugar$2;
-    %25 = $desugar$3;
+    %24 = $desugar$3;
+    %25 = $desugar$2;
     %23 = < %24 %25;
     %23 ? bb3 : bb4;
   }
   bb3 {
     PushScopeFrame 21
-    %0 = (1, $desugar$0)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
     p = %0;
     %3 = ConstantLoad 0
     %2 = p[%3];
@@ -55,11 +55,11 @@ main() -> nil{
     %16 = ConstantLoad 0
     %15 = $desugar$4[%16];
     (1, $desugar$1)[%15] = %13;
-    %18 = (1, $desugar$2);
+    %18 = (1, $desugar$3);
     %19 = ConstantLoad 1
     %20 = %19;
     %17 = + %18 %20;
-    (1, $desugar$2) = %17;
+    (1, $desugar$3) = %17;
     PopScopeFrame
     GOTO bb2;
   }

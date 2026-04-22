@@ -324,6 +324,51 @@ func TestResolveQueryExprOrderByClause(t *testing.T) {
 	}
 }
 
+func TestResolveQueryExprMultipleOrderByConsecutive(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(newIntLiteral(1), true)),
+		newOrderByClause(newOrderKey(newIntLiteral(2), false)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for consecutive order by clauses")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprMultipleOrderByNonConsecutive(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(3, 1, 2), nil, true),
+		newOrderByClause(newOrderKey(newIntLiteral(1), true)),
+		newWhereClause(newBoolLiteral(true)),
+		newOrderByClause(newOrderKey(newIntLiteral(2), false)),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for non-consecutive order by clauses")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
 func TestResolveQueryExprOrderByRejectsMixedSimpleUnion(t *testing.T) {
 	resolver, cx := newTestQueryResolver()
 
@@ -602,6 +647,14 @@ func newStringLiteral(value string) *ast.BLangLiteral {
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
 	literal.SetValueType(ast.NewBType(model.TypeTags_STRING, "", 0))
+	return literal
+}
+
+func newBoolLiteral(value bool) *ast.BLangLiteral {
+	literal := &ast.BLangLiteral{}
+	literal.SetPosition(queryTestPos)
+	literal.SetValue(value)
+	literal.SetValueType(ast.NewBType(model.TypeTags_BOOLEAN, "", 0))
 	return literal
 }
 
