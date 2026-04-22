@@ -19,8 +19,8 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(true);
-    printBoolean(false);
+    printBoolean(true); // @output 1
+    printBoolean(false); // @output 0
 }
 
 function printBoolean(boolean b) {
@@ -31,3 +31,4 @@ function printBoolean(boolean b) {
         io:println(0);
     }
 }
+

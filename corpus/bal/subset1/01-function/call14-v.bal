@@ -19,7 +19,7 @@
 import ballerina/io;
 
 public function main() {
-    io:println(foo(bar(baz(sum(23, foobar())))));
+    io:println(foo(bar(baz(sum(23, foobar()))))); // @output 35
 }
 
 function foo(int x) returns int {
@@ -41,3 +41,4 @@ function foobar() returns int {
 function sum(int x, int y) returns int {
     return x + y;
 }
+

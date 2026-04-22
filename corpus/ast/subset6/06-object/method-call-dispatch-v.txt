@@ -45,21 +45,19 @@
     (value-type null))
     (block-function-body
       (var-def
-        (variable fs (type
-          (array-type
-            (user-defined-type Foo) dimensions: 1 ([]))) (expr
-          (list-constructor-expr
-            (new
-              (user-defined-type F1) ())
-            (new
-              (user-defined-type F2) ())))))
-      (foreach
-        (var-def
-          (variable f (type
-            (user-defined-type Foo))))
-        (simple-var-ref fs)
-        (block-stmt
-          (expression-stmt
-            (invocation io println (
-              (invocation foo expr:
-                (simple-var-ref f) ())))))))))
+        (variable f (type
+          (user-defined-type Foo)) (expr
+          (new
+            (user-defined-type F1) ()))))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo expr:
+            (simple-var-ref f) ()))))
+      (assignment
+        (simple-var-ref f)
+        (new
+          (user-defined-type F2) ()))
+      (expression-stmt
+        (invocation io println (
+          (invocation foo expr:
+            (simple-var-ref f) ())))))))

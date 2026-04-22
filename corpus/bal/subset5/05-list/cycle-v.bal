@@ -20,5 +20,6 @@ type T [int, T...];
 
 public function main() {
     T t = [1, [2, [3]]];
-    io:println(t);
+    io:println(t); // @output [1,[2,[3]]]
 }
+

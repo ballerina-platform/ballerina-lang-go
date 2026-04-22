@@ -34,10 +34,10 @@ public function main() {
     MoveFn fn = moveFn;	
     ColouredPoint cp = {x: 10, y: 20, colour: "red"};
     Point cp2 = fn(cp, 10, 20);
-    io:println(cp2); // @output {"colour":"red","x":20,"y":40}
+    io:println(cp2); // @output {"x":20,"y":40,"colour":"red"}
     Point p = {x: 10, y: 20};
     Point p2 = fn(p, 10, 20);
-    io:println(p2); // @output {"colour":"white","x":20,"y":40}
+    io:println(p2); // @output {"x":20,"y":40,"colour":"white"}
 }
 
 function moveFn(Point p, int dx, int dy) returns ColouredPoint {

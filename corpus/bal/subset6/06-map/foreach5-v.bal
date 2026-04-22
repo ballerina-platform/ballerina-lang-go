@@ -22,6 +22,7 @@ function getMap() returns map<int> {
 
 public function main() {
     foreach int val in getMap() {
-        io:println(val);
+        io:println(val); // @output 10
+                          // @output 20
     }
 }

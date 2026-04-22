@@ -30,15 +30,16 @@ function takeDecimal(decimal x) returns decimal {
 
 public function main() {
     // int literal narrowed by function parameter type
-    io:println(takeInt(42));
-    io:println(takeFloat(42));
-    io:println(takeDecimal(42));
+    io:println(takeInt(42)); // @output 42
+    io:println(takeFloat(42)); // @output 42.0
+    io:println(takeDecimal(42)); // @output 42
 
     // float literal narrowed by function parameter type
-    io:println(takeFloat(1.5));
-    io:println(takeDecimal(1.5));
+    io:println(takeFloat(1.5)); // @output 1.5
+    io:println(takeDecimal(1.5)); // @output 1.5
 
     // suffixed literals
-    io:println(takeFloat(1.5f));
-    io:println(takeDecimal(100d));
+    io:println(takeFloat(1.5f)); // @output 1.5
+    io:println(takeDecimal(100d)); // @output 100
 }
+

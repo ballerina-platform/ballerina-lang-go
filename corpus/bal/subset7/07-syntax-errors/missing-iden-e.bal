@@ -21,9 +21,9 @@ function add(int a, int b) returns int {
 }
 
 public function main() {
-    int[] arr = [, , 3];
+    int[] arr = [, , 3]; // @error
     io:println(arr);
 
-    int result = add(,);
+    int result = add(,); // @error
     io:println(result);
 }

@@ -20,10 +20,11 @@ import ballerina/io;
 public function main() {
     decimal d = 100D;
     int i = <int>d;
-    io:println(i);
+    io:println(i); // @output 100
 
     decimal d2 = 1.5;
     int i2 = <int>d2;
-    io:println(i2);
+    io:println(i2); // @output 2
 }
+
 

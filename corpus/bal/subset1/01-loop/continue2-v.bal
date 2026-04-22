@@ -25,9 +25,9 @@ public function main() {
         if i == 2 {
             continue;
         }
-       
-       
-       
+        // @output 1
+        // @output 3
+        // @output 4
         io:println(i);
     }
 }

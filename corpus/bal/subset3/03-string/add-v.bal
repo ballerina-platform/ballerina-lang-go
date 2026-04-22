@@ -20,6 +20,7 @@ import ballerina/io;
 public function main() {
     string a = "hello";
     string b = "world";
-    io:println(a + " " + b);
-    io:println("" + "x");
+    io:println(a + " " + b); // @output hello world
+    io:println("" + "x"); // @output x
 }
+

@@ -23,6 +23,7 @@ type OpenRecord record {
 public function main() {
     OpenRecord r = {name: "John", "age": 30};
     foreach any val in r {
-        io:println(val);
+        io:println(val); // @output John
+                          // @output 30
     }
 }

@@ -19,8 +19,9 @@ import ballerina/io;
 public function main() {
     int[]|boolean[] arr = [1, 2, 3];
     foreach int|boolean val in arr {
-        io:println(val);
-       
-       
+        io:println(val); //@output 1
+        // @output 2
+        // @output 3
     }
 }
+

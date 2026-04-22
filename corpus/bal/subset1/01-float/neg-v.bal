@@ -19,5 +19,6 @@ import ballerina/io;
 
 public function main() {
     float x = 3.14;
-    io:println(-x);
+    io:println(-x); // @output -3.14
 }
+

@@ -19,9 +19,9 @@
 import ballerina/io;
 
 public function main() {
-    printBranch(5);
-    printBranch(10);
-    printBranch(15);
+    printBranch(5); // @output 1
+    printBranch(10); // @output 0
+    printBranch(15); // @output 0
 }
 
 function printBranch(int x) {
@@ -32,3 +32,4 @@ function printBranch(int x) {
         io:println(0);
     }
 }
+

@@ -911,10 +911,15 @@ func analyzeUnaryExpr[A analyzer](a A, unaryExpr *ast.BLangUnaryExpr, expectedTy
 	}
 
 	exprTy := unaryExpr.Expr.GetDeterminedType()
+	// Strip nil for nil-lifted numeric/bitwise unary operations
+	underlyingTy := exprTy
+	if semtypes.ContainsBasicType(exprTy, semtypes.NIL) {
+		underlyingTy = semtypes.Diff(exprTy, semtypes.NIL)
+	}
 
 	switch unaryExpr.GetOperatorKind() {
 	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
-		if !isNumericType(exprTy) {
+		if !isNumericType(underlyingTy) {
 			a.semanticErr(fmt.Sprintf("expect numeric type for %s", string(unaryExpr.GetOperatorKind())), unaryExpr.GetPosition())
 			return false
 		}

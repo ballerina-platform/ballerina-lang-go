@@ -29,7 +29,7 @@ class F1 {
     }
 
     function foo() returns int {
-        io:println("f1"); // @output f1
+        io:println("f1");
         return self.x;
     }
 }
@@ -42,14 +42,16 @@ class F2 {
     }
 
     function foo() returns int {
-        io:println("f2"); // @output f2
+        io:println("f2");
         return self.x;
     }
 }
 
 public function main() {
-    Foo[] fs = [new F1(), new F2()];
-    foreach Foo f in fs {
-        io:println(f.foo());
-    }
+    Foo f = new F1();
+    io:println(f.foo()); // @output f1
+                         // @output 1
+    f = new F2();
+    io:println(f.foo()); // @output f2
+                         // @output 2
 }

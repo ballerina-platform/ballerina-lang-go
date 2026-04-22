@@ -113,9 +113,117 @@ func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNod
 		expr.RhsExpr = result.replacementNode.(ast.BLangExpression)
 	}
 
+	if !isNilLiftableBinaryOp(expr.OpKind) {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+
+	lhsTy := expr.LhsExpr.GetDeterminedType()
+	rhsTy := expr.RhsExpr.GetDeterminedType()
+	if lhsTy == nil || rhsTy == nil {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+	lhsHasNil := semtypes.ContainsBasicType(lhsTy, semtypes.NIL)
+	rhsHasNil := semtypes.ContainsBasicType(rhsTy, semtypes.NIL)
+
+	if !lhsHasNil && !rhsHasNil {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+
+	basePos := expr.GetPosition()
+	resultTy := expr.GetDeterminedType()
+
+	// Create temp vars for nullable operands
+	var lhsVarName *ast.BLangIdentifier
+	var lhsSymbol model.SymbolRef
+	if lhsHasNil {
+		lhsVarName, lhsSymbol, initStmts = createOperandTempVar(cx, lhsTy, expr.LhsExpr, basePos, initStmts)
+	}
+
+	var rhsVarName *ast.BLangIdentifier
+	var rhsSymbol model.SymbolRef
+	if rhsHasNil {
+		rhsVarName, rhsSymbol, initStmts = createOperandTempVar(cx, rhsTy, expr.RhsExpr, basePos, initStmts)
+	}
+
+	// Create result temp var initialized to nil
+	resultVarName, resultSymbol, initStmts := createNilResultVar(cx, resultTy, basePos, initStmts)
+
+	// Build the nil check condition
+	var nilCheckCond ast.BLangExpression
+	if lhsHasNil {
+		nilCheckCond = createNilTypeTest(lhsVarName, lhsSymbol, lhsTy, basePos)
+	}
+	if rhsHasNil {
+		rhsNilCheck := createNilTypeTest(rhsVarName, rhsSymbol, rhsTy, basePos)
+		if nilCheckCond == nil {
+			nilCheckCond = rhsNilCheck
+		} else {
+			orExpr := &ast.BLangBinaryExpr{
+				LhsExpr: nilCheckCond,
+				RhsExpr: rhsNilCheck,
+				OpKind:  model.OperatorKind_OR,
+			}
+			orExpr.SetDeterminedType(semtypes.BOOLEAN)
+			orExpr.SetPosition(basePos)
+			nilCheckCond = orExpr
+		}
+	}
+
+	// Build the operation in the else branch
+	var lhsRef ast.BLangExpression
+	if lhsHasNil {
+		lhsRef = createVarRef(lhsVarName, lhsSymbol, semtypes.Diff(lhsTy, semtypes.NIL))
+	} else {
+		lhsRef = expr.LhsExpr
+	}
+
+	var rhsRef ast.BLangExpression
+	if rhsHasNil {
+		rhsRef = createVarRef(rhsVarName, rhsSymbol, semtypes.Diff(rhsTy, semtypes.NIL))
+	} else {
+		rhsRef = expr.RhsExpr
+	}
+
+	newBinaryExpr := &ast.BLangBinaryExpr{
+		LhsExpr: lhsRef,
+		RhsExpr: rhsRef,
+		OpKind:  expr.OpKind,
+	}
+	newBinaryExpr.SetDeterminedType(semtypes.Diff(resultTy, semtypes.NIL))
+	newBinaryExpr.SetPosition(basePos)
+
+	resultAssign := createResultAssignment(resultVarName, resultSymbol, resultTy, newBinaryExpr, basePos)
+
+	elseBody := &ast.BLangBlockStmt{
+		Stmts: []ast.BLangStatement{resultAssign},
+	}
+	elseBody.SetDeterminedType(semtypes.NEVER)
+	ifStmt := &ast.BLangIf{
+		Expr:     nilCheckCond,
+		Body:     ast.BLangBlockStmt{},
+		ElseStmt: elseBody,
+	}
+	ifStmt.Body.SetDeterminedType(semtypes.NEVER)
+	ifStmt.SetDeterminedType(semtypes.NEVER)
+	ifStmt.SetScope(cx.currentScope())
+	setPositionIfMissing(ifStmt, basePos)
+	initStmts = append(initStmts, ifStmt)
+
+	replacementRef := createVarRef(resultVarName, resultSymbol, resultTy)
+	setPositionIfMissing(replacementRef, basePos)
+
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
-		replacementNode: expr,
+		replacementNode: replacementRef,
 	}
 }
 
@@ -128,9 +236,77 @@ func walkUnaryExpr(cx *functionContext, expr *ast.BLangUnaryExpr) desugaredNode[
 		expr.Expr = result.replacementNode.(ast.BLangExpression)
 	}
 
+	// Unary + is identity — desugar to just the operand (BIR gen doesn't handle unary +)
+	if expr.Operator == model.OperatorKind_ADD {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr.Expr,
+		}
+	}
+
+	if !isNilLiftableUnaryOp(expr.Operator) {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+
+	operandTy := expr.Expr.GetDeterminedType()
+	if !semtypes.ContainsBasicType(operandTy, semtypes.NIL) {
+		return desugaredNode[model.ExpressionNode]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
+
+	basePos := expr.GetPosition()
+	resultTy := expr.GetDeterminedType()
+
+	// Create operand temp var
+	operandVarName, operandSymbol, initStmts := createOperandTempVar(cx, operandTy, expr.Expr, basePos, initStmts)
+
+	// Create result temp var initialized to nil
+	resultVarName, resultSymbol, initStmts := createNilResultVar(cx, resultTy, basePos, initStmts)
+
+	// Build nil check: if ($operand is ()) { } else { ... }
+	nilCheck := createNilTypeTest(operandVarName, operandSymbol, operandTy, basePos)
+
+	// Build the operation for the if-body (operand is not nil)
+	nonNilTy := semtypes.Diff(operandTy, semtypes.NIL)
+	operandRef := createVarRef(operandVarName, operandSymbol, nonNilTy)
+
+	newUnary := &ast.BLangUnaryExpr{
+		Expr:     operandRef,
+		Operator: expr.Operator,
+	}
+	newUnary.SetDeterminedType(semtypes.Diff(resultTy, semtypes.NIL))
+	newUnary.SetPosition(basePos)
+	var opExpr ast.BLangExpression = newUnary
+
+	resultAssign := createResultAssignment(resultVarName, resultSymbol, resultTy, opExpr, basePos)
+
+	// if ($operand is ()) { } else { $result = op $operand }
+	elseBody := &ast.BLangBlockStmt{
+		Stmts: []ast.BLangStatement{resultAssign},
+	}
+	elseBody.SetDeterminedType(semtypes.NEVER)
+	ifStmt := &ast.BLangIf{
+		Expr:     nilCheck,
+		Body:     ast.BLangBlockStmt{},
+		ElseStmt: elseBody,
+	}
+	ifStmt.Body.SetDeterminedType(semtypes.NEVER)
+	ifStmt.SetDeterminedType(semtypes.NEVER)
+	ifStmt.SetScope(cx.currentScope())
+	setPositionIfMissing(ifStmt, basePos)
+	initStmts = append(initStmts, ifStmt)
+
+	replacementRef := createVarRef(resultVarName, resultSymbol, resultTy)
+	setPositionIfMissing(replacementRef, basePos)
+
 	return desugaredNode[model.ExpressionNode]{
 		initStmts:       initStmts,
-		replacementNode: expr,
+		replacementNode: replacementRef,
 	}
 }
 
@@ -1571,4 +1747,85 @@ func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, val
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
 	return inv
+}
+
+func isNilLiftableBinaryOp(op model.OperatorKind) bool {
+	switch op {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB,
+		model.OperatorKind_MUL, model.OperatorKind_DIV, model.OperatorKind_MOD,
+		model.OperatorKind_BITWISE_LEFT_SHIFT, model.OperatorKind_BITWISE_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT,
+		model.OperatorKind_BITWISE_AND, model.OperatorKind_BITWISE_OR, model.OperatorKind_BITWISE_XOR:
+		return true
+	default:
+		return false
+	}
+}
+
+func isNilLiftableUnaryOp(op model.OperatorKind) bool {
+	switch op {
+	case model.OperatorKind_ADD, model.OperatorKind_SUB, model.OperatorKind_BITWISE_COMPLEMENT:
+		return true
+	default:
+		return false
+	}
+}
+
+func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast.BLangExpression, pos ast.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+	name, symbol := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
+	varName := &ast.BLangIdentifier{Value: name}
+	tempVar := &ast.BLangSimpleVariable{Name: varName}
+	tempVar.SetDeterminedType(ty)
+	tempVar.SetInitialExpression(initExpr)
+	tempVar.SetSymbol(symbol)
+	varDef := &ast.BLangSimpleVariableDef{Var: tempVar}
+	varDef.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(varDef, pos)
+	return varName, symbol, append(initStmts, varDef)
+}
+
+func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos ast.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+	nilLit := &ast.BLangLiteral{Value: nil}
+	nilLit.SetDeterminedType(semtypes.NIL)
+	setPositionIfMissing(nilLit, pos)
+
+	name, symbol := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
+	varName := &ast.BLangIdentifier{Value: name}
+	tempVar := &ast.BLangSimpleVariable{Name: varName}
+	tempVar.SetDeterminedType(ty)
+	tempVar.SetInitialExpression(nilLit)
+	tempVar.SetSymbol(symbol)
+	varDef := &ast.BLangSimpleVariableDef{Var: tempVar}
+	varDef.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(varDef, pos)
+	return varName, symbol, append(initStmts, varDef)
+}
+
+func createNilTypeTest(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semtypes.SemType, pos ast.Location) *ast.BLangTypeTestExpr {
+	ref := createVarRef(varName, symbol, ty)
+	typeTest := &ast.BLangTypeTestExpr{
+		Expr: ref,
+		Type: model.TypeData{Type: semtypes.NIL},
+	}
+	typeTest.SetDeterminedType(semtypes.BOOLEAN)
+	setPositionIfMissing(typeTest, pos)
+	return typeTest
+}
+
+func createVarRef(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semtypes.SemType) *ast.BLangSimpleVarRef {
+	ref := &ast.BLangSimpleVarRef{VariableName: varName}
+	ref.SetSymbol(symbol)
+	ref.SetDeterminedType(ty)
+	return ref
+}
+
+func createResultAssignment(resultVarName *ast.BLangIdentifier, resultSymbol model.SymbolRef, resultTy semtypes.SemType, valueExpr ast.BLangExpression, pos ast.Location) *ast.BLangAssignment {
+	varRef := createVarRef(resultVarName, resultSymbol, resultTy)
+	assign := &ast.BLangAssignment{
+		VarRef: varRef,
+		Expr:   valueExpr,
+	}
+	assign.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(assign, pos)
+	return assign
 }

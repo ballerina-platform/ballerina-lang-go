@@ -19,8 +19,8 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(not(true));
-    printBoolean(not(false));
+    printBoolean(not(true)); // @output 0
+    printBoolean(not(false)); // @output 1
 }
 
 function printBoolean(boolean b) {
@@ -35,3 +35,4 @@ function printBoolean(boolean b) {
 function not(boolean b) returns boolean {
     return !b;
 }
+

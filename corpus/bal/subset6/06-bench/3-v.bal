@@ -35078,5 +35078,6 @@ public function main() {
     total = total + runGroup7();
     total = total + runGroup8();
     total = total + runGroup9();
-    io:println(total);
+    io:println(total); // @output 8091000
 }
+
