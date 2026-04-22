@@ -62,19 +62,57 @@ func initArrayModule(rt *runtime.Runtime) {
 		}
 
 		rowCount := indices.Len()
+		if keys.Len() != rowCount {
+			return nil, fmt.Errorf("keys and indices length mismatch: keys=%d indices=%d", keys.Len(), rowCount)
+		}
+		keyCount := directions.Len()
+
+		directionFlags := make([]bool, keyCount)
+		for keyIndex := 0; keyIndex < keyCount; keyIndex++ {
+			isAscending, ok := directions.Get(keyIndex).(bool)
+			if !ok {
+				return nil, fmt.Errorf("directions entry %d must be a bool", keyIndex)
+			}
+			directionFlags[keyIndex] = isAscending
+		}
+
+		keyRows := make([]*values.List, rowCount)
+		for row := 0; row < rowCount; row++ {
+			rowKeys, ok := keys.Get(row).(*values.List)
+			if !ok {
+				return nil, fmt.Errorf("keys entry %d must be a list", row)
+			}
+			if rowKeys.Len() != keyCount {
+				return nil, fmt.Errorf("keys entry %d length mismatch: got %d, expected %d", row, rowKeys.Len(), keyCount)
+			}
+			keyRows[row] = rowKeys
+		}
+
+		payloadCount := payloads.Len()
+		payloadLists := make([]*values.List, payloadCount)
+		for i := 0; i < payloadCount; i++ {
+			payloadList, ok := payloads.Get(i).(*values.List)
+			if !ok {
+				return nil, fmt.Errorf("payload entry %d must be a list", i)
+			}
+			if payloadList.Len() != rowCount {
+				return nil, fmt.Errorf("payload entry %d length mismatch: got %d, expected %d", i, payloadList.Len(), rowCount)
+			}
+			payloadLists[i] = payloadList
+		}
+
 		order := make([]int, rowCount)
-		for i := range rowCount {
+		for i := 0; i < rowCount; i++ {
 			order[i] = i
 		}
 
 		sort.SliceStable(order, func(i, j int) bool {
 			leftRow := order[i]
 			rightRow := order[j]
-			leftKeys, _ := keys.Get(leftRow).(*values.List)
-			rightKeys, _ := keys.Get(rightRow).(*values.List)
-			keyCount := directions.Len()
-			for keyIndex := range keyCount {
-				isAscending, _ := directions.Get(keyIndex).(bool)
+			leftKeys := keyRows[leftRow]
+			rightKeys := keyRows[rightRow]
+			for keyIndex := 0; keyIndex < keyCount; keyIndex++ {
+				isAscending := directionFlags[keyIndex]
 				cmp := compareQuerySortValues(leftKeys.Get(keyIndex), rightKeys.Get(keyIndex), isAscending)
 				switch {
 				case cmp < 0:
@@ -88,12 +126,8 @@ func initArrayModule(rt *runtime.Runtime) {
 
 		reorderListInPlace(indices, order)
 		reorderListInPlace(keys, order)
-		for i := range payloads.Len() {
-			payloadList, ok := payloads.Get(i).(*values.List)
-			if !ok {
-				return nil, fmt.Errorf("payload entry %d must be a list", i)
-			}
-			reorderListInPlace(payloadList, order)
+		for i := 0; i < payloadCount; i++ {
+			reorderListInPlace(payloadLists[i], order)
 		}
 		return nil, nil
 	})
