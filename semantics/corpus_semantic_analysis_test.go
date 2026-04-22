@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
 	"flag"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -140,11 +141,9 @@ func TestSemanticAnalysisErrors(t *testing.T) {
 }
 
 func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
-	for _, skip := range semanticAnalysisErrorSkipList {
-		if strings.HasSuffix(testCase.InputPath, skip) {
-			t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
-			return
-		}
+	if shouldSkipSemanticAnalysisErrorTest(testCase.InputPath) {
+		t.Skipf("Skipping semantic analysis error test for %s", testCase.InputPath)
+		return
 	}
 
 	env := context.NewCompilerEnvironment(semtypes.CreateTypeEnv(), false)
@@ -166,4 +165,15 @@ func testSemanticAnalysisError(t *testing.T, testCase test_util.TestCase) {
 	_, _ = testphases.RunPipeline(cx, testphases.PhaseCFGAnalysis, testCase.InputPath)
 
 	// If we reach here without panic, the defer will catch it
+}
+
+func shouldSkipSemanticAnalysisErrorTest(inputPath string) bool {
+	normalizedInputPath := filepath.ToSlash(inputPath)
+	for _, skip := range semanticAnalysisErrorSkipList {
+		normalizedSkipPath := filepath.ToSlash(skip)
+		if strings.HasSuffix(normalizedInputPath, normalizedSkipPath) {
+			return true
+		}
+	}
+	return false
 }
