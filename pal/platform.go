@@ -14,28 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package runtime
-
-import (
-	"io"
-	"os"
-)
+package pal
 
 type (
 	Platform struct {
-		IO PlatformIO
+		IO IO
 	}
-	PlatformIO struct {
-		Stdout io.Writer
-		Stderr io.Writer
+	IO struct {
+		Stdout func(p []byte) (n int, err error)
+		Stderr func(p []byte) (n int, err error)
 	}
 )
-
-func NativePlatform() Platform {
-	return Platform{
-		IO: PlatformIO{
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-		},
-	}
-}

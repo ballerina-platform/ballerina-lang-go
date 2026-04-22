@@ -248,11 +248,7 @@ func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffe
 		return
 	}
 
-	platform := runtime.NativePlatform()
-	platform.IO.Stdout = stdoutBuf
-	platform.IO.Stderr = stderrBuf
-
-	rt := runtime.NewRuntime(platform)
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
 	if err := rt.Interpret(*birPkg); err != nil {
 		// For now just write the error string to stderr to match corpus expectations
 		fmt.Fprintln(stderrBuf, err.Error())
@@ -372,11 +368,7 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *b
 		return
 	}
 
-	platform := runtime.NativePlatform()
-	platform.IO.Stdout = stdoutBuf
-	platform.IO.Stderr = stderrBuf
-
-	rt := runtime.NewRuntime(platform)
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())

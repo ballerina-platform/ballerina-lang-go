@@ -27,6 +27,7 @@ import (
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
@@ -61,9 +62,7 @@ func TestExternValid(t *testing.T) {
 
 	stdoutBuf := &bytes.Buffer{}
 
-	platform := runtime.NativePlatform()
-	platform.IO.Stdout = stdoutBuf
-	rt := runtime.NewRuntime(platform)
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
 
 	// Register foo() returns "$foo"
 	runtime.RegisterExternFunction(rt, "$anon", "1-v", "foo", func(args []values.BalValue) (values.BalValue, error) {
@@ -176,9 +175,7 @@ func TestExternHandle(t *testing.T) {
 
 	stdoutBuf := &bytes.Buffer{}
 
-	platform := runtime.NativePlatform()
-	platform.IO.Stdout = stdoutBuf
-	rt := runtime.NewRuntime(platform)
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
 
 	type myHandle struct {
 		data string

@@ -36,7 +36,7 @@ func Println(rt *runtime.Runtime, vals ...values.BalValue) {
 	for i, v := range vals {
 		parts[i] = values.String(v, visited)
 	}
-	_, _ = fmt.Fprintln(rt.Platform().IO.Stdout, strings.Join(parts, ""))
+	_, _ = rt.Platform().IO.Stdout(fmt.Appendln(nil, strings.Join(parts, "")))
 }
 
 func printlnExtern(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue, error) {
