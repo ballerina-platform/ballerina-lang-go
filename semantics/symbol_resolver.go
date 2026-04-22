@@ -192,91 +192,113 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 	return true
 }
 
+func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedType, visited map[model.SymbolRef]bool) bool {
+	pkgAlias, typeName := ref.PkgAlias.Value, ref.TypeName.Value
+	if pkgAlias != "" {
+		symRef, ok := ms.GetPrefixedSymbol(pkgAlias, typeName)
+		if !ok {
+			return false
+		}
+		ty := ms.ctx.GetSymbol(symRef).Type()
+		return ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.TYPEDESC)
+	}
+	symRef, _, ok := ms.GetSymbol(typeName)
+	if !ok {
+		return false
+	}
+	if visited[symRef] {
+		return false
+	}
+	visited[symRef] = true
+	td, ok := ms.typeDefns[symRef].(*ast.BLangTypeDefinition)
+	if !ok {
+		return false
+	}
+	return ms.isDescriptorTypedesc(td.GetTypeData().TypeDescriptor, visited)
+}
+
+// isDescriptorTypedesc reports whether a type descriptor AST node is (directly or via a user-
+// defined reference chain) a typedesc type.
+func (ms *moduleSymbolResolver) isDescriptorTypedesc(desc any, visited map[model.SymbolRef]bool) bool {
+	switch tn := desc.(type) {
+	case *ast.BLangValueType:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangBuiltInRefTypeNode:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangConstrainedType:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangUserDefinedType:
+		return ms.isTypeRefToTypedesc(tn, visited)
+	}
+	return false
+}
+
 // allocateFunctionSymbol creates the appropriate function symbol for a function declaration.
 // If the return type references a typedesc parameter (dependently-typed), it creates a
 // DependentlyTypedFunctionSymbol; otherwise a plain FunctionSymbol. The returned symbol has
 // no type information yet — it is filled during type resolution.
-func allocateFunctionSymbol(fn *ast.BLangFunction, name string, isPublic bool) model.Symbol {
+func (ms *moduleSymbolResolver) allocateFunctionSymbol(fn *ast.BLangFunction, name string, isPublic bool) model.Symbol {
 	paramNames := make([]string, len(fn.RequiredParams))
 	for i := range fn.RequiredParams {
 		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
 	}
-	if dependentReturnParamIndex(fn, fn.GetReturnTypeDescriptor()) >= 0 {
+	if ms.isDependentlyTyped(fn) {
 		return model.NewDependentlyTypedFunctionSymbol(name, paramNames, len(fn.RequiredParams), fn.FuncSymbolFlags(), isPublic)
 	}
 	return model.NewFunctionSymbol(name, model.FunctionSignature{}, isPublic)
 }
 
-// dependentReturnParamIndex returns the index of a typedesc parameter that the return type
-// references, or -1 if none. A dependently-typed function is any function whose return type
-// contains a user-defined-type node whose name matches a typedesc parameter of the function.
-func dependentReturnParamIndex(fn *ast.BLangFunction, retTd model.TypeDescriptor) int {
+// isDependentlyTyped reports whether a function's return type references one of its typedesc
+// parameters by name.
+func (ms *moduleSymbolResolver) isDependentlyTyped(fn *ast.BLangFunction) bool {
+	retTd := fn.GetReturnTypeDescriptor()
 	if retTd == nil {
-		return -1
+		return false
 	}
 	node, ok := retTd.(ast.BLangNode)
 	if !ok {
-		return -1
+		return false
 	}
-	return findDependentParamRef(fn, node)
+	typedescParams := make(map[string]struct{})
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if param.Name == nil {
+			continue
+		}
+		if ms.isDescriptorTypedesc(param.TypeNode(), make(map[model.SymbolRef]bool)) {
+			typedescParams[param.Name.Value] = struct{}{}
+		}
+	}
+	if len(typedescParams) == 0 {
+		return false
+	}
+	return returnTypeReferencesTypedescParam(node, typedescParams)
 }
 
-func findDependentParamRef(fn *ast.BLangFunction, node ast.BLangNode) int {
+func returnTypeReferencesTypedescParam(node ast.BLangNode, typedescParams map[string]struct{}) bool {
 	switch n := node.(type) {
 	case *ast.BLangUserDefinedType:
 		if n.PkgAlias.Value != "" {
-			return -1
+			return false
 		}
-		return typedescParamIndex(fn, n.TypeName.Value)
+		_, ok := typedescParams[n.TypeName.Value]
+		return ok
 	case *ast.BLangUnionTypeNode:
-		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
-				return idx
-			}
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(lhs, typedescParams) {
+			return true
 		}
-		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
-				return idx
-			}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(rhs, typedescParams) {
+			return true
 		}
 	case *ast.BLangIntersectionTypeNode:
-		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, lhs); idx >= 0 {
-				return idx
-			}
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(lhs, typedescParams) {
+			return true
 		}
-		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok {
-			if idx := findDependentParamRef(fn, rhs); idx >= 0 {
-				return idx
-			}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(rhs, typedescParams) {
+			return true
 		}
 	}
-	return -1
-}
-
-func typedescParamIndex(fn *ast.BLangFunction, name string) int {
-	for i := range fn.RequiredParams {
-		param := &fn.RequiredParams[i]
-		if param.Name == nil || param.Name.Value != name {
-			continue
-		}
-		switch tn := param.TypeNode().(type) {
-		case *ast.BLangValueType:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		case *ast.BLangBuiltInRefTypeNode:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		case *ast.BLangConstrainedType:
-			if tn.GetTypeKind() == model.TypeKind_TYPEDESC {
-				return i
-			}
-		}
-		return -1
-	}
-	return -1
+	return false
 }
 
 func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
@@ -287,12 +309,24 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
-	// First add all the top level symbols they can be referred from anywhere
+	// Type definitions are registered first so that function-symbol allocation can walk alias
+	// chains when classifying typedesc parameters (needed for dependently-typed detection).
+	for i := range pkg.TypeDefinitions {
+		typeDef := &pkg.TypeDefinitions[i]
+		name := typeDef.Name.Value
+		isPublic := typeDef.IsPublic()
+		symbol := model.NewTypeSymbol(name, isPublic)
+		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
+			return moduleResolver.scope.Exports()
+		}
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		moduleResolver.typeDefns[symRef] = typeDef
+	}
 	for i := range pkg.Functions {
 		fn := &pkg.Functions[i]
 		name := fn.Name.Value
 		isPublic := fn.IsPublic()
-		symbol := allocateFunctionSymbol(fn, name, isPublic)
+		symbol := moduleResolver.allocateFunctionSymbol(fn, name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, symbol, fn.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
 		}
@@ -316,17 +350,6 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		signature := model.FunctionSignature{}
 		symbol := model.NewFunctionSymbol("init", signature, false)
 		addTopLevelSymbol(moduleResolver, "init", symbol, pkg.InitFunction.Name.GetPosition())
-	}
-	for i := range pkg.TypeDefinitions {
-		typeDef := &pkg.TypeDefinitions[i]
-		name := typeDef.Name.Value
-		isPublic := typeDef.IsPublic()
-		symbol := model.NewTypeSymbol(name, isPublic)
-		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
-			return moduleResolver.scope.Exports()
-		}
-		symRef, _, _ := moduleResolver.GetSymbol(name)
-		moduleResolver.typeDefns[symRef] = typeDef
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
@@ -1041,7 +1064,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			continue
 		}
 		isPublic := method.IsPublic()
-		symbol := allocateFunctionSymbol(method, methodName, isPublic)
+		symbol := ms.allocateFunctionSymbol(method, methodName, isPublic)
 		if isPublicClass && isPublic {
 			moduleName := className + "." + methodName
 			ms.scope.AddSymbol(moduleName, symbol)

@@ -823,7 +823,7 @@ func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.B
 func typedescExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangTypedescExpr) expressionEffect {
 	resultOperand := ctx.addTempVar(expr.GetDeterminedType())
 	td := &values.TypeDesc{Type: expr.Constraint}
-	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, expr.GetPosition()))
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(resultOperand, td, ctx.loc(expr.GetPosition())))
 	return expressionEffect{
 		result: resultOperand,
 		block:  curBB,
@@ -1340,8 +1340,20 @@ func transformClassDefinition(ctx *Context, class *ast.BLangClassDefinition, bir
 	birClassDef.VTable["init"] = initFunc
 
 	for methodName, method := range class.Methods {
-		fn := transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
-		fn.FunctionLookupKey = buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		lookupKey := buildMethodLookupKeyFromSymbol(ctx, className.Value(), method.Symbol())
+		var fn *BIRFunction
+		if method.IsNative() {
+			fn = &BIRFunction{
+				Name:              model.Name(method.GetName().GetValue()),
+				OriginalName:      model.Name(method.GetName().GetValue()),
+				Flags:             method.FlagsAsInt64(),
+				FunctionLookupKey: lookupKey,
+			}
+			fn.Pos = birLoc(ctx.CompilerContext.DiagnosticEnv(), method.GetPosition())
+		} else {
+			fn = transformFunctionInner(&stmtContext{birCx: ctx, scopeCtx: &scopeContext{varMap: make(map[model.SymbolRef]*BIROperand), isFunctionBoundary: true}}, method, &selfRef)
+			fn.FunctionLookupKey = lookupKey
+		}
 		birClassDef.VTable[methodName] = fn
 	}
 

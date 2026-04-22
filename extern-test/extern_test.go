@@ -30,6 +30,7 @@ import (
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/text"
 	"ballerina-lang-go/values"
 	"bytes"
 	"fmt"
@@ -293,6 +294,74 @@ func TestDependentlyTyped(t *testing.T) {
 	}
 }
 
+func TestDependentlyTypedMethod(t *testing.T) {
+	projectDir := filepath.Join(testDataDir, "dependently-typed-method-v")
+	absPath, err := filepath.Abs(projectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	result, err := directory.LoadProject(fsys, filepath.Base(absPath))
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		for _, d := range compilation.DiagnosticResult().Diagnostics() {
+			t.Logf("diagnostic: %v", d)
+		}
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkgs := backend.BIRPackages()
+
+	var stdoutBuf bytes.Buffer
+	rt := runtime.NewRuntime()
+	tyCtx := semtypes.ContextFrom(rt.GetTypeEnv())
+
+	runtime.RegisterExternFunction(rt, "ballerina", "io", "println", func(args []values.BalValue) (values.BalValue, error) {
+		var b strings.Builder
+		visited := make(map[uintptr]bool)
+		for _, arg := range args {
+			b.WriteString(values.String(arg, visited))
+		}
+		b.WriteByte('\n')
+		stdoutBuf.WriteString(b.String())
+		return nil, nil
+	})
+
+	runtime.RegisterExternFunction(rt, "testorg", "crossmoduledependentfn.http",
+		"Client."+model.RemoteMethodName("get"),
+		func(args []values.BalValue) (values.BalValue, error) {
+			td, ok := args[3].(*values.TypeDesc)
+			if !ok {
+				return nil, fmt.Errorf("expected typedesc argument, got %T", args[3])
+			}
+			switch {
+			case semtypes.IsSubtype(tyCtx, semtypes.STRING, td.Type):
+				return "string response", nil
+			case semtypes.IsSubtype(tyCtx, semtypes.INT, td.Type):
+				return int64(2), nil
+			}
+			panic(values.NewErrorWithMessage("unsupported targetType"))
+		})
+
+	for _, birPkg := range birPkgs {
+		if err := rt.Interpret(*birPkg); err != nil {
+			t.Fatalf("runtime error: %v", err)
+		}
+	}
+
+	expected := "string response\n2\n"
+	if stdoutBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}
+
 func TestExternHandle(t *testing.T) {
 	balFile := filepath.Join(testDataDir, "4-v.bal")
 	absPath, err := filepath.Abs(balFile)
@@ -479,6 +548,11 @@ func compileSingleFileModule(
 		t.Fatal(err)
 	}
 	cx := context.NewCompilerContext(env)
+	content, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", balPath, err)
+	}
+	cx.DiagnosticEnv().RegisterFile(absPath, text.NewStringTextDocument(string(content)))
 	st, err := parser.GetSyntaxTree(cx, absPath)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", balPath, err)

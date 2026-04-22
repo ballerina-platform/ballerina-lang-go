@@ -1330,7 +1330,7 @@ func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunctio
 		kind = model.InclusionMemberKindResourceMethod
 	}
 	md := model.NewMethodDescriptor(name, kind, vis, method.Symbol())
-	md.SetMemberType(t.symbolType(method.Symbol()))
+	md.SetMemberType(methodMemberType(t, method.Symbol()))
 	return md
 }
 
@@ -1463,7 +1463,7 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	}
 	for name := range classDef.Methods {
 		method := classDef.Methods[name]
-		methodTy := t.symbolType(method.Symbol())
+		methodTy := methodMemberType(t, method.Symbol())
 		vis := semtypes.VisibilityPrivate
 		if method.IsPublic() {
 			vis = semtypes.VisibilityPublic
@@ -1888,9 +1888,9 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangTypeTestExpr:
 		return resolveTypeTestExpr(t, chain, e)
 	case *ast.BLangCheckedExpr:
-		return resolveCheckedExpr(t, chain, e)
+		return resolveCheckedExpr(t, chain, e, expectedType)
 	case *ast.BLangCheckPanickedExpr:
-		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr)
+		return resolveCheckedExpr(t, chain, &e.BLangCheckedExpr, expectedType)
 	case *ast.BLangTrapExpr:
 		return resolveTrapExpr(t, chain, e)
 	case *ast.BLangNamedArgsExpression:
@@ -1906,7 +1906,7 @@ func resolveExpressionInner(t typeResolver, chain *binding, expr ast.BLangAction
 	case *ast.BLangLambdaFunction:
 		return resolveLambdaFunctionExpr(t, chain, e)
 	case *ast.BLangRemoteMethodCallAction:
-		return resolveRemoteMethodCallAction(t, chain, e)
+		return resolveRemoteMethodCallAction(t, chain, e, expectedType)
 	case *ast.BLangInferredTypedescDefault:
 		return resolveInferredTypedescDefault(t, chain, e, expectedType)
 	default:
@@ -2082,8 +2082,12 @@ func resolveTrapExpr(t typeResolver, chain *binding, e *ast.BLangTrapExpr) (semt
 	return resultTy, defaultExpressionEffect(chain), true
 }
 
-func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr) (semtypes.SemType, expressionEffect, bool) {
-	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, nil)
+func resolveCheckedExpr(t typeResolver, chain *binding, e *ast.BLangCheckedExpr, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
+	var innerExpected semtypes.SemType
+	if expectedType != nil {
+		innerExpected = semtypes.Union(expectedType, semtypes.ERROR)
+	}
+	exprTy, _, ok := resolveActionOrExpression(t, chain, e.Expr, innerExpected)
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
@@ -3454,7 +3458,7 @@ func finishResolveMethodCall(t typeResolver, chain *binding, receiverTy semtypes
 	return symbolRef, retTy, defaultExpressionEffect(chain), true
 }
 
-func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction) (semtypes.SemType, expressionEffect, bool) {
+func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLangRemoteMethodCallAction, expectedType semtypes.SemType) (semtypes.SemType, expressionEffect, bool) {
 	receiverTy, _, ok := resolveActionOrExpression(t, chain, expr.Expr, nil)
 	if !ok {
 		return nil, expressionEffect{}, false
@@ -3472,7 +3476,7 @@ func resolveRemoteMethodCallAction(t typeResolver, chain *binding, expr *ast.BLa
 	expr.Name.SetDeterminedType(semtypes.NEVER)
 	if methodRef, ok := t.lookupClassMethodSymbol(receiverTy, remoteMethodName); ok {
 		expr.SetMethodSymbol(methodRef)
-		return resolveFunctionCall(t, chain, expr, methodRef, nil)
+		return resolveFunctionCall(t, chain, expr, methodRef, expectedType)
 	}
 	symbolRef, retTy, effect, ok := finishResolveMethodCall(t, chain, receiverTy, remoteMethodName, expr.RawSymbol.(*deferredMethodSymbol), expr.ArgExprs, expr)
 	if ok {
@@ -3694,6 +3698,27 @@ func resolveFunctionCall(t typeResolver, chain *binding, inv invocable, symbolRe
 
 	setExpectedType(inv, retTy)
 	return retTy, defaultExpressionEffect(chain), true
+}
+
+// methodMemberType returns a function type describing a class method for inclusion in its
+// object type. For a dependently-typed method the symbol has no stored type (monomorphization
+// happens per call site); synthesize a function type from its param types and the return type
+// that results from applying the return TypeOp against those param types.
+func methodMemberType(t typeResolver, methodRef model.SymbolRef) semtypes.SemType {
+	sym := t.getSymbol(methodRef)
+	depSym, ok := sym.(model.DependentlyTypedFunctionSymbol)
+	if !ok {
+		return t.symbolType(methodRef)
+	}
+	paramTypes := depSym.ParamTypes()
+	retTy := depSym.ReturnType().Apply(t.typeContext(), paramTypes)
+	sig := model.FunctionSignature{
+		ParamTypes:    paramTypes,
+		ReturnType:    retTy,
+		RestParamType: semtypes.NEVER,
+		Flags:         depSym.FuncFlags(),
+	}
+	return typeFromFunctionSignature(t, sig)
 }
 
 func typeFromFunctionSignature(t typeResolver, sig model.FunctionSignature) semtypes.SemType {
