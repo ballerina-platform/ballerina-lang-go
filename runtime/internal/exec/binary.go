@@ -26,9 +26,6 @@ import (
 
 func execBinaryOpAdd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -52,9 +49,6 @@ func execBinaryOpAdd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -75,9 +69,6 @@ func execBinaryOpSub(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -96,9 +87,6 @@ func execBinaryOpMul(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -122,9 +110,6 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	switch v1 := op1.(type) {
 	case int64:
 		v2 := op2.(int64)
@@ -217,17 +202,11 @@ func execBinaryOpLTE(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 
 func execBinaryOpAnd(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, op1.(bool) && op2.(bool))
 }
 
 func execBinaryOpOr(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, op1.(bool) || op2.(bool))
 }
 
@@ -309,9 +288,6 @@ func execUnaryOpBitwiseComplement(ctx *Context, unaryOp *bir.UnaryOp, frame *Fra
 
 func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bitOp func(a, b int64) int64, isShift bool) {
 	op1, op2 := getBinaryRhsValues(ctx, binaryOp, frame)
-	if handleNilLifting(ctx, op1, op2, binaryOp.LhsOp, frame) {
-		return
-	}
 	v1 := op1.(int64)
 	v2 := op2.(int64)
 	if isShift {
@@ -328,12 +304,4 @@ func validateShiftAmount(amount int64) {
 	if amount < 0 || amount >= 64 {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("invalid shift amount: %d (must be 0-63)", amount)))
 	}
-}
-
-func handleNilLifting(ctx *Context, op1, op2 values.BalValue, lhsOp *bir.BIROperand, frame *Frame) bool {
-	if op1 == nil || op2 == nil {
-		setOperandValue(ctx, lhsOp, frame, nil)
-		return true
-	}
-	return false
 }

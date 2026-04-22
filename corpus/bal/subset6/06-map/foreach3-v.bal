@@ -19,6 +19,7 @@ import ballerina/io;
 public function main() {
     map<int>|map<string> m = {a: 1, b: 2};
     foreach int|string val in m {
-        io:println(val);
+        io:println(val); // @output 1
+                          // @output 2
     }
 }

@@ -37,6 +37,7 @@ function process(RecordA|RecordB input) returns int {
 public function main() {
     RecordA a = {id: 1, name: "test"};
     RecordB b = {id: 2, score: 3.5};
-    io:println(process(a));
-    io:println(process(b));
+    io:println(process(a)); // @output 2
+    io:println(process(b)); // @output 2
 }
+

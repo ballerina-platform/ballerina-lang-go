@@ -22,8 +22,9 @@ public function main() {
         if i == 8 {
             continue;
         }
-        io:println(i);
-                      
-                      
+        io:println(i); // @output 6
+                       // @output 7
+                       // @output 9
     }
 }
+

@@ -26,19 +26,20 @@ public function main() {
 function test1() {
     any[] x = [];
     array:push(foo(x), 1);
-    io:println(x);
+    io:println(x); // @output [1]
 }
 
 function test2() {
     any[] x = [];
     array:push(foo(x), 2);
-    io:println(x);
-    io:println(array:length(x));
+    io:println(x); // @output [2]
+    io:println(array:length(x)); // @output 1
     array:push(x, 3);
-    io:println(x);
-    io:println(x.length());
+    io:println(x); // @output [2,3]
+    io:println(x.length()); // @output 2
 }
 
 function foo(any[] x) returns any[] {
     return x;
 }
+

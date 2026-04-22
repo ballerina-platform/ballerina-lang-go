@@ -24,20 +24,21 @@ public function main() {
 
 function test1() {
     any[] x = [];
-    (foo(x)).push(1);
+    (foo(x)).push(1); // @output [1]
     io:println(x);
 }
 
 function test2() {
     any[] x = [];
     foo(x).push(2);
-    io:println(x);
-    io:println(x.length());
+    io:println(x); // @output [2]
+    io:println(x.length()); // @output 1
     x.push(3);
-    io:println(x);
-    io:println(x.length());
+    io:println(x); // @output [2,3]
+    io:println(x.length()); // @output 2
 }
 
 function foo(any[] x) returns any[] {
     return x;
 }
+

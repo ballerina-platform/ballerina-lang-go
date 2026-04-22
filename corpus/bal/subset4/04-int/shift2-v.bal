@@ -19,19 +19,20 @@ import ballerina/io;
 public function main() {
     int:Unsigned8 u8 = 200;
     int:Unsigned8 a = u8 >> 2;
-    io:println(a);
+    io:println(a); // @output 50
 
     int:Unsigned8 b = u8 >>> 2;
-    io:println(b);
+    io:println(b); // @output 50
 
     int:Unsigned16 u16 = 2000;
     int:Unsigned16 c = u16 >> 2;
-    io:println(c);
+    io:println(c); // @output 500
 
     int:Unsigned32 u32 = 200000;
     int:Unsigned32 d = u32 >> 2;
-    io:println(d);
+    io:println(d); // @output 50000
 
     int e = u8 << 2;
-    io:println(e);
+    io:println(e); // @output 800
 }
+

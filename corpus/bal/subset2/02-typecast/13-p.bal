@@ -20,6 +20,6 @@ import ballerina/io;
 public function main() {
     float a = 1e10;
     float b = a * a;
-    int i = <int>b;
+    int i = <int>b; // @panic bad type cast
     io:println(i);
 }

@@ -18,14 +18,15 @@ import ballerina/io;
 
 public function main() {
     int i = 1;
-    io:println(i << 2);
-    io:println(i >> 2);
+    io:println(i << 2); // @output 4
+    io:println(i >> 2); // @output 0
 
     int j = -128;
-    io:println(j >> 2);
-    io:println(j >>> 2);
+    io:println(j >> 2); // @output -32
+    io:println(j >>> 2); // @output 4611686018427387872
 
     int k = 128;
-    io:println(k >> 2);
-    io:println(k >>> 2);
+    io:println(k >> 2); // @output 32
+    io:println(k >>> 2); // @output 32
 }
+

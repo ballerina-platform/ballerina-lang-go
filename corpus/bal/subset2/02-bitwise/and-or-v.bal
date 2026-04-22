@@ -21,8 +21,8 @@ public function main() {
     boolean t = true;
     boolean f = false;
 
-    io:println(t && t);
-    io:println(t && f);
-    io:println(f || t);
-    io:println(f || f);
+    io:println(t && t); // @output true
+    io:println(t && f); // @output false
+    io:println(f || t); // @output true
+    io:println(f || f); // @output false
 }

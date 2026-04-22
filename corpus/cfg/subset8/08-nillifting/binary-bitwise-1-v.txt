@@ -1,0 +1,94 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable x (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (literal 5))))
+    (var-def
+      (variable y (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (literal <nil>))))
+    (var-def
+      (variable a (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr &
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+    (var-def
+      (variable b (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr ^
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+    (var-def
+      (variable c (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr |
+          (simple-var-ref x)
+          (simple-var-ref y)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref c))))
+    (var-def
+      (variable i (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (literal <nil>))))
+    (var-def
+      (variable j (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (literal 10))))
+    (var-def
+      (variable a1 (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr &
+          (simple-var-ref i)
+          (simple-var-ref j)))))
+    (var-def
+      (variable b1 (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr ^
+          (simple-var-ref i)
+          (simple-var-ref y)))))
+    (var-def
+      (variable c1 (type
+        (union-type
+          (value-type int)
+          (value-type null))) (expr
+        (binary-expr |
+          (simple-var-ref i)
+          (simple-var-ref y)))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a1))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b1))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref c1))))
+  )
+)

@@ -7,7 +7,7 @@ It orchestrates the Ballerina interpreter (to generate DOT format) and Graphviz 
 
 Usage:
     python3 cfgviz.py <source-file.bal> [options]
-    python3 cfgviz.py corpus/cfg/subset1/01-loop/while02-v.bal
+    python3 cfgviz.py corpus/bal/subset1/01-loop/while2-v.bal
     python3 cfgviz.py myfile.bal -f svg -o output.svg
     python3 cfgviz.py myfile.bal --no-open
 
@@ -209,7 +209,7 @@ Examples:
   %(prog)s myfile.bal
   %(prog)s myfile.bal -f svg
   %(prog)s myfile.bal -o output.png --no-open
-  %(prog)s corpus/cfg/subset1/01-loop/while02-v.bal
+  %(prog)s corpus/bal/subset1/01-loop/while2-v.bal
         """,
     )
 

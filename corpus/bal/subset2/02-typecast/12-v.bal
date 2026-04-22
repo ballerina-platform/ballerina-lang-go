@@ -20,6 +20,7 @@ import ballerina/io;
 public function main() {
     int i = 42;
     float f = <float>i;
-    io:println(f);
+    io:println(f); // @output 42.0
 }
+
 

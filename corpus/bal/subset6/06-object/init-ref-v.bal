@@ -31,6 +31,6 @@ class Foo {
 }
 
 public function main() {
-    Foo f = new (); // @output "init called"
-    f.foo(); // @output "init called"
+    Foo f = new (); // @output init called
+    f.foo(); // @output init called
 }

@@ -1,0 +1,13 @@
+(main
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref a))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref b))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref c))))
+  )
+)
