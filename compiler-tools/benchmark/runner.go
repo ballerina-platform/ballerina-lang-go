@@ -107,7 +107,10 @@ func (b *benchmark) run() error {
 		if export != nil {
 			label := target.label
 			if target.mode == multipleFilesMode {
-				label = getRelativeLabel(target.root, path)
+				label = path
+				for strings.HasPrefix(label, "../") {
+					label = strings.TrimPrefix(label, "../")
+				}
 			}
 			results = append(results, runResult{
 				label:  label,
