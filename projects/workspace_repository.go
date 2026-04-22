@@ -1,0 +1,114 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package projects
+
+import (
+	"context"
+)
+
+// WorkspaceRepository resolves packages from within a workspace.
+// It allows packages in a workspace to import each other by org+name lookup.
+// This repository has the highest priority in resolution order.
+type WorkspaceRepository struct {
+	workspace *WorkspaceProject
+}
+
+// newWorkspaceRepository creates a repository for workspace package resolution.
+// The workspace reference must be set via setWorkspace before use.
+func newWorkspaceRepository() *WorkspaceRepository {
+	return &WorkspaceRepository{}
+}
+
+// setWorkspace sets the workspace reference for this repository.
+// This must be called after the workspace is created.
+func (r *WorkspaceRepository) setWorkspace(workspace *WorkspaceProject) {
+	r.workspace = workspace
+}
+
+// GetPackage returns a package from the workspace matching the given org, name, and version.
+// If version is empty, it matches by org+name only.
+// Returns (nil, nil) if not found.
+func (r *WorkspaceRepository) GetPackage(ctx context.Context, org, name, version string) (*Package, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	for _, project := range r.workspace.Projects() {
+		pkg := project.CurrentPackage()
+		if pkg == nil {
+			continue
+		}
+
+		desc := pkg.Descriptor()
+		if desc.Org().String() != org || desc.Name().String() != name {
+			continue
+		}
+
+		// If version is specified, it must match exactly
+		if version != "" && desc.Version().String() != version {
+			continue
+		}
+
+		return pkg, nil
+	}
+
+	return nil, nil
+}
+
+// GetPackageVersions returns available versions for a package in the workspace.
+// Since workspace packages have a single version, this returns at most one version.
+func (r *WorkspaceRepository) GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	for _, project := range r.workspace.Projects() {
+		pkg := project.CurrentPackage()
+		if pkg == nil {
+			continue
+		}
+
+		desc := pkg.Descriptor()
+		if desc.Org().String() == org && desc.Name().String() == name {
+			return []PackageVersion{desc.Version()}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// GetLatestVersion returns the version of the workspace package matching org+name.
+// Since workspace packages have a single version, this returns that version.
+func (r *WorkspaceRepository) GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error) {
+	versions, err := r.GetPackageVersions(ctx, org, name)
+	if err != nil {
+		return PackageVersion{}, false, err
+	}
+
+	if len(versions) == 0 {
+		return PackageVersion{}, false, nil
+	}
+
+	return versions[0], true, nil
+}
+
+// Compile-time verification that WorkspaceRepository implements Repository.
+var _ Repository = (*WorkspaceRepository)(nil)

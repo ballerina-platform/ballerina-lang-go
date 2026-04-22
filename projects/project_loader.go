@@ -129,6 +129,46 @@ func loadBalaProjectInEnvironment(fsys fs.FS, platformDir string, sharedEnv *Env
 	return loader.loadBalaProjectWithEnv(platformDir, ProjectLoadConfig{}, sharedEnv)
 }
 
+// createWorkspaceEnvironment creates an Environment for workspace projects.
+// The workspace repository is added first (highest priority), followed by default repositories.
+func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, workspaceRepo *WorkspaceRepository) *Environment {
+	// Build repository list: workspace repo first, then default repos
+	repos := []Repository{workspaceRepo}
+
+	// Add default repositories (local cache, etc.)
+	defaultRepos := l.getDefaultRepositories(cfg)
+	repos = append(repos, defaultRepos...)
+
+	buildOpts := NewBuildOptions()
+	if cfg.BuildOptions != nil {
+		buildOpts = *cfg.BuildOptions
+	}
+
+	return NewProjectEnvironmentBuilder(l.projectFs).
+		WithRepositories(repos).
+		WithBuildOptions(buildOpts).
+		Build()
+}
+
+// getDefaultRepositories returns the default repositories based on config.
+func (l *ProjectLoader) getDefaultRepositories(cfg ProjectLoadConfig) []Repository {
+	if len(cfg.Repositories) > 0 {
+		return cfg.Repositories
+	}
+
+	homeFs := l.ballerinaHomeFs
+	if homeFs == nil {
+		// Default to project-local .ballerina directory
+		if subFs, err := fs.Sub(l.projectFs, ".ballerina"); err == nil {
+			homeFs = subFs
+		}
+	}
+	if homeFs != nil {
+		return defaultRepositories(homeFs)
+	}
+	return nil
+}
+
 // createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
 // This ensures the Environment is immutable after creation.
 //
@@ -329,12 +369,18 @@ func (l *ProjectLoader) loadWorkspaceProject(projectPath string, cfg ProjectLoad
 		buildOpts = NewBuildOptions()
 	}
 
-	// Create environment with repositories configured
-	env := l.createEnvironmentWithRepositories(cfg)
+	// Create workspace repository first (without workspace reference yet)
+	workspaceRepo := newWorkspaceRepository()
 
-	// Create workspace project
+	// Create environment with workspace repository first, then default repositories
+	env := l.createWorkspaceEnvironment(cfg, workspaceRepo)
+
+	// Create workspace project with the environment
 	workspace := newWorkspaceProject(projectPath, buildOpts, env)
 	workspace.setManifest(workspaceManifest)
+
+	// Now set the workspace reference on the repository
+	workspaceRepo.setWorkspace(workspace)
 
 	// Collect all diagnostics
 	var allDiags []diagnostics.Diagnostic

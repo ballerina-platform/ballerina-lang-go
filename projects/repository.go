@@ -22,7 +22,8 @@ import (
 
 // Repository provides access to Ballerina packages from a specific source.
 // Implementations include FileSystemRepository (local bala cache),
-// CentralRepository (Ballerina Central API), MavenRepository, etc.
+// WorkspaceRepository (packages within a workspace), CentralRepository
+// (Ballerina Central API), MavenRepository, etc.
 type Repository interface {
 	// GetPackage loads a specific version of a package.
 	// Returns (nil, nil) if not found (not an error).

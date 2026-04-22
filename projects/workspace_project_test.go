@@ -17,6 +17,7 @@
 package projects_test
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -49,4 +50,33 @@ func TestWorkspaceProjectLoading(t *testing.T) {
 	currentPackage := workspace.CurrentPackage()
 	require.NotNil(currentPackage)
 	assert.Equal("pkga", currentPackage.Descriptor().Name().String())
+
+	// Verify workspace packages can be resolved via the environment
+	// Package pkgb should be resolvable by pkga's environment
+	env := workspace.Environment()
+	require.NotNil(env)
+
+	resolver := env.PackageResolver()
+	require.NotNil(resolver)
+
+	// Workspace repository should be first in the list
+	repos := resolver.Repositories()
+	assert.True(len(repos) > 0)
+
+	// Verify we can resolve pkgb from the workspace
+	version, err := projects.NewPackageVersionFromString("1.0.0")
+	require.NoError(err)
+
+	ctx := context.Background()
+	responses := resolver.ResolvePackages(ctx, []projects.ResolutionRequest{
+		projects.NewResolutionRequest(projects.NewPackageDescriptor(
+			projects.NewPackageOrg("testorg"),
+			projects.NewPackageName("pkgb"),
+			version,
+		)),
+	}, projects.ResolutionOptions{})
+
+	require.Len(responses, 1)
+	assert.True(responses[0].IsResolved())
+	assert.Equal("pkgb", responses[0].Package().Descriptor().Name().String())
 }
