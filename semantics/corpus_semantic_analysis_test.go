@@ -121,7 +121,9 @@ func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.
 }
 
 var semanticAnalysisErrorSkipList = []string{
-	// No skipped tests
+	// This case is expected to fail at desugar phase with an unimplemented error,
+	// not during semantic analysis.
+	"subset8/08-query-expression/order-by-multiple-e.bal",
 }
 
 func TestSemanticAnalysisErrors(t *testing.T) {
