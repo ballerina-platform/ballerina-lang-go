@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: on conflict clause expression must be error?
+  --> on-conflict-invalid-return-e.bal:20:9
+   |
+20 |         on conflict 1; // @error
+   |         ^^^^^^^^^^^^^

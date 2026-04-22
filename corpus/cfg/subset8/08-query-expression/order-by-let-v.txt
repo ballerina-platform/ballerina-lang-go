@@ -1,0 +1,79 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable nums (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 3)
+          (literal 1)
+          (literal 2)
+          (literal 1)
+          (literal 4)))))
+    (var-def
+      (variable listResult (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable n))
+            (simple-var-ref nums))
+          (let-clause
+            (var-def
+              (variable doubled (type
+                (value-type int)) (expr
+                (binary-expr *
+                  (simple-var-ref n)
+                  (literal 2))))))
+          (order-by-clause
+            (order-key ascending
+              (simple-var-ref doubled)))
+          (select-clause
+            (binary-expr +
+              (simple-var-ref doubled)
+              (literal 1)))))))
+    (var-def
+      (variable values (type
+        (constrained-type
+          (builtin-ref-type map)
+          (value-type int))) (expr
+        (mapping-constructor-expr
+          (key-value
+            (literal a)
+            (literal 3))
+          (key-value
+            (literal b)
+            (literal 1))
+          (key-value
+            (literal c)
+            (literal 2))))))
+    (var-def
+      (variable mapResult (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable v))
+            (simple-var-ref values))
+          (let-clause
+            (var-def
+              (variable adjusted (type
+                (value-type int)) (expr
+                (binary-expr +
+                  (simple-var-ref v)
+                  (literal 10))))))
+          (order-by-clause
+            (order-key descending
+              (simple-var-ref adjusted)))
+          (select-clause
+            (simple-var-ref adjusted))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref listResult))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref mapResult))))
+  )
+)

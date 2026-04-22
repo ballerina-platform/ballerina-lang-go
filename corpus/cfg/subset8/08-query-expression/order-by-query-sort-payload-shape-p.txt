@@ -1,0 +1,39 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable keys (type
+        (array-type
+          (value-type anydata) dimensions: 2 ([][]))) (expr
+        (list-constructor-expr
+          (list-constructor-expr
+            (literal 1))
+          (list-constructor-expr
+            (literal 2))))))
+    (var-def
+      (variable directions (type
+        (array-type
+          (value-type boolean) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal true)))))
+    (var-def
+      (variable indices (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 0)
+          (literal 1)))))
+    (var-def
+      (variable payloads (type
+        (array-type
+          (value-type anydata) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 1)))))
+    (assignment
+      (wildcard-binding-pattern)
+      (invocation array querySort (
+        (simple-var-ref keys)
+        (simple-var-ref directions)
+        (simple-var-ref indices)
+        (simple-var-ref payloads))))
+  )
+)

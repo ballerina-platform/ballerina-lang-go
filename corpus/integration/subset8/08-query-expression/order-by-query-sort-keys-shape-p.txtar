@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: keys entry 0 must be a list
+        at main(order-by-query-sort-keys-shape-p.bal:24)

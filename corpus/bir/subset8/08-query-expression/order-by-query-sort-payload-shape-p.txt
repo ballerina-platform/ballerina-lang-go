@@ -1,0 +1,33 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 1
+    %3 = newArray [nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table...][%2]{%1}
+    %4 = ConstantLoad 2
+    %5 = ConstantLoad 1
+    %6 = newArray [nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table...][%5]{%4}
+    %7 = ConstantLoad 2
+    %8 = newArray [[nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table...]...][%7]{%3, %6}
+    keys = %8;
+    %10 = ConstantLoad true
+    %11 = ConstantLoad 1
+    %12 = newArray [boolean...][%11]{%10}
+    directions = %12;
+    %14 = ConstantLoad 0
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad 2
+    %17 = newArray [int...][%16]{%14, %15}
+    indices = %17;
+    %19 = ConstantLoad 1
+    %20 = ConstantLoad 1
+    %21 = newArray [nil|boolean|int|float|decimal|string|regexp|xml|[nil|boolean|int|float|decimal|string|regexp|xml|...|...|table...]|{| nil|boolean|int|float|decimal|string|regexp|xml|...|...|table... |}|table...][%20]{%19}
+    payloads = %21;
+    %23 = querySort(keys,directions,indices,payloads) -> bb1;
+  }
+  bb1 {
+    %24 = %23;
+    return;
+  }
+}

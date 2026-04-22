@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: keys entry 1 length mismatch: got 1, expected 2
+        at main(order-by-query-sort-keys-row-len-p.bal:24)
