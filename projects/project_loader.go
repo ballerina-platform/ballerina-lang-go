@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"ballerina-lang-go/common/tomlparser"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -266,9 +267,13 @@ func Load(projectFs fs.FS, projectPath string, config ...ProjectLoadConfig) (Pro
 	}
 
 	if info.IsDir() {
-		// 2. Check for Ballerina.toml (build project)
+		// 2. Check for Ballerina.toml
 		tomlPath := path.Join(projectPath, BallerinaTomlFile)
 		if info, err := fs.Stat(projectFs, tomlPath); err == nil && !info.IsDir() {
+			// Check if it's a workspace project
+			if loader.isWorkspaceProject(projectPath) {
+				return loader.loadWorkspaceProject(projectPath, cfg)
+			}
 			return loader.loadBuildProject(projectPath, cfg)
 		}
 
@@ -291,4 +296,155 @@ func Load(projectFs fs.FS, projectPath string, config ...ProjectLoadConfig) (Pro
 	return ProjectLoadResult{}, &ProjectError{
 		Message: "unsupported file type: " + projectPath,
 	}
+}
+
+// isWorkspaceProject checks if the project at the given path is a workspace project.
+// A workspace project has a [workspace] section in its Ballerina.toml.
+func (l *ProjectLoader) isWorkspaceProject(projectPath string) bool {
+	tomlPath := path.Join(projectPath, BallerinaTomlFile)
+	toml, err := tomlparser.Read(l.projectFs, tomlPath)
+	if err != nil {
+		return false
+	}
+	_, ok := toml.GetTable("workspace")
+	return ok
+}
+
+// loadWorkspaceProject loads a workspace project from the given path.
+func (l *ProjectLoader) loadWorkspaceProject(projectPath string, cfg ProjectLoadConfig) (ProjectLoadResult, error) {
+	// Parse Ballerina.toml to get workspace manifest
+	tomlPath := path.Join(projectPath, BallerinaTomlFile)
+	toml, err := tomlparser.Read(l.projectFs, tomlPath)
+	if err != nil {
+		return ProjectLoadResult{}, err
+	}
+
+	// Extract workspace packages
+	workspaceManifest := parseWorkspaceManifestFromToml(toml, l.projectFs, projectPath)
+
+	var buildOpts BuildOptions
+	if cfg.BuildOptions != nil {
+		buildOpts = *cfg.BuildOptions
+	} else {
+		buildOpts = NewBuildOptions()
+	}
+
+	// Create environment with repositories configured
+	env := l.createEnvironmentWithRepositories(cfg)
+
+	// Create workspace project
+	workspace := newWorkspaceProject(projectPath, buildOpts, env)
+	workspace.setManifest(workspaceManifest)
+
+	// Collect all diagnostics
+	var allDiags []diagnostics.Diagnostic
+	allDiags = append(allDiags, workspaceManifest.Diagnostics().Diagnostics()...)
+
+	// Load each package in the workspace
+	for _, pkgPath := range workspaceManifest.Packages() {
+		fullPkgPath := path.Join(projectPath, pkgPath)
+
+		// Load as build project with shared environment
+		result, err := l.loadBuildProjectInWorkspace(fullPkgPath, cfg, env)
+		if err != nil {
+			allDiags = append(allDiags, createSimpleDiagnostic(
+				diagnostics.Error,
+				"failed to load package '"+pkgPath+"': "+err.Error(),
+			))
+			continue
+		}
+
+		if result.Diagnostics().HasErrors() {
+			allDiags = append(allDiags, result.Diagnostics().Diagnostics()...)
+			continue
+		}
+
+		buildProject := result.Project().(*BuildProject)
+		workspace.addProject(buildProject)
+	}
+
+	return NewProjectLoadResult(workspace, NewDiagnosticResult(allDiags)), nil
+}
+
+// loadBuildProjectInWorkspace loads a build project with a shared environment.
+func (l *ProjectLoader) loadBuildProjectInWorkspace(projectPath string, cfg ProjectLoadConfig, sharedEnv *Environment) (ProjectLoadResult, error) {
+	packageConfig, err := createBuildProjectConfig(l.projectFs, projectPath)
+	if err != nil {
+		return ProjectLoadResult{}, err
+	}
+
+	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
+	var mergedOpts BuildOptions
+	if cfg.BuildOptions != nil {
+		mergedOpts = manifestBuildOptions.AcceptTheirs(*cfg.BuildOptions)
+	} else {
+		mergedOpts = manifestBuildOptions
+	}
+
+	project := newBuildProjectWithEnv(projectPath, mergedOpts, sharedEnv)
+
+	compilationOptions := mergedOpts.CompilationOptions()
+	pkg := NewPackageFromConfig(project, packageConfig, compilationOptions)
+	project.InitPackage(pkg)
+
+	var diags []diagnostics.Diagnostic
+	diags = append(diags, packageConfig.PackageManifest().Diagnostics()...)
+	diagResult := NewDiagnosticResult(diags)
+
+	return NewProjectLoadResult(project, diagResult), nil
+}
+
+// parseWorkspaceManifestFromToml parses the workspace manifest from a TOML document.
+func parseWorkspaceManifestFromToml(toml *tomlparser.Toml, fsys fs.FS, workspaceRoot string) WorkspaceManifest {
+	var packages []string
+	var diags []diagnostics.Diagnostic
+
+	workspaceTable, ok := toml.GetTable("workspace")
+	if !ok {
+		return newWorkspaceManifest(nil, nil)
+	}
+
+	// Parse packages array from TOML
+	packagesRaw, ok := workspaceTable.GetArray("packages")
+	if !ok || len(packagesRaw) == 0 {
+		diags = append(diags, createSimpleDiagnostic(
+			diagnostics.Error,
+			"no packages found in the workspace Ballerina.toml file",
+		))
+		return newWorkspaceManifest(nil, diags)
+	}
+
+	// Convert to string array
+	var packagesArray []string
+	for _, item := range packagesRaw {
+		if str, ok := item.(string); ok {
+			packagesArray = append(packagesArray, str)
+		}
+	}
+
+	// Validate each package path
+	for _, pkgPath := range packagesArray {
+		fullPath := path.Join(workspaceRoot, pkgPath)
+		tomlPath := path.Join(fullPath, BallerinaTomlFile)
+
+		// Check if package directory and Ballerina.toml exist
+		if _, err := fs.Stat(fsys, tomlPath); err != nil {
+			diags = append(diags, createSimpleDiagnostic(
+				diagnostics.Error,
+				"could not locate the package path '"+pkgPath+"'",
+			))
+			continue
+		}
+
+		packages = append(packages, pkgPath)
+	}
+
+	return newWorkspaceManifest(packages, diags)
+}
+
+// createSimpleDiagnostic creates a diagnostic without location information.
+func createSimpleDiagnostic(severity diagnostics.DiagnosticSeverity, message string) diagnostics.Diagnostic {
+	info := diagnostics.NewDiagnosticInfo(nil, message, severity)
+	loc := diagnostics.NewBLangDiagnosticLocation("", 0, 0, 0, 0, 0, 0)
+	return diagnostics.NewDefaultDiagnostic(info, loc, nil)
 }
