@@ -1954,7 +1954,9 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
 	pos := getPosition(n.de(), checkExpressionNode)
-	expr := n.createExpression(checkExpressionNode.Expression())
+	// we are deviating from the spec here (https://ballerina.io/spec/lang/master/#section_6.33) check is only suppose
+	// to work with expression but jBallerina also allow remote method calls (which is an action)
+	expr := n.createActionOrExpression(checkExpressionNode.Expression())
 	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos

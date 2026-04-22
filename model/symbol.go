@@ -850,15 +850,17 @@ func (s *dependentlyTypedFunctionSymbol) SetReturnType(op TypeOp) {
 }
 
 func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name string, origRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol {
+	fixed := argTys
 	var rest semtypes.SemType = semtypes.NEVER
 	if len(argTys) > s.nRequiredArgs {
+		fixed = argTys[:s.nRequiredArgs]
 		for _, each := range argTys[s.nRequiredArgs:] {
 			rest = semtypes.Union(rest, each)
 		}
 	}
 	returnType := s.retType.Apply(ctx, argTys)
 	sig := FunctionSignature{
-		ParamTypes:    argTys,
+		ParamTypes:    fixed,
 		ParamNames:    s.paramNames,
 		RestParamType: rest,
 		ReturnType:    returnType,

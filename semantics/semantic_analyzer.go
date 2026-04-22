@@ -415,6 +415,7 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	if depSym, ok := fnSymbol.(model.DependentlyTypedFunctionSymbol); ok {
 		validateDependentFunction(parent, function, depSym)
+		validateDefaultParamTypes(parent, function)
 		return fa
 	}
 	rejectInferredTypedescOnNonDependent(parent, function)
