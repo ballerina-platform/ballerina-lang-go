@@ -993,9 +993,9 @@ func queryOrderByClauseIndices(queryExpr *ast.BLangQueryExpr, startClauseIndex i
 }
 
 type queryLetStore struct {
-	VarDef   *ast.BLangSimpleVariableDef
-	StoreRef *ast.BLangSimpleVarRef
-	ValueTy  semtypes.SemType
+	varDef   *ast.BLangSimpleVariableDef
+	storeRef *ast.BLangSimpleVarRef
+	valueTy  semtypes.SemType
 }
 
 type queryOrderStageInput struct {
@@ -1084,9 +1084,9 @@ func appendQueryOrderByStageStmts(
 	stageStores := make([]queryLetStore, 0, len(stageInput.payloadStores)+len(newLetStores))
 	for _, store := range stageInput.payloadStores {
 		stageStores = append(stageStores, queryLetStore{
-			VarDef:   store.VarDef,
-			StoreRef: createQueryListStore(cx, initStmts, basePos),
-			ValueTy:  store.ValueTy,
+			varDef:   store.varDef,
+			storeRef: createQueryListStore(cx, initStmts, basePos),
+			valueTy:  store.valueTy,
 		})
 	}
 	stageStores = append(stageStores, newLetStores...)
@@ -1104,10 +1104,10 @@ func appendQueryOrderByStageStmts(
 	var bodyStmts []ast.BLangStatement
 	bodyStmts = append(bodyStmts, loopVarDefClone)
 	for _, store := range stageInput.payloadStores {
-		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
+		restoredVarDef := cloneSimpleVariableDef(store.varDef)
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
-		storeAccess.Expr = store.StoreRef
-		storeAccess.SetDeterminedType(store.ValueTy)
+		storeAccess.Expr = store.storeRef
+		storeAccess.SetDeterminedType(store.valueTy)
 		restoredVarDef.Var.SetInitialExpression(storeAccess)
 		bodyStmts = append(bodyStmts, restoredVarDef)
 	}
@@ -1142,11 +1142,11 @@ func appendQueryOrderByStageStmts(
 	}
 	for _, store := range stageStores {
 		valueRef := &ast.BLangSimpleVarRef{
-			VariableName: store.VarDef.Var.Name,
+			VariableName: store.varDef.Var.Name,
 		}
-		valueRef.SetSymbol(store.VarDef.Var.Symbol())
-		valueRef.SetDeterminedType(store.ValueTy)
-		pushStore := createPushInvocation(cx, store.StoreRef, valueRef)
+		valueRef.SetSymbol(store.varDef.Var.Symbol())
+		valueRef.SetDeterminedType(store.valueTy)
+		pushStore := createPushInvocation(cx, store.storeRef, valueRef)
 		if pushStore == nil {
 			return queryOrderStageInput{}, false
 		}
@@ -1217,10 +1217,10 @@ func appendQueryFinalStageStmts(
 	var bodyStmts []ast.BLangStatement
 	bodyStmts = append(bodyStmts, loopVarDefClone)
 	for _, store := range stageInput.payloadStores {
-		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
+		restoredVarDef := cloneSimpleVariableDef(store.varDef)
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
-		storeAccess.Expr = store.StoreRef
-		storeAccess.SetDeterminedType(store.ValueTy)
+		storeAccess.Expr = store.storeRef
+		storeAccess.SetDeterminedType(store.valueTy)
 		restoredVarDef.Var.SetInitialExpression(storeAccess)
 		bodyStmts = append(bodyStmts, restoredVarDef)
 	}
@@ -1347,9 +1347,9 @@ func createPreOrderLetStores(
 			}
 			storeRef := createQueryListStore(cx, initStmts, pos)
 			stores = append(stores, queryLetStore{
-				VarDef:   varDef,
-				StoreRef: storeRef,
-				ValueTy:  valueTy,
+				varDef:   varDef,
+				storeRef: storeRef,
+				valueTy:  valueTy,
 			})
 		}
 	}
@@ -1364,7 +1364,7 @@ func createQueryPayloadStore(
 ) (*ast.BLangSimpleVarRef, bool) {
 	payloadRef := createQueryListStore(cx, initStmts, pos)
 	for _, store := range letStores {
-		pushPayload := createPushInvocation(cx, payloadRef, store.StoreRef)
+		pushPayload := createPushInvocation(cx, payloadRef, store.storeRef)
 		if pushPayload == nil {
 			return nil, false
 		}
@@ -1373,6 +1373,45 @@ func createQueryPayloadStore(
 		*initStmts = append(*initStmts, pushStmt)
 	}
 	return payloadRef, true
+}
+
+func createQueryVarRefAt(ref *ast.BLangSimpleVarRef, pos diagnostics.Location) *ast.BLangSimpleVarRef {
+	varRef := createVarRef(ref.VariableName, ref.Symbol(), ref.GetDeterminedType())
+	setPositionIfMissing(varRef, pos)
+	return varRef
+}
+
+func createNegativeLimitPanicIf(
+	cx *functionContext,
+	limitRef *ast.BLangSimpleVarRef,
+	pos diagnostics.Location,
+) *ast.BLangIf {
+	zero := createIntLiteral(0)
+	setPositionIfMissing(zero, pos)
+	negativeCond := &ast.BLangBinaryExpr{
+		LhsExpr: createQueryVarRefAt(limitRef, pos),
+		RhsExpr: zero,
+		OpKind:  model.OperatorKind_LESS_THAN,
+	}
+	negativeCond.SetDeterminedType(semtypes.BOOLEAN)
+	setPositionIfMissing(negativeCond, pos)
+
+	panicStmt := &ast.BLangPanic{
+		Expr: createErrorWithMessage("limit cannot be negative", pos),
+	}
+	panicStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(panicStmt, pos)
+
+	negativeLimitIf := &ast.BLangIf{
+		Expr: negativeCond,
+		Body: ast.BLangBlockStmt{
+			Stmts: []ast.BLangStatement{panicStmt},
+		},
+	}
+	negativeLimitIf.SetScope(cx.currentScope())
+	negativeLimitIf.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(negativeLimitIf, pos)
+	return negativeLimitIf
 }
 
 func buildOrderKeyTupleExpr(
@@ -1626,6 +1665,13 @@ func appendQueryIntermediateClauseStmts(
 				cx.unimplemented("query limit clause requires a limit expression")
 				return nil, false
 			}
+			limitPos := clause.GetPosition()
+			limitResult := walkExpression(cx, clause.Expression)
+			*initStmts = append(*initStmts, limitResult.initStmts...)
+			limitExpr := limitResult.replacementNode.(ast.BLangExpression)
+			limitVarDef, limitRef := assignToLocal(cx, limitExpr, limitPos)
+			*initStmts = append(*initStmts, limitVarDef)
+			*initStmts = append(*initStmts, createNegativeLimitPanicIf(cx, limitRef, limitPos))
 
 			limitCounterName, limitCounterSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 			limitCounterVar := &ast.BLangSimpleVariable{
@@ -1644,13 +1690,9 @@ func appendQueryIntermediateClauseStmts(
 			limitCounterRef.SetSymbol(limitCounterSymbol)
 			limitCounterRef.SetDeterminedType(semtypes.INT)
 
-			limitResult := walkExpression(cx, clause.Expression)
-			bodyStmts = append(bodyStmts, limitResult.initStmts...)
-			limitExpr := limitResult.replacementNode.(ast.BLangExpression)
-
 			reachedLimitCond := &ast.BLangBinaryExpr{
 				LhsExpr: limitCounterRef,
-				RhsExpr: limitExpr,
+				RhsExpr: createQueryVarRefAt(limitRef, limitPos),
 				OpKind:  model.OperatorKind_GREATER_EQUAL,
 			}
 			reachedLimitCond.SetDeterminedType(semtypes.BOOLEAN)
@@ -1707,6 +1749,27 @@ func createBoolLiteral(value bool, pos diagnostics.Location) *ast.BLangLiteral {
 	lit.SetDeterminedType(semtypes.BOOLEAN)
 	setPositionIfMissing(lit, pos)
 	return lit
+}
+
+func createStringLiteral(value string, pos diagnostics.Location) *ast.BLangLiteral {
+	lit := &ast.BLangLiteral{
+		Value:         value,
+		OriginalValue: value,
+	}
+	lit.SetDeterminedType(semtypes.STRING)
+	setPositionIfMissing(lit, pos)
+	return lit
+}
+
+func createErrorWithMessage(message string, pos diagnostics.Location) *ast.BLangErrorConstructorExpr {
+	errorExpr := &ast.BLangErrorConstructorExpr{
+		PositionalArgs: []ast.BLangExpression{
+			createStringLiteral(message, pos),
+		},
+	}
+	errorExpr.SetDeterminedType(semtypes.ERROR)
+	setPositionIfMissing(errorExpr, pos)
+	return errorExpr
 }
 
 func createMapPutAssignment(mapExpr ast.BLangExpression, keyExpr ast.BLangExpression, valueExpr ast.BLangExpression) *ast.BLangAssignment {

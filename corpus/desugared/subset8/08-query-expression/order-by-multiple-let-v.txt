@@ -109,6 +109,17 @@
           (numeric-literal 0))))
       (var-def
         (variable $desugar$14 (expr
+          (literal 4))))
+      (if
+        (binary-expr <
+          (simple-var-ref $desugar$14)
+          (numeric-literal 0))
+        (block-stmt
+          (panic
+            (error-constructor-expr (
+              (literal limit cannot be negative))))) ())
+      (var-def
+        (variable $desugar$15 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
@@ -130,8 +141,8 @@
                 (simple-var-ref $desugar$13)))))
           (if
             (binary-expr >=
-              (simple-var-ref $desugar$14)
-              (literal 4))
+              (simple-var-ref $desugar$15)
+              (simple-var-ref $desugar$14))
             (block-stmt
               (assignment
                 (simple-var-ref $desugar$13)
@@ -140,9 +151,9 @@
                   (numeric-literal 1)))
               (continue)) ())
           (assignment
-            (simple-var-ref $desugar$14)
+            (simple-var-ref $desugar$15)
             (binary-expr +
-              (simple-var-ref $desugar$14)
+              (simple-var-ref $desugar$15)
               (numeric-literal 1)))
           (expression-stmt
             (invocation lang.array push (
@@ -172,16 +183,16 @@
           (simple-var-ref $desugar$10)
           (simple-var-ref $desugar$12))))
       (var-def
-        (variable $desugar$15 (expr
+        (variable $desugar$16 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$10))))))
       (var-def
-        (variable $desugar$16 (expr
+        (variable $desugar$17 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
-          (simple-var-ref $desugar$16)
-          (simple-var-ref $desugar$15))
+          (simple-var-ref $desugar$17)
+          (simple-var-ref $desugar$16))
         (block-stmt
           (var-def
             (variable n (expr
@@ -189,13 +200,13 @@
                 (simple-var-ref $desugar$0)
                 (index-based-access
                   (simple-var-ref $desugar$10)
-                  (simple-var-ref $desugar$16))))))
+                  (simple-var-ref $desugar$17))))))
           (var-def
             (variable bucket (type
               (value-type int)) (expr
               (index-based-access
                 (simple-var-ref $desugar$11)
-                (simple-var-ref $desugar$16)))))
+                (simple-var-ref $desugar$17)))))
           (expression-stmt
             (invocation lang.array push (
               (simple-var-ref $desugar$1)
@@ -203,9 +214,9 @@
                 (simple-var-ref n)
                 (simple-var-ref bucket)))))
           (assignment
-            (simple-var-ref $desugar$16)
+            (simple-var-ref $desugar$17)
             (binary-expr +
-              (simple-var-ref $desugar$16)
+              (simple-var-ref $desugar$17)
               (numeric-literal 1)))))
       (var-def
         (variable result (type
