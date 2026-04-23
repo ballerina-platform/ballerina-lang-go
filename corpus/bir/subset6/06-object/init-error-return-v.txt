@@ -56,7 +56,7 @@ main() -> nil{
   }
   bb4 {
     r1 = %4;
-    %7 = r1 is object
+    %7 = r1 is object { function getVal() returns int; function init(int) returns nil|error; int val }
     %7 ? bb5 : bb8;
   }
   bb5 {

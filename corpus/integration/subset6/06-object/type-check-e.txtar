@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: incompatible type: expected object, got object
+error[SEMANTIC_ERROR]: incompatible type: expected object { int bar; function baz(int, int) returns int; function foo(int, int) returns int }, got object { int bar; int baz; function foo(int, int) returns int; function init(int) returns nil }
   --> type-check-e.bal:39:13
    |
 39 |     Foo f = new Bar(5); // @error
