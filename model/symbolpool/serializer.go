@@ -36,6 +36,8 @@ const (
 	symTagValue
 	symTagFunction
 	symTagDependentlyTypedFunction
+	symTagRecord
+	symTagObjectType
 )
 
 const (
@@ -140,6 +142,10 @@ func (sw *symbolWriter) writeSymbol(buf *bytes.Buffer, sym model.Symbol) error {
 	switch s := sym.(type) {
 	case *model.ClassSymbol:
 		return sw.writeClassSymbol(buf, s)
+	case *model.RecordSymbol:
+		return sw.writeRecordSymbol(buf, s)
+	case *model.ObjectTypeSymbol:
+		return sw.writeObjectTypeSymbol(buf, s)
 	case *model.TypeSymbol:
 		return sw.writeTypeSymbol(buf, s)
 	case *model.ValueSymbol:
@@ -170,7 +176,27 @@ func (sw *symbolWriter) writeTypeSymbol(buf *bytes.Buffer, sym *model.TypeSymbol
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.InclusionMembers())
+	return sw.writeInclusionMembers(buf, nil)
+}
+
+func (sw *symbolWriter) writeRecordSymbol(buf *bytes.Buffer, sym *model.RecordSymbol) error {
+	if err := write(buf, symTagRecord); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	return sw.writeInclusionMembers(buf, sym.Members())
+}
+
+func (sw *symbolWriter) writeObjectTypeSymbol(buf *bytes.Buffer, sym *model.ObjectTypeSymbol) error {
+	if err := write(buf, symTagObjectType); err != nil {
+		return err
+	}
+	if err := sw.writeSymbolBase(buf, sym); err != nil {
+		return err
+	}
+	return sw.writeInclusionMembers(buf, sym.Members())
 }
 
 func (sw *symbolWriter) writeInclusionMembers(buf *bytes.Buffer, members []model.InclusionMember) error {
@@ -264,7 +290,7 @@ func (sw *symbolWriter) writeClassSymbol(buf *bytes.Buffer, sym *model.ClassSymb
 	if err := sw.writeSymbolBase(buf, sym); err != nil {
 		return err
 	}
-	return sw.writeInclusionMembers(buf, sym.InclusionMembers())
+	return sw.writeInclusionMembers(buf, sym.Members())
 }
 
 func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymbol) error {
@@ -318,7 +344,10 @@ func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.Functio
 	if err := write(buf, uint8(sig.Flags)); err != nil {
 		return err
 	}
-	return sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes))
+	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(sig.ParamTypes)); err != nil {
+		return err
+	}
+	return sw.writeIncludedRecordParams(buf, sym.IncludedRecordParams(), len(sig.ParamTypes))
 }
 
 func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, sym model.DependentlyTypedFunctionSymbol) error {
@@ -356,6 +385,9 @@ func (sw *symbolWriter) writeDependentlyTypedFunctionSymbol(buf *bytes.Buffer, s
 		return err
 	}
 	if err := sw.writeDefaultableParams(buf, sym.DefaultableParams(), len(paramNames)); err != nil {
+		return err
+	}
+	if err := sw.writeIncludedRecordParams(buf, sym.IncludedRecordParams(), len(paramNames)); err != nil {
 		return err
 	}
 	return sw.writeTypeOp(buf, sym.ReturnType())
@@ -415,6 +447,33 @@ func (sw *symbolWriter) writeDefaultableParams(buf *bytes.Buffer, info *model.De
 		}
 		if err := sw.writeSymbolRef(buf, param.Symbol); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func (sw *symbolWriter) writeIncludedRecordParams(buf *bytes.Buffer, info *model.IncludedRecordParamInfo, paramCount int) error {
+	var included []int
+	for i := 0; i < paramCount; i++ {
+		if info.IsIncluded(i) {
+			included = append(included, i)
+		}
+	}
+	if err := write(buf, int64(len(included))); err != nil {
+		return err
+	}
+	for _, idx := range included {
+		if err := write(buf, int64(idx)); err != nil {
+			return err
+		}
+		fields := info.Fields(idx)
+		if err := write(buf, int64(len(fields))); err != nil {
+			return err
+		}
+		for _, name := range fields {
+			if err := sw.writeStringCP(buf, name); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

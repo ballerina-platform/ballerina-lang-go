@@ -487,6 +487,8 @@ const (
 	flagDefaultParam  nodeFlags = 1 << model.Flag_DEFAULTABLE_PARAM
 	flagRestParam     nodeFlags = 1 << model.Flag_REST_PARAM
 	flagAnyFunction   nodeFlags = 1 << model.Flag_ANY_FUNCTION
+
+	flagIncludedRecordParam nodeFlags = 1 << model.Flag_INCLUDED
 )
 
 func (f nodeFlags) has(flag nodeFlags) bool { return f&flag != 0 }
@@ -524,16 +526,20 @@ func (b *BLangVariableBase) IsFinal() bool            { return b.flags.has(flagF
 func (b *BLangVariableBase) IsDefaultableParam() bool { return b.flags.has(flagDefaultParam) }
 func (b *BLangVariableBase) IsRequiredParam() bool    { return b.flags.has(flagRequiredParam) }
 func (b *BLangVariableBase) IsRestParam() bool        { return b.flags.has(flagRestParam) }
+func (b *BLangVariableBase) IsIncludedRecordParam() bool {
+	return b.flags.has(flagIncludedRecordParam)
+}
 
-func (b *BLangVariableBase) SetPublic()           { b.flags |= flagPublic }
-func (b *BLangVariableBase) SetPrivate()          { b.flags &^= flagPublic }
-func (b *BLangVariableBase) SetFinal()            { b.flags |= flagFinal }
-func (b *BLangVariableBase) SetIsolated()         { b.flags |= flagIsolated }
-func (b *BLangVariableBase) SetDefaultableParam() { b.flags |= flagDefaultParam }
-func (b *BLangVariableBase) SetRequiredParam()    { b.flags |= flagRequiredParam }
-func (b *BLangVariableBase) SetRestParam()        { b.flags |= flagRestParam }
-func (b *BLangVariableBase) IsReadonly() bool     { return b.flags.has(flagReadonly) }
-func (b *BLangVariableBase) FlagsAsInt64() int64  { return b.flags.asInt64() }
+func (b *BLangVariableBase) SetPublic()              { b.flags |= flagPublic }
+func (b *BLangVariableBase) SetPrivate()             { b.flags &^= flagPublic }
+func (b *BLangVariableBase) SetFinal()               { b.flags |= flagFinal }
+func (b *BLangVariableBase) SetIsolated()            { b.flags |= flagIsolated }
+func (b *BLangVariableBase) SetDefaultableParam()    { b.flags |= flagDefaultParam }
+func (b *BLangVariableBase) SetRequiredParam()       { b.flags |= flagRequiredParam }
+func (b *BLangVariableBase) SetRestParam()           { b.flags |= flagRestParam }
+func (b *BLangVariableBase) SetIncludedRecordParam() { b.flags |= flagIncludedRecordParam }
+func (b *BLangVariableBase) IsReadonly() bool        { return b.flags.has(flagReadonly) }
+func (b *BLangVariableBase) FlagsAsInt64() int64     { return b.flags.asInt64() }
 
 func (b *BLangConstant) FlagsAsInt64() int64 { return (b.flags | flagConstant).asInt64() }
 

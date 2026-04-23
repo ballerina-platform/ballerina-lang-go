@@ -69,6 +69,8 @@ type FunctionSymbol interface {
 	SetSignature(FunctionSignature)
 	DefaultableParams() *DefaultableParamInfo
 	SetDefaultableParams(DefaultableParamInfo)
+	IncludedRecordParams() *IncludedRecordParamInfo
+	SetIncludedRecordParams(IncludedRecordParamInfo)
 	ParamNames() []string
 }
 
@@ -213,12 +215,29 @@ type (
 
 	TypeSymbol struct {
 		symbolBase
-		inclusionMembers []InclusionMember
+	}
+
+	// memberHolderBase carries direct + type-inclusion-inherited members
+	// (fields and optional rest-type for records; fields + methods for classes
+	// and object type aliases).
+	memberHolderBase struct {
+		members []InclusionMember
 	}
 
 	ClassSymbol struct {
 		TypeSymbol
+		memberHolderBase
 		methods map[string]SymbolRef
+	}
+
+	RecordSymbol struct {
+		TypeSymbol
+		memberHolderBase
+	}
+
+	ObjectTypeSymbol struct {
+		TypeSymbol
+		memberHolderBase
 	}
 
 	FieldDefault struct {
@@ -234,8 +253,9 @@ type (
 
 	functionSymbol struct {
 		symbolBase
-		signature         FunctionSignature
-		defaultableParams DefaultableParamInfo
+		signature            FunctionSignature
+		defaultableParams    DefaultableParamInfo
+		includedRecordParams IncludedRecordParamInfo
 	}
 
 	monomorphicFunctionSymbol struct {
@@ -252,10 +272,11 @@ type (
 
 	dependentlyTypedFunctionSymbol struct {
 		symbolBase
-		paramNames    []string
-		nRequiredArgs int
-		Flags         FuncSymbolFlags
-		defaultable   DefaultableParamInfo
+		paramNames           []string
+		nRequiredArgs        int
+		Flags                FuncSymbolFlags
+		defaultable          DefaultableParamInfo
+		includedRecordParams IncludedRecordParamInfo
 
 		// Populated by type resolver at stage 4.
 		paramTypes []semtypes.SemType
@@ -280,6 +301,11 @@ type (
 	DefaultableParamInfo struct {
 		params      []DefaultableParam
 		defaultable []bool
+	}
+
+	IncludedRecordParamInfo struct {
+		params     []bool
+		fieldNames [][]string
 	}
 )
 
@@ -377,6 +403,11 @@ var (
 	_ Scope                          = &BlockScope{}
 	_ Symbol                         = &TypeSymbol{}
 	_ Symbol                         = &ClassSymbol{}
+	_ Symbol                         = &RecordSymbol{}
+	_ Symbol                         = &ObjectTypeSymbol{}
+	_ MemberCarrier                  = &ClassSymbol{}
+	_ MemberCarrier                  = &RecordSymbol{}
+	_ MemberCarrier                  = &ObjectTypeSymbol{}
 	_ Symbol                         = &ValueSymbol{}
 	_ Symbol                         = &functionSymbol{}
 	_ FunctionSymbol                 = &functionSymbol{}
@@ -605,19 +636,59 @@ func (ts *TypeSymbol) Copy() Symbol {
 	panic("TypeSymbol cannot be copied")
 }
 
-func (ts *TypeSymbol) InclusionMembers() []InclusionMember { return ts.inclusionMembers }
-func (ts *TypeSymbol) AddInclusionMember(m InclusionMember) {
-	ts.inclusionMembers = append(ts.inclusionMembers, m)
+// MemberCarrier is implemented by symbols that carry direct + inclusion-inherited members.
+// TypeSymbol does not implement this; only RecordSymbol, ClassSymbol, and ObjectTypeSymbol do.
+type MemberCarrier interface {
+	Members() []InclusionMember
+	AddMember(InclusionMember)
+	FieldDefaults() []FieldDefault
 }
 
-func (ts *TypeSymbol) FieldDefaults() []FieldDefault {
+func (m *memberHolderBase) Members() []InclusionMember { return m.members }
+func (m *memberHolderBase) AddMember(im InclusionMember) {
+	m.members = append(m.members, im)
+}
+
+func (m *memberHolderBase) FieldDefaults() []FieldDefault {
 	var defaults []FieldDefault
-	for _, m := range ts.inclusionMembers {
-		if fd, ok := m.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
+	for _, im := range m.members {
+		if fd, ok := im.(*FieldDescriptor); ok && fd.DefaultFnRef != (SymbolRef{}) {
 			defaults = append(defaults, FieldDefault{FieldName: fd.name, FnRef: fd.DefaultFnRef})
 		}
 	}
 	return defaults
+}
+
+func (r *RecordSymbol) Fields() iter.Seq2[string, *FieldDescriptor] {
+	return func(yield func(string, *FieldDescriptor) bool) {
+		for _, m := range r.members {
+			fd, ok := m.(*FieldDescriptor)
+			if !ok {
+				continue
+			}
+			if !yield(fd.name, fd) {
+				return
+			}
+		}
+	}
+}
+
+func (r *RecordSymbol) Field(name string) (*FieldDescriptor, bool) {
+	for _, m := range r.members {
+		if fd, ok := m.(*FieldDescriptor); ok && fd.name == name {
+			return fd, true
+		}
+	}
+	return nil, false
+}
+
+func (r *RecordSymbol) RestField() (*RestTypeDescriptor, bool) {
+	for _, m := range r.members {
+		if rd, ok := m.(*RestTypeDescriptor); ok {
+			return rd, true
+		}
+	}
+	return nil, false
 }
 
 func (vs *ValueSymbol) Kind() SymbolKind {
@@ -664,6 +735,14 @@ func (fs *functionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
 	fs.defaultableParams = info
 }
 
+func (fs *functionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
+	return &fs.includedRecordParams
+}
+
+func (fs *functionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+	fs.includedRecordParams = info
+}
+
 func (fs *functionSymbol) ParamNames() []string {
 	return fs.Signature().ParamNames
 }
@@ -699,6 +778,50 @@ func (d *DefaultableParamInfo) SetInferredTypedesc(index int) {
 	d.params[index] = DefaultableParam{Kind: DefaultableParamKindInferredTypedesc}
 }
 
+func NewIncludedRecordParamInfo(paramCount int) IncludedRecordParamInfo {
+	return IncludedRecordParamInfo{
+		params:     make([]bool, paramCount),
+		fieldNames: make([][]string, paramCount),
+	}
+}
+
+func (i *IncludedRecordParamInfo) Set(index int) {
+	i.params[index] = true
+}
+
+func (i *IncludedRecordParamInfo) SetFields(index int, names []string) {
+	i.fieldNames[index] = names
+}
+
+func (i *IncludedRecordParamInfo) Fields(index int) []string {
+	if index >= len(i.fieldNames) {
+		return nil
+	}
+	return i.fieldNames[index]
+}
+
+func (i *IncludedRecordParamInfo) LookupField(name string) (int, bool) {
+	for idx, names := range i.fieldNames {
+		for _, n := range names {
+			if n == name {
+				return idx, true
+			}
+		}
+	}
+	return -1, false
+}
+
+func (i *IncludedRecordParamInfo) IsIncluded(index int) bool {
+	if index >= len(i.params) {
+		return false
+	}
+	return i.params[index]
+}
+
+func (i *IncludedRecordParamInfo) Len() int {
+	return len(i.params)
+}
+
 func (fs *FunctionSignature) IsIsolated() bool {
 	return fs.Flags&FuncSymbolFlagIsolated != 0
 }
@@ -723,6 +846,22 @@ func NewTypeSymbol(name string, isPublic bool) TypeSymbol {
 
 func NewClassSymbol(name string, isPublic bool) ClassSymbol {
 	return ClassSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+	}
+}
+
+func NewRecordSymbol(name string, isPublic bool) RecordSymbol {
+	return RecordSymbol{
+		TypeSymbol: TypeSymbol{
+			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
+		},
+	}
+}
+
+func NewObjectTypeSymbol(name string, isPublic bool) ObjectTypeSymbol {
+	return ObjectTypeSymbol{
 		TypeSymbol: TypeSymbol{
 			symbolBase: symbolBase{name: name, ty: nil, isPublic: isPublic},
 		},
@@ -782,6 +921,14 @@ func (s *genericFunctionSymbol) SetDefaultableParams(_ DefaultableParamInfo) {
 	panic("GenericSymbol must be Monomorphized")
 }
 
+func (s *genericFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
+	panic("GenericSymbol must be Monomorphized")
+}
+
+func (s *genericFunctionSymbol) SetIncludedRecordParams(_ IncludedRecordParamInfo) {
+	panic("GenericSymbol must be Monomorphized")
+}
+
 func (s *genericFunctionSymbol) Copy() Symbol {
 	panic("GenericSymbol must be Monomorphized")
 }
@@ -829,6 +976,14 @@ func (s *dependentlyTypedFunctionSymbol) SetDefaultableParams(info DefaultablePa
 	s.defaultable = info
 }
 
+func (s *dependentlyTypedFunctionSymbol) IncludedRecordParams() *IncludedRecordParamInfo {
+	return &s.includedRecordParams
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetIncludedRecordParams(info IncludedRecordParamInfo) {
+	s.includedRecordParams = info
+}
+
 func (s *dependentlyTypedFunctionSymbol) ParamNames() []string { return s.paramNames }
 
 func (s *dependentlyTypedFunctionSymbol) Copy() Symbol {
@@ -866,9 +1021,10 @@ func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name
 	}
 	return &monomorphicFunctionSymbol{
 		functionSymbol: functionSymbol{
-			symbolBase:        symbolBase{name: name, ty: nil, isPublic: s.isPublic},
-			signature:         sig,
-			defaultableParams: s.defaultable,
+			symbolBase:           symbolBase{name: name, ty: nil, isPublic: s.isPublic},
+			signature:            sig,
+			defaultableParams:    s.defaultable,
+			includedRecordParams: s.includedRecordParams,
 		},
 		polymorhpicFn: origRef,
 	}

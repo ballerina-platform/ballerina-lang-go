@@ -315,8 +315,16 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		typeDef := &pkg.TypeDefinitions[i]
 		name := typeDef.Name.Value
 		isPublic := typeDef.IsPublic()
-		symbol := model.NewTypeSymbol(name, isPublic)
-		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
+		var symbol model.Symbol
+		switch typeDef.GetTypeData().TypeDescriptor.(type) {
+		case *ast.BLangRecordType:
+			symbol = new(model.NewRecordSymbol(name, isPublic))
+		case *ast.BLangObjectType:
+			symbol = new(model.NewObjectTypeSymbol(name, isPublic))
+		default:
+			symbol = new(model.NewTypeSymbol(name, isPublic))
+		}
+		if !addTopLevelSymbol(moduleResolver, name, symbol, typeDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
 		}
 		symRef, _, _ := moduleResolver.GetSymbol(name)
@@ -395,8 +403,13 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 	fnSymRef := function.Symbol()
 	fnSym := cx.GetSymbol(fnSymRef).(model.FunctionSymbol)
 	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
+	inclInfo := model.NewIncludedRecordParamInfo(len(function.RequiredParams))
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
+		if param.IsIncludedRecordParam() {
+			inclInfo.Set(i)
+			continue
+		}
 		if !param.IsDefaultableParam() {
 			continue
 		}
@@ -412,6 +425,7 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 		info.SetDefaultable(i, symRef)
 	}
 	fnSym.SetDefaultableParams(info)
+	fnSym.SetIncludedRecordParams(inclInfo)
 }
 
 func resolveLambdaFunction(functionResolver *blockSymbolResolver, parent *blockSymbolResolver, function *ast.BLangFunction) {
@@ -911,21 +925,21 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			includedFields = append(includedFields, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
 		} else {
 			sym := ctx.GetSymbol(symRef)
-			var typeSym *model.TypeSymbol
+			var carrier model.MemberCarrier
 			switch s := sym.(type) {
 			case *model.ClassSymbol:
-				typeSym = &s.TypeSymbol
-			case *model.TypeSymbol:
+				carrier = s
+			case *model.ObjectTypeSymbol:
 				if s.Type() == nil || !semtypes.IsSubtypeSimple(s.Type(), semtypes.OBJECT) {
 					ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 					continue
 				}
-				typeSym = s
+				carrier = s
 			default:
 				ctx.SemanticError("type inclusion must be an object type or class", inc.GetPosition())
 				continue
 			}
-			for _, m := range typeSym.InclusionMembers() {
+			for _, m := range carrier.Members() {
 				if m.MemberKind() != model.InclusionMemberKindField {
 					continue
 				}
@@ -961,8 +975,8 @@ func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []
 			}
 		} else {
 			sym := ctx.GetSymbol(symRef)
-			typeSym, ok := sym.(*model.TypeSymbol)
-			if !ok || typeSym.Type() == nil || !semtypes.IsSubtypeSimple(typeSym.Type(), semtypes.MAPPING) {
+			recSym, ok := sym.(*model.RecordSymbol)
+			if !ok || recSym.Type() == nil || !semtypes.IsSubtypeSimple(recSym.Type(), semtypes.MAPPING) {
 				ctx.SemanticError("included type is not a record type", udt.GetPosition())
 				continue
 			}
@@ -979,16 +993,18 @@ func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.Sy
 			result = append(result, collectTransitiveFieldsFromDefn(ctx, tDefn, localDefns)...)
 		} else {
 			sym := ctx.GetSymbol(symRef)
-			var typeSym *model.TypeSymbol
+			var carrier model.MemberCarrier
 			switch s := sym.(type) {
-			case *model.TypeSymbol:
-				typeSym = s
+			case *model.RecordSymbol:
+				carrier = s
+			case *model.ObjectTypeSymbol:
+				carrier = s
 			case *model.ClassSymbol:
-				typeSym = &s.TypeSymbol
+				carrier = s
 			default:
 				continue
 			}
-			for _, m := range typeSym.InclusionMembers() {
+			for _, m := range carrier.Members() {
 				if m.MemberKind() != model.InclusionMemberKindField {
 					continue
 				}

@@ -2194,7 +2194,27 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 }
 
 func (n *NodeBuilder) TransformIncludedRecordParameter(includedRecordParameterNode *tree.IncludedRecordParameterNode) BLangNode {
-	panic("TransformIncludedRecordParameter unimplemented")
+	paramName := includedRecordParameterNode.ParamName()
+
+	if paramName != nil {
+		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
+	}
+
+	simpleVar := n.createSimpleVarWithTokenNodeNodeList(paramName, includedRecordParameterNode.TypeName(), includedRecordParameterNode.Annotations())
+
+	simpleVar.pos = getPosition(n.de(), includedRecordParameterNode)
+
+	if paramName != nil {
+		simpleVar.Name.pos = getPosition(n.de(), paramName)
+		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
+		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
+	}
+
+	simpleVar.SetRequiredParam()
+	simpleVar.SetIncludedRecordParam()
+
+	return simpleVar
 }
 
 func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParameterNode) BLangNode {
