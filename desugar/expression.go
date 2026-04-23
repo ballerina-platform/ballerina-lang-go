@@ -863,11 +863,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 
 	var seenKeysRef *ast.BLangSimpleVarRef
 	if onConflictClause != nil && expr.QueryConstructType == model.TypeKind_MAP {
-		var ok bool
-		seenKeysRef, ok = createQueryMapStore(cx, &initStmts, basePos)
-		if !ok {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-		}
+		seenKeysRef = createQueryMapStore(cx, &initStmts, basePos)
 	}
 
 	loopVarSymbol := loopVarDef.Var.Symbol()
@@ -976,13 +972,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 }
 
 func cloneSimpleVariableDef(varDef *ast.BLangSimpleVariableDef) *ast.BLangSimpleVariableDef {
-	if varDef == nil {
-		return nil
-	}
 	clone := *varDef
-	if varDef.Var == nil {
-		return &clone
-	}
 	cloneVar := *varDef.Var
 	if varDef.Var.Name != nil {
 		cloneName := *varDef.Var.Name
@@ -1083,31 +1073,22 @@ func appendQueryOrderByStageStmts(
 	initStmts *[]model.StatementNode,
 	basePos diagnostics.Location,
 ) (queryOrderStageInput, bool) {
-	if stageInput.rowCountRef == nil {
-		cx.internalError("query order-by stage input length must be available")
-		return queryOrderStageInput{}, false
-	}
+	orderByClause := queryExpr.QueryClauseList[orderByClauseIndex].(*ast.BLangOrderByClause)
 
-	orderByClause, ok := queryExpr.QueryClauseList[orderByClauseIndex].(*ast.BLangOrderByClause)
-	if !ok {
-		cx.internalError("expected order by clause at query stage boundary")
-		return queryOrderStageInput{}, false
-	}
-
-	orderKeyRowsRef, ok := createQueryListStore(cx, initStmts, basePos)
-	if !ok {
-		return queryOrderStageInput{}, false
-	}
-	sortedIndexRowsRef, ok := createQueryListStore(cx, initStmts, basePos)
-	if !ok {
-		return queryOrderStageInput{}, false
-	}
+	orderKeyRowsRef := createQueryListStore(cx, initStmts, basePos)
+	sortedIndexRowsRef := createQueryListStore(cx, initStmts, basePos)
 	newLetStores, ok := createPreOrderLetStores(cx, queryExpr, startClauseIndex, orderByClauseIndex, initStmts, basePos)
 	if !ok {
 		return queryOrderStageInput{}, false
 	}
 	stageStores := make([]queryLetStore, 0, len(stageInput.payloadStores)+len(newLetStores))
-	stageStores = append(stageStores, stageInput.payloadStores...)
+	for _, store := range stageInput.payloadStores {
+		stageStores = append(stageStores, queryLetStore{
+			VarDef:   store.VarDef,
+			StoreRef: createQueryListStore(cx, initStmts, basePos),
+			ValueTy:  store.ValueTy,
+		})
+	}
 	stageStores = append(stageStores, newLetStores...)
 	payloadRowsRef, ok := createQueryPayloadStore(cx, initStmts, basePos, stageStores)
 	if !ok {
@@ -1117,24 +1098,13 @@ func appendQueryOrderByStageStmts(
 	loopCounterRef := createQueryCounterRef(cx, initStmts, basePos)
 	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
 	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopVarTy)
-	if elementAccess == nil {
-		return queryOrderStageInput{}, false
-	}
 	loopVarDefClone := cloneSimpleVariableDef(loopVarDef)
-	if loopVarDefClone == nil || loopVarDefClone.Var == nil {
-		cx.internalError("failed to clone query loop variable")
-		return queryOrderStageInput{}, false
-	}
 	loopVarDefClone.Var.SetInitialExpression(elementAccess)
 
 	var bodyStmts []ast.BLangStatement
 	bodyStmts = append(bodyStmts, loopVarDefClone)
 	for _, store := range stageInput.payloadStores {
 		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
-		if restoredVarDef == nil || restoredVarDef.Var == nil {
-			cx.internalError("failed to clone pre-order let variable for query stage")
-			return queryOrderStageInput{}, false
-		}
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
 		storeAccess.Expr = store.StoreRef
 		storeAccess.SetDeterminedType(store.ValueTy)
@@ -1154,10 +1124,7 @@ func appendQueryOrderByStageStmts(
 		return queryOrderStageInput{}, false
 	}
 
-	keyTuple, keyInitStmts, ok := buildOrderKeyTupleExpr(cx, orderByClause, basePos)
-	if !ok {
-		return queryOrderStageInput{}, false
-	}
+	keyTuple, keyInitStmts := buildOrderKeyTupleExpr(cx, orderByClause, basePos)
 	bodyStmts = append(bodyStmts, keyInitStmts...)
 	if pushKeys := createPushInvocation(cx, orderKeyRowsRef, keyTuple); pushKeys != nil {
 		pushStmt := &ast.BLangExpressionStmt{Expr: pushKeys}
@@ -1241,32 +1208,16 @@ func appendQueryFinalStageStmts(
 	initStmts *[]model.StatementNode,
 	basePos diagnostics.Location,
 ) bool {
-	if stageInput.rowCountRef == nil {
-		cx.internalError("query final stage input length must be available")
-		return false
-	}
-
 	loopCounterRef := createQueryCounterRef(cx, initStmts, basePos)
 	baseIndexExpr := queryStageBaseIndexExpr(loopCounterRef, stageInput.indexRowsRef)
 	elementAccess := queryElementAccess(collRef, keysRef, baseIndexExpr, loopVarTy)
-	if elementAccess == nil {
-		return false
-	}
 	loopVarDefClone := cloneSimpleVariableDef(loopVarDef)
-	if loopVarDefClone == nil || loopVarDefClone.Var == nil {
-		cx.internalError("failed to clone query loop variable for final stage")
-		return false
-	}
 	loopVarDefClone.Var.SetInitialExpression(elementAccess)
 
 	var bodyStmts []ast.BLangStatement
 	bodyStmts = append(bodyStmts, loopVarDefClone)
 	for _, store := range stageInput.payloadStores {
 		restoredVarDef := cloneSimpleVariableDef(store.VarDef)
-		if restoredVarDef == nil || restoredVarDef.Var == nil {
-			cx.internalError("failed to clone pre-order let variable for final query stage")
-			return false
-		}
 		storeAccess := &ast.BLangIndexBasedAccess{IndexExpr: loopCounterRef}
 		storeAccess.Expr = store.StoreRef
 		storeAccess.SetDeterminedType(store.ValueTy)
@@ -1322,7 +1273,7 @@ func createQueryListStore(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
 	pos diagnostics.Location,
-) (*ast.BLangSimpleVarRef, bool) {
+) *ast.BLangSimpleVarRef {
 	listName, listSymbol := cx.addDesugardSymbol(semtypes.LIST, model.SymbolKindVariable, false)
 	emptyList := &ast.BLangListConstructorExpr{Exprs: []ast.BLangExpression{}}
 	emptyList.SetDeterminedType(semtypes.LIST)
@@ -1340,14 +1291,14 @@ func createQueryListStore(
 	listRef.SetSymbol(listSymbol)
 	listRef.SetDeterminedType(semtypes.LIST)
 	setPositionIfMissing(listRef, pos)
-	return listRef, true
+	return listRef
 }
 
 func createQueryMapStore(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
 	pos diagnostics.Location,
-) (*ast.BLangSimpleVarRef, bool) {
+) *ast.BLangSimpleVarRef {
 	mapName, mapSymbol := cx.addDesugardSymbol(semtypes.MAPPING, model.SymbolKindVariable, false)
 	emptyMap := &ast.BLangMappingConstructorExpr{Fields: []model.MappingField{}}
 	emptyMap.SetDeterminedType(semtypes.MAPPING)
@@ -1364,7 +1315,7 @@ func createQueryMapStore(
 	mapRef.SetSymbol(mapSymbol)
 	mapRef.SetDeterminedType(semtypes.MAPPING)
 	setPositionIfMissing(mapRef, pos)
-	return mapRef, true
+	return mapRef
 }
 
 func createPreOrderLetStores(
@@ -1394,10 +1345,7 @@ func createPreOrderLetStores(
 			if valueTy == nil {
 				valueTy = semtypes.ANY
 			}
-			storeRef, ok := createQueryListStore(cx, initStmts, pos)
-			if !ok {
-				return nil, false
-			}
+			storeRef := createQueryListStore(cx, initStmts, pos)
 			stores = append(stores, queryLetStore{
 				VarDef:   varDef,
 				StoreRef: storeRef,
@@ -1414,10 +1362,7 @@ func createQueryPayloadStore(
 	pos diagnostics.Location,
 	letStores []queryLetStore,
 ) (*ast.BLangSimpleVarRef, bool) {
-	payloadRef, ok := createQueryListStore(cx, initStmts, pos)
-	if !ok {
-		return nil, false
-	}
+	payloadRef := createQueryListStore(cx, initStmts, pos)
 	for _, store := range letStores {
 		pushPayload := createPushInvocation(cx, payloadRef, store.StoreRef)
 		if pushPayload == nil {
@@ -1434,7 +1379,7 @@ func buildOrderKeyTupleExpr(
 	cx *functionContext,
 	orderByClause *ast.BLangOrderByClause,
 	pos diagnostics.Location,
-) (*ast.BLangListConstructorExpr, []model.StatementNode, bool) {
+) (*ast.BLangListConstructorExpr, []model.StatementNode) {
 	keyExprs := make([]ast.BLangExpression, 0, len(orderByClause.OrderByKeyList))
 	var initStmts []model.StatementNode
 	for i := range orderByClause.OrderByKeyList {
@@ -1446,7 +1391,7 @@ func buildOrderKeyTupleExpr(
 	keyTuple.SetDeterminedType(semtypes.LIST)
 	keyTuple.AtomicType = semtypes.LIST_ATOMIC_INNER
 	setPositionIfMissing(keyTuple, pos)
-	return keyTuple, initStmts, true
+	return keyTuple, initStmts
 }
 
 func buildOrderDirectionExpr(orderByClause *ast.BLangOrderByClause, pos diagnostics.Location) *ast.BLangListConstructorExpr {
