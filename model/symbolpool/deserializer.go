@@ -117,6 +117,10 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readTypeSymbol(space)
 	case symTagClass:
 		sr.readClassSymbol(space)
+	case symTagRecord:
+		sr.readRecordSymbol(space)
+	case symTagObjectType:
+		sr.readObjectTypeSymbol(space)
 	case symTagValue:
 		sr.readValueSymbol(space)
 	case symTagFunction:
@@ -139,8 +143,26 @@ func (sr *symbolReader) readTypeSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
 	sym := model.NewTypeSymbol(name, isPublic)
 	sym.SetType(ty)
+	_ = sr.readInclusionMembers(space)
+	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) readRecordSymbol(space *model.SymbolSpace) {
+	name, isPublic, ty := sr.readSymbolBase()
+	sym := model.NewRecordSymbol(name, isPublic)
+	sym.SetType(ty)
 	for _, m := range sr.readInclusionMembers(space) {
-		sym.AddInclusionMember(m)
+		sym.AddMember(m)
+	}
+	space.AddSymbol(name, &sym)
+}
+
+func (sr *symbolReader) readObjectTypeSymbol(space *model.SymbolSpace) {
+	name, isPublic, ty := sr.readSymbolBase()
+	sym := model.NewObjectTypeSymbol(name, isPublic)
+	sym.SetType(ty)
+	for _, m := range sr.readInclusionMembers(space) {
+		sym.AddMember(m)
 	}
 	space.AddSymbol(name, &sym)
 }
@@ -220,7 +242,7 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 	sym.SetType(ty)
 	methods := make(map[string]model.SymbolRef)
 	for _, m := range sr.readInclusionMembers(space) {
-		sym.AddInclusionMember(m)
+		sym.AddMember(m)
 		if md, ok := m.(*model.MethodDescriptor); ok {
 			methods[md.MemberName()] = md.MethodRef
 		}
@@ -276,6 +298,8 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 	sym.SetType(ty)
 	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
 	sym.SetDefaultableParams(defaultInfo)
+	inclInfo := sr.readIncludedRecordParams(int(paramCount))
+	sym.SetIncludedRecordParams(inclInfo)
 	space.AddSymbol(name, sym)
 }
 
@@ -304,6 +328,8 @@ func (sr *symbolReader) readDependentlyTypedFunctionSymbol(space *model.SymbolSp
 	sym.SetParamTypes(paramTypes)
 	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
 	sym.SetDefaultableParams(defaultInfo)
+	inclInfo := sr.readIncludedRecordParams(int(paramCount))
+	sym.SetIncludedRecordParams(inclInfo)
 	sym.SetReturnType(sr.readTypeOp())
 	space.AddSymbol(name, sym)
 }
@@ -349,6 +375,25 @@ func (sr *symbolReader) readDefaultableParams(paramCount int, space *model.Symbo
 		}
 		ref := sr.readSymbolRef(space)
 		info.SetDefaultable(int(idx), ref)
+	}
+	return info
+}
+
+func (sr *symbolReader) readIncludedRecordParams(paramCount int) model.IncludedRecordParamInfo {
+	var count int64
+	read(sr.r, &count)
+	info := model.NewIncludedRecordParamInfo(paramCount)
+	for i := int64(0); i < count; i++ {
+		var idx int64
+		read(sr.r, &idx)
+		info.Set(int(idx))
+		var fieldCount int64
+		read(sr.r, &fieldCount)
+		names := make([]string, fieldCount)
+		for j := int64(0); j < fieldCount; j++ {
+			names[j] = sr.readStringCP()
+		}
+		info.SetFields(int(idx), names)
 	}
 	return info
 }

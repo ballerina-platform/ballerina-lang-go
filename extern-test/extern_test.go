@@ -310,7 +310,8 @@ func TestDependentlyTypedAlias(t *testing.T) {
 		t.Fatalf("failed to load project: %v", err)
 	}
 
-	compilation := result.Project().CurrentPackage().Compilation()
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
 	if compilation.DiagnosticResult().HasErrors() {
 		for _, d := range compilation.DiagnosticResult().Diagnostics() {
 			t.Logf("diagnostic: %v", d)
@@ -344,6 +345,67 @@ func TestDependentlyTypedAlias(t *testing.T) {
 	}
 
 	const expected = "10\nalias\n10\nalias\n"
+	if stdoutBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}
+
+func TestDependentlyTypedIncludedRecordParam(t *testing.T) {
+	balFile := filepath.Join(testDataDir, "dependently-typed-incl-record-v.bal")
+	absPath, err := filepath.Abs(balFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath))
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+
+	currentPkg := result.Project().CurrentPackage()
+	compilation := currentPkg.Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		for _, d := range compilation.DiagnosticResult().Diagnostics() {
+			t.Logf("diagnostic: %v", d)
+		}
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	stdoutBuf := &bytes.Buffer{}
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+
+	runtime.RegisterExternFunction(rt, "$anon", "dependently-typed-incl-record-v", "shift", func(args []values.BalValue) (values.BalValue, error) {
+		src, ok := args[0].(*values.Map)
+		if !ok {
+			return nil, fmt.Errorf("expected record argument, got %T", args[0])
+		}
+		opts, ok := args[1].(*values.Map)
+		if !ok {
+			return nil, fmt.Errorf("expected record argument, got %T", args[1])
+		}
+		td, ok := args[2].(*values.TypeDesc)
+		if !ok {
+			return nil, fmt.Errorf("expected typedesc argument, got %T", args[2])
+		}
+		xVal, _ := src.Get("x")
+		yVal, _ := src.Get("y")
+		dxVal, _ := opts.Get("dx")
+		dyVal, _ := opts.Get("dy")
+		out := values.NewMap(td.Type)
+		out.Put("x", xVal.(int64)+dxVal.(int64))
+		out.Put("y", yVal.(int64)+dyVal.(int64))
+		return out, nil
+	})
+
+	if err := rt.Interpret(*birPkg); err != nil {
+		t.Fatalf("runtime error: %v", err)
+	}
+
+	expected := "11\n22\n6\n2\n1\n2\n"
 	if stdoutBuf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
 	}
