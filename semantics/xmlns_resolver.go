@@ -89,7 +89,7 @@ func processXMLNSDecl[T symbolResolver](resolver T, scope model.Scope, decl *ast
 		return
 	}
 	prefix := ""
-	if p, ok := decl.GetPrefix().(*ast.BLangIdentifier); ok && p != nil {
+	if p := decl.GetPrefix(); p != nil {
 		prefix = p.GetValue()
 	}
 	defineXMLNS(resolver, scope, prefix, uri, decl.GetPosition())

@@ -19,7 +19,6 @@ package semantics_test
 import (
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
@@ -111,7 +110,7 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *semanticAnalysisValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *semanticAnalysisValidator) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	if typeData == nil || typeData.TypeDescriptor == nil {
 		return v
 	}

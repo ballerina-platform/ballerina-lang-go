@@ -160,7 +160,7 @@ func (m *implicitVarMarker) Visit(node ast.BLangNode) ast.Visitor {
 	return m
 }
 
-func (m *implicitVarMarker) VisitTypeData(*model.TypeData) ast.Visitor { return m }
+func (m *implicitVarMarker) VisitTypeData(*ast.TypeData) ast.Visitor { return m }
 
 func (a *uninitVarAnalyzer) analyze() {
 	if len(a.fcfg.bbs) == 0 {
@@ -210,7 +210,7 @@ func (a *uninitVarAnalyzer) analyzeBlock(bb *basicBlock, state *varInitState) *v
 }
 
 // analyzeNode processes a single node in the CFG
-func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
+func (a *uninitVarAnalyzer) analyzeNode(node ast.Node, state *varInitState) {
 	switch n := node.(type) {
 	case *ast.BLangSimpleVariableDef:
 		symRef := n.Var.Symbol()
@@ -245,7 +245,7 @@ func (a *uninitVarAnalyzer) markAssignmentTarget(expr ast.BLangExpression, state
 	}
 
 	// For simple variable references, mark as initialized
-	if nodeWithSymbol, ok := expr.(model.NodeWithSymbol); ok {
+	if nodeWithSymbol, ok := expr.(ast.NodeWithSymbol); ok {
 		symRef := nodeWithSymbol.Symbol()
 		if state.isTracked(symRef) {
 			state.markInitialized(symRef)
@@ -265,7 +265,7 @@ func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangActionOrExpression, st
 }
 
 // checkVariableReference checks if a variable is initialized before use
-func (a *uninitVarAnalyzer) checkVariableReference(symRef model.SymbolRef, node model.Node, state *varInitState) {
+func (a *uninitVarAnalyzer) checkVariableReference(symRef model.SymbolRef, node ast.Node, state *varInitState) {
 	if !state.isTracked(symRef) {
 		return
 	}
@@ -290,14 +290,14 @@ func (v *varRefChecker) Visit(node ast.BLangNode) ast.Visitor {
 	}
 
 	// Check if this node is a variable reference
-	if nodeWithSymbol, ok := node.(model.NodeWithSymbol); ok {
+	if nodeWithSymbol, ok := node.(ast.NodeWithSymbol); ok {
 		v.analyzer.checkVariableReference(nodeWithSymbol.Symbol(), node, v.state)
 	}
 
 	return v
 }
 
-func (v *varRefChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *varRefChecker) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	// TypeDesc could have default values
 	return v
 }

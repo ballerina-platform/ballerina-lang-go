@@ -16,6 +16,7 @@
 
 package model
 
+// PR-FIXME: are these used outside of front end?
 type TypeTags int
 
 const (

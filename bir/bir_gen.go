@@ -308,7 +308,6 @@ func TransformGlobalVariableDcl(ctx *Context, ast *ast.BLangSimpleVariable) BIRG
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(ast.Symbol())
 	dcl.Flags = ast.FlagsAsInt64()
-	dcl.Origin = model.SymbolOrigin_SOURCE
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
@@ -321,7 +320,6 @@ func transformConstantAsGlobal(ctx *Context, c *ast.BLangConstant) BIRGlobalVari
 	dcl.PkgId = ctx.packageID
 	dcl.Type = ctx.CompilerContext.SymbolType(c.Symbol())
 	dcl.Flags = c.FlagsAsInt64()
-	dcl.Origin = model.SymbolOrigin_SOURCE
 	dcl.GlobalVarLookupKey = buildGlobalVarLookupKey(ctx.packageID, name)
 	return dcl
 }
@@ -355,7 +353,7 @@ func transformFunctionInner(stmtCx *stmtContext, astFunc *ast.BLangFunction, sel
 		}
 	}
 	if astFunc.RestParam != nil {
-		restParam := astFunc.RestParam.(*ast.BLangSimpleVariable)
+		restParam := astFunc.RestParam
 		ty := ctx.CompilerContext.SymbolType(restParam.Symbol())
 		stmtCx.addLocalVar(model.Name(restParam.GetName().GetValue()), ty, restParam.Symbol())
 		birFunc.RestParams = &BIRParameter{Name: model.Name(restParam.GetName().GetValue())}
@@ -775,7 +773,7 @@ func andOperands(ctx *stmtContext, bb *BIRBasicBlock, existing *BIROperand, new 
 
 func handleExprFunctionBody(ctx *stmtContext, body *ast.BLangExprFunctionBody) {
 	curBB := ctx.addBB()
-	effect := handleActionOrExpression(ctx, curBB, body.Expr.(ast.BLangExpression))
+	effect := handleActionOrExpression(ctx, curBB, body.Expr)
 	curBB = effect.block
 	if curBB != nil {
 		retAssign := &Move{}
@@ -1278,7 +1276,7 @@ type callable interface {
 	ResolvedSymbol() model.SymbolRef
 	Receiver() ast.BLangExpression
 	CallArgs() []ast.BLangExpression
-	GetName() model.IdentifierNode
+	GetName() ast.IdentifierNode
 }
 
 func generateCall(ctx *stmtContext, bb *BIRBasicBlock, callable callable) expressionEffect {

@@ -114,7 +114,7 @@ func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 	}
 	last := bb.nodes[len(bb.nodes)-1]
 	k := last.GetKind()
-	if k == model.NodeKind_RETURN || k == model.NodeKind_PANIC {
+	if k == ast.NodeKind_RETURN || k == ast.NodeKind_PANIC {
 		return true
 	}
 	// The only other way a reachable block becomes terminal is via a

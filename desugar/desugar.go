@@ -28,8 +28,8 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type desugaredNode[E model.Node] struct {
-	initStmts       []model.StatementNode
+type desugaredNode[E ast.Node] struct {
+	initStmts       []ast.StatementNode
 	replacementNode E
 }
 
@@ -336,7 +336,7 @@ func (v *dependencyVisitor) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *dependencyVisitor) VisitTypeData(_ *model.TypeData) ast.Visitor { return v }
+func (v *dependencyVisitor) VisitTypeData(_ *ast.TypeData) ast.Visitor { return v }
 
 func toplogicallySortInits(compilerCtx *context.CompilerContext, nodes []moduleInitNode) ([]int, bool) {
 	nodeSet := make(map[model.SymbolRef]int, len(nodes))
@@ -623,7 +623,7 @@ func (r symbolRemapper) Visit(node ast.BLangNode) ast.Visitor {
 	return r
 }
 
-func (r symbolRemapper) VisitTypeData(_ *model.TypeData) ast.Visitor {
+func (r symbolRemapper) VisitTypeData(_ *ast.TypeData) ast.Visitor {
 	return r
 }
 
@@ -795,7 +795,7 @@ func desugarFunction(pkgCtx *packageContext, fn *ast.BLangFunction) *ast.BLangFu
 			if len(result.initStmts) > 0 {
 				fn.Body = convertExprBodyToBlockBody(body, result)
 			} else {
-				body.Expr = result.replacementNode
+				body.Expr = result.replacementNode.(ast.BLangExpression)
 			}
 		}
 	case *ast.BLangExternFunctionBody:

@@ -46,11 +46,6 @@ type (
 		Pos Location
 	}
 
-	BIRDocumentableNodeBase struct {
-		BIRNodeBase
-		MarkdownDocAttachment model.MarkdownDocAttachment
-	}
-
 	// BIRAbstractInstruction
 	BIRInstructionBase struct {
 		BIRNodeBase
@@ -107,16 +102,14 @@ type (
 		birVariableDclBase
 		Flags              int64
 		PkgId              *model.PackageID
-		Origin             model.SymbolOrigin
 		GlobalVarLookupKey string
 	}
 
 	BIRFunction struct {
-		BIRDocumentableNodeBase
+		BIRNodeBase
 		Name           model.Name
 		OriginalName   model.Name
 		Flags          int64
-		Origin         model.SymbolOrigin
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int

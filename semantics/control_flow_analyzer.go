@@ -39,7 +39,7 @@ type basicBlock struct {
 	children []int
 	// Nodes inside this block. Almost always these are statements but ternary expression will have expressions
 	// as children.
-	nodes []model.Node
+	nodes []ast.Node
 }
 
 type bbRef int
@@ -278,7 +278,7 @@ func (analyzer *functionControlFlowAnalyzer) createNewBB() bbRef {
 }
 
 // addNode adds a node to a basic block
-func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node model.Node) {
+func (analyzer *functionControlFlowAnalyzer) addNode(bb bbRef, node ast.Node) {
 	analyzer.bbs[bb].nodes = append(analyzer.bbs[bb].nodes, node)
 }
 
@@ -339,14 +339,14 @@ func (analyzer *functionControlFlowAnalyzer) analyzeStatement(curBB bbRef, stmt 
 	}
 }
 
-func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 model.ExpressionNode) stmtEffect {
+func createTernaryExpressionEffect(analyzer *functionControlFlowAnalyzer, curBB bbRef, expressionNode1, expressionNode2 ast.ExpressionNode) stmtEffect {
 	panic("unimplemented")
 }
 
 type ternaryExpressionChecker struct {
 	hasTernaryExpression bool
-	ifTrue               model.ExpressionNode
-	ifFalse              model.ExpressionNode
+	ifTrue               ast.ExpressionNode
+	ifFalse              ast.ExpressionNode
 }
 
 var _ ast.Visitor = &ternaryExpressionChecker{}
@@ -361,7 +361,7 @@ func (c *ternaryExpressionChecker) Visit(node ast.BLangNode) ast.Visitor {
 	return c
 }
 
-func (c *ternaryExpressionChecker) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (c *ternaryExpressionChecker) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 

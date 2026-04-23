@@ -17,7 +17,6 @@
 package ast
 
 import (
-	"ballerina-lang-go/model"
 	"fmt"
 )
 
@@ -26,7 +25,7 @@ import (
 // of node with the visitor w, followed by a call of w.Visit(nil).
 type Visitor interface {
 	Visit(node BLangNode) (w Visitor)
-	VisitTypeData(typeData *model.TypeData) (w Visitor)
+	VisitTypeData(typeData *TypeData) (w Visitor)
 }
 
 // Walk traverses an AST in depth-first order: It starts by calling
@@ -244,7 +243,9 @@ func Walk(v Visitor, node BLangNode) {
 		if node.RestParam != nil {
 			Walk(v, node.RestParam.(BLangNode))
 		}
-		walkTypeDescriptor(v, node.returnTypeDescriptor)
+		if node.returnTypeDescriptor != nil {
+			walkTypeDescriptor(v, node.returnTypeDescriptor)
+		}
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
 		}
@@ -447,8 +448,8 @@ func Walk(v Visitor, node BLangNode) {
 		for _, arg := range node.PositionalArgs {
 			Walk(v, arg.(BLangNode))
 		}
-		for _, arg := range node.NamedArgs {
-			Walk(v, arg)
+		for i := range node.NamedArgs {
+			Walk(v, &node.NamedArgs[i])
 		}
 
 	case *BLangInvocation:
@@ -750,7 +751,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Collection.(BLangNode))
 		}
 		if node.VariableDefinitionNode != nil {
-			Walk(v, node.VariableDefinitionNode.(BLangNode))
+			Walk(v, node.VariableDefinitionNode)
 		}
 
 	case *BLangJoinClause:
@@ -761,7 +762,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.OnClause.OnExpr.(BLangNode))
 		}
 		if node.VariableDefinitionNode != nil {
-			Walk(v, node.VariableDefinitionNode.(BLangNode))
+			Walk(v, node.VariableDefinitionNode)
 		}
 		if node.OnClause.EqualsExpr != nil {
 			Walk(v, node.OnClause.EqualsExpr.(BLangNode))
@@ -774,7 +775,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangLetClause:
 		for i := range node.LetVarDeclarations {
-			Walk(v, node.LetVarDeclarations[i].(BLangNode))
+			Walk(v, &node.LetVarDeclarations[i])
 		}
 
 	case *BLangWhereClause:
@@ -815,7 +816,7 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Body)
 		}
 		if node.VariableDefinitionNode != nil {
-			Walk(v, node.VariableDefinitionNode.(BLangNode))
+			Walk(v, node.VariableDefinitionNode)
 		}
 
 	case *BLangDoClause:
@@ -915,7 +916,7 @@ func Walk(v Visitor, node BLangNode) {
 
 // We need to do this because TypeData is not a ast node but within it there can be ast nodes. Need to think if this is
 // the correct appraoch.
-func WalkTypeData(v Visitor, typeData *model.TypeData) {
+func WalkTypeData(v Visitor, typeData *TypeData) {
 	v.VisitTypeData(typeData)
 	if typeData.TypeDescriptor == nil {
 		return
@@ -926,7 +927,7 @@ func WalkTypeData(v Visitor, typeData *model.TypeData) {
 	}
 }
 
-func walkTypeDescriptor(v Visitor, td model.TypeDescriptor) {
+func walkTypeDescriptor(v Visitor, td TypeDescriptor) {
 	if td == nil {
 		return
 	}

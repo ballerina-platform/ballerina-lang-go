@@ -26,8 +26,6 @@ const (
 	FailureBreakMode_BREAK_TO_OUTER_BLOCK
 )
 
-type BLangStatement = model.StatementNode
-
 type (
 	bLangStatementBase struct {
 		bLangNodeBase
@@ -49,7 +47,7 @@ type (
 
 	BLangCompoundAssignment struct {
 		bLangStatementBase
-		VarRef       model.ExpressionNode
+		VarRef       ExpressionNode
 		Expr         BLangActionOrExpression
 		OpKind       model.OperatorKind
 		ModifiedExpr BLangExpression
@@ -120,18 +118,18 @@ type (
 )
 
 var (
-	_ model.AssignmentNode          = &BLangAssignment{}
-	_ model.CompoundAssignmentNode  = &BLangCompoundAssignment{}
-	_ model.ContinueNode            = &BLangContinue{}
-	_ model.DoNode                  = &BLangDo{}
-	_ model.BlockStatementNode      = &BLangBlockStmt{}
-	_ model.ExpressionStatementNode = &BLangExpressionStmt{}
-	_ model.IfNode                  = &BLangIf{}
-	_ model.WhileNode               = &BLangWhile{}
-	_ model.ForeachNode             = &BLangForeach{}
-	_ model.VariableDefinitionNode  = &BLangSimpleVariableDef{}
-	_ model.ReturnNode              = &BLangReturn{}
-	_ model.PanicNode               = &BLangPanic{}
+	_ AssignmentNode          = &BLangAssignment{}
+	_ CompoundAssignmentNode  = &BLangCompoundAssignment{}
+	_ ContinueNode            = &BLangContinue{}
+	_ DoNode                  = &BLangDo{}
+	_ BlockStatementNode      = &BLangBlockStmt{}
+	_ ExpressionStatementNode = &BLangExpressionStmt{}
+	_ IfNode                  = &BLangIf{}
+	_ WhileNode               = &BLangWhile{}
+	_ ForeachNode             = &BLangForeach{}
+	_ VariableDefinitionNode  = &BLangSimpleVariableDef{}
+	_ ReturnNode              = &BLangReturn{}
+	_ PanicNode               = &BLangPanic{}
 )
 
 var (
@@ -157,12 +155,12 @@ var (
 	_ BLangNode = &BLangMatchStatement{}
 )
 
-func (b *BLangAssignment) GetVariable() model.ExpressionNode {
+func (b *BLangAssignment) GetVariable() ExpressionNode {
 	// migrated from BLangAssignment.java:48:5
 	return b.VarRef
 }
 
-func (b *BLangAssignment) GetExpression() model.ExpressionNode {
+func (b *BLangAssignment) GetExpression() ExpressionNode {
 	// migrated from BLangAssignment.java:53:5
 	return b.Expr
 }
@@ -172,8 +170,8 @@ func (b *BLangAssignment) IsDeclaredWithVar() bool {
 	return false
 }
 
-func (b *BLangAssignment) GetKind() model.NodeKind {
-	return model.NodeKind_ASSIGNMENT
+func (b *BLangAssignment) GetKind() NodeKind {
+	return NodeKind_ASSIGNMENT
 }
 
 func (b *BLangAssignment) SetActionOrExpression(actionOrExpression BLangActionOrExpression) {
@@ -184,33 +182,29 @@ func (b *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
 	// migrated from BLangAssignment.java:69:5
 }
 
-func (b *BLangAssignment) SetVariable(variableReferenceNode model.VariableReferenceNode) {
+func (b *BLangAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
 	// migrated from BLangAssignment.java:74:5
-	if varRef, ok := variableReferenceNode.(BLangExpression); ok {
-		b.VarRef = varRef
-	} else {
-		panic("variableReferenceNode is not a BLangExpression")
-	}
+	b.VarRef = variableReferenceNode.(BLangExpression)
 }
 
-func (b *BLangBlockStmt) GetKind() model.NodeKind {
+func (b *BLangBlockStmt) GetKind() NodeKind {
 	// migrated from BLangBlockStmt.java:83:5
-	return model.NodeKind_BLOCK
+	return NodeKind_BLOCK
 }
 
-func (b *BLangBlockStmt) GetStatements() []model.StatementNode {
+func (b *BLangBlockStmt) GetStatements() []StatementNode {
 	// migrated from BLangBlockStmt.java:88:5
 	return b.Stmts
 }
 
-func (b *BLangBlockStmt) AddStatement(statement model.StatementNode) {
+func (b *BLangBlockStmt) AddStatement(statement StatementNode) {
 	// migrated from BLangBlockStmt.java:93:5
 	b.Stmts = append(b.Stmts, statement)
 }
 
-func (b *BLangBreak) GetKind() model.NodeKind {
+func (b *BLangBreak) GetKind() NodeKind {
 	// migrated from BLangBreak.java:45:5
-	return model.NodeKind_BREAK
+	return NodeKind_BREAK
 }
 
 func (b *BLangCompoundAssignment) IsDeclaredWithVar() bool {
@@ -226,12 +220,12 @@ func (b *BLangCompoundAssignment) GetOperatorKind() model.OperatorKind {
 	return b.OpKind
 }
 
-func (b *BLangCompoundAssignment) GetVariable() model.ExpressionNode {
+func (b *BLangCompoundAssignment) GetVariable() ExpressionNode {
 	// migrated from BLangCompoundAssignment.java:64:5
 	return b.VarRef
 }
 
-func (b *BLangCompoundAssignment) GetExpression() model.ExpressionNode {
+func (b *BLangCompoundAssignment) GetExpression() ExpressionNode {
 	// migrated from BLangCompoundAssignment.java:69:5
 	return b.Expr
 }
@@ -240,27 +234,26 @@ func (b *BLangCompoundAssignment) SetActionOrExpression(actionOrExpression BLang
 	b.Expr = actionOrExpression
 }
 
-func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode model.VariableReferenceNode) {
-	// migrated from BLangCompoundAssignment.java:79:5
-	b.VarRef = variableReferenceNode
+func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode VariableReferenceNode) {
+	b.VarRef = variableReferenceNode.(BLangExpression)
 }
 
-func (b *BLangCompoundAssignment) GetKind() model.NodeKind {
+func (b *BLangCompoundAssignment) GetKind() NodeKind {
 	// migrated from BLangCompoundAssignment.java:99:5
-	return model.NodeKind_COMPOUND_ASSIGNMENT
+	return NodeKind_COMPOUND_ASSIGNMENT
 }
 
-func (b *BLangContinue) GetKind() model.NodeKind {
+func (b *BLangContinue) GetKind() NodeKind {
 	// migrated from BLangContinue.java:46:5
-	return model.NodeKind_NEXT
+	return NodeKind_NEXT
 }
 
-func (b *BLangDo) GetBody() model.BlockStatementNode {
+func (b *BLangDo) GetBody() BlockStatementNode {
 	// migrated from BLangDo.java:47:5
 	return &b.Body
 }
 
-func (b *BLangDo) SetBody(body model.BlockStatementNode) {
+func (b *BLangDo) SetBody(body BlockStatementNode) {
 	// migrated from BLangDo.java:52:5
 	if blockStmt, ok := body.(*BLangBlockStmt); ok {
 		b.Body = *blockStmt
@@ -269,12 +262,12 @@ func (b *BLangDo) SetBody(body model.BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (b *BLangDo) GetOnFailClause() model.OnFailClauseNode {
+func (b *BLangDo) GetOnFailClause() OnFailClauseNode {
 	// migrated from BLangDo.java:57:5
 	return &b.OnFailClause
 }
 
-func (b *BLangDo) SetOnFailClause(onFailClause model.OnFailClauseNode) {
+func (b *BLangDo) SetOnFailClause(onFailClause OnFailClauseNode) {
 	// migrated from BLangDo.java:62:5
 	if onFailClause, ok := onFailClause.(*BLangOnFailClause); ok {
 		b.OnFailClause = *onFailClause
@@ -283,18 +276,18 @@ func (b *BLangDo) SetOnFailClause(onFailClause model.OnFailClauseNode) {
 	panic("onFailClause is not a BLangOnFailClause")
 }
 
-func (b *BLangDo) GetKind() model.NodeKind {
+func (b *BLangDo) GetKind() NodeKind {
 	// migrated from BLangDo.java:82:5
-	return model.NodeKind_DO_STMT
+	return NodeKind_DO_STMT
 }
 
-func (b *BLangExpressionStmt) GetExpression() model.ExpressionNode {
+func (b *BLangExpressionStmt) GetExpression() ExpressionNode {
 	// migrated from BLangExpressionStmt.java:46:5
 	return b.Expr
 }
 
-func (b *BLangExpressionStmt) GetKind() model.NodeKind {
-	return model.NodeKind_EXPRESSION_STATEMENT
+func (b *BLangExpressionStmt) GetKind() NodeKind {
+	return NodeKind_EXPRESSION_STATEMENT
 }
 
 func (b *BLangIf) Scope() model.Scope {
@@ -305,31 +298,27 @@ func (b *BLangIf) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-func (b *BLangIf) GetCondition() model.ExpressionNode {
+func (b *BLangIf) GetCondition() ExpressionNode {
 	// migrated from BLangIf.java:47:5
 	return b.Expr
 }
 
-func (b *BLangIf) GetBody() model.BlockStatementNode {
+func (b *BLangIf) GetBody() BlockStatementNode {
 	// migrated from BLangIf.java:52:5
 	return &b.Body
 }
 
-func (b *BLangIf) GetElseStatement() model.StatementNode {
+func (b *BLangIf) GetElseStatement() StatementNode {
 	// migrated from BLangIf.java:57:5
 	return b.ElseStmt
 }
 
-func (b *BLangIf) SetCondition(condition model.ExpressionNode) {
+func (b *BLangIf) SetCondition(condition ExpressionNode) {
 	// migrated from BLangIf.java:62:5
-	if expr, ok := condition.(BLangExpression); ok {
-		b.Expr = expr
-	} else {
-		panic("condition is not a BLangExpression")
-	}
+	b.Expr = condition.(BLangExpression)
 }
 
-func (b *BLangIf) SetBody(body model.BlockStatementNode) {
+func (b *BLangIf) SetBody(body BlockStatementNode) {
 	// migrated from BLangIf.java:67:5
 	if blockStmt, ok := body.(*BLangBlockStmt); ok {
 		b.Body = *blockStmt
@@ -338,14 +327,14 @@ func (b *BLangIf) SetBody(body model.BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (b *BLangIf) SetElseStatement(elseStatement model.StatementNode) {
+func (b *BLangIf) SetElseStatement(elseStatement StatementNode) {
 	// migrated from BLangIf.java:72:5
 	b.ElseStmt = elseStatement
 }
 
-func (b *BLangIf) GetKind() model.NodeKind {
+func (b *BLangIf) GetKind() NodeKind {
 	// migrated from BLangIf.java:77:5
-	return model.NodeKind_IF
+	return NodeKind_IF
 }
 
 func (b *BLangWhile) Scope() model.Scope {
@@ -356,26 +345,22 @@ func (b *BLangWhile) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-func (b *BLangWhile) GetCondition() model.ExpressionNode {
+func (b *BLangWhile) GetCondition() ExpressionNode {
 	// migrated from BLangWhile.java:50:5
 	return b.Expr
 }
 
-func (b *BLangWhile) SetCondition(condition model.ExpressionNode) {
+func (b *BLangWhile) SetCondition(condition ExpressionNode) {
 	// migrated from BLangWhile.java:60:5
-	if expr, ok := condition.(BLangExpression); ok {
-		b.Expr = expr
-	} else {
-		panic("condition is not a BLangExpression")
-	}
+	b.Expr = condition.(BLangExpression)
 }
 
-func (b *BLangWhile) GetBody() model.BlockStatementNode {
+func (b *BLangWhile) GetBody() BlockStatementNode {
 	// migrated from BLangWhile.java:55:5
 	return &b.Body
 }
 
-func (b *BLangWhile) SetBody(body model.BlockStatementNode) {
+func (b *BLangWhile) SetBody(body BlockStatementNode) {
 	// migrated from BLangWhile.java:65:5
 	if blockStmt, ok := body.(*BLangBlockStmt); ok {
 		b.Body = *blockStmt
@@ -384,12 +369,12 @@ func (b *BLangWhile) SetBody(body model.BlockStatementNode) {
 	panic("body is not a BLangBlockStmt")
 }
 
-func (b *BLangWhile) GetOnFailClause() model.OnFailClauseNode {
+func (b *BLangWhile) GetOnFailClause() OnFailClauseNode {
 	// migrated from BLangWhile.java:70:5
 	return &b.OnFailClause
 }
 
-func (b *BLangWhile) SetOnFailClause(onFailClause model.OnFailClauseNode) {
+func (b *BLangWhile) SetOnFailClause(onFailClause OnFailClauseNode) {
 	// migrated from BLangWhile.java:75:5
 	if onFailClause, ok := onFailClause.(*BLangOnFailClause); ok {
 		b.OnFailClause = *onFailClause
@@ -398,9 +383,9 @@ func (b *BLangWhile) SetOnFailClause(onFailClause model.OnFailClauseNode) {
 	panic("onFailClause is not a BLangOnFailClause")
 }
 
-func (b *BLangWhile) GetKind() model.NodeKind {
+func (b *BLangWhile) GetKind() NodeKind {
 	// migrated from BLangWhile.java:95:5
-	return model.NodeKind_WHILE
+	return NodeKind_WHILE
 }
 
 func (b *BLangForeach) Scope() model.Scope {
@@ -411,15 +396,15 @@ func (b *BLangForeach) SetScope(scope model.Scope) {
 	b.scope = scope
 }
 
-func (b *BLangForeach) GetKind() model.NodeKind {
-	return model.NodeKind_FOREACH
+func (b *BLangForeach) GetKind() NodeKind {
+	return NodeKind_FOREACH
 }
 
-func (b *BLangForeach) GetVariableDefinitionNode() model.VariableDefinitionNode {
+func (b *BLangForeach) GetVariableDefinitionNode() VariableDefinitionNode {
 	return b.VariableDef
 }
 
-func (b *BLangForeach) SetVariableDefinitionNode(node model.VariableDefinitionNode) {
+func (b *BLangForeach) SetVariableDefinitionNode(node VariableDefinitionNode) {
 	if varDef, ok := node.(*BLangSimpleVariableDef); ok {
 		b.VariableDef = varDef
 		return
@@ -427,7 +412,7 @@ func (b *BLangForeach) SetVariableDefinitionNode(node model.VariableDefinitionNo
 	panic("node is not a *BLangSimpleVariableDef")
 }
 
-func (b *BLangForeach) GetCollection() model.ExpressionNode {
+func (b *BLangForeach) GetCollection() ExpressionNode {
 	return b.Collection
 }
 
@@ -435,11 +420,11 @@ func (b *BLangForeach) SetCollection(collection BLangActionOrExpression) {
 	b.Collection = collection
 }
 
-func (b *BLangForeach) GetBody() model.BlockStatementNode {
+func (b *BLangForeach) GetBody() BlockStatementNode {
 	return &b.Body
 }
 
-func (b *BLangForeach) SetBody(body model.BlockStatementNode) {
+func (b *BLangForeach) SetBody(body BlockStatementNode) {
 	if blockStmt, ok := body.(*BLangBlockStmt); ok {
 		b.Body = *blockStmt
 		return
@@ -451,14 +436,14 @@ func (b *BLangForeach) GetIsDeclaredWithVar() bool {
 	return b.IsDeclaredWithVar
 }
 
-func (b *BLangForeach) GetOnFailClause() model.OnFailClauseNode {
+func (b *BLangForeach) GetOnFailClause() OnFailClauseNode {
 	if b.OnFailClause == nil {
 		return nil
 	}
 	return b.OnFailClause
 }
 
-func (b *BLangForeach) SetOnFailClause(onFailClause model.OnFailClauseNode) {
+func (b *BLangForeach) SetOnFailClause(onFailClause OnFailClauseNode) {
 	if clause, ok := onFailClause.(*BLangOnFailClause); ok {
 		b.OnFailClause = clause
 		return
@@ -474,15 +459,15 @@ func (b *BLangSimpleVariableDef) GetIsWorker() bool {
 	return b.IsWorker
 }
 
-func (b *BLangSimpleVariableDef) GetKind() model.NodeKind {
-	return model.NodeKind_VARIABLE_DEF
+func (b *BLangSimpleVariableDef) GetKind() NodeKind {
+	return NodeKind_VARIABLE_DEF
 }
 
-func (b *BLangSimpleVariableDef) GetVariable() model.VariableNode {
+func (b *BLangSimpleVariableDef) GetVariable() VariableNode {
 	return b.Var
 }
 
-func (b *BLangSimpleVariableDef) SetVariable(variable model.VariableNode) {
+func (b *BLangSimpleVariableDef) SetVariable(variable VariableNode) {
 	if v, ok := variable.(*BLangSimpleVariable); ok {
 		b.Var = v
 	} else {
@@ -490,7 +475,7 @@ func (b *BLangSimpleVariableDef) SetVariable(variable model.VariableNode) {
 	}
 }
 
-func (b *BLangReturn) GetExpression() model.ExpressionNode {
+func (b *BLangReturn) GetExpression() ExpressionNode {
 	return b.Expr
 }
 
@@ -498,18 +483,18 @@ func (b *BLangReturn) SetActionOrExpression(actionOrExpression BLangActionOrExpr
 	b.Expr = actionOrExpression
 }
 
-func (b *BLangReturn) GetKind() model.NodeKind {
-	return model.NodeKind_RETURN
+func (b *BLangReturn) GetKind() NodeKind {
+	return NodeKind_RETURN
 }
 
-func (b *BLangPanic) GetExpression() model.ExpressionNode {
+func (b *BLangPanic) GetExpression() ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangPanic) GetKind() model.NodeKind {
-	return model.NodeKind_PANIC
+func (b *BLangPanic) GetKind() NodeKind {
+	return NodeKind_PANIC
 }
 
-func (b *BLangMatchStatement) GetKind() model.NodeKind {
-	return model.NodeKind_MATCH_STATEMENT
+func (b *BLangMatchStatement) GetKind() NodeKind {
+	return NodeKind_MATCH_STATEMENT
 }

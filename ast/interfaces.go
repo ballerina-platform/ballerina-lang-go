@@ -14,512 +14,43 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package ast
 
 import (
 	"iter"
 
+	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
 )
 
+// Field represents an annotated type member with a name and type.
 type Field interface {
 	AnnotatableNode
-	GetName() Name
+	GetName() model.Name
 	GetType() Type
 }
 
-// Type interface (used by Symbol interface)
+// Type describes a resolved type in the language model. It is the value-level
+// view of a type (kind + type-data) that symbol machinery works against.
 type Type interface {
 	GetTypeKind() TypeKind
 	GetTypeData() TypeData
 }
 
-// ValueType is a type alias for Type (used for BType references)
+// ValueType is a historical alias for Type.
 type ValueType = Type
 
-// Enums used by interfaces
-
-type NodeKind uint
-
-const (
-	NodeKind_ANNOTATION NodeKind = iota
-	NodeKind_ANNOTATION_ATTACHMENT
-	NodeKind_ANNOTATION_ATTRIBUTE
-	NodeKind_COMPILATION_UNIT
-	NodeKind_DEPRECATED
-	NodeKind_DOCUMENTATION
-	NodeKind_MARKDOWN_DOCUMENTATION
-	NodeKind_ENDPOINT
-	NodeKind_FUNCTION
-	NodeKind_RESOURCE_FUNC
-	NodeKind_BLOCK_FUNCTION_BODY
-	NodeKind_EXPR_FUNCTION_BODY
-	NodeKind_EXTERN_FUNCTION_BODY
-	NodeKind_IDENTIFIER
-	NodeKind_IMPORT
-	NodeKind_PACKAGE
-	NodeKind_PACKAGE_DECLARATION
-	NodeKind_RECORD_LITERAL_KEY_VALUE
-	NodeKind_RECORD_LITERAL_SPREAD_OP
-	NodeKind_RESOURCE
-	NodeKind_SERVICE
-	NodeKind_TYPE_DEFINITION
-	NodeKind_VARIABLE
-	NodeKind_LET_VARIABLE
-	NodeKind_TUPLE_VARIABLE
-	NodeKind_RECORD_VARIABLE
-	NodeKind_ERROR_VARIABLE
-	NodeKind_WORKER
-	NodeKind_XMLNS
-	NodeKind_CHANNEL
-	NodeKind_WAIT_LITERAL_KEY_VALUE
-	NodeKind_TABLE_KEY_SPECIFIER
-	NodeKind_TABLE_KEY_TYPE_CONSTRAINT
-	NodeKind_RETRY_SPEC
-	NodeKind_CLASS_DEFN
-	NodeKind_DOCUMENTATION_ATTRIBUTE
-	NodeKind_ARRAY_LITERAL_EXPR
-	NodeKind_TUPLE_LITERAL_EXPR
-	NodeKind_LIST_CONSTRUCTOR_EXPR
-	NodeKind_LIST_CONSTRUCTOR_SPREAD_OP
-	NodeKind_BINARY_EXPR
-	NodeKind_QUERY_EXPR
-	NodeKind_ELVIS_EXPR
-	NodeKind_GROUP_EXPR
-	NodeKind_TYPE_INIT_EXPR
-	NodeKind_FIELD_BASED_ACCESS_EXPR
-	NodeKind_INDEX_BASED_ACCESS_EXPR
-	NodeKind_INT_RANGE_EXPR
-	NodeKind_INVOCATION
-	NodeKind_COLLECT_CONTEXT_INVOCATION
-	NodeKind_LAMBDA
-	NodeKind_ARROW_EXPR
-	NodeKind_LITERAL
-	NodeKind_NUMERIC_LITERAL
-	NodeKind_HEX_FLOATING_POINT_LITERAL
-	NodeKind_INTEGER_LITERAL
-	NodeKind_DECIMAL_FLOATING_POINT_LITERAL
-	NodeKind_CONSTANT
-	NodeKind_RECORD_LITERAL_EXPR
-	NodeKind_SIMPLE_VARIABLE_REF
-	NodeKind_CONSTANT_REF
-	NodeKind_TUPLE_VARIABLE_REF
-	NodeKind_RECORD_VARIABLE_REF
-	NodeKind_ERROR_VARIABLE_REF
-	NodeKind_STRING_TEMPLATE_LITERAL
-	NodeKind_RAW_TEMPLATE_LITERAL
-	NodeKind_TERNARY_EXPR
-	NodeKind_WAIT_EXPR
-	NodeKind_TRAP_EXPR
-	NodeKind_TYPEDESC_EXPRESSION
-	NodeKind_ANNOT_ACCESS_EXPRESSION
-	NodeKind_TYPE_CONVERSION_EXPR
-	NodeKind_IS_ASSIGNABLE_EXPR
-	NodeKind_UNARY_EXPR
-	NodeKind_REST_ARGS_EXPR
-	NodeKind_NAMED_ARGS_EXPR
-	NodeKind_XML_QNAME
-	NodeKind_XML_ATTRIBUTE
-	NodeKind_XML_ATTRIBUTE_ACCESS_EXPR
-	NodeKind_XML_QUOTED_STRING
-	NodeKind_XML_ELEMENT_LITERAL
-	NodeKind_XML_TEXT_LITERAL
-	NodeKind_XML_COMMENT_LITERAL
-	NodeKind_XML_PI_LITERAL
-	NodeKind_XML_SEQUENCE_LITERAL
-	NodeKind_XML_ELEMENT_FILTER_EXPR
-	NodeKind_XML_ELEMENT_ACCESS
-	NodeKind_XML_NAVIGATION
-	NodeKind_XML_EXTENDED_NAVIGATION
-	NodeKind_XML_STEP_INDEXED_EXTEND
-	NodeKind_XML_STEP_FILTER_EXTEND
-	NodeKind_XML_STEP_METHOD_CALL_EXTEND
-	NodeKind_STATEMENT_EXPRESSION
-	NodeKind_MATCH_EXPRESSION
-	NodeKind_MATCH_EXPRESSION_PATTERN_CLAUSE
-	NodeKind_CHECK_EXPR
-	NodeKind_CHECK_PANIC_EXPR
-	NodeKind_FAIL
-	NodeKind_TYPE_TEST_EXPR
-	NodeKind_IS_LIKE
-	NodeKind_IGNORE_EXPR
-	NodeKind_DOCUMENTATION_DESCRIPTION
-	NodeKind_DOCUMENTATION_PARAMETER
-	NodeKind_DOCUMENTATION_REFERENCE
-	NodeKind_DOCUMENTATION_DEPRECATION
-	NodeKind_DOCUMENTATION_DEPRECATED_PARAMETERS
-	NodeKind_SERVICE_CONSTRUCTOR
-	NodeKind_LET_EXPR
-	NodeKind_TABLE_CONSTRUCTOR_EXPR
-	NodeKind_TRANSACTIONAL_EXPRESSION
-	NodeKind_OBJECT_CTOR_EXPRESSION
-	NodeKind_ERROR_CONSTRUCTOR_EXPRESSION
-	NodeKind_DYNAMIC_PARAM_EXPR
-	NodeKind_INFER_TYPEDESC_EXPR
-	NodeKind_REG_EXP_TEMPLATE_LITERAL
-	NodeKind_REG_EXP_DISJUNCTION
-	NodeKind_REG_EXP_SEQUENCE
-	NodeKind_REG_EXP_ATOM_CHAR_ESCAPE
-	NodeKind_REG_EXP_ATOM_QUANTIFIER
-	NodeKind_REG_EXP_CHARACTER_CLASS
-	NodeKind_REG_EXP_CHAR_SET
-	NodeKind_REG_EXP_CHAR_SET_RANGE
-	NodeKind_REG_EXP_QUANTIFIER
-	NodeKind_REG_EXP_ASSERTION
-	NodeKind_REG_EXP_CAPTURING_GROUP
-	NodeKind_REG_EXP_FLAG_EXPR
-	NodeKind_REG_EXP_FLAGS_ON_OFF
-	NodeKind_NATURAL_EXPR
-	NodeKind_ABORT
-	NodeKind_DONE
-	NodeKind_RETRY
-	NodeKind_RETRY_TRANSACTION
-	NodeKind_ASSIGNMENT
-	NodeKind_COMPOUND_ASSIGNMENT
-	NodeKind_POST_INCREMENT
-	NodeKind_BLOCK
-	NodeKind_BREAK
-	NodeKind_NEXT
-	NodeKind_EXPRESSION_STATEMENT
-	NodeKind_FOREACH
-	NodeKind_FORK_JOIN
-	NodeKind_IF
-	NodeKind_MATCH
-	NodeKind_MATCH_STATEMENT
-	NodeKind_MATCH_TYPED_PATTERN_CLAUSE
-	NodeKind_MATCH_STATIC_PATTERN_CLAUSE
-	NodeKind_MATCH_STRUCTURED_PATTERN_CLAUSE
-	NodeKind_REPLY
-	NodeKind_RETURN
-	NodeKind_THROW
-	NodeKind_PANIC
-	NodeKind_TRANSACTION
-	NodeKind_TRANSFORM
-	NodeKind_TUPLE_DESTRUCTURE
-	NodeKind_RECORD_DESTRUCTURE
-	NodeKind_ERROR_DESTRUCTURE
-	NodeKind_VARIABLE_DEF
-	NodeKind_WHILE
-	NodeKind_LOCK
-	NodeKind_WORKER_RECEIVE
-	NodeKind_ALTERNATE_WORKER_RECEIVE
-	NodeKind_MULTIPLE_WORKER_RECEIVE
-	NodeKind_WORKER_ASYNC_SEND
-	NodeKind_WORKER_SYNC_SEND
-	NodeKind_WORKER_FLUSH
-	NodeKind_STREAM
-	NodeKind_SCOPE
-	NodeKind_COMPENSATE
-	NodeKind_CHANNEL_RECEIVE
-	NodeKind_CHANNEL_SEND
-	NodeKind_DO_ACTION
-	NodeKind_COMMIT
-	NodeKind_ROLLBACK
-	NodeKind_DO_STMT
-	NodeKind_SELECT
-	NodeKind_COLLECT
-	NodeKind_FROM
-	NodeKind_JOIN
-	NodeKind_WHERE
-	NodeKind_DO
-	NodeKind_LET_CLAUSE
-	NodeKind_ON_CONFLICT
-	NodeKind_ON
-	NodeKind_LIMIT
-	NodeKind_ORDER_BY
-	NodeKind_ORDER_KEY
-	NodeKind_GROUP_BY
-	NodeKind_GROUPING_KEY
-	NodeKind_ON_FAIL
-	NodeKind_MATCH_CLAUSE
-	NodeKind_MATCH_GUARD
-	NodeKind_CONST_MATCH_PATTERN
-	NodeKind_WILDCARD_MATCH_PATTERN
-	NodeKind_VAR_BINDING_PATTERN_MATCH_PATTERN
-	NodeKind_LIST_MATCH_PATTERN
-	NodeKind_REST_MATCH_PATTERN
-	NodeKind_MAPPING_MATCH_PATTERN
-	NodeKind_FIELD_MATCH_PATTERN
-	NodeKind_ERROR_MATCH_PATTERN
-	NodeKind_ERROR_MESSAGE_MATCH_PATTERN
-	NodeKind_ERROR_CAUSE_MATCH_PATTERN
-	NodeKind_ERROR_FIELD_MATCH_PATTERN
-	NodeKind_NAMED_ARG_MATCH_PATTERN
-	NodeKind_SIMPLE_MATCH_PATTERN
-	NodeKind_WILDCARD_BINDING_PATTERN
-	NodeKind_CAPTURE_BINDING_PATTERN
-	NodeKind_LIST_BINDING_PATTERN
-	NodeKind_REST_BINDING_PATTERN
-	NodeKind_FIELD_BINDING_PATTERN
-	NodeKind_MAPPING_BINDING_PATTERN
-	NodeKind_ERROR_BINDING_PATTERN
-	NodeKind_ERROR_MESSAGE_BINDING_PATTERN
-	NodeKind_ERROR_CAUSE_BINDING_PATTERN
-	NodeKind_ERROR_FIELD_BINDING_PATTERN
-	NodeKind_NAMED_ARG_BINDING_PATTERN
-	NodeKind_SIMPLE_BINDING_PATTERN
-	NodeKind_ARRAY_TYPE
-	NodeKind_MEMBER_TYPE_DESC
-	NodeKind_UNION_TYPE_NODE
-	NodeKind_INTERSECTION_TYPE_NODE
-	NodeKind_FINITE_TYPE_NODE
-	NodeKind_TUPLE_TYPE_NODE
-	NodeKind_BUILT_IN_REF_TYPE
-	NodeKind_CONSTRAINED_TYPE
-	NodeKind_FUNCTION_TYPE
-	NodeKind_USER_DEFINED_TYPE
-	NodeKind_VALUE_TYPE
-	NodeKind_RECORD_TYPE
-	NodeKind_OBJECT_TYPE
-	NodeKind_OBJECT_FIELD
-	NodeKind_METHOD_DECL
-	NodeKind_ERROR_TYPE
-	NodeKind_STREAM_TYPE
-	NodeKind_TABLE_TYPE
-	NodeKind_NODE_ENTRY
-	NodeKind_RESOURCE_PATH_IDENTIFIER_SEGMENT
-	NodeKind_RESOURCE_PATH_PARAM_SEGMENT
-	NodeKind_RESOURCE_PATH_REST_PARAM_SEGMENT
-	NodeKind_RESOURCE_ROOT_PATH_SEGMENT
-	NodeKind_INFERRED_TYPEDESC_DEFAULT
-)
-
-type Flag uint
-
-const (
-	Flag_PUBLIC Flag = iota
-	Flag_PRIVATE
-	Flag_REMOTE
-	Flag_TRANSACTIONAL
-	Flag_NATIVE
-	Flag_FINAL
-	Flag_ATTACHED
-	Flag_LAMBDA
-	Flag_WORKER
-	Flag_PARALLEL
-	Flag_LISTENER
-	Flag_READONLY
-	Flag_FUNCTION_FINAL
-	Flag_INTERFACE
-	Flag_REQUIRED
-	Flag_RECORD
-	Flag_ANONYMOUS
-	Flag_OPTIONAL
-	Flag_TESTABLE
-	Flag_CLIENT
-	Flag_RESOURCE
-	Flag_ISOLATED
-	Flag_SERVICE
-	Flag_CONSTANT
-	Flag_TYPE_PARAM
-	Flag_LANG_LIB
-	Flag_FORKED
-	Flag_DISTINCT
-	Flag_CLASS
-	Flag_CONFIGURABLE
-	Flag_OBJECT_CTOR
-	Flag_ENUM
-	Flag_INCLUDED
-	Flag_REQUIRED_PARAM
-	Flag_DEFAULTABLE_PARAM
-	Flag_REST_PARAM
-	Flag_FIELD
-	Flag_ANY_FUNCTION
-	Flag_NEVER_ALLOWED
-	Flag_ENUM_MEMBER
-	Flag_QUERY_LAMBDA
-)
-
-type SourceKind uint8
-
-const (
-	SourceKind_REGULAR_SOURCE SourceKind = iota
-	SourceKind_TEST_SOURCE
-)
-
-type TypeKind string
-
-const (
-	TypeKind_INT           TypeKind = "int"
-	TypeKind_BYTE          TypeKind = "byte"
-	TypeKind_FLOAT         TypeKind = "float"
-	TypeKind_DECIMAL       TypeKind = "decimal"
-	TypeKind_STRING        TypeKind = "string"
-	TypeKind_BOOLEAN       TypeKind = "boolean"
-	TypeKind_BLOB          TypeKind = "blob"
-	TypeKind_TYPEDESC      TypeKind = "typedesc"
-	TypeKind_TYPEREFDESC   TypeKind = "typerefdesc"
-	TypeKind_STREAM        TypeKind = "stream"
-	TypeKind_TABLE         TypeKind = "table"
-	TypeKind_JSON          TypeKind = "json"
-	TypeKind_XML           TypeKind = "xml"
-	TypeKind_ANY           TypeKind = "any"
-	TypeKind_ANYDATA       TypeKind = "anydata"
-	TypeKind_MAP           TypeKind = "map"
-	TypeKind_FUTURE        TypeKind = "future"
-	TypeKind_PACKAGE       TypeKind = "package"
-	TypeKind_SERVICE       TypeKind = "service"
-	TypeKind_CONNECTOR     TypeKind = "connector"
-	TypeKind_ENDPOINT      TypeKind = "endpoint"
-	TypeKind_FUNCTION      TypeKind = "function"
-	TypeKind_ANNOTATION    TypeKind = "annotation"
-	TypeKind_ARRAY         TypeKind = "[]"
-	TypeKind_UNION         TypeKind = "|"
-	TypeKind_INTERSECTION  TypeKind = "&"
-	TypeKind_VOID          TypeKind = ""
-	TypeKind_NIL           TypeKind = "null"
-	TypeKind_NEVER         TypeKind = "never"
-	TypeKind_NONE          TypeKind = ""
-	TypeKind_OTHER         TypeKind = "other"
-	TypeKind_ERROR         TypeKind = "error"
-	TypeKind_TUPLE         TypeKind = "tuple"
-	TypeKind_OBJECT        TypeKind = "object"
-	TypeKind_RECORD        TypeKind = "record"
-	TypeKind_FINITE        TypeKind = "finite"
-	TypeKind_CHANNEL       TypeKind = "channel"
-	TypeKind_HANDLE        TypeKind = "handle"
-	TypeKind_READONLY      TypeKind = "readonly"
-	TypeKind_TYPEPARAM     TypeKind = "typeparam"
-	TypeKind_PARAMETERIZED TypeKind = "parameterized"
-	TypeKind_REGEXP        TypeKind = "regexp"
-)
-
-type SymbolOrigin uint8
-
-const (
-	SymbolOrigin_BUILTIN SymbolOrigin = iota + 1
-	SymbolOrigin_SOURCE
-	SymbolOrigin_COMPILED_SOURCE
-	SymbolOrigin_VIRTUAL
-)
-
-type OperatorKind string
-
-const (
-	OperatorKind_ADD                          OperatorKind = "+"
-	OperatorKind_SUB                          OperatorKind = "-"
-	OperatorKind_MUL                          OperatorKind = "*"
-	OperatorKind_DIV                          OperatorKind = "/"
-	OperatorKind_MOD                          OperatorKind = "%"
-	OperatorKind_AND                          OperatorKind = "&&"
-	OperatorKind_OR                           OperatorKind = "||"
-	OperatorKind_EQUAL                        OperatorKind = "=="
-	OperatorKind_EQUALS                       OperatorKind = "equals"
-	OperatorKind_NOT_EQUAL                    OperatorKind = "!="
-	OperatorKind_GREATER_THAN                 OperatorKind = ">"
-	OperatorKind_GREATER_EQUAL                OperatorKind = ">="
-	OperatorKind_LESS_THAN                    OperatorKind = "<"
-	OperatorKind_LESS_EQUAL                   OperatorKind = "<="
-	OperatorKind_IS_ASSIGNABLE                OperatorKind = "isassignable"
-	OperatorKind_NOT                          OperatorKind = "!"
-	OperatorKind_LENGTHOF                     OperatorKind = "lengthof"
-	OperatorKind_TYPEOF                       OperatorKind = "typeof"
-	OperatorKind_UNTAINT                      OperatorKind = "untaint"
-	OperatorKind_INCREMENT                    OperatorKind = "++"
-	OperatorKind_DECREMENT                    OperatorKind = "--"
-	OperatorKind_CHECK                        OperatorKind = "check"
-	OperatorKind_CHECK_PANIC                  OperatorKind = "checkpanic"
-	OperatorKind_ELVIS                        OperatorKind = "?:"
-	OperatorKind_BITWISE_AND                  OperatorKind = "&"
-	OperatorKind_BITWISE_OR                   OperatorKind = "|"
-	OperatorKind_BITWISE_XOR                  OperatorKind = "^"
-	OperatorKind_BITWISE_COMPLEMENT           OperatorKind = "~"
-	OperatorKind_BITWISE_LEFT_SHIFT           OperatorKind = "<<"
-	OperatorKind_BITWISE_RIGHT_SHIFT          OperatorKind = ">>"
-	OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT OperatorKind = ">>>"
-	OperatorKind_CLOSED_RANGE                 OperatorKind = "..."
-	OperatorKind_HALF_OPEN_RANGE              OperatorKind = "..<"
-	OperatorKind_REF_EQUAL                    OperatorKind = "==="
-	OperatorKind_REF_NOT_EQUAL                OperatorKind = "!=="
-	OperatorKind_ANNOT_ACCESS                 OperatorKind = ".@"
-	OperatorKind_UNDEFINED                    OperatorKind = "UNDEF"
-)
-
-func OperatorKindValueFrom(opValue string) OperatorKind {
-	switch opValue {
-	case "+":
-		return OperatorKind_ADD
-	case "-":
-		return OperatorKind_SUB
-	case "*":
-		return OperatorKind_MUL
-	case "/":
-		return OperatorKind_DIV
-	case "%":
-		return OperatorKind_MOD
-	case "&&":
-		return OperatorKind_AND
-	case "||":
-		return OperatorKind_OR
-	case "==":
-		return OperatorKind_EQUAL
-	case "equals":
-		return OperatorKind_EQUALS
-	case "!=":
-		return OperatorKind_NOT_EQUAL
-	case ">":
-		return OperatorKind_GREATER_THAN
-	case ">=":
-		return OperatorKind_GREATER_EQUAL
-	case "<":
-		return OperatorKind_LESS_THAN
-	case "<=":
-		return OperatorKind_LESS_EQUAL
-	case "isassignable":
-		return OperatorKind_IS_ASSIGNABLE
-	case "!":
-		return OperatorKind_NOT
-	case "lengthof":
-		return OperatorKind_LENGTHOF
-	case "typeof":
-		return OperatorKind_TYPEOF
-	case "untaint":
-		return OperatorKind_UNTAINT
-	case "++":
-		return OperatorKind_INCREMENT
-	case "--":
-		return OperatorKind_DECREMENT
-	case "check":
-		return OperatorKind_CHECK
-	case "checkpanic":
-		return OperatorKind_CHECK_PANIC
-	case "?:":
-		return OperatorKind_ELVIS
-	case "&":
-		return OperatorKind_BITWISE_AND
-	case "|":
-		return OperatorKind_BITWISE_OR
-	case "^":
-		return OperatorKind_BITWISE_XOR
-	case "~":
-		return OperatorKind_BITWISE_COMPLEMENT
-	case "<<":
-		return OperatorKind_BITWISE_LEFT_SHIFT
-	case ">>":
-		return OperatorKind_BITWISE_RIGHT_SHIFT
-	case ">>>":
-		return OperatorKind_BITWISE_UNSIGNED_RIGHT_SHIFT
-	case "...":
-		return OperatorKind_CLOSED_RANGE
-	case "..<":
-		return OperatorKind_HALF_OPEN_RANGE
-	case "===":
-		return OperatorKind_REF_EQUAL
-	case "!==":
-		return OperatorKind_REF_NOT_EQUAL
-	case ".@":
-		return OperatorKind_ANNOT_ACCESS
-	case "UNDEF":
-		return OperatorKind_UNDEFINED
-	default:
-		panic("Unsupported operator: " + opValue)
-	}
+// TypeData pairs the AST type descriptor with the resolved semantic type.
+type TypeData struct {
+	// TypeDescriptor is the AST-level type representation. Available after AST
+	// construction; may be nil if the node has no attached descriptor.
+	TypeDescriptor TypeDescriptor
+	// Type is the resolved semantic type, set by the semantic analyzer.
+	Type semtypes.SemType
 }
 
-type DocumentationReferenceType string
-
-// Core/Base Interfaces
+// Core node interfaces.
 
 type Node interface {
 	GetKind() NodeKind
@@ -529,10 +60,8 @@ type Node interface {
 
 type NodeWithSymbol interface {
 	Node
-	Symbol() SymbolRef
+	Symbol() model.SymbolRef
 }
-
-// Top-Level/Structure Interfaces
 
 type TopLevelNode = Node
 
@@ -542,8 +71,6 @@ type CompilationUnitNode interface {
 	GetTopLevelNodes() []TopLevelNode
 	SetName(name string)
 	GetName() string
-	SetSourceKind(kind SourceKind)
-	GetSourceKind() SourceKind
 }
 
 type PackageNode interface {
@@ -571,29 +98,29 @@ type PackageNode interface {
 type ImportPackageNode interface {
 	Node
 	TopLevelNode
-	GetOrgName() IdentifierNode
-	GetPackageName() []IdentifierNode
-	SetPackageName([]IdentifierNode)
-	GetPackageVersion() IdentifierNode
-	SetPackageVersion(IdentifierNode)
-	GetAlias() IdentifierNode
-	SetAlias(IdentifierNode)
+	GetOrgName() *BLangIdentifier
+	GetPackageName() []*BLangIdentifier
+	SetPackageName([]*BLangIdentifier)
+	GetPackageVersion() *BLangIdentifier
+	SetPackageVersion(*BLangIdentifier)
+	GetAlias() *BLangIdentifier
+	SetAlias(*BLangIdentifier)
 }
 
 type XMLNSDeclarationNode interface {
 	TopLevelNode
 	GetNamespaceURI() ExpressionNode
 	SetNamespaceURI(namespaceURI ExpressionNode)
-	GetPrefix() IdentifierNode
-	SetPrefix(prefix IdentifierNode)
+	GetPrefix() *BLangIdentifier
+	SetPrefix(prefix *BLangIdentifier)
 }
 
 type AnnotationNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
+	GetName() *BLangIdentifier
+	SetName(name *BLangIdentifier)
 	GetTypeDescriptor() TypeDescriptor
 	SetTypeDescriptor(typeDescriptor TypeDescriptor)
 }
@@ -605,7 +132,10 @@ type ExprFunctionBodyNode interface {
 	GetExpr() ExpressionNode
 }
 
-// Variable/Constant Interfaces
+// BLangFunctionBody keeps Phase-1 name for the function-body polymorphism.
+type BLangFunctionBody = FunctionBodyNode
+
+// Variable/constant interfaces.
 
 type VariableNode interface {
 	NodeWithSymbol
@@ -622,15 +152,15 @@ type SimpleVariableNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
+	GetName() *BLangIdentifier
+	SetName(name *BLangIdentifier)
 }
 
 type ConstantNode interface {
 	GetAssociatedType() semtypes.SemType
 }
 
-// Function/Invokable Interfaces
+// Function/invokable interfaces.
 
 type InvokableNode interface {
 	AnnotatableNode
@@ -644,7 +174,7 @@ type InvokableNode interface {
 	GetBody() FunctionBodyNode
 	SetBody(body FunctionBodyNode)
 	HasBody() bool
-	GetRestParameters() SimpleVariableNode
+	GetRestParam() SimpleVariableNode
 	SetRestParameter(restParam SimpleVariableNode)
 }
 
@@ -654,14 +184,14 @@ type FunctionNode interface {
 	TopLevelNode
 }
 
-// Class/Service Interfaces
+// Class / service.
 
 type ClassDefinition interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
 	OrderedNode
-	GetName() IdentifierNode
+	GetName() *BLangIdentifier
 	GetMethods() iter.Seq2[string, FunctionNode]
 	GetMethod(name string) FunctionNode
 	GetInitFunction() FunctionNode
@@ -671,26 +201,26 @@ type ServiceNode interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
+	GetName() *BLangIdentifier
+	SetName(name *BLangIdentifier)
 	GetResources() []FunctionNode
 	IsAnonymousService() bool
 	GetAttachedExprs() []ExpressionNode
 	GetServiceClass() ClassDefinition
-	GetAbsolutePath() []IdentifierNode
+	GetAbsolutePath() []*BLangIdentifier
 	GetServiceNameLiteral() LiteralNode
 }
 
-// Type Interfaces
-
+// Type-definition node (carries either a BLangTypeDefinition or a
+// BLangClassDefinition).
 type TypeDefinition interface {
 	AnnotatableNode
 	DocumentableNode
 	TopLevelNode
 	OrderedNode
 	NodeWithSymbol
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
+	GetName() *BLangIdentifier
+	SetName(name *BLangIdentifier)
 	GetTypeData() TypeData
 	SetTypeData(typeData TypeData)
 	SetDeterminedType(ty semtypes.SemType)
@@ -698,36 +228,9 @@ type TypeDefinition interface {
 	SetCycleDepth(depth int)
 }
 
-type EnumDeclarationNode interface {
-	AnnotatableNode
-	DocumentableNode
-	TopLevelNode
-	NodeWithSymbol
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
-	GetMembers() []EnumMemberNode
-	AddMember(member EnumMemberNode)
-}
-
-type EnumMemberNode interface {
-	AnnotatableNode
-	DocumentableNode
-	NodeWithSymbol
-	GetName() IdentifierNode
-	SetName(name IdentifierNode)
-	GetExpression() ExpressionNode
-	SetExpression(expr ExpressionNode)
-}
-
-type TypeData struct {
-	// Represent semantic information (if available) of the type that are necessary to construct a value of the type.
-	// Will always be available after creating the AST but will be nil if there is no such type descriptor to the
-	// attached node.
-	TypeDescriptor TypeDescriptor
-	// Represents the actual type represented by the AST node. Will be initialized by the semantic analyzer, and will
-	// never be nil after that.
-	Type semtypes.SemType
-}
+// BTypeDefn is the Phase-1 polymorphic alias (*BLangTypeDefinition |
+// *BLangClassDefinition) — kept until single-name callers migrate.
+type BTypeDefn = TypeDefinition
 
 type TypeDescriptor interface {
 	Node
@@ -785,35 +288,15 @@ type FiniteTypeNode interface {
 	AddValue(value ExpressionNode)
 }
 
-type ObjectMemberKind uint8
-
-const (
-	ObjectMemberKindField ObjectMemberKind = iota
-	ObjectMemberKindMethod
-	ObjectMemberKindRemoteMethod
-	ObjectMemberKindResourceMethod
-)
-
-type Visibility uint8
-
-const (
-	VisibilityPrivate Visibility = iota
-	VisibilityPublic
-)
-
 type ObjectMember interface {
 	MemberKind() ObjectMemberKind
 	Name() string
-	Visibility() Visibility
+	Visibility() model.Visibility
 }
 
-type ObjectNetworkQuals uint8
-
-const (
-	ObjectNetworkQualsNone ObjectNetworkQuals = iota
-	ObjectNetworkQualsClient
-	ObjectNetworkQualsService
-)
+// BLangObjectMember is the Phase-1 polymorphic alias — (*BObjectField |
+// *BMethodDecl).
+type BLangObjectMember = ObjectMember
 
 type ObjectType interface {
 	ReferenceTypeNode
@@ -846,25 +329,25 @@ type ConstrainedTypeNode interface {
 
 type UserDefinedTypeNode interface {
 	ReferenceTypeNode
-	GetPackageAlias() IdentifierNode
-	GetTypeName() IdentifierNode
+	GetPackageAlias() *BLangIdentifier
+	GetTypeName() *BLangIdentifier
 }
 
-// Expression Interfaces
+// Expression interfaces.
 
-type ExpressionNode = Node
+type ExpressionNode = BLangActionOrExpression
 
 type VariableReferenceNode = ExpressionNode
 
 type BinaryExpressionNode interface {
 	GetLeftExpression() ExpressionNode
 	GetRightExpression() ExpressionNode
-	GetOperatorKind() OperatorKind
+	GetOperatorKind() model.OperatorKind
 }
 
 type UnaryExpressionNode interface {
 	GetExpression() ExpressionNode
-	GetOperatorKind() OperatorKind
+	GetOperatorKind() model.OperatorKind
 }
 
 type IndexBasedAccessNode interface {
@@ -876,7 +359,7 @@ type IndexBasedAccessNode interface {
 type FieldBasedAccessNode interface {
 	VariableReferenceNode
 	GetExpression() ExpressionNode
-	GetFieldName() IdentifierNode
+	GetFieldName() *BLangIdentifier
 }
 
 type ListConstructorExprNode interface {
@@ -905,8 +388,8 @@ type CommitExpressionNode interface {
 
 type SimpleVariableReferenceNode interface {
 	VariableReferenceNode
-	GetPackageAlias() IdentifierNode
-	GetVariableName() IdentifierNode
+	GetPackageAlias() *BLangIdentifier
+	GetVariableName() *BLangIdentifier
 }
 
 type LiteralNode interface {
@@ -928,6 +411,9 @@ type MappingField interface {
 	Node
 	IsKeyValueField() bool
 }
+
+// BLangMappingField is Phase-1 polymorphic alias.
+type BLangMappingField = MappingField
 
 type MappingVarNameFieldNode interface {
 	MappingField
@@ -953,8 +439,8 @@ type MarkdownDocumentationTextAttributeNode interface {
 
 type MarkdownDocumentationParameterAttributeNode interface {
 	ExpressionNode
-	GetParameterName() IdentifierNode
-	SetParameterName(parameterName IdentifierNode)
+	GetParameterName() *BLangIdentifier
+	SetParameterName(parameterName *BLangIdentifier)
 	GetParameterDocumentationLines() []string
 	AddParameterDocumentationLine(text string)
 	GetParameterDocumentation() string
@@ -985,17 +471,23 @@ type MarkDownDocumentationDeprecatedParametersAttributeNode interface {
 type WorkerReceiveNode interface {
 	ExpressionNode
 	ActionNode
-	GetWorkerName() IdentifierNode
-	SetWorkerName(identifierNode IdentifierNode)
+	GetWorkerName() *BLangIdentifier
+	SetWorkerName(identifierNode *BLangIdentifier)
 }
 
+// WorkerSendExpressionNode currently has no concrete implementations; it
+// exists as a placeholder for BLangWorkerReceive.Send until worker-send
+// expressions are modeled.
 type WorkerSendExpressionNode interface {
 	ExpressionNode
 	ActionNode
 	GetExpression() ExpressionNode
-	GetWorkerName() IdentifierNode
-	SetWorkerName(identifierNode IdentifierNode)
+	GetWorkerName() *BLangIdentifier
+	SetWorkerName(identifierNode *BLangIdentifier)
 }
+
+// BLangWorkerSendExpression is the Phase-1 alias.
+type BLangWorkerSendExpression = WorkerSendExpressionNode
 
 type MarkdownDocumentationReferenceAttributeNode interface {
 	Node
@@ -1030,8 +522,8 @@ type TypedescExpressionNode interface {
 
 type NamedArgNode interface {
 	ExpressionNode
-	SetName(name IdentifierNode)
-	GetName() IdentifierNode
+	SetName(name *BLangIdentifier)
+	GetName() *BLangIdentifier
 	GetExpression() ExpressionNode
 	SetExpression(expr ExpressionNode)
 }
@@ -1053,9 +545,15 @@ type TypeConversionNode interface {
 
 type DynamicArgNode = ExpressionNode
 
-// Statement Interfaces
+// Statement interfaces.
 
 type StatementNode = Node
+
+// BLangStatement promoted from alias to ast-owned name.
+type BLangStatement = StatementNode
+
+// BLangTopLevelNode is the ast-owned top-level polymorphism name.
+type BLangTopLevelNode = TopLevelNode
 
 type ContinueNode = StatementNode
 
@@ -1070,7 +568,7 @@ type AssignmentNode interface {
 
 type CompoundAssignmentNode interface {
 	AssignmentNode
-	GetOperatorKind() OperatorKind
+	GetOperatorKind() model.OperatorKind
 }
 
 type BlockNode interface {
@@ -1151,16 +649,19 @@ type ForeachNode interface {
 	SetOnFailClause(onFailClause OnFailClauseNode)
 }
 
-// Binding Pattern Interfaces
+// Binding pattern interfaces.
 
 type BindingPatternNode = Node
+
+// BLangBindingPattern is the ast-owned name.
+type BLangBindingPattern = BindingPatternNode
 
 type WildCardBindingPatternNode = Node
 
 type CaptureBindingPatternNode interface {
 	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
+	GetIdentifier() *BLangIdentifier
+	SetIdentifier(identifier *BLangIdentifier)
 }
 
 type SimpleBindingPatternNode interface {
@@ -1207,25 +708,26 @@ type ErrorFieldBindingPatternsNode interface {
 
 type NamedArgBindingPatternNode interface {
 	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
+	GetIdentifier() *BLangIdentifier
+	SetIdentifier(identifier *BLangIdentifier)
 	GetBindingPattern() BindingPatternNode
 	SetBindingPattern(bindingPattern BindingPatternNode)
 }
 
 type RestBindingPatternNode interface {
 	Node
-	GetIdentifier() IdentifierNode
-	SetIdentifier(identifier IdentifierNode)
+	GetIdentifier() *BLangIdentifier
+	SetIdentifier(identifier *BLangIdentifier)
 }
 
-// Match Pattern Interfaces
+// Match pattern interfaces.
 
 type MatchStatement interface {
 	StatementNode
 	GetExpression() ExpressionNode
 	GetClauses() []MatchClause
 }
+
 type MatchClause interface {
 	Node
 	GetMatchGuard() MatchGuard
@@ -1244,7 +746,7 @@ type ConstPatternNode interface {
 	GetExpression() ExpressionNode
 }
 
-// Clause Interfaces
+// Clause interfaces.
 
 type InputClauseNode interface {
 	Node
@@ -1307,7 +809,7 @@ type OnFailClauseNode interface {
 	SetBody(body BlockStatementNode)
 }
 
-// Documentation Interfaces
+// Documentation interfaces.
 
 type DocumentableNode interface {
 	Node
@@ -1334,7 +836,7 @@ type MarkdownDocumentationNode interface {
 	AddReference(reference MarkdownDocumentationReferenceAttributeNode)
 }
 
-// Other Interfaces
+// Other interfaces.
 
 type IdentifierNode interface {
 	GetValue() string
@@ -1345,10 +847,10 @@ type IdentifierNode interface {
 }
 
 type AnnotationAttachmentNode interface {
-	GetPackageAlias() IdentifierNode
-	SetPackageAlias(pkgAlias IdentifierNode)
-	GetAnnotationName() IdentifierNode
-	SetAnnotationName(name IdentifierNode)
+	GetPackageAlias() *BLangIdentifier
+	SetPackageAlias(pkgAlias *BLangIdentifier)
+	GetAnnotationName() *BLangIdentifier
+	SetAnnotationName(name *BLangIdentifier)
 	GetExpressionNode() ExpressionNode
 	SetExpressionNode(expr ExpressionNode)
 }
@@ -1395,25 +897,3 @@ const (
 	Point_WORKER         Point = "worker"
 	Point_CLASS          Point = "class"
 )
-
-type MarkdownDocAttachment struct {
-	Description             *string
-	Parameters              []Parameters
-	ReturnValueDescription  *string
-	DeprecatedDocumentation *string
-	DeprecatedParameters    []Parameters
-}
-
-type Parameters struct {
-	Name        *string
-	Description *string
-}
-
-type NamedNode interface {
-	GetName() Name
-}
-
-type InvokableType interface {
-	GetParameterTypes() []Type
-	GetReturnType() Type
-}

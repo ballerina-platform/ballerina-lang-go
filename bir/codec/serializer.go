@@ -114,7 +114,6 @@ func (bw *birWriter) writeGlobalVars(buf *bytes.Buffer, pkg *bir.BIRPackage) {
 		name := gv.GetName()
 		bw.writeStringCPEntry(buf, name.Value())
 		bw.writeFlags(buf, gv.Flags)
-		bw.writeOrigin(buf, gv.Origin)
 		bw.writeType(buf, gv.GetType())
 	}
 }
@@ -166,7 +165,6 @@ func (bw *birWriter) writeFunction(buf *bytes.Buffer, fn *bir.BIRFunction) {
 	bw.writeStringCPEntry(buf, fn.Name.Value())
 	bw.writeStringCPEntry(buf, fn.OriginalName.Value())
 	bw.writeFlags(buf, fn.Flags)
-	bw.writeOrigin(buf, fn.Origin)
 	bw.writeStringCPEntry(buf, fn.FunctionLookupKey)
 
 	bw.writeLength(buf, len(fn.RequiredParams))
@@ -563,10 +561,6 @@ func (bw *birWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
 
 func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags int64) {
 	write(buf, flags)
-}
-
-func (bw *birWriter) writeOrigin(buf *bytes.Buffer, origin model.SymbolOrigin) {
-	write(buf, uint8(origin))
 }
 
 func (bw *birWriter) writeStringCPEntry(buf *bytes.Buffer, str string) {

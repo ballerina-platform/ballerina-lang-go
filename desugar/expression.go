@@ -106,7 +106,7 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		// Wildcard binding pattern can appear in variable references (e.g., _ = expr)
 		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	case *ast.BLangXMLSequenceLiteral:
-		var initStmts []model.StatementNode
+		var initStmts []ast.StatementNode
 		for i, child := range expr.Children {
 			r := walkExpression(cx, child)
 			initStmts = append(initStmts, r.initStmts...)
@@ -114,7 +114,7 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		}
 		return desugaredNode[ast.BLangActionOrExpression]{initStmts: initStmts, replacementNode: expr}
 	case *ast.BLangXMLElementLiteral:
-		var initStmts []model.StatementNode
+		var initStmts []ast.StatementNode
 		for i := range expr.Attrs {
 			if expr.Attrs[i].Value != nil {
 				r := walkExpression(cx, expr.Attrs[i].Value)
@@ -136,7 +136,7 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 }
 
 func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.LhsExpr != nil {
 		result := walkExpression(cx, expr.LhsExpr)
@@ -265,7 +265,7 @@ func walkBinaryExpr(cx *functionContext, expr *ast.BLangBinaryExpr) desugaredNod
 }
 
 func walkUnaryExpr(cx *functionContext, expr *ast.BLangUnaryExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
@@ -348,7 +348,7 @@ func walkUnaryExpr(cx *functionContext, expr *ast.BLangUnaryExpr) desugaredNode[
 }
 
 func walkElvisExpr(cx *functionContext, expr *ast.BLangElvisExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.LhsExpr != nil {
 		result := walkExpression(cx, expr.LhsExpr)
@@ -369,7 +369,7 @@ func walkElvisExpr(cx *functionContext, expr *ast.BLangElvisExpr) desugaredNode[
 }
 
 func walkGroupExpr(cx *functionContext, expr *ast.BLangGroupExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expression != nil {
 		result := walkExpression(cx, expr.Expression)
@@ -384,7 +384,7 @@ func walkGroupExpr(cx *functionContext, expr *ast.BLangGroupExpr) desugaredNode[
 }
 
 func walkIndexBasedAccess(cx *functionContext, expr *ast.BLangIndexBasedAccess) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
@@ -405,7 +405,7 @@ func walkIndexBasedAccess(cx *functionContext, expr *ast.BLangIndexBasedAccess) 
 }
 
 func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
@@ -435,7 +435,7 @@ func walkFieldBaseAccess(cx *functionContext, expr *ast.BLangFieldBaseAccess) de
 }
 
 func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Receiver() != nil {
 		result := walkExpression(cx, expr.Receiver())
@@ -468,7 +468,7 @@ func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLang
 	}
 }
 
-func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.FunctionSymbol) []model.StatementNode {
+func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.FunctionSymbol) []ast.StatementNode {
 	sig := fnSym.Signature()
 	totalParams := len(sig.ParamTypes)
 	if totalParams == 0 {
@@ -496,7 +496,7 @@ func walkDirectCallArgs(cx *functionContext, expr invocable, fnSym model.Functio
 
 	pos := expr.GetPosition()
 	defaultableParams := fnSym.DefaultableParams()
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	var transformed []ast.BLangExpression
 	for i := range totalParams {
@@ -542,7 +542,7 @@ func synthesizeInferredTypedescArg(cx *functionContext, tdTy semtypes.SemType, p
 	return tdExpr
 }
 
-func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (model.StatementNode, *ast.BLangSimpleVarRef) {
+func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (ast.StatementNode, *ast.BLangSimpleVarRef) {
 	ty := initExpr.GetDeterminedType()
 	tempName, tempSymRef := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
 	tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}
@@ -562,7 +562,7 @@ func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagno
 }
 
 func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructorExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	for i := range expr.Exprs {
 		result := walkExpression(cx, expr.Exprs[i])
@@ -577,7 +577,7 @@ func walkListConstructorExpr(cx *functionContext, expr *ast.BLangListConstructor
 }
 
 func walkErrorConstructorExpr(cx *functionContext, expr *ast.BLangErrorConstructorExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	//nolint:staticcheck // TODO
 	if expr.ErrorTypeRef != nil {
@@ -622,7 +622,7 @@ func walkTrapExpr(cx *functionContext, expr *ast.BLangTrapExpr) desugaredNode[as
 }
 
 func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic bool) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	// Walk the inner expression first
 	if expr.Expr != nil {
@@ -655,7 +655,7 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 
 	typeTestExpr := &ast.BLangTypeTestExpr{}
 	typeTestExpr.Expr = tempVarRefForTest
-	typeTestExpr.Type = model.TypeData{Type: semtypes.ERROR}
+	typeTestExpr.Type = ast.TypeData{Type: semtypes.ERROR}
 	typeTestExpr.SetDeterminedType(semtypes.BOOLEAN)
 
 	// If body: return or panic
@@ -696,7 +696,7 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 }
 
 func walkDynamicArgExpr(cx *functionContext, expr *ast.BLangDynamicArgExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Condition != nil {
 		result := walkExpression(cx, expr.Condition)
@@ -728,7 +728,7 @@ func walkLambdaFunction(cx *functionContext, expr *ast.BLangLambdaFunction) desu
 }
 
 func walkTypeConversionExpr(cx *functionContext, expr *ast.BLangTypeConversionExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expression != nil {
 		result := walkExpression(cx, expr.Expression)
@@ -743,7 +743,7 @@ func walkTypeConversionExpr(cx *functionContext, expr *ast.BLangTypeConversionEx
 }
 
 func walkTypeTestExpr(cx *functionContext, expr *ast.BLangTypeTestExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
@@ -758,7 +758,7 @@ func walkTypeTestExpr(cx *functionContext, expr *ast.BLangTypeTestExpr) desugare
 }
 
 func walkAnnotAccessExpr(cx *functionContext, expr *ast.BLangAnnotAccessExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	if expr.Expr != nil {
 		result := walkExpression(cx, expr.Expr)
@@ -787,7 +787,7 @@ func walkArrowFunction(cx *functionContext, expr *ast.BLangArrowFunction) desuga
 	// Arrow functions have a body that may need desugaring
 	if expr.Body != nil {
 		result := walkExpression(cx, expr.Body.Expr.(ast.BLangActionOrExpression))
-		expr.Body.Expr = result.replacementNode
+		expr.Body.Expr = result.replacementNode.(ast.BLangExpression)
 		// Handle initStmts if needed - arrow functions may need special handling
 	}
 
@@ -797,7 +797,7 @@ func walkArrowFunction(cx *functionContext, expr *ast.BLangArrowFunction) desuga
 }
 
 func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	for i := range expr.ArgsExprs {
 		result := walkExpression(cx, expr.ArgsExprs[i])
@@ -815,7 +815,7 @@ func walkNewExpression(cx *functionContext, expr *ast.BLangNewExpression) desuga
 	}
 }
 
-func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []model.StatementNode {
+func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) []ast.StatementNode {
 	classSym, ok := cx.getSymbol(expr.ClassSymbol).(*model.ClassSymbol)
 	if !ok {
 		return nil
@@ -839,7 +839,7 @@ func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) 
 	}
 
 	pos := expr.GetPosition()
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	// Materialize original args into locals so the same node is not aliased into
 	// multiple default-lambda invocations. Mirrors walkDirectCallArgs behaviour.
@@ -880,7 +880,7 @@ func fillNewExprInitDefaults(cx *functionContext, expr *ast.BLangNewExpression) 
 }
 
 func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConstructorExpr) desugaredNode[ast.BLangActionOrExpression] {
-	var initStmts []model.StatementNode
+	var initStmts []ast.StatementNode
 
 	for _, field := range expr.Fields {
 		kv := field.(*ast.BLangMappingKeyValueField)
@@ -931,7 +931,7 @@ func isNilLiftableUnaryOp(op model.OperatorKind) bool {
 	}
 }
 
-func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast.BLangExpression, pos diagnostics.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast.BLangExpression, pos diagnostics.Location, initStmts []ast.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []ast.StatementNode) {
 	name, symbol := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
 	varName := &ast.BLangIdentifier{Value: name}
 	tempVar := &ast.BLangSimpleVariable{Name: varName}
@@ -944,7 +944,7 @@ func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast
 	return varName, symbol, append(initStmts, varDef)
 }
 
-func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos diagnostics.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos diagnostics.Location, initStmts []ast.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []ast.StatementNode) {
 	nilLit := &ast.BLangLiteral{Value: nil}
 	nilLit.SetDeterminedType(semtypes.NIL)
 	setPositionIfMissing(nilLit, pos)
@@ -965,7 +965,7 @@ func createNilTypeTest(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty 
 	ref := createVarRef(varName, symbol, ty)
 	typeTest := &ast.BLangTypeTestExpr{
 		Expr: ref,
-		Type: model.TypeData{Type: semtypes.NIL},
+		Type: ast.TypeData{Type: semtypes.NIL},
 	}
 	typeTest.SetDeterminedType(semtypes.BOOLEAN)
 	setPositionIfMissing(typeTest, pos)

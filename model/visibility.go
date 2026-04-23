@@ -14,31 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package desugar
+package model
 
-import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/tools/diagnostics"
+// PR-FIXME: are these used outside of front-end
+//
+//	also do we need these
+type Visibility uint8
+
+const (
+	VisibilityPrivate Visibility = iota
+	VisibilityPublic
 )
-
-type posUpdateVisitor struct {
-	pos diagnostics.Location
-}
-
-func (v *posUpdateVisitor) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return nil
-	}
-	if diagnostics.IsLocationEmpty(node.GetPosition()) {
-		node.SetPosition(v.pos)
-	}
-	return v
-}
-
-func (v *posUpdateVisitor) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
-	return v
-}
-
-func setPositionIfMissing(root ast.BLangNode, pos diagnostics.Location) {
-	ast.Walk(&posUpdateVisitor{pos: pos}, root)
-}

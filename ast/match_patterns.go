@@ -17,12 +17,11 @@
 package ast
 
 import (
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 )
 
 type BLangMatchPattern interface {
-	model.MatchPatternNode
+	MatchPatternNode
 	SetAcceptedType(semtypes.SemType)
 }
 
@@ -52,10 +51,10 @@ type (
 )
 
 var (
-	_ model.ConstPatternNode = &BLangConstPattern{}
-	_ model.MatchClause      = &BLangMatchClause{}
-	_ BLangMatchPattern      = &BLangConstPattern{}
-	_ BLangMatchPattern      = &BLangWildCardMatchPattern{}
+	_ ConstPatternNode  = &BLangConstPattern{}
+	_ MatchClause       = &BLangMatchClause{}
+	_ BLangMatchPattern = &BLangConstPattern{}
+	_ BLangMatchPattern = &BLangWildCardMatchPattern{}
 )
 
 var (
@@ -64,43 +63,39 @@ var (
 	_ BLangNode = &BLangWildCardMatchPattern{}
 )
 
-func (b *BLangConstPattern) GetKind() model.NodeKind {
+func (b *BLangConstPattern) GetKind() NodeKind {
 	// migrated from BLangConstPattern.java:53:5
-	return model.NodeKind_CONST_MATCH_PATTERN
+	return NodeKind_CONST_MATCH_PATTERN
 }
 
-func (b *BLangConstPattern) GetExpression() model.ExpressionNode {
+func (b *BLangConstPattern) GetExpression() ExpressionNode {
 	// migrated from BLangConstPattern.java:58:5
 	return b.Expr
 }
 
-func (b *BLangConstPattern) SetExpression(expression model.ExpressionNode) {
+func (b *BLangConstPattern) SetExpression(expression ExpressionNode) {
 	// migrated from BLangConstPattern.java:63:5
-	if expr, ok := expression.(BLangExpression); ok {
-		b.Expr = expr
-	} else {
-		panic("Expected BLangExpression")
-	}
+	b.Expr = expression.(BLangExpression)
 }
 
-func (b *BLangWildCardMatchPattern) GetKind() model.NodeKind {
-	return model.NodeKind_WILDCARD_MATCH_PATTERN
+func (b *BLangWildCardMatchPattern) GetKind() NodeKind {
+	return NodeKind_WILDCARD_MATCH_PATTERN
 }
 
-func (b *BLangMatchClause) GetKind() model.NodeKind {
-	return model.NodeKind_MATCH_CLAUSE
+func (b *BLangMatchClause) GetKind() NodeKind {
+	return NodeKind_MATCH_CLAUSE
 }
 
-func (b *BLangMatchClause) GetMatchGuard() model.MatchGuard {
+func (b *BLangMatchClause) GetMatchGuard() MatchGuard {
 	return b.Guard
 }
 
-func (b *BLangMatchClause) GetBlockStatementNode() model.BlockStatementNode {
+func (b *BLangMatchClause) GetBlockStatementNode() BlockStatementNode {
 	return &b.Body
 }
 
-func (b *BLangMatchClause) GetMatchPatterns() []model.MatchPatternNode {
-	result := make([]model.MatchPatternNode, len(b.Patterns))
+func (b *BLangMatchClause) GetMatchPatterns() []MatchPatternNode {
+	result := make([]MatchPatternNode, len(b.Patterns))
 	for i, p := range b.Patterns {
 		result[i] = p
 	}
@@ -108,7 +103,7 @@ func (b *BLangMatchClause) GetMatchPatterns() []model.MatchPatternNode {
 }
 
 func (b *BLangMatchClause) SetMatchClause(node BLangMatchGuard) {
-	b.Guard = node
+	b.Guard = node.(BLangExpression)
 }
 
 func (b *BLangMatchClause) SetBlockStatementNode(node BLangBlockStmt) {

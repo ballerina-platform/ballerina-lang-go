@@ -44,17 +44,17 @@ type typeTable struct {
 
 func newTypeTable() typeTable {
 	return typeTable{
-		booleanType: &BTypeBasic{tag: model.TypeTags_BOOLEAN, flags: Flags_READONLY},
-		intType:     &BTypeBasic{tag: model.TypeTags_INT, flags: Flags_READONLY},
-		nilType:     &BTypeBasic{tag: model.TypeTags_NIL, flags: Flags_READONLY},
-		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: Flags_READONLY},
-		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: Flags_READONLY},
-		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: Flags_READONLY},
-		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: Flags_READONLY},
+		booleanType: &BTypeBasic{tag: model.TypeTags_BOOLEAN, flags: FlagReadonly},
+		intType:     &BTypeBasic{tag: model.TypeTags_INT, flags: FlagReadonly},
+		nilType:     &BTypeBasic{tag: model.TypeTags_NIL, flags: FlagReadonly},
+		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: FlagReadonly},
+		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: FlagReadonly},
+		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: FlagReadonly},
+		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: FlagReadonly},
 	}
 }
 
-func (t *typeTable) getTypeFromTag(tag model.TypeTags) model.TypeDescriptor {
+func (t *typeTable) getTypeFromTag(tag model.TypeTags) TypeDescriptor {
 	switch tag {
 	case model.TypeTags_BOOLEAN:
 		return t.booleanType
@@ -840,7 +840,7 @@ func (n *NodeBuilder) getNextAnonymousTypeKey(packageID *model.PackageID, suffix
 
 // createTypeNode creates a type node from a syntax tree node
 // This delegates to the appropriate Transform method based on the node type
-func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
+func (n *NodeBuilder) createTypeNode(typeNode tree.Node) TypeDescriptor {
 	if typeNode == nil {
 		panic("createTypeNode: typeNode is nil")
 	}
@@ -862,7 +862,7 @@ func (n *NodeBuilder) createTypeNode(typeNode tree.Node) model.TypeDescriptor {
 		nameReferenceNode := typeNode.(*tree.SimpleNameReferenceNode)
 		return n.createTypeNode(nameReferenceNode.Name())
 	default:
-		return n.TransformSyntaxNode(typeNode).(model.TypeDescriptor)
+		return n.TransformSyntaxNode(typeNode).(BType)
 	}
 }
 
@@ -912,7 +912,7 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 	return bLSimpleVar
 }
 
-func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) model.TypeDescriptor {
+func (n *NodeBuilder) createBuiltInTypeNode(typeNode tree.Node) TypeDescriptor {
 	var typeText string
 	if typeNode.Kind() == common.NIL_TYPE_DESC {
 		typeText = "()"
@@ -1085,7 +1085,7 @@ func isType(nodeKind common.SyntaxKind) bool {
 
 // createSimpleLiteral creates a simple literal from a node
 // migrated from BLangNodeBuilder.java:6095:5
-func (n *NodeBuilder) createSimpleLiteral(literal tree.Node) model.LiteralNode {
+func (n *NodeBuilder) createSimpleLiteral(literal tree.Node) LiteralNode {
 	return n.createSimpleLiteralInner(literal, n.isInFiniteContext)
 }
 
@@ -1194,8 +1194,8 @@ func isNumericLiteral(kind common.SyntaxKind) bool {
 
 // createSimpleLiteralInner creates a simple literal from a node
 // migrated from BLangNodeBuilder.java:6106:5
-func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType bool) model.LiteralNode {
-	var bLiteral model.LiteralNode
+func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType bool) LiteralNode {
+	var bLiteral LiteralNode
 	kind := literal.Kind()
 	var typeTag model.TypeTags = -1
 	var value any = nil
@@ -1309,7 +1309,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			bLiteral = &BLangLiteral{}
 		}
 	} else if kind == common.BYTE_ARRAY_LITERAL {
-		return n.TransformSyntaxNode(literal).(model.LiteralNode)
+		return n.TransformSyntaxNode(literal).(LiteralNode)
 	}
 	bLangNode := bLiteral.(BLangNode)
 	bLangNode.SetPosition(getPosition(n.de(), literal))
@@ -1359,7 +1359,7 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 		// Dispatch to TransformSyntaxNode which handles all node types
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
-		node := transformedNode.(model.TopLevelNode)
+		node := transformedNode.(TopLevelNode)
 		compilationUnit.AddTopLevelNode(node)
 	}
 
@@ -1405,7 +1405,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 	parameters := funcSignature.Parameters()
 	for param := range parameters.Iterator() {
 		// Transform parameter using TransformSyntaxNode
-		paramNode := n.TransformSyntaxNode(param).(model.SimpleVariableNode)
+		paramNode := n.TransformSyntaxNode(param).(SimpleVariableNode)
 
 		// Special handling for rest parameters
 		if _, isRestParam := param.(*tree.RestParameterNode); isRestParam {
@@ -1437,7 +1437,7 @@ func (n *NodeBuilder) populateFuncSignature(bLFunction *BLangFunction, funcSigna
 		}
 	} else {
 		// Default return type is nil when not specified
-		nilReturnType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+		nilReturnType := &BLangValueType{TypeKind: TypeKind_NIL}
 		nilReturnType.pos = diagnostics.NewBuiltinLocation()
 		bLFunction.SetReturnTypeDescriptor(nilReturnType)
 	}
@@ -1487,9 +1487,9 @@ func (n *NodeBuilder) populateFunctionNode(name BLangIdentifier, qualifierList t
 		blFunction.Body = nil
 		blFunction.SetInterface()
 	} else {
-		body := n.TransformSyntaxNode(funcBody).(model.FunctionBodyNode)
+		body := n.TransformSyntaxNode(funcBody).(FunctionBodyNode)
 		blFunction.Body = body
-		if body.GetKind() == model.NodeKind_EXTERN_FUNCTION_BODY {
+		if body.GetKind() == NodeKind_EXTERN_FUNCTION_BODY {
 			blFunction.SetNative()
 		}
 	}
@@ -1584,7 +1584,7 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 	n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, typeDef.Name.GetValue())
 
-	typeData := model.TypeData{
+	typeData := TypeData{
 		TypeDescriptor: n.createTypeNode(typeDefinitionNode.TypeDescriptor()),
 	}
 	typeDef.SetTypeData(typeData)
@@ -1663,7 +1663,7 @@ func (n *NodeBuilder) TransformVariableDeclaration(variableDeclarationNode *tree
 	return varNode.(BLangNode)
 }
 
-func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) model.VariableDefinitionNode {
+func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBindingPattern *tree.TypedBindingPatternNode, initializer tree.ExpressionNode, finalKeyword tree.Token) VariableDefinitionNode {
 	bindingPattern := typedBindingPattern.BindingPattern()
 
 	variable := n.getBLangVariableNode(bindingPattern, location)
@@ -2044,7 +2044,7 @@ func (n *NodeBuilder) TransformMethodCallExpression(methodCallExpressionNode *tr
 
 func (n *NodeBuilder) TransformMappingConstructorExpression(mappingConstructorExpressionNode *tree.MappingConstructorExpressionNode) BLangNode {
 	mappingConstructor := &BLangMappingConstructorExpr{
-		Fields: make([]model.MappingField, 0),
+		Fields: make([]MappingField, 0),
 	}
 	fields := mappingConstructorExpressionNode.FieldNodes()
 	for i := 0; i < fields.Size(); i += 2 {
@@ -2363,16 +2363,16 @@ func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNo
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
-	objectType := &BLangObjectType{members: make(map[string]model.ObjectMember)}
+	objectType := &BLangObjectType{members: make(map[string]ObjectMember)}
 
 	// Process object type qualifiers (client/service/isolated)
 	qualifiers := objectTypeDescriptorNode.ObjectTypeQualifiers()
 	for q := range qualifiers.Iterator() {
 		switch q.Kind() {
 		case common.CLIENT_KEYWORD:
-			objectType.NetworkQuals = model.ObjectNetworkQualsClient
+			objectType.NetworkQuals = ObjectNetworkQualsClient
 		case common.SERVICE_KEYWORD:
-			objectType.NetworkQuals = model.ObjectNetworkQualsService
+			objectType.NetworkQuals = ObjectNetworkQualsService
 		case common.ISOLATED_KEYWORD:
 			objectType.Isolated = true
 		}
@@ -2403,7 +2403,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			bMethod := &BMethodDecl{}
 			bMethod.name = methodName
 			bMethod.pos = getPosition(n.de(), methodDecl)
-			bMethod.memberKind = model.ObjectMemberKindMethod
+			bMethod.memberKind = ObjectMemberKindMethod
 
 			// Process visibility and method kind from qualifier list
 			methodQuals := methodDecl.QualifierList()
@@ -2412,9 +2412,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				case common.PUBLIC_KEYWORD:
 					bMethod.visibility = model.VisibilityPublic
 				case common.REMOTE_KEYWORD:
-					bMethod.memberKind = model.ObjectMemberKindRemoteMethod
+					bMethod.memberKind = ObjectMemberKindRemoteMethod
 				case common.RESOURCE_KEYWORD:
-					bMethod.memberKind = model.ObjectMemberKindResourceMethod
+					bMethod.memberKind = ObjectMemberKindResourceMethod
 				case common.ISOLATED_KEYWORD:
 					bMethod.SetIsolated()
 				case common.TRANSACTIONAL_KEYWORD:
@@ -2422,7 +2422,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				}
 			}
 
-			if bMethod.memberKind == model.ObjectMemberKindRemoteMethod {
+			if bMethod.memberKind == ObjectMemberKindRemoteMethod {
 				bMethod.name = model.RemoteMethodName(bMethod.name)
 			}
 
@@ -2442,9 +2442,9 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 
 				// Process return type
 				if retTypeDesc := funcSig.ReturnTypeDesc(); retTypeDesc != nil {
-					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type())
+					bMethod.ReturnTypeDescriptor = n.createTypeNode(retTypeDesc.Type()).(BType)
 				} else {
-					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: model.TypeKind_NIL}
+					bMethod.ReturnTypeDescriptor = &BLangValueType{TypeKind: TypeKind_NIL}
 				}
 			}
 
@@ -2526,13 +2526,13 @@ func (n *NodeBuilder) TransformNilTypeDescriptor(nilTypeDescriptorNode *tree.Nil
 
 func (n *NodeBuilder) TransformOptionalTypeDescriptor(optionalTypeDescriptorNode *tree.OptionalTypeDescriptorNode) BLangNode {
 	typeDesc := optionalTypeDescriptorNode.TypeDescriptor()
-	nilType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+	nilType := &BLangValueType{TypeKind: TypeKind_NIL}
 	nilType.pos = getPosition(n.de(), optionalTypeDescriptorNode.QuestionMarkToken())
 	bLUnionType := &BLangUnionTypeNode{
-		lhs: model.TypeData{
+		lhs: TypeData{
 			TypeDescriptor: n.createTypeNode(typeDesc),
 		},
-		rhs: model.TypeData{
+		rhs: TypeData{
 			TypeDescriptor: nilType,
 		},
 	}
@@ -2625,7 +2625,7 @@ func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.T
 	typeTestExpr := &BLangTypeTestExpr{}
 	typeTestExpr.isNegation = typeTestExpressionNode.IsKeyword().Kind() == common.NOT_IS_KEYWORD
 	typeTestExpr.Expr = n.createExpression(typeTestExpressionNode.Expression())
-	typeTestExpr.Type = model.TypeData{TypeDescriptor: n.createTypeNode(typeTestExpressionNode.TypeDescriptor())}
+	typeTestExpr.Type = TypeData{TypeDescriptor: n.createTypeNode(typeTestExpressionNode.TypeDescriptor())}
 	typeTestExpr.SetPosition(getPosition(n.de(), typeTestExpressionNode))
 	return typeTestExpr
 }
@@ -2643,7 +2643,7 @@ func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode
 
 func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.MapTypeDescriptorNode) BLangNode {
 	refType := &BLangBuiltInRefTypeNode{
-		TypeKind: model.TypeKind_MAP,
+		TypeKind: TypeKind_MAP,
 	}
 	refType.SetPosition(getPosition(n.de(), mapTypeDescriptorNode))
 
@@ -2654,8 +2654,8 @@ func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.Map
 	constraint := n.createTypeNode(mapTypeParamsNode.TypeNode())
 
 	constrainedType := &BLangConstrainedType{
-		Type:       model.TypeData{TypeDescriptor: refType},
-		Constraint: model.TypeData{TypeDescriptor: constraint},
+		Type:       TypeData{TypeDescriptor: refType},
+		Constraint: TypeData{TypeDescriptor: constraint},
 	}
 	constrainedType.SetPosition(refType.GetPosition())
 	return constrainedType
@@ -2786,7 +2786,7 @@ func (n *NodeBuilder) TransformTypeCastExpression(typeCastExpressionNode *tree.T
 	typeConversionNode.SetPosition(getPosition(n.de(), typeCastExpressionNode))
 	typeCastParamNode := typeCastExpressionNode.TypeCastParam()
 	if typeCastParamNode != nil && typeCastParamNode.Type() != nil {
-		typeConversionNode.TypeDescriptor = n.createTypeNode(typeCastParamNode.Type())
+		typeConversionNode.TypeDescriptor = n.createTypeNode(typeCastParamNode.Type()).(BType)
 	} else {
 		panic("type cast param node type is not present")
 	}
@@ -2806,10 +2806,10 @@ func (n *NodeBuilder) TransformUnionTypeDescriptor(unionTypeDescriptorNode *tree
 	lhs := unionTypeDescriptorNode.LeftTypeDesc()
 	rhs := unionTypeDescriptorNode.RightTypeDesc()
 	bLUnionType := &BLangUnionTypeNode{
-		lhs: model.TypeData{
+		lhs: TypeData{
 			TypeDescriptor: n.createTypeNode(lhs),
 		},
-		rhs: model.TypeData{
+		rhs: TypeData{
 			TypeDescriptor: n.createTypeNode(rhs),
 		},
 	}
@@ -3095,9 +3095,9 @@ func (n *NodeBuilder) TransformFunctionTypeDescriptor(functionTypeDescriptorNode
 
 		// Set Return Type
 		if retNode := funcSignature.ReturnTypeDesc(); retNode != nil {
-			funcType.ReturnTypeDescriptor = n.createTypeNode(retNode.Type())
+			funcType.ReturnTypeDescriptor = n.createTypeNode(retNode.Type()).(BType)
 		} else {
-			retType := &BLangValueType{TypeKind: model.TypeKind_NIL}
+			retType := &BLangValueType{TypeKind: TypeKind_NIL}
 			retType.pos = diagnostics.NewBuiltinLocation()
 			funcType.ReturnTypeDescriptor = retType
 		}
@@ -3167,7 +3167,7 @@ func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprN
 	ident := createIdentifier(diagnostics.NewBuiltinLocation(), &name, &name)
 	bLFunction.Name = ident
 	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
-	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(model.FunctionBodyNode)
+	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(FunctionBodyNode)
 	bLFunction.Body = body
 	bLFunction.pos = getPosition(n.de(), anonFuncExprNode)
 	bLFunction.SetAnonymous()
@@ -3195,7 +3195,7 @@ func (n *NodeBuilder) TransformTupleTypeDescriptor(tupleTypeDescriptorNode *tree
 		node := types.Get(i)
 		if node.Kind() == common.REST_TYPE {
 			restDescriptor := node.(*tree.RestDescriptorNode)
-			tupleTypeNode.Rest = n.createTypeNode(restDescriptor.TypeDescriptor())
+			tupleTypeNode.Rest = n.createTypeNode(restDescriptor.TypeDescriptor()).(BType)
 		} else {
 			memberNode := node.(*tree.MemberTypeDescriptorNode)
 			member := BLangMemberTypeDesc{
@@ -3274,10 +3274,10 @@ func (n *NodeBuilder) TransformLetClause(letClauseNode *tree.LetClauseNode) BLan
 	letClause := &BLangLetClause{}
 	letClause.pos = getPosition(n.de(), letClauseNode)
 	letVarDeclarations := letClauseNode.LetVarDeclarations()
-	letClause.LetVarDeclarations = make([]model.VariableDefinitionNode, 0, letVarDeclarations.Size())
+	letClause.LetVarDeclarations = make([]BLangSimpleVariableDef, 0, letVarDeclarations.Size())
 	for letVar := range letVarDeclarations.Iterator() {
-		varDef := n.TransformLetVariableDeclaration(letVar).(model.VariableDefinitionNode)
-		letClause.LetVarDeclarations = append(letClause.LetVarDeclarations, varDef)
+		varDef := n.TransformLetVariableDeclaration(letVar).(*BLangSimpleVariableDef)
+		letClause.LetVarDeclarations = append(letClause.LetVarDeclarations, *varDef)
 	}
 	return letClause
 }
@@ -3341,8 +3341,8 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 
 	if constructType := queryExpressionNode.QueryConstructType(); constructType != nil {
 		switch constructType.Keyword().Text() {
-		case string(model.TypeKind_MAP):
-			queryExpr.QueryConstructType = model.TypeKind_MAP
+		case string(TypeKind_MAP):
+			queryExpr.QueryConstructType = TypeKind_MAP
 		default:
 			n.cx.Unimplemented("only map query construct type is supported for now", getPosition(n.de(), constructType))
 		}
@@ -3389,10 +3389,10 @@ func (n *NodeBuilder) TransformIntersectionTypeDescriptor(intersectionTypeDescri
 	lhs := intersectionTypeDescriptorNode.LeftTypeDesc()
 	rhs := intersectionTypeDescriptorNode.RightTypeDesc()
 	bLIntersectionType := &BLangIntersectionTypeNode{
-		lhs: model.TypeData{
+		lhs: TypeData{
 			TypeDescriptor: n.createTypeNode(lhs),
 		},
-		rhs: model.TypeData{
+		rhs: TypeData{
 			TypeDescriptor: n.createTypeNode(rhs),
 		},
 	}
@@ -3533,7 +3533,7 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 	}
 
 	memberNodes := enumDeclarationNode.EnumMemberList()
-	memberTypeNodes := make([]model.TypeDescriptor, 0)
+	memberTypeNodes := make([]TypeDescriptor, 0)
 	for memberNode := range memberNodes.Iterator() {
 		if memberNode.Kind() != common.ENUM_MEMBER {
 			continue
@@ -3569,17 +3569,17 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 		current := memberTypeNodes[0]
 		for i := 1; i < len(memberTypeNodes); i++ {
 			unionType := &BLangUnionTypeNode{
-				lhs: model.TypeData{TypeDescriptor: current},
-				rhs: model.TypeData{TypeDescriptor: memberTypeNodes[i]},
+				lhs: TypeData{TypeDescriptor: current},
+				rhs: TypeData{TypeDescriptor: memberTypeNodes[i]},
 			}
 			unionType.pos = typeDef.pos
 			current = unionType
 		}
-		typeDef.SetTypeData(model.TypeData{TypeDescriptor: current})
+		typeDef.SetTypeData(TypeData{TypeDescriptor: current})
 	} else {
-		neverType := &BLangValueType{TypeKind: model.TypeKind_NEVER}
+		neverType := &BLangValueType{TypeKind: TypeKind_NEVER}
 		neverType.pos = diagnostics.NewBuiltinLocation()
-		typeDef.SetTypeData(model.TypeData{TypeDescriptor: neverType})
+		typeDef.SetTypeData(TypeData{TypeDescriptor: neverType})
 		n.cx.SyntaxError("missing enum member", typeDef.Name.GetPosition())
 	}
 
@@ -3614,7 +3614,7 @@ func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, p
 		constantNode.Expr = n.createSimpleLiteral(enumMemberNode.Identifier()).(BLangExpression)
 	}
 
-	stringType := &BLangValueType{TypeKind: model.TypeKind_STRING}
+	stringType := &BLangValueType{TypeKind: TypeKind_STRING}
 	stringType.pos = diagnostics.NewBuiltinLocation()
 	constantNode.SetTypeNode(stringType)
 
@@ -3653,7 +3653,7 @@ func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree
 
 	arrayTypeNode := &BLangArrayType{}
 	arrayTypeNode.pos = position
-	arrayTypeNode.Elemtype = model.TypeData{
+	arrayTypeNode.Elemtype = TypeData{
 		TypeDescriptor: n.createTypeNode(arrayTypeDescriptorNode.MemberTypeDesc()),
 	}
 	arrayTypeNode.Dimensions = dimensionSize
@@ -3861,7 +3861,7 @@ func (n *NodeBuilder) addReferencesAndReturnDocumentationText(references *[]BLan
 				contentString = tree.ToSourceCode(backtickContent.InternalNode())
 			}
 			bLangRefDoc.ReferenceName = contentString
-			bLangRefDoc.Type = model.DocumentationReferenceType("BACKTICK_CONTENT")
+			bLangRefDoc.Type = DocumentationReferenceType("BACKTICK_CONTENT")
 
 			referenceType := balNameRefNode.ReferenceType()
 			if referenceType != nil && !referenceType.IsMissing() {
@@ -4027,28 +4027,28 @@ func (n *NodeBuilder) transformCodeBlock(documentationLines *[]BLangMarkdownDocu
 	*documentationLines = append(*documentationLines, bLangDocLine)
 }
 
-func (n *NodeBuilder) stringToRefType(refTypeName string) model.DocumentationReferenceType {
+func (n *NodeBuilder) stringToRefType(refTypeName string) DocumentationReferenceType {
 	switch refTypeName {
 	case "type":
-		return model.DocumentationReferenceType("TYPE")
+		return DocumentationReferenceType("TYPE")
 	case "service":
-		return model.DocumentationReferenceType("SERVICE")
+		return DocumentationReferenceType("SERVICE")
 	case "variable":
-		return model.DocumentationReferenceType("VARIABLE")
+		return DocumentationReferenceType("VARIABLE")
 	case "var":
-		return model.DocumentationReferenceType("VAR")
+		return DocumentationReferenceType("VAR")
 	case "annotation":
-		return model.DocumentationReferenceType("ANNOTATION")
+		return DocumentationReferenceType("ANNOTATION")
 	case "module":
-		return model.DocumentationReferenceType("MODULE")
+		return DocumentationReferenceType("MODULE")
 	case "function":
-		return model.DocumentationReferenceType("FUNCTION")
+		return DocumentationReferenceType("FUNCTION")
 	case "parameter":
-		return model.DocumentationReferenceType("PARAMETER")
+		return DocumentationReferenceType("PARAMETER")
 	case "const":
-		return model.DocumentationReferenceType("CONST")
+		return DocumentationReferenceType("CONST")
 	default:
-		return model.DocumentationReferenceType("BACKTICK_CONTENT")
+		return DocumentationReferenceType("BACKTICK_CONTENT")
 	}
 }
 
@@ -4244,7 +4244,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 
 	arguments := errorConstructorExpressionNode.Arguments()
 	positionalArgs := make([]BLangExpression, 0)
-	namedArgs := make([]*BLangNamedArgsExpression, 0)
+	namedArgs := make([]BLangNamedArgsExpression, 0)
 
 	for arg := range arguments.Iterator() {
 		switch arg.Kind() {
@@ -4256,7 +4256,7 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 		case common.NAMED_ARG:
 			namedArgNode := arg.(*tree.NamedArgumentNode)
 			namedArg := n.TransformNamedArgument(namedArgNode).(*BLangNamedArgsExpression)
-			namedArgs = append(namedArgs, namedArg)
+			namedArgs = append(namedArgs, *namedArg)
 		case common.REST_ARG:
 			n.cx.InternalError("rest arguments not supported in error constructor", getPosition(n.de(), arg))
 		default:
@@ -4287,20 +4287,20 @@ func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTy
 	if typeParamNode == nil {
 		valueType := &BLangValueType{}
 		valueType.pos = getPosition(n.de(), node)
-		valueType.TypeKind = model.TypeKind_TYPEDESC
+		valueType.TypeKind = TypeKind_TYPEDESC
 		return valueType
 	}
 	constrainedType := &BLangConstrainedType{}
 	constrainedType.pos = getPosition(n.de(), node)
 	base := &BLangValueType{}
 	base.pos = getPosition(n.de(), node)
-	base.TypeKind = model.TypeKind_TYPEDESC
-	constrainedType.Type = model.TypeData{TypeDescriptor: base}
+	base.TypeKind = TypeKind_TYPEDESC
+	constrainedType.Type = TypeData{TypeDescriptor: base}
 	constraint := typeParamNode.TypeNode()
 	if constraint == nil {
-		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(typeParamNode)}
+		constrainedType.Constraint = TypeData{TypeDescriptor: n.createTypeNode(typeParamNode)}
 	} else {
-		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(constraint)}
+		constrainedType.Constraint = TypeData{TypeDescriptor: n.createTypeNode(constraint)}
 	}
 	return constrainedType
 }
@@ -4311,17 +4311,17 @@ func (n *NodeBuilder) transformXMLTypeDescriptor(parameterizedTypeDescriptorNode
 	if typeParamNode == nil {
 		valueType := &BLangValueType{}
 		valueType.pos = pos
-		valueType.TypeKind = model.TypeKind_XML
+		valueType.TypeKind = TypeKind_XML
 		return valueType
 	}
 	refType := &BLangBuiltInRefTypeNode{
-		TypeKind: model.TypeKind_XML,
+		TypeKind: TypeKind_XML,
 	}
 	refType.SetPosition(pos)
 	constraint := n.createTypeNode(typeParamNode.TypeNode())
 	constrainedType := &BLangConstrainedType{
-		Type:       model.TypeData{TypeDescriptor: refType},
-		Constraint: model.TypeData{TypeDescriptor: constraint},
+		Type:       TypeData{TypeDescriptor: refType},
+		Constraint: TypeData{TypeDescriptor: constraint},
 	}
 	constrainedType.SetPosition(pos)
 	return constrainedType
@@ -4334,7 +4334,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 	// Handle optional type parameter
 	typeParamNode := errorTypeDescriptorNode.TypeParamNode()
 	if typeParamNode != nil {
-		errorType.DetailType = model.TypeData{
+		errorType.DetailType = TypeData{
 			TypeDescriptor: n.createTypeNode(typeParamNode),
 		}
 	}
@@ -4495,60 +4495,60 @@ func getConstantInitValue(expr BLangActionOrExpression) string {
 	return ""
 }
 
-func stringToTypeKind(typeText string) model.TypeKind {
+func stringToTypeKind(typeText string) TypeKind {
 	switch typeText {
 	case "int":
-		return model.TypeKind_INT
+		return TypeKind_INT
 	case "byte":
-		return model.TypeKind_BYTE
+		return TypeKind_BYTE
 	case "float":
-		return model.TypeKind_FLOAT
+		return TypeKind_FLOAT
 	case "decimal":
-		return model.TypeKind_DECIMAL
+		return TypeKind_DECIMAL
 	case "boolean":
-		return model.TypeKind_BOOLEAN
+		return TypeKind_BOOLEAN
 	case "string":
-		return model.TypeKind_STRING
+		return TypeKind_STRING
 	case "json":
-		return model.TypeKind_JSON
+		return TypeKind_JSON
 	case "xml":
-		return model.TypeKind_XML
+		return TypeKind_XML
 	case "stream":
-		return model.TypeKind_STREAM
+		return TypeKind_STREAM
 	case "table":
-		return model.TypeKind_TABLE
+		return TypeKind_TABLE
 	case "any":
-		return model.TypeKind_ANY
+		return TypeKind_ANY
 	case "anydata":
-		return model.TypeKind_ANYDATA
+		return TypeKind_ANYDATA
 	case "map":
-		return model.TypeKind_MAP
+		return TypeKind_MAP
 	case "future":
-		return model.TypeKind_FUTURE
+		return TypeKind_FUTURE
 	case "typedesc":
-		return model.TypeKind_TYPEDESC
+		return TypeKind_TYPEDESC
 	case "error":
-		return model.TypeKind_ERROR
+		return TypeKind_ERROR
 	case "()", "null":
-		return model.TypeKind_NIL
+		return TypeKind_NIL
 	case "never":
-		return model.TypeKind_NEVER
+		return TypeKind_NEVER
 	case "channel":
-		return model.TypeKind_CHANNEL
+		return TypeKind_CHANNEL
 	case "service":
-		return model.TypeKind_SERVICE
+		return TypeKind_SERVICE
 	case "handle":
-		return model.TypeKind_HANDLE
+		return TypeKind_HANDLE
 	case "readonly":
-		return model.TypeKind_READONLY
+		return TypeKind_READONLY
 	case "function":
-		return model.TypeKind_FUNCTION
+		return TypeKind_FUNCTION
 	default:
 		panic("stringToTypeKind: invalid type name: " + typeText)
 	}
 }
 
-func createUserDefinedType(pos diagnostics.Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) model.TypeDescriptor {
+func createUserDefinedType(pos diagnostics.Location, pkgAlias BLangIdentifier, typeName BLangIdentifier) TypeDescriptor {
 	userDefinedType := BLangUserDefinedType{}
 	userDefinedType.pos = pos
 	userDefinedType.PkgAlias = pkgAlias
@@ -4560,7 +4560,7 @@ func getNextMissingNodeName(pkgID *model.PackageID) string {
 	panic("getNextMissingNodeName unimplemented")
 }
 
-func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos diagnostics.Location) model.VariableNode {
+func (n *NodeBuilder) getBLangVariableNode(bindingPattern tree.BindingPatternNode, varPos diagnostics.Location) VariableNode {
 	var varName tree.Token
 	switch bindingPattern.Kind() {
 	case common.WILDCARD_BINDING_PATTERN:

@@ -33,10 +33,28 @@ const (
 	ProjectKind_WORKSPACE_PROJECT
 )
 
+type ObjectNetworkQuals uint8
+
+const (
+	ObjectNetworkQualsNone ObjectNetworkQuals = iota
+	ObjectNetworkQualsClient
+	ObjectNetworkQualsService
+)
+
+type ObjectMemberKind uint8
+
+const (
+	ObjectMemberKindField ObjectMemberKind = iota
+	ObjectMemberKindMethod
+	ObjectMemberKindRemoteMethod
+	ObjectMemberKindResourceMethod
+)
+
 type BType interface {
-	model.Type
-	SetTypeData(ty model.TypeData)
-	GetTypeData() model.TypeData
+	TypeDescriptor
+	SetTypeData(ty TypeData)
+	GetTypeData() TypeData
+	GetTypeKind() TypeKind
 	BTypeGetTag() model.TypeTags
 	BTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
@@ -48,7 +66,7 @@ type BType interface {
 type (
 	bLangTypeBase struct {
 		bLangNodeBase
-		ty      model.TypeData
+		ty      TypeData
 		Grouped bool
 		tags    model.TypeTags
 		name    model.Name
@@ -56,26 +74,26 @@ type (
 	}
 
 	BTypeBasic struct {
-		ty    model.TypeData
+		ty    TypeData
 		tag   model.TypeTags
 		name  model.Name
 		flags nodeFlags
 	}
 	BLangArrayType struct {
 		bLangTypeBase
-		Elemtype   model.TypeData
+		Elemtype   TypeData
 		Sizes      []BLangExpression
 		Dimensions int
 		Definition semtypes.Definition
 	}
 	BLangBuiltInRefTypeNode struct {
 		bLangTypeBase
-		TypeKind model.TypeKind
+		TypeKind TypeKind
 	}
 
 	BLangValueType struct {
 		bLangTypeBase
-		TypeKind model.TypeKind
+		TypeKind TypeKind
 	}
 
 	// TODO: Is this just type reference? if not we need to rethink this when we have actual user defined types.
@@ -101,7 +119,7 @@ type (
 		flags          nodeFlags
 		DefaultExpr    BLangExpression
 		DefaultFnRef   model.SymbolRef
-		AnnAttachments []model.AnnotationAttachmentNode
+		AnnAttachments []BLangAnnotationAttachment
 	}
 
 	bObjectFieldBase struct {
@@ -119,7 +137,7 @@ type (
 	BMethodDecl struct {
 		bObjectFieldBase
 		BLangFunctionType
-		memberKind model.ObjectMemberKind
+		memberKind ObjectMemberKind
 	}
 
 	BLangObjectType struct {
@@ -127,10 +145,10 @@ type (
 		Inclusions           []model.SymbolRef      // This needs to be symbol because it could be a class definition as well
 		InclusionPositions   []diagnostics.Location // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions []*BLangUserDefinedType
-		members              map[string]model.ObjectMember
+		members              map[string]ObjectMember
 		Definition           semtypes.Definition
 		Isolated             bool
-		NetworkQuals         model.ObjectNetworkQuals
+		NetworkQuals         ObjectNetworkQuals
 	}
 
 	BLangFiniteTypeNode struct {
@@ -140,25 +158,25 @@ type (
 
 	BLangUnionTypeNode struct {
 		bLangTypeBase
-		lhs model.TypeData
-		rhs model.TypeData
+		lhs TypeData
+		rhs TypeData
 	}
 
 	BLangIntersectionTypeNode struct {
 		bLangTypeBase
-		lhs model.TypeData
-		rhs model.TypeData
+		lhs TypeData
+		rhs TypeData
 	}
 
 	BLangErrorTypeNode struct {
 		bLangTypeBase
-		DetailType model.TypeData
+		DetailType TypeData
 	}
 
 	BLangConstrainedType struct {
 		bLangTypeBase
-		Type       model.TypeData
-		Constraint model.TypeData
+		Type       TypeData
+		Constraint TypeData
 		Definition semtypes.Definition
 	}
 
@@ -167,14 +185,14 @@ type (
 		Definition semtypes.Definition
 		// jBallerina uses BLangSimpleVariable for this but I think it is better to make it explicit
 		Members []BLangMemberTypeDesc
-		Rest    model.TypeDescriptor
+		Rest    BType
 	}
 
 	BLangMemberTypeDesc struct {
 		bLangNodeBase
-		TypeDesc                        model.TypeDescriptor
-		AnnAttachments                  []model.AnnotationAttachmentNode
-		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
+		TypeDesc                        TypeDescriptor
+		AnnAttachments                  []AnnotationAttachmentNode
+		MarkdownDocumentationAttachment MarkdownDocumentationNode
 	}
 
 	BLangRecordType struct {
@@ -191,7 +209,7 @@ type (
 		Definition           semtypes.Definition
 		RequiredParams       []BLangFunctionTypeParam
 		RestParam            *BLangFunctionTypeParam
-		ReturnTypeDescriptor model.TypeDescriptor
+		ReturnTypeDescriptor BType
 	}
 
 	BLangFunctionTypeParam struct {
@@ -199,33 +217,32 @@ type (
 		Name           *BLangIdentifier
 		TypeDesc       BType
 		InitExpr       BLangExpression
-		AnnAttachments []model.AnnotationAttachmentNode
+		AnnAttachments []BLangAnnotationAttachment
 	}
 )
 
 var (
-	_ model.ArrayTypeNode            = &BLangArrayType{}
-	_ model.BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
-	_ model.UserDefinedTypeNode      = &BLangUserDefinedType{}
-	_ model.Field                    = &BField{}
-	_ BNodeWithSymbol                = &BLangUserDefinedType{}
-	_ model.NamedNode                = &BField{}
-	_ model.FiniteTypeNode           = &BLangFiniteTypeNode{}
-	_ BNodeWithSymbol                = &BLangUserDefinedType{}
-	_ model.UnionTypeNode            = &BLangUnionTypeNode{}
-	_ model.IntersectionTypeNode     = &BLangIntersectionTypeNode{}
-	_ model.ErrorTypeNode            = &BLangErrorTypeNode{}
-	_ model.ConstrainedTypeNode      = &BLangConstrainedType{}
-	_ model.TupleTypeNode            = &BLangTupleTypeNode{}
-	_ model.MemberTypeDesc           = &BLangMemberTypeDesc{}
-	_ model.RecordTypeNode           = &BLangRecordType{}
-	_ model.ObjectType               = &BLangObjectType{}
-	_ model.ObjectMember             = &BMethodDecl{}
-	_ model.ObjectMember             = &BObjectField{}
-	_ BLangNode                      = &BObjectField{}
-	_ BLangNode                      = &BMethodDecl{}
-	_ model.FunctionTypeNode         = &BLangFunctionType{}
-	_ model.FunctionTypeParam        = &BLangFunctionTypeParam{}
+	_ ArrayTypeNode            = &BLangArrayType{}
+	_ BuiltInReferenceTypeNode = &BLangBuiltInRefTypeNode{}
+	_ UserDefinedTypeNode      = &BLangUserDefinedType{}
+	_ Field                    = &BField{}
+	_ BNodeWithSymbol          = &BLangUserDefinedType{}
+	_ FiniteTypeNode           = &BLangFiniteTypeNode{}
+	_ BNodeWithSymbol          = &BLangUserDefinedType{}
+	_ UnionTypeNode            = &BLangUnionTypeNode{}
+	_ IntersectionTypeNode     = &BLangIntersectionTypeNode{}
+	_ ErrorTypeNode            = &BLangErrorTypeNode{}
+	_ ConstrainedTypeNode      = &BLangConstrainedType{}
+	_ TupleTypeNode            = &BLangTupleTypeNode{}
+	_ MemberTypeDesc           = &BLangMemberTypeDesc{}
+	_ RecordTypeNode           = &BLangRecordType{}
+	_ ObjectType               = &BLangObjectType{}
+	_ ObjectMember             = &BMethodDecl{}
+	_ ObjectMember             = &BObjectField{}
+	_ BLangNode                = &BObjectField{}
+	_ BLangNode                = &BMethodDecl{}
+	_ FunctionTypeNode         = &BLangFunctionType{}
+	_ FunctionTypeParam        = &BLangFunctionTypeParam{}
 )
 
 var (
@@ -239,21 +256,21 @@ var (
 )
 
 var (
-	_ BLangNode            = &BLangArrayType{}
-	_ BLangNode            = &BLangUserDefinedType{}
-	_ BLangNode            = &BLangValueType{}
-	_ BLangNode            = &BLangConstrainedType{}
-	_ model.TypeDescriptor = &BLangValueType{}
-	_ model.TypeDescriptor = &BLangConstrainedType{}
-	_ BLangNode            = &BLangTupleTypeNode{}
+	_ BLangNode      = &BLangArrayType{}
+	_ BLangNode      = &BLangUserDefinedType{}
+	_ BLangNode      = &BLangValueType{}
+	_ BLangNode      = &BLangConstrainedType{}
+	_ TypeDescriptor = &BLangValueType{}
+	_ TypeDescriptor = &BLangConstrainedType{}
+	_ BLangNode      = &BLangTupleTypeNode{}
 )
 
-func (b *BLangArrayType) GetKind() model.NodeKind {
+func (b *BLangArrayType) GetKind() NodeKind {
 	// migrated from BLangArrayType.java:100:5
-	return model.NodeKind_ARRAY_TYPE
+	return NodeKind_ARRAY_TYPE
 }
 
-func (b *BLangArrayType) GetElementType() model.TypeData {
+func (b *BLangArrayType) GetElementType() TypeData {
 	return b.Elemtype
 }
 
@@ -261,8 +278,8 @@ func (b *BLangArrayType) GetDimensions() int {
 	return b.Dimensions
 }
 
-func (b *BLangArrayType) GetSizes() []model.ExpressionNode {
-	expressionNodes := make([]model.ExpressionNode, len(b.Sizes))
+func (b *BLangArrayType) GetSizes() []ExpressionNode {
+	expressionNodes := make([]ExpressionNode, len(b.Sizes))
 	for i, size := range b.Sizes {
 		expressionNodes[i] = size
 	}
@@ -277,40 +294,40 @@ func (b *bLangTypeBase) IsGrouped() bool {
 	return b.Grouped
 }
 
-func (b *BLangBuiltInRefTypeNode) GetTypeKind() model.TypeKind {
+func (b *BLangBuiltInRefTypeNode) GetTypeKind() TypeKind {
 	return b.TypeKind
 }
 
-func (b *BLangBuiltInRefTypeNode) GetKind() model.NodeKind {
+func (b *BLangBuiltInRefTypeNode) GetKind() NodeKind {
 	// migrated from BLangBuiltInRefTypeNode.java:60:5
-	return model.NodeKind_BUILT_IN_REF_TYPE
+	return NodeKind_BUILT_IN_REF_TYPE
 }
 
-func (b *BLangValueType) GetTypeKind() model.TypeKind {
+func (b *BLangValueType) GetTypeKind() TypeKind {
 	return b.TypeKind
 }
 
-func (b *BLangValueType) GetKind() model.NodeKind {
+func (b *BLangValueType) GetKind() NodeKind {
 	// migrated from BLangValueType.java:74:5
-	return model.NodeKind_VALUE_TYPE
+	return NodeKind_VALUE_TYPE
 }
 
-func (b *BLangUserDefinedType) GetPackageAlias() model.IdentifierNode {
+func (b *BLangUserDefinedType) GetPackageAlias() *BLangIdentifier {
 	// migrated from BLangUserDefinedType.java:55:5
 	return &b.PkgAlias
 }
 
-func (b *BLangUserDefinedType) GetTypeName() model.IdentifierNode {
+func (b *BLangUserDefinedType) GetTypeName() *BLangIdentifier {
 	// migrated from BLangUserDefinedType.java:60:5
 	return &b.TypeName
 }
 
-func (b *BLangUserDefinedType) GetKind() model.NodeKind {
+func (b *BLangUserDefinedType) GetKind() NodeKind {
 	// migrated from BLangUserDefinedType.java:70:5
-	return model.NodeKind_USER_DEFINED_TYPE
+	return NodeKind_USER_DEFINED_TYPE
 }
 
-func (b *BLangUserDefinedType) GetTypeKind() model.TypeKind {
+func (b *BLangUserDefinedType) GetTypeKind() TypeKind {
 	panic("not implemented")
 }
 
@@ -326,11 +343,11 @@ func (b *BField) GetName() model.Name {
 	return b.Name
 }
 
-func (b *BField) GetType() model.Type {
+func (b *BField) GetType() Type {
 	return b.Type
 }
 
-func (b *BField) GetKind() model.NodeKind {
+func (b *BField) GetKind() NodeKind {
 	panic("not implemented")
 }
 
@@ -341,46 +358,50 @@ func (b *BField) SetPublic()       { b.flags |= flagPublic }
 func (b *BField) SetReadonly()     { b.flags |= flagReadonly }
 func (b *BField) SetOptional()     { b.flags |= flagOptional }
 
-func (b *BField) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	return b.AnnAttachments
+func (b *BField) GetAnnotationAttachments() []AnnotationAttachmentNode {
+	result := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i := range b.AnnAttachments {
+		result[i] = &b.AnnAttachments[i]
+	}
+	return result
 }
 
-func (b *BField) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
-	b.AnnAttachments = append(b.AnnAttachments, annAttachment)
+func (b *BField) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
+	b.AnnAttachments = append(b.AnnAttachments, *annAttachment.(*BLangAnnotationAttachment))
 }
 
-func typeTagToTypeKind(tag model.TypeTags) model.TypeKind {
+func typeTagToTypeKind(tag model.TypeTags) TypeKind {
 	switch tag {
 	case model.TypeTags_INT:
-		return model.TypeKind_INT
+		return TypeKind_INT
 	case model.TypeTags_BYTE:
-		return model.TypeKind_BYTE
+		return TypeKind_BYTE
 	case model.TypeTags_FLOAT:
-		return model.TypeKind_FLOAT
+		return TypeKind_FLOAT
 	case model.TypeTags_DECIMAL:
-		return model.TypeKind_DECIMAL
+		return TypeKind_DECIMAL
 	case model.TypeTags_STRING:
-		return model.TypeKind_STRING
+		return TypeKind_STRING
 	case model.TypeTags_BOOLEAN:
-		return model.TypeKind_BOOLEAN
+		return TypeKind_BOOLEAN
 	case model.TypeTags_TYPEDESC:
-		return model.TypeKind_TYPEDESC
+		return TypeKind_TYPEDESC
 	case model.TypeTags_NIL:
-		return model.TypeKind_NIL
+		return TypeKind_NIL
 	case model.TypeTags_NEVER:
-		return model.TypeKind_NEVER
+		return TypeKind_NEVER
 	case model.TypeTags_ERROR:
-		return model.TypeKind_ERROR
+		return TypeKind_ERROR
 	case model.TypeTags_READONLY:
-		return model.TypeKind_READONLY
+		return TypeKind_READONLY
 	case model.TypeTags_PARAMETERIZED_TYPE:
-		return model.TypeKind_PARAMETERIZED
+		return TypeKind_PARAMETERIZED
 	default:
-		return model.TypeKind_OTHER
+		return TypeKind_OTHER
 	}
 }
 
-func (b *bLangTypeBase) GetTypeKind() model.TypeKind {
+func (b *bLangTypeBase) GetTypeKind() TypeKind {
 	return typeTagToTypeKind(b.BTypeGetTag())
 }
 
@@ -409,12 +430,12 @@ func (b *bStructureTypeBase) AddField(name string, field BField) {
 	b.fields = append(b.fields, field)
 }
 
-func (b *BLangObjectType) GetKind() model.NodeKind {
-	return model.NodeKind_OBJECT_TYPE
+func (b *BLangObjectType) GetKind() NodeKind {
+	return NodeKind_OBJECT_TYPE
 }
 
-func (b *BLangObjectType) Members() iter.Seq[model.ObjectMember] {
-	return func(yield func(model.ObjectMember) bool) {
+func (b *BLangObjectType) Members() iter.Seq[ObjectMember] {
+	return func(yield func(ObjectMember) bool) {
 		for _, member := range b.members {
 			if !yield(member) {
 				return
@@ -423,7 +444,7 @@ func (b *BLangObjectType) Members() iter.Seq[model.ObjectMember] {
 	}
 }
 
-func (b *BLangObjectType) Member(name string) (model.ObjectMember, bool) {
+func (b *BLangObjectType) Member(name string) (ObjectMember, bool) {
 	member, ok := b.members[name]
 	return member, ok
 }
@@ -436,27 +457,27 @@ func (b *bObjectFieldBase) Visibility() model.Visibility {
 	return b.visibility
 }
 
-func (b *BObjectField) MemberKind() model.ObjectMemberKind {
-	return model.ObjectMemberKindField
+func (b *BObjectField) MemberKind() ObjectMemberKind {
+	return ObjectMemberKindField
 }
 
-func (b *BObjectField) GetKind() model.NodeKind {
-	return model.NodeKind_OBJECT_FIELD
+func (b *BObjectField) GetKind() NodeKind {
+	return NodeKind_OBJECT_FIELD
 }
 
-func (b *BMethodDecl) MemberKind() model.ObjectMemberKind {
+func (b *BMethodDecl) MemberKind() ObjectMemberKind {
 	return b.memberKind
 }
 
-func (b *BMethodDecl) GetKind() model.NodeKind {
-	return model.NodeKind_METHOD_DECL
+func (b *BMethodDecl) GetKind() NodeKind {
+	return NodeKind_METHOD_DECL
 }
 
-func (b *bLangTypeBase) GetTypeData() model.TypeData {
+func (b *bLangTypeBase) GetTypeData() TypeData {
 	return b.ty
 }
 
-func (b *bLangTypeBase) SetTypeData(ty model.TypeData) {
+func (b *bLangTypeBase) SetTypeData(ty TypeData) {
 	b.ty = ty
 }
 
@@ -508,11 +529,11 @@ func (b *BTypeBasic) bTypeSetFlags(flags nodeFlags) {
 	b.flags = flags
 }
 
-func (b *BTypeBasic) GetTypeKind() model.TypeKind {
+func (b *BTypeBasic) GetTypeKind() TypeKind {
 	return typeTagToTypeKind(b.tag)
 }
 
-func (b *BTypeBasic) GetKind() model.NodeKind {
+func (b *BTypeBasic) GetKind() NodeKind {
 	panic("not implemented")
 }
 
@@ -528,11 +549,11 @@ func (b *BTypeBasic) IsGrouped() bool {
 	panic("not implemented")
 }
 
-func (b *BTypeBasic) GetTypeData() model.TypeData {
+func (b *BTypeBasic) GetTypeData() TypeData {
 	return b.ty
 }
 
-func (b *BTypeBasic) SetTypeData(ty model.TypeData) {
+func (b *BTypeBasic) SetTypeData(ty TypeData) {
 	b.ty = ty
 }
 
@@ -548,68 +569,64 @@ func NewBType(tag model.TypeTags, name model.Name, flags uint64) BType {
 	}
 }
 
-func (b *BLangFiniteTypeNode) GetValueSet() []model.ExpressionNode {
-	values := make([]model.ExpressionNode, len(b.ValueSpace))
+func (b *BLangFiniteTypeNode) GetValueSet() []ExpressionNode {
+	values := make([]ExpressionNode, len(b.ValueSpace))
 	for i, value := range b.ValueSpace {
 		values[i] = value
 	}
 	return values
 }
 
-func (b *BLangFiniteTypeNode) AddValue(value model.ExpressionNode) {
-	if blangExpression, ok := value.(BLangExpression); ok {
-		b.ValueSpace = append(b.ValueSpace, blangExpression)
-	} else {
-		panic("value is not a BLangExpression")
-	}
+func (b *BLangFiniteTypeNode) AddValue(value ExpressionNode) {
+	b.ValueSpace = append(b.ValueSpace, value.(BLangExpression))
 }
 
-func (b *BLangFiniteTypeNode) GetKind() model.NodeKind {
+func (b *BLangFiniteTypeNode) GetKind() NodeKind {
 	// migrated from BLangFiniteTypeNode.java:100:5
-	return model.NodeKind_FINITE_TYPE_NODE
+	return NodeKind_FINITE_TYPE_NODE
 }
 
-func (b *BLangUnionTypeNode) GetKind() model.NodeKind {
-	return model.NodeKind_UNION_TYPE_NODE
+func (b *BLangUnionTypeNode) GetKind() NodeKind {
+	return NodeKind_UNION_TYPE_NODE
 }
 
-func (b *BLangUnionTypeNode) Lhs() *model.TypeData {
+func (b *BLangUnionTypeNode) Lhs() *TypeData {
 	return &b.lhs
 }
 
-func (b *BLangUnionTypeNode) Rhs() *model.TypeData {
+func (b *BLangUnionTypeNode) Rhs() *TypeData {
 	return &b.rhs
 }
 
-func (b *BLangUnionTypeNode) SetLhs(typeData model.TypeData) {
+func (b *BLangUnionTypeNode) SetLhs(typeData TypeData) {
 	b.lhs = typeData
 }
 
-func (b *BLangUnionTypeNode) SetRhs(typeData model.TypeData) {
+func (b *BLangUnionTypeNode) SetRhs(typeData TypeData) {
 	b.rhs = typeData
 }
 
-func (b *BLangIntersectionTypeNode) GetKind() model.NodeKind {
-	return model.NodeKind_INTERSECTION_TYPE_NODE
+func (b *BLangIntersectionTypeNode) GetKind() NodeKind {
+	return NodeKind_INTERSECTION_TYPE_NODE
 }
 
-func (b *BLangIntersectionTypeNode) Lhs() *model.TypeData {
+func (b *BLangIntersectionTypeNode) Lhs() *TypeData {
 	return &b.lhs
 }
 
-func (b *BLangIntersectionTypeNode) Rhs() *model.TypeData {
+func (b *BLangIntersectionTypeNode) Rhs() *TypeData {
 	return &b.rhs
 }
 
-func (b *BLangIntersectionTypeNode) SetLhs(typeData model.TypeData) {
+func (b *BLangIntersectionTypeNode) SetLhs(typeData TypeData) {
 	b.lhs = typeData
 }
 
-func (b *BLangIntersectionTypeNode) SetRhs(typeData model.TypeData) {
+func (b *BLangIntersectionTypeNode) SetRhs(typeData TypeData) {
 	b.rhs = typeData
 }
 
-func (b *BLangErrorTypeNode) GetDetailType() model.TypeData {
+func (b *BLangErrorTypeNode) GetDetailType() TypeData {
 	return b.DetailType
 }
 
@@ -617,12 +634,12 @@ func (b *BLangErrorTypeNode) IsTop() bool {
 	return b.DetailType.TypeDescriptor == nil
 }
 
-func (b *BLangErrorTypeNode) GetKind() model.NodeKind {
-	return model.NodeKind_ERROR_TYPE
+func (b *BLangErrorTypeNode) GetKind() NodeKind {
+	return NodeKind_ERROR_TYPE
 }
 
-func (b *BLangTupleTypeNode) GetKind() model.NodeKind {
-	return model.NodeKind_TUPLE_TYPE_NODE
+func (b *BLangTupleTypeNode) GetKind() NodeKind {
+	return NodeKind_TUPLE_TYPE_NODE
 }
 
 func (b *BLangErrorTypeNode) IsDistinct() bool { return b.bTypeGetFlags().has(flagDistinct) }
@@ -647,77 +664,84 @@ func (b *BLangFunctionType) SetTransactional() {
 	b.bTypeSetFlags(b.bTypeGetFlags() | flagTransactional)
 }
 
-func (b *BLangConstrainedType) GetKind() model.NodeKind {
-	return model.NodeKind_CONSTRAINED_TYPE
+func (b *BLangConstrainedType) GetKind() NodeKind {
+	return NodeKind_CONSTRAINED_TYPE
 }
 
-func (b *BLangConstrainedType) GetType() model.TypeData {
+func (b *BLangConstrainedType) GetType() TypeData {
 	return b.Type
 }
 
-func (b *BLangConstrainedType) GetConstraint() model.TypeData {
+func (b *BLangConstrainedType) GetConstraint() TypeData {
 	return b.Constraint
 }
 
-func (b *BLangConstrainedType) GetTypeKind() model.TypeKind {
+func (b *BLangConstrainedType) GetTypeKind() TypeKind {
 	if b.Type.TypeDescriptor == nil {
 		panic("base type is nil")
 	}
-	if builtIn, ok := b.Type.TypeDescriptor.(model.BuiltInReferenceTypeNode); ok {
+	if builtIn, ok := b.Type.TypeDescriptor.(BuiltInReferenceTypeNode); ok {
 		return builtIn.GetTypeKind()
 	}
 	panic("BLangConstrainedType.Type does not implement BuiltInReferenceTypeNode")
 }
 
-func (b *BLangTupleTypeNode) GetMembers() []model.MemberTypeDesc {
-	members := make([]model.MemberTypeDesc, len(b.Members))
+func (b *BLangTupleTypeNode) GetMembers() []MemberTypeDesc {
+	members := make([]MemberTypeDesc, len(b.Members))
 	for i := range b.Members {
 		members[i] = &b.Members[i]
 	}
 	return members
 }
 
-func (b *BLangTupleTypeNode) GetRest() model.TypeDescriptor {
+func (b *BLangTupleTypeNode) GetRest() TypeDescriptor {
 	if b.Rest == nil {
 		return nil
 	}
 	return b.Rest
 }
 
-func (b *BLangMemberTypeDesc) GetKind() model.NodeKind {
-	return model.NodeKind_MEMBER_TYPE_DESC
+func (b *BLangMemberTypeDesc) GetKind() NodeKind {
+	return NodeKind_MEMBER_TYPE_DESC
 }
 
-func (b *BLangMemberTypeDesc) GetTypeDesc() model.TypeDescriptor {
+func (b *BLangMemberTypeDesc) GetTypeDesc() TypeDescriptor {
 	return b.TypeDesc
 }
 
-func (b *BLangMemberTypeDesc) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *BLangMemberTypeDesc) GetAnnotationAttachments() []AnnotationAttachmentNode {
 	return b.AnnAttachments
 }
 
-func (b *BLangMemberTypeDesc) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangMemberTypeDesc) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode) {
 	b.AnnAttachments = append(b.AnnAttachments, annAttachment)
 }
 
-func (b *BLangMemberTypeDesc) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+func (b *BLangMemberTypeDesc) GetMarkdownDocumentationAttachment() MarkdownDocumentationNode {
+	if b.MarkdownDocumentationAttachment == nil {
+		return nil
+	}
 	return b.MarkdownDocumentationAttachment
 }
 
-func (b *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
-	b.MarkdownDocumentationAttachment = documentationNode
+func (b *BLangMemberTypeDesc) SetMarkdownDocumentationAttachment(documentationNode MarkdownDocumentationNode) {
+	if documentationNode == nil {
+		b.MarkdownDocumentationAttachment = nil
+		return
+	}
+	b.MarkdownDocumentationAttachment = documentationNode.(*BLangMarkdownDocumentation)
 }
 
-func (b *BLangFunctionType) GetTypeKind() model.TypeKind {
-	return model.TypeKind_FUNCTION
+func (b *BLangFunctionType) GetTypeKind() TypeKind {
+	return TypeKind_FUNCTION
 }
 
-func (b *BLangFunctionType) GetKind() model.NodeKind {
-	return model.NodeKind_FUNCTION_TYPE
+func (b *BLangFunctionType) GetKind() NodeKind {
+	return NodeKind_FUNCTION_TYPE
 }
 
-func (b *BLangFunctionTypeParam) GetKind() model.NodeKind {
-	return model.NodeKind_VARIABLE
+func (b *BLangFunctionTypeParam) GetKind() NodeKind {
+	return NodeKind_VARIABLE
 }
 
 func (b *BLangFunctionTypeParam) GetName() *string {
@@ -728,39 +752,39 @@ func (b *BLangFunctionTypeParam) GetName() *string {
 	return &name
 }
 
-func (b *BLangFunctionTypeParam) GetTypeDesc() model.Type {
+func (b *BLangFunctionTypeParam) GetTypeDesc() Type {
 	return b.TypeDesc
 }
 
-func (b *BLangFunctionType) GetParams() []model.FunctionTypeParam {
-	params := make([]model.FunctionTypeParam, len(b.RequiredParams))
+func (b *BLangFunctionType) GetParams() []FunctionTypeParam {
+	params := make([]FunctionTypeParam, len(b.RequiredParams))
 	for i := range b.RequiredParams {
 		params[i] = &b.RequiredParams[i]
 	}
 	return params
 }
 
-func (b *BLangFunctionType) GetRestParam() model.FunctionTypeParam {
+func (b *BLangFunctionType) GetRestParam() FunctionTypeParam {
 	if b.RestParam == nil {
 		return nil
 	}
 	return b.RestParam
 }
 
-func (b *BLangFunctionType) GetReturnTypeNode() model.TypeDescriptor {
+func (b *BLangFunctionType) GetReturnTypeNode() TypeDescriptor {
 	return b.ReturnTypeDescriptor
 }
 
-func (b *BLangRecordType) GetKind() model.NodeKind {
-	return model.NodeKind_RECORD_TYPE
+func (b *BLangRecordType) GetKind() NodeKind {
+	return NodeKind_RECORD_TYPE
 }
 
-func (b *BLangRecordType) GetRestFieldType() model.TypeData {
+func (b *BLangRecordType) GetRestFieldType() TypeData {
 	return b.RestType.GetTypeData()
 }
 
-func (b *BLangRecordType) GetFields() iter.Seq2[string, model.Field] {
-	return func(yield func(string, model.Field) bool) {
+func (b *BLangRecordType) GetFields() iter.Seq2[string, Field] {
+	return func(yield func(string, Field) bool) {
 		for i, name := range b.names {
 			if !yield(name, &b.fields[i]) {
 				return
@@ -770,7 +794,7 @@ func (b *BLangRecordType) GetFields() iter.Seq2[string, model.Field] {
 }
 
 // AddMember insert a new member. If there was already a member by the same name return true
-func (b *BLangObjectType) AddMember(member model.ObjectMember) bool {
+func (b *BLangObjectType) AddMember(member ObjectMember) bool {
 	name := member.Name()
 	if _, hadValue := b.members[name]; hadValue {
 		return true

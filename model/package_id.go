@@ -21,6 +21,7 @@ import (
 	"sync"
 )
 
+// PR-FIXME: do we use these anywhere?
 const (
 	STRING_SIGNED32    = "Signed32"
 	STRING_SIGNED16    = "Signed16"
@@ -195,11 +196,9 @@ func NewPackageID(interner *PackageIDInterner, orgName Name, nameComps []Name, v
 	return interner.Intern(id)
 }
 
-var (
-	DefaultPackageIDInterner = &PackageIDInterner{
-		packageMap: make(map[packageKey]*PackageID),
-	}
-)
+var DefaultPackageIDInterner = &PackageIDInterner{
+	packageMap: make(map[packageKey]*PackageID),
+}
 
 var (
 	DEFAULT = NewPackageID(DefaultPackageIDInterner, ANON_ORG, []Name{DEFAULT_PACKAGE}, DEFAULT_VERSION)

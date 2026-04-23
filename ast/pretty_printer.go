@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 
 	"ballerina-lang-go/model"
@@ -232,7 +231,7 @@ func (p *PrettyPrinter) printXMLNS(node *BLangXMLNS) {
 	if uri := node.GetNamespaceURI(); uri != nil {
 		p.PrintInner(uri.(BLangNode))
 	}
-	if prefix, ok := node.GetPrefix().(*BLangIdentifier); ok && prefix != nil {
+	if prefix := node.GetPrefix(); prefix != nil {
 		p.printString("as")
 		p.printString(prefix.GetValue())
 	}
@@ -286,6 +285,17 @@ func (p *PrettyPrinter) printCompilationUnit(node *BLangCompilationUnit) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printSourceKind(sourceKind SourceKind) {
+	switch sourceKind {
+	case SourceKind_REGULAR_SOURCE:
+		p.printString("regular-source")
+	case SourceKind_TEST_SOURCE:
+		p.printString("test-source")
+	default:
+		panic(fmt.Sprintf("Unsupported source kind: %d", int(sourceKind)))
+	}
+}
+
 func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 	p.startNode()
 	p.printString("package")
@@ -317,17 +327,6 @@ func (p *PrettyPrinter) printPackage(node *BLangPackage) {
 
 func (p *PrettyPrinter) printBLangNodeBase(node *bLangNodeBase) {
 	// no-op
-}
-
-func (p *PrettyPrinter) printSourceKind(sourceKind model.SourceKind) {
-	switch sourceKind {
-	case model.SourceKind_REGULAR_SOURCE:
-		p.printString("regular-source")
-	case model.SourceKind_TEST_SOURCE:
-		p.printString("test-source")
-	default:
-		panic("Unsupported source kind: " + strconv.Itoa(int(sourceKind)))
-	}
 }
 
 func (p *PrettyPrinter) startNode() {
@@ -377,7 +376,7 @@ func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
 	p.printString(string(opKind))
 }
 
-func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
+func (p *PrettyPrinter) printTypeKind(typeKind TypeKind) {
 	p.printString(string(typeKind))
 }
 
@@ -775,7 +774,7 @@ func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
 	p.printString("from-clause")
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
-		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+		p.PrintInner(node.VariableDefinitionNode)
 	}
 	if node.Collection != nil {
 		p.PrintInner(node.Collection)
@@ -793,7 +792,7 @@ func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
 	}
 	p.indentLevel++
 	if node.VariableDefinitionNode != nil {
-		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+		p.PrintInner(node.VariableDefinitionNode)
 	}
 	if node.Collection != nil {
 		p.PrintInner(node.Collection)
@@ -810,7 +809,7 @@ func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
 	p.printString("let-clause")
 	p.indentLevel++
 	for i := range node.LetVarDeclarations {
-		p.PrintInner(node.LetVarDeclarations[i].(BLangNode))
+		p.PrintInner(&node.LetVarDeclarations[i])
 	}
 	p.indentLevel--
 	p.endNode()
@@ -960,9 +959,9 @@ func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 
 	// Print markdown documentation if present
 	if node.MarkdownDocumentationAttachment != nil {
-		if doc, ok := node.MarkdownDocumentationAttachment.(*BLangMarkdownDocumentation); ok {
+		if bn, ok := node.MarkdownDocumentationAttachment.(BLangNode); ok {
 			p.indentLevel++
-			p.PrintInner(doc)
+			p.PrintInner(bn)
 			p.indentLevel--
 			p.addSpaceBeforeNode = true
 		}
@@ -1519,13 +1518,13 @@ func (p *PrettyPrinter) printObjectType(node *BLangObjectType) {
 		p.printString("isolated")
 	}
 	switch node.NetworkQuals {
-	case model.ObjectNetworkQualsClient:
+	case ObjectNetworkQualsClient:
 		p.printString("client")
-	case model.ObjectNetworkQualsService:
+	case ObjectNetworkQualsService:
 		p.printString("service")
 	}
 	p.indentLevel++
-	members := slices.SortedFunc(node.Members(), func(a, b model.ObjectMember) int {
+	members := slices.SortedFunc(node.Members(), func(a, b ObjectMember) int {
 		return cmp.Compare(a.Name(), b.Name())
 	})
 	for _, member := range members {

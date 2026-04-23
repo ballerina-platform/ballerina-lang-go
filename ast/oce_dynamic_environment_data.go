@@ -16,11 +16,7 @@
 
 package ast
 
-import (
-	"ballerina-lang-go/model"
-)
-
-// TODO: get rid of this
+// PR-TODO: get rid of this
 // OCEDynamicEnvironmentData represents the dynamic environment data for object constructor expressions
 type OCEDynamicEnvironmentData struct {
 	// TypeInit                       *BLangTypeInit
@@ -31,7 +27,7 @@ type OCEDynamicEnvironmentData struct {
 	OriginalClass                  *BLangClassDefinition
 	Parents                        []*BLangClassDefinition
 	DesugaredClosureVars           []*BLangSimpleVarRef
-	InitInvocation                 model.ExpressionNode
+	InitInvocation                 ExpressionNode
 	CloneAttempt                   int
 	ClosureDesugaringInProgress    bool
 	IsDirty                        bool

@@ -220,14 +220,12 @@ func (br *birReader) readGlobalVars(pkgID *model.PackageID) map[string]bir.BIRGl
 		_ = br.readKind() // kind (ignored, concrete type determines it)
 		name := br.readStringCPEntry()
 		flags := br.readFlags()
-		origin := br.readOrigin()
 
 		ty := br.readType()
 
 		lookupKey := pkgID.OrgName.Value() + "/" + pkgID.PkgName.Value() + ":" + name.Value()
 		gv := bir.BIRGlobalVariableDcl{
 			Flags:              flags,
-			Origin:             origin,
 			GlobalVarLookupKey: lookupKey,
 		}
 		gv.Pos = pos
@@ -292,7 +290,6 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	name := br.readStringCPEntry()
 	originalName := br.readStringCPEntry()
 	flag := br.readFlags()
-	origin := br.readOrigin()
 	functionLookupKey := br.readStringCPEntry()
 	requiredParamsCount := br.readLength()
 
@@ -399,15 +396,12 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 	}
 
 	return &bir.BIRFunction{
-		BIRDocumentableNodeBase: bir.BIRDocumentableNodeBase{
-			BIRNodeBase: bir.BIRNodeBase{
-				Pos: pos,
-			},
+		BIRNodeBase: bir.BIRNodeBase{
+			Pos: pos,
 		},
 		Name:              name,
 		OriginalName:      originalName,
 		Flags:             flag,
-		Origin:            origin,
 		FunctionLookupKey: string(functionLookupKey),
 		RequiredParams:    requiredParams,
 		RestParams:        restParams,
@@ -1007,12 +1001,6 @@ func (br *birReader) readFlags() int64 {
 	var val int64
 	br.read(&val)
 	return val
-}
-
-func (br *birReader) readOrigin() model.SymbolOrigin {
-	var val uint8
-	br.read(&val)
-	return model.SymbolOrigin(val)
 }
 
 func (br *birReader) readStringCPEntry() model.Name {
