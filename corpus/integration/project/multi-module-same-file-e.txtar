@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: incompatible type: expected int, got "hello"
+  --> modules/mod1/foo.bal:18:13
+   |
+18 |     int x = "hello"; // @error type mismatch
+   |             ^^^^^^^
+
+error[SEMANTIC_ERROR]: incompatible type: expected int, got "world"
+  --> modules/mod2/bar.bal:18:13
+   |
+18 |     int y = "world"; // @error type mismatch
+   |             ^^^^^^^

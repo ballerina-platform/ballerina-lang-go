@@ -29,7 +29,7 @@ import (
 
 // FIXME: get rid of repeated l.reader references in ai code
 
-const INITIAL_TRIVIA_CAPACITY = 10
+const INITIAL_TRIVIA_CAPACITY = 1
 
 type Lexer interface {
 	NextToken() tree.STToken

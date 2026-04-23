@@ -22,17 +22,23 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type CompilerEnvironment struct {
-	anonTypeCount    map[*model.PackageID]int
-	anonFuncCount    map[*model.PackageID]int
-	packageInterner  *model.PackageIDInterner
-	symbolSpaces     []*model.SymbolSpace
-	symbolSpacesMu   sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
-	typeEnv          semtypes.Env
-	underlyingSymbol sync.Map
-	statsEnabled     bool
+	anonTypeCount     map[*model.PackageID]int
+	anonFuncCount     map[*model.PackageID]int
+	packageInterner   *model.PackageIDInterner
+	symbolSpaces      []*model.SymbolSpace
+	symbolSpacesMu    sync.RWMutex // we need this because desugaring add new init functions concurrently we shouldn't need this if the spaces are scoped to the module, may be we should do that?
+	typeEnv           semtypes.Env
+	underlyingSymbol  sync.Map
+	statsEnabled      bool
+	diagnosticContext *diagnostics.DiagnosticEnv
+}
+
+func (this *CompilerEnvironment) DiagnosticEnv() *diagnostics.DiagnosticEnv {
+	return this.diagnosticContext
 }
 
 func (this *CompilerEnvironment) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
@@ -138,11 +144,12 @@ func (this *CompilerEnvironment) NewPackageID(orgName model.Name, nameComps []mo
 
 func NewCompilerEnvironment(typeEnv semtypes.Env, statsEnabled bool) *CompilerEnvironment {
 	return &CompilerEnvironment{
-		anonTypeCount:   make(map[*model.PackageID]int),
-		anonFuncCount:   make(map[*model.PackageID]int),
-		packageInterner: model.DefaultPackageIDInterner,
-		typeEnv:         typeEnv,
-		statsEnabled:    statsEnabled,
+		anonTypeCount:     make(map[*model.PackageID]int),
+		anonFuncCount:     make(map[*model.PackageID]int),
+		packageInterner:   model.DefaultPackageIDInterner,
+		typeEnv:           typeEnv,
+		statsEnabled:      statsEnabled,
+		diagnosticContext: diagnostics.NewDiagnosticEnv(),
 	}
 }
 

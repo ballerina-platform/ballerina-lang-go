@@ -18,19 +18,21 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // ArrayValueNode holds a TOML array of values.
 type ArrayValueNode struct {
 	elements []ValueNode
-	loc      Location
+	loc      diagnostics.Location
 }
 
-func NewArrayValueNode(elements []ValueNode, loc Location) *ArrayValueNode {
+func NewArrayValueNode(elements []ValueNode, loc diagnostics.Location) *ArrayValueNode {
 	return &ArrayValueNode{elements: elements, loc: loc}
 }
 
-func (n *ArrayValueNode) Kind() TomlType        { return TypeArray }
-func (n *ArrayValueNode) Loc() Location         { return n.loc }
-func (n *ArrayValueNode) Elements() []ValueNode { return n.elements }
+func (n *ArrayValueNode) Kind() TomlType            { return TypeArray }
+func (n *ArrayValueNode) Loc() diagnostics.Location { return n.loc }
+func (n *ArrayValueNode) Elements() []ValueNode     { return n.elements }
 
 func (n *ArrayValueNode) NativeValue() any {
 	result := make([]any, len(n.elements))

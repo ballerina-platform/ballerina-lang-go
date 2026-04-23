@@ -112,27 +112,30 @@ func buildDiagnosticLocation(filePath string, startLine, startCol, endLine, endC
 	}
 }
 
-func printDiagnostics(fsys fs.FS, w io.Writer, diagResult projects.DiagnosticResult, noColors bool) {
+func printDiagnostics(fsys fs.FS, w io.Writer, diagResult projects.DiagnosticResult, noColors bool, de *diagnostics.DiagnosticEnv) {
 	for _, d := range diagResult.Diagnostics() {
-		printDiagnostic(fsys, w, d, noColors)
+		printDiagnostic(fsys, w, d, noColors, de)
 	}
 }
 
-func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, noColors bool) {
+func printDiagnostic(fsys fs.FS, w io.Writer, d diagnostics.Diagnostic, noColors bool, de *diagnostics.DiagnosticEnv) {
 	s := outputStyleFor(noColors)
 	printDiagnosticHeader(w, s, d)
 
 	location := d.Location()
-	if location == nil {
+	if diagnostics.IsLocationEmpty(location) {
 		_, _ = fmt.Fprintln(w)
 		return
 	}
+	if !diagnostics.LocationHasSource(location) {
+		_, _ = fmt.Fprintf(w, "  %s-->%s %s\n\n", s.cyan, s.reset, de.FileName(location))
+		return
+	}
 
-	lineRange := location.LineRange()
 	loc := buildDiagnosticLocation(
-		lineRange.FileName(),
-		lineRange.StartLine().Line(), lineRange.StartLine().Offset(),
-		lineRange.EndLine().Line(), lineRange.EndLine().Offset(),
+		de.FileName(location),
+		de.StartLine(location), de.StartColumn(location),
+		de.EndLine(location), de.EndColumn(location),
 	)
 	printDiagnosticLocation(w, s, loc)
 	printSourceSnippet(w, s, loc, fsys, s.severityColor(d.DiagnosticInfo().Severity()))

@@ -612,7 +612,9 @@ func desugarCheckedExpr(cx *functionContext, expr *ast.BLangCheckedExpr, isPanic
 
 	var bodyStmt ast.BLangStatement
 	if isPanic {
-		bodyStmt = &ast.BLangPanic{Expr: tempVarRefForBody}
+		panicStmt := &ast.BLangPanic{Expr: tempVarRefForBody}
+		panicStmt.SetPosition(expr.GetPosition())
+		bodyStmt = panicStmt
 	} else {
 		bodyStmt = &ast.BLangReturn{Expr: tempVarRefForBody}
 	}
@@ -1251,7 +1253,7 @@ func isNilLiftableUnaryOp(op model.OperatorKind) bool {
 	}
 }
 
-func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast.BLangExpression, pos ast.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast.BLangExpression, pos diagnostics.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
 	name, symbol := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
 	varName := &ast.BLangIdentifier{Value: name}
 	tempVar := &ast.BLangSimpleVariable{Name: varName}
@@ -1264,7 +1266,7 @@ func createOperandTempVar(cx *functionContext, ty semtypes.SemType, initExpr ast
 	return varName, symbol, append(initStmts, varDef)
 }
 
-func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos ast.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
+func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos diagnostics.Location, initStmts []model.StatementNode) (*ast.BLangIdentifier, model.SymbolRef, []model.StatementNode) {
 	nilLit := &ast.BLangLiteral{Value: nil}
 	nilLit.SetDeterminedType(semtypes.NIL)
 	setPositionIfMissing(nilLit, pos)
@@ -1281,7 +1283,7 @@ func createNilResultVar(cx *functionContext, ty semtypes.SemType, pos ast.Locati
 	return varName, symbol, append(initStmts, varDef)
 }
 
-func createNilTypeTest(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semtypes.SemType, pos ast.Location) *ast.BLangTypeTestExpr {
+func createNilTypeTest(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semtypes.SemType, pos diagnostics.Location) *ast.BLangTypeTestExpr {
 	ref := createVarRef(varName, symbol, ty)
 	typeTest := &ast.BLangTypeTestExpr{
 		Expr: ref,
@@ -1299,7 +1301,7 @@ func createVarRef(varName *ast.BLangIdentifier, symbol model.SymbolRef, ty semty
 	return ref
 }
 
-func createResultAssignment(resultVarName *ast.BLangIdentifier, resultSymbol model.SymbolRef, resultTy semtypes.SemType, valueExpr ast.BLangExpression, pos ast.Location) *ast.BLangAssignment {
+func createResultAssignment(resultVarName *ast.BLangIdentifier, resultSymbol model.SymbolRef, resultTy semtypes.SemType, valueExpr ast.BLangExpression, pos diagnostics.Location) *ast.BLangAssignment {
 	varRef := createVarRef(resultVarName, resultSymbol, resultTy)
 	assign := &ast.BLangAssignment{
 		VarRef: varRef,

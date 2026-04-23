@@ -14,32 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package desugar
-
-import (
-	"ballerina-lang-go/ast"
-	"ballerina-lang-go/model"
-	"ballerina-lang-go/tools/diagnostics"
-)
-
-type posUpdateVisitor struct {
-	pos diagnostics.Location
-}
-
-func (v *posUpdateVisitor) Visit(node ast.BLangNode) ast.Visitor {
-	if node == nil {
-		return nil
-	}
-	if diagnostics.IsLocationEmpty(node.GetPosition()) {
-		node.SetPosition(v.pos)
-	}
-	return v
-}
-
-func (v *posUpdateVisitor) VisitTypeData(typeData *model.TypeData) ast.Visitor {
-	return v
-}
-
-func setPositionIfMissing(root ast.BLangNode, pos diagnostics.Location) {
-	ast.Walk(&posUpdateVisitor{pos: pos}, root)
+public function barFunc2() returns int {
+    int y = "world"; // @error type mismatch
+    return y;
 }

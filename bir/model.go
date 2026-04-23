@@ -21,7 +21,6 @@ import (
 
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 )
 
 type ConstValue struct {
@@ -30,10 +29,10 @@ type ConstValue struct {
 
 type BIRInstruction interface {
 	GetKind() InstructionKind
-	GetPos() diagnostics.Location
+	GetPos() Location
 }
 
-func (b BIRNodeBase) GetPos() diagnostics.Location {
+func (b BIRNodeBase) GetPos() Location {
 	return b.Pos
 }
 
@@ -44,7 +43,7 @@ type BIRVariableDcl interface {
 
 type (
 	BIRNodeBase struct {
-		Pos diagnostics.Location
+		Pos Location
 	}
 
 	BIRDocumentableNodeBase struct {
@@ -204,7 +203,7 @@ func (v *birVariableDclBase) SetName(name model.Name) {
 	v.Name = name
 }
 
-func (v *birVariableDclBase) SetPos(pos diagnostics.Location) {
+func (v *birVariableDclBase) SetPos(pos Location) {
 	v.Pos = pos
 }
 

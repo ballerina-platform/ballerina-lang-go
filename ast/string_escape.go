@@ -19,6 +19,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 var unicodeCodepointPattern = regexp.MustCompile(`\\(\\*)u\{([a-fA-F0-9]+)\}`)
@@ -89,7 +91,7 @@ func unescapeBackslashEscapes(s string) string {
 
 // validateUnicodePoints validates unicode escape sequences
 // migrated from BLangNodeBuilder.java:6233:5
-func validateUnicodePoints(text string, pos Location) {
+func validateUnicodePoints(text string, pos diagnostics.Location) {
 	matches := unicodeCodepointPattern.FindAllStringSubmatch(text, -1)
 	for _, match := range matches {
 		if len(match) < 3 {

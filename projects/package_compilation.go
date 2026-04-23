@@ -33,6 +33,7 @@ type PackageCompilation struct {
 	backendMu             sync.Mutex
 	pluginDiagnostics     []diagnostics.Diagnostic
 	diagnosticResult      DiagnosticResult
+	compilerEnv           *context.CompilerEnvironment
 	compileOnce           sync.Once
 	compilerPluginManager any // TODO(P6): CompilerPluginManager once plugin system is migrated
 }
@@ -45,6 +46,7 @@ func newPackageCompilation(rootPkgCtx *packageContext, compilationOptions Compil
 		packageResolution:  rootPkgCtx.getResolution(),
 		compilationOptions: compilationOptions,
 		compilerBackends:   make(map[TargetPlatform]CompilerBackend),
+		compilerEnv:        rootPkgCtx.project.Environment().compilerEnvironment(),
 	}
 
 	compilation.compile()
@@ -77,6 +79,14 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
+		// Register all module source files with the shared DiagnosticEnv
+		de := c.compilerEnv.DiagnosticEnv()
+		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
+			for _, docCtx := range moduleCtx.srcDocContextMap {
+				de.RegisterFile(docCtx.getName(), docCtx.getTextDocument())
+			}
+		}
+
 		// Phase 1: Parse, AST, symbol resolution, type resolution (sequential - respects dependencies)
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			moduleCtx.compilerCtx.InitModuleStats(moduleCtx.getModuleName().String())
@@ -143,6 +153,11 @@ func (c *PackageCompilation) Resolution() *PackageResolution {
 // Java source: PackageCompilation.diagnosticResult()
 func (c *PackageCompilation) DiagnosticResult() DiagnosticResult {
 	return c.diagnosticResult
+}
+
+// DiagnosticEnv returns the diagnostic env for resolving byte offsets to line/column.
+func (c *PackageCompilation) DiagnosticEnv() *diagnostics.DiagnosticEnv {
+	return c.compilerEnv.DiagnosticEnv()
 }
 
 // SemanticModel returns the semantic model for the specified module.

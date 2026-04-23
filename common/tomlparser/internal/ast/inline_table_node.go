@@ -18,23 +18,25 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // InlineTableValueNode holds an inline table { k = v, ... }.
 // It implements ValueNode so it can appear as the RHS of a key-value pair.
 type InlineTableValueNode struct {
 	entries map[string]TopLevelNode
 	order   []string // insertion order (Go maps are unordered)
-	loc     Location
+	loc     diagnostics.Location
 }
 
-func NewInlineTableValueNode(loc Location) *InlineTableValueNode {
+func NewInlineTableValueNode(loc diagnostics.Location) *InlineTableValueNode {
 	return &InlineTableValueNode{
 		entries: make(map[string]TopLevelNode),
 		loc:     loc,
 	}
 }
 
-func (n *InlineTableValueNode) Kind() TomlType { return TypeInlineTable }
-func (n *InlineTableValueNode) Loc() Location  { return n.loc }
+func (n *InlineTableValueNode) Kind() TomlType            { return TypeInlineTable }
+func (n *InlineTableValueNode) Loc() diagnostics.Location { return n.loc }
 
 // AddEntry inserts a key-value entry into the inline table.
 func (n *InlineTableValueNode) AddEntry(key string, node TopLevelNode) {
@@ -50,7 +52,7 @@ func (n *InlineTableValueNode) Entries() map[string]TopLevelNode {
 }
 
 // SetLoc updates the location after the closing brace is consumed.
-func (n *InlineTableValueNode) SetLoc(loc Location) {
+func (n *InlineTableValueNode) SetLoc(loc diagnostics.Location) {
 	n.loc = loc
 }
 

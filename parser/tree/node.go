@@ -300,18 +300,18 @@ func (n *NodeBase) LineRange() LineRange {
 	startOffset := textRange.StartOffset
 	endOffset := textRange.EndOffset
 
-	startLinePos, err := textDocument.LinePositionFromTextPosition(startOffset)
+	startLine, startColumn, err := textDocument.LinePositionFromTextPosition(startOffset)
 	if err != nil {
 		return n.lineRange
 	}
-	endLinePos, err := textDocument.LinePositionFromTextPosition(endOffset)
+	endLine, endColumn, err := textDocument.LinePositionFromTextPosition(endOffset)
 	if err != nil {
 		return n.lineRange
 	}
 
 	n.lineRange = LineRange{
-		StartLine: LinePosition{Line: startLinePos.Line(), Column: startLinePos.Offset()},
-		EndLine:   LinePosition{Line: endLinePos.Line(), Column: endLinePos.Offset()},
+		StartLine: LinePosition{Line: startLine, Column: startColumn},
+		EndLine:   LinePosition{Line: endLine, Column: endColumn},
 	}
 
 	return n.lineRange

@@ -424,7 +424,7 @@ func (t *packageTypeResolver) ensureResolved(ref model.SymbolRef, depth int) boo
 	if c, inMap := t.packageVarNodes[ref]; inMap {
 		if c == nil {
 			// we are already resolving this
-			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), nil)
+			t.semanticError(fmt.Sprintf("invalid cycle detected for %s", t.symbolName(ref)), diagnostics.Location{})
 			return false
 		}
 		t.packageVarNodes[ref] = nil // mark as in-progress
@@ -3456,6 +3456,8 @@ func resolveFunctionCall(t typeResolver, chain *binding, expr *ast.BLangInvocati
 
 	retTy := semtypes.FunctionReturnType(t.typeContext(), t.symbolType(symbolRef), argListTy)
 	if retTy == nil {
+		// This can only happen when function call is not well-typed and since we
+		// ensure funcTy is a function subtype, this can only be caused by invalid args
 		t.semanticError("incompatible arguments for function call", expr.GetPosition())
 		return nil, expressionEffect{}, false
 	}
@@ -3514,7 +3516,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 		case model.TypeKind_HANDLE:
 			return semtypes.HANDLE, true
 		default:
-			t.internalError("unexpected type kind", nil)
+			t.internalError("unexpected type tag", diagnostics.Location{})
 			return nil, false
 		}
 	case *ast.BLangArrayType:
@@ -3620,7 +3622,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 				t.setMappingAtomBType(mat, ty)
 				return semType, true
 			default:
-				t.unimplemented("unsupported base type kind", nil)
+				t.unimplemented("unsupported base type kind", diagnostics.Location{})
 				return nil, false
 			}
 		} else {
@@ -3791,7 +3793,7 @@ func resolveBTypeInner(t typeResolver, btype ast.BType, depth int) (semtypes.Sem
 	case *ast.BLangObjectType:
 		return resolveObjectType(t, ty, depth)
 	default:
-		t.unimplemented("unsupported type", nil)
+		t.unimplemented("unsupported type", diagnostics.Location{})
 		return nil, false
 	}
 }
@@ -4211,7 +4213,7 @@ func semtypeNetworkQualifier(nq model.ObjectNetworkQuals) semtypes.NetworkQualif
 	}
 }
 
-func setPositions(pos ast.Location, nodes ...ast.BLangNode) {
+func setPositions(pos diagnostics.Location, nodes ...ast.BLangNode) {
 	for _, node := range nodes {
 		node.SetPosition(pos)
 	}

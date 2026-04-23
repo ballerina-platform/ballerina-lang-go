@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type desugaredNode[E model.Node] struct {
@@ -103,11 +104,11 @@ func (ctx *packageContext) addSymbolToSameSpace(ref model.SymbolRef, name string
 }
 
 func (ctx *packageContext) internalError(msg string) {
-	ctx.compilerCtx.InternalError(msg, nil)
+	ctx.compilerCtx.InternalError(msg, diagnostics.Location{})
 }
 
 func (ctx *packageContext) unimplemented(msg string) {
-	ctx.compilerCtx.Unimplemented(msg, nil)
+	ctx.compilerCtx.Unimplemented(msg, diagnostics.Location{})
 }
 
 type functionContext struct {
@@ -318,14 +319,17 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	if pkg.InitFunction == nil {
 		initName := &ast.BLangIdentifier{Value: "init"}
 		initName.SetDeterminedType(semtypes.NEVER)
+		initPos := initStmts[0].GetPosition()
 		pkg.InitFunction = &ast.BLangFunction{}
 		pkg.InitFunction.Name = initName
 		body := &ast.BLangBlockFunctionBody{
 			Stmts: initStmts,
 		}
 		body.SetDeterminedType(semtypes.NEVER)
+		body.SetPosition(initPos)
 		pkg.InitFunction.Body = body
 		pkg.InitFunction.SetDeterminedType(semtypes.NEVER)
+		pkg.InitFunction.SetPosition(initPos)
 		// Create a proper function symbol and scope for the synthetic init function
 		pkgID := pkg.PackageID
 		signature := model.FunctionSignature{ReturnType: semtypes.NIL}
@@ -574,14 +578,18 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 
 func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinition) {
 	if class.InitFunction == nil {
+		classPos := class.GetPosition()
 		fn := ast.BLangFunction{
 			ObjInitFunction: true,
 		}
 		fn.FlagSet.Add(model.Flag_ATTACHED)
 		fn.Name = &ast.BLangIdentifier{Value: "init"}
-		fn.Body = &ast.BLangBlockFunctionBody{}
+		body := &ast.BLangBlockFunctionBody{}
+		body.SetPosition(classPos)
+		fn.Body = body
 		fn.SetDeterminedType(semtypes.NEVER)
 		fn.SetScope(pkgCtx.newFunctionScope(class.Scope()))
+		fn.SetPosition(classPos)
 		initSymbol := model.NewFunctionSymbol("init", model.FunctionSignature{ReturnType: semtypes.NIL}, false)
 		classScope := class.Scope()
 		classScope.AddSymbol("init", initSymbol)

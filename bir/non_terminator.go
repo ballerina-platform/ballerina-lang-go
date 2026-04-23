@@ -18,7 +18,6 @@ package bir
 
 import (
 	"ballerina-lang-go/semtypes"
-	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
 
@@ -164,7 +163,7 @@ func (m *Move) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_MOVE
 }
 
-func NewMove(fromOperand, toOperand *BIROperand, pos diagnostics.Location) *Move {
+func NewMove(fromOperand, toOperand *BIROperand, pos Location) *Move {
 	return &Move{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -184,7 +183,7 @@ func (b *BinaryOp) GetKind() InstructionKind {
 	return b.Kind
 }
 
-func NewBinaryOp(kind InstructionKind, lhsOp, rhsOp1, rhsOp2 *BIROperand, pos diagnostics.Location) *BinaryOp {
+func NewBinaryOp(kind InstructionKind, lhsOp, rhsOp1, rhsOp2 *BIROperand, pos Location) *BinaryOp {
 	return &BinaryOp{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -206,7 +205,7 @@ func (u *UnaryOp) GetKind() InstructionKind {
 	return u.Kind
 }
 
-func NewUnaryOp(kind InstructionKind, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *UnaryOp {
+func NewUnaryOp(kind InstructionKind, lhsOp, rhsOp *BIROperand, pos Location) *UnaryOp {
 	return &UnaryOp{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -227,7 +226,7 @@ func (c *ConstantLoad) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_CONST_LOAD
 }
 
-func NewConstantLoad(lhsOp *BIROperand, value any, pos diagnostics.Location) *ConstantLoad {
+func NewConstantLoad(lhsOp *BIROperand, value any, pos Location) *ConstantLoad {
 	return &ConstantLoad{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -247,7 +246,7 @@ func (f *FieldAccess) GetKind() InstructionKind {
 	return f.Kind
 }
 
-func NewFieldAccess(kind InstructionKind, lhsOp, keyOp, rhsOp *BIROperand, pos diagnostics.Location) *FieldAccess {
+func NewFieldAccess(kind InstructionKind, lhsOp, keyOp, rhsOp *BIROperand, pos Location) *FieldAccess {
 	return &FieldAccess{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -269,7 +268,7 @@ func (n *NewArray) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_ARRAY
 }
 
-func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue, pos diagnostics.Location) *NewArray {
+func NewArrayConstructor(typ semtypes.SemType, lhsOp, sizeOp *BIROperand, values []*BIROperand, filler values.BalValue, pos Location) *NewArray {
 	return &NewArray{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -292,7 +291,7 @@ func (t *TypeCast) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_CAST
 }
 
-func NewTypeCast(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *TypeCast {
+func NewTypeCast(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos Location) *TypeCast {
 	return &TypeCast{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -313,7 +312,7 @@ func (t *TypeTest) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_TYPE_TEST
 }
 
-func NewTypeTest(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos diagnostics.Location) *TypeTest {
+func NewTypeTest(typ semtypes.SemType, lhsOp, rhsOp *BIROperand, pos Location) *TypeTest {
 	return &TypeTest{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -338,7 +337,7 @@ func (n *NewMap) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_NEW_STRUCTURE
 }
 
-func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, pos diagnostics.Location) *NewMap {
+func NewMapConstructor(typ semtypes.SemType, lhsOp *BIROperand, values []MappingConstructorEntry, defaults []MappingConstructorDefaultEntry, pos Location) *NewMap {
 	return &NewMap{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -360,7 +359,7 @@ func (n *NewError) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
-func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp, causeOp, detailOp *BIROperand, pos diagnostics.Location) *NewError {
+func NewErrorConstructor(typ semtypes.SemType, typeName string, lhsOp, messageOp, causeOp, detailOp *BIROperand, pos Location) *NewError {
 	return &NewError{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -388,7 +387,7 @@ func (n *NewObject) GetLhsOperand() *BIROperand {
 	return n.LhsOp
 }
 
-func NewObjectConstructor(classDefRef string, lhsOp *BIROperand, pos diagnostics.Location) *NewObject {
+func NewObjectConstructor(classDefRef string, lhsOp *BIROperand, pos Location) *NewObject {
 	return &NewObject{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{
@@ -416,7 +415,7 @@ func (p *PopScopeFrame) GetLhsOperand() *BIROperand {
 	return nil
 }
 
-func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand, pos diagnostics.Location) *FPLoad {
+func NewFPLoad(functionLookupKey string, typ semtypes.SemType, lhsOp *BIROperand, pos Location) *FPLoad {
 	return &FPLoad{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{

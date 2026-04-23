@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type BLangExpression interface {
@@ -1204,7 +1205,7 @@ func (this *BLangNewExpression) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
+func createBLangUnaryExpr(location diagnostics.Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
 	exprNode := &BLangUnaryExpr{}
 	exprNode.pos = location
 	exprNode.Expr = expr
