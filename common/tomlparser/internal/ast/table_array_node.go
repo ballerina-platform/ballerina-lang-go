@@ -18,25 +18,27 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // TableArrayNode represents [[array-of-tables]] entries.
 // Each [[array-of-tables]] occurrence appends a new TableNode child.
 type TableArrayNode struct {
 	key      string
 	children []*TableNode
-	loc      Location
+	loc      diagnostics.Location
 }
 
-func NewTableArrayNode(key string, loc Location) *TableArrayNode {
+func NewTableArrayNode(key string, loc diagnostics.Location) *TableArrayNode {
 	return &TableArrayNode{
 		key: key,
 		loc: loc,
 	}
 }
 
-func (n *TableArrayNode) Kind() TomlType         { return TypeTableArray }
-func (n *TableArrayNode) Loc() Location          { return n.loc }
-func (n *TableArrayNode) KeyName() string        { return n.key }
-func (n *TableArrayNode) Children() []*TableNode { return n.children }
+func (n *TableArrayNode) Kind() TomlType            { return TypeTableArray }
+func (n *TableArrayNode) Loc() diagnostics.Location { return n.loc }
+func (n *TableArrayNode) KeyName() string           { return n.key }
+func (n *TableArrayNode) Children() []*TableNode    { return n.children }
 
 // AddChild appends a table to this array.
 func (n *TableArrayNode) AddChild(t *TableNode) {

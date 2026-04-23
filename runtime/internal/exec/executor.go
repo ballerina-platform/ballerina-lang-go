@@ -19,7 +19,6 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 	"fmt"
 )
@@ -140,11 +139,11 @@ func executeBasicBlockWithTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame
 
 func executeBasicBlock(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
-		posProvider := inst.(interface{ GetPos() diagnostics.Location })
+		posProvider := inst.(interface{ GetPos() bir.Location })
 		frame.location = posProvider.GetPos()
 		currentFrame = execInstruction(ctx, inst, currentFrame)
 	}
-	posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
+	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
 	frame.location = posProvider.GetPos()
 	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame
 }

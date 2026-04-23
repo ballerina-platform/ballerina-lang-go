@@ -28,6 +28,7 @@ import (
 	"ballerina-lang-go/projects"
 	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
+	"ballerina-lang-go/tools/diagnostics"
 
 	"github.com/spf13/cobra"
 )
@@ -174,7 +175,8 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for loading errors
 	diagResult := result.Diagnostics()
 	if diagResult.HasErrors() {
-		printDiagnostics(fsys, os.Stderr, diagResult, !isTerminal())
+		// Given we don't have sources at this point it is okay to pass an empty diagnostic env
+		printDiagnostics(fsys, os.Stderr, diagResult, !isTerminal(), diagnostics.NewDiagnosticEnv())
 		return fmt.Errorf("project loading contains errors")
 	}
 
@@ -187,7 +189,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 	// Check for compilation errors
 	compilationDiags := compilation.DiagnosticResult()
 	if compilationDiags.HasErrors() {
-		printDiagnostics(fsys, os.Stderr, compilationDiags, !isTerminal())
+		printDiagnostics(fsys, os.Stderr, compilationDiags, !isTerminal(), compilation.DiagnosticEnv())
 		return fmt.Errorf("compilation failed with errors")
 	}
 

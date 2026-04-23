@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
 )
 
@@ -52,13 +53,12 @@ func formatCallStack(ctx *Context) []string {
 		}
 		f := frames[i]
 		loc := f.location
-		if loc == nil {
+		if bir.IsLocationEmpty(loc) {
 			out = append(out, fmt.Sprintf("%s(unknown)", f.functionKey))
 			continue
 		}
-		lr := loc.LineRange()
-		file := filepath.Base(lr.FileName())
-		line := lr.StartLine().Line() + 1
+		file := filepath.Base(loc.FilePath())
+		line := loc.StartLine() + 1
 		out = append(out, fmt.Sprintf("%s(%s:%d)", prettyFunctionName(f.functionKey), file, line))
 	}
 	return out

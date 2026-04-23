@@ -18,17 +18,19 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // BoolValueNode holds a boolean value.
 type BoolValueNode struct {
 	value bool
-	loc   Location
+	loc   diagnostics.Location
 }
 
-func NewBoolValueNode(value bool, loc Location) *BoolValueNode {
+func NewBoolValueNode(value bool, loc diagnostics.Location) *BoolValueNode {
 	return &BoolValueNode{value: value, loc: loc}
 }
 
-func (n *BoolValueNode) Kind() TomlType   { return TypeBoolean }
-func (n *BoolValueNode) Loc() Location    { return n.loc }
-func (n *BoolValueNode) Value() bool      { return n.value }
-func (n *BoolValueNode) NativeValue() any { return n.value }
+func (n *BoolValueNode) Kind() TomlType            { return TypeBoolean }
+func (n *BoolValueNode) Loc() diagnostics.Location { return n.loc }
+func (n *BoolValueNode) Value() bool               { return n.value }
+func (n *BoolValueNode) NativeValue() any          { return n.value }

@@ -18,6 +18,8 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // TomlType enumerates the semantic AST node kinds.
 type TomlType int
 
@@ -33,18 +35,10 @@ const (
 	TypeInlineTable                 // { k = v }
 )
 
-// Location stores the source position of a node, used for diagnostics.
-type Location struct {
-	StartLine   int // 1-based
-	StartColumn int // 1-based
-	EndLine     int
-	EndColumn   int
-}
-
 // Node is the base interface for all semantic AST nodes.
 type Node interface {
 	Kind() TomlType
-	Loc() Location
+	Loc() diagnostics.Location
 }
 
 // TopLevelNode can appear as an entry in a table's entries map.

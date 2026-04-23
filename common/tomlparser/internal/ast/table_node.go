@@ -18,17 +18,19 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // TableNode represents a [table] section or the implicit root document table.
 type TableNode struct {
 	key       string // last key segment; empty for root table
 	entries   map[string]TopLevelNode
 	order     []string // insertion order (Go maps are unordered)
 	generated bool     // true when implicitly created for a dotted key
-	loc       Location
+	loc       diagnostics.Location
 }
 
 // NewTableNode creates an explicit (non-generated) table node.
-func NewTableNode(key string, loc Location) *TableNode {
+func NewTableNode(key string, loc diagnostics.Location) *TableNode {
 	return &TableNode{
 		key:     key,
 		entries: make(map[string]TopLevelNode),
@@ -37,7 +39,7 @@ func NewTableNode(key string, loc Location) *TableNode {
 }
 
 // NewGeneratedTableNode creates an implicit intermediate table node.
-func NewGeneratedTableNode(key string, loc Location) *TableNode {
+func NewGeneratedTableNode(key string, loc diagnostics.Location) *TableNode {
 	return &TableNode{
 		key:       key,
 		entries:   make(map[string]TopLevelNode),
@@ -46,10 +48,10 @@ func NewGeneratedTableNode(key string, loc Location) *TableNode {
 	}
 }
 
-func (t *TableNode) Kind() TomlType  { return TypeTable }
-func (t *TableNode) Loc() Location   { return t.loc }
-func (t *TableNode) KeyName() string { return t.key }
-func (t *TableNode) Generated() bool { return t.generated }
+func (t *TableNode) Kind() TomlType            { return TypeTable }
+func (t *TableNode) Loc() diagnostics.Location { return t.loc }
+func (t *TableNode) KeyName() string           { return t.key }
+func (t *TableNode) Generated() bool           { return t.generated }
 
 // Entries returns the map of child nodes.
 func (t *TableNode) Entries() map[string]TopLevelNode { return t.entries }

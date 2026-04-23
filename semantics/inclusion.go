@@ -18,6 +18,7 @@ package semantics
 
 import (
 	"ballerina-lang-go/model"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 // collectIncludedMembers resolves each included type, validates it is a subtype of expectedBasicType,
@@ -28,7 +29,7 @@ func collectIncludedMembers(t typeResolver, inclusions []model.SymbolRef, depth 
 		t.ensureResolved(symRef, depth)
 		incSym := getTypeSymbol(t, symRef)
 		if incSym == nil {
-			t.internalError("inclusion symbol is not a type symbol", nil)
+			t.internalError("inclusion symbol is not a type symbol", diagnostics.Location{})
 			return nil, true
 		}
 		if incSym.Type() == nil {

@@ -411,3 +411,215 @@ func TestFunctionTypeWithUnionParams(t *testing.T) {
 		t.Errorf("got %s expected %s", actual, expected)
 	}
 }
+
+func TestObjectSimpleFields(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+		{Name: "y", ValueTy: STRING, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, ty)
+	expected := "object { int x; string y }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectWithMethod(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	methodTy := funcHelper(env, createTupleType(env, INT, INT), INT)
+	ty := od.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "foo", ValueTy: methodTy, Kind: MemberKindMethod, Visibility: VisibilityPublic, Immutable: true},
+	})
+	actual := ToString(cx, ty)
+	expected := "object { function foo(int, int) returns int }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectWithFieldsAndMethods(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	methodTy := funcHelper(env, createTupleType(env, INT, INT), INT)
+	ty := od.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "bar", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+		{Name: "foo", ValueTy: methodTy, Kind: MemberKindMethod, Visibility: VisibilityPublic, Immutable: true},
+	})
+	actual := ToString(cx, ty)
+	expected := "object { int bar; function foo(int, int) returns int }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectIsolated(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersFrom(true, false, NetworkQualifierNone), []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, ty)
+	expected := "isolated object { int x }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectClient(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersFrom(false, false, NetworkQualifierClient), []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, ty)
+	expected := "client object { int x }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectService(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersFrom(false, false, NetworkQualifierService), []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, ty)
+	expected := "service object { int x }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectIsolatedService(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersFrom(true, false, NetworkQualifierService), []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, ty)
+	expected := "isolated service object { int x }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectRemoteMethod(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	methodTy := funcHelper(env, createTupleType(env, INT), STRING)
+	ty := od.Define(env, ObjectQualifiersFrom(false, false, NetworkQualifierClient), []Member{
+		{Name: "ping", ValueTy: methodTy, Kind: MemberKindRemoteMethod, Visibility: VisibilityPublic, Immutable: true},
+	})
+	actual := ToString(cx, ty)
+	expected := "client object { remote function ping(int) returns string }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectResourceMethod(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	methodTy := funcHelper(env, createTupleType(env), NIL)
+	ty := od.Define(env, ObjectQualifiersFrom(false, false, NetworkQualifierService), []Member{
+		{Name: "get", ValueTy: methodTy, Kind: MemberKindResourceMethod, Visibility: VisibilityPublic, Immutable: true},
+	})
+	actual := ToString(cx, ty)
+	expected := "service object { resource function get() returns nil }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectEmpty(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersDEFAULT, nil)
+	actual := ToString(cx, ty)
+	expected := "object"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectReadonlyIntersect(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od := NewObjectDefinition()
+	ty := od.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, Intersect(ty, VAL_READONLY))
+	expected := "readonly&object { int x }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectTypeUnion(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od1 := NewObjectDefinition()
+	ty1 := od1.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	od2 := NewObjectDefinition()
+	ty2 := od2.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "y", ValueTy: STRING, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, Union(ty1, ty2))
+	expected := "object { int x }|object { string y }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectTypeIntersect(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od1 := NewObjectDefinition()
+	ty1 := od1.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	od2 := NewObjectDefinition()
+	ty2 := od2.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "y", ValueTy: STRING, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, Intersect(ty1, ty2))
+	expected := "object { int x }&object { string y }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}
+
+func TestObjectTypeDiff(t *testing.T) {
+	env := CreateTypeEnv()
+	cx := ContextFrom(env)
+	od1 := NewObjectDefinition()
+	ty1 := od1.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "x", ValueTy: INT, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	od2 := NewObjectDefinition()
+	ty2 := od2.Define(env, ObjectQualifiersDEFAULT, []Member{
+		{Name: "y", ValueTy: STRING, Kind: MemberKindField, Visibility: VisibilityPublic},
+	})
+	actual := ToString(cx, Diff(ty1, ty2))
+	expected := "object { int x }&¬object { string y }"
+	if actual != expected {
+		t.Errorf("got %q expected %q", actual, expected)
+	}
+}

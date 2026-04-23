@@ -19,6 +19,9 @@
 package testphases
 
 import (
+	"fmt"
+	"os"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/context"
@@ -26,7 +29,7 @@ import (
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/semantics"
-	"fmt"
+	"ballerina-lang-go/tools/text"
 )
 
 // Phase represents a frontend compilation phase
@@ -67,6 +70,12 @@ type PipelineResult struct {
 // It returns a PipelineResult containing the outputs relevant to that phase.
 func RunPipeline(cx *context.CompilerContext, phase Phase, inputPath string) (*PipelineResult, error) {
 	result := &PipelineResult{}
+
+	// Register source file with DiagnosticEnv
+	content, err := os.ReadFile(inputPath)
+	if err == nil {
+		cx.DiagnosticEnv().RegisterFile(inputPath, text.NewStringTextDocument(string(content)))
+	}
 
 	// Phase 1: Parse
 	syntaxTree, err := parser.GetSyntaxTree(cx, inputPath)

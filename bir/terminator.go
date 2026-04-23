@@ -19,7 +19,6 @@ package bir
 import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 )
 
@@ -81,7 +80,7 @@ func (g *Goto) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_GOTO
 }
 
-func NewReturn(pos diagnostics.Location) *Return {
+func NewReturn(pos Location) *Return {
 	return &Return{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
@@ -93,7 +92,7 @@ func NewReturn(pos diagnostics.Location) *Return {
 	}
 }
 
-func NewGoto(thenBB *BIRBasicBlock, pos diagnostics.Location) *Goto {
+func NewGoto(thenBB *BIRBasicBlock, pos Location) *Goto {
 	return &Goto{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
@@ -114,7 +113,7 @@ func (c *Call) GetLhsOperand() *BIROperand {
 	return c.LhsOp
 }
 
-func NewCall(kind InstructionKind, args []BIROperand, name model.Name, thenBB *BIRBasicBlock, lhsOp *BIROperand, pos diagnostics.Location) *Call {
+func NewCall(kind InstructionKind, args []BIROperand, name model.Name, thenBB *BIRBasicBlock, lhsOp *BIROperand, pos Location) *Call {
 	return &Call{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
@@ -143,7 +142,7 @@ func (p *Panic) GetKind() InstructionKind {
 	return INSTRUCTION_KIND_PANIC
 }
 
-func NewPanic(errorOp *BIROperand, pos diagnostics.Location) *Panic {
+func NewPanic(errorOp *BIROperand, pos Location) *Panic {
 	return &Panic{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{
@@ -156,7 +155,7 @@ func NewPanic(errorOp *BIROperand, pos diagnostics.Location) *Panic {
 	}
 }
 
-func NewBranch(op *BIROperand, trueBB, falseBB *BIRBasicBlock, pos diagnostics.Location) *Branch {
+func NewBranch(op *BIROperand, trueBB, falseBB *BIRBasicBlock, pos Location) *Branch {
 	return &Branch{
 		BIRTerminatorBase: BIRTerminatorBase{
 			BIRInstructionBase: BIRInstructionBase{

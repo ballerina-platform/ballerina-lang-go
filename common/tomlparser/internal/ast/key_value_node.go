@@ -18,29 +18,31 @@
 
 package ast
 
+import "ballerina-lang-go/tools/diagnostics"
+
 // KeyValueNode represents a key = value pair.
 // When the TOML source uses a dotted key (a.b.c = val), keys holds all
 // segments; KeyName() returns only the last segment.
 type KeyValueNode struct {
 	keys  []string // all key segments (len >= 1)
 	value ValueNode
-	loc   Location
+	loc   diagnostics.Location
 }
 
 // NewKeyValueNode creates a single-key (non-dotted) KeyValueNode.
-func NewKeyValueNode(key string, value ValueNode, loc Location) *KeyValueNode {
+func NewKeyValueNode(key string, value ValueNode, loc diagnostics.Location) *KeyValueNode {
 	return &KeyValueNode{keys: []string{key}, value: value, loc: loc}
 }
 
 // NewKeyValueNodeWithPath creates a dotted-key KeyValueNode.
 // Used by the parser when it encounters a.b.c = val.
-func NewKeyValueNodeWithPath(keys []string, value ValueNode, loc Location) *KeyValueNode {
+func NewKeyValueNodeWithPath(keys []string, value ValueNode, loc diagnostics.Location) *KeyValueNode {
 	return &KeyValueNode{keys: keys, value: value, loc: loc}
 }
 
-func (n *KeyValueNode) Kind() TomlType   { return TypeKeyValue }
-func (n *KeyValueNode) Loc() Location    { return n.loc }
-func (n *KeyValueNode) KeyName() string  { return n.keys[len(n.keys)-1] }
-func (n *KeyValueNode) Keys() []string   { return n.keys }
-func (n *KeyValueNode) Value() ValueNode { return n.value }
-func (n *KeyValueNode) NativeValue() any { return n.value.NativeValue() }
+func (n *KeyValueNode) Kind() TomlType            { return TypeKeyValue }
+func (n *KeyValueNode) Loc() diagnostics.Location { return n.loc }
+func (n *KeyValueNode) KeyName() string           { return n.keys[len(n.keys)-1] }
+func (n *KeyValueNode) Keys() []string            { return n.keys }
+func (n *KeyValueNode) Value() ValueNode          { return n.value }
+func (n *KeyValueNode) NativeValue() any          { return n.value.NativeValue() }

@@ -124,11 +124,11 @@ func verifyBIRPositions(t *testing.T, pkg *bir.BIRPackage, inputPath string) {
 func verifyFunctionPositions(t *testing.T, fn *bir.BIRFunction, inputPath string) {
 	for _, bb := range fn.BasicBlocks {
 		for _, inst := range bb.Instructions {
-			if inst.GetPos() == nil {
+			if bir.IsLocationEmpty(inst.GetPos()) {
 				t.Errorf("instruction %T in %s (BB: %s) has no position info for %s", inst, fn.Name, bb.Id, inputPath)
 			}
 		}
-		if bb.Terminator != nil && bb.Terminator.GetPos() == nil {
+		if bb.Terminator != nil && bir.IsLocationEmpty(bb.Terminator.GetPos()) {
 			t.Errorf("terminator %T in %s (BB: %s) has no position info for %s", bb.Terminator, fn.Name, bb.Id, inputPath)
 		}
 	}

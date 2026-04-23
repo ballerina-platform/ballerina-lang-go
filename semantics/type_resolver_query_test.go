@@ -34,7 +34,7 @@ type unsupportedBType struct {
 	ast.BLangValueType
 }
 
-var queryTestPos = diagnostics.NewBLangDiagnosticLocation("query_test.bal", 0, 0, 0, 0, 0, 0)
+var queryTestPos = diagnostics.NewBuiltinLocation()
 
 func TestResolveQueryExprErrorCases(t *testing.T) {
 	testCases := []struct {

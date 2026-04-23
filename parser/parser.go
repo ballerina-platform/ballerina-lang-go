@@ -14699,7 +14699,7 @@ func GetSyntaxTree(ctx *context.CompilerContext, fileName string) (*tree.SyntaxT
 	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
 	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, nil, fileName, false)
 	if syntaxTree.HasDiagnostics() {
-		ctx.SyntaxError("syntax error at", nil)
+		ctx.SyntaxError("syntax error at", diagnostics.Location{})
 	}
 	return &syntaxTree, nil
 }

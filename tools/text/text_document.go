@@ -18,17 +18,6 @@ package text
 
 // TextDocument is an abstract representation of a Ballerina source file (.bal).
 type TextDocument interface {
-	Apply(textDocumentChange TextDocumentChange) TextDocument
-	ToCharArray() []rune
-	Line(line int) (TextLine, error)
-	LinePositionFromTextPosition(textPosition int) (LinePosition, error)
-	TextPositionFromLinePosition(linePosition LinePosition) (int, error)
-	TextLines() []string
-	Lines() LineMap
-	PopulateTextLineMap() LineMap
+	LinePositionFromTextPosition(textPosition int) (line, offset int, err error)
 	String() string
-}
-
-type textDocumentBase struct {
-	lineMap LineMap
 }
