@@ -787,11 +787,7 @@ func walkMappingConstructorExpr(cx *functionContext, expr *ast.BLangMappingConst
 }
 
 func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
-	fromClause, ok := expr.QueryClauseList[0].(*ast.BLangFromClause)
-	if !ok {
-		cx.internalError("query expression must start with from clause")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
+	fromClause := expr.QueryClauseList[0].(*ast.BLangFromClause)
 
 	selectClauseIndex := len(expr.QueryClauseList) - 1
 	var onConflictClause *ast.BLangOnConflictClause
@@ -799,23 +795,11 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		onConflictClause = clause
 		selectClauseIndex--
 	}
-	if selectClauseIndex < 1 {
-		cx.internalError("query expression must end with select clause")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
 
-	selectClause, ok := expr.QueryClauseList[selectClauseIndex].(*ast.BLangSelectClause)
-	if !ok {
-		cx.internalError("query expression must end with select clause")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
+	selectClause := expr.QueryClauseList[selectClauseIndex].(*ast.BLangSelectClause)
 	orderByClauseIndices := queryOrderByClauseIndices(expr, 1, selectClauseIndex)
 
-	loopVarDef, ok := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
-	if !ok {
-		cx.unimplemented("query from clause currently supports only simple variable definition")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
+	loopVarDef := fromClause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
 
 	queryTy := expr.GetDeterminedType()
 	basePos := expr.GetPosition()
@@ -877,6 +861,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 
 	var seenKeysRef *ast.BLangSimpleVarRef
 	if onConflictClause != nil && expr.QueryConstructType == model.TypeKind_MAP {
+		var ok bool
 		seenKeysRef, ok = createQueryMapStore(cx, &initStmts, basePos)
 		if !ok {
 			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
@@ -885,10 +870,6 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 
 	loopVarSymbol := loopVarDef.Var.Symbol()
 	loopVarTy := cx.symbolType(loopVarSymbol)
-	if loopVarTy == nil {
-		cx.internalError("query from clause variable symbol type not found")
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
-	}
 
 	lengthSource := collRef
 	var keysRef *ast.BLangSimpleVarRef
@@ -944,6 +925,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		rowCountRef: lenRef,
 	}
 	stageStart := 1
+	var ok bool
 	for _, orderByClauseIndex := range orderByClauseIndices {
 		stageInput, ok = appendQueryOrderByStageStmts(
 			cx,
