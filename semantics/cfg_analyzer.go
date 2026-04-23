@@ -129,22 +129,26 @@ func terminalBlockHasReturnOrPanic(bb basicBlock) bool {
 		return false
 	}
 	last := bb.nodes[len(bb.nodes)-1]
-	k := last.GetKind()
-	if k == model.NodeKind_RETURN || k == model.NodeKind_PANIC {
+	switch last.(type) {
+	case *ast.BLangReturn, *ast.BLangPanic:
 		return true
+	case *ast.BLangExpressionStmt:
+		// The only other way a reachable block becomes terminal is via a
+		// `check`/`checkpanic` expression statement whose operand is
+		// statically a subtype of error (see analyzeStatement in
+		// control_flow_analyzer.go).
+		return true
+	default:
+		return false
 	}
-	// The only other way a reachable block becomes terminal is via a
-	// `check`/`checkpanic` expression statement whose operand is statically
-	// a subtype of error (see analyzeStatement in control_flow_analyzer.go).
-	_, ok := last.(*ast.BLangExpressionStmt)
-	return ok
 }
 
 func terminalBlockHasPanic(bb basicBlock) bool {
 	if len(bb.nodes) == 0 {
 		return false
 	}
-	return bb.nodes[len(bb.nodes)-1].GetKind() == model.NodeKind_PANIC
+	_, ok := bb.nodes[len(bb.nodes)-1].(*ast.BLangPanic)
+	return ok
 }
 
 func positionForMissingReturn(bb basicBlock, fn *ast.BLangFunction) diagnostics.Location {

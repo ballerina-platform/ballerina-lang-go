@@ -133,15 +133,15 @@ func (ab *analyzerBase) tyCtx() semtypes.Context {
 	return ab.parentAnalyzer().tyCtx()
 }
 
-func (sa *SemanticAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (sa *SemanticAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 
-func (fa *functionAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (fa *functionAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return nil
 }
 
-func (la *loopAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (la *loopAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return la
 }
 
@@ -192,7 +192,7 @@ func (ca *constantAnalyzer) loc() diagnostics.Location {
 	return ca.constant.GetPosition()
 }
 
-func (ca *constantAnalyzer) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (ca *constantAnalyzer) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return ca
 }
 
@@ -581,12 +581,12 @@ func (ca *constantAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangContinue:
 		ca.semanticErr("continue statement not allowed in constant expression", n.GetPosition())
 		return nil
-	case model.TypeDescriptor:
+	case ast.TypeDescriptor:
 	case *ast.BLangTypeDefinition:
 		// We have set the type at constructor
 		return nil
-	case model.ExpressionNode:
-		bLangExpr := n.(ast.BLangExpression)
+	case ast.BLangExpression:
+		bLangExpr := n
 		hasErrors := false
 		validateConstantExpr(ca.ctx(), bLangExpr, func(e ast.BLangExpression) {
 			ca.semanticErr("expression is not a constant expression", e.GetPosition())
@@ -858,9 +858,9 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 				return false
 			}
 		case *ast.BLangLetClause:
-			for _, variableDef := range clause.LetVarDeclarations {
-				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
-				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
+			for i := range clause.LetVarDeclarations {
+				varDef := &clause.LetVarDeclarations[i]
+				if varDef.Var == nil || varDef.Var.Expr == nil {
 					a.semanticErr("let clause supports only initialized simple variable declarations", clause.GetPosition())
 					return false
 				}
@@ -885,7 +885,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	}
 
 	var selectExpectedTy semtypes.SemType
-	if queryExpr.QueryConstructType == model.TypeKind_MAP {
+	if queryExpr.QueryConstructType == ast.TypeKind_MAP {
 		selectExpectedTy = mapQuerySelectExpectedType(a.tyCtx().Env())
 	}
 
@@ -894,7 +894,7 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 	}
 
 	if clauses.onConflictClause != nil {
-		if queryExpr.QueryConstructType != model.TypeKind_MAP {
+		if queryExpr.QueryConstructType != ast.TypeKind_MAP {
 			a.semanticErr("on conflict clause is supported only for map query construct type", clauses.onConflictClause.GetPosition())
 			return false
 		}
@@ -1216,7 +1216,7 @@ type invocable interface {
 	SetResolvedSymbol(model.SymbolRef)
 	CallArgs() []ast.BLangExpression
 	SetCallArgs([]ast.BLangExpression)
-	GetName() model.IdentifierNode
+	GetName() ast.IdentifierNode
 	SetRawSymbol(model.Symbol)
 }
 
@@ -1332,7 +1332,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
 	case *ast.BLangXMLNS:
-		expr := n.GetNamespaceURI().(ast.BLangExpression)
+		expr := n.GetNamespaceURI()
 		validateResolvedType(a, expr, semtypes.STRING)
 		validateConstantExpr(a.ctx(), expr, func(e ast.BLangExpression) {
 			a.semanticErr("expression is not a constant expression", e.GetPosition())
@@ -1387,8 +1387,8 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		}
 		return nil
 	case *ast.BLangClassDefinition:
-		for _, f := range n.Fields {
-			field := f.(*ast.BLangSimpleVariable)
+		for _, fieldNode := range n.Fields {
+			field := fieldNode.(*ast.BLangSimpleVariable)
 			if field.Expr != nil {
 				expectedType := a.ctx().SymbolType(field.Symbol())
 				analyzeActionOrExpression(a, field.Expr.(ast.BLangExpression), expectedType)
@@ -1411,12 +1411,12 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 }
 
 type assignmentNode interface {
-	GetVariable() model.ExpressionNode
-	GetExpression() model.ExpressionNode
+	GetVariable() ast.LExpr
+	GetExpression() ast.BLangActionOrExpression
 }
 
 func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
-	variable := assignment.GetVariable().(ast.BLangExpression)
+	variable := assignment.GetVariable()
 	if symbolNode, ok := variable.(ast.BNodeWithSymbol); ok {
 		symbol := symbolNode.Symbol()
 		if !ast.SymbolIsSet(symbolNode) {
@@ -1443,7 +1443,7 @@ func analyzeAssignment[A analyzer](a A, assignment assignmentNode) bool {
 		return false
 	}
 	expectedType := variable.GetDeterminedType()
-	expression := assignment.GetExpression().(ast.BLangActionOrExpression)
+	expression := assignment.GetExpression()
 	return analyzeActionOrExpression(a, expression, expectedType)
 }
 
@@ -1451,8 +1451,8 @@ func analyzeCompoundAssignment[A analyzer](a A, assignment *ast.BLangCompoundAss
 	if !analyzeAssignment(a, assignment) {
 		return false
 	}
-	lhsTy := assignment.GetVariable().(ast.BLangExpression).GetDeterminedType()
-	rhsTy := assignment.GetExpression().(ast.BLangActionOrExpression).GetDeterminedType()
+	lhsTy := assignment.GetVariable().GetDeterminedType()
+	rhsTy := assignment.GetExpression().GetDeterminedType()
 	if semtypes.ContainsBasicType(lhsTy, semtypes.NIL) || semtypes.ContainsBasicType(rhsTy, semtypes.NIL) {
 		a.semanticErr("compound assignment operands cannot be nilable", assignment.GetPosition())
 		return false
@@ -1685,7 +1685,7 @@ func (v *everyNodeVisitor[A]) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *everyNodeVisitor[A]) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *everyNodeVisitor[A]) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	return v
 }
 

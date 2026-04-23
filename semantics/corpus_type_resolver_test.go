@@ -116,7 +116,7 @@ func (v *typeResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *typeResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *typeResolutionValidator) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return nil
 	}

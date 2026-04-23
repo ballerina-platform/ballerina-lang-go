@@ -22,7 +22,6 @@ import (
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
-	"ballerina-lang-go/model"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
@@ -106,7 +105,7 @@ func (v *symbolResolutionValidator) Visit(node ast.BLangNode) ast.Visitor {
 	return v
 }
 
-func (v *symbolResolutionValidator) VisitTypeData(typeData *model.TypeData) ast.Visitor {
+func (v *symbolResolutionValidator) VisitTypeData(typeData *ast.TypeData) ast.Visitor {
 	if typeData.TypeDescriptor == nil {
 		return nil
 	}
