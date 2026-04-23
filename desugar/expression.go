@@ -1017,7 +1017,7 @@ type queryOrderStageInput struct {
 func createQueryCounterRef(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) *ast.BLangSimpleVarRef {
 	counterName, counterSymbol := cx.addDesugardSymbol(semtypes.INT, model.SymbolKindVariable, false)
 	counterVar := &ast.BLangSimpleVariable{
@@ -1040,7 +1040,7 @@ func createQueryLengthRef(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
 	source ast.BLangExpression,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) (*ast.BLangSimpleVarRef, bool) {
 	lengthInvocation := createLengthInvocation(cx, source)
 	if lengthInvocation == nil {
@@ -1081,7 +1081,7 @@ func appendQueryOrderByStageStmts(
 	orderByClauseIndex int,
 	stageInput queryOrderStageInput,
 	initStmts *[]model.StatementNode,
-	basePos ast.Location,
+	basePos diagnostics.Location,
 ) (queryOrderStageInput, bool) {
 	if stageInput.rowCountRef == nil {
 		cx.internalError("query order-by stage input length must be available")
@@ -1239,7 +1239,7 @@ func appendQueryFinalStageStmts(
 	onConflictClause *ast.BLangOnConflictClause,
 	seenKeysRef *ast.BLangSimpleVarRef,
 	initStmts *[]model.StatementNode,
-	basePos ast.Location,
+	basePos diagnostics.Location,
 ) bool {
 	if stageInput.rowCountRef == nil {
 		cx.internalError("query final stage input length must be available")
@@ -1321,7 +1321,7 @@ func appendQueryFinalStageStmts(
 func createQueryListStore(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) (*ast.BLangSimpleVarRef, bool) {
 	listName, listSymbol := cx.addDesugardSymbol(semtypes.LIST, model.SymbolKindVariable, false)
 	emptyList := &ast.BLangListConstructorExpr{Exprs: []ast.BLangExpression{}}
@@ -1346,7 +1346,7 @@ func createQueryListStore(
 func createQueryMapStore(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) (*ast.BLangSimpleVarRef, bool) {
 	mapName, mapSymbol := cx.addDesugardSymbol(semtypes.MAPPING, model.SymbolKindVariable, false)
 	emptyMap := &ast.BLangMappingConstructorExpr{Fields: []model.MappingField{}}
@@ -1373,7 +1373,7 @@ func createPreOrderLetStores(
 	startClauseIndex int,
 	endClauseIndex int,
 	initStmts *[]model.StatementNode,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) ([]queryLetStore, bool) {
 	var stores []queryLetStore
 	for i := startClauseIndex; i < endClauseIndex; i++ {
@@ -1411,7 +1411,7 @@ func createPreOrderLetStores(
 func createQueryPayloadStore(
 	cx *functionContext,
 	initStmts *[]model.StatementNode,
-	pos ast.Location,
+	pos diagnostics.Location,
 	letStores []queryLetStore,
 ) (*ast.BLangSimpleVarRef, bool) {
 	payloadRef, ok := createQueryListStore(cx, initStmts, pos)
@@ -1433,7 +1433,7 @@ func createQueryPayloadStore(
 func buildOrderKeyTupleExpr(
 	cx *functionContext,
 	orderByClause *ast.BLangOrderByClause,
-	pos ast.Location,
+	pos diagnostics.Location,
 ) (*ast.BLangListConstructorExpr, []model.StatementNode, bool) {
 	keyExprs := make([]ast.BLangExpression, 0, len(orderByClause.OrderByKeyList))
 	var initStmts []model.StatementNode
@@ -1449,7 +1449,7 @@ func buildOrderKeyTupleExpr(
 	return keyTuple, initStmts, true
 }
 
-func buildOrderDirectionExpr(orderByClause *ast.BLangOrderByClause, pos ast.Location) *ast.BLangListConstructorExpr {
+func buildOrderDirectionExpr(orderByClause *ast.BLangOrderByClause, pos diagnostics.Location) *ast.BLangListConstructorExpr {
 	directions := make([]ast.BLangExpression, 0, len(orderByClause.OrderByKeyList))
 	for i := range orderByClause.OrderByKeyList {
 		directions = append(directions, createBoolLiteral(orderByClause.OrderByKeyList[i].IsAscending, pos))
@@ -1495,7 +1495,7 @@ func appendQuerySelectResultStmts(
 	selectClause *ast.BLangSelectClause,
 	onConflictClause *ast.BLangOnConflictClause,
 	seenKeysRef *ast.BLangSimpleVarRef,
-	basePos ast.Location,
+	basePos diagnostics.Location,
 	bodyStmts []ast.BLangStatement,
 ) ([]ast.BLangStatement, bool) {
 	selectResult := walkExpression(cx, selectClause.Expression)
@@ -1750,7 +1750,7 @@ func createIntLiteral(value int64) *ast.BLangNumericLiteral {
 	return lit
 }
 
-func createBoolLiteral(value bool, pos ast.Location) *ast.BLangLiteral {
+func createBoolLiteral(value bool, pos diagnostics.Location) *ast.BLangLiteral {
 	originalValue := "false"
 	if value {
 		originalValue = "true"
