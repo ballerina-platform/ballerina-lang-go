@@ -79,4 +79,71 @@ func TestWorkspaceProjectLoading(t *testing.T) {
 	require.Len(responses, 1)
 	assert.True(responses[0].IsResolved())
 	assert.Equal("pkgb", responses[0].Package().Descriptor().Name().String())
+
+	// Verify workspace resolution provides topological ordering
+	resolution := workspace.Resolution()
+	require.NotNil(resolution)
+	assert.NotNil(resolution.DependencyGraph())
+	assert.False(resolution.DiagnosticResult().HasErrors())
+
+	// Verify topological order: pkg-b should come before pkg-a (since pkg-a depends on pkg-b)
+	sortedProjects := resolution.DependencyGraph().ToTopologicallySortedList()
+	require.Len(sortedProjects, 2)
+
+	// Find positions
+	var pkgaIndex, pkgbIndex int
+	for i, proj := range sortedProjects {
+		name := proj.CurrentPackage().Descriptor().Name().String()
+		if name == "pkga" {
+			pkgaIndex = i
+		} else if name == "pkgb" {
+			pkgbIndex = i
+		}
+	}
+
+	// pkg-b should come before pkg-a in compilation order
+	assert.True(pkgbIndex < pkgaIndex, "pkgb should be compiled before pkga")
+}
+
+// TestWorkspaceRepositoryPriority tests that workspace repository takes priority over central cache.
+// When a package exists in both workspace and central cache (even with higher version),
+// the workspace version should be loaded.
+func TestWorkspaceRepositoryPriority(t *testing.T) {
+	assert := test_util.New(t)
+	require := test_util.NewRequire(t)
+
+	// Load workspace-simple which has:
+	// - pkg-b in workspace (version 1.0.0)
+	// - pkg-b in .ballerina cache (version 2.0.0 - higher than workspace)
+	projectPath := filepath.Join("testdata", "workspace-simple")
+	absPath, err := filepath.Abs(projectPath)
+	require.NoError(err)
+
+	result, err := loadProject(absPath)
+	require.NoError(err)
+
+	workspace := result.Project().(*projects.WorkspaceProject)
+
+	// Get pkg-a which depends on pkg-b
+	var pkgA *projects.Package
+	for _, proj := range workspace.Projects() {
+		if proj.CurrentPackage().Descriptor().Name().String() == "pkga" {
+			pkgA = proj.CurrentPackage()
+			break
+		}
+	}
+	require.NotNil(pkgA)
+
+	// Get resolution for pkg-a
+	resolution := pkgA.Resolution()
+	require.NotNil(resolution)
+
+	// Check resolved dependencies - pkgb should be resolved to workspace version (1.0.0)
+	// not the cache version (2.0.0)
+	resolvedDeps := resolution.ResolvedDependencies()
+	pkgbDesc := resolvedDeps["testorg/pkgb"]
+	require.NotNil(pkgbDesc, "pkgb should be in resolved dependencies")
+
+	// Verify it's the workspace version (1.0.0), not the cache version (2.0.0)
+	assert.Equal("1.0.0", pkgbDesc.Version().String())
 }

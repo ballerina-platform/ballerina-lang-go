@@ -2,3 +2,8 @@
 org = "testorg"
 name = "pkga"
 version = "1.0.0"
+
+[[dependency]]
+org = "testorg"
+name = "pkgb"
+version = "1.0.0"

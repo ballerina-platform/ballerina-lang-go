@@ -156,7 +156,7 @@ func (l *ProjectLoader) getDefaultRepositories(cfg ProjectLoadConfig) []Reposito
 		return cfg.Repositories
 	}
 
-	homeFs := l.ballerinaHomeFs
+	homeFs := l.ballerinaEnvFs
 	if homeFs == nil {
 		// Default to project-local .ballerina directory
 		if subFs, err := fs.Sub(l.projectFs, ".ballerina"); err == nil {
@@ -491,6 +491,6 @@ func parseWorkspaceManifestFromToml(toml *tomlparser.Toml, fsys fs.FS, workspace
 // createSimpleDiagnostic creates a diagnostic without location information.
 func createSimpleDiagnostic(severity diagnostics.DiagnosticSeverity, message string) diagnostics.Diagnostic {
 	info := diagnostics.NewDiagnosticInfo(nil, message, severity)
-	loc := diagnostics.NewBLangDiagnosticLocation("", 0, 0, 0, 0, 0, 0)
+	loc := diagnostics.NewBallerinaTomlLocation(0, 0)
 	return diagnostics.NewDefaultDiagnostic(info, loc, nil)
 }

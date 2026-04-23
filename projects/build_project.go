@@ -70,7 +70,7 @@ func (b *BuildProject) DocumentID(filePath string) (DocumentID, bool) {
 		// Check source documents
 		for _, docID := range module.DocumentIDs() {
 			doc := module.Document(docID)
-			if doc != nil && doc.Name() == filepath.Base(filePath) {
+			if doc != nil && filepath.Base(doc.Name()) == filepath.Base(filePath) {
 				// Check if the document path matches
 				docPath := b.documentPathForModule(docID, module)
 				if docPath == filePath {
@@ -82,7 +82,7 @@ func (b *BuildProject) DocumentID(filePath string) (DocumentID, bool) {
 		// Check test documents
 		for _, docID := range module.TestDocumentIDs() {
 			doc := module.Document(docID)
-			if doc != nil && doc.Name() == filepath.Base(filePath) {
+			if doc != nil && filepath.Base(doc.Name()) == filepath.Base(filePath) {
 				docPath := b.documentPathForModule(docID, module)
 				if docPath == filePath {
 					return docID, true
@@ -101,7 +101,10 @@ func (b *BuildProject) documentPathForModule(docID DocumentID, module *Module) s
 		return ""
 	}
 
-	docName := doc.Name()
+	// Document.Name() may be path-joined relative to the project root
+	// (e.g., "modules/util/foo.bal" or "pkg-a/main.bal" for workspace
+	// members). Extract the bare basename for path construction.
+	docName := filepath.Base(doc.Name())
 
 	if module.IsDefaultModule() {
 		// Default module: files are in sourceRoot or sourceRoot/tests

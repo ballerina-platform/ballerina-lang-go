@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "org": "testorg",
+      "name": "pkgb",
+      "version": "2.0.0",
+      "transitive": false,
+      "dependencies": [],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

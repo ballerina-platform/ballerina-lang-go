@@ -24,8 +24,8 @@ import (
 // A workspace contains multiple BuildProjects that can depend on each other.
 type WorkspaceProject struct {
 	BaseProject
-	projects  []*BuildProject
-	manifest  WorkspaceManifest
+	projects []*BuildProject
+	manifest WorkspaceManifest
 }
 
 // Compile-time check to verify WorkspaceProject implements Project interface
@@ -51,6 +51,14 @@ func (w *WorkspaceProject) Projects() []*BuildProject {
 // Manifest returns the workspace manifest.
 func (w *WorkspaceProject) Manifest() WorkspaceManifest {
 	return w.manifest
+}
+
+// Resolution returns the workspace resolution (dependency graph between packages).
+// The resolution is computed lazily and cached.
+func (w *WorkspaceProject) Resolution() *WorkspaceResolution {
+	// Note: In a full implementation, this would be lazily computed and cached.
+	// For now, we compute it fresh each time.
+	return newWorkspaceResolution(w)
 }
 
 // CurrentPackage returns the current package (first project's package).
