@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
@@ -156,11 +155,10 @@ type (
 
 	BLangArrowFunction struct {
 		bLangExpressionBase
-		Params            []BLangSimpleVariable
-		FunctionName      *BLangIdentifier
-		Body              *BLangExprFunctionBody
-		FuncType          BType
-		ClosureVarSymbols common.OrderedSet[ClosureVarSymbol]
+		Params       []BLangSimpleVariable
+		FunctionName *BLangIdentifier
+		Body         *BLangExprFunctionBody
+		FuncType     BType
 	}
 
 	BLangLambdaFunction struct {

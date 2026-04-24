@@ -231,28 +231,28 @@ type (
 
 	BLangPackage struct {
 		bLangNodeBase
-		CompUnits               []BLangCompilationUnit
-		Imports                 []BLangImportPackage
-		XmlnsList               []BLangXMLNS
-		Constants               []BLangConstant
-		GlobalVars              []BLangSimpleVariable
-		Services                []BLangService
-		Functions               []BLangFunction
-		TypeDefinitions         []BLangTypeDefinition
-		Annotations             []BLangAnnotation
-		InitFunction            *BLangFunction
-		StartFunction           *BLangFunction
-		StopFunction            *BLangFunction
-		TopLevelNodes           []TopLevelNode
-		TestablePkgs            []*BLangTestablePackage
-		ClassDefinitions        []BLangClassDefinition
-		CompletedPhases         common.UnorderedSet[CompilerPhase]
-		LambdaFunctions         []BLangLambdaFunction
-		PackageID               *model.PackageID
-		Scope                   model.Scope
-		diagnostics             []diagnostics.Diagnostic
-		errorCount              int
-		warnCount               int
+		CompUnits        []BLangCompilationUnit
+		Imports          []BLangImportPackage
+		XmlnsList        []BLangXMLNS
+		Constants        []BLangConstant
+		GlobalVars       []BLangSimpleVariable
+		Services         []BLangService
+		Functions        []BLangFunction
+		TypeDefinitions  []BLangTypeDefinition
+		Annotations      []BLangAnnotation
+		InitFunction     *BLangFunction
+		StartFunction    *BLangFunction
+		StopFunction     *BLangFunction
+		TopLevelNodes    []TopLevelNode
+		TestablePkgs     []*BLangTestablePackage
+		ClassDefinitions []BLangClassDefinition
+		CompletedPhases  common.UnorderedSet[CompilerPhase]
+		LambdaFunctions  []BLangLambdaFunction
+		PackageID        *model.PackageID
+		Scope            model.Scope
+		diagnostics      []diagnostics.Diagnostic
+		errorCount       int
+		warnCount        int
 	}
 	BLangTestablePackage struct {
 		BLangPackage
