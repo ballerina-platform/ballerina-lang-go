@@ -40,7 +40,7 @@ type BlockLevelScope interface {
 	SymbolSpaceProvider
 }
 
-// These methods should never be called directly. Instead call them via the compiler context.
+// Symbol methods should never be called directly. Instead call them via the compiler context.
 type Symbol interface {
 	Name() string
 	Type() semtypes.SemType
@@ -56,6 +56,13 @@ type symbolTypeSetter interface {
 	SetType(semtypes.SemType)
 }
 
+type FuncSymbolFlags uint8
+
+const (
+	FuncSymbolFlagIsolated FuncSymbolFlags = 1 << iota
+	FuncSymbolFlagTransactional
+)
+
 type FunctionSymbol interface {
 	Symbol
 	Signature() FunctionSignature
@@ -70,6 +77,73 @@ type GenericFunctionSymbol interface {
 	FunctionSymbol
 	Monomorphize(args []semtypes.SemType) SymbolRef
 	Space() *SymbolSpace
+}
+
+// DependentlyTypedFunctionSymbol represents a [dependently typed function]. Actual function signature
+// is determined at each call site by calling Monomorphize.
+// TODO: this is very similar to [GenericFunctionSymbol]; merge both. #389
+type DependentlyTypedFunctionSymbol interface {
+	FunctionSymbol
+	Monomorphize(ctx semtypes.Context, name string, polymorphicRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol
+	ParamTypes() []semtypes.SemType
+	ReturnType() TypeOp
+	NRequiredArgs() int
+	FuncFlags() FuncSymbolFlags
+	SetParamTypes(types []semtypes.SemType)
+	SetReturnType(op TypeOp)
+}
+
+// MonomorphicFunctionSymbol represent a polymorphic function after monomrophizisation.
+// It carries a reference back to the underlying polymorphic function so BIR can dispatch to it,
+// but front end can treat this as non polymorphic.
+type MonomorphicFunctionSymbol interface {
+	FunctionSymbol
+	PolymorphicSymbol() SymbolRef
+}
+
+type BinaryTypeOpKind uint8
+
+const (
+	TypeOpUnion BinaryTypeOpKind = iota
+	TypeOpIntersection
+)
+
+// TypeOp represents a partially applied type. This is necessary to represent things like
+// return types of dependently typed functions in a serializable manner.
+type TypeOp interface {
+	Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType
+}
+
+type BinaryTypeOp struct {
+	Kind BinaryTypeOpKind
+	Lhs  TypeOp
+	Rhs  TypeOp
+}
+
+func (binary *BinaryTypeOp) Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType {
+	lhs := binary.Lhs.Apply(ctx, args)
+	rhs := binary.Rhs.Apply(ctx, args)
+	if binary.Kind == TypeOpUnion {
+		return semtypes.Union(lhs, rhs)
+	}
+	return semtypes.Intersect(lhs, rhs)
+}
+
+type IdentityTypeOp struct {
+	Type semtypes.SemType
+}
+
+func (identity *IdentityTypeOp) Apply(_ semtypes.Context, _ []semtypes.SemType) semtypes.SemType {
+	return identity.Type
+}
+
+// RefTypeOp references a typedesc parameter by position. Apply resolves to the constraint T of args[Index] (typedesc<T>).
+type RefTypeOp struct {
+	Index int
+}
+
+func (ref *RefTypeOp) Apply(ctx semtypes.Context, args []semtypes.SemType) semtypes.SemType {
+	return semtypes.TypedescConstraint(ctx, args[ref.Index])
 }
 
 type SymbolKind uint
@@ -164,6 +238,11 @@ type (
 		defaultableParams DefaultableParamInfo
 	}
 
+	monomorphicFunctionSymbol struct {
+		functionSymbol
+		polymorhpicFn SymbolRef
+	}
+
 	genericFunctionSymbol struct {
 		name          string
 		space         *SymbolSpace
@@ -171,21 +250,42 @@ type (
 		paramNames    []string
 	}
 
+	dependentlyTypedFunctionSymbol struct {
+		symbolBase
+		paramNames    []string
+		nRequiredArgs int
+		Flags         FuncSymbolFlags
+		defaultable   DefaultableParamInfo
+
+		// Populated by type resolver at stage 4.
+		paramTypes []semtypes.SemType
+		retType    TypeOp
+	}
+
 	FunctionSignature struct {
 		ParamTypes    []semtypes.SemType
 		ParamNames    []string
 		ReturnType    semtypes.SemType
 		RestParamType semtypes.SemType
+		Flags         FuncSymbolFlags
 	}
 
+	DefaultableParamKind uint8
+
 	DefaultableParam struct {
-		Symbol SymbolRef // symbol to the lambda that would provide the default value if needed
+		Symbol SymbolRef
+		Kind   DefaultableParamKind
 	}
 
 	DefaultableParamInfo struct {
 		params      []DefaultableParam
 		defaultable []bool
 	}
+)
+
+const (
+	DefaultableParamKindExpr DefaultableParamKind = iota
+	DefaultableParamKindInferredTypedesc
 )
 
 type InclusionMemberKind uint8
@@ -272,17 +372,19 @@ var (
 )
 
 var (
-	_ Scope                 = &ModuleScope{}
-	_ Scope                 = &FunctionScope{}
-	_ Scope                 = &BlockScope{}
-	_ Symbol                = &TypeSymbol{}
-	_ Symbol                = &ClassSymbol{}
-	_ Symbol                = &ValueSymbol{}
-	_ Symbol                = &functionSymbol{}
-	_ FunctionSymbol        = &functionSymbol{}
-	_ GenericFunctionSymbol = &genericFunctionSymbol{}
-	_ Symbol                = &SymbolRef{}
-	_ SymbolSpaceProvider   = &ModuleScope{}
+	_ Scope                          = &ModuleScope{}
+	_ Scope                          = &FunctionScope{}
+	_ Scope                          = &BlockScope{}
+	_ Symbol                         = &TypeSymbol{}
+	_ Symbol                         = &ClassSymbol{}
+	_ Symbol                         = &ValueSymbol{}
+	_ Symbol                         = &functionSymbol{}
+	_ FunctionSymbol                 = &functionSymbol{}
+	_ GenericFunctionSymbol          = &genericFunctionSymbol{}
+	_ DependentlyTypedFunctionSymbol = &dependentlyTypedFunctionSymbol{}
+	_ MonomorphicFunctionSymbol      = &monomorphicFunctionSymbol{}
+	_ Symbol                         = &SymbolRef{}
+	_ SymbolSpaceProvider            = &ModuleScope{}
 )
 
 func (space *SymbolSpace) AddSymbol(name string, symbol Symbol) {
@@ -589,7 +691,20 @@ func (d *DefaultableParamInfo) Get(index int) (DefaultableParam, bool) {
 
 func (d *DefaultableParamInfo) SetDefaultable(index int, symbol SymbolRef) {
 	d.defaultable[index] = true
-	d.params[index].Symbol = symbol
+	d.params[index] = DefaultableParam{Symbol: symbol, Kind: DefaultableParamKindExpr}
+}
+
+func (d *DefaultableParamInfo) SetInferredTypedesc(index int) {
+	d.defaultable[index] = true
+	d.params[index] = DefaultableParam{Kind: DefaultableParamKindInferredTypedesc}
+}
+
+func (fs *FunctionSignature) IsIsolated() bool {
+	return fs.Flags&FuncSymbolFlagIsolated != 0
+}
+
+func (fs *FunctionSignature) IsTransactional() bool {
+	return fs.Flags&FuncSymbolFlagTransactional != 0
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {
@@ -677,4 +792,91 @@ func (s *genericFunctionSymbol) Monomorphize(args []semtypes.SemType) SymbolRef 
 
 func (s *genericFunctionSymbol) Space() *SymbolSpace {
 	return s.space
+}
+
+func NewDependentlyTypedFunctionSymbol(name string, paramNames []string, nRequiredArgs int, flags FuncSymbolFlags, isPublic bool) DependentlyTypedFunctionSymbol {
+	return &dependentlyTypedFunctionSymbol{
+		symbolBase:    symbolBase{name: name, ty: nil, isPublic: isPublic},
+		paramNames:    paramNames,
+		nRequiredArgs: nRequiredArgs,
+		Flags:         flags,
+	}
+}
+
+func (s *dependentlyTypedFunctionSymbol) Kind() SymbolKind { return SymbolKindFunction }
+
+func (s *dependentlyTypedFunctionSymbol) Type() semtypes.SemType {
+	panic("DependentlyTypedFunctionSymbol must be Monomorphized")
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetType(_ semtypes.SemType) {
+	panic("DependentlyTypedFunctionSymbol must be Monomorphized")
+}
+
+func (s *dependentlyTypedFunctionSymbol) Signature() FunctionSignature {
+	panic("DependentlyTypedFunctionSymbol must be Monomorphized")
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetSignature(_ FunctionSignature) {
+	panic("DependentlyTypedFunctionSymbol must be Monomorphized")
+}
+
+func (s *dependentlyTypedFunctionSymbol) DefaultableParams() *DefaultableParamInfo {
+	return &s.defaultable
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetDefaultableParams(info DefaultableParamInfo) {
+	s.defaultable = info
+}
+
+func (s *dependentlyTypedFunctionSymbol) ParamNames() []string { return s.paramNames }
+
+func (s *dependentlyTypedFunctionSymbol) Copy() Symbol {
+	cp := *s
+	return &cp
+}
+
+func (s *dependentlyTypedFunctionSymbol) ParamTypes() []semtypes.SemType { return s.paramTypes }
+func (s *dependentlyTypedFunctionSymbol) ReturnType() TypeOp             { return s.retType }
+func (s *dependentlyTypedFunctionSymbol) NRequiredArgs() int             { return s.nRequiredArgs }
+func (s *dependentlyTypedFunctionSymbol) FuncFlags() FuncSymbolFlags     { return s.Flags }
+
+func (s *dependentlyTypedFunctionSymbol) SetParamTypes(types []semtypes.SemType) {
+	s.paramTypes = types
+}
+
+func (s *dependentlyTypedFunctionSymbol) SetReturnType(op TypeOp) {
+	s.retType = op
+}
+
+func (s *dependentlyTypedFunctionSymbol) Monomorphize(ctx semtypes.Context, name string, origRef SymbolRef, argTys []semtypes.SemType) FunctionSymbol {
+	var rest semtypes.SemType = semtypes.NEVER
+	if len(argTys) > s.nRequiredArgs {
+		for _, each := range argTys[s.nRequiredArgs:] {
+			rest = semtypes.Union(rest, each)
+		}
+	}
+	returnType := s.retType.Apply(ctx, argTys)
+	sig := FunctionSignature{
+		ParamTypes:    argTys,
+		ParamNames:    s.paramNames,
+		RestParamType: rest,
+		ReturnType:    returnType,
+		Flags:         s.Flags,
+	}
+	return &monomorphicFunctionSymbol{
+		functionSymbol: functionSymbol{
+			symbolBase:        symbolBase{name: name, ty: nil, isPublic: s.isPublic},
+			signature:         sig,
+			defaultableParams: s.defaultable,
+		},
+		polymorhpicFn: origRef,
+	}
+}
+
+func (m *monomorphicFunctionSymbol) PolymorphicSymbol() SymbolRef { return m.polymorhpicFn }
+
+func (m *monomorphicFunctionSymbol) Copy() Symbol {
+	cp := *m
+	return &cp
 }

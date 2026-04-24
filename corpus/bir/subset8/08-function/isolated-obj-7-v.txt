@@ -1,0 +1,55 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Counter {
+  count int
+  initial int
+
+  getInitial() -> int{
+    bb0 {
+      %3 = ConstantLoad initial
+      %2 = self[%3];
+      %0 = %2;
+      return;
+    }
+  }
+
+  init(int) -> nil{
+    bb0 {
+      %3 = ConstantLoad count
+      self[%3] = initial;
+      %4 = ConstantLoad initial
+      self[%4] = initial;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:Counter
+    %2 = ConstantLoad 42
+    %3 = init(%1,%2) -> bb1;
+  }
+  bb1 {
+    %5 = %3 is nil
+    %5 ? bb2 : bb3;
+  }
+  bb2 {
+    %4 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %4 = %3;
+    GOTO bb4;
+  }
+  bb4 {
+    c = %4;
+    %7 = getInitial(c) -> bb5;
+  }
+  bb5 {
+    %8 = %7;
+    %9 = println(%8) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

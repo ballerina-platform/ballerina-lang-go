@@ -98,7 +98,7 @@ func walkAssignment(cx *functionContext, stmt *ast.BLangAssignment) desugaredNod
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -119,7 +119,7 @@ func walkCompoundAssignment(cx *functionContext, stmt *ast.BLangCompoundAssignme
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -134,7 +134,7 @@ func walkExpressionStmt(cx *functionContext, stmt *ast.BLangExpressionStmt) desu
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -257,9 +257,9 @@ func walkSimpleVariableDef(cx *functionContext, stmt *ast.BLangSimpleVariableDef
 			}
 		}
 		if stmt.Var.Expr != nil {
-			result := walkExpression(cx, stmt.Var.Expr.(ast.BLangExpression))
+			result := walkExpression(cx, stmt.Var.Expr)
 			initStmts = append(initStmts, result.initStmts...)
-			stmt.Var.Expr = result.replacementNode.(ast.BLangExpression)
+			stmt.Var.Expr = result.replacementNode
 		}
 	}
 
@@ -290,7 +290,7 @@ func walkReturn(cx *functionContext, stmt *ast.BLangReturn) desugaredNode[model.
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -363,7 +363,7 @@ func visitForEach(cx *functionContext, stmt *ast.BLangForeach) desugaredNode[mod
 	return desugaredNode[model.StatementNode]{}
 }
 
-func desugarForEachOnList(cx *functionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
 	basePos := collection.GetPosition()
@@ -512,17 +512,15 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 	nameIdent := &ast.BLangIdentifier{Value: "length"}
 	pkgAliasIdent := &ast.BLangIdentifier{Value: pkgName}
 
-	inv := &ast.BLangInvocation{
-		Name:     nameIdent,
-		PkgAlias: pkgAliasIdent,
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: pkgAliasIdent}
+	inv.Name = nameIdent
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
 	return inv
 }
 
-func desugarForEachOnMap(cx *functionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+func desugarForEachOnMap(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
 	basePos := collection.GetPosition()
@@ -683,11 +681,9 @@ func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "keys"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "keys"}
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(returnType)
 	return inv
@@ -805,7 +801,7 @@ func isAppendReachable(stmt ast.BLangStatement) bool {
 	}
 }
 
-func isRangeExpr(expr ast.BLangExpression) bool {
+func isRangeExpr(expr ast.BLangActionOrExpression) bool {
 	if binaryExpr, ok := expr.(*ast.BLangBinaryExpr); ok {
 		switch binaryExpr.GetOperatorKind() {
 		case model.OperatorKind_CLOSED_RANGE, model.OperatorKind_HALF_OPEN_RANGE:
@@ -823,7 +819,7 @@ func walkMatchStatement(cx *functionContext, stmt *ast.BLangMatchStatement) desu
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	for i := range stmt.MatchClauses {
@@ -831,7 +827,7 @@ func walkMatchStatement(cx *functionContext, stmt *ast.BLangMatchStatement) desu
 		if clause.Guard != nil {
 			guardResult := walkExpression(cx, clause.Guard)
 			initStmts = append(initStmts, guardResult.initStmts...)
-			clause.Guard = guardResult.replacementNode.(ast.BLangExpression)
+			clause.Guard = guardResult.replacementNode
 		}
 		bodyResult := walkBlockStmt(cx, &clause.Body)
 		clause.Body = *bodyResult.replacementNode.(*ast.BLangBlockStmt)

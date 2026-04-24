@@ -23,6 +23,8 @@ import (
 	"ballerina-lang-go/values"
 )
 
+const nativeMethodFlagMask int64 = 1 << model.Flag_NATIVE
+
 type Registry struct {
 	birFunctions    map[string]*bir.BIRFunction
 	birClassDefs    map[string]*bir.BIRClassDef
@@ -54,6 +56,9 @@ func (r *Registry) RegisterModule(id *model.PackageID, m *BIRModule) *BIRModule 
 			classDef := &m.Pkg.ClassDefs[i]
 			r.birClassDefs[classDef.LookupKey] = classDef
 			for _, fn := range classDef.VTable {
+				if fn.Flags&nativeMethodFlagMask != 0 {
+					continue
+				}
 				r.birFunctions[fn.FunctionLookupKey] = fn
 			}
 		}

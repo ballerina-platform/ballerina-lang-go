@@ -121,6 +121,8 @@ func (sr *symbolReader) readSymbol(space *model.SymbolSpace) {
 		sr.readValueSymbol(space)
 	case symTagFunction:
 		sr.readFunctionSymbol(space)
+	case symTagDependentlyTypedFunction:
+		sr.readDependentlyTypedFunctionSymbol(space)
 	default:
 		panic(fmt.Sprintf("unknown symbol tag: %d", tag))
 	}
@@ -260,17 +262,73 @@ func (sr *symbolReader) readFunctionSymbol(space *model.SymbolSpace) {
 		restParamType = sr.readType()
 	}
 
+	var flags uint8
+	read(sr.r, &flags)
+
 	sig := model.FunctionSignature{
 		ParamTypes:    paramTypes,
 		ParamNames:    paramNames,
 		ReturnType:    returnType,
 		RestParamType: restParamType,
+		Flags:         model.FuncSymbolFlags(flags),
 	}
 	sym := model.NewFunctionSymbol(name, sig, isPublic)
 	sym.SetType(ty)
 	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
 	sym.SetDefaultableParams(defaultInfo)
 	space.AddSymbol(name, sym)
+}
+
+func (sr *symbolReader) readDependentlyTypedFunctionSymbol(space *model.SymbolSpace) {
+	name := sr.readStringCP()
+	var isPublic bool
+	read(sr.r, &isPublic)
+	var paramCount int64
+	read(sr.r, &paramCount)
+	paramTypes := make([]semtypes.SemType, paramCount)
+	for i := int64(0); i < paramCount; i++ {
+		paramTypes[i] = sr.readType()
+	}
+	var nameCount int64
+	read(sr.r, &nameCount)
+	paramNames := make([]string, nameCount)
+	for i := int64(0); i < nameCount; i++ {
+		paramNames[i] = sr.readStringCP()
+	}
+	var nRequired int64
+	read(sr.r, &nRequired)
+	var flags uint8
+	read(sr.r, &flags)
+
+	sym := model.NewDependentlyTypedFunctionSymbol(name, paramNames, int(nRequired), model.FuncSymbolFlags(flags), isPublic)
+	sym.SetParamTypes(paramTypes)
+	defaultInfo := sr.readDefaultableParams(int(paramCount), space)
+	sym.SetDefaultableParams(defaultInfo)
+	sym.SetReturnType(sr.readTypeOp())
+	space.AddSymbol(name, sym)
+}
+
+func (sr *symbolReader) readTypeOp() model.TypeOp {
+	var tag uint8
+	read(sr.r, &tag)
+	switch tag {
+	case typeOpTagIdentity:
+		return &model.IdentityTypeOp{Type: sr.readType()}
+	case typeOpTagRef:
+		var idx int64
+		read(sr.r, &idx)
+		return &model.RefTypeOp{Index: int(idx)}
+	case typeOpTagUnion:
+		lhs := sr.readTypeOp()
+		rhs := sr.readTypeOp()
+		return &model.BinaryTypeOp{Kind: model.TypeOpUnion, Lhs: lhs, Rhs: rhs}
+	case typeOpTagIntersect:
+		lhs := sr.readTypeOp()
+		rhs := sr.readTypeOp()
+		return &model.BinaryTypeOp{Kind: model.TypeOpIntersection, Lhs: lhs, Rhs: rhs}
+	default:
+		panic(fmt.Sprintf("unknown TypeOp tag: %d", tag))
+	}
 }
 
 func (sr *symbolReader) readDefaultableParams(paramCount int, space *model.SymbolSpace) model.DefaultableParamInfo {
@@ -283,6 +341,12 @@ func (sr *symbolReader) readDefaultableParams(paramCount int, space *model.Symbo
 	for i := int64(0); i < count; i++ {
 		var idx int64
 		read(sr.r, &idx)
+		var kind uint8
+		read(sr.r, &kind)
+		if model.DefaultableParamKind(kind) == model.DefaultableParamKindInferredTypedesc {
+			info.SetInferredTypedesc(int(idx))
+			continue
+		}
 		ref := sr.readSymbolRef(space)
 		info.SetDefaultable(int(idx), ref)
 	}

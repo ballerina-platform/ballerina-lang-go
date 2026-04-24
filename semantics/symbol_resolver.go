@@ -192,6 +192,115 @@ func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model
 	return true
 }
 
+func (ms *moduleSymbolResolver) isTypeRefToTypedesc(ref *ast.BLangUserDefinedType, visited map[model.SymbolRef]bool) bool {
+	pkgAlias, typeName := ref.PkgAlias.Value, ref.TypeName.Value
+	if pkgAlias != "" {
+		symRef, ok := ms.GetPrefixedSymbol(pkgAlias, typeName)
+		if !ok {
+			return false
+		}
+		ty := ms.ctx.GetSymbol(symRef).Type()
+		return ty != nil && semtypes.IsSubtypeSimple(ty, semtypes.TYPEDESC)
+	}
+	symRef, _, ok := ms.GetSymbol(typeName)
+	if !ok {
+		return false
+	}
+	if visited[symRef] {
+		return false
+	}
+	visited[symRef] = true
+	td, ok := ms.typeDefns[symRef].(*ast.BLangTypeDefinition)
+	if !ok {
+		return false
+	}
+	return ms.isDescriptorTypedesc(td.GetTypeData().TypeDescriptor, visited)
+}
+
+// isDescriptorTypedesc reports whether a type descriptor AST node is (directly or via a user-
+// defined reference chain) a typedesc type.
+func (ms *moduleSymbolResolver) isDescriptorTypedesc(desc any, visited map[model.SymbolRef]bool) bool {
+	switch tn := desc.(type) {
+	case *ast.BLangValueType:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangBuiltInRefTypeNode:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangConstrainedType:
+		return tn.GetTypeKind() == model.TypeKind_TYPEDESC
+	case *ast.BLangUserDefinedType:
+		return ms.isTypeRefToTypedesc(tn, visited)
+	}
+	return false
+}
+
+// allocateFunctionSymbol creates the appropriate function symbol for a function declaration.
+// If the return type references a typedesc parameter (dependently-typed), it creates a
+// DependentlyTypedFunctionSymbol; otherwise a plain FunctionSymbol. The returned symbol has
+// no type information yet — it is filled during type resolution.
+func (ms *moduleSymbolResolver) allocateFunctionSymbol(fn *ast.BLangFunction, name string, isPublic bool) model.Symbol {
+	paramNames := make([]string, len(fn.RequiredParams))
+	for i := range fn.RequiredParams {
+		paramNames[i] = fn.RequiredParams[i].GetName().GetValue()
+	}
+	if ms.isDependentlyTyped(fn) {
+		return model.NewDependentlyTypedFunctionSymbol(name, paramNames, len(fn.RequiredParams), fn.FuncSymbolFlags(), isPublic)
+	}
+	return model.NewFunctionSymbol(name, model.FunctionSignature{}, isPublic)
+}
+
+// isDependentlyTyped reports whether a function's return type references one of its typedesc
+// parameters by name.
+func (ms *moduleSymbolResolver) isDependentlyTyped(fn *ast.BLangFunction) bool {
+	retTd := fn.GetReturnTypeDescriptor()
+	if retTd == nil {
+		return false
+	}
+	node, ok := retTd.(ast.BLangNode)
+	if !ok {
+		return false
+	}
+	typedescParams := make(map[string]struct{})
+	for i := range fn.RequiredParams {
+		param := &fn.RequiredParams[i]
+		if param.Name == nil {
+			continue
+		}
+		if ms.isDescriptorTypedesc(param.TypeNode(), make(map[model.SymbolRef]bool)) {
+			typedescParams[param.Name.Value] = struct{}{}
+		}
+	}
+	if len(typedescParams) == 0 {
+		return false
+	}
+	return returnTypeReferencesTypedescParam(node, typedescParams)
+}
+
+func returnTypeReferencesTypedescParam(node ast.BLangNode, typedescParams map[string]struct{}) bool {
+	switch n := node.(type) {
+	case *ast.BLangUserDefinedType:
+		if n.PkgAlias.Value != "" {
+			return false
+		}
+		_, ok := typedescParams[n.TypeName.Value]
+		return ok
+	case *ast.BLangUnionTypeNode:
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(lhs, typedescParams) {
+			return true
+		}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(rhs, typedescParams) {
+			return true
+		}
+	case *ast.BLangIntersectionTypeNode:
+		if lhs, ok := n.Lhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(lhs, typedescParams) {
+			return true
+		}
+		if rhs, ok := n.Rhs().TypeDescriptor.(ast.BLangNode); ok && returnTypeReferencesTypedescParam(rhs, typedescParams) {
+			return true
+		}
+	}
+	return false
+}
+
 func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol model.Symbol, node ast.BNodeWithSymbol) {
 	resolver.AddSymbol(name, symbol)
 	symRef, _, _ := resolver.GetSymbol(name)
@@ -200,20 +309,31 @@ func addSymbolAndSetOnNode[T symbolResolver](resolver T, name string, symbol mod
 
 func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, importedSymbols map[string]model.ExportedSymbolSpace) model.ExportedSymbolSpace {
 	moduleResolver := newModuleSymbolResolver(cx, *pkg.PackageID, importedSymbols)
-	// First add all the top level symbols they can be referred from anywhere
-	for _, fn := range pkg.Functions {
+	// Type definitions are registered first so that function-symbol allocation can walk alias
+	// chains when classifying typedesc parameters (needed for dependently-typed detection).
+	for i := range pkg.TypeDefinitions {
+		typeDef := &pkg.TypeDefinitions[i]
+		name := typeDef.Name.Value
+		isPublic := typeDef.IsPublic()
+		symbol := model.NewTypeSymbol(name, isPublic)
+		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
+			return moduleResolver.scope.Exports()
+		}
+		symRef, _, _ := moduleResolver.GetSymbol(name)
+		moduleResolver.typeDefns[symRef] = typeDef
+	}
+	for i := range pkg.Functions {
+		fn := &pkg.Functions[i]
 		name := fn.Name.Value
-		isPublic := fn.FlagSet.Contains(model.Flag_PUBLIC)
-		// We are going to fill this in type resolver
-		signature := model.FunctionSignature{}
-		symbol := model.NewFunctionSymbol(name, signature, isPublic)
+		isPublic := fn.IsPublic()
+		symbol := moduleResolver.allocateFunctionSymbol(fn, name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, symbol, fn.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
 		}
 	}
 	for _, constDef := range pkg.Constants {
 		name := constDef.Name.Value
-		isPublic := constDef.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := constDef.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, true, false)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, constDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
@@ -221,8 +341,8 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 	}
 	for _, globalVar := range pkg.GlobalVars {
 		name := globalVar.Name.Value
-		isPublic := globalVar.FlagSet.Contains(model.Flag_PUBLIC)
-		isFinal := globalVar.FlagSet.Contains(model.Flag_FINAL)
+		isPublic := globalVar.IsPublic()
+		isFinal := globalVar.IsFinal()
 		symbol := model.NewValueSymbol(name, isPublic, isFinal, false)
 		addTopLevelSymbol(moduleResolver, name, &symbol, globalVar.Name.GetPosition())
 	}
@@ -231,21 +351,10 @@ func ResolveSymbols(cx *context.CompilerContext, pkg *ast.BLangPackage, imported
 		symbol := model.NewFunctionSymbol("init", signature, false)
 		addTopLevelSymbol(moduleResolver, "init", symbol, pkg.InitFunction.Name.GetPosition())
 	}
-	for i := range pkg.TypeDefinitions {
-		typeDef := &pkg.TypeDefinitions[i]
-		name := typeDef.Name.Value
-		isPublic := typeDef.FlagSet.Contains(model.Flag_PUBLIC)
-		symbol := model.NewTypeSymbol(name, isPublic)
-		if !addTopLevelSymbol(moduleResolver, name, &symbol, typeDef.Name.GetPosition()) {
-			return moduleResolver.scope.Exports()
-		}
-		symRef, _, _ := moduleResolver.GetSymbol(name)
-		moduleResolver.typeDefns[symRef] = typeDef
-	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
 		name := classDef.Name.Value
-		isPublic := classDef.FlagSet.Contains(model.Flag_PUBLIC)
+		isPublic := classDef.IsPublic()
 		symbol := model.NewClassSymbol(name, isPublic)
 		if !addTopLevelSymbol(moduleResolver, name, &symbol, classDef.Name.GetPosition()) {
 			return moduleResolver.scope.Exports()
@@ -288,7 +397,11 @@ func allocateDefaultParamSymbols(alloc defaultSymbolAllocator, targetScope model
 	info := model.NewDefaultableParamInfo(len(function.RequiredParams))
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
-		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+		if !param.IsDefaultableParam() {
+			continue
+		}
+		if _, ok := param.Expr.(*ast.BLangInferredTypedescDefault); ok {
+			info.SetInferredTypedesc(i)
 			continue
 		}
 		name := alloc.nextDefaultSymbolName()
@@ -433,7 +546,7 @@ func (bs *blockSymbolResolver) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangBlockStmt, *ast.BLangDo:
 		return newBlockSymbolResolverWithBlockScope(bs, n)
 	case *ast.BLangSimpleVariableDef:
-		defineVariable(bs, n.GetVariable(), n.GetVariable().GetFlags().Contains(model.Flag_FINAL))
+		defineVariable(bs, n.GetVariable(), n.GetVariable().(*ast.BLangSimpleVariable).IsFinal())
 	case *ast.BLangLambdaFunction:
 		fn := n.Function
 		name := fn.Name.Value
@@ -461,12 +574,15 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 		return resolveMappingConstructor(resolver, n)
 	case *ast.BLangQueryExpr:
 		return newBlockSymbolResolverWithBlockScope(resolver, n)
-	case model.InvocationNode:
+	case *ast.BLangInvocation:
 		if n.GetExpression() != nil {
 			createDeferredMethodSymbol(resolver, n)
 		} else {
-			resolveFunctionRef(resolver, n.(functionRefNode))
+			resolveFunctionRef(resolver, n)
 		}
+	case *ast.BLangRemoteMethodCallAction:
+		// We are creating a deferred symbol here since without determining the type of the reciever we can't determine the actual function symbol
+		createDeferredMethodSymbol(resolver, n)
 	case model.VariableNode:
 		referVariable(resolver, n.(variableNode))
 	case model.SimpleVariableReferenceNode:
@@ -474,7 +590,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
 	case *ast.BLangObjectType:
-		n.Inclusions, _ = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
+		n.Inclusions, n.InclusionPositions, _ = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
 	case *ast.BLangRecordType:
 		n.Inclusions = resolveRecordTypeInclusions(resolver, n.TypeInclusions)
 	}
@@ -499,11 +615,10 @@ func resolveMappingConstructor[T symbolResolver](resolver T, n *ast.BLangMapping
 
 // since we don't have type information we can't determine if this is an actual method call or need to be converted
 // to a function call.
-func createDeferredMethodSymbol[T symbolResolver](resolver T, n model.InvocationNode) {
-	invocation := n.(*ast.BLangInvocation)
-	name := invocation.Name.GetValue()
+func createDeferredMethodSymbol[T symbolResolver](resolver T, n invocable) {
+	name := n.GetName().GetValue()
 	scope := resolver.GetScope().(model.SymbolSpaceProvider)
-	invocation.RawSymbol = &deferredMethodSymbol{name: name, space: scope.MainSpace()}
+	n.SetRawSymbol(new(deferredMethodSymbol{name: name, space: scope.MainSpace()}))
 }
 
 type deferredMethodSymbol struct {
@@ -601,8 +716,8 @@ type functionRefNode interface {
 	SetSymbol(symbolRef model.SymbolRef)
 }
 
-func resolveFunctionRef[T symbolResolver](resolver T, functionRef functionRefNode) {
-	resolveSymbolRef(resolver, functionRef.GetName().GetValue(), functionRef.GetPackageAlias().GetValue(), functionRef.GetPosition(), functionRef)
+func resolveFunctionRef[T symbolResolver](resolver T, invocation *ast.BLangInvocation) {
+	resolveSymbolRef(resolver, invocation.GetName().GetValue(), invocation.GetPackageAlias().GetValue(), invocation.GetPosition(), invocation)
 }
 
 type variableNode interface {
@@ -772,10 +887,11 @@ type inclusionMemberForSymbolResolution struct {
 // resolveObjectInclusions update the AST node references with correct symbol references. Will add semantic errors if the type
 // reference is for something that can't be included. This means after this stage we have the gurantee symbol ref always refer
 // to a valid AST node.
-func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []inclusionMemberForSymbolResolution) {
+func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []diagnostics.Location, []inclusionMemberForSymbolResolution) {
 	ctx := resolver.GetCtx()
 	localDefns := resolver.GetTypeDefns()
 	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
+	positions := make([]diagnostics.Location, 0, len(unresolvedInclusions))
 	var includedFields []inclusionMemberForSymbolResolution
 	for _, inc := range unresolvedInclusions {
 		ast.Walk(resolver, inc)
@@ -821,8 +937,9 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			}
 		}
 		inclusions = append(inclusions, symRef)
+		positions = append(positions, inc.GetPosition())
 	}
-	return inclusions, includedFields
+	return inclusions, positions, includedFields
 }
 
 func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []ast.BType) []model.SymbolRef {
@@ -911,7 +1028,7 @@ func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn model.T
 			field := f.(*ast.BLangSimpleVariable)
 			directFields = append(directFields, inclusionMemberForSymbolResolution{
 				name:     field.Name.Value,
-				isPublic: field.FlagSet.Contains(model.Flag_PUBLIC),
+				isPublic: field.IsPublic(),
 			})
 		}
 		return collectTransitiveFields(ctx, defn.Inclusions, directFields, localDefns)
@@ -925,7 +1042,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	classDef.SetScope(classResolver.scope)
 
 	var includedFields []inclusionMemberForSymbolResolution
-	classDef.Inclusions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
+	classDef.Inclusions, classDef.InclusionPositions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()
@@ -933,22 +1050,21 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 			semanticError(classResolver, "redeclared symbol '"+name+"'", field.GetPosition())
 			continue
 		}
-		isPublic := field.GetFlags().Contains(model.Flag_PUBLIC)
+		isPublic := field.IsPublic()
 		symbol := model.NewValueSymbol(name, isPublic, false, false)
 		classResolver.AddSymbol(name, &symbol)
 	}
 
-	isPublicClass := classDef.FlagSet.Contains(model.Flag_PUBLIC)
+	isPublicClass := classDef.IsPublic()
 	className := classDef.Name.Value
 	for methodName := range classDef.Methods {
 		method := classDef.Methods[methodName]
 		if _, sk, exists := classResolver.GetSymbol(methodName); exists && sk == blockScopeKind {
-			semanticError(classResolver, "redeclared symbol '"+methodName+"'", method.Name.GetPosition())
+			semanticError(classResolver, "redeclared symbol '"+model.StripRemotePrefix(methodName)+"'", method.Name.GetPosition())
 			continue
 		}
-		isPublic := method.FlagSet.Contains(model.Flag_PUBLIC)
-		signature := model.FunctionSignature{}
-		symbol := model.NewFunctionSymbol(methodName, signature, isPublic)
+		isPublic := method.IsPublic()
+		symbol := ms.allocateFunctionSymbol(method, methodName, isPublic)
 		if isPublicClass && isPublic {
 			moduleName := className + "." + methodName
 			ms.scope.AddSymbol(moduleName, symbol)
@@ -1041,8 +1157,3 @@ func internalError[T symbolResolver](resolver T, message string, pos diagnostics
 func semanticError[T symbolResolver](resolver T, message string, pos diagnostics.Location) {
 	resolver.GetCtx().SemanticError(message, pos)
 }
-
-// We can't determine if a symbol is actually a method or not without resolivng the expression
-// Also we can't really resolve the actual method until we know the type of reciever
-// Thus we need to defer the resolution of the method until type resolution
-type defferedMethodSymbol struct{}

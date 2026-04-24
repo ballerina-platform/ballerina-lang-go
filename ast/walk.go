@@ -249,9 +249,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	// Section 3: Function & Body
 	case *BLangFunction:
-		if node.Name != nil {
-			Walk(v, node.Name)
-		}
+		Walk(v, &node.Name)
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}
@@ -261,9 +259,6 @@ func Walk(v Visitor, node BLangNode) {
 		walkTypeDescriptor(v, node.returnTypeDescriptor)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
-		}
-		if node.Receiver != nil {
-			Walk(v, node.Receiver)
 		}
 
 	case *BLangBlockFunctionBody:
@@ -481,10 +476,6 @@ func Walk(v Visitor, node BLangNode) {
 		for _, arg := range node.ArgExprs {
 			Walk(v, arg.(BLangNode))
 		}
-		for i := range node.AnnAttachments {
-			Walk(v, &node.AnnAttachments[i])
-		}
-
 	case *BLangLambdaFunction:
 		if node.Function != nil {
 			Walk(v, node.Function)
@@ -511,6 +502,9 @@ func Walk(v Visitor, node BLangNode) {
 
 	case *BLangTypedescExpr:
 		walkTypeDescriptor(v, node.typeDescriptor)
+
+	case *BLangInferredTypedescDefault:
+		// leaf — no children
 
 	case *BLangTypeConversionExpr:
 		if node.Expression != nil {
@@ -847,6 +841,17 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.UserDefinedType)
 		}
 		for _, arg := range node.ArgsExprs {
+			Walk(v, arg.(BLangNode))
+		}
+
+	case *BLangRemoteMethodCallAction:
+		if node.Name != nil {
+			Walk(v, node.Name)
+		}
+		if node.Expr != nil {
+			Walk(v, node.Expr.(BLangNode))
+		}
+		for _, arg := range node.ArgExprs {
 			Walk(v, arg.(BLangNode))
 		}
 
