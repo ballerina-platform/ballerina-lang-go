@@ -759,6 +759,21 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.Expression.(BLangNode))
 		}
 
+	case *BLangOrderByClause:
+		for i := range node.OrderByKeyList {
+			Walk(v, &node.OrderByKeyList[i])
+		}
+
+	case *BLangOrderKey:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
+	case *BLangOnConflictClause:
+		if node.Expression != nil {
+			Walk(v, node.Expression.(BLangNode))
+		}
+
 	case *BLangOnFailClause:
 		if node.Body != nil {
 			Walk(v, node.Body)

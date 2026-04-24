@@ -37,23 +37,23 @@ $desugar$0() -> [int...]{
     %7 = ConstantLoad 0
     %8 = newArray list[%7]{}
     $desugar$1 = %8;
-    %10 = ConstantLoad 0
-    $desugar$2 = %10;
-    %12 = length($desugar$0) -> bb1;
+    %10 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$2 = %10;
+    %12 = ConstantLoad 0
     $desugar$3 = %12;
     GOTO bb2;
   }
   bb2 {
-    %15 = $desugar$2;
-    %16 = $desugar$3;
+    %15 = $desugar$3;
+    %16 = $desugar$2;
     %14 = < %15 %16;
     %14 ? bb3 : bb4;
   }
   bb3 {
     PushScopeFrame 9
-    %0 = (1, $desugar$0)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
     _ = %0;
     %2 = ConstantLoad 5
     %3 = %2;
@@ -64,11 +64,11 @@ $desugar$0() -> [int...]{
     return;
   }
   bb5 {
-    %6 = (1, $desugar$2);
+    %6 = (1, $desugar$3);
     %7 = ConstantLoad 1
     %8 = %7;
     %5 = + %6 %8;
-    (1, $desugar$2) = %5;
+    (1, $desugar$3) = %5;
     PopScopeFrame
     GOTO bb2;
   }

@@ -1,0 +1,64 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable withNils (type
+          (array-type
+            (union-type
+              (value-type float)
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (list-constructor-expr
+            (literal <nil>)
+            (literal <nil>)
+            (literal 1.0)))))
+      (var-def
+        (variable sortedNils (type
+          (array-type
+            (union-type
+              (value-type float)
+              (value-type null)) dimensions: 1 ([]))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable value))
+              (simple-var-ref withNils))
+            (order-by-clause
+              (order-key ascending
+                (simple-var-ref value)))
+            (select-clause
+              (simple-var-ref value))))))
+      (var-def
+        (variable dupRows (type
+          (array-type
+            (value-type int) dimensions: 2 ([][]))) (expr
+          (list-constructor-expr
+            (list-constructor-expr
+              (literal 1))
+            (list-constructor-expr
+              (literal 1))
+            (list-constructor-expr
+              (literal 1)
+              (literal 0))))))
+      (var-def
+        (variable sortedRows (type
+          (array-type
+            (value-type int) dimensions: 2 ([][]))) (expr
+          (query-expr
+            (from-clause
+              (var-def
+                (variable row))
+              (simple-var-ref dupRows))
+            (order-by-clause
+              (order-key ascending
+                (simple-var-ref row)))
+            (select-clause
+              (simple-var-ref row))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref sortedNils))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref sortedRows)))))))

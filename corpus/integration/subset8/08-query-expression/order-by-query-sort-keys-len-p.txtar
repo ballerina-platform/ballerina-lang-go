@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: keys and indices length mismatch: keys=1 indices=2
+        at main(order-by-query-sort-keys-len-p.bal:24)

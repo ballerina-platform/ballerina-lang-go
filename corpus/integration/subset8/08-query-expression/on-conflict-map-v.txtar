@@ -1,0 +1,5 @@
+-- stdout --
+{"k":3}
+2
+true
+-- stderr --

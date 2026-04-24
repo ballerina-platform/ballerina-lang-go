@@ -1,0 +1,75 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable xs (type
+        (array-type
+          (value-type int) dimensions: 1 ([]))) (expr
+        (list-constructor-expr
+          (literal 1)
+          (literal 2)
+          (literal 3)))))
+    (var-def
+      (variable out1 (type
+        (union-type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type int))
+          (error-type))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (list-constructor-expr
+              (literal k)
+              (simple-var-ref x)))
+          (on-conflict-clause
+            (invocation onConflictNil ()))))))
+    (var-def
+      (variable out2 (type
+        (union-type
+          (constrained-type
+            (builtin-ref-type map)
+            (value-type int))
+          (error-type))) (expr
+        (query-expr
+          (from-clause
+            (var-def
+              (variable x))
+            (simple-var-ref xs))
+          (select-clause
+            (list-constructor-expr
+              (literal k)
+              (simple-var-ref x)))
+          (on-conflict-clause
+            (invocation onConflictError ()))))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref out1))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref conflictHitCount))))
+    (expression-stmt
+      (invocation io println (
+        (type-test-expr is
+          (simple-var-ref out2)
+          (error-type)))))
+  )
+)
+(onConflictError
+  (bb0 () ()
+    (return
+      (error-constructor-expr (
+        (literal duplicate key))))
+  )
+)
+(onConflictNil
+  (bb0 () ()
+    (compound-assignment +
+      (simple-var-ref conflictHitCount)
+      (literal 1))
+    (return
+      (literal <nil>))
+  )
+)

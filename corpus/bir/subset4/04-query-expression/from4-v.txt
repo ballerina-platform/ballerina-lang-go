@@ -12,23 +12,23 @@ main() -> nil{
     %7 = ConstantLoad 0
     %8 = newArray list[%7]{}
     $desugar$1 = %8;
-    %10 = ConstantLoad 0
-    $desugar$2 = %10;
-    %12 = length($desugar$0) -> bb1;
+    %10 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$2 = %10;
+    %12 = ConstantLoad 0
     $desugar$3 = %12;
     GOTO bb2;
   }
   bb2 {
-    %15 = $desugar$2;
-    %16 = $desugar$3;
+    %15 = $desugar$3;
+    %16 = $desugar$2;
     %14 = < %15 %16;
     %14 ? bb3 : bb4;
   }
   bb3 {
     PushScopeFrame 24
-    %0 = (1, $desugar$0)[(1, $desugar$2)];
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
     x = %0;
     %3 = x;
     %4 = ConstantLoad 1
@@ -40,27 +40,27 @@ main() -> nil{
     %9 = ConstantLoad 0
     %10 = newArray list[%9]{}
     $desugar$5 = %10;
-    %12 = ConstantLoad 0
-    $desugar$6 = %12;
-    %14 = length($desugar$4) -> bb5;
+    %12 = length($desugar$4) -> bb5;
   }
   bb4 {
     out = $desugar$1;
     %18 = println(out) -> bb11;
   }
   bb5 {
+    $desugar$6 = %12;
+    %14 = ConstantLoad 0
     $desugar$7 = %14;
     GOTO bb6;
   }
   bb6 {
-    %17 = $desugar$6;
-    %18 = $desugar$7;
+    %17 = $desugar$7;
+    %18 = $desugar$6;
     %16 = < %17 %18;
     %16 ? bb7 : bb8;
   }
   bb7 {
     PushScopeFrame 12
-    %0 = (1, $desugar$4)[(1, $desugar$6)];
+    %0 = (1, $desugar$4)[(1, $desugar$7)];
     s = %0;
     %3 = s;
     %4 = ConstantLoad 2
@@ -73,20 +73,20 @@ main() -> nil{
     %19 = push((1, $desugar$1),$desugar$5) -> bb10;
   }
   bb9 {
-    %9 = (1, $desugar$6);
+    %9 = (1, $desugar$7);
     %10 = ConstantLoad 1
     %11 = %10;
     %8 = + %9 %11;
-    (1, $desugar$6) = %8;
+    (1, $desugar$7) = %8;
     PopScopeFrame
     GOTO bb6;
   }
   bb10 {
-    %21 = (1, $desugar$2);
+    %21 = (1, $desugar$3);
     %22 = ConstantLoad 1
     %23 = %22;
     %20 = + %21 %23;
-    (1, $desugar$2) = %20;
+    (1, $desugar$3) = %20;
     PopScopeFrame
     GOTO bb2;
   }

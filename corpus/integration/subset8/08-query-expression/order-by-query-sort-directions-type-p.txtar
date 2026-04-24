@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: directions entry 0 must be a bool
+        at main(order-by-query-sort-directions-type-p.bal:24)

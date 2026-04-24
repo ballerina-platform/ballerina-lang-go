@@ -1,0 +1,4 @@
+-- stdout --
+-- stderr --
+error: payload entry 0 must be a list
+        at main(order-by-query-sort-payload-shape-p.bal:24)
