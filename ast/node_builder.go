@@ -3229,7 +3229,10 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 		if enumMember.Identifier() == nil || enumMember.Identifier().IsMissing() {
 			continue
 		}
-		constantNode := n.transformEnumMember(enumMember, publicQualifier)
+		constantNode, redeclared := n.transformEnumMember(enumMember, publicQualifier)
+		if redeclared {
+			continue
+		}
 		if n.currentCompUnit == nil {
 			n.cx.InternalError("enum constants can only be added at module level", getPosition(n.de(), enumMember))
 			continue
@@ -3262,6 +3265,11 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 			current = unionType
 		}
 		typeDef.SetTypeData(model.TypeData{TypeDescriptor: current})
+	} else {
+		neverType := &BLangValueType{TypeKind: model.TypeKind_NEVER}
+		neverType.pos = diagnostics.NewBuiltinLocation()
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: neverType})
+		n.cx.SemanticError("missing enum member", typeDef.Name.GetPosition())
 	}
 
 	metadata := enumDeclarationNode.Metadata()
@@ -3274,10 +3282,11 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 }
 
 func (n *NodeBuilder) TransformEnumMember(enumMemberNode *tree.EnumMemberNode) BLangNode {
-	return n.transformEnumMember(enumMemberNode, false)
+	constantNode, _ := n.transformEnumMember(enumMemberNode, false)
+	return constantNode
 }
 
-func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, publicQualifier bool) *BLangConstant {
+func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, publicQualifier bool) (*BLangConstant, bool) {
 	constantNode := createConstantNode()
 	constantNode.pos = getPositionWithoutMetadata(n.de(), enumMemberNode)
 	constantNode.FlagSet.Add(model.Flag_CONSTANT)
@@ -3314,11 +3323,12 @@ func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, p
 	constantName := constantNode.Name.GetValue()
 	if n.constantSet[constantName] {
 		n.cx.SemanticError("redeclared symbol '"+constantName+"'", constantNode.Name.GetPosition())
+		return nil, true
 	} else {
 		n.constantSet[constantName] = true
 	}
 
-	return constantNode
+	return constantNode, false
 }
 
 func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree.ArrayTypeDescriptorNode) BLangNode {
