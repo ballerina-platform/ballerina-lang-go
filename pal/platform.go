@@ -14,6 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// Package pal provides the Platform Adaptation Layer (PAL).
+//
+// PAL abstracts away interactions with the underlying platform such that the
+// runtime can be agnostic toward the underlying platform. All library functions
+// that interact with the underlying platform (e.g. io, http) should use PAL.
+// Each supported platform (e.g. native-cli, web-editor) should provide an
+// implementation of PAL to the runtime.
 package pal
 
 type (
