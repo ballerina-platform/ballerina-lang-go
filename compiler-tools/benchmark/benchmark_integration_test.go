@@ -31,10 +31,10 @@ const (
 
 func TestBenchmarkRunExportsHTML(t *testing.T) {
 	if testing.Short() {
-		t.Fatalf("skipping benchmark integration test in short mode")
+		t.Skip("skipping benchmark integration test in short mode")
 	}
 	if _, err := exec.LookPath("hyperfine"); err != nil {
-		t.Fatalf("hyperfine is unavailable: %v", err)
+		t.Skipf("skipping benchmark integration test; hyperfine is unavailable: %v", err)
 	}
 	if err := exec.Command("git", "rev-parse", "--verify", baseRef).Run(); err != nil {
 		t.Fatalf("base ref %q is unavailable: %v", baseRef, err)

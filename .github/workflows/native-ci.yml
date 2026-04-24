@@ -13,25 +13,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
+      - name: Install hyperfine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+          hyperfine --version
+
       - name: Run tests with coverage
         run: |
           set -euo pipefail
-          TEST_SKIP='TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests'
-          GO_TEST_COMMON_ARGS=(-race -count=1 -timeout 30m -skip "$TEST_SKIP")
+
+          go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' \
+            -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+
           mkdir -p .cover/cli_executable
           BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
-            go test "${GO_TEST_COMMON_ARGS[@]}" -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
           go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
 
           COVERAGE_FILES=("coverage.out" "coverage-cli-executable.out")
-          mapfile -t MODULE_GOMODS < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)
-          for gomod in "${MODULE_GOMODS[@]}"; do
+          while IFS= read -r gomod; do
             dir="$(dirname "$gomod")"
             if [ "$dir" = "." ]; then
               continue
@@ -42,17 +51,20 @@ jobs:
             safe="${safe_base}-${safe_hash}"
             out="$GITHUB_WORKSPACE/coverage-mod-$safe.out"
             integration_cov_dir="$GITHUB_WORKSPACE/.cover/${safe}_codecov"
+
             mkdir -p "$integration_cov_dir"
-            echo "go test (coverage) in module $dir (integration cover: .cover/${safe}_codecov)"
+            echo "go test (coverage) in module $dir"
             (cd "$dir" && CODECOV_INTEGRATION_COVERDIR="$integration_cov_dir" \
-              go test "${GO_TEST_COMMON_ARGS[@]}" -coverpkg=./... -coverprofile="$out" -covermode=atomic ./...)
+              go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' \
+                -coverpkg=./... -coverprofile="$out" -covermode=atomic ./...)
             COVERAGE_FILES+=("$out")
+
             exec_out="$GITHUB_WORKSPACE/coverage-mod-${safe}-executable.out"
             if [ -d "$integration_cov_dir" ] && [ -n "$(find "$integration_cov_dir" -type f 2>/dev/null | head -n 1)" ]; then
               go tool covdata textfmt -i="$integration_cov_dir" -o="$exec_out"
               COVERAGE_FILES+=("$exec_out")
             fi
-          done
+          done < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)
 
           printf -v COVERAGE_FILES_CSV '%s,' "${COVERAGE_FILES[@]}"
           echo "COVERAGE_FILES=${COVERAGE_FILES_CSV%,}" >> "$GITHUB_ENV"
@@ -79,19 +91,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
+      - name: Install hyperfine
+        shell: pwsh
+        run: |
+          choco install hyperfine -y
+          hyperfine --version
+
       - name: Run tests
         shell: bash
         run: |
           set -euo pipefail
-          TEST_SKIP='TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests'
-          GO_TEST_COMMON_ARGS=(-race -count=1 -timeout 30m -skip "$TEST_SKIP")
-          go test "${GO_TEST_COMMON_ARGS[@]}" ./...
+
+          go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
 
           while IFS= read -r gomod; do
             dir="$(dirname "$gomod")"
@@ -99,5 +118,5 @@ jobs:
               continue
             fi
             echo "go test in module $dir"
-            (cd "$dir" && go test "${GO_TEST_COMMON_ARGS[@]}" ./...)
+            (cd "$dir" && go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...)
           done < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)
