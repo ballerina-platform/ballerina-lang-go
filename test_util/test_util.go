@@ -18,10 +18,13 @@
 package test_util
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ballerina-lang-go/pal"
 )
 
 // TestKind represents the type of corpus test
@@ -160,4 +163,13 @@ func computeExpectedPath(inputPath, inputBaseDir, outputBaseDir, outputExt strin
 	relPath, _ := filepath.Rel(inputBaseDir, inputPath)
 	relPath = strings.TrimSuffix(relPath, ".bal") + outputExt
 	return filepath.Join(outputBaseDir, relPath)
+}
+
+func TestPal(stdout io.Writer, stderr io.Writer) pal.Platform {
+	return pal.Platform{
+		IO: pal.IO{
+			Stdout: stdout.Write,
+			Stderr: stderr.Write,
+		},
+	}
 }

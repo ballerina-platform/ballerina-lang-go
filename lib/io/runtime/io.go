@@ -17,11 +17,11 @@
 package io
 
 import (
+	"fmt"
+	"strings"
+
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/values"
-	"fmt"
-	"os"
-	"strings"
 )
 
 const (
@@ -30,22 +30,24 @@ const (
 	funcName   = "println"
 )
 
-func Println(vals ...values.BalValue) {
+func Println(rt *runtime.Runtime, vals ...values.BalValue) {
 	parts := make([]string, len(vals))
 	visited := make(map[uintptr]bool)
 	for i, v := range vals {
 		parts[i] = values.String(v, visited)
 	}
-	_, _ = fmt.Fprintln(os.Stdout, strings.Join(parts, ""))
+	_, _ = rt.Platform().IO.Stdout(fmt.Appendln(nil, strings.Join(parts, "")))
 }
 
-func printlnExtern(args []values.BalValue) (values.BalValue, error) {
-	Println(args...)
-	return nil, nil
+func printlnExtern(rt *runtime.Runtime) func(args []values.BalValue) (values.BalValue, error) {
+	return func(args []values.BalValue) (values.BalValue, error) {
+		Println(rt, args...)
+		return nil, nil
+	}
 }
 
 func initIOModule(rt *runtime.Runtime) {
-	runtime.RegisterExternFunction(rt, orgName, moduleName, funcName, printlnExtern)
+	runtime.RegisterExternFunction(rt, orgName, moduleName, funcName, printlnExtern(rt))
 }
 
 func init() {
