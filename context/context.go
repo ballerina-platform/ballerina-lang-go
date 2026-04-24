@@ -64,6 +64,10 @@ type CompilerContext struct {
 	stage       activeStage
 }
 
+func (this *CompilerContext) DiagnosticEnv() *diagnostics.DiagnosticEnv {
+	return this.env.DiagnosticEnv()
+}
+
 func (this *CompilerContext) NewSymbolSpace(packageID model.PackageID) *model.SymbolSpace {
 	return this.env.NewSymbolSpace(packageID)
 }

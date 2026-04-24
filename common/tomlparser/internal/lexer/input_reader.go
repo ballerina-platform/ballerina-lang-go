@@ -18,14 +18,18 @@
 
 package lexer
 
+import "unicode/utf8"
+
 // InputReader provides character-level lookahead over a UTF-8 source string.
 // The source is converted to []rune once for O(1) indexed access.
 type InputReader struct {
-	runes   []rune // full source as rune slice for correct Unicode indexing
-	pos     int    // current read position (next rune to consume)
-	markPos int    // position saved by Mark() for GetMarkedChars()
-	line    int    // 1-based current line (updated on Read)
-	col     int    // 1-based current column (updated on Read)
+	runes    []rune // full source as rune slice for correct Unicode indexing
+	pos      int    // current read position (next rune to consume)
+	markPos  int    // position saved by Mark() for GetMarkedChars()
+	line     int    // 1-based current line (updated on Read)
+	col      int    // 1-based current column (updated on Read)
+	bytePos  int    // current byte offset in the source string
+	markByte int    // byte position saved by Mark()
 }
 
 // NewInputReader creates an InputReader from a source string.
@@ -61,12 +65,13 @@ func (r *InputReader) PeekAt(k int) rune {
 	return r.runes[idx]
 }
 
-// Advance consumes the next rune and updates line/column tracking.
+// Advance consumes the next rune and updates line/column/byte offset tracking.
 func (r *InputReader) Advance() {
 	if r.pos >= len(r.runes) {
 		return
 	}
 	c := r.runes[r.pos]
+	r.bytePos += utf8.RuneLen(c)
 	r.pos++
 	if c == charNewline {
 		r.line++
@@ -87,6 +92,7 @@ func (r *InputReader) AdvanceN(n int) {
 // text consumed since the mark.
 func (r *InputReader) Mark() {
 	r.markPos = r.pos
+	r.markByte = r.bytePos
 }
 
 // GetMarkedChars returns the text consumed since the last Mark() call.
@@ -105,4 +111,9 @@ func (r *InputReader) Line() int {
 // Col returns the current 1-based column (position of the NEXT rune to be read).
 func (r *InputReader) Col() int {
 	return r.col
+}
+
+// BytePos returns the current byte offset in the source string.
+func (r *InputReader) BytePos() int {
+	return r.bytePos
 }

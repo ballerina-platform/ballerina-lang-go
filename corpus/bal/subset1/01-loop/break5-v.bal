@@ -19,12 +19,12 @@
 import ballerina/io;
 
 public function main() {
-   
-   
-   
-   
-   
-   
+    // @output 8
+    // @output 6
+    // @output 4
+    // @output 2
+    // @output 0
+    // @output -1
     io:println(foo(10));
 }
 
@@ -42,3 +42,4 @@ function foo(int x) returns int {
     }
     return foo(i);
 }
+

@@ -24,6 +24,7 @@ import (
 	libcommon "ballerina-lang-go/lib/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 var MapPackageID = model.NewPackageID(
@@ -43,6 +44,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	lengthSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
 		ReturnType: semtypes.INT,
+		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	lengthSymbol := model.NewFunctionSymbol("length", lengthSignature, true)
 	space.AddSymbol("length", lengthSymbol)
@@ -55,6 +57,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	keysSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
 		ReturnType: stringArrayTy,
+		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	keysSymbol := model.NewFunctionSymbol("keys", keysSignature, true)
 	space.AddSymbol("keys", keysSymbol)
@@ -75,7 +78,7 @@ func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.Generi
 
 	return func(s model.GenericFunctionSymbol, args []semtypes.SemType) model.SymbolRef {
 		if len(args) == 0 {
-			ctx.SemanticError("remove() requires at least 1 argument", nil)
+			ctx.SemanticError("remove() requires at least 1 argument", diagnostics.Location{})
 			return model.SymbolRef{}
 		}
 		ty := args[0]
@@ -86,13 +89,14 @@ func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.Generi
 		}
 		tyCtx := semtypes.ContextFrom(ctx.GetTypeEnv())
 		if !semtypes.IsSubtype(tyCtx, ty, semtypes.MAPPING) {
-			ctx.SemanticError("expect first argument to be a subtype of map<any|error>", nil)
+			ctx.SemanticError("expect first argument to be a subtype of map<any|error>", diagnostics.Location{})
 			return model.SymbolRef{}
 		}
 		memberType := semtypes.MappingMemberTypeInnerValProj(tyCtx, ty, semtypes.STRING)
 		removeSignature := model.FunctionSignature{
 			ParamTypes: []semtypes.SemType{ty, semtypes.STRING},
 			ReturnType: memberType,
+			Flags:      model.FuncSymbolFlagIsolated,
 		}
 		removeSymbol := model.NewFunctionSymbol("remove", removeSignature, true)
 		symbolName := fmt.Sprintf("remove_%d", nextIndex)

@@ -17,8 +17,8 @@
 import ballerina/io;
 
 public function main() {
-    foo(1);
-    foo(0);
+    foo(1); // @output true
+    foo(0); // @output false
 }
 
 function foo(int a) {
@@ -30,3 +30,4 @@ function foo(int a) {
     }
     io:println(b);
 }
+

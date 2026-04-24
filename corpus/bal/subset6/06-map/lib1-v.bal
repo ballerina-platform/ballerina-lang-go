@@ -21,7 +21,7 @@ public function main() {
     io:println(foo.length()); //@output 2
     io:println(foo.keys()); // @output ["a","b"]
     any b = foo.remove("b");
-    io:println(b); // @output "b"
+    io:println(b); // @output b
     io:println(foo.length()); //@output 1
     io:println(foo.keys()); // @output ["a"]
 }

@@ -21,15 +21,16 @@ public function main() {
     float a = 1.5;
     float b = 2.0;
 
-    io:println(a > b);
-    io:println(b > a);
+    io:println(a > b); // @output false
+    io:println(b > a); // @output true
 
-    io:println(a >= b);
-    io:println(b >= a);
+    io:println(a >= b); // @output false
+    io:println(b >= a); // @output true
 
-    io:println(a < b);
-    io:println(b < a);
+    io:println(a < b); // @output true
+    io:println(b < a); // @output false
 
-    io:println(a <= b);
-    io:println(b <= a);
+    io:println(a <= b); // @output true
+    io:println(b <= a); // @output false
 }
+

@@ -19,8 +19,8 @@
 import ballerina/io;
 
 public function main() {
-    printTrue();
-    printFalse();
+    printTrue(); // @output 1
+    printFalse(); // @output 0
 }
 
 function printTrue() {

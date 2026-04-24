@@ -17,5 +17,6 @@ import ballerina/io;
 
 public function main() {
     int[]|string[] foo = [1];
-    io:println(foo is int[]);
+    io:println(foo is int[]); //@output true
 }
+

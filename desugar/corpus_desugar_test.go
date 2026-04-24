@@ -26,6 +26,7 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
+	"ballerina-lang-go/tools/diagnostics"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -54,7 +55,7 @@ func (v *walkTestVisitor) Visit(node ast.BLangNode) ast.Visitor {
 		return nil
 	}
 
-	if node.GetPosition() == nil {
+	if diagnostics.IsLocationEmpty(node.GetPosition()) {
 		v.t.Errorf("node with missing position: %T", node)
 	}
 

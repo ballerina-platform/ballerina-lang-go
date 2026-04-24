@@ -21,5 +21,6 @@ function foo() returns 1|true {
 
 public function main() {
     int|boolean c = foo();
-    io:println(c);
+    io:println(c); // @output 1
 }
+

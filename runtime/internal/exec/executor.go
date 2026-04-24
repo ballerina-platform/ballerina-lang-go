@@ -19,31 +19,29 @@ package exec
 import (
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/model"
-	"ballerina-lang-go/runtime/internal/modules"
-	"ballerina-lang-go/tools/diagnostics"
 	"ballerina-lang-go/values"
 	"fmt"
 )
 
 const maxRecursionDepth = 1000
 
-func executeFunction(birFunc bir.BIRFunction, args []values.BalValue, reg *modules.Registry, callStack *callStack, parentFrame *Frame) values.BalValue {
-	frame := createFunctionFrame(&birFunc, args, callStack, parentFrame)
+func executeFunction(ctx *Context, birFunc bir.BIRFunction, args []values.BalValue, parentFrame *Frame) values.BalValue {
+	frame := createFunctionFrame(ctx, &birFunc, args, parentFrame)
 	bb := &birFunc.BasicBlocks[0]
 	if len(birFunc.ErrorTable) > 0 {
-		executeFunctionWithTrap(&birFunc, bb, frame, reg, callStack)
+		executeFunctionWithTrap(ctx, &birFunc, bb, frame)
 	} else {
-		executeFunctionNoTrap(bb, frame, reg, callStack)
+		executeFunctionNoTrap(ctx, bb, frame)
 	}
-	callStack.Pop()
+	ctx.PopFrame()
 	return frame.locals[0]
 }
 
-func createFunctionFrame(birFunc *bir.BIRFunction, args []values.BalValue, callStack *callStack, parentFrame *Frame) *Frame {
+func createFunctionFrame(ctx *Context, birFunc *bir.BIRFunction, args []values.BalValue, parentFrame *Frame) *Frame {
 	locals := initLocalsForFunction(birFunc, args)
 	frame := &Frame{locals: locals, functionKey: birFunc.FunctionLookupKey, parent: parentFrame}
-	callStack.Push(frame)
-	if len(callStack.elements) > maxRecursionDepth {
+	ctx.PushFrame(frame)
+	if ctx.CallStackDepth() > maxRecursionDepth {
 		panic(values.NewErrorWithMessage("stack overflow"))
 	}
 	return frame
@@ -87,11 +85,11 @@ func initLocalsForFunction(birFunc *bir.BIRFunction, args []values.BalValue) []v
 	return locals
 }
 
-func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
+func executeFunctionWithTrap(ctx *Context, birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, frame *Frame) {
 	currentFrame := frame
 	for {
 		curBBNumber := bb.Number
-		nextBB, nextFrame, recovered := executeBasicBlockWithTrap(bb, frame, currentFrame, reg, callStack)
+		nextBB, nextFrame, recovered := executeBasicBlockWithTrap(ctx, bb, frame, currentFrame)
 
 		if recovered != nil {
 			// Resolve the innermost error-table entry covering the current block and
@@ -100,11 +98,11 @@ func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, fr
 			if handler == nil {
 				panic(recovered)
 			}
-			unwindCallStackToFrame(callStack, frame)
+			unwindCallStackToFrame(ctx, frame)
 			errVal := panicValueToErrorValue(recovered)
 			// After unwinding, the active frame is the function frame.
 			currentFrame = frame
-			setOperandValue(handler.ErrorOp, currentFrame, reg, errVal)
+			setOperandValue(ctx, handler.ErrorOp, currentFrame, errVal)
 			bb = &birFunc.BasicBlocks[handler.Target]
 			continue
 		}
@@ -117,11 +115,11 @@ func executeFunctionWithTrap(birFunc *bir.BIRFunction, bb *bir.BIRBasicBlock, fr
 	}
 }
 
-func executeFunctionNoTrap(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Registry, callStack *callStack) {
+func executeFunctionNoTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame) {
 	currentFrame := frame
 	for {
 		var nextBB *bir.BIRBasicBlock
-		nextBB, currentFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+		nextBB, currentFrame = executeBasicBlock(ctx, bb, frame, currentFrame)
 		bb = nextBB
 		if bb == nil {
 			break
@@ -129,94 +127,94 @@ func executeFunctionNoTrap(bb *bir.BIRBasicBlock, frame *Frame, reg *modules.Reg
 	}
 }
 
-func executeBasicBlockWithTrap(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
+func executeBasicBlockWithTrap(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (nextBB *bir.BIRBasicBlock, nextFrame *Frame, recovered any) {
 	defer func() {
 		if r := recover(); r != nil {
 			recovered = r
 		}
 	}()
-	nextBB, nextFrame = executeBasicBlock(bb, frame, currentFrame, reg, callStack)
+	nextBB, nextFrame = executeBasicBlock(ctx, bb, frame, currentFrame)
 	return nextBB, nextFrame, nil
 }
 
-func executeBasicBlock(bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame, reg *modules.Registry, callStack *callStack) (*bir.BIRBasicBlock, *Frame) {
+func executeBasicBlock(ctx *Context, bb *bir.BIRBasicBlock, frame *Frame, currentFrame *Frame) (*bir.BIRBasicBlock, *Frame) {
 	for _, inst := range bb.Instructions {
-		posProvider := inst.(interface{ GetPos() diagnostics.Location })
+		posProvider := inst.(interface{ GetPos() bir.Location })
 		frame.location = posProvider.GetPos()
-		currentFrame = execInstruction(inst, currentFrame, reg, callStack)
+		currentFrame = execInstruction(ctx, inst, currentFrame)
 	}
-	posProvider := bb.Terminator.(interface{ GetPos() diagnostics.Location })
+	posProvider := bb.Terminator.(interface{ GetPos() bir.Location })
 	frame.location = posProvider.GetPos()
-	return execTerminator(bb.Terminator, currentFrame, reg, callStack), currentFrame
+	return execTerminator(ctx, bb.Terminator, currentFrame), currentFrame
 }
 
-func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *Frame {
+func execInstruction(ctx *Context, inst bir.BIRNonTerminator, frame *Frame) *Frame {
 	switch v := inst.(type) {
 	case *bir.PushScopeFrame:
 		return &Frame{locals: make([]values.BalValue, v.NumLocals), parent: frame}
 	case *bir.PopScopeFrame:
 		return frame.parent
 	case *bir.ConstantLoad:
-		execConstantLoad(v, frame, reg)
+		execConstantLoad(ctx, v, frame)
 	case *bir.Move:
-		execMove(v, frame, reg)
+		execMove(ctx, v, frame)
 	case *bir.NewArray:
-		execNewArray(v, frame, reg)
+		execNewArray(ctx, v, frame)
 	case *bir.NewMap:
-		execNewMap(v, frame, reg, callStack)
+		execNewMap(ctx, v, frame)
 	case *bir.NewError:
-		execNewError(v, frame, reg)
+		execNewError(ctx, v, frame)
 	case *bir.NewObject:
-		execNewObject(v, frame, reg)
+		execNewObject(ctx, v, frame)
 	case *bir.FieldAccess:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ARRAY_STORE:
-			execArrayStore(v, frame, reg)
+			execArrayStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_ARRAY_LOAD:
-			execArrayLoad(v, frame, reg)
+			execArrayLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_STORE:
-			execMapStore(v, frame, reg)
+			execMapStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MAP_LOAD:
-			execMapLoad(v, frame, reg)
+			execMapLoad(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_OBJECT_STORE:
-			execObjectStore(v, frame, reg)
+			execObjectStore(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_OBJECT_LOAD:
-			execObjectLoad(v, frame, reg)
+			execObjectLoad(ctx, v, frame)
 		default:
 			fmt.Printf("UNKNOWN_FIELD_ACCESS_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.BinaryOp:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_ADD:
-			execBinaryOpAdd(v, frame, reg)
+			execBinaryOpAdd(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_SUB:
-			execBinaryOpSub(v, frame, reg)
+			execBinaryOpSub(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MUL:
-			execBinaryOpMul(v, frame, reg)
+			execBinaryOpMul(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_DIV:
-			execBinaryOpDiv(v, frame, reg)
+			execBinaryOpDiv(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_MOD:
-			execBinaryOpMod(v, frame, reg)
+			execBinaryOpMod(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_EQUAL:
-			execBinaryOpEqual(v, frame, reg)
+			execBinaryOpEqual(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_NOT_EQUAL:
-			execBinaryOpNotEqual(v, frame, reg)
+			execBinaryOpNotEqual(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_GREATER_THAN:
-			execBinaryOpGT(v, frame, reg)
+			execBinaryOpGT(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_GREATER_EQUAL:
-			execBinaryOpGTE(v, frame, reg)
+			execBinaryOpGTE(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_LESS_THAN:
-			execBinaryOpLT(v, frame, reg)
+			execBinaryOpLT(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_LESS_EQUAL:
-			execBinaryOpLTE(v, frame, reg)
+			execBinaryOpLTE(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_AND:
-			execBinaryOpAnd(v, frame, reg)
+			execBinaryOpAnd(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_OR:
-			execBinaryOpOr(v, frame, reg)
+			execBinaryOpOr(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_REF_EQUAL:
-			execBinaryOpRefEqual(v, frame, reg)
+			execBinaryOpRefEqual(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_REF_NOT_EQUAL:
-			execBinaryOpRefNotEqual(v, frame, reg)
+			execBinaryOpRefNotEqual(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_CLOSED_RANGE:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_CLOSED_RANGE")
 		case bir.INSTRUCTION_KIND_HALF_OPEN_RANGE:
@@ -224,63 +222,63 @@ func execInstruction(inst bir.BIRNonTerminator, frame *Frame, reg *modules.Regis
 		case bir.INSTRUCTION_KIND_ANNOT_ACCESS:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_ANNOT_ACCESS")
 		case bir.INSTRUCTION_KIND_BITWISE_AND:
-			execBinaryOpBitwiseAnd(v, frame, reg)
+			execBinaryOpBitwiseAnd(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_OR:
-			execBinaryOpBitwiseOr(v, frame, reg)
+			execBinaryOpBitwiseOr(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_XOR:
-			execBinaryOpBitwiseXor(v, frame, reg)
+			execBinaryOpBitwiseXor(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_LEFT_SHIFT:
-			execBinaryOpBitwiseLeftShift(v, frame, reg)
+			execBinaryOpBitwiseLeftShift(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_RIGHT_SHIFT:
-			execBinaryOpBitwiseRightShift(v, frame, reg)
+			execBinaryOpBitwiseRightShift(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_UNSIGNED_RIGHT_SHIFT:
-			execBinaryOpBitwiseUnsignedRightShift(v, frame, reg)
+			execBinaryOpBitwiseUnsignedRightShift(ctx, v, frame)
 		default:
 			fmt.Printf("UNKNOWN_BINARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.UnaryOp:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_NOT:
-			execUnaryOpNot(v, frame, reg)
+			execUnaryOpNot(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_NEGATE:
-			execUnaryOpNegate(v, frame, reg)
+			execUnaryOpNegate(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_BITWISE_COMPLEMENT:
-			execUnaryOpBitwiseComplement(v, frame, reg)
+			execUnaryOpBitwiseComplement(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_TYPEOF:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_TYPEOF")
 		default:
 			fmt.Printf("UNKNOWN_UNARY_INSTRUCTION_KIND(%d)\n", v.GetKind())
 		}
 	case *bir.TypeCast:
-		execTypeCast(v, frame, reg)
+		execTypeCast(ctx, v, frame)
 	case *bir.TypeTest:
-		execTypeTest(v, frame, reg)
+		execTypeTest(ctx, v, frame)
 	case *bir.FPLoad:
-		execFPLoad(v, frame, reg)
+		execFPLoad(ctx, v, frame)
 	default:
 		fmt.Printf("UNKNOWN_INSTRUCTION_TYPE(%T)\n", inst)
 	}
 	return frame
 }
 
-func execTerminator(term bir.BIRTerminator, frame *Frame, reg *modules.Registry, callStack *callStack) *bir.BIRBasicBlock {
+func execTerminator(ctx *Context, term bir.BIRTerminator, frame *Frame) *bir.BIRBasicBlock {
 	switch v := term.(type) {
 	case *bir.Goto:
 		return v.ThenBB
 	case *bir.Branch:
-		return execBranch(v, frame, reg)
+		return execBranch(ctx, v, frame)
 	case *bir.Panic:
-		return execPanic(v, frame, reg)
+		return execPanic(ctx, v, frame)
 	case *bir.Call:
 		switch v.GetKind() {
 		case bir.INSTRUCTION_KIND_CALL:
-			return execCall(v, frame, reg, callStack)
+			return execCall(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_ASYNC_CALL:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_ASYNC_CALL")
 		case bir.INSTRUCTION_KIND_WAIT:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WAIT")
 		case bir.INSTRUCTION_KIND_FP_CALL:
-			return execFpCall(v, frame, reg, callStack)
+			return execFpCall(ctx, v, frame)
 		case bir.INSTRUCTION_KIND_WK_RECEIVE:
 			fmt.Println("NOT IMPLEMENTED: INSTRUCTION_KIND_WK_RECEIVE")
 		case bir.INSTRUCTION_KIND_WK_SEND:
@@ -345,8 +343,8 @@ func findTrapErrorEntry(birFunc *bir.BIRFunction, bbNumber int) *bir.BIRErrorEnt
 	return best
 }
 
-func unwindCallStackToFrame(callStack *callStack, frame *Frame) {
-	for len(callStack.elements) > 0 && callStack.elements[len(callStack.elements)-1] != frame {
-		callStack.Pop()
+func unwindCallStackToFrame(ctx *Context, frame *Frame) {
+	for ctx.CallStackDepth() > 0 && ctx.callStack.elements[ctx.CallStackDepth()-1] != frame {
+		ctx.PopFrame()
 	}
 }

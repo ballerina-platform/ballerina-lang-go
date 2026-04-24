@@ -15,7 +15,7 @@
 // under the License.
 package common
 
-type SyntaxKind int
+type SyntaxKind uint16
 
 const (
 	PUBLIC_KEYWORD SyntaxKind = iota

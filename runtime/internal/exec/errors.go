@@ -21,12 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
 )
 
-func getFormattedError(r any, cs *callStack) error {
+func getFormattedError(ctx *Context, r any) error {
 	message := panicMessage(r)
-	stack := formatCallStack(cs)
+	stack := formatCallStack(ctx)
 	return fmt.Errorf("%s", formatRuntimePanic(message, stack))
 }
 
@@ -41,8 +42,8 @@ func panicMessage(r any) string {
 	}
 }
 
-func formatCallStack(cs *callStack) []string {
-	frames := cs.Frames()
+func formatCallStack(ctx *Context) []string {
+	frames := ctx.Frames()
 	const maxFrames = 32
 	out := make([]string, 0, len(frames))
 	for i := len(frames) - 1; i >= 0; i-- {
@@ -52,13 +53,12 @@ func formatCallStack(cs *callStack) []string {
 		}
 		f := frames[i]
 		loc := f.location
-		if loc == nil {
+		if bir.IsLocationEmpty(loc) {
 			out = append(out, fmt.Sprintf("%s(unknown)", f.functionKey))
 			continue
 		}
-		lr := loc.LineRange()
-		file := filepath.Base(lr.FileName())
-		line := lr.StartLine().Line() + 1
+		file := filepath.Base(loc.FilePath())
+		line := loc.StartLine() + 1
 		out = append(out, fmt.Sprintf("%s(%s:%d)", prettyFunctionName(f.functionKey), file, line))
 	}
 	return out

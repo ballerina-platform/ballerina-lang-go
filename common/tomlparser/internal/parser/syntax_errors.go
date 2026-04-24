@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"ballerina-lang-go/common/tomlparser/internal/lexer"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 // ParseError is a semantic or syntactic error produced during parsing.
@@ -54,6 +55,14 @@ func (p *Parser) addErrorAt(msg string, line, col int) {
 		EndLine: line,
 		EndCol:  col,
 	})
+}
+
+// addErrorAtLoc records a diagnostic at a position from a diagnostics.Location,
+// resolving byte offsets to line/column using the parser's DiagnosticContext.
+func (p *Parser) addErrorAtLoc(msg string, loc diagnostics.Location) {
+	line := p.de.StartLine(loc) + 1
+	col := p.de.StartColumn(loc) + 1
+	p.addErrorAt(msg, line, col)
 }
 
 // expectToken asserts the next token has the expected kind.  If it does not,

@@ -39,6 +39,7 @@ import (
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
+	"ballerina-lang-go/tools/text"
 	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
@@ -242,7 +243,7 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
-	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult())
+	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
 		return nil, nil
 	}
@@ -385,7 +386,7 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 	currentPkg := result.Project().CurrentPackage()
 	compilation := currentPkg.Compilation()
 
-	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult())
+	printDiagnostics(fsys, stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
 		return nil, nil
 	}
@@ -493,7 +494,7 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 	currentPkg := project.CurrentPackage()
 	compilation := currentPkg.Compilation()
 
-	printDiagnostics(fsys, &stderrBuf, compilation.DiagnosticResult())
+	printDiagnostics(fsys, &stderrBuf, compilation.DiagnosticResult(), compilation.DiagnosticEnv())
 	if compilation.DiagnosticResult().HasErrors() {
 		return stdoutBuf.String(), stderrBuf.String()
 	}
@@ -591,6 +592,17 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	absProjectDir string, publicSymbols map[semantics.PackageIdentifier]model.ExportedSymbolSpace, defaultOrg string,
 ) (*bir.BIRPackage, error) {
 	cx := context.NewCompilerContext(env)
+
+	// Register source files with DiagnosticEnv
+	de := cx.DiagnosticEnv()
+	for _, docID := range module.DocumentIDs() {
+		relPath := project.DocumentPath(docID)
+		absPath := filepath.Join(absProjectDir, relPath)
+		content, err := os.ReadFile(absPath)
+		if err == nil {
+			de.RegisterFile(absPath, text.NewStringTextDocument(string(content)))
+		}
+	}
 
 	// Parse all source files in the module
 	docIDs := module.DocumentIDs()

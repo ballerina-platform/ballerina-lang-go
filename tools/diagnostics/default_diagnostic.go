@@ -16,11 +16,7 @@
 
 package diagnostics
 
-import (
-	"fmt"
-
-	"ballerina-lang-go/tools/text"
-)
+import "fmt"
 
 // DefaultDiagnostic is an internal implementation of the Diagnostic interface that is used by the DiagnosticFactory
 // to create diagnostics.
@@ -63,20 +59,16 @@ func (dd *defaultDiagnosticImpl) Properties() []DiagnosticProperty[any] {
 }
 
 func (dd *defaultDiagnosticImpl) String() string {
-	lineRange := dd.location.LineRange()
-	filePath := lineRange.FileName()
+	loc := dd.location
+	if IsLocationEmpty(loc) {
+		return fmt.Sprintf("%s %s",
+			dd.diagnosticInfo.Severity().String(),
+			dd.Message())
+	}
 
-	startLine := lineRange.StartLine()
-	endLine := lineRange.EndLine()
-
-	oneBasedStartLine := text.LinePositionFromLineAndOffset(startLine.Line()+1, startLine.Offset()+1)
-	oneBasedEndLine := text.LinePositionFromLineAndOffset(endLine.Line()+1, endLine.Offset()+1)
-	oneBasedLineRange := text.LineRangeFromLinePositions(filePath, oneBasedStartLine, oneBasedEndLine)
-
-	return fmt.Sprintf("%s [%s:%s] %s",
+	return fmt.Sprintf("%s [%s] %s",
 		dd.diagnosticInfo.Severity().String(),
-		filePath,
-		oneBasedLineRange.String(),
+		loc.String(),
 		dd.Message())
 }
 

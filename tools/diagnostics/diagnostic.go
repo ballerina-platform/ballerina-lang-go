@@ -34,12 +34,11 @@ type diagnosticBase struct{}
 // This is the default implementation from the abstract Diagnostic class.
 func (db diagnosticBase) String(d Diagnostic) string {
 	var location string
-	if d.Location().LineRange().FileName() == "" {
+	loc := d.Location()
+	if IsLocationEmpty(loc) {
 		location = ""
 	} else {
-		location = fmt.Sprintf(" [%s:%s]",
-			d.Location().LineRange().FileName(),
-			d.Location().LineRange().String())
+		location = fmt.Sprintf(" [%s]", loc.String())
 	}
 	return fmt.Sprintf("%s%s %s",
 		d.DiagnosticInfo().Severity().String(),

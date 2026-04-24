@@ -16,7 +16,7 @@
 
 import ballerina/io;
 
-function add(int a, int b) return int {
+function add(int a, int b) return int { // @error
     return a + b;
 }
 

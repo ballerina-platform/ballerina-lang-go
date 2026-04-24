@@ -81,7 +81,9 @@ func Diff(t1, t2 SemType) SemType {
 		return basicTypeUnion(all)
 	}
 	var subtypes []basicSubtype
-	for pair := range newSubtypePairs(t1, t2, some) {
+	it := newSubtypePairs(t1, t2, some)
+	for it.hasNext() {
+		pair := it.next()
 		code := pair.BasicTypeCode
 		data1 := pair.SubtypeData1
 		data2 := pair.SubtypeData2
@@ -106,18 +108,6 @@ func Diff(t1, t2 SemType) SemType {
 	return createComplexSemType(all, subtypes...)
 }
 
-func getUnpackComplexSemType(t *ComplexSemType) []basicSubtype {
-	some := t.some()
-	subtypeDataList := t.subtypeDataList()
-	subtypes := make([]basicSubtype, len(subtypeDataList))
-	for i, data := range subtypeDataList {
-		code := basicTypeCodeFrom(bits.TrailingZeros(uint(some)))
-		subtypes[i] = basicSubtypeFrom(code, data)
-		some = some & ^(1 << code.Code())
-	}
-	return subtypes
-}
-
 func getComplexSubtypeData(t *ComplexSemType, code BasicTypeCode) SubtypeData {
 	c := BasicTypeBitSet(1 << code.Code())
 	if (t.all() & c) != 0 {
@@ -137,7 +127,6 @@ func getComplexSubtypeData(t *ComplexSemType, code BasicTypeCode) SubtypeData {
 }
 
 func Union(t1, t2 SemType) SemType {
-	common.Assert(t1 != nil && t2 != nil)
 	var all1, all2, some1, some2 BasicTypeBitSet
 	if b1, ok := t1.(BasicTypeBitSet); ok {
 		if b2, ok := t2.(BasicTypeBitSet); ok {
@@ -168,7 +157,9 @@ func Union(t1, t2 SemType) SemType {
 		return all
 	}
 	var subtypes []basicSubtype
-	for pair := range newSubtypePairs(t1, t2, some) {
+	it := newSubtypePairs(t1, t2, some)
+	for it.hasNext() {
+		pair := it.next()
 		code := pair.BasicTypeCode
 		data1 := pair.SubtypeData1
 		data2 := pair.SubtypeData2
@@ -194,7 +185,6 @@ func Union(t1, t2 SemType) SemType {
 }
 
 func Intersect(t1, t2 SemType) SemType {
-	common.Assert(t1 != nil && t2 != nil)
 	var all1, all2, some1, some2 BasicTypeBitSet
 	if b1, ok := t1.(BasicTypeBitSet); ok {
 		if b2, ok := t2.(BasicTypeBitSet); ok {
@@ -238,7 +228,9 @@ func Intersect(t1, t2 SemType) SemType {
 		return basicTypeUnion(all)
 	}
 	var subtypes []basicSubtype
-	for pair := range newSubtypePairs(t1, t2, some) {
+	it := newSubtypePairs(t1, t2, some)
+	for it.hasNext() {
+		pair := it.next()
 		code := pair.BasicTypeCode
 		data1 := pair.SubtypeData1
 		data2 := pair.SubtypeData2
@@ -286,7 +278,6 @@ func IsNever(t SemType) bool {
 }
 
 func IsEmpty(cx Context, t SemType) bool {
-	common.Assert(t != nil && cx != nil)
 	if b, ok := t.(BasicTypeBitSet); ok {
 		return b.all() == 0
 	} else {
@@ -294,10 +285,13 @@ func IsEmpty(cx Context, t SemType) bool {
 		if ct.all() != 0 {
 			return false
 		}
-		for _, st := range getUnpackComplexSemType(ct) {
-			if !ops[st.BasicTypeCode.Code()].IsEmpty(cx, st.SubtypeData) {
+		some := ct.some()
+		for _, data := range ct.subtypeDataList() {
+			code := basicTypeCodeFrom(bits.TrailingZeros(uint(some)))
+			if !ops[code.Code()].IsEmpty(cx, data) {
 				return false
 			}
+			some &^= 1 << code.Code()
 		}
 		return true
 	}

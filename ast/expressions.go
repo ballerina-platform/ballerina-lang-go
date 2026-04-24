@@ -24,6 +24,7 @@ import (
 	"ballerina-lang-go/common"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
+	"ballerina-lang-go/tools/diagnostics"
 )
 
 type BLangExpression interface {
@@ -259,7 +260,6 @@ type (
 		RequiredArgs              []BLangExpression
 		RestArgs                  []BLangExpression
 		ObjectInitMethod          bool
-		FlagSet                   common.UnorderedSet[model.Flag]
 		Async                     bool
 		FunctionPointerInvocation bool
 		LangLibInvocation         bool
@@ -905,14 +905,6 @@ func (this *BLangInvocation) IsAsync() bool {
 	return this.Async
 }
 
-func (this *BLangInvocation) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangInvocation) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
-}
-
 func (this *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i := range this.AnnAttachments {
@@ -957,12 +949,8 @@ func (this *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.Type
 	this.TypeDescriptor = typeDescriptor
 }
 
-func (this *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
-	panic("not implemented")
-}
-
-func (this *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
-	panic("not implemented")
+func (this *BLangTypeConversionExpr) IsPublic() bool {
+	return false
 }
 
 func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -1204,7 +1192,7 @@ func (this *BLangNewExpression) SetTypeCheckedType(ty BType) {
 	panic("not implemented")
 }
 
-func createBLangUnaryExpr(location Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
+func createBLangUnaryExpr(location diagnostics.Location, operator model.OperatorKind, expr BLangExpression) *BLangUnaryExpr {
 	exprNode := &BLangUnaryExpr{}
 	exprNode.pos = location
 	exprNode.Expr = expr

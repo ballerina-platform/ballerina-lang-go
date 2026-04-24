@@ -1,54 +1,44 @@
 module $anon.. v 0.0.0;
 import ballerina.io v 0.0.0;
-main<NIL>{
+main() -> nil{
   bb0 {
-    %1 = foreachInWhile() -> bb1;
+    %1 = ConstantLoad 0
+    %2 = %1;
+    %3 = println(%2) -> bb1;
   }
   bb1 {
-    return;
-  }
-}
-foreachInWhile<NIL>{
-  bb0 {
-    %1 = ConstantLoad 3
-    count = %1;
-    GOTO bb1;
-  }
-  bb1 {
-    %4 = ConstantLoad 0
-    %3 = > count %4;
-    %3 ? bb2 : bb3;
+    %4 = ConstantLoad 2
+    i = %4;
+    %6 = ConstantLoad 1
+    $desugar$0 = %6;
+    GOTO bb2;
   }
   bb2 {
-    %6 = ConstantLoad 1
-    %5 = - count %6;
-    count = %5;
-    %7 = ConstantLoad 1
-    i = %7;
-    %9 = ConstantLoad 3
-    $desugar$0 = %9;
-    GOTO bb4;
+    %9 = i;
+    %10 = $desugar$0;
+    %8 = < %9 %10;
+    %8 ? bb3 : bb4;
   }
   bb3 {
-    return;
+    PushScopeFrame 6
+    %0 = (1, i);
+    %1 = println(%0) -> bb5;
   }
   bb4 {
-    %11 = < i $desugar$0;
-    %11 ? bb5 : bb6;
+    %11 = ConstantLoad 1
+    %12 = %11;
+    %13 = println(%12) -> bb6;
   }
   bb5 {
-    %14 = ConstantLoad 10
-    %13 = * count %14;
-    %12 = + %13 i;
-    %15 = println(%12) -> bb7;
+    %3 = (1, i);
+    %4 = ConstantLoad 1
+    %5 = %4;
+    %2 = + %3 %5;
+    (1, i) = %2;
+    PopScopeFrame
+    GOTO bb2;
   }
   bb6 {
-    GOTO bb1;
-  }
-  bb7 {
-    %17 = ConstantLoad 1
-    %16 = + i %17;
-    i = %16;
-    GOTO bb4;
+    return;
   }
 }

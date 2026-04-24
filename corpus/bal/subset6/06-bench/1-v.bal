@@ -3518,5 +3518,6 @@ public function main() {
     total = total + narrowFunc99(a99.id);
     total = total + narrowFunc99(99.5);
     total = total + narrowFunc99("str99");
-    io:println(total);
+    io:println(total); // @output 89100
 }
+

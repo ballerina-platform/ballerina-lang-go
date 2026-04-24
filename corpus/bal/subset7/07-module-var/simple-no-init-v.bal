@@ -28,6 +28,6 @@ function init() {
 
 public function main() {
     io:println(x); // @output 5
-    io:println(s); // @output "s"
+    io:println(s); // @output s
     io:println(b); // @output true
 }

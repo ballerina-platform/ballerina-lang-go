@@ -16,8 +16,6 @@
 
 package text
 
-import "strings"
-
 const (
 	CR = 13 // Carriage Return
 	LF = 10 // Line Feed
@@ -26,13 +24,11 @@ const (
 // StringTextDocument represents a TextDocument created with a string.
 type StringTextDocument interface {
 	TextDocument
-	String() string
 }
 
 type stringTextDocumentImpl struct {
-	textDocumentBase
-	text        string
-	textLineMap LineMap
+	text    string
+	lineMap LineMap
 }
 
 func NewStringTextDocument(text string) StringTextDocument {
@@ -41,58 +37,18 @@ func NewStringTextDocument(text string) StringTextDocument {
 	}
 }
 
-func (std *stringTextDocumentImpl) Apply(textDocumentChange TextDocumentChange) TextDocument {
-	startOffset := 0
-	var sb strings.Builder
-	textEditCount := textDocumentChange.GetTextEditCount()
-	for i := range textEditCount {
-		textEdit := textDocumentChange.GetTextEdit(i)
-		textRange := textEdit.Range()
-		sb.WriteString(std.text[startOffset:textRange.StartOffset()])
-		sb.WriteString(textEdit.Text())
-		startOffset = textRange.EndOffset()
-	}
-	sb.WriteString(std.text[startOffset:])
-	return NewStringTextDocument(sb.String())
-}
-
-func (std *stringTextDocumentImpl) PopulateTextLineMap() LineMap {
-	if std.textLineMap != nil {
-		return std.textLineMap
-	}
-	std.textLineMap = NewLineMap(std.calculateTextLines())
-	return std.textLineMap
-}
-
-func (std *stringTextDocumentImpl) ToCharArray() []rune {
-	return []rune(std.text)
-}
-
 func (std *stringTextDocumentImpl) String() string {
 	return std.text
 }
 
-func (std *stringTextDocumentImpl) Line(line int) (TextLine, error) {
-	return std.Lines().TextLine(line)
+func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (line, offset int, err error) {
+	return std.lines().LinePositionFromPosition(textPosition)
 }
 
-func (std *stringTextDocumentImpl) LinePositionFromTextPosition(textPosition int) (LinePosition, error) {
-	return std.Lines().LinePositionFromPosition(textPosition)
-}
-
-func (std *stringTextDocumentImpl) TextPositionFromLinePosition(linePosition LinePosition) (int, error) {
-	return std.Lines().TextPositionFromLinePosition(linePosition)
-}
-
-func (std stringTextDocumentImpl) TextLines() []string {
-	return std.Lines().TextLines()
-}
-
-func (std *stringTextDocumentImpl) Lines() LineMap {
-	if std.lineMap != nil {
-		return std.lineMap
+func (std *stringTextDocumentImpl) lines() LineMap {
+	if std.lineMap == nil {
+		std.lineMap = NewLineMap(std.calculateTextLines())
 	}
-	std.lineMap = std.PopulateTextLineMap()
 	return std.lineMap
 }
 

@@ -1,0 +1,234 @@
+// Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package main
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const (
+	baseInterpreter = "bal-base"
+	headInterpreter = "bal-base"
+)
+
+type (
+	benchmark struct {
+		config
+		workRoot string
+	}
+	runResult struct {
+		export benchExport
+		label  string
+	}
+)
+
+func (b *benchmark) run() error {
+	if _, err := exec.LookPath("hyperfine"); err != nil {
+		return fmt.Errorf("hyperfine is required but was not found in PATH; please install it and retry: %w", err)
+	}
+
+	target, err := resolveTarget(b.target)
+	if err != nil {
+		return fmt.Errorf("failed to resolve benchmark target: %w", err)
+	}
+
+	workRoot, err := os.MkdirTemp("", "bal-bench-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(workRoot) }()
+	b.workRoot = workRoot
+
+	baseWorktree, err := b.checkoutWorktree(b.baseRef)
+	if err != nil {
+		return err
+	}
+	defer b.removeWorktree(baseWorktree)
+
+	headWorktree, err := b.checkoutWorktree(b.headRef)
+	if err != nil {
+		return err
+	}
+	defer b.removeWorktree(headWorktree)
+
+	fmt.Printf("Building interpreter for %s...\n", b.baseRef)
+	if err := b.buildInterpreter(baseWorktree, b.baseRef, baseInterpreter); err != nil {
+		return err
+	}
+	fmt.Printf("Building interpreter for %s...\n", b.headRef)
+	if err := b.buildInterpreter(headWorktree, b.headRef, headInterpreter); err != nil {
+		return err
+	}
+
+	if b.config.exportPath == "" {
+		for _, path := range target.paths {
+			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
+			if _, err := b.runHyperfine(cmds, ""); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	exportDir, err := os.MkdirTemp("", "bal-bench-exports-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory for exports: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(exportDir) }()
+
+	var results []runResult
+	for _, path := range target.paths {
+		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
+		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
+		export, err := b.runHyperfine(cmds, exportPath)
+		if err != nil {
+			return err
+		}
+		if export != nil {
+			label := target.label
+			if target.mode == multipleFilesMode {
+				label = path
+				for strings.HasPrefix(label, "../") {
+					label = strings.TrimPrefix(label, "../")
+				}
+			}
+			results = append(results, runResult{
+				label:  label,
+				export: *export,
+			})
+		}
+	}
+
+	report := report{
+		BaseRef:   b.baseRef,
+		HeadRef:   b.headRef,
+		Generated: time.Now(),
+		results:   results,
+	}
+	if err := report.export(b.config.exportPath); err != nil {
+		return err
+	}
+	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
+	return nil
+}
+
+func (b *benchmark) checkoutWorktree(ref string) (string, error) {
+	path := filepath.Join(b.workRoot, "worktree"+sanitize(ref))
+	b.removeWorktree(path)
+
+	if err := runCmd(".", "git", "worktree", "add", "--detach", path, ref); err != nil {
+		return "", fmt.Errorf("failed to checkout worktree for ref %q: %w", ref, err)
+	}
+	return path, nil
+}
+
+func (b *benchmark) removeWorktree(path string) {
+	_ = runCmdSilent(".", "git", "worktree", "remove", "--force", path)
+}
+
+func (b *benchmark) buildInterpreter(worktreePath, ref, output string) error {
+	if err := runCmd(worktreePath, "go", "build", "-o", output, "./cli/cmd"); err != nil {
+		return fmt.Errorf("failed to build interpreter for ref %q: %w", ref, err)
+	}
+	return nil
+}
+
+func (b *benchmark) hyperfineFlags() []string {
+	var args []string
+	if b.warmup > 0 {
+		args = append(args, "--warmup", strconv.Itoa(b.warmup))
+	}
+	if b.runs > 0 {
+		args = append(args, "--runs", strconv.Itoa(b.runs))
+	}
+	return args
+}
+
+func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchExport, error) {
+	args := b.hyperfineFlags()
+	if b.config.exportPath != "" {
+		args = append(args, "--export-json", jsonExportPath)
+	}
+	args = append(args, cmds...)
+	if err := runCmd(".", "hyperfine", args...); err != nil {
+		return nil, fmt.Errorf("failed to run hyperfine: %w", err)
+	}
+	if b.config.exportPath != "" {
+		return parseHyperfineExport(jsonExportPath)
+	}
+	return nil, nil
+}
+
+func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode targetMode) []string {
+	command := fmt.Sprintf("%s run %s", shellQuote(interpreter), shellQuote(target))
+	if mode == multipleFilesMode {
+		ref = fmt.Sprintf("%s (%s)", ref, getRelativeLabel(root, target))
+	}
+	return []string{"--command-name", ref, command}
+}
+
+func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode) []string {
+	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, baseInterpreter), root, target, mode)
+	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, headInterpreter), root, target, mode)
+	return append(baseCmd, headCmd...)
+}
+
+func getRelativeLabel(root, path string) string {
+	if root != "" {
+		if rel, err := filepath.Rel(root, path); err == nil {
+			return rel
+		}
+	}
+	return filepath.Base(path)
+}
+
+func sanitize(ref string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', ':':
+			return '-'
+		default:
+			return r
+		}
+	}, ref)
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
+}
+
+func runCmd(dir, name string, args ...string) error {
+	c := exec.Command(name, args...)
+	c.Dir = dir
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run()
+}
+
+func runCmdSilent(dir, name string, args ...string) error {
+	c := exec.Command(name, args...)
+	c.Dir = dir
+	c.Stdout = nil
+	c.Stderr = nil
+	return c.Run()
+}

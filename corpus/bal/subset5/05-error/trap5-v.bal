@@ -31,5 +31,6 @@ function baz() returns int|error {
 public function main() {
     var res = trap baz();
 
-    io:println(res);
+    io:println(res); // @output error("boom!")
 }
+

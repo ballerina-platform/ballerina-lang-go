@@ -20,7 +20,10 @@ public function main() {
     map<int[]> m = {a: [1, 2], b: [3, 4]};
     foreach int[] val in m {
         foreach int v in val {
-            io:println(v);
+            io:println(v); // @output 1
+                             // @output 2
+                             // @output 3
+                             // @output 4
         }
     }
 }
