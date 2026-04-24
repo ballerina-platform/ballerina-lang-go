@@ -17,7 +17,7 @@
 package semtypes
 
 import (
-	"iter"
+	"math/bits"
 )
 
 type iterState byte
@@ -30,24 +30,16 @@ const (
 
 type subtypePairIterator struct {
 	cache subtypePair
-	t1    []basicSubtype
-	t2    []basicSubtype
+	list1 []ProperSubtypeData
+	list2 []ProperSubtypeData
+	some1 BasicTypeBitSet
+	some2 BasicTypeBitSet
 	bits  BasicTypeBitSet
-	i1    int
-	i2    int
 	state iterState
 }
 
 func (i *subtypePairIterator) include(code BasicTypeCode) bool {
 	return (i.bits.all() & (1 << code.Code())) != 0
-}
-
-func (i *subtypePairIterator) get1() basicSubtype {
-	return i.t1[i.i1]
-}
-
-func (i *subtypePairIterator) get2() basicSubtype {
-	return i.t2[i.i2]
 }
 
 func (i *subtypePairIterator) hasNext() bool {
@@ -71,80 +63,72 @@ func (i *subtypePairIterator) next() subtypePair {
 	return i.cache
 }
 
+func (i *subtypePairIterator) advance1() (BasicTypeCode, SubtypeData) {
+	code := basicTypeCodeFrom(bits.TrailingZeros(uint(i.some1)))
+	data := i.list1[0]
+	i.list1 = i.list1[1:]
+	i.some1 &^= 1 << code.Code()
+	return code, data
+}
+
+func (i *subtypePairIterator) advance2() (BasicTypeCode, SubtypeData) {
+	code := basicTypeCodeFrom(bits.TrailingZeros(uint(i.some2)))
+	data := i.list2[0]
+	i.list2 = i.list2[1:]
+	i.some2 &^= 1 << code.Code()
+	return code, data
+}
+
 func (i *subtypePairIterator) internalNext() (subtypePair, bool) {
 	for {
-		if i.i1 >= len(i.t1) {
-			if i.i2 >= len(i.t2) {
-				break
-			}
-			t := i.get2()
-			code := t.BasicTypeCode
-			data2 := t.SubtypeData
-			i.i2++
+		has1 := i.some1 != 0
+		has2 := i.some2 != 0
+		if !has1 && !has2 {
+			return subtypePair{}, false
+		}
+		if !has1 {
+			code, data2 := i.advance2()
 			if i.include(code) {
 				return createSubTypePair(code, nil, data2), true
 			}
-		} else if i.i2 >= len(i.t2) {
-			t := i.get1()
-			code := t.BasicTypeCode
-			data1 := t.SubtypeData
-			i.i1++
+		} else if !has2 {
+			code, data1 := i.advance1()
 			if i.include(code) {
 				return createSubTypePair(code, data1, nil), true
 			}
 		} else {
-			t1 := i.get1()
-			code1 := t1.BasicTypeCode
-			data1 := t1.SubtypeData
-
-			t2 := i.get2()
-			code2 := t2.BasicTypeCode
-			data2 := t2.SubtypeData
+			code1 := basicTypeCodeFrom(bits.TrailingZeros(uint(i.some1)))
+			code2 := basicTypeCodeFrom(bits.TrailingZeros(uint(i.some2)))
 			if code1 == code2 {
-				i.i1++
-				i.i2++
+				_, data1 := i.advance1()
+				_, data2 := i.advance2()
 				if i.include(code1) {
 					return createSubTypePair(code1, data1, data2), true
 				}
 			} else if code1.Code() < code2.Code() {
-				i.i1++
+				_, data1 := i.advance1()
 				if i.include(code1) {
 					return createSubTypePair(code1, data1, nil), true
 				}
 			} else {
-				i.i2++
+				_, data2 := i.advance2()
 				if i.include(code2) {
 					return createSubTypePair(code2, nil, data2), true
 				}
 			}
 		}
 	}
-	return subtypePair{}, false
 }
 
-func (i *subtypePairIterator) toIterator() iter.Seq[subtypePair] {
-	return func(yield func(subtypePair) bool) {
-		for i.hasNext() {
-			if !yield(i.next()) {
-				break
-			}
-		}
+func newSubtypePairs(s1, s2 SemType, b BasicTypeBitSet) subtypePairIterator {
+	it := subtypePairIterator{bits: b, state: iterNeedsCalc}
+	if ct1, ok := s1.(*ComplexSemType); ok {
+		it.list1 = ct1.subtypeDataList()
+		it.some1 = ct1.some()
 	}
-}
-
-func newSubtypePairs(s1, s2 SemType, bits BasicTypeBitSet) iter.Seq[subtypePair] {
-	i := subtypePairIterator{
-		t1:    unpackToBasicSubtypes(s1),
-		t2:    unpackToBasicSubtypes(s2),
-		bits:  bits,
-		state: iterNeedsCalc,
+	if ct2, ok := s2.(*ComplexSemType); ok {
+		it.list2 = ct2.subtypeDataList()
+		it.some2 = ct2.some()
 	}
-	return i.toIterator()
-}
-
-func unpackToBasicSubtypes(t SemType) []basicSubtype {
-	if _, ok := t.(BasicTypeBitSet); ok {
-		return nil
-	}
-	return getUnpackComplexSemType(t.(*ComplexSemType))
+	return it
 }
