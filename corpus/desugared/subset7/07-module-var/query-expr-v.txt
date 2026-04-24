@@ -25,18 +25,18 @@
           (simple-var-ref base))))
       (var-def
         (variable $desugar$1 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$2 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$0))))))
+      (var-def
+        (variable $desugar$2 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$3 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
           (simple-var-ref $desugar$3)
-          (simple-var-ref $desugar$2))
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable x (expr
@@ -45,7 +45,7 @@
                 (simple-var-ref $desugar$3)))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$1)
+              (simple-var-ref $desugar$2)
               (binary-expr *
                 (simple-var-ref x)
                 (literal 2)))))
@@ -56,24 +56,24 @@
               (numeric-literal 1)))))
       (assignment
         (simple-var-ref doubled)
-        (simple-var-ref $desugar$1))
+        (simple-var-ref $desugar$2))
       (var-def
         (variable $desugar$4 (expr
           (simple-var-ref base))))
       (var-def
         (variable $desugar$5 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$6 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$4))))))
+      (var-def
+        (variable $desugar$6 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$7 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
           (simple-var-ref $desugar$7)
-          (simple-var-ref $desugar$6))
+          (simple-var-ref $desugar$5))
         (block-stmt
           (var-def
             (variable x (expr
@@ -96,7 +96,7 @@
               (continue)) ())
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$5)
+              (simple-var-ref $desugar$6)
               (simple-var-ref x))))
           (assignment
             (simple-var-ref $desugar$7)
@@ -105,7 +105,7 @@
               (numeric-literal 1)))))
       (assignment
         (simple-var-ref evens)
-        (simple-var-ref $desugar$5))))
+        (simple-var-ref $desugar$6))))
   (function main () (
     (value-type null))
     (block-function-body

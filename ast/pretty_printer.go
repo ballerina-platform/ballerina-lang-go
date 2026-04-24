@@ -149,8 +149,12 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printQueryExpr(t)
 	case *BLangFromClause:
 		p.printFromClause(t)
+	case *BLangJoinClause:
+		p.printJoinClause(t)
 	case *BLangLetClause:
 		p.printLetClause(t)
+	case *BLangOnClause:
+		p.printOnClause(t)
 	case *BLangWhereClause:
 		p.printWhereClause(t)
 	case *BLangLimitClause:
@@ -684,12 +688,47 @@ func (p *PrettyPrinter) printFromClause(node *BLangFromClause) {
 	p.endNode()
 }
 
+func (p *PrettyPrinter) printJoinClause(node *BLangJoinClause) {
+	p.startNode()
+	if node.IsOuterJoinFlag {
+		p.printString("join-clause outer")
+	} else {
+		p.printString("join-clause")
+	}
+	p.indentLevel++
+	if node.VariableDefinitionNode != nil {
+		p.PrintInner(node.VariableDefinitionNode.(BLangNode))
+	}
+	if node.Collection != nil {
+		p.PrintInner(node.Collection)
+	}
+	if node.OnClause != nil {
+		p.PrintInner(node.OnClause)
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
 func (p *PrettyPrinter) printLetClause(node *BLangLetClause) {
 	p.startNode()
 	p.printString("let-clause")
 	p.indentLevel++
 	for i := range node.LetVarDeclarations {
 		p.PrintInner(node.LetVarDeclarations[i].(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printOnClause(node *BLangOnClause) {
+	p.startNode()
+	p.printString("on-clause")
+	p.indentLevel++
+	if node.LhsExpr != nil {
+		p.PrintInner(node.LhsExpr)
+	}
+	if node.RhsExpr != nil {
+		p.PrintInner(node.RhsExpr)
 	}
 	p.indentLevel--
 	p.endNode()

@@ -1,0 +1,244 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+deptIdOrMissing(nil|{| id: int, name: string, never... |}) -> int{
+  bb0 {
+    %2 = dept is {| id: int, name: string, never... |}
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad id
+    %3 = dept[%4];
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %5 = ConstantLoad 1
+    %6 = unknown %5;
+    %0 = %6;
+    return;
+  }
+}
+deptNameOrNil(nil|{| id: int, name: string, never... |}) -> nil|string{
+  bb0 {
+    %2 = dept is {| id: int, name: string, never... |}
+    %2 ? bb1 : bb2;
+  }
+  bb1 {
+    %4 = ConstantLoad name
+    %3 = dept[%4];
+    %0 = %3;
+    return;
+  }
+  bb2 {
+    %5 = ConstantLoad <nil>
+    %0 = %5;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad id
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad name
+    %4 = ConstantLoad Alex
+    %5 = newMap {| id: int, name: string, never... |}{%1=%2, %3=%4}
+    %6 = ConstantLoad id
+    %7 = ConstantLoad 3
+    %8 = ConstantLoad name
+    %9 = ConstantLoad Casey
+    %10 = newMap {| id: int, name: string, never... |}{%6=%7, %8=%9}
+    %11 = ConstantLoad 2
+    %12 = newArray [{| id: int, name: string, never... |}...][%11]{%5, %10}
+    people = %12;
+    %14 = ConstantLoad id
+    %15 = ConstantLoad 1
+    %16 = ConstantLoad name
+    %17 = ConstantLoad HR
+    %18 = newMap {| id: int, name: string, never... |}{%14=%15, %16=%17}
+    %19 = ConstantLoad 1
+    %20 = newArray [{| id: int, name: string, never... |}...][%19]{%18}
+    departments = %20;
+    %22 = ConstantLoad 0
+    %23 = newArray list[%22]{}
+    $desugar$0 = %23;
+    %25 = ConstantLoad 0
+    %26 = newArray list[%25]{}
+    $desugar$1 = %26;
+    $desugar$2 = people;
+    %29 = length($desugar$2) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %29;
+    %31 = ConstantLoad 0
+    $desugar$4 = %31;
+    GOTO bb2;
+  }
+  bb2 {
+    %34 = $desugar$4;
+    %35 = $desugar$3;
+    %33 = < %34 %35;
+    %33 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 9
+    %0 = (1, $desugar$2)[(1, $desugar$4)];
+    person = %0;
+    %2 = ConstantLoad 1
+    %3 = newArray list[%2]{person}
+    %4 = push((1, $desugar$1),%3) -> bb5;
+  }
+  bb4 {
+    %36 = ConstantLoad 0
+    %37 = newArray list[%36]{}
+    $desugar$5 = %37;
+    %39 = length($desugar$1) -> bb6;
+  }
+  bb5 {
+    %6 = (1, $desugar$4);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, $desugar$4) = %5;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb6 {
+    $desugar$6 = %39;
+    %41 = ConstantLoad 0
+    $desugar$7 = %41;
+    GOTO bb7;
+  }
+  bb7 {
+    %44 = $desugar$7;
+    %45 = $desugar$6;
+    %43 = < %44 %45;
+    %43 ? bb8 : bb9;
+  }
+  bb8 {
+    PushScopeFrame 27
+    %0 = (1, $desugar$1)[(1, $desugar$7)];
+    $desugar$8 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$8[%3];
+    person = %2;
+    %6 = ConstantLoad id
+    %5 = person[%6];
+    $desugar$9 = %5;
+    %8 = ConstantLoad false
+    $desugar$10 = %8;
+    $desugar$11 = (1, departments);
+    %11 = length($desugar$11) -> bb10;
+  }
+  bb9 {
+    %46 = length($desugar$5) -> bb21;
+  }
+  bb10 {
+    $desugar$12 = %11;
+    %13 = ConstantLoad 0
+    $desugar$13 = %13;
+    GOTO bb11;
+  }
+  bb11 {
+    %16 = $desugar$13;
+    %17 = $desugar$12;
+    %15 = < %16 %17;
+    %15 ? bb12 : bb13;
+  }
+  bb12 {
+    PushScopeFrame 14
+    %0 = (1, $desugar$11)[(1, $desugar$13)];
+    dept = %0;
+    %3 = (1, $desugar$9);
+    %4 = deptIdOrMissing(dept) -> bb14;
+  }
+  bb13 {
+    %18 = ! $desugar$10;
+    %18 ? bb18 : bb20;
+  }
+  bb14 {
+    %5 = %4;
+    %2 = == %3 %5;
+    %2 ? bb15 : bb17;
+  }
+  bb15 {
+    %6 = ConstantLoad true
+    (1, $desugar$10) = %6;
+    %7 = ConstantLoad 2
+    %8 = newArray list[%7]{(1, person), dept}
+    %9 = push((2, $desugar$5),%8) -> bb16;
+  }
+  bb16 {
+    GOTO bb17;
+  }
+  bb17 {
+    %11 = (1, $desugar$13);
+    %12 = ConstantLoad 1
+    %13 = %12;
+    %10 = + %11 %13;
+    (1, $desugar$13) = %10;
+    PopScopeFrame
+    GOTO bb11;
+  }
+  bb18 {
+    %19 = ConstantLoad <nil>
+    %20 = ConstantLoad 2
+    %21 = newArray list[%20]{person, %19}
+    %22 = push((1, $desugar$5),%21) -> bb19;
+  }
+  bb19 {
+    GOTO bb20;
+  }
+  bb20 {
+    %24 = (1, $desugar$7);
+    %25 = ConstantLoad 1
+    %26 = %25;
+    %23 = + %24 %26;
+    (1, $desugar$7) = %23;
+    PopScopeFrame
+    GOTO bb7;
+  }
+  bb21 {
+    $desugar$14 = %46;
+    %48 = ConstantLoad 0
+    $desugar$15 = %48;
+    GOTO bb22;
+  }
+  bb22 {
+    %51 = $desugar$15;
+    %52 = $desugar$14;
+    %50 = < %51 %52;
+    %50 ? bb23 : bb24;
+  }
+  bb23 {
+    PushScopeFrame 14
+    %0 = (1, $desugar$5)[(1, $desugar$15)];
+    $desugar$16 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$16[%3];
+    person = %2;
+    %6 = ConstantLoad 1
+    %5 = $desugar$16[%6];
+    dept = %5;
+    %8 = deptNameOrNil(dept) -> bb25;
+  }
+  bb24 {
+    joined = $desugar$0;
+    %54 = println(joined) -> bb27;
+  }
+  bb25 {
+    %9 = push((1, $desugar$0),%8) -> bb26;
+  }
+  bb26 {
+    %11 = (1, $desugar$15);
+    %12 = ConstantLoad 1
+    %13 = %12;
+    %10 = + %11 %13;
+    (1, $desugar$15) = %10;
+    PopScopeFrame
+    GOTO bb22;
+  }
+  bb27 {
+    return;
+  }
+}

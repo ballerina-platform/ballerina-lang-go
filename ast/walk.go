@@ -744,6 +744,20 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.VariableDefinitionNode.(BLangNode))
 		}
 
+	case *BLangJoinClause:
+		if node.Collection != nil {
+			Walk(v, node.Collection.(BLangNode))
+		}
+		if node.OnClause != nil && node.OnClause.LhsExpr != nil {
+			Walk(v, node.OnClause.LhsExpr.(BLangNode))
+		}
+		if node.VariableDefinitionNode != nil {
+			Walk(v, node.VariableDefinitionNode.(BLangNode))
+		}
+		if node.OnClause != nil && node.OnClause.RhsExpr != nil {
+			Walk(v, node.OnClause.RhsExpr.(BLangNode))
+		}
+
 	case *BLangSelectClause:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))
@@ -757,6 +771,14 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangWhereClause:
 		if node.Expression != nil {
 			Walk(v, node.Expression.(BLangNode))
+		}
+
+	case *BLangOnClause:
+		if node.LhsExpr != nil {
+			Walk(v, node.LhsExpr.(BLangNode))
+		}
+		if node.RhsExpr != nil {
+			Walk(v, node.RhsExpr.(BLangNode))
 		}
 
 	case *BLangLimitClause:

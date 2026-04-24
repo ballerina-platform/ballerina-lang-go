@@ -42,21 +42,21 @@
           (simple-var-ref xs))))
       (var-def
         (variable $desugar$1 (expr
-          (mapping-constructor-expr))))
+          (invocation lang.array length (
+            (simple-var-ref $desugar$0))))))
       (var-def
         (variable $desugar$2 (expr
           (mapping-constructor-expr))))
       (var-def
         (variable $desugar$3 (expr
-          (invocation lang.array length (
-            (simple-var-ref $desugar$0))))))
+          (mapping-constructor-expr))))
       (var-def
         (variable $desugar$4 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
           (simple-var-ref $desugar$4)
-          (simple-var-ref $desugar$3))
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable x (expr
@@ -71,7 +71,7 @@
           (if
             (binary-expr ==
               (index-based-access
-                (simple-var-ref $desugar$2)
+                (simple-var-ref $desugar$3)
                 (index-based-access
                   (simple-var-ref $desugar$5)
                   (numeric-literal 0)))
@@ -85,19 +85,19 @@
                   (simple-var-ref $desugar$6))
                 (block-stmt
                   (assignment
-                    (simple-var-ref $desugar$1)
+                    (simple-var-ref $desugar$2)
                     (simple-var-ref $desugar$6))
                   (break)) ())) ())
           (assignment
             (index-based-access
-              (simple-var-ref $desugar$2)
+              (simple-var-ref $desugar$3)
               (index-based-access
                 (simple-var-ref $desugar$5)
                 (numeric-literal 0)))
             (literal true))
           (assignment
             (index-based-access
-              (simple-var-ref $desugar$1)
+              (simple-var-ref $desugar$2)
               (index-based-access
                 (simple-var-ref $desugar$5)
                 (numeric-literal 0)))
@@ -116,27 +116,27 @@
               (builtin-ref-type map)
               (value-type int))
             (error-type))) (expr
-          (simple-var-ref $desugar$1))))
+          (simple-var-ref $desugar$2))))
       (var-def
         (variable $desugar$7 (expr
           (simple-var-ref xs))))
       (var-def
         (variable $desugar$8 (expr
-          (mapping-constructor-expr))))
+          (invocation lang.array length (
+            (simple-var-ref $desugar$7))))))
       (var-def
         (variable $desugar$9 (expr
           (mapping-constructor-expr))))
       (var-def
         (variable $desugar$10 (expr
-          (invocation lang.array length (
-            (simple-var-ref $desugar$7))))))
+          (mapping-constructor-expr))))
       (var-def
         (variable $desugar$11 (expr
           (numeric-literal 0))))
       (while
         (binary-expr <
           (simple-var-ref $desugar$11)
-          (simple-var-ref $desugar$10))
+          (simple-var-ref $desugar$8))
         (block-stmt
           (var-def
             (variable x (expr
@@ -151,7 +151,7 @@
           (if
             (binary-expr ==
               (index-based-access
-                (simple-var-ref $desugar$9)
+                (simple-var-ref $desugar$10)
                 (index-based-access
                   (simple-var-ref $desugar$12)
                   (numeric-literal 0)))
@@ -165,19 +165,19 @@
                   (simple-var-ref $desugar$13))
                 (block-stmt
                   (assignment
-                    (simple-var-ref $desugar$8)
+                    (simple-var-ref $desugar$9)
                     (simple-var-ref $desugar$13))
                   (break)) ())) ())
           (assignment
             (index-based-access
-              (simple-var-ref $desugar$9)
+              (simple-var-ref $desugar$10)
               (index-based-access
                 (simple-var-ref $desugar$12)
                 (numeric-literal 0)))
             (literal true))
           (assignment
             (index-based-access
-              (simple-var-ref $desugar$8)
+              (simple-var-ref $desugar$9)
               (index-based-access
                 (simple-var-ref $desugar$12)
                 (numeric-literal 0)))
@@ -196,7 +196,7 @@
               (builtin-ref-type map)
               (value-type int))
             (error-type))) (expr
-          (simple-var-ref $desugar$8))))
+          (simple-var-ref $desugar$9))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref out1))))

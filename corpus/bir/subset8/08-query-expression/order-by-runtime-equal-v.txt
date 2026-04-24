@@ -10,12 +10,12 @@ main() -> nil{
     %5 = newArray [nil|float...][%4]{%1, %2, %3}
     withNils = %5;
     $desugar$0 = withNils;
-    %8 = ConstantLoad 0
-    %9 = newArray list[%8]{}
-    $desugar$1 = %9;
-    %11 = length($desugar$0) -> bb1;
+    %8 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    %11 = newArray list[%10]{}
     $desugar$2 = %11;
     %13 = ConstantLoad 0
     %14 = newArray list[%13]{}
@@ -32,7 +32,7 @@ main() -> nil{
   }
   bb2 {
     %25 = $desugar$6;
-    %26 = $desugar$2;
+    %26 = $desugar$1;
     %24 = < %25 %26;
     %24 ? bb3 : bb4;
   }
@@ -84,10 +84,10 @@ main() -> nil{
     %0 = (1, $desugar$0)[%1];
     value = %0;
     %3 = value;
-    %4 = push((1, $desugar$1),%3) -> bb12;
+    %4 = push((1, $desugar$2),%3) -> bb12;
   }
   bb11 {
-    sortedNils = $desugar$1;
+    sortedNils = $desugar$2;
     %39 = ConstantLoad 1
     %40 = ConstantLoad 1
     %41 = newArray [int...][%40]{%39}
@@ -102,10 +102,7 @@ main() -> nil{
     %50 = newArray [[int...]...][%49]{%41, %44, %48}
     dupRows = %50;
     $desugar$9 = dupRows;
-    %53 = ConstantLoad 0
-    %54 = newArray list[%53]{}
-    $desugar$10 = %54;
-    %56 = length($desugar$9) -> bb13;
+    %53 = length($desugar$9) -> bb13;
   }
   bb12 {
     %6 = (1, $desugar$8);
@@ -117,6 +114,9 @@ main() -> nil{
     GOTO bb9;
   }
   bb13 {
+    $desugar$10 = %53;
+    %55 = ConstantLoad 0
+    %56 = newArray list[%55]{}
     $desugar$11 = %56;
     %58 = ConstantLoad 0
     %59 = newArray list[%58]{}
@@ -133,7 +133,7 @@ main() -> nil{
   }
   bb14 {
     %70 = $desugar$15;
-    %71 = $desugar$11;
+    %71 = $desugar$10;
     %69 = < %70 %71;
     %69 ? bb15 : bb16;
   }
@@ -184,10 +184,10 @@ main() -> nil{
     %1 = (1, $desugar$13)[(1, $desugar$17)];
     %0 = (1, $desugar$9)[%1];
     row = %0;
-    %3 = push((1, $desugar$10),row) -> bb24;
+    %3 = push((1, $desugar$11),row) -> bb24;
   }
   bb23 {
-    sortedRows = $desugar$10;
+    sortedRows = $desugar$11;
     %84 = println(sortedNils) -> bb25;
   }
   bb24 {

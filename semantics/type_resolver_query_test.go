@@ -213,9 +213,53 @@ func TestResolveQueryIntermediateClauseErrorCases(t *testing.T) {
 			diagSub: "order by key expression must have an ordered type",
 		},
 		{
+			name: "join collection non-list",
+			clause: newJoinClause(
+				newIntLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				newOnClause(newIntLiteral(1), newIntLiteral(1)),
+			),
+			diagSub: "query from clause currently supports only list or map collections",
+		},
+		{
+			name: "outer join without var",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", newValueType(model.TypeKind_INT), nil),
+				false,
+				true,
+				newOnClause(newIntLiteral(1), newIntLiteral(1)),
+			),
+			diagSub: "outer join clause variable must be declared with var",
+		},
+		{
+			name: "join without on clause",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				nil,
+			),
+			diagSub: "join clause requires an on clause",
+		},
+		{
+			name: "join incompatible on clause types",
+			clause: newJoinClause(
+				newIntListLiteral(1),
+				newSimpleVarDef("j", nil, nil),
+				true,
+				false,
+				newOnClause(newStringLiteral("x"), newIntLiteral(1)),
+			),
+			diagSub: "incompatible type",
+		},
+		{
 			name:    "unsupported intermediate clause",
 			clause:  newCollectClause(),
-			diagSub: "only let + where + order by + limit clauses are supported as intermediate query clauses",
+			diagSub: "only join + let + where + order by + limit clauses are supported as intermediate query clauses",
 		},
 	}
 
@@ -315,6 +359,33 @@ func TestResolveQueryExprOrderByClause(t *testing.T) {
 	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
 	if !ok {
 		t.Fatalf("expected resolveQueryExpr to succeed for order by clause")
+	}
+	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
+		t.Fatalf("expected query result type to be a list, got %v", queryTy)
+	}
+	if len(cx.Diagnostics()) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", cx.Diagnostics())
+	}
+}
+
+func TestResolveQueryExprJoinClause(t *testing.T) {
+	resolver, cx := newTestQueryResolver()
+
+	query := newQueryExpr(
+		newFromClause(newIntListLiteral(1, 2), nil, true),
+		newJoinClause(
+			newIntListLiteral(2, 3),
+			newSimpleVarDef("j", nil, nil),
+			true,
+			false,
+			newOnClause(newIntLiteral(1), newIntLiteral(1)),
+		),
+		newSelectClause(newIntLiteral(1)),
+	)
+
+	queryTy, _, ok := resolveQueryExpr(resolver, nil, query)
+	if !ok {
+		t.Fatalf("expected resolveQueryExpr to succeed for join clause")
 	}
 	if !semtypes.IsSubtypeSimple(queryTy, semtypes.LIST) {
 		t.Fatalf("expected query result type to be a list, got %v", queryTy)
@@ -516,6 +587,26 @@ func newFromClause(collection ast.BLangExpression, varDef model.VariableDefiniti
 	return fromClause
 }
 
+func newJoinClause(
+	collection ast.BLangExpression,
+	varDef model.VariableDefinitionNode,
+	declaredWithVar bool,
+	isOuterJoin bool,
+	onClause *ast.BLangOnClause,
+) *ast.BLangJoinClause {
+	joinClause := &ast.BLangJoinClause{
+		BLangInputClause: ast.BLangInputClause{
+			VariableDefinitionNode: varDef,
+			IsDeclaredWithVarFlag:  declaredWithVar,
+		},
+		OnClause:        onClause,
+		IsOuterJoinFlag: isOuterJoin,
+	}
+	joinClause.SetPosition(queryTestPos)
+	joinClause.SetCollection(collection)
+	return joinClause
+}
+
 func newSelectClause(expr ast.BLangExpression) *ast.BLangSelectClause {
 	selectClause := &ast.BLangSelectClause{}
 	selectClause.SetPosition(queryTestPos)
@@ -537,6 +628,15 @@ func newWhereClause(expr ast.BLangExpression) *ast.BLangWhereClause {
 	}
 	whereClause.SetPosition(queryTestPos)
 	return whereClause
+}
+
+func newOnClause(lhs ast.BLangExpression, rhs ast.BLangExpression) *ast.BLangOnClause {
+	onClause := &ast.BLangOnClause{
+		LhsExpr: lhs,
+		RhsExpr: rhs,
+	}
+	onClause.SetPosition(queryTestPos)
+	return onClause
 }
 
 func newLimitClause(expr ast.BLangExpression) *ast.BLangLimitClause {

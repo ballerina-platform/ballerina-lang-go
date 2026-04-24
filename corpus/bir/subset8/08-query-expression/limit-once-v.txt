@@ -22,12 +22,12 @@ main() -> nil{
     %5 = newArray [int...][%4]{%1, %2, %3}
     xs = %5;
     $desugar$0 = xs;
-    %8 = ConstantLoad 0
-    %9 = newArray list[%8]{}
-    $desugar$1 = %9;
-    %11 = length($desugar$0) -> bb1;
+    %8 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    %11 = newArray list[%10]{}
     $desugar$2 = %11;
     %13 = ConstantLoad 0
     $desugar$3 = %13;
@@ -53,7 +53,7 @@ main() -> nil{
   }
   bb5 {
     %26 = $desugar$3;
-    %27 = $desugar$2;
+    %27 = $desugar$1;
     %25 = < %26 %27;
     %25 ? bb6 : bb7;
   }
@@ -67,7 +67,7 @@ main() -> nil{
     %2 ? bb8 : bb9;
   }
   bb7 {
-    ys = $desugar$1;
+    ys = $desugar$2;
     %29 = println(ys) -> bb11;
   }
   bb8 {
@@ -86,7 +86,7 @@ main() -> nil{
     %9 = + %10 %12;
     (1, $desugar$5) = %9;
     %13 = x;
-    %14 = push((1, $desugar$1),%13) -> bb10;
+    %14 = push((1, $desugar$2),%13) -> bb10;
   }
   bb10 {
     %16 = (1, $desugar$3);

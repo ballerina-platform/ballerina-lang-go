@@ -30,11 +30,11 @@ main() -> nil{
     %6 = newArray [int...][%5]{%1, %2, %3, %4}
     xs = %6;
     $desugar$0 = xs;
-    %9 = newMap {| int... |}{}
-    $desugar$1 = %9;
-    %11 = length($desugar$0) -> bb1;
+    %9 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %9;
+    %11 = newMap {| int... |}{}
     $desugar$2 = %11;
     %13 = ConstantLoad 0
     $desugar$3 = %13;
@@ -42,7 +42,7 @@ main() -> nil{
   }
   bb2 {
     %16 = $desugar$3;
-    %17 = $desugar$2;
+    %17 = $desugar$1;
     %15 = < %16 %17;
     %15 ? bb3 : bb4;
   }
@@ -54,7 +54,7 @@ main() -> nil{
     %3 = keyFor(%2) -> bb5;
   }
   bb4 {
-    out = $desugar$1;
+    out = $desugar$2;
     %20 = ConstantLoad a
     %19 = out[%20];
     %21 = %19;
@@ -68,7 +68,7 @@ main() -> nil{
     %7 = $desugar$4[%8];
     %10 = ConstantLoad 0
     %9 = $desugar$4[%10];
-    (1, $desugar$1)[%9] = %7;
+    (1, $desugar$2)[%9] = %7;
     %12 = (1, $desugar$3);
     %13 = ConstantLoad 1
     %14 = %13;

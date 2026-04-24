@@ -24,11 +24,11 @@ main() -> nil{
     %18 = newArray [[string, int, never...]...][%17]{%4, %8, %12, %16}
     seed = %18;
     $desugar$0 = seed;
-    %21 = newMap {| int... |}{}
-    $desugar$1 = %21;
-    %23 = length($desugar$0) -> bb1;
+    %21 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %21;
+    %23 = newMap {| int... |}{}
     $desugar$2 = %23;
     %25 = ConstantLoad 0
     $desugar$3 = %25;
@@ -52,7 +52,7 @@ main() -> nil{
   }
   bb4 {
     %38 = $desugar$3;
-    %39 = $desugar$2;
+    %39 = $desugar$1;
     %37 = < %38 %39;
     %37 ? bb5 : bb6;
   }
@@ -66,11 +66,8 @@ main() -> nil{
     %2 ? bb7 : bb8;
   }
   bb6 {
-    $desugar$7 = $desugar$1;
-    %41 = ConstantLoad 0
-    %42 = newArray list[%41]{}
-    $desugar$8 = %42;
-    %44 = keys($desugar$7) -> bb9;
+    $desugar$7 = $desugar$2;
+    %41 = keys($desugar$7) -> bb9;
   }
   bb7 {
     %6 = (1, $desugar$3);
@@ -102,7 +99,7 @@ main() -> nil{
     %24 = $desugar$6[%25];
     %27 = ConstantLoad 0
     %26 = $desugar$6[%27];
-    (1, $desugar$1)[%26] = %24;
+    (1, $desugar$2)[%26] = %24;
     %29 = (1, $desugar$3);
     %30 = ConstantLoad 1
     %31 = %30;
@@ -112,10 +109,13 @@ main() -> nil{
     GOTO bb4;
   }
   bb9 {
-    $desugar$9 = %44;
-    %46 = length($desugar$9) -> bb10;
+    $desugar$8 = %41;
+    %43 = length($desugar$8) -> bb10;
   }
   bb10 {
+    $desugar$9 = %43;
+    %45 = ConstantLoad 0
+    %46 = newArray list[%45]{}
     $desugar$10 = %46;
     %48 = ConstantLoad 0
     $desugar$11 = %48;
@@ -139,13 +139,13 @@ main() -> nil{
   }
   bb13 {
     %61 = $desugar$11;
-    %62 = $desugar$10;
+    %62 = $desugar$9;
     %60 = < %61 %62;
     %60 ? bb14 : bb15;
   }
   bb14 {
     PushScopeFrame 20
-    %1 = (1, $desugar$9)[(1, $desugar$11)];
+    %1 = (1, $desugar$8)[(1, $desugar$11)];
     %0 = (1, $desugar$7)[%1];
     x = %0;
     %4 = (1, $desugar$13);
@@ -154,7 +154,7 @@ main() -> nil{
     %3 ? bb16 : bb17;
   }
   bb15 {
-    out = $desugar$8;
+    out = $desugar$10;
     %64 = println(out) -> bb19;
   }
   bb16 {
@@ -173,7 +173,7 @@ main() -> nil{
     %10 = + %11 %13;
     (1, $desugar$13) = %10;
     %14 = x;
-    %15 = push((1, $desugar$8),%14) -> bb18;
+    %15 = push((1, $desugar$10),%14) -> bb18;
   }
   bb18 {
     %17 = (1, $desugar$11);

@@ -19,11 +19,11 @@
           (simple-var-ref withNils))))
       (var-def
         (variable $desugar$1 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$2 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$0))))))
+      (var-def
+        (variable $desugar$2 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$3 (expr
           (list-constructor-expr))))
@@ -39,7 +39,7 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$6)
-          (simple-var-ref $desugar$2))
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable value (expr
@@ -88,7 +88,7 @@
                   (simple-var-ref $desugar$8))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$1)
+              (simple-var-ref $desugar$2)
               (simple-var-ref value))))
           (assignment
             (simple-var-ref $desugar$8)
@@ -101,7 +101,7 @@
             (union-type
               (value-type float)
               (value-type null)) dimensions: 1 ([]))) (expr
-          (simple-var-ref $desugar$1))))
+          (simple-var-ref $desugar$2))))
       (var-def
         (variable dupRows (type
           (array-type
@@ -119,11 +119,11 @@
           (simple-var-ref dupRows))))
       (var-def
         (variable $desugar$10 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$11 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$9))))))
+      (var-def
+        (variable $desugar$11 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$12 (expr
           (list-constructor-expr))))
@@ -139,7 +139,7 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$15)
-          (simple-var-ref $desugar$11))
+          (simple-var-ref $desugar$10))
         (block-stmt
           (var-def
             (variable row (expr
@@ -188,7 +188,7 @@
                   (simple-var-ref $desugar$17))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$10)
+              (simple-var-ref $desugar$11)
               (simple-var-ref row))))
           (assignment
             (simple-var-ref $desugar$17)
@@ -199,7 +199,7 @@
         (variable sortedRows (type
           (array-type
             (value-type int) dimensions: 2 ([][]))) (expr
-          (simple-var-ref $desugar$10))))
+          (simple-var-ref $desugar$11))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref sortedNils))))

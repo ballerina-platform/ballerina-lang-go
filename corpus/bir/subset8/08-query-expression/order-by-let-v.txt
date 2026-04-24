@@ -13,12 +13,12 @@ main() -> nil{
     %7 = newArray [int...][%6]{%1, %2, %3, %4, %5}
     nums = %7;
     $desugar$0 = nums;
-    %10 = ConstantLoad 0
-    %11 = newArray list[%10]{}
-    $desugar$1 = %11;
-    %13 = length($desugar$0) -> bb1;
+    %10 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %10;
+    %12 = ConstantLoad 0
+    %13 = newArray list[%12]{}
     $desugar$2 = %13;
     %15 = ConstantLoad 0
     %16 = newArray list[%15]{}
@@ -41,7 +41,7 @@ main() -> nil{
   }
   bb3 {
     %31 = $desugar$7;
-    %32 = $desugar$2;
+    %32 = $desugar$1;
     %30 = < %31 %32;
     %30 ? bb4 : bb5;
   }
@@ -108,10 +108,10 @@ main() -> nil{
     %8 = %7;
     %5 = + %6 %8;
     %9 = %5;
-    %10 = push((1, $desugar$1),%9) -> bb14;
+    %10 = push((1, $desugar$2),%9) -> bb14;
   }
   bb13 {
-    listResult = $desugar$1;
+    listResult = $desugar$2;
     %45 = ConstantLoad a
     %46 = ConstantLoad 3
     %47 = ConstantLoad b
@@ -121,10 +121,7 @@ main() -> nil{
     %51 = newMap {| int... |}{%45=%46, %47=%48, %49=%50}
     values = %51;
     $desugar$10 = values;
-    %54 = ConstantLoad 0
-    %55 = newArray list[%54]{}
-    $desugar$11 = %55;
-    %57 = keys($desugar$10) -> bb15;
+    %54 = keys($desugar$10) -> bb15;
   }
   bb14 {
     %12 = (1, $desugar$9);
@@ -136,10 +133,13 @@ main() -> nil{
     GOTO bb11;
   }
   bb15 {
-    $desugar$12 = %57;
-    %59 = length($desugar$12) -> bb16;
+    $desugar$11 = %54;
+    %56 = length($desugar$11) -> bb16;
   }
   bb16 {
+    $desugar$12 = %56;
+    %58 = ConstantLoad 0
+    %59 = newArray list[%58]{}
     $desugar$13 = %59;
     %61 = ConstantLoad 0
     %62 = newArray list[%61]{}
@@ -162,13 +162,13 @@ main() -> nil{
   }
   bb18 {
     %77 = $desugar$18;
-    %78 = $desugar$13;
+    %78 = $desugar$12;
     %76 = < %77 %78;
     %76 ? bb19 : bb20;
   }
   bb19 {
     PushScopeFrame 19
-    %1 = (1, $desugar$12)[(1, $desugar$18)];
+    %1 = (1, $desugar$11)[(1, $desugar$18)];
     %0 = (1, $desugar$10)[%1];
     v = %0;
     %4 = v;
@@ -221,16 +221,16 @@ main() -> nil{
   bb27 {
     PushScopeFrame 12
     %2 = (1, $desugar$15)[(1, $desugar$20)];
-    %1 = (1, $desugar$12)[%2];
+    %1 = (1, $desugar$11)[%2];
     %0 = (1, $desugar$10)[%1];
     v = %0;
     %4 = (1, $desugar$16)[(1, $desugar$20)];
     adjusted = %4;
     %6 = adjusted;
-    %7 = push((1, $desugar$11),%6) -> bb29;
+    %7 = push((1, $desugar$13),%6) -> bb29;
   }
   bb28 {
-    mapResult = $desugar$11;
+    mapResult = $desugar$13;
     %91 = println(listResult) -> bb30;
   }
   bb29 {

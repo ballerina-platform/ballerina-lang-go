@@ -2984,11 +2984,27 @@ func (n *NodeBuilder) TransformLetClause(letClauseNode *tree.LetClauseNode) BLan
 }
 
 func (n *NodeBuilder) TransformJoinClause(joinClauseNode *tree.JoinClauseNode) BLangNode {
-	panic("TransformJoinClause unimplemented")
+	joinClause := &BLangJoinClause{}
+	joinClause.pos = getPosition(n.de(), joinClauseNode)
+	joinClause.SetCollection(n.createExpression(joinClauseNode.Expression()))
+	bindingPatternNode := joinClauseNode.TypedBindingPattern()
+	joinClause.SetVariableDefinitionNode(
+		n.createBLangVarDef(getPosition(n.de(), bindingPatternNode), bindingPatternNode, nil, nil),
+	)
+	joinClause.IsDeclaredWithVarFlag = isDeclaredWithVar(bindingPatternNode.TypeDescriptor())
+	joinClause.IsOuterJoinFlag = joinClauseNode.OuterKeyword() != nil
+	if onClauseNode := joinClauseNode.JoinOnCondition(); onClauseNode != nil {
+		joinClause.OnClause = n.TransformOnClause(onClauseNode).(*BLangOnClause)
+	}
+	return joinClause
 }
 
 func (n *NodeBuilder) TransformOnClause(onClauseNode *tree.OnClauseNode) BLangNode {
-	panic("TransformOnClause unimplemented")
+	onClause := &BLangOnClause{}
+	onClause.pos = getPosition(n.de(), onClauseNode)
+	onClause.SetLeftExpression(n.createExpression(onClauseNode.LhsExpression()))
+	onClause.SetRightExpression(n.createExpression(onClauseNode.RhsExpression()))
+	return onClause
 }
 
 func (n *NodeBuilder) TransformLimitClause(limitClauseNode *tree.LimitClauseNode) BLangNode {
@@ -3045,10 +3061,10 @@ func (n *NodeBuilder) TransformQueryExpression(queryExpressionNode *tree.QueryEx
 	for i := 0; i < intermediateClauses.Size(); i++ {
 		clause := intermediateClauses.Get(i)
 		switch clause.Kind() {
-		case common.FROM_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
+		case common.FROM_CLAUSE, common.JOIN_CLAUSE, common.LET_CLAUSE, common.WHERE_CLAUSE, common.LIMIT_CLAUSE, common.ORDER_BY_CLAUSE:
 			queryExpr.AddQueryClause(n.TransformSyntaxNode(clause))
 		default:
-			n.cx.Unimplemented("only from + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
+			n.cx.Unimplemented("only from + join + let + where + order by + limit + select query clauses are supported for now", getPosition(n.de(), clause))
 		}
 	}
 

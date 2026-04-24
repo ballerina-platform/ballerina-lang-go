@@ -688,6 +688,20 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 
 	for i := 1; i < lastClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangJoinClause:
+			if !analyzeExpression(a, clause.Collection, nil) {
+				return false
+			}
+			if clause.OnClause == nil {
+				a.semanticErr("join clause requires an on clause", clause.GetPosition())
+				return false
+			}
+			if !analyzeExpression(a, clause.OnClause.LhsExpr, nil) {
+				return false
+			}
+			if !analyzeExpression(a, clause.OnClause.RhsExpr, nil) {
+				return false
+			}
 		case *ast.BLangLetClause:
 			for _, variableDef := range clause.LetVarDeclarations {
 				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)

@@ -30,13 +30,13 @@ main() -> nil{
     %5 = newArray [int...][%4]{%1, %2, %3}
     xs = %5;
     $desugar$0 = xs;
-    %8 = newMap error|{| int... |}{}
-    $desugar$1 = %8;
-    %10 = newMap mapping{}
-    $desugar$2 = %10;
-    %12 = length($desugar$0) -> bb1;
+    %8 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %8;
+    %10 = newMap error|{| int... |}{}
+    $desugar$2 = %10;
+    %12 = newMap mapping{}
     $desugar$3 = %12;
     %14 = ConstantLoad 0
     $desugar$4 = %14;
@@ -44,7 +44,7 @@ main() -> nil{
   }
   bb2 {
     %17 = $desugar$4;
-    %18 = $desugar$3;
+    %18 = $desugar$1;
     %16 = < %17 %18;
     %16 ? bb3 : bb4;
   }
@@ -58,20 +58,16 @@ main() -> nil{
     $desugar$5 = %4;
     %9 = ConstantLoad 0
     %8 = $desugar$5[%9];
-    %7 = (1, $desugar$2)[%8];
+    %7 = (1, $desugar$3)[%8];
     %10 = ConstantLoad true
     %11 = %10;
     %6 = == %7 %11;
     %6 ? bb5 : bb9;
   }
   bb4 {
-    out1 = $desugar$1;
+    out1 = $desugar$2;
     $desugar$7 = xs;
-    %21 = newMap error|{| int... |}{}
-    $desugar$8 = %21;
-    %23 = newMap mapping{}
-    $desugar$9 = %23;
-    %25 = length($desugar$7) -> bb10;
+    %21 = length($desugar$7) -> bb10;
   }
   bb5 {
     %12 = onConflictNil() -> bb6;
@@ -82,7 +78,7 @@ main() -> nil{
     %14 ? bb7 : bb8;
   }
   bb7 {
-    (1, $desugar$1) = $desugar$6;
+    (1, $desugar$2) = $desugar$6;
     PopScopeFrame
     GOTO bb4;
   }
@@ -93,12 +89,12 @@ main() -> nil{
     %15 = ConstantLoad true
     %17 = ConstantLoad 0
     %16 = $desugar$5[%17];
-    (1, $desugar$2)[%16] = %15;
+    (1, $desugar$3)[%16] = %15;
     %19 = ConstantLoad 1
     %18 = $desugar$5[%19];
     %21 = ConstantLoad 0
     %20 = $desugar$5[%21];
-    (1, $desugar$1)[%20] = %18;
+    (1, $desugar$2)[%20] = %18;
     %23 = (1, $desugar$4);
     %24 = ConstantLoad 1
     %25 = %24;
@@ -108,6 +104,10 @@ main() -> nil{
     GOTO bb2;
   }
   bb10 {
+    $desugar$8 = %21;
+    %23 = newMap error|{| int... |}{}
+    $desugar$9 = %23;
+    %25 = newMap mapping{}
     $desugar$10 = %25;
     %27 = ConstantLoad 0
     $desugar$11 = %27;
@@ -115,7 +115,7 @@ main() -> nil{
   }
   bb11 {
     %30 = $desugar$11;
-    %31 = $desugar$10;
+    %31 = $desugar$8;
     %29 = < %30 %31;
     %29 ? bb12 : bb13;
   }
@@ -129,14 +129,14 @@ main() -> nil{
     $desugar$12 = %4;
     %9 = ConstantLoad 0
     %8 = $desugar$12[%9];
-    %7 = (1, $desugar$9)[%8];
+    %7 = (1, $desugar$10)[%8];
     %10 = ConstantLoad true
     %11 = %10;
     %6 = == %7 %11;
     %6 ? bb14 : bb18;
   }
   bb13 {
-    out2 = $desugar$8;
+    out2 = $desugar$9;
     %33 = println(out1) -> bb19;
   }
   bb14 {
@@ -148,7 +148,7 @@ main() -> nil{
     %14 ? bb16 : bb17;
   }
   bb16 {
-    (1, $desugar$8) = $desugar$13;
+    (1, $desugar$9) = $desugar$13;
     PopScopeFrame
     GOTO bb13;
   }
@@ -159,12 +159,12 @@ main() -> nil{
     %15 = ConstantLoad true
     %17 = ConstantLoad 0
     %16 = $desugar$12[%17];
-    (1, $desugar$9)[%16] = %15;
+    (1, $desugar$10)[%16] = %15;
     %19 = ConstantLoad 1
     %18 = $desugar$12[%19];
     %21 = ConstantLoad 0
     %20 = $desugar$12[%21];
-    (1, $desugar$8)[%20] = %18;
+    (1, $desugar$9)[%20] = %18;
     %23 = (1, $desugar$11);
     %24 = ConstantLoad 1
     %25 = %24;

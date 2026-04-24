@@ -11,12 +11,12 @@ main() -> nil{
     %6 = newArray [int...][%5]{%1, %2, %3, %4}
     xs = %6;
     $desugar$0 = xs;
-    %9 = ConstantLoad 0
-    %10 = newArray list[%9]{}
-    $desugar$1 = %10;
-    %12 = length($desugar$0) -> bb1;
+    %9 = length($desugar$0) -> bb1;
   }
   bb1 {
+    $desugar$1 = %9;
+    %11 = ConstantLoad 0
+    %12 = newArray list[%11]{}
     $desugar$2 = %12;
     %14 = ConstantLoad 0
     %15 = newArray list[%14]{}
@@ -33,7 +33,7 @@ main() -> nil{
   }
   bb2 {
     %26 = $desugar$6;
-    %27 = $desugar$2;
+    %27 = $desugar$1;
     %25 = < %26 %27;
     %25 ? bb3 : bb4;
   }
@@ -89,14 +89,11 @@ main() -> nil{
     %6 = %5;
     %3 = * %4 %6;
     %7 = %3;
-    %8 = push((1, $desugar$1),%7) -> bb12;
+    %8 = push((1, $desugar$2),%7) -> bb12;
   }
   bb11 {
-    $desugar$9 = $desugar$1;
-    %40 = ConstantLoad 0
-    %41 = newArray list[%40]{}
-    $desugar$10 = %41;
-    %43 = length($desugar$9) -> bb13;
+    $desugar$9 = $desugar$2;
+    %40 = length($desugar$9) -> bb13;
   }
   bb12 {
     %10 = (1, $desugar$8);
@@ -108,6 +105,9 @@ main() -> nil{
     GOTO bb9;
   }
   bb13 {
+    $desugar$10 = %40;
+    %42 = ConstantLoad 0
+    %43 = newArray list[%42]{}
     $desugar$11 = %43;
     %45 = ConstantLoad 0
     %46 = newArray list[%45]{}
@@ -124,7 +124,7 @@ main() -> nil{
   }
   bb14 {
     %57 = $desugar$15;
-    %58 = $desugar$11;
+    %58 = $desugar$10;
     %56 = < %57 %58;
     %56 ? bb15 : bb16;
   }
@@ -180,10 +180,10 @@ main() -> nil{
     %6 = %5;
     %3 = + %4 %6;
     %7 = %3;
-    %8 = push((1, $desugar$10),%7) -> bb24;
+    %8 = push((1, $desugar$11),%7) -> bb24;
   }
   bb23 {
-    out = $desugar$10;
+    out = $desugar$11;
     %71 = println(out) -> bb25;
   }
   bb24 {

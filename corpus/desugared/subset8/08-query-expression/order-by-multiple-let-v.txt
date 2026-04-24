@@ -19,11 +19,11 @@
           (simple-var-ref nums))))
       (var-def
         (variable $desugar$1 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$2 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$0))))))
+      (var-def
+        (variable $desugar$2 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$3 (expr
           (list-constructor-expr))))
@@ -46,7 +46,7 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$7)
-          (simple-var-ref $desugar$2))
+          (simple-var-ref $desugar$1))
         (block-stmt
           (var-def
             (variable n (expr
@@ -209,7 +209,7 @@
                 (simple-var-ref $desugar$17)))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$1)
+              (simple-var-ref $desugar$2)
               (binary-expr +
                 (simple-var-ref n)
                 (simple-var-ref bucket)))))
@@ -222,7 +222,7 @@
         (variable result (type
           (array-type
             (value-type int) dimensions: 1 ([]))) (expr
-          (simple-var-ref $desugar$1))))
+          (simple-var-ref $desugar$2))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref result)))))))

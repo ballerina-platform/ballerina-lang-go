@@ -30,15 +30,15 @@
           (simple-var-ref valuesById))))
       (var-def
         (variable $desugar$1 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$2 (expr
           (invocation lang.map keys (
             (simple-var-ref $desugar$0))))))
       (var-def
-        (variable $desugar$3 (expr
+        (variable $desugar$2 (expr
           (invocation lang.array length (
-            (simple-var-ref $desugar$2))))))
+            (simple-var-ref $desugar$1))))))
+      (var-def
+        (variable $desugar$3 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$4 (expr
           (list-constructor-expr))))
@@ -54,14 +54,14 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$7)
-          (simple-var-ref $desugar$3))
+          (simple-var-ref $desugar$2))
         (block-stmt
           (var-def
             (variable value (expr
               (index-based-access
                 (simple-var-ref $desugar$0)
                 (index-based-access
-                  (simple-var-ref $desugar$2)
+                  (simple-var-ref $desugar$1)
                   (simple-var-ref $desugar$7))))))
           (expression-stmt
             (invocation lang.array push (
@@ -101,13 +101,13 @@
               (index-based-access
                 (simple-var-ref $desugar$0)
                 (index-based-access
-                  (simple-var-ref $desugar$2)
+                  (simple-var-ref $desugar$1)
                   (index-based-access
                     (simple-var-ref $desugar$5)
                     (simple-var-ref $desugar$9)))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$1)
+              (simple-var-ref $desugar$3)
               (simple-var-ref value))))
           (assignment
             (simple-var-ref $desugar$9)
@@ -120,21 +120,21 @@
             (union-type
               (value-type float)
               (value-type null)) dimensions: 1 ([]))) (expr
-          (simple-var-ref $desugar$1))))
+          (simple-var-ref $desugar$3))))
       (var-def
         (variable $desugar$10 (expr
           (simple-var-ref valuesById))))
       (var-def
         (variable $desugar$11 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$12 (expr
           (invocation lang.map keys (
             (simple-var-ref $desugar$10))))))
       (var-def
-        (variable $desugar$13 (expr
+        (variable $desugar$12 (expr
           (invocation lang.array length (
-            (simple-var-ref $desugar$12))))))
+            (simple-var-ref $desugar$11))))))
+      (var-def
+        (variable $desugar$13 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$14 (expr
           (list-constructor-expr))))
@@ -150,14 +150,14 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$17)
-          (simple-var-ref $desugar$13))
+          (simple-var-ref $desugar$12))
         (block-stmt
           (var-def
             (variable value (expr
               (index-based-access
                 (simple-var-ref $desugar$10)
                 (index-based-access
-                  (simple-var-ref $desugar$12)
+                  (simple-var-ref $desugar$11)
                   (simple-var-ref $desugar$17))))))
           (expression-stmt
             (invocation lang.array push (
@@ -197,13 +197,13 @@
               (index-based-access
                 (simple-var-ref $desugar$10)
                 (index-based-access
-                  (simple-var-ref $desugar$12)
+                  (simple-var-ref $desugar$11)
                   (index-based-access
                     (simple-var-ref $desugar$15)
                     (simple-var-ref $desugar$19)))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$11)
+              (simple-var-ref $desugar$13)
               (simple-var-ref value))))
           (assignment
             (simple-var-ref $desugar$19)
@@ -216,7 +216,7 @@
             (union-type
               (value-type float)
               (value-type null)) dimensions: 1 ([]))) (expr
-          (simple-var-ref $desugar$11))))
+          (simple-var-ref $desugar$13))))
       (var-def
         (variable rows (type
           (array-type
@@ -241,11 +241,11 @@
           (simple-var-ref rows))))
       (var-def
         (variable $desugar$21 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$22 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$20))))))
+      (var-def
+        (variable $desugar$22 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$23 (expr
           (list-constructor-expr))))
@@ -261,7 +261,7 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$26)
-          (simple-var-ref $desugar$22))
+          (simple-var-ref $desugar$21))
         (block-stmt
           (var-def
             (variable row (expr
@@ -310,7 +310,7 @@
                   (simple-var-ref $desugar$28))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$21)
+              (simple-var-ref $desugar$22)
               (simple-var-ref row))))
           (assignment
             (simple-var-ref $desugar$28)
@@ -321,17 +321,17 @@
         (variable ascRows (type
           (array-type
             (value-type int) dimensions: 2 ([][]))) (expr
-          (simple-var-ref $desugar$21))))
+          (simple-var-ref $desugar$22))))
       (var-def
         (variable $desugar$29 (expr
           (simple-var-ref rows))))
       (var-def
         (variable $desugar$30 (expr
-          (list-constructor-expr))))
-      (var-def
-        (variable $desugar$31 (expr
           (invocation lang.array length (
             (simple-var-ref $desugar$29))))))
+      (var-def
+        (variable $desugar$31 (expr
+          (list-constructor-expr))))
       (var-def
         (variable $desugar$32 (expr
           (list-constructor-expr))))
@@ -347,7 +347,7 @@
       (while
         (binary-expr <
           (simple-var-ref $desugar$35)
-          (simple-var-ref $desugar$31))
+          (simple-var-ref $desugar$30))
         (block-stmt
           (var-def
             (variable row (expr
@@ -396,7 +396,7 @@
                   (simple-var-ref $desugar$37))))))
           (expression-stmt
             (invocation lang.array push (
-              (simple-var-ref $desugar$30)
+              (simple-var-ref $desugar$31)
               (simple-var-ref row))))
           (assignment
             (simple-var-ref $desugar$37)
@@ -407,7 +407,7 @@
         (variable descRows (type
           (array-type
             (value-type int) dimensions: 2 ([][]))) (expr
-          (simple-var-ref $desugar$30))))
+          (simple-var-ref $desugar$31))))
       (expression-stmt
         (invocation io println (
           (simple-var-ref ascFloats))))

@@ -1,0 +1,354 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = ConstantLoad id
+    %2 = ConstantLoad 1
+    %3 = ConstantLoad name
+    %4 = ConstantLoad Alex
+    %5 = newMap {| id: int, name: string, never... |}{%1=%2, %3=%4}
+    %6 = ConstantLoad id
+    %7 = ConstantLoad 2
+    %8 = ConstantLoad name
+    %9 = ConstantLoad Ranjan
+    %10 = newMap {| id: int, name: string, never... |}{%6=%7, %8=%9}
+    %11 = ConstantLoad 2
+    %12 = newArray [{| id: int, name: string, never... |}...][%11]{%5, %10}
+    people = %12;
+    %14 = ConstantLoad id
+    %15 = ConstantLoad 10
+    %16 = ConstantLoad ownerId
+    %17 = ConstantLoad 1
+    %18 = ConstantLoad name
+    %19 = ConstantLoad HR
+    %20 = newMap {| id: int, name: string, ownerId: int, never... |}{%14=%15, %16=%17, %18=%19}
+    %21 = ConstantLoad id
+    %22 = ConstantLoad 20
+    %23 = ConstantLoad ownerId
+    %24 = ConstantLoad 1
+    %25 = ConstantLoad name
+    %26 = ConstantLoad Ops
+    %27 = newMap {| id: int, name: string, ownerId: int, never... |}{%21=%22, %23=%24, %25=%26}
+    %28 = ConstantLoad id
+    %29 = ConstantLoad 30
+    %30 = ConstantLoad ownerId
+    %31 = ConstantLoad 2
+    %32 = ConstantLoad name
+    %33 = ConstantLoad QA
+    %34 = newMap {| id: int, name: string, ownerId: int, never... |}{%28=%29, %30=%31, %32=%33}
+    %35 = ConstantLoad 3
+    %36 = newArray [{| id: int, name: string, ownerId: int, never... |}...][%35]{%20, %27, %34}
+    departments = %36;
+    $desugar$0 = people;
+    %39 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$1 = %39;
+    %41 = ConstantLoad 0
+    %42 = newArray list[%41]{}
+    $desugar$2 = %42;
+    %44 = ConstantLoad 0
+    $desugar$3 = %44;
+    GOTO bb2;
+  }
+  bb2 {
+    %47 = $desugar$3;
+    %48 = $desugar$1;
+    %46 = < %47 %48;
+    %46 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 69
+    %0 = (1, $desugar$0)[(1, $desugar$3)];
+    person = %0;
+    %2 = ConstantLoad 0
+    %3 = newArray list[%2]{}
+    $desugar$4 = %3;
+    %5 = ConstantLoad 0
+    %6 = newArray list[%5]{}
+    $desugar$5 = %6;
+    $desugar$6 = (1, departments);
+    %9 = length($desugar$6) -> bb5;
+  }
+  bb4 {
+    result = $desugar$2;
+    %50 = println(result) -> bb42;
+  }
+  bb5 {
+    $desugar$7 = %9;
+    %11 = ConstantLoad 0
+    $desugar$8 = %11;
+    GOTO bb6;
+  }
+  bb6 {
+    %14 = $desugar$8;
+    %15 = $desugar$7;
+    %13 = < %14 %15;
+    %13 ? bb7 : bb8;
+  }
+  bb7 {
+    PushScopeFrame 9
+    %0 = (1, $desugar$6)[(1, $desugar$8)];
+    dept = %0;
+    %2 = ConstantLoad 1
+    %3 = newArray list[%2]{dept}
+    %4 = push((1, $desugar$5),%3) -> bb9;
+  }
+  bb8 {
+    %16 = ConstantLoad 0
+    %17 = newArray list[%16]{}
+    $desugar$9 = %17;
+    %19 = length($desugar$5) -> bb10;
+  }
+  bb9 {
+    %6 = (1, $desugar$8);
+    %7 = ConstantLoad 1
+    %8 = %7;
+    %5 = + %6 %8;
+    (1, $desugar$8) = %5;
+    PopScopeFrame
+    GOTO bb6;
+  }
+  bb10 {
+    $desugar$10 = %19;
+    %21 = ConstantLoad 0
+    $desugar$11 = %21;
+    GOTO bb11;
+  }
+  bb11 {
+    %24 = $desugar$11;
+    %25 = $desugar$10;
+    %23 = < %24 %25;
+    %23 ? bb12 : bb13;
+  }
+  bb12 {
+    PushScopeFrame 20
+    %0 = (1, $desugar$5)[(1, $desugar$11)];
+    $desugar$12 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$12[%3];
+    dept = %2;
+    %6 = ConstantLoad ownerId
+    %5 = dept[%6];
+    $desugar$13 = %5;
+    $desugar$14 = (2, people);
+    %9 = length($desugar$14) -> bb14;
+  }
+  bb13 {
+    %26 = ConstantLoad 0
+    %27 = newArray list[%26]{}
+    $desugar$17 = %27;
+    %29 = length($desugar$9) -> bb21;
+  }
+  bb14 {
+    $desugar$15 = %9;
+    %11 = ConstantLoad 0
+    $desugar$16 = %11;
+    GOTO bb15;
+  }
+  bb15 {
+    %14 = $desugar$16;
+    %15 = $desugar$15;
+    %13 = < %14 %15;
+    %13 ? bb16 : bb17;
+  }
+  bb16 {
+    PushScopeFrame 14
+    %0 = (1, $desugar$14)[(1, $desugar$16)];
+    owner = %0;
+    %3 = (1, $desugar$13);
+    %5 = ConstantLoad id
+    %4 = owner[%5];
+    %6 = %4;
+    %2 = == %3 %6;
+    %2 ? bb18 : bb20;
+  }
+  bb17 {
+    %17 = (1, $desugar$11);
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %16 = + %17 %19;
+    (1, $desugar$11) = %16;
+    PopScopeFrame
+    GOTO bb11;
+  }
+  bb18 {
+    %7 = ConstantLoad 2
+    %8 = newArray list[%7]{(1, dept), owner}
+    %9 = push((2, $desugar$9),%8) -> bb19;
+  }
+  bb19 {
+    GOTO bb20;
+  }
+  bb20 {
+    %11 = (1, $desugar$16);
+    %12 = ConstantLoad 1
+    %13 = %12;
+    %10 = + %11 %13;
+    (1, $desugar$16) = %10;
+    PopScopeFrame
+    GOTO bb15;
+  }
+  bb21 {
+    $desugar$18 = %29;
+    %31 = ConstantLoad 0
+    $desugar$19 = %31;
+    GOTO bb22;
+  }
+  bb22 {
+    %34 = $desugar$19;
+    %35 = $desugar$18;
+    %33 = < %34 %35;
+    %33 ? bb23 : bb24;
+  }
+  bb23 {
+    PushScopeFrame 20
+    %0 = (1, $desugar$9)[(1, $desugar$19)];
+    $desugar$20 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$20[%3];
+    dept = %2;
+    %6 = ConstantLoad 1
+    %5 = $desugar$20[%6];
+    owner = %5;
+    %10 = ConstantLoad id
+    %9 = owner[%10];
+    %11 = %9;
+    %13 = ConstantLoad id
+    %12 = (1, person)[%13];
+    %14 = %12;
+    %8 = == %11 %14;
+    %8 ? bb25 : bb27;
+  }
+  bb24 {
+    %36 = ConstantLoad 0
+    %37 = newArray list[%36]{}
+    $desugar$21 = %37;
+    %39 = ConstantLoad 0
+    %40 = newArray list[%39]{}
+    $desugar$22 = %40;
+    %42 = ConstantLoad 0
+    %43 = newArray list[%42]{}
+    $desugar$23 = %43;
+    %45 = push($desugar$23,$desugar$17) -> bb28;
+  }
+  bb25 {
+    %15 = push((1, $desugar$17),$desugar$20) -> bb26;
+  }
+  bb26 {
+    GOTO bb27;
+  }
+  bb27 {
+    %17 = (1, $desugar$19);
+    %18 = ConstantLoad 1
+    %19 = %18;
+    %16 = + %17 %19;
+    (1, $desugar$19) = %16;
+    PopScopeFrame
+    GOTO bb22;
+  }
+  bb28 {
+    %46 = length($desugar$17) -> bb29;
+  }
+  bb29 {
+    $desugar$24 = %46;
+    %48 = ConstantLoad 0
+    $desugar$25 = %48;
+    GOTO bb30;
+  }
+  bb30 {
+    %51 = $desugar$25;
+    %52 = $desugar$24;
+    %50 = < %51 %52;
+    %50 ? bb31 : bb32;
+  }
+  bb31 {
+    PushScopeFrame 19
+    %0 = (1, $desugar$17)[(1, $desugar$25)];
+    $desugar$26 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$26[%3];
+    dept = %2;
+    %6 = ConstantLoad 1
+    %5 = $desugar$26[%6];
+    owner = %5;
+    %9 = ConstantLoad id
+    %8 = dept[%9];
+    %10 = ConstantLoad 1
+    %11 = newArray list[%10]{%8}
+    %12 = push((1, $desugar$21),%11) -> bb33;
+  }
+  bb32 {
+    %53 = ConstantLoad true
+    %54 = ConstantLoad 1
+    %55 = newArray list[%54]{%53}
+    %56 = querySort($desugar$21,%55,$desugar$22,$desugar$23) -> bb35;
+  }
+  bb33 {
+    %13 = (1, $desugar$25);
+    %14 = push((1, $desugar$22),%13) -> bb34;
+  }
+  bb34 {
+    %16 = (1, $desugar$25);
+    %17 = ConstantLoad 1
+    %18 = %17;
+    %15 = + %16 %18;
+    (1, $desugar$25) = %15;
+    PopScopeFrame
+    GOTO bb30;
+  }
+  bb35 {
+    %57 = length($desugar$17) -> bb36;
+  }
+  bb36 {
+    $desugar$27 = %57;
+    %59 = ConstantLoad 0
+    $desugar$28 = %59;
+    GOTO bb37;
+  }
+  bb37 {
+    %62 = $desugar$28;
+    %63 = $desugar$27;
+    %61 = < %62 %63;
+    %61 ? bb38 : bb39;
+  }
+  bb38 {
+    PushScopeFrame 15
+    %0 = (1, $desugar$17)[(1, $desugar$28)];
+    $desugar$29 = %0;
+    %3 = ConstantLoad 0
+    %2 = $desugar$29[%3];
+    dept = %2;
+    %6 = ConstantLoad 1
+    %5 = $desugar$29[%6];
+    owner = %5;
+    %9 = ConstantLoad name
+    %8 = dept[%9];
+    %10 = push((1, $desugar$4),%8) -> bb40;
+  }
+  bb39 {
+    %64 = push((1, $desugar$2),$desugar$4) -> bb41;
+  }
+  bb40 {
+    %12 = (1, $desugar$28);
+    %13 = ConstantLoad 1
+    %14 = %13;
+    %11 = + %12 %14;
+    (1, $desugar$28) = %11;
+    PopScopeFrame
+    GOTO bb37;
+  }
+  bb41 {
+    %66 = (1, $desugar$3);
+    %67 = ConstantLoad 1
+    %68 = %67;
+    %65 = + %66 %68;
+    (1, $desugar$3) = %65;
+    PopScopeFrame
+    GOTO bb2;
+  }
+  bb42 {
+    return;
+  }
+}

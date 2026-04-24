@@ -15,16 +15,16 @@ main() -> nil{
     %9 = newMap {| nil|float... |}{%1=%2, %3=%4, %5=%6, %7=%8}
     valuesById = %9;
     $desugar$0 = valuesById;
-    %12 = ConstantLoad 0
-    %13 = newArray list[%12]{}
-    $desugar$1 = %13;
-    %15 = keys($desugar$0) -> bb1;
+    %12 = keys($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$2 = %15;
-    %17 = length($desugar$2) -> bb2;
+    $desugar$1 = %12;
+    %14 = length($desugar$1) -> bb2;
   }
   bb2 {
+    $desugar$2 = %14;
+    %16 = ConstantLoad 0
+    %17 = newArray list[%16]{}
     $desugar$3 = %17;
     %19 = ConstantLoad 0
     %20 = newArray list[%19]{}
@@ -41,13 +41,13 @@ main() -> nil{
   }
   bb3 {
     %31 = $desugar$7;
-    %32 = $desugar$3;
+    %32 = $desugar$2;
     %30 = < %31 %32;
     %30 ? bb4 : bb5;
   }
   bb4 {
     PushScopeFrame 12
-    %1 = (1, $desugar$2)[(1, $desugar$7)];
+    %1 = (1, $desugar$1)[(1, $desugar$7)];
     %0 = (1, $desugar$0)[%1];
     value = %0;
     %3 = ConstantLoad 1
@@ -91,19 +91,16 @@ main() -> nil{
   bb11 {
     PushScopeFrame 10
     %2 = (1, $desugar$5)[(1, $desugar$9)];
-    %1 = (1, $desugar$2)[%2];
+    %1 = (1, $desugar$1)[%2];
     %0 = (1, $desugar$0)[%1];
     value = %0;
     %4 = value;
-    %5 = push((1, $desugar$1),%4) -> bb13;
+    %5 = push((1, $desugar$3),%4) -> bb13;
   }
   bb12 {
-    ascFloats = $desugar$1;
+    ascFloats = $desugar$3;
     $desugar$10 = valuesById;
-    %46 = ConstantLoad 0
-    %47 = newArray list[%46]{}
-    $desugar$11 = %47;
-    %49 = keys($desugar$10) -> bb14;
+    %46 = keys($desugar$10) -> bb14;
   }
   bb13 {
     %7 = (1, $desugar$9);
@@ -115,10 +112,13 @@ main() -> nil{
     GOTO bb10;
   }
   bb14 {
-    $desugar$12 = %49;
-    %51 = length($desugar$12) -> bb15;
+    $desugar$11 = %46;
+    %48 = length($desugar$11) -> bb15;
   }
   bb15 {
+    $desugar$12 = %48;
+    %50 = ConstantLoad 0
+    %51 = newArray list[%50]{}
     $desugar$13 = %51;
     %53 = ConstantLoad 0
     %54 = newArray list[%53]{}
@@ -135,13 +135,13 @@ main() -> nil{
   }
   bb16 {
     %65 = $desugar$17;
-    %66 = $desugar$13;
+    %66 = $desugar$12;
     %64 = < %65 %66;
     %64 ? bb17 : bb18;
   }
   bb17 {
     PushScopeFrame 12
-    %1 = (1, $desugar$12)[(1, $desugar$17)];
+    %1 = (1, $desugar$11)[(1, $desugar$17)];
     %0 = (1, $desugar$10)[%1];
     value = %0;
     %3 = ConstantLoad 1
@@ -185,14 +185,14 @@ main() -> nil{
   bb24 {
     PushScopeFrame 10
     %2 = (1, $desugar$15)[(1, $desugar$19)];
-    %1 = (1, $desugar$12)[%2];
+    %1 = (1, $desugar$11)[%2];
     %0 = (1, $desugar$10)[%1];
     value = %0;
     %4 = value;
-    %5 = push((1, $desugar$11),%4) -> bb26;
+    %5 = push((1, $desugar$13),%4) -> bb26;
   }
   bb25 {
-    descFloats = $desugar$11;
+    descFloats = $desugar$13;
     %79 = ConstantLoad 1
     %80 = ConstantLoad 2
     %81 = ConstantLoad 2
@@ -216,10 +216,7 @@ main() -> nil{
     %99 = newArray [[int...]...][%98]{%82, %86, %89, %92, %97}
     rows = %99;
     $desugar$20 = rows;
-    %102 = ConstantLoad 0
-    %103 = newArray list[%102]{}
-    $desugar$21 = %103;
-    %105 = length($desugar$20) -> bb27;
+    %102 = length($desugar$20) -> bb27;
   }
   bb26 {
     %7 = (1, $desugar$19);
@@ -231,6 +228,9 @@ main() -> nil{
     GOTO bb23;
   }
   bb27 {
+    $desugar$21 = %102;
+    %104 = ConstantLoad 0
+    %105 = newArray list[%104]{}
     $desugar$22 = %105;
     %107 = ConstantLoad 0
     %108 = newArray list[%107]{}
@@ -247,7 +247,7 @@ main() -> nil{
   }
   bb28 {
     %119 = $desugar$26;
-    %120 = $desugar$22;
+    %120 = $desugar$21;
     %118 = < %119 %120;
     %118 ? bb29 : bb30;
   }
@@ -298,15 +298,12 @@ main() -> nil{
     %1 = (1, $desugar$24)[(1, $desugar$28)];
     %0 = (1, $desugar$20)[%1];
     row = %0;
-    %3 = push((1, $desugar$21),row) -> bb38;
+    %3 = push((1, $desugar$22),row) -> bb38;
   }
   bb37 {
-    ascRows = $desugar$21;
+    ascRows = $desugar$22;
     $desugar$29 = rows;
-    %134 = ConstantLoad 0
-    %135 = newArray list[%134]{}
-    $desugar$30 = %135;
-    %137 = length($desugar$29) -> bb39;
+    %134 = length($desugar$29) -> bb39;
   }
   bb38 {
     %5 = (1, $desugar$28);
@@ -318,6 +315,9 @@ main() -> nil{
     GOTO bb35;
   }
   bb39 {
+    $desugar$30 = %134;
+    %136 = ConstantLoad 0
+    %137 = newArray list[%136]{}
     $desugar$31 = %137;
     %139 = ConstantLoad 0
     %140 = newArray list[%139]{}
@@ -334,7 +334,7 @@ main() -> nil{
   }
   bb40 {
     %151 = $desugar$35;
-    %152 = $desugar$31;
+    %152 = $desugar$30;
     %150 = < %151 %152;
     %150 ? bb41 : bb42;
   }
@@ -385,10 +385,10 @@ main() -> nil{
     %1 = (1, $desugar$33)[(1, $desugar$37)];
     %0 = (1, $desugar$29)[%1];
     row = %0;
-    %3 = push((1, $desugar$30),row) -> bb50;
+    %3 = push((1, $desugar$31),row) -> bb50;
   }
   bb49 {
-    descRows = $desugar$30;
+    descRows = $desugar$31;
     %165 = println(ascFloats) -> bb51;
   }
   bb50 {

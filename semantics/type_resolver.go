@@ -1617,6 +1617,9 @@ func resolveNumericLiteral(t typeResolver, n *ast.BLangNumericLiteral, expectedT
 func updateSymbolType(t typeResolver, node ast.BLangNode, ty semtypes.SemType) {
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()
+		if symbol == (model.SymbolRef{}) {
+			return
+		}
 		t.setSymbolType(symbol, ty)
 	}
 }
@@ -2257,19 +2260,8 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	if !ok {
 		return nil, expressionEffect{}, false
 	}
-	var elementTy semtypes.SemType
-	switch {
-	case semtypes.IsSubtypeSimple(collectionTy, semtypes.LIST):
-		memberTypes := semtypes.ListAllMemberTypesInner(t.typeContext(), collectionTy)
-		var result semtypes.SemType = semtypes.NEVER
-		for _, each := range memberTypes.SemTypes {
-			result = semtypes.Union(result, each)
-		}
-		elementTy = result
-	case semtypes.IsSubtypeSimple(collectionTy, semtypes.MAPPING):
-		elementTy = semtypes.MappingMemberTypeInnerValProj(t.typeContext(), collectionTy, semtypes.STRING)
-	default:
-		t.unimplemented("query from clause currently supports only list or map collections", fromClause.GetPosition())
+	elementTy, ok := resolveQueryCollectionElementType(t, collectionTy, fromClause.GetPosition())
+	if !ok {
 		return nil, expressionEffect{}, false
 	}
 
@@ -2355,6 +2347,27 @@ func resolveQueryExpr(t typeResolver, chain *binding, expr *ast.BLangQueryExpr) 
 	return queryTy, defaultExpressionEffect(chain), true
 }
 
+func resolveQueryCollectionElementType(
+	t typeResolver,
+	collectionTy semtypes.SemType,
+	pos diagnostics.Location,
+) (semtypes.SemType, bool) {
+	switch {
+	case semtypes.IsSubtypeSimple(collectionTy, semtypes.LIST):
+		memberTypes := semtypes.ListAllMemberTypesInner(t.typeContext(), collectionTy)
+		var result semtypes.SemType = semtypes.NEVER
+		for _, each := range memberTypes.SemTypes {
+			result = semtypes.Union(result, each)
+		}
+		return result, true
+	case semtypes.IsSubtypeSimple(collectionTy, semtypes.MAPPING):
+		return semtypes.MappingMemberTypeInnerValProj(t.typeContext(), collectionTy, semtypes.STRING), true
+	default:
+		t.unimplemented("query from clause currently supports only list or map collections", pos)
+		return nil, false
+	}
+}
+
 func mapQuerySelectExpectedType(env semtypes.Env) semtypes.SemType {
 	ld := semtypes.NewListDefinition()
 	valueTy := semtypes.Union(semtypes.ANY, semtypes.ERROR)
@@ -2365,6 +2378,64 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 	currentChain := chain
 	for i := 1; i < selectClauseIndex; i++ {
 		switch clause := queryExpr.QueryClauseList[i].(type) {
+		case *ast.BLangJoinClause:
+			clause.SetDeterminedType(semtypes.NEVER)
+			collectionTy, _, ok := resolveExpression(t, currentChain, clause.Collection, nil)
+			if !ok {
+				return nil, false
+			}
+			elementTy, ok := resolveQueryCollectionElementType(t, collectionTy, clause.GetPosition())
+			if !ok {
+				return nil, false
+			}
+			varDef, ok := clause.VariableDefinitionNode.(*ast.BLangSimpleVariableDef)
+			if !ok || varDef.Var == nil {
+				t.unimplemented("only simple variable bindings are supported in join clause", clause.GetPosition())
+				return nil, false
+			}
+			varDef.SetDeterminedType(semtypes.NEVER)
+			if clause.IsOuterJoinFlag && !clause.IsDeclaredWithVarFlag {
+				t.semanticError("outer join clause variable must be declared with var", clause.GetPosition())
+				return nil, false
+			}
+			variableTy := elementTy
+			if clause.IsOuterJoinFlag {
+				variableTy = semtypes.Union(variableTy, semtypes.NIL)
+			}
+			if !clause.IsDeclaredWithVarFlag && varDef.Var.TypeNode() != nil {
+				variableTy, ok = resolveBType(t, varDef.Var.TypeNode(), 0)
+				if !ok {
+					return nil, false
+				}
+				if !semtypes.IsSubtype(t.typeContext(), elementTy, variableTy) {
+					t.semanticError("join clause variable type is incompatible with collection member type",
+						varDef.GetPosition())
+					return nil, false
+				}
+			}
+			if varDef.Var.Name != nil {
+				varDef.Var.Name.SetDeterminedType(semtypes.NEVER)
+			}
+			varDef.Var.SetDeterminedType(semtypes.NEVER)
+			updateSymbolType(t, varDef.Var, variableTy)
+
+			if clause.OnClause == nil || clause.OnClause.LhsExpr == nil || clause.OnClause.RhsExpr == nil {
+				t.semanticError("join clause requires an on clause", clause.GetPosition())
+				return nil, false
+			}
+			clause.OnClause.SetDeterminedType(semtypes.NEVER)
+			lhsTy, _, ok := resolveExpression(t, currentChain, clause.OnClause.LhsExpr, nil)
+			if !ok {
+				return nil, false
+			}
+			rhsTy, _, ok := resolveExpression(t, currentChain, clause.OnClause.RhsExpr, nil)
+			if !ok {
+				return nil, false
+			}
+			if !semtypes.IsSubtype(t.typeContext(), lhsTy, rhsTy) {
+				t.semanticError(formatIncompatibleTypeMessage(t.typeContext(), rhsTy, lhsTy), clause.OnClause.RhsExpr.GetPosition())
+				return nil, false
+			}
 		case *ast.BLangLetClause:
 			clause.SetDeterminedType(semtypes.NEVER)
 			for _, variableDef := range clause.LetVarDeclarations {
@@ -2438,7 +2509,7 @@ func resolveQueryIntermediateClauses(t typeResolver, chain *binding, queryExpr *
 				}
 			}
 		default:
-			t.unimplemented("only let + where + order by + limit clauses are supported as intermediate query clauses", clause.GetPosition())
+			t.unimplemented("only join + let + where + order by + limit clauses are supported as intermediate query clauses", clause.GetPosition())
 			return nil, false
 		}
 	}

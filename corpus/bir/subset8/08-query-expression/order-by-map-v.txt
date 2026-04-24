@@ -15,16 +15,16 @@ main() -> nil{
     %9 = newMap {| int... |}{%1=%2, %3=%4, %5=%6, %7=%8}
     xs = %9;
     $desugar$0 = xs;
-    %12 = ConstantLoad 0
-    %13 = newArray list[%12]{}
-    $desugar$1 = %13;
-    %15 = keys($desugar$0) -> bb1;
+    %12 = keys($desugar$0) -> bb1;
   }
   bb1 {
-    $desugar$2 = %15;
-    %17 = length($desugar$2) -> bb2;
+    $desugar$1 = %12;
+    %14 = length($desugar$1) -> bb2;
   }
   bb2 {
+    $desugar$2 = %14;
+    %16 = ConstantLoad 0
+    %17 = newArray list[%16]{}
     $desugar$3 = %17;
     %19 = ConstantLoad 0
     %20 = newArray list[%19]{}
@@ -41,13 +41,13 @@ main() -> nil{
   }
   bb3 {
     %31 = $desugar$7;
-    %32 = $desugar$3;
+    %32 = $desugar$2;
     %30 = < %31 %32;
     %30 ? bb4 : bb5;
   }
   bb4 {
     PushScopeFrame 12
-    %1 = (1, $desugar$2)[(1, $desugar$7)];
+    %1 = (1, $desugar$1)[(1, $desugar$7)];
     %0 = (1, $desugar$0)[%1];
     x = %0;
     %3 = ConstantLoad 1
@@ -91,19 +91,16 @@ main() -> nil{
   bb11 {
     PushScopeFrame 10
     %2 = (1, $desugar$5)[(1, $desugar$9)];
-    %1 = (1, $desugar$2)[%2];
+    %1 = (1, $desugar$1)[%2];
     %0 = (1, $desugar$0)[%1];
     x = %0;
     %4 = x;
-    %5 = push((1, $desugar$1),%4) -> bb13;
+    %5 = push((1, $desugar$3),%4) -> bb13;
   }
   bb12 {
-    asc = $desugar$1;
+    asc = $desugar$3;
     $desugar$10 = xs;
-    %46 = ConstantLoad 0
-    %47 = newArray list[%46]{}
-    $desugar$11 = %47;
-    %49 = keys($desugar$10) -> bb14;
+    %46 = keys($desugar$10) -> bb14;
   }
   bb13 {
     %7 = (1, $desugar$9);
@@ -115,10 +112,13 @@ main() -> nil{
     GOTO bb10;
   }
   bb14 {
-    $desugar$12 = %49;
-    %51 = length($desugar$12) -> bb15;
+    $desugar$11 = %46;
+    %48 = length($desugar$11) -> bb15;
   }
   bb15 {
+    $desugar$12 = %48;
+    %50 = ConstantLoad 0
+    %51 = newArray list[%50]{}
     $desugar$13 = %51;
     %53 = ConstantLoad 0
     %54 = newArray list[%53]{}
@@ -135,13 +135,13 @@ main() -> nil{
   }
   bb16 {
     %65 = $desugar$17;
-    %66 = $desugar$13;
+    %66 = $desugar$12;
     %64 = < %65 %66;
     %64 ? bb17 : bb18;
   }
   bb17 {
     PushScopeFrame 12
-    %1 = (1, $desugar$12)[(1, $desugar$17)];
+    %1 = (1, $desugar$11)[(1, $desugar$17)];
     %0 = (1, $desugar$10)[%1];
     x = %0;
     %3 = ConstantLoad 1
@@ -185,19 +185,16 @@ main() -> nil{
   bb24 {
     PushScopeFrame 10
     %2 = (1, $desugar$15)[(1, $desugar$19)];
-    %1 = (1, $desugar$12)[%2];
+    %1 = (1, $desugar$11)[%2];
     %0 = (1, $desugar$10)[%1];
     x = %0;
     %4 = x;
-    %5 = push((1, $desugar$11),%4) -> bb26;
+    %5 = push((1, $desugar$13),%4) -> bb26;
   }
   bb25 {
-    desc = $desugar$11;
+    desc = $desugar$13;
     $desugar$20 = xs;
-    %80 = ConstantLoad 0
-    %81 = newArray list[%80]{}
-    $desugar$21 = %81;
-    %83 = keys($desugar$20) -> bb27;
+    %80 = keys($desugar$20) -> bb27;
   }
   bb26 {
     %7 = (1, $desugar$19);
@@ -209,10 +206,13 @@ main() -> nil{
     GOTO bb23;
   }
   bb27 {
-    $desugar$22 = %83;
-    %85 = length($desugar$22) -> bb28;
+    $desugar$21 = %80;
+    %82 = length($desugar$21) -> bb28;
   }
   bb28 {
+    $desugar$22 = %82;
+    %84 = ConstantLoad 0
+    %85 = newArray list[%84]{}
     $desugar$23 = %85;
     %87 = ConstantLoad 0
     %88 = newArray list[%87]{}
@@ -229,13 +229,13 @@ main() -> nil{
   }
   bb29 {
     %99 = $desugar$27;
-    %100 = $desugar$23;
+    %100 = $desugar$22;
     %98 = < %99 %100;
     %98 ? bb30 : bb31;
   }
   bb30 {
     PushScopeFrame 12
-    %1 = (1, $desugar$22)[(1, $desugar$27)];
+    %1 = (1, $desugar$21)[(1, $desugar$27)];
     %0 = (1, $desugar$20)[%1];
     x = %0;
     %3 = ConstantLoad 1
@@ -279,7 +279,7 @@ main() -> nil{
   bb37 {
     PushScopeFrame 19
     %2 = (1, $desugar$25)[(1, $desugar$29)];
-    %1 = (1, $desugar$22)[%2];
+    %1 = (1, $desugar$21)[%2];
     %0 = (1, $desugar$20)[%1];
     x = %0;
     %5 = x;
@@ -290,7 +290,7 @@ main() -> nil{
     %8 ? bb39 : bb40;
   }
   bb38 {
-    filtered = $desugar$21;
+    filtered = $desugar$23;
     %113 = println(asc) -> bb42;
   }
   bb39 {
@@ -304,7 +304,7 @@ main() -> nil{
   }
   bb40 {
     %13 = x;
-    %14 = push((1, $desugar$21),%13) -> bb41;
+    %14 = push((1, $desugar$23),%13) -> bb41;
   }
   bb41 {
     %16 = (1, $desugar$29);
