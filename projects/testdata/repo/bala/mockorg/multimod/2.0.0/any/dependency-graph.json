@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "org": "mockorg",
+      "name": "multimod",
+      "version": "2.0.0",
+      "transitive": false,
+      "dependencies": [],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

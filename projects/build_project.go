@@ -29,10 +29,18 @@ type BuildProject struct {
 // Compile-time check to verify BuildProject implements Project interface
 var _ Project = (*BuildProject)(nil)
 
-// NewBuildProject creates a new BuildProject with the given source root and build options.
-func NewBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *BuildProject {
+// newBuildProject creates a new BuildProject with the given source root and build options.
+func newBuildProject(fsys fs.FS, sourceRoot string, buildOptions BuildOptions) *BuildProject {
 	project := &BuildProject{}
 	project.initBase(fsys, sourceRoot, buildOptions)
+	return project
+}
+
+// newBuildProjectWithEnv creates a new BuildProject with a pre-configured Environment.
+// Use this when the Environment has been configured with repositories upfront.
+func newBuildProjectWithEnv(sourceRoot string, buildOptions BuildOptions, env *Environment) *BuildProject {
+	project := &BuildProject{}
+	project.initBaseWithEnv(sourceRoot, buildOptions, env)
 	return project
 }
 
@@ -147,8 +155,8 @@ func (b *BuildProject) Save() {
 func (b *BuildProject) Duplicate() Project {
 	// Create duplicate build options using AcceptTheirs pattern
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(b.buildOptions)
-	// Create new project and package instances
-	newProject := NewBuildProject(b.Environment().fs(), b.sourceRoot, duplicateBuildOptions)
+	// Create new environment with fresh caches but same repository config
+	newProject := newBuildProjectWithEnv(b.sourceRoot, duplicateBuildOptions, b.Environment().Duplicate())
 	ResetPackage(b, newProject)
 
 	return newProject

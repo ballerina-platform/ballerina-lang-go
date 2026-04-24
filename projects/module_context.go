@@ -49,6 +49,7 @@ type moduleContext struct {
 
 	// Compilation state tracking.
 	compilationState  moduleCompilationState
+	stateInitialized  bool
 	moduleDiagnostics []diagnostics.Diagnostic
 
 	// Compilation artifacts.
@@ -61,12 +62,14 @@ type moduleContext struct {
 
 // newModuleContext creates a moduleContext from ModuleConfig.
 func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxTree bool) *moduleContext {
+	qualifier := moduleConfig.ModuleDescriptor().String()
+
 	// Build source document context map
 	srcDocContextMap := make(map[DocumentID]*documentContext)
 	srcDocIDs := make([]DocumentID, 0, len(moduleConfig.SourceDocs()))
 	for _, srcDocConfig := range moduleConfig.SourceDocs() {
 		docID := srcDocConfig.DocumentID()
-		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree)
+		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree, qualifier)
 		srcDocIDs = append(srcDocIDs, docID)
 	}
 
@@ -75,7 +78,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	testSrcDocIDs := make([]DocumentID, 0, len(moduleConfig.TestSourceDocs()))
 	for _, testDocConfig := range moduleConfig.TestSourceDocs() {
 		docID := testDocConfig.DocumentID()
-		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree)
+		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree, qualifier)
 		testSrcDocIDs = append(testSrcDocIDs, docID)
 	}
 
@@ -479,7 +482,18 @@ func (m *moduleContext) getBIRPackage() *bir.BIRPackage {
 
 // getCompilationState returns the current compilation state of the module.
 func (m *moduleContext) getCompilationState() moduleCompilationState {
+	if !m.stateInitialized {
+		// TODO: Check compilationCache.getBir() for pre-compiled BIR
+		m.compilationState = moduleCompilationStateLoadedFromSources
+		m.stateInitialized = true
+	}
 	return m.compilationState
+}
+
+// setCompilationState sets the compilation state of the module.
+func (m *moduleContext) setCompilationState(state moduleCompilationState) {
+	m.compilationState = state
+	m.stateInitialized = true
 }
 
 // getDiagnostics returns the diagnostics produced during module compilation.

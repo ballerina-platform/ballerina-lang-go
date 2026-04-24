@@ -37,40 +37,58 @@
 //
 // # Project Types
 //
-// Two concrete project implementations are provided:
+// Three concrete project implementations are provided:
 //
 //   - [BuildProject]: A standard project with a Ballerina.toml manifest
 //   - [SingleFileProject]: A standalone .bal file without a manifest
+//   - [BalaProject]: A pre-compiled package loaded from a .bala archive
 //
-// Projects are loaded using [directory.LoadProject] which auto-detects the
+// Projects are loaded using [Load] which auto-detects the
 // project type based on the path:
 //   - Directory with Ballerina.toml -> BuildProject
+//   - Directory with package.json (bala) -> BalaProject
 //   - Single .bal file -> SingleFileProject
 //
 // # Loading Projects
 //
-// Use the directory subpackage to load projects from the filesystem:
+// Use [Load] to load projects from the filesystem. First, set up the required filesystems:
 //
-//	import "ballerina-lang-go/projects/directory"
+//	// Set up project filesystem (the directory containing the project)
+//	fsys := os.DirFS("/path/to/project/parent")
+//
+//	// Set up Ballerina home filesystem (for langlib and cached packages)
+//	// Determine home path from BAL_HOME env var or ~/.ballerina
+//	ballerinaHomePath := os.Getenv(projects.BallerinaHomeEnvVar)
+//	if ballerinaHomePath == "" {
+//	    userHome, _ := os.UserHomeDir()
+//	    ballerinaHomePath = filepath.Join(userHome, projects.UserHomeDirName)
+//	}
+//	ballerinaHomeFs := os.DirFS(ballerinaHomePath)
 //
 //	// Load with default options
-//	result, err := directory.LoadProject("./myproject")
+//	result, err := projects.Load(fsys, "myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //
 //	// Load with custom build options
 //	buildOpts := projects.NewBuildOptionsBuilder().
 //	    WithOffline(true).
 //	    WithSkipTests(true).
 //	    Build()
-//	result, err := directory.LoadProject("./myproject", directory.ProjectLoadConfig{
+//	result, err := projects.Load(fsys, "./myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
 //	    BuildOptions: &buildOpts,
 //	})
 //
 //	// Load a single .bal file
-//	result, err := directory.LoadProject("./main.bal")
+//	result, err := projects.Load(fsys, "./main.bal", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //
-// The [directory.ProjectLoadConfig] struct allows optional configuration:
+// [ProjectLoadConfig] allows optional configuration:
 //   - BuildOptions: Compilation settings (offline mode, skip tests, etc.)
-//   - Future fields can be added without breaking existing callers
+//   - Repositories: Package repositories for dependency resolution
+//   - BallerinaHomeFs: Filesystem for Ballerina home (defaults to <projectFs>/.ballerina/)
 //
 // # Compilation Pipeline
 //
@@ -84,7 +102,9 @@
 // Complete example:
 //
 //	// Load project
-//	result, err := directory.LoadProject("./myproject")
+//	result, err := projects.Load(fsys, "./myproject", projects.ProjectLoadConfig{
+//	    BallerinaHomeFs: ballerinaHomeFs,
+//	})
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -127,9 +147,4 @@
 // Lazy-initialized fields (compilation, resolution, compiler backends) are
 // protected by sync.Once or sync.Mutex for safe concurrent access. Document
 // content supports both eager and lazy loading via the DocumentConfig interface.
-//
-// # Subpackages
-//
-//   - projects/directory: Project loading from filesystem ([LoadProject], [ProjectLoadConfig])
-//   - projects/internal: Internal helpers (ManifestBuilder, PackageConfigCreator)
 package projects
