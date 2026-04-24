@@ -944,6 +944,49 @@ func createServiceObject(context Context) SemType {
 	return serviceObj
 }
 
+func CreateIterable(context Context) SemType {
+	memo := context.iterableMemo()
+	if memo != nil {
+		return memo
+	}
+	env := context.Env()
+
+	// Build the broadest next() return type: record {| (any|error) value; |}|error?
+	valueField := FieldFrom("value", VAL, false, false)
+	md := NewMappingDefinition()
+	recordTy := md.DefineMappingTypeWrapped(env, []Field{valueField}, NEVER)
+	nextReturnTy := Union(recordTy, Union(ERROR, NIL))
+
+	// next() function type: () -> nextReturnTy
+	ld := NewListDefinition()
+	emptyParams := ld.DefineListTypeWrapped(env, []SemType{}, 0, NEVER, CellMutability_CELL_MUT_NONE)
+	fd := NewFunctionDefinition()
+	nextFnTy := fd.Define(env, emptyParams, nextReturnTy, FunctionQualifiersFrom(env, false, false))
+
+	// Iterator object type: object { public function next() ... }
+	iteratorMembers := []Member{
+		{Name: "next", ValueTy: nextFnTy, Kind: MemberKindMethod, Visibility: VisibilityPublic, Immutable: true},
+	}
+	iterOd := NewObjectDefinition()
+	iteratorTy := iterOd.Define(env, ObjectQualifiersDEFAULT, iteratorMembers)
+
+	// iterator() function type: () -> iteratorTy
+	ld2 := NewListDefinition()
+	emptyParams2 := ld2.DefineListTypeWrapped(env, []SemType{}, 0, NEVER, CellMutability_CELL_MUT_NONE)
+	fd2 := NewFunctionDefinition()
+	iteratorFnTy := fd2.Define(env, emptyParams2, iteratorTy, FunctionQualifiersFrom(env, false, false))
+
+	// Iterable object type: object { public function iterator() ... }
+	iterableMembers := []Member{
+		{Name: "iterator", ValueTy: iteratorFnTy, Kind: MemberKindMethod, Visibility: VisibilityPublic, Immutable: true},
+	}
+	iterableOd := NewObjectDefinition()
+	iterableTy := iterableOd.Define(env, ObjectQualifiersDEFAULT, iterableMembers)
+
+	context.setIterableMemo(iterableTy)
+	return iterableTy
+}
+
 func createBasicSemType(typeCode BasicTypeCode, subtypeData SubtypeData) SemType {
 	if _, ok := subtypeData.(allOrNothingSubtype); ok {
 		if isAllSubtype(subtypeData) {

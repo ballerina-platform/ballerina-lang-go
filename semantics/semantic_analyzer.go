@@ -1225,8 +1225,22 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 		case semtypes.IsSubtypeSimple(collectionType, semtypes.MAPPING):
 			expectedValueType = semtypes.MappingMemberTypeInnerVal(a.tyCtx(), collectionType, semtypes.STRING)
 		default:
-			a.unimplementedErr("unsupported foreach collection", collection.GetPosition())
-			return false
+			tyCtx := a.tyCtx()
+			iterableTy := semtypes.CreateIterable(tyCtx)
+			if !semtypes.IsSubtype(tyCtx, collectionType, iterableTy) {
+				a.semanticErr("incompatible types: expected an iterable collection", collection.GetPosition())
+				return false
+			}
+			// Extract value type from the iterator's next() return type
+			iteratorMethodTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("iterator"), collectionType)
+			ld := semtypes.NewListDefinition()
+			emptyArgs := ld.DefineListTypeWrapped(a.tyCtx().Env(), []semtypes.SemType{}, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+			iteratorTy := semtypes.FunctionReturnType(tyCtx, iteratorMethodTy, emptyArgs)
+			nextMethodTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("next"), iteratorTy)
+			nextReturnTy := semtypes.FunctionReturnType(tyCtx, nextMethodTy, emptyArgs)
+			// next returns record{|T value|}|C where C is completion type (nil, error|nil, etc.)
+			recordPart := semtypes.Diff(nextReturnTy, semtypes.Union(semtypes.NIL, semtypes.ERROR))
+			expectedValueType = semtypes.MappingMemberTypeInnerVal(tyCtx, recordPart, semtypes.StringConst("value"))
 		}
 		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())

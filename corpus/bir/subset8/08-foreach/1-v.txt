@@ -1,0 +1,148 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class NumberIterator {
+  items [int...]
+  idx int
+
+  init() -> nil{
+    bb0 {
+      %2 = ConstantLoad 1
+      %3 = ConstantLoad 2
+      %4 = ConstantLoad 3
+      %5 = ConstantLoad 3
+      %6 = newArray [int, int, int, never...][%5]{%2, %3, %4}
+      %7 = ConstantLoad items
+      self[%7] = %6;
+      %8 = ConstantLoad 0
+      %9 = ConstantLoad idx
+      self[%9] = %8;
+      return;
+    }
+  }
+
+  next() -> nil|{| value: int, never... |}{
+    bb0 {
+      %4 = ConstantLoad idx
+      %3 = self[%4];
+      %5 = %3;
+      %6 = ConstantLoad 3
+      %7 = %6;
+      %2 = >= %5 %7;
+      %2 ? bb1 : bb2;
+    }
+    bb1 {
+      %8 = ConstantLoad <nil>
+      %0 = %8;
+      return;
+    }
+    bb2 {
+      %11 = ConstantLoad idx
+      %10 = self[%11];
+      %13 = ConstantLoad items
+      %12 = self[%13];
+      %9 = %12[%10];
+      val = %9;
+      %17 = ConstantLoad idx
+      %16 = self[%17];
+      %18 = %16;
+      %19 = ConstantLoad 1
+      %20 = %19;
+      %15 = + %18 %20;
+      %21 = ConstantLoad idx
+      self[%21] = %15;
+      %22 = ConstantLoad value
+      %23 = newMap {| value: int, never... |}{%22=val}
+      %0 = %23;
+      return;
+    }
+  }
+}
+class NumberGenerator {
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+
+  iterator() -> object { int idx; function init() returns nil; [int...] items; function next() returns nil|{| value: int, never... |} }{
+    bb0 {
+      %2 = newObject $anon/.:NumberIterator
+      %3 = init(%2) -> bb1;
+    }
+    bb1 {
+      %5 = %3 is nil
+      %5 ? bb2 : bb3;
+    }
+    bb2 {
+      %4 = %2;
+      GOTO bb4;
+    }
+    bb3 {
+      %4 = %3;
+      GOTO bb4;
+    }
+    bb4 {
+      %0 = %4;
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:NumberGenerator
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    gen = %3;
+    $desugar$0 = gen;
+    %7 = iterator($desugar$0) -> bb5;
+  }
+  bb5 {
+    $desugar$2 = %7;
+    GOTO bb6;
+  }
+  bb6 {
+    %9 = ConstantLoad true
+    %9 ? bb7 : bb8;
+  }
+  bb7 {
+    PushScopeFrame 8
+    %0 = next((1, $desugar$2)) -> bb9;
+  }
+  bb8 {
+    return;
+  }
+  bb9 {
+    $desugar$4 = %0;
+    %2 = $desugar$4 is nil
+    %2 ? bb10 : bb11;
+  }
+  bb10 {
+    PopScopeFrame
+    GOTO bb8;
+  }
+  bb11 {
+    %4 = ConstantLoad value
+    %3 = $desugar$4[%4];
+    val = %3;
+    %6 = val;
+    %7 = println(%6) -> bb12;
+  }
+  bb12 {
+    PopScopeFrame
+    GOTO bb6;
+  }
+}
