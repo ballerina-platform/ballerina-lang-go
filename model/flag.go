@@ -16,49 +16,58 @@
 
 package model
 
-// PR-TODO: standardize these with AST
-type Flag uint
+type Flag uint64
 
 const (
-	Flag_PUBLIC Flag = iota
-	Flag_PRIVATE
-	Flag_REMOTE
-	Flag_TRANSACTIONAL
-	Flag_NATIVE
-	Flag_FINAL
-	Flag_ATTACHED
-	Flag_LAMBDA
-	Flag_WORKER
-	Flag_PARALLEL
-	Flag_LISTENER
-	Flag_READONLY
-	Flag_FUNCTION_FINAL
-	Flag_INTERFACE
-	Flag_REQUIRED
-	Flag_RECORD
-	Flag_ANONYMOUS
-	Flag_OPTIONAL
-	Flag_TESTABLE
-	Flag_CLIENT
-	Flag_RESOURCE
-	Flag_ISOLATED
-	Flag_SERVICE
-	Flag_CONSTANT
-	Flag_TYPE_PARAM
-	Flag_LANG_LIB
-	Flag_FORKED
-	Flag_DISTINCT
-	Flag_CLASS
-	Flag_CONFIGURABLE
-	Flag_OBJECT_CTOR
-	Flag_ENUM
-	Flag_INCLUDED
-	Flag_REQUIRED_PARAM
-	Flag_DEFAULTABLE_PARAM
-	Flag_REST_PARAM
-	Flag_FIELD
-	Flag_ANY_FUNCTION
-	Flag_NEVER_ALLOWED
-	Flag_ENUM_MEMBER
-	Flag_QUERY_LAMBDA
+	FlagPublic           Flag = 1 << 0
+	FlagPrivate          Flag = 1 << 1
+	FlagRemote           Flag = 1 << 2
+	FlagTransactional    Flag = 1 << 3
+	FlagNative           Flag = 1 << 4
+	FlagFinal            Flag = 1 << 5
+	FlagAttached         Flag = 1 << 6
+	FlagLambda           Flag = 1 << 7
+	FlagWorker           Flag = 1 << 8
+	FlagParallel         Flag = 1 << 9
+	FlagListener         Flag = 1 << 10
+	FlagReadonly         Flag = 1 << 11
+	FlagFunctionFinal    Flag = 1 << 12
+	FlagInterface        Flag = 1 << 13
+	FlagRequired         Flag = 1 << 14
+	FlagRecord           Flag = 1 << 15
+	FlagAnonymous        Flag = 1 << 16
+	FlagOptional         Flag = 1 << 17
+	FlagTestable         Flag = 1 << 18
+	FlagClient           Flag = 1 << 19
+	FlagResource         Flag = 1 << 20
+	FlagIsolated         Flag = 1 << 21
+	FlagService          Flag = 1 << 22
+	FlagConstant         Flag = 1 << 23
+	FlagTypeParam        Flag = 1 << 24
+	FlagLangLib          Flag = 1 << 25
+	FlagForked           Flag = 1 << 26
+	FlagDistinct         Flag = 1 << 27
+	FlagClass            Flag = 1 << 28
+	FlagConfigurable     Flag = 1 << 29
+	FlagObjectCtor       Flag = 1 << 30
+	FlagEnum             Flag = 1 << 31
+	FlagIncluded         Flag = 1 << 32
+	FlagRequiredParam    Flag = 1 << 33
+	FlagDefaultableParam Flag = 1 << 34
+	FlagRestParam        Flag = 1 << 35
+	FlagField            Flag = 1 << 36
+	FlagAnyFunction      Flag = 1 << 37
+	FlagNeverAllowed     Flag = 1 << 38
+	FlagEnumMember       Flag = 1 << 39
+	FlagQueryLambda      Flag = 1 << 40
+	FlagDeprecated       Flag = 1 << 41
+	FlagParameterized    Flag = 1 << 42
+	FlagIsolatedParam    Flag = 1 << 43
+	FlagInfer            Flag = 1 << 44
+	FlagEffectiveTypeDef Flag = 1 << 45
+	FlagSourceAnnotation Flag = 1 << 46
 )
+
+func (f Flag) Has(flag Flag) bool {
+	return f&flag != 0
+}

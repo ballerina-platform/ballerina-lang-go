@@ -59,8 +59,8 @@ type BType interface {
 	BTypeSetTag(tag model.TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
-	bTypeGetFlags() nodeFlags
-	bTypeSetFlags(flags nodeFlags)
+	bTypeGetFlags() model.Flag
+	bTypeSetFlags(flags model.Flag)
 }
 
 type (
@@ -70,14 +70,14 @@ type (
 		Grouped bool
 		tags    model.TypeTags
 		name    model.Name
-		flags   nodeFlags
+		flags   model.Flag
 	}
 
 	BTypeBasic struct {
 		ty    TypeData
 		tag   model.TypeTags
 		name  model.Name
-		flags nodeFlags
+		flags model.Flag
 	}
 	BLangArrayType struct {
 		bLangTypeBase
@@ -116,7 +116,7 @@ type (
 		bLangNodeBase
 		Name           model.Name
 		Type           BType
-		flags          nodeFlags
+		flags          model.Flag
 		DefaultExpr    BLangExpression
 		DefaultFnRef   model.SymbolRef
 		AnnAttachments []BLangAnnotationAttachment
@@ -351,12 +351,12 @@ func (b *BField) GetKind() NodeKind {
 	panic("not implemented")
 }
 
-func (b *BField) IsPublic() bool   { return b.flags.has(flagPublic) }
-func (b *BField) IsReadonly() bool { return b.flags.has(flagReadonly) }
-func (b *BField) IsOptional() bool { return b.flags.has(flagOptional) }
-func (b *BField) SetPublic()       { b.flags |= flagPublic }
-func (b *BField) SetReadonly()     { b.flags |= flagReadonly }
-func (b *BField) SetOptional()     { b.flags |= flagOptional }
+func (b *BField) IsPublic() bool   { return b.flags.Has(model.FlagPublic) }
+func (b *BField) IsReadonly() bool { return b.flags.Has(model.FlagReadonly) }
+func (b *BField) IsOptional() bool { return b.flags.Has(model.FlagOptional) }
+func (b *BField) SetPublic()       { b.flags |= model.FlagPublic }
+func (b *BField) SetReadonly()     { b.flags |= model.FlagReadonly }
+func (b *BField) SetOptional()     { b.flags |= model.FlagOptional }
 
 func (b *BField) GetAnnotationAttachments() []AnnotationAttachmentNode {
 	result := make([]AnnotationAttachmentNode, len(b.AnnAttachments))
@@ -497,11 +497,11 @@ func (b *bLangTypeBase) bTypeSetName(name model.Name) {
 	b.name = name
 }
 
-func (b *bLangTypeBase) bTypeGetFlags() nodeFlags {
+func (b *bLangTypeBase) bTypeGetFlags() model.Flag {
 	return b.flags
 }
 
-func (b *bLangTypeBase) bTypeSetFlags(flags nodeFlags) {
+func (b *bLangTypeBase) bTypeSetFlags(flags model.Flag) {
 	b.flags = flags
 }
 
@@ -521,11 +521,11 @@ func (b *BTypeBasic) bTypeSetName(name model.Name) {
 	b.name = name
 }
 
-func (b *BTypeBasic) bTypeGetFlags() nodeFlags {
+func (b *BTypeBasic) bTypeGetFlags() model.Flag {
 	return b.flags
 }
 
-func (b *BTypeBasic) bTypeSetFlags(flags nodeFlags) {
+func (b *BTypeBasic) bTypeSetFlags(flags model.Flag) {
 	b.flags = flags
 }
 
@@ -565,7 +565,7 @@ func NewBType(tag model.TypeTags, name model.Name, flags uint64) BType {
 	return &BTypeBasic{
 		tag:   tag,
 		name:  name,
-		flags: nodeFlags(flags),
+		flags: model.Flag(flags),
 	}
 }
 
@@ -642,26 +642,28 @@ func (b *BLangTupleTypeNode) GetKind() NodeKind {
 	return NodeKind_TUPLE_TYPE_NODE
 }
 
-func (b *BLangErrorTypeNode) IsDistinct() bool { return b.bTypeGetFlags().has(flagDistinct) }
+func (b *BLangErrorTypeNode) IsDistinct() bool {
+	return b.bTypeGetFlags().Has(model.FlagDistinct)
+}
 func (b *BLangErrorTypeNode) SetDistinct() {
-	b.bTypeSetFlags(b.bTypeGetFlags() | flagDistinct)
+	b.bTypeSetFlags(b.bTypeGetFlags() | model.FlagDistinct)
 }
 
 func (b *BLangFunctionType) IsAnyFunction() bool {
-	return b.bTypeGetFlags().has(flagAnyFunction)
+	return b.bTypeGetFlags().Has(model.FlagAnyFunction)
 }
-func (b *BLangFunctionType) IsIsolated() bool { return b.bTypeGetFlags().has(flagIsolated) }
+func (b *BLangFunctionType) IsIsolated() bool { return b.bTypeGetFlags().Has(model.FlagIsolated) }
 func (b *BLangFunctionType) IsTransactional() bool {
-	return b.bTypeGetFlags().has(flagTransactional)
+	return b.bTypeGetFlags().Has(model.FlagTransactional)
 }
 func (b *BLangFunctionType) SetAnyFunction() {
-	b.bTypeSetFlags(b.bTypeGetFlags() | flagAnyFunction)
+	b.bTypeSetFlags(b.bTypeGetFlags() | model.FlagAnyFunction)
 }
 func (b *BLangFunctionType) SetIsolated() {
-	b.bTypeSetFlags(b.bTypeGetFlags() | flagIsolated)
+	b.bTypeSetFlags(b.bTypeGetFlags() | model.FlagIsolated)
 }
 func (b *BLangFunctionType) SetTransactional() {
-	b.bTypeSetFlags(b.bTypeGetFlags() | flagTransactional)
+	b.bTypeSetFlags(b.bTypeGetFlags() | model.FlagTransactional)
 }
 
 func (b *BLangConstrainedType) GetKind() NodeKind {

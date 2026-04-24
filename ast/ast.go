@@ -28,57 +28,6 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-type Flag uint64
-
-const (
-	FlagPublic = 1 << iota
-	FlagNative
-	FlagFinal
-	FlagAttached
-	FlagDeprecated
-	FlagReadonly
-	FlagFunctionFinal
-	FlagInterface
-	// Marks as a field for which the user MUST provide a value
-	FlagRequired
-	FlagRecord
-	FlagPrivate
-	FlagAnonymous
-	FlagOptional
-	FlagTestable
-	FlagConstant
-	FlagRemote
-	FlagClient
-	FlagResource
-	FlagService
-	FlagListener
-	FlagLambda
-	FlagTypeParam
-	FlagLangLib
-	FlagWorker
-	FlagForked
-	FlagTransactional
-	FlagParameterized
-	FlagDistinct
-	FlagClass
-	FlagIsolated
-	FlagIsolatedParam
-	FlagConfigurable
-	FlagObjectCtor
-	FlagEnum
-	FlagIncluded
-	FlagRequiredParam
-	FlagDefaultableParam
-	FlagRestParam
-	FlagField
-	FlagAnyFunction
-	FlagInfer
-	FlagEnumMember
-	FlagQueryLambda
-	FlagEffectiveTypeDef
-	FlagSourceAnnotation
-)
-
 type BNodeWithSymbol interface {
 	NodeWithSymbol
 	BLangNode
@@ -198,7 +147,7 @@ type (
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
 		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
-		flags                           nodeFlags
+		flags                           model.Flag
 		typeData                        TypeData
 		Definition                      semtypes.Definition
 		CycleDepth                      int
@@ -292,7 +241,7 @@ type (
 		AnnAttachments                  []AnnotationAttachmentNode
 		MarkdownDocumentationAttachment MarkdownDocumentationNode
 		Expr                            BLangActionOrExpression
-		flags                           nodeFlags
+		flags                           model.Flag
 		IsDeclaredWithVar               bool
 		symbol                          model.SymbolRef
 	}
@@ -321,15 +270,13 @@ type (
 		RestParam                       SimpleVariableNode
 		returnTypeDescriptor            TypeDescriptor
 		Body                            FunctionBodyNode
-		flags                           nodeFlags
+		flags                           model.Flag
 	}
 
 	BLangFunction struct {
 		bLangInvokableNodeBase
 		scope model.Scope
 	}
-
-	nodeFlags uint64
 
 	BLangTypeDefinition struct {
 		bLangNodeBase
@@ -338,7 +285,7 @@ type (
 		typeData                        TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
-		flags                           nodeFlags
+		flags                           model.Flag
 		precedence                      int
 		CycleDepth                      int
 		isBuiltinTypeDef                bool
@@ -347,109 +294,75 @@ type (
 	}
 )
 
-// Flag bit constants — bit positions match model.Flag iota values.
-const (
-	flagPublic        nodeFlags = 1 << model.Flag_PUBLIC
-	flagPrivate       nodeFlags = 1 << model.Flag_PRIVATE
-	flagRemote        nodeFlags = 1 << model.Flag_REMOTE
-	flagTransactional nodeFlags = 1 << model.Flag_TRANSACTIONAL
-	flagNative        nodeFlags = 1 << model.Flag_NATIVE
-	flagFinal         nodeFlags = 1 << model.Flag_FINAL
-	flagAttached      nodeFlags = 1 << model.Flag_ATTACHED
-	flagLambda        nodeFlags = 1 << model.Flag_LAMBDA
-	flagReadonly      nodeFlags = 1 << model.Flag_READONLY
-	flagInterface     nodeFlags = 1 << model.Flag_INTERFACE
-	flagAnonymous     nodeFlags = 1 << model.Flag_ANONYMOUS
-	flagOptional      nodeFlags = 1 << model.Flag_OPTIONAL
-	flagClient        nodeFlags = 1 << model.Flag_CLIENT
-	flagResource      nodeFlags = 1 << model.Flag_RESOURCE
-	flagIsolated      nodeFlags = 1 << model.Flag_ISOLATED
-	flagService       nodeFlags = 1 << model.Flag_SERVICE
-	flagConstant      nodeFlags = 1 << model.Flag_CONSTANT
-	flagDistinct      nodeFlags = 1 << model.Flag_DISTINCT
-	flagClass         nodeFlags = 1 << model.Flag_CLASS
-	flagRequiredParam nodeFlags = 1 << model.Flag_REQUIRED_PARAM
-	flagDefaultParam  nodeFlags = 1 << model.Flag_DEFAULTABLE_PARAM
-	flagRestParam     nodeFlags = 1 << model.Flag_REST_PARAM
-	flagAnyFunction   nodeFlags = 1 << model.Flag_ANY_FUNCTION
-
-	flagIncludedRecordParam nodeFlags = 1 << model.Flag_INCLUDED
-)
-
-func (f nodeFlags) has(flag nodeFlags) bool { return f&flag != 0 }
-func (f nodeFlags) asInt64() int64          { return int64(f) }
-
 // bLangInvokableNodeBase flag methods
-func (b *bLangInvokableNodeBase) IsPublic() bool        { return b.flags.has(flagPublic) }
-func (b *bLangInvokableNodeBase) IsRemote() bool        { return b.flags.has(flagRemote) }
-func (b *bLangInvokableNodeBase) IsTransactional() bool { return b.flags.has(flagTransactional) }
-func (b *bLangInvokableNodeBase) IsResource() bool      { return b.flags.has(flagResource) }
-func (b *bLangInvokableNodeBase) IsIsolated() bool      { return b.flags.has(flagIsolated) }
-func (b *bLangInvokableNodeBase) IsInterface() bool     { return b.flags.has(flagInterface) }
-func (b *bLangInvokableNodeBase) IsNative() bool        { return b.flags.has(flagNative) }
-func (b *bLangInvokableNodeBase) IsAnonymous() bool     { return b.flags.has(flagLambda) }
-func (b *bLangInvokableNodeBase) IsAttached() bool      { return b.flags.has(flagAttached) }
+func (b *bLangInvokableNodeBase) IsPublic() bool        { return b.flags.Has(model.FlagPublic) }
+func (b *bLangInvokableNodeBase) IsRemote() bool        { return b.flags.Has(model.FlagRemote) }
+func (b *bLangInvokableNodeBase) IsTransactional() bool { return b.flags.Has(model.FlagTransactional) }
+func (b *bLangInvokableNodeBase) IsResource() bool      { return b.flags.Has(model.FlagResource) }
+func (b *bLangInvokableNodeBase) IsIsolated() bool      { return b.flags.Has(model.FlagIsolated) }
+func (b *bLangInvokableNodeBase) IsInterface() bool     { return b.flags.Has(model.FlagInterface) }
+func (b *bLangInvokableNodeBase) IsNative() bool        { return b.flags.Has(model.FlagNative) }
+func (b *bLangInvokableNodeBase) IsAnonymous() bool     { return b.flags.Has(model.FlagLambda) }
+func (b *bLangInvokableNodeBase) IsAttached() bool      { return b.flags.Has(model.FlagAttached) }
 
-func (b *bLangInvokableNodeBase) SetPublic()          { b.flags |= flagPublic }
-func (b *bLangInvokableNodeBase) SetRemote()          { b.flags |= flagRemote }
-func (b *bLangInvokableNodeBase) SetTransactional()   { b.flags |= flagTransactional }
-func (b *bLangInvokableNodeBase) SetResource()        { b.flags |= flagResource }
-func (b *bLangInvokableNodeBase) SetIsolated()        { b.flags |= flagIsolated }
-func (b *bLangInvokableNodeBase) SetInterface()       { b.flags |= flagInterface }
-func (b *bLangInvokableNodeBase) SetNative()          { b.flags |= flagNative }
-func (b *bLangInvokableNodeBase) SetAnonymous()       { b.flags |= flagLambda | flagAnonymous }
-func (b *bLangInvokableNodeBase) SetAttached()        { b.flags |= flagAttached }
-func (b *bLangInvokableNodeBase) FlagsAsInt64() int64 { return b.flags.asInt64() }
+func (b *bLangInvokableNodeBase) SetPublic()        { b.flags |= model.FlagPublic }
+func (b *bLangInvokableNodeBase) SetRemote()        { b.flags |= model.FlagRemote }
+func (b *bLangInvokableNodeBase) SetTransactional() { b.flags |= model.FlagTransactional }
+func (b *bLangInvokableNodeBase) SetResource()      { b.flags |= model.FlagResource }
+func (b *bLangInvokableNodeBase) SetIsolated()      { b.flags |= model.FlagIsolated }
+func (b *bLangInvokableNodeBase) SetInterface()     { b.flags |= model.FlagInterface }
+func (b *bLangInvokableNodeBase) SetNative()        { b.flags |= model.FlagNative }
+func (b *bLangInvokableNodeBase) SetAnonymous()     { b.flags |= model.FlagLambda | model.FlagAnonymous }
+func (b *bLangInvokableNodeBase) SetAttached()      { b.flags |= model.FlagAttached }
+func (b *bLangInvokableNodeBase) Flags() model.Flag { return b.flags }
 
 func (b *bLangInvokableNodeBase) FuncSymbolFlags() model.FuncSymbolFlags {
 	return model.FuncSymbolFlags(b.flags)
 }
 
 // BLangVariableBase flag methods
-func (b *BLangVariableBase) IsPublic() bool           { return b.flags.has(flagPublic) }
-func (b *BLangVariableBase) IsFinal() bool            { return b.flags.has(flagFinal) }
-func (b *BLangVariableBase) IsDefaultableParam() bool { return b.flags.has(flagDefaultParam) }
-func (b *BLangVariableBase) IsRequiredParam() bool    { return b.flags.has(flagRequiredParam) }
-func (b *BLangVariableBase) IsRestParam() bool        { return b.flags.has(flagRestParam) }
+func (b *BLangVariableBase) IsPublic() bool           { return b.flags.Has(model.FlagPublic) }
+func (b *BLangVariableBase) IsFinal() bool            { return b.flags.Has(model.FlagFinal) }
+func (b *BLangVariableBase) IsDefaultableParam() bool { return b.flags.Has(model.FlagDefaultableParam) }
+func (b *BLangVariableBase) IsRequiredParam() bool    { return b.flags.Has(model.FlagRequiredParam) }
+func (b *BLangVariableBase) IsRestParam() bool        { return b.flags.Has(model.FlagRestParam) }
 func (b *BLangVariableBase) IsIncludedRecordParam() bool {
-	return b.flags.has(flagIncludedRecordParam)
+	return b.flags.Has(model.FlagIncluded)
 }
 
-func (b *BLangVariableBase) SetPublic()              { b.flags |= flagPublic }
-func (b *BLangVariableBase) SetPrivate()             { b.flags &^= flagPublic }
-func (b *BLangVariableBase) SetFinal()               { b.flags |= flagFinal }
-func (b *BLangVariableBase) SetIsolated()            { b.flags |= flagIsolated }
-func (b *BLangVariableBase) SetDefaultableParam()    { b.flags |= flagDefaultParam }
-func (b *BLangVariableBase) SetRequiredParam()       { b.flags |= flagRequiredParam }
-func (b *BLangVariableBase) SetRestParam()           { b.flags |= flagRestParam }
-func (b *BLangVariableBase) SetIncludedRecordParam() { b.flags |= flagIncludedRecordParam }
-func (b *BLangVariableBase) IsReadonly() bool        { return b.flags.has(flagReadonly) }
-func (b *BLangVariableBase) FlagsAsInt64() int64     { return b.flags.asInt64() }
-
-func (b *BLangConstant) FlagsAsInt64() int64 { return (b.flags | flagConstant).asInt64() }
+func (b *BLangVariableBase) SetPublic()              { b.flags |= model.FlagPublic }
+func (b *BLangVariableBase) SetPrivate()             { b.flags &^= model.FlagPublic }
+func (b *BLangVariableBase) SetFinal()               { b.flags |= model.FlagFinal }
+func (b *BLangVariableBase) SetIsolated()            { b.flags |= model.FlagIsolated }
+func (b *BLangVariableBase) SetDefaultableParam()    { b.flags |= model.FlagDefaultableParam }
+func (b *BLangVariableBase) SetRequiredParam()       { b.flags |= model.FlagRequiredParam }
+func (b *BLangVariableBase) SetRestParam()           { b.flags |= model.FlagRestParam }
+func (b *BLangVariableBase) SetIncludedRecordParam() { b.flags |= model.FlagIncluded }
+func (b *BLangVariableBase) IsReadonly() bool        { return b.flags.Has(model.FlagReadonly) }
+func (b *BLangVariableBase) Flags() model.Flag       { return b.flags }
 
 // BLangClassDefinition flag methods
-func (b *BLangClassDefinition) IsPublic() bool   { return b.flags.has(flagPublic) }
-func (b *BLangClassDefinition) IsDistinct() bool { return b.flags.has(flagDistinct) }
-func (b *BLangClassDefinition) IsClient() bool   { return b.flags.has(flagClient) }
-func (b *BLangClassDefinition) IsReadonly() bool { return b.flags.has(flagReadonly) }
-func (b *BLangClassDefinition) IsService() bool  { return b.flags.has(flagService) }
-func (b *BLangClassDefinition) IsIsolated() bool { return b.flags.has(flagIsolated) }
+func (b *BLangClassDefinition) IsPublic() bool   { return b.flags.Has(model.FlagPublic) }
+func (b *BLangClassDefinition) IsDistinct() bool { return b.flags.Has(model.FlagDistinct) }
+func (b *BLangClassDefinition) IsClient() bool   { return b.flags.Has(model.FlagClient) }
+func (b *BLangClassDefinition) IsReadonly() bool { return b.flags.Has(model.FlagReadonly) }
+func (b *BLangClassDefinition) IsService() bool  { return b.flags.Has(model.FlagService) }
+func (b *BLangClassDefinition) IsIsolated() bool { return b.flags.Has(model.FlagIsolated) }
 
-func (b *BLangClassDefinition) SetPublic()          { b.flags |= flagPublic }
-func (b *BLangClassDefinition) SetDistinct()        { b.flags |= flagDistinct }
-func (b *BLangClassDefinition) SetClient()          { b.flags |= flagClient }
-func (b *BLangClassDefinition) SetReadonly()        { b.flags |= flagReadonly }
-func (b *BLangClassDefinition) SetService()         { b.flags |= flagService }
-func (b *BLangClassDefinition) SetIsolated()        { b.flags |= flagIsolated }
-func (b *BLangClassDefinition) SetClass()           { b.flags |= flagClass }
-func (b *BLangClassDefinition) FlagsAsInt64() int64 { return b.flags.asInt64() }
+func (b *BLangClassDefinition) SetPublic()        { b.flags |= model.FlagPublic }
+func (b *BLangClassDefinition) SetDistinct()      { b.flags |= model.FlagDistinct }
+func (b *BLangClassDefinition) SetClient()        { b.flags |= model.FlagClient }
+func (b *BLangClassDefinition) SetReadonly()      { b.flags |= model.FlagReadonly }
+func (b *BLangClassDefinition) SetService()       { b.flags |= model.FlagService }
+func (b *BLangClassDefinition) SetIsolated()      { b.flags |= model.FlagIsolated }
+func (b *BLangClassDefinition) SetClass()         { b.flags |= model.FlagClass }
+func (b *BLangClassDefinition) Flags() model.Flag { return b.flags }
 
 // BLangTypeDefinition flag methods
-func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.has(flagPublic) }
-func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.has(flagAnonymous) }
-func (b *BLangTypeDefinition) SetPublic()        { b.flags |= flagPublic }
-func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= flagAnonymous }
+func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.Has(model.FlagPublic) }
+func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.Has(model.FlagAnonymous) }
+func (b *BLangTypeDefinition) SetPublic()        { b.flags |= model.FlagPublic }
+func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= model.FlagAnonymous }
 
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
@@ -1703,7 +1616,9 @@ func createSimpleVariableNode() *BLangSimpleVariable {
 }
 
 func createConstantNode() *BLangConstant {
-	return &BLangConstant{}
+	c := &BLangConstant{}
+	c.flags = model.FlagConstant
+	return c
 }
 
 func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree) *BLangCompilationUnit {

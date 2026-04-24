@@ -100,7 +100,7 @@ type (
 
 	BIRGlobalVariableDcl struct {
 		birVariableDclBase
-		Flags              int64
+		Flags              model.Flag
 		PkgId              *model.PackageID
 		GlobalVarLookupKey string
 	}
@@ -109,7 +109,7 @@ type (
 		BIRNodeBase
 		Name           model.Name
 		OriginalName   model.Name
-		Flags          int64
+		Flags          model.Flag
 		RequiredParams []BIRParameter
 		RestParams     *BIRParameter
 		ArgsCount      int
@@ -141,7 +141,7 @@ type (
 	BIRParameter struct {
 		BIRNodeBase
 		Name  model.Name
-		Flags int64
+		Flags model.Flag
 	}
 
 	BIRFunctionParameter struct {

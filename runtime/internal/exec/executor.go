@@ -70,7 +70,7 @@ func initLocalsForFunction(ctx *extern.Context, birFunc *bir.BIRFunction, args [
 	localVars := &birFunc.LocalVars
 	locals := make([]values.BalValue, len(*localVars))
 	argOffset := 0
-	if hasFunctionFlag(birFunc.Flags, model.Flag_ATTACHED) {
+	if birFunc.Flags.Has(model.FlagAttached) {
 		locals[1] = args[0]
 		argOffset = 1
 	}
@@ -335,10 +335,6 @@ func execTerminator(ctx *extern.Context, term bir.BIRTerminator, frame *Frame) *
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}
 	return nil
-}
-
-func hasFunctionFlag(flags int64, flag model.Flag) bool {
-	return flags&(1<<int64(flag)) != 0
 }
 
 func panicValueToErrorValue(r any) values.BalValue {

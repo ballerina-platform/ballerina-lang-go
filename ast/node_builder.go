@@ -44,13 +44,13 @@ type typeTable struct {
 
 func newTypeTable() typeTable {
 	return typeTable{
-		booleanType: &BTypeBasic{tag: model.TypeTags_BOOLEAN, flags: FlagReadonly},
-		intType:     &BTypeBasic{tag: model.TypeTags_INT, flags: FlagReadonly},
-		nilType:     &BTypeBasic{tag: model.TypeTags_NIL, flags: FlagReadonly},
-		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: FlagReadonly},
-		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: FlagReadonly},
-		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: FlagReadonly},
-		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: FlagReadonly},
+		booleanType: &BTypeBasic{tag: model.TypeTags_BOOLEAN, flags: model.FlagReadonly},
+		intType:     &BTypeBasic{tag: model.TypeTags_INT, flags: model.FlagReadonly},
+		nilType:     &BTypeBasic{tag: model.TypeTags_NIL, flags: model.FlagReadonly},
+		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: model.FlagReadonly},
+		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: model.FlagReadonly},
+		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: model.FlagReadonly},
+		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: model.FlagReadonly},
 	}
 }
 

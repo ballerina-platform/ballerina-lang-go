@@ -997,10 +997,10 @@ func (br *birReader) readKind() bir.VarKind {
 	return bir.VarKind(val)
 }
 
-func (br *birReader) readFlags() int64 {
+func (br *birReader) readFlags() model.Flag {
 	var val int64
 	br.read(&val)
-	return val
+	return model.Flag(val)
 }
 
 func (br *birReader) readStringCPEntry() model.Name {

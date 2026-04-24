@@ -559,8 +559,8 @@ func (bw *birWriter) writeKind(buf *bytes.Buffer, kind bir.VarKind) {
 	write(buf, uint8(kind))
 }
 
-func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags int64) {
-	write(buf, flags)
+func (bw *birWriter) writeFlags(buf *bytes.Buffer, flags model.Flag) {
+	write(buf, int64(flags))
 }
 
 func (bw *birWriter) writeStringCPEntry(buf *bytes.Buffer, str string) {
