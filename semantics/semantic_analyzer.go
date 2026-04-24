@@ -362,7 +362,7 @@ func isLangImport(importNode *ast.BLangImportPackage, name string) bool {
 }
 
 func validateInitFunction(parent analyzer, function *ast.BLangFunction, fnSymbol model.FunctionSymbol, pos diagnostics.Location) {
-	if function.FlagSet.Contains(model.Flag_PUBLIC) {
+	if function.IsPublic() {
 		parent.semanticErr("'init' function cannot be declared as public", pos)
 	}
 
@@ -415,13 +415,27 @@ func initializeFunctionAnalyzerInner(parent analyzer, function *ast.BLangFunctio
 	fnSymbol := parent.ctx().GetSymbol(function.Symbol()).(model.FunctionSymbol)
 	fa.retTy = fnSymbol.Signature().ReturnType
 	validateDefaultParamTypes(parent, function)
+	if function.IsIsolated() && !function.IsNative() {
+		isIsolatedFuncInner(fa, function.GetBody().(ast.BLangNode))
+		validateIsolatedDefaultParams(fa, function)
+	}
 	return fa
+}
+
+func validateIsolatedDefaultParams[A analyzer](a A, function *ast.BLangFunction) {
+	for i := range function.RequiredParams {
+		param := &function.RequiredParams[i]
+		if !param.IsDefaultableParam() || param.Expr == nil {
+			continue
+		}
+		isIsolatedFuncInner(a, param.Expr.(ast.BLangNode))
+	}
 }
 
 func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {
 	for i := range function.RequiredParams {
 		param := &function.RequiredParams[i]
-		if !param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+		if !param.IsDefaultableParam() {
 			continue
 		}
 		paramTy := param.GetDeterminedType()
@@ -1258,67 +1272,41 @@ func setExpectedType[E ast.BLangNode](e E, expectedType semtypes.SemType) {
 func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 	for _, field := range node.Fields() {
 		if field.DefaultExpr != nil {
-			if !isIsolatedFuncInner(a, nil, field.DefaultExpr.(ast.BLangNode)) {
-				a.semanticErr("not an isolated expression", field.DefaultExpr.(ast.BLangNode).GetPosition())
-			}
+			isIsolatedFuncInner(a, field.DefaultExpr.(ast.BLangNode))
 		}
 	}
 }
 
-// ancestorSpaceIndices collects the SpaceIndex values of all scopes above the given
-// function scope (its parent chain up to the module scope). Variables from these scopes
-// are non-local (module-level or captured) and must be const in an isolated function.
-// If funcScope is nil (module-level context), returns nil to signal that all refs must be const.
-// NOTE: this works with narrowing because we create narrowed symbol in the same space as the symbol being narrowed.
-func ancestorSpaceIndices(funcScope *model.FunctionScope) map[int]struct{} {
-	if funcScope == nil {
-		return nil
-	}
-	ancestors := make(map[int]struct{})
-	scope := funcScope.Parent
-	for scope != nil {
-		switch s := scope.(type) {
-		case *model.ModuleScope:
-			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
-			return ancestors
-		case *model.FunctionScope:
-			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
-			scope = s.Parent
-		case *model.BlockScope:
-			ancestors[s.MainSpace().SpaceIndex()] = struct{}{}
-			scope = s.Parent
-		default:
-			return ancestors
-		}
-	}
-	return ancestors
-}
-
-// TODO: Make this generic over Expressions and statements
-func isIsolatedFuncInner[A analyzer](a A, funcScope *model.FunctionScope, node ast.BLangNode) bool {
-	ancestors := ancestorSpaceIndices(funcScope)
-	return everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
+// isIsolatedFuncInner validates an isolated function body: every variable reference
+// must resolve to a constant or to a variable declared within the body itself.
+func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
+	locals := make(map[model.SymbolRef]struct{})
+	tyCtx := a.tyCtx()
+	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
+	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
+		case *ast.BLangSimpleVariableDef:
+			locals[inner.Var.Symbol()] = struct{}{}
 		case *ast.BLangInvocation:
-			analyzer.unimplementedErr("isolated functions not implemented", inner.GetPosition())
-			return false
+			fnTy := a.ctx().SymbolType(inner.Symbol())
+			if !semtypes.IsSubtype(tyCtx, fnTy, isolatedTop) {
+				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
+			}
 		case *ast.BLangSimpleVarRef:
 			sym := a.ctx().GetSymbol(inner.Symbol())
-			if varSym, ok := sym.(*model.ValueSymbol); ok {
-				if ancestors == nil {
-					return varSym.IsConst()
-				}
-				if _, isAncestor := ancestors[inner.Symbol().SpaceIndex]; isAncestor {
-					return varSym.IsConst()
-				}
-				return true
-			} else {
+			varSym, ok := sym.(*model.ValueSymbol)
+			if !ok {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
-				return false
+				return true
 			}
-		default:
-			return true
+			if varSym.IsConst() {
+				return true
+			}
+			if _, isLocal := locals[inner.Symbol()]; !isLocal {
+				a.semanticErr("access of mutable variable", inner.GetPosition())
+			}
 		}
+		return true
 	})
 }
 
