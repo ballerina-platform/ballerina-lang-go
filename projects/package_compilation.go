@@ -78,11 +78,13 @@ func (c *PackageCompilation) compileModulesInternal() {
 
 	// Add compilation diagnostics if no resolution errors
 	if !c.packageResolution.DiagnosticResult().HasErrors() {
-		// Register all module source files with the shared DiagnosticEnv
+		// Register all module source files with the shared DiagnosticEnv using
+		// package-qualified names so files with the same basename in different
+		// packages (e.g., each having main.bal) don't collide.
 		de := c.compilerEnv.DiagnosticEnv()
 		for _, moduleCtx := range c.packageResolution.topologicallySortedModuleList {
 			for _, docCtx := range moduleCtx.srcDocContextMap {
-				de.RegisterFile(docCtx.getName(), docCtx.getTextDocument())
+				de.RegisterFile(docCtx.getQualifiedName(), docCtx.getTextDocument())
 			}
 		}
 

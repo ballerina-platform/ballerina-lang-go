@@ -62,12 +62,14 @@ type moduleContext struct {
 
 // newModuleContext creates a moduleContext from ModuleConfig.
 func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxTree bool) *moduleContext {
+	qualifier := moduleConfig.ModuleDescriptor().String()
+
 	// Build source document context map
 	srcDocContextMap := make(map[DocumentID]*documentContext)
 	srcDocIDs := make([]DocumentID, 0, len(moduleConfig.SourceDocs()))
 	for _, srcDocConfig := range moduleConfig.SourceDocs() {
 		docID := srcDocConfig.DocumentID()
-		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree)
+		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree, qualifier)
 		srcDocIDs = append(srcDocIDs, docID)
 	}
 
@@ -76,7 +78,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	testSrcDocIDs := make([]DocumentID, 0, len(moduleConfig.TestSourceDocs()))
 	for _, testDocConfig := range moduleConfig.TestSourceDocs() {
 		docID := testDocConfig.DocumentID()
-		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree)
+		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree, qualifier)
 		testSrcDocIDs = append(testSrcDocIDs, docID)
 	}
 

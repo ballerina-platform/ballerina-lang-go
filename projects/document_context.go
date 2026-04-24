@@ -30,6 +30,7 @@ import (
 type documentContext struct {
 	documentConfig    DocumentConfig
 	name              string
+	qualifiedName     string // "{moduleDescriptor}/{name}" — unique across packages
 	disableSyntaxTree bool
 
 	// Lazy-loaded with sync.Once
@@ -40,10 +41,21 @@ type documentContext struct {
 }
 
 // newDocumentContext creates a documentContext from DocumentConfig.
-func newDocumentContext(documentConfig DocumentConfig, disableSyntaxTree bool) *documentContext {
+// qualifier identifies the owning module (typically moduleDescriptor.String()) and is
+// combined with the document name to produce a package-unique key used by the
+// diagnostic environment and SyntaxTree. Pass "" when there is no module context;
+// callers should ensure non-empty qualifiers for docs belonging to real modules so
+// that files with the same basename in different packages do not collide.
+func newDocumentContext(documentConfig DocumentConfig, disableSyntaxTree bool, qualifier string) *documentContext {
+	name := documentConfig.Name()
+	qualifiedName := name
+	if qualifier != "" {
+		qualifiedName = qualifier + "/" + name
+	}
 	return &documentContext{
 		documentConfig:    documentConfig,
-		name:              documentConfig.Name(),
+		name:              name,
+		qualifiedName:     qualifiedName,
 		disableSyntaxTree: disableSyntaxTree,
 	}
 }
@@ -53,9 +65,18 @@ func (d *documentContext) documentID() DocumentID {
 	return d.documentConfig.DocumentID()
 }
 
-// getName returns the document filename.
+// getName returns the document filename (basename only).
+// Public APIs that expose document names to users should use this.
 func (d *documentContext) getName() string {
 	return d.name
+}
+
+// getQualifiedName returns a package-unique key combining the owning module's
+// descriptor with the document name. Used for DiagnosticEnv registration and
+// SyntaxTree filePath so files with the same basename in different packages
+// don't collide.
+func (d *documentContext) getQualifiedName() string {
+	return d.qualifiedName
 }
 
 // parseContent parses the content string and returns a SyntaxTree.
@@ -79,8 +100,9 @@ func (d *documentContext) parseContent(content string, textDoc text.TextDocument
 	// Create the ModulePart node
 	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
 
-	// Create the SyntaxTree
-	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, textDoc, d.name, false)
+	// Create the SyntaxTree using the qualified name so AST-emitted Locations
+	// resolve unambiguously via DiagnosticEnv.FileIndex.
+	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, textDoc, d.qualifiedName, false)
 	return &syntaxTree
 }
 
