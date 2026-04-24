@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: cannot include isolated object type in non-isolated object
+  --> isolated-obj-6-e.bal:24:6
+   |
+24 |     *IsoObj; // @error
+   |      ^^^^^^

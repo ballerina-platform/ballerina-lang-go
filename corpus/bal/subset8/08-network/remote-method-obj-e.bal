@@ -14,15 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
-
-type Foo record {|
-    // spec doesn't specify i to be constant; though I can't figure out a way to mutate it. This doesn't work in jBallerina as well, due to a bug
-    int[] values = from int i in [1, 2, 3]
-        select i; // @error 
-|};
-
-public function main() {
-    Foo f = {};
-    io:println(f.values);
+type Client object {
+    remote function get(string path) returns string; // @error
 }
+

@@ -893,9 +893,9 @@ func (n *NodeBuilder) createSimpleVarInner(name tree.Token, typeName tree.Node, 
 
 	if visibilityQualifier != nil {
 		if visibilityQualifier.Kind() == common.PRIVATE_KEYWORD {
-			bLSimpleVar.FlagSet.Add(model.Flag_PRIVATE)
+			bLSimpleVar.SetPrivate()
 		} else if visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-			bLSimpleVar.FlagSet.Add(model.Flag_PUBLIC)
+			bLSimpleVar.SetPublic()
 		}
 	}
 
@@ -1377,17 +1377,17 @@ func setFunctionQualifiers(bLFunction *BLangFunction, qualifierList tree.NodeLis
 
 		switch kind {
 		case common.PUBLIC_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_PUBLIC)
+			bLFunction.SetPublic()
 		case common.PRIVATE_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_PRIVATE)
+			// private is the default
 		case common.REMOTE_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_REMOTE)
+			bLFunction.SetRemote()
 		case common.TRANSACTIONAL_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_TRANSACTIONAL)
+			bLFunction.SetTransactional()
 		case common.RESOURCE_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_RESOURCE)
+			bLFunction.SetResource()
 		case common.ISOLATED_KEYWORD:
-			bLFunction.FlagSet.Add(model.Flag_ISOLATED)
+			bLFunction.SetIsolated()
 		default:
 			// Skip unknown qualifiers
 			continue
@@ -1469,7 +1469,7 @@ func (n *NodeBuilder) createFunctionNode(funcName *tree.IdentifierToken, qualifi
 
 func (n *NodeBuilder) populateFunctionNode(name BLangIdentifier, qualifierList tree.NodeList[tree.Token], funcSignature *tree.FunctionSignatureNode, funcBody tree.FunctionBodyNode, blFunction *BLangFunction) {
 	// Set function name
-	blFunction.Name = &name
+	blFunction.Name = name
 	// Set method qualifiers
 	setFunctionQualifiers(blFunction, qualifierList)
 	// Set function signature
@@ -1480,13 +1480,12 @@ func (n *NodeBuilder) populateFunctionNode(name BLangIdentifier, qualifierList t
 	// Set the function body
 	if funcBody == nil {
 		blFunction.Body = nil
-		blFunction.FlagSet.Add(model.Flag_INTERFACE)
-		blFunction.InterfaceFunction = true
+		blFunction.SetInterface()
 	} else {
 		body := n.TransformSyntaxNode(funcBody).(model.FunctionBodyNode)
 		blFunction.Body = body
 		if body.GetKind() == model.NodeKind_EXTERN_FUNCTION_BODY {
-			blFunction.FlagSet.Add(model.Flag_NATIVE)
+			blFunction.SetNative()
 		}
 	}
 }
@@ -1589,7 +1588,7 @@ func (n *NodeBuilder) TransformTypeDefinition(typeDefinitionNode *tree.TypeDefin
 
 	visibilityQualifier := typeDefinitionNode.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-		typeDef.FlagSet.Add(model.Flag_PUBLIC)
+		typeDef.SetPublic()
 	}
 
 	typeDef.pos = getPositionWithoutMetadata(n.de(), typeDefinitionNode)
@@ -1615,7 +1614,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 	bLAssignment := &BLangAssignment{}
 	lhsExpr := n.createExpression(assignmentStatementNode.VarRef())
 	// TODO: validate lhsExpr
-	bLAssignment.SetExpression(n.createExpression(assignmentStatementNode.Expression()))
+	bLAssignment.SetActionOrExpression(n.createActionOrExpression(assignmentStatementNode.Expression()))
 	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr
 	return bLAssignment
@@ -1623,7 +1622,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 
 func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStmtNode *tree.CompoundAssignmentStatementNode) BLangNode {
 	bLCompAssignment := &BLangCompoundAssignment{}
-	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
+	bLCompAssignment.SetActionOrExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
 	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
 	BLangNode(bLCompAssignment).SetPosition(getPosition(n.de(), compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
@@ -1658,30 +1657,29 @@ func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBind
 
 	switch bindingPattern.Kind() {
 	case common.CAPTURE_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
+		variable := variable.(*BLangSimpleVariable)
 		bLVarDef := &BLangSimpleVariableDef{}
 
 		bLVarDef.pos = location
-		variable.(BLangNode).SetPosition(location)
+		variable.SetPosition(location)
 
-		var expr BLangExpression
+		var expr BLangActionOrExpression
 		if initializer != nil {
-			expr = n.createExpression(initializer)
-		} else {
-			expr = nil
+			expr = n.createActionOrExpression(initializer)
 		}
 		variable.SetInitialExpression(expr)
 
 		bLVarDef.SetVariable(variable)
 
 		if finalKeyword != nil {
-			variable.GetFlags().Add(model.Flag_FINAL)
+			variable.SetFinal()
 		}
 
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
 		if !isDeclaredWithVar {
-			variable.(*BLangSimpleVariable).SetTypeNode(n.createTypeNode(typeDesc).(BType))
+			variable.SetTypeNode(n.createTypeNode(typeDesc).(BType))
 		}
 
 		return bLVarDef
@@ -1772,20 +1770,20 @@ func (n *NodeBuilder) TransformFailStatement(failStatementNode *tree.FailStateme
 
 func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.ExpressionStatementNode) BLangNode {
 	bLExpressionStmt := BLangExpressionStmt{}
-	bLExpressionStmt.Expr = n.createExpression(expressionStatement.Expression())
+	bLExpressionStmt.Expr = n.createActionOrExpression(expressionStatement.Expression())
 	bLExpressionStmt.pos = getPosition(n.de(), expressionStatement)
 	return &bLExpressionStmt
 }
 
 func (n *NodeBuilder) createExpression(expressionNode tree.Node) BLangExpression {
-	return n.createActionOrExpression(expressionNode).(BLangExpression)
+	return n.createActionOrExpression(expressionNode).(BLangExpression) //nolint:forcetypeassert // only called where expressions are expected, not actions
 }
 
 // createActionOrExpression creates an action or expression node from a syntax tree node
 // migrated from BLangNodeBuilder.java:5490:5
-func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangNode {
+func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangActionOrExpression {
 	if isSimpleLiteral(actionOrExpression.Kind()) {
-		return n.createSimpleLiteral(actionOrExpression).(BLangNode)
+		return n.createSimpleLiteral(actionOrExpression).(BLangActionOrExpression)
 	} else if actionOrExpression.Kind() == common.SIMPLE_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.QUALIFIED_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.IDENTIFIER_TOKEN {
@@ -1807,7 +1805,7 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 		typeAccessExpr.typeDescriptor = n.createTypeNode(actionOrExpression)
 		return &typeAccessExpr
 	} else {
-		return n.TransformSyntaxNode(actionOrExpression)
+		return n.TransformSyntaxNode(actionOrExpression).(BLangActionOrExpression)
 	}
 }
 
@@ -1868,13 +1866,13 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 	bLReturn := &BLangReturn{}
 	bLReturn.pos = getPosition(n.de(), returnStatementNode)
 	if returnStatementNode.Expression() != nil {
-		bLReturn.SetExpression(n.createExpression(returnStatementNode.Expression()))
+		bLReturn.SetActionOrExpression(n.createActionOrExpression(returnStatementNode.Expression()))
 	} else {
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(n.de(), returnStatementNode)
 		nilLiteral.Value = nil
 		nilLiteral.SetValueType(n.types.getTypeFromTag(model.TypeTags_NIL).(BType))
-		bLReturn.SetExpression(nilLiteral)
+		bLReturn.SetActionOrExpression(nilLiteral)
 	}
 
 	return bLReturn
@@ -1944,7 +1942,9 @@ func (n *NodeBuilder) TransformBracedExpression(bracedExpressionNode *tree.Brace
 
 func (n *NodeBuilder) TransformCheckExpression(checkExpressionNode *tree.CheckExpressionNode) BLangNode {
 	pos := getPosition(n.de(), checkExpressionNode)
-	expr := n.createExpression(checkExpressionNode.Expression())
+	// we are deviating from the spec here (https://ballerina.io/spec/lang/master/#section_6.33) check is only suppose
+	// to work with expression but jBallerina also allow remote method calls (which is an action)
+	expr := n.createActionOrExpression(checkExpressionNode.Expression())
 	if checkExpressionNode.CheckKeyword().Kind() == common.CHECK_KEYWORD {
 		checkedExpr := &BLangCheckedExpr{}
 		checkedExpr.pos = pos
@@ -2121,11 +2121,9 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 		constantNode.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
 	}
 
-	constantNode.FlagSet.Add(model.Flag_CONSTANT)
-
 	visibilityQualifier := constantDeclarationNode.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-		constantNode.FlagSet.Add(model.Flag_PUBLIC)
+		constantNode.SetPublic()
 	}
 
 	constantName := constantNode.Name.GetValue()
@@ -2158,7 +2156,7 @@ func (n *NodeBuilder) TransformDefaultableParameter(defaultableParameterNode *tr
 		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
-	simpleVar.FlagSet.Add(model.Flag_DEFAULTABLE_PARAM)
+	simpleVar.SetDefaultableParam()
 
 	return simpleVar
 }
@@ -2190,13 +2188,33 @@ func (n *NodeBuilder) TransformRequiredParameter(requiredParameterNode *tree.Req
 		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
-	simpleVar.FlagSet.Add(model.Flag_REQUIRED_PARAM)
+	simpleVar.SetRequiredParam()
 
 	return simpleVar
 }
 
 func (n *NodeBuilder) TransformIncludedRecordParameter(includedRecordParameterNode *tree.IncludedRecordParameterNode) BLangNode {
-	panic("TransformIncludedRecordParameter unimplemented")
+	paramName := includedRecordParameterNode.ParamName()
+
+	if paramName != nil {
+		n.anonTypeNameSuffixes = append(n.anonTypeNameSuffixes, paramName.Text())
+	}
+
+	simpleVar := n.createSimpleVarWithTokenNodeNodeList(paramName, includedRecordParameterNode.TypeName(), includedRecordParameterNode.Annotations())
+
+	simpleVar.pos = getPosition(n.de(), includedRecordParameterNode)
+
+	if paramName != nil {
+		simpleVar.Name.pos = getPosition(n.de(), paramName)
+		n.anonTypeNameSuffixes = n.anonTypeNameSuffixes[:len(n.anonTypeNameSuffixes)-1]
+	} else if diagnostics.IsLocationEmpty(simpleVar.Name.pos) {
+		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
+	}
+
+	simpleVar.SetRequiredParam()
+	simpleVar.SetIncludedRecordParam()
+
+	return simpleVar
 }
 
 func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParameterNode) BLangNode {
@@ -2217,7 +2235,7 @@ func (n *NodeBuilder) TransformRestParameter(restParameterNode *tree.RestParamet
 		simpleVar.Name.pos = diagnostics.NewBuiltinLocation()
 	}
 
-	simpleVar.FlagSet.Add(model.Flag_REST_PARAM)
+	simpleVar.SetRestParam()
 
 	return simpleVar
 }
@@ -2255,7 +2273,9 @@ func (n *NodeBuilder) TransformRestArgument(restArgumentNode *tree.RestArgumentN
 }
 
 func (n *NodeBuilder) TransformInferredTypedescDefault(inferredTypedescDefaultNode *tree.InferredTypedescDefaultNode) BLangNode {
-	panic("TransformInferredTypedescDefault unimplemented")
+	node := &BLangInferredTypedescDefault{}
+	node.pos = getPosition(n.de(), inferredTypedescDefaultNode)
+	return node
 }
 
 func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tree.ObjectTypeDescriptorNode) BLangNode {
@@ -2311,7 +2331,15 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 					bMethod.memberKind = model.ObjectMemberKindRemoteMethod
 				case common.RESOURCE_KEYWORD:
 					bMethod.memberKind = model.ObjectMemberKindResourceMethod
+				case common.ISOLATED_KEYWORD:
+					bMethod.SetIsolated()
+				case common.TRANSACTIONAL_KEYWORD:
+					bMethod.SetTransactional()
 				}
+			}
+
+			if bMethod.memberKind == model.ObjectMemberKindRemoteMethod {
+				bMethod.name = model.RemoteMethodName(bMethod.name)
 			}
 
 			// Build function type from method signature
@@ -2338,7 +2366,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			}
 
 			if objectType.AddMember(bMethod) {
-				n.cx.SyntaxError("redeclared symbol '"+methodName+"'", bMethod.pos)
+				n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(bMethod.name)+"'", bMethod.pos)
 			}
 		case common.TYPE_REFERENCE:
 			typeRef := member.(*tree.TypeReferenceNode)
@@ -2371,10 +2399,10 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			}
 			bField.pos = getPosition(n.de(), recordField)
 			if recordField.ReadonlyKeyword() != nil {
-				bField.FlagSet.Add(model.Flag_READONLY)
+				bField.SetReadonly()
 			}
 			if recordField.QuestionMarkToken() != nil {
-				bField.FlagSet.Add(model.Flag_OPTIONAL)
+				bField.SetOptional()
 			}
 			recordType.AddField(fieldName, bField)
 		case common.RECORD_FIELD_WITH_DEFAULT_VALUE:
@@ -2387,7 +2415,7 @@ func (n *NodeBuilder) TransformRecordTypeDescriptor(recordTypeDescriptorNode *tr
 			}
 			bField.pos = getPosition(n.de(), recordFieldDV)
 			if recordFieldDV.ReadonlyKeyword() != nil {
-				bField.FlagSet.Add(model.Flag_READONLY)
+				bField.SetReadonly()
 			}
 			recordType.AddField(fieldName, bField)
 		case common.TYPE_REFERENCE:
@@ -2493,7 +2521,7 @@ func (n *NodeBuilder) TransformModuleVariableDeclaration(moduleVariableDeclarati
 func (n *NodeBuilder) populateModuleVariableVisibilityAndQualifiers(node *tree.ModuleVariableDeclarationNode, simpleVar *BLangSimpleVariable) {
 	visibilityQualifier := node.VisibilityQualifier()
 	if visibilityQualifier != nil && visibilityQualifier.Kind() == common.PUBLIC_KEYWORD {
-		simpleVar.FlagSet.Add(model.Flag_PUBLIC)
+		simpleVar.SetPublic()
 	}
 
 	qualifiers := node.Qualifiers()
@@ -2501,9 +2529,9 @@ func (n *NodeBuilder) populateModuleVariableVisibilityAndQualifiers(node *tree.M
 		qualifier := qualifiers.Get(i)
 		switch qualifier.Kind() {
 		case common.FINAL_KEYWORD:
-			simpleVar.FlagSet.Add(model.Flag_FINAL)
+			simpleVar.SetFinal()
 		case common.ISOLATED_KEYWORD:
-			simpleVar.FlagSet.Add(model.Flag_ISOLATED)
+			simpleVar.SetIsolated()
 		case common.CONFIGURABLE_KEYWORD:
 			n.cx.Unimplemented("configurable module variables are not supported yet", simpleVar.pos)
 		}
@@ -2520,7 +2548,14 @@ func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.T
 }
 
 func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode *tree.RemoteMethodCallActionNode) BLangNode {
-	panic("TransformRemoteMethodCallAction unimplemented")
+	inv := n.createBLangInvocation(remoteMethodCallActionNode.MethodName(),
+		remoteMethodCallActionNode.Arguments(),
+		getPosition(n.de(), remoteMethodCallActionNode), false)
+	action := &BLangRemoteMethodCallAction{}
+	action.bLangInvocationBase = inv.bLangInvocationBase
+	action.Expr = n.createExpression(remoteMethodCallActionNode.Expression())
+	action.pos = getPosition(n.de(), remoteMethodCallActionNode)
+	return action
 }
 
 func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.MapTypeDescriptorNode) BLangNode {
@@ -2802,16 +2837,16 @@ func (n *NodeBuilder) TransformFunctionTypeDescriptor(functionTypeDescriptorNode
 			funcType.ReturnTypeDescriptor = retType
 		}
 	} else {
-		funcType.FlagSet.Add(model.Flag_ANY_FUNCTION)
+		funcType.SetAnyFunction()
 	}
 
 	qualifierList := functionTypeDescriptorNode.QualifierList()
 	for token := range qualifierList.Iterator() {
 		switch token.Kind() {
 		case common.ISOLATED_KEYWORD:
-			funcType.FlagSet.Add(model.Flag_ISOLATED)
+			funcType.SetIsolated()
 		case common.TRANSACTIONAL_KEYWORD:
-			funcType.FlagSet.Add(model.Flag_TRANSACTIONAL)
+			funcType.SetTransactional()
 		}
 	}
 
@@ -2865,13 +2900,12 @@ func (n *NodeBuilder) TransformExplicitAnonymousFunctionExpression(anonFuncExprN
 	bLFunction := &BLangFunction{}
 	name := n.cx.GetNextAnonymousFunctionKey(n.PackageID)
 	ident := createIdentifier(diagnostics.NewBuiltinLocation(), &name, &name)
-	bLFunction.Name = &ident
+	bLFunction.Name = ident
 	n.populateFuncSignature(bLFunction, anonFuncExprNode.FunctionSignature())
 	body := n.TransformSyntaxNode(anonFuncExprNode.FunctionBody()).(model.FunctionBodyNode)
 	bLFunction.Body = body
 	bLFunction.pos = getPosition(n.de(), anonFuncExprNode)
-	bLFunction.FlagSet.Add(model.Flag_LAMBDA)
-	bLFunction.FlagSet.Add(model.Flag_ANONYMOUS)
+	bLFunction.SetAnonymous()
 	setFunctionQualifiers(bLFunction, anonFuncExprNode.QualifierList())
 
 	lambdaFunc := &BLangLambdaFunction{Function: bLFunction}
@@ -3685,7 +3719,7 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 	// Handle visibility qualifier
 	if visQual := classDefinitionNode.VisibilityQualifier(); visQual != nil {
 		if visQual.Kind() == common.PUBLIC_KEYWORD {
-			blangClass.FlagSet.Add(model.Flag_PUBLIC)
+			blangClass.SetPublic()
 		}
 	}
 
@@ -3704,13 +3738,19 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 			funcDef := member.(*tree.FunctionDefinition)
 			bLFunction := n.createFunctionNode(funcDef.FunctionName(), funcDef.QualifierList(), funcDef.FunctionSignature(), funcDef.FunctionBody())
 			bLFunction.pos = getPositionWithoutMetadata(n.de(), funcDef)
-			bLFunction.AttachedFunction = true
-			bLFunction.FlagSet.Add(model.Flag_ATTACHED)
+			bLFunction.SetAttached()
 
 			funcName := bLFunction.Name.Value
 			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
 				blangClass.InitFunction = bLFunction
 			} else {
+				if bLFunction.IsRemote() {
+					funcName = model.RemoteMethodName(funcName)
+					bLFunction.Name.Value = funcName
+				}
+				if blangClass.GetMethod(funcName) != nil {
+					n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
+				}
 				blangClass.AddMethod(funcName, bLFunction)
 			}
 		case common.TYPE_REFERENCE:
@@ -3728,15 +3768,15 @@ func (n *NodeBuilder) setClassQualifiers(blangClass *BLangClassDefinition, quali
 	for qualifier := range qualifiers.Iterator() {
 		switch qualifier.Kind() {
 		case common.DISTINCT_KEYWORD:
-			blangClass.FlagSet.Add(model.Flag_DISTINCT)
+			blangClass.SetDistinct()
 		case common.CLIENT_KEYWORD:
-			blangClass.FlagSet.Add(model.Flag_CLIENT)
+			blangClass.SetClient()
 		case common.READONLY_KEYWORD:
-			blangClass.FlagSet.Add(model.Flag_READONLY)
+			blangClass.SetReadonly()
 		case common.SERVICE_KEYWORD:
-			blangClass.FlagSet.Add(model.Flag_SERVICE)
+			blangClass.SetService()
 		case common.ISOLATED_KEYWORD:
-			blangClass.FlagSet.Add(model.Flag_ISOLATED)
+			blangClass.SetIsolated()
 		}
 	}
 }
@@ -3750,16 +3790,16 @@ func (n *NodeBuilder) transformClassField(objectField *tree.ObjectFieldNode) *BL
 
 	if vis := objectField.VisibilityQualifier(); vis != nil {
 		if vis.Kind() == common.PUBLIC_KEYWORD {
-			bLSimpleVar.FlagSet.Add(model.Flag_PUBLIC)
+			bLSimpleVar.SetPublic()
 		} else if vis.Kind() == common.PRIVATE_KEYWORD {
-			bLSimpleVar.FlagSet.Add(model.Flag_PRIVATE)
+			bLSimpleVar.SetPrivate()
 		}
 	}
 
 	qualifiers := objectField.QualifierList()
 	for qualifier := range qualifiers.Iterator() {
 		if qualifier.Kind() == common.FINAL_KEYWORD {
-			bLSimpleVar.FlagSet.Add(model.Flag_FINAL)
+			bLSimpleVar.SetFinal()
 		}
 	}
 
@@ -3821,10 +3861,36 @@ func (n *NodeBuilder) TransformErrorConstructorExpression(errorConstructorExpres
 }
 
 func (n *NodeBuilder) TransformParameterizedTypeDescriptor(parameterizedTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
-	if parameterizedTypeDescriptorNode.Kind() == common.ERROR_TYPE_DESC {
+	switch parameterizedTypeDescriptorNode.Kind() {
+	case common.ERROR_TYPE_DESC:
 		return n.transformErrorTypeDescriptor(parameterizedTypeDescriptorNode)
+	case common.TYPEDESC_TYPE_DESC:
+		return n.transformTypedescTypeDescriptor(parameterizedTypeDescriptorNode)
 	}
-	panic("TransformParameterizedTypeDescriptor supported only for error type descriptors")
+	panic("TransformParameterizedTypeDescriptor supported only for error and typedesc type descriptors")
+}
+
+func (n *NodeBuilder) transformTypedescTypeDescriptor(node *tree.ParameterizedTypeDescriptorNode) BLangNode {
+	typeParamNode := node.TypeParamNode()
+	if typeParamNode == nil {
+		valueType := &BLangValueType{}
+		valueType.pos = getPosition(n.de(), node)
+		valueType.TypeKind = model.TypeKind_TYPEDESC
+		return valueType
+	}
+	constrainedType := &BLangConstrainedType{}
+	constrainedType.pos = getPosition(n.de(), node)
+	base := &BLangValueType{}
+	base.pos = getPosition(n.de(), node)
+	base.TypeKind = model.TypeKind_TYPEDESC
+	constrainedType.Type = model.TypeData{TypeDescriptor: base}
+	constraint := typeParamNode.TypeNode()
+	if constraint == nil {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(typeParamNode)}
+	} else {
+		constrainedType.Constraint = model.TypeData{TypeDescriptor: n.createTypeNode(constraint)}
+	}
+	return constrainedType
 }
 
 func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree.ParameterizedTypeDescriptorNode) BLangNode {
@@ -3842,7 +3908,7 @@ func (n *NodeBuilder) transformErrorTypeDescriptor(errorTypeDescriptorNode *tree
 	// Check if this is a distinct error type
 	parent := errorTypeDescriptorNode.Parent()
 	if parent.Kind() == common.DISTINCT_TYPE_DESC {
-		errorType.FlagSet.Add(model.Flag_DISTINCT)
+		errorType.SetDistinct()
 	}
 
 	return errorType

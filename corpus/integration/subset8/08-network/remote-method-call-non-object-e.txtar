@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: remote method call is only allowed on client objects
+  --> remote-method-call-non-object-e.bal:21:19
+   |
+21 |     string res2 = c->notExist1("foo"); // @error
+   |                   ^^^^^^^^^^^^^^^^^^^

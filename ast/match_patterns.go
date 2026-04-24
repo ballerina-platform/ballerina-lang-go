@@ -26,12 +26,12 @@ type BLangMatchPattern interface {
 	SetAcceptedType(semtypes.SemType)
 }
 
-type BLangMatchGuard BLangExpression
+type BLangMatchGuard BLangActionOrExpression
 
 type (
 	BLangMatchClause struct {
 		bLangNodeBase
-		Guard        BLangExpression
+		Guard        BLangMatchGuard
 		Body         BLangBlockStmt
 		Patterns     []BLangMatchPattern
 		AcceptedType semtypes.SemType
@@ -51,14 +51,18 @@ type (
 	}
 )
 
-var _ model.ConstPatternNode = &BLangConstPattern{}
-var _ model.MatchClause = &BLangMatchClause{}
-var _ BLangMatchPattern = &BLangConstPattern{}
-var _ BLangMatchPattern = &BLangWildCardMatchPattern{}
+var (
+	_ model.ConstPatternNode = &BLangConstPattern{}
+	_ model.MatchClause      = &BLangMatchClause{}
+	_ BLangMatchPattern      = &BLangConstPattern{}
+	_ BLangMatchPattern      = &BLangWildCardMatchPattern{}
+)
 
-var _ BLangNode = &BLangConstPattern{}
-var _ BLangNode = &BLangMatchClause{}
-var _ BLangNode = &BLangWildCardMatchPattern{}
+var (
+	_ BLangNode = &BLangConstPattern{}
+	_ BLangNode = &BLangMatchClause{}
+	_ BLangNode = &BLangWildCardMatchPattern{}
+)
 
 func (this *BLangConstPattern) GetKind() model.NodeKind {
 	// migrated from BLangConstPattern.java:53:5

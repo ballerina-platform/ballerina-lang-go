@@ -1,0 +1,34 @@
+(Counter
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access count
+          (simple-var-ref self))
+        (simple-var-ref initial))
+      (assignment
+        (field-based-access initial
+          (simple-var-ref self))
+        (simple-var-ref initial))
+    )
+  )
+  (getInitial
+    (bb0 () ()
+      (return
+        (field-based-access initial
+          (simple-var-ref self)))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (user-defined-type Counter)) (expr
+        (new (
+          (literal 42))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation getInitial expr:
+          (simple-var-ref c) ()))))
+  )
+)

@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: invocation of a non-isolated function
+  --> isolated-fn-10-e.bal:44:12
+   |
+44 |     return f.getX(); // @error
+   |            ^^^^^^^^
+
+error[SEMANTIC_ERROR]: invocation of a non-isolated function
+  --> isolated-fn-10-e.bal:49:12
+   |
+49 |     return b->getY(); // @error
+   |            ^^^^^^^^^

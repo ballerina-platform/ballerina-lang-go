@@ -1,0 +1,4 @@
+-- stdout --
+fooremote get
+fooget
+-- stderr --

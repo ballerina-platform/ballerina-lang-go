@@ -1,0 +1,58 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition Client1
+    (variable base (type
+      (value-type string)))
+    (function init (
+      (variable base (type
+        (value-type string)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal base))
+          (simple-var-ref base))))
+    (function $remote$get (
+      (variable path (type
+        (value-type string)))) (
+      (value-type string))
+      (block-function-body
+        (return
+          (binary-expr +
+            (binary-expr +
+              (index-based-access
+                (simple-var-ref self)
+                (literal base))
+              (simple-var-ref path))
+            (literal get))))))
+  (class-definition Client
+    (function init () ()
+      (block-function-body))
+    (function $remote$get (
+      (variable path (type
+        (value-type string)))) (
+      (value-type string))
+      (block-function-body
+        (return
+          (binary-expr +
+            (simple-var-ref path)
+            (literal get))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable c (type
+          (union-type
+            (user-defined-type Client)
+            (user-defined-type Client1))) (expr
+          (new ()))))
+      (var-def
+        (variable res (type
+          (value-type string)) (expr
+          (remote-method-call get expr:
+            (simple-var-ref c) (
+            (literal foo))))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref res)))))))
