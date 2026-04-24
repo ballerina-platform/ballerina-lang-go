@@ -64,6 +64,8 @@ const (
 	NodeKind_RESOURCE
 	NodeKind_SERVICE
 	NodeKind_TYPE_DEFINITION
+	NodeKind_ENUM_DECLARATION
+	NodeKind_ENUM_MEMBER
 	NodeKind_VARIABLE
 	NodeKind_LET_VARIABLE
 	NodeKind_TUPLE_VARIABLE
@@ -695,6 +697,27 @@ type TypeDefinition interface {
 	SetDeterminedType(ty semtypes.SemType)
 	GetCycleDepth() int
 	SetCycleDepth(depth int)
+}
+
+type EnumDeclarationNode interface {
+	AnnotatableNode
+	DocumentableNode
+	TopLevelNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetMembers() []EnumMemberNode
+	AddMember(member EnumMemberNode)
+}
+
+type EnumMemberNode interface {
+	AnnotatableNode
+	DocumentableNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetExpression() ExpressionNode
+	SetExpression(expr ExpressionNode)
 }
 
 type TypeData struct {
