@@ -1,0 +1,19 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: Unknown symbol: BLUE
+  --> main.bal:24:16
+   |
+24 |     io:println(types:BLUE); // @output BLUE
+   |                ^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: Unknown symbol: GREEN
+  --> main.bal:23:16
+   |
+23 |     io:println(types:GREEN); // @output green
+   |                ^^^^^^^^^^^
+
+error[SEMANTIC_ERROR]: Unknown symbol: RED
+  --> main.bal:22:16
+   |
+22 |     io:println(types:RED); // @output RED
+   |                ^^^^^^^^^
