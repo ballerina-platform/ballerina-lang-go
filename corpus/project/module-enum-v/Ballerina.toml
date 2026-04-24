@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "moduleenum"
+version = "0.1.0"

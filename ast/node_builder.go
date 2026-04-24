@@ -79,6 +79,7 @@ type NodeBuilder struct {
 	PackageID            *model.PackageID
 	anonTypeNameSuffixes []string // Stack for anonymous type name suffixes
 	additionalStatements []BLangStatement
+	currentCompUnit      *BLangCompilationUnit
 	CurrentCompUnitName  string
 	isInLocalContext     bool
 	isInFiniteContext    bool
@@ -1327,6 +1328,8 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 
 func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLangNode {
 	compilationUnit := BLangCompilationUnit{}
+	n.currentCompUnit = &compilationUnit
+	defer func() { n.currentCompUnit = nil }()
 	compilationUnit.Name = n.CurrentCompUnitName
 	compilationUnit.packageID = n.PackageID
 	pos := getPosition(n.de(), modulePartNode)
@@ -3210,11 +3213,121 @@ func (n *NodeBuilder) TransformConditionalExpression(conditionalExpressionNode *
 }
 
 func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDeclarationNode) BLangNode {
-	panic("TransformEnumDeclaration unimplemented")
+	publicQualifier := false
+	qualifier := enumDeclarationNode.Qualifier()
+	if qualifier != nil && qualifier.Kind() == common.PUBLIC_KEYWORD {
+		publicQualifier = true
+	}
+
+	memberNodes := enumDeclarationNode.EnumMemberList()
+	memberTypeNodes := make([]model.TypeDescriptor, 0)
+	for memberNode := range memberNodes.Iterator() {
+		if memberNode.Kind() != common.ENUM_MEMBER {
+			continue
+		}
+		enumMember := memberNode.(*tree.EnumMemberNode)
+		if enumMember.Identifier() == nil || enumMember.Identifier().IsMissing() {
+			continue
+		}
+		constantNode, redeclared := n.transformEnumMember(enumMember, publicQualifier)
+		if redeclared {
+			continue
+		}
+		if n.currentCompUnit == nil {
+			n.cx.InternalError("enum constants can only be added at module level", getPosition(n.de(), enumMember))
+			continue
+		}
+		n.currentCompUnit.AddTopLevelNode(constantNode)
+		memberTypeNodes = append(memberTypeNodes, n.createTypeNode(enumMember.Identifier()))
+	}
+
+	typeDef := NewBLangTypeDefinition()
+	typeDef.pos = getPositionWithoutMetadata(n.de(), enumDeclarationNode)
+	typeDef.SetEnum()
+	if publicQualifier {
+		typeDef.SetPublic()
+	}
+
+	identifierPos := getPosition(n.de(), enumDeclarationNode.Identifier())
+	identifier := createIdentifierFromToken(identifierPos, enumDeclarationNode.Identifier())
+	typeDef.Name = &identifier
+
+	if len(memberTypeNodes) == 1 {
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: memberTypeNodes[0]})
+	} else if len(memberTypeNodes) > 1 {
+		current := memberTypeNodes[len(memberTypeNodes)-1]
+		for i := len(memberTypeNodes) - 2; i >= 0; i-- {
+			unionType := &BLangUnionTypeNode{
+				lhs: model.TypeData{TypeDescriptor: memberTypeNodes[i]},
+				rhs: model.TypeData{TypeDescriptor: current},
+			}
+			unionType.pos = typeDef.pos
+			current = unionType
+		}
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: current})
+	} else {
+		neverType := &BLangValueType{TypeKind: model.TypeKind_NEVER}
+		neverType.pos = diagnostics.NewBuiltinLocation()
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: neverType})
+		n.cx.SemanticError("missing enum member", typeDef.Name.GetPosition())
+	}
+
+	metadata := enumDeclarationNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		docString := getDocumentationString(metadata)
+		typeDef.markdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
+
+	return typeDef
 }
 
 func (n *NodeBuilder) TransformEnumMember(enumMemberNode *tree.EnumMemberNode) BLangNode {
-	panic("TransformEnumMember unimplemented")
+	constantNode, _ := n.transformEnumMember(enumMemberNode, false)
+	return constantNode
+}
+
+func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, publicQualifier bool) (*BLangConstant, bool) {
+	constantNode := createConstantNode()
+	constantNode.pos = getPositionWithoutMetadata(n.de(), enumMemberNode)
+	constantNode.SetEnumMember()
+	if publicQualifier {
+		constantNode.SetPublic()
+	}
+
+	identifierPos := getPosition(n.de(), enumMemberNode.Identifier())
+	identifier := createIdentifierFromToken(identifierPos, enumMemberNode.Identifier())
+	constantNode.Name = &identifier
+
+	if exprNode := enumMemberNode.ConstExprNode(); exprNode != nil {
+		constantNode.Expr = n.createExpression(exprNode)
+	} else {
+		literal := &BLangLiteral{}
+		literal.pos = identifierPos
+		literal.Value = identifier.Value
+		literal.OriginalValue = identifier.Value
+		literal.SetValueType(n.types.getTypeFromTag(model.TypeTags_STRING).(BType))
+		constantNode.Expr = literal
+	}
+
+	stringType := &BLangValueType{TypeKind: model.TypeKind_STRING}
+	stringType.pos = diagnostics.NewBuiltinLocation()
+	constantNode.SetTypeNode(stringType)
+
+	metadata := enumMemberNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		docString := getDocumentationString(metadata)
+		constantNode.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
+
+	constantName := constantNode.Name.GetValue()
+	if n.constantSet[constantName] {
+		n.cx.SemanticError("redeclared symbol '"+constantName+"'", constantNode.Name.GetPosition())
+		return nil, true
+	} else {
+		n.constantSet[constantName] = true
+	}
+
+	return constantNode, false
 }
 
 func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree.ArrayTypeDescriptorNode) BLangNode {

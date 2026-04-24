@@ -17,9 +17,10 @@
 package model
 
 import (
+	"iter"
+
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"iter"
 )
 
 type Field interface {
@@ -695,6 +696,27 @@ type TypeDefinition interface {
 	SetDeterminedType(ty semtypes.SemType)
 	GetCycleDepth() int
 	SetCycleDepth(depth int)
+}
+
+type EnumDeclarationNode interface {
+	AnnotatableNode
+	DocumentableNode
+	TopLevelNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetMembers() []EnumMemberNode
+	AddMember(member EnumMemberNode)
+}
+
+type EnumMemberNode interface {
+	AnnotatableNode
+	DocumentableNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetExpression() ExpressionNode
+	SetExpression(expr ExpressionNode)
 }
 
 type TypeData struct {

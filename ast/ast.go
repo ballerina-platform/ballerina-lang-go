@@ -482,10 +482,12 @@ const (
 	flagConstant      nodeFlags = 1 << model.Flag_CONSTANT
 	flagDistinct      nodeFlags = 1 << model.Flag_DISTINCT
 	flagClass         nodeFlags = 1 << model.Flag_CLASS
+	flagEnum          nodeFlags = 1 << model.Flag_ENUM
 	flagRequiredParam nodeFlags = 1 << model.Flag_REQUIRED_PARAM
 	flagDefaultParam  nodeFlags = 1 << model.Flag_DEFAULTABLE_PARAM
 	flagRestParam     nodeFlags = 1 << model.Flag_REST_PARAM
 	flagAnyFunction   nodeFlags = 1 << model.Flag_ANY_FUNCTION
+	flagEnumMember    nodeFlags = 1 << model.Flag_ENUM_MEMBER
 )
 
 func (f nodeFlags) has(flag nodeFlags) bool { return f&flag != 0 }
@@ -531,6 +533,7 @@ func (b *BLangVariableBase) IsReadonly() bool     { return b.flags.has(flagReado
 func (b *BLangVariableBase) FlagsAsInt64() int64  { return b.flags.asInt64() }
 
 func (b *BLangConstant) FlagsAsInt64() int64 { return (b.flags | flagConstant).asInt64() }
+func (b *BLangConstant) SetEnumMember()      { b.flags |= flagEnumMember }
 
 // BLangClassDefinition flag methods
 func (b *BLangClassDefinition) IsPublic() bool   { return b.flags.has(flagPublic) }
@@ -554,6 +557,7 @@ func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.has(flagPublic
 func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.has(flagAnonymous) }
 func (b *BLangTypeDefinition) SetPublic()        { b.flags |= flagPublic }
 func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= flagAnonymous }
+func (b *BLangTypeDefinition) SetEnum()          { b.flags |= flagEnum }
 
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
