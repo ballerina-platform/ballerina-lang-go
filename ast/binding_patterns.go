@@ -352,6 +352,5 @@ func (this *BLangWildCardBindingPattern) GetKind() model.NodeKind {
 	return model.NodeKind_WILDCARD_BINDING_PATTERN
 }
 
-func (this *BLangWildCardBindingPattern) SetTypeCheckedType(ty BType) {
-	panic("not implemented")
-}
+func (*BLangWildCardBindingPattern) actionOrExpression() {}
+func (*BLangWildCardBindingPattern) expressionNode()     {}

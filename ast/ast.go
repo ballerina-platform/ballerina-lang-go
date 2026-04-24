@@ -17,6 +17,7 @@
 package ast
 
 import (
+	"iter"
 	"strings"
 
 	"ballerina-lang-go/common"
@@ -25,7 +26,6 @@ import (
 	"ballerina-lang-go/parser/tree"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"iter"
 )
 
 type Flags uint64
@@ -246,7 +246,6 @@ type (
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		typeDescriptor                  model.TypeDescriptor
-		FlagSet                         common.UnorderedSet[model.Flag]
 		attachPoints                    common.UnorderedSet[model.AttachPoint]
 	}
 
@@ -304,8 +303,9 @@ type (
 		Methods                         map[string]*BLangFunction
 		Fields                          []model.SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
+		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
-		FlagSet                         common.Set[model.Flag]
+		flags                           nodeFlags
 		typeData                        model.TypeData
 		Definition                      semtypes.Definition
 		CycleDepth                      int
@@ -323,7 +323,6 @@ type (
 		Name                            *BLangIdentifier
 		AnnAttachments                  []BLangAnnotationAttachment
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
-		FlagSet                         common.UnorderedSet[model.Flag]
 		ListenerType                    BType
 		ResourceFunctions               []BLangFunction
 		InferredServiceType             BType
@@ -354,7 +353,6 @@ type (
 		TopLevelNodes           []model.TopLevelNode
 		TestablePkgs            []*BLangTestablePackage
 		ClassDefinitions        []BLangClassDefinition
-		FlagSet                 common.UnorderedSet[model.Flag]
 		CompletedPhases         common.UnorderedSet[CompilerPhase]
 		LambdaFunctions         []BLangLambdaFunction
 		PackageID               *model.PackageID
@@ -408,8 +406,8 @@ type (
 		typeNode                        BType
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
-		Expr                            model.ExpressionNode
-		FlagSet                         common.Set[model.Flag]
+		Expr                            BLangActionOrExpression
+		flags                           nodeFlags
 		IsDeclaredWithVar               bool
 		symbol                          model.SymbolRef
 	}
@@ -430,30 +428,23 @@ type (
 
 	bLangInvokableNodeBase struct {
 		bLangNodeBase
-		Name                            *BLangIdentifier
+		Name                            BLangIdentifier
 		symbol                          model.SymbolRef
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment *BLangMarkdownDocumentation
 		RequiredParams                  []BLangSimpleVariable
 		RestParam                       model.SimpleVariableNode
 		returnTypeDescriptor            model.TypeDescriptor
-		ReturnTypeAnnAttachments        []model.AnnotationAttachmentNode
 		Body                            model.FunctionBodyNode
-		DefaultWorkerName               model.IdentifierNode
-		FlagSet                         common.UnorderedSet[model.Flag]
+		flags                           nodeFlags
 	}
 
 	BLangFunction struct {
 		bLangInvokableNodeBase
-		scope             model.Scope
-		Receiver          *BLangSimpleVariable
-		SendsToThis       common.OrderedSet[Channel]
-		AnonForkName      string
-		MapSymbolUpdated  bool
-		AttachedFunction  bool
-		ObjInitFunction   bool
-		InterfaceFunction bool
+		scope model.Scope
 	}
+
+	nodeFlags uint64
 
 	BLangTypeDefinition struct {
 		bLangNodeBase
@@ -462,7 +453,7 @@ type (
 		typeData                        model.TypeData
 		annAttachments                  []BLangAnnotationAttachment
 		markdownDocumentationAttachment *BLangMarkdownDocumentation
-		FlagSet                         common.UnorderedSet[model.Flag]
+		flags                           nodeFlags
 		precedence                      int
 		CycleDepth                      int
 		isBuiltinTypeDef                bool
@@ -470,6 +461,105 @@ type (
 		referencedFieldsDefined         bool
 	}
 )
+
+// Flag bit constants — bit positions match model.Flag iota values.
+const (
+	flagPublic        nodeFlags = 1 << model.Flag_PUBLIC
+	flagPrivate       nodeFlags = 1 << model.Flag_PRIVATE
+	flagRemote        nodeFlags = 1 << model.Flag_REMOTE
+	flagTransactional nodeFlags = 1 << model.Flag_TRANSACTIONAL
+	flagNative        nodeFlags = 1 << model.Flag_NATIVE
+	flagFinal         nodeFlags = 1 << model.Flag_FINAL
+	flagAttached      nodeFlags = 1 << model.Flag_ATTACHED
+	flagLambda        nodeFlags = 1 << model.Flag_LAMBDA
+	flagReadonly      nodeFlags = 1 << model.Flag_READONLY
+	flagInterface     nodeFlags = 1 << model.Flag_INTERFACE
+	flagAnonymous     nodeFlags = 1 << model.Flag_ANONYMOUS
+	flagOptional      nodeFlags = 1 << model.Flag_OPTIONAL
+	flagClient        nodeFlags = 1 << model.Flag_CLIENT
+	flagResource      nodeFlags = 1 << model.Flag_RESOURCE
+	flagIsolated      nodeFlags = 1 << model.Flag_ISOLATED
+	flagService       nodeFlags = 1 << model.Flag_SERVICE
+	flagConstant      nodeFlags = 1 << model.Flag_CONSTANT
+	flagDistinct      nodeFlags = 1 << model.Flag_DISTINCT
+	flagClass         nodeFlags = 1 << model.Flag_CLASS
+	flagRequiredParam nodeFlags = 1 << model.Flag_REQUIRED_PARAM
+	flagDefaultParam  nodeFlags = 1 << model.Flag_DEFAULTABLE_PARAM
+	flagRestParam     nodeFlags = 1 << model.Flag_REST_PARAM
+	flagAnyFunction   nodeFlags = 1 << model.Flag_ANY_FUNCTION
+)
+
+func (f nodeFlags) has(flag nodeFlags) bool { return f&flag != 0 }
+func (f nodeFlags) asInt64() int64          { return int64(f) }
+
+// bLangInvokableNodeBase flag methods
+func (b *bLangInvokableNodeBase) IsPublic() bool        { return b.flags.has(flagPublic) }
+func (b *bLangInvokableNodeBase) IsRemote() bool        { return b.flags.has(flagRemote) }
+func (b *bLangInvokableNodeBase) IsTransactional() bool { return b.flags.has(flagTransactional) }
+func (b *bLangInvokableNodeBase) IsResource() bool      { return b.flags.has(flagResource) }
+func (b *bLangInvokableNodeBase) IsIsolated() bool      { return b.flags.has(flagIsolated) }
+func (b *bLangInvokableNodeBase) IsInterface() bool     { return b.flags.has(flagInterface) }
+func (b *bLangInvokableNodeBase) IsNative() bool        { return b.flags.has(flagNative) }
+func (b *bLangInvokableNodeBase) IsAnonymous() bool     { return b.flags.has(flagLambda) }
+func (b *bLangInvokableNodeBase) IsAttached() bool      { return b.flags.has(flagAttached) }
+
+func (b *bLangInvokableNodeBase) SetPublic()          { b.flags |= flagPublic }
+func (b *bLangInvokableNodeBase) SetRemote()          { b.flags |= flagRemote }
+func (b *bLangInvokableNodeBase) SetTransactional()   { b.flags |= flagTransactional }
+func (b *bLangInvokableNodeBase) SetResource()        { b.flags |= flagResource }
+func (b *bLangInvokableNodeBase) SetIsolated()        { b.flags |= flagIsolated }
+func (b *bLangInvokableNodeBase) SetInterface()       { b.flags |= flagInterface }
+func (b *bLangInvokableNodeBase) SetNative()          { b.flags |= flagNative }
+func (b *bLangInvokableNodeBase) SetAnonymous()       { b.flags |= flagLambda | flagAnonymous }
+func (b *bLangInvokableNodeBase) SetAttached()        { b.flags |= flagAttached }
+func (b *bLangInvokableNodeBase) FlagsAsInt64() int64 { return b.flags.asInt64() }
+
+// BLangVariableBase flag methods
+func (b *BLangVariableBase) IsPublic() bool           { return b.flags.has(flagPublic) }
+func (b *BLangVariableBase) IsFinal() bool            { return b.flags.has(flagFinal) }
+func (b *BLangVariableBase) IsDefaultableParam() bool { return b.flags.has(flagDefaultParam) }
+func (b *BLangVariableBase) IsRequiredParam() bool    { return b.flags.has(flagRequiredParam) }
+func (b *BLangVariableBase) IsRestParam() bool        { return b.flags.has(flagRestParam) }
+
+func (b *BLangVariableBase) SetPublic()           { b.flags |= flagPublic }
+func (b *BLangVariableBase) SetPrivate()          { b.flags &^= flagPublic }
+func (b *BLangVariableBase) SetFinal()            { b.flags |= flagFinal }
+func (b *BLangVariableBase) SetIsolated()         { b.flags |= flagIsolated }
+func (b *BLangVariableBase) SetDefaultableParam() { b.flags |= flagDefaultParam }
+func (b *BLangVariableBase) SetRequiredParam()    { b.flags |= flagRequiredParam }
+func (b *BLangVariableBase) SetRestParam()        { b.flags |= flagRestParam }
+func (b *BLangVariableBase) IsReadonly() bool     { return b.flags.has(flagReadonly) }
+func (b *BLangVariableBase) FlagsAsInt64() int64  { return b.flags.asInt64() }
+
+func (b *BLangConstant) FlagsAsInt64() int64 { return (b.flags | flagConstant).asInt64() }
+
+// BLangClassDefinition flag methods
+func (b *BLangClassDefinition) IsPublic() bool   { return b.flags.has(flagPublic) }
+func (b *BLangClassDefinition) IsDistinct() bool { return b.flags.has(flagDistinct) }
+func (b *BLangClassDefinition) IsClient() bool   { return b.flags.has(flagClient) }
+func (b *BLangClassDefinition) IsReadonly() bool { return b.flags.has(flagReadonly) }
+func (b *BLangClassDefinition) IsService() bool  { return b.flags.has(flagService) }
+func (b *BLangClassDefinition) IsIsolated() bool { return b.flags.has(flagIsolated) }
+
+func (b *BLangClassDefinition) SetPublic()          { b.flags |= flagPublic }
+func (b *BLangClassDefinition) SetDistinct()        { b.flags |= flagDistinct }
+func (b *BLangClassDefinition) SetClient()          { b.flags |= flagClient }
+func (b *BLangClassDefinition) SetReadonly()        { b.flags |= flagReadonly }
+func (b *BLangClassDefinition) SetService()         { b.flags |= flagService }
+func (b *BLangClassDefinition) SetIsolated()        { b.flags |= flagIsolated }
+func (b *BLangClassDefinition) SetClass()           { b.flags |= flagClass }
+func (b *BLangClassDefinition) FlagsAsInt64() int64 { return b.flags.asInt64() }
+
+// BLangTypeDefinition flag methods
+func (b *BLangTypeDefinition) IsPublic() bool    { return b.flags.has(flagPublic) }
+func (b *BLangTypeDefinition) IsAnonymous() bool { return b.flags.has(flagAnonymous) }
+func (b *BLangTypeDefinition) SetPublic()        { b.flags |= flagPublic }
+func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= flagAnonymous }
+
+// Stub IsPublic for types with no flags
+func (b *BLangAnnotation) IsPublic() bool     { return false }
+func (b *BLangService) IsPublic() bool        { return false }
+func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
 func (this *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
 	this.DeterminedType = ty
@@ -667,16 +757,6 @@ func (this *BLangAnnotation) SetTypeDescriptor(typeDescriptor model.TypeDescript
 	this.typeDescriptor = typeDescriptor
 }
 
-func (this *BLangAnnotation) GetFlags() common.Set[model.Flag] {
-	// migrated from BLangAnnotation.java:90:5
-	return &this.FlagSet
-}
-
-func (this *BLangAnnotation) AddFlag(flag model.Flag) {
-	// migrated from BLangAnnotation.java:95:5
-	(&this.FlagSet).Add(flag)
-}
-
 func (this *BLangAnnotation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangAnnotation.java:100:5
 	attachments := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
@@ -813,8 +893,7 @@ func NewBLangClassDefinition() BLangClassDefinition {
 	this := BLangClassDefinition{}
 	this.CycleDepth = -1
 	this.Methods = map[string]*BLangFunction{}
-	this.FlagSet = &common.UnorderedSet[model.Flag]{}
-	this.FlagSet.Add(model.Flag_CLASS)
+	this.SetClass()
 	return this
 }
 
@@ -883,16 +962,6 @@ func (this *BLangClassDefinition) AddInclusion(symbolRef model.SymbolRef) {
 func (this *BLangClassDefinition) GetKind() model.NodeKind {
 	// migrated from BLangClassDefinition.java:138:5
 	return model.NodeKind_CLASS_DEFN
-}
-
-func (this *BLangClassDefinition) GetFlags() common.Set[model.Flag] {
-	// migrated from BLangClassDefinition.java:158:5
-	return this.FlagSet
-}
-
-func (this *BLangClassDefinition) AddFlag(flag model.Flag) {
-	// migrated from BLangClassDefinition.java:163:5
-	this.FlagSet.Add(flag)
 }
 
 func (this *BLangClassDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -1006,16 +1075,6 @@ func (this *BLangConstant) SetName(name model.IdentifierNode) {
 		return
 	}
 	panic("name is not a BLangIdentifier")
-}
-
-func (this *BLangConstant) GetFlags() common.Set[model.Flag] {
-	// migrated from BLangConstant.java:78:5
-	return this.FlagSet
-}
-
-func (this *BLangConstant) AddFlag(flag model.Flag) {
-	// migrated from BLangConstant.java:83:5
-	this.FlagSet.Add(flag)
 }
 
 func (this *BLangConstant) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -1246,14 +1305,6 @@ func (this *BLangService) GetServiceNameLiteral() model.LiteralNode {
 	return this.ServiceNameLiteral
 }
 
-func (this *BLangService) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangService) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
-}
-
 func (this *BLangService) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i := range this.AnnAttachments {
@@ -1286,18 +1337,6 @@ func (this *BLangService) GetKind() model.NodeKind {
 	return model.NodeKind_SERVICE
 }
 
-func (this *BLangFunction) GetReceiver() model.SimpleVariableNode {
-	return this.Receiver
-}
-
-func (this *BLangFunction) SetReceiver(receiver model.SimpleVariableNode) {
-	if rec, ok := receiver.(*BLangSimpleVariable); ok {
-		this.Receiver = rec
-	} else {
-		panic("receiver is not a BLangSimpleVariable")
-	}
-}
-
 func (this *BLangFunction) GetKind() model.NodeKind {
 	return model.NodeKind_FUNCTION
 }
@@ -1313,12 +1352,12 @@ func (this *BLangFunction) SetScope(scope model.Scope) {
 var _ NodeWithScope = &BLangFunction{}
 
 func (b *bLangInvokableNodeBase) GetName() model.IdentifierNode {
-	return b.Name
+	return &b.Name
 }
 
 func (b *bLangInvokableNodeBase) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		b.Name = id
+		b.Name = *id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
@@ -1340,10 +1379,6 @@ func (b *bLangInvokableNodeBase) AddAnnotationAttachment(annAttachment model.Ann
 
 func (b *bLangInvokableNodeBase) SetAnnAttachments(annAttachments []model.AnnotationAttachmentNode) {
 	b.AnnAttachments = annAttachments
-}
-
-func (b *bLangInvokableNodeBase) AddFlag(flag model.Flag) {
-	b.FlagSet.Add(flag)
 }
 
 func (b *bLangInvokableNodeBase) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
@@ -1421,52 +1456,12 @@ func (b *bLangInvokableNodeBase) SetReturnTypeDescriptor(typeDescriptor model.Ty
 	b.returnTypeDescriptor = typeDescriptor
 }
 
-func (b *bLangInvokableNodeBase) GetReturnTypeAnnotationAttachments() []model.AnnotationAttachmentNode {
-	return b.ReturnTypeAnnAttachments
-}
-
-func (b *bLangInvokableNodeBase) GetReturnTypeAnnAttachments() []model.AnnotationAttachmentNode {
-	return b.ReturnTypeAnnAttachments
-}
-
-func (b *bLangInvokableNodeBase) AddReturnTypeAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
-	b.ReturnTypeAnnAttachments = append(b.ReturnTypeAnnAttachments, annAttachment)
-}
-
-func (b *bLangInvokableNodeBase) SetReturnTypeAnnAttachments(returnTypeAnnAttachments []model.AnnotationAttachmentNode) {
-	b.ReturnTypeAnnAttachments = returnTypeAnnAttachments
-}
-
 func (b *bLangInvokableNodeBase) GetBody() model.FunctionBodyNode {
 	return b.Body
 }
 
 func (b *bLangInvokableNodeBase) SetBody(body model.FunctionBodyNode) {
 	b.Body = body
-}
-
-func (b *bLangInvokableNodeBase) GetDefaultWorkerName() model.IdentifierNode {
-	return b.DefaultWorkerName
-}
-
-func (b *bLangInvokableNodeBase) SetDefaultWorkerName(defaultWorkerName model.IdentifierNode) {
-	b.DefaultWorkerName = defaultWorkerName
-}
-
-func (b *bLangInvokableNodeBase) GetFlags() common.Set[model.Flag] {
-	return &b.FlagSet
-}
-
-func (b *bLangInvokableNodeBase) GetFlagSet() common.Set[model.Flag] {
-	return &b.FlagSet
-}
-
-func (b *bLangInvokableNodeBase) SetFlagSet(flagSet common.Set[model.Flag]) {
-	if set, ok := flagSet.(*common.UnorderedSet[model.Flag]); ok {
-		b.FlagSet = *set
-	} else {
-		panic("flagSet is not a common.UnorderedSet[Flag]")
-	}
 }
 
 func (b *BLangVariableBase) GetAnnAttachments() []model.AnnotationAttachmentNode {
@@ -1489,16 +1484,8 @@ func (b *BLangVariableBase) GetExpr() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangVariableBase) SetExpr(expr model.ExpressionNode) {
+func (b *BLangVariableBase) SetExpr(expr BLangActionOrExpression) {
 	b.Expr = expr
-}
-
-func (b *BLangVariableBase) GetFlagSet() common.Set[model.Flag] {
-	return b.FlagSet
-}
-
-func (b *BLangVariableBase) SetFlagSet(flagSet common.Set[model.Flag]) {
-	b.FlagSet = flagSet
 }
 
 func (b *BLangVariableBase) GetIsDeclaredWithVar() bool {
@@ -1514,23 +1501,15 @@ func (m *BLangVariableBase) AddAnnotationAttachment(annAttachment model.Annotati
 	m.AnnAttachments = append(m.AnnAttachments, annAttachment)
 }
 
-func (m *BLangVariableBase) AddFlag(flag model.Flag) {
-	m.FlagSet.Add(flag)
-}
-
 func (m *BLangVariableBase) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	return m.AnnAttachments
-}
-
-func (m *BLangVariableBase) GetFlags() common.Set[model.Flag] {
-	return m.FlagSet
 }
 
 func (m *BLangVariableBase) GetInitialExpression() model.ExpressionNode {
 	return m.Expr
 }
 
-func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
+func (m *BLangVariableBase) SetInitialExpression(expr BLangActionOrExpression) {
 	m.Expr = expr
 }
 
@@ -1539,7 +1518,6 @@ func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
 func NewBLangTypeDefinition() *BLangTypeDefinition {
 	this := &BLangTypeDefinition{}
 	this.annAttachments = []BLangAnnotationAttachment{}
-	this.FlagSet = common.UnorderedSet[model.Flag]{}
 	this.CycleDepth = -1
 	this.hasCyclicReference = false
 	return this
@@ -1563,14 +1541,6 @@ func (this *BLangTypeDefinition) GetTypeData() model.TypeData {
 
 func (this *BLangTypeDefinition) SetTypeData(typeData model.TypeData) {
 	this.typeData = typeData
-}
-
-func (this *BLangTypeDefinition) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangTypeDefinition) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
 }
 
 func (this *BLangTypeDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
@@ -1822,10 +1792,6 @@ func (this *BLangPackage) ContainsTestablePkg() bool {
 	return len(this.TestablePkgs) > 0
 }
 
-func (this *BLangPackage) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
 func (this *BLangPackage) HasTestablePackage() bool {
 	return len(this.TestablePkgs) > 0
 }
@@ -1892,7 +1858,6 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	this.TopLevelNodes = []model.TopLevelNode{}
 	this.TestablePkgs = []*BLangTestablePackage{}
 	this.ClassDefinitions = []BLangClassDefinition{}
-	this.FlagSet = common.UnorderedSet[model.Flag]{}
 	this.CompletedPhases = common.UnorderedSet[CompilerPhase]{}
 	this.LambdaFunctions = []BLangLambdaFunction{}
 	this.errorCount = 0
@@ -1933,19 +1898,11 @@ func createSimpleVariableNodeWithLocationTokenLocation(location diagnostics.Loca
 }
 
 func createSimpleVariableNode() *BLangSimpleVariable {
-	return &BLangSimpleVariable{
-		BLangVariableBase: BLangVariableBase{
-			FlagSet: &common.UnorderedSet[model.Flag]{},
-		},
-	}
+	return &BLangSimpleVariable{}
 }
 
 func createConstantNode() *BLangConstant {
-	return &BLangConstant{
-		BLangVariableBase: BLangVariableBase{
-			FlagSet: &common.UnorderedSet[model.Flag]{},
-		},
-	}
+	return &BLangConstant{}
 }
 
 func GetCompilationUnit(cx *context.CompilerContext, syntaxTree *tree.SyntaxTree) *BLangCompilationUnit {

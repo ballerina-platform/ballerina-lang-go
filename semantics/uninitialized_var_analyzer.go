@@ -215,7 +215,7 @@ func (a *uninitVarAnalyzer) analyzeNode(node model.Node, state *varInitState) {
 	case *ast.BLangSimpleVariableDef:
 		symRef := n.Var.Symbol()
 		if n.Var.Expr != nil {
-			a.checkExpression(n.Var.Expr.(ast.BLangExpression), state)
+			a.checkExpression(n.Var.Expr, state)
 			state.markInitialized(symRef)
 		} else if !state.isInitialized(symRef) {
 			state.markUninitialized(symRef)
@@ -259,7 +259,7 @@ func (a *uninitVarAnalyzer) markAssignmentTarget(expr ast.BLangExpression, state
 }
 
 // checkExpression walks an expression and checks all variable references
-func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangExpression, state *varInitState) {
+func (a *uninitVarAnalyzer) checkExpression(expr ast.BLangActionOrExpression, state *varInitState) {
 	checker := &varRefChecker{analyzer: a, state: state}
 	ast.Walk(checker, expr)
 }

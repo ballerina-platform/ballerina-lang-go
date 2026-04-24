@@ -73,6 +73,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printBinaryExpr(t)
 	case *BLangInvocation:
 		p.printInvocation(t)
+	case *BLangRemoteMethodCallAction:
+		p.printRemoteMethodCallAction(t)
 	case *BLangNamedArgsExpression:
 		p.printNamedArgsExpression(t)
 	case *BLangValueType:
@@ -340,23 +342,6 @@ func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
 	p.printString(string(typeKind))
 }
 
-func (p *PrettyPrinter) printFlags(flagSet any) {
-	// Check if flagSet has a Contains method
-	type flagChecker interface {
-		Contains(model.Flag) bool
-	}
-
-	if checker, ok := flagSet.(flagChecker); ok {
-		if checker.Contains(model.Flag_PUBLIC) {
-			p.printString("public")
-		}
-		if checker.Contains(model.Flag_PRIVATE) {
-			p.printString("private")
-		}
-		// Add more flags as needed
-	}
-}
-
 // Literal and basic expression printers
 func (p *PrettyPrinter) printLiteral(node *BLangLiteral) {
 	p.startNode()
@@ -415,6 +400,31 @@ func (p *PrettyPrinter) printInvocation(node *BLangInvocation) {
 	}
 
 	// Print arguments if present
+	p.printString("(")
+	if len(node.ArgExprs) > 0 {
+		p.indentLevel++
+		for _, arg := range node.ArgExprs {
+			p.PrintInner(arg.(BLangNode))
+		}
+		p.indentLevel--
+	}
+	p.printSticky(")")
+
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printRemoteMethodCallAction(node *BLangRemoteMethodCallAction) {
+	p.startNode()
+	p.printString("remote-method-call")
+	p.printString(node.Name.Value)
+
+	if node.Expr != nil {
+		p.printString("expr:")
+		p.indentLevel++
+		p.PrintInner(node.Expr.(BLangNode))
+		p.indentLevel--
+	}
+
 	p.printString("(")
 	if len(node.ArgExprs) > 0 {
 		p.indentLevel++
@@ -546,9 +556,6 @@ func (p *PrettyPrinter) printBlockFunctionBody(node *BLangBlockFunctionBody) {
 func (p *PrettyPrinter) printFunction(node *BLangFunction) {
 	p.startNode()
 	p.printString("function")
-
-	// Print flags
-	p.printFlags(node.FlagSet)
 
 	// Print function name
 	p.printString(node.Name.Value)
@@ -777,7 +784,6 @@ func (p *PrettyPrinter) printArrayType(node *BLangArrayType) {
 func (p *PrettyPrinter) printConstant(node *BLangConstant) {
 	p.startNode()
 	p.printString("const")
-	p.printFlags(node.FlagSet)
 	p.printString(node.Name.Value)
 
 	// Print markdown documentation if present
@@ -1273,7 +1279,6 @@ func (p *PrettyPrinter) printTypeDefinition(node *BLangTypeDefinition) {
 	if node.Name != nil {
 		p.printString(node.Name.Value)
 	}
-	p.printFlags(node.FlagSet)
 	if node.GetTypeData().TypeDescriptor != nil {
 		p.indentLevel++
 		p.PrintInner(node.GetTypeData().TypeDescriptor.(BLangNode))
@@ -1309,10 +1314,10 @@ func (p *PrettyPrinter) printRecordType(node *BLangRecordType) {
 		p.startNode()
 		p.printString("field")
 		p.printString(name)
-		if field.FlagSet.Contains(model.Flag_READONLY) {
+		if field.IsReadonly() {
 			p.printString("readonly")
 		}
-		if field.FlagSet.Contains(model.Flag_OPTIONAL) {
+		if field.IsOptional() {
 			p.printString("optional")
 		}
 		p.indentLevel++
@@ -1484,7 +1489,9 @@ func (p *PrettyPrinter) printTrapExpr(node *BLangTrapExpr) {
 func (p *PrettyPrinter) printClassDefinition(node *BLangClassDefinition) {
 	p.startNode()
 	p.printString("class-definition")
-	p.printFlags(node.FlagSet)
+	if node.IsPublic() {
+		p.printString("public")
+	}
 	p.printString(node.Name.Value)
 	p.indentLevel++
 	// Print fields

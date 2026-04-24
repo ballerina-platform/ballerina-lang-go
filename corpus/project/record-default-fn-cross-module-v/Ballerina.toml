@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "record_default_fn_cross_module"
+version = "0.1.0"
