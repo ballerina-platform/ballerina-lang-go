@@ -35,32 +35,32 @@ jobs:
             local profile="$1"
             local module_path="$2"
             local module_dir="$3"
-            python - "$profile" "$module_path" "$module_dir" <<'PY'
-import pathlib
-import sys
-
-profile_path = pathlib.Path(sys.argv[1])
-module_path = sys.argv[2]
-module_dir = sys.argv[3].strip("./")
-if not profile_path.exists():
-    sys.exit(0)
-if not module_path or module_path == module_dir:
-    sys.exit(0)
-
-prefix = module_path + "/"
-target_prefix = module_dir + "/" if module_dir else ""
-lines = profile_path.read_text(encoding="utf-8").splitlines()
-normalized = []
-for line in lines:
-    if line.startswith("mode:"):
-        normalized.append(line)
-        continue
-    if line.startswith(prefix):
-        normalized.append(target_prefix + line[len(prefix):])
-    else:
-        normalized.append(line)
-profile_path.write_text("\n".join(normalized) + "\n", encoding="utf-8")
-PY
+            python - "$profile" "$module_path" "$module_dir" <<-'PY'
+			import pathlib
+			import sys
+			
+			profile_path = pathlib.Path(sys.argv[1])
+			module_path = sys.argv[2]
+			module_dir = sys.argv[3].removeprefix("./")
+			if not profile_path.exists():
+			    sys.exit(0)
+			if not module_path or module_path == module_dir:
+			    sys.exit(0)
+			
+			prefix = module_path + "/"
+			target_prefix = module_dir + "/" if module_dir else ""
+			lines = profile_path.read_text(encoding="utf-8").splitlines()
+			normalized = []
+			for line in lines:
+			    if line.startswith("mode:"):
+			        normalized.append(line)
+			        continue
+			    if line.startswith(prefix):
+			        normalized.append(target_prefix + line[len(prefix):])
+			    else:
+			        normalized.append(line)
+			profile_path.write_text("\n".join(normalized) + "\n", encoding="utf-8")
+			PY
           }
 
           go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' \
