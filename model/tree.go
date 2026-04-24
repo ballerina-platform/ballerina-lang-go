@@ -17,9 +17,10 @@
 package model
 
 import (
+	"iter"
+
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"iter"
 )
 
 type Field interface {
@@ -64,8 +65,6 @@ const (
 	NodeKind_RESOURCE
 	NodeKind_SERVICE
 	NodeKind_TYPE_DEFINITION
-	NodeKind_ENUM_DECLARATION
-	NodeKind_ENUM_MEMBER
 	NodeKind_VARIABLE
 	NodeKind_LET_VARIABLE
 	NodeKind_TUPLE_VARIABLE
