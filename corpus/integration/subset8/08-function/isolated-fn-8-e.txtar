@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: invocation of a non-isolated function
+  --> isolated-fn-8-e.bal:24:31
+   |
+24 | isolated function foo(int x = bar()) { // @error
+   |                               ^^^^^

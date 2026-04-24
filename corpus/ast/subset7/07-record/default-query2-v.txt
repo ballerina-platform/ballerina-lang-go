@@ -1,0 +1,30 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Foo
+    (record-type
+      (field values
+        (array-type
+          (value-type int) dimensions: 1 ([]))
+        (query-expr
+          (from-clause
+            (var-def
+              (variable i (type
+                (value-type int))))
+            (list-constructor-expr
+              (literal 1)
+              (literal 2)
+              (literal 3)))
+          (select-clause
+            (simple-var-ref i))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Foo)) (expr
+          (mapping-constructor-expr))))
+      (expression-stmt
+        (invocation io println (
+          (field-based-access values
+            (simple-var-ref f))))))))

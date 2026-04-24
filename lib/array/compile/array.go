@@ -43,6 +43,7 @@ func GetArraySymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	lenghtSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.LIST},
 		ReturnType: semtypes.INT,
+		Flags:      model.FuncSymbolFlagIsolated,
 	}
 
 	lengthSymbol := model.NewFunctionSymbol("length", lenghtSignature, true)
@@ -87,6 +88,7 @@ func createPushMonomorphizer(ctx *context.CompilerContext) func(s model.GenericF
 			ParamTypes:    []semtypes.SemType{ty},
 			RestParamType: valType,
 			ReturnType:    semtypes.NIL,
+			Flags:         model.FuncSymbolFlagIsolated,
 		}
 		pushSymbol := model.NewFunctionSymbol("push", pushSignature, true)
 		symbolName := fmt.Sprintf("push_%d", nextIndex)

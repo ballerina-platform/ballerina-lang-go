@@ -1,6 +1,6 @@
 -- stdout --
 -- stderr --
-error[SEMANTIC_ERROR]: not an isolated expression
+error[SEMANTIC_ERROR]: access of mutable variable
   --> 6-e.bal:19:26
    |
 19 |     record {|int value = c;|} f = {}; // @error
