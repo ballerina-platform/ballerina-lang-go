@@ -1,8 +1,0 @@
--- template --
-missing.tmpl
--- outputPath --
-out.go
--- data.json --
-{"NodeType":"node","AbstractTypes":{}}
--- wantError --
-loading template
