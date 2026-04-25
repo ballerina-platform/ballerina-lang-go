@@ -13,24 +13,102 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
+      - name: Install Hyperfine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+          hyperfine --version
+
       - name: Run tests with coverage
         run: |
+          set -euo pipefail
+
+          normalize_coverage_paths() {
+            local profile="$1"
+            local module_path="$2"
+            local module_dir="$3"
+            python - "$profile" "$module_path" "$module_dir" <<-'PY'
+          	import pathlib
+          	import sys
+          	
+          	profile_path = pathlib.Path(sys.argv[1])
+          	module_path = sys.argv[2]
+          	module_dir = sys.argv[3].removeprefix("./")
+          	if not profile_path.exists():
+          	    sys.exit(0)
+          	if not module_path or module_path == module_dir:
+          	    sys.exit(0)
+          	
+          	prefix = module_path + "/"
+          	target_prefix = module_dir + "/" if module_dir else ""
+          	lines = profile_path.read_text(encoding="utf-8").splitlines()
+          	normalized = []
+          	for line in lines:
+          	    if line.startswith("mode:"):
+          	        normalized.append(line)
+          	        continue
+          	    if line.startswith(prefix):
+          	        normalized.append(target_prefix + line[len(prefix):])
+          	    else:
+          	        normalized.append(line)
+          	profile_path.write_text("\n".join(normalized) + "\n", encoding="utf-8")
+          	PY
+          }
+
+          go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' \
+            -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+
           mkdir -p .cover/cli_executable
           BAL_GOCOVERDIR="$PWD/.cover/cli_executable" \
-            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+            go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
           go tool covdata textfmt -i=.cover/cli_executable -o=coverage-cli-executable.out
+
+          COVERAGE_FILES=("coverage.out" "coverage-cli-executable.out")
+          while IFS= read -r gomod; do
+            dir="$(dirname "$gomod")"
+            if [ "$dir" = "." ]; then
+              continue
+            fi
+            rel="${dir#./}"
+            safe_base="${rel//\//-}"
+            safe_hash="$(printf '%s' "$rel" | sha256sum | cut -c1-8)"
+            safe="${safe_base}-${safe_hash}"
+            out="$GITHUB_WORKSPACE/coverage-mod-$safe.out"
+            integration_cov_dir="$GITHUB_WORKSPACE/.cover/${safe}_codecov"
+
+            mkdir -p "$integration_cov_dir"
+            echo "go test (coverage) in module $dir"
+            (cd "$dir" && CODECOV_INTEGRATION_COVERDIR="$integration_cov_dir" \
+              go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' \
+                -coverpkg=./... -coverprofile="$out" -covermode=atomic ./...)
+            module_path="$(cd "$dir" && go list -m -f '{{.Path}}')"
+            normalize_coverage_paths "$out" "$module_path" "$rel"
+            COVERAGE_FILES+=("$out")
+
+            exec_out="$GITHUB_WORKSPACE/coverage-mod-${safe}-executable.out"
+            if [ -d "$integration_cov_dir" ] && [ -n "$(find "$integration_cov_dir" -type f 2>/dev/null | head -n 1)" ]; then
+              go tool covdata textfmt -i="$integration_cov_dir" -o="$exec_out"
+              normalize_coverage_paths "$exec_out" "$module_path" "$rel"
+              COVERAGE_FILES+=("$exec_out")
+            fi
+          done < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)
+
+          printf -v COVERAGE_FILES_CSV '%s,' "${COVERAGE_FILES[@]}"
+          echo "COVERAGE_FILES=${COVERAGE_FILES_CSV%,}" >> "$GITHUB_ENV"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,coverage-cli-executable.out
+          files: ${{ env.COVERAGE_FILES }}
           fail_ci_if_error: true
 
       - name: Check gofmt
@@ -48,11 +126,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version: '1.26'
 
+      - name: Install Hyperfine
+        shell: pwsh
+        run: |
+          choco install hyperfine -y
+          hyperfine --version
+
       - name: Run tests
-        run: go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...
+
+          while IFS= read -r gomod; do
+            dir="$(dirname "$gomod")"
+            if [ "$dir" = "." ]; then
+              continue
+            fi
+            echo "go test in module $dir"
+            (cd "$dir" && go test -race -count=1 -timeout 30m -skip 'TestParseCorpusFiles|TestJBalUnitTests|TestJBalUnitBIRTests' ./...)
+          done < <(find . -type f -name go.mod ! -path '*/vendor/*' | LC_ALL=C sort)

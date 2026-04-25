@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -154,7 +155,7 @@ func (b *benchmark) buildInterpreter(worktreePath, ref, output string) error {
 }
 
 func (b *benchmark) hyperfineFlags() []string {
-	var args []string
+	args := []string{"--show-output"}
 	if b.warmup > 0 {
 		args = append(args, "--warmup", strconv.Itoa(b.warmup))
 	}
@@ -214,6 +215,9 @@ func sanitize(ref string) string {
 }
 
 func shellQuote(s string) string {
+	if runtime.GOOS == "windows" {
+		return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+	}
 	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
 }
 
