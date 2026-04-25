@@ -17,24 +17,16 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"testing"
-
-	"golang.org/x/tools/txtar"
 )
 
-// CODECOV_INTEGRATION_COVERDIR is set by Native CI for every nested go.mod module
-// (.cover/<path-with-slashes-as-dashes>_codecov). Tests that run a -cover-built
-// subprocess should read it and pass GOCOVERDIR to the child, like corpus CLI tests.
 const integrationCoverDirEnv = "CODECOV_INTEGRATION_COVERDIR"
 
 var (
@@ -44,29 +36,206 @@ var (
 	treeGenBuildErr error
 )
 
-func resolveIntegrationCoverDir() (string, error) {
-	d := os.Getenv(integrationCoverDirEnv)
-	if d == "" {
-		return "", nil
+func TestGenerateFile(t *testing.T) {
+	t.Parallel()
+	tests := []generateCase{
+		{
+			name:            "writes output",
+			templateContent: "Hello {{.NodeType}}",
+			templatePath:    "template.tmpl",
+			outputPath:      "out.go",
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": map[string]bool{}},
+			wantOutput:      "Hello node",
+		},
+		{
+			name:            "title and isAbstract funcs",
+			templateContent: `{{title ""}}|{{title "abc"}}|{{isAbstract "A"}}|{{isAbstract "B"}}`,
+			templatePath:    "template.tmpl",
+			outputPath:      "out.txt",
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": map[string]bool{"A": true}},
+			wantOutput:      "|Abc|true|false",
+		},
+		{
+			name:            "creates nested output directory",
+			templateContent: "ok",
+			templatePath:    "template.tmpl",
+			outputPath:      filepath.Join("nested", "deep", "out.go"),
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": map[string]bool{}},
+			wantOutput:      "ok",
+		},
+		{
+			name:            "missing template",
+			templatePath:    "missing.tmpl",
+			outputPath:      "out.go",
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": map[string]bool{}},
+			wantErrContains: "loading template",
+		},
+		{
+			name:            "template execute error",
+			templateContent: `{{template "nonexistent" .}}`,
+			templatePath:    "template.tmpl",
+			outputPath:      "out.go",
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": map[string]bool{}},
+			wantErrContains: "executing template",
+		},
+		{
+			name:            "isAbstract wrong map type",
+			templateContent: `{{isAbstract "X"}}`,
+			templatePath:    "template.tmpl",
+			outputPath:      "out.txt",
+			data:            map[string]interface{}{"NodeType": "node", "AbstractTypes": "not-a-map"},
+			wantOutput:      "false",
+		},
 	}
-	if err := os.MkdirAll(d, 0o755); err != nil {
-		return "", fmt.Errorf("mkdir %s %q: %w", integrationCoverDirEnv, d, err)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			runGenerateCase(t, tc)
+		})
 	}
-	return d, nil
 }
 
-func buildTreeGenBinary(coverDir, modDir, outputPath string) error {
-	args := []string{"build", "-o", outputPath}
-	if coverDir != "" {
-		args = append(args, "-cover", "-coverpkg=./...")
+func TestCLI(t *testing.T) {
+	t.Parallel()
+	mod := moduleDir(t)
+	tests := []cliCase{
+		{
+			name: "generates main output",
+			files: map[string]string{
+				"nodes.json":    `[{"name":"N","kind":"K","attributes":[]}]`,
+				"template.tmpl": `{{range .Nodes}}{{.Name}}{{end}}`,
+				"want/gen.go":   "N",
+				"stdout-marker": "Successfully generated",
+			},
+			args: []string{
+				"-config", "@nodes.json",
+				"-type", "node",
+				"-template", "@template.tmpl",
+				"-output", "@gen.go",
+			},
+			wantStdoutContain: "@stdout-marker",
+			wantFiles:         map[string]string{"gen.go": "@want/gen.go"},
+		},
+		{
+			name: "generates with util",
+			files: map[string]string{
+				"nodes.json":   `[]`,
+				"main.tmpl":    `main`,
+				"util.tmpl":    `util`,
+				"want/main.go": "main",
+				"want/util.go": "util",
+			},
+			args: []string{
+				"-config", "@nodes.json",
+				"-type", "st-node",
+				"-template", "@main.tmpl",
+				"-output", "@main.go",
+				"-util-template", "@util.tmpl",
+				"-util-output", "@util.go",
+			},
+			wantFiles: map[string]string{"main.go": "@want/main.go", "util.go": "@want/util.go"},
+		},
+		{
+			name: "missing required flags",
+			files: map[string]string{
+				"nodes.json":    `[{"name":"N","kind":"K","attributes":[]}]`,
+				"template.tmpl": `{{range .Nodes}}{{.Name}}{{end}}`,
+			},
+			args: []string{
+				"-config", "@nodes.json",
+				"-type", "node",
+				"-template", "@template.tmpl",
+			},
+			wantErrContains: "all flags required (config, type, template, output)",
+		},
+		{
+			name: "invalid node type",
+			args: []string{
+				"-config", "@x",
+				"-type", "other",
+				"-template", "@y",
+				"-output", "@z",
+			},
+			wantErrContains: "type must be",
+		},
+		{
+			name: "missing config",
+			args: []string{
+				"-config", "@nope.json",
+				"-type", "node",
+				"-template", "@y",
+				"-output", "@z",
+			},
+			wantErrContains: "Error reading config file",
+		},
+		{
+			name: "bad json",
+			files: map[string]string{
+				"bad.json": "not json",
+				"t.tmpl":   "unused",
+			},
+			args: []string{
+				"-config", "@bad.json",
+				"-type", "node",
+				"-template", "@t.tmpl",
+				"-output", "@out.go",
+			},
+			wantErrContains: "Error parsing config JSON",
+		},
 	}
-	args = append(args, ".")
-	cmd := exec.Command("go", args...)
-	cmd.Dir = modDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("go build tree-gen: %w\n%s", err, string(out))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			runCLICase(t, mod, tc)
+		})
 	}
-	return nil
+}
+
+type generateCase struct {
+	name            string
+	templateContent string
+	templatePath    string
+	outputPath      string
+	data            map[string]interface{}
+	wantOutput      string
+	wantErrContains string
+}
+
+type cliCase struct {
+	name              string
+	files             map[string]string
+	args              []string
+	wantErrContains   string
+	wantStdoutContain string
+	wantFiles         map[string]string
+}
+
+func moduleDir(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return wd
+}
+
+func goRunTreeGen(t *testing.T, dir string, args ...string) ([]byte, error) {
+	t.Helper()
+	if err := ensureTreeGenCoveredBinary(); err != nil {
+		return nil, err
+	}
+	var cmd *exec.Cmd
+	if treeGenBinPath != "" {
+		cmd = exec.Command(treeGenBinPath, args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GOCOVERDIR="+treeGenCoverDir)
+	} else {
+		cmd = exec.Command("go", append([]string{"run", "."}, args...)...)
+		cmd.Dir = dir
+	}
+	return cmd.CombinedOutput()
 }
 
 func ensureTreeGenCoveredBinary() error {
@@ -100,231 +269,134 @@ func ensureTreeGenCoveredBinary() error {
 	return treeGenBuildErr
 }
 
-func moduleDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
+func buildTreeGenBinary(coverDir, modDir, outputPath string) error {
+	args := []string{"build", "-o", outputPath}
+	if coverDir != "" {
+		args = append(args, "-cover", "-coverpkg=./...")
 	}
-	return wd
+	args = append(args, ".")
+	cmd := exec.Command("go", args...)
+	cmd.Dir = modDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("go build tree-gen: %w\n%s", err, string(out))
+	}
+	return nil
 }
 
-func goRunTreeGen(t *testing.T, dir string, args ...string) ([]byte, error) {
-	t.Helper()
-	if err := ensureTreeGenCoveredBinary(); err != nil {
-		return nil, err
-	}
-	var cmd *exec.Cmd
-	if treeGenBinPath != "" {
-		cmd = exec.Command(treeGenBinPath, args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(), "GOCOVERDIR="+treeGenCoverDir)
-	} else {
-		cmd = exec.Command("go", append([]string{"run", "."}, args...)...)
-		cmd.Dir = dir
-	}
-	return cmd.CombinedOutput()
-}
-
-func TestGenerateFileFixtures(t *testing.T) {
-	t.Parallel()
-	for _, tc := range listTxtarCases(t, "testdata/generate") {
-		tc := tc
-		t.Run(strings.TrimSuffix(filepath.Base(tc), ".txtar"), func(t *testing.T) {
-			t.Parallel()
-			workDir, files := extractTxtarCase(t, tc)
-			outPath := filepath.Join(workDir, txtarValue(t, files, "outputPath"))
-			template := txtarValue(t, files, "template")
-			if strings.HasPrefix(template, "@") {
-				template = txtarPath(t, files, strings.TrimPrefix(template, "@"))
-			}
-			data := parseFixtureJSON(t, txtarValue(t, files, "data.json"))
-			wantErr, err := txtarOptional(files, "wantError")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = generateFile(template, outPath, data)
-			if wantErr != "" {
-				if err == nil || !strings.Contains(err.Error(), wantErr) {
-					t.Fatalf("error %v does not contain %q", err, wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := os.ReadFile(outPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			want := txtarValue(t, files, "wantOutput")
-			if normalize(string(got)) != normalize(want) {
-				t.Fatalf("got %q want %q", got, want)
-			}
-		})
-	}
-}
-
-func TestCLIFixtures(t *testing.T) {
-	t.Parallel()
-	mod := moduleDir(t)
-	for _, tc := range listTxtarCases(t, "testdata/cli") {
-		tc := tc
-		t.Run(strings.TrimSuffix(filepath.Base(tc), ".txtar"), func(t *testing.T) {
-			t.Parallel()
-			_, files := extractTxtarCase(t, tc)
-			args := parseFixtureArgs(t, txtarValue(t, files, "args"), files)
-			out, err := goRunTreeGen(t, mod, args...)
-			wantErr, readErr := txtarOptional(files, "wantError")
-			if readErr != nil {
-				t.Fatal(readErr)
-			}
-			if wantErr != "" {
-				if err == nil || !strings.Contains(string(out), wantErr) {
-					t.Fatalf("output %q does not contain %q", string(out), wantErr)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("go run: %v\n%s", err, out)
-			}
-			wantStdout, readErr := txtarOptional(files, "wantStdoutContains")
-			if readErr != nil {
-				t.Fatal(readErr)
-			}
-			if wantStdout != "" && !strings.Contains(string(out), wantStdout) {
-				t.Fatalf("stdout %q does not contain %q", string(out), wantStdout)
-			}
-			for name := range files {
-				if !strings.HasPrefix(name, "wantFile:") {
-					continue
-				}
-				target := strings.TrimPrefix(name, "wantFile:")
-				got, readErr := os.ReadFile(txtarPath(t, files, target))
-				if readErr != nil {
-					t.Fatal(readErr)
-				}
-				want := txtarValue(t, files, name)
-				if normalize(string(got)) != normalize(want) {
-					t.Fatalf("%s got %q want %q", target, got, want)
-				}
-			}
-		})
-	}
-}
-
-func listTxtarCases(t *testing.T, dir string) []string {
-	t.Helper()
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var files []string
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".txtar") {
-			continue
-		}
-		files = append(files, filepath.Join(dir, e.Name()))
-	}
-	sort.Strings(files)
-	return files
-}
-
-func extractTxtarCase(t *testing.T, txtarPath string) (string, map[string]string) {
-	t.Helper()
-	archive, err := txtar.ParseFile(txtarPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	workDir := t.TempDir()
-	files := make(map[string]string, len(archive.Files))
-	for _, f := range archive.Files {
-		cleaned := filepath.Clean(filepath.FromSlash(f.Name))
-		if filepath.IsAbs(cleaned) || cleaned == ".." ||
-			strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-			t.Fatalf("invalid txtar path %q", f.Name)
-		}
-		outPath := filepath.Join(workDir, cleaned)
-		rel, err := filepath.Rel(workDir, outPath)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			t.Fatalf("txtar path escapes work dir %q", f.Name)
-		}
-		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		trimmed := bytes.TrimSuffix(f.Data, []byte("\n"))
-		if err := os.WriteFile(outPath, trimmed, 0o644); err != nil {
-			t.Fatal(err)
-		}
-		files[f.Name] = outPath
-	}
-	return workDir, files
-}
-
-func txtarPath(t *testing.T, files map[string]string, name string) string {
-	t.Helper()
-	path, ok := files[name]
-	if !ok {
-		t.Fatalf("missing fixture %q", name)
-	}
-	return path
-}
-
-func txtarValue(t *testing.T, files map[string]string, name string) string {
-	t.Helper()
-	b, err := os.ReadFile(txtarPath(t, files, name))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return strings.TrimSuffix(string(b), "\n")
-}
-
-func txtarOptional(files map[string]string, name string) (string, error) {
-	path, ok := files[name]
-	if !ok {
+func resolveIntegrationCoverDir() (string, error) {
+	d := os.Getenv(integrationCoverDirEnv)
+	if d == "" {
 		return "", nil
 	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
+	if err := os.MkdirAll(d, 0o755); err != nil {
+		return "", fmt.Errorf("mkdir %s %q: %w", integrationCoverDirEnv, d, err)
 	}
-	return strings.TrimSuffix(string(b), "\n"), nil
+	return d, nil
 }
 
-func parseFixtureJSON(t *testing.T, raw string) map[string]interface{} {
+func runGenerateCase(t *testing.T, tc generateCase) {
 	t.Helper()
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(raw), &data); err != nil {
-		t.Fatalf("invalid data.json: %v", err)
+	workDir := t.TempDir()
+	templatePath := filepath.Join(workDir, tc.templatePath)
+	if tc.templateContent != "" {
+		mustWriteFile(t, templatePath, tc.templateContent)
 	}
-	if abstractTypes, ok := data["AbstractTypes"].(map[string]interface{}); ok {
-		typed := make(map[string]bool, len(abstractTypes))
-		for k, v := range abstractTypes {
-			if b, ok := v.(bool); ok {
-				typed[k] = b
-			}
-		}
-		data["AbstractTypes"] = typed
+	outputPath := filepath.Join(workDir, tc.outputPath)
+
+	err := generateFile(templatePath, outputPath, tc.data)
+	assertErrorContains(t, err, tc.wantErrContains)
+	if tc.wantErrContains != "" {
+		return
 	}
-	return data
+	assertFileContent(t, outputPath, tc.wantOutput)
 }
 
-func parseFixtureArgs(t *testing.T, raw string, files map[string]string) []string {
+func runCLICase(t *testing.T, mod string, tc cliCase) {
 	t.Helper()
-	raw = strings.ReplaceAll(raw, "\r\n", "\n")
-	var args []string
-	for _, line := range strings.Split(raw, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
+	workDir := t.TempDir()
+	for rel, content := range tc.files {
+		if strings.HasPrefix(rel, "want/") || rel == "stdout-marker" {
 			continue
 		}
-		if strings.HasPrefix(line, "@") {
-			line = txtarPath(t, files, strings.TrimPrefix(line, "@"))
-		}
-		args = append(args, line)
+		mustWriteFile(t, filepath.Join(workDir, rel), content)
 	}
-	return args
+	args := resolveCasePaths(workDir, tc.args)
+	out, err := goRunTreeGen(t, mod, args...)
+	if tc.wantErrContains != "" {
+		if err == nil {
+			t.Fatalf("expected command to fail, output: %q", string(out))
+		}
+		if !strings.Contains(string(out), tc.wantErrContains) {
+			t.Fatalf("output %q does not contain %q", string(out), tc.wantErrContains)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("tree-gen run failed: %v\n%s", err, out)
+	}
+	if marker := resolveExpectedValue(workDir, tc.files, tc.wantStdoutContain); marker != "" && !strings.Contains(string(out), marker) {
+		t.Fatalf("stdout %q does not contain %q", string(out), marker)
+	}
+	for rel, want := range tc.wantFiles {
+		assertFileContent(t, filepath.Join(workDir, rel), resolveExpectedValue(workDir, tc.files, want))
+	}
+}
+
+func resolveCasePaths(workDir string, args []string) []string {
+	resolved := make([]string, 0, len(args))
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "@") {
+			resolved = append(resolved, filepath.Join(workDir, strings.TrimPrefix(arg, "@")))
+			continue
+		}
+		resolved = append(resolved, arg)
+	}
+	return resolved
+}
+
+func resolveExpectedValue(workDir string, files map[string]string, value string) string {
+	if !strings.HasPrefix(value, "@") {
+		return value
+	}
+	key := strings.TrimPrefix(value, "@")
+	if content, ok := files[key]; ok {
+		return content
+	}
+	return filepath.Join(workDir, key)
+}
+
+func assertErrorContains(t *testing.T, err error, wantContains string) {
+	t.Helper()
+	if wantContains == "" {
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		return
+	}
+	if err == nil || !strings.Contains(err.Error(), wantContains) {
+		t.Fatalf("error %v does not contain %q", err, wantContains)
+	}
+}
+
+func assertFileContent(t *testing.T, path, want string) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if normalize(string(got)) != normalize(want) {
+		t.Fatalf("%s got %q want %q", path, string(got), want)
+	}
+}
+
+func mustWriteFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func normalize(s string) string {

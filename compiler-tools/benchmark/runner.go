@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -214,6 +215,9 @@ func sanitize(ref string) string {
 }
 
 func shellQuote(s string) string {
+	if runtime.GOOS == "windows" {
+		return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+	}
 	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
 }
 
