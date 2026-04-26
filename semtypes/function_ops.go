@@ -189,3 +189,13 @@ func functionReturnTypeInner(cx Context, accumArgList SemType, accumReturn SemTy
 		panic("impossible")
 	}
 }
+
+func CreateIsolatedTop(cx Context) SemType {
+	if cx._isolatedTopMemo == nil {
+		fd := NewFunctionDefinition()
+		env := cx.Env()
+		cx._isolatedTopMemo = fd.Define(env, NEVER, VAL, FunctionQualifiersFrom(env, true, false))
+	}
+
+	return cx._isolatedTopMemo
+}

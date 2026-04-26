@@ -260,7 +260,6 @@ type (
 		RequiredArgs              []BLangExpression
 		RestArgs                  []BLangExpression
 		ObjectInitMethod          bool
-		FlagSet                   common.UnorderedSet[model.Flag]
 		Async                     bool
 		FunctionPointerInvocation bool
 		LangLibInvocation         bool
@@ -906,14 +905,6 @@ func (this *BLangInvocation) IsAsync() bool {
 	return this.Async
 }
 
-func (this *BLangInvocation) GetFlags() common.Set[model.Flag] {
-	return &this.FlagSet
-}
-
-func (this *BLangInvocation) AddFlag(flag model.Flag) {
-	this.FlagSet.Add(flag)
-}
-
 func (this *BLangInvocation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
 	for i := range this.AnnAttachments {
@@ -958,12 +949,8 @@ func (this *BLangTypeConversionExpr) SetTypeDescriptor(typeDescriptor model.Type
 	this.TypeDescriptor = typeDescriptor
 }
 
-func (this *BLangTypeConversionExpr) GetFlags() common.Set[model.Flag] {
-	panic("not implemented")
-}
-
-func (this *BLangTypeConversionExpr) AddFlag(flag model.Flag) {
-	panic("not implemented")
+func (this *BLangTypeConversionExpr) IsPublic() bool {
+	return false
 }
 
 func (this *BLangTypeConversionExpr) GetAnnotationAttachments() []model.AnnotationAttachmentNode {

@@ -44,6 +44,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	lengthSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
 		ReturnType: semtypes.INT,
+		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	lengthSymbol := model.NewFunctionSymbol("length", lengthSignature, true)
 	space.AddSymbol("length", lengthSymbol)
@@ -56,6 +57,7 @@ func GetMapSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	keysSignature := model.FunctionSignature{
 		ParamTypes: []semtypes.SemType{semtypes.MAPPING},
 		ReturnType: stringArrayTy,
+		Flags:      model.FuncSymbolFlagIsolated,
 	}
 	keysSymbol := model.NewFunctionSymbol("keys", keysSignature, true)
 	space.AddSymbol("keys", keysSymbol)
@@ -94,6 +96,7 @@ func createRemoveMonomorphizer(ctx *context.CompilerContext) func(s model.Generi
 		removeSignature := model.FunctionSignature{
 			ParamTypes: []semtypes.SemType{ty, semtypes.STRING},
 			ReturnType: memberType,
+			Flags:      model.FuncSymbolFlagIsolated,
 		}
 		removeSymbol := model.NewFunctionSymbol("remove", removeSignature, true)
 		symbolName := fmt.Sprintf("remove_%d", nextIndex)

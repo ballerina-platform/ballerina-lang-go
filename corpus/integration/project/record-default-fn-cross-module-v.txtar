@@ -1,0 +1,8 @@
+-- stdout --
+getDefaultValue called
+42
+10
+getDefaultValue called
+chainedCall called
+43
+-- stderr --

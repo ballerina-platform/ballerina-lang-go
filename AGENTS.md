@@ -59,6 +59,8 @@ Execution of these stages is defined in `module_context.go` (and `testphases/pha
   - Each corpus tests will run the interpreter up to that stage.
 - IMPORTANT: This is the preferred way of testing for any interpreter stage.
 
+- Project test cases ends up in `./corpus/project/` and project names fallow the same convention.
+
 ## Commands
 
 - You can run interpreter as `go run ./cli/cmd run [flags] <path to bal file>`

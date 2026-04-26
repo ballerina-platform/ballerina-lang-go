@@ -1,0 +1,71 @@
+(package
+  (import-package ballerina io (as io))
+  (import-package ballerina lang array (as lang.array))
+  (type-definition Foo
+    (record-type
+      (field values
+        (array-type
+          (value-type int) dimensions: 1 ([]))
+        (query-expr
+          (from-clause
+            (var-def
+              (variable i (type
+                (value-type int))))
+            (list-constructor-expr
+              (literal 1)
+              (literal 2)
+              (literal 3)))
+          (select-clause
+            (simple-var-ref i))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable f (type
+          (user-defined-type Foo)) (expr
+          (mapping-constructor-expr))))
+      (expression-stmt
+        (invocation io println (
+          (index-based-access
+            (simple-var-ref f)
+            (literal values)))))))
+  (function $desugar$0 () ()
+    (block-function-body
+      (var-def
+        (variable $desugar$0 (expr
+          (list-constructor-expr
+            (literal 1)
+            (literal 2)
+            (literal 3)))))
+      (var-def
+        (variable $desugar$1 (expr
+          (list-constructor-expr))))
+      (var-def
+        (variable $desugar$2 (expr
+          (numeric-literal 0))))
+      (var-def
+        (variable $desugar$3 (expr
+          (invocation lang.array length (
+            (simple-var-ref $desugar$0))))))
+      (while
+        (binary-expr <
+          (simple-var-ref $desugar$2)
+          (simple-var-ref $desugar$3))
+        (block-stmt
+          (var-def
+            (variable i (type
+              (value-type int)) (expr
+              (index-based-access
+                (simple-var-ref $desugar$0)
+                (simple-var-ref $desugar$2)))))
+          (expression-stmt
+            (invocation lang.array push (
+              (simple-var-ref $desugar$1)
+              (simple-var-ref i))))
+          (assignment
+            (simple-var-ref $desugar$2)
+            (binary-expr +
+              (simple-var-ref $desugar$2)
+              (numeric-literal 1)))))
+      (return
+        (simple-var-ref $desugar$1)))))

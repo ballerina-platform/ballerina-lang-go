@@ -1,0 +1,7 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: invocation of a non-isolated function
+  --> main.bal:22:5
+   |
+22 |     utils:bar(a); // @error
+   |     ^^^^^^^^^^^^

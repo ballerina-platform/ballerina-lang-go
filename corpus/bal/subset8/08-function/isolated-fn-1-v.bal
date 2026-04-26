@@ -1,3 +1,4 @@
+
 // Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
@@ -16,13 +17,15 @@
 
 import ballerina/io;
 
-type Foo record {|
-    // spec doesn't specify i to be constant; though I can't figure out a way to mutate it. This doesn't work in jBallerina as well, due to a bug
-    int[] values = from int i in [1, 2, 3]
-        select i; // @error 
-|};
+isolated function bar(int val) {
+    io:println(val);
+}
+
+isolated function foo() {
+    int a = 5;
+    bar(a);
+}
 
 public function main() {
-    Foo f = {};
-    io:println(f.values);
+    foo(); // @output 5
 }

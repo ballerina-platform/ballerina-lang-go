@@ -22,7 +22,6 @@ import (
 	"sync"
 
 	"ballerina-lang-go/ast"
-	"ballerina-lang-go/common"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
 	"ballerina-lang-go/semtypes"
@@ -317,11 +316,10 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 	}
 
 	if pkg.InitFunction == nil {
-		initName := &ast.BLangIdentifier{Value: "init"}
-		initName.SetDeterminedType(semtypes.NEVER)
 		initPos := initStmts[0].GetPosition()
 		pkg.InitFunction = &ast.BLangFunction{}
-		pkg.InitFunction.Name = initName
+		pkg.InitFunction.Name = ast.BLangIdentifier{Value: "init"}
+		pkg.InitFunction.Name.SetDeterminedType(semtypes.NEVER)
 		body := &ast.BLangBlockFunctionBody{
 			Stmts: initStmts,
 		}
@@ -350,7 +348,6 @@ func desugarInitFn(pkgCtx *packageContext, compilerCtx *context.CompilerContext,
 
 func newSimpleVariable(name string, ty semtypes.SemType) *ast.BLangSimpleVariable {
 	v := &ast.BLangSimpleVariable{}
-	v.FlagSet = &common.UnorderedSet[model.Flag]{}
 	v.Name = &ast.BLangIdentifier{Value: name}
 	v.Name.SetDeterminedType(semtypes.NEVER)
 	v.SetDeterminedType(ty)
@@ -364,7 +361,7 @@ func createDefaultValueFunction(name string, defaultExpr ast.BLangExpression) *a
 	body.SetDeterminedType(semtypes.NEVER)
 
 	fn := &ast.BLangFunction{}
-	fn.Name = &ast.BLangIdentifier{Value: name}
+	fn.Name = ast.BLangIdentifier{Value: name}
 	fn.Name.SetDeterminedType(semtypes.NEVER)
 	fn.Body = body
 	fn.SetDeterminedType(semtypes.NEVER)
@@ -430,7 +427,7 @@ func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*
 		param := &fn.RequiredParams[j]
 		dp, ok := defaultableParams.Get(j)
 		if !ok {
-			if param.FlagSet.Contains(model.Flag_DEFAULTABLE_PARAM) {
+			if param.IsDefaultableParam() {
 				ctx.internalError("defaultable param info missing for parameter marked as defaultable")
 			}
 			continue
@@ -449,7 +446,7 @@ func desugarFunctionParamDefaults(ctx desugarContext, fn *ast.BLangFunction) []*
 			paramName := precedingParam.Name.Value
 			paramTy := ctx.symbolType(precedingParam.Symbol())
 			newParam := newSimpleVariable(paramName, paramTy)
-			newParam.FlagSet.Add(model.Flag_REQUIRED_PARAM)
+			newParam.SetRequiredParam()
 			fnScope.AddSymbol(paramName, new(model.NewValueSymbol(paramName, false, false, true)))
 			paramSymRef, _ := fnScope.GetSymbol(paramName)
 			ctx.setSymbolType(paramSymRef, paramTy)
@@ -579,11 +576,9 @@ func DesugarPackage(compilerCtx *context.CompilerContext, pkg *ast.BLangPackage,
 func desugarClassDefinition(pkgCtx *packageContext, class *ast.BLangClassDefinition) {
 	if class.InitFunction == nil {
 		classPos := class.GetPosition()
-		fn := ast.BLangFunction{
-			ObjInitFunction: true,
-		}
-		fn.FlagSet.Add(model.Flag_ATTACHED)
-		fn.Name = &ast.BLangIdentifier{Value: "init"}
+		fn := ast.BLangFunction{}
+		fn.SetAttached()
+		fn.Name = ast.BLangIdentifier{Value: "init"}
 		body := &ast.BLangBlockFunctionBody{}
 		body.SetPosition(classPos)
 		fn.Body = body

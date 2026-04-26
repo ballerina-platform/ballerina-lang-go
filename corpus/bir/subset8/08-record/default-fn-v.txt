@@ -1,0 +1,45 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+foo() -> int{
+  bb0 {
+    %1 = ConstantLoad foo called
+    %2 = println(%1) -> bb1;
+  }
+  bb1 {
+    %3 = ConstantLoad 5
+    %0 = %3;
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newMap {| f: int, never... |}{} defaults{f=$anon/.:$desugar$0}
+    r1 = %1;
+    %4 = ConstantLoad f
+    %3 = r1[%4];
+    %5 = %3;
+    %6 = println(%5) -> bb1;
+  }
+  bb1 {
+    %7 = ConstantLoad f
+    %8 = ConstantLoad 5
+    %9 = newMap {| f: int, never... |}{%7=%8} defaults{f=$anon/.:$desugar$0}
+    r2 = %9;
+    %12 = ConstantLoad f
+    %11 = r2[%12];
+    %13 = %11;
+    %14 = println(%13) -> bb2;
+  }
+  bb2 {
+    return;
+  }
+}
+$desugar$0() -> int{
+  bb0 {
+    %1 = foo() -> bb1;
+  }
+  bb1 {
+    %0 = %1;
+    return;
+  }
+}

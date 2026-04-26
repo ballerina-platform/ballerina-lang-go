@@ -34,6 +34,7 @@ func GetIoSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	printLnSignature := model.FunctionSignature{
 		RestParamType: semtypes.VAL,
 		ReturnType:    semtypes.NIL,
+		Flags:         model.FuncSymbolFlagIsolated,
 	}
 	printLnSymbol := model.NewFunctionSymbol("println", printLnSignature, true)
 	space.AddSymbol("println", printLnSymbol)

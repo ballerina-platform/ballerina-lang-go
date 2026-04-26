@@ -1,0 +1,61 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+import ballerina.io v 0.0.0;
+main() -> nil{
+  bb0 {
+    %1 = newMap {| values: [int...], never... |}{} defaults{values=$anon/.:$desugar$0}
+    f = %1;
+    %4 = ConstantLoad values
+    %3 = f[%4];
+    %5 = println(%3) -> bb1;
+  }
+  bb1 {
+    return;
+  }
+}
+$desugar$0() -> [int...]{
+  bb0 {
+    %1 = ConstantLoad 1
+    %2 = ConstantLoad 2
+    %3 = ConstantLoad 3
+    %4 = ConstantLoad 3
+    %5 = newArray [int, int, int, never...][%4]{%1, %2, %3}
+    $desugar$0 = %5;
+    %7 = ConstantLoad 0
+    %8 = newArray list[%7]{}
+    $desugar$1 = %8;
+    %10 = ConstantLoad 0
+    $desugar$2 = %10;
+    %12 = length($desugar$0) -> bb1;
+  }
+  bb1 {
+    $desugar$3 = %12;
+    GOTO bb2;
+  }
+  bb2 {
+    %15 = $desugar$2;
+    %16 = $desugar$3;
+    %14 = < %15 %16;
+    %14 ? bb3 : bb4;
+  }
+  bb3 {
+    PushScopeFrame 8
+    %0 = (1, $desugar$0)[(1, $desugar$2)];
+    i = %0;
+    %2 = i;
+    %3 = push((1, $desugar$1),%2) -> bb5;
+  }
+  bb4 {
+    %0 = $desugar$1;
+    return;
+  }
+  bb5 {
+    %5 = (1, $desugar$2);
+    %6 = ConstantLoad 1
+    %7 = %6;
+    %4 = + %5 %7;
+    (1, $desugar$2) = %4;
+    PopScopeFrame
+    GOTO bb2;
+  }
+}

@@ -56,6 +56,13 @@ type symbolTypeSetter interface {
 	SetType(semtypes.SemType)
 }
 
+type FuncSymbolFlags uint8
+
+const (
+	FuncSymbolFlagIsolated FuncSymbolFlags = 1 << iota
+	FuncSymbolFlagTransactional
+)
+
 type FunctionSymbol interface {
 	Symbol
 	Signature() FunctionSignature
@@ -176,6 +183,7 @@ type (
 		ParamNames    []string
 		ReturnType    semtypes.SemType
 		RestParamType semtypes.SemType
+		Flags         FuncSymbolFlags
 	}
 
 	DefaultableParam struct {
@@ -590,6 +598,14 @@ func (d *DefaultableParamInfo) Get(index int) (DefaultableParam, bool) {
 func (d *DefaultableParamInfo) SetDefaultable(index int, symbol SymbolRef) {
 	d.defaultable[index] = true
 	d.params[index].Symbol = symbol
+}
+
+func (fs *FunctionSignature) IsIsolated() bool {
+	return fs.Flags&FuncSymbolFlagIsolated != 0
+}
+
+func (fs *FunctionSignature) IsTransactional() bool {
+	return fs.Flags&FuncSymbolFlagTransactional != 0
 }
 
 func NewValueSymbol(name string, isPublic bool, isConst bool, isParameter bool) ValueSymbol {

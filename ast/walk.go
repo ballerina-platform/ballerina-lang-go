@@ -249,9 +249,7 @@ func Walk(v Visitor, node BLangNode) {
 
 	// Section 3: Function & Body
 	case *BLangFunction:
-		if node.Name != nil {
-			Walk(v, node.Name)
-		}
+		Walk(v, &node.Name)
 		for i := range node.RequiredParams {
 			Walk(v, &node.RequiredParams[i])
 		}
@@ -261,9 +259,6 @@ func Walk(v Visitor, node BLangNode) {
 		walkTypeDescriptor(v, node.returnTypeDescriptor)
 		if node.Body != nil {
 			Walk(v, node.Body.(BLangNode))
-		}
-		if node.Receiver != nil {
-			Walk(v, node.Receiver)
 		}
 
 	case *BLangBlockFunctionBody:

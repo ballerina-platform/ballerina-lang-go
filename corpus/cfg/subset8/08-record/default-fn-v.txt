@@ -1,0 +1,32 @@
+(foo
+  (bb0 () ()
+    (expression-stmt
+      (invocation io println (
+        (literal foo called))))
+    (return
+      (literal 5))
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable r1 (type
+        (user-defined-type r)) (expr
+        (mapping-constructor-expr))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access f
+          (simple-var-ref r1)))))
+    (var-def
+      (variable r2 (type
+        (user-defined-type r)) (expr
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref f)
+            (literal 5))))))
+    (expression-stmt
+      (invocation io println (
+        (field-based-access f
+          (simple-var-ref r2)))))
+  )
+)

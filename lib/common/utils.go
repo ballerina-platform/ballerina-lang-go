@@ -36,5 +36,5 @@ func FunctionSignatureToSemType(env semtypes.Env, fs *model.FunctionSignature) s
 	// Build the function type
 	functionDefn := semtypes.NewFunctionDefinition()
 	return functionDefn.Define(env, paramListTy, fs.ReturnType,
-		semtypes.FunctionQualifiersFrom(env, false, false))
+		semtypes.FunctionQualifiersFrom(env, fs.IsIsolated(), fs.IsTransactional()))
 }

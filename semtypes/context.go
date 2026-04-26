@@ -35,6 +35,7 @@ type context struct {
 	_cloneableMemo      SemType
 	_isolatedObjectMemo SemType
 	_serviceObjectMemo  SemType
+	_isolatedTopMemo    SemType
 	_comparableMemo     map[comparableMemoKey]*comparableMemo
 }
 
