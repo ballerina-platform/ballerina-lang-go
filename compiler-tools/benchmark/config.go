@@ -23,12 +23,12 @@ import (
 )
 
 type config struct {
-	baseRef        string
-	headRef        string
-	target         string
-	warmup         int
-	runs           int
-	exportPath     string
+	baseRef    string
+	headRef    string
+	target     string
+	warmup     int
+	runs       int
+	exportPath string
 }
 
 func parseConfig() (*config, error) {
