@@ -27,10 +27,7 @@ import (
 	"time"
 )
 
-const (
-	baseInterpreter = "bal-base"
-	headInterpreter = "bal-base"
-)
+const builtInterpreter = "bal-base"
 
 type (
 	benchmark struct {
@@ -73,22 +70,12 @@ func (b *benchmark) run() error {
 	defer b.removeWorktree(headWorktree)
 
 	fmt.Printf("Building interpreter for %s...\n", b.baseRef)
-	if err := b.buildInterpreter(baseWorktree, b.baseRef, baseInterpreter); err != nil {
+	if err := b.buildInterpreter(baseWorktree, b.baseRef, builtInterpreter); err != nil {
 		return err
 	}
 	fmt.Printf("Building interpreter for %s...\n", b.headRef)
-	if err := b.buildInterpreter(headWorktree, b.headRef, headInterpreter); err != nil {
+	if err := b.buildInterpreter(headWorktree, b.headRef, builtInterpreter); err != nil {
 		return err
-	}
-
-	if b.config.exportPath == "" {
-		for _, path := range target.paths {
-			cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
-			if _, err := b.runHyperfine(cmds, ""); err != nil {
-				return err
-			}
-		}
-		return nil
 	}
 
 	exportDir, err := os.MkdirTemp("", "bal-bench-exports-*")
@@ -105,31 +92,31 @@ func (b *benchmark) run() error {
 		if err != nil {
 			return err
 		}
-		if export != nil {
-			label := target.label
-			if target.mode == multipleFilesMode {
-				label = path
-				for strings.HasPrefix(label, "../") {
-					label = strings.TrimPrefix(label, "../")
-				}
+		label := target.label
+		if target.mode == multipleFilesMode {
+			label = path
+			for strings.HasPrefix(label, "../") {
+				label = strings.TrimPrefix(label, "../")
 			}
-			results = append(results, runResult{
-				label:  label,
-				export: *export,
-			})
 		}
+		results = append(results, runResult{
+			label:  label,
+			export: *export,
+		})
 	}
 
-	report := report{
+	rep := report{
 		BaseRef:   b.baseRef,
 		HeadRef:   b.headRef,
 		Generated: time.Now(),
 		results:   results,
 	}
-	if err := report.export(b.config.exportPath); err != nil {
-		return err
+	if b.config.exportPath != "" {
+		if err := rep.export(b.config.exportPath); err != nil {
+			return err
+		}
+		fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	}
-	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	return nil
 }
 
@@ -159,25 +146,18 @@ func (b *benchmark) hyperfineFlags() []string {
 	if b.warmup > 0 {
 		args = append(args, "--warmup", strconv.Itoa(b.warmup))
 	}
-	if b.runs > 0 {
-		args = append(args, "--runs", strconv.Itoa(b.runs))
-	}
+	args = append(args, "--runs", strconv.Itoa(b.runs))
 	return args
 }
 
 func (b *benchmark) runHyperfine(cmds []string, jsonExportPath string) (*benchExport, error) {
 	args := b.hyperfineFlags()
-	if b.config.exportPath != "" {
-		args = append(args, "--export-json", jsonExportPath)
-	}
+	args = append(args, "--export-json", jsonExportPath)
 	args = append(args, cmds...)
 	if err := runCmd(".", "hyperfine", args...); err != nil {
 		return nil, fmt.Errorf("failed to run hyperfine: %w", err)
 	}
-	if b.config.exportPath != "" {
-		return parseHyperfineExport(jsonExportPath)
-	}
-	return nil, nil
+	return parseHyperfineExport(jsonExportPath)
 }
 
 func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode targetMode) []string {
@@ -189,8 +169,8 @@ func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode
 }
 
 func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode) []string {
-	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, baseInterpreter), root, target, mode)
-	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, headInterpreter), root, target, mode)
+	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, builtInterpreter), root, target, mode)
+	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, builtInterpreter), root, target, mode)
 	return append(baseCmd, headCmd...)
 }
 

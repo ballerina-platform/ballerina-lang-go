@@ -81,21 +81,21 @@ func (r *report) export(outPath string) error {
 			base = &run.export.Results[0]
 			head = &run.export.Results[1]
 		}
-		row := row{
+		tblRow := row{
 			Label: run.label,
 			Base:  base,
 			Head:  head,
 		}
 		if base != nil {
-			row.BaseMean = fmt.Sprintf("%.3f", base.Mean*1000.0)
-			row.BaseStddev = fmt.Sprintf("%.3f", base.Stddev*1000.0)
+			tblRow.BaseMean = fmt.Sprintf("%.3f", base.Mean*1000.0)
+			tblRow.BaseStddev = fmt.Sprintf("%.3f", base.Stddev*1000.0)
 		}
 		if head != nil {
-			row.HeadMean = fmt.Sprintf("%.3f", head.Mean*1000.0)
-			row.HeadStddev = fmt.Sprintf("%.3f", head.Stddev*1000.0)
+			tblRow.HeadMean = fmt.Sprintf("%.3f", head.Mean*1000.0)
+			tblRow.HeadStddev = fmt.Sprintf("%.3f", head.Stddev*1000.0)
 		}
-		row.DeltaAvailable, row.DeltaRatio, row.DeltaStddev, row.DeltaWinnerRef = computeDelta(base, head, r.BaseRef, r.HeadRef)
-		rows = append(rows, row)
+		tblRow.DeltaAvailable, tblRow.DeltaRatio, tblRow.DeltaStddev, tblRow.DeltaWinnerRef = computeDelta(base, head, r.BaseRef, r.HeadRef)
+		rows = append(rows, tblRow)
 	}
 
 	tpl := template.Must(template.New("report").Parse(htmlTemplate))

@@ -31,10 +31,16 @@ import (
 const (
 	baseRef                = "HEAD~1"
 	headRef                = "HEAD"
-	targetPath             = "../../corpus/bal/subset6/06-bench/4-v.bal"
+	integrationProjectPath = "../../corpus/project/hello-world-v"
 	benchmarkTool          = "bal-benchmark-tool"
 	integrationCoverDirEnv = "CODECOV_INTEGRATION_COVERDIR"
 )
+
+// integrationTargets are paths relative to compiler-tools/benchmark (the test binary cwd).
+var integrationTargets = []string{
+	"../../corpus/bal/subset6/06-bench/1-v.bal",
+	integrationProjectPath,
+}
 
 var (
 	buildBinaryOnce sync.Once
@@ -44,43 +50,34 @@ var (
 )
 
 func TestBenchmarkBinaryRunExportsHTML(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping benchmark integration test in short mode")
-	}
-	if _, err := exec.LookPath("hyperfine"); err != nil {
-		t.Skipf("skipping benchmark integration test because hyperfine is unavailable: %v", err)
-	}
-	if err := exec.Command("git", "rev-parse", "--verify", baseRef).Run(); err != nil {
-		t.Skipf("skipping benchmark integration test because base ref %q is unavailable: %v", baseRef, err)
-	}
-	if err := exec.Command("git", "rev-parse", "--verify", headRef).Run(); err != nil {
-		t.Skipf("skipping benchmark integration test because head ref %q is unavailable: %v", headRef, err)
-	}
-	if _, err := os.Stat(targetPath); err != nil {
-		t.Fatalf("benchmark target is unavailable: %v", err)
-	}
+	skipUnlessBenchmarkIntegration(t)
 
 	bin := ensureBenchmarkBinary(t)
-	outputPath := filepath.Join(t.TempDir(), "output.html")
-	result := runBenchmarkBinary(t, bin,
-		"--warmup", "1",
-		"--runs", "2",
-		"--export-html", outputPath,
-		baseRef, headRef, targetPath,
-	)
-	if result.err != nil {
-		t.Fatalf("benchmark run failed: %v\nstderr:\n%s", result.err, result.stderr)
-	}
-	report, err := os.ReadFile(outputPath)
-	if err != nil {
-		t.Fatalf("expected html report at %q: %v", outputPath, err)
-	}
-	if len(report) == 0 {
-		t.Fatalf("expected non-empty html report at %q", outputPath)
-	}
-	text := string(report)
-	if !strings.Contains(text, baseRef) || !strings.Contains(text, headRef) {
-		t.Fatalf("expected report to compare refs %q and %q", baseRef, headRef)
+	for _, targetPath := range integrationTargets {
+		t.Run(filepath.Base(targetPath), func(t *testing.T) {
+			tmp := t.TempDir()
+			htmlPath := filepath.Join(tmp, "output.html")
+			result := runBenchmarkBinary(t, bin,
+				"--warmup", "1",
+				"--runs", "2",
+				"--export-html", htmlPath,
+				baseRef, headRef, targetPath,
+			)
+			if result.err != nil {
+				t.Fatalf("benchmark run failed: %v\nstderr:\n%s", result.err, result.stderr)
+			}
+			htmlReport, err := os.ReadFile(htmlPath)
+			if err != nil {
+				t.Fatalf("expected html report at %q: %v", htmlPath, err)
+			}
+			if len(htmlReport) == 0 {
+				t.Fatalf("expected non-empty html report at %q", htmlPath)
+			}
+			text := string(htmlReport)
+			if !strings.Contains(text, baseRef) || !strings.Contains(text, headRef) {
+				t.Fatalf("expected report to compare refs %q and %q", baseRef, headRef)
+			}
+		})
 	}
 }
 
@@ -92,16 +89,11 @@ func TestBenchmarkBinaryFailsForInvalidConfig(t *testing.T) {
 		wantInStdErr string
 	}{
 		{
-			name:         "missing required refs and target",
-			args:         []string{"--export-html", filepath.Join(t.TempDir(), "output.html")},
-			wantInStdErr: "missing required arguments",
-		},
-		{
 			name: "missing export flag",
 			args: []string{
-				baseRef, headRef, targetPath,
+				baseRef, headRef, integrationProjectPath,
 			},
-			wantInStdErr: "export path is required",
+			wantInStdErr: "provide --export-html",
 		},
 		{
 			name: "target does not exist",
@@ -116,7 +108,7 @@ func TestBenchmarkBinaryFailsForInvalidConfig(t *testing.T) {
 			args: []string{
 				"--runs", "0",
 				"--export-html", filepath.Join(t.TempDir(), "output.html"),
-				baseRef, headRef, targetPath,
+				baseRef, headRef, integrationProjectPath,
 			},
 			wantInStdErr: "runs must be greater than zero",
 		},
@@ -131,6 +123,50 @@ func TestBenchmarkBinaryFailsForInvalidConfig(t *testing.T) {
 				t.Fatalf("stderr mismatch, want %q\nstderr:\n%s", tt.wantInStdErr, result.stderr)
 			}
 		})
+	}
+}
+
+func TestBenchmarkBinaryFailsWithoutHyperfine(t *testing.T) {
+	bin := ensureBenchmarkBinary(t)
+	cmd := exec.Command(bin,
+		"--warmup", "1",
+		"--runs", "2",
+		"--export-html", filepath.Join(t.TempDir(), "output.html"),
+		baseRef, headRef, integrationProjectPath,
+	)
+	cmd.Dir = "."
+	cmd.Env = []string{}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatalf("expected command to fail without hyperfine\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "hyperfine is required but was not found in PATH") {
+		t.Fatalf("stderr mismatch, expected hyperfine lookup failure\nstderr:\n%s", stderr.String())
+	}
+}
+
+func skipUnlessBenchmarkIntegration(t *testing.T) {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping benchmark integration test in short mode")
+	}
+	if _, err := exec.LookPath("hyperfine"); err != nil {
+		t.Skipf("skipping benchmark integration test because hyperfine is unavailable: %v", err)
+	}
+	if err := exec.Command("git", "rev-parse", "--verify", baseRef).Run(); err != nil {
+		t.Skipf("skipping benchmark integration test because base ref %q is unavailable: %v", baseRef, err)
+	}
+	if err := exec.Command("git", "rev-parse", "--verify", headRef).Run(); err != nil {
+		t.Skipf("skipping benchmark integration test because head ref %q is unavailable: %v", headRef, err)
+	}
+	for _, p := range integrationTargets {
+		if _, err := os.Stat(p); err != nil {
+			t.Fatalf("benchmark target %q is unavailable: %v", p, err)
+		}
 	}
 }
 

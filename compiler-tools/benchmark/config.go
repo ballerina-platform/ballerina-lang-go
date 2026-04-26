@@ -23,12 +23,12 @@ import (
 )
 
 type config struct {
-	baseRef    string
-	headRef    string
-	target     string
-	warmup     int
-	runs       int
-	exportPath string
+	baseRef        string
+	headRef        string
+	target         string
+	warmup         int
+	runs           int
+	exportPath     string
 }
 
 func parseConfig() (*config, error) {
@@ -83,7 +83,7 @@ func (c *config) validate() error {
 		return fmt.Errorf("runs must be greater than zero")
 	}
 	if c.exportPath == "" {
-		return fmt.Errorf("export path is required")
+		return fmt.Errorf("provide --export-html")
 	}
 	return nil
 }
