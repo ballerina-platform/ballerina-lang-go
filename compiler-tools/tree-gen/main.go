@@ -42,10 +42,6 @@ type NodeDef struct {
 	Attributes []Attribute `json:"attributes"`
 }
 
-type Config struct {
-	Nodes []NodeDef `json:"nodes"`
-}
-
 func main() {
 	var (
 		configPath       = flag.String("config", "", "Path to JSON configuration file")
@@ -81,8 +77,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := Config{Nodes: nodes}
-
 	// Create set of abstract type names
 	abstractTypes := make(map[string]bool)
 	for _, node := range nodes {
@@ -93,7 +87,7 @@ func main() {
 
 	// Prepare template data
 	data := map[string]interface{}{
-		"Nodes":         config.Nodes,
+		"Nodes":         nodes,
 		"NodeType":      *nodeType,
 		"AbstractTypes": abstractTypes,
 	}
