@@ -69,12 +69,13 @@ func (b *benchmark) run() error {
 	}
 	defer b.removeWorktree(headWorktree)
 
+	interpreterBin := builtInterpreterBinaryName()
 	fmt.Printf("Building interpreter for %s...\n", b.baseRef)
-	if err := b.buildInterpreter(baseWorktree, b.baseRef, builtInterpreterBinaryName()); err != nil {
+	if err := b.buildInterpreter(baseWorktree, b.baseRef, interpreterBin); err != nil {
 		return err
 	}
 	fmt.Printf("Building interpreter for %s...\n", b.headRef)
-	if err := b.buildInterpreter(headWorktree, b.headRef, builtInterpreterBinaryName()); err != nil {
+	if err := b.buildInterpreter(headWorktree, b.headRef, interpreterBin); err != nil {
 		return err
 	}
 
@@ -86,7 +87,7 @@ func (b *benchmark) run() error {
 
 	results := make([]runResult, 0, len(target.paths))
 	for _, path := range target.paths {
-		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode)
+		cmds := b.benchmarkCmdPair(baseWorktree, headWorktree, target.root, path, target.mode, interpreterBin)
 		exportPath := filepath.Join(exportDir, fmt.Sprintf("%s.json", sanitize(path)))
 		export, err := b.runHyperfine(cmds, exportPath)
 		if err != nil {
@@ -159,9 +160,9 @@ func (b *benchmark) benchmarkCmdArgs(ref, interpreter, root, target string, mode
 	return []string{"--command-name", ref, command}
 }
 
-func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode) []string {
-	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, builtInterpreterBinaryName()), root, target, mode)
-	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, builtInterpreterBinaryName()), root, target, mode)
+func (b *benchmark) benchmarkCmdPair(baseWorktree, headWorktree, root, target string, mode targetMode, interpreterBin string) []string {
+	baseCmd := b.benchmarkCmdArgs(b.baseRef, filepath.Join(baseWorktree, interpreterBin), root, target, mode)
+	headCmd := b.benchmarkCmdArgs(b.headRef, filepath.Join(headWorktree, interpreterBin), root, target, mode)
 	return append(baseCmd, headCmd...)
 }
 
