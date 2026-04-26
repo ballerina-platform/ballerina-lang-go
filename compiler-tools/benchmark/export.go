@@ -120,10 +120,7 @@ func (r *report) export(outPath string) error {
 }
 
 func computeDelta(base, head *benchResult, baseRef, headRef string) (bool, string, string, string) {
-	if base == nil || head == nil {
-		return false, "", "", ""
-	}
-	if base.Mean <= 0 || head.Mean <= 0 {
+	if base == nil || head == nil || base.Mean <= 0 || head.Mean <= 0 {
 		return false, "", "", ""
 	}
 

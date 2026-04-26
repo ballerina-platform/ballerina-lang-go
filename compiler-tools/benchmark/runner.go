@@ -185,10 +185,6 @@ func sanitize(ref string) string {
 	}, ref)
 }
 
-func shellQuote(s string) string {
-	return shellQuoteForOS(runtime.GOOS, s)
-}
-
 func shellQuoteForOS(goos, s string) string {
 	if goos == "windows" {
 		return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`

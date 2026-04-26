@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -50,12 +51,34 @@ var (
 	binaryBuildErr  error
 )
 
+func TestHyperfineFlagsWithPositiveWarmup(t *testing.T) {
+	t.Parallel()
+	b := &benchmark{config: config{warmup: 3, runs: 7}}
+	got := b.hyperfineFlags()
+	want := []string{"--show-output", "--warmup", "3", "--runs", "7"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
+	}
+}
+
+func TestHyperfineFlagsOmitsWarmupWhenZero(t *testing.T) {
+	t.Parallel()
+	b := &benchmark{config: config{warmup: 0, runs: 2}}
+	got := b.hyperfineFlags()
+	want := []string{"--show-output", "--runs", "2"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
+	}
+}
+
 func TestBenchmarkBinaryRunExportsHTML(t *testing.T) {
 	skipUnlessBenchmarkIntegration(t)
+	t.Parallel()
 
 	bin := ensureBenchmarkBinary(t)
 	for _, targetPath := range integrationTargets {
 		t.Run(filepath.Base(targetPath), func(t *testing.T) {
+			t.Parallel()
 			tmp := t.TempDir()
 			htmlPath := filepath.Join(tmp, "output.html")
 			htmlReport := assertBenchmarkBinarySuccessAndReadReport(t, bin, htmlPath,
@@ -77,6 +100,7 @@ func TestBenchmarkBinaryRunExportsHTML(t *testing.T) {
 
 func TestBenchmarkBinaryRunExportsHTMLForDirectoryTarget(t *testing.T) {
 	skipUnlessBenchmarkIntegration(t)
+	t.Parallel()
 
 	target, err := resolveTarget(integrationDirPath)
 	if err != nil {
@@ -105,6 +129,7 @@ func TestBenchmarkBinaryRunExportsHTMLForDirectoryTarget(t *testing.T) {
 
 func TestBenchmarkBinaryRunExportsHTMLForPackageTarget(t *testing.T) {
 	skipUnlessBenchmarkIntegration(t)
+	t.Parallel()
 
 	target, err := resolveTarget(integrationProjectPath)
 	if err != nil {
@@ -130,6 +155,7 @@ func TestBenchmarkBinaryRunExportsHTMLForPackageTarget(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsWithoutExportFlag(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{baseRef, headRef, integrationSinglePath},
@@ -138,6 +164,7 @@ func TestBenchmarkBinaryFailsWithoutExportFlag(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForMissingTarget(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -152,6 +179,7 @@ func TestBenchmarkBinaryFailsForNonBalFileTarget(t *testing.T) {
 	if _, err := exec.LookPath("hyperfine"); err != nil {
 		t.Skipf("skipping: hyperfine not available: %v", err)
 	}
+	t.Parallel()
 
 	bin := ensureBenchmarkBinary(t)
 	tmp := t.TempDir()
@@ -172,6 +200,7 @@ func TestBenchmarkBinaryFailsForDirectoryWithNoBalFiles(t *testing.T) {
 	if _, err := exec.LookPath("hyperfine"); err != nil {
 		t.Skipf("skipping: hyperfine not available: %v", err)
 	}
+	t.Parallel()
 
 	bin := ensureBenchmarkBinary(t)
 	tmp := t.TempDir()
@@ -188,6 +217,7 @@ func TestBenchmarkBinaryFailsForDirectoryWithNoBalFiles(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForInvalidRuns(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -200,6 +230,7 @@ func TestBenchmarkBinaryFailsForInvalidRuns(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForInvalidWarmup(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -212,6 +243,7 @@ func TestBenchmarkBinaryFailsForInvalidWarmup(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForMissingRequiredArguments(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -223,6 +255,7 @@ func TestBenchmarkBinaryFailsForMissingRequiredArguments(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForEmptyBaseRef(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -234,6 +267,7 @@ func TestBenchmarkBinaryFailsForEmptyBaseRef(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForEmptyHeadRef(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -245,6 +279,7 @@ func TestBenchmarkBinaryFailsForEmptyHeadRef(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForEmptyTarget(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	assertBenchmarkBinaryFailure(t, bin,
 		[]string{
@@ -256,6 +291,7 @@ func TestBenchmarkBinaryFailsForEmptyTarget(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsWithoutHyperfine(t *testing.T) {
+	t.Parallel()
 	bin := ensureBenchmarkBinary(t)
 	cmd := exec.Command(bin,
 		"--warmup", "0",
