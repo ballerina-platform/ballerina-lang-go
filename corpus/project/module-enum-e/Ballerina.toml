@@ -1,4 +1,4 @@
 [package]
 org = "testorg"
-name = "moduleenum"
+name = "module_enum"
 version = "0.1.0"

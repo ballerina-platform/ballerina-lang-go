@@ -1338,6 +1338,10 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 	// Generate import declarations
 	imports := modulePartNode.Imports()
 	for importDecl := range imports.Iterator() {
+		if importDecl.HasDiagnostics() {
+			n.reportSyntaxDiagnostics(importDecl)
+			continue
+		}
 		bLangImport := n.TransformImportDeclaration(importDecl).(*BLangImportPackage)
 		bLangImport.CompUnit = &compUnit
 		compilationUnit.AddTopLevelNode(bLangImport)
@@ -1346,6 +1350,10 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 	// Generate other module-level declarations
 	members := modulePartNode.Members()
 	for member := range members.Iterator() {
+		if member.HasDiagnostics() {
+			n.reportSyntaxDiagnostics(member)
+			continue
+		}
 		// Dispatch to TransformSyntaxNode which handles all node types
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
@@ -3235,6 +3243,7 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 		}
 		enumMember := memberNode.(*tree.EnumMemberNode)
 		if enumMember.Identifier() == nil || enumMember.Identifier().IsMissing() {
+			n.cx.InternalError("missing enum member identifier", getPosition(n.de(), enumMember))
 			continue
 		}
 		constantNode, redeclared := n.transformEnumMember(enumMember, publicQualifier)
@@ -3260,14 +3269,12 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 	identifier := createIdentifierFromToken(identifierPos, enumDeclarationNode.Identifier())
 	typeDef.Name = &identifier
 
-	if len(memberTypeNodes) == 1 {
-		typeDef.SetTypeData(model.TypeData{TypeDescriptor: memberTypeNodes[0]})
-	} else if len(memberTypeNodes) > 1 {
-		current := memberTypeNodes[len(memberTypeNodes)-1]
-		for i := len(memberTypeNodes) - 2; i >= 0; i-- {
+	if len(memberTypeNodes) > 0 {
+		current := memberTypeNodes[0]
+		for i := 1; i < len(memberTypeNodes); i++ {
 			unionType := &BLangUnionTypeNode{
-				lhs: model.TypeData{TypeDescriptor: memberTypeNodes[i]},
-				rhs: model.TypeData{TypeDescriptor: current},
+				lhs: model.TypeData{TypeDescriptor: current},
+				rhs: model.TypeData{TypeDescriptor: memberTypeNodes[i]},
 			}
 			unionType.pos = typeDef.pos
 			current = unionType
@@ -3277,7 +3284,7 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 		neverType := &BLangValueType{TypeKind: model.TypeKind_NEVER}
 		neverType.pos = diagnostics.NewBuiltinLocation()
 		typeDef.SetTypeData(model.TypeData{TypeDescriptor: neverType})
-		n.cx.SemanticError("missing enum member", typeDef.Name.GetPosition())
+		n.cx.SyntaxError("missing enum member", typeDef.Name.GetPosition())
 	}
 
 	metadata := enumDeclarationNode.Metadata()

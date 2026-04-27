@@ -8,10 +8,10 @@
     (value-type string)) ())
   (type-definition Color
     (union-type
-      (user-defined-type RED)
       (union-type
-        (user-defined-type GREEN)
-        (user-defined-type BLUE))))
+        (user-defined-type RED)
+        (user-defined-type GREEN))
+      (user-defined-type BLUE)))
   (function init () ()
     (block-function-body
       (assignment

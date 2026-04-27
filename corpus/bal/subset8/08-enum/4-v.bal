@@ -16,5 +16,18 @@
 // @productions module-enum-decl
 import ballerina/io;
 
-public enum Color { // @error
+public enum Color {
+    RED,
+    GREEN = "green",
+    BLUE
+}
+
+public function main() {
+    Color c = GREEN;
+
+    "RED"|"green"|"BLUE" x = c;
+    string y = c;
+
+    io:println(x); // @output green
+    io:println(y); // @output green
 }

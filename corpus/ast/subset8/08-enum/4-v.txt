@@ -22,16 +22,7 @@
       (var-def
         (variable c (type
           (user-defined-type Color)) (expr
-          (simple-var-ref RED))))
-      (expression-stmt
-        (invocation io println (
-          (simple-var-ref c))))
-      (expression-stmt
-        (invocation io println (
           (simple-var-ref GREEN))))
-      (expression-stmt
-        (invocation io println (
-          (simple-var-ref BLUE))))
       (var-def
         (variable x (type
           (union-type
@@ -46,4 +37,10 @@
       (var-def
         (variable y (type
           (value-type string)) (expr
-          (simple-var-ref c)))))))
+          (simple-var-ref c))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref y)))))))

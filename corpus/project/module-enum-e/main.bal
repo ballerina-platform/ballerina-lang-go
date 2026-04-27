@@ -14,12 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import moduleenum.types;
+import module_enum.types;
 
 import ballerina/io;
 
 public function main() {
-    io:println(types:RED); // @output RED
-    io:println(types:GREEN); // @output green
-    io:println(types:BLUE); // @output BLUE
+    io:println(types:RED); // @error
+    io:println(types:GREEN); // @error
+    io:println(types:BLUE); // @error
 }

@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import moduleenum.types;
+import module_enum.types;
 
 import ballerina/io;
 

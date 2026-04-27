@@ -16,5 +16,9 @@
 // @productions module-enum-decl
 import ballerina/io;
 
-public enum Color { // @error
+public enum Color {
+    RED,
+    123, // @error
+    , // @error
+    BLUE
 }
