@@ -2,7 +2,9 @@ github_checks:
   annotations: true
 
 coverage:
+  require_ci_to_pass: yes
   status:
     patch:
       default:
         target: 80%
+        after_n_builds: 2

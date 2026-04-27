@@ -232,9 +232,7 @@ func TestBenchmarkBinaryFailsForMissingTarget(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForNonBalFileTarget(t *testing.T) {
-	if _, err := exec.LookPath("hyperfine"); err != nil {
-		t.Skipf("skipping: hyperfine not available: %v", err)
-	}
+	requireHyperfine(t)
 	t.Parallel()
 
 	bin := ensureBenchmarkBinary(t)
@@ -253,9 +251,7 @@ func TestBenchmarkBinaryFailsForNonBalFileTarget(t *testing.T) {
 }
 
 func TestBenchmarkBinaryFailsForDirectoryWithNoBalFiles(t *testing.T) {
-	if _, err := exec.LookPath("hyperfine"); err != nil {
-		t.Skipf("skipping: hyperfine not available: %v", err)
-	}
+	requireHyperfine(t)
 	t.Parallel()
 
 	bin := ensureBenchmarkBinary(t)
@@ -485,9 +481,7 @@ func skipUnlessBenchmarkIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping benchmark integration test in short mode")
 	}
-	if _, err := exec.LookPath("hyperfine"); err != nil {
-		t.Skipf("skipping benchmark integration test because hyperfine is unavailable: %v", err)
-	}
+	requireHyperfine(t)
 	if err := exec.Command("git", "rev-parse", "--verify", baseRef).Run(); err != nil {
 		t.Skipf("skipping benchmark integration test because base ref %q is unavailable: %v", baseRef, err)
 	}
@@ -498,5 +492,12 @@ func skipUnlessBenchmarkIntegration(t *testing.T) {
 		if _, err := os.Stat(p); err != nil {
 			t.Fatalf("benchmark target %q is unavailable: %v", p, err)
 		}
+	}
+}
+
+func requireHyperfine(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("hyperfine"); err != nil {
+		t.Fatalf("hyperfine is required but unavailable: %v", err)
 	}
 }

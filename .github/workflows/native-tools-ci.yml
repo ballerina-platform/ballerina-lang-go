@@ -1,0 +1,112 @@
+name: Native Tools CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ubuntu-tools-build:
+    name: Ubuntu Native Tools Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+
+      - name: Install Hyperfine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hyperfine
+
+      - name: Run non-root module tests with coverage
+        id: run_tools_tests
+        run: |
+          set -euo pipefail
+
+          mapfile -t modules < <(python3 .github/scripts/discover_non_root_modules.py)
+
+          if [ "${#modules[@]}" -eq 0 ]; then
+            echo "No non-root modules found."
+            echo "has_modules=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          coverage_files=()
+          for module in "${modules[@]}"; do
+            echo "Running tests in $module"
+            safe_module="${module//\//-}"
+            integration_cov_dir="$GITHUB_WORKSPACE/.cover/${safe_module}_codecov"
+            mkdir -p "$integration_cov_dir"
+
+            (
+              cd "$module" && CODECOV_INTEGRATION_COVERDIR="$integration_cov_dir" \
+                go test -race -count=1 -timeout 30m -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
+            )
+            module_path="$(cd "$module" && go list -m -f '{{.Path}}')"
+            python3 .github/scripts/normalize_coverage_paths.py "$module/coverage.out" "$module_path" "$module"
+            coverage_files+=("$module/coverage.out")
+
+            exec_out="$module/coverage-executable.out"
+            if [ -d "$integration_cov_dir" ] && [ -n "$(find "$integration_cov_dir" -type f -print -quit)" ]; then
+              go tool covdata textfmt -i="$integration_cov_dir" -o="$exec_out"
+              python3 .github/scripts/normalize_coverage_paths.py "$exec_out" "$module_path" "$module"
+              coverage_files+=("$exec_out")
+            fi
+          done
+
+          printf -v files_csv '%s,' "${coverage_files[@]}"
+          echo "has_modules=true" >> "$GITHUB_OUTPUT"
+          echo "codecov_files=${files_csv%,}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tools coverage to Codecov
+        if: ${{ steps.run_tools_tests.outputs.has_modules == 'true' }}
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.run_tools_tests.outputs.codecov_files }}
+          fail_ci_if_error: true
+
+  windows-tools-build:
+    name: Windows Native Tools Build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+
+      - name: Install Hyperfine
+        shell: pwsh
+        run: |
+          choco install hyperfine -y
+
+      - name: Run non-root module tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t modules < <(python3 .github/scripts/discover_non_root_modules.py)
+
+          if [ "${#modules[@]}" -eq 0 ]; then
+            echo "No non-root modules found."
+            exit 0
+          fi
+
+          for module in "${modules[@]}"; do
+            module="${module%$'\r'}"
+            echo "Running tests in $module"
+            (cd "$module" && go test -race -count=1 -timeout 30m ./...)
+          done
