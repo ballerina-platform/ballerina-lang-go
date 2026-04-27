@@ -51,82 +51,6 @@ var (
 	binaryBuildErr  error
 )
 
-func TestHyperfineFlagsWithPositiveWarmup(t *testing.T) {
-	t.Parallel()
-	b := &benchmark{config: config{warmup: 3, runs: 7}}
-	got := b.hyperfineFlags()
-	want := []string{"--show-output", "--warmup", "3", "--runs", "7"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
-	}
-}
-
-func TestHyperfineFlagsOmitsWarmupWhenZero(t *testing.T) {
-	t.Parallel()
-	b := &benchmark{config: config{warmup: 0, runs: 2}}
-	got := b.hyperfineFlags()
-	want := []string{"--show-output", "--runs", "2"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
-	}
-}
-
-func TestGetRelativeLabel(t *testing.T) {
-	t.Parallel()
-	t.Run("empty_root_uses_base_name", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join("some", "dir", "file.bal")
-		got := getRelativeLabel("", path)
-		want := filepath.Base(path)
-		if got != want {
-			t.Fatalf("getRelativeLabel(%q, %q) = %q, want %q", "", path, got, want)
-		}
-	})
-	t.Run("under_root_uses_relative_path", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "nested", "case.bal")
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		got := getRelativeLabel(root, path)
-		want := filepath.Join("nested", "case.bal")
-		if got != want {
-			t.Fatalf("getRelativeLabel(%q, %q) = %q, want %q", root, path, got, want)
-		}
-	})
-}
-
-func TestBenchmarkResultLabel(t *testing.T) {
-	t.Parallel()
-	t.Run("non_directory_mode_uses_target_label", func(t *testing.T) {
-		t.Parallel()
-		target := &benchmarkTarget{mode: singleFileMode, label: "main.bal"}
-		got := benchmarkResultLabel(target, "/ignored/path.bal")
-		if got != "main.bal" {
-			t.Fatalf("got %q, want main.bal", got)
-		}
-	})
-	t.Run("multiple_files_returns_path_when_no_dotdot_prefix", func(t *testing.T) {
-		t.Parallel()
-		target := &benchmarkTarget{mode: multipleFilesMode, label: "cases"}
-		path := filepath.Join("cases", "sub", "1-v.bal")
-		got := benchmarkResultLabel(target, path)
-		if got != path {
-			t.Fatalf("got %q, want %q", got, path)
-		}
-	})
-	t.Run("multiple_files_strips_leading_dotdot_slash", func(t *testing.T) {
-		t.Parallel()
-		target := &benchmarkTarget{mode: multipleFilesMode, label: "cases"}
-		got := benchmarkResultLabel(target, "../outer/cases/sub/1-v.bal")
-		want := "outer/cases/sub/1-v.bal"
-		if got != want {
-			t.Fatalf("got %q, want %q", got, want)
-		}
-	})
-}
-
 func TestBenchmarkBinaryRunExportsHTML(t *testing.T) {
 	skipUnlessBenchmarkIntegration(t)
 	t.Parallel()
@@ -208,15 +132,6 @@ func TestBenchmarkBinaryRunExportsHTMLForPackageTarget(t *testing.T) {
 	if !strings.Contains(text, target.label) {
 		t.Fatalf("expected report to include package label %q", target.label)
 	}
-}
-
-func TestBenchmarkBinaryFailsWithoutExportFlag(t *testing.T) {
-	t.Parallel()
-	bin := ensureBenchmarkBinary(t)
-	assertBenchmarkBinaryFailure(t, bin,
-		[]string{baseRef, headRef, integrationSinglePath},
-		"provide --export-html",
-	)
 }
 
 func TestBenchmarkBinaryFailsForMissingTarget(t *testing.T) {
@@ -364,6 +279,126 @@ func TestBenchmarkBinaryFailsWithoutHyperfine(t *testing.T) {
 	if !strings.Contains(stderr.String(), "hyperfine is required but was not found in PATH") {
 		t.Fatalf("stderr mismatch, expected hyperfine lookup failure\nstderr:\n%s", stderr.String())
 	}
+}
+
+func TestConfigValidateAllowsEmptyExportPath(t *testing.T) {
+	t.Parallel()
+	target := filepath.Join(t.TempDir(), "test.bal")
+	if err := os.WriteFile(target, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config{
+		baseRef:    baseRef,
+		headRef:    headRef,
+		target:     target,
+		warmup:     0,
+		runs:       1,
+		exportPath: "",
+	}
+	if err := cfg.validate(); err != nil {
+		t.Fatalf("validate() returned error for empty export path: %v", err)
+	}
+}
+
+func TestParseConfigDefaultsToEmptyExportPath(t *testing.T) {
+	t.Parallel()
+	target := filepath.Join(t.TempDir(), "test.bal")
+	if err := os.WriteFile(target, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	originalArgs := os.Args
+	t.Cleanup(func() {
+		os.Args = originalArgs
+	})
+	os.Args = []string{
+		"bal-bench",
+		baseRef,
+		headRef,
+		target,
+	}
+	cfg, err := parseConfig()
+	if err != nil {
+		t.Fatalf("parseConfig() returned error: %v", err)
+	}
+	if cfg.exportPath != "" {
+		t.Fatalf("expected exportPath to default to empty, got %q", cfg.exportPath)
+	}
+}
+
+func TestHyperfineFlagsWithPositiveWarmup(t *testing.T) {
+	t.Parallel()
+	b := &benchmark{config: config{warmup: 3, runs: 7}}
+	got := b.hyperfineFlags()
+	want := []string{"--show-output", "--warmup", "3", "--runs", "7"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
+	}
+}
+
+func TestHyperfineFlagsOmitsWarmupWhenZero(t *testing.T) {
+	t.Parallel()
+	b := &benchmark{config: config{warmup: 0, runs: 2}}
+	got := b.hyperfineFlags()
+	want := []string{"--show-output", "--runs", "2"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("hyperfineFlags() = %v, want %v", got, want)
+	}
+}
+
+func TestGetRelativeLabel(t *testing.T) {
+	t.Parallel()
+	t.Run("empty_root_uses_base_name", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join("some", "dir", "file.bal")
+		got := getRelativeLabel("", path)
+		want := filepath.Base(path)
+		if got != want {
+			t.Fatalf("getRelativeLabel(%q, %q) = %q, want %q", "", path, got, want)
+		}
+	})
+	t.Run("under_root_uses_relative_path", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		path := filepath.Join(root, "nested", "case.bal")
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		got := getRelativeLabel(root, path)
+		want := filepath.Join("nested", "case.bal")
+		if got != want {
+			t.Fatalf("getRelativeLabel(%q, %q) = %q, want %q", root, path, got, want)
+		}
+	})
+}
+
+func TestBenchmarkResultLabel(t *testing.T) {
+	t.Parallel()
+	t.Run("non_directory_mode_uses_target_label", func(t *testing.T) {
+		t.Parallel()
+		target := &benchmarkTarget{mode: singleFileMode, label: "main.bal"}
+		got := benchmarkResultLabel(target, "/ignored/path.bal")
+		if got != "main.bal" {
+			t.Fatalf("got %q, want main.bal", got)
+		}
+	})
+	t.Run("multiple_files_returns_path_when_no_dotdot_prefix", func(t *testing.T) {
+		t.Parallel()
+		target := &benchmarkTarget{mode: multipleFilesMode, label: "cases"}
+		path := filepath.Join("cases", "sub", "1-v.bal")
+		got := benchmarkResultLabel(target, path)
+		if got != path {
+			t.Fatalf("got %q, want %q", got, path)
+		}
+	})
+	t.Run("multiple_files_strips_leading_dotdot_slash", func(t *testing.T) {
+		t.Parallel()
+		target := &benchmarkTarget{mode: multipleFilesMode, label: "cases"}
+		got := benchmarkResultLabel(target, "../outer/cases/sub/1-v.bal")
+		want := "outer/cases/sub/1-v.bal"
+		if got != want {
+			t.Fatalf("got %q, want %q", got, want)
+		}
+	})
 }
 
 type commandResult struct {

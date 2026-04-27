@@ -105,10 +105,12 @@ func (b *benchmark) run() error {
 		Generated: time.Now(),
 		results:   results,
 	}
-	if err := rep.export(b.config.exportPath); err != nil {
-		return err
+	if b.config.exportPath != "" {
+		if err := rep.export(b.config.exportPath); err != nil {
+			return err
+		}
+		fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	}
-	fmt.Printf("Benchmark report exported to %s\n", b.config.exportPath)
 	return nil
 }
 

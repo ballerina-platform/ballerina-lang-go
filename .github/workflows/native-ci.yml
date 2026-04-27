@@ -31,6 +31,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out,coverage-cli-executable.out
+          flags: native
           fail_ci_if_error: true
 
       - name: Check gofmt

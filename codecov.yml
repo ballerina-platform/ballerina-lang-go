@@ -4,7 +4,17 @@ github_checks:
 coverage:
   require_ci_to_pass: yes
   status:
+    project:
+      default:
+        target: auto
+        after_n_builds: 2
+        flags:
+          - native
+          - tools
     patch:
       default:
         target: 80%
         after_n_builds: 2
+        flags:
+          - native
+          - tools

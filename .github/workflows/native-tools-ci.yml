@@ -72,6 +72,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run_tools_tests.outputs.codecov_files }}
+          flags: tools
           fail_ci_if_error: true
 
   windows-tools-build:

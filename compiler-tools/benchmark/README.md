@@ -32,7 +32,7 @@ bal-bench [options] <base-ref> <head-ref> <target>
 
 - `-warmup` — warmup iterations for hyperfine (default: `4`)
 - `-runs` — timed runs per command (default: `10`)
-- `-export-html` — path for the generated HTML report (required)
+- `-export-html` — path for the generated HTML report (optional)
 
 **Target modes**
 
