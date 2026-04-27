@@ -29,40 +29,40 @@ func newXmlOps() xmlOps {
 	return this
 }
 
-func (this *xmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *xmlOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives | v2.Primitives)
 	return createXmlSubtype(primitives, bddUnion(v1.Sequence, v2.Sequence))
 }
 
-func (this *xmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *xmlOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & v2.Primitives)
 	return createXmlSubtypeOrEmpty(primitives, bddIntersect(v1.Sequence, v2.Sequence))
 }
 
-func (this *xmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (x *xmlOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(*xmlSubtype)
 	v2 := d2.(*xmlSubtype)
 	primitives := (v1.Primitives & (^v2.Primitives))
 	return createXmlSubtypeOrEmpty(primitives, bddDiff(v1.Sequence, v2.Sequence))
 }
 
-func (this *xmlOps) complement(d SubtypeData) SubtypeData {
-	return this.Diff(XML_SUBTYPE_TOP, d)
+func (x *xmlOps) complement(d SubtypeData) SubtypeData {
+	return x.Diff(XML_SUBTYPE_TOP, d)
 }
 
-func (this *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (x *xmlOps) IsEmpty(cx Context, t SubtypeData) bool {
 	sd := t.(*xmlSubtype)
 	if sd.Primitives != 0 {
 		return false
 	}
-	return this.xmlBddEmpty(cx, sd.Sequence)
+	return x.xmlBddEmpty(cx, sd.Sequence)
 }
 
-func (this *xmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
+func (x *xmlOps) xmlBddEmpty(cx Context, bdd Bdd) bool {
 	return bddEvery(cx, bdd, conjunctionNil, conjunctionNil, xmlFormulaIsEmpty)
 }
 

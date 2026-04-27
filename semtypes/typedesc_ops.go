@@ -39,10 +39,10 @@ func newTypedescOps() typedescOps {
 	return this
 }
 
-func (this *typedescOps) complement(d SubtypeData) SubtypeData {
+func (t *typedescOps) complement(d SubtypeData) SubtypeData {
 	return typedescSubtypeComplement(d)
 }
 
-func (this *typedescOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (t *typedescOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return typedescSubtypeIsEmpty(cx, d)
 }

@@ -810,7 +810,7 @@ func containsConstFloat(t SemType, n float64) bool {
 		return (b.all() & (1 << BTFloat.Code())) != 0
 	} else {
 		return floatSubtypeContains(
-			getComplexSubtypeData(t.(*ComplexSemType), BTFloat), enumerableFloatFrom(n))
+			getComplexSubtypeData(t.(*ComplexSemType), BTFloat), newEnumerableFloatFromFloat64(n))
 	}
 }
 

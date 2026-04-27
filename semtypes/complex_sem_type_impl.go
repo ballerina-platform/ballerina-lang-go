@@ -26,19 +26,19 @@ type ComplexSemType struct {
 
 var _ SemType = &ComplexSemType{}
 
-func (this *ComplexSemType) all() BasicTypeBitSet {
-	return this.allBitSet
+func (c *ComplexSemType) all() BasicTypeBitSet {
+	return c.allBitSet
 }
 
-func (this *ComplexSemType) some() BasicTypeBitSet {
-	return this.someBitSet
+func (c *ComplexSemType) some() BasicTypeBitSet {
+	return c.someBitSet
 }
 
-func (this *ComplexSemType) subtypeDataList() []ProperSubtypeData {
-	return this.dataList
+func (c *ComplexSemType) subtypeDataList() []ProperSubtypeData {
+	return c.dataList
 }
 
-func (this *ComplexSemType) equals(other *ComplexSemType) bool {
-	return this == other || (this.allBitSet == other.allBitSet && this.someBitSet == other.someBitSet &&
-		slices.Equal(this.dataList, other.dataList))
+func (c *ComplexSemType) equals(other *ComplexSemType) bool {
+	return c == other || (c.allBitSet == other.allBitSet && c.someBitSet == other.someBitSet &&
+		slices.Equal(c.dataList, other.dataList))
 }

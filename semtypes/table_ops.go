@@ -33,22 +33,22 @@ func tableSubtypeIsEmpty(cx Context, t SubtypeData) bool {
 	return listSubtypeIsEmpty(cx, b)
 }
 
-func (this *tableOps) complement(d SubtypeData) SubtypeData {
+func (t *tableOps) complement(d SubtypeData) SubtypeData {
 	return tableSubtypeComplement(d)
 }
 
-func (this *tableOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (t *tableOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return tableSubtypeIsEmpty(cx, d)
 }
 
-func (this *tableOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (t *tableOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *tableOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (t *tableOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *tableOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (t *tableOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }

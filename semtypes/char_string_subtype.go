@@ -30,10 +30,10 @@ func charStringSubtypeFrom(allowed bool, values []enumerableType[string]) charSt
 	}
 }
 
-func (this *charStringSubtype) Allowed() bool {
-	return this.allowed
+func (c *charStringSubtype) Allowed() bool {
+	return c.allowed
 }
 
-func (this *charStringSubtype) Values() []enumerableType[string] {
-	return this.values
+func (c *charStringSubtype) Values() []enumerableType[string] {
+	return c.values
 }

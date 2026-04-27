@@ -50,113 +50,113 @@ type comparableMemoKey struct {
 	semType2 SemType
 }
 
-func (this *context) pushToMemoStack(m *bddMemo) {
-	this._memoStack = append(this._memoStack, m)
+func (c *context) pushToMemoStack(m *bddMemo) {
+	c._memoStack = append(c._memoStack, m)
 }
 
-func (this *context) getMemoStackDepth() int {
-	return len(this._memoStack)
+func (c *context) getMemoStackDepth() int {
+	return len(c._memoStack)
 }
 
-func (this *context) getMemoStack(i int) *bddMemo {
-	return this._memoStack[i]
+func (c *context) getMemoStack(i int) *bddMemo {
+	return c._memoStack[i]
 }
 
-func (this *context) popFromMemoStack() *bddMemo {
-	lastIndex := len(this._memoStack) - 1
-	memo := this._memoStack[lastIndex]
-	this._memoStack = this._memoStack[:lastIndex]
+func (c *context) popFromMemoStack() *bddMemo {
+	lastIndex := len(c._memoStack) - 1
+	memo := c._memoStack[lastIndex]
+	c._memoStack = c._memoStack[:lastIndex]
 	return memo
 }
 
-func (this *context) Env() Env {
-	return this._env
+func (c *context) Env() Env {
+	return c._env
 }
 
-func (this *context) jsonMemo() SemType {
-	return this._jsonMemo
+func (c *context) jsonMemo() SemType {
+	return c._jsonMemo
 }
 
-func (this *context) setJsonMemo(t SemType) {
-	this._jsonMemo = t
+func (c *context) setJsonMemo(t SemType) {
+	c._jsonMemo = t
 }
 
-func (this *context) anydataMemo() SemType {
-	return this._anydataMemo
+func (c *context) anydataMemo() SemType {
+	return c._anydataMemo
 }
 
-func (this *context) setAnydataMemo(t SemType) {
-	this._anydataMemo = t
+func (c *context) setAnydataMemo(t SemType) {
+	c._anydataMemo = t
 }
 
-func (this *context) cloneableMemo() SemType {
-	return this._cloneableMemo
+func (c *context) cloneableMemo() SemType {
+	return c._cloneableMemo
 }
 
-func (this *context) setCloneableMemo(t SemType) {
-	this._cloneableMemo = t
+func (c *context) setCloneableMemo(t SemType) {
+	c._cloneableMemo = t
 }
 
-func (this *context) isolatedObjectMemo() SemType {
-	return this._isolatedObjectMemo
+func (c *context) isolatedObjectMemo() SemType {
+	return c._isolatedObjectMemo
 }
 
-func (this *context) setIsolatedObjectMemo(t SemType) {
-	this._isolatedObjectMemo = t
+func (c *context) setIsolatedObjectMemo(t SemType) {
+	c._isolatedObjectMemo = t
 }
 
-func (this *context) serviceObjectMemo() SemType {
-	return this._serviceObjectMemo
+func (c *context) serviceObjectMemo() SemType {
+	return c._serviceObjectMemo
 }
 
-func (this *context) setServiceObjectMemo(t SemType) {
-	this._serviceObjectMemo = t
+func (c *context) setServiceObjectMemo(t SemType) {
+	c._serviceObjectMemo = t
 }
 
-func (this *context) mappingMemo() map[string]*bddMemo {
-	return this._mappingMemo
+func (c *context) mappingMemo() map[string]*bddMemo {
+	return c._mappingMemo
 }
 
-func (this *context) functionMemo() map[string]*bddMemo {
-	return this._functionMemo
+func (c *context) functionMemo() map[string]*bddMemo {
+	return c._functionMemo
 }
 
-func (this *context) listMemo() map[string]*bddMemo {
-	return this._listMemo
+func (c *context) listMemo() map[string]*bddMemo {
+	return c._listMemo
 }
 
-func (this *context) FunctionAtomType(atom atom) *functionAtomicType {
-	return this._env.functionAtomType(atom)
+func (c *context) FunctionAtomType(atom atom) *functionAtomicType {
+	return c._env.functionAtomType(atom)
 }
 
-func (this *context) ListAtomType(atom atom) *ListAtomicType {
-	return this._env.listAtomType(atom)
+func (c *context) ListAtomType(atom atom) *ListAtomicType {
+	return c._env.listAtomType(atom)
 }
 
-func (this *context) MappingAtomType(atom atom) *MappingAtomicType {
-	return this._env.mappingAtomType(atom)
+func (c *context) MappingAtomType(atom atom) *MappingAtomicType {
+	return c._env.mappingAtomType(atom)
 }
 
-func (this *context) pushConjunction(atom atom, next conjunctionHandle) conjunctionHandle {
-	idx := conjunctionHandle(len(this._conjunctions) + 1)
-	this._conjunctions = append(this._conjunctions, conjunction{atom: atom, Next: next})
+func (c *context) pushConjunction(atom atom, next conjunctionHandle) conjunctionHandle {
+	idx := conjunctionHandle(len(c._conjunctions) + 1)
+	c._conjunctions = append(c._conjunctions, conjunction{atom: atom, Next: next})
 	return idx
 }
 
-func (this *context) conjunctionAtom(h conjunctionHandle) atom {
-	return this._conjunctions[h-1].atom
+func (c *context) conjunctionAtom(h conjunctionHandle) atom {
+	return c._conjunctions[h-1].atom
 }
 
-func (this *context) conjunctionNext(h conjunctionHandle) conjunctionHandle {
-	return this._conjunctions[h-1].Next
+func (c *context) conjunctionNext(h conjunctionHandle) conjunctionHandle {
+	return c._conjunctions[h-1].Next
 }
 
-func (this *context) conjunctionStackDepth() int32 {
-	return int32(len(this._conjunctions))
+func (c *context) conjunctionStackDepth() int32 {
+	return int32(len(c._conjunctions))
 }
 
-func (this *context) resetConjunctionStack(depth int32) {
-	this._conjunctions = this._conjunctions[:depth]
+func (c *context) resetConjunctionStack(depth int32) {
+	c._conjunctions = c._conjunctions[:depth]
 }
 
 func ContextFrom(env Env) Context {
@@ -170,10 +170,10 @@ func ContextFrom(env Env) Context {
 	}
 }
 
-func (this *context) comparableMemo(t1, t2 SemType) *comparableMemo {
-	return this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
+func (c *context) comparableMemo(t1, t2 SemType) *comparableMemo {
+	return c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}]
 }
 
-func (this *context) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
-	this._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
+func (c *context) setComparableMemo(t1, t2 SemType, memo *comparableMemo) {
+	c._comparableMemo[comparableMemoKey{semType1: t1, semType2: t2}] = memo
 }

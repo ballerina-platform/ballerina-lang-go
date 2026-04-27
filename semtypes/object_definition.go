@@ -59,7 +59,7 @@ func objectDefinitionDistinct(distinctId int) SemType {
 //	      FUNCTION value;
 //	   }
 //	}
-func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, members []Member) SemType {
+func (o *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, members []Member) SemType {
 	common.Assert(objectDefinitionValidateMembers(members))
 	var mut CellMutability
 	if qualifiers.readonly {
@@ -75,8 +75,8 @@ func (this *ObjectDefinition) Define(env Env, qualifiers ObjectQualifiers, membe
 	var cellFields []CellField
 	cellFields = append(cellFields, memberStream...)
 	cellFields = append(cellFields, qualifierStream...)
-	mappingType := this.mappingDefinition.Define(env, cellFields, this.restMemberType(env, mut, qualifiers.readonly))
-	return this.objectContaining(mappingType)
+	mappingType := o.mappingDefinition.Define(env, cellFields, o.restMemberType(env, mut, qualifiers.readonly))
+	return o.objectContaining(mappingType)
 }
 
 func objectDefinitionValidateMembers(members []Member) bool {
@@ -91,12 +91,12 @@ func objectDefinitionValidateMembers(members []Member) bool {
 	return len(nameMap) == len(members)
 }
 
-func (this *ObjectDefinition) objectContaining(mappingType SemType) SemType {
+func (o *ObjectDefinition) objectContaining(mappingType SemType) SemType {
 	bdd := subtypeData(mappingType, BTMapping)
 	return createBasicSemType(BTObject, bdd)
 }
 
-func (this *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
+func (o *ObjectDefinition) restMemberType(env Env, mut CellMutability, immutable bool) *ComplexSemType {
 	fieldDefn := NewMappingDefinition()
 	var fieldValueTy SemType
 	if immutable {
@@ -144,6 +144,6 @@ func memberField(env Env, member *Member, mut CellMutability) CellField {
 	return cellFieldFrom(member.Name, *cellContainingWithEnvSemTypeCellMutability(env, semtype, fieldMut))
 }
 
-func (this *ObjectDefinition) GetSemType(env Env) SemType {
-	return this.objectContaining(this.mappingDefinition.GetSemType(env))
+func (o *ObjectDefinition) GetSemType(env Env) SemType {
+	return o.objectContaining(o.mappingDefinition.GetSemType(env))
 }

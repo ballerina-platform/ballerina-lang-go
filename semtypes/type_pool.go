@@ -544,7 +544,7 @@ func fromFloatSubtype(st *floatSubtype) floatSubtypeEntry {
 func toFloatSubtype(entry floatSubtypeEntry) ProperSubtypeData {
 	values := make([]enumerableType[float64], entry.nValues)
 	for i, v := range entry.values {
-		f := enumerableFloatFrom(v)
+		f := newEnumerableFloatFromFloat64(v)
 		values[i] = &f
 	}
 	return createFloatSubtype(entry.allowed, values)

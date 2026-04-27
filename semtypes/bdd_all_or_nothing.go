@@ -40,31 +40,31 @@ func bddNothing() *bddAllOrNothing {
 	return &nothing
 }
 
-func (this *bddAllOrNothing) IsAll() bool {
-	return this.isAll
+func (b *bddAllOrNothing) IsAll() bool {
+	return b.isAll
 }
 
-func (this *bddAllOrNothing) IsNothing() bool {
-	return (!this.isAll)
+func (b *bddAllOrNothing) IsNothing() bool {
+	return (!b.isAll)
 }
 
-func (this *bddAllOrNothing) complement() *bddAllOrNothing {
-	if this.isAll {
+func (b *bddAllOrNothing) complement() *bddAllOrNothing {
+	if b.isAll {
 		return &nothing
 	}
 	return &all
 }
 
-func (this *bddAllOrNothing) canonicalKey() string {
-	if this.isAll {
+func (b *bddAllOrNothing) canonicalKey() string {
+	if b.isAll {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (this *bddAllOrNothing) String() string {
-	if this.isAll {
+func (b *bddAllOrNothing) String() string {
+	if b.isAll {
 		return "all"
 	} else {
 		return "nothing"

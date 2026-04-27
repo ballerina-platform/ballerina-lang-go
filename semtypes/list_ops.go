@@ -372,22 +372,22 @@ func newListOps() listOps {
 	return this
 }
 
-func (this *listOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *listOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *listOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *listOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *listOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (l *listOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }
 
-func (this *listOps) complement(d SubtypeData) SubtypeData {
+func (l *listOps) complement(d SubtypeData) SubtypeData {
 	return bddSubtypeComplement(d)
 }
 
-func (this *listOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (l *listOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return listSubtypeIsEmpty(cx, d)
 }

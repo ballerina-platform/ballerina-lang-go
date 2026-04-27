@@ -137,12 +137,12 @@ func codePointCount(s string, start, end int) int {
 	return len([]rune(s[start:end]))
 }
 
-func (this *stringSubtype) GetChar() enumerableSubtype[string] {
-	return &this.charData
+func (s *stringSubtype) GetChar() enumerableSubtype[string] {
+	return &s.charData
 }
 
-func (this *stringSubtype) GetNonChar() enumerableSubtype[string] {
-	return &this.nonCharData
+func (s *stringSubtype) GetNonChar() enumerableSubtype[string] {
+	return &s.nonCharData
 }
 
 func stringChar() SemType {

@@ -25,20 +25,20 @@ type bddNodeSimple struct {
 
 var _ bddNode = &bddNodeSimple{}
 
-func (this *bddNodeSimple) left() Bdd {
+func (b *bddNodeSimple) left() Bdd {
 	return bddAll()
 }
 
-func (this *bddNodeSimple) middle() Bdd {
+func (b *bddNodeSimple) middle() Bdd {
 	return bddNothing()
 }
 
-func (this *bddNodeSimple) right() Bdd {
+func (b *bddNodeSimple) right() Bdd {
 	return bddNothing()
 }
 
-func (this *bddNodeSimple) atom() atom {
-	return this._atom
+func (b *bddNodeSimple) atom() atom {
+	return b._atom
 }
 
 func newBddNodeSimple(atom atom) *bddNodeSimple {
@@ -48,6 +48,6 @@ func newBddNodeSimple(atom atom) *bddNodeSimple {
 	}
 }
 
-func (this *bddNodeSimple) canonicalKey() string {
-	return this.canonical
+func (b *bddNodeSimple) canonicalKey() string {
+	return b.canonical
 }

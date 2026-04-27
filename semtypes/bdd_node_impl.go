@@ -28,20 +28,20 @@ type bddNodeImpl struct {
 
 var _ bddNode = &bddNodeImpl{}
 
-func (this *bddNodeImpl) atom() atom {
-	return this._atom
+func (b *bddNodeImpl) atom() atom {
+	return b._atom
 }
 
-func (this *bddNodeImpl) left() Bdd {
-	return this._left
+func (b *bddNodeImpl) left() Bdd {
+	return b._left
 }
 
-func (this *bddNodeImpl) middle() Bdd {
-	return this._middle
+func (b *bddNodeImpl) middle() Bdd {
+	return b._middle
 }
 
-func (this *bddNodeImpl) right() Bdd {
-	return this._right
+func (b *bddNodeImpl) right() Bdd {
+	return b._right
 }
 
 func newBddNodeImpl(atom atom, left, middle, right Bdd) *bddNodeImpl {
@@ -54,6 +54,6 @@ func newBddNodeImpl(atom atom, left, middle, right Bdd) *bddNodeImpl {
 	}
 }
 
-func (this *bddNodeImpl) canonicalKey() string {
-	return this.canonical
+func (b *bddNodeImpl) canonicalKey() string {
+	return b.canonical
 }

@@ -34,10 +34,10 @@ func nonCharStringSubtypeFrom(allowed bool, values []enumerableType[string]) non
 	return newNonCharStringSubtypeFromBoolEnumerableStrings(allowed, values)
 }
 
-func (this *nonCharStringSubtype) Allowed() bool {
-	return this.allowed
+func (n *nonCharStringSubtype) Allowed() bool {
+	return n.allowed
 }
 
-func (this *nonCharStringSubtype) Values() []enumerableType[string] {
-	return this.values
+func (n *nonCharStringSubtype) Values() []enumerableType[string] {
+	return n.values
 }

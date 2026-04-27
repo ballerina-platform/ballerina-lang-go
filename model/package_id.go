@@ -38,8 +38,8 @@ const (
 
 type Name string
 
-func (this *Name) Value() string {
-	return string(*this)
+func (n *Name) Value() string {
+	return string(*n)
 }
 
 const (
@@ -174,8 +174,8 @@ type PackageID struct {
 	IsTestPkg      bool
 }
 
-func (this *PackageID) IsUnnamed() bool {
-	return this.isUnnamed || (this.OrgName == nil && this.PkgName == nil && this.Version == nil)
+func (p *PackageID) IsUnnamed() bool {
+	return p.isUnnamed || (p.OrgName == nil && p.PkgName == nil && p.Version == nil)
 }
 
 func NewPackageID(interner *PackageIDInterner, orgName Name, nameComps []Name, version Name) *PackageID {
@@ -255,21 +255,21 @@ type PackageIDInterner struct {
 	packageMap map[packageKey]*PackageID
 }
 
-func (this *PackageIDInterner) GetDefaultPackage() *PackageID {
+func (p *PackageIDInterner) GetDefaultPackage() *PackageID {
 	return DEFAULT
 }
 
-func (this *PackageIDInterner) Intern(packageID *PackageID) *PackageID {
+func (p *PackageIDInterner) Intern(packageID *PackageID) *PackageID {
 	packageKey := packageKeyFromPackageID(packageID)
-	this.rwLock.RLock()
-	internedPackage, ok := this.packageMap[packageKey]
-	this.rwLock.RUnlock()
+	p.rwLock.RLock()
+	internedPackage, ok := p.packageMap[packageKey]
+	p.rwLock.RUnlock()
 	if ok {
 		return internedPackage
 	}
-	this.rwLock.Lock()
-	defer this.rwLock.Unlock()
-	this.packageMap[packageKey] = packageID
+	p.rwLock.Lock()
+	defer p.rwLock.Unlock()
+	p.packageMap[packageKey] = packageID
 	return packageID
 }
 

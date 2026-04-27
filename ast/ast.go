@@ -561,20 +561,20 @@ func (b *BLangService) IsPublic() bool        { return false }
 func (b *BLangInvocation) IsPublic() bool     { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
-func (this *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
-	this.DeterminedType = ty
+func (b *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
+	b.DeterminedType = ty
 }
 
-func (this *bLangNodeBase) GetDeterminedType() semtypes.SemType {
-	return this.DeterminedType
+func (b *bLangNodeBase) GetDeterminedType() semtypes.SemType {
+	return b.DeterminedType
 }
 
-func (this *bLangNodeBase) GetPosition() diagnostics.Location {
-	return this.pos
+func (b *bLangNodeBase) GetPosition() diagnostics.Location {
+	return b.pos
 }
 
-func (this *bLangNodeBase) SetPosition(pos diagnostics.Location) {
-	this.pos = pos
+func (b *bLangNodeBase) SetPosition(pos diagnostics.Location) {
+	b.pos = pos
 }
 
 func (n *BLangClassDefinition) Symbol() model.SymbolRef {
@@ -689,201 +689,201 @@ var (
 	_ BNodeWithSymbol = &BLangTypeDefinition{}
 )
 
-func (this *BLangAnnotationAttachment) GetKind() model.NodeKind {
+func (b *BLangAnnotationAttachment) GetKind() model.NodeKind {
 	// migrated from BLangAnnotationAttachment.java:89:5
 	return model.NodeKind_ANNOTATION_ATTACHMENT
 }
 
-func (this *BLangAnnotationAttachment) GetPackageAlias() model.IdentifierNode {
-	return this.PkgAlias
+func (b *BLangAnnotationAttachment) GetPackageAlias() model.IdentifierNode {
+	return b.PkgAlias
 }
 
-func (this *BLangAnnotationAttachment) SetPackageAlias(pkgAlias model.IdentifierNode) {
+func (b *BLangAnnotationAttachment) SetPackageAlias(pkgAlias model.IdentifierNode) {
 	if id, ok := pkgAlias.(*BLangIdentifier); ok {
-		this.PkgAlias = id
+		b.PkgAlias = id
 	} else {
 		panic("pkgAlias is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangAnnotationAttachment) GetAnnotationName() model.IdentifierNode {
-	return this.AnnotationName
+func (b *BLangAnnotationAttachment) GetAnnotationName() model.IdentifierNode {
+	return b.AnnotationName
 }
 
-func (this *BLangAnnotationAttachment) SetAnnotationName(name model.IdentifierNode) {
+func (b *BLangAnnotationAttachment) SetAnnotationName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.AnnotationName = id
+		b.AnnotationName = id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangAnnotationAttachment) GetExpressionNode() model.ExpressionNode {
-	return this.Expr
+func (b *BLangAnnotationAttachment) GetExpressionNode() model.ExpressionNode {
+	return b.Expr
 }
 
-func (this *BLangAnnotationAttachment) SetExpressionNode(expr model.ExpressionNode) {
+func (b *BLangAnnotationAttachment) SetExpressionNode(expr model.ExpressionNode) {
 	if expr, ok := expr.(BLangExpression); ok {
-		this.Expr = expr
+		b.Expr = expr
 	} else {
 		panic("expr is not a BLangExpression")
 	}
 }
 
-func (this *BLangAnnotation) GetKind() model.NodeKind {
+func (b *BLangAnnotation) GetKind() model.NodeKind {
 	// migrated from BLangAnnotation.java:135:5
 	return model.NodeKind_ANNOTATION
 }
 
-func (this *BLangAnnotation) GetName() model.IdentifierNode {
+func (b *BLangAnnotation) GetName() model.IdentifierNode {
 	// migrated from BLangAnnotation.java:80:5
-	return this.Name
+	return b.Name
 }
 
-func (this *BLangAnnotation) SetName(name model.IdentifierNode) {
+func (b *BLangAnnotation) SetName(name model.IdentifierNode) {
 	// migrated from BLangAnnotation.java:85:5
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 		return
 	}
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangAnnotation) GetTypeDescriptor() model.TypeDescriptor {
-	return this.typeDescriptor
+func (b *BLangAnnotation) GetTypeDescriptor() model.TypeDescriptor {
+	return b.typeDescriptor
 }
 
-func (this *BLangAnnotation) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
-	this.typeDescriptor = typeDescriptor
+func (b *BLangAnnotation) SetTypeDescriptor(typeDescriptor model.TypeDescriptor) {
+	b.typeDescriptor = typeDescriptor
 }
 
-func (this *BLangAnnotation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *BLangAnnotation) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangAnnotation.java:100:5
-	attachments := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
-	for i, attachment := range this.AnnAttachments {
+	attachments := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i, attachment := range b.AnnAttachments {
 		attachments[i] = &attachment
 	}
 	return attachments
 }
 
-func (this *BLangAnnotation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangAnnotation) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangAnnotation.java:105:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, *annAttachment)
+		b.AnnAttachments = append(b.AnnAttachments, *annAttachment)
 		return
 	}
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangAnnotation) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+func (b *BLangAnnotation) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangAnnotation.java:110:5
-	return this.MarkdownDocumentationAttachment
+	return b.MarkdownDocumentationAttachment
 }
 
-func (this *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+func (b *BLangAnnotation) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangAnnotation.java:115:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		this.MarkdownDocumentationAttachment = documentationNode
+		b.MarkdownDocumentationAttachment = documentationNode
 		return
 	}
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (this *BLangBlockFunctionBody) GetKind() model.NodeKind {
+func (b *BLangBlockFunctionBody) GetKind() model.NodeKind {
 	// migrated from BLangBlockFunctionBody.java:73:5
 	return model.NodeKind_BLOCK_FUNCTION_BODY
 }
 
-func (this *BLangExternFunctionBody) GetKind() model.NodeKind {
+func (b *BLangExternFunctionBody) GetKind() model.NodeKind {
 	return model.NodeKind_EXTERN_FUNCTION_BODY
 }
 
-func (this *BLangExprFunctionBody) GetKind() model.NodeKind {
+func (b *BLangExprFunctionBody) GetKind() model.NodeKind {
 	// migrated from BLangExprFunctionBody.java:50:5
 	return model.NodeKind_EXPR_FUNCTION_BODY
 }
 
-func (this *BLangExprFunctionBody) GetExpr() model.ExpressionNode {
+func (b *BLangExprFunctionBody) GetExpr() model.ExpressionNode {
 	// migrated from BLangExprFunctionBody.java:55:5
-	return this.Expr
+	return b.Expr
 }
 
-func (this *BLangIdentifier) GetValue() string {
+func (b *BLangIdentifier) GetValue() string {
 	// migrated from BLangIdentifier.java:32:5
-	return this.Value
+	return b.Value
 }
 
-func (this *BLangIdentifier) GetKind() model.NodeKind {
+func (b *BLangIdentifier) GetKind() model.NodeKind {
 	// migrated from BLangIdentifier.java:32:5
 	return model.NodeKind_IDENTIFIER
 }
 
-func (this *BLangIdentifier) SetValue(value string) {
+func (b *BLangIdentifier) SetValue(value string) {
 	// migrated from BLangIdentifier.java:37:5
-	this.Value = value
+	b.Value = value
 }
 
-func (this *BLangIdentifier) SetOriginalValue(value string) {
+func (b *BLangIdentifier) SetOriginalValue(value string) {
 	// migrated from BLangIdentifier.java:42:5
-	this.OriginalValue = value
+	b.OriginalValue = value
 }
 
-func (this *BLangIdentifier) IsLiteral() bool {
+func (b *BLangIdentifier) IsLiteral() bool {
 	// migrated from BLangIdentifier.java:47:5
-	return this.isLiteral
+	return b.isLiteral
 }
 
-func (this *BLangIdentifier) SetLiteral(isLiteral bool) {
+func (b *BLangIdentifier) SetLiteral(isLiteral bool) {
 	// migrated from BLangIdentifier.java:52:5
-	this.isLiteral = isLiteral
+	b.isLiteral = isLiteral
 }
 
-func (this *BLangImportPackage) GetKind() model.NodeKind {
+func (b *BLangImportPackage) GetKind() model.NodeKind {
 	return model.NodeKind_IMPORT
 }
 
-func (this *BLangImportPackage) GetOrgName() model.IdentifierNode {
-	return this.OrgName
+func (b *BLangImportPackage) GetOrgName() model.IdentifierNode {
+	return b.OrgName
 }
 
-func (this *BLangImportPackage) GetPackageName() []model.IdentifierNode {
-	result := make([]model.IdentifierNode, len(this.PkgNameComps))
-	for i := range this.PkgNameComps {
-		result[i] = &this.PkgNameComps[i]
+func (b *BLangImportPackage) GetPackageName() []model.IdentifierNode {
+	result := make([]model.IdentifierNode, len(b.PkgNameComps))
+	for i := range b.PkgNameComps {
+		result[i] = &b.PkgNameComps[i]
 	}
 	return result
 }
 
-func (this *BLangImportPackage) SetPackageName(nameParts []model.IdentifierNode) {
-	this.PkgNameComps = make([]BLangIdentifier, 0, len(nameParts))
+func (b *BLangImportPackage) SetPackageName(nameParts []model.IdentifierNode) {
+	b.PkgNameComps = make([]BLangIdentifier, 0, len(nameParts))
 	for _, namePart := range nameParts {
 		if id, ok := namePart.(*BLangIdentifier); ok {
-			this.PkgNameComps = append(this.PkgNameComps, *id)
+			b.PkgNameComps = append(b.PkgNameComps, *id)
 		} else {
 			panic("namePart is not a BLangIdentifier")
 		}
 	}
 }
 
-func (this *BLangImportPackage) GetPackageVersion() model.IdentifierNode {
-	return this.Version
+func (b *BLangImportPackage) GetPackageVersion() model.IdentifierNode {
+	return b.Version
 }
 
-func (this *BLangImportPackage) SetPackageVersion(version model.IdentifierNode) {
+func (b *BLangImportPackage) SetPackageVersion(version model.IdentifierNode) {
 	if id, ok := version.(*BLangIdentifier); ok {
-		this.Version = id
+		b.Version = id
 	} else {
 		panic("version is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangImportPackage) GetAlias() model.IdentifierNode {
-	return this.Alias
+func (b *BLangImportPackage) GetAlias() model.IdentifierNode {
+	return b.Alias
 }
 
-func (this *BLangImportPackage) SetAlias(alias model.IdentifierNode) {
+func (b *BLangImportPackage) SetAlias(alias model.IdentifierNode) {
 	if id, ok := alias.(*BLangIdentifier); ok {
-		this.Alias = id
+		b.Alias = id
 	} else {
 		panic("alias is not a BLangIdentifier")
 	}
@@ -897,29 +897,29 @@ func NewBLangClassDefinition() BLangClassDefinition {
 	return this
 }
 
-func (this *BLangClassDefinition) PopUnresolvedInclusions() []*BLangUserDefinedType {
-	inclusions := this.unresolvedInclusions
-	this.unresolvedInclusions = nil
+func (b *BLangClassDefinition) PopUnresolvedInclusions() []*BLangUserDefinedType {
+	inclusions := b.unresolvedInclusions
+	b.unresolvedInclusions = nil
 	return inclusions
 }
 
-func (this *BLangClassDefinition) GetName() model.IdentifierNode {
+func (b *BLangClassDefinition) GetName() model.IdentifierNode {
 	// migrated from BLangClassDefinition.java:88:5
-	return this.Name
+	return b.Name
 }
 
-func (this *BLangClassDefinition) SetName(name model.IdentifierNode) {
+func (b *BLangClassDefinition) SetName(name model.IdentifierNode) {
 	// migrated from BLangClassDefinition.java:93:5
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 		return
 	}
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionNode] {
+func (b *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionNode] {
 	return func(yield func(string, model.FunctionNode) bool) {
-		for name, method := range this.Methods {
+		for name, method := range b.Methods {
 			if !yield(name, method) {
 				return
 			}
@@ -927,426 +927,426 @@ func (this *BLangClassDefinition) GetMethods() iter.Seq2[string, model.FunctionN
 	}
 }
 
-func (this *BLangClassDefinition) GetMethod(name string) model.FunctionNode {
-	if method, ok := this.Methods[name]; ok {
+func (b *BLangClassDefinition) GetMethod(name string) model.FunctionNode {
+	if method, ok := b.Methods[name]; ok {
 		return method
 	}
 	return nil
 }
 
-func (this *BLangClassDefinition) AddMethod(name string, function *BLangFunction) {
-	if this.Methods == nil {
-		this.Methods = map[string]*BLangFunction{}
+func (b *BLangClassDefinition) AddMethod(name string, function *BLangFunction) {
+	if b.Methods == nil {
+		b.Methods = map[string]*BLangFunction{}
 	}
-	this.Methods[name] = function
+	b.Methods[name] = function
 }
 
-func (this *BLangClassDefinition) GetInitFunction() model.FunctionNode {
+func (b *BLangClassDefinition) GetInitFunction() model.FunctionNode {
 	// migrated from BLangClassDefinition.java:108:5
-	return this.InitFunction
+	return b.InitFunction
 }
 
-func (this *BLangClassDefinition) AddField(field model.VariableNode) {
+func (b *BLangClassDefinition) AddField(field model.VariableNode) {
 	// migrated from BLangClassDefinition.java:113:5
 	if field, ok := field.(*BLangSimpleVariable); ok {
-		this.Fields = append(this.Fields, field)
+		b.Fields = append(b.Fields, field)
 		return
 	}
 	panic("field is not a BLangSimpleVariable")
 }
 
-func (this *BLangClassDefinition) AddInclusion(symbolRef model.SymbolRef) {
-	this.Inclusions = append(this.Inclusions, symbolRef)
+func (b *BLangClassDefinition) AddInclusion(symbolRef model.SymbolRef) {
+	b.Inclusions = append(b.Inclusions, symbolRef)
 }
 
-func (this *BLangClassDefinition) GetKind() model.NodeKind {
+func (b *BLangClassDefinition) GetKind() model.NodeKind {
 	// migrated from BLangClassDefinition.java:138:5
 	return model.NodeKind_CLASS_DEFN
 }
 
-func (this *BLangClassDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *BLangClassDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangClassDefinition.java:168:5
-	attachments := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
-	for i, attachment := range this.AnnAttachments {
+	attachments := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i, attachment := range b.AnnAttachments {
 		attachments[i] = &attachment
 	}
 	return attachments
 }
 
-func (this *BLangClassDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangClassDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangClassDefinition.java:173:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, *annAttachment)
+		b.AnnAttachments = append(b.AnnAttachments, *annAttachment)
 		return
 	}
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangClassDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+func (b *BLangClassDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangClassDefinition.java:178:5
-	return this.MarkdownDocumentationAttachment
+	return b.MarkdownDocumentationAttachment
 }
 
-func (this *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+func (b *BLangClassDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangClassDefinition.java:183:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		this.MarkdownDocumentationAttachment = documentationNode
+		b.MarkdownDocumentationAttachment = documentationNode
 		return
 	}
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (this *BLangClassDefinition) GetPrecedence() int {
-	return this.precedence
+func (b *BLangClassDefinition) GetPrecedence() int {
+	return b.precedence
 }
 
-func (this *BLangClassDefinition) SetPrecedence(precedence int) {
-	this.precedence = precedence
+func (b *BLangClassDefinition) SetPrecedence(precedence int) {
+	b.precedence = precedence
 }
 
-func (this *BLangClassDefinition) GetTypeData() model.TypeData {
-	return this.typeData
+func (b *BLangClassDefinition) GetTypeData() model.TypeData {
+	return b.typeData
 }
 
-func (this *BLangClassDefinition) SetTypeData(typeData model.TypeData) {
-	this.typeData = typeData
+func (b *BLangClassDefinition) SetTypeData(typeData model.TypeData) {
+	b.typeData = typeData
 }
 
-func (this *BLangClassDefinition) GetCycleDepth() int {
-	return this.CycleDepth
+func (b *BLangClassDefinition) GetCycleDepth() int {
+	return b.CycleDepth
 }
 
-func (this *BLangClassDefinition) SetCycleDepth(depth int) {
-	this.CycleDepth = depth
+func (b *BLangClassDefinition) SetCycleDepth(depth int) {
+	b.CycleDepth = depth
 }
 
-func (this *BLangCompilationUnit) AddTopLevelNode(node model.TopLevelNode) {
+func (b *BLangCompilationUnit) AddTopLevelNode(node model.TopLevelNode) {
 	// migrated from BLangCompilationUnit.java:48:5
-	this.TopLevelNodes = append(this.TopLevelNodes, node)
+	b.TopLevelNodes = append(b.TopLevelNodes, node)
 }
 
-func (this *BLangCompilationUnit) GetTopLevelNodes() []model.TopLevelNode {
+func (b *BLangCompilationUnit) GetTopLevelNodes() []model.TopLevelNode {
 	// migrated from BLangCompilationUnit.java:53:5
-	return this.TopLevelNodes
+	return b.TopLevelNodes
 }
 
-func (this *BLangCompilationUnit) GetName() string {
+func (b *BLangCompilationUnit) GetName() string {
 	// migrated from BLangCompilationUnit.java:58:5
-	return this.Name
+	return b.Name
 }
 
-func (this *BLangCompilationUnit) SetName(name string) {
+func (b *BLangCompilationUnit) SetName(name string) {
 	// migrated from BLangCompilationUnit.java:63:5
-	this.Name = name
+	b.Name = name
 }
 
-func (this *BLangCompilationUnit) GetPackageID() *model.PackageID {
+func (b *BLangCompilationUnit) GetPackageID() *model.PackageID {
 	// migrated from BLangCompilationUnit.java:68:5
-	return this.packageID
+	return b.packageID
 }
 
-func (this *BLangCompilationUnit) SetPackageID(packageID *model.PackageID) {
+func (b *BLangCompilationUnit) SetPackageID(packageID *model.PackageID) {
 	// migrated from BLangCompilationUnit.java:72:5
-	this.packageID = packageID
+	b.packageID = packageID
 }
 
-func (this *BLangCompilationUnit) GetKind() model.NodeKind {
+func (b *BLangCompilationUnit) GetKind() model.NodeKind {
 	// migrated from BLangCompilationUnit.java:76:5
 	return model.NodeKind_COMPILATION_UNIT
 }
 
-func (this *BLangCompilationUnit) SetSourceKind(kind SourceKind) {
+func (b *BLangCompilationUnit) SetSourceKind(kind SourceKind) {
 	// migrated from BLangCompilationUnit.java:81:5
-	this.sourceKind = kind
+	b.sourceKind = kind
 }
 
-func (this *BLangCompilationUnit) GetSourceKind() SourceKind {
+func (b *BLangCompilationUnit) GetSourceKind() SourceKind {
 	// migrated from BLangCompilationUnit.java:86:5
-	return this.sourceKind
+	return b.sourceKind
 }
 
-func (this *BLangConstant) GetName() model.IdentifierNode {
-	return this.Name
+func (b *BLangConstant) GetName() model.IdentifierNode {
+	return b.Name
 }
 
-func (this *BLangConstant) SetName(name model.IdentifierNode) {
+func (b *BLangConstant) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 		return
 	}
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangConstant) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+func (b *BLangConstant) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
 	// migrated from BLangConstant.java:88:5
-	return this.AnnAttachments
+	return b.AnnAttachments
 }
 
-func (this *BLangConstant) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangConstant) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	// migrated from BLangConstant.java:93:5
 	if annAttachment, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, annAttachment)
+		b.AnnAttachments = append(b.AnnAttachments, annAttachment)
 		return
 	}
 	panic("annAttachment is not a BLangAnnotationAttachment")
 }
 
-func (this *BLangConstant) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+func (b *BLangConstant) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
 	// migrated from BLangConstant.java:98:5
-	return this.MarkdownDocumentationAttachment
+	return b.MarkdownDocumentationAttachment
 }
 
-func (this *BLangConstant) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+func (b *BLangConstant) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	// migrated from BLangConstant.java:103:5
 	if documentationNode, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		this.MarkdownDocumentationAttachment = documentationNode
+		b.MarkdownDocumentationAttachment = documentationNode
 		return
 	}
 	panic("documentationNode is not a BLangMarkdownDocumentation")
 }
 
-func (this *BLangConstant) GetKind() model.NodeKind {
+func (b *BLangConstant) GetKind() model.NodeKind {
 	// migrated from BLangConstant.java:108:5
 	return model.NodeKind_CONSTANT
 }
 
-func (this *BLangConstant) GetAssociatedType() semtypes.SemType {
-	if this.TypeNode() != nil {
-		return this.TypeNode().GetTypeData().Type
+func (b *BLangConstant) GetAssociatedType() semtypes.SemType {
+	if b.TypeNode() != nil {
+		return b.TypeNode().GetTypeData().Type
 	}
 	return nil
 }
 
-func (this *BLangConstant) GetPrecedence() int {
+func (b *BLangConstant) GetPrecedence() int {
 	// migrated from BLangConstant.java:144:5
 	return 0
 }
 
-func (this *BLangConstant) SetPrecedence(precedence int) {
+func (b *BLangConstant) SetPrecedence(precedence int) {
 	// migrated from BLangConstant.java:149:5
 }
 
-func (this *BLangSimpleVariable) GetName() model.IdentifierNode {
-	return this.Name
+func (b *BLangSimpleVariable) GetName() model.IdentifierNode {
+	return b.Name
 }
 
-func (this *BLangSimpleVariable) GetKind() model.NodeKind {
+func (b *BLangSimpleVariable) GetKind() model.NodeKind {
 	return model.NodeKind_VARIABLE
 }
 
-func (this *BLangSimpleVariable) SetName(name model.IdentifierNode) {
+func (b *BLangSimpleVariable) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 		return
 	}
 	panic("name is not a BLangIdentifier")
 }
 
-func (this *BLangMarkdownDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkdownDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_MARKDOWN_DOCUMENTATION
 }
 
-func (this *BLangMarkdownDocumentation) GetDocumentationLines() []model.MarkdownDocumentationTextAttributeNode {
-	result := make([]model.MarkdownDocumentationTextAttributeNode, len(this.DocumentationLines))
-	for i := range this.DocumentationLines {
-		result[i] = &this.DocumentationLines[i]
+func (b *BLangMarkdownDocumentation) GetDocumentationLines() []model.MarkdownDocumentationTextAttributeNode {
+	result := make([]model.MarkdownDocumentationTextAttributeNode, len(b.DocumentationLines))
+	for i := range b.DocumentationLines {
+		result[i] = &b.DocumentationLines[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddDocumentationLine(documentationText model.MarkdownDocumentationTextAttributeNode) {
+func (b *BLangMarkdownDocumentation) AddDocumentationLine(documentationText model.MarkdownDocumentationTextAttributeNode) {
 	if line, ok := documentationText.(*BLangMarkdownDocumentationLine); ok {
-		this.DocumentationLines = append(this.DocumentationLines, *line)
+		b.DocumentationLines = append(b.DocumentationLines, *line)
 	} else {
 		panic("documentationText is not a BLangMarkdownDocumentationLine")
 	}
 }
 
-func (this *BLangMarkdownDocumentation) GetParameters() []model.MarkdownDocumentationParameterAttributeNode {
-	result := make([]model.MarkdownDocumentationParameterAttributeNode, len(this.Parameters))
-	for i := range this.Parameters {
-		result[i] = &this.Parameters[i]
+func (b *BLangMarkdownDocumentation) GetParameters() []model.MarkdownDocumentationParameterAttributeNode {
+	result := make([]model.MarkdownDocumentationParameterAttributeNode, len(b.Parameters))
+	for i := range b.Parameters {
+		result[i] = &b.Parameters[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddParameter(parameter model.MarkdownDocumentationParameterAttributeNode) {
+func (b *BLangMarkdownDocumentation) AddParameter(parameter model.MarkdownDocumentationParameterAttributeNode) {
 	if param, ok := parameter.(*BLangMarkdownParameterDocumentation); ok {
-		this.Parameters = append(this.Parameters, *param)
+		b.Parameters = append(b.Parameters, *param)
 	} else {
 		panic("parameter is not a BLangMarkdownParameterDocumentation")
 	}
 }
 
-func (this *BLangMarkdownDocumentation) GetReturnParameter() model.MarkdownDocumentationReturnParameterAttributeNode {
-	return this.ReturnParameter
+func (b *BLangMarkdownDocumentation) GetReturnParameter() model.MarkdownDocumentationReturnParameterAttributeNode {
+	return b.ReturnParameter
 }
 
-func (this *BLangMarkdownDocumentation) GetDeprecationDocumentation() model.MarkDownDocumentationDeprecationAttributeNode {
-	return this.DeprecationDocumentation
+func (b *BLangMarkdownDocumentation) GetDeprecationDocumentation() model.MarkDownDocumentationDeprecationAttributeNode {
+	return b.DeprecationDocumentation
 }
 
-func (this *BLangMarkdownDocumentation) SetReturnParameter(returnParameter model.MarkdownDocumentationReturnParameterAttributeNode) {
+func (b *BLangMarkdownDocumentation) SetReturnParameter(returnParameter model.MarkdownDocumentationReturnParameterAttributeNode) {
 	if param, ok := returnParameter.(*BLangMarkdownReturnParameterDocumentation); ok {
-		this.ReturnParameter = param
+		b.ReturnParameter = param
 	} else {
 		panic("returnParameter is not a BLangMarkdownReturnParameterDocumentation")
 	}
 }
 
-func (this *BLangMarkdownDocumentation) SetDeprecationDocumentation(deprecationDocumentation model.MarkDownDocumentationDeprecationAttributeNode) {
+func (b *BLangMarkdownDocumentation) SetDeprecationDocumentation(deprecationDocumentation model.MarkDownDocumentationDeprecationAttributeNode) {
 	if doc, ok := deprecationDocumentation.(*BLangMarkDownDeprecationDocumentation); ok {
-		this.DeprecationDocumentation = doc
+		b.DeprecationDocumentation = doc
 	} else {
 		panic("deprecationDocumentation is not a BLangMarkDownDeprecationDocumentation")
 	}
 }
 
-func (this *BLangMarkdownDocumentation) SetDeprecatedParametersDocumentation(deprecatedParametersDocumentation model.MarkDownDocumentationDeprecatedParametersAttributeNode) {
+func (b *BLangMarkdownDocumentation) SetDeprecatedParametersDocumentation(deprecatedParametersDocumentation model.MarkDownDocumentationDeprecatedParametersAttributeNode) {
 	if doc, ok := deprecatedParametersDocumentation.(*BLangMarkDownDeprecatedParametersDocumentation); ok {
-		this.DeprecatedParametersDocumentation = doc
+		b.DeprecatedParametersDocumentation = doc
 	} else {
 		panic("deprecatedParametersDocumentation is not a BLangMarkDownDeprecatedParametersDocumentation")
 	}
 }
 
-func (this *BLangMarkdownDocumentation) GetDeprecatedParametersDocumentation() model.MarkDownDocumentationDeprecatedParametersAttributeNode {
-	return this.DeprecatedParametersDocumentation
+func (b *BLangMarkdownDocumentation) GetDeprecatedParametersDocumentation() model.MarkDownDocumentationDeprecatedParametersAttributeNode {
+	return b.DeprecatedParametersDocumentation
 }
 
-func (this *BLangMarkdownDocumentation) GetDocumentation() string {
+func (b *BLangMarkdownDocumentation) GetDocumentation() string {
 	var lines []string
-	for i := range this.DocumentationLines {
-		lines = append(lines, this.DocumentationLines[i].GetText())
+	for i := range b.DocumentationLines {
+		lines = append(lines, b.DocumentationLines[i].GetText())
 	}
 	result := strings.Join(lines, "\n")
 	return strings.ReplaceAll(result, "\r", "")
 }
 
-func (this *BLangMarkdownDocumentation) GetParameterDocumentations() map[string]model.MarkdownDocumentationParameterAttributeNode {
+func (b *BLangMarkdownDocumentation) GetParameterDocumentations() map[string]model.MarkdownDocumentationParameterAttributeNode {
 	result := make(map[string]model.MarkdownDocumentationParameterAttributeNode)
-	for _, parameter := range this.Parameters {
+	for _, parameter := range b.Parameters {
 		paramName := parameter.GetParameterName()
 		result[paramName.GetValue()] = &parameter
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) GetReturnParameterDocumentation() *string {
-	if this.ReturnParameter == nil {
+func (b *BLangMarkdownDocumentation) GetReturnParameterDocumentation() *string {
+	if b.ReturnParameter == nil {
 		return nil
 	}
-	return new(this.ReturnParameter.GetReturnParameterDocumentation())
+	return new(b.ReturnParameter.GetReturnParameterDocumentation())
 }
 
-func (this *BLangMarkdownDocumentation) GetReferences() []model.MarkdownDocumentationReferenceAttributeNode {
-	result := make([]model.MarkdownDocumentationReferenceAttributeNode, len(this.References))
-	for i := range this.References {
-		result[i] = &this.References[i]
+func (b *BLangMarkdownDocumentation) GetReferences() []model.MarkdownDocumentationReferenceAttributeNode {
+	result := make([]model.MarkdownDocumentationReferenceAttributeNode, len(b.References))
+	for i := range b.References {
+		result[i] = &b.References[i]
 	}
 	return result
 }
 
-func (this *BLangMarkdownDocumentation) AddReference(reference model.MarkdownDocumentationReferenceAttributeNode) {
+func (b *BLangMarkdownDocumentation) AddReference(reference model.MarkdownDocumentationReferenceAttributeNode) {
 	if ref, ok := reference.(*BLangMarkdownReferenceDocumentation); ok {
-		this.References = append(this.References, *ref)
+		b.References = append(b.References, *ref)
 	} else {
 		panic("reference is not a BLangMarkdownReferenceDocumentation")
 	}
 }
 
-func (this *BLangMarkdownReferenceDocumentation) GetType() model.DocumentationReferenceType {
-	return this.Type
+func (b *BLangMarkdownReferenceDocumentation) GetType() model.DocumentationReferenceType {
+	return b.Type
 }
 
-func (this *BLangMarkdownReferenceDocumentation) GetKind() model.NodeKind {
+func (b *BLangMarkdownReferenceDocumentation) GetKind() model.NodeKind {
 	return model.NodeKind_DOCUMENTATION_REFERENCE
 }
 
 // BLangService methods
 
-func (this *BLangService) GetName() model.IdentifierNode {
-	return this.Name
+func (b *BLangService) GetName() model.IdentifierNode {
+	return b.Name
 }
 
-func (this *BLangService) SetName(name model.IdentifierNode) {
+func (b *BLangService) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangService) GetResources() []model.FunctionNode {
+func (b *BLangService) GetResources() []model.FunctionNode {
 	return []model.FunctionNode{}
 }
 
-func (this *BLangService) IsAnonymousService() bool {
+func (b *BLangService) IsAnonymousService() bool {
 	return false
 }
 
-func (this *BLangService) GetAttachedExprs() []model.ExpressionNode {
-	result := make([]model.ExpressionNode, len(this.AttachedExprs))
-	for i := range this.AttachedExprs {
-		result[i] = this.AttachedExprs[i]
+func (b *BLangService) GetAttachedExprs() []model.ExpressionNode {
+	result := make([]model.ExpressionNode, len(b.AttachedExprs))
+	for i := range b.AttachedExprs {
+		result[i] = b.AttachedExprs[i]
 	}
 	return result
 }
 
-func (this *BLangService) GetServiceClass() model.ClassDefinition {
-	return this.ServiceClass
+func (b *BLangService) GetServiceClass() model.ClassDefinition {
+	return b.ServiceClass
 }
 
-func (this *BLangService) GetAbsolutePath() []model.IdentifierNode {
-	return this.AbsoluteResourcePath
+func (b *BLangService) GetAbsolutePath() []model.IdentifierNode {
+	return b.AbsoluteResourcePath
 }
 
-func (this *BLangService) GetServiceNameLiteral() model.LiteralNode {
-	return this.ServiceNameLiteral
+func (b *BLangService) GetServiceNameLiteral() model.LiteralNode {
+	return b.ServiceNameLiteral
 }
 
-func (this *BLangService) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	result := make([]model.AnnotationAttachmentNode, len(this.AnnAttachments))
-	for i := range this.AnnAttachments {
-		result[i] = &this.AnnAttachments[i]
+func (b *BLangService) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	result := make([]model.AnnotationAttachmentNode, len(b.AnnAttachments))
+	for i := range b.AnnAttachments {
+		result[i] = &b.AnnAttachments[i]
 	}
 	return result
 }
 
-func (this *BLangService) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangService) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	if ann, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.AnnAttachments = append(this.AnnAttachments, *ann)
+		b.AnnAttachments = append(b.AnnAttachments, *ann)
 	} else {
 		panic("annAttachment is not a BLangAnnotationAttachment")
 	}
 }
 
-func (this *BLangService) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
-	return this.MarkdownDocumentationAttachment
+func (b *BLangService) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+	return b.MarkdownDocumentationAttachment
 }
 
-func (this *BLangService) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+func (b *BLangService) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	if doc, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		this.MarkdownDocumentationAttachment = doc
+		b.MarkdownDocumentationAttachment = doc
 	} else {
 		panic("documentationNode is not a BLangMarkdownDocumentation")
 	}
 }
 
-func (this *BLangService) GetKind() model.NodeKind {
+func (b *BLangService) GetKind() model.NodeKind {
 	return model.NodeKind_SERVICE
 }
 
-func (this *BLangFunction) GetKind() model.NodeKind {
+func (b *BLangFunction) GetKind() model.NodeKind {
 	return model.NodeKind_FUNCTION
 }
 
-func (this *BLangFunction) Scope() model.Scope {
-	return this.scope
+func (b *BLangFunction) Scope() model.Scope {
+	return b.scope
 }
 
-func (this *BLangFunction) SetScope(scope model.Scope) {
-	this.scope = scope
+func (b *BLangFunction) SetScope(scope model.Scope) {
+	b.scope = scope
 }
 
 var _ NodeWithScope = &BLangFunction{}
@@ -1523,298 +1523,298 @@ func NewBLangTypeDefinition() *BLangTypeDefinition {
 	return this
 }
 
-func (this *BLangTypeDefinition) GetName() model.IdentifierNode {
-	return this.Name
+func (b *BLangTypeDefinition) GetName() model.IdentifierNode {
+	return b.Name
 }
 
-func (this *BLangTypeDefinition) SetName(name model.IdentifierNode) {
+func (b *BLangTypeDefinition) SetName(name model.IdentifierNode) {
 	if id, ok := name.(*BLangIdentifier); ok {
-		this.Name = id
+		b.Name = id
 	} else {
 		panic("name is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangTypeDefinition) GetTypeData() model.TypeData {
-	return this.typeData
+func (b *BLangTypeDefinition) GetTypeData() model.TypeData {
+	return b.typeData
 }
 
-func (this *BLangTypeDefinition) SetTypeData(typeData model.TypeData) {
-	this.typeData = typeData
+func (b *BLangTypeDefinition) SetTypeData(typeData model.TypeData) {
+	b.typeData = typeData
 }
 
-func (this *BLangTypeDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
-	result := make([]model.AnnotationAttachmentNode, len(this.annAttachments))
-	for i := range this.annAttachments {
-		result[i] = &this.annAttachments[i]
+func (b *BLangTypeDefinition) GetAnnotationAttachments() []model.AnnotationAttachmentNode {
+	result := make([]model.AnnotationAttachmentNode, len(b.annAttachments))
+	for i := range b.annAttachments {
+		result[i] = &b.annAttachments[i]
 	}
 	return result
 }
 
-func (this *BLangTypeDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
+func (b *BLangTypeDefinition) AddAnnotationAttachment(annAttachment model.AnnotationAttachmentNode) {
 	if ann, ok := annAttachment.(*BLangAnnotationAttachment); ok {
-		this.annAttachments = append(this.annAttachments, *ann)
+		b.annAttachments = append(b.annAttachments, *ann)
 	} else {
 		panic("annAttachment is not a BLangAnnotationAttachment")
 	}
 }
 
-func (this *BLangTypeDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
-	return this.markdownDocumentationAttachment
+func (b *BLangTypeDefinition) GetMarkdownDocumentationAttachment() model.MarkdownDocumentationNode {
+	return b.markdownDocumentationAttachment
 }
 
-func (this *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
+func (b *BLangTypeDefinition) SetMarkdownDocumentationAttachment(documentationNode model.MarkdownDocumentationNode) {
 	if doc, ok := documentationNode.(*BLangMarkdownDocumentation); ok {
-		this.markdownDocumentationAttachment = doc
+		b.markdownDocumentationAttachment = doc
 	} else {
 		panic("documentationNode is not a BLangMarkdownDocumentation")
 	}
 }
 
-func (this *BLangTypeDefinition) GetPrecedence() int {
-	return this.precedence
+func (b *BLangTypeDefinition) GetPrecedence() int {
+	return b.precedence
 }
 
-func (this *BLangTypeDefinition) SetPrecedence(precedence int) {
-	this.precedence = precedence
+func (b *BLangTypeDefinition) SetPrecedence(precedence int) {
+	b.precedence = precedence
 }
 
-func (this *BLangTypeDefinition) GetKind() model.NodeKind {
+func (b *BLangTypeDefinition) GetKind() model.NodeKind {
 	return model.NodeKind_TYPE_DEFINITION
 }
 
-func (this *BLangTypeDefinition) GetCycleDepth() int {
-	return this.CycleDepth
+func (b *BLangTypeDefinition) GetCycleDepth() int {
+	return b.CycleDepth
 }
 
-func (this *BLangTypeDefinition) SetCycleDepth(depth int) {
-	this.CycleDepth = depth
+func (b *BLangTypeDefinition) SetCycleDepth(depth int) {
+	b.CycleDepth = depth
 }
 
-func (this *BLangXMLNS) GetNamespaceURI() model.ExpressionNode {
-	return this.namespaceURI
+func (b *BLangXMLNS) GetNamespaceURI() model.ExpressionNode {
+	return b.namespaceURI
 }
 
-func (this *BLangXMLNS) GetPrefix() model.IdentifierNode {
-	return this.prefix
+func (b *BLangXMLNS) GetPrefix() model.IdentifierNode {
+	return b.prefix
 }
 
-func (this *BLangXMLNS) SetNamespaceURI(namespaceURI model.ExpressionNode) {
+func (b *BLangXMLNS) SetNamespaceURI(namespaceURI model.ExpressionNode) {
 	if expr, ok := namespaceURI.(BLangExpression); ok {
-		this.namespaceURI = expr
+		b.namespaceURI = expr
 	} else {
 		panic("namespaceURI is not a BLangExpression")
 	}
 }
 
-func (this *BLangXMLNS) SetPrefix(prefix model.IdentifierNode) {
+func (b *BLangXMLNS) SetPrefix(prefix model.IdentifierNode) {
 	if ident, ok := prefix.(*BLangIdentifier); ok {
-		this.prefix = ident
+		b.prefix = ident
 	} else {
 		panic("prefix is not a BLangIdentifier")
 	}
 }
 
-func (this *BLangXMLNS) GetKind() model.NodeKind {
+func (b *BLangXMLNS) GetKind() model.NodeKind {
 	return model.NodeKind_XMLNS
 }
 
-func (this *BLangPackage) GetCompilationUnits() []model.CompilationUnitNode {
-	result := make([]model.CompilationUnitNode, len(this.CompUnits))
-	for i := range this.CompUnits {
-		result[i] = &this.CompUnits[i]
+func (b *BLangPackage) GetCompilationUnits() []model.CompilationUnitNode {
+	result := make([]model.CompilationUnitNode, len(b.CompUnits))
+	for i := range b.CompUnits {
+		result[i] = &b.CompUnits[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddCompilationUnit(compUnit model.CompilationUnitNode) {
+func (b *BLangPackage) AddCompilationUnit(compUnit model.CompilationUnitNode) {
 	if cu, ok := compUnit.(*BLangCompilationUnit); ok {
-		this.CompUnits = append(this.CompUnits, *cu)
+		b.CompUnits = append(b.CompUnits, *cu)
 	} else {
 		panic("compUnit is not a BLangCompilationUnit")
 	}
 }
 
-func (this *BLangPackage) GetImports() []model.ImportPackageNode {
-	result := make([]model.ImportPackageNode, len(this.Imports))
-	for i := range this.Imports {
-		result[i] = &this.Imports[i]
+func (b *BLangPackage) GetImports() []model.ImportPackageNode {
+	result := make([]model.ImportPackageNode, len(b.Imports))
+	for i := range b.Imports {
+		result[i] = &b.Imports[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddImport(importPkg model.ImportPackageNode) {
+func (b *BLangPackage) AddImport(importPkg model.ImportPackageNode) {
 	if imp, ok := importPkg.(*BLangImportPackage); ok {
-		this.Imports = append(this.Imports, *imp)
+		b.Imports = append(b.Imports, *imp)
 	} else {
 		panic("importPkg is not a BLangImportPackage")
 	}
 }
 
-func (this *BLangPackage) GetNamespaceDeclarations() []model.XMLNSDeclarationNode {
-	result := make([]model.XMLNSDeclarationNode, len(this.XmlnsList))
-	for i := range this.XmlnsList {
-		result[i] = &this.XmlnsList[i]
+func (b *BLangPackage) GetNamespaceDeclarations() []model.XMLNSDeclarationNode {
+	result := make([]model.XMLNSDeclarationNode, len(b.XmlnsList))
+	for i := range b.XmlnsList {
+		result[i] = &b.XmlnsList[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddNamespaceDeclaration(xmlnsDecl model.XMLNSDeclarationNode) {
+func (b *BLangPackage) AddNamespaceDeclaration(xmlnsDecl model.XMLNSDeclarationNode) {
 	if xmlns, ok := xmlnsDecl.(*BLangXMLNS); ok {
-		this.XmlnsList = append(this.XmlnsList, *xmlns)
-		this.TopLevelNodes = append(this.TopLevelNodes, xmlnsDecl)
+		b.XmlnsList = append(b.XmlnsList, *xmlns)
+		b.TopLevelNodes = append(b.TopLevelNodes, xmlnsDecl)
 	} else {
 		panic("xmlnsDecl is not a BLangXMLNS")
 	}
 }
 
-func (this *BLangPackage) GetConstants() []model.ConstantNode {
-	result := make([]model.ConstantNode, len(this.Constants))
-	for i := range this.Constants {
-		result[i] = &this.Constants[i]
+func (b *BLangPackage) GetConstants() []model.ConstantNode {
+	result := make([]model.ConstantNode, len(b.Constants))
+	for i := range b.Constants {
+		result[i] = &b.Constants[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) GetGlobalVariables() []model.VariableNode {
-	result := make([]model.VariableNode, len(this.GlobalVars))
-	for i := range this.GlobalVars {
-		result[i] = &this.GlobalVars[i]
+func (b *BLangPackage) GetGlobalVariables() []model.VariableNode {
+	result := make([]model.VariableNode, len(b.GlobalVars))
+	for i := range b.GlobalVars {
+		result[i] = &b.GlobalVars[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddGlobalVariable(globalVar model.SimpleVariableNode) {
+func (b *BLangPackage) AddGlobalVariable(globalVar model.SimpleVariableNode) {
 	if sv, ok := globalVar.(*BLangSimpleVariable); ok {
-		this.GlobalVars = append(this.GlobalVars, *sv)
-		this.TopLevelNodes = append(this.TopLevelNodes, globalVar)
+		b.GlobalVars = append(b.GlobalVars, *sv)
+		b.TopLevelNodes = append(b.TopLevelNodes, globalVar)
 	} else {
 		panic("globalVar is not a BLangSimpleVariable")
 	}
 }
 
-func (this *BLangPackage) GetServices() []model.ServiceNode {
-	result := make([]model.ServiceNode, len(this.Services))
-	for i := range this.Services {
-		result[i] = &this.Services[i]
+func (b *BLangPackage) GetServices() []model.ServiceNode {
+	result := make([]model.ServiceNode, len(b.Services))
+	for i := range b.Services {
+		result[i] = &b.Services[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddService(service model.ServiceNode) {
+func (b *BLangPackage) AddService(service model.ServiceNode) {
 	if svc, ok := service.(*BLangService); ok {
-		this.Services = append(this.Services, *svc)
-		this.TopLevelNodes = append(this.TopLevelNodes, service)
+		b.Services = append(b.Services, *svc)
+		b.TopLevelNodes = append(b.TopLevelNodes, service)
 	} else {
 		panic("service is not a BLangService")
 	}
 }
 
-func (this *BLangPackage) GetFunctions() []model.FunctionNode {
-	result := make([]model.FunctionNode, len(this.Functions))
-	for i := range this.Functions {
-		result[i] = &this.Functions[i]
+func (b *BLangPackage) GetFunctions() []model.FunctionNode {
+	result := make([]model.FunctionNode, len(b.Functions))
+	for i := range b.Functions {
+		result[i] = &b.Functions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddFunction(function model.FunctionNode) {
+func (b *BLangPackage) AddFunction(function model.FunctionNode) {
 	if fn, ok := function.(*BLangFunction); ok {
-		this.Functions = append(this.Functions, *fn)
-		this.TopLevelNodes = append(this.TopLevelNodes, function)
+		b.Functions = append(b.Functions, *fn)
+		b.TopLevelNodes = append(b.TopLevelNodes, function)
 	} else {
 		panic("function is not a BLangFunction")
 	}
 }
 
-func (this *BLangPackage) GetTypeDefinitions() []model.TypeDefinition {
-	result := make([]model.TypeDefinition, len(this.TypeDefinitions))
-	for i := range this.TypeDefinitions {
-		result[i] = &this.TypeDefinitions[i]
+func (b *BLangPackage) GetTypeDefinitions() []model.TypeDefinition {
+	result := make([]model.TypeDefinition, len(b.TypeDefinitions))
+	for i := range b.TypeDefinitions {
+		result[i] = &b.TypeDefinitions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddTypeDefinition(typeDefinition model.TypeDefinition) {
+func (b *BLangPackage) AddTypeDefinition(typeDefinition model.TypeDefinition) {
 	if td, ok := typeDefinition.(*BLangTypeDefinition); ok {
-		this.TypeDefinitions = append(this.TypeDefinitions, *td)
-		this.TopLevelNodes = append(this.TopLevelNodes, typeDefinition)
+		b.TypeDefinitions = append(b.TypeDefinitions, *td)
+		b.TopLevelNodes = append(b.TopLevelNodes, typeDefinition)
 	} else {
 		panic("typeDefinition is not a BLangTypeDefinition")
 	}
 }
 
-func (this *BLangPackage) GetAnnotations() []model.AnnotationNode {
-	result := make([]model.AnnotationNode, len(this.Annotations))
-	for i := range this.Annotations {
-		result[i] = &this.Annotations[i]
+func (b *BLangPackage) GetAnnotations() []model.AnnotationNode {
+	result := make([]model.AnnotationNode, len(b.Annotations))
+	for i := range b.Annotations {
+		result[i] = &b.Annotations[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) AddAnnotation(annotation model.AnnotationNode) {
+func (b *BLangPackage) AddAnnotation(annotation model.AnnotationNode) {
 	if ann, ok := annotation.(*BLangAnnotation); ok {
-		this.Annotations = append(this.Annotations, *ann)
-		this.TopLevelNodes = append(this.TopLevelNodes, annotation)
+		b.Annotations = append(b.Annotations, *ann)
+		b.TopLevelNodes = append(b.TopLevelNodes, annotation)
 	} else {
 		panic("annotation is not a BLangAnnotation")
 	}
 }
 
-func (this *BLangPackage) GetClassDefinitions() []model.ClassDefinition {
-	result := make([]model.ClassDefinition, len(this.ClassDefinitions))
-	for i := range this.ClassDefinitions {
-		result[i] = &this.ClassDefinitions[i]
+func (b *BLangPackage) GetClassDefinitions() []model.ClassDefinition {
+	result := make([]model.ClassDefinition, len(b.ClassDefinitions))
+	for i := range b.ClassDefinitions {
+		result[i] = &b.ClassDefinitions[i]
 	}
 	return result
 }
 
-func (this *BLangPackage) GetKind() model.NodeKind {
+func (b *BLangPackage) GetKind() model.NodeKind {
 	return model.NodeKind_PACKAGE
 }
 
-func (this *BLangPackage) AddTestablePkg(testablePkg *BLangTestablePackage) {
-	this.TestablePkgs = append(this.TestablePkgs, testablePkg)
+func (b *BLangPackage) AddTestablePkg(testablePkg *BLangTestablePackage) {
+	b.TestablePkgs = append(b.TestablePkgs, testablePkg)
 }
 
-func (this *BLangPackage) GetTestablePkgs() []*BLangTestablePackage {
-	return this.TestablePkgs
+func (b *BLangPackage) GetTestablePkgs() []*BLangTestablePackage {
+	return b.TestablePkgs
 }
 
-func (this *BLangPackage) GetTestablePkg() *BLangTestablePackage {
-	if len(this.TestablePkgs) > 0 {
-		return this.TestablePkgs[0]
+func (b *BLangPackage) GetTestablePkg() *BLangTestablePackage {
+	if len(b.TestablePkgs) > 0 {
+		return b.TestablePkgs[0]
 	}
 	return nil
 }
 
-func (this *BLangPackage) ContainsTestablePkg() bool {
-	return len(this.TestablePkgs) > 0
+func (b *BLangPackage) ContainsTestablePkg() bool {
+	return len(b.TestablePkgs) > 0
 }
 
-func (this *BLangPackage) HasTestablePackage() bool {
-	return len(this.TestablePkgs) > 0
+func (b *BLangPackage) HasTestablePackage() bool {
+	return len(b.TestablePkgs) > 0
 }
 
-func (this *BLangPackage) AddClassDefinition(classDefNode *BLangClassDefinition) {
-	this.TopLevelNodes = append(this.TopLevelNodes, classDefNode)
-	this.ClassDefinitions = append(this.ClassDefinitions, *classDefNode)
+func (b *BLangPackage) AddClassDefinition(classDefNode *BLangClassDefinition) {
+	b.TopLevelNodes = append(b.TopLevelNodes, classDefNode)
+	b.ClassDefinitions = append(b.ClassDefinitions, *classDefNode)
 }
 
-func (this *BLangPackage) AddDiagnostic(diagnostic diagnostics.Diagnostic) {
+func (b *BLangPackage) AddDiagnostic(diagnostic diagnostics.Diagnostic) {
 	// Check if diagnostic already exists
-	for _, existing := range this.diagnostics {
+	for _, existing := range b.diagnostics {
 		if diagnosticEqual(existing, diagnostic) {
 			return
 		}
 	}
-	this.diagnostics = append(this.diagnostics, diagnostic)
+	b.diagnostics = append(b.diagnostics, diagnostic)
 	severity := diagnostic.DiagnosticInfo().Severity()
 	switch severity {
 	case diagnostics.Error:
-		this.errorCount++
+		b.errorCount++
 	case diagnostics.Warning:
-		this.warnCount++
+		b.warnCount++
 	}
 }
 
@@ -1826,22 +1826,22 @@ func diagnosticEqual(d1, d2 diagnostics.Diagnostic) bool {
 		info1.Severity() == info2.Severity()
 }
 
-func (this *BLangPackage) GetDiagnostics() []diagnostics.Diagnostic {
-	result := make([]diagnostics.Diagnostic, len(this.diagnostics))
-	copy(result, this.diagnostics)
+func (b *BLangPackage) GetDiagnostics() []diagnostics.Diagnostic {
+	result := make([]diagnostics.Diagnostic, len(b.diagnostics))
+	copy(result, b.diagnostics)
 	return result
 }
 
-func (this *BLangPackage) GetErrorCount() int {
-	return this.errorCount
+func (b *BLangPackage) GetErrorCount() int {
+	return b.errorCount
 }
 
-func (this *BLangPackage) GetWarnCount() int {
-	return this.warnCount
+func (b *BLangPackage) GetWarnCount() int {
+	return b.warnCount
 }
 
-func (this *BLangPackage) HasErrors() bool {
-	return this.errorCount > 0
+func (b *BLangPackage) HasErrors() bool {
+	return b.errorCount > 0
 }
 
 func NewBLangPackage(env semtypes.Env) *BLangPackage {
@@ -1866,26 +1866,26 @@ func NewBLangPackage(env semtypes.Env) *BLangPackage {
 	return this
 }
 
-func (this *BLangTestablePackage) GetMockFunctionNamesMap() map[string]string {
-	return this.mockFunctionNamesMap
+func (b *BLangTestablePackage) GetMockFunctionNamesMap() map[string]string {
+	return b.mockFunctionNamesMap
 }
 
-func (this *BLangTestablePackage) AddMockFunction(id string, function string) {
-	if this.mockFunctionNamesMap == nil {
-		this.mockFunctionNamesMap = make(map[string]string)
+func (b *BLangTestablePackage) AddMockFunction(id string, function string) {
+	if b.mockFunctionNamesMap == nil {
+		b.mockFunctionNamesMap = make(map[string]string)
 	}
-	this.mockFunctionNamesMap[id] = function
+	b.mockFunctionNamesMap[id] = function
 }
 
-func (this *BLangTestablePackage) GetIsLegacyMockingMap() map[string]bool {
-	return this.isLegacyMockingMap
+func (b *BLangTestablePackage) GetIsLegacyMockingMap() map[string]bool {
+	return b.isLegacyMockingMap
 }
 
-func (this *BLangTestablePackage) AddIsLegacyMockingMap(id string, isLegacy bool) {
-	if this.isLegacyMockingMap == nil {
-		this.isLegacyMockingMap = make(map[string]bool)
+func (b *BLangTestablePackage) AddIsLegacyMockingMap(id string, isLegacy bool) {
+	if b.isLegacyMockingMap == nil {
+		b.isLegacyMockingMap = make(map[string]bool)
 	}
-	this.isLegacyMockingMap[id] = isLegacy
+	b.isLegacyMockingMap[id] = isLegacy
 }
 
 func createSimpleVariableNodeWithLocationTokenLocation(location diagnostics.Location, identifier tree.Token, identifierPos diagnostics.Location) *BLangSimpleVariable {

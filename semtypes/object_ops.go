@@ -21,15 +21,15 @@ type objectOps struct {
 
 var _ BasicTypeOps = &objectOps{}
 
-func (this *objectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *objectOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(t1, t2)
 }
 
-func (this *objectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *objectOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(t1, t2)
 }
 
-func (this *objectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (o *objectOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(t1, t2)
 }
 
@@ -46,14 +46,14 @@ func newObjectOps() objectOps {
 	return this
 }
 
-func (this *objectOps) complement(t SubtypeData) SubtypeData {
-	return this.objectSubTypeComplement(t)
+func (o *objectOps) complement(t SubtypeData) SubtypeData {
+	return o.objectSubTypeComplement(t)
 }
 
-func (this *objectOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (o *objectOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return objectSubTypeIsEmpty(cx, t)
 }
 
-func (this *objectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
+func (o *objectOps) objectSubTypeComplement(t SubtypeData) SubtypeData {
 	return bddSubtypeDiff(MAPPING_SUBTYPE_OBJECT, t)
 }

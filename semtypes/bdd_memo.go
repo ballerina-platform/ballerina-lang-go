@@ -37,14 +37,14 @@ func newBddMemo() bddMemo {
 	return this
 }
 
-func (this *bddMemo) SetIsEmpty(isEmpty bool) {
+func (b *bddMemo) SetIsEmpty(isEmpty bool) {
 	if isEmpty {
-		this.isEmpty = MemoStatus_TRUE
+		b.isEmpty = MemoStatus_TRUE
 	} else {
-		this.isEmpty = MemoStatus_FALSE
+		b.isEmpty = MemoStatus_FALSE
 	}
 }
 
-func (this *bddMemo) IsEmpty() bool {
-	return (this.isEmpty == MemoStatus_TRUE)
+func (b *bddMemo) IsEmpty() bool {
+	return (b.isEmpty == MemoStatus_TRUE)
 }

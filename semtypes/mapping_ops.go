@@ -205,22 +205,22 @@ func newMappingOps() mappingOps {
 	return mappingOps{}
 }
 
-func (this *mappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *mappingOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeUnion(d1, d2)
 }
 
-func (this *mappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *mappingOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeIntersect(d1, d2)
 }
 
-func (this *mappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (m *mappingOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return bddSubtypeDiff(d1, d2)
 }
 
-func (this *mappingOps) complement(d SubtypeData) SubtypeData {
+func (m *mappingOps) complement(d SubtypeData) SubtypeData {
 	return bddSubtypeComplement(d)
 }
 
-func (this *mappingOps) IsEmpty(cx Context, d SubtypeData) bool {
+func (m *mappingOps) IsEmpty(cx Context, d SubtypeData) bool {
 	return mappingSubtypeIsEmpty(cx, d)
 }

@@ -38,43 +38,43 @@ func NewSyntaxTreeFromNodeTextDocument(rootNode Node, textDocument text.TextDocu
 	return this
 }
 
-func (this *SyntaxTree) TextDocument() text.TextDocument {
-	return this.textDocument
+func (s *SyntaxTree) TextDocument() text.TextDocument {
+	return s.textDocument
 }
 
-func (this *SyntaxTree) ContainsModulePart() bool {
+func (s *SyntaxTree) ContainsModulePart() bool {
 	// migrated from SyntaxTree.java:76:5
-	return this.RootNode.Kind() == common.MODULE_PART
+	return s.RootNode.Kind() == common.MODULE_PART
 }
 
-func (this *SyntaxTree) FilePath() string {
+func (s *SyntaxTree) FilePath() string {
 	// migrated from SyntaxTree.java:85:5
-	return this.filePath
+	return s.filePath
 }
 
-func (this *SyntaxTree) ModifyWith(rootNode Node) SyntaxTree {
+func (s *SyntaxTree) ModifyWith(rootNode Node) SyntaxTree {
 	// migrated from SyntaxTree.java:91:5
 	panic("not implemented")
 }
 
-func (this *SyntaxTree) ReplaceNode(target Node, replacement Node) SyntaxTree {
+func (s *SyntaxTree) ReplaceNode(target Node, replacement Node) SyntaxTree {
 	// migrated from SyntaxTree.java:95:5
 	panic("not implemented")
 }
 
-func (this *SyntaxTree) Diagnostics() iter.Seq[Diagnostic] {
+func (s *SyntaxTree) Diagnostics() iter.Seq[Diagnostic] {
 	// migrated from SyntaxTree.java:105:5
-	return this.RootNode.Diagnostics()
+	return s.RootNode.Diagnostics()
 }
 
-func (this *SyntaxTree) HasDiagnostics() bool {
+func (s *SyntaxTree) HasDiagnostics() bool {
 	// migrated from SyntaxTree.java:109:5
-	return this.RootNode.HasDiagnostics()
+	return s.RootNode.HasDiagnostics()
 }
 
-func (this *SyntaxTree) ToSourceCode() string {
+func (s *SyntaxTree) ToSourceCode() string {
 	// migrated from SyntaxTree.java:123:5
-	return this.RootNode.ToSourceCode()
+	return s.RootNode.ToSourceCode()
 }
 
 func modifyWithSyntaxTree[T Node](node T, clone bool, syntaxTree *SyntaxTree) T {

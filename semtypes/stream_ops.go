@@ -39,10 +39,10 @@ func newStreamOps() streamOps {
 	return this
 }
 
-func (this *streamOps) complement(t SubtypeData) SubtypeData {
+func (s *streamOps) complement(t SubtypeData) SubtypeData {
 	return streamSubtypeComplement(t)
 }
 
-func (this *streamOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (s *streamOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return streamSubtypeIsEmpty(cx, t)
 }

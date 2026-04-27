@@ -47,14 +47,14 @@ func createDistinctRecAtom(index int) recAtom {
 	return newRecAtomFromInt(index)
 }
 
-func (this *recAtom) index() int {
-	return this.idx
+func (r *recAtom) index() int {
+	return r.idx
 }
 
-func (this *recAtom) canonicalKey() string {
-	return fmt.Sprintf("r%d", this.idx)
+func (r *recAtom) canonicalKey() string {
+	return fmt.Sprintf("r%d", r.idx)
 }
 
-func (this *recAtom) String() string {
-	return fmt.Sprintf("r%d", this.idx)
+func (r *recAtom) String() string {
+	return fmt.Sprintf("r%d", r.idx)
 }

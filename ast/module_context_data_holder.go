@@ -65,38 +65,38 @@ func ModuleDescriptorFrom(moduleName *ModuleName, packageDescriptor *PackageDesc
 
 // PackageName returns the package name
 // Migrated from ModuleDescriptor.java:58:5
-func (this *ModuleDescriptor) PackageName() *PackageName {
-	return this.packageDesc.name()
+func (m *ModuleDescriptor) PackageName() *PackageName {
+	return m.packageDesc.name()
 }
 
 // Org returns the package organization
 // Migrated from ModuleDescriptor.java:62:5
-func (this *ModuleDescriptor) Org() *PackageOrg {
-	return this.packageDesc.org()
+func (m *ModuleDescriptor) Org() *PackageOrg {
+	return m.packageDesc.org()
 }
 
 // Version returns the package version
 // Migrated from ModuleDescriptor.java:66:5
-func (this *ModuleDescriptor) Version() *PackageVersion {
-	return this.packageDesc.version()
+func (m *ModuleDescriptor) Version() *PackageVersion {
+	return m.packageDesc.version()
 }
 
 // Name returns the module name
 // Migrated from ModuleDescriptor.java:70:5
-func (this *ModuleDescriptor) Name() *ModuleName {
-	return this.moduleName
+func (m *ModuleDescriptor) Name() *ModuleName {
+	return m.moduleName
 }
 
 // ModuleCompilationId returns the module compilation ID
 // Migrated from ModuleDescriptor.java:74:5
-func (this *ModuleDescriptor) ModuleCompilationId() *model.PackageID {
-	return this.moduleCompilationId
+func (m *ModuleDescriptor) ModuleCompilationId() *model.PackageID {
+	return m.moduleCompilationId
 }
 
 // ModuleTestCompilationId returns the module test compilation ID
 // Migrated from ModuleDescriptor.java:78:5
-func (this *ModuleDescriptor) ModuleTestCompilationId() *model.PackageID {
-	return this.moduleTestCompilationId
+func (m *ModuleDescriptor) ModuleTestCompilationId() *model.PackageID {
+	return m.moduleTestCompilationId
 }
 
 // ModuleName represents the name of a Package.
@@ -133,20 +133,20 @@ func FromPackageNameWithModuleNamePart(packageName *PackageName, moduleNamePart 
 
 // PackageName returns the package name
 // Migrated from ModuleName.java:50:5
-func (this *ModuleName) PackageName() *PackageName {
-	return this.packageName
+func (m *ModuleName) PackageName() *PackageName {
+	return m.packageName
 }
 
 // ModuleNamePart returns the module name part
 // Migrated from ModuleName.java:54:5
-func (this *ModuleName) ModuleNamePart() string {
-	return this.moduleNamePart
+func (m *ModuleName) ModuleNamePart() string {
+	return m.moduleNamePart
 }
 
 // IsDefaultModuleName checks if this is the default module name
 // Migrated from ModuleName.java:58:5
-func (this *ModuleName) IsDefaultModuleName() bool {
-	return this.moduleNamePart == ""
+func (m *ModuleName) IsDefaultModuleName() bool {
+	return m.moduleNamePart == ""
 }
 
 // PackageName represents the name of a Package.
@@ -174,8 +174,8 @@ func FromString(packageNameStr string) *PackageName {
 
 // value returns the package name string
 // Migrated from PackageName.java:54:5
-func (this *PackageName) value() string {
-	return this.packageNameStr
+func (p *PackageName) value() string {
+	return p.packageNameStr
 }
 
 // PackageOrg represents the organization of a Package.
@@ -217,26 +217,26 @@ func FromPackageOrg(packageOrgStr string) *PackageOrg {
 
 // value returns the package org string
 // Migrated from PackageOrg.java:51:5
-func (this *PackageOrg) value() string {
-	return this.packageOrgStr
+func (p *PackageOrg) value() string {
+	return p.packageOrgStr
 }
 
 // anonymous checks if this is an anonymous organization
 // Migrated from PackageOrg.java:79:5
-func (this *PackageOrg) anonymous() bool {
-	return PKG_ORG_ANON_NAME == this.packageOrgStr
+func (p *PackageOrg) anonymous() bool {
+	return PKG_ORG_ANON_NAME == p.packageOrgStr
 }
 
 // isBallerinaOrg checks if this is the ballerina organization
 // Migrated from PackageOrg.java:83:5
-func (this *PackageOrg) isBallerinaOrg() bool {
-	return this == PKG_ORG_BALLERINA
+func (p *PackageOrg) isBallerinaOrg() bool {
+	return p == PKG_ORG_BALLERINA
 }
 
 // isBallerinaxOrg checks if this is the ballerinax organization
 // Migrated from PackageOrg.java:87:5
-func (this *PackageOrg) isBallerinaxOrg() bool {
-	return this == PKG_ORG_BALLERINAX
+func (p *PackageOrg) isBallerinaxOrg() bool {
+	return p == PKG_ORG_BALLERINAX
 }
 
 // PackageVersion represents the version of a Package.
@@ -272,7 +272,7 @@ func FromSemanticVersion(version *SemanticVersion) *PackageVersion {
 
 // value returns the semantic version
 // Migrated from PackageVersion.java:52:5
-func (this *PackageVersion) value() *SemanticVersion {
+func (p *PackageVersion) value() *SemanticVersion {
 	panic("Not implemented")
 }
 
@@ -326,49 +326,49 @@ func FromPackageOrgNameVersionWithDeprecation(packageOrg *PackageOrg, packageNam
 
 // name returns the package name
 // Migrated from PackageDescriptor.java:86:5
-func (this *PackageDescriptor) name() *PackageName {
-	return this.packageName
+func (p *PackageDescriptor) name() *PackageName {
+	return p.packageName
 }
 
 // org returns the package organization
 // Migrated from PackageDescriptor.java:90:5
-func (this *PackageDescriptor) org() *PackageOrg {
-	return this.packageOrg
+func (p *PackageDescriptor) org() *PackageOrg {
+	return p.packageOrg
 }
 
 // version returns the package version
 // Migrated from PackageDescriptor.java:94:5
-func (this *PackageDescriptor) version() *PackageVersion {
-	return this.packageVersion
+func (p *PackageDescriptor) version() *PackageVersion {
+	return p.packageVersion
 }
 
 // Repository returns the repository (Optional)
 // Migrated from PackageDescriptor.java:98:5
 // Note: Using common.Optional when available
-func (this *PackageDescriptor) Repository() string {
-	return this.repository
+func (p *PackageDescriptor) Repository() string {
+	return p.repository
 }
 
 // isLangLibPackage checks if this is a lang lib package
 // Migrated from PackageDescriptor.java:102:5
-func (this *PackageDescriptor) isLangLibPackage() bool {
+func (p *PackageDescriptor) isLangLibPackage() bool {
 	panic("Not implemented")
 }
 
 // isBuiltInPackage checks if this is a built-in package
 // Migrated from PackageDescriptor.java:106:5
-func (this *PackageDescriptor) isBuiltInPackage() bool {
+func (p *PackageDescriptor) isBuiltInPackage() bool {
 	panic("Not implemented")
 }
 
 // getDeprecated returns whether this package is deprecated
 // Migrated from PackageDescriptor.java:110:5
-func (this *PackageDescriptor) getDeprecated() bool {
-	return this.isDeprecated
+func (p *PackageDescriptor) getDeprecated() bool {
+	return p.isDeprecated
 }
 
 // getDeprecationMsg returns the deprecation message
 // Migrated from PackageDescriptor.java:114:5
-func (this *PackageDescriptor) getDeprecationMsg() string {
-	return this.deprecationMsg
+func (p *PackageDescriptor) getDeprecationMsg() string {
+	return p.deprecationMsg
 }

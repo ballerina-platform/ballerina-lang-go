@@ -26,8 +26,8 @@ type enumerableDecimal struct {
 
 var _ enumerableType[big.Rat] = &enumerableDecimal{}
 
-func (this *enumerableDecimal) Value() big.Rat {
-	return this.value
+func (e *enumerableDecimal) Value() big.Rat {
+	return e.value
 }
 
 func (t1 *enumerableDecimal) Compare(t2 enumerableType[big.Rat]) int {

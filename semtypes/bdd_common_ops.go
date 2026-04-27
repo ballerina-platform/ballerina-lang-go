@@ -226,7 +226,7 @@ func atomCmp(a1 atom, a2 atom) int {
 	return a1.index() - a2.index()
 }
 
-func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
+func (c *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	if allOrNothing, ok := b.(*bddAllOrNothing); ok {
 		if allOrNothing.IsAll() {
 			return "1"
@@ -242,7 +242,7 @@ func (this *bddCommonOpsMethods) BddToString(b Bdd, inner bool) string {
 	} else {
 		str = "a" + string(rune(a.index()))
 	}
-	str = str + "?" + this.BddToString(bdd.left(), true) + ":" + this.BddToString(bdd.middle(), true) + ":" + this.BddToString(bdd.right(), true)
+	str = str + "?" + c.BddToString(bdd.left(), true) + ":" + c.BddToString(bdd.middle(), true) + ":" + c.BddToString(bdd.right(), true)
 	if inner {
 		str = "(" + str + ")"
 	}

@@ -38,10 +38,10 @@ func createTypeAtom(index int, atomicType atomicType) typeAtom {
 	}
 }
 
-func (this *typeAtom) index() int {
-	return this.idx
+func (t *typeAtom) index() int {
+	return t.idx
 }
 
-func (this *typeAtom) canonicalKey() string {
-	return fmt.Sprintf("t%d", this.idx)
+func (t *typeAtom) canonicalKey() string {
+	return fmt.Sprintf("t%d", t.idx)
 }

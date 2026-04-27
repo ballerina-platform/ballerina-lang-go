@@ -151,23 +151,23 @@ func newCellOps() cellOps {
 	return this
 }
 
-func (this *cellOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *cellOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return cellSubtypeUnion(t1, t2)
 }
 
-func (this *cellOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *cellOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return cellSubtypeIntersect(t1, t2)
 }
 
-func (this *cellOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (c *cellOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return cellSubtypeDiff(t1, t2)
 }
 
-func (this *cellOps) complement(t SubtypeData) SubtypeData {
+func (c *cellOps) complement(t SubtypeData) SubtypeData {
 	return cellSubtypeComplement(t)
 }
 
-func (this *cellOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (c *cellOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return cellFormulaIsEmpty(cx, t)
 }
 

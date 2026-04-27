@@ -41,24 +41,24 @@ func createNothing() allOrNothingSubtype {
 	return allOrNothingSubtypeNothing
 }
 
-func (this *allOrNothingSubtype) IsAllSubtype() bool {
-	return this.isAll
+func (a *allOrNothingSubtype) IsAllSubtype() bool {
+	return a.isAll
 }
 
-func (this *allOrNothingSubtype) IsNothingSubtype() bool {
-	return (!this.isAll)
+func (a *allOrNothingSubtype) IsNothingSubtype() bool {
+	return (!a.isAll)
 }
 
-func (this *allOrNothingSubtype) canonicalKey() string {
-	if this.isAll {
+func (a *allOrNothingSubtype) canonicalKey() string {
+	if a.isAll {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (this *allOrNothingSubtype) String() string {
-	if this.isAll {
+func (a *allOrNothingSubtype) String() string {
+	if a.isAll {
 		return "all"
 	} else {
 		return "nothing"

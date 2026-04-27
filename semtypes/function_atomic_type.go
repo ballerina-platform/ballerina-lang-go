@@ -25,10 +25,10 @@ type functionAtomicType struct {
 
 var _ atomicType = &functionAtomicType{}
 
-func (this *functionAtomicType) equals(other atomicType) bool {
+func (f *functionAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*functionAtomicType); ok {
-		return other.ParamType == this.ParamType && other.RetType == this.RetType &&
-			other.Qualifiers == this.Qualifiers && other.IsGeneric == this.IsGeneric
+		return other.ParamType == f.ParamType && other.RetType == f.RetType &&
+			other.Qualifiers == f.Qualifiers && other.IsGeneric == f.IsGeneric
 	}
 	return false
 }
@@ -52,6 +52,6 @@ func newFunctionAtomicType(paramType SemType, retType SemType, qualifiers SemTyp
 	return this
 }
 
-func (this *functionAtomicType) atomKind() kind {
+func (f *functionAtomicType) atomKind() kind {
 	return kind_FUNCTION_ATOM
 }

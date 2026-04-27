@@ -41,14 +41,14 @@ func newFloatSubtypeFromBoolEnumerableFloats(allowed bool, values []enumerableTy
 	this.allowed = allowed
 	var floats []enumerableFloat
 	for _, value := range values {
-		floats = append(floats, enumerableFloatFrom(value.Value()))
+		floats = append(floats, newEnumerableFloatFromFloat64(value.Value()))
 	}
 	this.values = floats
 	return this
 }
 
 func FloatConst(value float64) SemType {
-	return getBasicSubtype(BTFloat, newFloatSubtypeFromBoolEnumerableFloat(true, enumerableFloatFrom(value)))
+	return getBasicSubtype(BTFloat, newFloatSubtypeFromBoolEnumerableFloat(true, newEnumerableFloatFromFloat64(value)))
 }
 
 func floatSubtypeSingleValue(d SubtypeData) common.Optional[float64] {
@@ -87,13 +87,13 @@ func createFloatSubtype(allowed bool, values []enumerableType[float64]) ProperSu
 	return newFloatSubtypeFromBoolEnumerableFloats(allowed, values)
 }
 
-func (this *floatSubtype) Allowed() bool {
-	return this.allowed
+func (f *floatSubtype) Allowed() bool {
+	return f.allowed
 }
 
-func (this *floatSubtype) Values() []enumerableType[float64] {
+func (f *floatSubtype) Values() []enumerableType[float64] {
 	var values []enumerableType[float64]
-	for _, value := range this.values {
+	for _, value := range f.values {
 		values = append(values, &value)
 	}
 	return values

@@ -20,25 +20,25 @@ type functionOps struct{}
 
 var _ BasicTypeOps = &functionOps{}
 
-func (this *functionOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (f *functionOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return memoSubtypeIsEmpty(cx, cx.functionMemo(), func(cx Context, b Bdd) bool {
 		return bddEvery(cx, b, conjunctionNil, conjunctionNil, functionFormulaIsEmpty)
 	}, t.(Bdd))
 }
 
-func (this *functionOps) complement(t SubtypeData) SubtypeData {
+func (f *functionOps) complement(t SubtypeData) SubtypeData {
 	return bddComplement(t.(Bdd))
 }
 
-func (this *functionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *functionOps) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddDiff(t1.(Bdd), t2.(Bdd))
 }
 
-func (this *functionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *functionOps) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddIntersect(t1.(Bdd), t2.(Bdd))
 }
 
-func (this *functionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (f *functionOps) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	return bddUnion(t1.(Bdd), t2.(Bdd))
 }
 
@@ -107,7 +107,7 @@ func NewFunctionOps() functionOps {
 	return this
 }
 
-func (this *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
+func (f *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos conjunctionHandle) bool {
 	if pos == conjunctionNil {
 		return (IsEmpty(cx, t0) || IsEmpty(cx, t1))
 	} else {
@@ -115,7 +115,7 @@ func (this *functionOps) functionTheta(cx Context, t0 SemType, t1 SemType, pos c
 		posNext := cx.conjunctionNext(pos)
 		s0 := s.ParamType
 		s1 := s.RetType
-		return ((IsSubtype(cx, t0, s0) || this.functionTheta(cx, Diff(s0, t0), s1, posNext)) && (IsSubtype(cx, t1, complement(s1)) || this.functionTheta(cx, s0, Intersect(s1, t1), posNext)))
+		return ((IsSubtype(cx, t0, s0) || f.functionTheta(cx, Diff(s0, t0), s1, posNext)) && (IsSubtype(cx, t1, complement(s1)) || f.functionTheta(cx, s0, Intersect(s1, t1), posNext)))
 	}
 }
 

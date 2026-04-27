@@ -27,6 +27,6 @@ func newFutureOps() futureOps {
 	return this
 }
 
-func (this *futureOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (f *futureOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return mappingSubtypeIsEmpty(cx, t)
 }

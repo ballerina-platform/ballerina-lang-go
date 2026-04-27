@@ -127,10 +127,10 @@ func intSubtypeSingleValue(d SubtypeData) common.Optional[int64] {
 	return common.OptionalOf(min)
 }
 
-func (this intSubtype) String() string {
+func (i intSubtype) String() string {
 	var builder strings.Builder
 	builder.WriteString("(int")
-	for _, r := range this.Ranges {
+	for _, r := range i.Ranges {
 		builder.WriteString(" ")
 		if r.Min == r.Max {
 			fmt.Fprintf(&builder, "%d", r.Min)

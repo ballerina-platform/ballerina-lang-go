@@ -28,12 +28,12 @@ type MappingAtomicType struct {
 
 var _ atomicType = &MappingAtomicType{}
 
-func (this *MappingAtomicType) equals(other atomicType) bool {
+func (m *MappingAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*MappingAtomicType); ok {
-		if !this.Rest.equals(other.Rest) {
+		if !m.Rest.equals(other.Rest) {
 			return false
 		}
-		return slices.Equal(other.Names, this.Names) && slices.EqualFunc(other.Types, this.Types, func(a, b ComplexSemType) bool { return a.equals(&b) })
+		return slices.Equal(other.Names, m.Names) && slices.EqualFunc(other.Types, m.Types, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }
@@ -46,23 +46,23 @@ func mappingAtomicTypeFrom(names []string, types []ComplexSemType, rest *Complex
 	}
 }
 
-func (this *MappingAtomicType) atomKind() kind {
+func (m *MappingAtomicType) atomKind() kind {
 	return kind_MAPPING_ATOM
 }
 
-func (this *MappingAtomicType) FieldInnerVal(name string) SemType {
-	for i, n := range this.Names {
+func (m *MappingAtomicType) FieldInnerVal(name string) SemType {
+	for i, n := range m.Names {
 		if n == name {
-			return cellInnerVal(&this.Types[i])
+			return cellInnerVal(&m.Types[i])
 		}
 	}
-	return cellInnerVal(this.Rest)
+	return cellInnerVal(m.Rest)
 }
 
-func (this *MappingAtomicType) IsOptional(cx Context, name string) bool {
-	for i, n := range this.Names {
+func (m *MappingAtomicType) IsOptional(cx Context, name string) bool {
+	for i, n := range m.Names {
 		if n == name {
-			return IsSubtype(cx, UNDEF, cellInnerVal(&this.Types[i]))
+			return IsSubtype(cx, UNDEF, cellInnerVal(&m.Types[i]))
 		}
 	}
 	return true

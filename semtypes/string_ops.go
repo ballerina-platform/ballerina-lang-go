@@ -26,7 +26,7 @@ func newStringOps() stringOps {
 	return this
 }
 
-func (this *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (s *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	sd1 := d1.(stringSubtype)
 	sd2 := d2.(stringSubtype)
 	var chars []enumerableType[string]
@@ -36,7 +36,7 @@ func (this *stringOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return createStringSubtype(charStringSubtypeFrom(charsAllowed, chars), nonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (s *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	if allOrNothing1, ok := d1.(*allOrNothingSubtype); ok {
 		if allOrNothing1.IsAllSubtype() {
 			return d2
@@ -60,11 +60,11 @@ func (this *stringOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return createStringSubtype(charStringSubtypeFrom(charsAllowed, chars), nonCharStringSubtypeFrom(nonCharsAllowed, nonChars))
 }
 
-func (this *stringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
-	return this.Intersect(d1, this.complement(d2))
+func (s *stringOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+	return s.Intersect(d1, s.complement(d2))
 }
 
-func (this *stringOps) complement(d SubtypeData) SubtypeData {
+func (s *stringOps) complement(d SubtypeData) SubtypeData {
 	st := d.(stringSubtype)
 	if len(st.GetChar().Values()) == 0 && len(st.GetNonChar().Values()) == 0 {
 		if st.GetChar().Allowed() && st.GetNonChar().Allowed() {
@@ -76,7 +76,7 @@ func (this *stringOps) complement(d SubtypeData) SubtypeData {
 	return createStringSubtype(charStringSubtypeFrom(!st.GetChar().Allowed(), st.GetChar().Values()), nonCharStringSubtypeFrom(!st.GetNonChar().Allowed(), st.GetNonChar().Values()))
 }
 
-func (this *stringOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (s *stringOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return notIsEmpty(cx, t)
 }
 

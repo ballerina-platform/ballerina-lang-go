@@ -28,40 +28,40 @@ func NewFunctionDefinition() FunctionDefinition {
 	return this
 }
 
-func (this *FunctionDefinition) GetSemType(env Env) SemType {
-	if this.semType != nil {
-		return this.semType
+func (f *FunctionDefinition) GetSemType(env Env) SemType {
+	if f.semType != nil {
+		return f.semType
 	}
 	rec := env.recFunctionAtom()
-	this.rec = &rec
-	return this.createSemType(&rec)
+	f.rec = &rec
+	return f.createSemType(&rec)
 }
 
-func (this *FunctionDefinition) createSemType(rec atom) SemType {
+func (f *FunctionDefinition) createSemType(rec atom) SemType {
 	bdd := bddAtom(rec)
 	s := getBasicSubtype(BTFunction, bdd)
-	this.semType = s
+	f.semType = s
 	return s
 }
 
-func (this *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
+func (f *FunctionDefinition) Define(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	atomicType := functionAtomicTypeFrom(args, ret, qualifiers.semType)
-	return this.defineInternal(env, atomicType)
+	return f.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
+func (f *FunctionDefinition) DefineGeneric(env Env, args SemType, ret SemType, qualifiers FunctionQualifiers) SemType {
 	atomicType := functionAtomicTypeGenericFrom(args, ret, qualifiers.semType)
-	return this.defineInternal(env, atomicType)
+	return f.defineInternal(env, atomicType)
 }
 
-func (this *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
+func (f *FunctionDefinition) defineInternal(env Env, atomicType functionAtomicType) SemType {
 	var a atom
-	rec := this.rec
+	rec := f.rec
 	if rec != nil {
 		a = rec
 		env.setRecFunctionAtomType(*rec, &atomicType)
 	} else {
 		a = new(env.functionAtom(&atomicType))
 	}
-	return this.createSemType(a)
+	return f.createSemType(a)
 }

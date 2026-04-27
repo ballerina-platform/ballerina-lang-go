@@ -38,14 +38,14 @@ func streamContaining(tupleType SemType) SemType {
 	return createBasicSemType(BTStream, bdd)
 }
 
-func (this *streamDefinition) GetSemType(env Env) SemType {
-	return streamContaining(this.listDefinition.GetSemType(env))
+func (s *streamDefinition) GetSemType(env Env) SemType {
+	return streamContaining(s.listDefinition.GetSemType(env))
 }
 
-func (this *streamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
+func (s *streamDefinition) Define(env Env, valueTy SemType, completionTy SemType) SemType {
 	if common.PointerEqualToValue(VAL, completionTy) && common.PointerEqualToValue(VAL, valueTy) {
 		return STREAM
 	}
-	tuple := this.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)
+	tuple := s.listDefinition.TupleTypeWrapped(env, valueTy, completionTy)
 	return streamContaining(tuple)
 }

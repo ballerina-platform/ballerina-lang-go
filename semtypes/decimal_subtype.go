@@ -89,13 +89,13 @@ func createDecimalSubtype(allowed bool, values []enumerableType[big.Rat]) Proper
 	return newDecimalSubtypeFromBoolEnumerableDecimals(allowed, values)
 }
 
-func (this *decimalSubtype) Allowed() bool {
-	return this.allowed
+func (d *decimalSubtype) Allowed() bool {
+	return d.allowed
 }
 
-func (this *decimalSubtype) Values() []enumerableType[big.Rat] {
+func (d *decimalSubtype) Values() []enumerableType[big.Rat] {
 	var values []enumerableType[big.Rat]
-	for _, value := range this.values {
+	for _, value := range d.values {
 		values = append(values, &value)
 	}
 	return values

@@ -34,26 +34,26 @@ func NewListDefinition() ListDefinition {
 	return this
 }
 
-func (this *ListDefinition) GetSemType(env Env) SemType {
-	s := this.semType
+func (l *ListDefinition) GetSemType(env Env) SemType {
+	s := l.semType
 	if s == nil {
 		rec := env.recListAtom()
-		this.rec = &rec
-		return this.createSemType(env, &rec)
+		l.rec = &rec
+		return l.createSemType(env, &rec)
 	} else {
 		return s
 	}
 }
 
-func (this *ListDefinition) TupleTypeWrapped(env Env, members ...SemType) SemType {
-	return this.DefineListTypeWrappedWithEnvSemTypesInt(env, members, len(members))
+func (l *ListDefinition) TupleTypeWrapped(env Env, members ...SemType) SemType {
+	return l.DefineListTypeWrappedWithEnvSemTypesInt(env, members, len(members))
 }
 
-func (this *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemType {
-	return this.DefineListTypeWrapped(env, members, len(members), NEVER, CellMutability_CELL_MUT_NONE)
+func (l *ListDefinition) TupleTypeWrappedRo(env Env, members ...SemType) SemType {
+	return l.DefineListTypeWrapped(env, members, len(members), NEVER, CellMutability_CELL_MUT_NONE)
 }
 
-func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
+func (l *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fixedLength int, rest SemType, mut CellMutability) SemType {
 	common.Assert(rest != nil)
 	var initialCells []ComplexSemType
 	for _, member := range initial {
@@ -66,44 +66,44 @@ func (this *ListDefinition) DefineListTypeWrapped(env Env, initial []SemType, fi
 		restMut = mut
 	}
 	restCell := cellContainingWithEnvSemTypeCellMutability(env, Union(rest, UNDEF), restMut)
-	return this.define(env, initialCells, fixedLength, restCell)
+	return l.define(env, initialCells, fixedLength, restCell)
 }
 
-func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesInt(env Env, initial []SemType, size int) SemType {
-	return this.DefineListTypeWrapped(env, initial, size, NEVER, CellMutability_CELL_MUT_LIMITED)
+func (l *ListDefinition) DefineListTypeWrappedWithEnvSemTypesInt(env Env, initial []SemType, size int) SemType {
+	return l.DefineListTypeWrapped(env, initial, size, NEVER, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesIntSemType(env Env, initial []SemType, fixedLength int, rest SemType) SemType {
-	return this.DefineListTypeWrapped(env, initial, fixedLength, rest, CellMutability_CELL_MUT_LIMITED)
+func (l *ListDefinition) DefineListTypeWrappedWithEnvSemTypesIntSemType(env Env, initial []SemType, fixedLength int, rest SemType) SemType {
+	return l.DefineListTypeWrapped(env, initial, fixedLength, rest, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) DefineListTypeWrappedWithEnvSemType(env Env, rest SemType) SemType {
-	return this.DefineListTypeWrappedWithEnvSemTypesIntSemType(env, nil, 0, rest)
+func (l *ListDefinition) DefineListTypeWrappedWithEnvSemType(env Env, rest SemType) SemType {
+	return l.DefineListTypeWrappedWithEnvSemTypesIntSemType(env, nil, 0, rest)
 }
 
-func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypeCellMutability(env Env, rest SemType, mut CellMutability) SemType {
-	return this.DefineListTypeWrapped(env, nil, 0, rest, mut)
+func (l *ListDefinition) DefineListTypeWrappedWithEnvSemTypeCellMutability(env Env, rest SemType, mut CellMutability) SemType {
+	return l.DefineListTypeWrapped(env, nil, 0, rest, mut)
 }
 
-func (this *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env, initial []SemType, rest SemType) SemType {
-	return this.DefineListTypeWrapped(env, initial, len(initial), rest, CellMutability_CELL_MUT_LIMITED)
+func (l *ListDefinition) DefineListTypeWrappedWithEnvSemTypesSemType(env Env, initial []SemType, rest SemType) SemType {
+	return l.DefineListTypeWrapped(env, initial, len(initial), rest, CellMutability_CELL_MUT_LIMITED)
 }
 
-func (this *ListDefinition) define(env Env, initial []ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
-	members := this.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
+func (l *ListDefinition) define(env Env, initial []ComplexSemType, fixedLength int, rest *ComplexSemType) *ComplexSemType {
+	members := l.fixedLengthNormalize(fixedLengthArrayFrom(initial, fixedLength))
 	atomicType := listAtomicTypeFrom(members, rest)
 	var atom atom
-	rec := this.rec
+	rec := l.rec
 	if rec != nil {
 		atom = rec
 		env.setRecListAtomType(*rec, &atomicType)
 	} else {
 		atom = new(env.listAtom(&atomicType))
 	}
-	return this.createSemType(env, atom)
+	return l.createSemType(env, atom)
 }
 
-func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengthArray {
+func (l *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLengthArray {
 	initial := array.initial
 	i := (len(initial) - 1)
 	if i <= 0 {
@@ -120,9 +120,9 @@ func (this *ListDefinition) fixedLengthNormalize(array fixedLengthArray) fixedLe
 	return fixedLengthArrayFrom(initial[:i+2], array.FixedLength)
 }
 
-func (this *ListDefinition) createSemType(env Env, atom atom) *ComplexSemType {
+func (l *ListDefinition) createSemType(env Env, atom atom) *ComplexSemType {
 	bdd := bddAtom(atom)
 	complexSemType := getBasicSubtype(BTList, bdd)
-	this.semType = complexSemType
+	l.semType = complexSemType
 	return complexSemType
 }

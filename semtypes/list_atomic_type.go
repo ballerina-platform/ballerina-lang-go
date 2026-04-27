@@ -27,13 +27,13 @@ type ListAtomicType struct {
 
 var _ atomicType = &ListAtomicType{}
 
-func (this *ListAtomicType) equals(other atomicType) bool {
+func (l *ListAtomicType) equals(other atomicType) bool {
 	if other, ok := other.(*ListAtomicType); ok {
-		if !this.rest.equals(other.rest) {
+		if !l.rest.equals(other.rest) {
 			return false
 		}
-		return other.Members.FixedLength == this.Members.FixedLength &&
-			slices.EqualFunc(other.Members.initial, this.Members.initial, func(a, b ComplexSemType) bool { return a.equals(&b) })
+		return other.Members.FixedLength == l.Members.FixedLength &&
+			slices.EqualFunc(other.Members.initial, l.Members.initial, func(a, b ComplexSemType) bool { return a.equals(&b) })
 	}
 	return false
 }
@@ -49,7 +49,7 @@ func listAtomicTypeFrom(members fixedLengthArray, rest *ComplexSemType) ListAtom
 	return newListAtomicTypeFromMembersRest(members, rest)
 }
 
-func (this *ListAtomicType) atomKind() kind {
+func (l *ListAtomicType) atomKind() kind {
 	return kind_LIST_ATOM
 }
 

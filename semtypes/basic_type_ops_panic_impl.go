@@ -26,22 +26,22 @@ func newBasicTypeOpsPanicImpl() basicTypeOpsPanicImpl {
 	return this
 }
 
-func (this *basicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *basicTypeOpsPanicImpl) Union(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	panic("Binary operation should not be called")
 }
 
-func (this *basicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *basicTypeOpsPanicImpl) Intersect(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	panic("Binary operation should not be called")
 }
 
-func (this *basicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
+func (b *basicTypeOpsPanicImpl) Diff(t1 SubtypeData, t2 SubtypeData) SubtypeData {
 	panic("Binary operation should not be called")
 }
 
-func (this *basicTypeOpsPanicImpl) complement(t SubtypeData) SubtypeData {
+func (b *basicTypeOpsPanicImpl) complement(t SubtypeData) SubtypeData {
 	panic("Unary operation should not be called")
 }
 
-func (this *basicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
+func (b *basicTypeOpsPanicImpl) IsEmpty(cx Context, t SubtypeData) bool {
 	panic("Unary boolean operation should not be called")
 }

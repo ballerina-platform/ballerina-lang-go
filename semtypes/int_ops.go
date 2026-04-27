@@ -27,7 +27,7 @@ func newIntOps() intOps {
 
 var intOpsInstance = newIntOps()
 
-func (this *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListUnion(v1.Ranges, v2.Ranges)
@@ -37,7 +37,7 @@ func (this *intOps) Union(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return createIntSubtype(v...)
 }
 
-func (this *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, v2.Ranges)
@@ -47,7 +47,7 @@ func (this *intOps) Intersect(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return createIntSubtype(v...)
 }
 
-func (this *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
+func (i *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	v1 := d1.(intSubtype)
 	v2 := d2.(intSubtype)
 	v := rangeListIntersect(v1.Ranges, rangeListComplement(v2.Ranges))
@@ -57,7 +57,7 @@ func (this *intOps) Diff(d1 SubtypeData, d2 SubtypeData) SubtypeData {
 	return createIntSubtype(v...)
 }
 
-func (this *intOps) complement(d SubtypeData) SubtypeData {
+func (i *intOps) complement(d SubtypeData) SubtypeData {
 	v := d.(intSubtype)
 	return createIntSubtype(rangeListComplement(v.Ranges)...)
 }
@@ -78,7 +78,7 @@ func intSubtypeMin(subtype intSubtype) int64 {
 	return subtype.Ranges[0].Min
 }
 
-func (this *intOps) IsEmpty(cx Context, t SubtypeData) bool {
+func (i *intOps) IsEmpty(cx Context, t SubtypeData) bool {
 	return notIsEmpty(cx, t)
 }
 

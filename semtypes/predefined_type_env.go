@@ -116,18 +116,18 @@ func predefinedTypeEnvGetInstance() *predefinedTypeEnv {
 // Helper methods
 
 // addInitializedCellAtom adds a cellAtomicType to the initialized atoms list
-func (this *predefinedTypeEnv) addInitializedCellAtom(atom *cellAtomicType) {
-	addInitializedAtom(this, &this.initializedCellAtoms, atom)
+func (p *predefinedTypeEnv) addInitializedCellAtom(atom *cellAtomicType) {
+	addInitializedAtom(p, &p.initializedCellAtoms, atom)
 }
 
 // addInitializedListAtom adds a ListAtomicType to the initialized atoms list
-func (this *predefinedTypeEnv) addInitializedListAtom(atom *ListAtomicType) {
-	addInitializedAtom(this, &this.initializedListAtoms, atom)
+func (p *predefinedTypeEnv) addInitializedListAtom(atom *ListAtomicType) {
+	addInitializedAtom(p, &p.initializedListAtoms, atom)
 }
 
 // addInitializedMapAtom adds a MappingAtomicType to the initialized atoms list
-func (this *predefinedTypeEnv) addInitializedMapAtom(atom *MappingAtomicType) {
-	addInitializedAtom(this, &this.initializedMappingAtoms, atom)
+func (p *predefinedTypeEnv) addInitializedMapAtom(atom *MappingAtomicType) {
+	addInitializedAtom(p, &p.initializedMappingAtoms, atom)
 }
 
 // addInitializedAtom is a generic function to add an atom to the atoms list with an index
@@ -137,18 +137,18 @@ func addInitializedAtom[E atomicType](env *predefinedTypeEnv, atoms *[]initializ
 }
 
 // cellAtomIndex returns the index of a cellAtomicType in the initialized atoms list
-func (this *predefinedTypeEnv) cellAtomIndex(atom *cellAtomicType) int {
-	return atomIndex(this.initializedCellAtoms, atom)
+func (p *predefinedTypeEnv) cellAtomIndex(atom *cellAtomicType) int {
+	return atomIndex(p.initializedCellAtoms, atom)
 }
 
 // listAtomIndex returns the index of a ListAtomicType in the initialized atoms list
-func (this *predefinedTypeEnv) listAtomIndex(atom *ListAtomicType) int {
-	return atomIndex(this.initializedListAtoms, atom)
+func (p *predefinedTypeEnv) listAtomIndex(atom *ListAtomicType) int {
+	return atomIndex(p.initializedListAtoms, atom)
 }
 
 // mappingAtomIndex returns the index of a MappingAtomicType in the initialized atoms list
-func (this *predefinedTypeEnv) mappingAtomIndex(atom *MappingAtomicType) int {
-	return atomIndex(this.initializedMappingAtoms, atom)
+func (p *predefinedTypeEnv) mappingAtomIndex(atom *MappingAtomicType) int {
+	return atomIndex(p.initializedMappingAtoms, atom)
 }
 
 // atomIndex is a generic function to find the index of an atom in the atoms list
@@ -165,502 +165,502 @@ func atomIndex[E atomicType](initializedAtoms []initializedTypeAtom[E], atom E) 
 // Getter methods
 
 // cellAtomicVal returns the cellAtomicType for VAL with limited mutability
-func (this *predefinedTypeEnv) cellAtomicVal() *cellAtomicType {
-	if this._cellAtomicVal == nil {
+func (p *predefinedTypeEnv) cellAtomicVal() *cellAtomicType {
+	if p._cellAtomicVal == nil {
 		val := cellAtomicTypeFrom(VAL, CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicVal = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicVal = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicVal
+	return p._cellAtomicVal
 }
 
 // atomCellVal returns the typeAtom for cell val
-func (this *predefinedTypeEnv) atomCellVal() *typeAtom {
-	if this._atomCellVal == nil {
-		cellAtomicVal := this.cellAtomicVal()
-		atomCellVal := createTypeAtom(this.cellAtomIndex(cellAtomicVal), cellAtomicVal)
-		this._atomCellVal = &atomCellVal
+func (p *predefinedTypeEnv) atomCellVal() *typeAtom {
+	if p._atomCellVal == nil {
+		cellAtomicVal := p.cellAtomicVal()
+		atomCellVal := createTypeAtom(p.cellAtomIndex(cellAtomicVal), cellAtomicVal)
+		p._atomCellVal = &atomCellVal
 	}
-	return this._atomCellVal
+	return p._atomCellVal
 }
 
 // cellAtomicNever returns the cellAtomicType for NEVER with limited mutability
-func (this *predefinedTypeEnv) cellAtomicNever() *cellAtomicType {
-	if this._cellAtomicNever == nil {
+func (p *predefinedTypeEnv) cellAtomicNever() *cellAtomicType {
+	if p._cellAtomicNever == nil {
 		val := cellAtomicTypeFrom(NEVER, CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicNever = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicNever = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicNever
+	return p._cellAtomicNever
 }
 
 // atomCellNever returns the typeAtom for cell never
-func (this *predefinedTypeEnv) atomCellNever() *typeAtom {
-	if this._atomCellNever == nil {
-		cellAtomicNever := this.cellAtomicNever()
-		atomCellNever := createTypeAtom(this.cellAtomIndex(cellAtomicNever), cellAtomicNever)
-		this._atomCellNever = &atomCellNever
+func (p *predefinedTypeEnv) atomCellNever() *typeAtom {
+	if p._atomCellNever == nil {
+		cellAtomicNever := p.cellAtomicNever()
+		atomCellNever := createTypeAtom(p.cellAtomIndex(cellAtomicNever), cellAtomicNever)
+		p._atomCellNever = &atomCellNever
 	}
-	return this._atomCellNever
+	return p._atomCellNever
 }
 
 // cellAtomicInner returns the cellAtomicType for INNER with limited mutability
-func (this *predefinedTypeEnv) cellAtomicInner() *cellAtomicType {
-	if this._callAtomicInner == nil {
+func (p *predefinedTypeEnv) cellAtomicInner() *cellAtomicType {
+	if p._callAtomicInner == nil {
 		val := cellAtomicTypeFrom(INNER, CellMutability_CELL_MUT_LIMITED)
-		this._callAtomicInner = &val
-		this.addInitializedCellAtom(&val)
+		p._callAtomicInner = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._callAtomicInner
+	return p._callAtomicInner
 }
 
 // atomCellInner returns the typeAtom for cell inner
-func (this *predefinedTypeEnv) atomCellInner() *typeAtom {
-	if this._atomCellInner == nil {
-		cellAtomicInner := this.cellAtomicInner()
-		atomCellInner := createTypeAtom(this.cellAtomIndex(cellAtomicInner), cellAtomicInner)
-		this._atomCellInner = &atomCellInner
+func (p *predefinedTypeEnv) atomCellInner() *typeAtom {
+	if p._atomCellInner == nil {
+		cellAtomicInner := p.cellAtomicInner()
+		atomCellInner := createTypeAtom(p.cellAtomIndex(cellAtomicInner), cellAtomicInner)
+		p._atomCellInner = &atomCellInner
 	}
-	return this._atomCellInner
+	return p._atomCellInner
 }
 
 // cellAtomicInnerMapping returns the cellAtomicType for union(MAPPING, UNDEF) with limited mutability
-func (this *predefinedTypeEnv) cellAtomicInnerMapping() *cellAtomicType {
-	if this._cellAtomicInnerMapping == nil {
+func (p *predefinedTypeEnv) cellAtomicInnerMapping() *cellAtomicType {
+	if p._cellAtomicInnerMapping == nil {
 		val := cellAtomicTypeFrom(Union(MAPPING, UNDEF), CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicInnerMapping = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicInnerMapping = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicInnerMapping
+	return p._cellAtomicInnerMapping
 }
 
 // atomCellInnerMapping returns the typeAtom for cell inner mapping
-func (this *predefinedTypeEnv) atomCellInnerMapping() *typeAtom {
-	if this._atomCellInnerMapping == nil {
-		cellAtomicInnerMapping := this.cellAtomicInnerMapping()
-		atomCellInnerMapping := createTypeAtom(this.cellAtomIndex(cellAtomicInnerMapping), cellAtomicInnerMapping)
-		this._atomCellInnerMapping = &atomCellInnerMapping
+func (p *predefinedTypeEnv) atomCellInnerMapping() *typeAtom {
+	if p._atomCellInnerMapping == nil {
+		cellAtomicInnerMapping := p.cellAtomicInnerMapping()
+		atomCellInnerMapping := createTypeAtom(p.cellAtomIndex(cellAtomicInnerMapping), cellAtomicInnerMapping)
+		p._atomCellInnerMapping = &atomCellInnerMapping
 	}
-	return this._atomCellInnerMapping
+	return p._atomCellInnerMapping
 }
 
 // cellAtomicInnerMappingRO returns the cellAtomicType for union(MAPPING_RO, UNDEF) with limited mutability
-func (this *predefinedTypeEnv) cellAtomicInnerMappingRO() *cellAtomicType {
-	if this._cellAtomicInnerMappingRO == nil {
+func (p *predefinedTypeEnv) cellAtomicInnerMappingRO() *cellAtomicType {
+	if p._cellAtomicInnerMappingRO == nil {
 		val := cellAtomicTypeFrom(Union(MAPPING_RO, UNDEF), CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicInnerMappingRO = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicInnerMappingRO = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicInnerMappingRO
+	return p._cellAtomicInnerMappingRO
 }
 
 // atomCellInnerMappingRO returns the typeAtom for cell inner mapping RO
-func (this *predefinedTypeEnv) atomCellInnerMappingRO() *typeAtom {
-	if this._atomCellInnerMappingRO == nil {
-		cellAtomicInnerMappingRO := this.cellAtomicInnerMappingRO()
-		atomCellInnerMappingRO := createTypeAtom(this.cellAtomIndex(cellAtomicInnerMappingRO), cellAtomicInnerMappingRO)
-		this._atomCellInnerMappingRO = &atomCellInnerMappingRO
+func (p *predefinedTypeEnv) atomCellInnerMappingRO() *typeAtom {
+	if p._atomCellInnerMappingRO == nil {
+		cellAtomicInnerMappingRO := p.cellAtomicInnerMappingRO()
+		atomCellInnerMappingRO := createTypeAtom(p.cellAtomIndex(cellAtomicInnerMappingRO), cellAtomicInnerMappingRO)
+		p._atomCellInnerMappingRO = &atomCellInnerMappingRO
 	}
-	return this._atomCellInnerMappingRO
+	return p._atomCellInnerMappingRO
 }
 
 // listAtomicMapping returns the ListAtomicType for empty fixed length array with CELL_SEMTYPE_INNER_MAPPING
-func (this *predefinedTypeEnv) listAtomicMapping() *ListAtomicType {
-	if this._listAtomicMapping == nil {
+func (p *predefinedTypeEnv) listAtomicMapping() *ListAtomicType {
+	if p._listAtomicMapping == nil {
 		val := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING)
-		this._listAtomicMapping = &val
-		this.addInitializedListAtom(&val)
+		p._listAtomicMapping = &val
+		p.addInitializedListAtom(&val)
 	}
-	return this._listAtomicMapping
+	return p._listAtomicMapping
 }
 
 // atomListMapping returns the typeAtom for list mapping
-func (this *predefinedTypeEnv) atomListMapping() *typeAtom {
-	if this._atomListMapping == nil {
-		listAtomicMapping := this.listAtomicMapping()
-		atomListMapping := createTypeAtom(this.listAtomIndex(listAtomicMapping), listAtomicMapping)
-		this._atomListMapping = &atomListMapping
+func (p *predefinedTypeEnv) atomListMapping() *typeAtom {
+	if p._atomListMapping == nil {
+		listAtomicMapping := p.listAtomicMapping()
+		atomListMapping := createTypeAtom(p.listAtomIndex(listAtomicMapping), listAtomicMapping)
+		p._atomListMapping = &atomListMapping
 	}
-	return this._atomListMapping
+	return p._atomListMapping
 }
 
 // listAtomicMappingRO returns the ListAtomicType for empty fixed length array with CELL_SEMTYPE_INNER_MAPPING_RO
-func (this *predefinedTypeEnv) listAtomicMappingRO() *ListAtomicType {
-	if this._listAtomicMappingRO == nil {
+func (p *predefinedTypeEnv) listAtomicMappingRO() *ListAtomicType {
+	if p._listAtomicMappingRO == nil {
 		val := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_MAPPING_RO)
-		this._listAtomicMappingRO = &val
-		this.addInitializedListAtom(&val)
+		p._listAtomicMappingRO = &val
+		p.addInitializedListAtom(&val)
 	}
-	return this._listAtomicMappingRO
+	return p._listAtomicMappingRO
 }
 
 // atomListMappingRO returns the typeAtom for list mapping RO
-func (this *predefinedTypeEnv) atomListMappingRO() *typeAtom {
-	if this._atomListMappingRO == nil {
-		listAtomicMappingRO := this.listAtomicMappingRO()
-		atomListMappingRO := createTypeAtom(this.listAtomIndex(listAtomicMappingRO), listAtomicMappingRO)
-		this._atomListMappingRO = &atomListMappingRO
+func (p *predefinedTypeEnv) atomListMappingRO() *typeAtom {
+	if p._atomListMappingRO == nil {
+		listAtomicMappingRO := p.listAtomicMappingRO()
+		atomListMappingRO := createTypeAtom(p.listAtomIndex(listAtomicMappingRO), listAtomicMappingRO)
+		p._atomListMappingRO = &atomListMappingRO
 	}
-	return this._atomListMappingRO
+	return p._atomListMappingRO
 }
 
 // cellAtomicInnerRO returns the cellAtomicType for INNER_READONLY with no mutability
-func (this *predefinedTypeEnv) cellAtomicInnerRO() *cellAtomicType {
-	if this._cellAtomicInnerRO == nil {
+func (p *predefinedTypeEnv) cellAtomicInnerRO() *cellAtomicType {
+	if p._cellAtomicInnerRO == nil {
 		val := cellAtomicTypeFrom(INNER_READONLY, CellMutability_CELL_MUT_NONE)
-		this._cellAtomicInnerRO = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicInnerRO = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicInnerRO
+	return p._cellAtomicInnerRO
 }
 
 // atomCellInnerRO returns the typeAtom for cell inner RO
-func (this *predefinedTypeEnv) atomCellInnerRO() *typeAtom {
-	if this._atomCellInnerRO == nil {
-		cellAtomicInnerRO := this.cellAtomicInnerRO()
-		atomCellInnerRO := createTypeAtom(this.cellAtomIndex(cellAtomicInnerRO), cellAtomicInnerRO)
-		this._atomCellInnerRO = &atomCellInnerRO
+func (p *predefinedTypeEnv) atomCellInnerRO() *typeAtom {
+	if p._atomCellInnerRO == nil {
+		cellAtomicInnerRO := p.cellAtomicInnerRO()
+		atomCellInnerRO := createTypeAtom(p.cellAtomIndex(cellAtomicInnerRO), cellAtomicInnerRO)
+		p._atomCellInnerRO = &atomCellInnerRO
 	}
-	return this._atomCellInnerRO
+	return p._atomCellInnerRO
 }
 
 // cellAtomicUndef returns the cellAtomicType for UNDEF with no mutability
-func (this *predefinedTypeEnv) cellAtomicUndef() *cellAtomicType {
-	if this._cellAtomicUndef == nil {
+func (p *predefinedTypeEnv) cellAtomicUndef() *cellAtomicType {
+	if p._cellAtomicUndef == nil {
 		val := cellAtomicTypeFrom(UNDEF, CellMutability_CELL_MUT_NONE)
-		this._cellAtomicUndef = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicUndef = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicUndef
+	return p._cellAtomicUndef
 }
 
 // atomCellUndef returns the typeAtom for cell undef
-func (this *predefinedTypeEnv) atomCellUndef() *typeAtom {
-	if this._atomCellUndef == nil {
-		cellAtomicUndef := this.cellAtomicUndef()
-		atomCellUndef := createTypeAtom(this.cellAtomIndex(cellAtomicUndef), cellAtomicUndef)
-		this._atomCellUndef = &atomCellUndef
+func (p *predefinedTypeEnv) atomCellUndef() *typeAtom {
+	if p._atomCellUndef == nil {
+		cellAtomicUndef := p.cellAtomicUndef()
+		atomCellUndef := createTypeAtom(p.cellAtomIndex(cellAtomicUndef), cellAtomicUndef)
+		p._atomCellUndef = &atomCellUndef
 	}
-	return this._atomCellUndef
+	return p._atomCellUndef
 }
 
 // listAtomicTwoElement returns the ListAtomicType for two-element list with CELL_SEMTYPE_VAL and CELL_SEMTYPE_UNDEF
-func (this *predefinedTypeEnv) listAtomicTwoElement() *ListAtomicType {
-	if this._listAtomicTwoElement == nil {
+func (p *predefinedTypeEnv) listAtomicTwoElement() *ListAtomicType {
+	if p._listAtomicTwoElement == nil {
 		val := listAtomicTypeFrom(fixedLengthArrayFrom([]ComplexSemType{*CELL_SEMTYPE_VAL}, 2), CELL_SEMTYPE_UNDEF)
-		this._listAtomicTwoElement = &val
-		this.addInitializedListAtom(&val)
+		p._listAtomicTwoElement = &val
+		p.addInitializedListAtom(&val)
 	}
-	return this._listAtomicTwoElement
+	return p._listAtomicTwoElement
 }
 
 // atomListTwoElement returns the typeAtom for list two element
-func (this *predefinedTypeEnv) atomListTwoElement() *typeAtom {
-	if this._atomListTwoElement == nil {
-		listAtomicTwoElement := this.listAtomicTwoElement()
-		atomListTwoElement := createTypeAtom(this.listAtomIndex(listAtomicTwoElement), listAtomicTwoElement)
-		this._atomListTwoElement = &atomListTwoElement
+func (p *predefinedTypeEnv) atomListTwoElement() *typeAtom {
+	if p._atomListTwoElement == nil {
+		listAtomicTwoElement := p.listAtomicTwoElement()
+		atomListTwoElement := createTypeAtom(p.listAtomIndex(listAtomicTwoElement), listAtomicTwoElement)
+		p._atomListTwoElement = &atomListTwoElement
 	}
-	return this._atomListTwoElement
+	return p._atomListTwoElement
 }
 
 // cellAtomicValRO returns the cellAtomicType for VAL_READONLY with no mutability
-func (this *predefinedTypeEnv) cellAtomicValRO() *cellAtomicType {
-	if this._cellAtomicValRO == nil {
+func (p *predefinedTypeEnv) cellAtomicValRO() *cellAtomicType {
+	if p._cellAtomicValRO == nil {
 		val := cellAtomicTypeFrom(VAL_READONLY, CellMutability_CELL_MUT_NONE)
-		this._cellAtomicValRO = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicValRO = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicValRO
+	return p._cellAtomicValRO
 }
 
 // atomCellValRO returns the typeAtom for cell val RO
-func (this *predefinedTypeEnv) atomCellValRO() *typeAtom {
-	if this._atomCellValRO == nil {
-		cellAtomicValRO := this.cellAtomicValRO()
-		atomCellValRO := createTypeAtom(this.cellAtomIndex(cellAtomicValRO), cellAtomicValRO)
-		this._atomCellValRO = &atomCellValRO
+func (p *predefinedTypeEnv) atomCellValRO() *typeAtom {
+	if p._atomCellValRO == nil {
+		cellAtomicValRO := p.cellAtomicValRO()
+		atomCellValRO := createTypeAtom(p.cellAtomIndex(cellAtomicValRO), cellAtomicValRO)
+		p._atomCellValRO = &atomCellValRO
 	}
-	return this._atomCellValRO
+	return p._atomCellValRO
 }
 
 // mappingAtomicObjectMemberRO returns the MappingAtomicType for object member RO
-func (this *predefinedTypeEnv) mappingAtomicObjectMemberRO() *MappingAtomicType {
-	if this._mappingAtomicObjectMemberRO == nil {
+func (p *predefinedTypeEnv) mappingAtomicObjectMemberRO() *MappingAtomicType {
+	if p._mappingAtomicObjectMemberRO == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
 			[]ComplexSemType{*CELL_SEMTYPE_OBJECT_MEMBER_KIND, *CELL_SEMTYPE_VAL_RO, *CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
-		this._mappingAtomicObjectMemberRO = &val
-		this.addInitializedMapAtom(&val)
+		p._mappingAtomicObjectMemberRO = &val
+		p.addInitializedMapAtom(&val)
 	}
-	return this._mappingAtomicObjectMemberRO
+	return p._mappingAtomicObjectMemberRO
 }
 
 // atomMappingObjectMemberRO returns the typeAtom for mapping object member RO
-func (this *predefinedTypeEnv) atomMappingObjectMemberRO() *typeAtom {
-	if this._atomMappingObjectMemberRO == nil {
-		mappingAtomicObjectMemberRO := this.mappingAtomicObjectMemberRO()
-		atomMappingObjectMemberRO := createTypeAtom(this.mappingAtomIndex(mappingAtomicObjectMemberRO), mappingAtomicObjectMemberRO)
-		this._atomMappingObjectMemberRO = &atomMappingObjectMemberRO
+func (p *predefinedTypeEnv) atomMappingObjectMemberRO() *typeAtom {
+	if p._atomMappingObjectMemberRO == nil {
+		mappingAtomicObjectMemberRO := p.mappingAtomicObjectMemberRO()
+		atomMappingObjectMemberRO := createTypeAtom(p.mappingAtomIndex(mappingAtomicObjectMemberRO), mappingAtomicObjectMemberRO)
+		p._atomMappingObjectMemberRO = &atomMappingObjectMemberRO
 	}
-	return this._atomMappingObjectMemberRO
+	return p._atomMappingObjectMemberRO
 }
 
 // cellAtomicObjectMemberRO returns the cellAtomicType for object member RO
-func (this *predefinedTypeEnv) cellAtomicObjectMemberRO() *cellAtomicType {
-	if this._cellAtomicObjectMemberRO == nil {
+func (p *predefinedTypeEnv) cellAtomicObjectMemberRO() *cellAtomicType {
+	if p._cellAtomicObjectMemberRO == nil {
 		val := cellAtomicTypeFrom(MAPPING_SEMTYPE_OBJECT_MEMBER_RO, CellMutability_CELL_MUT_NONE)
-		this._cellAtomicObjectMemberRO = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicObjectMemberRO = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicObjectMemberRO
+	return p._cellAtomicObjectMemberRO
 }
 
 // atomCellObjectMemberRO returns the typeAtom for cell object member RO
-func (this *predefinedTypeEnv) atomCellObjectMemberRO() *typeAtom {
-	if this._atomCellObjectMemberRO == nil {
-		cellAtomicObjectMemberRO := this.cellAtomicObjectMemberRO()
-		atomCellObjectMemberRO := createTypeAtom(this.cellAtomIndex(cellAtomicObjectMemberRO), cellAtomicObjectMemberRO)
-		this._atomCellObjectMemberRO = &atomCellObjectMemberRO
+func (p *predefinedTypeEnv) atomCellObjectMemberRO() *typeAtom {
+	if p._atomCellObjectMemberRO == nil {
+		cellAtomicObjectMemberRO := p.cellAtomicObjectMemberRO()
+		atomCellObjectMemberRO := createTypeAtom(p.cellAtomIndex(cellAtomicObjectMemberRO), cellAtomicObjectMemberRO)
+		p._atomCellObjectMemberRO = &atomCellObjectMemberRO
 	}
-	return this._atomCellObjectMemberRO
+	return p._atomCellObjectMemberRO
 }
 
 // cellAtomicObjectMemberKind returns the cellAtomicType for object member kind
-func (this *predefinedTypeEnv) cellAtomicObjectMemberKind() *cellAtomicType {
-	if this._cellAtomicObjectMemberKind == nil {
+func (p *predefinedTypeEnv) cellAtomicObjectMemberKind() *cellAtomicType {
+	if p._cellAtomicObjectMemberKind == nil {
 		val := cellAtomicTypeFrom(Union(StringConst("field"), StringConst("method")), CellMutability_CELL_MUT_NONE)
-		this._cellAtomicObjectMemberKind = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicObjectMemberKind = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicObjectMemberKind
+	return p._cellAtomicObjectMemberKind
 }
 
 // atomCellObjectMemberKind returns the typeAtom for cell object member kind
-func (this *predefinedTypeEnv) atomCellObjectMemberKind() *typeAtom {
-	if this._atomCellObjectMemberKind == nil {
-		cellAtomicObjectMemberKind := this.cellAtomicObjectMemberKind()
-		atomCellObjectMemberKind := createTypeAtom(this.cellAtomIndex(cellAtomicObjectMemberKind), cellAtomicObjectMemberKind)
-		this._atomCellObjectMemberKind = &atomCellObjectMemberKind
+func (p *predefinedTypeEnv) atomCellObjectMemberKind() *typeAtom {
+	if p._atomCellObjectMemberKind == nil {
+		cellAtomicObjectMemberKind := p.cellAtomicObjectMemberKind()
+		atomCellObjectMemberKind := createTypeAtom(p.cellAtomIndex(cellAtomicObjectMemberKind), cellAtomicObjectMemberKind)
+		p._atomCellObjectMemberKind = &atomCellObjectMemberKind
 	}
-	return this._atomCellObjectMemberKind
+	return p._atomCellObjectMemberKind
 }
 
 // cellAtomicObjectMemberVisibility returns the cellAtomicType for object member visibility
-func (this *predefinedTypeEnv) cellAtomicObjectMemberVisibility() *cellAtomicType {
-	if this._cellAtomicObjectMemberVisibility == nil {
+func (p *predefinedTypeEnv) cellAtomicObjectMemberVisibility() *cellAtomicType {
+	if p._cellAtomicObjectMemberVisibility == nil {
 		val := cellAtomicTypeFrom(Union(StringConst("public"), StringConst("private")), CellMutability_CELL_MUT_NONE)
-		this._cellAtomicObjectMemberVisibility = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicObjectMemberVisibility = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicObjectMemberVisibility
+	return p._cellAtomicObjectMemberVisibility
 }
 
 // atomCellObjectMemberVisibility returns the typeAtom for cell object member visibility
-func (this *predefinedTypeEnv) atomCellObjectMemberVisibility() *typeAtom {
-	if this._atomCellObjectMemberVisibility == nil {
-		cellAtomicObjectMemberVisibility := this.cellAtomicObjectMemberVisibility()
-		atomCellObjectMemberVisibility := createTypeAtom(this.cellAtomIndex(cellAtomicObjectMemberVisibility), cellAtomicObjectMemberVisibility)
-		this._atomCellObjectMemberVisibility = &atomCellObjectMemberVisibility
+func (p *predefinedTypeEnv) atomCellObjectMemberVisibility() *typeAtom {
+	if p._atomCellObjectMemberVisibility == nil {
+		cellAtomicObjectMemberVisibility := p.cellAtomicObjectMemberVisibility()
+		atomCellObjectMemberVisibility := createTypeAtom(p.cellAtomIndex(cellAtomicObjectMemberVisibility), cellAtomicObjectMemberVisibility)
+		p._atomCellObjectMemberVisibility = &atomCellObjectMemberVisibility
 	}
-	return this._atomCellObjectMemberVisibility
+	return p._atomCellObjectMemberVisibility
 }
 
 // mappingAtomicObjectMember returns the MappingAtomicType for object member
-func (this *predefinedTypeEnv) mappingAtomicObjectMember() *MappingAtomicType {
-	if this._mappingAtomicObjectMember == nil {
+func (p *predefinedTypeEnv) mappingAtomicObjectMember() *MappingAtomicType {
+	if p._mappingAtomicObjectMember == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"kind", "value", "visibility"},
 			[]ComplexSemType{*CELL_SEMTYPE_OBJECT_MEMBER_KIND, *CELL_SEMTYPE_VAL, *CELL_SEMTYPE_OBJECT_MEMBER_VISIBILITY},
 			CELL_SEMTYPE_UNDEF)
-		this._mappingAtomicObjectMember = &val
-		this.addInitializedMapAtom(&val)
+		p._mappingAtomicObjectMember = &val
+		p.addInitializedMapAtom(&val)
 	}
-	return this._mappingAtomicObjectMember
+	return p._mappingAtomicObjectMember
 }
 
 // atomMappingObjectMember returns the typeAtom for mapping object member
-func (this *predefinedTypeEnv) atomMappingObjectMember() *typeAtom {
-	if this._atomMappingObjectMember == nil {
-		mappingAtomicObjectMember := this.mappingAtomicObjectMember()
-		atomMappingObjectMember := createTypeAtom(this.mappingAtomIndex(mappingAtomicObjectMember), mappingAtomicObjectMember)
-		this._atomMappingObjectMember = &atomMappingObjectMember
+func (p *predefinedTypeEnv) atomMappingObjectMember() *typeAtom {
+	if p._atomMappingObjectMember == nil {
+		mappingAtomicObjectMember := p.mappingAtomicObjectMember()
+		atomMappingObjectMember := createTypeAtom(p.mappingAtomIndex(mappingAtomicObjectMember), mappingAtomicObjectMember)
+		p._atomMappingObjectMember = &atomMappingObjectMember
 	}
-	return this._atomMappingObjectMember
+	return p._atomMappingObjectMember
 }
 
 // cellAtomicObjectMember returns the cellAtomicType for object member
-func (this *predefinedTypeEnv) cellAtomicObjectMember() *cellAtomicType {
-	if this._cellAtomicObjectMember == nil {
+func (p *predefinedTypeEnv) cellAtomicObjectMember() *cellAtomicType {
+	if p._cellAtomicObjectMember == nil {
 		val := cellAtomicTypeFrom(MAPPING_SEMTYPE_OBJECT_MEMBER, CellMutability_CELL_MUT_UNLIMITED)
-		this._cellAtomicObjectMember = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicObjectMember = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicObjectMember
+	return p._cellAtomicObjectMember
 }
 
 // atomCellObjectMember returns the typeAtom for cell object member
-func (this *predefinedTypeEnv) atomCellObjectMember() *typeAtom {
-	if this._atomCellObjectMember == nil {
-		cellAtomicObjectMember := this.cellAtomicObjectMember()
-		atomCellObjectMember := createTypeAtom(this.cellAtomIndex(cellAtomicObjectMember), cellAtomicObjectMember)
-		this._atomCellObjectMember = &atomCellObjectMember
+func (p *predefinedTypeEnv) atomCellObjectMember() *typeAtom {
+	if p._atomCellObjectMember == nil {
+		cellAtomicObjectMember := p.cellAtomicObjectMember()
+		atomCellObjectMember := createTypeAtom(p.cellAtomIndex(cellAtomicObjectMember), cellAtomicObjectMember)
+		p._atomCellObjectMember = &atomCellObjectMember
 	}
-	return this._atomCellObjectMember
+	return p._atomCellObjectMember
 }
 
 // mappingAtomicObject returns the MappingAtomicType for object
-func (this *predefinedTypeEnv) mappingAtomicObject() *MappingAtomicType {
-	if this._mappingAtomicObject == nil {
+func (p *predefinedTypeEnv) mappingAtomicObject() *MappingAtomicType {
+	if p._mappingAtomicObject == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
 			[]ComplexSemType{*CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER)
-		this._mappingAtomicObject = &val
-		this.addInitializedMapAtom(&val)
+		p._mappingAtomicObject = &val
+		p.addInitializedMapAtom(&val)
 	}
-	return this._mappingAtomicObject
+	return p._mappingAtomicObject
 }
 
 // atomMappingObject returns the typeAtom for mapping object
-func (this *predefinedTypeEnv) atomMappingObject() *typeAtom {
-	if this._atomMappingObject == nil {
-		mappingAtomicObject := this.mappingAtomicObject()
-		atomMappingObject := createTypeAtom(this.mappingAtomIndex(mappingAtomicObject), mappingAtomicObject)
-		this._atomMappingObject = &atomMappingObject
+func (p *predefinedTypeEnv) atomMappingObject() *typeAtom {
+	if p._atomMappingObject == nil {
+		mappingAtomicObject := p.mappingAtomicObject()
+		atomMappingObject := createTypeAtom(p.mappingAtomIndex(mappingAtomicObject), mappingAtomicObject)
+		p._atomMappingObject = &atomMappingObject
 	}
-	return this._atomMappingObject
+	return p._atomMappingObject
 }
 
 // listAtomicRO returns the ListAtomicType for read-only list
-func (this *predefinedTypeEnv) listAtomicRO() *ListAtomicType {
-	if this._listAtomicRO == nil {
+func (p *predefinedTypeEnv) listAtomicRO() *ListAtomicType {
+	if p._listAtomicRO == nil {
 		val := listAtomicTypeFrom(fixedLengthArrayEmpty(), CELL_SEMTYPE_INNER_RO)
-		this._listAtomicRO = &val
-		this.initializedRecListAtoms = append(this.initializedRecListAtoms, &val)
+		p._listAtomicRO = &val
+		p.initializedRecListAtoms = append(p.initializedRecListAtoms, &val)
 	}
-	return this._listAtomicRO
+	return p._listAtomicRO
 }
 
 // mappingAtomicRO returns the MappingAtomicType for read-only mapping
-func (this *predefinedTypeEnv) mappingAtomicRO() *MappingAtomicType {
-	if this._mappingAtomicRO == nil {
+func (p *predefinedTypeEnv) mappingAtomicRO() *MappingAtomicType {
+	if p._mappingAtomicRO == nil {
 		val := mappingAtomicTypeFrom([]string{}, []ComplexSemType{}, CELL_SEMTYPE_INNER_RO)
-		this._mappingAtomicRO = &val
-		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
+		p._mappingAtomicRO = &val
+		p.initializedRecMappingAtoms = append(p.initializedRecMappingAtoms, &val)
 	}
-	return this._mappingAtomicRO
+	return p._mappingAtomicRO
 }
 
 // getMappingAtomicObjectRO returns the MappingAtomicType for read-only object
-func (this *predefinedTypeEnv) getMappingAtomicObjectRO() *MappingAtomicType {
-	if this._mappingAtomicObjectRO == nil {
+func (p *predefinedTypeEnv) getMappingAtomicObjectRO() *MappingAtomicType {
+	if p._mappingAtomicObjectRO == nil {
 		val := mappingAtomicTypeFrom(
 			[]string{"$qualifiers"},
 			[]ComplexSemType{*CELL_SEMTYPE_OBJECT_QUALIFIER},
 			CELL_SEMTYPE_OBJECT_MEMBER_RO)
-		this._mappingAtomicObjectRO = &val
-		this.initializedRecMappingAtoms = append(this.initializedRecMappingAtoms, &val)
+		p._mappingAtomicObjectRO = &val
+		p.initializedRecMappingAtoms = append(p.initializedRecMappingAtoms, &val)
 	}
-	return this._mappingAtomicObjectRO
+	return p._mappingAtomicObjectRO
 }
 
 // cellAtomicMappingArray returns the cellAtomicType for mapping array
-func (this *predefinedTypeEnv) cellAtomicMappingArray() *cellAtomicType {
-	if this._cellAtomicMappingArray == nil {
+func (p *predefinedTypeEnv) cellAtomicMappingArray() *cellAtomicType {
+	if p._cellAtomicMappingArray == nil {
 		val := cellAtomicTypeFrom(MAPPING_ARRAY, CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicMappingArray = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicMappingArray = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicMappingArray
+	return p._cellAtomicMappingArray
 }
 
 // atomCellMappingArray returns the typeAtom for cell mapping array
-func (this *predefinedTypeEnv) atomCellMappingArray() *typeAtom {
-	if this._atomCellMappingArray == nil {
-		cellAtomicMappingArray := this.cellAtomicMappingArray()
-		atomCellMappingArray := createTypeAtom(this.cellAtomIndex(cellAtomicMappingArray), cellAtomicMappingArray)
-		this._atomCellMappingArray = &atomCellMappingArray
+func (p *predefinedTypeEnv) atomCellMappingArray() *typeAtom {
+	if p._atomCellMappingArray == nil {
+		cellAtomicMappingArray := p.cellAtomicMappingArray()
+		atomCellMappingArray := createTypeAtom(p.cellAtomIndex(cellAtomicMappingArray), cellAtomicMappingArray)
+		p._atomCellMappingArray = &atomCellMappingArray
 	}
-	return this._atomCellMappingArray
+	return p._atomCellMappingArray
 }
 
 // cellAtomicMappingArrayRO returns the cellAtomicType for read-only mapping array
-func (this *predefinedTypeEnv) cellAtomicMappingArrayRO() *cellAtomicType {
-	if this._cellAtomicMappingArrayRO == nil {
+func (p *predefinedTypeEnv) cellAtomicMappingArrayRO() *cellAtomicType {
+	if p._cellAtomicMappingArrayRO == nil {
 		val := cellAtomicTypeFrom(MAPPING_ARRAY_RO, CellMutability_CELL_MUT_LIMITED)
-		this._cellAtomicMappingArrayRO = &val
-		this.addInitializedCellAtom(&val)
+		p._cellAtomicMappingArrayRO = &val
+		p.addInitializedCellAtom(&val)
 	}
-	return this._cellAtomicMappingArrayRO
+	return p._cellAtomicMappingArrayRO
 }
 
 // atomCellMappingArrayRO returns the typeAtom for cell mapping array RO
-func (this *predefinedTypeEnv) atomCellMappingArrayRO() *typeAtom {
-	if this._atomCellMappingArrayRO == nil {
-		cellAtomicMappingArrayRO := this.cellAtomicMappingArrayRO()
-		atomCellMappingArrayRO := createTypeAtom(this.cellAtomIndex(cellAtomicMappingArrayRO), cellAtomicMappingArrayRO)
-		this._atomCellMappingArrayRO = &atomCellMappingArrayRO
+func (p *predefinedTypeEnv) atomCellMappingArrayRO() *typeAtom {
+	if p._atomCellMappingArrayRO == nil {
+		cellAtomicMappingArrayRO := p.cellAtomicMappingArrayRO()
+		atomCellMappingArrayRO := createTypeAtom(p.cellAtomIndex(cellAtomicMappingArrayRO), cellAtomicMappingArrayRO)
+		p._atomCellMappingArrayRO = &atomCellMappingArrayRO
 	}
-	return this._atomCellMappingArrayRO
+	return p._atomCellMappingArrayRO
 }
 
 // listAtomicThreeElement returns the ListAtomicType for three-element list
-func (this *predefinedTypeEnv) listAtomicThreeElement() *ListAtomicType {
-	if this._listAtomicThreeElement == nil {
+func (p *predefinedTypeEnv) listAtomicThreeElement() *ListAtomicType {
+	if p._listAtomicThreeElement == nil {
 		val := listAtomicTypeFrom(
 			fixedLengthArrayFrom([]ComplexSemType{*CELL_SEMTYPE_LIST_SUBTYPE_MAPPING, *CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
-		this._listAtomicThreeElement = &val
-		this.addInitializedListAtom(&val)
+		p._listAtomicThreeElement = &val
+		p.addInitializedListAtom(&val)
 	}
-	return this._listAtomicThreeElement
+	return p._listAtomicThreeElement
 }
 
 // atomListThreeElement returns the typeAtom for list three element
-func (this *predefinedTypeEnv) atomListThreeElement() *typeAtom {
-	if this._atomListThreeElement == nil {
-		listAtomicThreeElement := this.listAtomicThreeElement()
-		atomListThreeElement := createTypeAtom(this.listAtomIndex(listAtomicThreeElement), listAtomicThreeElement)
-		this._atomListThreeElement = &atomListThreeElement
+func (p *predefinedTypeEnv) atomListThreeElement() *typeAtom {
+	if p._atomListThreeElement == nil {
+		listAtomicThreeElement := p.listAtomicThreeElement()
+		atomListThreeElement := createTypeAtom(p.listAtomIndex(listAtomicThreeElement), listAtomicThreeElement)
+		p._atomListThreeElement = &atomListThreeElement
 	}
-	return this._atomListThreeElement
+	return p._atomListThreeElement
 }
 
 // listAtomicThreeElementRO returns the ListAtomicType for read-only three-element list
-func (this *predefinedTypeEnv) listAtomicThreeElementRO() *ListAtomicType {
-	if this._listAtomicThreeElementRO == nil {
+func (p *predefinedTypeEnv) listAtomicThreeElementRO() *ListAtomicType {
+	if p._listAtomicThreeElementRO == nil {
 		val := listAtomicTypeFrom(
 			fixedLengthArrayFrom([]ComplexSemType{*CELL_SEMTYPE_LIST_SUBTYPE_MAPPING_RO, *CELL_SEMTYPE_VAL}, 3),
 			CELL_SEMTYPE_UNDEF)
-		this._listAtomicThreeElementRO = &val
-		this.addInitializedListAtom(&val)
+		p._listAtomicThreeElementRO = &val
+		p.addInitializedListAtom(&val)
 	}
-	return this._listAtomicThreeElementRO
+	return p._listAtomicThreeElementRO
 }
 
 // atomListThreeElementRO returns the typeAtom for list three element RO
-func (this *predefinedTypeEnv) atomListThreeElementRO() *typeAtom {
-	if this._atomListThreeElementRO == nil {
-		listAtomicThreeElementRO := this.listAtomicThreeElementRO()
-		atomListThreeElementRO := createTypeAtom(this.listAtomIndex(listAtomicThreeElementRO), listAtomicThreeElementRO)
-		this._atomListThreeElementRO = &atomListThreeElementRO
+func (p *predefinedTypeEnv) atomListThreeElementRO() *typeAtom {
+	if p._atomListThreeElementRO == nil {
+		listAtomicThreeElementRO := p.listAtomicThreeElementRO()
+		atomListThreeElementRO := createTypeAtom(p.listAtomIndex(listAtomicThreeElementRO), listAtomicThreeElementRO)
+		p._atomListThreeElementRO = &atomListThreeElementRO
 	}
-	return this._atomListThreeElementRO
+	return p._atomListThreeElementRO
 }
 
 // ReservedRecAtomCount returns the maximum count of reserved rec atoms
-func (this *predefinedTypeEnv) ReservedRecAtomCount() int {
-	if len(this.initializedRecListAtoms) > len(this.initializedRecMappingAtoms) {
-		return len(this.initializedRecListAtoms)
+func (p *predefinedTypeEnv) ReservedRecAtomCount() int {
+	if len(p.initializedRecListAtoms) > len(p.initializedRecMappingAtoms) {
+		return len(p.initializedRecListAtoms)
 	}
-	return len(this.initializedRecMappingAtoms)
+	return len(p.initializedRecMappingAtoms)
 }
 
 // GetPredefinedRecAtom returns a predefined recAtom for the given index
-func (this *predefinedTypeEnv) GetPredefinedRecAtom(index int) common.Optional[*recAtom] {
-	if this.IsPredefinedRecAtom(index) {
+func (p *predefinedTypeEnv) GetPredefinedRecAtom(index int) common.Optional[*recAtom] {
+	if p.IsPredefinedRecAtom(index) {
 		recAtom := createRecAtom(index)
 		return common.OptionalOf(&recAtom)
 	}
@@ -668,6 +668,6 @@ func (this *predefinedTypeEnv) GetPredefinedRecAtom(index int) common.Optional[*
 }
 
 // IsPredefinedRecAtom checks if the given index is a predefined rec atom
-func (this *predefinedTypeEnv) IsPredefinedRecAtom(index int) bool {
-	return index >= 0 && index < this.ReservedRecAtomCount()
+func (p *predefinedTypeEnv) IsPredefinedRecAtom(index int) bool {
+	return index >= 0 && index < p.ReservedRecAtomCount()
 }

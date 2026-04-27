@@ -22,8 +22,8 @@ type enumerableCharString struct {
 
 var _ enumerableType[string] = &enumerableCharString{}
 
-func (this *enumerableCharString) Value() string {
-	return this.value
+func (e *enumerableCharString) Value() string {
+	return e.value
 }
 
 func (t1 *enumerableCharString) Compare(t2 enumerableType[string]) int {
@@ -40,9 +40,9 @@ func (t1 *enumerableCharString) Compare(t2 enumerableType[string]) int {
 }
 
 func newEnumerableCharStringFromString(value string) enumerableCharString {
-	this := enumerableCharString{}
-	this.value = value
-	return this
+	e := enumerableCharString{}
+	e.value = value
+	return e
 }
 
 func enumerableCharStringFrom(v string) enumerableType[string] {
