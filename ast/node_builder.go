@@ -44,31 +44,31 @@ type typeTable struct {
 
 func newTypeTable() typeTable {
 	return typeTable{
-		booleanType: &BTypeBasic{tag: model.TypeTags_BOOLEAN, flags: model.FlagReadonly},
-		intType:     &BTypeBasic{tag: model.TypeTags_INT, flags: model.FlagReadonly},
-		nilType:     &BTypeBasic{tag: model.TypeTags_NIL, flags: model.FlagReadonly},
-		stringType:  &BTypeBasic{tag: model.TypeTags_STRING, flags: model.FlagReadonly},
-		floatType:   &BTypeBasic{tag: model.TypeTags_FLOAT, flags: model.FlagReadonly},
-		decimalType: &BTypeBasic{tag: model.TypeTags_DECIMAL, flags: model.FlagReadonly},
-		byteType:    &BTypeBasic{tag: model.TypeTags_BYTE, flags: model.FlagReadonly},
+		booleanType: &BTypeBasic{tag: TypeTags_BOOLEAN, flags: model.FlagReadonly},
+		intType:     &BTypeBasic{tag: TypeTags_INT, flags: model.FlagReadonly},
+		nilType:     &BTypeBasic{tag: TypeTags_NIL, flags: model.FlagReadonly},
+		stringType:  &BTypeBasic{tag: TypeTags_STRING, flags: model.FlagReadonly},
+		floatType:   &BTypeBasic{tag: TypeTags_FLOAT, flags: model.FlagReadonly},
+		decimalType: &BTypeBasic{tag: TypeTags_DECIMAL, flags: model.FlagReadonly},
+		byteType:    &BTypeBasic{tag: TypeTags_BYTE, flags: model.FlagReadonly},
 	}
 }
 
-func (t *typeTable) getTypeFromTag(tag model.TypeTags) TypeDescriptor {
+func (t *typeTable) getTypeFromTag(tag TypeTags) TypeDescriptor {
 	switch tag {
-	case model.TypeTags_BOOLEAN:
+	case TypeTags_BOOLEAN:
 		return t.booleanType
-	case model.TypeTags_INT:
+	case TypeTags_INT:
 		return t.intType
-	case model.TypeTags_NIL:
+	case TypeTags_NIL:
 		return t.nilType
-	case model.TypeTags_STRING:
+	case TypeTags_STRING:
 		return t.stringType
-	case model.TypeTags_FLOAT:
+	case TypeTags_FLOAT:
 		return t.floatType
-	case model.TypeTags_DECIMAL:
+	case TypeTags_DECIMAL:
 		return t.decimalType
-	case model.TypeTags_BYTE:
+	case TypeTags_BYTE:
 		return t.byteType
 	default:
 		panic("not implemented")
@@ -1197,7 +1197,7 @@ func isNumericLiteral(kind common.SyntaxKind) bool {
 func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType bool) LiteralNode {
 	var bLiteral LiteralNode
 	kind := literal.Kind()
-	var typeTag model.TypeTags = -1
+	var typeTag TypeTags = -1
 	var value any = nil
 	var originalValue *string = nil
 
@@ -1216,19 +1216,19 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		literalTokenKind := basicLiteralNode.LiteralToken().Kind()
 		switch literalTokenKind {
 		case common.DECIMAL_INTEGER_LITERAL_TOKEN, common.HEX_INTEGER_LITERAL_TOKEN:
-			typeTag = model.TypeTags_INT
+			typeTag = TypeTags_INT
 			value = getIntegerLiteral(n.cx, literal, textValue)
 			originalValue = &textValue
 			// TODO: can we fix below?
 			if literalTokenKind == common.HEX_INTEGER_LITERAL_TOKEN && withinByteRange(value) {
-				typeTag = model.TypeTags_BYTE
+				typeTag = TypeTags_BYTE
 			}
 		case common.DECIMAL_FLOATING_POINT_LITERAL_TOKEN:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
 			if balCommon.IsDecimalDiscriminated(textValue) {
-				typeTag = model.TypeTags_DECIMAL
+				typeTag = TypeTags_DECIMAL
 			} else {
-				typeTag = model.TypeTags_FLOAT
+				typeTag = TypeTags_FLOAT
 			}
 			if isFiniteType {
 				// Remove f, d, and + suffixes
@@ -1240,7 +1240,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			}
 		default:
 			// TODO: Check effect of mapping negative(-) numbers as unary-expr
-			typeTag = model.TypeTags_FLOAT
+			typeTag = TypeTags_FLOAT
 			value = getHexNodeValue(textValue)
 			originalValue = &textValue
 		}
@@ -1251,7 +1251,7 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 		numericLiteral.OriginalValue = *originalValue
 		return &numericLiteral.BLangLiteral
 	} else if kind == common.BOOLEAN_LITERAL {
-		typeTag = model.TypeTags_BOOLEAN
+		typeTag = TypeTags_BOOLEAN
 		value = strings.ToLower(textValue) == "true"
 		originalValue = &textValue
 		bLiteral = &BLangLiteral{}
@@ -1284,21 +1284,21 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 			text = unescapeBallerinaString(text)
 		}
 
-		typeTag = model.TypeTags_STRING
+		typeTag = TypeTags_STRING
 		value = text
 		originalValue = &textValue
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NIL_LITERAL {
-		typeTag = model.TypeTags_NIL
+		typeTag = TypeTags_NIL
 		value = nil
 		originalValue = new(string(model.NIL_VALUE))
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.NULL_LITERAL {
 		originalValue = new("null")
-		typeTag = model.TypeTags_NIL
+		typeTag = TypeTags_NIL
 		bLiteral = &BLangLiteral{}
 	} else if kind == common.BINARY_EXPRESSION { // Should be base16 and base64
-		typeTag = model.TypeTags_BYTE_ARRAY
+		typeTag = TypeTags_BYTE_ARRAY
 		value = textValue
 		originalValue = &textValue
 
@@ -1807,7 +1807,7 @@ func (n *NodeBuilder) createSpecificFieldNameLiteral(fieldName tree.Node) BLangE
 	lit := &BLangLiteral{}
 	lit.SetPosition(pos)
 	bType := &BTypeBasic{}
-	bType.BTypeSetTag(model.TypeTags_STRING)
+	bType.BTypeSetTag(TypeTags_STRING)
 	lit.SetValueType(bType)
 	lit.SetValue(name)
 	lit.SetOriginalValue(name)
@@ -1910,7 +1910,7 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(n.de(), returnStatementNode)
 		nilLiteral.Value = nil
-		nilLiteral.SetValueType(n.types.getTypeFromTag(model.TypeTags_NIL).(BType))
+		nilLiteral.SetValueType(n.types.getTypeFromTag(TypeTags_NIL).(BType))
 		bLReturn.SetActionOrExpression(nilLiteral)
 	}
 
@@ -2142,7 +2142,7 @@ func (n *NodeBuilder) TransformUnaryExpression(unaryExpressionNode *tree.UnaryEx
 // float (losing precision) and later coerced back to int, corrupting the
 // value used at runtime (e.g. for `<decimal>-9223372036854775808`).
 func foldNegativeIntLiteral(lit *BLangLiteral) bool {
-	if lit.GetValueType().BTypeGetTag() != model.TypeTags_INT {
+	if lit.GetValueType().BTypeGetTag() != TypeTags_INT {
 		return false
 	}
 	if _, isFloat := lit.GetValue().(float64); !isFloat {
@@ -2392,7 +2392,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			bField.name = fieldName
 			bField.pos = getPosition(n.de(), objectField)
 			if vis := objectField.VisibilityQualifier(); vis != nil && vis.Kind() == common.PUBLIC_KEYWORD {
-				bField.visibility = model.VisibilityPublic
+				bField.flags |= model.FlagPublic
 			}
 			if objectType.AddMember(bField) {
 				n.cx.SyntaxError("redeclared symbol '"+fieldName+"'", bField.pos)
@@ -2410,7 +2410,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			for q := range methodQuals.Iterator() {
 				switch q.Kind() {
 				case common.PUBLIC_KEYWORD:
-					bMethod.visibility = model.VisibilityPublic
+					bMethod.flags |= model.FlagPublic
 				case common.REMOTE_KEYWORD:
 					bMethod.memberKind = ObjectMemberKindRemoteMethod
 				case common.RESOURCE_KEYWORD:

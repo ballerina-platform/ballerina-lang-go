@@ -508,7 +508,7 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		var tagByte int8
 		br.read(&tagByte)
 
-		tag := model.TypeTags(tagByte)
+		tag := typeTag(tagByte)
 		value := br.readConstValueByTag(tag)
 
 		if isWrapped {
@@ -915,39 +915,39 @@ func (br *birReader) readConstValue() any {
 	var tagByte int8
 	br.read(&tagByte)
 
-	tag := model.TypeTags(tagByte)
+	tag := typeTag(tagByte)
 	return br.readConstValueByTag(tag)
 }
 
-func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
+func (br *birReader) readConstValueByTag(tag typeTag) any {
 	switch tag {
-	case model.TypeTags_INT,
-		model.TypeTags_SIGNED32_INT,
-		model.TypeTags_SIGNED16_INT,
-		model.TypeTags_SIGNED8_INT,
-		model.TypeTags_UNSIGNED32_INT,
-		model.TypeTags_UNSIGNED16_INT,
-		model.TypeTags_UNSIGNED8_INT:
+	case typeTagInt,
+		typeTagSigned32,
+		typeTagSigned16,
+		typeTagSigned8,
+		typeTagUnsigned32,
+		typeTagUnsigned16,
+		typeTagUnsigned8:
 		var val int64
 		br.read(&val)
 		return val
-	case model.TypeTags_BYTE:
+	case typeTagByte:
 		var val byte
 		br.read(&val)
 		return val
-	case model.TypeTags_FLOAT:
+	case typeTagFloat:
 		var val float64
 		br.read(&val)
 		return val
-	case model.TypeTags_BOOLEAN:
+	case typeTagBoolean:
 		var val bool
 		br.read(&val)
 		return val
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING:
+	case typeTagString, typeTagCharString:
 		var idx int32
 		br.read(&idx)
 		return br.getStringFromCP(int(idx))
-	case model.TypeTags_DECIMAL:
+	case typeTagDecimal:
 		var idx int32
 		br.read(&idx)
 		str := br.getStringFromCP(int(idx))
@@ -956,7 +956,7 @@ func (br *birReader) readConstValueByTag(tag model.TypeTags) any {
 			panic(fmt.Sprintf("invalid decimal value %q: %v", str, err))
 		}
 		return r
-	case model.TypeTags_NIL:
+	case typeTagNil:
 		var idx int32
 		br.read(&idx)
 		return nil

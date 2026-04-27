@@ -443,20 +443,20 @@ func (bw *birWriter) writeOperand(buf *bytes.Buffer, op *bir.BIROperand) {
 	}
 }
 
-func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags, value any) {
+func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag typeTag, value any) {
 	if cv, isConstValue := value.(bir.ConstValue); isConstValue {
 		bw.writeConstValueByTag(buf, tag, cv.Value)
 		return
 	}
 
 	switch tag {
-	case model.TypeTags_INT,
-		model.TypeTags_SIGNED32_INT,
-		model.TypeTags_SIGNED16_INT,
-		model.TypeTags_SIGNED8_INT,
-		model.TypeTags_UNSIGNED32_INT,
-		model.TypeTags_UNSIGNED16_INT,
-		model.TypeTags_UNSIGNED8_INT:
+	case typeTagInt,
+		typeTagSigned32,
+		typeTagSigned16,
+		typeTagSigned8,
+		typeTagUnsigned32,
+		typeTagUnsigned16,
+		typeTagUnsigned8:
 		var val int64
 		switch v := value.(type) {
 		case int64:
@@ -473,7 +473,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected integer for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_BYTE:
+	case typeTagByte:
 		var val byte
 		switch v := value.(type) {
 		case byte:
@@ -486,7 +486,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected byte for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_FLOAT:
+	case typeTagFloat:
 		var val float64
 		switch v := value.(type) {
 		case float64:
@@ -497,7 +497,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected float for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_STRING, model.TypeTags_CHAR_STRING, model.TypeTags_DECIMAL:
+	case typeTagString, typeTagCharString, typeTagDecimal:
 		var val string
 		switch v := value.(type) {
 		case string:
@@ -515,7 +515,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 		}
 		cpIdx := bw.cp.AddStringCPEntry(val)
 		write(buf, cpIdx)
-	case model.TypeTags_BOOLEAN:
+	case typeTagBoolean:
 		var val bool
 		switch v := value.(type) {
 		case bool:
@@ -524,7 +524,7 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 			panic(fmt.Sprintf("expected boolean for tag %v, got %T", tag, value))
 		}
 		write(buf, val)
-	case model.TypeTags_NIL:
+	case typeTagNil:
 		write(buf, int32(-1))
 	default:
 		panic(fmt.Sprintf("unsupported tag for constant value: %v", tag))
@@ -532,24 +532,24 @@ func (bw *birWriter) writeConstValueByTag(buf *bytes.Buffer, tag model.TypeTags,
 }
 
 // FIXME: Remove this after implementing types
-func (bw *birWriter) inferTag(value any) (model.TypeTags, error) {
+func (bw *birWriter) inferTag(value any) (typeTag, error) {
 	switch v := value.(type) {
 	case bir.ConstValue:
 		return bw.inferTag(v.Value)
 	case int, int64, int32, int16, int8:
-		return model.TypeTags_INT, nil
+		return typeTagInt, nil
 	case float64, float32:
-		return model.TypeTags_FLOAT, nil
+		return typeTagFloat, nil
 	case string, *string:
-		return model.TypeTags_STRING, nil
+		return typeTagString, nil
 	case bool:
-		return model.TypeTags_BOOLEAN, nil
+		return typeTagBoolean, nil
 	case byte:
-		return model.TypeTags_BYTE, nil
+		return typeTagByte, nil
 	case *decimal.Decimal:
-		return model.TypeTags_DECIMAL, nil
+		return typeTagDecimal, nil
 	case nil:
-		return model.TypeTags_NIL, nil
+		return typeTagNil, nil
 	default:
 		return 0, fmt.Errorf("cannot infer tag for value %v (%T)", value, value)
 	}

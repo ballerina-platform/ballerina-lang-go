@@ -1538,7 +1538,7 @@ func (p *PrettyPrinter) printObjectField(node *BObjectField) {
 	p.startNode()
 	p.printString("field")
 	p.printString(node.Name())
-	if node.Visibility() == model.VisibilityPublic {
+	if node.IsPublic() {
 		p.printString("public")
 	}
 	p.indentLevel++
@@ -1551,7 +1551,7 @@ func (p *PrettyPrinter) printMethodDecl(node *BMethodDecl) {
 	p.startNode()
 	p.printString("method-decl")
 	p.printString(node.Name())
-	if node.Visibility() == model.VisibilityPublic {
+	if node.IsPublic() {
 		p.printString("public")
 	}
 	p.printString("(")

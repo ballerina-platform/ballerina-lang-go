@@ -14,9 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package model
+package ast
 
-// PR-FIXME: are these used outside of front end?
 type TypeTags int
 
 const (

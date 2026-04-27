@@ -291,7 +291,7 @@ type FiniteTypeNode interface {
 type ObjectMember interface {
 	MemberKind() ObjectMemberKind
 	Name() string
-	Visibility() model.Visibility
+	IsPublic() bool
 }
 
 // BLangObjectMember is the Phase-1 polymorphic alias — (*BObjectField |

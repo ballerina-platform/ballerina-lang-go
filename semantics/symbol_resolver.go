@@ -999,7 +999,7 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 				fd := m.(*model.FieldDescriptor)
 				includedFields = append(includedFields, inclusionMemberForSymbolResolution{
 					name:     fd.MemberName(),
-					isPublic: fd.Visibility() == model.VisibilityPublic,
+					isPublic: fd.IsPublic(),
 				})
 			}
 		}
@@ -1064,7 +1064,7 @@ func collectTransitiveFields(ctx *context.CompilerContext, inclusions []model.Sy
 				fd := m.(*model.FieldDescriptor)
 				result = append(result, inclusionMemberForSymbolResolution{
 					name:     fd.MemberName(),
-					isPublic: fd.Visibility() == model.VisibilityPublic,
+					isPublic: fd.IsPublic(),
 				})
 			}
 		}
@@ -1087,7 +1087,7 @@ func collectTransitiveFieldsFromDefn(ctx *context.CompilerContext, tDefn ast.Typ
 			}
 			directFields = append(directFields, inclusionMemberForSymbolResolution{
 				name:     m.Name(),
-				isPublic: m.Visibility() == model.VisibilityPublic,
+				isPublic: m.IsPublic(),
 			})
 		}
 		return collectTransitiveFields(ctx, objTy.Inclusions, directFields, localDefns)

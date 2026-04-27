@@ -732,7 +732,7 @@ func newIntLiteral(value int64) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_INT, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_INT, "", 0))
 	return literal
 }
 
@@ -752,7 +752,7 @@ func newStringLiteral(value string) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_STRING, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_STRING, "", 0))
 	return literal
 }
 
@@ -760,7 +760,7 @@ func newBoolLiteral(value bool) *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(value)
-	literal.SetValueType(ast.NewBType(model.TypeTags_BOOLEAN, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_BOOLEAN, "", 0))
 	return literal
 }
 
@@ -768,7 +768,7 @@ func newNilLiteral() *ast.BLangLiteral {
 	literal := &ast.BLangLiteral{}
 	literal.SetPosition(queryTestPos)
 	literal.SetValue(nil)
-	literal.SetValueType(ast.NewBType(model.TypeTags_NIL, "", 0))
+	literal.SetValueType(ast.NewBType(ast.TypeTags_NIL, "", 0))
 	return literal
 }
 

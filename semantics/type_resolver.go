@@ -1591,7 +1591,7 @@ func classMembers(t typeResolver, classDef *ast.BLangClassDefinition) []model.In
 }
 
 func objectFieldDescriptor(field *ast.BObjectField) model.FieldDescriptor {
-	fd := model.NewFieldDescriptor(field.Name(), 0, field.Visibility())
+	fd := model.NewFieldDescriptor(field.Name(), 0, field.IsPublic())
 	fd.SetMemberType(field.GetDeterminedType())
 	return fd
 }
@@ -1604,37 +1604,29 @@ func methodDescriptor(method *ast.BMethodDecl, fnRef model.SymbolRef) model.Meth
 	case ast.ObjectMemberKindResourceMethod:
 		kind = model.InclusionMemberKindResourceMethod
 	}
-	md := model.NewMethodDescriptor(method.Name(), kind, method.Visibility(), fnRef)
+	md := model.NewMethodDescriptor(method.Name(), kind, method.IsPublic(), fnRef)
 	md.SetMemberType(method.GetDeterminedType())
 	return md
 }
 
 func classFieldDescriptor(t typeResolver, field *ast.BLangSimpleVariable) model.FieldDescriptor {
-	vis := model.VisibilityPrivate
-	if field.IsPublic() {
-		vis = model.VisibilityPublic
-	}
 	var flags model.FieldDescriptorFlag
 	if field.IsReadonly() {
 		flags |= model.FieldDescriptorReadonly
 	}
-	fd := model.NewFieldDescriptor(field.Name.Value, flags, vis)
+	fd := model.NewFieldDescriptor(field.Name.Value, flags, field.IsPublic())
 	fd.SetMemberType(t.symbolType(field.Symbol()))
 	return fd
 }
 
 func classMethodDescriptor(t typeResolver, name string, method *ast.BLangFunction) model.MethodDescriptor {
-	vis := model.VisibilityPrivate
-	if method.IsPublic() {
-		vis = model.VisibilityPublic
-	}
 	kind := model.InclusionMemberKindMethod
 	if method.IsRemote() {
 		kind = model.InclusionMemberKindRemoteMethod
 	} else if method.IsResource() {
 		kind = model.InclusionMemberKindResourceMethod
 	}
-	md := model.NewMethodDescriptor(name, kind, vis, method.Symbol())
+	md := model.NewMethodDescriptor(name, kind, method.IsPublic(), method.Symbol())
 	md.SetMemberType(methodMemberType(t, method.Symbol()))
 	return md
 }
@@ -1650,7 +1642,7 @@ func createFieldDescriptor(name string, field ast.BField) model.FieldDescriptor 
 	if field.DefaultExpr != nil {
 		flags |= model.FieldDescriptorHasDefault
 	}
-	fd := model.NewFieldDescriptor(name, flags, model.VisibilityPublic)
+	fd := model.NewFieldDescriptor(name, flags, true)
 	fd.SetMemberType(field.Type.(ast.BLangNode).GetDeterminedType())
 	fd.DefaultFnRef = field.DefaultFnRef
 	return fd
@@ -1813,19 +1805,19 @@ func resolveLiteral(t typeResolver, n *ast.BLangLiteral, expectedType semtypes.S
 	var ty semtypes.SemType
 
 	switch bType.BTypeGetTag() {
-	case model.TypeTags_INT, model.TypeTags_BYTE, model.TypeTags_FLOAT, model.TypeTags_DECIMAL:
+	case ast.TypeTags_INT, ast.TypeTags_BYTE, ast.TypeTags_FLOAT, ast.TypeTags_DECIMAL:
 		var ok bool
 		ty, ok = resolveNumericLiteralValue(t, n, expectedType)
 		if !ok {
 			return false
 		}
-	case model.TypeTags_BOOLEAN:
+	case ast.TypeTags_BOOLEAN:
 		value := n.GetValue().(bool)
 		ty = semtypes.BooleanConst(value)
-	case model.TypeTags_STRING:
+	case ast.TypeTags_STRING:
 		value := n.GetValue().(string)
 		ty = semtypes.StringConst(value)
-	case model.TypeTags_NIL:
+	case ast.TypeTags_NIL:
 		ty = semtypes.NIL
 	default:
 		t.unimplemented("unsupported literal type", n.GetPosition())
@@ -1849,9 +1841,9 @@ func hasFloatTypeSuffix(s string) bool {
 
 func determineCandidatesFromLiteral(t typeResolver, n *ast.BLangLiteral) semtypes.SemType {
 	switch n.GetValueType().BTypeGetTag() {
-	case model.TypeTags_INT, model.TypeTags_BYTE:
+	case ast.TypeTags_INT, ast.TypeTags_BYTE:
 		return semtypes.NUMBER
-	case model.TypeTags_FLOAT:
+	case ast.TypeTags_FLOAT:
 		if hasFloatTypeSuffix(n.OriginalValue) {
 			return semtypes.FLOAT
 		}
@@ -1859,7 +1851,7 @@ func determineCandidatesFromLiteral(t typeResolver, n *ast.BLangLiteral) semtype
 			return semtypes.FLOAT
 		}
 		return semtypes.Union(semtypes.FLOAT, semtypes.DECIMAL)
-	case model.TypeTags_DECIMAL:
+	case ast.TypeTags_DECIMAL:
 		return semtypes.DECIMAL
 	default:
 		t.internalError(fmt.Sprintf("unexpected type tag %v for numeric literal", n.GetValueType().BTypeGetTag()), n.GetPosition())
@@ -4660,7 +4652,7 @@ func resolveIncludedRecordSlot(t typeResolver, chain *binding, s *mappingSlot, l
 		effect = fe
 		keyLit := &ast.BLangLiteral{Value: f.name, OriginalValue: f.name}
 		keyLit.SetPosition(f.expr.GetPosition())
-		keyLit.SetValueType(ast.NewBType(model.TypeTags_STRING, model.Name(""), 0))
+		keyLit.SetValueType(ast.NewBType(ast.TypeTags_STRING, model.Name(""), 0))
 		keyLit.SetDeterminedType(semtypes.STRING)
 		kv := &ast.BLangMappingKeyValueField{
 			Key:       &ast.BLangMappingKey{Expr: keyLit},
@@ -5207,7 +5199,7 @@ func resolveObjectType(t typeResolver, ty *ast.BLangObjectType, depth int) (semt
 			name:       m.Name(),
 			valueTy:    valueTy,
 			kind:       semtypeMemberKind(m.MemberKind()),
-			visibility: semtypeVisibility(m.Visibility()),
+			visibility: semtypeVisibility(m.IsPublic()),
 			immutable:  m.MemberKind() != ast.ObjectMemberKindField,
 			pos:        ty.GetPosition(),
 		})
@@ -5579,9 +5571,9 @@ func inclusionMemberToSemtypeMember(m model.InclusionMember) semtypes.Member {
 	kind := m.MemberKind()
 	vis := semtypes.VisibilityPrivate
 	if fd, ok := m.(*model.FieldDescriptor); ok {
-		vis = semtypeVisibility(fd.Visibility())
+		vis = semtypeVisibility(fd.IsPublic())
 	} else if md, ok := m.(*model.MethodDescriptor); ok {
-		vis = semtypeVisibility(md.Visibility())
+		vis = semtypeVisibility(md.IsPublic())
 	}
 	return semtypes.Member{
 		Name:       m.MemberName(),
@@ -5592,15 +5584,11 @@ func inclusionMemberToSemtypeMember(m model.InclusionMember) semtypes.Member {
 	}
 }
 
-func semtypeVisibility(v model.Visibility) semtypes.Visibility {
-	switch v {
-	case model.VisibilityPublic:
+func semtypeVisibility(isPublic bool) semtypes.Visibility {
+	if isPublic {
 		return semtypes.VisibilityPublic
-	case model.VisibilityPrivate:
-		return semtypes.VisibilityPrivate
-	default:
-		panic("invalid visibility")
 	}
+	return semtypes.VisibilityPrivate
 }
 
 func semtypeNetworkQualifier(nq ast.ObjectNetworkQuals) semtypes.NetworkQualifier {

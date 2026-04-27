@@ -55,8 +55,8 @@ type BType interface {
 	SetTypeData(ty TypeData)
 	GetTypeData() TypeData
 	GetTypeKind() TypeKind
-	BTypeGetTag() model.TypeTags
-	BTypeSetTag(tag model.TypeTags)
+	BTypeGetTag() TypeTags
+	BTypeSetTag(tag TypeTags)
 	bTypeGetName() model.Name
 	bTypeSetName(name model.Name)
 	bTypeGetFlags() model.Flag
@@ -68,14 +68,14 @@ type (
 		bLangNodeBase
 		ty      TypeData
 		Grouped bool
-		tags    model.TypeTags
+		tags    TypeTags
 		name    model.Name
 		flags   model.Flag
 	}
 
 	BTypeBasic struct {
 		ty    TypeData
-		tag   model.TypeTags
+		tag   TypeTags
 		name  model.Name
 		flags model.Flag
 	}
@@ -124,8 +124,8 @@ type (
 
 	bObjectFieldBase struct {
 		bLangNodeBase
-		name       string
-		visibility model.Visibility
+		name  string
+		flags model.Flag
 	}
 
 	BObjectField struct {
@@ -370,31 +370,31 @@ func (b *BField) AddAnnotationAttachment(annAttachment AnnotationAttachmentNode)
 	b.AnnAttachments = append(b.AnnAttachments, *annAttachment.(*BLangAnnotationAttachment))
 }
 
-func typeTagToTypeKind(tag model.TypeTags) TypeKind {
+func typeTagToTypeKind(tag TypeTags) TypeKind {
 	switch tag {
-	case model.TypeTags_INT:
+	case TypeTags_INT:
 		return TypeKind_INT
-	case model.TypeTags_BYTE:
+	case TypeTags_BYTE:
 		return TypeKind_BYTE
-	case model.TypeTags_FLOAT:
+	case TypeTags_FLOAT:
 		return TypeKind_FLOAT
-	case model.TypeTags_DECIMAL:
+	case TypeTags_DECIMAL:
 		return TypeKind_DECIMAL
-	case model.TypeTags_STRING:
+	case TypeTags_STRING:
 		return TypeKind_STRING
-	case model.TypeTags_BOOLEAN:
+	case TypeTags_BOOLEAN:
 		return TypeKind_BOOLEAN
-	case model.TypeTags_TYPEDESC:
+	case TypeTags_TYPEDESC:
 		return TypeKind_TYPEDESC
-	case model.TypeTags_NIL:
+	case TypeTags_NIL:
 		return TypeKind_NIL
-	case model.TypeTags_NEVER:
+	case TypeTags_NEVER:
 		return TypeKind_NEVER
-	case model.TypeTags_ERROR:
+	case TypeTags_ERROR:
 		return TypeKind_ERROR
-	case model.TypeTags_READONLY:
+	case TypeTags_READONLY:
 		return TypeKind_READONLY
-	case model.TypeTags_PARAMETERIZED_TYPE:
+	case TypeTags_PARAMETERIZED_TYPE:
 		return TypeKind_PARAMETERIZED
 	default:
 		return TypeKind_OTHER
@@ -453,8 +453,8 @@ func (b *bObjectFieldBase) Name() string {
 	return b.name
 }
 
-func (b *bObjectFieldBase) Visibility() model.Visibility {
-	return b.visibility
+func (b *bObjectFieldBase) IsPublic() bool {
+	return b.flags.Has(model.FlagPublic)
 }
 
 func (b *BObjectField) MemberKind() ObjectMemberKind {
@@ -481,11 +481,11 @@ func (b *bLangTypeBase) SetTypeData(ty TypeData) {
 	b.ty = ty
 }
 
-func (b *bLangTypeBase) BTypeSetTag(tag model.TypeTags) {
+func (b *bLangTypeBase) BTypeSetTag(tag TypeTags) {
 	b.tags = tag
 }
 
-func (b *bLangTypeBase) BTypeGetTag() model.TypeTags {
+func (b *bLangTypeBase) BTypeGetTag() TypeTags {
 	return b.tags
 }
 
@@ -505,11 +505,11 @@ func (b *bLangTypeBase) bTypeSetFlags(flags model.Flag) {
 	b.flags = flags
 }
 
-func (b *BTypeBasic) BTypeGetTag() model.TypeTags {
+func (b *BTypeBasic) BTypeGetTag() TypeTags {
 	return b.tag
 }
 
-func (b *BTypeBasic) BTypeSetTag(tag model.TypeTags) {
+func (b *BTypeBasic) BTypeSetTag(tag TypeTags) {
 	b.tag = tag
 }
 
@@ -561,7 +561,7 @@ func (b *BTypeBasic) GetDeterminedType() semtypes.SemType {
 	panic("not implemented")
 }
 
-func NewBType(tag model.TypeTags, name model.Name, flags uint64) BType {
+func NewBType(tag TypeTags, name model.Name, flags uint64) BType {
 	return &BTypeBasic{
 		tag:   tag,
 		name:  name,
