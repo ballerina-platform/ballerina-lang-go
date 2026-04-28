@@ -131,72 +131,72 @@ func (b *BLangFromClause) GetKind() model.NodeKind {
 	return model.NodeKind_FROM
 }
 
-func (this *BLangJoinClause) GetKind() model.NodeKind {
+func (b *BLangJoinClause) GetKind() model.NodeKind {
 	return model.NodeKind_JOIN
 }
 
-func (this *BLangJoinClause) GetCollection() model.ExpressionNode {
-	return this.Collection
+func (b *BLangJoinClause) GetCollection() model.ExpressionNode {
+	return b.Collection
 }
 
-func (this *BLangJoinClause) SetCollection(collection model.ExpressionNode) {
+func (b *BLangJoinClause) SetCollection(collection model.ExpressionNode) {
 	if exp, ok := collection.(BLangExpression); ok {
-		this.Collection = exp
+		b.Collection = exp
 		return
 	}
 	panic("collection is not a BLangExpression")
 }
 
-func (this *BLangJoinClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
-	return this.VariableDefinitionNode
+func (b *BLangJoinClause) GetVariableDefinitionNode() model.VariableDefinitionNode {
+	return b.VariableDefinitionNode
 }
 
-func (this *BLangJoinClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
-	this.VariableDefinitionNode = variableDefinitionNode
+func (b *BLangJoinClause) SetVariableDefinitionNode(variableDefinitionNode model.VariableDefinitionNode) {
+	b.VariableDefinitionNode = variableDefinitionNode
 }
 
-func (this *BLangJoinClause) IsDeclaredWithVar() bool {
-	return this.IsDeclaredWithVarFlag
+func (b *BLangJoinClause) IsDeclaredWithVar() bool {
+	return b.IsDeclaredWithVarFlag
 }
 
-func (this *BLangJoinClause) GetOnClause() model.OnClauseNode {
-	return this.OnClause
+func (b *BLangJoinClause) GetOnClause() model.OnClauseNode {
+	return b.OnClause
 }
 
-func (this *BLangJoinClause) IsOuterJoin() bool {
-	return this.IsOuterJoinFlag
+func (b *BLangJoinClause) IsOuterJoin() bool {
+	return b.IsOuterJoinFlag
 }
 
-func (this *BLangOnClause) GetKind() model.NodeKind {
+func (b *BLangOnClause) GetKind() model.NodeKind {
 	return model.NodeKind_ON
 }
 
-func (this *BLangOnClause) GetLeftExpression() model.ExpressionNode {
-	return this.LhsExpr
+func (b *BLangOnClause) GetLeftExpression() model.ExpressionNode {
+	return b.LhsExpr
 }
 
-func (this *BLangOnClause) SetLeftExpression(expression model.ExpressionNode) {
+func (b *BLangOnClause) SetLeftExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
-		this.LhsExpr = exp
+		b.LhsExpr = exp
 		return
 	}
 	panic("expression is not a BLangExpression")
 }
 
-func (this *BLangOnClause) GetRightExpression() model.ExpressionNode {
-	return this.RhsExpr
+func (b *BLangOnClause) GetRightExpression() model.ExpressionNode {
+	return b.RhsExpr
 }
 
-func (this *BLangOnClause) SetRightExpression(expression model.ExpressionNode) {
+func (b *BLangOnClause) SetRightExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
-		this.RhsExpr = exp
+		b.RhsExpr = exp
 		return
 	}
 	panic("expression is not a BLangExpression")
 }
 
-func (this *BLangFromClause) GetCollection() model.ExpressionNode {
-	return this.Collection
+func (b *BLangFromClause) GetCollection() model.ExpressionNode {
+	return b.Collection
 }
 
 func (b *BLangFromClause) SetCollection(collection model.ExpressionNode) {
@@ -247,16 +247,16 @@ func (b *BLangSelectClause) GetKind() model.NodeKind {
 	return model.NodeKind_SELECT
 }
 
-func (this *BLangOrderByClause) GetKind() model.NodeKind {
+func (b *BLangOrderByClause) GetKind() model.NodeKind {
 	return model.NodeKind_ORDER_BY
 }
 
-func (this *BLangOrderKey) GetKind() model.NodeKind {
+func (b *BLangOrderKey) GetKind() model.NodeKind {
 	return model.NodeKind_ORDER_KEY
 }
 
-func (this *BLangSelectClause) GetExpression() model.ExpressionNode {
-	return this.Expression
+func (b *BLangSelectClause) GetExpression() model.ExpressionNode {
+	return b.Expression
 }
 
 func (b *BLangSelectClause) SetExpression(expression model.ExpressionNode) {
@@ -267,23 +267,23 @@ func (b *BLangSelectClause) SetExpression(expression model.ExpressionNode) {
 	panic("expression is not a BLangExpression")
 }
 
-func (this *BLangOnConflictClause) GetKind() model.NodeKind {
+func (b *BLangOnConflictClause) GetKind() model.NodeKind {
 	return model.NodeKind_ON_CONFLICT
 }
 
-func (this *BLangOnConflictClause) GetExpression() model.ExpressionNode {
-	return this.Expression
+func (b *BLangOnConflictClause) GetExpression() model.ExpressionNode {
+	return b.Expression
 }
 
-func (this *BLangOnConflictClause) SetExpression(expression model.ExpressionNode) {
+func (b *BLangOnConflictClause) SetExpression(expression model.ExpressionNode) {
 	if exp, ok := expression.(BLangExpression); ok {
-		this.Expression = exp
+		b.Expression = exp
 		return
 	}
 	panic("expression is not a BLangExpression")
 }
 
-func (this *BLangCollectClause) GetKind() model.NodeKind {
+func (b *BLangCollectClause) GetKind() model.NodeKind {
 	// migrated from BLangCollectClause.java:48:5
 	return model.NodeKind_COLLECT
 }
