@@ -1,0 +1,77 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition Node
+    (variable value (type
+      (value-type int)))
+    (variable next (type
+      (union-type
+        (user-defined-type Node)
+        (value-type null))))
+    (function init (
+      (variable value (type
+        (value-type int)))
+      (variable next (type
+        (union-type
+          (user-defined-type Node)
+          (value-type null))))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal value))
+          (simple-var-ref value))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal next))
+          (simple-var-ref next)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable a (type
+          (user-defined-type Node)) (expr
+          (new (
+            (literal 1)
+            (literal <nil>))))))
+      (var-def
+        (variable b (type
+          (user-defined-type Node)) (expr
+          (new (
+            (literal 2)
+            (simple-var-ref a))))))
+      (var-def
+        (variable c (type
+          (user-defined-type Node)) (expr
+          (new (
+            (literal 3)
+            (simple-var-ref b))))))
+      (var-def
+        (variable total (type
+          (value-type int)) (expr
+          (literal 0))))
+      (var-def
+        (variable cur (type
+          (union-type
+            (user-defined-type Node)
+            (value-type null))) (expr
+          (simple-var-ref c))))
+      (while
+        (type-test-expr is
+          (simple-var-ref cur)
+          (user-defined-type Node))
+        (block-stmt
+          (compound-assignment +
+            (simple-var-ref total)
+            (index-based-access
+              (simple-var-ref cur)
+              (literal value)))
+          (assignment
+            (simple-var-ref cur)
+            (index-based-access
+              (simple-var-ref cur)
+              (literal next)))))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref total)))))))

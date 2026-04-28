@@ -1,0 +1,25 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: type definition A is empty
+  --> cycle-object-mutual-e.bal:17:1
+   |
+17 | type A object { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+18 |     int va;
+   |     ^^^^^^^
+19 |     B b;
+   |     ^^^^
+20 | };
+   | ^^
+
+error[SEMANTIC_ERROR]: type definition B is empty
+  --> cycle-object-mutual-e.bal:22:1
+   |
+22 | type B object { // @error
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^
+23 |     int vb;
+   |     ^^^^^^^
+24 |     A a;
+   |     ^^^^
+25 | };
+   | ^^

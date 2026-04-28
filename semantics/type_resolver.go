@@ -599,7 +599,7 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	}
 	for i := range pkg.ClassDefinitions {
 		classDef := &pkg.ClassDefinitions[i]
-		if _, ok := resolveClassDefinitionType(t, classDef, 0); !ok {
+		if _, ok := resolveTypeDefinition(t, classDef, 0); !ok {
 			return
 		}
 	}
@@ -650,6 +650,11 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 	for _, defn := range pkg.TypeDefinitions {
 		if semtypes.IsEmpty(tctx, defn.DeterminedType) {
 			t.semanticError(fmt.Sprintf("type definition %s is empty", defn.Name.GetValue()), defn.GetPosition())
+		}
+	}
+	for _, class := range pkg.ClassDefinitions {
+		if semtypes.IsEmpty(tctx, t.symbolType(class.Symbol())) {
+			t.semanticError(fmt.Sprintf("class definition %s is empty", class.Name.GetValue()), class.GetPosition())
 		}
 	}
 }
@@ -996,9 +1001,6 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 	if ty := t.symbolType(defn.Symbol()); ty != nil {
 		return ty, true
 	}
-	if classDef, ok := defn.(*ast.BLangClassDefinition); ok {
-		return resolveClassDefinitionType(t, classDef, depth)
-	}
 	if defn.GetName() != nil {
 		setOtherNodesAsNever(defn.GetName().(ast.BLangNode))
 	}
@@ -1007,7 +1009,13 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 		return nil, false
 	}
 	defn.SetCycleDepth(depth)
-	semType, ok := resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	var semType semtypes.SemType
+	var ok bool
+	if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
+		semType, ok = resolveClassDefinitionType(t, classDef, depth)
+	} else {
+		semType, ok = resolveBType(t, defn.GetTypeData().TypeDescriptor.(ast.BType), depth)
+	}
 	if !ok {
 		return nil, false
 	}
@@ -1019,13 +1027,17 @@ func resolveTypeDefinition(t typeResolver, defn model.TypeDefinition, depth int)
 		typeData.Type = semType
 		defn.SetTypeData(typeData)
 		addInclusionsToTypeSymbol(t, defn)
+		if classDef, isClass := defn.(*ast.BLangClassDefinition); isClass {
+			if selfRef, ok := classDef.Scope().GetSymbol("self"); ok {
+				t.setSymbolType(selfRef, semType)
+			}
+		}
 		return semType, true
-	} else {
-		// This can happen with recursion
-		// We use the first definition we produced
-		// and throw away the others
-		return defn.GetDeterminedType(), true
 	}
+	// This can happen with recursion
+	// We use the first definition we produced
+	// and throw away the others
+	return defn.GetDeterminedType(), true
 }
 
 // addInclusionsToTypeSymbol addes all the inclusions (both transitive and direct) to the type symbol
@@ -1239,16 +1251,13 @@ func createFieldDescriptor(name string, field ast.BField) model.FieldDescriptor 
 }
 
 func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefinition, depth int) (semtypes.SemType, bool) {
-	if classDef.GetDeterminedType() != nil {
-		return classDef.GetDeterminedType(), true
+	if classDef.Definition != nil {
+		// Recursive self-reference while the surrounding class is still being
+		// resolved. Return the partial type so callers can refer to it.
+		recTy := classDef.Definition.GetSemType(t.typeEnv())
+		t.setSymbolType(classDef.Symbol(), recTy)
+		return recTy, true
 	}
-	setOtherNodesAsNever(classDef.Name)
-	if depth == classDef.GetCycleDepth() {
-		t.semanticError(fmt.Sprintf("invalid cycle detected for class definition %s", classDef.Name.GetValue()), classDef.GetPosition())
-		return nil, false
-	}
-	classDef.SetCycleDepth(depth)
-
 	od := semtypes.NewObjectDefinition()
 	classDef.Definition = &od
 
@@ -1390,20 +1399,6 @@ func resolveClassDefinitionType(t typeResolver, classDef *ast.BLangClassDefiniti
 	}
 	qualifiers := semtypes.ObjectQualifiersFrom(isolated, false, networkQual)
 	semType := od.Define(t.typeEnv(), qualifiers, members)
-
-	t.setSymbolType(classDef.Symbol(), semType)
-	classDef.SetCycleDepth(-1)
-	typeData := classDef.GetTypeData()
-	typeData.Type = semType
-	classDef.SetTypeData(typeData)
-	addInclusionsToTypeSymbol(t, classDef)
-
-	// Set self symbol type
-	selfRef, ok := classDef.Scope().GetSymbol("self")
-	if ok {
-		t.setSymbolType(selfRef, semType)
-	}
-
 	return semType, true
 }
 
