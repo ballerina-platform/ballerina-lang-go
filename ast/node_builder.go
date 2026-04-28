@@ -3260,7 +3260,6 @@ func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDec
 
 	typeDef := NewBLangTypeDefinition()
 	typeDef.pos = getPositionWithoutMetadata(n.de(), enumDeclarationNode)
-	typeDef.SetEnum()
 	if publicQualifier {
 		typeDef.SetPublic()
 	}
@@ -3304,7 +3303,6 @@ func (n *NodeBuilder) TransformEnumMember(enumMemberNode *tree.EnumMemberNode) B
 func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, publicQualifier bool) (*BLangConstant, bool) {
 	constantNode := createConstantNode()
 	constantNode.pos = getPositionWithoutMetadata(n.de(), enumMemberNode)
-	constantNode.SetEnumMember()
 	if publicQualifier {
 		constantNode.SetPublic()
 	}
