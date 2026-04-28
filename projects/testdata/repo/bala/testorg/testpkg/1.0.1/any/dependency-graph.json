@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "org": "testorg",
+      "name": "testpkg",
+      "version": "1.0.1",
+      "transitive": false,
+      "dependencies": [],
+      "modules": []
+    }
+  ],
+  "modules": []
+}

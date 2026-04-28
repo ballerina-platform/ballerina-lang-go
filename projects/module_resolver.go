@@ -16,6 +16,10 @@
 
 package projects
 
+import (
+	"context"
+)
+
 // moduleLoadRequestKey is used as a map key for caching module load responses.
 type moduleLoadRequestKey struct {
 	orgName    string
@@ -33,36 +37,41 @@ func newModuleLoadRequestKey(request *moduleLoadRequest) moduleLoadRequestKey {
 	}
 }
 
+// resolutionStatus indicates whether a module/package was resolved.
+type resolutionStatus int
+
+const (
+	// resolutionStatusResolved indicates the module/package was found.
+	resolutionStatusResolved resolutionStatus = iota
+	// resolutionStatusUnresolved indicates the module/package was not found.
+	resolutionStatusUnresolved
+)
+
 // importModuleResponse represents the result of resolving a moduleLoadRequest.
 type importModuleResponse struct {
-	moduleDesc ModuleDescriptor
-	resolved   bool
+	packageDescriptor *PackageDescriptor // Package containing the module (nil for same package)
+	moduleDesc        ModuleDescriptor   // Module descriptor
+	resolutionStatus  resolutionStatus
 }
 
-// moduleResolver resolves module dependencies within a single package.
+// moduleResolver resolves module dependencies using PackageResolver.
 type moduleResolver struct {
-	rootPkgDesc PackageDescriptor
-	moduleNames map[string]ModuleDescriptor
-	responseMap map[moduleLoadRequestKey]*importModuleResponse
+	rootPkgDesc       PackageDescriptor
+	responseMap       map[moduleLoadRequestKey]*importModuleResponse
+	packageResolver   PackageResolver
+	resolutionOptions ResolutionOptions
 }
 
-func newModuleResolver(
-	rootPkgDesc PackageDescriptor,
-	moduleDescriptors []ModuleDescriptor,
-) *moduleResolver {
-	moduleNames := make(map[string]ModuleDescriptor, len(moduleDescriptors))
-	for _, modDesc := range moduleDescriptors {
-		moduleNames[modDesc.Name().String()] = modDesc
-	}
-
+func newModuleResolver(rootPkgDesc PackageDescriptor, env *Environment) *moduleResolver {
 	return &moduleResolver{
-		rootPkgDesc: rootPkgDesc,
-		moduleNames: moduleNames,
-		responseMap: make(map[moduleLoadRequestKey]*importModuleResponse),
+		rootPkgDesc:       rootPkgDesc,
+		responseMap:       make(map[moduleLoadRequestKey]*importModuleResponse),
+		packageResolver:   env.PackageResolver(),
+		resolutionOptions: env.ResolutionOptions(),
 	}
 }
 
-func (r *moduleResolver) resolveModuleLoadRequests(requests []*moduleLoadRequest) []*importModuleResponse {
+func (r *moduleResolver) resolveModuleLoadRequests(ctx context.Context, requests []*moduleLoadRequest) []*importModuleResponse {
 	responses := make([]*importModuleResponse, 0, len(requests))
 
 	for _, request := range requests {
@@ -75,7 +84,7 @@ func (r *moduleResolver) resolveModuleLoadRequests(requests []*moduleLoadRequest
 		}
 
 		// Try to resolve the module
-		response := r.resolveRequest(request)
+		response := r.resolveRequest(ctx, request)
 		r.responseMap[key] = response
 		responses = append(responses, response)
 	}
@@ -83,32 +92,52 @@ func (r *moduleResolver) resolveModuleLoadRequests(requests []*moduleLoadRequest
 	return responses
 }
 
-func (r *moduleResolver) resolveRequest(request *moduleLoadRequest) *importModuleResponse {
-	// Check if this is a root package module
-	if r.isRootPackageModule(request.orgName, request.moduleName) {
-		modDesc, ok := r.moduleNames[request.moduleName]
-		if ok {
-			return &importModuleResponse{
-				moduleDesc: modDesc,
-				resolved:   true,
+func (r *moduleResolver) resolveRequest(ctx context.Context, request *moduleLoadRequest) *importModuleResponse {
+	// Determine org - use request org or default to root package org
+	org := r.rootPkgDesc.Org().Value()
+	if request.orgName != nil {
+		org = request.orgName.Value()
+	}
+
+	// Extract package name from module name (e.g., "http.auth" -> "http")
+	pkgName := extractPackageName(request.moduleName)
+
+	// Look up packages via PackageResolver
+	// Packages are returned oldest-first, so iterate in reverse to get the newest version
+	packages := r.packageResolver.ResolveByName(ctx, org, pkgName, r.resolutionOptions)
+	for i := len(packages) - 1; i >= 0; i-- {
+		pkg := packages[i]
+		// Check if module exists in this package
+		for _, mod := range pkg.Modules() {
+			if mod.ModuleName().String() == request.moduleName {
+				pkgDesc := pkg.Manifest().PackageDescriptor()
+				// Only set packageDescriptor for external packages (nil for same-package)
+				var pkgDescPtr *PackageDescriptor
+				if !pkgDesc.Equals(r.rootPkgDesc) {
+					pkgDescPtr = &pkgDesc
+				}
+				return &importModuleResponse{
+					packageDescriptor: pkgDescPtr,
+					moduleDesc:        mod.Descriptor(),
+					resolutionStatus:  resolutionStatusResolved,
+				}
 			}
 		}
 	}
 
-	// Module not found in root package
+	// Module not found
 	return &importModuleResponse{
-		resolved: false,
+		resolutionStatus: resolutionStatusUnresolved,
 	}
 }
 
-// isRootPackageModule checks if the given org and module name belong to the root package.
-// A module belongs to the root package if:
-// 1. The org matches the root package org (or org is nil)
-// 2. The module name is found in the moduleNames map
-func (r *moduleResolver) isRootPackageModule(orgName *PackageOrg, moduleName string) bool {
-	if orgName != nil && !orgName.Equals(r.rootPkgDesc.Org()) {
-		return false
+// extractPackageName extracts the package name from a module name.
+// e.g., "http" -> "http", "http.auth" -> "http"
+func extractPackageName(moduleName string) string {
+	for i, c := range moduleName {
+		if c == '.' {
+			return moduleName[:i]
+		}
 	}
-	_, exists := r.moduleNames[moduleName]
-	return exists
+	return moduleName
 }

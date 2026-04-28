@@ -1,0 +1,4 @@
+[package]
+org = "testorg"
+name = "transitive_app"
+version = "1.0.0"

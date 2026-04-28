@@ -35,7 +35,6 @@ import (
 	"ballerina-lang-go/model/symbolpool"
 	"ballerina-lang-go/parser"
 	"ballerina-lang-go/projects"
-	"ballerina-lang-go/projects/directory"
 	"ballerina-lang-go/runtime"
 	"ballerina-lang-go/semantics"
 	"ballerina-lang-go/semtypes"
@@ -227,7 +226,16 @@ func runCompilePhase(balFile string, stdoutBuf, stderrBuf *bytes.Buffer) (pkg *b
 
 	fsys := os.DirFS(filepath.Dir(balFile))
 
-	result, err := directory.LoadProject(fsys, filepath.Base(balFile))
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
+	}
+	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
+
+	result, err := projects.Load(fsys, filepath.Base(balFile), projects.ProjectLoadConfig{
+		BallerinaEnvFs: ballerinaEnvFs,
+	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -361,7 +369,16 @@ func runProjectCompilePhase(projectDir string, stdoutBuf, stderrBuf *bytes.Buffe
 
 	fsys := os.DirFS(projectDir)
 
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
+		return nil, err
+	}
+	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
+
+	result, err := projects.Load(fsys, ".", projects.ProjectLoadConfig{
+		BallerinaEnvFs: ballerinaEnvFs,
+	})
 	if err != nil {
 		fmt.Fprintf(stdoutBuf, "%s\n", err.Error())
 		return nil, err
@@ -460,7 +477,15 @@ func runProjectSerializationRoundtrip(projectDir string) (stdout, stderr string)
 	}
 
 	fsys := os.DirFS(projectDir)
-	result, err := directory.LoadProject(fsys, ".")
+	ballerinaEnvPath, err := getBallerinaEnvPath()
+	if err != nil {
+		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
+		return stdoutBuf.String(), stderrBuf.String()
+	}
+	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
+	result, err := projects.Load(fsys, ".", projects.ProjectLoadConfig{
+		BallerinaEnvFs: ballerinaEnvFs,
+	})
 	if err != nil {
 		fmt.Fprintf(&stdoutBuf, "%s\n", err.Error())
 		return stdoutBuf.String(), stderrBuf.String()
@@ -676,4 +701,17 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	pkg = desugar.DesugarPackage(cx, pkg, importedSymbols)
 
 	return bir.GenBir(cx, pkg), nil
+}
+
+func getBallerinaEnvPath() (string, error) {
+	if balEnv := os.Getenv(projects.BallerinaEnvVar); balEnv != "" {
+		return balEnv, nil
+	}
+
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userHome, projects.UserHomeDirName), nil
 }

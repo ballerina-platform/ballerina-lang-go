@@ -79,7 +79,6 @@ func (d *documentContext) parseContent(content string, textDoc text.TextDocument
 	// Create the ModulePart node
 	moduleNode := tree.CreateUnlinkedFacade[*tree.STModulePart, *tree.ModulePart](rootNode)
 
-	// Create the SyntaxTree
 	syntaxTree := tree.NewSyntaxTreeFromNodeTextDocument(moduleNode, textDoc, d.name, false)
 	return &syntaxTree
 }

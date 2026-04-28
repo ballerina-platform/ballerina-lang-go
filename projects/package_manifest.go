@@ -34,6 +34,7 @@ type PackageManifest struct {
 	license          []string
 	authors          []string
 	keywords         []string
+	exportedModules  []string
 	repository       string
 	ballerinaVersion string
 	visibility       string
@@ -93,8 +94,9 @@ func (d Dependency) Repository() string {
 // NewPackageManifest creates a new PackageManifest with default values.
 func NewPackageManifest(desc PackageDescriptor) PackageManifest {
 	return PackageManifest{
-		packageDesc:  desc,
-		buildOptions: NewBuildOptions(),
+		packageDesc:     desc,
+		buildOptions:    NewBuildOptions(),
+		exportedModules: []string{desc.Name().Value()},
 	}
 }
 
@@ -153,6 +155,11 @@ func (m PackageManifest) Keywords() []string {
 	return slices.Clone(m.keywords)
 }
 
+// ExportedModules returns a copy of the exported module names.
+func (m PackageManifest) ExportedModules() []string {
+	return slices.Clone(m.exportedModules)
+}
+
 // Repository returns the package repository URL.
 func (m PackageManifest) Repository() string {
 	return m.repository
@@ -194,6 +201,7 @@ type PackageManifestParams struct {
 	License          []string
 	Authors          []string
 	Keywords         []string
+	ExportedModules  []string
 	Repository       string
 	BallerinaVersion string
 	Visibility       string
@@ -207,6 +215,12 @@ type PackageManifestParams struct {
 // This function is intended for use by internal packages that need to construct
 // PackageManifest instances with full control over all fields.
 func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest {
+	// Default exported modules to package name if not specified.
+	exportedModules := slices.Clone(params.ExportedModules)
+	if len(exportedModules) == 0 {
+		exportedModules = []string{params.PackageDesc.Name().Value()}
+	}
+
 	return PackageManifest{
 		packageDesc:      params.PackageDesc,
 		dependencies:     slices.Clone(params.Dependencies),
@@ -215,6 +229,7 @@ func NewPackageManifestFromParams(params PackageManifestParams) PackageManifest 
 		license:          slices.Clone(params.License),
 		authors:          slices.Clone(params.Authors),
 		keywords:         slices.Clone(params.Keywords),
+		exportedModules:  exportedModules,
 		repository:       params.Repository,
 		ballerinaVersion: params.BallerinaVersion,
 		visibility:       params.Visibility,
