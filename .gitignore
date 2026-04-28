@@ -42,3 +42,7 @@ parser/testdata/**/*.json
 .gopath/
 .gocache/
 .gomodcache/
+/.cache/
+
+# Local lint tool binary
+/bin/golangci-lint

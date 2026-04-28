@@ -1222,10 +1222,7 @@ func createQueryNilLiteral(pos diagnostics.Location) *ast.BLangLiteral {
 }
 
 func appendModelStatements(bodyStmts []ast.BLangStatement, stmts []model.StatementNode) []ast.BLangStatement {
-	for _, stmt := range stmts {
-		bodyStmts = append(bodyStmts, stmt)
-	}
-	return bodyStmts
+	return append(bodyStmts, stmts...)
 }
 
 func applyQueryLetClauseToRows(
