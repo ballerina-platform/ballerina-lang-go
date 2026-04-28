@@ -200,6 +200,16 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintPushScopeFrame(instruction)
 	case *PopScopeFrame:
 		return "PopScopeFrame"
+	case *NewXMLElement:
+		return p.PrintNewXMLElement(instruction)
+	case *NewXMLPI:
+		return p.PrintNewXMLPI(instruction)
+	case *NewXMLComment:
+		return p.PrintNewXMLComment(instruction)
+	case *NewXMLText:
+		return p.PrintNewXMLText(instruction)
+	case *NewXMLSequence:
+		return p.PrintNewXMLSequence(instruction)
 	default:
 		panic(fmt.Sprintf("unknown instruction type: %T", instruction))
 	}
@@ -451,4 +461,35 @@ func (p *PrettyPrinter) PrintPackageID(packageID *model.PackageID) string {
 	pkgName := string(*packageID.PkgName)
 	version := string(*packageID.Version)
 	return fmt.Sprintf("%s.%s v %s", orgName, pkgName, version)
+}
+
+func (p *PrettyPrinter) PrintNewXMLElement(n *NewXMLElement) string {
+	children := "()"
+	if n.ChildrenOp != nil {
+		children = p.PrintOperand(*n.ChildrenOp)
+	}
+	return fmt.Sprintf("%s = newXMLElement(%s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children)
+}
+
+func (p *PrettyPrinter) PrintNewXMLPI(n *NewXMLPI) string {
+	return fmt.Sprintf("%s = newXMLPI(%s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.TargetOp), p.PrintOperand(*n.DataOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLComment(n *NewXMLComment) string {
+	return fmt.Sprintf("%s = newXMLComment(%s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.BodyOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLText(n *NewXMLText) string {
+	return fmt.Sprintf("%s = newXMLText(%s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.BodyOp))
+}
+
+func (p *PrettyPrinter) PrintNewXMLSequence(n *NewXMLSequence) string {
+	parts := strings.Builder{}
+	for i, child := range n.Children {
+		if i > 0 {
+			parts.WriteString(", ")
+		}
+		parts.WriteString(p.PrintOperand(*child))
+	}
+	return fmt.Sprintf("%s = newXMLSequence{%s}", p.PrintOperand(*n.LhsOp), parts.String())
 }

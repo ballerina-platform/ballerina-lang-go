@@ -35,6 +35,7 @@ import (
 	bMap "ballerina-lang-go/lib/map/compile"
 	bString "ballerina-lang-go/lib/string/compile"
 	bValue "ballerina-lang-go/lib/value/compile"
+	bXML "ballerina-lang-go/lib/xml/compile"
 )
 
 type scopeKind int
@@ -575,6 +576,7 @@ func GetImplicitImports(ctx *context.CompilerContext) map[string]model.ExportedS
 	result[bMap.PackageName] = bMap.GetMapSymbols(ctx)
 	result[bString.PackageName] = bString.GetStringSymbols(ctx)
 	result[bValue.PackageName] = bValue.GetValueSymbols(ctx)
+	result[bXML.PackageName] = bXML.GetXMLSymbols(ctx)
 	return result
 }
 

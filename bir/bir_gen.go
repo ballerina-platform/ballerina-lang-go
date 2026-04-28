@@ -853,6 +853,16 @@ func handleActionOrExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr ast.B
 		return generateCall(ctx, curBB, expr)
 	case *ast.BLangTypedescExpr:
 		return typedescExpression(ctx, curBB, expr)
+	case *ast.BLangXMLSequenceLiteral:
+		return xmlSequenceLiteral(ctx, curBB, expr)
+	case *ast.BLangXMLElementLiteral:
+		return xmlElementLiteral(ctx, curBB, expr)
+	case *ast.BLangXMLPILiteral:
+		return xmlPILiteral(ctx, curBB, expr)
+	case *ast.BLangXMLCommentLiteral:
+		return xmlCommentLiteral(ctx, curBB, expr)
+	case *ast.BLangXMLTextLiteral:
+		return xmlTextLiteral(ctx, curBB, expr)
 	default:
 		panic(fmt.Sprintf("unexpected expression type: %T", expr))
 	}
@@ -866,6 +876,67 @@ func typedescExpression(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangT
 		result: resultOperand,
 		block:  curBB,
 	}
+}
+
+func xmlTextLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLTextLiteral) expressionEffect {
+	pos := ctx.loc(expr.GetPosition())
+	bodyOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(bodyOp, expr.Body, pos))
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewXMLTextInstr(resultOp, bodyOp, pos))
+	return expressionEffect{result: resultOp, block: curBB}
+}
+
+func xmlCommentLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLCommentLiteral) expressionEffect {
+	pos := ctx.loc(expr.GetPosition())
+	bodyOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(bodyOp, expr.Body, pos))
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewXMLCommentInstr(resultOp, bodyOp, pos))
+	return expressionEffect{result: resultOp, block: curBB}
+}
+
+func xmlPILiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLPILiteral) expressionEffect {
+	pos := ctx.loc(expr.GetPosition())
+	targetOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(targetOp, expr.Target, pos))
+	dataOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(dataOp, expr.Data, pos))
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewXMLPIInstr(resultOp, targetOp, dataOp, pos))
+	return expressionEffect{result: resultOp, block: curBB}
+}
+
+func xmlElementLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLElementLiteral) expressionEffect {
+	pos := ctx.loc(expr.GetPosition())
+	nameOp := ctx.addTempVar(semtypes.STRING)
+	curBB.Instructions = append(curBB.Instructions, NewConstantLoad(nameOp, expr.Name, pos))
+	var contentOp *BIROperand
+	if expr.Content != nil {
+		eff := handleActionOrExpression(ctx, curBB, expr.Content)
+		curBB = eff.block
+		contentOp = eff.result
+	}
+	// PR-TODO: add support for attributes
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewXMLElementInstr(resultOp, nameOp, contentOp, pos))
+	return expressionEffect{result: resultOp, block: curBB}
+}
+
+func xmlSequenceLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLSequenceLiteral) expressionEffect {
+	if len(expr.Children) == 1 {
+		return handleActionOrExpression(ctx, curBB, expr.Children[0])
+	}
+	pos := ctx.loc(expr.GetPosition())
+	var childOps []*BIROperand
+	for _, child := range expr.Children {
+		eff := handleActionOrExpression(ctx, curBB, child)
+		curBB = eff.block
+		childOps = append(childOps, eff.result)
+	}
+	resultOp := ctx.addTempVar(expr.GetDeterminedType())
+	curBB.Instructions = append(curBB.Instructions, NewXMLSequenceInstr(resultOp, childOps, pos))
+	return expressionEffect{result: resultOp, block: curBB}
 }
 
 type mappingField struct {

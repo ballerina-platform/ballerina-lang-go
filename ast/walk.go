@@ -557,6 +557,33 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangNumericLiteral:
 		// Leaf node
 
+	case *BLangXMLSequenceLiteral:
+		for _, child := range node.Children {
+			Walk(v, child)
+		}
+
+	case *BLangXMLElementLiteral:
+		for i := range node.Attrs {
+			Walk(v, &node.Attrs[i])
+		}
+		if node.Content != nil {
+			Walk(v, node.Content)
+		}
+
+	case *BLangXMLAttribute:
+		if node.Value != nil {
+			Walk(v, node.Value)
+		}
+
+	case *BLangXMLPILiteral:
+		// Leaf node
+
+	case *BLangXMLCommentLiteral:
+		// Leaf node
+
+	case *BLangXMLTextLiteral:
+		// Leaf node
+
 	// Section 7: Expressions - Worker
 	case *BLangWorkerReceive:
 		if node.WorkerIdentifier != nil {

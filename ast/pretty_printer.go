@@ -205,6 +205,18 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printMarkDownDeprecatedParametersDocumentation(t)
 	case *BLangMarkdownReferenceDocumentation:
 		p.printMarkdownReferenceDocumentation(t)
+	case *BLangXMLSequenceLiteral:
+		p.printXMLSequenceLiteral(t)
+	case *BLangXMLElementLiteral:
+		p.printXMLElementLiteral(t)
+	case *BLangXMLAttribute:
+		p.printXMLAttribute(t)
+	case *BLangXMLPILiteral:
+		p.printXMLPILiteral(t)
+	case *BLangXMLCommentLiteral:
+		p.printXMLCommentLiteral(t)
+	case *BLangXMLTextLiteral:
+		p.printXMLTextLiteral(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
@@ -350,6 +362,66 @@ func (p *PrettyPrinter) printOperatorKind(opKind model.OperatorKind) {
 
 func (p *PrettyPrinter) printTypeKind(typeKind model.TypeKind) {
 	p.printString(string(typeKind))
+}
+
+func (p *PrettyPrinter) printXMLSequenceLiteral(node *BLangXMLSequenceLiteral) {
+	p.startNode()
+	p.printString("xml-sequence-literal")
+	p.indentLevel++
+	for _, child := range node.Children {
+		p.PrintInner(child.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLElementLiteral(node *BLangXMLElementLiteral) {
+	p.startNode()
+	p.printString("xml-element-literal")
+	p.printString(node.Name)
+	p.indentLevel++
+	for i := range node.Attrs {
+		p.PrintInner(&node.Attrs[i])
+	}
+	if node.Content != nil {
+		p.PrintInner(node.Content.(BLangNode))
+	}
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLAttribute(node *BLangXMLAttribute) {
+	p.startNode()
+	p.printString("xml-attribute")
+	p.printString(node.Name)
+	if node.Value != nil {
+		p.indentLevel++
+		p.PrintInner(node.Value.(BLangNode))
+		p.indentLevel--
+	}
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLPILiteral(node *BLangXMLPILiteral) {
+	p.startNode()
+	p.printString("xml-pi-literal")
+	p.printString(node.Target)
+	p.printString(node.Data)
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLCommentLiteral(node *BLangXMLCommentLiteral) {
+	p.startNode()
+	p.printString("xml-comment-literal")
+	p.printString(node.Body)
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printXMLTextLiteral(node *BLangXMLTextLiteral) {
+	p.startNode()
+	p.printString("xml-text-literal")
+	p.printString(node.Body)
+	p.endNode()
 }
 
 // Literal and basic expression printers

@@ -283,3 +283,41 @@ func toDecimal(value any) *decimal.Decimal {
 		panic(values.NewErrorWithMessage(fmt.Sprintf("bad type cast: cannot cast %v to decimal", value)))
 	}
 }
+
+func execNewXMLText(ctx *Context, instr *bir.NewXMLText, frame *Frame) {
+	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
+	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLText{Body: body})
+}
+
+func execNewXMLComment(ctx *Context, instr *bir.NewXMLComment, frame *Frame) {
+	body := getOperandValue(ctx, instr.BodyOp, frame).(string)
+	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLComment{Body: body})
+}
+
+func execNewXMLPI(ctx *Context, instr *bir.NewXMLPI, frame *Frame) {
+	target := getOperandValue(ctx, instr.TargetOp, frame).(string)
+	data := getOperandValue(ctx, instr.DataOp, frame).(string)
+	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLProcessingInstruction{Target: target, Data: data})
+}
+
+func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
+	name := getOperandValue(ctx, instr.NameOp, frame).(string)
+	var children values.XMLValue
+	if instr.ChildrenOp != nil {
+		if v, ok := getOperandValue(ctx, instr.ChildrenOp, frame).(values.XMLValue); ok {
+			children = v
+		}
+	}
+	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Children: children})
+}
+
+func execNewXMLSequence(ctx *Context, instr *bir.NewXMLSequence, frame *Frame) {
+	items := make([]values.XMLValue, 0, len(instr.Children))
+	for _, op := range instr.Children {
+		val := getOperandValue(ctx, op, frame)
+		if x, ok := val.(values.XMLValue); ok {
+			items = append(items, x)
+		}
+	}
+	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLSequence(items))
+}

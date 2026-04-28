@@ -334,6 +334,29 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		write(buf, int32(instr.NumLocals))
 	case *bir.PopScopeFrame:
 		// no fields to write
+	case *bir.NewXMLElement:
+		bw.writeOperand(buf, instr.NameOp)
+		write(buf, instr.ChildrenOp != nil)
+		if instr.ChildrenOp != nil {
+			bw.writeOperand(buf, instr.ChildrenOp)
+		}
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLPI:
+		bw.writeOperand(buf, instr.TargetOp)
+		bw.writeOperand(buf, instr.DataOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLComment:
+		bw.writeOperand(buf, instr.BodyOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLText:
+		bw.writeOperand(buf, instr.BodyOp)
+		bw.writeOperand(buf, instr.LhsOp)
+	case *bir.NewXMLSequence:
+		bw.writeLength(buf, len(instr.Children))
+		for _, child := range instr.Children {
+			bw.writeOperand(buf, child)
+		}
+		bw.writeOperand(buf, instr.LhsOp)
 	default:
 		panic(fmt.Sprintf("unsupported instruction type: %T", instr))
 	}

@@ -9,7 +9,7 @@ F  0;
 G  float;
 H  boolean;
 I  boolean;
-J  float;
+J  0;
 main() -> nil{
   bb0 {
     %1 = eq(A,B) -> bb1;

@@ -732,6 +732,8 @@ func analyzeActionOrExpression[A analyzer](a A, expr ast.BLangActionOrExpression
 		return validateResolvedType(a, expr, expectedType)
 	case *ast.BLangTypedescExpr:
 		return validateResolvedType(a, expr, expectedType)
+	case *ast.BLangXMLSequenceLiteral, *ast.BLangXMLElementLiteral, *ast.BLangXMLPILiteral, *ast.BLangXMLCommentLiteral, *ast.BLangXMLTextLiteral:
+		return validateResolvedType(a, expr, expectedType)
 	default:
 		a.internalErr("unexpected expression type: "+reflect.TypeOf(expr).String(), expr.GetPosition())
 		return false
