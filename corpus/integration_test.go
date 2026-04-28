@@ -684,6 +684,31 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	return bir.GenBir(cx, pkg), nil
 }
 
+func BenchmarkIntegration(b *testing.B) {
+	testPairs := test_util.GetTests(b, test_util.Bench, func(path string) bool {
+		return true
+	})
+	for _, testPair := range testPairs {
+		b.Run(testPair.Name, func(b *testing.B) {
+			for b.Loop() {
+				runIntegrationCase(testPair.InputPath)
+			}
+		})
+	}
+}
+
+func TestBenchIntegration(t *testing.T) {
+	testPairs := test_util.GetTests(t, test_util.Bench, func(path string) bool {
+		return true
+	})
+	for _, testPair := range testPairs {
+		t.Run(testPair.Name, func(t *testing.T) {
+			t.Parallel()
+			testIntegration(t, testPair)
+		})
+	}
+}
+
 func getBallerinaEnvPath() (string, error) {
 	if balEnv := os.Getenv(projects.BallerinaEnvVar); balEnv != "" {
 		return balEnv, nil

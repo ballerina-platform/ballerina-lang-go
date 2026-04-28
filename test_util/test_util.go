@@ -37,6 +37,7 @@ const (
 	CFG
 	Desugar
 	Integration
+	Bench
 )
 
 // TestCase represents a test case: input file and expected output file
@@ -46,24 +47,32 @@ type TestCase struct {
 	ExpectedPath string // Absolute path to expected output (.txt or .json)
 }
 
+// GetValidTests returns all valid test pairs for the given test kind
+// It only returns test cases where the input file ends with "-v.bal"
+func GetValidTests(t testing.TB, kind TestKind) []TestCase {
+	return GetTests(t, kind, func(path string) bool {
+		return strings.HasSuffix(path, "-v.bal")
+	})
+}
+
 // GetErrorTests returns all error test pairs for the given test kind
 // It only returns test cases where the input file ends with "-e.bal"
-func GetErrorTests(t *testing.T, kind TestKind) []TestCase {
+func GetErrorTests(t testing.TB, kind TestKind) []TestCase {
 	return GetTests(t, kind, func(path string) bool {
 		return strings.HasSuffix(path, "-e.bal")
 	})
 }
 
 // GetValidAndPanicTests returns all valid and panic test pairs for the given test kind
-func GetValidAndPanicTests(t *testing.T, kind TestKind) []TestCase {
+func GetValidAndPanicTests(t testing.TB, kind TestKind) []TestCase {
 	return GetTests(t, kind, func(path string) bool {
 		return strings.HasSuffix(path, "-v.bal") || strings.HasSuffix(path, "-p.bal")
 	})
 }
 
 // GetTests returns test pairs for the given test kind, filtered by the provided function
-func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestCase {
-	inputBaseDirAlt := "bal"
+func GetTests(t testing.TB, kind TestKind, filterFunc func(string) bool) []TestCase {
+	inputBaseDir := "bal"
 	var outputBaseDir string
 	var outputExt string
 
@@ -86,8 +95,12 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 	case Integration:
 		outputBaseDir = "integration"
 		outputExt = ".txtar"
+	case Bench:
+		inputBaseDir = "bench"
+		outputBaseDir = "bench-integration"
+		outputExt = ".txtar"
 	}
-	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDirAlt, outputBaseDir)
+	resolvedInputDir, resolvedOutputDir := resolveDir(t, inputBaseDir, outputBaseDir)
 	files := walkDir(t, resolvedInputDir, filterFunc)
 	testPairs := make([]TestCase, 0, len(files))
 	for _, inputPath := range files {
@@ -105,7 +118,7 @@ func GetTests(t *testing.T, kind TestKind, filterFunc func(string) bool) []TestC
 
 // resolveDir resolves the input and output directories to absolute paths.
 // It tries ../corpus/<inputBaseDir>, then ./corpus/<inputBaseDir>, then ../../corpus/<inputBaseDir>.
-func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, string) {
+func resolveDir(t testing.TB, inputBaseDir, outputBaseDir string) (string, string) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Could not get working directory: %v", err)
@@ -126,7 +139,7 @@ func resolveDir(t *testing.T, inputBaseDir, outputBaseDir string) (string, strin
 }
 
 // walkDir recursively walks a directory and collects all .bal files that match the filter
-func walkDir(t *testing.T, dir string, filterFunc func(string) bool) []string {
+func walkDir(t testing.TB, dir string, filterFunc func(string) bool) []string {
 	var files []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
