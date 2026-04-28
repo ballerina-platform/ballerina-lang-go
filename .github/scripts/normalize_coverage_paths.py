@@ -10,6 +10,8 @@ def main() -> None:
     profile_path = pathlib.Path(sys.argv[1])
     module_path = sys.argv[2]
     module_dir = sys.argv[3].removeprefix("./")
+    if module_dir == ".":
+        module_dir = ""
 
     if not profile_path.exists():
         return
