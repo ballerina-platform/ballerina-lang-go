@@ -62,12 +62,14 @@ type moduleContext struct {
 
 // newModuleContext creates a moduleContext from ModuleConfig.
 func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxTree bool) *moduleContext {
+	diagKeyPrefix := buildDiagKeyPrefix(project, moduleConfig.ModuleDescriptor())
+
 	// Build source document context map
 	srcDocContextMap := make(map[DocumentID]*documentContext)
 	srcDocIDs := make([]DocumentID, 0, len(moduleConfig.SourceDocs()))
 	for _, srcDocConfig := range moduleConfig.SourceDocs() {
 		docID := srcDocConfig.DocumentID()
-		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree)
+		srcDocContextMap[docID] = newDocumentContext(srcDocConfig, disableSyntaxTree, diagKeyPrefix)
 		srcDocIDs = append(srcDocIDs, docID)
 	}
 
@@ -76,7 +78,7 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 	testSrcDocIDs := make([]DocumentID, 0, len(moduleConfig.TestSourceDocs()))
 	for _, testDocConfig := range moduleConfig.TestSourceDocs() {
 		docID := testDocConfig.DocumentID()
-		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree)
+		testDocContextMap[docID] = newDocumentContext(testDocConfig, disableSyntaxTree, diagKeyPrefix)
 		testSrcDocIDs = append(testSrcDocIDs, docID)
 	}
 
@@ -96,6 +98,30 @@ func newModuleContext(project Project, moduleConfig ModuleConfig, disableSyntaxT
 		moduleDescDependencies: depsCopy,
 		compilerCtx:            context.NewCompilerContext(env),
 	}
+}
+
+// buildDiagKeyPrefix returns the prefix prepended to a document name to form
+// a globally-unique DiagnosticEnv key.
+//
+//   - bala dependency:    "<org>/<moduleName>/<version>::"
+//   - workspace member:   "<member-dir>/[modules/<moduleNamePart>/]"
+//   - build named module: "modules/<moduleNamePart>/"
+//   - default module:     ""
+func buildDiagKeyPrefix(project Project, md ModuleDescriptor) string {
+	if project.Kind() == ProjectKindBala {
+		return md.Org().Value() + "/" + md.Name().String() + "/" + md.Version().String() + "::"
+	}
+
+	prefix := ""
+	if root := project.SourceRoot(); root != "" && root != "." {
+		// Workspace member (or any project loaded with a non-trivial source root):
+		// scope all its files under the source-root directory.
+		prefix = root + "/"
+	}
+	if !md.Name().IsDefaultModuleName() {
+		prefix += ModulesDir + "/" + md.Name().ModuleNamePart() + "/"
+	}
+	return prefix
 }
 
 // newModuleContextFromMaps creates a moduleContext directly from document context maps.
