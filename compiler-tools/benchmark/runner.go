@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-const builtInterpreter = "bal-base"
+const builtInterpreter = "bal"
 
 type (
 	benchmark struct {
