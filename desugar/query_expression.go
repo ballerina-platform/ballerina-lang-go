@@ -218,7 +218,7 @@ func createQueryCollectionSource(
 		keysRef = keysLocalRef
 		lengthSource = keysRef
 	default:
-		cx.unimplemented("query from clause currently supports only list or map collections")
+		cx.internalError("query collection type should have been validated during type resolution")
 		return nil, nil, nil, nil, false
 	}
 
@@ -296,7 +296,7 @@ func walkQueryExprWithJoins(
 		case *ast.BLangOrderByClause:
 			ok = applyQueryOrderByClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
 		default:
-			cx.unimplemented("query expression currently supports only join + let + where + order by + limit clauses with joins")
+			cx.internalError("query clause shape should have been validated during type resolution")
 			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
 		}
 		if !ok {
@@ -390,7 +390,10 @@ func queryRowBindingFromVarDef(
 ) (*ast.BLangSimpleVariableDef, semtypes.SemType, bool) {
 	varDef, ok := variableDefinitionNode.(*ast.BLangSimpleVariableDef)
 	if !ok || varDef.Var == nil || varDef.Var.Symbol() == (model.SymbolRef{}) {
-		cx.unimplemented(fmt.Sprintf("query %s clause currently supports only simple variable definitions", clauseName))
+		cx.internalError(fmt.Sprintf(
+			"query %s clause binding should have been validated during type resolution",
+			clauseName,
+		))
 		return nil, nil, false
 	}
 	valueTy := cx.symbolType(varDef.Var.Symbol())
@@ -1255,7 +1258,7 @@ func createPreOrderLetStores(
 		for _, variableDef := range clause.LetVarDeclarations {
 			varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
 			if !ok || varDef.Var == nil || varDef.Var.Symbol() == (model.SymbolRef{}) {
-				cx.unimplemented("query let clause currently supports only initialized simple variable declarations")
+				cx.internalError("query let clause bindings should have been validated during type resolution")
 				return nil, false
 			}
 			valueTy := cx.symbolType(varDef.Var.Symbol())
@@ -1544,7 +1547,7 @@ func appendQueryIntermediateClauseStmts(
 			for _, variableDef := range clause.LetVarDeclarations {
 				varDef, ok := variableDef.(*ast.BLangSimpleVariableDef)
 				if !ok || varDef.Var == nil || varDef.Var.Expr == nil {
-					cx.unimplemented("query let clause currently supports only initialized simple variable declarations")
+					cx.internalError("query let clause bindings should have been validated during type resolution")
 					return nil, false
 				}
 				letResult := walkExpression(cx, varDef.Var.Expr.(ast.BLangExpression))
@@ -1553,10 +1556,6 @@ func appendQueryIntermediateClauseStmts(
 				bodyStmts = append(bodyStmts, varDef)
 			}
 		case *ast.BLangWhereClause:
-			if clause.Expression == nil {
-				cx.unimplemented("query where clause requires a condition expression")
-				return nil, false
-			}
 			whereResult := walkExpression(cx, clause.Expression)
 			bodyStmts = append(bodyStmts, whereResult.initStmts...)
 			whereCond := whereResult.replacementNode.(ast.BLangExpression)
@@ -1581,10 +1580,6 @@ func appendQueryIntermediateClauseStmts(
 			filterIf.SetDeterminedType(semtypes.NEVER)
 			bodyStmts = append(bodyStmts, filterIf)
 		case *ast.BLangLimitClause:
-			if clause.Expression == nil {
-				cx.unimplemented("query limit clause requires a limit expression")
-				return nil, false
-			}
 			limitPos := clause.GetPosition()
 			limitResult := walkExpression(cx, clause.Expression)
 			*initStmts = append(*initStmts, limitResult.initStmts...)
@@ -1635,10 +1630,10 @@ func appendQueryIntermediateClauseStmts(
 
 			bodyStmts = append(bodyStmts, createIncrementStmt(limitCounterRef))
 		case *ast.BLangOrderByClause:
-			cx.unimplemented("query order by clause must be handled by dedicated lowering path")
+			cx.internalError("query order by clauses should have been split before generic intermediate lowering")
 			return nil, false
 		default:
-			cx.unimplemented("query expression currently supports only let + where + order by + limit clauses as intermediate clauses")
+			cx.internalError("query clause shape should have been validated during type resolution")
 			return nil, false
 		}
 	}

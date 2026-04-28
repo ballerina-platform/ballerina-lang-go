@@ -673,14 +673,19 @@ func analyzeCheckPanickedExpr[A analyzer](a A, expr *ast.BLangCheckPanickedExpr,
 	return validateResolvedType(a, expr, expectedType)
 }
 
-func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
+func queryExprClausesForAnalysis[A analyzer](
+	a A,
+	queryExpr *ast.BLangQueryExpr,
+) (*ast.BLangFromClause, *ast.BLangSelectClause, *ast.BLangOnConflictClause, int, bool) {
+	if len(queryExpr.QueryClauseList) < 2 {
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return nil, nil, nil, 0, false
+	}
+
 	fromClause, ok := queryExpr.QueryClauseList[0].(*ast.BLangFromClause)
 	if !ok {
-		a.semanticErr("query expression must start with a from clause", queryExpr.GetPosition())
-		return false
-	}
-	if !analyzeExpression(a, fromClause.Collection, nil) {
-		return false
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return nil, nil, nil, 0, false
 	}
 
 	lastClauseIndex := len(queryExpr.QueryClauseList) - 1
@@ -690,13 +695,25 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 		lastClauseIndex--
 	}
 	if lastClauseIndex < 1 {
-		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
-		return false
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return nil, nil, nil, 0, false
 	}
 
 	selectClause, ok := queryExpr.QueryClauseList[lastClauseIndex].(*ast.BLangSelectClause)
 	if !ok {
-		a.semanticErr("query expression requires a select clause", queryExpr.GetPosition())
+		a.internalErr("query expression shape should have been validated during type resolution", queryExpr.GetPosition())
+		return nil, nil, nil, 0, false
+	}
+	return fromClause, selectClause, onConflictClause, lastClauseIndex, true
+}
+
+func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedType semtypes.SemType) bool {
+	// Query clause ordering and shape are validated during type resolution.
+	fromClause, selectClause, onConflictClause, lastClauseIndex, ok := queryExprClausesForAnalysis(a, queryExpr)
+	if !ok {
+		return false
+	}
+	if !analyzeExpression(a, fromClause.Collection, nil) {
 		return false
 	}
 
