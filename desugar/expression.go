@@ -489,7 +489,7 @@ func walkDirectCallArgs(cx *functionContext, expr *ast.BLangInvocation, fnSym mo
 	return initStmts
 }
 
-func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (model.StatementNode, *ast.BLangSimpleVarRef) {
+func assignToLocal(cx *functionContext, initExpr ast.BLangExpression, pos diagnostics.Location) (ast.BLangStatement, *ast.BLangSimpleVarRef) {
 	ty := initExpr.GetDeterminedType()
 	tempName, tempSymRef := cx.addDesugardSymbol(ty, model.SymbolKindVariable, false)
 	tempVar := &ast.BLangSimpleVariable{Name: &ast.BLangIdentifier{Value: tempName}}
@@ -1223,7 +1223,7 @@ func createQueryNilLiteral(pos diagnostics.Location) *ast.BLangLiteral {
 
 func appendModelStatements(bodyStmts []ast.BLangStatement, stmts []model.StatementNode) []ast.BLangStatement {
 	for _, stmt := range stmts {
-		bodyStmts = append(bodyStmts, stmt.(ast.BLangStatement))
+		bodyStmts = append(bodyStmts, stmt)
 	}
 	return bodyStmts
 }
@@ -1245,7 +1245,7 @@ func applyQueryLetClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	bodyStmts := []ast.BLangStatement{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	newBindings := append([]queryRowBinding{}, bindings...)
@@ -1305,7 +1305,7 @@ func applyQueryWhereClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	bodyStmts := []ast.BLangStatement{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	whereResult := walkExpression(cx, clause.Expression)
@@ -1368,7 +1368,7 @@ func applyQueryLimitClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	bodyStmts := []ast.BLangStatement{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	withinLimitCond := &ast.BLangBinaryExpr{
@@ -1442,7 +1442,7 @@ func applyQueryOrderByClauseToRows(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	bodyStmts := []ast.BLangStatement{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	keyTuple, keyInitStmts := buildOrderKeyTupleExpr(cx, clause, pos)
@@ -1507,18 +1507,18 @@ func appendQueryJoinClauseRows(
 	rowAccess.IndexExpr = outerCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	outerBody := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	outerBody := []ast.BLangStatement{rowVarDef}
 	outerBody = appendQueryRowRestoreStmts(outerBody, rowRef, bindings, pos)
 
 	lhsResult := walkExpression(cx, clause.OnClause.LhsExpr)
 	outerBody = appendModelStatements(outerBody, lhsResult.initStmts)
 	lhsVarDef, lhsRef := assignToLocal(cx, lhsResult.replacementNode.(ast.BLangExpression), pos)
-	outerBody = append(outerBody, lhsVarDef.(ast.BLangStatement))
+	outerBody = append(outerBody, lhsVarDef)
 
 	var matchedRef *ast.BLangSimpleVarRef
 	if clause.IsOuterJoinFlag {
 		matchedVarDef, matchedLocalRef := assignToLocal(cx, createBoolLiteral(false, pos), pos)
-		outerBody = append(outerBody, matchedVarDef.(ast.BLangStatement))
+		outerBody = append(outerBody, matchedVarDef)
 		matchedRef = matchedLocalRef
 	}
 
@@ -1653,7 +1653,7 @@ func appendQueryRowsSelectResultStmts(
 	rowAccess.IndexExpr = loopCounterRef
 	rowVarDef, rowRef := assignToLocal(cx, rowAccess, pos)
 
-	bodyStmts := []ast.BLangStatement{rowVarDef.(ast.BLangStatement)}
+	bodyStmts := []ast.BLangStatement{rowVarDef}
 	bodyStmts = appendQueryRowRestoreStmts(bodyStmts, rowRef, bindings, pos)
 
 	bodyStmts, ok = appendQuerySelectResultStmts(
