@@ -19,6 +19,7 @@ package exec
 import (
 	"fmt"
 	"math"
+	"math/big"
 
 	"ballerina-lang-go/bir"
 	"ballerina-lang-go/values"
@@ -100,6 +101,9 @@ func execBinaryOpDiv(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, v1/v2)
+	case *big.Rat:
+		v2 := op2.(*big.Rat)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalQuotient(v1, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T / %T", op1, op2)))
 	}
@@ -117,6 +121,9 @@ func execBinaryOpMod(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) {
 	case float64:
 		v2 := op2.(float64)
 		setOperandValue(ctx, binaryOp.LhsOp, frame, math.Mod(v1, v2))
+	case *big.Rat:
+		v2 := op2.(*big.Rat)
+		setOperandValue(ctx, binaryOp.LhsOp, frame, decimalRemainder(v1, v2))
 	default:
 		panic(values.NewErrorWithMessage(fmt.Sprintf("unsupported type combination: %T %% %T", op1, op2)))
 	}
@@ -234,6 +241,23 @@ func execBinaryOpBitwise(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame, bit
 		validateShiftAmount(v2)
 	}
 	setOperandValue(ctx, binaryOp.LhsOp, frame, bitOp(v1, v2))
+}
+
+func isDecimalZero(v *big.Rat) bool {
+	return v.Sign() == 0
+}
+
+func decimalRemainder(v1 *big.Rat, v2 *big.Rat) *big.Rat {
+	quotient := decimalQuotient(v1, v2)
+	truncatedQuotient := new(big.Int).Quo(quotient.Num(), quotient.Denom())
+	return new(big.Rat).Sub(new(big.Rat).Set(v1), new(big.Rat).Mul(new(big.Rat).SetInt(truncatedQuotient), v2))
+}
+
+func decimalQuotient(v1 *big.Rat, v2 *big.Rat) *big.Rat {
+	if isDecimalZero(v2) {
+		panic(values.NewErrorWithMessage("divide by zero"))
+	}
+	return new(big.Rat).Quo(v1, v2)
 }
 
 func getBinaryRhsValues(ctx *Context, binaryOp *bir.BinaryOp, frame *Frame) (op1, op2 values.BalValue) {
