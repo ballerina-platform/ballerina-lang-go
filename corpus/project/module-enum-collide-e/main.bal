@@ -13,8 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-// @productions module-enum-decl
+
+import module_enum.utils;
+
 import ballerina/io;
 
-public enum Color {
-} // @error
+public function main() {
+    io:println(utils:RED);
+}

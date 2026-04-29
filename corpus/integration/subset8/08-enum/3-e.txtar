@@ -1,7 +1,9 @@
 -- stdout --
 -- stderr --
 error[SYNTAX_ERROR]: missing enum member
-  --> 3-e.bal:19:19
+  --> 3-e.bal:19:1
    |
-19 | public enum Color { // @error
-   |                   ^
+19 | public enum Color {
+   | ^^^^^^^^^^^^^^^^^^^
+20 | } // @error
+   | ^

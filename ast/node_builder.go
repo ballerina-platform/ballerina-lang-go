@@ -1335,11 +1335,14 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 	pos := getPosition(n.de(), modulePartNode)
 	compUnit := createIdentifier(pos, &n.CurrentCompUnitName, &n.CurrentCompUnitName)
 
+	if modulePartNode.HasDiagnostics() {
+		n.reportSyntaxDiagnostics(modulePartNode)
+	}
+
 	// Generate import declarations
 	imports := modulePartNode.Imports()
 	for importDecl := range imports.Iterator() {
 		if importDecl.HasDiagnostics() {
-			n.reportSyntaxDiagnostics(importDecl)
 			continue
 		}
 		bLangImport := n.TransformImportDeclaration(importDecl).(*BLangImportPackage)
@@ -1351,7 +1354,6 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 	members := modulePartNode.Members()
 	for member := range members.Iterator() {
 		if member.HasDiagnostics() {
-			n.reportSyntaxDiagnostics(member)
 			continue
 		}
 		// Dispatch to TransformSyntaxNode which handles all node types
@@ -1732,7 +1734,6 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 			continue
 		}
 		if currentStatement.HasDiagnostics() {
-			n.reportSyntaxDiagnostics(currentStatement)
 			continue
 		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
@@ -3314,12 +3315,7 @@ func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, p
 	if exprNode := enumMemberNode.ConstExprNode(); exprNode != nil {
 		constantNode.Expr = n.createExpression(exprNode)
 	} else {
-		literal := &BLangLiteral{}
-		literal.pos = identifierPos
-		literal.Value = identifier.Value
-		literal.OriginalValue = identifier.Value
-		literal.SetValueType(n.types.getTypeFromTag(model.TypeTags_STRING).(BType))
-		constantNode.Expr = literal
+		constantNode.Expr = n.createSimpleLiteral(enumMemberNode.Identifier()).(BLangExpression)
 	}
 
 	stringType := &BLangValueType{TypeKind: model.TypeKind_STRING}

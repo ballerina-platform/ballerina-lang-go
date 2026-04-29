@@ -3,11 +3,29 @@
 error[SYNTAX_ERROR]: missing equal token
   --> object-attached-func-e.bal:18:39
    |
-17 | class TestObj { // @error
-   |       ^^^^^^^
+18 |     function foo(int a) returns string;
+   |
 
-error[SEMANTIC_ERROR]: redeclared symbol 'TestObj'
-  --> object-attached-func-e.bal:22:10
+error[SYNTAX_ERROR]: missing equal token
+  --> object-attached-func-e.bal:19:39
+   |
+19 |     function bar(string a) returns int;
+   |
+
+error[SYNTAX_ERROR]: missing external keyword
+  --> object-attached-func-e.bal:18:39
+   |
+18 |     function foo(int a) returns string;
+   |
+
+error[SYNTAX_ERROR]: missing external keyword
+  --> object-attached-func-e.bal:19:39
+   |
+19 |     function bar(string a) returns int;
+   |
+
+error[SYNTAX_ERROR]: resource path in function definition
+  --> object-attached-func-e.bal:22:21
    |
 22 | function TestObj.foo(int a) returns string { // @error
-   |          ^^^^^^^
+   |                     ^
