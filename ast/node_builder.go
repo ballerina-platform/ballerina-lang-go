@@ -2892,11 +2892,21 @@ func (n *NodeBuilder) xmlNameToString(name tree.XMLNameNode) string {
 	return ""
 }
 
+func (n *NodeBuilder) xmlAttributes(attrs tree.NodeList[*tree.XMLAttributeNode]) []BLangXMLAttribute {
+	out := make([]BLangXMLAttribute, 0, attrs.Size())
+	for attrNode := range attrs.Iterator() {
+		attr := n.TransformXMLAttribute(attrNode).(*BLangXMLAttribute)
+		out = append(out, *attr)
+	}
+	return out
+}
+
 func (n *NodeBuilder) TransformXMLElement(xMLElementNode *tree.XMLElementNode) BLangNode {
 	elem := &BLangXMLElementLiteral{}
 	elem.pos = getPosition(n.de(), xMLElementNode)
 	if start := xMLElementNode.StartTag(); start != nil {
 		elem.Name = n.xmlNameToString(start.Name())
+		elem.Attrs = n.xmlAttributes(start.Attributes())
 	}
 	var children []BLangExpression
 	content := xMLElementNode.Content()
@@ -2945,6 +2955,7 @@ func (n *NodeBuilder) TransformXMLEmptyElement(xMLEmptyElementNode *tree.XMLEmpt
 	elem := &BLangXMLElementLiteral{}
 	elem.pos = getPosition(n.de(), xMLEmptyElementNode)
 	elem.Name = n.xmlNameToString(xMLEmptyElementNode.Name())
+	elem.Attrs = n.xmlAttributes(xMLEmptyElementNode.Attributes())
 	return elem
 }
 
@@ -2962,11 +2973,33 @@ func (n *NodeBuilder) TransformXMLText(xMLTextNode *tree.XMLTextNode) BLangNode 
 }
 
 func (n *NodeBuilder) TransformXMLAttribute(xMLAttributeNode *tree.XMLAttributeNode) BLangNode {
-	panic("xml attributes not yet supported")
+	attr := &BLangXMLAttribute{}
+	attr.pos = getPosition(n.de(), xMLAttributeNode)
+	attr.Name = n.xmlNameToString(xMLAttributeNode.AttributeName())
+	if valueNode := xMLAttributeNode.Value(); valueNode != nil {
+		attr.Value = n.TransformXMLAttributeValue(valueNode).(BLangExpression)
+	}
+	return attr
 }
 
 func (n *NodeBuilder) TransformXMLAttributeValue(xMLAttributeValue *tree.XMLAttributeValue) BLangNode {
-	panic("xml attributes not yet supported")
+	var b strings.Builder
+	items := xMLAttributeValue.Value()
+	for child := range items.Iterator() {
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml attribute value interpolation not yet supported", getPosition(n.de(), child))
+			return nil
+		}
+		b.WriteString(tok.Text())
+	}
+	text := b.String()
+	lit := &BLangLiteral{}
+	lit.pos = getPosition(n.de(), xMLAttributeValue)
+	lit.SetValueType(n.types.getTypeFromTag(model.TypeTags_STRING).(BType))
+	lit.Value = text
+	lit.OriginalValue = text
+	return lit
 }
 
 func (n *NodeBuilder) TransformXMLComment(xMLComment *tree.XMLComment) BLangNode {

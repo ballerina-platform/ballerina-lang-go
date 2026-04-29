@@ -16,7 +16,10 @@
 
 package values
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type (
 	XMLValue interface {
@@ -59,6 +62,20 @@ func (e *XMLElement) XMLString() string {
 	var b strings.Builder
 	b.WriteByte('<')
 	b.WriteString(e.Name)
+	if e.Attributes != nil {
+		for _, k := range e.Attributes.Keys() {
+			v, _ := e.Attributes.Get(k)
+			sv, ok := v.(string)
+			if !ok {
+				panic(fmt.Sprintf("xml attribute %q has non-string value of type %T", k, v))
+			}
+			b.WriteByte(' ')
+			b.WriteString(k)
+			b.WriteString(`="`)
+			b.WriteString(sv)
+			b.WriteByte('"')
+		}
+	}
 	body := ""
 	if e.Children != nil {
 		body = e.Children.XMLString()

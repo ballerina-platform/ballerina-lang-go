@@ -115,6 +115,13 @@ func walkExpression(cx *functionContext, node ast.BLangActionOrExpression) desug
 		return desugaredNode[ast.BLangActionOrExpression]{initStmts: initStmts, replacementNode: expr}
 	case *ast.BLangXMLElementLiteral:
 		var initStmts []model.StatementNode
+		for i := range expr.Attrs {
+			if expr.Attrs[i].Value != nil {
+				r := walkExpression(cx, expr.Attrs[i].Value)
+				initStmts = append(initStmts, r.initStmts...)
+				expr.Attrs[i].Value = r.replacementNode.(ast.BLangExpression)
+			}
+		}
 		if expr.Content != nil {
 			r := walkExpression(cx, expr.Content)
 			initStmts = append(initStmts, r.initStmts...)

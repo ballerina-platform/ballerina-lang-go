@@ -2377,6 +2377,15 @@ func resolveXMLPILiteral(_ typeResolver, chain *binding, e *ast.BLangXMLPILitera
 }
 
 func resolveXMLElementLiteral(t typeResolver, chain *binding, e *ast.BLangXMLElementLiteral) (semtypes.SemType, expressionEffect, bool) {
+	for i := range e.Attrs {
+		attr := &e.Attrs[i]
+		if attr.Value != nil {
+			if _, _, ok := resolveActionOrExpression(t, chain, attr.Value, semtypes.STRING); !ok {
+				return nil, expressionEffect{}, false
+			}
+		}
+		attr.SetDeterminedType(semtypes.NEVER)
+	}
 	if e.Content != nil {
 		if _, _, ok := resolveActionOrExpression(t, chain, e.Content, semtypes.XML); !ok {
 			return nil, expressionEffect{}, false

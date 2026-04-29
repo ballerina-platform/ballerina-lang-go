@@ -42,6 +42,7 @@ type Context struct {
 	packageID       *model.PackageID            // Current package ID
 	birPkg          *BIRPackage
 	typeCtx         semtypes.Context
+	stringMapTy     semtypes.SemType // Memoized map<string> type
 }
 
 func (c *Context) TypeContext() semtypes.Context {
@@ -57,6 +58,14 @@ type stmtContext struct {
 	loopCtx      *loopContext
 	isClosure    bool          // set to true when a captured variable is resolved across a function boundary
 	scopeCtx     *scopeContext // current scope (holds localVars, varMap, retVar)
+}
+
+func (c *Context) stringMapType() semtypes.SemType {
+	if c.stringMapTy == nil {
+		md := semtypes.NewMappingDefinition()
+		c.stringMapTy = md.DefineMappingTypeWrapped(c.CompilerContext.GetTypeEnv(), nil, semtypes.STRING)
+	}
+	return c.stringMapTy
 }
 
 func (cx *stmtContext) loc(pos diagnostics.Location) Location {
@@ -917,9 +926,18 @@ func xmlElementLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXM
 		curBB = eff.block
 		contentOp = eff.result
 	}
-	// PR-TODO: add support for attributes
+	var attrsOp *BIROperand
+	if len(expr.Attrs) > 0 {
+		fields := make([]mappingField, 0, len(expr.Attrs))
+		for _, attr := range expr.Attrs {
+			fields = append(fields, mappingField{key: attr.Name, value: attr.Value})
+		}
+		attrMapEff := mappingConstructorExpressionInner(ctx, curBB, ctx.birCx.stringMapType(), fields, nil, pos)
+		curBB = attrMapEff.block
+		attrsOp = attrMapEff.result
+	}
 	resultOp := ctx.addTempVar(expr.GetDeterminedType())
-	curBB.Instructions = append(curBB.Instructions, NewXMLElementInstr(resultOp, nameOp, contentOp, pos))
+	curBB.Instructions = append(curBB.Instructions, NewXMLElementInstr(resultOp, nameOp, contentOp, attrsOp, pos))
 	return expressionEffect{result: resultOp, block: curBB}
 }
 

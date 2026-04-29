@@ -30,7 +30,7 @@ import (
 
 const (
 	BIR_MAGIC   = "\xba\x10\xc0\xde"
-	BIR_VERSION = 75
+	BIR_VERSION = 76
 )
 
 type birWriter struct {
@@ -339,6 +339,10 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		write(buf, instr.ChildrenOp != nil)
 		if instr.ChildrenOp != nil {
 			bw.writeOperand(buf, instr.ChildrenOp)
+		}
+		write(buf, instr.AttrsOp != nil)
+		if instr.AttrsOp != nil {
+			bw.writeOperand(buf, instr.AttrsOp)
 		}
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.NewXMLPI:

@@ -136,6 +136,7 @@ type (
 		BIRInstructionBase
 		NameOp     *BIROperand
 		ChildrenOp *BIROperand
+		AttrsOp    *BIROperand
 	}
 
 	NewXMLPI struct {
@@ -485,7 +486,7 @@ func (m *MappingConstructorKeyValueEntry) KeyOp() *BIROperand {
 func (n *NewXMLElement) GetLhsOperand() *BIROperand { return n.LhsOp }
 func (n *NewXMLElement) GetKind() InstructionKind   { return INSTRUCTION_KIND_NEW_XML_ELEMENT }
 
-func NewXMLElementInstr(lhsOp, nameOp, childrenOp *BIROperand, pos Location) *NewXMLElement {
+func NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp *BIROperand, pos Location) *NewXMLElement {
 	return &NewXMLElement{
 		BIRInstructionBase: BIRInstructionBase{
 			BIRNodeBase: BIRNodeBase{Pos: pos},
@@ -493,6 +494,7 @@ func NewXMLElementInstr(lhsOp, nameOp, childrenOp *BIROperand, pos Location) *Ne
 		},
 		NameOp:     nameOp,
 		ChildrenOp: childrenOp,
+		AttrsOp:    attrsOp,
 	}
 }
 

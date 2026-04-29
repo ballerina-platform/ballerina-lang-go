@@ -706,8 +706,14 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		if hasChildren {
 			childrenOp = br.readOperand(varMap)
 		}
+		var attrsOp *bir.BIROperand
+		var hasAttrs bool
+		br.read(&hasAttrs)
+		if hasAttrs {
+			attrsOp = br.readOperand(varMap)
+		}
 		lhsOp := br.readOperand(varMap)
-		return bir.NewXMLElementInstr(lhsOp, nameOp, childrenOp, pos)
+		return bir.NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, pos)
 	case bir.INSTRUCTION_KIND_NEW_XML_PI:
 		targetOp := br.readOperand(varMap)
 		dataOp := br.readOperand(varMap)
