@@ -22,7 +22,7 @@ import (
 
 // Repository provides access to Ballerina packages from a specific source.
 // Implementations include FileSystemRepository (local bala cache),
-// WorkspaceRepository (packages within a workspace), CentralRepository
+// workspaceRepository (packages within a workspace), CentralRepository
 // (Ballerina Central API), MavenRepository, etc.
 type Repository interface {
 	// GetPackage loads a specific version of a package.
@@ -31,7 +31,7 @@ type Repository interface {
 	GetPackage(ctx context.Context, org, name, version string) (*Package, error)
 
 	// GetPackageVersions returns all available versions for a package.
-	// Returns empty slice if package not found.
+	// Returns a nil or empty slice if the package is not found.
 	GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error)
 
 	// GetLatestVersion returns the latest available version for a package.

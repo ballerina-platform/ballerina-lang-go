@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"ballerina-lang-go/cli/templates"
+	"ballerina-lang-go/common/tomlparser"
 	"ballerina-lang-go/projects"
 
 	"github.com/spf13/cobra"
@@ -65,15 +66,44 @@ func createNewCmd() *cobra.Command {
 	packages, they will be discovered and added to the workspace.`,
 		Args: validateNewArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNew(cmd, args, workspace, template)
+			tmpl, err := validateTemplate(template)
+			if err != nil {
+				printErrorTo(cmd.ErrOrStderr(), err, "new <project-path>", false)
+				return err
+			}
+			return runNew(cmd, args, workspace, tmpl)
 		},
 	}
 
 	cmd.Flags().BoolVar(&workspace, "workspace", false, "")
-	cmd.Flags().StringVarP(&template, "template", "t", "default",
-		"Acceptable values: [main, service, lib] default: default")
+	cmd.Flags().StringVarP(&template, "template", "t", string(templateDefault),
+		fmt.Sprintf("Acceptable values: %v default: %s", validTemplates, templateDefault))
 
 	return cmd
+}
+
+// templateName is a validated --template flag value.
+type templateName string
+
+const (
+	templateDefault templateName = "default"
+	templateMain    templateName = "main"
+	templateService templateName = "service"
+	templateLib     templateName = "lib"
+)
+
+// validTemplates is the closed set of accepted --template values.
+var validTemplates = []templateName{templateDefault, templateMain, templateService, templateLib}
+
+// validateTemplate ensures the raw --template flag value is one of the
+// accepted templates and returns the typed equivalent.
+func validateTemplate(raw string) (templateName, error) {
+	for _, t := range validTemplates {
+		if string(t) == raw {
+			return t, nil
+		}
+	}
+	return "", fmt.Errorf("invalid template '%s'. Acceptable values: %v", raw, validTemplates)
 }
 
 // validateNewArgs validates the arguments for the 'new' command.
@@ -92,7 +122,7 @@ func validateNewArgs(cmd *cobra.Command, args []string) error {
 }
 
 // runNew executes the 'new' command.
-func runNew(cmd *cobra.Command, args []string, workspace bool, template string) error {
+func runNew(cmd *cobra.Command, args []string, workspace bool, template templateName) error {
 	projectPath := args[0]
 
 	// Convert to absolute path
@@ -109,7 +139,7 @@ func runNew(cmd *cobra.Command, args []string, workspace bool, template string) 
 }
 
 // runNewPackage creates a new single Ballerina package.
-func runNewPackage(cmd *cobra.Command, absPath, projectPath, template string) error {
+func runNewPackage(cmd *cobra.Command, absPath, projectPath string, template templateName) error {
 	// Derive package name from directory name
 	packageName := filepath.Base(absPath)
 
@@ -190,7 +220,7 @@ func runNewPackage(cmd *cobra.Command, absPath, projectPath, template string) er
 }
 
 // runNewWorkspace creates a new workspace project or converts an existing directory to workspace.
-func runNewWorkspace(cmd *cobra.Command, absPath, projectPath, template string) error {
+func runNewWorkspace(cmd *cobra.Command, absPath, projectPath string, template templateName) error {
 	// Validate path
 	if err := validateWorkspacePath(absPath); err != nil {
 		printErrorTo(cmd.ErrOrStderr(), err, "new --workspace <path>", false)
@@ -294,11 +324,11 @@ func writeWorkspaceToml(workspacePath string, packages []string) error {
 }
 
 // getWorkspacePackageName returns the sample package name based on the template.
-func getWorkspacePackageName(template string) string {
+func getWorkspacePackageName(template templateName) string {
 	switch template {
-	case "service":
+	case templateService:
 		return "hello-service"
-	case "lib":
+	case templateLib:
 		return "hello-lib"
 	default:
 		return "hello-app"
@@ -332,13 +362,20 @@ func validateWorkspacePath(path string) error {
 	return nil
 }
 
-// isWorkspaceToml checks if a Ballerina.toml file contains a [workspace] section.
+// isWorkspaceToml reports whether the file at tomlPath defines a top-level [workspace] table.
+// IO errors and parse errors return false so malformed or missing files don't get classified
+// as workspaces.
 func isWorkspaceToml(tomlPath string) bool {
 	content, err := os.ReadFile(tomlPath)
 	if err != nil {
 		return false
 	}
-	return strings.Contains(string(content), "[workspace]")
+	t, err := tomlparser.ReadString(string(content))
+	if err != nil {
+		return false
+	}
+	_, ok := t.GetTable("workspace")
+	return ok
 }
 
 // findWorkspaceRoot searches for a workspace root starting from the given path.
@@ -362,15 +399,22 @@ func findWorkspaceRoot(startPath string) string {
 	}
 }
 
-// getOrgNameFromWorkspace gets the organization name from the first package in the workspace.
+// getOrgNameFromWorkspace gets the organization name from the first package
+// declared in the workspace manifest. Reading the manifest (rather than scanning
+// immediate child directories) ensures nested member paths like
+// `packages = ["nested/pkg-a"]` are honored.
 func getOrgNameFromWorkspace(workspaceRoot string) string {
-	packages := discoverExistingPackages(workspaceRoot)
+	wsToml, err := os.ReadFile(filepath.Join(workspaceRoot, projects.BallerinaTomlFile))
+	if err != nil {
+		return ""
+	}
+	packages := parseWorkspacePackages(string(wsToml))
 	if len(packages) == 0 {
 		return ""
 	}
 
-	// Read the first package's Ballerina.toml to get org name
-	tomlPath := filepath.Join(workspaceRoot, packages[0], projects.BallerinaTomlFile)
+	// packages stores forward-slash paths; convert to OS-native for filesystem access.
+	tomlPath := filepath.Join(workspaceRoot, filepath.FromSlash(packages[0]), projects.BallerinaTomlFile)
 	content, err := os.ReadFile(tomlPath)
 	if err != nil {
 		return ""
@@ -398,6 +442,10 @@ func addPackageToWorkspace(workspaceRoot, packagePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read workspace Ballerina.toml: %w", err)
 	}
+
+	// Always store forward-slash paths in the workspace TOML so the file is portable
+	// across platforms.
+	packagePath = filepath.ToSlash(packagePath)
 
 	contentStr := string(content)
 
@@ -452,32 +500,28 @@ func addPackageToWorkspace(workspaceRoot, packagePath string) error {
 	return os.WriteFile(tomlPath, []byte(newContent), 0644)
 }
 
-// parseWorkspacePackages extracts the packages array from workspace TOML content.
+// parseWorkspacePackages extracts the workspace.packages array from a workspace
+// Ballerina.toml. Uses the in-repo TOML parser so multi-line arrays, comments
+// and quoting variants all decode correctly.
 func parseWorkspacePackages(content string) []string {
+	t, err := tomlparser.ReadString(content)
+	if err != nil {
+		return nil
+	}
+	ws, ok := t.GetTable("workspace")
+	if !ok {
+		return nil
+	}
+	raw, ok := ws.GetArray("packages")
+	if !ok {
+		return nil
+	}
 	var packages []string
-
-	// Find packages = [...] line
-	for _, line := range strings.Split(content, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "packages") && strings.Contains(trimmed, "=") {
-			// Extract the array part
-			idx := strings.Index(trimmed, "[")
-			endIdx := strings.LastIndex(trimmed, "]")
-			if idx >= 0 && endIdx > idx {
-				arrayContent := trimmed[idx+1 : endIdx]
-				// Parse individual package names
-				for _, part := range strings.Split(arrayContent, ",") {
-					part = strings.TrimSpace(part)
-					part = strings.Trim(part, "\"")
-					if part != "" {
-						packages = append(packages, part)
-					}
-				}
-			}
-			break
+	for _, item := range raw {
+		if s, ok := item.(string); ok && s != "" {
+			packages = append(packages, s)
 		}
 	}
-
 	return packages
 }
 
@@ -529,7 +573,7 @@ func hasExistingBalFiles(path string) bool {
 }
 
 // initPackage creates a new Ballerina package at the specified path.
-func initPackage(projectPath, packageName, orgName, template string) error {
+func initPackage(projectPath, packageName, orgName string, template templateName) error {
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -593,15 +637,15 @@ func initPackage(projectPath, packageName, orgName, template string) error {
 }
 
 // getTemplateSource returns the source file name and content for the given template.
-func getTemplateSource(template string) (fileName string, content string, err error) {
+func getTemplateSource(template templateName) (fileName string, content string, err error) {
 	switch template {
-	case "lib":
+	case templateLib:
 		content, err = templates.ReadTemplate(templates.LibBal)
 		return "lib.bal", content, err
-	case "service":
+	case templateService:
 		content, err = templates.ReadTemplate(templates.ServiceBal)
 		return "service.bal", content, err
-	default: // "default", "main", or any other
+	default: // templateDefault, templateMain
 		content, err = templates.ReadTemplate(templates.MainBal)
 		return "main.bal", content, err
 	}

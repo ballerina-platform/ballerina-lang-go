@@ -17,6 +17,8 @@
 package projects
 
 import (
+	"strings"
+
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -95,7 +97,7 @@ func (r *WorkspaceResolution) buildDependencyGraph() *DependencyGraph[*BuildProj
 			}
 			diags = append(diags, createSimpleDiagnostic(
 				diagnostics.Error,
-				"circular dependency detected in workspace: "+joinStrings(cycleNames, " -> "),
+				"circular dependency detected in workspace: "+strings.Join(cycleNames, " -> "),
 			))
 		}
 	}
@@ -112,16 +114,4 @@ func (r *WorkspaceResolution) DependencyGraph() *DependencyGraph[*BuildProject] 
 // DiagnosticResult returns any diagnostics from resolution (e.g., cycle errors).
 func (r *WorkspaceResolution) DiagnosticResult() DiagnosticResult {
 	return r.diagnosticResult
-}
-
-// joinStrings joins strings with a separator.
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	return result
 }

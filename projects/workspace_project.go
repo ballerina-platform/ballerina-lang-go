@@ -18,6 +18,7 @@ package projects
 
 import (
 	"path/filepath"
+	"sync"
 )
 
 // WorkspaceProject represents a multi-package workspace project.
@@ -26,6 +27,9 @@ type WorkspaceProject struct {
 	BaseProject
 	projects []*BuildProject
 	manifest WorkspaceManifest
+
+	resolutionOnce sync.Once
+	resolution     *WorkspaceResolution
 }
 
 // Compile-time check to verify WorkspaceProject implements Project interface
@@ -54,11 +58,12 @@ func (w *WorkspaceProject) Manifest() WorkspaceManifest {
 }
 
 // Resolution returns the workspace resolution (dependency graph between packages).
-// The resolution is computed lazily and cached.
+// The resolution is computed once on first access and cached for subsequent calls.
 func (w *WorkspaceProject) Resolution() *WorkspaceResolution {
-	// Note: In a full implementation, this would be lazily computed and cached.
-	// For now, we compute it fresh each time.
-	return newWorkspaceResolution(w)
+	w.resolutionOnce.Do(func() {
+		w.resolution = newWorkspaceResolution(w)
+	})
+	return w.resolution
 }
 
 // CurrentPackage returns the current package (first project's package).
@@ -109,8 +114,28 @@ func (w *WorkspaceProject) Save() {
 // Duplicate creates a deep copy of the workspace project.
 func (w *WorkspaceProject) Duplicate() Project {
 	duplicateBuildOptions := NewBuildOptions().AcceptTheirs(w.buildOptions)
-	newWorkspace := newWorkspaceProject(w.sourceRoot, duplicateBuildOptions, w.Environment().Duplicate())
+
+	// Build a fresh environment, swapping the workspace repository for a new one.
+	// Sharing the original workspaceRepository would let setWorkspace on the duplicate
+	// mutate the source workspace's resolution.
+	origEnv := w.Environment()
+	newWorkspaceRepo := newWorkspaceRepository()
+	var newRepos []Repository
+	for _, repo := range origEnv.PackageResolver().Repositories() {
+		if _, ok := repo.(*workspaceRepository); ok {
+			newRepos = append(newRepos, newWorkspaceRepo)
+			continue
+		}
+		newRepos = append(newRepos, repo)
+	}
+	newEnv := NewProjectEnvironmentBuilder(origEnv.fs()).
+		WithRepositories(newRepos).
+		WithBuildOptions(duplicateBuildOptions).
+		Build()
+
+	newWorkspace := newWorkspaceProject(w.sourceRoot, duplicateBuildOptions, newEnv)
 	newWorkspace.manifest = w.manifest
+	newWorkspaceRepo.setWorkspace(newWorkspace)
 
 	// Duplicate all projects
 	for _, project := range w.projects {

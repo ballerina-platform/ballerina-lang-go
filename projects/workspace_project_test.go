@@ -90,16 +90,19 @@ func TestWorkspaceProjectLoading(t *testing.T) {
 	sortedProjects := resolution.DependencyGraph().ToTopologicallySortedList()
 	require.Len(sortedProjects, 2)
 
-	// Find positions
-	var pkgaIndex, pkgbIndex int
+	// Find positions; sentinel -1 catches the case where a package is missing
+	// from the topo list (otherwise zero-indexes would mask the bug).
+	pkgaIndex, pkgbIndex := -1, -1
 	for i, proj := range sortedProjects {
-		name := proj.CurrentPackage().Descriptor().Name().String()
-		if name == "pkga" {
+		switch proj.CurrentPackage().Descriptor().Name().String() {
+		case "pkga":
 			pkgaIndex = i
-		} else if name == "pkgb" {
+		case "pkgb":
 			pkgbIndex = i
 		}
 	}
+	require.NotEqual(-1, pkgaIndex, "pkga should be present in topological order")
+	require.NotEqual(-1, pkgbIndex, "pkgb should be present in topological order")
 
 	// pkg-b should come before pkg-a in compilation order
 	assert.True(pkgbIndex < pkgaIndex, "pkgb should be compiled before pkga")

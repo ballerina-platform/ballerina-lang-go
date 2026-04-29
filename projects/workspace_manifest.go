@@ -17,6 +17,8 @@
 package projects
 
 import (
+	"slices"
+
 	"ballerina-lang-go/tools/diagnostics"
 )
 
@@ -28,7 +30,7 @@ type WorkspaceManifest struct {
 
 // Packages returns the relative paths to packages in this workspace.
 func (m WorkspaceManifest) Packages() []string {
-	return m.packages
+	return slices.Clone(m.packages)
 }
 
 // Diagnostics returns any diagnostics encountered while parsing the workspace manifest.
@@ -39,7 +41,7 @@ func (m WorkspaceManifest) Diagnostics() DiagnosticResult {
 // newWorkspaceManifest creates a new WorkspaceManifest.
 func newWorkspaceManifest(packages []string, diags []diagnostics.Diagnostic) WorkspaceManifest {
 	return WorkspaceManifest{
-		packages:    packages,
+		packages:    slices.Clone(packages),
 		diagnostics: NewDiagnosticResult(diags),
 	}
 }

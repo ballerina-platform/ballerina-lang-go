@@ -974,8 +974,8 @@ func TestNewPackage_InsideWorkspace_NestedDir(t *testing.T) {
 	}
 
 	contentStr := string(content)
-	// The path should be relative from workspace root
-	expectedPath := filepath.Join("packages", "nested-pkg")
+	// Workspace TOML always stores forward-slash paths regardless of platform.
+	expectedPath := "packages/nested-pkg"
 	if !strings.Contains(contentStr, expectedPath) {
 		t.Errorf("workspace Ballerina.toml should contain '%s':\n%s", expectedPath, contentStr)
 	}

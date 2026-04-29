@@ -17,6 +17,7 @@
 package projects
 
 import (
+	"fmt"
 	"io/fs"
 	"path"
 	"strings"
@@ -131,7 +132,7 @@ func loadBalaProjectInEnvironment(fsys fs.FS, platformDir string, sharedEnv *Env
 
 // createWorkspaceEnvironment creates an Environment for workspace projects.
 // The workspace repository is added first (highest priority), followed by default repositories.
-func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, workspaceRepo *WorkspaceRepository) *Environment {
+func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, workspaceRepo *workspaceRepository) *Environment {
 	// Build repository list: workspace repo first, then default repos
 	repos := []Repository{workspaceRepo}
 
@@ -400,8 +401,9 @@ func (l *ProjectLoader) loadWorkspaceProject(projectPath string, cfg ProjectLoad
 			continue
 		}
 
+		// Carry over diagnostics (including warnings) regardless of success.
+		allDiags = append(allDiags, result.Diagnostics().Diagnostics()...)
 		if result.Diagnostics().HasErrors() {
-			allDiags = append(allDiags, result.Diagnostics().Diagnostics()...)
 			continue
 		}
 
@@ -460,12 +462,22 @@ func parseWorkspaceManifestFromToml(toml *tomlparser.Toml, fsys fs.FS, workspace
 		return newWorkspaceManifest(nil, diags)
 	}
 
-	// Convert to string array
+	// Convert to string array; reject non-string entries so a manifest like
+	// packages = [1] surfaces an error instead of silently loading as empty.
 	var packagesArray []string
-	for _, item := range packagesRaw {
-		if str, ok := item.(string); ok {
-			packagesArray = append(packagesArray, str)
+	for i, item := range packagesRaw {
+		str, ok := item.(string)
+		if !ok {
+			diags = append(diags, createSimpleDiagnostic(
+				diagnostics.Error,
+				fmt.Sprintf("workspace.packages[%d] must be a string, got %T", i, item),
+			))
+			continue
 		}
+		packagesArray = append(packagesArray, str)
+	}
+	if len(packagesArray) == 0 {
+		return newWorkspaceManifest(nil, diags)
 	}
 
 	// Validate each package path
