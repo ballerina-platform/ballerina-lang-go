@@ -1327,6 +1327,13 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 		return a
 	case *ast.BLangBreak, *ast.BLangContinue:
 		return nil
+	case *ast.BLangXMLNS:
+		expr := n.GetNamespaceURI().(ast.BLangExpression)
+		validateResolvedType(a, expr, semtypes.STRING)
+		validateConstantExpr(a.ctx(), expr, func(e ast.BLangExpression) {
+			a.semanticErr("expression is not a constant expression", e.GetPosition())
+		})
+		return nil
 	case *ast.BLangMatchStatement:
 		return a
 	case *ast.BLangSimpleVariableDef:

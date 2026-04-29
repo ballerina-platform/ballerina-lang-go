@@ -18,6 +18,7 @@ package bir
 
 import (
 	"fmt"
+	"sort"
 
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
@@ -422,6 +423,9 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 		return panicStatement(ctx, curBB, stmt)
 	case *ast.BLangMatchStatement:
 		return matchStatement(ctx, curBB, stmt)
+	case *ast.BLangXMLNS:
+		// xmlns declarations have no runtime effect.
+		return statementEffect{block: curBB}
 	default:
 		panic("unexpected statement type")
 	}
@@ -936,9 +940,36 @@ func xmlElementLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXM
 		curBB = attrMapEff.block
 		attrsOp = attrMapEff.result
 	}
+	var namespacesOp *BIROperand
+	if len(expr.Namespaces) > 0 {
+		namespacesOp, curBB = buildXMLNamespacesMap(ctx, curBB, expr.Namespaces, pos)
+	}
 	resultOp := ctx.addTempVar(expr.GetDeterminedType())
-	curBB.Instructions = append(curBB.Instructions, NewXMLElementInstr(resultOp, nameOp, contentOp, attrsOp, pos))
+	curBB.Instructions = append(curBB.Instructions, NewXMLElementInstr(resultOp, nameOp, contentOp, attrsOp, namespacesOp, pos))
 	return expressionEffect{result: resultOp, block: curBB}
+}
+
+// buildXMLNamespacesMap constructs a string map of XML namespace declarations
+// from an element's resolved Namespaces map. Keys are stored in already
+// printable form ("xmlns" or "xmlns:<prefix>"). Iteration is sorted by key
+// for deterministic output.
+func buildXMLNamespacesMap(ctx *stmtContext, curBB *BIRBasicBlock, ns map[string]string, pos Location) (*BIROperand, *BIRBasicBlock) {
+	keys := make([]string, 0, len(ns))
+	for k := range ns {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	entries := make([]MappingConstructorEntry, 0, len(keys))
+	for _, k := range keys {
+		keyOp := ctx.addTempVar(semtypes.STRING)
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(keyOp, k, pos))
+		valOp := ctx.addTempVar(semtypes.STRING)
+		curBB.Instructions = append(curBB.Instructions, NewConstantLoad(valOp, ns[k], pos))
+		entries = append(entries, &MappingConstructorKeyValueEntry{keyOp: keyOp, valueOp: valOp})
+	}
+	resultOp := ctx.addTempVar(ctx.birCx.stringMapType())
+	curBB.Instructions = append(curBB.Instructions, NewMapConstructor(ctx.birCx.stringMapType(), resultOp, entries, nil, pos))
+	return resultOp, curBB
 }
 
 func xmlSequenceLiteral(ctx *stmtContext, curBB *BIRBasicBlock, expr *ast.BLangXMLSequenceLiteral) expressionEffect {

@@ -312,7 +312,11 @@ func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
 	if instr.AttrsOp != nil {
 		attrs = getOperandValue(ctx, instr.AttrsOp, frame).(*values.Map)
 	}
-	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Children: children})
+	var namespaces *values.Map
+	if instr.NamespacesOp != nil {
+		namespaces = getOperandValue(ctx, instr.NamespacesOp, frame).(*values.Map)
+	}
+	setOperandValue(ctx, instr.LhsOp, frame, &values.XMLElement{Name: name, Attributes: attrs, Namespaces: namespaces, Children: children})
 }
 
 func execNewXMLSequence(ctx *Context, instr *bir.NewXMLSequence, frame *Frame) {

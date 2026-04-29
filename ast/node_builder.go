@@ -1360,14 +1360,6 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
 		node := transformedNode.(model.TopLevelNode)
-
-		// Special handling for XML namespace declarations
-		if _, isXMLNS := memberNode.(*tree.ModuleXMLNamespaceDeclarationNode); isXMLNS {
-			if blangXmlns, ok := transformedNode.(*BLangXMLNS); ok {
-				blangXmlns.CompUnit = &compUnit
-			}
-		}
-
 		compilationUnit.AddTopLevelNode(node)
 	}
 
@@ -2681,12 +2673,49 @@ func (n *NodeBuilder) TransformAnnotationAttachPoint(annotationAttachPointNode *
 	panic("TransformAnnotationAttachPoint unimplemented")
 }
 
+type xmlNamespaceDeclarationNode interface {
+	tree.Node
+	Namespaceuri() tree.ExpressionNode
+	NamespacePrefix() *tree.IdentifierToken
+}
+
+func (n *NodeBuilder) transformXMLNamespaceDeclaration(node xmlNamespaceDeclarationNode) BLangNode {
+	pos := getPosition(n.de(), node)
+	xmlns := &BLangXMLNS{}
+	xmlns.SetPosition(pos)
+	n.populateXMLNS(xmlns, pos, node.Namespaceuri(), node.NamespacePrefix())
+	return xmlns
+}
+
 func (n *NodeBuilder) TransformXMLNamespaceDeclaration(xMLNamespaceDeclarationNode *tree.XMLNamespaceDeclarationNode) BLangNode {
-	panic("TransformXMLNamespaceDeclaration unimplemented")
+	return n.transformXMLNamespaceDeclaration(xMLNamespaceDeclarationNode)
 }
 
 func (n *NodeBuilder) TransformModuleXMLNamespaceDeclaration(moduleXMLNamespaceDeclarationNode *tree.ModuleXMLNamespaceDeclarationNode) BLangNode {
-	panic("TransformModuleXMLNamespaceDeclaration unimplemented")
+	return n.transformXMLNamespaceDeclaration(moduleXMLNamespaceDeclarationNode)
+}
+
+func (n *NodeBuilder) populateXMLNS(target *BLangXMLNS, pos diagnostics.Location, uriNode tree.ExpressionNode, prefixTok *tree.IdentifierToken) {
+	if uriNode != nil {
+		var uriExpr BLangExpression
+		switch u := uriNode.(type) {
+		case *tree.BasicLiteralNode:
+			uriExpr = n.createSimpleLiteral(u).(BLangExpression)
+		default:
+			if transformed, ok := n.TransformSyntaxNode(uriNode).(BLangExpression); ok {
+				uriExpr = transformed
+			} else {
+				n.cx.InternalError("xmlns URI did not produce a BLangExpression", pos)
+			}
+		}
+		if uriExpr != nil {
+			target.SetNamespaceURI(uriExpr)
+		}
+	}
+	if prefixTok != nil {
+		prefixIdent := createIdentifierFromToken(getPosition(n.de(), prefixTok), prefixTok)
+		target.SetPrefix(&prefixIdent)
+	}
 }
 
 func (n *NodeBuilder) TransformFunctionBodyBlock(functionBodyBlockNode *tree.FunctionBodyBlockNode) BLangNode {
@@ -2902,7 +2931,7 @@ func (n *NodeBuilder) xmlAttributes(attrs tree.NodeList[*tree.XMLAttributeNode])
 }
 
 func (n *NodeBuilder) TransformXMLElement(xMLElementNode *tree.XMLElementNode) BLangNode {
-	elem := &BLangXMLElementLiteral{}
+	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
 	elem.pos = getPosition(n.de(), xMLElementNode)
 	if start := xMLElementNode.StartTag(); start != nil {
 		elem.Name = n.xmlNameToString(start.Name())
@@ -2952,7 +2981,7 @@ func (n *NodeBuilder) TransformXMLQualifiedName(xMLQualifiedNameNode *tree.XMLQu
 }
 
 func (n *NodeBuilder) TransformXMLEmptyElement(xMLEmptyElementNode *tree.XMLEmptyElementNode) BLangNode {
-	elem := &BLangXMLElementLiteral{}
+	elem := &BLangXMLElementLiteral{Namespaces: map[string]string{}}
 	elem.pos = getPosition(n.de(), xMLEmptyElementNode)
 	elem.Name = n.xmlNameToString(xMLEmptyElementNode.Name())
 	elem.Attrs = n.xmlAttributes(xMLEmptyElementNode.Attributes())

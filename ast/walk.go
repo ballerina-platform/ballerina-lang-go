@@ -235,18 +235,6 @@ func Walk(v Visitor, node BLangNode) {
 			Walk(v, node.prefix)
 		}
 
-	case *BLangLocalXMLNS:
-		Walk(v, node.namespaceURI.(BLangNode))
-		if node.prefix != nil {
-			Walk(v, node.prefix)
-		}
-
-	case *BLangPackageXMLNS:
-		Walk(v, node.namespaceURI.(BLangNode))
-		if node.prefix != nil {
-			Walk(v, node.prefix)
-		}
-
 	// Section 3: Function & Body
 	case *BLangFunction:
 		Walk(v, &node.Name)

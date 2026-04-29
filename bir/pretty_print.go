@@ -468,8 +468,15 @@ func (p *PrettyPrinter) PrintNewXMLElement(n *NewXMLElement) string {
 	if n.ChildrenOp != nil {
 		children = p.PrintOperand(*n.ChildrenOp)
 	}
+	attrs := "()"
 	if n.AttrsOp != nil {
-		return fmt.Sprintf("%s = newXMLElement(%s, %s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children, p.PrintOperand(*n.AttrsOp))
+		attrs = p.PrintOperand(*n.AttrsOp)
+	}
+	if n.NamespacesOp != nil {
+		return fmt.Sprintf("%s = newXMLElement(%s, %s, %s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children, attrs, p.PrintOperand(*n.NamespacesOp))
+	}
+	if n.AttrsOp != nil {
+		return fmt.Sprintf("%s = newXMLElement(%s, %s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children, attrs)
 	}
 	return fmt.Sprintf("%s = newXMLElement(%s, %s)", p.PrintOperand(*n.LhsOp), p.PrintOperand(*n.NameOp), children)
 }

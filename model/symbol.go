@@ -27,7 +27,22 @@ type Scope interface {
 	GetSymbol(name string) (SymbolRef, bool)
 	GetPrefixedSymbol(prefix, name string) (SymbolRef, bool)
 	AddSymbol(name string, symbol Symbol)
+	// LookupXMLNS returns the URI bound to the given XML namespace prefix in
+	// this scope or any enclosing scope, along with the scope where the
+	// binding is defined. Empty string prefix queries the default namespace.
+	// Compare the returned scope against the receiver to check whether the
+	// binding was defined locally vs inherited.
+	LookupXMLNS(prefix string) (uri string, scope Scope, ok bool)
+	// DefineXMLNS adds a prefix -> URI binding to this scope. Callers are
+	// responsible for any duplicate or validity checks via LookupXMLNS.
+	DefineXMLNS(prefix, uri string)
 }
+
+// XMLNSReservedPrefix is the predeclared prefix that cannot be redeclared.
+const XMLNSReservedPrefix = "xmlns"
+
+// XMLNSReservedURI is the URI bound to the predeclared `xmlns` prefix.
+const XMLNSReservedURI = "http://www.w3.org/2000/xmlns/"
 
 // SymbolSpaceProvider provides access to symbol spaces for block-level scopes
 type SymbolSpaceProvider interface {
@@ -178,6 +193,10 @@ type (
 		Main       *SymbolSpace
 		Prefix     map[string]ExportedSymbolSpace
 		Annotation *SymbolSpace
+		// XMLNS holds module-level XML namespace prefix bindings.
+		// Key is the prefix ("" for the default namespace); value is the URI.
+		// Seeded with the predeclared `xmlns` prefix.
+		XMLNS map[string]string
 	}
 
 	// ExportedSymbolSpace is a readonly representation of symbols exported by a Module
@@ -189,6 +208,9 @@ type (
 	BlockScopeBase struct {
 		Parent Scope
 		Main   *SymbolSpace
+		// XMLNS holds block-level XML namespace prefix bindings.
+		// Key is the prefix ("" for the default namespace); value is the URI.
+		XMLNS map[string]string
 	}
 
 	// This is a delimiter to help detect if we need to capture a symbol as a closure
@@ -543,6 +565,18 @@ func (ms *ModuleScope) AddSymbol(name string, symbol Symbol) {
 	ms.Main.AddSymbol(name, symbol)
 }
 
+func (ms *ModuleScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	uri, ok := ms.XMLNS[prefix]
+	if !ok {
+		return "", nil, false
+	}
+	return uri, ms, true
+}
+
+func (ms *ModuleScope) DefineXMLNS(prefix, uri string) {
+	ms.XMLNS[prefix] = uri
+}
+
 func (ms *ModuleScope) AddAnnotationSymbol(name string, symbol Symbol) {
 	ms.Annotation.AddSymbol(name, symbol)
 }
@@ -594,6 +628,24 @@ func (bs *BlockScopeBase) AddSymbol(name string, symbol Symbol) {
 
 func (bs *BlockScopeBase) MainSpace() *SymbolSpace {
 	return bs.Main
+}
+
+func (bs *BlockScopeBase) DefineXMLNS(prefix, uri string) {
+	bs.XMLNS[prefix] = uri
+}
+
+func (s *BlockScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	if uri, ok := s.XMLNS[prefix]; ok {
+		return uri, s, true
+	}
+	return s.Parent.LookupXMLNS(prefix)
+}
+
+func (s *FunctionScope) LookupXMLNS(prefix string) (string, Scope, bool) {
+	if uri, ok := s.XMLNS[prefix]; ok {
+		return uri, s, true
+	}
+	return s.Parent.LookupXMLNS(prefix)
 }
 
 func (ba *symbolBase) Name() string {

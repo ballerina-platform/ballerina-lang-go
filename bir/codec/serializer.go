@@ -344,6 +344,10 @@ func (bw *birWriter) writeInstruction(buf *bytes.Buffer, instr bir.BIRInstructio
 		if instr.AttrsOp != nil {
 			bw.writeOperand(buf, instr.AttrsOp)
 		}
+		write(buf, instr.NamespacesOp != nil)
+		if instr.NamespacesOp != nil {
+			bw.writeOperand(buf, instr.NamespacesOp)
+		}
 		bw.writeOperand(buf, instr.LhsOp)
 	case *bir.NewXMLPI:
 		bw.writeOperand(buf, instr.TargetOp)

@@ -770,6 +770,9 @@ func (t *packageTypeResolver) resolveTopLevelTypes(pkg *ast.BLangPackage) {
 		setOtherNodesAsNever(&pkg.GlobalVars[i])
 	}
 	detectGlobalVarInitCycles(t, pkg)
+	for i := range pkg.XmlnsList {
+		resolveXMLNS(t, nil, &pkg.XmlnsList[i])
+	}
 
 	t.drainDeferredEmptinessChecks()
 }
@@ -1018,9 +1021,22 @@ func resolveStatementInner(t typeResolver, chain *binding, stmt ast.BLangStateme
 			t.semanticError("continue statement not allowed outside loop", s.GetPosition())
 		}
 		return statementEffect{binding: nil, nonCompletion: true}, true
+	case *ast.BLangXMLNS:
+		resolveXMLNS(t, chain, s)
+		return defaultStmtEffect(chain), true
 	default:
 		t.internalError(fmt.Sprintf("unhandled statement type: %T", stmt), stmt.GetPosition())
 		return defaultStmtEffect(chain), false
+	}
+}
+
+func resolveXMLNS(t typeResolver, chain *binding, decl *ast.BLangXMLNS) {
+	decl.SetDeterminedType(semtypes.NEVER)
+	if uriExpr, ok := decl.GetNamespaceURI().(ast.BLangExpression); ok && uriExpr != nil {
+		resolveActionOrExpression(t, chain, uriExpr, semtypes.STRING)
+	}
+	if prefix, ok := decl.GetPrefix().(*ast.BLangIdentifier); ok && prefix != nil {
+		prefix.SetDeterminedType(semtypes.NEVER)
 	}
 }
 

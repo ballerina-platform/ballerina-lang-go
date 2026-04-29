@@ -217,10 +217,27 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printXMLCommentLiteral(t)
 	case *BLangXMLTextLiteral:
 		p.printXMLTextLiteral(t)
+	case *BLangXMLNS:
+		p.printXMLNS(t)
 	default:
 		fmt.Println(p.buffer.String())
 		panic("Unsupported node type: " + reflect.TypeOf(t).String())
 	}
+}
+
+func (p *PrettyPrinter) printXMLNS(node *BLangXMLNS) {
+	p.startNode()
+	p.printString("xmlns")
+	p.indentLevel++
+	if uri := node.GetNamespaceURI(); uri != nil {
+		p.PrintInner(uri.(BLangNode))
+	}
+	if prefix, ok := node.GetPrefix().(*BLangIdentifier); ok && prefix != nil {
+		p.printString("as")
+		p.printString(prefix.GetValue())
+	}
+	p.indentLevel--
+	p.endNode()
 }
 
 func (p *PrettyPrinter) printCompoundAssignment(t *BLangCompoundAssignment) {

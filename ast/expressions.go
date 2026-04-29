@@ -385,6 +385,12 @@ type (
 		Name    string
 		Attrs   []BLangXMLAttribute
 		Content BLangExpression
+		// Namespaces holds XML namespace declarations to emit on this element.
+		// Keys are stored in already-printable form: "xmlns" for the default
+		// namespace, "xmlns:<prefix>" otherwise. Values are URIs.
+		// Populated by the symbol resolver from inline xmlns attributes and
+		// from outer-scope xmlns declarations referenced inside this literal.
+		Namespaces map[string]string
 	}
 
 	BLangXMLAttribute struct {

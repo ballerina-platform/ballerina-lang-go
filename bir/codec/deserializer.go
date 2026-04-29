@@ -712,8 +712,14 @@ func (br *birReader) readInstruction(varMap map[string]bir.BIRVariableDcl) bir.B
 		if hasAttrs {
 			attrsOp = br.readOperand(varMap)
 		}
+		var namespacesOp *bir.BIROperand
+		var hasNamespaces bool
+		br.read(&hasNamespaces)
+		if hasNamespaces {
+			namespacesOp = br.readOperand(varMap)
+		}
 		lhsOp := br.readOperand(varMap)
-		return bir.NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, pos)
+		return bir.NewXMLElementInstr(lhsOp, nameOp, childrenOp, attrsOp, namespacesOp, pos)
 	case bir.INSTRUCTION_KIND_NEW_XML_PI:
 		targetOp := br.readOperand(varMap)
 		dataOp := br.readOperand(varMap)

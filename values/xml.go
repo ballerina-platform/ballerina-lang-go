@@ -29,6 +29,10 @@ type (
 	XMLElement struct {
 		Name       string
 		Attributes *Map
+		// Namespaces holds XML namespace declarations to print on this element.
+		// Keys are stored in already-printable form ("xmlns" or "xmlns:<prefix>");
+		// values are URIs.
+		Namespaces *Map
 		Children   XMLValue
 	}
 
@@ -62,20 +66,8 @@ func (e *XMLElement) XMLString() string {
 	var b strings.Builder
 	b.WriteByte('<')
 	b.WriteString(e.Name)
-	if e.Attributes != nil {
-		for _, k := range e.Attributes.Keys() {
-			v, _ := e.Attributes.Get(k)
-			sv, ok := v.(string)
-			if !ok {
-				panic(fmt.Sprintf("xml attribute %q has non-string value of type %T", k, v))
-			}
-			b.WriteByte(' ')
-			b.WriteString(k)
-			b.WriteString(`="`)
-			b.WriteString(sv)
-			b.WriteByte('"')
-		}
-	}
+	writeXMLStringMap(&b, e.Attributes, "attribute")
+	writeXMLStringMap(&b, e.Namespaces, "namespace")
 	body := ""
 	if e.Children != nil {
 		body = e.Children.XMLString()
@@ -90,6 +82,24 @@ func (e *XMLElement) XMLString() string {
 	b.WriteString(e.Name)
 	b.WriteByte('>')
 	return b.String()
+}
+
+func writeXMLStringMap(b *strings.Builder, m *Map, kind string) {
+	if m == nil {
+		return
+	}
+	for _, k := range m.Keys() {
+		v, _ := m.Get(k)
+		sv, ok := v.(string)
+		if !ok {
+			panic(fmt.Sprintf("xml %s %q has non-string value of type %T", kind, k, v))
+		}
+		b.WriteByte(' ')
+		b.WriteString(k)
+		b.WriteString(`="`)
+		b.WriteString(sv)
+		b.WriteByte('"')
+	}
 }
 
 func (s *XMLSequence) XMLString() string {
