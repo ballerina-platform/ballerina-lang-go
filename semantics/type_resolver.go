@@ -2421,6 +2421,7 @@ func resolveXMLSequenceLiteral(t typeResolver, chain *binding, e *ast.BLangXMLSe
 		}
 		if !semtypes.IsSubtypeSimple(childTy, semtypes.XML) {
 			t.semanticError(fmt.Sprintf("expected xml value, got %s", semtypes.ToString(t.typeContext(), childTy)), child.GetPosition())
+			return nil, expressionEffect{}, false
 		}
 		childUnion = semtypes.Union(childUnion, childTy)
 	}
@@ -3444,14 +3445,14 @@ func additiveSingletonType(t typeResolver, lhsTy, rhsTy semtypes.SemType, op mod
 	switch {
 	case bothSameType(semtypes.XML):
 		if op != model.OperatorKind_ADD {
-			t.semanticError(fmt.Sprintf("unsupported operation %s for xml", string(op)), loc)
+			t.semanticError(fmt.Sprintf("unsupported operation %s for xml (only addition is supported)", string(op)), loc)
 			return nil, false
 		}
 		resultTy := semtypes.XMLSequence(semtypes.Union(lhsTy, rhsTy))
 		return resultTy, true
 	case bothSameType(semtypes.STRING):
 		if op != model.OperatorKind_ADD {
-			t.semanticError(fmt.Sprintf("unsupported operation %s for xml", string(op)), loc)
+			t.semanticError(fmt.Sprintf("unsupported operation %s for string (only addition is supported)", string(op)), loc)
 			return nil, false
 		}
 		lhsValue := semtypes.SingleShape(lhsTy)
@@ -3577,7 +3578,11 @@ func resolveAdditiveExprInner(t typeResolver, chain *binding, lhsTy semtypes.Sem
 	lhsBasicTy := semtypes.WidenToBasicTypes(lhsTy)
 	rhsBasicTy := semtypes.WidenToBasicTypes(rhsTy)
 	if !semtypes.IsSubtype(ctx, lhsBasicTy, supportedTypes) || !semtypes.IsSubtype(ctx, rhsBasicTy, supportedTypes) {
-		t.semanticError(fmt.Sprintf("invalid type for operand of %s", string(op)), pos)
+		msg := "expect numeric, string, or xml types"
+		if op == model.OperatorKind_SUB {
+			msg = "expect numeric types"
+		}
+		t.semanticError(fmt.Sprintf("%s for %s", msg, string(op)), pos)
 		return nil, expressionEffect{}, false
 	} else if lhsBasicTy != rhsBasicTy {
 		t.semanticError("both operands must belong to same basic type", pos)

@@ -45,8 +45,9 @@ func GetXMLSymbols(ctx *context.CompilerContext) model.ExportedSymbolSpace {
 	space := ctx.NewSymbolSpace(*XMLPackageID)
 	for _, each := range types {
 		tySym := model.NewTypeSymbol(each.name, true)
-		tySym.SetType(each.ty)
 		space.AddSymbol(each.name, &tySym)
+		ref, _ := space.GetSymbol(each.name)
+		ctx.SetSymbolType(ref, each.ty)
 	}
 	return model.NewExportedSymbolSpace(space, nil)
 }

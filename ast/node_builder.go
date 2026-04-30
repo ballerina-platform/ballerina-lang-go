@@ -2697,20 +2697,7 @@ func (n *NodeBuilder) TransformModuleXMLNamespaceDeclaration(moduleXMLNamespaceD
 
 func (n *NodeBuilder) populateXMLNS(target *BLangXMLNS, pos diagnostics.Location, uriNode tree.ExpressionNode, prefixTok *tree.IdentifierToken) {
 	if uriNode != nil {
-		var uriExpr BLangExpression
-		switch u := uriNode.(type) {
-		case *tree.BasicLiteralNode:
-			uriExpr = n.createSimpleLiteral(u).(BLangExpression)
-		default:
-			if transformed, ok := n.TransformSyntaxNode(uriNode).(BLangExpression); ok {
-				uriExpr = transformed
-			} else {
-				n.cx.InternalError("xmlns URI did not produce a BLangExpression", pos)
-			}
-		}
-		if uriExpr != nil {
-			target.SetNamespaceURI(uriExpr)
-		}
+		target.SetNamespaceURI(n.createExpression(uriNode))
 	}
 	if prefixTok != nil {
 		prefixIdent := createIdentifierFromToken(getPosition(n.de(), prefixTok), prefixTok)
@@ -2868,6 +2855,7 @@ func (n *NodeBuilder) TransformTemplateExpression(templateExpressionNode *tree.T
 	typeToken := templateExpressionNode.Type()
 	if typeToken == nil || typeToken.Text() != "xml" {
 		n.cx.Unimplemented("non-xml template expressions not yet supported", getPosition(n.de(), templateExpressionNode))
+		return nil
 	}
 	var children []BLangExpression
 	content := templateExpressionNode.Content()
@@ -2879,6 +2867,7 @@ func (n *NodeBuilder) TransformTemplateExpression(templateExpressionNode *tree.T
 		expr, ok := bl.(BLangExpression)
 		if !ok {
 			n.cx.InternalError("xml template child did not produce BLangExpression", getPosition(n.de(), child))
+			return nil
 		}
 		children = append(children, expr)
 	}
@@ -2989,7 +2978,8 @@ func (n *NodeBuilder) TransformXMLEmptyElement(xMLEmptyElementNode *tree.XMLEmpt
 }
 
 func (n *NodeBuilder) TransformInterpolation(interpolationNode *tree.InterpolationNode) BLangNode {
-	panic("xml interpolation not yet supported")
+	n.cx.Unimplemented("xml interpolation not yet supported", getPosition(n.de(), interpolationNode))
+	return nil
 }
 
 func (n *NodeBuilder) TransformXMLText(xMLTextNode *tree.XMLTextNode) BLangNode {
@@ -3006,7 +2996,11 @@ func (n *NodeBuilder) TransformXMLAttribute(xMLAttributeNode *tree.XMLAttributeN
 	attr.pos = getPosition(n.de(), xMLAttributeNode)
 	attr.Name = n.xmlNameToString(xMLAttributeNode.AttributeName())
 	if valueNode := xMLAttributeNode.Value(); valueNode != nil {
-		attr.Value = n.TransformXMLAttributeValue(valueNode).(BLangExpression)
+		if transformed := n.TransformXMLAttributeValue(valueNode); transformed != nil {
+			if expr, ok := transformed.(BLangExpression); ok {
+				attr.Value = expr
+			}
+		}
 	}
 	return attr
 }
@@ -3037,16 +3031,20 @@ func (n *NodeBuilder) TransformXMLComment(xMLComment *tree.XMLComment) BLangNode
 	var b strings.Builder
 	content := xMLComment.Content()
 	for child := range content.Iterator() {
-		if tok, ok := child.(tree.Token); ok {
-			b.WriteString(tok.Text())
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml interpolation in comment not yet supported", getPosition(n.de(), child))
+			continue
 		}
+		b.WriteString(tok.Text())
 	}
 	c.Body = b.String()
 	return c
 }
 
 func (n *NodeBuilder) TransformXMLCDATA(xMLCDATANode *tree.XMLCDATANode) BLangNode {
-	panic("xml CDATA not yet supported")
+	n.cx.Unimplemented("xml CDATA not yet supported", getPosition(n.de(), xMLCDATANode))
+	return nil
 }
 
 func (n *NodeBuilder) TransformXMLProcessingInstruction(xMLProcessingInstruction *tree.XMLProcessingInstruction) BLangNode {
@@ -3056,9 +3054,12 @@ func (n *NodeBuilder) TransformXMLProcessingInstruction(xMLProcessingInstruction
 	var b strings.Builder
 	data := xMLProcessingInstruction.Data()
 	for child := range data.Iterator() {
-		if tok, ok := child.(tree.Token); ok {
-			b.WriteString(tok.Text())
+		tok, ok := child.(tree.Token)
+		if !ok {
+			n.cx.Unimplemented("xml interpolation in processing instruction not yet supported", getPosition(n.de(), child))
+			continue
 		}
+		b.WriteString(tok.Text())
 	}
 	pi.Data = b.String()
 	return pi

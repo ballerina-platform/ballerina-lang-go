@@ -304,9 +304,12 @@ func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
 	name := getOperandValue(ctx, instr.NameOp, frame).(string)
 	var children values.XMLValue
 	if instr.ChildrenOp != nil {
-		if v, ok := getOperandValue(ctx, instr.ChildrenOp, frame).(values.XMLValue); ok {
-			children = v
+		raw := getOperandValue(ctx, instr.ChildrenOp, frame)
+		v, ok := raw.(values.XMLValue)
+		if !ok {
+			panic(fmt.Sprintf("invariant violation: NewXMLElement children operand %v is not an XMLValue (got %T)", instr.ChildrenOp, raw))
 		}
+		children = v
 	}
 	var attrs *values.Map
 	if instr.AttrsOp != nil {
@@ -321,11 +324,13 @@ func execNewXMLElement(ctx *Context, instr *bir.NewXMLElement, frame *Frame) {
 
 func execNewXMLSequence(ctx *Context, instr *bir.NewXMLSequence, frame *Frame) {
 	items := make([]values.XMLValue, 0, len(instr.Children))
-	for _, op := range instr.Children {
+	for i, op := range instr.Children {
 		val := getOperandValue(ctx, op, frame)
-		if x, ok := val.(values.XMLValue); ok {
-			items = append(items, x)
+		x, ok := val.(values.XMLValue)
+		if !ok {
+			panic(fmt.Sprintf("invariant violation: NewXMLSequence child %d operand %v is not an XMLValue (got %T)", i, op, val))
 		}
+		items = append(items, x)
 	}
 	setOperandValue(ctx, instr.LhsOp, frame, values.NewXMLSequence(items))
 }

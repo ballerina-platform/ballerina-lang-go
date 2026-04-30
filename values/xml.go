@@ -97,9 +97,29 @@ func writeXMLStringMap(b *strings.Builder, m *Map, kind string) {
 		b.WriteByte(' ')
 		b.WriteString(k)
 		b.WriteString(`="`)
-		b.WriteString(sv)
+		b.WriteString(escapeAttr(sv))
 		b.WriteByte('"')
 	}
+}
+
+// escapeText escapes characters in XML text node bodies.
+func escapeText(s string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+	)
+	return replacer.Replace(s)
+}
+
+// escapeAttr escapes characters in XML attribute values quoted with `"`.
+func escapeAttr(s string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		"\"", "&quot;",
+	)
+	return replacer.Replace(s)
 }
 
 func (s *XMLSequence) XMLString() string {
@@ -111,14 +131,20 @@ func (s *XMLSequence) XMLString() string {
 }
 
 func (p *XMLProcessingInstruction) XMLString() string {
+	if strings.Contains(p.Data, "?>") {
+		panic(NewErrorWithMessage(fmt.Sprintf("xml processing instruction %q data must not contain '?>'", p.Target)))
+	}
 	return "<?" + p.Target + " " + p.Data + "?>"
 }
 
 func (t *XMLText) XMLString() string {
-	return t.Body
+	return escapeText(t.Body)
 }
 
 func (c *XMLComment) XMLString() string {
+	if strings.Contains(c.Body, "--") || strings.HasSuffix(c.Body, "-") {
+		panic(NewErrorWithMessage("xml comment body must not contain '--' or end with '-'"))
+	}
 	return "<!--" + c.Body + "-->"
 }
 
