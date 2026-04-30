@@ -133,6 +133,10 @@ func execMapStore(ctx *Context, access *bir.FieldAccess, frame *Frame) {
 	}
 	m := container.(*values.Map)
 	valueVal := getOperandValue(ctx, access.RhsOp, frame)
+	if valueVal == nil && m.ShouldDeleteOnNilStore(ctx.TypeCheckContext(), keyStr) {
+		m.Delete(keyStr)
+		return
+	}
 	m.Put(keyStr, valueVal)
 }
 
