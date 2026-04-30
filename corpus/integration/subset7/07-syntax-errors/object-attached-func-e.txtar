@@ -5,3 +5,9 @@ error[SEMANTIC_ERROR]: redeclared symbol 'TestObj'
    |
 17 | class TestObj { // @error
    |       ^^^^^^^
+
+error[SEMANTIC_ERROR]: redeclared symbol 'TestObj'
+  --> object-attached-func-e.bal:22:10
+   |
+22 | function TestObj.foo(int a) returns string { // @error
+   |          ^^^^^^^

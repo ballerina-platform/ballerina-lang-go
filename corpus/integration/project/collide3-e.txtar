@@ -11,3 +11,9 @@ error[SEMANTIC_ERROR]: redeclared symbol 'RED'
    |
 17 | public string RED;
    |               ^^^
+
+error[SEMANTIC_ERROR]: redeclared symbol 'RED'
+  --> modules/utils/c.bal:17:15
+   |
+17 | public string RED;
+   |               ^^^
