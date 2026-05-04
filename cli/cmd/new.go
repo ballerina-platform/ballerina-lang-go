@@ -280,31 +280,46 @@ func runNewWorkspace(cmd *cobra.Command, absPath, projectPath string, template t
 	return nil
 }
 
-// discoverExistingPackages scans immediate subdirectories for Ballerina packages.
+// discoverExistingPackages walks the workspace directory recursively and
+// returns workspace-relative paths to every directory that contains a
+// Ballerina.toml. Hidden directories (names starting with ".") are skipped.
+// Paths are returned forward-slash-normalized (matching the manifest's
+// stored format) and sorted for deterministic output.
+//
+// Workspace member paths can be nested (for example, "packages/pkg-a"), so
+// this function must descend into subdirectories rather than only inspect
+// immediate children.
 func discoverExistingPackages(workspacePath string) []string {
 	var packages []string
 
-	entries, err := os.ReadDir(workspacePath)
-	if err != nil {
-		return packages
-	}
+	_ = filepath.WalkDir(workspacePath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if path != workspacePath && strings.HasPrefix(name, ".") {
+			return filepath.SkipDir
+		}
+		// The workspace root itself is not a member; skip its Ballerina.toml.
+		if path == workspacePath {
+			return nil
+		}
+		tomlPath := filepath.Join(path, projects.BallerinaTomlFile)
+		if _, err := os.Stat(tomlPath); err != nil {
+			return nil
+		}
+		rel, err := filepath.Rel(workspacePath, path)
+		if err != nil {
+			return nil
+		}
+		packages = append(packages, filepath.ToSlash(rel))
+		// A package directory does not contain another package; stop descending.
+		return filepath.SkipDir
+	})
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		// Skip hidden directories
-		if strings.HasPrefix(entry.Name(), ".") {
-			continue
-		}
-		// Check for Ballerina.toml
-		tomlPath := filepath.Join(workspacePath, entry.Name(), projects.BallerinaTomlFile)
-		if _, err := os.Stat(tomlPath); err == nil {
-			packages = append(packages, entry.Name())
-		}
-	}
-
-	// Sort for consistent output
 	sort.Strings(packages)
 	return packages
 }

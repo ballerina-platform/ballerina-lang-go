@@ -42,7 +42,17 @@ func (r *workspaceRepository) setWorkspace(workspace *WorkspaceProject) {
 // GetPackage returns a package from the workspace matching the given org, name, and version.
 // If version is empty, it matches by org+name only.
 // Returns (nil, nil) if not found.
-func (r *workspaceRepository) GetPackage(ctx context.Context, org, name, version string) (*Package, error) {
+//
+// ResolutionOptions are ignored — workspace lookups never consult a remote
+// source, so flags like Offline have no effect here.
+//
+// The repository is constructed before the workspace exists (the loader and
+// WorkspaceProject.Duplicate install the repo first, then call setWorkspace).
+// During that window any consult must be a no-op rather than a nil-deref panic.
+func (r *workspaceRepository) GetPackage(ctx context.Context, org, name, version string, _ ResolutionOptions) (*Package, error) {
+	if r.workspace == nil {
+		return nil, nil
+	}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -73,7 +83,13 @@ func (r *workspaceRepository) GetPackage(ctx context.Context, org, name, version
 
 // GetPackageVersions returns available versions for a package in the workspace.
 // Since workspace packages have a single version, this returns at most one version.
-func (r *workspaceRepository) GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error) {
+//
+// Returns nil if the workspace reference has not been set yet — see the note
+// on GetPackage about construction order.
+func (r *workspaceRepository) GetPackageVersions(ctx context.Context, org, name string, _ ResolutionOptions) ([]PackageVersion, error) {
+	if r.workspace == nil {
+		return nil, nil
+	}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -93,21 +109,6 @@ func (r *workspaceRepository) GetPackageVersions(ctx context.Context, org, name 
 	}
 
 	return nil, nil
-}
-
-// GetLatestVersion returns the version of the workspace package matching org+name.
-// Since workspace packages have a single version, this returns that version.
-func (r *workspaceRepository) GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error) {
-	versions, err := r.GetPackageVersions(ctx, org, name)
-	if err != nil {
-		return PackageVersion{}, false, err
-	}
-
-	if len(versions) == 0 {
-		return PackageVersion{}, false, nil
-	}
-
-	return versions[0], true, nil
 }
 
 // Compile-time verification that workspaceRepository implements Repository.

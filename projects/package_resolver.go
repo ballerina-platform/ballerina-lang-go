@@ -140,10 +140,19 @@ func (r *defaultPackageResolver) ResolveByName(
 	org, name string,
 	options ResolutionOptions,
 ) []*Package {
-	// 1. Check cache first; pick the highest cached version.
+	// 1. Cache fast-path: only short-circuit when exactly one version is
+	// cached. With multiple cached versions, repository precedence matters
+	// (a workspace member must win over a stale central cache entry, even
+	// if the central one has a higher version) — so fall through to the
+	// repo loop below.
+	//
+	// The single-entry path is also load-bearing for the project's own
+	// package: InitPackage caches it, and no Repository in the current
+	// chain knows about the loading project, so this is the only way a
+	// sub-module import can resolve back to its parent package.
 	if !options.DisableCache() {
-		if pkg := pickLatest(r.cache.GetPackages(org, name)); pkg != nil {
-			return []*Package{pkg}
+		if cached := r.cache.GetPackages(org, name); len(cached) == 1 {
+			return []*Package{cached[0]}
 		}
 	}
 
@@ -161,9 +170,14 @@ func (r *defaultPackageResolver) ResolveByName(
 		}
 		latest := pickLatestVersion(versions)
 
+		// Once a repo lists at least one version, it owns the package by
+		// precedence. If the subsequent GetPackage fails, treat the lookup
+		// as terminally unresolved — falling through to a lower-priority
+		// repo would silently substitute a different source's package for a
+		// broken higher-priority one.
 		pkg, err := repo.GetPackage(ctx, org, name, latest.String(), options)
 		if err != nil || pkg == nil {
-			continue
+			return nil
 		}
 
 		if !options.DisableCache() {
@@ -181,22 +195,6 @@ func pickLatestVersion(versions []PackageVersion) PackageVersion {
 	for _, v := range versions[1:] {
 		if v.Compare(latest) > 0 {
 			latest = v
-		}
-	}
-	return latest
-}
-
-// pickLatest returns the package with the highest version, or nil for an
-// empty input. Versions are compared via PackageVersion.Compare.
-func pickLatest(packages []*Package) *Package {
-	if len(packages) == 0 {
-		return nil
-	}
-	latest := packages[0]
-	for _, p := range packages[1:] {
-		if p.Manifest().PackageDescriptor().Version().Compare(
-			latest.Manifest().PackageDescriptor().Version()) > 0 {
-			latest = p
 		}
 	}
 	return latest

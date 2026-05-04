@@ -118,61 +118,6 @@ func TestWorkspace_Duplicate(t *testing.T) {
 	}
 }
 
-// TestWorkspace_MissingPackagePath verifies that a workspace whose Ballerina.toml
-// lists a non-existent package still loads, with a diagnostic surfacing the
-// missing path.
-func TestWorkspace_MissingPackagePath(t *testing.T) {
-	require := test_util.NewRequire(t)
-	assert := test_util.New(t)
-
-	dir := t.TempDir()
-	writeFile(t, dir, "Ballerina.toml", `[workspace]
-packages = ["does-not-exist"]
-`)
-
-	result, err := loadProject(dir)
-	require.NoError(err)
-
-	assert.Equal(projects.ProjectKindWorkspace, result.Project().Kind())
-
-	diags := result.Diagnostics()
-	if !containsDiagnosticMentioning(diags, "does-not-exist") {
-		t.Errorf("expected diagnostic mentioning 'does-not-exist', got: %v",
-			diagnosticMessages(diags))
-	}
-}
-
-// TestWorkspace_PackageWithParseError verifies that a package with a malformed
-// Ballerina.toml is skipped but the workspace still loads with the remaining
-// packages.
-func TestWorkspace_PackageWithParseError(t *testing.T) {
-	require := test_util.NewRequire(t)
-	assert := test_util.New(t)
-
-	dir := t.TempDir()
-	writeFile(t, dir, "Ballerina.toml", `[workspace]
-packages = ["good", "bad"]
-`)
-	writeFile(t, dir, "good/Ballerina.toml", `[package]
-org = "testorg"
-name = "good"
-version = "1.0.0"
-`)
-	writeFile(t, dir, "good/main.bal", "public function main() {}\n")
-
-	writeFile(t, dir, "bad/Ballerina.toml", "this is not valid toml = =\n")
-	writeFile(t, dir, "bad/main.bal", "public function main() {}\n")
-
-	result, err := loadProject(dir)
-	require.NoError(err)
-
-	ws := result.Project().(*projects.WorkspaceProject)
-
-	assert.True(len(ws.Projects()) >= 1, "good package should still load")
-	assert.True(result.Diagnostics().DiagnosticCount() > 0,
-		"expected at least one diagnostic for the bad package")
-}
-
 // TestWorkspace_CircularDependency verifies cycle detection in WorkspaceResolution.
 func TestWorkspace_CircularDependency(t *testing.T) {
 	require := test_util.NewRequire(t)

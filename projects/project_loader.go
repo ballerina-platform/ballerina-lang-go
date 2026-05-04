@@ -61,16 +61,13 @@ func (l *ProjectLoader) loadBuildProject(projectPath string, cfg ProjectLoadConf
 		return ProjectLoadResult{}, err
 	}
 
-	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
-	var mergedOpts BuildOptions
-	if cfg.BuildOptions != nil {
-		mergedOpts = manifestBuildOptions.AcceptTheirs(*cfg.BuildOptions)
-	} else {
-		mergedOpts = manifestBuildOptions
-	}
+	mergedOpts := mergeManifestAndCLIBuildOptions(
+		packageConfig.PackageManifest().BuildOptions(), cfg.BuildOptions)
 
-	// Create environment with repositories configured upfront
-	env := l.createEnvironmentWithRepositories(cfg)
+	// Build the environment from the merged BuildOptions so
+	// Environment.resolutionOptions honors manifest-declared flags (e.g. a
+	// manifest's `offline = true`), not just the CLI overrides.
+	env := l.createEnvironmentWithRepositories(cfg, mergedOpts)
 
 	project := newBuildProjectWithEnv(projectPath, mergedOpts, env)
 
@@ -111,7 +108,10 @@ func (l *ProjectLoader) loadBalaProjectWithEnv(projectPath string, cfg ProjectLo
 	// proper repository setup for resolving their own dependencies.
 	env := sharedEnv
 	if env == nil {
-		env = l.createEnvironmentWithRepositories(cfg)
+		// Bala projects don't carry resolver-facing manifest BuildOptions
+		// (no Ballerina.toml in the bala layout that the loader parses for
+		// build options); pass through the CLI-supplied options directly.
+		env = l.createEnvironmentWithRepositories(cfg, buildOpts)
 	}
 
 	project := newBalaProjectWithEnv(projectPath, buildOpts, result.Platform, env)
@@ -132,18 +132,16 @@ func loadBalaProjectInEnvironment(fsys fs.FS, platformDir string, sharedEnv *Env
 
 // createWorkspaceEnvironment creates an Environment for workspace projects.
 // The workspace repository is added first (highest priority), followed by default repositories.
-func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, workspaceRepo *workspaceRepository) *Environment {
+//
+// buildOpts must already reflect manifest+CLI merging (callers pass the merged
+// result; the env builder derives Environment.resolutionOptions from these).
+func (l *ProjectLoader) createWorkspaceEnvironment(cfg ProjectLoadConfig, workspaceRepo *workspaceRepository, buildOpts BuildOptions) *Environment {
 	// Build repository list: workspace repo first, then default repos
 	repos := []Repository{workspaceRepo}
 
 	// Add default repositories (local cache, etc.)
 	defaultRepos := l.getDefaultRepositories(cfg)
 	repos = append(repos, defaultRepos...)
-
-	buildOpts := NewBuildOptions()
-	if cfg.BuildOptions != nil {
-		buildOpts = *cfg.BuildOptions
-	}
 
 	return NewProjectEnvironmentBuilder(l.projectFs).
 		WithRepositories(repos).
@@ -173,13 +171,18 @@ func (l *ProjectLoader) getDefaultRepositories(cfg ProjectLoadConfig) []Reposito
 // createEnvironmentWithRepositories creates an Environment with all repositories configured upfront.
 // This ensures the Environment is immutable after creation.
 //
+// buildOpts must already reflect manifest+CLI merging — callers compute
+// `manifestBuildOptions.AcceptTheirs(cfg.BuildOptions)` and pass the result so
+// the env's resolutionOptions reflect the merged view (e.g. a manifest's
+// `offline = true` is honored even when not set on the CLI).
+//
 // Repository resolution order:
 //  1. If Repositories is explicitly set in config, use those
 //  2. If BallerinaEnvFs is set in config, create default repositories from it
 //  3. Otherwise, default to fs.Sub(projectFs, ".ballerina") — which resolves to
 //     <project-path>/.ballerina for build projects and
 //     <file-path-parent>/.ballerina for single-file projects.
-func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig) *Environment {
+func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig, buildOpts BuildOptions) *Environment {
 	repos := cfg.Repositories
 
 	if len(repos) == 0 {
@@ -194,15 +197,21 @@ func (l *ProjectLoader) createEnvironmentWithRepositories(cfg ProjectLoadConfig)
 		}
 	}
 
-	buildOpts := NewBuildOptions()
-	if cfg.BuildOptions != nil {
-		buildOpts = *cfg.BuildOptions
-	}
-
 	return NewProjectEnvironmentBuilder(l.projectFs).
 		WithRepositories(repos).
 		WithBuildOptions(buildOpts).
 		Build()
+}
+
+// mergeManifestAndCLIBuildOptions returns BuildOptions whose values are the
+// manifest's defaults overridden by the caller-supplied (CLI) options. CLI
+// always wins on conflict via AcceptTheirs; absent CLI overrides yield the
+// raw manifest options.
+func mergeManifestAndCLIBuildOptions(manifest BuildOptions, cli *BuildOptions) BuildOptions {
+	if cli == nil {
+		return manifest
+	}
+	return manifest.AcceptTheirs(*cli)
 }
 
 func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoadConfig) (ProjectLoadResult, error) {
@@ -239,8 +248,9 @@ func (l *ProjectLoader) loadSingleFileProject(projectPath string, cfg ProjectLoa
 	sourceDir := path.Dir(projectPath)
 	packageName := strings.TrimSuffix(fileName, BalFileExtension)
 
-	// Create environment with repositories configured upfront
-	env := l.createEnvironmentWithRepositories(cfg)
+	// Single-file projects have no Ballerina.toml, so there are no manifest
+	// BuildOptions to merge — pass the CLI-supplied options directly.
+	env := l.createEnvironmentWithRepositories(cfg, buildOpts)
 
 	project := newSingleFileProjectWithEnv(sourceDir, buildOpts, fileName, env)
 
@@ -363,21 +373,34 @@ func (l *ProjectLoader) loadWorkspaceProject(projectPath string, cfg ProjectLoad
 	// Extract workspace packages
 	workspaceManifest := parseWorkspaceManifestFromToml(toml, l.projectFs, projectPath)
 
-	var buildOpts BuildOptions
-	if cfg.BuildOptions != nil {
-		buildOpts = *cfg.BuildOptions
-	} else {
-		buildOpts = NewBuildOptions()
+	// Resolve env-facing BuildOptions by peeking the first listed member's
+	// Ballerina.toml — its manifest BuildOptions become the workspace-wide
+	// base, with cfg.BuildOptions overriding on conflict. This way
+	// Environment.resolutionOptions reflects manifest+CLI just like a
+	// standalone build project does. If the first member's manifest can't
+	// be parsed (missing dir, malformed TOML), fall back to cfg-only —
+	// the load-level diagnostic from parseWorkspaceManifestFromToml /
+	// loadBuildProjectInWorkspace will surface the failure separately.
+	workspaceBase := NewBuildOptions()
+	for _, pkgPath := range workspaceManifest.Packages() {
+		fullPkgPath := path.Join(projectPath, pkgPath)
+		if peeked, err := createBuildProjectConfig(l.projectFs, fullPkgPath); err == nil {
+			workspaceBase = peeked.PackageManifest().BuildOptions()
+			break
+		}
 	}
+	mergedOpts := mergeManifestAndCLIBuildOptions(workspaceBase, cfg.BuildOptions)
 
 	// Create workspace repository first (without workspace reference yet)
 	workspaceRepo := newWorkspaceRepository()
 
 	// Create environment with workspace repository first, then default repositories
-	env := l.createWorkspaceEnvironment(cfg, workspaceRepo)
+	env := l.createWorkspaceEnvironment(cfg, workspaceRepo, mergedOpts)
 
-	// Create workspace project with the environment
-	workspace := newWorkspaceProject(projectPath, buildOpts, env)
+	// Create workspace project with the environment.
+	// mergedOpts is reused so workspace.BuildOptions() also reflects the
+	// manifest+CLI merge that the env was built with.
+	workspace := newWorkspaceProject(projectPath, mergedOpts, env)
 	workspace.setManifest(workspaceManifest)
 
 	// Now set the workspace reference on the repository
@@ -421,13 +444,8 @@ func (l *ProjectLoader) loadBuildProjectInWorkspace(projectPath string, cfg Proj
 		return ProjectLoadResult{}, err
 	}
 
-	manifestBuildOptions := packageConfig.PackageManifest().BuildOptions()
-	var mergedOpts BuildOptions
-	if cfg.BuildOptions != nil {
-		mergedOpts = manifestBuildOptions.AcceptTheirs(*cfg.BuildOptions)
-	} else {
-		mergedOpts = manifestBuildOptions
-	}
+	mergedOpts := mergeManifestAndCLIBuildOptions(
+		packageConfig.PackageManifest().BuildOptions(), cfg.BuildOptions)
 
 	project := newBuildProjectWithEnv(projectPath, mergedOpts, sharedEnv)
 
@@ -482,7 +500,20 @@ func parseWorkspaceManifestFromToml(toml *tomlparser.Toml, fsys fs.FS, workspace
 
 	// Validate each package path
 	for _, pkgPath := range packagesArray {
-		fullPath := path.Join(workspaceRoot, pkgPath)
+		// Reject absolute paths and any path that traverses outside the
+		// workspace root. path.Join would otherwise normalize "../foo" to
+		// a sibling of the workspace, allowing the manifest to load
+		// arbitrary directories on disk.
+		cleanPkgPath := path.Clean(pkgPath)
+		if path.IsAbs(cleanPkgPath) || cleanPkgPath == ".." || strings.HasPrefix(cleanPkgPath, "../") {
+			diags = append(diags, createSimpleDiagnostic(
+				diagnostics.Error,
+				"workspace package path must stay within the workspace root: '"+pkgPath+"'",
+			))
+			continue
+		}
+
+		fullPath := path.Join(workspaceRoot, cleanPkgPath)
 		tomlPath := path.Join(fullPath, BallerinaTomlFile)
 
 		// Check if package directory and Ballerina.toml exist
