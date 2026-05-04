@@ -1,0 +1,74 @@
+(Adder
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access base
+          (simple-var-ref self))
+        (simple-var-ref base))
+    )
+  )
+  (sum
+    (bb0 () (bb1)
+      (var-def
+        (variable total (type
+          (value-type int)) (expr
+          (field-based-access base
+            (simple-var-ref self)))))
+    )
+    (bb1 (bb0 bb2) (bb2 bb3)
+      (binary-expr ..<
+        (literal 0)
+        (invocation lang.array length (
+          (simple-var-ref vals))))
+      (var-def
+        (variable i (type
+          (value-type int))))
+    )
+    (bb2 (bb1) (bb1)
+      (assignment
+        (simple-var-ref total)
+        (binary-expr +
+          (simple-var-ref total)
+          (index-based-access
+            (simple-var-ref vals)
+            (simple-var-ref i))))
+    )
+    (bb3 (bb1) ()
+      (return
+        (simple-var-ref total))
+    )
+  )
+)
+(main
+  (bb0 () ()
+    (var-def
+      (variable a (type
+        (user-defined-type Adder)) (expr
+        (new (
+          (literal 10))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sum expr:
+          (simple-var-ref a) ()))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sum expr:
+          (simple-var-ref a) (
+          (literal 1))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sum expr:
+          (simple-var-ref a) (
+          (literal 1)
+          (literal 2)
+          (literal 3))))))
+    (expression-stmt
+      (invocation io println (
+        (invocation sum expr:
+          (simple-var-ref a) (
+          (literal 1)
+          (literal 2)
+          (literal 3)
+          (literal 4))))))
+  )
+)

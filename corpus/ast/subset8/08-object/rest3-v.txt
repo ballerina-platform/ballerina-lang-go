@@ -1,0 +1,65 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (type-definition Summer
+    (object-type
+      (method-decl sum (
+        (param base
+          (value-type int))) (
+        (value-type int)))))
+  (class-definition IntAdder
+    (function sum (
+      (variable base (type
+        (value-type int)))) (
+      (value-type int))
+      (block-function-body
+        (var-def
+          (variable total (type
+            (value-type int)) (expr
+            (simple-var-ref base))))
+        (foreach
+          (var-def
+            (variable i (type
+              (value-type int))))
+          (binary-expr ..<
+            (literal 0)
+            (invocation length expr:
+              (simple-var-ref vals) ()))
+          (block-stmt
+            (assignment
+              (simple-var-ref total)
+              (binary-expr +
+                (simple-var-ref total)
+                (index-based-access
+                  (simple-var-ref vals)
+                  (simple-var-ref i))))))
+        (return
+          (simple-var-ref total)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable s (type
+          (user-defined-type Summer)) (expr
+          (new
+            (user-defined-type IntAdder) ()))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref s) (
+            (literal 10))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref s) (
+            (literal 10)
+            (literal 5))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation sum expr:
+            (simple-var-ref s) (
+            (literal 10)
+            (literal 1)
+            (literal 2)
+            (literal 3)
+            (literal 4)))))))))
