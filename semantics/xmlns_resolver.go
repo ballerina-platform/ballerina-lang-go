@@ -156,6 +156,9 @@ func resolveXMLNameRef[T symbolResolver](resolver T, scope model.Scope, name str
 		if !ok || defScope == scope {
 			return
 		}
+		if _, fromXMLAncestor := defScope.(*xmlnsChildScope); fromXMLAncestor {
+			return
+		}
 		rootNeeds["xmlns"] = uri
 		return
 	}
@@ -165,6 +168,9 @@ func resolveXMLNameRef[T symbolResolver](resolver T, scope model.Scope, name str
 		return
 	}
 	if defScope == scope {
+		return
+	}
+	if _, fromXMLAncestor := defScope.(*xmlnsChildScope); fromXMLAncestor {
 		return
 	}
 	rootNeeds["xmlns:"+prefix] = uri
