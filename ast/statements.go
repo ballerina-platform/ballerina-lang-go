@@ -35,7 +35,7 @@ type (
 	BLangAssignment struct {
 		bLangStatementBase
 		VarRef BLangExpression
-		Expr   BLangExpression
+		Expr   BLangActionOrExpression
 	}
 	BLangBlockStmt struct {
 		bLangStatementBase
@@ -50,7 +50,7 @@ type (
 	BLangCompoundAssignment struct {
 		bLangStatementBase
 		VarRef       model.ExpressionNode
-		Expr         BLangExpression
+		Expr         BLangActionOrExpression
 		OpKind       model.OperatorKind
 		ModifiedExpr BLangExpression
 	}
@@ -65,7 +65,7 @@ type (
 
 	BLangExpressionStmt struct {
 		bLangStatementBase
-		Expr BLangExpression
+		Expr BLangActionOrExpression
 	}
 
 	BLangIf struct {
@@ -88,7 +88,7 @@ type (
 		bLangStatementBase
 		scope             model.Scope
 		VariableDef       *BLangSimpleVariableDef
-		Collection        BLangExpression
+		Collection        BLangActionOrExpression
 		Body              BLangBlockStmt
 		OnFailClause      *BLangOnFailClause
 		IsDeclaredWithVar bool
@@ -103,7 +103,7 @@ type (
 
 	BLangReturn struct {
 		bLangStatementBase
-		Expr BLangExpression
+		Expr BLangActionOrExpression
 	}
 
 	BLangPanic struct {
@@ -113,7 +113,7 @@ type (
 
 	BLangMatchStatement struct {
 		bLangStatementBase
-		Expr         BLangExpression
+		Expr         BLangActionOrExpression
 		MatchClauses []BLangMatchClause
 		IsExhaustive bool
 	}
@@ -176,13 +176,8 @@ func (b *BLangAssignment) GetKind() model.NodeKind {
 	return model.NodeKind_ASSIGNMENT
 }
 
-func (b *BLangAssignment) SetExpression(expression model.ExpressionNode) {
-	// migrated from BLangAssignment.java:64:5
-	if expr, ok := expression.(BLangExpression); ok {
-		b.Expr = expr
-	} else {
-		panic("expression is not a BLangExpression")
-	}
+func (b *BLangAssignment) SetActionOrExpression(actionOrExpression BLangActionOrExpression) {
+	b.Expr = actionOrExpression
 }
 
 func (b *BLangAssignment) SetDeclaredWithVar(isDeclaredWithVar bool) {
@@ -241,13 +236,8 @@ func (b *BLangCompoundAssignment) GetExpression() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangCompoundAssignment) SetExpression(expression model.ExpressionNode) {
-	// migrated from BLangCompoundAssignment.java:74:5
-	if exp, ok := expression.(BLangExpression); ok {
-		b.Expr = exp
-	} else {
-		panic("Expected BLangExpression")
-	}
+func (b *BLangCompoundAssignment) SetActionOrExpression(actionOrExpression BLangActionOrExpression) {
+	b.Expr = actionOrExpression
 }
 
 func (b *BLangCompoundAssignment) SetVariable(variableReferenceNode model.VariableReferenceNode) {
@@ -441,12 +431,8 @@ func (b *BLangForeach) GetCollection() model.ExpressionNode {
 	return b.Collection
 }
 
-func (b *BLangForeach) SetCollection(collection model.ExpressionNode) {
-	if expr, ok := collection.(BLangExpression); ok {
-		b.Collection = expr
-	} else {
-		panic("collection is not a BLangExpression")
-	}
+func (b *BLangForeach) SetCollection(collection BLangActionOrExpression) {
+	b.Collection = collection
 }
 
 func (b *BLangForeach) GetBody() model.BlockStatementNode {
@@ -508,12 +494,8 @@ func (b *BLangReturn) GetExpression() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangReturn) SetExpression(expression model.ExpressionNode) {
-	if expr, ok := expression.(BLangExpression); ok {
-		b.Expr = expr
-	} else {
-		panic("expression is not a BLangExpression")
-	}
+func (b *BLangReturn) SetActionOrExpression(actionOrExpression BLangActionOrExpression) {
+	b.Expr = actionOrExpression
 }
 
 func (b *BLangReturn) GetKind() model.NodeKind {
@@ -527,6 +509,7 @@ func (b *BLangPanic) GetExpression() model.ExpressionNode {
 func (b *BLangPanic) GetKind() model.NodeKind {
 	return model.NodeKind_PANIC
 }
+
 func (b *BLangMatchStatement) GetKind() model.NodeKind {
 	return model.NodeKind_MATCH_STATEMENT
 }

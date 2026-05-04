@@ -1614,7 +1614,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 	bLAssignment := &BLangAssignment{}
 	lhsExpr := n.createExpression(assignmentStatementNode.VarRef())
 	// TODO: validate lhsExpr
-	bLAssignment.SetExpression(n.createExpression(assignmentStatementNode.Expression()))
+	bLAssignment.SetActionOrExpression(n.createActionOrExpression(assignmentStatementNode.Expression()))
 	bLAssignment.pos = getPosition(n.de(), assignmentStatementNode)
 	bLAssignment.VarRef = lhsExpr
 	return bLAssignment
@@ -1622,7 +1622,7 @@ func (n *NodeBuilder) TransformAssignmentStatement(assignmentStatementNode *tree
 
 func (n *NodeBuilder) TransformCompoundAssignmentStatement(compoundAssignmentStmtNode *tree.CompoundAssignmentStatementNode) BLangNode {
 	bLCompAssignment := &BLangCompoundAssignment{}
-	bLCompAssignment.SetExpression(n.createExpression(compoundAssignmentStmtNode.RhsExpression()))
+	bLCompAssignment.SetActionOrExpression(n.createActionOrExpression(compoundAssignmentStmtNode.RhsExpression()))
 	bLCompAssignment.SetVariable(n.createExpression(compoundAssignmentStmtNode.LhsExpression()))
 	BLangNode(bLCompAssignment).SetPosition(getPosition(n.de(), compoundAssignmentStmtNode))
 	bLCompAssignment.OpKind = model.OperatorKindValueFrom(compoundAssignmentStmtNode.BinaryOperator().Text())
@@ -1657,32 +1657,29 @@ func (n *NodeBuilder) createBLangVarDef(location diagnostics.Location, typedBind
 
 	switch bindingPattern.Kind() {
 	case common.CAPTURE_BINDING_PATTERN, common.WILDCARD_BINDING_PATTERN:
+		variable := variable.(*BLangSimpleVariable)
 		bLVarDef := &BLangSimpleVariableDef{}
 
 		bLVarDef.pos = location
-		variable.(BLangNode).SetPosition(location)
+		variable.SetPosition(location)
 
-		var expr BLangExpression
+		var expr BLangActionOrExpression
 		if initializer != nil {
-			expr = n.createExpression(initializer)
-		} else {
-			expr = nil
+			expr = n.createActionOrExpression(initializer)
 		}
 		variable.SetInitialExpression(expr)
 
 		bLVarDef.SetVariable(variable)
 
 		if finalKeyword != nil {
-			if v, ok := variable.(*BLangSimpleVariable); ok {
-				v.SetFinal()
-			}
+			variable.SetFinal()
 		}
 
 		typeDesc := typedBindingPattern.TypeDescriptor()
 		isDeclaredWithVar := isDeclaredWithVar(typeDesc)
 		variable.SetIsDeclaredWithVar(isDeclaredWithVar)
 		if !isDeclaredWithVar {
-			variable.(*BLangSimpleVariable).SetTypeNode(n.createTypeNode(typeDesc).(BType))
+			variable.SetTypeNode(n.createTypeNode(typeDesc).(BType))
 		}
 
 		return bLVarDef
@@ -1773,20 +1770,20 @@ func (n *NodeBuilder) TransformFailStatement(failStatementNode *tree.FailStateme
 
 func (n *NodeBuilder) TransformExpressionStatement(expressionStatement *tree.ExpressionStatementNode) BLangNode {
 	bLExpressionStmt := BLangExpressionStmt{}
-	bLExpressionStmt.Expr = n.createExpression(expressionStatement.Expression())
+	bLExpressionStmt.Expr = n.createActionOrExpression(expressionStatement.Expression())
 	bLExpressionStmt.pos = getPosition(n.de(), expressionStatement)
 	return &bLExpressionStmt
 }
 
 func (n *NodeBuilder) createExpression(expressionNode tree.Node) BLangExpression {
-	return n.createActionOrExpression(expressionNode).(BLangExpression)
+	return n.createActionOrExpression(expressionNode).(BLangExpression) //nolint:forcetypeassert // only called where expressions are expected, not actions
 }
 
 // createActionOrExpression creates an action or expression node from a syntax tree node
 // migrated from BLangNodeBuilder.java:5490:5
-func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangNode {
+func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLangActionOrExpression {
 	if isSimpleLiteral(actionOrExpression.Kind()) {
-		return n.createSimpleLiteral(actionOrExpression).(BLangNode)
+		return n.createSimpleLiteral(actionOrExpression).(BLangActionOrExpression)
 	} else if actionOrExpression.Kind() == common.SIMPLE_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.QUALIFIED_NAME_REFERENCE ||
 		actionOrExpression.Kind() == common.IDENTIFIER_TOKEN {
@@ -1808,7 +1805,7 @@ func (n *NodeBuilder) createActionOrExpression(actionOrExpression tree.Node) BLa
 		typeAccessExpr.typeDescriptor = n.createTypeNode(actionOrExpression)
 		return &typeAccessExpr
 	} else {
-		return n.TransformSyntaxNode(actionOrExpression)
+		return n.TransformSyntaxNode(actionOrExpression).(BLangActionOrExpression)
 	}
 }
 
@@ -1869,13 +1866,13 @@ func (n *NodeBuilder) TransformReturnStatement(returnStatementNode *tree.ReturnS
 	bLReturn := &BLangReturn{}
 	bLReturn.pos = getPosition(n.de(), returnStatementNode)
 	if returnStatementNode.Expression() != nil {
-		bLReturn.SetExpression(n.createExpression(returnStatementNode.Expression()))
+		bLReturn.SetActionOrExpression(n.createActionOrExpression(returnStatementNode.Expression()))
 	} else {
 		nilLiteral := &BLangLiteral{}
 		nilLiteral.pos = getPosition(n.de(), returnStatementNode)
 		nilLiteral.Value = nil
 		nilLiteral.SetValueType(n.types.getTypeFromTag(model.TypeTags_NIL).(BType))
-		bLReturn.SetExpression(nilLiteral)
+		bLReturn.SetActionOrExpression(nilLiteral)
 	}
 
 	return bLReturn
@@ -2317,6 +2314,10 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 				}
 			}
 
+			if bMethod.memberKind == model.ObjectMemberKindRemoteMethod {
+				bMethod.name = model.RemoteMethodName(bMethod.name)
+			}
+
 			// Build function type from method signature
 			funcSig := methodDecl.MethodSignature()
 			if funcSig != nil {
@@ -2341,7 +2342,7 @@ func (n *NodeBuilder) TransformObjectTypeDescriptor(objectTypeDescriptorNode *tr
 			}
 
 			if objectType.AddMember(bMethod) {
-				n.cx.SyntaxError("redeclared symbol '"+methodName+"'", bMethod.pos)
+				n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(bMethod.name)+"'", bMethod.pos)
 			}
 		case common.TYPE_REFERENCE:
 			typeRef := member.(*tree.TypeReferenceNode)
@@ -2523,7 +2524,14 @@ func (n *NodeBuilder) TransformTypeTestExpression(typeTestExpressionNode *tree.T
 }
 
 func (n *NodeBuilder) TransformRemoteMethodCallAction(remoteMethodCallActionNode *tree.RemoteMethodCallActionNode) BLangNode {
-	panic("TransformRemoteMethodCallAction unimplemented")
+	inv := n.createBLangInvocation(remoteMethodCallActionNode.MethodName(),
+		remoteMethodCallActionNode.Arguments(),
+		getPosition(n.de(), remoteMethodCallActionNode), false)
+	action := &BLangRemoteMethodCallAction{}
+	action.bLangInvocationBase = inv.bLangInvocationBase
+	action.Expr = n.createExpression(remoteMethodCallActionNode.Expression())
+	action.pos = getPosition(n.de(), remoteMethodCallActionNode)
+	return action
 }
 
 func (n *NodeBuilder) TransformMapTypeDescriptor(mapTypeDescriptorNode *tree.MapTypeDescriptorNode) BLangNode {
@@ -3751,6 +3759,13 @@ func (n *NodeBuilder) TransformClassDefinition(classDefinitionNode *tree.ClassDe
 			if model.Name(funcName) == model.USER_DEFINED_INIT_SUFFIX {
 				blangClass.InitFunction = bLFunction
 			} else {
+				if bLFunction.IsRemote() {
+					funcName = model.RemoteMethodName(funcName)
+					bLFunction.Name.Value = funcName
+				}
+				if blangClass.GetMethod(funcName) != nil {
+					n.cx.SyntaxError("redeclared symbol '"+model.StripRemotePrefix(funcName)+"'", bLFunction.pos)
+				}
 				blangClass.AddMethod(funcName, bLFunction)
 			}
 		case common.TYPE_REFERENCE:

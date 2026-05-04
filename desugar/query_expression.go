@@ -27,7 +27,7 @@ import (
 	"ballerina-lang-go/tools/diagnostics"
 )
 
-func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[model.ExpressionNode] {
+func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[ast.BLangActionOrExpression] {
 	fromClause := expr.QueryClauseList[0].(*ast.BLangFromClause)
 
 	selectClauseIndex := len(expr.QueryClauseList) - 1
@@ -51,7 +51,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 	var initStmts []model.StatementNode
 	collRef, keysRef, lenRef, _, ok := createQueryCollectionSource(cx, &initStmts, fromClause.Collection, basePos)
 	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
 
 	resultName, resultSymbol := cx.addDesugardSymbol(queryTy, model.SymbolKindVariable, false)
@@ -111,7 +111,7 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 			basePos,
 		)
 		if !ok {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+			return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 		}
 		stageStart = orderByClauseIndex + 1
 	}
@@ -133,11 +133,11 @@ func walkQueryExpr(cx *functionContext, expr *ast.BLangQueryExpr) desugaredNode[
 		basePos,
 	)
 	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
 
 	setPositionIfMissing(resultRef, basePos)
-	return desugaredNode[model.ExpressionNode]{
+	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: resultRef,
 	}
@@ -236,7 +236,7 @@ func walkQueryExprWithJoins(
 	selectClause *ast.BLangSelectClause,
 	selectClauseIndex int,
 	onConflictClause *ast.BLangOnConflictClause,
-) desugaredNode[model.ExpressionNode] {
+) desugaredNode[ast.BLangActionOrExpression] {
 	queryTy := expr.GetDeterminedType()
 	basePos := expr.GetPosition()
 	var initStmts []model.StatementNode
@@ -280,7 +280,7 @@ func walkQueryExprWithJoins(
 	rowsRef := createQueryListStore(cx, &initStmts, basePos)
 	bindings, ok := appendInitialQueryRows(cx, rowsRef, fromClause, &initStmts, basePos)
 	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
 
 	for i := 1; i < selectClauseIndex; i++ {
@@ -297,10 +297,10 @@ func walkQueryExprWithJoins(
 			ok = applyQueryOrderByClauseToRows(cx, rowsRef, bindings, clause, basePos, &initStmts)
 		default:
 			cx.internalError("query clause shape should have been validated during type resolution")
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+			return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 		}
 		if !ok {
-			return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+			return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 		}
 	}
 
@@ -317,11 +317,11 @@ func walkQueryExprWithJoins(
 		&initStmts,
 	)
 	if !ok {
-		return desugaredNode[model.ExpressionNode]{replacementNode: expr}
+		return desugaredNode[ast.BLangActionOrExpression]{replacementNode: expr}
 	}
 
 	setPositionIfMissing(resultRef, basePos)
-	return desugaredNode[model.ExpressionNode]{
+	return desugaredNode[ast.BLangActionOrExpression]{
 		initStmts:       initStmts,
 		replacementNode: resultRef,
 	}
@@ -1724,11 +1724,9 @@ func createQuerySortInvocation(
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "querySort"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{keysExpr, directionsExpr, indicesExpr, payloadExpr},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "querySort"}
+	inv.ArgExprs = []ast.BLangExpression{keysExpr, directionsExpr, indicesExpr, payloadExpr}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
 	setPositionIfMissing(inv, keysExpr.GetPosition())
@@ -1752,11 +1750,9 @@ func createPushInvocation(cx *functionContext, listExpr ast.BLangExpression, val
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "array"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "push"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{listExpr, valueExpr},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "push"}
+	inv.ArgExprs = []ast.BLangExpression{listExpr, valueExpr}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.NIL)
 	return inv

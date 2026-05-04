@@ -15,6 +15,10 @@ This document defines how AI/code agents should work with this repository: codin
 
 - Each bal/go file should have the correct license header
 
+## PAL (Platform Adaptation Layer)
+
+- All platform interactions (e.g. io, http, fs) must go through PAL, not the underlying platform directly.
+
 ## Symbols
 
 - IMPORTANT: never store `model.Symbol` as the key in a map, always use a `model.SymbolRef`

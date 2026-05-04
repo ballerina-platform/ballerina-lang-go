@@ -94,8 +94,8 @@ func (v *Visibility) field() Field {
 	}
 }
 
-// objectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
-func objectMemberKind(ctx Context, name, ty SemType) SemType {
+// ObjectMemberKind returns the kind of the member as a subtype of "field"|"method"|"remote-method"|"resource-method"
+func ObjectMemberKind(ctx Context, name, ty SemType) SemType {
 	objectTy := convertObjectToMappingTy(ctx, ty)
 	if objectTy == nil {
 		return nil

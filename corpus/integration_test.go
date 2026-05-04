@@ -40,7 +40,6 @@ import (
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/tools/text"
-	"ballerina-lang-go/values"
 
 	_ "ballerina-lang-go/lib/rt"
 )
@@ -48,10 +47,6 @@ import (
 const (
 	corpusProjectBaseDir            = "../corpus/project"
 	corpusProjectIntegrationBaseDir = "../corpus/integration/project"
-
-	externOrgName    = "ballerina"
-	externModuleName = "io"
-	externFuncName   = "println"
 
 	panicPrefix = "panic: "
 )
@@ -256,25 +251,11 @@ func runInterpretPhase(birPkg *bir.BIRPackage, stdoutBuf, stderrBuf *bytes.Buffe
 	if birPkg == nil {
 		return
 	}
-	rt := runtime.NewRuntime()
-	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
+
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
 	if err := rt.Interpret(*birPkg); err != nil {
 		// For now just write the error string to stderr to match corpus expectations
 		fmt.Fprintln(stderrBuf, err.Error())
-	}
-}
-
-func capturePrintlnOutput(stdoutBuf *bytes.Buffer) func(args []values.BalValue) (values.BalValue, error) {
-	return func(args []values.BalValue) (values.BalValue, error) {
-		var b strings.Builder
-		visited := make(map[uintptr]bool)
-		for _, arg := range args {
-			b.WriteString(values.String(arg, visited))
-		}
-		b.WriteByte('\n')
-		stdoutBuf.WriteString(b.String())
-
-		return nil, nil
 	}
 }
 
@@ -399,8 +380,8 @@ func runProjectInterpretPhase(birPkgs []*bir.BIRPackage, stdoutBuf, stderrBuf *b
 	if len(birPkgs) == 0 {
 		return
 	}
-	rt := runtime.NewRuntime()
-	runtime.RegisterExternFunction(rt, externOrgName, externModuleName, externFuncName, capturePrintlnOutput(stdoutBuf))
+
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, stderrBuf))
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			fmt.Fprintln(stderrBuf, err.Error())

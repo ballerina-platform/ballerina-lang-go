@@ -226,7 +226,7 @@ func runBallerina(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	rt := runtime.NewRuntime()
+	rt := runtime.NewRuntime(nativePal)
 	for _, birPkg := range birPkgs {
 		if err := rt.Interpret(*birPkg); err != nil {
 			printRuntimeError(err)

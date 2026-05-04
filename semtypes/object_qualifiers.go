@@ -53,6 +53,34 @@ func (nq *NetworkQualifier) field() Field {
 	}
 }
 
+func IsNetworkInteractionObject(ctx Context, ty SemType) bool {
+	return IsClientObject(ctx, ty) || IsServiceObject(ctx, ty)
+}
+
+func IsClientObject(ctx Context, ty SemType) bool {
+	return objectHasNetworkQualifier(ctx, ty, networkQualifierClientTag)
+}
+
+func IsServiceObject(ctx Context, ty SemType) bool {
+	return objectHasNetworkQualifier(ctx, ty, networkQualifierServiceTag)
+}
+
+func objectHasNetworkQualifier(ctx Context, ty SemType, qualifierTag SemType) bool {
+	objectTy := convertObjectToMappingTy(ctx, ty)
+	if objectTy == nil {
+		return false
+	}
+	qualifiersMap := mappingMemberTypeInner(ctx, objectTy, StringConst("$qualifiers"))
+	if qualifiersMap == nil {
+		return false
+	}
+	networkTy := mappingMemberTypeInner(ctx, qualifiersMap, StringConst("network"))
+	if networkTy == nil {
+		return false
+	}
+	return IsSubtype(ctx, networkTy, qualifierTag)
+}
+
 // ObjectQualifiers represents object-type-quals in the spec
 // Migrated from ObjectQualifiers.java:43
 type ObjectQualifiers struct {
