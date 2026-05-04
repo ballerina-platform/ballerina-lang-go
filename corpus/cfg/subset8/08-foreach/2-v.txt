@@ -1,0 +1,77 @@
+(WordIterator
+  (init
+    (bb0 () ()
+      (assignment
+        (field-based-access data
+          (simple-var-ref self))
+        (simple-var-ref data))
+      (assignment
+        (field-based-access len
+          (simple-var-ref self))
+        (simple-var-ref len))
+    )
+  )
+  (next
+    (bb0 () (bb1 bb2)
+      (binary-expr >=
+        (field-based-access idx
+          (simple-var-ref self))
+        (field-based-access len
+          (simple-var-ref self)))
+    )
+    (bb1 (bb0) ()
+      (return
+        (literal <nil>))
+    )
+    (bb2 (bb0) ()
+      (var-def
+        (variable val (type
+          (value-type string)) (expr
+          (index-based-access
+            (field-based-access data
+              (simple-var-ref self))
+            (field-based-access idx
+              (simple-var-ref self))))))
+      (compound-assignment +
+        (field-based-access idx
+          (simple-var-ref self))
+        (literal 1))
+      (return
+        (mapping-constructor-expr
+          (key-value
+            (simple-var-ref value)
+            (simple-var-ref val))))
+    )
+  )
+)
+(Words
+  (iterator
+    (bb0 () ()
+      (return
+        (new (
+          (field-based-access data
+            (simple-var-ref self))
+          (literal 2))))
+    )
+  )
+)
+(main
+  (bb0 () (bb1)
+    (var-def
+      (variable w (type
+        (user-defined-type Words)) (expr
+        (new ()))))
+  )
+  (bb1 (bb0 bb2) (bb2 bb3)
+    (simple-var-ref w)
+    (var-def
+      (variable word (type
+        (value-type string))))
+  )
+  (bb2 (bb1) (bb1)
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref word))))
+  )
+  (bb3 (bb1) ())
+)

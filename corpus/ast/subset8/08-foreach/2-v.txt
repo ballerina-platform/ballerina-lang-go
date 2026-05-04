@@ -1,0 +1,93 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition WordIterator
+    (variable data (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))))
+    (variable idx (type
+      (value-type int)) (expr
+      (literal 0)))
+    (variable len (type
+      (value-type int)))
+    (function init (
+      (variable data (type
+        (array-type
+          (value-type string) dimensions: 1 ([]))))
+      (variable len (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (field-based-access data
+            (simple-var-ref self))
+          (simple-var-ref data))
+        (assignment
+          (field-based-access len
+            (simple-var-ref self))
+          (simple-var-ref len))))
+    (function next () (
+      (union-type
+        (record-type
+          (field value
+            (value-type string)))
+        (value-type null)))
+      (block-function-body
+        (if
+          (binary-expr >=
+            (field-based-access idx
+              (simple-var-ref self))
+            (field-based-access len
+              (simple-var-ref self)))
+          (block-stmt
+            (return
+              (literal <nil>))) ())
+        (block-stmt
+          (var-def
+            (variable val (type
+              (value-type string)) (expr
+              (index-based-access
+                (field-based-access data
+                  (simple-var-ref self))
+                (field-based-access idx
+                  (simple-var-ref self))))))
+          (compound-assignment +
+            (field-based-access idx
+              (simple-var-ref self))
+            (literal 1))
+          (return
+            (mapping-constructor-expr
+              (key-value
+                (simple-var-ref value)
+                (simple-var-ref val))))))))
+  (class-definition Words
+    (variable data (type
+      (array-type
+        (value-type string) dimensions: 1 ([]))) (expr
+      (list-constructor-expr
+        (literal hello)
+        (literal world))))
+    (function iterator () (
+      (user-defined-type WordIterator))
+      (block-function-body
+        (return
+          (new (
+            (field-based-access data
+              (simple-var-ref self))
+            (literal 2)))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable w (type
+          (user-defined-type Words)) (expr
+          (new ()))))
+      (foreach
+        (var-def
+          (variable word (type
+            (value-type string))))
+        (simple-var-ref w)
+        (block-stmt
+          (expression-stmt
+            (invocation io println (
+              (simple-var-ref word)))))))))
