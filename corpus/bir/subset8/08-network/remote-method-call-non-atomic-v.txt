@@ -1,0 +1,72 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+class Client1 {
+  base string
+
+  $remote$get(string) -> string{
+    bb0 {
+      %6 = ConstantLoad base
+      %5 = self[%6];
+      %4 = + %5 path;
+      %7 = ConstantLoad get
+      %3 = + %4 %7;
+      %0 = %3;
+      return;
+    }
+  }
+
+  init(string) -> nil{
+    bb0 {
+      %3 = ConstantLoad base
+      self[%3] = base;
+      return;
+    }
+  }
+}
+class Client {
+
+  $remote$get(string) -> string{
+    bb0 {
+      %4 = ConstantLoad get
+      %3 = + path %4;
+      %0 = %3;
+      return;
+    }
+  }
+
+  init() -> nil{
+    bb0 {
+      return;
+    }
+  }
+}
+main() -> nil{
+  bb0 {
+    %1 = newObject $anon/.:Client
+    %2 = init(%1) -> bb1;
+  }
+  bb1 {
+    %4 = %2 is nil
+    %4 ? bb2 : bb3;
+  }
+  bb2 {
+    %3 = %1;
+    GOTO bb4;
+  }
+  bb3 {
+    %3 = %2;
+    GOTO bb4;
+  }
+  bb4 {
+    c = %3;
+    %6 = ConstantLoad foo
+    %7 = $remote$get(c,%6) -> bb5;
+  }
+  bb5 {
+    res = %7;
+    %9 = println(res) -> bb6;
+  }
+  bb6 {
+    return;
+  }
+}

@@ -1,0 +1,11 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: remote methods are only allowed in client or service classes
+  --> remote-method-decl-e.bal:18:5
+   |
+18 |     remote function get(string path) returns string { // @error
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 | 
+   | 
+20 |     }
+   |     ^

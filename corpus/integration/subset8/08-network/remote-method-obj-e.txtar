@@ -1,0 +1,11 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: remote methods are only allowed in client or service object types
+  --> remote-method-obj-e.bal:17:13
+   |
+17 | type Client object {
+   |             ^^^^^^^^
+18 |     remote function get(string path) returns string; // @error
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 | }
+   | ^

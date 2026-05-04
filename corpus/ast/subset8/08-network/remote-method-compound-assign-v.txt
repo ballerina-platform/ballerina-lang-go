@@ -1,0 +1,34 @@
+(compilation-unit  regular-source
+(package-id $anon . 0.0.0)
+  (import-package ballerina io (as io))
+  (class-definition Counter
+    (function $remote$next () (
+      (value-type int))
+      (block-function-body
+        (return
+          (literal 5)))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable c (type
+          (user-defined-type Counter)) (expr
+          (new ()))))
+      (var-def
+        (variable x (type
+          (value-type int)) (expr
+          (literal 10))))
+      (compound-assignment +
+        (simple-var-ref x)
+        (remote-method-call next expr:
+          (simple-var-ref c) ()))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x))))
+      (compound-assignment -
+        (simple-var-ref x)
+        (remote-method-call next expr:
+          (simple-var-ref c) ()))
+      (expression-stmt
+        (invocation io println (
+          (simple-var-ref x)))))))
