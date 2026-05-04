@@ -63,7 +63,9 @@ func (r *FileSystemRepository) bind(env *Environment) {
 }
 
 // GetPackage loads a specific version. Returns (nil, nil) if not found.
-func (r *FileSystemRepository) GetPackage(ctx context.Context, org, name, version string) (*Package, error) {
+// FileSystemRepository ignores ResolutionOptions — it only ever reads from
+// disk, so flags like Offline have no effect here.
+func (r *FileSystemRepository) GetPackage(ctx context.Context, org, name, version string, _ ResolutionOptions) (*Package, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -93,7 +95,7 @@ func (r *FileSystemRepository) GetPackage(ctx context.Context, org, name, versio
 }
 
 // GetPackageVersions returns all available versions for a package.
-func (r *FileSystemRepository) GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error) {
+func (r *FileSystemRepository) GetPackageVersions(ctx context.Context, org, name string, _ ResolutionOptions) ([]PackageVersion, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -135,20 +137,6 @@ func (r *FileSystemRepository) GetPackageVersions(ctx context.Context, org, name
 	})
 
 	return versions, nil
-}
-
-// GetLatestVersion returns the latest available version. Returns (zero, false, nil) if not found.
-func (r *FileSystemRepository) GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error) {
-	versions, err := r.GetPackageVersions(ctx, org, name)
-	if err != nil {
-		return PackageVersion{}, false, err
-	}
-
-	if len(versions) == 0 {
-		return PackageVersion{}, false, nil
-	}
-
-	return versions[len(versions)-1], true, nil
 }
 
 // Exists checks if a specific package version exists in this repository.
@@ -201,9 +189,13 @@ var _ bindableRepository = (*FileSystemRepository)(nil)
 
 // defaultRepositories returns repositories for the standard repository locations
 // using the given ballerinaEnvFs.
-// Currently only queries the central cache.
+//
+// The central repository is exposed as a RemoteRepository whose on-disk cache
+// is the central bala directory. The RemoteRepository currently has no remote
+// source wired in, so it behaves as a cache-only read until that arrives.
 func defaultRepositories(ballerinaEnvFs fs.FS) []Repository {
+	centralCache := NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath)
 	return []Repository{
-		NewFileSystemRepository(ballerinaEnvFs, centralCacheSubpath),
+		NewRemoteRepository(centralCache),
 	}
 }

@@ -28,13 +28,9 @@ type Repository interface {
 	// GetPackage loads a specific version of a package.
 	// Returns (nil, nil) if not found (not an error).
 	// Returns (nil, error) on actual errors (IO, parse, etc.)
-	GetPackage(ctx context.Context, org, name, version string) (*Package, error)
+	GetPackage(ctx context.Context, org, name, version string, options ResolutionOptions) (*Package, error)
 
 	// GetPackageVersions returns all available versions for a package.
-	// Returns a nil or empty slice if the package is not found.
-	GetPackageVersions(ctx context.Context, org, name string) ([]PackageVersion, error)
-
-	// GetLatestVersion returns the latest available version for a package.
-	// Returns (zero, false, nil) if not found.
-	GetLatestVersion(ctx context.Context, org, name string) (PackageVersion, bool, error)
+	// Returns nil or empty slice if the package is not found.
+	GetPackageVersions(ctx context.Context, org, name string, options ResolutionOptions) ([]PackageVersion, error)
 }
