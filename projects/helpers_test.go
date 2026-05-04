@@ -23,6 +23,13 @@ import (
 	"ballerina-lang-go/projects"
 )
 
+// loadProject loads a Ballerina project for tests. It always forces
+// Offline=true on the BuildOptions so tests never make network calls —
+// repositories behave purely as on-disk caches.
+//
+// Caller-supplied BuildOptions, Repositories and BallerinaEnvFs flow through
+// projects.ProjectLoadConfig as before; only Offline is unconditionally
+// pinned by overlaying it via BuildOptions.AcceptTheirs.
 func loadProject(path string, config ...projects.ProjectLoadConfig) (projects.ProjectLoadResult, error) {
 	baseDir := path
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
@@ -34,20 +41,29 @@ func loadProject(path string, config ...projects.ProjectLoadConfig) (projects.Pr
 
 	fsys := os.DirFS(baseDir)
 
-	ballerinaEnvPath, err := getBallerinaEnvPath()
-	if err != nil {
-		return projects.ProjectLoadResult{}, err
-	}
-	ballerinaEnvFs := os.DirFS(ballerinaEnvPath)
-
-	// Merge BallerinaEnvFs into config if not already set
 	var cfg projects.ProjectLoadConfig
 	if len(config) > 0 {
 		cfg = config[0]
 	}
+
 	if cfg.BallerinaEnvFs == nil {
-		cfg.BallerinaEnvFs = ballerinaEnvFs
+		ballerinaEnvPath, err := getBallerinaEnvPath()
+		if err != nil {
+			return projects.ProjectLoadResult{}, err
+		}
+		cfg.BallerinaEnvFs = os.DirFS(ballerinaEnvPath)
 	}
+
+	// Force Offline=true on whatever BuildOptions the caller provided.
+	var base projects.BuildOptions
+	if cfg.BuildOptions != nil {
+		base = *cfg.BuildOptions
+	} else {
+		base = projects.NewBuildOptions()
+	}
+	offlineOverlay := projects.NewBuildOptionsBuilder().WithOffline(true).Build()
+	merged := base.AcceptTheirs(offlineOverlay)
+	cfg.BuildOptions = &merged
 
 	return projects.Load(fsys, path, cfg)
 }
