@@ -14,8 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-const foo = 23; // @error
+import module_enum.utils;
 
-function foo() returns int { // @error
-    return 5;
+import ballerina/io;
+
+public function main() {
+    io:println(utils:RED);
 }

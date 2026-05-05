@@ -14,8 +14,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-const foo = 23; // @error
-
-function foo() returns int { // @error
-    return 5;
-}
+public string RED;
