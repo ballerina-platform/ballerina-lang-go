@@ -58,8 +58,9 @@ type mappingAtomicTypeEntry struct {
 	nFields int32
 	names   []enumerableStringDataEntry
 	types   []TypePoolIndex
+	muts    []uint8
 	rest    TypePoolIndex
-	mut     uint8
+	restMut uint8
 }
 
 type functionAtomicTypeEntry struct {
@@ -196,10 +197,10 @@ func (sc *bddSerializationContext) serializeListAtom(atom atom) int32 {
 	var mut uint8
 	for i := range at.Members.initial {
 		cell := &at.Members.initial[i]
-		initial[i] = sc.pool.Put(cellInnerVal(cell))
+		initial[i] = sc.pool.Put(cellInner(cell))
 		mut = uint8(cellMut(cell))
 	}
-	rest := sc.pool.Put(cellInnerVal(at.rest))
+	rest := sc.pool.Put(cellInner(at.rest))
 	if len(at.Members.initial) == 0 {
 		mut = uint8(cellMut(at.rest))
 	}
@@ -222,25 +223,24 @@ func (sc *bddSerializationContext) serializeMappingAtom(atom atom) int32 {
 	at := sc.cx.MappingAtomType(atom)
 	names := make([]enumerableStringDataEntry, len(at.Names))
 	types := make([]TypePoolIndex, len(at.Types))
-	var mut uint8
+	muts := make([]uint8, len(at.Types))
 	for i, name := range at.Names {
 		b := []byte(name)
 		names[i] = enumerableStringDataEntry{len: int32(len(b)), values: b}
 		atomTy := &at.Types[i]
-		types[i] = sc.pool.Put(cellInnerVal(atomTy))
-		mut = uint8(cellMut(atomTy))
+		types[i] = sc.pool.Put(cellInner(atomTy))
+		muts[i] = uint8(cellMut(atomTy))
 	}
-	rest := sc.pool.Put(cellInnerVal(at.Rest))
-	if len(at.Types) == 0 {
-		mut = uint8(cellMut(at.Rest))
-	}
+	rest := sc.pool.Put(cellInner(at.Rest))
+	restMut := uint8(cellMut(at.Rest))
 
 	sc.bp.mappingAtomicTypes[idx] = mappingAtomicTypeEntry{
 		nFields: int32(len(names)),
 		names:   names,
 		types:   types,
+		muts:    muts,
 		rest:    rest,
-		mut:     mut,
+		restMut: restMut,
 	}
 	return idx
 }
@@ -427,17 +427,17 @@ func (dc *bddDeserializationContext) deserializeMappingAtom(atomIndex int32) ato
 	dc.mappingAtomDefs[atomIndex] = &def
 
 	entry := dc.bp.mappingAtomicTypes[atomIndex]
-	fields := make([]Field, entry.nFields)
-	for j := range fields {
-		fields[j] = Field{
-			Name: string(entry.names[j].values),
-			Ty:   dc.resolvePoolType(entry.types[j]),
-		}
+	cellFields := make([]CellField, entry.nFields)
+	for j := range cellFields {
+		inner := dc.resolvePoolType(entry.types[j])
+		mut := CellMutability(entry.muts[j])
+		cellFields[j] = cellFieldFrom(string(entry.names[j].values),
+			*cellContainingWithEnvSemTypeCellMutability(dc.env, inner, mut))
 	}
-	rest := dc.resolvePoolType(entry.rest)
-	mut := CellMutability(entry.mut)
+	restInner := dc.resolvePoolType(entry.rest)
+	restCell := cellContainingWithEnvSemTypeCellMutability(dc.env, restInner, CellMutability(entry.restMut))
 
-	result := def.DefineMappingTypeWrappedWithEnvFieldsSemTypeCellMutability(dc.env, fields, rest, mut)
+	result := def.Define(dc.env, cellFields, restCell)
 	atom := extractAtom(result)
 	dc.mappingAtoms[atomIndex] = atom
 	return atom
@@ -593,9 +593,12 @@ func marshalMappingAtomicType(buf *bytes.Buffer, entry mappingAtomicTypeEntry) {
 	for _, idx := range entry.types {
 		write(buf, int32(idx))
 	}
+	for _, m := range entry.muts {
+		write(buf, m)
+	}
 	rest := int32(entry.rest)
 	write(buf, rest)
-	write(buf, entry.mut)
+	write(buf, entry.restMut)
 }
 
 func unmarshalMappingAtomicType(r *bytes.Reader) mappingAtomicTypeEntry {
@@ -615,10 +618,14 @@ func unmarshalMappingAtomicType(r *bytes.Reader) mappingAtomicTypeEntry {
 		read(r, &idx)
 		entry.types[j] = TypePoolIndex(idx)
 	}
+	entry.muts = make([]uint8, entry.nFields)
+	for j := range entry.muts {
+		read(r, &entry.muts[j])
+	}
 	var rest int32
 	read(r, &rest)
 	entry.rest = TypePoolIndex(rest)
-	read(r, &entry.mut)
+	read(r, &entry.restMut)
 	return entry
 }
 
