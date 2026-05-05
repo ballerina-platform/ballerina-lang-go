@@ -457,11 +457,15 @@ func rejectInferredTypedescOnNonDependent(a analyzer, fn *ast.BLangFunction) {
 //  1. The function body must be external. Otherwise: "dependently-typed function must be external".
 //  2. A parameter with inferred-typedesc default '<>' must be the parameter the return type
 //     depends on. Otherwise: "inferred typedesc default '<>' requires the return type to depend on this parameter".
+//  3. A union of dependent and defined return parts must be disjoint.
 func validateDependentFunction(a analyzer, fn *ast.BLangFunction, sym model.DependentlyTypedFunctionSymbol) {
 	if _, ok := fn.Body.(*ast.BLangExternFunctionBody); !ok {
 		a.semanticErr("dependently-typed function must be external", fn.GetPosition())
 	}
 	retType := sym.ReturnType()
+	if _, disjoint := checkDependentReturnParts(a, a.tyCtx(), retType, sym.ParamTypes(), fn.GetPosition()); !disjoint {
+		a.semanticErr("dependently-typed function return type dependent and defined parts must be disjoint", fn.GetPosition())
+	}
 	for i := range fn.RequiredParams {
 		param := &fn.RequiredParams[i]
 		if !param.IsDefaultableParam() {
@@ -484,6 +488,35 @@ func typeOpReferencesIndex(op model.TypeOp, i int) bool {
 		return typeOpReferencesIndex(o.Lhs, i) || typeOpReferencesIndex(o.Rhs, i)
 	}
 	return false
+}
+
+func checkDependentReturnParts(a analyzer, ctx semtypes.Context, op model.TypeOp, paramTypes []semtypes.SemType, loc diagnostics.Location) (bool, bool) {
+	switch o := op.(type) {
+	case *model.RefTypeOp:
+		// RefTypeOp is the dependent part: it references a typedesc parameter.
+		// A single part has no sibling to overlap with, so it is disjoint by itself.
+		return true, true
+	case *model.IdentityTypeOp:
+		// IdentityTypeOp is a defined/concrete return part, e.g. error or int.
+		// A single part has no sibling to overlap with, so it is disjoint by itself.
+		return false, true
+	case *model.BinaryTypeOp:
+		lhsDepends, lhsDisjoint := checkDependentReturnParts(a, ctx, o.Lhs, paramTypes, loc)
+		rhsDepends, rhsDisjoint := checkDependentReturnParts(a, ctx, o.Rhs, paramTypes, loc)
+		depends := lhsDepends || rhsDepends
+		if !lhsDisjoint || !rhsDisjoint {
+			return depends, false
+		}
+		// By definition not disjoint but could be NEVER
+		if o.Kind != model.TypeOpUnion || lhsDepends == rhsDepends {
+			return depends, true
+		}
+		intersection := semtypes.Intersect(o.Lhs.Apply(ctx, paramTypes), o.Rhs.Apply(ctx, paramTypes))
+		return depends, semtypes.IsEmpty(ctx, intersection)
+	default:
+		a.internalErr(fmt.Sprintf("unknown dependent return type op: %T", op), loc)
+		return false, false
+	}
 }
 
 func validateDefaultParamTypes(a analyzer, function *ast.BLangFunction) {

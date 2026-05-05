@@ -210,6 +210,12 @@ func TestDependentlyTyped(t *testing.T) {
 		if !ok {
 			return nil, fmt.Errorf("expected typedesc argument, got %T", args[1])
 		}
+		if got := values.String(td, nil); got != "typedesc" {
+			return nil, fmt.Errorf("expected typedesc string, got %q", got)
+		}
+		if !semtypes.IsSubtype(tyCtx, values.SemTypeForValue(td), semtypes.TYPEDESC) {
+			return nil, fmt.Errorf("expected typedesc semtype")
+		}
 		switch {
 		case semtypes.IsSubtype(tyCtx, td.Type, semtypes.INT):
 			return int64(1), nil
@@ -291,6 +297,58 @@ func TestDependentlyTyped(t *testing.T) {
 	}
 }
 
+func TestDependentlyTypedAlias(t *testing.T) {
+	balFile := filepath.Join(testDataDir, "dependent-alias-v.bal")
+	absPath, err := filepath.Abs(balFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fsys := os.DirFS(filepath.Dir(absPath))
+	result, err := projects.Load(fsys, filepath.Base(absPath))
+	if err != nil {
+		t.Fatalf("failed to load project: %v", err)
+	}
+
+	compilation := result.Project().CurrentPackage().Compilation()
+	if compilation.DiagnosticResult().HasErrors() {
+		for _, d := range compilation.DiagnosticResult().Diagnostics() {
+			t.Logf("diagnostic: %v", d)
+		}
+		t.Fatal("compilation had errors")
+	}
+
+	backend := projects.NewBallerinaBackend(compilation)
+	birPkg := backend.BIR()
+
+	stdoutBuf := &bytes.Buffer{}
+	rt := runtime.NewRuntime(test_util.TestPal(stdoutBuf, os.Stderr))
+	aliasImpl := func(args []values.BalValue) (values.BalValue, error) {
+		if _, ok := args[1].(*values.TypeDesc); !ok {
+			return nil, fmt.Errorf("expected typedesc argument, got %T", args[1])
+		}
+		switch args[0].(int64) {
+		case 0, 2:
+			return int64(10), nil
+		case 1, 3:
+			return "alias", nil
+		}
+		panic(values.NewErrorWithMessage("unsupported alias typedesc constraint"))
+	}
+	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaAlias", aliasImpl)
+	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaAliasUnion", aliasImpl)
+	runtime.RegisterExternFunction(rt, "$anon", "dependent-alias-v", "viaChainedAlias", aliasImpl)
+
+	if err := rt.Interpret(*birPkg); err != nil {
+		t.Fatalf("runtime error: %v", err)
+	}
+
+	const expected = "10\nalias\n10\nalias\n"
+	if stdoutBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
+	}
+}
+
 func TestDependentlyTypedMethod(t *testing.T) {
 	projectDir := filepath.Join(testDataDir, "dependently-typed-method-v")
 	absPath, err := filepath.Abs(projectDir)
@@ -342,7 +400,7 @@ func TestDependentlyTypedMethod(t *testing.T) {
 		}
 	}
 
-	expected := "string response\n2\n"
+	expected := "string response\n2\n2\n"
 	if stdoutBuf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, stdoutBuf.String())
 	}
@@ -495,7 +553,6 @@ func TestDependentlyTypedCrossModuleRoundtrip(t *testing.T) {
 		}
 		panic(values.NewErrorWithMessage("unsupported inferred typedesc constraint"))
 	})
-
 	for _, pkg := range []*bir.BIRPackage{deserializedHelperBIR, mainBIR} {
 		if err := rt.Interpret(*pkg); err != nil {
 			t.Fatalf("runtime error: %v", err)

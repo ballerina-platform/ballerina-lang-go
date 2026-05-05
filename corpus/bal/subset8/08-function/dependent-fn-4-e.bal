@@ -14,16 +14,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import crossmoduledependentfn.http;
-
-import ballerina/io;
-
-public function main() {
-    http:Client c = new ("http://foo");
-    string res1 = checkpanic c->get("bar");
-    io:println(res1); // @output "string response"
-    int res2 = checkpanic c->get("bar");
-    io:println(res2); // @output 2
-    int res3 = checkpanic c->get("bar");
-    io:println(res3); // @output 2
-}
+function inferredUnion(int val, typedesc retTy = <>) returns retTy|error = external; // @error

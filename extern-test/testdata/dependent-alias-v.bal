@@ -14,16 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import crossmoduledependentfn.http;
-
 import ballerina/io;
 
+type TargetType typedesc<anydata>;
+type ChainedTargetType TargetType;
+
 public function main() {
-    http:Client c = new ("http://foo");
-    string res1 = checkpanic c->get("bar");
-    io:println(res1); // @output "string response"
-    int res2 = checkpanic c->get("bar");
-    io:println(res2); // @output 2
-    int res3 = checkpanic c->get("bar");
-    io:println(res3); // @output 2
+    int a = viaAlias(0);
+    io:println(a);
+
+    string b = viaAlias(1);
+    io:println(b);
+
+    int|error c = viaAliasUnion(2);
+    io:println(c);
+
+    string d = viaChainedAlias(3);
+    io:println(d);
 }
+
+function viaAlias(int val, TargetType retTy = <>) returns retTy = external;
+
+function viaAliasUnion(int val, TargetType retTy = <>) returns retTy|error = external;
+
+function viaChainedAlias(int val, ChainedTargetType retTy = <>) returns retTy = external;
