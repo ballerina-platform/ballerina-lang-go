@@ -124,7 +124,8 @@ type (
 
 	BLangObjectType struct {
 		bLangTypeBase
-		Inclusions           []model.SymbolRef // This needs to be symbol because it could be a class definition as well
+		Inclusions           []model.SymbolRef      // This needs to be symbol because it could be a class definition as well
+		InclusionPositions   []diagnostics.Location // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions []*BLangUserDefinedType
 		members              map[string]model.ObjectMember
 		Definition           semtypes.Definition

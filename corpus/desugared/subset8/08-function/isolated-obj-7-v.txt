@@ -1,0 +1,41 @@
+(package
+  (import-package ballerina io (as io))
+  (class-definition Counter
+    (variable count (type
+      (value-type int)))
+    (variable initial (type
+      (value-type int)))
+    (function init (
+      (variable initial (type
+        (value-type int)))) (
+      (value-type null))
+      (block-function-body
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal count))
+          (simple-var-ref initial))
+        (assignment
+          (index-based-access
+            (simple-var-ref self)
+            (literal initial))
+          (simple-var-ref initial))))
+    (function getInitial () (
+      (value-type int))
+      (block-function-body
+        (return
+          (index-based-access
+            (simple-var-ref self)
+            (literal initial))))))
+  (function main () (
+    (value-type null))
+    (block-function-body
+      (var-def
+        (variable c (type
+          (user-defined-type Counter)) (expr
+          (new (
+            (literal 42))))))
+      (expression-stmt
+        (invocation io println (
+          (invocation getInitial expr:
+            (simple-var-ref c) ())))))))

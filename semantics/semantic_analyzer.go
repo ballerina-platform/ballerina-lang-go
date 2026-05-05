@@ -1159,6 +1159,11 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 	case *ast.BLangRecordType:
 		validateRecordFieldDefaults(a, n)
 		return nil
+	case *ast.BLangObjectType:
+		if !n.Isolated {
+			validateObjInclusions(a, n.Inclusions, n.InclusionPositions)
+		}
+		return nil
 	case *ast.BLangClassDefinition:
 		for _, f := range n.Fields {
 			field := f.(*ast.BLangSimpleVariable)
@@ -1176,6 +1181,7 @@ func visitInner[A analyzer](a A, node ast.BLangNode) ast.Visitor {
 			fa := initializeMethodAnalyzer(a, method)
 			ast.Walk(fa, method)
 		}
+		validateClassDefn(a, n)
 		return nil
 	default:
 		return a
@@ -1253,8 +1259,22 @@ func validateForeach[A analyzer](a A, foreachStmt *ast.BLangForeach) bool {
 		case semtypes.IsSubtypeSimple(collectionType, semtypes.MAPPING):
 			expectedValueType = semtypes.MappingMemberTypeInnerVal(a.tyCtx(), collectionType, semtypes.STRING)
 		default:
-			a.unimplementedErr("unsupported foreach collection", collection.GetPosition())
-			return false
+			tyCtx := a.tyCtx()
+			iterableTy := semtypes.CreateIterable(tyCtx)
+			if !semtypes.IsSubtype(tyCtx, collectionType, iterableTy) {
+				a.semanticErr("incompatible types: expected an iterable collection", collection.GetPosition())
+				return false
+			}
+			// Extract value type from the iterator's next() return type
+			iteratorMethodTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("iterator"), collectionType)
+			ld := semtypes.NewListDefinition()
+			emptyArgs := ld.DefineListTypeWrapped(a.tyCtx().Env(), []semtypes.SemType{}, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+			iteratorTy := semtypes.FunctionReturnType(tyCtx, iteratorMethodTy, emptyArgs)
+			nextMethodTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("next"), iteratorTy)
+			nextReturnTy := semtypes.FunctionReturnType(tyCtx, nextMethodTy, emptyArgs)
+			// next returns record{|T value|}|C where C is completion type (nil, error|nil, etc.)
+			recordPart := semtypes.Diff(nextReturnTy, semtypes.Union(semtypes.NIL, semtypes.ERROR))
+			expectedValueType = semtypes.MappingMemberTypeInnerVal(tyCtx, recordPart, semtypes.StringConst("value"))
 		}
 		if !semtypes.IsSubtype(a.tyCtx(), expectedValueType, variableType) {
 			a.ctx().SemanticError("invalid type for variable", variable.GetPosition())
@@ -1291,26 +1311,114 @@ func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 	}
 }
 
+func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
+	if classDef.IsIsolated() {
+		validateIsolatedClassFields(a, classDef)
+		validateIsolatedClassMutableFieldAccess(a, classDef)
+	} else {
+		validateObjInclusions(a, classDef.Inclusions, classDef.InclusionPositions)
+	}
+}
+
+func isImmutableField(tyCtx semtypes.Context, field *ast.BLangSimpleVariable) bool {
+	return field.IsFinal() && semtypes.IsSubtype(tyCtx, field.GetDeterminedType(), semtypes.VAL_READONLY)
+}
+
+func validateIsolatedClassFields[A analyzer](a A, classDef *ast.BLangClassDefinition) {
+	tyCtx := a.tyCtx()
+	for _, f := range classDef.Fields {
+		field := f.(*ast.BLangSimpleVariable)
+		if field.IsPublic() && !isImmutableField(tyCtx, field) {
+			a.semanticErr("public field of an isolated object must be \"final\" and have a type that is a subtype of \"readonly\"", field.GetPosition())
+		}
+	}
+}
+
+func validateIsolatedClassMutableFieldAccess[A analyzer](a A, classDef *ast.BLangClassDefinition) {
+	tyCtx := a.tyCtx()
+	fieldsByName := make(map[string]*ast.BLangSimpleVariable)
+	for _, f := range classDef.Fields {
+		field := f.(*ast.BLangSimpleVariable)
+		fieldsByName[field.Name.Value] = field
+	}
+	isMutableSelfFieldAccess := func(node ast.BLangNode) bool {
+		fieldAccess, ok := node.(*ast.BLangFieldBaseAccess)
+		if !ok || !isSelfFieldAccess(fieldAccess) {
+			return false
+		}
+		field, exists := fieldsByName[fieldAccess.Field.Value]
+		return exists && !isImmutableField(tyCtx, field)
+	}
+	checkMutableSelfAccess := func(method *ast.BLangFunction) {
+		everyNode(a, method.GetBody().(ast.BLangNode), func(_ A, inner ast.BLangNode) bool {
+			switch n := inner.(type) {
+			case *ast.BLangAssignment:
+				if isMutableSelfFieldAccess(n.GetVariable().(ast.BLangNode)) {
+					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
+					return false
+				}
+			case *ast.BLangFieldBaseAccess:
+				if isMutableSelfFieldAccess(n) {
+					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
+				}
+			}
+			return true
+		})
+	}
+	for _, method := range classDef.Methods {
+		checkMutableSelfAccess(method)
+	}
+}
+
+// validateObjInclusions validate all the inclusions of non isolated objects are non-isolated as well.
+// For isolated objects there are no restrictions
+func validateObjInclusions[A analyzer](a A, inclusions []model.SymbolRef, positions []diagnostics.Location) {
+	tyCtx := a.tyCtx()
+	for i, ref := range inclusions {
+		incTy := a.ctx().SymbolType(ref)
+		if semtypes.IsIsolatedObject(tyCtx, incTy) {
+			a.semanticErr("cannot include isolated object type in non-isolated object", positions[i])
+		}
+	}
+}
+
+func isIsolatedInvocation[A analyzer](a A, tyCtx semtypes.Context, symbol model.SymbolRef) bool {
+	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
+	fnTy := a.ctx().SymbolType(symbol)
+	return semtypes.IsSubtype(tyCtx, fnTy, isolatedTop)
+}
+
 // isIsolatedFuncInner validates an isolated function body: every variable reference
 // must resolve to a constant or to a variable declared within the body itself.
 func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 	locals := make(map[model.SymbolRef]struct{})
 	tyCtx := a.tyCtx()
-	isolatedTop := semtypes.CreateIsolatedTop(tyCtx)
 	everyNode(a, node, func(analyzer A, inner ast.BLangNode) bool {
 		switch inner := inner.(type) {
 		case *ast.BLangSimpleVariableDef:
 			locals[inner.Var.Symbol()] = struct{}{}
 		case *ast.BLangInvocation:
-			fnTy := a.ctx().SymbolType(inner.Symbol())
-			if !semtypes.IsSubtype(tyCtx, fnTy, isolatedTop) {
+			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
+			}
+		case *ast.BLangRemoteMethodCallAction:
+			if !isIsolatedInvocation(a, tyCtx, inner.MethodSymbol()) {
+				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
+			}
+		case *ast.BLangNewExpression:
+			classTy := a.ctx().SymbolType(inner.ClassSymbol)
+			initTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("init"), classTy)
+			if initTy != nil && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedTop(tyCtx)) {
+				a.semanticErr("non isolated initialization", inner.GetPosition())
 			}
 		case *ast.BLangSimpleVarRef:
 			sym := a.ctx().GetSymbol(inner.Symbol())
 			varSym, ok := sym.(*model.ValueSymbol)
 			if !ok {
 				analyzer.unimplementedErr("unsupported reference in isolated function body", inner.GetPosition())
+				return true
+			}
+			if varSym.Name() == "self" {
 				return true
 			}
 			if varSym.IsConst() {
