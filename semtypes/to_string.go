@@ -407,10 +407,12 @@ func (s *toStringState) objectAtomicTypeToString(atom atom) string {
 		}
 		kindTy := memberAtomic.FieldInnerVal("kind")
 		valueTy := memberAtomic.FieldInnerVal("value")
+		visibilityTy := memberAtomic.FieldInnerVal("visibility")
+		visibilityPrefix := visibilityToString(s.cx, visibilityTy)
 		if IsSameType(s.cx, kindTy, StringConst("field")) {
-			members = append(members, s.semTypeToString(valueTy)+" "+name)
+			members = append(members, visibilityPrefix+s.semTypeToString(valueTy)+" "+name)
 		} else {
-			members = append(members, s.objectMethodToString(name, kindTy, valueTy))
+			members = append(members, visibilityPrefix+s.objectMethodToString(name, kindTy, valueTy))
 		}
 	}
 	prefix = append(prefix, "object")
@@ -419,6 +421,16 @@ func (s *toStringState) objectAtomicTypeToString(atom atom) string {
 		result += " { " + strings.Join(members, "; ") + " }"
 	}
 	return result
+}
+
+func visibilityToString(cx Context, visibilityTy SemType) string {
+	if IsSameType(cx, visibilityTy, StringConst("public")) {
+		return "public "
+	}
+	if IsSameType(cx, visibilityTy, StringConst("private")) {
+		return "private "
+	}
+	return ""
 }
 
 func (s *toStringState) objectMethodToString(name string, kindTy SemType, fnTy SemType) string {

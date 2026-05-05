@@ -451,6 +451,12 @@ func walkInvocation(cx *functionContext, expr invocable) desugaredNode[ast.BLang
 	}
 	expr.SetCallArgs(args)
 
+	if ast.IsStreamOperation(expr) {
+		return desugaredNode[ast.BLangActionOrExpression]{
+			initStmts:       initStmts,
+			replacementNode: expr,
+		}
+	}
 	fnSym, isDirectCall := cx.getSymbol(expr.ResolvedSymbol()).(model.FunctionSymbol)
 	if !isDirectCall {
 		return desugaredNode[ast.BLangActionOrExpression]{

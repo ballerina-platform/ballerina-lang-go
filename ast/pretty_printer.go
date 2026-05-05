@@ -114,6 +114,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printErrorTypeNode(t)
 	case *BLangConstrainedType:
 		p.printConstrainedType(t)
+	case *BLangStreamType:
+		p.printStreamType(t)
 	case *BLangTypeDefinition:
 		p.printTypeDefinition(t)
 	case *BLangUserDefinedType:
@@ -1425,6 +1427,20 @@ func (p *PrettyPrinter) printMarkdownReferenceDocumentation(node *BLangMarkdownR
 		p.printString("has-parser-warnings")
 	}
 
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printStreamType(node *BLangStreamType) {
+	p.startNode()
+	p.printString("stream-type")
+	p.indentLevel++
+	if node.ValueType.TypeDescriptor != nil {
+		p.PrintInner(node.ValueType.TypeDescriptor.(BLangNode))
+	}
+	if node.CompletionType.TypeDescriptor != nil {
+		p.PrintInner(node.CompletionType.TypeDescriptor.(BLangNode))
+	}
 	p.indentLevel--
 	p.endNode()
 }

@@ -622,6 +622,9 @@ func Walk(v Visitor, node BLangNode) {
 	case *BLangConstrainedType:
 		WalkTypeData(v, &node.Type)
 		WalkTypeData(v, &node.Constraint)
+	case *BLangStreamType:
+		WalkTypeData(v, &node.ValueType)
+		WalkTypeData(v, &node.CompletionType)
 	case *BLangTupleTypeNode:
 		for i := range node.Members {
 			Walk(v, node.Members[i].TypeDesc.(BLangNode))

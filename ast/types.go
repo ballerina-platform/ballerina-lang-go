@@ -180,6 +180,13 @@ type (
 		Definition semtypes.Definition
 	}
 
+	BLangStreamType struct {
+		bLangTypeBase
+		ValueType      TypeData
+		CompletionType TypeData
+		Definition     semtypes.Definition
+	}
+
 	BLangTupleTypeNode struct {
 		bLangTypeBase
 		Definition semtypes.Definition
@@ -233,6 +240,9 @@ var (
 	_ IntersectionTypeNode     = &BLangIntersectionTypeNode{}
 	_ ErrorTypeNode            = &BLangErrorTypeNode{}
 	_ ConstrainedTypeNode      = &BLangConstrainedType{}
+	_ BType                    = &BLangStreamType{}
+	_ BLangNode                = &BLangStreamType{}
+	_ TypeDescriptor           = &BLangStreamType{}
 	_ TupleTypeNode            = &BLangTupleTypeNode{}
 	_ MemberTypeDesc           = &BLangMemberTypeDesc{}
 	_ RecordTypeNode           = &BLangRecordType{}
@@ -682,6 +692,21 @@ func (b *BLangConstrainedType) GetTypeKind() TypeKind {
 		return builtIn.GetTypeKind()
 	}
 	panic("BLangConstrainedType.Type does not implement BuiltInReferenceTypeNode")
+}
+
+func NewBLangStreamType(valueType, completionType TypeData) *BLangStreamType {
+	return &BLangStreamType{
+		ValueType:      valueType,
+		CompletionType: completionType,
+	}
+}
+
+func (b *BLangStreamType) GetKind() NodeKind {
+	return NodeKind_STREAM_TYPE
+}
+
+func (b *BLangStreamType) GetTypeKind() TypeKind {
+	return TypeKind_STREAM
 }
 
 func (b *BLangTupleTypeNode) GetMembers() []MemberTypeDesc {
