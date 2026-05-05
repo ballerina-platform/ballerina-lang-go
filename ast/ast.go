@@ -323,6 +323,7 @@ func (b *bLangInvokableNodeBase) FuncSymbolFlags() model.FuncSymbolFlags {
 // BLangVariableBase flag methods
 func (b *BLangVariableBase) IsPublic() bool           { return b.flags.Has(model.FlagPublic) }
 func (b *BLangVariableBase) IsFinal() bool            { return b.flags.Has(model.FlagFinal) }
+func (b *BLangVariableBase) IsConfigurable() bool     { return b.flags.Has(model.FlagConfigurable) }
 func (b *BLangVariableBase) IsDefaultableParam() bool { return b.flags.Has(model.FlagDefaultableParam) }
 func (b *BLangVariableBase) IsRequiredParam() bool    { return b.flags.Has(model.FlagRequiredParam) }
 func (b *BLangVariableBase) IsRestParam() bool        { return b.flags.Has(model.FlagRestParam) }
@@ -333,6 +334,7 @@ func (b *BLangVariableBase) IsIncludedRecordParam() bool {
 func (b *BLangVariableBase) SetPublic()              { b.flags |= model.FlagPublic }
 func (b *BLangVariableBase) SetPrivate()             { b.flags &^= model.FlagPublic }
 func (b *BLangVariableBase) SetFinal()               { b.flags |= model.FlagFinal }
+func (b *BLangVariableBase) SetConfigurable()        { b.flags |= model.FlagConfigurable }
 func (b *BLangVariableBase) SetIsolated()            { b.flags |= model.FlagIsolated }
 func (b *BLangVariableBase) SetDefaultableParam()    { b.flags |= model.FlagDefaultableParam }
 func (b *BLangVariableBase) SetRequiredParam()       { b.flags |= model.FlagRequiredParam }

@@ -1149,3 +1149,17 @@ func ContainsUndef(t SemType) bool {
 		panic("unexpected semtype")
 	}
 }
+
+func HasNoStorageIdentity(ty SemType) bool {
+	return IsSubtypeSimple(ty, SIMPLE_BASIC)
+}
+
+// CreateIsolated returns the top type of isolated values:
+// `readonly | isolated object {}`. Used by isolation analysis to test
+// whether an expression's static type is intrinsically isolated.
+func CreateIsolated(cx Context) SemType {
+	if cx._isolatedMemo == nil {
+		cx._isolatedMemo = Union(VAL_READONLY, createIsolatedObject(cx))
+	}
+	return cx._isolatedMemo
+}

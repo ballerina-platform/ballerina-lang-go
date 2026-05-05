@@ -59,6 +59,23 @@ type stmtContext struct {
 	loopCtx      *loopContext
 	isClosure    bool          // set to true when a captured variable is resolved across a function boundary
 	scopeCtx     *scopeContext // current scope (holds localVars, varMap, retVar)
+	// activeLockKey is set while emitting BIR for the body of a `lock`
+	// statement. Nested locks are rejected by the lock analyzer, so at most
+	// one is active at any point during BIR-gen.
+	activeLockKey *string
+}
+
+// emitLockEndBeforeAbruptExit, when called inside a lock body, closes the
+// current BB with a LockEnd terminator and returns a fresh BB whose execution
+// resumes the abrupt-exit terminator (Return/Break/Continue). When not inside
+// a lock body, returns curBB unchanged.
+func emitLockEndBeforeAbruptExit(ctx *stmtContext, curBB *BIRBasicBlock, pos Location) *BIRBasicBlock {
+	if ctx.activeLockKey == nil {
+		return curBB
+	}
+	newBB := ctx.addBB()
+	curBB.Terminator = NewLockEnd(*ctx.activeLockKey, newBB, pos)
+	return newBB
 }
 
 func (c *Context) stringMapType() semtypes.SemType {
@@ -423,9 +440,29 @@ func handleStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt ast.BLangState
 	case *ast.BLangXMLNS:
 		// xmlns declarations have no runtime effect.
 		return statementEffect{block: curBB}
+	case *ast.BLangLock:
+		return lockStatement(ctx, curBB, stmt)
 	default:
 		panic("unexpected statement type")
 	}
+}
+
+func lockStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangLock) statementEffect {
+	pos := ctx.loc(stmt.GetPosition())
+	if stmt.LockKey == "" {
+		ctx.birCx.CompilerContext.InternalError("lock statement reached BIR-gen without a lock key", stmt.GetPosition())
+	}
+	key := stmt.LockKey
+	bodyEntry := ctx.addBB()
+	bb.Terminator = NewLockStart(key, bodyEntry, pos)
+	ctx.activeLockKey = &key
+	bodyEffect := blockStatement(ctx, bodyEntry, &stmt.Body)
+	ctx.activeLockKey = nil
+	afterLock := ctx.addBB()
+	if bodyEffect.block != nil {
+		bodyEffect.block.Terminator = NewLockEnd(key, afterLock, pos)
+	}
+	return statementEffect{block: afterLock}
 }
 
 func compoundAssignment(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCompoundAssignment) statementEffect {
@@ -482,9 +519,11 @@ func memberAccessInstructionKinds(containerType semtypes.SemType) (loadKind, sto
 }
 
 func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangContinue) statementEffect {
-	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: ctx.loc(stmt.GetPosition())}}})
+	pos := ctx.loc(stmt.GetPosition())
+	curBB = emitLockEndBeforeAbruptExit(ctx, curBB, pos)
+	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: pos}}})
 	onContinueBB := ctx.loopCtx.onContinueBB
-	curBB.Terminator = NewGoto(onContinueBB, ctx.loc(stmt.GetPosition()))
+	curBB.Terminator = NewGoto(onContinueBB, pos)
 	return statementEffect{
 		// We don't know where to add the next statement so we return nil
 		block: nil,
@@ -492,9 +531,11 @@ func continueStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangCo
 }
 
 func breakStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangBreak) statementEffect {
-	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: ctx.loc(stmt.GetPosition())}}})
+	pos := ctx.loc(stmt.GetPosition())
+	curBB = emitLockEndBeforeAbruptExit(ctx, curBB, pos)
+	curBB.Instructions = append(curBB.Instructions, &PopScopeFrame{BIRInstructionBase: BIRInstructionBase{BIRNodeBase: BIRNodeBase{Pos: pos}}})
 	onBreakBB := ctx.loopCtx.onBreakBB
-	curBB.Terminator = NewGoto(onBreakBB, ctx.loc(stmt.GetPosition()))
+	curBB.Terminator = NewGoto(onBreakBB, pos)
 	return statementEffect{
 		// We don't know where to add the next statement so we return nil
 		block: nil,
@@ -618,6 +659,7 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 		mov := NewMove(valueEffect.result, ctx.scopeCtx.retVar, pos)
 		curBB.Instructions = append(curBB.Instructions, mov)
 	}
+	curBB = emitLockEndBeforeAbruptExit(ctx, curBB, pos)
 	ret := NewReturn(pos)
 	curBB.Terminator = ret
 	return statementEffect{}
@@ -815,7 +857,7 @@ type expressionEffect struct {
 // of an expression dont' affect the other.
 func snapshotIfNeeded(ctx *stmtContext, effect expressionEffect, pos Location) expressionEffect {
 	op := effect.result
-	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && hasNoStorageIdentity(op.VariableDcl.GetType()) {
+	if _, isLocal := op.VariableDcl.(*BIRLocalVariableDcl); isLocal && semtypes.HasNoStorageIdentity(op.VariableDcl.GetType()) {
 		tempOp := ctx.addTempVar(op.VariableDcl.GetType())
 		effect.block.Instructions = append(effect.block.Instructions, NewMove(op, tempOp, pos))
 		effect.result = tempOp
@@ -1670,8 +1712,4 @@ func appendIfNotNil[T any](slice []T, item *T) []T {
 		slice = append(slice, *item)
 	}
 	return slice
-}
-
-func hasNoStorageIdentity(ty semtypes.SemType) bool {
-	return semtypes.IsSubtypeSimple(ty, semtypes.SIMPLE_BASIC)
 }

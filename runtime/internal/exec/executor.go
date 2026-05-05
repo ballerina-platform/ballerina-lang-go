@@ -337,6 +337,12 @@ func execTerminator(ctx *extern.Context, term bir.BIRTerminator, frame *Frame) *
 		}
 	case *bir.Return:
 		return nil
+	case *bir.LockStart:
+		ctx.AcquireLock(v.LockKey)
+		return v.ThenBB
+	case *bir.LockEnd:
+		ctx.ReleaseLock()
+		return v.ThenBB
 	default:
 		fmt.Printf("UNKNOWN_TERMINATOR_TYPE(%T)\n", term)
 	}

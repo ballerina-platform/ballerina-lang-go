@@ -322,6 +322,9 @@ func Walk(v Visitor, node BLangNode) {
 		Walk(v, &node.Body)
 		Walk(v, &node.OnFailClause)
 
+	case *BLangLock:
+		Walk(v, &node.Body)
+
 	case *BLangMatchStatement:
 		if node.Expr != nil {
 			Walk(v, node.Expr.(BLangNode))

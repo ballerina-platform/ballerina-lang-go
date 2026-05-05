@@ -303,7 +303,16 @@ func (sw *symbolWriter) writeValueSymbol(buf *bytes.Buffer, sym *model.ValueSymb
 	if err := write(buf, sym.Kind() == model.SymbolKindConstant); err != nil {
 		return err
 	}
-	return write(buf, sym.Kind() == model.SymbolKindParemeter)
+	if err := write(buf, sym.Kind() == model.SymbolKindParemeter); err != nil {
+		return err
+	}
+	if err := write(buf, sym.IsFinal()); err != nil {
+		return err
+	}
+	if err := write(buf, sym.IsConfigurable()); err != nil {
+		return err
+	}
+	return write(buf, sym.IsIsolated())
 }
 
 func (sw *symbolWriter) writeFunctionSymbol(buf *bytes.Buffer, sym model.FunctionSymbol) error {

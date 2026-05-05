@@ -366,6 +366,14 @@ func (br *birReader) readFunction() *bir.BIRFunction {
 				}
 			case *bir.Panic:
 				// Panic has no ThenBB
+			case *bir.LockStart:
+				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
+					t.ThenBB = target
+				}
+			case *bir.LockEnd:
+				if target, ok := bbMap[t.ThenBB.Id.Value()]; ok {
+					t.ThenBB = target
+				}
 			}
 		}
 	}
@@ -867,6 +875,30 @@ func (br *birReader) readTerminator(varMap map[string]bir.BIRVariableDcl) bir.BI
 				},
 			},
 			ErrorOp: errorOp,
+		}
+	case bir.INSTRUCTION_KIND_LOCK:
+		key := br.readStringCPEntry()
+		thenBBId := br.readStringCPEntry()
+		return &bir.LockStart{
+			BIRTerminatorBase: bir.BIRTerminatorBase{
+				BIRInstructionBase: bir.BIRInstructionBase{
+					BIRNodeBase: bir.BIRNodeBase{Pos: pos},
+				},
+				ThenBB: &bir.BIRBasicBlock{Id: thenBBId},
+			},
+			LockKey: string(key),
+		}
+	case bir.INSTRUCTION_KIND_UNLOCK:
+		key := br.readStringCPEntry()
+		thenBBId := br.readStringCPEntry()
+		return &bir.LockEnd{
+			BIRTerminatorBase: bir.BIRTerminatorBase{
+				BIRInstructionBase: bir.BIRInstructionBase{
+					BIRNodeBase: bir.BIRNodeBase{Pos: pos},
+				},
+				ThenBB: &bir.BIRBasicBlock{Id: thenBBId},
+			},
+			LockKey: string(key),
 		}
 	default:
 		panic(fmt.Sprintf("unsupported terminator kind: %d", termInstructionKind))

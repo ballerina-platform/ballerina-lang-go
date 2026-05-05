@@ -88,6 +88,8 @@ func (p *PrettyPrinter) PrintInner(node BLangNode) {
 		p.printGroupExpr(t)
 	case *BLangWhile:
 		p.printWhile(t)
+	case *BLangLock:
+		p.printLock(t)
 	case *BLangForeach:
 		p.printForeach(t)
 	case *BLangArrayType:
@@ -910,6 +912,15 @@ func (p *PrettyPrinter) printWhile(node *BLangWhile) {
 	p.PrintInner(node.Expr.(BLangNode))
 	p.PrintInner(&node.Body)
 	// OnFailClause handling can be added if needed in the future
+	p.indentLevel--
+	p.endNode()
+}
+
+func (p *PrettyPrinter) printLock(node *BLangLock) {
+	p.startNode()
+	p.printString("lock")
+	p.indentLevel++
+	p.PrintInner(&node.Body)
 	p.indentLevel--
 	p.endNode()
 }

@@ -192,6 +192,10 @@ func (p *PrettyPrinter) PrintInstruction(instruction BIRInstruction) string {
 		return p.PrintTypeTest(instruction)
 	case *Panic:
 		return p.PrintPanic(instruction)
+	case *LockStart:
+		return p.PrintLockStart(instruction)
+	case *LockEnd:
+		return p.PrintLockEnd(instruction)
 	case *NewObject:
 		return p.PrintNewObject(instruction)
 	case *NewStream:
@@ -355,6 +359,14 @@ func (p *PrettyPrinter) PrintReturn(r *Return) string {
 
 func (p *PrettyPrinter) PrintPanic(pa *Panic) string {
 	return fmt.Sprintf("panic %s;", p.PrintOperand(*pa.ErrorOp))
+}
+
+func (p *PrettyPrinter) PrintLockStart(l *LockStart) string {
+	return fmt.Sprintf("lock-start %q GOTO %s;", l.LockKey, l.ThenBB.Id.Value())
+}
+
+func (p *PrettyPrinter) PrintLockEnd(l *LockEnd) string {
+	return fmt.Sprintf("lock-end %q GOTO %s;", l.LockKey, l.ThenBB.Id.Value())
 }
 
 func (p *PrettyPrinter) PrintBranch(b *Branch) string {
