@@ -142,7 +142,7 @@ func (r *defaultPackageResolver) ResolveByName(
 ) []*Package {
 	// 1. Check cache first; pick the highest cached version.
 	if !options.DisableCache() {
-		if pkg := pickLatest(r.cache.GetPackages(org, name)); pkg != nil {
+		if pkg, ok := pickLatest(r.cache.GetPackages(org, name), packageVersion); ok {
 			return []*Package{pkg}
 		}
 	}
@@ -156,10 +156,14 @@ func (r *defaultPackageResolver) ResolveByName(
 		}
 
 		versions, err := repo.GetPackageVersions(ctx, org, name, options)
-		if err != nil || len(versions) == 0 {
+		if err != nil {
 			continue
 		}
-		latest := pickLatestVersion(versions)
+		latest, ok := pickLatest(versions, identityVersion)
+		if !ok {
+			// Repository listed no versions for this org+name.
+			continue
+		}
 
 		pkg, err := repo.GetPackage(ctx, org, name, latest.String(), options)
 		if err != nil || pkg == nil {
@@ -175,29 +179,32 @@ func (r *defaultPackageResolver) ResolveByName(
 	return nil
 }
 
-// pickLatestVersion returns the highest PackageVersion. Input must be non-empty.
-func pickLatestVersion(versions []PackageVersion) PackageVersion {
-	latest := versions[0]
-	for _, v := range versions[1:] {
-		if v.Compare(latest) > 0 {
-			latest = v
+// pickLatest returns the element of items whose extracted PackageVersion is
+// the highest, plus ok=true. For an empty slice it returns the zero value of
+// T and ok=false, letting the caller handle absence explicitly.
+//
+// Used both for picking the latest already-loaded package out of the cache
+// (T = *Package) and for picking the latest version a repository advertised
+// before loading (T = PackageVersion).
+func pickLatest[T any](items []T, version func(T) PackageVersion) (T, bool) {
+	var zero T
+	if len(items) == 0 {
+		return zero, false
+	}
+	best := items[0]
+	for _, item := range items[1:] {
+		if version(item).Compare(version(best)) > 0 {
+			best = item
 		}
 	}
-	return latest
+	return best, true
 }
 
-// pickLatest returns the package with the highest version, or nil for an
-// empty input. Versions are compared via PackageVersion.Compare.
-func pickLatest(packages []*Package) *Package {
-	if len(packages) == 0 {
-		return nil
-	}
-	latest := packages[0]
-	for _, p := range packages[1:] {
-		if p.Manifest().PackageDescriptor().Version().Compare(
-			latest.Manifest().PackageDescriptor().Version()) > 0 {
-			latest = p
-		}
-	}
-	return latest
+// packageVersion is the version extractor used by pickLatest when picking
+// among already-loaded *Package instances.
+func packageVersion(p *Package) PackageVersion {
+	return p.Manifest().PackageDescriptor().Version()
 }
+
+// identityVersion is the trivial extractor for slices of PackageVersion.
+func identityVersion(v PackageVersion) PackageVersion { return v }
