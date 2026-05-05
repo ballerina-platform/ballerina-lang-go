@@ -912,7 +912,7 @@ func compileModuleFromSource(env *context.CompilerEnvironment, project projects.
 	}
 
 	analyzer := semantics.NewSemanticAnalyzer(cx)
-	analyzer.Analyze(pkg)
+	analyzer.Analyze(pkg, importedSymbols)
 	if cx.HasDiagnostics() {
 		return nil, fmt.Errorf("semantic analysis failed")
 	}

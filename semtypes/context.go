@@ -36,7 +36,8 @@ type context struct {
 	_orderedMemo           SemType
 	_isolatedObjectMemo    SemType
 	_serviceObjectMemo     SemType
-	_isolatedTopMemo       SemType
+	_isolatedFnMemo        SemType
+	_isolatedMemo          SemType
 	_iterableMemo          SemType
 	_comparableMemo        map[comparableMemoKey]*comparableMemo
 	_fillerMemo            map[atomicType]Filler

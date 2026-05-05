@@ -253,11 +253,23 @@ func (sr *symbolReader) readClassSymbol(space *model.SymbolSpace) {
 
 func (sr *symbolReader) readValueSymbol(space *model.SymbolSpace) {
 	name, isPublic, ty := sr.readSymbolBase()
-	var isConst, isParameter bool
+	var isConst, isParameter, isFinal, isConfigurable, isIsolated bool
 	read(sr.r, &isConst)
 	read(sr.r, &isParameter)
+	read(sr.r, &isFinal)
+	read(sr.r, &isConfigurable)
+	read(sr.r, &isIsolated)
 	sym := model.NewValueSymbol(name, isPublic, isConst, isParameter)
 	sym.SetType(ty)
+	if isFinal {
+		sym.SetFinal()
+	}
+	if isConfigurable {
+		sym.SetConfigurable()
+	}
+	if isIsolated {
+		sym.SetIsolated()
+	}
 	space.AddSymbol(name, &sym)
 }
 

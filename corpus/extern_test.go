@@ -667,7 +667,7 @@ func compileSingleFileModule(
 	semantics.ResolveLocalNodes(cx, pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "ResolveLocalNodes")
 	analyzer := semantics.NewSemanticAnalyzer(cx)
-	analyzer.Analyze(pkg)
+	analyzer.Analyze(pkg, importedSymbols)
 	assertNoDiagnostics(t, cx, "SemanticAnalyzer")
 	cfg := semantics.CreateControlFlowGraph(cx, pkg)
 	assertNoDiagnostics(t, cx, "CreateControlFlowGraph")

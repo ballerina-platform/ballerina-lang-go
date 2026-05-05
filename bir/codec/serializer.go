@@ -414,6 +414,12 @@ func (bw *birWriter) writeTerminator(buf *bytes.Buffer, term bir.BIRTerminator) 
 	case *bir.Return:
 	case *bir.Panic:
 		bw.writeOperand(buf, term.ErrorOp)
+	case *bir.LockStart:
+		bw.writeStringCPEntry(buf, term.LockKey)
+		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
+	case *bir.LockEnd:
+		bw.writeStringCPEntry(buf, term.LockKey)
+		bw.writeStringCPEntry(buf, term.ThenBB.Id.Value())
 	default:
 		panic(fmt.Sprintf("unsupported terminator type: %T", term))
 	}
