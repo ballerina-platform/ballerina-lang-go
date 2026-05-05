@@ -84,7 +84,7 @@ type NodeBuilder struct {
 	isInLocalContext     bool
 	isInFiniteContext    bool
 	inCollectContext     bool
-	constantSet          map[string]bool // Track declared constants to detect redeclarations
+	constantSet          map[string]string // Track declared constants to detect redeclarations
 	cx                   *context.CompilerContext
 	types                typeTable
 }
@@ -96,7 +96,7 @@ func (n *NodeBuilder) de() *diagnostics.DiagnosticEnv {
 // NewNodeBuilder creates and initializes a new NodeBuilder instance
 func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	nodeBuilder := &NodeBuilder{
-		constantSet: make(map[string]bool),
+		constantSet: make(map[string]string),
 		cx:          cx,
 		PackageID:   cx.GetDefaultPackage(),
 		types:       newTypeTable(),
@@ -2138,11 +2138,20 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 
 	constantName := constantNode.Name.GetValue()
 
-	if n.constantSet[constantName] {
-		panic("unimplemented")
-		// TODO: Add diagnostic logging when dlog is migrated
+	if initializedValue, exists := n.constantSet[constantName]; exists {
+		if initializedValue != "" {
+			n.cx.SemanticError(
+				fmt.Sprintf("symbol '%s' is already initialized with '%s'", constantName, initializedValue),
+				constantNode.Name.GetPosition(),
+			)
+		} else {
+			n.cx.SemanticError(
+				fmt.Sprintf("symbol '%s' is already initialized", constantName),
+				constantNode.Name.GetPosition(),
+			)
+		}
 	} else {
-		n.constantSet[constantName] = true
+		n.constantSet[constantName] = getConstantInitValue(constantNode.Expr)
 	}
 
 	return constantNode
@@ -3329,11 +3338,11 @@ func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, p
 	}
 
 	constantName := constantNode.Name.GetValue()
-	if n.constantSet[constantName] {
+	if _, exists := n.constantSet[constantName]; exists {
 		n.cx.SemanticError("redeclared symbol '"+constantName+"'", constantNode.Name.GetPosition())
 		return nil, true
 	} else {
-		n.constantSet[constantName] = true
+		n.constantSet[constantName] = getConstantInitValue(constantNode.Expr)
 	}
 
 	return constantNode, false
@@ -4109,6 +4118,20 @@ func (n *NodeBuilder) TransformToken(token tree.Token) BLangNode {
 
 func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken) BLangNode {
 	panic("TransformIdentifierToken unimplemented")
+}
+
+func getConstantInitValue(expr BLangActionOrExpression) string {
+	type constantValue interface {
+		GetValue() any
+		GetOriginalValue() string
+	}
+	if cv, ok := expr.(constantValue); ok {
+		if v := cv.GetValue(); v != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		return cv.GetOriginalValue()
+	}
+	return ""
 }
 
 func stringToTypeKind(typeText string) model.TypeKind {
