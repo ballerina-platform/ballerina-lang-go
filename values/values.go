@@ -75,6 +75,8 @@ func fillerFactoryFromDesc(cx semtypes.Context, f semtypes.Filler) FillerFactory
 		return func() BalValue { return NewMap(ty, atomic, readonly, nil) }
 	case semtypes.ListFiller:
 		return listFillerFactory(cx, f)
+	case semtypes.ObjectFiller, semtypes.StreamFiller, semtypes.TableFiller, semtypes.XMLFiller:
+		return func() BalValue { return nil }
 	default:
 		panic("unknown filler kind")
 	}
@@ -133,6 +135,8 @@ func SemTypeForValue(v BalValue) semtypes.SemType {
 		return v.Type
 	case *Object:
 		return v.Type
+	case *Stream:
+		return v.Type
 	case *TypeDesc:
 		return semtypes.TYPEDESC
 	default:
@@ -174,6 +178,8 @@ func toString(v BalValue, visited map[uintptr]bool, isDirect bool) string {
 		return "function " + t.LookupKey
 	case *Object:
 		return "object"
+	case *Stream:
+		return "stream"
 	case *TypeDesc:
 		return "typedesc"
 	case XMLValue:

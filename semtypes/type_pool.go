@@ -116,6 +116,9 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 				case BTObject:
 					entry = subtypeDataEntry{kind: objectBddSubtypeData, index: uint32(len(bp.objectBdds))}
 					bp.objectBdds = append(bp.objectBdds, sc.serializeMappingBdd(data))
+				case BTStream:
+					entry = subtypeDataEntry{kind: streamBddSubtypeData, index: uint32(len(bp.streamBdds))}
+					bp.streamBdds = append(bp.streamBdds, sc.serializeListBdd(data))
 				default:
 					panic(fmt.Sprintf("unsupported BDD basic type code: %v", bs.BasicTypeCode))
 				}
@@ -143,6 +146,7 @@ func fromTypePool(pool *TypePool, env Env) binaryPool {
 	bp.nErrorBdds = uint32(len(bp.errorBdds))
 	bp.nTableBdds = uint32(len(bp.tableBdds))
 	bp.nObjectBdds = uint32(len(bp.objectBdds))
+	bp.nStreamBdds = uint32(len(bp.streamBdds))
 	bp.nXmlAtomicTypes = uint32(len(bp.xmlAtomicTypes))
 	bp.nXmlSubtypes = uint32(len(bp.xmlSubtypes))
 	bp.nListAtomicTypes = uint32(len(bp.listAtomicTypes))
@@ -195,6 +199,7 @@ func MarshalTypePool(pool *TypePool, env Env) []byte {
 	write(buf, bp.nErrorBdds)
 	write(buf, bp.nTableBdds)
 	write(buf, bp.nObjectBdds)
+	write(buf, bp.nStreamBdds)
 	for _, entry := range bp.listBdds {
 		marshalBddDnf(buf, entry)
 	}
@@ -211,6 +216,9 @@ func MarshalTypePool(pool *TypePool, env Env) []byte {
 		marshalBddDnf(buf, entry)
 	}
 	for _, entry := range bp.objectBdds {
+		marshalBddDnf(buf, entry)
+	}
+	for _, entry := range bp.streamBdds {
 		marshalBddDnf(buf, entry)
 	}
 
@@ -280,6 +288,7 @@ func UnmarshalTypePool(data []byte, env Env) *TypePool {
 	read(r, &bp.nErrorBdds)
 	read(r, &bp.nTableBdds)
 	read(r, &bp.nObjectBdds)
+	read(r, &bp.nStreamBdds)
 	bp.listBdds = make([]unionOfIntersections, bp.nListBdds)
 	for i := range bp.listBdds {
 		bp.listBdds[i] = unmarshalBddDnf(r)
@@ -303,6 +312,10 @@ func UnmarshalTypePool(data []byte, env Env) *TypePool {
 	bp.objectBdds = make([]unionOfIntersections, bp.nObjectBdds)
 	for i := range bp.objectBdds {
 		bp.objectBdds[i] = unmarshalBddDnf(r)
+	}
+	bp.streamBdds = make([]unionOfIntersections, bp.nStreamBdds)
+	for i := range bp.streamBdds {
+		bp.streamBdds[i] = unmarshalBddDnf(r)
 	}
 
 	read(r, &bp.nListAtomicTypes)
@@ -358,12 +371,14 @@ type binaryPool struct {
 	nErrorBdds    uint32
 	nTableBdds    uint32
 	nObjectBdds   uint32
+	nStreamBdds   uint32
 	listBdds      []unionOfIntersections
 	mappingBdds   []unionOfIntersections
 	functionBdds  []unionOfIntersections
 	errorBdds     []unionOfIntersections
 	tableBdds     []unionOfIntersections
 	objectBdds    []unionOfIntersections
+	streamBdds    []unionOfIntersections
 
 	nListAtomicTypes     uint32
 	nMappingAtomicTypes  uint32
@@ -430,6 +445,7 @@ const (
 	tableBddSubtypeData
 	xmlSubtypeData
 	objectBddSubtypeData
+	streamBddSubtypeData
 )
 
 func marshalSubtypeData(buf *bytes.Buffer, entries []subtypeDataEntry) {

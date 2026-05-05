@@ -17,13 +17,14 @@
 package semantics_test
 
 import (
+	"flag"
+	"testing"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/test_util"
 	"ballerina-lang-go/test_util/testphases"
-	"flag"
-	"testing"
 )
 
 // semanticAnalysisSkipList is the semantic-analysis *additional* skip list,
@@ -98,6 +99,9 @@ func (v *semanticAnalysisValidator) Visit(node ast.BLangNode) ast.Visitor {
 		}
 	}
 
+	if inv, ok := node.(*ast.BLangInvocation); ok && ast.IsStreamOperation(inv) {
+		return v
+	}
 	// Check if node has a symbol that should have type set
 	if nodeWithSymbol, ok := node.(ast.BNodeWithSymbol); ok {
 		symbol := nodeWithSymbol.Symbol()

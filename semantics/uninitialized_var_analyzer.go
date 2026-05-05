@@ -17,11 +17,12 @@
 package semantics
 
 import (
+	"maps"
+	"sync"
+
 	"ballerina-lang-go/ast"
 	"ballerina-lang-go/context"
 	"ballerina-lang-go/model"
-	"maps"
-	"sync"
 )
 
 // varInitState tracks which variables are definitely initialized
@@ -291,6 +292,9 @@ func (v *varRefChecker) Visit(node ast.BLangNode) ast.Visitor {
 	}
 
 	// Check if this node is a variable reference
+	if inv, ok := node.(*ast.BLangInvocation); ok && ast.IsStreamOperation(inv) {
+		return nil
+	}
 	if nodeWithSymbol, ok := node.(ast.NodeWithSymbol); ok {
 		v.analyzer.checkVariableReference(nodeWithSymbol.Symbol(), node, v.state)
 	}

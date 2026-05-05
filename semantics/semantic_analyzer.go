@@ -961,7 +961,55 @@ func analyzeQueryExpr[A analyzer](a A, queryExpr *ast.BLangQueryExpr, expectedTy
 }
 
 func analyzeNewExpression[A analyzer](a A, expr *ast.BLangNewExpression, expectedType semtypes.SemType) bool {
+	if ast.IsStreamNewExpression(expr) {
+		return analyzeStreamNewExpression(a, expr, expectedType)
+	}
 	return validateResolvedType(a, expr, expectedType)
+}
+
+func analyzeStreamNewExpression[A analyzer](a A, expr *ast.BLangNewExpression, expectedType semtypes.SemType) bool {
+	cx := a.tyCtx()
+	streamTy := expr.GetDeterminedType()
+	valueTy := semtypes.StreamValueType(cx, streamTy)
+	completionTy := semtypes.StreamCompletionType(cx, streamTy)
+	if valueTy == nil || completionTy == nil {
+		a.internalErr("failed to extract stream type parameters", expr.GetPosition())
+		return false
+	}
+	implTy := semtypes.CreateStreamImplementorType(cx, valueTy, completionTy)
+	arg := expr.ArgsExprs[0]
+	if !analyzeActionOrExpression(a, arg, implTy) {
+		return false
+	}
+	if !validateStreamCloseMethod(a, arg, completionTy) {
+		return false
+	}
+	return validateResolvedType(a, expr, expectedType)
+}
+
+func validateStreamCloseMethod[A analyzer](a A, impl ast.BLangExpression, completionTy semtypes.SemType) bool {
+	cx := a.tyCtx()
+	implTy := impl.GetDeterminedType()
+	closeName := semtypes.StringConst("close")
+	kindTy := semtypes.ObjectMemberKind(cx, closeName, implTy)
+	if !semtypes.IsSubtype(cx, kindTy, semtypes.StringConst("method")) {
+		return true
+	}
+	visibilityTy := semtypes.ObjectMemberVisibility(cx, closeName, implTy)
+	if !semtypes.IsSubtype(cx, visibilityTy, semtypes.StringConst("public")) {
+		a.semanticErr("stream implementor close method must be public", impl.GetPosition())
+		return false
+	}
+	closeFnTy := semtypes.ObjectMemberType(cx, closeName, implTy)
+	paramListDefn := semtypes.NewListDefinition()
+	emptyParamList := paramListDefn.DefineListTypeWrapped(cx.Env(), nil, 0, semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	returnTy := semtypes.FunctionReturnType(cx, closeFnTy, emptyParamList)
+	expectedReturnTy := semtypes.Union(completionTy, semtypes.NIL)
+	if returnTy == nil || !semtypes.IsSubtype(cx, returnTy, expectedReturnTy) {
+		a.semanticErr("stream implementor close method is incompatible", impl.GetPosition())
+		return false
+	}
+	return true
 }
 
 func analyzeLambdaFunction[A analyzer](a A, expr *ast.BLangLambdaFunction) bool {
@@ -1290,6 +1338,7 @@ type invocable interface {
 	ast.BLangActionOrExpression
 	ResolvedSymbol() model.SymbolRef
 	SetResolvedSymbol(model.SymbolRef)
+	Receiver() ast.BLangExpression
 	CallArgs() []ast.BLangExpression
 	SetCallArgs([]ast.BLangExpression)
 	GetName() ast.IdentifierNode
@@ -1297,6 +1346,9 @@ type invocable interface {
 }
 
 func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.SemType) bool {
+	if ast.IsStreamOperation(inv) {
+		return analyzeStreamOperation(a, inv.(*ast.BLangInvocation), expectedType)
+	}
 	symbol := inv.ResolvedSymbol()
 	// Skip invocations that failed type resolution — an unresolved dependently-typed
 	// symbol still sits in the invocation, but has no usable semtype.
@@ -1316,6 +1368,19 @@ func analyzeInvocation[A analyzer](a A, inv invocable, expectedType semtypes.Sem
 		return false
 	}
 	return analyzeDirectInvocation(a, inv, fnSymbol, paramListTy, expectedType)
+}
+
+func analyzeStreamOperation[A analyzer](a A, invocation *ast.BLangInvocation, expectedType semtypes.SemType) bool {
+	if len(invocation.ArgExprs) != 0 {
+		a.semanticErr("stream method '"+invocation.Name.Value+"' takes no arguments", invocation.GetPosition())
+		return false
+	}
+	if invocation.Expr != nil {
+		if !analyzeActionOrExpression(a, invocation.Expr, nil) {
+			return false
+		}
+	}
+	return validateResolvedType(a, invocation, expectedType)
 }
 
 func analyzeDirectInvocation[A analyzer](a A, inv invocable, fnSymbol model.FunctionSymbol, paramListTy, expectedType semtypes.SemType) bool {
@@ -1710,6 +1775,9 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 		case *ast.BLangSimpleVariableDef:
 			locals[ctx.UnnarrowedSymbol(inner.Var.Symbol())] = struct{}{}
 		case *ast.BLangInvocation:
+			if ast.IsStreamOperation(inner) {
+				return true
+			}
 			if !isIsolatedInvocation(a, tyCtx, inner.Symbol()) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
 			}
@@ -1718,6 +1786,9 @@ func isIsolatedFuncInner[A analyzer](a A, node ast.BLangNode) {
 				a.semanticErr("invocation of a non-isolated function", inner.GetPosition())
 			}
 		case *ast.BLangNewExpression:
+			if ast.IsStreamNewExpression(inner) {
+				return true
+			}
 			classTy := a.ctx().SymbolType(inner.ClassSymbol)
 			initTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst("init"), classTy)
 			if initTy != nil && !semtypes.IsSubtype(tyCtx, initTy, semtypes.CreateIsolatedTop(tyCtx)) {
