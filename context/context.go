@@ -159,7 +159,8 @@ func (c *CompilerContext) HasDiagnostics() bool {
 
 func (c *CompilerContext) HasErrors() bool {
 	for _, diag := range c.diagnostics {
-		if diag.DiagnosticInfo().Severity() == diagnostics.Error {
+		switch diag.DiagnosticInfo().Severity() {
+		case diagnostics.Error, diagnostics.Fatal:
 			return true
 		}
 	}

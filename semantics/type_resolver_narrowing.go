@@ -185,7 +185,7 @@ func diff(c1, c2 *binding) *binding {
 	return result
 }
 
-func singletonExprEffect(chain *binding, expr ast.BLangExpression) (expressionEffect, bool) {
+func singletonExprEffect(chain *binding, expr ast.BLangActionOrExpression) (expressionEffect, bool) {
 	ty := expr.GetDeterminedType()
 	if ty == nil {
 		return expressionEffect{}, false
@@ -206,7 +206,7 @@ func defaultStmtEffect(chain *binding) statementEffect {
 	return statementEffect{binding: chain, nonCompletion: false}
 }
 
-func varRefExp(chain *binding, expr *ast.BLangExpression) (model.SymbolRef, bool) {
+func varRefExp(chain *binding, expr ast.BLangActionOrExpression) (model.SymbolRef, bool) {
 	baseSymbol, isVarRef := varRefExpInner(expr)
 	if !isVarRef {
 		return baseSymbol, false
@@ -218,11 +218,11 @@ func varRefExp(chain *binding, expr *ast.BLangExpression) (model.SymbolRef, bool
 	return baseSymbol, true
 }
 
-func varRefExpInner(expr *ast.BLangExpression) (model.SymbolRef, bool) {
+func varRefExpInner(expr ast.BLangActionOrExpression) (model.SymbolRef, bool) {
 	if expr == nil {
 		return model.SymbolRef{}, false
 	}
-	switch expr := (*expr).(type) {
+	switch expr := expr.(type) {
 	case *ast.BLangSimpleVarRef:
 		return expr.Symbol(), true
 	case *ast.BLangLocalVarRef:

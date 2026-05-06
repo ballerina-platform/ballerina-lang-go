@@ -17,9 +17,10 @@
 package model
 
 import (
+	"iter"
+
 	"ballerina-lang-go/semtypes"
 	"ballerina-lang-go/tools/diagnostics"
-	"iter"
 )
 
 type Field interface {
@@ -611,7 +612,6 @@ type VariableNode interface {
 	DocumentableNode
 	TopLevelNode
 	GetInitialExpression() ExpressionNode
-	SetInitialExpression(expr ExpressionNode)
 	GetIsDeclaredWithVar() bool
 	SetIsDeclaredWithVar(isDeclaredWithVar bool)
 }
@@ -695,6 +695,27 @@ type TypeDefinition interface {
 	SetDeterminedType(ty semtypes.SemType)
 	GetCycleDepth() int
 	SetCycleDepth(depth int)
+}
+
+type EnumDeclarationNode interface {
+	AnnotatableNode
+	DocumentableNode
+	TopLevelNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetMembers() []EnumMemberNode
+	AddMember(member EnumMemberNode)
+}
+
+type EnumMemberNode interface {
+	AnnotatableNode
+	DocumentableNode
+	NodeWithSymbol
+	GetName() IdentifierNode
+	SetName(name IdentifierNode)
+	GetExpression() ExpressionNode
+	SetExpression(expr ExpressionNode)
 }
 
 type TypeData struct {
@@ -989,14 +1010,11 @@ type LambdaFunctionNode interface {
 
 type InvocationNode interface {
 	VariableReferenceNode
-	AnnotatableNode
 	GetPackageAlias() IdentifierNode
 	GetName() IdentifierNode
 	GetArgumentExpressions() []ExpressionNode
 	GetRequiredArgs() []ExpressionNode
 	GetExpression() ExpressionNode
-	IsIterableOperation() bool
-	IsAsync() bool
 }
 
 type GroupExpressionNode interface {
@@ -1046,7 +1064,6 @@ type AssignmentNode interface {
 	GetVariable() ExpressionNode
 	GetExpression() ExpressionNode
 	IsDeclaredWithVar() bool
-	SetExpression(expression Node)
 	SetDeclaredWithVar(IsDeclaredWithVar bool)
 	SetVariable(variableReferenceNode VariableReferenceNode)
 }
@@ -1092,7 +1109,6 @@ type VariableDefinitionNode interface {
 type ReturnNode interface {
 	StatementNode
 	GetExpression() ExpressionNode
-	SetExpression(expression ExpressionNode)
 }
 
 type PanicNode interface {
@@ -1128,7 +1144,6 @@ type ForeachNode interface {
 	GetVariableDefinitionNode() VariableDefinitionNode
 	SetVariableDefinitionNode(node VariableDefinitionNode)
 	GetCollection() ExpressionNode
-	SetCollection(collection ExpressionNode)
 	GetBody() BlockStatementNode
 	SetBody(body BlockStatementNode)
 	GetIsDeclaredWithVar() bool

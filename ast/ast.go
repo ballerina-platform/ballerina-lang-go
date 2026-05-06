@@ -303,6 +303,7 @@ type (
 		Methods                         map[string]*BLangFunction
 		Fields                          []model.SimpleVariableNode
 		Inclusions                      []model.SymbolRef       // This needs to be symbol because it could be a class definition as well
+		InclusionPositions              []diagnostics.Location  // Positions of each inclusion, parallel to Inclusions
 		unresolvedInclusions            []*BLangUserDefinedType // we need this because we can't get symbols before the symbol resolution in node_builder. After symbol resolution this field is cleared out
 		flags                           nodeFlags
 		typeData                        model.TypeData
@@ -405,7 +406,7 @@ type (
 		typeNode                        BType
 		AnnAttachments                  []model.AnnotationAttachmentNode
 		MarkdownDocumentationAttachment model.MarkdownDocumentationNode
-		Expr                            model.ExpressionNode
+		Expr                            BLangActionOrExpression
 		flags                           nodeFlags
 		IsDeclaredWithVar               bool
 		symbol                          model.SymbolRef
@@ -558,7 +559,6 @@ func (b *BLangTypeDefinition) SetAnonymous()     { b.flags |= flagAnonymous }
 // Stub IsPublic for types with no flags
 func (b *BLangAnnotation) IsPublic() bool     { return false }
 func (b *BLangService) IsPublic() bool        { return false }
-func (b *BLangInvocation) IsPublic() bool     { return false }
 func (b *BLangMemberTypeDesc) IsPublic() bool { return false }
 
 func (b *bLangNodeBase) SetDeterminedType(ty semtypes.SemType) {
@@ -1484,7 +1484,7 @@ func (b *BLangVariableBase) GetExpr() model.ExpressionNode {
 	return b.Expr
 }
 
-func (b *BLangVariableBase) SetExpr(expr model.ExpressionNode) {
+func (b *BLangVariableBase) SetExpr(expr BLangActionOrExpression) {
 	b.Expr = expr
 }
 
@@ -1509,7 +1509,7 @@ func (m *BLangVariableBase) GetInitialExpression() model.ExpressionNode {
 	return m.Expr
 }
 
-func (m *BLangVariableBase) SetInitialExpression(expr model.ExpressionNode) {
+func (m *BLangVariableBase) SetInitialExpression(expr BLangActionOrExpression) {
 	m.Expr = expr
 }
 

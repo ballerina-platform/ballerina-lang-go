@@ -15,6 +15,10 @@ This document defines how AI/code agents should work with this repository: codin
 
 - Each bal/go file should have the correct license header
 
+## PAL (Platform Adaptation Layer)
+
+- All platform interactions (e.g. io, http, fs) must go through PAL, not the underlying platform directly.
+
 ## Symbols
 
 - IMPORTANT: never store `model.Symbol` as the key in a map, always use a `model.SymbolRef`
@@ -39,6 +43,12 @@ This document defines how AI/code agents should work with this repository: codin
 Stages 1–10 are the compilation pipeline (source → BIR); stage 11 is the interpreter (BIR execution).
 
 Execution of these stages is defined in `module_context.go` (and `testphases/phases.go` for corpus tests)
+
+### Error handling
+
+Stages 1–4 run sequentially across modules: stages 3–4 are topologically sorted (a module's symbol/type resolution depends on its dependencies' results), while stages 1–2 are unordered per module. If any module reports an error in stages 1–4 (errors are recorded by calling an `*Error` method on the compiler context, e.g. `SemanticError`, `SyntaxError`), the pipeline must stop before stage 5 — no module may proceed to local-node resolution or beyond.
+
+Stages 5–10 then run concurrently per module, with no cross-module dependencies. After stage 10 completes for every module, if any module has errors we must not load any BIR into the runtime: stage 11 (interpretation) is skipped entirely.
 
 ## Tests
 

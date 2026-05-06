@@ -1,0 +1,13 @@
+-- stdout --
+-- stderr --
+error[SEMANTIC_ERROR]: redeclared symbol 'RED'
+  --> modules/utils/constants.bal:17:21
+   |
+17 | public const string RED = "RED";
+   |                     ^^^
+
+error[SEMANTIC_ERROR]: redeclared symbol 'RED'
+  --> modules/utils/enums.bal:18:5
+   |
+18 |     RED
+   |     ^^^

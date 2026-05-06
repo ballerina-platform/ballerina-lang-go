@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"ballerina-lang-go/bir"
+	"ballerina-lang-go/pal"
 	"ballerina-lang-go/runtime/internal/exec"
 	"ballerina-lang-go/runtime/internal/modules"
 	"ballerina-lang-go/semtypes"
@@ -28,6 +29,7 @@ import (
 // and is used as the execution context for interpreting BIR packages.
 type Runtime struct {
 	registry *modules.Registry
+	platform pal.Platform
 }
 
 // ModuleInitializer is a function that can install modules (e.g. stdlibs) into
@@ -38,14 +40,20 @@ var moduleInitializers []ModuleInitializer
 
 // NewRuntime constructs a new runtime with an empty registry and runs all
 // registered module initializers.
-func NewRuntime() *Runtime {
+func NewRuntime(platform pal.Platform) *Runtime {
 	rt := &Runtime{
 		registry: modules.NewRegistry(),
+		platform: platform,
 	}
 	for _, init := range moduleInitializers {
 		init(rt)
 	}
 	return rt
+}
+
+// Platform returns the platform configuration of this runtime instance.
+func (rt *Runtime) Platform() pal.Platform {
+	return rt.platform
 }
 
 // Interpret interprets a BIR package using this runtime instance.

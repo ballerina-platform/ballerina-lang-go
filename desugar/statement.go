@@ -98,7 +98,7 @@ func walkAssignment(cx *functionContext, stmt *ast.BLangAssignment) desugaredNod
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -119,7 +119,7 @@ func walkCompoundAssignment(cx *functionContext, stmt *ast.BLangCompoundAssignme
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -134,7 +134,7 @@ func walkExpressionStmt(cx *functionContext, stmt *ast.BLangExpressionStmt) desu
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -257,9 +257,9 @@ func walkSimpleVariableDef(cx *functionContext, stmt *ast.BLangSimpleVariableDef
 			}
 		}
 		if stmt.Var.Expr != nil {
-			result := walkExpression(cx, stmt.Var.Expr.(ast.BLangExpression))
+			result := walkExpression(cx, stmt.Var.Expr)
 			initStmts = append(initStmts, result.initStmts...)
-			stmt.Var.Expr = result.replacementNode.(ast.BLangExpression)
+			stmt.Var.Expr = result.replacementNode
 		}
 	}
 
@@ -290,7 +290,7 @@ func walkReturn(cx *functionContext, stmt *ast.BLangReturn) desugaredNode[model.
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	return desugaredNode[model.StatementNode]{
@@ -359,11 +359,10 @@ func visitForEach(cx *functionContext, stmt *ast.BLangForeach) desugaredNode[mod
 	if semtypes.IsSubtypeSimple(stmt.Collection.GetDeterminedType(), semtypes.MAPPING) {
 		return desugarForEachOnMap(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 	}
-	cx.unimplemented("unsupported collection type in foreach")
-	return desugaredNode[model.StatementNode]{}
+	return desugarForEachOnIterable(cx, stmt.Collection, stmt.VariableDef, &stmt.Body, stmt.Scope())
 }
 
-func desugarForEachOnList(cx *functionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+func desugarForEachOnList(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
 	basePos := collection.GetPosition()
@@ -512,17 +511,15 @@ func createLengthInvocation(cx *functionContext, collection ast.BLangExpression)
 	nameIdent := &ast.BLangIdentifier{Value: "length"}
 	pkgAliasIdent := &ast.BLangIdentifier{Value: pkgName}
 
-	inv := &ast.BLangInvocation{
-		Name:     nameIdent,
-		PkgAlias: pkgAliasIdent,
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: pkgAliasIdent}
+	inv.Name = nameIdent
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(semtypes.INT)
 	return inv
 }
 
-func desugarForEachOnMap(cx *functionContext, collection ast.BLangExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+func desugarForEachOnMap(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
 	basePos := collection.GetPosition()
@@ -683,11 +680,9 @@ func createKeysInvocation(cx *functionContext, collection ast.BLangExpression) *
 		PkgNameComps: []ast.BLangIdentifier{{Value: "lang"}, {Value: "map"}},
 		Alias:        &ast.BLangIdentifier{Value: pkgName},
 	})
-	inv := &ast.BLangInvocation{
-		Name:     &ast.BLangIdentifier{Value: "keys"},
-		PkgAlias: &ast.BLangIdentifier{Value: pkgName},
-		ArgExprs: []ast.BLangExpression{collection},
-	}
+	inv := &ast.BLangInvocation{PkgAlias: &ast.BLangIdentifier{Value: pkgName}}
+	inv.Name = &ast.BLangIdentifier{Value: "keys"}
+	inv.ArgExprs = []ast.BLangExpression{collection}
 	inv.SetSymbol(symbolRef)
 	inv.SetDeterminedType(returnType)
 	return inv
@@ -805,7 +800,7 @@ func isAppendReachable(stmt ast.BLangStatement) bool {
 	}
 }
 
-func isRangeExpr(expr ast.BLangExpression) bool {
+func isRangeExpr(expr ast.BLangActionOrExpression) bool {
 	if binaryExpr, ok := expr.(*ast.BLangBinaryExpr); ok {
 		switch binaryExpr.GetOperatorKind() {
 		case model.OperatorKind_CLOSED_RANGE, model.OperatorKind_HALF_OPEN_RANGE:
@@ -817,13 +812,189 @@ func isRangeExpr(expr ast.BLangExpression) bool {
 	return false
 }
 
+func createMethodInvocation(cx *functionContext, receiver ast.BLangExpression, methodName string, receiverType semtypes.SemType, args []ast.BLangExpression) *ast.BLangInvocation {
+	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+	fnTy := semtypes.ObjectMemberType(tyCtx, semtypes.StringConst(methodName), receiverType)
+
+	argTys := make([]semtypes.SemType, len(args))
+	for i, arg := range args {
+		argTys[i] = arg.GetDeterminedType()
+	}
+	ld := semtypes.NewListDefinition()
+	paramList := ld.DefineListTypeWrapped(cx.typeEnv(), argTys, len(argTys), semtypes.NEVER, semtypes.CellMutability_CELL_MUT_NONE)
+	retTy := semtypes.FunctionReturnType(tyCtx, fnTy, paramList)
+
+	_, fnSymRef := cx.addDesugardSymbol(fnTy, model.SymbolKindFunction, false)
+
+	inv := &ast.BLangInvocation{}
+	inv.Name = &ast.BLangIdentifier{Value: methodName}
+	inv.Expr = receiver
+	inv.ArgExprs = args
+	inv.SetSymbol(fnSymRef)
+	inv.SetDeterminedType(retTy)
+	return inv
+}
+
+func desugarForEachOnIterable(cx *functionContext, collection ast.BLangActionOrExpression, loopVarDef *ast.BLangSimpleVariableDef, body *ast.BLangBlockStmt, foreachScope model.Scope) desugaredNode[model.StatementNode] {
+	var initStmts []model.StatementNode
+	basePos := collection.GetPosition()
+	tyCtx := semtypes.ContextFrom(cx.typeEnv())
+
+	// Step 1: Evaluate collection into temp var
+	collResult := walkExpression(cx, collection)
+	initStmts = append(initStmts, collResult.initStmts...)
+	collExpr := collResult.replacementNode
+
+	collType := collExpr.GetDeterminedType()
+	collName, collSymbol := cx.addDesugardSymbol(collType, model.SymbolKindVariable, false)
+	collVarName := &ast.BLangIdentifier{Value: collName}
+	collVar := &ast.BLangSimpleVariable{Name: collVarName}
+	collVar.SetDeterminedType(collType)
+	collVar.SetInitialExpression(collExpr)
+	collVar.SetSymbol(collSymbol)
+	collVarDef := &ast.BLangSimpleVariableDef{Var: collVar}
+	setPositionIfMissing(collVarDef, basePos)
+	initStmts = append(initStmts, collVarDef)
+
+	collVarRef := &ast.BLangSimpleVarRef{VariableName: collVarName}
+	collVarRef.SetSymbol(collSymbol)
+	collVarRef.SetDeterminedType(collType)
+
+	// Step 2: Create iterator = collection.iterator()
+	iteratorInv := createMethodInvocation(cx, collVarRef, "iterator", collType, []ast.BLangExpression{})
+	iteratorType := iteratorInv.GetDeterminedType()
+
+	iterName, iterSymbol := cx.addDesugardSymbol(iteratorType, model.SymbolKindVariable, false)
+	iterVarName := &ast.BLangIdentifier{Value: iterName}
+	iterVar := &ast.BLangSimpleVariable{Name: iterVarName}
+	iterVar.SetDeterminedType(iteratorType)
+	iterVar.SetInitialExpression(iteratorInv)
+	iterVar.SetSymbol(iterSymbol)
+	iterVarDef := &ast.BLangSimpleVariableDef{Var: iterVar}
+	setPositionIfMissing(iterVarDef, basePos)
+	initStmts = append(initStmts, iterVarDef)
+
+	// Step 3: while(true) condition
+	trueLiteral := &ast.BLangLiteral{Value: true, OriginalValue: "true"}
+	trueLiteral.SetDeterminedType(semtypes.BOOLEAN)
+
+	// Step 4: Build while body
+	var whileBodyStmts []model.StatementNode
+
+	// 4a: $next = $iterator.next()
+	iterVarRef := &ast.BLangSimpleVarRef{VariableName: iterVarName}
+	iterVarRef.SetSymbol(iterSymbol)
+	iterVarRef.SetDeterminedType(iteratorType)
+
+	nextInv := createMethodInvocation(cx, iterVarRef, "next", iteratorType, []ast.BLangExpression{})
+	nextReturnType := nextInv.GetDeterminedType()
+
+	nextName, nextSymbol := cx.addDesugardSymbol(nextReturnType, model.SymbolKindVariable, false)
+	nextVarName := &ast.BLangIdentifier{Value: nextName}
+	nextVar := &ast.BLangSimpleVariable{Name: nextVarName}
+	nextVar.SetDeterminedType(nextReturnType)
+	nextVar.SetInitialExpression(nextInv)
+	nextVar.SetSymbol(nextSymbol)
+	nextVarDef := &ast.BLangSimpleVariableDef{Var: nextVar}
+	setPositionIfMissing(nextVarDef, basePos)
+	whileBodyStmts = append(whileBodyStmts, nextVarDef)
+
+	// 4b: if $next is () { break }
+	nextRefForNilCheck := &ast.BLangSimpleVarRef{VariableName: nextVarName}
+	nextRefForNilCheck.SetSymbol(nextSymbol)
+	nextRefForNilCheck.SetDeterminedType(nextReturnType)
+
+	nilCheck := &ast.BLangTypeTestExpr{}
+	nilCheck.Expr = nextRefForNilCheck
+	nilCheck.Type = model.TypeData{Type: semtypes.NIL}
+	nilCheck.SetDeterminedType(semtypes.BOOLEAN)
+
+	breakStmt := &ast.BLangBreak{}
+	setPositionIfMissing(breakStmt, basePos)
+	nilCheckIf := &ast.BLangIf{
+		Expr: nilCheck,
+		Body: ast.BLangBlockStmt{Stmts: []model.StatementNode{breakStmt}},
+	}
+	nilCheckIf.SetScope(foreachScope)
+	setPositionIfMissing(nilCheckIf, basePos)
+	whileBodyStmts = append(whileBodyStmts, nilCheckIf)
+
+	// 4c: if $next is error { panic $next } (only if error is possible)
+	hasError := !semtypes.IsEmpty(tyCtx, semtypes.Intersect(nextReturnType, semtypes.ERROR))
+	if hasError {
+		nextRefForErrCheck := &ast.BLangSimpleVarRef{VariableName: nextVarName}
+		nextRefForErrCheck.SetSymbol(nextSymbol)
+		nextRefForErrCheck.SetDeterminedType(nextReturnType)
+
+		errCheck := &ast.BLangTypeTestExpr{}
+		errCheck.Expr = nextRefForErrCheck
+		errCheck.Type = model.TypeData{Type: semtypes.ERROR}
+		errCheck.SetDeterminedType(semtypes.BOOLEAN)
+
+		nextRefForPanic := &ast.BLangSimpleVarRef{VariableName: nextVarName}
+		nextRefForPanic.SetSymbol(nextSymbol)
+		nextRefForPanic.SetDeterminedType(nextReturnType)
+
+		panicStmt := &ast.BLangPanic{Expr: nextRefForPanic}
+		setPositionIfMissing(panicStmt, basePos)
+		errCheckIf := &ast.BLangIf{
+			Expr: errCheck,
+			Body: ast.BLangBlockStmt{Stmts: []model.StatementNode{panicStmt}},
+		}
+		errCheckIf.SetScope(foreachScope)
+		setPositionIfMissing(errCheckIf, basePos)
+		whileBodyStmts = append(whileBodyStmts, errCheckIf)
+	}
+
+	// 4d: loopVar = $next.value (field access desugared to index access by walkBlockStmt)
+	nextRefForValue := &ast.BLangSimpleVarRef{VariableName: nextVarName}
+	nextRefForValue.SetSymbol(nextSymbol)
+	nextRefForValue.SetDeterminedType(nextReturnType)
+
+	valueAccess := &ast.BLangFieldBaseAccess{
+		Field: ast.BLangIdentifier{Value: "value"},
+	}
+	valueAccess.Expr = nextRefForValue
+	valueAccess.SetDeterminedType(loopVarDef.Var.GetDeterminedType())
+	setPositionIfMissing(valueAccess, basePos)
+
+	loopVarDef.Var.SetInitialExpression(valueAccess)
+	whileBodyStmts = append(whileBodyStmts, loopVarDef)
+
+	// 4e: original body stmts
+	whileBodyStmts = append(whileBodyStmts, body.Stmts...)
+
+	body.Stmts = whileBodyStmts
+
+	// No loop var tracking needed — no index increment for iterable foreach
+	// Continue in iterable foreach just goes back to calling next()
+	cx.pushLoopVar(nil)
+	bodyResult := walkBlockStmt(cx, body)
+	newBody := bodyResult.replacementNode.(*ast.BLangBlockStmt)
+	cx.popLoopVar()
+
+	// Step 5: Create while loop
+	whileStmt := &ast.BLangWhile{
+		Expr: trueLiteral,
+		Body: *newBody,
+	}
+	whileStmt.SetScope(foreachScope)
+	whileStmt.SetDeterminedType(semtypes.NEVER)
+	setPositionIfMissing(whileStmt, basePos)
+
+	return desugaredNode[model.StatementNode]{
+		initStmts:       initStmts,
+		replacementNode: whileStmt,
+	}
+}
+
 func walkMatchStatement(cx *functionContext, stmt *ast.BLangMatchStatement) desugaredNode[model.StatementNode] {
 	var initStmts []model.StatementNode
 
 	if stmt.Expr != nil {
 		result := walkExpression(cx, stmt.Expr)
 		initStmts = append(initStmts, result.initStmts...)
-		stmt.Expr = result.replacementNode.(ast.BLangExpression)
+		stmt.Expr = result.replacementNode
 	}
 
 	for i := range stmt.MatchClauses {
@@ -831,7 +1002,7 @@ func walkMatchStatement(cx *functionContext, stmt *ast.BLangMatchStatement) desu
 		if clause.Guard != nil {
 			guardResult := walkExpression(cx, clause.Guard)
 			initStmts = append(initStmts, guardResult.initStmts...)
-			clause.Guard = guardResult.replacementNode.(ast.BLangExpression)
+			clause.Guard = guardResult.replacementNode
 		}
 		bodyResult := walkBlockStmt(cx, &clause.Body)
 		clause.Body = *bodyResult.replacementNode.(*ast.BLangBlockStmt)
