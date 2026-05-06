@@ -79,11 +79,12 @@ type NodeBuilder struct {
 	PackageID            *model.PackageID
 	anonTypeNameSuffixes []string // Stack for anonymous type name suffixes
 	additionalStatements []BLangStatement
+	currentCompUnit      *BLangCompilationUnit
 	CurrentCompUnitName  string
 	isInLocalContext     bool
 	isInFiniteContext    bool
 	inCollectContext     bool
-	constantSet          map[string]bool // Track declared constants to detect redeclarations
+	constantSet          map[string]string // Track declared constants to detect redeclarations
 	cx                   *context.CompilerContext
 	types                typeTable
 }
@@ -95,7 +96,7 @@ func (n *NodeBuilder) de() *diagnostics.DiagnosticEnv {
 // NewNodeBuilder creates and initializes a new NodeBuilder instance
 func NewNodeBuilder(cx *context.CompilerContext) *NodeBuilder {
 	nodeBuilder := &NodeBuilder{
-		constantSet: make(map[string]bool),
+		constantSet: make(map[string]string),
 		cx:          cx,
 		PackageID:   cx.GetDefaultPackage(),
 		types:       newTypeTable(),
@@ -1327,14 +1328,23 @@ func (n *NodeBuilder) createSimpleLiteralInner(literal tree.Node, isFiniteType b
 
 func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLangNode {
 	compilationUnit := BLangCompilationUnit{}
+	n.currentCompUnit = &compilationUnit
+	defer func() { n.currentCompUnit = nil }()
 	compilationUnit.Name = n.CurrentCompUnitName
 	compilationUnit.packageID = n.PackageID
 	pos := getPosition(n.de(), modulePartNode)
 	compUnit := createIdentifier(pos, &n.CurrentCompUnitName, &n.CurrentCompUnitName)
 
+	if modulePartNode.HasDiagnostics() {
+		n.reportSyntaxDiagnostics(modulePartNode)
+	}
+
 	// Generate import declarations
 	imports := modulePartNode.Imports()
 	for importDecl := range imports.Iterator() {
+		if importDecl.HasDiagnostics() {
+			continue
+		}
 		bLangImport := n.TransformImportDeclaration(importDecl).(*BLangImportPackage)
 		bLangImport.CompUnit = &compUnit
 		compilationUnit.AddTopLevelNode(bLangImport)
@@ -1343,6 +1353,9 @@ func (n *NodeBuilder) TransformModulePart(modulePartNode *tree.ModulePart) BLang
 	// Generate other module-level declarations
 	members := modulePartNode.Members()
 	for member := range members.Iterator() {
+		if member.HasDiagnostics() {
+			continue
+		}
 		// Dispatch to TransformSyntaxNode which handles all node types
 		var memberNode tree.Node = member
 		transformedNode := n.TransformSyntaxNode(memberNode)
@@ -1721,7 +1734,6 @@ func (n *NodeBuilder) generateAndAddBLangStatements(statementNodes tree.NodeList
 			continue
 		}
 		if currentStatement.HasDiagnostics() {
-			n.reportSyntaxDiagnostics(currentStatement)
 			continue
 		}
 		if currentStatement.Kind() == common.FORK_STATEMENT {
@@ -2126,11 +2138,20 @@ func (n *NodeBuilder) TransformConstantDeclaration(constantDeclarationNode *tree
 
 	constantName := constantNode.Name.GetValue()
 
-	if n.constantSet[constantName] {
-		panic("unimplemented")
-		// TODO: Add diagnostic logging when dlog is migrated
+	if initializedValue, exists := n.constantSet[constantName]; exists {
+		if initializedValue != "" {
+			n.cx.SemanticError(
+				fmt.Sprintf("symbol '%s' is already initialized with '%s'", constantName, initializedValue),
+				constantNode.Name.GetPosition(),
+			)
+		} else {
+			n.cx.SemanticError(
+				fmt.Sprintf("symbol '%s' is already initialized", constantName),
+				constantNode.Name.GetPosition(),
+			)
+		}
 	} else {
-		n.constantSet[constantName] = true
+		n.constantSet[constantName] = getConstantInitValue(constantNode.Expr)
 	}
 
 	return constantNode
@@ -3218,11 +3239,113 @@ func (n *NodeBuilder) TransformConditionalExpression(conditionalExpressionNode *
 }
 
 func (n *NodeBuilder) TransformEnumDeclaration(enumDeclarationNode *tree.EnumDeclarationNode) BLangNode {
-	panic("TransformEnumDeclaration unimplemented")
+	publicQualifier := false
+	qualifier := enumDeclarationNode.Qualifier()
+	if qualifier != nil && qualifier.Kind() == common.PUBLIC_KEYWORD {
+		publicQualifier = true
+	}
+
+	memberNodes := enumDeclarationNode.EnumMemberList()
+	memberTypeNodes := make([]model.TypeDescriptor, 0)
+	for memberNode := range memberNodes.Iterator() {
+		if memberNode.Kind() != common.ENUM_MEMBER {
+			continue
+		}
+		enumMember := memberNode.(*tree.EnumMemberNode)
+		if enumMember.Identifier() == nil || enumMember.Identifier().IsMissing() {
+			n.cx.InternalError("missing enum member identifier", getPosition(n.de(), enumMember))
+			continue
+		}
+		constantNode, redeclared := n.transformEnumMember(enumMember, publicQualifier)
+		if redeclared {
+			continue
+		}
+		if n.currentCompUnit == nil {
+			n.cx.InternalError("enum constants can only be added at module level", getPosition(n.de(), enumMember))
+			continue
+		}
+		n.currentCompUnit.AddTopLevelNode(constantNode)
+		memberTypeNodes = append(memberTypeNodes, n.createTypeNode(enumMember.Identifier()))
+	}
+
+	typeDef := NewBLangTypeDefinition()
+	typeDef.pos = getPositionWithoutMetadata(n.de(), enumDeclarationNode)
+	if publicQualifier {
+		typeDef.SetPublic()
+	}
+
+	identifierPos := getPosition(n.de(), enumDeclarationNode.Identifier())
+	identifier := createIdentifierFromToken(identifierPos, enumDeclarationNode.Identifier())
+	typeDef.Name = &identifier
+
+	if len(memberTypeNodes) > 0 {
+		current := memberTypeNodes[0]
+		for i := 1; i < len(memberTypeNodes); i++ {
+			unionType := &BLangUnionTypeNode{
+				lhs: model.TypeData{TypeDescriptor: current},
+				rhs: model.TypeData{TypeDescriptor: memberTypeNodes[i]},
+			}
+			unionType.pos = typeDef.pos
+			current = unionType
+		}
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: current})
+	} else {
+		neverType := &BLangValueType{TypeKind: model.TypeKind_NEVER}
+		neverType.pos = diagnostics.NewBuiltinLocation()
+		typeDef.SetTypeData(model.TypeData{TypeDescriptor: neverType})
+		n.cx.SyntaxError("missing enum member", typeDef.Name.GetPosition())
+	}
+
+	metadata := enumDeclarationNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		docString := getDocumentationString(metadata)
+		typeDef.markdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
+
+	return typeDef
 }
 
 func (n *NodeBuilder) TransformEnumMember(enumMemberNode *tree.EnumMemberNode) BLangNode {
-	panic("TransformEnumMember unimplemented")
+	constantNode, _ := n.transformEnumMember(enumMemberNode, false)
+	return constantNode
+}
+
+func (n *NodeBuilder) transformEnumMember(enumMemberNode *tree.EnumMemberNode, publicQualifier bool) (*BLangConstant, bool) {
+	constantNode := createConstantNode()
+	constantNode.pos = getPositionWithoutMetadata(n.de(), enumMemberNode)
+	if publicQualifier {
+		constantNode.SetPublic()
+	}
+
+	identifierPos := getPosition(n.de(), enumMemberNode.Identifier())
+	identifier := createIdentifierFromToken(identifierPos, enumMemberNode.Identifier())
+	constantNode.Name = &identifier
+
+	if exprNode := enumMemberNode.ConstExprNode(); exprNode != nil {
+		constantNode.Expr = n.createExpression(exprNode)
+	} else {
+		constantNode.Expr = n.createSimpleLiteral(enumMemberNode.Identifier()).(BLangExpression)
+	}
+
+	stringType := &BLangValueType{TypeKind: model.TypeKind_STRING}
+	stringType.pos = diagnostics.NewBuiltinLocation()
+	constantNode.SetTypeNode(stringType)
+
+	metadata := enumMemberNode.Metadata()
+	if metadata != nil && !metadata.IsMissing() {
+		docString := getDocumentationString(metadata)
+		constantNode.MarkdownDocumentationAttachment = n.createMarkdownDocumentationAttachment(docString)
+	}
+
+	constantName := constantNode.Name.GetValue()
+	if _, exists := n.constantSet[constantName]; exists {
+		n.cx.SemanticError("redeclared symbol '"+constantName+"'", constantNode.Name.GetPosition())
+		return nil, true
+	} else {
+		n.constantSet[constantName] = getConstantInitValue(constantNode.Expr)
+	}
+
+	return constantNode, false
 }
 
 func (n *NodeBuilder) TransformArrayTypeDescriptor(arrayTypeDescriptorNode *tree.ArrayTypeDescriptorNode) BLangNode {
@@ -3995,6 +4118,20 @@ func (n *NodeBuilder) TransformToken(token tree.Token) BLangNode {
 
 func (n *NodeBuilder) TransformIdentifierToken(identifier *tree.IdentifierToken) BLangNode {
 	panic("TransformIdentifierToken unimplemented")
+}
+
+func getConstantInitValue(expr BLangActionOrExpression) string {
+	type constantValue interface {
+		GetValue() any
+		GetOriginalValue() string
+	}
+	if cv, ok := expr.(constantValue); ok {
+		if v := cv.GetValue(); v != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		return cv.GetOriginalValue()
+	}
+	return ""
 }
 
 func stringToTypeKind(typeText string) model.TypeKind {

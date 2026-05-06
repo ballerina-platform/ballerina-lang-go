@@ -13,8 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// @productions module-enum-decl
+import ballerina/io;
 
-type Client object {
-    remote function get(string path) returns string; // @error
-};
+public enum Color {
+    RED,
+    GREEN = "green",
+    BLUE
+}
 
+public function main() {
+    Color c = GREEN;
+
+    "RED"|"GREEN"|"BLUE" x = c; // @error
+    int y = c; // @error
+}

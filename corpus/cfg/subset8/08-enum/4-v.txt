@@ -1,0 +1,29 @@
+(main
+  (bb0 () ()
+    (var-def
+      (variable c (type
+        (user-defined-type Color)) (expr
+        (simple-var-ref GREEN))))
+    (var-def
+      (variable x (type
+        (union-type
+          (union-type
+            (finite-type
+              (literal RED))
+            (finite-type
+              (literal green)))
+          (finite-type
+            (literal BLUE)))) (expr
+        (simple-var-ref c))))
+    (var-def
+      (variable y (type
+        (value-type string)) (expr
+        (simple-var-ref c))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref x))))
+    (expression-stmt
+      (invocation io println (
+        (simple-var-ref y))))
+  )
+)

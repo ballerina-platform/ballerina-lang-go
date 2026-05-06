@@ -14,7 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Client object {
-    remote function get(string path) returns string; // @error
-};
-
+enum Color {
+    RED,
+    GREEN = "green",
+    BLUE
+}

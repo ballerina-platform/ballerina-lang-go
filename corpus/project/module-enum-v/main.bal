@@ -14,7 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type Client object {
-    remote function get(string path) returns string; // @error
-};
+import module_enum.types;
 
+import ballerina/io;
+
+public function main() {
+    io:println(types:RED); // @output RED
+    io:println(types:GREEN); // @output green
+    io:println(types:BLUE); // @output BLUE
+}
