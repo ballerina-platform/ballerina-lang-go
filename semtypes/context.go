@@ -37,6 +37,7 @@ type context struct {
 	_isolatedObjectMemo SemType
 	_serviceObjectMemo  SemType
 	_isolatedTopMemo    SemType
+	_iterableMemo       SemType
 	_comparableMemo     map[comparableMemoKey]*comparableMemo
 }
 
@@ -120,6 +121,14 @@ func (c *context) serviceObjectMemo() SemType {
 
 func (c *context) setServiceObjectMemo(t SemType) {
 	c._serviceObjectMemo = t
+}
+
+func (c *context) iterableMemo() SemType {
+	return c._iterableMemo
+}
+
+func (c *context) setIterableMemo(t SemType) {
+	c._iterableMemo = t
 }
 
 func (c *context) mappingMemo() map[string]*bddMemo {
