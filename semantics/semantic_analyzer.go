@@ -202,6 +202,9 @@ func (fa *functionAnalyzer) Visit(node ast.BLangNode) ast.Visitor {
 	case *ast.BLangSimpleVarRef:
 		checkIsolatedModuleVarOutsideLock(fa, n)
 		return visitInner(fa, n)
+	case *ast.BLangFieldBaseAccess:
+		checkIsolatedFieldOutsideLock(fa, n)
+		return visitInner(fa, n)
 	default:
 		// Delegate loop creation and common nodes to visitInner
 		return visitInner(fa, node)
@@ -1810,7 +1813,6 @@ func validateRecordFieldDefaults[A analyzer](a A, node *ast.BLangRecordType) {
 func validateClassDefn[A analyzer](a A, classDef *ast.BLangClassDefinition) {
 	if classDef.IsIsolated() {
 		validateIsolatedClassFields(a, classDef)
-		validateIsolatedClassMutableFieldAccess(a, classDef)
 	} else {
 		validateObjInclusions(a, classDef.Inclusions, classDef.InclusionPositions)
 	}
@@ -1827,46 +1829,6 @@ func validateIsolatedClassFields[A analyzer](a A, classDef *ast.BLangClassDefini
 		if field.IsPublic() && !isImmutableField(tyCtx, field) {
 			a.semanticErr("public field of an isolated object must be \"final\" and have a type that is a subtype of \"readonly\"", field.GetPosition())
 		}
-	}
-}
-
-func validateIsolatedClassMutableFieldAccess[A analyzer](a A, classDef *ast.BLangClassDefinition) {
-	tyCtx := a.tyCtx()
-	fieldsByName := make(map[string]*ast.BLangSimpleVariable)
-	for _, f := range classDef.Fields {
-		field := f.(*ast.BLangSimpleVariable)
-		fieldsByName[field.Name.Value] = field
-	}
-	isMutableSelfFieldAccess := func(node ast.BLangNode) bool {
-		fieldAccess, ok := node.(*ast.BLangFieldBaseAccess)
-		if !ok || !isSelfFieldAccess(fieldAccess) {
-			return false
-		}
-		field, exists := fieldsByName[fieldAccess.Field.Value]
-		return exists && !isImmutableField(tyCtx, field)
-	}
-	checkMutableSelfAccess := func(method *ast.BLangFunction) {
-		everyNode(a, method.GetBody().(ast.BLangNode), func(_ A, inner ast.BLangNode) bool {
-			switch n := inner.(type) {
-			case *ast.BLangLock:
-				// Mutable self-field access inside a lock body is permitted;
-				// the lock analyzer handles it.
-				return false
-			case *ast.BLangAssignment:
-				if isMutableSelfFieldAccess(n.GetVariable().(ast.BLangNode)) {
-					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
-					return false
-				}
-			case *ast.BLangFieldBaseAccess:
-				if isMutableSelfFieldAccess(n) {
-					a.semanticErr("mutable field access within isolated object must be inside a lock statement", inner.GetPosition())
-				}
-			}
-			return true
-		})
-	}
-	for _, method := range classDef.Methods {
-		checkMutableSelfAccess(method)
 	}
 }
 

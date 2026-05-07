@@ -430,6 +430,45 @@ func checkIsolatedModuleVarOutsideLock(a analyzer, ref *ast.BLangSimpleVarRef) {
 	}
 }
 
+// checkIsolatedFieldOutsideLock is the field-access twin of
+// checkIsolatedModuleVarOutsideLock. It rejects every `self.f`
+// reference where `f` is a non-final field of an isolated class and
+// the reference's enclosing closure has no lock analyzer in scope.
+// Because enclosingLockAnalyzer stops at the nearest functionAnalyzer
+// (lambdas push their own), this also rejects captures of `self.f`
+// inside lambdas constructed within a lock body.
+func checkIsolatedFieldOutsideLock(a analyzer, access *ast.BLangFieldBaseAccess) {
+	_, _, ok := selfFieldLockEntry(a, access)
+	if !ok {
+		return
+	}
+	if inInitFunction(a) {
+		return
+	}
+	if enclosingLockAnalyzer(a) == nil {
+		a.semanticErr(
+			"mutable field access within isolated object must be inside a lock statement",
+			access.GetPosition(),
+		)
+	}
+}
+
+// inInitFunction reports whether `a` is inside the body of the
+// enclosing class's `init` method (still within the same closure —
+// crossing into a lambda detaches us from init). Mutations of
+// `self.f` inside init are exempt because the constructed object is
+// not observable to other strands until init returns.
+func inInitFunction(a analyzer) bool {
+	for cur := a; cur != nil; cur = cur.parentAnalyzer() {
+		fa, ok := cur.(*functionAnalyzer)
+		if !ok {
+			continue
+		}
+		return fa.enclosingClass != nil && fa.enclosingClass.InitFunction == fa.function
+	}
+	return false
+}
+
 // validateModuleLevelIsolatedDecls enforces that the initializer of
 // every module-level `isolated` declaration is itself an isolated
 // expression.
