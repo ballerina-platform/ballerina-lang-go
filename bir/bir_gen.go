@@ -666,9 +666,11 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 }
 
 func panicStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangPanic) statementEffect {
+	pos := ctx.loc(stmt.GetPosition())
 	errorEffect := handleActionOrExpression(ctx, curBB, stmt.Expr)
 	curBB = errorEffect.block
-	curBB.Terminator = NewPanic(errorEffect.result, ctx.loc(stmt.GetPosition()))
+	curBB = emitLockEndBeforeAbruptExit(ctx, curBB, pos)
+	curBB.Terminator = NewPanic(errorEffect.result, pos)
 	return statementEffect{}
 }
 
