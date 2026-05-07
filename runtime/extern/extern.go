@@ -77,6 +77,13 @@ func CreateContext(env *Env) *Context {
 
 // AcquireLock acquires the global re-entrant mutex for the given lock key on
 // behalf of the current strand and pushes it onto the held-lock stack.
+//
+// Callers must pair every acquisition with a `LockEnd` BIR terminator (which
+// invokes ReleaseLock). BIR-gen guarantees this for every abrupt-exit BIR
+// terminator inside a `lock` body (Return / Break / Continue / Panic), but
+// not for Go-level `panic`s raised below BIR (e.g. div-by-zero, array OOB).
+// A `trap` that recovers such a Go-level panic does NOT release the lock
+// — see the package doc on runtime/internal/locks.
 func (ctx *Context) AcquireLock(key string) {
 	m := ctx.Env.Locks.Get(key)
 	m.Lock(ctx.StrandID)
@@ -87,15 +94,23 @@ func (ctx *Context) AcquireLock(key string) {
 func (ctx *Context) ReleaseLock() {
 	n := len(ctx.heldLocks)
 	top := ctx.heldLocks[n-1]
+	ctx.heldLocks[n-1] = nil
 	ctx.heldLocks = ctx.heldLocks[:n-1]
 	top.Unlock(ctx.StrandID)
 }
 
-// ReleaseAllHeldLocks drains the held-lock stack in LIFO order. Used during
-// Ballerina-panic unwinding so a strand never strands a held lock.
+// ReleaseAllHeldLocks drains the held-lock stack in LIFO order.
+//
+// This is the last-resort uncaught-panic path: it is invoked by the
+// interpreter's top-level recover so a strand never strands a held lock when
+// the program aborts. `trap`-recovered panics do NOT invoke this — by design
+// at this stage, locks recovered through `trap` remain owned by the strand
+// (the lock is re-entrant per strand, so this is harmless within the same
+// strand).
 func (ctx *Context) ReleaseAllHeldLocks() {
 	for i := len(ctx.heldLocks) - 1; i >= 0; i-- {
 		ctx.heldLocks[i].Unlock(ctx.StrandID)
+		ctx.heldLocks[i] = nil
 	}
 	ctx.heldLocks = ctx.heldLocks[:0]
 }

@@ -1,0 +1,61 @@
+module $anon.. v 0.0.0;
+import ballerina.io v 0.0.0;
+counter  int;
+bump() -> nil{
+  bb0 {
+    lock-start "$anon/.:counter" GOTO bb1;
+  }
+  bb1 {
+    %2 = ConstantLoad 1
+    %3 = %2;
+    %1 = + counter %3;
+    counter = %1;
+    %4 = ConstantLoad boom
+    %5 = newError error(%4)
+    lock-end "$anon/.:counter" GOTO bb2;
+  }
+  bb2 {
+    panic %5;
+  }
+  bb3 {
+    return;
+  }
+}
+main() -> nil{
+  bb0 {
+    GOTO bb1;
+  }
+  bb1 {
+    %2 = bump() -> bb2;
+  }
+  bb2 {
+    %1 = %2;
+    GOTO bb3;
+  }
+  bb3 {
+    e = %1;
+    %4 = e is error
+    %5 = %4;
+    %6 = println(%5) -> bb4;
+  }
+  bb4 {
+    lock-start "$anon/.:counter" GOTO bb5;
+  }
+  bb5 {
+    %8 = ConstantLoad 1
+    %9 = %8;
+    %7 = + counter %9;
+    counter = %7;
+    %10 = println(counter) -> bb6;
+  }
+  bb6 {
+    lock-end "$anon/.:counter" GOTO bb7;
+  }
+  bb7 {
+    return;
+  }
+  
+  error-table {
+    [bb1, bb2] -> bb3, %1
+  }
+}

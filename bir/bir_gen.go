@@ -67,8 +67,13 @@ type stmtContext struct {
 
 // emitLockEndBeforeAbruptExit, when called inside a lock body, closes the
 // current BB with a LockEnd terminator and returns a fresh BB whose execution
-// resumes the abrupt-exit terminator (Return/Break/Continue). When not inside
-// a lock body, returns curBB unchanged.
+// resumes the abrupt-exit terminator (Return/Break/Continue/Panic). When not
+// inside a lock body, returns curBB unchanged.
+//
+// The set of covered terminators is exhaustive by design: only abrupt-exit
+// BIR terminators inside a `lock` body need an explicit LockEnd. Go-level
+// panics raised below BIR (e.g. div-by-zero, array OOB) are out of scope —
+// see the runtime/internal/locks package doc for the release model.
 func emitLockEndBeforeAbruptExit(ctx *stmtContext, curBB *BIRBasicBlock, pos Location) *BIRBasicBlock {
 	if ctx.activeLockKey == nil {
 		return curBB
@@ -666,9 +671,11 @@ func returnStatement(ctx *stmtContext, bb *BIRBasicBlock, stmt *ast.BLangReturn)
 }
 
 func panicStatement(ctx *stmtContext, curBB *BIRBasicBlock, stmt *ast.BLangPanic) statementEffect {
+	pos := ctx.loc(stmt.GetPosition())
 	errorEffect := handleActionOrExpression(ctx, curBB, stmt.Expr)
 	curBB = errorEffect.block
-	curBB.Terminator = NewPanic(errorEffect.result, ctx.loc(stmt.GetPosition()))
+	curBB = emitLockEndBeforeAbruptExit(ctx, curBB, pos)
+	curBB.Terminator = NewPanic(errorEffect.result, pos)
 	return statementEffect{}
 }
 

@@ -105,7 +105,7 @@ func selfFieldLockEntry(a analyzer, access *ast.BLangFieldBaseAccess) (string, m
 		a.internalErr("failed to find enclosing class definition", access.GetPosition())
 		return "", model.SymbolRef{}, false
 	}
-	if !ok || !cls.IsIsolated() {
+	if !cls.IsIsolated() {
 		return "", model.SymbolRef{}, false
 	}
 	fieldName := access.Field.Value
