@@ -58,11 +58,17 @@ type (
 		nextDefaultSymbolName() string
 	}
 
+	prevPos struct {
+		pos      diagnostics.Location
+		reported bool
+	}
+
 	moduleSymbolResolver struct {
 		ctx            *context.CompilerContext
 		scope          *model.ModuleScope
 		pkgID          model.PackageID
 		typeDefns      map[model.SymbolRef]model.TypeDefinition
+		prevPos        map[string]prevPos
 		defaultCounter int
 	}
 
@@ -92,6 +98,7 @@ func newModuleSymbolResolver(ctx *context.CompilerContext, pkgID model.PackageID
 		scope:     scope,
 		pkgID:     pkgID,
 		typeDefns: make(map[model.SymbolRef]model.TypeDefinition),
+		prevPos:   make(map[string]prevPos),
 	}
 }
 
@@ -186,10 +193,17 @@ func (bs *blockSymbolResolver) GetTypeDefns() map[model.SymbolRef]model.TypeDefi
 
 func addTopLevelSymbol(resolver *moduleSymbolResolver, name string, symbol model.Symbol, pos diagnostics.Location) bool {
 	if _, _, exists := resolver.GetSymbol(name); exists {
-		semanticError(resolver, "redeclared symbol '"+name+"'", pos)
+		msg := "redeclared symbol '" + name + "'"
+		if prev, ok := resolver.prevPos[name]; ok && !prev.reported {
+			semanticError(resolver, msg, prev.pos)
+			prev.reported = true
+			resolver.prevPos[name] = prev
+		}
+		semanticError(resolver, msg, pos)
 		return false
 	}
 	resolver.AddSymbol(name, symbol)
+	resolver.prevPos[name] = prevPos{pos: pos}
 	return true
 }
 
@@ -479,7 +493,7 @@ func visitInnerSymbolResolver[T symbolResolver](resolver T, node ast.BLangNode) 
 	case *ast.BLangUserDefinedType:
 		referUserDefinedType(resolver, n)
 	case *ast.BLangObjectType:
-		n.Inclusions, _ = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
+		n.Inclusions, n.InclusionPositions, _ = resolveObjectInclusions(resolver, n.PopUnresolvedInclusions())
 	case *ast.BLangRecordType:
 		n.Inclusions = resolveRecordTypeInclusions(resolver, n.TypeInclusions)
 	}
@@ -776,10 +790,11 @@ type inclusionMemberForSymbolResolution struct {
 // resolveObjectInclusions update the AST node references with correct symbol references. Will add semantic errors if the type
 // reference is for something that can't be included. This means after this stage we have the gurantee symbol ref always refer
 // to a valid AST node.
-func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []inclusionMemberForSymbolResolution) {
+func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions []*ast.BLangUserDefinedType) ([]model.SymbolRef, []diagnostics.Location, []inclusionMemberForSymbolResolution) {
 	ctx := resolver.GetCtx()
 	localDefns := resolver.GetTypeDefns()
 	inclusions := make([]model.SymbolRef, 0, len(unresolvedInclusions))
+	positions := make([]diagnostics.Location, 0, len(unresolvedInclusions))
 	var includedFields []inclusionMemberForSymbolResolution
 	for _, inc := range unresolvedInclusions {
 		ast.Walk(resolver, inc)
@@ -825,8 +840,9 @@ func resolveObjectInclusions[T symbolResolver](resolver T, unresolvedInclusions 
 			}
 		}
 		inclusions = append(inclusions, symRef)
+		positions = append(positions, inc.GetPosition())
 	}
-	return inclusions, includedFields
+	return inclusions, positions, includedFields
 }
 
 func resolveRecordTypeInclusions[T symbolResolver](resolver T, typeInclusions []ast.BType) []model.SymbolRef {
@@ -929,7 +945,7 @@ func resolveClassDefinition(ms *moduleSymbolResolver, classDef *ast.BLangClassDe
 	classDef.SetScope(classResolver.scope)
 
 	var includedFields []inclusionMemberForSymbolResolution
-	classDef.Inclusions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
+	classDef.Inclusions, classDef.InclusionPositions, includedFields = resolveObjectInclusions(ms, classDef.PopUnresolvedInclusions())
 
 	for _, field := range classDef.Fields {
 		name := field.GetName().GetValue()

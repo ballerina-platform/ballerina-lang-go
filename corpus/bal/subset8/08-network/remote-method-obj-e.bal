@@ -16,5 +16,5 @@
 
 type Client object {
     remote function get(string path) returns string; // @error
-}
+};
 

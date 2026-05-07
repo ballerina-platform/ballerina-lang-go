@@ -82,8 +82,5 @@ func (c *config) validate() error {
 	if c.runs <= 0 {
 		return fmt.Errorf("runs must be greater than zero")
 	}
-	if c.exportPath == "" {
-		return fmt.Errorf("export path is required")
-	}
 	return nil
 }

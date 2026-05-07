@@ -1,2 +1,7 @@
 -- stdout --
 -- stderr --
+error[SYNTAX_ERROR]: invalid token
+  --> optionalField-e.bal:19:20
+   |
+19 |     public int bar?; // @error
+   |                    ^
